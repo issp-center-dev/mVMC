@@ -1,0 +1,29 @@
+CC = icc -lmpi
+
+LIB = -L$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64\
+ -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core\
+ -lmkl_blacs_sgimpt_lp64\
+ -openmp -lpthread -lm
+CFLAGS = -O3 -no-prec-div -xHost -openmp -Wno-unknown-pragmas
+REPORT = -openmp-report1 -vec-report=1
+OPTION = -D_mpi_use
+
+OUT = vmc.out
+SRC = vmcmain.c
+PFAPACK = pfapack/libpfapack.a
+SFMT = sfmt/SFMT.o
+OBJS = vmcmain.o $(PFAPACK) $(SFMT)
+
+.PHONY : all pfapack sfmt
+all : vmc.out
+
+vmc.out : vmcmain.o pfapack sfmt
+	$(CC) -o $(OUT) $(OBJS) -O3 $(LIB) 
+
+vmcmain.o : *.c *.h
+	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT)
+
+pfapack :
+	$(MAKE) -C pfapack -f Makefile_intel
+sfmt :
+	$(MAKE) -C sfmt -f Makefile_intel

@@ -1,0 +1,28 @@
+FC = mpifrtpx
+CC = mpifccpx
+
+LIB = -SCALAPACK -SSL2BLAMP
+# CFLAGS = -Kfast,parallel,ocl,preex,array_private,openmp
+CFLAGS = -Kfast,parallel,ocl,openmp
+REPORT = -Koptmsg=2
+OPTION = -D_mpi_use
+
+OUT = vmc.out
+SRC = vmcmain.c
+PFAPACK = pfapack/libpfapack.a
+SFMT = sfmt/SFMT.o
+OBJS = vmcmain.o $(PFAPACK) $(SFMT)
+
+.PHONY : all pfapack sfmt
+all : vmc.out
+
+vmc.out : vmcmain.o pfapack sfmt
+	$(FC) -mlcmain=main -o $(OUT) $(OBJS) $(CFLAGS) $(LIB)
+
+vmcmain.o : *.c *.h
+	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT)
+
+pfapack :
+	$(MAKE) -C pfapack -f Makefile_kei
+sfmt :
+	$(MAKE) -C sfmt -f Makefile_kei
