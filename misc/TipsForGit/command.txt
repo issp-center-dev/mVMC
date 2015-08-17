@@ -1,33 +1,34 @@
-$B$H$j$"$($:!"$h$/;H$&$b$N$r=q$-IU$1$F$*$/!#(B
+#UTF8
+とりあえず、よく使うものを書き付けておく。
 =================================================
--github$B>e$N>pJs$r$H$C$F$/$k(B
+-github上の情報をとってくる
  git fetch 
 
--branch$B$N>pJs$r8+$k(B
+-branchの情報を見る
 git branch -a
 
--old-branch$B$+$i(Bnew-branch$B$r:n@.(B
+-old-branchからnew-branchを作成
 git branch new-branch old-branch
 
--br1$B$r(Bgithub$B$K(Bpush
+-br1をgithubにpush
 git push origin br1
 
 =================================================
 
--$B0l$DA0$N(Bcommit$B$N%3%a%s%H$r=$@5(B
+-一つ前のcommitのコメントを修正
 git commit --amend
 
--remote$B$K$b$&$J$$(Bbranch$B$r:o=|(B
+-remoteにもうないbranchを削除
 git remote prune origin
 
--$BJL$N%V%i%s%A$N%U%!%$%k$r8+$k(B
-git cat-file -p $B%V%i%s%AL>(B:$B%U%!%$%k%Q%9L>(B
+-別のブランチのファイルを見る
+git cat-file -p ブランチ名:ファイルパス名
 
--$B%V%i%s%A$N>pJs$r;k3P2=$9$k(B()$B!#(B
+-ブランチの情報を視覚化する()。
 git log --graph --branches --pretty=format:"%d [%h] \"%s\""
 
--merge$B%3%_%C%H$N%m%0$@$1$r8+$k(B
+-mergeコミットのログだけを見る
 git log --oneline --abbrev-commit --merges
 
--branch$B4V$N(Bdiff
+-branch間のdiff
 git diff br1:foo/bar.txt br2:hoge/fuga.txt

@@ -1,3 +1,5 @@
+#UTF8
+
 = error messages
  ! [rejected]        develop -> develop (non-fast-forward)
 error: failed to push some refs to 'https://github.com/tmisawa/mVMC.git'
@@ -5,14 +7,14 @@ hint: Updates were rejected because the tip of your current branch is behind
 hint: its remote counterpart. Merge the remote changes (e.g. 'git pull')
 = error messages
 
-$B:n6HCf$K(B
-$BC/$+$,(Bgithub$B$N(Bpush$B$7$h$&$H$7$F$k(B
-branch$B!J:#$N>l9g$O(Bdevelop$B!K$r99?7$7$F$k>l9g$K@8$8$k!#(B
+作業中に
+誰かがgithubのpushしようとしてる
+branch（今の場合はdevelop）を更新してる場合に生じる。
 
-$B2r7hJ}K!(B:
+解決方法:
 git fetch
-$B$N$"$H(B
+のあと
 git merge origin/develop
-$B$G(Bmerge$B$7$F$+$i(B
+でmergeしてから
 git push origin develop
-$B$H$9$k!#(B
+とする。
