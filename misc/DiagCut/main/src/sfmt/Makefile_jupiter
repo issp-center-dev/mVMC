@@ -1,0 +1,10 @@
+OBJ = SFMT.o
+CC = icc
+CFLAGS = -O3 -no-ansi-alias
+OPTION = -DMEXP=19937
+
+$(OBJ): SFMT.c
+	$(CC) $(CFLAGS) $(OPTION) -c $< -o $@
+
+clean:
+	-rm -f $(OBJ)
