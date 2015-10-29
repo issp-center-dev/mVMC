@@ -1,0 +1,137 @@
+#!/usr/local/bin/perl
+  #print "start !! \n";
+  #input!!
+  &input;
+  #input!!
+  $orb_num=$tmp_orb;
+  $L_x=$tmp_Lx;
+  $L_y=$tmp_Ly;
+  $L=$L_x*$L_y;
+  $Ns=$L;
+  $All_N=$Ns*$orb_num;
+  printf("CHECK norbital L_x=$L_x L_y=$L_y  orb=$orb_num \n");
+
+  $sub_comp=4;# components of sublattice 
+
+
+  $cnt=0;
+  for($all_i=0;$all_i<$All_N;$all_i+=1){
+    if($cnt==0){
+      $vec_x[$cnt]=0; 
+      $vec_y[$cnt]=0; 
+      $vec_orb[$cnt]=0; 
+      #printf "$cnt $vec_x[$cnt] $vec_y[$cnt] \n";
+      $cnt+=1;
+    }else{
+      $orb  = $all_i % $orb_num;    
+      $site = ($all_i-$orb)/$orb_num;  
+   
+      $x=$site%$L_x;
+      $y=($site-$x)/$L_x;
+      #print "NEW $j $x $y\n"; 
+      $vec_x[$cnt]=$x; 
+      $vec_y[$cnt]=$y; 
+      $vec_orb[$cnt]=$orb; 
+      #printf "$cnt $vec_x[$cnt] $vec_y[$cnt] \n";
+      $cnt+=1;
+    }
+  }
+  $cnt_max=$cnt; 
+  #printf "$cnt_max \n";
+  $tmp=($cnt_max)*$sub_comp*$orb_num;
+  # caution "+2" !!!!
+
+  $fname="zorbitalidx.def";
+  open(FILE,">$fname");
+  printf FILE "========misawa======== \n";
+  printf FILE "NOrbitalIdx $tmp  \n";
+  printf FILE "========misawa======== \n";
+  printf FILE "========i_j_OrbitalIdx  ====== \n";
+  printf FILE "========misawa======== \n";
+  #for($j=0;$j<=$cnt_max;$j+=1){
+  #"  $tmp_2=sqrt($dis[$j]);
+  #"  print "$j $tmp_2 \n";
+  #"}
+
+  #for($i=0;$i<$sub_comp;$i++){
+  #  $match[$i]=0;   
+  #}
+
+  for($all_i=0;$all_i<$All_N;$all_i+=1){
+    $orb_i  = $all_i % $orb_num;    
+    $site_i = ($all_i-$orb_i)/$orb_num;  
+
+    $x_1=$site_i%$L_x;
+    $y_1=($site_i-$x_1)/$L_x;
+    $sub_x=$x_1%2;
+    $sub_y=$y_1%2;
+    if($sub_x==0 && $sub_y==0){
+      $sub_ini=0;
+    }elsif($sub_x==1 && $sub_y==0){
+      $sub_ini=1;
+    }elsif($sub_x==0 && $sub_y==1){
+      $sub_ini=2;
+    }elsif($sub_x==1 && $sub_y==1){
+      $sub_ini=3;
+    }else{
+      print "sub sub FAITAL ERROR in ORBITAL\n";
+    }
+
+    for($cnt=0;$cnt<$cnt_max;$cnt+=1){
+        $x_2    = ($x_1+$vec_x[$cnt])%$L_x;
+        $y_2    = ($y_1+$vec_y[$cnt])%$L_y;
+        $orb_j  = $vec_orb[$cnt];
+        $site_j = $x_2+$y_2*$L_x;
+        $all_j  = $orb_j+$orb_num*$site_j; 
+        $tmp    = $cnt_max*($sub_ini+$orb_i*$sub_comp)+$cnt; 
+        printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$tmp);
+    }  
+  }
+  $tmp=($cnt_max)*$sub_comp*$orb_num;
+  for($i=0;$i<$tmp;$i++){
+    if($i==9){
+      printf FILE ("%4d %4d \n",$i,0);
+    }else{
+      printf FILE ("%4d %4d \n",$i,1);
+    }
+  }
+  close(FILE);
+  printf("orbital.prl finish \n");
+ sub input{
+  #input START 
+  $Lx_cnt=0;
+  $Ly_cnt=0;
+  $orb_cnt=0;
+  $file=sprintf("input.txt");
+  open(INPUTFILE,$file);
+  while($name=<INPUTFILE>){
+    chomp $name;
+    #DELETE EMPTY
+    $_=$name; 
+    s/^\s+//;
+    $name=$_; 
+    @tmp = split /\s+/, $name;
+    #printf "$tmp[0] $tmp[1] \n";
+    if($tmp[0] eq 'Lx'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_Lx = $tmp[1];
+      $Lx_cnt=1;
+    } 
+    if($tmp[0] eq 'Ly'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_Ly = $tmp[1];
+      $Ly_cnt=1;
+    } 
+    if($tmp[0] eq 'orb_num'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_orb = $tmp[1];
+      $orb_cnt=1;
+    } 
+  }
+  if($Lx_cnt==0 || $Ly_cnt==0||$orb_cnt==0){
+    printf "FAITAL ERROR IN input.txt !!!!!!!!!!!!! \n";
+  }
+  #input FINISH
+ }
+
+
