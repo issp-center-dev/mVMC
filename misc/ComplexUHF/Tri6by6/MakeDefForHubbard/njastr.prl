@@ -1,0 +1,78 @@
+#!/usr/local/bin/perl
+  #print "start !! \n";
+  #input!!
+  &input;
+  #input!!
+  #@intra_U=(1..5);
+  #$inp=(1..10);
+  $orb_num=$tmp_orb;
+  $L_x=$tmp_Lx;
+  $L_y=$tmp_Ly;
+  $L=$L_x*$L_y;
+  $Ns=$L;
+  $All_N=$Ns*$orb_num;
+  printf("CHECK jastraw L_x=$L_x L_y=$L_y  orb=$orb_num \n");
+
+  $fname="zjastrowidx.def";
+  open(FILE,">$fname");
+  printf FILE "========misawa======== \n";
+  printf FILE "NJastrowIdx 1  \n";
+  printf FILE "========misawa======== \n";
+  printf FILE "========i_j_JastrowIdx  ====== \n";
+  printf FILE "========misawa======== \n";
+  #for($j=0;$j<=$cnt_max;$j+=1){
+  #"  $tmp_2=sqrt($dis[$j]);
+  #"  print "$j $tmp_2 \n";
+  #"}
+  $cnt=0;
+  for($all_i=0;$all_i<$All_N;$all_i++){
+    for($all_j=0;$all_j<$All_N;$all_j++){
+      #print "$i $j \n";
+      if($all_j!=$all_i){
+        printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,0);
+        $cnt+=1;
+      }
+    }
+  }
+  printf FILE ("%4d  %4d \n",0,2);
+  close(FILE);
+  printf "jastr.prl finish \n";
+
+#subroutine
+ sub input{
+  #input START
+  $Lx_cnt=0;
+  $Ly_cnt=0;
+  $orb_cnt=0;
+  $file=sprintf("input.txt");
+  open(INPUTFILE,$file);
+  while($name=<INPUTFILE>){
+    chomp $name;
+    #DELETE EMPTY
+    $_=$name;
+    s/^\s+//;
+    $name=$_;
+    @tmp = split /\s+/, $name;
+    #printf "$tmp[0] $tmp[1] \n";
+    if($tmp[0] eq 'Lx'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_Lx = $tmp[1];
+      $Lx_cnt=1;
+    }
+    if($tmp[0] eq 'Ly'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_Ly = $tmp[1];
+      $Ly_cnt=1;
+    }
+    if($tmp[0] eq 'orb_num'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_orb = $tmp[1];
+      $orb_cnt=1;
+    }
+  }
+  if($Lx_cnt==0 || $Ly_cnt==0||$orb_cnt==0){
+    printf "FAITAL ERROR IN input.txt !!!!!!!!!!!!! \n";
+  }
+  #input FINISH
+ }
+

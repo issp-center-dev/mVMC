@@ -13,6 +13,9 @@ sol mars :
 reims :
 	$(MAKE) -f Makefile_reims
 
+sekirei :
+	$(MAKE) -f Makefile_sekirei
+
 clean :
 	-rm -f *.o vmc.out
 	-rm -f pfapack/*.o pfapack/libpfapack.a

@@ -1,0 +1,11 @@
+OBJ = SFMT.o
+CC = fccpx
+# CFLAGS = -Kfast,parallel,ocl,preex,array_private,nomemalias
+# CFLAGS = -Kfast,parallel,ocl,nomemalias
+CFLAGS = -Kfast,ocl,nomemalias
+
+$(OBJ): SFMT.c
+	$(CC) $(CFLAGS) -DMEXP=19937 -c $< -o $@
+
+clean:
+	-rm -f $(OBJ)

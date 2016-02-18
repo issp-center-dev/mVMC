@@ -1,0 +1,27 @@
+CC	= mpicc
+
+LIB = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lguide -lpthread -lm -openmp
+CFLAGS = -O3 -no-prec-div -xP -Wno-unknown-pragmas
+REPORT = -vec-report1
+OPTION = -D_mpi_use -D_lapack
+
+OUT = vmc.out
+SRC = vmcmain.c
+PFAPACK = pfapack/libpfapack.a
+SFMT = sfmt/SFMT.o
+OBJS = vmcmain.o $(PFAPACK) $(SFMT)
+
+.PHONY: all pfapack sfmt
+
+all : $(OUT)
+
+$(OUT) : vmcmain.o sfmt pfapack
+	$(CC) -o $(OUT) $(OBJS) -O3 $(LIB) 
+
+vmcmain.o : *.c *.h
+	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT)
+
+pfapack :
+	$(MAKE) -C pfapack -f Makefile_jupiter
+sfmt :
+	$(MAKE) -C sfmt -f Makefile_jupiter
