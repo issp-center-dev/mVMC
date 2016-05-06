@@ -1,0 +1,199 @@
+#!/usr/local/bin/perl
+  #print "start !! \n";
+  #input!!
+  &input;
+  #input!!
+  $orb_num=$tmp_orb;
+  $L_x=$tmp_Lx;
+  $L_y=$tmp_Ly;
+  $lambda=$tmp_lambda;
+  $L=$L_x*$L_y;
+  $Ns=$L;
+  $All_N=$Ns*$orb_num;
+  printf("CHECK jastraw L_x=$L_x L_y=$L_y lambda=$lambda orb=$orb_num \n");
+
+  $unit_num = 4;
+
+  $num = $orb_num*($orb_num-1)/2;
+  $tmp = $num*$unit_num+$orb_num*$orb_num*4*$unit_num+1;
+  $oth = $num*$unit_num+$orb_num*$orb_num*4*$unit_num;
+  $fname="zjastrowidx.def";
+  open(FILE,">$fname");
+  printf FILE "========misawa======== \n";
+  printf FILE "NJastrowIdx $tmp  \n";
+  printf FILE "========misawa======== \n";
+  printf FILE "========i_j_JastrowIdx  ====== \n";
+  printf FILE "========misawa======== \n";
+  #for($j=0;$j<=$cnt_max;$j+=1){
+  #"  $tmp_2=sqrt($dis[$j]);
+  #"  print "$j $tmp_2 \n";
+  #"}
+# initialization for onsite
+  $cnt = 0;
+  for($orb_i=0;$orb_i<$orb_num;$orb_i++){
+    for($orb_j=$orb_i+1;$orb_j<$orb_num;$orb_j++){
+      $tmp_cnt[$orb_i][$orb_j]  = $cnt; 
+      $cnt+=1;
+    }
+  }
+  for($orb_i=0;$orb_i<$orb_num;$orb_i++){
+    for($orb_j=0;$orb_j<$orb_num;$orb_j++){
+      if($orb_j<$orb_i){
+        $tmp_cnt[$orb_i][$orb_j] = $tmp_cnt[$orb_j][$orb_i]; 
+      }
+      if($orb_j==$orb_i){
+        $tmp_cnt[$orb_i][$orb_j] = $num*$unit_num; 
+      }
+    }
+  }
+# initialization for offsite
+  $cnt = $num*$unit_num;
+  for($unit=0;$unit<$unit_num;$unit++){
+    for($int_i=0;$int_i<4;$int_i++){
+      for($orb_i=0;$orb_i<$orb_num;$orb_i++){
+       for($orb_j=0;$orb_j<$orb_num;$orb_j++){
+         $offsite_cnt[$unit][$int_i][$orb_i][$orb_j]  = $cnt; 
+         $cnt+=1;
+       }
+     }
+   }
+ }   
+
+  
+  
+  $cnt=0;
+  for($all_i=0;$all_i<$All_N;$all_i++){
+    $orb_i  = $all_i%$orb_num;
+    $site_i = ($all_i-$orb_i)/$orb_num;
+    $i_x    = $site_i%$L_x;
+    $i_y    = ($site_i-$i_x)/$L_x;
+    #$unit   = ($i_x+$i_y)%2;
+    #$unit   =($i_x+($L_y-1)*$i_y)%$L_x;
+    $unit   =($i_x%2+2*$i_y)%4;
+    for($all_j=0;$all_j<$All_N;$all_j++){
+      $orb_j  = $all_j%$orb_num;
+      $site_j = ($all_j-$orb_j)/$orb_num;
+      $j_x    = $site_j%$L_x;
+      $j_y    = ($site_j-$j_x)/$L_x;
+      #print "$i $j \n";  
+      if($all_j!=$all_i){
+
+# on-site inter orbital jastraw
+        if($site_i == $site_j){
+          if($orb_i!=$orb_j){
+            $cnt = $tmp_cnt[$orb_i][$orb_j]+$unit*$num;  
+            printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$cnt);
+          }else{
+            $cnt = $tmp_cnt[$orb_i][$orb_j];
+            printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$cnt);
+          }   
+        # off-site inter orbital jastraw
+        # nearest neighbor
+          #(1,0)
+        }elsif($j_x == ($i_x+1)%$L_x && $j_y== ($i_y)%$L_y){
+          $cnt = $offsite_cnt[$unit][0][$orb_i][$orb_j];  
+          printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$cnt);
+          #(-1,0)
+        }elsif($j_x == ($i_x-1+$L_x)%$L_x && $j_y== ($i_y)%$L_y){
+          $cnt = $offsite_cnt[$unit][0][$orb_i][$orb_j];  
+          printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$cnt);
+          #(0,1)
+        }elsif($j_x == ($i_x)%$L_x && $j_y== ($i_y+1)%$L_y){
+          $cnt = $offsite_cnt[$unit][1][$orb_i][$orb_j];  
+          printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$cnt);
+          #(0,-1)
+        }elsif($j_x == ($i_x)%$L_x && $j_y== ($i_y-1+$L_y)%$L_y){
+          $cnt = $offsite_cnt[$unit][1][$orb_i][$orb_j];  
+          printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$cnt);
+        # next-nearest neighbor
+          #(1,1)
+        }elsif($j_x == ($i_x+1+$L_x)%$L_x && $j_y== ($i_y+1+$L_y)%$L_y){
+          $cnt = $offsite_cnt[$unit][2][$orb_i][$orb_j];  
+          printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$cnt);
+          #(-1,-1)
+        }elsif($j_x == ($i_x-1+$L_x)%$L_x && $j_y== ($i_y-1+$L_y)%$L_y){
+          $cnt = $offsite_cnt[$unit][2][$orb_i][$orb_j];  
+          printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$cnt);
+          #(1,-1)
+        }elsif($j_x == ($i_x+1+$L_x)%$L_x && $j_y== ($i_y-1+$L_y)%$L_y){
+          $cnt = $offsite_cnt[$unit][3][$orb_i][$orb_j];  
+          printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$cnt);
+          #(-1,1)
+        }elsif($j_x == ($i_x-1+$L_x)%$L_x && $j_y== ($i_y+1+$L_y)%$L_y){
+          $cnt = $offsite_cnt[$unit][3][$orb_i][$orb_j];  
+          printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$cnt);
+        }else{
+          $cnt = $oth; 
+          printf FILE ("%4d  %4d  %4d \n",$all_i,$all_j,$cnt);
+        }
+        #next-nearest neighbor
+      }
+    }
+  } 
+  for($unit=0;$unit<$unit_num;$unit++){
+    for($orb_i=0;$orb_i<$orb_num;$orb_i++){
+      for($orb_j=$orb_i+1;$orb_j<$orb_num;$orb_j++){
+        $cnt = $tmp_cnt[$orb_i][$orb_j]+$unit*$num;  
+        printf FILE ("%4d  %4d \n",$cnt,1);
+      }
+    }
+  }
+#offsite
+  for($unit=0;$unit<$unit_num;$unit++){
+    for($int_i=0;$int_i<4;$int_i++){
+      for($orb_i=0;$orb_i<$orb_num;$orb_i++){
+        for($orb_j=0;$orb_j<$orb_num;$orb_j++){
+          $cnt = $offsite_cnt[$unit][$int_i][$orb_i][$orb_j];
+          printf FILE ("%4d  %4d \n",$cnt,0);
+        }
+      }
+    }
+  }   
+  $cnt = $oth; 
+  printf FILE ("%4d  %4d \n",$cnt,0);
+  close(FILE);
+  printf "jastr.prl finish \n";
+
+ sub input{
+  #input START 
+  $Lx_cnt=0;
+  $Ly_cnt=0;
+  $orb_cnt=0;
+  $lambda_cnt=0;
+  $file=sprintf("input.txt");
+  open(INPUTFILE,$file);
+  while($name=<INPUTFILE>){
+    chomp $name;
+    #DELETE EMPTY
+    $_=$name; 
+    s/^\s+//;
+    $name=$_; 
+    @tmp = split /\s+/, $name;
+    #printf "$tmp[0] $tmp[1] \n";
+    if($tmp[0] eq 'Lx'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_Lx = $tmp[1];
+      $Lx_cnt=1;
+    } 
+    if($tmp[0] eq 'Ly'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_Ly = $tmp[1];
+      $Ly_cnt=1;
+    } 
+    if($tmp[0] eq 'orb_num'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_orb = $tmp[1];
+      $orb_cnt=1;
+    } 
+    if($tmp[0] eq 'lambda'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_lambda = $tmp[1];
+      $lambda_cnt=1;
+    } 
+  }
+  if($Lx_cnt==0 || $Ly_cnt==0||$orb_cnt==0|| $lambda_cnt==0){
+    printf "FAITAL ERROR IN input.txt !!!!!!!!!!!!! \n";
+  }
+  #input FINISH
+ }
+
