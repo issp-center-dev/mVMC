@@ -16,6 +16,9 @@ reims :
 sekirei :
 	$(MAKE) -f Makefile_sekirei
 
+intel :	
+	$(MAKE) -f Makefile_intel
+
 clean :
 	-rm -f *.o vmc.out
 	-rm -f pfapack/*.o pfapack/libpfapack.a

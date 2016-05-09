@@ -1,0 +1,26 @@
+CC	= mpicc
+
+LIB = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lpthread -lm -fopenmp -lirc
+CFLAGS = -O3 -Wno-unknown-pragmas
+OPTION = -D_mpi_use -D_lapack
+
+OUT = vmc.out
+SRC = vmcmain.c
+PFAPACK = pfapack/libpfapack.a
+SFMT = sfmt/SFMT.o
+OBJS = vmcmain.o $(PFAPACK) $(SFMT)
+
+.PHONY: all pfapack sfmt
+
+all : $(OUT)
+
+$(OUT) : vmcmain.o sfmt pfapack
+	$(CC) -o $(OUT) $(OBJS) -O3 $(LIB) 
+
+vmcmain.o : *.c *.h
+	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) 
+
+pfapack :
+	$(MAKE) -C pfapack -f Makefile_gnu
+sfmt :
+	$(MAKE) -C sfmt -f Makefile_intel
