@@ -19,6 +19,9 @@ sekirei :
 intel :	
 	$(MAKE) -f Makefile_intel
 
+gnu :	
+	$(MAKE) -f Makefile_gnu
+
 clean :
 	-rm -f *.o vmc.out
 	-rm -f pfapack/*.o pfapack/libpfapack.a
