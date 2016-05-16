@@ -27,8 +27,13 @@ void InitFile(char *xNameListFile, int rank) {
   if(NVMCCalMode==0) {
     sprintf(fileName, "%s_SRinfo.dat", CDataFileHead);
     FileSRinfo = fopen(fileName, "w");
-    fprintf(FileSRinfo,
+    if(SRFlag == 0){
+      fprintf(FileSRinfo,
             "#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax       imax\n");
+    }else{
+      fprintf(FileSRinfo,
+            "#Npara Msize optCut diagCut sEigenMax  sEigenMin    absRmax       imax\n");
+    }
 
     sprintf(fileName, "%s_out_%03d.dat", CDataFileHead, NDataIdxStart);
     FileOut = fopen(fileName, "w");

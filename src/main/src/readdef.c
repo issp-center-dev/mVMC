@@ -358,6 +358,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     APFlag = 0;
   }
 
+  if(DSROptStepDt < 0) {
+    SRFlag = 1; /* diagonalization */
+    if(rank==0) fprintf(stderr, "remark: Diagonalization Mode\n");
+    DSROptStepDt *= -1;
+  } else {
+    SRFlag = 0;
+  }
+
   Nsize   = 2*Ne;
   Nsite2  = 2*Nsite;
   NSlater = NOrbitalIdx;
