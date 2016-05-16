@@ -15,7 +15,10 @@
 #	 sktrf.o sktf2.o skbtrd.o
 OBJECTS = dlasktrd.o dlasktrf.o \
 	 dskmv.o dskpfa.o dskr2.o dskr2k.o dsktd2.o \
-	 dsktf2.o dsktrd.o dsktrf.o
+	 dsktf2.o dsktrd.o dsktrf.o \
+         zlasktrd.o zlasktrf.o \
+ 	 zskmv.o zskpfa.o zskr2.o zskr2k.o zsktd2.o \
+ 	 zsktf2.o zsktrd.o zsktrf.o
 
 FORT = gfortran
 FFLAGS = -O3 -fimplicit-none
