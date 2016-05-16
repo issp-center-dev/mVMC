@@ -2,7 +2,7 @@
  * Variational Monte Carlo
  * calculate physical quantities
  *-------------------------------------------------------------
- * by Satoshi Morita and Ryui Kaneko
+ * by Satoshi Morita 
  *-------------------------------------------------------------*/
 
 void VMCMainCal(MPI_Comm comm);

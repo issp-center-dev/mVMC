@@ -13,14 +13,23 @@ int calculateMAll_child(const int *eleIdx, const int qpStart, const int qpEnd, c
   #define M_DGETRF DGETRF
   #define M_DGETRI DGETRI
   #define M_DSKPFA DSKPFA
+  #define M_ZGETRF ZGETRF
+  #define M_ZGETRI ZGETRI
+  #define M_ZSKPFA ZSKPFA
 #elif _lapack_small_nounderscore
   #define M_DGETRF dgetrf
   #define M_DGETRI dgetri
   #define M_DSKPFA dskpfa
+  #define M_ZGETRF zgetrf
+  #define M_ZGETRI zgetri
+  #define M_ZSKPFA zskpfa
 #else
   #define M_DGETRF dgetrf_
   #define M_DGETRI dgetri_
   #define M_DSKPFA dskpfa_
+  #define M_ZGETRF zgetrf_
+  #define M_ZGETRI zgetri_
+  #define M_ZSKPFA zskpfa_
 #endif
 
 #define D_PfLimit 1.0e-100
@@ -30,6 +39,11 @@ int M_DGETRI(int *n, double *a, int *lda, int *ipiv, double *work, int *lwork, i
 int M_DSKPFA(const char *uplo, const char *mthd, const int *n,
              double *a, const int *lda, double *pfaff, int *iwork,
              double *work, const int *lwork, int *info);
+int M_ZGETRF(int *m, int *n, double complex *a, int *lda, int *ipiv, int *info);
+int M_ZGETRI(int *n, double complex *a, int *lda, int *ipiv, double complex *work, int *lwork, int *info);
+int M_ZSKPFA(const char *uplo, const char *mthd, const int *n,
+             double complex *a, const int *lda, double complex *pfaff, int *iwork,
+             double complex *work, const int *lwork, double *rwork, int *info);
 
 
 int getLWork() {
@@ -50,6 +64,29 @@ int getLWork() {
   lwork = (optSize1>optSize2) ? (int)optSize1 : (int)optSize2;
   return lwork;
 }
+
+int getLWork_fcomp() {
+  char uplo='U', mthd='P';
+  int n,lda,lwork,info=0;
+  double rwork;
+  double complex pfaff;
+  int iwork;
+  double complex a;
+  double complex optSize1,optSize2;
+
+  /* ask the optimal size of work */
+  n=lda=Ne;
+  lwork=-1;
+  M_ZGETRI(&n, &a, &lda, &iwork, &optSize1, &lwork, &info);
+  lwork=-1;
+  M_ZSKPFA(&uplo, &mthd, &n, &a, &lda, &pfaff, &iwork, &optSize2, &lwork, &rwork, &info);
+
+  lwork = (creal(optSize1)>creal(optSize2)) ? (int)creal(optSize1) : (int)creal(optSize2);
+  return lwork;
+}
+
+
+
 
 /* Calculate PfM and InvM from qpidx=qpStart to qpEnd */
 int CalculateMAll(const int *eleIdx, const int qpStart, const int qpEnd) {

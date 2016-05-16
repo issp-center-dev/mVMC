@@ -2,7 +2,7 @@
  * Variational Monte Carlo
  * initialization of files
  *-------------------------------------------------------------
- * by Satoshi Morita and Ryui Kaneko
+ * by Satoshi Morita 
  *-------------------------------------------------------------*/
 
 void InitFile(char *xNameListFile, int rank);

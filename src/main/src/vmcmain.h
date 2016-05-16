@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <string.h>
+#include <complex.h>
 
 #ifdef _mpi_use
   #include <mpi.h>
