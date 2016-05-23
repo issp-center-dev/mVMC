@@ -5,17 +5,17 @@
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-void UpdateSlaterElm();
-void SlaterElmDiff(double *srOptO, const double ip, int *eleIdx);
+void UpdateSlaterElm_fcmp();
+void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx);
 
-void UpdateSlaterElm() {
+void UpdateSlaterElm_fcmp() {
   int ri,ori,tri,sgni,rsi0,rsi1;
   int rj,orj,trj,sgnj,rsj0,rsj1;
   int qpidx,mpidx,spidx,optidx;
   double cs,cc,ss;
-  double slt_ij,slt_ji;
+  double complex slt_ij,slt_ji;
   int *xqp, *xqpSgn, *xqpOpt, *xqpOptSgn;
-  double *sltE,*sltE_i0,*sltE_i1;
+  double complex *sltE,*sltE_i0,*sltE_i1;
 
   #pragma omp parallel for default(shared)        \
     private(qpidx,optidx,mpidx,spidx,                      \
@@ -24,26 +24,28 @@ void UpdateSlaterElm() {
             rj,orj,trj,sgnj,rsj0,rsj1,slt_ij,slt_ji)
   #pragma loop noalias
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
-    optidx = qpidx / NQPFix;
-    mpidx = (qpidx%NQPFix) / NSPGaussLeg;
-    spidx = qpidx % NSPGaussLeg;
+    // qpidx  = optidx*NQPFix+NSPGaussLeg*mpidx+spidx 
+    // optidx will not be used
+    optidx    = qpidx / NQPFix;   
+    mpidx     = (qpidx%NQPFix) / NSPGaussLeg;
+    spidx     = qpidx % NSPGaussLeg;
 
-    xqpOpt = QPOptTrans[optidx];
+    xqpOpt    = QPOptTrans[optidx];
     xqpOptSgn = QPOptTransSgn[optidx];
-    xqp = QPTrans[mpidx];
-    xqpSgn = QPTransSgn[mpidx];
-    cs = SPGLCosSin[spidx];
-    cc = SPGLCosCos[spidx];
-    ss = SPGLSinSin[spidx];
+    xqp       = QPTrans[mpidx];
+    xqpSgn    = QPTransSgn[mpidx];
+    cs        = SPGLCosSin[spidx];
+    cc        = SPGLCosCos[spidx];
+    ss        = SPGLSinSin[spidx];
     
-    sltE = SlaterElm + qpidx*Nsite2*Nsite2;
+    sltE      = SlaterElm + qpidx*Nsite2*Nsite2;
     
     for(ri=0;ri<Nsite;ri++) {
-      ori = xqpOpt[ri];
-      tri = xqp[ori];
-      sgni = xqpSgn[ori]*xqpOptSgn[ri];
-      rsi0 = ri;
-      rsi1 = ri+Nsite;
+      ori     = xqpOpt[ri];
+      tri     = xqp[ori];
+      sgni    = xqpSgn[ori]*xqpOptSgn[ri];
+      rsi0    = ri;
+      rsi1    = ri+Nsite;
       sltE_i0 = sltE + rsi0*Nsite2;
       sltE_i1 = sltE + rsi1*Nsite2;
       
@@ -58,9 +60,9 @@ void UpdateSlaterElm() {
         slt_ji = Slater[ OrbitalIdx[trj][tri] ] * (double)(OrbitalSgn[trj][tri]*sgni*sgnj);
         
         sltE_i0[rsj0] = -(slt_ij - slt_ji)*cs;
-        sltE_i0[rsj1] = slt_ij*cc + slt_ji*ss;
+        sltE_i0[rsj1] =   slt_ij*cc + slt_ji*ss;
         sltE_i1[rsj0] = -slt_ij*ss - slt_ji*cc;
-        sltE_i1[rsj1] = (slt_ij - slt_ji)*cs;
+        sltE_i1[rsj1] =  (slt_ij - slt_ji)*cs;
       }
     }
   }
@@ -68,7 +70,7 @@ void UpdateSlaterElm() {
   return;
 }
 
-void SlaterElmDiff(double *srOptO, const double ip, int *eleIdx) {
+void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
   const int nBuf=NSlater*NQPFull;
   const int nsize = Nsize;
   const int ne = Ne;
@@ -82,22 +84,22 @@ void SlaterElmDiff(double *srOptO, const double ip, int *eleIdx) {
   int mpidx,spidx,orbidx,qpidx,optidx,i;
   double cs,cc,ss;
   int *xqp,*xqpSgn,*xqpOpt,*xqpOptSgn;
-  double *invM,*invM_i;
+  double complex *invM,*invM_i;
 
   int *orbitalIdx_i;
   int *transOrbIdx; /* transOrbIdx[mpidx][msi][msj] */
   int *transOrbSgn; /* transOrbSgn[mpidx][msi][msj] */
   int *tOrbIdx,*tOrbIdx_i;
   int *tOrbSgn,*tOrbSgn_i;
-  double *buf, *buffer;
-  double tmp;
+  double complex *buf, *buffer;
+  double complex tmp;
 
   RequestWorkSpaceInt(2*nTrans*Nsize*Nsize);
-  RequestWorkSpaceDouble(NQPFull*NSlater);
+  RequestWorkSpaceComplex(NQPFull*NSlater);
 
   transOrbIdx = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbIdx[mpidx][msi][msj] */
   transOrbSgn = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbSgn[mpidx][msi][msj] */
-  buffer = GetWorkSpaceDouble(NQPFull*NSlater);
+  buffer = GetWorkSpaceComplex(NQPFull*NSlater);
 
   for(i=0;i<nBuf;i++) buffer[i]=0.0;
 
@@ -204,6 +206,6 @@ void SlaterElmDiff(double *srOptO, const double ip, int *eleIdx) {
   }
 
   ReleaseWorkSpaceInt();
-  ReleaseWorkSpaceDouble();
+  ReleaseWorkSpaceComplex();
   return;
 }

@@ -7,11 +7,11 @@
 
 void VMCMainCal(MPI_Comm comm);
 void clearPhysQuantity();
-void calculateOptTransDiff(double *srOptO, const double ipAll);
-void calculateOO(double *srOptOO, double *srOptHO, const double *srOptO,
-                 const double w, const double e, const int srOptSize);
-void calculateOO_Store(double *srOptOO, double *srOptHO,  double *srOptO,
-                 const double w, const double e,  int srOptSize, int sampleSize);
+void calculateOptTransDiff(double complex *srOptO, const double complex ipAll);
+void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+                 const double w, const double complex e, const int srOptSize);
+void calculateOO_Store(double complex *srOptOO, double complex *srOptHO,  double complex *srOptO,
+                 const double w, const double complex e,  int srOptSize, int sampleSize);
 void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam);
 void calculateQCAQ(double *qcaq, const double *lslca, const double *lslq,
                    const double w, const int nLSHam, const int nCA);
@@ -21,7 +21,8 @@ void calculateQCACAQ(double *qcacaq, const double *lslca, const double w,
 
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
-  double e,x,w,ip;
+  double complex e,x,ip;
+  double w;
   double we,sqrtw;
 
   const int qpStart=0;
@@ -31,7 +32,7 @@ void VMCMainCal(MPI_Comm comm) {
 
   /* optimazation for Kei */
   const int nProj=NProj;
-  double *srOptO = SROptO;
+  double complex *srOptO = SROptO;
 
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);
@@ -49,7 +50,7 @@ void VMCMainCal(MPI_Comm comm) {
     eleProjCnt = EleProjCnt + sample*NProj;
 
     StartTimer(40);
-    info = CalculateMAll(eleIdx,qpStart,qpEnd);
+    info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd);
     StopTimer(40);
 
     if(info!=0) {
@@ -57,10 +58,11 @@ void VMCMainCal(MPI_Comm comm) {
       continue;
     }
 
-    ip = CalculateIP(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+    ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
     x = LogProjVal(eleProjCnt);
     /* calculate reweight */
-    w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
+    //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
+    w =1.0;
     if( !isfinite(w) ) {
       fprintf(stderr,"waring: VMCMainCal rank:%d sample:%d w=%e\n",rank,sample,w);
       continue;
@@ -71,7 +73,7 @@ void VMCMainCal(MPI_Comm comm) {
     e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
     StopTimer(41);
     if( !isfinite(e) ) {
-      fprintf(stderr,"waring: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,e);
+      fprintf(stderr,"waring: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
       continue;
     }
 
@@ -87,7 +89,7 @@ void VMCMainCal(MPI_Comm comm) {
 
       StartTimer(42);
       /* SlaterElmDiff */
-      SlaterElmDiff(SROptO+NProj+1,ip,eleIdx);
+      SlaterElmDiff_fcmp(SROptO+NProj+1,ip,eleIdx);
       StopTimer(42);
       
       if(FlagOptTrans>0) {
@@ -117,20 +119,21 @@ void VMCMainCal(MPI_Comm comm) {
       StopTimer(42);
 
       if(NLanczosMode>0){
+        // ignoring Lanczos: to be added
         /* Calculate local QQQQ */
-        StartTimer(43);
-        LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-        calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
-        StopTimer(43);
-        if(NLanczosMode>1){
+        //StartTimer(43);
+        //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+        //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
+        //StopTimer(43);
+        //if(NLanczosMode>1){
           /* Calculate local QcisAjsQ */
-          StartTimer(44);
-          LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-          calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
-          calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
-                          NCisAjsCktAlt,CisAjsCktAltIdx);
-          StopTimer(44);
-        }
+          //StartTimer(44);
+          //LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+          //calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
+          //calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
+          //                NCisAjsCktAlt,CisAjsCktAltIdx);
+          //StopTimer(44);
+        //}
       }
     }
   } /* end of for(sample) */
@@ -147,7 +150,7 @@ void VMCMainCal(MPI_Comm comm) {
 
 void clearPhysQuantity(){
   int i,n;
-  double *vec;
+  double complex *vec;
   Wc = Etot = Etot2 = 0.0;
   if(NVMCCalMode==0) {
     /* SROptOO, SROptHO, SROptO */
@@ -176,10 +179,10 @@ void clearPhysQuantity(){
   return;
 }
 
-void calculateOptTransDiff(double *srOptO, const double ipAll) {
+void calculateOptTransDiff(double complex *srOptO, const double complex ipAll) {
   int i,j;
-  double ip;
-  double *pfM;
+  double complex ip;
+  double complex *pfM;
 
   for(i=0;i<NQPOptTrans;++i) {
     ip = 0.0;
@@ -193,8 +196,8 @@ void calculateOptTransDiff(double *srOptO, const double ipAll) {
   return;
 }
 
-void calculateOO_Store(double *srOptOO, double *srOptHO, double *srOptO_Store,
-                 const double w, const double e, int srOptSize, int sampleSize) {
+void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double complex *srOptO_Store,
+                 const double w, const double complex e, int srOptSize, int sampleSize) {
 
   //#define M_DGEM dgemm_
 
@@ -209,34 +212,55 @@ void calculateOO_Store(double *srOptOO, double *srOptHO, double *srOptO_Store,
   
   jobz = 'N';
   uplo = 'T';
-  dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
+  //dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
 
   return;
 }
 
 
 
-void calculateOO(double *srOptOO, double *srOptHO, const double *srOptO,
-                 const double w, const double e, const int srOptSize) {
-  double we=w*e;
 
-  #define M_DAXPY daxpy_
-  #define M_DGER dger_
+//void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+//                 const double w, const double complex e, const int srOptSize) {
+//  double we=w*e;
+//
+//  #define M_DAXPY daxpy_
+//  #define M_DGER dger_
+//
+//  extern int M_DAXPY(const int *n, const double *alpha, const double *x, const int *incx,
+//                     double *y, const int *incy);
+//  extern int M_DGER(const int *m, const int *n, const double *alpha,
+//                    const double *x, const int *incx, const double *y, const int *incy, 
+//                    double *a, const int *lda);
+//  int m,n,incx,incy,lda;
+//  m=n=lda=srOptSize;
+//  incx=incy=1;
+//
+//  /* OO[i][j] += w*O[i]*O[j] */
+//  M_DGER(&m, &n, &w, srOptO, &incx, srOptO, &incy, srOptOO, &lda);
+//
+//  /* HO[i] += w*e*O[i] */
+//  M_DAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
+//
+//  return;
+//}
 
-  extern int M_DAXPY(const int *n, const double *alpha, const double *x, const int *incx,
-                     double *y, const int *incy);
-  extern int M_DGER(const int *m, const int *n, const double *alpha,
-                    const double *x, const int *incx, const double *y, const int *incy, 
-                    double *a, const int *lda);
-  int m,n,incx,incy,lda;
-  m=n=lda=srOptSize;
-  incx=incy=1;
-
-  /* OO[i][j] += w*O[i]*O[j] */
-  M_DGER(&m, &n, &w, srOptO, &incx, srOptO, &incy, srOptOO, &lda);
-
-  /* HO[i] += w*e*O[i] */
-  M_DAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
+void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+                 const double w, const double complex e, const int srOptSize){
+  int i,j;
+  double complex tmp;
+  #pragma omp parallel for default(shared)        \
+    private(i,j,tmp,srOptOO)
+  #pragma loop noalias
+  for(i=0;i<srOptSize;i++) {
+    tmp         = w * srOptO[i];
+    srOptHO[i] += e * tmp;
+    for(j=0;j<srOptSize;j++) {
+    //  srOptOO[j] += tmp * srOptO[j]; // TBC
+      /* OO[i][j] += w*O[i]*O[j] */
+    }
+    /* HO[i] += w*e*O[i] */
+  }
 
   return;
 }

@@ -34,9 +34,9 @@ void VMCMakeSample(MPI_Comm comm) {
   int nAccept=0;
   int sample;
 
-  double logIpOld,logIpNew; /* logarithm of inner product <phi|L|x> */
+  double complex logIpOld,logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
   int projCntNew[NProj];
-  double pfMNew[NQPFull];
+  double complex pfMNew[NQPFull];
   double x,w;
 
   int qpStart,qpEnd;
@@ -55,14 +55,14 @@ void VMCMakeSample(MPI_Comm comm) {
     copyFromBurnSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt);
   }
   
-  CalculateMAll(TmpEleIdx,qpStart,qpEnd);
-  logIpOld = CalculateLogIP(PfM,qpStart,qpEnd,comm);
+  CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+  logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
   if( !isfinite(logIpOld) ) {
-    if(rank==0) fprintf(stderr,"waring: VMCMakeSample remakeSample logIpOld=%e\n",logIpOld);
+    if(rank==0) fprintf(stderr,"waring: VMCMakeSample remakeSample logIpOld=%e\n",creal(logIpOld)); //TBC
     makeInitialSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,
                       qpStart,qpEnd,comm);
-    CalculateMAll(TmpEleIdx,qpStart,qpEnd);
-    logIpOld = CalculateLogIP(PfM,qpStart,qpEnd,comm);
+    CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+    logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
     BurnFlag = 0;
   }
   StopTimer(30);
@@ -99,7 +99,7 @@ void VMCMakeSample(MPI_Comm comm) {
 
           StartTimer(62);
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP(pfMNew,qpStart,qpEnd,comm);
+        logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
           StopTimer(62);
 
         /* Metroplis */
@@ -148,24 +148,24 @@ void VMCMakeSample(MPI_Comm comm) {
         StopTimer(65);
         StartTimer(66);
 
-        CalculateNewPfMTwo2(mi, s, mj, t, pfMNew, TmpEleIdx, qpStart, qpEnd);
+        CalculateNewPfMTwo2_fcmp(mi, s, mj, t, pfMNew, TmpEleIdx, qpStart, qpEnd);
 
         StopTimer(66);
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP(pfMNew,qpStart,qpEnd,comm);
+        logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
 
         StopTimer(67);
 
         /* Metroplis */
         x = LogProjRatio(projCntNew,TmpEleProjCnt);
-        w = exp(2.0*(x+logIpNew-logIpOld));
+        w = exp(2.0*(x+creal(logIpNew-logIpOld))); //TBC
         if( !isfinite(w) ) w = -1.0; /* should be rejected */
 
         if(w > genrand_real2()) { /* accept */
           StartTimer(68);
-          UpdateMAllTwo(mi, s, mj, t, ri, rj, TmpEleIdx,qpStart,qpEnd);
+          UpdateMAllTwo_fcmp(mi, s, mj, t, ri, rj, TmpEleIdx,qpStart,qpEnd);
           StopTimer(68);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
@@ -182,8 +182,8 @@ void VMCMakeSample(MPI_Comm comm) {
       if(nAccept>Nsite) {
         StartTimer(34);
         /* recal PfM and InvM */
-        CalculateMAll(TmpEleIdx,qpStart,qpEnd);
-        logIpOld = CalculateLogIP(PfM,qpStart,qpEnd,comm);
+        CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+        logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
         StopTimer(34);
         nAccept=0;
       }
@@ -255,7 +255,7 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
     
     MakeProjCnt(eleProjCnt,eleNum);
 
-    flag = CalculateMAll(eleIdx,qpStart,qpEnd);
+    flag = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd);
     if(size>1) {
       MPI_Allreduce(&flag,&flagRdc,1,MPI_INT,MPI_MAX,comm);
       flag = flagRdc;
@@ -310,7 +310,7 @@ void saveEleConfig(const int sample, const double logIp,
   for(i=0;i<nProj;i++) EleProjCnt[offset+i] = eleProjCnt[i];
   
   x = LogProjVal(eleProjCnt);
-  logSqPfFullSlater[sample] = 2.0*(x+logIp);
+  logSqPfFullSlater[sample] = 2.0*(x+creal(logIp));//TBC
   
   return;
 }

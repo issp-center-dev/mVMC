@@ -255,7 +255,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   for(step=0;step<NSROptItrStep;step++) {
     if(rank==0) OutputTime(step);
       StartTimer(20);
-    UpdateSlaterElm();
+    UpdateSlaterElm_fcmp();
     UpdateQPWeight();
       StopTimer(20);
       StartTimer(3);
@@ -308,7 +308,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   MPI_Comm_rank(comm_parent, &rank);
 
   StartTimer(20);
-  UpdateSlaterElm();
+  UpdateSlaterElm_fcmp();
   StopTimer(20);
 
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
@@ -358,7 +358,7 @@ void outputData() {
   /* zvo_var.dat */
   if(FlagBinary==0) { /* formatted output*/
     fprintf(FileVar, "% .18e 0.0 % .18e 0.0 ", Etot, Etot2);
-    for(i=0;i<NPara;i++)   fprintf(FileVar, "% .18e 0.0 ", Para[i]);
+    for(i=0;i<NPara;i++)   fprintf(FileVar, "% .18e % .18e 0.0 ", creal(Para[i]),cimag(Para[i]));
     fprintf(FileVar, "\n");
   } else { /* binary output */
     fwrite(Para,sizeof(double),NPara,FileVar);
@@ -366,44 +366,45 @@ void outputData() {
 
   if(NVMCCalMode==1) {
     /* zvo_cisajs.dat */
-    for(i=0;i<NCisAjs;i++) fprintf(FileCisAjs, "% .18e  ", PhysCisAjs[i]);
+    for(i=0;i<NCisAjs;i++) fprintf(FileCisAjs, "% .18e  % .18e ", creal(PhysCisAjs[i]), cimag(PhysCisAjs[i]));
     fprintf(FileCisAjs, "\n");
 
     /* zvo_cisajscktalt.dat */
-    for(i=0;i<NCisAjsCktAlt;i++) fprintf(FileCisAjsCktAlt, "% .18e  ", PhysCisAjsCktAlt[i]);
+    for(i=0;i<NCisAjsCktAlt;i++) fprintf(FileCisAjsCktAlt, "% .18e  % .18e ", creal(PhysCisAjsCktAlt[i]),cimag(PhysCisAjsCktAlt[i]));
     fprintf(FileCisAjsCktAlt, "\n");
 
     /* zvo_cisajscktaltdc.dat */
-    for(i=0;i<NCisAjsCktAltDC;i++) fprintf(FileCisAjsCktAltDC, "% .18e  ", PhysCisAjsCktAltDC[i]);
+    for(i=0;i<NCisAjsCktAltDC;i++) fprintf(FileCisAjsCktAltDC, "% .18e % .18e  ", creal(PhysCisAjsCktAltDC[i]),cimag(PhysCisAjsCktAltDC[i]));
     fprintf(FileCisAjsCktAltDC, "\n");
 
     if(NLanczosMode>0){
+// ignorign Lanczos to be added
       /* zvo_ls.dat */
-      fprintf(FileLS, "% .18e  ", QQQQ[2]);  /* H * I = QQQQ[1],[2],[4],[8] */
-      fprintf(FileLS, "% .18e  ", QQQQ[3]);  /* H * H = QQQQ[3],[6],[9],[12] */
-      fprintf(FileLS, "% .18e  ", QQQQ[10]); /* H^2 * I = QQQQ[5],[10] */
-      fprintf(FileLS, "% .18e  ", QQQQ[11]); /* H^2 * H = QQQQ[7],[11],[13],[14] */
-      fprintf(FileLS, "% .18e\n", QQQQ[15]); /* H^2 * H^2 = QQQQ[15] */
-
-      /* zvo_ls_qqqq.dat */
-      for(i=0;i<NLSHam*NLSHam*NLSHam*NLSHam;i++) {
-        fprintf(FileLSQQQQ, "% .18e  ", QQQQ[i]);
-      }
-      fprintf(FileLSQQQQ, "\n");
-
-      if(NLanczosMode>1){
-        /* zvo_ls_qcisajsq.dat */
-        for(i=0;i<NLSHam*NLSHam*NCisAjs;i++) {
-          fprintf(FileLSQCisAjsQ, "% .18e  ", QCisAjsQ[i]);
-        }
-        fprintf(FileLSQCisAjsQ, "\n");
-
-        /* zvo_ls_qcisajscktaltq.dat */
-        for(i=0;i<NLSHam*NLSHam*NCisAjsCktAlt;i++) {
-          fprintf(FileLSQCisAjsCktAltQ, "% .18e  ", QCisAjsCktAltQ[i]);
-        }
-        fprintf(FileLSQCisAjsCktAltQ, "\n");
-      }
+//      fprintf(FileLS, "% .18e  ", creal(QQQQ[2]));  /* H * I = QQQQ[1],[2],[4],[8] */      //TBC
+//      fprintf(FileLS, "% .18e  ", creal(QQQQ[3]));  /* H * H = QQQQ[3],[6],[9],[12] */     //TBC
+//      fprintf(FileLS, "% .18e  ", creal(QQQQ[2])); /* H^2 * I = QQQQ[5],[10] */           //TBC
+//      fprintf(FileLS, "% .18e  ", creal(QQQQ[11])); /* H^2 * H = QQQQ[7],[11],[13],[14] */ //TBC
+//      fprintf(FileLS, "% .18e\n", creal(QQQQ[15])); /* H^2 * H^2 = QQQQ[15] */             //TBC
+//
+//      /* zvo_ls_qqqq.dat */
+//      for(i=0;i<NLSHam*NLSHam*NLSHam*NLSHam;i++) {
+//        fprintf(FileLSQQQQ, "% .18e  ", creal(QQQQ[i]));
+//      }
+//      fprintf(FileLSQQQQ, "\n");
+//
+//      if(NLanczosMode>1){
+//        /* zvo_ls_qcisajsq.dat */
+//        for(i=0;i<NLSHam*NLSHam*NCisAjs;i++) {
+//          fprintf(FileLSQCisAjsQ, "% .18e  ", QCisAjsQ[i]);
+//        }
+//        fprintf(FileLSQCisAjsQ, "\n");
+//
+//        /* zvo_ls_qcisajscktaltq.dat */
+//        for(i=0;i<NLSHam*NLSHam*NCisAjsCktAlt;i++) {
+//          fprintf(FileLSQCisAjsCktAltQ, "% .18e  ", QCisAjsCktAltQ[i]);
+//        }
+//        fprintf(FileLSQCisAjsCktAltQ, "\n");
+//      }
     }
   }
 

@@ -100,7 +100,7 @@ int **OrbitalSgn; /* OrbitalSgn[Nsite][Nsite] = +1 or -1 */
 /* zqptransidx.def */
 int NQPTrans, **QPTrans; /* [NQPTrans][Nsite] */
 int **QPTransSgn; /* QPTransSgn[NQPTrans][NSite] = +1 or -1 */
-double *ParaQPTrans;
+double complex *ParaQPTrans;
 
 /* zqpopttrans.def */
 int NQPOptTrans, **QPOptTrans; /* [NQPOptTrans][Nsite] */
@@ -134,14 +134,13 @@ int FlagBinary=0;
 int NFileFlushInterval=1;
 
 /***** Variational Parameters *****/
-int NPara_rela,NPara_comp; /* the total number of variational prameters NPara_real= NProj, NPara_comp= NSlater+ NOptTrans */ //add_comp
+int NPara; /* the total number of variational prameters NPara= NProj + NSlater+ NOptTrans */ 
 int NProj;    /* the number of correlation factor */
 int NSlater;  /* the number of pair orbital (f_ij) = NOrbitalIdx */
 int NOptTrans; /* the number of weights for OptTrans. This is used only for variatonal parameters */
                /* NOptTrans = 0 (not OptTrans mode) or NQPOptTrans (OptTrans mode) */
-double *Para_real;   /* variatonal parameters for real*/
-double complex *Para_comp;   /* variatonal parameters for complex*/
-double *Proj;   /* correlation factor (Proj    =Para) */
+double complex *Para;   /* variatonal parameters */
+double complex *Proj;   /* correlation factor (Proj    =Para) */
 double complex *Slater; /* pair orbital       (Slater  =Para+NProj) */
 double complex *OptTrans; /* weights          (OptTrans=Para+NProj+NSlater) */
 
@@ -170,10 +169,10 @@ double complex *InvM; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
 double complex *PfM; /* PfM[QPidx] */
 
 /***** Quantum Projection *****/
-double *QPFullWeight; /* QPFullWeight[NQPFull] */
-double *QPFixWeight; /* QPFixWeight[NQPFix] */
-double *SPGLCos, *SPGLSin; /* [NSPGaussLeg]  cos(beta/2) and sin(beta/2) */
-double *SPGLCosSin, *SPGLCosCos, *SPGLSinSin; /* [NSPGaussLeg] */
+double complex *QPFullWeight; /* QPFullWeight[NQPFull] */
+double complex *QPFixWeight; /* QPFixWeight[NQPFix] */
+double complex *SPGLCos, *SPGLSin; /* [NSPGaussLeg]  cos(beta/2) and sin(beta/2) */
+double complex *SPGLCosSin, *SPGLCosCos, *SPGLSinSin; /* [NSPGaussLeg] */
 
 /***** Stocastic Reconfiguration *****/
 int    SROptSize; /* 1+NPara */
@@ -182,8 +181,7 @@ double complex *SROptHO; /* [SROptSize]            < HO > */
 double complex *SROptO;  /* [SROptSize] calculation buffar */
 double complex *SROptO_Store;  /* [SROptSize*NVMCSample] calculation buffar */
 
-double         *SROptData_real; /* [2+NPara_real] storage for energy and variational parameters */
-double complex *SROptData_real; /* [2+NPara_comp] storage for energy and variational parameters */
+double complex *SROptData; /* [2+NPara] storage for energy and variational parameters */
 
 /***** Physical Quantity *****/
 double Wc; /* Weight for correlation sampling = <psi|x> */
@@ -196,12 +194,12 @@ double complex *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
 double complex *LocalCisAjs; /* [NCisAjs] */
 
 const int NLSHam = 2; /* 0: I, 1: H */
-double *QQQQ; /* QQQQ[NLSHam][NLSHam][NLSHam][NLSHam]*/
-double *LSLQ; /* [NLSHam][NLSHam]*/
-
-double *QCisAjsQ; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/
-double *QCisAjsCktAltQ; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/
-double *LSLCisAjs; /* [NLSHam][NCisAjs]*/
+double complex *QQQQ; /* QQQQ[NLSHam][NLSHam][NLSHam][NLSHam]*/  //TBC
+double complex *LSLQ; /* [NLSHam][NLSHam]*/                      //TBC   
+ 
+double complex *QCisAjsQ; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/ //TBC
+double complex *QCisAjsCktAltQ; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/ //TBC
+double complex *LSLCisAjs; /* [NLSHam][NCisAjs]*/                //TBC
 
 /***** Output File *****/
 /* FILE *FileCfg; */

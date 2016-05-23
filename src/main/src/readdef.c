@@ -373,8 +373,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
         + 2*3*NDoublonHolon2siteIdx
         + 2*5*NDoublonHolon4siteIdx;
   NOptTrans = (FlagOptTrans>0) ? NQPOptTrans : 0;
-  NPara_real   = NProj;
-  NPara_comp   = NSlater + NOptTrans ; //add_comp
+  NPara   = NProj + NSlater + NOptTrans ; 
   NQPFix = NSPGaussLeg * NMPTrans;
   NQPFull = NQPFix * NQPOptTrans;
   SROptSize = NPara+1;
@@ -424,6 +423,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   int fidx=0; /* index for OptFlag */
   int x0,x1,x2,x3,x4,x5,x6,x7;
   int rank;
+  double tmp_real,tmp_comp;
 
   MPI_Comm_rank(comm, &rank);
 
@@ -749,8 +749,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             if(fp!=NULL) {
               for(i=0;i<5;i++) fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
               for(i=0;i<NQPTrans;i++){
-                fscanf(fp, "%d ", &itmp);
-                fscanf(fp, "%lf\n", &(ParaQPTrans[itmp]));
+                fscanf(fp, "%d ",   &itmp);
+                fscanf(fp, "%lf",   &(tmp_real));
+                fscanf(fp, "%lf\n", &(tmp_comp));
+                ParaQPTrans[itmp] = tmp_real+tmp_comp*I;
               }
               idx = 0;
               if(APFlag==0) {

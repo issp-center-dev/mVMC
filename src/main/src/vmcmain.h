@@ -2,7 +2,7 @@
  * Variational Monte Carlo
  * main program header
  *-------------------------------------------------------------
- * by Satoshi Morita and Ryui Kaneko
+ * by Satoshi Morita
  *-------------------------------------------------------------*/
 
 #ifndef _VMC_INCLUDE_FILES
@@ -38,6 +38,7 @@ extern int omp_get_thread_num(void);
 #include "global.h"
 
 #include "safempi.c"
+#include "safempi_fcmp.c"
 #include "time.c"
 #include "workspace.c"
 
@@ -59,12 +60,11 @@ extern int omp_get_thread_num(void);
 #include "qp.c"
 #include "matrix.c"
 #include "pfupdate.c"
-#include "pfupdate_two.c"
+#include "pfupdate_two_fcmp.c"
 #include "locgrn.c"
 #include "calham.c"
 #include "calgrn.c"
-#include "lslocgrn.c"
-
+//#include "lslocgrn.c" // ignoring Lanczos To be added
 #include "setmemory.c"
 #include "readdef.c"
 #include "initfile.c"

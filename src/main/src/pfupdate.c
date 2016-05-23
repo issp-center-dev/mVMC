@@ -5,18 +5,18 @@
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-void CalculateNewPfM(const int mi, const int s, double *pfMNew, const int *eleIdx,
+void CalculateNewPfM(const int mi, const int s, double complex *pfMNew, const int *eleIdx,
                      const int qpStart, const int qpEnd);
-void CalculateNewPfM2(const int mi, const int s, double *pfMNew, const int *eleIdx,
+void CalculateNewPfM2(const int mi, const int s, double complex *pfMNew, const int *eleIdx,
                      const int qpStart, const int qpEnd);
 void UpdateMAll(const int mi, const int s, const int *eleIdx,
                 const int qpStart, const int qpEnd);
 void updateMAll_child(const int ma, const int s, const int *eleIdx,
                       const int qpStart, const int qpEnd, const int qpidx,
-                      double *vec1, double *vec2);
+                      double complex *vec1, double complex *vec2);
 
 /* Calculate new pfaffian. The ma-th electron with spin s hops. */
-void CalculateNewPfM(const int ma, const int s, double *pfMNew, const int *eleIdx,
+void CalculateNewPfM(const int ma, const int s, double complex *pfMNew, const int *eleIdx,
                      const int qpStart, const int qpEnd) {
   #pragma procedure serial
   const int qpNum = qpEnd-qpStart;
@@ -25,9 +25,9 @@ void CalculateNewPfM(const int ma, const int s, double *pfMNew, const int *eleId
 
   int qpidx;
   int msj,rsj;
-  const double *sltE_a; /* update elements of msa-th row */
-  const double *invM_a;
-  double ratio;
+  const double complex *sltE_a; /* update elements of msa-th row */
+  const double complex *invM_a;
+  double complex ratio;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -55,7 +55,7 @@ void CalculateNewPfM(const int ma, const int s, double *pfMNew, const int *eleId
 }
 
 /* thread parallel version of CalculateNewPfM */
-void CalculateNewPfM2(const int ma, const int s, double *pfMNew, const int *eleIdx,
+void CalculateNewPfM2(const int ma, const int s, double complex *pfMNew, const int *eleIdx,
                      const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;
   const int msa = ma+s*Ne;
@@ -63,9 +63,9 @@ void CalculateNewPfM2(const int ma, const int s, double *pfMNew, const int *eleI
 
   int qpidx;
   int msj,rsj;
-  const double *sltE_a; /* update elements of msa-th row */
-  const double *invM_a;
-  double ratio;
+  const double complex *sltE_a; /* update elements of msa-th row */
+  const double complex *invM_a;
+  double complex ratio;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -99,14 +99,14 @@ void UpdateMAll(const int ma, const int s, const int *eleIdx,
                 const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;
   int qpidx;
-  double *vec1,*vec2;
+  double complex *vec1,*vec2;
 
-  RequestWorkSpaceThreadDouble(2*Nsize);
+  RequestWorkSpaceThreadComplex(2*Nsize);
 
   #pragma omp parallel default(shared) private(vec1,vec2)
   {
-    vec1 = GetWorkSpaceThreadDouble(Nsize);
-    vec2 = GetWorkSpaceThreadDouble(Nsize);
+    vec1 = GetWorkSpaceThreadComplex(Nsize);
+    vec2 = GetWorkSpaceThreadComplex(Nsize);
    
     #pragma omp for private(qpidx)
     #pragma loop nounroll
@@ -115,13 +115,13 @@ void UpdateMAll(const int ma, const int s, const int *eleIdx,
     }
   }
 
-  ReleaseWorkSpaceThreadDouble();
+  ReleaseWorkSpaceThreadComplex();
   return;
 }
 
 void updateMAll_child(const int ma, const int s, const int *eleIdx,
                       const int qpStart, const int qpEnd, const int qpidx,
-                      double *vec1, double *vec2) {
+                      double complex *vec1, double complex *vec2) {
   #pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
   const int msa = ma+s*Ne;
@@ -130,21 +130,21 @@ void updateMAll_child(const int ma, const int s, const int *eleIdx,
 
   int msi,msj,rsj;
 
-  const double *sltE_a; /* update elements of msa-th row */
-  double sltE_aj;
-  double *invM;
-  double *invM_i,*invM_j,*invM_a;
+  const double complex *sltE_a; /* update elements of msa-th row */
+  double complex sltE_aj;
+  double complex *invM;
+  double complex *invM_i,*invM_j,*invM_a;
 
-  double vec1_i,vec2_i;
-  double invVec1_a;
-  double tmp;
+  double complex vec1_i,vec2_i;
+  double complex invVec1_a;
+  double complex tmp;
 
   sltE_a = SlaterElm + (qpidx+qpStart)*Nsite2*Nsite2 + rsa*Nsite2;
 
   invM = InvM + qpidx*Nsize*Nsize;
   invM_a = invM + msa*Nsize;
 
-  for(msi=0;msi<nsize;msi++) vec1[msi] = 0.0;
+  for(msi=0;msi<nsize;msi++) vec1[msi] = 0.0+0.0*I; //TBC
 
   /* Calculate vec1[i] = sum_j invM[i][j] sltE[a][j] */
   /* Note tah invM[i][j] = -invM[j][i] */
