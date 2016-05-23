@@ -134,15 +134,16 @@ int FlagBinary=0;
 int NFileFlushInterval=1;
 
 /***** Variational Parameters *****/
-int NPara;    /* the total number of variational prameters = NSlater + NProj + NOptTrans */
+int NPara_rela,NPara_comp; /* the total number of variational prameters NPara_real= NProj, NPara_comp= NSlater+ NOptTrans */ //add_comp
 int NProj;    /* the number of correlation factor */
 int NSlater;  /* the number of pair orbital (f_ij) = NOrbitalIdx */
 int NOptTrans; /* the number of weights for OptTrans. This is used only for variatonal parameters */
                /* NOptTrans = 0 (not OptTrans mode) or NQPOptTrans (OptTrans mode) */
-double *Para;   /* variatonal parameters */
+double *Para_real;   /* variatonal parameters for real*/
+double complex *Para_comp;   /* variatonal parameters for complex*/
 double *Proj;   /* correlation factor (Proj    =Para) */
-double *Slater; /* pair orbital       (Slater  =Para+NProj) */
-double *OptTrans; /* weights          (OptTrans=Para+NProj+NSlater) */
+double complex *Slater; /* pair orbital       (Slater  =Para+NProj) */
+double complex *OptTrans; /* weights          (OptTrans=Para+NProj+NSlater) */
 
 /***** Electron Configuration ******/
 int *EleIdx; /* EleIdx[sample][mi+si*Ne] */
@@ -163,10 +164,10 @@ int *BurnEleProjCnt;
 int BurnFlag=0; /* 0: off, 1: on */
 
 /***** Slater Elements ******/
-double *SlaterElm; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
+double complex *SlaterElm; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
 
-double *InvM; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
-double *PfM; /* PfM[QPidx] */
+double complex *InvM; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
+double complex *PfM; /* PfM[QPidx] */
 
 /***** Quantum Projection *****/
 double *QPFullWeight; /* QPFullWeight[NQPFull] */
@@ -175,23 +176,24 @@ double *SPGLCos, *SPGLSin; /* [NSPGaussLeg]  cos(beta/2) and sin(beta/2) */
 double *SPGLCosSin, *SPGLCosCos, *SPGLSinSin; /* [NSPGaussLeg] */
 
 /***** Stocastic Reconfiguration *****/
-int SROptSize; /* 1+NPara */
-double *SROptOO; /* [SROptSize*SROptSize] <O^\dagger O> */
-double *SROptHO; /* [SROptSize]            < HO > */
-double *SROptO;  /* [SROptSize] calculation buffar */
-double *SROptO_Store;  /* [SROptSize*NVMCSample] calculation buffar */
+int    SROptSize; /* 1+NPara */
+double complex *SROptOO; /* [SROptSize*SROptSize] <O^\dagger O> */
+double complex *SROptHO; /* [SROptSize]            < HO > */
+double complex *SROptO;  /* [SROptSize] calculation buffar */
+double complex *SROptO_Store;  /* [SROptSize*NVMCSample] calculation buffar */
 
-double *SROptData; /* [2+NPara] storage for energy and variational parameters */
+double         *SROptData_real; /* [2+NPara_real] storage for energy and variational parameters */
+double complex *SROptData_real; /* [2+NPara_comp] storage for energy and variational parameters */
 
 /***** Physical Quantity *****/
 double Wc; /* Weight for correlation sampling = <psi|x> */
 double Etot; /* <H> */
 double Etot2; /* <H^2> */
 
-double *PhysCisAjs; /* [NCisAjs] */
-double *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */
-double *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
-double *LocalCisAjs; /* [NCisAjs] */
+double complex *PhysCisAjs; /* [NCisAjs] */
+double complex *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */
+double complex *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
+double complex *LocalCisAjs; /* [NCisAjs] */
 
 const int NLSHam = 2; /* 0: I, 1: H */
 double *QQQQ; /* QQQQ[NLSHam][NLSHam][NLSHam][NLSHam]*/

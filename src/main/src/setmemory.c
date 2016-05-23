@@ -193,10 +193,12 @@ void FreeMemoryDef() {
 void SetMemory() {
 
   /***** Variational Parameters *****/
-  Para = (double*)malloc(sizeof(double)*(NPara));
-  Proj = Para;
-  Slater = Para + NProj;
-  OptTrans = Para + NProj + NSlater;
+  Para_real = (double*)malloc(sizeof(double)*(NPara_real)); 
+  Para_comp = (double complex*)malloc(sizeof(double complex)*(NPara_comp)); 
+  Proj     = Para_real;
+
+  Slater   = Para_comp; 
+  OptTrans = Para_comp + NSlater;
 
   /***** Electron Configuration ******/
   EleIdx = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));
@@ -216,9 +218,9 @@ void SetMemory() {
   BurnEleProjCnt = BurnEleNum + 2*Nsite;
 
   /***** Slater Elements ******/
-  SlaterElm = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+  SlaterElm = (double complex*)malloc( sizeof(double complex)*(NQPFull*(2*Nsite)*(2*Nsite)) );
 
-  InvM = (double*)malloc( sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
+  InvM = (double complex*)malloc( sizeof(double complex)*(NQPFull*(Nsize*Nsize+1)) );
   PfM = InvM + NQPFull*Nsize*Nsize;
 
   /***** Quantum Projection *****/
@@ -232,19 +234,19 @@ void SetMemory() {
 
   /***** Stocastic Reconfiguration *****/
   if(NVMCCalMode==0){
-    SROptOO = (double*)malloc( sizeof(double)*(SROptSize*(SROptSize+2)) );
+    SROptOO = (double complex*)malloc( sizeof(double complex)*(SROptSize*(SROptSize+2)) );
     SROptHO = SROptOO + SROptSize*SROptSize;
     SROptO  = SROptHO + SROptSize;
 
     if(NStoreO!=0){
-      SROptO_Store = (double*)malloc( sizeof(double)*(SROptSize*NVMCSample) );
+      SROptO_Store = (double complex*)malloc( sizeof(double complex)*(SROptSize*NVMCSample) );
     }
-    SROptData = (double*)malloc( sizeof(double)*(NSROptItrSmp*(2+NPara)) );
+    SROptData = (double complex*)malloc( sizeof(double complex)*(NSROptItrSmp*(2+NPara)) );
   }
 
   /***** Physical Quantity *****/
   if(NVMCCalMode==1){
-    PhysCisAjs  = (double*)malloc(sizeof(double)
+    PhysCisAjs  = (double complex*)malloc(sizeof(double complex)
                     *(2*NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC));
     PhysCisAjsCktAlt   = PhysCisAjs       + NCisAjs;
     PhysCisAjsCktAltDC = PhysCisAjsCktAlt + NCisAjsCktAlt;

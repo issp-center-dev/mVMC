@@ -373,7 +373,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
         + 2*3*NDoublonHolon2siteIdx
         + 2*5*NDoublonHolon4siteIdx;
   NOptTrans = (FlagOptTrans>0) ? NQPOptTrans : 0;
-  NPara   = NSlater + NProj + NOptTrans;
+  NPara_real   = NProj;
+  NPara_comp   = NSlater + NOptTrans ; //add_comp
   NQPFix = NSPGaussLeg * NMPTrans;
   NQPFull = NQPFix * NQPOptTrans;
   SROptSize = NPara+1;
