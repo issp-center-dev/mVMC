@@ -75,9 +75,9 @@ void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
   const int nsize = Nsize;
   const int ne = Ne;
   const int nQPFull = NQPFull;
-  const int nMPTrans = NMPTrans;
+  const int nMPTrans = NMPTrans; // number of translational operators
   const int nSlater = NSlater;
-  const int nTrans = NMPTrans * NQPOptTrans;
+  const int nTrans = NMPTrans * NQPOptTrans; //usually NQPOptTrans=1
 
   const double invIP = 1.0/ip;
   int msi,msj,ri,rj,ori,orj,tri,trj,sgni,sgnj;
@@ -108,29 +108,30 @@ void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
             ri,ori,tri,sgni,rj,orj,trj,sgnj,                       \
             tOrbIdx,tOrbIdx_i,tOrbSgn,tOrbSgn_i,orbitalIdx_i)
   #pragma loop noalias
-  for(qpidx=0;qpidx<nTrans;qpidx++) {
-    optidx = qpidx / nMPTrans;
-    mpidx = qpidx % nMPTrans;
-
-    xqpOpt = QPOptTrans[optidx];
-    xqpOptSgn = QPOptTransSgn[optidx];
-    xqp = QPTrans[mpidx];
-    xqpSgn = QPTransSgn[mpidx];
-    tOrbIdx = transOrbIdx + qpidx*nsize*nsize;
-    tOrbSgn = transOrbSgn + qpidx*nsize*nsize;
-    for(msi=0;msi<nsize;msi++) {
-      ri = eleIdx[msi];
-      ori = xqpOpt[ri];
-      tri = xqp[ori];
-      sgni = xqpSgn[ori]*xqpOptSgn[ri];
-      tOrbIdx_i = tOrbIdx + msi*nsize;
-      tOrbSgn_i = tOrbSgn + msi*nsize;
-      orbitalIdx_i = OrbitalIdx[tri];
-      for(msj=0;msj<nsize;msj++) {
-        rj = eleIdx[msj];
-        orj = xqpOpt[rj];
-        trj = xqp[orj];
-        sgnj = xqpSgn[orj]*xqpOptSgn[rj];
+  for(qpidx=0;qpidx<nTrans;qpidx++) {            // nTran=nMPTrans*NQPOptTrans: usually nMPTrans
+    optidx    = qpidx / nMPTrans;                // qpidx=mpidx+nMPTrans*optidx
+    mpidx     = qpidx % nMPTrans; 
+                                                 // QPOptTrans:     NQPOptTrans* Nsite matrix :  usually NQPOptTrans = 1
+                                                 // QPOptTransSgn:  NQPOptTrans* Nsite matrix :  usually NQPOptTrans = 1 
+    xqpOpt    = QPOptTrans[optidx];              // xqpOpt[]    = QPOptTrans[optidx][]    : usually optidx=0 and not be used
+    xqpOptSgn = QPOptTransSgn[optidx];           // xqpOptSgn[] = QPOptTransSgn[optidx][] : usually optidx=0 and not be used
+    xqp       = QPTrans[mpidx];                  // xqp    =  QPTrans[mpidx][]
+    xqpSgn    = QPTransSgn[mpidx];               // xqpSgn =  QPTransSgn[mpidx][]
+    tOrbIdx   = transOrbIdx + qpidx*nsize*nsize; // tOrbIdx : f_ij
+    tOrbSgn   = transOrbSgn + qpidx*nsize*nsize; // tOrbSgn : sign of f_ij
+    for(msi=0;msi<nsize;msi++) {                 // nsize=2*Ne
+      ri           = eleIdx[msi];                //  ri  : postion where the msi-th electron exists  
+      ori          = xqpOpt[ri];                 // ori  : 
+      tri          = xqp[ori];                   // tri  : 
+      sgni         = xqpSgn[ori]*xqpOptSgn[ri];  // sgni :
+      tOrbIdx_i    = tOrbIdx + msi*nsize;        // 
+      tOrbSgn_i    = tOrbSgn + msi*nsize;        //
+      orbitalIdx_i = OrbitalIdx[tri];            //
+      for(msj=0;msj<nsize;msj++) { //nsize=2*Ne //
+        rj             = eleIdx[msj];           //
+        orj            = xqpOpt[rj];         
+        trj            = xqp[orj];
+        sgnj           = xqpSgn[orj]*xqpOptSgn[rj];
         tOrbIdx_i[msj] = orbitalIdx_i[trj];
         tOrbSgn_i[msj] = sgni*sgnj*OrbitalSgn[tri][trj];
       }
@@ -142,46 +143,46 @@ void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
             tOrbIdx,tOrbSgn,invM,buf,msi,msj,             \
             tOrbIdx_i,tOrbSgn_i,invM_i,orbidx)
   #pragma loop noalias
-  for(qpidx=0;qpidx<nQPFull;qpidx++) {
-    mpidx = qpidx / NSPGaussLeg;
+  for(qpidx=0;qpidx<nQPFull;qpidx++) { // nQPFull = NQPFix * NQPOptTrans: usually = NSPGaussLeg * NMPTrans
+    mpidx = qpidx / NSPGaussLeg;       // qpidx   = NSPGaussLeg*mpidx + spidx
     spidx = qpidx % NSPGaussLeg;
 
-    cs = PfM[qpidx] * SPGLCosSin[spidx];
-    cc = PfM[qpidx] * SPGLCosCos[spidx];
-    ss = PfM[qpidx] * SPGLSinSin[spidx];
+    cs = PfM[qpidx] * SPGLCosSin[spidx]; // spin rotaion
+    cc = PfM[qpidx] * SPGLCosCos[spidx]; //
+    ss = PfM[qpidx] * SPGLSinSin[spidx]; //
 
-    tOrbIdx = transOrbIdx + mpidx*nsize*nsize;
-    tOrbSgn = transOrbSgn + mpidx*nsize*nsize;
-    invM = InvM + qpidx*Nsize*Nsize;
-    buf = buffer + qpidx*NSlater;
+    tOrbIdx = transOrbIdx + mpidx*nsize*nsize; // tOrbIdx[msi][msj] = transOrbIdx[mpidx][msi][msj]
+    tOrbSgn = transOrbSgn + mpidx*nsize*nsize; // tOrbSgn[msi][msj] = transOrbSgn[mpidx][msi][msj]
+    invM    = InvM        + qpidx*Nsize*Nsize; // invM  M^-1 and PfM, InvM: NQPFull*(Nsize*Nsize)+PfM
+    buf     = buffer      + qpidx*NSlater;     // buf   fij, buffer: NSlater*NQPFull
 
     #pragma loop norecurrence
     for(msi=0;msi<ne;msi++) {
-      tOrbIdx_i = tOrbIdx + msi*nsize;
-      tOrbSgn_i = tOrbSgn + msi*nsize;
-      invM_i = invM + msi*nsize;
-      for(msj=0;msj<ne;msj++) {
+      tOrbIdx_i = tOrbIdx + msi*nsize;         // tOrbIdx_i[] = tOrbIdx[msi][msj]
+      tOrbSgn_i = tOrbSgn + msi*nsize;         // tOrbSgn_i[] = tOrbSgn[msi][msj]
+      invM_i    = invM + msi*nsize;            // invM[]      = invM[msi][]
+      for(msj=0;msj<ne;msj++) {      // up-up
         /* si=0 sj=0*/
-        orbidx = tOrbIdx_i[msj];
+        orbidx       = tOrbIdx_i[msj];
         buf[orbidx] += invM_i[msj]*cs*tOrbSgn_i[msj];
       }
-      for(msj=ne;msj<nsize;msj++) {
+      for(msj=ne;msj<nsize;msj++) { // up-down
         /* si=0 sj=1*/
-        orbidx = tOrbIdx_i[msj];
+        orbidx       = tOrbIdx_i[msj];
         buf[orbidx] -= invM_i[msj]*cc*tOrbSgn_i[msj];
       }
     }
     #pragma loop norecurrence
-    for(msi=ne;msi<nsize;msi++) {
+    for(msi=ne;msi<nsize;msi++) { 
       tOrbIdx_i = tOrbIdx + msi*nsize;
       tOrbSgn_i = tOrbSgn + msi*nsize;
       invM_i = invM + msi*nsize;
-      for(msj=0;msj<ne;msj++) {
+      for(msj=0;msj<ne;msj++) {    // down-up
         /* si=1 sj=0*/
         orbidx = tOrbIdx_i[msj];
         buf[orbidx] += invM_i[msj]*ss*tOrbSgn_i[msj];
       }
-      for(msj=ne;msj<nsize;msj++) {
+      for(msj=ne;msj<nsize;msj++) {// down-down
         /* si=1 sj=1*/
         orbidx = tOrbIdx_i[msj];
         buf[orbidx] -= invM_i[msj]*cs*tOrbSgn_i[msj];
