@@ -59,10 +59,10 @@ void UpdateSlaterElm_fcmp() {
         slt_ij = Slater[ OrbitalIdx[tri][trj] ] * (double)(OrbitalSgn[tri][trj]*sgni*sgnj);
         slt_ji = Slater[ OrbitalIdx[trj][tri] ] * (double)(OrbitalSgn[trj][tri]*sgni*sgnj);
         
-        sltE_i0[rsj0] = -(slt_ij - slt_ji)*cs;
-        sltE_i0[rsj1] =   slt_ij*cc + slt_ji*ss;
-        sltE_i1[rsj0] = -slt_ij*ss - slt_ji*cc;
-        sltE_i1[rsj1] =  (slt_ij - slt_ji)*cs;
+        sltE_i0[rsj0] = -(slt_ij - slt_ji)*cs;   // up   - up
+        sltE_i0[rsj1] =   slt_ij*cc + slt_ji*ss; // up   - down
+        sltE_i1[rsj0] = -slt_ij*ss - slt_ji*cc;  // down - up
+        sltE_i1[rsj1] =  (slt_ij - slt_ji)*cs;   // down - down 
       }
     }
   }
@@ -70,6 +70,7 @@ void UpdateSlaterElm_fcmp() {
   return;
 }
 
+// Calculating Tr[Inv[M]*D_k(X)]
 void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
   const int nBuf=NSlater*NQPFull;
   const int nsize = Nsize;
@@ -161,12 +162,12 @@ void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
       tOrbIdx_i = tOrbIdx + msi*nsize;         // tOrbIdx_i[] = tOrbIdx[msi][msj]
       tOrbSgn_i = tOrbSgn + msi*nsize;         // tOrbSgn_i[] = tOrbSgn[msi][msj]
       invM_i    = invM + msi*nsize;            // invM[]      = invM[msi][]
-      for(msj=0;msj<ne;msj++) {      // up-up
+      for(msj=0;msj<ne;msj++) {                // up-up
         /* si=0 sj=0*/
-        orbidx       = tOrbIdx_i[msj];
+        orbidx       = tOrbIdx_i[msj];         // 
         buf[orbidx] += invM_i[msj]*cs*tOrbSgn_i[msj];
       }
-      for(msj=ne;msj<nsize;msj++) { // up-down
+      for(msj=ne;msj<nsize;msj++) {            // up-down
         /* si=0 sj=1*/
         orbidx       = tOrbIdx_i[msj];
         buf[orbidx] -= invM_i[msj]*cc*tOrbSgn_i[msj];
