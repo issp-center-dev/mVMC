@@ -13,12 +13,12 @@ void CalculateGreenFunc(const double w, const double ip, int *eleIdx, int *eleCf
 
   int idx,idx0,idx1;
   int ri,rj,s,rk,rl,t;
-  double tmp;
+  double complex tmp;
   int *myEleIdx, *myEleNum, *myProjCntNew;
-  double *myBuffer;
+  double complex *myBuffer;
 
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
-  RequestWorkSpaceThreadDouble(NQPFull+2*Nsize);
+  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
 #pragma omp parallel default(shared)\
@@ -27,7 +27,7 @@ void CalculateGreenFunc(const double w, const double ip, int *eleIdx, int *eleCf
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
-    myBuffer = GetWorkSpaceThreadDouble(NQPFull+2*Nsize);
+    myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -86,6 +86,6 @@ void CalculateGreenFunc(const double w, const double ip, int *eleIdx, int *eleCf
   }
 
   ReleaseWorkSpaceThreadInt();
-  ReleaseWorkSpaceThreadDouble();
+  ReleaseWorkSpaceThreadComplex();
   return;
 }

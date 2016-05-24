@@ -5,27 +5,27 @@
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-double CalculateHamiltonian(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian(const double ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt);
-double CalculateHamiltonian0(const int *eleNum);
-double CalculateHamiltonian1(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian0(const int *eleNum);
+double complex CalculateHamiltonian1(const double ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt);
-double CalculateHamiltonian2(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian2(const double ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt);
 
-double CalculateHamiltonian(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian(const double ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt) {
   const int *n0 = eleNum;
   const int *n1 = eleNum + Nsite;
-  double e=0.0, tmp;
+  double complex e=0.0, tmp;
   int idx;
   int ri,rj,s,rk,rl,t;
   int *myEleIdx, *myEleNum, *myProjCntNew;
-  double *myBuffer;
-  double myEnergy;
+  double complex *myBuffer;
+  double complex myEnergy;
 
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
-  RequestWorkSpaceThreadDouble(NQPFull+2*Nsize);
+  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
 #pragma omp parallel default(shared)\
@@ -35,7 +35,7 @@ double CalculateHamiltonian(const double ip, int *eleIdx, const int *eleCfg,
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
-    myBuffer = GetWorkSpaceThreadDouble(NQPFull+2*Nsize);
+    myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -132,20 +132,20 @@ double CalculateHamiltonian(const double ip, int *eleIdx, const int *eleCfg,
   }
 
   ReleaseWorkSpaceThreadInt();
-  ReleaseWorkSpaceThreadDouble();
+  ReleaseWorkSpaceThreadComplex();
   return e;
 }
 
 /* Calculate the CoulombIntra, CoulombInter, Hund terms, */
 /* which can be calculated by number operators. */
 /* This function will be used in the Lanczos mode */
-double CalculateHamiltonian0(const int *eleNum) {
+double complex CalculateHamiltonian0(const int *eleNum) {
   const int *n0 = eleNum;
   const int *n1 = eleNum + Nsite;
-  double e=0.0;
+  double complex e=0.0;
   int idx;
   int ri,rj;
-  double myEnergy;
+  double complex myEnergy;
 
 #pragma omp parallel default(shared)\
   private(myEnergy) reduction(+:e)
@@ -185,17 +185,17 @@ double CalculateHamiltonian0(const int *eleNum) {
 /* Calculate the transfer terms, */
 /* which can be calculated by 1-body Green function. */
 /* This function will be used in the Lanczos mode */
-double CalculateHamiltonian1(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian1(const double ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt) {
-  double e=0.0;
+  double complex e=0.0;
   int idx;
   int ri,rj,s;
   int *myEleIdx, *myEleNum, *myProjCntNew;
-  double *myBuffer;
-  double myEnergy;
+  double complex *myBuffer;
+  double complex myEnergy;
 
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
-  RequestWorkSpaceThreadDouble(NQPFull);
+  RequestWorkSpaceThreadComplex(NQPFull);
   /* GreenFunc1: NQPFull */
 
 #pragma omp parallel default(shared)\
@@ -205,7 +205,7 @@ double CalculateHamiltonian1(const double ip, int *eleIdx, const int *eleCfg,
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
-    myBuffer = GetWorkSpaceThreadDouble(NQPFull);
+    myBuffer = GetWorkSpaceThreadComplex(NQPFull);
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -230,24 +230,24 @@ double CalculateHamiltonian1(const double ip, int *eleIdx, const int *eleCfg,
   }
 
   ReleaseWorkSpaceThreadInt();
-  ReleaseWorkSpaceThreadDouble();
+  ReleaseWorkSpaceThreadComplex();
   return e;
 }
 
 /* Calculate the exchange coupling, pair hopping, interAll terms, */
 /* which can be calculated by 2-body Green function. */
 /* This function will be used in the Lanczos mode */
-double CalculateHamiltonian2(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian2(const double ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt) {
   double e=0.0, tmp;
   int idx;
   int ri,rj,s,rk,rl,t;
   int *myEleIdx, *myEleNum, *myProjCntNew;
-  double *myBuffer;
-  double myEnergy;
+  double complex *myBuffer;
+  double complex myEnergy;
 
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
-  RequestWorkSpaceThreadDouble(NQPFull+2*Nsize);
+  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
   /* GreenFunc2: NQPFull+2*Nsize */
 
 #pragma omp parallel default(shared)\
@@ -257,7 +257,7 @@ double CalculateHamiltonian2(const double ip, int *eleIdx, const int *eleCfg,
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
-    myBuffer = GetWorkSpaceThreadDouble(NQPFull+2*Nsize);
+    myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -309,6 +309,6 @@ double CalculateHamiltonian2(const double ip, int *eleIdx, const int *eleCfg,
   }
 
   ReleaseWorkSpaceThreadInt();
-  ReleaseWorkSpaceThreadDouble();
+  ReleaseWorkSpaceThreadComplex();
   return e;
 }

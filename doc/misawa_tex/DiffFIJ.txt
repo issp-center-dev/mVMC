@@ -1,0 +1,13 @@
+&I=(i,\sigma), J=(j,\sigma^{\prime}) \\
+&F_{IJ}=f_{ij}\times\alpha(\sigma,\sigma^{\prime}) \\
+&X=F_{IJ}-F_{JI}=f_{ij}\times\alpha(\sigma,\sigma^{\prime})-f_{ji}\times\alpha(\sigma^{\prime},\sigma) \\
+&Y_{IJ}=\Big(\frac{\partial X}{\partial f_{ab}}\Big)
+=\delta_{ia}\delta_{jb}\times\alpha(\sigma,\sigma^{\prime})
+-\delta_{ja}\delta_{ib}\times\alpha(\sigma^{\prime},\sigma) \\
+\\
+&\sum_{M,L} (X^{-1})_{ML}Y_{ML}=\sum_{m,l,\sigma,\sigma^{\prime}}
+(X^{-1})_{m\sigma,l\sigma^{\prime}}Y_{l\sigma^{\prime},m\sigma} \\
+&=\sum_{\sigma,\sigma^{\prime}}(X^{-1})_{m\sigma,l\sigma^{\prime}}
+[\delta_{la}\delta_{mb}\times\alpha(\sigma,\sigma^{\prime})
+-\delta_{ma}\delta_{lb}\times\alpha(\sigma^{\prime},\sigma)] \\
+&=-2\sum_{\sigma,\sigma^{\prime}}\alpha(\sigma,\sigma^{\prime})(X^{-1})_{a\sigma,b\sigma^{\prime}}

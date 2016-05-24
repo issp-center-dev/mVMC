@@ -43,7 +43,7 @@ int stcOptMainDiag(double *const r, int const nSmat, int *const smatToParaIdx,
 int StochasticOpt(MPI_Comm comm) {
   const int nPara=NPara;
   const int srOptSize=SROptSize;
-  const double *srOptOO=SROptOO;
+  const double complex *srOptOO=SROptOO;
 
   double r[SROptSize]; /* the parameter change */
   int nSmat;
@@ -60,7 +60,7 @@ int StochasticOpt(MPI_Comm comm) {
   int simax;
   int info=0;
 
-  double *para=Para;
+  double complex *para=Para;
 
   int rank,size;
   MPI_Comm_rank(comm,&rank);
@@ -198,10 +198,10 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   int ir,ic;
 
   const int srOptSize=SROptSize;
-  const double dSROptStepDt = DSROptStepDt;
-  const double srOptHO_0=SROptHO[0];
-  double *srOptOO=SROptOO;
-  double *srOptHO=SROptHO;
+  const double complex dSROptStepDt = DSROptStepDt;
+  const double complex srOptHO_0=SROptHO[0];
+  double complex *srOptOO=SROptOO;
+  double complex *srOptHO=SROptHO;
 
   StartTimer(55);
 
@@ -320,7 +320,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
     }
 
     /* gather the solution to r on rank=0 process */
-    SafeMpiReduce(w,r,nSmat,comm_col);
+    SafeMpiReduce_fcmp(w,r,nSmat,comm_col);
   }
 
   StopTimer(58);
@@ -335,7 +335,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
 int StochasticOptDiag(MPI_Comm comm) {
   const int nPara=NPara;
   const int srOptSize=SROptSize;
-  const double *srOptOO=SROptOO;
+  const double complex *srOptOO=SROptOO;
 
   double *r; /* the parameter change */
   int nSmat;
@@ -352,7 +352,7 @@ int StochasticOptDiag(MPI_Comm comm) {
   int simax;
   int info=0;
 
-  double *para=Para;
+  double complex *para=Para;
 
   int rank,size;
   MPI_Comm_rank(comm,&rank);
@@ -460,8 +460,8 @@ int stcOptMainDiag(double *const r, int const nSmat, int *const smatToParaIdx,
   const double dSROptStepDt = DSROptStepDt;
   const double dSROptRedCut = DSROptRedCut;
   const double srOptHO_0=SROptHO[0];
-  double *srOptOO=SROptOO;
-  double *srOptHO=SROptHO;
+  double complex *srOptOO=SROptOO;
+  double complex *srOptHO=SROptHO;
   
   int si,sj,pi,pj,idx;
   int ir,ic;

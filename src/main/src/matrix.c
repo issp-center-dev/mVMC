@@ -4,10 +4,12 @@
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+// Questions: what is rwork : only for complex ?? 
 
-int CalculateMAll(const int *eleIdx, const int qpStart, const int qpEnd);
-int calculateMAll_child(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
-                        double *bufM, int *iwork, double *work, int lwork);
+
+int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd);
+int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
+                        double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
 
 #ifdef _SYSTEM_A
   #define M_DGETRF DGETRF
@@ -86,36 +88,37 @@ int getLWork_fcomp() {
 }
 
 
-
-
+//==============s fcomp =============//
 /* Calculate PfM and InvM from qpidx=qpStart to qpEnd */
-int CalculateMAll(const int *eleIdx, const int qpStart, const int qpEnd) {
+int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;
   int qpidx;
 
   int info = 0;
 
-  double *myBufM;
-  double *myWork;
-  int *myIWork;
-  int myInfo;
+  double complex *myBufM;
+  double complex *myWork;
+  int            *myIWork;
+  int             myInfo;
+  double         *myRWork;
 
   RequestWorkSpaceThreadInt(Nsize);
-  RequestWorkSpaceThreadDouble(Nsize*Nsize+LapackLWork);
+  RequestWorkSpaceThreadComplex(Nsize*Nsize+LapackLWork);
+  RequestWorkSpaceThreadDouble(Nsize*Nsize+LapackLWork); // TBC for rwork
 
   #pragma omp parallel default(shared)              \
     private(myIWork,myWork,myInfo,myBufM)
   {
     myIWork = GetWorkSpaceThreadInt(Nsize);
-    myBufM = GetWorkSpaceThreadDouble(Nsize*Nsize);
-    myWork = GetWorkSpaceThreadDouble(LapackLWork);
+    myBufM = GetWorkSpaceThreadComplex(Nsize*Nsize);
+    myRWork = GetWorkSpaceThreadDouble(Nsize*Nsize+LapackLWork); //TBC for rwork
 
     #pragma omp for private(qpidx)
     for(qpidx=0;qpidx<qpNum;qpidx++) {
       if(info!=0) continue;
       
-      myInfo = calculateMAll_child(eleIdx, qpStart, qpEnd, qpidx,
-                                   myBufM, myIWork, myWork, LapackLWork);
+      myInfo = calculateMAll_child_fcomp(eleIdx, qpStart, qpEnd, qpidx,
+                                   myBufM, myIWork, myWork, LapackLWork,myRWork);
       if(myInfo!=0) {
         #pragma omp critical
         info=myInfo;
@@ -124,12 +127,13 @@ int CalculateMAll(const int *eleIdx, const int qpStart, const int qpEnd) {
   }
 
   ReleaseWorkSpaceThreadInt();
+  ReleaseWorkSpaceThreadComplex();
   ReleaseWorkSpaceThreadDouble();
   return info;
 }
 
-int calculateMAll_child(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
-                        double *bufM, int *iwork, double *work, int lwork) {
+int calculateMAll_child_fcomp(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
+                        double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork) {
   #pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
   int msi,msj;
@@ -137,18 +141,18 @@ int calculateMAll_child(const int *eleIdx, const int qpStart, const int qpEnd, c
 
   char uplo='U', mthd='P';
   int m,n,lda,info=0;
-  double pfaff;
+  double complex pfaff;
 
   /* optimization for Kei */
   const int nsize = Nsize;
 
-  const double *sltE = SlaterElm + (qpidx+qpStart)*Nsite2*Nsite2;
-  const double *sltE_i;
+  const double complex *sltE = SlaterElm + (qpidx+qpStart)*Nsite2*Nsite2;
+  const double complex *sltE_i;
 
-  double *invM = InvM + qpidx*Nsize*Nsize;
-  double *invM_i;
+  double complex *invM = InvM + qpidx*Nsize*Nsize;
+  double complex *invM_i;
 
-  double *bufM_i, *bufM_i2;
+  double complex *bufM_i, *bufM_i2;
 
   m=n=lda=Nsize;
 
@@ -174,16 +178,16 @@ int calculateMAll_child(const int *eleIdx, const int qpStart, const int qpEnd, c
     invM[msi] = bufM[msi];
   }
   /* calculate Pf M */
-  M_DSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, &info);
+  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
   if(info!=0) return info;
   if(!isfinite(pfaff)) return qpidx+1;
   PfM[qpidx] = pfaff;
 
   /* DInv */
-  M_DGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
+  M_ZGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
   if(info!=0) return info;
   
-  M_DGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
+  M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
   if(info!=0) return info;
   
   /* store InvM */
@@ -201,3 +205,6 @@ int calculateMAll_child(const int *eleIdx, const int qpStart, const int qpEnd, c
 
   return info;
 }
+
+
+//==============e fcomp =============//
