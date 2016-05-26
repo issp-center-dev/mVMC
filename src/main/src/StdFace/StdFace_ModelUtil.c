@@ -440,6 +440,39 @@ void StdFace_FoldSite2D(struct StdIntList *StdI,
 
 /**
 *
+* Define whether the specified site is in the unit cell or not.
+*
+* @author Mitsuaki Kawamura (The University of Tokyo)
+*/
+void StdFace_FoldSite2Dsub(struct StdIntList *StdI,
+  int iW, int iL, int *iCell0, int *iCell1, int *iWfold, int *iLfold)
+{
+  double x0, x1, xW, xL;
+
+  /*
+  Transform to fractional coordinate
+  */
+  x0 = StdI->bW0sub * (double)iW + StdI->bL0sub * (double)iL;
+  x1 = StdI->bW1sub * (double)iW + StdI->bL1sub * (double)iL;
+  /**/
+  if (x0 + 1.0e-8 >= 0.0) *iCell0 = (int)(x0 + 1.0e-8);
+  else *iCell0 = (int)(x0 + 1.0e-8) - 1;
+  if (x1 + 1.0e-8 >= 0.0) *iCell1 = (int)(x1 + 1.0e-8);
+  else *iCell1 = (int)(x1 + 1.0e-8) - 1;
+  /**/
+  x0 -= (double)*iCell0;
+  x1 -= (double)*iCell1;
+  /**/
+  xW = (double)StdI->a0Wsub * x0 + (double)StdI->a1Wsub * x1;
+  xL = (double)StdI->a0Lsub * x0 + (double)StdI->a1Lsub * x1;
+  if (xW >= 0) *iWfold = (int)(xW + 1.0e-8);
+  else *iWfold = (int)(xW - 1.0e-8);
+  if (xL >= 0) *iLfold = (int)(xL + 1.0e-8);
+  else *iLfold = (int)(xL - 1.0e-8);
+}
+
+/**
+*
 * Initialize Cell
 *
 * @author Mitsuaki Kawamura (The University of Tokyo)
@@ -493,8 +526,8 @@ void StdFace_InitSite2D(struct StdIntList *StdI, FILE *fp,
       exitMPI(-1);
     }
     StdFace_PrintVal_i("a0W", &StdI->a0W, 1);
-    StdFace_PrintVal_i("a0L", &StdI->a0L, 1);
-    StdFace_PrintVal_i("a1W", &StdI->a1W, 1);
+    StdFace_PrintVal_i("a0L", &StdI->a0L, 0);
+    StdFace_PrintVal_i("a1W", &StdI->a1W, 0);
     StdFace_PrintVal_i("a1L", &StdI->a1L, 1);
   }
   StdI->Wx = Wx0;
@@ -615,6 +648,121 @@ void StdFace_InitSite2D(struct StdIntList *StdI, FILE *fp,
 
 }
 
+/**
+*
+* Initialize sub Cell
+*
+* @author Mitsuaki Kawamura (The University of Tokyo)
+*/
+void StdFace_InitSite2DSub(struct StdIntList *StdI)
+{
+  int Wmin, Wmax, Lmin, Lmax;
+  int iW, iL, ipos;
+  int iCell, iCell0, iCell1, iWfold, iLfold, isiteUC;
+  double pos[4][2], xmin, xmax, det/*, offset[2], scale*/;
+  /*
+  check Input parameters
+  */
+  if ((StdI->Lsub != 9999 || StdI->Wsub != 9999)
+    && (StdI->a0Lsub != 9999 || StdI->a0Wsub != 9999 || StdI->a1Lsub != 9999 || StdI->a1Wsub != 9999)) {
+    fprintf(stdout, "\nERROR ! (Lsub, Wsub) and (a0Wsub, a0Lsub, a1Wsub, a1Lsub) conflict !\n\n");
+    exitMPI(-1);
+  }
+  else if (StdI->Lsub != 9999 || StdI->Wsub != 9999) {
+    if (StdI->Lsub == 9999) {
+      fprintf(stdout, "\nERROR ! Wsub is specified, but Lsub is NOT specified !\n\n");
+      exitMPI(-1);
+    }
+    else if (StdI->Wsub == 9999) {
+      fprintf(stdout, "\nERROR ! Lsub is specified, but Wsub is NOT specified !\n\n");
+      exitMPI(-1);
+    }
+    StdFace_PrintVal_i("Lsub", &StdI->Lsub, 1);
+    StdFace_PrintVal_i("Wsub", &StdI->Wsub, 1);
+    StdI->a0Wsub = StdI->Wsub;
+    StdI->a0Lsub = 0;
+    StdI->a1Wsub = 0;
+    StdI->a1Lsub = StdI->Lsub;
+  }
+  else if (StdI->a0Lsub != 9999 || StdI->a0Wsub != 9999 || StdI->a1Lsub != 9999 || StdI->a1Wsub != 9999) {
+    if (StdI->a0Wsub == 9999) {
+      fprintf(stdout, "\nERROR ! a0Wsub is NOT specified !\n\n");
+      exitMPI(-1);
+    }
+    else if (StdI->a0L == 9999) {
+      fprintf(stdout, "\nERROR ! a0Lsub is NOT specified !\n\n");
+      exitMPI(-1);
+    }
+    else if (StdI->a1W == 9999) {
+      fprintf(stdout, "\nERROR ! a1Wsub is NOT specified !\n\n");
+      exitMPI(-1);
+    }
+    else if (StdI->a1L == 9999) {
+      fprintf(stdout, "\nERROR ! a1Lsub is NOT specified !\n\n");
+      exitMPI(-1);
+    }
+    StdFace_PrintVal_i("a0Wsub", &StdI->a0Wsub, 1);
+    StdFace_PrintVal_i("a0Lsub", &StdI->a0Lsub, 0);
+    StdFace_PrintVal_i("a1Wsub", &StdI->a1Wsub, 0);
+    StdFace_PrintVal_i("a1Lsub", &StdI->a1Lsub, 1);
+  }
+  /*
+  Calculate reciplocal lattice vectors
+  */
+  if (StdI->a0Wsub * StdI->a1Lsub - StdI->a0Lsub * StdI->a1Wsub == 0) {
+    exitMPI(-1);
+  }
+
+  det = (double)(StdI->a0Wsub * StdI->a1Lsub - StdI->a0Lsub * StdI->a1Wsub);
+  StdI->bW0sub = (double)StdI->a1Lsub / det;
+  StdI->bL0sub = -(double)StdI->a1Wsub / det;
+  StdI->bW1sub = -(double)StdI->a0Lsub / det;
+  StdI->bL1sub = (double)StdI->a0Wsub / det;
+  /*
+  Initialize gnuplot
+  */
+  Wmax = 0;
+  if (StdI->a0Wsub > Wmax) Wmax = StdI->a0Wsub;
+  if (StdI->a1Wsub > Wmax) Wmax = StdI->a1Wsub;
+  if (StdI->a0Wsub + StdI->a1Wsub > Wmax) Wmax = StdI->a0Wsub + StdI->a1Wsub;
+  /**/
+  Wmin = 0;
+  if (StdI->a0Wsub < Wmin) Wmin = StdI->a0Wsub;
+  if (StdI->a1Wsub < Wmin) Wmin = StdI->a1Wsub;
+  if (StdI->a0Wsub + StdI->a1Wsub < Wmin) Wmin = StdI->a0Wsub + StdI->a1Wsub;
+  /**/
+  Lmax = 0;
+  if (StdI->a0Lsub > Lmax) Lmax = StdI->a0Lsub;
+  if (StdI->a1Lsub > Lmax) Lmax = StdI->a1Lsub;
+  if (StdI->a0Lsub + StdI->a1Lsub > Lmax) Lmax = StdI->a0Lsub + StdI->a1Lsub;
+  /**/
+  Lmin = 0;
+  if (StdI->a0Lsub < Lmin) Lmin = StdI->a0Lsub;
+  if (StdI->a1Lsub < Lmin) Lmin = StdI->a1Lsub;
+  if (StdI->a0Lsub + StdI->a1Lsub < Lmin) Lmin = StdI->a0Lsub + StdI->a1Lsub;
+  /*
+  Calculate the number of Unit Cell in a sub lattice
+  */
+  StdI->Cellsub = (int **)malloc(sizeof(int*) * (Wmax - Wmin + 1) * (Lmax - Lmin + 1));
+  for (iCell = 0; iCell < (Wmax - Wmin + 1) * (Lmax - Lmin + 1); iCell++) {
+    StdI->Cellsub[iCell] = (int *)malloc(sizeof(int) * 2);
+  }/*for (iCell = 0; iCell < (Wmax - Wmin + 1) * (Lmax - Lmin + 1); iCell++)*/
+
+  StdI->NCellsub = 0;
+  for (iL = Lmin; iL <= Lmax; iL++) {
+    for (iW = Wmin; iW <= Wmax; iW++) {
+      StdFace_FoldSite2D(StdI, iW, iL, &iCell0, &iCell1, &iWfold, &iLfold);
+      if (iCell0 == 0 && iCell1 == 0) {
+        StdI->Cellsub[StdI->NCellsub][0] = iW;
+        StdI->Cellsub[StdI->NCellsub][1] = iL;
+        StdI->NCellsub += 1;
+      }/*if (lUC == 1)*/
+    }/*for (iW = Wmin; iW <= Wmax; iW++*/
+  }/*for (iL = Lmin; iL <= Lmax; iL++)*/
+ }
+ /*
+  Set Label in the gnuplot display
+ */
 void StdFace_SetLabel(struct StdIntList *StdI, FILE *fp, 
   int iW, int iL, int diW, int diL, int isiteUC, int jsiteUC, 
   int *isite, int *jsite, int connect)

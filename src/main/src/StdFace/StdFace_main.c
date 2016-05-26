@@ -290,7 +290,7 @@ void PrintLocSpin(struct StdIntList *StdI) {
     fprintf(fp, "%5d  %5d\n", isite, StdI->locspinflag[isite]);
 
   fclose(fp);
-  fprintf(stdout, "    zlocspin.def is written.\n");
+  fprintf(stdout, "    zlocspn.def is written.\n");
 }
 
 /**
@@ -737,7 +737,7 @@ static void Print2Green(struct StdIntList *StdI){
   }
   greenindx = (int **)malloc(sizeof(int*) * (ngreen + 1));
   for (igreen = 0; igreen < ngreen; igreen++){
-    greenindx[igreen] = (int *)malloc(sizeof(int) * 8);
+    greenindx[igreen] = (int *)malloc(sizeof(int) * 6);
   }
   if (StdI->ioutputmode == 1){
     igreen = 0;
@@ -754,20 +754,18 @@ static void Print2Green(struct StdIntList *StdI){
 
           for (spin2 = 0; spin2 <= S2Max; spin2++){
             greenindx[igreen][0] = site1;
-            greenindx[igreen][1] = spin1;
-            greenindx[igreen][2] = site1;
-            greenindx[igreen][3] = spin1;
+            greenindx[igreen][1] = site1;
+            greenindx[igreen][2] = spin1;
+            greenindx[igreen][3] = site2;
             greenindx[igreen][4] = site2;
             greenindx[igreen][5] = spin2;
-            greenindx[igreen][6] = site2;
-            greenindx[igreen][7] = spin2;
            igreen++;
           }
         }
       }
     }
-   }
-  else if (StdI->ioutputmode == 2){
+  }
+  else if (StdI->ioutputmode == 2) {
     igreen = 0;
     for (site1 = 0; site1 < StdI->nsite; site1++){
 
@@ -784,6 +782,9 @@ static void Print2Green(struct StdIntList *StdI){
           else S2Max = StdI->locspinflag[site2];
 
           for (spin2 = 0; spin2 <= S2Max; spin2++){
+
+            if (spin1 != spin2) continue;
+
             for (site3 = 0; site3 < StdI->nsite; site3++){
 
               if (StdI->locspinflag[site3] == 0) S3Max = 1;
@@ -799,14 +800,15 @@ static void Print2Green(struct StdIntList *StdI){
                   else S4Max = StdI->locspinflag[site4];
 
                   for (spin4 = 0; spin4 <= S4Max; spin4++){
+
+                    if (spin3 != spin4) continue;
+
                     greenindx[igreen][0] = site1;
-                    greenindx[igreen][1] = spin1;
-                    greenindx[igreen][2] = site2;
-                    greenindx[igreen][3] = spin2;
-                    greenindx[igreen][4] = site3;
-                    greenindx[igreen][5] = spin3;
-                    greenindx[igreen][6] = site4;
-                    greenindx[igreen][7] = spin4;
+                    greenindx[igreen][1] = site2;
+                    greenindx[igreen][2] = spin2;
+                    greenindx[igreen][3] = site3;
+                    greenindx[igreen][4] = site4;
+                    greenindx[igreen][5] = spin4;
                     igreen++;
                   }
                 }
@@ -819,7 +821,7 @@ static void Print2Green(struct StdIntList *StdI){
   }
   ngreen = igreen;
 
-  fp = fopen("greentwo.def", "w");
+  fp = fopen("greentwodc.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NCisAjsCktAltDC %10d\n", ngreen);
   fprintf(fp, "=============================================\n");
@@ -827,12 +829,22 @@ static void Print2Green(struct StdIntList *StdI){
   fprintf(fp, "=============================================\n");
   for (igreen = 0; igreen < ngreen; igreen++){
     fprintf(fp,"%5d %5d %5d %5d %5d %5d %5d %5d\n",
-      greenindx[igreen][0], greenindx[igreen][1], greenindx[igreen][2], greenindx[igreen][3],
-      greenindx[igreen][4], greenindx[igreen][5], greenindx[igreen][6], greenindx[igreen][7]);
+      greenindx[igreen][0], greenindx[igreen][1], greenindx[igreen][2], 
+      greenindx[igreen][3], greenindx[igreen][4], greenindx[igreen][5]);
   }
   fclose(fp);
 
+  fprintf(stdout, "    greentwodc.def is written.\n");
+
+  fp = fopen("greentwo.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NCisAjsCktAlt %10d\n", 0);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "======== Green functions for Sq AND Nq ======\n");
+  fprintf(fp, "=============================================\n");
+  fclose(fp);
   fprintf(stdout, "    greentwo.def is written.\n");
+
   //[s] free
   for (igreen = 0; igreen < ngreen; igreen++){
     free(greenindx[igreen]);
@@ -840,6 +852,33 @@ static void Print2Green(struct StdIntList *StdI){
   free(greenindx);
   //[e] free
 }
+
+/**
+*
+* Print Quantum number projection
+*
+* @author Mitsuaki Kawamura (The University of Tokyo)
+*/
+static void PrintProj(struct StdIntList *StdI)
+{
+  FILE *fp;
+  int isite;
+
+  fp = fopen("zqptransidx.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NQPTrans %10d\n", 1);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n");
+  fprintf(fp, "=============================================\n");
+
+  fprintf(fp, "%d %10.5f\n", 0, 1.0);
+
+  for (isite = 0; isite < StdI->nsite; isite++)
+    fprintf(fp, "%5d  %5d  %5d\n", 0, isite, isite);
+
+  fclose(fp);
+  fprintf(stdout, "    zqptransidx.def is written.\n");
+}/*static void PrintProj*/
 
 /**
  *
@@ -969,6 +1008,93 @@ static void CheckModPara(struct StdIntList *StdI)
     }
   }
 }
+
+/**
+* Output .def file for Gutzwiller
+*
+*/
+static void PrintGutzwiller(struct StdIntList *StdI)
+{
+  FILE *fp;
+  int isite;
+
+  fp = fopen("zgutzwilleridx.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NGutzwillerIdx %10d\n", 1);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "================== Gutzwille ================\n");
+  fprintf(fp, "=============================================\n");
+  for (isite = 0; isite < StdI->nsite; isite++)
+    fprintf(fp, "%5d  %5d\n", isite, 0);
+
+  fprintf(fp, "%5d  %5d\n", 0, 1);
+  fclose(fp);
+  fprintf(stdout, "    zgutzwilleridx.def is written.\n");
+
+}/*static void PrintGutzwiller*/
+
+ /**
+ * Output .def file for Specific interaction
+ */
+static void PrintOther()
+{
+  FILE *fp;
+
+  fp = fopen("zcoulombintra.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NCoulombIntra %10d\n", 0);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "================== CoulombIntra ================\n");
+  fprintf(fp, "=============================================\n");
+  fclose(fp);
+  fprintf(stdout, "    zcoulombintra.def is written.\n");
+
+  fp = fopen("zcoulombinter.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NCoulombInter %10d\n", 0);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "================== CoulombInter ================\n");
+  fprintf(fp, "=============================================\n");
+  fclose(fp);
+  fprintf(stdout, "    zcoulombinter.def is written.\n");
+
+  fp = fopen("zhund.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NHund %10d\n", 0);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "=============== Hund coupling ===============\n");
+  fprintf(fp, "=============================================\n");
+  fclose(fp);
+  fprintf(stdout, "    zhund.def is written.\n");
+
+  fp = fopen("zpairhopp.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NPairhopp %10d\n", 0);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "================= Pair hopping ==============\n");
+  fprintf(fp, "=============================================\n");
+  fclose(fp);
+  fprintf(stdout, "    zpairhopp.def is written.\n");
+
+  fp = fopen("zdoublonholon2siteidx.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NDoublonHolon2siteIdx %10d\n", 0);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "======== i_xi_xi_DoublonHolon2siteIdx =======\n");
+  fprintf(fp, "=============================================\n");
+  fclose(fp);
+  fprintf(stdout, "    zdoublonholon2siteidx.def is written.\n");
+
+  fp = fopen("zdoublonholon4siteidx.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NDoublonHolon2siteIdx %10d\n", 0);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "===== i_xi_xi_xi_xi_DoublonHolon4siteIdx ====\n");
+  fprintf(fp, "=============================================\n");
+  fclose(fp);
+  fprintf(stdout, "    zdoublonholon4siteidx.def is written.\n");
+
+}/*static void PrintOther*/
 
 /**
 *
@@ -1126,10 +1252,6 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "nvmcwarmup") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NVMCWarmUp);
     else if (strcmp(keyword, "outputmode") == 0) StoreWithCheckDup_s(keyword, value, StdI.outputmode);
     else if (strcmp(keyword, "rndseed") == 0) StoreWithCheckDup_i(keyword, value, &StdI.RndSeed);
-    else if (strcmp(keyword, "sub0l") == 0) StoreWithCheckDup_i(keyword, value, &StdI.sub0L);
-    else if (strcmp(keyword, "sub0w") == 0) StoreWithCheckDup_i(keyword, value, &StdI.sub0W);
-    else if (strcmp(keyword, "sub1l") == 0) StoreWithCheckDup_i(keyword, value, &StdI.sub1L);
-    else if (strcmp(keyword, "sub1w") == 0) StoreWithCheckDup_i(keyword, value, &StdI.sub1W);
     else if (strcmp(keyword, "t") == 0) StoreWithCheckDup_c(keyword, value, &StdI.t);
     else if (strcmp(keyword, "t0") == 0) StoreWithCheckDup_c(keyword, value, &StdI.t0);
     else if (strcmp(keyword, "t1") == 0) StoreWithCheckDup_c(keyword, value, &StdI.t1);

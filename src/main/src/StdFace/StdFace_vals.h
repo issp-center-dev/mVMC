@@ -26,6 +26,8 @@ struct StdIntList {
   double a1;
   int L;
   int W;
+  int Lsub;
+  int Wsub;
   double Lx;
   double Ly;
   double Wx;
@@ -34,6 +36,11 @@ struct StdIntList {
   int a0W;
   int a1L;
   int a1W;
+  int a0Lsub;
+  int a0Wsub;
+  int a1Lsub;
+  int a1Wsub;
+  int S2;
   /*
   Parameters for MODEL
   */
@@ -77,10 +84,6 @@ struct StdIntList {
   */
   int JastrowCut;
   int JastrowAniso;
-  int sub0L;
-  int sub0W;
-  int sub1L;
-  int sub1W;
   /*
    Calculation conditions
   */
@@ -121,8 +124,14 @@ struct StdIntList {
   double bW1;
   double bL0;
   double bL1;
+  double bW0sub;
+  double bW1sub;
+  double bL0sub;
+  double bL1sub;
   int NCell;
   int **Cell;
+  int NCellsub;
+  int **Cellsub;
   int NsiteUC;
   double **tau;
   /*
