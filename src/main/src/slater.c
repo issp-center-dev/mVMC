@@ -6,7 +6,7 @@
  *-------------------------------------------------------------*/
 
 void UpdateSlaterElm_fcmp();
-void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx);
+void SlaterElmDiff_fcmp(double complex *srOptO, const double complex ip, int *eleIdx);
 
 void UpdateSlaterElm_fcmp() {
   int ri,ori,tri,sgni,rsi0,rsi1;
@@ -71,7 +71,7 @@ void UpdateSlaterElm_fcmp() {
 }
 
 // Calculating Tr[Inv[M]*D_k(X)]
-void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
+void SlaterElmDiff_fcmp(double complex *srOptO, const double complex ip, int *eleIdx) {
   const int nBuf=NSlater*NQPFull;
   const int nsize = Nsize;
   const int ne = Ne;
@@ -83,7 +83,7 @@ void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
   const double invIP = 1.0/ip;
   int msi,msj,ri,rj,ori,orj,tri,trj,sgni,sgnj;
   int mpidx,spidx,orbidx,qpidx,optidx,i;
-  double cs,cc,ss;
+  double complex cs,cc,ss; // including Pf
   int *xqp,*xqpSgn,*xqpOpt,*xqpOptSgn;
   double complex *invM,*invM_i;
 
@@ -138,7 +138,7 @@ void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
       }
     }
   }
-
+// calculating Tr(X^{-1}*dX/df_{msi,msj})=-2*alpha(sigma(msi),sigma(msj))(X^{-1})_{msi,msj}
   #pragma omp parallel for default(shared)        \
     private(qpidx,mpidx,spidx,cs,cc,ss,                   \
             tOrbIdx,tOrbSgn,invM,buf,msi,msj,             \
@@ -148,9 +148,9 @@ void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
     mpidx = qpidx / NSPGaussLeg;       // qpidx   = NSPGaussLeg*mpidx + spidx
     spidx = qpidx % NSPGaussLeg;
 
-    cs = PfM[qpidx] * SPGLCosSin[spidx]; // spin rotaion
-    cc = PfM[qpidx] * SPGLCosCos[spidx]; //
-    ss = PfM[qpidx] * SPGLSinSin[spidx]; //
+    cs = PfM[qpidx] * SPGLCosSin[spidx]; // spin rotation + PfM
+    cc = PfM[qpidx] * SPGLCosCos[spidx]; // spin rotation + PfM
+    ss = PfM[qpidx] * SPGLSinSin[spidx]; // spin rotation + PfM
 
     tOrbIdx = transOrbIdx + mpidx*nsize*nsize; // tOrbIdx[msi][msj] = transOrbIdx[mpidx][msi][msj]
     tOrbSgn = transOrbSgn + mpidx*nsize*nsize; // tOrbSgn[msi][msj] = transOrbSgn[mpidx][msi][msj]
@@ -165,7 +165,7 @@ void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
       for(msj=0;msj<ne;msj++) {                // up-up
         /* si=0 sj=0*/
         orbidx       = tOrbIdx_i[msj];         // 
-        buf[orbidx] += invM_i[msj]*cs*tOrbSgn_i[msj];
+        buf[orbidx] += invM_i[msj]*cs*tOrbSgn_i[msj]; // invM[msi][msj]
       }
       for(msj=ne;msj<nsize;msj++) {            // up-down
         /* si=0 sj=1*/
@@ -193,18 +193,21 @@ void SlaterElmDiff_fcmp(double complex *srOptO, const double ip, int *eleIdx) {
 
   /* store SROptO[] */
   for(orbidx=0;orbidx<nSlater;orbidx++) {
-    srOptO[orbidx] = 0.0;
+    srOptO[2*orbidx]   = 0.0+0.0*I; // 0
+    srOptO[2*orbidx+1] = 0.0+0.0*I; // 0
   }
   #pragma loop noalias
   for(qpidx=0;qpidx<nQPFull;qpidx++) {
     tmp = QPFullWeight[qpidx];
     buf = buffer + qpidx*nSlater;
     for(orbidx=0;orbidx<nSlater;orbidx++) {
-      srOptO[orbidx] += tmp * buf[orbidx];
+      srOptO[2*orbidx]   += tmp * buf[orbidx];   //real      TBC
+      srOptO[2*orbidx+1] += tmp * buf[orbidx]*I; //imaginary TBC
     }
   }
   for(orbidx=0;orbidx<nSlater;orbidx++) {
-    srOptO[orbidx] *= invIP;
+    srOptO[2*orbidx]   *= invIP;
+    srOptO[2*orbidx+1] *= invIP;
   }
 
   ReleaseWorkSpaceInt();

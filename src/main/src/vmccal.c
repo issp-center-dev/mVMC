@@ -83,17 +83,21 @@ void VMCMainCal(MPI_Comm comm) {
 
     if(NVMCCalMode==0) {
       /* Calculate O for correlation fauctors */
-      SROptO[0] = 1.0;
+      SROptO[0] = 1.0+0.0*I;//   real 
+      SROptO[1] = 0.0+0.0*I;//   real 
       #pragma loop noalias
-      for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
+      for(i=0;i<nProj;i++){ 
+        srOptO[(i+1)*2]     = (double)(eleProjCnt[i]); // even real
+        srOptO[(i+1)*2+1]   = 0.0+0.0*I;               // odd  comp
+      }
 
       StartTimer(42);
       /* SlaterElmDiff */
-      SlaterElmDiff_fcmp(SROptO+NProj+1,ip,eleIdx);
+      SlaterElmDiff_fcmp(SROptO+2*NProj+2,ip,eleIdx); //TBC
       StopTimer(42);
       
-      if(FlagOptTrans>0) {
-        calculateOptTransDiff(SROptO+NProj+NSlater+1, ip);
+      if(FlagOptTrans>0) { // this part will be not used
+        calculateOptTransDiff(SROptO+2*NProj+2*NSlater+2, ip); //TBC
       }
 
       StartTimer(43);
@@ -252,12 +256,11 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
   #pragma omp parallel for default(shared)        \
     private(i,j,tmp,srOptOO)
   #pragma loop noalias
-  for(i=0;i<srOptSize;i++) {
+  for(i=0;i<2*srOptSize;i++) {
     tmp         = w * srOptO[i];
     srOptHO[i] += e * tmp;
-    for(j=0;j<srOptSize;j++) {
-    //  srOptOO[j] += tmp * srOptO[j]; // TBC
-      /* OO[i][j] += w*O[i]*O[j] */
+    for(j=0;j<2*srOptSize;j++) {
+      srOptOO[j+i*(2*srOptSize)] += w*srOptO[j]*srOptO[j]; // TBC
     }
     /* HO[i] += w*e*O[i] */
   }

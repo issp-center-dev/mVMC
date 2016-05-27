@@ -4,7 +4,6 @@
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-// Questions: what is rwork : only for complex ?? 
 
 
 int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd);

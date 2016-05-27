@@ -45,9 +45,9 @@ int StochasticOpt(MPI_Comm comm) {
   const int srOptSize=SROptSize;
   const double complex *srOptOO=SROptOO;
 
-  double r[SROptSize]; /* the parameter change */
+  double r[2*SROptSize]; /* the parameter change */
   int nSmat;
-  int smatToParaIdx[NPara];
+  int smatToParaIdx[2*NPara];//TBC
 
   int cutNum=0,optNum=0;
   double sDiag,sDiagMax,sDiagMin;
@@ -73,9 +73,11 @@ int StochasticOpt(MPI_Comm comm) {
   for(pi=0;pi<nPara;pi++) {
     /* r[i] is temporarily used for diagonal elements of S */
     /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
-    r[pi] = srOptOO[(pi+1)*srOptSize+pi+1] - srOptOO[pi+1] * srOptOO[pi+1];
+    r[2*pi]   = creal(srOptOO[(2*pi+2)*(2*srOptSize+pi)+(2*pi+2)]) - creal(srOptOO[2*pi+2]) * creal(srOptOO[2*pi+2]);
+    r[2*pi+1] = creal(srOptOO[(2*pi+3)*(2*srOptSize+pi)+(2*pi+3)]) - creal(srOptOO[2*pi+3]) * creal(srOptOO[2*pi+3]);
   }
 
+// search for max and min
   sDiag = r[0];
   sDiagMax=sDiag; sDiagMin=sDiag;
   for(pi=0;pi<nPara;pi++) {
@@ -84,14 +86,17 @@ int StochasticOpt(MPI_Comm comm) {
     if(sDiag<sDiagMin) sDiagMin=sDiag;
   }
 
+// threshold
+// optNum = number of parameters 
+// cutNum: number of paramers that are cut
   diagCutThreshold = sDiagMax*DSROptRedCut;
   si = 0;
-  for(pi=0;pi<nPara;pi++) {
+  for(pi=0;pi<nPara*2;pi++) {
     if(OptFlag[pi]!=1) { /* fixed by OptFlag */
       optNum++;
-      continue;
+      continue; //skip sDiag
     }
-
+// s:this part will be skipped if OptFlag[pi]!=1
     sDiag = r[pi];
     if(sDiag < diagCutThreshold) { /* fixed by diagCut */
       cutNum++;
@@ -99,9 +104,10 @@ int StochasticOpt(MPI_Comm comm) {
       smatToParaIdx[si] = pi;
       si += 1;
     }
+// e
   }
   nSmat = si;
-  for(si=nSmat;si<nPara;si++) {
+  for(si=nSmat;si<nPara*2;si++) {
     smatToParaIdx[si] = -1;
   }
 
@@ -147,7 +153,11 @@ int StochasticOpt(MPI_Comm comm) {
     #pragma loop norecurrence para
     for(si=0;si<nSmat;si++) {
       pi = smatToParaIdx[si];
-      para[pi] += r[si];
+      if(pi%2==0){
+        para[pi/2] += r[si];  // real
+      }else{
+        para[(pi-1)/2] += r[si]*I; // imag
+      }
     }
   }
 
@@ -197,9 +207,9 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   int si,pi,pj,idx;
   int ir,ic;
 
-  const int srOptSize=SROptSize;
-  const double complex dSROptStepDt = DSROptStepDt;
-  const double complex srOptHO_0=SROptHO[0];
+  const int srOptSize = SROptSize;//TBC
+  const double dSROptStepDt = DSROptStepDt;
+  const double srOptHO_0 = creal(SROptHO[0]);
   double complex *srOptOO=SROptOO;
   double complex *srOptHO=SROptHO;
 
@@ -266,7 +276,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
       idx = ir + ic*mlocr; /* local index (row major) */
 
       /* S[i][j] = xOO[i+1][j+1] - xOO[0][i+1] * xOO[0][j+1]; */
-      s[idx] = srOptOO[(pi+1)*srOptSize+(pj+1)] - srOptOO[pi+1] * srOptOO[pj+1];
+      s[idx] = creal(srOptOO[(pi+2)*(2*srOptSize)+(pj+2)]) - creal(srOptOO[pi+2]) * creal(srOptOO[pj+2]);
       /* modify diagonal elements */
       if(pi==pj) s[idx] *= ratioDiag;
     }
@@ -282,7 +292,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
       
       /* energy gradient = 2.0*( xHO[i+1] - xHO[0] * xOO[0][i+1]) */
       /* g[i] = -dt * (energy gradient) */
-      g[ir] = -dSROptStepDt*2.0*(srOptHO[pi+1] - srOptHO_0 * srOptOO[pi+1]);
+      g[ir] = -dSROptStepDt*2.0*(creal(srOptHO[pi+2]) - srOptHO_0 * creal(srOptOO[pi+2]));
     }
   }
 
@@ -320,7 +330,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
     }
 
     /* gather the solution to r on rank=0 process */
-    SafeMpiReduce_fcmp(w,r,nSmat,comm_col);
+    SafeMpiReduce(w,r,nSmat,comm_col);
   }
 
   StopTimer(58);

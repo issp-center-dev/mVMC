@@ -197,20 +197,20 @@ void SetFlagShift() {
   FlagShiftGJ=0;
   FlagShiftDH2=0;
   FlagShiftDH4=0;
-  if(NGutzwillerIdx==0) return;
+  if(NGutzwillerIdx==0) return; // no Gutz -> do nothing
   start = 0;
   end = start + NGutzwillerIdx;
   for(i=start;i<end;i++) {
-    if(OptFlag[i]!=1) return;
+    if(OptFlag[i]!=1) return;   // fixed Gutx -> do nothing
   }
   
   /* Jastrow */
   if(NJastrowIdx>0) {
     start = end;
     end   = start + NJastrowIdx;
-    FlagShiftGJ=1;
+    FlagShiftGJ=1; // unfixed J -> FlagShift on
     for(i=start;i<end;i++) {
-      if(OptFlag[i]!=1) {
+      if(OptFlag[i]!=1) {       // fixed jast -> do nothing
         FlagShiftGJ=0;
         break;
       }
@@ -221,9 +221,9 @@ void SetFlagShift() {
   if(NDoublonHolon2siteIdx>0) {
     start = end;
     end   = start + 6*NDoublonHolon2siteIdx;
-    FlagShiftDH2=1;
+    FlagShiftDH2=1;         // unfixed D-H -> FlagShift on
     for(i=start;i<end;i++) {
-      if(OptFlag[i]!=1) {
+      if(OptFlag[i]!=1) { // fixed D-H -> do nothing
         FlagShiftDH2=0;
         break;
       }
@@ -234,9 +234,9 @@ void SetFlagShift() {
   if(NDoublonHolon4siteIdx>0) {
     start = end;
     end   = start + 10*NDoublonHolon4siteIdx;
-    FlagShiftDH4=1;
-    for(i=start;i<end;i++) {
-      if(OptFlag[i]!=1) {
+    FlagShiftDH4=1;         // unfixed D-H -> FlagShift on
+    for(i=start;i<end;i++) { 
+      if(OptFlag[i]!=1) { // fixed D-H -> do nothing
         FlagShiftDH4=0;
         break;
       }

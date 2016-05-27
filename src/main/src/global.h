@@ -179,7 +179,9 @@ int    SROptSize; /* 1+NPara */
 double complex *SROptOO; /* [SROptSize*SROptSize] <O^\dagger O> */
 double complex *SROptHO; /* [SROptSize]            < HO > */
 double complex *SROptO;  /* [SROptSize] calculation buffar */
-double complex *SROptO_Store;  /* [SROptSize*NVMCSample] calculation buffar */
+double complex *SROptO_Store;  /* [SROptSize*NVMCSample] calculation buffer */
+
+
 
 double complex *SROptData; /* [2+NPara] storage for energy and variational parameters */
 
