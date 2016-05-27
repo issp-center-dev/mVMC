@@ -245,4 +245,9 @@ void StdFace_Tetragonal(struct StdIntList *StdI, char *model)
   fprintf(fp, "plot x w l lw 0\n");
   fprintf(fp, "pause -1\n");
   fclose(fp);
+  /*
+   Set Orbital index
+  */
+  generate_orb(StdI);
 }
+

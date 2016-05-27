@@ -108,6 +108,8 @@ struct StdIntList {
   int NExUpdatePath;
   int RndSeed;
   int ioutputmode;
+  int NSplitSize;
+  int NStore;
   /*
    Input strings
   */
@@ -130,8 +132,6 @@ struct StdIntList {
   double bL1sub;
   int NCell;
   int **Cell;
-  int NCellsub;
-  int **Cellsub;
   int NsiteUC;
   double **tau;
   /*
@@ -148,4 +148,6 @@ struct StdIntList {
 
   int lGC;
   int Sz2;
+  int **Orb;
+  int NOrb;
 };

@@ -436,7 +436,7 @@ void StdFace_FoldSite2D(struct StdIntList *StdI,
   else *iWfold = (int)(xW - 1.0e-8);
   if (xL >= 0) *iLfold = (int)(xL + 1.0e-8);
   else *iLfold = (int)(xL - 1.0e-8);
-}
+}/*void StdFace_FoldSite2D*/
 
 /**
 *
@@ -469,7 +469,7 @@ void StdFace_FoldSite2Dsub(struct StdIntList *StdI,
   else *iWfold = (int)(xW - 1.0e-8);
   if (xL >= 0) *iLfold = (int)(xL + 1.0e-8);
   else *iLfold = (int)(xL - 1.0e-8);
-}
+}/*void StdFace_FoldSite2Dsub*/
 
 /**
 *
@@ -646,7 +646,7 @@ void StdFace_InitSite2D(struct StdIntList *StdI, FILE *fp,
   fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[3][0], pos[3][1], pos[2][0], pos[2][1]);
   fprintf(fp, "set arrow from %f, %f to %f, %f nohead front ls 3\n", pos[2][0], pos[2][1], pos[0][0], pos[0][1]);
 
-}
+}/*void StdFace_InitSite2D*/
 
 /**
 *
@@ -656,10 +656,8 @@ void StdFace_InitSite2D(struct StdIntList *StdI, FILE *fp,
 */
 void StdFace_InitSite2DSub(struct StdIntList *StdI)
 {
-  int Wmin, Wmax, Lmin, Lmax;
-  int iW, iL, ipos;
-  int iCell, iCell0, iCell1, iWfold, iLfold, isiteUC;
-  double pos[4][2], xmin, xmax, det/*, offset[2], scale*/;
+  int ii;
+  double det, prod[4];
   /*
   check Input parameters
   */
@@ -719,49 +717,25 @@ void StdFace_InitSite2DSub(struct StdIntList *StdI)
   StdI->bW1sub = -(double)StdI->a0Lsub / det;
   StdI->bL1sub = (double)StdI->a0Wsub / det;
   /*
-  Initialize gnuplot
+   Check : Is the sublattice commensurate ?
   */
-  Wmax = 0;
-  if (StdI->a0Wsub > Wmax) Wmax = StdI->a0Wsub;
-  if (StdI->a1Wsub > Wmax) Wmax = StdI->a1Wsub;
-  if (StdI->a0Wsub + StdI->a1Wsub > Wmax) Wmax = StdI->a0Wsub + StdI->a1Wsub;
-  /**/
-  Wmin = 0;
-  if (StdI->a0Wsub < Wmin) Wmin = StdI->a0Wsub;
-  if (StdI->a1Wsub < Wmin) Wmin = StdI->a1Wsub;
-  if (StdI->a0Wsub + StdI->a1Wsub < Wmin) Wmin = StdI->a0Wsub + StdI->a1Wsub;
-  /**/
-  Lmax = 0;
-  if (StdI->a0Lsub > Lmax) Lmax = StdI->a0Lsub;
-  if (StdI->a1Lsub > Lmax) Lmax = StdI->a1Lsub;
-  if (StdI->a0Lsub + StdI->a1Lsub > Lmax) Lmax = StdI->a0Lsub + StdI->a1Lsub;
-  /**/
-  Lmin = 0;
-  if (StdI->a0Lsub < Lmin) Lmin = StdI->a0Lsub;
-  if (StdI->a1Lsub < Lmin) Lmin = StdI->a1Lsub;
-  if (StdI->a0Lsub + StdI->a1Lsub < Lmin) Lmin = StdI->a0Lsub + StdI->a1Lsub;
-  /*
-  Calculate the number of Unit Cell in a sub lattice
-  */
-  StdI->Cellsub = (int **)malloc(sizeof(int*) * (Wmax - Wmin + 1) * (Lmax - Lmin + 1));
-  for (iCell = 0; iCell < (Wmax - Wmin + 1) * (Lmax - Lmin + 1); iCell++) {
-    StdI->Cellsub[iCell] = (int *)malloc(sizeof(int) * 2);
-  }/*for (iCell = 0; iCell < (Wmax - Wmin + 1) * (Lmax - Lmin + 1); iCell++)*/
+  prod[0] = StdI->bW0sub * (double)StdI->a0W + StdI->bL0sub * (double)StdI->a0L;
+  prod[1] = StdI->bW1sub * (double)StdI->a0W + StdI->bL1sub * (double)StdI->a0L;
+  prod[2] = StdI->bW0sub * (double)StdI->a1W + StdI->bL0sub * (double)StdI->a1L;
+  prod[3] = StdI->bW1sub * (double)StdI->a1W + StdI->bL1sub * (double)StdI->a1L;
 
-  StdI->NCellsub = 0;
-  for (iL = Lmin; iL <= Lmax; iL++) {
-    for (iW = Wmin; iW <= Wmax; iW++) {
-      StdFace_FoldSite2D(StdI, iW, iL, &iCell0, &iCell1, &iWfold, &iLfold);
-      if (iCell0 == 0 && iCell1 == 0) {
-        StdI->Cellsub[StdI->NCellsub][0] = iW;
-        StdI->Cellsub[StdI->NCellsub][1] = iL;
-        StdI->NCellsub += 1;
-      }/*if (lUC == 1)*/
-    }/*for (iW = Wmin; iW <= Wmax; iW++*/
-  }/*for (iL = Lmin; iL <= Lmax; iL++)*/
- }
+  for (ii = 0; ii < 4; ii++){
+    prod[ii] = prod[ii] - round(prod[ii]);
+    if (fabs(prod[ii]) > 0.00001) {
+      printf("\n ERROR ! Sublattice is INCOMMENSURATE !\n\n");
+      exit(-1);
+    }/*if (fabs(prod[ii]) > 0.00001)*/
+  }/*for (ii = 0; ii < 4; ii++)*/
+
+}/*void StdFace_InitSite2DSub*/
+
  /*
-  Set Label in the gnuplot display
+  * Set Label in the gnuplot display
  */
 void StdFace_SetLabel(struct StdIntList *StdI, FILE *fp, 
   int iW, int iL, int diW, int diL, int isiteUC, int jsiteUC, 
@@ -842,7 +816,7 @@ void StdFace_SetLabel(struct StdIntList *StdI, FILE *fp,
   if (*jsite < 10)fprintf(fp, "set label \"%1d\" at %f, %f center font \"GothicBBB-Medium-EUC-H,5\" front\n", *jsite, xj, yj);
   else fprintf(fp, "set label \"%2d\" at %f, %f center font \"GothicBBB-Medium-EUC-H,5\" front\n", *jsite, xj, yj);
   fprintf(fp, "set arrow from %f, %f to %f, %f nohead ls %d\n", xi, yi, xj, yj, connect);
-}
+}/*void StdFace_SetLabel*/
 
 void StdFace_InputSpinNN(struct StdIntList *StdI, double J0[3][3], 
   double J0All, char *J0name) 
@@ -1006,3 +980,66 @@ void StdFace_InputHopp(struct StdIntList *StdI, double complex *t0, char *t0name
 
 }
 
+/*
+ *Generate orbitalindex
+*/
+void generate_orb(struct StdIntList *StdI) {
+  int iCell, jCell, kCell, iW, iL, jW, jL, iCell2, jCell2;
+  int NotUse1, NotUse2, iWfold, iLfold, iOrb;
+  int isite, jsite;
+
+  StdFace_InitSite2DSub(StdI);
+
+  StdI->Orb = (int **)malloc(sizeof(int*) * StdI->nsite);
+  for(isite = 0;isite<StdI->nsite;isite ++ )
+    StdI->Orb[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
+
+  iOrb = 0;
+  for (iCell = 0; iCell < StdI->NCell; iCell++) {
+    /**/
+    iW = StdI->Cell[iCell][0];
+    iL = StdI->Cell[iCell][1];
+
+    StdFace_FoldSite2Dsub(StdI, iW, iL, &NotUse1, &NotUse2, &iWfold, &iLfold);
+
+    StdFace_FoldSite2D(StdI, iWfold, iLfold, &NotUse1, &NotUse2, &iWfold, &iLfold);
+
+    for (kCell = 0; kCell < StdI->NCell; kCell++) {
+      if (iWfold == StdI->Cell[kCell][0] && iLfold == StdI->Cell[kCell][1]) {
+        iCell2 = kCell;
+      }
+    }/*for (iCell = 0; iCell < StdI->NCell; iCell++)*/
+
+    for (jCell = 0; jCell < StdI->NCell; jCell++) {
+      /**/
+      jW = StdI->Cell[jCell][0];
+      jL = StdI->Cell[jCell][1];
+
+      jW = jW + iWfold - iW;
+      jL = jL + iLfold - iL;
+
+      StdFace_FoldSite2D(StdI, jW, jL, &NotUse1, &NotUse2, &iWfold, &iLfold);
+
+      for (kCell = 0; kCell < StdI->NCell; kCell++) {
+        if (iWfold == StdI->Cell[kCell][0] && iLfold == StdI->Cell[kCell][1]) {
+          jCell2 = kCell;
+        }
+      }/*for (iCell = 0; iCell < StdI->NCell; iCell++)*/
+
+      for (isite = 0; isite < StdI->NsiteUC; isite++) {
+        for (jsite = 0; jsite < StdI->NsiteUC; jsite++) {
+          if (iCell == iCell2 && jCell == jCell2) {
+            StdI->Orb[iCell*StdI->NsiteUC + isite][jCell*StdI->NsiteUC + jsite] = iOrb;
+            iOrb += 1;
+          }
+          else StdI->Orb[iCell*StdI->NsiteUC + isite][jCell*StdI->NsiteUC + jsite]
+            = StdI->Orb[iCell2*StdI->NsiteUC + isite][jCell2*StdI->NsiteUC + jsite];
+        }/*for (jsite = 0; jsite < StdI->NsiteUC; jsite++)*/
+      }/*for (isite = 0; isite < StdI->NsiteUC; isite++)*/
+
+    }/*for (jCell = 0; jCell < StdI->NCell; jCell++)*/
+
+  }/*for (iCell = 0; iCell < StdI->NCell; iCell++)*/
+  StdI->NOrb = iOrb;
+
+}

@@ -54,14 +54,11 @@ void StdFace_SetLabel(struct StdIntList *StdI, FILE *fp,
   int iW, int iL, int diW, int diL, int isiteUC, int jsiteUC,
   int *isite, int *jsite, int connect);
 
+void generate_orb(struct StdIntList *StdI);
+
 void StdFace_Tetragonal(struct StdIntList *StdI, char *model);
 void StdFace_Chain(struct StdIntList *StdI, char *model);
 void StdFace_Ladder(struct StdIntList *StdI, char *model);
 void StdFace_Triangular(struct StdIntList *StdI, char *model);
 void StdFace_Honeycomb(struct StdIntList *StdI, char *model);
 void StdFace_Kagome(struct StdIntList *StdI, char *model);
-
-void StdFace_Chain_Boost(struct StdIntList *StdI);
-void StdFace_Ladder_Boost(struct StdIntList *StdI);
-void StdFace_Honeycomb_Boost(struct StdIntList *StdI);
-void StdFace_Kagome_Boost(struct StdIntList *StdI);
