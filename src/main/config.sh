@@ -25,6 +25,19 @@ FORT = ifort
 FFLAGS = -O3 -implicitnone -xSSE2
 SMFTFLAGS = -O3 -no-ansi-alias -xSSE2 -DMEXP=19937 -DHAVE_SSE2
 EOF
+    elif [ ${1} = "openmpi-intel" ]; then
+        cat > src/make.sys <<EOF
+CC = mpicc
+LIB = -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_openmpi_lp64 -lpthread -lm -ldl
+CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas -I ${MKLROOT}/include
+REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
+OPTION = -D_mpi_use
+CP = cp -f -v
+AR = ar rv
+FORT = ifort
+FFLAGS = -O3 -implicitnone -xSSE2
+SMFTFLAGS = -O3 -no-ansi-alias -xSSE2 -DMEXP=19937 -DHAVE_SSE2
+EOF
     elif [ ${1} = "jupiter" ]; then
         cat > src/make.sys <<EOF
 CC      = mpicc
@@ -115,7 +128,7 @@ EOF
     cat src/make.sys
 
     echo
-    echo "HPhiconfig DONE"
+    echo "config DONE"
     echo
 
     cat > makefile <<EOF

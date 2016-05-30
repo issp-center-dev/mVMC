@@ -37,10 +37,14 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->a = 9999.9;
   StdI->a0 = 9999.9;
   StdI->a0L = 9999;
+  StdI->a0Lsub = 9999;
   StdI->a0W = 9999;
   StdI->a1 = 9999.9;
+  StdI->a0Wsub = 9999;
   StdI->a1L = 9999;
+  StdI->a1Lsub = 9999;
   StdI->a1W = 9999;
+  StdI->a1Wsub = 9999;
   StdI->Gamma = 9999.9;
   StdI->h = 9999.9;
   StdI->JAll = 9999.9;
@@ -65,6 +69,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->D[2][2] = 9999.9;
   StdI->K = 9999.9;
   StdI->L = 9999;
+  StdI->Lsub = 9999;
   StdI->Lx = 9999.9;
   StdI->Ly = 9999.9;
   StdI->mu = 9999.9;
@@ -84,12 +89,12 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->V2 = 9999.9;
   StdI->V2p = 9999.9;
   StdI->W = 9999;
+  StdI->Wsub = 9999;
   StdI->Wx = 9999.9;
   StdI->Wy = 9999.9;
 
   strcpy(StdI->model, "****\0");
   strcpy(StdI->lattice, "****\0");
-  strcpy(StdI->method, "****\0");
   strcpy(StdI->outputmode, "****\0");
   strcpy(StdI->CDataFileHead, "****\0");
   strcpy(StdI->CParaFileHead, "****\0");
@@ -100,7 +105,8 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->NDataIdxStart = 9999;
   StdI->NDataQtySmp = 9999;
   StdI->Nsite = 9999;
-  StdI->nelec = 9999;
+  StdI->Sz2 = 9999;
+  StdI->S2 = 9999;
   StdI->NSPGaussLeg = 9999;
   StdI->NSPStot = 9999;
   StdI->NMPTrans = 9999;
@@ -281,7 +287,7 @@ void PrintLocSpin(struct StdIntList *StdI) {
   for (isite = 0; isite < StdI->nsite; isite++)
     if (StdI->locspinflag[isite] != 0) nlocspin = nlocspin + 1;
 
-  fp = fopen("zlocspn.def", "w");
+  fp = fopen("locspn.def", "w");
   fprintf(fp, "================================ \n");
   fprintf(fp, "NlocalSpin %5d  \n", nlocspin);
   fprintf(fp, "================================ \n");
@@ -289,12 +295,10 @@ void PrintLocSpin(struct StdIntList *StdI) {
   fprintf(fp, "================================ \n");
 
   for (isite = 0; isite < StdI->nsite; isite++)
-    fprintf(fp, "%5d  %5d\n", isite, StdI->locspinflag[isite]);
+    fprintf(fp, "%5d  %5d\n", isite, 1-StdI->locspinflag[isite]);/*debug*/
 
   fclose(fp);
-  fprintf(stdout, "    zlocspn.def is written.\n");
-
-  free(StdI->locspinflag);
+  fprintf(stdout, "    locspn.def is written.\n");
 
 }/*void PrintLocSpin*/
 
@@ -325,7 +329,7 @@ static void PrintTrans(struct StdIntList *StdI){
     if (cabs(StdI->trans[ktrans]) > 0.000001) ntrans0 = ntrans0 + 1;
   }
 
-  fp = fopen("zTrans.def", "w");
+  fp = fopen("trans.def", "w");
   fprintf(fp, "======================== \n");
   fprintf(fp, "NTransfer %7d  \n", ntrans0);
   fprintf(fp, "======================== \n");
@@ -335,19 +339,19 @@ static void PrintTrans(struct StdIntList *StdI){
   ntrans0 = 0;
   for (ktrans = 0; ktrans < StdI->ntrans; ktrans++) {
     if (cabs(StdI->trans[ktrans]) > 0.000001)
-      fprintf(fp, "%5d %5d %5d %5d %25.15f  %25.15f\n",
-        StdI->transindx[ktrans][0], StdI->transindx[ktrans][1],
+      fprintf(fp, "%5d %5d %5d %25.15f\n",
+        StdI->transindx[ktrans][0], /*StdI->transindx[ktrans][1],*/
         StdI->transindx[ktrans][2], StdI->transindx[ktrans][3],
-        creal(StdI->trans[ktrans]), cimag(StdI->trans[ktrans]));
+        creal(StdI->trans[ktrans])/*, cimag(StdI->trans[ktrans])*/);
   }
 
   fclose(fp);
-  fprintf(stdout, "      zTrans.def is written.\n");
+  fprintf(stdout, "    trans.def is written.\n");
 }/*static void PrintTrans*/
 
 /**
 *
-* Print zInterAll.def
+* Print Interall.def
 *
 * @author Mitsuaki Kawamura (The University of Tokyo)
 */
@@ -488,7 +492,7 @@ static void PrintInter(struct StdIntList *StdI){
     if (cabs(StdI->intr[kintr]) > 0.000001) nintr0 = nintr0 + 1;
   }
 
-  fp = fopen("zInterAll.def", "w");
+  fp = fopen("interall.def", "w");
   fprintf(fp, "====================== \n");
   fprintf(fp, "NInterAll %7d  \n", nintr0);
   fprintf(fp, "====================== \n");
@@ -497,17 +501,34 @@ static void PrintInter(struct StdIntList *StdI){
 
   nintr0 = 0;
   for (kintr = 0; kintr < StdI->nintr; kintr++) {
-    if (cabs(StdI->intr[kintr]) > 0.000001)
-      fprintf(fp, "%5d %5d %5d %5d %5d %5d %5d %5d %25.15f  %25.15f\n",
-        StdI->intrindx[kintr][0], StdI->intrindx[kintr][1],
-        StdI->intrindx[kintr][2], StdI->intrindx[kintr][3],
-        StdI->intrindx[kintr][4], StdI->intrindx[kintr][5],
-        StdI->intrindx[kintr][6], StdI->intrindx[kintr][7],
-        creal(StdI->intr[kintr]), cimag(StdI->intr[kintr]));
+    if (cabs(StdI->intr[kintr]) > 0.000001) {
+      if (StdI->intrindx[kintr][1] == StdI->intrindx[kintr][3] &&
+        StdI->intrindx[kintr][5] == StdI->intrindx[kintr][7]) {
+        fprintf(fp, "%5d %5d %5d %5d %5d %5d %25.15f\n",
+          StdI->intrindx[kintr][0], /*StdI->intrindx[kintr][1],*/
+          StdI->intrindx[kintr][2], StdI->intrindx[kintr][3],
+          StdI->intrindx[kintr][4], /*StdI->intrindx[kintr][5],*/
+          StdI->intrindx[kintr][6], StdI->intrindx[kintr][7],
+          creal(StdI->intr[kintr])/*, cimag(StdI->intr[kintr])*/);
+      }
+      else if (StdI->intrindx[kintr][1] == StdI->intrindx[kintr][7] &&
+        StdI->intrindx[kintr][5] == StdI->intrindx[kintr][3]) {
+        fprintf(fp, "%5d %5d %5d %5d %5d %5d %25.15f\n",
+          StdI->intrindx[kintr][0], /*StdI->intrindx[kintr][1],*/
+          StdI->intrindx[kintr][6], StdI->intrindx[kintr][7],
+          StdI->intrindx[kintr][4], /*StdI->intrindx[kintr][5],*/
+          StdI->intrindx[kintr][2], StdI->intrindx[kintr][3],
+          creal(-StdI->intr[kintr])/*, cimag(StdI->intr[kintr])*/);
+      }
+      else {
+        printf("something wrong\n");
+        exit(-1);
+      }
+    }
   }/*for (kintr = 0; kintr < StdI->nintr; kintr++)*/
 
   fclose(fp);
-  fprintf(stdout, "   zInterAll.def is written.\n");
+  fprintf(stdout, "    interall.def is written.\n");
 }/*static void PrintInter*/
 
 /**
@@ -521,24 +542,24 @@ static void PrintNamelist(struct StdIntList *StdI){
 
   fp = fopen("namelist.def", "w");
 
-  fprintf(fp, "zmodpara.def\n");
-  fprintf(fp, "zlocspn.def\n");
-  fprintf(fp, "ztransfer.def\n");
-  fprintf(fp, "zcoulombintra.def\n");
-  fprintf(fp, "zcoulombinter.def\n");
-  fprintf(fp, "zhund.def\n");
-  fprintf(fp, "zpairhop.def\n");
-  fprintf(fp, "zexchange.def\n");
-  fprintf(fp, "zgutzwilleridx.def\n");
-  fprintf(fp, "zjastrowidx.def\n");
-  fprintf(fp, "zdoublonholon2siteidx.def\n");
-  fprintf(fp, "zdoublonholon4siteidx.def\n");
-  fprintf(fp, "zorbitalidx.def\n");
-  fprintf(fp, "zqptransidx.def\n");
-  fprintf(fp, "zcisajs.def\n");
-  fprintf(fp, "zcisajscktalt.def\n");
-  fprintf(fp, "zcisajscktaltdc.def\n");
-  fprintf(fp, "zinterall.def\n");
+  fprintf(fp, "modpara.def\n");
+  fprintf(fp, "locspn.def\n");
+  fprintf(fp, "trans.def\n");
+  fprintf(fp, "coulombintra.def\n");
+  fprintf(fp, "coulombinter.def\n");
+  fprintf(fp, "hund.def\n");
+  fprintf(fp, "pairhop.def\n");
+  fprintf(fp, "exchange.def\n");
+  fprintf(fp, "gutzwilleridx.def\n");
+  fprintf(fp, "jastrowidx.def\n");
+  fprintf(fp, "doublonholon2siteidx.def\n");
+  fprintf(fp, "doublonholon4siteidx.def\n");
+  fprintf(fp, "orbitalidx.def\n");
+  fprintf(fp, "qptransidx.def\n");
+  fprintf(fp, "greenone.def\n");
+  fprintf(fp, "greentwo.def\n");
+  fprintf(fp, "greentwodc.def\n");
+  fprintf(fp, "interall.def\n");
 
   fclose(fp);
   fprintf(stdout, "    namelist.def is written.\n");
@@ -644,7 +665,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "NStore         %-5d\n", StdI->NStore);
 
   fclose(fp);
-  fprintf(stdout, "     modpara.def is written.\n");
+  fprintf(stdout, "    modpara.def is written.\n");
 }/*static void PrintModPara*/
 
 /**
@@ -869,7 +890,7 @@ static void Print2Green(struct StdIntList *StdI){
   fprintf(fp, "======== Green functions for Sq AND Nq ======\n");
   fprintf(fp, "=============================================\n");
   for (igreen = 0; igreen < ngreen; igreen++){
-    fprintf(fp,"%5d %5d %5d %5d %5d %5d %5d %5d\n",
+    fprintf(fp,"%5d %5d %5d %5d %5d %5d\n",
       greenindx[igreen][0], greenindx[igreen][1], greenindx[igreen][2], 
       greenindx[igreen][3], greenindx[igreen][4], greenindx[igreen][5]);
   }
@@ -906,16 +927,41 @@ void PrintJastrow(struct StdIntList *StdI) {
   for (isite = 0; isite < StdI->nsite; isite++)
     Jastrow[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
 
-  NJastrow = 0;
-  for (isite = 0; isite < StdI->nsite; isite++) {
-    for (jsite = 0; jsite < isite; jsite++) {
-      Jastrow[isite][jsite] = NJastrow;
-      Jastrow[jsite][isite] = NJastrow;
-      NJastrow += 1;
-    }/*for (jsite = 0; jsite < isite; jsite++)*/
-  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+  if (strcmp(StdI->model, "hubbard") == 0) {
+    NJastrow = 0;
+    for (isite = 0; isite < StdI->nsite; isite++) {
+      for (jsite = 0; jsite < isite; jsite++) {
+        Jastrow[isite][jsite] = NJastrow;
+        Jastrow[jsite][isite] = NJastrow;
+        NJastrow += 1;
+      }/*for (jsite = 0; jsite < isite; jsite++)*/
+    }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+  }
+  else if (strcmp(StdI->model, "spin") == 0) {
+    NJastrow = 1;
+    for (isite = 0; isite < StdI->nsite; isite++) {
+      for (jsite = 0; jsite < StdI->nsite; jsite++) {
+        Jastrow[isite][jsite] = 0;
+      }/*for (jsite = 0; jsite < isite; jsite++)*/
+    }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+  }
+  else if (strcmp(StdI->model, "kondo") == 0) {
+    NJastrow = 1;
+    for (isite = 0; isite < StdI->nsite / 2; isite++) {
+      for (jsite = 0; jsite < StdI->nsite / 2; jsite++) {
+        Jastrow[isite][jsite] = 0;
+      }/*for (jsite = 0; jsite < isite; jsite++)*/
+    }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+    for (isite = StdI->nsite / 2 + 1; isite < StdI->nsite; isite++) {
+      for (jsite = StdI->nsite / 2 + 1; jsite < isite; jsite++) {
+        Jastrow[isite][jsite] = NJastrow;
+        Jastrow[jsite][isite] = NJastrow;
+        NJastrow += 1;
+      }/*for (jsite = 0; jsite < isite; jsite++)*/
+    }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+  }
 
-  fp = fopen("zjastrowidx.def", "w");
+  fp = fopen("jastrowidx.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NKastrowIdx %10d\n", NJastrow);
   fprintf(fp, "=============================================\n");
@@ -929,11 +975,25 @@ void PrintJastrow(struct StdIntList *StdI) {
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
 
-  for (iJastrow = 0; iJastrow < NJastrow; iJastrow++)
-    fprintf(fp, "%5d  %5d\n", iJastrow, 1);
+  if (strcmp(StdI->model, "hubbard") == 0) {
+    for (iJastrow = 0; iJastrow < NJastrow; iJastrow++)
+      fprintf(fp, "%5d  %5d\n", iJastrow, 1);
+  }
+  else if (strcmp(StdI->model, "spin") == 0) {
+    fprintf(fp, "%5d  %5d\n", 0, 0);
+  }
+  else if (strcmp(StdI->model, "kondo") == 0) {
+    fprintf(fp, "%5d  %5d\n", 0, 0);
+    for (iJastrow = 1; iJastrow < NJastrow; iJastrow++)
+      fprintf(fp, "%5d  %5d\n", iJastrow, 1);
+  }
+  else {
+    printf("\nSomething wrong. \n\n");
+    exit(-1);
+  }
 
   fclose(fp);
-  fprintf(stdout, "    zjastrowidx.def is written.\n");
+  fprintf(stdout, "    jastrowidx.def is written.\n");
 
   for (isite = 0; isite < StdI->nsite; isite++) free(Jastrow[isite]);
   free(Jastrow);
@@ -946,7 +1006,7 @@ void PrintOrb(struct StdIntList *StdI) {
   FILE *fp;
   int isite, jsite, iOrb;
 
-  fp = fopen("zorbitalidx.def", "w");
+  fp = fopen("orbitalidx.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NOrbitalIdx %10d\n", StdI->NOrb);
   fprintf(fp, "=============================================\n");
@@ -963,7 +1023,7 @@ void PrintOrb(struct StdIntList *StdI) {
     fprintf(fp, "%5d  %5d\n", iOrb, 1);
 
   fclose(fp);
-  fprintf(stdout, "    zorbitalidx.def is written.\n");
+  fprintf(stdout, "    orbitalidx.def is written.\n");
 
   for (isite = 0; isite < StdI->nsite; isite++) free(StdI->Orb[isite]);
   free(StdI->Orb);
@@ -980,7 +1040,7 @@ static void PrintProj(struct StdIntList *StdI)
   FILE *fp;
   int isite;
 
-  fp = fopen("zqptransidx.def", "w");
+  fp = fopen("qptransidx.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NQPTrans %10d\n", 1);
   fprintf(fp, "=============================================\n");
@@ -993,7 +1053,7 @@ static void PrintProj(struct StdIntList *StdI)
     fprintf(fp, "%5d  %5d  %5d\n", 0, isite, isite);
 
   fclose(fp);
-  fprintf(stdout, "    zqptransidx.def is written.\n");
+  fprintf(stdout, "    qptransidx.def is written.\n");
 }/*static void PrintProj*/
 
 /**
@@ -1107,7 +1167,10 @@ static void CheckModPara(struct StdIntList *StdI)
 
   /**/
   if (strcmp(StdI->model, "hubbard") == 0){
-    if (StdI->lGC == 0) StdFace_RequiredVal_i("nelec", StdI->nelec);
+    if (StdI->lGC == 0) {
+      StdFace_RequiredVal_i("nelec", StdI->nelec);
+      StdFace_RequiredVal_i("2Sz", StdI->Sz2);
+    }
     else {
       StdFace_NotUsed_i("nelec", StdI->nelec);
       StdFace_NotUsed_i("2Sz", StdI->Sz2);
@@ -1115,11 +1178,15 @@ static void CheckModPara(struct StdIntList *StdI)
   }
   else if (strcmp(StdI->model, "spin") == 0) {
     StdFace_NotUsed_i("nelec", StdI->nelec);
+    StdI->nelec = StdI->nsite / 2;
     if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
     else StdFace_NotUsed_i("2Sz", StdI->Sz2);
   }
   else if (strcmp(StdI->model, "kondo") == 0) {
-    if (StdI->lGC == 0) StdFace_RequiredVal_i("nelec", StdI->nelec);
+    if (StdI->lGC == 0) {
+      StdFace_RequiredVal_i("nelec", StdI->nelec);
+      StdFace_RequiredVal_i("2Sz", StdI->Sz2);
+    }
     else {
       StdFace_NotUsed_i("nelec", StdI->nelec);
       StdFace_NotUsed_i("2Sz", StdI->Sz2);
@@ -1134,20 +1201,42 @@ static void CheckModPara(struct StdIntList *StdI)
 static void PrintGutzwiller(struct StdIntList *StdI)
 {
   FILE *fp;
-  int isite;
+  int isite, NGutzwiller;
 
-  fp = fopen("zgutzwilleridx.def", "w");
+  if (strcmp(StdI->model, "kondo") == 0) NGutzwiller = 2;
+  else NGutzwiller = 1;
+
+  fp = fopen("gutzwilleridx.def", "w");
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "NGutzwillerIdx %10d\n", 1);
+  fprintf(fp, "NGutzwillerIdx %10d\n", NGutzwiller);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "================== Gutzwille ================\n");
   fprintf(fp, "=============================================\n");
-  for (isite = 0; isite < StdI->nsite; isite++)
-    fprintf(fp, "%5d  %5d\n", isite, 0);
 
-  fprintf(fp, "%5d  %5d\n", 0, 1);
+  if (strcmp(StdI->model, "hubbard") == 0) {
+    for (isite = 0; isite < StdI->nsite; isite++)
+      fprintf(fp, "%5d  %5d\n", isite, 0);
+    fprintf(fp, "%5d  %5d\n", 0, 1);
+  }
+  else if (strcmp(StdI->model, "spin") == 0) {
+    for (isite = 0; isite < StdI->nsite; isite++)
+      fprintf(fp, "%5d  %5d\n", isite, 0);
+    fprintf(fp, "%5d  %5d\n", 0, 0);
+  }
+  else if (strcmp(StdI->model, "kondo") == 0) {
+    for (isite = 0; isite < StdI->nsite; isite++) {
+      if(StdI->locspinflag[isite] == 0) fprintf(fp, "%5d  %5d\n", isite, 0);
+      else fprintf(fp, "%5d  %5d\n", isite, 1);
+    }
+    fprintf(fp, "%5d  %5d\n", 0, 1);
+    fprintf(fp, "%5d  %5d\n", 1, 0);
+  }
+  else {
+    printf("\nSomething wrong. \n\n");
+    exit(-1);
+  }
   fclose(fp);
-  fprintf(stdout, "    zgutzwilleridx.def is written.\n");
+  fprintf(stdout, "    gutzwilleridx.def is written.\n");
 
 }/*static void PrintGutzwiller*/
 
@@ -1158,59 +1247,68 @@ static void PrintOther()
 {
   FILE *fp;
 
-  fp = fopen("zcoulombintra.def", "w");
+  fp = fopen("coulombintra.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NCoulombIntra %10d\n", 0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "================== CoulombIntra ================\n");
   fprintf(fp, "=============================================\n");
   fclose(fp);
-  fprintf(stdout, "    zcoulombintra.def is written.\n");
+  fprintf(stdout, "    coulombintra.def is written.\n");
 
-  fp = fopen("zcoulombinter.def", "w");
+  fp = fopen("coulombinter.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NCoulombInter %10d\n", 0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "================== CoulombInter ================\n");
   fprintf(fp, "=============================================\n");
   fclose(fp);
-  fprintf(stdout, "    zcoulombinter.def is written.\n");
+  fprintf(stdout, "    coulombinter.def is written.\n");
 
-  fp = fopen("zhund.def", "w");
+  fp = fopen("hund.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NHund %10d\n", 0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "=============== Hund coupling ===============\n");
   fprintf(fp, "=============================================\n");
   fclose(fp);
-  fprintf(stdout, "    zhund.def is written.\n");
+  fprintf(stdout, "    hund.def is written.\n");
 
-  fp = fopen("zpairhopp.def", "w");
+  fp = fopen("pairhop.def", "w");
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "NPairhopp %10d\n", 0);
+  fprintf(fp, "NPairhop %10d\n", 0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "================= Pair hopping ==============\n");
   fprintf(fp, "=============================================\n");
   fclose(fp);
-  fprintf(stdout, "    zpairhopp.def is written.\n");
+  fprintf(stdout, "    pairhop.def is written.\n");
 
-  fp = fopen("zdoublonholon2siteidx.def", "w");
+  fp = fopen("exchange.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NExchange %10d\n", 0);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "====== ExchangeCoupling coupling ============\n");
+  fprintf(fp, "=============================================\n");
+  fclose(fp);
+  fprintf(stdout, "    exchange.def is written.\n");
+
+  fp = fopen("doublonholon2siteidx.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NDoublonHolon2siteIdx %10d\n", 0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "======== i_xi_xi_DoublonHolon2siteIdx =======\n");
   fprintf(fp, "=============================================\n");
   fclose(fp);
-  fprintf(stdout, "    zdoublonholon2siteidx.def is written.\n");
+  fprintf(stdout, "    doublonholon2siteidx.def is written.\n");
 
-  fp = fopen("zdoublonholon4siteidx.def", "w");
+  fp = fopen("doublonholon4siteidx.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NDoublonHolon2siteIdx %10d\n", 0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "===== i_xi_xi_xi_xi_DoublonHolon4siteIdx ====\n");
   fprintf(fp, "=============================================\n");
   fclose(fp);
-  fprintf(stdout, "    zdoublonholon4siteidx.def is written.\n");
+  fprintf(stdout, "    doublonholon4siteidx.def is written.\n");
 
 }/*static void PrintOther*/
 
@@ -1353,9 +1451,9 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "k") == 0) StoreWithCheckDup_d(keyword, value, &StdI.K);
     else if (strcmp(keyword, "l") == 0) StoreWithCheckDup_i(keyword, value, &StdI.L);
     else if (strcmp(keyword, "lattice") == 0) StoreWithCheckDup_s(keyword, value, StdI.lattice);
+    else if (strcmp(keyword, "lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI.Lsub);
     else if (strcmp(keyword, "lx") == 0) StoreWithCheckDup_d(keyword, value, &StdI.Lx);
     else if (strcmp(keyword, "ly") == 0) StoreWithCheckDup_d(keyword, value, &StdI.Ly);
-    else if (strcmp(keyword, "method") == 0) StoreWithCheckDup_s(keyword, value, StdI.method);
     else if (strcmp(keyword, "model") == 0) StoreWithCheckDup_s(keyword, value, StdI.model);
     else if (strcmp(keyword, "mu") == 0) StoreWithCheckDup_d(keyword, value, &StdI.mu);
     else if (strcmp(keyword, "nvmccalmode") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NVMCCalMode);
@@ -1392,8 +1490,10 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "v2p") == 0) StoreWithCheckDup_d(keyword, value, &StdI.V2);
     else if (strcmp(keyword, "v'") == 0) StoreWithCheckDup_d(keyword, value, &StdI.Vp);
     else if (strcmp(keyword, "w") == 0) StoreWithCheckDup_i(keyword, value, &StdI.W);
+    else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI.Wsub);
     else if (strcmp(keyword, "wx") == 0) StoreWithCheckDup_d(keyword, value, &StdI.Wx);
     else if (strcmp(keyword, "wy") == 0) StoreWithCheckDup_d(keyword, value, &StdI.Wy);
+    else if (strcmp(keyword, "2sz") == 0) StoreWithCheckDup_i(keyword, value, &StdI.Sz2);
     else {
       fprintf(stdout, "ERROR ! Unsupported Keyword !\n");
       exit(-1);
@@ -1461,7 +1561,7 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
   PrintTrans(&StdI);
   PrintInter(&StdI);
   PrintJastrow(&StdI);
-  PrintOther(&StdI);
+  PrintOther();
   PrintOrb(&StdI);
   PrintGutzwiller(&StdI);
   PrintNamelist(&StdI);

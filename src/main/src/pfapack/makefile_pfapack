@@ -19,7 +19,7 @@ OBJECTS = dlasktrd.o dlasktrf.o \
 	 dskmv.o dskpfa.o dskr2.o dskr2k.o dsktd2.o \
 	 dsktf2.o dsktrd.o dsktrf.o
 
-all: $(OBJECTS)
+libpfapack.a: $(OBJECTS)
 	$(AR) libpfapack.a $(OBJECTS)
 
 clean:

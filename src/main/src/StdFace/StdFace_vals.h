@@ -115,7 +115,6 @@ struct StdIntList {
   */
   char model[256];
   char lattice[256];
-  char method[256];
   char outputmode[256];
   char CDataFileHead[256];
   char CParaFileHead[256];

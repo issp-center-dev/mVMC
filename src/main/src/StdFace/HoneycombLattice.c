@@ -20,9 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include "../include/mfmemory.h"
 #include <complex.h>
-#include "../include/wrapperMPI.h"
 #include <string.h>
 
 /**
