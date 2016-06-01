@@ -149,4 +149,20 @@ struct StdIntList {
   int Sz2;
   int **Orb;
   int NOrb;
+  int NSym;
+  /*
+   Interactions
+  */
+  int NCintra;
+  int **CintraIndx;
+  double *Cintra;
+  int NCinter;
+  int **CinterIndx;
+  double *Cinter;
+  int NHund;
+  int **HundIndx;
+  double *Hund;
+  int NEx;
+  int **ExIndx;
+  double *Ex;
 };

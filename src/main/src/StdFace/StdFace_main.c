@@ -487,6 +487,7 @@ static void PrintInter(struct StdIntList *StdI){
     }
   }/*for (jintr = 0; jintr < StdI->nintr; jintr++)*/
  
+  StdI->nintr = 0;/*debug*/
   nintr0 = 0;
   for (kintr = 0; kintr < StdI->nintr; kintr++){
     if (cabs(StdI->intr[kintr]) > 0.000001) nintr0 = nintr0 + 1;
@@ -1030,33 +1031,6 @@ void PrintOrb(struct StdIntList *StdI) {
 }/*void PrintJastrow*/
 
 /**
-*
-* Print Quantum number projection
-*
-* @author Mitsuaki Kawamura (The University of Tokyo)
-*/
-static void PrintProj(struct StdIntList *StdI)
-{
-  FILE *fp;
-  int isite;
-
-  fp = fopen("qptransidx.def", "w");
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "NQPTrans %10d\n", 1);
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n");
-  fprintf(fp, "=============================================\n");
-
-  fprintf(fp, "%d %10.5f\n", 0, 1.0);
-
-  for (isite = 0; isite < StdI->nsite; isite++)
-    fprintf(fp, "%5d  %5d  %5d\n", 0, isite, isite);
-
-  fclose(fp);
-  fprintf(stdout, "    qptransidx.def is written.\n");
-}/*static void PrintProj*/
-
-/**
  *
  * Stop HPhi if unsupported model is read 
  *
@@ -1144,7 +1118,7 @@ static void CheckModPara(struct StdIntList *StdI)
 
   StdFace_PrintVal_i("NSPGaussLeg", &StdI->NSPGaussLeg, 1);
   StdFace_PrintVal_i("NSPStot", &StdI->NSPStot, 0);
-  StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, 1);
+  StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, StdI->NSym);
 
   if (StdI->NVMCCalMode == 1) StdFace_NotUsed_i("NSROptItrStep", StdI->NSROptItrStep);
   /*else*/ StdFace_PrintVal_i("NSROptItrStep", &StdI->NSROptItrStep, 1200);
@@ -1156,7 +1130,11 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_i("NVMCWarmUp", &StdI->NVMCWarmUp, 10);
   StdFace_PrintVal_i("NVMCIniterval", &StdI->NVMCIniterval, 1);
   StdFace_PrintVal_i("NVMCSample", &StdI->NVMCSample, 100);
-  StdFace_PrintVal_i("NExUpdatePath", &StdI->NExUpdatePath, 0);
+
+  if (strcmp(StdI->model, "hubbard") == 0) StdI->NExUpdatePath = 0;
+  else if (strcmp(StdI->model, "spin") == 0) StdI->NExUpdatePath = 2;
+  else if (strcmp(StdI->model, "kondo") == 0) StdI->NExUpdatePath = 1;
+
   StdFace_PrintVal_i("RndSeed", &StdI->RndSeed, 123456789);
   StdFace_PrintVal_i("NSplitSize", &StdI->NSplitSize, 1);
   StdFace_PrintVal_i("NStore", &StdI->NStore, 0);
@@ -1243,34 +1221,68 @@ static void PrintGutzwiller(struct StdIntList *StdI)
  /**
  * Output .def file for Specific interaction
  */
-static void PrintOther()
+static void PrintOther(struct StdIntList *StdI)
 {
   FILE *fp;
-
+  int nintr0, kintr;
+  /*
+   Coulomb INTRA
+  */
+  nintr0 = 0;
+  for (kintr = 0; kintr < StdI->NCintra; kintr++) {
+    if (fabs(StdI->Cintra[kintr]) > 0.000001) nintr0 = nintr0 + 1;
+  }
   fp = fopen("coulombintra.def", "w");
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "NCoulombIntra %10d\n", 0);
+  fprintf(fp, "NCoulombIntra %10d\n", nintr0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "================== CoulombIntra ================\n");
   fprintf(fp, "=============================================\n");
+  for (kintr = 0; kintr < StdI->NCintra; kintr++) {
+    if (fabs(StdI->Cintra[kintr]) > 0.000001) 
+      fprintf(fp, "%5d %25.15f\n",
+        StdI->CintraIndx[kintr][0], StdI->Cintra[kintr]);
+  }
   fclose(fp);
   fprintf(stdout, "    coulombintra.def is written.\n");
-
+  /*
+  Coulomb INTER
+  */
+  nintr0 = 0;
+  for (kintr = 0; kintr < StdI->NCinter; kintr++) {
+    if (fabs(StdI->Cinter[kintr]) > 0.000001) nintr0 = nintr0 + 1;
+  }
   fp = fopen("coulombinter.def", "w");
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "NCoulombInter %10d\n", 0);
+  fprintf(fp, "NCoulombInter %10d\n", nintr0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "================== CoulombInter ================\n");
   fprintf(fp, "=============================================\n");
+  for (kintr = 0; kintr < StdI->NCinter; kintr++) {
+    if (fabs(StdI->Cinter[kintr]) > 0.000001)
+      fprintf(fp, "%5d %5d %25.15f\n",
+        StdI->CinterIndx[kintr][0], StdI->CinterIndx[kintr][1], StdI->Cinter[kintr]);
+  }
   fclose(fp);
   fprintf(stdout, "    coulombinter.def is written.\n");
-
+  /*
+  Hund
+  */
+  nintr0 = 0;
+  for (kintr = 0; kintr < StdI->NHund; kintr++) {
+    if (fabs(StdI->Hund[kintr]) > 0.000001) nintr0 = nintr0 + 1;
+  }
   fp = fopen("hund.def", "w");
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "NHund %10d\n", 0);
+  fprintf(fp, "NHund %10d\n", nintr0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "=============== Hund coupling ===============\n");
   fprintf(fp, "=============================================\n");
+  for (kintr = 0; kintr < StdI->NHund; kintr++) {
+    if (fabs(StdI->Hund[kintr]) > 0.000001)
+      fprintf(fp, "%5d %5d %25.15f\n",
+        StdI->HundIndx[kintr][0], StdI->HundIndx[kintr][1], StdI->Hund[kintr]);
+  }
   fclose(fp);
   fprintf(stdout, "    hund.def is written.\n");
 
@@ -1282,13 +1294,24 @@ static void PrintOther()
   fprintf(fp, "=============================================\n");
   fclose(fp);
   fprintf(stdout, "    pairhop.def is written.\n");
-
+  /*
+  Exchange
+  */
+  nintr0 = 0;
+  for (kintr = 0; kintr < StdI->NEx; kintr++) {
+    if (fabs(StdI->Ex[kintr]) > 0.000001) nintr0 = nintr0 + 1;
+  }
   fp = fopen("exchange.def", "w");
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "NExchange %10d\n", 0);
+  fprintf(fp, "NExchange %10d\n", nintr0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "====== ExchangeCoupling coupling ============\n");
   fprintf(fp, "=============================================\n");
+  for (kintr = 0; kintr < StdI->NEx; kintr++) {
+    if (fabs(StdI->Ex[kintr]) > 0.000001)
+      fprintf(fp, "%5d %5d %25.15f\n",
+        StdI->ExIndx[kintr][0], StdI->ExIndx[kintr][1], StdI->Ex[kintr]);
+  }
   fclose(fp);
   fprintf(stdout, "    exchange.def is written.\n");
 
@@ -1460,10 +1483,9 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "nelec") == 0) StoreWithCheckDup_i(keyword, value, &StdI.nelec);
     else if (strcmp(keyword, "ndataidxstart") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NDataIdxStart);
     else if (strcmp(keyword, "ndataqtysmp") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NDataQtySmp);
-    else if (strcmp(keyword, "nexupdatepath") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NExUpdatePath);
     else if (strcmp(keyword, "nlanczosmode") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NLanczosMode);
     else if (strcmp(keyword, "nmptrans") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NMPTrans);
-    else if (strcmp(keyword, "nspgaussLeg") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSPGaussLeg);
+    else if (strcmp(keyword, "nspgaussleg") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSPGaussLeg);
     else if (strcmp(keyword, "nsplitsize") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSplitSize);
     else if (strcmp(keyword, "nsroptfixsmp") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSROptFixSmp);
     else if (strcmp(keyword, "nsroptitrsmp") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSROptItrSmp);
@@ -1551,21 +1573,22 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     || strcmp(StdI.lattice, "triangularlattice") == 0) StdFace_Triangular(&StdI, StdI.model);
   else UnsupportedSystem(StdI.model, StdI.lattice);
   /**/
-  CheckModPara(&StdI);
+  StdFace_generate_orb(&StdI);
   CheckOutputMode(&StdI);
   /**/
   fprintf(stdout, "\n");
   fprintf(stdout, "######  Print Expert input files  ######\n");
   fprintf(stdout, "\n");
+  StdFace_Proj(&StdI);
+  CheckModPara(&StdI);
   PrintLocSpin(&StdI);
   PrintTrans(&StdI);
   PrintInter(&StdI);
   PrintJastrow(&StdI);
-  PrintOther();
+  PrintOther(&StdI);
   PrintOrb(&StdI);
   PrintGutzwiller(&StdI);
   PrintNamelist(&StdI);
-  PrintProj(&StdI);
   /*PrintCalcMod(&StdI);*/
   PrintModPara(&StdI);
   Print1Green(&StdI);

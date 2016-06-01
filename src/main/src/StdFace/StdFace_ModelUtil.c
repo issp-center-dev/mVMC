@@ -203,6 +203,21 @@ struct StdIntList *StdI,
 
     }/*for (jspin = 0; jspin <= Sj2; jspin++)*/
   }/*for (ispin = 0; ispin <= Si2; ispin++)*/
+
+  StdI->Hund[StdI->NHund] = - 0.5 * J[0][0];
+  StdI->HundIndx[StdI->NHund][0] = isite; 
+  StdI->HundIndx[StdI->NHund][1] = jsite;
+  StdI->NHund += 1;
+
+  StdI->Cinter[StdI->NCinter] = - 0.25 * J[0][0];
+  StdI->CinterIndx[StdI->NCinter][0] = isite;
+  StdI->CinterIndx[StdI->NCinter][1] = jsite;
+  StdI->NCinter += 1;
+
+  StdI->Ex[StdI->NEx] = - 0.25 * (J[0][0] + J[1][1]);
+  StdI->ExIndx[StdI->NEx][0] = isite;
+  StdI->ExIndx[StdI->NEx][1] = jsite;
+  StdI->NEx += 1;
 }
 
 /**
@@ -223,6 +238,11 @@ struct StdIntList *StdI,
       StdFace_intr(StdI, V, isite, ispin, isite, ispin, jsite, jspin, jsite, jspin);
     }
   }
+
+  StdI->Cinter[StdI->NCinter] = V;
+  StdI->CinterIndx[StdI->NCinter][0] = isite;
+  StdI->CinterIndx[StdI->NCinter][1] = jsite;
+  StdI->NCinter += 1;
 }
 
 /**
@@ -989,7 +1009,7 @@ void StdFace_InputHopp(struct StdIntList *StdI, double complex *t0, char *t0name
 /*
  *Generate orbitalindex
 */
-void generate_orb(struct StdIntList *StdI) {
+void StdFace_generate_orb(struct StdIntList *StdI) {
   int iCell, jCell, kCell, iW, iL, jW, jL, iCell2, jCell2;
   int NotUse1, NotUse2, iWfold, iLfold, jWfold, jLfold, iOrb;
   int isite, jsite;
@@ -1036,7 +1056,6 @@ void generate_orb(struct StdIntList *StdI) {
         }
       }/*for (iCell = 0; iCell < StdI->NCell; iCell++)*/
 
-      printf("DEBUG2 %d %d %d %d\n", iCell, iCell2, jCell, jCell2);
       for (isite = 0; isite < StdI->NsiteUC; isite++) {
         for (jsite = 0; jsite < StdI->NsiteUC; jsite++) {
  
@@ -1068,4 +1087,130 @@ void generate_orb(struct StdIntList *StdI) {
   }/*for (iCell = 0; iCell < StdI->NCell; iCell++)*/
   StdI->NOrb = iOrb;
 
+}
+
+void StdFace_InterAllSeparate(struct StdIntList *StdI) {
+  int kintr;
+  /*
+  Coulomb intra
+  */
+  StdI->CintraIndx = (int **)malloc(sizeof(int*) * StdI->nintr);
+  StdI->Cintra = (double *)malloc(sizeof(double) * StdI->nintr);
+  for (kintr = 0; kintr < StdI->nintr; kintr++) {
+    StdI->CintraIndx[kintr] = (int *)malloc(sizeof(int) * 1);
+  }
+  /*
+  Coulomb inter
+  */
+  StdI->CinterIndx = (int **)malloc(sizeof(int*) * StdI->nintr);
+  StdI->Cinter = (double *)malloc(sizeof(double) * StdI->nintr);
+  for (kintr = 0; kintr < StdI->nintr; kintr++) {
+    StdI->CinterIndx[kintr] = (int *)malloc(sizeof(int) * 2);
+  }
+  /*
+  Hund
+  */
+  StdI->HundIndx = (int **)malloc(sizeof(int*) * StdI->nintr);
+  StdI->Hund = (double *)malloc(sizeof(double) * StdI->nintr);
+  for (kintr = 0; kintr < StdI->nintr; kintr++) {
+    StdI->HundIndx[kintr] = (int *)malloc(sizeof(int) * 2);
+  }
+  /*
+  Excahnge
+  */
+  StdI->ExIndx = (int **)malloc(sizeof(int*) * StdI->nintr);
+  StdI->Ex = (double *)malloc(sizeof(double) * StdI->nintr);
+  for (kintr = 0; kintr < StdI->nintr; kintr++) {
+    StdI->ExIndx[kintr] = (int *)malloc(sizeof(int) * 2);
+  }
+
+  StdI->NCintra = 0;
+  StdI->NCinter = 0;
+  StdI->NHund = 0;
+  StdI->NEx = 0;
+}
+
+/**
+*
+* Print Quantum number projection
+*
+* @author Mitsuaki Kawamura (The University of Tokyo)
+*/
+void StdFace_Proj(struct StdIntList *StdI)
+{
+  FILE *fp;
+  int isite, jsite, iCell, jCell, kCell;
+  int iWfold, iLfold, jWfold, jLfold, iW, iL;
+  int NotUse1, NotUse2;
+  int iSym;
+  int **Sym;
+
+  Sym = (int **)malloc(sizeof(int*) * StdI->nsite);
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    Sym[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
+  }
+  /*
+  Define translation operator in sub lattice
+  */
+  StdI->NSym = 0;
+  for (iCell = 0; iCell < StdI->NCell; iCell++) {
+    iW = StdI->Cell[iCell][0];
+    iL = StdI->Cell[iCell][1];
+
+    StdFace_FoldSite2Dsub(StdI, iW, iL, &NotUse1, &NotUse2, &iWfold, &iLfold);
+
+    StdFace_FoldSite2D(StdI, iWfold, iLfold, &NotUse1, &NotUse2, &iWfold, &iLfold);
+
+    if (iWfold == iW && iLfold == iL) {
+      /*
+      Translation operator in sub lattice
+      */
+      for (jCell = 0; jCell < StdI->NCell; jCell++) {
+
+        jWfold = StdI->Cell[jCell][0] + iW;
+        jLfold = StdI->Cell[jCell][1] + iL;
+        StdFace_FoldSite2D(StdI, jWfold, jLfold, &NotUse1, &NotUse2, &jWfold, &jLfold);
+
+        for (kCell = 0; kCell < StdI->NCell; kCell++) {
+          if (jWfold == StdI->Cell[kCell][0] && jLfold == StdI->Cell[kCell][1]) {
+
+            for (isite = 0; isite < StdI->NsiteUC; isite++) {
+              for (jsite = 0; jsite < StdI->NsiteUC; jsite++) {
+
+                Sym[StdI->NSym][jCell*StdI->NsiteUC + jsite] = kCell*StdI->NsiteUC + isite;
+
+                if (strcmp(StdI->model, "kondo") == 0) {
+                  Sym[StdI->NSym][StdI->nsite / 2 + jCell*StdI->NsiteUC + jsite] = StdI->nsite / 2 + kCell*StdI->NsiteUC + isite;
+                }/*if (strcmp(StdI->model, "kondo") == 0)*/
+
+              }/*for (jsite = 0; jsite < StdI->NsiteUC; jsite++)*/
+            }/*for (isite = 0; isite < StdI->NsiteUC; isite++)*/
+
+          }/*if (jWfold == StdI->Cell[kCell][0] && jLfold == StdI->Cell[kCell][1])*/
+        }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
+      }/*for (jCell = 0; jCell < StdI->NCell; jCell++)*/
+      StdI->NSym += 1;
+    }/*if (iWfold == iW && iLfold == iL)*/
+  }/*for (iCell = 0; iCell < StdI->NCell; iCell++)*/
+
+  fp = fopen("qptransidx.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NQPTrans %10d\n", StdI->NSym);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n");
+  fprintf(fp, "=============================================\n");
+  for (iSym = 0; iSym < StdI->NSym; iSym++) {
+    fprintf(fp, "%d %10.5f\n", iSym, 1.0);
+  }
+  for (iSym = 0; iSym < StdI->NSym; iSym++) {
+    for (isite = 0; isite < StdI->nsite; isite++)
+      fprintf(fp, "%5d  %5d  %5d\n", iSym, isite, Sym[iSym][isite]);
+  }
+  fclose(fp);
+  fprintf(stdout, "    qptransidx.def is written.\n");
+
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    free(Sym[isite]);
+  }
+  free(Sym);
 }

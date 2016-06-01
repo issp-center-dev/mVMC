@@ -166,6 +166,7 @@ void StdFace_Triangular(struct StdIntList *StdI, char *model)
   for (kintr = 0; kintr < StdI->nintr; kintr++) {
     StdI->intrindx[kintr] = (int *)malloc(sizeof(int) * 8);
   }
+  StdFace_InterAllSeparate(StdI);/*debug*/
   /*
   Set Transfer & Interaction
   */
@@ -188,6 +189,7 @@ void StdFace_Triangular(struct StdIntList *StdI, char *model)
     else {
       StdFace_Hopping(StdI, StdI->mu, isite, isite);
       StdFace_intr(StdI, StdI->U, isite, 0, isite, 0, isite, 1, isite, 1);
+      StdI->Cintra[StdI->NCintra] = StdI->U; StdI->CintraIndx[StdI->NCintra][0] = isite; StdI->NCintra += 1;
       /**/
       if (strcmp(StdI->model, "kondo") == 0 ) {
         jsite = kCell;
@@ -271,9 +273,5 @@ void StdFace_Triangular(struct StdIntList *StdI, char *model)
   fprintf(fp, "plot x w l lw 0\n");
   fprintf(fp, "pause -1\n");
   fclose(fp);
-  /*
-  Set Orbital index
-  */
-  generate_orb(StdI);
 }
 
