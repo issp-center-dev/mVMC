@@ -15,15 +15,15 @@ else
     if [ ${1} = "sekirei" ]; then
         cat > src/make.sys <<EOF
 CC = mpicc
-LIB = -L\$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -openmp -lpthread -lm
+LIB = -L\$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
 CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
 REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
 FORT = ifort
-FFLAGS = -O3 -implicitnone -xSSE2
-SMFTFLAGS = -O3 -no-ansi-alias -xSSE2 -DMEXP=19937 -DHAVE_SSE2
+FFLAGS = -O3 -implicitnone -xHost
+SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
 EOF
     elif [ ${1} = "openmpi-intel" ]; then
         cat > src/make.sys <<EOF
@@ -35,8 +35,8 @@ OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
 FORT = ifort
-FFLAGS = -O3 -implicitnone -xSSE2
-SMFTFLAGS = -O3 -no-ansi-alias -xSSE2 -DMEXP=19937 -DHAVE_SSE2
+FFLAGS = -O3 -implicitnone -xHost
+SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
 EOF
     elif [ ${1} = "jupiter" ]; then
         cat > src/make.sys <<EOF
