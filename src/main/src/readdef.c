@@ -5,14 +5,211 @@
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-int ReadDefFileError(char *defname);
+#include "./include/readdef.h"
+#include "./include/readdef_core.h"
+
+int ReadDefFileError(const char *defname);
 int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm);
 int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm);
 
-int ReadDefFileError(char *defname){
+int ReadDefFileError(const char *defname){
   fprintf(stderr, "error: %s (Broken file or Not exist)\n", defname);
   return 1;
 }
+
+int CheckWords( const char* ctmp, const char* cKeyWord);
+
+/**
+ * Keyword List in NameListFile.
+ **/
+static char cKWListOfFileNameList[D_iKWNumDef][D_CharTmpReadDef]={
+        "CalcMod",
+        "ModPara",
+        "LocSpin",
+        "Trans",
+        "CoulombIntra",
+        "CoulombInter",
+        "Hund",
+        "PairHop",
+        "Exchange",
+        "InterAll",
+        "Gutzwiller",
+        "Jastrow",
+        "DH2",
+        "DH4",
+        "Orbital",
+        "TransSym",
+        "OneBodyG",
+        "TwoBodyG",
+        "TwoBodyGEx"
+};
+
+/**
+ * File Name List in NameListFile.
+ **/
+static char cFileNameListFile[D_iKWNumDef][D_CharTmpReadDef];
+
+/**
+ * @brief Function of Validating value.
+ * @param[in] icheckValue value to validate.
+ * @param[in] ilowestValue lowest value which icheckValue can be set.
+ * @param[in] iHighestValue heighest value which icheckValue can be set.
+ * @retval 0 value is correct.
+ * @retval -1 value is incorrect.
+ * @author Kazuyoshi Yoshimi (The University of Tokyo)
+ **/
+int ValidateValue(
+		  const int icheckValue, 
+		  const int ilowestValue, 
+		  const int iHighestValue
+		  ){
+
+  if(icheckValue < ilowestValue || icheckValue > iHighestValue){
+    return(-1);
+  }
+  return 0;
+}
+
+/**
+ * @brief Function of Checking keyword in NameList file.
+ * @param[in] _cKW keyword candidate
+ * @param[in] _cKWList Reffercnce of keyword List
+ * @param[in] iSizeOfKWidx number of keyword
+ * @param[out] _iKWidx index of keyword
+ * @retval 0 keyword is correct.
+ * @retval -1 keyword is incorrect.
+ * @version 0.1
+ * @author Takahiro Misawa (The University of Tokyo)
+ * @author Kazuyoshi Yoshimi (The University of Tokyo)
+ **/
+int CheckKW(
+	    const char* cKW,
+	    char  cKWList[][D_CharTmpReadDef],
+	    int iSizeOfKWidx,
+	    int* iKWidx
+	    ){
+  *iKWidx=-1;
+  int itmpKWidx;
+  int iret=-1;
+  for(itmpKWidx=0; itmpKWidx<iSizeOfKWidx; itmpKWidx++){
+    if(strcmp(cKW,"")==0){
+      break;
+    }
+    else if(CheckWords(cKW, cKWList[itmpKWidx])==0){
+      iret=0;
+      *iKWidx=itmpKWidx;
+    }
+  }
+  return iret;
+}
+
+/**
+ * @brief Function of Getting keyword and it's variable from characters.
+ * @param[in] _ctmpLine characters including keyword and it's variable 
+ * @param[out] _ctmp keyword
+ * @param[out] _itmp variable for a keyword
+ * @retval 0 keyword and it's variable are obtained.
+ * @retval 1 ctmpLine is a comment line.
+ * @retval -1 format of ctmpLine is incorrect.
+ * @version 1.0
+ * @author Kazuyoshi Yoshimi (The University of Tokyo)
+ **/
+int GetKWWithIdx(
+		 char *ctmpLine,
+		 char *ctmp,
+		 int *itmp
+		 )
+{
+    char *ctmpRead;
+    char *cerror;
+    char csplit[] = " ,.\t\n";
+    if(*ctmpLine=='\n') return(-1);
+    ctmpRead = strtok(ctmpLine, csplit);
+    if(strncmp(ctmpRead, "=", 1)==0 || strncmp(ctmpRead, "#", 1)==0 || ctmpRead==NULL){
+      return(-1);
+    }
+    strcpy(ctmp, ctmpRead);
+    
+    ctmpRead = strtok( NULL, csplit );
+    *itmp = strtol(ctmpRead, &cerror, 0);
+    //if ctmpRead is not integer type
+    if(*cerror != '\0'){
+      fprintf(stderr, "Error: incorrect format= %s. \n", cerror);
+      return(-1);
+    }
+
+    ctmpRead = strtok( NULL, csplit );
+    if(ctmpRead != NULL){
+      fprintf(stderr, "Error: incorrect format= %s. \n", ctmpRead);
+      return(-1);
+    }    
+    return 0;
+}
+
+/**
+ * @brief Function of Fitting FileName
+ * @param[in]  _cFileListNameFile file for getting names of input files.
+ * @param[out] _cFileNameList arrays for getting names of input files.
+ * @retval 0 normally finished reading file.
+ * @retval -1 unnormally finished reading file.
+ * @version 1.0
+ * @author Kazuyoshi Yoshimi (The University of Tokyo)
+ **/
+int GetFileName(
+		const char* cFileListNameFile,
+		char cFileNameList[][D_CharTmpReadDef],
+        MPI_Comm comm
+		)
+{
+  int myrank;
+  FILE *fplist;
+  char ctmp[D_FileNameMax];
+  int itmpKWidx=-1;
+  char ctmpFileName[D_FileNameMaxReadDef];
+  char ctmpKW[D_CharTmpReadDef], ctmp2[256];
+  int i;
+  for(i=0; i< D_iKWNumDef; i++){
+    strcpy(cFileNameList[i],"");
+  }
+  
+  fplist = fopen(cFileListNameFile, "r");
+  if(fplist==NULL) return ReadDefFileError(cFileListNameFile);
+  
+  while(fgets(ctmp2, 256, fplist) != NULL){ 
+    sscanf(ctmp2,"%s %s\n", ctmpKW, ctmpFileName);
+
+    if(strncmp(ctmpKW, "#", 1)==0 || *ctmp2=='\n'){
+      continue;
+    }
+    else if(strcmp(ctmpKW, "")*strcmp(ctmpFileName, "")==0){
+      fprintf(stderr, "Error: keyword and filename must be set as a pair in %s.\n", cFileListNameFile);
+      fclose(fplist);
+      return(-1);
+    }
+    /*!< Check KW */
+    if( CheckKW(ctmpKW, cKWListOfFileNameList, D_iKWNumDef, &itmpKWidx)!=0 ){
+
+      fprintf(stderr, "Error: Wrong keywords '%s' in %s.\n", ctmpKW, cFileListNameFile);
+      fprintf(stderr, "%s", "Choose Keywords as follows: \n");
+      for(i=0; i<D_iKWNumDef;i++){
+        fprintf(stderr, "%s \n", cKWListOfFileNameList[i]);
+      }      
+      fclose(fplist);
+      return(-1);
+    }
+    /*!< Check cFileNameList to prevent from double registering the file name */    
+    if(strcmp(cFileNameList[itmpKWidx], "") !=0){
+      fprintf(stderr, "Error: Same keywords exist in %s.\n", cFileListNameFile);
+      fclose(fplist);
+      return(-1);
+    }
+    /*!< Copy FileName */
+    strcpy(cFileNameList[itmpKWidx], ctmpFileName);
+  }
+  fclose(fplist);  
+  return 0;
+}
+
 
 int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   FILE *fp, *fplist;
@@ -942,4 +1139,42 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   }
 
   return 0;
+}
+
+
+/** 
+ * 
+ * @brief function of checking whether ctmp is same as cKeyWord or not
+ * 
+ * @param[in] ctmp 
+ * @param[in] cKeyWord 
+ * @return 0 ctmp is same as cKeyWord
+ * 
+ * @author Kazuyoshi Yoshimi (The University of Tokyo)
+ */
+int CheckWords(
+	       const char* ctmp,
+	       const char* cKeyWord
+	       )
+{
+  int i=0;
+
+    char ctmp_small[256];
+    char cKW_small[256];
+    int n;
+    n=strlen(cKeyWord);
+    memset(cKW_small, 0, sizeof(cKeyWord));
+    strncpy(cKW_small, cKeyWord, sizeof(cKeyWord));
+
+  for(i=0; i<n; i++){
+    cKW_small[i]=tolower(cKW_small[i]);
+  }
+
+    n=strlen(ctmp);
+    memset(ctmp_small, 0, sizeof(ctmp));
+    strncpy(ctmp_small, ctmp, sizeof(ctmp));
+  for(i=0; i<n; i++){
+    ctmp_small[i]=tolower(ctmp_small[i]);
+  }
+  return(strncmp(ctmp_small, cKW_small, sizeof(ctmp)));
 }
