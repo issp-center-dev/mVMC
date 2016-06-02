@@ -1116,7 +1116,7 @@ static void CheckModPara(struct StdIntList *StdI)
   if (StdI->NVMCCalMode == 0) StdFace_NotUsed_i("NDataQtySmp", StdI->NDataQtySmp);
   /*else*/StdFace_PrintVal_i("NDataQtySmp", &StdI->NDataQtySmp, 5);
 
-  StdFace_PrintVal_i("NSPGaussLeg", &StdI->NSPGaussLeg, 1);
+  StdFace_PrintVal_i("NSPGaussLeg", &StdI->NSPGaussLeg, 8);
   StdFace_PrintVal_i("NSPStot", &StdI->NSPStot, 0);
   StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, StdI->NSym);
 
@@ -1139,9 +1139,9 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_i("NSplitSize", &StdI->NSplitSize, 1);
   StdFace_PrintVal_i("NStore", &StdI->NStore, 0);
 
-  StdFace_PrintVal_d("DSROptRedCut", &StdI->DSROptRedCut, 0.0001);
-  StdFace_PrintVal_d("DSROptStaDel", &StdI->DSROptStaDel, 0.01);
-  StdFace_PrintVal_d("DSROptStepDt", &StdI->DSROptStepDt, 0.05);
+  StdFace_PrintVal_d("DSROptRedCut", &StdI->DSROptRedCut, 0.001);
+  StdFace_PrintVal_d("DSROptStaDel", &StdI->DSROptStaDel, 0.02);
+  StdFace_PrintVal_d("DSROptStepDt", &StdI->DSROptStepDt, 0.02);
 
   /**/
   if (strcmp(StdI->model, "hubbard") == 0){
