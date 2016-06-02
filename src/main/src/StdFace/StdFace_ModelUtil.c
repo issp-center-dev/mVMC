@@ -1139,15 +1139,15 @@ void StdFace_InterAllSeparate(struct StdIntList *StdI) {
 void StdFace_Proj(struct StdIntList *StdI)
 {
   FILE *fp;
-  int isite, jsite, iCell, jCell, kCell;
+  int jsite, iCell, jCell, kCell;
   int iWfold, iLfold, jWfold, jLfold, iW, iL;
   int NotUse1, NotUse2;
   int iSym;
   int **Sym;
 
   Sym = (int **)malloc(sizeof(int*) * StdI->nsite);
-  for (isite = 0; isite < StdI->nsite; isite++) {
-    Sym[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
+  for (jsite = 0; jsite < StdI->nsite; jsite++) {
+    Sym[jsite] = (int *)malloc(sizeof(int) * StdI->nsite);
   }
   /*
   Define translation operator in sub lattice
@@ -1174,17 +1174,15 @@ void StdFace_Proj(struct StdIntList *StdI)
         for (kCell = 0; kCell < StdI->NCell; kCell++) {
           if (jWfold == StdI->Cell[kCell][0] && jLfold == StdI->Cell[kCell][1]) {
 
-            for (isite = 0; isite < StdI->NsiteUC; isite++) {
-              for (jsite = 0; jsite < StdI->NsiteUC; jsite++) {
+            for (jsite = 0; jsite < StdI->NsiteUC; jsite++) {
 
-                Sym[StdI->NSym][jCell*StdI->NsiteUC + jsite] = kCell*StdI->NsiteUC + isite;
+              Sym[StdI->NSym][jCell*StdI->NsiteUC + jsite] = kCell*StdI->NsiteUC + jsite;
 
-                if (strcmp(StdI->model, "kondo") == 0) {
-                  Sym[StdI->NSym][StdI->nsite / 2 + jCell*StdI->NsiteUC + jsite] = StdI->nsite / 2 + kCell*StdI->NsiteUC + isite;
-                }/*if (strcmp(StdI->model, "kondo") == 0)*/
+              if (strcmp(StdI->model, "kondo") == 0) {
+                Sym[StdI->NSym][StdI->nsite / 2 + jCell*StdI->NsiteUC + jsite] = StdI->nsite / 2 + kCell*StdI->NsiteUC + jsite;
+              }/*if (strcmp(StdI->model, "kondo") == 0)*/
 
-              }/*for (jsite = 0; jsite < StdI->NsiteUC; jsite++)*/
-            }/*for (isite = 0; isite < StdI->NsiteUC; isite++)*/
+            }/*for (jsite = 0; jsite < StdI->NsiteUC; jsite++)*/
 
           }/*if (jWfold == StdI->Cell[kCell][0] && jLfold == StdI->Cell[kCell][1])*/
         }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
@@ -1203,14 +1201,14 @@ void StdFace_Proj(struct StdIntList *StdI)
     fprintf(fp, "%d %10.5f\n", iSym, 1.0);
   }
   for (iSym = 0; iSym < StdI->NSym; iSym++) {
-    for (isite = 0; isite < StdI->nsite; isite++)
-      fprintf(fp, "%5d  %5d  %5d\n", iSym, isite, Sym[iSym][isite]);
+    for (jsite = 0; jsite < StdI->nsite; jsite++)
+      fprintf(fp, "%5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite]);
   }
   fclose(fp);
   fprintf(stdout, "    qptransidx.def is written.\n");
 
-  for (isite = 0; isite < StdI->nsite; isite++) {
-    free(Sym[isite]);
+  for (jsite = 0; jsite < StdI->nsite; jsite++) {
+    free(Sym[jsite]);
   }
   free(Sym);
 }
