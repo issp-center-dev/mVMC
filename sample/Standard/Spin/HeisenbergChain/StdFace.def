@@ -1,0 +1,6 @@
+L = 16
+Lsub=16
+model = "Spin"
+lattice = "chain"
+J = 1.0
+2Sz = 0

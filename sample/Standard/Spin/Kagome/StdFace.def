@@ -1,0 +1,12 @@
+a0W = 2
+a0L = -1
+a1W = -2
+a1L = 6
+a0Wsub = 2
+a0Lsub = -1
+a1Wsub = -1
+a1Lsub = 3
+model = "Spin"
+lattice = "Kagome"
+J = 1.0
+2Sz = 0

@@ -45,6 +45,8 @@ void StdFace_Chain(struct StdIntList *StdI, char *model)
   StdFace_RequiredVal_i("L", StdI->L);
   StdFace_NotUsed_i("W", StdI->W);
   StdI->W = 1;
+  StdI->Wsub = 1;
+  StdFace_PrintVal_i("Lsub", &StdI->Lsub, StdI->L);
   StdFace_NotUsed_i("a0W", StdI->a0W);
   StdFace_NotUsed_i("a0L", StdI->a0L);
   StdFace_NotUsed_i("a1W", StdI->a1W);
