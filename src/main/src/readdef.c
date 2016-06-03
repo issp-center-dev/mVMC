@@ -5,8 +5,8 @@
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
+#include <ctype.h>
 #include "./include/readdef.h"
-#include "./include/readdef_core.h"
 
 int ReadDefFileError(const char *defname);
 int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm);
@@ -22,7 +22,7 @@ int CheckWords( const char* ctmp, const char* cKeyWord);
 /**
  * Keyword List in NameListFile.
  **/
-static char cKWListOfFileNameList[D_iKWNumDef][D_CharTmpReadDef]={
+static char cKWListOfFileNameList[][D_CharTmpReadDef]={
         "CalcMod",
         "ModPara",
         "LocSpin",
@@ -39,15 +39,22 @@ static char cKWListOfFileNameList[D_iKWNumDef][D_CharTmpReadDef]={
         "DH4",
         "Orbital",
         "TransSym",
+        "InGutzwiller",
+        "InJastrow",
+        "InDH2",
+        "InDH4",
+        "InOrbital",
         "OneBodyG",
         "TwoBodyG",
         "TwoBodyGEx"
 };
 
+int D_iKWNumDef = sizeof(cKWListOfFileNameList)/sizeof(cKWListOfFileNameList[0]);
+
 /**
  * File Name List in NameListFile.
  **/
-static char cFileNameListFile[D_iKWNumDef][D_CharTmpReadDef];
+static char (*cFileNameListFile)[D_CharTmpReadDef];
 
 /**
  * @brief Function of Validating value.
@@ -157,8 +164,7 @@ int GetKWWithIdx(
  **/
 int GetFileName(
 		const char* cFileListNameFile,
-		char cFileNameList[][D_CharTmpReadDef],
-        MPI_Comm comm
+		char cFileNameList[][D_CharTmpReadDef]
 		)
 {
   int myrank;
@@ -227,6 +233,13 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   MPI_Comm_rank(comm, &rank);
 
   if(rank==0) {
+    cFileNameListFile = malloc(sizeof(char)*D_CharTmpReadDef*D_iKWNumDef);
+    fprintf(stdout, "  Read File %s .\n", xNameListFile); 
+    if(GetFileName(xNameListFile, cFileNameListFile)!=0){
+      fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+    
     fplist = fopen(xNameListFile, "r");
     if(fplist!=NULL) {
       /* zmodpara.def */
@@ -1158,21 +1171,21 @@ int CheckWords(
 	       )
 {
   int i=0;
-
-    char ctmp_small[256];
-    char cKW_small[256];
-    int n;
-    n=strlen(cKeyWord);
-    memset(cKW_small, 0, sizeof(cKeyWord));
-    strncpy(cKW_small, cKeyWord, sizeof(cKeyWord));
-
+  
+  char ctmp_small[256];
+  char cKW_small[256];
+  int n;
+  n=strlen(cKeyWord);
+  memset(cKW_small, 0, sizeof(cKeyWord));
+  strncpy(cKW_small, cKeyWord, sizeof(cKeyWord));
+  
   for(i=0; i<n; i++){
     cKW_small[i]=tolower(cKW_small[i]);
   }
-
-    n=strlen(ctmp);
-    memset(ctmp_small, 0, sizeof(ctmp));
-    strncpy(ctmp_small, ctmp, sizeof(ctmp));
+  
+  n=strlen(ctmp);
+  memset(ctmp_small, 0, sizeof(ctmp));
+  strncpy(ctmp_small, ctmp, sizeof(ctmp));
   for(i=0; i<n; i++){
     ctmp_small[i]=tolower(ctmp_small[i]);
   }
