@@ -948,16 +948,16 @@ void PrintJastrow(struct StdIntList *StdI) {
   }
   else if (strcmp(StdI->model, "kondo") == 0) {
     NJastrow = 1;
-    for (isite = 0; isite < StdI->nsite / 2; isite++) {
-      for (jsite = 0; jsite < StdI->nsite / 2; jsite++) {
-        Jastrow[isite][jsite] = 0;
-      }/*for (jsite = 0; jsite < isite; jsite++)*/
-    }/*for (isite = 0; isite < StdI->nsite; isite++)*/
-    for (isite = StdI->nsite / 2 + 1; isite < StdI->nsite; isite++) {
-      for (jsite = StdI->nsite / 2 + 1; jsite < isite; jsite++) {
-        Jastrow[isite][jsite] = NJastrow;
-        Jastrow[jsite][isite] = NJastrow;
-        NJastrow += 1;
+    for (isite = 0; isite < StdI->nsite; isite++) {
+      for (jsite = 0; jsite < StdI->nsite; jsite++) {
+        if (isite < StdI->nsite / 2 || jsite < StdI->nsite / 2) {
+          Jastrow[isite][jsite] = 0;
+        }
+        else {
+          Jastrow[isite][jsite] = NJastrow;
+          Jastrow[jsite][isite] = NJastrow;
+          NJastrow += 1;
+        }
       }/*for (jsite = 0; jsite < isite; jsite++)*/
     }/*for (isite = 0; isite < StdI->nsite; isite++)*/
   }

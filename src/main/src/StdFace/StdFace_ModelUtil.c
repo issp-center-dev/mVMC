@@ -1013,14 +1013,19 @@ void StdFace_generate_orb(struct StdIntList *StdI) {
   int iCell, jCell, kCell, iW, iL, jW, jL, iCell2, jCell2;
   int NotUse1, NotUse2, iWfold, iLfold, jWfold, jLfold, iOrb;
   int isite, jsite;
+  int **CellDone;
 
   StdFace_InitSite2DSub(StdI);
 
   StdI->Orb = (int **)malloc(sizeof(int*) * StdI->nsite);
   for (isite = 0; isite < StdI->nsite; isite++) {
     StdI->Orb[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
-    for (jsite = 0; jsite < StdI->nsite; jsite++) {
-      StdI->Orb[isite][jsite] = -1;
+  }
+  CellDone = (int **)malloc(sizeof(int*) * StdI->NCell);
+  for (iCell = 0; iCell < StdI->NCell; iCell++) {
+    CellDone[iCell] = (int *)malloc(sizeof(int) * StdI->NCell);
+    for (jCell = 0; jCell < StdI->NCell; jCell++) {
+      CellDone[iCell][jCell] = 0;
     }
   }
 
@@ -1059,7 +1064,7 @@ void StdFace_generate_orb(struct StdIntList *StdI) {
       for (isite = 0; isite < StdI->NsiteUC; isite++) {
         for (jsite = 0; jsite < StdI->NsiteUC; jsite++) {
  
-          if (StdI->Orb[iCell2*StdI->NsiteUC + isite][jCell2*StdI->NsiteUC + jsite] < 0) {
+          if (CellDone[iCell2][jCell2] == 0) {
             StdI->Orb[iCell2*StdI->NsiteUC + isite][jCell2*StdI->NsiteUC + jsite] = iOrb;
             iOrb += 1;
           }
@@ -1067,12 +1072,25 @@ void StdFace_generate_orb(struct StdIntList *StdI) {
             = StdI->Orb[iCell2*StdI->NsiteUC + isite][jCell2*StdI->NsiteUC + jsite];
  
           if (strcmp(StdI->model, "kondo") == 0) {
-            if (StdI->Orb[StdI->nsite / 2 + iCell2*StdI->NsiteUC + isite]
-                         [StdI->nsite / 2 + jCell2*StdI->NsiteUC + jsite] < 0) {
+            if (CellDone[iCell2][jCell2] == 0) {
+              StdI->Orb[StdI->nsite / 2 + iCell2*StdI->NsiteUC + isite]
+                       [                  jCell2*StdI->NsiteUC + jsite] = iOrb;
+              iOrb += 1;
+              StdI->Orb[                  iCell2*StdI->NsiteUC + isite]
+                       [StdI->nsite / 2 + jCell2*StdI->NsiteUC + jsite] = iOrb;
+              iOrb += 1;
               StdI->Orb[StdI->nsite / 2 + iCell2*StdI->NsiteUC + isite]
                        [StdI->nsite / 2 + jCell2*StdI->NsiteUC + jsite] = iOrb;
               iOrb += 1;
             }
+            StdI->Orb[StdI->nsite / 2 + iCell*StdI->NsiteUC + isite]
+                     [                  jCell*StdI->NsiteUC + jsite]
+            = StdI->Orb[StdI->nsite / 2 + iCell2*StdI->NsiteUC + isite]
+                       [                  jCell2*StdI->NsiteUC + jsite];
+            StdI->Orb[                  iCell*StdI->NsiteUC + isite]
+                     [StdI->nsite / 2 + jCell*StdI->NsiteUC + jsite]
+            = StdI->Orb[                  iCell2*StdI->NsiteUC + isite]
+                       [StdI->nsite / 2 + jCell2*StdI->NsiteUC + jsite];
             StdI->Orb[StdI->nsite / 2 + iCell*StdI->NsiteUC + isite]
                      [StdI->nsite / 2 + jCell*StdI->NsiteUC + jsite]
               = StdI->Orb[StdI->nsite / 2 + iCell2*StdI->NsiteUC + isite]
@@ -1081,12 +1099,14 @@ void StdFace_generate_orb(struct StdIntList *StdI) {
 
         }/*for (jsite = 0; jsite < StdI->NsiteUC; jsite++)*/
       }/*for (isite = 0; isite < StdI->NsiteUC; isite++)*/
-
+      CellDone[iCell2][jCell2] = 1;
     }/*for (jCell = 0; jCell < StdI->NCell; jCell++)*/
 
   }/*for (iCell = 0; iCell < StdI->NCell; iCell++)*/
   StdI->NOrb = iOrb;
 
+  for (iCell = 0; iCell < StdI->NCell; iCell++) free(CellDone[iCell]);
+  free(CellDone);
 }
 
 void StdFace_InterAllSeparate(struct StdIntList *StdI) {
