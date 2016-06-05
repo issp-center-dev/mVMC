@@ -27,11 +27,12 @@ enum KWIdxInt{
   KWCalcMod, KWModPara, KWLocSpin,
   KWTrans, KWCoulombIntra,KWCoulombInter,
   KWHund, KWPairHop, KWExchange,
-  KWInterAll, KWGutzwiller, KWJastrow,
+  KWGutzwiller, KWJastrow,
   KWDH2, KWDH4, KWOrbital,
   KWTransSym, KWInGutzwiller, KWInJastrow,
   KWInDH2, KWInDH4, KWInOrbital,
   KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
+  KWInterAll,
   KWIdxInt_end
 };
 
@@ -48,6 +49,12 @@ enum ParamIdxInt{
   IdxSROptItrStep, IdxSROptItrSmp, IdxSROptFixSmp,
   IdxVMCWarmUp, IdxVMCIniterval, IdxVMCSample,
   IdxExUpdatePath, IdxRndSeed, IdxSplitSize,
+  IdxNLocSpin,IdxNTrans,IdxNCoulombIntra,
+  IdxNCoulombInter, IdxNHund, IdxNPairHop, 
+  IdxNExchange, IdxNGutz, IdxNJast,
+  IdxNDH2, IdxNDH4, IdxNOrbit,
+  IdxNQPTrans, IdxNOneBodyG, IdxNTwoBodyG,
+  IdxNTwoBodyGEx, IdxNInterAll,
   ParamIdxInt_End
 };
 

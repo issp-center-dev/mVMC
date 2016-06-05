@@ -41,7 +41,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     cFileNameListFile = malloc(sizeof(char)*D_CharTmpReadDef*KWIdxInt_end);
     fprintf(stdout, "  Read File %s .\n", xNameListFile); 
     if(GetFileName(xNameListFile, cFileNameListFile)!=0){
-      fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
+      fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
       MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
     }
     
@@ -52,7 +52,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 		case KWModPara:
 		case KWLocSpin:
 		case KWOrbital:
-		  fprintf(stderr, "Error: Need to make a def file for %s.\n", cKWListOfFileNameList[iKWidx]);
+		  fprintf(stderr, "  Error: Need to make a def file for %s.\n", cKWListOfFileNameList[iKWidx]);
 		  MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
 		  break;
 		default:
@@ -64,10 +64,13 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	for(iKWidx=0; iKWidx< KWIdxInt_end; iKWidx++){ 
 	  strcpy(defname, cFileNameListFile[iKWidx]);
 	  if(strcmp(defname,"")==0) continue;
-
 	  fprintf(stdout,  "  Read File '%s' for %s.\n", defname, cKWListOfFileNameList[iKWidx]);
 	  fp = fopen(defname, "r");
-	  if(fp==NULL)  return (info=ReadDefFileError(defname));
+
+	  if(fp==NULL){
+		info=ReadDefFileError(defname);
+		break;
+	  }
 	  else{
 		switch(iKWidx){
 		case KWModPara:
@@ -88,7 +91,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 
 		  double dtmp;
 		  while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp)!=NULL){
-		  	if(*ctmp2 == '\n' || ctmp2[0] == '-') printf("test"); continue;
+		  	if(*ctmp2 == '\n' || ctmp2[0] == '-')  continue;
 			sscanf(ctmp2,"%s %lf\n", ctmp, &dtmp);
 			if(CheckWords(ctmp, "NVMCCalMode")==0){
 			  bufInt[IdxVMCCalcMode]=(int)dtmp;
@@ -105,7 +108,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 			else if(CheckWords(ctmp, "Nsite")==0){
 			  bufInt[IdxNsite]=(int)dtmp;
 			}
-			else if(CheckWords(ctmp, "Ne")==0){
+			else if(CheckWords(ctmp, "Ne")==0 || CheckWords(ctmp, "Nelectron")==0 ){
 			  bufInt[IdxNe]=(int)dtmp;
 			}
 			else if(CheckWords(ctmp, "NSPGaussLeg")==0){
@@ -127,13 +130,13 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 			  bufInt[IdxSROptFixSmp]=(int)dtmp;
 			}	
 			else if(CheckWords(ctmp, "DSROptRedCut")==0){
-			  bufDouble[IdxSROptRedCut]=(int)dtmp;
+			  bufDouble[IdxSROptRedCut]=(double)dtmp;
 			}	
 			else if(CheckWords(ctmp, "DSROptStaDel")==0){
-			  bufDouble[IdxSROptStaDel]=(int)dtmp;
+			  bufDouble[IdxSROptStaDel]=(double)dtmp;
 			}	
 			else if(CheckWords(ctmp, "DSROptStepDt")==0){
-			  bufDouble[IdxSROptStepDt]=(int)dtmp;
+			  bufDouble[IdxSROptStepDt]=(double)dtmp;
 			}	
 			else if(CheckWords(ctmp, "NVMCWarmUp")==0){
 			  bufInt[IdxVMCWarmUp]=(int)dtmp;
@@ -157,239 +160,149 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 			  NStoreO=(int)dtmp;
 			}
 			else{
+			  fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
 			  info = ReadDefFileError(defname);
-			  MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+			  MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);			 
 			}
 		  }
 		  if(bufInt[IdxRndSeed]<0) {
 			bufInt[IdxRndSeed] = (int)time(NULL);
-			fprintf(stdout, "remark: Seed = %d\n", bufInt[IdxRndSeed]);
+			fprintf(stdout, "  remark: Seed = %d\n", bufInt[IdxRndSeed]);
 		  }
-
 		  break;//modpara file
+
+		case KWLocSpin:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNLocSpin]);
+		  break;
+
+		case KWTrans:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNTrans]);
+		  break;
+
+		case KWCoulombIntra:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNCoulombIntra]);
+		  break;
+
+		case KWCoulombInter:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNCoulombInter]);
+		  break;
+
+		case KWHund:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNHund]);
+		  break;
+		  
+		case KWPairHop:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNPairHop]);
+		  break;
+		  
+		case KWExchange:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNExchange]);
+		  break;
+
+		case KWGutzwiller:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNExchange]);
+		  break;
+
+		case KWJastrow:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNJast]);
+		  break;
+
+		case KWDH2:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNDH2]);
+		  break;
+
+		case KWDH4:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNDH4]);
+		  break;
+
+		case KWOrbital:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOrbit]);
+		  break;
+
+		case KWTransSym:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNQPTrans]);
+		  break;
+
+		case KWOneBodyG:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOneBodyG]);
+		  break;
+
+		case KWTwoBodyG:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNTwoBodyG]);
+		  break;
+
+		case KWTwoBodyGEx:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNTwoBodyGEx]);
+		  break;
+
+		case KWInterAll:
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNInterAll]);
+		  break;		
+		  
+		default:
+		  break;
 		}//case KW
 	  }
 	}
-    
-
+    	
+	/*qpopttrans.def--------------------------------*/
+	/*	
+		if(info==0) {
+		bufInt[35] = 1;
+		if(FlagOptTrans>0) {
+		if(fscanf(fplist, "%s\n", defname)!=EOF) {
+		fp = fopen(defname, "r");
+		if(fp!=NULL) {
+		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		fscanf(fp,"%s %d\n", ctmp, &(bufInt[35])); // NQPOptTrans 
+		fclose(fp);
+		if(bufInt[35]<1) {
+		fprintf(stderr, "error: NQPOptTrans should be larger than 0.\n");
+		info = ReadDefFileError(defname);
+		}
+		} else { info = ReadDefFileError(defname);}
+		} else { info = ReadDefFileError(xNameListFile);}
+		}
+		}
+	*/
+      fclose(fp);
+  }
 	fprintf(stdout, "Debug: test.\n");
 	MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
-	
-    fplist = fopen(xNameListFile, "r");
-    if(fplist!=NULL) {
-      /*locspn.def----------------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[18])); /* NLocSpn */
-            fclose(fp);
-          } else { info =  ReadDefFileError(defname); }
-        } else { info = ReadDefFileError(xNameListFile); }
-      }
-      /*transfer.def--------------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[19])); /* NTransfer */
-            fclose(fp);
-          } else { info= ReadDefFileError(defname);}
-        } else {info = ReadDefFileError(xNameListFile);}
-      }
-      /*coulombintra.def----------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[20])); /* NCoulombIntra */
-            fclose(fp);
-          } else { info =ReadDefFileError(defname);}
-        } else { info= ReadDefFileError(xNameListFile);}
-      }
-      /*coulombinter.def----------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[21])); /* NCoulombInter */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*hund.def------------------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[22])); /* NHundCoupling */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*pairhop.def---------------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[23])); /* NPairHopping */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*exchange.def--------------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[24])); /* NExchangeCoupling */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*gutzwilleridx.def---------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[25])); /* NGutzwillerIdx */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*jastrowidx.def------------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[26])); /* NJastrowIdx */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*doublonholon2siteidx.def--------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[27])); /* NDoublonHolon2siteIdx */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info =ReadDefFileError(xNameListFile);}
-      }
-      /*doublonholon4siteidx.def--------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[28])); /* NDoublonHolon4siteIdx */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*orbitalidx.def------------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[29])); /* NOrbitalIdx */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*qptransidx.def------------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[30])); /* NQPTrans */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*cisajs.def----------------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[31])); /* NCisAjs */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*cisajscktalt.def----------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[32])); /* NCisAjsCktAlt */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*cisajscktaltdc.def--------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[33])); /* NCisAjsCktAltDC */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else { info = ReadDefFileError(xNameListFile);}
-      }
-      /*interall.def--------------------------------*/
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[34])); /* NInterAll */
-            fclose(fp);
-          } else { info = ReadDefFileError(defname);}
-        } else {
-          ReadDefFileError(xNameListFile);
-          fprintf(stderr, "warning: Please add zinterall.def. This job assumes NInterAll=0.\n");
-          bufInt[34] = 0;
-        }
-      }
-      /*qpopttrans.def--------------------------------*/
-      if(info==0) {
-        bufInt[35] = 1;
-        if(FlagOptTrans>0) {
-          if(fscanf(fplist, "%s\n", defname)!=EOF) {
-            fp = fopen(defname, "r");
-            if(fp!=NULL) {
-              fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-              fscanf(fp,"%s %d\n", ctmp, &(bufInt[35])); /* NQPOptTrans */
-              fclose(fp);
-              if(bufInt[35]<1) {
-                fprintf(stderr, "error: NQPOptTrans should be larger than 0.\n");
-                info = ReadDefFileError(defname);
-              }
-            } else { info = ReadDefFileError(defname);}
-          } else { info = ReadDefFileError(xNameListFile);}
-        }
-      }
-
-      fclose(fplist);
-    } else { info=ReadDefFileError(xNameListFile);}
-  } /* if(rank==0) */
 
   if(info!=0) {
     if(rank==0) {
