@@ -7,24 +7,60 @@
 #define IgnoreLinesInDef 5
 
 /**
- * Number of Keyword List in NameListFile for this prrogram.  
+ * Keyword List in NameListFile.
  **/
-#define KWCalcMod 0
-#define KWModPara 1
-#define KWLocSpin 2
-#define KWTrans 3
-#define KWCoulombIntra 4
-#define KWCoulombInter 5
-#define KWHund 6
-#define KWPairHop 7
-#define KWExchange 8
-#define KWInterAll 9
-#define KWGutzwiller 10
-#define KWJastrow 11
-#define KWDH2 12
-#define KWDH4 13
-#define KWOrbital 14
-#define KWTransSym 15
-#define KWOneBodyG 16
-#define KWTwoBodyG 17
-#define KWTwoBodyGEx 18
+static char cKWListOfFileNameList[][D_CharTmpReadDef]={
+        "CalcMod", "ModPara", "LocSpin",
+        "Trans", "CoulombIntra", "CoulombInter",
+        "Hund", "PairHop", "Exchange",
+        "InterAll", "Gutzwiller", "Jastrow",
+        "DH2", "DH4", "Orbital",
+		"TransSym", "InGutzwiller", "InJastrow",
+        "InDH2", "InDH4", "InOrbital",
+        "OneBodyG", "TwoBodyG", "TwoBodyGEx"
+};
+
+/**
+ * Number of Keyword List in NameListFile for this program.  
+ **/
+enum KWIdxInt{
+  KWCalcMod, KWModPara, KWLocSpin,
+  KWTrans, KWCoulombIntra,KWCoulombInter,
+  KWHund, KWPairHop, KWExchange,
+  KWInterAll, KWGutzwiller, KWJastrow,
+  KWDH2, KWDH4, KWOrbital,
+  KWTransSym, KWInGutzwiller, KWInJastrow,
+  KWInDH2, KWInDH4, KWInOrbital,
+  KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
+  KWIdxInt_end
+};
+
+/**
+ * File Name List in NameListFile.
+ **/
+static char (*cFileNameListFile)[D_CharTmpReadDef];
+
+
+enum ParamIdxInt{
+  IdxVMCCalcMode, IdxLanczosMode, IdxDataIdxStart, 
+  IdxDataQtySmp, IdxNsite, IdxNe, 
+  IdxSPGaussLeg, IdxSPStot, IdxMPTrans,
+  IdxSROptItrStep, IdxSROptItrSmp, IdxSROptFixSmp,
+  IdxVMCWarmUp, IdxVMCIniterval, IdxVMCSample,
+  IdxExUpdatePath, IdxRndSeed, IdxSplitSize,
+  ParamIdxInt_End
+};
+
+enum ParamIdxDouble{
+  IdxSROptRedCut, IdxSROptStaDel, IdxSROptStepDt,
+  ParamIdxDouble_End
+};
+
+
+int CheckWords( const char* ctmp, const char* cKeyWord);
+int CheckKW(const char* cKW, char  cKWList[][D_CharTmpReadDef], int iSizeOfKWidx, int* iKWidx);
+int GetKWWithIdx(char *ctmpLine, char *ctmp, int *itmp);
+int ValidateValue(const int icheckValue, const int ilowestValue, const int iHighestValue);
+int GetFileName(const char* cFileListNameFile, char cFileNameList[][D_CharTmpReadDef]);
+
+void SetDefultValuesModPara(int *buf, double* bufDouble);

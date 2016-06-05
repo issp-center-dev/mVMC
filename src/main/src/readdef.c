@@ -8,42 +8,6 @@
 #include <ctype.h>
 #include "./include/readdef.h"
 
-/**
- * Keyword List in NameListFile.
- **/
-static char cKWListOfFileNameList[][D_CharTmpReadDef]={
-        "CalcMod",
-        "ModPara",
-        "LocSpin",
-        "Trans",
-        "CoulombIntra",
-        "CoulombInter",
-        "Hund",
-        "PairHop",
-        "Exchange",
-        "InterAll",
-        "Gutzwiller",
-        "Jastrow",
-        "DH2",
-        "DH4",
-        "Orbital",
-        "TransSym",
-        "InGutzwiller",
-        "InJastrow",
-        "InDH2",
-        "InDH4",
-        "InOrbital",
-        "OneBodyG",
-        "TwoBodyG",
-        "TwoBodyGEx"
-};
-
-int D_iKWNumDef = sizeof(cKWListOfFileNameList)/sizeof(cKWListOfFileNameList[0]);
-/**
- * File Name List in NameListFile.
- **/
-static char (*cFileNameListFile)[D_CharTmpReadDef];
-
 int ReadDefFileError(const char *defname);
 int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm);
 int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm);
@@ -53,87 +17,166 @@ int ReadDefFileError(const char *defname){
   return 1;
 }
 
-int CheckWords( const char* ctmp, const char* cKeyWord);
-int CheckKW(const char* cKW, char  cKWList[][D_CharTmpReadDef], int iSizeOfKWidx, int* iKWidx);
-int GetKWWithIdx(char *ctmpLine, char *ctmp, int *itmp);
-int ValidateValue(const int icheckValue, const int ilowestValue, const int iHighestValue);
-int GetFileName(const char* cFileListNameFile, char cFileNameList[][D_CharTmpReadDef]);
-
-
 int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   FILE *fp, *fplist;
   char defname[D_FileNameMax];
   char ctmp[D_FileNameMax];
+  char ctmp2[D_FileNameMax];
+
+  int i=0;
   int itmp,tmp_info;
 
   int rank, info=0;
-  const int nBufInt=36;
-  const int nBufDouble=3;
+  //  const int nBufInt=36;
+  const int nBufInt= ParamIdxInt_End;
+  const int nBufDouble= ParamIdxDouble_End;
   const int nBufChar=D_FileNameMax;
   int bufInt[nBufInt];
   double bufDouble[nBufDouble];
+  int iKWidx=0;
 
   MPI_Comm_rank(comm, &rank);
 
   if(rank==0) {
-    cFileNameListFile = malloc(sizeof(char)*D_CharTmpReadDef*D_iKWNumDef);
+    cFileNameListFile = malloc(sizeof(char)*D_CharTmpReadDef*KWIdxInt_end);
     fprintf(stdout, "  Read File %s .\n", xNameListFile); 
     if(GetFileName(xNameListFile, cFileNameListFile)!=0){
       fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
       MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
     }
     
+	for(iKWidx=0; iKWidx< KWIdxInt_end; iKWidx++){ 
+	  strcpy(defname, cFileNameListFile[iKWidx]);
+	  if(strcmp(defname,"")==0){
+		switch (iKWidx){
+		case KWModPara:
+		case KWLocSpin:
+		case KWOrbital:
+		  fprintf(stderr, "Error: Need to make a def file for %s.\n", cKWListOfFileNameList[iKWidx]);
+		  MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+		  break;
+		default:
+		  break;
+		}
+	  }
+	} 
+
+	for(iKWidx=0; iKWidx< KWIdxInt_end; iKWidx++){ 
+	  strcpy(defname, cFileNameListFile[iKWidx]);
+	  if(strcmp(defname,"")==0) continue;
+
+	  fprintf(stdout,  "  Read File '%s' for %s.\n", defname, cKWListOfFileNameList[iKWidx]);
+	  fp = fopen(defname, "r");
+	  if(fp==NULL)  return (info=ReadDefFileError(defname));
+	  else{
+		switch(iKWidx){
+		case KWModPara:
+		  /* Read modpara.def---------------------------------------*/
+		  //TODO: add error procedure here when parameters are not enough.
+		  SetDefultValuesModPara(bufInt, bufDouble);
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &itmp); //2
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //3
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //4
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //5
+		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %s\n", ctmp, CDataFileHead); //6
+		  fgets(ctmp2,sizeof(ctmp2)/sizeof(char), fp);
+		  sscanf(ctmp2,"%s %s\n", ctmp, CParaFileHead); //7
+		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);   //8
+
+		  double dtmp;
+		  while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp)!=NULL){
+		  	if(*ctmp2 == '\n' || ctmp2[0] == '-') printf("test"); continue;
+			sscanf(ctmp2,"%s %lf\n", ctmp, &dtmp);
+			if(CheckWords(ctmp, "NVMCCalMode")==0){
+			  bufInt[IdxVMCCalcMode]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "NLanczosMode")==0){
+			  bufInt[IdxLanczosMode]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "NDataIdxStart")==0){
+			  bufInt[IdxDataIdxStart]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "NDataQtySmp")==0){
+			  bufInt[IdxDataQtySmp]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "Nsite")==0){
+			  bufInt[IdxNsite]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "Ne")==0){
+			  bufInt[IdxNe]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "NSPGaussLeg")==0){
+			  bufInt[IdxSPGaussLeg]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "NSPStot")==0){
+			  bufInt[IdxSPStot]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "NMPTrans")==0){
+			  bufInt[IdxMPTrans]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "NSROptItrStep")==0){
+			  bufInt[IdxSROptItrStep]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "NSROptItrSmp")==0){
+			  bufInt[IdxSROptItrSmp]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "NSROptFixSmp")==0){
+			  bufInt[IdxSROptFixSmp]=(int)dtmp;
+			}	
+			else if(CheckWords(ctmp, "DSROptRedCut")==0){
+			  bufDouble[IdxSROptRedCut]=(int)dtmp;
+			}	
+			else if(CheckWords(ctmp, "DSROptStaDel")==0){
+			  bufDouble[IdxSROptStaDel]=(int)dtmp;
+			}	
+			else if(CheckWords(ctmp, "DSROptStepDt")==0){
+			  bufDouble[IdxSROptStepDt]=(int)dtmp;
+			}	
+			else if(CheckWords(ctmp, "NVMCWarmUp")==0){
+			  bufInt[IdxVMCWarmUp]=(int)dtmp;
+			}	
+			else if(CheckWords(ctmp, "NVMCIniterval")==0){
+			  bufInt[IdxVMCIniterval]=(int)dtmp;
+			}	
+			else if(CheckWords(ctmp, "NVMCSample")==0){
+			  bufInt[IdxVMCSample]=(int)dtmp;
+			}	
+			else if(CheckWords(ctmp, "NExUpdatePath")==0){
+			  bufInt[IdxExUpdatePath]=(int)dtmp;
+			}	
+			else if(CheckWords(ctmp, "RndSeed")==0){
+			  bufInt[IdxRndSeed] = (int)dtmp;
+			}
+			else if(CheckWords(ctmp, "NSplitSize")==0){
+			  bufInt[IdxSplitSize]=(int)dtmp;
+			}
+			else if(CheckWords(ctmp, "NStore")==0){
+			  NStoreO=(int)dtmp;
+			}
+			else{
+			  info = ReadDefFileError(defname);
+			  MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+			}
+		  }
+		  if(bufInt[IdxRndSeed]<0) {
+			bufInt[IdxRndSeed] = (int)time(NULL);
+			fprintf(stdout, "remark: Seed = %d\n", bufInt[IdxRndSeed]);
+		  }
+
+		  break;//modpara file
+		}//case KW
+	  }
+	}
+    
+
+	fprintf(stdout, "Debug: test.\n");
+	MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+	
     fplist = fopen(xNameListFile, "r");
     if(fplist!=NULL) {
-      /* zmodpara.def */
-      if(info==0) {
-        if(fscanf(fplist, "%s\n", defname)!=EOF) {
-          fp = fopen(defname, "r");
-          if(fp!=NULL) {
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &itmp);
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %s\n", ctmp, CDataFileHead);
-            fscanf(fp,"%s %s\n", ctmp, CParaFileHead);
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[ 0])); /* NVMCCalMode */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[ 1])); /* NLanczosMode */
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[ 2])); /* NDataIdxStart */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[ 3])); /* NDataQtySmp */
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[ 4])); /* Nsite */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[ 5])); /* Ne */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[ 6])); /* NSPGaussLeg */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[ 7])); /* NSPStot */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[ 8])); /* NMPTrans */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[ 9])); /* NSROptItrStep */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[10])); /* NSROptItrSmp */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[11])); /* NSROptFixSmp */
-            fscanf(fp,"%s %lf\n",ctmp, &(bufDouble[0])); /* DSROptRedCut */
-            fscanf(fp,"%s %lf\n",ctmp, &(bufDouble[1])); /* DSROptStaDel */
-            fscanf(fp,"%s %lf\n",ctmp, &(bufDouble[2])); /* DSROptStepDt */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[12])); /* NVMCWarmUp */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[13])); /* NVMCIniterval */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[14])); /* NVMCSample */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[15])); /* NExUpdatePath */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[16])); /* RndSeed */
-            if(bufInt[16]<0) {
-              bufInt[16] = (int)time(NULL);
-              fprintf(stderr, "remark: Seed = %d\n", bufInt[16]);
-            }
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[17])); /* NSplitSize */
-            tmp_info=fscanf(fp,"%s %d\n", ctmp, &(NStoreO)); /* choice of store O: 0-> normal other-> store */
-            if(tmp_info==-1){
-              NStoreO = 0;
-              printf("no input for NStoreO: default value (NStore=0) is used. \n");
-            }
-            fclose(fp);
-          } else { info = ReadDefFileError(defname); }
-        } else { info = ReadDefFileError(xNameListFile); }
-      }
       /*locspn.def----------------------------------------*/
       if(info==0) {
         if(fscanf(fplist, "%s\n", defname)!=EOF) {
@@ -363,24 +406,24 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   MPI_Bcast(CParaFileHead, nBufChar, MPI_CHAR, 0, comm);
 #endif /* _mpi_use */
 
-  NVMCCalMode            =  bufInt[ 0];
-  NLanczosMode           =  bufInt[ 1];
-  NDataIdxStart          =  bufInt[ 2];
-  NDataQtySmp            =  bufInt[ 3];
-  Nsite                  =  bufInt[ 4];
-  Ne                     =  bufInt[ 5];
-  NSPGaussLeg            =  bufInt[ 6];
-  NSPStot                =  bufInt[ 7];
-  NMPTrans               =  bufInt[ 8];
-  NSROptItrStep          =  bufInt[ 9];
-  NSROptItrSmp           =  bufInt[10];
-  NSROptFixSmp           =  bufInt[11];
-  NVMCWarmUp             =  bufInt[12];
-  NVMCIniterval          =  bufInt[13];
-  NVMCSample             =  bufInt[14];
-  NExUpdatePath          =  bufInt[15];
-  RndSeed                =  bufInt[16];
-  NSplitSize             =  bufInt[17];
+  NVMCCalMode            =  bufInt[IdxVMCCalcMode];
+  NLanczosMode           =  bufInt[IdxLanczosMode];
+  NDataIdxStart          =  bufInt[IdxDataIdxStart];
+  NDataQtySmp            =  bufInt[IdxDataQtySmp];
+  Nsite                  =  bufInt[IdxNsite];
+  Ne                     =  bufInt[IdxNe];
+  NSPGaussLeg            =  bufInt[IdxSPGaussLeg];
+  NSPStot                =  bufInt[IdxSPStot];
+  NMPTrans               =  bufInt[IdxMPTrans];
+  NSROptItrStep          =  bufInt[IdxSROptItrStep];
+  NSROptItrSmp           =  bufInt[IdxSROptItrSmp];
+  NSROptFixSmp           =  bufInt[IdxSROptFixSmp];
+  NVMCWarmUp             =  bufInt[IdxVMCWarmUp];
+  NVMCIniterval          =  bufInt[IdxVMCIniterval];
+  NVMCSample             =  bufInt[IdxVMCSample];
+  NExUpdatePath          =  bufInt[IdxExUpdatePath];
+  RndSeed                =  bufInt[IdxRndSeed];
+  NSplitSize             =  bufInt[IdxSplitSize];
   NLocSpn                =  bufInt[18];
   NTransfer              =  bufInt[19];
   NCoulombIntra          =  bufInt[20];
@@ -400,9 +443,9 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NInterAll              =  bufInt[34];
   NQPOptTrans            =  bufInt[35];
 
-  DSROptRedCut = bufDouble[0];
-  DSROptStaDel = bufDouble[1];
-  DSROptStepDt = bufDouble[2];
+  DSROptRedCut = bufDouble[IdxSROptRedCut];
+  DSROptStaDel = bufDouble[IdxSROptStaDel];
+  DSROptStepDt = bufDouble[IdxSROptStepDt];
 
   if(NMPTrans < 0) {
     APFlag = 1; /* anti-periodic boundary */
@@ -1016,26 +1059,26 @@ int CheckWords(
 	       const char* cKeyWord
 	       )
 {
+
   int i=0;
-  
-  char ctmp_small[256];
-  char cKW_small[256];
+
+  char ctmp_small[256]={0};
+  char cKW_small[256]={0};
   int n;
   n=strlen(cKeyWord);
-  memset(cKW_small, 0, sizeof(cKeyWord));
-  strncpy(cKW_small, cKeyWord, sizeof(cKeyWord));
+  strncpy(cKW_small, cKeyWord, n);
   
   for(i=0; i<n; i++){
     cKW_small[i]=tolower(cKW_small[i]);
   }
   
   n=strlen(ctmp);
-  memset(ctmp_small, 0, sizeof(ctmp));
-  strncpy(ctmp_small, ctmp, sizeof(ctmp));
+  strncpy(ctmp_small, ctmp, n);
   for(i=0; i<n; i++){
     ctmp_small[i]=tolower(ctmp_small[i]);
   }
-  return(strncmp(ctmp_small, cKW_small, sizeof(ctmp)));
+  if(n<strlen(cKW_small)) n=strlen(cKW_small);
+  return(strncmp(ctmp_small, cKW_small, n));
 }
 
 /**
@@ -1156,7 +1199,7 @@ int GetFileName(
   char ctmpFileName[D_FileNameMaxReadDef];
   char ctmpKW[D_CharTmpReadDef], ctmp2[256];
   int i;
-  for(i=0; i< D_iKWNumDef; i++){
+  for(i=0; i< KWIdxInt_end; i++){
     strcpy(cFileNameList[i],"");
   }
   
@@ -1175,11 +1218,11 @@ int GetFileName(
       return(-1);
     }
     /*!< Check KW */
-    if( CheckKW(ctmpKW, cKWListOfFileNameList, D_iKWNumDef, &itmpKWidx)!=0 ){
+    if( CheckKW(ctmpKW, cKWListOfFileNameList, KWIdxInt_end, &itmpKWidx)!=0 ){
 
       fprintf(stderr, "Error: Wrong keywords '%s' in %s.\n", ctmpKW, cFileListNameFile);
       fprintf(stderr, "%s", "Choose Keywords as follows: \n");
-      for(i=0; i<D_iKWNumDef;i++){
+      for(i=0; i<KWIdxInt_end;i++){
         fprintf(stderr, "%s \n", cKWListOfFileNameList[i]);
       }      
       fclose(fplist);
@@ -1197,4 +1240,29 @@ int GetFileName(
   fclose(fplist);  
   return 0;
 }
+
+void SetDefultValuesModPara(int *bufInt, double* bufDouble){
+  bufInt[IdxVMCCalcMode]=0;
+  bufInt[IdxLanczosMode]=0;
+  bufInt[IdxDataIdxStart]=1;
+  bufInt[IdxDataQtySmp]=5;
+  bufInt[IdxNsite]=16;
+  bufInt[IdxNe]=8;
+  bufInt[IdxSPGaussLeg]=1;
+  bufInt[IdxSPStot]=0;
+  bufInt[IdxMPTrans]=0;
+  bufInt[IdxSROptItrStep]=1000;
+  bufInt[IdxSROptItrSmp]=bufInt[IdxSROptItrStep]/10;
+  bufInt[IdxVMCWarmUp]=10;
+  bufInt[IdxVMCIniterval]=1;
+  bufInt[IdxVMCSample]=10;
+  bufInt[IdxExUpdatePath]=0;
+  bufInt[IdxRndSeed]=11272;
+  bufInt[IdxSplitSize]=1;
+  bufDouble[IdxSROptRedCut]=0.001;
+  bufDouble[IdxSROptStaDel]=0.02;
+  bufDouble[IdxSROptStepDt]=0.02;
+  NStoreO=1;
+}
+
 /**********************************************************************/
