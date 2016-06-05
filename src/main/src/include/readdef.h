@@ -10,21 +10,22 @@
  * Keyword List in NameListFile.
  **/
 static char cKWListOfFileNameList[][D_CharTmpReadDef]={
-        "CalcMod", "ModPara", "LocSpin",
+        "ModPara", "LocSpin",
         "Trans", "CoulombIntra", "CoulombInter",
         "Hund", "PairHop", "Exchange",
-        "InterAll", "Gutzwiller", "Jastrow",
+        "Gutzwiller", "Jastrow",
         "DH2", "DH4", "Orbital",
 		"TransSym", "InGutzwiller", "InJastrow",
         "InDH2", "InDH4", "InOrbital",
-        "OneBodyG", "TwoBodyG", "TwoBodyGEx"
+        "OneBodyG", "TwoBodyG", "TwoBodyGEx",
+		"InterAll"
 };
 
 /**
  * Number of Keyword List in NameListFile for this program.  
  **/
 enum KWIdxInt{
-  KWCalcMod, KWModPara, KWLocSpin,
+  KWModPara, KWLocSpin,
   KWTrans, KWCoulombIntra,KWCoulombInter,
   KWHund, KWPairHop, KWExchange,
   KWGutzwiller, KWJastrow,

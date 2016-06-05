@@ -66,12 +66,13 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  if(strcmp(defname,"")==0) continue;
 	  fprintf(stdout,  "  Read File '%s' for %s.\n", defname, cKWListOfFileNameList[iKWidx]);
 	  fp = fopen(defname, "r");
-
 	  if(fp==NULL){
 		info=ReadDefFileError(defname);
 		break;
 	  }
 	  else{
+		//printf("id=%d, defname=%s\n", iKWidx, defname);
+
 		switch(iKWidx){
 		case KWModPara:
 		  /* Read modpara.def---------------------------------------*/
@@ -216,7 +217,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 		case KWGutzwiller:
 		  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 		  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNExchange]);
+		  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNGutz]);
 		  break;
 
 		case KWJastrow:
@@ -301,8 +302,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	*/
       fclose(fp);
   }
-	fprintf(stdout, "Debug: test.\n");
-	MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
 
   if(info!=0) {
     if(rank==0) {
@@ -337,24 +336,27 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NExUpdatePath          =  bufInt[IdxExUpdatePath];
   RndSeed                =  bufInt[IdxRndSeed];
   NSplitSize             =  bufInt[IdxSplitSize];
-  NLocSpn                =  bufInt[18];
-  NTransfer              =  bufInt[19];
-  NCoulombIntra          =  bufInt[20];
-  NCoulombInter          =  bufInt[21];
-  NHundCoupling          =  bufInt[22];
-  NPairHopping           =  bufInt[23];
-  NExchangeCoupling      =  bufInt[24];
-  NGutzwillerIdx         =  bufInt[25];
-  NJastrowIdx            =  bufInt[26];
-  NDoublonHolon2siteIdx  =  bufInt[27];
-  NDoublonHolon4siteIdx  =  bufInt[28];
-  NOrbitalIdx            =  bufInt[29];
-  NQPTrans               =  bufInt[30];
-  NCisAjs                =  bufInt[31];
-  NCisAjsCktAlt          =  bufInt[32];
-  NCisAjsCktAltDC        =  bufInt[33];
-  NInterAll              =  bufInt[34];
-  NQPOptTrans            =  bufInt[35];
+  NLocSpn                =  bufInt[IdxNLocSpin];
+  NTransfer              =  bufInt[IdxNTrans];
+  NCoulombIntra          =  bufInt[IdxNCoulombIntra];
+  NCoulombInter          =  bufInt[IdxNCoulombInter];
+  NHundCoupling          =  bufInt[IdxNHund];
+  NPairHopping           =  bufInt[IdxNPairHop];
+  NExchangeCoupling      =  bufInt[IdxNExchange];
+  NGutzwillerIdx         =  bufInt[IdxNGutz];
+  NJastrowIdx            =  bufInt[IdxNJast];
+  NDoublonHolon2siteIdx  =  bufInt[IdxNDH2];
+  NDoublonHolon4siteIdx  =  bufInt[IdxNDH4];
+  NOrbitalIdx            =  bufInt[IdxNOrbit];
+  NQPTrans               =  bufInt[IdxNQPTrans];
+  NCisAjs                =  bufInt[IdxNOneBodyG];
+  NCisAjsCktAlt          =  bufInt[IdxNTwoBodyG];
+  NCisAjsCktAltDC        =  bufInt[IdxNTwoBodyGEx];
+  NInterAll              =  bufInt[IdxNInterAll];
+  
+  //ToDo: Check
+  NQPOptTrans = 1;
+  //NQPOptTrans            =  bufInt[35];
 
   DSROptRedCut = bufDouble[IdxSROptRedCut];
   DSROptStaDel = bufDouble[IdxSROptStaDel];
@@ -378,7 +380,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NQPFix = NSPGaussLeg * NMPTrans;
   NQPFull = NQPFix * NQPOptTrans;
   SROptSize = NPara+1;
-
   NTotalDefInt = Nsite /* LocSpn */
     + 3*NTransfer /* Transfer */
     + NCoulombIntra /* CoulombIntra */
@@ -392,15 +393,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + 4*Nsite*NDoublonHolon4siteIdx /* DoublonHolon4siteIdx */
     + Nsite*Nsite /* OrbitalIdx */
     + Nsite*Nsite /* OrbitalSgn */
-    + Nsite*NQPTrans /* QPTrans */
-    + Nsite*NQPTrans /* QPTransSgn */
+	+ Nsite*NQPTrans /* QPTrans */
+	+ Nsite*NQPTrans /* QPTransSgn */
     + 3*NCisAjs /* CisAjs */
     + 8*NCisAjsCktAlt /* CisAjsCktAlt */
-    + 6*NCisAjsCktAltDC /* CisAjsCktAltDC */
-    + 6*NInterAll /* InterAll */
-    + Nsite*NQPOptTrans /* QPOptTrans */
-    + Nsite*NQPOptTrans /* QPOptTransSgn */
-    + NPara; /* OptFlag */
+    + 6*NCisAjsCktAltDC; /* CisAjsCktAltDC */
+  + 6*NInterAll /* InterAll */
+     + Nsite*NQPOptTrans /* QPOptTrans */
+     + Nsite*NQPOptTrans /* QPOptTransSgn */
+	 + NPara; /* OptFlag */
+	;
+
   NTotalDefDouble = NTransfer /* ParaTransfer */
     + NCoulombIntra /* ParaCoulombIntra */
     + NCoulombInter /* ParaCoulombInter */
@@ -410,6 +413,11 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + NQPTrans /* ParaQPTrans */
     + NInterAll /* ParaInterAll */
     + NQPOptTrans; /* ParaQPTransOpt */
+  /*
+  if(rank==0){
+  fprintf(stdout, "NTotalDefInt=%d\n", NTotalDefInt);
+  fprintf(stdout, "NTotalDefDouble=%d\n", NTotalDefDouble);
+  }*/
 
   return 0;
 }
