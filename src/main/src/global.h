@@ -222,6 +222,10 @@ FILE *FileLSQCisAjsCktAltQ;
 const int NTimer=100;
 double Timer[100], TimerStart[100];
 
+/* flag for  SROptimization*/
+int SRFlag; /* 0: periodic, 1: Diagonalization */
+
+
 /***** openMP *****/
 int NThread;
 
