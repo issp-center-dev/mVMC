@@ -10,15 +10,15 @@
  * Keyword List in NameListFile.
  **/
 static char cKWListOfFileNameList[][D_CharTmpReadDef]={
-        "ModPara", "LocSpin",
-        "Trans", "CoulombIntra", "CoulombInter",
-        "Hund", "PairHop", "Exchange",
-        "Gutzwiller", "Jastrow",
-        "DH2", "DH4", "Orbital",
-		"TransSym", "InGutzwiller", "InJastrow",
-        "InDH2", "InDH4", "InOrbital",
-        "OneBodyG", "TwoBodyG", "TwoBodyGEx",
-		"InterAll"
+  "ModPara", "LocSpin",
+  "Trans", "CoulombIntra", "CoulombInter",
+  "Hund", "PairHop", "Exchange",
+  "Gutzwiller", "Jastrow",
+  "DH2", "DH4", "Orbital",
+  "TransSym", "InGutzwiller", "InJastrow",
+  "InDH2", "InDH4", "InOrbital",
+  "OneBodyG", "TwoBodyG", "TwoBodyGEx",
+  "InterAll", "OptTrans"
 };
 
 /**
@@ -33,7 +33,7 @@ enum KWIdxInt{
   KWTransSym, KWInGutzwiller, KWInJastrow,
   KWInDH2, KWInDH4, KWInOrbital,
   KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
-  KWInterAll,
+  KWInterAll, KWOptTrans,
   KWIdxInt_end
 };
 
@@ -55,7 +55,7 @@ enum ParamIdxInt{
   IdxNExchange, IdxNGutz, IdxNJast,
   IdxNDH2, IdxNDH4, IdxNOrbit,
   IdxNQPTrans, IdxNOneBodyG, IdxNTwoBodyG,
-  IdxNTwoBodyGEx, IdxNInterAll,
+  IdxNTwoBodyGEx, IdxNInterAll, IdxNQPOptTrans,
   ParamIdxInt_End
 };
 
