@@ -347,6 +347,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NInterAll              =  bufInt[34];
   NQPOptTrans            =  bufInt[35];
 
+  for(i=0; i<36; i++){
+    fprintf(stdout, "%d-th: %d\n", i, bufInt[i]);
+  }
+  
   DSROptRedCut = bufDouble[0];
   DSROptStaDel = bufDouble[1];
   DSROptStepDt = bufDouble[2];
@@ -378,6 +382,18 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NQPFull = NQPFix * NQPOptTrans;
   SROptSize = NPara+1;
 
+//debug
+  fprintf(stdout, "Nsize=%d\n", Nsize);
+  fprintf(stdout, "Nsite2=%d\n", Nsite2);
+  fprintf(stdout, "NSlater=%d\n", NSlater);
+  fprintf(stdout, "NProj=%d\n", NProj);
+  fprintf(stdout, "NOptTrans=%d\n", NOptTrans);
+  fprintf(stdout, "NPara=%d\n", NPara);
+  fprintf(stdout, "NQPFix=%d, \n", NQPFix);
+  fprintf(stdout, "NQPFuLL=%d \n", NQPFull);
+  fprintf(stdout, "SROptSize=%d\n", SROptSize);
+  
+  
   NTotalDefInt = Nsite /* LocSpn */
     + 3*NTransfer /* Transfer */
     + NCoulombIntra /* CoulombIntra */

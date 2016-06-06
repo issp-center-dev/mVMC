@@ -395,6 +395,19 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NQPFix = NSPGaussLeg * NMPTrans;
   NQPFull = NQPFix * NQPOptTrans;
   SROptSize = NPara+1;
+
+  //debug
+  fprintf(stdout, "Nsize=%d\n", Nsize);
+  fprintf(stdout, "Nsite2=%d\n", Nsite2);
+  fprintf(stdout, "NSlater=%d\n", NSlater);
+  fprintf(stdout, "NProj=%d\n", NProj);
+  fprintf(stdout, "NOptTrans=%d\n", NOptTrans);
+  fprintf(stdout, "NPara=%d\n", NPara);
+  fprintf(stdout, "NQPFix=%d, \n", NQPFix);
+  fprintf(stdout, "NQPFuLL=%d \n", NQPFull);
+  fprintf(stdout, "SROptSize=%d\n", SROptSize);
+  
+  
   NTotalDefInt = Nsite /* LocSpn */
     + 3*NTransfer /* Transfer */
     + NCoulombIntra /* CoulombIntra */
@@ -417,7 +430,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + Nsite*NQPOptTrans /* QPOptTrans */
     + Nsite*NQPOptTrans /* QPOptTransSgn */
     + NPara; /* OptFlag */
-  ;
 
   NTotalDefDouble = NTransfer /* ParaTransfer */
     + NCoulombIntra /* ParaCoulombIntra */
@@ -1075,6 +1087,7 @@ int GetFileName(
 }
 
 void SetDefultValuesModPara(int *bufInt, double* bufDouble){
+  
   bufInt[IdxVMCCalcMode]=0;
   bufInt[IdxLanczosMode]=0;
   bufInt[IdxDataIdxStart]=0;
