@@ -750,9 +750,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               for(i=0;i<5;i++) fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
               for(i=0;i<NQPTrans;i++){
                 fscanf(fp, "%d ",   &itmp);
-                fscanf(fp, "%lf",   &(tmp_real));
-                fscanf(fp, "%lf\n", &(tmp_comp));
-                ParaQPTrans[itmp] = tmp_real+tmp_comp*I;
+                fscanf(fp, "%lf ^n",   &(tmp_real));
+                //fscanf(fp, "%lf\n", &(tmp_comp));
+                ParaQPTrans[itmp] = tmp_real+0*I;
               }
               idx = 0;
               if(APFlag==0) {

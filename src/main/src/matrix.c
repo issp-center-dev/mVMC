@@ -101,16 +101,21 @@ int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd) {
   int             myInfo;
   double         *myRWork;
 
-  RequestWorkSpaceThreadInt(Nsize);
+  RequestWorkSpaceThreadInt(Nsize);         //int
+
   RequestWorkSpaceThreadComplex(Nsize*Nsize+LapackLWork);
-  RequestWorkSpaceThreadDouble(Nsize*Nsize+LapackLWork); // TBC for rwork
+
+  RequestWorkSpaceThreadDouble(LapackLWork); // TBC for rwork
 
   #pragma omp parallel default(shared)              \
     private(myIWork,myWork,myInfo,myBufM)
   {
-    myIWork = GetWorkSpaceThreadInt(Nsize);
-    myBufM = GetWorkSpaceThreadComplex(Nsize*Nsize);
-    myRWork = GetWorkSpaceThreadDouble(Nsize*Nsize+LapackLWork); //TBC for rwork
+    myIWork = GetWorkSpaceThreadInt(Nsize); // int
+
+    myBufM  = GetWorkSpaceThreadComplex(Nsize*Nsize); //comp
+    myWork  = GetWorkSpaceThreadComplex(LapackLWork); // comp
+
+    myRWork = GetWorkSpaceThreadDouble(LapackLWork); //TBC for rwork
 
     #pragma omp for private(qpidx)
     for(qpidx=0;qpidx<qpNum;qpidx++) {
@@ -177,7 +182,9 @@ int calculateMAll_child_fcomp(const int *eleIdx, const int qpStart, const int qp
     invM[msi] = bufM[msi];
   }
   /* calculate Pf M */
+  //printf("DEBUG: n=%d \n",n);
   M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
+  //printf("DEBUG: info=%d \n",info);
   if(info!=0) return info;
   if(!isfinite(pfaff)) return qpidx+1;
   PfM[qpidx] = pfaff;
