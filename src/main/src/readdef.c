@@ -442,6 +442,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   int i,j,n,idx,idx0,idx1,info=0;
   int fidx=0; /* index for OptFlag */
   int x0,x1,x2,x3,x4,x5,x6,x7;
+	double dReValue, dImValue;
+	int tmp_ispin;
   int rank;
 
   MPI_Comm_rank(comm, &rank);
@@ -486,11 +488,22 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       case KWTrans:
 	/* transfer.def--------------------------------------*/
 	if(NTransfer>0){
-	  while( fscanf(fp, "%d %d %d %lf\n", 
+	  while( fscanf(fp, "%d %d %d %d %lf %lf\n",
 			&(Transfer[idx][0]),
+			&tmp_ispin,
 			&(Transfer[idx][1]),
 			&(Transfer[idx][2]),
-			&(ParaTransfer[idx]))!=EOF){
+			&dReValue,
+	  		&dImValue)!=EOF){
+
+		  	ParaTransfer[idx]=dReValue;
+			//todo Input dImValue
+
+		  	if(tmp_ispin != Transfer[idx][2]){
+				fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
+				info = ReadDefFileError(defname);
+				break;
+			}
 	    idx++;
 	  }
 	  if(idx!=NTransfer) info = ReadDefFileError(defname);
@@ -782,15 +795,30 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	/*interall.def---------------------------------------*/
 	if(NInterAll>0){
 	  idx = 0;
-	  while( fscanf(fp, "%d %d %d %d %d %d %lf\n", 
+	  while( fscanf(fp, "%d %d %d %d %d %d %d %d %lf %lf\n",
 			&(InterAll[idx][0]),
+					&(x1), //ispin1
 			&(InterAll[idx][1]),
-			&(InterAll[idx][2]),
+			&(InterAll[idx][2]),//ispin2
 			&(InterAll[idx][3]),
+					&(x3),//ispin3
 			&(InterAll[idx][4]),
-			&(InterAll[idx][5]),
-			&(ParaInterAll[idx]) )!=EOF ){
-	    idx++;
+			&(InterAll[idx][5]),//ispin4
+			&dReValue,
+					&dImValue)!=EOF ){
+
+		  ParaInterAll[idx]=dReValue;
+		  //Todo: Input dImValue
+		  if((x1 != InterAll[idx][2] || x3 != InterAll[idx][5])
+				  || (x1 != InterAll[idx][5] || x3 != InterAll[idx][2])
+			)
+		  {
+			  fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
+			  info = ReadDefFileError(defname);
+			  break;
+		  }
+
+		  idx++;
 	  }
 	  if(idx!=NInterAll) info=ReadDefFileError(defname);
 	} else {
