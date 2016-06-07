@@ -1,0 +1,252 @@
+The system is: Darwin - 15.5.0 - x86_64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc 
+Build flags: 
+Id flags: 
+
+The output was:
+0
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+
+The C compiler identification is AppleClang, found in "/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/3.5.2/CompilerIdC/a.out"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_7bd23/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_7bd23.dir/build.make CMakeFiles/cmTC_7bd23.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_7bd23.dir/testCCompiler.c.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc     -o CMakeFiles/cmTC_7bd23.dir/testCCompiler.c.o   -c /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp/testCCompiler.c
+Linking C executable cmTC_7bd23
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_7bd23.dir/link.txt --verbose=1
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_7bd23.dir/testCCompiler.c.o  -o cmTC_7bd23  
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' から出ます
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_a4aea/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_a4aea.dir/build.make CMakeFiles/cmTC_a4aea.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_a4aea.dir/CMakeCCompilerABI.c.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc     -o CMakeFiles/cmTC_a4aea.dir/CMakeCCompilerABI.c.o   -c /opt/local/share/cmake-3.5/Modules/CMakeCCompilerABI.c
+Linking C executable cmTC_a4aea
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a4aea.dir/link.txt --verbose=1
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -Wl,-search_paths_first -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_a4aea.dir/CMakeCCompilerABI.c.o  -o cmTC_a4aea   
+Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)
+Target: x86_64-apple-darwin15.5.0
+Thread model: posix
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -dynamic -arch x86_64 -macosx_version_min 10.11.0 -o cmTC_a4aea -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_a4aea.dir/CMakeCCompilerABI.c.o -L/opt/intel/composer_xe_2015.3.187/compiler/lib -L/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib -L/opt/intel/composer_xe_2015.3.187/ipp/lib -L/opt/intel/composer_xe_2015.3.187/compiler/lib -L/opt/intel/composer_xe_2015.3.187/mkl/lib -L/opt/intel/composer_xe_2015.3.187/tbb/lib -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a
+@(#)PROGRAM:ld  PROJECT:ld64-242.2
+configured to support archs: armv6 armv7 armv7s arm64 i386 x86_64 x86_64h armv6m armv7m armv7em
+Library search paths:
+	/opt/intel/composer_xe_2015.3.187/compiler/lib
+	/opt/intel/composer_xe_2015.3.187/compiler/lib
+	/opt/intel/composer_xe_2015.3.187/ipp/lib
+	/opt/intel/composer_xe_2015.3.187/compiler/lib
+	/opt/intel/composer_xe_2015.3.187/mkl/lib
+	/opt/intel/composer_xe_2015.3.187/tbb/lib
+	/usr/lib
+	/usr/local/lib
+Framework search paths:
+	/Library/Frameworks/
+	/System/Library/Frameworks/
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' から出ます
+
+
+Parsed C implicit link information from above output:
+  link line regex: [^( *|.*[/\])(ld|([^/\]+-)?ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command:"/opt/local/bin/gmake" "cmTC_a4aea/fast"]
+  ignore line: [/opt/local/bin/gmake -f CMakeFiles/cmTC_a4aea.dir/build.make CMakeFiles/cmTC_a4aea.dir/build]
+  ignore line: [gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' に入ります]
+  ignore line: [Building C object CMakeFiles/cmTC_a4aea.dir/CMakeCCompilerABI.c.o]
+  ignore line: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc     -o CMakeFiles/cmTC_a4aea.dir/CMakeCCompilerABI.c.o   -c /opt/local/share/cmake-3.5/Modules/CMakeCCompilerABI.c]
+  ignore line: [Linking C executable cmTC_a4aea]
+  ignore line: [/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a4aea.dir/link.txt --verbose=1]
+  ignore line: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -Wl,-search_paths_first -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_a4aea.dir/CMakeCCompilerABI.c.o  -o cmTC_a4aea   ]
+  ignore line: [Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)]
+  ignore line: [Target: x86_64-apple-darwin15.5.0]
+  ignore line: [Thread model: posix]
+  link line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -dynamic -arch x86_64 -macosx_version_min 10.11.0 -o cmTC_a4aea -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_a4aea.dir/CMakeCCompilerABI.c.o -L/opt/intel/composer_xe_2015.3.187/compiler/lib -L/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib -L/opt/intel/composer_xe_2015.3.187/ipp/lib -L/opt/intel/composer_xe_2015.3.187/compiler/lib -L/opt/intel/composer_xe_2015.3.187/mkl/lib -L/opt/intel/composer_xe_2015.3.187/tbb/lib -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a]
+    arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld] ==> ignore
+    arg [-demangle] ==> ignore
+    arg [-dynamic] ==> ignore
+    arg [-arch] ==> ignore
+    arg [x86_64] ==> ignore
+    arg [-macosx_version_min] ==> ignore
+    arg [10.11.0] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTC_a4aea] ==> ignore
+    arg [-search_paths_first] ==> ignore
+    arg [-headerpad_max_install_names] ==> ignore
+    arg [-v] ==> ignore
+    arg [CMakeFiles/cmTC_a4aea.dir/CMakeCCompilerABI.c.o] ==> ignore
+    arg [-L/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+    arg [-L/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib]
+    arg [-L/opt/intel/composer_xe_2015.3.187/ipp/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/ipp/lib]
+    arg [-L/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+    arg [-L/opt/intel/composer_xe_2015.3.187/mkl/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/mkl/lib]
+    arg [-L/opt/intel/composer_xe_2015.3.187/tbb/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/tbb/lib]
+    arg [-lSystem] ==> lib [System]
+    arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a] ==> lib [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a]
+  Library search paths: [;/opt/intel/composer_xe_2015.3.187/compiler/lib;/opt/intel/composer_xe_2015.3.187/compiler/lib;/opt/intel/composer_xe_2015.3.187/ipp/lib;/opt/intel/composer_xe_2015.3.187/compiler/lib;/opt/intel/composer_xe_2015.3.187/mkl/lib;/opt/intel/composer_xe_2015.3.187/tbb/lib;/usr/lib;/usr/local/lib]
+  Framework search paths: [;/Library/Frameworks/;/System/Library/Frameworks/]
+  remove lib [System]
+  collapse lib [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a] ==> [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/ipp/lib] ==> [/opt/intel/composer_xe_2015.3.187/ipp/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/mkl/lib] ==> [/opt/intel/composer_xe_2015.3.187/mkl/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/tbb/lib] ==> [/opt/intel/composer_xe_2015.3.187/tbb/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/ipp/lib] ==> [/opt/intel/composer_xe_2015.3.187/ipp/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/mkl/lib] ==> [/opt/intel/composer_xe_2015.3.187/mkl/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/tbb/lib] ==> [/opt/intel/composer_xe_2015.3.187/tbb/lib]
+  collapse library dir [/usr/lib] ==> [/usr/lib]
+  collapse library dir [/usr/local/lib] ==> [/usr/local/lib]
+  collapse framework dir [/Library/Frameworks/] ==> [/Library/Frameworks]
+  collapse framework dir [/System/Library/Frameworks/] ==> [/System/Library/Frameworks]
+  implicit libs: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a]
+  implicit dirs: [/opt/intel/composer_xe_2015.3.187/compiler/lib;/opt/intel/composer_xe_2015.3.187/ipp/lib;/opt/intel/composer_xe_2015.3.187/mkl/lib;/opt/intel/composer_xe_2015.3.187/tbb/lib;/usr/lib;/usr/local/lib]
+  implicit fwks: [/Library/Frameworks;/System/Library/Frameworks]
+
+
+
+
+Detecting C [-std=c11] compiler features compiled with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_62f81/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_62f81.dir/build.make CMakeFiles/cmTC_62f81.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_62f81.dir/feature_tests.c.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -std=c11 -o CMakeFiles/cmTC_62f81.dir/feature_tests.c.o   -c /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/feature_tests.c
+Linking C executable cmTC_62f81
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_62f81.dir/link.txt --verbose=1
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_62f81.dir/feature_tests.c.o  -o cmTC_62f81  
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' から出ます
+
+
+    Feature record: C_FEATURE:1c_function_prototypes
+    Feature record: C_FEATURE:1c_restrict
+    Feature record: C_FEATURE:1c_static_assert
+    Feature record: C_FEATURE:1c_variadic_macros
+
+
+Detecting C [-std=c99] compiler features compiled with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_c66c8/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_c66c8.dir/build.make CMakeFiles/cmTC_c66c8.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_c66c8.dir/feature_tests.c.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -std=c99 -o CMakeFiles/cmTC_c66c8.dir/feature_tests.c.o   -c /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/feature_tests.c
+Linking C executable cmTC_c66c8
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c66c8.dir/link.txt --verbose=1
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_c66c8.dir/feature_tests.c.o  -o cmTC_c66c8  
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' から出ます
+
+
+    Feature record: C_FEATURE:1c_function_prototypes
+    Feature record: C_FEATURE:1c_restrict
+    Feature record: C_FEATURE:0c_static_assert
+    Feature record: C_FEATURE:1c_variadic_macros
+
+
+Detecting C [-std=c90] compiler features compiled with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_bb5a2/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_bb5a2.dir/build.make CMakeFiles/cmTC_bb5a2.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_bb5a2.dir/feature_tests.c.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -std=c90 -o CMakeFiles/cmTC_bb5a2.dir/feature_tests.c.o   -c /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/feature_tests.c
+Linking C executable cmTC_bb5a2
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bb5a2.dir/link.txt --verbose=1
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_bb5a2.dir/feature_tests.c.o  -o cmTC_bb5a2  
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' から出ます
+
+
+    Feature record: C_FEATURE:1c_function_prototypes
+    Feature record: C_FEATURE:0c_restrict
+    Feature record: C_FEATURE:0c_static_assert
+    Feature record: C_FEATURE:0c_variadic_macros
+Determining if the function dgemm_ exists passed with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_9f5ab/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_9f5ab.dir/build.make CMakeFiles/cmTC_9f5ab.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_9f5ab.dir/CheckFunctionExists.c.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -DCHECK_FUNCTION_EXISTS=dgemm_   -o CMakeFiles/cmTC_9f5ab.dir/CheckFunctionExists.c.o   -c /opt/local/share/cmake-3.5/Modules/CheckFunctionExists.c
+Linking C executable cmTC_9f5ab
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9f5ab.dir/link.txt --verbose=1
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=dgemm_ -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_9f5ab.dir/CheckFunctionExists.c.o  -o cmTC_9f5ab  -framework Accelerate 
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' から出ます
+
+
+Determining if the include file pthread.h exists passed with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_801de/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_801de.dir/build.make CMakeFiles/cmTC_801de.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_801de.dir/CheckIncludeFile.c.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc     -o CMakeFiles/cmTC_801de.dir/CheckIncludeFile.c.o   -c /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTC_801de
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_801de.dir/link.txt --verbose=1
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_801de.dir/CheckIncludeFile.c.o  -o cmTC_801de  
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' から出ます
+
+
+Determining if the pthread_create exist passed with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_a4dc5/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_a4dc5.dir/build.make CMakeFiles/cmTC_a4dc5.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_a4dc5.dir/CheckSymbolExists.c.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc     -o CMakeFiles/cmTC_a4dc5.dir/CheckSymbolExists.c.o   -c /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_a4dc5
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a4dc5.dir/link.txt --verbose=1
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_a4dc5.dir/CheckSymbolExists.c.o  -o cmTC_a4dc5  
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' から出ます
+
+File /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function cheev_ exists passed with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_e2215/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_e2215.dir/build.make CMakeFiles/cmTC_e2215.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_e2215.dir/CheckFunctionExists.c.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc    -DCHECK_FUNCTION_EXISTS=cheev_   -o CMakeFiles/cmTC_e2215.dir/CheckFunctionExists.c.o   -c /opt/local/share/cmake-3.5/Modules/CheckFunctionExists.c
+Linking C executable cmTC_e2215
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e2215.dir/link.txt --verbose=1
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=cheev_ -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_e2215.dir/CheckFunctionExists.c.o  -o cmTC_e2215  -framework Accelerate -framework Accelerate 
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build_gnu/CMakeFiles/CMakeTmp' から出ます
+
+

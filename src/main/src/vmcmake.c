@@ -213,9 +213,6 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
   int rank,size;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
-
-  fprintf(stdout, "Debug: qpStart=%d, qpEnd=%d\n", qpStart,qpEnd);
-  fprintf(stdout, "Debug: Nsize=%d, Nsite2=%d\n", Nsize, Nsite2);
   
   do {
     /* initialize */

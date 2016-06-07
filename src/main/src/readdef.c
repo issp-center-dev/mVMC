@@ -429,20 +429,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + NInterAll /* ParaInterAll */
     + NQPOptTrans; /* ParaQPTransOpt */
 
-
-    //debug
-  /*
-  fprintf(stdout, "Nsize=%d\n", Nsize);
-  fprintf(stdout, "Nsite2=%d\n", Nsite2);
-  fprintf(stdout, "NSlater=%d\n", NSlater);
-  fprintf(stdout, "NProj=%d\n", NProj);
-  fprintf(stdout, "NOptTrans=%d\n", NOptTrans);
-  fprintf(stdout, "NPara=%d\n", NPara);
-  fprintf(stdout, "NQPFix=%d, \n", NQPFix);
-  fprintf(stdout, "NQPFuLL=%d \n", NQPFull);
-  fprintf(stdout, "SROptSize=%d\n", SROptSize);
-  */  
-
   return 0;
 }
 
@@ -836,13 +822,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	      idx++;
 	    }
 	  }
-	} else {
-	  ParaQPOptTrans[0]=1.0;
-	  for(i=0;i<Nsite;++i) {
-	    QPOptTrans[0][i] = i;
-	    QPOptTransSgn[0][i] = 1;
-	  }
 	}
+    
 	fclose(fp);
 	break;
 	  
@@ -851,13 +832,20 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	break;
       }
     }
-     
+
     if(fidx!=NPara){
       fprintf(stderr, "error: OptFlag is incomplete.\n");
       info=1;
     }
   } /* if(rank==0) */
 
+  if(FlagOptTrans<=0){
+    ParaQPOptTrans[0]=1.0;
+    for(i=0;i<Nsite;++i) {
+      QPOptTrans[0][i] = i;
+      QPOptTransSgn[0][i] = 1;
+    }
+  }  
   if(info!=0) {
     if(rank==0) {
       fprintf(stderr, "error: Indices and Parameters of Definition files(*.def) are incomplete.\n");
