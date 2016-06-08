@@ -176,7 +176,6 @@ NSPStot        0
 NMPTrans       1
 NSROptItrStep  1200
 NSROptItrSmp   100
-NSROptFixSmp   1
 DSROptRedCut   0.001
 DSROptStaDel   0.02
 DSROptStepDt   0.02
@@ -310,12 +309,6 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 {\bf 形式 :} int型 (1以上数、\tr{デフォルト値 = }\verb|NSROptItrStep|/10)
 
 {\bf 説明 :} \verb|NSROptItrStep|ステップ中、最後の\verb|NSROptItrSmp|ステップでの各変分パラメータの平均値を最適値とする。\verb|NVMCCalMode|=0の場合のみ使用されます。
-
- \item  \verb|NSROptFixSmp|
-
-{\bf 形式 :} int型 (1以上、\tr{デフォルト値 = 1})
-
-{\bf 説明 :} 固定サンプルの下で何回のSR 法のステップを行うか指定。
 
 \item   \verb|DSROptRedCut|
    
