@@ -236,8 +236,8 @@ void SetMemory() {
   if(NVMCCalMode==0){
     //SR componets are described by real and complex componets of O
     SROptOO = (double complex*)malloc( sizeof(double complex)*((2*SROptSize)*(2*SROptSize+2))) ; //TBC
-    SROptHO = SROptOO + (SROptSize*2)*(SROptSize*2); //TBC
-    SROptO  = SROptHO + (SROptSize*2);  //TBC
+    SROptHO = SROptOO + (2*SROptSize)*(2*SROptSize); //TBC
+    SROptO  = SROptHO + (2*SROptSize);  //TBC
 
 
     if(NStoreO!=0){

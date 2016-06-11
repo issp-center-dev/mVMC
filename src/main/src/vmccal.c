@@ -59,6 +59,7 @@ void VMCMainCal(MPI_Comm comm) {
     }
 
     ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+   // printf("DEBUG:  ip= %lf %lf\n",creal(ip),cimag(ip));
     x = LogProjVal(eleProjCnt);
     /* calculate reweight */
     //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
@@ -71,6 +72,7 @@ void VMCMainCal(MPI_Comm comm) {
     StartTimer(41);
     /* calculate energy */
     e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+    //printf("DEBUG:  e= %lf %lf\n",creal(e),cimag(e));
     StopTimer(41);
     if( !isfinite(e) ) {
       fprintf(stderr,"waring: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
@@ -94,12 +96,19 @@ void VMCMainCal(MPI_Comm comm) {
       StartTimer(42);
       /* SlaterElmDiff */
       SlaterElmDiff_fcmp(SROptO+2*NProj+2,ip,eleIdx); //TBC
+      //printf("DEBUG:  NPara=%d NProj=%d NSlater=%d \n",NPara,NProj,NSlater);
+      //for(i=0;i<NPara+1;i++){ 
+      //  printf("DEBUG:  i=%d %lf %lf\n",i,creal(SROptO[i*2]),cimag(SROptO[i*2+1]));
+      //}
       StopTimer(42);
       
       if(FlagOptTrans>0) { // this part will be not used
         calculateOptTransDiff(SROptO+2*NProj+2*NSlater+2, ip); //TBC
       }
 
+      //for(i=0;i<NPara*2+2;i++){ 
+      //  printf("DEBUG: i=%d %lf %lf \n",i,creal(srOptO[i]),cimag(srOptO[i]));
+      //}
       StartTimer(43);
       /* Calculate OO and HO */
       if(NStoreO==0){
@@ -253,14 +262,15 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
                  const double w, const double complex e, const int srOptSize){
   int i,j;
   double complex tmp;
-  #pragma omp parallel for default(shared)        \
+  //#pragma omp parallel for default(shared)        \
     private(i,j,tmp,srOptOO)
-  #pragma loop noalias
+  //#pragma loop noalias
   for(i=0;i<2*srOptSize;i++) {
     tmp         = w * srOptO[i];
+    //printf("i=%d %lf \n",i,creal(tmp));
     srOptHO[i] += e * tmp;
     for(j=0;j<2*srOptSize;j++) {
-      srOptOO[j+i*(2*srOptSize)] += w*srOptO[j]*srOptO[j]; // TBC
+      srOptOO[j+i*(2*srOptSize)] += w*srOptO[j]*srOptO[i]; // TBC
     }
     /* HO[i] += w*e*O[i] */
   }

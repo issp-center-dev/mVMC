@@ -399,7 +399,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + 6*NInterAll /* InterAll */
     + Nsite*NQPOptTrans /* QPOptTrans */
     + Nsite*NQPOptTrans /* QPOptTransSgn */
-    + NPara; /* OptFlag */
+    + 2*NPara; /* OptFlag */ // TBC
   NTotalDefDouble = NTransfer /* ParaTransfer */
     + NCoulombIntra /* ParaCoulombIntra */
     + NCoulombInter /* ParaCoulombInter */
@@ -598,7 +598,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 if(idx0==Nsite) break;
               }
               while( fscanf(fp, "%d ", &i) != EOF){
-                fscanf(fp, "%d\n", &(OptFlag[fidx]));
+                fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
+                OptFlag[2*fidx+1] = 0; //  TBC imaginary
                 fidx++;
                 idx1++;
               }
@@ -631,7 +632,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 if(idx0==Nsite*(Nsite-1)) break;
               }
               while( fscanf(fp, "%d ", &i) != EOF){
-                fscanf(fp, "%d\n", &(OptFlag[fidx]));
+                fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
+                OptFlag[2*fidx+1] = 0; //  TBC imaginary
                 fidx++;
                 idx1++;
               }
@@ -659,7 +661,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 if(idx0==Nsite*NDoublonHolon2siteIdx) break;
               }
               while( fscanf(fp, "%d ", &i) != EOF){
-                fscanf(fp, "%d\n", &(OptFlag[fidx]));
+                fscanf(fp, "%d\n", &(OptFlag[2*fidx]));//TBC real
+                OptFlag[2*fidx+1] = 0; //  TBC imaginary
                 fidx++;
                 idx1++;
               }
@@ -691,7 +694,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 if(idx0==Nsite*NDoublonHolon4siteIdx) break;
               }
               while( fscanf(fp, "%d ", &i) != EOF){
-                fscanf(fp, "%d\n", &(OptFlag[fidx]));
+                fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
+                OptFlag[2*fidx+1] = 0; //  TBC imaginary
                 fidx++;
                 idx1++;
               }
@@ -728,7 +732,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 }
               }
               while( fscanf(fp, "%d ", &i) != EOF){
-                fscanf(fp, "%d\n", &(OptFlag[fidx]));
+                fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
+                OptFlag[2*fidx+1] = 0; //  TBC imaginary
                 fidx += 1;
                 idx1++;
               }
@@ -887,7 +892,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               for(i=0;i<NQPOptTrans;i++){
                 fscanf(fp, "%d ", &itmp);
                 fscanf(fp, "%lf\n", &(ParaQPOptTrans[itmp]));
-                OptFlag[fidx] = 1;
+                OptFlag[2*fidx] = 1;
+                OptFlag[2*fidx+1] = 0; //  TBC imaginary
                 fidx += 1;
               }
               idx = 0;

@@ -66,7 +66,7 @@ int getLWork() {
   return lwork;
 }
 
-int getLWork_fcomp() {
+int getLWork_fcmp() {
   char uplo='U', mthd='P';
   int n,lda,lwork,info=0;
   double rwork;
@@ -87,7 +87,7 @@ int getLWork_fcomp() {
 }
 
 
-//==============s fcomp =============//
+//==============s fcmp =============//
 /* Calculate PfM and InvM from qpidx=qpStart to qpEnd */
 int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;
@@ -121,7 +121,7 @@ int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd) {
     for(qpidx=0;qpidx<qpNum;qpidx++) {
       if(info!=0) continue;
       
-      myInfo = calculateMAll_child_fcomp(eleIdx, qpStart, qpEnd, qpidx,
+      myInfo = calculateMAll_child_fcmp(eleIdx, qpStart, qpEnd, qpidx,
                                    myBufM, myIWork, myWork, LapackLWork,myRWork);
       if(myInfo!=0) {
         #pragma omp critical
@@ -136,7 +136,7 @@ int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd) {
   return info;
 }
 
-int calculateMAll_child_fcomp(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
+int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
                         double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork) {
   #pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
@@ -172,6 +172,7 @@ int calculateMAll_child_fcomp(const int *eleIdx, const int qpStart, const int qp
     for(msj=0;msj<nsize;msj++) {
       rsj = eleIdx[msj] + (msj/Ne)*Nsite;
       bufM_i[msj] = -sltE_i[rsj];
+//      printf("DEBUG: msi=%d msj=%d bufM=%lf %lf \n",msi,msj,creal(bufM_i[msj]),cimag(bufM_i[msj]));
     }
   }
 
@@ -183,8 +184,13 @@ int calculateMAll_child_fcomp(const int *eleIdx, const int qpStart, const int qp
   }
   /* calculate Pf M */
   //printf("DEBUG: n=%d \n",n);
-  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
-  //printf("DEBUG: info=%d \n",info);
+  //for(msi=0;msi<nsize;msi++){
+  //  for(msj=0;msj<nsize;msj++){
+  //    printf("DEBUG: msi=%d msj=%d bufM %lf %lf \n",msi,msj,creal(bufM[msi+msj*n]),cimag(bufM[msi+msj*n]));
+  //  }
+  //}
+  M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
+  //printf("DEBUG: pfaff=%lf %lf\n",creal(pfaff),cimag(pfaff));
   if(info!=0) return info;
   if(!isfinite(pfaff)) return qpidx+1;
   PfM[qpidx] = pfaff;
@@ -192,6 +198,9 @@ int calculateMAll_child_fcomp(const int *eleIdx, const int qpStart, const int qp
   /* DInv */
   M_ZGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
   if(info!=0) return info;
+  //for(msi=0;msi<nsize*nsize;msi++) {
+  //  printf("DEBUG: M_ZGETRF %d %lf %lf \n",msi,creal(bufM[msi]),cimag(bufM[msi]));
+  //}
   
   M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
   if(info!=0) return info;
@@ -205,6 +214,7 @@ int calculateMAll_child_fcomp(const int *eleIdx, const int qpStart, const int qp
     bufM_i2 = bufM + msi;
     for(msj=0;msj<nsize;msj++) {
       invM_i[msj] = 0.5*(bufM_i2[msj*nsize] - bufM_i[msj]);
+      //printf("DEBUG: msj=%d invM=%lf %lf \n",msj,creal(invM_i[msj]),cimag(invM_i[msj]));
       /* invM[i][j] = 0.5*(bufM[i][j]-bufM[j][i]) */
     }
   }
@@ -213,4 +223,4 @@ int calculateMAll_child_fcomp(const int *eleIdx, const int qpStart, const int qp
 }
 
 
-//==============e fcomp =============//
+//==============e fcmp =============//

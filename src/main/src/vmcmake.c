@@ -56,12 +56,14 @@ void VMCMakeSample(MPI_Comm comm) {
   }
   
   CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+ // printf("DEBUG: maker1: PfM=%lf\n",creal(PfM[0]));
   logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
   if( !isfinite(logIpOld) ) {
     if(rank==0) fprintf(stderr,"waring: VMCMakeSample remakeSample logIpOld=%e\n",creal(logIpOld)); //TBC
     makeInitialSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,
                       qpStart,qpEnd,comm);
     CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+    //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
     logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
     BurnFlag = 0;
   }
@@ -95,6 +97,7 @@ void VMCMakeSample(MPI_Comm comm) {
           StopTimer(60);
           StartTimer(61);
         CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
+        //printf("DEBUG: out %d in %d pfMNew=%lf \n",outStep,inStep,creal(pfMNew[0]));
           StopTimer(61);
 
           StartTimer(62);
@@ -149,7 +152,6 @@ void VMCMakeSample(MPI_Comm comm) {
         StartTimer(66);
 
         CalculateNewPfMTwo2_fcmp(mi, s, mj, t, pfMNew, TmpEleIdx, qpStart, qpEnd);
-
         StopTimer(66);
         StartTimer(67);
 
@@ -183,6 +185,7 @@ void VMCMakeSample(MPI_Comm comm) {
         StartTimer(34);
         /* recal PfM and InvM */
         CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+        //printf("DEBUG: maker3: PfM=%lf\n",creal(PfM[0]));
         logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
         StopTimer(34);
         nAccept=0;
@@ -256,6 +259,7 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
     MakeProjCnt(eleProjCnt,eleNum);
 
     flag = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd);
+    //printf("DEBUG: maker4: PfM=%lf\n",creal(PfM[0]));
     if(size>1) {
       MPI_Allreduce(&flag,&flagRdc,1,MPI_INT,MPI_MAX,comm);
       flag = flagRdc;

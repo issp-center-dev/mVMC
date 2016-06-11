@@ -208,6 +208,7 @@ void SlaterElmDiff_fcmp(double complex *srOptO, const double complex ip, int *el
   for(orbidx=0;orbidx<nSlater;orbidx++) {
     srOptO[2*orbidx]   *= invIP;
     srOptO[2*orbidx+1] *= invIP;
+    //printf("DEBUG:orbidx=%d srOptO=%lf %lf invIP=%lf %lf \n",orbidx,creal(srOptO[2*orbidx]),cimag(srOptO[2*orbidx]),creal(invIP),cimag(invIP));
   }
 
   ReleaseWorkSpaceInt();

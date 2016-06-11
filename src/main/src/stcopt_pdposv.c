@@ -70,17 +70,20 @@ int StochasticOpt(MPI_Comm comm) {
 
   #pragma omp parallel for default(shared) private(pi)
   #pragma loop noalias
-  for(pi=0;pi<nPara;pi++) {
+  //for(pi=0;pi<nPara;pi++) {
+  for(pi=0;pi<2*nPara;pi++) {
     /* r[i] is temporarily used for diagonal elements of S */
     /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
-    r[2*pi]   = creal(srOptOO[(2*pi+2)*(2*srOptSize+pi)+(2*pi+2)]) - creal(srOptOO[2*pi+2]) * creal(srOptOO[2*pi+2]);
-    r[2*pi+1] = creal(srOptOO[(2*pi+3)*(2*srOptSize+pi)+(2*pi+3)]) - creal(srOptOO[2*pi+3]) * creal(srOptOO[2*pi+3]);
+    r[pi]   = creal(srOptOO[(pi+2)*(2*srOptSize)+(pi+2)]) - creal(srOptOO[pi+2]) * creal(srOptOO[pi+2]);
+    //r[2*pi]   = creal(srOptOO[(2*pi+2)*(2*srOptSize+pi)+(2*pi+2)]) - creal(srOptOO[2*pi+2]) * creal(srOptOO[2*pi+2]);
+    //r[2*pi+1] = creal(srOptOO[(2*pi+3)*(2*srOptSize+pi)+(2*pi+3)]) - creal(srOptOO[2*pi+3]) * creal(srOptOO[2*pi+3]);
+    //printf("DEBUG: pi=%d %lf \n",pi,creal(srOptOO[2*pi+2]));
   }
 
 // search for max and min
   sDiag = r[0];
   sDiagMax=sDiag; sDiagMin=sDiag;
-  for(pi=0;pi<nPara;pi++) {
+  for(pi=0;pi<2*nPara;pi++) {
     sDiag = r[pi];
     if(sDiag>sDiagMax) sDiagMax=sDiag;
     if(sDiag<sDiagMin) sDiagMin=sDiag;
@@ -91,7 +94,8 @@ int StochasticOpt(MPI_Comm comm) {
 // cutNum: number of paramers that are cut
   diagCutThreshold = sDiagMax*DSROptRedCut;
   si = 0;
-  for(pi=0;pi<nPara*2;pi++) {
+  for(pi=0;pi<2*nPara;pi++) {
+    //printf("DEBUG: nPara=%d pi=%d OptFlag=%d r=%lf\n",nPara,pi,OptFlag[pi],r[pi]);
     if(OptFlag[pi]!=1) { /* fixed by OptFlag */
       optNum++;
       continue; //skip sDiag
@@ -107,13 +111,15 @@ int StochasticOpt(MPI_Comm comm) {
 // e
   }
   nSmat = si;
-  for(si=nSmat;si<nPara*2;si++) {
+  for(si=nSmat;si<2*nPara;si++) {
     smatToParaIdx[si] = -1;
   }
 
   StopTimer(50);
   StartTimer(51);
 
+
+  //printf("DEBUG: nSmat=%d \n",nSmat);
   /* calculate r[i]: global vector [nSmat] */
   info = stcOptMain(r, nSmat, smatToParaIdx, comm);
 
@@ -241,6 +247,8 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   M_DESCINIT(descg, &m, &n, &mb, &nb, &irsrc, &icsrc, &ictxt, &vlld, &info);
   gSize = (vlocr*vlocc>0) ? vlocr*vlocc : 1;
 
+  //printf("DEBUG: n=%d nSmat=%d gSize=%d  sSize=%d wSize=%d: srOptSize=%d \n",n,nSmat,gSize,sSize,wSize,srOptSize);
+  //printf("DEBUG: vlocc=%d mlocc=%d \n",vlocc,mlocc);
   /* allocate memory */
   RequestWorkSpaceDouble(sSize+gSize+wSize);
   s = GetWorkSpaceDouble(sSize);
@@ -278,6 +286,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
       /* S[i][j] = xOO[i+1][j+1] - xOO[0][i+1] * xOO[0][j+1]; */
       s[idx] = creal(srOptOO[(pi+2)*(2*srOptSize)+(pj+2)]) - creal(srOptOO[pi+2]) * creal(srOptOO[pj+2]);
       /* modify diagonal elements */
+      //printf("DEBUG: idx=%d s[]=%lf \n",idx,s[idx]);
       if(pi==pj) s[idx] *= ratioDiag;
     }
   }
@@ -293,6 +302,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
       /* energy gradient = 2.0*( xHO[i+1] - xHO[0] * xOO[0][i+1]) */
       /* g[i] = -dt * (energy gradient) */
       g[ir] = -dSROptStepDt*2.0*(creal(srOptHO[pi+2]) - srOptHO_0 * creal(srOptOO[pi+2]));
+      //printf("DEBUG: ir=%d g[]=%lf \n",ir,g[ir]);
     }
   }
 

@@ -23,8 +23,9 @@ void InitParameter() {
   for(i=0;i<NProj;i++) Proj[i] = 0.0;
 
   for(i=0;i<NSlater;i++){
-    if(OptFlag[i+NProj] > 0){
+    if(OptFlag[2*i+2*NProj] > 0){ //TBC
       Slater[i] = genrand_real2(); /* uniform distribution [0,1) */
+      //printf("DEBUG: i=%d slater=%lf \n",i,creal(Slater[i]));
     } else {
       Slater[i] = 0.0;
     }
@@ -201,7 +202,7 @@ void SetFlagShift() {
   start = 0;
   end = start + NGutzwillerIdx;
   for(i=start;i<end;i++) {
-    if(OptFlag[i]!=1) return;   // fixed Gutx -> do nothing
+    if(OptFlag[2*i]!=1) return;   // fixed Gutx -> do nothing
   }
   
   /* Jastrow */
@@ -210,7 +211,7 @@ void SetFlagShift() {
     end   = start + NJastrowIdx;
     FlagShiftGJ=1; // unfixed J -> FlagShift on
     for(i=start;i<end;i++) {
-      if(OptFlag[i]!=1) {       // fixed jast -> do nothing
+      if(OptFlag[2*i]!=1) {       // fixed jast -> do nothing
         FlagShiftGJ=0;
         break;
       }
@@ -223,7 +224,7 @@ void SetFlagShift() {
     end   = start + 6*NDoublonHolon2siteIdx;
     FlagShiftDH2=1;         // unfixed D-H -> FlagShift on
     for(i=start;i<end;i++) {
-      if(OptFlag[i]!=1) { // fixed D-H -> do nothing
+      if(OptFlag[2*i]!=1) { // fixed D-H -> do nothing
         FlagShiftDH2=0;
         break;
       }
@@ -236,7 +237,7 @@ void SetFlagShift() {
     end   = start + 10*NDoublonHolon4siteIdx;
     FlagShiftDH4=1;         // unfixed D-H -> FlagShift on
     for(i=start;i<end;i++) { 
-      if(OptFlag[i]!=1) { // fixed D-H -> do nothing
+      if(OptFlag[2*i]!=1) { // fixed D-H -> do nothing
         FlagShiftDH4=0;
         break;
       }

@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
   /* initialize Mersenne Twister */
   init_gen_rand(RndSeed+group1);
   /* get the size of work space for LAPACK and PFAPACK */
-  LapackLWork = getLWork();
+  LapackLWork = getLWork_fcmp(); //TBC
 
   StartTimer(13);
   /* initialize variational parameters */
@@ -250,6 +250,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   int step;
   int info;
   int rank;
+  int i;//DEBUG
   MPI_Comm_rank(comm_parent, &rank);
 
   for(step=0;step<NSROptItrStep;step++) {
@@ -274,6 +275,13 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     if(rank==0) outputData();
       StopTimer(22);
       StartTimer(5);
+//DEBUG
+    if(rank==0){
+      for(i=0;i<2*SROptSize*(2*SROptSize+2);i++){
+      //  printf("DEBUG: i=%d SROptOO=%lf +I*%lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
+      } 
+    }
+//DBBUG
     info = StochasticOpt(comm_parent);
       StopTimer(5);
 

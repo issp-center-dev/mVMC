@@ -82,6 +82,7 @@ void CalculateNewPfM2(const int ma, const int s, double complex *pfMNew, const i
     for(msj=0;msj<ne;msj++) {
       rsj = eleIdx[msj];
       ratio += invM_a[msj] * sltE_a[rsj];
+      //printf("DEBUG:msj=%d rsj=%d: invM=%lf %lf : slt=%lf %lf \n",msj,rsj,creal(invM_a[msj]),cimag(invM_a[msj]),creal(sltE_a[rsj]),cimag(sltE_a[rsj]));
     }
     for(msj=ne;msj<nsize;msj++) {
       rsj = eleIdx[msj] + Nsite;
