@@ -52,7 +52,7 @@ double complex GreenFunc1(const int ri, const int rj, const int s, const double 
   eleNum[rsj] = 1;
   eleNum[rsi] = 0;
 
-  return z/ip;
+  return conj(z/ip);//TBC
 }
 
 /* Calculate 2-body Green function <psi|CisAjsCktAlt|x>/<psi|x> */
@@ -140,7 +140,7 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
   eleNum[rsj] = 1;
   eleNum[rsi] = 0;
 
-  return z/ip;
+  return conj(z/ip);//TBC
 }
 
 

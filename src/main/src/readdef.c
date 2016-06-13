@@ -733,7 +733,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               }
               while( fscanf(fp, "%d ", &i) != EOF){
                 fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
-                OptFlag[2*fidx+1] = 0; //  TBC imaginary
+                OptFlag[2*fidx+1] = 1; //  TBC imaginary
                 fidx += 1;
                 idx1++;
               }

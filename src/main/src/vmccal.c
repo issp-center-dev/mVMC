@@ -81,7 +81,7 @@ void VMCMainCal(MPI_Comm comm) {
 
     Wc += w;
     Etot  += w * e;
-    Etot2 += w * e * e;
+    Etot2 += w * conj(e) * e;
 
     if(NVMCCalMode==0) {
       /* Calculate O for correlation fauctors */
@@ -270,7 +270,7 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
     //printf("i=%d %lf \n",i,creal(tmp));
     srOptHO[i] += e * tmp;
     for(j=0;j<2*srOptSize;j++) {
-      srOptOO[j+i*(2*srOptSize)] += w*srOptO[j]*srOptO[i]; // TBC
+      srOptOO[j+i*(2*srOptSize)] += w*srOptO[j]*(srOptO[i]); // TBC
     }
     /* HO[i] += w*e*O[i] */
   }

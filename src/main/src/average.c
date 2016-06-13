@@ -15,9 +15,9 @@ void weightAverageReduce_fcmp(int n, double complex *vec, MPI_Comm comm);
 /* All processes will have the result */
 void WeightAverageWE(MPI_Comm comm) {
   const int n=3;
-  double invW;
+  double complex invW;
   int rank,size;
-  double send[n], recv[n];
+  double complex send[n], recv[n];
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
@@ -27,7 +27,7 @@ void WeightAverageWE(MPI_Comm comm) {
     send[1] = Etot;
     send[2] = Etot2;
 
-    SafeMpiAllReduce(send,recv,n,comm);
+    SafeMpiAllReduce_fcmp(send,recv,n,comm);
 
     Wc    = recv[0];
     invW  = 1.0/Wc;

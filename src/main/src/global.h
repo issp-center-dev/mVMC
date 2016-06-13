@@ -186,9 +186,9 @@ double complex *SROptO_Store;  /* [SROptSize*NVMCSample] calculation buffer */
 double complex *SROptData; /* [2+NPara] storage for energy and variational parameters */
 
 /***** Physical Quantity *****/
-double Wc; /* Weight for correlation sampling = <psi|x> */
-double Etot; /* <H> */
-double Etot2; /* <H^2> */
+double complex Wc; /* Weight for correlation sampling = <psi|x> */
+double complex Etot; /* <H> */
+double complex Etot2; /* <H^2> */
 
 double complex *PhysCisAjs; /* [NCisAjs] */
 double complex *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */

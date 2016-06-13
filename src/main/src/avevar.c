@@ -44,7 +44,7 @@ void OutputOptData() {
       var = 0.0;
       for(sample=0;sample<NSROptItrSmp;sample++) {
         data = SROptData[i+n*sample] - ave;
-        var += data*data;
+        var += data*(data);//TBC
       }
       var = sqrt( var/((double)(NSROptItrSmp)-1.0) );
 

@@ -361,11 +361,12 @@ void outputData() {
   double x;
 
   /* zvo_out.dat */
-  fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
+ // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
+    fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)));
 
   /* zvo_var.dat */
   if(FlagBinary==0) { /* formatted output*/
-    fprintf(FileVar, "% .18e 0.0 % .18e 0.0 ", Etot, Etot2);
+    fprintf(FileVar, "% .18e 0.0 % .18e 0.0 ", creal(Etot), creal(Etot2));
     for(i=0;i<NPara;i++)   fprintf(FileVar, "% .18e % .18e 0.0 ", creal(Para[i]),cimag(Para[i]));
     fprintf(FileVar, "\n");
   } else { /* binary output */
