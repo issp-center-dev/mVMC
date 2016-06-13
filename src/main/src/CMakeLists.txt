@@ -7,7 +7,7 @@ endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 
 include_directories(include)
 include_directories(sfmt)
-link_directories(/Users/yoshimi/program/mVMC/src/main/src/pfapack)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/pfapack)
 
 set(SOURCES_vmcmain
         vmcmain.c   

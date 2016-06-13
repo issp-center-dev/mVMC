@@ -6,8 +6,8 @@
  *-------------------------------------------------------------*/
 
 void InitQPWeight();
-double CalculateLogIP(double * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);
-double CalculateIP(double * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);
+double complex CalculateLogIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);
+double complex CalculateIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);
 void UpdateQPWeight();
 
 /* calculate SPGLCos, SPGLSin and QPFullWeight */
@@ -39,11 +39,11 @@ void InitQPWeight() {
 
     #pragma omp parallel for default(shared) private(i,j,w,idx)
     for(i=0;i<NSPGaussLeg;i++) {
-      SPGLCos[i] = cos(0.5 * beta[i]);
-      SPGLSin[i] = sin(0.5 * beta[i]);
-      SPGLCosSin[i] = SPGLCos[i]*SPGLSin[i];
-      SPGLCosCos[i] = SPGLCos[i]*SPGLCos[i];
-      SPGLSinSin[i] = SPGLSin[i]*SPGLSin[i];
+      SPGLCos[i]    = cos(0.5 * beta[i])+0*I;    //TBC
+      SPGLSin[i]    = sin(0.5 * beta[i])+0*I;    //TBC
+      SPGLCosSin[i] = SPGLCos[i]*SPGLSin[i]+0*I; //TBC
+      SPGLCosCos[i] = SPGLCos[i]*SPGLCos[i]+0*I; //TBC
+      SPGLSinSin[i] = SPGLSin[i]*SPGLSin[i]+0*I; //TBC
       
       w = 0.5*sin(beta[i])*weight[i]*LegendrePoly(cos(beta[i]), NSPStot);
       
@@ -60,10 +60,11 @@ void InitQPWeight() {
   return;
 }
 
+
 /* Calculate logarithm of inner product <phi|L|x> */
-double CalculateLogIP(double * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm) {
+double complex CalculateLogIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm) {
   const int qpNum = qpEnd-qpStart;
-  double ip=0.0, ip2;
+  double complex ip=0.0+0.0*I, ip2;
   int qpidx;
   int size;
   MPI_Comm_size(comm,&size);
@@ -73,16 +74,16 @@ double CalculateLogIP(double * const pfM, const int qpStart, const int qpEnd, MP
     ip += QPFullWeight[qpidx+qpStart] * pfM[qpidx];
   }
   if(size>1) {
-    MPI_Allreduce(&ip, &ip2, 1, MPI_DOUBLE, MPI_SUM, comm);
+    MPI_Allreduce(&ip, &ip2, 1, MPI_DOUBLE_COMPLEX, MPI_SUM, comm);//TBC
     ip = ip2;
   }
-  return log(fabs(ip));
+  return clog(ip);
 }
 
 /* Calculate inner product <phi|L|x> */
-double CalculateIP(double * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm) {
+double complex CalculateIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm) {
   const int qpNum = qpEnd-qpStart;
-  double ip=0.0, ip2;
+  double complex ip=0.0+0.0*I, ip2;
   int qpidx;
   int size;
   MPI_Comm_size(comm,&size);
@@ -92,7 +93,7 @@ double CalculateIP(double * const pfM, const int qpStart, const int qpEnd, MPI_C
     ip += QPFullWeight[qpidx+qpStart] * pfM[qpidx];
   }
   if(size>1) {
-    MPI_Allreduce(&ip, &ip2, 1, MPI_DOUBLE, MPI_SUM, comm);
+    MPI_Allreduce(&ip, &ip2, 1, MPI_DOUBLE_COMPLEX, MPI_SUM, comm);
     ip = ip2;
   }
   return ip;
@@ -100,7 +101,7 @@ double CalculateIP(double * const pfM, const int qpStart, const int qpEnd, MPI_C
 
 void UpdateQPWeight() {
   int i,j,offset;
-  double tmp;
+  double complex tmp; //TBC
 
   if(FlagOptTrans>0) {
     for(i=0;i<NOptTrans;i++) {

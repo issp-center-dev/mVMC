@@ -9,14 +9,15 @@ void WeightAverageSROpt(MPI_Comm comm);
 void WeightAverageGreenFunc(MPI_Comm comm);
 
 void weightAverageReduce(int n, double *vec, MPI_Comm comm);
+void weightAverageReduce_fcmp(int n, double complex *vec, MPI_Comm comm);
 
 /* calculate average of Wc, Etot and Etot2 */
 /* All processes will have the result */
 void WeightAverageWE(MPI_Comm comm) {
   const int n=3;
-  double invW;
+  double complex invW;
   int rank,size;
-  double send[n], recv[n];
+  double complex send[n], recv[n];
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
@@ -26,7 +27,7 @@ void WeightAverageWE(MPI_Comm comm) {
     send[1] = Etot;
     send[2] = Etot2;
 
-    SafeMpiAllReduce(send,recv,n,comm);
+    SafeMpiAllReduce_fcmp(send,recv,n,comm);
 
     Wc    = recv[0];
     invW  = 1.0/Wc;
@@ -46,25 +47,25 @@ void WeightAverageWE(MPI_Comm comm) {
 void WeightAverageSROpt(MPI_Comm comm) {
   int i,n;
   double invW = 1.0/Wc;
-  double *vec,*buf;
+  double complex *vec,*buf;
   int rank,size;
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
   /* SROptOO and SROptHO */
-  n = SROptSize*(SROptSize+1);
+  n   = 2*SROptSize*(2*SROptSize+2);
   vec = SROptOO;
   if(size>1) {
-    RequestWorkSpaceDouble(n);
-    buf = GetWorkSpaceDouble(n);
+    RequestWorkSpaceComplex(n);
+    buf = GetWorkSpaceComplex(n);
 
-    SafeMpiAllReduce(vec,buf,n,comm);
+    SafeMpiAllReduce_fcmp(vec,buf,n,comm);
 
     #pragma omp parallel for default(shared) private(i)
     #pragma loop noalias
     for(i=0;i<n;i++) vec[i] = buf[i] * invW;
 
-    ReleaseWorkSpaceDouble();
+    ReleaseWorkSpaceComplex();
  } else {
     #pragma omp parallel for default(shared) private(i)
     #pragma loop noalias
@@ -78,25 +79,25 @@ void WeightAverageSROpt(MPI_Comm comm) {
 /* Only rank=0 process will have the result */
 void WeightAverageGreenFunc(MPI_Comm comm) {
   int n;
-  double *vec;
+  double complex *vec;
 
   /* Green functions */
   /* CisAjs, CisAjsCktAlt and CisAjsCktAltDC */
   n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
   vec = PhysCisAjs;
-  weightAverageReduce(n,vec,comm);
+  weightAverageReduce_fcmp(n,vec,comm);
   
   if(NLanczosMode>0){
     /* QQQQ */
     n = NLSHam*NLSHam*NLSHam*NLSHam;
     vec = QQQQ;
-    weightAverageReduce(n,vec,comm);
+    weightAverageReduce_fcmp(n,vec,comm);
     
     if(NLanczosMode>1){
       /* QCisAjsQ and QCisAjsCktAltQ */
       n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAlt;
       vec = QCisAjsQ;
-      weightAverageReduce(n,vec,comm);
+      weightAverageReduce_fcmp(n,vec,comm);
     }
   }  
 
@@ -123,6 +124,35 @@ void weightAverageReduce(int n, double *vec, MPI_Comm comm) {
     }
 
     ReleaseWorkSpaceDouble();
+  } else {
+    #pragma omp parallel for default(shared) private(i)
+    #pragma loop noalias
+    for(i=0;i<n;i++) vec[i] *= invW;
+  }
+
+  return;
+}
+
+void weightAverageReduce_fcmp(int n, double  complex *vec, MPI_Comm comm) {
+  int i;
+  const double invW = 1.0/Wc;
+  double complex *buf;
+  int rank,size;
+  MPI_Comm_rank(comm,&rank);
+  MPI_Comm_size(comm,&size);
+
+  if(size>1) {
+    RequestWorkSpaceComplex(n);
+    buf = GetWorkSpaceComplex(n);
+
+    SafeMpiReduce_fcmp(vec,buf,n,comm);
+    if(rank==0) {
+      #pragma omp parallel for default(shared) private(i)
+      #pragma loop noalias
+      for(i=0;i<n;i++) vec[i] = buf[i] * invW;
+    }
+
+    ReleaseWorkSpaceComplex();
   } else {
     #pragma omp parallel for default(shared) private(i)
     #pragma loop noalias

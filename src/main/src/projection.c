@@ -26,7 +26,7 @@ inline double LogProjRatio(const int *projCntNew, const int *projCntOld) {
   int idx;
   double z=0;
   for(idx=0;idx<NProj;idx++) {
-    z += Proj[idx] * (double)(projCntNew[idx]-projCntOld[idx]);
+    z += creal(Proj[idx]) * (double)(projCntNew[idx]-projCntOld[idx]); //TBC
   }
   return z;
 }
@@ -35,7 +35,7 @@ inline double ProjRatio(const int *projCntNew, const int *projCntOld) {
   int idx;
   double z=0;
   for(idx=0;idx<NProj;idx++) {
-    z += Proj[idx] * (double)(projCntNew[idx]-projCntOld[idx]);
+    z += creal(Proj[idx]) * (double)(projCntNew[idx]-projCntOld[idx]); // TVC
   }
   return exp(z);
 }

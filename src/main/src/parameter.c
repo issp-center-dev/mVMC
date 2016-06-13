@@ -23,8 +23,10 @@ void InitParameter() {
   for(i=0;i<NProj;i++) Proj[i] = 0.0;
 
   for(i=0;i<NSlater;i++){
-    if(OptFlag[i+NProj] > 0){
+    if(OptFlag[2*i+2*NProj] > 0){ //TBC
       Slater[i] = genrand_real2(); /* uniform distribution [0,1) */
+      Slater[i] += 0.01*I*genrand_real2(); /* uniform distribution [0,1) */
+      printf("DEBUG: i=%d slater=%lf %lf \n",i,creal(Slater[i]),cimag(Slater[i]));
     } else {
       Slater[i] = 0.0;
     }
@@ -42,19 +44,24 @@ int ReadInitParameter(char *initFile) {
   FILE *fp;
   int i,xi;
   double xtmp;
+  double tmp_real,tmp_comp;
+
 
   fp = fopen(initFile, "r");
   if(fp!=NULL){
     while(fscanf(fp, "%lf ", &xtmp)!=EOF){
       for(i=1;i<4;i++) fscanf(fp, "%lf ", &xtmp);
       for(xi=0;xi<NProj;xi++) {
-        fscanf(fp, "%lf %lf ", &(Proj[xi]), &xtmp);
+        fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
+        Proj[xi] = tmp_real+tmp_comp*I; 
       }
       for(xi=0;xi<NSlater;xi++) {
-        fscanf(fp, "%lf %lf ", &(Slater[xi]), &xtmp);
+        fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
+        Slater[xi] = tmp_real+tmp_comp*I; 
       }
       for(xi=0;xi<NOptTrans;xi++) {
-        fscanf(fp, "%lf %lf ", &(OptTrans[xi]), &xtmp);
+        fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
+        OptTrans[xi] = tmp_real+tmp_comp*I; 
       }
     }
     fclose(fp);
@@ -72,7 +79,7 @@ void SyncModifiedParameter(MPI_Comm comm) {
 #ifdef _mpi_use
   int size;
   MPI_Comm_size(comm, &size);
-  if(size>1) MPI_Bcast(Para, NPara, MPI_DOUBLE, 0, comm);
+  if(size>1) MPI_Bcast(Para, NPara, MPI_DOUBLE_COMPLEX, 0, comm);
 #endif /* _mpi_use */
 
   /***** shift correlation factors *****/
@@ -87,7 +94,7 @@ void SyncModifiedParameter(MPI_Comm comm) {
   /***** rescale Slater *****/
   xmax = fabs(Slater[0]);
   for(i=1;i<NSlater;i++){
-    if(xmax < fabs(Slater[i])) xmax = fabs(Slater[i]);
+    if(xmax < cabs(Slater[i])) xmax = cabs(Slater[i]);
   }
   ratio = D_AmpMax/xmax;
   #pragma omp parallel for default(shared) private(i)
@@ -97,9 +104,10 @@ void SyncModifiedParameter(MPI_Comm comm) {
   if(FlagOptTrans>0){
     xmax = fabs(OptTrans[0]);
     for(i=1;i<NOptTrans;++i) {
-      if(xmax < fabs(OptTrans[i])) xmax = fabs(OptTrans[i]);
+      if(xmax < cabs(OptTrans[i])) xmax = cabs(OptTrans[i]);
     }
-    ratio = 1.0/copysign(xmax, OptTrans[0]);
+    //ratio = 1.0/copysign(xmax, OptTrans[0]);
+    ratio = 1.0/xmax; //TBC
     #pragma omp parallel for default(shared) private(i)
     for(i=0;i<NOptTrans;++i) {
       OptTrans[i] *= ratio;
@@ -118,7 +126,7 @@ void shiftGJ() {
   if(NGutzwillerIdx==0||NJastrowIdx==0) return;
 
   for(i=0;i<n;i++) {
-    shift += Proj[i];
+    shift += creal(Proj[i]); // TBC
   }
   shift /= (double)n;
 
@@ -145,7 +153,7 @@ double shiftDH2() {
     n0 = offset + xn;
     n1 = n0 + 2*NDoublonHolon2siteIdx;
     n2 = n0 + 4*NDoublonHolon2siteIdx;
-    shift = (Proj[n0]+Proj[n1]+Proj[n2])/3.0;
+    shift = (creal(Proj[n0])+creal(Proj[n1])+creal(Proj[n2]))/3.0; //TBC
     Proj[n0] -= shift;
     Proj[n1] -= shift;
     Proj[n2] -= shift;
@@ -172,7 +180,7 @@ double shiftDH4() {
     n2 = n0 + 4*NDoublonHolon4siteIdx;
     n3 = n0 + 6*NDoublonHolon4siteIdx;
     n4 = n0 + 8*NDoublonHolon4siteIdx;
-    shift = (Proj[n0]+Proj[n1]+Proj[n2]+Proj[n3]+Proj[n4])/5.0;
+    shift = (creal(Proj[n0])+creal(Proj[n1])+creal(Proj[n2])+creal(Proj[n3])+creal(Proj[n4]))/5.0; //TBC
     Proj[n0] -= shift;
     Proj[n1] -= shift;
     Proj[n2] -= shift;
@@ -191,20 +199,20 @@ void SetFlagShift() {
   FlagShiftGJ=0;
   FlagShiftDH2=0;
   FlagShiftDH4=0;
-  if(NGutzwillerIdx==0) return;
+  if(NGutzwillerIdx==0) return; // no Gutz -> do nothing
   start = 0;
   end = start + NGutzwillerIdx;
   for(i=start;i<end;i++) {
-    if(OptFlag[i]!=1) return;
+    if(OptFlag[2*i]!=1) return;   // fixed Gutx -> do nothing
   }
   
   /* Jastrow */
   if(NJastrowIdx>0) {
     start = end;
     end   = start + NJastrowIdx;
-    FlagShiftGJ=1;
+    FlagShiftGJ=1; // unfixed J -> FlagShift on
     for(i=start;i<end;i++) {
-      if(OptFlag[i]!=1) {
+      if(OptFlag[2*i]!=1) {       // fixed jast -> do nothing
         FlagShiftGJ=0;
         break;
       }
@@ -215,9 +223,9 @@ void SetFlagShift() {
   if(NDoublonHolon2siteIdx>0) {
     start = end;
     end   = start + 6*NDoublonHolon2siteIdx;
-    FlagShiftDH2=1;
+    FlagShiftDH2=1;         // unfixed D-H -> FlagShift on
     for(i=start;i<end;i++) {
-      if(OptFlag[i]!=1) {
+      if(OptFlag[2*i]!=1) { // fixed D-H -> do nothing
         FlagShiftDH2=0;
         break;
       }
@@ -228,9 +236,9 @@ void SetFlagShift() {
   if(NDoublonHolon4siteIdx>0) {
     start = end;
     end   = start + 10*NDoublonHolon4siteIdx;
-    FlagShiftDH4=1;
-    for(i=start;i<end;i++) {
-      if(OptFlag[i]!=1) {
+    FlagShiftDH4=1;         // unfixed D-H -> FlagShift on
+    for(i=start;i<end;i++) { 
+      if(OptFlag[2*i]!=1) { // fixed D-H -> do nothing
         FlagShiftDH4=0;
         break;
       }

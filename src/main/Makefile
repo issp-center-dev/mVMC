@@ -1,13 +1,14 @@
 # host name
-host = kashiwa kei jupiter sol reims
+host = kashiwa kei jupiter sol reims gnu
 
 # alias
 mars : sol
 ksw : kashiwa
 fx maki : kei
+mac : gnu
 
 # Please add alias name
-.PHONY : ksw fx maki mars
+.PHONY : ksw fx maki mars mac
 
 .PHONY : clean $(host)
 

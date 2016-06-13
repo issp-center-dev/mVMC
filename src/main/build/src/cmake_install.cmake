@@ -1,4 +1,4 @@
-# Install script for directory: /Users/yoshimi/program/mVMC/src/main/src
+# Install script for directory: /Users/k-yoshimi/program/mVMC/src/main/src
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

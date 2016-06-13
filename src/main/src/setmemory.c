@@ -2,7 +2,7 @@
  * Variational Monte Carlo
  * Allocate and free memory for global array
  *-------------------------------------------------------------
- * by Satoshi Morita and Ryui Kaneko
+ * by Satoshi Morita
  *-------------------------------------------------------------*/
 
 void SetMemoryDef();
@@ -136,7 +136,7 @@ void SetMemoryDef() {
   OptFlag = pInt;
 
   /* Double */
-  ParaTransfer = (double*)malloc(sizeof(double)*(NTotalDefDouble));
+  ParaTransfer = (double*)malloc(sizeof(double)*(NTotalDefDouble-NQPTrans));
   pDouble = ParaTransfer + NTransfer;
 
   ParaCoulombIntra = pDouble;
@@ -154,13 +154,15 @@ void SetMemoryDef() {
   ParaExchangeCoupling = pDouble;
   pDouble +=  NExchangeCoupling;
   
-  ParaQPTrans = pDouble;
-  pDouble +=  NQPTrans;
+//  ParaQPTrans = pDouble;
+//  pDouble +=  NQPTrans;
 
   ParaInterAll = pDouble;
   pDouble +=  NInterAll;
   
   ParaQPOptTrans = pDouble;
+
+  ParaQPTrans = (double complex*)malloc(sizeof(double complex)*(NQPTrans));
 
   return;
 }
@@ -193,22 +195,22 @@ void FreeMemoryDef() {
 void SetMemory() {
 
   /***** Variational Parameters *****/
-  Para = (double*)malloc(sizeof(double)*(NPara));
-  Proj = Para;
-  Slater = Para + NProj;
+  Para     = (double complex*)malloc(sizeof(double complex)*(NPara)); 
+  Proj     = Para;
+  Slater   = Para + NProj; 
   OptTrans = Para + NProj + NSlater;
 
   /***** Electron Configuration ******/
-  EleIdx = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));
-  EleCfg = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
-  EleNum = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
-  EleProjCnt = (int*)malloc(sizeof(int)*( NVMCSample*NProj ));
+  EleIdx            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));
+  EleCfg            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
+  EleNum            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
+  EleProjCnt        = (int*)malloc(sizeof(int)*( NVMCSample*NProj ));
   logSqPfFullSlater = (double*)malloc(sizeof(double)*(NVMCSample));
 
-  TmpEleIdx = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
-  TmpEleCfg = TmpEleIdx + 2*Ne;
-  TmpEleNum = TmpEleCfg + 2*Nsite;
-  TmpEleProjCnt = TmpEleNum + 2*Nsite;
+  TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
+  TmpEleCfg         = TmpEleIdx + 2*Ne;
+  TmpEleNum         = TmpEleCfg + 2*Nsite;
+  TmpEleProjCnt     = TmpEleNum + 2*Nsite;
 
   BurnEleIdx = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
   BurnEleCfg = BurnEleIdx + 2*Ne;
@@ -216,13 +218,13 @@ void SetMemory() {
   BurnEleProjCnt = BurnEleNum + 2*Nsite;
 
   /***** Slater Elements ******/
-  SlaterElm = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+  SlaterElm = (double complex*)malloc( sizeof(double complex)*(NQPFull*(2*Nsite)*(2*Nsite)) );
 
-  InvM = (double*)malloc( sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
+  InvM = (double complex*)malloc( sizeof(double complex)*(NQPFull*(Nsize*Nsize+1)) );
   PfM = InvM + NQPFull*Nsize*Nsize;
 
   /***** Quantum Projection *****/
-  QPFullWeight = (double*)malloc(sizeof(double)*(NQPFull+NQPFix+5*NSPGaussLeg));
+  QPFullWeight = (double complex*)malloc(sizeof(double complex)*(NQPFull+NQPFix+5*NSPGaussLeg));
   QPFixWeight= QPFullWeight + NQPFull;
   SPGLCos    = QPFullWeight + NQPFull + NQPFix;
   SPGLSin    = SPGLCos + NSPGaussLeg;
@@ -232,29 +234,31 @@ void SetMemory() {
 
   /***** Stocastic Reconfiguration *****/
   if(NVMCCalMode==0){
-    SROptOO = (double*)malloc( sizeof(double)*(SROptSize*(SROptSize+2)) );
-    SROptHO = SROptOO + SROptSize*SROptSize;
-    SROptO  = SROptHO + SROptSize;
+    //SR componets are described by real and complex componets of O
+    SROptOO = (double complex*)malloc( sizeof(double complex)*((2*SROptSize)*(2*SROptSize+2))) ; //TBC
+    SROptHO = SROptOO + (2*SROptSize)*(2*SROptSize); //TBC
+    SROptO  = SROptHO + (2*SROptSize);  //TBC
+
 
     if(NStoreO!=0){
-      SROptO_Store = (double*)malloc( sizeof(double)*(SROptSize*NVMCSample) );
+      SROptO_Store = (double complex*)malloc( sizeof(double complex)*(SROptSize*NVMCSample) );
     }
-    SROptData = (double*)malloc( sizeof(double)*(NSROptItrSmp*(2+NPara)) );
+    SROptData = (double complex*)malloc( sizeof(double complex)*(NSROptItrSmp*(2+NPara)) );
   }
 
   /***** Physical Quantity *****/
   if(NVMCCalMode==1){
-    PhysCisAjs  = (double*)malloc(sizeof(double)
+    PhysCisAjs  = (double complex*)malloc(sizeof(double complex)
                     *(2*NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC));
     PhysCisAjsCktAlt   = PhysCisAjs       + NCisAjs;
     PhysCisAjsCktAltDC = PhysCisAjsCktAlt + NCisAjsCktAlt;
     LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
     if(NLanczosMode>0){
-      QQQQ = (double*)malloc(sizeof(double)
+      QQQQ = (double complex*)malloc(sizeof(double complex)
         *(NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam) );
       LSLQ = QQQQ + NLSHam*NLSHam*NLSHam*NLSHam;
       if(NLanczosMode>1){
-        QCisAjsQ = (double*)malloc(sizeof(double)
+        QCisAjsQ = (double complex*)malloc(sizeof(double complex)
           *(NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAlt + NLSHam*NCisAjs) );
         QCisAjsCktAltQ = QCisAjsQ + NLSHam*NLSHam*NCisAjs;
         LSLCisAjs = QCisAjsCktAltQ + NLSHam*NLSHam*NCisAjsCktAlt;

@@ -13,6 +13,10 @@ int NumWorkSpaceDouble;
 double *WorkSpaceDouble;
 double *WorkSpaceDoubleNow;
 
+int NumWorkSpaceComplex;
+double complex *WorkSpaceComplex;
+double complex *WorkSpaceComplexNow;
+
 int NumWorkSpaceThreadInt;
 int **WorkSpaceThreadInt;
 int **WorkSpaceThreadIntNow;
@@ -20,6 +24,10 @@ int **WorkSpaceThreadIntNow;
 int NumWorkSpaceThreadDouble;
 double **WorkSpaceThreadDouble;
 double **WorkSpaceThreadDoubleNow;
+
+int NumWorkSpaceThreadComplex;
+double complex **WorkSpaceThreadComplex;
+double complex **WorkSpaceThreadComplexNow;
 
 void initializeWorkSpaceAll();
 void FreeWorkSpaceAll();
@@ -32,6 +40,10 @@ void RequestWorkSpaceDouble(int n);
 double* GetWorkSpaceDouble(int n);
 void ReleaseWorkSpaceDouble();
 
+void RequestWorkSpaceComplex(int n);
+double complex* GetWorkSpaceComplex(int n);
+void ReleaseWorkSpaceComplex();
+
 void RequestWorkSpaceThreadInt(int n);
 int* GetWorkSpaceThreadInt(int n);
 void ReleaseWorkSpaceThreadInt();
@@ -39,6 +51,10 @@ void ReleaseWorkSpaceThreadInt();
 void RequestWorkSpaceThreadDouble(int n);
 double* GetWorkSpaceThreadDouble(int n);
 void ReleaseWorkSpaceThreadDouble();
+
+void requestWorkSpaceThreadComplex(int n);
+double complex* GetWorkSpaceThreadComplex(int n);
+void ReleaseWorkSpaceThreadComplex();
 
 void initializeWorkSpaceAll() {
   int i;
@@ -49,6 +65,9 @@ void initializeWorkSpaceAll() {
   NumWorkSpaceDouble = 0;
   WorkSpaceDouble = NULL;
 
+  NumWorkSpaceComplex = 0; //TBC
+  WorkSpaceComplex = NULL; //TBC
+
   NumWorkSpaceThreadInt = 0;
   WorkSpaceThreadInt = (int**)malloc(sizeof(int*)*NThread);
   WorkSpaceThreadIntNow = (int**)malloc(sizeof(int*)*NThread);
@@ -57,9 +76,14 @@ void initializeWorkSpaceAll() {
   WorkSpaceThreadDouble = (double**)malloc(sizeof(double*)*NThread);
   WorkSpaceThreadDoubleNow = (double**)malloc(sizeof(double*)*NThread);
 
+  NumWorkSpaceThreadComplex  = 0; // TBC
+  WorkSpaceThreadComplex     = (double complex **)malloc(sizeof(double complex *)*NThread); //TBC
+  WorkSpaceThreadComplexNow  = (double complex **)malloc(sizeof(double complex *)*NThread); //TBC
+
   for(i=0;i<NThread;i++) {
     WorkSpaceThreadInt[i] = NULL;
     WorkSpaceThreadDouble[i] = NULL;
+    WorkSpaceThreadComplex[i] = NULL;
   }
 
   return;
@@ -125,6 +149,27 @@ void ReleaseWorkSpaceDouble() {
   return;
 }
 
+/* WorkSpaceComplex */
+void RequestWorkSpaceComplex(int n) {
+  if(n>NumWorkSpaceComplex) {
+    NumWorkSpaceComplex=n;
+    free(WorkSpaceComplex);
+    WorkSpaceComplex = (double complex*)malloc(sizeof(double complex)*NumWorkSpaceComplex);
+    WorkSpaceComplexNow = WorkSpaceComplex;
+  }
+  return;
+}
+double complex * GetWorkSpaceComplex(int n) {
+  double complex *p=WorkSpaceComplexNow;
+  WorkSpaceComplexNow += n;
+  return p;
+}
+void ReleaseWorkSpaceComplex() {
+  WorkSpaceComplexNow = WorkSpaceComplex;
+  return;
+}
+
+
 /* WorkSpaceThreadInt */
 void RequestWorkSpaceThreadInt(int n) {
   /* This function should be called "out of" an openMP parallel region. */
@@ -187,6 +232,39 @@ void ReleaseWorkSpaceThreadDouble() {
   int i;
   for(i=0;i<NThread;i++) {
     WorkSpaceThreadDoubleNow[i] = WorkSpaceThreadDouble[i];
+  }
+  return;
+}
+
+/* WorkSpaceThreadComplex */
+void RequestWorkSpaceThreadComplex(int n) {
+  /* This function should be called "out of" an openMP parallel region. */
+  int i;
+  if(n>NumWorkSpaceThreadComplex) {
+    /* printf("WS ThreadComplex %d -> %d\n",NumWorkSpaceThreadComplex,n); */
+    NumWorkSpaceThreadComplex=n;
+    #pragma omp parallel private(i)
+    {
+      i = omp_get_thread_num();
+      free(WorkSpaceThreadComplex[i]);
+      WorkSpaceThreadComplex[i] = (double complex*)malloc(sizeof(double complex)*NumWorkSpaceThreadComplex);
+      WorkSpaceThreadComplexNow[i] = WorkSpaceThreadComplex[i];
+    }
+  }
+  return;
+}
+double complex* GetWorkSpaceThreadComplex(int n) {
+  /* This function should be called "in" an openMP parallel region. */
+  int i = omp_get_thread_num();
+  double complex *p = WorkSpaceThreadComplexNow[i];
+  WorkSpaceThreadComplexNow[i] += n;
+  return p;
+}
+void ReleaseWorkSpaceThreadComplex() {
+  /* This function should be called "out of" an openMP parallel region. */
+  int i;
+  for(i=0;i<NThread;i++) {
+    WorkSpaceThreadComplexNow[i] = WorkSpaceThreadComplex[i];
   }
   return;
 }

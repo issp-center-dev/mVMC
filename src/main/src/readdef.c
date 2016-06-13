@@ -383,7 +383,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   } else {
     SRFlag = 0;
   }
-  
   Nsize   = 2*Ne;
   Nsite2  = 2*Nsite;
   NSlater = NOrbitalIdx;
@@ -391,7 +390,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + 2*3*NDoublonHolon2siteIdx
     + 2*5*NDoublonHolon4siteIdx;
   NOptTrans = (FlagOptTrans>0) ? NQPOptTrans : 0;
-  NPara   = NSlater + NProj + NOptTrans;
+  NPara   = NProj + NSlater + NOptTrans ; 
   NQPFix = NSPGaussLeg * NMPTrans;
   NQPFull = NQPFix * NQPOptTrans;
   SROptSize = NPara+1;
@@ -417,7 +416,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + 6*NInterAll /* InterAll */
     + Nsite*NQPOptTrans /* QPOptTrans */
     + Nsite*NQPOptTrans /* QPOptTransSgn */
-    + NPara; /* OptFlag */
+    + 2*NPara; /* OptFlag */ // TBC
 
   NTotalDefDouble = NTransfer /* ParaTransfer */
     + NCoulombIntra /* ParaCoulombIntra */
@@ -445,6 +444,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	double dReValue, dImValue;
 	int tmp_ispin;
   int rank;
+  double tmp_real,tmp_comp;
 
   MPI_Comm_rank(comm, &rank);
   
@@ -592,7 +592,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    if(idx0==Nsite) break;
 	  }
 	  while( fscanf(fp, "%d ", &i) != EOF){
-	    fscanf(fp, "%d\n", &(OptFlag[fidx]));
+	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
+	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
 	  }
@@ -619,7 +620,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    if(idx0==Nsite*(Nsite-1)) break;
 	  }
 	  while( fscanf(fp, "%d ", &i) != EOF){
-	    fscanf(fp, "%d\n", &(OptFlag[fidx]));
+	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
+	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
 	  }
@@ -641,7 +643,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    if(idx0==Nsite*NDoublonHolon2siteIdx) break;
 	  }
 	  while( fscanf(fp, "%d ", &i) != EOF){
-	    fscanf(fp, "%d\n", &(OptFlag[fidx]));
+	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));//TBC real
+	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
 	  }
@@ -667,7 +670,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    if(idx0==Nsite*NDoublonHolon4siteIdx) break;
 	  }
 	  while( fscanf(fp, "%d ", &i) != EOF){
-	    fscanf(fp, "%d\n", &(OptFlag[fidx]));
+	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
+	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
 	  }
@@ -698,7 +702,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    }
 	  }
 	  while( fscanf(fp, "%d ", &i) != EOF){
-	    fscanf(fp, "%d\n", &(OptFlag[fidx]));
+	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
+	    OptFlag[2*fidx+1] = 1; //  TBC imaginary
 	    fidx += 1;
 	    idx1++;
 	  }

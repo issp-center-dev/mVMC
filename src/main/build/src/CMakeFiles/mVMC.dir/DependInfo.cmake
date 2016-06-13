@@ -4,8 +4,8 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "/Users/yoshimi/program/mVMC/src/main/src/sfmt/SFMT.c" "/Users/yoshimi/program/mVMC/src/main/build/src/CMakeFiles/mVMC.dir/sfmt/SFMT.c.o"
-  "/Users/yoshimi/program/mVMC/src/main/src/vmcmain.c" "/Users/yoshimi/program/mVMC/src/main/build/src/CMakeFiles/mVMC.dir/vmcmain.c.o"
+  "/Users/k-yoshimi/program/mVMC/src/main/src/sfmt/SFMT.c" "/Users/k-yoshimi/program/mVMC/src/main/build/src/CMakeFiles/mVMC.dir/sfmt/SFMT.c.o"
+  "/Users/k-yoshimi/program/mVMC/src/main/src/vmcmain.c" "/Users/k-yoshimi/program/mVMC/src/main/build/src/CMakeFiles/mVMC.dir/vmcmain.c.o"
   )
 set(CMAKE_C_COMPILER_ID "Intel")
 
@@ -17,7 +17,7 @@ set(CMAKE_TARGET_DEFINITIONS_C
 
 # The include file search paths:
 set(CMAKE_C_TARGET_INCLUDE_PATH
-  "/opt/local/include/openmpi-gcc49"
+  "/opt/local/include/openmpi-gcc5"
   "../src/include"
   "../src/sfmt"
   )

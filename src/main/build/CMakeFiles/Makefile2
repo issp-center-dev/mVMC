@@ -54,10 +54,10 @@ RM = /opt/local/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /Users/yoshimi/program/mVMC/src/main
+CMAKE_SOURCE_DIR = /Users/k-yoshimi/program/mVMC/src/main
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /Users/yoshimi/program/mVMC/src/main/build
+CMAKE_BINARY_DIR = /Users/k-yoshimi/program/mVMC/src/main/build
 
 #=============================================================================
 # Directory level rules for directory src
@@ -84,7 +84,7 @@ src/preinstall:
 src/CMakeFiles/mVMC.dir/all:
 	$(MAKE) -f src/CMakeFiles/mVMC.dir/build.make src/CMakeFiles/mVMC.dir/depend
 	$(MAKE) -f src/CMakeFiles/mVMC.dir/build.make src/CMakeFiles/mVMC.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles --progress-num=1,2,3 "Built target mVMC"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/Users/k-yoshimi/program/mVMC/src/main/build/CMakeFiles --progress-num=1,2,3 "Built target mVMC"
 .PHONY : src/CMakeFiles/mVMC.dir/all
 
 # Include target in all.
@@ -94,9 +94,9 @@ all: src/CMakeFiles/mVMC.dir/all
 
 # Build rule for subdir invocation for target.
 src/CMakeFiles/mVMC.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles 3
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/k-yoshimi/program/mVMC/src/main/build/CMakeFiles 3
 	$(MAKE) -f CMakeFiles/Makefile2 src/CMakeFiles/mVMC.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/k-yoshimi/program/mVMC/src/main/build/CMakeFiles 0
 .PHONY : src/CMakeFiles/mVMC.dir/rule
 
 # Convenience name for target.

@@ -2,7 +2,7 @@
  * Variational Monte Carlo
  * Allocate and free memory for global array
  *-------------------------------------------------------------
- * by Satoshi Morita and Ryui Kaneko
+ * by Satoshi Morita 
  *-------------------------------------------------------------*/
 
 void SetMemoryDef();

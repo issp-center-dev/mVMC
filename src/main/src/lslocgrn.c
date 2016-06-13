@@ -2,7 +2,7 @@
  * Variational Monte Carlo
  * local Q and Green Functions with Lanczos step
  *-------------------------------------------------------------
- * by Ryui Kaneko and Satoshi Morita
+ * by Satoshi Morita
  *-------------------------------------------------------------*/
 
 void LSLocalQ(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);

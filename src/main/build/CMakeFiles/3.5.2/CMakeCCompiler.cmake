@@ -1,7 +1,7 @@
-set(CMAKE_C_COMPILER "/opt/intel/composer_xe_2015.3.187/bin/intel64/icc")
+set(CMAKE_C_COMPILER "/opt/intel/compilers_and_libraries_2016.1.111/mac/bin/intel64/icc")
 set(CMAKE_C_COMPILER_ARG1 "")
 set(CMAKE_C_COMPILER_ID "Intel")
-set(CMAKE_C_COMPILER_VERSION "15.0.3.20150408")
+set(CMAKE_C_COMPILER_VERSION "16.0.1.20151020")
 set(CMAKE_C_COMPILER_WRAPPER "")
 set(CMAKE_C_STANDARD_COMPUTED_DEFAULT "90")
 set(CMAKE_C_COMPILE_FEATURES "")
@@ -62,6 +62,6 @@ endif()
 
 
 
-set(CMAKE_C_IMPLICIT_LINK_LIBRARIES "/opt/intel/composer_xe_2015.3.187/compiler/lib/libimf.a;/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a;/opt/intel/composer_xe_2015.3.187/compiler/lib/libirng.a;/opt/intel/composer_xe_2015.3.187/compiler/lib/libipgo.a;/opt/intel/composer_xe_2015.3.187/compiler/lib/libdecimal.a;c++;/opt/intel/composer_xe_2015.3.187/compiler/lib/libirc.a;/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a;/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a")
-set(CMAKE_C_IMPLICIT_LINK_DIRECTORIES "/opt/intel/composer_xe_2015.3.187/compiler/lib;/opt/intel/composer_xe_2015.3.187/ipp/lib;/opt/intel/composer_xe_2015.3.187/mkl/lib;/opt/intel/composer_xe_2015.3.187/tbb/lib;/usr/lib;/usr/local/lib")
+set(CMAKE_C_IMPLICIT_LINK_LIBRARIES "/opt/intel/compilers_and_libraries_2016.1.111/mac/compiler/lib/libimf.a;/opt/intel/compilers_and_libraries_2016.1.111/mac/compiler/lib/libsvml.a;/opt/intel/compilers_and_libraries_2016.1.111/mac/compiler/lib/libirng.a;/opt/intel/compilers_and_libraries_2016.1.111/mac/compiler/lib/libipgo.a;/opt/intel/compilers_and_libraries_2016.1.111/mac/compiler/lib/libdecimal.a;c++;/opt/intel/compilers_and_libraries_2016.1.111/mac/compiler/lib/libirc.a;/opt/intel/compilers_and_libraries_2016.1.111/mac/compiler/lib/libsvml.a;/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/7.0.2/lib/darwin/libclang_rt.osx.a")
+set(CMAKE_C_IMPLICIT_LINK_DIRECTORIES "/opt/intel/compilers_and_libraries_2016.1.111/mac/compiler/lib;/opt/intel/compilers_and_libraries_2016.1.111/mac/mkl/lib;/opt/intel/compilers_and_libraries_2016.1.111/mac/ipp/lib;/opt/intel/compilers_and_libraries_2016.1.111/mac/tbb/lib;/opt/intel/compilers_and_libraries_2016/mac/daal/lib;/opt/intel/compilers_and_libraries_2016/mac/tbb/lib;/opt/intel/compilers_and_libraries_2016/mac/compiler/lib;/usr/lib;/usr/local/lib")
 set(CMAKE_C_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "/Library/Frameworks;/System/Library/Frameworks")
