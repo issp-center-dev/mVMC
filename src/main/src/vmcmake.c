@@ -107,7 +107,7 @@ void VMCMakeSample(MPI_Comm comm) {
 
         /* Metroplis */
         x = LogProjRatio(projCntNew,TmpEleProjCnt);
-        w = exp(2.0*(x+logIpNew-logIpOld));
+        w = exp(2.0*(x+creal(logIpNew-logIpOld)));
         if( !isfinite(w) ) w = -1.0; /* should be rejected */
 
         if(w > genrand_real2()) { /* accept */

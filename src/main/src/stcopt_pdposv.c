@@ -160,7 +160,7 @@ int StochasticOpt(MPI_Comm comm) {
     for(si=0;si<nSmat;si++) {
       pi = smatToParaIdx[si];
       if(pi%2==0){
-        para[pi/2] += r[si];  // real
+        para[pi/2]     += r[si];  // real
       }else{
         para[(pi-1)/2] += r[si]*I; // imag
       }
