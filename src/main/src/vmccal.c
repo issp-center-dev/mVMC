@@ -8,8 +8,10 @@
 void VMCMainCal(MPI_Comm comm);
 void clearPhysQuantity();
 void calculateOptTransDiff(double complex *srOptO, const double complex ipAll);
-void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
                  const double complex w, const double complex e, const int srOptSize);
+void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+                 const double  w, const double complex e, const int srOptSize);
 void calculateOO_Store(double complex *srOptOO, double complex *srOptHO,  double complex *srOptO,
                  const double w, const double complex e,  int srOptSize, int sampleSize);
 void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam);
@@ -259,7 +261,8 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
 //  return;
 //}
 
-void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+/*
+void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
                  const double complex w, const double complex e, const int srOptSize) {
   double complex we=w*e;
 
@@ -275,16 +278,15 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
   m=n=lda=2*srOptSize;
   incx=incy=1;
 
-//  /* OO[i][j] += w*O[i]*O[j] */
+//   OO[i][j] += w*O[i]*O[j] 
   M_ZGERC(&m, &n, &w, srOptO, &incx, srOptO, &incy, srOptOO, &lda);
 
-//  /* HO[i] += w*e*O[i] */
+//   HO[i] += w*e*O[i] 
   M_ZAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
 
   return;
 }
-
-/*
+*/
 void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
                  const double w, const double complex e, const int srOptSize){
   int i,j;
@@ -295,23 +297,20 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
   for(j=0;j<2*srOptSize;j++) {
     tmp                            = w * srOptO[j];
     srOptOO[0*(2*srOptSize)+j]    += tmp;      //TBC
-    srOptHO[0*(2*srOptSize)+j]    += e * tmp;
     srOptOO[1*(2*srOptSize)+j]    += 0.0;      //TBC
-    srOptHO[1*(2*srOptSize)+j]    += 0.0;
   }
   for(i=2;i<2*srOptSize;i++) {
     tmp            = w * srOptO[i];
     srOptHO[i]    += e * tmp;
     for(j=0;j<2*srOptSize;j++) {
-      srOptOO[j+i*(2*srOptSize)] += w*(srOptO[j])*(srOptO[i]); // TBC
+      srOptOO[j+i*(2*srOptSize)] += w*(srOptO[j])*conj(srOptO[i]); // TBC
       //srOptOO[j+i*(2*srOptSize)] += w*(srOptO[j])*(srOptO[i]); // TBC
     }
-     HO[i] += w*e*O[i] 
   }
 
   return;
 }
-*/
+
 void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam) {
   const int n=nLSHam*nLSHam*nLSHam*nLSHam;
   int rq,rp,ri,rj;
