@@ -369,6 +369,7 @@ void outputData() {
     fprintf(FileVar, "% .18e 0.0 % .18e 0.0 ", creal(Etot), creal(Etot2));
     for(i=0;i<NPara;i++)   fprintf(FileVar, "% .18e % .18e 0.0 ", creal(Para[i]),cimag(Para[i]));
     fprintf(FileVar, "\n");
+    //for(i=0;i<NPara;i++)  printf("DEBUG:i=%d: % .18e % .18e  \n",i, creal(Para[i]),cimag(Para[i]));
   } else { /* binary output */
     fwrite(Para,sizeof(double),NPara,FileVar);
   }

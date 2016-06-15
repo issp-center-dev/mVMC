@@ -50,6 +50,11 @@ void VMCMainCal(MPI_Comm comm) {
     eleCfg = EleCfg + sample*Nsite2;
     eleNum = EleNum + sample*Nsite2;
     eleProjCnt = EleProjCnt + sample*NProj;
+//DEBUG
+   // for(i=0;i<Nsite;i++) {
+   //   printf("sample=%d: i=%d  up=%d down =%d \n",sample,i,eleCfg[i+0*Nsite],eleCfg[i+1*Nsite]);
+   // }
+//DEBUG
 
     StartTimer(40);
     info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd);
@@ -98,10 +103,6 @@ void VMCMainCal(MPI_Comm comm) {
       StartTimer(42);
       /* SlaterElmDiff */
       SlaterElmDiff_fcmp(SROptO+2*NProj+2,ip,eleIdx); //TBC
-      //printf("DEBUG:  NPara=%d NProj=%d NSlater=%d \n",NPara,NProj,NSlater);
-      //for(i=0;i<NPara+1;i++){ 
-      //  printf("DEBUG:  i=%d %lf %lf\n",i,creal(SROptO[i*2]),cimag(SROptO[i*2+1]));
-      //}
       StopTimer(42);
       
       if(FlagOptTrans>0) { // this part will be not used
@@ -114,7 +115,18 @@ void VMCMainCal(MPI_Comm comm) {
       StartTimer(43);
       /* Calculate OO and HO */
       if(NStoreO==0){
+        //printf("DEBUG:  NPara=%d NProj=%d NSlater=%d \n",NPara,NProj,NSlater);
+        //for(i=0;i<2*(NPara+1);i++){ 
+        //  printf("tmp: DEBUG:  i=%d %lf %lf\n",i,creal(SROptO[i]),cimag(SROptO[i]));
+        //}
+        //for(i=0;i<2*(NPara+1);i++){ 
+        //  printf("B accum: DEBUG:  i=%d %lf %lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
+        //}
+
         calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
+        //for(i=0;i<2*(NPara+1);i++){ 
+        //  printf("A accum: DEBUG:  i=%d %lf %lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
+        //}
       }else{
         we    = w*e;
         sqrtw = sqrt(w); 

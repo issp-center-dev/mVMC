@@ -78,7 +78,7 @@ int StochasticOpt(MPI_Comm comm) {
     r[pi]   = creal(srOptOO[(pi+2)*(2*srOptSize)+(pi+2)]) - creal(srOptOO[pi+2]) * creal(srOptOO[pi+2]);
     //r[2*pi]   = creal(srOptOO[(2*pi+2)*(2*srOptSize+pi)+(2*pi+2)]) - creal(srOptOO[2*pi+2]) * creal(srOptOO[2*pi+2]);
     //r[2*pi+1] = creal(srOptOO[(2*pi+3)*(2*srOptSize+pi)+(2*pi+3)]) - creal(srOptOO[2*pi+3]) * creal(srOptOO[2*pi+3]);
-    //printf("DEBUG: pi=%d %lf \n",pi,creal(srOptOO[2*pi+2]));
+    //printf("DEBUG: pi=%d: %lf %lf \n",pi,creal(srOptOO[pi]),cimag(srOptOO[pi]));
   }
 
 // search for max and min
@@ -289,7 +289,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
       s[idx] = creal(srOptOO[(pi+2)*(2*srOptSize)+(pj+2)]) - creal(srOptOO[pi+2]) * creal(srOptOO[pj+2]);
       //s[idx] = creal(srOptOO[(pi+2)*(2*srOptSize)+(pj+2)]) - creal(srOptOO[pi+2]*srOptOO[pj+2]);
       /* modify diagonal elements */
-      //printf("DEBUG: idx=%d s[]=%lf \n",idx,s[idx]);
+      //printf("DEBUG: idx=%d %d %d s[]=%lf \n",idx,pi,pj,s[idx]);
       if(pi==pj) s[idx] *= ratioDiag;
     }
   }
