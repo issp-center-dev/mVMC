@@ -25,7 +25,7 @@ void InitParameter() {
   for(i=0;i<NSlater;i++){
     if(OptFlag[2*i+2*NProj] > 0){ //TBC
       Slater[i] =  genrand_real2(); /* uniform distribution [0,1) */
-      Slater[i] += I*genrand_real2(); /* uniform distribution [0,1) */
+      Slater[i] += 0*I*genrand_real2(); /* uniform distribution [0,1) */
       printf("DEBUG: i=%d slater=%lf %lf \n",i,creal(Slater[i]),cimag(Slater[i]));
     } else {
       Slater[i] = 0.0;
@@ -92,7 +92,7 @@ void SyncModifiedParameter(MPI_Comm comm) {
   if(FlagShiftGJ==1) shiftGJ();
 
   /***** rescale Slater *****/
-  xmax = fabs(Slater[0]);
+  xmax = cabs(Slater[0]);
   for(i=1;i<NSlater;i++){
     if(xmax < cabs(Slater[i])) xmax = cabs(Slater[i]);
   }
@@ -102,7 +102,7 @@ void SyncModifiedParameter(MPI_Comm comm) {
 
   /***** normalize OptTrans *****/
   if(FlagOptTrans>0){
-    xmax = fabs(OptTrans[0]);
+    xmax = cabs(OptTrans[0]);
     for(i=1;i<NOptTrans;++i) {
       if(xmax < cabs(OptTrans[i])) xmax = cabs(OptTrans[i]);
     }

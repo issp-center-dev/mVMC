@@ -74,7 +74,6 @@ void VMCMainCal(MPI_Comm comm) {
     StartTimer(41);
     /* calculate energy */
     e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-    e = creal(e); //TBC
     //printf("DEBUG: sample=%d e= %lf %lf\n",sample,creal(e),cimag(e));
     StopTimer(41);
     if( !isfinite(e) ) {
@@ -296,14 +295,14 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
   //#pragma loop noalias
   for(j=0;j<2*srOptSize;j++) {
     tmp                            = w * srOptO[j];
-    srOptOO[0*(2*srOptSize)+j]    += tmp;      //TBC
-    srOptOO[1*(2*srOptSize)+j]    += 0.0;      //TBC
+    srOptOO[0*(2*srOptSize)+j]    += tmp;      // update O
+    srOptOO[1*(2*srOptSize)+j]    += 0.0;      // update 
+    srOptHO[j]                    += e * tmp;  // update HO
   }
   for(i=2;i<2*srOptSize;i++) {
     tmp            = w * srOptO[i];
-    srOptHO[i]    += e * tmp;
     for(j=0;j<2*srOptSize;j++) {
-      srOptOO[j+i*(2*srOptSize)] += w*(srOptO[j])*conj(srOptO[i]); // TBC
+      srOptOO[i*(2*srOptSize)+j] += w*(srOptO[j])*(srOptO[i]); // TBC
       //srOptOO[j+i*(2*srOptSize)] += w*(srOptO[j])*(srOptO[i]); // TBC
     }
   }

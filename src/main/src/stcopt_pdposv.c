@@ -74,6 +74,7 @@ int StochasticOpt(MPI_Comm comm) {
   for(pi=0;pi<2*nPara;pi++) {
     /* r[i] is temporarily used for diagonal elements of S */
     /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
+    //r[pi]   = creal(srOptOO[(pi+2)*(2*srOptSize)+(pi+2)]) - creal(srOptOO[pi+2] * srOptOO[pi+2]);
     r[pi]   = creal(srOptOO[(pi+2)*(2*srOptSize)+(pi+2)]) - creal(srOptOO[pi+2]) * creal(srOptOO[pi+2]);
     //r[2*pi]   = creal(srOptOO[(2*pi+2)*(2*srOptSize+pi)+(2*pi+2)]) - creal(srOptOO[2*pi+2]) * creal(srOptOO[2*pi+2]);
     //r[2*pi+1] = creal(srOptOO[(2*pi+3)*(2*srOptSize+pi)+(2*pi+3)]) - creal(srOptOO[2*pi+3]) * creal(srOptOO[2*pi+3]);
@@ -216,6 +217,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   const int srOptSize = SROptSize;//TBC
   const double dSROptStepDt = DSROptStepDt;
   const double srOptHO_0 = creal(SROptHO[0]);
+ // const double complex srOptHO_0 = SROptHO[0];
   double complex *srOptOO=SROptOO;
   double complex *srOptHO=SROptHO;
 
@@ -285,6 +287,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
 
       /* S[i][j] = xOO[i+1][j+1] - xOO[0][i+1] * xOO[0][j+1]; */
       s[idx] = creal(srOptOO[(pi+2)*(2*srOptSize)+(pj+2)]) - creal(srOptOO[pi+2]) * creal(srOptOO[pj+2]);
+      //s[idx] = creal(srOptOO[(pi+2)*(2*srOptSize)+(pj+2)]) - creal(srOptOO[pi+2]*srOptOO[pj+2]);
       /* modify diagonal elements */
       //printf("DEBUG: idx=%d s[]=%lf \n",idx,s[idx]);
       if(pi==pj) s[idx] *= ratioDiag;
@@ -302,6 +305,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
       /* energy gradient = 2.0*( xHO[i+1] - xHO[0] * xOO[0][i+1]) */
       /* g[i] = -dt * (energy gradient) */
       g[ir] = -dSROptStepDt*2.0*(creal(srOptHO[pi+2]) - srOptHO_0 * creal(srOptOO[pi+2]));
+      //g[ir] = -dSROptStepDt*2.0*(creal(srOptHO[pi+2]) - creal(srOptHO_0 * srOptOO[pi+2]));
       //printf("DEBUG: ir=%d g[]=%lf \n",ir,g[ir]);
     }
   }
