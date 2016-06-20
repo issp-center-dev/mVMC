@@ -871,7 +871,6 @@ NSPStot        0
 NMPTrans       1
 NSROptItrStep  1200
 NSROptItrSmp   100
-NSROptFixSmp   1
 DSROptRedCut   0.001
 DSROptStaDel   0.02
 DSROptStepDt   0.02
@@ -988,7 +987,7 @@ NStore         1
 
  \item  \verb|NMPTrans|
 
-{\bf 形式 :} int型 (1以上、\tr{デフォルト値 = 0})
+{\bf 形式 :} int型 (1以上、\tr{デフォルト値 = 1})
 
 {\bf 説明 :} 
 運動量・格子対称性の量子数射影の個数。TransSymファイルで指定した重みで上から\verb|NMPTrans|個まで使用する。\tr{射影を行わない場合は1に設定する。}
@@ -1005,12 +1004,6 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 {\bf 形式 :} int型 (1以上数、\tr{デフォルト値 = }\verb|NSROptItrStep|/10)
 
 {\bf 説明 :} \verb|NSROptItrStep|ステップ中、最後の\verb|NSROptItrSmp|ステップでの各変分パラメータの平均値を最適値とする。\verb|NVMCCalMode|=0の場合のみ使用されます。
-
- \item  \verb|NSROptFixSmp|
-
-{\bf 形式 :} int型 (1以上、\tr{デフォルト値 = 1})
-
-{\bf 説明 :} 固定サンプルの下で何回のSR 法のステップを行うか指定。
 
 \item   \verb|DSROptRedCut|
    
@@ -1765,10 +1758,9 @@ Gutzwiller因子
 \begin{verbatim}
 ======================
 NGutzwillerIdx 2  
+ComplexType 0
 ====================== 
-===== Gutzwiller ===== 
 ====================== 
-   1
    0     0
    1     0
    2     0
@@ -1789,10 +1781,10 @@ NGutzwillerIdx 2
  \begin{itemize}
    \item  1行:  ヘッダ(何が書かれても問題ありません)。
    \item  2行:   [string01]~[int01]
-   \item  3-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6行: [int02]
-   \item  7 - 6+$N_s$行: [int03]~[int04]
-   \item  7+$N_s$ - 6+$N_s$+$N_g$行：[int05]~[int06]
+   \item  3行:   [string02]~[int02]
+   \item  4-5行:  ヘッダ(何が書かれても問題ありません)。
+   \item  6 - 5+$N_s$行: [int03]~[int04]
+   \item  6+$N_s$ - 5+$N_s$+$N_g$行：[int05]~[int06]
   \end{itemize}
 \subsubsection{パラメータ}
  \begin{itemize}
@@ -1808,6 +1800,12 @@ NGutzwillerIdx 2
     {\bf 形式 :} int型 (空白不可)
 
    {\bf 説明 :} $g_i$の変分パラメータの種類の総数を指定します。
+
+   \item  $[$string02$]$
+   
+    {\bf 形式 :} string型 (空白不可)
+
+   {\bf 説明 :} $g_i$の変分パラメータの型を指定するためのキーワード名を指定します(任意)。
 
   \item  $[$int02$]$
   
@@ -1864,10 +1862,9 @@ Jastrow因子
 \begin{verbatim}
 ======================
 NJastrowIdx 5  
+ComplexType 0
 ====================== 
-== i_j_JastrowIdx  ===
 ======================
-   0	 
    0     1     0 
    0     2     1 
    0     3     0 
@@ -1886,10 +1883,10 @@ NJastrowIdx 5
  \begin{itemize}
    \item  1行:  ヘッダ(何が書かれても問題ありません)。
    \item  2行:   [string01]~[int01]
-   \item  3-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6行：[int02]
-   \item  7 - 6+$N_s\times (N_s-1)$行: [int03]~[int04]~[int05]
-   \item  7+$N_s\times (N_s-1)$ - 6+$N_s\times (N_s-1)$+$N_j$行：[int06]~[int07]
+   \item  3行:   [string02]~[int02]
+   \item  4-5行:  ヘッダ(何が書かれても問題ありません)。
+   \item  6 - 5+$N_s\times (N_s-1)$行: [int03]~[int04]~[int05]
+   \item  6+$N_s\times (N_s-1)$ - 5+$N_s\times (N_s-1)$+$N_j$行：[int06]~[int07]
   \end{itemize}
 \subsubsection{パラメータ}
  \begin{itemize}
@@ -1905,6 +1902,12 @@ NJastrowIdx 5
     {\bf 形式 :} int型 (空白不可)
 
    {\bf 説明 :} $v_{ij}$の変分パラメータの種類の総数を指定します。
+
+   \item  $[$string02$]$
+   
+    {\bf 形式 :} string型 (空白不可)
+
+   {\bf 説明 :} $v_{ij}$の変分パラメータの型を指定するためのキーワード名を指定します(任意)。
 
    \item  $[$int02$]$
    
@@ -1961,10 +1964,9 @@ NJastrowIdx 5
 \begin{verbatim}
 ====================================
 NDoublonHolon2siteIdx 2  
+ComplexType 0
 ====================================
-==  i_xi_xi_DoublonHolon2siteIdx  ==
 ====================================
-   0
    0     5   15    0
    0    13    7    1
    1     6   12    0
@@ -1987,10 +1989,10 @@ NDoublonHolon2siteIdx 2
  \begin{itemize}
    \item  1行:  ヘッダ(何が書かれても問題ありません)。
    \item  2行:   [string01]~[int01]
-   \item  3-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6行：[int02]
-   \item  7 - 6+$N_s\times N_{\rm dh2}$行: [int03]~[int04]~[int05]~[int06]
-   \item  7+$N_s\times N_{\rm dh2}$ - 6+$(N_s+6) \times N_{\rm dh2}$行：[int07]~[int08]
+   \item  3行:   [string02]~[int02]
+   \item  4-5行:  ヘッダ(何が書かれても問題ありません)。
+   \item  6 - 5+$N_s\times N_{\rm dh2}$行: [int03]~[int04]~[int05]~[int06]
+   \item  6+$N_s\times N_{\rm dh2}$ - 5+$(N_s+6) \times N_{\rm dh2}$行：[int07]~[int08]
   \end{itemize}
 \subsubsection{パラメータ}
  \begin{itemize}
@@ -2007,6 +2009,12 @@ NDoublonHolon2siteIdx 2
 
    {\bf 説明 :} 変分パラメータのセット総数を指定します。
 
+  \item  $[$string02$]$
+   
+    {\bf 形式 :} string型 (空白不可)
+
+   {\bf 説明 :}変分パラメータの型を指定するためのキーワード名を指定します(任意)。
+   
    \item  $[$int02$]$
    
     {\bf 形式 :} int型 (空白不可)
@@ -2070,10 +2078,9 @@ NDoublonHolon2siteIdx 2
 \begin{verbatim}
 ====================================
 NDoublonHolon4siteIdx 1  
+ComplexType 0
 ====================================
-==  i_xi_xi_DoublonHolon4siteIdx  ==
 ====================================
-   0
    0     1    3    4   12    0
    1     2    0    5   13    0
    2     3    1    6   14    0
@@ -2095,10 +2102,10 @@ NDoublonHolon4siteIdx 1
  \begin{itemize}
    \item  1行:  ヘッダ(何が書かれても問題ありません)。
    \item  2行:   [string01]~[int01]
-   \item  3-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6行： [int02]
-   \item  7 - 6+$N_s\times N_{\rm dh4}$行: [int03]~[int04]~[int05]~[int06]~[int07]~[int08]
-   \item  7+$N_s\times N_{\rm dh4}$ - 6+$(N_s+10) \times N_{\rm dh4}$行：[int09]~[int10]
+   \item  3行:   [string02]~[int02]
+   \item  4-5行:  ヘッダ(何が書かれても問題ありません)。
+   \item  6 - 5+$N_s\times N_{\rm dh4}$行: [int03]~[int04]~[int05]~[int06]~[int07]~[int08]
+   \item  6+$N_s\times N_{\rm dh4}$ - 5+$(N_s+10) \times N_{\rm dh4}$行：[int09]~[int10]
   \end{itemize}
 \subsubsection{パラメータ}
  \begin{itemize}
@@ -2114,6 +2121,12 @@ NDoublonHolon4siteIdx 1
     {\bf 形式 :} int型 (空白不可)
 
    {\bf 説明 :} 変分パラメータのセット総数を指定します。
+
+   \item  $[$string02$]$
+   
+    {\bf 形式 :} string型 (空白不可)
+
+   {\bf 説明 :} 変分パラメータの型を指定するためのキーワード名を指定します(任意)。
 
    \item  $[$int02$]$
    
@@ -2175,11 +2188,10 @@ NDoublonHolon4siteIdx 1
 \begin{screen}
 \begin{verbatim}
 ====================================
-NOrbitalIdx 64  
+NOrbitalIdx 64   
+ComplexType 0
 ====================================
-==  i_j_OrbitalIdx  ==
 ====================================
-   1
    0     0     0 
    0     1     1 
    0     2     2 
@@ -2201,10 +2213,10 @@ NOrbitalIdx 64
  \begin{itemize}
    \item  1行:  ヘッダ(何が書かれても問題ありません)。
    \item  2行:   [string01]~[int01]
-   \item  3-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6行: [int02]
-   \item  7 - 6+$N_s^2$行: [int03]~[int04]~[int05]
-   \item  7+$N_s^2$ - 6+$N_s^2+N_{\rm o}$行：[int06]~[int07]
+   \item  3行:   [string02]~[int02]
+   \item  4-5行:  ヘッダ(何が書かれても問題ありません)。
+   \item  6 - 5+$N_s^2$行: [int03]~[int04]~[int05]
+   \item  6+$N_s^2$ - 5+$N_s^2+N_{\rm o}$行：[int06]~[int07]
   \end{itemize}
 \subsubsection{パラメータ}
  \begin{itemize}
@@ -2220,6 +2232,12 @@ NOrbitalIdx 64
     {\bf 形式 :} int型 (空白不可)
 
    {\bf 説明 :} 変分パラメータのセット総数を指定します。
+
+   \item  $[$string02$]$
+   
+    {\bf 形式 :} string型 (空白不可)
+
+   {\bf 説明 :} 変分パラメータの型を指定するためのキーワード名を指定します(任意)。
 
    \item  $[$int02$]$
    
@@ -2408,12 +2426,17 @@ NGutzwillerIdx  16
 
 {\bf 説明 :} サイト番号を指定する整数。0以上\verb|Nsite|{未満}で指定します。
  
- \item  $[$double01$]$, $[$double02$]$
+ \item  $[$double01$]$
    
    {\bf 形式 :} double型 (空白不可)
 
-  {\bf 説明 :} $g_i$の初期値を与えます。$[$double01$]$が実部、$[$double02$]$が虚部を与えます。\verb|Gutzwiller|指定ファイルで型を実部に指定している場合は$[$double02$]$の値は破棄されます。
-  
+  {\bf 説明 :} $g_i$の初期値の実部を与えます。
+   
+   \item  $[$double02$]$
+   {\bf 形式 :} double型 
+
+  {\bf 説明 :} $g_i$の初期値の虚部を与えます。\verb|Gutzwiller|指定ファイルで型を実数に指定している場合は、$[$double02$]$は入力しないでください。複素数指定の場合に$[$double02$]$がない場合には、0が代入されます。
+   
 \end{itemize}
 
 \subsubsection{使用ルール}
@@ -2422,6 +2445,7 @@ NGutzwillerIdx  16
 \item 行数固定で読み込みを行う為、ヘッダの省略はできません。
 \item 成分が重複して指定された場合にはエラー終了します。
 \item $[$int01$]$と定義されている変分パラメータの総数が異なる場合はエラー終了します。
+\item \verb|Gutzwiller|指定ファイルで型を実部に指定した状態で、$[$double02$]$が入力されるとエラー終了します。
 \item \verb|Gutzwiller|指定ファイルで紐付けされるサイト番号とパラメータの種類と、入力ファイルで指定されるパラメータの値の整合性がとれない場合は警告を出します。その際、入力値としては平均された値が採用されます。例えば、\verb|Gutzwiller|指定ファイルで$i$, $j$サイトのパラメータの種類が共通の$0$に指定されているにも関わらず、入力ファイルで$i$,$j$サイトの値が異なる場合には警告が出されます。
 \end{itemize}
 
@@ -2482,11 +2506,17 @@ NJastrowIdx 240
 
 {\bf 説明 :} サイト番号を指定する整数。0以上\verb|Nsite|{未満}で指定します。
  
- \item  $[$double01$]$, $[$double02$]$
+ \item  $[$double01$]$
    
    {\bf 形式 :} double型 (空白不可)
 
-  {\bf 説明 :} $v_{ij}$の初期値を与えます。$[$double01$]$が実部、$[$double02$]$が虚部を与えます。\verb|Jastrow|指定ファイルで型を実部に指定している場合は$[$double02$]$の値は破棄されます。
+  {\bf 説明 :} $v_{ij}$の初期値の実部を与えます。
+  
+ \item  $[$double02$]$
+   
+   {\bf 形式 :} double型 
+
+  {\bf 説明 :} $v_{ij}$の初期値の虚部を与えます。\verb|Jastrow|指定ファイルで型を実数に指定している場合は、$[$double02$]$は入力しないでください。複素数指定の場合に$[$double02$]$がない場合には、0が代入されます。
   
 \end{itemize}
 
@@ -2496,6 +2526,7 @@ NJastrowIdx 240
 \item 行数固定で読み込みを行う為、ヘッダの省略はできません。
 \item 成分が重複して指定された場合にはエラー終了します。
 \item $[$int01$]$と定義されている変分パラメータの総数が異なる場合はエラー終了します。
+\item  \verb|Jastrow|指定ファイルで型を実数に指定した状態で、$[$double02$]$が入力されるとエラー終了します。
 \item \verb|Jastrow|指定ファイルで紐付けされるサイト番号とパラメータの種類と、入力ファイルで指定されるパラメータの値の整合性がとれない場合は警告を出します。その際、入力値としては平均された値が採用されます。
 \end{itemize}
 
@@ -2554,11 +2585,18 @@ NDoublonHolon2siteIdx 32
 
   {\bf 説明 :} \verb|DH2|指定ファイル内の変分プラメータの種類([int07])を指定します。値は0以上[int01]{未満}です。
 
- \item  $[$double01$]$, $[$double02$]$
-   
+ \item  $[$double01$]$
+    
    {\bf 形式 :} double型 (空白不可)
 
-  {\bf 説明 :} $[$double01$]$が実部、$[$double02$]$が虚部を与えます。\verb|DH2|指定ファイルで型を実部に指定している場合は$[$double02$]$の値は破棄されます。
+  {\bf 説明 :} 変分パラメータの実部を与えます。
+  
+ 
+ \item $[$double02$]$
+   
+   {\bf 形式 :} double型
+
+  {\bf 説明 :} 変分パラメータの虚部を与えます。 \verb|DH2|指定ファイルで型を実数に指定している場合は、$[$double02$]$は入力しないでください。複素数指定の場合に$[$double02$]$がない場合には、0が代入されます。
   
 \end{itemize}
 
@@ -2568,6 +2606,7 @@ NDoublonHolon2siteIdx 32
 \item 行数固定で読み込みを行う為、ヘッダの省略はできません。
 \item 成分が重複して指定された場合にはエラー終了します。
 \item $[$int01$]$と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
+\item \verb|DH2|指定ファイルで型を実数に指定した状態で、$[$double02$]$が入力されるとエラー終了します。
 \end{itemize}
 
 
@@ -2625,11 +2664,18 @@ NDoublonHolon4siteIdx 10
 
   {\bf 説明 :} \verb|DH4|指定ファイル内の変分プラメータの種類([int09])を指定します。値は0以上[int01]{未満}です。
 
- \item  $[$double01$]$, $[$double02$]$
-   
+ \item  $[$double01$]$
+    
    {\bf 形式 :} double型 (空白不可)
 
-  {\bf 説明 :} $[$double01$]$が実部、$[$double02$]$が虚部を与えます。\verb|DH4|指定ファイルで型を実部に指定している場合は$[$double02$]$の値は破棄されます。
+  {\bf 説明 :} 変分パラメータの実部を与えます。
+  
+ 
+ \item $[$double02$]$
+   
+   {\bf 形式 :} double型
+
+  {\bf 説明 :} 変分パラメータの虚部を与えます。 \verb|DH4|指定ファイルで型を実数に指定している場合は、$[$double02$]$は入力しないでください。複素数指定の場合に$[$double02$]$がない場合には、0が代入されます。
   
 \end{itemize}
 
@@ -2639,6 +2685,8 @@ NDoublonHolon4siteIdx 10
 \item 行数固定で読み込みを行う為、ヘッダの省略はできません。
 \item 成分が重複して指定された場合にはエラー終了します。
 \item $[$int01$]$と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
+\item \verb|DH4|指定ファイルで型を実数に指定した状態で、$[$double02$]$が入力されるとエラー終了します。
+
 \end{itemize}
 
 \newpage
@@ -2697,11 +2745,18 @@ NOrbitalIdx 64
 
 {\bf 説明 :} サイト番号を指定する整数。0以上\verb|Nsite|{未満}で指定します。
  
-   \item  $[$double01$]$, $[$double02$]$
-   
+  \item  $[$double01$]$
+    
    {\bf 形式 :} double型 (空白不可)
 
-  {\bf 説明 :} $[$double01$]$が実部、$[$double02$]$が虚部を与えます。\verb|DH4|指定ファイルで型を実部に指定している場合は$[$double02$]$の値は破棄されます。
+  {\bf 説明 :} 変分パラメータの実部を与えます。
+  
+ 
+ \item $[$double02$]$
+   
+   {\bf 形式 :} double型
+
+  {\bf 説明 :} 変分パラメータの虚部を与えます。 \verb|Orbital|指定ファイルで型を実数に指定している場合は、$[$double02$]$は入力しないでください。複素数指定の場合に$[$double02$]$がない場合には、0が代入されます。
 
   
 \end{itemize}
@@ -2713,8 +2768,8 @@ NOrbitalIdx 64
 \item 成分が重複して指定された場合にはエラー終了します。
 \item $[$int01$]$と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
 \item $[$int02$]$, $[$int03$]$を指定する際、範囲外の整数を指定した場合はエラー終了します。
+\item \verb|Orbital|指定ファイルで型を実数に指定した状態で、$[$double02$]$が入力されるとエラー終了します。
 \item \verb|Orbital|指定ファイルで紐付けされるサイト番号とパラメータの種類と、入力ファイルで指定されるパラメータの値の整合性がとれない場合は警告を出します。その際、入力値としては平均された値が採用されます。
-
 \end{itemize}
 
 
