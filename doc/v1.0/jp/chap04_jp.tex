@@ -54,8 +54,7 @@ J'=-0.5
 \item \verb|model|
 
 {\bf 形式 :} 文字列(\verb|"Fermion Hubbard"|, \verb|"Spin"|, \verb|"Kondo Lattice"|, 
-\verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, \verb|"Kondo LatticeGC"|, 
-\verb|"SpinGCBoost"|のいずれか)
+\verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, \verb|"Kondo LatticeGC"|のいずれか)
 
 {\bf 説明 :} 計算対象の模型を指定します。上記の文字列はそれぞれ
 カノニカル集団のフェルミ粒子Hubbard模型
@@ -91,11 +90,6 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 グランドカノニカル集団のスピン模型[式(\ref{fml4_1_spin})]、
 グランドカノニカル集団の近藤格子模型[式(\ref{fml4_1_kondo})]に対応します。
 
-\verb|"SpinGCBoost"|では\verb|"SpinGC"|と同じ計算を
-より速いアルゴリズム\footnote{現在論文執筆中。投稿後に掲載します。}を用いて行います。
-ただし、扱うことのできるモデルやMPI並列数に強い制約があります。
-以下の\verb|"Latice"|の項もご参照ください。
-
 \item \verb|lattice|
 
 {\bf 形式 :} 文字列(\verb|"Chain Lattice"|, \verb|"Square Lattice"|, 
@@ -108,35 +102,6 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 2次元異方的蜂の巣格子(Fig. \ref{fig_chap04_1_honeycomb})、
 梯子格子(Fig. \ref{fig_ladder})、
 カゴメ格子(Fig. \ref{fig_kagome})に対応します。
-
-\verb|method="SpinGCBoost"|では、
-このうち\verb|"Chain Lattice"|, \verb|"Honeycomb Lattice"|, 
-\verb|"Ladder"|, \verb|"Kagome"|に対応しています。
-
-各格子についてのサイズ($L$,$W$)とMPI並列数($N_{\rm proc}$)の制限は次のとおりです
-(次節の\verb|L|, \verb|W|もご参照ください)。
-
-\begin{itemize}
-
-  \item \verb|"Chain Lattice"|
-
-    $L = 8n$(ただし$n$は$n\geq1$の整数),
-    $N_{\rm proc} \leq 2(L=8)$, $N_{\rm proc} \leq 2^{L/2-2}(L>8)$.
-    
-  \item \verb|"Honeycomb Lattice"|
-
-    $W=3, L \geq 2$, $N_{\rm proc} \leq 2(L=2)$, $N_{\rm proc} \leq 64(L>2)$.
-
-  \item \verb|"Ladder"|
-
-    $W=2, L = 2n$(ただし$n$は$n\geq4$の整数),
-    $N_{\rm proc} \leq 2^{L-4}$.
-
-  \item \verb|"Kagome"|
-
-    $W=3, L \geq 2$, $N_{\rm proc} \leq 1(L=2)$, $N_{\rm proc} \leq 512(L>2)$.
-
-\end{itemize}
 
 \begin{figure}[!htbp]
   \begin{center}
@@ -237,7 +202,6 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 
 これらの格子では、標準の単位胞(図中の黒の破線を参照)を用いて格子形状を指定する方法と、
 それらとは別の方向に格子ベクトルを取る方法が選択できます。
-ただし、\verb|model=SpinGCBoost|の時には前者のみが使えます。
 また、両方を指定した場合にはプログラムを終了します。
 
 \begin{itemize}
@@ -342,7 +306,6 @@ $ gnuplot lattice.gp
 {\bf 形式 :} 実数
 
 {\bf 説明 :} スピン模型での縦磁場、横磁場、異方性パラメータを指定します。
-ただし異方性パラメータについては、\verb|model=SpinGCBoost|では使用できません。
 
 \end{itemize}
 
@@ -504,8 +467,6 @@ $ gnuplot lattice.gp
 {\bf 形式 :} 実数
 
 {\bf 説明 :} スピン模型での、次近接サイト間のスピン相互作用を指定します。
-ただし、蜂の巣格子またはカゴメ格子で\verb|model=SpinGCBoost|の場合には
-まだ対応していません。
 また対角項について、\verb|J'x, J'y, J'z|を指定する代わりに
 パラメータ\verb|J'|を指定すると
 \verb|J'x = J'y = J'z = J'|が代入されます。
@@ -536,57 +497,48 @@ $\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_
 スピン系の演算子はBogoliubov表現により生成消滅演算子で表されています。
 詳しくは\ref{sec_bogoliubov_rep}をご覧ください。
 
+  \item  \verb|CDataFileHead|
 
-\item  \verb|CDataFileHead|
+ {\bf 形式 :} string型 (空白不可、必須)
 
-  {\bf 形式 :} string型 (空白不可、必須)
+{\bf 説明 :} アウトプットファイルのヘッダ。例えば、一体のGreen関数の出力ファイル名が{\bf xxx\_cisajs.dat}として出力されます(xxxに\verb|CDataFileHead|で指定した文字が記載)。
+
+ \item  \verb|CParaFileHead|
+
+ {\bf 形式 :} string型 (空白不可、必須)
+
+{\bf 説明 :} 最適化された変分パラメータの出力ファイル名のヘッダ。最適化された変分パラメータが{\bf xxx\_opt.dat}ファイルとして出力されます(xxxに\verb|CParaFileHead|で指定した文字が記載)。
  
-  {\bf 説明 :} アウトプットファイルのヘッダ。
-  例えば、一体のGreen関数の出力ファイル名が{\bf xxx\_cisajs.dat}として出力されます
-  (xxxに\verb|CDataFileHead|で指定した文字が記載)。
-
-\item  \verb|CParaFileHead|
-
-  {\bf 形式 :} string型 (空白不可、必須)
-
-  {\bf 説明 :} 最適化された変分パラメータの出力ファイル名のヘッダ。
-  最適化された変分パラメータが{\bf xxx\_opt.dat}ファイルとして出力されます
-  (xxxに\verb|CParaFileHead|で指定した文字が記載)。
  
-\item  \verb|NVMCCalMode|
+ \item  \verb|NVMCCalMode|
 
-  {\bf 形式 :} int型 (\tr{デフォルト値 = 0})
-  
-  {\bf 説明 :} [0] 変分パラメータの最適化、[1] 1 体・2 体のグリーン関数の計算。
+ {\bf 形式 :} int型 (\tr{デフォルト値 = 0})
+
+{\bf 説明 :} [0] 変分パラメータの最適化、[1] 1 体・2 体のグリーン関数の計算。
  
-\item  \verb|NLanczosMode|
+ \item  \verb|NLanczosMode|
 
-  {\bf 形式 :} int型 (\tr{デフォルト値 = 0})
+ {\bf 形式 :} int型 (\tr{デフォルト値 = 0})
 
-  {\bf 説明 :} [0] 何もしない、[1] Single Lanczos Step でエネルギーまで計算、
-  [2] Single Lanczos Step で1 体・2 体のグリーン関数まで計算
-  (条件: 1, 2 は\verb|NVMCCalMode| = 1のみ使用可能. 
-  また, pair hopping項, exchange 項がハミルトニアンに含まれる場合は使用できません)。
+{\bf 説明 :} [0] 何もしない、[1] Single Lanczos Step でエネルギーまで計算、
+[2] Single Lanczos Step で1 体・2 体のグリーン関数まで計算
+(条件: 1, 2 は\verb|NVMCCalMode| = 1のみ使用可能. 
+また, pair hopping項, exchange 項がハミルトニアンに含まれる場合は使用できません)。
  
-\item  \verb|NDataIdxStart|
+ \item  \verb|NDataIdxStart|
 
-  {\bf 形式 :} int型 (\tr{デフォルト値 = 0})
+ {\bf 形式 :} int型 (\tr{デフォルト値 = 0})
 
-  {\bf 説明 :} 出力ファイルの付加番号。
-  \verb|NVMCCalMode|= 0 の場合は\verb|NDataIdxStart|が出力され、 
-  \verb|NVMCCalMode| = 1 の場合は、\verb|NDataIdxStart|から連番で\verb|NDataQtySmp|個のファイルを出力します。
+{\bf 説明 :} 出力ファイルの付加番号。
+\verb|NVMCCalMode|= 0 の場合は\verb|NDataIdxStart|が出力され、 
+\verb|NVMCCalMode| = 1 の場合は、
+\verb|NDataIdxStart|から連番で\verb|NDataQtySmp|個のファイルを出力します。
    
-\item  \verb|NDataQtySmp|
-  
-  {\bf 形式 :} int型 (\tr{デフォルト値 = 1})
+ \item  \verb|NDataQtySmp|
 
-  {\bf 説明 :} 出力ファイルのセット数。 \verb|NVMCCalMode| = 1 の場合に使用します。
+ {\bf 形式 :} int型 (\tr{デフォルト値 = 1})
 
-\item  \verb|Nsite|
-
-  {\bf 形式 :} int型
-
-  {\bf 説明 :} このパラメーターは自動決定されるので指定できません。
+{\bf 説明 :} 出力ファイルのセット数。 \verb|NVMCCalMode| = 1 の場合に使用します。
 
 \item  \verb|nelec|
 
@@ -600,6 +552,7 @@ $\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_
   {\bf 形式 :} {int型 (1以上、\tr{デフォルト値 = 8})}
 
   {\bf 説明 :} スピン量子数射影の$\beta$積分($S^y$回転)のGauss-Legendre求積法の分点数。
+
 
 \item  \verb|NSPStot|
 
@@ -615,89 +568,72 @@ $\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_
   運動量・格子対称性の量子数射影の個数。
   TransSymファイルで指定した重みで上から\verb|NMPTrans|個まで使用する。\tr{射影を行わない場合は1に設定する。}
 
-\item  \verb|NSROptItrStep|
+ \item  \verb|NSROptItrStep|
 
-  {\bf 形式 :} int型 (1以上、\tr{デフォルト値 = 1000})
+{\bf 形式 :} int型 (1以上、\tr{デフォルト値 = 1000})
 
-  {\bf 説明 :} 
-  SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場合のみ使用されます。
+{\bf 説明 :} 
+SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場合のみ使用されます。
  
-\item  \verb|NSROptItrSmp|
+ \item  \verb|NSROptItrSmp|
 
-  {\bf 形式 :} int型 (1以上数、\tr{デフォルト値 = }\verb|NSROptItrStep|/10)
+{\bf 形式 :} int型 (1以上数、\tr{デフォルト値 = }\verb|NSROptItrStep|/10)
 
-  {\bf 説明 :} \verb|NSROptItrStep|ステップ中、
-  最後の\verb|NSROptItrSmp|ステップでの各変分パラメータの平均値を最適値とする。
-  \verb|NVMCCalMode|=0の場合のみ使用されます。
-
-\item  \verb|NSROptFixSmp|
-
-  {\bf 形式 :} int型 (1以上、\tr{デフォルト値 = 1})
-
-  {\bf 説明 :} 固定サンプルの下で何回のSR 法のステップを行うか指定。
+{\bf 説明 :} \verb|NSROptItrStep|ステップ中、最後の\verb|NSROptItrSmp|ステップでの各変分パラメータの平均値を最適値とする。\verb|NVMCCalMode|=0の場合のみ使用されます。
 
 \item   \verb|DSROptRedCut|
-  
-  {\bf 形式 :} double型 (\tr{デフォルト値 = 0.001})
-  
-  {\bf 説明 :} SR 法安定化因子。手法論文の$\varepsilon_{\rm wf}$に対応。
-
-\item  \verb|DSROptStaDel| 
    
-  {\bf 形式 :} double型 (\tr{デフォルト値 = 0.02})
+{\bf 形式 :} double型 (\tr{デフォルト値 = 0.001})
+
+{\bf 説明 :} SR 法安定化因子。手法論文の$\varepsilon_{\rm wf}$に対応。
+
+ \item  \verb|DSROptStaDel| 
+   
+ {\bf 形式 :} double型 (\tr{デフォルト値 = 0.02})
 
   {\bf 説明 :} SR 法安定化因子。手法論文の$\varepsilon$に対応。
      
 \item \verb|DSROptStepDt|
 
-  {\bf 形式 :} double型 (\tr{デフォルト値 = 0.02})
+{\bf 形式 :} double型 (\tr{デフォルト値 = 0.02})
 
-  {\bf 説明 :} \tr{要確認(マニュアルに説明なし)}
+{\bf 説明 :} \tr{要確認(マニュアルに説明なし)}
  
 \item \verb|NVMCWarmUp|
 
-  {\bf 形式 :} int型 (1以上、\tr{デフォルト値=10})
+{\bf 形式 :} int型 (1以上、\tr{デフォルト値=10})
 
-  {\bf 説明 :}マルコフ連鎖の空回し回数。
+{\bf 説明 :}マルコフ連鎖の空回し回数。
 
 \item \verb|NVMCIniterval|
 
-  {\bf 形式 :} int型 (1以上、\tr{デフォルト値=1})
+{\bf 形式 :} int型 (1以上、\tr{デフォルト値=1})
 
-  {\bf 説明 :} サンプル間のステップ間隔。ローカル更新が\verb|Nsite|× \verb|NVMCIniterval| 回行わます。
+{\bf 説明 :} サンプル間のステップ間隔。ローカル更新が\verb|Nsite|× \verb|NVMCIniterval| 回行わます。
 
 \item \verb|NVMCSample|
 
-  {\bf 形式 :} int型 (1以上、\tr{デフォルト値=1000})
+{\bf 形式 :} int型 (1以上、\tr{デフォルト値=1000})
 
-  {\bf 説明 :} 期待値計算に使用するサンプル数。
-
-\item \verb|NExUpdatePath|
-
-  {\bf 形式 :} int型 (デフォルトは、\verb|model="hubbard"|では\verb|0|、
-  \verb|model="spin"|では\verb|1|、\verb|model="kondo"|では\verb|2|)
-
-  {\bf 説明 :} ローカル更新で2 電子交換を[0] 認めない、[1] 認める。
-  \tr{デフォルト設定は局在スピンが一つでもある場合は1、それ以外は0となります}。
+{\bf 説明 :} 期待値計算に使用するサンプル数。
 
 \item \verb|RndSeed|
 
-  {\bf 形式 :} int型 
+{\bf 形式 :} int型 
 
-  {\bf 説明 :} 乱数の初期seed。
-  \tr{MPI 並列では各計算機に}\verb|RndSeed|\tr{+my rank+1 で初期seed が与えられます。}
+{\bf 説明 :} 乱数の初期seed。\tr{MPI 並列では各計算機に}\verb|RndSeed|\tr{+my rank+1 で初期seed が与えられます。}
 
-\item \verb|NSplitSize|
+ \item \verb|NSplitSize|
 
-  {\bf 形式 :} int型 (1以上、\tr{デフォルト値=1})
+{\bf 形式 :} int型 (1以上、\tr{デフォルト値=1})
 
-  {\bf 説明 :} mpi内部並列を行う場合の並列数。
+{\bf 説明 :} mpi内部並列を行う場合の並列数。
 
 \item \verb|NStoreOO|
 
-  {\bf 形式 :} int型 (1以上、\tr{デフォルト値=1})
+{\bf 形式 :} int型 (1以上、\tr{デフォルト値=1})
 
-  {\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にするオプション(1で機能On)。
+{\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にするオプション(1で機能On)。
  
 \end{itemize}
 
