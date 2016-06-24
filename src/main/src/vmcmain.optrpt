@@ -243,117 +243,117 @@ Begin optimization report for: VMCPhysCal(MPI_Comm, MPI_Comm, MPI_Comm)
 
     Report from: OpenMP optimizations [openmp]
 
-OpenMP Construct at slater.c(20,3) inlined into vmcmain.c(319,3)
+OpenMP Construct at slater.c(20,3) inlined into vmcmain.c(320,3)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at average.c(150,7) inlined into vmcmain.c(341,5)
+OpenMP Construct at average.c(150,7) inlined into vmcmain.c(342,5)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at average.c(157,5) inlined into vmcmain.c(341,5)
+OpenMP Construct at average.c(157,5) inlined into vmcmain.c(342,5)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at average.c(150,7) inlined into vmcmain.c(341,5)
+OpenMP Construct at average.c(150,7) inlined into vmcmain.c(342,5)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at average.c(157,5) inlined into vmcmain.c(341,5)
+OpenMP Construct at average.c(157,5) inlined into vmcmain.c(342,5)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at average.c(150,7) inlined into vmcmain.c(341,5)
+OpenMP Construct at average.c(150,7) inlined into vmcmain.c(342,5)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at average.c(157,5) inlined into vmcmain.c(341,5)
+OpenMP Construct at average.c(157,5) inlined into vmcmain.c(342,5)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
 
     Report from: Vector optimizations [vec]
 
 
-LOOP BEGIN at vmcmain.c(322,3)
+LOOP BEGIN at vmcmain.c(323,3)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at safempi_fcmp.c(19,3) inlined into vmcmain.c(341,5)
+   LOOP BEGIN at safempi_fcmp.c(19,3) inlined into vmcmain.c(342,5)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at safempi_fcmp.c(19,3) inlined into vmcmain.c(341,5)
+   LOOP BEGIN at safempi_fcmp.c(19,3) inlined into vmcmain.c(342,5)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at safempi_fcmp.c(19,3) inlined into vmcmain.c(341,5)
+   LOOP BEGIN at safempi_fcmp.c(19,3) inlined into vmcmain.c(342,5)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at vmcmain.c(370,5) inlined into vmcmain.c(347,17)
+   LOOP BEGIN at vmcmain.c(371,5) inlined into vmcmain.c(348,17)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at vmcmain.c(379,5) inlined into vmcmain.c(347,17)
+   LOOP BEGIN at vmcmain.c(380,5) inlined into vmcmain.c(348,17)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at vmcmain.c(383,5) inlined into vmcmain.c(347,17)
+   LOOP BEGIN at vmcmain.c(384,5) inlined into vmcmain.c(348,17)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at vmcmain.c(387,5) inlined into vmcmain.c(347,17)
+   LOOP BEGIN at vmcmain.c(388,5) inlined into vmcmain.c(348,17)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at vmcmake.c(358,5) inlined into vmcmain.c(342,5)
+   LOOP BEGIN at vmcmake.c(358,5) inlined into vmcmain.c(343,5)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 LOOP END
 
-LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(342,5)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(342,5)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(342,5)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(342,5)
    remark #25460: No loop optimizations reported
 LOOP END
 
-LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(342,5)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(342,5)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(342,5)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(342,5)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(342,5)
    remark #25460: No loop optimizations reported
 LOOP END
 
-LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(342,5)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(342,5)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(342,5)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(159,5) inlined into vmcmain.c(342,5)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(342,5)
    remark #25460: No loop optimizations reported
 LOOP END
 
-LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(341,5)
+LOOP BEGIN at average.c(152,7) inlined into vmcmain.c(342,5)
 <Remainder>
 LOOP END
 ===========================================================================
@@ -471,7 +471,7 @@ LOOP BEGIN at vmccal.c(48,3)
 LOOP END
 ===========================================================================
 
-Begin optimization report for: CalculateHamiltonian(const double, int *, const int *, int *, const int *)
+Begin optimization report for: CalculateHamiltonian(const double __complex__, int *, const int *, int *, const int *)
 
     Report from: OpenMP optimizations [openmp]
 
@@ -841,15 +841,15 @@ LOOP BEGIN at slater.c(200,3)
 LOOP END
 
 LOOP BEGIN at slater.c(210,3)
-<Peeled loop for vectorization>
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at slater.c(211,5)
+      remark #15301: MATERIALIZED LOOP WAS VECTORIZED
+   LOOP END
 LOOP END
 
 LOOP BEGIN at slater.c(210,3)
-   remark #15300: LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at slater.c(210,3)
-<Remainder loop for vectorization>
+<Remainder>
 LOOP END
 ===========================================================================
 
@@ -1585,39 +1585,39 @@ LOOP BEGIN at vmcmake.c(358,5) inlined into vmcmain.c(271,5)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at avevar.c(17,3) inlined into vmcmain.c(298,7)
+LOOP BEGIN at avevar.c(17,3) inlined into vmcmain.c(299,7)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at avevar.c(17,3) inlined into vmcmain.c(298,7)
+   LOOP BEGIN at avevar.c(17,3) inlined into vmcmain.c(299,7)
    <Multiversioned v2>
    LOOP END
 
-   LOOP BEGIN at avevar.c(17,3) inlined into vmcmain.c(298,7)
+   LOOP BEGIN at avevar.c(17,3) inlined into vmcmain.c(299,7)
    <Remainder, Multiversioned v2>
    LOOP END
 LOOP END
 
-LOOP BEGIN at avevar.c(37,5) inlined into vmcmain.c(307,15)
+LOOP BEGIN at avevar.c(37,5) inlined into vmcmain.c(308,15)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at avevar.c(39,7) inlined into vmcmain.c(307,15)
+   LOOP BEGIN at avevar.c(39,7) inlined into vmcmain.c(308,15)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at avevar.c(39,7) inlined into vmcmain.c(307,15)
+   LOOP BEGIN at avevar.c(39,7) inlined into vmcmain.c(308,15)
    <Remainder>
    LOOP END
 
-   LOOP BEGIN at avevar.c(45,7) inlined into vmcmain.c(307,15)
+   LOOP BEGIN at avevar.c(45,7) inlined into vmcmain.c(308,15)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at avevar.c(45,7) inlined into vmcmain.c(307,15)
+   LOOP BEGIN at avevar.c(45,7) inlined into vmcmain.c(308,15)
    <Remainder loop for vectorization>
       remark #15301: REMAINDER LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at avevar.c(45,7) inlined into vmcmain.c(307,15)
+   LOOP BEGIN at avevar.c(45,7) inlined into vmcmain.c(308,15)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
@@ -1817,33 +1817,33 @@ OpenMP Construct at stcopt_pdposv.c(266,3)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
 OpenMP Construct at stcopt_pdposv.c(272,3)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at stcopt_pdposv.c(280,3)
+OpenMP Construct at stcopt_pdposv.c(281,3)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at stcopt_pdposv.c(299,5)
+OpenMP Construct at stcopt_pdposv.c(302,5)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at stcopt_pdposv.c(338,5)
+OpenMP Construct at stcopt_pdposv.c(341,5)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
 
     Report from: Vector optimizations [vec]
 
 
-LOOP BEGIN at stcopt_pdposv.c(334,3)
+LOOP BEGIN at stcopt_pdposv.c(337,3)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at stcopt_pdposv.c(334,3)
+   LOOP BEGIN at stcopt_pdposv.c(337,3)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at stcopt_pdposv.c(334,3)
+   LOOP BEGIN at stcopt_pdposv.c(337,3)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(341,5)
+LOOP BEGIN at stcopt_pdposv.c(344,5)
    remark #25460: No loop optimizations reported
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(341,5)
+LOOP BEGIN at stcopt_pdposv.c(344,5)
 <Remainder>
 LOOP END
 ===========================================================================
@@ -1918,38 +1918,30 @@ Begin optimization report for: StochasticOptDiag(MPI_Comm)
 
     Report from: OpenMP optimizations [openmp]
 
-OpenMP Construct at stcopt_pdposv.c(414,5)
+OpenMP Construct at stcopt_pdposv.c(420,5)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
 
     Report from: Vector optimizations [vec]
 
 
-LOOP BEGIN at stcopt_pdposv.c(388,3)
+LOOP BEGIN at stcopt_pdposv.c(391,3)
    remark #25460: No loop optimizations reported
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(388,3)
+LOOP BEGIN at stcopt_pdposv.c(391,3)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(398,3)
+LOOP BEGIN at stcopt_pdposv.c(401,3)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at stcopt_pdposv.c(398,3)
+   LOOP BEGIN at stcopt_pdposv.c(401,3)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at stcopt_pdposv.c(398,3)
+   LOOP BEGIN at stcopt_pdposv.c(401,3)
    <Remainder loop for vectorization>
    LOOP END
-LOOP END
-
-LOOP BEGIN at stcopt_pdposv.c(417,5)
-   remark #25460: No loop optimizations reported
-LOOP END
-
-LOOP BEGIN at stcopt_pdposv.c(417,5)
-<Remainder>
 LOOP END
 ===========================================================================
 
@@ -1957,57 +1949,57 @@ Begin optimization report for: stcOptMainDiag(double *const, const int, int *con
 
     Report from: OpenMP optimizations [openmp]
 
-OpenMP Construct at stcopt_pdposv.c(544,3)
-remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at stcopt_pdposv.c(550,3)
-remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at stcopt_pdposv.c(554,3)
+OpenMP Construct at stcopt_pdposv.c(556,3)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
 OpenMP Construct at stcopt_pdposv.c(562,3)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at stcopt_pdposv.c(579,5)
+OpenMP Construct at stcopt_pdposv.c(566,3)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at stcopt_pdposv.c(644,3)
+OpenMP Construct at stcopt_pdposv.c(574,3)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
-OpenMP Construct at stcopt_pdposv.c(672,5)
+OpenMP Construct at stcopt_pdposv.c(592,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(657,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(685,5)
 remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
 
     Report from: Vector optimizations [vec]
 
 
-LOOP BEGIN at stcopt_pdposv.c(626,3)
+LOOP BEGIN at stcopt_pdposv.c(639,3)
    remark #25460: No loop optimizations reported
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(668,3)
+LOOP BEGIN at stcopt_pdposv.c(681,3)
    remark #25460: No loop optimizations reported
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(668,3)
+LOOP BEGIN at stcopt_pdposv.c(681,3)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(687,5)
+LOOP BEGIN at stcopt_pdposv.c(700,5)
    remark #25460: No loop optimizations reported
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(687,5)
+LOOP BEGIN at stcopt_pdposv.c(700,5)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(645,3)
+LOOP BEGIN at stcopt_pdposv.c(658,3)
    remark #25460: No loop optimizations reported
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(645,3)
+LOOP BEGIN at stcopt_pdposv.c(658,3)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(675,5)
+LOOP BEGIN at stcopt_pdposv.c(688,5)
    remark #25460: No loop optimizations reported
 LOOP END
 
-LOOP BEGIN at stcopt_pdposv.c(675,5)
+LOOP BEGIN at stcopt_pdposv.c(688,5)
 <Remainder>
 LOOP END
 ===========================================================================
@@ -2719,7 +2711,7 @@ LOOP BEGIN at calham.c(172,5)
 LOOP END
 ===========================================================================
 
-Begin optimization report for: CalculateHamiltonian1(const double, int *, const int *, int *, const int *)
+Begin optimization report for: CalculateHamiltonian1(const double __complex__, int *, const int *, int *, const int *)
 
     Report from: OpenMP optimizations [openmp]
 
@@ -2762,7 +2754,7 @@ LOOP BEGIN at calham.c(218,5)
 LOOP END
 ===========================================================================
 
-Begin optimization report for: CalculateHamiltonian2(const double, int *, const int *, int *, const int *)
+Begin optimization report for: CalculateHamiltonian2(const double __complex__, int *, const int *, int *, const int *)
 
     Report from: OpenMP optimizations [openmp]
 
@@ -3008,28 +3000,6 @@ LOOP BEGIN at vmccal.c(214,3)
 
    LOOP BEGIN at vmccal.c(217,5)
    <Remainder loop for vectorization>
-   LOOP END
-LOOP END
-===========================================================================
-
-Begin optimization report for: calculateOO(double __complex__ *, double __complex__ *, const double __complex__ *, const double, const double __complex__, const int)
-
-    Report from: Vector optimizations [vec]
-
-
-LOOP BEGIN at vmccal.c(308,3)
-   remark #25460: No loop optimizations reported
-LOOP END
-
-LOOP BEGIN at vmccal.c(314,3)
-   remark #25460: No loop optimizations reported
-
-   LOOP BEGIN at vmccal.c(316,5)
-      remark #25460: No loop optimizations reported
-   LOOP END
-
-   LOOP BEGIN at vmccal.c(316,5)
-   <Remainder>
    LOOP END
 LOOP END
 ===========================================================================

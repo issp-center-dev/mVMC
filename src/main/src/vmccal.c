@@ -314,7 +314,7 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
   for(i=2;i<2*srOptSize;i++) {
     tmp            = w * srOptO[i];
     for(j=0;j<2*srOptSize;j++) {
-      srOptOO[i*(2*srOptSize)+j] += w*(srOptO[j])*(srOptO[i]); // TBC
+      srOptOO[i*(2*srOptSize)+j] += w*(srOptO[j])*conj(srOptO[i]); // TBC
       //srOptOO[j+i*(2*srOptSize)] += w*(srOptO[j])*(srOptO[i]); // TBC
     }
   }

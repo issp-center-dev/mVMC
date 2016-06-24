@@ -5,15 +5,15 @@
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-double complex CalculateHamiltonian(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt);
 double complex CalculateHamiltonian0(const int *eleNum);
-double complex CalculateHamiltonian1(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian1(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt);
-double complex CalculateHamiltonian2(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian2(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt);
 
-double complex CalculateHamiltonian(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt) {
   const int *n0 = eleNum;
   const int *n1 = eleNum + Nsite;
@@ -185,7 +185,7 @@ double complex CalculateHamiltonian0(const int *eleNum) {
 /* Calculate the transfer terms, */
 /* which can be calculated by 1-body Green function. */
 /* This function will be used in the Lanczos mode */
-double complex CalculateHamiltonian1(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian1(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt) {
   double complex e=0.0;
   int idx;
@@ -237,7 +237,7 @@ double complex CalculateHamiltonian1(const double ip, int *eleIdx, const int *el
 /* Calculate the exchange coupling, pair hopping, interAll terms, */
 /* which can be calculated by 2-body Green function. */
 /* This function will be used in the Lanczos mode */
-double complex CalculateHamiltonian2(const double ip, int *eleIdx, const int *eleCfg,
+double complex CalculateHamiltonian2(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt) {
   double e=0.0, tmp;
   int idx;

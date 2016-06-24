@@ -106,14 +106,14 @@ int StochasticOpt(MPI_Comm comm) {
     if(sDiag < diagCutThreshold) { /* fixed by diagCut */
       cutNum++;
     } else { /* optimized */
-      smatToParaIdx[si] = pi;
+      smatToParaIdx[si] = pi; // si -> restricted parameters , pi -> full paramer 0 <-> 2*NPara
       si += 1;
     }
 // e
   }
   nSmat = si;
   for(si=nSmat;si<2*nPara;si++) {
-    smatToParaIdx[si] = -1;
+    smatToParaIdx[si] = -1; // parameters that will not be optimized
   }
 
   StopTimer(50);
@@ -277,6 +277,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   StopTimer(55);
   StartTimer(56);
   /* calculate the overlap matrix S */
+  printf("YDEBUG: %d %d %lf \n",mlocc,mlocr,ratioDiag);
   #pragma omp parallel for default(shared) private(ic,ir,pi,pj,idx)
   #pragma loop noalias
   for(ic=0;ic<mlocc;ic++) {
@@ -290,7 +291,9 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
       //s[idx] = creal(srOptOO[(pi+2)*(2*srOptSize)+(pj+2)]) - creal(srOptOO[pi+2]*srOptOO[pj+2]);
       /* modify diagonal elements */
       //printf("DEBUG: idx=%d %d %d s[]=%lf \n",idx,pi,pj,s[idx]);
-      if(pi==pj) s[idx] *= ratioDiag;
+      //printf("XDEBUG %d %d %lf \n",ic,ir,s[idx]);
+      if(pi==pj) s[idx] *= ratioDiag; // TBC
+      //if(pi==pj) s[idx] +=0.5;   // TBC
     }
   }
 
@@ -306,7 +309,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
       /* g[i] = -dt * (energy gradient) */
       g[ir] = -dSROptStepDt*2.0*(creal(srOptHO[pi+2]) - srOptHO_0 * creal(srOptOO[pi+2]));
       //g[ir] = -dSROptStepDt*2.0*(creal(srOptHO[pi+2]) - creal(srOptHO_0 * srOptOO[pi+2]));
-      //printf("DEBUG: ir=%d g[]=%lf \n",ir,g[ir]);
+      //printf("ZDEBUG: %d %lf \n",ir,g[ir]);
     }
   }
 
@@ -405,6 +408,9 @@ int StochasticOptDiag(MPI_Comm comm) {
   StartTimer(51);
 
   info = stcOptMainDiag(r,nSmat,smatToParaIdx,comm, optNum);
+  for(pi=0;pi<nSmat;pi++) {
+    printf("DEBUG: pi=%d r= %lf \n",pi,r[pi]);
+  }
 
   StopTimer(51);
   StartTimer(52);
@@ -416,7 +422,13 @@ int StochasticOptDiag(MPI_Comm comm) {
     #pragma loop norecurrence para
     for(si=0;si<nSmat;si++) {
       pi = smatToParaIdx[si];
-      para[pi] += r[si];
+//      para[pi] += r[si];
+      if(pi%2==0){
+        para[pi/2]     += r[si];  // real
+      }else{
+        para[(pi-1)/2] += r[si]*I; // imag
+      }
+
     }
   }
 
@@ -483,7 +495,7 @@ int stcOptMainDiag(double *const r, int const nSmat, int *const smatToParaIdx,
   const double ratioDiag = 1.0+DSROptStaDel;
   const double dSROptStepDt = DSROptStepDt;
   const double dSROptRedCut = DSROptRedCut;
-  const double srOptHO_0=SROptHO[0];
+  const double srOptHO_0=creal(SROptHO[0]);
   double complex *srOptOO=SROptOO;
   double complex *srOptHO=SROptHO;
   
@@ -568,9 +580,10 @@ int stcOptMainDiag(double *const r, int const nSmat, int *const smatToParaIdx,
       idx = ir + ic*mlocr; /* local index (row major) */
 
       /* S[i][j] = xOO[i+1][j+1] - xOO[0][i+1] * xOO[0][j+1]; */
-      s[idx] = srOptOO[(pi+1)*srOptSize+(pj+1)] - srOptOO[pi+1] * srOptOO[pj+1];
+      s[idx] = creal(srOptOO[(pi+2)*2*srOptSize+(pj+2)]) - creal(srOptOO[pi+2]) * creal(srOptOO[pj+2]);
       /* modify diagonal elements */
-      if(pi==pj) s[idx] *= ratioDiag;
+      //if(pi==pj) s[idx] *= ratioDiag;
+      if(pi==pj) s[idx] += 0.1;
     }
   }
 
@@ -584,7 +597,7 @@ int stcOptMainDiag(double *const r, int const nSmat, int *const smatToParaIdx,
       
       /* energy gradient = 2.0*( xHO[i+1] - xHO[0] * xOO[0][i+1]) */
       /* g[i] = (energy gradient) */
-      g[ir] = 2.0*(srOptHO[pi+1] - srOptHO_0 * srOptOO[pi+1]);
+      g[ir] = 2.0*(creal(srOptHO[pi+2]) - srOptHO_0 * creal(srOptOO[pi+2]));
       x[ir] = 0.0;
     }
   }

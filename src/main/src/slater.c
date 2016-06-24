@@ -80,7 +80,7 @@ void SlaterElmDiff_fcmp(double complex *srOptO, const double complex ip, int *el
   const int nSlater = NSlater;
   const int nTrans = NMPTrans * NQPOptTrans; //usually NQPOptTrans=1
 
-  const double invIP = 1.0/ip;
+  const double complex invIP = 1.0/ip;
   int msi,msj,ri,rj,ori,orj,tri,trj,sgni,sgnj;
   int mpidx,spidx,orbidx,qpidx,optidx,i;
   double complex cs,cc,ss; // including Pf
