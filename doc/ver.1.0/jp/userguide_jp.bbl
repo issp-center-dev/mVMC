@@ -1,0 +1,36 @@
+\begin{thebibliography}{1}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+
+\bibitem{Dagotto}
+E.~Dagotto, Rev. Mod. Phys. {\bfseries 66}, 763--840 (1994).
+
+\bibitem{Imada1986}
+M.~Imada, M.~Takahashi, Journal of the Physical Society of Japan {\bfseries
+  55}, 3354--3361 (1986).
+
+\bibitem{FTLanczos}
+J.~Jakli\ifmmode~\check{c}\else \v{c}\fi{}, P.~Prelov\ifmmode~\check{s}\else
+  \v{s}\fi{}ek, Phys. Rev. B {\bfseries 49}, 5065--5068 (1994).
+
+\bibitem{Hams}
+A.~Hams, H.~De~Raedt, Phys. Rev. E {\bfseries 62}, 4365--4377 (2000).
+
+\bibitem{Sugiura2012}
+S.~Sugiura, A.~Shimizu, Phys. Rev. Lett. {\bfseries 108}, 240401 (2012).
+
+\bibitem{Yamaji2014}
+Y.~Yamaji, Y.~Nomura, M.~Kurita, R.~Arita, M.~Imada, Phys. Rev. Lett.
+  {\bfseries 113}, 107201 (2014).
+
+\bibitem{titpack}
+~http://www.stat.phys.titech.ac.jp/~nishimori/titpack2\_new/index-e.html.
+
+\bibitem{SugiharaMurota}
+杉原正顯, 室田一雄, 線形計算の数理, 岩波数学叢書, 岩波書店, 2009.
+
+\bibitem{Mutsuo2008}
+~http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT.
+
+\end{thebibliography}

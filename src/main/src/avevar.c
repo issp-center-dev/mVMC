@@ -10,7 +10,7 @@ void OutputOptData();
 void StoreOptData(int sample){
   const int n = 2+NPara;
   int i;
-  double *optData = SROptData + n*sample;
+  double complex *optData = SROptData + n*sample;
 
   optData[0] = Etot;
   optData[1] = Etot2;
@@ -31,7 +31,7 @@ void OutputOptData() {
 
   if(NSROptItrSmp==1) {
     for(i=0;i<n;i++) {
-      fprintf(fp,"% .18e % .18e ", SROptData[i], 0.0);
+      fprintf(fp,"% .18e % .18e ", creal(SROptData[i]), 0.0);//TBC
     }
   } else {
     for(i=0;i<n;i++) {
@@ -44,7 +44,7 @@ void OutputOptData() {
       var = 0.0;
       for(sample=0;sample<NSROptItrSmp;sample++) {
         data = SROptData[i+n*sample] - ave;
-        var += data*data;
+        var += data*(data);//TBC
       }
       var = sqrt( var/((double)(NSROptItrSmp)-1.0) );
 

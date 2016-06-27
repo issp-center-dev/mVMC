@@ -1,0 +1,15 @@
+perl -w trans.prl
+perl -w U_intra.prl
+perl -w JU_inter.prl
+perl -w JJ_inter.prl
+perl -w local.prl
+perl -w gutzw.prl
+perl -w 2doublon_holon.prl
+perl -w 4doublon_holon.prl
+#perl -w jastr.prl
+perl -w jastr.prl
+perl -w qptrans.prl
+perl -w norbital.prl
+perl -w CisAjs.prl
+perl -w CisAjsCktAlt.prl
+perl -w CisAjsCktAltDC.prl

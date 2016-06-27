@@ -1,4 +1,4 @@
-CC = mpicc
+CC = mpicc -g
 
 LIB = -L$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64\
  -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core\

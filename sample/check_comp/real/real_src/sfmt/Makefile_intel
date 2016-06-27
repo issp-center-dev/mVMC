@@ -1,0 +1,10 @@
+OBJ = SFMT.o
+CC = icc
+CFLAGS = -O3 -no-ansi-alias -xSSE2
+OPTION = -DMEXP=19937 -DHAVE_SSE2
+
+$(OBJ): SFMT.c
+	$(CC) $(CFLAGS) $(OPTION) -c $< -o $@
+
+clean:
+	-rm -f $(OBJ)

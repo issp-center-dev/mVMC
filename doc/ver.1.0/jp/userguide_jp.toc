@@ -1,0 +1,181 @@
+\contentsline {chapter}{\numberline {1}What is $ \mathcal {H} \Phi $?}{1}{chapter.1}
+\contentsline {section}{\numberline {1.1}$ \mathcal {H} \Phi $とは？}{1}{section.1.1}
+\contentsline {subsection}{\numberline {1.1.1}ライセンス}{1}{subsection.1.1.1}
+\contentsline {subsection}{\numberline {1.1.2}コピーライト}{2}{subsection.1.1.2}
+\contentsline {subsection}{\numberline {1.1.3}開発貢献者}{2}{subsection.1.1.3}
+\contentsline {section}{\numberline {1.2}動作環境}{3}{section.1.2}
+\contentsline {chapter}{\numberline {2}How to use $ \mathcal {H} \Phi $?}{4}{chapter.2}
+\contentsline {section}{\numberline {2.1}要件}{4}{section.2.1}
+\contentsline {section}{\numberline {2.2}インストール方法}{4}{section.2.2}
+\contentsline {subsection}{\numberline {2.2.1}\texttt {HPhiconfig.sh}を使う方法}{5}{subsection.2.2.1}
+\contentsline {subsection}{\numberline {2.2.2}cmakeを使う場合}{6}{subsection.2.2.2}
+\contentsline {section}{\numberline {2.3}ディレクトリ構成}{7}{section.2.3}
+\contentsline {section}{\numberline {2.4}基本的な使い方}{9}{section.2.4}
+\contentsline {subsection}{\numberline {2.4.1}スタンダードモード}{9}{subsection.2.4.1}
+\contentsline {subsection}{\numberline {2.4.2}エキスパートモード}{11}{subsection.2.4.2}
+\contentsline {subsection}{\numberline {2.4.3}プロセス数の設定}{12}{subsection.2.4.3}
+\contentsline {subsection}{\numberline {2.4.4}バージョン番号の確認}{12}{subsection.2.4.4}
+\contentsline {chapter}{\numberline {3}チュートリアル}{13}{chapter.3}
+\contentsline {section}{\numberline {3.1}スタンダードモード}{13}{section.3.1}
+\contentsline {subsection}{\numberline {3.1.1}Heisenberg模型}{13}{subsection.3.1.1}
+\contentsline {subsubsection}{ログ出力}{13}{section*.2}
+\contentsline {subsubsection}{計算結果出力}{17}{section*.3}
+\contentsline {subsection}{\numberline {3.1.2}その他の系でのチュートリアル}{19}{subsection.3.1.2}
+\contentsline {section}{\numberline {3.2}エキスパートモード}{20}{section.3.2}
+\contentsline {subsection}{\numberline {3.2.1}入力ファイルリストファイル}{20}{subsection.3.2.1}
+\contentsline {subsection}{\numberline {3.2.2}基本パラメータの指定}{20}{subsection.3.2.2}
+\contentsline {subsection}{\numberline {3.2.3}Hamiltonianの指定}{22}{subsection.3.2.3}
+\contentsline {subsection}{\numberline {3.2.4}出力ファイルの指定}{24}{subsection.3.2.4}
+\contentsline {subsection}{\numberline {3.2.5}計算の実行}{25}{subsection.3.2.5}
+\contentsline {subsection}{\numberline {3.2.6}その他の系でのチュートリアル}{25}{subsection.3.2.6}
+\contentsline {section}{\numberline {3.3}エキスパート用入力ファイル作成モード}{26}{section.3.3}
+\contentsline {chapter}{\numberline {4}ファイル仕様}{27}{chapter.4}
+\contentsline {section}{\numberline {4.1}スタンダードモード用入力ファイル}{27}{section.4.1}
+\contentsline {subsection}{\numberline {4.1.1}計算の種類に関する必須パラメーター}{28}{subsection.4.1.1}
+\contentsline {subsection}{\numberline {4.1.2}格子に関するパラメーター}{31}{subsection.4.1.2}
+\contentsline {subsubsection}{1次元鎖[Fig. \ref {fig_chap04_1_lattice}(a)]}{31}{section*.4}
+\contentsline {subsubsection}{梯子格子(Fig. \ref {fig_ladder})}{31}{section*.5}
+\contentsline {subsubsection}{矩形格子[Fig. \ref {fig_chap04_1_lattice}(b)]、三角格子[Fig. \ref {fig_chap04_1_lattice}(c)]、蜂の巣格子(Fig. \ref {fig_chap04_1_honeycomb})、カゴメ格子(Fig. \ref {fig_kagome})}{31}{section*.6}
+\contentsline {subsection}{\numberline {4.1.3}保存量に関するパラメーター}{32}{subsection.4.1.3}
+\contentsline {subsection}{\numberline {4.1.4}ハミルトニアンの各項の係数}{33}{subsection.4.1.4}
+\contentsline {subsubsection}{局所項}{33}{section*.7}
+\contentsline {subsubsection}{非局所項[梯子格子 (Fig. \ref {fig_ladder})]}{34}{section*.8}
+\contentsline {subsubsection}{非局所項 [梯子格子以外(Figs. \ref {fig_chap04_1_lattice}, \ref {fig_chap04_1_honeycomb}, \ref {fig_kagome})]}{34}{section*.9}
+\contentsline {subsection}{\numberline {4.1.5}計算条件のパラメーター}{36}{subsection.4.1.5}
+\contentsline {section}{\numberline {4.2}エキスパートモード用入力ファイル}{38}{section.4.2}
+\contentsline {subsection}{\numberline {4.2.1}入力ファイル指定用ファイル}{39}{subsection.4.2.1}
+\contentsline {subsubsection}{ファイル形式}{39}{section*.10}
+\contentsline {subsubsection}{パラメータ}{39}{section*.11}
+\contentsline {subsubsection}{使用ルール}{39}{section*.12}
+\contentsline {subsection}{\numberline {4.2.2}CalcModファイル}{40}{subsection.4.2.2}
+\contentsline {subsubsection}{ファイル形式}{40}{section*.13}
+\contentsline {subsubsection}{パラメータ}{40}{section*.14}
+\contentsline {subsubsection}{使用ルール}{41}{section*.15}
+\contentsline {subsubsection}{キーワード}{41}{section*.16}
+\contentsline {subsection}{\numberline {4.2.3}ModParaファイル}{43}{subsection.4.2.3}
+\contentsline {subsubsection}{ファイル形式}{43}{section*.17}
+\contentsline {subsubsection}{使用ルール}{44}{section*.18}
+\contentsline {subsubsection}{キーワード}{44}{section*.19}
+\contentsline {subsection}{\numberline {4.2.4}LocSpin指定ファイル}{47}{subsection.4.2.4}
+\contentsline {subsubsection}{ファイル形式}{47}{section*.20}
+\contentsline {subsubsection}{パラメータ}{47}{section*.21}
+\contentsline {subsubsection}{使用ルール}{48}{section*.22}
+\contentsline {subsection}{\numberline {4.2.5}Trans指定ファイル}{49}{subsection.4.2.5}
+\contentsline {subsubsection}{ファイル形式}{49}{section*.23}
+\contentsline {subsubsection}{パラメータ}{49}{section*.24}
+\contentsline {subsubsection}{使用ルール}{50}{section*.25}
+\contentsline {subsection}{\numberline {4.2.6}InterAll指定ファイル}{51}{subsection.4.2.6}
+\contentsline {subsubsection}{ファイル形式}{51}{section*.26}
+\contentsline {subsubsection}{パラメータ}{52}{section*.27}
+\contentsline {subsubsection}{使用ルール}{52}{section*.28}
+\contentsline {subsection}{\numberline {4.2.7}CoulombIntra指定ファイル}{54}{subsection.4.2.7}
+\contentsline {subsubsection}{ファイル形式}{54}{section*.29}
+\contentsline {subsubsection}{パラメータ}{54}{section*.30}
+\contentsline {subsubsection}{使用ルール}{55}{section*.31}
+\contentsline {subsection}{\numberline {4.2.8}CoulombInter指定ファイル}{56}{subsection.4.2.8}
+\contentsline {subsubsection}{ファイル形式}{56}{section*.32}
+\contentsline {subsubsection}{パラメータ}{56}{section*.33}
+\contentsline {subsubsection}{使用ルール}{57}{section*.34}
+\contentsline {subsection}{\numberline {4.2.9}Hund指定ファイル}{58}{subsection.4.2.9}
+\contentsline {subsubsection}{ファイル形式}{58}{section*.35}
+\contentsline {subsubsection}{パラメータ}{58}{section*.36}
+\contentsline {subsubsection}{使用ルール}{59}{section*.37}
+\contentsline {subsection}{\numberline {4.2.10}PairHop指定ファイル}{60}{subsection.4.2.10}
+\contentsline {subsubsection}{ファイル形式}{60}{section*.38}
+\contentsline {subsubsection}{パラメータ}{60}{section*.39}
+\contentsline {subsubsection}{使用ルール}{61}{section*.40}
+\contentsline {subsection}{\numberline {4.2.11}Exchange指定ファイル}{62}{subsection.4.2.11}
+\contentsline {subsubsection}{ファイル形式}{62}{section*.41}
+\contentsline {subsubsection}{パラメータ}{62}{section*.42}
+\contentsline {subsubsection}{使用ルール}{63}{section*.43}
+\contentsline {subsection}{\numberline {4.2.12}Ising指定ファイル}{64}{subsection.4.2.12}
+\contentsline {subsubsection}{ファイル形式}{64}{section*.44}
+\contentsline {subsubsection}{パラメータ}{64}{section*.45}
+\contentsline {subsubsection}{使用ルール}{65}{section*.46}
+\contentsline {subsection}{\numberline {4.2.13}PairLift指定ファイル}{66}{subsection.4.2.13}
+\contentsline {subsubsection}{ファイル形式}{66}{section*.47}
+\contentsline {subsubsection}{パラメータ}{66}{section*.48}
+\contentsline {subsubsection}{使用ルール}{67}{section*.49}
+\contentsline {subsection}{\numberline {4.2.14}OneBodyG指定ファイル}{68}{subsection.4.2.14}
+\contentsline {subsubsection}{ファイル形式}{68}{section*.50}
+\contentsline {subsubsection}{パラメータ}{69}{section*.51}
+\contentsline {subsubsection}{使用ルール}{69}{section*.52}
+\contentsline {subsection}{\numberline {4.2.15}TwoBodyG指定ファイル}{70}{subsection.4.2.15}
+\contentsline {subsubsection}{ファイル形式}{70}{section*.53}
+\contentsline {subsubsection}{パラメータ}{71}{section*.54}
+\contentsline {subsubsection}{使用ルール}{71}{section*.55}
+\contentsline {section}{\numberline {4.3}出力ファイル}{72}{section.4.3}
+\contentsline {subsection}{\numberline {4.3.1}CHECK\_Chemi.dat}{72}{subsection.4.3.1}
+\contentsline {subsubsection}{ファイル形式}{72}{section*.56}
+\contentsline {subsubsection}{パラメータ}{72}{section*.57}
+\contentsline {subsection}{\numberline {4.3.2}CHECK\_InterAll.dat}{73}{subsection.4.3.2}
+\contentsline {subsubsection}{ファイル形式}{73}{section*.58}
+\contentsline {subsubsection}{パラメータ}{73}{section*.59}
+\contentsline {subsection}{\numberline {4.3.3}CHECK\_CoulombIntra.dat}{74}{subsection.4.3.3}
+\contentsline {subsubsection}{ファイル形式}{74}{section*.60}
+\contentsline {subsubsection}{パラメータ}{74}{section*.61}
+\contentsline {subsection}{\numberline {4.3.4}CHECK\_Hund.dat}{75}{subsection.4.3.4}
+\contentsline {subsubsection}{ファイル形式}{75}{section*.62}
+\contentsline {subsubsection}{パラメータ}{75}{section*.63}
+\contentsline {subsection}{\numberline {4.3.5}CHECK\_INTER\_U.dat}{76}{subsection.4.3.5}
+\contentsline {subsubsection}{ファイル形式}{76}{section*.64}
+\contentsline {subsubsection}{パラメータ}{76}{section*.65}
+\contentsline {subsection}{\numberline {4.3.6}CHECK\_Memory.dat}{77}{subsection.4.3.6}
+\contentsline {subsubsection}{ファイル形式}{77}{section*.66}
+\contentsline {subsubsection}{パラメータ}{77}{section*.67}
+\contentsline {subsection}{\numberline {4.3.7}WarningOnTransfer.dat}{78}{subsection.4.3.7}
+\contentsline {subsubsection}{ファイル形式}{78}{section*.68}
+\contentsline {subsubsection}{パラメータ}{78}{section*.69}
+\contentsline {subsection}{\numberline {4.3.8}TimeKeeper.dat}{79}{subsection.4.3.8}
+\contentsline {subsubsection}{ファイル名}{79}{section*.70}
+\contentsline {subsection}{\numberline {4.3.9}sz\_TimeKeeper.dat}{79}{subsection.4.3.9}
+\contentsline {subsubsection}{ファイル名}{79}{section*.71}
+\contentsline {subsection}{\numberline {4.3.10}Time\_CG\_EigenVector.dat}{80}{subsection.4.3.10}
+\contentsline {subsubsection}{ファイル名}{80}{section*.72}
+\contentsline {subsection}{\numberline {4.3.11}energy.dat}{81}{subsection.4.3.11}
+\contentsline {subsubsection}{ファイル名}{81}{section*.73}
+\contentsline {subsubsection}{ファイル形式}{81}{section*.74}
+\contentsline {subsubsection}{パラメータ}{81}{section*.75}
+\contentsline {subsection}{\numberline {4.3.12}Lanczos\_Step.dat}{82}{subsection.4.3.12}
+\contentsline {subsubsection}{ファイル名}{82}{section*.76}
+\contentsline {subsubsection}{ファイル形式}{82}{section*.77}
+\contentsline {subsubsection}{パラメータ}{82}{section*.78}
+\contentsline {subsection}{\numberline {4.3.13}Norm\_rand.dat}{83}{subsection.4.3.13}
+\contentsline {subsubsection}{ファイル名}{83}{section*.79}
+\contentsline {subsubsection}{ファイル形式}{83}{section*.80}
+\contentsline {subsubsection}{パラメータ}{83}{section*.81}
+\contentsline {subsection}{\numberline {4.3.14}SS\_rand.dat}{84}{subsection.4.3.14}
+\contentsline {subsubsection}{ファイル名}{84}{section*.82}
+\contentsline {subsubsection}{ファイル形式}{84}{section*.83}
+\contentsline {subsubsection}{パラメータ}{84}{section*.84}
+\contentsline {subsection}{\numberline {4.3.15}Eigenvalue.dat}{86}{subsection.4.3.15}
+\contentsline {subsubsection}{ファイル形式}{86}{section*.85}
+\contentsline {subsubsection}{パラメータ}{86}{section*.86}
+\contentsline {subsection}{\numberline {4.3.16}phys.dat}{87}{subsection.4.3.16}
+\contentsline {subsubsection}{ファイル名}{87}{section*.87}
+\contentsline {subsubsection}{ファイル形式}{87}{section*.88}
+\contentsline {subsubsection}{パラメータ}{87}{section*.89}
+\contentsline {subsection}{\numberline {4.3.17}cisajs.dat}{89}{subsection.4.3.17}
+\contentsline {subsubsection}{ファイル名}{89}{section*.90}
+\contentsline {subsubsection}{ファイル形式}{89}{section*.91}
+\contentsline {subsubsection}{パラメータ}{89}{section*.92}
+\contentsline {subsection}{\numberline {4.3.18}cisajscktalt.dat}{91}{subsection.4.3.18}
+\contentsline {subsubsection}{ファイル名}{91}{section*.93}
+\contentsline {subsubsection}{ファイル形式}{91}{section*.94}
+\contentsline {subsubsection}{パラメータ}{91}{section*.95}
+\contentsline {subsection}{\numberline {4.3.19}eigenvec.dat}{93}{subsection.4.3.19}
+\contentsline {subsubsection}{ファイル名}{93}{section*.96}
+\contentsline {subsubsection}{ファイル形式}{93}{section*.97}
+\contentsline {subsubsection}{パラメータ}{93}{section*.98}
+\contentsline {section}{\numberline {4.4}エラーメッセージ一覧}{94}{section.4.4}
+\contentsline {chapter}{\numberline {5}アルゴリズム}{95}{chapter.5}
+\contentsline {section}{\numberline {5.1}Lanczos法}{95}{section.5.1}
+\contentsline {subsection}{\numberline {5.1.1}手法概要}{95}{subsection.5.1.1}
+\contentsline {subsection}{\numberline {5.1.2}逆反復法}{96}{subsection.5.1.2}
+\contentsline {subsection}{\numberline {5.1.3}実際の実装について}{97}{subsection.5.1.3}
+\contentsline {section}{\numberline {5.2}完全対角化}{98}{section.5.2}
+\contentsline {subsection}{\numberline {5.2.1}手法概要}{98}{subsection.5.2.1}
+\contentsline {subsection}{\numberline {5.2.2}有限温度物理量の計算}{98}{subsection.5.2.2}
+\contentsline {section}{\numberline {5.3}熱的純粋量子状態による有限温度計算}{98}{section.5.3}
+\contentsline {subsection}{\numberline {5.3.1}実際の実装について}{99}{subsection.5.3.1}
+\contentsline {chapter}{\numberline {6}謝辞}{100}{chapter.6}

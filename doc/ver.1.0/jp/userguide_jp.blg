@@ -1,0 +1,47 @@
+This is pBibTeX, Version 0.99d-j0.33 (utf8.euc) (TeX Live 2015)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: userguide_jp.aux
+The style file: ../bib/elsart-num_mod.bst
+Database file #1: ../bib/userguide.bib
+You've used 9 entries,
+            2344 wiz_defined-function locations,
+            646 strings with 5944 characters,
+and the built_in function-call counts, 1635 in all, are:
+= -- 129
+> -- 57
+< -- 0
++ -- 25
+- -- 16
+* -- 143
+:= -- 226
+add.period$ -- 9
+call.type$ -- 9
+change.case$ -- 2
+chr.to.int$ -- 0
+cite$ -- 9
+duplicate$ -- 69
+empty$ -- 188
+format.name$ -- 22
+if$ -- 354
+int.to.chr$ -- 0
+int.to.str$ -- 9
+missing$ -- 8
+newline$ -- 33
+num.names$ -- 7
+pop$ -- 36
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 0
+skip$ -- 26
+stack$ -- 0
+substring$ -- 154
+swap$ -- 12
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 0
+warning$ -- 0
+while$ -- 16
+width$ -- 10
+write$ -- 65
+is.kanji.str$ -- 0

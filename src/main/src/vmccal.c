@@ -2,16 +2,18 @@
  * Variational Monte Carlo
  * calculate physical quantities
  *-------------------------------------------------------------
- * by Satoshi Morita and Ryui Kaneko
+ * by Satoshi Morita 
  *-------------------------------------------------------------*/
 
 void VMCMainCal(MPI_Comm comm);
 void clearPhysQuantity();
-void calculateOptTransDiff(double *srOptO, const double ipAll);
-void calculateOO(double *srOptOO, double *srOptHO, const double *srOptO,
-                 const double w, const double e, const int srOptSize);
-void calculateOO_Store(double *srOptOO, double *srOptHO,  double *srOptO,
-                 const double w, const double e,  int srOptSize, int sampleSize);
+void calculateOptTransDiff(double complex *srOptO, const double complex ipAll);
+void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+                 const double complex w, const double complex e, const int srOptSize);
+void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+                 const double  w, const double complex e, const int srOptSize);
+void calculateOO_Store(double complex *srOptOO, double complex *srOptHO,  double complex *srOptO,
+                 const double w, const double complex e,  int srOptSize, int sampleSize);
 void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam);
 void calculateQCAQ(double *qcaq, const double *lslca, const double *lslq,
                    const double w, const int nLSHam, const int nCA);
@@ -21,7 +23,8 @@ void calculateQCACAQ(double *qcacaq, const double *lslca, const double w,
 
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
-  double e,x,w,ip;
+  double complex e,x,ip;
+  double w;
   double we,sqrtw;
 
   const int qpStart=0;
@@ -31,7 +34,7 @@ void VMCMainCal(MPI_Comm comm) {
 
   /* optimazation for Kei */
   const int nProj=NProj;
-  double *srOptO = SROptO;
+  double complex *srOptO = SROptO;
 
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);
@@ -47,9 +50,14 @@ void VMCMainCal(MPI_Comm comm) {
     eleCfg = EleCfg + sample*Nsite2;
     eleNum = EleNum + sample*Nsite2;
     eleProjCnt = EleProjCnt + sample*NProj;
+//DEBUG
+   // for(i=0;i<Nsite;i++) {
+   //   printf("sample=%d: i=%d  up=%d down =%d \n",sample,i,eleCfg[i+0*Nsite],eleCfg[i+1*Nsite]);
+   // }
+//DEBUG
 
     StartTimer(40);
-    info = CalculateMAll(eleIdx,qpStart,qpEnd);
+    info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd);
     StopTimer(40);
 
     if(info!=0) {
@@ -57,10 +65,12 @@ void VMCMainCal(MPI_Comm comm) {
       continue;
     }
 
-    ip = CalculateIP(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+    ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+    //printf("DEBUG: sample=%d ip= %lf %lf\n",sample,creal(ip),cimag(ip));
     x = LogProjVal(eleProjCnt);
     /* calculate reweight */
-    w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
+    //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
+    w =1.0;
     if( !isfinite(w) ) {
       fprintf(stderr,"waring: VMCMainCal rank:%d sample:%d w=%e\n",rank,sample,w);
       continue;
@@ -69,35 +79,54 @@ void VMCMainCal(MPI_Comm comm) {
     StartTimer(41);
     /* calculate energy */
     e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+    //printf("DEBUG: sample=%d e= %lf %lf\n",sample,creal(e),cimag(e));
     StopTimer(41);
     if( !isfinite(e) ) {
-      fprintf(stderr,"waring: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,e);
+      fprintf(stderr,"waring: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
       continue;
     }
 
     Wc += w;
     Etot  += w * e;
-    Etot2 += w * e * e;
+    Etot2 += w * conj(e) * e;
 
     if(NVMCCalMode==0) {
       /* Calculate O for correlation fauctors */
-      SROptO[0] = 1.0;
+      srOptO[0] = 1.0+0.0*I;//   real 
+      srOptO[1] = 0.0+0.0*I;//   real 
       #pragma loop noalias
-      for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
+      for(i=0;i<nProj;i++){ 
+        srOptO[(i+1)*2]     = (double)(eleProjCnt[i]); // even real
+        srOptO[(i+1)*2+1]   = 0.0+0.0*I;               // odd  comp
+      }
 
       StartTimer(42);
       /* SlaterElmDiff */
-      SlaterElmDiff(SROptO+NProj+1,ip,eleIdx);
+      SlaterElmDiff_fcmp(SROptO+2*NProj+2,ip,eleIdx); //TBC
       StopTimer(42);
       
-      if(FlagOptTrans>0) {
-        calculateOptTransDiff(SROptO+NProj+NSlater+1, ip);
+      if(FlagOptTrans>0) { // this part will be not used
+        calculateOptTransDiff(SROptO+2*NProj+2*NSlater+2, ip); //TBC
       }
 
+      //for(i=0;i<NPara*2+2;i++){ 
+      //  printf("DEBUG: i=%d %lf %lf \n",i,creal(srOptO[i]),cimag(srOptO[i]));
+      //}
       StartTimer(43);
       /* Calculate OO and HO */
       if(NStoreO==0){
+        //printf("DEBUG:  NPara=%d NProj=%d NSlater=%d \n",NPara,NProj,NSlater);
+        //for(i=0;i<2*(NPara+1);i++){ 
+        //  printf("tmp: DEBUG:  i=%d %lf %lf\n",i,creal(SROptO[i]),cimag(SROptO[i]));
+        //}
+        //for(i=0;i<2*(NPara+1);i++){ 
+        //  printf("B accum: DEBUG:  i=%d %lf %lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
+        //}
+
         calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
+        //for(i=0;i<2*(NPara+1);i++){ 
+        //  printf("A accum: DEBUG:  i=%d %lf %lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
+        //}
       }else{
         we    = w*e;
         sqrtw = sqrt(w); 
@@ -117,20 +146,21 @@ void VMCMainCal(MPI_Comm comm) {
       StopTimer(42);
 
       if(NLanczosMode>0){
+        // ignoring Lanczos: to be added
         /* Calculate local QQQQ */
-        StartTimer(43);
-        LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-        calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
-        StopTimer(43);
-        if(NLanczosMode>1){
+        //StartTimer(43);
+        //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+        //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
+        //StopTimer(43);
+        //if(NLanczosMode>1){
           /* Calculate local QcisAjsQ */
-          StartTimer(44);
-          LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-          calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
-          calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
-                          NCisAjsCktAlt,CisAjsCktAltIdx);
-          StopTimer(44);
-        }
+          //StartTimer(44);
+          //LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+          //calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
+          //calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
+          //                NCisAjsCktAlt,CisAjsCktAltIdx);
+          //StopTimer(44);
+        //}
       }
     }
   } /* end of for(sample) */
@@ -147,13 +177,13 @@ void VMCMainCal(MPI_Comm comm) {
 
 void clearPhysQuantity(){
   int i,n;
-  double *vec;
+  double complex *vec;
   Wc = Etot = Etot2 = 0.0;
   if(NVMCCalMode==0) {
     /* SROptOO, SROptHO, SROptO */
-    n = SROptSize*(SROptSize+2);
+    n = (2*SROptSize)*(2*SROptSize+2); // TBC
     vec = SROptOO;
-    for(i=0;i<n;i++) vec[i] = 0.0;
+    for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
     n = 2*NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
@@ -176,10 +206,10 @@ void clearPhysQuantity(){
   return;
 }
 
-void calculateOptTransDiff(double *srOptO, const double ipAll) {
+void calculateOptTransDiff(double complex *srOptO, const double complex ipAll) {
   int i,j;
-  double ip;
-  double *pfM;
+  double complex ip;
+  double complex *pfM;
 
   for(i=0;i<NQPOptTrans;++i) {
     ip = 0.0;
@@ -193,8 +223,8 @@ void calculateOptTransDiff(double *srOptO, const double ipAll) {
   return;
 }
 
-void calculateOO_Store(double *srOptOO, double *srOptHO, double *srOptO_Store,
-                 const double w, const double e, int srOptSize, int sampleSize) {
+void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double complex *srOptO_Store,
+                 const double w, const double complex e, int srOptSize, int sampleSize) {
 
   //#define M_DGEM dgemm_
 
@@ -209,34 +239,85 @@ void calculateOO_Store(double *srOptOO, double *srOptHO, double *srOptO_Store,
   
   jobz = 'N';
   uplo = 'T';
-  dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
+  //dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
 
   return;
 }
 
 
 
-void calculateOO(double *srOptOO, double *srOptHO, const double *srOptO,
-                 const double w, const double e, const int srOptSize) {
-  double we=w*e;
 
-  #define M_DAXPY daxpy_
-  #define M_DGER dger_
+//void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+//                 const double w, const double complex e, const int srOptSize) {
+//  double we=w*e;
+//
+//  #define M_DAXPY daxpy_
+//  #define M_DGER dger_
+//
+//  extern int M_DAXPY(const int *n, const double *alpha, const double *x, const int *incx,
+//                     double *y, const int *incy);
+//  extern int M_DGER(const int *m, const int *n, const double *alpha,
+//                    const double *x, const int *incx, const double *y, const int *incy, 
+//                    double *a, const int *lda);
+//  int m,n,incx,incy,lda;
+//  m=n=lda=srOptSize;
+//  incx=incy=1;
+//
+//  /* OO[i][j] += w*O[i]*O[j] */
+//  M_DGER(&m, &n, &w, srOptO, &incx, srOptO, &incy, srOptOO, &lda);
+//
+//  /* HO[i] += w*e*O[i] */
+//  M_DAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
+//
+//  return;
+//}
 
-  extern int M_DAXPY(const int *n, const double *alpha, const double *x, const int *incx,
-                     double *y, const int *incy);
-  extern int M_DGER(const int *m, const int *n, const double *alpha,
-                    const double *x, const int *incx, const double *y, const int *incy, 
-                    double *a, const int *lda);
+/*
+void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+                 const double complex w, const double complex e, const int srOptSize) {
+  double complex we=w*e;
+
+  #define M_ZAXPY zaxpy_
+  #define M_ZGERC zgerc_
+
+  extern int M_ZAXPY(const int *n, const double complex *alpha, const double complex *x, const int *incx,
+                     double complex *y, const int *incy);
+  extern int M_ZGERC(const int *m, const int *n, const double complex *alpha,
+                    const double complex *x, const int *incx, const double complex *y, const int *incy, 
+                    double complex *a, const int *lda);
   int m,n,incx,incy,lda;
-  m=n=lda=srOptSize;
+  m=n=lda=2*srOptSize;
   incx=incy=1;
 
-  /* OO[i][j] += w*O[i]*O[j] */
-  M_DGER(&m, &n, &w, srOptO, &incx, srOptO, &incy, srOptOO, &lda);
+//   OO[i][j] += w*O[i]*O[j] 
+  M_ZGERC(&m, &n, &w, srOptO, &incx, srOptO, &incy, srOptOO, &lda);
 
-  /* HO[i] += w*e*O[i] */
-  M_DAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
+//   HO[i] += w*e*O[i] 
+  M_ZAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
+
+  return;
+}
+*/
+void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+                 const double w, const double complex e, const int srOptSize){
+  int i,j;
+  double complex tmp;
+  //#pragma omp parallel for default(shared)        \
+    private(i,j,tmp,srOptOO)
+  //#pragma loop noalias
+  for(j=0;j<2*srOptSize;j++) {
+    tmp                            = w * srOptO[j];
+    srOptOO[0*(2*srOptSize)+j]    += tmp;      // update O
+    srOptOO[1*(2*srOptSize)+j]    += 0.0;      // update 
+    srOptHO[j]                    += e * tmp;  // update HO
+  }
+  for(i=2;i<2*srOptSize;i++) {
+    tmp            = w * srOptO[i];
+    for(j=0;j<2*srOptSize;j++) {
+      srOptOO[i*(2*srOptSize)+j] += w*(srOptO[j])*conj(srOptO[i]); // TBC
+      //srOptOO[j+i*(2*srOptSize)] += w*(srOptO[j])*(srOptO[i]); // TBC
+    }
+  }
 
   return;
 }

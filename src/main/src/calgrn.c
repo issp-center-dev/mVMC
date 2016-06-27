@@ -13,12 +13,12 @@ void CalculateGreenFunc(const double w, const double ip, int *eleIdx, int *eleCf
 
   int idx,idx0,idx1;
   int ri,rj,s,rk,rl,t;
-  double tmp;
+  double complex tmp;
   int *myEleIdx, *myEleNum, *myProjCntNew;
-  double *myBuffer;
+  double complex *myBuffer;
 
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
-  RequestWorkSpaceThreadDouble(NQPFull+2*Nsize);
+  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
 #pragma omp parallel default(shared)\
@@ -27,7 +27,7 @@ void CalculateGreenFunc(const double w, const double ip, int *eleIdx, int *eleCf
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
-    myBuffer = GetWorkSpaceThreadDouble(NQPFull+2*Nsize);
+    myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -40,8 +40,8 @@ void CalculateGreenFunc(const double w, const double ip, int *eleIdx, int *eleCf
     #pragma omp for private(idx,ri,rj,s,tmp) schedule(dynamic) nowait
     for(idx=0;idx<NCisAjs;idx++) {
       ri = CisAjsIdx[idx][0];
-      rj = CisAjsIdx[idx][1];
-      s  = CisAjsIdx[idx][2];
+      rj = CisAjsIdx[idx][2];
+      s  = CisAjsIdx[idx][3];
       tmp = GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,
                        myProjCntNew,myBuffer);
       LocalCisAjs[idx] = tmp;
@@ -78,7 +78,7 @@ void CalculateGreenFunc(const double w, const double ip, int *eleIdx, int *eleCf
     for(idx=0;idx<NCisAjsCktAlt;idx++) {
       idx0 = CisAjsCktAltIdx[idx][0];
       idx1 = CisAjsCktAltIdx[idx][1];
-      PhysCisAjsCktAlt[idx] += w*LocalCisAjs[idx0]*LocalCisAjs[idx1];
+      PhysCisAjsCktAlt[idx] += w*LocalCisAjs[idx0]*conj(LocalCisAjs[idx1]);// TBC conj ok?
     }
 
     #pragma omp master
@@ -86,6 +86,6 @@ void CalculateGreenFunc(const double w, const double ip, int *eleIdx, int *eleCf
   }
 
   ReleaseWorkSpaceThreadInt();
-  ReleaseWorkSpaceThreadDouble();
+  ReleaseWorkSpaceThreadComplex();
   return;
 }
