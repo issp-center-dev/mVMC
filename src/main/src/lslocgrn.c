@@ -79,8 +79,8 @@ void LSLocalCisAjs(const double h1, const double ip, int *eleIdx, int *eleCfg, i
 
   for(idx=0;idx<nCisAjs;idx++){
     ri = CisAjsIdx[idx][0];
-    rj = CisAjsIdx[idx][1];
-    s  = CisAjsIdx[idx][2];
+    rj = CisAjsIdx[idx][2];
+    s  = CisAjsIdx[idx][3];
 
     /* calculate local HCisAjs */
     LSLCisAjs[idx+nCisAjs] = calHCA(ri,rj,s,h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt);

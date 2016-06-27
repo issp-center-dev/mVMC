@@ -100,7 +100,7 @@ void SetMemoryDef() {
   CisAjsIdx = (int**)malloc(sizeof(int*)*NCisAjs);
   for(i=0;i<NCisAjs;i++) {
     CisAjsIdx[i] = pInt;
-    pInt += 3;
+    pInt += 4;
   }
 
   CisAjsCktAltIdx = (int**)malloc(sizeof(int*)*NCisAjsCktAlt);
@@ -112,7 +112,7 @@ void SetMemoryDef() {
   CisAjsCktAltDCIdx = (int**)malloc(sizeof(int*)*NCisAjsCktAltDC);
   for(i=0;i<NCisAjsCktAltDC;i++) {
     CisAjsCktAltDCIdx[i] = pInt;
-    pInt += 6;
+    pInt += 8;
   }
 
   InterAll = (int**)malloc(sizeof(int*)*NInterAll);
