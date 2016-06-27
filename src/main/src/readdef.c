@@ -396,7 +396,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   SROptSize = NPara+1;
   
   NTotalDefInt = Nsite /* LocSpn */
-    + 3*NTransfer /* Transfer */
+    + 4*NTransfer /* Transfer */
     + NCoulombIntra /* CoulombIntra */
     + 2*NCoulombInter /* CoulombInter */
     + 2*NHundCoupling /* HundCoupling */
