@@ -490,16 +490,16 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	if(NTransfer>0){
 	  while( fscanf(fp, "%d %d %d %d %lf %lf\n",
 			&(Transfer[idx][0]),
-			&tmp_ispin,
 			&(Transfer[idx][1]),
 			&(Transfer[idx][2]),
+			&(Transfer[idx][3]),
 			&dReValue,
 	  		&dImValue)!=EOF){
 
 		  	ParaTransfer[idx]=dReValue;
 			//todo Input dImValue
 
-		  	if(tmp_ispin != Transfer[idx][2]){
+		  	if(Transfer[idx][1] != Transfer[idx][3]){
 				fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
 				info = ReadDefFileError(defname);
 				break;

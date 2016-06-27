@@ -22,7 +22,7 @@ void SetMemoryDef() {
   Transfer = (int**)malloc(sizeof(int*)*NTransfer);
   for(i=0;i<NTransfer;i++) {
     Transfer[i] = pInt;
-    pInt += 3;
+    pInt += 4;
   }
 
   CoulombIntra = pInt;

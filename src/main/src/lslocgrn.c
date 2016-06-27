@@ -95,8 +95,8 @@ double calculateHK(const double h1, const double ip, int *eleIdx, int *eleCfg,
 
   for(idx=0;idx<NTransfer;idx++) {
     ri = Transfer[idx][0];
-    rj = Transfer[idx][1];
-    s  = Transfer[idx][2];
+    rj = Transfer[idx][2];
+    s  = Transfer[idx][3];
     
     val -= ParaTransfer[idx] * calHCA(ri,rj,s,h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
     /* Caution: negative sign */
@@ -324,8 +324,8 @@ double calHCA2(const int ri, const int rj, const int s,
     #pragma omp for private(idx,rk,rl,sk) schedule(dynamic) nowait
     for(idx=0;idx<NTransfer;idx++) {
       rk = Transfer[idx][0];
-      rl = Transfer[idx][1];
-      sk = Transfer[idx][2];
+      rl = Transfer[idx][2];
+      sk = Transfer[idx][3];
       
       myValue -= ParaTransfer[idx]
         * GreenFunc2(rk,rl,ri,rj,sk,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myBufferInt,myBuffer);
@@ -642,8 +642,8 @@ double calHCACA2(const int ri, const int rj, const int rk, const int rl,
     /* Transfer */
     #pragma omp for private(idx) schedule(dynamic) nowait
     for(idx=0;idx<NTransfer;idx++) {
-      myRsi[0] = Transfer[idx][0]+Transfer[idx][2]*Nsite;
-      myRsj[0] = Transfer[idx][1]+Transfer[idx][2]*Nsite;
+      myRsi[0] = Transfer[idx][0]+Transfer[idx][1]*Nsite;
+      myRsj[0] = Transfer[idx][2]+Transfer[idx][3]*Nsite;
       myRsi[1] = rsi;
       myRsj[1] = rsj;
       myRsi[2] = rsk;
