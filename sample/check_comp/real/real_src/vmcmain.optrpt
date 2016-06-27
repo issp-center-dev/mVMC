@@ -1,0 +1,5334 @@
+Intel(R) Advisor can now assist with vectorization and show optimization
+  report messages with your source code.
+See "https://software.intel.com/en-us/intel-advisor-xe" for details.
+
+
+Begin optimization report for: main(int, char **)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at parameter.c(22,3) inlined into vmcmain.c(202,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at time.c(33,3) inlined into vmcmain.c(47,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at time.c(34,3) inlined into vmcmain.c(47,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at parameter.c(34,3) inlined into vmcmain.c(202,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at parameter.c(34,3) inlined into vmcmain.c(202,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at parameter.c(34,3) inlined into vmcmain.c(202,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at parameter.c(49,5) inlined into vmcmain.c(203,38)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at parameter.c(51,7) inlined into vmcmain.c(203,38)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at parameter.c(54,7) inlined into vmcmain.c(203,38)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at parameter.c(57,7) inlined into vmcmain.c(203,38)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at parameter.c(50,7) inlined into vmcmain.c(203,38)
+   LOOP END
+LOOP END
+
+LOOP BEGIN at parameter.c(23,3) inlined into vmcmain.c(202,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at parameter.c(23,3) inlined into vmcmain.c(202,3)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at parameter.c(23,3) inlined into vmcmain.c(202,3)
+   <Remainder>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: SetMemoryDef()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at setmemory.c(23,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(23,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(32,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(32,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(38,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(38,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(44,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(44,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(50,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(50,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(59,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(59,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(65,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(65,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(71,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(71,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(77,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(77,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(83,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(83,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(89,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(89,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(95,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(95,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(101,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(101,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(107,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(107,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(113,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(113,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(119,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(119,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(125,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(125,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at setmemory.c(131,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at setmemory.c(131,3)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: ReadDefFileIdxPara(char *, MPI_Comm)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at readdef.c(909,11)
+   remark #25460: No loop optimizations reported
+LOOP END
+===========================================================================
+
+Begin optimization report for: SetFlagShift()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at parameter.c(198,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(198,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(198,3)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: SetMemory()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(60,3) inlined into setmemory.c(266,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at workspace.c(60,3) inlined into setmemory.c(266,3)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: VMCPhysCal(MPI_Comm, MPI_Comm, MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at slater.c(20,3) inlined into vmcmain.c(311,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(120,7) inlined into vmcmain.c(333,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(127,5) inlined into vmcmain.c(333,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(120,7) inlined into vmcmain.c(333,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(127,5) inlined into vmcmain.c(333,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(120,7) inlined into vmcmain.c(333,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(127,5) inlined into vmcmain.c(333,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at vmcmain.c(314,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at safempi.c(20,3) inlined into vmcmain.c(333,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at safempi.c(20,3) inlined into vmcmain.c(333,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at safempi.c(20,3) inlined into vmcmain.c(333,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(358,5) inlined into vmcmain.c(334,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into vmcmain.c(333,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into vmcmain.c(333,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into vmcmain.c(333,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Remainder, Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into vmcmain.c(333,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into vmcmain.c(333,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into vmcmain.c(333,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Remainder, Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into vmcmain.c(333,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into vmcmain.c(333,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into vmcmain.c(333,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into vmcmain.c(333,5)
+<Remainder, Multiversioned v2>
+LOOP END
+===========================================================================
+
+Begin optimization report for: VMCMainCal(MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(135,5) inlined into vmccal.c(53,12)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at workspace.c(168,5) inlined into vmccal.c(53,12)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at matrix.c(76,5) inlined into vmccal.c(53,12)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at matrix.c(69,3) inlined into vmccal.c(53,12)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at vmccal.c(109,9)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(156,5) inlined into vmccal.c(128,9)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(163,5) inlined into vmccal.c(128,9)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(171,5) inlined into vmccal.c(128,9)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(150,1) inlined into vmccal.c(128,9)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at vmccal.c(255,3) inlined into vmccal.c(129,9)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at vmccal.c(275,1) inlined into vmccal.c(135,11)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at vmccal.c(295,1) inlined into vmccal.c(136,11)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at vmccal.c(161,5) inlined into vmccal.c(44,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmccal.c(161,5) inlined into vmccal.c(44,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(161,5) inlined into vmccal.c(44,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmccal.c(166,5) inlined into vmccal.c(44,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmccal.c(166,5) inlined into vmccal.c(44,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(166,5) inlined into vmccal.c(44,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmccal.c(171,7) inlined into vmccal.c(44,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at vmccal.c(177,9) inlined into vmccal.c(44,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmccal.c(177,9) inlined into vmccal.c(44,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(177,9) inlined into vmccal.c(44,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmccal.c(45,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at workspace.c(155,3) inlined into vmccal.c(53,12)
+   LOOP END
+
+   LOOP BEGIN at workspace.c(188,3) inlined into vmccal.c(53,12)
+   LOOP END
+
+   LOOP BEGIN at workspace.c(155,3) inlined into vmccal.c(53,12)
+   <Remainder>
+   LOOP END
+
+   LOOP BEGIN at qp.c(91,3) inlined into vmccal.c(61,10)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at projection.c(19,3) inlined into vmccal.c(63,9)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at projection.c(19,3) inlined into vmccal.c(63,9)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at projection.c(19,3) inlined into vmccal.c(63,9)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at projection.c(19,3) inlined into vmccal.c(63,9)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(88,7)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(88,7)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(88,7)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(88,7)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(189,3) inlined into vmccal.c(100,9)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at vmccal.c(192,5) inlined into vmccal.c(100,9)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at vmccal.c(192,5) inlined into vmccal.c(100,9)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at vmccal.c(192,5) inlined into vmccal.c(100,9)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at vmccal.c(192,5) inlined into vmccal.c(100,9)
+      <Remainder loop for vectorization>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(96,3) inlined into vmccal.c(128,9)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at pfupdate.c(37,3) inlined into vmccal.c(128,9)
+         remark #25460: No loop optimizations reported
+
+         LOOP BEGIN at pfupdate.c(42,5) inlined into vmccal.c(128,9)
+         <Peeled loop for vectorization>
+         LOOP END
+
+         LOOP BEGIN at pfupdate.c(42,5) inlined into vmccal.c(128,9)
+            remark #15300: LOOP WAS VECTORIZED
+         LOOP END
+
+         LOOP BEGIN at pfupdate.c(42,5) inlined into vmccal.c(128,9)
+         <Remainder loop for vectorization>
+            remark #15301: REMAINDER LOOP WAS VECTORIZED
+         LOOP END
+
+         LOOP BEGIN at pfupdate.c(42,5) inlined into vmccal.c(128,9)
+         <Remainder loop for vectorization>
+         LOOP END
+
+         LOOP BEGIN at pfupdate.c(46,5) inlined into vmccal.c(128,9)
+         <Peeled loop for vectorization>
+         LOOP END
+
+         LOOP BEGIN at pfupdate.c(46,5) inlined into vmccal.c(128,9)
+            remark #15300: LOOP WAS VECTORIZED
+         LOOP END
+
+         LOOP BEGIN at pfupdate.c(46,5) inlined into vmccal.c(128,9)
+         <Remainder loop for vectorization>
+            remark #15301: REMAINDER LOOP WAS VECTORIZED
+         LOOP END
+
+         LOOP BEGIN at pfupdate.c(46,5) inlined into vmccal.c(128,9)
+         <Remainder loop for vectorization>
+         LOOP END
+      LOOP END
+
+      LOOP BEGIN at qp.c(91,3) inlined into vmccal.c(128,9)
+         remark #25460: No loop optimizations reported
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(114,3) inlined into vmccal.c(128,9)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(123,3) inlined into vmccal.c(128,9)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(133,3) inlined into vmccal.c(128,9)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(76,3) inlined into vmccal.c(134,11)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at lslocgrn.c(76,3) inlined into vmccal.c(134,11)
+      <Multiversioned v2>
+      LOOP END
+
+      LOOP BEGIN at lslocgrn.c(76,3) inlined into vmccal.c(134,11)
+      <Remainder, Multiversioned v2>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(80,3) inlined into vmccal.c(134,11)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into vmccal.c(128,9)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into vmccal.c(128,9)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into vmccal.c(128,9)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into vmccal.c(128,9)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into vmccal.c(128,9)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into vmccal.c(128,9)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into vmccal.c(128,9)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into vmccal.c(128,9)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into vmccal.c(128,9)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at vmccal.c(110,9)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at vmccal.c(110,9)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at vmccal.c(110,9)
+<Remainder loop for vectorization, Multiversioned v1>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at vmccal.c(110,9)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at vmccal.c(110,9)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at vmccal.c(110,9)
+<Remainder, Multiversioned v2>
+LOOP END
+===========================================================================
+
+Begin optimization report for: calHCA2(const int, const int, const int, const double, int *, int *, int *, int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(135,5) inlined into lslocgrn.c(284,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at workspace.c(168,5) inlined into lslocgrn.c(285,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at calham.c(156,5) inlined into lslocgrn.c(298,11)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(163,5) inlined into lslocgrn.c(298,11)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(171,5) inlined into lslocgrn.c(298,11)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(150,1) inlined into lslocgrn.c(298,11)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at lslocgrn.c(324,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at lslocgrn.c(336,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at lslocgrn.c(352,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at lslocgrn.c(376,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at lslocgrn.c(305,1)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(155,3) inlined into lslocgrn.c(395,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into lslocgrn.c(396,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(155,3) inlined into lslocgrn.c(395,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into lslocgrn.c(298,11)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into lslocgrn.c(298,11)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into lslocgrn.c(298,11)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into lslocgrn.c(298,11)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into lslocgrn.c(298,11)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into lslocgrn.c(298,11)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into lslocgrn.c(298,11)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into lslocgrn.c(298,11)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into lslocgrn.c(298,11)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(317,5)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(317,5)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(317,5)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(317,5)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(317,5)
+<Remainder, Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(319,5)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(319,5)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(319,5)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(319,5)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(319,5)
+<Remainder, Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(324,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(325,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(336,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(337,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(352,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(353,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(376,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(377,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: calHCA1(const int, const int, const int, const double, int *, int *, int *, int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(168,5) inlined into lslocgrn.c(239,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at pfupdate.c(112,5) inlined into lslocgrn.c(239,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at pfupdate.c(107,3) inlined into lslocgrn.c(239,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(226,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(226,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(226,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(226,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(226,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(226,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into lslocgrn.c(237,7)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into lslocgrn.c(237,7)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into lslocgrn.c(237,7)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into lslocgrn.c(237,7)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into lslocgrn.c(239,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into lslocgrn.c(239,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(252,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(252,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(252,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(252,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(252,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(252,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate.c(114,5) inlined into lslocgrn.c(239,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(148,3) inlined into lslocgrn.c(239,3)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at pfupdate.c(148,3) inlined into lslocgrn.c(239,3)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(148,3) inlined into lslocgrn.c(239,3)
+      <Remainder loop for vectorization>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(153,3) inlined into lslocgrn.c(239,3)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at pfupdate.c(158,5) inlined into lslocgrn.c(239,3)
+      <Peeled loop for vectorization, Multiversioned v1>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(158,5) inlined into lslocgrn.c(239,3)
+      <Multiversioned v1>
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(158,5) inlined into lslocgrn.c(239,3)
+      <Remainder loop for vectorization, Multiversioned v1>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(158,5) inlined into lslocgrn.c(239,3)
+      <Remainder loop for vectorization, Multiversioned v1>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(158,5) inlined into lslocgrn.c(239,3)
+      <Multiversioned v2>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(158,5) inlined into lslocgrn.c(239,3)
+      <Remainder, Multiversioned v2>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(171,3) inlined into lslocgrn.c(239,3)
+   <Peeled loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(171,3) inlined into lslocgrn.c(239,3)
+   <Multiversioned v1>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(171,3) inlined into lslocgrn.c(239,3)
+   <Remainder loop for vectorization, Multiversioned v1>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(171,3) inlined into lslocgrn.c(239,3)
+   <Remainder loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(171,3) inlined into lslocgrn.c(239,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(171,3) inlined into lslocgrn.c(239,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(177,3) inlined into lslocgrn.c(239,3)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at pfupdate.c(182,5) inlined into lslocgrn.c(239,3)
+      <Peeled loop for vectorization, Multiversioned v1>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(182,5) inlined into lslocgrn.c(239,3)
+      <Multiversioned v1>
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(182,5) inlined into lslocgrn.c(239,3)
+      <Remainder loop for vectorization, Multiversioned v1>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(182,5) inlined into lslocgrn.c(239,3)
+      <Remainder loop for vectorization, Multiversioned v1>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(182,5) inlined into lslocgrn.c(239,3)
+      <Multiversioned v2>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(182,5) inlined into lslocgrn.c(239,3)
+      <Remainder, Multiversioned v2>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(190,3) inlined into lslocgrn.c(239,3)
+   <Peeled loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(190,3) inlined into lslocgrn.c(239,3)
+   <Multiversioned v1>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(190,3) inlined into lslocgrn.c(239,3)
+   <Remainder loop for vectorization, Multiversioned v1>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(190,3) inlined into lslocgrn.c(239,3)
+   <Remainder loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(190,3) inlined into lslocgrn.c(239,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(190,3) inlined into lslocgrn.c(239,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: checkGF1(const int, const int, const int, const double, int *, const int *, int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at pfupdate.c(37,3) inlined into lslocgrn.c(194,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(194,3)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(194,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(194,3)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(194,3)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(194,3)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(194,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(194,3)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(194,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(91,3) inlined into lslocgrn.c(195,7)
+   remark #25460: No loop optimizations reported
+LOOP END
+===========================================================================
+
+Begin optimization report for: calHCACA(const int, const int, const int, const int, const int, const int, const double, const double, int *, int *, int *, int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at pfupdate.c(37,3) inlined into lslocgrn.c(416,14)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(416,14)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(416,14)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(416,14)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(416,14)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(416,14)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(416,14)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(416,14)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(416,14)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(91,3) inlined into lslocgrn.c(416,14)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at pfupdate.c(37,3) inlined into lslocgrn.c(421,14)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(421,14)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(421,14)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(421,14)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(421,14)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(421,14)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(421,14)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(421,14)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(421,14)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(91,3) inlined into lslocgrn.c(421,14)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at pfupdate.c(37,3) inlined into lslocgrn.c(427,14)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(427,14)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(427,14)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(427,14)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(427,14)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(427,14)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(427,14)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(427,14)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(427,14)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(91,3) inlined into lslocgrn.c(427,14)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at pfupdate.c(37,3) inlined into lslocgrn.c(433,15)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(433,15)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(433,15)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(433,15)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(433,15)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(433,15)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(433,15)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(433,15)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(433,15)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(91,3) inlined into lslocgrn.c(433,15)
+   remark #25460: No loop optimizations reported
+LOOP END
+===========================================================================
+
+Begin optimization report for: checkGF2(const int, const int, const int, const int, const int, const int, const double, int *, const int *, int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at pfupdate.c(37,3) inlined into lslocgrn.c(485,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(485,3)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(485,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(485,3)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(485,3)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(485,3)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(485,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(485,3)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(485,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(45,3) inlined into lslocgrn.c(485,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate_two.c(123,3) inlined into lslocgrn.c(485,3)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(138,3) inlined into lslocgrn.c(485,3)
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into lslocgrn.c(485,3)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into lslocgrn.c(485,3)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into lslocgrn.c(485,3)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into lslocgrn.c(485,3)
+      <Remainder loop for vectorization>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(151,3) inlined into lslocgrn.c(485,3)
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: calHCACA1(const int, const int, const int, const int, const int, const int, const double, int *, int *, int *, int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(168,5) inlined into lslocgrn.c(545,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at pfupdate_two.c(187,5) inlined into lslocgrn.c(545,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at pfupdate_two.c(180,1) inlined into lslocgrn.c(545,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(523,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(523,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(523,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(523,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(523,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(523,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into lslocgrn.c(543,7)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into lslocgrn.c(543,7)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into lslocgrn.c(543,7)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into lslocgrn.c(543,7)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into lslocgrn.c(545,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into lslocgrn.c(545,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(564,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(564,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(737,3) inlined into lslocgrn.c(564,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(564,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(564,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(741,3) inlined into lslocgrn.c(564,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: calHCACA2(const int, const int, const int, const int, const int, const int, const double, int *, int *, int *, int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(135,5) inlined into lslocgrn.c(598,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at workspace.c(168,5) inlined into lslocgrn.c(599,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at calham.c(156,5) inlined into lslocgrn.c(615,11)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(163,5) inlined into lslocgrn.c(615,11)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(171,5) inlined into lslocgrn.c(615,11)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(150,1) inlined into lslocgrn.c(615,11)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at lslocgrn.c(643,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at lslocgrn.c(658,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at lslocgrn.c(676,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at lslocgrn.c(704,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at lslocgrn.c(624,1)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(155,3) inlined into lslocgrn.c(725,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into lslocgrn.c(726,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(155,3) inlined into lslocgrn.c(725,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into lslocgrn.c(615,11)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into lslocgrn.c(615,11)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into lslocgrn.c(615,11)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into lslocgrn.c(615,11)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into lslocgrn.c(615,11)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into lslocgrn.c(615,11)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into lslocgrn.c(615,11)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into lslocgrn.c(615,11)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into lslocgrn.c(615,11)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(636,5)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(636,5)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(636,5)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(636,5)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(636,5)
+<Remainder, Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(638,5)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(638,5)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(638,5)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(638,5)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(638,5)
+<Remainder, Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(643,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(644,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(658,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(659,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(676,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(677,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(704,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(705,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: GreenFuncN(const int, int *, int *, const double, int *, const int *, int *, const int *, double *, int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at locgrn.c(196,9)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at locgrn.c(196,9)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at locgrn.c(212,7)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at locgrn.c(212,7)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at locgrn.c(224,9)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at locgrn.c(224,9)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(251,7)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(251,7)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(251,7)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(251,7)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: calculateNewPfMN_child(const int, const int, const int *, const int *, const int *, double *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at locgrn.c(305,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at locgrn.c(310,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at locgrn.c(310,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at locgrn.c(310,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at locgrn.c(317,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at locgrn.c(320,5)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at locgrn.c(323,7)
+         remark #25460: No loop optimizations reported
+
+         LOOP BEGIN at locgrn.c(326,9)
+         <Peeled loop for vectorization>
+         LOOP END
+
+         LOOP BEGIN at locgrn.c(326,9)
+            remark #15300: LOOP WAS VECTORIZED
+         LOOP END
+
+         LOOP BEGIN at locgrn.c(326,9)
+         <Remainder loop for vectorization>
+            remark #15301: REMAINDER LOOP WAS VECTORIZED
+         LOOP END
+
+         LOOP BEGIN at locgrn.c(326,9)
+         <Remainder loop for vectorization>
+         LOOP END
+      LOOP END
+   LOOP END
+LOOP END
+
+LOOP BEGIN at locgrn.c(336,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at locgrn.c(339,5)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at locgrn.c(342,7)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at locgrn.c(342,7)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at locgrn.c(342,7)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at locgrn.c(342,7)
+      <Remainder loop for vectorization>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at locgrn.c(339,5)
+   <Remainder>
+
+      LOOP BEGIN at locgrn.c(342,7)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at locgrn.c(342,7)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at locgrn.c(342,7)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at locgrn.c(342,7)
+      <Remainder loop for vectorization>
+      LOOP END
+   LOOP END
+LOOP END
+
+LOOP BEGIN at locgrn.c(350,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at locgrn.c(353,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at locgrn.c(353,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at locgrn.c(353,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at locgrn.c(353,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at locgrn.c(359,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at locgrn.c(361,5)
+   <Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at locgrn.c(361,5)
+   <Remainder, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at locgrn.c(361,5)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at locgrn.c(361,5)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: calculateMAll_child(const int *, const int, const int, const int, double *, int *, double *, int)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at matrix.c(122,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at matrix.c(127,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at matrix.c(127,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at matrix.c(127,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at matrix.c(137,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at matrix.c(137,3)
+   <Peeled loop for vectorization, Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at matrix.c(137,3)
+   <Multiversioned v2>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at matrix.c(137,3)
+   <Remainder loop for vectorization, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at matrix.c(161,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at matrix.c(165,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at matrix.c(165,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at matrix.c(165,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at matrix.c(165,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: CalculateHamiltonian(const double, int *, const int *, int *, const int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(135,5) inlined into calham.c(28,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at workspace.c(168,5) inlined into calham.c(29,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at calham.c(52,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(59,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(67,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(79,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(94,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(104,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(115,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(31,1)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(155,3) inlined into calham.c(135,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into calham.c(136,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(155,3) inlined into calham.c(135,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at calham.c(41,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at calham.c(43,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at calham.c(53,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(53,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(53,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(60,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(60,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(60,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(68,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(68,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(68,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(79,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at calham.c(80,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at calham.c(94,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at calham.c(95,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at calham.c(104,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at calham.c(105,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at calham.c(115,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at calham.c(116,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: GreenFunc2(const int, const int, const int, const int, const int, const int, const double, int *, const int *, int *, const int *, int *, double *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(129,7)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(129,7)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(129,7)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(129,7)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at pfupdate.c(37,3) inlined into locgrn.c(132,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into locgrn.c(132,3)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into locgrn.c(132,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into locgrn.c(132,3)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into locgrn.c(132,3)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into locgrn.c(132,3)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into locgrn.c(132,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into locgrn.c(132,3)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into locgrn.c(132,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(45,3) inlined into locgrn.c(132,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate_two.c(123,3) inlined into locgrn.c(132,3)
+   <Peeled loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(123,3) inlined into locgrn.c(132,3)
+   <Multiversioned v1>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(123,3) inlined into locgrn.c(132,3)
+   <Remainder loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(123,3) inlined into locgrn.c(132,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(138,3) inlined into locgrn.c(132,3)
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into locgrn.c(132,3)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into locgrn.c(132,3)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into locgrn.c(132,3)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into locgrn.c(132,3)
+      <Remainder loop for vectorization>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(151,3) inlined into locgrn.c(132,3)
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: GreenFunc1(const int, const int, const int, const double, int *, const int *, int *, const int *, int *, double *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(44,7)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(44,7)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(44,7)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3) inlined into locgrn.c(44,7)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at pfupdate.c(37,3) inlined into locgrn.c(47,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into locgrn.c(47,3)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into locgrn.c(47,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into locgrn.c(47,3)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into locgrn.c(47,3)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into locgrn.c(47,3)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into locgrn.c(47,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into locgrn.c(47,3)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into locgrn.c(47,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(91,3) inlined into locgrn.c(48,8)
+   remark #25460: No loop optimizations reported
+LOOP END
+===========================================================================
+
+Begin optimization report for: CalculateGreenFunc(const double, const double, int *, int *, int *, int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(135,5) inlined into calgrn.c(21,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at workspace.c(168,5) inlined into calgrn.c(22,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at calgrn.c(40,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calgrn.c(53,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calgrn.c(69,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calgrn.c(77,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calgrn.c(24,1)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(155,3) inlined into calgrn.c(89,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into calgrn.c(90,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(155,3) inlined into calgrn.c(89,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at calgrn.c(33,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at calgrn.c(35,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at calgrn.c(40,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at calgrn.c(41,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at calgrn.c(53,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at calgrn.c(54,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at calgrn.c(70,5)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at calgrn.c(70,5)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calgrn.c(70,5)
+<Remainder loop for vectorization, Multiversioned v1>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calgrn.c(70,5)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at calgrn.c(70,5)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at calgrn.c(70,5)
+<Remainder, Multiversioned v2>
+LOOP END
+===========================================================================
+
+Begin optimization report for: SlaterElmDiff(double *, const double, int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at slater.c(104,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at slater.c(138,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at slater.c(102,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at slater.c(102,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at slater.c(102,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at slater.c(191,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at slater.c(191,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at slater.c(191,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at slater.c(195,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at slater.c(198,5)
+   <Peeled loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at slater.c(198,5)
+   <Multiversioned v1>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at slater.c(198,5)
+   <Remainder loop for vectorization, Multiversioned v1>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at slater.c(198,5)
+   <Remainder loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at slater.c(198,5)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at slater.c(198,5)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at slater.c(202,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at slater.c(202,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at slater.c(202,3)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at slater.c(202,3)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at slater.c(143,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at slater.c(157,5)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at slater.c(161,7)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at slater.c(161,7)
+      <Remainder>
+      LOOP END
+
+      LOOP BEGIN at slater.c(166,7)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at slater.c(166,7)
+      <Remainder>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at slater.c(173,5)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at slater.c(177,7)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at slater.c(177,7)
+      <Remainder>
+      LOOP END
+
+      LOOP BEGIN at slater.c(182,7)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at slater.c(182,7)
+      <Remainder>
+      LOOP END
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: VMCMakeSample(MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at pfupdate.c(74,3) inlined into vmcmake.c(100,9)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at workspace.c(168,5) inlined into vmcmake.c(116,13)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at pfupdate.c(112,5) inlined into vmcmake.c(116,13)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at pfupdate.c(107,3) inlined into vmcmake.c(116,13)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at vmcmake.c(283,3) inlined into vmcmake.c(56,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(283,3) inlined into vmcmake.c(56,5)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(283,3) inlined into vmcmake.c(56,5)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmcmake.c(75,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at vmcmake.c(77,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(78,5)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at vmcmake.c(372,3) inlined into vmcmake.c(87,9)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at vmcmake.c(379,3) inlined into vmcmake.c(87,9)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at qp.c(72,3) inlined into vmcmake.c(106,20)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at projection.c(28,3) inlined into vmcmake.c(110,13)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at projection.c(28,3) inlined into vmcmake.c(110,13)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at projection.c(28,3) inlined into vmcmake.c(110,13)
+      <Remainder loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at workspace.c(188,3) inlined into vmcmake.c(116,13)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at workspace.c(188,3) inlined into vmcmake.c(116,13)
+      <Remainder>
+      LOOP END
+
+      LOOP BEGIN at vmcmake.c(118,11)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at vmcmake.c(404,3) inlined into vmcmake.c(132,9)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at vmcmake.c(410,3) inlined into vmcmake.c(132,9)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at vmcmake.c(422,5) inlined into vmcmake.c(132,9)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at qp.c(72,3) inlined into vmcmake.c(160,20)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at projection.c(28,3) inlined into vmcmake.c(165,13)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at projection.c(28,3) inlined into vmcmake.c(165,13)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at projection.c(28,3) inlined into vmcmake.c(165,13)
+      <Remainder loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at vmcmake.c(173,11)
+         remark #25460: No loop optimizations reported
+      LOOP END
+
+      LOOP BEGIN at qp.c(72,3) inlined into vmcmake.c(190,20)
+         remark #25460: No loop optimizations reported
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(306,3) inlined into vmcmake.c(200,7)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at vmcmake.c(306,3) inlined into vmcmake.c(200,7)
+      <Multiversioned v2>
+      LOOP END
+
+      LOOP BEGIN at vmcmake.c(306,3) inlined into vmcmake.c(200,7)
+      <Remainder, Multiversioned v2>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(309,3) inlined into vmcmake.c(200,7)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at vmcmake.c(309,3) inlined into vmcmake.c(200,7)
+      <Multiversioned v2>
+      LOOP END
+
+      LOOP BEGIN at vmcmake.c(309,3) inlined into vmcmake.c(200,7)
+      <Remainder, Multiversioned v2>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(311,3) inlined into vmcmake.c(200,7)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at vmcmake.c(311,3) inlined into vmcmake.c(200,7)
+      <Multiversioned v2>
+      LOOP END
+
+      LOOP BEGIN at vmcmake.c(311,3) inlined into vmcmake.c(200,7)
+      <Remainder, Multiversioned v2>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(314,3) inlined into vmcmake.c(200,7)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at vmcmake.c(314,3) inlined into vmcmake.c(200,7)
+      <Multiversioned v2>
+      LOOP END
+
+      LOOP BEGIN at vmcmake.c(314,3) inlined into vmcmake.c(200,7)
+      <Remainder, Multiversioned v2>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at projection.c(19,3) inlined into vmcmake.c(200,7)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at projection.c(19,3) inlined into vmcmake.c(200,7)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at projection.c(19,3) inlined into vmcmake.c(200,7)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at projection.c(19,3) inlined into vmcmake.c(200,7)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmcmake.c(292,3) inlined into vmcmake.c(206,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(292,3) inlined into vmcmake.c(206,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(292,3) inlined into vmcmake.c(206,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate.c(77,3) inlined into vmcmake.c(100,9)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(82,5) inlined into vmcmake.c(100,9)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(82,5) inlined into vmcmake.c(100,9)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(82,5) inlined into vmcmake.c(100,9)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(82,5) inlined into vmcmake.c(100,9)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5) inlined into vmcmake.c(100,9)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5) inlined into vmcmake.c(100,9)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5) inlined into vmcmake.c(100,9)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5) inlined into vmcmake.c(100,9)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: updateMAll_child(const int, const int, const int *, const int, const int, const int, double *, double *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at pfupdate.c(148,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(148,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(148,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate.c(153,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(158,5)
+   <Peeled loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(158,5)
+   <Multiversioned v1>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(158,5)
+   <Remainder loop for vectorization, Multiversioned v1>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(158,5)
+   <Remainder loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(158,5)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(158,5)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate.c(171,3)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at pfupdate.c(171,3)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at pfupdate.c(171,3)
+<Remainder loop for vectorization, Multiversioned v1>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at pfupdate.c(171,3)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at pfupdate.c(171,3)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at pfupdate.c(171,3)
+<Remainder, Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at pfupdate.c(177,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(182,5)
+   <Peeled loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(182,5)
+   <Multiversioned v1>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(182,5)
+   <Remainder loop for vectorization, Multiversioned v1>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(182,5)
+   <Remainder loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(182,5)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(182,5)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate.c(190,3)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at pfupdate.c(190,3)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at pfupdate.c(190,3)
+<Remainder loop for vectorization, Multiversioned v1>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at pfupdate.c(190,3)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at pfupdate.c(190,3)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at pfupdate.c(190,3)
+<Remainder, Multiversioned v2>
+LOOP END
+===========================================================================
+
+Begin optimization report for: CalculateNewPfMTwo2(const int, const int, const int, const int, double *, const int *, const int, const int)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at pfupdate.c(74,3) inlined into pfupdate_two.c(68,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at workspace.c(168,5) inlined into pfupdate_two.c(72,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at pfupdate_two.c(78,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at pfupdate_two.c(73,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(188,3) inlined into pfupdate_two.c(87,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into pfupdate_two.c(87,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at pfupdate.c(77,3) inlined into pfupdate_two.c(68,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(82,5) inlined into pfupdate_two.c(68,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(82,5) inlined into pfupdate_two.c(68,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(82,5) inlined into pfupdate_two.c(68,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(82,5) inlined into pfupdate_two.c(68,5)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5) inlined into pfupdate_two.c(68,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5) inlined into pfupdate_two.c(68,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5) inlined into pfupdate_two.c(68,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5) inlined into pfupdate_two.c(68,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(80,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate_two.c(123,3) inlined into pfupdate_two.c(82,7)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(138,3) inlined into pfupdate_two.c(82,7)
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into pfupdate_two.c(82,7)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into pfupdate_two.c(82,7)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into pfupdate_two.c(82,7)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into pfupdate_two.c(82,7)
+      <Remainder loop for vectorization>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(151,3) inlined into pfupdate_two.c(82,7)
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: UpdateMAllTwo(const int, const int, const int, const int, const int, const int, const int *, const int, const int)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(168,5) inlined into pfupdate_two.c(179,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at pfupdate_two.c(187,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at pfupdate_two.c(180,1)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(188,3) inlined into pfupdate_two.c(196,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into pfupdate_two.c(196,3)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: updateMAllTwo_child(const int, const int, const int, const int, const int, const int, const int *, const int, const int, const int, double *, double *, double *, double *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at pfupdate_two.c(234,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(248,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate_two.c(250,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(250,5)
+   <Remainder>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(259,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(259,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(259,3)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(259,3)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(280,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(280,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(287,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate_two.c(294,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(312,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+===========================================================================
+
+Begin optimization report for: UpdateProjCnt(const int, const int, const int, int *, const int *, const int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at projection.c(197,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at projection.c(222,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at projection.c(155,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at projection.c(155,5)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at projection.c(155,5)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at projection.c(173,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at projection.c(173,5)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at projection.c(173,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at projection.c(173,5)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at projection.c(181,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at projection.c(181,5)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at projection.c(181,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at projection.c(181,5)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at projection.c(193,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at projection.c(193,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at projection.c(193,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at projection.c(198,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at projection.c(200,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at projection.c(223,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at projection.c(225,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: CalculateMAll(const int *, const int, const int)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(135,5) inlined into matrix.c(67,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at workspace.c(168,5) inlined into matrix.c(68,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at matrix.c(76,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at matrix.c(69,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(155,3) inlined into matrix.c(90,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into matrix.c(91,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(155,3) inlined into matrix.c(90,3)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: VMCParaOpt(MPI_Comm, MPI_Comm, MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at slater.c(20,3) inlined into vmcmain.c(258,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(63,5) inlined into vmcmain.c(269,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(69,5) inlined into vmcmain.c(269,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at qp.c(106,5) inlined into vmcmain.c(259,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at qp.c(109,7) inlined into vmcmain.c(259,5)
+   <Peeled loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7) inlined into vmcmain.c(259,5)
+   <Multiversioned v1>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7) inlined into vmcmain.c(259,5)
+   <Remainder loop for vectorization, Multiversioned v1>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7) inlined into vmcmain.c(259,5)
+   <Remainder loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7) inlined into vmcmain.c(259,5)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7) inlined into vmcmain.c(259,5)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(114,5) inlined into vmcmain.c(259,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at qp.c(114,5) inlined into vmcmain.c(259,5)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at qp.c(114,5) inlined into vmcmain.c(259,5)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmcmake.c(358,5) inlined into vmcmain.c(270,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at avevar.c(17,3) inlined into vmcmain.c(290,7)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at avevar.c(17,3) inlined into vmcmain.c(290,7)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at avevar.c(17,3) inlined into vmcmain.c(290,7)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at avevar.c(37,5) inlined into vmcmain.c(299,15)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at avevar.c(39,7) inlined into vmcmain.c(299,15)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at avevar.c(39,7) inlined into vmcmain.c(299,15)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at avevar.c(39,7) inlined into vmcmain.c(299,15)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at avevar.c(45,7) inlined into vmcmain.c(299,15)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at avevar.c(45,7) inlined into vmcmain.c(299,15)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at avevar.c(45,7) inlined into vmcmain.c(299,15)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at average.c(71,5) inlined into vmcmain.c(269,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(71,5) inlined into vmcmain.c(269,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(71,5) inlined into vmcmain.c(269,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(65,5) inlined into vmcmain.c(269,5)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(65,5) inlined into vmcmain.c(269,5)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(65,5) inlined into vmcmain.c(269,5)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(65,5) inlined into vmcmain.c(269,5)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(65,5) inlined into vmcmain.c(269,5)
+<Remainder, Multiversioned v2>
+LOOP END
+===========================================================================
+
+Begin optimization report for: SyncModifiedParameter(MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at parameter.c(94,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at parameter.c(104,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at parameter.c(144,3) inlined into parameter.c(82,33)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(144,3) inlined into parameter.c(82,33)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(144,3) inlined into parameter.c(82,33)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(169,3) inlined into parameter.c(83,33)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(169,3) inlined into parameter.c(83,33)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(169,3) inlined into parameter.c(83,33)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(84,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(84,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(84,3)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(84,3)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(121,3) inlined into parameter.c(87,22)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(121,3) inlined into parameter.c(87,22)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(121,3) inlined into parameter.c(87,22)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(121,3) inlined into parameter.c(87,22)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(126,3) inlined into parameter.c(87,22)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(126,3) inlined into parameter.c(87,22)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(126,3) inlined into parameter.c(87,22)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(126,3) inlined into parameter.c(87,22)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(90,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(90,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(90,3)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(90,3)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(100,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(100,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(100,5)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(100,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(95,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(95,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(95,3)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(105,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(105,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(105,5)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: StochasticOpt(MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at stcopt_pdposv.c(71,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(146,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at stcopt_pdposv.c(82,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(82,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(82,3)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(82,3)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(90,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(90,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(105,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at stcopt_pdposv.c(105,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at stcopt_pdposv.c(105,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(122,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(122,5)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(73,3)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(73,3)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(73,3)
+<Remainder loop for vectorization, Multiversioned v1>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(73,3)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(73,3)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(73,3)
+<Remainder, Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(149,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(149,5)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: stcOptMain(double *, const int, const int *, MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at stcopt_pdposv.c(247,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(253,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(261,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(279,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(316,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at stcopt_pdposv.c(312,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at stcopt_pdposv.c(312,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at stcopt_pdposv.c(312,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(263,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at stcopt_pdposv.c(265,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at stcopt_pdposv.c(265,5)
+   <Remainder>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(282,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(282,5)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(319,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(319,5)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: RequestWorkSpaceThreadInt(int)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(135,5)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+===========================================================================
+
+Begin optimization report for: ReleaseWorkSpaceThreadInt()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(155,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at workspace.c(155,3)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: RequestWorkSpaceThreadDouble(int)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(168,5)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+===========================================================================
+
+Begin optimization report for: ReleaseWorkSpaceThreadDouble()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(188,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: StochasticOptDiag(MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at stcopt_pdposv.c(392,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at stcopt_pdposv.c(366,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(366,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(376,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at stcopt_pdposv.c(376,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at stcopt_pdposv.c(376,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(395,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(395,5)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: stcOptMainDiag(double *const, const int, int *const, MPI_Comm, const int)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at stcopt_pdposv.c(522,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(528,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(532,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(540,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(557,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(622,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at stcopt_pdposv.c(650,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at stcopt_pdposv.c(604,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(646,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(646,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(665,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(665,5)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(542,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at stcopt_pdposv.c(544,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at stcopt_pdposv.c(544,5)
+   <Remainder>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(560,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(560,5)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(623,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(623,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(653,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at stcopt_pdposv.c(653,5)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: GaussLeg(const double, const double, double *, double *, const int)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at gauleg.c(18,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+===========================================================================
+
+Begin optimization report for: StoreOptData(int)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at avevar.c(17,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at avevar.c(17,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at avevar.c(17,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: OutputOptData()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at avevar.c(37,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at avevar.c(39,7)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at avevar.c(39,7)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at avevar.c(39,7)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at avevar.c(45,7)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at avevar.c(45,7)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at avevar.c(45,7)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: WeightAverageSROpt(MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at average.c(63,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(69,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at average.c(71,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(71,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(71,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(65,5)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(65,5)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(65,5)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(65,5)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(65,5)
+<Remainder, Multiversioned v2>
+LOOP END
+===========================================================================
+
+Begin optimization report for: WeightAverageGreenFunc(MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at average.c(120,7) inlined into average.c(88,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(127,5) inlined into average.c(88,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(120,7) inlined into average.c(94,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(127,5) inlined into average.c(94,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(120,7) inlined into average.c(100,7)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(127,5) inlined into average.c(100,7)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at average.c(129,5) inlined into average.c(88,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into average.c(88,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into average.c(88,3)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(88,3)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(88,3)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(88,3)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(88,3)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(88,3)
+<Remainder, Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into average.c(94,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into average.c(94,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into average.c(94,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(94,5)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(94,5)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(94,5)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(94,5)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(94,5)
+<Remainder, Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into average.c(100,7)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into average.c(100,7)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(129,5) inlined into average.c(100,7)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(100,7)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(100,7)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(100,7)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(100,7)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(122,7) inlined into average.c(100,7)
+<Remainder, Multiversioned v2>
+LOOP END
+===========================================================================
+
+Begin optimization report for: weightAverageReduce(int, double *, MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at average.c(120,7)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at average.c(127,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at average.c(129,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(129,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(129,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at average.c(122,7)
+<Peeled loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7)
+<Multiversioned v1>
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at average.c(122,7)
+<Remainder loop for vectorization, Multiversioned v1>
+LOOP END
+
+LOOP BEGIN at average.c(122,7)
+<Multiversioned v2>
+LOOP END
+
+LOOP BEGIN at average.c(122,7)
+<Remainder, Multiversioned v2>
+LOOP END
+===========================================================================
+
+Begin optimization report for: shiftGJ()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at parameter.c(121,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(121,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(121,3)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(121,3)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(126,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(126,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(126,3)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(126,3)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: shiftDH2()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at parameter.c(144,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(144,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(144,3)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: shiftDH4()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at parameter.c(169,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at parameter.c(169,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at parameter.c(169,3)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: LogProjVal(const int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at projection.c(19,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at projection.c(19,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(19,3)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(19,3)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: LogProjRatio(const int *, const int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at projection.c(28,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at projection.c(28,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(28,3)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(28,3)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: ProjRatio(const int *, const int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at projection.c(37,3)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at projection.c(37,3)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(37,3)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: UpdateSlaterElm()
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at slater.c(20,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+===========================================================================
+
+Begin optimization report for: UpdateQPWeight()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at qp.c(106,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at qp.c(109,7)
+   <Peeled loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7)
+   <Multiversioned v1>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7)
+   <Remainder loop for vectorization, Multiversioned v1>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7)
+   <Remainder loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(114,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at qp.c(114,5)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at qp.c(114,5)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: CalculateNewPfM(const int, const int, double *, const int *, const int, const int)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at pfupdate.c(37,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(42,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: CalculateNewPfM2(const int, const int, double *, const int *, const int, const int)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at pfupdate.c(74,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at pfupdate.c(77,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(82,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(82,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(82,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(82,5)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(87,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: UpdateMAll(const int, const int, const int *, const int, const int)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(168,5) inlined into pfupdate.c(106,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at pfupdate.c(112,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at pfupdate.c(107,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(188,3) inlined into pfupdate.c(120,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into pfupdate.c(120,3)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: CalculateNewPfMTwo(const int, const int, const int, const int, double *, const int *, const int, const int, double *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at pfupdate_two.c(45,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate_two.c(123,3) inlined into pfupdate_two.c(47,5)
+   <Peeled loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(123,3) inlined into pfupdate_two.c(47,5)
+   <Multiversioned v1>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(123,3) inlined into pfupdate_two.c(47,5)
+   <Remainder loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(123,3) inlined into pfupdate_two.c(47,5)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(138,3) inlined into pfupdate_two.c(47,5)
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into pfupdate_two.c(47,5)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into pfupdate_two.c(47,5)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into pfupdate_two.c(47,5)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate_two.c(154,5) inlined into pfupdate_two.c(47,5)
+      <Remainder loop for vectorization>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(151,3) inlined into pfupdate_two.c(47,5)
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate.c(37,3) inlined into pfupdate_two.c(42,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into pfupdate_two.c(42,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into pfupdate_two.c(42,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into pfupdate_two.c(42,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into pfupdate_two.c(42,5)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into pfupdate_two.c(42,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into pfupdate_two.c(42,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into pfupdate_two.c(42,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into pfupdate_two.c(42,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: calculateNewPfMTwo_child(const int, const int, const int, const int, double *, const int *, const int, const int, const int, double *, double *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at pfupdate_two.c(123,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(138,3)
+
+   LOOP BEGIN at pfupdate_two.c(154,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(154,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(154,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate_two.c(154,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at pfupdate_two.c(151,3)
+LOOP END
+===========================================================================
+
+Begin optimization report for: CalculateHamiltonian0(const int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at calham.c(156,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(163,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(171,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(150,1)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at calham.c(157,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(157,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(157,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(164,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(164,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(164,5)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(172,5)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(172,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(172,5)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: CalculateHamiltonian1(const double, int *, const int *, int *, const int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(135,5) inlined into calham.c(198,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at workspace.c(168,5) inlined into calham.c(199,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at calham.c(218,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(201,1)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(155,3) inlined into calham.c(233,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into calham.c(234,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(155,3) inlined into calham.c(233,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at calham.c(211,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at calham.c(213,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at calham.c(218,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at calham.c(219,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: CalculateHamiltonian2(const double, int *, const int *, int *, const int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at workspace.c(135,5) inlined into calham.c(250,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at workspace.c(168,5) inlined into calham.c(251,3)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at calham.c(270,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(281,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(294,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(253,1)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(155,3) inlined into calham.c(312,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(188,3) inlined into calham.c(313,3)
+LOOP END
+
+LOOP BEGIN at workspace.c(155,3) inlined into calham.c(312,3)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at calham.c(263,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at calham.c(265,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at calham.c(270,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at calham.c(271,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at calham.c(281,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at calham.c(282,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at calham.c(294,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at calham.c(295,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: LSLocalQ(const double, const double, int *, int *, int *, int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at calham.c(156,5) inlined into lslocgrn.c(50,8)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(163,5) inlined into lslocgrn.c(50,8)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(171,5) inlined into lslocgrn.c(50,8)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at calham.c(150,1) inlined into lslocgrn.c(50,8)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at lslocgrn.c(96,3) inlined into lslocgrn.c(53,9)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(37,3) inlined into lslocgrn.c(53,9)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(53,9)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(53,9)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(53,9)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(53,9)
+      <Remainder loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(53,9)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(53,9)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(53,9)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(53,9)
+      <Remainder loop for vectorization>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at qp.c(91,3) inlined into lslocgrn.c(53,9)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into lslocgrn.c(50,8)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into lslocgrn.c(50,8)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(157,5) inlined into lslocgrn.c(50,8)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into lslocgrn.c(50,8)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into lslocgrn.c(50,8)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(164,5) inlined into lslocgrn.c(50,8)
+<Remainder loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into lslocgrn.c(50,8)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into lslocgrn.c(50,8)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at calham.c(172,5) inlined into lslocgrn.c(50,8)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: LSLocalCisAjs(const double, const double, int *, int *, int *, int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at lslocgrn.c(76,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(76,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(76,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(80,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(37,3) inlined into lslocgrn.c(87,30)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(87,30)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(87,30)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(87,30)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(87,30)
+      <Remainder loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(87,30)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(87,30)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(87,30)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(87,30)
+      <Remainder loop for vectorization>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at qp.c(91,3) inlined into lslocgrn.c(87,30)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: calculateHK(const double, const double, int *, int *, int *, int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at lslocgrn.c(96,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(37,3) inlined into lslocgrn.c(102,32)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(102,32)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(102,32)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(102,32)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(102,32)
+      <Remainder loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(102,32)
+      <Peeled loop for vectorization>
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(102,32)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(102,32)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(102,32)
+      <Remainder loop for vectorization>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at qp.c(91,3) inlined into lslocgrn.c(102,32)
+      remark #25460: No loop optimizations reported
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: calHCA(const int, const int, const int, const double, const double, int *, int *, int *, int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at pfupdate.c(37,3) inlined into lslocgrn.c(167,7)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(167,7)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(167,7)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(167,7)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(42,5) inlined into lslocgrn.c(167,7)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(167,7)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(167,7)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(167,7)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at pfupdate.c(46,5) inlined into lslocgrn.c(167,7)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(91,3) inlined into lslocgrn.c(167,7)
+   remark #25460: No loop optimizations reported
+LOOP END
+===========================================================================
+
+Begin optimization report for: copyMAll(double *, double *, double *, double *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at lslocgrn.c(737,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(737,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(737,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at lslocgrn.c(741,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at lslocgrn.c(741,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at lslocgrn.c(741,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: copyFromBurnSample(int *, int *, int *, int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at vmcmake.c(283,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(283,3)
+   <Peeled loop for vectorization, Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(283,3)
+   <Multiversioned v2>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(283,3)
+   <Remainder loop for vectorization, Multiversioned v2>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: copyToBurnSample(const int *, const int *, const int *, const int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at vmcmake.c(292,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(292,3)
+   <Peeled loop for vectorization, Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(292,3)
+   <Multiversioned v2>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(292,3)
+   <Remainder loop for vectorization, Multiversioned v2>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: saveEleConfig(const int, const double, const int *, const int *, const int *, const int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at vmcmake.c(306,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(306,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(306,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmcmake.c(309,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(309,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(309,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmcmake.c(311,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(311,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(311,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmcmake.c(314,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(314,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(314,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at projection.c(19,3) inlined into vmcmake.c(317,7)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at projection.c(19,3) inlined into vmcmake.c(317,7)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(19,3) inlined into vmcmake.c(317,7)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at projection.c(19,3) inlined into vmcmake.c(317,7)
+<Remainder loop for vectorization>
+LOOP END
+===========================================================================
+
+Begin optimization report for: ReduceCounter(MPI_Comm)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at vmcmake.c(358,5)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+===========================================================================
+
+Begin optimization report for: clearPhysQuantity()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at vmccal.c(161,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmccal.c(161,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(161,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmccal.c(166,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmccal.c(166,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(166,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmccal.c(171,7)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at vmccal.c(177,9)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmccal.c(177,9)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(177,9)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: calculateOptTransDiff(double *, const double)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at vmccal.c(189,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmccal.c(192,5)
+   <Peeled loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(192,5)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(192,5)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at vmccal.c(192,5)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: calculateQQQQ(double *, const double *, const double, const int)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at vmccal.c(255,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+===========================================================================
+
+Begin optimization report for: calculateQCAQ(double *, const double *, const double *, const double, const int, const int)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at vmccal.c(275,1)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+===========================================================================
+
+Begin optimization report for: calculateQCACAQ(double *, const double *, const double, const int, const int, const int, int **)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at vmccal.c(295,1)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+===========================================================================
+
+Begin optimization report for: MakeProjCnt(int *, const int *)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at projection.c(82,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at projection.c(108,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at projection.c(56,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at projection.c(56,3)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at projection.c(56,3)
+   <Remainder loop for vectorization>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at projection.c(60,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at projection.c(60,5)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at projection.c(68,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at projection.c(71,7)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at projection.c(71,7)
+   <Remainder>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: makeInitialSample(int *, int *, int *, int *, const int, const int, MPI_Comm)
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at vmcmake.c(222,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at vmcmake.c(224,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at vmcmake.c(253,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at workspace.c(135,5) inlined into vmcmake.c(262,12)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at workspace.c(168,5) inlined into vmcmake.c(262,12)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+OpenMP Construct at matrix.c(76,5) inlined into vmcmake.c(262,12)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at matrix.c(69,3) inlined into vmcmake.c(262,12)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at vmcmake.c(218,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(228,5)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at vmcmake.c(229,7)
+         remark #25460: No loop optimizations reported
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(240,5)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at vmcmake.c(241,7)
+         remark #25460: No loop optimizations reported
+
+         LOOP BEGIN at vmcmake.c(242,9)
+            remark #25460: No loop optimizations reported
+         LOOP END
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at workspace.c(155,3) inlined into vmcmake.c(262,12)
+   LOOP END
+
+   LOOP BEGIN at workspace.c(188,3) inlined into vmcmake.c(262,12)
+   LOOP END
+
+   LOOP BEGIN at workspace.c(155,3) inlined into vmcmake.c(262,12)
+   <Remainder>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmcmake.c(223,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(223,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(223,5)
+   <Remainder>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmcmake.c(225,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at vmcmake.c(225,5)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at vmcmake.c(225,5)
+   <Remainder>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at vmcmake.c(255,5)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at vmcmake.c(255,5)
+<Remainder>
+LOOP END
+
+LOOP BEGIN at matrix.c(77,5) inlined into vmcmake.c(262,12)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at matrix.c(122,3) inlined into vmcmake.c(262,12)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at matrix.c(127,5) inlined into vmcmake.c(262,12)
+         remark #25460: No loop optimizations reported
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at matrix.c(137,3) inlined into vmcmake.c(262,12)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at matrix.c(137,3) inlined into vmcmake.c(262,12)
+      <Multiversioned v2>
+      LOOP END
+
+      LOOP BEGIN at matrix.c(137,3) inlined into vmcmake.c(262,12)
+      <Remainder, Multiversioned v2>
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at matrix.c(161,3) inlined into vmcmake.c(262,12)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at matrix.c(165,5) inlined into vmcmake.c(262,12)
+      <Peeled loop for vectorization, Multiversioned v1>
+      LOOP END
+
+      LOOP BEGIN at matrix.c(165,5) inlined into vmcmake.c(262,12)
+      <Multiversioned v1>
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at matrix.c(165,5) inlined into vmcmake.c(262,12)
+      <Remainder loop for vectorization, Multiversioned v1>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at matrix.c(165,5) inlined into vmcmake.c(262,12)
+      <Remainder loop for vectorization, Multiversioned v1>
+      LOOP END
+
+      LOOP BEGIN at matrix.c(165,5) inlined into vmcmake.c(262,12)
+      <Multiversioned v2>
+      LOOP END
+
+      LOOP BEGIN at matrix.c(165,5) inlined into vmcmake.c(262,12)
+      <Remainder, Multiversioned v2>
+      LOOP END
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: InitQPWeight()
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at gauleg.c(18,3) inlined into qp.c(39,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+OpenMP Construct at qp.c(40,5)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at qp.c(33,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at qp.c(33,5)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at qp.c(33,5)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(106,5) inlined into qp.c(58,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at qp.c(109,7) inlined into qp.c(58,3)
+   <Peeled loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7) inlined into qp.c(58,3)
+   <Multiversioned v1>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7) inlined into qp.c(58,3)
+   <Remainder loop for vectorization, Multiversioned v1>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7) inlined into qp.c(58,3)
+   <Remainder loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7) inlined into qp.c(58,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at qp.c(109,7) inlined into qp.c(58,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(114,5) inlined into qp.c(58,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at qp.c(114,5) inlined into qp.c(58,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at qp.c(114,5) inlined into qp.c(58,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at qp.c(41,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at legendrepoly.c(16,5) inlined into qp.c(49,38)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at qp.c(50,7)
+   <Peeled loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at qp.c(50,7)
+   <Multiversioned v1>
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at qp.c(50,7)
+   <Remainder loop for vectorization, Multiversioned v1>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at qp.c(50,7)
+   <Remainder loop for vectorization, Multiversioned v1>
+   LOOP END
+
+   LOOP BEGIN at qp.c(50,7)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at qp.c(50,7)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: ReadInitParameter(char *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at parameter.c(49,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at parameter.c(51,7)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at parameter.c(54,7)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at parameter.c(57,7)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at parameter.c(50,7)
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: InitParameter()
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at parameter.c(22,3)
+remark #16200: OpenMP DEFINED LOOP WAS PARALLELIZED
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at parameter.c(34,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at parameter.c(34,3)
+   <Multiversioned v2>
+   LOOP END
+
+   LOOP BEGIN at parameter.c(34,3)
+   <Remainder, Multiversioned v2>
+   LOOP END
+LOOP END
+
+LOOP BEGIN at parameter.c(23,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at parameter.c(23,3)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at parameter.c(23,3)
+   <Remainder>
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: initializeWorkSpaceAll()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at workspace.c(60,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at workspace.c(60,3)
+<Remainder>
+LOOP END
+===========================================================================
+
+Begin optimization report for: InitTimer()
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at time.c(33,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+
+LOOP BEGIN at time.c(34,3)
+   remark #25460: No loop optimizations reported
+LOOP END
+===========================================================================

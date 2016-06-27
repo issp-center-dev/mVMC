@@ -8,8 +8,10 @@
 void VMCMainCal(MPI_Comm comm);
 void clearPhysQuantity();
 void calculateOptTransDiff(double complex *srOptO, const double complex ipAll);
+void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+                 const double complex w, const double complex e, const int srOptSize);
 void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
-                 const double w, const double complex e, const int srOptSize);
+                 const double  w, const double complex e, const int srOptSize);
 void calculateOO_Store(double complex *srOptOO, double complex *srOptHO,  double complex *srOptO,
                  const double w, const double complex e,  int srOptSize, int sampleSize);
 void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam);
@@ -48,6 +50,11 @@ void VMCMainCal(MPI_Comm comm) {
     eleCfg = EleCfg + sample*Nsite2;
     eleNum = EleNum + sample*Nsite2;
     eleProjCnt = EleProjCnt + sample*NProj;
+//DEBUG
+   // for(i=0;i<Nsite;i++) {
+   //   printf("sample=%d: i=%d  up=%d down =%d \n",sample,i,eleCfg[i+0*Nsite],eleCfg[i+1*Nsite]);
+   // }
+//DEBUG
 
     StartTimer(40);
     info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd);
@@ -59,7 +66,7 @@ void VMCMainCal(MPI_Comm comm) {
     }
 
     ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
-   // printf("DEBUG:  ip= %lf %lf\n",creal(ip),cimag(ip));
+    //printf("DEBUG: sample=%d ip= %lf %lf\n",sample,creal(ip),cimag(ip));
     x = LogProjVal(eleProjCnt);
     /* calculate reweight */
     //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
@@ -72,7 +79,7 @@ void VMCMainCal(MPI_Comm comm) {
     StartTimer(41);
     /* calculate energy */
     e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-    //printf("DEBUG:  e= %lf %lf\n",creal(e),cimag(e));
+    //printf("DEBUG: sample=%d e= %lf %lf\n",sample,creal(e),cimag(e));
     StopTimer(41);
     if( !isfinite(e) ) {
       fprintf(stderr,"waring: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
@@ -85,8 +92,8 @@ void VMCMainCal(MPI_Comm comm) {
 
     if(NVMCCalMode==0) {
       /* Calculate O for correlation fauctors */
-      SROptO[0] = 1.0+0.0*I;//   real 
-      SROptO[1] = 0.0+0.0*I;//   real 
+      srOptO[0] = 1.0+0.0*I;//   real 
+      srOptO[1] = 0.0+0.0*I;//   real 
       #pragma loop noalias
       for(i=0;i<nProj;i++){ 
         srOptO[(i+1)*2]     = (double)(eleProjCnt[i]); // even real
@@ -96,10 +103,6 @@ void VMCMainCal(MPI_Comm comm) {
       StartTimer(42);
       /* SlaterElmDiff */
       SlaterElmDiff_fcmp(SROptO+2*NProj+2,ip,eleIdx); //TBC
-      //printf("DEBUG:  NPara=%d NProj=%d NSlater=%d \n",NPara,NProj,NSlater);
-      //for(i=0;i<NPara+1;i++){ 
-      //  printf("DEBUG:  i=%d %lf %lf\n",i,creal(SROptO[i*2]),cimag(SROptO[i*2+1]));
-      //}
       StopTimer(42);
       
       if(FlagOptTrans>0) { // this part will be not used
@@ -112,7 +115,18 @@ void VMCMainCal(MPI_Comm comm) {
       StartTimer(43);
       /* Calculate OO and HO */
       if(NStoreO==0){
+        //printf("DEBUG:  NPara=%d NProj=%d NSlater=%d \n",NPara,NProj,NSlater);
+        //for(i=0;i<2*(NPara+1);i++){ 
+        //  printf("tmp: DEBUG:  i=%d %lf %lf\n",i,creal(SROptO[i]),cimag(SROptO[i]));
+        //}
+        //for(i=0;i<2*(NPara+1);i++){ 
+        //  printf("B accum: DEBUG:  i=%d %lf %lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
+        //}
+
         calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
+        //for(i=0;i<2*(NPara+1);i++){ 
+        //  printf("A accum: DEBUG:  i=%d %lf %lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
+        //}
       }else{
         we    = w*e;
         sqrtw = sqrt(w); 
@@ -167,9 +181,9 @@ void clearPhysQuantity(){
   Wc = Etot = Etot2 = 0.0;
   if(NVMCCalMode==0) {
     /* SROptOO, SROptHO, SROptO */
-    n = SROptSize*(SROptSize+2);
+    n = (2*SROptSize)*(2*SROptSize+2); // TBC
     vec = SROptOO;
-    for(i=0;i<n;i++) vec[i] = 0.0;
+    for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
     n = 2*NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
@@ -258,6 +272,32 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
 //  return;
 //}
 
+/*
+void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
+                 const double complex w, const double complex e, const int srOptSize) {
+  double complex we=w*e;
+
+  #define M_ZAXPY zaxpy_
+  #define M_ZGERC zgerc_
+
+  extern int M_ZAXPY(const int *n, const double complex *alpha, const double complex *x, const int *incx,
+                     double complex *y, const int *incy);
+  extern int M_ZGERC(const int *m, const int *n, const double complex *alpha,
+                    const double complex *x, const int *incx, const double complex *y, const int *incy, 
+                    double complex *a, const int *lda);
+  int m,n,incx,incy,lda;
+  m=n=lda=2*srOptSize;
+  incx=incy=1;
+
+//   OO[i][j] += w*O[i]*O[j] 
+  M_ZGERC(&m, &n, &w, srOptO, &incx, srOptO, &incy, srOptOO, &lda);
+
+//   HO[i] += w*e*O[i] 
+  M_ZAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
+
+  return;
+}
+*/
 void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
                  const double w, const double complex e, const int srOptSize){
   int i,j;
@@ -265,14 +305,18 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
   //#pragma omp parallel for default(shared)        \
     private(i,j,tmp,srOptOO)
   //#pragma loop noalias
-  for(i=0;i<2*srOptSize;i++) {
-    tmp         = w * srOptO[i];
-    //printf("i=%d %lf \n",i,creal(tmp));
-    srOptHO[i] += e * tmp;
+  for(j=0;j<2*srOptSize;j++) {
+    tmp                            = w * srOptO[j];
+    srOptOO[0*(2*srOptSize)+j]    += tmp;      // update O
+    srOptOO[1*(2*srOptSize)+j]    += 0.0;      // update 
+    srOptHO[j]                    += e * tmp;  // update HO
+  }
+  for(i=2;i<2*srOptSize;i++) {
+    tmp            = w * srOptO[i];
     for(j=0;j<2*srOptSize;j++) {
-      srOptOO[j+i*(2*srOptSize)] += w*srOptO[j]*(srOptO[i]); // TBC
+      srOptOO[i*(2*srOptSize)+j] += w*(srOptO[j])*conj(srOptO[i]); // TBC
+      //srOptOO[j+i*(2*srOptSize)] += w*(srOptO[j])*(srOptO[i]); // TBC
     }
-    /* HO[i] += w*e*O[i] */
   }
 
   return;

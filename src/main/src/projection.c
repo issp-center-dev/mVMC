@@ -17,7 +17,7 @@ inline double LogProjVal(const int *projCnt) {
   int idx;
   double z=0;
   for(idx=0;idx<NProj;idx++) {
-    z += Proj[idx] * (double)(projCnt[idx]);
+    z += creal(Proj[idx]) * (double)(projCnt[idx]);
   }
   return z;
 }
