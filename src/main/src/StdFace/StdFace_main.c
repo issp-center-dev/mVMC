@@ -339,10 +339,10 @@ static void PrintTrans(struct StdIntList *StdI){
   ntrans0 = 0;
   for (ktrans = 0; ktrans < StdI->ntrans; ktrans++) {
     if (cabs(StdI->trans[ktrans]) > 0.000001)
-      fprintf(fp, "%5d %5d %5d %25.15f\n",
-        StdI->transindx[ktrans][0], /*StdI->transindx[ktrans][1],*/
+      fprintf(fp, "%5d %5d %5d %5d %25.15f %25.15f\n",
+        StdI->transindx[ktrans][0], StdI->transindx[ktrans][1],
         StdI->transindx[ktrans][2], StdI->transindx[ktrans][3],
-        creal(StdI->trans[ktrans])/*, cimag(StdI->trans[ktrans])*/);
+        creal(StdI->trans[ktrans]), cimag(StdI->trans[ktrans]));
   }
 
   fclose(fp);
@@ -543,24 +543,19 @@ static void PrintNamelist(struct StdIntList *StdI){
 
   fp = fopen("namelist.def", "w");
 
-  fprintf(fp, "modpara.def\n");
-  fprintf(fp, "locspn.def\n");
-  fprintf(fp, "trans.def\n");
-  fprintf(fp, "coulombintra.def\n");
-  fprintf(fp, "coulombinter.def\n");
-  fprintf(fp, "hund.def\n");
-  fprintf(fp, "pairhop.def\n");
-  fprintf(fp, "exchange.def\n");
-  fprintf(fp, "gutzwilleridx.def\n");
-  fprintf(fp, "jastrowidx.def\n");
-  fprintf(fp, "doublonholon2siteidx.def\n");
-  fprintf(fp, "doublonholon4siteidx.def\n");
-  fprintf(fp, "orbitalidx.def\n");
-  fprintf(fp, "qptransidx.def\n");
-  fprintf(fp, "greenone.def\n");
-  fprintf(fp, "greentwo.def\n");
-  fprintf(fp, "greentwodc.def\n");
-  fprintf(fp, "interall.def\n");
+  fprintf(fp, "     ModPara  modpara.def\n");
+  fprintf(fp, "     LocSpin  locspn.def\n");
+  fprintf(fp, "       Trans  trans.def\n");
+  fprintf(fp, "CoulombIntra  coulombintra.def\n");
+  fprintf(fp, "CoulombInter  coulombinter.def\n");
+  fprintf(fp, "        Hund  hund.def\n");
+  fprintf(fp, "    Exchange  exchange.def\n");
+  fprintf(fp, "  Gutzwiller  gutzwilleridx.def\n");
+  fprintf(fp, "     Jastrow  jastrowidx.def\n");
+  fprintf(fp, "     Orbital  orbitalidx.def\n");
+  fprintf(fp, "    TransSym  qptransidx.def\n");
+  fprintf(fp, "    OneBodyG  greenone.def\n");
+  fprintf(fp, "    TwoBodyG  greentwo.def\n");
 
   fclose(fp);
   fprintf(stdout, "    namelist.def is written.\n");
@@ -884,28 +879,19 @@ static void Print2Green(struct StdIntList *StdI){
   }
   ngreen = igreen;
 
-  fp = fopen("greentwodc.def", "w");
+  fp = fopen("greentwo.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NCisAjsCktAltDC %10d\n", ngreen);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "======== Green functions for Sq AND Nq ======\n");
   fprintf(fp, "=============================================\n");
   for (igreen = 0; igreen < ngreen; igreen++){
-    fprintf(fp,"%5d %5d %5d %5d %5d %5d\n",
-      greenindx[igreen][0], greenindx[igreen][1], greenindx[igreen][2], 
-      greenindx[igreen][3], greenindx[igreen][4], greenindx[igreen][5]);
+    fprintf(fp,"%5d %5d %5d %5d %5d %5d %5d %5d\n",
+      greenindx[igreen][0], greenindx[igreen][2], greenindx[igreen][1], greenindx[igreen][2],
+      greenindx[igreen][3], greenindx[igreen][5], greenindx[igreen][4], greenindx[igreen][5]);
   }
   fclose(fp);
 
-  fprintf(stdout, "    greentwodc.def is written.\n");
-
-  fp = fopen("greentwo.def", "w");
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "NCisAjsCktAlt %10d\n", 0);
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "======== Green functions for Sq AND Nq ======\n");
-  fprintf(fp, "=============================================\n");
-  fclose(fp);
   fprintf(stdout, "    greentwo.def is written.\n");
 
   //[s] free
@@ -1285,15 +1271,6 @@ static void PrintOther(struct StdIntList *StdI)
   }
   fclose(fp);
   fprintf(stdout, "    hund.def is written.\n");
-
-  fp = fopen("pairhop.def", "w");
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "NPairhop %10d\n", 0);
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "================= Pair hopping ==============\n");
-  fprintf(fp, "=============================================\n");
-  fclose(fp);
-  fprintf(stdout, "    pairhop.def is written.\n");
   /*
   Exchange
   */
@@ -1314,24 +1291,6 @@ static void PrintOther(struct StdIntList *StdI)
   }
   fclose(fp);
   fprintf(stdout, "    exchange.def is written.\n");
-
-  fp = fopen("doublonholon2siteidx.def", "w");
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "NDoublonHolon2siteIdx %10d\n", 0);
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "======== i_xi_xi_DoublonHolon2siteIdx =======\n");
-  fprintf(fp, "=============================================\n");
-  fclose(fp);
-  fprintf(stdout, "    doublonholon2siteidx.def is written.\n");
-
-  fp = fopen("doublonholon4siteidx.def", "w");
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "NDoublonHolon2siteIdx %10d\n", 0);
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "===== i_xi_xi_xi_xi_DoublonHolon4siteIdx ====\n");
-  fprintf(fp, "=============================================\n");
-  fclose(fp);
-  fprintf(stdout, "    doublonholon4siteidx.def is written.\n");
 
 }/*static void PrintOther*/
 
