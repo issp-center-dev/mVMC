@@ -1,0 +1,292 @@
+#!/usr/local/bin/perl
+  print "start !! \n";
+
+  for($T_i=1;$T_i<=12;$T_i++){
+    &input_T;
+  }
+  &NtoM;
+#========= some exceptions =======================
+ $trans[5][0][0] = -0.020;
+ $trans[5][1][1] =  0.008;
+ $trans[5][3][3] =  0.008;
+ $trans[6][1][1] =  0.008;
+ $trans[6][3][3] =  0.008;
+
+ $trans[7][3][3] =  0.100;
+ $trans[8][3][3] =  0.100;
+ $trans[9][1][1] =  0.100;
+ $trans[10][1][1] =  0.100;
+
+ $trans[7][2][2] =  0.200;
+ $trans[8][2][2] =  0.200;
+ $trans[9][2][2] =  0.200;
+ $trans[10][2][2] =  0.200;
+#=================================================
+ 
+
+ for($T_i=1;$T_i<=12;$T_i++){
+   for($i=0;$i<5;$i++){
+     for($j=0;$j<5;$j++){
+       $tmp     = $trans[$T_i][$i][$j];
+       $tmp_abs = abs($trans[$T_i][$i][$j]);
+       for($cnt=0;$cnt<$Anum[$T_i];$cnt++){
+         if(abs($tmp_abs-$Nakamura[$T_i][$cnt])<0.0001){
+           $trans[$T_i][$i][$j] = $tmp/$tmp_abs*$Miyake[$T_i][$cnt];
+           last;
+         }
+       }
+     }
+   }
+ }
+
+ for($T_i=1;$T_i<=12;$T_i++){
+   $fname="QST$T_i.txt";
+   open(FILE,">$fname");
+   for($i=0;$i<5;$i++){
+     for($j=0;$j<5;$j++){
+        printf FILE (" %lf\n",$trans[$T_i][$i][$j]);
+     }
+   }
+   close(FILE);
+ } 
+# $T_i=11;
+# for($i=0;$i<5;$i++){
+#   for($j=$i;$j<5;$j++){
+#     printf("trans[$T_i][$i][$j] = $trans[$T_i][$i][$j]\n");
+#   }
+# }
+# printf("\n");
+# $T_i=12;
+# for($i=0;$i<5;$i++){
+#   for($j=$i;$j<5;$j++){
+#     printf("trans[$T_i][$i][$j] = $trans[$T_i][$i][$j]\n");
+#   }
+# }
+
+ 
+ sub input_T{
+  #input START 
+  $cnt=0; 
+  $file=sprintf("QT$T_i.txt");
+  printf("$file \n");
+  open(INPUTFILE,$file);
+  while($name=<INPUTFILE>){
+    chomp $name;
+    #DELETE EMPTY
+    $_=$name; 
+    s/^\s+//;
+    $name=$_; 
+    @tmp = split /\s+/, $name;
+    #printf "$tmp[0] \n";
+    $int_x = $cnt%5;
+    $int_y = ($cnt-$int_x)/5;
+    $trans[$T_i][$int_y][$int_x]=$tmp[0];
+    $cnt+=1;
+  }
+  #printf "$cnt \n";
+  #input FINISH
+ }
+
+ sub NtoM{
+
+#======== T1 Start=======================#
+   $Anum[1]        = 8;
+
+   $Nakamura[1][0] = 0.316;
+   $Miyake[1][0]   = 0.315;
+
+   $Nakamura[1][1] = 0.214;
+   $Miyake[1][1]   = 0.206;
+
+   $Nakamura[1][2] = 0.077;
+   $Miyake[1][2]   = 0.073;
+
+   $Nakamura[1][3] = 0.135;
+   $Miyake[1][3]   = 0.137;
+
+   $Nakamura[1][4] = 0.175;
+   $Miyake[1][4]   = 0.165;
+
+   $Nakamura[1][5] = 0.080;
+   $Miyake[1][5]   = 0.072;
+
+   $Nakamura[1][6] = 0.075;
+   $Miyake[1][6]   = 0.073;
+
+   $Nakamura[1][7] = 0.187;
+   $Miyake[1][7]   = 0.152;
+#======== T1 Finish=======================#
+
+#======== T2 Start=======================#
+   $Anum[2]        = 9;
+
+   $Nakamura[2][0] = 0.317;
+   $Miyake[2][0]   = 0.315;
+
+   $Nakamura[2][1] = 0.214;
+   $Miyake[2][1]   = 0.206;
+
+   $Nakamura[2][2] = 0.077;
+   $Miyake[2][2]   = 0.073;
+
+   $Nakamura[2][3] = 0.135;
+   $Miyake[2][3]   = 0.137;
+
+   $Nakamura[2][4] = 0.175;
+   $Miyake[2][4]   = 0.165;
+
+   $Nakamura[2][5] = 0.080;
+   $Miyake[2][5]   = 0.072;
+
+   $Nakamura[2][6] = 0.075;
+   $Miyake[2][6]   = 0.073;
+
+   $Nakamura[2][7] = 0.187;
+   $Miyake[2][7]   = 0.152;
+
+   $Nakamura[2][8] = 0.252;
+   $Miyake[2][8]   = 0.253;
+#======== T2 Finish=======================#
+
+#======== T3,T4 Start=======================#
+   
+ for($T_i=3;$T_i<=4;$T_i++){ 
+   $Anum[$T_i]        = 10;
+
+   $Nakamura[$T_i][0] = 0.059;
+   $Miyake[$T_i][0]   = 0.067;
+
+   $Nakamura[$T_i][1] = 0.139;
+   $Miyake[$T_i][1]   = 0.138;
+
+   $Nakamura[$T_i][2] = 0.147;
+   $Miyake[$T_i][2]   = 0.135;
+
+   $Nakamura[$T_i][3] = 0.003;
+   $Miyake[$T_i][3]   = 0.013;
+
+   $Nakamura[$T_i][4] = 0.145;
+   $Miyake[$T_i][4]   = 0.137;
+
+   $Nakamura[$T_i][5] = 0.182;
+   $Miyake[$T_i][5]   = 0.159;
+
+   $Nakamura[$T_i][6] = 0.342;
+   $Miyake[$T_i][6]   = 0.345;
+
+   $Nakamura[$T_i][7] = 0.008;
+   $Miyake[$T_i][7]   = 0.019;
+
+   $Nakamura[$T_i][8] = 0.182;
+   $Miyake[$T_i][8]   = 0.159;
+
+   $Nakamura[$T_i][9] = 0.131;
+   $Miyake[$T_i][9]   = 0.118;
+ }  
+#======== T3,T4 Finish=======================#
+
+#======== T5,T6 Start=======================#
+ for($T_i=5;$T_i<=6;$T_i++){ 
+   $Anum[$T_i]        = 7;
+
+   $Nakamura[$T_i][0] = 0.020;
+   $Miyake[$T_i][0]   = 0.019;
+
+   $Nakamura[$T_i][1] = 0.008;
+   $Miyake[$T_i][1]   = 0.012;
+
+   #===== See exceptions !!! ==============
+   $Nakamura[$T_i][2] = 0.007;
+   $Miyake[$T_i][2]   = 0.002;
+
+   $Nakamura[$T_i][3] = 0.025;
+   $Miyake[$T_i][3]   = 0.018;
+
+   $Nakamura[$T_i][4] = 0.002;
+   $Miyake[$T_i][4]   = 0.004;
+
+   $Nakamura[$T_i][5] = 0.035;
+   $Miyake[$T_i][5]   = 0.038;
+
+   $Nakamura[$T_i][6] = 0.034;
+   $Miyake[$T_i][6]   = 0.024;
+ }  
+#======== T5,T6 Finish=======================#
+
+#======== T7,T8,T9,T10 Start=======================#
+ for($T_i=7;$T_i<=10;$T_i++){ 
+   $Anum[$T_i]        = 13;
+
+   $Nakamura[$T_i][0] = 0.021;
+   $Miyake[$T_i][0]   = 0.018;
+
+   $Nakamura[$T_i][1] = 0.030;
+   $Miyake[$T_i][1]   = 0.033;
+
+   $Nakamura[$T_i][2] = 0.009;
+   $Miyake[$T_i][2]   = 0.010;
+
+   #===== See exceptions !!! ==============
+   $Nakamura[$T_i][3] = 0.100;
+   $Miyake[$T_i][3]   = 0.009;
+
+   $Nakamura[$T_i][4] = 0.007;
+   $Miyake[$T_i][4]   = 0.001;
+
+   $Nakamura[$T_i][5] = 0.015;
+   $Miyake[$T_i][5]   = 0.009;
+
+   $Nakamura[$T_i][6] = 0.020;
+   $Miyake[$T_i][6]   = 0.010;
+
+   $Nakamura[$T_i][7] = 0.200;
+   $Miyake[$T_i][7]   = 0.015;
+
+   $Nakamura[$T_i][8] = 0.001;
+   $Miyake[$T_i][8]   = 0.003;
+
+   $Nakamura[$T_i][9] = 0.005;
+   $Miyake[$T_i][9]   = 0.001;
+
+   $Nakamura[$T_i][10] = 0.029;
+   $Miyake[$T_i][10]   = 0.036;
+
+   $Nakamura[$T_i][11] = 0.018;
+   $Miyake[$T_i][11]   = 0.011;
+
+   $Nakamura[$T_i][12] = 0.032;
+   $Miyake[$T_i][12]   = 0.030;
+ }  
+#======== T7,T8,T9,T10 Finish=======================#
+
+#======== T11,T12 Start=======================#
+ for($T_i=11;$T_i<=12;$T_i++){ 
+   $Anum[$T_i]        = 8;
+
+   $Nakamura[$T_i][0] = 0.011;
+   $Miyake[$T_i][0]   = 0.000;
+
+   $Nakamura[$T_i][1] = 0.004;
+   $Miyake[$T_i][1]   = 0.009;
+
+   $Nakamura[$T_i][2] = 0.018;
+   $Miyake[$T_i][2]   = 0.035;
+
+   $Nakamura[$T_i][3] = 0.020;
+   $Miyake[$T_i][3]   = 0.000;
+
+   $Nakamura[$T_i][4] = 0.015;
+   $Miyake[$T_i][4]   = 0.034;
+
+   $Nakamura[$T_i][5] = 0.088;
+   $Miyake[$T_i][5]   = 0.139;
+
+   $Nakamura[$T_i][6] = 0.002;
+   $Miyake[$T_i][6]   = 0.000;
+
+   $Nakamura[$T_i][7] = 0.025;
+   $Miyake[$T_i][7]   = 0.055;
+ }  
+#======== T11,T12 Finish=======================#
+
+ }

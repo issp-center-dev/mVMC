@@ -1,0 +1,233 @@
+The system is: Darwin - 15.5.0 - x86_64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler: /opt/intel/composer_xe_2015.3.187/bin/intel64/icc 
+Build flags: 
+Id flags: 
+
+The output was:
+0
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+
+The C compiler identification is Intel, found in "/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/3.5.2/CompilerIdC/a.out"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_6c0f7/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_6c0f7.dir/build.make CMakeFiles/cmTC_6c0f7.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_6c0f7.dir/testCCompiler.c.o
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc     -o CMakeFiles/cmTC_6c0f7.dir/testCCompiler.c.o   -c /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp/testCCompiler.c
+Linking C executable cmTC_6c0f7
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_6c0f7.dir/link.txt --verbose=1
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc    -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_6c0f7.dir/testCCompiler.c.o  -o cmTC_6c0f7  
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' から出ます
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_6c222/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_6c222.dir/build.make CMakeFiles/cmTC_6c222.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc     -o CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o   -c /opt/local/share/cmake-3.5/Modules/CMakeCCompilerABI.c
+Linking C executable cmTC_6c222
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_6c222.dir/link.txt --verbose=1
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc    -Wl,-search_paths_first -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o  -o cmTC_6c222   
+icc version 15.0.3 (gcc version 5.1.0 compatibility)
+/opt/intel/composer_xe_2015.3.187/bin/intel64/mcpcom    -mP1OPT_version=15.0-intel64 -mGLOB_diag_file=CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.diag -mGLOB_diag_use_message_catalog=FALSE -mP1OPT_print_version=FALSE -mCG_use_gas_got_workaround=F -mP2OPT_align_option_used=TRUE -mGLOB_gcc_version=510 "-mGLOB_options_string=-Wl,-search_paths_first -Wl,-headerpad_max_install_names -v -Wl,-v -o cmTC_6c222" -mGLOB_position_independent_code -mGLOB_preemption_model=1 -mGLOB_no_compact_unwind=TRUE -mGLOB_cxx_limited_range=FALSE -mCG_extend_parms=FALSE -mGLOB_compiler_bin_directory=/opt/intel/composer_xe_2015.3.187/bin/intel64 -mGLOB_as_output_backup_file_name=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/iccVYrJbZas_.s -mIPOPT_activate -mGLOB_em64t -mGLOB_product_id_code=0x22006d91 -mP3OPT_use_mspp_call_convention -mPGOPTI_value_profile_use=T -mGLOB_opt_report_use_source_name -mP2OPT_il0_array_sections=TRUE -mP2OPT_hlo -mP2OPT_hpo_rtt_control=0 -mIPOPT_args_in_regs=0 -mP2OPT_disam_assume_nonstd_intent_in=FALSE -mGLOB_imf_mapping_library=/opt/intel/composer_xe_2015.3.187/bin/intel64/libiml_attr.dylib -mPGOPTI_gen_threadsafe_level=0 -mIPOPT_link -mIPOPT_ipo_activate -mIPOPT_mo_activate -mIPOPT_source_files_list=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/iccslis2fKpwX -mIPOPT_mo_global_data "-mIPOPT_cmdline_link="-dynamic" "-arch" "x86_64" "-weak_reference_mismatches" "non-weak" "-macosx_version_min" "10.11.5" "-no_compact_unwind" "-o" "cmTC_6c222" "-L/opt/intel/composer_xe_2015.3.187/compiler/lib" "-L/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib" "-L/opt/intel/composer_xe_2015.3.187/ipp/lib" "-L/opt/intel/composer_xe_2015.3.187/compiler/lib" "-L/opt/intel/composer_xe_2015.3.187/mkl/lib" "-L/opt/intel/composer_xe_2015.3.187/tbb/lib" "-L/opt/intel/composer_xe_2015.3.187/compiler/lib" "-L/usr/lib" "-search_paths_first" "-headerpad_max_install_names" "-v" "CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libimf.a" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libirng.a" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libipgo.a" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libdecimal.a" "-weak-lcilkrts" "-lc++" "-lSystem" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libirc.a" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a" "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a"" -mIPOPT_il_in_obj -mIPOPT_ipo_activate_warn=FALSE -mIPOPT_obj_output_file_name=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/ipo_iccQFRRPQ.o -mIPOPT_whole_archive_fixup_file_name=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/iccwarchLAPyS7 -mGLOB_long_size_64 -mGLOB_routine_pointer_size_64 -mGLOB_driver_tempfile_name=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/icctempfilehyexCW -mGLOB_os_target=GLOB_OS_TARGET_MACH -mGLOB_async_unwind_tables=TRUE -mGLOB_obj_output_file=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/ipo_iccQFRRPQ.o -mGLOB_source_dialect=GLOB_SOURCE_DIALECT_NONE -mP1OPT_source_file_name=ipo_out.c CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o -mIPOPT_object_files=T -mIPOPT_assembly_files=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/iccalisVS555Z -mIPOPT_generated_tempfiles=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/iccelisnn1EiH -mIPOPT_embedded_object_base_name=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/icceobjJ0m02W
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld    -dynamic -arch x86_64 -weak_reference_mismatches non-weak -macosx_version_min 10.11.5 -no_compact_unwind -o cmTC_6c222 -L/opt/intel/composer_xe_2015.3.187/compiler/lib -L/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib -L/opt/intel/composer_xe_2015.3.187/ipp/lib -L/opt/intel/composer_xe_2015.3.187/compiler/lib -L/opt/intel/composer_xe_2015.3.187/mkl/lib -L/opt/intel/composer_xe_2015.3.187/tbb/lib -L/opt/intel/composer_xe_2015.3.187/compiler/lib -L/usr/lib CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o -search_paths_first -headerpad_max_install_names -v /opt/intel/composer_xe_2015.3.187/compiler/lib/libimf.a /opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a /opt/intel/composer_xe_2015.3.187/compiler/lib/libirng.a /opt/intel/composer_xe_2015.3.187/compiler/lib/libipgo.a /opt/intel/composer_xe_2015.3.187/compiler/lib/libdecimal.a -weak-lcilkrts -lc++ -lSystem /opt/intel/composer_xe_2015.3.187/compiler/lib/libirc.a /opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a
+@(#)PROGRAM:ld  PROJECT:ld64-242.2
+configured to support archs: armv6 armv7 armv7s arm64 i386 x86_64 x86_64h armv6m armv7m armv7em
+Library search paths:
+	/opt/intel/composer_xe_2015.3.187/compiler/lib
+	/opt/intel/composer_xe_2015.3.187/compiler/lib
+	/opt/intel/composer_xe_2015.3.187/ipp/lib
+	/opt/intel/composer_xe_2015.3.187/compiler/lib
+	/opt/intel/composer_xe_2015.3.187/mkl/lib
+	/opt/intel/composer_xe_2015.3.187/tbb/lib
+	/opt/intel/composer_xe_2015.3.187/compiler/lib
+	/usr/lib
+	/usr/lib
+	/usr/local/lib
+Framework search paths:
+	/Library/Frameworks/
+	/System/Library/Frameworks/
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' から出ます
+
+
+Parsed C implicit link information from above output:
+  link line regex: [^( *|.*[/\])(ld|([^/\]+-)?ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command:"/opt/local/bin/gmake" "cmTC_6c222/fast"]
+  ignore line: [/opt/local/bin/gmake -f CMakeFiles/cmTC_6c222.dir/build.make CMakeFiles/cmTC_6c222.dir/build]
+  ignore line: [gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' に入ります]
+  ignore line: [Building C object CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o]
+  ignore line: [/opt/intel/composer_xe_2015.3.187/bin/intel64/icc     -o CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o   -c /opt/local/share/cmake-3.5/Modules/CMakeCCompilerABI.c]
+  ignore line: [Linking C executable cmTC_6c222]
+  ignore line: [/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_6c222.dir/link.txt --verbose=1]
+  ignore line: [/opt/intel/composer_xe_2015.3.187/bin/intel64/icc    -Wl,-search_paths_first -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o  -o cmTC_6c222   ]
+  ignore line: [icc version 15.0.3 (gcc version 5.1.0 compatibility)]
+  ignore line: [/opt/intel/composer_xe_2015.3.187/bin/intel64/mcpcom    -mP1OPT_version=15.0-intel64 -mGLOB_diag_file=CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.diag -mGLOB_diag_use_message_catalog=FALSE -mP1OPT_print_version=FALSE -mCG_use_gas_got_workaround=F -mP2OPT_align_option_used=TRUE -mGLOB_gcc_version=510 "-mGLOB_options_string=-Wl,-search_paths_first -Wl,-headerpad_max_install_names -v -Wl,-v -o cmTC_6c222" -mGLOB_position_independent_code -mGLOB_preemption_model=1 -mGLOB_no_compact_unwind=TRUE -mGLOB_cxx_limited_range=FALSE -mCG_extend_parms=FALSE -mGLOB_compiler_bin_directory=/opt/intel/composer_xe_2015.3.187/bin/intel64 -mGLOB_as_output_backup_file_name=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/iccVYrJbZas_.s -mIPOPT_activate -mGLOB_em64t -mGLOB_product_id_code=0x22006d91 -mP3OPT_use_mspp_call_convention -mPGOPTI_value_profile_use=T -mGLOB_opt_report_use_source_name -mP2OPT_il0_array_sections=TRUE -mP2OPT_hlo -mP2OPT_hpo_rtt_control=0 -mIPOPT_args_in_regs=0 -mP2OPT_disam_assume_nonstd_intent_in=FALSE -mGLOB_imf_mapping_library=/opt/intel/composer_xe_2015.3.187/bin/intel64/libiml_attr.dylib -mPGOPTI_gen_threadsafe_level=0 -mIPOPT_link -mIPOPT_ipo_activate -mIPOPT_mo_activate -mIPOPT_source_files_list=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/iccslis2fKpwX -mIPOPT_mo_global_data "-mIPOPT_cmdline_link="-dynamic" "-arch" "x86_64" "-weak_reference_mismatches" "non-weak" "-macosx_version_min" "10.11.5" "-no_compact_unwind" "-o" "cmTC_6c222" "-L/opt/intel/composer_xe_2015.3.187/compiler/lib" "-L/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib" "-L/opt/intel/composer_xe_2015.3.187/ipp/lib" "-L/opt/intel/composer_xe_2015.3.187/compiler/lib" "-L/opt/intel/composer_xe_2015.3.187/mkl/lib" "-L/opt/intel/composer_xe_2015.3.187/tbb/lib" "-L/opt/intel/composer_xe_2015.3.187/compiler/lib" "-L/usr/lib" "-search_paths_first" "-headerpad_max_install_names" "-v" "CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libimf.a" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libirng.a" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libipgo.a" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libdecimal.a" "-weak-lcilkrts" "-lc++" "-lSystem" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libirc.a" "/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a" "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a"" -mIPOPT_il_in_obj -mIPOPT_ipo_activate_warn=FALSE -mIPOPT_obj_output_file_name=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/ipo_iccQFRRPQ.o -mIPOPT_whole_archive_fixup_file_name=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/iccwarchLAPyS7 -mGLOB_long_size_64 -mGLOB_routine_pointer_size_64 -mGLOB_driver_tempfile_name=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/icctempfilehyexCW -mGLOB_os_target=GLOB_OS_TARGET_MACH -mGLOB_async_unwind_tables=TRUE -mGLOB_obj_output_file=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/ipo_iccQFRRPQ.o -mGLOB_source_dialect=GLOB_SOURCE_DIALECT_NONE -mP1OPT_source_file_name=ipo_out.c CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o -mIPOPT_object_files=T -mIPOPT_assembly_files=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/iccalisVS555Z -mIPOPT_generated_tempfiles=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/iccelisnn1EiH -mIPOPT_embedded_object_base_name=/var/folders/zx/6ls_cx9x5h37rr5f52g35pt40000gp/T/icceobjJ0m02W]
+  link line: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld    -dynamic -arch x86_64 -weak_reference_mismatches non-weak -macosx_version_min 10.11.5 -no_compact_unwind -o cmTC_6c222 -L/opt/intel/composer_xe_2015.3.187/compiler/lib -L/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib -L/opt/intel/composer_xe_2015.3.187/ipp/lib -L/opt/intel/composer_xe_2015.3.187/compiler/lib -L/opt/intel/composer_xe_2015.3.187/mkl/lib -L/opt/intel/composer_xe_2015.3.187/tbb/lib -L/opt/intel/composer_xe_2015.3.187/compiler/lib -L/usr/lib CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o -search_paths_first -headerpad_max_install_names -v /opt/intel/composer_xe_2015.3.187/compiler/lib/libimf.a /opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a /opt/intel/composer_xe_2015.3.187/compiler/lib/libirng.a /opt/intel/composer_xe_2015.3.187/compiler/lib/libipgo.a /opt/intel/composer_xe_2015.3.187/compiler/lib/libdecimal.a -weak-lcilkrts -lc++ -lSystem /opt/intel/composer_xe_2015.3.187/compiler/lib/libirc.a /opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a]
+    arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld] ==> ignore
+    arg [-dynamic] ==> ignore
+    arg [-arch] ==> ignore
+    arg [x86_64] ==> ignore
+    arg [-weak_reference_mismatches] ==> ignore
+    arg [non-weak] ==> ignore
+    arg [-macosx_version_min] ==> ignore
+    arg [10.11.5] ==> ignore
+    arg [-no_compact_unwind] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTC_6c222] ==> ignore
+    arg [-L/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+    arg [-L/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib]
+    arg [-L/opt/intel/composer_xe_2015.3.187/ipp/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/ipp/lib]
+    arg [-L/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+    arg [-L/opt/intel/composer_xe_2015.3.187/mkl/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/mkl/lib]
+    arg [-L/opt/intel/composer_xe_2015.3.187/tbb/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/tbb/lib]
+    arg [-L/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> dir [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+    arg [-L/usr/lib] ==> dir [/usr/lib]
+    arg [CMakeFiles/cmTC_6c222.dir/CMakeCCompilerABI.c.o] ==> ignore
+    arg [-search_paths_first] ==> ignore
+    arg [-headerpad_max_install_names] ==> ignore
+    arg [-v] ==> ignore
+    arg [/opt/intel/composer_xe_2015.3.187/compiler/lib/libimf.a] ==> lib [/opt/intel/composer_xe_2015.3.187/compiler/lib/libimf.a]
+    arg [/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a] ==> lib [/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a]
+    arg [/opt/intel/composer_xe_2015.3.187/compiler/lib/libirng.a] ==> lib [/opt/intel/composer_xe_2015.3.187/compiler/lib/libirng.a]
+    arg [/opt/intel/composer_xe_2015.3.187/compiler/lib/libipgo.a] ==> lib [/opt/intel/composer_xe_2015.3.187/compiler/lib/libipgo.a]
+    arg [/opt/intel/composer_xe_2015.3.187/compiler/lib/libdecimal.a] ==> lib [/opt/intel/composer_xe_2015.3.187/compiler/lib/libdecimal.a]
+    arg [-weak-lcilkrts] ==> ignore
+    arg [-lc++] ==> lib [c++]
+    arg [-lSystem] ==> lib [System]
+    arg [/opt/intel/composer_xe_2015.3.187/compiler/lib/libirc.a] ==> lib [/opt/intel/composer_xe_2015.3.187/compiler/lib/libirc.a]
+    arg [/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a] ==> lib [/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a]
+    arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a] ==> lib [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a]
+  Library search paths: [;/opt/intel/composer_xe_2015.3.187/compiler/lib;/opt/intel/composer_xe_2015.3.187/compiler/lib;/opt/intel/composer_xe_2015.3.187/ipp/lib;/opt/intel/composer_xe_2015.3.187/compiler/lib;/opt/intel/composer_xe_2015.3.187/mkl/lib;/opt/intel/composer_xe_2015.3.187/tbb/lib;/opt/intel/composer_xe_2015.3.187/compiler/lib;/usr/lib;/usr/lib;/usr/local/lib]
+  Framework search paths: [;/Library/Frameworks/;/System/Library/Frameworks/]
+  remove lib [System]
+  collapse lib [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a] ==> [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/ipp/lib] ==> [/opt/intel/composer_xe_2015.3.187/ipp/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/mkl/lib] ==> [/opt/intel/composer_xe_2015.3.187/mkl/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/tbb/lib] ==> [/opt/intel/composer_xe_2015.3.187/tbb/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/usr/lib] ==> [/usr/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/ipp/lib] ==> [/opt/intel/composer_xe_2015.3.187/ipp/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/mkl/lib] ==> [/opt/intel/composer_xe_2015.3.187/mkl/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/tbb/lib] ==> [/opt/intel/composer_xe_2015.3.187/tbb/lib]
+  collapse library dir [/opt/intel/composer_xe_2015.3.187/compiler/lib] ==> [/opt/intel/composer_xe_2015.3.187/compiler/lib]
+  collapse library dir [/usr/lib] ==> [/usr/lib]
+  collapse library dir [/usr/lib] ==> [/usr/lib]
+  collapse library dir [/usr/local/lib] ==> [/usr/local/lib]
+  collapse framework dir [/Library/Frameworks/] ==> [/Library/Frameworks]
+  collapse framework dir [/System/Library/Frameworks/] ==> [/System/Library/Frameworks]
+  implicit libs: [/opt/intel/composer_xe_2015.3.187/compiler/lib/libimf.a;/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a;/opt/intel/composer_xe_2015.3.187/compiler/lib/libirng.a;/opt/intel/composer_xe_2015.3.187/compiler/lib/libipgo.a;/opt/intel/composer_xe_2015.3.187/compiler/lib/libdecimal.a;c++;/opt/intel/composer_xe_2015.3.187/compiler/lib/libirc.a;/opt/intel/composer_xe_2015.3.187/compiler/lib/libsvml.a;/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/6.1.0/lib/darwin/libclang_rt.osx.a]
+  implicit dirs: [/opt/intel/composer_xe_2015.3.187/compiler/lib;/opt/intel/composer_xe_2015.3.187/ipp/lib;/opt/intel/composer_xe_2015.3.187/mkl/lib;/opt/intel/composer_xe_2015.3.187/tbb/lib;/usr/lib;/usr/local/lib]
+  implicit fwks: [/Library/Frameworks;/System/Library/Frameworks]
+
+
+Performing C SOURCE FILE Test OpenMP_FLAG_DETECTED succeeded with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_7cba9/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_7cba9.dir/build.make CMakeFiles/cmTC_7cba9.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_7cba9.dir/src.c.o
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc    -DOpenMP_FLAG_DETECTED -qopenmp   -o CMakeFiles/cmTC_7cba9.dir/src.c.o   -c /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_7cba9
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_7cba9.dir/link.txt --verbose=1
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc   -DOpenMP_FLAG_DETECTED -qopenmp -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_7cba9.dir/src.c.o  -o cmTC_7cba9  
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' から出ます
+
+Source file was:
+
+#include <omp.h>
+int main() {
+#ifdef _OPENMP
+  return 0;
+#else
+  breaks_on_purpose
+#endif
+}
+
+Determining if the include file pthread.h exists passed with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_d6bf3/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_d6bf3.dir/build.make CMakeFiles/cmTC_d6bf3.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_d6bf3.dir/CheckIncludeFile.c.o
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc    -qopenmp    -o CMakeFiles/cmTC_d6bf3.dir/CheckIncludeFile.c.o   -c /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTC_d6bf3
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d6bf3.dir/link.txt --verbose=1
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc   -qopenmp  -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_d6bf3.dir/CheckIncludeFile.c.o  -o cmTC_d6bf3  
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' から出ます
+
+
+Determining if the pthread_create exist passed with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_1f183/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_1f183.dir/build.make CMakeFiles/cmTC_1f183.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_1f183.dir/CheckSymbolExists.c.o
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc    -qopenmp    -o CMakeFiles/cmTC_1f183.dir/CheckSymbolExists.c.o   -c /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_1f183
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1f183.dir/link.txt --verbose=1
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc   -qopenmp  -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_1f183.dir/CheckSymbolExists.c.o  -o cmTC_1f183  
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' から出ます
+
+File /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function sgemm_ exists passed with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_2fdef/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_2fdef.dir/build.make CMakeFiles/cmTC_2fdef.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_2fdef.dir/CheckFunctionExists.c.o
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc    -qopenmp -DCHECK_FUNCTION_EXISTS=sgemm_   -o CMakeFiles/cmTC_2fdef.dir/CheckFunctionExists.c.o   -c /opt/local/share/cmake-3.5/Modules/CheckFunctionExists.c
+Linking C executable cmTC_2fdef
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2fdef.dir/link.txt --verbose=1
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc   -qopenmp -DCHECK_FUNCTION_EXISTS=sgemm_ -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_2fdef.dir/CheckFunctionExists.c.o  -o cmTC_2fdef  /Users/yoshimi/anaconda/lib/libmkl_intel_lp64.dylib /Users/yoshimi/anaconda/lib/libmkl_intel_thread.dylib /Users/yoshimi/anaconda/lib/libmkl_core.dylib /Users/yoshimi/anaconda/lib/libiomp5.dylib -lm -Wl,-rpath,/Users/yoshimi/anaconda/lib 
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' から出ます
+
+
+Determining if the function cheev_ exists passed with the following output:
+Change Dir: /Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/opt/local/bin/gmake" "cmTC_e7fe4/fast"
+/opt/local/bin/gmake -f CMakeFiles/cmTC_e7fe4.dir/build.make CMakeFiles/cmTC_e7fe4.dir/build
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' に入ります
+Building C object CMakeFiles/cmTC_e7fe4.dir/CheckFunctionExists.c.o
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc    -qopenmp -DCHECK_FUNCTION_EXISTS=cheev_   -o CMakeFiles/cmTC_e7fe4.dir/CheckFunctionExists.c.o   -c /opt/local/share/cmake-3.5/Modules/CheckFunctionExists.c
+Linking C executable cmTC_e7fe4
+/opt/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e7fe4.dir/link.txt --verbose=1
+/opt/intel/composer_xe_2015.3.187/bin/intel64/icc   -qopenmp -DCHECK_FUNCTION_EXISTS=cheev_ -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_e7fe4.dir/CheckFunctionExists.c.o  -o cmTC_e7fe4  /Users/yoshimi/anaconda/lib/libmkl_intel_lp64.dylib /Users/yoshimi/anaconda/lib/libmkl_intel_thread.dylib /Users/yoshimi/anaconda/lib/libmkl_core.dylib /Users/yoshimi/anaconda/lib/libiomp5.dylib -lm -Wl,-rpath,/Users/yoshimi/anaconda/lib 
+gmake[1]: ディレクトリ '/Users/yoshimi/program/mVMC/src/main/build/CMakeFiles/CMakeTmp' から出ます
+
+
