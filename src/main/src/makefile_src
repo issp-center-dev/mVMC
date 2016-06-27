@@ -21,10 +21,12 @@ matrix.c \
 parameter.c \
 pfupdate.c \
 pfupdate_two.c \
+pfupdate_two_fcmp.c \
 projection.c \
 qp.c \
 readdef.c \
 safempi.c \
+safempi_fcmp.c \
 setmemory.c \
 slater.c \
 splitloop.c \
