@@ -52,7 +52,7 @@ void StdFace_InitSite2D(struct StdIntList *StdI, FILE *fp,
   double Wx0, double Wy0, double Lx0, double Ly0);
 void StdFace_SetLabel(struct StdIntList *StdI, FILE *fp,
   int iW, int iL, int diW, int diL, int isiteUC, int jsiteUC,
-  int *isite, int *jsite, int connect);
+  int *isite, int *jsite, int connect, double complex *phase);
 
 void StdFace_generate_orb(struct StdIntList *StdI);
 

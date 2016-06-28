@@ -35,6 +35,8 @@ void StdFace_Chain(struct StdIntList *StdI, char *model)
   int isite, jsite;
   int iL;
   int ktrans, kintr;
+  double complex phase;
+
   /**/
   fprintf(stdout, "\n");
   fprintf(stdout, "#######  Parameter Summary  #######\n");
@@ -57,6 +59,9 @@ void StdFace_Chain(struct StdIntList *StdI, char *model)
   StdFace_InitSite2D(StdI, fp, StdI->a0, 0.0, 0.0, StdI->a1);
   fclose(fp);
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0;
+  /**/
+  StdFace_PrintVal_c("phase0", &StdI->phase0, 1.0);
+  StdFace_NotUsed_c("phase1", StdI->phase1);
   /**/
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
   StdFace_NotUsed_J("J1", StdI->J1All, StdI->J1);
@@ -188,26 +193,28 @@ void StdFace_Chain(struct StdIntList *StdI, char *model)
     Nearest neighbor
    */
     jsite = (iL + 1) % StdI->L;
+    phase = cpow(StdI->phase0, (double)((iL + 1) / StdI->L));
     if (strcmp(StdI->model, "kondo") == 0 ) jsite += StdI->L;
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
       StdFace_GeneralJ(StdI, StdI->J0, StdI->S2, StdI->S2, isite, jsite);
     }
     else {
-      StdFace_Hopping(StdI, StdI->t0, isite, jsite);
+      StdFace_Hopping(StdI, phase * StdI->t0, isite, jsite);
       StdFace_Coulomb(StdI, StdI->V0, isite, jsite);
     }
     /*
     Second nearest neighbor
     */
     jsite = (iL + 2) % StdI->L;
+    phase = cpow(StdI->phase0, (double)((iL + 2) / StdI->L));
     if (strcmp(StdI->model, "kondo") == 0 ) jsite += StdI->L;
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
       StdFace_GeneralJ(StdI, StdI->Jp, StdI->S2, StdI->S2, isite, jsite);
     }
     else {
-      StdFace_Hopping(StdI, StdI->tp, isite, jsite);
+      StdFace_Hopping(StdI, phase * StdI->tp, isite, jsite);
       StdFace_Coulomb(StdI, StdI->Vp, isite, jsite);
     }
   }/*for (iL = 0; iL < StdI->L; iL++)*/

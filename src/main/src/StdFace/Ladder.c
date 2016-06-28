@@ -35,6 +35,7 @@ void StdFace_Ladder(struct StdIntList *StdI, char *model)
   int isite, jsite, ksite;
   int iL, iW;
   int ktrans, kintr;
+  double complex phase;
 
   StdI->NsiteUC = 1;
   fprintf(stdout, "\n");
@@ -55,6 +56,9 @@ void StdFace_Ladder(struct StdIntList *StdI, char *model)
   StdFace_InitSite2D(StdI, fp, StdI->a0, 0.0, 0.0, StdI->a1);
   fclose(fp);
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0;
+  /**/
+  StdFace_PrintVal_c("phase0", &StdI->phase0, 1.0);
+  StdFace_NotUsed_c("phase1", StdI->phase1);
   /**/
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
   StdFace_NotUsed_J("J", StdI->JAll, StdI->J);
@@ -201,25 +205,27 @@ void StdFace_Ladder(struct StdIntList *StdI, char *model)
        Nearest neighbor along the ladder
       */
       jsite = iW + ((iL + 1) % StdI->L) * StdI->W;
+      phase = cpow(StdI->phase0, (double)((iL + 1) / StdI->L));
       if (strcmp(StdI->model, "kondo") == 0 ) jsite += StdI->L * StdI->W;
       /**/
       if (strcmp(StdI->model, "spin") == 0 ) {
         StdFace_GeneralJ(StdI, StdI->J1, StdI->S2, StdI->S2, isite, jsite);
       }/*if (strcmp(StdI->model, "spin") == 0 )*/
       else {
-        StdFace_Hopping(StdI, StdI->t1, isite, jsite);
+        StdFace_Hopping(StdI, phase * StdI->t1, isite, jsite);
         StdFace_Coulomb(StdI, StdI->V1, isite, jsite);
       }/*if (model != "spin")*/
       /*
        Second nearest neighbor along the ladder
       */
       jsite = iW + ((iL + 2) % StdI->L) * StdI->W;
+      phase = cpow(StdI->phase0, (double)((iL + 2) / StdI->L));
       if (strcmp(StdI->model, "kondo") == 0 ) jsite += StdI->L * StdI->W;
       if (strcmp(StdI->model, "spin") == 0 ) {
         StdFace_GeneralJ(StdI, StdI->J1p, StdI->S2, StdI->S2, isite, jsite);
       }/*if (strcmp(StdI->model, "spin") == 0 )*/
       else {
-        StdFace_Hopping(StdI, StdI->t1p, isite, jsite);
+        StdFace_Hopping(StdI, phase * StdI->t1p, isite, jsite);
         StdFace_Coulomb(StdI, StdI->V1p, isite, jsite);
       }/*if (model != "spin")*/
       /*

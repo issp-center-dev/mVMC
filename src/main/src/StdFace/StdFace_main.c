@@ -92,6 +92,8 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->Wsub = 9999;
   StdI->Wx = 9999.9;
   StdI->Wy = 9999.9;
+  StdI->phase0 = 9999.9;
+  StdI->phase1 = 9999.9;
 
   strcpy(StdI->model, "****\0");
   strcpy(StdI->lattice, "****\0");
@@ -907,50 +909,64 @@ static void Print2Green(struct StdIntList *StdI){
 */
 void PrintJastrow(struct StdIntList *StdI) {
   FILE *fp;
-  int isite, jsite, NJastrow, iJastrow;
+  int isite, jsite, NJastrow, iJastrow, isite1, jsite1;
   int **Jastrow;
 
   Jastrow = (int **)malloc(sizeof(int*) * StdI->nsite);
-  for (isite = 0; isite < StdI->nsite; isite++)
+  for (isite = 0; isite < StdI->nsite; isite++) {
     Jastrow[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
+    for (jsite = 0; jsite < StdI->nsite; jsite++) {
+      Jastrow[isite][jsite] = StdI->Orb[isite][jsite];
+    }/*for (jsite = 0; jsite < isite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+  /*
+   Symmetrize
+  */
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    for (jsite = 0; jsite < isite; jsite++) {
+      Jastrow[isite][jsite] = Jastrow[jsite][isite];
+    }/*for (jsite = 0; jsite < isite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+  /**/
+  if (strcmp(StdI->model, "hubbard") == 0) NJastrow = 0;
+  else NJastrow = -1;
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    /*
+     For Local spin
+    */
+    if (StdI->locspinflag[isite] != 0) {
+      for (jsite = 0; jsite < StdI->nsite; jsite++) {
+        Jastrow[isite][jsite] = -1;
+        Jastrow[jsite][isite] = -1;
+      }
+      continue;
+    }
+    /**/
+    for (jsite = 0; jsite < isite; jsite++) {
+      if (Jastrow[isite][jsite] >= 0) {
+        iJastrow = Jastrow[isite][jsite];
+        NJastrow -= 1;
+        for (isite1 = 0; isite1 < StdI->nsite; isite1++) {
+          for (jsite1 = 0; jsite1 < StdI->nsite; jsite1++) {
+            if (Jastrow[isite1][jsite1] == iJastrow)
+              Jastrow[isite1][jsite1] = NJastrow;
+          }/*for (jsite1 = 0; jsite1 < StdI->nsite; jsite1++)*/
+        }/*for (isite1 = 0; isite1 < StdI->nsite; isite1++)*/
+      }/*if (Jastrow[isite][jsite] >= 0)*/
+    }/*for (jsite = 0; jsite < isite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+  /**/
+  NJastrow = -NJastrow;
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    for (jsite = 0; jsite < StdI->nsite; jsite++) {
+      Jastrow[isite][jsite] = -1 - Jastrow[isite][jsite];
+    }/*for (jsite = 0; jsite < isite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
 
-  if (strcmp(StdI->model, "hubbard") == 0) {
-    NJastrow = 0;
-    for (isite = 0; isite < StdI->nsite; isite++) {
-      for (jsite = 0; jsite < isite; jsite++) {
-        Jastrow[isite][jsite] = NJastrow;
-        Jastrow[jsite][isite] = NJastrow;
-        NJastrow += 1;
-      }/*for (jsite = 0; jsite < isite; jsite++)*/
-    }/*for (isite = 0; isite < StdI->nsite; isite++)*/
-  }
-  else if (strcmp(StdI->model, "spin") == 0) {
-    NJastrow = 1;
-    for (isite = 0; isite < StdI->nsite; isite++) {
-      for (jsite = 0; jsite < StdI->nsite; jsite++) {
-        Jastrow[isite][jsite] = 0;
-      }/*for (jsite = 0; jsite < isite; jsite++)*/
-    }/*for (isite = 0; isite < StdI->nsite; isite++)*/
-  }
-  else if (strcmp(StdI->model, "kondo") == 0) {
-    NJastrow = 1;
-    for (isite = 0; isite < StdI->nsite; isite++) {
-      for (jsite = 0; jsite < StdI->nsite; jsite++) {
-        if (isite < StdI->nsite / 2 || jsite < StdI->nsite / 2) {
-          Jastrow[isite][jsite] = 0;
-        }
-        else {
-          Jastrow[isite][jsite] = NJastrow;
-          Jastrow[jsite][isite] = NJastrow;
-          NJastrow += 1;
-        }
-      }/*for (jsite = 0; jsite < isite; jsite++)*/
-    }/*for (isite = 0; isite < StdI->nsite; isite++)*/
-  }
 
   fp = fopen("jastrowidx.def", "w");
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "NKastrowIdx %10d\n", NJastrow);
+  fprintf(fp, "NJastrowIdx %10d\n", NJastrow);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "================ i_j_JastrowIdx =============\n");
   fprintf(fp, "=============================================\n");
@@ -1454,6 +1470,8 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "nvmcsample") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NVMCSample);
     else if (strcmp(keyword, "nvmcwarmup") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NVMCWarmUp);
     else if (strcmp(keyword, "outputmode") == 0) StoreWithCheckDup_s(keyword, value, StdI.outputmode);
+    else if (strcmp(keyword, "phase0") == 0) StoreWithCheckDup_c(keyword, value, &StdI.phase0);
+    else if (strcmp(keyword, "phase1") == 0) StoreWithCheckDup_c(keyword, value, &StdI.phase1);
     else if (strcmp(keyword, "rndseed") == 0) StoreWithCheckDup_i(keyword, value, &StdI.RndSeed);
     else if (strcmp(keyword, "t") == 0) StoreWithCheckDup_c(keyword, value, &StdI.t);
     else if (strcmp(keyword, "t0") == 0) StoreWithCheckDup_c(keyword, value, &StdI.t0);

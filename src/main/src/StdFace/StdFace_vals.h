@@ -133,6 +133,8 @@ struct StdIntList {
   int **Cell;
   int NsiteUC;
   double **tau;
+  double complex phase0;
+  double complex phase1;
   /*
    Transfer, Interaction, Locspin
   */

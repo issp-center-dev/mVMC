@@ -765,7 +765,7 @@ void StdFace_InitSite2DSub(struct StdIntList *StdI)
  */
 void StdFace_SetLabel(struct StdIntList *StdI, FILE *fp, 
   int iW, int iL, int diW, int diL, int isiteUC, int jsiteUC, 
-  int *isite, int *jsite, int connect)
+  int *isite, int *jsite, int connect, double complex *phase)
 {
   int iCell, jCell, kCell;
   int jCell0, jCell1;
@@ -815,6 +815,8 @@ void StdFace_SetLabel(struct StdIntList *StdI, FILE *fp,
   jW = iW + diW;
   jL = iL + diL;
   StdFace_FoldSite2D(StdI, jW, jL, &jCell0, &jCell1, &jWfold, &jLfold);
+  *phase = cpow(StdI->phase0, (double)jCell0) * cpow(StdI->phase1, (double)jCell1);
+  *phase = conj(*phase);
   /**/
   for (kCell = 0; kCell < StdI->NCell; kCell++) {
     if (jWfold == StdI->Cell[kCell][0] && jLfold == StdI->Cell[kCell][1]) {
