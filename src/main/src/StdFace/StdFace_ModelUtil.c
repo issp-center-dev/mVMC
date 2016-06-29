@@ -816,7 +816,6 @@ void StdFace_SetLabel(struct StdIntList *StdI, FILE *fp,
   jL = iL + diL;
   StdFace_FoldSite2D(StdI, jW, jL, &jCell0, &jCell1, &jWfold, &jLfold);
   *phase = cpow(StdI->phase0, (double)jCell0) * cpow(StdI->phase1, (double)jCell1);
-  *phase = conj(*phase);
   /**/
   for (kCell = 0; kCell < StdI->NCell; kCell++) {
     if (jWfold == StdI->Cell[kCell][0] && jLfold == StdI->Cell[kCell][1]) {
