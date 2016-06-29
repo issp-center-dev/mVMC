@@ -62,8 +62,8 @@ int *LocSpn; /* [Nsite] */
 
 /* for Hamiltonian */
 int NTransfer;
-int **Transfer; /* [NTransfer][3] */
-double *ParaTransfer;
+int **Transfer; /* [NTransfer][4] */
+double complex*ParaTransfer;
 
 int NCoulombIntra;
 int *CoulombIntra; /* [NCoulombIntra] */

@@ -417,9 +417,9 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + Nsite*NQPOptTrans /* QPOptTrans */
     + Nsite*NQPOptTrans /* QPOptTransSgn */
     + 2*NPara; /* OptFlag */ // TBC
-
-  NTotalDefDouble = NTransfer /* ParaTransfer */
-    + NCoulombIntra /* ParaCoulombIntra */
+  
+  NTotalDefDouble =
+    NCoulombIntra /* ParaCoulombIntra */
     + NCoulombInter /* ParaCoulombInter */
     + NHundCoupling /* ParaHondCoupling */
     + NPairHopping  /* ParaPairHopping */
@@ -496,9 +496,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 			&dReValue,
 	  		&dImValue)!=EOF){
 
-		  	ParaTransfer[idx]=dReValue;
-			//todo Input dImValue
-
+		  	ParaTransfer[idx]=dReValue+I*dImValue;
 		  	if(Transfer[idx][1] != Transfer[idx][3]){
 				fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
 				info = ReadDefFileError(defname);
@@ -905,7 +903,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   
 #ifdef _mpi_use
   SafeMpiBcastInt(LocSpn, NTotalDefInt, comm);
-  SafeMpiBcast(ParaTransfer, NTotalDefDouble, comm);
+  SafeMpiBcast_fcmp(ParaTransfer, NTransfer, comm);
+  SafeMpiBcast(ParaCoulombIntra, NTotalDefDouble, comm);
+
   /* MPI_Bcast(LocSpn, NTotalDefInt, MPI_INT, 0, comm); */
   /* MPI_Bcast(ParaTransfer, NTotalDefDouble, MPI_DOUBLE, 0, comm); */
 #endif /* _mpi_use */
