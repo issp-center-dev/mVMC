@@ -40,8 +40,8 @@ void CalculateGreenFunc(const double w, const double ip, int *eleIdx, int *eleCf
     #pragma omp for private(idx,ri,rj,s,tmp) schedule(dynamic) nowait
     for(idx=0;idx<NCisAjs;idx++) {
       ri = CisAjsIdx[idx][0];
-      rj = CisAjsIdx[idx][1];
-      s  = CisAjsIdx[idx][2];
+      rj = CisAjsIdx[idx][2];
+      s  = CisAjsIdx[idx][3];
       tmp = GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,
                        myProjCntNew,myBuffer);
       LocalCisAjs[idx] = tmp;

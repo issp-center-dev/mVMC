@@ -396,7 +396,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   SROptSize = NPara+1;
   
   NTotalDefInt = Nsite /* LocSpn */
-    + 3*NTransfer /* Transfer */
+    + 4*NTransfer /* Transfer */
     + NCoulombIntra /* CoulombIntra */
     + 2*NCoulombInter /* CoulombInter */
     + 2*NHundCoupling /* HundCoupling */
@@ -410,9 +410,9 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + Nsite*Nsite /* OrbitalSgn */
     + Nsite*NQPTrans /* QPTrans */
     + Nsite*NQPTrans /* QPTransSgn */
-    + 3*NCisAjs /* CisAjs */
+    + 4*NCisAjs /* CisAjs */
     + 8*NCisAjsCktAlt /* CisAjsCktAlt */
-    + 6*NCisAjsCktAltDC /* CisAjsCktAltDC */
+    + 8*NCisAjsCktAltDC /* CisAjsCktAltDC */
     + 6*NInterAll /* InterAll */
     + Nsite*NQPOptTrans /* QPOptTrans */
     + Nsite*NQPOptTrans /* QPOptTransSgn */
@@ -490,16 +490,16 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	if(NTransfer>0){
 	  while( fscanf(fp, "%d %d %d %d %lf %lf\n",
 			&(Transfer[idx][0]),
-			&tmp_ispin,
 			&(Transfer[idx][1]),
 			&(Transfer[idx][2]),
+			&(Transfer[idx][3]),
 			&dReValue,
 	  		&dImValue)!=EOF){
 
 		  	ParaTransfer[idx]=dReValue;
 			//todo Input dImValue
 
-		  	if(tmp_ispin != Transfer[idx][2]){
+		  	if(Transfer[idx][1] != Transfer[idx][3]){
 				fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
 				info = ReadDefFileError(defname);
 				break;
@@ -745,9 +745,15 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	  idx = 0;
 	  while( fscanf(fp, "%d %d %d %d\n",
 			&(x0), &(x1), &(x2), &(x3)) != EOF){
-	    CisAjsIdx[x0][0] = x1;
-	    CisAjsIdx[x0][1] = x2;
-	    CisAjsIdx[x0][2] = x3;
+	    CisAjsIdx[idx][0] = x0;
+        CisAjsIdx[idx][1] = x1;
+	    CisAjsIdx[idx][2] = x2;
+	    CisAjsIdx[idx][3] = x3;
+        if(x1 != x3){
+          fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
+          info = ReadDefFileError(defname);
+          break;
+        }
 	    idx++;
 	  }
 	  if(idx!=NCisAjs) info=ReadDefFileError(defname);
@@ -755,8 +761,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	fclose(fp);
 	break;	  
 
-      case KWTwoBodyG:	  
-	/*cisajscktalt.def----------------------------------*/
+    
+      case KWTwoBodyGEx:
+        /*cisajscktalt.def----------------------------------*/
 	if(NCisAjsCktAlt>0){
 	  idx = 0;
 	  while( fscanf(fp, "%d %d %d %d %d %d %d %d\n", 
@@ -777,19 +784,29 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	fclose(fp);
 	break;
 
-      case KWTwoBodyGEx:    
+
+
+      case KWTwoBodyG:	  
 	/*cisajscktaltdc.def--------------------------------*/
 	if(NCisAjsCktAltDC>0){
 	  idx = 0;	  
-	  while( fscanf(fp, "%d %d %d %d %d %d\n", 
-			&(x0), &(x1), &(x2), &(x3), &(x4), &(x5) ) != EOF ){
+	  while( fscanf(fp, "%d %d %d %d %d %d %d %d\n", 
+			&(x0), &(x1), &(x2), &(x3), &(x4),
+			&(x5), &(x6), &(x7) ) != EOF ){
 	    CisAjsCktAltDCIdx[idx][0] = x0;
 	    CisAjsCktAltDCIdx[idx][1] = x1;
 	    CisAjsCktAltDCIdx[idx][2] = x2;
 	    CisAjsCktAltDCIdx[idx][3] = x3;
 	    CisAjsCktAltDCIdx[idx][4] = x4;
 	    CisAjsCktAltDCIdx[idx][5] = x5;
+	    CisAjsCktAltDCIdx[idx][6] = x6;
+	    CisAjsCktAltDCIdx[idx][7] = x7;
 	    idx++;
+        if(x1 != x3 || x5 != x7){
+          fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
+          info = ReadDefFileError(defname);
+          break;
+        }
 	  }
 	  if(idx!=NCisAjsCktAltDC) info=ReadDefFileError(defname);
 	}

@@ -79,8 +79,8 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
     #pragma omp for private(idx,ri,rj,s) schedule(dynamic) nowait
     for(idx=0;idx<NTransfer;idx++) {
       ri = Transfer[idx][0];
-      rj = Transfer[idx][1];
-      s  = Transfer[idx][2];
+      rj = Transfer[idx][2];
+      s  = Transfer[idx][3];
       
       myEnergy -= ParaTransfer[idx]
         * GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
@@ -218,8 +218,8 @@ double complex CalculateHamiltonian1(const double complex ip, int *eleIdx, const
     #pragma omp for private(idx,ri,rj,s) schedule(dynamic) nowait
     for(idx=0;idx<NTransfer;idx++) {
       ri = Transfer[idx][0];
-      rj = Transfer[idx][1];
-      s  = Transfer[idx][2];
+      rj = Transfer[idx][2];
+      s  = Transfer[idx][3];
       
       myEnergy -= ParaTransfer[idx]
         * GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
