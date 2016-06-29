@@ -26,7 +26,7 @@ void InitParameter() {
     if(OptFlag[2*i+2*NProj] > 0){ //TBC
       Slater[i] =  1*genrand_real2(); /* uniform distribution [0,1) */
       Slater[i] += 1*I*genrand_real2(); /* uniform distribution [0,1) */
-      printf("DEBUG: i=%d slater=%lf %lf \n",i,creal(Slater[i]),cimag(Slater[i]));
+      //printf("DEBUG: i=%d slater=%lf %lf \n",i,creal(Slater[i]),cimag(Slater[i]));
     } else {
       Slater[i] = 0.0;
     }
