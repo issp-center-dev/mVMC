@@ -4,12 +4,15 @@ if [ -z ${1} ] || [ ${1} = "help" ]; then
     echo "Usage:"
     echo "./HPhiconfig.sh system_name"
     echo " system_name should be chosen from below:"
-    echo "     sekirei : ISSP system-B"
-    echo "     jupiter : "
-    echo "     kashiwa : "
-    echo "         kei : "
-    echo "         sol : "
-    echo "       reims : "
+    echo "        sekirei : ISSP system-B"
+    echo "            kei : Fujitsu K computer & FX10"
+    echo "  openmpi-intel : OpenMPI + Intel Compiler + MKL"
+    echo "            gnu : GNU"
+    echo "        jupiter : "
+    echo "        kashiwa : "
+    echo "            sol : "
+    echo "          reims : "
+    echo "         manual : Configure manualy"
     echo ""
 else
     if [ ${1} = "sekirei" ]; then
@@ -104,18 +107,36 @@ FORT = ifort
 FFLAGS = -O3 -implicitnone -xSSE2
 SMFTFLAGS = -O3 -no-ansi-alias -xSSE2 -DMEXP=19937 -DHAVE_SSE2
 EOF
-    elif [ ${1} == "manual" ]; then
-echo " C compiler ?"
-read CC
-echo " LAPACK option ?"
-read LAPACK_FLAGS
-echo " Other compilation flags ?"
-read FLAGS
+    elif [ ${1} = "gnu" ]; then
         cat > src/make.sys <<EOF
-CC = ${CC}
+CC = mpicc
+LIB = -fopenmp  -framework Accelerate -llapack -lblas -lm
+CFLAGS = -O3 -fopenmp
+REPORT = 
+OPTION = -D_mpi_use -D_lapack
 CP = cp -f -v
 AR = ar rv
+FORT = gfortran
+FFLAGS = -O3 -fimplicit-none
+SMFTFLAGS = -DMEXP=19937
 EOF
+    elif [ ${1} == "manual" ]; then
+        cat > src/make.sys <<EOF
+CC = 
+LIB = 
+CFLAGS = 
+REPORT = 
+OPTION = 
+CP = cp -f -v
+AR = ar rv
+FORT = 
+FFLAGS = 
+SMFTFLAGS = 
+EOF
+        echo ""
+        echo "Generate src/make.sys without any setting."
+        echo "Please fill src/make.sys manualy."
+        echo ""
     else
         echo ""
         echo "Unsupported system. Please type"
