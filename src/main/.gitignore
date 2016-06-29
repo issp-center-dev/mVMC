@@ -4,3 +4,4 @@
 *.out
 # Emacs's backup files
 *~
+build*
