@@ -277,7 +277,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   StopTimer(55);
   StartTimer(56);
   /* calculate the overlap matrix S */
-  printf("YDEBUG: %d %d %lf \n",mlocc,mlocr,ratioDiag);
+  //printf("YDEBUG: %d %d %lf \n",mlocc,mlocr,ratioDiag);
   #pragma omp parallel for default(shared) private(ic,ir,pi,pj,idx)
   #pragma loop noalias
   for(ic=0;ic<mlocc;ic++) {
@@ -408,10 +408,11 @@ int StochasticOptDiag(MPI_Comm comm) {
   StartTimer(51);
 
   info = stcOptMainDiag(r,nSmat,smatToParaIdx,comm, optNum);
+  /*
   for(pi=0;pi<nSmat;pi++) {
     printf("DEBUG: pi=%d r= %lf \n",pi,r[pi]);
   }
-
+  */
   StopTimer(51);
   StartTimer(52);
 
