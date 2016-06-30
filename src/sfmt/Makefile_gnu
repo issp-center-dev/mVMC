@@ -1,9 +1,0 @@
-OBJ = SFMT.o
-CC = gcc
-OPTION = -DMEXP=19937 
-
-$(OBJ): SFMT.c
-	$(CC) $(OPTION) -c $< -o $@
-
-clean:
-	-rm -f $(OBJ)
