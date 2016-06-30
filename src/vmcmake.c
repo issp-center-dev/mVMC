@@ -10,7 +10,7 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
                       const int qpStart, const int qpEnd, MPI_Comm comm);
 void copyFromBurnSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
 void copyToBurnSample(const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt);
-void saveEleConfig(const int sample, const double logIp,
+void saveEleConfig(const int sample, const double complex logIp,
                    const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt);
 void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum);
 void ReduceCounter(MPI_Comm comm);
@@ -293,7 +293,7 @@ void copyToBurnSample(const int *eleIdx, const int *eleCfg, const int *eleNum, c
   return;
 }
 
-void saveEleConfig(const int sample, const double logIp,
+void saveEleConfig(const int sample, const double complex logIp,
                    const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt) {
   int i,offset;
   double x;

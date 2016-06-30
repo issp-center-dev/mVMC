@@ -135,7 +135,7 @@ void weightAverageReduce(int n, double *vec, MPI_Comm comm) {
 
 void weightAverageReduce_fcmp(int n, double  complex *vec, MPI_Comm comm) {
   int i;
-  const double invW = 1.0/Wc;
+  const double complex invW = 1.0/Wc;
   double complex *buf;
   int rank,size;
   MPI_Comm_rank(comm,&rank);

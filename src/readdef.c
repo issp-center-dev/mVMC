@@ -908,6 +908,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   SafeMpiBcastInt(LocSpn, NTotalDefInt, comm);
   SafeMpiBcast_fcmp(ParaTransfer, NTransfer, comm);
   SafeMpiBcast(ParaCoulombIntra, NTotalDefDouble, comm);
+  SafeMpiBcast_fcmp(ParaQPTrans, NQPTrans, comm);
 
   /* MPI_Bcast(LocSpn, NTotalDefInt, MPI_INT, 0, comm); */
   /* MPI_Bcast(ParaTransfer, NTotalDefDouble, MPI_DOUBLE, 0, comm); */

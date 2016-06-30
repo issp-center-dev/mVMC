@@ -31,6 +31,7 @@ void InitQPWeight() {
     SPGLSinSin[0] = 0.0;
 
     for(j=0;j<NMPTrans;j++) {
+      //printf("XDEBUG: j=%d %lf %lf\n",j, creal(ParaQPTrans[j]), cimag(ParaQPTrans[j]));
       QPFixWeight[j] = ParaQPTrans[j];
     }
 
@@ -91,6 +92,7 @@ double complex CalculateIP_fcmp(double complex * const pfM, const int qpStart, c
   #pragma loop noalias
   for(qpidx=0;qpidx<qpNum;qpidx++) {
     ip += QPFullWeight[qpidx+qpStart] * pfM[qpidx];
+    //printf("DEBUG: qpidx =%d: %lf %lf   \n",qpidx,creal( QPFullWeight[qpidx+qpStart] ),creal(pfM[qpidx]));
   }
   if(size>1) {
     MPI_Allreduce(&ip, &ip2, 1, MPI_DOUBLE_COMPLEX, MPI_SUM, comm);

@@ -61,7 +61,7 @@ void VMCMainCal(MPI_Comm comm) {
     StopTimer(40);
 
     if(info!=0) {
-      fprintf(stderr,"waring: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
+      fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
       continue;
     }
 
@@ -72,17 +72,17 @@ void VMCMainCal(MPI_Comm comm) {
     //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
     w =1.0;
     if( !isfinite(w) ) {
-      fprintf(stderr,"waring: VMCMainCal rank:%d sample:%d w=%e\n",rank,sample,w);
+      fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d w=%e\n",rank,sample,w);
       continue;
     }
 
     StartTimer(41);
     /* calculate energy */
     e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-    //printf("DEBUG: sample=%d e= %lf %lf\n",sample,creal(e),cimag(e));
+    //printf("DEBUG: rank=%d: sample=%d ip= %lf %lf\n",rank,sample,creal(ip),cimag(ip));
     StopTimer(41);
     if( !isfinite(e) ) {
-      fprintf(stderr,"waring: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
+      fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
       continue;
     }
 
