@@ -86,7 +86,7 @@ int **ExchangeCoupling; /* [NExchangeCoupling][2] */
 double *ParaExchangeCoupling;
 
 int NInterAll;
-int **InterAll; /* [NInterAll][6] */
+int **InterAll; /* [NInterAll][8] */
 double *ParaInterAll;
 
 /* for variational parameters */

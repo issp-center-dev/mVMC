@@ -118,7 +118,7 @@ void SetMemoryDef() {
   InterAll = (int**)malloc(sizeof(int*)*NInterAll);
   for(i=0;i<NInterAll;i++) {
     InterAll[i] = pInt;
-    pInt += 6;
+    pInt += 8;
   }
 
   QPOptTrans = (int**)malloc(sizeof(int*)*NQPOptTrans);

@@ -115,11 +115,11 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
     #pragma omp for private(idx,ri,rj,s,rk,rl,t) schedule(dynamic) nowait
     for(idx=0;idx<NInterAll;idx++) {
       ri = InterAll[idx][0];
-      rj = InterAll[idx][1];
-      s  = InterAll[idx][2];
-      rk = InterAll[idx][3];
-      rl = InterAll[idx][4];
-      t  = InterAll[idx][5];
+      rj = InterAll[idx][2];
+      s  = InterAll[idx][3];
+      rk = InterAll[idx][4];
+      rl = InterAll[idx][6];
+      t  = InterAll[idx][7];
       
       myEnergy += ParaInterAll[idx]
         * GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
@@ -294,11 +294,11 @@ double complex CalculateHamiltonian2(const double complex ip, int *eleIdx, const
     #pragma omp for private(idx,ri,rj,s,rk,rl,t) schedule(dynamic) nowait
     for(idx=0;idx<NInterAll;idx++) {
       ri = InterAll[idx][0];
-      rj = InterAll[idx][1];
-      s  = InterAll[idx][2];
-      rk = InterAll[idx][3];
-      rl = InterAll[idx][4];
-      t  = InterAll[idx][5];
+      rj = InterAll[idx][2];
+      s  = InterAll[idx][3];
+      rk = InterAll[idx][4];
+      rl = InterAll[idx][6];
+      t  = InterAll[idx][7];
       
       myEnergy += ParaInterAll[idx]
         * GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,

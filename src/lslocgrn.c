@@ -132,11 +132,11 @@ double complex calculateHW(const double h1, const double ip, int *eleIdx, int *e
   /* Inter All */
   for(idx=0;idx<NInterAll;idx++) {
     ri = InterAll[idx][0];
-    rj = InterAll[idx][1];
-    s  = InterAll[idx][2];
-    rk = InterAll[idx][3];
-    rl = InterAll[idx][4];
-    t  = InterAll[idx][5];
+    rj = InterAll[idx][2];
+    s  = InterAll[idx][3];
+    rk = InterAll[idx][4];
+    rl = InterAll[idx][6];
+    t  = InterAll[idx][7];
       
     val += ParaInterAll[idx]
       * calHCACA(ri,rj,rk,rl,s,t,h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
@@ -376,10 +376,10 @@ double complex calHCA2(const int ri, const int rj, const int s,
     /* Inter All */
     #pragma omp for private(idx) schedule(dynamic) nowait
     for(idx=0;idx<NInterAll;idx++) {
-      myRsi[0] = InterAll[idx][0] + InterAll[idx][2]*Nsite;
-      myRsj[0] = InterAll[idx][1] + InterAll[idx][2]*Nsite;
-      myRsi[1] = InterAll[idx][3] + InterAll[idx][5]*Nsite;
-      myRsj[1] = InterAll[idx][4] + InterAll[idx][5]*Nsite;
+      myRsi[0] = InterAll[idx][0] + InterAll[idx][3]*Nsite;
+      myRsj[0] = InterAll[idx][2] + InterAll[idx][3]*Nsite;
+      myRsi[1] = InterAll[idx][4] + InterAll[idx][7]*Nsite;
+      myRsj[1] = InterAll[idx][6] + InterAll[idx][7]*Nsite;
       myRsi[2] = rsi;
       myRsj[2] = rsj;
       myValue += ParaInterAll[idx]
@@ -705,10 +705,10 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
     /* Inter All */
     #pragma omp for private(idx) schedule(dynamic) nowait
     for(idx=0;idx<NInterAll;idx++) {
-      myRsi[0] = InterAll[idx][0] + InterAll[idx][2]*Nsite;
-      myRsj[0] = InterAll[idx][1] + InterAll[idx][2]*Nsite;
-      myRsi[1] = InterAll[idx][3] + InterAll[idx][5]*Nsite;
-      myRsj[1] = InterAll[idx][4] + InterAll[idx][5]*Nsite;
+      myRsi[0] = InterAll[idx][0] + InterAll[idx][3]*Nsite;
+      myRsj[0] = InterAll[idx][2] + InterAll[idx][3]*Nsite;
+      myRsi[1] = InterAll[idx][4] + InterAll[idx][7]*Nsite;
+      myRsj[1] = InterAll[idx][6] + InterAll[idx][7]*Nsite;
       myRsi[2] = rsi;
       myRsj[2] = rsj;
       myRsi[3] = rsk;
