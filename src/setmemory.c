@@ -135,12 +135,9 @@ void SetMemoryDef() {
 
   OptFlag = pInt;
 
-  /* Double */
-  ParaTransfer = (double*)malloc(sizeof(double)*(NTotalDefDouble-NQPTrans));
-  pDouble = ParaTransfer + NTransfer;
-
-  ParaCoulombIntra = pDouble;
-  pDouble += NCoulombIntra;
+  ParaTransfer = (double complex*)malloc(sizeof(double complex)*(NTransfer));  
+  ParaCoulombIntra = (double*)malloc(sizeof(double)*(NTotalDefDouble-NQPTrans));
+  pDouble = ParaCoulombIntra +NCoulombIntra; 
 
   ParaCoulombInter = pDouble;
   pDouble += NCoulombInter;
