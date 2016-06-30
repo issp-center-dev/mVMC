@@ -118,7 +118,7 @@ void SetMemoryDef() {
   InterAll = (int**)malloc(sizeof(int*)*NInterAll);
   for(i=0;i<NInterAll;i++) {
     InterAll[i] = pInt;
-    pInt += 6;
+    pInt += 8;
   }
 
   QPOptTrans = (int**)malloc(sizeof(int*)*NQPOptTrans);
@@ -136,6 +136,8 @@ void SetMemoryDef() {
   OptFlag = pInt;
 
   ParaTransfer = (double complex*)malloc(sizeof(double complex)*(NTransfer));  
+  ParaInterAll = ParaTransfer+NTrans;
+
   ParaCoulombIntra = (double*)malloc(sizeof(double)*(NTotalDefDouble-NQPTrans));
   pDouble = ParaCoulombIntra +NCoulombIntra; 
 
@@ -154,8 +156,6 @@ void SetMemoryDef() {
 //  ParaQPTrans = pDouble;
 //  pDouble +=  NQPTrans;
 
-  ParaInterAll = pDouble;
-  pDouble +=  NInterAll;
   
   ParaQPOptTrans = pDouble;
 

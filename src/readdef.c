@@ -413,7 +413,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + 4*NCisAjs /* CisAjs */
     + 8*NCisAjsCktAlt /* CisAjsCktAlt */
     + 8*NCisAjsCktAltDC /* CisAjsCktAltDC */
-    + 6*NInterAll /* InterAll */
+    + 8*NInterAll /* InterAll */
     + Nsite*NQPOptTrans /* QPOptTrans */
     + Nsite*NQPOptTrans /* QPOptTransSgn */
     + 2*NPara; /* OptFlag */ // TBC
@@ -425,7 +425,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + NPairHopping  /* ParaPairHopping */
     + NExchangeCoupling /* ParaExchangeCoupling */
     + NQPTrans /* ParaQPTrans */
-    + NInterAll /* ParaInterAll */
+    //+ NInterAll /* ParaInterAll */
     + NQPOptTrans; /* ParaQPTransOpt */
 
   return 0;
@@ -816,29 +816,31 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	if(NInterAll>0){
 	  idx = 0;
 	  while( fscanf(fp, "%d %d %d %d %d %d %d %d %lf %lf\n",
-			&(InterAll[idx][0]),
-					&(x1), //ispin1
-			&(InterAll[idx][1]),
-			&(InterAll[idx][2]),//ispin2
-			&(InterAll[idx][3]),
-					&(x3),//ispin3
-			&(InterAll[idx][4]),
-			&(InterAll[idx][5]),//ispin4
-			&dReValue,
+                    &(InterAll[idx][0]),
+                    &(InterAll[idx][1]),//ispin1
+                    &(InterAll[idx][2]),
+                    &(InterAll[idx][3]),//ispin2
+                    &(InterAll[idx][4]),
+                    &(InterAll[idx][5]),//ispin3
+                    &(InterAll[idx][6]),
+                    &(InterAll[idx][7]),//ispin4
+                    &dReValue,
 					&dImValue)!=EOF ){
 
-		  ParaInterAll[idx]=dReValue;
-		  //Todo: Input dImValue
-		  if(! ((x1 == InterAll[idx][2] || x3 == InterAll[idx][5])
-			|| (x1 == InterAll[idx][5] || x3 == InterAll[idx][2])
-			)
-		     )
-		  {
-			  fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-			  info = ReadDefFileError(defname);
-			  break;
-		  }
+		  ParaInterAll[idx]=dReValue+I*dImValue;
 
+		  if(!((InterAll[idx][1] == InterAll[idx][3]
+		      || InterAll[idx][5] == InterAll[idx][7])
+		   ||
+		       (InterAll[idx][1] == InterAll[idx][5]
+			|| InterAll[idx][3]  == InterAll[idx][7])
+		       )
+		     )
+		    {
+		      fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
+		      info = ReadDefFileError(defname);
+		      break;
+		    }
 		  idx++;
 	  }
 	  if(idx!=NInterAll) info=ReadDefFileError(defname);
