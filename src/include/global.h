@@ -87,7 +87,7 @@ double *ParaExchangeCoupling;
 
 int NInterAll;
 int **InterAll; /* [NInterAll][6] */
-double *ParaInterAll;
+double complex*ParaInterAll;
 
 /* for variational parameters */
 int NGutzwillerIdx, *GutzwillerIdx; /* [Nsite] */
