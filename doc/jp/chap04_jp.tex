@@ -249,25 +249,25 @@ $ gnuplot lattice.gp
 
 \end{itemize}
 
-\subsection{保存量に関するパラメーター}
+%\subsection{保存量に関するパラメーター}
+%
+%\begin{itemize}
+%\item \verb|nelec|
+%
+%{\bf 形式 :} 整数
+%
+%{\bf 説明 :} 全伝導電子数を指定します。
+%\verb|model = "Fermion HubbardGC"|, \verb|"Spin"|, \verb|"SpinGC"|
+%のときには指定しないでください。
 
-\begin{itemize}
-\item \verb|nelec|
+%\item \verb|2Sz|
 
-{\bf 形式 :} 整数
+%{\bf 形式 :} 整数
 
-{\bf 説明 :} 伝導電子数を指定します。
-\verb|model = "Fermion HubbardGC"|, \verb|"Spin"|, \verb|"SpinGC"|
-のときには指定しないでください。
-
-\item \verb|2Sz|
-
-{\bf 形式 :} 整数
-
-{\bf 説明 :} 全スピンのz 成分の2倍を指定します。
-\verb|model = "Fermion HubbardGC"|, \verb|SpinGC|
-のときには指定しないでください。
-\end{itemize}
+%{\bf 説明 :} 全スピンのz 成分の2倍を指定します。
+%\verb|model = "Fermion HubbardGC"|, \verb|SpinGC|
+%のときには指定しないでください。
+%\end{itemize}
 
 \subsection{ハミルトニアンの各項の係数}
 
@@ -559,8 +559,8 @@ $\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_
 
   {\bf 形式 :} {int型 (1以上、必須)}
 
-  {\bf 説明 :} \tr{$\uparrow$電子の個数。
-    $S_z=0$部分空間で計算するので、$\uparrow$電子と$\downarrow$電子の個数は等しい。}
+  {\bf 説明 :} \tr{伝導電子の数。
+    $\uparrow$電子と$\downarrow$電子の個数を足したものを入力してください。}
 
 \item  \verb|NSPGaussLeg|
 

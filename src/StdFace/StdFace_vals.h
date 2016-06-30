@@ -92,7 +92,6 @@ struct StdIntList {
   int NLanczosMode;
   int NDataIdxStart;
   int NDataQtySmp;
-  int Nsite;
   int NSPGaussLeg;
   int NSPStot;
   int NMPTrans;

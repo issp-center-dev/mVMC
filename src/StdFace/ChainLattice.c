@@ -180,7 +180,7 @@ void StdFace_Chain(struct StdIntList *StdI, char *model)
       StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite, jsite);
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
-      StdFace_Hopping(StdI, StdI->mu, isite, isite);
+      StdFace_Hopping(StdI, StdI->mu, isite, isite, 0);
       StdFace_intr(StdI, StdI->U, isite, 0, isite, 0, isite, 1, isite, 1);
       StdI->Cintra[StdI->NCintra] = StdI->U; StdI->CintraIndx[StdI->NCintra][0] = isite; StdI->NCintra += 1;
       /**/
@@ -200,7 +200,7 @@ void StdFace_Chain(struct StdIntList *StdI, char *model)
       StdFace_GeneralJ(StdI, StdI->J0, StdI->S2, StdI->S2, isite, jsite);
     }
     else {
-      StdFace_Hopping(StdI, phase * StdI->t0, isite, jsite);
+      StdFace_Hopping(StdI, phase * StdI->t0, isite, jsite, 1);
       StdFace_Coulomb(StdI, StdI->V0, isite, jsite);
     }
     /*
@@ -214,7 +214,7 @@ void StdFace_Chain(struct StdIntList *StdI, char *model)
       StdFace_GeneralJ(StdI, StdI->Jp, StdI->S2, StdI->S2, isite, jsite);
     }
     else {
-      StdFace_Hopping(StdI, phase * StdI->tp, isite, jsite);
+      StdFace_Hopping(StdI, phase * StdI->tp, isite, jsite, 1);
       StdFace_Coulomb(StdI, StdI->Vp, isite, jsite);
     }
   }/*for (iL = 0; iL < StdI->L; iL++)*/

@@ -828,7 +828,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 					&dImValue)!=EOF ){
 
 		  ParaInterAll[idx]=dReValue+I*dImValue;
-		  //Todo: Input dImValue
+
 		  if(!((InterAll[idx][1] == InterAll[idx][3]
 		      || InterAll[idx][5] == InterAll[idx][7])
 		   ||
@@ -841,7 +841,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 		      info = ReadDefFileError(defname);
 		      break;
 		    }
-
 		  idx++;
 	  }
 	  if(idx!=NInterAll) info=ReadDefFileError(defname);

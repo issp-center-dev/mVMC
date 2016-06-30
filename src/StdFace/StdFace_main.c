@@ -106,7 +106,6 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->NLanczosMode = 9999;
   StdI->NDataIdxStart = 9999;
   StdI->NDataQtySmp = 9999;
-  StdI->Nsite = 9999;
   StdI->Sz2 = 9999;
   StdI->S2 = 9999;
   StdI->NSPGaussLeg = 9999;
@@ -1150,6 +1149,13 @@ static void CheckModPara(struct StdIntList *StdI)
     if (StdI->lGC == 0) {
       StdFace_RequiredVal_i("nelec", StdI->nelec);
       StdFace_RequiredVal_i("2Sz", StdI->Sz2);
+      if (StdI->nelec % 2 != 0) {
+        printf("\nERROR ! nelec should be an even number !\n\n");
+        exit(-1);
+      }
+      else {
+        StdI->nelec = StdI->nelec / 2;
+      }
     }
     else {
       StdFace_NotUsed_i("nelec", StdI->nelec);
@@ -1166,6 +1172,13 @@ static void CheckModPara(struct StdIntList *StdI)
     if (StdI->lGC == 0) {
       StdFace_RequiredVal_i("nelec", StdI->nelec);
       StdFace_RequiredVal_i("2Sz", StdI->Sz2);
+      if ((StdI->nelec + StdI->nsite / 2) % 2 != 0) {
+        printf("\nERROR ! nelec should be an even number !\n\n");
+        exit(-1);
+      }
+      else {
+        StdI->nelec = (StdI->nelec + StdI->nsite / 2) / 2;
+      }
     }
     else {
       StdFace_NotUsed_i("nelec", StdI->nelec);
