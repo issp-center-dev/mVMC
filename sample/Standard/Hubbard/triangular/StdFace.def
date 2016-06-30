@@ -6,5 +6,5 @@ model = "FermionHubbard"
 lattice = "triangular"
 t = 1.0
 U = 4.0
-nelec = 4
+nelec = 8
 2Sz = 0

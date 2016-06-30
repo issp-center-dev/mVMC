@@ -23,7 +23,7 @@ void StdFace_intr(struct StdIntList *StdI, double complex intr0,
   int site3, int spin3, int site4, int spin4);
 
 void StdFace_Hopping(struct StdIntList *StdI, double complex trans0,
-  int isite, int jsite);
+  int isite, int jsite, int loff);
 void StdFace_MagField(struct StdIntList *StdI, int S2, double h, double Gamma, int isite);
 
 void StdFace_Coulomb(struct StdIntList *StdI, double V, int isite, int jsite);

@@ -55,14 +55,15 @@ void StdFace_Hopping(
 struct StdIntList *StdI,
   double complex trans0 /**< [in] Hopping integral t, mu, etc. */,
   int isite /**< [in] i for c_{i sigma}^dagger*/,
-  int jsite /**< [in] j for c_{j sigma'}*/
+  int jsite /**< [in] j for c_{j sigma'}*/,
+  int loff
   )
 {
   int ispin;
 
   for (ispin = 0; ispin < 2; ispin++) {
     StdFace_trans(StdI, trans0, jsite, ispin, isite, ispin);
-    if(isite != jsite)
+    if(loff == 1)
       StdFace_trans(StdI, conj(trans0), isite, ispin, jsite, ispin);
   }/*for (ispin = 0; ispin < 2; ispin++)*/
 
