@@ -425,7 +425,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + NPairHopping  /* ParaPairHopping */
     + NExchangeCoupling /* ParaExchangeCoupling */
     + NQPTrans /* ParaQPTrans */
-    + NInterAll /* ParaInterAll */
+    //+ NInterAll /* ParaInterAll */
     + NQPOptTrans; /* ParaQPTransOpt */
 
   return 0;
@@ -827,7 +827,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                     &dReValue,
 					&dImValue)!=EOF ){
 
-		  ParaInterAll[idx]=dReValue;
+		  ParaInterAll[idx]=dReValue+I*dImValue;
 		  //Todo: Input dImValue
 		  if((InterAll[idx][1] != InterAll[idx][3]
               || InterAll[idx][5] != InterAll[idx][7])
