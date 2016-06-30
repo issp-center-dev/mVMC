@@ -829,16 +829,18 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 
 		  ParaInterAll[idx]=dReValue;
 		  //Todo: Input dImValue
-		  if((InterAll[idx][1] != InterAll[idx][3]
-              || InterAll[idx][5] != InterAll[idx][7])
-             || (InterAll[idx][1] != InterAll[idx][5]
-                 || InterAll[idx][3]  != InterAll[idx][7])
-             )
-            {
-			  fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-			  info = ReadDefFileError(defname);
-			  break;
-		  }
+		  if(!((InterAll[idx][1] == InterAll[idx][3]
+		      || InterAll[idx][5] == InterAll[idx][7])
+		   ||
+		       (InterAll[idx][1] == InterAll[idx][5]
+			|| InterAll[idx][3]  == InterAll[idx][7])
+		       )
+		     )
+		    {
+		      fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
+		      info = ReadDefFileError(defname);
+		      break;
+		    }
 
 		  idx++;
 	  }
