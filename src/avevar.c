@@ -23,7 +23,9 @@ void OutputOptData() {
   const int n = 2+NPara;
   char fileName[D_FileNameMax];
   FILE *fp;
-  double ave,var,data;
+  //double ave,var,data;
+  double complex ave,data;
+  double var;
   int sample,i;
 
   sprintf(fileName, "%s_opt.dat", CParaFileHead);
@@ -44,11 +46,12 @@ void OutputOptData() {
       var = 0.0;
       for(sample=0;sample<NSROptItrSmp;sample++) {
         data = SROptData[i+n*sample] - ave;
-        var += data*(data);//TBC
+        var += creal(data*conj(data));//TBC
       }
       var = sqrt( var/((double)(NSROptItrSmp)-1.0) );
 
-      fprintf(fp,"% .18e % .18e ", ave, var);
+      fprintf(fp,"% .18e % .18e % .18e ",
+              creal(ave), cimag(ave), var);
     }
   }
   fprintf(fp, "\n");
