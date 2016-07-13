@@ -4,6 +4,8 @@
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#include "./include/readdef.h"
+
 void StoreOptData(int sample);
 void OutputOptData();
 
@@ -29,8 +31,30 @@ void CalcAveVar(int i, int n, double complex* _ave, double* _var){
   *_var= var;
 }
 
-void OutputGutzwiller(){
-  
+void WriteHeader(char* cNKWidx, int NKWidx, FILE *fp){
+  fprintf(fp, "======================\n");
+  fprintf(fp, cNKWidx);
+  fprintf(fp, "  %d\n", NKWidx);
+  fprintf(fp, "======================\n");
+  fprintf(fp, "======================\n");
+  fprintf(fp, "======================\n");    
+}
+
+void Child_OutputOptData(FILE *fp_all, char* cFileName, char* cNKWidx, int Nidx_head, int Nidx, int count_i, int n){
+  FILE *fp_out;
+  int i;
+  double complex ave;
+  double var;
+  fp_out = fopen(cFileName, "w");
+  WriteHeader(cNKWidx, Nidx_head,  fp_out);
+  for(i=0; i<Nidx; i++){
+    CalcAveVar(count_i+i, n, &ave, &var);  
+    fprintf(fp_out, "%d % .18e % .18e \n",
+            i, creal(ave), cimag(ave));
+    fprintf(fp_all,"% .18e % .18e % .18e ",
+            creal(ave), cimag(ave), var);
+  }
+  fclose(fp_out);
 }
   
 void StoreOptData(int sample){
@@ -70,53 +94,43 @@ void OutputOptData() {
     }
 
     count_i=2;
-    for(i=0; i<NGutzwillerIdx; i++){
-      CalcAveVar(count_i+i, n, &ave, &var);
-      OutputGutzwiller();
-      fprintf(fp,"% .18e % .18e % .18e ",
-              creal(ave), cimag(ave), var);
+    if(NGutzwillerIdx !=0){
+      Child_OutputOptData(fp, "gutzwiller_opt.dat", "NGutzwillerIdx", 
+			  NGutzwillerIdx, NGutzwillerIdx, count_i, n);
+      count_i += NGutzwillerIdx;
     }
 
-    count_i += NGutzwillerIdx;
-    for(i=0; i<NJastrowIdx; i++){
-      CalcAveVar(count_i+i, n, &ave, &var);
-      fprintf(fp,"% .18e % .18e % .18e ",
-              creal(ave), cimag(ave), var);
+    if(NJastrowIdx !=0){
+      Child_OutputOptData(fp, "jastrow_opt.dat", "NJastrowIdx", 
+			  NJastrowIdx, NJastrowIdx, count_i, n);
+      count_i += NJastrowIdx;
     }
 
-    count_i += NJastrowIdx;
-    for(i=0; i<2*3*NDoublonHolon2siteIdx; i++){
-      CalcAveVar(count_i+i, n, &ave, &var);
-      fprintf(fp,"% .18e % .18e % .18e ",
-              creal(ave), cimag(ave), var);
+    if(NDoublonHolon2siteIdx != 0){
+      Child_OutputOptData(fp, "doublonHolon2site_opt.dat", "NDoublonHolon2siteIdx", 
+			  NDoublonHolon2siteIdx, NDoublonHolon2siteIdx*2*3, 
+			  count_i, n);
+      count_i +=2*3*NDoublonHolon2siteIdx;
     }
 
-    count_i +=2*3*NDoublonHolon2siteIdx;
-    for(i=0; i<2*5*NDoublonHolon4siteIdx; i++){
-      CalcAveVar(count_i+i, n, &ave, &var);
-      fprintf(fp,"% .18e % .18e % .18e ",
-              creal(ave), cimag(ave), var);
+    if(NDoublonHolon4siteIdx != 0){
+      Child_OutputOptData(fp, "doublonHolon4site_opt.dat", "NDoublonHolon4siteIdx", 
+			  NDoublonHolon4siteIdx, NDoublonHolon4siteIdx*2*5, 
+			  count_i, n);
+      count_i +=2*5*NDoublonHolon4siteIdx;
     }
 
-    count_i +=2*5*NDoublonHolon4siteIdx;
-    for(i=0; i<NSlater; i++){
-      CalcAveVar(count_i+i, n, &ave, &var);
-      fprintf(fp,"% .18e % .18e % .18e ",
-              creal(ave), cimag(ave), var);
+    if(NSlater != 0){
+      Child_OutputOptData(fp, "orbital_opt.dat", "NOrbitalIdx", 
+			  NSlater, NSlater, count_i, n);
+      count_i +=NSlater;
     }
 
-    count_i +=NSlater;
-    for(i=0; i<NOptTrans; i++){
-      CalcAveVar(count_i+i, n, &ave, &var);
-      fprintf(fp,"% .18e % .18e % .18e ",
-              creal(ave), cimag(ave), var);
+    if(NOptTrans !=0){
+      Child_OutputOptData(fp, "trans_opt.dat", "NQPTrans", 
+			  NOptTrans, NOptTrans, count_i, n);
+      count_i += NOptTrans;
     }
-
-    count_i += NOptTrans;
-    if(count_i != n){
-      printf("Debug: NProj=%d, NPara=%d\n", NProj, NPara);
-      printf("Debug: Error %d, %d\n", count_i, n);
-    }    
   }
   fprintf(fp, "\n");
   fclose(fp);
