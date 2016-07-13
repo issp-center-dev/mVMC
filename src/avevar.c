@@ -7,6 +7,28 @@
 void StoreOptData(int sample);
 void OutputOptData();
 
+void CalcAveVar(int i, int n, double complex* _ave, double* _var){
+  int sample;
+  double complex data;
+  double complex ave=0;
+  double var=0;
+  
+  for(sample=0;sample<NSROptItrSmp;sample++) {
+    ave += SROptData[i+n*sample];
+  }
+  ave /= (double)(NSROptItrSmp);
+  
+  var = 0.0;
+  for(sample=0;sample<NSROptItrSmp;sample++) {
+    data = SROptData[i+n*sample] - ave;
+    var += creal(data*conj(data));//TBC
+  }
+  var = sqrt( var/((double)(NSROptItrSmp)-1.0) );
+
+  _ave=&ave;
+  _var=&var;
+}
+  
 void StoreOptData(int sample){
   const int n = 2+NPara;
   int i;
@@ -37,6 +59,12 @@ void OutputOptData() {
     }
   } else {
     for(i=0;i<n;i++) {
+      CalcAveVar(i, n, &ave, &var);
+      fprintf(fp,"% .18e % .18e % .18e ",
+              creal(ave), cimag(ave), var);
+    }
+    /*
+    for(i=0;i<n;i++) {
       ave=0.0;
       for(sample=0;sample<NSROptItrSmp;sample++) {
         ave += SROptData[i+n*sample];
@@ -53,9 +81,35 @@ void OutputOptData() {
       fprintf(fp,"% .18e % .18e % .18e ",
               creal(ave), cimag(ave), var);
     }
+    */
   }
   fprintf(fp, "\n");
   fclose(fp);
 
   return;
+}
+
+void GetAveVar(){
+}
+
+void OutputGutzwiller(){
+  
+}
+
+void OutputJastrow(){
+  
+}
+
+void OutputDoublonHolon2site(){
+  
+}
+
+void OutputDoublonHolon4site(){
+  
+}
+
+void OutputSlater(){
+}
+
+void OutputOptTrans(){
 }
