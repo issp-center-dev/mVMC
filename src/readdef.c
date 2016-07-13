@@ -262,7 +262,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNQPTrans]);
 	  fclose(fp);
 	  break;
-
+      
 	case KWOneBodyG:
 	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
@@ -456,9 +456,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 
       fp = fopen(defname, "r");
       if(fp==NULL){
-	info= ReadDefFileError(defname);
-	fclose(fp);
-	continue;
+        info= ReadDefFileError(defname);
+        fclose(fp);
+        continue;
       }
 
       /*=======================================================================*/
@@ -928,6 +928,123 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   
   return 0;
 }
+
+int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
+{
+  FILE *fp;
+  char defname[D_FileNameMax];
+  char ctmp[D_FileNameMax], ctmp2[256];
+  int iKWidx=0;
+  int i,idx;
+  int rank;
+  int count=0;
+  int info=0;
+  double tmp_real, tmp_comp;
+  MPI_Comm_rank(comm, &rank);
+  
+  if(rank==0) {
+    for(iKWidx=KWInGutzwiller; iKWidx< KWIdxInt_end; iKWidx++){     
+      strcpy(defname, cFileNameListFile[iKWidx]);
+      if(strcmp(defname,"")==0) continue;   
+      fp = fopen(defname, "r");
+      if(fp==NULL){
+        info= ReadDefFileError(defname);
+        fclose(fp);
+        continue;
+      }
+      /*=======================================================================*/
+      idx=0;
+      switch(iKWidx){
+        //get idx
+        fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+        fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+        sscanf(ctmp2,"%s %d\n", ctmp, &idx);
+        
+      case KWInGutzwiller:
+        if(idx != NGutzwillerIdx){
+          info=1;
+          continue;
+        }
+        for(i=0; i<NGutzwillerIdx; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          Proj[i]=tmp_real+I*tmp_comp;
+        }
+        break;
+        
+      case KWInJastrow:
+        if(idx != NJastrowIdx){
+          info=1;
+          continue;
+        }
+        count= NGutzwillerIdx;
+        for(i=count; i<count+NJastrowIdx; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          Proj[i]=tmp_real+I*tmp_comp;
+        }
+        break;
+        
+      case KWInDH2:
+        if(idx != NDoublonHolon2siteIdx){
+          info=1;
+          continue;
+        }
+        count =NGutzwillerIdx+NJastrowIdx;
+        for(i=count; i<count+2*3*NDoublonHolon2siteIdx; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          Proj[i]=tmp_real+I*tmp_comp;
+        }       
+        break;
+        
+      case KWInDH4:
+        if(idx != NDoublonHolon4siteIdx){
+          info=1;
+          continue;
+        }
+        count =NGutzwillerIdx+NJastrowIdx+2*3*NDoublonHolon2siteIdx;
+        for(i=count; i<count+2*5*NDoublonHolon4siteIdx; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          Proj[i]=tmp_real+I*tmp_comp;
+        }        
+        break;
+        
+      case KWInOrbital:
+        if(idx != NOrbitalIdx){
+          info=1;
+          continue;
+        }
+        for(i=0; i<NSlater; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          Slater[i]=tmp_real+I*tmp_comp;
+        }  
+        break;
+        
+      case KWInOptTrans:
+        if(idx != NOptTrans){
+          info=1;
+          continue;
+        }
+        for(i=0; i<NOptTrans; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          OptTrans[i]=tmp_real+I*tmp_comp;
+        }  
+        break;
+        
+      default:
+        break;
+      }
+      fclose(fp);
+    }
+  } /* if(rank==0) */
+
+  if(info!=0) {
+    if(rank==0) {
+      fprintf(stderr, "error: Indices of %s file is incomplete.\n", defname);
+    }
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }  
+  return 0;
+}
+
 
 
 /**********************************************************************/

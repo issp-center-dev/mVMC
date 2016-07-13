@@ -127,7 +127,7 @@ void OutputOptData() {
     }
 
     if(NOptTrans !=0){
-      Child_OutputOptData(fp, "trans_opt.dat", "NQPTrans", 
+      Child_OutputOptData(fp, "trans_opt.dat", "NQPOptTrans", 
 			  NOptTrans, NOptTrans, count_i, n);
       count_i += NOptTrans;
     }
