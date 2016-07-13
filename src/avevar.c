@@ -25,8 +25,12 @@ void CalcAveVar(int i, int n, double complex* _ave, double* _var){
   }
   var = sqrt( var/((double)(NSROptItrSmp)-1.0) );
 
-  _ave=&ave;
-  _var=&var;
+  *_ave= ave;
+  *_var= var;
+}
+
+void OutputGutzwiller(){
+  
 }
   
 void StoreOptData(int sample){
@@ -49,7 +53,7 @@ void OutputOptData() {
   double complex ave,data;
   double var;
   int sample,i;
-
+  int count_i;
   sprintf(fileName, "%s_opt.dat", CParaFileHead);
   fp = fopen(fileName, "w");
 
@@ -57,43 +61,67 @@ void OutputOptData() {
     for(i=0;i<n;i++) {
       fprintf(fp,"% .18e % .18e ", creal(SROptData[i]), 0.0);//TBC
     }
-  } else {
-    for(i=0;i<n;i++) {
+  } else {    
+    //output <H> and <H^2>
+    for(i=0;i<2;i++) {
       CalcAveVar(i, n, &ave, &var);
       fprintf(fp,"% .18e % .18e % .18e ",
               creal(ave), cimag(ave), var);
     }
-    /*
-    for(i=0;i<n;i++) {
-      ave=0.0;
-      for(sample=0;sample<NSROptItrSmp;sample++) {
-        ave += SROptData[i+n*sample];
-      }
-      ave /= (double)(NSROptItrSmp);
 
-      var = 0.0;
-      for(sample=0;sample<NSROptItrSmp;sample++) {
-        data = SROptData[i+n*sample] - ave;
-        var += creal(data*conj(data));//TBC
-      }
-      var = sqrt( var/((double)(NSROptItrSmp)-1.0) );
-
+    count_i=2;
+    for(i=0; i<NGutzwillerIdx; i++){
+      CalcAveVar(count_i+i, n, &ave, &var);
+      OutputGutzwiller();
       fprintf(fp,"% .18e % .18e % .18e ",
               creal(ave), cimag(ave), var);
     }
-    */
+
+    count_i += NGutzwillerIdx;
+    for(i=0; i<NJastrowIdx; i++){
+      CalcAveVar(count_i+i, n, &ave, &var);
+      fprintf(fp,"% .18e % .18e % .18e ",
+              creal(ave), cimag(ave), var);
+    }
+
+    count_i += NJastrowIdx;
+    for(i=0; i<2*3*NDoublonHolon2siteIdx; i++){
+      CalcAveVar(count_i+i, n, &ave, &var);
+      fprintf(fp,"% .18e % .18e % .18e ",
+              creal(ave), cimag(ave), var);
+    }
+
+    count_i +=2*3*NDoublonHolon2siteIdx;
+    for(i=0; i<2*5*NDoublonHolon4siteIdx; i++){
+      CalcAveVar(count_i+i, n, &ave, &var);
+      fprintf(fp,"% .18e % .18e % .18e ",
+              creal(ave), cimag(ave), var);
+    }
+
+    count_i +=2*5*NDoublonHolon4siteIdx;
+    for(i=0; i<NSlater; i++){
+      CalcAveVar(count_i+i, n, &ave, &var);
+      fprintf(fp,"% .18e % .18e % .18e ",
+              creal(ave), cimag(ave), var);
+    }
+
+    count_i +=NSlater;
+    for(i=0; i<NOptTrans; i++){
+      CalcAveVar(count_i+i, n, &ave, &var);
+      fprintf(fp,"% .18e % .18e % .18e ",
+              creal(ave), cimag(ave), var);
+    }
+
+    count_i += NOptTrans;
+    if(count_i != n){
+      printf("Debug: NProj=%d, NPara=%d\n", NProj, NPara);
+      printf("Debug: Error %d, %d\n", count_i, n);
+    }    
   }
   fprintf(fp, "\n");
   fclose(fp);
 
   return;
-}
-
-void GetAveVar(){
-}
-
-void OutputGutzwiller(){
-  
 }
 
 void OutputJastrow(){
