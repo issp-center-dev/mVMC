@@ -4,6 +4,8 @@
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#include "./include/readdef.h"
+
 void StoreOptData(int sample);
 void OutputOptData();
 
@@ -29,8 +31,28 @@ void CalcAveVar(int i, int n, double complex* _ave, double* _var){
   *_var= var;
 }
 
-void OutputGutzwiller(){
-  
+void WriteHeader(char* cNKWidx, int NKWidx, FILE *fp){
+  fprintf(fp, "======================\n");
+  fprintf(fp, cNKWidx);
+  fprintf(fp, "  %d\n", NKWidx);
+  fprintf(fp, "======================\n");
+  fprintf(fp, "======================\n");
+  fprintf(fp, "======================\n");    
+}
+
+void OutputGutzwiller(FILE *fp_all, int count_i){
+  FILE *fp_gutz;
+  fp_gutz = fopen("gutzwiller_opt.out", "w");
+  WriteHeader("NGutzwillerIdx", NGutzwillerIdx,  fp_gutz);
+
+  for(i=0; i<NGutzwillerIdx; i++){
+    CalcAveVar(count_i+i, n, &ave, &var);  
+    fprintf(fp_gutz, "%d % .18e % .18e \n",
+            GutzwillerIdx[i], creal(ave), cimag(ave));
+    fprintf(fp_all,"% .18e % .18e % .18e ",
+            creal(ave), cimag(ave), var);
+  }
+  fp_gutz.close();
 }
   
 void StoreOptData(int sample){
@@ -70,12 +92,7 @@ void OutputOptData() {
     }
 
     count_i=2;
-    for(i=0; i<NGutzwillerIdx; i++){
-      CalcAveVar(count_i+i, n, &ave, &var);
-      OutputGutzwiller();
-      fprintf(fp,"% .18e % .18e % .18e ",
-              creal(ave), cimag(ave), var);
-    }
+    OutputGutzwiller(fp, count_i);
 
     count_i += NGutzwillerIdx;
     for(i=0; i<NJastrowIdx; i++){
