@@ -717,7 +717,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	if(NQPTrans>0){
 	  for(i=0;i<NQPTrans;i++){
 	    fscanf(fp, "%d ", &itmp);
-	    fscanf(fp, "%lf\n", &(ParaQPTrans[itmp]));
+	    fscanf(fp, "%lf %lf\n", &dReValue, &dImValue);
+		ParaQPTrans[itmp]=dReValue+I*dImValue;
 	  }
 	  idx = 0;
 	  if(APFlag==0) {
@@ -954,12 +955,13 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
       }
       /*=======================================================================*/
       idx=0;
-      switch(iKWidx){
+		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		sscanf(ctmp2,"%s %d\n", ctmp, &idx);
+
+		switch(iKWidx){
         //get idx
-        fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-        fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-        sscanf(ctmp2,"%s %d\n", ctmp, &idx);
-        
+
       case KWInGutzwiller:
         if(idx != NGutzwillerIdx){
           info=1;
