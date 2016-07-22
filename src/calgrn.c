@@ -22,7 +22,7 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myProjCntNew,myBuffer)
+  private(myEleIdx,myEleNum,myProjCntNew,myBuffer,idx)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
