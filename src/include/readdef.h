@@ -74,3 +74,11 @@ int GetFileName(const char* cFileListNameFile, char cFileNameList[][D_CharTmpRea
 void SetDefultValuesModPara(int *buf, double* bufDouble);
 
 int ReadInputParameters(char *xNameListFile, MPI_Comm comm);
+
+// Flag for giving type of optimized parameters
+// 0: real, 1: complex
+int iComplexFlgGutzwiller=0;
+int iComplexFlgJastrow=0;
+int iComplexFlgDH2=0;
+int iComplexFlgDH4=0;
+int iComplexFlgOrbital=0;
