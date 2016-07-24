@@ -225,6 +225,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNGutz]);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgGutzwiller);
 	  fclose(fp);
 	  break;
 
@@ -232,13 +234,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNJast]);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgJastrow);
 	  fclose(fp);
 	  break;
 
 	case KWDH2:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNDH2]);
+      fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNDH2]);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgDH2);
 	  fclose(fp);
 	  break;
 
@@ -246,6 +252,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNDH4]);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgDH4);
 	  fclose(fp);
 	  break;
 
@@ -253,6 +261,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOrbit]);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgOrbital);
 	  fclose(fp);
 	  break;
 
@@ -440,9 +450,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   
   int i,j,n,idx,idx0,idx1,info=0;
   int fidx=0; /* index for OptFlag */
+    int count_idx=0;
   int x0,x1,x2,x3,x4,x5,x6,x7;
-	double dReValue, dImValue;
-	int tmp_ispin;
+  double dReValue, dImValue;
+  int tmp_ispin;
   int rank;
   double tmp_real,tmp_comp;
 
@@ -589,11 +600,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx0++;
 	    if(idx0==Nsite) break;
 	  }
+      fidx=0;
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
-	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
+
+	    OptFlag[2*fidx+1] = iComplexFlgGutzwller; //  TBC imaginary
 	    fidx++;
 	    idx1++;
+        count_idx++;
 	  }
 	  if(idx0!=Nsite || idx1!=NGutzwillerIdx) {
 	    info=ReadDefFileError(defname);
@@ -617,12 +631,15 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx0++;
 	    if(idx0==Nsite*(Nsite-1)) break;
 	  }
+      fidx=NGutzwillerIdx;
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
-	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
+	    OptFlag[2*fidx+1] = iComplexFlgJastrow; //  TBC imaginary
 	    fidx++;
 	    idx1++;
-	  }
+          count_idx++;
+
+      }
 	  if(idx0!=Nsite*(Nsite-1) || idx1!=NJastrowIdx) {
 	    info=ReadDefFileError(defname);
 	  }
@@ -640,12 +657,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx0++;
 	    if(idx0==Nsite*NDoublonHolon2siteIdx) break;
 	  }
+      fidx=NGutzwillerIdx+NJastrowIdx;
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));//TBC real
-	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
+	    OptFlag[2*fidx+1] = iComplexFlgDH2; //  TBC imaginary
 	    fidx++;
 	    idx1++;
-	  }
+        count_idx++;
+      }
 	  if(idx0!=Nsite*NDoublonHolon2siteIdx
 	     || idx1!=2*3*NDoublonHolon2siteIdx) {
 	    info=ReadDefFileError(defname);
@@ -667,12 +686,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx0++;
 	    if(idx0==Nsite*NDoublonHolon4siteIdx) break;
 	  }
-	  while( fscanf(fp, "%d ", &i) != EOF){
+      fidx=NGutzwillerIdx+NJastrowIdx+2*3*NDoublonHolon2siteIdx;
+        while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
 	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
-	  }
+            count_idx++;
+        }
 	  if(idx0!=Nsite*NDoublonHolon4siteIdx
 	     || idx1!=2*5*NDoublonHolon4siteIdx) {
 	    info=ReadDefFileError(defname);
@@ -699,12 +720,15 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	      if(idx0==Nsite*Nsite) break;
 	    }
 	  }
-	  while( fscanf(fp, "%d ", &i) != EOF){
+
+        fidx=NProj;
+        while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
-	    OptFlag[2*fidx+1] = 1; //  TBC imaginary
-	    fidx += 1;
+	    OptFlag[2*fidx+1] = iComplexFlgOrbital; //  TBC imaginary
+	    fidx ++;
 	    idx1++;
-	  }
+        count_idx++;
+        }
 	  if(idx0!=Nsite*Nsite || idx1!=NOrbitalIdx) {
 	    info=ReadDefFileError(defname);
 	  }
@@ -783,8 +807,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	fclose(fp);
 	break;
 
-
-
       case KWTwoBodyG:	  
 	/*cisajscktaltdc.def--------------------------------*/
 	if(NCisAjsCktAltDC>0){
@@ -852,15 +874,17 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	fclose(fp);
 	break;
 
-      case KWOptTrans:
+    case KWOptTrans:
 	/*qpopttrans.def------------------------------------*/
 	if(FlagOptTrans>0) {
-	  for(i=0;i<NQPOptTrans;i++){
+        fidx=NProj+NOrbitalIdx;
+        for(i=0;i<NQPOptTrans;i++){
 	    fscanf(fp, "%d ", &itmp);
 	    fscanf(fp, "%lf\n", &(ParaQPOptTrans[itmp]));
 	    OptFlag[fidx] = 1;
-	    fidx += 1;
-	  }
+	    fidx ++;
+        count_idx++;
+        }
 	  idx = 0;
 	  if(APFlag==0) {
 	    while( fscanf(fp, "%d %d ", &i, &j) != EOF){
@@ -885,7 +909,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       }
     }
 
-    if(fidx!=NPara){
+    if(count_idx!=NPara){
       fprintf(stderr, "error: OptFlag is incomplete.\n");
       info=1;
     }
