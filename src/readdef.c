@@ -604,7 +604,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
 
-	    OptFlag[2*fidx+1] = iComplexFlgGutzwller; //  TBC imaginary
+	    OptFlag[2*fidx+1] = iComplexFlgGutzwiller; //  TBC imaginary
 	    fidx++;
 	    idx1++;
         count_idx++;
