@@ -105,6 +105,8 @@ void OutputTimerParaOpt() {
   fprintf(fp,"  WeightAverage            [21] %12.5lf\n",Timer[21]);
   fprintf(fp,"  outputData               [22] %12.5lf\n",Timer[22]);
   fprintf(fp,"  SyncModifiedParameter    [23] %12.5lf\n",Timer[23]);
+  fprintf(fp,"  WE                       [24] %12.5lf\n",Timer[24]);
+  fprintf(fp,"  SR                       [25] %12.5lf\n",Timer[25]);
 
   fclose(fp);
 }

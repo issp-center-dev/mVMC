@@ -276,8 +276,12 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     VMCMainCal(comm_child1);
       StopTimer(4);
       StartTimer(21);
+      StartTimer(24);//DEBUG
     WeightAverageWE(comm_parent);
-    WeightAverageSROpt(comm_parent);
+      StopTimer(24); //DEBUG
+      StartTimer(25);//DEBUG
+    WeightAverageSROpt_real(comm_parent);
+      StopTimer(25);
     ReduceCounter(comm_child2);
       StopTimer(21);
       StartTimer(22);
