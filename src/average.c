@@ -76,8 +76,43 @@ void WeightAverageSROpt(MPI_Comm comm) {
   return;
 }
 
+/* calculate average of real_SROptOO and real_SROptHO */
+/* All processes will have the result */
+void WeightAverageSROpt_real(MPI_Comm comm) {
+  int i,n;
+  double invW = 1.0/Wc;
+  double *vec,*buf;
+  int rank,size;
+  MPI_Comm_rank(comm,&rank);
+  MPI_Comm_size(comm,&size);
+
+  /* SROptOO and SROptHO */
+  n = SROptSize*(SROptSize+1);
+  vec = real_SROptOO;
+  if(size>1) {
+    RequestWorkSpaceDouble(n);
+    buf = GetWorkSpaceDouble(n);
+
+    SafeMpiAllReduce(vec,buf,n,comm);
+
+    #pragma omp parallel for default(shared) private(i)
+    #pragma loop noalias
+    for(i=0;i<n;i++) vec[i] = buf[i] * invW;
+
+    ReleaseWorkSpaceDouble();
+ } else {
+    #pragma omp parallel for default(shared) private(i)
+    #pragma loop noalias
+    for(i=0;i<n;i++) vec[i] *= invW;
+  }
+  return;
+}
+
+
+
 /* calculate average of SROptOO and SROptHO */
 /* All processes will have the result */
+/*
 void WeightAverageSROpt_real(MPI_Comm comm) {
   int i,n,j,int_x,int_y;
   double invW = 1.0/Wc;
@@ -86,7 +121,6 @@ void WeightAverageSROpt_real(MPI_Comm comm) {
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
-  /* SROptOO and SROptHO */
   n   = SROptSize*(SROptSize+1);
   vec = (double*)malloc(sizeof(double)*n);
   j   = 0;
@@ -130,7 +164,7 @@ void WeightAverageSROpt_real(MPI_Comm comm) {
 
   return;
 }
-
+*/
 
 /* calculate average of Green functions */
 /* Only rank=0 process will have the result */

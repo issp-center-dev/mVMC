@@ -12,6 +12,8 @@ void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const 
                  const double complex w, const double complex e, const int srOptSize);
 void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
                  const double  w, const double complex e, const int srOptSize);
+void calculateOO_real(double *srOptOO, double *srOptHO, const double *srOptO,
+                 const double w, const double e, const int srOptSize);
 void calculateOO_Store(double complex *srOptOO, double complex *srOptHO,  double complex *srOptO,
                  const double w, const double complex e,  int srOptSize, int sampleSize);
 void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam);
@@ -35,6 +37,7 @@ void VMCMainCal(MPI_Comm comm) {
   /* optimazation for Kei */
   const int nProj=NProj;
   double complex *srOptO = SROptO;
+  double         *real_srOptO = real_SROptO;
 
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);
@@ -108,25 +111,18 @@ void VMCMainCal(MPI_Comm comm) {
       if(FlagOptTrans>0) { // this part will be not used
         calculateOptTransDiff(SROptO+2*NProj+2*NSlater+2, ip); //TBC
       }
+//[s] this part will be used for real varaibles
+      #pragma loop noalias
+      for(i=0;i<SROptSize;i++){ 
+        real_srOptO[i] = creal(srOptO[2*i]);       
+      }
+//[e]
 
-      //for(i=0;i<NPara*2+2;i++){ 
-      //  printf("DEBUG: i=%d %lf %lf \n",i,creal(srOptO[i]),cimag(srOptO[i]));
-      //}
       StartTimer(43);
       /* Calculate OO and HO */
       if(NStoreO==0){
-        //printf("DEBUG:  NPara=%d NProj=%d NSlater=%d \n",NPara,NProj,NSlater);
-        //for(i=0;i<2*(NPara+1);i++){ 
-        //  printf("tmp: DEBUG:  i=%d %lf %lf\n",i,creal(SROptO[i]),cimag(SROptO[i]));
-        //}
-        //for(i=0;i<2*(NPara+1);i++){ 
-        //  printf("B accum: DEBUG:  i=%d %lf %lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
-        //}
-
-        calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
-        //for(i=0;i<2*(NPara+1);i++){ 
-        //  printf("A accum: DEBUG:  i=%d %lf %lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
-        //}
+        //calculateOO_matvec(SROptOO,SROptHO,SROptO,w,e,SROptSize);
+        calculateOO_real(real_SROptOO,real_SROptHO,real_SROptO,w,creal(e),SROptSize);
       }else{
         we    = w*e;
         sqrtw = sqrt(w); 
@@ -178,12 +174,17 @@ void VMCMainCal(MPI_Comm comm) {
 void clearPhysQuantity(){
   int i,n;
   double complex *vec;
+  double  *real_vec;
   Wc = Etot = Etot2 = 0.0;
   if(NVMCCalMode==0) {
     /* SROptOO, SROptHO, SROptO */
     n = (2*SROptSize)*(2*SROptSize+2); // TBC
     vec = SROptOO;
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
+// only for real variables
+    n = (SROptSize)*(SROptSize+1); // TBC
+    real_vec = real_SROptOO;
+    for(i=0;i<n;i++) real_vec[i] = 0.0+0.0*I;
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
     n = 2*NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
@@ -272,7 +273,6 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
 //  return;
 //}
 
-/*
 void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
                  const double complex w, const double complex e, const int srOptSize) {
   double complex we=w*e;
@@ -291,13 +291,11 @@ void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const 
 
 //   OO[i][j] += w*O[i]*O[j] 
   M_ZGERC(&m, &n, &w, srOptO, &incx, srOptO, &incy, srOptOO, &lda);
-
 //   HO[i] += w*e*O[i] 
   M_ZAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
-
   return;
 }
-*/
+
 void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
                  const double w, const double complex e, const int srOptSize){
   int i,j;
@@ -324,6 +322,32 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
 
   return;
 }
+
+void calculateOO_real(double *srOptOO, double *srOptHO, const double *srOptO,
+                 const double w, const double e, const int srOptSize) {
+  double we=w*e;
+
+  #define M_DAXPY daxpy_
+  #define M_DGER dger_
+
+  extern int M_DAXPY(const int *n, const double *alpha, const double *x, const int *incx,
+                     double *y, const int *incy);
+  extern int M_DGER(const int *m, const int *n, const double *alpha,
+                    const double *x, const int *incx, const double *y, const int *incy, 
+                    double *a, const int *lda);
+  int m,n,incx,incy,lda;
+  m=n=lda=srOptSize;
+  incx=incy=1;
+
+  /* OO[i][j] += w*O[i]*O[j] */
+  M_DGER(&m, &n, &w, srOptO, &incx, srOptO, &incy, srOptOO, &lda);
+
+  /* HO[i] += w*e*O[i] */
+  M_DAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
+
+  return;
+}
+
 
 void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam) {
   const int n=nLSHam*nLSHam*nLSHam*nLSHam;

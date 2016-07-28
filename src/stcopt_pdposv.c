@@ -44,6 +44,7 @@ int StochasticOpt(MPI_Comm comm) {
   const int nPara=NPara;
   const int srOptSize=SROptSize;
   const double complex *srOptOO=SROptOO;
+  const double         *real_srOptOO= real_SROptOO;
 
   double r[2*SROptSize]; /* the parameter change */
   int nSmat;
@@ -60,6 +61,9 @@ int StochasticOpt(MPI_Comm comm) {
   int simax;
   int info=0;
 
+// for real
+  int int_x,int_y,j,i;
+
   double complex *para=Para;
 
   int rank,size;
@@ -67,7 +71,20 @@ int StochasticOpt(MPI_Comm comm) {
   MPI_Comm_size(comm,&size);
 
   StartTimer(50);
-
+//[s] for only real variables TBC
+  #pragma omp parallel for default(shared) private(i,int_x,int_y,j)
+  #pragma loop noalias
+  for(i=0;i<2*SROptSize*(2*SROptSize+2);i++){
+    int_x  = i%(2*SROptSize);
+    int_y  = (i-int_x)/(2*SROptSize);
+    if(int_x%2==0 && int_y%2==0){
+      j          = int_x/2+(int_y/2)*SROptSize;
+      SROptOO[i] = real_SROptOO[j];// only real part TBC
+    }else{
+      SROptOO[i] = 0.0+0.0*I;
+    }
+  }
+//[e]
   #pragma omp parallel for default(shared) private(pi)
   #pragma loop noalias
   for(pi=0;pi<2*nPara;pi++) {

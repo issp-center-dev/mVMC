@@ -180,6 +180,10 @@ double complex *SROptOO; /* [SROptSize*SROptSize] <O^\dagger O> */
 double complex *SROptHO; /* [SROptSize]            < HO > */
 double complex *SROptO;  /* [SROptSize] calculation buffar */
 double complex *SROptO_Store;  /* [SROptSize*NVMCSample] calculation buffer */
+//for real
+double *real_SROptOO; /* [SROptSize*SROptSize] <O^\dagger O> */ //TBC
+double *real_SROptHO; /* [SROptSize]            < HO > */       //TBC
+double *real_SROptO;  /* [SROptSize] calculation buffar */      //TBC
 
 
 

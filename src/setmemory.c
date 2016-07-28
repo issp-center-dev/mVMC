@@ -231,11 +231,14 @@ void SetMemory() {
 
   /***** Stocastic Reconfiguration *****/
   if(NVMCCalMode==0){
-    //SR componets are described by real and complex componets of O
+    //SR components are described by real and complex components of O
     SROptOO = (double complex*)malloc( sizeof(double complex)*((2*SROptSize)*(2*SROptSize+2))) ; //TBC
     SROptHO = SROptOO + (2*SROptSize)*(2*SROptSize); //TBC
     SROptO  = SROptHO + (2*SROptSize);  //TBC
-
+//for real
+    real_SROptOO = (double *)malloc( sizeof(double )*((SROptSize)*(SROptSize+1))) ; //TBC
+    real_SROptHO = real_SROptOO + (SROptSize)*(SROptSize); //TBC
+    real_SROptO  = real_SROptHO + (SROptSize);  //TBC
 
     if(NStoreO!=0){
       SROptO_Store = (double complex*)malloc( sizeof(double complex)*(SROptSize*NVMCSample) );
