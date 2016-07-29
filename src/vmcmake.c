@@ -38,6 +38,7 @@ void VMCMakeSample(MPI_Comm comm) {
   int projCntNew[NProj];
   double complex pfMNew[NQPFull];
   double x,w; // TBC x will be complex number
+  int tmp_i; //TBC
 
   int qpStart,qpEnd;
   int rejectFlag;
@@ -111,9 +112,21 @@ void VMCMakeSample(MPI_Comm comm) {
         if( !isfinite(w) ) w = -1.0; /* should be rejected */
 
         if(w > genrand_real2()) { /* accept */
+
+            //StartTimer(69);
+            //for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+            //for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++) InvM_real[tmp_i]= creal(InvM[tmp_i]);
+            //StopTimer(69);
+//
             StartTimer(63);
+            //UpdateMAll_real(mi,s,TmpEleIdx,qpStart,qpEnd);
             UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
             StopTimer(63);
+//
+            //StartTimer(69);
+            //for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm[tmp_i] = SlaterElm_real[tmp_i];
+            //for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i];
+            //StopTimer(69);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
           logIpOld = logIpNew;

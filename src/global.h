@@ -164,9 +164,12 @@ int BurnFlag=0; /* 0: off, 1: on */
 
 /***** Slater Elements ******/
 double complex *SlaterElm; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
-
 double complex *InvM; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
 double complex *PfM; /* PfM[QPidx] */
+// TBC only for real
+double *SlaterElm_real; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
+double *InvM_real; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
+double *PfM_real; /* PfM[QPidx] */
 
 /***** Quantum Projection *****/
 double complex *QPFullWeight; /* QPFullWeight[NQPFull] */

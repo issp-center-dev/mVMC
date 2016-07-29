@@ -60,6 +60,7 @@ extern int omp_get_thread_num(void);
 #include "qp.c"
 #include "matrix.c"
 #include "pfupdate.c"
+#include "pfupdate_real.c"
 #include "pfupdate_two_fcmp.c"
 #include "locgrn.c"
 #include "calham.c"
