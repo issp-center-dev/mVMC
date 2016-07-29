@@ -44,7 +44,7 @@ int StochasticOpt(MPI_Comm comm) {
   const int nPara=NPara;
   const int srOptSize=SROptSize;
   const double complex *srOptOO=SROptOO;
-  const double         *real_srOptOO= real_SROptOO;
+  //const double         *srOptOO= SROptOO_real;
 
   double r[2*SROptSize]; /* the parameter change */
   int nSmat;
@@ -79,7 +79,7 @@ int StochasticOpt(MPI_Comm comm) {
     int_y  = (i-int_x)/(2*SROptSize);
     if(int_x%2==0 && int_y%2==0){
       j          = int_x/2+(int_y/2)*SROptSize;
-      SROptOO[i] = real_SROptOO[j];// only real part TBC
+      SROptOO[i] = SROptOO_real[j];// only real part TBC
     }else{
       SROptOO[i] = 0.0+0.0*I;
     }

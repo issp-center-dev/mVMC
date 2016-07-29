@@ -58,6 +58,7 @@ extern int omp_get_thread_num(void);
 #include "projection.c"
 #include "slater.c"
 #include "qp.c"
+#include "qp_real.c"
 #include "matrix.c"
 #include "pfupdate.c"
 #include "pfupdate_real.c"

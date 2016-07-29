@@ -94,7 +94,7 @@ void CalculateNewPfM2_real(const int ma, const int s, double *pfMNew_real, const
   return;
 }
 
-/* Update PfM and InvM. The ma-th electron with spin s hops to site ra=eleIdx[msi] */
+/* Update PfM_real and InvM_real. The ma-th electron with spin s hops to site ra=eleIdx[msi] */
 void UpdateMAll_real(const int ma, const int s, const int *eleIdx,
                 const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;

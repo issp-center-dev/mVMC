@@ -270,7 +270,9 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     UpdateQPWeight();
       StopTimer(20);
       StartTimer(3);
+printf("DEBUG A: step=%d rank=%d \n",step,rank);
     VMCMakeSample(comm_child1);
+printf("DEBUG B: step=%d rank=%d \n",step,rank);
       StopTimer(3);
       StartTimer(4);
     VMCMainCal(comm_child1);

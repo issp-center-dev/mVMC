@@ -37,7 +37,7 @@ void VMCMainCal(MPI_Comm comm) {
   /* optimazation for Kei */
   const int nProj=NProj;
   double complex *srOptO = SROptO;
-  double         *real_srOptO = real_SROptO;
+  double         *srOptO_real = SROptO_real;
 
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);
@@ -114,7 +114,7 @@ void VMCMainCal(MPI_Comm comm) {
 //[s] this part will be used for real varaibles
       #pragma loop noalias
       for(i=0;i<SROptSize;i++){ 
-        real_srOptO[i] = creal(srOptO[2*i]);       
+        srOptO_real[i] = creal(srOptO[2*i]);       
       }
 //[e]
 
@@ -122,7 +122,7 @@ void VMCMainCal(MPI_Comm comm) {
       /* Calculate OO and HO */
       if(NStoreO==0){
         //calculateOO_matvec(SROptOO,SROptHO,SROptO,w,e,SROptSize);
-        calculateOO_real(real_SROptOO,real_SROptHO,real_SROptO,w,creal(e),SROptSize);
+        calculateOO_real(SROptOO_real,SROptHO_real,SROptO_real,w,creal(e),SROptSize);
       }else{
         we    = w*e;
         sqrtw = sqrt(w); 
@@ -174,7 +174,7 @@ void VMCMainCal(MPI_Comm comm) {
 void clearPhysQuantity(){
   int i,n;
   double complex *vec;
-  double  *real_vec;
+  double  *vec_real;
   Wc = Etot = Etot2 = 0.0;
   if(NVMCCalMode==0) {
     /* SROptOO, SROptHO, SROptO */
@@ -182,9 +182,9 @@ void clearPhysQuantity(){
     vec = SROptOO;
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
 // only for real variables
-    n = (SROptSize)*(SROptSize+1); // TBC
-    real_vec = real_SROptOO;
-    for(i=0;i<n;i++) real_vec[i] = 0.0+0.0*I;
+    n = (SROptSize)*(SROptSize+2); // TBC
+    vec_real = SROptOO_real;
+    for(i=0;i<n;i++) vec_real[i] = 0.0;
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
     n = 2*NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;

@@ -239,9 +239,9 @@ void SetMemory() {
     SROptHO = SROptOO + (2*SROptSize)*(2*SROptSize); //TBC
     SROptO  = SROptHO + (2*SROptSize);  //TBC
 //for real
-    real_SROptOO = (double *)malloc( sizeof(double )*((SROptSize)*(SROptSize+1))) ; //TBC
-    real_SROptHO = real_SROptOO + (SROptSize)*(SROptSize); //TBC
-    real_SROptO  = real_SROptHO + (SROptSize);  //TBC
+    SROptOO_real = (double*)malloc( sizeof(double )*((SROptSize)*(SROptSize+2))) ; //TBC
+    SROptHO_real = SROptOO_real + (SROptSize)*(SROptSize); //TBC
+    SROptO_real  = SROptHO_real + (SROptSize);  //TBC
 
     if(NStoreO!=0){
       SROptO_Store = (double complex*)malloc( sizeof(double complex)*(SROptSize*NVMCSample) );

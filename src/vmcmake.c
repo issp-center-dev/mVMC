@@ -37,6 +37,7 @@ void VMCMakeSample(MPI_Comm comm) {
   double complex logIpOld,logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
   int projCntNew[NProj];
   double complex pfMNew[NQPFull];
+  double         pfMNew_real[NQPFull];
   double x,w; // TBC x will be complex number
   int tmp_i; //TBC
 
@@ -75,6 +76,12 @@ void VMCMakeSample(MPI_Comm comm) {
 
   for(i=0;i<4;i++) Counter[i]=0;  /* reset counter */
 
+// only for real TBC
+  StartTimer(69);
+  for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+  StopTimer(69);
+// only for real TBC
   for(outStep=0;outStep<nOutStep;outStep++) {
     for(inStep=0;inStep<nInStep;inStep++) {
 
@@ -97,13 +104,15 @@ void VMCMakeSample(MPI_Comm comm) {
         UpdateProjCnt(ri,rj,s,projCntNew,TmpEleProjCnt,TmpEleNum);
           StopTimer(60);
           StartTimer(61);
-        CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
+        //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
+        CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
         //printf("DEBUG: out %d in %d pfMNew=%lf \n",outStep,inStep,creal(pfMNew[0]));
           StopTimer(61);
 
           StartTimer(62);
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
+        //logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
+        logIpNew = CalculateLogIP_real(pfMNew_real,qpStart,qpEnd,comm);
           StopTimer(62);
 
         /* Metroplis */
@@ -112,21 +121,11 @@ void VMCMakeSample(MPI_Comm comm) {
         if( !isfinite(w) ) w = -1.0; /* should be rejected */
 
         if(w > genrand_real2()) { /* accept */
-
-            //StartTimer(69);
-            //for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
-            //for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++) InvM_real[tmp_i]= creal(InvM[tmp_i]);
-            //StopTimer(69);
-//
+            // UpdateMAll will change SlaterElm, InvM (including PfM)
             StartTimer(63);
-            //UpdateMAll_real(mi,s,TmpEleIdx,qpStart,qpEnd);
-            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
+            UpdateMAll_real(mi,s,TmpEleIdx,qpStart,qpEnd);
+//            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
             StopTimer(63);
-//
-            //StartTimer(69);
-            //for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm[tmp_i] = SlaterElm_real[tmp_i];
-            //for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i];
-            //StopTimer(69);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
           logIpOld = logIpNew;
@@ -214,6 +213,11 @@ void VMCMakeSample(MPI_Comm comm) {
     StopTimer(35);
 
   } /* end of outstep */
+// only for real TBC
+  StartTimer(69);
+  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i];
+  StopTimer(69);
+// only for real TBC
 
   copyToBurnSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt);
   BurnFlag=1;

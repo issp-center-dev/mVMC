@@ -53,8 +53,8 @@ void WeightAverageSROpt(MPI_Comm comm) {
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
-  /* SROptOO and SROptHO */
-  n   = 2*SROptSize*(2*SROptSize+2);
+  /* SROptOO and SROptHO */ // except for SROptO 
+  n   = 2*SROptSize*(2*SROptSize+1);
   vec = SROptOO;
   if(size>1) {
     RequestWorkSpaceComplex(n);
@@ -76,7 +76,7 @@ void WeightAverageSROpt(MPI_Comm comm) {
   return;
 }
 
-/* calculate average of real_SROptOO and real_SROptHO */
+/* calculate average of SROptOO_real and SROptHO_real */
 /* All processes will have the result */
 void WeightAverageSROpt_real(MPI_Comm comm) {
   int i,n;
@@ -86,9 +86,9 @@ void WeightAverageSROpt_real(MPI_Comm comm) {
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
-  /* SROptOO and SROptHO */
+  /* SROptOO and SROptHO */ // except for SROptO 
   n = SROptSize*(SROptSize+1);
-  vec = real_SROptOO;
+  vec = SROptOO_real;
   if(size>1) {
     RequestWorkSpaceDouble(n);
     buf = GetWorkSpaceDouble(n);
