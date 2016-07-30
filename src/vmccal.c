@@ -302,15 +302,18 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
                  const double w, const double complex e, const int srOptSize){
   int i,j;
   double complex tmp;
-  //#pragma omp parallel for default(shared)        \
-    private(i,j,tmp,srOptOO)
-  //#pragma loop noalias
+  #pragma omp parallel for default(shared) private(j,tmp)
+  //    private(i,j,tmp,srOptOO)
+#pragma loop noalias
   for(j=0;j<2*srOptSize;j++) {
     tmp                            = w * srOptO[j];
     srOptOO[0*(2*srOptSize)+j]    += tmp;      // update O
     srOptOO[1*(2*srOptSize)+j]    += 0.0;      // update 
     srOptHO[j]                    += e * tmp;  // update HO
   }
+  
+  #pragma omp parallel for default(shared) private(i,j,tmp)
+#pragma loop noalias
   for(i=2;i<2*srOptSize;i++) {
     tmp            = w * srOptO[i];
     for(j=0;j<2*srOptSize;j++) {

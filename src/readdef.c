@@ -604,7 +604,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
 
-	    OptFlag[2*fidx+1] = iComplexFlgGutzwiller; //  TBC imaginary
+	    //	    OptFlag[2*fidx+1] = iComplexFlgGutzwiller; //  TBC imaginary
+	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
         count_idx++;
@@ -634,7 +635,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       fidx=NGutzwillerIdx;
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
-	    OptFlag[2*fidx+1] = iComplexFlgJastrow; //  TBC imaginary
+	    //	    OptFlag[2*fidx+1] = iComplexFlgJastrow; //  TBC imaginary
+	    	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
           count_idx++;
@@ -660,7 +662,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       fidx=NGutzwillerIdx+NJastrowIdx;
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));//TBC real
-	    OptFlag[2*fidx+1] = iComplexFlgDH2; //  TBC imaginary
+	    //	    OptFlag[2*fidx+1] = iComplexFlgDH2; //  TBC imaginary
+	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
         count_idx++;
@@ -689,6 +692,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       fidx=NGutzwillerIdx+NJastrowIdx+2*3*NDoublonHolon2siteIdx;
         while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
+	    //	    OptFlag[2*fidx+1] = iComplexFlgDH4; //  TBC imaginary
 	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
@@ -724,7 +728,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
         fidx=NProj;
         while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
-	    OptFlag[2*fidx+1] = iComplexFlgOrbital; //  TBC imaginary
+	    //	    OptFlag[2*fidx+1] = iComplexFlgOrbital; //  TBC imaginary
+	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx ++;
 	    idx1++;
         count_idx++;
