@@ -109,6 +109,7 @@ struct StdIntList {
   int ioutputmode;
   int NSplitSize;
   int NStore;
+  int ComplexType;
   /*
    Input strings
   */
