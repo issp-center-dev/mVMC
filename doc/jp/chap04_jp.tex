@@ -761,9 +761,9 @@ TwoBodyG	zcisajscktaltdc.def
 \begin{center}
   \begin{tabular}{|ll|} \hline
            Keywords     & Details for corresponding files       \\   \hline\hline
-           ModPara       &  Parameters for calculation.        \\ \hline 
+           *ModPara       &  Parameters for calculation.        \\ \hline 
            %%%%%%%%%%%%%%%%%%  
-           LocSpin         &  Configurations of the local spins for Hamiltonian.         \\ 
+           *LocSpin         &  Configurations of the local spins for Hamiltonian.         \\ 
            Trans       &   Transfer and chemical potential for Hamiltonian.  \\
            InterAll  &   Two-body interactions for Hamiltonian. \\  
            CoulombIntra  &   CoulombIntra interactions. \\  
@@ -776,7 +776,7 @@ TwoBodyG	zcisajscktaltdc.def
            Jastrow & Charge Jastrow factors.\\
            DH2 & 2-site doublon-holon correlation factors.\\
            DH4 & 4-site doublon-holon correlation factors.\\
-           Orbital & pair orbital factors.\\
+           *Orbital & pair orbital factors.\\
            TransSym & translational and lattice symmetry operation. \\ \hline
            %%%%%%%%%%%%%%%%%%
            InGutzwiller & Initial values of Gutzwiller factors.\\
@@ -789,7 +789,7 @@ TwoBodyG	zcisajscktaltdc.def
            TwoBodyG &   Output components for Correlation functions $\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle$  \\   \hline
   \end{tabular}
 \end{center}
-\caption{List of the definition files.}
+\caption{List of the definition files. * が付いているファイルは実行時に必ず必要となります。}
 \label{Table:Defs}
 \end{table*}%
 
