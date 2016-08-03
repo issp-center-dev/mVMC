@@ -50,7 +50,8 @@ int ReadInitParameter(char *initFile) {
   fp = fopen(initFile, "r");
   if(fp!=NULL){
     while(fscanf(fp, "%lf ", &xtmp)!=EOF){
-      for(i=1;i<4;i++) fscanf(fp, "%lf ", &xtmp);
+      //for(i=1;i<4;i++) fscanf(fp, "%lf ", &xtmp);
+      for(i=1;i<6;i++) fscanf(fp, "%lf ", &xtmp);
       for(xi=0;xi<NProj;xi++) {
         fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
         Proj[xi] = tmp_real+tmp_comp*I; 

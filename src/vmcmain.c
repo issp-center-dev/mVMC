@@ -201,6 +201,16 @@ int main(int argc, char* argv[])
   /* initialize variational parameters */
   InitParameter(); /* Run parallelly for synchronization of random generator */
   if(flagReadInitPara>0 && rank0==0) ReadInitParameter(fileInitPara);
+  //[s] add read parameters respectively
+  if(rank0==0){
+    if(!ReadInputParameters(fileDefList, comm0)==0){
+      //[ToDo]: Add Error procedure
+      info=1;
+    }
+  }
+  
+  //[e] add read parameters respectively
+  
   SyncModifiedParameter(comm0);
   StopTimer(13);
 

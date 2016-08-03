@@ -225,6 +225,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNGutz]);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgGutzwiller);
 	  fclose(fp);
 	  break;
 
@@ -232,13 +234,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNJast]);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgJastrow);
 	  fclose(fp);
 	  break;
 
 	case KWDH2:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNDH2]);
+      fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNDH2]);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgDH2);
 	  fclose(fp);
 	  break;
 
@@ -246,6 +252,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNDH4]);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgDH4);
 	  fclose(fp);
 	  break;
 
@@ -253,6 +261,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOrbit]);
+      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgOrbital);
 	  fclose(fp);
 	  break;
 
@@ -262,7 +272,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNQPTrans]);
 	  fclose(fp);
 	  break;
-
+      
 	case KWOneBodyG:
 	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
@@ -440,9 +450,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   
   int i,j,n,idx,idx0,idx1,info=0;
   int fidx=0; /* index for OptFlag */
+    int count_idx=0;
   int x0,x1,x2,x3,x4,x5,x6,x7;
-	double dReValue, dImValue;
-	int tmp_ispin;
+  double dReValue, dImValue;
+  int tmp_ispin;
   int rank;
   double tmp_real,tmp_comp;
 
@@ -456,9 +467,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 
       fp = fopen(defname, "r");
       if(fp==NULL){
-	info= ReadDefFileError(defname);
-	fclose(fp);
-	continue;
+        info= ReadDefFileError(defname);
+        fclose(fp);
+        continue;
       }
 
       /*=======================================================================*/
@@ -589,11 +600,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx0++;
 	    if(idx0==Nsite) break;
 	  }
+      fidx=0;
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
-	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
+
+	    OptFlag[2*fidx+1] = iComplexFlgGutzwiller; //  TBC imaginary
 	    fidx++;
 	    idx1++;
+        count_idx++;
 	  }
 	  if(idx0!=Nsite || idx1!=NGutzwillerIdx) {
 	    info=ReadDefFileError(defname);
@@ -617,12 +631,15 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx0++;
 	    if(idx0==Nsite*(Nsite-1)) break;
 	  }
+      fidx=NGutzwillerIdx;
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
-	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
+	    OptFlag[2*fidx+1] = iComplexFlgJastrow; //  TBC imaginary
 	    fidx++;
 	    idx1++;
-	  }
+          count_idx++;
+
+      }
 	  if(idx0!=Nsite*(Nsite-1) || idx1!=NJastrowIdx) {
 	    info=ReadDefFileError(defname);
 	  }
@@ -640,12 +657,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx0++;
 	    if(idx0==Nsite*NDoublonHolon2siteIdx) break;
 	  }
+      fidx=NGutzwillerIdx+NJastrowIdx;
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));//TBC real
-	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
+	    OptFlag[2*fidx+1] = iComplexFlgDH2; //  TBC imaginary
 	    fidx++;
 	    idx1++;
-	  }
+        count_idx++;
+      }
 	  if(idx0!=Nsite*NDoublonHolon2siteIdx
 	     || idx1!=2*3*NDoublonHolon2siteIdx) {
 	    info=ReadDefFileError(defname);
@@ -667,12 +686,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx0++;
 	    if(idx0==Nsite*NDoublonHolon4siteIdx) break;
 	  }
-	  while( fscanf(fp, "%d ", &i) != EOF){
+      fidx=NGutzwillerIdx+NJastrowIdx+2*3*NDoublonHolon2siteIdx;
+        while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
 	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
-	  }
+            count_idx++;
+        }
 	  if(idx0!=Nsite*NDoublonHolon4siteIdx
 	     || idx1!=2*5*NDoublonHolon4siteIdx) {
 	    info=ReadDefFileError(defname);
@@ -699,12 +720,15 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	      if(idx0==Nsite*Nsite) break;
 	    }
 	  }
-	  while( fscanf(fp, "%d ", &i) != EOF){
+
+        fidx=NProj;
+        while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
-	    OptFlag[2*fidx+1] = 1; //  TBC imaginary
-	    fidx += 1;
+	    OptFlag[2*fidx+1] = iComplexFlgOrbital; //  TBC imaginary
+	    fidx ++;
 	    idx1++;
-	  }
+        count_idx++;
+        }
 	  if(idx0!=Nsite*Nsite || idx1!=NOrbitalIdx) {
 	    info=ReadDefFileError(defname);
 	  }
@@ -782,8 +806,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	fclose(fp);
 	break;
 
-
-
       case KWTwoBodyG:	  
 	/*cisajscktaltdc.def--------------------------------*/
 	if(NCisAjsCktAltDC>0){
@@ -851,15 +873,17 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	fclose(fp);
 	break;
 
-      case KWOptTrans:
+    case KWOptTrans:
 	/*qpopttrans.def------------------------------------*/
 	if(FlagOptTrans>0) {
-	  for(i=0;i<NQPOptTrans;i++){
+        fidx=NProj+NOrbitalIdx;
+        for(i=0;i<NQPOptTrans;i++){
 	    fscanf(fp, "%d ", &itmp);
 	    fscanf(fp, "%lf\n", &(ParaQPOptTrans[itmp]));
 	    OptFlag[fidx] = 1;
-	    fidx += 1;
-	  }
+	    fidx ++;
+        count_idx++;
+        }
 	  idx = 0;
 	  if(APFlag==0) {
 	    while( fscanf(fp, "%d %d ", &i, &j) != EOF){
@@ -884,7 +908,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       }
     }
 
-    if(fidx!=NPara){
+    if(count_idx!=NPara){
       fprintf(stderr, "error: OptFlag is incomplete.\n");
       info=1;
     }
@@ -928,6 +952,123 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   
   return 0;
 }
+
+int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
+{
+  FILE *fp;
+  char defname[D_FileNameMax];
+  char ctmp[D_FileNameMax], ctmp2[256];
+  int iKWidx=0;
+  int i,idx;
+  int rank;
+  int count=0;
+  int info=0;
+  double tmp_real, tmp_comp;
+  MPI_Comm_rank(comm, &rank);
+  
+  if(rank==0) {
+    for(iKWidx=KWInGutzwiller; iKWidx< KWIdxInt_end; iKWidx++){     
+      strcpy(defname, cFileNameListFile[iKWidx]);
+      if(strcmp(defname,"")==0) continue;   
+      fp = fopen(defname, "r");
+      if(fp==NULL){
+        info= ReadDefFileError(defname);
+        fclose(fp);
+        continue;
+      }
+      /*=======================================================================*/
+      idx=0;
+      switch(iKWidx){
+        //get idx
+        fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+        fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+        sscanf(ctmp2,"%s %d\n", ctmp, &idx);
+        
+      case KWInGutzwiller:
+        if(idx != NGutzwillerIdx){
+          info=1;
+          continue;
+        }
+        for(i=0; i<NGutzwillerIdx; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          Proj[i]=tmp_real+I*tmp_comp;
+        }
+        break;
+        
+      case KWInJastrow:
+        if(idx != NJastrowIdx){
+          info=1;
+          continue;
+        }
+        count= NGutzwillerIdx;
+        for(i=count; i<count+NJastrowIdx; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          Proj[i]=tmp_real+I*tmp_comp;
+        }
+        break;
+        
+      case KWInDH2:
+        if(idx != NDoublonHolon2siteIdx){
+          info=1;
+          continue;
+        }
+        count =NGutzwillerIdx+NJastrowIdx;
+        for(i=count; i<count+2*3*NDoublonHolon2siteIdx; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          Proj[i]=tmp_real+I*tmp_comp;
+        }       
+        break;
+        
+      case KWInDH4:
+        if(idx != NDoublonHolon4siteIdx){
+          info=1;
+          continue;
+        }
+        count =NGutzwillerIdx+NJastrowIdx+2*3*NDoublonHolon2siteIdx;
+        for(i=count; i<count+2*5*NDoublonHolon4siteIdx; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          Proj[i]=tmp_real+I*tmp_comp;
+        }        
+        break;
+        
+      case KWInOrbital:
+        if(idx != NOrbitalIdx){
+          info=1;
+          continue;
+        }
+        for(i=0; i<NSlater; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          Slater[i]=tmp_real+I*tmp_comp;
+        }  
+        break;
+        
+      case KWInOptTrans:
+        if(idx != NOptTrans){
+          info=1;
+          continue;
+        }
+        for(i=0; i<NOptTrans; i++){
+          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          OptTrans[i]=tmp_real+I*tmp_comp;
+        }  
+        break;
+        
+      default:
+        break;
+      }
+      fclose(fp);
+    }
+  } /* if(rank==0) */
+
+  if(info!=0) {
+    if(rank==0) {
+      fprintf(stderr, "error: Indices of %s file is incomplete.\n", defname);
+    }
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }  
+  return 0;
+}
+
 
 
 /**********************************************************************/
