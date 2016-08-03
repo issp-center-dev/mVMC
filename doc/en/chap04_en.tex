@@ -3,10 +3,10 @@
 \chapter{ファイル仕様}
 
 %----------------------------------------------------------
-\section{スタンダードモード用入力ファイル}
+\section{Input files for {\it Standard} mode}
 \label{Ch:HowToStandard}
 
-スタンダードモード用入力ファイルは次のような格好をしています。
+An example of input file for the standard mode is shown below:
 
 \begin{minipage}{10cm}
 \begin{screen}
@@ -30,116 +30,152 @@ J'=-0.5
 \end{screen}
 \end{minipage}
 
-大まかなルールは次のとおりです。
+{\bf Basic rules for input files}
 \begin{itemize}
-\item 各行にはひと組ずつキーワード(\verb|=|の前)と
-  パラメーター(\verb|=|の後)が書かれており間は\verb|=|で区切られています。
-\item 各キーワードは順不同に記述できます。
-\item 空白行、または\verb|//|で始まる行(コメントアウト)は読み飛ばされます。
-\item 各キーワード、パラメーターの大文字$\cdot$小文字は区別されません。
-  ダブルクオート、空白は無視されます。
-\item 必ず指定しなければいけないパラメーター、
-  指定しない場合デフォルト値が使われるパラメーター、
-  (他のパラメーターの組み合わせによっては)使われないパラメーターが存在します。
-  使われないパラメーターが指定された場合にはプログラムは終了し、
-  入力ファイルをチェックするようにというメッセージが表示されます。
+\item In each line, there is a set of a keyword (before an ``\verb|=|") and a parameter(after an ``\verb|=|"); 
+  they are separated by ``\verb|=|".
+\item You can describe keywords in a random order.
+\item Empty lines and lines beginning in a ``\verb|//|''(comment outs) are skipped.
+\item Upper- and lowercase are not distinguished.
+  Double quotes and blanks are ignored.
+\item There are three kinds of parameters.\\ 
+  1.~Parameters that must be specified~(if not, \verb|vmcdry.out| will stop with error messages),\\ 
+  2.~Parameters that is not necessary be specified~(if not, default values are used),\\
+  3.~Parameters that must not be specified~(if specified, \verb|vmcdry.out| will stop with error messages).\\
+  An example of 3 is transfer $t$ for the Heisenberg spin system. 
+  If you choose ``model=spin", you should not specify ``$t$".
 \end{itemize}
 
-次に各キーワードの説明をします。
+We explain each keywords as follows:
 
-\subsection{計算の種類に関する必須パラメーター}
+\subsection{Parameters about the kind of a calculation}
 
 \begin{itemize}
 
 \item \verb|model|
 
-{\bf 形式 :} 文字列(\verb|"Fermion Hubbard"|, \verb|"Spin"|, \verb|"Kondo Lattice"|, 
-\verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, \verb|"Kondo LatticeGC"|のいずれか)
+{\bf Type :} String (Choose from \verb|"Fermion Hubbard"|, \verb|"Spin"|, \verb|"Kondo Lattice"|, 
+\verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, \verb|"Kondo LatticeGC"|)
+\footnote{GC=Grand Canonical}
 
-{\bf 説明 :} 計算対象の模型を指定します。上記の文字列はそれぞれ
-カノニカル集団のフェルミ粒子Hubbard模型
+{\bf Description :} The target model is specified with this parameter;
+above words denote the canonical ensemble of the Fermion in the Hubbard model
 \begin{align}
-H = - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma} 
+H = -\mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma} 
 - \sum_{i \neq j \sigma} t_{i j} c^\dagger_{i \sigma} c_{j \sigma} 
 + \sum_{i} U n_{i \uparrow} n_{i \downarrow}
 + \sum_{i \neq j} V_{i j} n_{i} n_{j},
 \label{fml4_1_hubbard}
 \end{align}
-同じくカノニカル集団のスピン模型 ($\{\sigma_1, \sigma_2\}={x, y, z}$)
+canonical ensemble in the Spin model($\{\sigma_1, \sigma_2\}={x, y, z}$)
 \begin{align}
 H &= -h \sum_{i} S_{i z} - \Gamma \sum_{i} S_{i x} + D \sum_{i} S_{i z} S_{i z}
 \nonumber \\
 &+ \sum_{i j, \sigma_1}J_{i j \sigma_1} S_{i \sigma_1} S_{j \sigma_1}+ \sum_{i j, \sigma_1 \neq \sigma_2} J_{i j \sigma_1 \sigma_2} S_{i \sigma_1} S_{j \sigma_2} ,
 \label{fml4_1_spin}
 \end{align}
-カノニカル集団の近藤格子模型(Hubbard模型と同様に$U$と$J$を入れることも可能)
+canonical ensemble in the Kondo lattice model
 \begin{align}
-H &= - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma} 
+H = - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma} 
 - t \sum_{\langle i j \rangle \sigma} c^\dagger_{i \sigma} c_{j \sigma} 
 + \frac{J}{2} \sum_{i} \left\{
 S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 + S_{i}^{-} c_{i \uparrow}^\dagger c_{i \downarrow}
-+ S_{i z} (n_{i \uparrow} - n_{i \downarrow})\right\}
-\nonumber \\
-& +  \sum_{i} U n_{i \uparrow} n_{i \downarrow}
-+ \sum_{i \neq j} V_{i j} n_{i} n_{j}
-,
++ S_{i z} (n_{i \uparrow} - n_{i \downarrow})
+\right\},
 \label{fml4_1_kondo}
 \end{align}
-グランドカノニカル集団のフェルミ粒子Hubbard模型[式(\ref{fml4_1_hubbard})]、
-グランドカノニカル集団のスピン模型[式(\ref{fml4_1_spin})]、
-グランドカノニカル集団の近藤格子模型[式(\ref{fml4_1_kondo})]に対応します。
+grand canonical ensemble of the Fermion in the Hubbard model [Eqn. (\ref{fml4_1_hubbard})],
+grand canonical ensemble in the Spin model [Eqn. (\ref{fml4_1_spin})],
+and
+grand canonical ensemble in Kondo lattice model [Eqn. (\ref{fml4_1_kondo})]
+respectively.
 
 \item \verb|lattice|
 
-{\bf 形式 :} 文字列(\verb|"Chain Lattice"|, \verb|"Square Lattice"|, 
-\verb|"Triangular Lattice"|, \verb|"Honeycomb Lattice"|, \verb|"Ladder"|, \verb|"Kagome"|のいずれか)
+{\bf Type :} String (Choose from \verb|"Chain Lattice"|, \verb|"Square Lattice"|, 
+\verb|"Triangular Lattice"|, \verb|"Honeycomb Lattice"|, \verb|"Ladder"|, \verb|"Kagome"|)
 
-{\bf 説明 :} 格子の形状を指定します。
-上記文字列はそれぞれ1次元鎖(Fig. \ref{fig_chap04_1_lattice}(a))、
-2次元正方格子(Fig. \ref{fig_chap04_1_lattice}(b))、
-2次元三角格子(Fig. \ref{fig_chap04_1_lattice}(c))、
-2次元異方的蜂の巣格子(Fig. \ref{fig_chap04_1_honeycomb})、
-梯子格子(Fig. \ref{fig_ladder})、
-カゴメ格子(Fig. \ref{fig_kagome})に対応します。
+{\bf Description :} The lattice shape is specified with this parameter;
+above words denote
+the one dimensional chain lattice (Fig. \ref{fig_chap04_1_lattice}(a)), 
+the two dimensional square lattice (Fig. \ref{fig_chap04_1_lattice}(b)),
+the two dimensional triangular lattice (Fig. \ref{fig_chap04_1_lattice}(c)),
+the two dimensional anisotropic honeycomb lattice (Fig. \ref{fig_chap04_1_honeycomb}),
+the ladder lattice (Fig. \ref{fig_ladder}),
+and
+the Kagome Lattice(Fig. \ref{fig_kagome})
+respectively.
 
-\begin{figure}[!htbp]
+In \verb|method="SpinGCBoost"|,
+only \verb|"Chain Lattice"|, \verb|"Honeycomb Lattice"|, 
+\verb|"Ladder"|, and \verb|"Kagome"| are supported.
+Limits of $L$, $W$, and the number of MPI processes ($N_{\rm proc}$) are as follows:
+
+\begin{itemize}
+
+  \item \verb|"Chain Lattice"|
+
+    $L = 8n$ (where $n$ is an integer number under the condition  $n\geq1$),
+    $N_{\rm proc} \leq 2(L=8)$, $N_{\rm proc} \leq 2^{L/2-2}(L>8)$.
+    
+  \item \verb|"Honeycomb Lattice"|
+
+    $W=3, L \geq 2$, $N_{\rm proc} \leq 2(L=2)$, $N_{\rm proc} \leq 64(L>2)$.
+
+  \item \verb|"Ladder"|
+
+    $W=2, L = 2n$ (where $n$ is an integer number under the condition  $n\geq4$),
+    $N_{\rm proc} \leq 2^{L-4}$.
+
+  \item \verb|"Kagome"|
+
+    $W=3, L \geq 2$, $N_{\rm proc} \leq 1(L=2)$, $N_{\rm proc} \leq 512(L>2)$.
+
+\end{itemize}
+
+\begin{figure}[!tbhp]
   \begin{center}
-    \includegraphics[width=10cm]{../figs/chap04_1_lattice.pdf}
-    \caption{(a)1次元鎖、(b)2次元正方格子、(c)2次元三角格子の模式図. 
-      ホッピング積分、オフサイトクーロン積分、スピン結合は、
-      再近接サイト間(マゼンタの実線)ではそれぞれ$t,V,J$となり、
-      次近接サイト間(緑の破線)ではそれぞれ$t',V',J'$となります。}
+    \includegraphics[width=8cm]{../figs/chap04_1_lattice.pdf}
+    \caption{Schematic illustration of
+      (a) one dimensional chain lattice, 
+      (b) two dimensional square lattice, and 
+      (c) two dimensional triangular lattice.
+      They have $t$, $V$, and $J$ as a nearest neighbor hopping, an offsite Coulomb integral, 
+      and a spin-coupling constant, respectively (magenta solid lines);
+      They also have $t'$, $V'$, and $J'$ as a next nearest neighbor hopping, offsite Coulomb integral, 
+      and spin-coupling constant, respectively (green dashed line).
+    }
     \label{fig_chap04_1_lattice}
   \end{center}
 \end{figure}
 
-\begin{figure}[!htbp]
+\begin{figure}[!tbhp]
   \begin{center}
     \includegraphics[width=15cm]{../figs/chap04_1_honeycomb.pdf}
-    \caption{2次元異方的蜂の巣格子の模式図. 
-      ホッピング積分、オフサイトクーロン積分、スピン結合は、
-      ボンドの方向によって異なります。
-      また、次近接のホッピング積分、オフサイトクーロン積分、スピン結合
-      には対応していません。
+    \caption{Schematic illustration of the anisotropic honeycomb lattice.
+      The nearest neighbor 
+      hopping integral, spin coupling, offsite Coulomb integral
+      depend on the bond direction.
+      Those between second nearest neighbor sites are not supported.
     }
     \label{fig_chap04_1_honeycomb}
   \end{center}
 \end{figure}
 
-\begin{figure}[!htbp]
+\begin{figure}[!tbhp]
   \begin{center}
-    \includegraphics[width=15cm]{../figs/kagome.pdf}
-    \caption{カゴメ格子の模式図. 
+    \includegraphics[width=10cm]{../figs/kagome.pdf}
+    \caption{Schematic illustration of the Kagome lattice.
     }
     \label{fig_kagome}
   \end{center}
 \end{figure}
 
-\begin{figure}[!htbp]
+\begin{figure}[!tbhp]
   \begin{center}
     \includegraphics[width=10cm]{../figs/ladder.pdf}
-    \caption{梯子格子の模式図. 
+    \caption{Schematic illustration of the ladder lattice.
     }
     \label{fig_ladder}
   \end{center}
@@ -147,80 +183,90 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 
 \end{itemize}
 
-\subsection{格子に関するパラメーター}
+\subsection{Parameters for the lattice}
 
-\subsubsection{1次元鎖[Fig. \ref{fig_chap04_1_lattice}(a)]}
+\subsubsection{Chain [Fig. \ref{fig_chap04_1_lattice}(a)]}
 
 \begin{itemize}
 
 \item \verb|L|
 
-{\bf 形式 :} 自然数
+{\bf Type :} Integer
 
-{\bf 説明 :} 鎖の長さを指定します. 
+{\bf Description :} The length of the chain is specified 
+with this parameter.
 
 \end{itemize}
 
-\subsubsection{梯子格子(Fig. \ref{fig_ladder})}
+\subsubsection{Ladder (Fig. \ref{fig_ladder})}
 
 \begin{itemize}
 
 \item \verb|L|
 
-{\bf 形式 :} 自然数
+{\bf Type :} Integer
 
-{\bf 説明 :} 梯子の長さを指定します. 
+{\bf Description :} The length of the ladder is specified 
+with this parameter.
 
 \item \verb|W|
 
-{\bf 形式 :} 自然数
+{\bf Type :} Integer
 
-{\bf 説明 :} 梯子の本数を指定します. 
+{\bf Description :} The number of the ladder is specified 
+with this parameter.
 
 \end{itemize}
 
-\begin{figure}[!htbp]
+\begin{figure}[!tbhp]
   \begin{center}
     \includegraphics[width=15cm]{../figs/chap04_1_unitlattice.pdf}
-    \caption{三角格子において、${\vec a}_0 = (6, 2), {\vec a}_1 = (2, 4)$とした場合のセル形状。
-      ${\vec a}_0$(マゼンタ)および${\vec a}_1$(グリーン)
-      で囲まれた部分(サイト数は20)が計算するセルとなる。
+    \caption{The shape of the numerical cell 
+      when ${\vec a}_0 = (6, 2), {\vec a}_1 = (2, 4)$
+      in the triangular lattice.
+      The region surrounded by 
+      ${\vec a}_0$(Magenta dashed arrow) and ${\vec a}_1$(Green dashed arrow)
+      becomes the cell to be calculated (20 sites).
     }
     \label{fig_chap04_1_unitlattice}
   \end{center}
 \end{figure}
 
-\subsubsection{矩形格子[Fig. \ref{fig_chap04_1_lattice}(b)]、 
-三角格子[Fig. \ref{fig_chap04_1_lattice}(c)]、
-蜂の巣格子(Fig. \ref{fig_chap04_1_honeycomb})、
-カゴメ格子(Fig. \ref{fig_kagome})}
+\subsubsection{Tetragonal lattice [Fig. \ref{fig_chap04_1_lattice}(b)], 
+Triangular lattice[Fig. \ref{fig_chap04_1_lattice}(c)],
+Honeycomb lattice(Fig. \ref{fig_chap04_1_honeycomb}),
+Kagome lattice(Fig. \ref{fig_kagome})}
 
-これらの格子では、標準の単位胞(図中の黒の破線を参照)を用いて格子形状を指定する方法と、
-それらとは別の方向に格子ベクトルを取る方法が選択できます。
-また、両方を指定した場合にはプログラムを終了します。
+In these lattices,
+we can specify the shape of the numerical cell by using the following two methods.
 
 \begin{itemize}
 
 \item \verb|W|, \verb|L|
 
-{\bf 形式 :} 自然数
+{\bf Type :} Integer
 
-{\bf 説明 :} 標準の単位胞の並び方を指定します。
+{\bf Description :} The alignment of original unit cells 
+(dashed black lines in Figs. \ref{fig_chap04_1_lattice} - \ref{fig_kagome})
+is specified with these parameter.
 
 \item \verb|a0W|, \verb|a0L|, \verb|a1W|, \verb|a1L|
 
-{\bf 形式 :} 自然数
+{\bf Type :} Integer
 
-{\bf 説明 :} 格子を指定する2本のベクトル(${\vec a}_0, {\vec a}_1$)
-を指定します (Fig. \ref{fig_chap04_1_unitlattice})。
-これらのベクトルは標準の並進ベクトルを基底とした座標(Fractional coordinate)
-で指定されます。
+{\bf Description :} 
+We can specify two vectors (${\vec a}_0, {\vec a}_1$)
+that surrounds the numerical cell (Fig. \ref{fig_chap04_1_unitlattice}).
+These vectors should be specified in the Fractional coordinate.
 
 \end{itemize}
 
-スタンダードモードで出力される\verb|lattice.gp|というファイルを使うと、
-自分の意図した通りの格子のとり方になっているかどうかを確かめる事が出来ます。
-このファイルは、次のようにして\verb|gnuplot|に読み込ませることが出来ます。
+If we use both of these method, \verb|vmcdry.out| stops.
+
+We can check the shape of the numerical cell
+by using a file \verb|lattice.gp|
+which is written in the Standard mode.
+This file can be read by \verb|gnuplot| as follows:
 \begin{verbatim}
 $ gnuplot lattice.gp
 \end{verbatim}
@@ -244,75 +290,73 @@ $ gnuplot lattice.gp
 
 \end{itemize}
 
-%\subsection{保存量に関するパラメーター}
-%
-%\begin{itemize}
-%\item \verb|nelec|
-%
-%{\bf 形式 :} 整数
-%
-%{\bf 説明 :} 全伝導電子数を指定します。
-%\verb|model = "Fermion HubbardGC"|, \verb|"Spin"|, \verb|"SpinGC"|
-%のときには指定しないでください。
 
-%\item \verb|2Sz|
+\subsection{Parameters for the Hamiltonian}
+A default value is set as $0$ unless a specific value is not defined in a description. 
+Table~\ref{table_interactions} shows the parameters for each models. 
+In the case of a complex type, a file format is ``{\it a real part, an imaginary part} "
+ while in the case of a real type, only ``{\it a real part} ".
 
-%{\bf 形式 :} 整数
 
-%{\bf 説明 :} 全スピンのz 成分の2倍を指定します。
-%\verb|model = "Fermion HubbardGC"|, \verb|SpinGC|
-%のときには指定しないでください。
-%\end{itemize}
-
-\subsection{ハミルトニアンの各項の係数}
-
-デフォルト値は特に記載されていないものについては0に設定してあります。
-型が複素数のパラメータは「実部, 虚部」(間に``,'')の形式で指定し、
-実数の場合には「実部」で指定が可能です。
-
-\subsubsection{局所項}
+\subsubsection{Local terms}
 
 \begin{itemize}
 
 \item \verb|mu|
 
-{\bf 形式 :} 実数
+{\bf Type :} Real
 
-{\bf 説明 :} Hubbardおよび近藤格子模型での化学ポテンシャルを指定します。
+{\bf Description :} (Hubbard and Kondo lattice model) 
+The chemical potential $\mu$ (including the site potential)
+is specified with this parameter.
 
 \item \verb|U|
 
-{\bf 形式 :} 実数
+{\bf Type :} Real
 
-{\bf 説明 :} Hubbardおよび近藤格子模型でのオンサイトクーロン積分を指定します。
+{\bf Description :} (Hubbard and Kondo lattice model) 
+The onsite Coulomb integral $U$ is specified with this parameter.
 
 \item \verb|Jx|, \verb|Jy|, \verb|Jz|, \verb|Jxy|, 
   \verb|Jyx|, \verb|Jxz|, \verb|Jzx|, \verb|Jyz|, \verb|Jzy|
 
-{\bf 形式 :} 実数
+{\bf Type :} Real
 
-{\bf 説明 :} 近藤格子模型での、局在電子と遍歴電子のスピン結合を指定します。
-また対角項について, \verb|Jx, Jy, Jz|を指定する代わりに、パラメータ\verb|J|を指定すると
-\verb|Jx = Jy = Jz = J|が代入されます。
-\verb|J|を指定した上で\verb|Jx|, \verb|Jy|, \verb|Jz|を指定した場合はプログラムを終了します。
+{\bf Description :} (Kondo lattice model) 
+The spin-coupling constant between the valence and the local electrons
+is specified with this parameter.
+If the exchange coupling \verb|J| is specified in the input file,
+instead of \verb|Jx, Jy, Jz|,
+the diagonal exchange couplings, \verb|Jx, Jy, Jz|, are set as \verb|Jx = Jy = Jz = J|.
+When both
+the set of exchange couplings (\verb|Jx|, \verb|Jy|, \verb|Jz|)
+and the exchange coupling \verb|J| are specified in the input file,
+\verb|vmcdry.out| will stop.
 
 \item \verb|h|, \verb|Gamma|, \verb|D|
 
-{\bf 形式 :} 実数
+{\bf Type :} Real
 
-{\bf 説明 :} スピン模型での縦磁場、横磁場、異方性パラメータを指定します。
+{\bf Description :} (Spin model)
+The longitudinal magnetic field, transverse magnetic field, 
+and the single-site anisotropy parameter are specified with these parameters.
+The single-site anisotropy parameter is not available for \verb|model=SpinGCBoost|.
 
 \end{itemize}
 
-下記の非局所項は、梯子格子の場合とそれ以外(１次元鎖、矩形格子、三角格子、蜂の巣格子、カゴメ格子)
-の場合で指定の仕方が異なります。
-また、各格子で指定可能なパラメーターをTable \ref{table_interactions}に表します。
+The non-local terms described below should be specified
+in different ways depending on the lattice structure:
+For \verb|lattice=Ladder|, the non-local terms are specified in the different way
+from \verb|lattice=Chain Lattice|, \verb|Square Lattice|, \verb|Triangular Lattice|, \verb|Honeycomb Lattice|, \verb|Kagome|. 
+Below, the available parameters for each lattice are shown in
+Table \ref{table_interactions}.
 
-\begin{table}[hbp]
+\begin{table}[tbhp]
   \begin{tabular}{|l||c|c|c|c|c|c|c|c|} \hline
-    相互作用 & 1次元鎖 & 矩形格子 & 三角格子 & 蜂の巣格子 & カゴメ格子 & 梯子格子\\ 
-    \hline \hline
-     \verb|J|, \verb|t|, \verb|V|(省略形) & $\circ$	 & $\circ$ & $\circ$ & $\circ$ & $\circ$ & -\\ 
+    Interactions & 1D chain & 2D square & 2D triangular & Honeycomb & Kagome & Ladder\\ 
+    \hline 
+    \hline
+     \verb|J|, \verb|t|, \verb|V| (simplified) & $\circ$	 & $\circ$ & $\circ$ & $\circ$ & $\circ$ & -\\ 
      \hline
     \verb|J'|, \verb|t'|, \verb|V'| & $\circ$	 & $\circ$	& $\circ$ 	& $\circ$ 	& $\circ$ & - \\ 
     \hline
@@ -327,25 +371,28 @@ $ gnuplot lattice.gp
     \verb|J2'| ,\verb|t2'|, \verb|V2'|  & -		 &-	 	& -		& -		& -		& $\circ$\\ 
     \hline
 \end{tabular}
-   \caption{各格子で定義可能な相互作用一覧。ただし、スピン結合については行列として与えることが可能。}
+   \caption{Interactions for each models defined in an input file. We can define spin couplings as matrix format.}
     \label{table_interactions}
 \end{table}
 
-\subsubsection{非局所項[梯子格子 (Fig. \ref{fig_ladder})]}
+\subsubsection{Non-local terms[ for Ladder (Fig. \ref{fig_ladder})]}
 
 \begin{itemize}
 \item \verb|t0|,  \verb|t1|,  \verb|t1'|,  \verb|t2|,  \verb|t2'|
 
-{\bf 形式 :} 複素数
+{\bf Type :} Complex
 
-{\bf 説明 :} 梯子格子でのホッピング(Fig. \ref{fig_ladder}参照)を指定します。
+{\bf Description :} (Hubbard and Kondo lattice model)
+Hopping integrals in the ladder lattice 
+(See Fig. \ref{fig_ladder}) is specified with this parameter.
 
 \item \verb|V0|,  \verb|V1|,  \verb|V1'|,  \verb|V2|,  \verb|V2'|
 
-{\bf 形式 :} 実数
+{\bf Type :} Real
 
-{\bf 説明 :} 梯子格子でのオフサイトクーロン積分
-(Fig. \ref{fig_ladder}参照)を指定します。
+{\bf Description :} (Hubbard and Kondo lattice model)
+Offsite Coulomb integrals on the ladder lattice
+(Fig. \ref{fig_chap04_1_honeycomb} are specified with these parameters.
 
 \item \verb|J0x|, \verb|J0y|, \verb|J0z|, \verb|J0xy|, 
   \verb|J0yx|, \verb|J0xz|, \verb|J0zx|, \verb|J0yz|, \verb|J0zy|
@@ -358,39 +405,52 @@ $ gnuplot lattice.gp
 \item \verb|J2'x|, \verb|J2'y|, \verb|J2'z|, \verb|J2'xy|, 
   \verb|J2'yx|, \verb|J2'xz|, \verb|J2'zx|, \verb|J2'yz|, \verb|J2'zy|
 
-{\bf 形式 :} 実数
+{\bf Type :} Real
 
-{\bf 説明 :} 梯子格子でのスピン相互作用
-(Fig. \ref{fig_ladder}参照)を指定します。
-また対角項について、例えば\verb|J0x, J0y, J0z|を指定する代わりに
-パラメータ\verb|J0|を指定すると
-\verb|J0x = J0y = J0z = J0|が代入されます。
-\verb|J0|を指定した上で\verb|J0x, J0y, J0z|等も指定した場合はプログラムを終了します。
-\verb|J1|, \verb|J1'|, \verb|J2|, \verb|J2'|についても同様です。
+{\bf Description :} (Spin model)
+Spin-coupling constants in the ladder lattice
+(See Fig. \ref{fig_ladder}) are specified with these parameter.
+If the simplified parameter \verb|J0| is specified in the input file instead of
+the diagonal couplings, \verb|J0x, J0y, J0z|,
+these diagonal couplings are set as \verb|J0x = J0y = J0z = J0|.
+If both \verb|J0| and the set of the couplings (\verb|J0x, J0y, J0z|)
+are specified, \verb|vmcdry.out| will stop.
+The above rules are also valid for the simplified parameters, \verb|J1|, \verb|J1'|, \verb|J2|, and \verb|J2'|.
 
 \end{itemize}
 
-\subsubsection{非局所項 [梯子格子以外(Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},
+\subsubsection{Non-local terms [other than Ladder (Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},
 \ref{fig_kagome})]}
 
 \begin{itemize}
 \item \verb|t0|,  \verb|t1|, \verb|t2|
 
-{\bf 形式 :} 複素数
+{\bf Type :} Complex
 
-{\bf 説明 :} Hubbardおよび近藤格子模型での、最近接サイト間の各方向のホッピングを指定します。
-また、ホッピングのボンド方向依存性がない場合は\verb|t0|,  \verb|t1|, \verb|t2|を
-別々に指定する代わりにパラメータ\verb|t|を指定すると、\verb|t0 = t1 = t2 = t|が代入されます。
-\verb|t|と\verb|t0|等の両方が指定された場合にはプログラムを終了します。
+{\bf Description :} (Hubbard and Kondo lattice model)
+Nearest neighbor hoppings for each direction
+(See Figs. \ref{fig_chap04_1_lattice}-\ref{fig_kagome})
+are specified with these parameter.
+If there is no bond dependence of the hoppings,
+the simplified parameter \verb|t| is available to specify \verb|t0|,  \verb|t1|, and \verb|t2| as
+\verb|t0 = t1 = t2 = t|.
+If both \verb|t| and the set of the hoppings (\verb|t0|,  \verb|t1|, \verb|t2|) are specified,
+\verb|vmcdry.out| will stop.
 
 \item \verb|V0|,  \verb|V1|, \verb|V2|
 
-{\bf 形式 :} 実数
+{\bf Type :} Real
 
-{\bf 説明 :} Hubbardおよび近藤格子模型での、最近接サイト間のCoulomb積分を指定します。
-また、サイト間Coulomb積分のボンド方向依存性がない場合は\verb|V0|,  \verb|V1|, \verb|V2|を
-別々に指定する代わりにパラメータ\verb|V|を指定すると、\verb|V0 = V1 = V2 = V|が代入されます。
-\verb|V|と\verb|V0|等の両方が指定された場合にはプログラムを終了します。
+{\bf Description :} (Hubbard and Kondo lattice model)
+Nearest-neighbor offsite Coulomb integrals $V$
+ for each direction
+(See Figs. \ref{fig_chap04_1_lattice}-\ref{fig_kagome})
+are specified with these parameters.
+If there is no bond dependence of the offsite Coulomb integrals,
+the simplified parameter \verb|V| is available to specify \verb|V0|,  \verb|V1|, and \verb|V2| as
+\verb|V0 = V1 = V2 = V|.
+If both \verb|V| and the set of the Coulomb integrals (\verb|V0|,  \verb|V1|, \verb|V2|) are specified,
+\verb|vmcdry.out| will stop.
 
 \item \verb|J0x|, \verb|J0y|, \verb|J0z|, \verb|J0xy|, 
   \verb|J0yx|, \verb|J0xz|, \verb|J0zx|, \verb|J0yz|, \verb|J0zy|
@@ -399,73 +459,91 @@ $ gnuplot lattice.gp
 \item \verb|J2x|, \verb|J2y|, \verb|J2z|, \verb|J2xy|, 
   \verb|J2yx|, \verb|J2xz|, \verb|J2zx|, \verb|J2yz|, \verb|J2zy|
 
-{\bf 形式 :} 実数
+{\bf Type :} Real
 
-{\bf 説明 :} スピン模型での、最近接サイト間のスピン相互作用を指定します。
-また対角項について、例えば\verb|J0x, J0y, J0z|を指定する代わりに
-パラメータ\verb|J0|を指定すると
-\verb|J0x = J0y = J0z = J0|が代入されます。
-\verb|J0|を指定した上で\verb|J0x, J0y, J0z|等も指定した場合はプログラムを終了します。
-\verb|J1|, \verb|J2|についても同様です。
+{\bf Description :} (Spin model)
+Nearest-neighbor exchange couplings for each direction
+are specified with thees parameters.
+If the simplified parameter \verb|J0| is specified, instead of \verb|J0x, J0y, J0z|,
+the exchange couplings, \verb|J0x, J0y, J0z|, are set as \verb|J0x = J0y = J0z = J0|.
+If both \verb|J0| and the set of the exchange couplings (\verb|J0x, J0y, J0z|)
+are specified, \verb|vmcdry.out| will stop.
+The above rules are valid for \verb|J1| and \verb|J2|.
 
-スピン間相互作用のボンド方向依存性がない場合には、
+If there is no bond dependence of the exchange couplings,
+the simplified parameters,
 \verb|Jx|, \verb|Jy|, \verb|Jz|, \verb|Jxy|, 
-\verb|Jyx|, \verb|Jxz|, \verb|Jzx|, \verb|Jyz|, \verb|Jzy|
-を指定すると、\verb|J0x = J1x = J2x = Jx|のようにすべてのボンド方向のスピン間相互作用に
-同じ値を代入することが出来ます。
-\verb|Jx|$\sim$\verb|Jzy|系列のどれかと\verb|J0x|$\sim$\verb|J2zy|系列のどれかを両方指定した
-場合にはプログラムを終了します。
-以下に最近接間スピン相互作用の指定方法の例を挙げます。
+\verb|Jyx|, \verb|Jxz|, \verb|Jzx|, \verb|Jyz|, \verb|Jzy|,
+are available to specify the exchange couplings for every bond as
+\verb|J0x = J1x = J2x = Jx|.
+If any simplified parameter (\verb|Jx|$\sim$\verb|Jzy|)
+is specified in addition to its counter parts (\verb|J0x|$\sim$\verb|J2zy|),
+\verb|vmcdry.out| will stop.
+Below, examples of parameter sets for nearest-neighbor exchange couplings are shown.
 
 \begin{itemize}
 
-\item ボンド方向依存性、スピン方向依存性、相互作用の非対角成分($J_{x y}$等)がない場合
+\item If there are no bond-dependent, no anisotropic and offdiagonal exchange couplings (such as $J_{x y}$),
+please specify \verb|J| in the input file.
 
-\verb|J|を指定
+\item If there are no bond-dependent and offdiagonal exchange couplings
+but are anisotropic couplings,
+please specify the non-zero couplings in the diagonal parameters, \verb|Jx, Jy, Jz|.
 
-\item ボンド方向依存性、相互作用の非対角成分がなく、スピン方向依存性がある場合
+\item If there are no bond-dependent exchange couplings
+but are anisotropic and offdiagonal exchange couplings,
+please specify the non-zero couplings in the nine parameters,
+\verb|Jx, Jy, Jz, Jxy, Jyz, Jxz, Jyx, Jzy, Jzx|.
 
-\verb|Jx, Jy, Jz|のうち\verb|0|でないものを指定
+\item If there are no anisotropic and offdiagonal exchange couplings,
+but are bond-dependent couplings,
+please specify the non-zero couplings in the three parameters,
+\verb|J0, J1, J2|.
 
-\item ボンド方向依存性がなく、スピン方向依存性、相互作用の非対角成分がある場合
+\item If there are no anisotropic exchange couplings, but are bond-dependent and offdiagonal couplings,
+please specify the non-zero couplings in the nine parameters,
+\verb|J0x, J0y, J0z, J1x, J1y, J1z, J2x, J2y, J2z|.
 
-\verb|Jx, Jy, Jz, Jxy, Jyz, Jxz, Jyx, Jzy, Jzx|のうち\verb|0|でないものを指定
-
-\item スピン方向依存性、相互作用の非対角成分がなく、ボンド方向依存性がある場合
-
-\verb|J0, J1, J2|のうち\verb|0|でないものを指定
-
-\item スピン方向依存性がなく、ボンド方向依存性、相互作用の非対角成分がある場合
-
-\verb|J0x, J0y, J0z, J1x, J1y, J1z, J2x, J2y, J2z|のうち\verb|0|でないものを指定
-
-\item ボンド方向依存性、スピン方向依存性、相互作用の非対角成分がある場合
-
-\verb|J0x|$\sim$\verb|J2zy|のすべてのうち\verb|0|でないものを指定
+\item If there are bond-dependent, anisotropic and offdiagonal exchange couplings,
+please specify the non-zero couplings in the twenty-seven parameters from
+\verb|J0x| to \verb|J2zy|.
 
 \end{itemize}
 \item \verb|t'|
 
-{\bf 形式 :} 複素数
+{\bf Type :} Complex
 
-{\bf 説明 :} Hubbardおよび近藤格子模型での、次近接サイト間の各方向のホッピングを指定します。
+{\bf Description :} (Hubbard and Kondo lattice model)
+Nearest neighbor hoppings for each direction
+(See Figs. \ref{fig_chap04_1_lattice}-\ref{fig_kagome})
+are specified with these parameter.
 
 \item \verb|V'|
 
-{\bf 形式 :} 実数
+{\bf Type :} Real
 
-{\bf 説明 :} Hubbardおよび近藤格子模型での、次近接サイト間のCoulomb積分を指定します。
+{\bf Description :} (Hubbard and Kondo lattice model)
+Nearest neighbor-offsite Coulomb integrals $V$
+ for each direction
+(See Figs. \ref{fig_chap04_1_lattice}-\ref{fig_kagome})
+are specified with these parameters.
 
 \item \verb|J'x|, \verb|J'y|, \verb|J'z|, \verb|J'xy|, 
   \verb|J'yx|, \verb|J'xz|, \verb|J'zx|, \verb|J'yz|, \verb|J'zy|
 
-{\bf 形式 :} 実数
+{\bf Type :} Real
 
-{\bf 説明 :} スピン模型での、次近接サイト間のスピン相互作用を指定します。
-また対角項について、\verb|J'x, J'y, J'z|を指定する代わりに
-パラメータ\verb|J'|を指定すると
-\verb|J'x = J'y = J'z = J'|が代入されます。
-\verb|J'|を指定した上で\verb|J'x, J'y, J'z|も指定した場合はプログラムを終了します。
+{\bf Description :} (Spin model)
+Second nearest-neighbor exchange couplings are specified.
+However, for \verb|lattice = Honeycomb Lattice| and  \verb|lattice = Kagome|
+with \verb|model=SpinGCBoost|,
+the second nearest-neighbor exchange couplings are not available in the $Standard$ mode.
+If the simplified parameter \verb|J'| is specified, instead of
+\verb|J'x, J'y, J'z|,
+the exchange couplings are set as
+\verb|J'x = J'y = J'z = J'|.
+If both \verb|J'| and the set of the couplings (\verb|J'x, J'y, J'z|),
+\verb|vmcdry.out| will stop.
 
 \item \verb|phase0|, \verb|phase1|
 
