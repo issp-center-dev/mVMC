@@ -1,0 +1,325 @@
+% !TEX root = userguide_jp.tex
+%----------------------------------------------------------
+\chapter{How to use mVMC?}
+\label{Ch:HowTo}
+
+\section{Prerequisite}
+
+mVMC requires the following packages:
+\begin{itemize}
+\item C compiler (intel, Fujitsu, GNU, etc. )
+\item ScaLAPACK library (intel MKL, Fujitsu, ATLAS, etc.)
+\item MPI library
+\end{itemize}
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize
+
+{\bf E. g. / Settings of intel compiler}
+
+When you use the intel compiler, you can use easily scripts attached to the compiler.
+In the case of the bash in 64 bit OS, write the following in your \verb|~/.bashrc|:
+\begin{verbatim}
+source /opt/intel/bin/compilervars.sh intel64
+\end{verbatim}
+or
+\begin{verbatim}
+source /opt/intel/bin/iccvars.sh intel64
+source /opt/intel/mkl/bin/mklvars.sh
+\end{verbatim}
+
+Please read manuals of your compiler/library for more information.
+
+\end{screen}
+
+\section{Installation}
+
+% !TEX root = userguide_en.tex
+%----------------------------------------------------------
+You can download mVMC in the following place.\\
+
+You can obtain the mVMC directory by typing
+\begin{verbatim}
+$ tar xzvf mVMC-xxx.tar.gz
+\end{verbatim}
+
+There are two kind of procedures to install mVMC.
+
+\subsection{Using \texttt{config.sh}}
+
+Please run \verb|config.sh| script in the mVMC directory as follow
+(for ISSP system-B ''sekirei''):
+\begin{verbatim}
+$ bash config.sh sekirei
+\end{verbatim}
+Then environmental configuration file \verb|make.sys| is generated in 
+\verb|src/| directory.
+The command-line argument of \verb|config.sh| is as follows:
+\begin{itemize}
+\item \verb|sekirei| : ISSP system-B ''sekirei''
+\item \verb|kei| : K computer and ISSP system-C ''maki''
+\item \verb|openmpi-intel| : OpenMPI + intel compiler
+\item \verb|gnu| : GCC
+\end{itemize}
+
+\verb|make.sys| is as follows (for ISSP-system-B ''sekirei''):
+\begin{verbatim}
+CC = mpicc
+LIB = -L$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
+      -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
+REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
+OPTION = -D_mpi_use
+CP = cp -f -v
+AR = ar rv
+FORT = ifort
+FFLAGS = -O3 -implicitnone -xHost
+SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
+\end{verbatim}
+We explain macros of this file as: 
+\begin{itemize}
+\item \verb|CC| : The C Compilation command (\verb|mpicc|, \verb|mpifccpx|)
+\item \verb|Lib| : Compilation options for ScaLAPACK.
+\item \verb|CFLAGS| : Other compilation options.
+\item \verb|FORT| : Fortran compilation command (\verb|ifort|, \verb|frtpx|)
+\end{itemize}
+
+
+Then you are ready to compile mVMC.
+Please type
+\begin{verbatim}
+$ make mvmc
+\end{verbatim}
+and obtain \verb|vmc.out| and \verb|vmcdry.out| in \verb|src/| directory;
+you should add this directory to the \verb|$PATH|.
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize
+
+You can make a PATH to mVMC as follows:
+\\
+\verb|$ export PATH=${PATH}:|\textit{mVMC\_top\_directory}\verb|/src/|
+\\
+If you keep this PATH, you should write above in \verb|~/.bashrc|
+(for \verb|bash| as a login shell)
+
+\end{screen}
+
+
+\subsection{Using \texttt{cmake}}
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize\\
+Before using cmake for sekirei, you must type 
+\begin{verbatim}
+source /home/issp/materiapps/tool/env.sh
+\end{verbatim}
+while for maki, you must type
+\begin{verbatim}
+source /global/app/materiapps/tool/env.sh
+\end{verbatim}
+\end{screen}
+
+We can compile mVMC as
+\begin{verbatim}
+cd $HOME/build/mvmc
+cmake -DCONFIG=gcc $PathTomVMC
+make
+\end{verbatim}
+Here, we set a path to mVMC as \verb| $PathTomVMC| and to a build directory as \verb| $HOME/build/mvmc|. 
+After compiling, a src folder is constructed below a \verb| $HOME/build/mvmc |folder 
+and obtain executables \verb|vmc.out| and \verb|vmcdry.out| in \verb|src/| directory. 
+
+In the above example, we compile mVMC by using a gcc compiler. 
+We can select a compiler by using following options
+\begin{itemize}
+\item \verb|sekirei| : ISSP system-B ''sekirei''
+\item \verb|fujitsu| : Fujitsu compiler (ISSP system-C ''maki'')
+\item \verb|intel| : intel compiler + Linux PC
+\item \verb|gcc| : GCC compiler + Linux PC.
+\end{itemize}
+An example for compiling mVMC by an intel compiler is shown as follows, 
+\begin{verbatim}
+mkdir ./build
+cd ./build
+cmake -DCONFIG=intel ../
+make
+\end{verbatim}
+After compiling,  a \verb|src| folder is made below the \verb|build| folder and executes
+\verb|vmc.out| and \verb|vmcdry.out| are made in the  \verb|src| folder. 
+It is noted that  we must delete the  \verb|build| folder and do the above works again 
+when we change the compilers.
+
+\label{Sec:HowToInstall}
+
+\section{ディレクトリ構成}
+mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示します。\\
+\\
+├──COPYING\\
+├──config.sh\\
+├──doc/\\
+│~~~~~~├──bib/\\
+│~~~~~~│~~~~~~├──elsart-num\_mod.bst\\
+│~~~~~~│~~~~~~└──userguide.bib\\
+│~~~~~~├──figs/\\
+│~~~~~~│~~~~~~├──*.pdf\\
+│~~~~~~│~~~~~~└──*.xbb\\
+│~~~~~~├──jp/\\
+│~~~~~~│~~~~~~└──*.tex\\
+│~~~~~~└──en/\\
+│~~~~~~~~~~~~~└──*.tex\\
+├──sample/\\
+│~~~~~~├──Expert/\\
+│~~~~~~│~~~~~~├──Hubbard/\\
+│~~~~~~│~~~~~~│~~~~~~├─square/\\
+│~~~~~~│~~~~~~│~~~~~~│~~~~~~├──*.def\\
+│~~~~~~│~~~~~~│~~~~~~│~~~~~~└──output\_ref/\\
+│~~~~~~│~~~~~~│~~~~~~│~~~~~~~~~~~~~~~~~~└──**.dat\\
+│~~~~~~│~~~~~~│~~~~~~└─triangular/\\
+│~~~~~~│~~~~~~│~~~~~~~~~~~~└──$\cdots$\\
+│~~~~~~│~~~~~~├──Kondo/\\
+│~~~~~~│~~~~~~│~~~~~~└─chain/\\
+│~~~~~~│~~~~~~│~~~~~~~~~~~~└──$\cdots$\\
+│~~~~~~│~~~~~~└──Spin/\\
+│~~~~~~│~~~~~~~~~~~~~~~├─HeisenbergChain/\\
+│~~~~~~│~~~~~~~~~~~~~~~│~~~~~~└──$\cdots$\\
+│~~~~~~│~~~~~~~~~~~~~~~├─HeisenbergSquare/\\
+│~~~~~~│~~~~~~~~~~~~~~~│~~~~~~└──$\cdots$\\
+│~~~~~~│~~~~~~~~~~~~~~~└─Kitaev/\\
+│~~~~~~│~~~~~~~~~~~~~~~~~~~~~~└──$\cdots$\\
+│~~~~~~└──Standard/\\
+│~~~~~~~~~~~~~~~~~~├──Hubbard/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~├─square/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~│~~~~~~├──StdFace.def\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~│~~~~~~└──reference/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~│~~~~~~~~~~~~~~~~~└──**.dat\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~└─triangular/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~~~~~~~└──$\cdots$\\
+│~~~~~~~~~~~~~~~~~~├──Kondo/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~└─chain/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~~~~~~~└──$\cdots$\\
+│~~~~~~~~~~~~~~~~~~└──Spin/\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~├─HeisenbergChain/\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~│~~~~~~└──$\cdots$\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~├─HeisenbergSquare/\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~│~~~~~~└──$\cdots$\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└─Kagome/\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└──$\cdots$\\
+└──src/\\
+~~~~~~~~~~~├──**.c\\
+~~~~~~~~~~~├──**.h\\
+~~~~~~~~~~~├──makefile\_src\\
+~~~~~~~~~~~├──include/\\
+~~~~~~~~~~~│~~~~~~~└──**.h\\
+~~~~~~~~~~~├──pfapack/\\
+~~~~~~~~~~~│~~~~~~~├──makefile\_pfapack\\
+~~~~~~~~~~~│~~~~~~~└──**.f\\
+~~~~~~~~~~~└──sfmt/\\
+~~~~~~~~~~~~~~~~~~~├──makefkie\_sfmt\\
+~~~~~~~~~~~~~~~~~~~├──**.c\\
+~~~~~~~~~~~~~~~~~~~└──**.h\\
+
+\newpage
+\section{Basic usage}
+mVMC has two modes; standard mode and expert mode. 
+Here, the basic flows of calculations by standard and expert modes are shown.
+
+\subsection{{\it Standard} mode}
+
+The procedure of calculation through the standard mode is shown as follows:
+
+\begin{enumerate}
+
+\item  Make a directory for a calculation scenario. 
+
+First, you make a working directory for the calculation.
+
+\item  Make input files for standard mode
+
+In the standard mode, you can choose a model (the Heisenberg model, the Hubbard model, etc.) and 
+a lattice (the square lattice, the triangular lattice, etc.) from ones provided;
+you can specify some parameters (such as the first/second nearest neighbor hopping integrals,
+the on-site Coulomb integral, etc.) for them.
+The input file format is described in the Sec. \ref{Ch:HowToStandard}.
+
+\item  Run
+
+Run a executable \verb|vmcdry.out| in terminal by specifing
+the name of input file written in previous step.
+MPI is not used in this step.
+
+\verb|$ |\textit{Path}\verb|/vmcdry.out |\textit{Input\_file\_name}
+
+Then, run a executable \verb|vmc.out| with 
+the {\it namelist} file generated in the previous step.
+
+\verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmcdry.out namelist.def|
+
+When you use a queuing system in workstations or super computers, 
+sometimes the number of processes is specified as an argument for the job-submitting command.
+If you need more information, please refer manuals for your system. 
+
+\item Watch calculation logs
+
+Log files are outputted in the ``output" folder which is automatically made in the directory for a calculation scenario.
+The details of output files are shown in \ref{Sec:outputfile}.
+
+\item Results
+
+If the calculation is finished normally, the result files are outputted in  the ``output" folder. The details of output files are shown in \ref{Sec:outputfile}.
+
+\end{enumerate}
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize
+
+{\bf The number of threads for OpenMP}
+
+If you specify the number of OpenMP threads for mVMC,
+you should set it as follows (in case of 16 threads) before the running:
+\begin{verbatim}
+export OMP_NUM_THREADS=16
+\end{verbatim}
+
+\end{screen}
+
+\subsection{{\it Expert} mode}
+The procedure of calculation for expert mode is shown as follows.
+ \begin{enumerate}
+   \item  Make a directory for a calculation scenario. \\
+First, you make a directory named as a calculation scenario (you can attach an arbitrary name to a directory).
+   \item  Make input files for expert mode\\
+For expert mode,  you should make input files 
+for constructing Hamiltonian operators, calculation condition and 
+a list file for the filenames of input files (see the file formats shown in  \ref{Ch:HowToExpert}). \\
+{\bf Note:} A List file can be easily made by using standard mode.
+ \item  Run\\
+Run \verb|vmcdry.out| in terminal by specifing
+a file name of the {\it namelist} file.\\
+
+\verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmc.out |\textit{Input\_List\_file\_name}
+
+\item Under running\\
+Log files are outputted in the ``output" folder which is automatically made in the directory for a calculation scenario.
+The details of output files are shown in \ref{Sec:outputfile}.
+
+\item Results\\
+If the calculation is finished normally, the result files are outputted in  the ``output" folder. The details of output files are shown in \ref{Sec:outputfile}.
+\end{enumerate}
+
+\subsection{Printing version ID}
+
+By using \verb|-v| option as follows, 
+you can check which version of mVMC you are using.
+
+\begin{verbatim}
+$ PATH/vmcdry -v
+\end{verbatim}
