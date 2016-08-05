@@ -112,9 +112,11 @@ void VMCMainCal(MPI_Comm comm) {
         calculateOptTransDiff(SROptO+2*NProj+2*NSlater+2, ip); //TBC
       }
 //[s] this part will be used for real varaibles
-      #pragma loop noalias
-      for(i=0;i<SROptSize;i++){ 
-        srOptO_real[i] = creal(srOptO[2*i]);       
+      if(AllComplexFlag==0){
+        #pragma loop noalias
+        for(i=0;i<SROptSize;i++){ 
+          srOptO_real[i] = creal(srOptO[2*i]);       
+        }
       }
 //[e]
 
@@ -122,7 +124,11 @@ void VMCMainCal(MPI_Comm comm) {
       /* Calculate OO and HO */
       if(NStoreO==0){
         //calculateOO_matvec(SROptOO,SROptHO,SROptO,w,e,SROptSize);
-        calculateOO_real(SROptOO_real,SROptHO_real,SROptO_real,w,creal(e),SROptSize);
+        if(AllComplexFlag==0){
+          calculateOO_real(SROptOO_real,SROptHO_real,SROptO_real,w,creal(e),SROptSize);
+        }else{
+          calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
+        } 
       }else{
         we    = w*e;
         sqrtw = sqrt(w); 

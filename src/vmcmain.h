@@ -72,6 +72,7 @@ extern int omp_get_thread_num(void);
 #include "initfile.c"
 
 #include "vmcmake.c"
+#include "vmcmake_real.c"
 #include "vmccal.c"
 
 #endif /* _VMC_INCLUDE_FILES */

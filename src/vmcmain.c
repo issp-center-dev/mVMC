@@ -270,9 +270,11 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     UpdateQPWeight();
       StopTimer(20);
       StartTimer(3);
-printf("DEBUG A: step=%d rank=%d \n",step,rank);
-    VMCMakeSample(comm_child1);
-printf("DEBUG B: step=%d rank=%d \n",step,rank);
+    if(AllComplexFlag==0){
+      VMCMakeSample_real(comm_child1);
+     }else{
+      VMCMakeSample(comm_child1);
+     } 
       StopTimer(3);
       StartTimer(4);
     VMCMainCal(comm_child1);
@@ -282,7 +284,11 @@ printf("DEBUG B: step=%d rank=%d \n",step,rank);
     WeightAverageWE(comm_parent);
       StopTimer(24); //DEBUG
       StartTimer(25);//DEBUG
-    WeightAverageSROpt_real(comm_parent);
+    if(AllComplexFlag==0){
+      WeightAverageSROpt_real(comm_parent);
+    }else{
+      WeightAverageSROpt(comm_parent);
+    }
       StopTimer(25);
     ReduceCounter(comm_child2);
       StopTimer(21);

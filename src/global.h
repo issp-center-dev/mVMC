@@ -114,6 +114,7 @@ int NCisAjsCktAltDC, **CisAjsCktAltDCIdx; /* [NCisAjsCktAltDC][6] */
 
 /* Optimization flag */
 int *OptFlag; /* [NPara]  1: optimized, 0 or 2: fixed */
+int AllComplexFlag;/* 0 -> all real variables, !=0-> including complex variables*/
 
 /* flag for anti-periodic boundry condition */
 int APFlag; /* 0: periodic, 1: anti-periodic */

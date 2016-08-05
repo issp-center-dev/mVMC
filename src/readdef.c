@@ -329,10 +329,16 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     }
     MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
   }
-
+  if(rank==0){
+    AllComplexFlag  = iComplexFlgGutzwiller+iComplexFlgJastrow+iComplexFlgDH2; //TBC
+    AllComplexFlag += iComplexFlgDH4+iComplexFlgOrbital;//TBC
+    // AllComplexFlag= 0 -> All real, !=0 -> complex
+  }
+  
 #ifdef _mpi_use
   MPI_Bcast(bufInt, nBufInt, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
+  MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
   MPI_Bcast(CDataFileHead, nBufChar, MPI_CHAR, 0, comm);
   MPI_Bcast(CParaFileHead, nBufChar, MPI_CHAR, 0, comm);
