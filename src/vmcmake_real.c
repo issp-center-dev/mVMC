@@ -34,7 +34,10 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
   
 // only for real TBC
+  StartTimer(69);
   for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+  StopTimer(69);
   // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
 // only for real TBC
 
@@ -48,14 +51,14 @@ void VMCMakeSample_real(MPI_Comm comm) {
   
   CalculateMAll_real(TmpEleIdx,qpStart,qpEnd);
  // printf("DEBUG: maker1: PfM=%lf\n",creal(PfM[0]));
-  logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
+  logIpOld = CalculateLogIP_real(PfM_real,qpStart,qpEnd,comm);
   if( !isfinite(logIpOld) ) {
     if(rank==0) fprintf(stderr,"waring: VMCMakeSample remakeSample logIpOld=%e\n",creal(logIpOld)); //TBC
     makeInitialSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,
                       qpStart,qpEnd,comm);
     CalculateMAll_real(TmpEleIdx,qpStart,qpEnd);
     //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
-    logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
+    logIpOld = CalculateLogIP_real(PfM_real,qpStart,qpEnd,comm);
     BurnFlag = 0;
   }
   StopTimer(30);
@@ -65,11 +68,6 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
   for(i=0;i<4;i++) Counter[i]=0;  /* reset counter */
 
-// only for real TBC
-  StartTimer(69);
-  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
-  StopTimer(69);
-// only for real TBC
   for(outStep=0;outStep<nOutStep;outStep++) {
     for(inStep=0;inStep<nInStep;inStep++) {
 
@@ -186,7 +184,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
         /* recal PfM and InvM */
         CalculateMAll_real(TmpEleIdx,qpStart,qpEnd);
         //printf("DEBUG: maker3: PfM=%lf\n",creal(PfM[0]));
-        logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
+        logIpOld = CalculateLogIP_real(PfM_real,qpStart,qpEnd,comm);
         StopTimer(34);
         nAccept=0;
       }

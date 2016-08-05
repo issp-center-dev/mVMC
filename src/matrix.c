@@ -319,7 +319,7 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   M_DSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, &info);
   if(info!=0) return info;
   if(!isfinite(pfaff)) return qpidx+1;
-  PfM[qpidx] = pfaff;
+  PfM_real[qpidx] = pfaff;
 
   /* DInv */
   M_DGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */

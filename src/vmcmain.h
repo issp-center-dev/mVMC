@@ -63,8 +63,11 @@ extern int omp_get_thread_num(void);
 #include "pfupdate.c"
 #include "pfupdate_real.c"
 #include "pfupdate_two_fcmp.c"
+#include "pfupdate_two_real.c"
 #include "locgrn.c"
+#include "locgrn_real.c"
 #include "calham.c"
+#include "calham_real.c"
 #include "calgrn.c"
 //#include "lslocgrn.c" // ignoring Lanczos To be added
 #include "setmemory.c"

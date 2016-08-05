@@ -81,7 +81,11 @@ void VMCMainCal(MPI_Comm comm) {
 
     StartTimer(41);
     /* calculate energy */
-    e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+    if(AllComplexFlag==0){
+      e = CalculateHamiltonian_real(creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
+    }else{
+      e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+    }
     //printf("DEBUG: rank=%d: sample=%d ip= %lf %lf\n",rank,sample,creal(ip),cimag(ip));
     StopTimer(41);
     if( !isfinite(e) ) {
