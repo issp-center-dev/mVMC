@@ -60,7 +60,7 @@ void StopTimer(int n) {
 void OutputTimerParaOpt() {
   char fileName[D_FileNameMax];
   FILE *fp;
-  sprintf(fileName, "%s_HitachiTimer.dat", CDataFileHead); 
+  sprintf(fileName, "%s_CalcTimer.dat", CDataFileHead); 
   fp = fopen(fileName, "w");
 
   fprintf(fp,"All                         [0] %12.5lf\n",Timer[0]);
