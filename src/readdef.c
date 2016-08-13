@@ -741,6 +741,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	if(NQPTrans>0){
 	  for(i=0;i<NQPTrans;i++){
 	    fscanf(fp, "%d ", &itmp);
+        ParaQPTrans[itmp]=0;
 	    fscanf(fp, "%lf\n", &(ParaQPTrans[itmp]));
 	  }
 	  idx = 0;
