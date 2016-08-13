@@ -157,7 +157,9 @@ int main(int argc, char* argv[])
   StopTimer(10);
 
   StartTimer(11);
+  if(rank0==0) fprintf(stdout,"Start: Read *def files.\n");
   ReadDefFileNInt(fileDefList, comm0);
+  if(rank0==0) fprintf(stdout,"End  : Read *def files.\n");
   StopTimer(11);
   
   StartTimer(12);
@@ -165,11 +167,15 @@ int main(int argc, char* argv[])
   StopTimer(12);
   
   StartTimer(11);
+  if(rank0==0) fprintf(stdout,"Start: Read parameters from *def files.\n");
   ReadDefFileIdxPara(fileDefList, comm0);
+  if(rank0==0) fprintf(stdout,"End  : Read parameters from *def files.\n");
   StopTimer(11);
   
   StartTimer(12);
+  if(rank0==0) fprintf(stdout,"Start: Set memories.\n");
   SetMemory();
+  if(rank0==0) fprintf(stdout,"End  : Set memories.\n");
   StopTimer(12);
   
   /* split MPI coummunicator */
@@ -199,6 +205,7 @@ int main(int argc, char* argv[])
 
   StartTimer(13);
   /* initialize variational parameters */
+  if(rank0==0) fprintf(stdout,"Start: Initialize parameters.\n");
   InitParameter(); /* Run parallelly for synchronization of random generator */
   if(flagReadInitPara>0 && rank0==0) ReadInitParameter(fileInitPara);
   //[s] add read parameters respectively
@@ -208,14 +215,16 @@ int main(int argc, char* argv[])
       info=1;
     }
   }
-  
+  if(rank0==0) fprintf(stdout,"End  : Initialize parameters.\n");
   //[e] add read parameters respectively
   
   SyncModifiedParameter(comm0);
   StopTimer(13);
 
   /* initialize variables for quantum projection */
+  if(rank0==0) fprintf(stdout,"Start: Initialize variables for quantum projection.\n");
   InitQPWeight();
+  if(rank0==0) fprintf(stdout,"End  : Initialize variables for quantum projection.\n");
   /* initialize output files */
   if(rank0==0) InitFile(fileDefList, rank0);
 
@@ -224,12 +233,16 @@ int main(int argc, char* argv[])
   if(NVMCCalMode==0) {
     StartTimer(2);
     /*-- VMC Parameter Optimization --*/
+    if(rank0==0) fprintf(stdout,"Start: Optimize VMC parameters.\n");
     VMCParaOpt(comm0, comm1, comm2);
+    if(rank0==0) fprintf(stdout,"End  : Optimize VMC parameters.\n");
     StopTimer(2);
   } else if(NVMCCalMode==1) {
     StartTimer(2);
     /*-- VMC Physical Quantity Calculation --*/
+    if(rank0==0) fprintf(stdout,"Start: Calculate VMC physical quantities.\n");
     VMCPhysCal(comm0, comm1, comm2);
+    if(rank0==0) fprintf(stdout,"End  : Calculate VMC physical quantities.\n");
     StopTimer(2);
   } else {
     info=1;
