@@ -400,16 +400,25 @@ void outputData() {
 
   if(NVMCCalMode==1) {
     /* zvo_cisajs.dat */
-    for(i=0;i<NCisAjs;i++) fprintf(FileCisAjs, "% .18e  % .18e ", creal(PhysCisAjs[i]), cimag(PhysCisAjs[i]));
-    fprintf(FileCisAjs, "\n");
-
+      if(NCisAjs>0) {
+          for (i = 0; i < NCisAjs; i++)
+              fprintf(FileCisAjs, "% .18e  % .18e ", creal(PhysCisAjs[i]), cimag(PhysCisAjs[i]));
+          fprintf(FileCisAjs, "\n");
+      }
     /* zvo_cisajscktalt.dat */
-    for(i=0;i<NCisAjsCktAlt;i++) fprintf(FileCisAjsCktAlt, "% .18e  % .18e ", creal(PhysCisAjsCktAlt[i]),cimag(PhysCisAjsCktAlt[i]));
-    fprintf(FileCisAjsCktAlt, "\n");
+      if(NCisAjsCktAlt>0) {
+          for (i = 0; i < NCisAjsCktAlt; i++)
+              fprintf(FileCisAjsCktAlt, "% .18e  % .18e ", creal(PhysCisAjsCktAlt[i]), cimag(PhysCisAjsCktAlt[i]));
+          fprintf(FileCisAjsCktAlt, "\n");
+      }
 
     /* zvo_cisajscktaltdc.dat */
-    for(i=0;i<NCisAjsCktAltDC;i++) fprintf(FileCisAjsCktAltDC, "% .18e % .18e  ", creal(PhysCisAjsCktAltDC[i]),cimag(PhysCisAjsCktAltDC[i]));
-    fprintf(FileCisAjsCktAltDC, "\n");
+      if(NCisAjsCktAltDC>0) {
+          for (i = 0; i < NCisAjsCktAltDC; i++)
+              fprintf(FileCisAjsCktAltDC, "% .18e % .18e  ", creal(PhysCisAjsCktAltDC[i]),
+                      cimag(PhysCisAjsCktAltDC[i]));
+          fprintf(FileCisAjsCktAltDC, "\n");
+      }
 
     if(NLanczosMode>0){
 // ignorign Lanczos to be added
