@@ -66,7 +66,8 @@ $ bash config.sh sekirei
 \verb|make.sys|の中身は次のようになっています(物性研システムB ''sekirei''の場合)。
 \begin{verbatim}
 CC = mpicc
-LIB = -L$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+LIB = -L$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
+      -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
 CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
 REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
 OPTION = -D_mpi_use
@@ -281,7 +282,7 @@ export OMP_NUM_THREADS=16
 バージョン番号を標準出力した後終了します。
 
 \begin{verbatim}
-$ PATH/vmcdry -v
+$ PATH/vmcdry.out -v
 \end{verbatim}
 
 
