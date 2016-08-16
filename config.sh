@@ -7,6 +7,7 @@ if [ -z ${1} ] || [ ${1} = "help" ]; then
     echo "        sekirei : ISSP system-B"
     echo "            kei : Fujitsu K computer & FX10"
     echo "  openmpi-intel : OpenMPI + Intel Compiler + MKL"
+    echo "    mpich-intel : MPICH + Intel Compiler + MKL"
     echo "            gnu : GNU"
     echo "        jupiter : "
     echo "        kashiwa : "
@@ -32,6 +33,19 @@ EOF
         cat > src/make.sys <<EOF
 CC = mpicc
 LIB = -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_openmpi_lp64 -lpthread -lm -ldl
+CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas -I ${MKLROOT}/include
+REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
+OPTION = -D_mpi_use
+CP = cp -f -v
+AR = ar rv
+FORT = ifort
+FFLAGS = -O3 -implicitnone -xHost
+SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
+EOF
+    elif [ ${1} = "mpich-intel" ]; then
+        cat > src/make.sys <<EOF
+CC = mpicc
+LIB = -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_intelmpi_lp64 -lpthread -lm -ldl
 CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas -I ${MKLROOT}/include
 REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
 OPTION = -D_mpi_use

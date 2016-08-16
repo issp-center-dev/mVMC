@@ -655,7 +655,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "DSROptStepDt   %-20.10f\n", StdI->DSROptStepDt);
   fprintf(fp, "NVMCWarmUp     %-5d\n", StdI->NVMCWarmUp);
   fprintf(fp, "NVMCIniterval  %-5d\n", StdI->NVMCIniterval);
-  fprintf(fp, "NVMCSample     %-85d\n", StdI->NVMCSample);
+  fprintf(fp, "NVMCSample     %-5d\n", StdI->NVMCSample);
   fprintf(fp, "NExUpdatePath  %-5d\n", StdI->NExUpdatePath);
   fprintf(fp, "RndSeed        %-8d\n", StdI->RndSeed);
   fprintf(fp, "NSplitSize     %-5d\n", StdI->NSplitSize);
