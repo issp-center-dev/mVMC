@@ -1115,7 +1115,7 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_i("NDataIdxStart", &StdI->NDataIdxStart, 1);
 
   if (StdI->NVMCCalMode == 0) StdFace_NotUsed_i("NDataQtySmp", StdI->NDataQtySmp);
-  /*else*/StdFace_PrintVal_i("NDataQtySmp", &StdI->NDataQtySmp, 5);
+  /*else*/StdFace_PrintVal_i("NDataQtySmp", &StdI->NDataQtySmp, 1);
 
   StdFace_PrintVal_i("NSPGaussLeg", &StdI->NSPGaussLeg, 8);
   StdFace_PrintVal_i("NSPStot", &StdI->NSPStot, 0);
