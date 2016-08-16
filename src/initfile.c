@@ -128,10 +128,16 @@ void CloseFilePhysCal(int rank) {
 
   fclose(FileOut);
   fclose(FileVar);
-  fclose(FileCisAjs);
+  if(NCisAjs>0){
+    fclose(FileCisAjs);
+  }
+  if(NCisAjsCktAlt>0){
   fclose(FileCisAjsCktAlt);
-  fclose(FileCisAjsCktAltDC);
-
+  }
+  if(NCisAjsCktAltDC>0){
+    fclose(FileCisAjsCktAltDC);
+  }
+  
   if(NLanczosMode>0){
     fclose(FileLS);
     fclose(FileLSQQQQ);
