@@ -537,7 +537,7 @@ $\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_
  
  \item  \verb|NDataIdxStart|
 
- {\bf 形式 :} int型 (\tr{デフォルト値 = 0})
+ {\bf 形式 :} int型 (\tr{デフォルト値 = 1})
 
 {\bf 説明 :} 出力ファイルの付加番号。
 \verb|NVMCCalMode|= 0 の場合は\verb|NDataIdxStart|が出力され、 
@@ -659,7 +659,7 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 \label{Ch:HowToExpert}
 
 mVMCのエキスパートモードで使用する入力ファイル(*def)に関して説明します。
-入力ファイルの種別は以下の4つで分類されます。
+入力ファイルの種別は以下の6つで分類されます。
 \begin{description}
 \item[(1)~List:]
 ~\\{キーワード指定なし}:
@@ -778,7 +778,7 @@ TwoBodyG	zcisajscktaltdc.def
            DH2 & 2-site doublon-holon correlation factors.\\
            DH4 & 4-site doublon-holon correlation factors.\\
            *Orbital & Pair orbital factors.\\
-           TransSym & Translational and lattice symmetry operation. \\ \hline
+           *TransSym & Translational and lattice symmetry operation. \\ \hline
            %%%%%%%%%%%%%%%%%%
            InGutzwiller & Initial values of Gutzwiller factors.\\
            InJastrow & Initial values of charge Jastrow factors.\\
@@ -814,7 +814,7 @@ NVMCCalMode    0
 NLanczosMode   0
 --------------------
 NDataIdxStart  1
-NDataQtySmp    5
+NDataQtySmp    1
 --------------------
 Nsite          16
 Nelectron      8
@@ -2907,33 +2907,34 @@ NCisAjsCktAltDC        576
 \item 行数固定で読み込みを行う為、ヘッダの省略はできません。
 \item 成分が重複して指定された場合にはエラー終了します。
 \item {スピンに関して計算する場合、$i=j, k=l$を満たさない場合ペアが存在するとエラー終了します。}
-\item $[$int01$]$と定義されているニ体グリーン関数成分の総数が異なる場合はエラー終了します。
+\item $[$int01$]$と定義されている二体グリーン関数成分の総数が異なる場合はエラー終了します。
 \item $[$int02$]$-$[$int09$]$を指定する際、範囲外の整数を指定した場合はエラー終了します。
 \end{itemize}
 
 \newpage
 \section{出力ファイル}
 \label{Sec:outputfile}
-出力ファイルの一覧は下記の通りです。
+出力ファイルの一覧は下記の通りです。\$\$\$には\verb|ModPara|ファイルの\verb|CParaFileHead|で指定されるヘッダが、xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。また、zzzには\verb|ModPara|ファイルの\verb|NDataIdxStart|が記載されます。
+
  \begin{table*}[h!]
 \begin{center}
   \begin{tabular}{|ll|} \hline
            Name     & Details for corresponding files       \\   \hline\hline
-           zqp\_opt.dat       &  All optimized parameters.       \\ \hline 
+           \$\$\$\_opt.dat       &  All optimized parameters.       \\ \hline 
            %%%%%%%%%%%%%%%%%%  
            gutzwiller\_opt.dat       &   Optimized gutzwiller factors.  \\
            jastrow\_opt.dat        &  Optimized jastrow factors.         \\ 
            doublonHolon2site\_opt.dat  &   Optimized 2-site doublon-holon correlation factors.  \\  
            doublonHolon4site\_opt.dat  &   Optimized 4-site doublon-holon correlation factors. \\  
            orbital\_opt.dat  &   Optimized pair orbital factors. \\  \hline
-           xxx\_out\_00[1-5].dat &  Energy and deviation.\\ 
-           xxx\_var\_00[1-5].dat &  Progress information for optimizing variational parameters.\\  \hline
+           xxx\_out\_yyy.dat &  Energy and deviation.\\ 
+           xxx\_var\_yyy.dat &  Progress information for optimizing variational parameters.\\  \hline
            xxx\_CalcTimer.dat & Computation time for each processes.\\  
-           xxx\_time.dat & Progress information for MonteCalro samplings.\\  \hline
+           xxx\_time\_zzz.dat & Progress information for MonteCalro samplings.\\  \hline
            \hline
            %%%%%%%%%%%%%%%%%%
-           xxx\_cisajs.dat & One body Green's functions.\\
-           xxx\_cisajscktalt.dat & Correlation functions.\\
+           xxx\_cisajs\_yyy.dat & One body Green's functions.\\
+           xxx\_cisajscktalt\_yyy.dat & Correlation functions.\\
 \hline
   \end{tabular}
 \end{center}
@@ -2941,15 +2942,17 @@ NCisAjsCktAltDC        576
 \label{Table:Output}
 \end{table*}%
 
-\subsection{zqp\_opt.dat}
+\subsection{\$\$\$\_opt.dat}
 SR法で最適化された変分パラメータとエネルギーが出力されます。平均値と標準偏差が
 \begin{equation}
 \langle H \rangle, \langle H^2 \rangle, g_i, v_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij} \nonumber
 \end{equation}
-について実部, 虚部の順番で出力されます。
+について順番で出力されます。平均値は複素数(実部、虚部の順)が出力され、標準偏差は実数が出力されます。
+\$\$\$には\verb|ModPara|ファイルの\verb|CParaFileHead|で指定されるヘッダが記載されます。
 
-\subsection{var\_00[1-5].dat}
+\subsection{xxx\_var\_yyy.dat}
 SR 法の各ステップにおける変分パラメータとエネルギーがzqp\_opt.dat と同形式で“追記しながら” 出力されます(標準偏差はゼロ)が出力されます。
+xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。
 
 \subsection{gutzwiller\_opt.dat}
 SR法で最適化されたGutzwiller因子が出力されます。出力形式はSec. \ref{Subsec:InGutzwiller}のInGutzwiller指定ファイルと同じです。
@@ -2966,12 +2969,13 @@ SR法で最適化された4サイトのdoublon-holon相関因子が出力され�
 \subsection{orbital\_opt.dat}
 SR法で最適化されたペア軌道の変分パラメータが出力されます。出力形式はSec. \ref{Subsec:InOrbital}のInOrbital指定ファイルと同じです。
 
-\subsection{out\_00[1-5].dat}
+\subsection{xxx\_out\_yyy.dat}
 ビン毎の計算情報として、
 \begin{equation}
 \langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2} \nonumber
 \end{equation}
 が順に出力されます。$\langle H \rangle$については実部と虚部がそれぞれ出力され、それ以外は実部のみ出力されます。以下に出力例を記載します。
+xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。
 
 \begin{minipage}{13cm}
 \begin{screen}
@@ -3040,9 +3044,10 @@ VMCParaOpt                  [2]     15.86367
 
 
 \newpage
-\subsection{time.dat }
+\subsection{xxx\_time\_zzz.dat }
 \label{subsec:time}
-計算情報としてビン毎にサンプリング数、hoppingおよびexchangeのアップデートに対するacceptance ratio(acc\_hopp, acc\_ex)、それぞれのアップデートの試行回数(n\_hopp, n\_ex)および実行した際の時間を順に出力します。出力例は以下の通りです。\\
+計算情報としてビン毎にサンプリング数、hoppingおよびexchangeのアップデートに対するacceptance ratio(acc\_hopp, acc\_ex)、それぞれのアップデートの試行回数(n\_hopp, n\_ex)および実行した際の時間を順に出力します。xxxには\verb|CDataFileHead|で指定されるヘッダが、zzzには\verb|ModPara|ファイルの\verb|NDataIdxStart|が記載されます。
+出力例は以下の通りです。\\
 \begin{minipage}{15.5cm}
 \begin{screen}
 \begin{verbatim}
@@ -3058,15 +3063,14 @@ VMCParaOpt                  [2]     15.86367
 \end{screen}
 \end{minipage}
 
-\subsection{cisajs.dat }
-OneBodyG指定ファイルで指定した順序で一体Green関数が出力されます。
+\subsection{xxx\_cisajs\_yyy.dat }
+OneBodyG指定ファイルで指定した順序で一体Green関数の各成分が実部、虚部の順に出力されます。
+xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。
 
-\subsection{cisajscktalt.dat }
+\subsection{xxx\_cisajscktalt\_yyy.dat }
 TwoBodyG指定ファイルで指定した順序で二体Green関数が出力されます。
+xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。
 
-\newpage
-\section{エラーメッセージ一覧}
-T.B.D
 %----------------------------------------------------------
 %----------------------------------------------------------
 %----------------------------------------------------------

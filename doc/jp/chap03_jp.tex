@@ -2,11 +2,40 @@
 %----------------------------------------------------------
 \chapter{チュートリアル}
 \label{Ch:model}
-\section{スタンダードモード}
-\label{Sec:StandardMode}
+
+\section{サンプルファイル一覧}
+
+mVMCでは\verb|sample/Standard/|以下に次のサンプルを用意しています。
+
+\begin{itemize}
+\item 2次元正方格子Hubbardモデル
+
+  (\verb|sample/Standard/Hubbard/square/|)
+\item 2次元三角格子Hubbardモデル
+
+  (\verb|sample/Standard/Hubbard/triangular/|)
+\item 1次元近藤格子モデル
+
+  (\verb|sample/Standard/Kondo/chain/|)
+\item 1次元反強磁性的Heisenbergモデル
+
+  (\verb|sample/Standard/Spin/HeisenbergChain/|)
+\item 2次元正方格子反強磁性的Heisenbergモデル
+
+  (\verb|sample/Standard/Spin/HeisenbergSquare/|)
+  
+\item 2次元カゴメ格子反強磁性的Heisenbergモデル
+
+  (\verb|sample/Standard/Spin/Kagome/|)
+
+\end{itemize}
+
+これらのチュートリアルの実行方法は全て同じ手順で実行することが可能です。
+以下ではHeisenberg模型について説明します。
+
 
 % !TEX root = userguide_jp.tex
-\subsection{Heisenberg模型}
+\section{Heisenberg模型}
 
 以下のチュートリアルはディレクトリ
 \begin{verbatim}
@@ -23,6 +52,7 @@ samples/Standard/Spin/HeisenbergChain/reference/
 \begin{align}
   {\hat H} = J \sum_{i=1}^{N_{\rm site}} {\hat {\boldsymbol S}}_i \cdot {\hat {\boldsymbol S}}_{i+1}
 \end{align}
+
 インプットファイルの中身は次のとおりです。
 \\
 \begin{minipage}{10cm}
@@ -139,7 +169,7 @@ NMPtrans=1
 \verb|gutzwilleridx.def|、\verb|jastrowidx.def|、\verb|orbitalidx.def|、\verb|qptransidx.def|、
 結果として出力する相関関数の要素を指定するファイル
 \verb|greenone.def|、\verb|greentwo.def|が生成されます。
-これらのファイルはエキスパートモードと共通です。
+各ファイルの詳細についてはSec. \ref{Ch:HowToExpert}をご覧ください。
 
 \subsubsection{計算実行}
 作成した詳細入力ファイルを読み込み計算を行います。
@@ -149,382 +179,148 @@ NMPtrans=1
 \verb|$ mpiexec -np |\underline{プロセス数}\verb| |\underline{パス}\verb|/vmc.out namelist.def|
 \small
 
-計算実行を行うと以下のログが出力されます。
+\begin{verbatim}
+-----------
+Start: Read *def files.
+  Read File namelist.def .
+  Read File 'modpara.def' for ModPara.
+  Read File 'locspn.def' for LocSpin.
+  Read File 'trans.def' for Trans.
+  Read File 'coulombintra.def' for CoulombIntra.
+  Read File 'coulombinter.def' for CoulombInter.
+  Read File 'hund.def' for Hund.
+  Read File 'exchange.def' for Exchange.
+  Read File 'gutzwilleridx.def' for Gutzwiller.
+  Read File 'jastrowidx.def' for Jastrow.
+  Read File 'orbitalidx.def' for Orbital.
+  Read File 'qptransidx.def' for TransSym.
+  Read File 'greenone.def' for OneBodyG.
+  Read File 'greentwo.def' for TwoBodyG.
+End  : Read *def files.
+Start: Read parameters from *def files.
+End  : Read parameters from *def files.
+Start: Set memories.
+End  : Set memories.
+Start: Initialize parameters.
+End  : Initialize parameters.
+Start: Initialize variables for quantum projection.
+End  : Initialize variables for quantum projection.
+Start: Optimize VMC parameters.
+End  : Optimize VMC parameters.
+-----------
+\end{verbatim}
+
+計算実行中に以下のファイルが情報として出力されます。
+\\
+\begin{minipage}{12cm}
+\begin{screen}
+\begin{verbatim}
+zvo_SRinfo.dat zvo_cfg_001.dat zvo_out_001.dat
+zvo_time_001.dat  zvo_var_001.dat
+\end{verbatim}
+\end{screen}
+\end{minipage}
+
+なお、\verb|zvo_out_001.dat|には、ビン毎の計算情報として、
+\begin{equation}
+\langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2} \nonumber
+\end{equation}
+が順に出力されますので、収束性の目安として利用することが可能です。各ファイルの詳細についてはSec. \ref{Sec:outputfile}をご覧ください。\\
 
 \subsubsection{計算結果出力}
-\tr{T.B.D. }
-計算が正常終了すると、エネルギー、エネルギーの分散、変分パラメータおよび一体グリーン関数、二体グリーン関数が計算され、ファイル出力されます。
-以下に、このサンプルでの出力ファイル例を記載します。\\
+計算が正常終了すると、エネルギー、エネルギーの分散、変分パラメータおよび計算実行時間を記載したファイルが出力されます。
+以下に、このサンプルでの出力ファイルを記載します。\\
 \begin{minipage}{12cm}
 \begin{screen}
 \begin{verbatim}
-zvo_energy.dat zvo_cisajs.dat 
-zvo_cisajscktalt.dat  
+gutzwiller_opt.dat
+jastrow_opt.dat
+orbital_opt.dat
+zqp_opt.dat
+ClacTimer.dat
 \end{verbatim}
 \end{screen}
 \end{minipage}
 
-スタンダードモードの場合は、\verb|greenone.def|、\verb|greentwo.def|に基づき、一体グリーン関数には$\langle n_{i\sigma} \rangle$、二体グリーン関数には$\langle n_{i\sigma} n_{j\sigma'} \rangle$が自動出力されます。なお、Lanczos法で求めた固有ベクトルが十分な精度を持つ場合にはその固有ベクトルで計算されます。一方、Lanczos法で求めた固有ベクトルが十分な精度を持たない場合には、ログ出力に「Accuracy of Lanczos vetor is not enough」が表示され、CG法で固有ベクトルが求められます。各ファイルの詳細は\ref{subsec:energy.dat}, \ref{Subsec:cgcisajs}, \ref{Subsec:cisajscktalt}に記載がありますので、ご参照ください。
+各ファイルの詳細についてはSec. \ref{Sec:outputfile}をご覧ください。
 
 
-\subsection{その他の系でのチュートリアル}
+\subsubsection{Green関数の計算}
+\verb|modpara.def|ファイル中の\verb|NVMCCalMode|を0から1に変更の上、以下のコマンドを実行します。
+実行時に\verb|namelist.dat|ファイルの後ろに\verb|zqp_opt.dat|を付け加えることで、
+一つ前の計算で最適化された変分パラメータを使用した計算が行われます。
 
-\verb|samples/Standard/|以下には次のチュートリアルが含まれています。
+\vspace{1cm}\hspace{-0.7cm}
+\verb|$ |\underline{パス}\verb|/vmc.out namelist.def zqp_opt.dat|
+\small
 
-\begin{itemize}
-\item 2次元正方格子Hubbardモデル
-
-  (\verb|samples/Standard/Hubbard/square/|)
-\item 2次元三角格子Hubbardモデル
-
-  (\verb|samples/Standard/Hubbard/triangular/|)
-\item 1次元近藤格子モデル
-
-  (\verb|samples/Standard/Kondo/chain/|)
-\item 1次元反強磁性的Heisenbergモデル
-
-  (\verb|samples/Standard/Spin/HeisenbergChain/HeisenbergChain/|)
-\item 2次元正方格子反強磁性的Heisenbergモデル
-
-  (\verb|samples/Standard/Spin/HeisenbergSquare/|)
-\item Kitaevモデル(Honeycomb格子、2$\times$3サイト)
-
-  (\verb|samples/Standard/Spin/Kitaev/|)
-
-\end{itemize}
-
-これらのチュートリアルの実行方法は前節と同じです。
-
-%----------------------------------------------------------
-\newpage
-\section{エキスパートモード}
-エキスパートモードでは、入力ファイルとして
-\begin{enumerate}
-\item 入力ファイルリスト
-\item 基本パラメータ用ファイル
-\item Hamiltonian作成用ファイル
-\item 出力結果指定用ファイル
-\end{enumerate}
-を用意した後、計算を行います。計算開始後に関しては、スタンダードモードと同様です。ここでは"{\it InstallDir}/samples/Expert/Spin/HeisenbergChain"にある16サイトの一次元鎖量子ハイゼンベルグ模型
-\begin{equation}
-H=\sum_{i=0}^{15} J {\bm S}_i\cdot {\bm S}_{i+1}
-\end{equation}
-を例に入力ファイルの作成に関する説明を行います(ただし、$J=2$, ${\bm S}_{16}={\bm S}_{0}$)。なお、サンプルディレクトリの中には下記の入力ファイルが用意されています。\\
-\begin{minipage}{15cm}
-\begin{screen}
-\begin{verbatim}
-calcmod.def   greentwo.def  namelist.def  zTrans.def
-greenone.def  modpara.def   zInterAll.def zlocspn.def
-\end{verbatim}
-\end{screen}
-\end{minipage}
-
-\subsection{入力ファイルリストファイル}
-入力ファイルの種類と名前を指定するファイルnamelist.defには、下記の内容が記載されています。各入力ファイルリストファイルでは、行毎にKeywordとファイル名を記載し、ファイルの種類の区別を行います。詳細は\ref{Subsec:InputFileList}をご覧ください。
+計算が終了すると以下のファイルが出力されます。
 \\
-\begin{minipage}{15cm}
+\begin{minipage}{12cm}
 \begin{screen}
 \begin{verbatim}
-CalcMod calcmod.def
-ModPara modpara.def
-LocSpin zlocspn.def
-Trans zTrans.def
-InterAll zInterAll.def
-OneBodyG greenone.def
-TwoBodyG greentwo.def
+zvo1_cisajs_001.dat
+zvo1_cisajscktalt_001.dat
 \end{verbatim}
 \end{screen}
 \end{minipage}
+\\
+各ファイルの詳細についてはSec. \ref{Sec:outputfile}をご覧ください。
 
-\subsection{基本パラメータの指定}
-計算モード、計算用パラメータ、局在スピンの位置を以下のファイルで指定します。
+
+
+\section{エキスパートユーザー向け}
+mVMCでは、以下の6つに分類される入力ファイルを読み込み、計算実行を行います。そのため、以下のファイルを直接作成・指定することで、より複雑な計算を行うことが可能です。各ファイルの詳細についてはSec. \ref{Ch:HowToExpert}をご覧ください。
+\\
 \begin{description}
-\item {\bf 計算モードの指定}\\
-CalcModでひも付けられるファイル(ここではcalcmod.def)で計算モードを指定します。ファイルの中身は下記の通りです。\\
-\begin{minipage}{15cm}
-\begin{screen}
-\begin{verbatim}
-#CalcType = 0:Lanczos, 1:TPQCalc, 2:FullDiag
-#CalcMod = 0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 
-4:SpinGC, 5:KondoGC 
-CalcType   0
-CalcModel   1
-\end{verbatim}
-\end{screen}
-\end{minipage}
-~\\
-CalcTypeで計算手法の選択、CalcModelで対象モデルの選択を行います。ここでは、計算手法としてLanczos法、対象モデルとしてスピン系(カノニカル)を選択しています。{CalcModファイルでは固有ベクトルの入出力機能も指定することができます。}CalcModファイルの詳細は\ref{Subsec:calcmod}をご覧ください。\\
-
-\item {\bf 計算用パラメータの指定}\\
-ModParaでひも付けられるファイル(ここではmodpara.def)で計算用パラメータを指定します。ファイルの中身は下記の通りです。\\
-\begin{minipage}{15cm}
-\begin{screen}
-\begin{verbatim}
---------------------
-Model_Parameters   0
---------------------
-VMC_Cal_Parameters
---------------------
-CDataFileHead  zvo
-CParaFileHead  zqp
---------------------
-Nsite          16   
-Ncond          16    
-2Sz            0    
-Lanczos_max    1000 
-initial_iv     12   
-nvec           1    
-exct           1    
-LanczosEps     14   
-LanczosTarget  2    
-LargeValue     12   
-NumAve         5    
-ExpecInterval  20 
-\end{verbatim}
-\end{screen}
-\end{minipage}
-~\\
-このファイルでは、サイト数、{伝導電子の数、トータル$S_z$}やLanczosステップの最大数などを指定します。ModParaファイルの詳細は\ref{Subsec:modpara}をご覧ください。\\
-
-\item {\bf 局在スピンの位置の指定}\\
-LocSpinでひも付けられるファイル(ここではzlocspn.def)で局在スピンの位置と$S$の値を指定します。ファイルの中身は下記の通りです。\\
-\begin{minipage}{15cm}
-\begin{screen}
-\begin{verbatim}
-================================ 
-NlocalSpin    16  
-================================ 
-========i_0LocSpn_1IteElc ====== 
-================================ 
-    0      1
-    1      1
-    2      1
-    3      1
-    4      1
-    5      1
-…
-\end{verbatim}
-\end{screen}
-\end{minipage}
-~\\
-LocSpinファイルの詳細は\ref{Subsec:locspn}をご覧ください。
-\end{description}
-
-\subsection{Hamiltonianの指定}
-基本パラメータを設定した後は、Hamiltonianを構築するためのファイルを作成します。$\HPhi$では、電子系の表現で計算を行うため、スピン系では以下の関係式
-\begin{align}
-S_z^{(i)}&=(c_{i\uparrow}^{\dag}c_{i\uparrow}-c_{i\downarrow}^{\dag}c_{i\downarrow})/2,\\
-S_+^{(i)}&=c_{i\uparrow}^{\dag}c_{i\downarrow},\\
-S_-^{(i)}&=c_{i\downarrow}^{\dag}c_{i\uparrow}
-\end{align}
-を用い、電子系の演算子に変換しHamiltonianの作成をする必要があります。
-\begin{description}
-\item {\bf Transfer部の指定}\\
-Transでひも付けられるファイル(ここではzTrans.def)で電子系のTransferに相当するHamiltonian
-\begin{align}
-H +=-\sum_{ij\sigma_1\sigma2} t_{ij\sigma_1\sigma2}c_{i\sigma_1}^{\dag}c_{j\sigma_2}
-\end{align}
-を指定します。ファイルの中身は下記の通りです。\\
-\begin{minipage}{15cm}
-\begin{screen}
-\begin{verbatim}
-======================== 
-NTransfer       0  
-======================== 
-========i_j_s_tijs====== 
-======================== 
-\end{verbatim}
-\end{screen}
-\end{minipage}
-~\\
-スピン系では外場を掛ける場合などに使用することができます。
-例えば、サイト1に$-0.5 S_z^{(1)}${($S=1/2$)}の外場を掛けたい場合には、
-電子系の表現$-0.5/2(c_{1\uparrow}^{\dag}c_{1\uparrow}-c_{1\downarrow}^{\dag}c_{1\downarrow})$
-に書き換えた以下のファイルを作成することで計算することが出来ます。\\
-\begin{minipage}{15cm}
-\begin{screen}
-\begin{verbatim}
-======================== 
-NTransfer      1   
-======================== 
-========i_j_s_tijs====== 
-======================== 
-1 0 1 0 -0.25 0
-1 1 1 1 0.25 0
-\end{verbatim}
-\end{screen}
-\end{minipage}
-~\\
-Transファイルの詳細は\ref{Subsec:Trans}をご覧ください。
-
-\item {\bf 二体相互作用部の指定}\\
-InterAllでひも付けられるファイル(ここではzInterAll.def)で電子系の二体相互作用部に相当するHamiltonian
-\begin{equation}
-H+=\sum_{i,j,k,l}\sum_{\sigma_1,\sigma_2, \sigma_3, \sigma_4}
-I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}
-\end{equation}
-を指定します。ファイルの中身は下記の通りです。\\
-\begin{minipage}{16cm}
-\begin{screen}
-\begin{verbatim}
-====================== 
-NInterAll      96  
-====================== 
-========zInterAll===== 
-====================== 
-    0     0     0     0     1     0     1     0   0.500000  0.000000
-    0     0     0     0     1     1     1     1  -0.500000  0.000000
-    0     1     0     1     1     0     1     0  -0.500000  0.000000
-    0     1     0     1     1     1     1     1   0.500000  0.000000
-    0     0     0     1     1     1     1     0   1.000000  0.000000
-    0     1     0     0     1     0     1     1   1.000000  0.000000
-…
-\end{verbatim}
-\end{screen}
-\end{minipage}
-~\\
-ここでは、簡単のためサイトiとサイトi+1間の相互作用に着目して説明します。{$S=1/2$の場合、}相互作用の項をフェルミオン演算子で書き換えると、
-\begin{align}
-H_{i,i+1}&=J(S_x^{(i)}S_x^{(i+1)}+S_y^{(i)}S_y^{(i+1)}+S_z^{(i)}S_z^{(i+1)}) \nonumber\\
-&=J \left( \frac{1}{2}S_+^{(i)}S_-^{(i+1)}+\frac{1}{2}S_-^{(i)}S_+^{(i+1)}+S_z^{(i)}S_z^{(i+1)} \right) \nonumber\\
-&=J \left[ \frac{1}{2}c_{i\uparrow}^{\dag}c_{i\downarrow}c_{i+1\downarrow}^{\dag}c_{i+1\uparrow}+\frac{1}{2}c_{i\downarrow}^{\dag}c_{i\uparrow}c_{i+1\uparrow}^{\dag}c_{i+1\downarrow}+\frac{1}{4}(c_{i\uparrow}^{\dag}c_{i\uparrow}-c_{i\downarrow}^{\dag}c_{i\downarrow})(c_{i+1\uparrow}^{\dag}c_{i+1\uparrow}-c_{i+1\downarrow}^{\dag}c_{i+1\downarrow}) \right] \nonumber 
-\end{align}
-となります。したがって、$J=2$に対してInterAllファイルのフォーマットを参考に相互作用を記載すると、$S_z^{(i)}S_z^{(i+1)}$の相互作用は\\
-\begin{minipage}{16cm}
-\begin{screen}
-\begin{verbatim}
-    i     0     i     0    i+1     0    i+1     0   0.500000  0.000000
-    i     0     i     0    i+1     1    i+1     1  -0.500000  0.000000
-    i     1     i     1    i+1     0    i+1     0  -0.500000  0.000000
-    i     1     i     1    i+1     1    i+1     1   0.500000  0.000000
-\end{verbatim}
-\end{screen}
-\end{minipage}
-~\\
-となり、それ以外の項は\\
-\begin{minipage}{16cm}
-\begin{screen}
-\begin{verbatim}
-    i     0     i     1    i+1     1    i+1     0   1.000000  0.000000
-    i     1     i     0    i+1     0    i+1     1   1.000000  0.000000
-\end{verbatim}
-\end{screen}
-\end{minipage}
-~\\
-と表せばよいことがわかります。なお、InterAll以外にも、Hamiltonianを簡易的に記載するための
-下記のファイル形式に対応しています。
-~\\{\bf CoulombIntra}: $n_ {i \uparrow}n_{i \downarrow}$で表される相互作用を指定します
-($n_{i \sigma}=c_{i\sigma}^{\dag}c_{i\sigma}$)。
+\item[(1)~List:]
+~\\{キーワード指定なし}:
+使用するinput fileの名前のリストを書きます。なお、ファイル名は任意に指定することができます。
+\item[(2)~Basic parameters:]
+~\\{\bf ModPara}: 計算時に必要な基本的なパラメーター(サイトの数、電子数、Lanczosステップを何回やるかなど)を設定します。
+~\\{\bf LocSpin}: 局在スピンの位置を設定します(近藤模型でのみ利用)。
+\item[(3)~Set Hamiltonian:] 
+~\\以下のファイルを用い、Hamiltonianを電子系の表式により指定します。
+~\\{\bf Trans}: $c_{i\sigma_1}^{\dag}c_{j\sigma_2}$で表される一体項を指定します。
+~\\{\bf InterAll}: $c_ {i \sigma_1}^{\dag}c_{j\sigma_2}c_{k \sigma_3}^{\dag}c_{l \sigma_4}$で表される一般二体相互作用を指定します。\\
+~\\なお、使用頻度の高い相互作用に関しては下記のキーワードで指定することも可能です。
+~\\{\bf CoulombIntra}: $n_ {i \uparrow}n_{i \downarrow}$で表される相互作用を指定します($n_{i \sigma}=c_{i\sigma}^{\dag}c_{i\sigma}$)。
 ~\\{\bf CoulombInter}: $n_ {i}n_{j}$で表される相互作用を指定します($n_i=n_{i\uparrow}+n_{i\downarrow}$)。
 ~\\{\bf Hund}: $n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow}$で表される相互作用を指定します。
-~\\{\bf PairHop}:  $c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{i \downarrow}^{\dag}c_{j  \downarrow}$
-で表される相互作用を指定します。
+~\\{\bf PairHop}:  $c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{i \downarrow}^{\dag}c_{j  \downarrow}$で表される相互作用を指定します。
 ~\\{\bf Exchange}: $S_i^+ S_j^-$で表される相互作用を指定します。
-~\\{\bf Ising}: $S_i^z S_j^z$で表される相互作用を指定します。
-~\\{\bf PairLift}: $c_ {i \uparrow}^{\dag}c_{i\downarrow}c_{j \uparrow}^{\dag}c_{j \downarrow}$
-で表される相互作用を指定します
+\item[(4)~Set condition of variational parameters :] 
+~\\変分波動関数は
+\begin{equation}
+|\psi \rangle = {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,
+\end{equation}
+で与えられます。ここで、一体部分は実空間のペア関数
+\begin{equation}
+|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle,
+\end{equation}
+を用いた波動関数で表されます。ここで$N$は全電子数、$N_s$は全サイト数です。
+変分パラメータの初期値は以下のファイルを用いて指定します。
+~\\{\bf Gutzwiller}: ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$のうち、最適化の対象とする変分パラメータ$g_i$を指定します。
+~\\{\bf Jastrow}: ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$のうち、最適化の対象とする変分パラメータ$v_{ij}$を指定します。
+~\\{\bf DH2}:  ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$で表される2サイトのdoublon-holon相関因子を指定します。詳細はDH2ファイルの説明を参照してください。
+~\\{\bf DH4}:  ${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$で表される4サイトのdoublon-holon相関因子を指定します。詳細はDH4ファイルの説明を参照してください。
+~\\{\bf Orbital}: ペア軌道$|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$を設定します。
+~\\{\bf TransSym}: 運動量射影${\cal L}_K=\frac{1}{N_s}\sum_{{\bm R}}e^{i {\bm K} \cdot{\bm R} } \hat{T}_{\bm R}$と格子対称性射影${\cal L}_P=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha}$に関する指定を行います。ここで、${\bm K}$は全運動量、$\hat{T}_{\bm R}$は並進ベクトル${\bm R}$に対応する並進演算子、$\hat{G}_{\alpha}$は格子の点群演算子、$p_\alpha$はパリティをそれぞれ表します。
 
-二体相互作用に関するファイル入力形式の詳細は\ref{Subsec:interall}-\ref{Subsec:pairlift}をご覧ください。
+\item[(5)~Initial variational parameters:]
+~\\ 変分パラメータに関する初期値を与えます。キーワード指定されない場合には$0$が初期値として設定されます。
+~\\{\bf InGutzwiller}: ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$のうち、変分パラメータ$g_i$の初期値を指定します。
+~\\{\bf InJastrow}: ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$のうち、変分パラメータ$v_{ij}$の初期値を指定します。
+~\\{\bf InDH2}:  ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$で表される2サイトのdoublon-holon相関因子$\alpha_{2nt}^{d(h)}$の初期値を指定します。
+~\\{\bf InDH4}:  ${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$で表される4サイトのdoublon-holon相関因子$\alpha_{4nt}^{d(h)}$の初期値を指定します。
+~\\{\bf InOrbital}: ペア軌道$|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$の$ f_{ij}$に関する初期値を設定します。
 
+\item[(6)~Output:]
+~\\{\bf OneBodyG }:出力する一体Green関数を指定します。
+ $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}\rangle$が出力されます。
+
+ {\bf TwoBodyG }:出力する二体Green関数を指定します。
+ $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}c^{\dagger}_{k \sigma_3}c_{l\sigma_4}\rangle$
+が出力されます。
 \end{description}
 
-\subsection{出力ファイルの指定}
-一体Green関数および二体Green関数の計算する成分を、それぞれOneBodyG, TwoBodyGでひも付けられるファイルで指定します。
-\begin{description}
-\item {\bf 一体Green関数の計算対象の指定}\\
-OneBodyGでひも付けられるファイル(ここではgreenone.def)で計算する一体Green関数$\langle c_{i\sigma_1}^{\dag}c_{j\sigma_2} \rangle$の成分を指定します。ファイルの中身は下記の通りです。\\
-\begin{minipage}{15cm}
-\begin{screen}
-\begin{verbatim}
-===============================
-NCisAjs         32
-===============================
-======== Green functions ======
-===============================
-    0     0     0     0
-    0     1     0     1
-    1     0     1     0
-    1     1     1     1
-    2     0     2     0
-…
-\end{verbatim}
-\end{screen}
-\end{minipage}
-~\\
-一体Green関数計算対象成分の指定に関するファイル入力形式の詳細は\ref{Subsec:onebodyg}をご覧ください。
-\item {\bf 二体Green関数の計算対象の指定}\\
-TwoBodyGでひも付けられるファイル(ここではgreentwo.def)で計算する二体Green関数$\langle c_{i\sigma_1}^{\dag}c_{j\sigma_2}c_{k\sigma_3}^{\dag}c_{l\sigma_4} \rangle$の成分を指定します。ファイルの中身は下記の通りです。\\
-\begin{minipage}{15cm}
-\begin{screen}
-\begin{verbatim}
-=============================================
-NCisAjsCktAltDC       1024
-=============================================
-======== Green functions for Sq AND Nq ======
-=============================================
-    0     0     0     0     0     0     0     0
-    0     0     0     0     0     1     0     1
-    0     0     0     0     1     0     1     0
-    0     0     0     0     1     1     1     1
-    0     0     0     0     2     0     2     0
-    …
-\end{verbatim}
-\end{screen}
-\end{minipage}
-~\\
-二体Green関数計算対象成分の指定に関するファイル入力形式の詳細は\ref{Subsec:twobodyg}をご覧ください。
-\end{description}
-
-\subsection{計算の実行}
-全ての入力ファイルが準備できた後、計算実行します。実行時はエキスパートモードを指定する"-e"をオプションとして指定の上、入力ファイルリストファイル(ここではnamelist.def)を引数とし、ターミナルから$\HPhi$を実行します。\\
-\verb|$ |\underline{パス}\verb|/HPhi -e namelist.def|
-~\\
-計算開始後のプロセスは、スタンダードモードと同様になります。
-
-\subsection{その他の系でのチュートリアル}
-
-\verb|samples/Expert/|以下には次のチュートリアルが含まれています。
-
-\begin{itemize}
-\item 2次元正方格子Hubbardモデル
-
-  (\verb|samples/Expert/Hubbard/square/|)
-\item 2次元三角格子Hubbardモデル
-
-  (\verb|samples/Expert/Hubbard/triangular/|)
-\item 1次元近藤格子モデル
-
-  (\verb|samples/Expert/Kondo/chain/|)
-\item 1次元反強磁性的Heisenbergモデル
-
-  (\verb|samples/Expert/Spin/HeisenbergChain/HeisenbergChain/|)
-\item 2次元正方格子反強磁性的Heisenbergモデル
-
-  (\verb|samples/Expert/Spin/HeisenbergSquare/|)
-\item Kitaevモデル(Honeycomb格子、2$\times$3サイト)
-
-  (\verb|samples/Expert/Spin/Kitaev/|)
-
-\end{itemize}
-
-これらのチュートリアルの実行方法は前節と同じです。
-\newpage
-\section{エキスパート用入力ファイル作成モード}
-スタンダードモードで定義したモデルを対象に、エキスパート用入力ファイルを作成するモードです。使用方法は下記の通りです。
-\begin{enumerate}
-\item{\ref{Sec:StandardMode}に従い、スタンダードモデルで入力ファイルを作成します。}
-\item{オプションとして"-sdry"を指定し、入力ファイル(ここではStdFace.def)を記入した上でHPhiを実行します。}\\
-\verb|$ |\underline{パス}\verb|/HPhi -sdry StdFace.def|
-
-このときMPIによる並列実行(\verb|mpirun|, \verb|mpiexec|など)は行わないでください。
-~\\
-\item{実行したディレクトリ内に、エキスパート用として下記のdefファイルが自動生成されます。}\\
-\begin{minipage}{12cm}
-\begin{screen}
-\begin{verbatim}
-calcmod.def   greentwo.def  namelist.def  zTrans.def
-greenone.def  modpara.def   zInterAll.def zlocspn.def
-\end{verbatim}
-\end{screen}
-\end{minipage}
-\end{enumerate}
