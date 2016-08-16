@@ -370,8 +370,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NOrbitalIdx            =  bufInt[IdxNOrbit];
   NQPTrans               =  bufInt[IdxNQPTrans];
   NCisAjs                =  bufInt[IdxNOneBodyG];
-  NCisAjsCktAlt          =  bufInt[IdxNTwoBodyG];
-  NCisAjsCktAltDC        =  bufInt[IdxNTwoBodyGEx];
+  NCisAjsCktAlt          =  bufInt[IdxNTwoBodyGEx];
+  NCisAjsCktAltDC        =  bufInt[IdxNTwoBodyG];
   NInterAll              =  bufInt[IdxNInterAll];
   NQPOptTrans            =  bufInt[IdxNQPOptTrans];
 
