@@ -73,15 +73,21 @@ void InitFilePhysCal(int i, int rank) {
   }
 
   /* Green function */
-  sprintf(fileName, "%s_cisajs_%03d.dat", CDataFileHead, idx);
-  FileCisAjs = fopen(fileName, "w");
+  if(NCisAjs>0){
+    sprintf(fileName, "%s_cisajs_%03d.dat", CDataFileHead, idx);
+    FileCisAjs = fopen(fileName, "w");
+  }
 
-  sprintf(fileName, "%s_cisajscktalt_%03d.dat", CDataFileHead, idx);
-  FileCisAjsCktAlt = fopen(fileName, "w");
+  if(NCisAjsCktAlt>0){
+    sprintf(fileName, "%s_cisajscktalt_%03d.dat", CDataFileHead, idx);
+    FileCisAjsCktAlt = fopen(fileName, "w");
+  }
 
-  sprintf(fileName, "%s_cisajscktaltdc_%03d.dat", CDataFileHead, idx);
-  FileCisAjsCktAltDC = fopen(fileName, "w");
-
+  if(NCisAjsCktAltDC>0){
+    sprintf(fileName, "%s_cisajscktaltdc_%03d.dat", CDataFileHead, idx);
+    FileCisAjsCktAltDC = fopen(fileName, "w");
+  }
+  
   if(NLanczosMode>0){
     sprintf(fileName, "%s_ls_%03d.dat", CDataFileHead, idx);
     FileLS = fopen(fileName, "w");
