@@ -202,13 +202,7 @@ int main(int argc, char* argv[])
   InitParameter(); /* Run parallelly for synchronization of random generator */
   if(flagReadInitPara>0 && rank0==0) ReadInitParameter(fileInitPara);
   //[s] add read parameters respectively
-  if(rank0==0){
-    if(!ReadInputParameters(fileDefList, comm0)==0){
-      //[ToDo]: Add Error procedure
-      info=1;
-    }
-  }
-  
+  ReadInputParameters(fileDefList, comm0);
   //[e] add read parameters respectively
   
   SyncModifiedParameter(comm0);
@@ -368,7 +362,8 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 }
 
 void outputData() {
-  int i;
+  int i,j;
+  double x;
 
   /* zvo_out.dat */
  // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
