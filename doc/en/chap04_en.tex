@@ -1,6 +1,6 @@
-% !TEX root = userguide_jp.tex
+% !TEX root = userguide_en.tex
 %----------------------------------------------------------
-\chapter{ファイル仕様}
+\chapter{File specification}
 
 %----------------------------------------------------------
 \section{Input files for {\it Standard} mode}
@@ -733,62 +733,66 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 
 \newpage
-\section{エキスパートモード用入力ファイル}
+\section{Detailed input files}
 \label{Ch:HowToExpert}
 
-mVMCのエキスパートモードで使用する入力ファイル(*def)に関して説明します。
-入力ファイルの種別は以下の4つで分類されます。
+In this section, detailed input files are explained. Input files are categorized by the following six parts.
+
 \begin{description}
 \item[(1)~List:]
-~\\{キーワード指定なし}:
-使用するinput fileの名前のリストを書きます。なお、ファイル名は任意に指定することができます。
+~\\{No keyword}:
+This file is a list of input file names with keywords. Each keywords is fixed, but file names are free to be determined.  
 \item[(2)~Basic parameters:]
-~\\{\bf ModPara}: 計算時に必要な基本的なパラメーター(サイトの数、電子数、Lanczosステップを何回やるかなど)を設定します。
-~\\{\bf LocSpin}: 局在スピンの位置を設定します(近藤模型でのみ利用)。
+~\\{\bf ModPara}: Set the parameters for basic parameters such as site number, electron number, Lanczos step {\it etc}.
+~\\{\bf LocSpin}: Set the location of local spin. 
 \item[(3)~Set Hamiltonian:] 
-~\\以下のファイルを用い、Hamiltonianを電子系の表式により指定します。
-~\\{\bf Trans}: $c_{i\sigma_1}^{\dag}c_{j\sigma_2}$で表される一体項を指定します。
-~\\{\bf InterAll}: $c_ {i \sigma_1}^{\dag}c_{j\sigma_2}c_{k \sigma_3}^{\dag}c_{l \sigma_4}$で表される一般二体相互作用を指定します。\\
-~\\なお、使用頻度の高い相互作用に関しては下記のキーワードで指定することも可能です。
-~\\{\bf CoulombIntra}: $n_ {i \uparrow}n_{i \downarrow}$で表される相互作用を指定します($n_{i \sigma}=c_{i\sigma}^{\dag}c_{i\sigma}$)。
-~\\{\bf CoulombInter}: $n_ {i}n_{j}$で表される相互作用を指定します($n_i=n_{i\uparrow}+n_{i\downarrow}$)。
-~\\{\bf Hund}: $n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow}$で表される相互作用を指定します。
-~\\{\bf PairHop}:  $c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{i \downarrow}^{\dag}c_{j  \downarrow}$で表される相互作用を指定します。
-~\\{\bf Exchange}: $S_i^+ S_j^-$で表される相互作用を指定します。
+Hamiltonian for mVMC is denoted by the format of interactions for electron system. 
+The kinds of interactions are determined by the following keywords. 
+~\\{\bf Trans}: The one body part, $c_{i\sigma_1}^{\dag}c_{j\sigma_2}$.
+~\\{\bf InterAll}: The general two body interactions, $c_ {i \sigma_1}^{\dag}c_{j\sigma_2}c_{k \sigma_3}^{\dag}c_{l \sigma_4}$.
+~\\We can set interactions which are often used by the following keywords. 
+~\\{\bf CoulombIntra}: On-site Coulomb interactions, $n_ {i \uparrow}n_{i \downarrow}$ ($n_{i \sigma}=c_{i\sigma}^{\dag}c_{i\sigma}$).
+~\\{\bf CoulombInter}: Off-site Coulomb interactions, $n_ {i}n_{j}$ ($n_i=n_{i\uparrow}+n_{i\downarrow}$).
+~\\{\bf Hund}: Hund couplings, $n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow}$.
+~\\{\bf PairHop}: Pair hopping couplings, $c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{i \downarrow}^{\dag}c_{j  \downarrow}$.
+~\\{\bf Exchange}: Exchange couplings, $c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{j \downarrow}^{\dag}c_{i  \downarrow}$.
 \item[(4)~Set condition of variational parameters :] 
-~\\変分波動関数は
+~\\The variational wave function is given as
 \begin{equation}
-|\psi \rangle = {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,
+|\psi \rangle = {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle.
 \end{equation}
-で与えられます。ここで、一体部分は実空間のペア関数
+The one body part of the wavefunction is represented as the pair function of the real space:
 \begin{equation}
 |\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle,
 \end{equation}
-を用いた波動関数で表されます。ここで$N$は全電子数、$N_s$は全サイト数です。
-変分パラメータの初期値は以下のファイルを用いて指定します。
-~\\{\bf Gutzwiller}: ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$のうち、最適化の対象とする変分パラメータ$g_i$を指定します。
-~\\{\bf Jastrow}: ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$のうち、最適化の対象とする変分パラメータ$v_{ij}$を指定します。
-~\\{\bf DH2}:  ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$で表される2サイトのdoublon-holon相関因子を指定します。詳細はDH2ファイルの説明を参照してください。
-~\\{\bf DH4}:  ${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$で表される4サイトのdoublon-holon相関因子を指定します。詳細はDH4ファイルの説明を参照してください。
-~\\{\bf Orbital}: ペア軌道$|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$を設定します。
-~\\{\bf TransSym}: 運動量射影${\cal L}_K=\frac{1}{N_s}\sum_{{\bm R}}e^{i {\bm K} \cdot{\bm R} } \hat{T}_{\bm R}$と格子対称性射影${\cal L}_P=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha}$に関する指定を行います。ここで、${\bm K}$は全運動量、$\hat{T}_{\bm R}$は並進ベクトル${\bm R}$に対応する並進演算子、$\hat{G}_{\alpha}$は格子の点群演算子、$p_\alpha$はパリティをそれぞれ表します。
+where $N$ is the number of electrons and $N_s$ is the number of sites.
+The setting for optimizing variational parameters or not is given by the following files.
+~\\{\bf Gutzwiller}: Set the target parameters $g_i$ in\\
+ ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$ to be optimized.
+~\\{\bf Jastrow}: Set the target parameters $v_{ij}$ in\\
+ ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$ to be optimized.
+~\\{\bf DH2}:  Set the target 2-site doublon-holon correlation factor $\alpha_{2nt}^{d(h)}$ in \\
+${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$ to be optimized. \\
+The details are shown in the desciption of DH2 file.
+~\\{\bf DH4}:  Set the target 4-site doublon-holon correlation factor $\alpha_{4nt}^{d(h)}$ in \\
+${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$ to be optimized.\\
+The details are shown in the desciption of DH4 file.
+~\\{\bf Orbital}: Set the pair orbital $f_{ij}$ in $|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$ to be optimized.
+~\\{\bf TransSym}: Set the the momentum projection operators ${\cal L}_K=\frac{1}{N_s}\sum_{{\bm R}}e^{i {\bm K} \cdot{\bm R} } \hat{T}_{\bm R}$ and the lattice translational projection operators ${\cal L}_P=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha}$, where ${\bm K}$ is the momentum operator of the whole system and $\hat{T}_{\bm R}$ is the translational operators corresponding to the translational vector ${\bm R}$, $\hat{G}_{\alpha}$ is the point group operator, and $p_\alpha$ is the parity operator, respectively.
 
 \item[(5)~Initial variational parameters:]
-~\\ 変分パラメータに関する初期値を与えます。キーワード指定されない場合には$0$が初期値として設定されます。
-~\\{\bf InGutzwiller}: ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$のうち、変分パラメータ$g_i$の初期値を指定します。
-~\\{\bf InJastrow}: ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$のうち、変分パラメータ$v_{ij}$の初期値を指定します。
-~\\{\bf InDH2}:  ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$で表される2サイトのdoublon-holon相関因子$\alpha_{2nt}^{d(h)}$の初期値を指定します。
-~\\{\bf InDH4}:  ${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$で表される4サイトのdoublon-holon相関因子$\alpha_{4nt}^{d(h)}$の初期値を指定します。
-~\\{\bf InOrbital}: ペア軌道$|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$の$ f_{ij}$に関する初期値を設定します。
-
+~\\ Set the initial values of the variational parameters. When the keyword is not setting, the corresponding parameters are given by random values as default values.
+~\\{\bf InGutzwiller}: Set the initial values of $g_i$ in ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$.
+~\\{\bf InJastrow}: Set the initial values of $v_{ij}$ in ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$.
+~\\{\bf InDH2}:  Set the initial values of $\alpha_{2nt}^{d(h)}$ in ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$.
+~\\{\bf InDH4}:  Set the initial values of $\alpha_{4nt}^{d(h)}$ in ${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$.
+~\\{\bf InOrbital}: Set the initial values of $ f_{ij}$ in $|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$.
 
 \item[(6)~Output:]
-~\\{\bf OneBodyG }:出力する一体Green関数を指定します。
- $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}\rangle$が出力されます。
-
- {\bf TwoBodyG }:出力する二体Green関数を指定します。
- $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}c^{\dagger}_{k \sigma_3}c_{l\sigma_4}\rangle$
-が出力されます。
+~\\
+Targets for output is determined.
+~\\{\bf OneBodyG }: One-body green functions,  $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}\rangle$.
+~\\{\bf TwoBodyG }: Two-body green functions,  $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}c^{\dagger}_{k \sigma_3}c_{l\sigma_4}\rangle$.
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%
 \newpage
@@ -855,8 +859,8 @@ TwoBodyG	zcisajscktaltdc.def
            Jastrow & Charge Jastrow factors.\\
            DH2 & 2-site doublon-holon correlation factors.\\
            DH4 & 4-site doublon-holon correlation factors.\\
-           *Orbital & pair orbital factors.\\
-           TransSym & translational and lattice symmetry operation. \\ \hline
+           *Orbital & Pair orbital factors.\\
+           *TransSym & Translational and lattice symmetry operation. \\ \hline
            %%%%%%%%%%%%%%%%%%
            InGutzwiller & Initial values of Gutzwiller factors.\\
            InJastrow & Initial values of charge Jastrow factors.\\
@@ -892,7 +896,7 @@ NVMCCalMode    0
 NLanczosMode   0
 --------------------
 NDataIdxStart  1
-NDataQtySmp    5
+NDataQtySmp    1
 --------------------
 Nsite          16
 Nelectron      8
@@ -2985,17 +2989,166 @@ NCisAjsCktAltDC        576
 \item 行数固定で読み込みを行う為、ヘッダの省略はできません。
 \item 成分が重複して指定された場合にはエラー終了します。
 \item {スピンに関して計算する場合、$i=j, k=l$を満たさない場合ペアが存在するとエラー終了します。}
-\item $[$int01$]$と定義されているニ体グリーン関数成分の総数が異なる場合はエラー終了します。
+\item $[$int01$]$と定義されている二体グリーン関数成分の総数が異なる場合はエラー終了します。
 \item $[$int02$]$-$[$int09$]$を指定する際、範囲外の整数を指定した場合はエラー終了します。
 \end{itemize}
 
 \newpage
 \section{出力ファイル}
 \label{Sec:outputfile}
-T.B.D
+出力ファイルの一覧は下記の通りです。\$\$\$には\verb|ModPara|ファイルの\verb|CParaFileHead|で指定されるヘッダが、xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。また、zzzには\verb|ModPara|ファイルの\verb|NDataIdxStart|が記載されます。
+
+ \begin{table*}[h!]
+\begin{center}
+  \begin{tabular}{|ll|} \hline
+           Name     & Details for corresponding files       \\   \hline\hline
+           \$\$\$\_opt.dat       &  All optimized parameters.       \\ \hline 
+           %%%%%%%%%%%%%%%%%%  
+           gutzwiller\_opt.dat       &   Optimized gutzwiller factors.  \\
+           jastrow\_opt.dat        &  Optimized jastrow factors.         \\ 
+           doublonHolon2site\_opt.dat  &   Optimized 2-site doublon-holon correlation factors.  \\  
+           doublonHolon4site\_opt.dat  &   Optimized 4-site doublon-holon correlation factors. \\  
+           orbital\_opt.dat  &   Optimized pair orbital factors. \\  \hline
+           xxx\_out\_yyy.dat &  Energy and deviation.\\ 
+           xxx\_var\_yyy.dat &  Progress information for optimizing variational parameters.\\  \hline
+           xxx\_CalcTimer.dat & Computation time for each processes.\\  
+           xxx\_time\_zzz.dat & Progress information for MonteCalro samplings.\\  \hline
+           \hline
+           %%%%%%%%%%%%%%%%%%
+           xxx\_cisajs\_yyy.dat & One body Green's functions.\\
+           xxx\_cisajscktalt\_yyy.dat & Correlation functions.\\
+\hline
+  \end{tabular}
+\end{center}
+\caption{List of the output files. }
+\label{Table:Output}
+\end{table*}%
+
+\subsection{\$\$\$\_opt.dat}
+SR法で最適化された変分パラメータとエネルギーが出力されます。平均値と標準偏差が
+\begin{equation}
+\langle H \rangle, \langle H^2 \rangle, g_i, v_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij} \nonumber
+\end{equation}
+について順番で出力されます。平均値は複素数(実部、虚部の順)が出力され、標準偏差は実数が出力されます。
+\$\$\$には\verb|ModPara|ファイルの\verb|CParaFileHead|で指定されるヘッダが記載されます。
+
+\subsection{xxx\_var\_yyy.dat}
+SR 法の各ステップにおける変分パラメータとエネルギーがzqp\_opt.dat と同形式で“追記しながら” 出力されます(標準偏差はゼロ)が出力されます。
+xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。
+
+\subsection{gutzwiller\_opt.dat}
+SR法で最適化されたGutzwiller因子が出力されます。出力形式はSec. \ref{Subsec:InGutzwiller}のInGutzwiller指定ファイルと同じです。
+
+\subsection{jastrow\_opt.dat}
+SR法で最適化されたJastrow因子が出力されます。出力形式はSec. \ref{Subsec:InJastrow}のInJastrow指定ファイルと同じです。
+
+\subsection{doublonHolon2site\_opt.dat}
+SR法で最適化された2サイトのdoublon-holon相関因子が出力されます。出力形式はSec. \ref{Subsec:InDH2}のInDH2指定ファイルと同じです。
+
+\subsection{doublonHolon4site\_opt.dat}
+SR法で最適化された4サイトのdoublon-holon相関因子が出力されます。出力形式はSec. \ref{Subsec:InDH4}のInDH4指定ファイルと同じです。
+
+\subsection{orbital\_opt.dat}
+SR法で最適化されたペア軌道の変分パラメータが出力されます。出力形式はSec. \ref{Subsec:InOrbital}のInOrbital指定ファイルと同じです。
+
+\subsection{xxx\_out\_yyy.dat}
+ビン毎の計算情報として、
+\begin{equation}
+\langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2} \nonumber
+\end{equation}
+が順に出力されます。$\langle H \rangle$については実部と虚部がそれぞれ出力され、それ以外は実部のみ出力されます。以下に出力例を記載します。
+xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。
+
+\begin{minipage}{13cm}
+\begin{screen}
+\begin{verbatim}
+1.151983765704212992e+01  8.124622418360909482e-01  \
+1.619082955438887268e+02  2.019905203939084959e-01 
+1.288482613817423150e+01  5.006903733262847433e-01  \ 
+1.972000325276957824e+02  1.824505193695792893e-01
+1.308897206011880421e+01  5.701244886956570168e-01  \
+2.072610167083121837e+02  2.029162857569105916e-01
+…
+\end{verbatim}
+\end{screen}
+\end{minipage}
+
+\subsection{CalcTimer.dat }
+計算終了後に、処理毎の計算処理時間が処理プロセス、プロセスに割り当てられた番号、秒数の順に出力されます。出力例は以下の通りです。
+
+\begin{minipage}{15.5cm}
+\begin{screen}
+\begin{verbatim}
+All                         [0]     15.90724
+Initialization              [1]      0.04357
+  read options             [10]      0.00012
+  ReadDefFile              [11]      0.00082
+  SetMemory                [12]      0.00002
+  InitParameter            [13]      0.03026
+VMCParaOpt                  [2]     15.86367
+  VMCMakeSample             [3]     12.85650
+    makeInitialSample      [30]      0.20219
+    make candidate         [31]      0.02553
+    hopping update         [32]     12.51967
+      UpdateProjCnt        [60]      7.41864
+      CalculateNewPfM2     [61]      3.67098
+      CalculateLogIP       [62]      0.07599
+      UpdateMAll           [63]      1.27466
+    exchange update        [33]      0.00000
+      UpdateProjCnt        [65]      0.00000
+      CalculateNewPfMTwo2  [66]      0.00000
+      CalculateLogIP       [67]      0.00000
+      UpdateMAllTwo        [68]      0.00000
+    recal PfM and InvM     [34]      0.08294
+    save electron config   [35]      0.00232
+  VMCMainCal                [4]      2.45481
+    CalculateMAll          [40]      0.47556
+    LocEnergyCal           [41]      0.79754
+      CalHamiltonian0      [70]      0.00259
+      CalHamiltonian1      [71]      0.18765
+      CalHamiltonian2      [72]      0.00107
+    ReturnSlaterElmDiff    [42]      0.40035
+    calculate OO and HO    [43]      0.68045
+  StochasticOpt             [5]      0.30489
+    preprocess             [50]      0.02587
+    stcOptMain             [51]      0.25471
+      initBLACS            [55]      0.06564
+      calculate S and g    [56]      0.05603
+      DPOSV                [57]      0.09833
+      gatherParaChange     [58]      0.02774
+    postprocess            [52]      0.02372
+  UpdateSlaterElm          [20]      0.02556
+  WeightAverage            [21]      0.06676
+  outputData               [22]      0.10554
+  SyncModifiedParameter    [23]      0.02151\end{verbatim}
+\end{screen}
+\end{minipage}
+
+
 \newpage
-\section{エラーメッセージ一覧}
-T.B.D
-%----------------------------------------------------------
-%----------------------------------------------------------
-%----------------------------------------------------------
+\subsection{xxx\_time\_zzz.dat }
+\label{subsec:time}
+計算情報としてビン毎にサンプリング数、hoppingおよびexchangeのアップデートに対するacceptance ratio(acc\_hopp, acc\_ex)、それぞれのアップデートの試行回数(n\_hopp, n\_ex)および実行した際の時間を順に出力します。xxxには\verb|CDataFileHead|で指定されるヘッダが、zzzには\verb|ModPara|ファイルの\verb|NDataIdxStart|が記載されます。
+出力例は以下の通りです。\\
+\begin{minipage}{15.5cm}
+\begin{screen}
+\begin{verbatim}
+00000  acc_hop acc_ex  n_hop    n_ex     : Mon Jul 25 14:03:29 2016
+00001  0.59688 0.00000 320      0        : Mon Jul 25 14:03:30 2016
+00002  0.47727 0.00000 176      0        : Mon Jul 25 14:03:30 2016
+00003  0.50000 0.00000 176      0        : Mon Jul 25 14:03:30 2016
+00004  0.49432 0.00000 176      0        : Mon Jul 25 14:03:30 2016
+00005  0.57386 0.00000 176      0        : Mon Jul 25 14:03:30 2016
+00006  0.55114 0.00000 176      0        : Mon Jul 25 14:03:30 2016    
+…
+\end{verbatim}
+\end{screen}
+\end{minipage}
+
+\subsection{xxx\_cisajs\_yyy.dat }
+OneBodyG指定ファイルで指定した順序で一体Green関数の各成分が実部、虚部の順に出力されます。
+xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。
+
+\subsection{xxx\_cisajscktalt\_yyy.dat }
+TwoBodyG指定ファイルで指定した順序で二体Green関数が出力されます。
+xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。

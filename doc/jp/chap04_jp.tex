@@ -655,18 +655,18 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 
 \newpage
-\section{エキスパートモード用入力ファイル}
+\section{詳細入力ファイル}
 \label{Ch:HowToExpert}
 
-mVMCのエキスパートモードで使用する入力ファイル(*def)に関して説明します。
+mVMCで使用する詳細入力ファイル(*def)に関して説明します。
 入力ファイルの種別は以下の6つで分類されます。
 \begin{description}
 \item[(1)~List:]
 ~\\{キーワード指定なし}:
 使用するinput fileの名前のリストを書きます。なお、ファイル名は任意に指定することができます。
 \item[(2)~Basic parameters:]
-~\\{\bf ModPara}: 計算時に必要な基本的なパラメーター(サイトの数、電子数、Lanczosステップを何回やるかなど)を設定します。
-~\\{\bf LocSpin}: 局在スピンの位置を設定します(近藤模型でのみ利用)。
+~\\{\bf ModPara}: 計算時に必要な基本的なパラメーター(サイトの数、電子数など)を設定します。
+~\\{\bf LocSpin}: 局在スピンの位置を設定します。
 \item[(3)~Set Hamiltonian:] 
 ~\\以下のファイルを用い、Hamiltonianを電子系の表式により指定します。
 ~\\{\bf Trans}: $c_{i\sigma_1}^{\dag}c_{j\sigma_2}$で表される一体項を指定します。
@@ -687,7 +687,7 @@ mVMCのエキスパートモードで使用する入力ファイル(*def)に関�
 |\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle,
 \end{equation}
 を用いた波動関数で表されます。ここで$N$は全電子数、$N_s$は全サイト数です。
-変分パラメータの初期値は以下のファイルを用いて指定します。
+変分パラメータを最適化するかどうかについては以下のファイルを用いて指定します。
 ~\\{\bf Gutzwiller}: ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$のうち、最適化の対象とする変分パラメータ$g_i$を指定します。
 ~\\{\bf Jastrow}: ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$のうち、最適化の対象とする変分パラメータ$v_{ij}$を指定します。
 ~\\{\bf DH2}:  ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$で表される2サイトのdoublon-holon相関因子を指定します。詳細はDH2ファイルの説明を参照してください。
