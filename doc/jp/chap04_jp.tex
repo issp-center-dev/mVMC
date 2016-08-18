@@ -641,7 +641,7 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 \item \verb|NStoreOO|
 
-{\bf 形式 :} int型 (1以上、\tr{デフォルト値=1})
+{\bf 形式 :} int型 (1以上、\tr{デフォルト値=0})
 
 {\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にするオプション(1で機能On)。
  
@@ -2322,40 +2322,37 @@ NQPTrans 4
 \end{itemize}
 
 \newpage
-\subsection{InGutzwiller指定ファイル}
-\label{Subsec:InGutzwiller}
-\begin{equation}
-{\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]
-\end{equation}
-の$g_i$について初期値を設定します。
+\subsection{変分パラメータ初期値指定(In\$\$\$)ファイル}
+\label{Subsec:InputParam}
+各変分パラメータの初期値を設定することが可能です。変分パラメータの種類は\\
+\verb|InGutzwiller|, \verb|InJastrow|, \verb|InDH2|, \verb|InDH4|, \verb|InOrbital|\\
+をファイル名の前にキーワードとして指定することで区別します。なお、ファイルフォーマットは全て共通です。
 
-以下にファイル例を記載します。
+以下に\verb|InJastrow|ファイルの例を記載します。
 
 \begin{minipage}{12.5cm}
 \begin{screen}
 \begin{verbatim}
 ======================
-NGutzwillerIdx  16  
+NJastrowIdx  28
 ====================== 
-===== Gutzwiller ===== 
+== i_j_JastrowIdx  ===
 ====================== 
-   0     0.0     0.0
-   1     0.1     0.0
-   2     0.0     0.0
-   3     0.1     0.0
- (continue...)
-  15     0.1     0.0
+0 -8.909963465082626488e-02  0.000000000000000000e+00
+1  5.521681211878626955e-02  0.000000000000000000e+00
+(continue...)
+27 -9.017586139930480749e-02  0.000000000000000000e+00
 \end{verbatim}
 \end{screen}
 \end{minipage}
 
 \subsubsection{ファイル形式}
-以下のように行数に応じ異なる形式をとります($N_s$はサイト数)。
+以下のように行数に応じ異なる形式をとります($N_v$は変分パラメータの種類の総数)。
  \begin{itemize}
    \item  1行:  ヘッダ(何が書かれても問題ありません)。
    \item  2行:   [string01]~[int01]
    \item  3-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6 - 5+$N_s$行: [int02]~[double01]~[double02]
+   \item  6 - 5+$N_v$行: [int02]~[double01]~[double02]
   \end{itemize}
 \subsubsection{パラメータ}
  \begin{itemize}
@@ -2364,111 +2361,30 @@ NGutzwillerIdx  16
    
     {\bf 形式 :} string型 (空白不可)
 
-   {\bf 説明 :} $g_i$の変分パラメータ総数のキーワード名を指定します(任意)。
+   {\bf 説明 :}変分パラメータ総数のキーワード名を指定します(任意)。
 
    \item  $[$int01$]$
    
     {\bf 形式 :} int型 (空白不可)
 
-   {\bf 説明 :} $g_i$の変分パラメータ総数を指定します。
+   {\bf 説明 :} 変分パラメータ総数を指定します。
 
   \item  $[$int02$]$
   
  {\bf 形式 :} int型 (空白不可)
 
-{\bf 説明 :} サイト番号を指定する整数。0以上\verb|Nsite|{未満}で指定します。
+{\bf 説明 :} 変分パラメータの種類を指定する整数。0以上 $[$int01$]$で指定します。
  
  \item  $[$double01$]$
    
    {\bf 形式 :} double型 (空白不可)
 
-  {\bf 説明 :} $g_i$の初期値の実部を与えます。
+  {\bf 説明 :} 変分パラメータの初期値の実部を与えます。
    
    \item  $[$double02$]$
    {\bf 形式 :} double型 
 
-  {\bf 説明 :} $g_i$の初期値の虚部を与えます。\verb|Gutzwiller|指定ファイルで型を実数に指定している場合は、$[$double02$]$は入力しないでください。複素数指定の場合に$[$double02$]$がない場合には、0が代入されます。
-   
-\end{itemize}
-
-\subsubsection{使用ルール}
-本ファイルを使用するにあたってのルールは以下の通りです。
-\begin{itemize}
-\item 行数固定で読み込みを行う為、ヘッダの省略はできません。
-\item 成分が重複して指定された場合にはエラー終了します。
-\item $[$int01$]$と定義されている変分パラメータの総数が異なる場合はエラー終了します。
-\item \verb|Gutzwiller|指定ファイルで型を実部に指定した状態で、$[$double02$]$が入力されるとエラー終了します。
-\item \verb|Gutzwiller|指定ファイルで紐付けされるサイト番号とパラメータの種類と、入力ファイルで指定されるパラメータの値の整合性がとれない場合は警告を出します。その際、入力値としては平均された値が採用されます。例えば、\verb|Gutzwiller|指定ファイルで$i$, $j$サイトのパラメータの種類が共通の$0$に指定されているにも関わらず、入力ファイルで$i$,$j$サイトの値が異なる場合には警告が出されます。
-\end{itemize}
-
-
-\newpage
-\subsection{InJastrow指定ファイル}
-\label{Subsec:InJastrow}
-Jastrow因子
-\begin{equation}
-{\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]
-\end{equation}
-の$v_{ij}$について初期値の設定を行います。
-
-\begin{minipage}{12.5cm}
-\begin{screen}
-\begin{verbatim}
-======================
-NJastrowIdx 240 
-====================== 
-== i_j_JastrowIdx  ===
-====================== 
-   0     1     0.0     0.0 
-   0     2     1.0     0.0
-   0     3     0.0     0.0
- (continue...)
-  16     14    0.0   0.0
-  16     15    0.0   0.0
-\end{verbatim}
-\end{screen}
-\end{minipage}
-
-\subsubsection{ファイル形式}
-以下のように行数に応じ異なる形式をとります($N_s$はサイト数)。
- \begin{itemize}
-   \item  1行:  ヘッダ(何が書かれても問題ありません)。
-   \item  2行:   [string01]~[int01]
-   \item  3-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6 - 5+$N_s*(N_s-1)$行: [int02]~[int03]~[double01]~[double02]
-  \end{itemize}
-\subsubsection{パラメータ}
- \begin{itemize}
-
-   \item  $[$string01$]$
-   
-    {\bf 形式 :} string型 (空白不可)
-
-   {\bf 説明 :} $v_{ij}$の変分パラメータ総数のキーワード名を指定します(任意)。
-
-   \item  $[$int01$]$
-   
-    {\bf 形式 :} int型 (空白不可)
-
-   {\bf 説明 :} $v_{ij}$の変分パラメータ総数を指定します。
-
-  \item  $[$int02$]$, $[$int03$]$
-  
- {\bf 形式 :} int型 (空白不可)
-
-{\bf 説明 :} サイト番号を指定する整数。0以上\verb|Nsite|{未満}で指定します。
- 
- \item  $[$double01$]$
-   
-   {\bf 形式 :} double型 (空白不可)
-
-  {\bf 説明 :} $v_{ij}$の初期値の実部を与えます。
-  
- \item  $[$double02$]$
-   
-   {\bf 形式 :} double型 
-
-  {\bf 説明 :} $v_{ij}$の初期値の虚部を与えます。\verb|Jastrow|指定ファイルで型を実数に指定している場合は、$[$double02$]$は入力しないでください。複素数指定の場合に$[$double02$]$がない場合には、0が代入されます。
+  {\bf 説明 :} 変分パラメータの初期値の虚部を与えます。
   
 \end{itemize}
 
@@ -2478,252 +2394,7 @@ NJastrowIdx 240
 \item 行数固定で読み込みを行う為、ヘッダの省略はできません。
 \item 成分が重複して指定された場合にはエラー終了します。
 \item $[$int01$]$と定義されている変分パラメータの総数が異なる場合はエラー終了します。
-\item  \verb|Jastrow|指定ファイルで型を実数に指定した状態で、$[$double02$]$が入力されるとエラー終了します。
-\item \verb|Jastrow|指定ファイルで紐付けされるサイト番号とパラメータの種類と、入力ファイルで指定されるパラメータの値の整合性がとれない場合は警告を出します。その際、入力値としては平均された値が採用されます。
 \end{itemize}
-
-\newpage
-\subsection{InDH2指定ファイル}
-\label{Subsec:InDH2}
-\begin{equation}
-{\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]
-\end{equation}
-で表される2サイトのdoublon-holon相関因子の初期値設定を行います。指定するパラメータは$(n, t, s)$(s=0は中心がdoublon、1は中心がholon)に対応する番号と、$\alpha_{2nt}^{d,h}$の初期値です。以下にファイル例を記載します。
-
-\begin{minipage}{12.5cm}
-\begin{screen}
-\begin{verbatim}
-====================================
-NDoublonHolon2siteIdx 32 
-====================================
-==  i_xi_xi_DoublonHolon2siteIdx  ==
-====================================
-   0    0.0    0.0
-   1    0.0    0.0
-   2    1.0    0.0
- (continue...)
-  10   0.0    0.0
-  11   1.0    0.0
-\end{verbatim}
-\end{screen}
-\end{minipage}
-
-\subsubsection{ファイル形式}
-以下のように行数に応じ異なる形式をとります($N_s$はサイト数、$N_{\rm dh2}$は変分パラメータの種類の数)。
- \begin{itemize}
-   \item  1行:  ヘッダ(何が書かれても問題ありません)。
-   \item  2行:   [string01]~[int01]
-   \item  3-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6 - 5+$N_{\rm dh2}$行: [int02]~[double01]~[double02]
-  \end{itemize}
-\subsubsection{パラメータ}
- \begin{itemize}
-
-   \item  $[$string01$]$
-   
-    {\bf 形式 :} string型 (空白不可)
-
-   {\bf 説明 :} 変分パラメータのセット総数のキーワード名を指定します(任意)。
-
-   \item  $[$int01$]$
-   
-    {\bf 形式 :} int型 (空白不可)
-
-   {\bf 説明 :} 変分パラメータのセット総数を指定します。
-
- \item  $[$int02$]$
-   
-   {\bf 形式 :} int型 (空白不可)
-
-  {\bf 説明 :} \verb|DH2|指定ファイル内の変分プラメータの種類([int07])を指定します。値は0以上[int01]{未満}です。
-
- \item  $[$double01$]$
-    
-   {\bf 形式 :} double型 (空白不可)
-
-  {\bf 説明 :} 変分パラメータの実部を与えます。
-  
- 
- \item $[$double02$]$
-   
-   {\bf 形式 :} double型
-
-  {\bf 説明 :} 変分パラメータの虚部を与えます。 \verb|DH2|指定ファイルで型を実数に指定している場合は、$[$double02$]$は入力しないでください。複素数指定の場合に$[$double02$]$がない場合には、0が代入されます。
-  
-\end{itemize}
-
-\subsubsection{使用ルール}
-本ファイルを使用するにあたってのルールは以下の通りです。
-\begin{itemize}
-\item 行数固定で読み込みを行う為、ヘッダの省略はできません。
-\item 成分が重複して指定された場合にはエラー終了します。
-\item $[$int01$]$と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
-\item \verb|DH2|指定ファイルで型を実数に指定した状態で、$[$double02$]$が入力されるとエラー終了します。
-\end{itemize}
-
-
-\newpage
-\subsection{InDH4指定ファイル}
-\label{Subsec:InDH4}
-\begin{equation}
-{\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]
-\end{equation}
-で表される4サイトのdoublon-holon相関因子の設定を行います。。指定するパラメータは$(n, t, s)$(s=0は中心がdoublon、1は中心がholon)に対応する番号と、$\alpha_{4nt}^{d,h}$の変分パラメータの初期値です。以下にファイル例を記載します。
-
-\begin{minipage}{12.5cm}
-\begin{screen}
-\begin{verbatim}
-====================================
-NDoublonHolon4siteIdx 10
-====================================
-==  i_xi_xi_DoublonHolon4siteIdx  ==
-====================================
-   0     1.0     0.0
-   1     0.0     0.0 
-(continue...)
-   8     1.0     0.0 
-   9     0.0     0.0 
-\end{verbatim}
-\end{screen}
-\end{minipage}
-
-\subsubsection{ファイル形式}
-以下のように行数に応じ異なる形式をとります($N_{\rm dh4}$は変分パラメータの総数)。
- \begin{itemize}
-   \item  1行:  ヘッダ(何が書かれても問題ありません)。
-   \item  2行:   [string01]~[int01]
-   \item  3-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6 - 6+$N_{\rm dh4}$行：[int02]~[double01]~[double02]
-  \end{itemize}
-\subsubsection{パラメータ}
- \begin{itemize}
-
-   \item  $[$string01$]$
-   
-    {\bf 形式 :} string型 (空白不可)
-
-   {\bf 説明 :} 変分パラメータのセット総数のキーワード名を指定します(任意)。
-
-   \item  $[$int01$]$
-   
-    {\bf 形式 :} int型 (空白不可)
-
-   {\bf 説明 :} 変分パラメータのセット総数を指定します。
-
- \item  $[$int02$]$
-   
-   {\bf 形式 :} int型 (空白不可)
-
-  {\bf 説明 :} \verb|DH4|指定ファイル内の変分プラメータの種類([int09])を指定します。値は0以上[int01]{未満}です。
-
- \item  $[$double01$]$
-    
-   {\bf 形式 :} double型 (空白不可)
-
-  {\bf 説明 :} 変分パラメータの実部を与えます。
-  
- 
- \item $[$double02$]$
-   
-   {\bf 形式 :} double型
-
-  {\bf 説明 :} 変分パラメータの虚部を与えます。 \verb|DH4|指定ファイルで型を実数に指定している場合は、$[$double02$]$は入力しないでください。複素数指定の場合に$[$double02$]$がない場合には、0が代入されます。
-  
-\end{itemize}
-
-\subsubsection{使用ルール}
-本ファイルを使用するにあたってのルールは以下の通りです。
-\begin{itemize}
-\item 行数固定で読み込みを行う為、ヘッダの省略はできません。
-\item 成分が重複して指定された場合にはエラー終了します。
-\item $[$int01$]$と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
-\item \verb|DH4|指定ファイルで型を実数に指定した状態で、$[$double02$]$が入力されるとエラー終了します。
-
-\end{itemize}
-
-\newpage
-\subsection{InOrbital指定ファイル}
-\label{Subsec:InOrbital}
-\begin{equation}
-|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle
-\end{equation}
-で表されるペア軌道の設定を行います。指定するパラメータはサイト番号$i, j$と変分パラメータ$f_{ij}$の初期値を設定します。以下にファイル例を記載します。
-
-\begin{minipage}{12.5cm}
-\begin{screen}
-\begin{verbatim}
-====================================
-NOrbitalIdx 64  
-====================================
-==  i_j_OrbitalIdx  ==
-====================================
-   0     0     0.1    0.0 
-   0     1     0.1    0.0     
-   0     2     0.1    0.0    
-   0     3     0.1    0.0    
- (continue...)
-  15     9     0.2    0.0 
-  15    10    0.2    0.0 
-\end{verbatim}
-\end{screen}
-\end{minipage}
-
-\subsubsection{ファイル形式}
-以下のように行数に応じ異なる形式をとります($N_s$はサイト数)。
- \begin{itemize}
-   \item  1行:  ヘッダ(何が書かれても問題ありません)。
-   \item  2行:   [string01]~[int01]
-   \item  3-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6 - 5+$N_s^2$行: [int02]~[int03]~[double01]~[double02]
-  \end{itemize}
-\subsubsection{パラメータ}
- \begin{itemize}
-
-   \item  $[$string01$]$
-   
-    {\bf 形式 :} string型 (空白不可)
-
-   {\bf 説明 :} 変分パラメータのセット総数のキーワード名を指定します(任意)。
-
-   \item  $[$int01$]$
-   
-    {\bf 形式 :} int型 (空白不可)
-
-   {\bf 説明 :} 変分パラメータのセット総数を指定します。
-
-  \item  $[$int02$]$, $[$int03$]$
-   
- {\bf 形式 :} int型 (空白不可)
-
-{\bf 説明 :} サイト番号を指定する整数。0以上\verb|Nsite|{未満}で指定します。
- 
-  \item  $[$double01$]$
-    
-   {\bf 形式 :} double型 (空白不可)
-
-  {\bf 説明 :} 変分パラメータの実部を与えます。
-  
- 
- \item $[$double02$]$
-   
-   {\bf 形式 :} double型
-
-  {\bf 説明 :} 変分パラメータの虚部を与えます。 \verb|Orbital|指定ファイルで型を実数に指定している場合は、$[$double02$]$は入力しないでください。複素数指定の場合に$[$double02$]$がない場合には、0が代入されます。
-
-  
-\end{itemize}
-
-\subsubsection{使用ルール}
-本ファイルを使用するにあたってのルールは以下の通りです。
-\begin{itemize}
-\item 行数固定で読み込みを行う為、ヘッダの省略はできません。
-\item 成分が重複して指定された場合にはエラー終了します。
-\item $[$int01$]$と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
-\item $[$int02$]$, $[$int03$]$を指定する際、範囲外の整数を指定した場合はエラー終了します。
-\item \verb|Orbital|指定ファイルで型を実数に指定した状態で、$[$double02$]$が入力されるとエラー終了します。
-\item \verb|Orbital|指定ファイルで紐付けされるサイト番号とパラメータの種類と、入力ファイルで指定されるパラメータの値の整合性がとれない場合は警告を出します。その際、入力値としては平均された値が採用されます。
-\end{itemize}
-
 
 
 \newpage
@@ -2955,27 +2626,27 @@ SR 法の各ステップにおける変分パラメータとエネルギーがzq
 xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。
 
 \subsection{gutzwiller\_opt.dat}
-SR法で最適化されたGutzwiller因子が出力されます。出力形式はSec. \ref{Subsec:InGutzwiller}のInGutzwiller指定ファイルと同じです。
+SR法で最適化されたGutzwiller因子が出力されます。出力形式はSec. \ref{Subsec:InputParam}のInGutzwiller指定ファイルと同じです。
 
 \subsection{jastrow\_opt.dat}
-SR法で最適化されたJastrow因子が出力されます。出力形式はSec. \ref{Subsec:InJastrow}のInJastrow指定ファイルと同じです。
+SR法で最適化されたJastrow因子が出力されます。出力形式はSec. \ref{Subsec:InputParam}のInJastrow指定ファイルと同じです。
 
 \subsection{doublonHolon2site\_opt.dat}
-SR法で最適化された2サイトのdoublon-holon相関因子が出力されます。出力形式はSec. \ref{Subsec:InDH2}のInDH2指定ファイルと同じです。
+SR法で最適化された2サイトのdoublon-holon相関因子が出力されます。出力形式はSec. \ref{Subsec:InputParam}のInDH2指定ファイルと同じです。
 
 \subsection{doublonHolon4site\_opt.dat}
-SR法で最適化された4サイトのdoublon-holon相関因子が出力されます。出力形式はSec. \ref{Subsec:InDH4}のInDH4指定ファイルと同じです。
+SR法で最適化された4サイトのdoublon-holon相関因子が出力されます。出力形式はSec. \ref{Subsec:InputParam}のInDH4指定ファイルと同じです。
 
 \subsection{orbital\_opt.dat}
-SR法で最適化されたペア軌道の変分パラメータが出力されます。出力形式はSec. \ref{Subsec:InOrbital}のInOrbital指定ファイルと同じです。
+SR法で最適化されたペア軌道の変分パラメータが出力されます。出力形式はSec. \ref{Subsec:InputParam}のInOrbital指定ファイルと同じです。
 
 \subsection{xxx\_out\_yyy.dat}
 ビン毎の計算情報として、
 \begin{equation}
 \langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2} \nonumber
 \end{equation}
-が順に出力されます。$\langle H \rangle$については実部と虚部がそれぞれ出力され、それ以外は実部のみ出力されます。以下に出力例を記載します。
-xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。
+が順に出力されます。$\langle H \rangle$については実部と虚部がそれぞれ出力され、それ以外は実部のみ出力されます。
+xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。以下に出力例を記載します。
 
 \begin{minipage}{13cm}
 \begin{screen}
@@ -2992,7 +2663,7 @@ xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|Mod
 \end{minipage}
 
 \subsection{CalcTimer.dat }
-計算終了後に、処理毎の計算処理時間が処理プロセス、プロセスに割り当てられた番号、秒数の順に出力されます。出力例は以下の通りです。
+計算終了後に、処理毎の計算処理時間がプロセス名、プロセスに割り当てられた番号、秒数の順に出力されます。出力例は以下の通りです。
 
 \begin{minipage}{15.5cm}
 \begin{screen}
