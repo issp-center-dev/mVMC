@@ -3,7 +3,7 @@
 \chapter{File specification}
 
 %----------------------------------------------------------
-\section{Input files for {\it Standard} mode}
+\section{Input files for \texttt{vmcdry.out}}
 \label{Ch:HowToStandard}
 
 An example of input file for the standard mode is shown below:
@@ -271,22 +271,23 @@ This file can be read by \verb|gnuplot| as follows:
 $ gnuplot lattice.gp
 \end{verbatim}
 
-\subsection{副格子}
+\subsection{Sublattice}
 
-以下パラメータを用いると変分波動関数のペア軌道部分に副格子の周期性を持たせることが出来ます。
+By using the following parameters, we can force the pair-orbital symmetrical
+to the translation of the sublattice.
 
 \begin{itemize}
 
 \item \verb|a0Wsub|, \verb|a0Lsub|, \verb|a1Wsub|, \verb|a1Lsub|, \verb|Wsub|, \verb|Lsub|
 
-{\bf Type :} 自然数。デフォルトでは
+{\bf Type :} Positive integer. In the default setting, 
 \verb|a0Wsub=a0W|, \verb|a0Lsub=a0L|, \verb|a1Wsub=a1W|, \verb|a1Lsub=a1L|, 
-\verb|Wsub=W|, \verb|Lsub=L|となる。
+\verb|Wsub=W|, and \verb|Lsub=L|.
 
-{\bf Description :} これらのパラメーターの指定の仕方は
-\verb|a0W|, \verb|a0L|, \verb|a1W|, \verb|a1L|, \verb|W|, \verb|L|
-と同様です。
-ただし、元の計算セルが副格子に整合しない場合にはプログラムを終了します。
+{\bf Description :} We can specify these parameter as we specify
+\verb|a0W|, \verb|a0L|, \verb|a1W|, \verb|a1L|, \verb|W|, \verb|L|.
+If the sublattice is incommensurate with the original lattice,
+\verb|vmcdry.out| stops.
 
 \end{itemize}
 
@@ -296,7 +297,6 @@ A default value is set as $0$ unless a specific value is not defined in a descri
 Table~\ref{table_interactions} shows the parameters for each models. 
 In the case of a complex type, a file format is ``{\it a real part, an imaginary part} "
  while in the case of a real type, only ``{\it a real part} ".
-
 
 \subsubsection{Local terms}
 
@@ -547,86 +547,84 @@ If both \verb|J'| and the set of the couplings (\verb|J'x, J'y, J'z|),
 
 \item \verb|phase0|, \verb|phase1|
 
-  {\bf Type :} 複素数(デフォルトでは\verb|1.0|)
+  {\bf Type :} Double complex (\verb|1.0| as defaults)
   
-  {\bf Description :} 計算するセルの境界をまたいだホッピング項に付く位相因子を指定することが出来ます。
-  $\vec{a}_0$方向、$\vec{a}_1$方向それぞれ別の位相因子を用いることが出来ます。
-  １次元系では\verb|phase0|のみ使用できます。
-  例えば、$i$サイトから$i+1$サイトへのホッピングで、
-  正の方向に境界をまたいだ場合には次のようになります。
+  {\bf Description :}
+  We can specify the phase fuctor for the hopping through the cell boundary
+  with these parameter.
+  These fuctor for the $\vec{a}_0$ direction and the $\vec{a}_1$ direction can be specified independently.
+  For the one-dimensional system, only \verb|phase0| can be used.
+  For example, a fopping from $i$-th site to $i+1$-th site through the cell boundary with the positive direction
+  becomes as 
   \begin{align}
     ({\rm phase0}) \times t {\hat c}_{i+1 \sigma}^\dagger {\hat c}_{i \sigma}
-    + ({\rm phase0})^* \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{i+1 \sigma}
+    + ({\rm phase0})^* \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{i+1 \sigma}.
   \end{align}
 
 \end{itemize}
 
-\subsection{計算条件のパラメーター}
+\subsection{Parameters for the numerical condition}
 
 \begin{itemize}
 
 \item \verb|OutputMode|
 
-  {\bf Type :} \verb|"none"|, \verb|"correlation"|, \verb|"full"|のいずれか(デフォルトは\verb|correlation|)
+  {\bf Type :} Choose from \verb|"none"|, \verb|"correlation"|, and \verb|"full"|
+  (\verb|correlation| as a default)
 
-  {\bf Description :} 計算を行う相関関数を指定します。
-\verb|"none"|の場合は相関関数を計算しません。
-\verb|"correlation"|を指定した場合には、1体部分はすべての$i, \sigma$について
-$\langle c_{i \sigma}^{\dagger}c_{i \sigma} \rangle$を、
-2体部分はすべての$i, j, \sigma, \sigma'$について
-$\langle c_{i \sigma}^{\dagger}c_{i \sigma} c_{j \sigma'}^{\dagger}c_{j \sigma'} \rangle$
-を計算します。
-\verb|"full"|を指定した場合には、
-1体部分はすべての$i, j, \sigma, \sigma'$について
-$\langle c_{i \sigma}^{\dagger}c_{j \sigma'} \rangle$を、
-2体部分はすべての$i_1, i_2, i_3, i_4, \sigma_1, \sigma_2, \sigma_3, \sigma_4$について
-$\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_{i_4 \sigma_4} \rangle$
-を計算します。
-スピン系の演算子はBogoliubov表現により生成消滅演算子で表されています。
-詳しくは\ref{sec_bogoliubov_rep}をご覧ください。
+  {\bf Description :} Indices of correlation functions
+  are specified with this keyword.
+  \verb|"none"| indicates correlation functions will not calculated.
+  When \verb|outputmode="correlation"|,
+  $\langle c_{i \sigma}^{\dagger}c_{i \sigma} \rangle$ is computed at all $i, \sigma$,
+  and
+  $\langle c_{i \sigma}^{\dagger}c_{i \sigma} c_{j \sigma'}^{\dagger}c_{j \sigma'} \rangle$
+  is computed at all $i, j, \sigma, \sigma'$.
+  If \verb|"full"| is selected,
+  $\langle c_{i \sigma}^{\dagger}c_{j \sigma'} \rangle$ is computed at all $i, j, \sigma, \sigma'$,
+  and
+  $\langle c_{i_1 \sigma}^{\dagger}c_{i_2 \sigma} c_{i_3 \sigma'}^{\dagger}c_{i_4 \sigma'} \rangle$
+  is computed at all $i_1, i_2, i_3, i_4, \sigma, \sigma'$.
+  
+  In spin system, 
+  indices are specified as those on the Bogoliubov representation
+  (See \ref{sec_bogoliubov_rep}).
 
   \item  \verb|CDataFileHead|
 
- {\bf Type :} string-type (blank parameter not allowed、必須)
+ {\bf Type :} string-type (blank parameter not allowed)
 
-{\bf Description :} アウトプットファイルのヘッダ。例えば、一体のGreen関数の出力ファイル名が{\bf xxx\_cisajs.dat}として出力されます(xxxに\verb|CDataFileHead|で指定した文字が記載)。
+{\bf Description :} A header for output files. For example, the output filename for one body Green's function becomes ``{\bf xxx\_cisajs\_yyy.dat}" (xxx are characters set by \verb|CDataFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|). 
 
  \item  \verb|CParaFileHead|
 
- {\bf Type :} string-type (blank parameter not allowed、必須)
+ {\bf Type :} string-type (blank parameter not allowed)
 
-{\bf Description :} 最適化された変分パラメータの出力ファイル名のヘッダ。最適化された変分パラメータが{\bf xxx\_opt.dat}ファイルとして出力されます(xxxに\verb|CParaFileHead|で指定した文字が記載)。
- 
+{\bf Description :}  A header for output files of the optimized variational parameters. For example, the optimized variational parameters are outputted as  {\bf zzz\_opt\_yyy.dat} (zzz are characters set by \verb|CParaFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|-1).
  
  \item  \verb|NVMCCalMode|
 
- {\bf Type :} int-type (\tr{デフォルト値 = 0})
+ {\bf Type :} int-type (default value: 0)
 
-{\bf Description :} [0] 変分パラメータの最適化、[1] 1 体・2 体のグリーン関数の計算。
- 
+{\bf Description :} [0] Optimization of variational parameters, [1] Calculation of one body and two body Green's functions.
+
  \item  \verb|NLanczosMode|
 
- {\bf Type :} int-type (\tr{デフォルト値 = 0})
+ {\bf Type :} int-type (default value: 0)
 
-{\bf Description :} [0] 何もしない、[1] Single Lanczos Step でエネルギーまで計算、
-[2] Single Lanczos Step で1 体・2 体のグリーン関数まで計算
-(条件: 1, 2 は\verb|NVMCCalMode| = 1のみ使用可能. 
-また, pair hopping項, exchange 項がハミルトニアンに含まれる場合は使用できません)。
+{\bf Description :} [0] Not using single Lanczos step, [1] Calculating energy by using Single Lanczos Step, [2] Calculating one body and two body Green's functions by using Single Lanczos Step (Condigion: The options 1 and 2 can be selected when \verb|NVMCCalMode| = 1. When Hamiltonian includes  pair hopping or exchange terms, the options 1 and 2 cannot be used).
  
  \item  \verb|NDataIdxStart|
 
- {\bf Type :} int-type (\tr{デフォルト値 = 0})
+ {\bf Type :} int-type (default value: 0)
 
-{\bf Description :} 出力ファイルの付加番号。
-\verb|NVMCCalMode|= 0 の場合は\verb|NDataIdxStart|が出力され、 
-\verb|NVMCCalMode| = 1 の場合は、
-\verb|NDataIdxStart|から連番で\verb|NDataQtySmp|個のファイルを出力します。
+{\bf Description :} An integer for numbering of output files. For \verb|NVMCCalMode|= 0 , \verb|NDataIdxStart| is added at the end of the output files. For \verb|NVMCCalMode| = 1,  the files are outputted with the number from \verb|NDataIdxStart| to  \verb|NDataIdxStart|+\verb|NDataQtySmp|-1.
    
  \item  \verb|NDataQtySmp|
 
- {\bf Type :} int-type (\tr{デフォルト値 = 1})
+ {\bf Type :} int-type (default value: 1)
 
-{\bf Description :} 出力ファイルのセット数。 \verb|NVMCCalMode| = 1 の場合に使用します。
+{\bf Description :} The set number for outputted files (only used for \verb|NVMCCalMode| = 1). 
 
 \item  \verb|nelec|
 
@@ -635,99 +633,107 @@ $\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_
   {\bf Description :} \tr{伝導電子の数。
     $\uparrow$電子と$\downarrow$電子の個数を足したものを入力してください。}
 
-\item  \verb|NSPGaussLeg|
+ \item  \verb|NSPGaussLeg|
 
-  {\bf Type :} {int-type (1以上、\tr{デフォルト値 = 8})}
+{\bf Type :} {int-type (Positive integer, default value: 8)}
 
-  {\bf Description :} スピン量子数射影の$\beta$積分($S^y$回転)のGauss-Legendre求積法の分点数。
+{\bf Description :} The mesh number for the Gauss-legendre quadrature about $\beta$ integration ($S_y$ rotation) for the spin quantum-number projection in actual numerical calculation.
 
+ \item  \verb|NSPStot|
 
-\item  \verb|NSPStot|
+{\bf Type :} int-type ( greater than 0,  default value: 0)
 
-  {\bf Type :} int-type (0以上、\tr{デフォルト値 = 0})
-
-  {\bf Description :}  スピン量子数。
+{\bf Description :}   The spin quantum-number. 
 
 \item  \verb|NMPTrans|
 
-  {\bf Type :} int-type (1以上、\tr{デフォルト値は副格子内部の並進ベクトルの数})
+  {\bf Type :} int-type (Positive integer.
+  As a defalut, The number of translational vectors in the sublattice)
 
   {\bf Description :} 
-  運動量・格子対称性の量子数射影の個数。
-  TransSymファイルで指定した重みで上から\verb|NMPTrans|個まで使用する。\tr{射影を行わない場合は1に設定する。}
+  The number of the momentum and lattice translational quantum-number projection.
+  In the case of not to apply the projection, this value must be set as 1.
 
  \item  \verb|NSROptItrStep|
 
-{\bf Type :} int-type (1以上、\tr{デフォルト値 = 1000})
+{\bf Type :} int-type (Positive integer, default value: 1000)
 
 {\bf Description :} 
-SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場合のみ使用されます。
+The whole step number to optimize variational parameters by SR method. Only used for \verb|NVMCCalMode|=0.
  
  \item  \verb|NSROptItrSmp|
 
-{\bf Type :} int-type (1以上数、\tr{デフォルト値 = }\verb|NSROptItrStep|/10)
+{\bf Type :} int-type (Positive integer, default value: \verb|NSROptItrStep|/10)
 
-{\bf Description :} \verb|NSROptItrStep|ステップ中、最後の\verb|NSROptItrSmp|ステップでの各変分パラメータの平均値を最適値とする。\verb|NVMCCalMode|=0の場合のみ使用されます。
+{\bf Description :} In the \verb|NSROptItrStep| step, the average values of the each variational parameters at the \verb|NSROptItrStep| step are adopted as the optimized values. Only used for \verb|NVMCCalMode|=0.
 
 \item   \verb|DSROptRedCut|
    
-{\bf Type :} double-type (\tr{デフォルト値 = 0.001})
+{\bf Type :} double-type (default value: 0.001)
 
-{\bf Description :} SR 法安定化因子。手法論文の$\varepsilon_{\rm wf}$に対応。
+{\bf Description :} The stabilized factor for the SR method by truncation of redundant directions corresponding to $\varepsilon_{\rm wf}$ in the ref. \cite{doi:10.1143/JPSJ.77.114701}.
 
  \item  \verb|DSROptStaDel| 
    
- {\bf Type :} double-type (\tr{デフォルト値 = 0.02})
+ {\bf Type :} double-type (default value: 0.02)
 
-  {\bf Description :} SR 法安定化因子。手法論文の$\varepsilon$に対応。
+  {\bf Description :} The stabilized factor for the SR method by modifying diagonal elements in the overwrap matrix corresponding to $\varepsilon$ in the ref. \cite{doi:10.1143/JPSJ.77.114701}.
      
 \item \verb|DSROptStepDt|
 
-{\bf Type :} double-type (\tr{デフォルト値 = 0.02})
+{\bf Type :} double-type 
 
 {\bf Description :} \tr{要確認(マニュアルにDescriptionなし)}
  
 \item \verb|NVMCWarmUp|
 
-{\bf Type :} int-type (1以上、\tr{デフォルト値=10})
+{\bf Type :} int-type (Positive integer, default value: 10)
 
-{\bf Description :}マルコフ連鎖の空回し回数。
+{\bf Description :} Idling number for the Malkov chain Montecarlo Methods.
 
 \item \verb|NVMCIniterval|
 
-{\bf Type :} int-type (1以上、\tr{デフォルト値=1})
+{\bf Type :} int-type (Positive integer, default value: 1)
 
-{\bf Description :} サンプル間のステップ間隔。ローカル更新が\verb|Nsite|× \verb|NVMCIniterval| 回行わます。
+{\bf Description :} The interval step between samples. The local update will be performed \verb|Nsite|× \verb|NVMCIniterval| times.
 
 \item \verb|NVMCSample|
 
-{\bf Type :} int-type (1以上、\tr{デフォルト値=1000})
+{\bf Type :} int-type (Positive integer, default value: 1000)
 
-{\bf Description :} 期待値計算に使用するサンプル数。
+{\bf Description :} The sample numbers to calculate the expected values.
+
+\item \verb|NExUpdatePath|
+
+{\bf Type :} int-type (Positive integer)
+
+{\bf Description :}  The option for local update about exchange terms. 0: not update, 1: update. The default value is set as 1 when the local spin exists, otherwise 0.
 
 \item \verb|RndSeed|
 
 {\bf Type :} int-type 
 
-{\bf Description :} 乱数の初期seed。\tr{MPI 並列では各計算機に}\verb|RndSeed|\tr{+my rank+1 で初期seed が与えられます。}
+{\bf Description :} The initial seed of generating random number. For MPI parallelization, the initial seeds are given by \verb|RndSeed|+my rank+1 at each ranks. 
 
  \item \verb|NSplitSize|
 
-{\bf Type :} int-type (1以上、\tr{デフォルト値=1})
+{\bf Type :} int-type (Positive integer, default value: 1)
 
-{\bf Description :} mpi内部並列を行う場合の並列数。
+{\bf Description :} The number of processes of MPI parallelization.
 
 \item \verb|NStoreOO|
 
-{\bf Type :} int-type (1以上、\tr{デフォルト値=1})
+{\bf Type :} int-type (Positive integer, default value: 0)
 
-{\bf Description :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にするオプション(1で機能On)。
- 
+{\bf Description :} The option of applying matrix-matrix product to calculate expected values $\langle O_k O_l \rangle$ (0: off, 1: on).
+  
 \item  \verb|ComplexType|
   
-  {\bf Type :} int-type (\verb|0|もしくは\verb|1|、デフォルト値\verb|0|)
+  {\bf Type :} int-type (\verb|0| or \verb|1|. \verb|0| as a default)
 
-  {\bf Description :} \verb|0|のとき変分パラメータの実部のみを、\verb|1|のとき実部/虚部両方を最適化します。
+  {\bf Description :}
+  If it is \verb|0|, only the real part of the variational parameters are optimized.
+  And the real and the imaginary part of them are optimized if this parameter is \verb|1|.
 
 \end{itemize}
 
