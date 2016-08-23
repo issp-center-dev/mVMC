@@ -32,7 +32,7 @@ void VMCMainCal(MPI_Comm comm) {
   const int qpStart=0;
   const int qpEnd=NQPFull;
   int sample,sampleStart,sampleEnd,sampleSize;
-  int i,info;
+  int i,info,tmp_i;
 
   /* optimazation for Kei */
   const int nProj=NProj;
@@ -46,8 +46,9 @@ void VMCMainCal(MPI_Comm comm) {
   SplitLoop(&sampleStart,&sampleEnd,NVMCSample,rank,size);
 
   /* initialization */
+  StartTimer(24);
   clearPhysQuantity();
-
+  StopTimer(24);
   for(sample=sampleStart;sample<sampleEnd;sample++) {
     eleIdx = EleIdx + sample*Nsize;
     eleCfg = EleCfg + sample*Nsite2;
@@ -60,7 +61,13 @@ void VMCMainCal(MPI_Comm comm) {
 //DEBUG
 
     StartTimer(40);
-    info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd);
+    if(AllComplexFlag==0){
+       info = CalculateMAll_real(eleIdx,qpStart,qpEnd); // InvM_real,PfM_real will change
+       #pragma omp parallel for default(shared) private(tmp_i)
+       for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)  InvM[tmp_i]= InvM_real[tmp_i]; // InvM will be used in  SlaterElmDiff_fcmp
+    }else{
+      info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd); // InvM,PfM will change
+    }
     StopTimer(40);
 
     if(info!=0) {
@@ -68,7 +75,11 @@ void VMCMainCal(MPI_Comm comm) {
       continue;
     }
 
-    ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+    if(AllComplexFlag==0){
+      ip = CalculateIP_real(PfM_real,qpStart,qpEnd,MPI_COMM_SELF);
+    }else{
+      ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+    } 
     //printf("DEBUG: sample=%d ip= %lf %lf\n",sample,creal(ip),cimag(ip));
     x = LogProjVal(eleProjCnt);
     /* calculate reweight */
@@ -109,7 +120,7 @@ void VMCMainCal(MPI_Comm comm) {
 
       StartTimer(42);
       /* SlaterElmDiff */
-      SlaterElmDiff_fcmp(SROptO+2*NProj+2,ip,eleIdx); //TBC
+      SlaterElmDiff_fcmp(SROptO+2*NProj+2,ip,eleIdx); //TBC: using InvM not InvM_real
       StopTimer(42);
       
       if(FlagOptTrans>0) { // this part will be not used
@@ -170,7 +181,6 @@ void VMCMainCal(MPI_Comm comm) {
       }
     }
   } /* end of for(sample) */
-
 // calculate OO and HO at NVMCCalMode==0
   if(NStoreO!=0 && NVMCCalMode==0){
     sampleSize=sampleEnd-sampleStart;
@@ -190,10 +200,12 @@ void clearPhysQuantity(){
     /* SROptOO, SROptHO, SROptO */
     n = (2*SROptSize)*(2*SROptSize+2); // TBC
     vec = SROptOO;
+    #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
 // only for real variables
     n = (SROptSize)*(SROptSize+2); // TBC
     vec_real = SROptOO_real;
+    #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec_real[i] = 0.0;
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
