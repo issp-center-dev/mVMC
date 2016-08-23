@@ -17,7 +17,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
   int nAccept=0;
   int sample;
 
-  double complex logIpOld,logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
+  double  logIpOld,logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
   int projCntNew[NProj];
   double complex pfMNew[NQPFull];
   double         pfMNew_real[NQPFull];
@@ -33,14 +33,6 @@ void VMCMakeSample_real(MPI_Comm comm) {
   SplitLoop(&qpStart,&qpEnd,NQPFull,rank,size);
 
   
-// only for real TBC
-  StartTimer(69);
-  for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
-  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
-  StopTimer(69);
-  // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-// only for real TBC
-
   StartTimer(30);
   if(BurnFlag==0) {
     makeInitialSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,
@@ -103,7 +95,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
         /* Metroplis */
         x = LogProjRatio(projCntNew,TmpEleProjCnt);
-        w = exp(2.0*(x+creal(logIpNew-logIpOld)));
+        w = exp(2.0*(x+(logIpNew-logIpOld)));
         if( !isfinite(w) ) w = -1.0; /* should be rejected */
 
         if(w > genrand_real2()) { /* accept */
@@ -149,18 +141,18 @@ void VMCMakeSample_real(MPI_Comm comm) {
         StopTimer(65);
         StartTimer(66);
 
-        CalculateNewPfMTwo2_fcmp(mi, s, mj, t, pfMNew, TmpEleIdx, qpStart, qpEnd);
+        CalculateNewPfMTwo2_real(mi, s, mj, t, pfMNew_real, TmpEleIdx, qpStart, qpEnd);
         StopTimer(66);
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
+        logIpNew = CalculateLogIP_real(pfMNew_real,qpStart,qpEnd,comm);
 
         StopTimer(67);
 
         /* Metroplis */
         x = LogProjRatio(projCntNew,TmpEleProjCnt);
-        w = exp(2.0*(x+creal(logIpNew-logIpOld))); //TBC
+        w = exp(2.0*(x+(logIpNew-logIpOld))); //TBC
         if( !isfinite(w) ) w = -1.0; /* should be rejected */
 
         if(w > genrand_real2()) { /* accept */
@@ -199,11 +191,6 @@ void VMCMakeSample_real(MPI_Comm comm) {
     StopTimer(35);
 
   } /* end of outstep */
-// only for real TBC
-  StartTimer(69);
-  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i];
-  StopTimer(69);
-// only for real TBC
 
   copyToBurnSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt);
   BurnFlag=1;
