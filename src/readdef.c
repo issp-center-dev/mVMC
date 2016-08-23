@@ -751,8 +751,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	/*qptransidx.def------------------------------------*/
 	if(NQPTrans>0){
 	  for(i=0;i<NQPTrans;i++){
-	    fscanf(fp, "%d ", &itmp);
-	    fscanf(fp, "%lf %lf\n", &dReValue, &dImValue);
+		 itmp=0; dReValue=0; dImValue=0;
+		 fgets(ctmp2, D_CharTmpReadDef,fp);
+		 sscanf(ctmp2, "%d %lf %lf\n",&itmp, &dReValue, &dImValue);
 		ParaQPTrans[itmp]=dReValue+I*dImValue;
 	  }
 	  idx = 0;
