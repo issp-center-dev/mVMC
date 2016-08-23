@@ -5,7 +5,7 @@ void makeham(struct BindStruct *X){
     time_t start,end;
     FILE *fp;
     char sdt[256];
-    int int_i,int_j,site_1,site_2,int_spin;
+    int int_i,int_j,site_1,site_2,int_spin1, int_spin2;
     int t_site_1,t_site_2;
     int u_site_1,u_site_2;
     int d_site_1,d_site_2;
@@ -23,12 +23,14 @@ void makeham(struct BindStruct *X){
     /*Transfer input*/
     for(int_i =0; int_i < X->Def.NTransfer; int_i++){
       site_1    = X->Def.Transfer[int_i][0];
-      site_2    = X->Def.Transfer[int_i][1];
-      int_spin  = X->Def.Transfer[int_i][2];
+      site_2    = X->Def.Transfer[int_i][2];
+      int_spin1  = X->Def.Transfer[int_i][1];
+      int_spin2  = X->Def.Transfer[int_i][3];
+
       tmp       = -X->Def.ParaTransfer[int_i];
 
-      t_site_1  = site_1+int_spin*Ns;
-      t_site_2  = site_2+int_spin*Ns;
+      t_site_1  = site_1+int_spin1*Ns;
+      t_site_2  = site_2+int_spin2*Ns;
 
       X->Large.Ham[t_site_1][t_site_2] += tmp;
     }

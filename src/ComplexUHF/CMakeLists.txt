@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.0 FATAL_ERROR)
-project(mVMC NONE)
+project(UHF NONE)
 
 if(CONFIG)
   message(STATUS "Loading configration: " ${PROJECT_SOURCE_DIR}/config/${CONFIG}.cmake)

@@ -28,7 +28,6 @@ double gettimeofday_sec(){
   return tv.tv_sec + (double)tv.tv_usec*1e-6;
 } 
 
-#define D_FileNameMax 200
 /*global variables---------------------------------------------*/
 struct EDMainCalStruct X;
 /*-------------------------------------------------------------*/
