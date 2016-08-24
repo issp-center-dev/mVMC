@@ -33,7 +33,7 @@ void CalcAveVar(int i, int n, double complex* _ave, double* _var){
 
 void WriteHeader(char* cNKWidx, int NKWidx, FILE *fp){
   fprintf(fp, "======================\n");
-  fprintf(fp, cNKWidx);
+  fprintf(fp, "%s", cNKWidx);
   fprintf(fp, "  %d\n", NKWidx);
   fprintf(fp, "======================\n");
   fprintf(fp, "======================\n");
@@ -74,9 +74,9 @@ void OutputOptData() {
   char fileName[D_FileNameMax];
   FILE *fp;
   //double ave,var,data;
-  double complex ave,data;
+  double complex ave;
   double var;
-  int sample,i;
+  int i;
   int count_i;
   sprintf(fileName, "%s_opt.dat", CParaFileHead);
   fp = fopen(fileName, "w");

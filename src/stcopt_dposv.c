@@ -24,7 +24,7 @@ int StochasticOpt(MPI_Comm comm) {
   double *g; /* the energy gradient and the prameter change */
   int nSmat;
 
-  int paraToSmatIdx[2*NPara], smatToParaIdx[2*NPara];
+  int smatToParaIdx[2*NPara];
 
   int optNum=0,cutNum=0;
   double sDiag,sDiagMax,sDiagMin;
@@ -32,12 +32,11 @@ int StochasticOpt(MPI_Comm comm) {
 
   double diagCutThreshold;
 
-  FILE *fp;
   double rmax;
   int simax;
 
-  int si,sj; /* index for matrix S */
-  int pi,pj; /* index for variational parameters */
+  int si; /* index for matrix S */
+  int pi; /* index for variational parameters */
 
   int info=0;
   int rank,size;
@@ -92,17 +91,17 @@ int StochasticOpt(MPI_Comm comm) {
   si = 0;
   for(pi=0;pi<2*NPara;pi++) {
     if(OptFlag[pi]!=1) { /* fixed by OptFlag */
-      paraToSmatIdx[pi] = -1;
+//      paraToSmatIdx[pi] = -1;
       optNum++;
       continue;
     }
 
     sDiag = sDiagElm[pi];
     if(sDiag < diagCutThreshold) { /* fixed by diagCut */
-      paraToSmatIdx[pi] = -1;
+  //    paraToSmatIdx[pi] = -1;
       cutNum++;
     } else { /* optimized */
-      paraToSmatIdx[pi] = si;
+    //  paraToSmatIdx[pi] = si;
       smatToParaIdx[si] = pi;
       si += 1;
     }
@@ -179,7 +178,6 @@ int stcOptMain(double *const s, double *const g, const int nSmat) {
   /* for DPOSV */
   char uplo;
   int n,nrhs,lds,ldg,info;
-  int si;
   StartTimer(53);
 
   uplo='U'; n=nSmat; nrhs=1; lds=n; ldg=n;

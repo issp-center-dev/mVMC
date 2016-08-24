@@ -19,10 +19,8 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
   double  logIpOld,logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
   int projCntNew[NProj];
-  double complex pfMNew[NQPFull];
   double         pfMNew_real[NQPFull];
   double x,w; // TBC x will be complex number
-  int tmp_i; //TBC
 
   int qpStart,qpEnd;
   int rejectFlag;

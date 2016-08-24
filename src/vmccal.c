@@ -25,7 +25,7 @@ void calculateQCACAQ(double *qcacaq, const double *lslca, const double w,
 
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
-  double complex e,x,ip;
+  double complex e,ip;
   double w;
   double we,sqrtw;
 
@@ -81,7 +81,8 @@ void VMCMainCal(MPI_Comm comm) {
       ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
     } 
     //printf("DEBUG: sample=%d ip= %lf %lf\n",sample,creal(ip),cimag(ip));
-    x = LogProjVal(eleProjCnt);
+    //x = LogProjVal(eleProjCnt);
+    LogProjVal(eleProjCnt);
     /* calculate reweight */
     //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
     w =1.0;
@@ -249,22 +250,13 @@ void calculateOptTransDiff(double complex *srOptO, const double complex ipAll) {
 void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double complex *srOptO_Store,
                  const double w, const double complex e, int srOptSize, int sampleSize) {
 
-  //#define M_DGEM dgemm_
+//#define M_DGEM dgemm_
 
-  extern int dgemm_(char *jobz, char *uplo, int *m,int *n,int *k,double *alpha,  double *a, int *lda, double *b, int *ldb,
-                    double *beta,double *c,int *ldc);
+extern int
+dgemm_(char *jobz, char *uplo, int *m, int *n, int *k, double *alpha, double *a, int *lda, double *b, int *ldb,
+       double *beta, double *c, int *ldc);
 
-  char jobz, uplo;
-  double alpha,beta;
-  
-  alpha = 1.0;
-  beta  = 0.0;
-  
-  jobz = 'N';
-  uplo = 'T';
-  //dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
-
-  return;
+return;
 }
 
 
