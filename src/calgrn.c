@@ -52,12 +52,21 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
     
     #pragma omp for private(idx,ri,rj,s,rk,rl,t,tmp) schedule(dynamic)
     for(idx=0;idx<NCisAjsCktAltDC;idx++) {
+      /*
       ri = CisAjsCktAltDCIdx[idx][0];
       rj = CisAjsCktAltDCIdx[idx][1];
       s  = CisAjsCktAltDCIdx[idx][2];
       rk = CisAjsCktAltDCIdx[idx][3];
       rl = CisAjsCktAltDCIdx[idx][4];
       t  = CisAjsCktAltDCIdx[idx][5];
+      */
+      ri = CisAjsCktAltDCIdx[idx][0];
+      rj = CisAjsCktAltDCIdx[idx][2];
+      s  = CisAjsCktAltDCIdx[idx][1];
+      rk = CisAjsCktAltDCIdx[idx][4];
+      rl = CisAjsCktAltDCIdx[idx][6];
+      t  = CisAjsCktAltDCIdx[idx][5];
+
       tmp = GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,
                        myProjCntNew,myBuffer);
       PhysCisAjsCktAltDC[idx] += w*tmp;

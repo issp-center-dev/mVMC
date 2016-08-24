@@ -18,8 +18,8 @@ void InitFile(char *xNameListFile, int rank) {
 
   if(rank!=0) return;
 
-  sprintf(fileName, "%s_cfg_%03d.dat", CDataFileHead, NDataIdxStart);
-  writeConfig(xNameListFile, fileName);
+  //sprintf(fileName, "%s_cfg_%03d.dat", CDataFileHead, NDataIdxStart);
+  //writeConfig(xNameListFile, fileName);
 
   sprintf(fileName, "%s_time_%03d.dat", CDataFileHead, NDataIdxStart);
   FileTime = fopen(fileName, "w");
@@ -73,15 +73,21 @@ void InitFilePhysCal(int i, int rank) {
   }
 
   /* Green function */
-  sprintf(fileName, "%s_cisajs_%03d.dat", CDataFileHead, idx);
-  FileCisAjs = fopen(fileName, "w");
+  if(NCisAjs>0){
+    sprintf(fileName, "%s_cisajs_%03d.dat", CDataFileHead, idx);
+    FileCisAjs = fopen(fileName, "w");
+  }
 
-  sprintf(fileName, "%s_cisajscktalt_%03d.dat", CDataFileHead, idx);
-  FileCisAjsCktAlt = fopen(fileName, "w");
+  if(NCisAjsCktAlt>0){
+    sprintf(fileName, "%s_cisajscktaltex_%03d.dat", CDataFileHead, idx);
+    FileCisAjsCktAlt = fopen(fileName, "w");
+  }
 
-  sprintf(fileName, "%s_cisajscktaltdc_%03d.dat", CDataFileHead, idx);
-  FileCisAjsCktAltDC = fopen(fileName, "w");
-
+  if(NCisAjsCktAltDC>0){
+    sprintf(fileName, "%s_cisajscktalt_%03d.dat", CDataFileHead, idx);
+    FileCisAjsCktAltDC = fopen(fileName, "w");
+  }
+  
   if(NLanczosMode>0){
     sprintf(fileName, "%s_ls_%03d.dat", CDataFileHead, idx);
     FileLS = fopen(fileName, "w");
@@ -122,10 +128,17 @@ void CloseFilePhysCal(int rank) {
 
   fclose(FileOut);
   fclose(FileVar);
-  fclose(FileCisAjs);
-  fclose(FileCisAjsCktAlt);
-  fclose(FileCisAjsCktAltDC);
-
+  
+  if(NCisAjs>0){
+    fclose(FileCisAjs);
+  }
+  if(NCisAjsCktAlt>0){
+    fclose(FileCisAjsCktAlt);
+  }
+  if(NCisAjsCktAltDC>0){
+    fclose(FileCisAjsCktAltDC);
+  }
+  
   if(NLanczosMode>0){
     fclose(FileLS);
     fclose(FileLSQQQQ);

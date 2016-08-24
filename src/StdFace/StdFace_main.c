@@ -656,7 +656,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "DSROptStepDt   %-20.10f\n", StdI->DSROptStepDt);
   fprintf(fp, "NVMCWarmUp     %-5d\n", StdI->NVMCWarmUp);
   fprintf(fp, "NVMCIniterval  %-5d\n", StdI->NVMCIniterval);
-  fprintf(fp, "NVMCSample     %-85d\n", StdI->NVMCSample);
+  fprintf(fp, "NVMCSample     %-5d\n", StdI->NVMCSample);
   fprintf(fp, "NExUpdatePath  %-5d\n", StdI->NExUpdatePath);
   fprintf(fp, "RndSeed        %-8d\n", StdI->RndSeed);
   fprintf(fp, "NSplitSize     %-5d\n", StdI->NSplitSize);
@@ -1118,7 +1118,7 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_i("NDataIdxStart", &StdI->NDataIdxStart, 1);
 
   if (StdI->NVMCCalMode == 0) StdFace_NotUsed_i("NDataQtySmp", StdI->NDataQtySmp);
-  /*else*/StdFace_PrintVal_i("NDataQtySmp", &StdI->NDataQtySmp, 5);
+  /*else*/StdFace_PrintVal_i("NDataQtySmp", &StdI->NDataQtySmp, 1);
 
   StdFace_PrintVal_i("NSPGaussLeg", &StdI->NSPGaussLeg, 8);
   StdFace_PrintVal_i("NSPStot", &StdI->NSPStot, 0);

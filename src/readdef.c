@@ -329,10 +329,16 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     }
     MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
   }
-
+  if(rank==0){
+    AllComplexFlag  = iComplexFlgGutzwiller+iComplexFlgJastrow+iComplexFlgDH2; //TBC
+    AllComplexFlag += iComplexFlgDH4+iComplexFlgOrbital;//TBC
+    // AllComplexFlag= 0 -> All real, !=0 -> complex
+  }
+  
 #ifdef _mpi_use
   MPI_Bcast(bufInt, nBufInt, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
+  MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
   MPI_Bcast(CDataFileHead, nBufChar, MPI_CHAR, 0, comm);
   MPI_Bcast(CParaFileHead, nBufChar, MPI_CHAR, 0, comm);
@@ -370,8 +376,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NOrbitalIdx            =  bufInt[IdxNOrbit];
   NQPTrans               =  bufInt[IdxNQPTrans];
   NCisAjs                =  bufInt[IdxNOneBodyG];
-  NCisAjsCktAlt          =  bufInt[IdxNTwoBodyG];
-  NCisAjsCktAltDC        =  bufInt[IdxNTwoBodyGEx];
+  NCisAjsCktAlt          =  bufInt[IdxNTwoBodyGEx];
+  NCisAjsCktAltDC        =  bufInt[IdxNTwoBodyG];
   NInterAll              =  bufInt[IdxNInterAll];
   NQPOptTrans            =  bufInt[IdxNQPOptTrans];
 
@@ -634,8 +640,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       fidx=NGutzwillerIdx;
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
-	    //	    OptFlag[2*fidx+1] = iComplexFlgJastrow; //  TBC imaginary
-	    	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
+	    OptFlag[2*fidx+1] = iComplexFlgJastrow; //  TBC imaginary
+	    //	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
           count_idx++;
@@ -661,8 +667,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       fidx=NGutzwillerIdx+NJastrowIdx;
 	  while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));//TBC real
-	    //	    OptFlag[2*fidx+1] = iComplexFlgDH2; //  TBC imaginary
-	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
+	    OptFlag[2*fidx+1] = iComplexFlgDH2; //  TBC imaginary
+	    //OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
         count_idx++;
@@ -691,8 +697,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       fidx=NGutzwillerIdx+NJastrowIdx+2*3*NDoublonHolon2siteIdx;
         while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
-	    //	    OptFlag[2*fidx+1] = iComplexFlgDH4; //  TBC imaginary
-	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
+	    OptFlag[2*fidx+1] = iComplexFlgDH4; //  TBC imaginary
+	    //OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
             count_idx++;
@@ -727,8 +733,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
         fidx=NProj;
         while( fscanf(fp, "%d ", &i) != EOF){
 	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
-	    //	    OptFlag[2*fidx+1] = iComplexFlgOrbital; //  TBC imaginary
-	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
+	    OptFlag[2*fidx+1] = iComplexFlgOrbital; //  TBC imaginary
+	    //OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx ++;
 	    idx1++;
         count_idx++;
@@ -744,8 +750,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	/*qptransidx.def------------------------------------*/
 	if(NQPTrans>0){
 	  for(i=0;i<NQPTrans;i++){
-	    fscanf(fp, "%d ", &itmp);
-	    fscanf(fp, "%lf %lf\n", &dReValue, &dImValue);
+		 itmp=0; dReValue=0; dImValue=0;
+		 fgets(ctmp2, D_CharTmpReadDef,fp);
+		 sscanf(ctmp2, "%d %lf %lf\n",&itmp, &dReValue, &dImValue);
 		ParaQPTrans[itmp]=dReValue+I*dImValue;
 	  }
 	  idx = 0;
