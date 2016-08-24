@@ -20,7 +20,6 @@
 #include "green.h"
 #include "cal_energy.h"
 #include "output.h"
-#include "cal_cisajs.h"
 
 double gettimeofday_sec(){
   struct timeval tv;  
@@ -126,7 +125,7 @@ int main(int argc, char* argv[]){
     } 
     fclose(fp);
     output(&(X.Bind));
-    cal_cisajs(&(X.Bind));
+    //    cal_cisajs(&(X.Bind));
     if(i<X.Bind.Def.IterationMax){
       printf(" %d finish \n ",i); 
     }else{

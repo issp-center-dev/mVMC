@@ -35,7 +35,7 @@
 int DSEVvalue(int xNsize, double **A, double *r);
 int DSEVvector(int xNsize, double **A, double *r, double **vec);
 
-int ZHEEVall(int xNsize, double complex **A, double complex *r,double complex **vec);
+int ZHEEVall(int xNsize, double complex **A, double *r,double complex **vec);
 
 int cmp_MMProd(int Ns, int Ne, double complex **Mat_1, double complex **Mat_2,double complex **Mat_3);
 #endif

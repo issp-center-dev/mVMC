@@ -357,14 +357,15 @@ int DSEVXU(int xNsize, double **A, double *r, double **X, int xNev){
  * @author Takahiro Misawa (The University of Tokyo)
  * @author Kazuyoshi Yoshimi (The University of Tokyo)
  */
-int ZHEEVall(int xNsize, double complex **A, double complex *r,double complex **vec){
+int ZHEEVall(int xNsize, double complex **A, double *r,double complex **vec){
 
 	int i,j,k;
 	char jobz, uplo;
 	int n, lda, lwork, info, lrwork;
-        double *rwork;
+    double *rwork;
 	double *w;
 	double complex *a, *work;
+	info=0;
 #ifdef SR
         int *iwork, liwork;
         liwork = 5 * xNsize + 3;

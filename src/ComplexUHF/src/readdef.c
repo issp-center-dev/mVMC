@@ -12,7 +12,7 @@
 #include <ctype.h>
 
 int ReadDefFileError(
-	char *defname
+	const char *defname
 ){
 	printf("Error: %s (Broken file or Not exist)\n", defname);
 	return 0;
@@ -236,7 +236,7 @@ int ReadDefFileIdxPara(
 					X->LocSpn[x0] = x1;
 					idx++;
 				}
-				if(X->NLocSpn>2*X->Ne){
+				if(2 * X->Ne < X->NLocSpn){
 					fprintf(stderr, "Error: 2*Ne must be (2*Ne >= NLocalSpin).\n");
 					info=1;
 				}
@@ -272,7 +272,7 @@ int ReadDefFileIdxPara(
 				/*coulombintra.def----------------------------------*/
 				if(X->NCoulombIntra>0){
 					while( fscanf(fp, "%d %lf\n",
-								  &(X->CoulombIntra[idx]),
+								  &(X->CoulombIntra[idx][0]),
 								  &(X->ParaCoulombIntra[idx]) )!=EOF){
 						idx++;
 					}
