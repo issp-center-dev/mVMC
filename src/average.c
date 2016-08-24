@@ -6,6 +6,7 @@
  *-------------------------------------------------------------*/
 void WeightAverageWE(MPI_Comm comm);
 void WeightAverageSROpt(MPI_Comm comm);
+void WeightAverageSROpt_real(MPI_Comm comm);
 void WeightAverageGreenFunc(MPI_Comm comm);
 
 void weightAverageReduce(int n, double *vec, MPI_Comm comm);
@@ -52,8 +53,8 @@ void WeightAverageSROpt(MPI_Comm comm) {
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
-  /* SROptOO and SROptHO */
-  n   = 2*SROptSize*(2*SROptSize+2);
+  /* SROptOO and SROptHO */ // except for SROptO 
+  n   = 2*SROptSize*(2*SROptSize+1);
   vec = SROptOO;
   if(size>1) {
     RequestWorkSpaceComplex(n);
@@ -74,6 +75,96 @@ void WeightAverageSROpt(MPI_Comm comm) {
 
   return;
 }
+
+/* calculate average of SROptOO_real and SROptHO_real */
+/* All processes will have the result */
+void WeightAverageSROpt_real(MPI_Comm comm) {
+  int i,n;
+  double invW = 1.0/Wc;
+  double *vec,*buf;
+  int rank,size;
+  MPI_Comm_rank(comm,&rank);
+  MPI_Comm_size(comm,&size);
+
+  /* SROptOO and SROptHO */ // except for SROptO 
+  n = SROptSize*(SROptSize+1);
+  vec = SROptOO_real;
+  if(size>1) {
+    RequestWorkSpaceDouble(n);
+    buf = GetWorkSpaceDouble(n);
+
+    SafeMpiAllReduce(vec,buf,n,comm);
+
+    #pragma omp parallel for default(shared) private(i)
+    #pragma loop noalias
+    for(i=0;i<n;i++) vec[i] = buf[i] * invW;
+
+    ReleaseWorkSpaceDouble();
+ } else {
+    #pragma omp parallel for default(shared) private(i)
+    #pragma loop noalias
+    for(i=0;i<n;i++) vec[i] *= invW;
+  }
+  return;
+}
+
+
+
+/* calculate average of SROptOO and SROptHO */
+/* All processes will have the result */
+/*
+void WeightAverageSROpt_real(MPI_Comm comm) {
+  int i,n,j,int_x,int_y;
+  double invW = 1.0/Wc;
+  double *vec,*buf;
+  int rank,size;
+  MPI_Comm_rank(comm,&rank);
+  MPI_Comm_size(comm,&size);
+
+  n   = SROptSize*(SROptSize+1);
+  vec = (double*)malloc(sizeof(double)*n);
+  j   = 0;
+  #pragma omp parallel for default(shared) private(i,int_x,int_y,j)
+  #pragma loop noalias
+  for(i=0;i<4*n;i++){
+    int_x  = i%(2*SROptSize);
+    int_y  = (i-int_x)/(2*SROptSize);
+    if(int_x%2==0 && int_y%2==0){
+      j      = int_x/2+(int_y/2)*SROptSize;
+      vec[j] = creal(SROptOO[i]);// only real part TBC
+    }
+  }
+  if(size>1) {
+    RequestWorkSpaceDouble(n);
+    buf = GetWorkSpaceDouble(n);
+
+    SafeMpiAllReduce(vec,buf,n,comm);
+
+    #pragma omp parallel for default(shared) private(i)
+    #pragma loop noalias
+    for(i=0;i<n;i++) vec[i] = buf[i] * invW;
+
+    ReleaseWorkSpaceDouble();
+ } else {
+    #pragma omp parallel for default(shared) private(i)
+    #pragma loop noalias
+    for(i=0;i<n;i++) vec[i] *= invW;
+  }
+  #pragma omp parallel for default(shared) private(i,int_x,int_y,j)
+  #pragma loop noalias
+  for(i=0;i<4*n;i++){
+    int_x  = i%(2*SROptSize);
+    int_y  = (i-int_x)/(2*SROptSize);
+    if(int_x%2==0 && int_y%2==0){
+      j          = int_x/2+(int_y/2)*SROptSize;
+      SROptOO[i] = vec[j];// only real part TBC
+    }
+  }
+  free(vec);
+
+  return;
+}
+*/
 
 /* calculate average of Green functions */
 /* Only rank=0 process will have the result */

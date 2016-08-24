@@ -44,6 +44,7 @@ int StochasticOpt(MPI_Comm comm) {
   const int nPara=NPara;
   const int srOptSize=SROptSize;
   const double complex *srOptOO=SROptOO;
+  //const double         *srOptOO= SROptOO_real;
 
   double r[2*SROptSize]; /* the parameter change */
   int nSmat;
@@ -60,6 +61,9 @@ int StochasticOpt(MPI_Comm comm) {
   int simax;
   int info=0;
 
+// for real
+  int int_x,int_y,j,i;
+
   double complex *para=Para;
 
   int rank,size;
@@ -67,11 +71,26 @@ int StochasticOpt(MPI_Comm comm) {
   MPI_Comm_size(comm,&size);
 
   StartTimer(50);
-
+//[s] for only real variables TBC
+  if(AllComplexFlag==0){
+    #pragma omp parallel for default(shared) private(i,int_x,int_y,j)
+    #pragma loop noalias
+    for(i=0;i<2*SROptSize*(2*SROptSize+2);i++){
+      int_x  = i%(2*SROptSize);
+      int_y  = (i-int_x)/(2*SROptSize);
+      if(int_x%2==0 && int_y%2==0){
+        j          = int_x/2+(int_y/2)*SROptSize;
+        SROptOO[i] = SROptOO_real[j];// only real part TBC
+      }else{
+        SROptOO[i] = 0.0+0.0*I;
+      }
+    }
+  }
+//[e]
   #pragma omp parallel for default(shared) private(pi)
   #pragma loop noalias
-  //for(pi=0;pi<nPara;pi++) {
   for(pi=0;pi<2*nPara;pi++) {
+    //for(pi=0;pi<nPara;pi++) {
     /* r[i] is temporarily used for diagonal elements of S */
     /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
     //r[pi]   = creal(srOptOO[(pi+2)*(2*srOptSize)+(pi+2)]) - creal(srOptOO[pi+2] * srOptOO[pi+2]);
@@ -388,7 +407,8 @@ int StochasticOptDiag(MPI_Comm comm) {
   StartTimer(50);
 
   si = 0;
-  for(pi=0;pi<nPara;pi++) {
+  //  for(pi=0;pi<nPara;pi++) {
+  for(pi=0;pi<2*nPara;pi++) {
     if(OptFlag[pi]!=1) { /* fixed by OptFlag */
       optNum++;
       continue;
@@ -398,7 +418,7 @@ int StochasticOptDiag(MPI_Comm comm) {
     }
   }
   nSmat = si;
-  for(si=nSmat;si<nPara;si++) {
+  for(si=nSmat;si<2*nPara;si++) {
     smatToParaIdx[si] = -1;
   }
 

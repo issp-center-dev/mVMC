@@ -12,6 +12,8 @@ void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const 
                  const double complex w, const double complex e, const int srOptSize);
 void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
                  const double  w, const double complex e, const int srOptSize);
+void calculateOO_real(double *srOptOO, double *srOptHO, const double *srOptO,
+                 const double w, const double e, const int srOptSize);
 void calculateOO_Store(double complex *srOptOO, double complex *srOptHO,  double complex *srOptO,
                  const double w, const double complex e,  int srOptSize, int sampleSize);
 void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam);
@@ -30,11 +32,12 @@ void VMCMainCal(MPI_Comm comm) {
   const int qpStart=0;
   const int qpEnd=NQPFull;
   int sample,sampleStart,sampleEnd,sampleSize;
-  int i,info;
+  int i,info,tmp_i;
 
   /* optimazation for Kei */
   const int nProj=NProj;
   double complex *srOptO = SROptO;
+  double         *srOptO_real = SROptO_real;
 
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);
@@ -43,8 +46,9 @@ void VMCMainCal(MPI_Comm comm) {
   SplitLoop(&sampleStart,&sampleEnd,NVMCSample,rank,size);
 
   /* initialization */
+  StartTimer(24);
   clearPhysQuantity();
-
+  StopTimer(24);
   for(sample=sampleStart;sample<sampleEnd;sample++) {
     eleIdx = EleIdx + sample*Nsize;
     eleCfg = EleCfg + sample*Nsite2;
@@ -57,7 +61,13 @@ void VMCMainCal(MPI_Comm comm) {
 //DEBUG
 
     StartTimer(40);
-    info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd);
+    if(AllComplexFlag==0){
+       info = CalculateMAll_real(eleIdx,qpStart,qpEnd); // InvM_real,PfM_real will change
+       #pragma omp parallel for default(shared) private(tmp_i)
+       for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)  InvM[tmp_i]= InvM_real[tmp_i]; // InvM will be used in  SlaterElmDiff_fcmp
+    }else{
+      info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd); // InvM,PfM will change
+    }
     StopTimer(40);
 
     if(info!=0) {
@@ -65,7 +75,11 @@ void VMCMainCal(MPI_Comm comm) {
       continue;
     }
 
-    ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+    if(AllComplexFlag==0){
+      ip = CalculateIP_real(PfM_real,qpStart,qpEnd,MPI_COMM_SELF);
+    }else{
+      ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+    } 
     //printf("DEBUG: sample=%d ip= %lf %lf\n",sample,creal(ip),cimag(ip));
     x = LogProjVal(eleProjCnt);
     /* calculate reweight */
@@ -78,7 +92,11 @@ void VMCMainCal(MPI_Comm comm) {
 
     StartTimer(41);
     /* calculate energy */
-    e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+    if(AllComplexFlag==0){
+      e = CalculateHamiltonian_real(creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
+    }else{
+      e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+    }
     //printf("DEBUG: rank=%d: sample=%d ip= %lf %lf\n",rank,sample,creal(ip),cimag(ip));
     StopTimer(41);
     if( !isfinite(e) ) {
@@ -102,31 +120,30 @@ void VMCMainCal(MPI_Comm comm) {
 
       StartTimer(42);
       /* SlaterElmDiff */
-      SlaterElmDiff_fcmp(SROptO+2*NProj+2,ip,eleIdx); //TBC
+      SlaterElmDiff_fcmp(SROptO+2*NProj+2,ip,eleIdx); //TBC: using InvM not InvM_real
       StopTimer(42);
       
       if(FlagOptTrans>0) { // this part will be not used
         calculateOptTransDiff(SROptO+2*NProj+2*NSlater+2, ip); //TBC
       }
+//[s] this part will be used for real varaibles
+      if(AllComplexFlag==0){
+        #pragma loop noalias
+        for(i=0;i<SROptSize;i++){ 
+          srOptO_real[i] = creal(srOptO[2*i]);       
+        }
+      }
+//[e]
 
-      //for(i=0;i<NPara*2+2;i++){ 
-      //  printf("DEBUG: i=%d %lf %lf \n",i,creal(srOptO[i]),cimag(srOptO[i]));
-      //}
       StartTimer(43);
       /* Calculate OO and HO */
       if(NStoreO==0){
-        //printf("DEBUG:  NPara=%d NProj=%d NSlater=%d \n",NPara,NProj,NSlater);
-        //for(i=0;i<2*(NPara+1);i++){ 
-        //  printf("tmp: DEBUG:  i=%d %lf %lf\n",i,creal(SROptO[i]),cimag(SROptO[i]));
-        //}
-        //for(i=0;i<2*(NPara+1);i++){ 
-        //  printf("B accum: DEBUG:  i=%d %lf %lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
-        //}
-
-        calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
-        //for(i=0;i<2*(NPara+1);i++){ 
-        //  printf("A accum: DEBUG:  i=%d %lf %lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
-        //}
+        //calculateOO_matvec(SROptOO,SROptHO,SROptO,w,e,SROptSize);
+        if(AllComplexFlag==0){
+          calculateOO_real(SROptOO_real,SROptHO_real,SROptO_real,w,creal(e),SROptSize);
+        }else{
+          calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
+        } 
       }else{
         we    = w*e;
         sqrtw = sqrt(w); 
@@ -164,7 +181,6 @@ void VMCMainCal(MPI_Comm comm) {
       }
     }
   } /* end of for(sample) */
-
 // calculate OO and HO at NVMCCalMode==0
   if(NStoreO!=0 && NVMCCalMode==0){
     sampleSize=sampleEnd-sampleStart;
@@ -178,12 +194,19 @@ void VMCMainCal(MPI_Comm comm) {
 void clearPhysQuantity(){
   int i,n;
   double complex *vec;
+  double  *vec_real;
   Wc = Etot = Etot2 = 0.0;
   if(NVMCCalMode==0) {
     /* SROptOO, SROptHO, SROptO */
     n = (2*SROptSize)*(2*SROptSize+2); // TBC
     vec = SROptOO;
+    #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
+// only for real variables
+    n = (SROptSize)*(SROptSize+2); // TBC
+    vec_real = SROptOO_real;
+    #pragma omp parallel for default(shared) private(i)
+    for(i=0;i<n;i++) vec_real[i] = 0.0;
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
     n = 2*NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
@@ -272,7 +295,6 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
 //  return;
 //}
 
-/*
 void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
                  const double complex w, const double complex e, const int srOptSize) {
   double complex we=w*e;
@@ -291,26 +313,27 @@ void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const 
 
 //   OO[i][j] += w*O[i]*O[j] 
   M_ZGERC(&m, &n, &w, srOptO, &incx, srOptO, &incy, srOptOO, &lda);
-
 //   HO[i] += w*e*O[i] 
   M_ZAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
-
   return;
 }
-*/
+
 void calculateOO(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
                  const double w, const double complex e, const int srOptSize){
   int i,j;
   double complex tmp;
-  //#pragma omp parallel for default(shared)        \
-    private(i,j,tmp,srOptOO)
-  //#pragma loop noalias
+  #pragma omp parallel for default(shared) private(j,tmp)
+  //    private(i,j,tmp,srOptOO)
+#pragma loop noalias
   for(j=0;j<2*srOptSize;j++) {
     tmp                            = w * srOptO[j];
     srOptOO[0*(2*srOptSize)+j]    += tmp;      // update O
     srOptOO[1*(2*srOptSize)+j]    += 0.0;      // update 
     srOptHO[j]                    += e * tmp;  // update HO
   }
+  
+  #pragma omp parallel for default(shared) private(i,j,tmp)
+#pragma loop noalias
   for(i=2;i<2*srOptSize;i++) {
     tmp            = w * srOptO[i];
     for(j=0;j<2*srOptSize;j++) {
@@ -321,6 +344,32 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
 
   return;
 }
+
+void calculateOO_real(double *srOptOO, double *srOptHO, const double *srOptO,
+                 const double w, const double e, const int srOptSize) {
+  double we=w*e;
+
+  #define M_DAXPY daxpy_
+  #define M_DGER dger_
+
+  extern int M_DAXPY(const int *n, const double *alpha, const double *x, const int *incx,
+                     double *y, const int *incy);
+  extern int M_DGER(const int *m, const int *n, const double *alpha,
+                    const double *x, const int *incx, const double *y, const int *incy, 
+                    double *a, const int *lda);
+  int m,n,incx,incy,lda;
+  m=n=lda=srOptSize;
+  incx=incy=1;
+
+  /* OO[i][j] += w*O[i]*O[j] */
+  M_DGER(&m, &n, &w, srOptO, &incx, srOptO, &incy, srOptOO, &lda);
+
+  /* HO[i] += w*e*O[i] */
+  M_DAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
+
+  return;
+}
+
 
 void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam) {
   const int n=nLSHam*nLSHam*nLSHam*nLSHam;

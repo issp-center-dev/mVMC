@@ -114,6 +114,7 @@ int NCisAjsCktAltDC, **CisAjsCktAltDCIdx; /* [NCisAjsCktAltDC][6] */
 
 /* Optimization flag */
 int *OptFlag; /* [NPara]  1: optimized, 0 or 2: fixed */
+int AllComplexFlag;/* 0 -> all real variables, !=0-> including complex variables*/
 
 /* flag for anti-periodic boundry condition */
 int APFlag; /* 0: periodic, 1: anti-periodic */
@@ -164,9 +165,12 @@ int BurnFlag=0; /* 0: off, 1: on */
 
 /***** Slater Elements ******/
 double complex *SlaterElm; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
-
 double complex *InvM; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
 double complex *PfM; /* PfM[QPidx] */
+// TBC only for real
+double *SlaterElm_real; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
+double *InvM_real; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
+double *PfM_real; /* PfM[QPidx] */
 
 /***** Quantum Projection *****/
 double complex *QPFullWeight; /* QPFullWeight[NQPFull] */
@@ -180,6 +184,10 @@ double complex *SROptOO; /* [SROptSize*SROptSize] <O^\dagger O> */
 double complex *SROptHO; /* [SROptSize]            < HO > */
 double complex *SROptO;  /* [SROptSize] calculation buffar */
 double complex *SROptO_Store;  /* [SROptSize*NVMCSample] calculation buffer */
+//for real
+double *SROptOO_real; /* [SROptSize*SROptSize] <O^\dagger O> */ //TBC
+double *SROptHO_real; /* [SROptSize]            < HO > */       //TBC
+double *SROptO_real;  /* [SROptSize] calculation buffar */      //TBC
 
 
 
