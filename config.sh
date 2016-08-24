@@ -2,7 +2,7 @@
 if [ -z ${1} ] || [ ${1} = "help" ]; then
     echo ""
     echo "Usage:"
-    echo "./HPhiconfig.sh system_name"
+    echo "./config.sh system_name"
     echo " system_name should be chosen from below:"
     echo "        sekirei : ISSP system-B"
     echo "            kei : Fujitsu K computer & FX10"
@@ -154,7 +154,7 @@ EOF
     else
         echo ""
         echo "Unsupported system. Please type"
-        echo "./HPhiconfig.sh help"
+        echo "./config.sh help"
         echo ""
         exit
     fi
