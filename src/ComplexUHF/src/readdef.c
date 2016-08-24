@@ -90,7 +90,7 @@ int ReadDefFileNInt(
 							X->Ne=(int)dtmp;
 						}
 						else if(CheckWords(ctmp, "Mix")==0){
-							X->mix=(int)dtmp;
+							X->mix=dtmp;
 						}
 						else if(CheckWords(ctmp, "EPS")==0){
 							X->eps_int=(int)dtmp;

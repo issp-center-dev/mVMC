@@ -94,7 +94,6 @@ int main(int argc, char* argv[]){
     printf("eps_int=%d \n",X.Bind.Def.eps_int);
     printf("mix=%lf \n",X.Bind.Def.mix);
     printf("print=%d \n",X.Bind.Def.print);
-    printf("print=%d \n",X.Bind.Def.print);
     X.Bind.Def.eps=tmp_eps;
     initial(&(X.Bind));
     sprintf(sdt,"%s_check.dat",X.Bind.Def.CDataFileHead);
