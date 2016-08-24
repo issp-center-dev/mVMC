@@ -969,7 +969,6 @@ void PrintJastrow(struct StdIntList *StdI) {
   fprintf(fp, "NJastrowIdx %10d\n", NJastrow);
   fprintf(fp, "ComplexType %10d\n", StdI->ComplexType);
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "================ i_j_JastrowIdx =============\n");
   fprintf(fp, "=============================================\n");
 
   for (isite = 0; isite < StdI->nsite; isite++) {
@@ -1015,7 +1014,6 @@ void PrintOrb(struct StdIntList *StdI) {
   fprintf(fp, "NOrbitalIdx %10d\n", StdI->NOrb);
   fprintf(fp, "ComplexType %10d\n", StdI->ComplexType);
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "================ i_j_OrbitalIdx =============\n");
   fprintf(fp, "=============================================\n");
 
   for (isite = 0; isite < StdI->nsite; isite++) {
@@ -1209,7 +1207,6 @@ static void PrintGutzwiller(struct StdIntList *StdI)
   fprintf(fp, "NGutzwillerIdx %10d\n", NGutzwiller);
   fprintf(fp, "ComplexType %10d\n", StdI->ComplexType);
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "================== Gutzwille ================\n");
   fprintf(fp, "=============================================\n");
 
   if (strcmp(StdI->model, "hubbard") == 0) {
