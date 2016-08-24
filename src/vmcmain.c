@@ -329,7 +329,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       } 
     }
 //DBBUG
-    //info = StochasticOpt(comm_parent);
+    info = StochasticOpt(comm_parent);
     //info = StochasticOptDiag(comm_parent);
     info=0;
       StopTimer(5);

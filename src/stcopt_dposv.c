@@ -155,14 +155,16 @@ int StochasticOpt(MPI_Comm comm) {
   if(info==0) {
     for(si=0;si<nSmat;si++) {
       pi = smatToParaIdx[si];
+      //printf("DEBUG: nSmat=%d: si=%d pi=%d: %lf\n",nSmat,si,pi,g[si]);
       if(pi%2==0){
         Para[pi/2]     += g[si];  // real
+        //printf("Real: DEBUG: nSmat=%d: si=%d pi=%d: %lf %lf\n",nSmat,si,pi,creal(Para[pi/2]),cimag(Para[pi/2]));
       }else{
         Para[(pi-1)/2] += g[si]*I; // imag
+        //printf("Imag: DEBUG: nSmat=%d: si=%d pi=%d: %lf %lf\n",nSmat,si,pi,creal(Para[(pi-1)/2]),cimag(Para[(pi-1)/2]));
       }
     }
   }
-
   MPI_Bcast(&info, 1, MPI_INT, 0, comm);
 
   StopTimer(52);
@@ -217,7 +219,7 @@ void stcOptInit(double *const s, double *const g, const int nSmat, int *const sm
   /* energy gradient = 2.0*( HO[i+1] - HO[0] * OO[i+1]) */
   for(si=0;si<nSmat;++si) {
     pi = smatToParaIdx[si];
-    g[si] = -DSROptStepDt*2.0*creal(SROptHO[pi+2]) - creal(SROptHO[0]) * creal(SROptOO[pi+2]);
+    g[si] = -DSROptStepDt*2.0*(creal(SROptHO[pi+2]) - creal(SROptHO[0]) * creal(SROptOO[pi+2]));
   }
 
   return;
