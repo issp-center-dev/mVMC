@@ -157,7 +157,9 @@ int main(int argc, char* argv[])
   StopTimer(10);
 
   StartTimer(11);
+  if(rank0==0) fprintf(stdout,"Start: Read *def files.\n");
   ReadDefFileNInt(fileDefList, comm0);
+  if(rank0==0) fprintf(stdout,"End  : Read *def files.\n");
   StopTimer(11);
   
   StartTimer(12);
@@ -165,11 +167,15 @@ int main(int argc, char* argv[])
   StopTimer(12);
   
   StartTimer(11);
+  if(rank0==0) fprintf(stdout,"Start: Read parameters from *def files.\n");
   ReadDefFileIdxPara(fileDefList, comm0);
+  if(rank0==0) fprintf(stdout,"End  : Read parameters from *def files.\n");
   StopTimer(11);
   
   StartTimer(12);
+  if(rank0==0) fprintf(stdout,"Start: Set memories.\n");
   SetMemory();
+  if(rank0==0) fprintf(stdout,"End  : Set memories.\n");
   StopTimer(12);
   
   /* split MPI coummunicator */
@@ -199,17 +205,26 @@ int main(int argc, char* argv[])
 
   StartTimer(13);
   /* initialize variational parameters */
+  if(rank0==0) fprintf(stdout,"Start: Initialize parameters.\n");
   InitParameter(); /* Run parallelly for synchronization of random generator */
   if(flagReadInitPara>0 && rank0==0) ReadInitParameter(fileInitPara);
   //[s] add read parameters respectively
-  ReadInputParameters(fileDefList, comm0);
+  if(rank0==0){
+    if(!ReadInputParameters(fileDefList, comm0)==0){
+      //[ToDo]: Add Error procedure
+      info=1;
+    }
+  }
+  if(rank0==0) fprintf(stdout,"End  : Initialize parameters.\n");
   //[e] add read parameters respectively
   
   SyncModifiedParameter(comm0);
   StopTimer(13);
 
   /* initialize variables for quantum projection */
+  if(rank0==0) fprintf(stdout,"Start: Initialize variables for quantum projection.\n");
   InitQPWeight();
+  if(rank0==0) fprintf(stdout,"End  : Initialize variables for quantum projection.\n");
   /* initialize output files */
   if(rank0==0) InitFile(fileDefList, rank0);
 
@@ -218,12 +233,16 @@ int main(int argc, char* argv[])
   if(NVMCCalMode==0) {
     StartTimer(2);
     /*-- VMC Parameter Optimization --*/
+    if(rank0==0) fprintf(stdout,"Start: Optimize VMC parameters.\n");
     VMCParaOpt(comm0, comm1, comm2);
+    if(rank0==0) fprintf(stdout,"End  : Optimize VMC parameters.\n");
     StopTimer(2);
   } else if(NVMCCalMode==1) {
     StartTimer(2);
     /*-- VMC Physical Quantity Calculation --*/
+    if(rank0==0) fprintf(stdout,"Start: Calculate VMC physical quantities.\n");
     VMCPhysCal(comm0, comm1, comm2);
+    if(rank0==0) fprintf(stdout,"End  : Calculate VMC physical quantities.\n");
     StopTimer(2);
   } else {
     info=1;
@@ -254,7 +273,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   int step;
   int info;
   int rank;
-  int i;//DEBUG
+  int i,tmp_i;//DEBUG
   MPI_Comm_rank(comm_parent, &rank);
 
   for(step=0;step<NSROptItrStep;step++) {
@@ -264,14 +283,38 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     UpdateQPWeight();
       StopTimer(20);
       StartTimer(3);
-    VMCMakeSample(comm_child1);
+     if(AllComplexFlag==0){
+        // only for real TBC
+         StartTimer(69);
+         #pragma omp parallel for default(shared) private(tmp_i)
+         for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+         #pragma omp parallel for default(shared) private(tmp_i)
+         for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+         StopTimer(69);
+         // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+         VMCMakeSample_real(comm_child1);
+         // only for real TBC
+         StartTimer(69);
+         #pragma omp parallel for default(shared) private(tmp_i)
+         for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
+         StopTimer(69);
+         // only for real TBC
+      }else{
+        VMCMakeSample(comm_child1);
+      } 
       StopTimer(3);
       StartTimer(4);
     VMCMainCal(comm_child1);
       StopTimer(4);
       StartTimer(21);
     WeightAverageWE(comm_parent);
-    WeightAverageSROpt(comm_parent);
+      StartTimer(25);//DEBUG
+    if(AllComplexFlag==0){
+      WeightAverageSROpt_real(comm_parent);
+    }else{
+      WeightAverageSROpt(comm_parent);
+    }
+      StopTimer(25);
     ReduceCounter(comm_child2);
       StopTimer(21);
       StartTimer(22);
@@ -381,16 +424,25 @@ void outputData() {
 
   if(NVMCCalMode==1) {
     /* zvo_cisajs.dat */
-    for(i=0;i<NCisAjs;i++) fprintf(FileCisAjs, "% .18e  % .18e ", creal(PhysCisAjs[i]), cimag(PhysCisAjs[i]));
-    fprintf(FileCisAjs, "\n");
-
+      if(NCisAjs>0) {
+          for (i = 0; i < NCisAjs; i++)
+              fprintf(FileCisAjs, "% .18e  % .18e ", creal(PhysCisAjs[i]), cimag(PhysCisAjs[i]));
+          fprintf(FileCisAjs, "\n");
+      }
     /* zvo_cisajscktalt.dat */
-    for(i=0;i<NCisAjsCktAlt;i++) fprintf(FileCisAjsCktAlt, "% .18e  % .18e ", creal(PhysCisAjsCktAlt[i]),cimag(PhysCisAjsCktAlt[i]));
-    fprintf(FileCisAjsCktAlt, "\n");
+      if(NCisAjsCktAlt>0) {
+          for (i = 0; i < NCisAjsCktAlt; i++)
+              fprintf(FileCisAjsCktAlt, "% .18e  % .18e ", creal(PhysCisAjsCktAlt[i]), cimag(PhysCisAjsCktAlt[i]));
+          fprintf(FileCisAjsCktAlt, "\n");
+      }
 
     /* zvo_cisajscktaltdc.dat */
-    for(i=0;i<NCisAjsCktAltDC;i++) fprintf(FileCisAjsCktAltDC, "% .18e % .18e  ", creal(PhysCisAjsCktAltDC[i]),cimag(PhysCisAjsCktAltDC[i]));
-    fprintf(FileCisAjsCktAltDC, "\n");
+      if(NCisAjsCktAltDC>0) {
+          for (i = 0; i < NCisAjsCktAltDC; i++)
+              fprintf(FileCisAjsCktAltDC, "% .18e % .18e  ", creal(PhysCisAjsCktAltDC[i]),
+                      cimag(PhysCisAjsCktAltDC[i]));
+          fprintf(FileCisAjsCktAltDC, "\n");
+      }
 
     if(NLanczosMode>0){
 // ignorign Lanczos to be added

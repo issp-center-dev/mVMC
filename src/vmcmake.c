@@ -38,6 +38,7 @@ void VMCMakeSample(MPI_Comm comm) {
   int projCntNew[NProj];
   double complex pfMNew[NQPFull];
   double x,w; // TBC x will be complex number
+  int tmp_i; //TBC
 
   int qpStart,qpEnd;
   int rejectFlag;
@@ -96,12 +97,14 @@ void VMCMakeSample(MPI_Comm comm) {
         UpdateProjCnt(ri,rj,s,projCntNew,TmpEleProjCnt,TmpEleNum);
           StopTimer(60);
           StartTimer(61);
+        //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         //printf("DEBUG: out %d in %d pfMNew=%lf \n",outStep,inStep,creal(pfMNew[0]));
           StopTimer(61);
 
           StartTimer(62);
         /* calculate inner product <phi|L|x> */
+        //logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
         logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
           StopTimer(62);
 
@@ -111,8 +114,10 @@ void VMCMakeSample(MPI_Comm comm) {
         if( !isfinite(w) ) w = -1.0; /* should be rejected */
 
         if(w > genrand_real2()) { /* accept */
+            // UpdateMAll will change SlaterElm, InvM (including PfM)
             StartTimer(63);
             UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
+//            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
             StopTimer(63);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];

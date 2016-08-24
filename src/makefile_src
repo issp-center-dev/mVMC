@@ -20,10 +20,12 @@ lslocgrn.c \
 matrix.c \
 parameter.c \
 pfupdate.c \
-pfupdate_two.c \
+pfupdate_real.c \
 pfupdate_two_fcmp.c \
+pfupdate_two_real.c \
 projection.c \
 qp.c \
+qp_real.c \
 readdef.c \
 safempi.c \
 safempi_fcmp.c \
@@ -37,6 +39,7 @@ vmccal.c \
 vmcdry.c \
 vmcmain.c \
 vmcmake.c \
+vmcmake_real.c \
 workspace.c
 
 HEADERS = \

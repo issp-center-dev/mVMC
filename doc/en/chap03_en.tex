@@ -1,5 +1,332 @@
-% !TEX root = userguide_jp.tex
+% !TEX root = userguide_en.tex
 %----------------------------------------------------------
-\chapter{チュートリアル}
+\chapter{Tutorial}
 \label{Ch:model}
-T.B.D
+
+\section{List of sample files}
+
+There are following tutorials in \verb|samples/Standard/|.
+
+\begin{itemize}
+\item The Hubbard model on the two dimensional square lattice
+
+  (\verb|samples/Standard/Hubbard/square/|)
+\item The Hubbard model on the two dimensional triangular lattice
+  
+  (\verb|samples/Standard/Hubbard/triangular/|)
+\item The one dimensional Kondo chain
+
+  (\verb|samples/Standard/Kondo/chain/|)
+\item The one dimensional antiferromagnetic Heisenberg chain
+  
+  (\verb|samples/Standard/Spin/HeisenbergChain/HeisenbergChain/|)
+\item The antiferromagnetic Heisenberg model on the two dimensional square lattice
+  
+  (\verb|samples/Standard/Spin/HeisenbergSquare/|)
+
+\item The antiferromagnetic Heisenberg model on the two dimensional Kagome lattice
+  
+  (\verb|samples/Standard/Spin/Kagome/|)
+
+\end{itemize}
+
+We can perform these tutorials in the same way. 
+In the following, the tutorial of the one dimensional antiferromagnetic Heisenberg chain is shown.
+
+\section{Heisenberg model}
+
+This tutorial should be performed in 
+\begin{verbatim}
+sample/Standard/Spin/HeisenbergChain/.
+\end{verbatim}
+
+The input file, reference outputs, and the redirected standard output are provided as follows:
+\begin{verbatim}
+samples/Standard/Spin/HeisenbergChain/StdFace.def
+samples/Standard/Spin/HeisenbergChain/reference/
+\end{verbatim}
+
+In this case, we treat the one dimensional antiferromagnetic Heisenberg chain
+which has a nearest neighbor spin coupling.
+\begin{align}
+  {\hat H} = J \sum_{i=1}^{N_{\rm site}} {\hat {\boldsymbol S}}_i \cdot {\hat {\boldsymbol S}}_{i+1}
+\end{align}
+
+The input file is as follows:
+\\
+\begin{minipage}{10cm}
+\begin{screen}
+\begin{verbatim}
+L = 16
+Lsub=4
+model = "Spin"
+lattice = "chain lattice"
+J = 1.0
+2Sz = 0
+NMPtrans=1
+\end{verbatim}
+\end{screen}
+\end{minipage}
+%
+\\
+In this tutorial, J and the number of sites are set to 1 (arbitral unit) and 16 respectively.
+
+\subsubsection{Making detailed input files}
+In mVMC, the detailed input files should be made as a first step.
+We first execute the following command. 
+
+\vspace{1cm}\hspace{-0.7cm}
+\verb|$ |\underline{Path}\verb|/vmcdry.out StdFace.def|
+\small
+\\ \\
+Then,  we can see the following standard outputs in the terminal.
+
+\begin{verbatim} 
+######  Standard Intarface Mode STARTS  ######
+
+  Open Standard-Mode Inputfile StdFace.def
+
+  KEYWORD : l                    | VALUE : 16
+  KEYWORD : lsub                 | VALUE : 4
+  KEYWORD : model                | VALUE : spin
+  KEYWORD : lattice              | VALUE : chain
+  KEYWORD : j                    | VALUE : 1.0
+  KEYWORD : 2sz                  | VALUE : 0
+  KEYWORD : nmptrans             | VALUE : 1
+
+#######  Parameter Summary  #######
+
+  @ Lattice Size & Shape
+
+                L = 16
+             Lsub = 4
+                L = 16
+                W = 1
+           phase0 = 1.00000    0.00000     ######  DEFAULT VALUE IS USED  ######
+
+  @ Hamiltonian
+
+               2S = 1           ######  DEFAULT VALUE IS USED  ######
+                h = 0.00000     ######  DEFAULT VALUE IS USED  ######
+            Gamma = 0.00000     ######  DEFAULT VALUE IS USED  ######
+                D = 0.00000     ######  DEFAULT VALUE IS USED  ######
+              J0x = 1.00000
+              J0y = 1.00000
+              J0z = 1.00000
+
+  @ Numerical conditions
+
+             Lsub = 4
+             Wsub = 1
+      ioutputmode = 1           ######  DEFAULT VALUE IS USED  ######
+
+######  Print Expert input files  ######
+
+    qptransidx.def is written.
+         filehead = zvo         ######  DEFAULT VALUE IS USED  ######
+         filehead = zqp         ######  DEFAULT VALUE IS USED  ######
+      NVMCCalMode = 0           ######  DEFAULT VALUE IS USED  ######
+     NLanczosMode = 0           ######  DEFAULT VALUE IS USED  ######
+    NDataIdxStart = 1           ######  DEFAULT VALUE IS USED  ######
+      NDataQtySmp = 5           ######  DEFAULT VALUE IS USED  ######
+      NSPGaussLeg = 8           ######  DEFAULT VALUE IS USED  ######
+          NSPStot = 0           ######  DEFAULT VALUE IS USED  ######
+         NMPTrans = 1
+    NSROptItrStep = 1200        ######  DEFAULT VALUE IS USED  ######
+     NSROptItrSmp = 100         ######  DEFAULT VALUE IS USED  ######
+     NSROptFixSmp = 1           ######  DEFAULT VALUE IS USED  ######
+       NVMCWarmUp = 10          ######  DEFAULT VALUE IS USED  ######
+    NVMCIniterval = 1           ######  DEFAULT VALUE IS USED  ######
+       NVMCSample = 100         ######  DEFAULT VALUE IS USED  ######
+          RndSeed = 123456789   ######  DEFAULT VALUE IS USED  ######
+       NSplitSize = 1           ######  DEFAULT VALUE IS USED  ######
+           NStore = 0           ######  DEFAULT VALUE IS USED  ######
+     DSROptRedCut = 0.00100     ######  DEFAULT VALUE IS USED  ######
+     DSROptStaDel = 0.02000     ######  DEFAULT VALUE IS USED  ######
+     DSROptStepDt = 0.02000     ######  DEFAULT VALUE IS USED  ######
+              2Sz = 0
+    locspn.def is written.
+    trans.def is written.
+    interall.def is written.
+    jastrowidx.def is written.
+    coulombintra.def is written.
+    coulombinter.def is written.
+    hund.def is written.
+    exchange.def is written.
+    orbitalidx.def is written.
+    gutzwilleridx.def is written.
+    namelist.def is written.
+    modpara.def is written.
+    greenone.def is written.
+    greentwo.def is written.
+
+######  Input files are generated.  ######
+\end{verbatim}
+\normalsize
+
+In the beginning of this run,
+files describing the detail of considered Hamiltonian
+(\verb|locspin.def|, \verb|trans.def|, \verb|coulombinter.def|, \verb|coulombintra.def|,
+\verb|exchange.def|, \verb|hund.def|, \verb|namelist.def|, \verb|calcmod.def|, \verb|modpara.def|)
+and files for setting variational parameters
+(\verb|gutzwilleridx.def|, \verb|jastrowidx.def|, \verb|orbitalidx.def|, \verb|qptransidx.def|)
+and files specifying elements of correlation functions
+that will be calculated 
+(\verb|greenone.def|, \verb|greentwo.def|)
+are generated. The details of these files are shown in Sec. \ref{Ch:HowToExpert}.
+
+\subsubsection{Running}
+By reading the detailed input files, mVMC executes the calculation of optimizing the variational parameters.
+
+We execute the following command. \\
+\verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmcdry.out namelist.def|
+
+
+Then, the calculation starts and the following standard message is outputted in the terminal.
+
+\begin{verbatim}
+-----------
+Start: Read *def files.
+  Read File namelist.def .
+  Read File 'modpara.def' for ModPara.
+  Read File 'locspn.def' for LocSpin.
+  Read File 'trans.def' for Trans.
+  Read File 'coulombintra.def' for CoulombIntra.
+  Read File 'coulombinter.def' for CoulombInter.
+  Read File 'hund.def' for Hund.
+  Read File 'exchange.def' for Exchange.
+  Read File 'gutzwilleridx.def' for Gutzwiller.
+  Read File 'jastrowidx.def' for Jastrow.
+  Read File 'orbitalidx.def' for Orbital.
+  Read File 'qptransidx.def' for TransSym.
+  Read File 'greenone.def' for OneBodyG.
+  Read File 'greentwo.def' for TwoBodyG.
+End  : Read *def files.
+Start: Read parameters from *def files.
+End  : Read parameters from *def files.
+Start: Set memories.
+End  : Set memories.
+Start: Initialize parameters.
+End  : Initialize parameters.
+Start: Initialize variables for quantum projection.
+End  : Initialize variables for quantum projection.
+Start: Optimize VMC parameters.
+End  : Optimize VMC parameters.
+-----------
+\end{verbatim}
+
+Under the calculation, the following file is outputted:\\
+\begin{minipage}{12cm}
+\begin{screen}
+\begin{verbatim}
+zvo_SRinfo.dat zvo_cfg_001.dat zvo_out_001.dat
+zvo_time_001.dat  zvo_var_001.dat
+\end{verbatim}
+\end{screen}
+\end{minipage}
+
+In \verb|zvo_out_001.dat|, the following quantities are outputted at each bins  
+\begin{equation}
+\langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2} \nonumber.
+\end{equation}
+By seeing these informations, the conversion of the calculation can be judged. 
+The details of these outputted files are shown in Sec. \ref{Sec:outputfile}.\\
+
+\subsubsection{Output results}
+After finishing calculation normally, the files for the energy, the deviation, the optimized variational parameters and the time of execution for each calculation steps are outputted. In the following, the outputted files are shown \\
+\begin{minipage}{12cm}
+\begin{screen}
+\begin{verbatim}
+gutzwiller_opt.dat
+jastrow_opt.dat
+orbital_opt.dat
+zqp_opt.dat
+ClacTimer.dat
+\end{verbatim}
+\end{screen}
+\end{minipage}
+
+The details of these outputted files are shown in Sec. \ref{Sec:outputfile}.\\
+
+\subsubsection{Calculation of Green functions}
+After changing the value of \verb|NVMCCalMode| from 0 to 1 in \verb|modpara.def| file, we execute the following command. 
+When we add \verb|zqp_opt.dat| after \verb|namelist.dat|,
+the calculation of Green functions is done by using the optimized variational parameters. 
+
+\vspace{1cm}\hspace{-0.7cm}
+\verb|$ |\underline{Path}\verb|/vmc.out namelist.def zqp_opt.dat|
+\small
+
+After finishing the calculation, the following files are outputted.
+\\
+\begin{minipage}{12cm}
+\begin{screen}
+\begin{verbatim}
+zvo1_cisajs_001.dat
+zvo1_cisajscktalt_001.dat
+\end{verbatim}
+\end{screen}
+\end{minipage}
+\\
+The details of these outputted files are shown in Sec. \ref{Sec:outputfile}.\\
+
+\section{For expert users}
+In mVMC, the calculation is done by reading input files categorized by the following six parts. 
+Thus, the calculation for complex models can be done by directly making input files. The details for each files are shown in Sec. \ref{Ch:HowToExpert}.
+\\
+\begin{description}
+\item[(1)~List:]
+~\\{No keyword}:
+This file is a list of input file names with keywords. Each keywords is fixed, but file names are free to be determined.  
+\item[(2)~Basic parameters:]
+~\\{\bf ModPara}: Set the parameters for basic parameters such as site number, electron number, Lanczos step {\it etc}.
+~\\{\bf LocSpin}: Set the location of local spin. 
+\item[(3)~Set Hamiltonian:] 
+Hamiltonian for mVMC is denoted by the format of interactions for electron system. 
+The kinds of interactions are determined by the following keywords. 
+~\\{\bf Trans}: The one body part, $c_{i\sigma_1}^{\dag}c_{j\sigma_2}$.
+~\\{\bf InterAll}: The general two body interactions, $c_ {i \sigma_1}^{\dag}c_{j\sigma_2}c_{k \sigma_3}^{\dag}c_{l \sigma_4}$.
+~\\We can set interactions which are often used by the following keywords. 
+~\\{\bf CoulombIntra}: On-site Coulomb interactions, $n_ {i \uparrow}n_{i \downarrow}$ ($n_{i \sigma}=c_{i\sigma}^{\dag}c_{i\sigma}$).
+~\\{\bf CoulombInter}: Off-site Coulomb interactions, $n_ {i}n_{j}$ ($n_i=n_{i\uparrow}+n_{i\downarrow}$).
+~\\{\bf Hund}: Hund couplings, $n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow}$.
+~\\{\bf PairHop}: Pair hopping couplings, $c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{i \downarrow}^{\dag}c_{j  \downarrow}$.
+~\\{\bf Exchange}: Exchange couplings, $c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{j \downarrow}^{\dag}c_{i  \downarrow}$.
+\item[(4)~Set condition of variational parameters :] 
+~\\The variational wave function is given as
+\begin{equation}
+|\psi \rangle = {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle.
+\end{equation}
+The one body part of the wavefunction is represented as the pair function of the real space:
+\begin{equation}
+|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle,
+\end{equation}
+where $N$ is the number of electrons and $N_s$ is the number of sites.
+The setting for optimizing variational parameters or not is given by the following files.
+~\\{\bf Gutzwiller}: Set the target parameters $g_i$ in\\
+ ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$ to be optimized.
+~\\{\bf Jastrow}: Set the target parameters $v_{ij}$ in\\
+ ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$ to be optimized.
+~\\{\bf DH2}:  Set the target 2-site doublon-holon correlation factor $\alpha_{2nt}^{d(h)}$ in \\
+${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$ to be optimized. \\
+The details are shown in the desciption of DH2 file.
+~\\{\bf DH4}:  Set the target 4-site doublon-holon correlation factor $\alpha_{4nt}^{d(h)}$ in \\
+${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$ to be optimized.\\
+The details are shown in the desciption of DH4 file.
+~\\{\bf Orbital}: Set the pair orbital $f_{ij}$ in $|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$ to be optimized.
+~\\{\bf TransSym}: Set the the momentum projection operators ${\cal L}_K=\frac{1}{N_s}\sum_{{\bm R}}e^{i {\bm K} \cdot{\bm R} } \hat{T}_{\bm R}$ and the lattice translational projection operators ${\cal L}_P=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha}$, where ${\bm K}$ is the momentum operator of the whole system and $\hat{T}_{\bm R}$ is the translational operators corresponding to the translational vector ${\bm R}$, $\hat{G}_{\alpha}$ is the point group operator, and $p_\alpha$ is the parity operator, respectively.
+
+\item[(5)~Initial variational parameters:]
+~\\ Set the initial values of the variational parameters. When the keyword is not setting, the corresponding parameters are given by random values as default values.
+~\\{\bf InGutzwiller}: Set the initial values of $g_i$ in ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$.
+~\\{\bf InJastrow}: Set the initial values of $v_{ij}$ in ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$.
+~\\{\bf InDH2}:  Set the initial values of $\alpha_{2nt}^{d(h)}$ in ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$.
+~\\{\bf InDH4}:  Set the initial values of $\alpha_{4nt}^{d(h)}$ in ${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$.
+~\\{\bf InOrbital}: Set the initial values of $ f_{ij}$ in $|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$.
+
+\item[(6)~Output:]
+~\\
+Targets for output is determined.
+~\\{\bf OneBodyG }: One-body green functions,  $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}\rangle$.
+~\\{\bf TwoBodyG }: Two-body green functions,  $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}c^{\dagger}_{k \sigma_3}c_{l\sigma_4}\rangle$.
+\end{description}

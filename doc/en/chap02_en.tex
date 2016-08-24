@@ -1,4 +1,4 @@
-% !TEX root = userguide_jp.tex
+% !TEX root = userguide_en.tex
 %----------------------------------------------------------
 \chapter{How to use mVMC?}
 \label{Ch:HowTo}
@@ -158,8 +158,8 @@ when we change the compilers.
 
 \label{Sec:HowToInstall}
 
-\section{ディレクトリ構成}
-mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示します。\\
+\section{Directory structure}
+When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.\\
 \\
 ├──COPYING\\
 ├──config.sh\\
@@ -227,22 +227,15 @@ mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示
 
 \newpage
 \section{Basic usage}
-mVMC has two modes; standard mode and expert mode. 
-Here, the basic flows of calculations by standard and expert modes are shown.
-
-\subsection{{\it Standard} mode}
-
-The procedure of calculation through the standard mode is shown as follows:
+mVMC has two executables;
+one generates detailed input files and the other perform the main calculation with these files.
+Here, the basic flows of calculations by using these programs.
 
 \begin{enumerate}
 
-\item  Make a directory for a calculation scenario. 
+\item  Prepare a minimal input file
 
-First, you make a working directory for the calculation.
-
-\item  Make input files for standard mode
-
-In the standard mode, you can choose a model (the Heisenberg model, the Hubbard model, etc.) and 
+You can choose a model (the Heisenberg model, the Hubbard model, etc.) and 
 a lattice (the square lattice, the triangular lattice, etc.) from ones provided;
 you can specify some parameters (such as the first/second nearest neighbor hopping integrals,
 the on-site Coulomb integral, etc.) for them.
@@ -291,35 +284,11 @@ export OMP_NUM_THREADS=16
 
 \end{screen}
 
-\subsection{{\it Expert} mode}
-The procedure of calculation for expert mode is shown as follows.
- \begin{enumerate}
-   \item  Make a directory for a calculation scenario. \\
-First, you make a directory named as a calculation scenario (you can attach an arbitrary name to a directory).
-   \item  Make input files for expert mode\\
-For expert mode,  you should make input files 
-for constructing Hamiltonian operators, calculation condition and 
-a list file for the filenames of input files (see the file formats shown in  \ref{Ch:HowToExpert}). \\
-{\bf Note:} A List file can be easily made by using standard mode.
- \item  Run\\
-Run \verb|vmcdry.out| in terminal by specifing
-a file name of the {\it namelist} file.\\
-
-\verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmc.out |\textit{Input\_List\_file\_name}
-
-\item Under running\\
-Log files are outputted in the ``output" folder which is automatically made in the directory for a calculation scenario.
-The details of output files are shown in \ref{Sec:outputfile}.
-
-\item Results\\
-If the calculation is finished normally, the result files are outputted in  the ``output" folder. The details of output files are shown in \ref{Sec:outputfile}.
-\end{enumerate}
-
-\subsection{Printing version ID}
+\section{Printing version ID}
 
 By using \verb|-v| option as follows, 
 you can check which version of mVMC you are using.
 
 \begin{verbatim}
-$ PATH/vmcdry -v
+$ PATH/vmcdry.out -v
 \end{verbatim}
