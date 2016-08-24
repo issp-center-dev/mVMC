@@ -68,5 +68,3 @@ clean :
 	cd pfapack; $(MAKE) -f makefile_pfapack clean
 	cd StdFace; $(MAKE) -f makefile_StdFace clean
 
-
-
