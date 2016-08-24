@@ -440,7 +440,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + NHundCoupling /* ParaHondCoupling */
     + NPairHopping  /* ParaPairHopping */
     + NExchangeCoupling /* ParaExchangeCoupling */
-    + NQPTrans /* ParaQPTrans */
+    //    + NQPTrans /* ParaQPTrans */
     //+ NInterAll /* ParaInterAll */
     + NQPOptTrans; /* ParaQPTransOpt */
 

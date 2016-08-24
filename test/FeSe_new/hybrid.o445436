@@ -1,0 +1,50 @@
+Wed Aug 24 14:01:35 JST 2016
+opt_pro
+mpijob CMD    : mpirun -f /tmp/mpiexec.params.i001100.29834
+mpijob PARAMS : -d /home/i0011/i001100/program/mVMC_develop/mVMC/test/FeSe_new r5i0n8
+        2, r5i0n9 2, r5i0n10 2, r5i0n11 2, r5i0n12 2, r5i0n13 2, r5i0n14 2,
+        r5i0n15 2 omplace -nt 12 "./vmc.out" "-F" "5" "xnamelist_pro.def"
+
+SGI MPT Placement option
+--------------------------
+omplace -nt 12
+
+Node   MPI
+------------
+r5i0n8 2
+r5i0n9 2
+r5i0n10 2
+r5i0n11 2
+r5i0n12 2
+r5i0n13 2
+r5i0n14 2
+r5i0n15 2
+
+Start: Read *def files.
+  Read File xnamelist_pro.def .
+  Read File 'zmodpara_pro.def' for ModPara.
+  Read File 'zlocspn.def' for LocSpin.
+  Read File 'ztransfer.def' for Trans.
+  Read File 'zcoulombintra.def' for CoulombIntra.
+  Read File 'zcoulombinter.def' for CoulombInter.
+  Read File 'zhund.def' for Hund.
+  Read File 'zpairhop.def' for PairHop.
+  Read File 'zexchange.def' for Exchange.
+  Read File 'zgutzwilleridx.def' for Gutzwiller.
+  Read File 'zjastrowidx.def' for Jastrow.
+  Read File 'zorbitalidx.def' for Orbital.
+  Read File 'zqptransidx.def' for TransSym.
+  Read File 'zcisajs.def' for OneBodyG.
+  Read File 'zcisajscktaltdc.def' for TwoBodyG.
+End  : Read *def files.
+Start: Read parameters from *def files.
+End  : Read parameters from *def files.
+Start: Set memories.
+End  : Set memories.
+Start: Initialize parameters.
+End  : Initialize parameters.
+Start: Initialize variables for quantum projection.
+End  : Initialize variables for quantum projection.
+Start: Optimize VMC parameters.
+End  : Optimize VMC parameters.
+Wed Aug 24 14:04:27 JST 2016
