@@ -172,7 +172,7 @@ int StochasticOpt(MPI_Comm comm) {
   }
   MPI_Bcast(&info, 1, MPI_INT, 0, comm);
 
-  /* update variatonal parameters */
+  /* update variational parameters */
   if(info==0 && rank==0) {
     #pragma omp parallel for default(shared) private(si,pi)
     #pragma loop noalias

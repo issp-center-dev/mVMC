@@ -20,11 +20,11 @@ void stcOptInit(double *const s, double *const g, const int nSmat, int *const sm
 int stcOptMain(double *const s, double *const g, const int nSmat);
 
 int StochasticOpt(MPI_Comm comm) {
-  double complex *s; /* the overlap matrix S */
-  double complex *g; /* the energy gradient and the prameter change */
+  double *s; /* the overlap matrix S */
+  double *g; /* the energy gradient and the prameter change */
   int nSmat;
 
-  int paraToSmatIdx[NPara], smatToParaIdx[NPara];
+  int paraToSmatIdx[2*NPara], smatToParaIdx[2*NPara];
 
   int optNum=0,cutNum=0;
   double sDiag,sDiagMax,sDiagMin;
@@ -41,6 +41,9 @@ int StochasticOpt(MPI_Comm comm) {
 
   int info=0;
   int rank,size;
+// for real
+  int int_x,int_y,j,i;
+
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
@@ -48,6 +51,23 @@ int StochasticOpt(MPI_Comm comm) {
     MPI_Bcast(&info, 1, MPI_INT, 0, comm);
     return info;
   }
+//[s] for only real variables TBC
+  if(AllComplexFlag==0){
+    #pragma omp parallel for default(shared) private(i,int_x,int_y,j)
+    #pragma loop noalias
+    for(i=0;i<2*SROptSize*(2*SROptSize+2);i++){
+      int_x  = i%(2*SROptSize);
+      int_y  = (i-int_x)/(2*SROptSize);
+      if(int_x%2==0 && int_y%2==0){
+        j          = int_x/2+(int_y/2)*SROptSize;
+        SROptOO[i] = SROptOO_real[j];// only real part TBC
+      }else{
+        SROptOO[i] = 0.0+0.0*I;
+      }
+    }
+  }
+//[e]
+
 
   RequestWorkSpaceDouble(2*SROptSize*(2*SROptSize+2));
   sDiagElm = GetWorkSpaceDouble(2*NPara); //NPara -> 2*NPars
@@ -57,7 +77,7 @@ int StochasticOpt(MPI_Comm comm) {
   for(pi=0;pi<2*NPara;pi++) {
     /* sDiagElm is temporarily used for diagonal elements of S */
     /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
-    sDiagElm[pi]  = creal(SROptOO[(pi+2)*(2*srOptSize)+(pi+2)]) - creal(SROptOO[pi+2]) * creal(SROptOO[pi+2]);
+    sDiagElm[pi]  = creal(SROptOO[(pi+2)*(2*SROptSize)+(pi+2)]) - creal(SROptOO[pi+2]) * creal(SROptOO[pi+2]);
   }
 
   sDiag = sDiagElm[0];
@@ -131,7 +151,7 @@ int StochasticOpt(MPI_Comm comm) {
     }
   }
 
-  /* update variatonal parameters */
+  /* update variational parameters */
   if(info==0) {
     for(si=0;si<nSmat;si++) {
       pi = smatToParaIdx[si];
@@ -197,7 +217,7 @@ void stcOptInit(double *const s, double *const g, const int nSmat, int *const sm
   /* energy gradient = 2.0*( HO[i+1] - HO[0] * OO[i+1]) */
   for(si=0;si<nSmat;++si) {
     pi = smatToParaIdx[si];
-    g[si] = -DSROptStepDt*2.0*(creal(SROptHO[pi+2]) - creal(SROptHO[0]) * creal(SROptOO[pi+2]);
+    g[si] = -DSROptStepDt*2.0*creal(SROptHO[pi+2]) - creal(SROptHO[0]) * creal(SROptOO[pi+2]);
   }
 
   return;
