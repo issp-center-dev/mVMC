@@ -20,8 +20,8 @@ void stcOptInit(double *const s, double *const g, const int nSmat, int *const sm
 int stcOptMain(double *const s, double *const g, const int nSmat);
 
 int StochasticOpt(MPI_Comm comm) {
-  double complex *s; /* the overlap matrix S */
-  double complex *g; /* the energy gradient and the prameter change */
+  double *s; /* the overlap matrix S */
+  double *g; /* the energy gradient and the prameter change */
   int nSmat;
 
   int paraToSmatIdx[NPara], smatToParaIdx[NPara];
@@ -49,20 +49,20 @@ int StochasticOpt(MPI_Comm comm) {
     return info;
   }
 
-  RequestWorkSpaceDouble(2*SROptSize*(2*SROptSize+2));
-  sDiagElm = GetWorkSpaceDouble(2*NPara); //NPara -> 2*NPars
+  RequestWorkSpaceDouble(SROptSize*(SROptSize+1));
+  sDiagElm = GetWorkSpaceDouble(NPara);
 
   StartTimer(50);
 
-  for(pi=0;pi<2*NPara;pi++) {
+  for(pi=0;pi<NPara;pi++) {
     /* sDiagElm is temporarily used for diagonal elements of S */
     /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
-    sDiagElm[pi]  = creal(SROptOO[(pi+2)*(2*srOptSize)+(pi+2)]) - creal(SROptOO[pi+2]) * creal(SROptOO[pi+2]);
+    sDiagElm[pi] = SROptOO[(pi+1)*SROptSize+pi+1] - SROptOO[pi+1] * SROptOO[pi+1];
   }
 
   sDiag = sDiagElm[0];
   sDiagMax=sDiag; sDiagMin=sDiag;
-  for(pi=0;pi<2*NPara;pi++) {
+  for(pi=0;pi<NPara;pi++) {
     sDiag = sDiagElm[pi];
     if(sDiag>sDiagMax) sDiagMax=sDiag;
     if(sDiag<sDiagMin) sDiagMin=sDiag;
@@ -70,7 +70,7 @@ int StochasticOpt(MPI_Comm comm) {
   diagCutThreshold = sDiagMax*DSROptRedCut;
 
   si = 0;
-  for(pi=0;pi<2*NPara;pi++) {
+  for(pi=0;pi<NPara;pi++) {
     if(OptFlag[pi]!=1) { /* fixed by OptFlag */
       paraToSmatIdx[pi] = -1;
       optNum++;
@@ -88,7 +88,7 @@ int StochasticOpt(MPI_Comm comm) {
     }
   }
   nSmat = si;
-  for(si=nSmat;si<2*NPara;si++) {
+  for(si=nSmat;si<NPara;si++) {
     smatToParaIdx[si] = -1;
   }
 
@@ -135,11 +135,7 @@ int StochasticOpt(MPI_Comm comm) {
   if(info==0) {
     for(si=0;si<nSmat;si++) {
       pi = smatToParaIdx[si];
-      if(pi%2==0){
-        Para[pi/2]     += g[si];  // real
-      }else{
-        Para[(pi-1)/2] += g[si]*I; // imag
-      }
+      Para[pi] += g[si];
     }
   }
 
@@ -177,15 +173,13 @@ void stcOptInit(double *const s, double *const g, const int nSmat, int *const sm
   /* S[i][j] = OO[i+1][j+1] - OO[0][i+1] * OO[0][j+1]; */
   for(si=0;si<nSmat;++si) {
     pi = smatToParaIdx[si];
-    //offset = (pi+1)*SROptSize;
-    offset = (pi+2)*(2*SROptSize);
-    tmp = creal(SROptOO[pi+2]);
+    offset = (pi+1)*SROptSize;
+    tmp = SROptOO[pi+1];
 
     for(sj=0;sj<nSmat;++sj) {
       pj = smatToParaIdx[sj];
       idx = si + nSmat*sj; /* column major */
-      //s[idx] = SROptOO[offset+pj+1] - tmp * SROptOO[pj+1];
-      s[idx] = creal(SROptOO[offset+(pj+2)]) - tmp * creal(SROptOO[pj+2]);
+      s[idx] = SROptOO[offset+pj+1] - tmp * SROptOO[pj+1];
     }
 
     /* modify diagonal elements */
@@ -197,7 +191,7 @@ void stcOptInit(double *const s, double *const g, const int nSmat, int *const sm
   /* energy gradient = 2.0*( HO[i+1] - HO[0] * OO[i+1]) */
   for(si=0;si<nSmat;++si) {
     pi = smatToParaIdx[si];
-    g[si] = -DSROptStepDt*2.0*(creal(SROptHO[pi+2]) - creal(SROptHO[0]) * creal(SROptOO[pi+2]);
+    g[si] = -DSROptStepDt*2.0*(SROptHO[pi+1] - SROptHO[0] * SROptOO[pi+1]);
   }
 
   return;
