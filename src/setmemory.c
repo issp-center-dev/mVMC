@@ -216,9 +216,12 @@ void SetMemory() {
 
   /***** Slater Elements ******/
   SlaterElm = (double complex*)malloc( sizeof(double complex)*(NQPFull*(2*Nsite)*(2*Nsite)) );
-
   InvM = (double complex*)malloc( sizeof(double complex)*(NQPFull*(Nsize*Nsize+1)) );
   PfM = InvM + NQPFull*Nsize*Nsize;
+// for real TBC
+  SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+  InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
+  PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
 
   /***** Quantum Projection *****/
   QPFullWeight = (double complex*)malloc(sizeof(double complex)*(NQPFull+NQPFix+5*NSPGaussLeg));
@@ -231,11 +234,14 @@ void SetMemory() {
 
   /***** Stocastic Reconfiguration *****/
   if(NVMCCalMode==0){
-    //SR componets are described by real and complex componets of O
+    //SR components are described by real and complex components of O
     SROptOO = (double complex*)malloc( sizeof(double complex)*((2*SROptSize)*(2*SROptSize+2))) ; //TBC
     SROptHO = SROptOO + (2*SROptSize)*(2*SROptSize); //TBC
     SROptO  = SROptHO + (2*SROptSize);  //TBC
-
+//for real
+    SROptOO_real = (double*)malloc( sizeof(double )*((SROptSize)*(SROptSize+2))) ; //TBC
+    SROptHO_real = SROptOO_real + (SROptSize)*(SROptSize); //TBC
+    SROptO_real  = SROptHO_real + (SROptSize);  //TBC
 
     if(NStoreO!=0){
       SROptO_Store = (double complex*)malloc( sizeof(double complex)*(SROptSize*NVMCSample) );

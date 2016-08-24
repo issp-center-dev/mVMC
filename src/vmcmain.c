@@ -273,7 +273,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   int step;
   int info;
   int rank;
-  int i;//DEBUG
+  int i,tmp_i;//DEBUG
   MPI_Comm_rank(comm_parent, &rank);
 
   for(step=0;step<NSROptItrStep;step++) {
@@ -283,14 +283,38 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     UpdateQPWeight();
       StopTimer(20);
       StartTimer(3);
-    VMCMakeSample(comm_child1);
+     if(AllComplexFlag==0){
+        // only for real TBC
+         StartTimer(69);
+         #pragma omp parallel for default(shared) private(tmp_i)
+         for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+         #pragma omp parallel for default(shared) private(tmp_i)
+         for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+         StopTimer(69);
+         // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+         VMCMakeSample_real(comm_child1);
+         // only for real TBC
+         StartTimer(69);
+         #pragma omp parallel for default(shared) private(tmp_i)
+         for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
+         StopTimer(69);
+         // only for real TBC
+      }else{
+        VMCMakeSample(comm_child1);
+      } 
       StopTimer(3);
       StartTimer(4);
     VMCMainCal(comm_child1);
       StopTimer(4);
       StartTimer(21);
     WeightAverageWE(comm_parent);
-    WeightAverageSROpt(comm_parent);
+      StartTimer(25);//DEBUG
+    if(AllComplexFlag==0){
+      WeightAverageSROpt_real(comm_parent);
+    }else{
+      WeightAverageSROpt(comm_parent);
+    }
+      StopTimer(25);
     ReduceCounter(comm_child2);
       StopTimer(21);
       StartTimer(22);
@@ -381,8 +405,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 }
 
 void outputData() {
-  int i,j;
-  double x;
+  int i;
 
   /* zvo_out.dat */
  // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
