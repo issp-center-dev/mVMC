@@ -181,8 +181,15 @@ help:
 mvmc:
 	cd src;make -f makefile_src
 
+userguide:
+	cd doc/jp/;make -f makefile_doc_jp;mv userguide_jp.pdf ../
+	cd doc/en/;make -f makefile_doc_en;mv userguide_en.pdf ../
+
 clean:
 	cd src; make -f makefile_src clean
+	cd doc/jp; make -f makefile_doc_jp clean
+	cd doc/en; make -f makefile_doc_en clean
+	rm -f doc/userguide_??.pdf
 
 veryclean:
 	make clean
