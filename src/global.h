@@ -188,6 +188,7 @@ double complex *SROptO_Store;  /* [SROptSize*NVMCSample] calculation buffer */
 double *SROptOO_real; /* [SROptSize*SROptSize] <O^\dagger O> */ //TBC
 double *SROptHO_real; /* [SROptSize]            < HO > */       //TBC
 double *SROptO_real;  /* [SROptSize] calculation buffar */      //TBC
+double *SROptO_Store_real;  /* [SROptSize*NVMCSample] calculation buffer */
 
 
 
