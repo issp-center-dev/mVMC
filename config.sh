@@ -174,6 +174,7 @@ help:
 	@echo ""
 	@echo "<entry> is chosen from below"
 	@echo "      mvmc : Build simulator mVMC in src/"
+	@echo " userguide : Generate userguid_jp.pdf & userguide_en.pdf in doc/"
 	@echo "     clean : Remove all generated files excepting makefile"
 	@echo " veryclean : Remove all generated files including makefile"
 	@echo ""
