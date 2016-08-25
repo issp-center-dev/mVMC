@@ -24,7 +24,7 @@ int StochasticOpt(MPI_Comm comm) {
   double *g; /* the energy gradient and the prameter change */
   int nSmat;
 
-  int paraToSmatIdx[2*NPara], smatToParaIdx[2*NPara];
+  int paraToSmatIdx[NPara], smatToParaIdx[NPara];
 
   int optNum=0,cutNum=0;
   double sDiag,sDiagMax,sDiagMin;
@@ -41,9 +41,6 @@ int StochasticOpt(MPI_Comm comm) {
 
   int info=0;
   int rank,size;
-// for real
-  int int_x,int_y,j,i;
-
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
@@ -51,38 +48,21 @@ int StochasticOpt(MPI_Comm comm) {
     MPI_Bcast(&info, 1, MPI_INT, 0, comm);
     return info;
   }
-//[s] for only real variables TBC
-  if(AllComplexFlag==0){
-    #pragma omp parallel for default(shared) private(i,int_x,int_y,j)
-    #pragma loop noalias
-    for(i=0;i<2*SROptSize*(2*SROptSize+2);i++){
-      int_x  = i%(2*SROptSize);
-      int_y  = (i-int_x)/(2*SROptSize);
-      if(int_x%2==0 && int_y%2==0){
-        j          = int_x/2+(int_y/2)*SROptSize;
-        SROptOO[i] = SROptOO_real[j];// only real part TBC
-      }else{
-        SROptOO[i] = 0.0+0.0*I;
-      }
-    }
-  }
-//[e]
 
-
-  RequestWorkSpaceDouble(2*SROptSize*(2*SROptSize+2));
-  sDiagElm = GetWorkSpaceDouble(2*NPara); //NPara -> 2*NPars
+  RequestWorkSpaceDouble(SROptSize*(SROptSize+1));
+  sDiagElm = GetWorkSpaceDouble(NPara);
 
   StartTimer(50);
 
-  for(pi=0;pi<2*NPara;pi++) {
+  for(pi=0;pi<NPara;pi++) {
     /* sDiagElm is temporarily used for diagonal elements of S */
     /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
-    sDiagElm[pi]  = creal(SROptOO[(pi+2)*(2*SROptSize)+(pi+2)]) - creal(SROptOO[pi+2]) * creal(SROptOO[pi+2]);
+    sDiagElm[pi] = SROptOO[(pi+1)*SROptSize+pi+1] - SROptOO[pi+1] * SROptOO[pi+1];
   }
 
   sDiag = sDiagElm[0];
   sDiagMax=sDiag; sDiagMin=sDiag;
-  for(pi=0;pi<2*NPara;pi++) {
+  for(pi=0;pi<NPara;pi++) {
     sDiag = sDiagElm[pi];
     if(sDiag>sDiagMax) sDiagMax=sDiag;
     if(sDiag<sDiagMin) sDiagMin=sDiag;
@@ -90,7 +70,7 @@ int StochasticOpt(MPI_Comm comm) {
   diagCutThreshold = sDiagMax*DSROptRedCut;
 
   si = 0;
-  for(pi=0;pi<2*NPara;pi++) {
+  for(pi=0;pi<NPara;pi++) {
     if(OptFlag[pi]!=1) { /* fixed by OptFlag */
       paraToSmatIdx[pi] = -1;
       optNum++;
@@ -108,7 +88,7 @@ int StochasticOpt(MPI_Comm comm) {
     }
   }
   nSmat = si;
-  for(si=nSmat;si<2*NPara;si++) {
+  for(si=nSmat;si<NPara;si++) {
     smatToParaIdx[si] = -1;
   }
 
@@ -151,20 +131,14 @@ int StochasticOpt(MPI_Comm comm) {
     }
   }
 
-  /* update variational parameters */
+  /* update variatonal parameters */
   if(info==0) {
     for(si=0;si<nSmat;si++) {
       pi = smatToParaIdx[si];
-      //printf("DEBUG: nSmat=%d: si=%d pi=%d: %lf\n",nSmat,si,pi,g[si]);
-      if(pi%2==0){
-        Para[pi/2]     += g[si];  // real
-        //printf("Real: DEBUG: nSmat=%d: si=%d pi=%d: %lf %lf\n",nSmat,si,pi,creal(Para[pi/2]),cimag(Para[pi/2]));
-      }else{
-        Para[(pi-1)/2] += g[si]*I; // imag
-        //printf("Imag: DEBUG: nSmat=%d: si=%d pi=%d: %lf %lf\n",nSmat,si,pi,creal(Para[(pi-1)/2]),cimag(Para[(pi-1)/2]));
-      }
+      Para[pi] += g[si];
     }
   }
+
   MPI_Bcast(&info, 1, MPI_INT, 0, comm);
 
   StopTimer(52);
@@ -199,15 +173,13 @@ void stcOptInit(double *const s, double *const g, const int nSmat, int *const sm
   /* S[i][j] = OO[i+1][j+1] - OO[0][i+1] * OO[0][j+1]; */
   for(si=0;si<nSmat;++si) {
     pi = smatToParaIdx[si];
-    //offset = (pi+1)*SROptSize;
-    offset = (pi+2)*(2*SROptSize);
-    tmp = creal(SROptOO[pi+2]);
+    offset = (pi+1)*SROptSize;
+    tmp = SROptOO[pi+1];
 
     for(sj=0;sj<nSmat;++sj) {
       pj = smatToParaIdx[sj];
       idx = si + nSmat*sj; /* column major */
-      //s[idx] = SROptOO[offset+pj+1] - tmp * SROptOO[pj+1];
-      s[idx] = creal(SROptOO[offset+(pj+2)]) - tmp * creal(SROptOO[pj+2]);
+      s[idx] = SROptOO[offset+pj+1] - tmp * SROptOO[pj+1];
     }
 
     /* modify diagonal elements */
@@ -219,7 +191,7 @@ void stcOptInit(double *const s, double *const g, const int nSmat, int *const sm
   /* energy gradient = 2.0*( HO[i+1] - HO[0] * OO[i+1]) */
   for(si=0;si<nSmat;++si) {
     pi = smatToParaIdx[si];
-    g[si] = -DSROptStepDt*2.0*(creal(SROptHO[pi+2]) - creal(SROptHO[0]) * creal(SROptOO[pi+2]));
+    g[si] = -DSROptStepDt*2.0*(SROptHO[pi+1] - SROptHO[0] * SROptOO[pi+1]);
   }
 
   return;
