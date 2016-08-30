@@ -42,7 +42,7 @@ J'=-0.5
   指定しない場合デフォルト値が使われるパラメーター、
   (他のパラメーターの組み合わせによっては)使われないパラメーターが存在します。
   使われないパラメーターが指定された場合にはプログラムは終了し、
-  入力ファイルをチェックするようにというメッセージが表示されます。
+  入力ファイルをチェックするようにというメッセージが英語で表示されます。
 \end{itemize}
 
 次に各キーワードの説明をします。
@@ -56,8 +56,8 @@ J'=-0.5
 {\bf 形式 :} 文字列(\verb|"Fermion Hubbard"|, \verb|"Spin"|, \verb|"Kondo Lattice"|, 
 \verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, \verb|"Kondo LatticeGC"|のいずれか)
 
-{\bf 説明 :} 計算対象の模型を指定します。上記の文字列はそれぞれ
-カノニカル集団のフェルミ粒子Hubbard模型
+{\bf 説明 :} 計算対象の模型を指定します。
+\verb|"Fermion Hubbard"|は、カノニカル集団のフェルミ粒子Hubbard模型
 \begin{align}
 H = - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma} 
 - \sum_{i \neq j \sigma} t_{i j} c^\dagger_{i \sigma} c_{j \sigma} 
@@ -65,14 +65,15 @@ H = - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma}
 + \sum_{i \neq j} V_{i j} n_{i} n_{j},
 \label{fml4_1_hubbard}
 \end{align}
-同じくカノニカル集団のスピン模型 ($\{\sigma_1, \sigma_2\}={x, y, z}$)
+\verb|"Spin"|はカノニカル集団のスピン模型 ($\{\sigma_1, \sigma_2\}={x, y, z}$)
 \begin{align}
 H &= -h \sum_{i} S_{i z} - \Gamma \sum_{i} S_{i x} + D \sum_{i} S_{i z} S_{i z}
 \nonumber \\
 &+ \sum_{i j, \sigma_1}J_{i j \sigma_1} S_{i \sigma_1} S_{j \sigma_1}+ \sum_{i j, \sigma_1 \neq \sigma_2} J_{i j \sigma_1 \sigma_2} S_{i \sigma_1} S_{j \sigma_2} ,
 \label{fml4_1_spin}
 \end{align}
-カノニカル集団の近藤格子模型(Hubbard模型と同様に$U$と$J$を入れることも可能)
+\verb|"Kondo Lattice"|はカノニカル集団の近藤格子模型
+(Hubbard模型と同様に$U$と$J$を入れることも可能)
 \begin{align}
 H &= - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma} 
 - t \sum_{\langle i j \rangle \sigma} c^\dagger_{i \sigma} c_{j \sigma} 
@@ -86,9 +87,13 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 ,
 \label{fml4_1_kondo}
 \end{align}
+に対応します。
+また、
+\verb|"Fermion HubbardGC"|は
 グランドカノニカル集団のフェルミ粒子Hubbard模型[式(\ref{fml4_1_hubbard})]、
-グランドカノニカル集団のスピン模型[式(\ref{fml4_1_spin})]、
-グランドカノニカル集団の近藤格子模型[式(\ref{fml4_1_kondo})]に対応します。
+\verb|"SpinGC"|はグランドカノニカル集団のスピン模型[式(\ref{fml4_1_spin})]、
+\verb|"Kondo LatticeGC"|は
+グランドカノニカル集団の近藤格子模型[式(\ref{fml4_1_kondo})]にそれぞれ対応します。
 
 \item \verb|lattice|
 
@@ -100,8 +105,8 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 2次元正方格子(Fig. \ref{fig_chap04_1_lattice}(b))、
 2次元三角格子(Fig. \ref{fig_chap04_1_lattice}(c))、
 2次元異方的蜂の巣格子(Fig. \ref{fig_chap04_1_honeycomb})、
-梯子格子(Fig. \ref{fig_ladder})、
-カゴメ格子(Fig. \ref{fig_kagome})に対応します。
+カゴメ格子(Fig. \ref{fig_kagome})、
+梯子格子(Fig. \ref{fig_ladder})に対応します。
 
 \begin{figure}[!htbp]
   \begin{center}
@@ -236,6 +241,7 @@ $ gnuplot lattice.gp
 {\bf 形式 :} 自然数。デフォルトでは
 \verb|a0Wsub=a0W|, \verb|a0Lsub=a0L|, \verb|a1Wsub=a1W|, \verb|a1Lsub=a1L|, 
 \verb|Wsub=W|, \verb|Lsub=L|となる。
+すなわち副格子を用いない。
 
 {\bf 説明 :} これらのパラメーターの指定の仕方は
 \verb|a0W|, \verb|a0L|, \verb|a1W|, \verb|a1L|, \verb|W|, \verb|L|
@@ -379,7 +385,10 @@ $ gnuplot lattice.gp
 {\bf 形式 :} 複素数
 
 {\bf 説明 :} Hubbardおよび近藤格子模型での、最近接サイト間の各方向のホッピングを指定します。
-また、ホッピングのボンド方向依存性がない場合は\verb|t0|,  \verb|t1|, \verb|t2|を
+Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
+のそれぞれのボンド(異なる線種で表されています)
+また、最近接ホッピングのボンド方向依存性(もしくは異方性)
+がない場合は\verb|t0|,  \verb|t1|, \verb|t2|を
 別々に指定する代わりにパラメータ\verb|t|を指定すると、\verb|t0 = t1 = t2 = t|が代入されます。
 \verb|t|と\verb|t0|等の両方が指定された場合にはプログラムを終了します。
 
