@@ -126,9 +126,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	    else if(CheckWords(ctmp, "NSROptItrSmp")==0){
 	      bufInt[IdxSROptItrSmp]=(int)dtmp;
 	    }
-	    else if(CheckWords(ctmp, "NSROptFixSmp")==0){
-	      bufInt[IdxSROptFixSmp]=(int)dtmp;
-	    }	
 	    else if(CheckWords(ctmp, "DSROptRedCut")==0){
 	      bufDouble[IdxSROptRedCut]=(double)dtmp;
 	    }	
