@@ -1,0 +1,197 @@
+#!/usr/local/bin/perl
+  #print "start !! \n";
+  #input!!
+  &input;
+  #input!!
+  $orb_num=$tmp_orb;
+  $L_x=$tmp_Lx;
+  $L_y=$tmp_Ly;
+  $lambda=$tmp_lambda;
+  $L=$L_x*$L_y;
+  $Ns=$L;
+  $All_N=$Ns*$orb_num;
+  printf("CHECK trans L_x=$L_x L_y=$L_y lambda=$lambda orb=$orb_num \n");
+
+  $t1 =  0.3/4.0;
+  $t2 =  1.7/4.0;
+  $t3 =  0.2/4.0;
+  $t4 =  1.0/4.0;
+
+
+  $tmp=12*$All_N;
+  $tmp=2*$tmp;
+  $fname="ztransfer.def";
+  open(FILE,">$fname");
+  printf FILE "========misawa======== \n";
+  printf FILE "NTransfer $tmp  \n";
+  printf FILE "========misawa======== \n";
+  printf FILE "========i_j_s_tijs  ====== \n";
+  printf FILE "========misawa======== \n";
+
+  # up spin
+for($spin_i=0;$spin_i<2;$spin_i++){
+  for($all_i=0;$all_i<$All_N;$all_i+=1){
+    $orb_i  = $all_i%$orb_num;
+    $site_i = ($all_i-$orb_i)/$orb_num;
+    $i_x    = $site_i%$L_x;
+    $i_y    = ($site_i-$i_x)/$L_x;
+
+    #nearest  
+    $orb_j    = $orb_i;
+    #(1,0)
+    $tmp_x    = ($i_x+1)%$L_x;
+    $tmp_y    = $i_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    $tmp      = $t3; 
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+    #(-1,0)
+    $tmp_x    = ($i_x-1+$L_x)%$L_x;
+    $tmp_y    = $i_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    $tmp      = $t3; 
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+    #(0,1)
+    $tmp_x    = $i_x;
+    $tmp_y    = ($i_y+1)%$L_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    $tmp      = $t3; 
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+    #(0,-1)
+    $tmp_x    = $i_x;
+    $tmp_y    = ($i_y-1+$L_y)%$L_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    $tmp      = $t3; 
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+
+    #nearest hibridaization
+    if($orb_i==0){
+      $orb_j = 1;
+    }else{
+      $orb_j = 0;  
+    }
+    #(1,0)
+    $tmp_x    = ($i_x+1)%$L_x;
+    $tmp_y    = $i_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    $tmp      = $t4; 
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+    #(-1,0)
+    $tmp_x    = ($i_x-1+$L_x)%$L_x;
+    $tmp_y    = $i_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    $tmp      = $t4; 
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+    #(0,1)
+    $tmp_x    = $i_x;
+    $tmp_y    = ($i_y+1)%$L_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    $tmp      = -1.0*$t4; 
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+    #(0,-1)
+    $tmp_x    = $i_x;
+    $tmp_y    = ($i_y-1+$L_y)%$L_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    $tmp      = -1.0*$t4; 
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+    
+    #next nearest
+    $orb_j    = $orb_i;
+    #(1,1)
+    $tmp_x    = ($i_x+1)%$L_x;
+    $tmp_y    = ($i_y+1)%$L_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    if($orb_i==0){
+      $tmp      = $t1; 
+    }else{
+      $tmp      = $t2; 
+    }
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+    #(-1,-1)
+    $tmp_x    = ($i_x-1+$L_x)%$L_x;
+    $tmp_y    = ($i_y-1+$L_y)%$L_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    if($orb_i==0){
+      $tmp      = $t1; 
+    }else{
+      $tmp      = $t2; 
+    }
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+    #(-1,1)
+    $tmp_x    = ($i_x-1+$L_x)%$L_x;
+    $tmp_y    = ($i_y+1)%$L_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    if($orb_i==0){
+      $tmp      = $t2; 
+    }else{
+      $tmp      = $t1; 
+    }
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+    #(1,-1)
+    $tmp_x    = ($i_x+1)%$L_x;
+    $tmp_y    = ($i_y-1+$L_y)%$L_y;
+    $tmp_site = $tmp_y*$L_x+$tmp_x;
+    $all_j    = $tmp_site*$orb_num+$orb_j;
+    if($orb_i==0){
+      $tmp      = $t2; 
+    }else{
+      $tmp      = $t1; 
+    }
+    printf FILE ("%4d  %4d  %4d  %lf\n",$all_i,$all_j,$spin_i,$tmp);
+  }
+}
+ close(FILE);
+ printf "trans.prl finish \n";
+
+ sub input{
+  #input START 
+  $Lx_cnt=0;
+  $Ly_cnt=0;
+  $orb_cnt=0;
+  $lambda_cnt=0;
+  $file=sprintf("input.txt");
+  open(INPUTFILE,$file);
+  while($name=<INPUTFILE>){
+    chomp $name;
+    #DELETE EMPTY
+    $_=$name; 
+    s/^\s+//;
+    $name=$_; 
+    @tmp = split /\s+/, $name;
+    #printf "$tmp[0] $tmp[1] \n";
+    if($tmp[0] eq 'Lx'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_Lx = $tmp[1];
+      $Lx_cnt=1;
+    } 
+    if($tmp[0] eq 'Ly'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_Ly = $tmp[1];
+      $Ly_cnt=1;
+    } 
+    if($tmp[0] eq 'orb_num'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_orb = $tmp[1];
+      $orb_cnt=1;
+    } 
+    if($tmp[0] eq 'lambda'){
+      #printf "AA $tmp[0] $tmp[1] \n";
+      $tmp_lambda = $tmp[1];
+      $lambda_cnt=1;
+    } 
+  }
+  if($Lx_cnt==0 || $Ly_cnt==0||$orb_cnt==0|| $lambda_cnt==0){
+    printf "FAITAL ERROR IN input.txt !!!!!!!!!!!!! \n";
+  }
+  #input FINISH
+ }
