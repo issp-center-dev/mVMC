@@ -95,39 +95,45 @@ void OutputOptData() {
 
     count_i=2;
     if(NGutzwillerIdx !=0){
-      Child_OutputOptData(fp, "gutzwiller_opt.dat", "NGutzwillerIdx", 
+      sprintf(fileName, "%s_gutzwiller_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NGutzwillerIdx",
 			  NGutzwillerIdx, NGutzwillerIdx, count_i, n);
       count_i += NGutzwillerIdx;
     }
 
     if(NJastrowIdx !=0){
-      Child_OutputOptData(fp, "jastrow_opt.dat", "NJastrowIdx", 
+      sprintf(fileName, "%s_jastrow_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NJastrowIdx",
 			  NJastrowIdx, NJastrowIdx, count_i, n);
       count_i += NJastrowIdx;
     }
 
     if(NDoublonHolon2siteIdx != 0){
-      Child_OutputOptData(fp, "doublonHolon2site_opt.dat", "NDoublonHolon2siteIdx", 
+      sprintf(fileName, "%s_doublonHolon2site_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NDoublonHolon2siteIdx",
 			  NDoublonHolon2siteIdx, NDoublonHolon2siteIdx*2*3, 
 			  count_i, n);
       count_i +=2*3*NDoublonHolon2siteIdx;
     }
 
     if(NDoublonHolon4siteIdx != 0){
-      Child_OutputOptData(fp, "doublonHolon4site_opt.dat", "NDoublonHolon4siteIdx", 
+      sprintf(fileName, "%s_doublonHolon4site_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NDoublonHolon4siteIdx",
 			  NDoublonHolon4siteIdx, NDoublonHolon4siteIdx*2*5, 
 			  count_i, n);
       count_i +=2*5*NDoublonHolon4siteIdx;
     }
 
     if(NSlater != 0){
-      Child_OutputOptData(fp, "orbital_opt.dat", "NOrbitalIdx", 
+      sprintf(fileName, "%s_orbital_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NOrbitalIdx",
 			  NSlater, NSlater, count_i, n);
       count_i +=NSlater;
     }
 
     if(NOptTrans !=0){
-      Child_OutputOptData(fp, "trans_opt.dat", "NQPOptTrans", 
+      sprintf(fileName, "%s_trans_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NQPOptTrans",
 			  NOptTrans, NOptTrans, count_i, n);
       count_i += NOptTrans;
     }
@@ -136,22 +142,4 @@ void OutputOptData() {
   fclose(fp);
 
   return;
-}
-
-void OutputJastrow(){
-  
-}
-
-void OutputDoublonHolon2site(){
-  
-}
-
-void OutputDoublonHolon4site(){
-  
-}
-
-void OutputSlater(){
-}
-
-void OutputOptTrans(){
 }

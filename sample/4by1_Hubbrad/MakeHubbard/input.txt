@@ -1,0 +1,7 @@
+ Lx 4
+ Ly 4
+ lambda  0.0
+ orb_num 1
+ J 0.0
+ U 4.0
+ V 0.0

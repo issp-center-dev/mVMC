@@ -14,6 +14,8 @@ void calculateOO(double complex *srOptOO, double complex *srOptHO, const double 
                  const double  w, const double complex e, const int srOptSize);
 void calculateOO_real(double *srOptOO, double *srOptHO, const double *srOptO,
                  const double w, const double e, const int srOptSize);
+void calculateOO_Store_real(double *srOptOO_real, double *srOptHO_real,  double *srOptO_real,
+                 const double w, const double e,  int srOptSize, int sampleSize);
 void calculateOO_Store(double complex *srOptOO, double complex *srOptHO,  double complex *srOptO,
                  const double w, const double complex e,  int srOptSize, int sampleSize);
 void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam);
@@ -147,11 +149,20 @@ void VMCMainCal(MPI_Comm comm) {
       }else{
         we    = w*e;
         sqrtw = sqrt(w); 
-        #pragma omp parallel for default(shared) private(int_i)
-        for(int_i=0;int_i<SROptSize;int_i++){
-          // SROptO_Store for fortran
-          SROptO_Store[int_i+sample*SROptSize]  = sqrtw*SROptO[int_i];
-          SROptHO[int_i]                       += we*SROptO[int_i]; 
+        if(AllComplexFlag==0){
+          #pragma omp parallel for default(shared) private(int_i)
+          for(int_i=0;int_i<SROptSize;int_i++){
+            // SROptO_Store for fortran
+            SROptO_Store_real[int_i+sample*SROptSize]  = sqrtw*SROptO_real[int_i];
+            SROptHO_real[int_i]                       += creal(we)*SROptO_real[int_i]; 
+          }
+        }else{
+          #pragma omp parallel for default(shared) private(int_i)
+          for(int_i=0;int_i<SROptSize*2;int_i++){
+            // SROptO_Store for fortran
+            SROptO_Store[int_i+sample*(2*SROptSize)]  = sqrtw*SROptO[int_i];
+            SROptHO[int_i]                           += we*SROptO[int_i]; 
+          }
         }
       } 
       StopTimer(43);
@@ -184,9 +195,15 @@ void VMCMainCal(MPI_Comm comm) {
 // calculate OO and HO at NVMCCalMode==0
   if(NStoreO!=0 && NVMCCalMode==0){
     sampleSize=sampleEnd-sampleStart;
-    StartTimer(45);
-    calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,SROptSize,sampleSize);
-    StopTimer(45);
+    if(AllComplexFlag==0){
+      StartTimer(45);
+      calculateOO_Store_real(SROptOO_real,SROptHO_real,SROptO_Store_real,creal(w),creal(e),SROptSize,sampleSize);
+      StopTimer(45);
+    }else{
+      StartTimer(45);
+      calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
+      StopTimer(45);
+    }
   }
   return;
 }
@@ -246,8 +263,8 @@ void calculateOptTransDiff(double complex *srOptO, const double complex ipAll) {
   return;
 }
 
-void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double complex *srOptO_Store,
-                 const double w, const double complex e, int srOptSize, int sampleSize) {
+void calculateOO_Store_real(double *srOptOO_real, double *srOptHO_real, double *srOptO_Store_real,
+                 const double w, const double e, int srOptSize, int sampleSize) {
 
   //#define M_DGEM dgemm_
 
@@ -262,7 +279,30 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
   
   jobz = 'N';
   uplo = 'T';
-  //dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
+  dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store_real,&srOptSize,srOptO_Store_real,&srOptSize,&beta,srOptOO_real,&srOptSize);
+
+  return;
+}
+
+
+
+void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double complex *srOptO_Store,
+                 const double w, const double complex e, int srOptSize, int sampleSize) {
+
+  //#define M_DGEM dgemm_
+
+  extern int zgemm_(char *jobz, char *uplo, int *m,int *n,int *k,double complex *alpha,  double complex *a, int *lda, double complex *b, int *ldb,
+                    double complex *beta,double complex *c,int *ldc);
+
+  char jobz, uplo;
+  double complex alpha,beta;
+  
+  alpha = 1.0;
+  beta  = 0.0;
+  
+  jobz = 'N';
+  uplo = 'C';
+  zgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
 
   return;
 }

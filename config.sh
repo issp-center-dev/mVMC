@@ -2,7 +2,7 @@
 if [ -z ${1} ] || [ ${1} = "help" ]; then
     echo ""
     echo "Usage:"
-    echo "./HPhiconfig.sh system_name"
+    echo "./config.sh system_name"
     echo " system_name should be chosen from below:"
     echo "        sekirei : ISSP system-B"
     echo "            kei : Fujitsu K computer & FX10"
@@ -154,7 +154,7 @@ EOF
     else
         echo ""
         echo "Unsupported system. Please type"
-        echo "./HPhiconfig.sh help"
+        echo "./config.sh help"
         echo ""
         exit
     fi
@@ -174,6 +174,7 @@ help:
 	@echo ""
 	@echo "<entry> is chosen from below"
 	@echo "      mvmc : Build simulator mVMC in src/"
+	@echo " userguide : Generate userguid_jp.pdf & userguide_en.pdf in doc/"
 	@echo "     clean : Remove all generated files excepting makefile"
 	@echo " veryclean : Remove all generated files including makefile"
 	@echo ""
@@ -181,8 +182,15 @@ help:
 mvmc:
 	cd src;make -f makefile_src
 
+userguide:
+	cd doc/jp/;make -f makefile_doc_jp;mv userguide_jp.pdf ../
+	cd doc/en/;make -f makefile_doc_en;mv userguide_en.pdf ../
+
 clean:
 	cd src; make -f makefile_src clean
+	cd doc/jp; make -f makefile_doc_jp clean
+	cd doc/en; make -f makefile_doc_en clean
+	rm -f doc/userguide_??.pdf
 
 veryclean:
 	make clean

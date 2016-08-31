@@ -93,7 +93,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp)!=NULL){
 	    if(*ctmp2 == '\n' || ctmp2[0] == '-')  continue;
 	    sscanf(ctmp2,"%s %lf\n", ctmp, &dtmp);
-	    if(CheckWords(ctmp, "NVMCCalMode")==0){
+        if(CheckWords(ctmp, "NVMCCalMode")==0){
 	      bufInt[IdxVMCCalcMode]=(int)dtmp;
 	    }
 	    else if(CheckWords(ctmp, "NLanczosMode")==0){
@@ -126,9 +126,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	    else if(CheckWords(ctmp, "NSROptItrSmp")==0){
 	      bufInt[IdxSROptItrSmp]=(int)dtmp;
 	    }
-	    else if(CheckWords(ctmp, "NSROptFixSmp")==0){
-	      bufInt[IdxSROptFixSmp]=(int)dtmp;
-	    }	
 	    else if(CheckWords(ctmp, "DSROptRedCut")==0){
 	      bufDouble[IdxSROptRedCut]=(double)dtmp;
 	    }	
@@ -332,6 +329,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   if(rank==0){
     AllComplexFlag  = iComplexFlgGutzwiller+iComplexFlgJastrow+iComplexFlgDH2; //TBC
     AllComplexFlag += iComplexFlgDH4+iComplexFlgOrbital;//TBC
+    //AllComplexFlag  = 1;//DEBUG
     // AllComplexFlag= 0 -> All real, !=0 -> complex
   }
   
@@ -440,7 +438,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + NHundCoupling /* ParaHondCoupling */
     + NPairHopping  /* ParaPairHopping */
     + NExchangeCoupling /* ParaExchangeCoupling */
-    + NQPTrans /* ParaQPTrans */
+    //    + NQPTrans /* ParaQPTrans */
     //+ NInterAll /* ParaInterAll */
     + NQPOptTrans; /* ParaQPTransOpt */
 
@@ -487,7 +485,13 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	/* Read locspn.def----------------------------------------*/
 	while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
 	  sscanf(ctmp2, "%d %d\n", &(x0), &(x1) );
-	  LocSpn[x0] = x1;
+        if(x1 ==0){
+            LocSpn[x0]=1;
+        }
+        else{
+            LocSpn[x0] = 0;
+        }
+        //LocSpn[x0] = x1;
 	  idx++;
 	}
 	if(NLocSpn>2*Ne){

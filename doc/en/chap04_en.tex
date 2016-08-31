@@ -849,9 +849,9 @@ TwoBodyG	zcisajscktaltdc.def
 \begin{center}
   \begin{tabular}{|ll|} \hline
            Keywords     & Details for corresponding files       \\   \hline\hline
-           *ModPara       &  Parameters for calculation.        \\ \hline 
+           ModPara$^*$        &  Parameters for calculation.        \\ \hline 
            %%%%%%%%%%%%%%%%%%  
-           *LocSpin         &  Configurations of the local spins for Hamiltonian.         \\ 
+           LocSpin$^*$          &  Configurations of the local spins for Hamiltonian.         \\ 
            Trans       &   Transfer and chemical potential for Hamiltonian.  \\
            InterAll  &   Two-body interactions for Hamiltonian. \\  
            CoulombIntra  &   CoulombIntra interactions. \\  
@@ -864,8 +864,8 @@ TwoBodyG	zcisajscktaltdc.def
            Jastrow & Charge Jastrow factors.\\
            DH2 & 2-site doublon-holon correlation factors.\\
            DH4 & 4-site doublon-holon correlation factors.\\
-           *Orbital & Pair orbital factors.\\
-           *TransSym & Translational and lattice symmetry operation. \\ \hline
+           Orbital$^*$  & Pair orbital factors.\\
+           TransSym$^*$  & Translational and lattice symmetry operation. \\ \hline
            %%%%%%%%%%%%%%%%%%
            InGutzwiller & Initial values of Gutzwiller factors.\\
            InJastrow & Initial values of charge Jastrow factors.\\
@@ -2334,7 +2334,7 @@ In the following, we define the total number of sites as $N_s$ and projection pa
    
  {\bf Type :} double-type (blank parameter not allowed)
 
-{\bf Description :} The weight $p_{\alpha}\cos ({\bm K}\cdot \alpha)$ of the projection pattern $(\alpha, {\bm R})$.
+{\bf Description :} The weight $p_{\alpha}\cos ({\bm K}\cdot {\bm R})$ of the projection pattern $(\alpha, {\bm R})$.
  
  \item  $[$int03$]$
    

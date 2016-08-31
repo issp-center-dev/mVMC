@@ -331,6 +331,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 //DBBUG
     info = StochasticOpt(comm_parent);
     //info = StochasticOptDiag(comm_parent);
+    info=0;
       StopTimer(5);
 
     if(info!=0) {
@@ -405,7 +406,8 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 }
 
 void outputData() {
-  int i;
+  int i,j;
+  double x;
 
   /* zvo_out.dat */
  // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));

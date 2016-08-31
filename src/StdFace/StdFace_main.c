@@ -124,6 +124,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->RndSeed = 9999;
   StdI->NSplitSize = 9999;
   StdI->NStore = 9999;
+  StdI->ComplexType = 9999;
 }/*static void StdFace_ResetVals*/
 
 /**
@@ -966,8 +967,8 @@ void PrintJastrow(struct StdIntList *StdI) {
   fp = fopen("jastrowidx.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NJastrowIdx %10d\n", NJastrow);
+  fprintf(fp, "ComplexType %10d\n", StdI->ComplexType);
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "================ i_j_JastrowIdx =============\n");
   fprintf(fp, "=============================================\n");
 
   for (isite = 0; isite < StdI->nsite; isite++) {
@@ -1011,8 +1012,8 @@ void PrintOrb(struct StdIntList *StdI) {
   fp = fopen("orbitalidx.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NOrbitalIdx %10d\n", StdI->NOrb);
+  fprintf(fp, "ComplexType %10d\n", StdI->ComplexType);
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "================ i_j_OrbitalIdx =============\n");
   fprintf(fp, "=============================================\n");
 
   for (isite = 0; isite < StdI->nsite; isite++) {
@@ -1185,6 +1186,8 @@ static void CheckModPara(struct StdIntList *StdI)
       StdFace_NotUsed_i("2Sz", StdI->Sz2);
     }
   }
+  StdFace_PrintVal_i("ComplexType", &StdI->ComplexType, 0);
+
 }/*static void CheckModPara*/
 
 /**
@@ -1202,8 +1205,8 @@ static void PrintGutzwiller(struct StdIntList *StdI)
   fp = fopen("gutzwilleridx.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NGutzwillerIdx %10d\n", NGutzwiller);
+  fprintf(fp, "ComplexType %10d\n", StdI->ComplexType);
   fprintf(fp, "=============================================\n");
-  fprintf(fp, "================== Gutzwille ================\n");
   fprintf(fp, "=============================================\n");
 
   if (strcmp(StdI->model, "hubbard") == 0) {
@@ -1381,6 +1384,7 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "a1lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI.a1Lsub);
     else if (strcmp(keyword, "a1w") == 0) StoreWithCheckDup_i(keyword, value, &StdI.a1W);
     else if (strcmp(keyword, "a1wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI.a1Wsub);
+    else if (strcmp(keyword, "complextype") == 0) StoreWithCheckDup_i(keyword, value, &StdI.ComplexType);
     else if (strcmp(keyword, "d") == 0) StoreWithCheckDup_d(keyword, value, &StdI.D[2][2]);
     else if (strcmp(keyword, "dsroptredcut") == 0) StoreWithCheckDup_d(keyword, value, &StdI.DSROptRedCut);
     else if (strcmp(keyword, "dsroptstadel") == 0) StoreWithCheckDup_d(keyword, value, &StdI.DSROptStaDel);
