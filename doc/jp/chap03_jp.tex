@@ -1,0 +1,376 @@
+% !TEX root = userguide_jp.tex
+%----------------------------------------------------------
+\chapter{チュートリアル}
+\label{Ch:model}
+
+\section{サンプルファイル一覧}
+
+mVMCでは\verb|sample/Standard/|以下に次のサンプルを用意しています。
+
+\begin{itemize}
+\item 2次元正方格子Hubbardモデル
+
+  (\verb|sample/Standard/Hubbard/square/|)
+\item 2次元三角格子Hubbardモデル
+
+  (\verb|sample/Standard/Hubbard/triangular/|)
+\item 1次元近藤格子モデル
+
+  (\verb|sample/Standard/Kondo/chain/|)
+\item 1次元反強磁性的Heisenbergモデル
+
+  (\verb|sample/Standard/Spin/HeisenbergChain/|)
+\item 2次元正方格子反強磁性的Heisenbergモデル
+
+  (\verb|sample/Standard/Spin/HeisenbergSquare/|)
+  
+\item 2次元カゴメ格子反強磁性的Heisenbergモデル
+
+  (\verb|sample/Standard/Spin/Kagome/|)
+
+\end{itemize}
+
+これらのチュートリアルの実行方法は全て同じ手順で実行することが可能です。
+以下ではHeisenberg模型について説明します。
+
+
+% !TEX root = userguide_jp.tex
+\section{Heisenberg模型}
+
+以下のチュートリアルはディレクトリ
+\begin{verbatim}
+sample/Standard/Spin/HeisenbergChain/
+\end{verbatim}
+内で行います。
+このディレクトには以下のファイルがあります.
+
+Heisenberg模型におけるサンプル入力ファイル: \verb|StdFace.def|
+
+参照用出力ディレクトリ: \verb|reference/|
+
+この例では1次元のHeisenberg鎖(最近接サイト間の反強磁性的スピン結合のみを持つ)を考察します。
+\begin{align}
+  {\hat H} = J \sum_{i=1}^{N_{\rm site}} {\hat {\boldsymbol S}}_i \cdot {\hat {\boldsymbol S}}_{i+1}
+\end{align}
+
+インプットファイルの中身は次のとおりです。
+\\
+\begin{minipage}{10cm}
+\begin{screen}
+\begin{verbatim}
+L = 16
+Lsub=4
+model = "Spin"
+lattice = "chain lattice"
+J = 1.0
+2Sz = 0
+NMPtrans=1
+\end{verbatim}
+\end{screen}
+\end{minipage}
+%
+\\
+この例ではスピン結合$J=1$(任意単位)とし、サイト数は16としました。
+
+\subsubsection{詳細入力ファイル作成}
+スタンダードモードでは詳細入力ファイルの作成を最初に行う必要があります。
+実行コマンドと標準出力は次のとおりです。
+
+\vspace{1cm}\hspace{-0.7cm}
+\verb|$ |\underline{パス}\verb|/vmcdry.out StdFace.def|
+\small
+\begin{verbatim}
+######  Standard Intarface Mode STARTS  ######
+
+  Open Standard-Mode Inputfile StdFace.def 
+
+  KEYWORD : l                    | VALUE : 16 
+  KEYWORD : lsub                 | VALUE : 4 
+  KEYWORD : model                | VALUE : spin 
+  KEYWORD : lattice              | VALUE : chain 
+  KEYWORD : j                    | VALUE : 1.0 
+  KEYWORD : 2sz                  | VALUE : 0 
+  KEYWORD : nmptrans             | VALUE : 1 
+
+#######  Parameter Summary  #######
+
+  @ Lattice Size & Shape
+
+                L = 16 
+             Lsub = 4         
+                L = 16        
+                W = 1         
+           phase0 = 1.00000    0.00000     ######  DEFAULT VALUE IS USED  ######
+
+  @ Hamiltonian 
+
+               2S = 1           ######  DEFAULT VALUE IS USED  ######
+                h = 0.00000     ######  DEFAULT VALUE IS USED  ######
+            Gamma = 0.00000     ######  DEFAULT VALUE IS USED  ######
+                D = 0.00000     ######  DEFAULT VALUE IS USED  ######
+              J0x = 1.00000   
+              J0y = 1.00000   
+              J0z = 1.00000   
+
+  @ Numerical conditions
+
+             Lsub = 4         
+             Wsub = 1         
+      ioutputmode = 1           ######  DEFAULT VALUE IS USED  ######
+
+######  Print Expert input files  ######
+
+    qptransidx.def is written.
+         filehead = zvo         ######  DEFAULT VALUE IS USED  ######
+         filehead = zqp         ######  DEFAULT VALUE IS USED  ######
+      NVMCCalMode = 0           ######  DEFAULT VALUE IS USED  ######
+     NLanczosMode = 0           ######  DEFAULT VALUE IS USED  ######
+    NDataIdxStart = 1           ######  DEFAULT VALUE IS USED  ######
+      NDataQtySmp = 1           ######  DEFAULT VALUE IS USED  ######
+      NSPGaussLeg = 8           ######  DEFAULT VALUE IS USED  ######
+          NSPStot = 0           ######  DEFAULT VALUE IS USED  ######
+         NMPTrans = 1         
+    NSROptItrStep = 1200        ######  DEFAULT VALUE IS USED  ######
+     NSROptItrSmp = 100         ######  DEFAULT VALUE IS USED  ######
+     NSROptFixSmp = 1           ######  DEFAULT VALUE IS USED  ######
+       NVMCWarmUp = 10          ######  DEFAULT VALUE IS USED  ######
+    NVMCIniterval = 1           ######  DEFAULT VALUE IS USED  ######
+       NVMCSample = 100         ######  DEFAULT VALUE IS USED  ######
+          RndSeed = 123456789   ######  DEFAULT VALUE IS USED  ######
+       NSplitSize = 1           ######  DEFAULT VALUE IS USED  ######
+           NStore = 0           ######  DEFAULT VALUE IS USED  ######
+     DSROptRedCut = 0.00100     ######  DEFAULT VALUE IS USED  ######
+     DSROptStaDel = 0.02000     ######  DEFAULT VALUE IS USED  ######
+     DSROptStepDt = 0.02000     ######  DEFAULT VALUE IS USED  ######
+              2Sz = 0  
+      ComplexType = 0           ######  DEFAULT VALUE IS USED  ######
+    locspn.def is written.
+    trans.def is written.
+    interall.def is written.
+    jastrowidx.def is written.
+    coulombintra.def is written.
+    coulombinter.def is written.
+    hund.def is written.
+    exchange.def is written.
+    orbitalidx.def is written.
+    gutzwilleridx.def is written.
+    namelist.def is written.
+    modpara.def is written.
+    greenone.def is written.
+    greentwo.def is written.
+
+######  Input files are generated.  ######
+\end{verbatim}
+\normalsize
+
+この実行では、ハミルトニアンの詳細を記述するファイル
+\begin{itemize}
+\item \verb|locspin.def|
+\item \verb|trans.def|
+\item \verb|coulombinter.def|
+\item \verb|coulombintra.def|
+\item \verb|exchange.def|
+\item \verb|hund.def|
+\item \verb|namelist.def|
+\item \verb|modpara.def|
+\end{itemize}
+と、変分パラメータを設定するファイル
+\begin{itemize}
+\item \verb|gutzwilleridx.def|
+\item \verb|jastrowidx.def|
+\item \verb|orbitalidx.def|
+\item \verb|qptransidx.def|
+\end{itemize}
+結果として出力する相関関数の要素を指定するファイル
+\begin{itemize}
+\item \verb|greenone.def|
+\item \verb|greentwo.def|
+\end{itemize}
+が生成されます。
+各ファイルの詳細についてはSec. \ref{Ch:HowToExpert}をご覧ください。
+
+\subsubsection{計算実行}
+作成した詳細入力ファイルを読み込み計算を行います。
+実行コマンドと標準出力は次のとおりです。
+
+\vspace{1cm}\hspace{-0.7cm}
+\verb|$ mpiexec -np |\underline{プロセス数}\verb| |\underline{パス}\verb|/vmc.out namelist.def|
+
+使っているシステムによっては\verb|mpiexec|コマンドではなく\verb|mpirun|や\verb|mpijob|、
+\verb|poe|となる場合もあります.
+
+\small
+
+\begin{verbatim}
+-----------
+Start: Read *def files.
+  Read File namelist.def .
+  Read File 'modpara.def' for ModPara.
+  Read File 'locspn.def' for LocSpin.
+  Read File 'trans.def' for Trans.
+  Read File 'coulombintra.def' for CoulombIntra.
+  Read File 'coulombinter.def' for CoulombInter.
+  Read File 'hund.def' for Hund.
+  Read File 'exchange.def' for Exchange.
+  Read File 'gutzwilleridx.def' for Gutzwiller.
+  Read File 'jastrowidx.def' for Jastrow.
+  Read File 'orbitalidx.def' for Orbital.
+  Read File 'qptransidx.def' for TransSym.
+  Read File 'greenone.def' for OneBodyG.
+  Read File 'greentwo.def' for TwoBodyG.
+End  : Read *def files.
+Start: Read parameters from *def files.
+End  : Read parameters from *def files.
+Start: Set memories.
+End  : Set memories.
+Start: Initialize parameters.
+End  : Initialize parameters.
+Start: Initialize variables for quantum projection.
+End  : Initialize variables for quantum projection.
+Start: Optimize VMC parameters.
+End  : Optimize VMC parameters.
+-----------
+\end{verbatim}
+
+計算実行中に以下のファイルが情報として出力されます。
+\\
+\begin{minipage}{12cm}
+  \begin{screen}
+\begin{verbatim}
+zvo_SRinfo.dat
+zvo_out_001.dat
+zvo_time_001.dat
+zvo_var_001.dat
+zvo_CalcTimer.dat
+\end{verbatim}
+  \end{screen}
+\end{minipage}
+
+なお、\verb|zvo_out_001.dat|には、ビン毎の計算情報として、
+\begin{equation}
+\langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2} \nonumber
+\end{equation}
+が順に出力されますので、収束性の目安として利用することが可能です。
+gnuplotを用いる場合には、次のようにして表示することが出来ます($\langle H \rangle$の場合)。
+\begin{verbatim}
+plot "zvo_out_001.dat" u 1
+\end{verbatim}
+各ファイルの詳細についてはSec. \ref{Sec:outputfile}をご覧ください。\\
+
+\subsubsection{計算結果出力}
+計算が正常終了すると、エネルギー、エネルギーの分散、
+変分パラメータおよび計算実行時間を記載したファイルが出力されます。
+以下に、このサンプルでの出力ファイルを記載します。\\
+\begin{minipage}{12cm}
+\begin{screen}
+\begin{verbatim}
+gutzwiller_opt.dat
+jastrow_opt.dat
+orbital_opt.dat
+zqp_opt.dat
+ClacTimer.dat
+\end{verbatim}
+\end{screen}
+\end{minipage}
+
+各ファイルの詳細についてはSec. \ref{Sec:outputfile}をご覧ください。
+
+
+\subsubsection{Green関数の計算}
+\verb|modpara.def|ファイル中の\verb|NVMCCalMode|を0から1に変更の上、以下のコマンドを実行します。
+下記のように
+実行時のコマンドライン引数として
+\verb|"namelist.dat"|の後ろに\verb|"zqp_opt.dat"|を付け加えることで、
+一つ前の計算で最適化された変分パラメータを使用した計算が行われます。
+
+\vspace{1cm}\hspace{-0.7cm}
+\verb|$ |\underline{パス}\verb|/vmc.out namelist.def zqp_opt.dat|
+\small
+
+計算が終了すると以下のファイルが出力されます。
+\\
+\begin{minipage}{12cm}
+\begin{screen}
+\begin{verbatim}
+zvo_cisajs_001.dat
+zvo_cisajscktalt_001.dat
+\end{verbatim}
+\end{screen}
+\end{minipage}
+\\
+各ファイルの詳細についてはSec. \ref{Sec:outputfile}をご覧ください。
+
+\section{エキスパートユーザー向け}
+mVMCでは、以下の6つに分類される入力ファイルを読み込み、計算実行を行います。
+そのため、以下のファイルを直接作成・指定することで、より複雑な計算を行うことが可能です。
+各ファイルの詳細についてはSec. \ref{Ch:HowToExpert}をご覧ください。
+\\
+\begin{description}
+\item[(1)~List(\texttt{namelist.def}):]
+~\\{キーワード指定なし}:
+使用するinput fileの名前のリストを書きます。なお、ファイル名は任意に指定することができます。
+\item[(2)~Basic parameters:]
+  ~\\{\bf ModPara}(\verb|modpara.def|): 計算時に必要な基本的なパラメーター
+  (サイトの数、電子数、Lanczosステップを何回やるかなど)を設定します。
+  ~\\{\bf LocSpin}(\verb|locspn.def|): 局在スピンの位置を設定します(近藤模型でのみ利用)。
+\item[(3)~Set Hamiltonian:] 
+  ~\\以下のファイルを用い、Hamiltonianを電子系の表式により指定します。
+  ~\\{\bf Trans}(\verb|trans.def|):
+  $c_{i\sigma_1}^{\dag}c_{j\sigma_2}$で表される一体項を指定します。
+  ~\\{\bf InterAll}(\verb|interall.def|):
+  $c_ {i \sigma_1}^{\dag}c_{j\sigma_2}c_{k \sigma_3}^{\dag}c_{l \sigma_4}$
+  で表される一般二体相互作用を指定します。\\
+  ~\\なお、使用頻度の高い相互作用に関しては下記のキーワードで指定することも可能です。
+  ~\\{\bf CoulombIntra}(\verb|coulombintra.def|):
+  $n_ {i \uparrow}n_{i \downarrow}$で表される相互作用を指定します
+  ($n_{i \sigma}=c_{i\sigma}^{\dag}c_{i\sigma}$)。
+  ~\\{\bf CoulombInter}(\verb|coulombinter.def|):
+  $n_ {i}n_{j}$で表される相互作用を指定します($n_i=n_{i\uparrow}+n_{i\downarrow}$)。
+  ~\\{\bf Hund}(\verb|hund.def|): $n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow}$
+  で表される相互作用を指定します。
+  ~\\{\bf PairHop}:  $c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{i \downarrow}^{\dag}c_{j  \downarrow}$
+  で表される相互作用を指定します。
+  ~\\{\bf Exchange}(\verb|exchange.def|): $S_i^+ S_j^-$で表される相互作用を指定します。
+\item[(4)~Set condition of variational parameters :] 
+~\\最適化する変分パラメーターを指定します。ただし変分波動関数は
+\begin{equation}
+|\psi \rangle = {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,
+\end{equation}
+で与えられます。ここで、一体部分は実空間のペア関数
+\begin{equation}
+|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle,
+\end{equation}
+を用いた波動関数で表されます。ここで$N$は全電子数、$N_s$は全サイト数です。
+~\\{\bf Gutzwiller}(\verb|gutzwilleridx.def|):
+${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$のうち、
+最適化の対象とする変分パラメータ$g_i$を指定します。
+~\\{\bf Jastrow}(\verb|jastrowidx.def|):
+${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$のうち、
+最適化の対象とする変分パラメータ$v_{ij}$を指定します。
+~\\{\bf DH2}:  ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$で表される2サイトのdoublon-holon相関因子を指定します。詳細はDH2ファイルの説明を参照してください。
+~\\{\bf DH4}:  ${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$で表される4サイトのdoublon-holon相関因子を指定します。詳細はDH4ファイルの説明を参照してください。
+~\\{\bf Orbital}(\verb|orbitalidx.def|):
+ペア軌道$|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$を設定します。
+~\\{\bf TransSym}(\verb|qptransidx.def|):
+運動量射影${\cal L}_K=\frac{1}{N_s}\sum_{{\bm R}}e^{i {\bm K} \cdot{\bm R} } \hat{T}_{\bm R}$
+と格子対称性射影${\cal L}_P=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha}$に関する指定を行います。
+ここで、${\bm K}$は全運動量、$\hat{T}_{\bm R}$は並進ベクトル${\bm R}$に対応する並進演算子、
+$\hat{G}_{\alpha}$は格子の点群演算子、$p_\alpha$はパリティをそれぞれ表します。
+
+\item[(5)~Initial variational parameters:]
+~\\ 変分パラメータに関する初期値を与えます。キーワード指定されない場合には$0$が初期値として設定されます。
+~\\{\bf InGutzwiller}: ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$のうち、変分パラメータ$g_i$の初期値を指定します。
+~\\{\bf InJastrow}: ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$のうち、変分パラメータ$v_{ij}$の初期値を指定します。
+~\\{\bf InDH2}:  ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$で表される2サイトのdoublon-holon相関因子$\alpha_{2nt}^{d(h)}$の初期値を指定します。
+~\\{\bf InDH4}:  ${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$で表される4サイトのdoublon-holon相関因子$\alpha_{4nt}^{d(h)}$の初期値を指定します。
+~\\{\bf InOrbital}: ペア軌道$|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$の$ f_{ij}$に関する初期値を設定します。
+
+\item[(6)~Output:]
+~\\{\bf OneBodyG }(\verb|greenone.def|):出力する一体Green関数を指定します。
+ $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}\rangle$が出力されます。
+
+ {\bf TwoBodyG }(\verb|greentwo.def|):出力する二体Green関数を指定します。
+ $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}c^{\dagger}_{k \sigma_3}c_{l\sigma_4}\rangle$
+が出力されます。
+\end{description}
+

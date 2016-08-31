@@ -1,0 +1,21 @@
+CC = icc
+
+LIB = -L$(MKLROOT)/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core\
+ -openmp -lpthread -lm
+
+OUT = main.out
+SRC = main.c
+PFAPACK = pfapack/libpfapack.a
+OBJS = main.o $(PFAPACK) 
+
+.PHONY : all pfapack 
+all : main.out
+
+main.out : main.o pfapack 
+	$(CC) -o $(OUT) $(OBJS) -O3  $(LIB)
+
+main.o : *.c 
+	$(CC) -c $(SRC) 
+
+pfapack :
+	$(MAKE) -C pfapack -f Makefile_intel

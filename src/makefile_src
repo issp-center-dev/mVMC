@@ -1,0 +1,70 @@
+include make.sys
+
+OUT = vmc.out
+SRC = vmcmain.c
+PFAPACK = pfapack/libpfapack.a
+SFMT = sfmt/SFMT.o
+STDFACE = StdFace/libStdFace.a
+OBJS = vmcmain.o $(PFAPACK) $(SFMT) $(STDFACE)
+
+SOURCES = \
+average.c \
+avevar.c \
+calgrn.c \
+calham.c \
+gauleg.c \
+initfile.c \
+legendrepoly.c \
+locgrn.c \
+lslocgrn.c \
+matrix.c \
+parameter.c \
+pfupdate.c \
+pfupdate_real.c \
+pfupdate_two_fcmp.c \
+pfupdate_two_real.c \
+projection.c \
+qp.c \
+qp_real.c \
+readdef.c \
+safempi.c \
+safempi_fcmp.c \
+setmemory.c \
+slater.c \
+splitloop.c \
+stcopt_dposv.c \
+stcopt_pdposv.c \
+time.c \
+vmccal.c \
+vmcdry.c \
+vmcmain.c \
+vmcmake.c \
+vmcmake_real.c \
+workspace.c
+
+HEADERS = \
+global.h \
+vmcmain.h
+
+all : 
+	cd pfapack; $(MAKE) -f makefile_pfapack
+	cd sfmt; $(MAKE) -f makefile_sfmt
+	cd StdFace; $(MAKE) -f makefile_StdFace libStdFace.a
+	make -f makefile_src vmc.out
+	make -f makefile_src vmcdry.out
+
+vmc.out : $(OBJS)
+	$(CC) -o $(OUT) $(OBJS) $(OPTION) $(CFLAGS) $(REPORT) $(LIB) 
+
+vmcdry.out : vmcdry.o $(STDFACE)
+	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) 
+
+vmcmain.o : $(SOURCES) $(HEADERS)
+	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT)
+
+clean :
+	rm -f *.o vmc.out
+	cd sfmt; $(MAKE) -f makefile_sfmt clean
+	cd pfapack; $(MAKE) -f makefile_pfapack clean
+	cd StdFace; $(MAKE) -f makefile_StdFace clean
+

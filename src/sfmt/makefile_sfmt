@@ -1,0 +1,9 @@
+include ../make.sys
+
+OBJ = SFMT.o
+
+$(OBJ): SFMT.c
+	$(CC) $(SMFTFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJ)

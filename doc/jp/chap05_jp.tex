@@ -1,0 +1,47 @@
+% !TEX root = userguide_jp.tex
+%----------------------------------------------------------
+\chapter{アルゴリズム}
+\label{Ch:algorithm}
+\section{変分モンテカルロ法}
+適当な完全系に対するマルコフ連鎖を構成して重みつきサンプリングを行います。
+ここでは完全系として$S_z = 0$ の実空間配置$\{| x\rangle\}$ を使用します。
+\begin{equation}
+| x\rangle =  \prod_{n=1}^{N/2} c_{r_{n\uparrow}}^{\dag} \prod_{n=1}^{N/2} c_{r_{n\downarrow}}^{\dag} |0 \rangle
+\end{equation}
+ここで、$n$番目の$\sigma$電子の位置を$r_{n\sigma}$としました。
+\subsection{Importance sampling}
+マルコフ連鎖の重みを
+\begin{equation}
+\rho(x)=\frac{|\langle x| \psi \rangle|^2}{\langle \psi | \psi \rangle} \ge 0, \sum{x} \rho(x)=1
+\end{equation}
+とすると演算子$A$の期待値は
+\begin{equation}
+\langle A \rangle =\frac{\langle \psi| A| \psi \rangle}{\langle \psi | \psi \rangle} 
+=\sum_x \frac{\langle \psi| A | x\rangle \langle x| \psi \rangle}{\langle \psi |\psi \rangle} 
+=\sum_x \rho(x) \frac{\langle \psi| A | x\rangle }{\langle \psi |x \rangle} 
+\end{equation}
+となります。$x$に関する和を重み付きサンプリングに置き換えます。また、Local Green's function $G_{ij\sigma\sigma'}(x)$は
+\begin{equation}
+G_{ij\sigma\sigma'}(x)=\frac{\langle \psi | c_{i\sigma}^{\dag} c_{j\sigma'} | \psi \rangle}{\langle \psi | x \rangle}
+\end{equation}
+で定義されます。
+メルセンヌツイスター\cite{Mutsuo2008}.
+
+\section{Bogoliubov表現}\label{sec_bogoliubov_rep}
+
+スピン系の計算において一体項(\verb|transfer|)、\verb|InterAll|形式での相互作用、
+相関関数のインデックスの指定にはBogoliubov表現が使われています。
+スピンの演算子は次のように生成$\cdot$消滅演算子で書き換えられます。
+\begin{align}
+  S_{i z} &= \sum_{\sigma = -S}^{S} \sigma c_{i \sigma}^\dagger c_{i \sigma}
+  \\
+  S_{i}^+ &= \sum_{\sigma = -S}^{S-1} 
+  \sqrt{S(S+1) - \sigma(\sigma+1)} 
+  c_{i \sigma+1}^\dagger c_{i \sigma}
+  \\
+  S_{i}^- &= \sum_{\sigma = -S}^{S-1} 
+  \sqrt{S(S+1) - \sigma(\sigma+1)} 
+  c_{i \sigma}^\dagger c_{i \sigma+1}
+\end{align}
+
+%----------------------------------------------------------

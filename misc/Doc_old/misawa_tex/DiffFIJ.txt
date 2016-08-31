@@ -1,0 +1,21 @@
+&I=(i,\sigma), J=(j,\sigma^{\prime}) \\
+&F_{IJ}=f_{ij}\times\alpha(\sigma,\sigma^{\prime}) \\
+&X=F_{IJ}-F_{JI}=f_{ij}\times\alpha(\sigma,\sigma^{\prime})-f_{ji}\times\alpha(\sigma^{\prime},\sigma) \\
+&Y_{IJ}=\Big(\frac{\partial X}{\partial f_{ab}}\Big)
+=\delta_{ia}\delta_{jb}\times\alpha(\sigma,\sigma^{\prime})
+-\delta_{ja}\delta_{ib}\times\alpha(\sigma^{\prime},\sigma) \\
+\\
+&\sum_{M,L} (X^{-1})_{ML}Y_{ML}=\sum_{m,l,\sigma,\sigma^{\prime}}
+(X^{-1})_{m\sigma,l\sigma^{\prime}}Y_{l\sigma^{\prime},m\sigma} \\
+&=\sum_{\sigma,\sigma^{\prime}}(X^{-1})_{m\sigma,l\sigma^{\prime}}
+[\delta_{la}\delta_{mb}\times\alpha(\sigma,\sigma^{\prime})
+-\delta_{ma}\delta_{lb}\times\alpha(\sigma^{\prime},\sigma)] \\
+&=-2\sum_{\sigma,\sigma^{\prime}}\alpha(\sigma,\sigma^{\prime})(X^{-1})_{a\sigma,b\sigma^{\prime}}
+
+
+\frac{\partial {\rm Pf}[A(x)]}{\partial x}=\frac{1}{2}{\rm Pf}[A(x)]{\rm Tr}\Big[A^{-1}\frac{\partial A(x)}{\partial x}\Big]
+&{\rm Pf}[A(x+\delta x)]={\rm Pf}[A(x)+\frac{\partial A(x)}{\partial x}\delta x+O(\delta x^2)] \\
+&\sim {\rm Pf}[(I+\frac{1}{2}A^{-1}\frac{\partial A(x)}{\partial x}\delta x)^{T}
+A(x)(I+\frac{1}{2}A^{-1}\frac{\partial A(x)}{\partial x}\delta x)+O(\delta x^{2})] \\
+&={\det(I+\frac{1}{2}A^{-1}\frac{\partial A(x)}{\partial x}\delta x+O(\delta x^2))}{\rm Pf}[A(x)] \\
+&={\rm Pf}[A(x)] (1+\frac{1}{2}{\rm Tr}\Big[A^{-1}\frac{\partial A(x)}{\partial x}\Big]\delta x+O(\delta x^2))

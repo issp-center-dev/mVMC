@@ -1,0 +1,288 @@
+% !TEX root = userguide_jp.tex
+%----------------------------------------------------------
+\chapter{How to use mVMC?}
+\label{Ch:HowTo}
+
+\section{要件}
+
+mVMCのコンパイル$\cdot$使用には次のものが必要です。
+\begin{itemize}
+\item Cコンパイラ (インテル、富士通、GNUなど)
+\item MPIライブラリ
+\item LAPACKライブラリ (インテルMKL, 富士通, ATLASなど)
+\item ScaLAPACKライブラリ
+\end{itemize}
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize
+
+{\bf 例/ intelコンパイラーでの設定}
+
+intelコンパイラを使用する場合には、コンパイラに付属の設定用スクリプトを使用するのが簡単です。
+
+64ビットOSでbashを使っている場合には
+\begin{verbatim}
+source /opt/intel/bin/compilervars.sh intel64
+\end{verbatim}
+または
+\begin{verbatim}
+source /opt/intel/bin/iccvars.sh intel64
+source /opt/intel/mkl/bin/mklvars.sh
+\end{verbatim}
+等を\verb|~/.bashrc|に記載してください。
+詳しくはお手持ちのコンパイラ、ライブラリのマニュアルをお読みください。
+
+\end{screen}
+
+\section{インストール方法}
+
+mVMC は次の場所からダウンロードできます。\\
+
+ダウンロードしたファイルを次のように展開してください。
+\begin{verbatim}
+$ tar xzvf mVMC-xxx.tar.gz
+\end{verbatim}
+
+mVMCは次の2通りの方法でインストールできます。
+
+\subsection{\texttt{config.sh}を使う方法}
+
+展開したディレクトリのなかにある\verb|config.sh|スクリプトを次のように実行してください。
+(物性研システムB''sekirei''の場合)
+\begin{verbatim}
+$ bash config.sh sekirei
+\end{verbatim}
+これによりコンパイル環境設定ファイル\verb|make.sys|が\verb|src/|ディレクトリに作られます。
+\verb|config.sh|の引数は次のものに対応しています。
+\begin{itemize}
+\item \verb|sekirei| : 物性研究所システムB ''sekirei''
+\item \verb|kei| : 京コンピューターおよび物性研究所システムC ''maki''(FX10)
+\item \verb|openmpi-intel| : OpenMPI + intelコンパイラ
+\item \verb|gnu| : GCC
+\end{itemize}
+
+\verb|make.sys|の中身は次のようになっています(物性研システムB ''sekirei''の場合)。
+\begin{verbatim}
+CC = mpicc
+LIB = -L$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
+      -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
+REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
+OPTION = -D_mpi_use
+CP = cp -f -v
+AR = ar rv
+FORT = ifort
+FFLAGS = -O3 -implicitnone -xHost
+SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
+\end{verbatim}
+となります。それぞれのマクロ(変数)の説明は次のとおりです。
+\begin{itemize}
+\item \verb|CC| : Cコンパイルコマンド(\verb|mpicc|, \verb|mpifccpx|など)
+\item \verb|LIB| : ScaLAPACKのためのコンパイルオプション。
+\item \verb|CFLAGS| : その他のコンパイルオプション。
+\item \verb|FORT| : Fortranコンパイルコマンド(\verb|ifort|, \verb|frtpx|など)
+\end{itemize}
+
+これでコンパイルのための準備が整います。その後
+\begin{verbatim}
+$ make mvmc
+\end{verbatim}
+
+とすることで実行可能ファイル\verb|vmc.out|、\verb|vmcdry.out|が\verb|src/内に|生成されるので、
+このディレクトリにパスを通すか、
+パスの通っている場所にシンボリックリンクを作ってください。
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize
+
+実行ファイルにパスを通す時には、次のようにします。
+\\
+\verb|$ export PATH=${PATH}:|\underline{mVMCのディレクトリ}\verb|/src/|
+\\
+この設定を常に残すには、例えばログインシェルが\verb|bash|の場合には
+\verb|~/.bashrc|ファイルに上記のコマンドを記載します。
+\end{screen}
+
+\subsection{cmakeを使う場合}
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize\\
+sekirei で cmake を利用するには
+\begin{verbatim}
+source /home/issp/materiapps/tool/env.sh
+\end{verbatim}
+maki では
+\begin{verbatim}
+source /global/app/materiapps/tool/env.sh
+\end{verbatim}
+をあらかじめ実行する必要があります。
+\end{screen}
+
+mVMCを展開したディレクトリのパスを\$PathTomVMC 、ビルドディレクトリを\$HOME/build/mvmc (任意の場所を指定可能)とした場合に、
+\begin{verbatim}
+cd $HOME/build/mvmc
+cmake -DCONFIG=gcc $PathTomVMC
+make
+\end{verbatim}
+でコンパイルすることができます。コンパイル後、\$HOME/build/mvmc 直下にsrcフォルダが作成され、
+実行ファイルである\verb|vmc.out|、\verb|vmcdry.out|がそのフォルダ内に作成されます。
+
+なお、上の例ではgccコンパイラを前提としたコンパイルになっていますが、
+\begin{itemize}
+\item \verb|sekirei| : 物性研究所システムB ''sekirei''
+\item \verb|kei| : 富士通コンパイラ(京コンピューター、物性研究所システムC ''maki'')
+\item \verb|intel| : intelコンパイラ + Linux PC
+\item \verb|gnu| : GCC + Linux PC
+\end{itemize}
+のオプションが用意されています。以下、mVMCを展開したディレクトリでビルドする例を示します(intelコンパイラの場合)。
+\begin{verbatim}
+mkdir ./build
+cd ./build
+cmake -DCONFIG=intel ../
+make
+\end{verbatim}
+実行後、buildフォルダ直下にsrcフォルダが作成され、\verb|vmc.out|、\verb|vmcdry.out|がsrcフォルダ内に作成されます。
+なお、コンパイラを変更しコンパイルし直したい場合には、都度buildフォルダごと削除を行った上で、新規に上記作業を行うことをお薦めします。
+
+\section{ディレクトリ構成}
+mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示します。\\
+\\
+├──COPYING\\
+├──config.sh\\
+├──doc/\\
+│~~~~~~├──bib/\\
+│~~~~~~│~~~~~~├──elsart-num\_mod.bst\\
+│~~~~~~│~~~~~~└──userguide.bib\\
+│~~~~~~├──figs/\\
+│~~~~~~│~~~~~~├──*.pdf\\
+│~~~~~~│~~~~~~└──*.xbb\\
+│~~~~~~├──jp/\\
+│~~~~~~│~~~~~~└──*.tex\\
+│~~~~~~└──en/\\
+│~~~~~~~~~~~~~└──*.tex\\
+├──sample/\\
+│~~~~~~├──Expert/\\
+│~~~~~~│~~~~~~├──Hubbard/\\
+│~~~~~~│~~~~~~│~~~~~~├─square/\\
+│~~~~~~│~~~~~~│~~~~~~│~~~~~~├──*.def\\
+│~~~~~~│~~~~~~│~~~~~~│~~~~~~└──output\_ref/\\
+│~~~~~~│~~~~~~│~~~~~~│~~~~~~~~~~~~~~~~~~└──**.dat\\
+│~~~~~~│~~~~~~│~~~~~~└─triangular/\\
+│~~~~~~│~~~~~~│~~~~~~~~~~~~└──$\cdots$\\
+│~~~~~~│~~~~~~├──Kondo/\\
+│~~~~~~│~~~~~~│~~~~~~└─chain/\\
+│~~~~~~│~~~~~~│~~~~~~~~~~~~└──$\cdots$\\
+│~~~~~~│~~~~~~└──Spin/\\
+│~~~~~~│~~~~~~~~~~~~~~~├─HeisenbergChain/\\
+│~~~~~~│~~~~~~~~~~~~~~~│~~~~~~└──$\cdots$\\
+│~~~~~~│~~~~~~~~~~~~~~~├─HeisenbergSquare/\\
+│~~~~~~│~~~~~~~~~~~~~~~│~~~~~~└──$\cdots$\\
+│~~~~~~│~~~~~~~~~~~~~~~└─Kitaev/\\
+│~~~~~~│~~~~~~~~~~~~~~~~~~~~~~└──$\cdots$\\
+│~~~~~~└──Standard/\\
+│~~~~~~~~~~~~~~~~~~├──Hubbard/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~├─square/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~│~~~~~~├──StdFace.def\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~│~~~~~~└──reference/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~│~~~~~~~~~~~~~~~~~└──**.dat\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~└─triangular/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~~~~~~~└──$\cdots$\\
+│~~~~~~~~~~~~~~~~~~├──Kondo/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~└─chain/\\
+│~~~~~~~~~~~~~~~~~~│~~~~~~~~~~~~└──$\cdots$\\
+│~~~~~~~~~~~~~~~~~~└──Spin/\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~├─HeisenbergChain/\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~│~~~~~~└──$\cdots$\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~├─HeisenbergSquare/\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~│~~~~~~└──$\cdots$\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└─Kagome/\\
+│~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└──$\cdots$\\
+└──src/\\
+~~~~~~~~~~~├──**.c\\
+~~~~~~~~~~~├──**.h\\
+~~~~~~~~~~~├──makefile\_src\\
+~~~~~~~~~~~├──include/\\
+~~~~~~~~~~~│~~~~~~~└──**.h\\
+~~~~~~~~~~~├──pfapack/\\
+~~~~~~~~~~~│~~~~~~~├──makefile\_pfapack\\
+~~~~~~~~~~~│~~~~~~~└──**.f\\
+~~~~~~~~~~~└──sfmt/\\
+~~~~~~~~~~~~~~~~~~~├──makefkie\_sfmt\\
+~~~~~~~~~~~~~~~~~~~├──**.c\\
+~~~~~~~~~~~~~~~~~~~└──**.h\\
+
+\newpage
+\section{基本的な使い方}
+
+\tr{mVMCでは詳細入力ファイルを作成する実行ファイルと詳細入力ファイルを読み込み計算する実行ファイルの2つが存在します。
+ここでは、これらのファイルを用いた基本的な使用方法を記載します。}
+
+ \begin{enumerate}
+   \item  計算用ディレクトリの作成
+
+計算シナリオ名を記載したディレクトリを作成します。
+
+   \item  \tr{簡易入力ファイルの作成}
+
+あらかじめ用意されたいくつかのモデル(HeisenbergモデルやHubbardモデル)や格子(正方格子など)を指定し、
+それらに対するいくつかのパラメーター(最近接$\cdot$次近接スピン結合やオンサイトクーロン積分など)を設定します。
+各ファイルはSec. \ref{Ch:HowToStandard}に従い記載してください。
+
+ \item  実行
+
+作成した入力ファイル名を引数とし、\verb|vmcdry.out|を実行します。
+MPIは使用しません。
+
+\verb|$ | \underline{パス}\verb|/vmcdry.out | \underline{入力ファイル} 
+
+このとき生成されたファイル\verb|namelist.def|を引数として\verb|vmc.out|を実行します。
+
+\verb|$ mpiexec -np |\underline{プロセス数}\verb| |\underline{パス}\verb|/vmc.out namelist.def|
+
+ワークステーションやスパコン等でキューイングシステムを利用している場合は
+プロセス数をジョブ投入コマンドの引数として与える場合があります。
+詳しくはお使いのシステムのマニュアルをご参照ください。
+
+\item 途中経過
+
+計算実行の経過についてoutputフォルダにログファイルが出力されます。
+出力されるファイルの詳細に関してはSec. \ref{Sec:outputfile}を参考にしてください。
+
+\item 最終結果
+
+計算が正常終了した場合、
+計算モードに従いoutputフォルダに計算結果ファイルが出力されます。
+出力されるファイルの詳細に関してはSec. \ref{Sec:outputfile}を参考にしてください。
+\end{enumerate}
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize
+
+{\bf OpenMPスレッド数の指定}
+
+実行時のOpenMPのスレッド数を指定する場合は、
+\verb|vmc.out|を実行する前に以下の様にしてください(16スレッドの場合)。
+\begin{verbatim}
+export OMP_NUM_THREADS=16
+\end{verbatim}
+
+\end{screen}
+
+\subsection{バージョン番号の確認}
+
+次のように\verb|-v|オプションをつけて\verb|vmcdry.out|を実行すると, 
+バージョン番号を標準出力した後終了します。
+
+\begin{verbatim}
+$ PATH/vmcdry.out -v
+\end{verbatim}
+
+
