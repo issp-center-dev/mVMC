@@ -126,9 +126,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	    else if(CheckWords(ctmp, "NSROptItrSmp")==0){
 	      bufInt[IdxSROptItrSmp]=(int)dtmp;
 	    }
-	    else if(CheckWords(ctmp, "NSROptFixSmp")==0){
-	      bufInt[IdxSROptFixSmp]=(int)dtmp;
-	    }	
 	    else if(CheckWords(ctmp, "DSROptRedCut")==0){
 	      bufDouble[IdxSROptRedCut]=(double)dtmp;
 	    }	
@@ -332,6 +329,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   if(rank==0){
     AllComplexFlag  = iComplexFlgGutzwiller+iComplexFlgJastrow+iComplexFlgDH2; //TBC
     AllComplexFlag += iComplexFlgDH4+iComplexFlgOrbital;//TBC
+    //AllComplexFlag  = 1;//DEBUG
     // AllComplexFlag= 0 -> All real, !=0 -> complex
   }
   

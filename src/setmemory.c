@@ -244,7 +244,11 @@ void SetMemory() {
     SROptO_real  = SROptHO_real + (SROptSize);  //TBC
 
     if(NStoreO!=0){
-      SROptO_Store = (double complex*)malloc( sizeof(double complex)*(SROptSize*NVMCSample) );
+      if(AllComplexFlag==0){
+        SROptO_Store_real = (double *)malloc(sizeof(double)*(SROptSize*NVMCSample) );
+      }else{
+        SROptO_Store      = (double complex*)malloc( sizeof(double complex)*(2*SROptSize*NVMCSample) );
+      }
     }
     SROptData = (double complex*)malloc( sizeof(double complex)*(NSROptItrSmp*(2+NPara)) );
   }
