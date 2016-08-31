@@ -157,7 +157,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
         if(w > genrand_real2()) { /* accept */
           StartTimer(68);
-          UpdateMAllTwo_fcmp(mi, s, mj, t, ri, rj, TmpEleIdx,qpStart,qpEnd);
+          UpdateMAllTwo_real(mi, s, mj, t, ri, rj, TmpEleIdx,qpStart,qpEnd);
           StopTimer(68);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
