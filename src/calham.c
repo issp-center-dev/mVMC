@@ -29,7 +29,7 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy)\
+  private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy,idx)  \
   reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
@@ -199,7 +199,7 @@ double complex CalculateHamiltonian1(const double complex ip, int *eleIdx, const
   /* GreenFunc1: NQPFull */
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy)\
+  private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy,idx)  \
   reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
@@ -251,7 +251,7 @@ double complex CalculateHamiltonian2(const double complex ip, int *eleIdx, const
   /* GreenFunc2: NQPFull+2*Nsize */
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy)\
+  private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy,idx)  \
   reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
