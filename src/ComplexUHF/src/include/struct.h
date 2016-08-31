@@ -18,7 +18,7 @@ struct DefineList{
   int eps_int;
   double eps,mix;
   int St;
-	
+  
 	int *LocSpn, NLocSpn, **All_pair;
 
 	int *OptFlag, fidx;
@@ -31,6 +31,9 @@ struct DefineList{
 	int **HundCoupling, NHundCoupling;			double *ParaHundCoupling;
 	int **PairHopping, NPairHopping;			double *ParaPairHopping;
 	int **ExchangeCoupling, NExchangeCoupling;	double *ParaExchangeCoupling;
+  int NOrbitalIdx, **OrbitalIdx; /* [Nsite][Nsite] */
+  int **OrbitalSgn; /* OrbitalSgn[Nsite][Nsite] = +1 or -1 */
+  
   int **Initial,NInitial;  
   double *ParaInitial;
   double *ParaInitial_theta;

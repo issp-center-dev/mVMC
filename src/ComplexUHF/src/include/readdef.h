@@ -14,7 +14,7 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
 		"ModPara", "LocSpin",
 		"Trans", "CoulombIntra", "CoulombInter",
 		"Hund", "PairHop", "Exchange",
-		"OneBodyG", "InterAll",
+		"OneBodyG", "Orbital", "InterAll",
 		"Initial"
 };
 
@@ -25,7 +25,7 @@ enum KWIdxInt{
 	KWModPara, KWLocSpin,
 	KWTrans, KWCoulombIntra,KWCoulombInter,
 	KWHund, KWPairHop, KWExchange,
-	KWOneBodyG, KWInterAll,
+	KWOneBodyG, KWOrbital, KWInterAll,
 	KWInitial,KWIdxInt_end
 };
 

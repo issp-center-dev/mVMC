@@ -25,7 +25,7 @@ void diag(struct BindStruct *X){
       }
     }
     ZHEEVall(2*xMsize,tmp_mat,r,vec);
-    for(int_k = 0; int_k < 2*X->Def.Nsite; int_k++){
+    for(int_k = 0; int_k < 2*xMsize; int_k++){
       X->Large.EigenValues[int_k] = r[int_k];
     }
     for(int_k = 0; int_k < 2*X->Def.Ne; int_k++){

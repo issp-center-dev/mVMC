@@ -30,6 +30,20 @@ void output(struct BindStruct *X){
   fprintf(fp,"  %.10lf \n",tmp);
   fclose(fp);
 
+  sprintf(sdt,"%s_fij.dat",X->Def.CDataFileHead);
+  fp=fopen(sdt,"w");
+  /*
+  for(i=0;i< X->Def.Nsite;i++){
+    for(j=0;j< X->Def.Nsite;j++){
+    tmp    =  0.0;
+      for(n=0;n< X->Def.Ne;n++){
+        tmp   +=  X->Large.R_SLT_0[i][n]*X->Large.R_SLT_1[j][n] ;
+      }
+    fprintf(fp," %d  %d %.10lf \n",i,j,tmp);
+    }
+  }
+  */
+  fclose(fp);
 }
 
 void cal_cisajs(struct BindStruct *X){

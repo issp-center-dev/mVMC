@@ -158,6 +158,13 @@ int ReadDefFileNInt(
 					fclose(fp);
 					break;
 
+            case KWOrbital:
+              fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+              fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+              sscanf(ctmp2,"%s %d\n", ctmp, &X->NOrbitalIdx);
+              fclose(fp);
+              break;
+
 				case KWOneBodyG:
 					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
@@ -206,7 +213,8 @@ int ReadDefFileIdxPara(
 	char defname[D_FileNameMaxReadDef];
 	char ctmp[D_FileNameMax], ctmp2[256];
 	int iKWidx=0;
-	int i, idx;
+	int i, j;
+    int idx;
 	int x0,x1,x2,x3,x4,x5,x6,x7;
 	int itmp, info;
 	double dReValue;
@@ -339,6 +347,25 @@ int ReadDefFileIdxPara(
 				fclose(fp);
 				break;
 
+        case KWOrbital:
+          /*orbitalidx.def------------------------------------*/
+          if(X->NOrbitalIdx>0){
+            idx = 0;
+            while( fscanf(fp, "%d %d ", &i, &j) != EOF){
+              fscanf(fp, "%d\n", &(X->OrbitalIdx[i][j]));
+              X->OrbitalSgn[i][j] = 1;
+              idx++;
+              if(idx==X->Nsite*X->Nsite) break;
+            }
+
+            if(idx!=X->Nsite*X->Nsite) {
+              info=ReadDefFileError(defname);
+            }
+          }
+          fclose(fp);
+          break;
+
+                
 			case KWOneBodyG:
 				/*cisajs.def----------------------------------------*/
 				if(X->NCisAjs>0){
