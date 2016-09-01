@@ -231,7 +231,7 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
     
     /* local spin */
     for(ri=0;ri<Nsite;ri++) {
-      if(LocSpn[ri]==0) {
+      if(LocSpn[ri]==1) {
         do {
           mi = gen_rand32()%Ne;
           si = (genrand_real2()<0.5) ? 0 : 1;
@@ -247,7 +247,7 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
         if(eleIdx[mi+si*Ne]== -1) {
           do {
             ri = gen_rand32()%Nsite;
-          } while (eleCfg[ri+si*Nsite]!= -1 || LocSpn[ri]==0);
+          } while (eleCfg[ri+si*Nsite]!= -1 || LocSpn[ri]==1);
           eleCfg[ri+si*Nsite] = mi;
           eleIdx[mi+si*Ne] = ri;
         }
@@ -379,7 +379,7 @@ void makeCandidate_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFla
     mi = gen_rand32()%Ne;
     s = (genrand_real2()<0.5) ? 0 : 1;
     ri = eleIdx[mi+s*Ne];
-  } while (LocSpn[ri] == 0);
+  } while (LocSpn[ri] == 1);
 
   icnt = 0;
   do {
@@ -389,7 +389,7 @@ void makeCandidate_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFla
       break;
     }
     icnt+=1;
-  } while (eleCfg[rj+s*Nsite] != -1 || LocSpn[rj]==0);
+  } while (eleCfg[rj+s*Nsite] != -1 || LocSpn[rj]==1);
 
   *mi_ = mi;
   *ri_ = ri;
