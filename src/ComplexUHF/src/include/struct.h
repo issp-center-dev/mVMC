@@ -25,7 +25,8 @@ struct DefineList{
   unsigned int *Tpow;
 
   int *EDChemi, EDNChemi; double *EDParaChemi;
-	int **Transfer, **EDTransfer, NTransfer,EDNTransfer;					double *ParaTransfer,*EDParaTransfer;
+  int **Transfer, **EDTransfer, NTransfer,EDNTransfer;
+  complex double *ParaTransfer;
 	int **CoulombIntra, NCoulombIntra;			double *ParaCoulombIntra;
 	int **CoulombInter, NCoulombInter;			double *ParaCoulombInter;
 	int **HundCoupling, NHundCoupling;			double *ParaHundCoupling;

@@ -18,6 +18,7 @@ int ReadDefFileError(
 	return 0;
 }
 
+void SetInitialValue(struct DefineList *X);
 
 int ReadDefFileNInt(
 	char *xNameListFile, 
@@ -51,7 +52,9 @@ int ReadDefFileNInt(
 		}
 	}
 
-	for(iKWidx=0; iKWidx< KWIdxInt_end; iKWidx++){
+    SetInitialValue(X);
+
+    for(iKWidx=0; iKWidx< KWIdxInt_end; iKWidx++){
 		strcpy(defname, cFileNameListFile[iKWidx]);
 		if(strcmp(defname,"")==0) continue;
 		fprintf(stdout,  "  Read File '%s' for %s.\n", defname, cKWListOfFileNameList[iKWidx]);
@@ -201,7 +204,7 @@ int ReadDefFileNInt(
 
 	X->Nsize   = 2*X->Ne;
 	X->fidx = 0;
-	return 1;
+	return 0;
 }
 
 
@@ -214,12 +217,12 @@ int ReadDefFileIdxPara(
 	char ctmp[D_FileNameMax], ctmp2[256];
 	int iKWidx=0;
 	int i, j;
-    int idx;
+    int idx, Orbitalidx;
 	int x0,x1,x2,x3,x4,x5,x6,x7;
 	int itmp, info;
 	double dReValue;
 	double dImValue;
-
+	info=0;
 	for(iKWidx=KWLocSpin; iKWidx< KWIdxInt_end; iKWidx++){
 		strcpy(defname, cFileNameListFile[iKWidx]);
 
@@ -248,30 +251,35 @@ int ReadDefFileIdxPara(
 					fprintf(stderr, "Error: 2*Ne must be (2*Ne >= NLocalSpin).\n");
 					info=1;
 				}
-				if(idx!=X->Nsite) info = ReadDefFileError(defname);
+				if(idx!=X->Nsite){
+					info = ReadDefFileError(defname);
+				}
 				fclose(fp);
 				break;//locspn
 
 			case KWTrans:
 				/* transfer.def--------------------------------------*/
 				if(X->NTransfer>0){
-					while( fscanf(fp, "%d %d %d %d %lf %lf\n",
-								  &(X->Transfer[idx][0]),
-								  &(X->Transfer[idx][1]),
-								  &(X->Transfer[idx][2]),
-								  &(X->Transfer[idx][3]),
-								  &dReValue,
-								  &dImValue)!=EOF){
-//						X->ParaTransfer[idx]=dReValue+dImValue*I;
-						X->ParaTransfer[idx]=dReValue;
-						if(X->Transfer[idx][1] != X->Transfer[idx][3]){
+					while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
+                      dImValue=0;
+						sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
+							   &(X->Transfer[idx][0]),
+							   &(X->Transfer[idx][1]),
+							   &(X->Transfer[idx][2]),
+							   &(X->Transfer[idx][3]),
+							   &dReValue,
+							   &dImValue);
+						X->ParaTransfer[idx]=dReValue+dImValue*I;
+                        if(X->Transfer[idx][1] != X->Transfer[idx][3]){
 							fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
 							info = ReadDefFileError(defname);
 							break;
 						}
 						idx++;
 					}
-					if(idx!=X->NTransfer) info = ReadDefFileError(defname);
+					if(idx!=X->NTransfer) {
+						info = ReadDefFileError(defname);
+					}
 				}
 				fclose(fp);
 				break;
@@ -282,9 +290,12 @@ int ReadDefFileIdxPara(
 					while( fscanf(fp, "%d %lf\n",
 								  &(X->CoulombIntra[idx][0]),
 								  &(X->ParaCoulombIntra[idx]) )!=EOF){
-						idx++;
+                      //printf("Debug: CoulombIntra: idx = %d, para = %lf \n", X->CoulombIntra[idx][0],X->ParaCoulombIntra[idx]);
+                      idx++;
 					}
-					if(idx!=X->NCoulombIntra) info = ReadDefFileError(defname);
+					if(idx!=X->NCoulombIntra) {
+						info = ReadDefFileError(defname);
+					}
 				}
 				fclose(fp);
 				break;
@@ -299,8 +310,11 @@ int ReadDefFileIdxPara(
 							   &(X->ParaCoulombInter[idx])
 						);
 						idx++;
+                        
 					}
-					if(idx!=X->NCoulombInter) info=ReadDefFileError(defname);
+					if(idx!=X->NCoulombInter){
+						info=ReadDefFileError(defname);
+					}
 				}
 				fclose(fp);
 				break;
@@ -314,7 +328,9 @@ int ReadDefFileIdxPara(
 								  &(X->ParaHundCoupling[idx]) )!=EOF){
 						idx++;
 					}
-					if(idx!=X->NHundCoupling) info=ReadDefFileError(defname);
+					if(idx!=X->NHundCoupling) {
+						info = ReadDefFileError(defname);
+					}
 				}
 				fclose(fp);
 				break;
@@ -328,7 +344,9 @@ int ReadDefFileIdxPara(
 								  &(X->ParaPairHopping[idx]) )!=EOF){
 						idx++;
 					}
-					if(idx!=X->NPairHopping) info=ReadDefFileError(defname);
+					if(idx!=X->NPairHopping){
+						info=ReadDefFileError(defname);
+					}
 				}
 				fclose(fp);
 				break;
@@ -342,7 +360,9 @@ int ReadDefFileIdxPara(
 								  &(X->ParaExchangeCoupling[idx]) )!=EOF){
 						idx++;
 					}
-					if(idx!=X->NExchangeCoupling) info=ReadDefFileError(defname);
+					if(idx!=X->NExchangeCoupling) {
+						info = ReadDefFileError(defname);
+					}
 				}
 				fclose(fp);
 				break;
@@ -350,19 +370,42 @@ int ReadDefFileIdxPara(
         case KWOrbital:
           /*orbitalidx.def------------------------------------*/
           if(X->NOrbitalIdx>0){
-            idx = 0;
-            while( fscanf(fp, "%d %d ", &i, &j) != EOF){
-              fscanf(fp, "%d\n", &(X->OrbitalIdx[i][j]));
-              X->OrbitalSgn[i][j] = 1;
-              idx++;
-              if(idx==X->Nsite*X->Nsite) break;
+            for(i=0; i<X->Nsite*2; i++){
+              for(j=0; j<X->Nsite*2; j++){
+                X->OrbitalIdx[i][j] = -1;
+              }
             }
+            idx = 0;
+            while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL)
+			  {
+                //TODO: Replace for spin dependent
+				  sscanf(ctmp2, "%d %d %d\n",
+						 &i,
+						 &j,
+						 &Orbitalidx);
+                  (X->OrbitalIdx[i+X->Nsite*1][j+X->Nsite*0])=Orbitalidx;
+                  idx++;
+                  if(idx==X->Nsite*X->Nsite) break;
 
+                  /*
+				  sscanf(ctmp2, "%d %d %d %d %d\n",
+						 &i,
+                         &ispin,
+						 &j,
+                         &jspin
+						 &Orbitalidx);
+                         X->OrbitalIdx[i+X->Nsite*ispin][j+X->Nsite*jspin]=Orbitalidx;
+                  idx++;
+                  if(idx==2*X->Nsite*2*X->Nsite) break;
+                  
+                  */
+            }
             if(idx!=X->Nsite*X->Nsite) {
-              info=ReadDefFileError(defname);
+				info=ReadDefFileError(defname);
             }
           }
           fclose(fp);
+          
           break;
 
                 
@@ -383,7 +426,9 @@ int ReadDefFileIdxPara(
 						}
 						idx++;
 					}
-					if(idx!=X->NCisAjs) info=ReadDefFileError(defname);
+					if(idx!=X->NCisAjs){
+						info=ReadDefFileError(defname);
+					}
 				}
 				fclose(fp);
 				break;
@@ -444,7 +489,9 @@ int ReadDefFileIdxPara(
 						idx++;
 					}
 
-					if(idx!=X->NInitial) info=ReadDefFileError(defname);
+					if(idx!=X->NInitial){
+						info=ReadDefFileError(defname);
+					}
 				} else {
 					// info=ReadDefFileError(xNameListFile);
 				}
@@ -457,13 +504,12 @@ int ReadDefFileIdxPara(
 		}
 	}
 
-
 	if(info!=0) {
 		fprintf(stderr, "error: Indices and Parameters of Definition files(*.def) are incomplete.\n");
 		return -1;
 	}
 
-	return 1;
+	return 0;
 }
 
 /**********************************************************************/
@@ -632,9 +678,11 @@ int GetFileName(
 	if(fplist==NULL) return ReadDefFileError(cFileListNameFile);
 
 	while(fgets(ctmp2, 256, fplist) != NULL){
-		sscanf(ctmp2,"%s %s\n", ctmpKW, ctmpFileName);
-
-		if(strncmp(ctmpKW, "#", 1)==0 || *ctmp2=='\n'){
+        memset(ctmpKW, '\0', strlen(ctmpKW));
+        memset(ctmpFileName, '\0', strlen(ctmpFileName));
+        sscanf(ctmp2,"%s %s\n", ctmpKW, ctmpFileName);
+		if(strncmp(ctmpKW, "#", 1)==0 || *ctmp2=='\n' || (strcmp(ctmpKW, "")&&strcmp(ctmpFileName,""))==0)
+        {
 			continue;
 		}
 		else if(strcmp(ctmpKW, "")*strcmp(ctmpFileName, "")==0){
@@ -665,3 +713,16 @@ int GetFileName(
 	fclose(fplist);
 	return 0;
 }
+
+void SetInitialValue(struct DefineList *X){
+  X->NTransfer=0;
+  X->NCoulombIntra=0;
+  X->NCoulombInter=0;
+  X->NHundCoupling=0;
+  X->NPairHopping=0;
+  X->NExchangeCoupling=0;
+  X->NOrbitalIdx=0;
+  X->NCisAjs=0;
+  X->NInitial=0;
+}
+

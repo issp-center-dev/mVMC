@@ -1254,11 +1254,13 @@ int GetFileName(
   if(fplist==NULL) return ReadDefFileError(cFileListNameFile);
   
   while(fgets(ctmp2, 256, fplist) != NULL){ 
-    sscanf(ctmp2,"%s %s\n", ctmpKW, ctmpFileName);
-
-    if(strncmp(ctmpKW, "#", 1)==0 || *ctmp2=='\n'){
-      continue;
-    }
+        memset(ctmpKW, '\0', strlen(ctmpKW));
+        memset(ctmpFileName, '\0', strlen(ctmpFileName));
+        sscanf(ctmp2,"%s %s\n", ctmpKW, ctmpFileName);
+		if(strncmp(ctmpKW, "#", 1)==0 || *ctmp2=='\n' || (strcmp(ctmpKW, "")&&strcmp(ctmpFileName,""))==0)
+        {
+			continue;
+		}
     else if(strcmp(ctmpKW, "")*strcmp(ctmpFileName, "")==0){
       fprintf(stderr, "Error: keyword and filename must be set as a pair in %s.\n", cFileListNameFile);
       fclose(fplist);

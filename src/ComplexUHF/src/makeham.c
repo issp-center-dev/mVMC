@@ -10,8 +10,9 @@ void makeham(struct BindStruct *X){
     int u_site_1,u_site_2;
     int d_site_1,d_site_2;
     int Ns;
-    double tmp,charge;
-
+    double charge;
+    double complex tmp;
+    
     Ns = X->Def.Nsite;
     /* Initialize */
     for(int_i=0; int_i < 2*X->Def.Nsite; int_i++){
@@ -28,7 +29,6 @@ void makeham(struct BindStruct *X){
       int_spin2  = X->Def.Transfer[int_i][3];
 
       tmp       = -X->Def.ParaTransfer[int_i];
-
       t_site_1  = site_1+int_spin1*Ns;
       t_site_2  = site_2+int_spin2*Ns;
 

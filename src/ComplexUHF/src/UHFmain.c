@@ -36,55 +36,53 @@ int main(int argc, char* argv[]){
     /*variable declaration-------------------------------------*/
     //time_t start,mid1,mid2,end;
     char sdt[256];
-	  FILE *fp, *fplist;
-	  char configfile[D_FileNameMax];
-	  char optfile[D_FileNameMax];
-	  char defname[D_FileNameMax];
+    FILE *fp, *fplist;
+    char configfile[D_FileNameMax];
+    char optfile[D_FileNameMax];
+    char defname[D_FileNameMax];
     
     double t_0,t_1,t_2,t_3,t_4;
-
-	  int mfint[7];/*for malloc*/
-	  int i,j,xi;
-
-	  int Nsmp,Nloop;
+    
+    int mfint[7];/*for malloc*/
+    int i,j,xi;
+    
+    int Nsmp,Nloop;
    	double **vardataBOX, **varADdataBOX;
-	  double xtmp,xmax,tmp_eps;
-	  int itrstep,jobcont;
+    double xtmp,xmax,tmp_eps;
+    int itrstep,jobcont;
     
     //time start
     X.Bind.Time.start=time(NULL);
     
- 	  if(argc==1 || argc>3){
-		  //ERROR
-		  printf("ED Error: *.out(*.exe) NameListFile [OptParaFile]\n");
-		  exit(1);
-	  }
-
-	  X.Bind.Def.CDataFileHead = (char*)malloc(D_FileNameMax*sizeof(char));
-	  X.Bind.Def.CParaFileHead = (char*)malloc(D_FileNameMax*sizeof(char));
-	  X.Bind.Def.CPathQtyExe   = (char*)malloc(D_FileNameMax*sizeof(char));
-	  X.Bind.Def.CPathAveDev   = (char*)malloc(D_FileNameMax*sizeof(char));
+    if(argc==1 || argc>3){
+      //ERROR
+      printf("ED Error: *.out(*.exe) NameListFile [OptParaFile]\n");
+      exit(1);
+    }
+    
+    X.Bind.Def.CDataFileHead = (char*)malloc(D_FileNameMax*sizeof(char));
+    X.Bind.Def.CParaFileHead = (char*)malloc(D_FileNameMax*sizeof(char));
+    X.Bind.Def.CPathQtyExe   = (char*)malloc(D_FileNameMax*sizeof(char));
+    X.Bind.Def.CPathAveDev   = (char*)malloc(D_FileNameMax*sizeof(char));
     X.Bind.Def.k_exct = 1;
     X.Bind.Def.nvec   = 1;
-
-	  if(ReadDefFileNInt(argv[1], &(X.Bind.Def))==0){
-		  printf("UHF Error: Definition files(*.def) are incomplete.\n");
-		  exit(1);
-	  };
-	  
-	  /*ALLOCATE-------------------------------------------*/
-	  #include "xsetmem_def.c"
-	  /*-----------------------------------------------------*/
-
-	  if(ReadDefFileIdxPara(argv[1], &(X.Bind.Def))==0){
-			printf("UHF Error: Indices and Parameters of Definition files(*.def) are incomplete.\n");
-		  exit(1);
-	  };
+    
+    if(ReadDefFileNInt(argv[1], &(X.Bind.Def))!=0){
+      exit(1);
+    };
+	
+    /*ALLOCATE-------------------------------------------*/
+#include "xsetmem_def.c"
+    /*-----------------------------------------------------*/
+    
+    if(ReadDefFileIdxPara(argv[1], &(X.Bind.Def))!=0){
+      exit(1);
+    };
     
     check(&(X.Bind)); 
-	  /*LARGE VECTORS ARE ALLOCATED*/
-	  #include "xsetmem_large.c"
-	  /*---------------------------*/
+    /*LARGE VECTORS ARE ALLOCATED*/
+#include "xsetmem_large.c"
+    /*---------------------------*/
     //Make eps
     tmp_eps=1;
     for(i=0;i<X.Bind.Def.eps_int;i++){
@@ -99,7 +97,7 @@ int main(int argc, char* argv[]){
     sprintf(sdt,"%s_check.dat",X.Bind.Def.CDataFileHead);
     fp=fopen(sdt,"w");
     for(i=0;i<X.Bind.Def.IterationMax;i++){
-
+      
      t_0 = gettimeofday_sec();
      makeham(&(X.Bind));
      t_1 = gettimeofday_sec();
@@ -118,13 +116,12 @@ int main(int argc, char* argv[]){
        printf("green: %lf \n",t_3-t_2);
        printf("cal: %lf \n",t_4-t_3);
      }
-      if(X.Bind.Phys.rest < X.Bind.Def.eps){
-        break;
-      } 
+     if(X.Bind.Phys.rest < X.Bind.Def.eps){
+       break;
+     } 
     } 
     fclose(fp);
     output(&(X.Bind));
-    //    cal_cisajs(&(X.Bind));
     if(i<X.Bind.Def.IterationMax){
       printf(" %d finish \n ",i); 
     }else{
@@ -132,4 +129,3 @@ int main(int argc, char* argv[]){
     } 
     return 0;
 }
-

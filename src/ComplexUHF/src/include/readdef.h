@@ -51,3 +51,5 @@ int ReadDefFileIdxPara(
 	char *xNameListFile, 
 	struct DefineList *X
                        );
+
+int trim(char *s);

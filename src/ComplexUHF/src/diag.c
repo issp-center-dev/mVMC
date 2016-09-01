@@ -28,6 +28,8 @@ void diag(struct BindStruct *X){
     for(int_k = 0; int_k < 2*xMsize; int_k++){
       X->Large.EigenValues[int_k] = r[int_k];
     }
+
+    //For zero-temperature to generate pair-orbitals
     for(int_k = 0; int_k < 2*X->Def.Ne; int_k++){
       for(int_l = 0; int_l < 2*xMsize; int_l++){
         X->Large.R_SLT[int_l][int_k] = conj(vec[int_k][int_l]);

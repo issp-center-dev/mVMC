@@ -4,11 +4,11 @@
 	i_malloc1(X.Bind.Def.LocSpn, X.Bind.Def.Nsite);
 	i_malloc2(X.Bind.Def.All_pair, X.Bind.Def.Nsite*X.Bind.Def.Nsite, 2);
 	d_malloc1(X.Bind.Phys.spin_real_cor, X.Bind.Def.Nsite*X.Bind.Def.Nsite);
-  d_malloc1(X.Bind.Phys.charge_real_cor, X.Bind.Def.Nsite*X.Bind.Def.Nsite);
-  d_malloc1(X.Bind.Phys.loc_spin_z, X.Bind.Def.Nsite*X.Bind.Def.Nsite);
+d_malloc1(X.Bind.Phys.charge_real_cor, X.Bind.Def.Nsite*X.Bind.Def.Nsite);
+d_malloc1(X.Bind.Phys.loc_spin_z, X.Bind.Def.Nsite*X.Bind.Def.Nsite);
   
 	i_malloc2(X.Bind.Def.Transfer, X.Bind.Def.NTransfer, 4);
-	d_malloc1(X.Bind.Def.ParaTransfer, X.Bind.Def.NTransfer);
+	c_malloc1(X.Bind.Def.ParaTransfer, X.Bind.Def.NTransfer);
 	i_malloc2(X.Bind.Def.CoulombIntra, X.Bind.Def.NCoulombIntra, 1);
 	d_malloc1(X.Bind.Def.ParaCoulombIntra, X.Bind.Def.NCoulombIntra);
 	i_malloc2(X.Bind.Def.CoulombInter, X.Bind.Def.NCoulombInter, 2);
@@ -22,6 +22,7 @@
 	i_malloc2(X.Bind.Def.Initial, X.Bind.Def.NInitial, 4);
 	d_malloc1(X.Bind.Def.ParaInitial, X.Bind.Def.NInitial);
 	d_malloc1(X.Bind.Def.ParaInitial_theta, X.Bind.Def.NInitial);
+i_malloc2(X.Bind.Def.OrbitalIdx, X.Bind.Def.Nsite*2, X.Bind.Def.Nsite*2);
 
 	i_malloc2(X.Bind.Def.CisAjs, X.Bind.Def.NCisAjs, 4);
   	i_malloc2(X.Bind.Def.CisAjsCktAltDC, X.Bind.Def.NCisAjsCktAltDC, 8);
