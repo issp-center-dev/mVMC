@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
   if(flagReadInitPara>0 && rank0==0) ReadInitParameter(fileInitPara);
   //[s] add read parameters respectively
   if(rank0==0){
-    if(!ReadInputParameters(fileDefList, comm0)==0){
+    if(ReadInputParameters(fileDefList, comm0)!=0){
       //[ToDo]: Add Error procedure
       info=1;
     }
