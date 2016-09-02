@@ -17,7 +17,12 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
 		"ModPara", "LocSpin",
 		"Trans", "CoulombIntra", "CoulombInter",
 		"Hund", "PairHop", "Exchange",
-		"OneBodyG", "Orbital", "InterAll",
+        "Gutzwiller", "Jastrow",
+        "DH2", "DH4", "Orbital",
+        "TransSym", "InGutzwiller", "InJastrow",
+        "InDH2", "InDH4", "InOrbital",
+        "OneBodyG", "TwoBodyG", "TwoBodyGEx",
+        "InterAll", "OptTrans", "InOptTrans",
 		"Initial"
 };
 
@@ -28,7 +33,12 @@ enum KWIdxInt{
 	KWModPara, KWLocSpin,
 	KWTrans, KWCoulombIntra,KWCoulombInter,
 	KWHund, KWPairHop, KWExchange,
-	KWOneBodyG, KWOrbital, KWInterAll,
+    KWGutzwiller, KWJastrow,
+    KWDH2, KWDH4, KWOrbital,
+    KWTransSym, KWInGutzwiller, KWInJastrow,
+    KWInDH2, KWInDH4, KWInOrbital,
+    KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
+    KWInterAll, KWOptTrans, KWInOptTrans,
 	KWInitial,KWIdxInt_end
 };
 
@@ -111,9 +121,29 @@ int ReadDefFileNInt(
 						sscanf(ctmp2,"%s %lf\n", ctmp, &dtmp);
 						if(CheckWords(ctmp, "NVMCCalMode")==0 ||
 						   CheckWords(ctmp, "NLanczosMode")==0 ||
-								CheckWords(ctmp, "NDataIdxStart")==0 ||
-								CheckWords(ctmp, "NDataQtySmp")==0
-									){
+                           CheckWords(ctmp, "NDataIdxStart")==0 ||
+                           CheckWords(ctmp, "NDataQtySmp")==0 ||
+                           CheckWords(ctmp, "NDataQtySmp")==0 ||
+                           CheckWords(ctmp, "NDataQtySmp")==0 ||
+                                CheckWords(ctmp, "NSPGaussLeg")==0 ||
+                                CheckWords(ctmp, "NSPStot")==0 ||
+                                CheckWords(ctmp, "NMPTrans")==0 ||
+                                CheckWords(ctmp, "NSROptItrStep")==0 ||
+                                CheckWords(ctmp, "NSROptItrSmp")==0 ||
+                                CheckWords(ctmp, "DSROptRedCut")==0 ||
+                                CheckWords(ctmp, "DSROptStaDel")==0 ||
+                                CheckWords(ctmp, "DSROptStepDt")==0 ||
+                                CheckWords(ctmp, "NVMCWarmUp")==0 ||
+                                CheckWords(ctmp, "NVMCIniterval")==0 ||
+                                CheckWords(ctmp, "NVMCSample")==0 ||
+                                CheckWords(ctmp, "NExUpdatePath")==0 ||
+                                CheckWords(ctmp, "RndSeed")==0 ||
+                                CheckWords(ctmp, "NSplitSize")==0 ||
+                                CheckWords(ctmp, "NStore")==0
+                           )
+                        {
+                            fprintf(stdout, "!! Warning: %s is not used for Hatree Fock Calculation. !!\n", ctmp);
+
 							continue;
 						}
 						else if(CheckWords(ctmp, "Nsite")==0){
@@ -529,7 +559,8 @@ int ReadDefFileIdxPara(
 				break;
 
 			default:
-				fclose(fp);
+                fprintf(stdout, "!! Warning: %s is not used for Hatree Fock Calculation. !!\n", defname);
+                fclose(fp);
 				break;
 		}
 	}
