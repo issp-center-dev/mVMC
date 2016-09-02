@@ -14,32 +14,32 @@
  * Keyword List in NameListFile.
  **/
 static char cKWListOfFileNameList[][D_CharTmpReadDef]={
-		"ModPara", "LocSpin",
-		"Trans", "CoulombIntra", "CoulombInter",
-		"Hund", "PairHop", "Exchange",
-        "Gutzwiller", "Jastrow",
-        "DH2", "DH4", "Orbital",
-        "TransSym", "InGutzwiller", "InJastrow",
-        "InDH2", "InDH4", "InOrbital",
-        "OneBodyG", "TwoBodyG", "TwoBodyGEx",
-        "InterAll", "OptTrans", "InOptTrans",
-		"Initial"
+  "ModPara", "LocSpin",
+  "Trans", "CoulombIntra", "CoulombInter",
+  "Hund", "PairHop", "Exchange",
+  "Gutzwiller", "Jastrow",
+  "DH2", "DH4", "Orbital",
+  "TransSym", "InGutzwiller", "InJastrow",
+  "InDH2", "InDH4", "InOrbital",
+  "OneBodyG", "TwoBodyG", "TwoBodyGEx",
+  "InterAll", "OptTrans", "InOptTrans",
+  "Initial"
 };
 
 /**
  * Number of Keyword List in NameListFile for this program.
  **/
 enum KWIdxInt{
-	KWModPara, KWLocSpin,
-	KWTrans, KWCoulombIntra,KWCoulombInter,
-	KWHund, KWPairHop, KWExchange,
-    KWGutzwiller, KWJastrow,
-    KWDH2, KWDH4, KWOrbital,
-    KWTransSym, KWInGutzwiller, KWInJastrow,
-    KWInDH2, KWInDH4, KWInOrbital,
-    KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
-    KWInterAll, KWOptTrans, KWInOptTrans,
-	KWInitial,KWIdxInt_end
+  KWModPara, KWLocSpin,
+  KWTrans, KWCoulombIntra,KWCoulombInter,
+  KWHund, KWPairHop, KWExchange,
+  KWGutzwiller, KWJastrow,
+  KWDH2, KWDH4, KWOrbital,
+  KWTransSym, KWInGutzwiller, KWInJastrow,
+  KWInDH2, KWInDH4, KWInOrbital,
+  KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
+  KWInterAll, KWOptTrans, KWInOptTrans,
+  KWInitial,KWIdxInt_end
 };
 
 static char (*cFileNameListFile)[D_CharTmpReadDef];
@@ -63,12 +63,14 @@ int ReadDefFileNInt(
 	char ctmp2[D_FileNameMax];
 	int itmp, info;
 	int iKWidx=0;
+	info=0;
 
 	cFileNameListFile = malloc(sizeof(char)*D_CharTmpReadDef*KWIdxInt_end);
 	fprintf(stdout, "  Read File %s .\n", xNameListFile);
 	if(GetFileName(xNameListFile, cFileNameListFile)!=0){
-		fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
-		return(-1);
+	  fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
+	  //	fprintf(stdout, " Error:  Read File %s .\n", xNameListFile);
+	  return(-1);
 	}
 
 	for(iKWidx=0; iKWidx< KWIdxInt_end; iKWidx++){
@@ -255,10 +257,17 @@ int ReadDefFileNInt(
 					break;
 			}//case KW
 		}
+	if(info!=0) {
+		fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
+		fprintf(stdout, " Error:  Read File %s .\n", defname);
+		return -1;
 	}
+
+    }
 
 	if(info!=0) {
 		fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
+		fprintf(stdout, " Error:  Read File %s .\n", defname);
 		return -1;
 	}
 
