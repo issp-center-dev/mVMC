@@ -4,15 +4,8 @@
 
 void green(struct BindStruct *X){
 
-    time_t start,end;
-    FILE *fp;
-    char sdt[256],jobz,uplo;
-    double alpha,beta;
-    int    lda;
-    double tmp_0,tmp_1;
     double complex **R_Mat;
-    int int_i,int_j,int_k,int_l,site_1,site_2;
-    int site_i,site_j,int_i_A,int_j_A,int_i_B,int_j_B;
+    int int_i,int_j;
     int mfint[7],xMsize,Ne;
 
  

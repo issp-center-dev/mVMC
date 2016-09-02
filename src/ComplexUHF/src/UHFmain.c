@@ -22,10 +22,11 @@
 #include "output.h"
 
 double gettimeofday_sec(){
-  struct timeval tv;  
-  gettimeofday(&tv, NULL);    
-  return tv.tv_sec + (double)tv.tv_usec*1e-6;
-} 
+//  struct timeval tv;
+//  gettimeofday(&tv, NULL);
+// return tv.tv_sec + (double)tv.tv_usec*1e-6;
+return 0;
+}
 
 /*global variables---------------------------------------------*/
 struct EDMainCalStruct X;
@@ -36,21 +37,15 @@ int main(int argc, char* argv[]){
     /*variable declaration-------------------------------------*/
     //time_t start,mid1,mid2,end;
     char sdt[256];
-    FILE *fp, *fplist;
-    char configfile[D_FileNameMax];
-    char optfile[D_FileNameMax];
-    char defname[D_FileNameMax];
-    
+    FILE *fp;
+
     double t_0,t_1,t_2,t_3,t_4;
     
     int mfint[7];/*for malloc*/
-    int i,j,xi;
+    int i;
     
-    int Nsmp,Nloop;
-   	double **vardataBOX, **varADdataBOX;
-    double xtmp,xmax,tmp_eps;
-    int itrstep,jobcont;
-    
+    double tmp_eps;
+
     //time start
     X.Bind.Time.start=time(NULL);
     

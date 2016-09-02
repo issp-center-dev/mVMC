@@ -16,6 +16,7 @@ int dgetrf_(int *m, int *n, double *a, int *lda, int *ipiv, int *info);
 int dgetri_(int *n, double *a, int *lda, int *ipiv, double *work, int *lwork, int *info);
 int dgemm_(char *jobz, char *uplo, int *m,int *n,int *k,double *alpha,  double *a, int *lda, double *b, int *ldb, double *beta,double *c,int *ldc);
 int dsyev_(char *jobz, char *uplo, int *n, double *a, int *lda, double *w, double *work, int *lwork, int *info);
+int zgemm_(char *jobz, char *uplo, int *m,int *n,int *k,double complex *alpha,  double complex *a, int *lda, double complex *b, int *ldb, double complex *beta,double complex *c,int *ldc);
 int zheev_(char *jobz, char *uplo, int *n, double complex *a, int *lda, double *w, double complex *work, int *lwork, double *rwork, int *info);
 
 
@@ -53,15 +54,12 @@ int dsyevx_(char *jobz, char *range, char *uplo, int *n, double *a, int *lda, do
 int cmp_MMProd(int Ns, int Ne, double complex **Mat_1, double complex **Mat_2,double complex **Mat_3){
 
 	int i,j,k;
-	int m,n,lda,ldb,ldc,info,lwork;
 	char jobz, uplo;
 	double complex *a,*b,*c;
   double complex alpha,beta;
 
   alpha = 1.0;
   beta  = 0.0;
-
-	m=n=lda=lwork=Ns;
 
 	a = (double complex*)malloc(Ns*Ne*sizeof(double complex));
 	b = (double complex*)malloc(Ns*Ne*sizeof(double complex));
@@ -116,7 +114,6 @@ int cmp_MMProd(int Ns, int Ne, double complex **Mat_1, double complex **Mat_2,do
 int MMProd(int Ns, int Ne, double **Mat_1, double **Mat_2,double **Mat_3){
 
 	int i,j,k;
-	int m,n,lda,ldb,ldc,info,lwork;
 	char jobz, uplo;
 	double *a,*b,*c;
   double alpha,beta;
@@ -124,7 +121,6 @@ int MMProd(int Ns, int Ne, double **Mat_1, double **Mat_2,double **Mat_3){
   alpha = 1.0;
   beta  = 0.0;
 
-	m=n=lda=lwork=Ns;
 
 	a = (double*)malloc(Ns*Ne*sizeof(double));
 	b = (double*)malloc(Ns*Ne*sizeof(double));

@@ -8,31 +8,8 @@
 #define IgnoreLinesInDef 5
 
 /**
- * Keyword List in NameListFile.
- **/
-static char cKWListOfFileNameList[][D_CharTmpReadDef]={
-		"ModPara", "LocSpin",
-		"Trans", "CoulombIntra", "CoulombInter",
-		"Hund", "PairHop", "Exchange",
-		"OneBodyG", "Orbital", "InterAll",
-		"Initial"
-};
-
-/**
- * Number of Keyword List in NameListFile for this program.
- **/
-enum KWIdxInt{
-	KWModPara, KWLocSpin,
-	KWTrans, KWCoulombIntra,KWCoulombInter,
-	KWHund, KWPairHop, KWExchange,
-	KWOneBodyG, KWOrbital, KWInterAll,
-	KWInitial,KWIdxInt_end
-};
-
-/**
  * File Name List in NameListFile.
  **/
-static char (*cFileNameListFile)[D_CharTmpReadDef];
 
 int CheckWords( const char* ctmp, const char* cKeyWord);
 int CheckKW(const char* cKW, char  cKWList[][D_CharTmpReadDef], int iSizeOfKWidx, int* iKWidx);

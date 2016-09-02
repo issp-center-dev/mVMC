@@ -10,6 +10,29 @@
 #include "readdef.h"
 #include "complex.h"
 #include <ctype.h>
+/**
+ * Keyword List in NameListFile.
+ **/
+static char cKWListOfFileNameList[][D_CharTmpReadDef]={
+		"ModPara", "LocSpin",
+		"Trans", "CoulombIntra", "CoulombInter",
+		"Hund", "PairHop", "Exchange",
+		"OneBodyG", "Orbital", "InterAll",
+		"Initial"
+};
+
+/**
+ * Number of Keyword List in NameListFile for this program.
+ **/
+enum KWIdxInt{
+	KWModPara, KWLocSpin,
+	KWTrans, KWCoulombIntra,KWCoulombInter,
+	KWHund, KWPairHop, KWExchange,
+	KWOneBodyG, KWOrbital, KWInterAll,
+	KWInitial,KWIdxInt_end
+};
+
+static char (*cFileNameListFile)[D_CharTmpReadDef];
 
 int ReadDefFileError(
 	const char *defname
@@ -24,7 +47,7 @@ int ReadDefFileNInt(
 	char *xNameListFile, 
 	struct DefineList *X
 ){
-	FILE *fp, *fplist;
+	FILE *fp;
 	char defname[D_FileNameMaxReadDef];
 	char ctmp[D_CharTmpReadDef];
 	char ctmp2[D_FileNameMax];
@@ -212,14 +235,14 @@ int ReadDefFileIdxPara(
 	char *xNameListFile, 
 	struct DefineList *X
 ){
-	FILE *fp, *fplist;
+	FILE *fp;
 	char defname[D_FileNameMaxReadDef];
 	char ctmp[D_FileNameMax], ctmp2[256];
 	int iKWidx=0;
 	int i, j;
     int idx, Orbitalidx;
-	int x0,x1,x2,x3,x4,x5,x6,x7;
-	int itmp, info;
+	int x0,x1,x2,x3;
+	int info;
 	double dReValue;
 	double dImValue;
 	info=0;
@@ -663,9 +686,7 @@ int GetFileName(
 		char cFileNameList[][D_CharTmpReadDef]
 )
 {
-	int myrank;
 	FILE *fplist;
-	char ctmp[D_FileNameMax];
 	int itmpKWidx=-1;
 	char ctmpFileName[D_FileNameMaxReadDef];
 	char ctmpKW[D_CharTmpReadDef], ctmp2[256];

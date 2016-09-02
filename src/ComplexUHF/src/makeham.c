@@ -2,9 +2,6 @@
 
 void makeham(struct BindStruct *X){
 
-    time_t start,end;
-    FILE *fp;
-    char sdt[256];
     int int_i,int_j,site_1,site_2,int_spin1, int_spin2;
     int t_site_1,t_site_2;
     int u_site_1,u_site_2;

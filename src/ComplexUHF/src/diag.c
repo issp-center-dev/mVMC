@@ -4,11 +4,8 @@
 
 void diag(struct BindStruct *X){
 
-    time_t start,end;
-    FILE *fp;
-    char sdt[256];
-    int int_i,int_j,int_k,int_l,site_1,site_2;
-    double tmp,charge,*r;
+    int int_i,int_j,int_k,int_l;
+    double *r;
     double complex **tmp_mat,**vec;
     int mfint[7],xMsize;
 

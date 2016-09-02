@@ -2,6 +2,7 @@
 #include "mfmemory.c"
 
 int MakeOrbitalFile(struct BindStruct *X);
+void cal_cisajs(struct BindStruct *X);
 
 void WriteHeader(char* cNKWidx, int NKWidx, FILE *fp){
   fprintf(fp, "======================\n");
@@ -28,7 +29,7 @@ void output(struct BindStruct *X){
   
   FILE *fp;
   char sdt[256];
-  int i, j, n, i_max;
+  int i;
   double tmp;
  
   sprintf(sdt,"%s_result.dat",X->Def.CDataFileHead);
@@ -51,15 +52,14 @@ void output(struct BindStruct *X){
   tmp =  X->Large.EigenValues[X->Def.Ne*2] - tmp;
   fprintf(fp,"  %.10lf \n",tmp);
   fclose(fp);
-
+  cal_cisajs(X);
   MakeOrbitalFile(X);
 }
 
 void cal_cisajs(struct BindStruct *X){
-    time_t start,end;
     FILE *fp;
     char sdt[256];
-    int int_i,int_spin,site_1,site_2,spin_1,spin_2;
+    int site_1,site_2,spin_1,spin_2;
     int Ns,t_site_1,t_site_2;
     double complex tmp;
     Ns = X->Def.Nsite; 
@@ -82,13 +82,12 @@ void cal_cisajs(struct BindStruct *X){
 }
 
 int MakeOrbitalFile(struct BindStruct *X){
-  int i, j, ispin, jspin, n, i_max;
+  int i, j, ispin, jspin, n;
   int isite, jsite;
   double complex **UHF_Fij;
   double complex *ParamOrbital;
   int *CountOrbital;
   int Orbitalidx;
-  char sdt[256];
   char fileName[256];
   
   if(X->Def.NOrbitalIdx>0){
@@ -100,8 +99,8 @@ int MakeOrbitalFile(struct BindStruct *X){
             isite = i+ispin*X->Def.Nsite;
             jsite = j+jspin*X->Def.Nsite;
             UHF_Fij[isite][jsite]=0;
-            for(n=0;n< 2*X->Def.Ne;n++){
-              UHF_Fij[isite][jsite]   +=  X->Large.R_SLT[isite][n]*X->Large.R_SLT[jsite][n];
+            for(n=0;n< 2*X->Def.Ne;n+=2){
+              UHF_Fij[isite][jsite]   +=  X->Large.R_SLT[isite][n]*X->Large.R_SLT[jsite][n+1];
             }
           }
         }
