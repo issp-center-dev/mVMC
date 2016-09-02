@@ -987,12 +987,12 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
         continue;
       }
       /*=======================================================================*/
-
-		for(i=0;i<IgnoreLinesInDef;i++) fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-      idx=0;
-		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-		fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);//1
+		fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);//2
 		sscanf(ctmp2,"%s %d\n", ctmp, &idx);
+		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);//3
+		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);//4
+		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);//5
 
 		switch(iKWidx){
         //get idx
