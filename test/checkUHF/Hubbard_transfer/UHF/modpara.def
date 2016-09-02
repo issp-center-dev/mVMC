@@ -1,0 +1,16 @@
+--------------------
+Model_Parameters   0
+--------------------
+VMC_Cal_Parameters
+--------------------
+CDataFileHead  zvo
+CParaFileHead  zqp
+--------------------
+NVMCCalMode    0    
+NLanczosMode   0    
+--------------------
+NDataIdxStart  1    
+NDataQtySmp    1    
+--------------------
+Nsite          16   
+Nelectron      8    

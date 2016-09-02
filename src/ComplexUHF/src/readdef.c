@@ -753,7 +753,7 @@ void SetInitialValue(struct DefineList *X){
   X->NCisAjs=0;
   X->NInitial=0;
 	X->mix=0.5;
-	X->eps=10;
+	X->eps_int=10;
 	X->print=0;
 	X->IterationMax=2000;
 }
