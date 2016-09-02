@@ -5,9 +5,8 @@ CoulombIntra  coulombintra.def
 CoulombInter  coulombinter.def
         Hund  hund.def
     Exchange  exchange.def
-  Gutzwiller  gutzwilleridx.def
-     Jastrow  jastrowidx.def
      Orbital  orbitalidx.def
     TransSym  qptransidx.def
     OneBodyG  greenone.def
     TwoBodyG  greentwo.def
+    InOrbital zqp_orbital_opt.dat
