@@ -7,6 +7,7 @@
 
 /*=================================================================================================*/
 struct DefineList{
+	int step;
 	char *CDataFileHead, *CParaFileHead, *CPathQtyExe, *CPathAveDev;
   int nvec,k_exct;
 	int NDataIdxStart, NDataQtySmp;

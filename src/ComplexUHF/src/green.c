@@ -8,8 +8,7 @@ void green(struct BindStruct *X){
     int int_i,int_j;
     int mfint[7],xMsize,Ne;
 
- 
-    printf("OK \n");
+ //   printf("OK \n");
 
     xMsize = X->Def.Nsite;  
     Ne     = X->Def.Ne;  

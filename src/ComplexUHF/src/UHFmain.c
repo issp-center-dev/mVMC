@@ -83,16 +83,22 @@ int main(int argc, char* argv[]){
     for(i=0;i<X.Bind.Def.eps_int;i++){
       tmp_eps=tmp_eps*0.1;
     }
+    printf("########Input parameters ###########\n");
     printf("tmp_eps=%lf \n",tmp_eps);
     printf("eps_int=%d \n",X.Bind.Def.eps_int);
     printf("mix=%lf \n",X.Bind.Def.mix);
     printf("print=%d \n",X.Bind.Def.print);
+    printf("#################################### \n");
+
     X.Bind.Def.eps=tmp_eps;
     initial(&(X.Bind));
     sprintf(sdt,"%s_check.dat",X.Bind.Def.CDataFileHead);
     fp=fopen(sdt,"w");
+
+    printf("\n########Start: Hartree-Fock calculation ###########\n");
+    printf("stp, rest, energy\n");
     for(i=0;i<X.Bind.Def.IterationMax;i++){
-      
+      X.Bind.Def.step=i;
      t_0 = gettimeofday_sec();
      makeham(&(X.Bind));
      t_1 = gettimeofday_sec();
@@ -101,7 +107,9 @@ int main(int argc, char* argv[]){
      green(&(X.Bind));
      t_3 = gettimeofday_sec();
      cal_energy(&(X.Bind));
-     t_4 = gettimeofday_sec();
+     printf("%d %.12lf %.12lf \n", X.Bind.Def.step ,X.Bind.Phys.rest,X.Bind.Phys.energy);
+
+        t_4 = gettimeofday_sec();
      fprintf(fp," %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
      if(X.Bind.Def.print==1){
        printf(" %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
@@ -116,11 +124,19 @@ int main(int argc, char* argv[]){
      } 
     } 
     fclose(fp);
-    output(&(X.Bind));
+
     if(i<X.Bind.Def.IterationMax){
-      printf(" %d finish \n ",i); 
+      printf("\nHartree-Fock calculation is finished at %d step. \n\n",i);
     }else{
-      printf(" !! %d Not finish !! \n ",i); 
-    } 
+      printf("\n!! Hartree-Fock calculation is not finished at %d  step!! \n",i);
+      return -1;
+    }
+    printf("########Finish: Hartree-Fock calculation ###########\n");
+
+    printf("\n########Start: Calculation of Physical Quantities ###########\n");
+    output(&(X.Bind));
+    printf("########Finish: Calculation of Physical Quantities ###########\n");
+
+
     return 0;
 }

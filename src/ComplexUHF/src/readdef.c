@@ -109,7 +109,14 @@ int ReadDefFileNInt(
 					while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp)!=NULL){
 						if(*ctmp2 == '\n' || ctmp2[0] == '-')  continue;
 						sscanf(ctmp2,"%s %lf\n", ctmp, &dtmp);
-						if(CheckWords(ctmp, "Nsite")==0){
+						if(CheckWords(ctmp, "NVMCCalMode")==0 ||
+						   CheckWords(ctmp, "NLanczosMode")==0 ||
+								CheckWords(ctmp, "NDataIdxStart")==0 ||
+								CheckWords(ctmp, "NDataQtySmp")==0
+									){
+							continue;
+						}
+						else if(CheckWords(ctmp, "Nsite")==0){
 							X->Nsite=(int)dtmp;
 						}
 						else if(CheckWords(ctmp, "Ne")==0 || CheckWords(ctmp, "Nelectron")==0 ){
@@ -745,5 +752,9 @@ void SetInitialValue(struct DefineList *X){
   X->NOrbitalIdx=0;
   X->NCisAjs=0;
   X->NInitial=0;
+	X->mix=0.5;
+	X->eps=10;
+	X->print=0;
+	X->IterationMax=2000;
 }
 

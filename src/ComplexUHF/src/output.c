@@ -31,12 +31,14 @@ void output(struct BindStruct *X){
   char sdt[256];
   int i;
   double tmp;
- 
+
+
   sprintf(sdt,"%s_result.dat",X->Def.CDataFileHead);
   fp=fopen(sdt,"w");
   fprintf(fp," energy %.10lf \n",X->Phys.energy);
   fprintf(fp," num    %.10lf \n",X->Phys.num);
   fclose(fp);
+  printf("Energy and num are outputted to %s.\n", sdt);
 
   sprintf(sdt,"%s_eigen.dat",X->Def.CDataFileHead);
   fp=fopen(sdt,"w");
@@ -45,6 +47,7 @@ void output(struct BindStruct *X){
     fprintf(fp," %d  %.10lf \n",i+1,tmp);
   }
   fclose(fp);
+  printf("Eigenvalues are outputted to %s.\n", sdt);
 
   sprintf(sdt,"%s_gap.dat",X->Def.CDataFileHead);
   fp=fopen(sdt,"w");
@@ -52,7 +55,9 @@ void output(struct BindStruct *X){
   tmp =  X->Large.EigenValues[X->Def.Ne*2] - tmp;
   fprintf(fp,"  %.10lf \n",tmp);
   fclose(fp);
+  printf("Energy gaps are outputted to %s.\n", sdt);
   cal_cisajs(X);
+
   MakeOrbitalFile(X);
 }
 
@@ -72,13 +77,14 @@ void cal_cisajs(struct BindStruct *X){
             t_site_1    = site_1+Ns*spin_1;
             t_site_2    = site_2+Ns*spin_2;
             tmp         = X->Large.G[t_site_1][t_site_2];
-            fprintf(fp," %4d %4d %4d %4d %.10lf %.10lf\n",site_1,site_2,spin_1,spin_2,cabs(tmp),carg(tmp));
+//            fprintf(fp," %4d %4d %4d %4d %.10lf %.10lf\n",site_1,site_2,spin_1,spin_2,cabs(tmp),carg(tmp));
+              fprintf(fp," %4d %4d %4d %4d %.10lf %.10lf\n",site_1,spin_1,site_2,spin_2,creal(tmp),cimag(tmp));
           }
         } 
       }
     }
     fclose(fp);
-
+    printf("Onebody Green's functions are outputted to %s.\n", sdt);
 }
 
 int MakeOrbitalFile(struct BindStruct *X){
@@ -140,8 +146,7 @@ int MakeOrbitalFile(struct BindStruct *X){
     
     c_free2(UHF_Fij, X->Def.Nsite*2, X->Def.Nsite*2);
     c_free1(ParamOrbital, X->Def.NOrbitalIdx);
-
-
+    printf("Fij for mVMC are outputted to %s.\n", fileName);
 
   }
   else{

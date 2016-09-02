@@ -9,7 +9,7 @@ void cal_energy(struct BindStruct *X){
     double tmp,charge_1,charge_2;
     double E_band,E_CoulombIntra,E_CoulombInter,E_HundCoupling;
     double E_ExchangeCoupling,E_PairHopping;
-    double num,mix,tmp_num_r,tmp_num_i;
+    double num,mix;
     int    xMsize;
     int    u_site_1,u_site_2;
     int    d_site_1,d_site_2;
@@ -23,7 +23,7 @@ void cal_energy(struct BindStruct *X){
     for(int_k = 0; int_k < X->Def.Ne*2; int_k++){
       E_band += X->Large.EigenValues[int_k];
     }
-    printf("E_band=%lf \n",E_band);
+    //printf("E_band=%lf \n",E_band);
     /*Intra U energy*/
     E_CoulombIntra = 0.0;
     for(int_i =0; int_i < X->Def.NCoulombIntra; int_i++){
@@ -152,16 +152,15 @@ void cal_energy(struct BindStruct *X){
     X->Phys.rest = sqrt(X->Phys.rest)/(2.0*X->Def.Nsite*X->Def.Nsite);
 
     //for(int_i=0;int_i<xMsize;int_i++){
-      int_i           = 1;
-      tmp_num_r       = creal(X->Large.G[int_i][int_i+xMsize]);
-      tmp_num_i       = cimag(X->Large.G[int_i][int_i+xMsize]);
-      printf("int_i=%d tmp_num_r = %lf tmp_num_i = %lf\n",int_i,tmp_num_r,tmp_num_i);
-      printf("\n");
+      //int_i           = 1;
+      //tmp_num_r       = creal(X->Large.G[int_i][int_i+xMsize]);
+      //tmp_num_i       = cimag(X->Large.G[int_i][int_i+xMsize]);
+      //printf("int_i=%d tmp_num_r = %lf tmp_num_i = %lf\n",int_i,tmp_num_r,tmp_num_i);
+      //printf("\n");
       //tmp_num_r       = creal(X->Large.G[int_i+xMsize][int_i]);
       //tmp_num_i       = cimag(X->Large.G[int_i+xMsize][int_i]);
       //printf("int_i=%d tmp_num_r = %lf tmp_num_i = %lf\n",int_i,tmp_num_r,tmp_num_i);
     //} 
     //printf("num=%lf \n",num);
-    //printf("rest =%.12lf energy = %lf \n",X->Phys.rest,X->Phys.energy);
 
 }

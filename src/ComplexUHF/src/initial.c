@@ -29,7 +29,7 @@ void initial(struct BindStruct *X){
       //tmp     = I;
       t_site_0 = site_0+spin_0*Ns;
       t_site_1 = site_1+spin_1*Ns;
-      printf(" Initial: %4d %4d %lf %lf \n",t_site_0,t_site_1,cabs(tmp),carg(tmp));
+      //printf(" Initial: %4d %4d %lf %lf \n",t_site_0,t_site_1,cabs(tmp),carg(tmp));
       X->Large.G[t_site_0][t_site_1]  = tmp ;
     }
 }
