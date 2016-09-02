@@ -157,7 +157,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
         if(w > genrand_real2()) { /* accept */
           StartTimer(68);
-          UpdateMAllTwo_fcmp(mi, s, mj, t, ri, rj, TmpEleIdx,qpStart,qpEnd);
+          UpdateMAllTwo_real(mi, s, mj, t, ri, rj, TmpEleIdx,qpStart,qpEnd);
           StopTimer(68);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
@@ -216,7 +216,7 @@ int makeInitialSample_real(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCn
     
     /* local spin */
     for(ri=0;ri<Nsite;ri++) {
-      if(LocSpn[ri]==0) {
+      if(LocSpn[ri]==1) {
         do {
           mi = gen_rand32()%Ne;
           si = (genrand_real2()<0.5) ? 0 : 1;
@@ -232,7 +232,7 @@ int makeInitialSample_real(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCn
         if(eleIdx[mi+si*Ne]== -1) {
           do {
             ri = gen_rand32()%Nsite;
-          } while (eleCfg[ri+si*Nsite]!= -1 || LocSpn[ri]==0);
+          } while (eleCfg[ri+si*Nsite]!= -1 || LocSpn[ri]==1);
           eleCfg[ri+si*Nsite] = mi;
           eleIdx[mi+si*Ne] = ri;
         }

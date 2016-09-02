@@ -113,7 +113,6 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->NMPTrans = 9999;
   StdI->NSROptItrStep = 9999;
   StdI->NSROptItrSmp = 9999;
-  StdI->NSROptFixSmp = 9999;
   StdI->DSROptRedCut = 9999.9;
   StdI->DSROptStaDel = 9999.9;
   StdI->DSROptStepDt = 9999.9;
@@ -297,7 +296,7 @@ void PrintLocSpin(struct StdIntList *StdI) {
   fprintf(fp, "================================ \n");
 
   for (isite = 0; isite < StdI->nsite; isite++)
-    fprintf(fp, "%5d  %5d\n", isite, 1-StdI->locspinflag[isite]);/*debug*/
+    fprintf(fp, "%5d  %5d\n", isite, StdI->locspinflag[isite]);/*debug*/
 
   fclose(fp);
   fprintf(stdout, "    locspn.def is written.\n");
@@ -650,7 +649,6 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "NMPTrans       %-5d\n", StdI->NMPTrans);
   fprintf(fp, "NSROptItrStep  %-8d\n", StdI->NSROptItrStep);
   fprintf(fp, "NSROptItrSmp   %-5d\n", StdI->NSROptItrSmp);
-  fprintf(fp, "NSROptFixSmp   %-5d\n", StdI->NSROptFixSmp);
   fprintf(fp, "DSROptRedCut   %-20.10f\n", StdI->DSROptRedCut);
   fprintf(fp, "DSROptStaDel   %-20.10f\n", StdI->DSROptStaDel);
   fprintf(fp, "DSROptStepDt   %-20.10f\n", StdI->DSROptStepDt);
@@ -1128,7 +1126,6 @@ static void CheckModPara(struct StdIntList *StdI)
   if (StdI->NVMCCalMode == 1) StdFace_NotUsed_i("NSROptItrSmp", StdI->NSROptItrSmp);
   /*else*/ StdFace_PrintVal_i("NSROptItrSmp", &StdI->NSROptItrSmp, 100);
 
-  StdFace_PrintVal_i("NSROptFixSmp", &StdI->NSROptFixSmp, 1);
   StdFace_PrintVal_i("NVMCWarmUp", &StdI->NVMCWarmUp, 10);
   StdFace_PrintVal_i("NVMCIniterval", &StdI->NVMCIniterval, 1);
   StdFace_PrintVal_i("NVMCSample", &StdI->NVMCSample, 100);
@@ -1479,7 +1476,6 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "nmptrans") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NMPTrans);
     else if (strcmp(keyword, "nspgaussleg") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSPGaussLeg);
     else if (strcmp(keyword, "nsplitsize") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSplitSize);
-    else if (strcmp(keyword, "nsroptfixsmp") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSROptFixSmp);
     else if (strcmp(keyword, "nsroptitrsmp") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSROptItrSmp);
     else if (strcmp(keyword, "nsroptitrstep") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSROptItrStep);
     else if (strcmp(keyword, "nstore") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NStore);
