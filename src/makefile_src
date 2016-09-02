@@ -52,6 +52,7 @@ all :
 	cd StdFace; $(MAKE) -f makefile_StdFace libStdFace.a
 	make -f makefile_src vmc.out
 	make -f makefile_src vmcdry.out
+	cd ComplexUHF/src; $(MAKE) -f makefile_uhf
 
 vmc.out : $(OBJS)
 	$(CC) -o $(OUT) $(OBJS) $(OPTION) $(CFLAGS) $(REPORT) $(LIB) 
@@ -67,4 +68,5 @@ clean :
 	cd sfmt; $(MAKE) -f makefile_sfmt clean
 	cd pfapack; $(MAKE) -f makefile_pfapack clean
 	cd StdFace; $(MAKE) -f makefile_StdFace clean
+	cd ComplexUHF/src; $(MAKE) -f makefile_uhf clean
 
