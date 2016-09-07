@@ -42,38 +42,42 @@ ${\cal H}_E$内の$J_{ij}^{\rm Ex}$を指定します。
 
 \item[(4)~最適化対象変分パラメータ:] 
 ~\\ \tr{最適化する変分パラメータを指定します}。変分波動関数は
-\begin{equation}
-|\psi \rangle = {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,
-\end{equation}
-で与えられます。ここで、一体部分は実空間のペア関数
+\begin{eqnarray}
+|\psi \rangle &=& {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
+{\cal P}_G&=&\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right],\\
+{\cal P}_J&=&\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right],\\
+{\cal P}_{d-h}^{(2)}&=& \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right],\\
+{\cal P}_{d-h}^{(4)}&=& \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right],\\
+{\cal L}_S&=&\frac{2S+1}{8 \pi^2}\int d\Omega P_s(\cos \beta) \hat{R}(\Omega),\\
+{\cal L}_K&=&\frac{1}{N_s}\sum_{{\bm R}}e^{i {\bm K} \cdot{\bm R} } \hat{T}_{\bm R},\\
+{\cal L}_P&=&\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha},
+\end{eqnarray}
+で与えられます。ここで、 $\Omega=(\alpha, \beta, \gamma)$はオイラー角、$\hat{R}(\Omega)$は回転演算子、$P_S(x)$は$S$次のルジャンドル多項式、${\bm K}$は全運動量、$\hat{T}_{\bm R}$は並進ベクトル${\bm R}$に対応する並進演算子、$\hat{G}_{\alpha}$は格子の点群演算子、$p_\alpha$はパリティをそれぞれ表します。ダブロン・ホロン相関因子に関する詳細は文献\cite{Tahara2008}の説明を参照してください。また、一体部分は実空間のペア関数
 \begin{equation}
 |\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle,
 \end{equation}
 を用いた波動関数で表されます。ここで$N$は全電子数、$N_s$は全サイト数です。
-最適化する変分パラメータは以下のファイルを用いて指定します。
-~\\{\bf Gutzwiller (gutzwilleridx.def)}: ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$のうち、最適化の対象とする変分パラメータ$g_i$を指定します。
-~\\{\bf Jastrow (jastrowidx.def)}: ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$のうち、最適化の対象とする変分パラメータ$v_{ij}$を指定します。
-~\\{\bf DH2}:  ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$で表される2サイトのdoublon-holon相関因子を指定します。相関因子に関する詳細は文献\cite{Tahara2008}を参照してください。
-~\\{\bf DH4}:  ${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$で表される4サイトのdoublon-holon相関因子を指定します。相関因子に関する詳細は文献\cite{Tahara2008}の説明を参照してください。
-~\\{\bf Orbital (orbitalidx.def)}: ペア軌道$|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$を設定します。
-~\\{\bf TransSym (qptransidx.def)}: 運動量射影${\cal L}_K=\frac{1}{N_s}\sum_{{\bm R}}e^{i {\bm K} \cdot{\bm R} } \hat{T}_{\bm R}$と格子対称性射影${\cal L}_P=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha}$に関する指定を行います。ここで、${\bm K}$は全運動量、$\hat{T}_{\bm R}$は並進ベクトル${\bm R}$に対応する並進演算子、$\hat{G}_{\alpha}$は格子の点群演算子、$p_\alpha$はパリティをそれぞれ表します。
-
+最適化する変分パラメータは以下のファイルを用いて指定します(${\cal L}_S$は{\bf ModPara}ファイルでパラメータの指定をします)。
+~\\{\bf Gutzwiller (gutzwilleridx.def)}: ${\cal P}_G$のうち、最適化の対象とする変分パラメータ$g_i$を指定します。
+~\\{\bf Jastrow (jastrowidx.def)}: ${\cal P}_J$のうち、最適化の対象とする変分パラメータ$v_{ij}$を指定します。
+~\\{\bf DH2}:  ${\cal P}_{d-h}^{(2)}$で表される2サイトのダブロン・ホロン相関因子を指定します。
+~\\{\bf DH4}:  ${\cal P}_{d-h}^{(4)}$で表される4サイトのダブロン・ホロン相関因子を指定します。
+~\\{\bf Orbital (orbitalidx.def)}: ペア軌道$|\phi_{\rm pair} \rangle$を設定します。
+~\\{\bf TransSym (qptransidx.def)}: 運動量射影${\cal L}_K$と格子対称性射影${\cal L}_P$に関する指定を行います。
 \item[(5)~変分パラメータ初期値:]
 ~\\ 変分パラメータに関する初期値を与えます。キーワード指定されない場合には$0$が初期値として設定されます。
-~\\{\bf InGutzwiller}: ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$のうち、変分パラメータ$g_i$の初期値を指定します。
-~\\{\bf InJastrow}: ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$のうち、変分パラメータ$v_{ij}$の初期値を指定します。
-~\\{\bf InDH2}:  ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$で表される2サイトのdoublon-holon相関因子$\alpha_{2nt}^{d(h)}$の初期値を指定します。
-~\\{\bf InDH4}:  ${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$で表される4サイトのdoublon-holon相関因子$\alpha_{4nt}^{d(h)}$の初期値を指定します。
-~\\{\bf InOrbital}: ペア軌道$|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$の$ f_{ij}$に関する初期値を設定します。
+~\\{\bf InGutzwiller}: ${\cal P}_G$内の変分パラメータ$g_i$の初期値を設定します。
+~\\{\bf InJastrow}: ${\cal P}_J$内の変分パラメータ$v_{ij}$の初期値を設定します。
+~\\{\bf InDH2}:  ${\cal P}_{d-h}^{(2)}$内の2サイトのダブロン・ホロン相関因子$\alpha_{2nt}^{d(h)}$の初期値を設定します。
+~\\{\bf InDH4}:  ${\cal P}_{d-h}^{(4)}$内の4サイトのダブロン・ホロン相関因子$\alpha_{4nt}^{d(h)}$の初期値を設定します。
+~\\{\bf InOrbital}: ペア軌道$|\phi_{\rm pair} \rangle$の$ f_{ij}$に関する初期値を設定します。
 
 
 \item[(6)~出力:]
 ~\\{\bf OneBodyG (greenone.def)}:出力する一体Green関数を指定します。
- $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}\rangle$が出力されます。
 
  {\bf TwoBodyG (greentwo.def)}:出力する二体Green関数を指定します。
- $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}c^{\dagger}_{k \sigma_3}c_{l\sigma_4}\rangle$
-が出力されます。
+
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%
 \newpage

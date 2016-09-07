@@ -38,45 +38,44 @@ Each parameters are specified by the following files, respectively;
 
 \item[(4)~Variational parameters to be optimized:] 
 ~\\The variational parameters to be optimized are specified by using this categorized files. In mVMC, the variational wave function is given as
-\begin{equation}
-|\psi \rangle = {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle.
-\end{equation}
-The one body part of the wavefunction is represented as the pair function of the real space:
+\begin{eqnarray}
+|\psi \rangle &=& {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
+{\cal P}_G&=&\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right],\\
+{\cal P}_J&=&\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right],\\
+{\cal P}_{d-h}^{(2)}&=& \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right],\\
+{\cal P}_{d-h}^{(4)}&=& \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right],\\
+{\cal L}_S&=&\frac{2S+1}{8 \pi^2}\int d\Omega P_s(\cos \beta) \hat{R}(\Omega),\\
+{\cal L}_K&=&\frac{1}{N_s}\sum_{{\bm R}}e^{i {\bm K} \cdot{\bm R} } \hat{T}_{\bm R},\\
+{\cal L}_P&=&\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha},
+\end{eqnarray}
+where $\Omega=(\alpha, \beta, \gamma)$ is the Euler angle, $\hat{R}(\Omega)$ is the rotational operator, $P_S(x)$ is the $S$-th polynomial, ${\bm K}$ is the momentum operator of the whole system and $\hat{T}_{\bm R}$ is the translational operators corresponding to the translational vector ${\bm R}$, $\hat{G}_{\alpha}$ is the point group operator, and $p_\alpha$ is the parity operator, respectively. The details of ${\cal P}_{d-h}^{(2)}$ and ${\cal P}_{d-h}^{(4)}$ are shown in \cite{Tahara2008}. The one body part of the wavefunction is represented as the pair function of the real space:
 \begin{equation}
 |\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle,
 \end{equation}
 where $N$ is the number of electrons and $N_s$ is the number of sites.
-The setting for optimizing variational parameters or not is given by the following files.
-~\\{\bf Gutzwiller}: Set the target parameters $g_i$ in\\
- ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$ to be optimized.
-~\\{\bf Jastrow}: Set the target parameters $v_{ij}$ in\\
- ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$ to be optimized.
-~\\{\bf DH2}:  Set the target 2-site doublon-holon correlation factor $\alpha_{2nt}^{d(h)}$ in \\
-${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$ to be optimized. \\
-The details are shown in the desciption of DH2 file.
-~\\{\bf DH4}:  Set the target 4-site doublon-holon correlation factor $\alpha_{4nt}^{d(h)}$ in \\
-${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$ to be optimized.\\
-The details are shown in the desciption of DH4 file.
-~\\{\bf Orbital}: Set the pair orbital $f_{ij}$ in $|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$ to be optimized.
-~\\{\bf TransSym}: Set the the momentum projection operators ${\cal L}_K=\frac{1}{N_s}\sum_{{\bm R}}e^{i {\bm K} \cdot{\bm R} } \hat{T}_{\bm R}$ and the lattice translational projection operators ${\cal L}_P=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha}$, where ${\bm K}$ is the momentum operator of the whole system and $\hat{T}_{\bm R}$ is the translational operators corresponding to the translational vector ${\bm R}$, $\hat{G}_{\alpha}$ is the point group operator, and $p_\alpha$ is the parity operator, respectively.
+The setting for optimizing variational parameters or not is given by the following files (the parameters for ${\cal L}_S$ are specified in the {\bf ModPara} file).
+~\\{\bf Gutzwiller  (gutzwilleridx.def)}: Set the target parameters $g_i$ in ${\cal P}_G$ to be optimized.
+~\\{\bf Jastrow (jastrowidx.def)}: Set the target parameters $v_{ij}$ in ${\cal P}_J$ to be optimized.
+~\\{\bf DH2}:  Set the target 2-site doublon-holon correlation factor $\alpha_{2nt}^{d(h)}$ in ${\cal P}_{d-h}^{(2)}$ to be optimized.
+~\\{\bf DH4}:  Set the target 4-site doublon-holon correlation factor $\alpha_{4nt}^{d(h)}$ in ${\cal P}_{d-h}^{(4)}$ to be optimized.
+~\\{\bf Orbital (orbitalidx.def)}: Set the pair orbital $f_{ij}$ in $|\phi_{\rm pair} \rangle$ to be optimized.
+~\\{\bf TransSym (qptransidx.def)}: Set the the momentum projection operators ${\cal L}_K$ and the lattice translational projection operators ${\cal L}_P$.
 
 \item[(5)~Initial variational parameters:]
 ~\\ Set the initial values of the variational parameters. When the keyword is not setting, the corresponding parameters are given by random values as default values.
-~\\{\bf InGutzwiller}: Set the initial values of $g_i$ in ${\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]$.
-~\\{\bf InJastrow}: Set the initial values of $v_{ij}$ in ${\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]$.
-~\\{\bf InDH2}:  Set the initial values of $\alpha_{2nt}^{d(h)}$ in ${\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]$.
-~\\{\bf InDH4}:  Set the initial values of $\alpha_{4nt}^{d(h)}$ in ${\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]$.
-~\\{\bf InOrbital}: Set the initial values of $ f_{ij}$ in $|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle$.
+~\\{\bf InGutzwiller}: Set the initial values of $g_i$ in ${\cal P}_G$.
+~\\{\bf InJastrow}: Set the initial values of $v_{ij}$ in ${\cal P}_J$.
+~\\{\bf InDH2}:  Set the initial values of $\alpha_{2nt}^{d(h)}$ in ${\cal P}_{d-h}^{(2)}$.
+~\\{\bf InDH4}:  Set the initial values of $\alpha_{4nt}^{d(h)}$ in ${\cal P}_{d-h}^{(4)}$.
+~\\{\bf InOrbital}: Set the initial values of $ f_{ij}$ in $|\phi_{\rm pair} \rangle$.
 
 \item[(6)~Output:]
-~\\
-Targets for output is determined.
-~\\{\bf OneBodyG }: One-body green functions,  $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}\rangle$.
-~\\{\bf TwoBodyG }: Two-body green functions,  $\langle c^{\dagger}_{i\sigma_1}c_{j\sigma_2}c^{\dagger}_{k \sigma_3}c_{l\sigma_4}\rangle$.
+~\\{\bf OneBodyG  (greenone.def)}: Set the components of one-body green functions to output.
+~\\{\bf TwoBodyG  (greentwo.def)}: Set the components of two-body green functions to output.
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%
 \newpage
-~\subsection{List file for Input files}
+~\subsection{List file for Input files (namelist.def)}
 \label{Subsec:InputFileList}
 This file determines input filenames which are correlated with keywords. File format is shown as follows.\\
 \begin{minipage}{10cm}
@@ -157,7 +156,7 @@ TwoBodyG	zcisajscktaltdc.def
 
 \newpage
 %----------------------------------
-\subsection{\tr{ModPara file}}
+\subsection{ModPara file (modpara.def)}
 \label{Subsec:modpara}
 This file determines parameters for calculation. File format is shown as follows.\\
 \begin{minipage}{10cm}
@@ -200,29 +199,51 @@ NStore         1
 
 \subsubsection{File format}
  \begin{itemize}
-   \item  Lines 1-5:  Header
+   \item  Lines 1 - 5:  Header
    \item  Line 6:  [string01]~[string02]
-   \item  Lines 7-8:  Header
-   \item  Lines 9- : [string01]~[int01]
+   \item  Line 7:  [string03]~[string04]
+   \item  Line 8:  Header
+   \item  Lines 9 - : [string05]~[int01] (or [double01])
   \end{itemize}
 
 \subsubsection{Parameters}
 \begin{itemize}
+
    \item  $[$string01$]$
    
-   {\bf Type :} string-type
+   {\bf Type :} string-type (blank parameter not allowed)
 
-  {\bf Description :} Select a word from keywords.
+  {\bf Description :} Set a keyword for header of output files.
+
    
    \item  $[$string02$]$
    
    {\bf Type :} string-type (blank parameter not allowed)
 
-  {\bf Description :} Set a header for output files.
+  {\bf Description :} Set a header of output files. For example, the output file of one-body green's functions are named as {\bf xxx\_cisajs.dat}, where {\bf xxx} is $[$string02$]$.
 
-   \item  $[$int01$]$
+\item  $[$string03$]$
    
-   {\bf Type :} int-type (blank parameter not allowed)
+   {\bf Type :} string-type (blank parameter not allowed)
+
+  {\bf Description :} Set a keyword for header of output files for variational parameters.
+
+   
+   \item  $[$string04$]$
+   
+   {\bf Type :} string-type (blank parameter not allowed)
+
+  {\bf Description :} Set a header of output files for variational parameters. For example, the output file of optimized variational parameters are named as {\bf xxx\_opt.dat}, where {\bf xxx} is $[$string04$]$.
+
+   \item  $[$string05$]$
+   
+   {\bf Type :} string-type
+
+  {\bf Description :} Select a word from keywords.
+
+   \item  $[$int01$]$ ([double01])
+   
+   {\bf Type :} int (double)-type (blank parameter not allowed)
 
   {\bf Description :} A parameter which is correlated with a keyword.
   \end{itemize}
@@ -230,22 +251,22 @@ NStore         1
 \subsubsection{User rules}
 \begin{itemize}
 \item From Line 9: After setting keywords at [string 01], a half-width blank is needed for setting a parameter.
-\item All Parameters are needed and the order for parameters is fixed.
+\item From Line 9: When the first character of the line is ``-", the line is not read and skipped.
 \end{itemize}
 
 ~\subsubsection{Keywords and parameters}
  \begin{itemize}
-  \item  \verb|CDataFileHead|
+%  \item  \verb|CDataFileHead|
 
- {\bf Type :} string-type (blank parameter not allowed)
+% {\bf Type :} string-type (blank parameter not allowed)
 
-{\bf Description :} A header for output files. For example, the output filename for one body Green's function becomes ``{\bf xxx\_cisajs\_yyy.dat}" (xxx are characters set by \verb|CDataFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|). 
+%{\bf Description :} A header for output files. For example, the output filename for one body Green's function becomes ``{\bf xxx\_cisajs\_yyy.dat}" (xxx are characters set by \verb|CDataFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|). 
 
- \item  \verb|CParaFileHead|
+ %\item  \verb|CParaFileHead|
 
- {\bf Type :} string-type (blank parameter not allowed)
+ %{\bf Type :} string-type (blank parameter not allowed)
 
-{\bf Description :}  A header for output files of the optimized variational parameters. For example, the optimized variational parameters are outputted as  {\bf zzz\_opt\_yyy.dat} (zzz are characters set by \verb|CParaFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|-1).
+%{\bf Description :}  A header for output files of the optimized variational parameters. For example, the optimized variational parameters are outputted as  {\bf zzz\_opt\_yyy.dat} (zzz are characters set by \verb|CParaFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|-1).
  
  
  \item  \verb|NVMCCalMode|
@@ -320,19 +341,19 @@ The whole step number to optimize variational parameters by SR method. Only used
    
 {\bf Type :} double-type (default value: 0.001)
 
-{\bf Description :} The stabilized factor for the SR method by truncation of redundant directions corresponding to $\varepsilon_{\rm wf}$ in the ref. \cite{doi:10.1143/JPSJ.77.114701}.
+{\bf Description :} The stabilized factor for the SR method by truncation of redundant directions corresponding to $\varepsilon_{\rm wf}$ in the ref. \cite{Tahara2008}.
 
  \item  \verb|DSROptStaDel| 
    
  {\bf Type :} double-type (default value: 0.02)
 
-  {\bf Description :} The stabilized factor for the SR method by modifying diagonal elements in the overwrap matrix corresponding to $\varepsilon$ in the ref. \cite{doi:10.1143/JPSJ.77.114701}.
+  {\bf Description :} The stabilized factor for the SR method by modifying diagonal elements in the overwrap matrix corresponding to $\varepsilon$ in the ref. \cite{Tahara2008}.
      
 \item \verb|DSROptStepDt|
 
 {\bf Type :} double-type 
 
-{\bf Description :} \tr{要確認(マニュアルにDescriptionなし)}
+{\bf Description :} The time step using in the SR method. 
  
 \item \verb|NVMCWarmUp|
 
@@ -374,7 +395,7 @@ The whole step number to optimize variational parameters by SR method. Only used
 
 {\bf Type :} int-type (Positive integer, default value: 0)
 
-{\bf Description :} The option of applying matrix-matrix product to calculate expected values $\langle O_k O_l \rangle$ (0: off, 1: on).
+{\bf Description :} The option of applying matrix-matrix product to calculate expected values $\langle O_k O_l \rangle$ (0: off, 1: on).  
  
  \end{itemize}
 
