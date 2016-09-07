@@ -485,13 +485,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	/* Read locspn.def----------------------------------------*/
 	while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
 	  sscanf(ctmp2, "%d %d\n", &(x0), &(x1) );
-        if(x1 ==0){
-            LocSpn[x0]=1;
-        }
-        else{
-            LocSpn[x0] = 0;
-        }
-        //LocSpn[x0] = x1;
+      LocSpn[x0] = x1;
 	  idx++;
 	}
 	if(NLocSpn>2*Ne){
@@ -1301,6 +1295,7 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxMPTrans]=0;
   bufInt[IdxSROptItrStep]=1000;
   bufInt[IdxSROptItrSmp]=bufInt[IdxSROptItrStep]/10;
+  bufInt[IdxSROptFixSmp]=1;
   bufInt[IdxVMCWarmUp]=10;
   bufInt[IdxVMCIniterval]=1;
   bufInt[IdxVMCSample]=10;
