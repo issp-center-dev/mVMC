@@ -402,7 +402,7 @@ The whole step number to optimize variational parameters by SR method. Only used
 
 \newpage
 %----------------------------------
-\subsection{LocSpin file}
+\subsection{LocSpin file (locspn.def)}
 \label{Subsec:locspn}
 This file determines sites with localized spins. File format is shown as follows.\\
 \begin{minipage}{10cm}
@@ -482,12 +482,15 @@ NlocalSpin     6
 \end{itemize}
 
 \newpage
-\subsection{Trans file}
+\subsection{Trans file (trans.def)}
 \label{Subsec:Trans}
-This file determines values of transfer integrals $t_{ij\sigma_1\sigma2}$,
+The Hamiltonian of general one-body interactions 
 \begin{align}
-H +=-\sum_{ij\sigma_1\sigma2} t_{ij\sigma_1\sigma2}c_{i\sigma_1}^{\dag}c_{j\sigma_2}.
+{\cal H}_{T} =-\sum_{ij\sigma_1\sigma2} t_{ij\sigma_1\sigma2}c_{i\sigma_1}^{\dag}c_{j\sigma_2},
 \end{align}
+are added to the Hamiltonian by setting the parameters $t_{ij\sigma_1\sigma2}$. 
+In mVMC ver.1.0, $\sigma_1$ must be equal to $\sigma_2$, since the calculation is only allowed at $S_z=0$.
+
 An example of file format is shown as follows.\\
 \begin{minipage}{12.5cm}
 \begin{screen}
@@ -568,21 +571,23 @@ NTransfer      24
 \subsubsection{Use rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item Since Hamiltonian must be Hermitian, the following relation must be satisfied, $t_{ij\sigma_1\sigma_2}=t_{ji\sigma_2\sigma_1}^{\dagger}$. A program is terminated when the above relation is broken.
-\item A program is terminated, when components of on-site interactions are double counted.
+\item Blank line is not allowed.
 \item A program is terminated, when $[$int01$]$ is different from the total number of transfer integrals defined in this file.
 \item A program is terminated, when $[$int02$]$-$[$int05$]$ are out of range from the defined values.
+\item Since Hamiltonian must be Hermitian, the following relation must be satisfied, $t_{ij\sigma_1\sigma_2}=t_{ji\sigma_2\sigma_1}^{\dagger}$. 
 \end{itemize}
 
 \newpage
 \subsection{InterAll file}
 \label{Subsec:interall}
-This file determines values of generalized two body interactions integrals $I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}$,
-\begin{equation}
-H+=\sum_{i,j,k,l}\sum_{\sigma_1,\sigma_2, \sigma_3, \sigma_4}
+The Hamiltonian of general two-body interactions 
+\begin{align}
+{\cal H}_I =\sum_{i,j,k,l}\sum_{\sigma_1,\sigma_2, \sigma_3, \sigma_4}
 I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}.
-\end{equation}
-{For Spin, the condition $i=j$ and $k=l$ must be satisfied.}
+\end{align}
+are added to the Hamiltonian by setting the parameters $I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}$. 
+In mVMC ver.1.0, this file cannot be applied to the spin system and $\sigma_1$ and $\sigma_3$ must be equal to $\sigma_2$, $\sigma_4$, respectively, since the calculation is only allowed at $S_z=0$. 
+
 An example of file format is shown as follows.
 
 \begin{minipage}{12.5cm}

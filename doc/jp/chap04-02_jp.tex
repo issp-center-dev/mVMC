@@ -477,11 +477,13 @@ NlocalSpin     6
 \newpage
 \subsection{Trans指定ファイル(\tr{trans.def})}
 \label{Subsec:Trans}
-\tr{一般的な一体相互作用をハミルトニアンに付け加え、ハミルトニアン中の相互作用パラメータを指定します。付け加える項は以下で与えられます。}
+\tr{一般的な一体相互作用をハミルトニアンに付け加え、ハミルトニアン中の相互作用パラメータ$t_{ij\sigma_1\sigma2}$を指定します。付け加える項は以下で与えられます。}
 \begin{align}
 {\cal H}_T =-\sum_{ij\sigma_1\sigma2} t_{ij\sigma_1\sigma2}c_{i\sigma_1}^{\dag}c_{j\sigma_2}
 \end{align}
-について$t_{ij\sigma_1\sigma2}$を指定します。以下にファイル名を記載します。\\
+\tr{なお、ver. 1.0では$S_z=0$の場合の計算のみ対応しているため、$\sigma_1=\sigma_2$となるようにしてください。}
+
+以下にファイル例を記載します。\\
 \begin{minipage}{12.5cm}
 \begin{screen}
 \begin{verbatim}
@@ -582,6 +584,7 @@ I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k
 \tr{なお、ver. 1.0では$S_z=0$の場合の計算のみ対応しているため、$\sigma_1=\sigma_2$、$\sigma_3=\sigma_4$となるようにしてください。}
 \tr{また、スピン系には未対応です。}
 
+以下にファイル例を記載します。\\
 \begin{minipage}{12.5cm}
 \begin{screen}
 \begin{verbatim}
