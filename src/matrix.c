@@ -39,16 +39,16 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
 
 #define D_PfLimit 1.0e-100
 
-int M_DGETRF(int *m, int *n, double *a, int *lda, int *ipiv, int *info);
-int M_DGETRI(int *n, double *a, int *lda, int *ipiv, double *work, int *lwork, int *info);
-int M_DSKPFA(const char *uplo, const char *mthd, const int *n,
-             double *a, const int *lda, double *pfaff, int *iwork,
-             double *work, const int *lwork, int *info);
-int M_ZGETRF(int *m, int *n, double complex *a, int *lda, int *ipiv, int *info);
-int M_ZGETRI(int *n, double complex *a, int *lda, int *ipiv, double complex *work, int *lwork, int *info);
-int M_ZSKPFA(const char *uplo, const char *mthd, const int *n,
-             double complex *a, const int *lda, double complex *pfaff, int *iwork,
-             double complex *work, const int *lwork, double *rwork, int *info);
+extern int M_DGETRF(int *m, int *n, double *a, int *lda, int *ipiv, int *info);
+extern int M_DGETRI(int *n, double *a, int *lda, int *ipiv, double *work, int *lwork, int *info);
+extern int M_DSKPFA(const char *uplo, const char *mthd, const int *n,
+                    double *a, const int *lda, double *pfaff, int *iwork,
+                    double *work, const int *lwork, int *info);
+extern int M_ZGETRF(int *m, int *n, double complex *a, int *lda, int *ipiv, int *info);
+extern int M_ZGETRI(int *n, double complex *a, int *lda, int *ipiv, double complex *work, int *lwork, int *info);
+extern int M_ZSKPFA(const char *uplo, const char *mthd, const int *n,
+                    double complex *a, const int *lda, double complex *pfaff, int *iwork,
+                    double complex *work, const int *lwork, double *rwork, int *info);
 
 
 int getLWork() {
@@ -80,7 +80,7 @@ int getLWork_fcmp() {
   double complex optSize1,optSize2;
 
   /* ask the optimal size of work */
-  n=lda=Ne;
+  n=lda=Nsize;
   lwork=-1;
   M_ZGETRI(&n, &a, &lda, &iwork, &optSize1, &lwork, &info);
   lwork=-1;

@@ -8,6 +8,7 @@ if [ -z ${1} ] || [ ${1} = "help" ]; then
     echo "            kei : Fujitsu K computer & FX10"
     echo "  openmpi-intel : OpenMPI + Intel Compiler + MKL"
     echo "    mpich-intel : MPICH + Intel Compiler + MKL"
+    echo "  mpich-gnu-mkl : MPICH + GNU Compiler + MKL"
     echo "            gnu : GNU"
     echo "        jupiter : "
     echo "        kashiwa : "
@@ -54,6 +55,19 @@ AR = ar rv
 FORT = ifort
 FFLAGS = -O3 -implicitnone -xHost
 SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
+EOF
+    elif [ ${1} = "mpich-gnu-mkl" ]; then
+        cat > src/make.sys <<EOF
+CC = mpicc
+LIB = -L\${MKLROOT}/lib -Wl,-rpath,\${MKLROOT}/lib -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_mpich_lp64 -lpthread -lm -ldl
+CFLAGS = -O3 -fopenmp -I\${MKLROOT}/include
+REPORT = 
+OPTION = -D_mpi_use
+CP = cp -f -v
+AR = ar rv
+FORT = gfortran
+FFLAGS = -O3 -fimplicit-none
+SMFTFLAGS = -DMEXP=19937
 EOF
     elif [ ${1} = "jupiter" ]; then
         cat > src/make.sys <<EOF
