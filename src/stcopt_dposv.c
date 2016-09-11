@@ -13,7 +13,7 @@
  #define M_DPOSV  dposv_
 #endif
 
-int M_DPOSV(char *uplo, int *n, int *nrhs, double *a, int *lda, double *b, int *ldb, int *info);
+extern int M_DPOSV(char *uplo, int *n, int *nrhs, double *a, int *lda, double *b, int *ldb, int *info);
 
 int StochasticOpt(MPI_Comm comm);
 void stcOptInit(double *const s, double *const g, const int nSmat, int *const smatToParaIdx);
