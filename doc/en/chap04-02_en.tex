@@ -77,7 +77,7 @@ The setting for optimizing variational parameters or not is given by the followi
 \newpage
 ~\subsection{List file for Input files (namelist.def)}
 \label{Subsec:InputFileList}
-This file determines input filenames which are correlated with keywords. File format is shown as follows.\\
+This file determines input filenames correlated with keywords. An example of the file format is shown as follows.\\
 \begin{minipage}{10cm}
 \begin{screen}
 \begin{verbatim}
@@ -111,7 +111,7 @@ TwoBodyG	zcisajscktaltdc.def
 \subsubsection{User rules}
 \begin{itemize}
 \item  After setting keywords at [string 01], half-width state is needed for writing a filename. You can set the filename freely.
-\item Keywords for input files are shown in Table\ref{Table:Defs}.
+\item Keywords for input files are shown in Table \ref{Table:Defs}.
 \item Essential keywords are ``CalcMod", ``ModPara" , ``LocSpin", ``Orbital" and ``TransSym".
 \item Keywords can be set in random order.
 \item If keywords or filenames are incorrect, the program is terminated. 
@@ -153,12 +153,13 @@ TwoBodyG	zcisajscktaltdc.def
 \caption{List of the definition files. The files marked * are essential for executing.}
 \label{Table:Defs}
 \end{table*}%
-
+\newpage
+~
 \newpage
 %----------------------------------
 \subsection{ModPara file (modpara.def)}
 \label{Subsec:modpara}
-This file determines parameters for calculation. File format is shown as follows.\\
+This file determines parameters for calculation. An example of the file format is shown as follows.\\
 \begin{minipage}{10cm}
 \begin{screen}
 \begin{verbatim}
@@ -322,7 +323,7 @@ NStore         1
 {\bf Type :} int-type (Positive integer, default value: 1)
 
 {\bf Description :} 
-The number of the momentum and lattice translational quantum-number projection. The quantum-number projection is used from the top to \verb|NMPTrans| with the specified weight indicated in \verb|TransSym| file. In the case of not to apply the projection, this value must be set as 1.
+The number of the momentum and lattice translational quantum-number projection. The quantum-number projection is used from the top to \verb|NMPTrans| with the specified weight indicated in \verb|TransSym| file. In the case of not applying the projection, this value must be equal to 1.
 
  \item  \verb|NSROptItrStep|
 
@@ -391,7 +392,7 @@ The whole step number to optimize variational parameters by SR method. Only used
 
 {\bf Description :} The number of processes of MPI parallelization.
 
-\item \verb|NStoreOO|
+\item \verb|NStore|
 
 {\bf Type :} int-type (Positive integer, default value: 0)
 
@@ -404,7 +405,7 @@ The whole step number to optimize variational parameters by SR method. Only used
 %----------------------------------
 \subsection{LocSpin file (locspn.def)}
 \label{Subsec:locspn}
-This file determines sites with localized spins. File format is shown as follows.\\
+This file determines sites with localized spins. An example of the file format is shown as follows.\\
 \begin{minipage}{10cm}
 \begin{screen}
 \begin{verbatim}
@@ -434,8 +435,8 @@ NlocalSpin     6
 \begin{itemize}
    \item  Line 1:  Header
    \item  Line 2:   [string01]~[int01]
-   \item  Lines 3-5:  Header
-   \item  Lines 6-:  [int02]~[int03]
+   \item  Lines 3 - 5:  Header
+   \item  Lines 6 -:  [int02]~[int03]
   \end{itemize}
  \subsubsection{Parameters}
  \subsubsection{Parameters}
@@ -467,10 +468,7 @@ NlocalSpin     6
 
  {\bf Type :} int-type (blank parameter not allowed)
 
-{\bf Description :} An integer for selecting an electron state whether localized spin or itinerant electron states:\\
-{
-0: Itinerant electron state, 1: localized spin state with $S=1/2$.
-}\\
+{\bf Description :} An integer for selecting an electron state whether localized spin or itinerant electron states (0: Itinerant electron state, 1: localized spin state with $S=1/2$).
  \end{itemize}
 
 \subsubsection{Use rules}
@@ -484,14 +482,13 @@ NlocalSpin     6
 \newpage
 \subsection{Trans file (trans.def)}
 \label{Subsec:Trans}
-The Hamiltonian of general one-body interactions 
+The Hamiltonian for general one-body interactions 
 \begin{align}
 {\cal H}_{T} =-\sum_{ij\sigma_1\sigma2} t_{ij\sigma_1\sigma2}c_{i\sigma_1}^{\dag}c_{j\sigma_2},
 \end{align}
-are added to the Hamiltonian by setting the parameters $t_{ij\sigma_1\sigma2}$. 
-In mVMC ver.1.0, $\sigma_1$ must be equal to $\sigma_2$, since the calculation is only allowed at $S_z=0$.
-
-An example of file format is shown as follows.\\
+is added to the whole Hamiltonian by setting the parameters $t_{ij\sigma_1\sigma2}$. 
+In ver.1.0, $\sigma_1$ must be equal to $\sigma_2$, since the calculation is only allowed at $S_z=0$.
+An example of the file format is shown as follows.\\
 \begin{minipage}{12.5cm}
 \begin{screen}
 \begin{verbatim}
@@ -580,14 +577,13 @@ NTransfer      24
 \newpage
 \subsection{InterAll file}
 \label{Subsec:interall}
-The Hamiltonian of general two-body interactions 
+The Hamiltonian for general two-body interactions 
 \begin{align}
 {\cal H}_I =\sum_{i,j,k,l}\sum_{\sigma_1,\sigma_2, \sigma_3, \sigma_4}
 I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}.
 \end{align}
-are added to the Hamiltonian by setting the parameters $I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}$. 
-In mVMC ver.1.0, this file cannot be applied to the spin system and $\sigma_1$ and $\sigma_3$ must be equal to $\sigma_2$, $\sigma_4$, respectively, since the calculation is only allowed at $S_z=0$. 
-
+is added to the whole Hamiltonian by setting the parameters $I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}$. 
+In ver.1.0, this file cannot be used for the spin system. Furthermore, $\sigma_1$ and $\sigma_3$ must be equal to $\sigma_2$, $\sigma_4$, respectively, since the calculation is only allowed at $S_z=0$. 
 An example of file format is shown as follows.
 
 \begin{minipage}{12.5cm}
@@ -625,8 +621,8 @@ NInterAll      36
  \begin{itemize}
    \item  Line 1:  Header
    \item  Line 2:   [string01]~[int01]
-   \item  Lines 3-5:  Header
-   \item  Lines 6-:
+   \item  Lines 3 - 5:  Header
+   \item  Lines 6 -:
    [int02]~[int03]~[int04]~[int05]~[int06]~[int07]~[int08]~[int09]~[double01]~[double02] 
   \end{itemize}
 \subsubsection{Parameters}
@@ -674,21 +670,19 @@ NInterAll      36
 \subsubsection{Use rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item Since Hamiltonian must be Hermitian, the following relation must be satisfied, $I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}=I_{lkji\sigma_4\sigma_3\sigma_2\sigma_1}^{\dag}$. A program is terminated when the above relations are broken.
-It is noted that a term of Hermitian conjugate for $I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}$ should be inputted as $I_{lkji\sigma_4\sigma_3\sigma_2\sigma_1}$ $c_{l\sigma_4}^{\dagger}c_{k\sigma_3}c_{j\sigma_2}^{\dagger}c_{i\sigma_1}$.
-\item {A program is terminated, when $i=j$ and $k=l$ are not satisfied for spin model.}
-\item A program is terminated, when components of on-site interactions are double counted.
+\item Since Hamiltonian must be Hermitian, the following relation must be satisfied, $I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}=I_{lkji\sigma_4\sigma_3\sigma_2\sigma_1}^{\dag}$. 
 \item A program is terminated, when $[$int01$]$ is different from the total number of generalized two body interactions defined in this file.
 \item A program is terminated, when $[$int02$]$-$[$int09$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage
-\subsection{CoulombIntra file}
-This file determines values of on-site interactions $U_i$,
+\subsection{CoulombIntra file (coulombintra.def)}
+The Hamiltonian for the coulombintra interactions
 \begin{equation}
-H+=\sum_{i}U_i n_ {i \uparrow}n_{i \downarrow}.
+{\cal H}_U =\sum_{i}U_i n_ {i \uparrow}n_{i \downarrow}
 \end{equation}
-An example of file format is shown as follows.
+is added to the whole Hamiltonian by setting $U_i$.
+An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
 \begin{screen}
@@ -712,8 +706,8 @@ NCoulombIntra 6
  \begin{itemize}
    \item  Line 1:  Header
    \item  Line 2:   [string01]~[int01]
-   \item  Lines 3-5:  Header
-   \item  Lines 6-:  [int02]~[double01] 
+   \item  Lines 3 - 5:  Header
+   \item  Lines 6 -:  [int02]~[double01] 
   \end{itemize}
 \subsubsection{Parameters}
  \begin{itemize}
@@ -747,18 +741,18 @@ NCoulombIntra 6
 \subsubsection{Use rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of on-site interactions are double counted.
 \item A program is terminated, when $[$int01$]$ is different from the total number of on-site interactions defined in this file.
 \item A program is terminated, when $[$int02$]$ is out of range from the defined values.
 \end{itemize}
 
 \newpage
-\subsection{CoulombInter file}
-This file determines values of off-site interactions $V_{ij}$,
+\subsection{CoulombInter file (coulombinter.def)}
+The Hamiltonian for the coulombintrer interactions
 \begin{equation}
-H+=\sum_{i,j}V_{ij} n_ {i}n_{j}.
+{\cal H}_V = \sum_{i,j}V_{ij} n_ {i}n_{j}
 \end{equation}
-An example of file format is shown as follows.
+is added to the whole Hamiltonian by setting $V_{ij}$.
+An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
 \begin{screen}
@@ -782,8 +776,8 @@ NCoulombInter 6
  \begin{itemize}
    \item  Line 1:  Header
    \item  Line 2:   [string01]~[int01]
-   \item  Lines 3-5:  Header
-   \item  Lines 6-: 
+   \item  Lines 3 - 5:  Header
+   \item  Lines 6 -: 
    [int02]~[int03]~[double01] 
   \end{itemize}
 \subsubsection{Parameters}
@@ -818,18 +812,18 @@ NCoulombInter 6
 \subsubsection{Use rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of off-site interactions are double counted.
 \item A program is terminated, when $[$int01$]$ is different from the total number of off-site interactions defined in this file.
 \item A program is terminated, when either $[$int02$]$ or $[$int03$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage
-\subsection{Hund file}
-This file determines values of Hund couplings $J_{ij}^{\rm Hund}$,
+\subsection{Hund file (hund.def)}
+The Hamiltonian for Hund couplings
 \begin{equation}
-H+=-\sum_{i,j}J_{ij}^{\rm Hund} (n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow}).
+{\cal H}_H =-\sum_{i,j}J_{ij}^{\rm Hund} (n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow})
 \end{equation}
-An example of file format is shown as follows.
+is added to the whole Hamiltonian by setting the parameters $J_{ij}^{\rm Hund}$. 
+An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
 \begin{screen}
@@ -853,8 +847,8 @@ NHund 6
  \begin{itemize}
    \item  Line 1:  Header
    \item  Line 2:   [string01]~[int01]
-   \item  Lines 3-5:  Header
-   \item  Lines 6-: 
+   \item  Lines 3 - 5:  Header
+   \item  Lines 6 -: 
    [int02]~[int03]~[double01] 
   \end{itemize}
 \subsubsection{Parameters}
@@ -889,18 +883,18 @@ NHund 6
 \subsubsection{Use rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of Hund couplings are double counted.
 \item A program is terminated, when $[$int01$]$ is different from the total number of Hund couplings defined in this file.
 \item A program is terminated, when either $[$int02$]$ or $[$int03$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage
 \subsection{PairHop file}
-This file determines values of PairHop couplings $J_{ij}^{\rm Pair}$,
+The Hamiltonian for PairHop couplings
 \begin{equation}
-H+=\sum_{i,j}J_{ij}^{\rm Pair} c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{i \downarrow}^{\dag}c_{j  \downarrow}.
+{\cal H}_P=\sum_{i,j}J_{ij}^{\rm Pair} c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{i \downarrow}^{\dag}c_{j  \downarrow}
 \end{equation}
-An example of file format is shown as follows.
+is added to the whole Hamiltonian by setting the parameters $J_{ij}^{\rm Pair}$.
+An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
 \begin{screen}
@@ -930,8 +924,8 @@ NPairhop 12
  \begin{itemize}
    \item  Line 1:  Header
    \item  Line 2:   [string01]~[int01]
-   \item  Lines 3-5:  Header
-   \item  Lines 6-: 
+   \item  Lines 3 - 5:  Header
+   \item  Lines 6 -: 
    [int02]~[int03]~[double01] 
   \end{itemize}
 \subsubsection{Parameters}
@@ -966,19 +960,18 @@ NPairhop 12
 \subsubsection{Use rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of PairHop couplings are double counted.
 \item A program is terminated, when $[$int01$]$ is different from the total number of PairHop couplings defined in this file.
 \item A program is terminated, when either $[$int02$]$ or $[$int03$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage
-\subsection{Exchange file}
-This file determines values of Exchange couplings $J_{ij}^{\rm Ex}$ {(for $S=1/2$ system)}.
-For fermion electronic system, exchange terms are given as
+\subsection{Exchange file (exchange.def)} 
+The Hamiltonian for exchange couplings 
 \begin{equation}
-H+=\sum_{i,j}J_{ij}^{\rm Ex} (c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{j \downarrow}^{\dag}c_{i  \downarrow}+c_ {i \downarrow}^{\dag}c_{j\downarrow}c_{j \uparrow}^{\dag}c_{i  \uparrow}).
+{\cal H}_E  =\sum_{i,j}J_{ij}^{\rm Ex} (c_ {i \uparrow}^{\dag}c_{j\uparrow}c_{j \downarrow}^{\dag}c_{i  \downarrow}+c_ {i \downarrow}^{\dag}c_{j\downarrow}c_{j \uparrow}^{\dag}c_{i  \uparrow})
 \end{equation}
-An example of file format is shown as follows.
+is added to the whole Hamiltonian by setting $J_{ij}^{\rm Ex}$.
+An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
 \begin{screen}
@@ -1038,19 +1031,18 @@ NExchange 6
 \subsubsection{Use rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of Exchange couplings are double counted.
 \item A program is terminated, when $[$int01$]$ is different from the total number of Exchange couplings defined in this file.
 \item A program is terminated, when either $[$int02$]$ or $[$int03$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage
-\subsection{Gutzwiller file}
+\subsection{Gutzwiller file (gutzwiller.def)}
 \label{Subsec:Gutzwiller}
 This file sets the calculation conditions of Gutzwiller factors 
 \begin{equation}
 {\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right].
 \end{equation}
-A site number $i$ and the variational parameters $g_i$ are indicated.
+A site number $i$ and the variational parameters $g_i$ are specified.
 An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
@@ -1082,9 +1074,9 @@ In the following, we define the whole number of sites as $N_s$ and variational p
    \item  Line 1: Header
    \item  Line 2: [string01]~[int01]
    \item  Line 3: [string02]~[int02]
-   \item  Lines 4-5:  Header
-   \item  Lines 6 - 5+$N_s$: [int03]~[int04]
-   \item  Lines 6+$N_s$ - 5+$N_s$+$N_g$: [int05]~[int06]
+   \item  Lines 4 - 5:  Header
+   \item  Lines 6 - (5+$N_s$): [int03]~[int04]
+   \item  Lines (6+$N_s$) - (5+$N_s$+$N_g$): [int05]~[int06]
   \end{itemize}
 \subsubsection{Parameters}
  \begin{itemize}
@@ -1148,13 +1140,13 @@ In the following, we define the whole number of sites as $N_s$ and variational p
 \end{itemize}
 
 \newpage
-\subsection{Jastrow file}
+\subsection{Jastrow file (jastrow.def)}
 \label{Subsec:Jastrow}
 This file sets the calculation conditions of Jastrow factors 
 \begin{equation}
 {\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]
 \end{equation}
-Site numbers $i$ $j$, and the variational parameters $v_{ij}$ are indicated.
+Site numbers $i$ $j$, and the variational parameters $v_{ij}$ are specified.
 An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
@@ -1185,9 +1177,9 @@ In the following, we define the total number of sites as $N_s$ and variational p
    \item  Line 1: Header
    \item  Line 2: [string01]~[int01]
    \item  Line 3: [string02]~[int02]
-   \item  Lines 4-5:  Header
-   \item  Lines 6 - 5+$N_s\times (N_s-1)$: [int03]~[int04]~[int05]
-   \item  Lines 6+$N_s\times (N_s-1)$ - 5+$N_s\times (N_s-1)$+$N_j$: [int06]~[int07]
+   \item  Lines 4 - 5:  Header
+   \item  Lines 6 - (5+$N_s\times (N_s-1))$: [int03]~[int04]~[int05]
+   \item  Lines (6+$N_s\times (N_s-1)$) - (5+$N_s\times (N_s-1)$+$N_j$): [int06]~[int07]
   \end{itemize}
 \subsubsection{Parameters}
  \begin{itemize}
@@ -1244,7 +1236,6 @@ In the following, we define the total number of sites as $N_s$ and variational p
 \subsubsection{User rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of variational parameters are double counted.
 \item A program is terminated, when $[$int01$]$ is different from the total number of variational parameters defined in this file.
 \item A program is terminated, when $[$int02$]$ - $[$int07$]$ are out of range from the defined values.
 \end{itemize}
@@ -1256,7 +1247,7 @@ This file sets the calculation conditions of 2-site doublon-holon correlation fa
 \begin{equation}
 {\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right].
 \end{equation}
-A site number $i$, the two sites around $i$ site and the variational parameters $\alpha_{2nt}^{d(h)}$ which have $t$ kinds at each sites are indicated.
+A site number $i$, the two sites around $i$ site and the variational parameters $\alpha_{2nt}^{d(h)}$ which have $t$ kinds at each sites are specified. The details of the parameters $\alpha_{2nt}^{d(h)}$ and the operator $\xi_{i2nt}^{d(h)}$ are shown in ref. \cite{Tahara2008}.
 An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
@@ -1285,9 +1276,9 @@ In the following, we define the total number of sites as $N_s$ and variational p
    \item  Line 1: Header
    \item  Line 2: [string01]~[int01]
    \item  Line 3: [string02]~[int02]
-   \item  Lines 4-5:  Header
-   \item  Lines 6 - 5+$N_s\times N_{\rm dh2}$: [int03]~[int04]~[int05]~[int06]
-   \item  Lines 6+$N_s\times N_{\rm dh2}$ - 5+$(N_s+6) \times N_{\rm dh2}$: [int07]~[int08]
+   \item  Lines 4 - 5:  Header
+   \item  Lines 6 - (5+$N_s\times N_{\rm dh2})$: [int03]~[int04]~[int05]~[int06]
+   \item  Lines (6+$N_s\times N_{\rm dh2}$) - (5+$(N_s+6) \times N_{\rm dh2})$: [int07]~[int08]
   \end{itemize}
 \subsubsection{Parameters}
  \begin{itemize}
@@ -1351,7 +1342,6 @@ In the following, we define the total number of sites as $N_s$ and variational p
 \subsubsection{User rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of variational parameters are double counted.
 \item A program is terminated, when $[$int01$]$ is different from the total number of variational parameters defined in this file.
 \item A program is terminated, when $[$int02$]$ - $[$int08$]$ are out of range from the defined values.
 \end{itemize}
@@ -1363,7 +1353,8 @@ This file sets the calculation conditions of 4-site doublon-holon correlation fa
 \begin{equation}
 {\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]
 \end{equation}
-A site number $i$, the four sites around $i$ site and the variational parameters $\alpha_{4nt}^{d(h)}$ which have $t$ kinds at each sites are indicated.
+A site number $i$, the four sites around $i$ site and the variational parameters $\alpha_{4nt}^{d(h)}$ which have $t$ kinds at each sites are specified.
+The details of the parameters $\alpha_{4nt}^{d(h)}$ and the operator $\xi_{i4nt}^{d(h)}$ are shown in ref. \cite{Tahara2008}.
 An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
@@ -1391,9 +1382,9 @@ In the following, we define the total number of sites as $N_s$ and variational p
    \item  Line 1: Header
    \item  Line 2: [string01]~[int01]
    \item  Line 3: [string02]~[int02]
-   \item  Lines 4-5:  Header
-   \item  Lines 6 - 5+$N_s\times N_{\rm dh4}$: [int03]~[int04]~[int05]~[int06]~[int07]~[int08]
-   \item  Lines 6+$N_s\times N_{\rm dh4}$ - 5+$(N_s+10) \times N_{\rm dh4}$: [int09]~[int10]
+   \item  Lines 4 - 5:  Header
+   \item  Lines 6 - (5+$N_s\times N_{\rm dh4}$): [int03]~[int04]~[int05]~[int06]~[int07]~[int08]
+   \item  Lines (6+$N_s\times N_{\rm dh4}$) - (5+$(N_s+10) \times N_{\rm dh4}$): [int09]~[int10]
   \end{itemize}
 \subsubsection{Parameters}
  \begin{itemize}
@@ -1458,12 +1449,12 @@ In the following, we define the total number of sites as $N_s$ and variational p
 \begin{itemize}
 \item Headers cannot be omitted. 
 \item A program is terminated, when components of variational parameters are double counted.
-\item A program is terminated, when $[$int01$]$ is different from the total number of Exchange couplings defined in this file.
+\item A program is terminated, when $[$int01$]$ is different from the total number of variational parameters defined in this file.
 \item A program is terminated, when $[$int02$]$ - $[$int10$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage
-\subsection{Orbital file}
+\subsection{Orbital file (orbitalidx.def)}
 \label{Subsec:Orbital}
 This file sets the calculation conditions of pair orbitals
 \begin{equation}
@@ -1504,8 +1495,8 @@ In the following, we define the total number of sites as $N_s$ and variational p
    \item  Line 2: [string01]~[int01]
    \item  Line 3: [string02]~[int02]
    \item  Lines 4 - 5:  Header
-   \item  Lines 6 - 5+$N_s^2$: [int03]~[int04]~[int05]
-   \item  Lines 6+$N_s^2$ - 5+$N_s^2+N_{\rm o}$: [int06]~[int07]
+   \item  Lines 6 - (5+$N_s^2$): [int03]~[int04]~[int05]
+   \item  Lines (6+$N_s^2$ )- (5+$N_s^2+N_{\rm o}$): [int06]~[int07]
   \end{itemize}
 \subsubsection{Parameters}
  \begin{itemize}
@@ -1563,20 +1554,19 @@ In the following, we define the total number of sites as $N_s$ and variational p
 \subsubsection{User rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of variational parameters are double counted.
-\item A program is terminated, when $[$int01$]$ is different from the total number of Exchange couplings defined in this file.
+\item A program is terminated, when $[$int01$]$ is different from the total number of variational parameters defined in this file.
 \item A program is terminated, when $[$int02$]$ - $[$int07$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage
-\subsection{TransSym file}
+\subsection{TransSym file (qptransidx.def)}
 \label{Subsec:TransSym}
 This file sets the weight and corresponding site numbers of momentum projection
 ${\cal L}_K=\frac{1}{N_s}\sum_{{\bm R}}e^{i {\bm K} \cdot{\bm R} } \hat{T}_{\bm R}$
 and lattice translational projection 
 ${\cal L}_P=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha}$. 
 The patterns of projection are indicated by $(\alpha, {\bm R})$.
-We note that weight must be equal to $1.0$ when the projection is not done.
+We note that the weight must be equal to $1.0$ when the projection is not done.
 An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
@@ -1606,8 +1596,8 @@ In the following, we define the total number of sites as $N_s$ and projection pa
    \item  Line 1: Header
    \item  Line 2: [string01]~[int01]
    \item  Lines 3 - 5:  Header
-   \item  Lines 6 - 5+$N_{\rm TS}$: [int02]~[double01]
-   \item  Lines 6+$N_{\rm TS}$ - 5+$(N_s+1) \times N_{\rm TS}$: [int03]~[int04]~[int05]
+   \item  Lines 6 - (5+$N_{\rm TS})$: [int02]~[double01]
+   \item  Lines (6+$N_{\rm TS}$) - (5+$(N_s+1) \times N_{\rm TS}$): [int03]~[int04]~[int05]
   \end{itemize}
 \subsubsection{Parameters}
  \begin{itemize}
@@ -1654,17 +1644,16 @@ In the following, we define the total number of sites as $N_s$ and projection pa
 \subsubsection{User rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of variational parameters are double counted.
-\item A program is terminated, when $[$int01$]$ is different from the total number of Exchange couplings defined in this file.
+\item A program is terminated, when $[$int01$]$ is different from the total number of projection patterns defined in this file.
 \item A program is terminated, when $[$int02$]$ - $[$int05$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage
-\subsection{In\$\$\$ file}
+\subsection{Files to set initial values of variational parameters}
 \label{Subsec:InputParam}
 This file sets the initial values of variational parameters.
-The kinds of variational parameters are indicated by the following keywords:
-\verb|InGutzwiller|, \verb|InJastrow|, \verb|InDH2|, \verb|InDH4|, \verb|InOrbital|.
+The kinds of variational parameters are specified by setting the following keywords in \verb|List| file (namelist.def):\\
+\verb|InGutzwiller|, \verb|InJastrow|, \verb|InDH2|, \verb|InDH4|, \verb|InOrbital|.\\
 The file format is common and an example of the \verb|InJastrow| file is shown as follows.
 
 \begin{minipage}{12.5cm}
@@ -1689,7 +1678,7 @@ In the following, we define the total number of variational parameters as $N_v$.
    \item  Line 1: Header
    \item  Line 2: [string01]~[int01]
    \item  Lines 3 - 5:  Header
-   \item  Lines 6 - 5+$N_v$: [int03]~[double01]~[double02]
+   \item  Lines 6 - (5+$N_v$): [int03]~[double01]~[double02]
   \end{itemize}
 \subsubsection{Parameters}
  \begin{itemize}
@@ -1729,14 +1718,13 @@ In the following, we define the total number of variational parameters as $N_v$.
 \subsubsection{User rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of variational parameters are double counted.
 \item A program is terminated, when $[$int01$]$ is different from the total number of variational parameters defined in this file.
 \end{itemize}
 
 \newpage
-\subsection{OneBodyG file}
+\subsection{OneBodyG file (greenone.def)}
 \label{Subsec:onebodyg}
-This file determines the target components of one-body Green's function $\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle$. An example of file format is shown as follows.
+This file determines the target components to calculate and output one-body Green's function $\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle$. An example of file format is shown as follows.
 
 \begin{minipage}{12.5cm}
 \begin{screen}
@@ -1778,8 +1766,8 @@ NCisAjs         24
  \begin{itemize}
    \item  Line 1:  Header
    \item  Line 2:   [string01]~[int01]
-   \item  Lines 3-5:  Header
-   \item  Lines 6-: 
+   \item  Lines 3 - 5:  Header
+   \item  Lines 6 -: 
   [int02]~~[int03]~~[int04]~~[int05]
   \end{itemize}
 \subsubsection{Parameters}
@@ -1817,15 +1805,14 @@ An integer giving a spin index,\\
 \subsubsection{Use rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of one-body Green's functions are double counted.
 \item A program is terminated, when $[$int01$]$ is different from the total number of one-body Green's functions defined in this file.
 \item A program is terminated, when $[$int02$]$-$[$int05$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage
-\subsection{TwoBodyG file}
+\subsection{TwoBodyG file (greentwo.def)}
 \label{Subsec:twobodyg}
-This file determines the target components of two-body Green's function $\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle$. {For Spin, the condition $i=j$ and $k=l$ must be satisfied.}
+This file determines the target components to calculate and output two-body Green's function $\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle$. {For Spin, the condition $i=j$ and $k=l$ must be satisfied.}
 An example of file format is shown as follows.
 
 \begin{minipage}{12.5cm}
@@ -1870,8 +1857,8 @@ NCisAjsCktAltDC        576
  \begin{itemize}
    \item  Line 1:  Header
    \item  Line 2:   [string01]~[int01]
-   \item  Lines 3-5:  Header
-   \item  Lines 6-: 
+   \item  Lines 3 - 5:  Header
+   \item  Lines 6 -: 
    [int02]~~[int03]~~[int04]~~[int05]~~[int06]~~[int07]~~[int08]~~[int09]
   \end{itemize}
 \subsubsection{Parameters}
@@ -1909,8 +1896,6 @@ An integer giving a spin index,\\
 \subsubsection{Use rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
-\item A program is terminated, when components of two-body Green's functions are double counted.
-\item {A program is terminated, when $i=j$ and $k=l$ are not satisfied for spin model.}
 \item A program is terminated, when $[$int01$]$ is different from the total number of two-body Green's functions defined in this file.
 \item A program is terminated, when $[$int02$]$-$[$int09$]$ are out of range from the defined values.
 \end{itemize}
@@ -1918,19 +1903,19 @@ An integer giving a spin index,\\
 \newpage
 \section{Output files}
 \label{Sec:outputfile}
-The list of output files are shown in Table \ref{Table:Output}, where \$\$\$ and xxx are the header indicated by \verb|CParaFileHead|,\verb|CDataFileHead| in \verb|ModPara| file, respectively. yyy is a number given by \verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|, where both \verb|NDataIdxStart| and \verb|NDataQtySmp| are defined in \verb|ModPara| file and zzz is a number given by \verb|NDataIdxStart| in \verb|ModPara|.
+The list of output files are shown in Table \ref{Table:Output}, where *** and xxx are the header indicated by \verb|CParaFileHead|,\verb|CDataFileHead| in \verb|ModPara| file, respectively. yyy is a number given by \verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|, where both \verb|NDataIdxStart| and \verb|NDataQtySmp| are defined in \verb|ModPara| file and zzz is a number given by \verb|NDataIdxStart| in \verb|ModPara|.
 
  \begin{table*}[h!]
 \begin{center}
   \begin{tabular}{|ll|} \hline
            Name     & Details for corresponding files       \\   \hline\hline
-           \$\$\$\_opt.dat       &  All optimized parameters.       \\ \hline 
+           ***\_opt.dat       &  All optimized parameters.       \\ \hline 
            %%%%%%%%%%%%%%%%%%  
-           gutzwiller\_opt.dat       &   Optimized gutzwiller factors.  \\
-           jastrow\_opt.dat        &  Optimized jastrow factors.         \\ 
-           doublonHolon2site\_opt.dat  &   Optimized 2-site doublon-holon correlation factors.  \\  
-           doublonHolon4site\_opt.dat  &   Optimized 4-site doublon-holon correlation factors. \\  
-           orbital\_opt.dat  &   Optimized pair orbital factors. \\  \hline
+           ***\_gutzwiller\_opt.dat       &   Optimized gutzwiller factors.  \\
+           ***\_jastrow\_opt.dat        &  Optimized jastrow factors.         \\ 
+           ***\_doublonHolon2site\_opt.dat  &   Optimized 2-site doublon-holon correlation factors.  \\  
+           ***\_doublonHolon4site\_opt.dat  &   Optimized 4-site doublon-holon correlation factors. \\  
+           ***\_orbital\_opt.dat  &   Optimized pair orbital factors. \\  \hline
            xxx\_out\_yyy.dat &  Energy and deviation.\\ 
            xxx\_var\_yyy.dat &  Progress information for optimizing variational parameters.\\  \hline
            xxx\_CalcTimer.dat & Computation time for each processes.\\  
@@ -1946,31 +1931,33 @@ The list of output files are shown in Table \ref{Table:Output}, where \$\$\$ and
 \label{Table:Output}
 \end{table*}%
 
-\subsection{\$\$\$\_opt.dat}
-The average and deviation values of variational parameters and the energy optimized by the SR method are outputted by the following order: 
+\subsection{Output file for variational parameters (***\_opt.dat)}
+The average and deviation values of variational parameters and the energy optimized by the SR method are outputted in the following order: 
 \begin{equation}
 \langle H \rangle, \langle H^2 \rangle, g_i, v_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij} \nonumber.
 \end{equation}
 The type of average values is a complex number, while that of the deviation is a real number.
-Here, \$\$\$ is the header indicated by \verb|CParaFileHead| in \verb|ModPara| file.
+Since the initial values of all variational parameters are specified at the beginning of the calculation, 
+the calculation of physical quantities is done by using this file file.
+Here, *** is the header indicated by \verb|CParaFileHead| in \verb|ModPara| file.
 
-\subsection{xxx\_var\_yyy.dat}
+\subsection{Output files for variational parameters at each steps (xxx\_var\_yyy.dat)}
 The average and deviation values of variational parameters and the energy optimized by the SR method are postscripted by the order same as \$\$\$\_opt.dat file (the deviation is always outputted as 0). 
 Here, xxx is the header indicated by \verb|CDataFileHead| in \verb|ModPara| file and yyy is a number given by \verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|, where both \verb|NDataIdxStart| and \verb|NDataQtySmp| are defined in \verb|ModPara| file.
 
-\subsection{gutzwiller\_opt.dat}
+\subsection{Output file for gutzwiller factors \\(***\_gutzwiller\_opt.dat)}
 The optimized Gutzwiller factors by SR method are outputted. The file format is same as the \verb|InGutzwiller| file defined in Sec. \ref{Subsec:InputParam}.
 
-\subsection{jastrow\_opt.dat}
+\subsection{Output file for jastrow factors \\(***\_jastrow\_opt.dat)}
 The optimized Jastrow factors  by SR method are outputted. The file format is same as the \verb|InJastrow| file defined in Sec. \ref{Subsec:InputParam}.
 
-\subsection{doublonHolon2site\_opt.dat}
+\subsection{Output file for doublonHolon 2-site factors \\(***\_doublonHolon2site\_opt.dat)}
 The optimized 2-site doublon-holon crrelation factors  by SR method are outputted. The file format is same as the \verb|InDH2| file defined in Sec. \ref{Subsec:InputParam}.
 
-\subsection{doublonHolon4site\_opt.dat}
+\subsection{Output file for doublonHolon 4-site factors \\(***\_doublonHolon4site\_opt.dat)}
 The optimized 4-site doublon-holon crrelation factors  by SR method are outputted. The file format is same as the \verb|InDH4| file defined in Sec. \ref{Subsec:InputParam}.
 
-\subsection{orbital\_opt.dat}
+\subsection{Output file for pair orbitals \\(***\_orbital\_opt.dat)}
 The optimized pair orbitals by SR method are outputted. The file format is same as the \verb|InOrbital| file defined in Sec. \ref{Subsec:InputParam}.
 
 \subsection{xxx\_out\_yyy.dat}
