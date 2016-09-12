@@ -5,7 +5,6 @@ Lsub = 2
 model = "FermionHubbard"
 lattice = "Tetragonal"
 t = 1.0
-U = 4
 nelec = 16
 2Sz = 0
 complextype = 0
