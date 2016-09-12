@@ -44,4 +44,76 @@ G_{ij\sigma\sigma'}(x)=\frac{\langle \psi | c_{i\sigma}^{\dag} c_{j\sigma'} | \p
   c_{i \sigma}^\dagger c_{i \sigma+1}
 \end{align}
 
+\section{\tr{パフィアン行列式とスレータ行列式の関係}}
+このセクションでは、パフィアン行列式とスレータ行列式の関係および$f_{ij}$の特異値分解の意味について説明します。
+\subsection{$f_{ij}$と$\Phi_{in\sigma}$の関係}
+パフィアンスレーター行列式(多変数変分モンテカルロ法の一体部分)は
+\begin{equation}
+|\phi_{\rm Pf}\rangle=\Big(\sum_{i,j=1}^{N_{s}}f_{ij}c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)^{N_{\rm e}/2}|0\rangle,
+\end{equation}
+のように定義されます。ここで、$N_{s}$はサイト数、$N_{e}$は全電子数、$f_{ij}$は変分パラメータとしました。
+簡単化のため、以降$f_{ij}$は実数と仮定します。また、シングルスレーター行列式として
+\begin{align}
+|\phi_{\rm SL}\rangle&=\Big(\prod_{n=1}^{N_{e}/2}\psi_{n\uparrow}^{\dagger}\Big)
+\Big(\prod_{m=1}^{N_{e}/2}\psi_{m\downarrow}^{\dagger}\Big)|0\rangle, \\
+\psi_{n\sigma}^{\dagger}&=\sum_{i=1}^{N_{s}}\Phi_{in\sigma}c^{\dagger}_{i\sigma}.
+\end{align}
+を定義します。ただし、$\Phi$は正規直行基底であり、クロネッカーのデルタ$\delta_{nm}$を用い
+\begin{equation}
+\sum_{i=1}^{N_{s}}\Phi_{in\sigma}\Phi_{im\sigma}=\delta_{nm},
+\end{equation}
+で表されます。この直交性の関係から、以下の関係式
+\begin{align}
+[\psi^{\dagger}_{n\sigma},\psi_{m\sigma}]_{+}&=\delta_{nm},\\
+G_{ij\sigma}=\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle 
+&=\frac{\langle \phi_{\rm SL}| c_{i\sigma}^{\dagger}c_{j\sigma} | \phi_{\rm SL}\rangle}{\langle \phi_{\rm SL}|\phi_{\rm SL}\rangle } \\
+&=\sum_{n} \Phi_{in\sigma} \Phi_{jn\sigma}.
+\end{align}
+が導かれます。
+
+次に、$\phi_{\rm SL}$を変形し、$f_{ij}$と$\Phi_{in\sigma}$の関係をあらわにします。
+$\psi^{\dagger}_{n\sigma}$の交換関係を用いると、$\phi_{\rm SL}$は
+\begin{align}
+|\phi_{\rm SL}\rangle \propto \prod_{n=1}^{N_{e}/2}\Big(\psi_{n\uparrow}^{\dagger}\psi_{\mu(n)\downarrow}^{\dagger}\Big)|0\rangle,
+\end{align}
+と書き換えられます。ここで、$\mu(n)$は$n= 1, 2, \cdots, N_{e}/2$の置換を表します。
+ここで議論を簡単にするため、同一のペア$n=\mu(n)$を採用します。
+このとき、$K_{n}^{\dagger}=\psi_{n\uparrow}^{\dagger}\psi_{n\downarrow}^{\dagger}$として、
+$K_{n}^{\dagger}K_{m}^{\dagger}=K_{m}^{\dagger}K_{n}^{\dagger}$の関係を用いることで、
+\begin{align}
+|\phi_{\rm SL}\rangle &\propto \prod_{n=1}^{N_{e}/2}\Big(\psi_{n\uparrow}^{\dagger}\psi_{n\downarrow}^{\dagger}\Big)|0\rangle
+=\prod_{n=1}^{N_{e}/2} K_{n}^{\dagger}|0\rangle \\
+&\propto\Big(\sum_{n=1}^{\frac{N_{e}}{2}}K_{n}^{\dagger}\Big)^{\frac{N_{e}}{2}} |0\rangle
+=\Big(\sum_{i,j=1}^{N_{s}}\Big[\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}\Big]
+c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)|0\rangle,
+\end{align}
+の関係が得られます。これより$f_{ij}$はシングルスレーター行列式の係数により
+\begin{align}
+f_{ij}=\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}.
+\end{align}
+として表されることが分かります。なお、この形式はシングルスレーター行列式で与えられる$f_{ij}$の表式の一つであり、
+実際にはペアを組む自由度(どの$\mu(n)$を選ぶか)およびゲージの自由度(すなわち$\Phi$の符号の自由度)に依存します。
+この自由度の多さが$f_{ij}$の冗長性につながっています。
+
+\subsection{$f_{ij}$の特異値分解}
+行列$F$, $\Phi_{\uparrow}$, $\Phi_{\downarrow}$,$\Sigma$を
+\begin{align}
+&(F)_{ij}=f_{ij},~~~ 
+(\Phi_{\uparrow})_{in}=\Phi_{in\uparrow},~~~ 
+(\Phi_{\downarrow})_{in}=\Phi_{in\downarrow}, \\
+&\Sigma={\rm diag}[1,\cdots,1,0,0,0]~~~\text{({\rm \# of 1} = $N_{e}/2$)}.
+\end{align}
+として定義します。これらの記法を用いると、$f_{ij}$(すなわち$F$)の特異値分解は
+\begin{align}
+F=\Phi_{\uparrow}\Sigma\Phi_{\downarrow}^{t}.
+\end{align}
+として記述することができます。
+この結果は、もし非ゼロの特異値が$N_{e}/2$個存在し、
+かつ全ての$F$の非ゼロの特異値が$1$であった場合、
+$f_{ij}$が平均場近似解として記述できることを示しています。
+言い換えると、特異値の非ゼロ成分の数とその値が、
+シングルスレータ行列式からパフィアンスレーター行列式がどのようにしてずれるのか、
+という点について定量的な基準を与えることを示しています。
+
+
 %----------------------------------------------------------

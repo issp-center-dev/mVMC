@@ -19,20 +19,24 @@
  #define M_PDGEMV  pdgemv_
 #endif
 
-int Csys2blacs_handle(MPI_Comm comm);
-int Cblacs_gridinit(int *ictxt, char *order, int nprow, int npcol);
-int Cblacs_gridexit(int ictxt);
-int Cblacs_gridinfo(int ictxt, int *nprow, int *npcol, int *myprow, int *mypcol);
-int M_NUMROC(int *n, int *nb, int *iproc, int *isrcproc, int *nprocs);
-int M_DESCINIT(int *desc, int *m, int *n, int *mb, int *nb, int *irsrc,
-               int *icsrc, int *ictxt, int *lld, int *info);
-int M_PDPOSV(char *uplo, int *n, int *nrhs, double *a, int *ia, int *ja, int *desca,
-             double *b, int *ib, int *jb, int *descb, int *info);
-void M_PDGEMV(char *trans, int *m, int *n, double *alpha,
-              double *a, int *ia, int *ja, int *desca,
-              double *x, int *ix, int *jx, int *descx, int *incx,
-              double *beta,
-              double *y, int *iy, int *jy, int *descy, int *incy);
+extern int Csys2blacs_handle(MPI_Comm comm);
+extern int Cblacs_gridinit(int *ictxt, char *order, int nprow, int npcol);
+extern int Cblacs_gridexit(int ictxt);
+extern int Cblacs_gridinfo(int ictxt, int *nprow, int *npcol, int *myprow, int *mypcol);
+extern int M_NUMROC(int *n, int *nb, int *iproc, int *isrcproc, int *nprocs);
+extern int M_DESCINIT(int *desc, int *m, int *n, int *mb, int *nb, int *irsrc,
+                      int *icsrc, int *ictxt, int *lld, int *info);
+extern void	M_PDSYEVD(const char* jobz, const char* uplo,
+                      const int* n, const double* a, const int* ia, const int* ja, const int* desca,
+                      double* w, double* z, const int* iz, const int* jz, const int* descz,
+                      double* work, const int* lwork, int* iwork, const int* liwork, int* info);
+extern int M_PDPOSV(char *uplo, int *n, int *nrhs, double *a, int *ia, int *ja, int *desca,
+                    double *b, int *ib, int *jb, int *descb, int *info);
+extern void M_PDGEMV(char *trans, int *m, int *n, double *alpha,
+                     double *a, int *ia, int *ja, int *desca,
+                     double *x, int *ix, int *jx, int *descx, int *incx,
+                     double *beta,
+                     double *y, int *iy, int *jy, int *descy, int *incy);
 
 int StochasticOpt(MPI_Comm comm);
 int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm comm);

@@ -1299,6 +1299,7 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxMPTrans]=0;
   bufInt[IdxSROptItrStep]=1000;
   bufInt[IdxSROptItrSmp]=bufInt[IdxSROptItrStep]/10;
+  bufInt[IdxSROptFixSmp]=1;
   bufInt[IdxVMCWarmUp]=10;
   bufInt[IdxVMCIniterval]=1;
   bufInt[IdxVMCSample]=10;

@@ -1,0 +1,160 @@
+\documentclass[preprint,letter]{jpsj2}
+% 32002/12/16
+%\usepackage[mtbold]{mathtime}
+\usepackage{color}
+\usepackage{ulem}
+\usepackage{bm}
+
+\newcommand{\tr}[1]{\textcolor{red}{#1}}
+\newcommand{\trs}[1]{\textcolor{red}{\sout{#1}}}
+\newcommand{\tb}[1]{\textcolor{blue}{#1}}
+\newcommand{\tbs}[1]{\textcolor{blue}{\sout{#1}}}
+\newcommand{\mb}[1]{\boldsymbol{#1}}
+\newcommand{\Ha}{\mathcal{H}}
+\newcommand{\mh}{\mathsf{h}}
+\newcommand{\mA}{\mathsf{A}}
+\newcommand{\mB}{\mathsf{B}}
+\newcommand{\mC}{\mathsf{C}}
+\newcommand{\mS}{\mathsf{S}}
+\newcommand{\mU}{\mathsf{U}}
+\newcommand{\mX}{\mathsf{X}}
+\newcommand{\mk}{\boldsymbol{k}}
+\newcommand{\mQ}{\boldsymbol{Q}}
+\newcommand{\sP}{\mathcal{P}}
+\newcommand{\sL}{\mathcal{L}}
+\newcommand{\sO}{\mathcal{O}}
+\newcommand{\up}{\uparrow}
+\newcommand{\down}{\downarrow}
+%
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\newcommand{\ga}{\alpha}
+\newcommand{\gb}{\beta}
+\newcommand{\gc}{\gamma}
+\newcommand{\gs}{\sigma}
+\newcommand{\vk}{{\bm{k}}}
+\newcommand{\vq}{{\bm{q}}}
+%\newcommand{\vr}{{\bm{r}}}
+\newcommand{\vR}{{\bm{R}}}
+\newcommand{\vQ}{{\bm{Q}}}
+\newcommand{\vga}{{\bm{\alpha}}}
+\newcommand{\vgc}{{\bm{\gamma}}}
+
+
+\def\runtitle{}
+\def\runauthor{Online-Journal Subcommittee}
+
+\title{A note on basic properties of $f_{ij}$}
+
+\author{%
+三澤　貴宏\thanks{E-mail:misawa@solis.t.u-tokyo.ac.jp}}
+
+\inst{
+ {\it Department of Applied Physics, University of Tokyo,
+7-3-1 Hongo, Bunkyo-ku, Tokyo, 113-8656, Japan}
+}
+
+\recdate{\today}
+
+\abst{
+In this note, we show relation between Pfaffian Slater determinant and single Slater determinant.
+We also discuss meaning of the singular value decomposition of coefficients $f_{ij}$. 
+}
+%\kword{\textcolor{red}{quantum critical phenomena, quantum tricritical point, YbRh$_2$Si$_2$, 
+%non-Fermi-liquid behavior, self-consistent renormalization theory}
+%
+%
+%\LaTeXe, amsmath.sty, graphicx.sty, EPS, PDF
+%}
+
+\begin{document}
+%\baselineskip 10mm
+\maketitle
+
+\section{Relation between $f_{ij}$ and $\Phi_{in\sigma}$}
+Pfaffian Slater determinant [one-body part of the many-variable variational Monte Carlo (mVMC) method]
+is defined as
+\begin{equation}
+|\phi_{\rm Pf}\rangle=\Big(\sum_{i,j=1}^{N_{s}}f_{ij}c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)^{N_{\rm e}/2}|0\rangle,
+\end{equation}
+where $N_{s}$ is number of sites, 
+$N_{e}$ is number of total particles,
+and $f_{ij}$ are variational parameters.
+For simplicity, we assume that $f_{ij}$ are real number.
+Single Slater determinant is defined as 
+\begin{align}
+|\phi_{\rm SL}\rangle&=\Big(\prod_{n=1}^{N_{e}/2}\psi_{n\uparrow}^{\dagger}\Big)
+\Big(\prod_{m=1}^{N_{e}/2}\psi_{m\downarrow}^{\dagger}\Big)|0\rangle, \\
+\psi_{n\sigma}^{\dagger}&=\sum_{i=1}^{N_{s}}\Phi_{in\sigma}c^{\dagger}_{i\sigma}.
+\end{align}
+We note that $\Phi$ is the normalized orthogonal basis, i.e, 
+\begin{equation}
+\sum_{i=1}^{N_{s}}\Phi_{in\sigma}\Phi_{im\sigma}=\delta_{nm},
+\end{equation}
+where $\delta_{nm}$ is the Kronecker's delta.
+Due to this normalized orthogonality, we obtain 
+following relation:
+\begin{align}
+[\psi^{\dagger}_{n\sigma},\psi_{m\sigma}]_{+}&=\delta_{nm},\\
+G_{ij\sigma}=\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle 
+&=\frac{\langle \phi_{\rm SL}| c_{i\sigma}^{\dagger}c_{j\sigma} | \phi_{\rm SL}\rangle}{\langle \phi_{\rm SL}|\phi_{\rm SL}\rangle } \\
+&=\sum_{n} \Phi_{in\sigma} \Phi_{jn\sigma}.
+\end{align}
+
+Here, we rewrite $\phi_{\rm SL}$ and obtain explicit 
+relation between $f_{ij}$ and $\Phi_{in\sigma}$.
+By using the commutation relation for $\psi^{\dagger}_{n\sigma}$,
+we rewrite $\phi_{\rm SL}$ as 
+\begin{align}
+|\phi_{\rm SL}\rangle \propto \prod_{n=1}^{N_{e}/2}\Big(\psi_{n\uparrow}^{\dagger}\psi_{\mu(n)\downarrow}^{\dagger}\Big)|0\rangle,
+\end{align}
+where $\mu(n)$ represents permutation of sequence of $n= 1, 2, \cdots, N_{e}/2$.
+For simplicity, we take identity permutation and obtain the relation 
+\begin{align}
+|\phi_{\rm SL}\rangle &\propto \prod_{n=1}^{N_{e}/2}\Big(\psi_{n\uparrow}^{\dagger}\psi_{n\downarrow}^{\dagger}\Big)|0\rangle
+=\prod_{n=1}^{N_{e}/2} K_{n}^{\dagger}|0\rangle \\
+&\propto\Big(\sum_{n=1}^{\frac{N_{e}}{2}}K_{n}^{\dagger}\Big)^{\frac{N_{e}}{2}} |0\rangle
+=\Big(\sum_{i,j=1}^{N_{s}}\Big[\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}\Big]
+c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)|0\rangle,
+\end{align}
+where $K_{n}^{\dagger}=\psi_{n\uparrow}^{\dagger}\psi_{n\downarrow}^{\dagger}$ and
+we use the relation  $K_{n}^{\dagger}K_{m}^{\dagger}=K_{m}^{\dagger}K_{n}^{\dagger}$.
+This result shows that $f_{ij}$ can be expressed by the 
+coefficients of the single Slater determinant as
+\begin{align}
+f_{ij}=\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}.
+\end{align}
+We note that this is one of expression of $f_{ij}$ for 
+single Slater determinant, i.e, $f_{ij}$ depend on
+the pairing degrees of freedom (choices  of $\mu(n)$) and
+gauge degrees of freedom ( we can arbitrary change
+the sign of $\Phi$ as $\Phi_{in\sigma}\rightarrow -\Phi_{in\sigma}$).
+This large degrees of freedom is the origin of huge redundancy of
+$f_{ij}$.
+
+\section{Singular value decomposition of $f_{ij}$}
+We define matrices $F$, $\Phi_{\uparrow}$, $\Phi_{\downarrow}$, and $\Sigma$ as
+\begin{align}
+&(F)_{ij}=f_{ij},~~~ 
+(\Phi_{\uparrow})_{in}=\Phi_{in\uparrow},~~~ 
+(\Phi_{\downarrow})_{in}=\Phi_{in\downarrow}, \\
+&\Sigma={\rm diag}[1,\cdots,1,0,0,0]~~~\text{({\rm \# of 1} = $N_{e}/2$)}.
+\end{align}
+By using these notations, we can describe the
+singular value decomposition of $f_{ij}$ (or equivalently $F$) as 
+\begin{align}
+F=\Phi_{\uparrow}\Sigma\Phi_{\downarrow}^{t}.
+\end{align}
+This result indicates that $f_{ij}$ can be 
+described by the mean-field solutions
+if the number of
+nonzero singular values are $N_{e}/2$ and
+all the nonzero singular values of $F$ are one.
+In other word, the singular values including their numbers
+offers the quantitative criterion how the Pfaffian Slater determinant
+deviates from the single Slate determinant.
+
+%\begin{thebibliography}{999}
+%\end{thebibliography}
+\end{document} 
+
