@@ -94,6 +94,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->Wy = 9999.9;
   StdI->phase0 = 9999.9;
   StdI->phase1 = 9999.9;
+  StdI->pi180 = 0.01745329251994329576;/*Pi/180*/
 
   strcpy(StdI->model, "****\0");
   strcpy(StdI->lattice, "****\0");
@@ -106,7 +107,6 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->NLanczosMode = 9999;
   StdI->NDataIdxStart = 9999;
   StdI->NDataQtySmp = 9999;
-  StdI->Sz2 = 9999;
   StdI->S2 = 9999;
   StdI->NSPGaussLeg = 9999;
   StdI->NSPStot = 9999;
@@ -1121,14 +1121,14 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, StdI->NSym);
 
   if (StdI->NVMCCalMode == 1) StdFace_NotUsed_i("NSROptItrStep", StdI->NSROptItrStep);
-  /*else*/ StdFace_PrintVal_i("NSROptItrStep", &StdI->NSROptItrStep, 1200);
+  /*else*/ StdFace_PrintVal_i("NSROptItrStep", &StdI->NSROptItrStep, 1000);
   
   if (StdI->NVMCCalMode == 1) StdFace_NotUsed_i("NSROptItrSmp", StdI->NSROptItrSmp);
-  /*else*/ StdFace_PrintVal_i("NSROptItrSmp", &StdI->NSROptItrSmp, 100);
+  /*else*/ StdFace_PrintVal_i("NSROptItrSmp", &StdI->NSROptItrSmp, StdI->NSROptItrStep/10);
 
   StdFace_PrintVal_i("NVMCWarmUp", &StdI->NVMCWarmUp, 10);
   StdFace_PrintVal_i("NVMCIniterval", &StdI->NVMCIniterval, 1);
-  StdFace_PrintVal_i("NVMCSample", &StdI->NVMCSample, 100);
+  StdFace_PrintVal_i("NVMCSample", &StdI->NVMCSample, 1000);
 
   if (strcmp(StdI->model, "hubbard") == 0) StdI->NExUpdatePath = 0;
   else if (strcmp(StdI->model, "spin") == 0) StdI->NExUpdatePath = 2;
@@ -1146,7 +1146,7 @@ static void CheckModPara(struct StdIntList *StdI)
   if (strcmp(StdI->model, "hubbard") == 0){
     if (StdI->lGC == 0) {
       StdFace_RequiredVal_i("nelec", StdI->nelec);
-      StdFace_RequiredVal_i("2Sz", StdI->Sz2);
+      StdFace_RequiredVal_i("NSPStot", StdI->NSPStot);
       if (StdI->nelec % 2 != 0) {
         printf("\nERROR ! nelec should be an even number !\n\n");
         exit(-1);
@@ -1157,19 +1157,19 @@ static void CheckModPara(struct StdIntList *StdI)
     }
     else {
       StdFace_NotUsed_i("nelec", StdI->nelec);
-      StdFace_NotUsed_i("2Sz", StdI->Sz2);
+      StdFace_NotUsed_i("NSPStot", StdI->NSPStot);
     }
   }
   else if (strcmp(StdI->model, "spin") == 0) {
     StdFace_NotUsed_i("nelec", StdI->nelec);
     StdI->nelec = StdI->nsite / 2;
-    if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
-    else StdFace_NotUsed_i("2Sz", StdI->Sz2);
+    if (StdI->lGC == 0) StdFace_RequiredVal_i("NSPStot", StdI->NSPStot);
+    else StdFace_NotUsed_i("NSPStot", StdI->NSPStot);
   }
   else if (strcmp(StdI->model, "kondo") == 0) {
     if (StdI->lGC == 0) {
       StdFace_RequiredVal_i("nelec", StdI->nelec);
-      StdFace_RequiredVal_i("2Sz", StdI->Sz2);
+      StdFace_RequiredVal_i("NSPStot", StdI->NSPStot);
       if ((StdI->nelec + StdI->nsite / 2) % 2 != 0) {
         printf("\nERROR ! nelec should be an even number !\n\n");
         exit(-1);
@@ -1180,7 +1180,7 @@ static void CheckModPara(struct StdIntList *StdI)
     }
     else {
       StdFace_NotUsed_i("nelec", StdI->nelec);
-      StdFace_NotUsed_i("2Sz", StdI->Sz2);
+      StdFace_NotUsed_i("NSPStot", StdI->NSPStot);
     }
   }
   StdFace_PrintVal_i("ComplexType", &StdI->ComplexType, 0);
@@ -1476,6 +1476,7 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "nmptrans") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NMPTrans);
     else if (strcmp(keyword, "nspgaussleg") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSPGaussLeg);
     else if (strcmp(keyword, "nsplitsize") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSplitSize);
+    else if (strcmp(keyword, "nspstot") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSPStot);
     else if (strcmp(keyword, "nsroptitrsmp") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSROptItrSmp);
     else if (strcmp(keyword, "nsroptitrstep") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSROptItrStep);
     else if (strcmp(keyword, "nstore") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NStore);
@@ -1483,8 +1484,8 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "nvmcsample") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NVMCSample);
     else if (strcmp(keyword, "nvmcwarmup") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NVMCWarmUp);
     else if (strcmp(keyword, "outputmode") == 0) StoreWithCheckDup_s(keyword, value, StdI.outputmode);
-    else if (strcmp(keyword, "phase0") == 0) StoreWithCheckDup_c(keyword, value, &StdI.phase0);
-    else if (strcmp(keyword, "phase1") == 0) StoreWithCheckDup_c(keyword, value, &StdI.phase1);
+    else if (strcmp(keyword, "phase0") == 0) StoreWithCheckDup_d(keyword, value, &StdI.phase0);
+    else if (strcmp(keyword, "phase1") == 0) StoreWithCheckDup_d(keyword, value, &StdI.phase1);
     else if (strcmp(keyword, "rndseed") == 0) StoreWithCheckDup_i(keyword, value, &StdI.RndSeed);
     else if (strcmp(keyword, "t") == 0) StoreWithCheckDup_c(keyword, value, &StdI.t);
     else if (strcmp(keyword, "t0") == 0) StoreWithCheckDup_c(keyword, value, &StdI.t0);
@@ -1505,7 +1506,6 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI.Wsub);
     else if (strcmp(keyword, "wx") == 0) StoreWithCheckDup_d(keyword, value, &StdI.Wx);
     else if (strcmp(keyword, "wy") == 0) StoreWithCheckDup_d(keyword, value, &StdI.Wy);
-    else if (strcmp(keyword, "2sz") == 0) StoreWithCheckDup_i(keyword, value, &StdI.Sz2);
     else {
       fprintf(stdout, "ERROR ! Unsupported Keyword !\n");
       exit(-1);

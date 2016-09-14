@@ -133,8 +133,13 @@ struct StdIntList {
   int **Cell;
   int NsiteUC;
   double **tau;
-  double complex phase0;
-  double complex phase1;
+  double pi180;
+  double phase0;
+  double phase1;
+  double complex ExpPhase0;
+  double complex ExpPhase1;
+  int AntiPeriod0;
+  int AntiPeriod1;
   /*
    Transfer, Interaction, Locspin
   */
@@ -148,8 +153,8 @@ struct StdIntList {
   double complex *intr;
 
   int lGC;
-  int Sz2;
   int **Orb;
+  int **AntiOrb;
   int NOrb;
   int NSym;
   /*
