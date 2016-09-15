@@ -1016,7 +1016,12 @@ void PrintOrb(struct StdIntList *StdI) {
 
   for (isite = 0; isite < StdI->nsite; isite++) {
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
-      fprintf(fp, "%5d  %5d  %5d\n", isite, jsite, StdI->Orb[isite][jsite]);
+      if (StdI->AntiPeriod0 == 1 || StdI->AntiPeriod1 == 1) {
+        fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, StdI->Orb[isite][jsite], StdI->AntiOrb[isite][jsite]);
+      }
+      else {
+        fprintf(fp, "%5d  %5d  %5d\n", isite, jsite, StdI->Orb[isite][jsite]);
+      }
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
 
@@ -1096,6 +1101,8 @@ static void CheckOutputMode(struct StdIntList *StdI)
  */
 static void CheckModPara(struct StdIntList *StdI)
 {
+  int NSym2;
+
   if (strcmp(StdI->CDataFileHead, "****") == 0) {
     strcpy(StdI->CDataFileHead, "zvo\0");
     fprintf(stdout, "         filehead = %-12s######  DEFAULT VALUE IS USED  ######\n", StdI->CDataFileHead);
@@ -1118,7 +1125,9 @@ static void CheckModPara(struct StdIntList *StdI)
 
   StdFace_PrintVal_i("NSPGaussLeg", &StdI->NSPGaussLeg, 8);
   StdFace_PrintVal_i("NSPStot", &StdI->NSPStot, 0);
-  StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, StdI->NSym);
+  if (StdI->AntiPeriod0 == 1 || StdI->AntiPeriod1 == 1) NSym2 = -StdI->NSym;
+  else NSym2 = StdI->NSym;
+  StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, NSym2);
 
   if (StdI->NVMCCalMode == 1) StdFace_NotUsed_i("NSROptItrStep", StdI->NSROptItrStep);
   /*else*/ StdFace_PrintVal_i("NSROptItrStep", &StdI->NSROptItrStep, 1000);

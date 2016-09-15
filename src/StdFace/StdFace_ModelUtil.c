@@ -1021,8 +1021,10 @@ void StdFace_generate_orb(struct StdIntList *StdI) {
   StdFace_InitSite2DSub(StdI);
 
   StdI->Orb = (int **)malloc(sizeof(int*) * StdI->nsite);
+  StdI->AntiOrb = (int **)malloc(sizeof(int*) * StdI->nsite);
   for (isite = 0; isite < StdI->nsite; isite++) {
     StdI->Orb[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
+    StdI->AntiOrb[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
   }
   CellDone = (int **)malloc(sizeof(int*) * StdI->NCell);
   for (iCell = 0; iCell < StdI->NCell; iCell++) {
@@ -1070,7 +1072,8 @@ void StdFace_generate_orb(struct StdIntList *StdI) {
       dL = StdI->Cell[jCell][1] - StdI->Cell[iCell][1];
       StdFace_FoldSite2D(StdI, dW, dL, &UnitNum0, &UnitNum1, &dWfold, &dLfold);
       Anti = StdI->AntiPeriod0 * UnitNum0 + StdI->AntiPeriod1 * UnitNum1;
-      Anti = 1 - 2 * (Anti % 2);
+      if (Anti % 2 == 0) Anti = 1;
+      else Anti = -1;
 
       for (isite = 0; isite < StdI->NsiteUC; isite++) {
         for (jsite = 0; jsite < StdI->NsiteUC; jsite++) {
@@ -1253,9 +1256,16 @@ void StdFace_Proj(struct StdIntList *StdI)
     fprintf(fp, "%d %10.5f\n", iSym, 1.0);
   }
   for (iSym = 0; iSym < StdI->NSym; iSym++) {
-    for (jsite = 0; jsite < StdI->nsite; jsite++)
-      Anti[iSym][jsite] = 1 - 2 * (Anti[iSym][jsite] % 2);
-      fprintf(fp, "%5d  %5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite], Anti[iSym][jsite]);
+    for (jsite = 0; jsite < StdI->nsite; jsite++) {
+      if (Anti[iSym][jsite] % 2 == 0) Anti[iSym][jsite] = 1;
+      else Anti[iSym][jsite] = -1;
+      if (StdI->AntiPeriod0 == 1 || StdI->AntiPeriod1 == 1) {
+        fprintf(fp, "%5d  %5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite], Anti[iSym][jsite]);
+      }
+      else {
+        fprintf(fp, "%5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite]);
+      }
+    }
   }
   fclose(fp);
   fprintf(stdout, "    qptransidx.def is written.\n");

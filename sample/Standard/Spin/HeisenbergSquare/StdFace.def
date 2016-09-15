@@ -5,4 +5,3 @@ Wsub = 2
 model = "Spin"
 lattice = "tetragonal"
 J = 1.0
-2Sz = 0
