@@ -1,23 +1,24 @@
-% !TEX root = userguide_jp.tex
+% !TEX root = userguide_en.tex
 %----------------------------------------------------------
 \appendix
-\chapter{非制限Hartree-Fock近似プログラム}
+\chapter{Program for the unrestricted Hartree-Fock approximation}
 \label{Ch:URHF}
-mVMCでは補助プログラムとして、多変数変分モンテカルロ法のペア軌道$f_{ij}$の初期値を非制限Hartree-Fock(UHF)近似から与えるためのプログラムを用意しています(対応関係は\ref{sec:PuffAndSlater}を参照)。なお、本プログラムは遍歴電子系を対象としており、スピン系、近藤系では正しく動作しません。
+In mVMC package, there is a program to calculate the initial values of the pair orbital parameters $f_{ij}$ for mVMC 
+by using the unrestricted Hartree-Fock (UHF) approximation (relation between Pfaffian Slater determinant and single Slater determinant is explained in sec. \ref{sec:PuffAndSlater}). It is noted that the target system of this program is the itinerant electron system.
 
-\section{概要}
-UHF近似では揺らぎ$\delta A \equiv A-\langle A \rangle$の一次までを考慮することで、二体項を一体項へと近似します。
-たとえば、サイト間クーロン相互作用
+\section{Overview}
+In UHF approximation, two-body interaction terms are approximated as one-body interaction terms by taking into account of the fluctuation, $\delta A \equiv A-\langle A \rangle$, up to the first order. As an example, we consider the inter-site coulomb interactions 
 \begin{equation}
-{\cal H}_V = \sum_{i,j, \sigma, \sigma'}V_{ij} n_ {i\sigma}n_{j\sigma'}
+{\cal H}_V = \sum_{i,j}V_{ij} n_ {i}n_{j},
 \end{equation}
-について考えます。簡単化のため、$i\equiv (i, \sigma)$, $j\equiv (j, \sigma')$とすると相互作用の項は揺らぎの二次を落とすことで、
+where we define $i\equiv (i, \sigma)$, $j\equiv (j, \sigma')$ for simplicity. 
+Then, the interaction terms can be approximated as
 \begin{eqnarray}
 n_ {i}n_{j} &=& (\langle n_{i} \rangle +\delta n_i) (\langle n_{j} \rangle +\delta n_j) - \left[ \langle c_{i}^{\dag}c_j \rangle +\delta (c_{i}^{\dag}c_j ) \right] \left[ \langle c_{j}^{\dag}c_i \rangle +\delta (c_{j}^{\dag}c_i )\right] \nonumber\\
 &\sim&\langle n_{i} \rangle n_j+\langle n_{j} \rangle  n_i - \langle c_{i}^{\dag}c_j \rangle  c_{j}^{\dag}c_i  -  \langle c_{j}^{\dag}c_i \rangle c_{i}^{\dag}c_j 
--\langle n_{i} \rangle \langle n_j \rangle +  \langle c_{j}^{\dag}c_i \rangle \langle c_{i}^{\dag}c_j \rangle 
+-\langle n_{i} \rangle \langle n_j \rangle +  \langle c_{j}^{\dag}c_i \rangle \langle c_{i}^{\dag}c_j \rangle.
 \end{eqnarray}
-と近似されます。このような形式で、その他の相互作用についても近似を行うことで、一体問題に帰着させることができます。
+このような形式で、その他の相互作用についても近似を行うことで、一体問題に帰着させることができます。
 計算では、上記の各平均値がself-consistentになるまで計算を行います。
 
 \subsection{ソースコード}
@@ -30,7 +31,7 @@ $ make mvmc
 を実行することで行われます。コンパイルが終了すると、
 \verb|src/ComplexUHF/src|に実行ファイル\verb|UHF|が作成されます。
 
-\subsection{必要な入力ファイル}
+\subsection{Input files}
 \subsubsection{入力ファイル指定用ファイル (namelsit.def)}
 UHFで指定するファイルは以下のファイルです。
 \verb|namelist.def|は\ref{Subsec:InputFileList}で定義されているファイルと同じ様式です。\\
@@ -79,7 +80,7 @@ linear mixingをdouble型で指定します。mix=1とすると完全に新し�
 ファイル様式は\verb|Trans|ファイルと同じで、$t_{ij\sigma_1\sigma_2}$の代わりに$G_{ij\sigma_1\sigma_2}$の値を記述します。
 なお、値を指定しないグリーン関数には０が入ります。
 
-\section{使用方法}
+\section{Usage}
 UHF自体はmVMCと同じように
 \begin{verbatim}
 $ UHF namelist.def
