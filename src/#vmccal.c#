@@ -273,6 +273,7 @@ extern int
 dgemm_(char *jobz, char *uplo, int *m, int *n, int *k, double *alpha, double *a, int *lda, double *b, int *ldb,
        double *beta, double *c, int *ldc);
 
+<<<<<<< .merge_file_NVihuP
   char jobz, uplo;
   double alpha,beta;
   
@@ -307,6 +308,9 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
   zgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
 
   return;
+=======
+return;
+>>>>>>> .merge_file_yjXy53
 }
 
 

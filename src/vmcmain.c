@@ -406,8 +406,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 }
 
 void outputData() {
-  int i,j;
-  double x;
+  int i;
 
   /* zvo_out.dat */
  // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));

@@ -23,8 +23,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   char ctmp[D_FileNameMax];
   char ctmp2[D_FileNameMax];
 
-  int i=0;
-  int itmp,tmp_info;
+  int itmp;
 
   int rank, info=0;
   const int nBufInt= ParamIdxInt_End;
@@ -457,9 +456,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
     int count_idx=0;
   int x0,x1,x2,x3,x4,x5,x6,x7;
   double dReValue, dImValue;
-  int tmp_ispin;
   int rank;
-  double tmp_real,tmp_comp;
 
   MPI_Comm_rank(comm, &rank);
   
@@ -1235,9 +1232,7 @@ int GetFileName(
 		char cFileNameList[][D_CharTmpReadDef]
 		)
 {
-  int myrank;
   FILE *fplist;
-  char ctmp[D_FileNameMax];
   int itmpKWidx=-1;
   char ctmpFileName[D_FileNameMaxReadDef];
   char ctmpKW[D_CharTmpReadDef], ctmp2[256];
