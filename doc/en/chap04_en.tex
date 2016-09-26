@@ -25,7 +25,6 @@ W = 2
 J = -1.0
 J'=-0.5
 // nelec = 8
-2Sz = 0
 \end{verbatim}
 \end{screen}
 \end{minipage}
@@ -59,7 +58,8 @@ We explain each keywords as follows:
 \footnote{GC=Grand Canonical}
 
 {\bf Description :} The target model is specified with this parameter;
-above words denote the canonical ensemble of the Fermion in the Hubbard model
+\verb|"Fermion Hubbard"| denotes
+the canonical ensemble of the Fermion in the Hubbard model
 \begin{align}
 H = -\mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma} 
 - \sum_{i \neq j \sigma} t_{i j} c^\dagger_{i \sigma} c_{j \sigma} 
@@ -67,14 +67,15 @@ H = -\mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma}
 + \sum_{i \neq j} V_{i j} n_{i} n_{j},
 \label{fml4_1_hubbard}
 \end{align}
-canonical ensemble in the Spin model($\{\sigma_1, \sigma_2\}={x, y, z}$)
+\verb|"Spin"| denotes canonical ensemble
+in the Spin model($\{\sigma_1, \sigma_2\}={x, y, z}$)
 \begin{align}
 H &= -h \sum_{i} S_{i z} - \Gamma \sum_{i} S_{i x} + D \sum_{i} S_{i z} S_{i z}
 \nonumber \\
 &+ \sum_{i j, \sigma_1}J_{i j \sigma_1} S_{i \sigma_1} S_{j \sigma_1}+ \sum_{i j, \sigma_1 \neq \sigma_2} J_{i j \sigma_1 \sigma_2} S_{i \sigma_1} S_{j \sigma_2} ,
 \label{fml4_1_spin}
 \end{align}
-canonical ensemble in the Kondo lattice model
+\verb|"Kondo Lattice"| denotes canonical ensemble in the Kondo lattice model
 \begin{align}
 H = - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma} 
 - t \sum_{\langle i j \rangle \sigma} c^\dagger_{i \sigma} c_{j \sigma} 
@@ -82,13 +83,15 @@ H = - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma}
 S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 + S_{i}^{-} c_{i \uparrow}^\dagger c_{i \downarrow}
 + S_{i z} (n_{i \uparrow} - n_{i \downarrow})
-\right\},
+\right\}.
 \label{fml4_1_kondo}
 \end{align}
+\verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, and \verb|"Kondo LatticeGC"|
+indicate 
 grand canonical ensemble of the Fermion in the Hubbard model [Eqn. (\ref{fml4_1_hubbard})],
 grand canonical ensemble in the Spin model [Eqn. (\ref{fml4_1_spin})],
 and
-grand canonical ensemble in Kondo lattice model [Eqn. (\ref{fml4_1_kondo})]
+grand canonical ensemble in Kondo lattice model [Eqn. (\ref{fml4_1_kondo})],
 respectively.
 
 \item \verb|lattice|
@@ -102,41 +105,14 @@ the one dimensional chain lattice (Fig. \ref{fig_chap04_1_lattice}(a)),
 the two dimensional square lattice (Fig. \ref{fig_chap04_1_lattice}(b)),
 the two dimensional triangular lattice (Fig. \ref{fig_chap04_1_lattice}(c)),
 the two dimensional anisotropic honeycomb lattice (Fig. \ref{fig_chap04_1_honeycomb}),
-the ladder lattice (Fig. \ref{fig_ladder}),
+the Kagome Lattice(Fig. \ref{fig_kagome}),
 and
-the Kagome Lattice(Fig. \ref{fig_kagome})
+the ladder lattice (Fig. \ref{fig_ladder}),
 respectively.
-
-In \verb|method="SpinGCBoost"|,
-only \verb|"Chain Lattice"|, \verb|"Honeycomb Lattice"|, 
-\verb|"Ladder"|, and \verb|"Kagome"| are supported.
-Limits of $L$, $W$, and the number of MPI processes ($N_{\rm proc}$) are as follows:
-
-\begin{itemize}
-
-  \item \verb|"Chain Lattice"|
-
-    $L = 8n$ (where $n$ is an integer number under the condition  $n\geq1$),
-    $N_{\rm proc} \leq 2(L=8)$, $N_{\rm proc} \leq 2^{L/2-2}(L>8)$.
-    
-  \item \verb|"Honeycomb Lattice"|
-
-    $W=3, L \geq 2$, $N_{\rm proc} \leq 2(L=2)$, $N_{\rm proc} \leq 64(L>2)$.
-
-  \item \verb|"Ladder"|
-
-    $W=2, L = 2n$ (where $n$ is an integer number under the condition  $n\geq4$),
-    $N_{\rm proc} \leq 2^{L-4}$.
-
-  \item \verb|"Kagome"|
-
-    $W=3, L \geq 2$, $N_{\rm proc} \leq 1(L=2)$, $N_{\rm proc} \leq 512(L>2)$.
-
-\end{itemize}
 
 \begin{figure}[!tbhp]
   \begin{center}
-    \includegraphics[width=8cm]{../figs/chap04_1_lattice.pdf}
+    \includegraphics[width=15cm]{../figs/chap04_1_lattice.pdf}
     \caption{Schematic illustration of
       (a) one dimensional chain lattice, 
       (b) two dimensional square lattice, and 
@@ -264,7 +240,8 @@ These vectors should be specified in the Fractional coordinate.
 If we use both of these method, \verb|vmcdry.out| stops.
 
 We can check the shape of the numerical cell
-by using a file \verb|lattice.gp|
+by using a file \verb|lattice.gp|(only for
+square, trianguler, honeycomb, and kagome lattice)
 which is written in the Standard mode.
 This file can be read by \verb|gnuplot| as follows:
 \begin{verbatim}
@@ -282,7 +259,7 @@ to the translation of the sublattice.
 
 {\bf Type :} Positive integer. In the default setting, 
 \verb|a0Wsub=a0W|, \verb|a0Lsub=a0L|, \verb|a1Wsub=a1W|, \verb|a1Lsub=a1L|, 
-\verb|Wsub=W|, and \verb|Lsub=L|.
+\verb|Wsub=W|, and \verb|Lsub=L|. Namely, there is no sublattice.
 
 {\bf Description :} We can specify these parameter as we specify
 \verb|a0W|, \verb|a0L|, \verb|a1W|, \verb|a1L|, \verb|W|, \verb|L|.
@@ -290,7 +267,6 @@ If the sublattice is incommensurate with the original lattice,
 \verb|vmcdry.out| stops.
 
 \end{itemize}
-
 
 \subsection{Parameters for the Hamiltonian}
 A default value is set as $0$ unless a specific value is not defined in a description. 
@@ -429,9 +405,10 @@ The above rules are also valid for the simplified parameters, \verb|J1|, \verb|J
 
 {\bf Description :} (Hubbard and Kondo lattice model)
 Nearest neighbor hoppings for each direction
-(See Figs. \ref{fig_chap04_1_lattice}-\ref{fig_kagome})
+(See Figs. \ref{fig_chap04_1_lattice}-\ref{fig_kagome}.
+These bonds are depicted with different line styles.)
 are specified with these parameter.
-If there is no bond dependence of the hoppings,
+If there is no bond dependence of the nearest-neighbor hoppings,
 the simplified parameter \verb|t| is available to specify \verb|t0|,  \verb|t1|, and \verb|t2| as
 \verb|t0 = t1 = t2 = t|.
 If both \verb|t| and the set of the hoppings (\verb|t0|,  \verb|t1|, \verb|t2|) are specified,
@@ -444,9 +421,10 @@ If both \verb|t| and the set of the hoppings (\verb|t0|,  \verb|t1|, \verb|t2|) 
 {\bf Description :} (Hubbard and Kondo lattice model)
 Nearest-neighbor offsite Coulomb integrals $V$
  for each direction
-(See Figs. \ref{fig_chap04_1_lattice}-\ref{fig_kagome})
+ (See Figs. \ref{fig_chap04_1_lattice}-\ref{fig_kagome}.
+ These bonds are depicted with different line styles.)
 are specified with these parameters.
-If there is no bond dependence of the offsite Coulomb integrals,
+If there is no bond dependence of the nearest-neighbor offsite Coulomb integrals,
 the simplified parameter \verb|V| is available to specify \verb|V0|,  \verb|V1|, and \verb|V2| as
 \verb|V0 = V1 = V2 = V|.
 If both \verb|V| and the set of the Coulomb integrals (\verb|V0|,  \verb|V1|, \verb|V2|) are specified,
@@ -470,7 +448,7 @@ If both \verb|J0| and the set of the exchange couplings (\verb|J0x, J0y, J0z|)
 are specified, \verb|vmcdry.out| will stop.
 The above rules are valid for \verb|J1| and \verb|J2|.
 
-If there is no bond dependence of the exchange couplings,
+If there is no bond dependence of the nearest-neighbor exchange couplings,
 the simplified parameters,
 \verb|Jx|, \verb|Jy|, \verb|Jz|, \verb|Jxy|, 
 \verb|Jyx|, \verb|Jxz|, \verb|Jzx|, \verb|Jyz|, \verb|Jzy|,
@@ -550,59 +528,22 @@ If both \verb|J'| and the set of the couplings (\verb|J'x, J'y, J'z|),
   {\bf Type :} Double complex (\verb|1.0| as defaults)
   
   {\bf Description :}
-  We can specify the phase fuctor for the hopping through the cell boundary
+  We can specify the phase for the prefactor for the hopping through the cell boundary
   with these parameter.
   These fuctor for the $\vec{a}_0$ direction and the $\vec{a}_1$ direction can be specified independently.
   For the one-dimensional system, only \verb|phase0| can be used.
   For example, a fopping from $i$-th site to $i+1$-th site through the cell boundary with the positive direction
   becomes as 
   \begin{align}
-    ({\rm phase0}) \times t {\hat c}_{i+1 \sigma}^\dagger {\hat c}_{i \sigma}
-    + ({\rm phase0})^* \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{i+1 \sigma}.
+    \exp(i \times {\rm phase0}) \times t {\hat c}_{i+1 \sigma}^\dagger {\hat c}_{i \sigma}
+    + \exp(-i \times {\rm phase0}) \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{i+1 \sigma}
   \end{align}
 
 \end{itemize}
 
 \subsection{Parameters for the numerical condition}
 
-\begin{itemize}
-
-\item \verb|OutputMode|
-
-  {\bf Type :} Choose from \verb|"none"|, \verb|"correlation"|, and \verb|"full"|
-  (\verb|correlation| as a default)
-
-  {\bf Description :} Indices of correlation functions
-  are specified with this keyword.
-  \verb|"none"| indicates correlation functions will not calculated.
-  When \verb|outputmode="correlation"|,
-  $\langle c_{i \sigma}^{\dagger}c_{i \sigma} \rangle$ is computed at all $i, \sigma$,
-  and
-  $\langle c_{i \sigma}^{\dagger}c_{i \sigma} c_{j \sigma'}^{\dagger}c_{j \sigma'} \rangle$
-  is computed at all $i, j, \sigma, \sigma'$.
-  If \verb|"full"| is selected,
-  $\langle c_{i \sigma}^{\dagger}c_{j \sigma'} \rangle$ is computed at all $i, j, \sigma, \sigma'$,
-  and
-  $\langle c_{i_1 \sigma}^{\dagger}c_{i_2 \sigma} c_{i_3 \sigma'}^{\dagger}c_{i_4 \sigma'} \rangle$
-  is computed at all $i_1, i_2, i_3, i_4, \sigma, \sigma'$.
-  
-  In spin system, 
-  indices are specified as those on the Bogoliubov representation
-  (See \ref{sec_bogoliubov_rep}).
-
-  \item  \verb|CDataFileHead|
-
- {\bf Type :} string-type (blank parameter not allowed)
-
-{\bf Description :} A header for output files. For example, the output filename for one body Green's function becomes ``{\bf xxx\_cisajs\_yyy.dat}" (xxx are characters set by \verb|CDataFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|). 
-
- \item  \verb|CParaFileHead|
-
- {\bf Type :} string-type (blank parameter not allowed)
-
-{\bf Description :}  A header for output files of the optimized variational parameters. For example, the optimized variational parameters are outputted as  {\bf zzz\_opt\_yyy.dat} (zzz are characters set by \verb|CParaFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|-1).
- 
- \item  \verb|NVMCCalMode|
+\begin{itemize} \item  \verb|NVMCCalMode|
 
  {\bf Type :} int-type (default value: 0)
 
@@ -626,16 +567,9 @@ If both \verb|J'| and the set of the couplings (\verb|J'x, J'y, J'z|),
 
 {\bf Description :} The set number for outputted files (only used for \verb|NVMCCalMode| = 1). 
 
-\item  \verb|nelec|
-
-  {\bf Type :} {int-type (1以上、必須)}
-
-  {\bf Description :} \tr{伝導電子の数。
-    $\uparrow$電子と$\downarrow$電子の個数を足したものを入力してください。}
-
  \item  \verb|NSPGaussLeg|
 
-{\bf Type :} {int-type (Positive integer, default value: 8)}
+{\bf Type :} {int-type (Positive integer, default value: 1)}
 
 {\bf Description :} The mesh number for the Gauss-legendre quadrature about $\beta$ integration ($S_y$ rotation) for the spin quantum-number projection in actual numerical calculation.
 
@@ -671,19 +605,19 @@ The whole step number to optimize variational parameters by SR method. Only used
    
 {\bf Type :} double-type (default value: 0.001)
 
-{\bf Description :} The stabilized factor for the SR method by truncation of redundant directions corresponding to $\varepsilon_{\rm wf}$ in the ref. \cite{doi:10.1143/JPSJ.77.114701}.
+{\bf Description :} The stabilized factor for the SR method by truncation of redundant directions corresponding to $\varepsilon_{\rm wf}$ in the ref. \cite{Tahara2008}.
 
  \item  \verb|DSROptStaDel| 
    
  {\bf Type :} double-type (default value: 0.02)
 
-  {\bf Description :} The stabilized factor for the SR method by modifying diagonal elements in the overwrap matrix corresponding to $\varepsilon$ in the ref. \cite{doi:10.1143/JPSJ.77.114701}.
+  {\bf Description :} The stabilized factor for the SR method by modifying diagonal elements in the overwrap matrix corresponding to $\varepsilon$ in the ref. \cite{Tahara2008}.
      
 \item \verb|DSROptStepDt|
 
 {\bf Type :} double-type 
 
-{\bf Description :} \tr{要確認(マニュアルにDescriptionなし)}
+{\bf Description :} The time step using in the SR method. 
  
 \item \verb|NVMCWarmUp|
 
@@ -721,11 +655,11 @@ The whole step number to optimize variational parameters by SR method. Only used
 
 {\bf Description :} The number of processes of MPI parallelization.
 
-\item \verb|NStoreOO|
+\item \verb|NStore|
 
 {\bf Type :} int-type (Positive integer, default value: 0)
 
-{\bf Description :} The option of applying matrix-matrix product to calculate expected values $\langle O_k O_l \rangle$ (0: off, 1: on).
+{\bf Description :} The option of applying matrix-matrix product to calculate expected values $\langle O_k O_l \rangle$ (0: off, 1: on).  
   
 \item  \verb|ComplexType|
   
@@ -734,6 +668,48 @@ The whole step number to optimize variational parameters by SR method. Only used
   {\bf Description :}
   If it is \verb|0|, only the real part of the variational parameters are optimized.
   And the real and the imaginary part of them are optimized if this parameter is \verb|1|.
+
+\item \verb|OutputMode|
+
+  {\bf Type :} Choose from \verb|"none"|, \verb|"correlation"|, and \verb|"full"|
+  (\verb|correlation| as a default)
+
+  {\bf Description :} Indices of correlation functions
+  are specified with this keyword.
+  \verb|"none"| indicates correlation functions will not calculated.
+  When \verb|outputmode="correlation"|,
+  $\langle c_{i \sigma}^{\dagger}c_{i \sigma} \rangle$ is computed at all $i, \sigma$,
+  and
+  $\langle c_{i \sigma}^{\dagger}c_{i \sigma} c_{j \sigma'}^{\dagger}c_{j \sigma'} \rangle$
+  is computed at all $i, j, \sigma, \sigma'$.
+  If \verb|"full"| is selected,
+  $\langle c_{i \sigma}^{\dagger}c_{j \sigma'} \rangle$ is computed at all $i, j, \sigma, \sigma'$,
+  and
+  $\langle c_{i_1 \sigma}^{\dagger}c_{i_2 \sigma} c_{i_3 \sigma'}^{\dagger}c_{i_4 \sigma'} \rangle$
+  is computed at all $i_1, i_2, i_3, i_4, \sigma, \sigma'$.
+  
+  In spin system, 
+  indices are specified as those on the Bogoliubov representation
+  (See \ref{sec_bogoliubov_rep}).
+
+  \item  \verb|CDataFileHead|
+
+ {\bf Type :} string-type (blank parameter not allowed)
+
+{\bf Description :} A header for output files. For example, the output filename for one body Green's function becomes ``{\bf xxx\_cisajs\_yyy.dat}" (xxx are characters set by \verb|CDataFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|). 
+
+ \item  \verb|CParaFileHead|
+
+ {\bf Type :} string-type (blank parameter not allowed)
+
+{\bf Description :}  A header for output files of the optimized variational parameters. For example, the optimized variational parameters are outputted as  {\bf zzz\_opt\_yyy.dat} (zzz are characters set by \verb|CParaFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|-1).
+
+\item  \verb|nelec|
+
+  {\bf Type :} {int-type (must be specified)}
+
+  {\bf Description :} \tr{The number of itenerant electrons.
+    It is the sum of the $\uparrow$ and $\downarrow$ electrons.}
 
 \end{itemize}
 

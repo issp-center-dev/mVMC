@@ -816,7 +816,7 @@ void StdFace_SetLabel(struct StdIntList *StdI, FILE *fp,
   jW = iW + diW;
   jL = iL + diL;
   StdFace_FoldSite2D(StdI, jW, jL, &jCell0, &jCell1, &jWfold, &jLfold);
-  *phase = cpow(StdI->phase0, (double)jCell0) * cpow(StdI->phase1, (double)jCell1);
+  *phase = cpow(StdI->ExpPhase0, (double)jCell0) * cpow(StdI->ExpPhase1, (double)jCell1);
   /**/
   for (kCell = 0; kCell < StdI->NCell; kCell++) {
     if (jWfold == StdI->Cell[kCell][0] && jLfold == StdI->Cell[kCell][1]) {
@@ -1015,13 +1015,16 @@ void StdFace_generate_orb(struct StdIntList *StdI) {
   int iCell, jCell, kCell, iW, iL, jW, jL, iCell2, jCell2;
   int NotUse1, NotUse2, iWfold, iLfold, jWfold, jLfold, iOrb;
   int isite, jsite;
+  int dW, dL, dWfold, dLfold, UnitNum0, UnitNum1, Anti;
   int **CellDone;
 
   StdFace_InitSite2DSub(StdI);
 
   StdI->Orb = (int **)malloc(sizeof(int*) * StdI->nsite);
+  StdI->AntiOrb = (int **)malloc(sizeof(int*) * StdI->nsite);
   for (isite = 0; isite < StdI->nsite; isite++) {
     StdI->Orb[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
+    StdI->AntiOrb[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
   }
   CellDone = (int **)malloc(sizeof(int*) * StdI->NCell);
   for (iCell = 0; iCell < StdI->NCell; iCell++) {
@@ -1045,7 +1048,7 @@ void StdFace_generate_orb(struct StdIntList *StdI) {
       if (iWfold == StdI->Cell[kCell][0] && iLfold == StdI->Cell[kCell][1]) {
         iCell2 = kCell;
       }
-    }/*for (iCell = 0; iCell < StdI->NCell; iCell++)*/
+    }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
     for (jCell = 0; jCell < StdI->NCell; jCell++) {
       /**/
@@ -1061,42 +1064,65 @@ void StdFace_generate_orb(struct StdIntList *StdI) {
         if (jWfold == StdI->Cell[kCell][0] && jLfold == StdI->Cell[kCell][1]) {
           jCell2 = kCell;
         }
-      }/*for (iCell = 0; iCell < StdI->NCell; iCell++)*/
+      }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
+      /*
+       AntiPeriodic factor
+      */
+      dW = StdI->Cell[jCell][0] - StdI->Cell[iCell][0];
+      dL = StdI->Cell[jCell][1] - StdI->Cell[iCell][1];
+      StdFace_FoldSite2D(StdI, dW, dL, &UnitNum0, &UnitNum1, &dWfold, &dLfold);
+      Anti = StdI->AntiPeriod0 * UnitNum0 + StdI->AntiPeriod1 * UnitNum1;
+      if (Anti % 2 == 0) Anti = 1;
+      else Anti = -1;
 
       for (isite = 0; isite < StdI->NsiteUC; isite++) {
         for (jsite = 0; jsite < StdI->NsiteUC; jsite++) {
  
           if (CellDone[iCell2][jCell2] == 0) {
             StdI->Orb[iCell2*StdI->NsiteUC + isite][jCell2*StdI->NsiteUC + jsite] = iOrb;
+            StdI->AntiOrb[iCell2*StdI->NsiteUC + isite][jCell2*StdI->NsiteUC + jsite] = Anti;
             iOrb += 1;
           }
           StdI->Orb[iCell*StdI->NsiteUC + isite][jCell*StdI->NsiteUC + jsite]
             = StdI->Orb[iCell2*StdI->NsiteUC + isite][jCell2*StdI->NsiteUC + jsite];
- 
+          StdI->AntiOrb[iCell*StdI->NsiteUC + isite][jCell*StdI->NsiteUC + jsite] = Anti;
+
           if (strcmp(StdI->model, "kondo") == 0) {
             if (CellDone[iCell2][jCell2] == 0) {
               StdI->Orb[StdI->nsite / 2 + iCell2*StdI->NsiteUC + isite]
                        [                  jCell2*StdI->NsiteUC + jsite] = iOrb;
+              StdI->AntiOrb[StdI->nsite / 2 + iCell2*StdI->NsiteUC + isite]
+                           [                  jCell2*StdI->NsiteUC + jsite] = Anti;
               iOrb += 1;
               StdI->Orb[                  iCell2*StdI->NsiteUC + isite]
                        [StdI->nsite / 2 + jCell2*StdI->NsiteUC + jsite] = iOrb;
+              StdI->AntiOrb[                  iCell2*StdI->NsiteUC + isite]
+                           [StdI->nsite / 2 + jCell2*StdI->NsiteUC + jsite] = Anti;
               iOrb += 1;
               StdI->Orb[StdI->nsite / 2 + iCell2*StdI->NsiteUC + isite]
                        [StdI->nsite / 2 + jCell2*StdI->NsiteUC + jsite] = iOrb;
+              StdI->AntiOrb[StdI->nsite / 2 + iCell2*StdI->NsiteUC + isite]
+                           [StdI->nsite / 2 + jCell2*StdI->NsiteUC + jsite] = Anti;
               iOrb += 1;
             }
             StdI->Orb[StdI->nsite / 2 + iCell*StdI->NsiteUC + isite]
                      [                  jCell*StdI->NsiteUC + jsite]
             = StdI->Orb[StdI->nsite / 2 + iCell2*StdI->NsiteUC + isite]
                        [                  jCell2*StdI->NsiteUC + jsite];
+            StdI->AntiOrb[StdI->nsite / 2 + iCell*StdI->NsiteUC + isite]
+                         [                  jCell*StdI->NsiteUC + jsite] = Anti;
             StdI->Orb[                  iCell*StdI->NsiteUC + isite]
                      [StdI->nsite / 2 + jCell*StdI->NsiteUC + jsite]
             = StdI->Orb[                  iCell2*StdI->NsiteUC + isite]
                        [StdI->nsite / 2 + jCell2*StdI->NsiteUC + jsite];
+            StdI->AntiOrb[iCell*StdI->NsiteUC + isite]
+                         [StdI->nsite / 2 + jCell*StdI->NsiteUC + jsite] = Anti;
             StdI->Orb[StdI->nsite / 2 + iCell*StdI->NsiteUC + isite]
                      [StdI->nsite / 2 + jCell*StdI->NsiteUC + jsite]
               = StdI->Orb[StdI->nsite / 2 + iCell2*StdI->NsiteUC + isite]
                          [StdI->nsite / 2 + jCell2*StdI->NsiteUC + jsite];
+              StdI->AntiOrb[StdI->nsite / 2 + iCell*StdI->NsiteUC + isite]
+                           [StdI->nsite / 2 + jCell*StdI->NsiteUC + jsite] = Anti;
           }/*if (strcmp(StdI->model, "kondo") == 0)*/
 
         }/*for (jsite = 0; jsite < StdI->NsiteUC; jsite++)*/
@@ -1164,12 +1190,15 @@ void StdFace_Proj(struct StdIntList *StdI)
   int jsite, iCell, jCell, kCell;
   int iWfold, iLfold, jWfold, jLfold, iW, iL;
   int NotUse1, NotUse2;
+  int UnitNum0, UnitNum1;
   int iSym;
-  int **Sym;
+  int **Sym, **Anti;
 
   Sym = (int **)malloc(sizeof(int*) * StdI->nsite);
+  Anti = (int **)malloc(sizeof(int*) * StdI->nsite);
   for (jsite = 0; jsite < StdI->nsite; jsite++) {
     Sym[jsite] = (int *)malloc(sizeof(int) * StdI->nsite);
+    Anti[jsite] = (int *)malloc(sizeof(int) * StdI->nsite);
   }
   /*
   Define translation operator in sub lattice
@@ -1191,7 +1220,7 @@ void StdFace_Proj(struct StdIntList *StdI)
 
         jWfold = StdI->Cell[jCell][0] + iW;
         jLfold = StdI->Cell[jCell][1] + iL;
-        StdFace_FoldSite2D(StdI, jWfold, jLfold, &NotUse1, &NotUse2, &jWfold, &jLfold);
+        StdFace_FoldSite2D(StdI, jWfold, jLfold, &UnitNum0, &UnitNum1, &jWfold, &jLfold);
 
         for (kCell = 0; kCell < StdI->NCell; kCell++) {
           if (jWfold == StdI->Cell[kCell][0] && jLfold == StdI->Cell[kCell][1]) {
@@ -1199,9 +1228,13 @@ void StdFace_Proj(struct StdIntList *StdI)
             for (jsite = 0; jsite < StdI->NsiteUC; jsite++) {
 
               Sym[StdI->NSym][jCell*StdI->NsiteUC + jsite] = kCell*StdI->NsiteUC + jsite;
+              Anti[StdI->NSym][jCell*StdI->NsiteUC + jsite] =
+                StdI->AntiPeriod0 * UnitNum0 + StdI->AntiPeriod1 * UnitNum1;
 
               if (strcmp(StdI->model, "kondo") == 0) {
                 Sym[StdI->NSym][StdI->nsite / 2 + jCell*StdI->NsiteUC + jsite] = StdI->nsite / 2 + kCell*StdI->NsiteUC + jsite;
+                Anti[StdI->NSym][StdI->nsite / 2 + jCell*StdI->NsiteUC + jsite]
+                  = StdI->AntiPeriod0 * UnitNum0 + StdI->AntiPeriod1 * UnitNum1;
               }/*if (strcmp(StdI->model, "kondo") == 0)*/
 
             }/*for (jsite = 0; jsite < StdI->NsiteUC; jsite++)*/
@@ -1223,14 +1256,24 @@ void StdFace_Proj(struct StdIntList *StdI)
     fprintf(fp, "%d %10.5f\n", iSym, 1.0);
   }
   for (iSym = 0; iSym < StdI->NSym; iSym++) {
-    for (jsite = 0; jsite < StdI->nsite; jsite++)
-      fprintf(fp, "%5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite]);
+    for (jsite = 0; jsite < StdI->nsite; jsite++) {
+      if (Anti[iSym][jsite] % 2 == 0) Anti[iSym][jsite] = 1;
+      else Anti[iSym][jsite] = -1;
+      if (StdI->AntiPeriod0 == 1 || StdI->AntiPeriod1 == 1) {
+        fprintf(fp, "%5d  %5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite], Anti[iSym][jsite]);
+      }
+      else {
+        fprintf(fp, "%5d  %5d  %5d\n", iSym, jsite, Sym[iSym][jsite]);
+      }
+    }
   }
   fclose(fp);
   fprintf(stdout, "    qptransidx.def is written.\n");
 
   for (jsite = 0; jsite < StdI->nsite; jsite++) {
+    free(Anti[jsite]);
     free(Sym[jsite]);
   }
   free(Sym);
+  free(Anti);
 }

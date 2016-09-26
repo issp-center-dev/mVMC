@@ -25,7 +25,6 @@ W = 2
 J = -1.0
 J'=-0.5
 // nelec = 8
-2Sz = 0
 \end{verbatim}
 \end{screen}
 \end{minipage}
@@ -57,7 +56,7 @@ J'=-0.5
 \verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, \verb|"Kondo LatticeGC"|のいずれか)
 
 {\bf 説明 :} 計算対象の模型を指定します。
-\verb|"Fermion Hubbard"|は、カノニカル集団のフェルミ粒子Hubbard模型
+文字列\verb|"Fermion Hubbard"|は、カノニカル集団のフェルミ粒子Hubbard模型
 \begin{align}
 H = - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma} 
 - \sum_{i \neq j \sigma} t_{i j} c^\dagger_{i \sigma} c_{j \sigma} 
@@ -65,14 +64,14 @@ H = - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma}
 + \sum_{i \neq j} V_{i j} n_{i} n_{j},
 \label{fml4_1_hubbard}
 \end{align}
-\verb|"Spin"|はカノニカル集団のスピン模型 ($\{\sigma_1, \sigma_2\}={x, y, z}$)
+文字列\verb|"Spin"|はカノニカル集団のスピン模型 ($\{\sigma_1, \sigma_2\}={x, y, z}$)
 \begin{align}
 H &= -h \sum_{i} S_{i z} - \Gamma \sum_{i} S_{i x} + D \sum_{i} S_{i z} S_{i z}
 \nonumber \\
 &+ \sum_{i j, \sigma_1}J_{i j \sigma_1} S_{i \sigma_1} S_{j \sigma_1}+ \sum_{i j, \sigma_1 \neq \sigma_2} J_{i j \sigma_1 \sigma_2} S_{i \sigma_1} S_{j \sigma_2} ,
 \label{fml4_1_spin}
 \end{align}
-\verb|"Kondo Lattice"|はカノニカル集団の近藤格子模型
+文字列\verb|"Kondo Lattice"|はカノニカル集団の近藤格子模型
 (Hubbard模型と同様に$U$と$J$を入れることも可能)
 \begin{align}
 H &= - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma} 
@@ -89,11 +88,10 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 \end{align}
 に対応します。
 また、
-\verb|"Fermion HubbardGC"|は
+\verb|"Fermion HubbardGC"|、\verb|"SpinGC"|、\verb|"Kondo LatticeGC"|はそれぞれ
 グランドカノニカル集団のフェルミ粒子Hubbard模型[式(\ref{fml4_1_hubbard})]、
-\verb|"SpinGC"|はグランドカノニカル集団のスピン模型[式(\ref{fml4_1_spin})]、
-\verb|"Kondo LatticeGC"|は
-グランドカノニカル集団の近藤格子模型[式(\ref{fml4_1_kondo})]にそれぞれ対応します。
+グランドカノニカル集団のスピン模型[式(\ref{fml4_1_spin})]、
+グランドカノニカル集団の近藤格子模型[式(\ref{fml4_1_kondo})]に対応します。
 
 \item \verb|lattice|
 
@@ -110,7 +108,7 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 
 \begin{figure}[!htbp]
   \begin{center}
-    \includegraphics[width=10cm]{../figs/chap04_1_lattice.pdf}
+    \includegraphics[width=15cm]{../figs/chap04_1_lattice.pdf}
     \caption{(a)1次元鎖、(b)2次元正方格子、(c)2次元三角格子の模式図. 
       ホッピング積分、オフサイトクーロン積分、スピン結合は、
       再近接サイト間(マゼンタの実線)ではそれぞれ$t,V,J$となり、
@@ -223,7 +221,8 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 
 \end{itemize}
 
-スタンダードモードで出力される\verb|lattice.gp|というファイルを使うと、
+スタンダードモードで出力される\verb|lattice.gp|(1次元鎖、梯子格子では出力されません)
+というファイルを使うと、
 自分の意図した通りの格子のとり方になっているかどうかを確かめる事が出来ます。
 このファイルは、次のようにして\verb|gnuplot|に読み込ませることが出来ます。
 \begin{verbatim}
@@ -241,7 +240,7 @@ $ gnuplot lattice.gp
 {\bf 形式 :} 自然数。デフォルトでは
 \verb|a0Wsub=a0W|, \verb|a0Lsub=a0L|, \verb|a1Wsub=a1W|, \verb|a1Lsub=a1L|, 
 \verb|Wsub=W|, \verb|Lsub=L|となる。
-すなわち副格子を用いない。
+すなわち副格子を用いず、変分波動関数のすべてのパラメーターが独立に変化する。
 
 {\bf 説明 :} これらのパラメーターの指定の仕方は
 \verb|a0W|, \verb|a0L|, \verb|a1W|, \verb|a1L|, \verb|W|, \verb|L|
@@ -386,10 +385,13 @@ $ gnuplot lattice.gp
 
 {\bf 説明 :} Hubbardおよび近藤格子模型での、最近接サイト間の各方向のホッピングを指定します。
 Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
-のそれぞれのボンド(異なる線種で表されています)
-また、最近接ホッピングのボンド方向依存性(もしくは異方性)
+のそれぞれのボンド(異なる線種で表されています)に対応するホッピングに関して別々の値を取るように
+刷ることが可能です。
+また、最近接ホッピング(\verb|t0|,  \verb|t1|, \verb|t2|)に関して、
+ボンド方向依存性(もしくは異方性)
 がない場合は\verb|t0|,  \verb|t1|, \verb|t2|を
-別々に指定する代わりにパラメータ\verb|t|を指定すると、\verb|t0 = t1 = t2 = t|が代入されます。
+別々に指定する代わりにパラメータ\verb|t|で一括指定(\verb|t0 = t1 = t2 = t|)
+を行うことが出来ます。
 \verb|t|と\verb|t0|等の両方が指定された場合にはプログラムを終了します。
 
 \item \verb|V0|,  \verb|V1|, \verb|V2|
@@ -397,8 +399,11 @@ Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
 {\bf 形式 :} 実数
 
 {\bf 説明 :} Hubbardおよび近藤格子模型での、最近接サイト間のCoulomb積分を指定します。
-また、サイト間Coulomb積分のボンド方向依存性がない場合は\verb|V0|,  \verb|V1|, \verb|V2|を
-別々に指定する代わりにパラメータ\verb|V|を指定すると、\verb|V0 = V1 = V2 = V|が代入されます。
+また、最近接サイト間のCoulomb積分(\verb|V0|,  \verb|V1|, \verb|V2|)に関して、
+ボンド方向依存性(もしくは異方性)
+がない場合は\verb|V0|,  \verb|V1|, \verb|V2|を
+別々に指定する代わりにパラメータ\verb|V|で一括指定(\verb|V0 = V1 = V2 = V|)
+を行うことが出来ます。
 \verb|V|と\verb|V0|等の両方が指定された場合にはプログラムを終了します。
 
 \item \verb|J0x|, \verb|J0y|, \verb|J0z|, \verb|J0xy|, 
@@ -417,7 +422,7 @@ Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
 \verb|J0|を指定した上で\verb|J0x, J0y, J0z|等も指定した場合はプログラムを終了します。
 \verb|J1|, \verb|J2|についても同様です。
 
-スピン間相互作用のボンド方向依存性がない場合には、
+最近接スピン間相互作用のボンド方向依存性がない場合には、
 \verb|Jx|, \verb|Jy|, \verb|Jz|, \verb|Jxy|, 
 \verb|Jyx|, \verb|Jxz|, \verb|Jzx|, \verb|Jyz|, \verb|Jzy|
 を指定すると、\verb|J0x = J1x = J2x = Jx|のようにすべてのボンド方向のスピン間相互作用に
@@ -480,14 +485,14 @@ Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
 
   {\bf 形式 :} 複素数(デフォルトでは\verb|1.0|)
   
-  {\bf 説明 :} 計算するセルの境界をまたいだホッピング項に付く位相因子を指定することが出来ます。
+  {\bf 説明 :} 計算するセルの境界をまたいだホッピング項に付く因子の位相を指定することが出来ます。
   $\vec{a}_0$方向、$\vec{a}_1$方向それぞれ別の位相因子を用いることが出来ます。
   １次元系では\verb|phase0|のみ使用できます。
   例えば、$i$サイトから$i+1$サイトへのホッピングで、
   正の方向に境界をまたいだ場合には次のようになります。
   \begin{align}
-    ({\rm phase0}) \times t {\hat c}_{i+1 \sigma}^\dagger {\hat c}_{i \sigma}
-    + ({\rm phase0})^* \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{i+1 \sigma}
+    \exp(i \times {\rm phase0}) \times t {\hat c}_{i+1 \sigma}^\dagger {\hat c}_{i \sigma}
+    + \exp(-i \times {\rm phase0}) \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{i+1 \sigma}
   \end{align}
 
 \end{itemize}
@@ -496,82 +501,35 @@ Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
 
 \begin{itemize}
 
-\item \verb|OutputMode|
-
-  {\bf 形式 :} \verb|"none"|, \verb|"correlation"|, \verb|"full"|のいずれか(デフォルトは\verb|correlation|)
-
-  {\bf 説明 :} 計算を行う相関関数を指定します。
-\verb|"none"|の場合は相関関数を計算しません。
-\verb|"correlation"|を指定した場合には、1体部分はすべての$i, \sigma$について
-$\langle c_{i \sigma}^{\dagger}c_{i \sigma} \rangle$を、
-2体部分はすべての$i, j, \sigma, \sigma'$について
-$\langle c_{i \sigma}^{\dagger}c_{i \sigma} c_{j \sigma'}^{\dagger}c_{j \sigma'} \rangle$
-を計算します。
-\verb|"full"|を指定した場合には、
-1体部分はすべての$i, j, \sigma, \sigma'$について
-$\langle c_{i \sigma}^{\dagger}c_{j \sigma'} \rangle$を、
-2体部分はすべての$i_1, i_2, i_3, i_4, \sigma_1, \sigma_2, \sigma_3, \sigma_4$について
-$\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_{i_4 \sigma_4} \rangle$
-を計算します。
-スピン系の演算子はBogoliubov表現により生成消滅演算子で表されています。
-詳しくは\ref{sec_bogoliubov_rep}をご覧ください。
-
-  \item  \verb|CDataFileHead|
-
- {\bf 形式 :} string型 (空白不可、必須)
-
-{\bf 説明 :} アウトプットファイルのヘッダ。例えば、一体のGreen関数の出力ファイル名が{\bf xxx\_cisajs.dat}として出力されます(xxxに\verb|CDataFileHead|で指定した文字が記載)。
-
- \item  \verb|CParaFileHead|
-
- {\bf 形式 :} string型 (空白不可、必須)
-
-{\bf 説明 :} 最適化された変分パラメータの出力ファイル名のヘッダ。最適化された変分パラメータが{\bf xxx\_opt.dat}ファイルとして出力されます(xxxに\verb|CParaFileHead|で指定した文字が記載)。
- 
- 
  \item  \verb|NVMCCalMode|
 
- {\bf 形式 :} int型 (\tr{デフォルト値 = 0})
+ {\bf 形式 :} int型 (デフォルト値 = 0)
 
 {\bf 説明 :} [0] 変分パラメータの最適化、[1] 1 体・2 体のグリーン関数の計算。
  
  \item  \verb|NLanczosMode|
 
- {\bf 形式 :} int型 (\tr{デフォルト値 = 0})
+ {\bf 形式 :} int型 (デフォルト値 = 0)
 
-{\bf 説明 :} [0] 何もしない、[1] Single Lanczos Step でエネルギーまで計算、
-[2] Single Lanczos Step で1 体・2 体のグリーン関数まで計算
-(条件: 1, 2 は\verb|NVMCCalMode| = 1のみ使用可能. 
-また, pair hopping項, exchange 項がハミルトニアンに含まれる場合は使用できません)。
+{\bf 説明 :} [0] 何もしない、[1] Single Lanczos Step でエネルギーまで計算、[2] Single Lanczos Step で1 体・2 体のグリーン関数まで計算(条件: 1, 2 は\verb|NVMCCalMode| = 1のみ使用可能。また, pair hopping項, exchange 項がハミルトニアンに含まれる場合は使用できません)。
  
  \item  \verb|NDataIdxStart|
 
- {\bf 形式 :} int型 (\tr{デフォルト値 = 1})
+ {\bf 形式 :} int型 (デフォルト値 = 0)
 
-{\bf 説明 :} 出力ファイルの付加番号。
-\verb|NVMCCalMode|= 0 の場合は\verb|NDataIdxStart|が出力され、 
-\verb|NVMCCalMode| = 1 の場合は、
-\verb|NDataIdxStart|から連番で\verb|NDataQtySmp|個のファイルを出力します。
+{\bf 説明 :} 出力ファイルの付加番号。\verb|NVMCCalMode|= 0 の場合は\verb|NDataIdxStart|が出力され、 \verb|NVMCCalMode| = 1 の場合は、\verb|NDataIdxStart|から連番で\verb|NDataQtySmp|個のファイルを出力します。
    
  \item  \verb|NDataQtySmp|
 
- {\bf 形式 :} int型 (\tr{デフォルト値 = 1})
+ {\bf 形式 :} int型 (デフォルト値 = 1)
 
 {\bf 説明 :} 出力ファイルのセット数。 \verb|NVMCCalMode| = 1 の場合に使用します。
-
-\item  \verb|nelec|
-
-  {\bf 形式 :} {int型 (1以上、必須)}
-
-  {\bf 説明 :} \tr{伝導電子の数。
-    $\uparrow$電子と$\downarrow$電子の個数を足したものを入力してください。}
 
 \item  \verb|NSPGaussLeg|
 
   {\bf 形式 :} {int型 (1以上、\tr{デフォルト値 = 8})}
 
   {\bf 説明 :} スピン量子数射影の$\beta$積分($S^y$回転)のGauss-Legendre求積法の分点数。
-
 
 \item  \verb|NSPStot|
 
@@ -589,50 +547,50 @@ $\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_
 
  \item  \verb|NSROptItrStep|
 
-{\bf 形式 :} int型 (1以上、\tr{デフォルト値 = 1000})
+{\bf 形式 :} int型 (1以上、デフォルト値 = 1000)
 
 {\bf 説明 :} 
 SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場合のみ使用されます。
  
  \item  \verb|NSROptItrSmp|
 
-{\bf 形式 :} int型 (1以上数、\tr{デフォルト値 = }\verb|NSROptItrStep|/10)
+{\bf 形式 :} int型 (1以上数、デフォルト値 = \verb|NSROptItrStep|/10)
 
 {\bf 説明 :} \verb|NSROptItrStep|ステップ中、最後の\verb|NSROptItrSmp|ステップでの各変分パラメータの平均値を最適値とする。\verb|NVMCCalMode|=0の場合のみ使用されます。
 
 \item   \verb|DSROptRedCut|
    
-{\bf 形式 :} double型 (\tr{デフォルト値 = 0.001})
+{\bf 形式 :} double型 (デフォルト値 = 0.001)
 
-{\bf 説明 :} SR 法安定化因子。手法論文の$\varepsilon_{\rm wf}$に対応。
+{\bf 説明 :} SR 法安定化因子。手法論文\cite{Tahara2008}の$\varepsilon_{\rm wf}$に対応。
 
  \item  \verb|DSROptStaDel| 
    
- {\bf 形式 :} double型 (\tr{デフォルト値 = 0.02})
+ {\bf 形式 :} double型 (デフォルト値 = 0.02)
 
-  {\bf 説明 :} SR 法安定化因子。手法論文の$\varepsilon$に対応。
+  {\bf 説明 :} SR 法安定化因子。手法論文\cite{Tahara2008}の$\varepsilon$に対応。
      
 \item \verb|DSROptStepDt|
 
-{\bf 形式 :} double型 (\tr{デフォルト値 = 0.02})
+{\bf 形式 :} double型 
 
-{\bf 説明 :} \tr{要確認(マニュアルに説明なし)}
+{\bf 説明 :} \tr{SR法で使用する刻み幅。手法論文\cite{Tahara2008}の$\Delta t$に対応。}
  
 \item \verb|NVMCWarmUp|
 
-{\bf 形式 :} int型 (1以上、\tr{デフォルト値=10})
+{\bf 形式 :} int型 (1以上、デフォルト値=10)
 
 {\bf 説明 :}マルコフ連鎖の空回し回数。
 
 \item \verb|NVMCIniterval|
 
-{\bf 形式 :} int型 (1以上、\tr{デフォルト値=1})
+{\bf 形式 :} int型 (1以上、デフォルト値=1)
 
-{\bf 説明 :} サンプル間のステップ間隔。ローカル更新が\verb|Nsite|× \verb|NVMCIniterval| 回行わます。
+{\bf 説明 :} サンプル間のステップ間隔。ローカル更新を\verb|Nsite|× \verb|NVMCIniterval| 回行います。
 
 \item \verb|NVMCSample|
 
-{\bf 形式 :} int型 (1以上、\tr{デフォルト値=1000})
+{\bf 形式 :} int型 (1以上、デフォルト値=1000)
 
 {\bf 説明 :} 期待値計算に使用するサンプル数。
 
@@ -640,19 +598,19 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 {\bf 形式 :} int型 
 
-{\bf 説明 :} 乱数の初期seed。\tr{MPI 並列では各計算機に}\verb|RndSeed|\tr{+my rank+1 で初期seed が与えられます。}
+{\bf 説明 :} 乱数の初期seed。MPI 並列では各計算機に\verb|RndSeed|+my rank+1 で初期seed が与えられます。
 
  \item \verb|NSplitSize|
 
-{\bf 形式 :} int型 (1以上、\tr{デフォルト値=1})
+{\bf 形式 :} int型 (1以上、デフォルト値=1)
 
-{\bf 説明 :} mpi内部並列を行う場合の並列数。
+{\bf 説明 :} MPI内部並列を行う場合の並列数。
 
-\item \verb|NStoreOO|
+\item \verb|NStore|
 
-{\bf 形式 :} int型 (1以上、\tr{デフォルト値=0})
+{\bf 形式 :} int型 (1以上、デフォルト値=1)
 
-{\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にするオプション(1で機能On)。
+{\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にして高速化するオプション(1で機能On、\tr{モンテカルロサンプリング数に応じてメモリの消費が増大します})。
  
 \item  \verb|ComplexType|
   
@@ -660,7 +618,47 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
   {\bf 説明 :} \verb|0|のとき変分パラメータの実部のみを、\verb|1|のとき実部/虚部両方を最適化します。
 
-\end{itemize}
+\item \verb|OutputMode|
+
+  {\bf 形式 :} \verb|"none"|, \verb|"correlation"|, \verb|"full"|のいずれか
+  (デフォルトは\verb|correlation|)
+
+  {\bf 説明 :} 計算を行う相関関数を指定します。
+\verb|"none"|の場合は相関関数を計算しません。
+\verb|"correlation"|を指定した場合には、1体部分はすべての$i, \sigma$について
+$\langle c_{i \sigma}^{\dagger}c_{i \sigma} \rangle$を、
+2体部分はすべての$i, j, \sigma, \sigma'$について
+$\langle c_{i \sigma}^{\dagger}c_{i \sigma} c_{j \sigma'}^{\dagger}c_{j \sigma'} \rangle$
+を計算します。
+\verb|"full"|を指定した場合には、
+1体部分はすべての$i, j, \sigma, \sigma'$について
+$\langle c_{i \sigma}^{\dagger}c_{j \sigma'} \rangle$を、
+2体部分はすべての$i_1, i_2, i_3, i_4, \sigma_1, \sigma_2, \sigma_3, \sigma_4$について
+$\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_{i_4 \sigma_4} \rangle$
+を計算します。
+スピン系の演算子はBogoliubov表現により生成消滅演算子で表されています。
+詳しくはSec. \ref{sec_bogoliubov_rep}をご覧ください。
+
+  \item  \verb|CDataFileHead|
+
+ {\bf 形式 :} string型 (空白不可、必須)
+
+{\bf 説明 :} アウトプットファイルのヘッダ。例えば、一体のGreen関数の出力ファイル名が{\bf xxx\_cisajs.dat}として出力されます(xxxに\verb|CDataFileHead|で指定した文字が記載)。
+
+ \item  \verb|CParaFileHead|
+
+ {\bf 形式 :} string型 (空白不可、必須)
+
+{\bf 説明 :} 最適化された変分パラメータの出力ファイル名のヘッダ。最適化された変分パラメータが{\bf xxx\_opt.dat}ファイルとして出力されます(xxxに\verb|CParaFileHead|で指定した文字が記載)。
+ 
+\item  \verb|nelec|
+
+  {\bf 形式 :} {int型 (1以上、必須)}
+
+  {\bf 説明 :} \tr{伝導電子の数。
+    $\uparrow$電子と$\downarrow$電子の個数を足したものを入力してください。}
+
+ \end{itemize}
 
  \input{chap04-02_jp.tex}
  %----------------------------------------------------------

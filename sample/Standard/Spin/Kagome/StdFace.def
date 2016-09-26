@@ -9,4 +9,3 @@ a1Lsub = 3
 model = "Spin"
 lattice = "Kagome"
 J = 1.0
-2Sz = 0

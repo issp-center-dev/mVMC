@@ -320,10 +320,10 @@ NStore         1
 
  \item  \verb|NMPTrans|
 
-{\bf Type :} int-type (Positive integer, default value: 1)
+{\bf Type :} int-type (default value: 1)
 
 {\bf Description :} 
-The number of the momentum and lattice translational quantum-number projection. The quantum-number projection is used from the top to \verb|NMPTrans| with the specified weight indicated in \verb|TransSym| file. In the case of not applying the projection, this value must be equal to 1.
+The absolute value gives the number of the momentum and lattice translational quantum-number projection. When the value is negative, the mode of anti-periodic condition turns on. The quantum-number projection is used from the top to \verb|NMPTrans| with the specified weight indicated in \verb|TransSym| file. In the case of not applying the projection, this value must be equal to 1.
 
  \item  \verb|NSROptItrStep|
 
@@ -1495,7 +1495,7 @@ In the following, we define the total number of sites as $N_s$ and variational p
    \item  Line 2: [string01]~[int01]
    \item  Line 3: [string02]~[int02]
    \item  Lines 4 - 5:  Header
-   \item  Lines 6 - (5+$N_s^2$): [int03]~[int04]~[int05]
+   \item  Lines 6 - (5+$N_s^2$): [int03]~[int04]~[int05]~[int06]
    \item  Lines (6+$N_s^2$ )- (5+$N_s^2+N_{\rm o}$): [int06]~[int07]
   \end{itemize}
 \subsubsection{Parameters}
@@ -1539,10 +1539,16 @@ In the following, we define the total number of sites as $N_s$ and variational p
 
  \item  $[$int06$]$
    
+   {\bf Type :} int-type
+
+  {\bf Description :} When the mode of the anti-periodic condition turns on (the mode turns on when the value of \verb|NMPTrans| in \verb|ModPara| file is negative), the sign of $f_{ij}$ is specified by setting $[$int06$]=\pm1$. This term can be omitted when the mode of the anti-periodic condition is off.
+
+ \item  $[$int07$]$
+   
    {\bf Type :} int-type (blank parameter not allowed)
 
   {\bf Description :} An integer giving kinds of variational  parameters ($0<= [$int06$]<[$int01]).   
- \item  $[$int07$]$
+ \item  $[$int08$]$
    
    {\bf Type :} int-type (blank parameter not allowed)
 
@@ -1555,7 +1561,7 @@ In the following, we define the total number of sites as $N_s$ and variational p
 \begin{itemize}
 \item Headers cannot be omitted. 
 \item A program is terminated, when $[$int01$]$ is different from the total number of variational parameters defined in this file.
-\item A program is terminated, when $[$int02$]$ - $[$int07$]$ are out of range from the defined values.
+\item A program is terminated, when $[$int02$]$ - $[$int09$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage
@@ -1597,7 +1603,7 @@ In the following, we define the total number of sites as $N_s$ and projection pa
    \item  Line 2: [string01]~[int01]
    \item  Lines 3 - 5:  Header
    \item  Lines 6 - (5+$N_{\rm TS})$: [int02]~[double01]
-   \item  Lines (6+$N_{\rm TS}$) - (5+$(N_s+1) \times N_{\rm TS}$): [int03]~[int04]~[int05]
+   \item  Lines (6+$N_{\rm TS}$) - (5+$(N_s+1) \times N_{\rm TS}$): [int03]~[int04]~[int05]~[int06]
   \end{itemize}
 \subsubsection{Parameters}
  \begin{itemize}
@@ -1639,13 +1645,19 @@ In the following, we define the total number of sites as $N_s$ and projection pa
   {\bf Description :} An integer giving a site index ($0<= [$int04$], [$int05$]<\verb|Nsite|$). 
   The site number $[$int05$]$ is given by applying the translation and point group transformation indicated by $[$int03$]$ to the site $[$int04$]$.
 
+ \item  $[$int06$]$
+   
+   {\bf Type :} int-type
+
+  {\bf Description :} When the mode of the anti-periodic condition turns on (the mode turns on when the value of \verb|NMPTrans| in \verb|ModPara| file is negative), the sign of the translational operator is specified by setting $[$int06$]=\pm1$. This term can be omitted when the mode of the anti-periodic condition is off.
+
 \end{itemize}
 
 \subsubsection{User rules}
 \begin{itemize}
 \item Headers cannot be omitted. 
 \item A program is terminated, when $[$int01$]$ is different from the total number of projection patterns defined in this file.
-\item A program is terminated, when $[$int02$]$ - $[$int05$]$ are out of range from the defined values.
+\item A program is terminated, when $[$int02$]$ - $[$int06$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage

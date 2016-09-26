@@ -60,8 +60,16 @@ void StdFace_Chain(struct StdIntList *StdI, char *model)
   fclose(fp);
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0;
   /**/
-  StdFace_PrintVal_c("phase0", &StdI->phase0, 1.0);
+  StdFace_PrintVal_d("phase0", &StdI->phase0, 0.0);
   StdFace_NotUsed_c("phase1", StdI->phase1);
+  StdI->phase1 = StdI->phase0;
+  StdI->phase0 = 0.0;
+  StdI->ExpPhase0 = cos(StdI->pi180 * StdI->phase0) + I*sin(StdI->pi180 * StdI->phase0);
+  StdI->ExpPhase1 = cos(StdI->pi180 * StdI->phase1) + I*sin(StdI->pi180 * StdI->phase1);
+  if (cabs(StdI->ExpPhase0 + 1.0) < 0.000001) StdI->AntiPeriod0 = 1;
+  else StdI->AntiPeriod0 = 0;
+  if (cabs(StdI->ExpPhase1 + 1.0) < 0.000001) StdI->AntiPeriod1 = 1;
+  else StdI->AntiPeriod1 = 0;
   /**/
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
   StdFace_NotUsed_J("J1", StdI->J1All, StdI->J1);
@@ -193,7 +201,7 @@ void StdFace_Chain(struct StdIntList *StdI, char *model)
     Nearest neighbor
    */
     jsite = (iL + 1) % StdI->L;
-    phase = cpow(StdI->phase0, (double)((iL + 1) / StdI->L));
+    phase = cpow(StdI->ExpPhase0, (double)((iL + 1) / StdI->L));
     if (strcmp(StdI->model, "kondo") == 0 ) jsite += StdI->L;
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
@@ -207,7 +215,7 @@ void StdFace_Chain(struct StdIntList *StdI, char *model)
     Second nearest neighbor
     */
     jsite = (iL + 2) % StdI->L;
-    phase = cpow(StdI->phase0, (double)((iL + 2) / StdI->L));
+    phase = cpow(StdI->ExpPhase0, (double)((iL + 2) / StdI->L));
     if (strcmp(StdI->model, "kondo") == 0 ) jsite += StdI->L;
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {

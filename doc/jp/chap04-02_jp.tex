@@ -314,10 +314,10 @@ NStore         1
 
  \item  \verb|NMPTrans|
 
-{\bf 形式 :} int型 (1以上、デフォルト値 = 1)
+{\bf 形式 :} int型 (デフォルト値 = 1)
 
 {\bf 説明 :} 
-並進・格子対称性の量子数射影の個数。TransSymファイルで指定した重みで上から\verb|NMPTrans|個まで使用する。\tr{射影を行わない場合は1に設定する必要があります。}
+\verb|NMPTrans|の絶対値で並進・格子対称性の量子数射影の個数を指定する。負の場合は反周期境界条件を与える。TransSymファイルで指定した重みで上から\verb|NMPTrans|個まで使用する。\tr{射影を行わない場合は1に設定する必要があります。}
 
  \item  \verb|NSROptItrStep|
 
@@ -1529,8 +1529,8 @@ ComplexType 0
    \item  2行:   [string01]~[int01]
    \item  3行:   [string02]~[int02]
    \item  4-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6 - (5+$N_s^2$)行: [int03]~[int04]~[int05]
-   \item  (6+$N_s^2$) - (5+$N_s^2+N_{\rm o}$)行：[int06]~[int07]
+   \item  6 - (5+$N_s^2$)行: [int03]~[int04]~[int05]~[int06]
+   \item  (6+$N_s^2$) - (5+$N_s^2+N_{\rm o}$)行：[int07]~[int08]
   \end{itemize}
 \subsubsection{パラメータ}
  \begin{itemize}
@@ -1573,11 +1573,18 @@ ComplexType 0
 
  \item  $[$int06$]$
    
+   {\bf 形式 :} int型
+
+  {\bf 説明 :} 反周期境界条件モードがON(\verb|ModPara|ファイルで\verb|NMPTrans|が負の場合に有効)の場合、変分パラメータ$f_{ij}$の番号の他に符号を反転するか否かを直接指定する。$[$int06$]$=$\pm1$により符号を指定する。反周期境界条件モードがOFFの場合は省略可能。
+
+
+ \item  $[$int07$]$
+   
    {\bf 形式 :} int型 (空白不可)
 
   {\bf 説明 :} 変分パラメータの種類を表します(最適化有無の設定用)。0以上[int01]{未満}で指定します。
   
- \item  $[$int07$]$
+ \item  $[$int08$]$
    
    {\bf 形式 :} int型 (空白不可)
 
@@ -1591,7 +1598,7 @@ ComplexType 0
 \begin{itemize}
 \item 行数固定で読み込みを行う為、ヘッダの省略はできません。
 \item $[$int01$]$と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
-\item $[$int02$]$-$[$int07$]$を指定する際、範囲外の整数を指定した場合はエラー終了します。
+\item $[$int02$]$-$[$int08$]$を指定する際、範囲外の整数を指定した場合はエラー終了します。
 \end{itemize}
 
 
@@ -1630,7 +1637,7 @@ NQPTrans 4
    \item  2行:   [string01]~[int01]
    \item  3-5行:  ヘッダ(何が書かれても問題ありません)。
    \item  6 - (5+$N_{\rm TS}$)行: [int02]~[double01]
-   \item  (6+$N_{\rm TS}$) - (5+$(N_s+1) \times N_{\rm TS}$)行：[int03]~[int04]~[int05]
+   \item  (6+$N_{\rm TS}$) - (5+$(N_s+1) \times N_{\rm TS}$)行：[int03]~[int04]~[int05]~[int06]
   \end{itemize}
 \subsubsection{パラメータ}
  \begin{itemize}
@@ -1671,6 +1678,11 @@ NQPTrans 4
 
   {\bf 説明 :} サイト番号を指定する整数。0以上\verb|Nsite|{未満}で指定します。$[$int03$]$で指定した並進・点群移動をサイト番号$[$int04$]$に作用させた場合の行き先が、サイト番号$[$int05$]$となるように設定します。
 
+ \item  $[$int06$]$
+   
+   {\bf 形式 :} int型 (空白不可)
+
+  {\bf 説明 :} 反周期境界条件モードがON(\verb|ModPara|ファイルで\verb|NMPTrans|が負の場合に有効)の場合、並進演算で生成消滅演算子の符号が反転するか否かを直接指定する。$[$int06$]$=$\pm1$により符号を指定する。反周期境界条件モードがOFFの場合は省略可能。
 \end{itemize}
 
 \subsubsection{使用ルール}
@@ -1678,7 +1690,7 @@ NQPTrans 4
 \begin{itemize}
 \item 行数固定で読み込みを行う為、ヘッダの省略はできません。
 \item $[$int01$]$と定義されている射影パターンの総数が異なる場合はエラー終了します。
-\item \tr{$[$int02$]$-$[$int05$]$を指定する際、範囲外の整数を指定した場合はエラー終了します。}
+\item \tr{$[$int02$]$-$[$int06$]$を指定する際、範囲外の整数を指定した場合はエラー終了します。}
 \end{itemize}
 
 \newpage

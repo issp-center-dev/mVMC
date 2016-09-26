@@ -63,8 +63,14 @@ void StdFace_Honeycomb(struct StdIntList *StdI, char *model)
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0;
   StdI->tau[1][0] = 1.0 / 3.0; StdI->tau[1][1] = 1.0 / 3.0;
   /**/
-  StdFace_PrintVal_c("phase0", &StdI->phase0, 1.0);
-  StdFace_PrintVal_c("phase1", &StdI->phase1, 1.0);
+  StdFace_PrintVal_d("phase0", &StdI->phase0, 0.0);
+  StdFace_PrintVal_d("phase1", &StdI->phase1, 0.0);
+  StdI->ExpPhase0 = cos(StdI->pi180 * StdI->phase0) + I*sin(StdI->pi180 * StdI->phase0);
+  StdI->ExpPhase1 = cos(StdI->pi180 * StdI->phase1) + I*sin(StdI->pi180 * StdI->phase1);
+  if (cabs(StdI->ExpPhase0 + 1.0) < 0.000001) StdI->AntiPeriod0 = 1;
+  else StdI->AntiPeriod0 = 0;
+  if (cabs(StdI->ExpPhase1 + 1.0) < 0.000001) StdI->AntiPeriod1 = 1;
+  else StdI->AntiPeriod1 = 0;
   /**/
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
   StdFace_NotUsed_J("J1'", StdI->J1pAll, StdI->J1p);
