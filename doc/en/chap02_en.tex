@@ -61,6 +61,8 @@ The command-line argument of \verb|config.sh| is as follows:
 \item \verb|sekirei| : ISSP system-B ''sekirei''
 \item \verb|kei| : K computer and ISSP system-C ''maki''
 \item \verb|openmpi-intel| : OpenMPI + intel compiler
+\item \verb|mpich-intel| : MPICH + intel compiler
+\item \verb|mpich-gnu-mkl| : MPICH + GNU Compiler + MKL
 \item \verb|gnu| : GCC
 \end{itemize}
 
@@ -250,12 +252,13 @@ If you need more information, please refer manuals for your system.
 
 \item Watch calculation logs
 
-Log files are outputted in the ``output" folder which is automatically made in the directory for a calculation scenario.
+Log files are outputted in the current directry which is automatically made in the directory for a calculation scenario.
 The details of output files are shown in Sec. \ref{Sec:outputfile}.
 
 \item Results
 
-If the calculation is finished normally, the result files are outputted in  the ``output" folder. The details of output files are shown in Sec. \ref{Sec:outputfile}.
+  If the calculation is finished normally, the result files are outputted in  the current directry.
+  The details of output files are shown in Sec. \ref{Sec:outputfile}.
 
 \end{enumerate}
 

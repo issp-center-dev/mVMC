@@ -1124,7 +1124,6 @@ static void CheckModPara(struct StdIntList *StdI)
   /*else*/StdFace_PrintVal_i("NDataQtySmp", &StdI->NDataQtySmp, 1);
 
   StdFace_PrintVal_i("NSPGaussLeg", &StdI->NSPGaussLeg, 8);
-  StdFace_PrintVal_i("NSPStot", &StdI->NSPStot, 0);
   if (StdI->AntiPeriod0 == 1 || StdI->AntiPeriod1 == 1) NSym2 = -StdI->NSym;
   else NSym2 = StdI->NSym;
   StdFace_PrintVal_i("NMPTrans", &StdI->NMPTrans, NSym2);
@@ -1142,6 +1141,7 @@ static void CheckModPara(struct StdIntList *StdI)
   if (strcmp(StdI->model, "hubbard") == 0) StdI->NExUpdatePath = 0;
   else if (strcmp(StdI->model, "spin") == 0) StdI->NExUpdatePath = 2;
   else if (strcmp(StdI->model, "kondo") == 0) StdI->NExUpdatePath = 1;
+  fprintf(stdout, "  %15s = %-10d\n", "NExUpdatePath", StdI->NExUpdatePath);
 
   StdFace_PrintVal_i("RndSeed", &StdI->RndSeed, 123456789);
   StdFace_PrintVal_i("NSplitSize", &StdI->NSplitSize, 1);
@@ -1155,7 +1155,7 @@ static void CheckModPara(struct StdIntList *StdI)
   if (strcmp(StdI->model, "hubbard") == 0){
     if (StdI->lGC == 0) {
       StdFace_RequiredVal_i("nelec", StdI->nelec);
-      StdFace_RequiredVal_i("NSPStot", StdI->NSPStot);
+      StdFace_PrintVal_i("NSPStot", &StdI->NSPStot, 0);
       if (StdI->nelec % 2 != 0) {
         printf("\nERROR ! nelec should be an even number !\n\n");
         exit(-1);
@@ -1172,13 +1172,13 @@ static void CheckModPara(struct StdIntList *StdI)
   else if (strcmp(StdI->model, "spin") == 0) {
     StdFace_NotUsed_i("nelec", StdI->nelec);
     StdI->nelec = StdI->nsite / 2;
-    if (StdI->lGC == 0) StdFace_RequiredVal_i("NSPStot", StdI->NSPStot);
+    if (StdI->lGC == 0) StdFace_PrintVal_i("NSPStot", &StdI->NSPStot, 0);
     else StdFace_NotUsed_i("NSPStot", StdI->NSPStot);
   }
   else if (strcmp(StdI->model, "kondo") == 0) {
     if (StdI->lGC == 0) {
       StdFace_RequiredVal_i("nelec", StdI->nelec);
-      StdFace_RequiredVal_i("NSPStot", StdI->NSPStot);
+      StdFace_PrintVal_i("NSPStot", &StdI->NSPStot, 0);
       if ((StdI->nelec + StdI->nsite / 2) % 2 != 0) {
         printf("\nERROR ! nelec should be an even number !\n\n");
         exit(-1);

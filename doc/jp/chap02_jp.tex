@@ -60,6 +60,8 @@ $ bash config.sh sekirei
 \item \verb|sekirei| : 物性研究所システムB ''sekirei''
 \item \verb|kei| : 京コンピューターおよび物性研究所システムC ''maki''(FX10)
 \item \verb|openmpi-intel| : OpenMPI + intelコンパイラ
+\item \verb|mpich-intel| : MPICH + intelコンパイラ
+\item \verb|mpich-gnu-mkl| : MPICH + GNU Compiler + MKL
 \item \verb|gnu| : GCC
 \end{itemize}
 
@@ -241,13 +243,13 @@ MPIは使用しません。
 
 \item 途中経過
 
-計算実行の経過についてoutputフォルダにログファイルが出力されます。
+計算実行の経過についてカレントディレクトリにログファイルが出力されます。
 出力されるファイルの詳細に関してはSec. \ref{Sec:outputfile}を参考にしてください。
 
 \item 最終結果
 
 計算が正常終了した場合、
-計算モードに従いoutputフォルダに計算結果ファイルが出力されます。
+計算モードに従いカレントディレクトリに計算結果ファイルが出力されます。
 出力されるファイルの詳細に関してはSec. \ref{Sec:outputfile}を参考にしてください。
 \end{enumerate}
 
