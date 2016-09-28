@@ -89,7 +89,6 @@ NMPtrans=1
   KEYWORD : model                | VALUE : spin 
   KEYWORD : lattice              | VALUE : chain 
   KEYWORD : j                    | VALUE : 1.0 
-  KEYWORD : 2sz                  | VALUE : 0 
   KEYWORD : nmptrans             | VALUE : 1 
 
 #######  Parameter Summary  #######
@@ -100,7 +99,7 @@ NMPtrans=1
              Lsub = 4         
                 L = 16        
                 W = 1         
-           phase0 = 1.00000    0.00000     ######  DEFAULT VALUE IS USED  ######
+           phase0 = 0.00000     ######  DEFAULT VALUE IS USED  ######
 
   @ Hamiltonian 
 
@@ -128,21 +127,20 @@ NMPtrans=1
     NDataIdxStart = 1           ######  DEFAULT VALUE IS USED  ######
       NDataQtySmp = 1           ######  DEFAULT VALUE IS USED  ######
       NSPGaussLeg = 8           ######  DEFAULT VALUE IS USED  ######
-          NSPStot = 0           ######  DEFAULT VALUE IS USED  ######
          NMPTrans = 1         
-    NSROptItrStep = 1200        ######  DEFAULT VALUE IS USED  ######
+    NSROptItrStep = 1000        ######  DEFAULT VALUE IS USED  ######
      NSROptItrSmp = 100         ######  DEFAULT VALUE IS USED  ######
-     NSROptFixSmp = 1           ######  DEFAULT VALUE IS USED  ######
        NVMCWarmUp = 10          ######  DEFAULT VALUE IS USED  ######
     NVMCIniterval = 1           ######  DEFAULT VALUE IS USED  ######
-       NVMCSample = 100         ######  DEFAULT VALUE IS USED  ######
+       NVMCSample = 1000        ######  DEFAULT VALUE IS USED  ######
+    NExUpdatePath = 2         
           RndSeed = 123456789   ######  DEFAULT VALUE IS USED  ######
        NSplitSize = 1           ######  DEFAULT VALUE IS USED  ######
            NStore = 0           ######  DEFAULT VALUE IS USED  ######
      DSROptRedCut = 0.00100     ######  DEFAULT VALUE IS USED  ######
      DSROptStaDel = 0.02000     ######  DEFAULT VALUE IS USED  ######
      DSROptStepDt = 0.02000     ######  DEFAULT VALUE IS USED  ######
-              2Sz = 0  
+          NSPStot = 0           ######  DEFAULT VALUE IS USED  ######
       ComplexType = 0           ######  DEFAULT VALUE IS USED  ######
     locspn.def is written.
     trans.def is written.

@@ -3,3 +3,4 @@ Lsub=4
 model = "Spin"
 lattice = "chain"
 J = 1.0
+NMPtrans=1
