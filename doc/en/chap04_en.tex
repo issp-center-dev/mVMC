@@ -544,7 +544,16 @@ If both \verb|J'| and the set of the couplings (\verb|J'x, J'y, J'z|),
 
 \subsection{Parameters for the numerical condition}
 
-\begin{itemize} \item  \verb|NVMCCalMode|
+\begin{itemize}
+
+\item  \verb|nelec|
+
+  {\bf Type :} {int-type (must be specified)}
+
+  {\bf Description :} \tr{The number of itenerant electrons.
+    It is the sum of the $\uparrow$ and $\downarrow$ electrons.}
+
+\item  \verb|NVMCCalMode|
 
  {\bf Type :} int-type (default value: 0)
 
@@ -558,7 +567,7 @@ If both \verb|J'| and the set of the couplings (\verb|J'x, J'y, J'z|),
  
  \item  \verb|NDataIdxStart|
 
- {\bf Type :} int-type (default value: 0)
+ {\bf Type :} int-type (default value: 1)
 
 {\bf Description :} An integer for numbering of output files. For \verb|NVMCCalMode|= 0 , \verb|NDataIdxStart| is added at the end of the output files. For \verb|NVMCCalMode| = 1,  the files are outputted with the number from \verb|NDataIdxStart| to  \verb|NDataIdxStart|+\verb|NDataQtySmp|-1.
    
@@ -616,7 +625,7 @@ The whole step number to optimize variational parameters by SR method. Only used
      
 \item \verb|DSROptStepDt|
 
-{\bf Type :} double-type 
+{\bf Type :} double-type (default value: 0.02)
 
 {\bf Description :} The time step using in the SR method. 
  
@@ -646,7 +655,7 @@ The whole step number to optimize variational parameters by SR method. Only used
 
 \item \verb|RndSeed|
 
-{\bf Type :} int-type 
+{\bf Type :} int-type (default value: 123456789)
 
 {\bf Description :} The initial seed of generating random number. For MPI parallelization, the initial seeds are given by \verb|RndSeed|+my rank+1 at each ranks. 
 
@@ -695,22 +704,15 @@ The whole step number to optimize variational parameters by SR method. Only used
 
   \item  \verb|CDataFileHead|
 
- {\bf Type :} string-type (blank parameter not allowed)
+ {\bf Type :} string-type (default : \verb|"zvo"|)
 
 {\bf Description :} A header for output files. For example, the output filename for one body Green's function becomes ``{\bf xxx\_cisajs\_yyy.dat}" (xxx are characters set by \verb|CDataFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|). 
 
  \item  \verb|CParaFileHead|
 
- {\bf Type :} string-type (blank parameter not allowed)
+ {\bf Type :} string-type (default : \verb|"zqp"|)
 
 {\bf Description :}  A header for output files of the optimized variational parameters. For example, the optimized variational parameters are outputted as  {\bf zzz\_opt\_yyy.dat} (zzz are characters set by \verb|CParaFileHead| and yyy are numbers given by numbers from \verb|NDataIdxStart| to \verb|NDataIdxStart| +  \verb|NDataQtySmp|-1).
-
-\item  \verb|nelec|
-
-  {\bf Type :} {int-type (must be specified)}
-
-  {\bf Description :} \tr{The number of itenerant electrons.
-    It is the sum of the $\uparrow$ and $\downarrow$ electrons.}
 
 \end{itemize}
 

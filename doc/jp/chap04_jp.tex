@@ -502,6 +502,13 @@ Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
 
 \begin{itemize}
 
+\item  \verb|nelec|
+
+  {\bf 形式 :} {int型 (1以上、必須)}
+
+  {\bf 説明 :} \tr{伝導電子の数。
+    $\uparrow$電子と$\downarrow$電子の個数を足したものを入力してください。}
+
  \item  \verb|NVMCCalMode|
 
  {\bf 形式 :} int型 (デフォルト値 = 0)
@@ -516,7 +523,7 @@ Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
  
  \item  \verb|NDataIdxStart|
 
- {\bf 形式 :} int型 (デフォルト値 = 0)
+ {\bf 形式 :} int型 (デフォルト値 = 1)
 
 {\bf 説明 :} 出力ファイルの付加番号。\verb|NVMCCalMode|= 0 の場合は\verb|NDataIdxStart|が出力され、 \verb|NVMCCalMode| = 1 の場合は、\verb|NDataIdxStart|から連番で\verb|NDataQtySmp|個のファイルを出力します。
    
@@ -573,7 +580,7 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
      
 \item \verb|DSROptStepDt|
 
-{\bf 形式 :} double型 
+{\bf 形式 :} double型 (デフォルト値 = 0.02)
 
 {\bf 説明 :} \tr{SR法で使用する刻み幅。手法論文\cite{Tahara2008}の$\Delta t$に対応。}
  
@@ -597,7 +604,7 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 \item \verb|RndSeed|
 
-{\bf 形式 :} int型 
+{\bf 形式 :} int型 (デフォルト値 = 123456789)
 
 {\bf 説明 :} 乱数の初期seed。MPI 並列では各計算機に\verb|RndSeed|+my rank+1 で初期seed が与えられます。
 
@@ -609,7 +616,7 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 \item \verb|NStore|
 
-{\bf 形式 :} int型 (1以上、デフォルト値=1)
+{\bf 形式 :} int型 (1以上、デフォルト値=0)
 
 {\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にして高速化するオプション(1で機能On、\tr{モンテカルロサンプリング数に応じてメモリの消費が増大します})。
  
@@ -642,23 +649,16 @@ $\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_
 
   \item  \verb|CDataFileHead|
 
- {\bf 形式 :} string型 (空白不可、必須)
+ {\bf 形式 :} string型 (デフォルト値\verb|"zvo"|)
 
 {\bf 説明 :} アウトプットファイルのヘッダ。例えば、一体のGreen関数の出力ファイル名が{\bf xxx\_cisajs.dat}として出力されます(xxxに\verb|CDataFileHead|で指定した文字が記載)。
 
  \item  \verb|CParaFileHead|
 
- {\bf 形式 :} string型 (空白不可、必須)
+ {\bf 形式 :} string型 (デフォルト値\verb|"zqp"|)
 
 {\bf 説明 :} 最適化された変分パラメータの出力ファイル名のヘッダ。最適化された変分パラメータが{\bf xxx\_opt.dat}ファイルとして出力されます(xxxに\verb|CParaFileHead|で指定した文字が記載)。
  
-\item  \verb|nelec|
-
-  {\bf 形式 :} {int型 (1以上、必須)}
-
-  {\bf 説明 :} \tr{伝導電子の数。
-    $\uparrow$電子と$\downarrow$電子の個数を足したものを入力してください。}
-
  \end{itemize}
 
  \input{chap04-02_jp.tex}
