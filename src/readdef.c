@@ -1289,7 +1289,7 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxDataQtySmp]=1;
   bufInt[IdxNsite]=16;
   bufInt[IdxNe]=8;
-  bufInt[IdxSPGaussLeg]=1;
+  bufInt[IdxSPGaussLeg]=8;
   bufInt[IdxSPStot]=0;
   bufInt[IdxMPTrans]=0;
   bufInt[IdxSROptItrStep]=1000;
