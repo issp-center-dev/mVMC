@@ -41,7 +41,7 @@ Each parameters are specified by the following files, respectively;
 \begin{eqnarray}
 |\psi \rangle &=& {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
 {\cal P}_G&=&\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right],\\
-{\cal P}_J&=&\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right],\\
+{\cal P}_J&=&\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1)(n_j-1)\right],\\
 {\cal P}_{d-h}^{(2)}&=& \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right],\\
 {\cal P}_{d-h}^{(4)}&=& \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right],\\
 {\cal L}_S&=&\frac{2S+1}{8 \pi^2}\int d\Omega P_s(\cos \beta) \hat{R}(\Omega),\\
@@ -378,7 +378,7 @@ The whole step number to optimize variational parameters by SR method. Only used
 
 {\bf Type :} int-type (Positive integer)
 
-{\bf Description :}  The option for local update about exchange terms. 0: not update, 1: update. The default value is set as 1 when the local spin exists, otherwise 0.
+{\bf Description :}  The option for local update about exchange terms. 0: not update, 1: update for electron system. For Spin system, the value must be 2.
 
 \item \verb|RndSeed|
 
@@ -749,7 +749,7 @@ NCoulombIntra 6
 \subsection{CoulombInter file (coulombinter.def)}
 The Hamiltonian for the coulombintrer interactions
 \begin{equation}
-{\cal H}_V = \sum_{i,j}V_{ij} n_ {i}n_{j}
+{\cal H}_V = \sum_{i,j}V_{ij} n_ {i} n_{j}
 \end{equation}
 is added to the whole Hamiltonian by setting $V_{ij}$.
 An example of the file format is shown as follows.
@@ -1144,7 +1144,7 @@ In the following, we define the whole number of sites as $N_s$ and variational p
 \label{Subsec:Jastrow}
 This file sets the calculation conditions of Jastrow factors 
 \begin{equation}
-{\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]
+{\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1)(n_j-1)\right]
 \end{equation}
 Site numbers $i$ $j$, and the variational parameters $v_{ij}$ are specified.
 An example of the file format is shown as follows.
@@ -1990,12 +1990,12 @@ An example of outputted file is shown as follows.
 1.972000325276957824e+02  1.824505193695792893e-01
 1.308897206011880421e+01  5.701244886956570168e-01  \
 2.072610167083121837e+02  2.029162857569105916e-01
-…
+...
 \end{verbatim}
 \end{screen}
 \end{minipage}
 
-\subsection{CalcTimer.dat }
+\subsection{xxx\_CalcTimer.dat }
 After finishing calculation, the processing time is outputted in the order of the name, the number assigned by the process and the seconds at each processes. An example of outputted file is shown as follows.
 
 \begin{minipage}{15.5cm}
@@ -2009,40 +2009,8 @@ Initialization              [1]      0.04357
   InitParameter            [13]      0.03026
 VMCParaOpt                  [2]     15.86367
   VMCMakeSample             [3]     12.85650
-    makeInitialSample      [30]      0.20219
-    make candidate         [31]      0.02553
-    hopping update         [32]     12.51967
-      UpdateProjCnt        [60]      7.41864
-      CalculateNewPfM2     [61]      3.67098
-      CalculateLogIP       [62]      0.07599
-      UpdateMAll           [63]      1.27466
-    exchange update        [33]      0.00000
-      UpdateProjCnt        [65]      0.00000
-      CalculateNewPfMTwo2  [66]      0.00000
-      CalculateLogIP       [67]      0.00000
-      UpdateMAllTwo        [68]      0.00000
-    recal PfM and InvM     [34]      0.08294
-    save electron config   [35]      0.00232
-  VMCMainCal                [4]      2.45481
-    CalculateMAll          [40]      0.47556
-    LocEnergyCal           [41]      0.79754
-      CalHamiltonian0      [70]      0.00259
-      CalHamiltonian1      [71]      0.18765
-      CalHamiltonian2      [72]      0.00107
-    ReturnSlaterElmDiff    [42]      0.40035
-    calculate OO and HO    [43]      0.68045
-  StochasticOpt             [5]      0.30489
-    preprocess             [50]      0.02587
-    stcOptMain             [51]      0.25471
-      initBLACS            [55]      0.06564
-      calculate S and g    [56]      0.05603
-      DPOSV                [57]      0.09833
-      gatherParaChange     [58]      0.02774
-    postprocess            [52]      0.02372
-  UpdateSlaterElm          [20]      0.02556
-  WeightAverage            [21]      0.06676
-  outputData               [22]      0.10554
-  SyncModifiedParameter    [23]      0.02151\end{verbatim}
+...
+\end{verbatim}
 \end{screen}
 \end{minipage}
 

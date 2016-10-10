@@ -12,13 +12,13 @@
 \begin{itemize}
 \item{与えられた変分自由度の範囲でハミルトニアンの期待値が最小 (極小) 値を持つような変分波動関数 を数値的に生成します.   量子数で分割された部分空間に限定して計算することも可能です。}
 \item{得られた変分波動関数における各種物理量 (相関関数など) の期待値を計算することができます。}
-\item{
-特定の条件 (ハミルトニアンの相互作用項が実空間で対角的かつ全て遍歴電子で構成された模型) を 持つ場合には Power Lanczos (Single Lanczos Step) 法 を適用した場合の期待値を計算することがで きます。}
+%\item{
+%特定の条件 (ハミルトニアンの相互作用項が実空間で対角的かつ全て遍歴電子で構成された模型) を 持つ場合には Power Lanczos (Single Lanczos %Step) 法 を適用した場合の期待値を計算することがで きます。}
 \end{itemize}
 mVMCでは以下の流れで計算を行います。
 \begin{enumerate}
 \item{入力ファイル(*.def)の読込}
-\item{$\langle {\cal H} \rangle$を最小化するように$\vec{\alpha}$を最適化}
+\item{$\langle {\cal H} \rangle$を最小化するように変分パラメータ$\vec{\alpha}$を最適化}
 \item{一体・二体Green関数の計算}
 \item{変分パラメータ・期待値の出力}
 \end{enumerate}

@@ -45,7 +45,7 @@ ${\cal H}_E$内の$J_{ij}^{\rm Ex}$を指定します。
 \begin{eqnarray}
 |\psi \rangle &=& {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
 {\cal P}_G&=&\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right],\\
-{\cal P}_J&=&\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right],\\
+{\cal P}_J&=&\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1)(n_j-1)\right],\\
 {\cal P}_{d-h}^{(2)}&=& \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right],\\
 {\cal P}_{d-h}^{(4)}&=& \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right],\\
 {\cal L}_S&=&\frac{2S+1}{8 \pi^2}\int d\Omega P_s(\cos \beta) \hat{R}(\Omega),\\
@@ -370,9 +370,9 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 \item \verb|NExUpdatePath|
 
-{\bf 形式 :} int型 (1以上)
+{\bf 形式 :} int型 (0以上)
 
-{\bf 説明 :} ローカル更新で2 電子交換を[0] 認めない、[1] 認める。デフォルト設定は局在スピンが一つでもある場合は1、それ以外は0となります。
+{\bf 説明 :} 電子系でローカル更新で2電子交換を[0] 認めない、[1] 認めるの設定をします。スピン系の場合には2に設定する必要があります。
 
 \item \verb|RndSeed|
 
@@ -1170,7 +1170,7 @@ ComplexType 0
 \label{Subsec:Jastrow}
 Jastrow因子
 \begin{equation}
-{\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} n_i n_j\right]
+{\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1) (n_j-1)\right]
 \end{equation}
 の設定を行います。指定するパラメータはサイト番号$i, j$と$v_{ij}$の変分パラメータの番号です。以下にファイル例を記載します。
 
@@ -2032,7 +2032,7 @@ xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|Mod
 \end{screen}
 \end{minipage}
 
-\subsection{CalcTimer.dat }
+\subsection{xxx\_CalcTimer.dat }
 計算終了後に、処理毎の計算処理時間が処理名、処理に割り当てられた識別番号、実行秒数の順に出力されます。出力例は以下の通りです。
 
 \begin{minipage}{15.5cm}
