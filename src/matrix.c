@@ -251,7 +251,6 @@ int CalculateMAll_real(const int *eleIdx, const int qpStart, const int qpEnd) {
     myIWork = GetWorkSpaceThreadInt(Nsize);
     myBufM = GetWorkSpaceThreadDouble(Nsize*Nsize);
     myWork = GetWorkSpaceThreadDouble(LapackLWork);
-
     #pragma omp for private(qpidx)
     for(qpidx=0;qpidx<qpNum;qpidx++) {
       if(info!=0) continue;
@@ -302,12 +301,23 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
     rsi = eleIdx[msi] + (msi/Ne)*Nsite;
     bufM_i = bufM + msi*Nsize;
     sltE_i = sltE + rsi*Nsite2;
+    //printf("Debug: bufM=%ld, sltE=%ld\n", bufM, sltE);
+    //    printf("Debug: bufM_i=%ld, sltE_i=%ld, rsi=%ld\n", bufM_i, sltE_i, rsi);
     #pragma loop norecurrence
     for(msj=0;msj<nsize;msj++) {
       rsj = eleIdx[msj] + (msj/Ne)*Nsite;
       bufM_i[msj] = -sltE_i[rsj];
+
     }
   }
+  /*
+  printf("DEBUG: n=%d \n",n);
+  for(msi=0;msi<nsize;msi++){
+    for(msj=0;msj<nsize;msj++){
+      printf("DEBUG: msi=%d msj=%d bufM %lf \n",msi,msj,bufM[msi+msj*n]);
+    }
+  }
+  */
 
   /* copy bufM to invM */
   /* For Pfaffian calculation, invM is used as second buffer */
@@ -315,16 +325,19 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   for(msi=0;msi<nsize*nsize;msi++) {
     invM[msi] = bufM[msi];
   }
+
   /* calculate Pf M */
   M_DSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, &info);
   if(info!=0) return info;
   if(!isfinite(pfaff)) return qpidx+1;
   PfM_real[qpidx] = pfaff;
 
+  //  printf("Debug: M_DGETRF\n");
   /* DInv */
   M_DGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
   if(info!=0) return info;
   
+  //  printf("Debug: M_DGETRI\n");
   M_DGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
   if(info!=0) return info;
   
