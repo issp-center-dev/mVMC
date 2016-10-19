@@ -35,6 +35,7 @@ extern int omp_get_max_threads(void);
 extern int omp_get_thread_num(void);
 
 #include "sfmt/SFMT.h"
+#include "version.h"
 #include "global.h"
 
 #include "safempi.c"

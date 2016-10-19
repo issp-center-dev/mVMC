@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
   StartTimer(10);
 
   /* read options */
-  while((option=getopt(argc,argv,"bhm:oF:"))!=-1) {
+  while((option=getopt(argc,argv,"bhvm:oF:"))!=-1) {
     switch(option) {
     case 'b': /* BinaryMode */
       FlagBinary=1;
@@ -59,6 +59,11 @@ int main(int argc, char* argv[])
     case 'h': /* Print Help Message*/
       printUsageError();
       printOption();
+      exit(EXIT_SUCCESS);
+      break;
+
+    case 'v': /* Print Version*/
+      printVersion();
       exit(EXIT_SUCCESS);
       break;
 
