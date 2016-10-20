@@ -3,30 +3,30 @@
 \chapter{\tr{Algorithm}}
 \label{Ch:algorithm}
 \section{Variational MonteCalro Method}
-適当な完全系に対するマルコフ連鎖を構成して重みつきサンプリングを行います。
-ここでは完全系として$S_z = 0$ の実空間配置$\{| x\rangle\}$ を使用します。
+In Variational MonteCalro (VMC) method, the importance sampling is performed in the system constructed by the Malkov chain toward the appropriate complete system.
+Here, we choose the real spatial arrangement $\{| x\rangle\}$ at $S_z = 0$ as the complete system.
 \begin{equation}
-| x\rangle =  \prod_{n=1}^{N/2} c_{r_{n\uparrow}}^{\dag} \prod_{n=1}^{N/2} c_{r_{n\downarrow}}^{\dag} |0 \rangle
+| x\rangle =  \prod_{n=1}^{N/2} c_{r_{n\uparrow}}^{\dag} \prod_{n=1}^{N/2} c_{r_{n\downarrow}}^{\dag} |0 \rangle,
 \end{equation}
-ここで、$n$番目の$\sigma$電子の位置を$r_{n\sigma}$としました。
+where we set $r_{n\sigma}$ as the position of $n$-th electron with $\sigma (=\uparrow \rm{or} \downarrow)$ spin.
+
 \subsection{Importance sampling}
-マルコフ連鎖の重みを
+When the importance of Malkov chain is defined by
 \begin{equation}
-\rho(x)=\frac{|\langle x| \psi \rangle|^2}{\langle \psi | \psi \rangle} \ge 0, \sum{x} \rho(x)=1
+\rho(x)=\frac{|\langle x| \psi \rangle|^2}{\langle \psi | \psi \rangle} \ge 0, \sum{x} \rho(x)=1,
 \end{equation}
-とすると演算子$A$の期待値は
+the expected value of the operator $A$ is given by
 \begin{equation}
 \langle A \rangle =\frac{\langle \psi| A| \psi \rangle}{\langle \psi | \psi \rangle} 
 =\sum_x \frac{\langle \psi| A | x\rangle \langle x| \psi \rangle}{\langle \psi |\psi \rangle} 
-=\sum_x \rho(x) \frac{\langle \psi| A | x\rangle }{\langle \psi |x \rangle} 
+=\sum_x \rho(x) \frac{\langle \psi| A | x\rangle }{\langle \psi |x \rangle} .
 \end{equation}
-となります。$x$に関する和を重み付きサンプリングに置き換えます。また、Local Green's function $G_{ij\sigma\sigma'}(x)$は
+In VMC, the summation in terms of $x$ is replaced by the importance sampling.
+Then, local Green's function $G_{ij\sigma\sigma'}(x)$ is defined by
 \begin{equation}
-G_{ij\sigma\sigma'}(x)=\frac{\langle \psi | c_{i\sigma}^{\dag} c_{j\sigma'} | \psi \rangle}{\langle \psi | x \rangle}
+G_{ij\sigma\sigma'}(x)=\frac{\langle \psi | c_{i\sigma}^{\dag} c_{j\sigma'} | \psi \rangle}{\langle \psi | x \rangle}.
 \end{equation}
-で定義されます。なお、サンプリングに使用する乱数生成については、メルセンヌツイスター法を使用しています\cite{Mutsuo2008}。
-
-
+In mVMC, the Mersenne twister method is used for sampling as the random number generator \cite{Mutsuo2008}. 
 
 \section{Bogoliubov representation}\label{sec_bogoliubov_rep}
 

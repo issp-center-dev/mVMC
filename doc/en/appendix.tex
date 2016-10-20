@@ -3,7 +3,7 @@
 \appendix
 \chapter{Program for the unrestricted Hartree-Fock approximation}
 \label{Ch:URHF}
-In mVMC package, there is a program to calculate the initial values of the pair orbital parameters $f_{ij}$ for mVMC 
+In mVMC package, there is a program to calculate the initial values of the pair orbital parameters $f_{ij}$
 by using the unrestricted Hartree-Fock (UHF) approximation (relation between Pfaffian Slater determinant and single Slater determinant is explained in sec. \ref{sec:PuffAndSlater}). It is noted that the target system of this program is the itinerant electron system.
 
 \section{Overview}
@@ -18,23 +18,28 @@ n_ {i}n_{j} &=& (\langle n_{i} \rangle +\delta n_i) (\langle n_{j} \rangle +\del
 &\sim&\langle n_{i} \rangle n_j+\langle n_{j} \rangle  n_i - \langle c_{i}^{\dag}c_j \rangle  c_{j}^{\dag}c_i  -  \langle c_{j}^{\dag}c_i \rangle c_{i}^{\dag}c_j 
 -\langle n_{i} \rangle \langle n_j \rangle +  \langle c_{j}^{\dag}c_i \rangle \langle c_{i}^{\dag}c_j \rangle.
 \end{eqnarray}
-このような形式で、その他の相互作用についても近似を行うことで、一体問題に帰着させることができます。
-計算では、上記の各平均値がself-consistentになるまで計算を行います。
+Also for other types of interaction, the problem can be attributed to a one-body problem by using a similar approximation.
+Actual calculation is performed iteratively until that self-consistent solution for the mean values of the above observables are obtained.
 
-\subsection{ソースコード}
-ソースコード一式は\verb|src/ComplexUHF/src|以下に入っています。
-\subsection{コンパイル方法}
-コンパイルはmVMCのコンパイルと同様にmVMCのフォルダ直下で
+\subsection{Source code}
+
+A set of source codes are included in the directory \verb|src/ComplexUHF/src|.
+
+\subsection{How to compile}
+
+To compile source codes, move to the directory just below the main directory of mVMC, and execute
 \begin{verbatim}
 $ make mvmc
 \end{verbatim}
-を実行することで行われます。コンパイルが終了すると、
-\verb|src/ComplexUHF/src|に実行ファイル\verb|UHF|が作成されます。
+in a similar way as the compile of mVMC.
+After compiling, an executable file \verb|UHF| is generated in \verb|src/ComplexUHF/src|.
 
 \subsection{Input files}
-\subsubsection{入力ファイル指定用ファイル (namelsit.def)}
-UHFで指定するファイルは以下のファイルです。
-\verb|namelist.def|は\ref{Subsec:InputFileList}で定義されているファイルと同じ様式です。\\
+
+\subsubsection{A file for assigning input files (namelsit.def)}
+
+The following files are needed to use the program of UHF.
+The format of \verb|namelist.def| is the same as defined in \ref{Subsec:InputFileList}.\\
 \begin{itemize}
 \item{\verb|ModPara|}
 \item{\verb|LocSpin|}
@@ -47,16 +52,16 @@ UHFで指定するファイルは以下のファイルです。
 \item{\verb|Orbital|}
 \item{\verb|Initial|}
 \end{itemize}
-基本的にはmVMCと同じファイルとなりますが、
+Although the format of these files are the same as those for mVMC basically, the following items are different:
  \begin{itemize}
- \item{\verb|ModPara|ファイルで指定されるパラメータ}
- \item{\verb|Initial|ファイルの追加}
+ \item{Parameters assigned in \verb|ModPara| file.}
+ \item{Addition of \verb|Initial| file.}
  \end{itemize}
-がmVMCと異なります。以下、その詳細を記載します。
+We explain details of the format of these files as follows.
 
+\subsubsection{Parameters assigned in ModPara file}
 
-\subsubsection{ModParaファイルで指定するパラメータ}
-UHFで指定するパラメータは以下のパラメータです。
+The parameters needed in the program of UHF are as follows:
 \begin{itemize}
 \item{\verb|Nsite|}
 \item{\verb|Ne|}
@@ -64,37 +69,41 @@ UHFで指定するパラメータは以下のパラメータです。
 \item{\verb|EPS|}
 \item{\verb|IterationMax|}
 \end{itemize}
-\verb|Nsite|, \verb|Ne|はmVMCと共通のパラメータで、以下の三つがUHF独特のパラメータです。
+The parameters, \verb|Nsite| and \verb|Ne|, are common as mVMC.
+The other three parameters are specific to UHF:
 \begin{itemize}
 \item{\verb|Mix|}\\
-linear mixingをdouble型で指定します。mix=1とすると完全に新しいGreen関数に置き換えられます。
+Linear mixing is assigned by double-type.
+When mix=1, a new Green's function is fully updated without using a old one.
 \item{\verb|EPS|}\\
-収束判定条件をint型で指定します。新しく計算されたGreen関数と一つ前のGreen関数の残差が$10^{-\verb|eps|}$の場合に、計算が打ち切られます。
+A condition for convergence is assigned by int-type.
+When a residual error between a new Green's function and a previous one is less than $10^{-\verb|eps|}$, the iteration of calculation is stopped.
 \item{\verb|IterationMax|}\\
-ループの最大数をint型で指定します。
+A maximum number of the loop is assigned by int-type.
 \end{itemize}
-なお、mVMCで使用するその他パラメータが存在する場合はWarningが標準出力されます(計算は中断せずに実行されます)。
+If there are the other parameters for mVMC in this file , warning is output to the standard output (the calculation is not stopped).
 
-\subsubsection{Initialファイル}
-グリーン関数$G_{ij\sigma_1\sigma_2}\equiv \langle c_{i\sigma_1}^\dag c_{j\sigma_2}\rangle$の初期値を与えます。
-ファイル様式は\verb|Trans|ファイルと同じで、$t_{ij\sigma_1\sigma_2}$の代わりに$G_{ij\sigma_1\sigma_2}$の値を記述します。
-なお、値を指定しないグリーン関数には０が入ります。
+\subsubsection{Initial file}
+Initial values of Green's function $G_{ij\sigma_1\sigma_2}\equiv \langle c_{i\sigma_1}^\dag c_{j\sigma_2}\rangle$ are given.
+The format is the same as \verb|Trans| file, and instead of $t_{ij\sigma_1\sigma_2}$, values of $G_{ij\sigma_1\sigma_2}$ are described.
+Green's function is set as zero if values are not given.
 
 \section{Usage}
-UHF自体はmVMCと同じように
+
+Calculation of UHF is performed by the same way as mVMC, i.e., by executing the command
 \begin{verbatim}
 $ UHF namelist.def
 \end{verbatim}
-で動きます。計算の流れは以下の通りです。
+The routine of the calculation is as follows.
 \begin{enumerate}
-\item{ファイル読み込み}
-\item{ハミルトニアンの作成}
-\item{グリーン関数の計算 (self-consistentになるまで)}
-\item{$f_{ij}$、各種ファイルの出力}
+\item{Reading files}
+\item{Construction of a Hamiltonian}
+\item{Self-consistent calculation of Green's function}
+\item{Output of $f_{ij}$ and other files}
 \end{enumerate}
-計算後に出力されるファイルおよび出力例は以下の通りです。
+Examples of output after calculation are as follows.
 \begin{itemize}
-\item{zvo\_result.dat:}  エネルギーと粒子数が出力されます。\\
+\item{zvo\_result.dat:}  The energy and the particle number are output. \\
 \begin{minipage}{13cm}
 \begin{screen}
 \begin{verbatim}
@@ -103,7 +112,7 @@ $ UHF namelist.def
 \end{verbatim}
 \end{screen}
 \end{minipage}
-\item{zvo\_check.dat:} イタレーションのステップ数、グリーン関数の残差の絶対値の平均、収束過程のエネルギー、粒子数を順に出力します。
+\item{zvo\_check.dat:} The step number of the iteration, the mean of the absolute value of the residual error in Green's function, the energy in convergence process, and the particle number are output in order.
 
 \begin{minipage}{13cm}
 \begin{screen}
@@ -117,8 +126,8 @@ $ UHF namelist.def
 \end{screen}
 \end{minipage}
 
-\item{zvo\_UHF\_cisajs.dat:} 収束した一体グリーン関数$G_{ij\sigma_1\sigma_2}\equiv\langle c_{i\sigma_1}^{\dag}c_{j\sigma_2}\rangle$。\\
-全成分について$i, \sigma_1, j, \sigma_2, {\rm Re}\left[G_{ij\sigma_1\sigma_2}\right], {\rm Im}\left[G_{ij\sigma_1\sigma_2}\right]$の順に出力されます。
+\item{zvo\_UHF\_cisajs.dat:} Convergent one-body Green's function $G_{ij\sigma_1\sigma_2}\equiv\langle c_{i\sigma_1}^{\dag}c_{j\sigma_2}\rangle$ is output. \\
+For all the components, $i, \sigma_1, j, \sigma_2, {\rm Re}\left[G_{ij\sigma_1\sigma_2}\right], {\rm Im}\left[G_{ij\sigma_1\sigma_2}\right]$ are output in order.
 
 \begin{minipage}{13cm}
 \begin{screen}
@@ -132,7 +141,7 @@ $ UHF namelist.def
 \end{screen}
 \end{minipage}    
     
-\item{zvo\_eigen.dat:} 収束したハミルトニアンの固有値が低エネルギー順に出力されます。\\
+\item{zvo\_eigen.dat:} Convergent eigenvalues of the Hamiltonian are output in ascending order. \\
 \begin{minipage}{13cm}
 \begin{screen}
 \begin{verbatim}
@@ -144,7 +153,7 @@ $ UHF namelist.def
 \end{screen}
 \end{minipage}
 
-\item{zvo\_gap.dat:} 全電子数を$N_{\rm tot}$とした場合に、$\Delta E= E(N_{\rm tot}+1)-E(N_{\rm tot})$が出力されます。
+\item{zvo\_gap.dat:} For the total electron number $N_{\rm tot}$, the energy difference $\Delta E= E(N_{\rm tot}+1)-E(N_{\rm tot})$ is output.
 
 \begin{minipage}{13cm}
 \begin{screen}
@@ -154,8 +163,9 @@ $ UHF namelist.def
 \end{screen}
 \end{minipage}
 
-\item{zvo\_orbital\_opt.dat:} スレータ行列式から生成した$f_{ij}$。\verb|InOrbital|ファイルと同じ形式のファイルが出力されます。
-$f_{ij}$が\verb|Orbital|ファイルを参照し計算され、同種のパラメータについては平均化した値が採用されます。
+\item{zvo\_orbital\_opt.dat:} $f_{ij}$ generated from the Slater determinant. The file with the same format as \verb|InOrbital| file is output.
+By referring \verb|Orbital| file, $f_{ij}$ is calculated (for the same type of parameters, the averaged value is calculated).
+
 
 \end{itemize}
 
