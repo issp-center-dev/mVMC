@@ -24,7 +24,7 @@ The calculation flow in mVMC is shown as follows:
 \item{Calculate one body and two body Green functions}
 \item{Output variational parameters and expected values}
 \end{enumerate}
-In calculation, the simple parallelization for the generation of the real space arrangement $|x\rangle$ and the collecting samples and the calculation result of expected energies is implemented. Following the procedure for each cluster computers, the parallelized calculation using MPI is automatically done by indicating the parallel number. However, mVMC cannot execute under the environment where the MPI job is forbidden such as the front-end of system B at ISSP.
+In calculation, the simple parallelization for the generation of the real space arrangement $|x\rangle$ and the collecting samples and the calculation result of expected energies is implemented. Following the procedure for each cluster computers, the parallelized calculation using MPI is automatically done by indicating the parallel number. However, mVMC cannot execute under the environment where the MPI job is forbidden such as the front-end of system B at ISSP. In mVMC, we use PFAPACK\cite{PFAPACK} to compute the Pfaffian matrix.
 
 \section{License}
 The distribution of the program package and the source codes for mVMC follows GNU General Public License version 3 (GPL v3). 
