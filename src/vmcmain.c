@@ -506,6 +506,7 @@ void printOption() {
   fprintf(stderr,"  -o     optTrans mode\n");
   fprintf(stderr,"  -F N   set interval of file flush\n");
   fprintf(stderr,"  -h     show this message\n");
+  fprintf(stderr,"  -v     show the version number of mVMC\n");
   return;
 }
 
