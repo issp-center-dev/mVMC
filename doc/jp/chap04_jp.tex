@@ -506,7 +506,7 @@ Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
 
   {\bf 形式 :} {int型 (1以上、必須)}
 
-  {\bf 説明 :} \tr{伝導電子の数。
+  {\bf 説明 :} {伝導電子の数。
     $\uparrow$電子と$\downarrow$電子の個数を足したものを入力してください。}
 
  \item  \verb|NVMCCalMode|
@@ -535,23 +535,23 @@ Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
 
 \item  \verb|NSPGaussLeg|
 
-  {\bf 形式 :} {int型 (1以上、\tr{デフォルト値 = 8})}
+  {\bf 形式 :} {int型 (1以上、{デフォルト値 = 8})}
 
   {\bf 説明 :} スピン量子数射影の$\beta$積分($S^y$回転)のGauss-Legendre求積法の分点数。
 
 \item  \verb|NSPStot|
 
-  {\bf 形式 :} int型 (0以上、\tr{デフォルト値 = 0})
+  {\bf 形式 :} int型 (0以上、{デフォルト値 = 0})
 
   {\bf 説明 :}  スピン量子数。
 
 \item  \verb|NMPTrans|
 
-  {\bf 形式 :} int型 (1以上、\tr{デフォルト値は副格子内部の並進ベクトルの数})
+  {\bf 形式 :} int型 (1以上、{デフォルト値は副格子内部の並進ベクトルの数})
 
   {\bf 説明 :} 
   運動量・格子対称性の量子数射影の個数。
-  TransSymファイルで指定した重みで上から\verb|NMPTrans|個まで使用する。\tr{射影を行わない場合は1に設定する。}
+  TransSymファイルで指定した重みで上から\verb|NMPTrans|個まで使用する。{射影を行わない場合は1に設定する。}
 
  \item  \verb|NSROptItrStep|
 
@@ -582,7 +582,7 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 {\bf 形式 :} double型 (デフォルト値 = 0.02)
 
-{\bf 説明 :} \tr{SR法で使用する刻み幅。手法論文\cite{Tahara2008}の$\Delta t$に対応。}
+{\bf 説明 :} {SR法で使用する刻み幅。手法論文\cite{Tahara2008}の$\Delta t$に対応。}
  
 \item \verb|NVMCWarmUp|
 
@@ -618,7 +618,7 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 {\bf 形式 :} int型 (1以上、デフォルト値=0)
 
-{\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にして高速化するオプション(1で機能On、\tr{モンテカルロサンプリング数に応じてメモリの消費が増大します})。
+{\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にして高速化するオプション(1で機能On、{モンテカルロサンプリング数に応じてメモリの消費が増大します})。
  
 \item  \verb|ComplexType|
   

@@ -1,10 +1,11 @@
 # mVMC
-many-variable variational Monte Carlo  
+
+A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
 
 ====
 
 ### Methods
-many-variable variational Monte Carlo
+many-variable variational Monte Carlo method
 
 
 ### Target models
@@ -28,7 +29,7 @@ You can install mVMC and also get a manual for mVMC from a [release note](https:
 
 The distribution of the program package and the source codes for mVMC follow GNU General Public License version 3 ([GPL v3](http://www.gnu.org/licenses/gpl-3.0.en.html)). 
 
-The mVMC package is based on the [mVMC-mini](https://github.com/fiber-miniapp/mVMC-mini) program which follows "The BSD 3-Clause License".
+The mVMC package is developed based on the [mVMC-mini](https://github.com/fiber-miniapp/mVMC-mini) program which follows "The BSD 3-Clause License".
 
 ## Author
 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido,  Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
