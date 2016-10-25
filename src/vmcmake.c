@@ -58,7 +58,7 @@ void VMCMakeSample(MPI_Comm comm) {
   CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
  // printf("DEBUG: maker1: PfM=%lf\n",creal(PfM[0]));
   logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
-  if( !isfinite(logIpOld) ) {
+  if( !isfinite(creal(logIpOld) + cimag(logIpOld)) ) {
     if(rank==0) fprintf(stderr,"waring: VMCMakeSample remakeSample logIpOld=%e\n",creal(logIpOld)); //TBC
     makeInitialSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,
                       qpStart,qpEnd,comm);

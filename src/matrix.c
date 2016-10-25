@@ -196,7 +196,7 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
   //printf("DEBUG: pfaff=%lf %lf\n",creal(pfaff),cimag(pfaff));
   if(info!=0) return info;
-  if(!isfinite(pfaff)) return qpidx+1;
+  if(!isfinite(creal(pfaff) + cimag(pfaff))) return qpidx+1;
   PfM[qpidx] = pfaff;
 
   /* DInv */

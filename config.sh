@@ -9,7 +9,7 @@ if [ -z ${1} ] || [ ${1} = "help" ]; then
     echo "  openmpi-intel : OpenMPI + Intel Compiler + MKL"
     echo "    mpich-intel : MPICH + Intel Compiler + MKL"
     echo "  mpich-gnu-mkl : MPICH + GNU Compiler + MKL"
-    echo "            gnu : GNU"
+    echo "            gnu : OpenMPI + GNU Compiler"
     echo "        jupiter : "
     echo "        kashiwa : "
     echo "            sol : "
@@ -138,10 +138,10 @@ EOF
     elif [ ${1} = "gnu" ]; then
         cat > src/make.sys <<EOF
 CC = mpicc
-LIB = -fopenmp  -framework Accelerate -llapack -lblas -lm
-CFLAGS = -O3 -fopenmp
+LIB = -fopenmp -lblacs-openmpi -lscalapack-openmpi -llapack -lblas
+CFLAGS = -O3 -fopenmp -lm
 REPORT = 
-OPTION = -D_mpi_use -D_lapack
+OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
 FORT = gfortran
