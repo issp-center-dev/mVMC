@@ -1,0 +1,30 @@
+--------------------
+Model_Parameters   0
+--------------------
+VMC_Cal_Parameters
+--------------------
+CDataFileHead  zvo
+CParaFileHead  zqp
+--------------------
+NVMCCalMode    0
+--------------------
+NDataIdxStart  1
+NDataQtySmp    1
+--------------------
+Nsite          16
+Nelectron      8
+NSPGaussLeg    1
+NSPStot        0
+NMPTrans       1
+NSROptItrStep  200
+NSROptItrSmp   3
+DSROptRedCut   0.00000100000
+DSROptStaDel   1.0e-5
+DSROptStepDt   0.0100000000
+NVMCWarmUp     10
+NVMCIniterval  1
+NVMCSample     200
+NExUpdatePath  0
+RndSeed        123456789
+NSplitSize     1
+NStore         0

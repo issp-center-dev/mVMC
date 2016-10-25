@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
   StartTimer(10);
 
   /* read options */
-  while((option=getopt(argc,argv,"bhvm:oF:"))!=-1) {
+  while((option=getopt(argc,argv,"bhm:oF:"))!=-1) {
     switch(option) {
     case 'b': /* BinaryMode */
       FlagBinary=1;
@@ -59,11 +59,6 @@ int main(int argc, char* argv[])
     case 'h': /* Print Help Message*/
       printUsageError();
       printOption();
-      exit(EXIT_SUCCESS);
-      break;
-
-    case 'v': /* Print Version*/
-      printVersion();
       exit(EXIT_SUCCESS);
       break;
 
@@ -215,7 +210,7 @@ int main(int argc, char* argv[])
   if(flagReadInitPara>0 && rank0==0) ReadInitParameter(fileInitPara);
   //[s] add read parameters respectively
   if(rank0==0){
-    if(ReadInputParameters(fileDefList, comm0)!=0){
+    if(!ReadInputParameters(fileDefList, comm0)==0){
       //[ToDo]: Add Error procedure
       info=1;
     }
@@ -284,8 +279,8 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   for(step=0;step<NSROptItrStep;step++) {
     if(rank==0) OutputTime(step);
       StartTimer(20);
-      UpdateSlaterElm_fcmp();
-      UpdateQPWeight();
+    UpdateSlaterElm_fcmp();
+    UpdateQPWeight();
       StopTimer(20);
       StartTimer(3);
      if(AllComplexFlag==0){
@@ -336,7 +331,6 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 //DBBUG
     info = StochasticOpt(comm_parent);
     //info = StochasticOptDiag(comm_parent);
-    info=0;
       StopTimer(5);
 
     if(info!=0) {
@@ -365,20 +359,12 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
 /*-- VMC Physical Quantity Calculation --*/
 int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2) {
-  int ismp, tmp_i;
+  int ismp;
   int rank;
   MPI_Comm_rank(comm_parent, &rank);
 
   StartTimer(20);
   UpdateSlaterElm_fcmp();
-  if(AllComplexFlag==0){
-    // only for real TBC
-#pragma omp parallel for default(shared) private(tmp_i)
-    for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
-#pragma omp parallel for default(shared) private(tmp_i)
-    for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
-         // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-  }
   StopTimer(20);
 
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
@@ -388,12 +374,9 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     InitFilePhysCal(ismp, rank);
     
     StartTimer(3);
-    if(AllComplexFlag==0){
-      VMCMakeSample_real(comm_child1);
-    }
-    else{
-      VMCMakeSample(comm_child1);
-    }
+
+    VMCMakeSample(comm_child1);
+
     StopTimer(3);
     StartTimer(4);
 
@@ -422,7 +405,8 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 }
 
 void outputData() {
-  int i;
+  int i,j;
+  double x;
 
   /* zvo_out.dat */
  // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
@@ -506,7 +490,6 @@ void printOption() {
   fprintf(stderr,"  -o     optTrans mode\n");
   fprintf(stderr,"  -F N   set interval of file flush\n");
   fprintf(stderr,"  -h     show this message\n");
-  fprintf(stderr,"  -v     show the version number of mVMC\n");
   return;
 }
 

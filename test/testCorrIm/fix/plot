@@ -1,0 +1,8 @@
+p \
+"zvo_out_001.dat" u ($1) ti "bfFull" w l lw 2 lc 1
+pause -1
+reset
+p \
+"eta" u 0:1:2 w errorlines pt 4 ps 2
+pause -1
+reset
