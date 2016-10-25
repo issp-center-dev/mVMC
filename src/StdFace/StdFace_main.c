@@ -117,7 +117,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->DSROptStaDel = 9999.9;
   StdI->DSROptStepDt = 9999.9;
   StdI->NVMCWarmUp = 9999;
-  StdI->NVMCIniterval = 9999;
+  StdI->NVMCInterval = 9999;
   StdI->NVMCSample = 9999;
   StdI->NExUpdatePath = 9999;
   StdI->RndSeed = 9999;
@@ -653,7 +653,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "DSROptStaDel   %.10f\n", StdI->DSROptStaDel);
   fprintf(fp, "DSROptStepDt   %.10f\n", StdI->DSROptStepDt);
   fprintf(fp, "NVMCWarmUp     %d\n", StdI->NVMCWarmUp);
-  fprintf(fp, "NVMCIniterval  %d\n", StdI->NVMCIniterval);
+  fprintf(fp, "NVMCInterval  %d\n", StdI->NVMCInterval);
   fprintf(fp, "NVMCSample     %d\n", StdI->NVMCSample);
   fprintf(fp, "NExUpdatePath  %d\n", StdI->NExUpdatePath);
   fprintf(fp, "RndSeed        %d\n", StdI->RndSeed);
@@ -1135,7 +1135,7 @@ static void CheckModPara(struct StdIntList *StdI)
   /*else*/ StdFace_PrintVal_i("NSROptItrSmp", &StdI->NSROptItrSmp, StdI->NSROptItrStep/10);
 
   StdFace_PrintVal_i("NVMCWarmUp", &StdI->NVMCWarmUp, 10);
-  StdFace_PrintVal_i("NVMCIniterval", &StdI->NVMCIniterval, 1);
+  StdFace_PrintVal_i("NVMCInterval", &StdI->NVMCInterval, 1);
   StdFace_PrintVal_i("NVMCSample", &StdI->NVMCSample, 1000);
 
   if (strcmp(StdI->model, "hubbard") == 0) StdI->NExUpdatePath = 0;
@@ -1489,7 +1489,7 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "nsroptitrsmp") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSROptItrSmp);
     else if (strcmp(keyword, "nsroptitrstep") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NSROptItrStep);
     else if (strcmp(keyword, "nstore") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NStore);
-    else if (strcmp(keyword, "nvmciniterval") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NVMCIniterval);
+    else if (strcmp(keyword, "nvmcinterval") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NVMCInterval);
     else if (strcmp(keyword, "nvmcsample") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NVMCSample);
     else if (strcmp(keyword, "nvmcwarmup") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NVMCWarmUp);
     else if (strcmp(keyword, "outputmode") == 0) StoreWithCheckDup_s(keyword, value, StdI.outputmode);

@@ -45,7 +45,7 @@ double DSROptStaDel; /* SR stabiliaing factor for diagonal element modification 
 double DSROptStepDt; /* step width of the SR method */
 
 int NVMCWarmUp; /* Monte Carlo steps for warming up */
-int NVMCIniterval; /* sampling interval [MCS] */ 
+int NVMCInterval; /* sampling interval [MCS] */ 
 int NVMCSample; /* the number of samples */
 int NExUpdatePath; /* update by exchange hopping  0: off, 1: on */
 

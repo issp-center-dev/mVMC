@@ -54,7 +54,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
   StopTimer(30);
 
   nOutStep = (BurnFlag==0) ? NVMCWarmUp+NVMCSample : NVMCSample+1;
-  nInStep = NVMCIniterval * Nsite;
+  nInStep = NVMCInterval * Nsite;
 
   for(i=0;i<4;i++) Counter[i]=0;  /* reset counter */
 

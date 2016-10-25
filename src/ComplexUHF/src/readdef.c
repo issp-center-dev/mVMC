@@ -136,7 +136,7 @@ int ReadDefFileNInt(
                                 CheckWords(ctmp, "DSROptStaDel")==0 ||
                                 CheckWords(ctmp, "DSROptStepDt")==0 ||
                                 CheckWords(ctmp, "NVMCWarmUp")==0 ||
-                                CheckWords(ctmp, "NVMCIniterval")==0 ||
+                                CheckWords(ctmp, "NVMCInterval")==0 ||
                                 CheckWords(ctmp, "NVMCSample")==0 ||
                                 CheckWords(ctmp, "NExUpdatePath")==0 ||
                                 CheckWords(ctmp, "RndSeed")==0 ||

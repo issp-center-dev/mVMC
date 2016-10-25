@@ -137,8 +137,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	    else if(CheckWords(ctmp, "NVMCWarmUp")==0){
 	      bufInt[IdxVMCWarmUp]=(int)dtmp;
 	    }	
-	    else if(CheckWords(ctmp, "NVMCIniterval")==0){
-	      bufInt[IdxVMCIniterval]=(int)dtmp;
+	    else if(CheckWords(ctmp, "NVMCInterval")==0){
+	      bufInt[IdxVMCInterval]=(int)dtmp;
 	    }	
 	    else if(CheckWords(ctmp, "NVMCSample")==0){
 	      bufInt[IdxVMCSample]=(int)dtmp;
@@ -354,7 +354,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NSROptItrSmp           =  bufInt[IdxSROptItrSmp];
   NSROptFixSmp           =  bufInt[IdxSROptFixSmp];
   NVMCWarmUp             =  bufInt[IdxVMCWarmUp];
-  NVMCIniterval          =  bufInt[IdxVMCIniterval];
+  NVMCInterval          =  bufInt[IdxVMCInterval];
   NVMCSample             =  bufInt[IdxVMCSample];
   NExUpdatePath          =  bufInt[IdxExUpdatePath];
   RndSeed                =  bufInt[IdxRndSeed];
@@ -1296,7 +1296,7 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxSROptItrSmp]=bufInt[IdxSROptItrStep]/10;
   bufInt[IdxSROptFixSmp]=1;
   bufInt[IdxVMCWarmUp]=10;
-  bufInt[IdxVMCIniterval]=1;
+  bufInt[IdxVMCInterval]=1;
   bufInt[IdxVMCSample]=10;
   bufInt[IdxExUpdatePath]=0;
   bufInt[IdxRndSeed]=11272;

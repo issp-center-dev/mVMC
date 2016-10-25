@@ -48,7 +48,7 @@ enum ParamIdxInt{
   IdxDataQtySmp, IdxNsite, IdxNe, 
   IdxSPGaussLeg, IdxSPStot, IdxMPTrans,
   IdxSROptItrStep, IdxSROptItrSmp, IdxSROptFixSmp,
-  IdxVMCWarmUp, IdxVMCIniterval, IdxVMCSample,
+  IdxVMCWarmUp, IdxVMCInterval, IdxVMCSample,
   IdxExUpdatePath, IdxRndSeed, IdxSplitSize,
   IdxNLocSpin,IdxNTrans,IdxNCoulombIntra,
   IdxNCoulombInter, IdxNHund, IdxNPairHop, 

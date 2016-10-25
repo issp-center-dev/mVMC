@@ -102,7 +102,7 @@ struct StdIntList {
   double DSROptStaDel;
   double DSROptStepDt;
   int NVMCWarmUp;
-  int NVMCIniterval;
+  int NVMCInterval;
   int NVMCSample;
   int NExUpdatePath;
   int RndSeed;

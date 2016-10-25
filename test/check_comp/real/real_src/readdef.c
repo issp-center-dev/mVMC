@@ -63,7 +63,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
             fscanf(fp,"%s %lf\n",ctmp, &(bufDouble[1])); /* DSROptStaDel */
             fscanf(fp,"%s %lf\n",ctmp, &(bufDouble[2])); /* DSROptStepDt */
             fscanf(fp,"%s %d\n", ctmp, &(bufInt[12])); /* NVMCWarmUp */
-            fscanf(fp,"%s %d\n", ctmp, &(bufInt[13])); /* NVMCIniterval */
+            fscanf(fp,"%s %d\n", ctmp, &(bufInt[13])); /* NVMCInterval */
             fscanf(fp,"%s %d\n", ctmp, &(bufInt[14])); /* NVMCSample */
             fscanf(fp,"%s %d\n", ctmp, &(bufInt[15])); /* NExUpdatePath */
             fscanf(fp,"%s %d\n", ctmp, &(bufInt[16])); /* RndSeed */
@@ -323,7 +323,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NSROptItrSmp           =  bufInt[10];
   NSROptFixSmp           =  bufInt[11];
   NVMCWarmUp             =  bufInt[12];
-  NVMCIniterval          =  bufInt[13];
+  NVMCInterval          =  bufInt[13];
   NVMCSample             =  bufInt[14];
   NExUpdatePath          =  bufInt[15];
   RndSeed                =  bufInt[16];
