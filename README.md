@@ -3,25 +3,19 @@
 A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
 
 ====
-mVMC(many-variable variational Monte Carlo method)
-is a software for performing the high-accurate 
+mVMC (many-variable Variational Monte Carlo method)
+is a software for performing the highly-accurate 
 variational Monte Carlo calculations
 with the simple and flexible user interface.
-mVMC also supports the massively parallel calculations.
-For the conventional model in strongly correlated electron systems
-such as the Hubbard model, the Heisenberg model, and the Kondo-lattice model,
-users can perform the calculation by preparing the one input files whose length is
-shorter the ten lines.
-By using the same input file,
-user can perform the exact diagonalization
-through [HPhi](https://github.com/QLMS/HPhi/releases).
-Thus, it is easy to perform the calculations 
+mVMC also supports the large-scale parallelization.
+For the conventional models in strongly correlated electron systems such as the Hubbard model, the Heisenberg model, and the Kondo-lattice model,
+users can perform the calculation by preparing the one input files whose length is shorter than ten lines.  
+By using the same input file, users can perform the exact diagonalization through [HPhi](https://github.com/QLMS/HPhi/releases).
+Thus, it is easy to examine the accuracy of the variational calculation for small system sizes
+and to perform the calculations 
 for large system sizes that can not be treated 
-by the exact diagonalization after examining the accuracy of the
-variational calculation for small system sizes.
-A broad spectrum of users including experimental scientists and 
-scientists of quantum chemistry is cordially welcome.
-
+by the exact diagonalization.
+A broad spectrum of users including experimental scientists is cordially welcome.
 
 
 ### Methods
