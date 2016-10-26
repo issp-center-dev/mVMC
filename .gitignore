@@ -25,6 +25,6 @@ GRTAGS
 GTAGS
 .idea
 .DS_Store
-doc/userguide_jp.pdf
-doc/userguide_en.pdf
+doc/jp/userguide_jp.pdf
+doc/en/userguide_en.pdf
 src/ComplexUHF/src/UHF
