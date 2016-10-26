@@ -1,6 +1,52 @@
 % !TEX root = userguide_en.tex
 %----------------------------------------------------------
 \chapter{What is mVMC?}
+High-accuracy analyses of theoretical models
+for quantum many-body systems are expected to
+play important role for clarifying the nature of
+novel quantum phases such
+high-temperature superconductivities and quantum spin liquids.
+Furthermore, recent theoretical progress enables us
+to obtain low-energy effective models for real materials 
+with non-empirical way~\cite{ImadaMiyake}.
+To clarify the electronic structures of real materials and
+control the physical properties,
+it is important perform the
+high-accuracy analyses the low-energy effective models.
+One of the most reliable theoretical tools for treating
+the strongly correlated electron systems is the 
+exact diagonalization method.
+However, applicable range of system size is strongly limited 
+in the exact diagonalization method.
+Variational Monte Carlo method~\cite{Gros} is one of promising way
+to perform the high-accuracy calculations for the larger
+system sizes beyond exact diagonalization method.
+Although the strong limitation of the variational wave function
+is the origin of the poor accuracy of the variational Monte
+Carlo method, recent development of the theoretical mehtod and computers
+relaxes the limitation of the variational wave functions and
+enable us to perform the high-accuracy calculations~\cite{Tahara2008,Misawa2014,Morita2015}.
+
+
+mVMC(many-variable variational Monte Carlo method)
+is a software for performing the high-accurate 
+variational Monte Carlo calculations
+with the simple and flexible user interface.
+mVMC also supports the massively parallel calculations.
+For the conventional model in strongly correlated electron systems
+such as the Hubbard model, the Heisenberg model, and the Kondo-lattice model,
+users can perform the calculation by preparing the one input files whose length is
+shorter the ten lines.
+By using the same input file,
+user can perform the exact diagonalization
+through  $\mathcal{H}\Phi$~\cite{HPhi}.
+Thus, it is easy to perform the calculations 
+for large system sizes that can not be treated 
+by the exact diagonalization after examining the accuracy of the
+variational calculation for small system sizes.
+A broad spectrum of users including experimental scientists and 
+scientists of quantum chemistry is cordially welcome.
+
 \label{Ch:whatismVMC}
 %----------------------------------------------------------
 %----------------------------------------------------------
