@@ -295,15 +295,26 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   int info;
   int rank;
   int i,tmp_i;//DEBUG
+  int iprogress;
   MPI_Comm_rank(comm_parent, &rank);
 
   for(step=0;step<NSROptItrStep;step++) {
-    if(rank==0) OutputTime(step);
-      StartTimer(20);
+    if(rank==0){
+      OutputTime(step);
+      if(step%(NSROptItrStep/20)==0){
+        iprogress = (int) (100.0*step/NSROptItrStep);
+        printf("Progress of Optimization: %d %%.\n", iprogress);
+      }
+    }
+    
+    StartTimer(20);
     UpdateSlaterElm_fcmp();
     UpdateQPWeight();
       StopTimer(20);
       StartTimer(3);
+#ifdef _DEBUG
+      printf("Debug: step %d, MakeSample.\n", step);
+#endif
      if(AllComplexFlag==0){
         // only for real TBC
          StartTimer(69);
@@ -325,11 +336,20 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       } 
       StopTimer(3);
       StartTimer(4);
+#ifdef _DEBUG
+      printf("Debug: step %d, MainCal.\n", step);
+#endif
     VMCMainCal(comm_child1);
       StopTimer(4);
       StartTimer(21);
+#ifdef _DEBUG
+      printf("Debug: step %d, AverageWE.\n", step);
+#endif
     WeightAverageWE(comm_parent);
       StartTimer(25);//DEBUG
+#ifdef _DEBUG
+      printf("Debug: step %d, SROpt.\n", step);
+#endif
     if(AllComplexFlag==0){
       WeightAverageSROpt_real(comm_parent);
     }else{

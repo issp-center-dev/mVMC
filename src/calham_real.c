@@ -44,7 +44,8 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
   RequestWorkSpaceThreadDouble(NQPFull+2*Nsize);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
-#pragma omp parallel default(shared)\
+  //  #pragma omp parallel default(shared)                  \
+  #pragma omp parallel default(firstprivate)                      \
   private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy)\
   reduction(+:e)
   {
@@ -63,14 +64,21 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
 
     #pragma omp master
     {StartTimer(70);}
-
+#ifdef _DEBUG
+#pragma omp master
+    printf("    Debug: CoulombIntra\n");
+#endif
     /* CoulombIntra */
     #pragma omp for private(idx,ri) nowait
     for(idx=0;idx<NCoulombIntra;idx++) {
       ri = CoulombIntra[idx];
       myEnergy += ParaCoulombIntra[idx] * n0[ri] * n1[ri];
     }
-  
+
+#ifdef _DEBUG
+#pragma omp master
+    printf("    Debug: CoulombInter\n");
+#endif
     /* CoulombInter */
     #pragma omp for private(idx,ri,rj) nowait
     for(idx=0;idx<NCoulombInter;idx++) {
@@ -79,6 +87,10 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
       myEnergy += ParaCoulombInter[idx] * (n0[ri]+n1[ri]) * (n0[rj]+n1[rj]);
     }
 
+#ifdef _DEBUG
+#pragma omp master
+    printf("    Debug: HundCoupling\n");
+#endif
     /* HundCoupling */
     #pragma omp for private(idx,ri,rj) nowait
     for(idx=0;idx<NHundCoupling;idx++) {
@@ -91,8 +103,12 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
     #pragma omp master
     {StopTimer(70);StartTimer(71);}
 
+#ifdef _DEBUG
+#pragma omp master
+    printf("    Debug: Transfer\n");
+#endif
     /* Transfer */
-    #pragma omp for private(idx,ri,rj,s) schedule(dynamic) nowait
+#pragma omp for private(idx,ri,rj,s) schedule(dynamic) nowait
     for(idx=0;idx<NTransfer;idx++) {
       ri = Transfer[idx][0];
       rj = Transfer[idx][2];
@@ -106,6 +122,10 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
     #pragma omp master
     {StopTimer(71);StartTimer(72);}
 
+#ifdef _DEBUG
+#pragma omp master
+    printf("    Debug: PairHopping\n");
+#endif
     /* Pair Hopping */
     #pragma omp for private(idx,ri,rj) schedule(dynamic) nowait
     for(idx=0;idx<NPairHopping;idx++) {
@@ -116,6 +136,10 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
         * GreenFunc2_real(ri,rj,ri,rj,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
     }
 
+#ifdef _DEBUG
+#pragma omp master
+    printf("    Debug: ExchangeCoupling, NExchangeCoupling=%d\n", NExchangeCoulpling);
+#endif
     /* Exchange Coupling */
     #pragma omp for private(idx,ri,rj,tmp) schedule(dynamic) nowait
     for(idx=0;idx<NExchangeCoupling;idx++) {
@@ -126,7 +150,11 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
       tmp += GreenFunc2_real(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
       myEnergy += ParaExchangeCoupling[idx] * tmp;
     }
-
+    
+#ifdef _DEBUG
+#pragma omp master
+    printf("    Debug: InterAll, NInterAll=%d\n", NInterAll);
+#endif
     /* Inter All */
     #pragma omp for private(idx,ri,rj,s,rk,rl,t) schedule(dynamic) nowait
     for(idx=0;idx<NInterAll;idx++) {
@@ -143,11 +171,20 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
 
     #pragma omp master
     {StopTimer(72);}
-
+#ifdef _DEBUG    
+    printf("    Debug: myEnergy=%lf\n", myEnergy);
+#endif
     e += myEnergy;
   }
-
+#ifdef _DEBUG
+#pragma omp master
+  printf("    Debug: Release\n");
+#endif
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadDouble();
+#ifdef _DEBUG
+#pragma omp master
+  printf("    Debug: HamRealFinish\n", NInterAll);
+#endif
   return e;
 }

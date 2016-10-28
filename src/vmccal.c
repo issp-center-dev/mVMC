@@ -65,7 +65,9 @@ void VMCMainCal(MPI_Comm comm) {
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
-
+#ifdef _DEBUG
+  printf("  Debug: SplitLoop\n");
+#endif
   SplitLoop(&sampleStart,&sampleEnd,NVMCSample,rank,size);
 
   /* initialization */
@@ -78,12 +80,15 @@ void VMCMainCal(MPI_Comm comm) {
     eleNum = EleNum + sample*Nsite2;
     eleProjCnt = EleProjCnt + sample*NProj;
 //DEBUG
-   // for(i=0;i<Nsite;i++) {
-   //   printf("sample=%d: i=%d  up=%d down =%d \n",sample,i,eleCfg[i+0*Nsite],eleCfg[i+1*Nsite]);
-   // }
+    /* for(i=0;i<Nsite;i++) {
+      printf("Debug: sample=%d: i=%d  up=%d down =%d \n",sample,i,eleCfg[i+0*Nsite],eleCfg[i+1*Nsite]);
+      }*/
 //DEBUG
 
     StartTimer(40);
+#ifdef _DEBUG
+    printf("  Debug: sample=%d: CalculateMAll \n",sample);
+#endif
     if(AllComplexFlag==0){
        info = CalculateMAll_real(eleIdx,qpStart,qpEnd); // InvM_real,PfM_real will change
        #pragma omp parallel for default(shared) private(tmp_i)
@@ -97,18 +102,26 @@ void VMCMainCal(MPI_Comm comm) {
       fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
       continue;
     }
-
+#ifdef _DEBUG
+    printf("  Debug: sample=%d: CalculateIP \n",sample);
+#endif
     if(AllComplexFlag==0){
       ip = CalculateIP_real(PfM_real,qpStart,qpEnd,MPI_COMM_SELF);
     }else{
       ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
     } 
-    //printf("DEBUG: sample=%d ip= %lf %lf\n",sample,creal(ip),cimag(ip));
+
     //x = LogProjVal(eleProjCnt);
+#ifdef _DEBUG
+    printf("  Debug: sample=%d: LogProjVal \n",sample);
+#endif
     LogProjVal(eleProjCnt);
     /* calculate reweight */
     //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
     w =1.0;
+#ifdef _DEBUG
+    printf("  Debug: sample=%d: isfinite \n",sample);
+#endif
     if( !isfinite(w) ) {
       fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d w=%e\n",rank,sample,w);
       continue;
@@ -116,9 +129,18 @@ void VMCMainCal(MPI_Comm comm) {
 
     StartTimer(41);
     /* calculate energy */
+#ifdef _DEBUG
+    printf("  Debug: sample=%d: calculateHam \n",sample);
+#endif
     if(AllComplexFlag==0){
+#ifdef _DEBUG
+      printf("  Debug: sample=%d: calculateHam_real \n",sample);
+#endif
       e = CalculateHamiltonian_real(creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
     }else{
+#ifdef _DEBUG
+      printf("  Debug: sample=%d: calculateHam_cmp \n",sample);
+#endif
       e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
     }
     //printf("DEBUG: rank=%d: sample=%d ip= %lf %lf\n",rank,sample,creal(ip),cimag(ip));
@@ -131,7 +153,9 @@ void VMCMainCal(MPI_Comm comm) {
     Wc += w;
     Etot  += w * e;
     Etot2 += w * conj(e) * e;
-
+#ifdef _DEBUG
+    printf("  Debug: sample=%d: calculateOpt \n",sample);
+#endif
     if(NVMCCalMode==0) {
       /* Calculate O for correlation fauctors */
       srOptO[0] = 1.0+0.0*I;//   real 
