@@ -44,10 +44,13 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
   RequestWorkSpaceThreadDouble(NQPFull+2*Nsize);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
-  //  #pragma omp parallel default(shared)                  \
-  #pragma omp parallel default(firstprivate)                      \
-  private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy)\
-  reduction(+:e)
+  #pragma omp parallel default(none) \
+    private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy, idx, ri, rj, rk, rl, s, t) \
+    firstprivate(ip, Nsize, Nsite2, NProj, NQPFull, NCoulombIntra, CoulombIntra, ParaCoulombIntra,   \
+    NCoulombInter, CoulombInter, ParaCoulombInter, NHundCoupling, HundCoupling, ParaHundCoupling,    \
+    NTransfer, Transfer, ParaTransfer, NPairHopping, PairHopping, ParaPairHopping,    \
+    NExchangeCoupling, ExchangeCoupling, ParaExchangeCoupling, NInterAll, InterAll, ParaInterAll, n0, n1)\
+    shared(eleCfg, eleProjCnt, eleIdx, eleNum) reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
