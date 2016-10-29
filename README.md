@@ -46,4 +46,4 @@ GNU General Public License version 3 ([GPL v3](http://www.gnu.org/licenses/gpl-3
 The mVMC package is developed based on the [mVMC-mini](https://github.com/fiber-miniapp/mVMC-mini) program. The license of mVMC-mini is "The BSD 3-Clause License".
 
 ## Authors
-Takahiro Misawa, gutSatoshi Morita, Takahiro Ohgoe, Kota Ido,  Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
+Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido,  Mitsuaki Kawamura, Kazuyoshi Yoshimi, Takeo Kato, Masatoshi Imada.
