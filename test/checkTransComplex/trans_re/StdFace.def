@@ -1,7 +1,0 @@
-L = 4
-model = "FermionHubbard"
-lattice = "chain"
-t = 1.0, 0.0
-U = 0.0
-nelec = 2
-2Sz = 0

@@ -1,6 +1,0 @@
-# ignore binary files
-*.o
-*.a
-*.out
-# Emacs's backup files
-*~

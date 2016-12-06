@@ -1,4 +1,0 @@
-SSLの証明書の期限がきれている場合は
-cshrcにSSL証明を無視するようにする。
-
-setenv GIT_SSL_NO_VERIFY true

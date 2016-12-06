@@ -1,1 +1,0 @@
-git config remote.origin.url git@github.com:tmisawa/mVMC.git
