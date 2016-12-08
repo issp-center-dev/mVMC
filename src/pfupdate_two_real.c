@@ -25,6 +25,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#include "pfupdate_real.c"
+
 void CalculateNewPfMTwo_real(const int mk, const int t, const int mi, const int s, 
                         double *pfMNew_real, const int *eleIdx,
                         const int qpStart, const int qpEnd, double *buffer);

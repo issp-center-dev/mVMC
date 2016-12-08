@@ -25,6 +25,13 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#ifndef _SRC_VMCMAKE_REAL
+#define _SRC_VMCMAKE_REAL
+
+#include "global.h"
+#include "splitloop.c"
+#include "vmcmake.c"
+#include "matrix.c"
 
 void VMCMakeSample_real(MPI_Comm comm);
 int makeInitialSample_real(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
@@ -283,3 +290,5 @@ int makeInitialSample_real(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCn
  
   return 0;
 }
+
+#endif

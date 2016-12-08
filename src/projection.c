@@ -25,6 +25,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#ifndef _SRC_PROJECTION
+#define _SRC_PROJECTION
 
 inline double LogProjVal(const int *projCnt);
 inline double LogProjRatio(const int *projCntNew, const int *projCntOld);
@@ -62,8 +64,8 @@ inline double ProjRatio(const int *projCntNew, const int *projCntOld) {
 }
 
 void MakeProjCnt(int *projCnt, const int *eleNum) {
-  const int *n0=eleNum;
-  const int *n1=eleNum+Nsite;
+  const int *n0=eleNum; //up-spin
+  const int *n1=eleNum+Nsite; //down-spin
   int idx,offset;
   int ri,rj;
   int xi,xj,xn,xm;
@@ -270,3 +272,5 @@ void UpdateProjCnt(const int ri, const int rj, const int s,
   return;
 
 }
+
+#endif

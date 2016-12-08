@@ -25,7 +25,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
+#pragma once
 double LegendrePoly(const double x, const int n){
   double P01, P02, P03;
   int i;

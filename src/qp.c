@@ -25,6 +25,13 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#pragma once
+#include "struct.h"
+#include "global.h"
+#include "complex.h"
+#include "legendrepoly.c"
+#include "workspace.c"
+#include "gauleg.c"
 
 void InitQPWeight();
 double complex CalculateLogIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);

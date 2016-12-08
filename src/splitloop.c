@@ -25,7 +25,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
+#ifndef _SRC_SPLITLOOP
+#define _SRC_SPLITLOOP
 inline void SplitLoop(int *start, int *end,
                       const int loopLength, 
                       const int mpiRank, const int mpiSize) {
@@ -66,3 +67,4 @@ inline void SplitLoop(int *start, int *end,
 
   return;
 }
+#endif

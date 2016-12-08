@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #include <ctype.h>
 #include "./include/readdef.h"
+#include "./global.h"
 
 int ReadDefFileError(const char *defname);
 int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm);

@@ -25,7 +25,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
+#pragma once
 #define GaussLeg_EPS 5.0e-14
 
 /* calculate n points x[] and weight w[] for integration from x1 to x2. */

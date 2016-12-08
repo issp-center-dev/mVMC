@@ -25,12 +25,18 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
-
+#ifndef _SRC_MATRIX
+#define _SRC_MATRIX
+#include "complex.h"
+#include "global.h"
+#include "workspace.c"
 
 int CalculateMAll_real(const int *eleIdx, const int qpStart, const int qpEnd);
+//int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
+//                        double *bufM, int *iwork, double *work, int lwork);
 int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
-                        double *bufM, int *iwork, double *work, int lwork);
+                             double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double *InvM_real);
+
 int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd);
 int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
                         double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
@@ -276,8 +282,11 @@ int CalculateMAll_real(const int *eleIdx, const int qpStart, const int qpEnd) {
     for(qpidx=0;qpidx<qpNum;qpidx++) {
       if(info!=0) continue;
       
-      myInfo = calculateMAll_child_real(eleIdx, qpStart, qpEnd, qpidx,
-                                   myBufM, myIWork, myWork, LapackLWork);
+//      myInfo = calculateMAll_child_real(eleIdx, qpStart, qpEnd, qpidx,
+ //                                  myBufM, myIWork, myWork, LapackLWork);
+        myInfo = calculateMAll_child_real(eleIdx, qpStart, qpEnd, qpidx,
+                                          myBufM, myIWork, myWork, LapackLWork, PfM_real, InvM_real);
+
       if(myInfo!=0) {
         #pragma omp critical
         info=myInfo;
@@ -290,9 +299,11 @@ int CalculateMAll_real(const int *eleIdx, const int qpStart, const int qpEnd) {
   return info;
 }
 
+//int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
+//                        double *bufM, int *iwork, double *work, int lwork) {
 int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
-                        double *bufM, int *iwork, double *work, int lwork) {
-  #pragma procedure serial
+                        double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double *InvM_real) {
+#pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
   int msi,msj;
   int rsi,rsj;
@@ -377,4 +388,5 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
 
   return info;
 }
+#endif
 //==============e real =============//

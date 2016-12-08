@@ -25,6 +25,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#ifndef _SRC_VMCMAKE
+#define _SRC_VMCMAKE
+#include "global.h"
+#include "projection.c"
+#include "matrix.c"
 
 void VMCMakeSample(MPI_Comm comm);
 int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
@@ -489,3 +494,5 @@ UpdateType getUpdateType(int path) {
   }
   return NONE;
 }
+
+#endif

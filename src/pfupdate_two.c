@@ -25,7 +25,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-void CalculateNewPfMTwo(const int mk, const int t, const int mi, const int s, 
+#pragma once
+#include "workspace.c"
+
+void CalculateNewPfMTwo(const int mk, const int t, const int mi, const int s,
                         double *pfMNew, const int *eleIdx,
                         const int qpStart, const int qpEnd, double *buffer);
 void CalculateNewPfMTwo2(const int ma, const int s, const int mb, const int t,

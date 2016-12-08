@@ -25,7 +25,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
+#pragma once
 int NumWorkSpaceInt;
 int *WorkSpaceInt;
 int *WorkSpaceIntNow;
