@@ -25,6 +25,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita 
  *-------------------------------------------------------------*/
+#ifndef _SRC_VMCCAL
+#define _SRC_VMCCAL
 
 void VMCMainCal(MPI_Comm comm);
 void clearPhysQuantity();
@@ -222,19 +224,33 @@ void VMCMainCal(MPI_Comm comm) {
       if(NLanczosMode>0){
         // ignoring Lanczos: to be added
         /* Calculate local QQQQ */
-        //StartTimer(43);
-        //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-        //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
-        //StopTimer(43);
-        //if(NLanczosMode>1){
+        StartTimer(43);
+        if(AllComplexFlag==0) {
+          //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+          //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
+        }else{
+          //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+          //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
+        }
+        StopTimer(43);
+
+        if(NLanczosMode>1){
           /* Calculate local QcisAjsQ */
-          //StartTimer(44);
-          //LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-          //calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
-          //calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
-          //                NCisAjsCktAlt,CisAjsCktAltIdx);
-          //StopTimer(44);
-        //}
+          StartTimer(44);
+          if(AllComplexFlag==0) {
+            //LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+            //calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
+            //calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
+            //                NCisAjsCktAlt,CisAjsCktAltIdx);
+          }
+          else{
+            //LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+            //calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
+            //calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
+            //                NCisAjsCktAlt,CisAjsCktAltIdx);
+          }
+          StopTimer(44);
+        }
       }
     }
   } /* end of for(sample) */
@@ -519,3 +535,4 @@ void calculateQCACAQ(double *qcacaq, const double *lslca, const double w,
   return;
 }
 
+#endif

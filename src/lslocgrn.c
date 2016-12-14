@@ -25,10 +25,13 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-#pragma once
+#ifndef _SOR_LSLOCGRN
+#define _SOR_LSLOCGRN
 #include "workspace.c"
+#include <complex.h>
 
 void LSLocalQ(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
+
 void LSLocalCisAjs(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
 
 double complex calculateHK(const double h1, const double ip, int *eleIdx, int *eleCfg,
@@ -66,7 +69,8 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
 void copyMAll(double *invM_from, double *pfM_from, double *invM_to, double *pfM_to);
 
 /* Calculate <psi|QQ|x>/<psi|x> */
-void LSLocalQ(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt) {
+void LSLocalQ(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt)
+{
   double complex e0,h2;
 
   e0 = CalculateHamiltonian0(eleNum); /* V */
@@ -767,3 +771,5 @@ void copyMAll(double *invM_from, double *pfM_from, double *invM_to, double *pfM_
 
   return;
 }
+
+#endif
