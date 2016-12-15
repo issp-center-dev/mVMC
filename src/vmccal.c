@@ -42,6 +42,9 @@ void calculateOO_Store_real(double *srOptOO_real, double *srOptHO_real,  double 
                  const double w, const double e,  int srOptSize, int sampleSize);
 void calculateOO_Store(double complex *srOptOO, double complex *srOptHO,  double complex *srOptO,
                  const double w, const double complex e,  int srOptSize, int sampleSize);
+
+void calculateQQQQ_real(double *qqqq, const double *lslq, const double w, const int nLSHam);
+
 void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam);
 void calculateQCAQ(double *qcaq, const double *lslca, const double *lslq,
                    const double w, const int nLSHam, const int nCA);
@@ -233,7 +236,7 @@ void VMCMainCal(MPI_Comm comm) {
 #else
 
           LSLocalQ_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
-          //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
+          calculateQQQQ_real(QQQQ_real,LSLQ_real,w,NLSHam);
 #endif
         }else{
           //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
@@ -478,6 +481,25 @@ void calculateOO_real(double *srOptOO, double *srOptHO, const double *srOptO,
   M_DAXPY(&n, &we, srOptO, &incx, srOptHO, &incy);
 
   return;
+}
+
+void calculateQQQQ_real(double *qqqq, const double *lslq, const double w, const int nLSHam) {
+    const int n=nLSHam*nLSHam*nLSHam*nLSHam;
+    int rq,rp,ri,rj;
+    int i,tmp;
+
+    /* QQQQ[rq][rp][ri][rj] += w * LSLQ[rq][ri] * LSLQ[rp][rj] */
+# pragma omp parallel for default(shared) private(i,tmp,rq,rp,ri,rj)
+    for(i=0;i<n;++i) {
+        rj = i%nLSHam;   tmp=i/nLSHam;
+        ri = tmp%nLSHam; tmp=tmp/nLSHam;
+        rp = tmp%nLSHam; tmp=tmp/nLSHam;
+        rq = tmp%nLSHam;
+
+        qqqq[i] += w * lslq[rq*nLSHam+ri] * lslq[rp*nLSHam+rj];
+    }
+
+    return;
 }
 
 

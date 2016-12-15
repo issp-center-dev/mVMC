@@ -227,11 +227,17 @@ double complex *LocalCisAjs; /* [NCisAjs] */
 
 const int NLSHam = 2; /* 0: I, 1: H */
 double complex *QQQQ; /* QQQQ[NLSHam][NLSHam][NLSHam][NLSHam]*/  //TBC
-double complex *LSLQ; /* [NLSHam][NLSHam]*/                      //TBC   
- 
+double complex *LSLQ; /* [NLSHam][NLSHam]*/                      //TBC
+double *QQQQ_real; /* QQQQ[NLSHam][NLSHam][NLSHam][NLSHam]*/  //TBC
+double *LSLQ_real; /* [NLSHam][NLSHam]*/                      //TBC
+
 double complex *QCisAjsQ; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/ //TBC
 double complex *QCisAjsCktAltQ; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/ //TBC
 double complex *LSLCisAjs; /* [NLSHam][NCisAjs]*/                //TBC
+
+double *QCisAjsQ_real; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/ //TBC
+double *QCisAjsCktAltQ_real; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/ //TBC
+double *LSLCisAjs_real; /* [NLSHam][NCisAjs]*/                //TBC
 
 /***** Output File *****/
 /* FILE *FileCfg; */

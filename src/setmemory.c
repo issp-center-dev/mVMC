@@ -285,11 +285,22 @@ void SetMemory() {
       QQQQ = (double complex*)malloc(sizeof(double complex)
         *(NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam) );
       LSLQ = QQQQ + NLSHam*NLSHam*NLSHam*NLSHam;
+      //for real
+      QQQQ_real = (double*)malloc(sizeof(double)
+      *(NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam) );
+      LSLQ_real = QQQQ_real + NLSHam*NLSHam*NLSHam*NLSHam;
+
       if(NLanczosMode>1){
         QCisAjsQ = (double complex*)malloc(sizeof(double complex)
           *(NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAlt + NLSHam*NCisAjs) );
         QCisAjsCktAltQ = QCisAjsQ + NLSHam*NLSHam*NCisAjs;
         LSLCisAjs = QCisAjsCktAltQ + NLSHam*NLSHam*NCisAjsCktAlt;
+        //for real
+        QCisAjsQ_real = (double *)malloc(sizeof(double )
+        *(NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAlt + NLSHam*NCisAjs) );
+        QCisAjsCktAltQ_real = QCisAjsQ_real + NLSHam*NLSHam*NCisAjs;
+        LSLCisAjs_real = QCisAjsCktAltQ_real + NLSHam*NLSHam*NCisAjsCktAlt;
+
       }
     }
   }
@@ -305,8 +316,10 @@ void FreeMemory() {
     free(PhysCisAjs);
     if(NLanczosMode>0){
       free(QQQQ);
+      free(QQQQ_real);
       if(NLanczosMode>1){
         free(QCisAjsQ);
+        free(QCisAjsQ_real);
       }
     }
   }
