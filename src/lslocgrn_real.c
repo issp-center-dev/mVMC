@@ -28,9 +28,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SOR_LSLOCGRN
 #define _SOR_LSLOCGRN
 #include "workspace.c"
-#include "vmccal.c"
-#include "calham_real.c"
 #include <complex.h>
+
+void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
 
 void LSLocalQ(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
 
@@ -219,12 +219,8 @@ double checkGF1(const int ri, const int rj, const int s, const double ip,
   eleNum[rsi] = 1;
 
   /* calculate Pfaffian */
-#define _ORG
-    CalculateNewPfM(mj, s, pfMNew, eleIdx, 0, NQPFull);
-    z = CalculateIP(pfMNew, 0, NQPFull, MPI_COMM_SELF);
-#endif
-    CalculateNewPfM_real(mj, s, pfMNew, eleIdx, 0, NQPFull);
-    z = CalculateIP_real(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  CalculateNewPfM(mj, s, pfMNew, eleIdx, 0, NQPFull);
+  z = CalculateIP(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
   /* revert hopping */
   eleIdx[msj] = rj;

@@ -27,6 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #ifndef _SRC_VMCCAL
 #define _SRC_VMCCAL
+#include "complex.h"
 
 void VMCMainCal(MPI_Comm comm);
 void clearPhysQuantity();
@@ -226,8 +227,13 @@ void VMCMainCal(MPI_Comm comm) {
         /* Calculate local QQQQ */
         StartTimer(43);
         if(AllComplexFlag==0) {
-          //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+#ifdef _ORG
+          LSLocalQ(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
           //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
+#elseif
+          LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+          calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
+#endif
         }else{
           //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
           //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
