@@ -230,15 +230,10 @@ void VMCMainCal(MPI_Comm comm) {
         /* Calculate local QQQQ */
         StartTimer(43);
         if(AllComplexFlag==0) {
-#ifdef _ORG
-          //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-          //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
-#else
-
           LSLocalQ_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
           calculateQQQQ_real(QQQQ_real,LSLQ_real,w,NLSHam);
-#endif
         }else{
+            return;
           //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
           //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
         }
@@ -258,6 +253,7 @@ void VMCMainCal(MPI_Comm comm) {
             //calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
             //calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
             //                NCisAjsCktAlt,CisAjsCktAltIdx);
+             return;
           }
           StopTimer(44);
         }
