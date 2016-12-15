@@ -228,7 +228,7 @@ void VMCMainCal(MPI_Comm comm) {
         StartTimer(43);
         if(AllComplexFlag==0) {
 #ifdef _ORG
-          LSLocalQ(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
+          LSLocalQ_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
           //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
 #elseif
           LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);

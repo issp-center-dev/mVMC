@@ -84,6 +84,7 @@ extern int omp_get_thread_num(void);
 #include "calham.c"
 #include "calgrn.c"
 #include "lslocgrn.c"
+#include "lslocgrn_real.c"
 
 #include "setmemory.c"
 #include "readdef.c"

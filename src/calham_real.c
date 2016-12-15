@@ -33,8 +33,15 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt);
 
-double complex CalculateHamiltonian0_real(const int *eleNum);
+double CalculateHamiltonian0_real(const int *eleNum);
 
+///
+/// \param ip
+/// \param eleIdx
+/// \param eleCfg
+/// \param eleNum
+/// \param eleProjCnt
+/// \return myEnergy
 double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt) {
   const int *n0 = eleNum;
@@ -201,14 +208,18 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
 /* Calculate the CoulombIntra, CoulombInter, Hund terms, */
 /* which can be calculated by number operators. */
 /* This function will be used in the Lanczos mode */
-double complex CalculateHamiltonian0_real(const int *eleNum)
+///
+/// \param eleNum [in]
+/// \return myEnergy
+/// \version 1.0
+double CalculateHamiltonian0_real(const int *eleNum)
 {
     const int *n0 = eleNum;
     const int *n1 = eleNum + Nsite;
-    double complex e=0.0;
+    double e=0.0;
     int idx;
     int ri,rj;
-    double complex myEnergy;
+    double myEnergy;
 
 #pragma omp parallel default(shared)\
   private(myEnergy) reduction(+:e)
@@ -244,4 +255,5 @@ double complex CalculateHamiltonian0_real(const int *eleNum)
 
     return e;
 }
+
 #endif
