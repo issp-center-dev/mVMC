@@ -44,7 +44,7 @@ double complex calculateHW(const double h1, const double ip, int *eleIdx, int *e
 double complex calHCA(const int ri, const int rj, const int s,
               const double h1, const double ip, int *eleIdx, int *eleCfg,
               int *eleNum, int *eleProjCnt);
-double comple calHCACA(const int ri, const int rj, const int rk, const int rl,
+double complex calHCACA(const int ri, const int rj, const int rk, const int rl,
                 const int si,const int sk,
                 const double h1, const double ip, int *eleIdx, int *eleCfg,
                 int *eleNum, int *eleProjCnt);
@@ -515,8 +515,8 @@ double checkGF2(const int ri, const int rj, const int rk, const int rl,
   eleNum[rsi] = 1;
 
   /* calculate Pfaffian */
-  CalculateNewPfMTwo(ml, t, mj, s, pfMNew, eleIdx, 0, NQPFull, buffer);
-  z = CalculateIP(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  CalculateNewPfMTwo_real(ml, t, mj, s, pfMNew, eleIdx, 0, NQPFull, buffer);
+  z = CalculateIP_real(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
   /* revert hopping */
   eleIdx[mtl] = rl;
