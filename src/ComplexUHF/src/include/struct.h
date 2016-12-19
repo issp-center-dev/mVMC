@@ -58,8 +58,9 @@ struct DefineList{
   int **OrbitalSgn; /* OrbitalSgn[Nsite][Nsite] = +1 or -1 */
   
   int **Initial,NInitial;  
-  double *ParaInitial;
-  double *ParaInitial_theta;
+  complex double *ParaInitial;
+  //double *ParaInitial;
+  //double *ParaInitial_theta;
   
 
   int **CisAjs, NCisAjs;
