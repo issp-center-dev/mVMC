@@ -60,7 +60,7 @@ void StdFace_Chain(struct StdIntList *StdI, char *model)
   /**/
   StdI->a0 = 1.0; StdI->a1 = 1.0;
   fp = fopen("/dev/null", "w");
-  StdFace_InitSite2D(StdI, fp, StdI->a0, 0.0, 0.0, StdI->a1);
+  StdFace_InitSite2D(StdI, fp);
   fclose(fp);
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0;
   /**/

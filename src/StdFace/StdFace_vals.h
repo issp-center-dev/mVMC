@@ -142,15 +142,16 @@ struct StdIntList {
   /*
    Parameter for lattice
   */
-  double bW0;
-  double bW1;
-  double bL0;
-  double bL1;
-  double bW0sub;
-  double bW1sub;
-  double bL0sub;
-  double bL1sub;
+  int bW0;
+  int bW1;
+  int bL0;
+  int bL1;
+  int bW0sub;
+  int bW1sub;
+  int bL0sub;
+  int bL1sub;
   int NCell;
+  int NCellsub;
   int **Cell;
   int NsiteUC;
   double **tau;
