@@ -33,7 +33,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 /* Calculate <psi|QQ|x>/<psi|x> */
 void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt)
 {
-  double complex e0,h2;
+  double e0,h2;
 
   e0 = CalculateHamiltonian0_real(eleNum); /* V */
 
@@ -42,12 +42,12 @@ void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, i
   h2 += calculateHW_real(h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
 
   /* calculate local Q (IQ) */
-  LSLQ[0] = 1.0; /* I */
-  LSLQ[1] = h1;  /* H = V+K+W */
+  LSLQ_real[0] = 1.0; /* I */
+  LSLQ_real[1] = h1;  /* H = V+K+W */
 
   /* calculate local Q (KQ) */
-  LSLQ[2] = h1;  /* H */
-  LSLQ[3] = h2;  /* H*H */
+  LSLQ_real[2] = h1;  /* H */
+  LSLQ_real[3] = h2;  /* H*H */
 
   return;
 }
@@ -754,4 +754,29 @@ double calHCACA2_real(const int ri, const int rj, const int rk, const int rl,
     return val;
 }
 
+
+/* Calculate <psi|QCisAjs|x>/<psi|x> */
+void LSLocalCisAjs_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt) {
+    const int nCisAjs=NCisAjs;
+    double *lsLCisAjs_real = LSLCisAjs_real;
+    double complex*localCisAjs = LocalCisAjs;
+    int ri,rj,s;
+    int idx;
+
+    /* copy local ICisAjs */
+#pragma loop noalias
+    for(idx=0;idx<nCisAjs;idx++){
+        lsLCisAjs_real[idx] = creal(localCisAjs[idx]);
+    }
+
+    for(idx=0;idx<nCisAjs;idx++){
+        ri = CisAjsIdx[idx][0];
+        rj = CisAjsIdx[idx][2];
+        s  = CisAjsIdx[idx][3];
+
+        /* calculate local HCisAjs */
+        LSLCisAjs_real[idx+nCisAjs] = calHCA_real(ri,rj,s,h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+    }
+    return;
+}
 #endif

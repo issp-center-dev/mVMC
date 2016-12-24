@@ -26,6 +26,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
+#pragma once
+#include <complex.h>
+
 void SetMemoryDef();
 void FreeMemoryDef();
 void SetMemory();
@@ -281,6 +284,7 @@ void SetMemory() {
     PhysCisAjsCktAlt   = PhysCisAjs       + NCisAjs;
     PhysCisAjsCktAltDC = PhysCisAjsCktAlt + NCisAjsCktAlt;
     LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
+
     if(NLanczosMode>0){
       QQQQ = (double complex*)malloc(sizeof(double complex)
         *(NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam) );

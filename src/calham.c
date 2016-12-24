@@ -25,6 +25,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#pragma once
 
 double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt);

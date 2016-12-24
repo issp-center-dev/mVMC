@@ -27,9 +27,12 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #ifndef _SOR_LSLOCGRN
 #define _SOR_LSLOCGRN
+
 #include "workspace.c"
 #include "vmccal.c"
-#include "calham_real.c"
+#include "calham.c"
+#include "qp.c"
+#include "pfupdate_two_fcmp.c"
 #include <complex.h>
 
 void LSLocalQ(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
@@ -219,10 +222,8 @@ double checkGF1(const int ri, const int rj, const int s, const double ip,
   eleNum[rsi] = 1;
 
   /* calculate Pfaffian */
-#define _ORG
-    CalculateNewPfM(mj, s, pfMNew, eleIdx, 0, NQPFull);
-    z = CalculateIP(pfMNew, 0, NQPFull, MPI_COMM_SELF);
-#endif
+//    CalculateNewPfM(mj, s, pfMNew, eleIdx, 0, NQPFull);
+//    z = CalculateIP(pfMNew, 0, NQPFull, MPI_COMM_SELF);
     CalculateNewPfM_real(mj, s, pfMNew, eleIdx, 0, NQPFull);
     z = CalculateIP_real(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
@@ -269,7 +270,7 @@ double calHCA1(const int ri, const int rj, const int s,
   z = ProjRatio(projCntNew,eleProjCnt);
 
   UpdateMAll(mj,s,eleIdx,0,NQPFull);
-  ipNew = CalculateIP(PfM,0,NQPFull,MPI_COMM_SELF);
+  ipNew = CalculateIP_fcmp(PfM,0,NQPFull,MPI_COMM_SELF);
 
   e = CalculateHamiltonian(ipNew,eleIdx,eleCfg,eleNum,projCntNew);
 
@@ -575,8 +576,8 @@ double calHCACA1(const int ri, const int rj, const int rk, const int rl,
 
   z = ProjRatio(projCntNew,eleProjCnt);
 
-  UpdateMAllTwo(ml, sk, mj, si, rl, rj, eleIdx, 0, NQPFull);
-  ipNew = CalculateIP(PfM,0,NQPFull,MPI_COMM_SELF);
+  UpdateMAllTwo_fcmp(ml, sk, mj, si, rl, rj, eleIdx, 0, NQPFull);
+  ipNew = CalculateIP_fcmp(PfM,0,NQPFull,MPI_COMM_SELF);
 
   e = CalculateHamiltonian(ipNew,eleIdx,eleCfg,eleNum,projCntNew);
 

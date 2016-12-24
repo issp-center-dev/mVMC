@@ -25,6 +25,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#pragma once
 
 void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, int *eleCfg,
                          int *eleNum, int *eleProjCnt);

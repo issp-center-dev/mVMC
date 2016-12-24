@@ -207,7 +207,6 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
 
 /* Calculate the CoulombIntra, CoulombInter, Hund terms, */
 /* which can be calculated by number operators. */
-/* This function will be used in the Lanczos mode */
 ///
 /// \param eleNum [in]
 /// \return myEnergy

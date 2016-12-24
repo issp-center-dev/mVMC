@@ -47,6 +47,8 @@ double calHCACA2_real(const int ri, const int rj, const int rk, const int rl,
                       const int si,const int sk,
                       const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
 
+void LSLocalCisAjs_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
+
 void copyMAll_real(double *invM_from, double *pfM_from, double *invM_to, double *pfM_to);
 
 #endif

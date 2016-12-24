@@ -25,9 +25,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita 
  *-------------------------------------------------------------*/
-#include "vmccal.h"
 #ifndef _SRC_VMCCAL
 #define _SRC_VMCCAL
+#include "vmccal.h"
 
 void VMCMainCal(MPI_Comm comm);
 void clearPhysQuantity();
@@ -51,6 +51,13 @@ void calculateQCAQ(double *qcaq, const double *lslca, const double *lslq,
 void calculateQCACAQ(double *qcacaq, const double *lslca, const double w,
                      const int nLSHam, const int nCA, const int nCACA,
                      int **cacaIdx);
+
+void calculateQCAQ_real(double *qcaq, const double *lslca, const double *lslq,
+                   const double w, const int nLSHam, const int nCA);
+
+void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
+                          const int nLSHam, const int nCA, const int nCACA,
+                          int **cacaIdx);
 
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
@@ -243,10 +250,10 @@ void VMCMainCal(MPI_Comm comm) {
           /* Calculate local QcisAjsQ */
           StartTimer(44);
           if(AllComplexFlag==0) {
-            //LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-            //calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
-            //calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
-            //                NCisAjsCktAlt,CisAjsCktAltIdx);
+            LSLocalCisAjs_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
+            calculateQCAQ_real(QCisAjsQ_real,LSLCisAjs_real,LSLQ_real,w,NLSHam,NCisAjs);
+            calculateQCACAQ_real(QCisAjsCktAltQ_real,LSLCisAjs_real,w,NLSHam,NCisAjs,
+                            NCisAjsCktAlt,CisAjsCktAltIdx);
           }
           else{
             //LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
@@ -287,6 +294,7 @@ void clearPhysQuantity(){
     vec = SROptOO;
     #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
+
 // only for real variables
     n = (SROptSize)*(SROptSize+2); // TBC
     vec_real = SROptOO_real;
@@ -295,19 +303,39 @@ void clearPhysQuantity(){
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
     n = 2*NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
+
     vec = PhysCisAjs;
-    for(i=0;i<n;i++) vec[i] = 0.0;
+    #pragma omp parallel for default(shared) private(i)
+    for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
+
     if(NLanczosMode>0) {
       /* QQQQ, LSLQ */
+        //[TODO]: Check the value n
       n = NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam;
       vec = QQQQ;
-      for(i=0;i<n;i++) vec[i] = 0.0;
-      if(NLanczosMode>1) {
+#pragma omp parallel for default(shared) private(i)
+      for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
+
+      n = NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam;
+      vec_real = QQQQ_real;
+#pragma omp parallel for default(shared) private(i)
+        for(i=0;i<n;i++) vec_real[i] = 0.0;
+
+        if(NLanczosMode>1) {
         /* QCisAjsQ, QCisAjsCktAltQ, LSLCisAjs */
-        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAlt
+         //[TODO]: Check the value n
+         n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAlt
           + NLSHam*NCisAjs;
         vec = QCisAjsQ;
-        for(i=0;i<n;i++) vec[i] = 0.0;
+#pragma omp parallel for default(shared) private(i)
+        for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
+
+        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAlt
+          + NLSHam*NCisAjs;
+        vec_real = QCisAjsQ_real;
+#pragma omp parallel for default(shared) private(i)
+        for(i=0;i<n;i++) vec_real[i] = 0.0;
+
       }
     }
   }
@@ -560,4 +588,45 @@ void calculateQCACAQ(double *qcacaq, const double *lslca, const double w,
   return;
 }
 
+void calculateQCAQ_real(double *qcaq, const double *lslca, const double *lslq,
+                   const double w, const int nLSHam, const int nCA) {
+    const int n=nLSHam*nLSHam*nCA;
+    int rq,rp,idx;
+    int i,tmp;
+
+    /* QCisAjsQ[rq][rp][idx] += w * LSLCisAjs[rq][idx] * LSLQ[rp][0] */
+# pragma omp parallel for default(shared) private(i,tmp,idx,rp,rq)
+    for(i=0;i<n;++i) {
+        idx = i%nCA;     tmp = i/nCA;
+        rp = tmp%nLSHam; tmp = tmp/nLSHam;
+        rq = tmp%nLSHam;
+
+        qcaq[i] += w * lslca[rq*nCA+idx] * lslq[rp*nLSHam];
+    }
+
+    return;
+}
+
+void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
+                     const int nLSHam, const int nCA, const int nCACA,
+                     int **cacaIdx) {
+    const int n=nLSHam*nLSHam*nCACA;
+    int rq,rp,ri,rj,idx;
+    int i,tmp;
+
+    /* QCisAjsCktAltQ[rq][rp][idx] += w * LSLCisAjs[rq][ri] * LSLCisAjs[rp][rj] */
+# pragma omp parallel for default(shared) private(i,tmp,idx,rp,rq,ri,rj)
+    for(i=0;i<n;++i) {
+        idx = i%nCACA;   tmp = i/nCACA;
+        rp = tmp%nLSHam; tmp = tmp/nLSHam;
+        rq = tmp%nLSHam;
+
+        ri = cacaIdx[idx][0];
+        rj = cacaIdx[idx][1];
+
+        qcacaq[i] += w * lslca[rq*nCA+ri] * lslca[rp*nCA+rj];
+    }
+
+    return;
+}
 #endif
