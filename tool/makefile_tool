@@ -3,7 +3,7 @@ include ../src/make.sys
 all:fourier corplot
 
 fourier:fourier.o key2lower.o
-	$(FORT) $^ -g $(LIB) -o $@
+	$(FORT) $^ -g $(LIB) $(CFLAGS) -o $@
 
 corplot:corplot.f90
 	$(FORT) $^ -g -o $@
