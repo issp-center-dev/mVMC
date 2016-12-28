@@ -26,7 +26,7 @@ REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xHost
 SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
 EOF
@@ -39,7 +39,7 @@ REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xHost
 SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
 EOF
@@ -52,7 +52,7 @@ REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xHost
 SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
 EOF
@@ -78,7 +78,7 @@ REPORT = -vec-report1
 OPTION = -D_mpi_use -D_lapack
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone
 SMFTFLAGS = -O3 -no-ansi-alias -DMEXP=19937
 EOF
@@ -91,7 +91,7 @@ REPORT = -openmp-report1 -vec-report=1
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xSSE2
 SMFTFLAGS = -O3 -no-ansi-alias -xSSE2 -DMEXP=19937 -DHAVE_SSE2
 EOF
@@ -118,7 +118,7 @@ REPORT = -openmp-report1 -vec-report=1
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xSSE2
 SMFTFLAGS = -O3 -no-ansi-alias -xSSE2 -DMEXP=19937 -DHAVE_SSE2
 EOF
@@ -131,7 +131,7 @@ REPORT = -openmp-report1 -vec-report=1
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xSSE2
 SMFTFLAGS = -O3 -no-ansi-alias -xSSE2 -DMEXP=19937 -DHAVE_SSE2
 EOF
