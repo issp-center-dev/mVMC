@@ -27,7 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #ifndef _SRC_VMCCAL
 #define _SRC_VMCCAL
-#include "vmccal.h"
+#include "./include/vmccal.h"
 
 void VMCMainCal(MPI_Comm comm);
 void clearPhysQuantity();

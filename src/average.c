@@ -26,7 +26,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #include <complex.h>
-#include "global.h"
+#include "./include/global.h"
 void WeightAverageWE(MPI_Comm comm);
 void WeightAverageSROpt(MPI_Comm comm);
 void WeightAverageSROpt_real(MPI_Comm comm);

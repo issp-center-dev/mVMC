@@ -25,8 +25,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-#include "complex.h"
-#include "global.h"
+#include <complex.h>
+#include "./include/global.h"
 
 void UpdateSlaterElm_fcmp();
 void SlaterElmDiff_fcmp(double complex *srOptO, const double complex ip, int *eleIdx);

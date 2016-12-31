@@ -43,8 +43,18 @@ vmcmake_real.c \
 workspace.c
 
 HEADERS = \
-global.h \
-vmcmain.h
+include/avevar.h \
+include/global.h \
+include/locgrn_real.h \
+include/lslocgrn_real.h \
+include/parameter.h \
+include/readdef.h \
+include/readdef_core.h \
+include/safempi.h \
+include/safempi_fcmp.h\
+include/vmccal.h \
+include/vmcmain.h 
+
 
 all : 
 	cd pfapack; $(MAKE) -f makefile_pfapack

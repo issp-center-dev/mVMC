@@ -28,7 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_VMCMAKE_REAL
 #define _SRC_VMCMAKE_REAL
 
-#include "global.h"
+#include "./include/global.h"
 #include "splitloop.c"
 #include "vmcmake.c"
 #include "matrix.c"

@@ -27,8 +27,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #ifndef _SRC_MATRIX
 #define _SRC_MATRIX
-#include "complex.h"
-#include "global.h"
+#include <complex.h>
+#include "./include/global.h"
 #include "workspace.c"
 
 int CalculateMAll_real(const int *eleIdx, const int qpStart, const int qpEnd);

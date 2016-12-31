@@ -27,7 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #ifndef _SRC_VMCMAKE
 #define _SRC_VMCMAKE
-#include "global.h"
+#include "./include/global.h"
 #include "projection.c"
 #include "matrix.c"
 

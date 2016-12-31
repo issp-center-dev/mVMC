@@ -26,9 +26,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #pragma once
-#include "struct.h"
-#include "global.h"
-#include "complex.h"
+//#include "./include/struct.h"
+#include "./include/global.h"
+#include <complex.h>
 #include "legendrepoly.c"
 #include "workspace.c"
 #include "gauleg.c"
