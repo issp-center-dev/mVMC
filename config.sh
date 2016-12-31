@@ -23,6 +23,7 @@ CC = mpicc
 LIB = -L\$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
 CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
 REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
+INCLUDE_DIR=./include
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
@@ -35,6 +36,7 @@ EOF
 CC = mpicc
 LIB = -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_openmpi_lp64 -lpthread -lm -ldl
 CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas -I ${MKLROOT}/include
+INCLUDE_DIR=./include
 REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
 OPTION = -D_mpi_use
 CP = cp -f -v
@@ -50,6 +52,7 @@ LIB = -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_cor
 CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas -I ${MKLROOT}/include
 REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
 OPTION = -D_mpi_use
+INCLUDE_DIR=./include
 CP = cp -f -v
 AR = ar rv
 FORT = ifort
@@ -63,6 +66,7 @@ LIB = -L\${MKLROOT}/lib -Wl,-rpath,\${MKLROOT}/lib -lmkl_scalapack_lp64 -lmkl_in
 CFLAGS = -O3 -fopenmp -I\${MKLROOT}/include
 REPORT = 
 OPTION = -D_mpi_use
+INCLUDE_DIR=./include
 CP = cp -f -v
 AR = ar rv
 FORT = gfortran
@@ -76,6 +80,7 @@ LIB = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lguide -lpthread -lm -open
 CFLAGS = -O3 -no-prec-div -xP -Wno-unknown-pragmas
 REPORT = -vec-report1
 OPTION = -D_mpi_use -D_lapack
+INCLUDE_DIR=./include
 CP = cp -f -v
 AR = ar rv
 FORT = ifort
@@ -89,6 +94,7 @@ LIB = -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64\ -lmkl_intel_lp64 -lmkl_in
 CFLAGS = -O3 -no-prec-div -xHost -openmp -Wno-unknown-pragmas
 REPORT = -openmp-report1 -vec-report=1
 OPTION = -D_mpi_use
+INCLUDE_DIR=./include
 CP = cp -f -v
 AR = ar rv
 FORT = ifort
@@ -103,6 +109,7 @@ LIB = -SCALAPACK -SSL2BLAMP
 CFLAGS = -Kfast,parallel,ocl,openmp
 REPORT = -Koptmsg=2
 OPTION = -D_mpi_use
+INCLUDE_DIR=./include
 CP = cp -f -v
 AR = ar rv
 FORT = frtpx
@@ -116,6 +123,7 @@ LIB = -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_int
 CFLAGS = -O3 -no-prec-div -xSSE2 -openmp -Wno-unknown-pragmas
 REPORT = -openmp-report1 -vec-report=1
 OPTION = -D_mpi_use
+INCLUDE_DIR=./include
 CP = cp -f -v
 AR = ar rv
 FORT = ifort
@@ -129,6 +137,7 @@ LIB = -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_int
 CFLAGS = -O3 -no-prec-div -xHost -openmp -Wno-unknown-pragmas
 REPORT = -openmp-report1 -vec-report=1
 OPTION = -D_mpi_use
+INCLUDE_DIR=./include
 CP = cp -f -v
 AR = ar rv
 FORT = ifort
@@ -142,6 +151,7 @@ LIB = -fopenmp -lblacs-openmpi -lscalapack-openmpi -llapack -lblas
 CFLAGS = -O3 -fopenmp -lm
 REPORT = 
 OPTION = -D_mpi_use
+INCLUDE_DIR=./include
 CP = cp -f -v
 AR = ar rv
 FORT = gfortran
