@@ -54,43 +54,46 @@ inline void MPI_Comm_rank(MPI_Comm comm, int *rank) {*rank = 0; return;}
 extern int omp_get_max_threads(void);
 extern int omp_get_thread_num(void);
 
-#include "sfmt/SFMT.h"
+#include "../sfmt/SFMT.h"
 #include "global.h"
 
-#include "safempi.c"
-#include "time.c"
-#include "workspace.c"
+#include "../safempi.c"
+#include "../safempi_fcmp.c"
+#include "../time.c"
+#include "../workspace.c"
 
 #ifdef _lapack
- #include "stcopt_dposv.c"
+ #include "../stcopt_dposv.c"
 #else
- #include "stcopt_pdposv.c"
+ #include "../stcopt_pdposv.c"
 #endif
 
-#include "gauleg.c"
-#include "legendrepoly.c"
-#include "splitloop.c"
-#include "avevar.c"
-#include "average.c"
+#include "../gauleg.c"
+#include "../legendrepoly.c"
+#include "../splitloop.c"
+#include "../avevar.c"
+#include "../average.c"
 
-#include "parameter.c"
-#include "projection.c"
-#include "slater.c"
-#include "qp.c"
-#include "matrix.c"
-#include "pfupdate.c"
-#include "pfupdate_two.c"
-#include "locgrn.c"
-#include "calham.c"
-#include "calgrn.c"
-#include "lslocgrn.c"
-#include "lslocgrn_real.c"
+#include "../parameter.c"
+#include "../projection.c"
+#include "../slater.c"
+#include "../qp.c"
+#include "../matrix.c"
+#include "../pfupdate.c"
+#include "../pfupdate_two.c"
+#include "../locgrn.c"
+#include "../locgrn_real.c"
+#include "../calham.c"
+#include "../calgrn.c"
+#include "../lslocgrn.c"
+#include "../lslocgrn_real.c"
 
-#include "setmemory.c"
-#include "readdef.c"
-#include "initfile.c"
+#include "../setmemory.c"
+#include "../readdef.c"
+#include "../initfile.c"
 
-#include "vmcmake.c"
-#include "vmccal.c"
+#include "../vmcmake.c"
+#include "../vmcmake_real.c"
+#include "../vmccal.c"
 
 #endif /* _VMC_INCLUDE_FILES */

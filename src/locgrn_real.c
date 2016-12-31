@@ -25,11 +25,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-#include "locgrn_real.h"
 
 #ifndef _SRC_LOCGRN_REAL
 #define _SRC_LOCGRN_REAL
-
+#include "./include/locgrn_real.h"
 
 /* Calculate 1-body Green function <CisAjs> */
 /* buffer size = NQPFull */

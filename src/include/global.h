@@ -28,7 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #ifndef _INCLUDE_GLOBAL
 #define _INCLUDE_GLOBAL
-
+#include <complex.h>
 #define D_FileNameMax 256
 
 /***** definition *****/

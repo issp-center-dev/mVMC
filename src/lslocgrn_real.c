@@ -25,10 +25,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-#include "lslocgrn_real.h"
 
 #ifndef _SRC_LSLOCGRN_REAL
 #define _SRC_LSLOCGRN_REAL
+#include "./include/lslocgrn_real.h"
+#include "locgrn_real.c"
 
 /* Calculate <psi|QQ|x>/<psi|x> */
 void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt)
