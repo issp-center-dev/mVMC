@@ -212,7 +212,7 @@ double calHCA1_real(const int ri, const int rj, const int s,
     eleNum[rsi] = 0;
 
     /* restore InvM and PfM */
-    copyMAll_real(oldInvM,oldPfM,InvM,PfM);
+    copyMAll_real(oldInvM,oldPfM,InvM_real,PfM_real);
 
     ReleaseWorkSpaceInt();
     ReleaseWorkSpaceDouble();
@@ -568,7 +568,7 @@ double calHCACA1_real(const int ri, const int rj, const int rk, const int rl,
     z = ProjRatio(projCntNew,eleProjCnt);
 
     UpdateMAllTwo_real(ml, sk, mj, si, rl, rj, eleIdx, 0, NQPFull);
-    ipNew = CalculateIP_real(PfM,0,NQPFull,MPI_COMM_SELF);
+    ipNew = CalculateIP_real(PfM_real,0,NQPFull,MPI_COMM_SELF);
 
     e = CalculateHamiltonian_real(ipNew,eleIdx,eleCfg,eleNum,projCntNew);
 
