@@ -26,20 +26,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #pragma once
-#include <complex.h>
+#include "./include/locgrn.h"
+#include "projection.c"
+#include "pfupdate.c"
 #include "qp.c"
 
-double complex GreenFunc1(const int ri, const int rj, const int s, const double complex ip,
-                  int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  int *projCntNew, double complex *buffer);
-double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl,
-                  const int s, const int t, const double complex  ip,
-                  int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  int *projCntNew, double complex *buffer);
-
-double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex  ip,
-                  int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  double complex *buffer, int *bufferInt);
 double complex calculateNewPfMN_child(const int qpidx, const int n, const int *msa, const int *rsa,
                               const int *eleIdx, double complex *buffer);
 
@@ -47,7 +38,7 @@ double complex calculateNewPfMN_child(const int qpidx, const int n, const int *m
 /* buffer size = NQPFull */
 double complex GreenFunc1(const int ri, const int rj, const int s, const double complex  ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  int *projCntNew, complex double *buffer) {
+                  int *projCntNew, double complex *buffer) {
   double complex z;
   int mj,msj,rsi,rsj;
   double complex *pfMNew = buffer; /* NQPFull */

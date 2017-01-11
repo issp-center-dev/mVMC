@@ -28,9 +28,12 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_VMCCAL
 #define _SRC_VMCCAL
 #include "./include/vmccal.h"
+#include "lslocgrn_real.c"
+#include "lslocgrn.c"
+#include "calgrn.c"
 
-void VMCMainCal(MPI_Comm comm);
 void clearPhysQuantity();
+
 void calculateOptTransDiff(double complex *srOptO, const double complex ipAll);
 void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const double complex *srOptO,
                  const double complex w, const double complex e, const int srOptSize);
@@ -240,9 +243,9 @@ void VMCMainCal(MPI_Comm comm) {
           LSLocalQ_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
           calculateQQQQ_real(QQQQ_real,LSLQ_real,w,NLSHam);
         }else{
+            LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+            //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
             return;
-          //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-          //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
         }
         StopTimer(43);
 

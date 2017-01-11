@@ -17,7 +17,4 @@ double GreenFuncN_real(const int n, int *rsi, int *rsj, const double ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
                   double *buffer, int *bufferInt);
 
-double calculateNewPfMN_real_child(const int qpidx, const int n, const int *msa, const int *rsa,
-                              const int *eleIdx, double *buffer);
-
 #endif

@@ -30,6 +30,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define _SRC_LOCGRN_REAL
 #include "./include/locgrn_real.h"
 
+double calculateNewPfMN_real_child(const int qpidx, const int n, const int *msa, const int *rsa,
+                                   const int *eleIdx, double *buffer);
+
 /* Calculate 1-body Green function <CisAjs> */
 /* buffer size = NQPFull */
 double  GreenFunc1_real(const int ri, const int rj, const int s, const double ip,

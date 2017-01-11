@@ -25,6 +25,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#pragma once
 
 void CalculateNewPfM(const int mi, const int s, double complex *pfMNew, const int *eleIdx,
                      const int qpStart, const int qpEnd);
