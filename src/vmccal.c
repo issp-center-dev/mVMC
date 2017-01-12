@@ -48,10 +48,10 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO,  double
 
 void calculateQQQQ_real(double *qqqq, const double *lslq, const double w, const int nLSHam);
 
-void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam);
-void calculateQCAQ(double *qcaq, const double *lslca, const double *lslq,
+void calculateQQQQ(double complex *qqqq, const double complex*lslq, const double w, const int nLSHam);
+void calculateQCAQ(double complex *qcaq, const double complex*lslca, const double complex*lslq,
                    const double w, const int nLSHam, const int nCA);
-void calculateQCACAQ(double *qcacaq, const double *lslca, const double w,
+void calculateQCACAQ(double complex *qcacaq, const double complex*lslca, const double w,
                      const int nLSHam, const int nCA, const int nCACA,
                      int **cacaIdx);
 
@@ -244,7 +244,7 @@ void VMCMainCal(MPI_Comm comm) {
           calculateQQQQ_real(QQQQ_real,LSLQ_real,w,NLSHam);
         }else{
             LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-            //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
+            calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
             return;
         }
         StopTimer(43);
@@ -259,10 +259,10 @@ void VMCMainCal(MPI_Comm comm) {
                             NCisAjsCktAlt,CisAjsCktAltIdx);
           }
           else{
-            //LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-            //calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
-            //calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
-            //                NCisAjsCktAlt,CisAjsCktAltIdx);
+            LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+            calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
+            calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
+                            NCisAjsCktAlt,CisAjsCktAltIdx);
              return;
           }
           StopTimer(44);
@@ -530,7 +530,7 @@ void calculateQQQQ_real(double *qqqq, const double *lslq, const double w, const 
 }
 
 
-void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int nLSHam) {
+void calculateQQQQ(double complex *qqqq, const double complex*lslq, const double w, const int nLSHam) {
   const int n=nLSHam*nLSHam*nLSHam*nLSHam;
   int rq,rp,ri,rj;
   int i,tmp;
@@ -549,7 +549,7 @@ void calculateQQQQ(double *qqqq, const double *lslq, const double w, const int n
   return;
 }
 
-void calculateQCAQ(double *qcaq, const double *lslca, const double *lslq,
+void calculateQCAQ(double complex*qcaq, const double complex*lslca, const double complex*lslq,
                    const double w, const int nLSHam, const int nCA) {
   const int n=nLSHam*nLSHam*nCA;
   int rq,rp,idx;
@@ -568,7 +568,7 @@ void calculateQCAQ(double *qcaq, const double *lslca, const double *lslq,
   return;
 }
 
-void calculateQCACAQ(double *qcacaq, const double *lslca, const double w,
+void calculateQCACAQ(double complex *qcacaq, const double complex *lslca, const double w,
                      const int nLSHam, const int nCA, const int nCACA,
                      int **cacaIdx) {
   const int n=nLSHam*nLSHam*nCACA;
