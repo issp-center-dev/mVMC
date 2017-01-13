@@ -239,7 +239,7 @@ void VMCMainCal(MPI_Comm comm) {
     }
   } /* end of for(sample) */
 // calculate OO and HO at NVMCCalMode==0
-  if(NStoreO!=0 && NVMCCalMode==0){
+  if(NStoreO==1 && NVMCCalMode==0){
     sampleSize=sampleEnd-sampleStart;
     if(AllComplexFlag==0){
       StartTimer(45);

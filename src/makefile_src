@@ -34,6 +34,7 @@ slater.c \
 splitloop.c \
 stcopt_dposv.c \
 stcopt_pdposv.c \
+stcopt_cg.c \
 time.c \
 vmccal.c \
 vmcdry.c \

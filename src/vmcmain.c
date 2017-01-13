@@ -370,7 +370,17 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       } 
     }
 //DBBUG
-    info = StochasticOpt(comm_parent);
+    if(NStoreO==2){
+      if(AllComplexFlag==0){
+        info = StochasticOptCG_real(comm_parent);
+      }else{
+        fprintf(stderr, "StochasticOptCG_complex is not implemented\n");
+        exit(1);
+        // info = StochasticOptCG_complex(comm_parent);
+      }
+    }else{
+      info = StochasticOpt(comm_parent);
+    }
     //info = StochasticOptDiag(comm_parent);
       StopTimer(5);
 
