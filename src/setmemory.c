@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #pragma once
 #include <complex.h>
+#include "./include/global.h"
 
 void SetMemoryDef();
 void FreeMemoryDef();
@@ -96,6 +97,28 @@ void SetMemoryDef() {
     DoublonHolon4siteIdx[i] = pInt;
     pInt += 4*Nsite;
   }
+
+  /*[s] For BackFlow */
+  PosBF = (int**)malloc(sizeof(int*)*Nsite);
+  for(i=0;i<Nsite;i++) {
+    PosBF[i] = pInt;
+    pInt += Nrange;
+  }
+
+  RangeIdx = (int**)malloc(sizeof(int*)*Nsite);
+  for(i=0;i<Nsite;i++) {
+    RangeIdx[i] = pInt;
+    pInt += Nsite;
+  }
+
+  if(NBackFlowIdx) {
+    BackFlowIdx = (int**)malloc(sizeof(int*)*Nsite*Nsite);
+    for(i=0;i<Nsite*Nsite;i++) {
+      BackFlowIdx[i] = pInt;
+      pInt += Nsite*Nsite;
+    }
+  }
+  /*[e] For BackFlow */
 
   OrbitalIdx = (int**)malloc(sizeof(int*)*Nsite);
   for(i=0;i<Nsite;i++) {
@@ -209,7 +232,9 @@ void FreeMemoryDef() {
   free(CoulombInter);
   free(Transfer);
   free(LocSpn);
-
+  free(PosBF);
+  free(RangeIdx);
+  free(BackFlowIdx);
   return;
 }
 
@@ -218,8 +243,9 @@ void SetMemory() {
   /***** Variational Parameters *****/
   Para     = (double complex*)malloc(sizeof(double complex)*(NPara)); 
   Proj     = Para;
-  Slater   = Para + NProj; 
-  OptTrans = Para + NProj + NSlater;
+  ProjBF   = Para + NProj;
+  Slater   = Para + NProj + NProjBF;
+  OptTrans = Para + NProj + NProjBF + NSlater;
 
   /***** Electron Configuration ******/
   EleIdx            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));

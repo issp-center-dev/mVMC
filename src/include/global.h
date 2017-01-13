@@ -182,7 +182,10 @@ int *EleIdx; /* EleIdx[sample][mi+si*Ne] */
 int *EleCfg; /* EleCfg[sample][ri+si*Nsite] */
 int *EleNum; /* EleIdx[sample][ri+si*Nsite] */
 int *EleProjCnt; /* EleProjCnt[sample][proj] */
+int *EleProjBFCnt; /* EleProjCnt[sample][proj] */
 double *logSqPfFullSlater; /* logSqPfFullSlater[sample] */
+double *SmpSltElmBF; /* logSqPfFullSlater[sample] */
+double complex *SmpSltElmBFForTE; /* logSqPfFullSlater[sample] */
 
 int *TmpEleIdx;
 int *TmpEleCfg;

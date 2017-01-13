@@ -25,8 +25,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#include "projection.h"
 #ifndef _SRC_PROJECTION
 #define _SRC_PROJECTION
+#include "global.h"
 
 inline double LogProjVal(const int *projCnt);
 inline double LogProjRatio(const int *projCntNew, const int *projCntOld);
@@ -271,6 +273,11 @@ void UpdateProjCnt(const int ri, const int rj, const int s,
   
   return;
 
+}
+
+void MakeProjBFCnt(int *projCnt, const int *eleNum) {
+
+  return;
 }
 
 #endif

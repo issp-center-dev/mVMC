@@ -25,9 +25,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#include "./include/global.h"
 #ifndef _SRC_VMCMAKE
 #define _SRC_VMCMAKE
-#include "./include/global.h"
 #include "projection.c"
 #include "matrix.c"
 
@@ -48,6 +48,13 @@ void updateEleConfig(int mi, int ri, int rj, int s,
                      int *eleIdx, int *eleCfg, int *eleNum);
 void revertEleConfig(int mi, int ri, int rj, int s,
                      int *eleIdx, int *eleCfg, int *eleNum);
+
+/*[s] BackFlow */
+void VMC_BF_MakeSample(MPI_Comm comm);
+int makeInitialSampleBF(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, int *eleProjBFCnt,
+                        const int qpStart, const int qpEnd, MPI_Comm comm);
+
+/*[e] BackFlow */
 
 typedef enum {HOPPING, EXCHANGE, NONE} UpdateType;
 UpdateType getUpdateType(int path);
@@ -493,6 +500,18 @@ UpdateType getUpdateType(int path) {
     return EXCHANGE;
   }
   return NONE;
+}
+
+void VMC_BF_MakeSample(MPI_Comm comm)
+{
+
+  return;
+};
+
+int makeInitialSampleBF(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, int *eleProjBFCnt,
+                        const int qpStart, const int qpEnd, MPI_Comm comm)
+{
+return 0;
 }
 
 #endif

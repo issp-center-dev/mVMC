@@ -286,6 +286,11 @@ void VMCMainCal(MPI_Comm comm) {
   return;
 }
 
+void VMC_BF_MainCal(MPI_Comm comm){
+    return ;
+}
+
+
 void clearPhysQuantity(){
   int i,n;
   double complex *vec;

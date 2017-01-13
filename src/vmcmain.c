@@ -323,8 +323,13 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          #pragma omp parallel for default(shared) private(tmp_i)
          for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
          StopTimer(69);
+         if(NProjBF ==0){
          // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-         VMCMakeSample_real(comm_child1);
+            VMCMakeSample_real(comm_child1);
+         }
+         else{
+            VMC_BF_MakeSample_real(comm_child1);
+         }
          // only for real TBC
          StartTimer(69);
          #pragma omp parallel for default(shared) private(tmp_i)
@@ -332,14 +337,24 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          StopTimer(69);
          // only for real TBC
       }else{
-        VMCMakeSample(comm_child1);
+         if(NProjBF ==0) {
+             VMCMakeSample(comm_child1);
+         }
+         else {
+             VMC_BF_MakeSample(comm_child1);
+         }
       } 
       StopTimer(3);
       StartTimer(4);
 #ifdef _DEBUG
       printf("Debug: step %d, MainCal.\n", step);
 #endif
-    VMCMainCal(comm_child1);
+      if(NProjBF ==0) {
+          VMCMainCal(comm_child1);
+      }
+      else{
+          VMC_BF_MainCal(comm_child1);
+      }
       StopTimer(4);
       StartTimer(21);
 #ifdef _DEBUG
@@ -415,13 +430,21 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     InitFilePhysCal(ismp, rank);
     
     StartTimer(3);
-
-    VMCMakeSample(comm_child1);
-
+    if(NProjBF ==0) {
+        VMCMakeSample(comm_child1);
+    }
+    else{
+        VMC_BF_MakeSample(comm_child1);
+    }
     StopTimer(3);
     StartTimer(4);
 
-    VMCMainCal(comm_child1);
+      if(NProjBF ==0) {
+          VMCMainCal(comm_child1);
+      }
+      else{
+          VMC_BF_MainCal(comm_child1);
+      }
 
     StopTimer(4);
     StartTimer(21);
