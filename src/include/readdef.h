@@ -39,7 +39,8 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
   "TransSym", "InGutzwiller", "InJastrow",
   "InDH2", "InDH4", "InOrbital",
   "OneBodyG", "TwoBodyG", "TwoBodyGEx",
-  "InterAll", "OptTrans", "InOptTrans"
+  "InterAll", "OptTrans", "InOptTrans",
+  "BF", "BFRange"
 };
 
 /**
@@ -55,6 +56,7 @@ enum KWIdxInt{
   KWInDH2, KWInDH4, KWInOrbital,
   KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
   KWInterAll, KWOptTrans, KWInOptTrans,
+  KWBF, KWBFRange,
   KWIdxInt_end
 };
 
@@ -77,6 +79,7 @@ enum ParamIdxInt{
   IdxNDH2, IdxNDH4, IdxNOrbit,
   IdxNQPTrans, IdxNOneBodyG, IdxNTwoBodyG,
   IdxNTwoBodyGEx, IdxNInterAll, IdxNQPOptTrans,
+  IdxNBF,IdxNrange, IdxNNz,
   ParamIdxInt_End
 };
 

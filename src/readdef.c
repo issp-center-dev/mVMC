@@ -333,7 +333,22 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  }
 	  fclose(fp);
 	  break;
-	  
+
+	case KWBFRange:
+		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+			fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+			sscanf(ctmp2,"%s %d %d\n", ctmp, &bufInt[IdxNrange], &bufInt[IdxNNz]);
+			fclose(fp);
+			break;
+
+	case KWBF:
+		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+		sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNBF]);
+		fclose(fp);
+		break;
+
+
 	default:
 	  fclose(fp);
 	  break;
@@ -377,7 +392,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NSROptItrSmp           =  bufInt[IdxSROptItrSmp];
   NSROptFixSmp           =  bufInt[IdxSROptFixSmp];
   NVMCWarmUp             =  bufInt[IdxVMCWarmUp];
-  NVMCInterval          =  bufInt[IdxVMCInterval];
+  NVMCInterval           =  bufInt[IdxVMCInterval];
   NVMCSample             =  bufInt[IdxVMCSample];
   NExUpdatePath          =  bufInt[IdxExUpdatePath];
   RndSeed                =  bufInt[IdxRndSeed];
@@ -400,10 +415,12 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NCisAjsCktAltDC        =  bufInt[IdxNTwoBodyG];
   NInterAll              =  bufInt[IdxNInterAll];
   NQPOptTrans            =  bufInt[IdxNQPOptTrans];
-
-  DSROptRedCut = bufDouble[IdxSROptRedCut];
-  DSROptStaDel = bufDouble[IdxSROptStaDel];
-  DSROptStepDt = bufDouble[IdxSROptStepDt];
+  Nrange                 =  bufInt[IdxNrange];
+  NBackFlowIdx           =  bufInt[IdxNBF];
+  Nz                     =  bufInt[IdxNNz];
+  DSROptRedCut           =  bufDouble[IdxSROptRedCut];
+  DSROptStaDel           =  bufDouble[IdxSROptStaDel];
+  DSROptStepDt           =  bufDouble[IdxSROptStepDt];
 
   if(NMPTrans < 0) {
     APFlag = 1; /* anti-periodic boundary */
@@ -426,7 +443,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + 2*3*NDoublonHolon2siteIdx
     + 2*5*NDoublonHolon4siteIdx;
   NOptTrans = (FlagOptTrans>0) ? NQPOptTrans : 0;
-  NPara   = NProj + NSlater + NOptTrans ; 
+
+  /* [s] For BackFlow */
+  NrangeIdx = 3*(Nrange-1)/Nz+1; //For Nz-conectivity
+  NBFIdxTotal = (NrangeIdx-1)*(NrangeIdx)/2+(NrangeIdx);
+  NProjBF = NBFIdxTotal*NBackFlowIdx;
+  /* [e] For BackFlow */
+
+  NPara   = NProj + NSlater + NOptTrans + NProjBF;
   NQPFix = NSPGaussLeg * NMPTrans;
   NQPFull = NQPFix * NQPOptTrans;
   SROptSize = NPara+1;
@@ -453,7 +477,12 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + Nsite*NQPOptTrans /* QPOptTrans */
     + Nsite*NQPOptTrans /* QPOptTransSgn */
     + 2*NPara; /* OptFlag */ // TBC
-  
+
+    if(NBackFlowIdx >0){
+        NTotalDefInt +=
+                Nsite*Nsite*Nsite*Nsite; /* BackflowIdx */
+    }
+
   NTotalDefDouble =
     NCoulombIntra /* ParaCoulombIntra */
     + NCoulombInter /* ParaCoulombInter */
@@ -931,8 +960,57 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
     
 	fclose(fp);
 	break;
-	  
-      default:
+
+    case KWBFRange:
+        /*rangebf.def--------------------------*/
+    if(Nrange>0) {
+        for (i = 0; i < 5; i++) fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+        idx0 = idx1 = 0;
+        while (fscanf(fp, "%d %d %d\n", &i, &j, &n) != EOF) {
+            PosBF[i][idx0 % Nrange] = j;
+            RangeIdx[i][j] = n;
+            //printf("PosBF[%d][%d]=%d\n",i,idx0 % Nrange, PosBF[i][idx0 % Nrange]);
+            //if(globalrank==0)printf("RangeIdx[%d][%d]=%d\n",i,j, RangeIdx[i][j]);
+            idx0++;
+            if (idx0 == Nsite * Nrange) break;
+        }
+        if (idx0 != Nsite * Nrange) {
+            info = ReadDefFileError(defname);
+        }
+    }
+    fclose(fp);
+    break;
+
+    case KWBF:
+        if(NBackFlowIdx>0) {
+            for (i = 0; i < 5; i++) fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            idx0 = idx1 = 0;
+            for (i = 0; i < Nsite * Nsite; i++) {
+                for (j = 0; j < Nsite * Nsite; j++) {
+                    BackFlowIdx[i][j] = -1;
+                }
+            }
+            while (fscanf(fp, "%d %d %d %d %d\n", &i, &j, &(x0), &(x1), &n) != EOF) {
+                BackFlowIdx[i * Nsite + j][x0 * Nsite + x1] = n;
+                idx0++;
+                //printf("idx0=%d, idx=%d\n",idx0,BackFlowIdx[i]);
+                if (idx0 == Nsite * Nsite * Nrange * Nrange) break;
+            }
+            while (fscanf(fp, "%d ", &i) != EOF) {
+                fscanf(fp, "%d\n", &(OptFlag[fidx]));
+                //printf("idx1=%d, OptFlag=%d\n",idx1,OptFlag[fidx]);
+                fidx++;
+                idx1++;
+            }
+            if (idx0 != Nsite * Nsite * Nrange * Nrange
+                || idx1 != NBFIdxTotal * NBackFlowIdx) {
+                info = ReadDefFileError(defname);
+            }
+        }
+    fclose(fp);
+    break;
+
+        default:
 	fclose(fp);
 	break;
       }
@@ -1342,7 +1420,10 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxNTwoBodyGEx]=0;
   bufInt[IdxNInterAll]=0;
   bufInt[IdxNQPOptTrans]=1;
-  
+  bufInt[IdxNBF]=0;
+	bufInt[IdxNrange]=0;
+	bufInt[IdxNNz]=0;
+
   bufDouble[IdxSROptRedCut]=0.001;
   bufDouble[IdxSROptStaDel]=0.02;
   bufDouble[IdxSROptStepDt]=0.02;

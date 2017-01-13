@@ -50,6 +50,7 @@ int Nsite; /* the number of sites */
 int Ne;    /* the number of electrons with up spin */
 int Nsize; /* the number of electrons = 2*Ne */
 int Nsite2; /* 2*Nsite */
+int Nz; /* connecivity */
 
 int NSPGaussLeg; /* the number of points for the Gauss-Legendre quadrature */
 int NSPStot; /* S of Spin projection */
@@ -158,13 +159,23 @@ int NFileFlushInterval=1;
 /***** Variational Parameters *****/
 int NPara; /* the total number of variational prameters NPara= NProj + NSlater+ NOptTrans */ 
 int NProj;    /* the number of correlation factor */
+int NProjBF;    /* the number of correlation factor */
 int NSlater;  /* the number of pair orbital (f_ij) = NOrbitalIdx */
 int NOptTrans; /* the number of weights for OptTrans. This is used only for variatonal parameters */
                /* NOptTrans = 0 (not OptTrans mode) or NQPOptTrans (OptTrans mode) */
+int **etaFlag;   /* Back Flow correlation factor (eta = 1.0 or ProjBF[0])*/
 double complex *Para;   /* variatonal parameters */
 double complex *Proj;   /* correlation factor (Proj    =Para) */
+double complex *ProjBF; /* Back flow correlation factor (Proj    =Para) */
 double complex *Slater; /* pair orbital       (Slater  =Para+NProj) */
 double complex *OptTrans; /* weights          (OptTrans=Para+NProj+NSlater) */
+double **eta;   /* Back Flow correlation factor (eta = 1.0 or ProjBF[0])*/
+
+/***** Back Flow ******/
+int NBackFlowIdx, **BackFlowIdx; /* [Nsite] */
+int Nrange, **PosBF, **RangeIdx; /* [Nsite] */
+int NBFIdxTotal,NrangeIdx;
+int **BFSubIdx; /* [Nsite] */
 
 /***** Electron Configuration ******/
 int *EleIdx; /* EleIdx[sample][mi+si*Ne] */
