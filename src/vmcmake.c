@@ -128,6 +128,9 @@ void VMCMakeSample(MPI_Comm comm) {
         updateEleConfig(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum);
         UpdateProjCnt(ri,rj,s,projCntNew,TmpEleProjCnt,TmpEleNum);
           StopTimer(60);
+
+  //TODO:Add        StartTimer
+
           StartTimer(61);
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);

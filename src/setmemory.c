@@ -138,6 +138,12 @@ void SetMemoryDef() {
     pInt += Nsite;
   }
 
+  QPTransInv = (int**)malloc(sizeof(int*)*NQPTrans);
+  for(i=0;i<NQPTrans;i++) {
+      QPTransInv[i] = pInt;
+      pInt += Nsite;
+  }
+
   QPTransSgn = (int**)malloc(sizeof(int*)*NQPTrans);
   for(i=0;i<NQPTrans;i++) {
     QPTransSgn[i] = pInt;
@@ -239,6 +245,7 @@ void FreeMemoryDef() {
 }
 
 void SetMemory() {
+  int i,j,n;
 
   /***** Variational Parameters *****/
   Para     = (double complex*)malloc(sizeof(double complex)*(NPara)); 
@@ -252,12 +259,17 @@ void SetMemory() {
   EleCfg            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
   EleNum            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
   EleProjCnt        = (int*)malloc(sizeof(int)*( NVMCSample*NProj ));
+  EleProjBFCnt = (int*)malloc(sizeof(int)*( NVMCSample*4*4*Nsite*Nrange));
   logSqPfFullSlater = (double*)malloc(sizeof(double)*(NVMCSample));
+  SmpSltElmBF_real = (double *)malloc(sizeof(double)*(NVMCSample*NQPFull*(2*Nsite)*(2*Nsite)));
+  SmpEta = (double*)malloc(sizeof(double*)*NVMCSample*NQPFull*Nsite*Nsite);
+  SmpEtaFlag = (int*)malloc(sizeof(int*)*NVMCSample*NQPFull*Nsite*Nsite);
 
   TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
   TmpEleCfg         = TmpEleIdx + 2*Ne;
   TmpEleNum         = TmpEleCfg + 2*Nsite;
   TmpEleProjCnt     = TmpEleNum + 2*Nsite;
+  TmpEleProjBFCnt = TmpEleProjCnt + NProj;
 
   BurnEleIdx = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
   BurnEleCfg = BurnEleIdx + 2*Ne;
@@ -270,6 +282,19 @@ void SetMemory() {
   PfM = InvM + NQPFull*Nsize*Nsize;
 // for real TBC
   SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+  SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+  eta = (double**)malloc(sizeof(double*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+        eta[i] = (double*)malloc(sizeof(double)*Nsite);
+    }
+    etaFlag = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+        etaFlag[i] = (int*)malloc(sizeof(int)*Nsite);
+    }
+    BFSubIdx = (int**)malloc(sizeof(int*)*NrangeIdx);
+    for(i=0;i<NrangeIdx;i++) {
+        BFSubIdx[i] = (int*)malloc(sizeof(int)*NrangeIdx);
+    }
   InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
   PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
 

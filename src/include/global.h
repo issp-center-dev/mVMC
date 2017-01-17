@@ -120,7 +120,7 @@ int NOrbitalIdx, **OrbitalIdx; /* [Nsite][Nsite] */
 int **OrbitalSgn; /* OrbitalSgn[Nsite][Nsite] = +1 or -1 */
 
 /* zqptransidx.def */
-int NQPTrans, **QPTrans; /* [NQPTrans][Nsite] */
+int NQPTrans, **QPTrans, **QPTransInv; /* [NQPTrans][Nsite] */
 int **QPTransSgn; /* QPTransSgn[NQPTrans][NSite] = +1 or -1 */
 double complex *ParaQPTrans;
 
@@ -184,13 +184,17 @@ int *EleNum; /* EleIdx[sample][ri+si*Nsite] */
 int *EleProjCnt; /* EleProjCnt[sample][proj] */
 int *EleProjBFCnt; /* EleProjCnt[sample][proj] */
 double *logSqPfFullSlater; /* logSqPfFullSlater[sample] */
-double *SmpSltElmBF; /* logSqPfFullSlater[sample] */
-double complex *SmpSltElmBFForTE; /* logSqPfFullSlater[sample] */
+//double complex *SmpSltElmBF; /* logSqPfFullSlater[sample] */
+double *SmpSltElmBF_real; /* logSqPfFullSlater[sample] */
+
+int    *SmpEtaFlag; /* logSqPfFullSlater[sample] */
+double *SmpEta; /* logSqPfFullSlater[sample] */
 
 int *TmpEleIdx;
 int *TmpEleCfg;
 int *TmpEleNum;
 int *TmpEleProjCnt;
+int *TmpEleProjBFCnt;
 
 int *BurnEleIdx;
 int *BurnEleCfg;
@@ -200,10 +204,12 @@ int BurnFlag=0; /* 0: off, 1: on */
 
 /***** Slater Elements ******/
 double complex *SlaterElm; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
+double complex *SlaterElmBF; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
 double complex *InvM; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
 double complex *PfM; /* PfM[QPidx] */
 // TBC only for real
 double *SlaterElm_real; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
+double *SlaterElmBF_real;/* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
 double *InvM_real; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
 double *PfM_real; /* PfM[QPidx] */
 

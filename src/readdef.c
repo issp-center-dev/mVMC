@@ -469,6 +469,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + Nsite*Nsite /* OrbitalIdx */
     + Nsite*Nsite /* OrbitalSgn */
     + Nsite*NQPTrans /* QPTrans */
+	+  Nsite*NQPTrans /* QPTransInv */
     + Nsite*NQPTrans /* QPTransSgn */
     + 4*NCisAjs /* CisAjs */
     + 8*NCisAjsCktAlt /* CisAjsCktAlt */
@@ -807,12 +808,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    while( fscanf(fp, "%d %d ", &i, &j) != EOF){
 	      fscanf(fp, "%d\n", &(QPTrans[i][j]));
 	      QPTransSgn[i][j] = 1;
+			QPTransInv[i][QPTrans[i][j]]=j;
 	      idx++;
 	    }
 	  } else { /* anti-periodic boundary mode */
 	    while( fscanf(fp, "%d %d ", &i, &j) != EOF){
 	      fscanf(fp, "%d %d\n", &(QPTrans[i][j]), &(QPTransSgn[i][j]));
-	      idx++;
+			QPTransInv[i][QPTrans[i][j]]=j;
+			idx++;
 	    }
 	  }
 	  if(idx!=NQPTrans*Nsite) info=ReadDefFileError(defname);

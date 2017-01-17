@@ -276,8 +276,76 @@ void UpdateProjCnt(const int ri, const int rj, const int s,
 }
 
 void MakeProjBFCnt(int *projCnt, const int *eleNum) {
+    const int *n0 = eleNum;
+    const int *n1 = eleNum + Nsite;
+    int idx, offset;
+    int k;
+    int ri, rk;
+    int xid, xih, xkd, xkh;
+    int xidh, xihd, xkdh, xkhd;
+    int r0, r1, r2, r3;
+    int **posBF = PosBF;
+    int *nBF0, *nBF1, *nBF2, *nBF3;
+    /* optimization for Kei */
+    const int nProj = NProj;
+    const int nSite = Nsite;
+    const int nRange = Nrange;
 
-  return;
+    /* initialization */
+    for (idx = 0; idx < 16 * nSite * nRange; idx++) projCnt[idx] = 0;
+
+    nBF0 = projCnt;
+    nBF1 = projCnt + 4 * nSite * nRange;
+    nBF2 = projCnt + 8 * nSite * nRange;
+    nBF3 = projCnt + 12 * nSite * nRange;
+
+    /* BackFlow factor */
+    if (NBackFlowIdx > 0) {
+        for (ri = 0; ri < nSite; ri++) {
+            xid = n0[ri] * n1[ri];
+            xih = (1 - n0[ri]) * (1 - n1[ri]);
+            xidh = n0[ri] * (1 - n1[ri]);
+            xihd = n1[ri] * (1 - n0[ri]);
+            //posBF = PosBF + ri*nSite;
+            for (k = 0; k < nRange; k++) {
+                rk = PosBF[ri][k];
+                xkd = n0[rk] * n1[rk];
+                xkh = (1 - n0[rk]) * (1 - n1[rk]);
+                xkdh = n0[rk] * (1 - n1[rk]);
+                xkhd = n1[rk] * (1 - n0[rk]);
+
+                if (ri == rk) {
+                    nBF0[ri * nRange + k] = 1;
+                    nBF1[ri * nRange + k] = 1;
+                    nBF2[ri * nRange + k] = 1;
+                    nBF3[ri * nRange + k] = 1;
+                } else {
+                    nBF0[ri * nRange + k] = 0;
+                    nBF1[ri * nRange + k] = 0;
+                    nBF2[ri * nRange + k] = 0;
+                    nBF3[ri * nRange + k] = 0;
+                }
+                nBF0[nSite * nRange + ri * nRange + k] = xid * xkh;
+                nBF0[2 * nSite * nRange + ri * nRange + k] = xidh * xkhd;
+                nBF0[3 * nSite * nRange + ri * nRange + k] = xid * xkhd + xidh * xkh;
+
+                nBF2[nSite * nRange + ri * nRange + k] = xkd * xih;
+                nBF2[2 * nSite * nRange + ri * nRange + k] = xkdh * xihd;
+                nBF2[3 * nSite * nRange + ri * nRange + k] = xkd * xihd + xkdh * xih;
+
+                nBF1[nSite * nRange + ri * nRange + k] = xid * xkh;
+                nBF1[2 * nSite * nRange + ri * nRange + k] = xihd * xkdh;
+                nBF1[3 * nSite * nRange + ri * nRange + k] = xid * xkdh + xihd * xkh;
+
+                nBF3[nSite * nRange + ri * nRange + k] = xkd * xih;
+                nBF3[2 * nSite * nRange + ri * nRange + k] = xkhd * xidh;
+                nBF3[3 * nSite * nRange + ri * nRange + k] = xkd * xidh + xkhd * xih;
+            }
+        }
+    }
+
+    return;
+
 }
 
 #endif
