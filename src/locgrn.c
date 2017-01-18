@@ -395,3 +395,62 @@ double complex calculateNewPfMN_child(const int qpidx, const int n, const int *m
 
   return sgn * pfaff * PfM[qpidx];
 }
+
+/* Calculate 1-body Green function <CisAjs> */
+/* buffer size = NQPFull */
+double complex GreenFunc1BF(const int ri, const int rj, const int s, const double complex ip, double complex *bufM,
+                    int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
+                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double complex *buffer) {
+  double complex z,logz;
+  int msi,mj,msj,rsi,rsj;
+  int qpidx,i;
+  const int nsize=Nsize;
+  double complex* sltE;
+  double complex* sltE_i;
+  double complex* bufM_i, *bufM_i2;
+  //double complex bufM[NQPFull*Nsize*Nsize];
+  double complex* pfMNew = buffer; /* NQPFull */
+  int msaTmp[NQPFull*Nsite],icount[NQPFull];
+
+  if(ri==rj) return eleNum[ri+s*Nsite];
+  if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
+
+  /* store SlaterElmBF before hopping */
+  mj = eleCfg[rj+s*Nsite];
+  msj = mj + s*Ne;
+  rsi = ri + s*Nsite;
+  rsj = rj + s*Nsite;
+
+  /* hopping */
+  eleCfg[rsj] = -1;
+  eleCfg[rsi] = mj;
+  eleIdx[msj] = ri;
+  eleNum[rsj] = 0;
+  eleNum[rsi] = 1;
+  UpdateProjCnt(rj, ri, s, projCntNew, eleProjCnt, eleNum);
+  z = ProjRatio(projCntNew,eleProjCnt);
+
+  /* calculate Pfaffian */
+  //printf("1");
+  StartTimer(81);
+  MakeProjBFCnt(projBFCntNew, eleNum);
+  StopTimer(81);
+  StartTimer(82);
+  UpdateSlaterElmBFGrn(mj, rj, ri, s, eleCfg, eleNum, projBFCntNew, msaTmp, icount, bufM);
+  StopTimer(82);
+  StartTimer(83);
+  CalculateNewPfMBF(icount, msaTmp, pfMNew, eleIdx, 0, NQPFull, bufM);
+  StopTimer(83);
+  z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+
+  /* revert hopping */
+  eleCfg[rsj] = mj;
+  eleCfg[rsi] = -1;
+  eleIdx[msj] = rj;
+  eleNum[rsj] = 1;
+  eleNum[rsi] = 0;
+
+  StoreSlaterElmBF(bufM);
+
+  return z/ip;
+}

@@ -31,6 +31,7 @@
 #include "./include/global.h"
 #include "./include/slater.h"
 #include "./include/matrix.h"
+#include "./include/pfupdate_real.h"
 #include "splitloop.c"
 #include "vmcmake.c"
 #include "matrix.c"

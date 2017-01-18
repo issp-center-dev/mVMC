@@ -35,6 +35,28 @@ double complex CalculateHamiltonian1(const double complex ip, int *eleIdx, const
 double complex CalculateHamiltonian2(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt);
 
+double CalculateDoubleOccupation(int *eleIdx, const int *eleCfg,
+                                 int *eleNum, const int *eleProjCnt) {
+  const int *n0 = eleNum;
+  const int *n1 = eleNum + Nsite;
+  double db=0.0;
+  int ri;
+
+#pragma omp master
+  {StartTimer(70);}
+
+  /* CoulombIntra */
+#pragma omp parallel for private(ri) reduction(+:db)
+  for(ri=0;ri<Nsite;ri++) {
+    db += (double)(n0[ri] * n1[ri]);
+  }
+
+#pragma omp master
+  {StopTimer(70);}
+
+  return db;
+}
+
 double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt) {
   const int *n0 = eleNum;

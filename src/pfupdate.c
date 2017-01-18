@@ -38,6 +38,13 @@ void updateMAll_child(const int ma, const int s, const int *eleIdx,
                       const int qpStart, const int qpEnd, const int qpidx,
                       double complex *vec1, double complex *vec2);
 
+void CalculateNewPfMBF(const int *icount, const int *msaTmp,double complex*pfMNew, const int *eleIdx,
+                       const int qpStart, const int qpEnd, const double complex*bufM) ;
+
+double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int *msa,
+                                 const int *eleIdx, const double complex* bufM);
+
+
 /* Calculate new pfaffian. The ma-th electron with spin s hops. */
 void CalculateNewPfM(const int ma, const int s, double complex *pfMNew, const int *eleIdx,
                      const int qpStart, const int qpEnd) {
@@ -216,4 +223,165 @@ void updateMAll_child(const int ma, const int s, const int *eleIdx,
   /* end of update invM */
 
   return;
+}
+
+
+/* Calculate new pfaffian with Backflow effects.
+   The ma-th electron with spin s hops from ra to rb */
+void CalculateNewPfMBF(const int *icount, const int *msaTmp,
+                       double complex* pfMNew, const int *eleIdx,
+                       const int qpStart, const int qpEnd, const double complex* bufM) {
+  //#pragma procedure serial
+  int i;
+  const int nsize = Nsize;
+  const int qpNum = qpEnd-qpStart;
+  int qpidx;
+  //double *sltE;
+  //double *sltE_i;
+  int *msa;
+  //int msi,msj,rsi,rsj,i;
+  //int *hop;
+  //double complex diff;
+
+  for(qpidx=0;qpidx<qpNum;qpidx++) {
+    //Store msa//
+    msa=(int *)malloc(sizeof(int)*icount[qpidx]);
+    //printf("Total=%d\n",icount[qpidx]);
+    for(i=0;i<icount[qpidx];i++){
+      msa[i] = msaTmp[i+qpidx*Nsite];
+      //printf("hop[%d]=%d\n",i,msa[i]);
+    }
+
+    /* calculateNewPfM */
+    pfMNew[qpidx] = calculateNewPfMBFN4_child(qpidx,icount[qpidx],msa,eleIdx,bufM);
+
+    free(msa);
+  }
+  //icount = UpdateSlaterElmBFTmp3(ma, rb, ra, s, eleCfg, eleNum, msaTmp);
+
+  return;
+}
+
+double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int *msa,
+                                         const int *eleIdx, const double complex* bufM)
+{
+  const int nsize = Nsize;
+  const int n2 = 2*n;
+  const double complex *sltE;
+  const double complex *sltE_k;
+  double complex *invM;
+  double complex *invM_i, *invM_k, *invM_l;
+
+  double complex *vec; /* vec[n][nsize] */
+  //double complex vec[n*nsize]; /* vec[n][nsize] */
+  double complex *vec_k, *vec_l;
+  //double complex mat[n2*n2]; /* mat[n2][n2] */
+  double complex *mat; /* mat[n2][n2] */
+  double complex *mat_k;
+  double complex *invMat; /* mat[n2][n2] */
+  //double complex matUV[n2*nsize]; /* mat[n2][nsize] */
+  double complex *matUV; /* mat[n2][nsize] */
+  double complex *invMat_k, *matUV_i, *matUV_j;
+  double sgn;
+
+  int rsi,rsk,msi,msj,k,l;
+  double complex val,tmp;
+
+  /* for ZSKPFA */
+  char uplo='U', mthd='P';
+  int m,nn,lda,info=0;
+  double complex pfaff;
+  int iwork[n2];
+  int iwork2[n2];
+  //double complex work[n2*n2]; /* [n2][n2] */
+  double complex *work; /* [n2][n2] */
+  double complex rwork[n2*n2]; /* [n2][n2] */
+  int lwork = n2*n2;
+  nn=lda=n2;
+
+  sltE = bufM + qpidx*Nsite2*Nsite2;
+  invM = InvM + qpidx*Nsize*Nsize;
+
+  vec = (double complex*)malloc(sizeof(double complex)*n*nsize);
+  //invMat = (double *)malloc(sizeof(double)*n2*n2);
+  mat = (double complex*)malloc(sizeof(double complex)*n2*n2);
+  //matUV = (double *)malloc(sizeof(double)*n2*nsize);
+  work = (double complex*)malloc(sizeof(double complex)*n2*n2);
+
+  //#pragma loop noalias
+  for(k=0;k<n;k++) {
+    rsk = eleIdx[msa[k]] + (msa[k]/Ne)*Nsite;
+    sltE_k = sltE + rsk*Nsite2;
+    vec_k = vec + k*nsize;
+    //#pragma loop norecurrence
+    for(msi=0;msi<nsize;msi++) {
+      rsi = eleIdx[msi] + (msi/Ne)*Nsite;
+      vec_k[msi] = sltE_k[rsi];
+    }
+  }
+
+  /* X_kl */
+  for(k=0;k<n;k++) {
+    mat_k = mat + n2*k;
+    vec_k = vec + k*nsize;
+    for(l=k+1;l<n;l++) {
+      vec_l = vec + l*nsize;
+      val = 0.0;
+      for(msi=0;msi<nsize;msi++) {
+        invM_i = invM + msi*nsize;
+        tmp = 0.0;
+        for(msj=0;msj<nsize;msj++) {
+          tmp += invM_i[msj] * vec_l[msj];
+        }
+        val += tmp * vec_k[msi];
+      }
+      mat_k[l] = val + vec_k[msa[l]];
+    }
+  }
+
+  /* Y_kl */
+  for(k=0;k<n;k++) {
+    mat_k = mat + n2*k + n;
+    vec_k = vec + k*nsize;
+    for(l=0;l<n;l++) {
+      invM_l = invM + msa[l]*nsize;
+      val = 0.0;
+      for(msi=0;msi<nsize;msi++) {
+        val += vec_k[msi] * invM_l[msi];
+      }
+      mat_k[l] = val;
+    }
+  }
+
+  /* Z_kl */
+  for(k=0;k<n;k++) {
+    mat_k = mat + n2*(k+n) + n;
+    invM_k = invM + msa[k]*nsize;
+    for(l=k+1;l<n;l++) {
+      mat_k[l] = invM_k[msa[l]];
+    }
+  }
+
+  //#pragma loop noalias
+  for(k=0;k<n2;k++) {
+    //#pragma loop norecurrence
+    for(l=0;l<k;l++) {
+      mat[n2*k + l] = -mat[n2*l + k]; /* transpose */
+    }
+    mat[n2*k + k] = 0.0; /* diagonal elements */
+  }
+
+  /* calculate Pf M */
+  //TODO: CHECK
+  M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+  //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
+
+  sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
+
+  //free(matUV);
+  free(mat);
+  free(vec);
+  //free(invMat);
+  free(work);
+  return sgn * pfaff * PfM[qpidx];
 }

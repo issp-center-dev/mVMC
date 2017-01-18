@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_VMCCAL
 #define _SRC_VMCCAL
 #include "./include/vmccal.h"
+#include "./include/matrix.h"
 #include "lslocgrn_real.c"
 #include "lslocgrn.c"
 #include "calgrn.c"
@@ -286,8 +287,248 @@ void VMCMainCal(MPI_Comm comm) {
   return;
 }
 
-void VMC_BF_MainCal(MPI_Comm comm){
-    return ;
+void VMC_BF_MainCal(MPI_Comm comm) {
+    int *eleIdx, *eleCfg, *eleNum, *eleProjCnt, *eleProjBFCnt;
+    double complex e, ip; //db is double?
+    double x, w, db;
+    double we, sqrtw;
+    int int_i, sampleSize;
+
+    const int qpStart = 0;
+    const int qpEnd = NQPFull;
+    int sample, sampleStart, sampleEnd;
+    int i, info;
+    double complex *InvM_Moto, *PfM_Moto;
+    double *InvM_real_Moto, *PfM_real_Moto;
+
+    /* optimazation for Kei */
+    const int nProj = NProj;
+    double complex *srOptO = SROptO;
+    double *srOptO_real = SROptO_real;
+
+    double rtmp;
+
+    int rank, size;
+    MPI_Comm_size(comm, &size);
+    MPI_Comm_rank(comm, &rank);
+
+    SplitLoop(&sampleStart, &sampleEnd, NVMCSample, rank, size);
+    //SplitLoop(&sampleStart,&sampleEnd,NExactSample,rank,size);
+
+    /* initialization */
+    StartTimer(24);
+    clearPhysQuantity();
+    StopTimer(24);
+
+    InvM_Moto = InvM;
+    PfM_Moto = PfM;
+
+    InvM_real_Moto = InvM_real;
+    PfM_real_Moto = PfM_real;
+
+    for (sample = sampleStart; sample < sampleEnd; sample++) {
+        eleIdx = EleIdx + sample * Nsize;
+        eleCfg = EleCfg + sample * Nsite2;
+        eleNum = EleNum + sample * Nsite2;
+        eleProjCnt = EleProjCnt + sample * NProj;
+        eleProjBFCnt = EleProjBFCnt + sample * 16 * Nsite * Nrange;
+
+        StartTimer(45);
+        MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
+        StopTimer(45);
+
+        StartTimer(40);
+        if (AllComplexFlag == 0) {
+#pragma omp parallel for default(shared) private(tmp_i)
+            for (tmp_i = 0; tmp_i < NQPFull * (2 * Nsite) * (2 * Nsite); tmp_i++)
+                SlaterElm_real[tmp_i] = creal(SlaterElm[tmp_i]);
+
+            info = CalculateMAll_BF_real(eleIdx, qpStart, qpEnd);  // InvM_real,PfM_real will change
+#pragma omp parallel for default(shared) private(tmp_i)
+            for (tmp_i = 0; tmp_i < NQPFull * (Nsize * Nsize + 1); tmp_i++)
+                InvM[tmp_i] = InvM_real[tmp_i]; // InvM will be used in  SlaterElmDiff_fcmp
+        } else {//complex
+//TODO: to be added
+            //            info = CalculateMAll_BF_fcmp(eleIdx,qpStart,qpEnd);
+
+        }
+        StopTimer(40);
+
+        if (info != 0) {
+            fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n", rank, sample, info);
+            continue;
+        }
+
+        if (AllComplexFlag == 0) {
+            ip = CalculateIP_real(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+        } else {
+            ip = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+        }
+
+        LogProjVal(eleProjCnt);
+        /* calculate reweight */
+        // TODO: check ~ Is it OK to fix w ?
+        //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
+        w = 1.0;
+        /*
+        if(log(fabs(1.0-w)) > -5) {
+            printf("w=%.3e\n",w);
+        }
+        */
+        if (!isfinite(w)) {
+            fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d w=%e\n", rank, sample, w);
+            continue;
+        }
+
+        StartTimer(41);
+        if (AllComplexFlag == 0) {
+            e = CalculateHamiltonianBF_real(ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt);
+        } else {/* calculate energy */
+            //TODO: to be added
+            //e = CalculateHamiltonianBF(ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt);
+        }
+
+        /* calculate double occupation D */
+        db = CalculateDoubleOccupation(eleIdx, eleCfg, eleNum, eleProjCnt);
+        StopTimer(41);
+        if (!isfinite(e)) {
+            fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d e=%e\n", rank, sample, e);
+            continue;
+        }
+
+        Wc += w;
+        Etot += w * e;
+        Etot2 += w * e * e;
+        Dbtot += w * db;
+        Dbtot2 += w * db * db;
+
+        if (NVMCCalMode == 0) {
+            /* Calculate O for correlation fauctors */
+            /*SROptO[0] = 1.0;
+#pragma loop noalias
+            for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
+*/
+            srOptO[0] = 1.0 + 0.0 * I;//   real
+            srOptO[1] = 0.0 + 0.0 * I;//   real
+#pragma loop noalias
+            for (i = 0; i < nProj; i++) {
+                srOptO[(i + 1) * 2] = (double) (eleProjCnt[i]); // even real
+                srOptO[(i + 1) * 2 + 1] = 0.0 + 0.0 * I;               // odd  comp
+            }
+
+            //StartTimer(44);
+            /* BackflowDiff */
+            //BackFlowDiff(SROptO+NProj+1,ip,eleIdx,eleNum,eleProjCnt,eleProjBFCnt);
+            BackFlowDiff_fcmp(SROptO + 2 * NProj + 2, ip, eleIdx, eleNum, eleProjCnt, eleProjBFCnt);
+            //StopTimer(44);
+
+            StartTimer(42);
+            /* SlaterElmDiff */
+            //SlaterElmBFDiff_fcmp(SROptO+NProj+NProjBF+1,ip,eleIdx,eleNum,eleCfg,eleProjCnt,eleProjBFCnt);
+            SlaterElmBFDiff_fcmp(SROptO + 2 * NProj + 2 * NProjBF + 2, ip, eleIdx, eleNum, eleCfg, eleProjCnt,
+                                 eleProjBFCnt);
+            StopTimer(42);
+
+            if (FlagOptTrans > 0) {
+                calculateOptTransDiff(SROptO + 2 * NProj + 2 * NProjBF + 2 * NSlater + 2, ip);
+            }
+
+            //[s] this part will be used for real varaibles
+            if (AllComplexFlag == 0) {
+#pragma loop noalias
+                for (i = 0; i < SROptSize; i++) {
+                    srOptO_real[i] = creal(srOptO[2 * i]);
+                }
+            }
+            //[e]
+
+            StartTimer(43);
+            /* Calculate OO and HO */
+            if (NStoreO == 0) {
+                if (AllComplexFlag == 0) {
+                    calculateOO_real(SROptOO_real, SROptHO_real, SROptO_real, w, creal(e), SROptSize);
+                } else {
+                    calculateOO(SROptOO, SROptHO, SROptO, w, e, SROptSize);
+                }
+            } else {
+                we = w * e;
+                sqrtw = sqrt(w);
+                if (AllComplexFlag == 0) {
+#pragma omp parallel for default(shared) private(int_i)
+                    for (int_i = 0; int_i < SROptSize; int_i++) {
+                        // SROptO_Store for fortran
+                        SROptO_Store_real[int_i + sample * SROptSize] = sqrtw * SROptO_real[int_i];
+                        SROptHO_real[int_i] += creal(we) * SROptO_real[int_i];
+                    }
+                } else {
+#pragma omp parallel for default(shared) private(int_i)
+                    for (int_i = 0; int_i < SROptSize * 2; int_i++) {
+                        // SROptO_Store for fortran
+                        SROptO_Store[int_i + sample * (2 * SROptSize)] = sqrtw * SROptO[int_i];
+                        SROptHO[int_i] += we * SROptO[int_i];
+                    }
+                }
+            }
+            StopTimer(43);
+
+        } else if (NVMCCalMode == 1) {
+            StartTimer(42);
+            /* Calculate Green Function */
+            CalculateGreenFuncBF(w, ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt);
+            StopTimer(42);
+
+            if (NLanczosMode > 0) {
+                // ignoring Lanczos: to be added
+                /* Calculate local QQQQ */
+                StartTimer(43);
+                if (AllComplexFlag == 0) {
+                    LSLocalQ_real(creal(e), creal(ip), eleIdx, eleCfg, eleNum, eleProjCnt);
+                    calculateQQQQ_real(QQQQ_real, LSLQ_real, w, NLSHam);
+                } else {
+                    LSLocalQ(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt);
+                    calculateQQQQ(QQQQ, LSLQ, w, NLSHam);
+                    return;
+                }
+                StopTimer(43);
+                if (NLanczosMode > 1) {
+                    /* Calculate local QcisAjsQ */
+                    StartTimer(44);
+                    if (AllComplexFlag == 0) {
+                        LSLocalCisAjs_real(creal(e), creal(ip), eleIdx, eleCfg, eleNum, eleProjCnt);
+                        calculateQCAQ_real(QCisAjsQ_real, LSLCisAjs_real, LSLQ_real, w, NLSHam, NCisAjs);
+                        calculateQCACAQ_real(QCisAjsCktAltQ_real, LSLCisAjs_real, w, NLSHam, NCisAjs,
+                                             NCisAjsCktAlt, CisAjsCktAltIdx);
+                    } else {
+                        LSLocalCisAjs(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt);
+                        calculateQCAQ(QCisAjsQ, LSLCisAjs, LSLQ, w, NLSHam, NCisAjs);
+                        calculateQCACAQ(QCisAjsCktAltQ, LSLCisAjs, w, NLSHam, NCisAjs,
+                                        NCisAjsCktAlt, CisAjsCktAltIdx);
+                        return;
+                    }
+                    StopTimer(44);
+                }
+            }
+        }
+    } /* end of for(sample) */
+
+    // calculate OO and HO at NVMCCalMode==0
+    if(NStoreO!=0 && NVMCCalMode==0){
+        sampleSize=sampleEnd-sampleStart;
+        if(AllComplexFlag==0){
+            StartTimer(45);
+            calculateOO_Store_real(SROptOO_real,SROptHO_real,SROptO_Store_real,creal(w),creal(e),SROptSize,sampleSize);
+            StopTimer(45);
+        }else{
+            StartTimer(45);
+            calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
+            StopTimer(45);
+        }
+    }
+
+    InvM = InvM_Moto;
+    PfM = PfM_Moto;
+
+    return;
 }
 
 
