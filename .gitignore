@@ -31,3 +31,4 @@ src/ComplexUHF/src/UHF
 tool/corplot
 *.mod
 tool/fourier
+doc/fourier/ja/_build/
