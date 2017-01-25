@@ -292,8 +292,7 @@ void VMC_BF_MainCal(MPI_Comm comm) {
     double complex e, ip; //db is double?
     double x, w, db;
     double we, sqrtw;
-    int int_i, sampleSize;
-
+    int int_i, sampleSize, tmp_i;
     const int qpStart = 0;
     const int qpEnd = NQPFull;
     int sample, sampleStart, sampleEnd;
@@ -360,7 +359,7 @@ void VMC_BF_MainCal(MPI_Comm comm) {
         }
 
         if (AllComplexFlag == 0) {
-            ip = CalculateIP_real(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+            ip = CalculateIP_real(PfM_real, qpStart, qpEnd, MPI_COMM_SELF);
         } else {
             ip = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
         }
@@ -537,6 +536,8 @@ void clearPhysQuantity(){
   double complex *vec;
   double  *vec_real;
   Wc = Etot = Etot2 = 0.0;
+  Dbtot = Dbtot2 = 0.0;
+
   if(NVMCCalMode==0) {
     /* SROptOO, SROptHO, SROptO */
     n = (2*SROptSize)*(2*SROptSize+2); // TBC

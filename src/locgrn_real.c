@@ -26,9 +26,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
+#include "./include/locgrn_real.h"
+#include "./include/pfupdate_real.h"
+
 #ifndef _SRC_LOCGRN_REAL
 #define _SRC_LOCGRN_REAL
-#include "./include/locgrn_real.h"
 
 double calculateNewPfMN_real_child(const int qpidx, const int n, const int *msa, const int *rsa,
                                    const int *eleIdx, double *buffer);
@@ -397,5 +399,79 @@ double calculateNewPfMN_real_child(const int qpidx, const int n, const int *msa,
 
   return sgn * pfaff * PfM_real[qpidx];
 }
+
+
+/* Calculate 1-body Green function <CisAjs> */
+/* buffer size = NQPFull */
+double GreenFunc1BF_real(const int ri, const int rj, const int s, const double ip, double *bufM,
+                    int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
+                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer) {
+  double z,logz;
+  int msi,mj,msj,rsi,rsj;
+  int qpidx,i;
+  const int nsize=Nsize;
+  double *sltE;
+  double *sltE_i;
+  double *bufM_i, *bufM_i2;
+  //double complex bufM[NQPFull*Nsize*Nsize];
+  double *pfMNew_real = buffer; /* NQPFull */
+  int msaTmp[NQPFull*Nsite],icount[NQPFull];
+
+  if(ri==rj) return eleNum[ri+s*Nsite];
+  if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
+
+  /* store SlaterElmBF before hopping */
+  mj = eleCfg[rj+s*Nsite];
+  msj = mj + s*Ne;
+  rsi = ri + s*Nsite;
+  rsj = rj + s*Nsite;
+
+  /* hopping */
+  eleCfg[rsj] = -1;
+  eleCfg[rsi] = mj;
+  eleIdx[msj] = ri;
+  eleNum[rsj] = 0;
+  eleNum[rsi] = 1;
+  UpdateProjCnt(rj, ri, s, projCntNew, eleProjCnt, eleNum);
+  z = ProjRatio(projCntNew,eleProjCnt);
+
+  /* calculate Pfaffian */
+  //printf("1");
+  StartTimer(81);
+  MakeProjBFCnt(projBFCntNew, eleNum);
+  StopTimer(81);
+  StartTimer(82);
+  UpdateSlaterElmBFGrn_real(mj, rj, ri, s, eleCfg, eleNum, projBFCntNew, msaTmp, icount, bufM);
+  StopTimer(82);
+  StartTimer(83);
+  CalculateNewPfMBF_real(icount, msaTmp, pfMNew_real, eleIdx, 0, NQPFull, bufM);
+  StopTimer(83);
+  z *= CalculateIP_real(pfMNew_real, 0, NQPFull, MPI_COMM_SELF);
+  //printf("1");
+  //MakeSlaterElmBF(eleNum,projBFCntNew);
+  //UpdateSlaterElmBF2(eleNum,projBFCntNew);
+  //printf("1");
+  //CalculateMAllBF_NoThread(eleIdx,0,NQPFull,bufM);
+  //CalculateMAllBF_NoThread(eleIdx,0,NQPFull,SlaterElmBF);
+  //printf("1\n");
+  //z *= CalculateIP(PfM,0,NQPFull,MPI_COMM_SELF);
+
+  /* revert hopping */
+  eleCfg[rsj] = mj;
+  eleCfg[rsi] = -1;
+  eleIdx[msj] = rj;
+  eleNum[rsj] = 1;
+  eleNum[rsi] = 0;
+
+  //UpdateSlaterElmBFTmp5(mj, ri, rj, s, eleCfg, eleNum, eleProjBFCnt, msaTmp, icount, bufM);
+  StoreSlaterElmBF_real(bufM);
+  //MakeProjBFCnt(projBFCntNew, eleNum);
+  //MakeSlaterElmBF(eleNum,projBFCntNew);
+  //CalculateMAllBF_NoThread(eleIdx,0,NQPFull,bufM);
+  //CalculateMAllBF_NoThread(eleIdx,0,NQPFull,SlaterElmBF);
+
+  return z/ip;
+}
+
 
 #endif

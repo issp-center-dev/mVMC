@@ -283,9 +283,9 @@ void SetMemory() {
 // for real TBC
   SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
   SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
-  eta = (double**)malloc(sizeof(double*)*Nsite);
+  eta = (double complex**)malloc(sizeof(double complex*)*Nsite);
     for(i=0;i<Nsite;i++) {
-        eta[i] = (double*)malloc(sizeof(double)*Nsite);
+        eta[i] = (double complex*)malloc(sizeof(double complex)*Nsite);
     }
     etaFlag = (int**)malloc(sizeof(int*)*Nsite);
     for(i=0;i<Nsite;i++) {

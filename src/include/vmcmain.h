@@ -86,6 +86,7 @@ extern int omp_get_thread_num(void);
 #include "../locgrn.c"
 #include "../locgrn_real.c"
 #include "../calham.c"
+#include "../calham_real.c"
 #include "../calgrn.c"
 //#include "../lslocgrn.c"
 #include "../lslocgrn_real.c"

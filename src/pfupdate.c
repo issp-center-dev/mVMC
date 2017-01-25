@@ -295,7 +295,7 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int
   int iwork2[n2];
   //double complex work[n2*n2]; /* [n2][n2] */
   double complex *work; /* [n2][n2] */
-  double complex rwork[n2*n2]; /* [n2][n2] */
+  double rwork[n2*n2]; /* [n2][n2] */
   int lwork = n2*n2;
   nn=lda=n2;
 
@@ -372,7 +372,7 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int
   }
 
   /* calculate Pf M */
-  //TODO: CHECK
+  //TODO: CHECK rwork is real
   M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
   //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
 

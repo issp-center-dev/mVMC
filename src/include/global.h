@@ -169,7 +169,7 @@ double complex *Proj;   /* correlation factor (Proj    =Para) */
 double complex *ProjBF; /* Back flow correlation factor (Proj    =Para) */
 double complex *Slater; /* pair orbital       (Slater  =Para+NProj) */
 double complex *OptTrans; /* weights          (OptTrans=Para+NProj+NSlater) */
-double **eta;   /* Back Flow correlation factor (eta = 1.0 or ProjBF[0])*/
+double complex **eta;   /* Back Flow correlation factor (eta = 1.0 or ProjBF[0])*/
 
 /***** Back Flow ******/
 int NBackFlowIdx, **BackFlowIdx; /* [Nsite] */
@@ -239,6 +239,8 @@ double complex *SROptData; /* [2+NPara] storage for energy and variational param
 double complex Wc; /* Weight for correlation sampling = <psi|x> */
 double complex Etot; /* <H> */
 double complex Etot2; /* <H^2> */
+double complex Dbtot;
+double complex Dbtot2;
 
 double complex *PhysCisAjs; /* [NCisAjs] */
 double complex *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */
