@@ -344,5 +344,54 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
     return e;
 }
 
+/* Calculate the CoulombIntra, CoulombInter, Hund terms, */
+/* which can be calculated by number operators. */
+///
+/// \param eleNum [in]
+/// \return myEnergy
+/// \version 1.0
+double CalculateHamiltonian0_real(const int *eleNum)
+{
+    const int *n0 = eleNum;
+    const int *n1 = eleNum + Nsite;
+    double e=0.0;
+    int idx;
+    int ri,rj;
+    double myEnergy;
+
+#pragma omp parallel default(shared)\
+  private(myEnergy) reduction(+:e)
+    {
+        myEnergy = 0.0;
+
+        /* CoulombIntra */
+#pragma omp for private(idx,ri)
+        for(idx=0;idx<NCoulombIntra;idx++) {
+            ri = CoulombIntra[idx];
+            myEnergy += ParaCoulombIntra[idx] * n0[ri] * n1[ri];
+        }
+
+        /* CoulombInter */
+#pragma omp for private(idx,ri,rj)
+        for(idx=0;idx<NCoulombInter;idx++) {
+            ri = CoulombInter[idx][0];
+            rj = CoulombInter[idx][1];
+            myEnergy += ParaCoulombInter[idx] * (n0[ri]+n1[ri]) * (n0[rj]+n1[rj]);
+        }
+
+        /* HundCoupling */
+#pragma omp for private(idx,ri,rj)
+        for(idx=0;idx<NHundCoupling;idx++) {
+            ri = HundCoupling[idx][0];
+            rj = HundCoupling[idx][1];
+            myEnergy -= ParaHundCoupling[idx] * (n0[ri]*n0[rj] + n1[ri]*n1[rj]);
+            /* Caution: negative sign */
+        }
+
+        e += myEnergy;
+    }
+
+    return e;
+}
 
 #endif
