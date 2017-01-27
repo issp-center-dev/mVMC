@@ -1,10 +1,6 @@
 /*
-mVMC - A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
-Copyright (C) 2016 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
-
-his program is developed based on the mVMC-mini program
-(https://github.com/fiber-miniapp/mVMC-mini)
-which follows "The BSD 3-Clause License".
+HPhi-mVMC-StdFace - Common input generator
+Copyright (C) 2015 The University of Tokyo
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,11 +9,11 @@ the Free Software Foundation, either version 3 of the License, or
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
@@ -61,7 +57,6 @@ void StdFace_Honeycomb(struct StdIntList *StdI, char *model)
   StdFace_PrintVal_d("Lx", &StdI->Lx, StdI->a1 * 0.5);
   StdFace_PrintVal_d("Ly", &StdI->Ly, StdI->a1 * 0.5 * sqrt(3.0));
   
-  StdI->a0 = 1.0; StdI->a1 = 1.0;
   StdFace_InitSite2D(StdI, fp);
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0;
   StdI->tau[1][0] = 1.0 / 3.0; StdI->tau[1][1] = 1.0 / 3.0;
@@ -182,7 +177,7 @@ void StdFace_Honeycomb(struct StdIntList *StdI, char *model)
   for (kintr = 0; kintr < StdI->nintr; kintr++) {
     StdI->intrindx[kintr] = (int *)malloc(sizeof(int) * 8);
   }
-  StdFace_InterAllSeparate(StdI);/*debug*/
+  StdFace_MallocInteractions(StdI);
   /*
   Set Transfer & Interaction
   */
@@ -207,8 +202,6 @@ void StdFace_Honeycomb(struct StdIntList *StdI, char *model)
     else {
       StdFace_Hopping(StdI, StdI->mu, isite, isite, 0);
       StdFace_Hopping(StdI, StdI->mu, isite + 1, isite + 1, 0);
-      StdFace_intr(StdI, StdI->U, isite, 0, isite, 0, isite, 1, isite, 1);
-      StdFace_intr(StdI, StdI->U, isite + 1, 0, isite + 1, 0, isite + 1, 1, isite + 1, 1);
       StdI->Cintra[StdI->NCintra] = StdI->U; StdI->CintraIndx[StdI->NCintra][0] = isite; StdI->NCintra += 1;
       StdI->Cintra[StdI->NCintra] = StdI->U; StdI->CintraIndx[StdI->NCintra][0] = isite + 1; StdI->NCintra += 1;
       /**/
@@ -331,4 +324,4 @@ void StdFace_Honeycomb(struct StdIntList *StdI, char *model)
   fprintf(fp, "plot \'-\' w d lc 7\n0.0 0.0\nend\npause -1\n");
   fclose(fp);
   StdFace_PrintGeometry(StdI);
-}
+}/*void StdFace_Honeycomb*/

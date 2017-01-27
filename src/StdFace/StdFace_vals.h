@@ -1,26 +1,5 @@
 /*
-mVMC - A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
-Copyright (C) 2016 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
-
-his program is developed based on the mVMC-mini program
-(https://github.com/fiber-miniapp/mVMC-mini)
-which follows "The BSD 3-Clause License".
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
-
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
-*/
-/*
-HPhi  -  Quantum Lattice Model Simulator
+HPhi-mVMC-StdFace - Common input generator
 Copyright (C) 2015 The University of Tokyo
 
 This program is free software: you can redistribute it and/or modify
@@ -42,13 +21,12 @@ struct StdIntList {
   /*
   Parameters for LATTICE
   */
+  char lattice[256];
   double a; /**< The lattice constant */
   double a0;
   double a1;
   int L;
   int W;
-  int Lsub;
-  int Wsub;
   double Lx;
   double Ly;
   double Wx;
@@ -57,14 +35,18 @@ struct StdIntList {
   int a0W;
   int a1L;
   int a1W;
-  int a0Lsub;
-  int a0Wsub;
-  int a1Lsub;
-  int a1Wsub;
-  int S2;
+  int bW0;
+  int bW1;
+  int bL0;
+  int bL1;
+  int NCell;
+  int **Cell;
+  int NsiteUC;
+  double **tau;
   /*
   Parameters for MODEL
   */
+  char model[256];
   double mu;
   double complex t;
   double complex tp;
@@ -101,60 +83,8 @@ struct StdIntList {
   double Gamma;
   double K;
   /*
-   Parameters for wavefunction
+   Phase for the boundary
   */
-  int JastrowCut;
-  int JastrowAniso;
-  /*
-   Calculation conditions
-  */
-  int nelec;
-  int NVMCCalMode;
-  int NLanczosMode;
-  int NDataIdxStart;
-  int NDataQtySmp;
-  int NSPGaussLeg;
-  int NSPStot;
-  int NMPTrans;
-  int NSROptItrStep;
-  int NSROptItrSmp;
-  int NSROptFixSmp;
-  double DSROptRedCut;
-  double DSROptStaDel;
-  double DSROptStepDt;
-  int NVMCWarmUp;
-  int NVMCInterval;
-  int NVMCSample;
-  int NExUpdatePath;
-  int RndSeed;
-  int ioutputmode;
-  int NSplitSize;
-  int NStore;
-  int ComplexType;
-  /*
-   Input strings
-  */
-  char model[256];
-  char lattice[256];
-  char outputmode[256];
-  char CDataFileHead[256];
-  char CParaFileHead[256];
-  /*
-   Parameter for lattice
-  */
-  int bW0;
-  int bW1;
-  int bL0;
-  int bL1;
-  int bW0sub;
-  int bW1sub;
-  int bL0sub;
-  int bL1sub;
-  int NCell;
-  int NCellsub;
-  int **Cell;
-  int NsiteUC;
-  double **tau;
   double pi180;
   double phase0;
   double phase1;
@@ -168,30 +98,85 @@ struct StdIntList {
   int nsite;
   int *locspinflag;
   int ntrans;
+  int Ltrans;
   int **transindx;
   double complex *trans;
   int nintr;
+  int Lintr;
   int **intrindx;
   double complex *intr;
-
+  int NCintra;
+  int LCintra;
+  int **CintraIndx;
+  double *Cintra;
+  int NCinter;
+  int LCinter;
+  int **CinterIndx;
+  double *Cinter;
+  int NHund;
+  int LHund;
+  int **HundIndx;
+  double *Hund;
+  int NEx;
+  int LEx;
+  int **ExIndx;
+  double *Ex;
+  int NPairLift;
+  int LPairLift;
+  int **PLIndx;
+  double *PairLift;
+  int lBoost;
+  /*
+   Calculation conditions
+  */
   int lGC;
+  int nelec;
+  int S2;
+  char outputmode[256];
+  char CDataFileHead[256];
+  int Sz2;
+  int ioutputmode;
+  /*mVMC modpara*/
+  char CParaFileHead[256];
+  int NVMCCalMode;
+  int NLanczosMode;
+  int NDataIdxStart;
+  int NDataQtySmp;
+  int NSPGaussLeg;
+  int NMPTrans;
+  int NSROptItrStep;
+  int NSROptItrSmp;
+  int NSROptFixSmp;
+  double DSROptRedCut;
+  double DSROptStaDel;
+  double DSROptStepDt;
+  int NVMCWarmUp;
+  int NVMCInterval;
+  int NVMCSample;
+  int NExUpdatePath;
+  int RndSeed;
+  int NSplitSize;
+  int NStore;
+  int ComplexType;
+  /*
+   Sub-lattice
+  */
+  int Lsub;
+  int Wsub;
+  int a0Lsub;
+  int a0Wsub;
+  int a1Lsub;
+  int a1Wsub;
+  int bW0sub;
+  int bW1sub;
+  int bL0sub;
+  int bL1sub;
+  int NCellsub;
+  /*
+   2-body part of the trial wavefunction
+  */
   int **Orb;
   int **AntiOrb;
   int NOrb;
   int NSym;
-  /*
-   Interactions
-  */
-  int NCintra;
-  int **CintraIndx;
-  double *Cintra;
-  int NCinter;
-  int **CinterIndx;
-  double *Cinter;
-  int NHund;
-  int **HundIndx;
-  double *Hund;
-  int NEx;
-  int **ExIndx;
-  double *Ex;
 };

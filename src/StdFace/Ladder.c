@@ -1,10 +1,6 @@
 /*
-mVMC - A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
-Copyright (C) 2016 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
-
-his program is developed based on the mVMC-mini program
-(https://github.com/fiber-miniapp/mVMC-mini)
-which follows "The BSD 3-Clause License".
+HPhi-mVMC-StdFace - Common input generator
+Copyright (C) 2015 The University of Tokyo
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,11 +9,11 @@ the Free Software Foundation, either version 3 of the License, or
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
@@ -41,13 +37,24 @@ void StdFace_Ladder(struct StdIntList *StdI, char *model)
   int ktrans, kintr;
   double complex phase;
 
-  StdI->NsiteUC = 1;
   fprintf(stdout, "\n");
   fprintf(stdout, "#######  Parameter Summary  #######\n");
   fprintf(stdout, "\n");
+  /*
+   Initialize Cell
+  */
+  fp = fopen("lattice.gp", "w");
   /**/
-  StdI->NsiteUC = 1;
   fprintf(stdout, "  @ Lattice Size & Shape\n\n");
+  
+  StdFace_PrintVal_d("a", &StdI->a, 1.0);
+  StdFace_PrintVal_d("a0", &StdI->a0, StdI->a);
+  StdFace_PrintVal_d("a1", &StdI->a1, StdI->a);
+  StdFace_PrintVal_d("Wx", &StdI->Wx, StdI->a0);
+  StdFace_PrintVal_d("Wy", &StdI->Wy, 0.0);
+  StdFace_PrintVal_d("Lx", &StdI->Lx, 0.0);
+  StdFace_PrintVal_d("Ly", &StdI->Ly, StdI->a1);
+  
   StdFace_RequiredVal_i("L", StdI->L);
   StdFace_RequiredVal_i("W", StdI->W);
   StdFace_NotUsed_i("a0W", StdI->a0W);
@@ -55,14 +62,17 @@ void StdFace_Ladder(struct StdIntList *StdI, char *model)
   StdFace_NotUsed_i("a1W", StdI->a1W);
   StdFace_NotUsed_i("a1L", StdI->a1L);
   /**/
-  StdI->a0 = 1.0; StdI->a1 = 1.0;
-  fp = fopen("/dev/null", "w");
+  StdI->NsiteUC = StdI->W;
+  StdI->W = 1;
+  StdI->Wx = (double)StdI->NsiteUC;
   StdFace_InitSite2D(StdI, fp);
-  fclose(fp);
-  StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0;
+  for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++){
+    StdI->tau[isiteUC][0] = (double)isiteUC;
+    StdI->tau[isiteUC][1] = 0.0;
+  }
   /**/
   StdFace_PrintVal_d("phase0", &StdI->phase0, 0.0);
-  StdFace_NotUsed_c("phase1", StdI->phase1);
+  StdFace_NotUsed_d("phase1", StdI->phase1);
   StdI->phase1 = StdI->phase0;
   StdI->phase0 = 0.0;
   StdI->ExpPhase0 = cos(StdI->pi180 * StdI->phase0) + I*sin(StdI->pi180 * StdI->phase0);
@@ -185,7 +195,7 @@ void StdFace_Ladder(struct StdIntList *StdI, char *model)
   for (kintr = 0; kintr < StdI->nintr; kintr++) {
     StdI->intrindx[kintr] = (int *)malloc(sizeof(int) * 8);
   }
-  StdFace_InterAllSeparate(StdI);/*debug*/
+  StdFace_MallocInteractions(StdI);
   /*
    Set Transfer & Interaction
   */
@@ -205,7 +215,6 @@ void StdFace_Ladder(struct StdIntList *StdI, char *model)
       }/*if (strcmp(StdI->model, "spin") == 0 )*/
       else {
         StdFace_Hopping(StdI, StdI->mu, isite, isite, 0);
-        StdFace_intr(StdI, StdI->U, isite, 0, isite, 0, isite, 1, isite, 1);
         StdI->Cintra[StdI->NCintra] = StdI->U; StdI->CintraIndx[StdI->NCintra][0] = isite; StdI->NCintra += 1;
         /**/
         if (strcmp(StdI->model, "kondo") == 0 ) {
@@ -292,4 +301,8 @@ void StdFace_Ladder(struct StdIntList *StdI, char *model)
 
     }/*for (iW = 0; iW < StdI->W; iW++)*/
   }/*for (iL = 0; iL < StdI->L; iL++)*/
-}
+
+  fprintf(fp, "plot \'-\' w d lc 7\n0.0 0.0\nend\npause -1\n");
+  fclose(fp);
+  StdFace_PrintGeometry(StdI);
+}/*void StdFace_Ladder*/
