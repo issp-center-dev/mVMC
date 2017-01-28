@@ -62,5 +62,12 @@ void StdFace_Triangular(struct StdIntList *StdI, char *model);
 void StdFace_Honeycomb(struct StdIntList *StdI, char *model);
 void StdFace_Kagome(struct StdIntList *StdI, char *model);
 
+#if defined(_HPhi)
+void StdFace_Chain_Boost(struct StdIntList *StdI);
+void StdFace_Ladder_Boost(struct StdIntList *StdI);
+void StdFace_Honeycomb_Boost(struct StdIntList *StdI);
+void StdFace_Kagome_Boost(struct StdIntList *StdI);
+#elif defined(_mVMC)
 void StdFace_generate_orb(struct StdIntList *StdI);
 void StdFace_Proj(struct StdIntList *StdI);
+#endif

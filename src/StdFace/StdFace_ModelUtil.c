@@ -988,6 +988,7 @@ void StdFace_MallocInteractions(struct StdIntList *StdI) {
   StdI->NPairLift = 0;
 }/*void StdFace_MallocInteractions*/
 
+#if defined(_mVMC)
 /**
 *
 * Print Quantum number projection
@@ -1343,4 +1344,4 @@ void StdFace_generate_orb(struct StdIntList *StdI) {
   for (iCell = 0; iCell < StdI->NCell; iCell++) free(CellDone[iCell]);
   free(CellDone);
 }
-
+#endif

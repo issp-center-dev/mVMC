@@ -11,7 +11,7 @@ libStdFace.a:$(StdFace_OBJS) $(Lattice_OBJS)
 SUFFIXES: .o .c
 
 .c.o:
-	$(CC) $(CFLAGS) $(OPTION) -c $<
+	$(CC) $(CFLAGS) $(OPTION) -D _mVMC -c $<
 
 clean:
 	rm -f *.o *.a

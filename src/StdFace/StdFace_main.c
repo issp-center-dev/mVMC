@@ -24,6 +24,309 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "StdFace_ModelUtil.h"
 #include <complex.h>
 
+#if defined(_HPhi)
+/**
+ * Set Largevalue for TPQ
+ */
+void StdFace_LargeValue(struct StdIntList *StdI) {
+  int ktrans, kintr;
+  double LargeValue0;
+
+  LargeValue0 = 0.0;
+  for (ktrans = 0; ktrans < StdI->ntrans; ktrans++) {
+    LargeValue0 += cabs(StdI->trans[ktrans]);
+  }
+  for (kintr = 0; kintr < StdI->nintr; kintr++) {
+    LargeValue0 += cabs(StdI->intr[kintr]);
+  }
+  LargeValue0 /= (double)StdI->nsite;
+  StdFace_PrintVal_d("LargeValue", &StdI->LargeValue, LargeValue0);
+}/*void StdFace_LargeValue*/
+/**
+ *
+ * Print calcmod.def
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
+static void PrintCalcMod(struct StdIntList *StdI)
+{
+  FILE *fp;
+  int iCalcType, iCalcModel, iRestart, iCalcSpec, 
+    iCalcEigenvec, iInitialVecTpye, InputEigenVec, OutputEigenVec;
+
+  fprintf(stdout, "\n  @ CalcMod\n\n");
+  /*
+   Method
+  */
+  iCalcEigenvec = 0;
+  if (strcmp(StdI->method, "****") == 0){
+    fprintf(stdout, "ERROR ! Method is NOT specified !\n");
+    exit(-1);
+  }
+  else if (strcmp(StdI->method, "lanczos") == 0) iCalcType = 0;
+  else if (strcmp(StdI->method, "lanczosenergy") == 0) { 
+    iCalcType = 0; 
+    iCalcEigenvec = 1;
+  }
+  else if (strcmp(StdI->method, "tpq") == 0) iCalcType = 1;
+  else if (strcmp(StdI->method, "fulldiag") == 0 ||
+    strcmp(StdI->method, "alldiag") == 0 ||
+    strcmp(StdI->method, "direct") == 0 ) iCalcType = 2;
+  else if (strcmp(StdI->method, "cg") == 0) iCalcType = 3;
+  else{
+    fprintf(stdout, "\n ERROR ! Unsupported Solver : %s\n", StdI->method);
+    exit(-1);
+  }
+  /*
+   Model
+  */
+  if (strcmp(StdI->model, "hubbard") == 0) {
+    if (StdI->lGC == 0)iCalcModel = 0;
+    else iCalcModel = 3;
+  }
+  else if (strcmp(StdI->model, "spin") == 0) {
+    if (StdI->lGC == 0)iCalcModel = 1;
+    else iCalcModel = 4;
+  }
+  if (strcmp(StdI->model, "kondo") == 0) {
+    if (StdI->lGC == 0)iCalcModel = 2;
+    else iCalcModel = 5;
+  }
+  /*
+    Restart
+  */
+  if (strcmp(StdI->Restart, "****") == 0) {
+    strcpy(StdI->Restart, "none\0");
+    fprintf(stdout, "          Restart = none        ######  DEFAULT VALUE IS USED  ######\n");
+    iRestart = 0;
+  }
+  else {
+    fprintf(stdout, "          Restart = %s\n", StdI->Restart);
+    if (strcmp(StdI->Restart, "none") == 0) iRestart = 0;
+    else if (strcmp(StdI->Restart, "save") == 0) iRestart = 1;
+    else if (strcmp(StdI->Restart, "restartsave") == 0) iRestart = 2;
+    else if (strcmp(StdI->Restart, "restart") == 0) iRestart = 3;
+    else {
+      fprintf(stdout, "\n ERROR ! Restart Mode : %s\n", StdI->Restart);
+      exit(-1);
+    }
+  }
+  /*
+  InitialVecType
+  */
+  if (strcmp(StdI->InitialVecType, "****") == 0) {
+    strcpy(StdI->InitialVecType, "c\0");
+    fprintf(stdout, "   InitialVecType = c           ######  DEFAULT VALUE IS USED  ######\n");
+    iInitialVecTpye = 0;
+  }
+  else {
+    fprintf(stdout, "   InitialVecType = %s\n", StdI->InitialVecType);
+    if (strcmp(StdI->InitialVecType, "c") == 0) iInitialVecTpye = 0;
+    else if (strcmp(StdI->InitialVecType, "r") == 0) iInitialVecTpye = 1;
+    else {
+      fprintf(stdout, "\n ERROR ! Restart Mode : %s\n", StdI->Restart);
+      exit(-1);
+    }
+  }
+  /*
+  EigenVecIO
+  */
+  InputEigenVec = 0;
+  OutputEigenVec = 0;
+  if (strcmp(StdI->EigenVecIO, "****") == 0) {
+    strcpy(StdI->EigenVecIO, "none\0");
+    fprintf(stdout, "       EigenVecIO = none        ######  DEFAULT VALUE IS USED  ######\n");
+  }
+  else {
+    fprintf(stdout, "       EigenVecIO = %s\n", StdI->EigenVecIO);
+    if (strcmp(StdI->EigenVecIO, "none") == 0) InputEigenVec = 0;
+    else if (strcmp(StdI->EigenVecIO, "in") == 0) InputEigenVec = 1;
+    else if (strcmp(StdI->EigenVecIO, "out") == 0) OutputEigenVec = 1;
+    else if (strcmp(StdI->EigenVecIO, "inout") == 0) {
+      InputEigenVec = 1;
+      OutputEigenVec = 1;
+    }
+    else {
+      fprintf(stdout, "\n ERROR ! EigenVecIO Mode : %s\n", StdI->Restart);
+      exit(-1);
+    }
+  }
+  /*
+  CalcSpec
+  */
+  if (strcmp(StdI->CalcSpec, "****") == 0) {
+    strcpy(StdI->CalcSpec, "none\0");
+    fprintf(stdout, "         CalcSpec = none        ######  DEFAULT VALUE IS USED  ######\n");
+    iCalcSpec = 0;
+  }
+  else {
+    fprintf(stdout, "         CalcSpec = %s\n", StdI->CalcSpec);
+    if (strcmp(StdI->CalcSpec, "none") == 0) iCalcSpec = 0;
+    else if (strcmp(StdI->CalcSpec, "normal") == 0) iCalcSpec = 1;
+    else if (strcmp(StdI->CalcSpec, "noiteration") == 0) iCalcSpec = 2;
+    else if (strcmp(StdI->CalcSpec, "save") == 0) iCalcSpec = 3;
+    else if (strcmp(StdI->CalcSpec, "restart") == 0) iCalcSpec = 4;
+    else if (strcmp(StdI->CalcSpec, "restartsave") == 0) iCalcSpec = 5;
+    else {
+      fprintf(stdout, "\n ERROR ! CalcSpec : %s\n", StdI->CalcSpec);
+      exit(-1);
+    }
+  }
+
+  fp = fopen("calcmod.def", "w");
+  fprintf(fp, "#CalcType = 0:Lanczos, 1:TPQCalc, 2:FullDiag, 4:CG\n");
+  fprintf(fp, "#CalcModel = 0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 4:SpinGC, 5:KondoGC\n");
+  fprintf(fp, "#Restart = 0:None, 1:Save, 2:Restart&Save, 3:Restart\n");
+  fprintf(fp, "#CalcSpec = 0:None, 1:Normal, 2:No H*Phi, 3:Save, 4:Restart, 5:Restart&Save\n");
+  fprintf(fp, "CalcType %3d\n", iCalcType);
+  fprintf(fp, "CalcModel %3d\n", iCalcModel);
+  fprintf(fp, "ReStart %3d\n", iRestart);
+  fprintf(fp, "CalcSpec %3d\n", iCalcSpec);
+  fprintf(fp, "CalcEigenVec %3d\n", iCalcEigenvec);
+  fprintf(fp, "InitialVecType %3d\n", iInitialVecTpye);
+  fprintf(fp, "InputEigenVec %3d\n", InputEigenVec);
+  fprintf(fp, "OutputEigenVec %3d\n", OutputEigenVec);
+  fclose(fp);
+  fprintf(stdout, "     calcmod.def is written.\n\n");
+}/*static void PrintCalcMod*/
+/**
+ *
+ * Print single.def or pair.def
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
+static void PrintExcitation(struct StdIntList *StdI) {
+  FILE *fp;
+  int NumOp, spin[2][2], isite, ispin, icell, itau;
+  double coef[2], pi, phase;
+  double *fourier_r, *fourier_i;
+
+  fourier_r = (double *)malloc(sizeof(double) * StdI->nsite);
+  fourier_i = (double *)malloc(sizeof(double) * StdI->nsite);
+  pi = acos(-1.0);
+
+  fprintf(stdout, "\n  @ Spectrum\n\n");
+
+  StdFace_PrintVal_d("SpectrumQW", &StdI->SpectrumQW, 0.0);
+  StdFace_PrintVal_d("SpectrumQL", &StdI->SpectrumQL, 0.0);
+
+  if (strcmp(StdI->SpectrumType, "****") == 0) {
+    strcpy(StdI->SpectrumType, "szsz\0");
+    fprintf(stdout, "     SpectrumType = szsz        ######  DEFAULT VALUE IS USED  ######\n");
+    NumOp = 2;
+    coef[0] = 0.5;
+    coef[1] = -0.5;
+    spin[0][0] = 0;
+    spin[0][1] = 0;
+    spin[1][0] = 1;
+    spin[1][1] = 1;
+    StdI->SpectrumBody = 2;
+  }
+  else {
+    fprintf(stdout, "     SpectrumType = %s\n", StdI->SpectrumType);
+    if (strcmp(StdI->SpectrumType, "szsz") == 0) {
+      NumOp = 2;
+      coef[0] = 0.5;
+      coef[1] = -0.5;
+      spin[0][0] = 0;
+      spin[0][1] = 0;
+      spin[1][0] = 1;
+      spin[1][1] = 1;
+      StdI->SpectrumBody = 2;
+    }
+    else if (strcmp(StdI->SpectrumType, "s+s-") == 0) {
+      NumOp = 1;
+      coef[0] = 1.0;
+      spin[0][0] = 0;
+      spin[0][1] = 1;
+      StdI->SpectrumBody = 2;
+    }
+    else if (strcmp(StdI->SpectrumType, "density") == 0) {
+      NumOp = 2;
+      coef[0] = 1,0;
+      coef[1] = 1.0;
+      spin[0][0] = 0;
+      spin[0][1] = 0;
+      spin[1][0] = 1;
+      spin[1][1] = 1;
+      StdI->SpectrumBody = 2;
+    }
+    else if (strcmp(StdI->SpectrumType, "up") == 0) {
+      NumOp = 1;
+      coef[0] = 1.0;
+      spin[0][0] = 0;
+      StdI->SpectrumBody = 1;
+    }
+    else if (strcmp(StdI->SpectrumType, "down") == 0) {
+      NumOp = 1;
+      coef[0] = 1.0;
+      spin[0][0] = 1;
+      StdI->SpectrumBody = 1;
+    }
+    else {
+      fprintf(stdout, "\n ERROR ! SpectrumType : %s\n", StdI->SpectrumType);
+      exit(-1);
+    }
+  }
+
+  if ((strcmp(StdI->model, "spin") == 0 && StdI->S2 > 1)
+    || strcmp(StdI->model, "kondo") == 0) {
+    printf("####################################\n");
+    printf("###########  CAUTION  ##############\n");
+    printf("####################################\n");
+    printf("\n");
+    printf(" For Kondo or S>1 system, excitation parameter file is NOT generated automatically.\n");
+    printf(" Please write it by hand.\n");
+  }/*if (StdI->S2 > 1 || strcmp(StdI->model, "kondo") == 0)*/
+
+  isite = 0;
+  for (icell = 0; icell < StdI->NCell; icell++) {
+    for (itau = 0; itau < StdI->NsiteUC; itau++) {
+      phase = (StdI->Cell[icell][0] + StdI->tau[itau][0])*StdI->SpectrumQW
+            + (StdI->Cell[icell][1] + StdI->tau[itau][1])*StdI->SpectrumQL;
+      fourier_r[isite] = cos(2.0*pi*phase);
+      fourier_i[isite] = sin(2.0*pi*phase);
+      isite += 1;
+    }
+  }
+
+  if (StdI->SpectrumBody == 1) {
+    fp = fopen("single.def", "w");
+    fprintf(fp, "=============================================\n");
+    fprintf(fp, "NSingle %d\n", StdI->nsite * NumOp);
+    fprintf(fp, "=============================================\n");
+    fprintf(fp, "============== Single Excitation ============\n");
+    fprintf(fp, "=============================================\n");
+    for (isite = 0; isite < StdI->nsite; isite++) {
+      fprintf(fp, "%d %d 0 %25.15f %25.15f\n", isite, spin[0][0],
+        fourier_r[isite]*coef[0], fourier_i[isite] * coef[0]);
+    }
+    fprintf(stdout, "      single.def is written.\n\n");
+  }
+  else {
+    fp = fopen("pair.def", "w");
+    fprintf(fp, "=============================================\n");
+    fprintf(fp, "NPair %d\n", StdI->nsite * NumOp);
+    fprintf(fp, "=============================================\n");
+    fprintf(fp, "=============== Pair Excitation =============\n");
+    fprintf(fp, "=============================================\n");
+    for (isite = 0; isite < StdI->nsite; isite++) {
+      for (ispin = 0; ispin < NumOp; ispin++) {
+        fprintf(fp, "%d %d %d %d 0 %25.15f %25.15f\n", 
+          isite, spin[ispin][0], isite, spin[ispin][1],
+          fourier_r[isite] * coef[ispin], fourier_i[isite] * coef[ispin]);
+      }
+    }
+    fprintf(stdout, "        pair.def is written.\n\n");
+  }
+  fclose(fp);
+
+  free(fourier_r);
+  free(fourier_i);
+
+}/*static void PrintExcitation()*/
+
+#elif defined(_mVMC)
 /**
  * Output Jastrow 
  *
@@ -203,6 +506,8 @@ static void PrintGutzwiller(struct StdIntList *StdI)
   fprintf(stdout, "    gutzwilleridx.def is written.\n");
 
 }/*static void PrintGutzwiller*/
+#endif
+
 /**
 *
 * Clear grobal variables in the standard mode
@@ -275,6 +580,30 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   strcpy(StdI->lattice, "****\0");
   strcpy(StdI->outputmode, "****\0");
   strcpy(StdI->CDataFileHead, "****\0");
+#if defined(_HPhi)
+  StdI->LargeValue = 9999.9;
+  StdI->OmegaMax = 9999.9;
+  StdI->OmegaMin = 9999.9;
+  StdI->OmegaIm = 9999.9;
+  StdI->Nomega = 9999;
+  StdI->SpectrumQW = 9999.9;
+  StdI->SpectrumQL = 9999.9;
+  strcpy(StdI->method, "****\0");
+  strcpy(StdI->Restart, "****\0");
+  strcpy(StdI->EigenVecIO, "****\0");
+  strcpy(StdI->InitialVecType, "****\0");
+  strcpy(StdI->CalcSpec, "****\0");
+  strcpy(StdI->SpectrumType, "****\0");
+  StdI->FlgTemp = 1;
+  StdI->Lanczos_max = 9999;
+  StdI->initial_iv = 9999;
+  StdI->nvec = 9999;
+  StdI->exct = 9999;
+  StdI->LanczosEps = 9999;
+  StdI->LanczosTarget = 9999;
+  StdI->NumAve = 9999;
+  StdI->ExpecInterval = 9999;
+#elif defined(_mVMC)
   strcpy(StdI->CParaFileHead, "****\0");
   StdI->NVMCCalMode = 9999;
   StdI->NLanczosMode = 9999;
@@ -301,6 +630,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->a1Wsub = 9999;
   StdI->Lsub = 9999;
   StdI->Wsub = 9999;
+#endif
 }/*static void StdFace_ResetVals*/
 /**
  *
@@ -548,11 +878,20 @@ static void PrintNamelist(struct StdIntList *StdI){
   if (StdI->Lintr == 1)fprintf(    fp, "    InterAll  interall.def\n");
   fprintf(                         fp, "    OneBodyG  greenone.def\n");
   fprintf(                         fp, "    TwoBodyG  greentwo.def\n");
+#if defined(_HPhi)
+  fprintf(                         fp, "     CalcMod  calcmod.def\n");
+  if(StdI->SpectrumBody == 1) fprintf(fp, "SingleExcitation single.def\n");
+  else fprintf(fp, "PairExcitation  pair.def\n");
+  fprintf(                         fp, " SpectrumVec  %s_eigenvec_0\n",
+                                   StdI->CDataFileHead);
+  if (StdI->lBoost == 1) fprintf(  fp, "       Boost  boost.def\n");
+#elif defined(_mVMC)
   fprintf(                         fp, "  Gutzwiller  gutzwilleridx.def\n");
   fprintf(                         fp, "     Jastrow  jastrowidx.def\n");
   fprintf(                         fp, "     Orbital  orbitalidx.def\n");
   fprintf(                         fp, "    TransSym  qptransidx.def\n");
-
+#endif
+  
   fclose(fp);
   fprintf(stdout, "    namelist.def is written.\n");
 }/*static void PrintNamelist*/
@@ -570,6 +909,29 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "--------------------\n");
   fprintf(fp, "Model_Parameters   0\n");
   fprintf(fp, "--------------------\n");
+#if defined(_HPhi)
+  fprintf(fp, "HPhi_Cal_Parameters\n");
+  fprintf(fp, "--------------------\n");
+  fprintf(fp, "CDataFileHead  %s\n", StdI->CDataFileHead);
+  fprintf(fp, "CParaFileHead  zqp\n");
+  fprintf(fp, "--------------------\n");
+  fprintf(fp, "Nsite          %-5d\n", StdI->nsite);
+  if (StdI->Sz2 != 9999) fprintf(fp, "2Sz            %-5d\n", StdI->Sz2);
+  if (StdI->nelec != 9999) fprintf(fp, "Ncond          %-5d\n", StdI->nelec);
+  fprintf(fp, "Lanczos_max    %-5d\n", StdI->Lanczos_max);
+  fprintf(fp, "initial_iv     %-5d\n", StdI->initial_iv);
+  if(StdI->nvec != 9999) fprintf(fp, "nvec           %-5d\n", StdI->nvec);
+  fprintf(fp, "exct           %-5d\n", StdI->exct);
+  fprintf(fp, "LanczosEps     %-5d\n", StdI->LanczosEps);
+  fprintf(fp, "LanczosTarget  %-5d\n", StdI->LanczosTarget);
+  fprintf(fp, "LargeValue     %-25.15e\n", StdI->LargeValue);
+  fprintf(fp, "NumAve         %-5d\n", StdI->NumAve);
+  fprintf(fp, "ExpecInterval  %-5d\n", StdI->ExpecInterval);
+  fprintf(fp, "NOmega         %-5d\n", StdI->Nomega);
+  fprintf(fp, "OmegaMax       %-25.15e\n", StdI->OmegaMax);
+  fprintf(fp, "OmegaMin       %-25.15e\n", StdI->OmegaMin);
+  fprintf(fp, "OmegaIm        %-25.15e\n", StdI->OmegaIm);
+#elif defined(_mVMC)
   fprintf(fp, "VMC_Cal_Parameters\n");
   fprintf(fp, "--------------------\n");
   fprintf(fp, "CDataFileHead  %s\n", StdI->CDataFileHead);
@@ -598,6 +960,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "RndSeed        %d\n", StdI->RndSeed);
   fprintf(fp, "NSplitSize     %d\n", StdI->NSplitSize);
   fprintf(fp, "NStore         %d\n", StdI->NStore);
+#endif
 
   fclose(fp);
   fprintf(stdout, "     modpara.def is written.\n");
@@ -747,7 +1110,9 @@ static void Print2Green(struct StdIntList *StdI) {
                       if (StdI->ioutputmode == 2 ||
                         (site1 == site2 && site3 == site4 &&
                           spin1 - spin2 + spin3 - spin4 == 0)) {
-                        if (spin1 != spin2 || spin3 != spin4) continue;/*Should be fixed*/
+#if defined(_mVMC)
+                        if (spin1 != spin2 || spin3 != spin4) continue;
+#endif
                         if (store == 1) {
                           greenindx[ngreen][0] = site1;
                           greenindx[ngreen][1] = spin1;
@@ -860,21 +1225,38 @@ static void CheckOutputMode(struct StdIntList *StdI)
  */
 static void CheckModPara(struct StdIntList *StdI)
 {
+#if defined(_mVMC)
   int NSym2;
+#endif
 
   if (strcmp(StdI->CDataFileHead, "****") == 0) {
     strcpy(StdI->CDataFileHead, "zvo\0");
     fprintf(stdout, "         CDataFileHead = %-12s######  DEFAULT VALUE IS USED  ######\n", StdI->CDataFileHead);
   }
   else fprintf(stdout, "         CDataFileHead = %-s\n", StdI->CDataFileHead);
- 
+
+  /**/
+#if defined(_HPhi)
+  StdFace_PrintVal_i("Lanczos_max", &StdI->Lanczos_max, 2000);
+  StdFace_PrintVal_i("initial_iv", &StdI->initial_iv, -1);
+  /*StdFace_PrintVal_i("nvec", &StdI->nvec, 1);*/
+  StdFace_PrintVal_i("exct", &StdI->exct, 1);
+  StdFace_PrintVal_i("LanczosEps", &StdI->LanczosEps, 14);
+  StdFace_PrintVal_i("LanczosTarget", &StdI->LanczosTarget, 2);
+  if(StdI->LanczosTarget < StdI->exct) StdI->LanczosTarget = StdI->exct;
+  StdFace_PrintVal_i("NumAve", &StdI->NumAve, 5);
+  StdFace_PrintVal_i("ExpecInterval", &StdI->ExpecInterval, 20);
+  StdFace_PrintVal_i("NOmega", &StdI->Nomega, 200);
+  StdFace_PrintVal_d("OmegaMax", &StdI->OmegaMax, StdI->LargeValue*StdI->nsite);
+  StdFace_PrintVal_d("OmegaMin", &StdI->OmegaMin, -StdI->LargeValue*StdI->nsite);
+  StdFace_PrintVal_d("OmegaIm", &StdI->OmegaIm, 0.01* (int)StdI->LargeValue);
+#elif defined(_mVMC)
   if (strcmp(StdI->CParaFileHead, "****") == 0) {
     strcpy(StdI->CParaFileHead, "zqp\0");
     fprintf(stdout, "         CParaFileHead = %-12s######  DEFAULT VALUE IS USED  ######\n", StdI->CParaFileHead);
   }
   else fprintf(stdout, "         CParaFileHead = %-s\n", StdI->CParaFileHead);
-
-  /**/
+  
   StdFace_PrintVal_i("NVMCCalMode", &StdI->NVMCCalMode, 0);
   StdFace_PrintVal_i("NLanczosMode", &StdI->NLanczosMode, 0);
   StdFace_PrintVal_i("NDataIdxStart", &StdI->NDataIdxStart, 1);
@@ -910,9 +1292,15 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_d("DSROptStaDel", &StdI->DSROptStaDel, 0.02);
   StdFace_PrintVal_d("DSROptStepDt", &StdI->DSROptStepDt, 0.02);
   StdFace_PrintVal_i("ComplexType", &StdI->ComplexType, 0);
+#endif
   /**/
   if (strcmp(StdI->model, "hubbard") == 0){
     if (StdI->lGC == 0) StdFace_RequiredVal_i("nelec", StdI->nelec);
+    else {
+      StdFace_NotUsed_i("nelec", StdI->nelec);
+      StdFace_NotUsed_i("2Sz", StdI->Sz2);
+    }
+#if defined(_mVMC)
     if (StdI->lGC == 0) {
       StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
       if (StdI->nelec % 2 != 0) {
@@ -923,19 +1311,23 @@ static void CheckModPara(struct StdIntList *StdI)
         StdI->nelec = StdI->nelec / 2;
       }
     }
+#endif
+  }
+  else if (strcmp(StdI->model, "spin") == 0) {
+    StdFace_NotUsed_i("nelec", StdI->nelec);
+    if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
+    else StdFace_NotUsed_i("2Sz", StdI->Sz2);
+#if defined(_mVMC)
+    StdI->nelec = StdI->nsite / 2;
+#endif
+  }
+  else if (strcmp(StdI->model, "kondo") == 0) {
+    if (StdI->lGC == 0) StdFace_RequiredVal_i("nelec", StdI->nelec);
     else {
       StdFace_NotUsed_i("nelec", StdI->nelec);
       StdFace_NotUsed_i("2Sz", StdI->Sz2);
     }
-  }
-  else if (strcmp(StdI->model, "spin") == 0) {
-    StdFace_NotUsed_i("nelec", StdI->nelec);
-    StdI->nelec = StdI->nsite / 2;
-    if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
-    else StdFace_NotUsed_i("2Sz", StdI->Sz2);
-  }
-  else if (strcmp(StdI->model, "kondo") == 0) {
-    if (StdI->lGC == 0) StdFace_RequiredVal_i("nelec", StdI->nelec);
+#if defined(_mVMC)
     if (StdI->lGC == 0) {
       StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
       if ((StdI->nelec + StdI->nsite / 2) % 2 != 0) {
@@ -946,10 +1338,7 @@ static void CheckModPara(struct StdIntList *StdI)
         StdI->nelec = (StdI->nelec + StdI->nsite / 2) / 2;
       }
     }
-    else {
-      StdFace_NotUsed_i("nelec", StdI->nelec);
-      StdFace_NotUsed_i("2Sz", StdI->Sz2);
-    }
+#endif
   }
 }/*static void CheckModPara*/
 /**
@@ -1408,6 +1797,32 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "wx") == 0) StoreWithCheckDup_d(keyword, value, &StdI.Wx);
     else if (strcmp(keyword, "wy") == 0) StoreWithCheckDup_d(keyword, value, &StdI.Wy);
 
+#if defined(_HPhi)
+    else if (strcmp(keyword, "calcspec") == 0) StoreWithCheckDup_s(keyword, value, StdI.CalcSpec);
+    else if (strcmp(keyword, "exct") == 0) StoreWithCheckDup_i(keyword, value, &StdI.exct);
+    else if (strcmp(keyword, "eigenvecio") == 0) StoreWithCheckDup_s(keyword, value, StdI.EigenVecIO);
+    else if (strcmp(keyword, "expecinterval") == 0) StoreWithCheckDup_i(keyword, value, &StdI.ExpecInterval);
+    else if (strcmp(keyword, "cdatafilehead") == 0) StoreWithCheckDup_s(keyword, value, StdI.CDataFileHead);
+    else if (strcmp(keyword, "flgtemp") == 0) StoreWithCheckDup_i(keyword, value, &StdI.FlgTemp);
+    else if (strcmp(keyword, "initialvectype") == 0) StoreWithCheckDup_s(keyword, value, StdI.InitialVecType);
+    else if (strcmp(keyword, "initial_iv") == 0) StoreWithCheckDup_i(keyword, value, &StdI.initial_iv);
+    else if (strcmp(keyword, "lanczoseps") == 0) StoreWithCheckDup_i(keyword, value, &StdI.LanczosEps);
+    else if (strcmp(keyword, "lanczostarget") == 0) StoreWithCheckDup_i(keyword, value, &StdI.LanczosTarget);
+    else if (strcmp(keyword, "lanczos_max") == 0) StoreWithCheckDup_i(keyword, value, &StdI.Lanczos_max);
+    else if (strcmp(keyword, "largevalue") == 0) StoreWithCheckDup_d(keyword, value, &StdI.LargeValue);
+    else if (strcmp(keyword, "method") == 0) StoreWithCheckDup_s(keyword, value, StdI.method);
+    else if (strcmp(keyword, "nomega") == 0) StoreWithCheckDup_i(keyword, value, &StdI.Nomega);
+    else if (strcmp(keyword, "numave") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NumAve);
+    else if (strcmp(keyword, "nvec") == 0) StoreWithCheckDup_i(keyword, value, &StdI.nvec);
+    else if (strcmp(keyword, "omegamax") == 0) StoreWithCheckDup_d(keyword, value, &StdI.OmegaMax);
+    else if (strcmp(keyword, "omegamin") == 0) StoreWithCheckDup_d(keyword, value, &StdI.OmegaMin);
+    else if (strcmp(keyword, "omegaim") == 0) StoreWithCheckDup_d(keyword, value, &StdI.OmegaIm);
+    else if (strcmp(keyword, "restart") == 0) StoreWithCheckDup_s(keyword, value, StdI.Restart);
+    else if (strcmp(keyword, "spectrumql") == 0) StoreWithCheckDup_d(keyword, value, &StdI.SpectrumQL);
+    else if (strcmp(keyword, "spectrumqw") == 0) StoreWithCheckDup_d(keyword, value, &StdI.SpectrumQW);
+    else if (strcmp(keyword, "spectrumtype") == 0) StoreWithCheckDup_s(keyword, value, StdI.SpectrumType);
+    else if (strcmp(keyword, "2s") == 0) StoreWithCheckDup_i(keyword, value, &StdI.S2);
+#elif defined(_mVMC)
     else if (strcmp(keyword, "a0lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI.a0Lsub);
     else if (strcmp(keyword, "a0wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI.a0Wsub);
     else if (strcmp(keyword, "a1lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI.a1Lsub);
@@ -1432,6 +1847,7 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     else if (strcmp(keyword, "nvmcwarmup") == 0) StoreWithCheckDup_i(keyword, value, &StdI.NVMCWarmUp);
     else if (strcmp(keyword, "rndseed") == 0) StoreWithCheckDup_i(keyword, value, &StdI.RndSeed);
     else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI.Wsub);
+#endif
     else {
       fprintf(stdout, "ERROR ! Unsupported Keyword !\n");
       exit(-1);
@@ -1457,6 +1873,13 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     strcpy(StdI.model, "spin\0");
     StdI.lGC = 1;
   }
+#if defined(_HPhi)
+  else if(strcmp(StdI.model, "spingcboost") == 0) {
+    strcpy(StdI.model, "spin\0");
+    StdI.lGC = 1;
+    StdI.lBoost = 1;
+  }
+#endif
   else if (strcmp(StdI.model, "kondolattice") == 0
     || strcmp(StdI.model, "kondo") == 0) {
     strcpy(StdI.model, "kondo\0");
@@ -1467,10 +1890,13 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     StdI.lGC = 1;
   }
   else UnsupportedSystem(StdI.model, StdI.lattice);
+
+#if defined(_mVMC)
   if (StdI.lGC == 1) {
     printf("\nSorry, Grandcanonical has not been supported !\n\n");
     exit(-1);
   }
+#endif
   /*
   Generate Hamiltonian definition files
   */
@@ -1490,6 +1916,24 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     || strcmp(StdI.lattice, "triangularlattice") == 0) StdFace_Triangular(&StdI, StdI.model);
   else UnsupportedSystem(StdI.model, StdI.lattice);
   /**/
+#if defined(_HPhi)
+  StdFace_LargeValue(&StdI);
+  /*
+  Generate Hamiltonian for Boost
+  */
+  if (StdI.lBoost == 1) {
+    if (strcmp(StdI.lattice, "chain") == 0
+      || strcmp(StdI.lattice, "chainlattice") == 0) StdFace_Chain_Boost(&StdI);
+    else if (strcmp(StdI.lattice, "honeycomb") == 0
+      || strcmp(StdI.lattice, "honeycomblattice") == 0) StdFace_Honeycomb_Boost(&StdI);
+    else if (strcmp(StdI.lattice, "kagome") == 0
+      || strcmp(StdI.lattice, "kagomelattice") == 0) StdFace_Kagome_Boost(&StdI);
+    else if (strcmp(StdI.lattice, "ladder") == 0
+      || strcmp(StdI.lattice, "ladderlattice") == 0) StdFace_Ladder_Boost(&StdI);
+    else UnsupportedSystem(StdI.model, StdI.lattice);
+  }
+#endif
+  /**/
   CheckModPara(&StdI);
   CheckOutputMode(&StdI);
   /**/
@@ -1499,11 +1943,16 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
   PrintLocSpin(&StdI);
   PrintTrans(&StdI);
   PrintInteractions(&StdI);
+#if defined(_HPhi)
+  PrintExcitation(&StdI);
+  PrintCalcMod(&StdI);
+#elif defined(_mVMC)
   StdFace_generate_orb(&StdI);
   StdFace_Proj(&StdI);
   PrintJastrow(&StdI);
   PrintOrb(&StdI);
   PrintGutzwiller(&StdI);
+#endif
   PrintModPara(&StdI);
   Print1Green(&StdI);
   Print2Green(&StdI);

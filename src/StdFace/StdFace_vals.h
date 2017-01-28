@@ -136,6 +136,39 @@ struct StdIntList {
   char CDataFileHead[256];
   int Sz2;
   int ioutputmode;
+
+#if defined(_HPhi)
+  /*HPhi modpara*/
+  char method[256];
+  char Restart[256];
+  char InitialVecType[256];
+  char EigenVecIO[256];
+  int FlgTemp;
+  int Lanczos_max;
+  int initial_iv; 
+  int nvec;
+  int exct;
+  int LanczosEps;
+  int LanczosTarget;
+  int NumAve;
+  int ExpecInterval;
+  double LargeValue;
+  /*Boost*/
+  int ***list_6spin_pair;
+  int **list_6spin_star;
+  int num_pivot;
+  int ishift_nspin;
+  /*Spectrum*/
+  char CalcSpec[256];
+  char SpectrumType[256];
+  int Nomega;
+  double OmegaMax;
+  double OmegaMin;
+  double OmegaIm;
+  double SpectrumQL;
+  double SpectrumQW;
+  int SpectrumBody;
+#elif defined(_mVMC)
   /*mVMC modpara*/
   char CParaFileHead[256];
   int NVMCCalMode;
@@ -179,4 +212,5 @@ struct StdIntList {
   int **AntiOrb;
   int NOrb;
   int NSym;
+#endif
 };

@@ -367,3 +367,296 @@ void StdFace_Kagome(struct StdIntList *StdI, char *model)
   fclose(fp);
   StdFace_PrintGeometry(StdI);
 }/*void StdFace_Kagome*/
+
+#if defined(_HPhi)
+/**
+*
+* Setup a Hamiltonian for the generalized Heisenberg model on a Heisenberg lattice
+*
+* @author Mitsuaki Kawamura (The University of Tokyo)
+*/
+void StdFace_Kagome_Boost(struct StdIntList *StdI)
+{
+  int isite, ipivot, i1, i2;
+  int kintr;
+  FILE *fp;
+
+  if (StdI->a0L != 0 || StdI->a1W != 0) {
+    fprintf(stdout, "\nERROR ! (a0W, a0L, a1W, a1L) can not be used with SpinGCBoost.\n\n");
+    exit(-1);
+  }
+  for (i1 = 0; i1 < 3; i1++) {
+    for (i2 = 0; i2 < 3; i2++) {
+      if (fabs(StdI->Jp[i1][i2]) > 1.0e-8) {
+        fprintf(stdout, "\nERROR ! J' can not be used with SpinGCBoost.\n\n");
+        exit(-1);
+      }
+    }
+  }
+  /*
+  Magnetic field
+  */
+  fp = fopen("boost.def", "w");
+  fprintf(fp, "# Magnetic field\n");
+  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+    -0.5 * StdI->Gamma, 0.0, -0.5 * StdI->h);
+  /*
+  Interaction
+  */
+  fprintf(fp, "%d  # Number of type of J\n", 3);
+  fprintf(fp, "# J 0\n");
+  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+    0.25 * StdI->J0[0][0], 0.25 * StdI->J0[0][1], 0.25 * StdI->J0[0][2]);
+  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+    0.25 * StdI->J0[0][1], 0.25 * StdI->J0[1][1], 0.25 * StdI->J0[1][2]);
+  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+    0.25 * StdI->J0[0][2], 0.25 * StdI->J0[1][2], 0.25 * StdI->J0[2][2]);
+  fprintf(fp, "# J 1\n");
+  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+    0.25 * StdI->J1[0][0], 0.25 * StdI->J1[0][1], 0.25 * StdI->J1[0][2]);
+  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+    0.25 * StdI->J1[0][1], 0.25 * StdI->J1[1][1], 0.25 * StdI->J1[1][2]);
+  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+    0.25 * StdI->J1[0][2], 0.25 * StdI->J1[1][2], 0.25 * StdI->J1[2][2]);
+  fprintf(fp, "# J 2\n");
+  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+    0.25 * StdI->J2[0][0], 0.25 * StdI->J2[0][1], 0.25 * StdI->J2[0][2]);
+  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+    0.25 * StdI->J2[0][1], 0.25 * StdI->J2[1][1], 0.25 * StdI->J2[1][2]);
+  fprintf(fp, "%25.15e %25.15e %25.15e\n",
+    0.25 * StdI->J2[0][2], 0.25 * StdI->J2[1][2], 0.25 * StdI->J2[2][2]);  /*
+  Topology
+  */
+  if (StdI->S2 != 1) {
+    fprintf(stdout, "\n ERROR! S2 must be 1 in Boost. \n\n");
+    exit(-1);
+  }
+  StdI->ishift_nspin = 3;
+  if (StdI->L < 2) {
+    fprintf(stdout, "\n ERROR! L < 2 \n\n");
+    exit(-1);
+  }
+  if (StdI->W % StdI->ishift_nspin != 0) {
+    fprintf(stdout, "\n ERROR! W %% %d != 0 \n\n", StdI->ishift_nspin);
+    exit(-1);
+  }
+  StdI->num_pivot = 4;
+  if (StdI->W != 3) {
+    fprintf(stdout, "DEBUG: W != 3\n");
+    exit(-1);
+  }
+  StdI->W = 9;
+  fprintf(fp, "# W0  R0  StdI->num_pivot  StdI->ishift_nspin\n");
+  fprintf(fp, "%d %d %d %d\n", StdI->W, StdI->L, StdI->num_pivot, StdI->ishift_nspin);
+
+  StdI->list_6spin_star = (int **)malloc(sizeof(int*) * StdI->num_pivot);
+  for (ipivot = 0; ipivot < StdI->num_pivot; ipivot++) {
+    StdI->list_6spin_star[ipivot] = (int *)malloc(sizeof(int) * 7);
+  }
+
+  StdI->list_6spin_star[0][0] = 1; // num of J
+  StdI->list_6spin_star[0][1] = 1;
+  StdI->list_6spin_star[0][2] = 1;
+  StdI->list_6spin_star[0][3] = 1;
+  StdI->list_6spin_star[0][4] = 4;
+  StdI->list_6spin_star[0][5] = 2;
+  StdI->list_6spin_star[0][6] = -1; // flag
+
+  StdI->list_6spin_star[1][0] = 6; // num of J
+  StdI->list_6spin_star[1][1] = 1;
+  StdI->list_6spin_star[1][2] = 1;
+  StdI->list_6spin_star[1][3] = 1;
+  StdI->list_6spin_star[1][4] = 6;
+  StdI->list_6spin_star[1][5] = 7;
+  StdI->list_6spin_star[1][6] = 1; // flag
+
+  StdI->list_6spin_star[2][0] = 6; // num of J
+  StdI->list_6spin_star[2][1] = 1;
+  StdI->list_6spin_star[2][2] = 1;
+  StdI->list_6spin_star[2][3] = 1;
+  StdI->list_6spin_star[2][4] = 4;
+  StdI->list_6spin_star[2][5] = 2;
+  StdI->list_6spin_star[2][6] = 1; // flag
+
+  StdI->list_6spin_star[3][0] = 5; // num of J
+  StdI->list_6spin_star[3][1] = 1;
+  StdI->list_6spin_star[3][2] = 1;
+  StdI->list_6spin_star[3][3] = 1;
+  StdI->list_6spin_star[3][4] = 4;
+  StdI->list_6spin_star[3][5] = 2;
+  StdI->list_6spin_star[3][6] = 1; // flag
+
+  fprintf(fp, "# StdI->list_6spin_star\n");
+  for (ipivot = 0; ipivot < StdI->num_pivot; ipivot++) {
+    fprintf(fp, "# pivot %d\n", ipivot);
+    for (isite = 0; isite < 7; isite++) {
+      fprintf(fp, "%d ", StdI->list_6spin_star[ipivot][isite]);
+    }
+    fprintf(fp, "\n");
+  }
+
+  StdI->list_6spin_pair = (int ***)malloc(sizeof(int**) * StdI->num_pivot);
+  for (ipivot = 0; ipivot < StdI->num_pivot; ipivot++) {
+    StdI->list_6spin_pair[ipivot] = (int **)malloc(sizeof(int*) * 7);
+    for (isite = 0; isite < 7; isite++) {
+      StdI->list_6spin_pair[ipivot][isite] = (int *)malloc(sizeof(int) * StdI->list_6spin_star[ipivot][0]);
+    }
+  }
+
+  StdI->list_6spin_pair[0][0][0] = 0; //(1,1,1+2*j)=0 
+  StdI->list_6spin_pair[0][1][0] = 4; //(2,1,1+2*j)=1
+  StdI->list_6spin_pair[0][2][0] = 1; //(3,1,1+2*j)=2
+  StdI->list_6spin_pair[0][3][0] = 2; //(4,1,1+2*j)=3
+  StdI->list_6spin_pair[0][4][0] = 3; //(5,1,1+2*j)=4
+  StdI->list_6spin_pair[0][5][0] = 5; //(6,1,1+2*j)=5
+  StdI->list_6spin_pair[0][6][0] = 3; //(7,1,1+2*j)=3 ! type of J
+
+  StdI->list_6spin_pair[1][0][0] = 0;
+  StdI->list_6spin_pair[1][1][0] = 1;
+  StdI->list_6spin_pair[1][2][0] = 2;
+  StdI->list_6spin_pair[1][3][0] = 3;
+  StdI->list_6spin_pair[1][4][0] = 4;
+  StdI->list_6spin_pair[1][5][0] = 5;
+  StdI->list_6spin_pair[1][6][0] = 3; // type of J
+  StdI->list_6spin_pair[1][0][1] = 1;
+  StdI->list_6spin_pair[1][1][1] = 2;
+  StdI->list_6spin_pair[1][2][1] = 0;
+  StdI->list_6spin_pair[1][3][1] = 3;
+  StdI->list_6spin_pair[1][4][1] = 4;
+  StdI->list_6spin_pair[1][5][1] = 5;
+  StdI->list_6spin_pair[1][6][1] = 1; // type of J
+  StdI->list_6spin_pair[1][0][2] = 0;
+  StdI->list_6spin_pair[1][1][2] = 2;
+  StdI->list_6spin_pair[1][2][2] = 1;
+  StdI->list_6spin_pair[1][3][2] = 3;
+  StdI->list_6spin_pair[1][4][2] = 4;
+  StdI->list_6spin_pair[1][5][2] = 5;
+  StdI->list_6spin_pair[1][6][2] = 2; // type of J
+  StdI->list_6spin_pair[1][0][3] = 1;
+  StdI->list_6spin_pair[1][1][3] = 3;
+  StdI->list_6spin_pair[1][2][3] = 0;
+  StdI->list_6spin_pair[1][3][3] = 2;
+  StdI->list_6spin_pair[1][4][3] = 4;
+  StdI->list_6spin_pair[1][5][3] = 5;
+  StdI->list_6spin_pair[1][6][3] = 3; // type of J
+  StdI->list_6spin_pair[1][0][4] = 2;
+  StdI->list_6spin_pair[1][1][4] = 4;
+  StdI->list_6spin_pair[1][2][4] = 0;
+  StdI->list_6spin_pair[1][3][4] = 1;
+  StdI->list_6spin_pair[1][4][4] = 3;
+  StdI->list_6spin_pair[1][5][4] = 5;
+  StdI->list_6spin_pair[1][6][4] = 2; // type of J
+  StdI->list_6spin_pair[1][0][5] = 2;
+  StdI->list_6spin_pair[1][1][5] = 5;
+  StdI->list_6spin_pair[1][2][5] = 0;
+  StdI->list_6spin_pair[1][3][5] = 1;
+  StdI->list_6spin_pair[1][4][5] = 3;
+  StdI->list_6spin_pair[1][5][5] = 4;
+  StdI->list_6spin_pair[1][6][5] = 1; // type of J
+
+  StdI->list_6spin_pair[2][0][0] = 0;
+  StdI->list_6spin_pair[2][1][0] = 1;
+  StdI->list_6spin_pair[2][2][0] = 2;
+  StdI->list_6spin_pair[2][3][0] = 3;
+  StdI->list_6spin_pair[2][4][0] = 4;
+  StdI->list_6spin_pair[2][5][0] = 5;
+  StdI->list_6spin_pair[2][6][0] = 3; // type of J
+  StdI->list_6spin_pair[2][0][1] = 1;
+  StdI->list_6spin_pair[2][1][1] = 2;
+  StdI->list_6spin_pair[2][2][1] = 0;
+  StdI->list_6spin_pair[2][3][1] = 3;
+  StdI->list_6spin_pair[2][4][1] = 4;
+  StdI->list_6spin_pair[2][5][1] = 5;
+  StdI->list_6spin_pair[2][6][1] = 1; // type of J
+  StdI->list_6spin_pair[2][0][2] = 0;
+  StdI->list_6spin_pair[2][1][2] = 2;
+  StdI->list_6spin_pair[2][2][2] = 1;
+  StdI->list_6spin_pair[2][3][2] = 3;
+  StdI->list_6spin_pair[2][4][2] = 4;
+  StdI->list_6spin_pair[2][5][2] = 5;
+  StdI->list_6spin_pair[2][6][2] = 2; // type of J
+  StdI->list_6spin_pair[2][0][3] = 1;
+  StdI->list_6spin_pair[2][1][3] = 3;
+  StdI->list_6spin_pair[2][2][3] = 0;
+  StdI->list_6spin_pair[2][3][3] = 2;
+  StdI->list_6spin_pair[2][4][3] = 4;
+  StdI->list_6spin_pair[2][5][3] = 5;
+  StdI->list_6spin_pair[2][6][3] = 3; // type of J
+  StdI->list_6spin_pair[2][0][4] = 2;
+  StdI->list_6spin_pair[2][1][4] = 5;
+  StdI->list_6spin_pair[2][2][4] = 0;
+  StdI->list_6spin_pair[2][3][4] = 1;
+  StdI->list_6spin_pair[2][4][4] = 3;
+  StdI->list_6spin_pair[2][5][4] = 4;
+  StdI->list_6spin_pair[2][6][4] = 2; // type of J
+  StdI->list_6spin_pair[2][0][5] = 2;
+  StdI->list_6spin_pair[2][1][5] = 4;
+  StdI->list_6spin_pair[2][2][5] = 0;
+  StdI->list_6spin_pair[2][3][5] = 1;
+  StdI->list_6spin_pair[2][4][5] = 3;
+  StdI->list_6spin_pair[2][5][5] = 5;
+  StdI->list_6spin_pair[2][6][5] = 1; // type of J
+
+  StdI->list_6spin_pair[3][0][0] = 0;
+  StdI->list_6spin_pair[3][1][0] = 1;
+  StdI->list_6spin_pair[3][2][0] = 2;
+  StdI->list_6spin_pair[3][3][0] = 3;
+  StdI->list_6spin_pair[3][4][0] = 4;
+  StdI->list_6spin_pair[3][5][0] = 5;
+  StdI->list_6spin_pair[3][6][0] = 3; // type of J
+  StdI->list_6spin_pair[3][0][1] = 1;
+  StdI->list_6spin_pair[3][1][1] = 2;
+  StdI->list_6spin_pair[3][2][1] = 0;
+  StdI->list_6spin_pair[3][3][1] = 3;
+  StdI->list_6spin_pair[3][4][1] = 4;
+  StdI->list_6spin_pair[3][5][1] = 5;
+  StdI->list_6spin_pair[3][6][1] = 1; // type of J
+  StdI->list_6spin_pair[3][0][2] = 0;
+  StdI->list_6spin_pair[3][1][2] = 2;
+  StdI->list_6spin_pair[3][2][2] = 1;
+  StdI->list_6spin_pair[3][3][2] = 3;
+  StdI->list_6spin_pair[3][4][2] = 4;
+  StdI->list_6spin_pair[3][5][2] = 5;
+  StdI->list_6spin_pair[3][6][2] = 2; // type of J
+  StdI->list_6spin_pair[3][0][3] = 2;
+  StdI->list_6spin_pair[3][1][3] = 5;
+  StdI->list_6spin_pair[3][2][3] = 0;
+  StdI->list_6spin_pair[3][3][3] = 1;
+  StdI->list_6spin_pair[3][4][3] = 3;
+  StdI->list_6spin_pair[3][5][3] = 4;
+  StdI->list_6spin_pair[3][6][3] = 2; // type of J
+  StdI->list_6spin_pair[3][0][4] = 2;
+  StdI->list_6spin_pair[3][1][4] = 4;
+  StdI->list_6spin_pair[3][2][4] = 0;
+  StdI->list_6spin_pair[3][3][4] = 1;
+  StdI->list_6spin_pair[3][4][4] = 3;
+  StdI->list_6spin_pair[3][5][4] = 5;
+  StdI->list_6spin_pair[3][6][4] = 1; // type of J
+
+  fprintf(fp, "# StdI->list_6spin_pair\n");
+  for (ipivot = 0; ipivot < StdI->num_pivot; ipivot++) {
+    fprintf(fp, "# pivot %d\n", ipivot);
+    for (kintr = 0; kintr < StdI->list_6spin_star[ipivot][0]; kintr++) {
+      for (isite = 0; isite < 7; isite++) {
+        fprintf(fp, "%d ", StdI->list_6spin_pair[ipivot][isite][kintr]);
+      }
+      fprintf(fp, "\n");
+    }
+  }
+  fclose(fp);
+
+  for (ipivot = 0; ipivot < StdI->num_pivot; ipivot++) {
+    free(StdI->list_6spin_star[ipivot]);
+  }
+  free(StdI->list_6spin_star);
+
+  for (ipivot = 0; ipivot < StdI->num_pivot; ipivot++) {
+    for (isite = 0; isite < 7; isite++) {
+      free(StdI->list_6spin_pair[ipivot][isite]);
+    }
+    free(StdI->list_6spin_pair[ipivot]);
+  }
+  free(StdI->list_6spin_pair);
+
+}
+#endif
