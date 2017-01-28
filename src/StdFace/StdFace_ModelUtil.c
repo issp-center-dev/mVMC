@@ -21,6 +21,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <complex.h>
 #include "StdFace_vals.h"
 #include <string.h>
+#ifdef MPI
+#include <mpi.h>
+#endif
+
+/**
+*
+* MPI Abortation wrapper
+*
+* @author Mitsuaki Kawamura (The University of Tokyo)
+*/
+void StdFace_exit(int errorcode /**< [in]*/)
+{
+  int ierr;
+  fflush(stdout);
+  fflush(stderr);
+#ifdef MPI
+  fprintf(stdout, "\n\n #######  You DO NOT have to WORRY about the following MPI-ERROR MESSAGE.  #######\n\n");
+  ierr = MPI_Abort(MPI_COMM_WORLD, errorcode);
+  ierr = MPI_Finalize();
+  if (ierr != 0) fprintf(stderr, "\n  MPI_Finalize() = %d\n\n", ierr);
+#endif
+  exit(errorcode);
+}
 
 /**
  *
@@ -170,7 +193,7 @@ struct StdIntList *StdI,
       StdI->ExIndx[StdI->NEx][1] = jsite;
       StdI->NEx += 1;
 
-      StdI->PairLift[StdI->NPairLift] = - 0.25 * (J[0][0] - J[1][1]);
+      StdI->PairLift[StdI->NPairLift] = 0.25 * (J[0][0] - J[1][1]);
       StdI->PLIndx[StdI->NPairLift][0] = isite;
       StdI->PLIndx[StdI->NPairLift][1] = jsite;
       StdI->NPairLift += 1;
@@ -350,7 +373,7 @@ void StdFace_NotUsed_d(
     fprintf(stdout, "\n Check !  %s is SPECIFIED but will NOT be USED. \n", valname);
     fprintf(stdout, "            Please COMMENT-OUT this line \n");
     fprintf(stdout, "            or check this input is REALLY APPROPRIATE for your purpose ! \n\n");
-    exit(-1);
+    StdFace_exit(-1);
   }
 }
 
@@ -368,7 +391,7 @@ void StdFace_NotUsed_c(
     fprintf(stdout, "\n Check !  %s is SPECIFIED but will NOT be USED. \n", valname);
     fprintf(stdout, "            Please COMMENT-OUT this line \n");
     fprintf(stdout, "            or check this input is REALLY APPROPRIATE for your purpose ! \n\n");
-    exit(-1);
+    StdFace_exit(-1);
   }
 }
 
@@ -420,7 +443,7 @@ void StdFace_NotUsed_i(
     fprintf(stdout, "\n Check !  %s is SPECIFIED but will NOT be USED. \n", valname);
     fprintf(stdout, "            Please COMMENT-OUT this line \n");
     fprintf(stdout, "            or check this input is REALLY APPROPRIATE for your purpose ! \n\n");
-    exit(-1);
+    StdFace_exit(-1);
   }
 }
 
@@ -437,7 +460,7 @@ void StdFace_RequiredVal_i(
 {
   if (val == 9999){
     fprintf(stdout, "ERROR ! %s is NOT specified !\n", valname);
-    exit(-1);
+    StdFace_exit(-1);
   }
   else fprintf(stdout, "  %15s = %-3d\n", valname, val);
 }
@@ -492,16 +515,16 @@ void StdFace_InitSite2D(struct StdIntList *StdI, FILE *fp)
   if ((StdI->L != 9999 || StdI->W != 9999)
     && (StdI->a0L != 9999 || StdI->a0W != 9999 || StdI->a1L != 9999 || StdI->a1W != 9999)) {
     fprintf(stdout, "\nERROR ! (L, W) and (a0W, a0L, a1W, a1L) conflict !\n\n");
-    exit(-1);
+    StdFace_exit(-1);
   }
   else if (StdI->L != 9999 || StdI->W != 9999) {
     if (StdI->L == 9999) {
       fprintf(stdout, "\nERROR ! W is specified, but L is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     else if (StdI->W == 9999) {
       fprintf(stdout, "\nERROR ! L is specified, but W is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     StdFace_PrintVal_i("L", &StdI->L, 1);
     StdFace_PrintVal_i("W", &StdI->W, 1);
@@ -513,19 +536,19 @@ void StdFace_InitSite2D(struct StdIntList *StdI, FILE *fp)
   else if (StdI->a0L != 9999 || StdI->a0W != 9999 || StdI->a1L != 9999 || StdI->a1W != 9999) {
     if (StdI->a0W == 9999) {
       fprintf(stdout, "\nERROR ! a0W is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     else if (StdI->a0L == 9999) {
       fprintf(stdout, "\nERROR ! a0L is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     else if (StdI->a1W == 9999) {
       fprintf(stdout, "\nERROR ! a1W is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     else if (StdI->a1L == 9999) {
       fprintf(stdout, "\nERROR ! a1L is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     StdFace_PrintVal_i("a0W", &StdI->a0W, 1);
     StdFace_PrintVal_i("a0L", &StdI->a0L, 0);
@@ -545,7 +568,7 @@ void StdFace_InitSite2D(struct StdIntList *StdI, FILE *fp)
   StdI->NCell = StdI->a0W * StdI->a1L - StdI->a0L * StdI->a1W;
   printf("         Number of Cell : %d\n", StdI->NCell);
   if (StdI->NCell == 0) {
-    exit(-1);
+    StdFace_exit(-1);
   }
 
   StdI->bW0 = StdI->a1L;
@@ -759,28 +782,28 @@ void StdFace_InputSpinNN(struct StdIntList *StdI, double J0[3][3],
 
   if (StdI->JAll < 9999.0 && J0All < 9999.0) {
     fprintf(stdout, "\n ERROR! J and %s conflict !\n\n", J0name);
-    exit(-1);
+    StdFace_exit(-1);
   }
   for (i1 = 0; i1 < 3; i1++) {
     for (i2 = 0; i2 < 3; i2++) {
       if (StdI->JAll < 9999.0 && StdI->J[i1][i2] < 9999.0) {
         fprintf(stdout, "\n ERROR! J and J%s conflict !\n\n", Jname[i1][i2]);
-        exit(-1);
+        StdFace_exit(-1);
       }
       else if (J0All < 9999.0 && StdI->J[i1][i2] < 9999.0) {
         fprintf(stdout, "\n ERROR! %s and J%s conflict !\n\n",
           J0name, Jname[i1][i2]);
-        exit(-1);
+        StdFace_exit(-1);
       }
       else if (J0All < 9999.0 && J0[i1][i2] < 9999.0) {
         fprintf(stdout, "\n ERROR! %s and %s%s conflict !\n\n", J0name,
           J0name, Jname[i1][i2]);
-        exit(-1);
+        StdFace_exit(-1);
       }
       else if (J0[i1][i2] < 9999.0 && StdI->JAll < 9999.0) {
         fprintf(stdout, "\n ERROR! %s%s and J conflict !\n\n",
           J0name, Jname[i1][i2]);
-        exit(-1);
+        StdFace_exit(-1);
       }
     }/*for (j = 0; j < 3; j++)*/
   }/*for (i = 0; i < 3; i++)*/
@@ -792,7 +815,7 @@ void StdFace_InputSpinNN(struct StdIntList *StdI, double J0[3][3],
           if (J0[i1][i2] < 9999.0 && StdI->J[i3][i4] < 9999.0) {
             fprintf(stdout, "\n ERROR! %s%s and J%s conflict !\n\n", 
               J0name, Jname[i1][i2], Jname[i3][i4]);
-            exit(-1);
+            StdFace_exit(-1);
           }
         }/*for (i4 = 0; i4 < 3; i4++)*/
       }/*for (i3 = 0; i3 < 3; i3++)*/
@@ -844,7 +867,7 @@ void StdFace_InputSpin(struct StdIntList *StdI, double Jp[3][3],
       if (JpAll < 9999.0 && Jp[i1][i2] < 9999.0) {
         fprintf(stdout, "\n ERROR! %s and %s%s conflict !\n\n", Jpname,
           Jpname, Jname[i1][i2]);
-        exit(-1);
+        StdFace_exit(-1);
       }
     }/*for (j = 0; j < 3; j++)*/
   }/*for (i = 0; i < 3; i++)*/
@@ -870,7 +893,7 @@ void StdFace_InputCoulombV(struct StdIntList *StdI, double *V0, char *V0name)
   
   if (StdI->V < 9999.0 && *V0 < 9999.0) {
     fprintf(stdout, "\n ERROR! V and %s conflict !\n\n", V0name);
-    exit(-1);
+    StdFace_exit(-1);
   }
   else if (*V0 < 9999.0)
     fprintf(stdout, "  %15s = %-10.5f\n", V0name, *V0);
@@ -889,7 +912,7 @@ void StdFace_InputHopp(struct StdIntList *StdI, double complex *t0, char *t0name
 
   if (creal(StdI->t) < 9999.0 && creal(*t0) < 9999.0) {
     fprintf(stdout, "\n ERROR! t and %s conflict !\n\n", t0name);
-    exit(-1);
+    StdFace_exit(-1);
   }
   else if (creal(*t0) < 9999.0)
     fprintf(stdout, "  %15s = %-10.5f\n", t0name, creal(*t0));
@@ -989,6 +1012,37 @@ void StdFace_MallocInteractions(struct StdIntList *StdI) {
 }/*void StdFace_MallocInteractions*/
 
 #if defined(_mVMC)
+ /**
+ *
+ * Define whether the specified site is in the unit cell or not.
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
+void StdFace_FoldSite2Dsub(struct StdIntList *StdI,
+  int iW, int iL, int *iCell0, int *iCell1, int *iWfold, int *iLfold)
+{
+  int x0, x1, xW, xL;
+  /*
+  Transform to fractional coordinate (times NCell)
+  */
+  x0 = StdI->bW0sub * iW + StdI->bL0sub * iL;
+  x1 = StdI->bW1sub * iW + StdI->bL1sub * iL;
+  /*
+  Which supercell contains this cell
+  */
+  *iCell0 = (x0 + StdI->NCellsub * 1000) / StdI->NCellsub - 1000;
+  *iCell1 = (x1 + StdI->NCellsub * 1000) / StdI->NCellsub - 1000;
+  /*
+  Fractional coordinate (times NCell) in the original supercell
+  */
+  x0 -= StdI->NCellsub*(*iCell0);
+  x1 -= StdI->NCellsub*(*iCell1);
+  /**/
+  xW = StdI->a0Wsub * x0 + StdI->a1Wsub * x1;
+  xL = StdI->a0Lsub * x0 + StdI->a1Lsub * x1;
+  *iWfold = (xW + StdI->NCellsub * 1000) / StdI->NCellsub - 1000;
+  *iLfold = (xL + StdI->NCellsub * 1000) / StdI->NCellsub - 1000;
+}
 /**
 *
 * Print Quantum number projection
@@ -1090,37 +1144,6 @@ void StdFace_Proj(struct StdIntList *StdI)
 }
 /**
 *
-* Define whether the specified site is in the unit cell or not.
-*
-* @author Mitsuaki Kawamura (The University of Tokyo)
-*/
-void StdFace_FoldSite2Dsub(struct StdIntList *StdI,
-  int iW, int iL, int *iCell0, int *iCell1, int *iWfold, int *iLfold)
-{
-  int x0, x1, xW, xL;
-  /*
-  Transform to fractional coordinate (times NCell)
-  */
-  x0 = StdI->bW0sub * iW + StdI->bL0sub * iL;
-  x1 = StdI->bW1sub * iW + StdI->bL1sub * iL;
-  /*
-  Which supercell contains this cell
-  */
-  *iCell0 = (x0 + StdI->NCellsub * 1000) / StdI->NCellsub - 1000;
-  *iCell1 = (x1 + StdI->NCellsub * 1000) / StdI->NCellsub - 1000;
-  /*
-  Fractional coordinate (times NCell) in the original supercell
-  */
-  x0 -= StdI->NCellsub*(*iCell0);
-  x1 -= StdI->NCellsub*(*iCell1);
-  /**/
-  xW = StdI->a0Wsub * x0 + StdI->a1Wsub * x1;
-  xL = StdI->a0Lsub * x0 + StdI->a1Lsub * x1;
-  *iWfold = (xW + StdI->NCellsub * 1000) / StdI->NCellsub - 1000;
-  *iLfold = (xL + StdI->NCellsub * 1000) / StdI->NCellsub - 1000;
-}
-/**
-*
 * Initialize sub Cell
 *
 * @author Mitsuaki Kawamura (The University of Tokyo)
@@ -1134,16 +1157,16 @@ void StdFace_InitSite2DSub(struct StdIntList *StdI)
   if ((StdI->Lsub != 9999 || StdI->Wsub != 9999)
     && (StdI->a0Lsub != 9999 || StdI->a0Wsub != 9999 || StdI->a1Lsub != 9999 || StdI->a1Wsub != 9999)) {
     fprintf(stdout, "\nERROR ! (Lsub, Wsub) and (a0Wsub, a0Lsub, a1Wsub, a1Lsub) conflict !\n\n");
-    exit(-1);
+    StdFace_exit(-1);
   }
   else if (StdI->Lsub != 9999 || StdI->Wsub != 9999) {
     if (StdI->Lsub == 9999) {
       fprintf(stdout, "\nERROR ! Wsub is specified, but Lsub is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     else if (StdI->Wsub == 9999) {
       fprintf(stdout, "\nERROR ! Lsub is specified, but Wsub is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     StdFace_PrintVal_i("Lsub", &StdI->Lsub, 1);
     StdFace_PrintVal_i("Wsub", &StdI->Wsub, 1);
@@ -1155,19 +1178,19 @@ void StdFace_InitSite2DSub(struct StdIntList *StdI)
   else if (StdI->a0Lsub != 9999 || StdI->a0Wsub != 9999 || StdI->a1Lsub != 9999 || StdI->a1Wsub != 9999) {
     if (StdI->a0Wsub == 9999) {
       fprintf(stdout, "\nERROR ! a0Wsub is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     else if (StdI->a0L == 9999) {
       fprintf(stdout, "\nERROR ! a0Lsub is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     else if (StdI->a1W == 9999) {
       fprintf(stdout, "\nERROR ! a1Wsub is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     else if (StdI->a1L == 9999) {
       fprintf(stdout, "\nERROR ! a1Lsub is NOT specified !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     StdFace_PrintVal_i("a0Wsub", &StdI->a0Wsub, 1);
     StdFace_PrintVal_i("a0Lsub", &StdI->a0Lsub, 0);
@@ -1186,7 +1209,7 @@ void StdFace_InitSite2DSub(struct StdIntList *StdI)
   StdI->NCellsub = StdI->a0Wsub * StdI->a1Lsub - StdI->a0Lsub * StdI->a1Wsub;
   printf("         Number of Cell in sublattice: %d\n", StdI->NCellsub);
   if (StdI->NCell == 0) {
-    exit(-1);
+    StdFace_exit(-1);
   }
 
   StdI->bW0sub = StdI->a1Lsub;
@@ -1211,7 +1234,7 @@ void StdFace_InitSite2DSub(struct StdIntList *StdI)
   for (ii = 0; ii < 4; ii++){
     if (prod[ii] % StdI->NCellsub != 0) {
       printf("\n ERROR ! Sublattice is INCOMMENSURATE !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }/*if (fabs(prod[ii]) > 0.00001)*/
   }/*for (ii = 0; ii < 4; ii++)*/
 

@@ -61,7 +61,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
   iCalcEigenvec = 0;
   if (strcmp(StdI->method, "****") == 0){
     fprintf(stdout, "ERROR ! Method is NOT specified !\n");
-    exit(-1);
+    StdFace_exit(-1);
   }
   else if (strcmp(StdI->method, "lanczos") == 0) iCalcType = 0;
   else if (strcmp(StdI->method, "lanczosenergy") == 0) { 
@@ -75,7 +75,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
   else if (strcmp(StdI->method, "cg") == 0) iCalcType = 3;
   else{
     fprintf(stdout, "\n ERROR ! Unsupported Solver : %s\n", StdI->method);
-    exit(-1);
+    StdFace_exit(-1);
   }
   /*
    Model
@@ -108,7 +108,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
     else if (strcmp(StdI->Restart, "restart") == 0) iRestart = 3;
     else {
       fprintf(stdout, "\n ERROR ! Restart Mode : %s\n", StdI->Restart);
-      exit(-1);
+      StdFace_exit(-1);
     }
   }
   /*
@@ -125,7 +125,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
     else if (strcmp(StdI->InitialVecType, "r") == 0) iInitialVecTpye = 1;
     else {
       fprintf(stdout, "\n ERROR ! Restart Mode : %s\n", StdI->Restart);
-      exit(-1);
+      StdFace_exit(-1);
     }
   }
   /*
@@ -148,7 +148,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
     }
     else {
       fprintf(stdout, "\n ERROR ! EigenVecIO Mode : %s\n", StdI->Restart);
-      exit(-1);
+      StdFace_exit(-1);
     }
   }
   /*
@@ -169,7 +169,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
     else if (strcmp(StdI->CalcSpec, "restartsave") == 0) iCalcSpec = 5;
     else {
       fprintf(stdout, "\n ERROR ! CalcSpec : %s\n", StdI->CalcSpec);
-      exit(-1);
+      StdFace_exit(-1);
     }
   }
 
@@ -265,7 +265,7 @@ static void PrintExcitation(struct StdIntList *StdI) {
     }
     else {
       fprintf(stdout, "\n ERROR ! SpectrumType : %s\n", StdI->SpectrumType);
-      exit(-1);
+      StdFace_exit(-1);
     }
   }
 
@@ -417,7 +417,7 @@ void PrintJastrow(struct StdIntList *StdI) {
   }
   else {
     printf("\nSomething wrong. \n\n");
-    exit(-1);
+    StdFace_exit(-1);
   }
 
   fclose(fp);
@@ -500,7 +500,7 @@ static void PrintGutzwiller(struct StdIntList *StdI)
   }
   else {
     printf("\nSomething wrong. \n\n");
-    exit(-1);
+    StdFace_exit(-1);
   }
   fclose(fp);
   fprintf(stdout, "    gutzwilleridx.def is written.\n");
@@ -678,7 +678,7 @@ static void StoreWithCheckDup_s(
 {
   if (strcmp(value, "****") != 0){
     fprintf(stdout, "ERROR !  Keyword %s is duplicated ! \n", keyword);
-    exit(-1);
+    StdFace_exit(-1);
   }
   else{
     strcpy(value, valuestring);
@@ -699,7 +699,7 @@ static void StoreWithCheckDup_i(
 {
   if (*value != 9999){
     fprintf(stdout, "ERROR !  Keyword %s is duplicated ! \n", keyword);
-    exit(-1);
+    StdFace_exit(-1);
   }
   else{
     sscanf(valuestring, "%d", value);
@@ -721,7 +721,7 @@ static void StoreWithCheckDup_d(
 
   if (*value != 9999.9){
     fprintf(stdout, "ERROR !  Keyword %s is duplicated ! \n", keyword);
-    exit(-1);
+    StdFace_exit(-1);
   }
   else{
     sscanf(valuestring, "%lf", value);
@@ -747,7 +747,7 @@ static void StoreWithCheckDup_c(
 
   if (creal(*value) != 9999.9) {
     fprintf(stdout, "ERROR !  Keyword %s is duplicated ! \n", keyword);
-    exit(-1);
+    StdFace_exit(-1);
   }
   else {
 
@@ -867,29 +867,32 @@ static void PrintNamelist(struct StdIntList *StdI){
   FILE *fp;
 
   fp = fopen("namelist.def", "w");
-  fprintf(                         fp, "     ModPara  modpara.def\n");
-  fprintf(                         fp, "     LocSpin  locspn.def\n");
-  if (StdI->Ltrans == 1) fprintf(  fp, "       Trans  trans.def\n");
-  if (StdI->LCintra == 1) fprintf( fp, "CoulombIntra  coulombintra.def\n");
-  if (StdI->LCinter == 1) fprintf( fp, "CoulombInter  coulombinter.def\n");
-  if (StdI->LHund == 1)fprintf(    fp, "        Hund  hund.def\n");
-  if (StdI->LEx == 1)fprintf(      fp, "    Exchange  exchange.def\n");
-  if (StdI->LPairLift == 1)fprintf(fp, "    PairLift  pairlift.def\n");
-  if (StdI->Lintr == 1)fprintf(    fp, "    InterAll  interall.def\n");
-  fprintf(                         fp, "    OneBodyG  greenone.def\n");
-  fprintf(                         fp, "    TwoBodyG  greentwo.def\n");
+  fprintf(                         fp, "         ModPara  modpara.def\n");
+  fprintf(                         fp, "         LocSpin  locspn.def\n");
+  if (StdI->Ltrans == 1) fprintf(  fp, "           Trans  trans.def\n");
+  if (StdI->LCintra == 1) fprintf( fp, "    CoulombIntra  coulombintra.def\n");
+  if (StdI->LCinter == 1) fprintf( fp, "    CoulombInter  coulombinter.def\n");
+  if (StdI->LHund == 1)fprintf(    fp, "            Hund  hund.def\n");
+  if (StdI->LEx == 1)fprintf(      fp, "        Exchange  exchange.def\n");
+  if (StdI->LPairLift == 1)fprintf(fp, "        PairLift  pairlift.def\n");
+  if (StdI->Lintr == 1)fprintf(    fp, "        InterAll  interall.def\n");
+  if (StdI->ioutputmode != 0) {
+    fprintf(                       fp, "        OneBodyG  greenone.def\n");
+    fprintf(                       fp, "        TwoBodyG  greentwo.def\n");
+  }
 #if defined(_HPhi)
-  fprintf(                         fp, "     CalcMod  calcmod.def\n");
-  if(StdI->SpectrumBody == 1) fprintf(fp, "SingleExcitation single.def\n");
-  else fprintf(fp, "PairExcitation  pair.def\n");
-  fprintf(                         fp, " SpectrumVec  %s_eigenvec_0\n",
+  fprintf(                         fp, "         CalcMod  calcmod.def\n");
+  if(StdI->SpectrumBody == 1) 
+    fprintf(                       fp, "SingleExcitation  single.def\n");
+  else fprintf(                    fp, "  PairExcitation  pair.def\n");
+  fprintf(                         fp, "     SpectrumVec  %s_eigenvec_0\n",
                                    StdI->CDataFileHead);
-  if (StdI->lBoost == 1) fprintf(  fp, "       Boost  boost.def\n");
+  if (StdI->lBoost == 1) fprintf(  fp, "           Boost  boost.def\n");
 #elif defined(_mVMC)
-  fprintf(                         fp, "  Gutzwiller  gutzwilleridx.def\n");
-  fprintf(                         fp, "     Jastrow  jastrowidx.def\n");
-  fprintf(                         fp, "     Orbital  orbitalidx.def\n");
-  fprintf(                         fp, "    TransSym  qptransidx.def\n");
+  fprintf(                         fp, "      Gutzwiller  gutzwilleridx.def\n");
+  fprintf(                         fp, "         Jastrow  jastrowidx.def\n");
+  fprintf(                         fp, "         Orbital  orbitalidx.def\n");
+  fprintf(                         fp, "        TransSym  qptransidx.def\n");
 #endif
   
   fclose(fp);
@@ -1025,27 +1028,27 @@ static void Print1Green(struct StdIntList *StdI)
         }/*for (ispin = 0; ispin <= SiMax; ispin++)*/
       }/*for (isite = 0; isite < StdI->nsite; isite++)*/
     }
-  }/*if (StdI->ioutputmode != 0) */
 
-  fp = fopen("greenone.def", "w");
-  fprintf(fp, "===============================\n");
-  fprintf(fp, "NCisAjs %10d\n", ngreen);
-  fprintf(fp, "===============================\n");
-  fprintf(fp, "======== Green functions ======\n");
-  fprintf(fp, "===============================\n");
-  for (igreen = 0; igreen < ngreen; igreen++) {
-    fprintf(fp, "%5d %5d %5d %5d\n",
+    fp = fopen("greenone.def", "w");
+    fprintf(fp, "===============================\n");
+    fprintf(fp, "NCisAjs %10d\n", ngreen);
+    fprintf(fp, "===============================\n");
+    fprintf(fp, "======== Green functions ======\n");
+    fprintf(fp, "===============================\n");
+    for (igreen = 0; igreen < ngreen; igreen++) {
+    fprintf(fp,   "%5d %5d %5d %5d\n",
       greenindx[igreen][0], greenindx[igreen][1], greenindx[igreen][2], greenindx[igreen][3]);
-  }
-  fclose(fp);
+    }
+    fclose(fp);
 
-  fprintf(stdout, "    greenone.def is written.\n");
-  //[s] free
-  for (igreen = 0; igreen < ngreen; igreen++) {
-    free(greenindx[igreen]);
-  }
-  free(greenindx);
-  //[e] free
+    fprintf(stdout, "    greenone.def is written.\n");
+
+    for (igreen = 0; igreen < ngreen; igreen++) {
+      free(greenindx[igreen]);
+    }
+    free(greenindx);
+
+  }/*if (StdI->ioutputmode != 0) */
 }/*static void Print1Green*/
 
 /**
@@ -1136,30 +1139,28 @@ static void Print2Green(struct StdIntList *StdI) {
       }/*for (site1 = 0; site1 < StdI->nsite; site1++)*/
 
     }/*for (store = 0; store < 2; store++)*/
-  }/*if (StdI->ioutputmode != 0)*/
 
-  fp = fopen("greentwo.def", "w");
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "NCisAjsCktAltDC %10d\n", ngreen);
-  fprintf(fp, "=============================================\n");
-  fprintf(fp, "======== Green functions for Sq AND Nq ======\n");
-  fprintf(fp, "=============================================\n");
-  for (igreen = 0; igreen < ngreen; igreen++) {
-    fprintf(fp, "%5d %5d %5d %5d %5d %5d %5d %5d\n",
-      greenindx[igreen][0], greenindx[igreen][1], greenindx[igreen][2], greenindx[igreen][3],
-      greenindx[igreen][4], greenindx[igreen][5], greenindx[igreen][6], greenindx[igreen][7]);
-  }
-  fclose(fp);
+    fp = fopen("greentwo.def", "w");
+    fprintf(fp, "=============================================\n");
+    fprintf(fp, "NCisAjsCktAltDC %10d\n", ngreen);
+    fprintf(fp, "=============================================\n");
+    fprintf(fp, "======== Green functions for Sq AND Nq ======\n");
+    fprintf(fp, "=============================================\n");
+    for (igreen = 0; igreen < ngreen; igreen++) {
+      fprintf(fp, "%5d %5d %5d %5d %5d %5d %5d %5d\n",
+        greenindx[igreen][0], greenindx[igreen][1], greenindx[igreen][2], greenindx[igreen][3],
+        greenindx[igreen][4], greenindx[igreen][5], greenindx[igreen][6], greenindx[igreen][7]);
+    }
+    fclose(fp);
 
-  fprintf(stdout, "    greentwo.def is written.\n");
+    fprintf(stdout, "    greentwo.def is written.\n");
 
-  if (StdI->ioutputmode != 0) {
     for (igreen = 0; igreen < ngreen; igreen++) {
       free(greenindx[igreen]);
     }
     free(greenindx);
-  }/*if (StdI->ioutputmode != 0)*/
 
+  }/*if (StdI->ioutputmode != 0)*/
 }/*void Print2Green(struct StdIntList *StdI)*/
 /**
  *
@@ -1176,7 +1177,7 @@ static void UnsupportedSystem(
   fprintf(stdout, "  LATTICE : %s, \n", lattice);
   fprintf(stdout, "is unsupported in the STANDARD MODE...\n");
   fprintf(stdout, "Please use the EXPART MODE, or write a NEW FUNCTION and post us.\n");
-  exit(-1);
+  StdFace_exit(-1);
 }/*static void UnsupportedSystem*/
 /**
  *
@@ -1213,7 +1214,7 @@ static void CheckOutputMode(struct StdIntList *StdI)
   }
   else{
     fprintf(stdout, "\n ERROR ! Unsupported OutPutMode : %s\n", StdI->outputmode);
-    exit(-1);
+    StdFace_exit(-1);
   }
 }/*static void CheckOutputMode*/
 /**
@@ -1305,7 +1306,7 @@ static void CheckModPara(struct StdIntList *StdI)
       StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
       if (StdI->nelec % 2 != 0) {
         printf("\nERROR ! nelec should be an even number !\n\n");
-        exit(-1);
+        StdFace_exit(-1);
       }
       else {
         StdI->nelec = StdI->nelec / 2;
@@ -1332,7 +1333,7 @@ static void CheckModPara(struct StdIntList *StdI)
       StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
       if ((StdI->nelec + StdI->nsite / 2) % 2 != 0) {
         printf("\nERROR ! nelec should be an even number !\n\n");
-        exit(-1);
+        StdFace_exit(-1);
       }
       else {
         StdI->nelec = (StdI->nelec + StdI->nsite / 2) / 2;
@@ -1347,7 +1348,7 @@ static void CheckModPara(struct StdIntList *StdI)
  *
  * @author Mitsuaki Kawamura (The University of Tokyo)
  */
-static void PrintInterations(struct StdIntList *StdI)
+static void PrintInteractions(struct StdIntList *StdI)
 {
   FILE *fp;
   int nintr0, kintr, jintr;
@@ -1462,7 +1463,7 @@ static void PrintInterations(struct StdIntList *StdI)
   else StdI->LPairLift = 1;
 
   if (StdI->LPairLift == 1) {
-    fp = fopen("exchange.def", "w");
+    fp = fopen("pairlift.def", "w");
     fprintf(fp, "=============================================\n");
     fprintf(fp, "NExchange %10d\n", nintr0);
     fprintf(fp, "=============================================\n");
@@ -1657,7 +1658,7 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
   fprintf(stdout, "\n######  Standard Intarface Mode STARTS  ######\n");
   if ((fp = fopen(fname, "r")) == NULL) {
     fprintf(stdout, "\n  ERROR !  Cannot open input file %s !\n\n", fname);
-    exit(-1);
+    StdFace_exit(-1);
   }
   else {
     fprintf(stdout, "\n  Open Standard-Mode Inputfile %s \n\n", fname);
@@ -1680,7 +1681,7 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     value = strtok(NULL, "=");
     if (value == NULL) {
       fprintf(stdout, "\n  ERROR !  \"=\" is NOT found !\n\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
     TrimSpaceQuote(keyword);
     TrimSpaceQuote(value);
@@ -1850,7 +1851,7 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
 #endif
     else {
       fprintf(stdout, "ERROR ! Unsupported Keyword !\n");
-      exit(-1);
+      StdFace_exit(-1);
     }
   }
   fclose(fp);
@@ -1894,7 +1895,7 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
 #if defined(_mVMC)
   if (StdI.lGC == 1) {
     printf("\nSorry, Grandcanonical has not been supported !\n\n");
-    exit(-1);
+    StdFace_exit(-1);
   }
 #endif
   /*
