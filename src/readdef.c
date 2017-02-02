@@ -755,9 +755,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx1++;
         count_idx++;
         }
-	  if(idx0!=Nsite*Nsite || idx1!=NOrbitalIdx) {
-	    info=ReadDefFileError(defname);
-	  }
+	if(idx0!=Nsite*Nsite || idx1!=NOrbitalIdx) {
+	  info=ReadDefFileError(defname);
+	}
 	}
 	fclose(fp);
 	break;
