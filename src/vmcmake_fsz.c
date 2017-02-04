@@ -26,28 +26,28 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-void VMCMakeSample(MPI_Comm comm);
-int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+void VMCMakeSample_fsz(MPI_Comm comm);
+int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,int *eleSpn,
                       const int qpStart, const int qpEnd, MPI_Comm comm);
-void copyFromBurnSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
-void copyToBurnSample(const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt);
-void saveEleConfig(const int sample, const double complex logIp,
-                   const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt);
-void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum);
+void copyFromBurnSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,int *eleSpn);
+void copyToBurnSample_fsz(const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,const int *eleSpn);
+void saveEleConfig_fsz(const int sample, const double complex logIp,
+                   const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,const int *eleSpn);
+//void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum);
 void ReduceCounter(MPI_Comm comm);
-void makeCandidate_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
-                           const int *eleIdx, const int *eleCfg);
-void makeCandidate_exchange(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
-                            const int *eleIdx, const int *eleCfg, const int *eleNum);
-void updateEleConfig(int mi, int ri, int rj, int s,
-                     int *eleIdx, int *eleCfg, int *eleNum);
-void revertEleConfig(int mi, int ri, int rj, int s,
-                     int *eleIdx, int *eleCfg, int *eleNum);
+void makeCandidate_hopping_spn(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg,const int *eleSpn);
+void makeCandidate_exchange_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
+                            const int *eleIdx, const int *eleCfg, const int *eleNum,const int *eleSpn);
+void updateEleConfig_fsz(int mi, int ri, int rj, int s,
+                     int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn);
+void revertEleConfig_fsz(int mi, int ri, int rj, int s,
+                     int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn);
 
 typedef enum {HOPPING, EXCHANGE, NONE} UpdateType;
 UpdateType getUpdateType(int path);
 
-void VMCMakeSample(MPI_Comm comm) {
+void VMCMakeSample_fsz(MPI_Comm comm) {
   int outStep,nOutStep;
   int inStep,nInStep;
   UpdateType updateType;
@@ -70,10 +70,10 @@ void VMCMakeSample(MPI_Comm comm) {
 
   StartTimer(30);
   if(BurnFlag==0) {
-    makeInitialSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,
+    makeInitialSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn,
                       qpStart,qpEnd,comm);
   } else {
-    copyFromBurnSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt);
+    copyFromBurnSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn) ;//fsz
   }
   
   CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
@@ -81,7 +81,7 @@ void VMCMakeSample(MPI_Comm comm) {
   logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
   if( !isfinite(creal(logIpOld) + cimag(logIpOld)) ) {
     if(rank==0) fprintf(stderr,"waring: VMCMakeSample remakeSample logIpOld=%e\n",creal(logIpOld)); //TBC
-    makeInitialSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,
+    makeInitialSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn,
                       qpStart,qpEnd,comm);
     CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
     //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
@@ -104,21 +104,21 @@ void VMCMakeSample(MPI_Comm comm) {
         Counter[0]++;
 
         StartTimer(31);
-        makeCandidate_hopping(&mi, &ri, &rj, &s, &rejectFlag,
-                              TmpEleIdx, TmpEleCfg);
+        makeCandidate_hopping_fsz(&mi, &ri, &rj, &s, &rejectFlag,
+                              TmpEleIdx, TmpEleCfg,TmpEleSpn);
         StopTimer(31);
 
-        if(rejectFlag) continue;
+        if(rejectFlag) continue; 
 
         StartTimer(32);
           StartTimer(60);
         /* The mi-th electron with spin s hops to site rj */
-        updateEleConfig(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum);
+        updateEleConfig_fsz(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         UpdateProjCnt(ri,rj,s,projCntNew,TmpEleProjCnt,TmpEleNum);
           StopTimer(60);
           StartTimer(61);
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
-        CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
+        CalculateNewPfM2_fsz(mi,s,pfMNew,TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
         //printf("DEBUG: out %d in %d pfMNew=%lf \n",outStep,inStep,creal(pfMNew[0]));
           StopTimer(61);
 
@@ -136,7 +136,7 @@ void VMCMakeSample(MPI_Comm comm) {
         if(w > genrand_real2()) { /* accept */
             // UpdateMAll will change SlaterElm, InvM (including PfM)
             StartTimer(63);
-            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
+            UpdateMAll_fsz(mi,s,TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
 //            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
             StopTimer(63);
 
@@ -145,7 +145,7 @@ void VMCMakeSample(MPI_Comm comm) {
           nAccept++;
           Counter[1]++;
         } else { /* reject */
-          revertEleConfig(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum);
+          revertEleConfig_fsz(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         }
         StopTimer(32);
 
@@ -153,8 +153,8 @@ void VMCMakeSample(MPI_Comm comm) {
         Counter[2]++;
 
         StartTimer(31);
-        makeCandidate_exchange(&mi, &ri, &rj, &s, &rejectFlag,
-                               TmpEleIdx, TmpEleCfg, TmpEleNum);
+        makeCandidate_exchange_fsz(&mi, &ri, &rj, &s, &rejectFlag,
+                               TmpEleIdx, TmpEleCfg, TmpEleNum,TmpEleSpn);
         StopTimer(31);
 
         if(rejectFlag) continue;
@@ -167,10 +167,10 @@ void VMCMakeSample(MPI_Comm comm) {
         mj = TmpEleCfg[rj+t*Nsite];
 
         /* The mi-th electron with spin s hops to rj */
-        updateEleConfig(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum);
+        updateEleConfig_fsz(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         UpdateProjCnt(ri,rj,s,projCntNew,TmpEleProjCnt,TmpEleNum);
         /* The mj-th electron with spin t hops to ri */
-        updateEleConfig(mj,rj,ri,t,TmpEleIdx,TmpEleCfg,TmpEleNum);
+        updateEleConfig_fsz(mj,rj,ri,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         UpdateProjCnt(rj,ri,t,projCntNew,projCntNew,TmpEleNum);
 
         StopTimer(65);
@@ -200,8 +200,8 @@ void VMCMakeSample(MPI_Comm comm) {
           nAccept++;
           Counter[3]++;
         } else { /* reject */
-          revertEleConfig(mj,rj,ri,t,TmpEleIdx,TmpEleCfg,TmpEleNum);
-          revertEleConfig(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum);
+          revertEleConfig_fsz(mj,rj,ri,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
+          revertEleConfig_fsz(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         }
         StopTimer(33);
       }
@@ -209,7 +209,7 @@ void VMCMakeSample(MPI_Comm comm) {
       if(nAccept>Nsite) {
         StartTimer(34);
         /* recal PfM and InvM */
-        CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+        CalculateMAll_fsz(TmpEleIdx,qpStart,qpEnd);
         //printf("DEBUG: maker3: PfM=%lf\n",creal(PfM[0]));
         logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
         StopTimer(34);
@@ -227,12 +227,12 @@ void VMCMakeSample(MPI_Comm comm) {
 
   } /* end of outstep */
 
-  copyToBurnSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt);
+  copyToBurnSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn);
   BurnFlag=1;
   return;
 }
 
-int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,int *eleSpn,
                       const int qpStart, const int qpEnd, MPI_Comm comm) {
   const int nsize = Nsize;
   const int nsite2 = Nsite2;
@@ -246,6 +246,8 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
     /* initialize */
     #pragma omp parallel for default(shared) private(msi)
     for(msi=0;msi<nsize;msi++) eleIdx[msi] = -1;
+    #pragma omp parallel for default(shared) private(msi)
+    for(msi=0;msi<nsize;msi++) eleSpn[msi] = -1;
     #pragma omp parallel for default(shared) private(rsi)
     for(rsi=0;rsi<nsite2;rsi++) eleCfg[rsi] = -1;
     
@@ -253,23 +255,25 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
     for(ri=0;ri<Nsite;ri++) {
       if(LocSpn[ri]==1) {
         do {
-          mi = gen_rand32()%Ne;
+          mi = gen_rand32()%nsize;
           si = (genrand_real2()<0.5) ? 0 : 1;
-        } while(eleIdx[mi+si*Ne]!=-1);
+        } while(eleIdx[mi]!=-1); // seeking empty site
         eleCfg[ri+si*Nsite] = mi;
-        eleIdx[mi+si*Ne] = ri;
+        eleIdx[mi]          = ri;
+        eleSpn[mi]          = si;
       }
     }
     
     /* itinerant electron */
-    for(si=0;si<2;si++) {
-      for(mi=0;mi<Ne;mi++) {
+    for(si=0;si<2;si++) { //note: Sz is not conserved quantity but initially we take Sz=0 
+      for(mi=0;mi<Ne;mi++) { 
         if(eleIdx[mi+si*Ne]== -1) {
           do {
             ri = gen_rand32()%Nsite;
-          } while (eleCfg[ri+si*Nsite]!= -1 || LocSpn[ri]==1);
-          eleCfg[ri+si*Nsite] = mi;
-          eleIdx[mi+si*Ne] = ri;
+          } while (eleCfg[ri+si*Nsite]!= -1 || LocSpn[ri]==1); // seeking empty and itinerant site
+          eleCfg[ri+si*Nsite]     = mi;
+          eleIdx[mi+si*Ne]        = ri;
+          eleSpn[mi+si*Ne]        = si;
         }
       }
     }
@@ -281,7 +285,7 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
       eleNum[rsi] = (eleCfg[rsi] < 0) ? 0 : 1;
     }
     
-    MakeProjCnt(eleProjCnt,eleNum);
+    MakeProjCnt(eleProjCnt,eleNum); // this function does not change even for fsz
 
     flag = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd);
     //printf("DEBUG: maker4: PfM=%lf\n",creal(PfM[0]));
@@ -300,26 +304,26 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
   return 0;
 }
 
-void copyFromBurnSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt) {
+void copyFromBurnSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,int *eleSpn) {
   int i,n;
-  const int *burnEleIdx = BurnEleIdx;
-  n = Nsize + 2*Nsite + 2*Nsite + NProj;
+  const int *burnEleIdx = BurnEleIdx;// BurnEleIdx is global
+  n = Nsize + 2*Nsite + 2*Nsite + NProj+Niste;//fsz
   #pragma loop noalias
-  for(i=0;i<n;i++) eleIdx[i] = burnEleIdx[i];
+  for(i=0;i<n;i++) eleIdx[i] = burnEleIdx[i]; 
   return;
 }
 
-void copyToBurnSample(const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt) {
+void copyToBurnSample_fsz(const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,const int *eleSpn) {
   int i,n;
   int *burnEleIdx = BurnEleIdx;
-  n = Nsize + 2*Nsite + 2*Nsite + NProj;
+  n = Nsize + 2*Nsite + 2*Nsite + NProj+Nsite;//fsz
   #pragma loop noalias
   for(i=0;i<n;i++) burnEleIdx[i] = eleIdx[i];
   return;
 }
 
 void saveEleConfig(const int sample, const double complex logIp,
-                   const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt) {
+                   const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,const int *eleSpn) {
   int i,offset;
   double x;
   const int nsize=Nsize;
@@ -337,6 +341,8 @@ void saveEleConfig(const int sample, const double complex logIp,
   offset = sample*nProj;
   #pragma loop noalias
   for(i=0;i<nProj;i++) EleProjCnt[offset+i] = eleProjCnt[i];
+  #pragma loop noalias
+  for(i=0;i<nProj;i++) EleSpn[offset+i] = eleSpnt[i];
   
   x = LogProjVal(eleProjCnt);
   logSqPfFullSlater[sample] = 2.0*(x+creal(logIp));//TBC
@@ -344,7 +350,7 @@ void saveEleConfig(const int sample, const double complex logIp,
   return;
 }
 
-void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum) {
+//void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum) {
 /*   int ri,mi=0; */
 /*   for(ri=0;ri<Nsite;ri++) { */
 /*     if(eleNum[ri]>0) { */
@@ -366,8 +372,8 @@ void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum) {
 /*     } */
 /*   } */
 
-  return;
-}
+//  return;
+//}
 
 void ReduceCounter(MPI_Comm comm) {
   #ifdef _mpi_use
@@ -388,17 +394,18 @@ void ReduceCounter(MPI_Comm comm) {
 
 
 /* The mi-th electron with spin s hops to site rj */
-void makeCandidate_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
-                           const int *eleIdx, const int *eleCfg) {
+void makeCandidate_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg,const int *eleSpn) {
   const int icnt_max = Nsite*Nsite;
   int icnt;
   int mi, ri, rj, s, flag;
 
   flag = 0; // FALSE
   do {
-    mi = gen_rand32()%Ne;
-    s = (genrand_real2()<0.5) ? 0 : 1;
-    ri = eleIdx[mi+s*Ne];
+    mi = gen_rand32()%Nsize;
+    //s  = (genrand_real2()<0.5) ? 0 : 1; //fsz
+    s  = eleSpn[mi] ; //fsz 
+    ri = eleIdx[mi];  //fsz
   } while (LocSpn[ri] == 1);
 
   icnt = 0;
@@ -421,8 +428,8 @@ void makeCandidate_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFla
 }
 
 /* The mi-th electron with spin s exchanges with the electron on site rj with spin 1-s */
-void makeCandidate_exchange(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
-                           const int *eleIdx, const int *eleCfg, const int *eleNum) {
+void makeCandidate_exchange_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg, const int *eleNum,const int *eleSpn) {
   int mi, mj, ri, rj, s, t, flag;
 
   flag = 1; // TRUE
@@ -438,15 +445,15 @@ void makeCandidate_exchange(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFl
   }
 
   do {
-    mi = gen_rand32()%Ne;
-    s = (genrand_real2()<0.5) ? 0 : 1;
-    ri = eleIdx[mi+s*Ne];
+    mi = gen_rand32()%Nsize;//fsz
+    s  = eleSpn[mi]// fsz //s = (genrand_real2()<0.5) ? 0 : 1;
+    ri = eleIdx[mi]; //fsz
   } while (eleCfg[ri+(1-s)*Nsite] != -1);
   do {
-    mj = gen_rand32()%Ne;
+    mj = gen_rand32()%Nsize;
     t = 1-s;
-    rj = eleIdx[mj+t*Ne];
-  } while (eleCfg[rj+(1-t)*Nsite] != -1);
+    rj = eleIdx[mj];
+  } while (eleCfg[rj+(1-t)*Nsite] != -1 || eleSpn[mj]==s); // is it OK ?
 
   *mi_ = mi;
   *ri_ = ri;
@@ -458,9 +465,10 @@ void makeCandidate_exchange(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFl
 }
 
 /* The mi-th electron with spin s hops to site rj */
-void updateEleConfig(int mi, int ri, int rj, int s,
-                     int *eleIdx, int *eleCfg, int *eleNum) {
-  eleIdx[mi+s*Ne] = rj;
+void updateEleConfig_fsz(int mi, int ri, int rj, int s,
+                     int *eleIdx, int *eleCfg, int *eleNum, int *eleSpn) {
+  eleIdx[mi]         = rj;
+  eleSpn[mi]         = s;
   eleCfg[ri+s*Nsite] = -1;
   eleCfg[rj+s*Nsite] = mi;
   eleNum[ri+s*Nsite] = 0;
@@ -468,9 +476,10 @@ void updateEleConfig(int mi, int ri, int rj, int s,
   return;
 }
 
-void revertEleConfig(int mi, int ri, int rj, int s,
-                     int *eleIdx, int *eleCfg, int *eleNum) {
-  eleIdx[mi+s*Ne] = ri;
+void revertEleConfig_fsz(int mi, int ri, int rj, int s,
+                     int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn) {
+  eleIdx[mi]         = ri;//fsz 
+  eleIdx[mi]         = s; //fsz
   eleCfg[ri+s*Nsite] = mi;
   eleCfg[rj+s*Nsite] = -1;
   eleNum[ri+s*Nsite] = 1;

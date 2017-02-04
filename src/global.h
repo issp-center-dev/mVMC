@@ -48,6 +48,7 @@ int NDataQtySmp; /* the number of output files */
 
 int Nsite; /* the number of sites */
 int Ne;    /* the number of electrons with up spin */
+int Nup;   /* the number of electrons with up spin */
 int Nsize; /* the number of electrons = 2*Ne */
 int Nsite2; /* 2*Nsite */
 
@@ -167,9 +168,10 @@ double complex *Slater; /* pair orbital       (Slater  =Para+NProj) */
 double complex *OptTrans; /* weights          (OptTrans=Para+NProj+NSlater) */
 
 /***** Electron Configuration ******/
-int *EleIdx; /* EleIdx[sample][mi+si*Ne] */
-int *EleCfg; /* EleCfg[sample][ri+si*Nsite] */
-int *EleNum; /* EleIdx[sample][ri+si*Nsite] */
+int *EleIdx;     /* EleIdx[sample][mi+si*Ne] */
+int *EleSpn;     /* EleIdx[sample][mi+si*Ne] */ //fsz
+int *EleCfg;     /* EleCfg[sample][ri+si*Nsite] */
+int *EleNum;     /* EleIdx[sample][ri+si*Nsite] */
 int *EleProjCnt; /* EleProjCnt[sample][proj] */
 double *logSqPfFullSlater; /* logSqPfFullSlater[sample] */
 
@@ -177,11 +179,13 @@ int *TmpEleIdx;
 int *TmpEleCfg;
 int *TmpEleNum;
 int *TmpEleProjCnt;
+int *TmpEleSpn;
 
 int *BurnEleIdx;
 int *BurnEleCfg;
 int *BurnEleNum;
 int *BurnEleProjCnt;
+int *BurnEleSpn;
 int BurnFlag=0; /* 0: off, 1: on */
 
 /***** Slater Elements ******/

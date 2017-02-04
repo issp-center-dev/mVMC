@@ -223,17 +223,20 @@ void SetMemory() {
   EleCfg            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
   EleNum            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
   EleProjCnt        = (int*)malloc(sizeof(int)*( NVMCSample*NProj ));
+  EleSpn            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));//fsz
   logSqPfFullSlater = (double*)malloc(sizeof(double)*(NVMCSample));
 
-  TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
+  TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne));//fsz
   TmpEleCfg         = TmpEleIdx + 2*Ne;
   TmpEleNum         = TmpEleCfg + 2*Nsite;
   TmpEleProjCnt     = TmpEleNum + 2*Nsite;
+  TmpElePSpn        = TmpEleProjCnt + NProj; //fsz
 
-  BurnEleIdx = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
-  BurnEleCfg = BurnEleIdx + 2*Ne;
-  BurnEleNum = BurnEleCfg + 2*Nsite;
-  BurnEleProjCnt = BurnEleNum + 2*Nsite;
+  BurnEleIdx        = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne)); //fsz
+  BurnEleCfg        = BurnEleIdx + 2*Ne;
+  BurnEleNum        = BurnEleCfg + 2*Nsite;
+  BurnEleProjCnt    = BurnEleNum + 2*Nsite;
+  BurnElePSpn       = BurnEleProjCnt + NProj; //fsz
 
   /***** Slater Elements ******/
   SlaterElm = (double complex*)malloc( sizeof(double complex)*(NQPFull*(2*Nsite)*(2*Nsite)) );

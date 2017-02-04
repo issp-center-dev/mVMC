@@ -159,7 +159,7 @@ void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *ele
     tOrbSgn   = transOrbSgn + qpidx*nsize*nsize; // tOrbSgn : sign of f_ij
     for(msi=0;msi<nsize;msi++) {                 // nsize=2*Ne including spin degrees of freedom
       ri           = eleIdx[msi];                //  ri  : postion where the msi-th electron exists  
-      si           = eleIdx_spn[msi];            //  si  : spin of the msi-th electron  :fsz
+      si           = eleSpn[msi];            //  si  : spin of the msi-th electron  :fsz
       ori          = xqpOpt[ri];                 // ori  : ri -> ori -> tri
       tri          = xqp[ori]+si*Nsite;          // tri  : fsz
       sgni         = xqpSgn[ori]*xqpOptSgn[ri];  // sgni :
@@ -168,7 +168,7 @@ void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *ele
       orbitalIdx_i = OrbitalIdx[tri];            //
       for(msj=0;msj<nsize;msj++) { //nsize=2*Ne //
         rj             = eleIdx[msj];           //
-        sj             = eleIdx_spn[msj]        // sj spin of the msj-th electron  :fsz
+        sj             = eleIdxSpn[msj]        // sj spin of the msj-th electron  :fsz
         orj            = xqpOpt[rj];         
         trj            = xqp[orj]+sj*Nsite;       //fsz
         sgnj           = xqpSgn[orj]*xqpOptSgn[rj]; //xqpSgn
