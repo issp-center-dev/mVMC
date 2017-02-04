@@ -35,8 +35,8 @@ int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd);
 int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
                         double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
 
-int CalculateMAll_fsz(const int *eleIdx, const int qpStart, const int qpEnd);
-int calculateMAll_child_fsz(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
+int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd);
+int calculateMAll_child_fsz(const int *eleIdx,const int elesSpn, const int qpStart, const int qpEnd, const int qpidx,
                         double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
 // note: CalculateMAll_fsz,calculateMAll_child_fsz will be merged with *fcmp
 
@@ -118,7 +118,7 @@ int getLWork_fcmp() {
 
 //==============s fsz =============//
 /* Calculate PfM and InvM from qpidx=qpStart to qpEnd */
-int CalculateMAll_fsz(const int *eleIdx, const int qpStart, const int qpEnd) {
+int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;
   int qpidx;
 
@@ -150,7 +150,7 @@ int CalculateMAll_fsz(const int *eleIdx, const int qpStart, const int qpEnd) {
     for(qpidx=0;qpidx<qpNum;qpidx++) {
       if(info!=0) continue;
       
-      myInfo = calculateMAll_child_fsz(eleIdx, qpStart, qpEnd, qpidx,
+      myInfo = calculateMAll_child_fsz(eleIdx,eleSpn, qpStart, qpEnd, qpidx,
                                    myBufM, myIWork, myWork, LapackLWork,myRWork);
       if(myInfo!=0) {
         #pragma omp critical
@@ -165,7 +165,7 @@ int CalculateMAll_fsz(const int *eleIdx, const int qpStart, const int qpEnd) {
   return info;
 }
 
-int calculateMAll_child_fsz(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
+int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd, const int qpidx,
                         double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork) {
   #pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
@@ -174,7 +174,7 @@ int calculateMAll_child_fsz(const int *eleIdx, const int qpStart, const int qpEn
 
   char uplo='U', mthd='P';
   int m,n,lda,info=0;
-  int nspn = 2*Ne+2*Nsite+2*Nsite+NProj;
+  //int nspn = 2*Ne+2*Nsite+2*Nsite+NProj; this is useful?
   double complex pfaff;
 
   /* optimization for Kei */
@@ -195,12 +195,12 @@ int calculateMAll_child_fsz(const int *eleIdx, const int qpStart, const int qpEn
   /* bufM[msj][msi] = -sltE[rsi][rsj] */
   #pragma loop noalias
   for(msi=0;msi<nsize;msi++) {
-    rsi = eleIdx[msi] + eleIdx[nspn+msi]*Nsite;//fsz
+    rsi = eleIdx[msi] + eleSpn[msi]*Nsite;//fsz
     bufM_i = bufM + msi*Nsize;
     sltE_i = sltE + rsi*Nsite2;
     #pragma loop norecurrence
     for(msj=0;msj<nsize;msj++) {
-      rsj = eleIdx[msj] + eleIdx[nspn+msi]*Nsite;//fsz
+      rsj = eleIdx[msj] + eleSpn[msj]*Nsite;//fsz
       bufM_i[msj] = -sltE_i[rsj];
 //      printf("DEBUG: msi=%d msj=%d bufM=%lf %lf \n",msi,msj,creal(bufM_i[msj]),cimag(bufM_i[msj]));
     }

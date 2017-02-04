@@ -28,6 +28,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 void CalculateNewPfM(const int mi, const int s, double complex *pfMNew, const int *eleIdx,
                      const int qpStart, const int qpEnd);
+void CalculateNewPfM_fsz(const int mi, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
+                     const int qpStart, const int qpEnd);
 void CalculateNewPfM2(const int mi, const int s, double complex *pfMNew, const int *eleIdx,
                      const int qpStart, const int qpEnd);
 void CalculateNewPfM2_fsz(const int ma, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
@@ -83,6 +85,48 @@ void CalculateNewPfM(const int ma, const int s, double complex *pfMNew, const in
 
   return;
 }
+
+/* Calculate new pfaffian. The ma-th electron with spin s hops. */
+void CalculateNewPfM_fsz(const int ma, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
+                     const int qpStart, const int qpEnd) {
+  #pragma procedure serial
+  const int qpNum = qpEnd-qpStart;
+  //const int msa = ma+s*Ne;//fsz
+  const int msa = ma;
+  const int rsa = eleIdx[msa] + s*Nsite;
+
+  int qpidx;
+  int msj,rsj;
+  const double complex *sltE_a; /* update elements of msa-th row */
+  const double complex *invM_a;
+  double complex ratio;
+
+  /* optimization for Kei */
+  const int nsize = Nsize;
+  const int ne = Ne;
+
+  #pragma loop noalias
+  for(qpidx=0;qpidx<qpNum;qpidx++) {
+    sltE_a = SlaterElm + (qpidx+qpStart)*Nsite2*Nsite2 + rsa*Nsite2;
+    invM_a = InvM + qpidx*Nsize*Nsize + msa*Nsize;
+
+    ratio = 0.0;
+    for(msj=0;msj<nize;msj++) { //fsz
+      rsj = eleIdx[msj]+eleSpn[msj]*Nsite;//fsz
+      ratio += invM_a[msj] * sltE_a[rsj];
+    }
+//    for(msj=ne;msj<nsize;msj++) {
+//      rsj = eleIdx[msj] + Nsite;
+//      ratio += invM_a[msj] * sltE_a[rsj];
+ //   }
+
+    pfMNew[qpidx] = -ratio*PfM[qpidx];
+  }
+
+  return;
+}
+
+
 
 /* thread parallel version of CalculateNewPfM */
 void CalculateNewPfM2(const int ma, const int s, double complex *pfMNew, const int *eleIdx,
@@ -284,7 +328,7 @@ void UpdateMAll_fsz(const int ma, const int s, const int *eleIdx,const int *eleS
     #pragma omp for private(qpidx)
     #pragma loop nounroll
     for(qpidx=0;qpidx<qpNum;qpidx++) {
-      updateMAll_child(ma, s, eleIdx,eleSpn, qpStart, qpEnd, qpidx, vec1, vec2);
+      updateMAll_child_fsz(ma, s, eleIdx,eleSpn, qpStart, qpEnd, qpidx, vec1, vec2);
     }
   }
 
@@ -298,7 +342,7 @@ void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int
   #pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
   //const int msa = ma+s*Ne;
-  /const int msa = ma;
+  const int msa = ma;
   const int rsa = eleIdx[msa] + s*Nsite;
   const int nsize = Nsize; /* optimization for Kei */
 

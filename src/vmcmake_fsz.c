@@ -76,14 +76,14 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
     copyFromBurnSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn) ;//fsz
   }
   
-  CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+  CalculateMAll_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
  // printf("DEBUG: maker1: PfM=%lf\n",creal(PfM[0]));
   logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
   if( !isfinite(creal(logIpOld) + cimag(logIpOld)) ) {
     if(rank==0) fprintf(stderr,"waring: VMCMakeSample remakeSample logIpOld=%e\n",creal(logIpOld)); //TBC
     makeInitialSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn,
                       qpStart,qpEnd,comm);
-    CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+    CalculateMAll_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
     //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
     logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
     BurnFlag = 0;
@@ -176,7 +176,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
         StopTimer(65);
         StartTimer(66);
 
-        CalculateNewPfMTwo2_fcmp(mi, s, mj, t, pfMNew, TmpEleIdx, qpStart, qpEnd);
+        CalculateNewPfMTwo2_fsz(mi, s, mj, t, pfMNew, TmpEleIdx,TmpEleSpn, qpStart, qpEnd);
         StopTimer(66);
         StartTimer(67);
 
@@ -192,7 +192,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
 
         if(w > genrand_real2()) { /* accept */
           StartTimer(68);
-          UpdateMAllTwo_fcmp(mi, s, mj, t, ri, rj, TmpEleIdx,qpStart,qpEnd);
+          UpdateMAllTwo_fsz(mi, s, mj, t, ri, rj, TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
           StopTimer(68);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
@@ -209,7 +209,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
       if(nAccept>Nsite) {
         StartTimer(34);
         /* recal PfM and InvM */
-        CalculateMAll_fsz(TmpEleIdx,qpStart,qpEnd);
+        CalculateMAll_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
         //printf("DEBUG: maker3: PfM=%lf\n",creal(PfM[0]));
         logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
         StopTimer(34);
@@ -221,7 +221,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
     /* save Electron Configuration */
     if(outStep >= nOutStep-NVMCSample) {
       sample = outStep-(nOutStep-NVMCSample);
-      saveEleConfig(sample,logIpOld,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt);
+      saveEleConfig_fsz(sample,logIpOld,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn);
     }
     StopTimer(35);
 
@@ -287,7 +287,7 @@ int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt
     
     MakeProjCnt(eleProjCnt,eleNum); // this function does not change even for fsz
 
-    flag = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd);
+    flag = CalculateMAll_fsz(eleIdx,eleSpn,qpStart,qpEnd);
     //printf("DEBUG: maker4: PfM=%lf\n",creal(PfM[0]));
     if(size>1) {
       MPI_Allreduce(&flag,&flagRdc,1,MPI_INT,MPI_MAX,comm);
@@ -322,7 +322,7 @@ void copyToBurnSample_fsz(const int *eleIdx, const int *eleCfg, const int *eleNu
   return;
 }
 
-void saveEleConfig(const int sample, const double complex logIp,
+void saveEleConfig_fsz(const int sample, const double complex logIp,
                    const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,const int *eleSpn) {
   int i,offset;
   double x;
@@ -341,8 +341,9 @@ void saveEleConfig(const int sample, const double complex logIp,
   offset = sample*nProj;
   #pragma loop noalias
   for(i=0;i<nProj;i++) EleProjCnt[offset+i] = eleProjCnt[i];
+  offset = sample*nsize;
   #pragma loop noalias
-  for(i=0;i<nProj;i++) EleSpn[offset+i] = eleSpnt[i];
+  for(i=0;i<nize;i++) EleSpn[offset+i] = eleSpn[i];
   
   x = LogProjVal(eleProjCnt);
   logSqPfFullSlater[sample] = 2.0*(x+creal(logIp));//TBC
