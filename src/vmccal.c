@@ -27,8 +27,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #ifndef _SRC_VMCCAL
 #define _SRC_VMCCAL
-#include "./include/vmccal.h"
-#include "./include/matrix.h"
+#include "vmccal.h"
+#include "matrix.h"
+#include "calham_real.h"
 #include "lslocgrn_real.c"
 #include "lslocgrn.c"
 #include "calgrn.c"

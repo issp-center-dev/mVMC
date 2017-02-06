@@ -31,15 +31,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "complex.h"
 #include "slater.h"
 #include "locgrn_real.h"
-
-double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg,
-                             int *eleNum, const int *eleProjCnt);
-
-double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleCfg,
-                              int *eleNum, const int *eleProjCnt, const int *eleProjBFCnt);
-
-
-double CalculateHamiltonian0_real(const int *eleNum);
+#include "calham_real.h"
 
 ///
 /// \param ip

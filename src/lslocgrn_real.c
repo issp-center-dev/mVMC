@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #ifndef _SRC_LSLOCGRN_REAL
 #define _SRC_LSLOCGRN_REAL
+#include "calham_real.h"
 #include "./include/lslocgrn_real.h"
 #include "locgrn_real.c"
 
