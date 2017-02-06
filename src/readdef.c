@@ -440,8 +440,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + Nsite*Nsite /* JastrowIdx */
     + 2*Nsite*NDoublonHolon2siteIdx /* DoublonHolon2siteIdx */
     + 4*Nsite*NDoublonHolon4siteIdx /* DoublonHolon4siteIdx */
-    + Nsite*Nsite /* OrbitalIdx */
-    + Nsite*Nsite /* OrbitalSgn */
+    + 2*Nsite*Nsite /* OrbitalIdx */ //fsz
+    + 2*Nsite*Nsite /* OrbitalSgn */ //fsz
     + Nsite*NQPTrans /* QPTrans */
     + Nsite*NQPTrans /* QPTransSgn */
     + 4*NCisAjs /* CisAjs */
@@ -473,8 +473,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   int iKWidx=0;
   
   int i,j,n,idx,idx0,idx1,info=0;
+  int spn_i,spn_j,all_i,all_j; // fsz
   int fidx=0; /* index for OptFlag */
-    int count_idx=0;
+  int count_idx=0;
   int x0,x1,x2,x3,x4,x5,x6,x7;
   double dReValue, dImValue;
   int rank;
@@ -728,19 +729,24 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	break;
 
       case KWOrbital:
+// this part will be polished
 	/*orbitalidx.def------------------------------------*/
 	if(NOrbitalIdx>0){
 	  idx0 = idx1 = 0;
 	  if(APFlag==0) {
-	    while( fscanf(fp, "%d %d ", &i, &j) != EOF){
-	      fscanf(fp, "%d\n", &(OrbitalIdx[i][j]));
+	    while( fscanf(fp, "%d %d %d %d", &i,&spn_i,&j,&spn_j) != EOF){ //fsz
+              all_i = i+spn_i*Nsite; //fsz
+              all_j = j+spn_j*Nsite; //fsz
+	      fscanf(fp, "%d\n", &(OrbitalIdx[all_i][all_j]));//fsz
 	      OrbitalSgn[i][j] = 1;
 	      idx0++;
 	      if(idx0==Nsite*Nsite) break;
 	    }
 	  } else { /* anti-periodic boundary mode */
-	    while( fscanf(fp, "%d %d ", &i, &j) != EOF){
-	      fscanf(fp, "%d %d\n", &(OrbitalIdx[i][j]), &(OrbitalSgn[i][j]));
+	    while( fscanf(fp, "%d %d %d %d", &i,&spn_i,&j,&spn_j) != EOF){ //fsz
+              all_i = i+spn_i*Nsite; //fsz
+              all_j = j+spn_j*Nsite; //fsz
+	      fscanf(fp, "%d %d\n", &(OrbitalIdx[all_i][all_j]), &(OrbitalSgn[all_i][all_j]));
 	      idx0++;
 	      if(idx0==Nsite*Nsite) break;
 	    }

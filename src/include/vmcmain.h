@@ -76,12 +76,16 @@ extern int omp_get_thread_num(void);
 #include "parameter.c"
 #include "projection.c"
 #include "slater.c"
+#include "slater_fsz.c"
 #include "qp.c"
 #include "matrix.c"
 #include "pfupdate.c"
 #include "pfupdate_two.c"
+#include "pfupdate_two_fsz.c"
 #include "locgrn.c"
+#include "locgrn_fsz.c"
 #include "calham.c"
+#include "calham_fsz.c"
 #include "calgrn.c"
 #include "lslocgrn.c"
 
@@ -90,6 +94,8 @@ extern int omp_get_thread_num(void);
 #include "initfile.c"
 
 #include "vmcmake.c"
+#include "vmcmake_fsz.c"
 #include "vmccal.c"
+#include "vmccal_fsz.c"
 
 #endif /* _VMC_INCLUDE_FILES */

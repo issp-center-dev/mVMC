@@ -36,7 +36,7 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
                         double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
 
 int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd);
-int calculateMAll_child_fsz(const int *eleIdx,const int elesSpn, const int qpStart, const int qpEnd, const int qpidx,
+int calculateMAll_child_fsz(const int *eleIdx,const int *elesSpn, const int qpStart, const int qpEnd, const int qpidx,
                         double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
 // note: CalculateMAll_fsz,calculateMAll_child_fsz will be merged with *fcmp
 

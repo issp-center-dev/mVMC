@@ -32,7 +32,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _INCLUDE_MFMEMORY
 #define _INCLUDE_MFMEMORY
 
-static mfint[7];
+static int mfint[7];
 
 /*complex type*/
 #define c_malloc1(X, N1) \

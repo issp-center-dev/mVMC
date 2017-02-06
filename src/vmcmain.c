@@ -308,7 +308,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }
     
     StartTimer(20);
-    UpdateSlaterElm_fcmp();
+    UpdateSlaterElm_fsz();//UpdateSlaterElm_fcmp();
     UpdateQPWeight();
       StopTimer(20);
       StartTimer(3);
@@ -332,14 +332,14 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          StopTimer(69);
          // only for real TBC
       }else{
-        VMCMakeSample(comm_child1);
+        VMCMakeSample_fsz(comm_child1);//VMCMakeSample(comm_child1);
       } 
       StopTimer(3);
       StartTimer(4);
 #ifdef _DEBUG
       printf("Debug: step %d, MainCal.\n", step);
 #endif
-    VMCMainCal(comm_child1);
+    VMCMainCal_fsz(comm_child1);// VMCMainCal(comm_child1);
       StopTimer(4);
       StartTimer(21);
 #ifdef _DEBUG
@@ -394,7 +394,6 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
   /* output zqp_opt */
   if(rank==0) OutputOptData();
-
   return 0;
 }
 

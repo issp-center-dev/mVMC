@@ -27,7 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 
 void UpdateSlaterElm_fsz();
-void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *eleIdx);
+void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *eleIdx,int *eleSpn);
 
 void UpdateSlaterElm_fsz() {
   int ri,ori,tri,sgni,rsi0,rsi1;
@@ -104,7 +104,7 @@ void UpdateSlaterElm_fsz() {
 }
 
 // Calculating Tr[Inv[M]*D_k(X)]
-void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *eleIdx) {
+void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *eleIdx,int *eleSpn) {
   const int nBuf=NSlater*NQPFull;
   const int nsize = Nsize;
   const int ne = Ne;
@@ -117,6 +117,7 @@ void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *ele
   int msi,msj,ri,rj,ori,orj,tri,trj,sgni,sgnj;
   int mpidx,spidx,orbidx,qpidx,optidx,i;
   int tri0,tri1,trj0,trj1;
+  int si,sj;//fsz
   double complex cs,cc,ss; // including Pf
   int *xqp,*xqpSgn,*xqpOpt,*xqpOptSgn;
   double complex *invM,*invM_i;
@@ -140,7 +141,7 @@ void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *ele
 
   #pragma omp parallel for default(shared)                        \
     private(qpidx,optidx,mpidx,msi,msj,xqp,xqpSgn,xqpOpt,xqpOptSgn,\
-            ri,ori,tri,sgni,rj,orj,trj,sgnj,                       \
+            ri,ori,tri,sgni,rj,orj,trj,sgnj,si,sj,                       \
             tOrbIdx,tOrbIdx_i,tOrbSgn,tOrbSgn_i,orbitalIdx_i)
   #pragma loop noalias
 // this loop for making transObrIdx,transOrbSgn
@@ -168,7 +169,7 @@ void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *ele
       orbitalIdx_i = OrbitalIdx[tri];            //
       for(msj=0;msj<nsize;msj++) { //nsize=2*Ne //
         rj             = eleIdx[msj];           //
-        sj             = eleIdxSpn[msj]        // sj spin of the msj-th electron  :fsz
+        sj             = eleSpn[msj];        // sj spin of the msj-th electron  :fsz
         orj            = xqpOpt[rj];         
         trj            = xqp[orj]+sj*Nsite;       //fsz
         sgnj           = xqpSgn[orj]*xqpOptSgn[rj]; //xqpSgn

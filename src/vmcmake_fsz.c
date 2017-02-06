@@ -34,8 +34,8 @@ void copyToBurnSample_fsz(const int *eleIdx, const int *eleCfg, const int *eleNu
 void saveEleConfig_fsz(const int sample, const double complex logIp,
                    const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,const int *eleSpn);
 //void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum);
-void ReduceCounter(MPI_Comm comm);
-void makeCandidate_hopping_spn(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
+//void ReduceCounter(MPI_Comm comm);
+void makeCandidate_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg,const int *eleSpn);
 void makeCandidate_exchange_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
                             const int *eleIdx, const int *eleCfg, const int *eleNum,const int *eleSpn);
@@ -44,8 +44,8 @@ void updateEleConfig_fsz(int mi, int ri, int rj, int s,
 void revertEleConfig_fsz(int mi, int ri, int rj, int s,
                      int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn);
 
-typedef enum {HOPPING, EXCHANGE, NONE} UpdateType;
-UpdateType getUpdateType(int path);
+//typedef enum {HOPPING, EXCHANGE, NONE} UpdateType;
+//UpdateType getUpdateType(int path);
 
 void VMCMakeSample_fsz(MPI_Comm comm) {
   int outStep,nOutStep;
@@ -307,7 +307,7 @@ int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt
 void copyFromBurnSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,int *eleSpn) {
   int i,n;
   const int *burnEleIdx = BurnEleIdx;// BurnEleIdx is global
-  n = Nsize + 2*Nsite + 2*Nsite + NProj+Niste;//fsz
+  n = Nsize + 2*Nsite + 2*Nsite + NProj+Nsite;//fsz
   #pragma loop noalias
   for(i=0;i<n;i++) eleIdx[i] = burnEleIdx[i]; 
   return;
@@ -343,7 +343,7 @@ void saveEleConfig_fsz(const int sample, const double complex logIp,
   for(i=0;i<nProj;i++) EleProjCnt[offset+i] = eleProjCnt[i];
   offset = sample*nsize;
   #pragma loop noalias
-  for(i=0;i<nize;i++) EleSpn[offset+i] = eleSpn[i];
+  for(i=0;i<nsize;i++) EleSpn[offset+i] = eleSpn[i];
   
   x = LogProjVal(eleProjCnt);
   logSqPfFullSlater[sample] = 2.0*(x+creal(logIp));//TBC
@@ -375,7 +375,7 @@ void saveEleConfig_fsz(const int sample, const double complex logIp,
 
 //  return;
 //}
-
+/*
 void ReduceCounter(MPI_Comm comm) {
   #ifdef _mpi_use
   int n=4;
@@ -392,7 +392,7 @@ void ReduceCounter(MPI_Comm comm) {
   #endif
   return;
 }
-
+*/
 
 /* The mi-th electron with spin s hops to site rj */
 void makeCandidate_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
@@ -447,7 +447,7 @@ void makeCandidate_exchange_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *reje
 
   do {
     mi = gen_rand32()%Nsize;//fsz
-    s  = eleSpn[mi]// fsz //s = (genrand_real2()<0.5) ? 0 : 1;
+    s  = eleSpn[mi];// fsz //s = (genrand_real2()<0.5) ? 0 : 1;
     ri = eleIdx[mi]; //fsz
   } while (eleCfg[ri+(1-s)*Nsite] != -1);
   do {
@@ -488,14 +488,15 @@ void revertEleConfig_fsz(int mi, int ri, int rj, int s,
   return;
 }
 
-
+/*
 UpdateType getUpdateType(int path) {
   if(path==0) {
     return HOPPING;
   } else if (path==1) {
-    return (genrand_real2()<0.5) ? EXCHANGE : HOPPING; /* exchange or hopping */
+    return (genrand_real2()<0.5) ? EXCHANGE : HOPPING; // exchange or hopping 
   } else if (path==2) {
     return EXCHANGE;
   }
   return NONE;
 }
+*/

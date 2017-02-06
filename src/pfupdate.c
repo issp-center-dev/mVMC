@@ -33,7 +33,7 @@ void CalculateNewPfM_fsz(const int mi, const int s, double complex *pfMNew, cons
 void CalculateNewPfM2(const int mi, const int s, double complex *pfMNew, const int *eleIdx,
                      const int qpStart, const int qpEnd);
 void CalculateNewPfM2_fsz(const int ma, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
-                     const int qpStart, const int qpEnd) {
+                     const int qpStart, const int qpEnd);
 void UpdateMAll(const int mi, const int s, const int *eleIdx,
                 const int qpStart, const int qpEnd);
 void updateMAll_child(const int ma, const int s, const int *eleIdx,
@@ -111,7 +111,7 @@ void CalculateNewPfM_fsz(const int ma, const int s, double complex *pfMNew, cons
     invM_a = InvM + qpidx*Nsize*Nsize + msa*Nsize;
 
     ratio = 0.0;
-    for(msj=0;msj<nize;msj++) { //fsz
+    for(msj=0;msj<nsize;msj++) { //fsz
       rsj = eleIdx[msj]+eleSpn[msj]*Nsite;//fsz
       ratio += invM_a[msj] * sltE_a[rsj];
     }
@@ -336,7 +336,7 @@ void UpdateMAll_fsz(const int ma, const int s, const int *eleIdx,const int *eleS
   return;
 }
 
-void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int *elsSpn,
+void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int *eleSpn,
                       const int qpStart, const int qpEnd, const int qpidx,
                       double complex *vec1, double complex *vec2) {
   #pragma procedure serial
