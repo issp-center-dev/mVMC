@@ -25,14 +25,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-#pragma once
-
-void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, int *eleCfg,
-                         int *eleNum, int *eleProjCnt);
-
-void CalculateGreenFuncBF(const double w, const double ip, int *eleIdx, int *eleCfg,
-                          int *eleNum, int *eleProjCnt, const int *eleProjBFCnt);
-
+#include "calgrn.h"
+#ifndef _CALGRN_SRC
+#define _CALGRN_SRC
 void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, int *eleCfg,
                         int *eleNum, int *eleProjCnt) {
 
@@ -213,3 +208,4 @@ void CalculateGreenFuncBF(const double w, const double ip, int *eleIdx, int *ele
   ReleaseWorkSpaceThreadComplex();
   return;
 }
+#endif
