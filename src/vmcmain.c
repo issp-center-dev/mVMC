@@ -299,6 +299,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   MPI_Comm_rank(comm_parent, &rank);
 
   for(step=0;step<NSROptItrStep;step++) {
+        printf("0 DUBUG make:step=%d \n",step);
     if(rank==0){
       OutputTime(step);
       if(step%(NSROptItrStep/20)==0){
@@ -308,7 +309,9 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }
     
     StartTimer(20);
+        printf("1 DUBUG make:step=%d \n",step);
     UpdateSlaterElm_fsz();//UpdateSlaterElm_fcmp();
+        printf("2 DUBUG make:step=%d \n",step);
     UpdateQPWeight();
       StopTimer(20);
       StartTimer(3);
@@ -332,6 +335,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          StopTimer(69);
          // only for real TBC
       }else{
+        printf("3 DUBUG make:step=%d \n",step);
         VMCMakeSample_fsz(comm_child1);//VMCMakeSample(comm_child1);
       } 
       StopTimer(3);

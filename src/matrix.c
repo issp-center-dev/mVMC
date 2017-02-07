@@ -202,7 +202,7 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
     for(msj=0;msj<nsize;msj++) {
       rsj = eleIdx[msj] + eleSpn[msj]*Nsite;//fsz
       bufM_i[msj] = -sltE_i[rsj];
-//      printf("DEBUG: msi=%d msj=%d bufM=%lf %lf \n",msi,msj,creal(bufM_i[msj]),cimag(bufM_i[msj]));
+      //printf("DEBUG: msi=%d msj=%d: rsi=%d rsj=%d :bufM=%lf %lf \n",msi,msj,rsi,rsj,creal(bufM_i[msj]),cimag(bufM_i[msj]));
     }
   }
 

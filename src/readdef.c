@@ -440,8 +440,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + Nsite*Nsite /* JastrowIdx */
     + 2*Nsite*NDoublonHolon2siteIdx /* DoublonHolon2siteIdx */
     + 4*Nsite*NDoublonHolon4siteIdx /* DoublonHolon4siteIdx */
-    + 2*Nsite*Nsite /* OrbitalIdx */ //fsz
-    + 2*Nsite*Nsite /* OrbitalSgn */ //fsz
+    + (2*Nsite)*(2*Nsite) /* OrbitalIdx */ //fsz
+    + (2*Nsite)*(2*Nsite) /* OrbitalSgn */ //fsz
     + Nsite*NQPTrans /* QPTrans */
     + Nsite*NQPTrans /* QPTransSgn */
     + 4*NCisAjs /* CisAjs */
@@ -738,9 +738,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               all_i = i+spn_i*Nsite; //fsz
               all_j = j+spn_j*Nsite; //fsz
 	      fscanf(fp, "%d\n", &(OrbitalIdx[all_i][all_j]));//fsz
-	      OrbitalSgn[i][j] = 1;
+              //printf("DEBUG: i=%d spn_i=%d j=%d spn_j=%d Orb=%d \n",i,spn_i,j,spn_j,OrbitalIdx[all_i][all_j]);
+	      OrbitalSgn[all_i][all_j] = 1;//fsz
 	      idx0++;
-	      if(idx0==Nsite*Nsite) break;
+	      if(idx0==(2*Nsite)*(2*Nsite)) break;
 	    }
 	  } else { /* anti-periodic boundary mode */
 	    while( fscanf(fp, "%d %d %d %d", &i,&spn_i,&j,&spn_j) != EOF){ //fsz
@@ -748,7 +749,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               all_j = j+spn_j*Nsite; //fsz
 	      fscanf(fp, "%d %d\n", &(OrbitalIdx[all_i][all_j]), &(OrbitalSgn[all_i][all_j]));
 	      idx0++;
-	      if(idx0==Nsite*Nsite) break;
+	      if(idx0==(2*Nsite)*(2*Nsite)) break;
 	    }
 	  }
 
@@ -761,7 +762,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx1++;
         count_idx++;
         }
-	if(idx0!=Nsite*Nsite || idx1!=NOrbitalIdx) {
+	if(idx0!=(2*Nsite)*(2*Nsite) || idx1!=NOrbitalIdx) {
 	  info=ReadDefFileError(defname);
 	}
 	}

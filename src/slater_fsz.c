@@ -33,9 +33,12 @@ void UpdateSlaterElm_fsz() {
   int ri,ori,tri,sgni,rsi0,rsi1;
   int rj,orj,trj,sgnj,rsj0,rsj1;
   int qpidx,mpidx,spidx,optidx;
-  int tri0,tri1,trj0,trj1;
+  int tri0,tri1,trj0,trj1; //fsz
   double cs,cc,ss;
-  double complex slt_ij,slt_ji;
+  double complex slt_i0j0,slt_j0i0;
+  double complex slt_i0j1,slt_j1i0;
+  double complex slt_i1j0,slt_j0i1;
+  double complex slt_i1j1,slt_j1i1;
   int *xqp, *xqpSgn, *xqpOpt, *xqpOptSgn;
   double complex *sltE,*sltE_i0,*sltE_i1;
 
@@ -43,9 +46,11 @@ void UpdateSlaterElm_fsz() {
     private(qpidx,optidx,mpidx,spidx,                      \
             xqpOpt,xqpOptSgn,xqp,xqpSgn,cs,cc,ss,sltE,     \
             ri,ori,tri,sgni,rsi0,rsi1,sltE_i0,sltE_i1,      \
-            rj,orj,trj,sgnj,rsj0,rsj1,slt_ij,slt_ji)
+            rj,orj,trj,sgnj,rsj0,rsj1,slt_i0j0,slt_j0i0,slt_i0j1,slt_j1i0,slt_i1j0,slt_j0i1,slt_i1j1,slt_j1i1,\
+            tri0,tri1,trj0,trj1)
   #pragma loop noalias
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    printf("qpidx=%d \n",qpidx);
     // qpidx  = optidx*NQPFix+NSPGaussLeg*mpidx+spidx 
     // optidx will not be used
     optidx    = qpidx / NQPFix;   
@@ -64,10 +69,12 @@ void UpdateSlaterElm_fsz() {
     // for fsz: only for translational projection
     // spin projection will be implemented
     for(ri=0;ri<Nsite;ri++) {
+      //printf("DEBUG:ri=%d \n",ri);
       ori     = xqpOpt[ri];
       tri     = xqp[ori];
-      tri0    = tri0; // fsz up
-      tri0    = tri0+Nsite; // fsz down
+      tri0    = tri; // fsz up
+      tri1    = tri0+Nsite; // fsz down
+      //printf("DEBUG:tri0=%d tri1=%d sgni=%d\n",tri0,tri1,sgni);
       sgni    = xqpSgn[ori]*xqpOptSgn[ri];
       rsi0    = ri; // up
       rsi1    = ri+Nsite; // down
@@ -75,18 +82,44 @@ void UpdateSlaterElm_fsz() {
       sltE_i1 = sltE + rsi1*Nsite2;
       
       for(rj=0;rj<Nsite;rj++) {
+        //printf("DEBUG:rj=%d \n",rj);
         orj  = xqpOpt[rj];
         trj  = xqp[orj];
+        //printf("DEBUG:rj=%d orj=%d trj=%d\n",rj,orj,trj);
         trj0 = trj; // fsz up
         trj1 = trj+Nsite; // fsz down
         sgnj = xqpSgn[orj]*xqpOptSgn[rj];
+        //printf("DUBUG:trj0=%d trj1=%d sgnj=%d\n",trj0,trj1,sgnj);
         rsj0 = rj;
         rsj1 = rj+Nsite;
+        //printf("DEBUG:rsj0=%d rsj1=%d \n",rsj0,rsj1);
 // for fsz        
-        sltE_i0[rsj0] =  Slater[ OrbitalIdx[tri0][trj0] ] * (double)(OrbitalSgn[tri0][trj0]*sgni*sgnj);   // up   - up
-        sltE_i0[rsj1] =  Slater[ OrbitalIdx[tri0][trj1] ] * (double)(OrbitalSgn[tri0][trj1]*sgni*sgnj); // up   - down
-        sltE_i1[rsj0] =  Slater[ OrbitalIdx[tri1][trj0] ] * (double)(OrbitalSgn[tri1][trj0]*sgni*sgnj);  // down - up
-        sltE_i1[rsj1] =  Slater[ OrbitalIdx[tri1][trj1] ] * (double)(OrbitalSgn[tri1][trj1]*sgni*sgnj);   // down - down 
+        //printf("DEBUG: tri0=%d tri1=%d trj0=%d trj1=%d: orb=%d \n",tri0,tri1,trj0,trj1,OrbitalIdx[tri0][trj0]);
+        //printf("DEBUG: tri0=%d tri1=%d trj0=%d trj1=%d: orb=%d \n",tri0,tri1,trj0,trj1,OrbitalIdx[tri0][trj1]);
+        //printf("DEBUG: tri0=%d tri1=%d trj0=%d trj1=%d: orb=%d \n",tri0,tri1,trj0,trj1,OrbitalIdx[tri1][trj0]);
+        //printf("DEBUG: tri0=%d tri1=%d trj0=%d trj1=%d: orb=%d \n",tri0,tri1,trj0,trj1,OrbitalIdx[tri1][trj1]);
+        slt_i0j0        = Slater[ OrbitalIdx[tri0][trj0] ] * (double)(OrbitalSgn[tri0][trj0]*sgni*sgnj);
+        slt_j0i0        = Slater[ OrbitalIdx[trj0][tri0] ] * (double)(OrbitalSgn[trj0][tri0]*sgni*sgnj);
+
+        slt_i0j1        = Slater[ OrbitalIdx[tri0][trj1] ] * (double)(OrbitalSgn[tri0][trj1]*sgni*sgnj);
+        slt_j1i0        = Slater[ OrbitalIdx[trj1][tri0] ] * (double)(OrbitalSgn[trj1][tri0]*sgni*sgnj);
+
+        slt_i1j0        = Slater[ OrbitalIdx[tri1][trj0] ] * (double)(OrbitalSgn[tri1][trj0]*sgni*sgnj);
+        slt_j0i1        = Slater[ OrbitalIdx[trj0][tri1] ] * (double)(OrbitalSgn[trj0][tri1]*sgni*sgnj);
+
+        slt_i1j1        = Slater[ OrbitalIdx[tri1][trj1] ] * (double)(OrbitalSgn[tri1][trj1]*sgni*sgnj);
+        slt_j1i1        = Slater[ OrbitalIdx[trj1][tri1] ] * (double)(OrbitalSgn[trj1][tri1]*sgni*sgnj);
+
+        sltE_i0[rsj0] =  slt_i0j0-slt_j0i0;   // up   - up
+        sltE_i0[rsj1] =  slt_i0j1-slt_j1i0;   // up   - down
+        sltE_i1[rsj0] =  slt_i1j0-slt_j0i1;   // down - up
+        sltE_i1[rsj1] =  slt_i1j1-slt_j1i1;   // down - down 
+/*
+        printf("XDEBUG: rsi0=%d rsj0=%d:tri0=%d trj0=%d : orbi0j0=%d %lf orbj0i0=%d %lf: %lf  \n",rsi0,rsj0,tri0,trj0,OrbitalIdx[tri0][trj0],creal(Slater[OrbitalIdx[tri0][trj0]]),OrbitalIdx[trj0][tri0],creal(Slater[OrbitalIdx[trj0][tri0]]),creal(sltE_i0[rsj0]));
+        printf("XDEBUG: rsi0=%d rsj1=%d:tri0=%d trj1=%d : orbi0j1=%d %lf orbj1i0=%d %lf: %lf  \n",rsi0,rsj1,tri0,trj1,OrbitalIdx[tri0][trj1],creal(Slater[OrbitalIdx[tri0][trj1]]),OrbitalIdx[trj1][tri0],creal(Slater[OrbitalIdx[trj1][tri0]]),creal(sltE_i0[rsj1]));
+        printf("XDEBUG: rsi1=%d rsj0=%d:tri1=%d trj0=%d : orbi1j0=%d %lf orbj0i1=%d %lf: %lf  \n",rsi1,rsj0,tri1,trj0,OrbitalIdx[tri1][trj0],creal(Slater[OrbitalIdx[tri1][trj0]]),OrbitalIdx[trj0][tri1],creal(Slater[OrbitalIdx[trj0][tri1]]),creal(sltE_i1[rsj0]));
+        printf("XDEBUG: rsi1=%d rsj1=%d:tri1=%d trj1=%d : orbi1j1=%d %lf orbj1i1=%d %lf: %lf  \n",rsi1,rsj1,tri1,trj1,OrbitalIdx[tri1][trj1],creal(Slater[OrbitalIdx[tri1][trj1]]),OrbitalIdx[trj1][tri1],creal(Slater[OrbitalIdx[trj1][tri1]]),creal(sltE_i1[rsj1]));
+*/
 /*
         slt_ij = Slater[ OrbitalIdx[tri][trj] ] * (double)(OrbitalSgn[tri][trj]*sgni*sgnj);
         slt_ji = Slater[ OrbitalIdx[trj][tri] ] * (double)(OrbitalSgn[trj][tri]*sgni*sgnj);

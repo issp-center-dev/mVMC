@@ -213,6 +213,7 @@ void FreeMemoryDef() {
 void SetMemory() {
 
   /***** Variational Parameters *****/
+  //printf("DEBUG:opt=%d %d %d %d %d Ne=%d\n", AllComplexFlag,NPara,NProj,NSlater,NOrbitalIdx,Ne);
   Para     = (double complex*)malloc(sizeof(double complex)*(NPara)); 
   Proj     = Para;
   Slater   = Para + NProj; 
@@ -230,14 +231,14 @@ void SetMemory() {
   TmpEleCfg         = TmpEleIdx + 2*Ne;
   TmpEleNum         = TmpEleCfg + 2*Nsite;
   TmpEleProjCnt     = TmpEleNum + 2*Nsite;
-  TmpEleSpn        = TmpEleProjCnt + NProj; //fsz
+  TmpEleSpn         = TmpEleProjCnt + NProj; //fsz
 
   BurnEleIdx        = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne)); //fsz
   BurnEleCfg        = BurnEleIdx + 2*Ne;
   BurnEleNum        = BurnEleCfg + 2*Nsite;
   BurnEleProjCnt    = BurnEleNum + 2*Nsite;
-  BurnEleSpn       = BurnEleProjCnt + NProj; //fsz
-
+  BurnEleSpn        = BurnEleProjCnt + NProj; //fsz
+  
   /***** Slater Elements ******/
   SlaterElm = (double complex*)malloc( sizeof(double complex)*(NQPFull*(2*Nsite)*(2*Nsite)) );
   InvM = (double complex*)malloc( sizeof(double complex)*(NQPFull*(Nsize*Nsize+1)) );

@@ -169,10 +169,10 @@ double complex *OptTrans; /* weights          (OptTrans=Para+NProj+NSlater) */
 
 /***** Electron Configuration ******/
 int *EleIdx;     /* EleIdx[sample][mi+si*Ne] */
-int *EleSpn;     /* EleIdx[sample][mi+si*Ne] */ //fsz
 int *EleCfg;     /* EleCfg[sample][ri+si*Nsite] */
 int *EleNum;     /* EleIdx[sample][ri+si*Nsite] */
 int *EleProjCnt; /* EleProjCnt[sample][proj] */
+int *EleSpn;     /* EleIdx[sample][mi+si*Ne] */ //fsz
 double *logSqPfFullSlater; /* logSqPfFullSlater[sample] */
 
 int *TmpEleIdx;

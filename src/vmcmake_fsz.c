@@ -63,6 +63,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
   int qpStart,qpEnd;
   int rejectFlag;
   int rank,size;
+  int tmp_mi,tmp_ri,tmp_num;//fsz DEBUG
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
 
@@ -70,6 +71,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
 
   StartTimer(30);
   if(BurnFlag==0) {
+    //printf("DEBUG: make1: \n");
     makeInitialSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn,
                       qpStart,qpEnd,comm);
   } else {
@@ -106,8 +108,24 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
         StartTimer(31);
         makeCandidate_hopping_fsz(&mi, &ri, &rj, &s, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleSpn);
+
+/*
+        printf("ri = %d s = %d -> rj=%d s= %d \n",ri,s,rj,s);
+        for(tmp_mi=0;tmp_mi<Nsize;tmp_mi++){
+          printf("tmp_mi=%d idx=%d s=%d\n",tmp_mi,TmpEleIdx[tmp_mi],TmpEleSpn[tmp_mi]);
+        }
+        printf("\n");
+        tmp_num=0;
+        for(tmp_ri=0;tmp_ri<Nsite;tmp_ri++){
+          tmp_num+=TmpEleNum[tmp_ri+0*Nsite]+TmpEleNum[tmp_ri+1*Nsite];
+          printf("tmp_ri=%d: cfg= %d %d : num = %d %d \n",tmp_ri,TmpEleCfg[tmp_ri+0*Nsite],TmpEleCfg[tmp_ri+Nsite],TmpEleNum[tmp_ri+0*Nsite],TmpEleNum[tmp_ri+Nsite]);
+        }
+        printf("tmp_num=%d \n",tmp_num);
+        printf("\n");
+*/
         StopTimer(31);
 
+        //printf("DEBUG: outStep=%d inStep=%d rejectFlag=%d \n",outStep,inStep,rejectFlag);
         if(rejectFlag) continue; 
 
         StartTimer(32);
@@ -288,7 +306,7 @@ int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt
     MakeProjCnt(eleProjCnt,eleNum); // this function does not change even for fsz
 
     flag = CalculateMAll_fsz(eleIdx,eleSpn,qpStart,qpEnd);
-    //printf("DEBUG: maker4: PfM=%lf\n",creal(PfM[0]));
+    //printf("DEBUG: make4: PfM=%lf\n",creal(PfM[0]));
     if(size>1) {
       MPI_Allreduce(&flag,&flagRdc,1,MPI_INT,MPI_MAX,comm);
       flag = flagRdc;
@@ -399,7 +417,7 @@ void makeCandidate_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *rejec
                            const int *eleIdx, const int *eleCfg,const int *eleSpn) {
   const int icnt_max = Nsite*Nsite;
   int icnt;
-  int mi, ri, rj, s, flag;
+  int mi, ri, rj, s, flag,tmp_rj;
 
   flag = 0; // FALSE
   do {
@@ -418,6 +436,14 @@ void makeCandidate_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *rejec
     }
     icnt+=1;
   } while (eleCfg[rj+s*Nsite] != -1 || LocSpn[rj]==1);
+  //if(flag==1){
+/*
+    printf("X:mi=%d ri=%d s=%d: rj=%d : cfg=%d %d\n",mi,ri,s,rj,eleCfg[rj+s*Nsite],eleCfg[rj+(1-s)*Nsite]);
+    for(tmp_rj=0;tmp_rj<Nsite;tmp_rj++){
+      printf("mi=%d ri=%d s=%d: tmp_rj=%d : cfg=%d %d\n",mi,ri,s,tmp_rj,eleCfg[tmp_rj+s*Nsite],eleCfg[tmp_rj+(1-s)*Nsite]);
+    }
+*/
+  //}
 
   *mi_ = mi;
   *ri_ = ri;
@@ -480,7 +506,7 @@ void updateEleConfig_fsz(int mi, int ri, int rj, int s,
 void revertEleConfig_fsz(int mi, int ri, int rj, int s,
                      int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn) {
   eleIdx[mi]         = ri;//fsz 
-  eleIdx[mi]         = s; //fsz
+  eleSpn[mi]         = s; //fsz
   eleCfg[ri+s*Nsite] = mi;
   eleCfg[rj+s*Nsite] = -1;
   eleNum[ri+s*Nsite] = 1;
