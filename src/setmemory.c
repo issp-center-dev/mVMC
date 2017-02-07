@@ -98,20 +98,18 @@ void SetMemoryDef() {
   }
 
   /*[s] For BackFlow */
-  PosBF = (int**)malloc(sizeof(int*)*Nsite);
-  for(i=0;i<Nsite;i++) {
-    PosBF[i] = pInt;
-    pInt += Nrange;
-  }
-
-  RangeIdx = (int**)malloc(sizeof(int*)*Nsite);
-  for(i=0;i<Nsite;i++) {
-    RangeIdx[i] = pInt;
-    pInt += Nsite;
-  }
-
-  if(NBackFlowIdx) {
-    BackFlowIdx = (int**)malloc(sizeof(int*)*Nsite*Nsite);
+  if(NBackFlowIdx>0) {
+      PosBF = (int**)malloc(sizeof(int*)*Nsite);
+      for(i=0;i<Nsite;i++) {
+          PosBF[i] = pInt;
+          pInt += Nrange;
+      }
+      RangeIdx = (int**)malloc(sizeof(int*)*Nsite);
+      for(i=0;i<Nsite;i++) {
+          RangeIdx[i] = pInt;
+          pInt += Nsite;
+      }
+      BackFlowIdx = (int**)malloc(sizeof(int*)*Nsite*Nsite);
     for(i=0;i<Nsite*Nsite;i++) {
       BackFlowIdx[i] = pInt;
       pInt += Nsite*Nsite;

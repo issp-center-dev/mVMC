@@ -445,9 +445,16 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NOptTrans = (FlagOptTrans>0) ? NQPOptTrans : 0;
 
   /* [s] For BackFlow */
-  NrangeIdx = 3*(Nrange-1)/Nz+1; //For Nz-conectivity
-  NBFIdxTotal = (NrangeIdx-1)*(NrangeIdx)/2+(NrangeIdx);
-  NProjBF = NBFIdxTotal*NBackFlowIdx;
+  if(NBackFlowIdx >0){
+    NrangeIdx = 3*(Nrange-1)/Nz+1; //For Nz-conectivity
+    NBFIdxTotal = (NrangeIdx-1)*(NrangeIdx)/2+(NrangeIdx);
+    NProjBF = NBFIdxTotal*NBackFlowIdx;
+  }
+  else{
+    NrangeIdx=0;
+    NBFIdxTotal=0;
+    NProjBF=0;
+  }
   /* [e] For BackFlow */
 
   NPara   = NProj + NSlater + NOptTrans + NProjBF;
@@ -1424,8 +1431,8 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxNInterAll]=0;
   bufInt[IdxNQPOptTrans]=1;
   bufInt[IdxNBF]=0;
-  bufInt[IdxNrange]=1;
-  bufInt[IdxNNz]=1;
+  bufInt[IdxNrange]=0;
+  bufInt[IdxNNz]=0;
 
   bufDouble[IdxSROptRedCut]=0.001;
   bufDouble[IdxSROptStaDel]=0.02;
