@@ -29,6 +29,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "locgrn.h"
 #include "projection.h"
 #include "pfupdate.h"
+#include "pfupdate_two_fcmp.h"
 #include "qp.h"
 
 double complex calculateNewPfMN_child(const int qpidx, const int n, const int *msa, const int *rsa,

@@ -36,7 +36,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "calham.h"
 #include "qp.h"
 #include "pfupdate.h"
-#include "pfupdate_two_fcmp.c"
+#include "pfupdate_two_fcmp.h"
 #include "projection.h"
 
 double complex calculateHK(const double complex h1, const double complex ip, int *eleIdx, int *eleCfg,

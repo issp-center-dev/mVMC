@@ -28,7 +28,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "./include/global.h"
 #ifndef _SRC_VMCMAKE
 #define _SRC_VMCMAKE
-#include "projection.c"
+#include "projection.h"
+#include "pfupdate_two_fcmp.h"
 #include "matrix.c"
 
 void VMCMakeSample(MPI_Comm comm);
