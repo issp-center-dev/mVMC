@@ -30,6 +30,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "vmccal.h"
 #include "matrix.h"
 #include "calham_real.h"
+#include "calham.h"
 #include "lslocgrn_real.c"
 #include "lslocgrn.c"
 #include "calgrn.c"

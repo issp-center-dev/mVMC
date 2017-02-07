@@ -28,10 +28,11 @@
 #ifndef _SRC_VMCMAKE_REAL
 #define _SRC_VMCMAKE_REAL
 
-#include "./include/global.h"
-#include "./include/slater.h"
-#include "./include/matrix.h"
-#include "./include/pfupdate_real.h"
+#include "global.h"
+#include "slater.h"
+#include "matrix.h"
+#include "pfupdate_real.h"
+#include "qp_real.h"
 #include "splitloop.c"
 #include "vmcmake.c"
 #include "matrix.c"

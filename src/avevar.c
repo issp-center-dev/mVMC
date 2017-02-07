@@ -25,10 +25,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-#include "./include/readdef.h"
-
-void StoreOptData(int sample);
-void OutputOptData();
+#include "readdef.h"
+#include "avevar.h"
+#ifndef _SRC_AVEVAR
+#define _SRC_AVEVAR
 
 void CalcAveVar(int i, int n, double complex* _ave, double* _var){
   int sample;
@@ -164,3 +164,5 @@ void OutputOptData() {
 
   return;
 }
+
+#endif

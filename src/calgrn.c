@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "calgrn.h"
 #ifndef _CALGRN_SRC
 #define _CALGRN_SRC
+
 void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, int *eleCfg,
                         int *eleNum, int *eleProjCnt) {
 

@@ -25,7 +25,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-#pragma once
+#include "legendrepoly.h"
+#ifndef _LEGENDREPOLY_SRC
+#define _LEGENDREPOLY_SRC
+
 double LegendrePoly(const double x, const int n){
   double P01, P02, P03;
   int i;
@@ -42,3 +45,5 @@ double LegendrePoly(const double x, const int n){
     return P03;
   };
 }
+
+#endif

@@ -25,19 +25,19 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-#include "./include/lslocgrn.h"
+#include "lslocgrn.h"
 
 #ifndef _SRC_LSLOCGRN_CMP
 #define _SRC_LSLOCGRN_CMP
 
-#include "./include/locgrn.h"
-#include "workspace.c"
+#include "locgrn.h"
+#include "workspace.h"
 #include "vmccal.c"
-#include "calham.c"
+#include "calham.h"
 #include "qp.c"
 #include "pfupdate.c"
 #include "pfupdate_two_fcmp.c"
-#include "projection.c"
+#include "projection.h"
 
 double complex calculateHK(const double complex h1, const double complex ip, int *eleIdx, int *eleCfg,
                    int *eleNum, int *eleProjCnt);

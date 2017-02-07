@@ -26,11 +26,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #include <complex.h>
-#include "./include/global.h"
-void WeightAverageWE(MPI_Comm comm);
-void WeightAverageSROpt(MPI_Comm comm);
-void WeightAverageSROpt_real(MPI_Comm comm);
-void WeightAverageGreenFunc(MPI_Comm comm);
+#include "global.h"
+#include "average.h"
+#ifndef _SRC_AVERAGE
+#define _SRC_AVERAGE
 
 void weightAverageReduce(int n, double *vec, MPI_Comm comm);
 void weightAverageReduce_fcmp(int n, double complex *vec, MPI_Comm comm);
@@ -316,3 +315,5 @@ void weightAverageReduce_real(int n, double *vec, MPI_Comm comm) {
 
     return;
 }
+
+#endif

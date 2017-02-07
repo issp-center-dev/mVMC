@@ -25,12 +25,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#include "qp_real.h"
+
 #ifndef _SRC_QP_REAL
 #define _SRC_QP_REAL
-
-double CalculateLogIP_real(double* const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);
-double CalculateIP_real(double* const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);
-
 
 /* Calculate logarithm of inner product <phi|L|x> */
 double CalculateLogIP_real(double* const pfM, const int qpStart, const int qpEnd, MPI_Comm comm) {

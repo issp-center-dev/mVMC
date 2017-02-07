@@ -27,7 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #ifndef _SRC_CALHAMREAL
 #define _SRC_CALHAMREAL
-#include "workspace.c"
+#include "workspace.h"
 #include "complex.h"
 #include "slater.h"
 #include "locgrn_real.h"
