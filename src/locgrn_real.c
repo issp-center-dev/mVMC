@@ -26,11 +26,13 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-#include "./include/locgrn_real.h"
-#include "./include/pfupdate_real.h"
+#include "locgrn_real.h"
 
 #ifndef _SRC_LOCGRN_REAL
 #define _SRC_LOCGRN_REAL
+
+#include "pfupdate_real.h"
+#include "pfupdate_two_real.h"
 
 double calculateNewPfMN_real_child(const int qpidx, const int n, const int *msa, const int *rsa,
                                    const int *eleIdx, double *buffer);
