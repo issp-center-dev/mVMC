@@ -1424,8 +1424,8 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxNInterAll]=0;
   bufInt[IdxNQPOptTrans]=1;
   bufInt[IdxNBF]=0;
-	bufInt[IdxNrange]=0;
-	bufInt[IdxNNz]=0;
+  bufInt[IdxNrange]=1;
+  bufInt[IdxNNz]=1;
 
   bufDouble[IdxSROptRedCut]=0.001;
   bufDouble[IdxSROptStaDel]=0.02;
