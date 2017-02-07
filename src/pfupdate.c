@@ -25,25 +25,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-#pragma once
-#include <complex.h>
-
-void CalculateNewPfM(const int mi, const int s, double complex *pfMNew, const int *eleIdx,
-                     const int qpStart, const int qpEnd);
-void CalculateNewPfM2(const int mi, const int s, double complex *pfMNew, const int *eleIdx,
-                     const int qpStart, const int qpEnd);
-void UpdateMAll(const int mi, const int s, const int *eleIdx,
-                const int qpStart, const int qpEnd);
-void updateMAll_child(const int ma, const int s, const int *eleIdx,
-                      const int qpStart, const int qpEnd, const int qpidx,
-                      double complex *vec1, double complex *vec2);
-
-void CalculateNewPfMBF(const int *icount, const int *msaTmp,double complex*pfMNew, const int *eleIdx,
-                       const int qpStart, const int qpEnd, const double complex*bufM) ;
-
-double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int *msa,
-                                 const int *eleIdx, const double complex* bufM);
-
+#include "pfupdate.h"
+#ifndef _PFUDATE_SRC
+#define _PFUDATE_SRC
 
 /* Calculate new pfaffian. The ma-th electron with spin s hops. */
 void CalculateNewPfM(const int ma, const int s, double complex *pfMNew, const int *eleIdx,
@@ -385,3 +369,5 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int
   free(work);
   return sgn * pfaff * PfM[qpidx];
 }
+
+#endif

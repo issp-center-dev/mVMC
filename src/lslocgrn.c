@@ -34,8 +34,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "workspace.h"
 #include "vmccal.c"
 #include "calham.h"
-#include "qp.c"
-#include "pfupdate.c"
+#include "qp.h"
+#include "pfupdate.h"
 #include "pfupdate_two_fcmp.c"
 #include "projection.h"
 

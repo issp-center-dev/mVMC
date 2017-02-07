@@ -26,10 +26,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #pragma once
-#include "./include/locgrn.h"
-#include "projection.c"
-#include "pfupdate.c"
-#include "qp.c"
+#include "locgrn.h"
+#include "projection.h"
+#include "pfupdate.h"
+#include "qp.h"
 
 double complex calculateNewPfMN_child(const int qpidx, const int n, const int *msa, const int *rsa,
                               const int *eleIdx, double complex *buffer);
