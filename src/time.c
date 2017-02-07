@@ -26,13 +26,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
-void OutputTime(int step);
-void InitTimer();
-inline void StartTimer(int n);
-inline void StopTimer(int n);
-void OutputTimerParaOpt();
-void OutputTimerPhysCal();
+#include "time.h"
+#include "setmemory.h"
+#include "stcopt_dposv.h"
+#ifndef _SRC_TIME
+#define _SRC_TIME
 
 void OutputTime(int step) {
   time_t tx;
@@ -180,3 +178,5 @@ void OutputTimerPhysCal() {
 
   fclose(fp);
 }
+
+#endif

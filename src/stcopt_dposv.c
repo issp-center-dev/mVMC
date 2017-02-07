@@ -26,6 +26,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
+#include "stcopt_dposv.h"
+#ifndef _SRC_STCOPT_DPOSV
+#define _SRC_STCOPT_DPOSV
+
 #ifdef _SYSTEM_A
  #define M_DPOSV  DPOSV
 #elif _lapack_small_nounderscore
@@ -36,9 +40,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 extern int M_DPOSV(char *uplo, int *n, int *nrhs, double *a, int *lda, double *b, int *ldb, int *info);
 
-int StochasticOpt(MPI_Comm comm);
-void stcOptInit(double *const s, double *const g, const int nSmat, int *const smatToParaIdx);
-int stcOptMain(double *const s, double *const g, const int nSmat);
 
 int StochasticOpt(MPI_Comm comm) {
   double *s; /* the overlap matrix S */
@@ -243,3 +244,5 @@ void stcOptInit(double *const s, double *const g, const int nSmat, int *const sm
 
   return;
 }
+
+#endif

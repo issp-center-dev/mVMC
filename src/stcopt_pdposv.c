@@ -26,6 +26,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
+#include "stcopt_pdposv.h"
+#ifndef _SRC_STCOPT_PDPOSV
+#define _SRC_STCOPT_PDPOSV
+
+
 #ifdef _SYSTEM_A
  #define M_PDSYEVD PDSYEVD
  #define M_PDGEMV  PDGEMV

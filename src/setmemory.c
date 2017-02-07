@@ -26,14 +26,13 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-#pragma once
-#include <complex.h>
-#include "./include/global.h"
 
-void SetMemoryDef();
-void FreeMemoryDef();
-void SetMemory();
-void FreeMemory();
+#include <complex.h>
+#include "global.h"
+#include "setmemory.h"
+
+#ifndef _SRC_SETMEMORY
+#define _SRC_SETMEMORY
 
 void SetMemoryDef() {  
   int i;
@@ -400,3 +399,5 @@ void FreeMemory() {
 
   return;
 }
+
+#endif
