@@ -25,14 +25,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita 
  *-------------------------------------------------------------*/
+#include "initfile.h"
 
-void InitFile(char *xNameListFile, int rank);
-void InitFilePhysCal(int i, int rank);
-void CloseFile(int rank);
-void CloseFilePhysCal(int rank);
-void FlushFile(int step, int rank);
-void writeConfig(char *xNameFile, char *fileName);
-int fileCopyAdd(char *inputFileName, FILE *outputFile);
+#ifndef _INITFILE_SRC
+#define _INITFILE_SRC
 
 void InitFile(char *xNameListFile, int rank) {
   char fileName[D_FileNameMax];
@@ -223,3 +219,5 @@ int fileCopyAdd(char *inputfileName, FILE *ofp){
 
   return 0;
 }
+
+#endif
