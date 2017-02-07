@@ -65,13 +65,13 @@ all :
 	cd ComplexUHF/src; $(MAKE) -f makefile_uhf
 
 vmc.out : $(OBJS)
-	$(CC) -o $(OUT) $(OBJS) $(OPTION) $(CFLAGS) $(REPORT) $(LIB) 
+	$(CC) -o $(OUT) $(OBJS) $(OPTION) $(CFLAGS) $(REPORT) $(LIB) -I$(INCLUDE_DIR)
 
 vmcdry.out : vmcdry.o $(STDFACE)
 	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) 
 
 vmcmain.o : $(SOURCES) $(HEADERS)
-	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT)
+	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT) -I$(INCLUDE_DIR)
 
 clean :
 	rm -f *.o vmc.out
