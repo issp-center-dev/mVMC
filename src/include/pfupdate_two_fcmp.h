@@ -13,5 +13,3 @@ void UpdateMAllTwo_fcmp(const int ma, const int s, const int mb, const int t,
                    const int *eleIdx, const int qpStart, const int qpEnd);
 
 #endif
-
-

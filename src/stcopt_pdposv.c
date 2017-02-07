@@ -30,7 +30,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_STCOPT_PDPOSV
 #define _SRC_STCOPT_PDPOSV
 
-
 #ifdef _SYSTEM_A
  #define M_PDSYEVD PDSYEVD
  #define M_PDGEMV  PDGEMV
@@ -63,12 +62,6 @@ extern void M_PDGEMV(char *trans, int *m, int *n, double *alpha,
                      double *x, int *ix, int *jx, int *descx, int *incx,
                      double *beta,
                      double *y, int *iy, int *jy, int *descy, int *incy);
-
-int StochasticOpt(MPI_Comm comm);
-int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm comm);
-int StochasticOptDiag(MPI_Comm comm);
-int stcOptMainDiag(double *const r, int const nSmat, int *const smatToParaIdx,
-               MPI_Comm comm, int const optNum);
 
 int StochasticOpt(MPI_Comm comm) {
   const int nPara=NPara;
@@ -774,3 +767,4 @@ int stcOptMainDiag(double *const r, int const nSmat, int *const smatToParaIdx,
   
   return info;
 }
+#endif

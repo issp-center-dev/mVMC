@@ -29,10 +29,12 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "pfupdate_two_real.h"
 #ifndef _SRC_PFUPDATE_TWO_REAL
 #define _SRC_PFUPDATE_TWO_REAL
+
 void calculateNewPfMTwo_child_real(const int ma, const int s, const int mb, const int t,
                               double *pfMNew_real, const int *eleIdx,
                               const int qpStart, const int qpEnd, const int qpidx,
                               double *vec_a, double *vec_b);
+
 void updateMAllTwo_child_real(const int ma, const int s, const int mb, const int t,
                          const int raOld, const int rbOld,
                          const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,

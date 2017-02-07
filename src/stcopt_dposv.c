@@ -25,7 +25,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
 #include "stcopt_dposv.h"
 #ifndef _SRC_STCOPT_DPOSV
 #define _SRC_STCOPT_DPOSV

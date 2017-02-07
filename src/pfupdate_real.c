@@ -29,12 +29,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "workspace.c"
 #include "pfupdate_real.h"
 
-void CalculateNewPfM_real(const int mi, const int s, double *pfMNew_real, const int *eleIdx,
-                     const int qpStart, const int qpEnd);
-void CalculateNewPfM2_real(const int mi, const int s, double *pfMNew_real, const int *eleIdx,
-                     const int qpStart, const int qpEnd);
-void UpdateMAll_real(const int mi, const int s, const int *eleIdx,
-                const int qpStart, const int qpEnd);
 
 void updateMAll_child_real(const int ma, const int s, const int *eleIdx,
                       const int qpStart, const int qpEnd, const int qpidx,
