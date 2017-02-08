@@ -155,6 +155,12 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	    else if(CheckWords(ctmp, "DSROptStepDt")==0){
 	      bufDouble[IdxSROptStepDt]=(double)dtmp;
 	    }	
+	    else if(CheckWords(ctmp, "NSROptCGMaxIter")==0){
+	      bufInt[IdxSROptCGMaxIter]=(int)dtmp;
+	    }	
+	    else if(CheckWords(ctmp, "DSROptCGTol")==0){
+	      bufDouble[IdxSROptCGTol]=(double)dtmp;
+	    }	
 	    else if(CheckWords(ctmp, "NVMCWarmUp")==0){
 	      bufInt[IdxVMCWarmUp]=(int)dtmp;
 	    }	
@@ -398,10 +404,12 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NCisAjsCktAltDC        =  bufInt[IdxNTwoBodyG];
   NInterAll              =  bufInt[IdxNInterAll];
   NQPOptTrans            =  bufInt[IdxNQPOptTrans];
+  NSROptCGMaxIter        =  bufInt[IdxSROptCGMaxIter];
 
   DSROptRedCut = bufDouble[IdxSROptRedCut];
   DSROptStaDel = bufDouble[IdxSROptStaDel];
   DSROptStepDt = bufDouble[IdxSROptStepDt];
+  DSROptCGTol  = bufDouble[IdxSROptCGTol];
 
   if(NMPTrans < 0) {
     APFlag = 1; /* anti-periodic boundary */
@@ -1340,10 +1348,12 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxNTwoBodyGEx]=0;
   bufInt[IdxNInterAll]=0;
   bufInt[IdxNQPOptTrans]=1;
+  bufInt[IdxSROptCGMaxIter]=100;
   
   bufDouble[IdxSROptRedCut]=0.001;
   bufDouble[IdxSROptStaDel]=0.02;
   bufDouble[IdxSROptStepDt]=0.02;
+  bufDouble[IdxSROptCGTol]=0.0001;
   NStoreO=1;
 }
 

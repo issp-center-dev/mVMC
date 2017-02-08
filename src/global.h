@@ -65,6 +65,9 @@ double DSROptRedCut; /* SR stabilizing factor for truncation of redundant direct
 double DSROptStaDel; /* SR stabiliaing factor for diagonal element modification */
 double DSROptStepDt; /* step width of the SR method */
 
+int NSROptCGMaxIter; /* the number of maximum iterations in SR-CG method */
+double DSROptCGTol; /* the tolerance for SR-CG method */
+
 int NVMCWarmUp; /* Monte Carlo steps for warming up */
 int NVMCInterval; /* sampling interval [MCS] */ 
 int NVMCSample; /* the number of samples */
@@ -210,8 +213,6 @@ double *SROptOO_real; /* [SROptSize*SROptSize] <O^\dagger O> */ //TBC
 double *SROptHO_real; /* [SROptSize]            < HO > */       //TBC
 double *SROptO_real;  /* [SROptSize] calculation buffar */      //TBC
 double *SROptO_Store_real;  /* [SROptSize*NVMCSample] calculation buffer */
-
-
 
 double complex *SROptData; /* [2+NPara] storage for energy and variational parameters */
 

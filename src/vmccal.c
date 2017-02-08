@@ -239,7 +239,7 @@ void VMCMainCal(MPI_Comm comm) {
     }
   } /* end of for(sample) */
 // calculate OO and HO at NVMCCalMode==0
-  if(NStoreO==1 && NVMCCalMode==0){
+  if(NStoreO>0 && NVMCCalMode==0){
     sampleSize=sampleEnd-sampleStart;
     if(AllComplexFlag==0){
       StartTimer(45);
@@ -318,15 +318,33 @@ extern int
 dgemm_(char *jobz, char *uplo, int *m, int *n, int *k, double *alpha, double *a, int *lda, double *b, int *ldb,
        double *beta, double *c, int *ldc);
 
+  int i,j;
   char jobz, uplo;
-  double alpha,beta;
+  double alpha,beta,o;
   
   alpha = 1.0;
   beta  = 0.0;
   
   jobz = 'N';
   uplo = 'T';
-  dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store_real,&srOptSize,srOptO_Store_real,&srOptSize,&beta,srOptOO_real,&srOptSize);
+  if(NStoreO==1){
+    dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store_real,&srOptSize,srOptO_Store_real,&srOptSize,&beta,srOptOO_real,&srOptSize);
+  }else{
+#pragma omp parallel for default(shared) private(i)
+#pragma loop noalias
+    for(i=0; i<srOptSize; ++i){
+      srOptOO_real[i] = 0.0;
+      srOptOO_real[i+srOptSize] = 0.0;
+    }
+#pragma omp parallel for default(shared) private(i,j,o)
+#pragma loop noalias
+    for(j=0; j<sampleSize; ++j){
+    for(i=0; i<srOptSize; ++i){
+      o = srOptO_Store_real[i+j*srOptSize];
+      srOptOO_real[i] += o;
+      srOptOO_real[i+srOptSize] += o*o;
+    }}
+  }
 
   return;
 }
@@ -341,15 +359,33 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
   extern int zgemm_(char *jobz, char *uplo, int *m,int *n,int *k,double complex *alpha,  double complex *a, int *lda, double complex *b, int *ldb,
                     double complex *beta,double complex *c,int *ldc);
 
+  int i,j;
   char jobz, uplo;
-  double complex alpha,beta;
+  double complex alpha,beta,o;
   
   alpha = 1.0;
   beta  = 0.0;
   
   jobz = 'N';
   uplo = 'C';
-  zgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
+  if(NStoreO==1){
+    zgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
+  }else{
+#pragma omp parallel for default(shared) private(i)
+#pragma loop noalias
+    for(i=0; i<srOptSize; ++i){
+      srOptOO[i] = 0.0;
+      srOptOO[i+2*srOptSize] = 0.0;
+    }
+#pragma omp parallel for default(shared) private(i,j,o)
+#pragma loop noalias
+    for(j=0; j<sampleSize; ++j){
+    for(i=0; i<srOptSize; ++i){
+      o = srOptO_Store[i+j*srOptSize];
+      srOptOO[i] += o;
+      srOptOO[i+2*srOptSize] += creal(o)*creal(o)+cimag(o)*cimag(o);
+    } }
+  }
 
   return;
 }

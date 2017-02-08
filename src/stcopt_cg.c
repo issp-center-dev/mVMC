@@ -21,7 +21,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 
 #ifdef _SYSTEM_A
- #define M_PDSYEVD PDSYEVD
  #define M_PDGEMV  PDGEMV
  #define M_PZSYEVD PZSYEVD
  #define M_PZGEMV  PZGEMV
@@ -29,26 +28,22 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  #define M_ZPOSV  ZPOSV
  #define M_ZGETRS  ZGETRS
  #define M_ZGETRF  ZGETRF
- #define M_PDSYEVD PDSYEVD
  #define M_PDGEMV  PDGEMV
  #define M_PZHEEVD  PZHEEVD
  #define M_DGEMV  DGEMV
 #elif _lapack_small_nounderscore
- #define M_PDSYEVD pdsyevd
  #define M_PDGEMV  pdgemv
  #define M_PZSYEVD pzsyevd
  #define M_PZGEMV  pzgemv
  #define M_ZPOSV  zposv
  #define M_ZGETRS  zgetrs
  #define M_ZGETRF  zgetrf
- #define M_PDSYEVD pdsyevd
  #define M_PDGEMV  pdgemv
  #define M_PZHEEVD  pzheevd
  #define M_DGEMV  dgemv
 #else
  #define M_NUMROC   numroc_
  #define M_DESCINIT descinit_
- #define M_PDSYEVD  pdsyevd_
  #define M_PDPOSV  pdposv_
  #define M_PDGEMV  pdgemv_
  #define M_PZSYEVD  pzsyevd_
@@ -58,7 +53,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  #define M_ZGETRS  zgetrs_
  #define M_ZGETRF  zgetrf_
  #define M_DSYEV  dsyev_
- #define M_PDSYEVD  pdsyevd_
  #define M_PDGEMV  pdgemv_
  #define M_PZHEEVD  pzheevd_
  #define M_DGEMV  dgemv_
@@ -71,10 +65,6 @@ int Cblacs_gridinfo(int ictxt, int *nprow, int *npcol, int *myprow, int *mypcol)
 int M_NUMROC(int *n, int *nb, int *iproc, int *isrcproc, int *nprocs);
 int M_DESCINIT(int *desc, int *m, int *n, int *mb, int *nb, int *irsrc,
                int *icsrc, int *ictxt, int *lld, int *info);
-
-int M_PDSYEVD(char *jobz, char *uplo, int *n, double *a, int *ia, int *ja, int *desca,
-              double *w, double *z, int *iz, int *jz, int *descz,
-              double *work, int *lwork, int *iwork, int *liwork, int *info);
 
 void M_PDGEMV(char *trans, int *m, int *n, double *alpha,
               double *a, int *ia, int *ja, int *desca,
@@ -104,13 +94,13 @@ void M_PZGEMV(char *trans, int *m, int *n, double complex *alpha,
 int StochasticOptCG_real(MPI_Comm comm);
 void stcOptCG_real_Init(const int nSmat, int *const smatToParaIdx, double *VecCG); 
 int stcOptCG_real_Main(const int nSmat, double *VecCG, MPI_Comm comm);
-inline double dot(const int n, double * const p, double * const q);
+inline double xdot(const int n, double * const p, double * const q);
 
 int StochasticOptCG_real(MPI_Comm comm) {
   const int nPara=NPara;
   const int srOptSize=SROptSize;
-  const double *srOptOOdiag=SROptOOdiag;
-  const double *srOptO=SROptO_real;
+  const double *srOptO=SROptOO_real;
+  const double *srOptOOdiag=SROptOO_real + srOptSize;
 
   double sDiagElm[nPara]; /* the parameter change */
   int nSmat;
@@ -127,7 +117,7 @@ int StochasticOptCG_real(MPI_Comm comm) {
   int simax;
   int info=0;
 
-  double *para=Para;
+  complex double *para=Para;
  //double VecCG[SROptSize*(NVMCSample+7) + NVMCSample];
   double *VecCG;
   //double *stcOd, *stcOs, *stcO;
@@ -244,10 +234,10 @@ int stcOptCG_real_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
   int si,pi,pj,idx;
   int rank, size, info;
   int iter;
-  int max_iter=CGiter;
+  int max_iter=NSROptCGMaxIter;
   double delta;
   double alpha, beta;
-  double cg_thresh = CGthresh*(double)NPara;
+  double cg_thresh = DSROptCGTol*(double)NPara;
   //double cg_thresh = DSROptRedCut;
 
   const int srOptSize=SROptSize;

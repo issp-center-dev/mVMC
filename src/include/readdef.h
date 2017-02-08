@@ -77,11 +77,13 @@ enum ParamIdxInt{
   IdxNDH2, IdxNDH4, IdxNOrbit,
   IdxNQPTrans, IdxNOneBodyG, IdxNTwoBodyG,
   IdxNTwoBodyGEx, IdxNInterAll, IdxNQPOptTrans,
+  IdxSROptCGMaxIter,
   ParamIdxInt_End
 };
 
 enum ParamIdxDouble{
   IdxSROptRedCut, IdxSROptStaDel, IdxSROptStepDt,
+  IdxSROptCGTol,
   ParamIdxDouble_End
 };
 

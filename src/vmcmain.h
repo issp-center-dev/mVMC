@@ -69,6 +69,7 @@ extern int omp_get_thread_num(void);
 #else
  #include "stcopt_pdposv.c"
 #endif
+#include "stcopt_cg.c"
 
 #include "gauleg.c"
 #include "legendrepoly.c"
