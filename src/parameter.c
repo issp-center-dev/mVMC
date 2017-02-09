@@ -45,7 +45,10 @@ void InitParameter() {
 
   for(i=0;i<NSlater;i++){
     if(OptFlag[2*i+2*NProj] > 0){ //TBC
-      Slater[i] =  1*genrand_real2(); /* uniform distribution [0,1) */
+      Slater[i] =  2*(0.5-genrand_real2()); /* uniform distribution [-1,1) */
+      if(OptFlag[2*i+2*NProj] > 0){ //TBC
+        Slater[i] += 2*I*(0.5-genrand_real2()); /* uniform distribution [-I,I) */
+      }
       //Slater[i] += 1*I*genrand_real2(); /* uniform distribution [0,1) */
       //printf("DEBUG: i=%d slater=%lf %lf \n",i,creal(Slater[i]),cimag(Slater[i]));
     } else {

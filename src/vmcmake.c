@@ -44,7 +44,7 @@ void updateEleConfig(int mi, int ri, int rj, int s,
 void revertEleConfig(int mi, int ri, int rj, int s,
                      int *eleIdx, int *eleCfg, int *eleNum);
 
-typedef enum {HOPPING, EXCHANGE, NONE} UpdateType;
+typedef enum {HOPPING,HOPPING_FSZ, EXCHANGE, NONE} UpdateType;
 UpdateType getUpdateType(int path);
 
 void VMCMakeSample(MPI_Comm comm) {
