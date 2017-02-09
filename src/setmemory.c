@@ -268,7 +268,7 @@ void SetMemory() {
     }
 //for real
     if(NStoreO<2){
-      SROptOO_real = (double*)malloc( sizeof(double )*(SROptSize+2)) ; //TBC
+      SROptOO_real = (double*)malloc( sizeof(double )*SROptSize*(SROptSize+2)) ; //TBC
       SROptHO_real = SROptOO_real + (SROptSize)*(SROptSize); //TBC
       SROptO_real  = SROptHO_real + (SROptSize);  //TBC
     }else{

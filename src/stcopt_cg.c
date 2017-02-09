@@ -20,6 +20,8 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see http://www.gnu.org/licenses/. 
 */
 
+// #define _DEBUG_STCOPT_CG
+
 #ifdef _SYSTEM_A
  #define M_PDGEMV  PDGEMV
  #define M_PZSYEVD PZSYEVD
@@ -91,20 +93,20 @@ void M_PZGEMV(char *trans, int *m, int *n, double complex *alpha,
               double complex *beta,
               double complex *y, int *iy, int *jy, int *descy, int *incy);
 
-int StochasticOptCG_real(MPI_Comm comm);
-void stcOptCG_real_Init(const int nSmat, int *const smatToParaIdx, double *VecCG); 
-int stcOptCG_real_Main(const int nSmat, double *VecCG, MPI_Comm comm);
+int StochasticOptCG(MPI_Comm comm);
+void stcOptCG_Init(const int nSmat, int *const smatToParaIdx, double *VecCG); 
+int stcOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm);
 inline double xdot(const int n, double * const p, double * const q);
 
-int StochasticOptCG_real(MPI_Comm comm) {
+int StochasticOptCG(MPI_Comm comm) {
   const int nPara=NPara;
   const int srOptSize=SROptSize;
-  const double *srOptO=SROptOO_real;
-  const double *srOptOOdiag=SROptOO_real + srOptSize;
+  const double complex *srOptO=SROptOO;
+  const double complex *srOptOOdiag=SROptOO + 2*srOptSize;
 
-  double sDiagElm[nPara]; /* the parameter change */
+  double sDiagElm[2*nPara]; /* the parameter change */
   int nSmat;
-  int smatToParaIdx[NPara];
+  int smatToParaIdx[2*nPara];
 
   int cutNum=0,optNum=0;
   double sDiag,sDiagMax,sDiagMin;
@@ -129,19 +131,38 @@ int StochasticOptCG_real(MPI_Comm comm) {
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
+#ifdef _DEBUG_STCOPT_CG
+  fprintf(stderr, "DEBUG in %s (%d): Start StochasticOptCG\n", __FILE__, __LINE__);
+  fprintf(stderr, "DEBUG in %s (%d): nPara = %d, srOptSize = %d\n", __FILE__, __LINE__, nPara, srOptSize);
+#endif
+
   StartTimer(50);
+
+  if(AllComplexFlag==0){
+    for(pi=0; pi<srOptSize; pi++){
+      SROptOO[2*pi] = SROptOO_real[pi];
+      SROptOO[2*pi+1] = 0.0;
+      SROptOO[2*pi+2*srOptSize] = SROptOO_real[pi+srOptSize];
+      SROptOO[2*pi+1+2*srOptSize] = 0.0;
+      SROptHO[2*pi] = SROptHO_real[pi];
+      SROptHO[2*pi+1] = 0.0;
+    }
+  }
 
   #pragma omp parallel for default(shared) private(pi)
   #pragma loop noalias
-  for(pi=0;pi<nPara;pi++) {
-    /* r[i] is temporarily used for diagonal elements of S */
-    /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
-    sDiagElm[pi] = srOptOOdiag[pi+1] - srOptO[pi+1] * srOptO[pi+1];
+  for(pi=0;pi<2*nPara;pi++) {
+    /* calculate diagonal elements of S */
+    /* S[pi][pi] = OO[pi+2][pi+2] - O[pi+2] * O[pi+2]; */
+    sDiagElm[pi] = creal(srOptOOdiag[pi+2] - conj(srOptO[pi+2]) * srOptO[pi+2]);
+#ifdef _DEBUG_STCOPT_CG
+    fprintf(stderr, "DEBUG in %s (%d): sDiagElm[%d] = %lf (optflag=%d)\n", __FILE__, __LINE__, pi, sDiagElm[pi], OptFlag[pi]);
+#endif
   }
 
   sDiag = sDiagElm[0];
   sDiagMax=sDiag; sDiagMin=sDiag;
-  for(pi=0;pi<nPara;pi++) {
+  for(pi=0;pi<2*nPara;pi++) {
     sDiag = sDiagElm[pi];
     if(sDiag>sDiagMax) sDiagMax=sDiag;
     if(sDiag<sDiagMin) sDiagMin=sDiag;
@@ -149,7 +170,7 @@ int StochasticOptCG_real(MPI_Comm comm) {
 
   diagCutThreshold = sDiagMax*DSROptRedCut;
   si = 0;
-  for(pi=0;pi<nPara;pi++) {
+  for(pi=0;pi<2*nPara;pi++) {
     if(OptFlag[pi]!=1) { /* fixed by OptFlag */
       optNum++;
       continue;
@@ -164,20 +185,24 @@ int StochasticOptCG_real(MPI_Comm comm) {
     }
   }
   nSmat = si;
-  for(si=nSmat;si<nPara;si++) {
+  for(si=nSmat;si<2*nPara;si++) {
     smatToParaIdx[si] = -1;
   }
 
+#ifdef _DEBUG_STCOPT_CG
+  fprintf(stderr, "DEBUG in %s (%d): diagCutThreshold = %lf\n", __FILE__, __LINE__, diagCutThreshold);
+  fprintf(stderr, "DEBUG in %s (%d): optNum, cutNum, nSmat, nPara == %d, %d, %d, %d\n", __FILE__, __LINE__, optNum, cutNum, nSmat, nPara);
+#endif
 
   StopTimer(50);
   StartTimer(51);
   
-  RequestWorkSpaceDouble(SROptSize*(NVMCSample+7) + NVMCSample);
-  VecCG  = GetWorkSpaceDouble(SROptSize*(NVMCSample+7) + NVMCSample);
+  RequestWorkSpaceDouble(2*SROptSize*(NVMCSample+7) + NVMCSample);
+  VecCG  = GetWorkSpaceDouble(2*SROptSize*(NVMCSample+7) + NVMCSample);
   
   /* calculate r[i]: global vector [nSmat] */
-  stcOptCG_real_Init(nSmat, smatToParaIdx, VecCG);
-  info = stcOptCG_real_Main(nSmat, VecCG, comm);
+  stcOptCG_Init(nSmat, smatToParaIdx, VecCG);
+  info = stcOptCG_Main(nSmat, VecCG, comm);
   
   StopTimer(51);
   StartTimer(52);
@@ -225,12 +250,17 @@ int StochasticOptCG_real(MPI_Comm comm) {
 
   StopTimer(52);
   ReleaseWorkSpaceDouble();
+
+
+#ifdef _DEBUG_STCOPT_CG
+  printf("DEBUG in %s (%d): End StochasticOptCG\n", __FILE__, __LINE__);
+#endif
   return info;
 }
 
 /* calculate the parameter change r[nSmat] from SOpt.
    Solve S*x = g */
-int stcOptCG_real_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
+int stcOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
   int si,pi,pj,idx;
   int rank, size, info;
   int iter;
@@ -243,6 +273,10 @@ int stcOptCG_real_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
   const int srOptSize=SROptSize;
   double *stcOd, *stcOs, *stcO;
   double  *r, *g, *q, *d, *x, *process_y;
+
+#ifdef _DEBUG_STCOPT_CG
+  printf("DEBUG in %s (%d): Start stcOptCG_Main\n", __FILE__, __LINE__);
+#endif
   
   x = VecCG;              //GetWorkSpaceDouble(nSmat)
   g = x  + nSmat;         //GetWorkSpaceDouble(nSmat)
@@ -299,6 +333,10 @@ int stcOptCG_real_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
       d[si] = r[si] + beta*d[si];
     }
   }
+
+#ifdef _DEBUG_STCOPT_CG
+  printf("DEBUG in %s (%d): End stcOptCG_Main\n", __FILE__, __LINE__);
+#endif
 
   return iter;
 }
@@ -357,14 +395,18 @@ int operate_by_S(int nSmat, double *x, double *y, double * stcO, MPI_Comm comm) 
   return info;
 }
 
-void stcOptCG_real_Init(const int nSmat, int *const smatToParaIdx, double *VecCG) {
+void stcOptCG_Init(const int nSmat, int *const smatToParaIdx, double *VecCG) {
   const double ratioDiag = 1.0 + DSROptStaDel;
   const double dt = 2.0*DSROptStepDt;
-  const double srOptHO_0 = SROptHO_real[0];
+  const double srOptHO_0 = creal(SROptHO[0]);
   int i;
   int si,sj,pi,pj,idx,offset;
   double *stcOd, *stcOs, *stcO;
   double  *r, *g, *y, *d, *x, *process_y;
+
+#ifdef _DEBUG_STCOPT_CG
+  fprintf(stderr, "DEBUG in %s (%d): Start stcOptCG_Init\n", __FILE__, __LINE__);
+#endif
   
   x = VecCG;              //GetWorkSpaceDouble(nSmat)
   g = x  + nSmat;         //GetWorkSpaceDouble(nSmat)
@@ -379,14 +421,14 @@ void stcOptCG_real_Init(const int nSmat, int *const smatToParaIdx, double *VecCG
   
   #pragma omp parallel for default(shared) private(si)
   #pragma loop noalias
-  for(si=0;si<SROptSize*(NVMCSample+7) + NVMCSample;si++) {
+  for(si=0;si<2*SROptSize*(NVMCSample+7) + NVMCSample;si++) {
     VecCG[si] = 0.0;
   }
 
   for(i=0;i<NVMCSample;++i) {
     offset = i*SROptSize;
     for(si=0;si<nSmat;++si) {
-      pi = smatToParaIdx[si];
+      pi = smatToParaIdx[si]/2;
       
       idx = si + i*nSmat; /* column major */
       stcOs[idx] = SROptO_Store_real[offset+pi+1];
@@ -400,9 +442,13 @@ void stcOptCG_real_Init(const int nSmat, int *const smatToParaIdx, double *VecCG
   for(si=0;si<nSmat;++si) {
     pi = smatToParaIdx[si];
     
-    stcO[si] = SROptO_real[pi+1];
-    g[si] = -dt*(SROptHO_real[pi+1] - srOptHO_0 * SROptO_real[pi+1]);
+    stcO[si] = SROptO[pi+2];
+    g[si] = -dt*(creal(SROptHO[pi+2]) - srOptHO_0 * creal(SROptO[pi+2]));
   }
+
+#ifdef _DEBUG_STCOPT_CG
+  fprintf(stderr, "DEBUG in %s (%d): Start stcOptCG_Init\n", __FILE__, __LINE__);
+#endif
 
   return;
 }

@@ -26,6 +26,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
+// #define _DEBUG_STCOPT_PDPOSV
+
 #ifdef _SYSTEM_A
  #define M_PDSYEVD PDSYEVD
  #define M_PDGEMV  PDGEMV
@@ -129,6 +131,9 @@ int StochasticOpt(MPI_Comm comm) {
   sDiag = r[0];
   sDiagMax=sDiag; sDiagMin=sDiag;
   for(pi=0;pi<2*nPara;pi++) {
+#ifdef _DEBUG_STCOPT_PDPOSV
+    printf("DEBUG in %s (%d): r[%d] = %lf (optflag=%d)\n", __FILE__, __LINE__, pi, r[pi], OptFlag[pi]);
+#endif
     sDiag = r[pi];
     if(sDiag>sDiagMax) sDiagMax=sDiag;
     if(sDiag<sDiagMin) sDiagMin=sDiag;
@@ -159,6 +164,11 @@ int StochasticOpt(MPI_Comm comm) {
   for(si=nSmat;si<2*nPara;si++) {
     smatToParaIdx[si] = -1; // parameters that will not be optimized
   }
+
+#ifdef _DEBUG_STCOPT_PDPOSV
+  printf("DEBUG in %s (%d): diagCutThreshold = %lf\n", __FILE__, __LINE__, diagCutThreshold);
+  printf("DEBUG in %s (%d): optNum, cutNum, nSmat, nPara == %d, %d, %d, %d\n", __FILE__, __LINE__, optNum, cutNum, nSmat, nPara);
+#endif
 
   StopTimer(50);
   StartTimer(51);
