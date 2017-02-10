@@ -216,92 +216,127 @@ double complex GreenFunc2_fsz(const int ri, const int rj, const int rk, const in
 
 /* Calculate 2-body Green function <psi|CisAjtCkuAlv|x>/<psi|x> */
 /* buffer size = NQPFull+2*Nsize */
+// s==t 
 double complex GreenFunc2_fsz2(const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t,const int u,const int v, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
                   int *projCntNew, double complex *buffer) {
   double complex z;
-  int mj,msj,ml,mtl;
-  int rsi,rsj,rtk,rtl;
+  //int mj,msj,ml,mtl;
+  int mj,ml; // mj: (rj,t) -> (ri,s) ml:(rl,v) -> (rk,u)
+  //int rsi,rtj,ruk,rvl;
+  int XI,XJ,XK,XL; //fsz
   double complex *pfMNew = buffer; /* [NQPFull] */
   double complex *bufV   = buffer+NQPFull; /* 2*Nsize */
 
-  rsi = ri + s*Nsite;
-  rsj = rj + t*Nsite;
-  rtk = rk + u*Nsite;
-  rtl = rl + v*Nsite;
+  XI = ri + s*Nsite;
+  XJ = rj + t*Nsite;
+  XK = rk + u*Nsite;
+  XL = rl + v*Nsite;
 
-  if(s==t) {
-    if(rk==rl) { /* CisAjsNks */
-      if(eleNum[rtk]==0) return 0.0;
-      else return GreenFunc1_fsz(ri,rj,s,ip,eleIdx,eleCfg,eleNum,
-                             eleProjCnt,eleSpn,projCntNew,buffer); /* CisAjs */
-    }else if(rj==rl) {
-      return 0.0; /* CisAjsCksAjs (j!=k) */
-    }else if(ri==rl) { /* AjsCksNis */
-      if(eleNum[rsi]==0) return 0.0;
-      else if(rj==rk) return 1.0-eleNum[rsj];
-      else return -GreenFunc1_fsz(rk,rj,s,ip,eleIdx,eleCfg,eleNum,
-                              eleProjCnt,eleSpn,projCntNew,buffer); /* -CksAjs */
-    }else if(rj==rk) { /* CisAls(1-Njs) */
-      if(eleNum[rsj]==1) return 0.0;
-      else if(ri==rl) return eleNum[rsi];
-      else return GreenFunc1_fsz(ri,rl,s,ip,eleIdx,eleCfg,eleNum,
-                             eleProjCnt,eleSpn,projCntNew,buffer); /* CisAls */
-    }else if(ri==rk) {
-      return 0.0; /* CisAjsCisAls (i!=j) */
-    }else if(ri==rj) { /* NisCksAls (i!=k,l) */
-      if(eleNum[rsi]==0) return 0.0;
-      else return GreenFunc1_fsz(rk,rl,s,ip,eleIdx,eleCfg,eleNum,
-                             eleProjCnt,eleSpn,projCntNew,buffer); /* CksAls */
+
+  if(XI == XJ) {
+    if(XJ == XK) {
+      if(XK == XL) {
+        // I=J=K=L #1
+        return eleNum[XI];
+      }else{
+        // I=J=K !=L #2
+        if(eleNum[XI]==1) return 0.0; // 
+        else return GreenFunc1_fsz2(rk,rl,u,v,ip,eleIdx,eleCfg,eleNum,
+                             eleProjCnt,eleSpn,projCntNew,buffer); /* CkuAlv */
+      }      
+    }else if(XJ == XL){
+      // I=J=L !=K #3
+      return 0.0;
+    }else if(XK == XL){
+      // I=J ! K=L #4
+      return eleNum[XI]*eleNum[XK];
+    }else {
+      // I=J   K!=L #5
+      if(eleNum[XI]==0) return 0.0; // 
+      else return GreenFunc1_fsz2(rk,rl,u,v,ip,eleIdx,eleCfg,eleNum,
+                            eleProjCnt,eleSpn,projCntNew,buffer); /* CkuAlv */
+    } 
+  }else if(XI == XK){
+    if(XJ == XL){
+      // I=K != J=L  #6
+      return 0.0;
+    }else if(XK == XL){
+      // I=K=L !=J #7
+      return 0.0;
+    }else{
+      // I=K != L!=J #8
+      return 0.0;
     }
-  } if(s!=t) {
-    if(rk==rl) { /* CisAjsNkt */
-      if(eleNum[rtk]==0) return 0.0;
-      else if(ri==rj) return eleNum[rsi];
-      else return GreenFunc1_fsz(ri,rj,s,ip,eleIdx,eleCfg,eleNum,
-                             eleProjCnt,eleSpn,projCntNew,buffer); /* CisAjs */
-    }else if(ri==rj) { /* NisCktAlt */
-      if(eleNum[rsi]==0) return 0.0;
-      else return GreenFunc1_fsz(rk,rl,t,ip,eleIdx,eleCfg,eleNum,
-                             eleProjCnt,eleSpn,projCntNew,buffer); /* CktAlt */
+  }else if(XI == XL){
+    if(XJ == XK){
+      // I=L != J==K #9
+      return eleNum[XI]*(1-eleNum[XJ]);
+    }else{
+      // I=L != J!=K #10
+      if(eleNum[XI]==0) return 0.0; // 
+      else return -1.0*GreenFunc1_fsz2(rk,rj,u,t,ip,eleIdx,eleCfg,eleNum,
+                            eleProjCnt,eleSpn,projCntNew,buffer); /* CkuAjt */
     }
+  }else if(XJ == XK){
+   if(XK == XL){
+      // I != J=K=L  #11
+      if(eleNum[XJ]==0) return 0.0; // 
+      else return GreenFunc1_fsz2(ri,rj,s,t,ip,eleIdx,eleCfg,eleNum,
+                            eleProjCnt,eleSpn,projCntNew,buffer); /* CisAjt */
+   }else{
+      // I != J=K !=L  #12
+      if(eleNum[XJ]==1) return 0.0; // 
+      else return GreenFunc1_fsz2(ri,rl,s,v,ip,eleIdx,eleCfg,eleNum,
+                            eleProjCnt,eleSpn,projCntNew,buffer); /* CisAlv */
+   } 
+  }else if(XJ == XL){
+      // I != J=L !=K  #13
+      return 0.0; // 
+  }else if(XK == XL){
+      // I != J != K =L  #14
+      if(eleNum[XK]==0) return 0.0; // 
+      else return GreenFunc1_fsz2(ri,rj,s,t,ip,eleIdx,eleCfg,eleNum,
+                            eleProjCnt,eleSpn,projCntNew,buffer); /* CisAjt */
   }
+     
+  // from here, no pair exists 
+  if(eleNum[XI]==1 || eleNum[XJ]==0 || eleNum[XK]==1 || eleNum[XL]==0) return 0.0;
 
-  if(eleNum[rsi]==1 || eleNum[rsj]==0 || eleNum[rtk]==1 || eleNum[rtl]==0) return 0.0;
 
-  mj = eleCfg[rj+s*Nsite];
-  ml = eleCfg[rl+t*Nsite];
-  msj = mj;// + s*Ne;
-  mtl = ml;// + t*Ne;
+  mj = eleCfg[XJ]; // electron exists
+  ml = eleCfg[XL]; // electron exists
+  //msj = mj;// + s*Ne;
+  //mtl = ml;// + t*Ne;
 
   /* hopping */
-  eleIdx[mtl] = rk;
-  eleSpn[mtl] = t;
-  eleNum[rtl] = 0;
-  eleNum[rtk] = 1;
-  UpdateProjCnt(rl, rk, t, projCntNew, eleProjCnt, eleNum);
-  eleIdx[msj] = ri;
-  eleSpn[msj] = s;
-  eleNum[rsj] = 0;
-  eleNum[rsi] = 1;
-  UpdateProjCnt(rj, ri, s, projCntNew, projCntNew, eleNum);
+  eleIdx[ml] = rk; // ml : (rk,u)
+  eleSpn[ml] = u;
+  eleNum[XL] = 0;
+  eleNum[XK] = 1;
+  UpdateProjCnt_fsz(rl, rk, v,u, projCntNew, eleProjCnt, eleNum); // (rl,v) -> (rk,u) v!=u
+  eleIdx[mj]  = ri; // mj : (ri,s)
+  eleSpn[mj]  = s;
+  eleNum[XJ] = 0;
+  eleNum[XI] = 1;
+  UpdateProjCnt_fsz(rj,ri, t,s, projCntNew, projCntNew, eleNum); // (rj,t) -> (ri,s) t!=s
 
   z = ProjRatio(projCntNew,eleProjCnt);
 
   /* calculate Pfaffian */
-  CalculateNewPfMTwo_fsz(ml, t, mj, s, pfMNew, eleIdx,eleSpn, 0, NQPFull, bufV);
+  CalculateNewPfMTwo_fsz(ml, v, mj, t, pfMNew, eleIdx,eleSpn, 0, NQPFull, bufV); // ml -> rk,u; mj -> ri,s
   z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
   /* revert hopping */
-  eleIdx[mtl] = rl;
-  eleSpn[mtl] = t;
-  eleNum[rtl] = 1;
-  eleNum[rtk] = 0;
-  eleIdx[msj] = rj;
-  eleSpn[msj] = s;
-  eleNum[rsj] = 1;
-  eleNum[rsi] = 0;
+  eleIdx[ml]  = rl;  // ml : (rl,v)
+  eleSpn[ml]  = v;
+  eleNum[XL] = 1;
+  eleNum[XK] = 0;
+  eleIdx[mj]  = rj;  // mj : (rj,t)
+  eleSpn[mj]  = t;
+  eleNum[XJ] = 1;
+  eleNum[XI] = 0;
 
   return conj(z/ip);//TBC
 }
