@@ -411,9 +411,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
     StartTimer(5);
     if(NStoreO==2){
-      if(AllComplexFlag==0){
-        info = StochasticOptCG(comm_parent);
-      }
+      info = StochasticOptCG(comm_parent);
     }else{
       info = StochasticOpt(comm_parent);
     }
@@ -427,7 +425,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 #endif
 
     // DEBUG
-    abort();
+    // abort();
 
     if(info!=0) {
       if(rank==0) fprintf(stderr, "Error: StcOpt info=%d step=%d\n",info,step);

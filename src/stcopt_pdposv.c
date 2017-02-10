@@ -125,15 +125,15 @@ int StochasticOpt(MPI_Comm comm) {
     //r[2*pi]   = creal(srOptOO[(2*pi+2)*(2*srOptSize+pi)+(2*pi+2)]) - creal(srOptOO[2*pi+2]) * creal(srOptOO[2*pi+2]);
     //r[2*pi+1] = creal(srOptOO[(2*pi+3)*(2*srOptSize+pi)+(2*pi+3)]) - creal(srOptOO[2*pi+3]) * creal(srOptOO[2*pi+3]);
     //printf("DEBUG: pi=%d: %lf %lf \n",pi,creal(srOptOO[pi]),cimag(srOptOO[pi]));
+#ifdef _DEBUG_STCOPT_PDPOSV
+  fprintf(stderr, "DEBUG in %s (%d): r[%d] = %lf\n", __FILE__, __LINE__, pi, r[pi]);
+#endif
   }
 
 // search for max and min
   sDiag = r[0];
   sDiagMax=sDiag; sDiagMin=sDiag;
   for(pi=0;pi<2*nPara;pi++) {
-#ifdef _DEBUG_STCOPT_PDPOSV
-    printf("DEBUG in %s (%d): r[%d] = %lf (optflag=%d)\n", __FILE__, __LINE__, pi, r[pi], OptFlag[pi]);
-#endif
     sDiag = r[pi];
     if(sDiag>sDiagMax) sDiagMax=sDiag;
     if(sDiag<sDiagMin) sDiagMin=sDiag;
@@ -166,8 +166,8 @@ int StochasticOpt(MPI_Comm comm) {
   }
 
 #ifdef _DEBUG_STCOPT_PDPOSV
-  printf("DEBUG in %s (%d): diagCutThreshold = %lf\n", __FILE__, __LINE__, diagCutThreshold);
-  printf("DEBUG in %s (%d): optNum, cutNum, nSmat, nPara == %d, %d, %d, %d\n", __FILE__, __LINE__, optNum, cutNum, nSmat, nPara);
+  printf("DEBUG in %s (%d): diagCutThreshold = %lg\n", __FILE__, __LINE__, diagCutThreshold);
+  printf("DEBUG in %s (%d): optNum, cutNum, nSmat, 2*nPara == %d, %d, %d, %d\n", __FILE__, __LINE__, optNum, cutNum, nSmat, 2*nPara);
 #endif
 
   StopTimer(50);
@@ -369,7 +369,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
 
   StopTimer(56);
   StartTimer(57);
-  
+
   /***** solve the linear equation S*r=g by PDPOSV *****/
   uplo='U'; n=nSmat; nrhs=1; is=1; js=1; ig=1; jg=1;
   M_PDPOSV(&uplo, &n, &nrhs, s, &is, &js, descs, 
