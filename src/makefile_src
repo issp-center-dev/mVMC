@@ -54,8 +54,8 @@ all :
 	make -f makefile_src vmcdry.out
 	cd ComplexUHF/src; $(MAKE) -f makefile_uhf
 
-vmc.out : $(OBJS)
-	$(CC) -o $(OUT) $(OBJS) $(OPTION) $(CFLAGS) $(REPORT) $(LIB) 
+vmc.out : $(OBJS) $(STDFACE)
+	$(CC) -o $(OUT) $(OBJS) $(STDFACE) $(OPTION) $(CFLAGS) $(REPORT) $(LIB) 
 
 vmcdry.out : vmcdry.o $(STDFACE)
 	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) 

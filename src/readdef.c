@@ -106,8 +106,13 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 	  sscanf(ctmp2,"%s %s\n", ctmp, CDataFileHead); //6
 	  fgets(ctmp2,sizeof(ctmp2)/sizeof(char), fp);
+          sprintf(ctmp,"output/%s", CDataFileHead);
+          strcpy(CDataFileHead,ctmp);
 	  sscanf(ctmp2,"%s %s\n", ctmp, CParaFileHead); //7
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);   //8
+          sprintf(ctmp, "output/%s", CParaFileHead);
+          strcpy(CParaFileHead, ctmp);
+          fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);   //8
+          info = system("mkdir -p output");
 
 	  double dtmp;
 	  while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp)!=NULL){
