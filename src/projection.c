@@ -278,16 +278,13 @@ void UpdateProjCnt(const int ri, const int rj, const int s,
 void MakeProjBFCnt(int *projCnt, const int *eleNum) {
     const int *n0 = eleNum;
     const int *n1 = eleNum + Nsite;
-    int idx, offset;
+    int idx;
     int k;
     int ri, rk;
     int xid, xih, xkd, xkh;
     int xidh, xihd, xkdh, xkhd;
-    int r0, r1, r2, r3;
-    int **posBF = PosBF;
     int *nBF0, *nBF1, *nBF2, *nBF3;
     /* optimization for Kei */
-    const int nProj = NProj;
     const int nSite = Nsite;
     const int nRange = Nrange;
 

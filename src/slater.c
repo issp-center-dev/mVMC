@@ -265,33 +265,31 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
   double complex cs,cc,ss;
   int *xqp, *xqpInv;
   double complex *invM,*invM_i,*invM_j,*invM_k,*invM_l;
-  const int *bfCnt0=eleProjBFCnt;
-  const int *bfCnt1=eleProjBFCnt + 4*Nsite*Nrange;
+//  const int *bfCnt0=eleProjBFCnt;
+//  const int *bfCnt1=eleProjBFCnt + 4*Nsite*Nrange;
   const int *bfCnt2=eleProjBFCnt + 8*Nsite*Nrange;
   const int *bfCnt3=eleProjBFCnt +12*Nsite*Nrange;
-  const int *bfCnt2_n,*bfCnt2_m,*bfCnt3_n,*bfCnt3_m;
+  const int *bfCnt2_n,*bfCnt3_m;
   int **posBF = PosBF;
 
   int *orbitalIdx_i,*orbitalSgn_i;
   int *transOrbIdx; /* transOrbIdx[mpidx][msi][msj] */
   int *transOrbSgn; /* transOrbSgn[mpidx][msi][msj] */
-  int *tOrbIdx,*tOrbIdx_i,*tOrbIdx_j;
-  int *tOrbSgn,*tOrbSgn_i;
+  int *tOrbIdx,*tOrbIdx_i;
+  int *tOrbSgn_i;
   double complex *buf,*buffer;
-  double complex logz,tmp;
+  double complex tmp;
   //double complex bfdhidx[NMultiSlater*NQPFull*Nsize*Nsize];
   //double complex *bfdhidx_i;
   double complex pTrans[Nsite2*Nsite2];
   double complex *pTrans_i;
 
-  int islater;
   double complex **etaTmp;
-  int *flagTmp;
-  int rki,rkj,rli,rlj;
+  int rki,rlj;
   const int nSite=Nsite;
   const int nRange=Nrange;
   const int nSiteRange = nRange*nSite;
-  int idx_ik,idx_jk,idx_il,idx_jl;
+  int idx_ik,idx_jl;
   int bfidx;
   int dki,dlj,nidx,midx,xtmp;
 
@@ -359,7 +357,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
     ss = PfM[qpidx] * SPGLSinSin[spidx];
 
     tOrbIdx = transOrbIdx + mpidx*nsize*nsize;
-    tOrbSgn = transOrbSgn + mpidx*nsize*nsize;
+//    tOrbSgn = transOrbSgn + mpidx*nsize*nsize;
     invM = InvM + qpidx*Nsize*Nsize;
     buf = buffer + qpidx*NSlater;
     etaTmp = eta + qpidx*Nsite*Nsite;
@@ -398,11 +396,11 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
 
           for(xn=0;xn<4;xn++){
             bfCnt2_n=bfCnt2+xn*nSiteRange;
-            bfCnt3_n=bfCnt3+xn*nSiteRange;
+//            bfCnt3_n=bfCnt3+xn*nSiteRange;
             for(xm=0;xm<4;xm++){
               if(xm==0 && xn == 0) continue;
               bfidx=BFSubIdx[xn][xm];
-              bfCnt2_m=bfCnt2+xm*nSiteRange;
+//              bfCnt2_m=bfCnt2+xm*nSiteRange;
               bfCnt3_m=bfCnt3+xm*nSiteRange;
           
               for(xk=0;xk<nRange;xk++) {

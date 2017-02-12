@@ -28,7 +28,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #include "time.h"
 #include "setmemory.h"
-#include "stcopt_dposv.h"
 #ifndef _SRC_TIME
 #define _SRC_TIME
 
