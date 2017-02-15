@@ -133,7 +133,7 @@ void CalculateGreenFuncBF(const double w, const double ip, int *eleIdx, int *ele
   double complex myEnergy;
 
   RequestWorkSpaceThreadInt(Nsize+2*Nsite2+NProj+16*Nsite*Nrange);
-  RequestWorkSpaceThreadDouble(NQPFull+2*Nsize+NQPFull*Nsite2*Nsite2);
+  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize+NQPFull*Nsite2*Nsite2);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
 #pragma omp parallel default(shared)\
