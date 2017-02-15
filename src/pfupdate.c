@@ -220,12 +220,7 @@ void CalculateNewPfMBF(const int *icount, const int *msaTmp,
   const int nsize = Nsize;
   const int qpNum = qpEnd-qpStart;
   int qpidx;
-  //double *sltE;
-  //double *sltE_i;
   int *msa;
-  //int msi,msj,rsi,rsj,i;
-  //int *hop;
-  //double complex diff;
 
   for(qpidx=0;qpidx<qpNum;qpidx++) {
     //Store msa//
@@ -241,7 +236,6 @@ void CalculateNewPfMBF(const int *icount, const int *msaTmp,
 
     free(msa);
   }
-  //icount = UpdateSlaterElmBFTmp3(ma, rb, ra, s, eleCfg, eleNum, msaTmp);
 
   return;
 }

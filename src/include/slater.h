@@ -17,7 +17,7 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
 void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const int u,
                           const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp);
 
-void StoreSlaterElmBF(complex double *bufM);
+void StoreSlaterElmBF_fcmp(complex double *bufM);
 
 void StoreSlaterElmBF_real(double *bufM_real);
 

@@ -451,7 +451,7 @@ double complex GreenFunc1BF(const int ri, const int rj, const int s, const doubl
   eleNum[rsj] = 1;
   eleNum[rsi] = 0;
 
-  StoreSlaterElmBF(bufM);
+  StoreSlaterElmBF_fcmp(bufM);
 
   return z/ip;
 }

@@ -154,7 +154,7 @@ void CalculateGreenFuncBF(const double w, const double ip, int *eleIdx, int *ele
 #pragma loop noalias
     for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
 
-    StoreSlaterElmBF(mySltBFTmp);
+    StoreSlaterElmBF_fcmp(mySltBFTmp);
 #pragma omp master
     {StartTimer(50);}
 

@@ -1561,7 +1561,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
 }
 
 
-void StoreSlaterElmBF(complex double *bufM){
+void StoreSlaterElmBF_fcmp(complex double *bufM){
     int qpidx,rsi,rsj;
     const double complex* sltE;
     const double complex* sltE_i;
