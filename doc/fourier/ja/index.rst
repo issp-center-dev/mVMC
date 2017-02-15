@@ -12,6 +12,7 @@ Welcome to HPhi/mVMC Fourie-Transformation utility's documentation!
    fourier_overview_ja.rst
    fourier_tutorial_ja.rst
    fourier_format_ja.rst
+   fourier_util_ja.rst
    fourier_contact_ja.rst
 
 .. Indices and tables

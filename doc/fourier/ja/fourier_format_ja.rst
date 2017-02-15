@@ -184,7 +184,7 @@ gnuplot スクリプト
 ``corplot`` とは別に 直接gnuplotを起動して, ``load`` でよみこむことも可能である.
 ファイル名は ``correlation.gp`` である.
 
-::
+.. code-block:: gnuplot
 
    #set terminal pdf color enhanced \    (1)
    #dashed dl 1.0 size 20.0cm, 20.0cm    (1)
