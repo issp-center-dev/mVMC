@@ -256,6 +256,10 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   return info;
 }
 
+int CalculateMAll_BF_fcmp(const int *eleIdx, const int qpStart, const int qpEnd) {
+  int info=0;
+  return info;
+}
 
 //==============e fcmp =============//
 
@@ -507,6 +511,6 @@ int calculateMAll_BF_real_child(const int *eleIdx, const int qpStart, const int 
   return info;
 }
 
+//==============e real =============//
 
 #endif
-//==============e real =============//

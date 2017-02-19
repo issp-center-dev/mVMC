@@ -7,6 +7,9 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
 double complex CalculateHamiltonian0(const int *eleNum);
 
 double CalculateDoubleOccupation(int *eleIdx, const int *eleCfg,
-                                 int *eleNum, const int *eleProjCnt); 
+                                 int *eleNum, const int *eleProjCnt);
+
+double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx, const int *eleCfg,
+                                   int *eleNum, const int *eleProjCnt, const int *eleProjBFCnt);
 
 #endif
