@@ -279,8 +279,8 @@ int CalculateMAll_BF_fcmp(const int *eleIdx, const int qpStart, const int qpEnd)
     private(myIWork,myWork,myRWork, myInfo,myBufM) //TODO: Check to add myRWork is correct or not.
   {
     myIWork = GetWorkSpaceThreadInt(Nsize);
-    myBufM = GetWorkSpaceThreadDouble(Nsize*Nsize);
-    myWork = GetWorkSpaceThreadDouble(LapackLWork);
+    myBufM = GetWorkSpaceThreadComplex(Nsize*Nsize);
+    myWork = GetWorkSpaceThreadComplex(LapackLWork);
 
     myRWork = GetWorkSpaceThreadDouble(LapackLWork); //TBC for rwork
 
