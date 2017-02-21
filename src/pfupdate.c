@@ -443,7 +443,7 @@ double complex updateMAll_BF_fcmp_child(
   int iwork[n2];
   int iwork2[n2];
   //double complex work[n2*n2]; /* [n2][n2] */
-  double complex rwork[n2*n2]; /* [n2][n2] */
+  double rwork[n2*n2]; /* [n2][n2] */
   double complex*work; /* [n2][n2] */
   double complex*work2; /* [n2][n2] */
   int lwork = n2*n2;
