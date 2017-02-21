@@ -370,4 +370,13 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int
   return sgn * pfaff * PfM[qpidx];
 }
 
+void UpdateMAll_BF_fcmp(const int *icount, const int *msaTmp,
+                        double complex* pfMNew, const int *eleIdx,
+                        const int qpStart, const int qpEnd)
+{
+
+  return;
+}
+
+
 #endif
