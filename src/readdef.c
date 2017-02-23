@@ -473,8 +473,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   int iKWidx=0;
   
   int i,j,n,idx,idx0,idx1,info=0;
+  int isigma1, isigma2;
   int fidx=0; /* index for OptFlag */
-    int count_idx=0;
+  int count_idx=0;
   int x0,x1,x2,x3,x4,x5,x6,x7;
   double dReValue, dImValue;
   int rank;
@@ -731,18 +732,25 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	/*orbitalidx.def------------------------------------*/
 	if(NOrbitalIdx>0){
 	  idx0 = idx1 = 0;
+      itmp=0;
 	  if(APFlag==0) {
-	    while( fscanf(fp, "%d %d ", &i, &j) != EOF){
+	    while( fscanf(fp, "%d %d %d %d ", &i, &isigma1, &j, &isigma2) != EOF){
+          if(isigma1 == isigma2 && i==j){
+            itmp=1;
+          }
 	      fscanf(fp, "%d\n", &(OrbitalIdx[i][j]));
 	      OrbitalSgn[i][j] = 1;
 	      idx0++;
-	      if(idx0==Nsite*Nsite) break;
+	      if(idx0==(4*Nsite*Nsite-2*Nsite)) break;
 	    }
 	  } else { /* anti-periodic boundary mode */
-	    while( fscanf(fp, "%d %d ", &i, &j) != EOF){
+        while( fscanf(fp, "%d %d %d %d ", &i, &isigma1, &j, &isigma2) != EOF){
+         if(isigma1 == isigma2 && i==j){
+            itmp=1;
+          }
 	      fscanf(fp, "%d %d\n", &(OrbitalIdx[i][j]), &(OrbitalSgn[i][j]));
 	      idx0++;
-	      if(idx0==Nsite*Nsite) break;
+	      if(idx0==(4*Nsite*Nsite-2*Nsite)) break;
 	    }
 	  }
 
@@ -755,7 +763,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx1++;
         count_idx++;
         }
-	  if(idx0!=Nsite*Nsite || idx1!=NOrbitalIdx) {
+        
+        if(idx0!=(4*Nsite*Nsite-2*Nsite) || idx1!=NOrbitalIdx || itmp==1) {
 	    info=ReadDefFileError(defname);
 	  }
 	}
