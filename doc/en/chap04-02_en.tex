@@ -50,7 +50,7 @@ Each parameters are specified by the following files, respectively;
 \end{eqnarray}
 where $\Omega=(\alpha, \beta, \gamma)$ is the Euler angle, $\hat{R}(\Omega)$ is the rotational operator, $P_S(x)$ is the $S$-th polynomial, ${\bm K}$ is the momentum operator of the whole system and $\hat{T}_{\bm R}$ is the translational operators corresponding to the translational vector ${\bm R}$, $\hat{G}_{\alpha}$ is the point group operator, and $p_\alpha$ is the parity operator, respectively. The details of ${\cal P}_{d-h}^{(2)}$ and ${\cal P}_{d-h}^{(4)}$ are shown in \cite{Tahara2008}. The one body part of the wavefunction is represented as the pair function of the real space:
 \begin{equation}
-|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle,
+|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} \sum_{\sigma_1, \sigma_2}f_{i\sigma_1j \sigma_2}c_{i\sigma_1}^{\dag}c_{j\sigma_2}^{\dag} \right]^{N/2}|0 \rangle,
 \end{equation}
 where $N$ is the number of electrons and $N_s$ is the number of sites.
 The setting for optimizing variational parameters or not is given by the following files (the parameters for ${\cal L}_S$ are specified in the {\bf ModPara} file).
@@ -1458,45 +1458,49 @@ In the following, we define the total number of sites as $N_s$ and variational p
 \label{Subsec:Orbital}
 This file sets the calculation conditions of pair orbitals
 \begin{equation}
-|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle.
+|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} \sum_{\sigma_1, \sigma_2}f_{i\sigma_1j\sigma_2}c_{i\sigma_1}^{\dag}c_{j\sigma_2}^{\dag} \right]^{N/2}|0 \rangle.
 \end{equation}
-Site numbers $i, j$ and the variational parameters $f_{ij}$ are indicated.
+Site numbers $i, j$, spin indexes $\sigma_1, \sigma_2$ and the variational parameters $f_{i\sigma_1j\sigma_2}$ are indicated.
+Process will terminate when the parameter $f_{i\sigma_1 i\sigma_1}$ will be inputted.
 An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
 \begin{screen}
 \begin{verbatim}
 ====================================
-NOrbitalIdx 64   
+NOrbitalIdx 870   
 ComplexType 0
 ====================================
 ====================================
-   0     0     0 
-   0     1     1 
-   0     2     2 
-   0     3     3 
+   0  1  0  0  0 
+   0  0  0  1  1
+   0  0  1  0  2 
+   0  0  1  1  3 
  (continue...)
-  15     9    62 
-  15    10    63 
+  15  0  14  0  866 
+  15  0  14  1  867 
+  15  0  15  1  868 
+  15  1  15  0  869 
    0    1 
    1    1 
 (continue...)
-  62    1 
-  63    1 
+  868    1 
+  869    1 
 \end{verbatim}
 \end{screen}
 \end{minipage}
 
 \subsubsection{File format}
 In the following, we define the total number of sites as $N_s$ and variational parameters as $N_{\rm o}$, respectively.  
+A total number of variational parameters are given by $4N_2^2-2N_s$.
 
  \begin{itemize}
    \item  Line 1: Header
    \item  Line 2: [string01]~[int01]
    \item  Line 3: [string02]~[int02]
    \item  Lines 4 - 5:  Header
-   \item  Lines 6 - (5+$N_s^2$): [int03]~[int04]~[int05]~[int06]
-   \item  Lines (6+$N_s^2$ )- (5+$N_s^2+N_{\rm o}$): [int06]~[int07]
+   \item  Lines 6 - (5+$4N_s^2-2N_s$): [int03]~[int04]~[int05]~[int06]~[int07]~[int08]
+   \item  Lines (6+$4N_s^2-2N_s$) - (5+$4N_s^2-2N_s+N_{\rm o}$): [int09]~[int10]
   \end{itemize}
 \subsubsection{Parameters}
  \begin{itemize}
@@ -1525,34 +1529,40 @@ In the following, we define the total number of sites as $N_s$ and variational p
 
    {\bf Description :} An integer indicates the double or complex type of variational parameters (0: double, 1: complex). 
 
-  \item  $[$int03$]$, $[$int04$]$
+  \item  $[$int03$]$, $[$int05$]$
    
  {\bf Type :} int-type (blank parameter not allowed)
 
 {\bf Description :} An integer giving a site index ($0<= [$int03$], [$int04$] <\verb|Nsite|$).
+
+  \item  $[$int04$]$, $[$int06$]$
+   
+ {\bf Type :} int-type (blank parameter not allowed)
+
+{\bf Description :} An integer giving a spin index ($0:\uparrow$ spin, $1:\downarrow$ spin).
  
- \item  $[$int05$]$
-   
-   {\bf Type :} int-type (blank parameter not allowed)
-
-  {\bf Description :} An integer setting kinds of variational  parameters ($0<= [$int05$]<[$int01]). 
-
- \item  $[$int06$]$
-   
-   {\bf Type :} int-type
-
-  {\bf Description :} When the mode of the anti-periodic condition turns on (the mode turns on when the value of \verb|NMPTrans| in \verb|ModPara| file is negative), the sign of $f_{ij}$ is specified by setting $[$int06$]=\pm1$. This term can be omitted when the mode of the anti-periodic condition is off.
-
  \item  $[$int07$]$
    
    {\bf Type :} int-type (blank parameter not allowed)
 
-  {\bf Description :} An integer giving kinds of variational  parameters ($0<= [$int06$]<[$int01]).   
+  {\bf Description :} An integer setting kinds of variational  parameters ($0<= [$int07$]<[$int01]). 
+
  \item  $[$int08$]$
+   
+   {\bf Type :} int-type
+
+  {\bf Description :} When the mode of the anti-periodic condition turns on (the mode turns on when the value of \verb|NMPTrans| in \verb|ModPara| file is negative), the sign of $f_{i\sigma_1j\sigma_2}$ is specified by setting $[$int08$]=\pm1$. This term can be omitted when the mode of the anti-periodic condition is off.
+
+ \item  $[$int09$]$
    
    {\bf Type :} int-type (blank parameter not allowed)
 
-  {\bf Description :} An integer to select the target of variational parameters indicated at [int06] to be optimized or not (0: not optimize, 1: optimize).
+  {\bf Description :} An integer giving kinds of variational  parameters ($0<= [$int09$]<[$int01]).   
+ \item  $[$int10$]$
+   
+   {\bf Type :} int-type (blank parameter not allowed)
+
+  {\bf Description :} An integer to select the target of variational parameters indicated at [int09] to be optimized or not (0: not optimize, 1: optimize).
   
   
 \end{itemize}
@@ -1561,7 +1571,7 @@ In the following, we define the total number of sites as $N_s$ and variational p
 \begin{itemize}
 \item Headers cannot be omitted. 
 \item A program is terminated, when $[$int01$]$ is different from the total number of variational parameters defined in this file.
-\item A program is terminated, when $[$int02$]$ - $[$int09$]$ are out of range from the defined values.
+\item A program is terminated, when $[$int02$]$ - $[$int10$]$ are out of range from the defined values.
 \end{itemize}
 
 \newpage
