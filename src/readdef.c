@@ -480,6 +480,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   double dReValue, dImValue;
   int rank;
 
+	//[s] for Orbital idx
+	int all_i, all_j;
+	int iSzFreeFlg=0; // 0: SzConserved, 1:SzFree
+	int fij=0;
+	int fijSign=1;
+    int spn_i,spn_j;
+	//[e] for Orbital idx
+
   MPI_Comm_rank(comm, &rank);
   
   if(rank==0) {
@@ -523,15 +531,15 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	/* transfer.def--------------------------------------*/
 	if(NTransfer>0){
 	  while( fscanf(fp, "%d %d %d %d %lf %lf\n",
-			&(Transfer[idx][0]),
-			&(Transfer[idx][1]),
-			&(Transfer[idx][2]),
-			&(Transfer[idx][3]),
-			&dReValue,
-	  		&dImValue)!=EOF){
+			&x0,&x1,&x2,&x3,
+			&dReValue, &dImValue)!=EOF){
+		  Transfer[idx][0]=x0;
+		  Transfer[idx][1]=x1;
+		  Transfer[idx][2]=x2;
+		  Transfer[idx][3]=x3;
+		  ParaTransfer[idx]=dReValue+I*dImValue;
 
-		  	ParaTransfer[idx]=dReValue+I*dImValue;
-		  	if(Transfer[idx][1] != Transfer[idx][3]){
+		  	  	if(Transfer[idx][1] != Transfer[idx][3]){
 				fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
 				info = ReadDefFileError(defname);
 				break;
@@ -547,8 +555,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	/*coulombintra.def----------------------------------*/
 	if(NCoulombIntra>0){
 	  while( fscanf(fp, "%d %lf\n", 
-			&(CoulombIntra[idx]),
-			&(ParaCoulombIntra[idx]) )!=EOF){
+			&x0, &dReValue )!=EOF){
+		  CoulombIntra[idx]=x0;
+		  ParaCoulombIntra[idx]=dReValue;
 	    idx++;
 	  }
 	  if(idx!=NCoulombIntra) info = ReadDefFileError(defname);
@@ -561,10 +570,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	if(NCoulombInter>0){
 	  while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
 	    sscanf(ctmp2, "%d %d %lf\n",
-		   &(CoulombInter[idx][0]),
-		   &(CoulombInter[idx][1]),
-		   &(ParaCoulombInter[idx])
-		   );
+		   &x0,&x1, &dReValue);
+		  CoulombInter[idx][0]=x0;
+		  CoulombInter[idx][1]=x1;
+		  ParaCoulombInter[idx]=dReValue;
 	    idx++;
 	  }
 	  if(idx!=NCoulombInter) info=ReadDefFileError(defname);
@@ -575,10 +584,11 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       case KWHund:
 	/*hund.def------------------------------------------*/
 	if(NHundCoupling>0){
-	  while( fscanf(fp, "%d %d %lf\n", 
-			&(HundCoupling[idx][0]),
-			&(HundCoupling[idx][1]),
-			&(ParaHundCoupling[idx]) )!=EOF){
+	  while( fscanf(fp, "%d %d %lf\n",
+			&x0,&x1, &dReValue)!=EOF){
+			HundCoupling[idx][0]=x0;
+			HundCoupling[idx][1]=x1;
+			ParaHundCoupling[idx]=dReValue;
 	    idx++;
 	  }
 	  if(idx!=NHundCoupling) info=ReadDefFileError(defname);
@@ -589,10 +599,11 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       case KWPairHop:
 	/*pairhop.def---------------------------------------*/
 	if(NPairHopping>0){
-	  while( fscanf(fp, "%d %d %lf\n", 
-			&(PairHopping[idx][0]),
-			&(PairHopping[idx][1]),
-			&(ParaPairHopping[idx]) )!=EOF){
+	  while( fscanf(fp, "%d %d %lf\n",
+					&x0,&x1, &dReValue)!=EOF){
+		  x0=PairHopping[idx][0];
+		  x1=PairHopping[idx][1];
+		  dReValue=ParaPairHopping[idx];
 	    idx++;
 	  }
 	  if(idx!=NPairHopping) info=ReadDefFileError(defname);
@@ -603,10 +614,11 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       case KWExchange:
 	/*exchange.def--------------------------------------*/
 	if(NExchangeCoupling>0){
-	  while( fscanf(fp, "%d %d %lf\n", 
-			&(ExchangeCoupling[idx][0]),
-			&(ExchangeCoupling[idx][1]),
-			&(ParaExchangeCoupling[idx]) )!=EOF){
+	  while( fscanf(fp, "%d %d %lf\n",
+					&x0,&x1, &dReValue)!=EOF){
+		  	x0=ExchangeCoupling[idx][0];
+			x1=ExchangeCoupling[idx][1];
+			dReValue=ParaExchangeCoupling[idx];
 	    idx++;
 	  }
 	  if(idx!=NExchangeCoupling) info=ReadDefFileError(defname);
@@ -734,23 +746,48 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	  idx0 = idx1 = 0;
       itmp=0;
 	  if(APFlag==0) {
-	    while( fscanf(fp, "%d %d %d %d ", &i, &isigma1, &j, &isigma2) != EOF){
-          if(isigma1 == isigma2 && i==j){
-            itmp=1;
-          }
-	      fscanf(fp, "%d\n", &(OrbitalIdx[i][j]));
-	      OrbitalSgn[i][j] = 1;
+	    while( fscanf(fp, "%d %d %d %d %d\n", &i, &spn_i, &j, &spn_j, &fij) != EOF){
+			all_i = i+spn_i*Nsite; //fsz
+			all_j = j+spn_j*Nsite; //fsz
+			if(all_i >= all_j){
+				itmp=1;
+			}
 	      idx0++;
-	      if(idx0==(4*Nsite*Nsite-2*Nsite)) break;
+			if(iSzFreeFlg==0){
+				OrbitalIdx[i][j]=fij;
+				OrbitalSgn[i][j] = 1;
+				if(idx==Nsite*Nsite) break;
+			}
+			else{
+				OrbitalIdx[all_i][all_j]=fij;
+				OrbitalSgn[all_i][all_j] = 1;
+				// Note F_{IJ}=-F_{JI}
+				OrbitalIdx[all_j][all_i]=fij;
+				OrbitalSgn[all_j][all_i] = -1;
+				if(idx0==(Nsite*(2*Nsite-1))) break; //2N*(2N-1)/2
+			}
 	    }
 	  } else { /* anti-periodic boundary mode */
-        while( fscanf(fp, "%d %d %d %d ", &i, &isigma1, &j, &isigma2) != EOF){
-         if(isigma1 == isigma2 && i==j){
-            itmp=1;
-          }
-	      fscanf(fp, "%d %d\n", &(OrbitalIdx[i][j]), &(OrbitalSgn[i][j]));
-	      idx0++;
-	      if(idx0==(4*Nsite*Nsite-2*Nsite)) break;
+        while( fscanf(fp, "%d %d %d %d %d %d \n", &i, &spn_i, &j, &spn_j, &fij, &fijSign) != EOF){
+			all_i = i+spn_i*Nsite; //fsz
+			all_j = j+spn_j*Nsite; //fsz
+			if(all_i >= all_j){
+				itmp=1;
+			}
+			idx0++;
+			if(iSzFreeFlg==0){
+				OrbitalIdx[i][j]=fij;
+				OrbitalSgn[i][j] = fijSign;
+				if(idx==Nsite*Nsite) break;
+			}
+			else{
+				OrbitalIdx[all_i][all_j]=fij;
+				OrbitalSgn[all_i][all_j] = fijSign;
+				// Note F_{IJ}=-F_{JI}
+				OrbitalIdx[all_j][all_i]=fij;
+				OrbitalSgn[all_j][all_i] = -fijSign;
+				if(idx0==(Nsite*(2*Nsite-1))) break; //2N*(2N-1)/2
+			}
 	    }
 	  }
 
@@ -875,18 +912,18 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	if(NInterAll>0){
 	  idx = 0;
 	  while( fscanf(fp, "%d %d %d %d %d %d %d %d %lf %lf\n",
-                    &(InterAll[idx][0]),
-                    &(InterAll[idx][1]),//ispin1
-                    &(InterAll[idx][2]),
-                    &(InterAll[idx][3]),//ispin2
-                    &(InterAll[idx][4]),
-                    &(InterAll[idx][5]),//ispin3
-                    &(InterAll[idx][6]),
-                    &(InterAll[idx][7]),//ispin4
-                    &dReValue,
-					&dImValue)!=EOF ){
+					&x0, &x1, &x2, &x3, &x4, &x5, &x6, &x7,
+                    &dReValue, &dImValue)!=EOF ){
+		  			InterAll[idx][0]=x0;
+				  	InterAll[idx][1]=x1;
+				  	InterAll[idx][2]=x2;
+				  	InterAll[idx][3]=x3;
+				  	InterAll[idx][4]=x4;
+				  	InterAll[idx][5]=x5;
+				  	InterAll[idx][6]=x6;
+				  	InterAll[idx][7]=x7;
 
-		  ParaInterAll[idx]=dReValue+I*dImValue;
+				  ParaInterAll[idx]=dReValue+I*dImValue;
 
 		  if(!((InterAll[idx][1] == InterAll[idx][3]
 		      || InterAll[idx][5] == InterAll[idx][7])
