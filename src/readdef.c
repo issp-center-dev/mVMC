@@ -753,9 +753,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	      fscanf(fp, "%d %d\n", &(OrbitalIdx[all_i][all_j]), &(OrbitalSgn[all_i][all_j]));
               // Note F_{IJ}=-F_{JI}
               OrbitalIdx[all_j][all_i] = OrbitalIdx[all_i][all_j]; //fsz
-	      OrbitalSgn[all_j][all_i] = -1*OrbitalSgn[all_i][all_j]//fsz
+	      OrbitalSgn[all_j][all_i] = -1*OrbitalSgn[all_i][all_j];//fsz
 	      idx0++;
-	      if(idx0==(Nsite)*(2*Nsite-1)/2) break;
+	      if(idx0==(Nsite)*(2*Nsite-1)) break;
 	    }
 	  }
 
