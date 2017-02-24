@@ -334,7 +334,7 @@ static void PrintExcitation(struct StdIntList *StdI) {
  */
 void PrintJastrow(struct StdIntList *StdI) {
   FILE *fp;
-  int isite, jsite, NJastrow, iJastrow, isite1, jsite1;
+  int isite, jsite, NJastrow, iJastrow, isite1, jsite1, iorb;
   int **Jastrow;
 
   Jastrow = (int **)malloc(sizeof(int*) * StdI->nsite);
@@ -347,11 +347,15 @@ void PrintJastrow(struct StdIntList *StdI) {
   /*
    Symmetrize
   */
-  for (isite = 0; isite < StdI->nsite; isite++) {
-    for (jsite = 0; jsite < isite; jsite++) {
-      Jastrow[isite][jsite] = Jastrow[jsite][isite];
-    }/*for (jsite = 0; jsite < isite; jsite++)*/
-  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+  for (iorb = 0; iorb < StdI->NOrb; iorb++) {
+    for (isite = 0; isite < StdI->nsite; isite++) {
+      for (jsite = 0; jsite < StdI->nsite; jsite++) {
+        if (Jastrow[isite][jsite] == iorb) {
+          Jastrow[jsite][isite] = Jastrow[isite][jsite];
+        }
+      }/*for (jsite = 0; jsite < isite; jsite++)*/
+    }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+  }/*for (iorb = 0; iorb < StdI->NOrb; iorb++)*/
   /**/
   if (strcmp(StdI->model, "hubbard") == 0) NJastrow = 0;
   else NJastrow = -1;
