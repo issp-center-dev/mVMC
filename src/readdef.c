@@ -739,17 +739,23 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               all_j = j+spn_j*Nsite; //fsz
 	      fscanf(fp, "%d\n", &(OrbitalIdx[all_i][all_j]));//fsz
               //printf("DEBUG: i=%d spn_i=%d j=%d spn_j=%d Orb=%d \n",i,spn_i,j,spn_j,OrbitalIdx[all_i][all_j]);
-	      OrbitalSgn[all_i][all_j] = 1;//fsz
+	      OrbitalSgn[all_i][all_j] = 1;
+              // Note F_{IJ}=-F_{JI}
+              OrbitalIdx[all_j][all_i] = OrbitalIdx[all_i][all_j]; //fsz
+	      OrbitalSgn[all_j][all_i] = -1;//fsz
 	      idx0++;
-	      if(idx0==(2*Nsite)*(2*Nsite)) break;
+	      if(idx0==(Nsite)*(2*Nsite-1)) break; // 2N*(2N-1)/2
 	    }
 	  } else { /* anti-periodic boundary mode */
 	    while( fscanf(fp, "%d %d %d %d", &i,&spn_i,&j,&spn_j) != EOF){ //fsz
               all_i = i+spn_i*Nsite; //fsz
               all_j = j+spn_j*Nsite; //fsz
 	      fscanf(fp, "%d %d\n", &(OrbitalIdx[all_i][all_j]), &(OrbitalSgn[all_i][all_j]));
+              // Note F_{IJ}=-F_{JI}
+              OrbitalIdx[all_j][all_i] = OrbitalIdx[all_i][all_j]; //fsz
+	      OrbitalSgn[all_j][all_i] = -1*OrbitalSgn[all_i][all_j]//fsz
 	      idx0++;
-	      if(idx0==(2*Nsite)*(2*Nsite)) break;
+	      if(idx0==(Nsite)*(2*Nsite-1)/2) break;
 	    }
 	  }
 
