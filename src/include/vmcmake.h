@@ -21,11 +21,15 @@ void updateEleConfig(int mi, int ri, int rj, int s,
 void revertEleConfig(int mi, int ri, int rj, int s,
                      int *eleIdx, int *eleCfg, int *eleNum);
 
+
 /*[s] BackFlow */
 void VMC_BF_MakeSample(MPI_Comm comm);
 int makeInitialSampleBF(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, int *eleProjBFCnt,
                         const int qpStart, const int qpEnd, MPI_Comm comm);
-
+void copyFromBurnSampleBF(int *eleIdx);
+void copyToBurnSampleBF(const int *eleIdx);
+void saveEleConfigBF(const int sample, const double logIp,
+                     const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt, const int *eleProjBFCnt);
 /*[e] BackFlow */
 
 typedef enum {HOPPING, EXCHANGE, NONE} UpdateType;

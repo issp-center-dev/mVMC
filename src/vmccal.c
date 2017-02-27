@@ -349,9 +349,7 @@ void VMC_BF_MainCal(MPI_Comm comm) {
             for (tmp_i = 0; tmp_i < NQPFull * (Nsize * Nsize + 1); tmp_i++)
                 InvM[tmp_i] = InvM_real[tmp_i]; // InvM will be used in  SlaterElmDiff_fcmp
         } else {//complex
-//TODO: to be added
-            //            info = CalculateMAll_BF_fcmp(eleIdx,qpStart,qpEnd);
-
+            info = CalculateMAll_BF_fcmp(eleIdx,qpStart,qpEnd);
         }
         StopTimer(40);
 
@@ -383,10 +381,9 @@ void VMC_BF_MainCal(MPI_Comm comm) {
 
         StartTimer(41);
         if (AllComplexFlag == 0) {
-            e = CalculateHamiltonianBF_real(ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt);
+            e = CalculateHamiltonianBF_real(creal(ip), eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt);
         } else {/* calculate energy */
-            //TODO: to be added
-            //e = CalculateHamiltonianBF(ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt);
+            e = CalculateHamiltonianBF_fcmp(ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt);
         }
 
         /* calculate double occupation D */
