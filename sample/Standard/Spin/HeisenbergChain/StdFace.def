@@ -4,3 +4,5 @@ model = "Spin"
 lattice = "chain"
 J = 1.0
 NMPtrans=1
+NSROptItrStep = 300
+2Sz = 0
