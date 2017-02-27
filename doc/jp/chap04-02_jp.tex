@@ -1496,45 +1496,41 @@ ComplexType 0
 \begin{equation}
 |\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} \sum_{\sigma_1, \sigma_2}f_{i\sigma_1 j \sigma_2}c_{i\sigma_1}^{\dag}c_{j\sigma_2}^{\dag} \right]^{N/2}|0 \rangle
 \end{equation}
-で表されるペア軌道の設定を行います。指定するパラメータはサイト番号$i, j$, スピン$\sigma_1, \sigma_2$と変分パラメータの種類を設定します。以下にファイル例を記載します。$(i, \sigma_1)=(j, \sigma_2)$が存在する場合は強制終了します。 
+で表されるペア軌道の設定を行います。指定するパラメータはサイト番号$i, j$, スピン$\sigma_1, \sigma_2$と変分パラメータの種類を設定します。$i+\sigma_1 N_s < j+\sigma_2 N_s$($\sigma=0 ,1$)を満たすように指定する必要があります。以下にファイル例を記載します。 
 
 \begin{minipage}{12.5cm}
 \begin{screen}
 \begin{verbatim}
 ====================================
-NOrbitalIdx 870   
+NOrbitalIdx 255
 ComplexType 0
 ====================================
 ====================================
-   0  1  0  0  0 
-   0  0  0  1  1
-   0  0  1  0  2 
-   0  0  1  1  3 
+   0  0  0  1  0
+   0  0  1  1  1 
  (continue...)
-  15  0  14  0  866 
-  15  0  14  1  867 
-  15  0  15  1  868 
-  15  1  15  0  869 
+  14  0  15 1 253
+  15  0  15  1  254
    0    1 
    1    1 
 (continue...)
-  868    1 
-  869    1 
+  253   1 
+  254    1 
 \end{verbatim}
 \end{screen}
 \end{minipage}
 
 \subsubsection{ファイル形式}
 以下のように行数に応じ異なる形式をとります($N_s$はサイト数、$N_{\rm o}$は変分パラメータの種類の数)。
-変分パラメータの総数はサイト当たりスピンの自由度が2つあること、同一サイトかつ同一スピンの組み合わせを除くことから、
-合計$4N_s^2-2N_s$個あります。
+変分パラメータの総数$N_p$は$i+\sigma_1 N_s < j+\sigma_2 N_s$($\sigma=0 ,1$)を満たすペアの総数に対応し、
+$S_z=0$の場合は$N_p=N_s^2$、$S_z$非保存の場合は$N_p=2N_s^2-N_s$個となります。
  \begin{itemize}
    \item  1行:  ヘッダ(何が書かれても問題ありません)。
    \item  2行:   [string01]~[int01]
    \item  3行:   [string02]~[int02]
    \item  4-5行:  ヘッダ(何が書かれても問題ありません)。
-   \item  6 - (5+$4N_s^2-2N_s$)行: [int03]~[int04]~[int05]~[int06]~[int07]~[int08]
-   \item  (6+$4N_s^2-2N_s$) - (5+$4N_s^2-2N_s+N_{\rm o}$)行：[int09]~[int10]
+   \item  6 - (5+$N_p$)行: [int03]~[int04]~[int05]~[int06]~[int07]~[int08]
+   \item  (6+$N_p$) - (5+$N_p+N_{\rm o}$)行：[int09]~[int10]
   \end{itemize}
 \subsubsection{パラメータ}
  \begin{itemize}

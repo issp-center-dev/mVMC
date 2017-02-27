@@ -1461,46 +1461,43 @@ This file sets the calculation conditions of pair orbitals
 |\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} \sum_{\sigma_1, \sigma_2}f_{i\sigma_1j\sigma_2}c_{i\sigma_1}^{\dag}c_{j\sigma_2}^{\dag} \right]^{N/2}|0 \rangle.
 \end{equation}
 Site numbers $i, j$, spin indexes $\sigma_1, \sigma_2$ and the variational parameters $f_{i\sigma_1j\sigma_2}$ are indicated.
-Process will terminate when the parameter $f_{i\sigma_1 i\sigma_1}$ will be inputted.
+The indexes of $f_{i\sigma_1j\sigma_2}$  must satisfy the condition $i+\sigma_1 N_s < j+\sigma_2 N_s$, where $\sigma_i = 0$ or $1$ and 
+process will terminate when the condition is broken.
 An example of the file format is shown as follows.
 
 \begin{minipage}{12.5cm}
 \begin{screen}
 \begin{verbatim}
 ====================================
-NOrbitalIdx 870   
+NOrbitalIdx 255
 ComplexType 0
 ====================================
 ====================================
-   0  1  0  0  0 
-   0  0  0  1  1
-   0  0  1  0  2 
-   0  0  1  1  3 
+   0  0  0  1  0
+   0  0  1  1  1 
  (continue...)
-  15  0  14  0  866 
-  15  0  14  1  867 
-  15  0  15  1  868 
-  15  1  15  0  869 
+  14  0  15 1 253
+  15  0  15  1  254
    0    1 
    1    1 
 (continue...)
-  868    1 
-  869    1 
+  253   1 
+  254    1 
 \end{verbatim}
 \end{screen}
 \end{minipage}
 
 \subsubsection{File format}
 In the following, we define the total number of sites as $N_s$ and variational parameters as $N_{\rm o}$, respectively.  
-A total number of variational parameters are given by $4N_2^2-2N_s$.
+A total number of variational parameters $N_p$ is given by $N_s^2$, $2 N_s^2 -N_s$in $Sz$ conserved and $S_z$ unconserved system, respectively.
 
  \begin{itemize}
    \item  Line 1: Header
    \item  Line 2: [string01]~[int01]
    \item  Line 3: [string02]~[int02]
    \item  Lines 4 - 5:  Header
-   \item  Lines 6 - (5+$4N_s^2-2N_s$): [int03]~[int04]~[int05]~[int06]~[int07]~[int08]
-   \item  Lines (6+$4N_s^2-2N_s$) - (5+$4N_s^2-2N_s+N_{\rm o}$): [int09]~[int10]
+   \item  Lines 6 - (5+$N_p$): [int03]~[int04]~[int05]~[int06]~[int07]~[int08]
+   \item  Lines (6+$N_p$) - (5+$N_p+N_{\rm o}$): [int09]~[int10]
   \end{itemize}
 \subsubsection{Parameters}
  \begin{itemize}
