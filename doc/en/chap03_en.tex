@@ -71,17 +71,17 @@ NMPtrans=1
 \\
 In this tutorial, J and the number of sites are set to 1 (arbitrary unit) and 16 respectively.
 
-\subsubsection{Making detailed input files}
-In mVMC, the detailed input files should be made as a first step.
-We first execute the following command. 
+\subsubsection{Running}
 
-\vspace{1cm}\hspace{-0.7cm}
-\verb|$ |\underline{Path}\verb|/vmcdry.out StdFace.def|
+We execute the following command. \\
+\verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmcdry.out -s StdFace.def|
+
+The MPI command depends on your system (such as \verb|mpiexec|, \verb|mpirun|, \verb|mpijob|,
+\verb|poe|, etc.).
+Then, the calculation starts and the following standard message is outputted in the terminal.
+
 \small
-\\ \\
-Then,  we can see the following standard outputs in the terminal.
-
-\begin{verbatim} 
+\begin{verbatim}
 ######  Standard Intarface Mode STARTS  ######
 
   Open Standard-Mode Inputfile StdFace.def 
@@ -160,6 +160,34 @@ Then,  we can see the following standard outputs in the terminal.
     greentwo.def is written.
 
 ######  Input files are generated.  ######
+-----------
+Start: Read *def files.
+  Read File namelist.def .
+  Read File 'modpara.def' for ModPara.
+  Read File 'locspn.def' for LocSpin.
+  Read File 'trans.def' for Trans.
+  Read File 'coulombintra.def' for CoulombIntra.
+  Read File 'coulombinter.def' for CoulombInter.
+  Read File 'hund.def' for Hund.
+  Read File 'exchange.def' for Exchange.
+  Read File 'gutzwilleridx.def' for Gutzwiller.
+  Read File 'jastrowidx.def' for Jastrow.
+  Read File 'orbitalidx.def' for Orbital.
+  Read File 'qptransidx.def' for TransSym.
+  Read File 'greenone.def' for OneBodyG.
+  Read File 'greentwo.def' for TwoBodyG.
+End  : Read *def files.
+Start: Read parameters from *def files.
+End  : Read parameters from *def files.
+Start: Set memories.
+End  : Set memories.
+Start: Initialize parameters.
+End  : Initialize parameters.
+Start: Initialize variables for quantum projection.
+End  : Initialize variables for quantum projection.
+Start: Optimize VMC parameters.
+End  : Optimize VMC parameters.
+-----------
 \end{verbatim}
 \normalsize
 
@@ -190,48 +218,7 @@ that will be calculated
 \end{itemize}
 are generated. The details of these files are shown in Sec. \ref{Ch:HowToExpert}.
 
-\subsubsection{Running}
-By reading the detailed input files, mVMC executes the calculation of optimizing the variational parameters.
-
-We execute the following command. \\
-\verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmcdry.out namelist.def|
-
-The MPI command depends on your system (such as \verb|mpiexec|, \verb|mpirun|, \verb|mpijob|,
-\verb|poe|, etc.).
-Then, the calculation starts and the following standard message is outputted in the terminal.
-
-\begin{verbatim}
------------
-Start: Read *def files.
-  Read File namelist.def .
-  Read File 'modpara.def' for ModPara.
-  Read File 'locspn.def' for LocSpin.
-  Read File 'trans.def' for Trans.
-  Read File 'coulombintra.def' for CoulombIntra.
-  Read File 'coulombinter.def' for CoulombInter.
-  Read File 'hund.def' for Hund.
-  Read File 'exchange.def' for Exchange.
-  Read File 'gutzwilleridx.def' for Gutzwiller.
-  Read File 'jastrowidx.def' for Jastrow.
-  Read File 'orbitalidx.def' for Orbital.
-  Read File 'qptransidx.def' for TransSym.
-  Read File 'greenone.def' for OneBodyG.
-  Read File 'greentwo.def' for TwoBodyG.
-End  : Read *def files.
-Start: Read parameters from *def files.
-End  : Read parameters from *def files.
-Start: Set memories.
-End  : Set memories.
-Start: Initialize parameters.
-End  : Initialize parameters.
-Start: Initialize variables for quantum projection.
-End  : Initialize variables for quantum projection.
-Start: Optimize VMC parameters.
-End  : Optimize VMC parameters.
------------
-\end{verbatim}
-
-Under the calculation, the following file is outputted:\\
+During the calculation, the following file is outputted:\\
 \begin{minipage}{12cm}
   \begin{screen}
 \begin{verbatim}
@@ -278,10 +265,10 @@ as follows,
 the calculation of Green functions is done by using the optimized variational parameters. 
 
 \vspace{1cm}\hspace{-0.7cm}
-\verb|$ |\underline{Path}\verb|/vmc.out namelist.def zqp_opt.dat|
+\verb|$ |\underline{Path}\verb|/vmc.out -e namelist.def zqp_opt.dat|
 \small
 
-After finishing the calculation, the following files are outputted.
+After the calculation finishes, the following files are outputted.
 \\
 \begin{minipage}{12cm}
 \begin{screen}
@@ -293,6 +280,8 @@ zvo_cisajscktalt_001.dat
 \end{minipage}
 \\
 The details of these outputted files are shown in Sec. \ref{Sec:outputfile}.\\
+
+\section{Input files for Expert mode}
 
 In mVMC, the calculation is done by reading input files categorized by the following six parts. 
 \begin{description}
@@ -306,3 +295,14 @@ In mVMC, the calculation is done by reading input files categorized by the follo
 
 The calculation for complex models can be done by directly making above input files. 
 The details for each files are shown in Sec. \ref{Ch:HowToExpert}.
+
+\section{Fourier transformation of correlation functions}
+
+This package has a utility which performs the Fourier transformation of the correlation function and plots that function.
+The manual of this utility is located in
+\begin{verbatim}
+doc/fourier/ja/_build/html/index.html
+doc/fourier/ja/_build/latex/fourier.pdf
+doc/fourier/en/_build/html/index.html
+doc/fourier/en/_build/latex/fourier.pdf
+\end{verbatim}
