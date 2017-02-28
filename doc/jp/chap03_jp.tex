@@ -72,12 +72,17 @@ NMPtrans=1
 \\
 この例ではスピン結合$J=1$(任意単位)とし、サイト数は16としました。
 
-\subsubsection{詳細入力ファイル作成}
-スタンダードモードでは詳細入力ファイルの作成を最初に行う必要があります。
-実行コマンドと標準出力は次のとおりです。
+\subsubsection{計算実行}
 
-\vspace{1cm}\hspace{-0.7cm}
-\verb|$ |\underline{パス}\verb|/vmcdry.out StdFace.def|
+実行コマンドは次のとおりです。
+
+\verb|$ mpiexec -np |\underline{プロセス数}\verb| |\underline{パス}\verb|/vmc.out -s StdFace.def|
+
+使っているシステムによっては\verb|mpiexec|コマンドではなく\verb|mpirun|や\verb|mpijob|、
+\verb|poe|となる場合もあります。
+
+この実行による標準出力は次のとおりです。
+
 \small
 \begin{verbatim}
 ######  Standard Intarface Mode STARTS  ######
@@ -158,48 +163,7 @@ NMPtrans=1
     greentwo.def is written.
 
 ######  Input files are generated.  ######
-\end{verbatim}
-\normalsize
 
-この実行では、ハミルトニアンの詳細を記述するファイル
-\begin{itemize}
-\item \verb|locspin.def|
-\item \verb|trans.def|
-\item \verb|coulombinter.def|
-\item \verb|coulombintra.def|
-\item \verb|exchange.def|
-\item \verb|hund.def|
-\item \verb|namelist.def|
-\item \verb|modpara.def|
-\end{itemize}
-と、変分パラメータを設定するファイル
-\begin{itemize}
-\item \verb|gutzwilleridx.def|
-\item \verb|jastrowidx.def|
-\item \verb|orbitalidx.def|
-\item \verb|qptransidx.def|
-\end{itemize}
-結果として出力する相関関数の要素を指定するファイル
-\begin{itemize}
-\item \verb|greenone.def|
-\item \verb|greentwo.def|
-\end{itemize}
-が生成されます。
-各ファイルの詳細についてはSec. \ref{Ch:HowToExpert}をご覧ください。
-
-\subsubsection{計算実行}
-作成した詳細入力ファイルを読み込み計算を行います。
-実行コマンドと標準出力は次のとおりです。
-
-\vspace{1cm}\hspace{-0.7cm}
-\verb|$ mpiexec -np |\underline{プロセス数}\verb| |\underline{パス}\verb|/vmc.out namelist.def|
-
-使っているシステムによっては\verb|mpiexec|コマンドではなく\verb|mpirun|や\verb|mpijob|、
-\verb|poe|となる場合もあります.
-
-\small
-
-\begin{verbatim}
 -----------
 Start: Read *def files.
   Read File namelist.def .
@@ -229,8 +193,36 @@ Start: Optimize VMC parameters.
 End  : Optimize VMC parameters.
 -----------
 \end{verbatim}
+\normalsize
 
-計算実行中に以下のファイルが情報として出力されます。
+この実行でははじめにエキスパートモード用の入力ファイルとして、
+ハミルトニアンの詳細を記述するファイル
+\begin{itemize}
+\item \verb|locspin.def|
+\item \verb|trans.def|
+\item \verb|coulombinter.def|
+\item \verb|coulombintra.def|
+\item \verb|exchange.def|
+\item \verb|hund.def|
+\item \verb|namelist.def|
+\item \verb|modpara.def|
+\end{itemize}
+と、変分パラメータを設定するファイル
+\begin{itemize}
+\item \verb|gutzwilleridx.def|
+\item \verb|jastrowidx.def|
+\item \verb|orbitalidx.def|
+\item \verb|qptransidx.def|
+\end{itemize}
+結果として出力する相関関数の要素を指定するファイル
+\begin{itemize}
+\item \verb|greenone.def|
+\item \verb|greentwo.def|
+\end{itemize}
+が生成されます。
+各ファイルの詳細についてはSec. \ref{Ch:HowToExpert}をご覧ください。
+
+その後実際に計算が行われ、以下のファイルが情報として出力されます。
 \\
 \begin{minipage}{12cm}
   \begin{screen}
@@ -273,8 +265,8 @@ ClacTimer.dat
 
 各ファイルの詳細についてはSec. \ref{Sec:outputfile}をご覧ください。
 
-
 \subsubsection{Green関数の計算}
+
 \verb|modpara.def|ファイル中の\verb|NVMCCalMode|を0から1に変更の上、以下のコマンドを実行します。
 下記のように
 実行時のコマンドライン引数として
@@ -282,7 +274,7 @@ ClacTimer.dat
 一つ前の計算で最適化された変分パラメータを使用した計算が行われます。
 
 \vspace{1cm}\hspace{-0.7cm}
-\verb|$ |\underline{パス}\verb|/vmc.out namelist.def zqp_opt.dat|
+\verb|$ |\underline{パス}\verb|/vmc.out -e namelist.def zqp_opt.dat|
 \small
 
 計算が終了すると以下のファイルが出力されます。
@@ -312,3 +304,14 @@ mVMCでは、以下の6つに分類される入力ファイルを読み込み、
 上記で分類されるファイルを直接作成・指定することで、より複雑な計算を行うことが可能です。
 ファイルの詳細についてはSec. \ref{Ch:HowToExpert}をご覧ください。
 
+\section{相関関数のフーリエ変換}
+
+このパッケージには、上で求めた相関関数をフーリエ変換し、プロットするユーティリティーが付属しています。
+このユーティリティーに関するマニュアルは
+\begin{verbatim}
+doc/fourier/ja/_build/html/index.html
+doc/fourier/ja/_build/latex/fourier.pdf
+doc/fourier/en/_build/html/index.html
+doc/fourier/en/_build/latex/fourier.pdf
+\end{verbatim}
+にありますので、そちらを参照してください。

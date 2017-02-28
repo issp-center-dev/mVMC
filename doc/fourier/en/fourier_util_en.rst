@@ -1,5 +1,5 @@
-Work of each utility
-====================
+Behavior of each utility
+========================
 
 Utility ``fourier``
 -------------------
@@ -15,7 +15,7 @@ the executable ``fourier`` exists,
 ${NAMELIST} is the NameList input-file name of :math:`{\mathcal H}\Phi`/mVMC, and
 ${GEOMETRY} is the path to the :ref:`geometry` file.
 
-The work of this utility is slightly different between the correlation functions from
+The behavior of this utility is slightly different between the correlation functions from
 each mode of :math:`{\mathcal H}\Phi` (Lanczos, TPQ, Full diagonalization, LOBCG)
 and mVMC.
 In the following cases, we assume that

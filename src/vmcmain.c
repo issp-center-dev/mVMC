@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
   StartTimer(10);
 
   /* read options */
-  while((option=getopt(argc,argv,"bhm:oF:es"))!=-1) {
+  while((option=getopt(argc,argv,"bhm:oF:esv"))!=-1) {
     switch(option) {
     case 'b': /* BinaryMode */
       FlagBinary=1;
@@ -150,6 +150,11 @@ int main(int argc, char* argv[])
       flagMultiDef = 0;
       flagStandard = 1;
       break;
+
+    case 'v': /* Print version */
+      printVersion();
+      MPI_Finalize();
+      return;
 
     default: /* '?' */
       printUsageError();
