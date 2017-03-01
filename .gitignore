@@ -25,8 +25,14 @@ GRTAGS
 GTAGS
 .idea
 .DS_Store
+doc/userguide_en.pdf
+doc/userguide_jp.pdf
+doc/jp/userguide_jp.out
 doc/jp/userguide_jp.pdf
+doc/jp/userguide_jp.synctex
+doc/en/userguide_en.out
 doc/en/userguide_en.pdf
+doc/en/userguide_en.synctex
 src/ComplexUHF/src/UHF
 tool/corplot
 *.mod
