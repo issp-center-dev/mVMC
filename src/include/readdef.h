@@ -35,9 +35,10 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
   "Trans", "CoulombIntra", "CoulombInter",
   "Hund", "PairHop", "Exchange",
   "Gutzwiller", "Jastrow",
-  "DH2", "DH4", "Orbital",
+  "DH2", "DH4", "Orbital", "OrbitalAntiParallel",
+  "OrbitalParallel", "OrbitalGeneral",
   "TransSym", "InGutzwiller", "InJastrow",
-  "InDH2", "InDH4", "InOrbital",
+  "InDH2", "InDH4", "InOrbital", "InOrbitalAntiParallel",
   "OneBodyG", "TwoBodyG", "TwoBodyGEx",
   "InterAll", "OptTrans", "InOptTrans"
 };
@@ -50,9 +51,10 @@ enum KWIdxInt{
   KWTrans, KWCoulombIntra,KWCoulombInter,
   KWHund, KWPairHop, KWExchange,
   KWGutzwiller, KWJastrow,
-  KWDH2, KWDH4, KWOrbital,
+  KWDH2, KWDH4, KWOrbital, KWOrbitalAntiParallel,
+	KWOrbitalParallel, KWOrbitalGeneral,
   KWTransSym, KWInGutzwiller, KWInJastrow,
-  KWInDH2, KWInDH4, KWInOrbital,
+  KWInDH2, KWInDH4, KWInOrbital,KWInOrbitalAntiParallel,
   KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
   KWInterAll, KWOptTrans, KWInOptTrans,
   KWIdxInt_end
@@ -74,8 +76,9 @@ enum ParamIdxInt{
   IdxNLocSpin,IdxNTrans,IdxNCoulombIntra,
   IdxNCoulombInter, IdxNHund, IdxNPairHop, 
   IdxNExchange, IdxNGutz, IdxNJast,
-  IdxNDH2, IdxNDH4, IdxNOrbit,
-  IdxNQPTrans, IdxNOneBodyG, IdxNTwoBodyG,
+  IdxNDH2, IdxNDH4, IdxNOrbit, IdxNOrbitAntiParallel,
+	IdxNOrbitParallel, IdxNOrbitGeneral,
+	IdxNQPTrans, IdxNOneBodyG, IdxNTwoBodyG,
   IdxNTwoBodyGEx, IdxNInterAll, IdxNQPOptTrans,
   ParamIdxInt_End
 };
