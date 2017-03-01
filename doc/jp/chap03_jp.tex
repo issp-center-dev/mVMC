@@ -222,7 +222,7 @@ End  : Optimize VMC parameters.
 が生成されます。
 各ファイルの詳細についてはSec. \ref{Ch:HowToExpert}をご覧ください。
 
-その後実際に計算が行われ、以下のファイルが情報として出力されます。
+その後実際に計算が行われ、以下のファイルが情報として \verb|output/| ディレクトリに出力されます。
 \\
 \begin{minipage}{12cm}
   \begin{screen}
@@ -249,7 +249,8 @@ plot "zvo_out_001.dat" u 1
 
 \subsubsection{計算結果出力}
 計算が正常終了すると、エネルギー、エネルギーの分散、
-変分パラメータおよび計算実行時間を記載したファイルが出力されます。
+変分パラメータおよび計算実行時間を記載したファイルが
+\verb|output/| ディレクトリに出力されます。
 以下に、このサンプルでの出力ファイルを記載します。\\
 \begin{minipage}{12cm}
 \begin{screen}
@@ -274,10 +275,10 @@ ClacTimer.dat
 一つ前の計算で最適化された変分パラメータを使用した計算が行われます。
 
 \vspace{1cm}\hspace{-0.7cm}
-\verb|$ |\underline{パス}\verb|/vmc.out -e namelist.def zqp_opt.dat|
+\verb|$ |\underline{パス}\verb|/vmc.out -e namelist.def output/zqp_opt.dat|
 \small
 
-計算が終了すると以下のファイルが出力されます。
+計算が終了すると以下のファイルが \verb|output/| ディレクトリに出力されます。
 \\
 \begin{minipage}{12cm}
 \begin{screen}

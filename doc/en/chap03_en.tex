@@ -218,7 +218,7 @@ that will be calculated
 \end{itemize}
 are generated. The details of these files are shown in Sec. \ref{Ch:HowToExpert}.
 
-During the calculation, the following file is outputted:\\
+During the calculation, the following files are outputted in \verb|output| directory:\\
 \begin{minipage}{12cm}
   \begin{screen}
 \begin{verbatim}
@@ -243,7 +243,10 @@ plot "zvo_out_001.dat" u 1
 The details of these outputted files are shown in Sec. \ref{Sec:outputfile}.\\
 
 \subsubsection{Output results}
-After finishing calculation normally, the files for the energy, the deviation, the optimized variational parameters and the time of execution for each calculation steps are outputted. In the following, the outputted files are shown \\
+After finishing calculation normally, the files for the energy, the deviation,
+the optimized variational parameters and
+the time of execution for each calculation steps are outputted  in \verb|output| directory.
+In the following, the outputted files are shown \\
 \begin{minipage}{12cm}
 \begin{screen}
 \begin{verbatim}
@@ -260,15 +263,15 @@ The details of these outputted files are shown in Sec. \ref{Sec:outputfile}.\\
 
 \subsubsection{Calculation of Green functions}
 After changing the value of \verb|NVMCCalMode| from 0 to 1 in \verb|modpara.def| file, we execute the following command. 
-When we add \verb|"zqp_opt.dat"| after \verb|"namelist.dat"| as a commandline argument
+When we add \verb|"zqp_opt.dat"| after \verb|"namelist.dat"| as a command-line argument
 as follows,
 the calculation of Green functions is done by using the optimized variational parameters. 
 
 \vspace{1cm}\hspace{-0.7cm}
-\verb|$ |\underline{Path}\verb|/vmc.out -e namelist.def zqp_opt.dat|
+\verb|$ |\underline{Path}\verb|/vmc.out -e namelist.def output/zqp_opt.dat|
 \small
 
-After the calculation finishes, the following files are outputted.
+After the calculation finishes, the following files are outputted in \verb|output| directory.
 \\
 \begin{minipage}{12cm}
 \begin{screen}
