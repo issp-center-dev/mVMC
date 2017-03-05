@@ -880,8 +880,11 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 
           if(iFlgOrbitalGeneral==0){
             if(APFlag==0) {
-              while( fscanf(fp, "%d %d %d %d %d\n", &i, &spn_i, &j, &spn_j, &fij) != EOF){
-                all_i = i+spn_i*Nsite; //fsz
+              while( fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF){
+				 spn_i = 0;
+				 spn_j = 1;
+
+				  all_i = i+spn_i*Nsite; //fsz
                 all_j = j+spn_j*Nsite; //fsz
                 if(CheckPairSite(i, j, Nsite) != 0){
                   fprintf(stderr, "Error: Site index is incorrect. \n");
@@ -894,11 +897,13 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 idx0++;
                 OrbitalIdx[i][j]=fij;
                 OrbitalSgn[i][j] = 1;
-                if(idx==Nsite*Nsite) break;
+                if(idx0==Nsite*Nsite) break;
               }
             }else { /* anti-periodic boundary mode */
-              while( fscanf(fp, "%d %d %d %d %d %d \n", &i, &spn_i, &j, &spn_j, &fij, &fijSign) != EOF){
-                all_i = i+spn_i*Nsite; //fsz
+              while( fscanf(fp, "%d %d %d \n", &i, &j, &fij, &fijSign) != EOF){
+				  spn_i = 0;
+				  spn_j = 1;
+				  all_i = i+spn_i*Nsite; //fsz
                 all_j = j+spn_j*Nsite; //fsz
                 if(all_i >= all_j){
                   itmp=1;
@@ -906,7 +911,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 idx0++;
                 OrbitalIdx[i][j]=fij;
                 OrbitalSgn[i][j] = fijSign;
-                if(idx==Nsite*Nsite) break;
+                if(idx0
+				   ==Nsite*Nsite) break;
               }
             }
             fidx=NProj;
