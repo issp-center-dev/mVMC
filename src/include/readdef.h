@@ -106,3 +106,5 @@ int iComplexFlgJastrow=0;
 int iComplexFlgDH2=0;
 int iComplexFlgDH4=0;
 int iComplexFlgOrbital=0;
+int iNOrbitalAP=0;
+int iNOrbitalP=0;

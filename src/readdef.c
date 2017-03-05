@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #include <ctype.h>
 #include "./include/readdef.h"
+#include "./include/global.h"
 
 int ReadDefFileError(const char *defname);
 int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm);
@@ -62,7 +63,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   int iKWidx=0;
   int iFlgOrbitalSimple=0;
   int iOrbitalComplex=0;
-  iFlgOrbitalGeneral=0; 
+  iFlgOrbitalGeneral=0;
   MPI_Comm_rank(comm, &rank);
 
   if(rank==0) {
@@ -302,6 +303,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
       sscanf(ctmp2,"%s %d\n", ctmp, &iOrbitalComplex);
 	  fclose(fp);
       iFlgOrbitalAP=1;
+      iNOrbitalAP=bufInt[IdxNOrbitAntiParallel];
       bufInt[IdxNOrbit] += bufInt[IdxNOrbitAntiParallel];
       iComplexFlgOrbital+=iOrbitalComplex;
       if(iFlgOrbitalSimple==-1){
@@ -334,6 +336,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
       sscanf(ctmp2,"%s %d\n", ctmp, &iOrbitalComplex);
 	  fclose(fp);
       //up-up and down-down 
+      iNOrbitalP=bufInt[IdxNOrbitParallel];
       bufInt[IdxNOrbit] += 2*bufInt[IdxNOrbitParallel];
       if(bufInt[IdxNOrbitParallel] > 0){
         iFlgOrbitalGeneral=1;
@@ -463,7 +466,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   NCisAjsCktAltDC        =  bufInt[IdxNTwoBodyG];
   NInterAll              =  bufInt[IdxNInterAll];
   NQPOptTrans            =  bufInt[IdxNQPOptTrans];
-
+  
   DSROptRedCut = bufDouble[IdxSROptRedCut];
   DSROptStaDel = bufDouble[IdxSROptStaDel];
   DSROptStepDt = bufDouble[IdxSROptStepDt];
@@ -871,7 +874,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       case KWOrbital:        
       case KWOrbitalAntiParallel:
         /*orbitalidxs.def------------------------------------*/
-        if(bufInt[IdxNOrbitAntiParallel]>0){
+        if(iNOrbitalAP>0){
           idx0 = idx1 = 0;
           itmp=0;
 
@@ -968,7 +971,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               count_idx++;
             }
           }
-          if(idx0!=(Nsite*Nsite) || idx1!=bufInt[IdxNOrbitAntiParallel] || itmp==1) {
+          if(idx0!=(Nsite*Nsite) || idx1!=iNOrbitalAP || itmp==1) {
             info=ReadDefFileError(defname);
           }
         }
@@ -1010,7 +1013,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 OrbitalSgn[all_i][all_j] = fijSign;
                 // Note F_{IJ}=-F_{JI}
                 OrbitalIdx[all_j][all_i]=fij;
-                OrbitalSgn[all_j][all_i] = -fijSign
+                OrbitalSgn[all_j][all_i] = -fijSign;
                   if(idx0==(2*Nsite*Nsite-Nsite)) break; //2N*(2N-1)/2
               }
             }
@@ -1024,8 +1027,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               idx1++;
               count_idx++;
             }
-          }
-          if(idx0!=(2*Nsite*Nsite-Nsite) || idx1!=bufInt[IdxNOrbit] || itmp==1) {
+
+          if(idx0!=(2*Nsite*Nsite-Nsite) || idx1!=NOrbitalIdx || itmp==1) {
             info=ReadDefFileError(defname);
           }
           fclose(fp);  
@@ -1035,7 +1038,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
     case KWOrbitalParallel:
 
       /*orbitalidxt.def------------------------------------*/
-      if(bufInt[IdxNOrbitParallel]>0){
+      if(iNOrbitalP>0){
         idx0 = idx1 = 0;
 
         while( fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF){
@@ -1090,7 +1093,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
         count_idx++;
       }
       
-	  if(idx0!=(Nsite*(Nsite-1))/2 || idx1!=bufInt[IdxNOrbitParallel]) {
+	  if(idx0!=(Nsite*(Nsite-1))/2 || idx1!=iNOrbitalP) {
 	    info=ReadDefFileError(defname);
 	  }
       

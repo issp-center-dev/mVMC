@@ -26,6 +26,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
+#include "./include/global.h"
+
 void SetMemoryDef();
 void FreeMemoryDef();
 void SetMemory();
