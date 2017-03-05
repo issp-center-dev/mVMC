@@ -986,7 +986,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 
 		case KWOrbitalGeneral:
           if(APFlag==0) {
-            while( fscanf(fp, "%d %d %d\n", &i, &spn_i, &j, &spn_j, &fij) != EOF){
+            while( fscanf(fp, "%d %d %d %d %d\n", &i, &spn_i, &j, &spn_j, &fij) != EOF){
                 all_i = i+spn_i*Nsite; //fsz
                 all_j = j+spn_j*Nsite; //fsz
                 if(CheckPairSite(i, j, Nsite) != 0){
