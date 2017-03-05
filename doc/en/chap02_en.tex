@@ -125,6 +125,10 @@ When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.
 │~~~~~~├──figs/\\
 │~~~~~~│~~~~~~├──*.pdf\\
 │~~~~~~│~~~~~~└──*.xbb\\
+│~~~~~~├──fourier/\\
+│~~~~~~│~~~~~~├──en/\\
+│~~~~~~│~~~~~~├──figs/\\
+│~~~~~~│~~~~~~└──ja/\\
 │~~~~~~├──jp/\\
 │~~~~~~│~~~~~~└──*.tex\\
 │~~~~~~└──en/\\
@@ -148,33 +152,57 @@ When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~│~~~~~~└──$\cdots$\\
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└─Kagome/\\
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└──$\cdots$\\
-└──src/\\
-~~~~~~~~~~~├──**.c\\
-~~~~~~~~~~~├──**.h\\
-~~~~~~~~~~~├──ComplexUHF/\\
-~~~~~~~~~~~│~~~~~~~└──src/\\
-~~~~~~~~~~~│~~~~~~~~~~~~~~~~├─ **.c\\
-~~~~~~~~~~~│~~~~~~~~~~~~~~~~└──include/\\
-~~~~~~~~~~~│~~~~~~~~~~~~~~~~~~~~~~~~~~~└──**.h\\
-~~~~~~~~~~~├──makefile\_src\\
-~~~~~~~~~~~├──include/\\
-~~~~~~~~~~~│~~~~~~~└──**.h\\
-~~~~~~~~~~~├──StdFace/\\
-~~~~~~~~~~~│~~~~~~~├──**.c\\
-~~~~~~~~~~~│~~~~~~~└──**.h\\
-~~~~~~~~~~~├──pfapack/\\
-~~~~~~~~~~~│~~~~~~~├──makefile\_pfapack\\
-~~~~~~~~~~~│~~~~~~~└──**.f\\
-~~~~~~~~~~~└──sfmt/\\
-~~~~~~~~~~~~~~~~~~~├──makefkie\_sfmt\\
-~~~~~~~~~~~~~~~~~~~├──**.c\\
-~~~~~~~~~~~~~~~~~~~└──**.h\\
+├──src/\\
+│~~~~~~~~~~├──**.c\\
+│~~~~~~~~~~├──**.h\\
+│~~~~~~~~~~├──ComplexUHF/\\
+│~~~~~~~~~~│~~~~~~~└──src/\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~~~├─ **.c\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~~~└──include/\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~~~~~~~~~~~~~~└──**.h\\
+│~~~~~~~~~~├──makefile\_src\\
+│~~~~~~~~~~├──include/\\
+│~~~~~~~~~~│~~~~~~~└──**.h\\
+│~~~~~~~~~~├──StdFace/\\
+│~~~~~~~~~~│~~~~~~~├──**.c\\
+│~~~~~~~~~~│~~~~~~~└──**.h\\
+│~~~~~~~~~~├──pfapack/\\
+│~~~~~~~~~~│~~~~~~~├──makefile\_pfapack\\
+│~~~~~~~~~~│~~~~~~~└──**.f\\
+│~~~~~~~~~~└──sfmt/\\
+│~~~~~~~~~~~~~~~~~~├──makefkie\_sfmt\\
+│~~~~~~~~~~~~~~~~~~├──**.c\\
+│~~~~~~~~~~~~~~~~~~└──**.h\\
+└──tool/\\
+~~~~~~~~~~~├──**.f90\\
+~~~~~~~~~~~└──makefile\_tool\\
 
 \newpage
 \section{Basic usage}
-mVMC has two executables;
-one generates detailed input files and the other perform the main calculation with these files.
-Here, the basic flows of calculations by using these programs.
+
+mVMC works as whether the following two modes:
+
+\begin{itemize}
+\item Expert mode
+
+  mVMC supports the arbitrary fermion-/spin-lattice system;
+  we can specify the hopping, etc. at each site independently.
+  Although this makes us able to specify flexibly the target
+  this requires many input-files, and
+  the setup of the calculation is complicated.
+
+\item Standard mode
+
+  For some typical models (such as the Heisenberg model on the square lattice),
+  we can start calculation with a few parameters (for example, the size of the
+  simulation cell, the common coupling parameter).
+  In this case, the input-files for Expert mode are automatically generated.
+  Although the number of available systems is smaller than that number of Expert mode,
+  the setup of the calculation is easier than in Expert mode.
+
+\end{itemize}
+
+We can calculate by using these modes as follows:
 
 \begin{enumerate}
 
@@ -188,16 +216,11 @@ The input file format is described in the Sec. \ref{Ch:HowToStandard}.
 
 \item  Run
 
-Run a executable \verb|vmcdry.out| in terminal by specifing
-the name of input file written in previous step.
-MPI is not used in this step.
+Run a executable \verb|vmc.out| in terminal by specifying
+the name of input file written in previous step
+(option \verb|-s| is required).
 
-\verb|$ |\textit{Path}\verb|/vmcdry.out |\textit{Input\_file\_name}
-
-Then, run a executable \verb|vmc.out| with 
-the {\it namelist} file generated in the previous step.
-
-\verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmcdry.out namelist.def|
+\verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmc.out -s| \textit{Input\_file\_name}
 
 When you use a queuing system in workstations or super computers, 
 sometimes the number of processes is specified as an argument for the job-submitting command.
@@ -205,13 +228,28 @@ If you need more information, please refer manuals for your system.
 
 \item Watch calculation logs
 
-Log files are outputted in the current directry which is automatically made in the directory for a calculation scenario.
+Log files are outputted in the \verb|output/| directory which is automatically made in the directory for a calculation scenario.
 The details of output files are shown in Sec. \ref{Sec:outputfile}.
 
 \item Results
 
-  If the calculation is finished normally, the result files are outputted in  the current directry.
+  If the calculation is finished normally, the result files are outputted in the \verb|output/| directory.
   The details of output files are shown in Sec. \ref{Sec:outputfile}.
+
+\item Prepare and run Expert mode
+
+  In the above case, the calculation starts as soon as input files
+  for Expert mode are generated.
+  If we only generate files without starting the calculation,
+  we can use a executable \verb|vmcdry.out| as follows
+  (MPI is not used in this step):
+
+  \verb|$ |\textit{Path}\verb|/vmcdry.out |\textit{Input\_file\_name}
+
+  Then, we can edit generated files by hand and run a executable \verb|vmc.out| with 
+  \verb|namelist.def| as an argument (option \verb|-e| is required) as follows:
+
+  \verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmcdry.out -e namelist.def|
 
 \end{enumerate}
 

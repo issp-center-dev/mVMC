@@ -116,8 +116,13 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 	  sscanf(ctmp2,"%s %s\n", ctmp, CDataFileHead); //6
 	  fgets(ctmp2,sizeof(ctmp2)/sizeof(char), fp);
+          sprintf(ctmp,"output/%s", CDataFileHead);
+          strcpy(CDataFileHead,ctmp);
 	  sscanf(ctmp2,"%s %s\n", ctmp, CParaFileHead); //7
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);   //8
+          sprintf(ctmp, "output/%s", CParaFileHead);
+          strcpy(CParaFileHead, ctmp);
+          fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);   //8
+          info = system("mkdir -p output");
 
 	  double dtmp;
 	  while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp)!=NULL){
@@ -581,7 +586,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       /*=======================================================================*/
       for(i=0;i<IgnoreLinesInDef;i++) fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
       idx=0;
-
+      idx0=0;
       switch(iKWidx){
       case KWLocSpin:
 	/* Read locspn.def----------------------------------------*/
@@ -900,7 +905,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 if(idx0==Nsite*Nsite) break;
               }
             }else { /* anti-periodic boundary mode */
-              while( fscanf(fp, "%d %d %d \n", &i, &j, &fij, &fijSign) != EOF){
+              while( fscanf(fp, "%d %d %d %d\n", &i, &j, &fij, &fijSign) != EOF){
 				  spn_i = 0;
 				  spn_j = 1;
 				  all_i = i+spn_i*Nsite; //fsz
