@@ -17,16 +17,13 @@ set(SOURCES_sfmt
         sfmt/SFMT.c   
  )
 
-set(SOURCES_STDFACE vmcdry.c StdFace/ChainLattice.c StdFace/HoneycombLattice.c StdFace/SquareLattice.c StdFace/StdFace_main.c StdFace/StdFace_ModelUtil.c StdFace/TriangularLattice.c StdFace/Ladder.c StdFace/Kagome.c)
+add_library(StdFace STATIC StdFace/ChainLattice.c StdFace/HoneycombLattice.c StdFace/SquareLattice.c StdFace/StdFace_main.c StdFace/StdFace_ModelUtil.c StdFace/TriangularLattice.c StdFace/Ladder.c StdFace/Kagome.c StdFace/Orthorhombic.c StdFace/Pyrochlore.c StdFace/Wannier90.c StdFace/FCOrtho.c)
 
 
-add_executable(vmcdry.out ${SOURCES_STDFACE})
+add_executable(vmcdry.out vmcdry.c)
+target_link_libraries(vmcdry.out StdFace)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
-#target_link_libraries(vmc.out mkl_intel_lp64)
-#target_link_libraries(vmc.out mkl_intel_thread)
-#target_link_libraries(vmc.out mkl_core pthread)
-#target_link_libraries(vmc.out m)
-#target_link_libraries(vmc.out irc)
+
 target_link_libraries(vmc.out ${LAPACK_LIBRARIES})
 if(MPI_FOUND)
   target_link_libraries(vmc.out ${MPI_C_LIBRARIES})

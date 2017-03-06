@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.0 FATAL_ERROR)
 project(mVMC NONE)
 
+add_definitions(-D_mVMC)
 if(CONFIG)
   message(STATUS "Loading configration: " ${PROJECT_SOURCE_DIR}/config/${CONFIG}.cmake)
   include(${PROJECT_SOURCE_DIR}/config/${CONFIG}.cmake)

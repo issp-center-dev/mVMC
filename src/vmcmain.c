@@ -34,13 +34,14 @@ void outputData();
 void printUsageError();
 void printOption();
 void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MPI_Comm *comm_child1);
+void StdFace_main(char *fname);
 
 /*main program*/
 int main(int argc, char* argv[])
 {
   /* input file name */
-  char *fileDefList;
-  char *fileInitPara;
+  char fileDefList[256];
+  char fileInitPara[256];
 
   int flagReadInitPara=0;
   int info=0;
@@ -48,6 +49,8 @@ int main(int argc, char* argv[])
   /* for MultiDef mode (-m option) */
   int flagMultiDef=0;
   int nMultiDef = 1;
+  /* for Standard mode (-s option)*/
+  int flagStandard = 0;
   /* for getopt() */
   int option;
   extern char *optarg;
@@ -71,7 +74,7 @@ int main(int argc, char* argv[])
   StartTimer(10);
 
   /* read options */
-  while((option=getopt(argc,argv,"bhm:oF:"))!=-1) {
+  while((option=getopt(argc,argv,"bhm:oF:esv"))!=-1) {
     switch(option) {
     case 'b': /* BinaryMode */
       FlagBinary=1;
@@ -138,6 +141,21 @@ int main(int argc, char* argv[])
       NFileFlushInterval = (int)num;
       break;
 
+    case 'e': /* Expert mode (For compatibility)*/
+      /*Nothing to do*/
+      flagMultiDef = 0;
+      break;
+
+    case 's': /* Standard mode */
+      flagMultiDef = 0;
+      flagStandard = 1;
+      break;
+
+    case 'v': /* Print version */
+      printVersion();
+      MPI_Finalize();
+      return;
+
     default: /* '?' */
       printUsageError();
       exit(EXIT_FAILURE);
@@ -153,16 +171,16 @@ int main(int argc, char* argv[])
 
   /* set input filename */
   if(flagMultiDef==0) { /* Original mode */
-    fileDefList=argv[optind];
+    strcpy(fileDefList, argv[optind]);
     if(argc-optind>1) {
       flagReadInitPara = 1;
-      fileInitPara=argv[optind+1];
+      strcpy(fileInitPara, argv[optind + 1]);
     }
   } else if(flagMultiDef==1) { /* MultiDef mode */
-    fileDefList=argv[optind+1];
+    strcpy(fileDefList, argv[optind+1]);
     if(argc-optind>2) {
       flagReadInitPara = 1;
-      fileInitPara=argv[optind+2];
+      strcpy(fileInitPara, argv[optind + 2]);
     }
   }
 
@@ -176,6 +194,15 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(comm0, &rank0);
   MPI_Comm_size(comm0, &size0);
   StopTimer(10);
+  /*
+   Standard mode: generating input files
+  */
+  if (flagStandard == 1) {
+    if (rank0 == 0) {
+      StdFace_main(fileDefList);
+    }
+    strcpy(fileDefList, "namelist.def");
+  }
 
   StartTimer(11);
   if(rank0==0) fprintf(stdout,"Start: Read *def files.\n");
@@ -583,6 +610,8 @@ void printOption() {
   fprintf(stderr,"  -m N   multiDef mode\n");
   fprintf(stderr,"  -o     optTrans mode\n");
   fprintf(stderr,"  -F N   set interval of file flush\n");
+  fprintf(stderr,"  -s     Standard mode\n");
+  fprintf(stderr,"  -e     Expert mode\n");
   fprintf(stderr,"  -h     show this message\n");
   return;
 }

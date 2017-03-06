@@ -2,7 +2,8 @@ include ../make.sys
 
 StdFace_OBJS = StdFace_main.o StdFace_ModelUtil.o
 Lattice_OBJS = SquareLattice.o ChainLattice.o TriangularLattice.o \
-	HoneycombLattice.o Ladder.o Kagome.o
+	HoneycombLattice.o Ladder.o Kagome.o Orthorhombic.o FCOrtho.o \
+	Pyrochlore.o Wannier90.o
 
 libStdFace.a:$(StdFace_OBJS) $(Lattice_OBJS)
 	$(AR) $@ $(StdFace_OBJS) $(Lattice_OBJS)
@@ -11,7 +12,7 @@ libStdFace.a:$(StdFace_OBJS) $(Lattice_OBJS)
 SUFFIXES: .o .c
 
 .c.o:
-	$(CC) $(CFLAGS) $(OPTION) -c $<
+	$(CC) $(CFLAGS) $(OPTION) -D _mVMC -c $<
 
 clean:
 	rm -f *.o *.a
@@ -24,3 +25,7 @@ TriangularLattice.o:TriangularLattice.c StdFace_vals.h StdFace_ModelUtil.h
 HoneycombLattice.o:HoneycombLattice.c StdFace_vals.h StdFace_ModelUtil.h
 Ladder.o:Ladder.c StdFace_vals.h StdFace_ModelUtil.h
 Kagome.o:Kagome.c StdFace_vals.h StdFace_ModelUtil.h
+Orthorhombic.o:Orthorhombic.c StdFace_vals.h StdFace_ModelUtil.h
+FCOrtho.o:FCOrtho.c StdFace_vals.h StdFace_ModelUtil.h
+Pyrochlore.o:Pyrochlore.c StdFace_vals.h StdFace_ModelUtil.h
+Wannier90.o:Wannier90.c StdFace_vals.h StdFace_ModelUtil.h
