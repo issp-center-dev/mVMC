@@ -97,7 +97,7 @@ void SetMemoryDef() {
     pInt += 4*Nsite;
   }
 
-  /*[s] For BackFlow */
+ /*[s] For BackFlow */
   if(NBackFlowIdx>0) {
       PosBF = (int**)malloc(sizeof(int*)*Nsite);
       for(i=0;i<Nsite;i++) {
@@ -117,16 +117,30 @@ void SetMemoryDef() {
   }
   /*[e] For BackFlow */
 
-  OrbitalIdx = (int**)malloc(sizeof(int*)*Nsite);
-  for(i=0;i<Nsite;i++) {
-    OrbitalIdx[i] = pInt;
-    pInt += Nsite;
+  if(iFlgOrbitalGeneral==0){//for spin conserved
+    OrbitalIdx = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      OrbitalIdx[i] = pInt;
+      pInt += Nsite;
+    }
+    OrbitalSgn = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      OrbitalSgn[i] = pInt;
+      pInt += Nsite;
+    }
   }
-
-  OrbitalSgn = (int**)malloc(sizeof(int*)*Nsite);
-  for(i=0;i<Nsite;i++) {
-    OrbitalSgn[i] = pInt;
-    pInt += Nsite;
+  else{//for spin not conserved
+    OrbitalIdx = (int**)malloc(sizeof(int*)*2*Nsite);
+    for(i=0;i<2*Nsite;i++) {
+      OrbitalIdx[i] = pInt;
+      pInt += 2*Nsite;
+    }
+    
+    OrbitalSgn = (int**)malloc(sizeof(int*)*2*Nsite);
+    for(i=0;i<2*Nsite;i++) {
+      OrbitalSgn[i] = pInt;
+      pInt += 2*Nsite;
+    }
   }
 
   QPTrans = (int**)malloc(sizeof(int*)*NQPTrans);

@@ -23,10 +23,10 @@ add_library(StdFace STATIC StdFace/ChainLattice.c StdFace/HoneycombLattice.c Std
 add_executable(vmcdry.out vmcdry.c)
 target_link_libraries(vmcdry.out StdFace)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
-
+target_link_libraries(vmc.out StdFace)
 target_link_libraries(vmc.out ${LAPACK_LIBRARIES})
 if(MPI_FOUND)
   target_link_libraries(vmc.out ${MPI_C_LIBRARIES})
 endif(MPI_FOUND)
 target_link_libraries(vmc.out pfapack)
-
+add_definitions(-D_mVMC)

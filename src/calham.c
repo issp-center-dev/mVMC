@@ -402,7 +402,7 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
 #pragma loop noalias
     for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
 
-    StoreSlaterElmBF(mySltBFTmp);
+    StoreSlaterElmBF_fcmp(mySltBFTmp);
 #pragma omp barrier
 
 

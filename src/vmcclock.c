@@ -26,7 +26,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-#include "time.h"
+#include <time.h>
 #include "setmemory.h"
 #ifndef _SRC_TIME
 #define _SRC_TIME

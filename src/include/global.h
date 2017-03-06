@@ -118,6 +118,9 @@ int NDoublonHolon2siteIdx, **DoublonHolon2siteIdx; /* DoublonHolon2siteIdx[idx][
 int NDoublonHolon4siteIdx, **DoublonHolon4siteIdx; /* DoublonHolon4siteIdx[idx][4*Nsite] */
 int NOrbitalIdx, **OrbitalIdx; /* [Nsite][Nsite] */
 int **OrbitalSgn; /* OrbitalSgn[Nsite][Nsite] = +1 or -1 */
+int iFlgOrbitalGeneral=0;
+int iFlgOrbitalAP=0;
+
 
 /* zqptransidx.def */
 int NQPTrans, **QPTrans, **QPTransInv; /* [NQPTrans][Nsite] */
@@ -204,6 +207,12 @@ int BurnFlag=0; /* 0: off, 1: on */
 
 /***** Slater Elements ******/
 double complex *SlaterElm; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
+double complex *InvM; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
+double complex *PfM; /* PfM[QPidx] */
+// TBC only for real
+double *SlaterElm_real; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
+double *InvM_real; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
+double *PfM_real; /* PfM[QPidx] */
 double complex *SlaterElmBF; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
 double complex *InvM; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
 double complex *PfM; /* PfM[QPidx] */

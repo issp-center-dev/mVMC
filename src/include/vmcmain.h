@@ -56,10 +56,11 @@ extern int omp_get_thread_num(void);
 
 #include "../sfmt/SFMT.h"
 #include "global.h"
+#include "../version.h"
 
 #include "../safempi.c"
 #include "../safempi_fcmp.c"
-#include "../time.c"
+#include "../vmcclock.c"
 #include "../workspace.c"
 
 #ifdef _lapack
@@ -90,7 +91,6 @@ extern int omp_get_thread_num(void);
 #include "../calgrn.c"
 //#include "../lslocgrn.c"
 #include "../lslocgrn_real.c"
-
 #include "../setmemory.c"
 #include "../readdef.c"
 #include "../initfile.c"
