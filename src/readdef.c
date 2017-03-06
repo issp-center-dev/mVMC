@@ -553,7 +553,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   int iKWidx=0;
   
   int i,j,n,idx,idx0,idx1,info=0;
-  int isigma1, isigma2;
   int fidx=0; /* index for OptFlag */
   int count_idx=0;
   int x0,x1,x2,x3,x4,x5,x6,x7;
@@ -1053,10 +1052,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
         idx0 = idx1 = 0;
 
         while( fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF){
-          for(spn_i=0; spn_i=2; spn_i++){
-            spn_j = spn_i;          
+          for(spn_i=0; spn_i<2; spn_i++){
             all_i = i+spn_i*Nsite; //fsz
-            all_j = j+spn_j*Nsite; //fsz
+            all_j = j+spn_i*Nsite; //fsz
             if(CheckPairSite(i, j, Nsite) != 0){
               fprintf(stderr, "Error: Site index is incorrect. \n");
               info=1;
@@ -1076,10 +1074,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
         }
       } else { /* anti-periodic boundary mode */
         while( fscanf(fp, "%d %d %d %d \n", &i, &j, &fij, &fijSign) != EOF){
-          for(spn_i=0; spn_i=2; spn_i++){
-            spn_j = spn_i;
+          for(spn_i=0; spn_i<2; spn_i++){
             all_i = i+spn_i*Nsite; //fsz
-            all_j = j+spn_j*Nsite; //fsz
+            all_j = j+spn_i*Nsite; //fsz
             if(all_i >= all_j){
               itmp=1;
             }
