@@ -61,7 +61,8 @@ extern int omp_get_thread_num(void);
 
 #include "safempi.c"
 #include "safempi_fcmp.c"
-#include "time.c"
+//#include "time.c"
+#include "vmcclock.c"
 #include "workspace.c"
 
 #ifdef _lapack

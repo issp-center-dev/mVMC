@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
     case 'v': /* Print version */
       printVersion();
       MPI_Finalize();
-      return;
+      return 0;
 
     default: /* '?' */
       printUsageError();
