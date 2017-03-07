@@ -24,7 +24,7 @@ add_executable(vmcdry.out vmcdry.c)
 target_link_libraries(vmcdry.out StdFace)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
 
-target_link_libraries(vmc.out ${LAPACK_LIBRARIES})
+target_link_libraries(vmc.out ${LAPACK_LIBRARIES} StdFace)
 if(MPI_FOUND)
   target_link_libraries(vmc.out ${MPI_C_LIBRARIES})
 endif(MPI_FOUND)
