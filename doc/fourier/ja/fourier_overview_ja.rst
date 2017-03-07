@@ -19,7 +19,7 @@
 1体相関
 
 .. math::
-
+   :nowrap:
    \begin{align}
    \langle {\hat c}_{{\bf k} \uparrow}^{\dagger} {\hat c}_{{\bf k} \uparrow}\rangle
    \equiv \frac{1}{N_{\rm site}^2} \sum_{i j}^{N_{\rm site}} e^{-i {\bf k}\cdot({\bf R}_i - {\bf R}_j)}
@@ -33,7 +33,7 @@
 密度-密度相関
 
 .. math::
-
+   :nowrap:
    \begin{align}
    \langle {\hat \rho}_{\bf k} {\hat \rho}_{\bf k}\rangle
    \equiv \frac{1}{N_{\rm site}^2} \sum_{i j}^{N_{\rm site}} e^{-i {\bf k}\cdot({\bf R}_i - {\bf R}_j)}
@@ -43,7 +43,7 @@
 スピン-スピン相関
 
 .. math::
-
+   :nowrap:
    \begin{align}
    \langle {\hat S}_{\bf k}^{z} {\hat S}_{\bf k}^{z} \rangle
    \equiv \frac{1}{N_{\rm site}^2} \sum_{i j}^{N_{\rm site}} e^{-i {\bf k}\cdot({\bf R}_i - {\bf R}_j)}
