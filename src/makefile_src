@@ -43,7 +43,7 @@ vmcmake_real.c \
 workspace.c
 
 HEADERS = \
-global.h \
+include/global.h \
 vmcmain.h
 
 all : 
@@ -55,13 +55,13 @@ all :
 	cd ComplexUHF/src; $(MAKE) -f makefile_uhf
 
 vmc.out : $(OBJS) $(STDFACE)
-	$(CC) -o $(OUT) $(OBJS) $(STDFACE) $(OPTION) $(CFLAGS) $(REPORT) $(LIB) 
+	$(CC) -o $(OUT) $(OBJS) $(STDFACE) $(OPTION) $(CFLAGS) $(REPORT) $(LIB)
 
 vmcdry.out : vmcdry.o $(STDFACE)
 	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) 
 
-vmcmain.o : $(SOURCES) $(HEADERS)
-	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT)
+vmcmain.o : $(SOURCES) -I$(INCLUDE_DIR) $(HEADERS)
+	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT) 
 
 clean :
 	rm -f *.o vmc.out

@@ -83,8 +83,8 @@ int *LocSpn; /* [Nsite] */
 
 /* for Hamiltonian */
 int NTransfer;
-int **Transfer; /* [NTransfer][3] */
-double *ParaTransfer;
+int **Transfer; /* [NTransfer][4] */
+double complex*ParaTransfer;
 
 int NCoulombIntra;
 int *CoulombIntra; /* [NCoulombIntra] */
@@ -107,7 +107,7 @@ int **ExchangeCoupling; /* [NExchangeCoupling][2] */
 double *ParaExchangeCoupling;
 
 int NInterAll;
-int **InterAll; /* [NInterAll][6] */
+int **InterAll; /* [NInterAll][8] */
 double complex*ParaInterAll;
 
 /* for variational parameters */
@@ -121,7 +121,7 @@ int **OrbitalSgn; /* OrbitalSgn[Nsite][Nsite] = +1 or -1 */
 /* zqptransidx.def */
 int NQPTrans, **QPTrans; /* [NQPTrans][Nsite] */
 int **QPTransSgn; /* QPTransSgn[NQPTrans][NSite] = +1 or -1 */
-double *ParaQPTrans;
+double complex *ParaQPTrans;
 
 /* zqpopttrans.def */
 int NQPOptTrans, **QPOptTrans; /* [NQPOptTrans][Nsite] */
@@ -135,6 +135,7 @@ int NCisAjsCktAltDC, **CisAjsCktAltDCIdx; /* [NCisAjsCktAltDC][6] */
 
 /* Optimization flag */
 int *OptFlag; /* [NPara]  1: optimized, 0 or 2: fixed */
+int AllComplexFlag;/* 0 -> all real variables, !=0-> including complex variables*/
 
 /* flag for anti-periodic boundry condition */
 int APFlag; /* 0: periodic, 1: anti-periodic */
@@ -155,15 +156,15 @@ int FlagBinary=0;
 int NFileFlushInterval=1;
 
 /***** Variational Parameters *****/
-int NPara;    /* the total number of variational prameters = NSlater + NProj + NOptTrans */
+int NPara; /* the total number of variational prameters NPara= NProj + NSlater+ NOptTrans */ 
 int NProj;    /* the number of correlation factor */
 int NSlater;  /* the number of pair orbital (f_ij) = NOrbitalIdx */
 int NOptTrans; /* the number of weights for OptTrans. This is used only for variatonal parameters */
                /* NOptTrans = 0 (not OptTrans mode) or NQPOptTrans (OptTrans mode) */
-double *Para;   /* variatonal parameters */
-double *Proj;   /* correlation factor (Proj    =Para) */
-double *Slater; /* pair orbital       (Slater  =Para+NProj) */
-double *OptTrans; /* weights          (OptTrans=Para+NProj+NSlater) */
+double complex *Para;   /* variatonal parameters */
+double complex *Proj;   /* correlation factor (Proj    =Para) */
+double complex *Slater; /* pair orbital       (Slater  =Para+NProj) */
+double complex *OptTrans; /* weights          (OptTrans=Para+NProj+NSlater) */
 
 /***** Electron Configuration ******/
 int *EleIdx; /* EleIdx[sample][mi+si*Ne] */
@@ -184,43 +185,53 @@ int *BurnEleProjCnt;
 int BurnFlag=0; /* 0: off, 1: on */
 
 /***** Slater Elements ******/
-double *SlaterElm; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
-
-double *InvM; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
-double *PfM; /* PfM[QPidx] */
+double complex *SlaterElm; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
+double complex *InvM; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
+double complex *PfM; /* PfM[QPidx] */
+// TBC only for real
+double *SlaterElm_real; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
+double *InvM_real; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
+double *PfM_real; /* PfM[QPidx] */
 
 /***** Quantum Projection *****/
-double *QPFullWeight; /* QPFullWeight[NQPFull] */
-double *QPFixWeight; /* QPFixWeight[NQPFix] */
-double *SPGLCos, *SPGLSin; /* [NSPGaussLeg]  cos(beta/2) and sin(beta/2) */
-double *SPGLCosSin, *SPGLCosCos, *SPGLSinSin; /* [NSPGaussLeg] */
+double complex *QPFullWeight; /* QPFullWeight[NQPFull] */
+double complex *QPFixWeight; /* QPFixWeight[NQPFix] */
+double complex *SPGLCos, *SPGLSin; /* [NSPGaussLeg]  cos(beta/2) and sin(beta/2) */
+double complex *SPGLCosSin, *SPGLCosCos, *SPGLSinSin; /* [NSPGaussLeg] */
 
 /***** Stocastic Reconfiguration *****/
-int SROptSize; /* 1+NPara */
-double *SROptOO; /* [SROptSize*SROptSize] <O^\dagger O> */
-double *SROptHO; /* [SROptSize]            < HO > */
-double *SROptO;  /* [SROptSize] calculation buffar */
-double *SROptO_Store;  /* [SROptSize*NVMCSample] calculation buffar */
+int    SROptSize; /* 1+NPara */
+double complex *SROptOO; /* [SROptSize*SROptSize] <O^\dagger O> */
+double complex *SROptHO; /* [SROptSize]            < HO > */
+double complex *SROptO;  /* [SROptSize] calculation buffar */
+double complex *SROptO_Store;  /* [SROptSize*NVMCSample] calculation buffer */
+//for real
+double *SROptOO_real; /* [SROptSize*SROptSize] <O^\dagger O> */ //TBC
+double *SROptHO_real; /* [SROptSize]            < HO > */       //TBC
+double *SROptO_real;  /* [SROptSize] calculation buffar */      //TBC
+double *SROptO_Store_real;  /* [SROptSize*NVMCSample] calculation buffer */
 
-double *SROptData; /* [2+NPara] storage for energy and variational parameters */
+
+
+double complex *SROptData; /* [2+NPara] storage for energy and variational parameters */
 
 /***** Physical Quantity *****/
-double Wc; /* Weight for correlation sampling = <psi|x> */
-double Etot; /* <H> */
-double Etot2; /* <H^2> */
+double complex Wc; /* Weight for correlation sampling = <psi|x> */
+double complex Etot; /* <H> */
+double complex Etot2; /* <H^2> */
 
-double *PhysCisAjs; /* [NCisAjs] */
-double *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */
-double *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
-double *LocalCisAjs; /* [NCisAjs] */
+double complex *PhysCisAjs; /* [NCisAjs] */
+double complex *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */
+double complex *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
+double complex *LocalCisAjs; /* [NCisAjs] */
 
 const int NLSHam = 2; /* 0: I, 1: H */
-double *QQQQ; /* QQQQ[NLSHam][NLSHam][NLSHam][NLSHam]*/
-double *LSLQ; /* [NLSHam][NLSHam]*/
-
-double *QCisAjsQ; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/
-double *QCisAjsCktAltQ; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/
-double *LSLCisAjs; /* [NLSHam][NCisAjs]*/
+double complex *QQQQ; /* QQQQ[NLSHam][NLSHam][NLSHam][NLSHam]*/  //TBC
+double complex *LSLQ; /* [NLSHam][NLSHam]*/                      //TBC   
+ 
+double complex *QCisAjsQ; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/ //TBC
+double complex *QCisAjsCktAltQ; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/ //TBC
+double complex *LSLCisAjs; /* [NLSHam][NCisAjs]*/                //TBC
 
 /***** Output File *****/
 /* FILE *FileCfg; */
@@ -242,6 +253,9 @@ FILE *FileLSQCisAjsCktAltQ;
 /***** HitachiTimer *****/
 const int NTimer=100;
 double Timer[100], TimerStart[100];
+
+/* flag for  SROptimization*/
+int SRFlag; /* 0: periodic, 1: Diagonalization */
 
 /***** openMP *****/
 int NThread;
