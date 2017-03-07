@@ -216,7 +216,6 @@ double complex GreenFunc2_fsz(const int ri, const int rj, const int rk, const in
 
 /* Calculate 2-body Green function <psi|CisAjtCkuAlv|x>/<psi|x> */
 /* buffer size = NQPFull+2*Nsize */
-// s==t 
 double complex GreenFunc2_fsz2(const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t,const int u,const int v, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,

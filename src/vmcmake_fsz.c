@@ -257,15 +257,17 @@ int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt
     for(rsi=0;rsi<nsite2;rsi++) eleCfg[rsi] = -1;
     
     /* local spin */
+    //note: Sz is not conserved quantity but initially we take Sz=0 
     for(ri=0;ri<Nsite;ri++) {
       if(LocSpn[ri]==1) {
         do {
-          mi = gen_rand32()%nsize;
+          //mi = gen_rand32()%nsize;
+          mi = gen_rand32()%Ne;
           si = (genrand_real2()<0.5) ? 0 : 1;
-        } while(eleIdx[mi]!=-1); // seeking empty site
+        } while(eleIdx[mi+si*Ne]!=-1); // seeking empty site
         eleCfg[ri+si*Nsite] = mi;
-        eleIdx[mi]          = ri;
-        eleSpn[mi]          = si;
+        eleIdx[mi+si*Ne]    = ri;
+        eleSpn[mi+si*Ne]    = si;
       }
     }
     
@@ -458,11 +460,11 @@ void makeCandidate_exchange_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *reje
     s  = eleSpn[mi];// fsz //s = (genrand_real2()<0.5) ? 0 : 1;
     ri = eleIdx[mi]; //fsz
   } while (eleCfg[ri+(1-s)*Nsite] != -1);
+  t = 1-s;
   do {
-    mj = gen_rand32()%Nsize;
-    t = 1-s;
-    rj = eleIdx[mj];
-  } while (eleCfg[rj+(1-t)*Nsite] != -1 || eleSpn[mj]==s); // is it OK ?
+    mj = gen_rand32()%Nsize; //fsz
+    rj = eleIdx[mj]; //fsz
+  } while (eleCfg[rj+(1-t)*Nsite] != -1 || eleSpn[mj]!=t); // is it OK ?
 
   *mi_ = mi;
   *ri_ = ri;

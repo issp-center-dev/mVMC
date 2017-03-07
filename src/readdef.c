@@ -479,6 +479,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   int x0,x1,x2,x3,x4,x5,x6,x7;
   double dReValue, dImValue;
   int rank;
+  int sgn;
 
   MPI_Comm_rank(comm, &rank);
   
@@ -734,15 +735,23 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	if(NOrbitalIdx>0){
 	  idx0 = idx1 = 0;
 	  if(APFlag==0) {
-	    while( fscanf(fp, "%d %d %d %d", &i,&spn_i,&j,&spn_j) != EOF){ //fsz
+	    while( fscanf(fp, "%d %d %d %d ", &i,&spn_i,&j,&spn_j) != EOF){ //fsz
               all_i = i+spn_i*Nsite; //fsz
               all_j = j+spn_j*Nsite; //fsz
-	      fscanf(fp, "%d\n", &(OrbitalIdx[all_i][all_j]));//fsz
-              //printf("DEBUG: i=%d spn_i=%d j=%d spn_j=%d Orb=%d \n",i,spn_i,j,spn_j,OrbitalIdx[all_i][all_j]);
-	      OrbitalSgn[all_i][all_j] = 1;
+              if(all_i>=all_j){ 
+                printf("BUG \n");
+                break;
+              }
+              OrbitalIdx[all_i][all_i] =    0;
+              OrbitalSgn[all_i][all_i] =    0;
+              OrbitalIdx[all_j][all_j] =    0;
+              OrbitalSgn[all_j][all_j] =    0;
+              
+	      fscanf(fp, "%d %d\n", &(OrbitalIdx[all_i][all_j]), &(OrbitalSgn[all_i][all_j]));
+              printf("DEBUG: i=%d spn_i=%d j=%d spn_j=%d Orb=%d sgn=%d\n",i,spn_i,j,spn_j,OrbitalIdx[all_i][all_j],OrbitalSgn[all_i][all_j]);
               // Note F_{IJ}=-F_{JI}
-              OrbitalIdx[all_j][all_i] = OrbitalIdx[all_i][all_j]; //fsz
-	      OrbitalSgn[all_j][all_i] = -1;//fsz
+              OrbitalIdx[all_j][all_i] =    OrbitalIdx[all_i][all_j]; //fsz
+	      OrbitalSgn[all_j][all_i] = -1*OrbitalSgn[all_i][all_j];//fsz
 	      idx0++;
 	      if(idx0==(Nsite)*(2*Nsite-1)) break; // 2N*(2N-1)/2
 	    }
@@ -768,7 +777,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    idx1++;
         count_idx++;
         }
-	if(idx0!=(2*Nsite)*(2*Nsite) || idx1!=NOrbitalIdx) {
+	if(idx0!=(Nsite)*(2*Nsite-1) || idx1!=NOrbitalIdx) {
 	  info=ReadDefFileError(defname);
 	}
 	}
