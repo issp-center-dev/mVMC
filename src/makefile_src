@@ -12,11 +12,12 @@ average.c \
 avevar.c \
 calgrn.c \
 calham.c \
+calham_real.c \
 gauleg.c \
 initfile.c \
 legendrepoly.c \
 locgrn.c \
-lslocgrn.c \
+locgrn_real.c \
 matrix.c \
 parameter.c \
 pfupdate.c \
@@ -36,15 +37,20 @@ stcopt_dposv.c \
 stcopt_pdposv.c \
 time.c \
 vmccal.c \
-vmcdry.c \
-vmcmain.c \
 vmcmake.c \
 vmcmake_real.c \
 workspace.c
 
 HEADERS = \
+include/avevar.h \
 include/global.h \
-vmcmain.h
+include/parameter.h \
+include/readdef.h \
+include/readdef_core.h \
+include/safempi.h \
+include/safempi_fcmp.h \
+include/version.h \
+include/vmcmain.h
 
 all : 
 	cd pfapack; $(MAKE) -f makefile_pfapack
@@ -60,8 +66,11 @@ vmc.out : $(OBJS) $(STDFACE)
 vmcdry.out : vmcdry.o $(STDFACE)
 	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) 
 
-vmcmain.o : $(SOURCES) -I$(INCLUDE_DIR) $(HEADERS)
-	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT) 
+vmcmain.o : $(SOURCES) $(HEADERS)
+	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT) -I ./include/
+
+vmcdry.o : vmcdry.c
+	$(CC) -c vmcdry.c $(OPTION) $(CFLAGS) $(REPORT) -I ./include/
 
 clean :
 	rm -f *.o vmc.out
