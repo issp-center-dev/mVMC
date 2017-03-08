@@ -1,8 +1,9 @@
 # include guard
 cmake_minimum_required(VERSION 2.8.0 )
 
+add_definitions(-D_mVMC)
 if(${CMAKE_PROJECT_NAME} STREQUAL "Project")
-  message(FATAL_ERROR "cmake should be executed not for 'src' subdirectory, but for the top directory of HPhi.")
+  message(FATAL_ERROR "cmake should be executed not for 'src' subdirectory, but for the top directory of mVMC.")
 endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 
 include_directories(include)
@@ -24,7 +25,7 @@ add_executable(vmcdry.out vmcdry.c)
 target_link_libraries(vmcdry.out StdFace)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
 
-target_link_libraries(vmc.out ${LAPACK_LIBRARIES})
+target_link_libraries(vmc.out ${LAPACK_LIBRARIES} StdFace)
 if(MPI_FOUND)
   target_link_libraries(vmc.out ${MPI_C_LIBRARIES})
 endif(MPI_FOUND)

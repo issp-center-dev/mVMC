@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
     case 'v': /* Print version */
       printVersion();
       MPI_Finalize();
-      return;
+      return 0;
 
     default: /* '?' */
       printUsageError();
@@ -427,7 +427,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
 /*-- VMC Physical Quantity Calculation --*/
 int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2) {
-  int ismp;
+  int ismp, tmp_i;
   int rank;
   MPI_Comm_rank(comm_parent, &rank);
 
@@ -443,7 +443,25 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     
     StartTimer(3);
 
-    VMCMakeSample(comm_child1);
+    if(AllComplexFlag==0){
+      // only for real TBC
+      StartTimer(69);
+#pragma omp parallel for default(shared) private(tmp_i)
+      for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+#pragma omp parallel for default(shared) private(tmp_i)
+      for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+      StopTimer(69);
+      // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+      VMCMakeSample_real(comm_child1);
+      // only for real TBC
+      StartTimer(69);
+#pragma omp parallel for default(shared) private(tmp_i)
+      for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
+      StopTimer(69);
+      // only for real TBC
+    }else{
+      VMCMakeSample(comm_child1);
+    } 
 
     StopTimer(3);
     StartTimer(4);
