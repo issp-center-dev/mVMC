@@ -32,5 +32,6 @@ target_link_libraries(vmc.out pfapack StdFace ${LAPACK_LIBRARIES})
 if(MPI_FOUND)
   target_link_libraries(vmc.out ${MPI_C_LIBRARIES})
 endif(MPI_FOUND)
+install(TARGETS vmcdry.out RUNTIME DESTINATION bin)
 install(TARGETS vmc.out RUNTIME DESTINATION bin)
 
