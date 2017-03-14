@@ -17,7 +17,7 @@ make.sys
 *.synctex.gz
 *.toc
 *~
-build
+*build*
 #*
 html/
 GPATH

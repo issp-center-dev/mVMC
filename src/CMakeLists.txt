@@ -6,8 +6,11 @@ if(${CMAKE_PROJECT_NAME} STREQUAL "Project")
   message(FATAL_ERROR "cmake should be executed not for 'src' subdirectory, but for the top directory of mVMC.")
 endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 
+add_subdirectory(pfapack)
+
 include_directories(include)
 include_directories(sfmt)
+add_definitions(-DMEXP=19937)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/pfapack)
 
 set(SOURCES_vmcmain
@@ -25,9 +28,10 @@ add_executable(vmcdry.out vmcdry.c)
 target_link_libraries(vmcdry.out StdFace)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
 
-target_link_libraries(vmc.out ${LAPACK_LIBRARIES} StdFace)
+target_link_libraries(vmc.out pfapack StdFace ${LAPACK_LIBRARIES})
 if(MPI_FOUND)
   target_link_libraries(vmc.out ${MPI_C_LIBRARIES})
 endif(MPI_FOUND)
-target_link_libraries(vmc.out pfapack)
+install(TARGETS vmcdry.out RUNTIME DESTINATION bin)
+install(TARGETS vmc.out RUNTIME DESTINATION bin)
 
