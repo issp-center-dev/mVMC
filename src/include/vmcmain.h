@@ -23,7 +23,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * Variational Monte Carlo
  * main program header
  *-------------------------------------------------------------
- * by Satoshi Morita and Ryui Kaneko
+ * by Satoshi Morita
  *-------------------------------------------------------------*/
 
 #ifndef _VMC_INCLUDE_FILES
@@ -37,6 +37,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <errno.h>
 #include <limits.h>
 #include <string.h>
+#include <complex.h>
 
 #ifdef _mpi_use
   #include <mpi.h>
@@ -54,42 +55,49 @@ inline void MPI_Comm_rank(MPI_Comm comm, int *rank) {*rank = 0; return;}
 extern int omp_get_max_threads(void);
 extern int omp_get_thread_num(void);
 
-#include "sfmt/SFMT.h"
+#include "../sfmt/SFMT.h"
+#include "version.h"
 #include "global.h"
 
-#include "safempi.c"
-#include "time.c"
-#include "workspace.c"
+#include "../safempi.c"
+#include "../safempi_fcmp.c"
+#include "../time.c"
+#include "../workspace.c"
 
 #ifdef _lapack
- #include "stcopt_dposv.c"
+ #include "../stcopt_dposv.c"
 #else
- #include "stcopt_pdposv.c"
+ #include "../stcopt_pdposv.c"
 #endif
 
-#include "gauleg.c"
-#include "legendrepoly.c"
-#include "splitloop.c"
-#include "avevar.c"
-#include "average.c"
+#include "../gauleg.c"
+#include "../legendrepoly.c"
+#include "../splitloop.c"
+#include "../avevar.c"
+#include "../average.c"
 
-#include "parameter.c"
-#include "projection.c"
-#include "slater.c"
-#include "qp.c"
-#include "matrix.c"
-#include "pfupdate.c"
-#include "pfupdate_two.c"
-#include "locgrn.c"
-#include "calham.c"
-#include "calgrn.c"
-#include "lslocgrn.c"
+#include "../parameter.c"
+#include "../projection.c"
+#include "../slater.c"
+#include "../qp.c"
+#include "../qp_real.c"
+#include "../matrix.c"
+#include "../pfupdate.c"
+#include "../pfupdate_real.c"
+#include "../pfupdate_two_fcmp.c"
+#include "../pfupdate_two_real.c"
+#include "../locgrn.c"
+#include "../locgrn_real.c"
+#include "../calham.c"
+#include "../calham_real.c"
+#include "../calgrn.c"
+//#include "lslocgrn.c" // ignoring Lanczos To be added
+#include "../setmemory.c"
+#include "../readdef.c"
+#include "../initfile.c"
 
-#include "setmemory.c"
-#include "readdef.c"
-#include "initfile.c"
-
-#include "vmcmake.c"
-#include "vmccal.c"
+#include "../vmcmake.c"
+#include "../vmcmake_real.c"
+#include "../vmccal.c"
 
 #endif /* _VMC_INCLUDE_FILES */
