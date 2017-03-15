@@ -39,7 +39,7 @@ EOF
 CC = mpifccpx
 F90 = mpifrtpx
 CFLAGS = -Kfast,parallel,ocl,openmp
-FFLAGS = -Kfast,ocl,auto,optmsg=2 -AT
+FFLAGS = -Kfast,ocl,auto,optmsg=2 -AT -Cpp -D FUJITSU
 LIBS = -SCALAPACK -SSL2BLAMP
 SFMTFLAGS = -Kfast,ocl,nomemalias
 EOF

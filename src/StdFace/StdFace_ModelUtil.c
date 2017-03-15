@@ -33,15 +33,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 void StdFace_exit(int errorcode /**< [in]*/)
 {
-  int ierr;
+  int ierr = 0;
   fflush(stdout);
   fflush(stderr);
 #ifdef MPI
   fprintf(stdout, "\n\n #######  You DO NOT have to WORRY about the following MPI-ERROR MESSAGE.  #######\n\n");
   ierr = MPI_Abort(MPI_COMM_WORLD, errorcode);
   ierr = MPI_Finalize();
-  if (ierr != 0) fprintf(stderr, "\n  MPI_Finalize() = %d\n\n", ierr);
 #endif
+  if (ierr != 0) fprintf(stderr, "\n  MPI_Finalize() = %d\n\n", ierr);
   exit(errorcode);
 }
 
@@ -1237,7 +1237,6 @@ void StdFace_Proj(struct StdIntList *StdI)
 static void StdFace_InitSiteSub(struct StdIntList *StdI)
 {
   int ii, jj, kk, prod;
-  int bound[3][2], iCellV[3], nBox[3], iCellV_fold[3];
   /*
   check Input parameters
   */
