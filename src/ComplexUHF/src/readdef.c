@@ -567,27 +567,29 @@ int ReadDefFileIdxPara(
 			case KWInitial:
 				/*initial.def------------------------------------*/
 				if(X->NInitial>0){
-					idx = 0;
-					while( fscanf(fp, "%d %d %d %d %lf %lf\n",
-								  &(X->Initial[idx][0]),
-								  &(X->Initial[idx][1]),
-								  &(X->Initial[idx][2]),
-								  &(X->Initial[idx][3]),
-								  &(X->ParaInitial[idx]),
-								  &(X->ParaInitial_theta[idx])
-					)!=EOF
-							){
-						idx++;
+                  idx = 0;
+					while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
+                      dImValue=0;
+                      sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
+                             &(X->Initial[idx][0]),
+                             &(X->Initial[idx][1]),
+                             &(X->Initial[idx][2]),
+                             &(X->Initial[idx][3]),
+                             &dReValue,
+                             &dImValue);
+                      X->ParaInitial[idx]=dReValue+dImValue*I;
+                      idx++;
 					}
-
-					if(idx!=X->NInitial){
-						info=ReadDefFileError(defname);
-					}
-				} else {
-					// info=ReadDefFileError(xNameListFile);
+                }
+                
+                if(idx!=X->NInitial){
+                  info=ReadDefFileError(defname);
+                }
+        	 else {
+					//	 info=ReadDefFileError(xNameListFile);
 				}
-				fclose(fp);
-				break;
+	        fclose(fp);
+    	    break;
 
 			default:
                 fprintf(stdout, "!! Warning: %s is not used for Hatree Fock Calculation. !!\n", defname);

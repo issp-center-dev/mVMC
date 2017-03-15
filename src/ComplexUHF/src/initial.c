@@ -45,9 +45,10 @@ void initial(struct BindStruct *X){
       spin_0  = X->Def.Initial[int_i][2]; 
       spin_1  = X->Def.Initial[int_i][3]; 
       
-      theta   = X->Def.ParaInitial_theta[int_i];
-      tmp     = X->Def.ParaInitial[int_i]*(cos(theta)+I*sin(theta));
+      //theta   = X->Def.ParaInitial_theta[int_i];
+      //tmp     = X->Def.ParaInitial[int_i]*(cos(theta)+I*sin(theta));
       //tmp     = I;
+      tmp =X->Def.ParaInitial[int_i];
       t_site_0 = site_0+spin_0*Ns;
       t_site_1 = site_1+spin_1*Ns;
       //printf(" Initial: %4d %4d %lf %lf \n",t_site_0,t_site_1,cabs(tmp),carg(tmp));
