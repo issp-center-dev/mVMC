@@ -178,9 +178,11 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	    else if(CheckWords(ctmp, "NSplitSize")==0){
 	      bufInt[IdxSplitSize]=(int)dtmp;
 	    }
+#ifdef _DEVELOPER
 	    else if(CheckWords(ctmp, "NStore")==0){
 	      NStoreO=(int)dtmp;
 	    }
+#endif
 	    else{
 	      fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
 	      info = ReadDefFileError(defname);
@@ -1349,7 +1351,7 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufDouble[IdxSROptRedCut]=0.001;
   bufDouble[IdxSROptStaDel]=0.02;
   bufDouble[IdxSROptStepDt]=0.02;
-  NStoreO=1;
+  NStoreO=0;
 }
 
 /**********************************************************************/
