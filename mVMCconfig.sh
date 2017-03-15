@@ -39,8 +39,8 @@ EOF
 CC = mpifccpx
 F90 = mpifrtpx
 CFLAGS = -Kfast,parallel,ocl,openmp
-FFLAGS = -Kfast,parallel,ocl,openmp,ocl,auto -AT -Cpp -D FUJITSU
-LIBS = -SCALAPACK -SSL2BLAMP
+FFLAGS = -Kfast,parallel,ocl,openmp,auto -AT -Cpp -D FUJITSU
+LIBS = -Kfast,parallel,ocl,openmp -SCALAPACK -SSL2BLAMP
 SFMTFLAGS = -Kfast,ocl,nomemalias
 EOF
     elif [ ${1} = "intel-openmpi" ]; then
