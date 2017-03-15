@@ -221,7 +221,6 @@ double *SlaterElm_real; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
 double *SlaterElmBF_real;/* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
 double *InvM_real; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
 double *PfM_real; /* PfM[QPidx] */
-
 /***** Quantum Projection *****/
 double complex *QPFullWeight; /* QPFullWeight[NQPFull] */
 double complex *QPFixWeight; /* QPFixWeight[NQPFix] */

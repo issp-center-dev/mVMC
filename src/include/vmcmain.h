@@ -23,7 +23,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * Variational Monte Carlo
  * main program header
  *-------------------------------------------------------------
- * by Satoshi Morita and Ryui Kaneko
+ * by Satoshi Morita
  *-------------------------------------------------------------*/
 
 #ifndef _VMC_INCLUDE_FILES
@@ -37,6 +37,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <errno.h>
 #include <limits.h>
 #include <string.h>
+#include <complex.h>
 
 #ifdef _mpi_use
   #include <mpi.h>
@@ -55,8 +56,8 @@ extern int omp_get_max_threads(void);
 extern int omp_get_thread_num(void);
 
 #include "../sfmt/SFMT.h"
+#include "version.h"
 #include "global.h"
-#include "../version.h"
 
 #include "../safempi.c"
 #include "../safempi_fcmp.c"
@@ -79,6 +80,7 @@ extern int omp_get_thread_num(void);
 #include "../projection.c"
 #include "../slater.c"
 #include "../qp.c"
+#include "../qp_real.c"
 #include "../matrix.c"
 #include "../pfupdate.c"
 //#include "../pfupdate_two.c"

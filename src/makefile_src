@@ -6,17 +6,19 @@ PFAPACK = pfapack/libpfapack.a
 SFMT = sfmt/SFMT.o
 STDFACE = StdFace/libStdFace.a
 OBJS = vmcmain.o $(PFAPACK) $(SFMT) $(STDFACE)
+OPTION = -D_mpi_use
 
 SOURCES = \
 average.c \
 avevar.c \
 calgrn.c \
 calham.c \
+calham_real.c \
 gauleg.c \
 initfile.c \
 legendrepoly.c \
 locgrn.c \
-lslocgrn.c \
+locgrn_real.c \
 matrix.c \
 parameter.c \
 pfupdate.c \
@@ -36,8 +38,6 @@ stcopt_dposv.c \
 stcopt_pdposv.c \
 time.c \
 vmccal.c \
-vmcdry.c \
-vmcmain.c \
 vmcmake.c \
 vmcmake_real.c \
 workspace.c
@@ -69,7 +69,7 @@ vmc.out : $(OBJS) $(STDFACE)
 	$(CC) -o $(OUT) $(OBJS) $(STDFACE) $(OPTION) $(CFLAGS) $(REPORT) $(LIB) -I$(INCLUDE_DIR)
 
 vmcdry.out : vmcdry.o $(STDFACE)
-	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) 
+	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) $(LIBS)
 
 vmcmain.o : $(SOURCES) $(HEADERS)
 	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT) -I$(INCLUDE_DIR)
