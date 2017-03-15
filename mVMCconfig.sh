@@ -5,7 +5,7 @@ if [ -z ${1} ] || [ ${1} = "help" ]; then
     echo "./config.sh system_name"
     echo " system_name should be chosen from below:"
     echo "        sekirei : ISSP system-B"
-    echo "            kei : Fujitsu K computer & FX10"
+    echo "        fujitsu : Fujitsu K computer & FX10"
     echo "  intel-openmpi : Intel Compiler + OpenMPI"
     echo "    intel-mpich : Intel Compiler + MPICH2 (or IntelMPI)"
     echo "    gcc-openmpi : GCC + OpenMPI"
@@ -34,7 +34,7 @@ FFLAGS = -O3 -implicitnone -xHost
 LIBS = -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm -openmp
 SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 EOF
-    elif [ ${1} = "kei" ]; then
+    elif [ ${1} = "fujitsu" ]; then
         cat > src/make.sys <<EOF
 CC = mpifccpx
 F90 = mpifrtpx
