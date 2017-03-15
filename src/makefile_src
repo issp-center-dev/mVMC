@@ -6,6 +6,7 @@ PFAPACK = pfapack/libpfapack.a
 SFMT = sfmt/SFMT.o
 STDFACE = StdFace/libStdFace.a
 OBJS = vmcmain.o $(PFAPACK) $(SFMT) $(STDFACE)
+OPTION = -D_mpi_use
 
 SOURCES = \
 average.c \
@@ -61,16 +62,16 @@ all :
 	cd ComplexUHF/src; $(MAKE) -f makefile_uhf
 
 vmc.out : $(OBJS) $(STDFACE)
-	$(CC) -o $(OUT) $(OBJS) $(STDFACE) $(OPTION) $(CFLAGS) $(REPORT) $(LIB)
+	$(CC) -o $(OUT) $(OBJS) $(STDFACE) $(OPTION) $(CFLAGS) $(LIBS)
 
 vmcdry.out : vmcdry.o $(STDFACE)
-	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) 
+	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) $(LIBS)
 
 vmcmain.o : $(SOURCES) $(HEADERS)
-	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT) -I ./include/
+	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) -I ./include/
 
 vmcdry.o : vmcdry.c
-	$(CC) -c vmcdry.c $(OPTION) $(CFLAGS) $(REPORT) -I ./include/
+	$(CC) -c vmcdry.c $(OPTION) $(CFLAGS) -I ./include/
 
 clean :
 	rm -f *.o vmc.out

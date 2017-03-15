@@ -19,7 +19,7 @@ xsetmem_def.c \
 xsetmem_large.c
 
 UHF : $(OBJS)
-	$(CC) -o $@ $^ $(CFLAGS) $(LIB)
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 SUFFIXES: .o .c
 

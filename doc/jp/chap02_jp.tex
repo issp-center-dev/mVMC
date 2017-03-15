@@ -47,44 +47,41 @@ $ tar xzvf mVMC-xxx.tar.gz
 
 mVMCは次の2通りの方法でインストールできます。
 
-\subsection{\texttt{config.sh}を使う方法}
+\subsection{\texttt{mVMCconfig.sh}を使う方法}
 
-展開したディレクトリのなかにある\verb|config.sh|スクリプトを次のように実行してください。
+展開したディレクトリのなかにある\verb|mVMCconfig.sh|スクリプトを次のように実行してください。
 (物性研システムB''sekirei''の場合)
 \begin{verbatim}
-$ bash config.sh sekirei
+$ bash mVMCconfig.sh sekirei
 \end{verbatim}
 これによりコンパイル環境設定ファイル\verb|make.sys|が\verb|src/|ディレクトリに作られます。
-\verb|config.sh|の引数は次のものに対応しています。
+\verb|mVMCconfig.sh|の引数は次のものに対応しています。
 \begin{itemize}
 \item \verb|sekirei| : 物性研究所システムB ''sekirei''
 \item \verb|kei| : 京コンピューターおよび物性研究所システムC ''maki''(FX10)
-\item \verb|openmpi-intel| : OpenMPI + intelコンパイラ
-\item \verb|mpich-intel| : MPICH + intelコンパイラ
-\item \verb|mpich-gnu-mkl| : MPICH + GNU Compiler + MKL
-\item \verb|gnu| :  OpenMPI + GCC
+\item \verb|intel-openmpi| : Intel コンパイラ + OpenMPI
+\item \verb|intel-mpich| : Intelコンパイラ + MPICH2 (or IntelMPI)
+\item \verb|gcc-mpich-mkl| : GCC + MPICH + MKL
+\item \verb|gcc-openmpi| : GCC + OpenMPI
 \end{itemize}
 
 \verb|make.sys|の中身は次のようになっています(物性研システムB ''sekirei''の場合)。
 \begin{verbatim}
 CC = mpicc
-LIB = -L$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
-      -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+F90 = mpif90
 CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
-REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
-OPTION = -D_mpi_use
-CP = cp -f -v
-AR = ar rv
-FORT = ifort
 FFLAGS = -O3 -implicitnone -xHost
-SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
+LIBS = -L $(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
+       -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 \end{verbatim}
 となります。それぞれのマクロ(変数)の説明は次のとおりです。
 \begin{itemize}
-\item \verb|CC| : Cコンパイルコマンド(\verb|mpicc|, \verb|mpifccpx|など)
-\item \verb|LIB| : ScaLAPACKのためのコンパイルオプション。
-\item \verb|CFLAGS| : その他のコンパイルオプション。
-\item \verb|FORT| : Fortranコンパイルコマンド(\verb|ifort|, \verb|frtpx|など)
+\item \verb|CC| : C コンパイラー(\verb|mpicc|, \verb|mpifccpx|など)
+\item \verb|F90| : fortran コンパイラー(\verb|ifort|, \verb|frtpx|など)
+\item \verb|LIBS| : リンカーオプション。
+\item \verb|CFLAGS| : C コンパイルオプション。
+\item \verb|FFLAGS| : fortran コンパイルオプション。
 \end{itemize}
 
 これでコンパイルのための準備が整います。その後
@@ -113,7 +110,7 @@ $ make mvmc
 mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示します。\\
 \\
 ├──COPYING\\
-├──config.sh\\
+├──mVMCconfig.sh\\
 ├──doc/\\
 │~~~~~~├──bib/\\
 │~~~~~~│~~~~~~├──elsart-num\_mod.bst\\

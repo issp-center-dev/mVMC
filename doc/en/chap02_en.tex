@@ -47,45 +47,42 @@ $ tar xzvf mVMC-xxx.tar.gz
 
 There are two kind of procedures to install mVMC.
 
-\subsection{Using \texttt{config.sh}}
+\subsection{Using \texttt{mVMCconfig.sh}}
 
-Please run \verb|config.sh| script in the mVMC directory as follow
+Please run \verb|mVMCconfig.sh| script in the mVMC directory as follow
 (for ISSP system-B ''sekirei''):
 \begin{verbatim}
-$ bash config.sh sekirei
+$ bash mVMCconfig.sh sekirei
 \end{verbatim}
 Then environmental configuration file \verb|make.sys| is generated in 
 \verb|src/| directory.
-The command-line argument of \verb|config.sh| is as follows:
+The command-line argument of \verb|mVMCconfig.sh| is as follows:
 \begin{itemize}
 \item \verb|sekirei| : ISSP system-B ''sekirei''
 \item \verb|kei| : K computer and ISSP system-C ''maki''
-\item \verb|openmpi-intel| : OpenMPI + intel compiler
-\item \verb|mpich-intel| : MPICH + intel compiler
-\item \verb|mpich-gnu-mkl| : MPICH + GNU Compiler + MKL
-\item \verb|gnu| : OpenMPI + GCC
+\item \verb|intel-openmpi| : Intel compiler + OpenMPI
+\item \verb|intel-mpich| : Intel compiler + MPICH2 (or IntelMPI)
+\item \verb|gcc-openmpi| : GCC + OpenMPI
+\item \verb|gcc-mpich-mkl| : GCC + MPICH + MKL
 \end{itemize}
 
 \verb|make.sys| is as follows (for ISSP-system-B ''sekirei''):
 \begin{verbatim}
 CC = mpicc
-LIB = -L$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
-      -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+F90 = mpif90
 CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
-REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
-OPTION = -D_mpi_use
-CP = cp -f -v
-AR = ar rv
-FORT = ifort
 FFLAGS = -O3 -implicitnone -xHost
-SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
+LIBS = -L $(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
+       -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 \end{verbatim}
 We explain macros of this file as: 
 \begin{itemize}
-\item \verb|CC| : The C Compilation command (\verb|mpicc|, \verb|mpifccpx|)
-\item \verb|Lib| : Compilation options for ScaLAPACK.
-\item \verb|CFLAGS| : Other compilation options.
-\item \verb|FORT| : Fortran compilation command (\verb|ifort|, \verb|frtpx|)
+\item \verb|CC| : C compiler (\verb|mpicc|, \verb|mpifccpx|)
+\item \verb|F90| : fortran compiler (\verb|ifort|, \verb|frtpx|)
+\item \verb|Libs| : Linker option
+\item \verb|CFLAGS| : C compile option
+\item \verb|FFLAGS| : fortran compile option
 \end{itemize}
 
 
@@ -117,7 +114,7 @@ If you keep this PATH, you should write above in \verb|~/.bashrc|
 When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.\\
 \\
 ├──COPYING\\
-├──config.sh\\
+├──mVMCconfig.sh\\
 ├──doc/\\
 │~~~~~~├──bib/\\
 │~~~~~~│~~~~~~├──elsart-num\_mod.bst\\
