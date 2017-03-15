@@ -178,11 +178,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 	    else if(CheckWords(ctmp, "NSplitSize")==0){
 	      bufInt[IdxSplitSize]=(int)dtmp;
 	    }
-#ifdef _DEVELOPER
 	    else if(CheckWords(ctmp, "NStore")==0){
 	      NStoreO=(int)dtmp;
+              NStoreO = 0;/*debug*/
 	    }
-#endif
 	    else{
 	      fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
 	      info = ReadDefFileError(defname);
