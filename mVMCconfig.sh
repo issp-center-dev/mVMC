@@ -20,18 +20,18 @@ else
         cat > src/make.sys <<EOF
 CC = mpicc
 F90 = mpif90
-CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
-FFLAGS = -O3 -implicitnone -xHost
-LIBS = -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+CFLAGS = -O3 -xHost -qopenmp -no-prec-div -Wno-unknown-pragmas
+FFLAGS = -O3 -xHost -qopenmp -implicitnone
+LIBS = -qopenmp -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
 SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 EOF
     elif [ ${1} = "kashiwa" ]; then
         cat > src/make.sys <<EOF
 CC = mpicc
 F90 = mpif90
-CFLAGS = -O3 -no-prec-div -xHost -openmp -Wno-unknown-pragmas
-FFLAGS = -O3 -implicitnone -xHost
-LIBS = -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm -openmp
+CFLAGS = -O3 -xHost -openmp -no-prec-div -Wno-unknown-pragmas
+FFLAGS = -O3 -xHost -openmp -implicitnone
+LIBS = -openmp -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm -openmp
 SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 EOF
     elif [ ${1} = "kei" ]; then
@@ -39,7 +39,7 @@ EOF
 CC = mpifccpx
 F90 = mpifrtpx
 CFLAGS = -Kfast,parallel,ocl,openmp
-FFLAGS = -Kfast,ocl,auto,optmsg=2 -AT -Cpp -D FUJITSU
+FFLAGS = -Kfast,parallel,ocl,openmp,ocl,auto -AT -Cpp -D FUJITSU
 LIBS = -SCALAPACK -SSL2BLAMP
 SFMTFLAGS = -Kfast,ocl,nomemalias
 EOF
@@ -47,44 +47,44 @@ EOF
         cat > src/make.sys <<EOF
 CC = mpicc
 F90 = mpif90
-CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas -I \${MKLROOT}/include
-FFLAGS = -O3 -implicitnone -xHost
-LIBS = -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_openmpi_lp64 -lpthread -lm -ldl
+CFLAGS = -O3 -xHost -qopenmp -no-prec-div -Wno-unknown-pragmas -I \${MKLROOT}/include
+FFLAGS = -O3 -xHost -qopenmp -implicitnone
+LIBS = -qopenmp -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_openmpi_lp64 -lpthread -lm -ldl
 SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 EOF
     elif [ ${1} = "sol" ]; then
         cat > src/make.sys <<EOF
 CC = mpicc
 F90 = mpif90
-CFLAGS = -O3 -no-prec-div -xHost -openmp -Wno-unknown-pragmas
-FFLAGS = -O3 -implicitnone -xHost
-LIBS = -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_openmpi_lp64 -lpthread -lm -openmp
+CFLAGS = -O3 -xHost -openmp -no-prec-div -Wno-unknown-pragmas
+FFLAGS = -O3 -xHost -openmp -implicitnone
+LIBS = -openmp -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_openmpi_lp64 -lpthread -lm -openmp
 SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 EOF
     elif [ ${1} = "intel-mpich" ]; then
         cat > src/make.sys <<EOF
 CC = mpicc
 F90 = mpif90
-CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas -I \${MKLROOT}/include
-FFLAGS = -O3 -implicitnone -xHost
-LIBS = -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_intelmpi_lp64 -lpthread -lm -ldl
+CFLAGS = -O3 -xHost -qopenmp -no-prec-div -Wno-unknown-pragmas -I \${MKLROOT}/include
+FFLAGS = -O3 -xHost -qopenmp -implicitnone
+LIBS = -qopenmp -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_intelmpi_lp64 -lpthread -lm -ldl
 SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 EOF
     elif [ ${1} = "reims" ]; then
         cat > src/make.sys <<EOF
 CC = mpicc
 F90 = mpif90
-CFLAGS = -O3 -no-prec-div -xHost -openmp -Wno-unknown-pragmas
-FFLAGS = -O3 -implicitnone -xHost
-LIBS = -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -lpthread -lm -openmp
+CFLAGS = -O3 -xHost -openmp -no-prec-div -Wno-unknown-pragmas
+FFLAGS = -O3 -xHost -openmp -implicitnone
+LIBS = -openmp -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -lpthread -lm -openmp
 SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 EOF
     elif [ ${1} = "gcc-openmpi" ]; then
         cat > src/make.sys <<EOF
 CC = mpicc
 F90 = gfortran
-FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
+FFLAGS = -O3 -fopenmp -fimplicit-none
 LIBS = -fopenmp -lblacs-openmpi -lscalapack-openmpi -llapack -lblas -lm
 SFMTFLAGS =
 EOF
@@ -93,8 +93,8 @@ EOF
 CC = mpicc
 F90 = gfortran
 CFLAGS = -O3 -fopenmp -I\${MKLROOT}/include
-FFLAGS = -O3 -fimplicit-none
-LIBS = -L\${MKLROOT}/lib -Wl,-rpath,\${MKLROOT}/lib -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_mpich_lp64 -lpthread -lm -ldl
+FFLAGS = -O3 -fopenmp -fimplicit-none
+LIBS = -fopenmp -L\${MKLROOT}/lib -Wl,-rpath,\${MKLROOT}/lib -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_mpich_lp64 -lpthread -lm -ldl
 SFMTFLAGS =
 EOF
     elif [ ${1} = "jupiter" ]; then
