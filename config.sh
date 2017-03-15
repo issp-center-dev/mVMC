@@ -26,7 +26,7 @@ REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xHost
 SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
 EOF
@@ -39,7 +39,7 @@ REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xHost
 SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
 EOF
@@ -52,7 +52,7 @@ REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xHost
 SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
 EOF
@@ -78,7 +78,7 @@ REPORT = -vec-report1
 OPTION = -D_mpi_use -D_lapack
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone
 SMFTFLAGS = -O3 -no-ansi-alias -DMEXP=19937
 EOF
@@ -91,7 +91,7 @@ REPORT = -openmp-report1 -vec-report=1
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xSSE2
 SMFTFLAGS = -O3 -no-ansi-alias -xSSE2 -DMEXP=19937 -DHAVE_SSE2
 EOF
@@ -118,7 +118,7 @@ REPORT = -openmp-report1 -vec-report=1
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xSSE2
 SMFTFLAGS = -O3 -no-ansi-alias -xSSE2 -DMEXP=19937 -DHAVE_SSE2
 EOF
@@ -131,7 +131,7 @@ REPORT = -openmp-report1 -vec-report=1
 OPTION = -D_mpi_use
 CP = cp -f -v
 AR = ar rv
-FORT = ifort
+FORT = mpif90
 FFLAGS = -O3 -implicitnone -xSSE2
 SMFTFLAGS = -O3 -no-ansi-alias -xSSE2 -DMEXP=19937 -DHAVE_SSE2
 EOF
@@ -187,14 +187,15 @@ help:
 	@echo "make <entry>"
 	@echo ""
 	@echo "<entry> is chosen from below"
-	@echo "      mvmc : Build simulator mVMC in src/"
+	@echo "      mvmc : Build simulator mVMC in src/ and tool/"
 	@echo " userguide : Generate userguid_jp.pdf & userguide_en.pdf in doc/"
-	@echo "     clean : Remove all generated files excepting makefile"
-	@echo " veryclean : Remove all generated files including makefile"
+	@echo "     clean : Remove all generated files excepting makefile and doc/"
+	@echo " veryclean : Remove all generated files including makefile and doc/"
 	@echo ""
 
 mvmc:
 	cd src;make -f makefile_src
+	cd tool;make -f makefile_tool
 
 userguide:
 	cd doc/jp/;make -f makefile_doc_jp;mv userguide_jp.pdf ../
@@ -202,12 +203,13 @@ userguide:
 
 clean:
 	cd src; make -f makefile_src clean
-	cd doc/jp; make -f makefile_doc_jp clean
-	cd doc/en; make -f makefile_doc_en clean
-	rm -f doc/userguide_??.pdf
+	cd tool; make -f makefile_tool clean
 
 veryclean:
 	make clean
+	cd doc/jp; make -f makefile_doc_jp clean
+	cd doc/en; make -f makefile_doc_en clean
+	rm -f doc/userguide_??.pdf
 	rm -f src/make.sys makefile
 EOF
 fi

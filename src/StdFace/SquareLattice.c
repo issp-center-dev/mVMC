@@ -1,10 +1,6 @@
 /*
-mVMC - A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
-Copyright (C) 2016 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
-
-his program is developed based on the mVMC-mini program
-(https://github.com/fiber-miniapp/mVMC-mini)
-which follows "The BSD 3-Clause License".
+HPhi-mVMC-StdFace - Common input generator
+Copyright (C) 2015 The University of Tokyo
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,11 +9,11 @@ the Free Software Foundation, either version 3 of the License, or
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
@@ -37,9 +33,8 @@ void StdFace_Tetragonal(struct StdIntList *StdI, char *model)
 {
   int isite, jsite;
   int iL, iW, kCell;
-  int ktrans, kintr;
   FILE *fp;
-  double complex phase;
+  double complex Cphase;
 
   fprintf(stdout, "\n");
   fprintf(stdout, "#######  Parameter Summary  #######\n");
@@ -52,28 +47,20 @@ void StdFace_Tetragonal(struct StdIntList *StdI, char *model)
   StdI->NsiteUC = 1;
   /**/
   fprintf(stdout, "  @ Lattice Size & Shape\n\n");
-  /*
+  
   StdFace_PrintVal_d("a", &StdI->a, 1.0);
-  StdFace_PrintVal_d("a0", &StdI->a0, StdI->a);
-  StdFace_PrintVal_d("a1", &StdI->a1, StdI->a);
-  StdFace_PrintVal_d("Wx", &StdI->Wx, StdI->a0);
-  StdFace_PrintVal_d("Wy", &StdI->Wy, 0.0);
-  StdFace_PrintVal_d("Lx", &StdI->Lx, 0.0);
-  StdFace_PrintVal_d("Ly", &StdI->Ly, StdI->a1);
-  */
-  StdI->a0 = 1.0; StdI->a1 = 1.0;
-  StdFace_InitSite2D(StdI, fp,
-    StdI->a0, 0.0, 0.0, StdI->a1);
-  StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0;
+  StdFace_PrintVal_d("Wlength", &StdI->length[0], StdI->a);
+  StdFace_PrintVal_d("Llength", &StdI->length[1], StdI->a);
+  StdFace_PrintVal_d("Wx", &StdI->direct[0][0], StdI->length[0]);
+  StdFace_PrintVal_d("Wy", &StdI->direct[0][1], 0.0);
+  StdFace_PrintVal_d("Lx", &StdI->direct[1][0], 0.0);
+  StdFace_PrintVal_d("Ly", &StdI->direct[1][1], StdI->length[1]);
+  
+  StdFace_PrintVal_d("phase0", &StdI->phase[0], 0.0);
+  StdFace_PrintVal_d("phase1", &StdI->phase[1], 0.0);
   /**/
-  StdFace_PrintVal_d("phase0", &StdI->phase0, 0.0);
-  StdFace_PrintVal_d("phase1", &StdI->phase1, 0.0);
-  StdI->ExpPhase0 = cos(StdI->pi180 * StdI->phase0) + I*sin(StdI->pi180 * StdI->phase0);
-  StdI->ExpPhase1 = cos(StdI->pi180 * StdI->phase1) + I*sin(StdI->pi180 * StdI->phase1);
-  if (cabs(StdI->ExpPhase0 + 1.0) < 0.000001) StdI->AntiPeriod0 = 1;
-  else StdI->AntiPeriod0 = 0;
-  if (cabs(StdI->ExpPhase1 + 1.0) < 0.000001) StdI->AntiPeriod1 = 1;
-  else StdI->AntiPeriod1 = 0;
+  StdFace_InitSite(StdI, fp, 2);
+  StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0; StdI->tau[0][2] = 0.0;
   /**/
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
   StdFace_NotUsed_J("J2", StdI->J2All, StdI->J2);
@@ -167,18 +154,7 @@ void StdFace_Tetragonal(struct StdIntList *StdI, char *model)
       StdI->nsite / 2 * (3 * StdI->S2 + 1) * (3 * StdI->S2 + 1);
   }
   /**/
-  StdI->transindx = (int **)malloc(sizeof(int*) * StdI->ntrans);
-  StdI->trans = (double complex *)malloc(sizeof(double complex) * StdI->ntrans);
-  for (ktrans = 0; ktrans < StdI->ntrans; ktrans++){
-    StdI->transindx[ktrans] = (int *)malloc(sizeof(int) * 4);
-  }
-  /**/
-  StdI->intrindx = (int **)malloc(sizeof(int*) * StdI->nintr);
-  StdI->intr = (double complex *)malloc(sizeof(double complex) * StdI->nintr);
-  for (kintr = 0; kintr < StdI->nintr; kintr++) {
-    StdI->intrindx[kintr] = (int *)malloc(sizeof(int) * 8);
-  }
-   StdFace_InterAllSeparate(StdI);/*debug*/
+  StdFace_MallocInteractions(StdI);
   /*
    Set Transfer & Interaction
   */
@@ -200,7 +176,6 @@ void StdFace_Tetragonal(struct StdIntList *StdI, char *model)
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
       StdFace_Hopping(StdI, StdI->mu, isite, isite, 0);
-      StdFace_intr(StdI, StdI->U, isite, 0, isite, 0, isite, 1, isite, 1);
       StdI->Cintra[StdI->NCintra] = StdI->U; StdI->CintraIndx[StdI->NCintra][0] = isite; StdI->NCintra += 1;
       /**/
       if (strcmp(StdI->model, "kondo") == 0 ) {
@@ -211,54 +186,54 @@ void StdFace_Tetragonal(struct StdIntList *StdI, char *model)
     /*
      Nearest neighbor along W
     */
-    StdFace_SetLabel(StdI, fp, iW, iL, 1, 0, 0, 0, &isite, &jsite, 1, &phase);
+    StdFace_SetLabel(StdI, fp, iW, iL, 1, 0, 0, 0, &isite, &jsite, 1, &Cphase);
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
       StdFace_GeneralJ(StdI, StdI->J0, StdI->S2, StdI->S2, isite, jsite);
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
-      StdFace_Hopping(StdI, phase * StdI->t0, isite, jsite, 1);
+      StdFace_Hopping(StdI, Cphase * StdI->t0, isite, jsite, 1);
       StdFace_Coulomb(StdI, StdI->V0, isite, jsite);
     }
     /*
      Nearest neighbor along L
     */
-    StdFace_SetLabel(StdI, fp, iW, iL, 0, 1, 0, 0, &isite, &jsite, 1, &phase);
+    StdFace_SetLabel(StdI, fp, iW, iL, 0, 1, 0, 0, &isite, &jsite, 1, &Cphase);
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
       StdFace_GeneralJ(StdI, StdI->J1, StdI->S2, StdI->S2, isite, jsite);
     }
     else {
-      StdFace_Hopping(StdI, phase * StdI->t1, isite, jsite, 1);
+      StdFace_Hopping(StdI, Cphase * StdI->t1, isite, jsite, 1);
       StdFace_Coulomb(StdI, StdI->V1, isite, jsite);
     }
     /*
      Second nearest neighbor 1
     */
-    StdFace_SetLabel(StdI, fp, iW, iL, 1, 1, 0, 0, &isite, &jsite, 2, &phase);
+    StdFace_SetLabel(StdI, fp, iW, iL, 1, 1, 0, 0, &isite, &jsite, 2, &Cphase);
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
       StdFace_GeneralJ(StdI, StdI->Jp, StdI->S2, StdI->S2, isite, jsite);
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
-      StdFace_Hopping(StdI, phase * StdI->tp, isite, jsite, 1);
+      StdFace_Hopping(StdI, Cphase * StdI->tp, isite, jsite, 1);
       StdFace_Coulomb(StdI, StdI->Vp, isite, jsite);
     }
     /*
      Second nearest neighbor 2
     */
-    StdFace_SetLabel(StdI, fp, iW, iL, 1, -1, 0, 0, &isite, &jsite, 2, &phase);
+    StdFace_SetLabel(StdI, fp, iW, iL, 1, -1, 0, 0, &isite, &jsite, 2, &Cphase);
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
       StdFace_GeneralJ(StdI, StdI->Jp, StdI->S2, StdI->S2, isite, jsite);
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
-      StdFace_Hopping(StdI, phase * StdI->tp, isite, jsite, 1);
+      StdFace_Hopping(StdI, Cphase * StdI->tp, isite, jsite, 1);
       StdFace_Coulomb(StdI, StdI->Vp, isite, jsite);
     }/*if (model != "spin")*/
   }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
   fprintf(fp, "plot \'-\' w d lc 7\n0.0 0.0\nend\npause -1\n");
   fclose(fp);
- }
-
+  StdFace_PrintGeometry(StdI);
+}
