@@ -10,10 +10,10 @@ if [ -z ${1} ] || [ ${1} = "help" ]; then
     echo "    intel-mpich : Intel Compiler + MPICH2 (or IntelMPI)"
     echo "    gcc-openmpi : GCC + OpenMPI"
     echo "  gcc-mpich-mkl : GCC + MPICH + MKL"
-    echo "        kashiwa : Remain for compatibility"
-    echo "        jupiter : Remain for compatibility"
-    echo "            sol : Remain for compatibility"
-    echo "          reims : Remain for compatibility"
+#    echo "        kashiwa : Remain for compatibility"
+#    echo "        jupiter : Remain for compatibility"
+#    echo "            sol : Remain for compatibility"
+#    echo "          reims : Remain for compatibility"
     echo ""
 else
     if [ ${1} = "sekirei" ]; then
