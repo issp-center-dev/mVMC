@@ -817,6 +817,7 @@ void StdFace_PrintXSF(struct StdIntList *StdI) {
       fprintf(fp, "H %15.5f %15.5f %15.5f\n", vec[0], vec[1], vec[2]);
     }
   }
+  fflush(fp);
   fclose(fp);
 }/*void StdFace_PrintXSF*/
 /*
@@ -1018,6 +1019,7 @@ void StdFace_PrintGeometry(struct StdIntList *StdI) {
       }/*for (isite = 0; isite < StdI->NsiteUC; isite++)*/
     }/* for (iCell = 0; iCell < StdI->NCell; iCell++)*/
   }
+  fflush(fp);
   fclose(fp);
 
 }/*void StdFace_PrintGeometry()*/
@@ -1218,6 +1220,7 @@ void StdFace_Proj(struct StdIntList *StdI)
       }
     }
   }
+  fflush(fp);
   fclose(fp);
   fprintf(stdout, "    qptransidx.def is written.\n");
 

@@ -2,7 +2,7 @@
 mVMC - A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
 Copyright (C) 2016 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
 
-his program is developed based on the mVMC-mini program
+This program is developed based on the mVMC-mini program
 (https://github.com/fiber-miniapp/mVMC-mini)
 which follows "The BSD 3-Clause License".
 
@@ -203,6 +203,7 @@ int main(int argc, char* argv[])
     }
     strcpy(fileDefList, "namelist.def");
   }
+  MPI_Barrier(comm0);
 
   StartTimer(11);
   if(rank0==0) fprintf(stdout,"Start: Read *def files.\n");
