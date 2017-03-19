@@ -14,7 +14,7 @@ add_definitions(-DMEXP=19937)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/pfapack)
 
 set(SOURCES_vmcmain
-        vmcmain.c   
+        vmcmain.c physcal_lanczos.c  
  )
 
 set(SOURCES_sfmt

@@ -27,6 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 /* #include "fjcoll.h" */
 #include "vmcmain.h"
+#include "physcal_lanczos.h"
 
 int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2);
 int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2);
@@ -575,61 +576,16 @@ void outputData() {
     }
 
     if (NLanczosMode > 0) {
-      if (AllComplexFlag == 0) {
-        /* zvo_ls.dat */
-        fprintf(FileLS, "% .18e  ", QQQQ_real[2]);  /* H * I = QQQQ[1],[2],[4],[8] */      //TBC
-        fprintf(FileLS, "% .18e  ", QQQQ_real[3]);  /* H * H = QQQQ[3],[6],[9],[12] */     //TBC
-        fprintf(FileLS, "% .18e  ", QQQQ_real[2]); /* H^2 * I = QQQQ[5],[10] */           //TBC
-        fprintf(FileLS, "% .18e  ", QQQQ_real[11]); /* H^2 * H = QQQQ[7],[11],[13],[14] */ //TBC
-        fprintf(FileLS, "% .18e\n", QQQQ_real[15]); /* H^2 * H^2 = QQQQ[15] */             //TBC
-
-        /* zvo_ls_qqqq.dat */
-        for (i = 0; i < NLSHam * NLSHam * NLSHam * NLSHam; i++) {
-          fprintf(FileLSQQQQ, "% .18e  ", QQQQ_real[i]);
-        }
-        fprintf(FileLSQQQQ, "\n");
-
-        if (NLanczosMode > 1) {
-          /* zvo_ls_qcisajsq.dat */
-          for (i = 0; i < NLSHam * NLSHam * NCisAjs; i++) {
-            fprintf(FileLSQCisAjsQ, "% .18e  ", QCisAjsQ_real[i]);
-          }
-          fprintf(FileLSQCisAjsQ, "\n");
-
-          /* zvo_ls_qcisajscktaltq.dat */
-          for (i = 0; i < NLSHam * NLSHam * NCisAjsCktAlt; i++) {
-            fprintf(FileLSQCisAjsCktAltQ, "% .18e  ", QCisAjsCktAltQ_real[i]);
-          }
-          fprintf(FileLSQCisAjsCktAltQ, "\n");
-        }
-      } else {
-        /* zvo_ls.dat */
-        fprintf(FileLS, "% .18e  ", creal(QQQQ[2]));  /* H * I = QQQQ[1],[2],[4],[8] */      //TBC
-        fprintf(FileLS, "% .18e  ", creal(QQQQ[3]));  /* H * H = QQQQ[3],[6],[9],[12] */     //TBC
-        fprintf(FileLS, "% .18e  ", creal(QQQQ[2])); /* H^2 * I = QQQQ[5],[10] */           //TBC
-        fprintf(FileLS, "% .18e  ", creal(QQQQ[11])); /* H^2 * H = QQQQ[7],[11],[13],[14] */ //TBC
-        fprintf(FileLS, "% .18e\n", creal(QQQQ[15])); /* H^2 * H^2 = QQQQ[15] */             //TBC
-
-        /* zvo_ls_qqqq.dat */
-        for (i = 0; i < NLSHam * NLSHam * NLSHam * NLSHam; i++) {
-          fprintf(FileLSQQQQ, "% .18e  ", creal(QQQQ[i]));
-        }
-        fprintf(FileLSQQQQ, "\n");
-
-        if (NLanczosMode > 1) {
-          /* zvo_ls_qcisajsq.dat */
-          for (i = 0; i < NLSHam * NLSHam * NCisAjs; i++) {
-            fprintf(FileLSQCisAjsQ, "% .18e  ", creal(QCisAjsQ[i]));
-          }
-          fprintf(FileLSQCisAjsQ, "\n");
-
-          /* zvo_ls_qcisajscktaltq.dat */
-          for (i = 0; i < NLSHam * NLSHam * NCisAjsCktAlt; i++) {
-            fprintf(FileLSQCisAjsCktAltQ, "% .18e  ",  creal(QCisAjsCktAltQ[i]));
-          }
-          fprintf(FileLSQCisAjsCktAltQ, "\n");
-        }
-
+      if (AllComplexFlag == 0) { //real
+		PhysCalLanczos_real(
+				QQQQ_real, QCisAjsCktAltQ_real, QCisAjsCktAltQ_real,
+				NLSHam, NCisAjs, NCisAjsCktAlt, NLanczosMode,
+				FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ);
+      }else { //complex
+		PhysCalLanczos_fcmp(
+				  QQQQ, QCisAjsCktAltQ, QCisAjsCktAltQ,
+				  NLSHam, NCisAjs, NCisAjsCktAlt, NLanczosMode,
+				  FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ);
       }
     }
   }
