@@ -3,7 +3,7 @@
 #include <complex.h>
 #include <stdio.h>
 
-void PhysCalLanczos_real(
+int PhysCalLanczos_real(
  double *_QQQQ_real,
  double *_QCisAjsQ_real,
  double *_QCisAjsCktAltQ_real,
@@ -17,7 +17,7 @@ void PhysCalLanczos_real(
  FILE *_FileLSQCisAjsCktAltQ
 );
 
-void PhysCalLanczos_fcmp(
+int PhysCalLanczos_fcmp(
  double complex* _QQQQ,
  double complex* _QCisAjsQ,
  double complex* _QCisAjsCktAltQ,
