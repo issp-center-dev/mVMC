@@ -243,10 +243,10 @@ void VMCMainCal(MPI_Comm comm) {
         /* Calculate local QQQQ */
         StartTimer(43);
         if(AllComplexFlag==0) {
-          LSLocalQ_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
+          LSLocalQ_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt, LSLQ_real);
           calculateQQQQ_real(QQQQ_real,LSLQ_real,w,NLSHam);
         }else{
-            LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+            LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt, LSLQ);
             calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
         }
         StopTimer(43);
@@ -479,10 +479,10 @@ void VMC_BF_MainCal(MPI_Comm comm) {
                 /* Calculate local QQQQ */
                 StartTimer(43);
                 if (AllComplexFlag == 0) {
-                    LSLocalQ_real(creal(e), creal(ip), eleIdx, eleCfg, eleNum, eleProjCnt);
+                    LSLocalQ_real(creal(e), creal(ip), eleIdx, eleCfg, eleNum, eleProjCnt, LSLQ_real);
                     calculateQQQQ_real(QQQQ_real, LSLQ_real, w, NLSHam);
                 } else {
-                    LSLocalQ(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt);
+                    LSLocalQ(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt, LSLQ);
                     calculateQQQQ(QQQQ, LSLQ, w, NLSHam);
                     return;
                 }
@@ -788,7 +788,7 @@ void calculateQQQQ(double complex *qqqq, const double complex*lslq, const double
     rp = tmp%nLSHam; tmp=tmp/nLSHam;
     rq = tmp%nLSHam;
 
-    qqqq[i] += w * lslq[rq*nLSHam+ri] * lslq[rp*nLSHam+rj];
+    qqqq[i] += w * conj(lslq[rq*nLSHam+ri]) * lslq[rp*nLSHam+rj];
    //fprintf(stdout, "Debug: qqqq[%d]= %lf, %lf \n", i, creal(qqqq[i]),cimag(qqqq[i]));
   }
 

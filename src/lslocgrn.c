@@ -74,7 +74,7 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
 void copyMAll(double complex *invM_from, double complex *pfM_from, double complex *invM_to, double complex *pfM_to);
 
 /* Calculate <psi|QQ|x>/<psi|x> */
-void LSLocalQ(const double complex h1, const double complex ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt)
+void LSLocalQ(const double complex h1, const double complex ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, double complex *_LSLQ)
 {
   double complex e0,h2;
 
@@ -85,12 +85,12 @@ void LSLocalQ(const double complex h1, const double complex ip, int *eleIdx, int
   h2 += calculateHW(h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
 
   /* calculate local Q (IQ) */
-  LSLQ[0] = 1.0; /* I */
-  LSLQ[1] = h1;  /* H = V+K+W */
+  _LSLQ[0] = 1.0; /* I */
+  _LSLQ[1] = h1;  /* H = V+K+W */
 
   /* calculate local Q (KQ) */
-  LSLQ[2] = h1;  /* H */
-  LSLQ[3] = h2;  /* H*H */
+  _LSLQ[2] = h1;  /* H */
+  _LSLQ[3] = h2;  /* H*H */
 
   return;
 }

@@ -33,7 +33,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "pfupdate_two_real.h"
 
 /* Calculate <psi|QQ|x>/<psi|x> */
-void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt)
+void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, double *_LSLQ_real)
 {
   double e0,h2;
 
@@ -44,12 +44,12 @@ void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, i
   h2 += calculateHW_real(h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
 
   /* calculate local Q (IQ) */
-  LSLQ_real[0] = 1.0; /* I */
-  LSLQ_real[1] = h1;  /* H = V+K+W */
+  _LSLQ_real[0] = 1.0; /* I */
+  _LSLQ_real[1] = h1;  /* H = V+K+W */
 
   /* calculate local Q (KQ) */
-  LSLQ_real[2] = h1;  /* H */
-  LSLQ_real[3] = h2;  /* H*H */
+  _LSLQ_real[2] = h1;  /* H */
+  _LSLQ_real[3] = h2;  /* H*H */
 
   return;
 }
