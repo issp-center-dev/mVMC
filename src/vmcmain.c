@@ -582,7 +582,6 @@ void outputData() {
 				NLSHam, NCisAjs, NCisAjsCktAlt, NLanczosMode,
 				FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ);
       }else { //complex
-		  fprintf(stdout, "Debug: test1\n");
 		PhysCalLanczos_fcmp(
 				  QQQQ, QCisAjsCktAltQ, QCisAjsCktAltQ,
 				  NLSHam, NCisAjs, NCisAjsCktAlt, NLanczosMode,

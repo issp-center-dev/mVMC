@@ -9,6 +9,19 @@ int CalculateEneByAlpha(double H1, double H2_1, double H2_2,
 						double H3, double H4, double alpha,
 						double *ene, double*ene_V);
 
+int CalculateEne_fcmp(
+		double complex H1, double complex H2_1, double complex H2_2,
+		double complex H3, double complex H4,
+		double *alpha_p, double *ene_p, double *ene_vp,
+		double *alpha_m, double *ene_m, double *ene_vm
+);
+
+int CalculateEneByAlpha_fcmp(
+		double complex H1, double complex H2_1, double complex H2_2,
+		double complex H3, double complex H4, double alpha,
+		double *ene, double*ene_V
+);
+
 int PhysCalLanczos_real
 (
  double *_QQQQ_real,
@@ -100,6 +113,15 @@ int PhysCalLanczos_fcmp(
 				 &alpha_p,  &ene_p,  &ene_vp, &alpha_m,  &ene_m,  &ene_vm)==0){
 		return -1;
 	}
+
+	/*
+	if(!CalculateEne_fcmp(_QQQQ[2],_QQQQ[3],
+					 _QQQQ[10], _QQQQ[11], _QQQQ[15],
+					 &alpha_p,  &ene_p,  &ene_vp, &alpha_m,  &ene_m,  &ene_vm)==0){
+		return -1;
+	}
+	 */
+
 	fprintf(_FileLS, "% .18e  ", alpha_p);
 	fprintf(_FileLS, "% .18e  ", ene_p);
 	fprintf(_FileLS, "% .18e  ", ene_vp);
@@ -174,5 +196,50 @@ int CalculateEneByAlpha(
 	if(fabs(tmp_2/H1) < pow(10.0, -12)) return -1;
 	*ene_V        =  ((tmp_3/tmp_2)-pow((tmp_1/tmp_2), 2))/pow((tmp_1/tmp_2),2);
 	*ene		= tmp_1/tmp_2;
+	return 0;
+}
+
+int CalculateEne_fcmp(
+		double complex H1, double complex H2_1, double complex H2_2,
+		double complex H3, double complex H4,
+		double *alpha_p, double *ene_p, double *ene_vp,
+		double *alpha_m, double *ene_m, double *ene_vm
+){
+	double tmp_AA, tmp_BB, tmp_CC, tmp_xp, tmp_xm;
+	//determine alpha
+	tmp_AA  = creal(H2_1*(H2_1+H2_2)-2*H1*H3);
+	tmp_BB  = creal(H1*H2_1+H3);
+	tmp_CC  = creal(H2_1*pow(H2_1+H2_2,2)-pow(H1,2)*H2_1*(H2_1+2.0*H2_2)+4*pow(H1, 3)*H3-2.0*H1*(2*H2_1+H2_2)*H3+H3*H3);
+	if(tmp_CC < 0){
+		return -1;
+	}
+	tmp_xp  = (tmp_BB+sqrt(tmp_CC))/tmp_AA;
+	tmp_xm  = (tmp_BB-sqrt(tmp_CC))/tmp_AA;
+	*alpha_p = creal(tmp_xp);
+	*alpha_m = creal(tmp_xm);
+
+	//calculate energy
+	if(!CalculateEneByAlpha_fcmp(H1, H2_1, H2_2, H3, H4, *alpha_p, ene_p, ene_vp)==0){
+		return -1;
+	}
+	if(!CalculateEneByAlpha_fcmp(H1, H2_1, H2_2, H3, H4, *alpha_m, ene_m, ene_vm)==0){
+		return -1;
+	}
+
+	return 0;
+}
+
+int CalculateEneByAlpha_fcmp(
+		double complex H1, double complex H2_1, double complex H2_2,
+		double complex H3, double complex H4, double alpha,
+		double *ene, double*ene_V
+){
+	double complex tmp_1, tmp_2, tmp_3;
+	tmp_1        = H1+alpha*(H2_1+H2_2)+alpha*alpha*H3;
+	tmp_2        = 1.0+2*alpha*H1+alpha*alpha*H2_1;
+	tmp_3        = H2_1+2*alpha*H3+alpha*alpha*H4;
+	if(fabs(creal(tmp_2/H1)) < pow(10.0, -12)) return -1;
+	*ene_V        =  creal(((tmp_3/tmp_2)-pow((tmp_1/tmp_2), 2))/pow((tmp_1/tmp_2),2));
+	*ene		= creal(tmp_1/tmp_2);
 	return 0;
 }

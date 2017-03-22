@@ -248,7 +248,6 @@ void VMCMainCal(MPI_Comm comm) {
         }else{
             LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
             calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
-            return;
         }
         StopTimer(43);
 
