@@ -808,7 +808,7 @@ void calculateQCAQ(double complex*qcaq, const double complex*lslca, const double
     rp = tmp%nLSHam; tmp = tmp/nLSHam;
     rq = tmp%nLSHam;
 
-    qcaq[i] += w * lslca[rq*nCA+idx] * lslq[rp*nLSHam];
+    qcaq[i] += w * conj(lslca[rq*nCA+idx]) * lslq[rp*nLSHam];
   }
 
   return;
@@ -831,7 +831,7 @@ void calculateQCACAQ(double complex *qcacaq, const double complex *lslca, const 
     ri = cacaIdx[idx][0];
     rj = cacaIdx[idx][1];
 
-    qcacaq[i] += w * lslca[rq*nCA+ri] * lslca[rp*nCA+rj];
+    qcacaq[i] += w * conj(lslca[rq*nCA+ri]) * lslca[rp*nCA+rj];
   }
 
   return;
