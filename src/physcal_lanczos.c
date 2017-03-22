@@ -1,5 +1,7 @@
 #include "physcal_lanczos.h"
 #include "math.h"
+#include "stdlib.h"
+
 int CalculateEne(
 		double H1, double H2_1, double H2_2, double H3, double H4,
 		double *alpha_p, double *ene_p, double *ene_vp,
@@ -8,6 +10,19 @@ int CalculateEne(
 int CalculateEneByAlpha(double H1, double H2_1, double H2_2,
 						double H3, double H4, double alpha,
 						double *ene, double*ene_V);
+
+int CalculatePhysVal_real(
+		double H1, double H2_1, double alpha,
+		double *_QPhysQ_real, int NPhys, int NLSHam,
+		double *_Phys_LS_real
+);
+
+int CalculatePhysVal_fcmp(
+		double complex H1, double complex H2_1, double complex alpha,
+		double complex *_QPhysQ_fcmp, int NPhys,int NLSHam,
+		double complex *_Phys_LS_fcmp
+);
+
 
 int PhysCalLanczos_real
 (
@@ -21,12 +36,19 @@ int PhysCalLanczos_real
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,
- FILE *_FileLSQCisAjsCktAltQ
+ FILE *_FileLSQCisAjsCktAltQ,
+ FILE *_FileLSCisAjs,
+ FILE *_FileLSCisAjsCktAlt
  )
 {
   int i=0;
+	double alpha;
 	double alpha_p, ene_p, ene_vp;
 	double alpha_m, ene_m, ene_vm;
+	double *LS_CisAjs_real;
+	double *LS_CisAjsCktAlt_real;
+	LS_CisAjs_real = (double*)malloc(sizeof(double)*_nCisAjs);
+	LS_CisAjsCktAlt_real = (double*)malloc(sizeof(double)*_nCisAjsCktAlt);
 
 	/* zvo_ls.dat */
 	/*
@@ -53,18 +75,44 @@ int PhysCalLanczos_real
   fprintf(_FileLSQQQQ, "\n");
 
   if (_NLanczosmode > 1) {
-    /* zvo_ls_qcisajsq.dat */
-    for (i = 0; i < _nLSHam * _nLSHam * _nCisAjs; i++) {
-      fprintf(_FileLSQCisAjsQ, "% .18e  ", _QCisAjsQ_real[i]);
-    }
-    fprintf(_FileLSQCisAjsQ, "\n");
+	   //determine alpha
+	  if (fabs(ene_p - _QQQQ_real[1]) > fabs(ene_m - _QQQQ_real[1])) {
+		  alpha = alpha_m;
+	  }else {
+		  alpha = alpha_p;
+	  }
+	  /* zvo_ls_qcisajsq.dat */
+	  for (i = 0; i < _nLSHam * _nLSHam * _nCisAjs; i++) {
+		  fprintf(_FileLSQCisAjsQ, "% .18e  ", _QCisAjsQ_real[i]);
+	  }
+	  fprintf(_FileLSQCisAjsQ, "\n");
 
-    /* zvo_ls_qcisajscktaltq.dat */
-    for (i = 0; i < _nLSHam * _nLSHam * _nCisAjsCktAlt; i++) {
-      fprintf(_FileLSQCisAjsCktAltQ, "% .18e  ", _QCisAjsCktAltQ_real[i]);
-    }
-    fprintf(_FileLSQCisAjsCktAltQ, "\n");
+	  CalculatePhysVal_real(_QQQQ_real[2], _QQQQ_real[3],
+							alpha, _QCisAjsQ_real, _nCisAjs,
+							_nLSHam, LS_CisAjs_real);
+	  /* zvo_ls_cisajs.dat */
+	  for (i = 0; i < _nCisAjs; i++) {
+		  fprintf(_FileLSCisAjs, "% .18e  ", LS_CisAjs_real[i]);
+	  }
+	  fprintf(_FileLSCisAjs, "\n");
+
+	  /* zvo_ls_qcisajscktaltq.dat */
+	  for (i = 0; i < _nLSHam * _nLSHam * _nCisAjsCktAlt; i++) {
+		  fprintf(_FileLSQCisAjsCktAltQ, "% .18e  ", _QCisAjsCktAltQ_real[i]);
+	  }
+	  fprintf(_FileLSQCisAjsCktAltQ, "\n");
+
+	  CalculatePhysVal_real(_QQQQ_real[2], _QQQQ_real[3],
+							alpha, _QCisAjsCktAltQ_real, _nCisAjsCktAlt,
+							_nLSHam, LS_CisAjsCktAlt_real);
+	  /* zvo_ls_cisajscktalt.dat */
+	  for (i = 0; i < _nCisAjsCktAlt; i++) {
+		  fprintf(_FileLSCisAjsCktAlt, "% .18e  ", LS_CisAjsCktAlt_real[i]);
+	  }
+	  fprintf(_FileLSCisAjsCktAlt, "\n");
   }
+	free(LS_CisAjs_real);
+	free(LS_CisAjsCktAlt_real);
 	return 0;
 }
 
@@ -79,12 +127,18 @@ int PhysCalLanczos_fcmp(
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,
- FILE *_FileLSQCisAjsCktAltQ
+ FILE *_FileLSQCisAjsCktAltQ,
+ FILE *_FileLSCisAjs,
+ FILE *_FileLSCisAjsCktAlt
 )
 {
   int i=0;
-	double alpha_p, ene_p, ene_vp;
+	double alpha, alpha_p, ene_p, ene_vp;
 	double alpha_m, ene_m, ene_vm;
+	double complex*LS_CisAjs;
+	double complex*LS_CisAjsCktAlt;
+	LS_CisAjs = (double complex*)malloc(sizeof(double complex)*_nCisAjs);
+	LS_CisAjsCktAlt = (double complex*)malloc(sizeof(double complex)*_nCisAjsCktAlt);
 
 	/* zvo_ls.dat */
 	/*
@@ -101,14 +155,6 @@ int PhysCalLanczos_fcmp(
 		return -1;
 	}
 
-	/*
-	if(!CalculateEne_fcmp(_QQQQ[2],_QQQQ[3],
-					 _QQQQ[10], _QQQQ[11], _QQQQ[15],
-					 &alpha_p,  &ene_p,  &ene_vp, &alpha_m,  &ene_m,  &ene_vm)==0){
-		return -1;
-	}
-	 */
-
 	fprintf(_FileLS, "% .18e  ", alpha_p);
 	fprintf(_FileLS, "% .18e  ", ene_p);
 	fprintf(_FileLS, "% .18e  ", ene_vp);
@@ -123,19 +169,46 @@ int PhysCalLanczos_fcmp(
   fprintf(_FileLSQQQQ, "\n");
 
   if (_NLanczosmode > 1) {
-    /* zvo_ls_qcisajsq.dat */
+	  //determine alpha
+	  if (fabs(ene_p - creal(_QQQQ[1])) > fabs(ene_m - creal(_QQQQ[1]))) {
+		  alpha = alpha_m;
+	  }else {
+		  alpha = alpha_p;
+	  }
+
+	  /* zvo_ls_qcisajsq.dat */
     for (i = 0; i < _nLSHam * _nLSHam * _nCisAjs; i++) {
       fprintf(_FileLSQCisAjsQ, "% .18e  ", creal(_QCisAjsQ[i]));
     }
     fprintf(_FileLSQCisAjsQ, "\n");
 
-    /* zvo_ls_qcisajscktaltq.dat */
+	  CalculatePhysVal_fcmp(_QQQQ[2], _QQQQ[3],
+							alpha, _QCisAjsQ, _nCisAjs,
+							_nLSHam, LS_CisAjs);
+	  /* zvo_ls_cisajs.dat */
+	  for (i = 0; i < _nCisAjs; i++) {
+		  fprintf(_FileLSCisAjs, "% .18e .18e ", creal(LS_CisAjs[i]), cimag(LS_CisAjs[i]));
+	  }
+	  fprintf(_FileLSCisAjs, "\n");
+
+
+	  /* zvo_ls_qcisajscktaltq.dat */
     for (i = 0; i < _nLSHam * _nLSHam * _nCisAjsCktAlt; i++) {
-      fprintf(_FileLSQCisAjsCktAltQ, "% .18e  ",  creal(_QCisAjsCktAltQ[i]));
+      fprintf(_FileLSQCisAjsCktAltQ, "% .18e ",  creal(_QCisAjsCktAltQ[i]));
     }
     fprintf(_FileLSQCisAjsCktAltQ, "\n");
-  }
 
+	  CalculatePhysVal_fcmp(_QQQQ[2], _QQQQ[3],
+							alpha, _QCisAjsCktAltQ, _nCisAjsCktAlt,
+							_nLSHam, LS_CisAjsCktAlt);
+	  /* zvo_ls_cisajs.dat */
+	  for (i = 0; i < _nCisAjsCktAlt; i++) {
+		  fprintf(_FileLSCisAjsCktAlt, "% .18e .18e ", creal(LS_CisAjsCktAlt[i]), cimag(LS_CisAjsCktAlt[i]));
+	  }
+	  fprintf(_FileLSCisAjsCktAlt, "\n");
+  }
+	free(LS_CisAjs);
+	free(LS_CisAjsCktAlt);
 	return 0;
 }
 
@@ -172,12 +245,58 @@ int CalculateEneByAlpha(
 		double H3, double H4, double alpha,
 		double *ene, double*ene_V
 ){
-	double tmp_1, tmp_2, tmp_3;
-	tmp_1        = H1+alpha*(H2_1+H2_2)+alpha*alpha*H3;
-	tmp_2        = 1.0+2*alpha*H1+alpha*alpha*H2_1;
-	tmp_3        = H2_1+2*alpha*H3+alpha*alpha*H4;
-	if(fabs(tmp_2/H1) < pow(10.0, -12)) return -1;
-	*ene_V        =  ((tmp_3/tmp_2)-pow((tmp_1/tmp_2), 2))/pow((tmp_1/tmp_2),2);
-	*ene		= tmp_1/tmp_2;
+	double tmp_ene, dnorm, tmp_ene_V;
+	tmp_ene        = H1+alpha*(H2_1+H2_2)+alpha*alpha*H3;
+	dnorm        = 1.0+2*alpha*H1+alpha*alpha*H2_1;
+	tmp_ene_V        = H2_1+2*alpha*H3+alpha*alpha*H4;
+	if(fabs(dnorm/H1) < pow(10.0, -12)) return -1;
+	*ene_V        =  ((tmp_ene_V/dnorm)-pow((tmp_ene/dnorm), 2))/pow((tmp_ene/dnorm),2);
+	*ene		= tmp_ene/dnorm;
+	return 0;
+}
+
+int CalculatePhysVal_real(
+		double H1, double H2_1, double alpha,
+		double *_QPhysQ_real, int _NPhys,  int _NLSHam,
+		double *_Phys_LS_real
+)
+{
+	int i;
+	double A0;
+	double A1_01;
+	double A1_10;
+	double A2_11;
+	double dnorm = 1.0+2*alpha*H1+alpha*alpha*H2_1;
+	for (i = 0; i < _NPhys; i++) {
+		A0=_QPhysQ_real[i];
+		A1_01=_QPhysQ_real[_NPhys+i];//01
+		A1_10=_QPhysQ_real[_NLSHam*_NPhys+i];//10
+		A2_11=_QPhysQ_real[_NLSHam*_NPhys+_NPhys+i];//11
+		_Phys_LS_real[i]=A0+alpha*(A1_01+A1_10)+alpha*alpha*A2_11;
+		_Phys_LS_real[i]/=dnorm;
+	}
+	return 0;
+}
+
+int CalculatePhysVal_fcmp(
+		double complex H1, double complex H2_1, double complex alpha,
+		double complex *_QPhysQ, int _NPhys,  int _NLSHam,
+		double complex *_Phys_LS
+)
+{
+	int i;
+	double complex A0;
+	double complex A1_01;
+	double complex A1_10;
+	double complex A2_11;
+	double dnorm = creal(1.0+2*alpha*H1+alpha*alpha*H2_1);
+	for (i = 0; i < _NPhys; i++) {
+		A0=_QPhysQ[i];
+		A1_01=_QPhysQ[_NPhys+i];//01
+		A1_10=_QPhysQ[_NLSHam*_NPhys+i];//10
+		A2_11=_QPhysQ[_NLSHam*_NPhys+_NPhys+i];//11
+		_Phys_LS[i]=A0+alpha*(A1_01+A1_10)+alpha*alpha*A2_11;
+		_Phys_LS[i]/=dnorm;
+	}
 	return 0;
 }

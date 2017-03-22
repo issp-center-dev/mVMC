@@ -1,14 +1,5 @@
 #ifndef _LSLOCGRN_REAL
 #define _LSLOCGRN_REAL
-#include <complex.h>
-#include "global.h"
-#include "locgrn_real.h"
-#include "../workspace.c"
-#include "../calham_real.c"
-#include "../pfupdate_real.c"
-#include "../pfupdate_two_real.c"
-#include "../qp_real.c"
-#include "../projection.c"
 
 void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, double *_LSLQ_real);
 

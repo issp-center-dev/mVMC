@@ -31,6 +31,15 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "calham_real.h"
 #include "locgrn_real.c"
 #include "pfupdate_two_real.h"
+#include <complex.h>
+#include "global.h"
+#include "locgrn_real.h"
+#include "workspace.c"
+#include "calham_real.c"
+#include "pfupdate_real.c"
+#include "pfupdate_two_real.c"
+#include "qp_real.c"
+#include "projection.h"
 
 /* Calculate <psi|QQ|x>/<psi|x> */
 void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, double *_LSLQ_real)

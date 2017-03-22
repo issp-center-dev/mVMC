@@ -29,6 +29,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _INCLUDE_GLOBAL
 #define _INCLUDE_GLOBAL
 #include <complex.h>
+#include "stdio.h"
 #define D_FileNameMax 256
 
 /***** definition *****/
@@ -282,6 +283,9 @@ FILE *FileLS;
 FILE *FileLSQQQQ;
 FILE *FileLSQCisAjsQ;
 FILE *FileLSQCisAjsCktAltQ;
+FILE *FileLSCisAjs;
+FILE *FileLSCisAjsCktAlt;
+
 
 /* FILE *FileTimerList; */
 /* FILE *FileOpt;    /\* zqp_opt *\/ */

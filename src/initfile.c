@@ -117,9 +117,17 @@ void InitFilePhysCal(int i, int rank) {
               CDataFileHead, idx);
       FileLSQCisAjsQ = fopen(fileName, "w");
 
+      sprintf(fileName, "%s_ls_cisajs_%03d.dat",
+              CDataFileHead, idx);
+      FileLSCisAjs = fopen(fileName, "w");
+
       sprintf(fileName, "%s_ls_qcisajscktaltq_%03d.dat", 
               CDataFileHead, idx);
       FileLSQCisAjsCktAltQ = fopen(fileName, "w");
+
+      sprintf(fileName, "%s_ls_cisajscktalt_%03d.dat",
+              CDataFileHead, idx);
+      FileLSCisAjsCktAlt = fopen(fileName, "w");
     }
   }
 
@@ -163,6 +171,8 @@ void CloseFilePhysCal(int rank) {
     if(NLanczosMode>1){
       fclose(FileLSQCisAjsQ);
       fclose(FileLSQCisAjsCktAltQ);
+      fclose(FileLSCisAjs);
+      fclose(FileLSCisAjsCktAlt);
     }
   }
 

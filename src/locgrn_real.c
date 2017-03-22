@@ -29,6 +29,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "locgrn_real.h"
 #include "pfupdate_real.h"
 #include "pfupdate_two_real.h"
+#include "global.h"
+#include "projection.h"
+#include "qp_real.c"
 
 #ifndef _SRC_LOCGRN_REAL
 #define _SRC_LOCGRN_REAL

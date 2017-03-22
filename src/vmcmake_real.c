@@ -34,7 +34,7 @@ which follows "The BSD 3-Clause License".
 #include "matrix.h"
 #include "pfupdate_real.h"
 #include "qp_real.h"
-#include "splitloop.c"
+#include "splitloop.h"
 #include "vmcmake.h"
 
 void VMCMakeSample_real(MPI_Comm comm) {

@@ -25,43 +25,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-#include "projection.h"
-#ifndef _SRC_PROJECTION
-#define _SRC_PROJECTION
+
 #include "global.h"
-
-void MakeProjCnt(int *projCnt, const int *eleNum);
-void UpdateProjCnt(const int ri, const int rj, const int s,
-                   int *projCntNew, const int *projCntOld,
-                   const int *eleNum);
-/*
-inline double LogProjVal(const int *projCnt) {
-  int idx;
-  double z=0;
-  for(idx=0;idx<NProj;idx++) {
-    z += creal(Proj[idx]) * (double)(projCnt[idx]);
-  }
-  return z;
-}
-
-inline double LogProjRatio(const int *projCntNew, const int *projCntOld) {
-  int idx;
-  double z=0;
-  for(idx=0;idx<NProj;idx++) {
-    z += creal(Proj[idx]) * (double)(projCntNew[idx]-projCntOld[idx]); //TBC
-  }
-  return z;
-}
-
-inline double ProjRatio(const int *projCntNew, const int *projCntOld) {
-  int idx;
-  double z=0;
-  for(idx=0;idx<NProj;idx++) {
-    z += creal(Proj[idx]) * (double)(projCntNew[idx]-projCntOld[idx]); // TVC
-  }
-  return exp(z);
-}
-*/
+#include "math.h"
+#include "projection.h"
 
 double LogProjVal(const int *projCnt) {
     int idx;
@@ -368,5 +335,3 @@ void MakeProjBFCnt(int *projCnt, const int *eleNum) {
     return;
 
 }
-
-#endif

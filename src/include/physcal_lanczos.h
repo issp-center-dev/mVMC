@@ -14,7 +14,9 @@ int PhysCalLanczos_real(
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,
- FILE *_FileLSQCisAjsCktAltQ
+ FILE *_FileLSQCisAjsCktAltQ,
+ FILE *_FileLSCisAjs,
+ FILE *_FileLSCisAjsCktAlt
 );
 
 int PhysCalLanczos_fcmp(
@@ -28,7 +30,9 @@ int PhysCalLanczos_fcmp(
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,
- FILE *_FileLSQCisAjsCktAltQ
+ FILE *_FileLSQCisAjsCktAltQ,
+ FILE *_FileLSCisAjs,
+ FILE *_FileLSCisAjsCktAlt
 );
 #endif
 

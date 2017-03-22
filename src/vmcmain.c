@@ -580,12 +580,14 @@ void outputData() {
 		PhysCalLanczos_real(
 				QQQQ_real, QCisAjsCktAltQ_real, QCisAjsCktAltQ_real,
 				NLSHam, NCisAjs, NCisAjsCktAlt, NLanczosMode,
-				FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ);
+				FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
+				FileLSCisAjs, FileLSCisAjsCktAlt);
       }else { //complex
 		PhysCalLanczos_fcmp(
 				  QQQQ, QCisAjsCktAltQ, QCisAjsCktAltQ,
 				  NLSHam, NCisAjs, NCisAjsCktAlt, NLanczosMode,
-				  FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ);
+				  FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
+				  FileLSCisAjs, FileLSCisAjsCktAlt);
       }
     }
   }
