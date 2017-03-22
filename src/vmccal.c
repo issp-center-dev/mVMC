@@ -790,6 +790,7 @@ void calculateQQQQ(double complex *qqqq, const double complex*lslq, const double
     rq = tmp%nLSHam;
 
     qqqq[i] += w * lslq[rq*nLSHam+ri] * lslq[rp*nLSHam+rj];
+   //fprintf(stdout, "Debug: qqqq[%d]= %lf, %lf \n", i, creal(qqqq[i]),cimag(qqqq[i]));
   }
 
   return;

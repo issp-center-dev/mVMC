@@ -141,6 +141,11 @@ int CalculateEne(double H1, double H2_1, double H2_2, double H3, double H4,
 	tmp_AA  = H2_1*(H2_1+H2_2)-2*H1*H3;
 	tmp_BB  = -H1*H2_1+H3;
 	tmp_CC  = H2_1*pow(H2_1+H2_2,2)-pow(H1,2)*H2_1*(H2_1+2.0*H2_2)+4*pow(H1, 3)*H3-2.0*H1*(2*H2_1+H2_2)*H3+H3*H3;
+	if(tmp_CC < 0){
+		tmp_xp=0;
+		tmp_xm=0;
+		return -1;
+	}
 	tmp_xp  = (tmp_BB+sqrt(tmp_CC))/tmp_AA;
 	tmp_xm  = (tmp_BB-sqrt(tmp_CC))/tmp_AA;
 	*alpha_p = tmp_xp ;

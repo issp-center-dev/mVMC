@@ -30,14 +30,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define _SRC_PROJECTION
 #include "global.h"
 
-inline double LogProjVal(const int *projCnt);
-inline double LogProjRatio(const int *projCntNew, const int *projCntOld);
-inline double ProjRatio(const int *projCntNew, const int *projCntOld);
 void MakeProjCnt(int *projCnt, const int *eleNum);
 void UpdateProjCnt(const int ri, const int rj, const int s,
                    int *projCntNew, const int *projCntOld,
                    const int *eleNum);
-
+/*
 inline double LogProjVal(const int *projCnt) {
   int idx;
   double z=0;
@@ -64,7 +61,34 @@ inline double ProjRatio(const int *projCntNew, const int *projCntOld) {
   }
   return exp(z);
 }
+*/
 
+double LogProjVal(const int *projCnt) {
+    int idx;
+    double z=0;
+    for(idx=0;idx<NProj;idx++) {
+        z += creal(Proj[idx]) * (double)(projCnt[idx]);
+    }
+    return z;
+}
+
+double LogProjRatio(const int *projCntNew, const int *projCntOld) {
+    int idx;
+    double z=0;
+    for(idx=0;idx<NProj;idx++) {
+        z += creal(Proj[idx]) * (double)(projCntNew[idx]-projCntOld[idx]); //TBC
+    }
+    return z;
+}
+
+double ProjRatio(const int *projCntNew, const int *projCntOld) {
+    int idx;
+    double z=0;
+    for(idx=0;idx<NProj;idx++) {
+        z += creal(Proj[idx]) * (double)(projCntNew[idx]-projCntOld[idx]); // TVC
+    }
+    return exp(z);
+}
 void MakeProjCnt(int *projCnt, const int *eleNum) {
   const int *n0=eleNum; //up-spin
   const int *n1=eleNum+Nsite; //down-spin

@@ -33,6 +33,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "projection.h"
 #include "pfupdate_two_fcmp.h"
 #include "matrix.c"
+#include "splitloop.h"
 #include "qp.h"
 
 void VMCMakeSample(MPI_Comm comm) {
