@@ -265,10 +265,13 @@ int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt
           mi = gen_rand32()%Ne;
           si = (genrand_real2()<0.5) ? 0 : 1;
         } while(eleIdx[mi+si*Ne]!=-1); // seeking empty site
-        eleCfg[ri+si*Nsite] = mi;
+        eleCfg[ri+si*Nsite] = mi+si*Ne;
         eleIdx[mi+si*Ne]    = ri;
         eleSpn[mi+si*Ne]    = si;
       }
+    }
+    for(mi=0;mi<2*Ne;mi++){
+      printf("DEBUG: %d %d %d\n",mi,eleIdx[mi],eleSpn[mi]);
     }
     
     /* itinerant electron */
