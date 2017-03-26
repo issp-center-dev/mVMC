@@ -878,8 +878,13 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
         rj = cacaIdx[idx][1];
 
         qcacaq[i] += w * lslca[rq*nCA+ri] * lslca[rp*nCA+rj];
+
     }
 
+  for(i=0;i<n;++i) {
+    fprintf(stdout, "Debug: qcacaq[%d]= %lf, %lf \n", i, creal(qcacaq[i]),cimag(qcacaq[i]));
+
+  }
     return;
 }
 #endif
