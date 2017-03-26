@@ -578,14 +578,14 @@ void outputData() {
     if (NLanczosMode > 0) {
       if (AllComplexFlag == 0) { //real
 		PhysCalLanczos_real(
-				QQQQ_real, QCisAjsCktAltQ_real, QCisAjsCktAltQ_real,
-				NLSHam, NCisAjs, NCisAjsCktAlt, NLanczosMode,
+				QQQQ_real, QCisAjsQ_real, QCisAjsCktAltQ_real,
+				NLSHam, NCisAjs, NCisAjsCktAltDC, NLanczosMode,
 				FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
 				FileLSCisAjs, FileLSCisAjsCktAlt);
       }else { //complex
 		PhysCalLanczos_fcmp(
-				  QQQQ, QCisAjsCktAltQ, QCisAjsCktAltQ,
-				  NLSHam, NCisAjs, NCisAjsCktAlt, NLanczosMode,
+				  QQQQ, QCisAjsQ, QCisAjsCktAltQ,
+				  NLSHam, NCisAjs, NCisAjsCktAltDC, NLanczosMode,
 				  FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
 				  FileLSCisAjs, FileLSCisAjsCktAlt);
       }

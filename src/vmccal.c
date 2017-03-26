@@ -258,13 +258,13 @@ void VMCMainCal(MPI_Comm comm) {
             LSLocalCisAjs_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
             calculateQCAQ_real(QCisAjsQ_real,LSLCisAjs_real,LSLQ_real,w,NLSHam,NCisAjs);
             calculateQCACAQ_real(QCisAjsCktAltQ_real,LSLCisAjs_real,w,NLSHam,NCisAjs,
-                            NCisAjsCktAlt,CisAjsCktAltIdx);
+                            NCisAjsCktAltDC,CisAjsCktAltDCIdx);
           }
           else{
             LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
             calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
             calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
-                            NCisAjsCktAlt,CisAjsCktAltIdx);
+                            NCisAjsCktAltDC,CisAjsCktAltDCIdx);
              return;
           }
           StopTimer(44);
@@ -493,13 +493,14 @@ void VMC_BF_MainCal(MPI_Comm comm) {
                     if (AllComplexFlag == 0) {
                         LSLocalCisAjs_real(creal(e), creal(ip), eleIdx, eleCfg, eleNum, eleProjCnt);
                         calculateQCAQ_real(QCisAjsQ_real, LSLCisAjs_real, LSLQ_real, w, NLSHam, NCisAjs);
-                        calculateQCACAQ_real(QCisAjsCktAltQ_real, LSLCisAjs_real, w, NLSHam, NCisAjs,
-                                             NCisAjsCktAlt, CisAjsCktAltIdx);
+
+                      calculateQCACAQ_real(QCisAjsCktAltQ_real, LSLCisAjs_real, w, NLSHam, NCisAjs,
+                                             NCisAjsCktAltDC, CisAjsCktAltDCIdx);
                     } else {
                         LSLocalCisAjs(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt);
                         calculateQCAQ(QCisAjsQ, LSLCisAjs, LSLQ, w, NLSHam, NCisAjs);
                         calculateQCACAQ(QCisAjsCktAltQ, LSLCisAjs, w, NLSHam, NCisAjs,
-                                        NCisAjsCktAlt, CisAjsCktAltIdx);
+                                        NCisAjsCktAltDC, CisAjsCktAltDCIdx);
                         return;
                     }
                     StopTimer(44);
@@ -550,7 +551,7 @@ void clearPhysQuantity(){
     for(i=0;i<n;i++) vec_real[i] = 0.0;
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
-    n = 2*NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
+    n = 2*NCisAjs+NCisAjsCktAltDC+NCisAjsCktAltDC;
 
     vec = PhysCisAjs;
     #pragma omp parallel for default(shared) private(i)
@@ -572,13 +573,13 @@ void clearPhysQuantity(){
         if(NLanczosMode>1) {
         /* QCisAjsQ, QCisAjsCktAltQ, LSLCisAjs */
          //[TODO]: Check the value n
-         n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAlt
+         n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC
           + NLSHam*NCisAjs;
         vec = QCisAjsQ;
 #pragma omp parallel for default(shared) private(i)
         for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
 
-        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAlt
+        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC
           + NLSHam*NCisAjs;
         vec_real = QCisAjsQ_real;
 #pragma omp parallel for default(shared) private(i)
@@ -851,6 +852,8 @@ void calculateQCAQ_real(double *qcaq, const double *lslca, const double *lslq,
         rq = tmp%nLSHam;
 
         qcaq[i] += w * lslca[rq*nCA+idx] * lslq[rp*nLSHam];
+      //fprintf(stdout, "Debug: qcaq[%d]= %lf, %lf \n", i, creal(qcaq[i]),cimag(qcaq[i]));
+
     }
 
     return;
@@ -862,6 +865,7 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
     const int n=nLSHam*nLSHam*nCACA;
     int rq,rp,ri,rj,idx;
     int i,tmp;
+
 
     /* QCisAjsCktAltQ[rq][rp][idx] += w * LSLCisAjs[rq][ri] * LSLCisAjs[rp][rj] */
 # pragma omp parallel for default(shared) private(i,tmp,idx,rp,rq,ri,rj)
