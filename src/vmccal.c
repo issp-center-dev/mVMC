@@ -69,7 +69,8 @@ void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
   double complex e,ip;
   double w;
-  double we,sqrtw;
+  double sqrtw;
+  double complex we;
 
   const int qpStart=0;
   const int qpEnd=NQPFull;
@@ -882,8 +883,8 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
     }
 
   for(i=0;i<n;++i) {
-    fprintf(stdout, "Debug: qcacaq[%d]= %lf, %lf \n", i, creal(qcacaq[i]),cimag(qcacaq[i]));
-
+      //fprintf(stdout, "Debug: qcacaq[%d]= %lf, %lf \n", i, creal(qcacaq[i]),cimag(qcacaq[i]));
+    fprintf(stdout, "Debug: lslca[%d]= %lf, %lf \n", i, creal(lslca[i]),cimag(lslca[i]));
   }
     return;
 }
