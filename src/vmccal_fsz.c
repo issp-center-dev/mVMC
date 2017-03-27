@@ -32,7 +32,8 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt,*eleSpn; //fsz
   double complex e,ip;
   double w;
-  double we,sqrtw;
+  double sqrtw;
+  double complex we;
 
   const int qpStart=0;
   const int qpEnd=NQPFull;
@@ -169,6 +170,10 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       StartTimer(43);
       /* Calculate OO and HO */
       if(NStoreO==0){
+
+        //for(int_i=0;int_i<SROptSize*2;int_i++){
+        //  printf("sample=%d: i=%d %lf %lf\n",SROptSize*2,int_i,creal(SROptO[int_i]),cimag(SROptO[int_i]));
+        //}
         //calculateOO_matvec(SROptOO,SROptHO,SROptO,w,e,SROptSize);
         if(AllComplexFlag==0){
           calculateOO_real(SROptOO_real,SROptHO_real,SROptO_real,w,creal(e),SROptSize);
@@ -186,6 +191,9 @@ void VMCMainCal_fsz(MPI_Comm comm) {
             SROptHO_real[int_i]                       += creal(we)*SROptO_real[int_i]; 
           }
         }else{
+        //for(int_i=0;int_i<SROptSize*2;int_i++){
+          //printf("sample=%d: i=%d %lf %lf\n",SROptSize*2,int_i,creal(SROptO[int_i]),cimag(SROptO[int_i]));
+        //}
           #pragma omp parallel for default(shared) private(int_i)
           for(int_i=0;int_i<SROptSize*2;int_i++){
             // SROptO_Store for fortran
@@ -221,6 +229,7 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       }
     }
   } /* end of for(sample) */
+
 // calculate OO and HO at NVMCCalMode==0
   if(NStoreO!=0 && NVMCCalMode==0){
     sampleSize=sampleEnd-sampleStart;
@@ -234,5 +243,13 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       StopTimer(45);
     }
   }
+/*
+  for(int_i=0;int_i<SROptSize*2;int_i++) {
+    printf("XHO %d: i=%d %lf %lf\n",SROptSize*2,int_i,creal(SROptHO[int_i]),cimag(SROptHO[int_i]));
+  }
+  for(int_i=0;int_i<SROptSize*2*(2*SROptSize+2);int_i++) {
+    printf("XOO %d: i=%d %lf %lf\n",SROptSize*2,int_i,creal(SROptOO[int_i]),cimag(SROptOO[int_i]));
+  }
+*/
   return;
 }

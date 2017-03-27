@@ -50,7 +50,8 @@ void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
   double complex e,ip;
   double w;
-  double we,sqrtw;
+  double sqrtw;
+  double complex we;
 
   const int qpStart=0;
   const int qpEnd=NQPFull;

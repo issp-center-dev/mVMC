@@ -374,7 +374,17 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       } 
     }
 //DBBUG
+/*
+    for(tmp_i=0;tmp_i<NPara;tmp_i++){
+      printf("Before: ParaAll NPara=%d; tmp_i=%d : %lf %lf\n",NPara,tmp_i,creal(Para[tmp_i]),cimag(Para[tmp_i]));
+    }
+*/
     info = StochasticOpt(comm_parent);
+/*
+    for(tmp_i=0;tmp_i<NPara;tmp_i++){
+      printf("Aft: ParaAll NPara=%d; tmp_i=%d : %lf %lf\n",NPara,tmp_i,creal(Para[tmp_i]),cimag(Para[tmp_i]));
+    }
+*/
     //info = StochasticOptDiag(comm_parent);
       StopTimer(5);
 
