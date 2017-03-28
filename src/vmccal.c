@@ -259,7 +259,7 @@ void clearPhysQuantity(){
   int i,n;
   double complex *vec;
   double  *vec_real;
-  Wc = Etot = Etot2 = 0.0;
+  Wc = Etot = Etot2 = Sztot =0.0;//fsz
   if(NVMCCalMode==0) {
     /* SROptOO, SROptHO, SROptO */
     n = (2*SROptSize)*(2*SROptSize+2); // TBC

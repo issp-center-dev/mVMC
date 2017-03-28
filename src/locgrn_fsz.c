@@ -89,33 +89,34 @@ double complex GreenFunc1_fsz2(const int ri, const int rj, const int s,const int
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
                   int *projCntNew, complex double *buffer) {
   double complex z;
-  int mj,msj,rsi,rsj;
+  int mj,rsi,rtj;//msj
   double complex *pfMNew = buffer; /* NQPFull */
 
   //if(ri==rj) return eleNum[ri+s*Nsite]; //fsz
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+t*Nsite]==0) return 0.0;
 
   mj  = eleCfg[rj+t*Nsite];
-  msj = mj;// + s*Ne;
+  //mtj = mj;// + s*Ne;
   rsi = ri + s*Nsite;
-  rsj = rj + t*Nsite;
+  rtj = rj + t*Nsite;
 
   /* hopping */
-  eleIdx[msj] = ri;
-  eleSpn[msj] = t;//fsz
-  eleNum[rsj] = 0;
+  // (j,t) -> (i,s)
+  eleIdx[mj] = ri;
+  eleSpn[mj] = s;//fsz
+  eleNum[rtj] = 0;
   eleNum[rsi] = 1;
-  UpdateProjCnt_fsz(rj, ri, s,t, projCntNew, eleProjCnt, eleNum);
+  UpdateProjCnt_fsz(rj, ri, t,s, projCntNew, eleProjCnt, eleNum);
   z = ProjRatio(projCntNew,eleProjCnt);
 
   /* calculate Pfaffian */
-  CalculateNewPfM_fsz(mj, t, pfMNew, eleIdx,eleSpn, 0, NQPFull);//fsz s->t
+  CalculateNewPfM_fsz(mj, s, pfMNew, eleIdx,eleSpn, 0, NQPFull);//fsz: note EleSpn[mj]=s
   z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
   /* revert hopping */
-  eleIdx[msj] = rj;
-  eleSpn[msj] = t; //fsz
-  eleNum[rsj] = 1;
+  eleIdx[mj] = rj;
+  eleSpn[mj] = t; //fsz
+  eleNum[rtj] = 1;
   eleNum[rsi] = 0;
 
   return conj(z/ip);//TBC

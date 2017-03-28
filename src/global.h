@@ -223,6 +223,8 @@ double complex *SROptData; /* [2+NPara] storage for energy and variational param
 double complex Wc; /* Weight for correlation sampling = <psi|x> */
 double complex Etot; /* <H> */
 double complex Etot2; /* <H^2> */
+double Sztot; /* <Sz> */
+
 
 double complex *PhysCisAjs; /* [NCisAjs] */
 double complex *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */

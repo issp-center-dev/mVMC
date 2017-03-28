@@ -26,6 +26,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
+double CalculateSz_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
+                             int *eleNum,const int *eleProjCnt,int *eleSpn);
 double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum,const int *eleProjCnt,int *eleSpn);
 double complex CalculateHamiltonian0_fsz(const int *eleNum);
@@ -33,6 +35,23 @@ double complex CalculateHamiltonian1_fsz(const double complex ip, int *eleIdx, c
                              int *eleNum,const int *eleProjCnt,int *eleSpn);
 double complex CalculateHamiltonian2_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt,int *eleSpn);
+
+double CalculateSz_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
+                             int *eleNum, const int *eleProjCnt,int *eleSpn) {
+  const int *n0 = eleNum;
+  const int *n1 = eleNum + Nsite;
+  double  Sz=0.0;
+  int ri;
+    
+  Sz = 0.0;
+//#pragma omp for default(none) firstprivate(Nsite,n0,n1) private(idx,ri) reduction(+:Sz)
+  for(ri=0;ri<Nsite;ri++) {
+    Sz += n0[ri]-n1[ri];
+  }
+  return Sz;
+}
+
+
 
 double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt,int *eleSpn) {
@@ -109,14 +128,19 @@ double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, co
     {StopTimer(70);StartTimer(71);}
 
     /* Transfer */
-    #pragma omp for private(idx,ri,rj,s) schedule(dynamic) nowait
+    #pragma omp for private(idx,ri,rj,s,t) schedule(dynamic) nowait
     for(idx=0;idx<NTransfer;idx++) {
       ri = Transfer[idx][0];
+      s  = Transfer[idx][1];
       rj = Transfer[idx][2];
-      s  = Transfer[idx][3];
-      
-      myEnergy -= ParaTransfer[idx]
-        * GreenFunc1_fsz(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,myProjCntNew,myBuffer);
+      t  = Transfer[idx][3];
+      if(s==t){
+        myEnergy -= ParaTransfer[idx]
+         * GreenFunc1_fsz(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,myProjCntNew,myBuffer);
+      }else{ 
+        myEnergy -= ParaTransfer[idx]
+        * GreenFunc1_fsz2(ri,rj,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,myProjCntNew,myBuffer);
+      }
       /* Caution: negative sign */
     }
 
@@ -257,8 +281,8 @@ double complex CalculateHamiltonian1_fsz(const double complex ip, int *eleIdx, c
     #pragma omp for private(idx,ri,rj,s) schedule(dynamic) nowait
     for(idx=0;idx<NTransfer;idx++) {
       ri = Transfer[idx][0];
+      s  = Transfer[idx][1];
       rj = Transfer[idx][2];
-      s  = Transfer[idx][3];
       
       myEnergy -= ParaTransfer[idx]
         * GreenFunc1_fsz(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,myProjCntNew,myBuffer);

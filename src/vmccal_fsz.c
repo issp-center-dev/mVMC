@@ -34,6 +34,7 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   double w;
   double sqrtw;
   double complex we;
+  double Sz;
 
   const int qpStart=0;
   const int qpEnd=NQPFull;
@@ -121,11 +122,13 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       printf("  Debug: sample=%d: calculateHam_real \n",sample);
 #endif
       e = CalculateHamiltonian_real(creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
+      Sz = 0.0; 
     }else{
 #ifdef _DEBUG
       printf("  Debug: sample=%d: calculateHam_cmp \n",sample);
 #endif
-      e = CalculateHamiltonian_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
+      e  = CalculateHamiltonian_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
+      Sz = CalculateSz_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
     }
     //printf("DEBUG: rank=%d: sample=%d ip= %lf %lf e=%lf %lf\n",rank,sample,creal(ip),cimag(ip),creal(e),cimag(e));
     StopTimer(41);
@@ -134,8 +137,9 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       continue;
     }
 
-    Wc += w;
+    Wc    += w;
     Etot  += w * e;
+    Sztot += w * Sz;
     Etot2 += w * conj(e) * e;
 #ifdef _DEBUG
     printf("  Debug: sample=%d: calculateOpt \n",sample);
