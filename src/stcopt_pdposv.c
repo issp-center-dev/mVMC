@@ -368,6 +368,20 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   }
 
   StopTimer(56);
+
+#ifdef _DEBUG_STCOPT_PDPOSV
+  for(ir=0; ir<vlocr; ++ir){
+    printf("%lg\n", g[ir]);
+  }
+  for(ic=0;ic<mlocc;ic++) {
+    for(ir=0;ir<mlocr;ir++) {
+      idx = ir + ic*mlocr; /* local index (row major) */
+      printf("%lg ", s[idx]);
+    }
+    printf("\n");
+  }
+#endif
+
   StartTimer(57);
 
   /***** solve the linear equation S*r=g by PDPOSV *****/
@@ -405,6 +419,12 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   }
 
   StopTimer(58);
+
+#ifdef _DEBUG_STCOPT_PDPOSV
+  for(si=0; si<nSmat; ++si){
+    fprintf(stderr, "%lg\n", r[si]);
+  }
+#endif
 
   ReleaseWorkSpaceInt();
   ReleaseWorkSpaceDouble();

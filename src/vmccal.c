@@ -350,9 +350,9 @@ dgemm_(char *jobz, char *uplo, int *m, int *n, int *k, double *alpha, double *a,
       srOptOO_real[i] = 0.0;
       srOptOO_real[i+srOptSize] = 0.0;
     }
-#pragma omp parallel for default(shared) private(i,j,o)
-#pragma loop noalias
     for(j=0; j<sampleSize; ++j){
+#pragma omp parallel for default(shared) private(i,o)
+#pragma loop noalias
     for(i=0; i<srOptSize; ++i){
       o = srOptO_Store_real[i+j*srOptSize];
       srOptOO_real[i] += o;
@@ -391,9 +391,9 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
       srOptOO[i] = 0.0;
       srOptOO[i+srOptSize] = 0.0;
     }
-#pragma omp parallel for default(shared) private(i,j,o)
-#pragma loop noalias
     for(j=0; j<sampleSize; ++j){
+#pragma omp parallel for default(shared) private(i,o)
+#pragma loop noalias
     for(i=0; i<srOptSize; ++i){
       o = srOptO_Store[i+j*srOptSize];
       srOptOO[i] += o;

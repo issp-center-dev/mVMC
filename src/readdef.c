@@ -1353,7 +1353,7 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufDouble[IdxSROptRedCut]=0.001;
   bufDouble[IdxSROptStaDel]=0.02;
   bufDouble[IdxSROptStepDt]=0.02;
-  bufDouble[IdxSROptCGTol]=0.0001;
+  bufDouble[IdxSROptCGTol]=0.00001;
   NStoreO=1;
 }
 
