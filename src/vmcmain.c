@@ -2,7 +2,7 @@
 mVMC - A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
 Copyright (C) 2016 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
 
-his program is developed based on the mVMC-mini program
+This program is developed based on the mVMC-mini program
 (https://github.com/fiber-miniapp/mVMC-mini)
 which follows "The BSD 3-Clause License".
 
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
     case 'v': /* Print version */
       printVersion();
       MPI_Finalize();
-      return;
+      return 0;
 
     default: /* '?' */
       printUsageError();
@@ -203,6 +203,7 @@ int main(int argc, char* argv[])
     }
     strcpy(fileDefList, "namelist.def");
   }
+  MPI_Barrier(comm0);
 
   StartTimer(11);
   if(rank0==0) fprintf(stdout,"Start: Read *def files.\n");
@@ -427,7 +428,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
 /*-- VMC Physical Quantity Calculation --*/
 int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2) {
-  int ismp;
+  int ismp, tmp_i;
   int rank;
   MPI_Comm_rank(comm_parent, &rank);
 
@@ -443,7 +444,25 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     
     StartTimer(3);
 
-    VMCMakeSample(comm_child1);
+    if(AllComplexFlag==0){
+      // only for real TBC
+      StartTimer(69);
+#pragma omp parallel for default(shared) private(tmp_i)
+      for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+#pragma omp parallel for default(shared) private(tmp_i)
+      for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+      StopTimer(69);
+      // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+      VMCMakeSample_real(comm_child1);
+      // only for real TBC
+      StartTimer(69);
+#pragma omp parallel for default(shared) private(tmp_i)
+      for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
+      StopTimer(69);
+      // only for real TBC
+    }else{
+      VMCMakeSample(comm_child1);
+    } 
 
     StopTimer(3);
     StartTimer(4);

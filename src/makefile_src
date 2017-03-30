@@ -6,17 +6,19 @@ PFAPACK = pfapack/libpfapack.a
 SFMT = sfmt/SFMT.o
 STDFACE = StdFace/libStdFace.a
 OBJS = vmcmain.o $(PFAPACK) $(SFMT) $(STDFACE)
+OPTION = -D_mpi_use
 
 SOURCES = \
 average.c \
 avevar.c \
 calgrn.c \
 calham.c \
+calham_real.c \
 gauleg.c \
 initfile.c \
 legendrepoly.c \
 locgrn.c \
-lslocgrn.c \
+locgrn_real.c \
 matrix.c \
 parameter.c \
 pfupdate.c \
@@ -36,15 +38,20 @@ stcopt_dposv.c \
 stcopt_pdposv.c \
 time.c \
 vmccal.c \
-vmcdry.c \
-vmcmain.c \
 vmcmake.c \
 vmcmake_real.c \
 workspace.c
 
 HEADERS = \
-global.h \
-vmcmain.h
+include/avevar.h \
+include/global.h \
+include/parameter.h \
+include/readdef.h \
+include/readdef_core.h \
+include/safempi.h \
+include/safempi_fcmp.h \
+include/version.h \
+include/vmcmain.h
 
 all : 
 	cd pfapack; $(MAKE) -f makefile_pfapack
@@ -55,13 +62,16 @@ all :
 	cd ComplexUHF/src; $(MAKE) -f makefile_uhf
 
 vmc.out : $(OBJS) $(STDFACE)
-	$(CC) -o $(OUT) $(OBJS) $(STDFACE) $(OPTION) $(CFLAGS) $(REPORT) $(LIB) 
+	$(CC) -o $(OUT) $(OBJS) $(STDFACE) $(OPTION) $(CFLAGS) $(LIBS)
 
 vmcdry.out : vmcdry.o $(STDFACE)
-	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) 
+	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) $(LIBS)
 
 vmcmain.o : $(SOURCES) $(HEADERS)
-	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT)
+	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) -I ./include/
+
+vmcdry.o : vmcdry.c
+	$(CC) -c vmcdry.c $(OPTION) $(CFLAGS) -I ./include/
 
 clean :
 	rm -f *.o vmc.out

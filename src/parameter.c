@@ -2,7 +2,7 @@
 mVMC - A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
 Copyright (C) 2016 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
 
-his program is developed based on the mVMC-mini program
+This program is developed based on the mVMC-mini program
 (https://github.com/fiber-miniapp/mVMC-mini)
 which follows "The BSD 3-Clause License".
 
@@ -42,17 +42,29 @@ void InitParameter() {
 
   #pragma omp parallel for default(shared) private(i)
   for(i=0;i<NProj;i++) Proj[i] = 0.0;
-
-  for(i=0;i<NSlater;i++){
-    if(OptFlag[2*i+2*NProj] > 0){ //TBC
-      Slater[i] =  1*genrand_real2(); /* uniform distribution [0,1) */
-      //Slater[i] += 1*I*genrand_real2(); /* uniform distribution [0,1) */
-      //printf("DEBUG: i=%d slater=%lf %lf \n",i,creal(Slater[i]),cimag(Slater[i]));
-    } else {
-      Slater[i] = 0.0;
+  if(AllComplexFlag==0){
+    for(i=0;i<NSlater;i++){
+      if(OptFlag[2*i+2*NProj] > 0){ //TBC
+        Slater[i] =  1*genrand_real2(); /* uniform distribution [0,1) */
+        //Slater[i] += 1*I*genrand_real2(); /* uniform distribution [0,1) */
+        //printf("DEBUG: i=%d slater=%lf %lf \n",i,creal(Slater[i]),cimag(Slater[i]));
+      } else {
+        Slater[i] = 0.0;
+      }
     }
   }
-
+  else{
+    for(i=0;i<NSlater;i++){
+      if(OptFlag[2*i+2*NProj] > 0){ //TBC
+        Slater[i] =  1*genrand_real2(); /* uniform distribution [0,1) */
+        Slater[i] += 1*I*genrand_real2(); /* uniform distribution [0,1) */
+        Slater[i] /=sqrt(2.0);
+      } else {
+        Slater[i] = 0.0;
+      }
+    }
+ 
+  }
   for(i=0;i<NOptTrans;i++){
     OptTrans[i] = ParaQPOptTrans[i];
   }
