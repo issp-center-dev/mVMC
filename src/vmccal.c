@@ -832,6 +832,7 @@ void calculateQCACAQ(double complex *qcacaq, const double complex *lslca, const 
 
     ri = cacaIdx[idx][0];
     rj = cacaIdx[idx][1];
+    //fprintf(stdout, "Debug: ri= %d, rj=%d, rp=%d, rq=%d \n", ri, rj, rp, rq);
 
     qcacaq[i] += w * conj(lslca[rq*nCA+ri]) * lslca[rp*nCA+rj];
   }
@@ -877,7 +878,6 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
 
         ri = cacaIdx[idx][0];
         rj = cacaIdx[idx][1];
-
         qcacaq[i] += w * lslca[rq*nCA+ri] * lslca[rp*nCA+rj];
 
     }

@@ -271,7 +271,7 @@ int CalculatePhysVal_real(
 	double A2_11;
 	double dnorm = 1.0+2*alpha*H1+alpha*alpha*H2_1;
 	for (i = 0; i < _NPhys; i++) {
-		A0=_QPhysQ_real[i];
+      A0=_QPhysQ_real[i];//00
 		A1_01=_QPhysQ_real[_NPhys+i];//01
 		A1_10=_QPhysQ_real[_NLSHam*_NPhys+i];//10
 		A2_11=_QPhysQ_real[_NLSHam*_NPhys+_NPhys+i];//11
