@@ -2,7 +2,7 @@
 mVMC - A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
 Copyright (C) 2016 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
 
-his program is developed based on the mVMC-mini program
+This program is developed based on the mVMC-mini program
 (https://github.com/fiber-miniapp/mVMC-mini)
 which follows "The BSD 3-Clause License".
 
@@ -39,13 +39,14 @@ void outputData();
 void printUsageError();
 void printOption();
 void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MPI_Comm *comm_child1);
+void StdFace_main(char *fname);
 
 /*main program*/
 int main(int argc, char* argv[])
 {
   /* input file name */
-  char *fileDefList;
-  char *fileInitPara;
+  char fileDefList[256];
+  char fileInitPara[256];
 
   int flagReadInitPara=0;
   int info=0;
@@ -53,6 +54,8 @@ int main(int argc, char* argv[])
   /* for MultiDef mode (-m option) */
   int flagMultiDef=0;
   int nMultiDef = 1;
+  /* for Standard mode (-s option)*/
+  int flagStandard = 0;
   /* for getopt() */
   int option;
   extern char *optarg;
@@ -76,7 +79,7 @@ int main(int argc, char* argv[])
   StartTimer(10);
 
   /* read options */
-  while((option=getopt(argc,argv,"bhm:oF:"))!=-1) {
+  while((option=getopt(argc,argv,"bhm:oF:esv"))!=-1) {
     switch(option) {
     case 'b': /* BinaryMode */
       FlagBinary=1;
@@ -143,6 +146,21 @@ int main(int argc, char* argv[])
       NFileFlushInterval = (int)num;
       break;
 
+    case 'e': /* Expert mode (For compatibility)*/
+      /*Nothing to do*/
+      flagMultiDef = 0;
+      break;
+
+    case 's': /* Standard mode */
+      flagMultiDef = 0;
+      flagStandard = 1;
+      break;
+
+    case 'v': /* Print version */
+      printVersion();
+      MPI_Finalize();
+      return 0;
+
     default: /* '?' */
       printUsageError();
       exit(EXIT_FAILURE);
@@ -158,16 +176,16 @@ int main(int argc, char* argv[])
 
   /* set input filename */
   if(flagMultiDef==0) { /* Original mode */
-    fileDefList=argv[optind];
+    strcpy(fileDefList, argv[optind]);
     if(argc-optind>1) {
       flagReadInitPara = 1;
-      fileInitPara=argv[optind+1];
+      strcpy(fileInitPara, argv[optind + 1]);
     }
   } else if(flagMultiDef==1) { /* MultiDef mode */
-    fileDefList=argv[optind+1];
+    strcpy(fileDefList, argv[optind+1]);
     if(argc-optind>2) {
       flagReadInitPara = 1;
-      fileInitPara=argv[optind+2];
+      strcpy(fileInitPara, argv[optind + 2]);
     }
   }
 
@@ -181,6 +199,16 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(comm0, &rank0);
   MPI_Comm_size(comm0, &size0);
   StopTimer(10);
+  /*
+   Standard mode: generating input files
+  */
+  if (flagStandard == 1) {
+    if (rank0 == 0) {
+      StdFace_main(fileDefList);
+    }
+    strcpy(fileDefList, "namelist.def");
+  }
+  MPI_Barrier(comm0);
 
   StartTimer(11);
   if(rank0==0) fprintf(stdout,"Start: Read *def files.\n");
@@ -453,7 +481,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
 /*-- VMC Physical Quantity Calculation --*/
 int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2) {
-  int ismp;
+  int ismp, tmp_i;
   int rank;
   MPI_Comm_rank(comm_parent, &rank);
 
@@ -469,7 +497,25 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     
     StartTimer(3);
 
-    VMCMakeSample(comm_child1);
+    if(AllComplexFlag==0){
+      // only for real TBC
+      StartTimer(69);
+#pragma omp parallel for default(shared) private(tmp_i)
+      for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+#pragma omp parallel for default(shared) private(tmp_i)
+      for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+      StopTimer(69);
+      // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+      VMCMakeSample_real(comm_child1);
+      // only for real TBC
+      StartTimer(69);
+#pragma omp parallel for default(shared) private(tmp_i)
+      for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
+      StopTimer(69);
+      // only for real TBC
+    }else{
+      VMCMakeSample(comm_child1);
+    } 
 
     StopTimer(3);
     StartTimer(4);
@@ -583,6 +629,8 @@ void printOption() {
   fprintf(stderr,"  -m N   multiDef mode\n");
   fprintf(stderr,"  -o     optTrans mode\n");
   fprintf(stderr,"  -F N   set interval of file flush\n");
+  fprintf(stderr,"  -s     Standard mode\n");
+  fprintf(stderr,"  -e     Expert mode\n");
   fprintf(stderr,"  -h     show this message\n");
   return;
 }

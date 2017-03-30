@@ -21,7 +21,15 @@ lattice.gp
 zvo_HitachiTimer.dat
 zvo_cfg_001.dat
 zvo_time_001.dat
-zvo_var_001.dat
+zvo_var_???.dat
 zvo_SRinfo.dat
-zvo_out_001.dat
+zvo_out_???.dat
 zqp_opt.dat
+geometry.dat
+zqp_gutzwiller_opt.dat
+zqp_jastrow_opt.dat
+zqp_orbital_opt.dat
+correlation.dat
+correlation.gp
+kpoints.dat
+zvo_corr.dat

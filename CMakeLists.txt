@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.0 FATAL_ERROR)
 project(mVMC NONE)
 
+add_definitions(-D_mVMC)
 if(CONFIG)
   message(STATUS "Loading configration: " ${PROJECT_SOURCE_DIR}/config/${CONFIG}.cmake)
   include(${PROJECT_SOURCE_DIR}/config/${CONFIG}.cmake)
@@ -10,7 +11,14 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
-enable_language(C)
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+enable_language(C Fortran)
+
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set(CMAKE_MACOSX_RPATH 1)
 
 find_package(OpenMP)
 if(OPENMP_FOUND)
@@ -30,3 +38,4 @@ if(LAPACK_FOUND)
 endif(LAPACK_FOUND)
 
 add_subdirectory(src)
+add_subdirectory(tool)

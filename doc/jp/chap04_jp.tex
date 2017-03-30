@@ -3,7 +3,7 @@
 \chapter{ファイル仕様}
 
 %----------------------------------------------------------
-\section{\texttt{vmcdry.out}用入力ファイル}
+\section{スタンダードモード用入力ファイル}
 \label{Ch:HowToStandard}
 
 スタンダードモード用入力ファイルは次のような格好をしています。
@@ -489,11 +489,11 @@ Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
   {\bf 説明 :} 計算するセルの境界をまたいだホッピング項に付く因子の位相を指定することが出来ます。
   $\vec{a}_0$方向、$\vec{a}_1$方向それぞれ別の位相因子を用いることが出来ます。
   １次元系では\verb|phase0|のみ使用できます。
-  例えば、$i$サイトから$i+1$サイトへのホッピングで、
+  例えば、$i$サイトから$j$サイトへのホッピングで、
   正の方向に境界をまたいだ場合には次のようになります。
   \begin{align}
-    \exp(i \times {\rm phase0}) \times t {\hat c}_{i+1 \sigma}^\dagger {\hat c}_{i \sigma}
-    + \exp(-i \times {\rm phase0}) \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{i+1 \sigma}
+    \exp(i \times {\rm phase0}) \times t {\hat c}_{j \sigma}^\dagger {\hat c}_{i \sigma}
+    + \exp(-i \times {\rm phase0}) \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{j \sigma}
   \end{align}
 
 \end{itemize}
@@ -616,7 +616,7 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 \item \verb|NStore|
 
-{\bf 形式 :} int型 (1以上、デフォルト値=0)
+{\bf 形式 :} int型 (0もしくは1、デフォルト値=1)
 
 {\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にして高速化するオプション(1で機能On、{モンテカルロサンプリング数に応じてメモリの消費が増大します})。
  

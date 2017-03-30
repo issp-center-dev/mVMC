@@ -47,44 +47,42 @@ $ tar xzvf mVMC-xxx.tar.gz
 
 mVMCは次の2通りの方法でインストールできます。
 
-\subsection{\texttt{config.sh}を使う方法}
+\subsection{\texttt{mVMCconfig.sh}を使う方法}
 
-展開したディレクトリのなかにある\verb|config.sh|スクリプトを次のように実行してください。
+展開したディレクトリのなかにある\verb|mVMCconfig.sh|スクリプトを次のように実行してください。
 (物性研システムB''sekirei''の場合)
 \begin{verbatim}
-$ bash config.sh sekirei
+$ bash mVMCconfig.sh sekirei
 \end{verbatim}
 これによりコンパイル環境設定ファイル\verb|make.sys|が\verb|src/|ディレクトリに作られます。
-\verb|config.sh|の引数は次のものに対応しています。
+\verb|mVMCconfig.sh|の引数は次のものに対応しています。
 \begin{itemize}
 \item \verb|sekirei| : 物性研究所システムB ''sekirei''
 \item \verb|kei| : 京コンピューターおよび物性研究所システムC ''maki''(FX10)
-\item \verb|openmpi-intel| : OpenMPI + intelコンパイラ
-\item \verb|mpich-intel| : MPICH + intelコンパイラ
-\item \verb|mpich-gnu-mkl| : MPICH + GNU Compiler + MKL
-\item \verb|gnu| :  OpenMPI + GCC
+\item \verb|intel-openmpi| : Intel コンパイラ + OpenMPI
+\item \verb|intel-mpich| : Intelコンパイラ + MPICH2
+\item \verb|intel-intelmpi| : Intelコンパイラ + IntelMPI
+\item \verb|gcc-mpich-mkl| : GCC + MPICH + MKL
+\item \verb|gcc-openmpi| : GCC + OpenMPI
 \end{itemize}
 
 \verb|make.sys|の中身は次のようになっています(物性研システムB ''sekirei''の場合)。
 \begin{verbatim}
 CC = mpicc
-LIB = -L$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
-      -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+F90 = mpif90
 CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
-REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
-OPTION = -D_mpi_use
-CP = cp -f -v
-AR = ar rv
-FORT = ifort
 FFLAGS = -O3 -implicitnone -xHost
-SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
+LIBS = -L $(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
+       -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 \end{verbatim}
 となります。それぞれのマクロ(変数)の説明は次のとおりです。
 \begin{itemize}
-\item \verb|CC| : Cコンパイルコマンド(\verb|mpicc|, \verb|mpifccpx|など)
-\item \verb|LIB| : ScaLAPACKのためのコンパイルオプション。
-\item \verb|CFLAGS| : その他のコンパイルオプション。
-\item \verb|FORT| : Fortranコンパイルコマンド(\verb|ifort|, \verb|frtpx|など)
+\item \verb|CC| : C コンパイラー(\verb|mpicc|, \verb|mpifccpx|など)
+\item \verb|F90| : fortran コンパイラー(\verb|ifort|, \verb|frtpx|など)
+\item \verb|LIBS| : リンカーオプション。
+\item \verb|CFLAGS| : C コンパイルオプション。
+\item \verb|FFLAGS| : fortran コンパイルオプション。
 \end{itemize}
 
 これでコンパイルのための準備が整います。その後
@@ -113,7 +111,7 @@ $ make mvmc
 mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示します。\\
 \\
 ├──COPYING\\
-├──config.sh\\
+├──mVMCconfig.sh\\
 ├──doc/\\
 │~~~~~~├──bib/\\
 │~~~~~~│~~~~~~├──elsart-num\_mod.bst\\
@@ -121,6 +119,10 @@ mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示
 │~~~~~~├──figs/\\
 │~~~~~~│~~~~~~├──*.pdf\\
 │~~~~~~│~~~~~~└──*.xbb\\
+│~~~~~~├──fourier/\\
+│~~~~~~│~~~~~~├──en/\\
+│~~~~~~│~~~~~~├──figs/\\
+│~~~~~~│~~~~~~└──ja/\\
 │~~~~~~├──jp/\\
 │~~~~~~│~~~~~~└──*.tex\\
 │~~~~~~└──en/\\
@@ -144,70 +146,107 @@ mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~│~~~~~~└──$\cdots$\\
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└─Kagome/\\
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└──$\cdots$\\
-└──src/\\
-~~~~~~~~~~~├──**.c\\
-~~~~~~~~~~~├──**.h\\
-~~~~~~~~~~~├──ComplexUHF/\\
-~~~~~~~~~~~│~~~~~~~└──src/\\
-~~~~~~~~~~~│~~~~~~~~~~~~~~~~├─ **.c\\
-~~~~~~~~~~~│~~~~~~~~~~~~~~~~└──include/\\
-~~~~~~~~~~~│~~~~~~~~~~~~~~~~~~~~~~~~~~~└──**.h\\
-~~~~~~~~~~~├──makefile\_src\\
-~~~~~~~~~~~├──include/\\
-~~~~~~~~~~~│~~~~~~~└──**.h\\
-~~~~~~~~~~~├──StdFace/\\
-~~~~~~~~~~~│~~~~~~~├──**.c\\
-~~~~~~~~~~~│~~~~~~~└──**.h\\
-~~~~~~~~~~~├──pfapack/\\
-~~~~~~~~~~~│~~~~~~~├──makefile\_pfapack\\
-~~~~~~~~~~~│~~~~~~~└──**.f\\
-~~~~~~~~~~~└──sfmt/\\
-~~~~~~~~~~~~~~~~~~~├──makefkie\_sfmt\\
-~~~~~~~~~~~~~~~~~~~├──**.c\\
-~~~~~~~~~~~~~~~~~~~└──**.h\\
+├──src/\\
+│~~~~~~~~~~├──**.c\\
+│~~~~~~~~~~├──**.h\\
+│~~~~~~~~~~├──ComplexUHF/\\
+│~~~~~~~~~~│~~~~~~~└──src/\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~~~├─ **.c\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~~~└──include/\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~~~~~~~~~~~~~~└──**.h\\
+│~~~~~~~~~~├──makefile\_src\\
+│~~~~~~~~~~├──include/\\
+│~~~~~~~~~~│~~~~~~~└──**.h\\
+│~~~~~~~~~~├──StdFace/\\
+│~~~~~~~~~~│~~~~~~~├──**.c\\
+│~~~~~~~~~~│~~~~~~~└──**.h\\
+│~~~~~~~~~~├──pfapack/\\
+│~~~~~~~~~~│~~~~~~~├──makefile\_pfapack\\
+│~~~~~~~~~~│~~~~~~~└──**.f\\
+│~~~~~~~~~~└──sfmt/\\
+│~~~~~~~~~~~~~~~~~~├──makefkie\_sfmt\\
+│~~~~~~~~~~~~~~~~~~├──**.c\\
+│~~~~~~~~~~~~~~~~~~└──**.h\\
+└──tool/\\
+~~~~~~~~~~~├──**.f90\\
+~~~~~~~~~~~└──makefile\_tool\\
 
 \newpage
 \section{基本的な使い方}
 
-{mVMCでは詳細入力ファイルを作成する実行ファイルと詳細入力ファイルを読み込み計算する実行ファイルの2つが存在します。
-ここでは、これらのファイルを用いた基本的な使用方法を記載します。}
+mVMCは次の二つのいずれかのモードで動作します。
+\begin{itemize}
+\item エキスパートモード
 
- \begin{enumerate}
-   \item  計算用ディレクトリの作成
+  mVMCでは一般的な格子フェルミオン/スピン系に対応しており、
+  各サイト毎にホッピング等を別々に指定することが出来ます。
+  これにより計算対象の柔軟な指定が可能となりますが、用意する入力ファイルは多く、
+  計算のセットアップは比較的煩雑になります。
+  
+\item スタンダードモード
 
-計算シナリオ名を記載したディレクトリを作成します。
+  典型的なモデル(正方格子上のHeisenbergモデルなど)では、
+  計算するセルのサイズや共通の相互作用項の大きさなど少数のパラメーターのみを入力して
+  エキスパートモード用の入力ファイルを自動生成し、計算をすることが出来ます。
+  計算対象はエキスパートモードに比べて限られますが、比較的容易に計算をセットアップすることが出来ます。
+  また、エキスパートモード用の入力ファイルを自動生成した後、計算をする前にそれらを手動で編集して
+  より広範なモデルに対応させることも可能です。
 
-   \item  {簡易入力ファイルの作成}
+\end{itemize}
 
-あらかじめ用意されたいくつかのモデル(HeisenbergモデルやHubbardモデル)や格子(正方格子など)を指定し、
-それらに対するいくつかのパラメーター(最近接$\cdot$次近接スピン結合やオンサイトクーロン積分など)を設定します。
-各ファイルはSec. \ref{Ch:HowToStandard}に従い記載してください。
+これらのモードを用いて次の用に計算を行います。
 
- \item  実行
+\begin{enumerate}
+  
+\item  計算用ディレクトリの作成
 
-作成した入力ファイル名を引数とし、\verb|vmcdry.out|を実行します。
-MPIは使用しません。
+  計算シナリオ名を記載したディレクトリを作成します。
 
-\verb|$ | \underline{パス}\verb|/vmcdry.out | \underline{入力ファイル} 
+\item  スタンダードモードの入力ファイルの作成
 
-このとき生成されたファイル\verb|namelist.def|を引数として\verb|vmc.out|を実行します。
+  あらかじめ用意されたいくつかのモデル(HeisenbergモデルやHubbardモデル)や格子(正方格子など)を指定し、
+  それらに対するいくつかのパラメーター(最近接$\cdot$次近接スピン結合やオンサイトクーロン積分など)を設定します。
+  各ファイルはSec. \ref{Ch:HowToStandard}に従い記載してください。
 
-\verb|$ mpiexec -np |\underline{プロセス数}\verb| |\underline{パス}\verb|/vmc.out namelist.def|
+\item  実行
 
-ワークステーションやスパコン等でキューイングシステムを利用している場合は
-プロセス数をジョブ投入コマンドの引数として与える場合があります。
-詳しくはお使いのシステムのマニュアルをご参照ください。
+  作成した入力ファイル名を引数として\verb|vmc.out|を実行します。
+  このとき入力ファイル名の前にオプション \verb|-s| を付けます。
+ 
+  \verb|$ mpiexec -np |\underline{プロセス数}\verb| |\underline{パス}\verb|/vmc.out -s| \underline{入力ファイル} 
+
+  ワークステーションやスパコン等でキューイングシステムを利用している場合は
+  プロセス数をジョブ投入コマンドの引数として与える場合があります。
+  詳しくはお使いのシステムのマニュアルをご参照ください。
 
 \item 途中経過
 
-計算実行の経過についてカレントディレクトリにログファイルが出力されます。
-出力されるファイルの詳細に関してはSec. \ref{Sec:outputfile}を参考にしてください。
+  計算実行の経過についてカレントディレクトリ直下の
+  \verb|output/| ディレクトリ(無ければ作られる)にログファイルが出力されます。
+  出力されるファイルの詳細に関してはSec. \ref{Sec:outputfile}を参考にしてください。
 
 \item 最終結果
 
-計算が正常終了した場合、
-計算モードに従いカレントディレクトリに計算結果ファイルが出力されます。
-出力されるファイルの詳細に関してはSec. \ref{Sec:outputfile}を参考にしてください。
+  計算が正常終了した場合、
+  計算モードに従い \verb|output/| ディレクトリに計算結果ファイルが出力されます。
+  出力されるファイルの詳細に関してはSec. \ref{Sec:outputfile}を参考にしてください。
+
+\item エキスパートモードの入力ファイルの作成と実行
+
+  上の例ではエキスパートモードのファイルを自動生成した後そのまま計算を開始していますが、
+  エキスパートモードのファイルの生成のみを行う場合には\verb|vmcdry.out|を実行します。
+  MPIは使用しません。
+
+  \verb|$ | \underline{パス}\verb|/vmcdry.out | \underline{入力ファイル} 
+
+  このとき生成されたファイルを必要に応じて手動で編集したのち、
+  \verb|-e| というオプションの後に \verb|namelist/def|というファイルを引数として\verb|vmcd.out|
+  を実行します。
+  
+  \verb|$ mpiexec -np |\underline{プロセス数}\verb| |\underline{パス}\verb|/vmc.out -e namelist.def|
+
+  以降はスタンダードモードと同様です。
+
 \end{enumerate}
 
 \begin{screen}

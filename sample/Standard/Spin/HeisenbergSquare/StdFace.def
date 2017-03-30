@@ -5,3 +5,7 @@ Wsub = 2
 model = "Spin"
 lattice = "tetragonal"
 J = 1.0
+NSplitSize = 4
+NSROptItrStep = 200
+2Sz = 0
+complextype = 1

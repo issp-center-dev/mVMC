@@ -2,7 +2,7 @@
 mVMC - A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
 Copyright (C) 2016 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
 
-his program is developed based on the mVMC-mini program
+This program is developed based on the mVMC-mini program
 (https://github.com/fiber-miniapp/mVMC-mini)
 which follows "The BSD 3-Clause License".
 
@@ -41,8 +41,9 @@ d_malloc1(X.Bind.Phys.loc_spin_z, X.Bind.Def.Nsite*X.Bind.Def.Nsite);
 	i_malloc2(X.Bind.Def.ExchangeCoupling, X.Bind.Def.NExchangeCoupling, 2);
 	d_malloc1(X.Bind.Def.ParaExchangeCoupling, X.Bind.Def.NExchangeCoupling);
 	i_malloc2(X.Bind.Def.Initial, X.Bind.Def.NInitial, 4);
-	d_malloc1(X.Bind.Def.ParaInitial, X.Bind.Def.NInitial);
-	d_malloc1(X.Bind.Def.ParaInitial_theta, X.Bind.Def.NInitial);
+c_malloc1(X.Bind.Def.ParaInitial, X.Bind.Def.NInitial);
+//d_malloc1(X.Bind.Def.ParaInitial, X.Bind.Def.NInitial);
+//d_malloc1(X.Bind.Def.ParaInitial_theta, X.Bind.Def.NInitial);
 i_malloc2(X.Bind.Def.OrbitalIdx, X.Bind.Def.Nsite*2, X.Bind.Def.Nsite*2);
 
 	i_malloc2(X.Bind.Def.CisAjs, X.Bind.Def.NCisAjs, 4);

@@ -47,45 +47,43 @@ $ tar xzvf mVMC-xxx.tar.gz
 
 There are two kind of procedures to install mVMC.
 
-\subsection{Using \texttt{config.sh}}
+\subsection{Using \texttt{mVMCconfig.sh}}
 
-Please run \verb|config.sh| script in the mVMC directory as follow
+Please run \verb|mVMCconfig.sh| script in the mVMC directory as follow
 (for ISSP system-B ''sekirei''):
 \begin{verbatim}
-$ bash config.sh sekirei
+$ bash mVMCconfig.sh sekirei
 \end{verbatim}
 Then environmental configuration file \verb|make.sys| is generated in 
 \verb|src/| directory.
-The command-line argument of \verb|config.sh| is as follows:
+The command-line argument of \verb|mVMCconfig.sh| is as follows:
 \begin{itemize}
 \item \verb|sekirei| : ISSP system-B ''sekirei''
 \item \verb|kei| : K computer and ISSP system-C ''maki''
-\item \verb|openmpi-intel| : OpenMPI + intel compiler
-\item \verb|mpich-intel| : MPICH + intel compiler
-\item \verb|mpich-gnu-mkl| : MPICH + GNU Compiler + MKL
-\item \verb|gnu| : OpenMPI + GCC
+\item \verb|intel-openmpi| : Intel compiler + OpenMPI
+\item \verb|intel-mpich| : Intel compiler + MPICH2
+\item \verb|intel-intelmpi| : Intel compiler + IntelMPI
+\item \verb|gcc-openmpi| : GCC + OpenMPI
+\item \verb|gcc-mpich-mkl| : GCC + MPICH + MKL
 \end{itemize}
 
 \verb|make.sys| is as follows (for ISSP-system-B ''sekirei''):
 \begin{verbatim}
 CC = mpicc
-LIB = -L$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
-      -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+F90 = mpif90
 CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
-REPORT = -qopt-report-phase=openmp -qopt-report-phase=par
-OPTION = -D_mpi_use
-CP = cp -f -v
-AR = ar rv
-FORT = ifort
 FFLAGS = -O3 -implicitnone -xHost
-SMFTFLAGS = -O3 -no-ansi-alias -xHost -DMEXP=19937 -DHAVE_SSE2
+LIBS = -L $(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
+       -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 \end{verbatim}
 We explain macros of this file as: 
 \begin{itemize}
-\item \verb|CC| : The C Compilation command (\verb|mpicc|, \verb|mpifccpx|)
-\item \verb|Lib| : Compilation options for ScaLAPACK.
-\item \verb|CFLAGS| : Other compilation options.
-\item \verb|FORT| : Fortran compilation command (\verb|ifort|, \verb|frtpx|)
+\item \verb|CC| : C compiler (\verb|mpicc|, \verb|mpifccpx|)
+\item \verb|F90| : fortran compiler (\verb|ifort|, \verb|frtpx|)
+\item \verb|Libs| : Linker option
+\item \verb|CFLAGS| : C compile option
+\item \verb|FFLAGS| : fortran compile option
 \end{itemize}
 
 
@@ -117,7 +115,7 @@ If you keep this PATH, you should write above in \verb|~/.bashrc|
 When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.\\
 \\
 ├──COPYING\\
-├──config.sh\\
+├──mVMCconfig.sh\\
 ├──doc/\\
 │~~~~~~├──bib/\\
 │~~~~~~│~~~~~~├──elsart-num\_mod.bst\\
@@ -125,6 +123,10 @@ When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.
 │~~~~~~├──figs/\\
 │~~~~~~│~~~~~~├──*.pdf\\
 │~~~~~~│~~~~~~└──*.xbb\\
+│~~~~~~├──fourier/\\
+│~~~~~~│~~~~~~├──en/\\
+│~~~~~~│~~~~~~├──figs/\\
+│~~~~~~│~~~~~~└──ja/\\
 │~~~~~~├──jp/\\
 │~~~~~~│~~~~~~└──*.tex\\
 │~~~~~~└──en/\\
@@ -148,33 +150,57 @@ When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~│~~~~~~└──$\cdots$\\
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└─Kagome/\\
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└──$\cdots$\\
-└──src/\\
-~~~~~~~~~~~├──**.c\\
-~~~~~~~~~~~├──**.h\\
-~~~~~~~~~~~├──ComplexUHF/\\
-~~~~~~~~~~~│~~~~~~~└──src/\\
-~~~~~~~~~~~│~~~~~~~~~~~~~~~~├─ **.c\\
-~~~~~~~~~~~│~~~~~~~~~~~~~~~~└──include/\\
-~~~~~~~~~~~│~~~~~~~~~~~~~~~~~~~~~~~~~~~└──**.h\\
-~~~~~~~~~~~├──makefile\_src\\
-~~~~~~~~~~~├──include/\\
-~~~~~~~~~~~│~~~~~~~└──**.h\\
-~~~~~~~~~~~├──StdFace/\\
-~~~~~~~~~~~│~~~~~~~├──**.c\\
-~~~~~~~~~~~│~~~~~~~└──**.h\\
-~~~~~~~~~~~├──pfapack/\\
-~~~~~~~~~~~│~~~~~~~├──makefile\_pfapack\\
-~~~~~~~~~~~│~~~~~~~└──**.f\\
-~~~~~~~~~~~└──sfmt/\\
-~~~~~~~~~~~~~~~~~~~├──makefkie\_sfmt\\
-~~~~~~~~~~~~~~~~~~~├──**.c\\
-~~~~~~~~~~~~~~~~~~~└──**.h\\
+├──src/\\
+│~~~~~~~~~~├──**.c\\
+│~~~~~~~~~~├──**.h\\
+│~~~~~~~~~~├──ComplexUHF/\\
+│~~~~~~~~~~│~~~~~~~└──src/\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~~~├─ **.c\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~~~└──include/\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~~~~~~~~~~~~~~└──**.h\\
+│~~~~~~~~~~├──makefile\_src\\
+│~~~~~~~~~~├──include/\\
+│~~~~~~~~~~│~~~~~~~└──**.h\\
+│~~~~~~~~~~├──StdFace/\\
+│~~~~~~~~~~│~~~~~~~├──**.c\\
+│~~~~~~~~~~│~~~~~~~└──**.h\\
+│~~~~~~~~~~├──pfapack/\\
+│~~~~~~~~~~│~~~~~~~├──makefile\_pfapack\\
+│~~~~~~~~~~│~~~~~~~└──**.f\\
+│~~~~~~~~~~└──sfmt/\\
+│~~~~~~~~~~~~~~~~~~├──makefkie\_sfmt\\
+│~~~~~~~~~~~~~~~~~~├──**.c\\
+│~~~~~~~~~~~~~~~~~~└──**.h\\
+└──tool/\\
+~~~~~~~~~~~├──**.f90\\
+~~~~~~~~~~~└──makefile\_tool\\
 
 \newpage
 \section{Basic usage}
-mVMC has two executables;
-one generates detailed input files and the other perform the main calculation with these files.
-Here, the basic flows of calculations by using these programs.
+
+mVMC works as whether the following two modes:
+
+\begin{itemize}
+\item Expert mode
+
+  mVMC supports the arbitrary fermion-/spin-lattice system;
+  we can specify the hopping, etc. at each site independently.
+  Although this makes us able to specify flexibly the target
+  this requires many input-files, and
+  the setup of the calculation is complicated.
+
+\item Standard mode
+
+  For some typical models (such as the Heisenberg model on the square lattice),
+  we can start calculation with a few parameters (for example, the size of the
+  simulation cell, the common coupling parameter).
+  In this case, the input-files for Expert mode are automatically generated.
+  Although the number of available systems is smaller than that number of Expert mode,
+  the setup of the calculation is easier than in Expert mode.
+
+\end{itemize}
+
+We can calculate by using these modes as follows:
 
 \begin{enumerate}
 
@@ -188,16 +214,11 @@ The input file format is described in the Sec. \ref{Ch:HowToStandard}.
 
 \item  Run
 
-Run a executable \verb|vmcdry.out| in terminal by specifing
-the name of input file written in previous step.
-MPI is not used in this step.
+Run a executable \verb|vmc.out| in terminal by specifying
+the name of input file written in previous step
+(option \verb|-s| is required).
 
-\verb|$ |\textit{Path}\verb|/vmcdry.out |\textit{Input\_file\_name}
-
-Then, run a executable \verb|vmc.out| with 
-the {\it namelist} file generated in the previous step.
-
-\verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmcdry.out namelist.def|
+\verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmc.out -s| \textit{Input\_file\_name}
 
 When you use a queuing system in workstations or super computers, 
 sometimes the number of processes is specified as an argument for the job-submitting command.
@@ -205,13 +226,28 @@ If you need more information, please refer manuals for your system.
 
 \item Watch calculation logs
 
-Log files are outputted in the current directry which is automatically made in the directory for a calculation scenario.
+Log files are outputted in the \verb|output/| directory which is automatically made in the directory for a calculation scenario.
 The details of output files are shown in Sec. \ref{Sec:outputfile}.
 
 \item Results
 
-  If the calculation is finished normally, the result files are outputted in  the current directry.
+  If the calculation is finished normally, the result files are outputted in the \verb|output/| directory.
   The details of output files are shown in Sec. \ref{Sec:outputfile}.
+
+\item Prepare and run Expert mode
+
+  In the above case, the calculation starts as soon as input files
+  for Expert mode are generated.
+  If we only generate files without starting the calculation,
+  we can use a executable \verb|vmcdry.out| as follows
+  (MPI is not used in this step):
+
+  \verb|$ |\textit{Path}\verb|/vmcdry.out |\textit{Input\_file\_name}
+
+  Then, we can edit generated files by hand and run a executable \verb|vmc.out| with 
+  \verb|namelist.def| as an argument (option \verb|-e| is required) as follows:
+
+  \verb|$ mpiexec -np |\textit{number\_of\_processes}\verb| |\textit{Path}\verb|/vmcdry.out -e namelist.def|
 
 \end{enumerate}
 

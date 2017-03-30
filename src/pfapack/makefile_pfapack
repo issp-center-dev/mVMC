@@ -23,7 +23,7 @@ OBJECTS = dlasktrd.o dlasktrf.o \
 	zsktf2.o zsktrd.o zsktrf.o
 
 libpfapack.a: $(OBJECTS)
-	$(AR) libpfapack.a $(OBJECTS)
+	ar -r -v $(AROPT) libpfapack.a $(OBJECTS)
 
 clean:
 	rm -f *.o
@@ -33,7 +33,7 @@ clean:
 .SUFFIXES: .o .f .f90
 
 .f90.o:
-	$(FORT) $(FFLAGS) -c $< -o $@
+	$(F90) $(FFLAGS) -c $< -o $@
 
 .f.o:
-	$(FORT) $(FFLAGS) -c $< -o $@
+	$(F90) $(FFLAGS) -c $< -o $@

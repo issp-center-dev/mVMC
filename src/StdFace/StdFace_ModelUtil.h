@@ -1,26 +1,5 @@
 /*
-mVMC - A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
-Copyright (C) 2016 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Mitsuaki Kawamura, Takeo Kato, Masatoshi Imada.
-
-his program is developed based on the mVMC-mini program
-(https://github.com/fiber-miniapp/mVMC-mini)
-which follows "The BSD 3-Clause License".
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
-
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
-*/
-/*
-HPhi  -  Quantum Lattice Model Simulator
+HPhi-mVMC-StdFace - Common input generator
 Copyright (C) 2015 The University of Tokyo
 
 This program is free software: you can redistribute it and/or modify
@@ -38,6 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <complex.h>
 #include <stdio.h>
+
+void StdFace_exit(int errorcode /**< [in]*/);
 
 void StdFace_intr(struct StdIntList *StdI, double complex intr0,
   int site1, int spin1, int site2, int spin2,
@@ -69,13 +50,17 @@ void StdFace_InputSpin(struct StdIntList *StdI, double Jp[3][3],
 void StdFace_InputCoulombV(struct StdIntList *StdI, double *V0, char *V0name);
 void StdFace_InputHopp(struct StdIntList *StdI, double complex *t0, char *t0name);
 
-void StdFace_InitSite2D(struct StdIntList *StdI, FILE *fp,
-  double Wx0, double Wy0, double Lx0, double Ly0);
+void StdFace_InitSite(struct StdIntList *StdI, FILE *fp, int dim);
 void StdFace_SetLabel(struct StdIntList *StdI, FILE *fp,
   int iW, int iL, int diW, int diL, int isiteUC, int jsiteUC,
-  int *isite, int *jsite, int connect, double complex *phase);
-
-void StdFace_generate_orb(struct StdIntList *StdI);
+  int *isite, int *jsite, int connect, double complex *Cphase);
+void StdFace_PrintGeometry(struct StdIntList *StdI);
+void StdFace_MallocInteractions(struct StdIntList *StdI);
+void StdFace_FindSite(struct StdIntList *StdI,
+  int iW, int iL, int iH, int diW, int diL, int diH,
+  int isiteUC, int jsiteUC,
+  int *isite, int *jsite, double complex *Cphase);
+void StdFace_PrintXSF(struct StdIntList *StdI);
 
 void StdFace_Tetragonal(struct StdIntList *StdI, char *model);
 void StdFace_Chain(struct StdIntList *StdI, char *model);
@@ -83,6 +68,17 @@ void StdFace_Ladder(struct StdIntList *StdI, char *model);
 void StdFace_Triangular(struct StdIntList *StdI, char *model);
 void StdFace_Honeycomb(struct StdIntList *StdI, char *model);
 void StdFace_Kagome(struct StdIntList *StdI, char *model);
+void StdFace_Orthorhombic(struct StdIntList *StdI, char *model);
+void StdFace_FCOrtho(struct StdIntList *StdI, char *model);
+void StdFace_Pyrochlore(struct StdIntList *StdI, char *model);
+void StdFace_Wannier90(struct StdIntList *StdI, char *model);
 
-void StdFace_InterAllSeparate(struct StdIntList *StdI);
+#if defined(_HPhi)
+void StdFace_Chain_Boost(struct StdIntList *StdI);
+void StdFace_Ladder_Boost(struct StdIntList *StdI);
+void StdFace_Honeycomb_Boost(struct StdIntList *StdI);
+void StdFace_Kagome_Boost(struct StdIntList *StdI);
+#elif defined(_mVMC)
+void StdFace_generate_orb(struct StdIntList *StdI);
 void StdFace_Proj(struct StdIntList *StdI);
+#endif
