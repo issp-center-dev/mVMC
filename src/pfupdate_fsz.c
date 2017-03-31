@@ -26,23 +26,23 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-void CalculateNewPfM(const int mi, const int s, double complex *pfMNew, const int *eleIdx,
+void CalculateNewPfM_fsz(const int mi, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
                      const int qpStart, const int qpEnd);
-void CalculateNewPfM2(const int mi, const int s, double complex *pfMNew, const int *eleIdx,
+void CalculateNewPfM2_fsz(const int ma, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
                      const int qpStart, const int qpEnd);
-void UpdateMAll(const int mi, const int s, const int *eleIdx,
+void UpdateMAll_fsz(const int mi, const int s, const int *eleIdx,const int *eleSpn,
                 const int qpStart, const int qpEnd);
-void updateMAll_child(const int ma, const int s, const int *eleIdx,
+void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int *eleSpn,
                       const int qpStart, const int qpEnd, const int qpidx,
                       double complex *vec1, double complex *vec2);
 
-
 /* Calculate new pfaffian. The ma-th electron with spin s hops. */
-void CalculateNewPfM(const int ma, const int s, double complex *pfMNew, const int *eleIdx,
+void CalculateNewPfM_fsz(const int ma, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
                      const int qpStart, const int qpEnd) {
   #pragma procedure serial
   const int qpNum = qpEnd-qpStart;
-  const int msa = ma+s*Ne;
+  //const int msa = ma+s*Ne;//fsz
+  const int msa = ma;
   const int rsa = eleIdx[msa] + s*Nsite;
 
   int qpidx;
@@ -61,14 +61,14 @@ void CalculateNewPfM(const int ma, const int s, double complex *pfMNew, const in
     invM_a = InvM + qpidx*Nsize*Nsize + msa*Nsize;
 
     ratio = 0.0;
-    for(msj=0;msj<ne;msj++) {
-      rsj = eleIdx[msj];
+    for(msj=0;msj<nsize;msj++) { //fsz
+      rsj = eleIdx[msj]+eleSpn[msj]*Nsite;//fsz
       ratio += invM_a[msj] * sltE_a[rsj];
     }
-    for(msj=ne;msj<nsize;msj++) {
-      rsj = eleIdx[msj] + Nsite;
-      ratio += invM_a[msj] * sltE_a[rsj];
-    }
+//    for(msj=ne;msj<nsize;msj++) {
+//      rsj = eleIdx[msj] + Nsite;
+//      ratio += invM_a[msj] * sltE_a[rsj];
+ //   }
 
     pfMNew[qpidx] = -ratio*PfM[qpidx];
   }
@@ -76,11 +76,12 @@ void CalculateNewPfM(const int ma, const int s, double complex *pfMNew, const in
   return;
 }
 
-/* thread parallel version of CalculateNewPfM */
-void CalculateNewPfM2(const int ma, const int s, double complex *pfMNew, const int *eleIdx,
+/* thread parallel version of CalculateNewPfM_fsz */
+void CalculateNewPfM2_fsz(const int ma, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
                      const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;
-  const int msa = ma+s*Ne;
+  //const int msa = ma+s*Ne;
+  const int msa = ma;
   const int rsa = eleIdx[msa] + s*Nsite;
 
   int qpidx;
@@ -101,15 +102,14 @@ void CalculateNewPfM2(const int ma, const int s, double complex *pfMNew, const i
     invM_a = InvM + qpidx*Nsize*Nsize + msa*Nsize;
 
     ratio = 0.0;
-    for(msj=0;msj<ne;msj++) {
-      rsj = eleIdx[msj];
+    for(msj=0;msj<nsize;msj++) {
+      rsj = eleIdx[msj]+eleSpn[msj]*Nsite;//fsz
       ratio += invM_a[msj] * sltE_a[rsj];
-      //printf("DEBUG:msj=%d rsj=%d: invM=%lf %lf : slt=%lf %lf \n",msj,rsj,creal(invM_a[msj]),cimag(invM_a[msj]),creal(sltE_a[rsj]),cimag(sltE_a[rsj]));
     }
-    for(msj=ne;msj<nsize;msj++) {
+/*    for(msj=ne;msj<nsize;msj++) {
       rsj = eleIdx[msj] + Nsite;
       ratio += invM_a[msj] * sltE_a[rsj];
-    }
+    }*/
 
     pfMNew[qpidx] = -ratio*PfM[qpidx];
   }
@@ -118,7 +118,7 @@ void CalculateNewPfM2(const int ma, const int s, double complex *pfMNew, const i
 }
 
 /* Update PfM and InvM. The ma-th electron with spin s hops to site ra=eleIdx[msi] */
-void UpdateMAll(const int ma, const int s, const int *eleIdx,
+void UpdateMAll_fsz(const int ma, const int s, const int *eleIdx,const int *eleSpn,
                 const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;
   int qpidx;
@@ -134,7 +134,7 @@ void UpdateMAll(const int ma, const int s, const int *eleIdx,
     #pragma omp for private(qpidx)
     #pragma loop nounroll
     for(qpidx=0;qpidx<qpNum;qpidx++) {
-      updateMAll_child(ma, s, eleIdx, qpStart, qpEnd, qpidx, vec1, vec2);
+      updateMAll_child_fsz(ma, s, eleIdx,eleSpn, qpStart, qpEnd, qpidx, vec1, vec2);
     }
   }
 
@@ -142,12 +142,13 @@ void UpdateMAll(const int ma, const int s, const int *eleIdx,
   return;
 }
 
-void updateMAll_child(const int ma, const int s, const int *eleIdx,
+void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int *eleSpn,
                       const int qpStart, const int qpEnd, const int qpidx,
                       double complex *vec1, double complex *vec2) {
   #pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
-  const int msa = ma+s*Ne;
+  //const int msa = ma+s*Ne;
+  const int msa = ma;
   const int rsa = eleIdx[msa] + s*Nsite;
   const int nsize = Nsize; /* optimization for Kei */
 
@@ -173,7 +174,8 @@ void updateMAll_child(const int ma, const int s, const int *eleIdx,
   /* Note that invM[i][j] = -invM[j][i] */
   #pragma loop noalias
   for(msj=0;msj<nsize;msj++) {
-    rsj = eleIdx[msj] + (msj/Ne)*Nsite;
+    //rsj = eleIdx[msj] + (msj/Ne)*Nsite;
+    rsj = eleIdx[msj] + eleSpn[msj]*Nsite; //fsz
     sltE_aj = sltE_a[rsj];
     invM_j = invM + msj*Nsize;
 

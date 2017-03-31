@@ -22,7 +22,7 @@ lslocgrn.c \
 matrix.c \
 parameter.c \
 pfupdate.c \
-pfupdate.c \
+pfupdate_fsz.c \
 pfupdate_real.c \
 pfupdate_two_fcmp.c \
 pfupdate_two_fsz.c \

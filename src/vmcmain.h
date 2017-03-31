@@ -84,6 +84,7 @@ extern int omp_get_thread_num(void);
 #include "qp_real.c"
 #include "matrix.c"
 #include "pfupdate.c"
+#include "pfupdate_fsz.c"
 #include "pfupdate_real.c"
 #include "pfupdate_two_fcmp.c"
 #include "pfupdate_two_fsz.c"
