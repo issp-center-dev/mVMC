@@ -55,6 +55,7 @@ inline void MPI_Comm_rank(MPI_Comm comm, int *rank) {*rank = 0; return;}
 extern int omp_get_max_threads(void);
 extern int omp_get_thread_num(void);
 
+<<<<<<< HEAD
 #include "../sfmt/SFMT.h"
 #include "version.h"
 #include "global.h"
@@ -63,6 +64,16 @@ extern int omp_get_thread_num(void);
 #include "../safempi_fcmp.c"
 #include "../time.c"
 #include "../workspace.c"
+=======
+#include "sfmt/SFMT.h"
+#include "version.h"
+#include "global.h"
+
+#include "safempi.c"
+#include "safempi_fcmp.c"
+#include "time.c"
+#include "workspace.c"
+>>>>>>> FreeSz
 
 #ifdef _lapack
  #include "../stcopt_dposv.c"
@@ -70,6 +81,7 @@ extern int omp_get_thread_num(void);
  #include "../stcopt_pdposv.c"
 #endif
 
+<<<<<<< HEAD
 #include "../gauleg.c"
 #include "../legendrepoly.c"
 #include "../splitloop.c"
@@ -99,5 +111,43 @@ extern int omp_get_thread_num(void);
 #include "../vmcmake.c"
 #include "../vmcmake_real.c"
 #include "../vmccal.c"
+=======
+#include "gauleg.c"
+#include "legendrepoly.c"
+#include "splitloop.c"
+#include "avevar.c"
+#include "average.c"
+
+#include "parameter.c"
+#include "projection.c"
+#include "slater.c"
+#include "slater_fsz.c"
+#include "qp.c"
+#include "qp_real.c"
+#include "matrix.c"
+#include "pfupdate.c"
+#include "pfupdate_fsz.c"
+#include "pfupdate_real.c"
+#include "pfupdate_two_fcmp.c"
+#include "pfupdate_two_fsz.c"
+#include "pfupdate_two_real.c"
+#include "locgrn.c"
+#include "locgrn_real.c"
+#include "locgrn_fsz.c"
+#include "calham.c"
+#include "calham_real.c"
+#include "calham_fsz.c"
+#include "calgrn.c"
+//#include "lslocgrn.c" // ignoring Lanczos To be added
+#include "setmemory.c"
+#include "readdef.c"
+#include "initfile.c"
+
+#include "vmcmake.c"
+#include "vmcmake_real.c"
+#include "vmcmake_fsz.c"
+#include "vmccal.c"
+#include "vmccal_fsz.c"
+>>>>>>> FreeSz
 
 #endif /* _VMC_INCLUDE_FILES */

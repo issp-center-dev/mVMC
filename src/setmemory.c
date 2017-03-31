@@ -94,16 +94,16 @@ void SetMemoryDef() {
     pInt += 4*Nsite;
   }
 
-  OrbitalIdx = (int**)malloc(sizeof(int*)*Nsite);
-  for(i=0;i<Nsite;i++) {
+  OrbitalIdx = (int**)malloc(sizeof(int*)*(2*Nsite));//fsz
+  for(i=0;i<Nsite*2;i++) {
     OrbitalIdx[i] = pInt;
-    pInt += Nsite;
+    pInt += Nsite*2;
   }
 
-  OrbitalSgn = (int**)malloc(sizeof(int*)*Nsite);
-  for(i=0;i<Nsite;i++) {
+  OrbitalSgn = (int**)malloc(sizeof(int*)*(Nsite*2));//fsz
+  for(i=0;i<Nsite*2;i++) {
     OrbitalSgn[i] = pInt;
-    pInt += Nsite;
+    pInt += Nsite*2;
   }
 
   QPTrans = (int**)malloc(sizeof(int*)*NQPTrans);
@@ -213,6 +213,7 @@ void FreeMemoryDef() {
 void SetMemory() {
 
   /***** Variational Parameters *****/
+  //printf("DEBUG:opt=%d %d %d %d %d Ne=%d\n", AllComplexFlag,NPara,NProj,NSlater,NOrbitalIdx,Ne);
   Para     = (double complex*)malloc(sizeof(double complex)*(NPara)); 
   Proj     = Para;
   Slater   = Para + NProj; 
@@ -223,18 +224,21 @@ void SetMemory() {
   EleCfg            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
   EleNum            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
   EleProjCnt        = (int*)malloc(sizeof(int)*( NVMCSample*NProj ));
+  EleSpn            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));//fsz
   logSqPfFullSlater = (double*)malloc(sizeof(double)*(NVMCSample));
 
-  TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
+  TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne));//fsz
   TmpEleCfg         = TmpEleIdx + 2*Ne;
   TmpEleNum         = TmpEleCfg + 2*Nsite;
   TmpEleProjCnt     = TmpEleNum + 2*Nsite;
+  TmpEleSpn         = TmpEleProjCnt + NProj; //fsz
 
-  BurnEleIdx = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
-  BurnEleCfg = BurnEleIdx + 2*Ne;
-  BurnEleNum = BurnEleCfg + 2*Nsite;
-  BurnEleProjCnt = BurnEleNum + 2*Nsite;
-
+  BurnEleIdx        = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne)); //fsz
+  BurnEleCfg        = BurnEleIdx + 2*Ne;
+  BurnEleNum        = BurnEleCfg + 2*Nsite;
+  BurnEleProjCnt    = BurnEleNum + 2*Nsite;
+  BurnEleSpn        = BurnEleProjCnt + NProj; //fsz
+  
   /***** Slater Elements ******/
   SlaterElm = (double complex*)malloc( sizeof(double complex)*(NQPFull*(2*Nsite)*(2*Nsite)) );
   InvM = (double complex*)malloc( sizeof(double complex)*(NQPFull*(Nsize*Nsize+1)) );
