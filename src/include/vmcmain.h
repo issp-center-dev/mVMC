@@ -23,7 +23,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * Variational Monte Carlo
  * main program header
  *-------------------------------------------------------------
- * by Satoshi Morita and Ryui Kaneko
+ * by Satoshi Morita
  *-------------------------------------------------------------*/
 
 #ifndef _VMC_INCLUDE_FILES
@@ -37,6 +37,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <errno.h>
 #include <limits.h>
 #include <string.h>
+#include <complex.h>
 
 #ifdef _mpi_use
   #include <mpi.h>
@@ -55,9 +56,11 @@ extern int omp_get_max_threads(void);
 extern int omp_get_thread_num(void);
 
 #include "sfmt/SFMT.h"
+#include "version.h"
 #include "global.h"
 
 #include "safempi.c"
+#include "safempi_fcmp.c"
 #include "time.c"
 #include "workspace.c"
 
@@ -78,22 +81,28 @@ extern int omp_get_thread_num(void);
 #include "slater.c"
 #include "slater_fsz.c"
 #include "qp.c"
+#include "qp_real.c"
 #include "matrix.c"
 #include "pfupdate.c"
-#include "pfupdate_two.c"
+#include "pfupdate_fsz.c"
+#include "pfupdate_real.c"
+#include "pfupdate_two_fcmp.c"
 #include "pfupdate_two_fsz.c"
+#include "pfupdate_two_real.c"
 #include "locgrn.c"
+#include "locgrn_real.c"
 #include "locgrn_fsz.c"
 #include "calham.c"
+#include "calham_real.c"
 #include "calham_fsz.c"
 #include "calgrn.c"
-#include "lslocgrn.c"
-
+//#include "lslocgrn.c" // ignoring Lanczos To be added
 #include "setmemory.c"
 #include "readdef.c"
 #include "initfile.c"
 
 #include "vmcmake.c"
+#include "vmcmake_real.c"
 #include "vmcmake_fsz.c"
 #include "vmccal.c"
 #include "vmccal_fsz.c"
