@@ -14,16 +14,21 @@ avevar.c \
 calgrn.c \
 calham.c \
 calham_real.c \
+calham_fsz.c \
 gauleg.c \
 initfile.c \
 legendrepoly.c \
 locgrn.c \
 locgrn_real.c \
+locgrn_fsz.c \
+lslocgrn.c \
 matrix.c \
 parameter.c \
 pfupdate.c \
+pfupdate_fsz.c \
 pfupdate_real.c \
 pfupdate_two_fcmp.c \
+pfupdate_two_fsz.c \
 pfupdate_two_real.c \
 projection.c \
 qp.c \
@@ -33,12 +38,17 @@ safempi.c \
 safempi_fcmp.c \
 setmemory.c \
 slater.c \
+slater_fsz.c \
 splitloop.c \
 stcopt_dposv.c \
 stcopt_pdposv.c \
 time.c \
 vmccal.c \
+vmccal_fsz.c \
+vmcdry.c \
+vmcmain.c \
 vmcmake.c \
+vmcmake_fsz.c \
 vmcmake_real.c \
 workspace.c
 

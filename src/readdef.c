@@ -513,7 +513,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
     + Nsite*Nsite /* JastrowIdx */
     + 2*Nsite*NDoublonHolon2siteIdx /* DoublonHolon2siteIdx */
     + 4*Nsite*NDoublonHolon4siteIdx /* DoublonHolon4siteIdx */
-    + Nsite*Nsite /* OrbitalSgn */
+    + (2*Nsite)*(2*Nsite) /* OrbitalIdx */ //fsz
+    + (2*Nsite)*(2*Nsite) /* OrbitalSgn */ //fsz
     + Nsite*NQPTrans /* QPTrans */
     + Nsite*NQPTrans /* QPTransSgn */
     + 4*NCisAjs /* CisAjs */
@@ -559,6 +560,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   int x0,x1,x2,x3,x4,x5,x6,x7;
   double dReValue, dImValue;
   int rank;
+  int sgn;
 
 	//[s] for Orbital idx
 	int all_i, all_j;
@@ -631,8 +633,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 		  }
               if(Transfer[idx][1] != Transfer[idx][3]){
 				fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-				info = ReadDefFileError(defname);
-				break;
+				//info = ReadDefFileError(defname);
+				//break;
 			}
 	    idx++;
 	  }
@@ -876,6 +878,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	fclose(fp);
 	break;
 
+
       case KWOrbital:        
       case KWOrbitalAntiParallel:
         /*orbitalidxs.def------------------------------------*/
@@ -988,7 +991,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
         }
         fclose(fp);
         break;
-
 		case KWOrbitalGeneral:
           if(APFlag==0) {
             while( fscanf(fp, "%d %d %d %d %d\n", &i, &spn_i, &j, &spn_j, &fij) != EOF){

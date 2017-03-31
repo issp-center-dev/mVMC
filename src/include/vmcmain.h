@@ -79,17 +79,22 @@ extern int omp_get_thread_num(void);
 #include "../parameter.c"
 #include "../projection.c"
 #include "../slater.c"
+#include "../slater_fsz.c"
 #include "../qp.c"
 #include "../qp_real.c"
 #include "../matrix.c"
 #include "../pfupdate.c"
 #include "../pfupdate_real.c"
+#include "../pfupdate_fsz.c"
 #include "../pfupdate_two_fcmp.c"
 #include "../pfupdate_two_real.c"
+#include "../pfupdate_two_fsz.c"
 #include "../locgrn.c"
 #include "../locgrn_real.c"
+#include "../locgrn_fsz.c"
 #include "../calham.c"
 #include "../calham_real.c"
+#include "../calham_fsz.c"
 #include "../calgrn.c"
 //#include "lslocgrn.c" // ignoring Lanczos To be added
 #include "../setmemory.c"
@@ -98,6 +103,8 @@ extern int omp_get_thread_num(void);
 
 #include "../vmcmake.c"
 #include "../vmcmake_real.c"
+#include "../vmcmake_fsz.c"
 #include "../vmccal.c"
+#include "../vmccal_fsz.c"
 
 #endif /* _VMC_INCLUDE_FILES */

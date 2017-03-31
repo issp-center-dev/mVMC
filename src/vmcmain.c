@@ -327,6 +327,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   MPI_Comm_rank(comm_parent, &rank);
 
   for(step=0;step<NSROptItrStep;step++) {
+        printf("0 DUBUG make:step=%d \n",step);
     if(rank==0){
       OutputTime(step);
       if(step%(NSROptItrStep/20)==0){
@@ -336,7 +337,9 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }
     
     StartTimer(20);
-    UpdateSlaterElm_fcmp();
+        printf("1 DUBUG make:step=%d \n",step);
+    UpdateSlaterElm_fsz();//UpdateSlaterElm_fcmp();
+        printf("2 DUBUG make:step=%d \n",step);
     UpdateQPWeight();
       StopTimer(20);
       StartTimer(3);
@@ -360,14 +363,15 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          StopTimer(69);
          // only for real TBC
       }else{
-        VMCMakeSample(comm_child1);
+        printf("3 DUBUG make:step=%d \n",step);
+        VMCMakeSample_fsz(comm_child1);//VMCMakeSample(comm_child1);
       } 
       StopTimer(3);
       StartTimer(4);
 #ifdef _DEBUG
       printf("Debug: step %d, MainCal.\n", step);
 #endif
-    VMCMainCal(comm_child1);
+    VMCMainCal_fsz(comm_child1);// VMCMainCal(comm_child1);
       StopTimer(4);
       StartTimer(21);
 #ifdef _DEBUG
@@ -398,7 +402,17 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       } 
     }
 //DBBUG
+/*
+    for(tmp_i=0;tmp_i<NPara;tmp_i++){
+      printf("Before: ParaAll NPara=%d; tmp_i=%d : %lf %lf\n",NPara,tmp_i,creal(Para[tmp_i]),cimag(Para[tmp_i]));
+    }
+*/
     info = StochasticOpt(comm_parent);
+/*
+    for(tmp_i=0;tmp_i<NPara;tmp_i++){
+      printf("Aft: ParaAll NPara=%d; tmp_i=%d : %lf %lf\n",NPara,tmp_i,creal(Para[tmp_i]),cimag(Para[tmp_i]));
+    }
+*/
     //info = StochasticOptDiag(comm_parent);
       StopTimer(5);
 
@@ -422,7 +436,6 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
   /* output zqp_opt */
   if(rank==0) OutputOptData();
-
   return 0;
 }
 
@@ -497,7 +510,8 @@ void outputData() {
 
   /* zvo_out.dat */
  // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
-    fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)));
+ //   fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)));
+    fprintf(FileOut, "% .18e % .18e  % .18e % .18e %.18e\n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)),Sztot);
 
   /* zvo_var.dat */
   if(FlagBinary==0) { /* formatted output*/

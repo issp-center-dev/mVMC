@@ -1,11 +1,9 @@
-W = 4
-L = 2
-Wsub = 4
-Lsub = 2
+W = 6
+L = 6
+Wsub = 6
+Lsub = 6
 model = "FermionHubbard"
 lattice = "triangular"
 t = 1.0
-U = 4.0
-nelec = 8
-NSplitsize = 8
-NSROptItrStep = 500
+U = 10.0
+nelec = 36

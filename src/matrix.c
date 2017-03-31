@@ -35,6 +35,11 @@ int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd);
 int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
                         double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
 
+int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd);
+int calculateMAll_child_fsz(const int *eleIdx,const int *elesSpn, const int qpStart, const int qpEnd, const int qpidx,
+                        double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
+// note: CalculateMAll_fsz,calculateMAll_child_fsz will be merged with *fcmp
+
 #ifdef _SYSTEM_A
   #define M_DGETRF DGETRF
   #define M_DGETRI DGETRI
@@ -110,6 +115,144 @@ int getLWork_fcmp() {
   lwork = (creal(optSize1)>creal(optSize2)) ? (int)creal(optSize1) : (int)creal(optSize2);
   return lwork;
 }
+
+//==============s fsz =============//
+/* Calculate PfM and InvM from qpidx=qpStart to qpEnd */
+int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd) {
+  const int qpNum = qpEnd-qpStart;
+  int qpidx;
+
+  int info = 0;
+
+  double complex *myBufM;
+  double complex *myWork;
+  int            *myIWork;
+  int             myInfo;
+  double         *myRWork;
+
+  RequestWorkSpaceThreadInt(Nsize);         //int
+
+  RequestWorkSpaceThreadComplex(Nsize*Nsize+LapackLWork);
+
+  RequestWorkSpaceThreadDouble(LapackLWork); // TBC for rwork
+
+  #pragma omp parallel default(shared)              \
+    private(myIWork,myWork,myInfo,myBufM)
+  {
+    myIWork = GetWorkSpaceThreadInt(Nsize); // int
+
+    myBufM  = GetWorkSpaceThreadComplex(Nsize*Nsize); //comp
+    myWork  = GetWorkSpaceThreadComplex(LapackLWork); // comp
+
+    myRWork = GetWorkSpaceThreadDouble(LapackLWork); //TBC for rwork
+
+    #pragma omp for private(qpidx)
+    for(qpidx=0;qpidx<qpNum;qpidx++) {
+      if(info!=0) continue;
+      
+      myInfo = calculateMAll_child_fsz(eleIdx,eleSpn, qpStart, qpEnd, qpidx,
+                                   myBufM, myIWork, myWork, LapackLWork,myRWork);
+      if(myInfo!=0) {
+        #pragma omp critical
+        info=myInfo;
+      }
+    }
+  }
+
+  ReleaseWorkSpaceThreadInt();
+  ReleaseWorkSpaceThreadComplex();
+  ReleaseWorkSpaceThreadDouble();
+  return info;
+}
+
+int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd, const int qpidx,
+                        double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork) {
+  #pragma procedure serial
+  /* const int qpNum = qpEnd-qpStart; */
+  int msi,msj;
+  int rsi,rsj;
+
+  char uplo='U', mthd='P';
+  int m,n,lda,info=0;
+  //int nspn = 2*Ne+2*Nsite+2*Nsite+NProj; this is useful?
+  double complex pfaff;
+
+  /* optimization for Kei */
+  const int nsize = Nsize;
+
+  const double complex *sltE = SlaterElm + (qpidx+qpStart)*Nsite2*Nsite2;
+  const double complex *sltE_i;
+
+  double complex *invM = InvM + qpidx*Nsize*Nsize;
+  double complex *invM_i;
+
+  double complex *bufM_i, *bufM_i2;
+
+  m=n=lda=Nsize;
+
+  /* store bufM */
+  /* Note that bufM is column-major and skew-symmetric. */
+  /* bufM[msj][msi] = -sltE[rsi][rsj] */
+  #pragma loop noalias
+  for(msi=0;msi<nsize;msi++) {
+    rsi = eleIdx[msi] + eleSpn[msi]*Nsite;//fsz
+    bufM_i = bufM + msi*Nsize;
+    sltE_i = sltE + rsi*Nsite2;
+    #pragma loop norecurrence
+    for(msj=0;msj<nsize;msj++) {
+      rsj = eleIdx[msj] + eleSpn[msj]*Nsite;//fsz
+      bufM_i[msj] = -sltE_i[rsj];
+      //printf("DEBUG: msi=%d msj=%d: rsi=%d rsj=%d :bufM=%lf %lf \n",msi,msj,rsi,rsj,creal(bufM_i[msj]),cimag(bufM_i[msj]));
+    }
+  }
+
+  /* copy bufM to invM */
+  /* For Pfaffian calculation, invM is used as second buffer */
+  #pragma loop noalias
+  for(msi=0;msi<nsize*nsize;msi++) {
+    invM[msi] = bufM[msi];
+  }
+  /* calculate Pf M */
+  //printf("DEBUG: n=%d \n",n);
+  //for(msi=0;msi<nsize;msi++){
+  //  for(msj=0;msj<nsize;msj++){
+  //    printf("DEBUG: msi=%d msj=%d bufM %lf %lf \n",msi,msj,creal(bufM[msi+msj*n]),cimag(bufM[msi+msj*n]));
+  //  }
+  //}
+  M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
+  //printf("DEBUG: pfaff=%lf %lf\n",creal(pfaff),cimag(pfaff));
+  if(info!=0) return info;
+  if(!isfinite(creal(pfaff) + cimag(pfaff))) return qpidx+1;
+  PfM[qpidx] = pfaff;
+
+  /* DInv */
+  M_ZGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
+  if(info!=0) return info;
+  //for(msi=0;msi<nsize*nsize;msi++) {
+  //  printf("DEBUG: M_ZGETRF %d %lf %lf \n",msi,creal(bufM[msi]),cimag(bufM[msi]));
+  //}
+  
+  M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
+  if(info!=0) return info;
+  
+  /* store InvM */
+  /* BufM is column-major, InvM is row-major */
+  #pragma loop noalias
+  for(msi=0;msi<nsize;msi++) {
+    invM_i = invM + msi*Nsize;
+    bufM_i = bufM + msi*Nsize;
+    bufM_i2 = bufM + msi;
+    for(msj=0;msj<nsize;msj++) {
+      invM_i[msj] = 0.5*(bufM_i2[msj*nsize] - bufM_i[msj]);
+      //printf("DEBUG: msj=%d invM=%lf %lf \n",msj,creal(invM_i[msj]),cimag(invM_i[msj]));
+      /* invM[i][j] = 0.5*(bufM[i][j]-bufM[j][i]) */
+    }
+  }
+
+  return info;
+}
+
+
 
 
 //==============s fcmp =============//
