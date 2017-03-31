@@ -26,6 +26,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
+#include "./include/global.h"
+
 void SetMemoryDef();
 void FreeMemoryDef();
 void SetMemory();
@@ -94,16 +96,30 @@ void SetMemoryDef() {
     pInt += 4*Nsite;
   }
 
-  OrbitalIdx = (int**)malloc(sizeof(int*)*(2*Nsite));//fsz
-  for(i=0;i<Nsite*2;i++) {
-    OrbitalIdx[i] = pInt;
-    pInt += Nsite*2;
+  if(iFlgOrbitalGeneral==0){//for spin conserved
+    OrbitalIdx = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      OrbitalIdx[i] = pInt;
+      pInt += Nsite;
+    }
+    OrbitalSgn = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      OrbitalSgn[i] = pInt;
+      pInt += Nsite;
+    }
   }
-
-  OrbitalSgn = (int**)malloc(sizeof(int*)*(Nsite*2));//fsz
-  for(i=0;i<Nsite*2;i++) {
-    OrbitalSgn[i] = pInt;
-    pInt += Nsite*2;
+  else{//for spin not conserved
+    OrbitalIdx = (int**)malloc(sizeof(int*)*2*Nsite);
+    for(i=0;i<2*Nsite;i++) {
+      OrbitalIdx[i] = pInt;
+      pInt += 2*Nsite;
+    }
+    
+    OrbitalSgn = (int**)malloc(sizeof(int*)*2*Nsite);
+    for(i=0;i<2*Nsite;i++) {
+      OrbitalSgn[i] = pInt;
+      pInt += 2*Nsite;
+    }
   }
 
   QPTrans = (int**)malloc(sizeof(int*)*NQPTrans);

@@ -34,4 +34,4 @@ if(MPI_FOUND)
 endif(MPI_FOUND)
 install(TARGETS vmcdry.out RUNTIME DESTINATION bin)
 install(TARGETS vmc.out RUNTIME DESTINATION bin)
-
+add_definitions(-D_mVMC)
