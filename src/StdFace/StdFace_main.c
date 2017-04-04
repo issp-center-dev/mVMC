@@ -451,9 +451,9 @@ void PrintJastrow(struct StdIntList *StdI) {
 }/*void PrintJastrow*/
 
  /*
- * Output Jastrow
+ * Output Orbital index (up-down)
  */
-void PrintOrb(struct StdIntList *StdI) {
+static void PrintOrb(struct StdIntList *StdI) {
   FILE *fp;
   int isite, jsite, iOrb;
 
@@ -484,8 +484,85 @@ void PrintOrb(struct StdIntList *StdI) {
 
   for (isite = 0; isite < StdI->nsite; isite++) free(StdI->Orb[isite]);
   free(StdI->Orb);
-}/*void PrintJastrow*/
-/**
+}/*void PrintOrb*/
+ /**
+ * Output OrbitalIdx (up-up & down-down)
+ *
+ * @author Mitsuaki Kawamura (The University of Tokyo)
+ */
+static void PrintOrbGC(struct StdIntList *StdI) {
+  FILE *fp;
+  int isite, jsite, NOrbGC, iOrbGC, isite1, jsite1, iorb;
+  int **OrbGC;
+
+  OrbGC = (int **)malloc(sizeof(int*) * StdI->nsite);
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    OrbGC[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
+    for (jsite = 0; jsite < StdI->nsite; jsite++) {
+      OrbGC[isite][jsite] = StdI->Orb[isite][jsite];
+    }/*for (jsite = 0; jsite < isite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+   /*
+   Symmetrize
+   */
+  for (iorb = 0; iorb < StdI->NOrb; iorb++) {
+    for (isite = 0; isite < StdI->nsite; isite++) {
+      for (jsite = 0; jsite < StdI->nsite; jsite++) {
+        if (OrbGC[isite][jsite] == iorb) {
+          OrbGC[jsite][isite] = OrbGC[isite][jsite];
+        }
+      }/*for (jsite = 0; jsite < isite; jsite++)*/
+    }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+  }/*for (iorb = 0; iorb < StdI->NOrb; iorb++)*/
+   /**/
+  NOrbGC = 0;
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    for (jsite = 0; jsite < isite; jsite++) {
+      if (OrbGC[isite][jsite] >= 0) {
+        iOrbGC = OrbGC[isite][jsite];
+        NOrbGC -= 1;
+        for (isite1 = 0; isite1 < StdI->nsite; isite1++) {
+          for (jsite1 = 0; jsite1 < StdI->nsite; jsite1++) {
+            if (OrbGC[isite1][jsite1] == iOrbGC)
+              OrbGC[isite1][jsite1] = NOrbGC;
+          }/*for (jsite1 = 0; jsite1 < StdI->nsite; jsite1++)*/
+        }/*for (isite1 = 0; isite1 < StdI->nsite; isite1++)*/
+      }/*if (OrbGC[isite][jsite] >= 0)*/
+    }/*for (jsite = 0; jsite < isite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+   /**/
+  NOrbGC = -NOrbGC;
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    for (jsite = 0; jsite < StdI->nsite; jsite++) {
+      OrbGC[isite][jsite] = -1 - OrbGC[isite][jsite];
+    }/*for (jsite = 0; jsite < isite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+
+  fp = fopen("orbitalidxgc.def", "w");
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "NOrbitalIdx %10d\n", NOrbGC);
+  fprintf(fp, "ComplexType %10d\n", StdI->ComplexType);
+  fprintf(fp, "=============================================\n");
+  fprintf(fp, "=============================================\n");
+
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    for (jsite = 0; jsite < StdI->nsite; jsite++) {
+      if (isite == jsite) continue;
+      fprintf(fp, "%5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite]);
+    }/*for (jsite = 0; jsite < isite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+
+  for (iOrbGC = 0; iOrbGC < NOrbGC; iOrbGC++)
+    fprintf(fp, "%5d  %5d\n", iOrbGC, 1);
+
+  fflush(fp);
+  fclose(fp);
+  fprintf(stdout, "    orbitalidxgc.def is written.\n");
+
+  for (isite = 0; isite < StdI->nsite; isite++) free(OrbGC[isite]);
+  free(OrbGC);
+}/*void PrintOrbGC*/
+ /**
 * Output .def file for Gutzwiller
 *
 */
@@ -996,6 +1073,7 @@ static void PrintNamelist(struct StdIntList *StdI){
   fprintf(                         fp, "      Gutzwiller  gutzwilleridx.def\n");
   fprintf(                         fp, "         Jastrow  jastrowidx.def\n");
   fprintf(                         fp, "         Orbital  orbitalidx.def\n");
+  if (StdI->lGC == 1) fprintf(     fp, " OrbitalParallel  orbitalidxgc.def\n");
   fprintf(                         fp, "        TransSym  qptransidx.def\n");
 #endif
   
@@ -1415,48 +1493,62 @@ static void CheckModPara(struct StdIntList *StdI)
 #endif
   /**/
   if (strcmp(StdI->model, "hubbard") == 0){
+#if defined(_HPhi)
     if (StdI->lGC == 0) StdFace_RequiredVal_i("nelec", StdI->nelec);
     else {
       StdFace_NotUsed_i("nelec", StdI->nelec);
       StdFace_NotUsed_i("2Sz", StdI->Sz2);
     }
-#if defined(_mVMC)
-    if (StdI->lGC == 0) {
-      StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
-      if (StdI->nelec % 2 != 0) {
-        printf("\nERROR ! nelec should be an even number !\n\n");
-        StdFace_exit(-1);
-      }
-      else {
-        StdI->nelec = StdI->nelec / 2;
-      }
+#else
+    StdFace_RequiredVal_i("nelec", StdI->nelec);
+    if (StdI->nelec % 2 != 0) {
+      printf("\nERROR ! nelec should be an even number !\n\n");
+      StdFace_exit(-1);
+    }
+    else {
+      StdI->nelec = StdI->nelec / 2;
+    }
+    if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
+    else {
+      StdFace_NotUsed_i("2Sz", StdI->Sz2);
+      StdI->Sz2 = 0;
     }
 #endif
   }
   else if (strcmp(StdI->model, "spin") == 0) {
     StdFace_NotUsed_i("nelec", StdI->nelec);
+#if defined(_HPhi)
     if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
     else StdFace_NotUsed_i("2Sz", StdI->Sz2);
-#if defined(_mVMC)
+#else
     StdI->nelec = StdI->nsite / 2;
+    if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
+    else {
+      StdFace_NotUsed_i("2Sz", StdI->Sz2);
+      StdI->Sz2 = 0;
+    }
 #endif
   }
   else if (strcmp(StdI->model, "kondo") == 0) {
+#if defined(_HPhi)
     if (StdI->lGC == 0) StdFace_RequiredVal_i("nelec", StdI->nelec);
     else {
       StdFace_NotUsed_i("nelec", StdI->nelec);
       StdFace_NotUsed_i("2Sz", StdI->Sz2);
     }
-#if defined(_mVMC)
-    if (StdI->lGC == 0) {
-      StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
-      if ((StdI->nelec + StdI->nsite / 2) % 2 != 0) {
-        printf("\nERROR ! nelec should be an even number !\n\n");
-        StdFace_exit(-1);
-      }
-      else {
-        StdI->nelec = (StdI->nelec + StdI->nsite / 2) / 2;
-      }
+#else
+    StdFace_RequiredVal_i("nelec", StdI->nelec);
+    if ((StdI->nelec + StdI->nsite / 2) % 2 != 0) {
+      printf("\nERROR ! nelec + (# of local spin) should be an even number !\n\n");
+      StdFace_exit(-1);
+    }
+    else {
+      StdI->nelec = (StdI->nelec + StdI->nsite / 2) / 2;
+    }
+    if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
+    else {
+      StdFace_NotUsed_i("2Sz", StdI->Sz2);
+      StdI->Sz2 = 0;
     }
 #endif
   }
@@ -2065,12 +2157,6 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
   }
   else UnsupportedSystem(StdI.model, StdI.lattice);
 
-#if defined(_mVMC)
-  if (StdI.lGC == 1) {
-    printf("\nSorry, Grandcanonical has not been supported !\n\n");
-    StdFace_exit(-1);
-  }
-#endif
   /*
   Generate Hamiltonian definition files
   */
@@ -2129,6 +2215,7 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
   StdFace_generate_orb(&StdI);
   StdFace_Proj(&StdI);
   PrintJastrow(&StdI);
+  if(StdI.lGC == 1)PrintOrbGC(&StdI);
   PrintGutzwiller(&StdI);
   PrintOrb(&StdI);
 #endif
