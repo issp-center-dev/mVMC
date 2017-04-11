@@ -378,9 +378,12 @@ int ReadDefFileIdxPara(
 			case KWCoulombIntra:
 				/*coulombintra.def----------------------------------*/
 				if(X->NCoulombIntra>0){
-					while( fscanf(fp, "%d %lf\n",
-								  &(X->CoulombIntra[idx][0]),
-								  &(X->ParaCoulombIntra[idx]) )!=EOF){
+					idx=0;
+					while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
+						sscanf(ctmp2, "%d %lf\n",
+							   &(X->CoulombIntra[idx][0]),
+							   &(X->ParaCoulombIntra[idx])
+						);
                       //printf("Debug: CoulombIntra: idx = %d, para = %lf \n", X->CoulombIntra[idx][0],X->ParaCoulombIntra[idx]);
                       idx++;
 					}

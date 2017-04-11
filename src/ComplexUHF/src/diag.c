@@ -39,7 +39,7 @@ void diag(struct BindStruct *X){
     for(int_i = 0;int_i < 2*xMsize; int_i++){
       for(int_j = 0;int_j < 2*xMsize; int_j++){
         tmp_mat[int_i][int_j] = X->Large.Ham[int_i][int_j];
-        //          fprintf(stdout, "Debug: mat(%d, %d)=(%lf, %lf)\n", int_i, int_j, creal(X->Large.Ham[int_i][int_j]), cimag(X->Large.Ham[int_i][int_j]));
+        //fprintf(stdout, "Debug: mat(%d, %d)=(%lf, %lf)\n", int_i, int_j, creal(X->Large.Ham[int_i][int_j]), cimag(X->Large.Ham[int_i][int_j]));
       }
     }
     ZHEEVall(2*xMsize,tmp_mat,r,vec);
@@ -47,7 +47,6 @@ void diag(struct BindStruct *X){
       X->Large.EigenValues[int_k] = r[int_k];
       //fprintf(stdout, "Debug: Eigen[%d]=%lf\n", int_k, X->Large.EigenValues[int_k]);
     }
-
     //For zero-temperature to generate pair-orbitals
     for(int_k = 0; int_k < 2*X->Def.Ne; int_k++){
       for(int_l = 0; int_l < 2*xMsize; int_l++){

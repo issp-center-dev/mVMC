@@ -98,8 +98,13 @@ void cal_cisajs(struct BindStruct *X){
             t_site_1    = site_1+Ns*spin_1;
             t_site_2    = site_2+Ns*spin_2;
             tmp         = X->Large.G[t_site_1][t_site_2];
-//            fprintf(fp," %4d %4d %4d %4d %.10lf %.10lf\n",site_1,site_2,spin_1,spin_2,cabs(tmp),carg(tmp));
-              fprintf(fp," %4d %4d %4d %4d %.10lf %.10lf\n",site_1,spin_1,site_2,spin_2,creal(tmp),cimag(tmp));
+            
+			  fprintf(fp, " %4d %4d %4d %4d %.10lf %.10lf\n", site_1, spin_1, site_2, spin_2, creal(tmp), cimag(tmp));
+			  
+			  if(t_site_1==t_site_2) {
+				  fprintf(stdout, " Debug: %4d %4d %4d %4d %.10lf %.10lf\n", site_1, spin_1, site_2, spin_2, cabs(tmp), carg(tmp));
+			  }
+			   
           }
         } 
       }
@@ -151,6 +156,8 @@ int MakeOrbitalFile(struct BindStruct *X){
             if(Orbitalidx !=-1){
               ParamOrbital[Orbitalidx]+=UHF_Fij[isite][jsite];
               CountOrbital[Orbitalidx]+=1;
+              //printf("debug: Orbitaidx[%d][%d]=%d, UHF_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(UHF_Fij[isite][jsite]), cimag(UHF_Fij[isite][jsite]));
+              //printf("debug: Orbitaidx[%d][%d]=%d, ParamOrbital_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(ParamOrbital[Orbitalidx]), cimag(ParamOrbital[Orbitalidx]));
             }
           }
         }
@@ -159,7 +166,7 @@ int MakeOrbitalFile(struct BindStruct *X){
 
     for(i=0; i<X->Def.NOrbitalIdx; i++){
       ParamOrbital[i] /= (double)CountOrbital[i];
-      //printf("debug: Orbital: idx=%d, param=%lf, %lf \n", i, creal(ParamOrbital[i]), cimag(ParamOrbital[i]));
+      //printf("debug: Orbital: idx=%d, param=%lf, %lf , count=%d \n", i, creal(ParamOrbital[i]), cimag(ParamOrbital[i]), CountOrbital[i]);
     };
     
     sprintf(fileName, "%s_orbital_opt.dat", X->Def.CParaFileHead);
@@ -167,6 +174,7 @@ int MakeOrbitalFile(struct BindStruct *X){
     
     c_free2(UHF_Fij, X->Def.Nsite*2, X->Def.Nsite*2);
     c_free1(ParamOrbital, X->Def.NOrbitalIdx);
+	i_free1(CountOrbital, X->Def.NOrbitalIdx);
     printf("Fij for mVMC are outputted to %s.\n", fileName);
 
   }
