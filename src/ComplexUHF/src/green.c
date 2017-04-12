@@ -47,9 +47,8 @@ void green(struct BindStruct *X){
 
     for(int_i = 0; int_i < 2*xMsize; int_i++){
       for(int_j = 0; int_j < 2*xMsize; int_j++){
-        //X->Large.G[int_i][int_j] = R_Mat[int_i][int_j];
-          X->Large.G[int_i][int_j] = R_Mat[int_i][int_j]*(double)X->Def.OrbitalSgn[int_i][int_j];
-          //fprintf(stdout, "DEBUG: X->Large.G[%d][%d]=%lf, %lf \n", int_i, int_j,creal(X->Large.G[int_i][int_j]), cimag(X->Large.G[int_i][int_j]));
+        X->Large.G[int_i][int_j] = R_Mat[int_i][int_j];
+        //fprintf(stdout, "DEBUG: X->Large.G[%d][%d]=%lf, %lf \n", int_i, int_j,creal(X->Large.G[int_i][int_j]), cimag(X->Large.G[int_i][int_j]));
       }
     }
 

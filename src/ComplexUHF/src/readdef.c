@@ -484,31 +484,15 @@ int ReadDefFileIdxPara(
             }
           }
           idx =0;
-          if(X->APFlag==0) {
-            while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
-              sscanf(ctmp2, "%d %d %d\n",
-                     &i,
-                     &j,
-                     &Orbitalidx);
-              X->OrbitalIdx[i+X->Nsite*0][j+X->Nsite*1]=Orbitalidx;
-				X->OrbitalSgn[i+X->Nsite*0][j+X->Nsite*1] = 1;
-              idx++;
-              if(idx==X->Nsite*X->Nsite) break;
-            }
-          } else { /* anti-periodic boundary mode */
-            while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
-                 sscanf(ctmp2, "%d %d %d %d\n",
-                        &i,
-                        &j,
-                        &Orbitalidx,
-                        &Orbitalsgn
-                        );
-                 X->OrbitalIdx[i+X->Nsite*0][j+X->Nsite*1]=Orbitalidx;
-				if(Orbitalsgn==0) Orbitalsgn=1;
-				X->OrbitalSgn[i+X->Nsite*0][j+X->Nsite*1] = Orbitalsgn;
-                 idx++;
-                 if(idx==X->Nsite*X->Nsite) break;
-            }
+
+          while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
+            sscanf(ctmp2, "%d %d %d\n",
+                   &i,
+                   &j,
+                   &Orbitalidx);
+            X->OrbitalIdx[i+X->Nsite*1][j+X->Nsite*0]=Orbitalidx;
+            idx++;
+            if(idx==X->Nsite*X->Nsite) break;
           }
           if(idx!=X->Nsite*X->Nsite) {
             info=ReadDefFileError(defname);
@@ -643,10 +627,10 @@ int CheckWords(
 {
 
 	int i=0;
-
 	char ctmp_small[256]={0};
 	char cKW_small[256]={0};
 	int n;
+    
 	n=strlen(cKeyWord);
 	strncpy(cKW_small, cKeyWord, n);
 
@@ -833,10 +817,10 @@ void SetInitialValue(struct DefineList *X){
   X->NOrbitalIdx=0;
   X->NCisAjs=0;
   X->NInitial=0;
-	X->mix=0.5;
-	X->eps_int=10;
-	X->print=0;
-	X->IterationMax=2000;
-	X->eps_int_slater=6;
+  X->mix=0.5;
+  X->eps_int=10;
+  X->print=0;
+  X->IterationMax=2000;
+  X->eps_int_slater=6;
 }
 

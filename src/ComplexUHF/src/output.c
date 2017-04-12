@@ -101,11 +101,11 @@ void cal_cisajs(struct BindStruct *X){
             tmp         = X->Large.G[t_site_1][t_site_2];
             
 			  fprintf(fp, " %4d %4d %4d %4d %.10lf %.10lf\n", site_1, spin_1, site_2, spin_2, creal(tmp), cimag(tmp));
-			  /*
+			  
 			  if(t_site_1==t_site_2) {
 				  fprintf(stdout, " Debug: %4d %4d %4d %4d %.10lf %.10lf\n", site_1, spin_1, site_2, spin_2, cabs(tmp), carg(tmp));
 			  }
-			  */
+			  
           }
         } 
       }
