@@ -490,7 +490,7 @@ int ReadDefFileIdxPara(
                    &i,
                    &j,
                    &Orbitalidx);
-            X->OrbitalIdx[i+X->Nsite*1][j+X->Nsite*0]=Orbitalidx;
+            X->OrbitalIdx[i+X->Nsite*0][j+X->Nsite*1]=Orbitalidx;
             idx++;
             if(idx==X->Nsite*X->Nsite) break;
           }

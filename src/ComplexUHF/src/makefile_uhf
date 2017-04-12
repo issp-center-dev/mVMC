@@ -21,10 +21,8 @@ xfreemem_large.c \
 xsetmem_def.c \
 xsetmem_large.c
 
-all :
-	cd sfmt; $(MAKE) -f makefile_sfmt
-
 UHF : $(OBJS)
+	cd sfmt; $(MAKE) -f makefile_sfmt
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 SUFFIXES: .o .c

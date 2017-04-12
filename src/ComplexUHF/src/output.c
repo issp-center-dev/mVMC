@@ -22,6 +22,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "output.h"
 #include "mfmemory.c"
 #include "sfmt/SFMT.h"
+#include <matrixlapack.h>
 
 int MakeOrbitalFile(struct BindStruct *X);
 void cal_cisajs(struct BindStruct *X);
@@ -121,7 +122,48 @@ int MakeOrbitalFile(struct BindStruct *X){
   double complex *ParamOrbital;
   int *CountOrbital;
   int Orbitalidx;
+  int int_i,int_j,int_k,int_l,xMsize;
+  double complex **tmp_mat,**vec;
+  double *r;
   char fileName[256];
+//
+//[s] for anti-pararell, rediag
+  xMsize = X->Def.Nsite;  
+  c_malloc2(tmp_mat,xMsize,xMsize);
+  c_malloc2(vec,xMsize,xMsize);
+  d_malloc1(r,xMsize);
+  for(int_l = 0; int_l < 2*xMsize; int_l++){
+    for(int_k = 0; int_k < 2*X->Def.Ne; int_k++){
+      X->Large.R_SLT[int_l][int_k] = 0.0;
+    }
+  } 
+// for up 
+  for(int_i = 0;int_i < xMsize; int_i++){
+    for(int_j = 0;int_j < xMsize; int_j++){
+      tmp_mat[int_i][int_j] = X->Large.Ham[int_i][int_j];
+    }
+  }
+  ZHEEVall(xMsize,tmp_mat,r,vec);
+  for(int_k = 0; int_k < X->Def.Ne; int_k++){
+    for(int_l = 0; int_l < xMsize; int_l++){
+      X->Large.R_SLT[int_l][2*int_k] = (vec[int_k][int_l]);
+    }
+  }
+// for down
+  for(int_i = 0;int_i < xMsize; int_i++){
+    for(int_j = 0;int_j < xMsize; int_j++){
+      tmp_mat[int_i][int_j] = X->Large.Ham[int_i+xMsize][int_j+xMsize];
+    }
+  }
+  ZHEEVall(xMsize,tmp_mat,r,vec);
+  for(int_k = 0; int_k < X->Def.Ne; int_k++){
+    for(int_l = 0; int_l < xMsize; int_l++){
+      X->Large.R_SLT[int_l+xMsize][2*int_k+1] = (vec[int_k][int_l]);
+    }
+  }
+//[e] for anti-pararell
+
+ 
   
   if(X->Def.NOrbitalIdx>0){
     c_malloc2(UHF_Fij, X->Def.Nsite*2, X->Def.Nsite*2);
@@ -145,9 +187,9 @@ int MakeOrbitalFile(struct BindStruct *X){
 		  for (ispin = 0; ispin < 2; ispin++) {
 			  for(n=0;n< 2*X->Def.Ne;n+=2) {
 				  isite = i + ispin * X->Def.Nsite;
-				  printf("debug: Orbital: isite=%d, R_SLT_up=%lf, R_SLT_down=%lf \n", isite,
-						 creal(X->Large.R_SLT[isite][n]),
-						 creal(X->Large.R_SLT[isite][n + 1]));
+				  //printf("debug: Orbital: isite=%d, R_SLT_up=%lf, R_SLT_down=%lf \n", isite,
+				//		 creal(X->Large.R_SLT[isite][n]),
+				//		 creal(X->Large.R_SLT[isite][n + 1]));
 			  }
 		  }
 	  }
