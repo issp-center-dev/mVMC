@@ -497,7 +497,7 @@ int ReadDefFileIdxPara(
             }
           } else { /* anti-periodic boundary mode */
             while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
-                 sscanf(ctmp2, "%d %d %d\n",
+                 sscanf(ctmp2, "%d %d %d %d\n",
                         &i,
                         &j,
                         &Orbitalidx,
