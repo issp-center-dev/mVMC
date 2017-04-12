@@ -150,7 +150,6 @@ int ReadDefFileNInt(
                            CheckWords(ctmp, "NDataQtySmp")==0 ||
                                 CheckWords(ctmp, "NSPGaussLeg")==0 ||
                                 CheckWords(ctmp, "NSPStot")==0 ||
-                                CheckWords(ctmp, "NMPTrans")==0 ||
                                 CheckWords(ctmp, "NSROptItrStep")==0 ||
                                 CheckWords(ctmp, "NSROptItrSmp")==0 ||
                                 CheckWords(ctmp, "DSROptRedCut")==0 ||
@@ -160,7 +159,7 @@ int ReadDefFileNInt(
                                 CheckWords(ctmp, "NVMCInterval")==0 ||
                                 CheckWords(ctmp, "NVMCSample")==0 ||
                                 CheckWords(ctmp, "NExUpdatePath")==0 ||
-                                CheckWords(ctmp, "RndSeed")==0 ||
+//                                CheckWords(ctmp, "RndSeed")==0 ||
                                 CheckWords(ctmp, "NSplitSize")==0 ||
                                 CheckWords(ctmp, "NStore")==0
                            )
@@ -186,6 +185,15 @@ int ReadDefFileNInt(
 						}
 						else if(CheckWords(ctmp, "IterationMax")==0){
 							X->IterationMax=(int)dtmp;
+						}
+						else if(CheckWords(ctmp, "RndSeed")==0){
+							X->RndSeed=(int)dtmp;
+						}
+						else if(CheckWords(ctmp, "EpsSlater")==0){
+							X->eps_int_slater=(int)dtmp;
+						}
+						else if( CheckWords(ctmp, "NMPTrans")==0){
+							X->NMPTrans=(int) dtmp;
 						}
 						else{
 							fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
@@ -292,6 +300,12 @@ int ReadDefFileNInt(
 		return -1;
 	}
 
+	if(X->NMPTrans < 0) {
+		X->APFlag = 1; /* anti-periodic boundary */
+		X->NMPTrans *= -1;
+	} else {
+		X->APFlag = 0;
+	}
 	X->Nsize   = 2*X->Ne;
 	X->fidx = 0;
 	return 0;
@@ -307,7 +321,7 @@ int ReadDefFileIdxPara(
 	char ctmp[D_FileNameMax], ctmp2[256];
 	int iKWidx=0;
 	int i, j;
-    int idx, Orbitalidx;
+    int idx, Orbitalidx, Orbitalsgn;
 	int x0,x1,x2,x3;
 	int info;
 	double dReValue;
@@ -461,149 +475,149 @@ int ReadDefFileIdxPara(
 				fclose(fp);
 				break;
 
-        case KWOrbital:
-          /*orbitalidx.def------------------------------------*/
-          if(X->NOrbitalIdx>0){
-            for(i=0; i<X->Nsite*2; i++){
-              for(j=0; j<X->Nsite*2; j++){
-                X->OrbitalIdx[i][j] = -1;
-              }
+      case KWOrbital:
+        /*orbitalidx.def------------------------------------*/
+        if(X->NOrbitalIdx>0){
+          for(i=0; i<X->Nsite*2; i++){
+            for(j=0; j<X->Nsite*2; j++){
+              X->OrbitalIdx[i][j] = -1;
             }
-            idx = 0;
-            while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL)
-			  {
-                //TODO: Replace for spin dependent
-				  sscanf(ctmp2, "%d %d %d\n",
-						 &i,
-						 &j,
-						 &Orbitalidx);
-                  (X->OrbitalIdx[i+X->Nsite*1][j+X->Nsite*0])=Orbitalidx;
-                  idx++;
-                  if(idx==X->Nsite*X->Nsite) break;
+          }
+          idx =0;
+          if(X->APFlag==0) {
+            while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
+              sscanf(ctmp2, "%d %d %d\n",
+                     &i,
+                     &j,
+                     &Orbitalidx);
+              X->OrbitalIdx[i+X->Nsite*0][j+X->Nsite*1]=Orbitalidx;
+				X->OrbitalSgn[i+X->Nsite*0][j+X->Nsite*1] = 1;
+              idx++;
+              if(idx==X->Nsite*X->Nsite) break;
+            }
+          } else { /* anti-periodic boundary mode */
+            while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
+                 sscanf(ctmp2, "%d %d %d\n",
+                        &i,
+                        &j,
+                        &Orbitalidx,
+                        &Orbitalsgn
+                        );
+                 X->OrbitalIdx[i+X->Nsite*0][j+X->Nsite*1]=Orbitalidx;
+				if(Orbitalsgn==0) Orbitalsgn=1;
+				X->OrbitalSgn[i+X->Nsite*0][j+X->Nsite*1] = Orbitalsgn;
+                 idx++;
+                 if(idx==X->Nsite*X->Nsite) break;
+            }
+          }
+          if(idx!=X->Nsite*X->Nsite) {
+            info=ReadDefFileError(defname);
+          }
+        }
+        fclose(fp);
+        break;
 
-                  /*
-				  sscanf(ctmp2, "%d %d %d %d %d\n",
-						 &i,
-                         &ispin,
-						 &j,
-                         &jspin
-						 &Orbitalidx);
-                         X->OrbitalIdx[i+X->Nsite*ispin][j+X->Nsite*jspin]=Orbitalidx;
-                  idx++;
-                  if(idx==2*X->Nsite*2*X->Nsite) break;
-                  
-                  */
+        case KWOneBodyG:
+          /*cisajs.def----------------------------------------*/
+          if(X->NCisAjs>0){
+            idx = 0;
+            while( fscanf(fp, "%d %d %d %d\n",
+                          &(x0), &(x1), &(x2), &(x3)) != EOF){
+              X->CisAjs[idx][0] = x0;
+              X->CisAjs[idx][1] = x1;
+              X->CisAjs[idx][2] = x2;
+              X->CisAjs[idx][3] = x3;
+              if(x1 != x3){
+                fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
+                info = ReadDefFileError(defname);
+                break;
+              }
+              idx++;
             }
-            if(idx!=X->Nsite*X->Nsite) {
-				info=ReadDefFileError(defname);
+            if(idx!=X->NCisAjs){
+              info=ReadDefFileError(defname);
             }
           }
           fclose(fp);
-          
           break;
 
-
-			case KWOneBodyG:
-				/*cisajs.def----------------------------------------*/
-				if(X->NCisAjs>0){
-					idx = 0;
-					while( fscanf(fp, "%d %d %d %d\n",
-								  &(x0), &(x1), &(x2), &(x3)) != EOF){
-						X->CisAjs[idx][0] = x0;
-						X->CisAjs[idx][1] = x1;
-						X->CisAjs[idx][2] = x2;
-						X->CisAjs[idx][3] = x3;
-						if(x1 != x3){
-							fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-							info = ReadDefFileError(defname);
-							break;
-						}
-						idx++;
-					}
-					if(idx!=X->NCisAjs){
-						info=ReadDefFileError(defname);
-					}
-				}
-				fclose(fp);
-				break;
-
-				/*
+          /*
 			case KWInterAll:
-				//
-				if(X->NInterAll>0){
-					idx = 0;
-					while( fscanf(fp, "%d %d %d %d %d %d %d %d %lf %lf\n",
-								  &(InterAll[idx][0]),
-								  &(InterAll[idx][1]),//ispin1
-								  &(InterAll[idx][2]),
-								  &(InterAll[idx][3]),//ispin2
-								  &(InterAll[idx][4]),
-								  &(InterAll[idx][5]),//ispin3
-								  &(InterAll[idx][6]),
-								  &(InterAll[idx][7]),//ispin4
-								  &dReValue,
-								  &dImValue)!=EOF ){
+            //
+            if(X->NInterAll>0){
+            idx = 0;
+            while( fscanf(fp, "%d %d %d %d %d %d %d %d %lf %lf\n",
+            &(InterAll[idx][0]),
+            &(InterAll[idx][1]),//ispin1
+            &(InterAll[idx][2]),
+            &(InterAll[idx][3]),//ispin2
+            &(InterAll[idx][4]),
+            &(InterAll[idx][5]),//ispin3
+            &(InterAll[idx][6]),
+            &(InterAll[idx][7]),//ispin4
+            &dReValue,
+            &dImValue)!=EOF ){
 
-						ParaInterAll[idx]=dReValue+I*dImValue;
+            ParaInterAll[idx]=dReValue+I*dImValue;
 
-						if(!((InterAll[idx][1] == InterAll[idx][3]
-							  || InterAll[idx][5] == InterAll[idx][7])
-							 ||
-							 (InterAll[idx][1] == InterAll[idx][5]
-							  || InterAll[idx][3]  == InterAll[idx][7])
-						)
-								)
-						{
-							fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-							info = ReadDefFileError(defname);
-							break;
-						}
-						idx++;
-					}
-					if(idx!=NInterAll) info=ReadDefFileError(defname);
-				} else {
-					// info=ReadDefFileError(xNameListFile);
-				}
-				fclose(fp);
-				break;
-		*/
-			case KWInitial:
-				/*initial.def------------------------------------*/
-				if(X->NInitial>0){
-                  idx = 0;
-					while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
-                      dImValue=0;
-                      sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
-                             &(X->Initial[idx][0]),
-                             &(X->Initial[idx][1]),
-                             &(X->Initial[idx][2]),
-                             &(X->Initial[idx][3]),
-                             &dReValue,
-                             &dImValue);
-                      X->ParaInitial[idx]=dReValue+dImValue*I;
-                      idx++;
-					}
-                }
+            if(!((InterAll[idx][1] == InterAll[idx][3]
+            || InterAll[idx][5] == InterAll[idx][7])
+            ||
+            (InterAll[idx][1] == InterAll[idx][5]
+            || InterAll[idx][3]  == InterAll[idx][7])
+            )
+            )
+            {
+            fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
+            info = ReadDefFileError(defname);
+            break;
+            }
+            idx++;
+            }
+            if(idx!=NInterAll) info=ReadDefFileError(defname);
+            } else {
+            // info=ReadDefFileError(xNameListFile);
+            }
+            fclose(fp);
+            break;
+          */
+        case KWInitial:
+          /*initial.def------------------------------------*/
+          if(X->NInitial>0){
+            idx = 0;
+            while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
+              dImValue=0;
+              sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
+                     &(X->Initial[idx][0]),
+                     &(X->Initial[idx][1]),
+                     &(X->Initial[idx][2]),
+                     &(X->Initial[idx][3]),
+                     &dReValue,
+                     &dImValue);
+              X->ParaInitial[idx]=dReValue+dImValue*I;
+              idx++;
+            }
+          }
                 
-                if(idx!=X->NInitial){
-                  info=ReadDefFileError(defname);
-                }
-        	 else {
-					//	 info=ReadDefFileError(xNameListFile);
-				}
-	        fclose(fp);
-    	    break;
+          if(idx!=X->NInitial){
+            info=ReadDefFileError(defname);
+          }
+          else {
+            //	 info=ReadDefFileError(xNameListFile);
+          }
+          fclose(fp);
+          break;
 
-			default:
-                fprintf(stdout, "!! Warning: %s is not used for Hatree Fock Calculation. !!\n", defname);
-                fclose(fp);
-				break;
+        default:
+          fprintf(stdout, "!! Warning: %s is not used for Hatree Fock Calculation. !!\n", defname);
+          fclose(fp);
+          break;
 		}
 	}
 
 	if(info!=0) {
-		fprintf(stderr, "error: Indices and Parameters of Definition files(*.def) are incomplete.\n");
-		return -1;
+      fprintf(stderr, "error: Indices and Parameters of Definition files(*.def) are incomplete.\n");
+      return -1;
 	}
 
 	return 0;
@@ -823,5 +837,6 @@ void SetInitialValue(struct DefineList *X){
 	X->eps_int=10;
 	X->print=0;
 	X->IterationMax=2000;
+	X->eps_int_slater=6;
 }
 

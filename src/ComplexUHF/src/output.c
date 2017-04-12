@@ -21,6 +21,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 #include "output.h"
 #include "mfmemory.c"
+#include "sfmt/SFMT.h"
 
 int MakeOrbitalFile(struct BindStruct *X);
 void cal_cisajs(struct BindStruct *X);
@@ -100,11 +101,11 @@ void cal_cisajs(struct BindStruct *X){
             tmp         = X->Large.G[t_site_1][t_site_2];
             
 			  fprintf(fp, " %4d %4d %4d %4d %.10lf %.10lf\n", site_1, spin_1, site_2, spin_2, creal(tmp), cimag(tmp));
-			  
+			  /*
 			  if(t_site_1==t_site_2) {
 				  fprintf(stdout, " Debug: %4d %4d %4d %4d %.10lf %.10lf\n", site_1, spin_1, site_2, spin_2, cabs(tmp), carg(tmp));
 			  }
-			   
+			  */
           }
         } 
       }
@@ -139,7 +140,18 @@ int MakeOrbitalFile(struct BindStruct *X){
       }
     }
 
-    c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
+
+	  for(i=0;i< X->Def.Nsite;i++) {
+		  for (ispin = 0; ispin < 2; ispin++) {
+			  for(n=0;n< 2*X->Def.Ne;n+=2) {
+				  isite = i + ispin * X->Def.Nsite;
+				  printf("debug: Orbital: isite=%d, R_SLT_up=%lf, R_SLT_down=%lf \n", isite,
+						 creal(X->Large.R_SLT[isite][n]),
+						 creal(X->Large.R_SLT[isite][n + 1]));
+			  }
+		  }
+	  }
+	  c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
     i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
     for(i=0; i<X->Def.NOrbitalIdx; i++){
       ParamOrbital[i]=0;
@@ -166,6 +178,7 @@ int MakeOrbitalFile(struct BindStruct *X){
 
     for(i=0; i<X->Def.NOrbitalIdx; i++){
       ParamOrbital[i] /= (double)CountOrbital[i];
+		ParamOrbital[i] += genrand_real2()*pow(10.0,-X->Def.eps_int_slater);
       //printf("debug: Orbital: idx=%d, param=%lf, %lf , count=%d \n", i, creal(ParamOrbital[i]), cimag(ParamOrbital[i]), CountOrbital[i]);
     };
     

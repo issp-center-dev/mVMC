@@ -41,6 +41,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "green.h"
 #include "cal_energy.h"
 #include "output.h"
+#include "sfmt/SFMT.h"
 
 double gettimeofday_sec(){
 //  struct timeval tv;
@@ -69,8 +70,10 @@ int main(int argc, char* argv[]){
 
     //time start
     X.Bind.Time.start=time(NULL);
-    
-    if(argc==1 || argc>3){
+
+	int RndSeed=11272;
+
+	if(argc==1 || argc>3){
       //ERROR
       printf("ED Error: *.out(*.exe) NameListFile [OptParaFile]\n");
       exit(1);
@@ -112,7 +115,10 @@ int main(int argc, char* argv[]){
     printf("#################################### \n");
 
     X.Bind.Def.eps=tmp_eps;
-    initial(&(X.Bind));
+
+	/* initialize Mersenne Twister */
+	init_gen_rand(X.Bind.Def.RndSeed);
+	initial(&(X.Bind));
     sprintf(sdt,"%s_check.dat",X.Bind.Def.CDataFileHead);
     fp=fopen(sdt,"w");
 
