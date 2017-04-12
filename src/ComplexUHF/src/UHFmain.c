@@ -71,8 +71,6 @@ int main(int argc, char* argv[]){
     //time start
     X.Bind.Time.start=time(NULL);
 
-	int RndSeed=11272;
-
 	if(argc==1 || argc>3){
       //ERROR
       printf("ED Error: *.out(*.exe) NameListFile [OptParaFile]\n");
