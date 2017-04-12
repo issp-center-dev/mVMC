@@ -57,10 +57,4 @@ void initial(struct BindStruct *X){
       t_site_1 = site_1+spin_1*Ns;
       X->Large.G[t_site_0][t_site_1]  = tmp ;
     }
-
-	for(int_i=0; int_i < 2*X->Def.Nsite; int_i++) {
-		for (int_j = 0; int_j < 2 * X->Def.Nsite; int_j++) {
-			X->Large.G[int_i][int_j] *= (double) X->Def.OrbitalSgn[int_i][int_j];
-		}
-	}
 }
