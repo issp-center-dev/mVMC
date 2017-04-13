@@ -12,6 +12,7 @@ SOURCES = \
 average.c \
 avevar.c \
 calgrn.c \
+calgrn_fsz.c \
 calham.c \
 calham_real.c \
 calham_fsz.c \

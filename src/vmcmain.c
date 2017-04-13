@@ -327,7 +327,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   MPI_Comm_rank(comm_parent, &rank);
 
   for(step=0;step<NSROptItrStep;step++) {
-        printf("0 DUBUG make:step=%d \n",step);
+    //printf("0 DUBUG make:step=%d \n",step);
     if(rank==0){
       OutputTime(step);
       if(step%(NSROptItrStep/20)==0){
@@ -337,12 +337,12 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }
     
     StartTimer(20);
-        printf("1 DUBUG make:step=%d \n",step);
+    //printf("1 DUBUG make:step=%d \n",step);
     UpdateSlaterElm_fsz();//UpdateSlaterElm_fcmp();
-        printf("2 DUBUG make:step=%d \n",step);
+    //printf("2 DUBUG make:step=%d \n",step);
     UpdateQPWeight();
-      StopTimer(20);
-      StartTimer(3);
+    StopTimer(20);
+    StartTimer(3);
 #ifdef _DEBUG
       printf("Debug: step %d, MakeSample.\n", step);
 #endif
@@ -363,15 +363,22 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          StopTimer(69);
          // only for real TBC
       }else{
-        printf("3 DUBUG make:step=%d \n",step);
-        VMCMakeSample_fsz(comm_child1);//VMCMakeSample(comm_child1);
+        if(iFlgOrbitalGeneral==0){//sz is conserved
+          VMCMakeSample(comm_child1);//VMCMakeSample(comm_child1);
+        }else{
+          VMCMakeSample_fsz(comm_child1);//VMCMakeSample(comm_child1);
+        } 
       } 
       StopTimer(3);
       StartTimer(4);
 #ifdef _DEBUG
       printf("Debug: step %d, MainCal.\n", step);
 #endif
-    VMCMainCal_fsz(comm_child1);// VMCMainCal(comm_child1);
+      if(iFlgOrbitalGeneral==0){//sz is conserved
+        VMCMainCal(comm_child1);
+      }else{//fsz
+        VMCMainCal_fsz(comm_child1); 
+      }
       StopTimer(4);
       StartTimer(21);
 #ifdef _DEBUG
@@ -395,24 +402,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     if(rank==0) outputData();
       StopTimer(22);
       StartTimer(5);
-//DEBUG
-    if(rank==0){
-      for(i=0;i<2*SROptSize*(2*SROptSize+2);i++){
-      //  printf("DEBUG: i=%d SROptOO=%lf +I*%lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
-      } 
-    }
-//DBBUG
-/*
-    for(tmp_i=0;tmp_i<NPara;tmp_i++){
-      printf("Before: ParaAll NPara=%d; tmp_i=%d : %lf %lf\n",NPara,tmp_i,creal(Para[tmp_i]),cimag(Para[tmp_i]));
-    }
-*/
     info = StochasticOpt(comm_parent);
-/*
-    for(tmp_i=0;tmp_i<NPara;tmp_i++){
-      printf("Aft: ParaAll NPara=%d; tmp_i=%d : %lf %lf\n",NPara,tmp_i,creal(Para[tmp_i]),cimag(Para[tmp_i]));
-    }
-*/
     //info = StochasticOptDiag(comm_parent);
       StopTimer(5);
 
@@ -474,13 +464,21 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       StopTimer(69);
       // only for real TBC
     }else{
-      VMCMakeSample(comm_child1);
+      if(AllComplexFlag==0){
+        VMCMakeSample(comm_child1);
+      }else{
+        VMCMakeSample_fsz(comm_child1);
+      }
     } 
 
     StopTimer(3);
     StartTimer(4);
 
-    VMCMainCal(comm_child1);
+    if(AllComplexFlag==0){
+      VMCMainCal(comm_child1);
+    }else{
+      VMCMainCal_fsz(comm_child1);
+    }
 
     StopTimer(4);
     StartTimer(21);

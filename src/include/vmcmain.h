@@ -96,6 +96,7 @@ extern int omp_get_thread_num(void);
 #include "../calham_real.c"
 #include "../calham_fsz.c"
 #include "../calgrn.c"
+#include "../calgrn_fsz.c"
 //#include "lslocgrn.c" // ignoring Lanczos To be added
 #include "../setmemory.c"
 #include "../readdef.c"

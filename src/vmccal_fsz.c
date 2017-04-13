@@ -211,7 +211,7 @@ void VMCMainCal_fsz(MPI_Comm comm) {
     } else if(NVMCCalMode==1) {
       StartTimer(42);
       /* Calculate Green Function */
-      CalculateGreenFunc(w,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+      CalculateGreenFunc_fsz(w,ip,eleIdx,eleCfg,eleNum,eleSpn,eleProjCnt);
       StopTimer(42);
 
       if(NLanczosMode>0){
