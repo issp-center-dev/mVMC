@@ -556,8 +556,22 @@ void outputData() {
   if (NVMCCalMode == 1) {
     /* zvo_cisajs.dat */
     if (NCisAjs > 0) {
-      for (i = 0; i < NCisAjs; i++)
-        fprintf(FileCisAjs, "% .18e  % .18e ", creal(PhysCisAjs[i]), cimag(PhysCisAjs[i]));
+      if(NLanczosMode <2) {
+        for (i = 0; i < NCisAjs; i++) {
+          fprintf(FileCisAjs, "%d %d %d %d % .18e  % .18e \n", CisAjsIdx[i][0], CisAjsIdx[i][1], CisAjsIdx[i][2],
+                  CisAjsIdx[i][3], creal(PhysCisAjs[i]), cimag(PhysCisAjs[i]));
+        }
+      }
+      else{
+        int idx=0;
+        for (i = 0; i < NCisAjsLz; i++) {
+          idx = iOneBodyGIdx[CisAjsLzIdx[i][0] + CisAjsLzIdx[i][1] * Nsite][CisAjsLzIdx[i][2] +
+                                                                            CisAjsLzIdx[i][3] * Nsite];
+          //fprintf(stdout, "Debug: idx= %d value= % .18e % .18e\n", idx, creal(PhysCisAjs[idx]), cimag(PhysCisAjs[idx]));
+          fprintf(FileCisAjs, "%d %d %d %d % .18e % .18e \n", CisAjsLzIdx[idx][0], CisAjsLzIdx[idx][1],
+                  CisAjsLzIdx[idx][2], CisAjsLzIdx[idx][3], creal(PhysCisAjs[idx]), cimag(PhysCisAjs[idx]));
+        }
+      }
       fprintf(FileCisAjs, "\n");
     }
     /* zvo_cisajscktalt.dat */
@@ -569,9 +583,12 @@ void outputData() {
 
     /* zvo_cisajscktaltdc.dat */
     if (NCisAjsCktAltDC > 0) {
-      for (i = 0; i < NCisAjsCktAltDC; i++)
-        fprintf(FileCisAjsCktAltDC, "% .18e % .18e  ", creal(PhysCisAjsCktAltDC[i]),
-                cimag(PhysCisAjsCktAltDC[i]));
+      for (i = 0; i < NCisAjsCktAltDC; i++) {
+        fprintf(FileCisAjsCktAltDC, "%d %d %d %d %d %d %d %d % .18e % .18e\n",
+                CisAjsCktAltDCIdx[i][0], CisAjsCktAltDCIdx[i][1], CisAjsCktAltDCIdx[i][2], CisAjsCktAltDCIdx[i][3],
+                CisAjsCktAltDCIdx[i][4], CisAjsCktAltDCIdx[i][5], CisAjsCktAltDCIdx[i][6], CisAjsCktAltDCIdx[i][7],
+                creal(PhysCisAjsCktAltDC[i]), cimag(PhysCisAjsCktAltDC[i]));
+      }
       fprintf(FileCisAjsCktAltDC, "\n");
     }
 
@@ -579,13 +596,13 @@ void outputData() {
       if (AllComplexFlag == 0) { //real
 		PhysCalLanczos_real(
 				QQQQ_real, QCisAjsQ_real, QCisAjsCktAltQ_real,
-				NLSHam, Nsite, NCisAjs, NCisAjsLz, iOneBodyGIdx, CisAjsLzIdx, NCisAjsCktAltDC, NLanczosMode,
+				NLSHam, Nsite, NCisAjs, NCisAjsLz, iOneBodyGIdx, CisAjsLzIdx, NCisAjsCktAltDC, CisAjsCktAltDCIdx, NLanczosMode,
 				FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
 				FileLSCisAjs, FileLSCisAjsCktAlt);
       }else { //complex
 		PhysCalLanczos_fcmp(
 				  QQQQ, QCisAjsQ, QCisAjsCktAltQ,
-				  NLSHam, Nsite, NCisAjs, NCisAjsLz, iOneBodyGIdx, CisAjsLzIdx, NCisAjsCktAltDC, NLanczosMode,
+				  NLSHam, Nsite, NCisAjs, NCisAjsLz, iOneBodyGIdx, CisAjsLzIdx, NCisAjsCktAltDC, CisAjsCktAltDCIdx, NLanczosMode,
 				  FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
 				  FileLSCisAjs, FileLSCisAjsCktAlt);
       }

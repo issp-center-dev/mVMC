@@ -261,7 +261,7 @@ void VMCMainCal(MPI_Comm comm) {
             LSLocalCisAjs_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
             calculateQCAQ_real(QCisAjsQ_real,LSLCisAjs_real,LSLQ_real,w,NLSHam,NCisAjs);
             calculateQCACAQ_real(QCisAjsCktAltQ_real,LSLCisAjs_real,w,NLSHam,NCisAjs,
-                            NCisAjsCktAltDC,CisAjsCktAltLzIdx);
+                            NCisAjsCktAltDC, CisAjsCktAltLzIdx);
             
           }
           else{
