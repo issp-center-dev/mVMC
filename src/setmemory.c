@@ -222,8 +222,15 @@ void SetMemoryDef() {
 
   
   ParaQPOptTrans = pDouble;
-
   ParaQPTrans = (double complex*)malloc(sizeof(double complex)*(NQPTrans));
+
+  // LanczosGreen
+  if(NLanczosMode>1){
+    CisAjsCktAltLzIdx = malloc(sizeof(int*)*NCisAjsCktAltDC);
+    for(i=0;i<NCisAjsCktAltDC;i++) {
+      CisAjsCktAltLzIdx[i] = malloc(sizeof(int) * 2);
+    }
+  }
 
   return;
 }

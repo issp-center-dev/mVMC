@@ -137,6 +137,8 @@ double *ParaQPOptTrans;
 int NCisAjs,         **CisAjsIdx;         /* [NCisAjs][3] */
 int NCisAjsCktAlt,   **CisAjsCktAltIdx;   /* [NCisAjsCktAlt][8] */
 int NCisAjsCktAltDC, **CisAjsCktAltDCIdx; /* [NCisAjsCktAltDC][6] */
+int NCisAjsLz, **CisAjsLzIdx, **iOneBodyGIdx; /* For Lanczos method only for rank 0*/
+int NCisAjsCktAltLz, **CisAjsCktAltLzIdx;
 
 /* Optimization flag */
 int *OptFlag; /* [NPara]  1: optimized, 0 or 2: fixed */

@@ -252,27 +252,33 @@ void VMCMainCal(MPI_Comm comm) {
         }
         StopTimer(43);
 
+        // LanczosGreen
         if(NLanczosMode>1){
-          /* Calculate local QcisAjsQ */
+          // Calculate local QcisAjsQ
           StartTimer(44);
           if(AllComplexFlag==0) {
+            
             LSLocalCisAjs_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
             calculateQCAQ_real(QCisAjsQ_real,LSLCisAjs_real,LSLQ_real,w,NLSHam,NCisAjs);
             calculateQCACAQ_real(QCisAjsCktAltQ_real,LSLCisAjs_real,w,NLSHam,NCisAjs,
-                            NCisAjsCktAltDC,CisAjsCktAltDCIdx);
+                            NCisAjsCktAltDC,CisAjsCktAltLzIdx);
+            
           }
           else{
+
             LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
             calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
             calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
-                            NCisAjsCktAltDC,CisAjsCktAltDCIdx);
-             return;
+                            NCisAjsCktAltDC,CisAjsCktAltLzIdx);
+             
           }
           StopTimer(44);
         }
+
       }
     }
   } /* end of for(sample) */
+
 // calculate OO and HO at NVMCCalMode==0
   if(NStoreO!=0 && NVMCCalMode==0){
     sampleSize=sampleEnd-sampleStart;
@@ -494,14 +500,13 @@ void VMC_BF_MainCal(MPI_Comm comm) {
                     if (AllComplexFlag == 0) {
                         LSLocalCisAjs_real(creal(e), creal(ip), eleIdx, eleCfg, eleNum, eleProjCnt);
                         calculateQCAQ_real(QCisAjsQ_real, LSLCisAjs_real, LSLQ_real, w, NLSHam, NCisAjs);
-
-                      calculateQCACAQ_real(QCisAjsCktAltQ_real, LSLCisAjs_real, w, NLSHam, NCisAjs,
-                                             NCisAjsCktAltDC, CisAjsCktAltDCIdx);
+                        calculateQCACAQ_real(QCisAjsCktAltQ_real, LSLCisAjs_real, w, NLSHam, NCisAjs,
+                                             NCisAjsCktAltDC, CisAjsCktAltLzIdx);
                     } else {
                         LSLocalCisAjs(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt);
                         calculateQCAQ(QCisAjsQ, LSLCisAjs, LSLQ, w, NLSHam, NCisAjs);
                         calculateQCACAQ(QCisAjsCktAltQ, LSLCisAjs, w, NLSHam, NCisAjs,
-                                        NCisAjsCktAltDC, CisAjsCktAltDCIdx);
+                                        NCisAjsCktAltDC, CisAjsCktAltLzIdx);
                         return;
                     }
                     StopTimer(44);
@@ -881,11 +886,14 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
         qcacaq[i] += w * lslca[rq*nCA+ri] * lslca[rp*nCA+rj];
 
     }
-
+  /*
   for(i=0;i<n;++i) {
-      //fprintf(stdout, "Debug: qcacaq[%d]= %lf, %lf \n", i, creal(qcacaq[i]),cimag(qcacaq[i]));
-    fprintf(stdout, "Debug: lslca[%d]= %lf, %lf \n", i, creal(lslca[i]),cimag(lslca[i]));
+      fprintf(stdout, "Debug: qcacaq[%d]= %lf, %lf \n", i, creal(qcacaq[i]),cimag(qcacaq[i]));
+      //fprintf(stdout, "Debug: lslca[%d]= %lf, %lf \n", i, creal(lslca[i]),cimag(lslca[i]));
   }
+  */
+
     return;
+
 }
 #endif

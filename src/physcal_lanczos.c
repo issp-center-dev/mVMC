@@ -30,7 +30,11 @@ int PhysCalLanczos_real
  double *_QCisAjsQ_real,
  double *_QCisAjsCktAltQ_real,
  const int _nLSHam,
+ const int _Ns,
  const int _nCisAjs,
+ const int _nCisAjsLz,
+ int **_iOneBodyGIdx,
+ int **_CisAjsLzIdx,
  const int _nCisAjsCktAlt,
  const int _NLanczosmode,
  FILE *_FileLS,
@@ -42,6 +46,7 @@ int PhysCalLanczos_real
  )
 {
   int i=0;
+	int idx=0;
 	double alpha;
 	double alpha_p, ene_p, ene_vp;
 	double alpha_m, ene_m, ene_vm;
@@ -92,8 +97,9 @@ int PhysCalLanczos_real
 							alpha, _QCisAjsQ_real, _nCisAjs,
 							_nLSHam, LS_CisAjs_real);
 	  /* zvo_ls_cisajs.dat */
-	  for (i = 0; i < _nCisAjs; i++) {
-      fprintf(_FileLSCisAjs, "% .18e 0.0 ", LS_CisAjs_real[i]);
+	  for (i = 0; i < _nCisAjsLz; i++) {
+			idx=_iOneBodyGIdx[_CisAjsLzIdx[i][0]+_CisAjsLzIdx[i][1]*_Ns][_CisAjsLzIdx[i][2]+_CisAjsLzIdx[i][3]*_Ns];
+      fprintf(_FileLSCisAjs, "% .18e 0.0 ", LS_CisAjs_real[idx]);
 		  //fprintf(_FileLSCisAjs, "%d % .18e  \n", i, LS_CisAjs_real[i]);
 	  }
 	  fprintf(_FileLSCisAjs, "\n");
@@ -123,7 +129,11 @@ int PhysCalLanczos_fcmp(
  double complex* _QCisAjsQ,
  double complex* _QCisAjsCktAltQ,
  const int _nLSHam,
+ const int _Ns,
  const int _nCisAjs,
+ const int _nCisAjsLz,
+ int **_iOneBodyGIdx,
+ int **_CisAjsLzIdx,
  const int _nCisAjsCktAlt,
  const int _NLanczosmode,
  FILE *_FileLS,
@@ -135,6 +145,7 @@ int PhysCalLanczos_fcmp(
 )
 {
   int i=0;
+	int idx=0;
 	double alpha, alpha_p, ene_p, ene_vp;
 	double alpha_m, ene_m, ene_vm;
 	double complex*LS_CisAjs;
@@ -189,11 +200,14 @@ int PhysCalLanczos_fcmp(
 							alpha, _QCisAjsQ, _nCisAjs,
 							_nLSHam, LS_CisAjs);
 	  /* zvo_ls_cisajs.dat */
-	  for (i = 0; i < _nCisAjs; i++) {
-		  fprintf(_FileLSCisAjs, "% .18e % .18e ", creal(LS_CisAjs[i]), cimag(LS_CisAjs[i]));
+
+	  for (i = 0; i < _nCisAjsLz; i++) {
+			idx=_iOneBodyGIdx[_CisAjsLzIdx[i][0]+_CisAjsLzIdx[i][1]*_Ns][_CisAjsLzIdx[i][2]+_CisAjsLzIdx[i][3]*_Ns];
+      //fprintf(stdout, "Debug: i=%d, idx=%d\n", i, idx);
+      //fprintf(stdout, "Debug: i=%d, is=%d, j=%d, js=%d, cisajs_ls=%lf, cisajs=%lf. \n", _CisAjsLzIdx[i][0], _CisAjsLzIdx[i][1], _CisAjsLzIdx[i][2], _CisAjsLzIdx[i][3], creal(LS_CisAjs[idx]), creal(_QCisAjsQ[idx]));
+			fprintf(_FileLSCisAjs, "% .18e % .18e ", creal(LS_CisAjs[idx]), cimag(LS_CisAjs[idx]));
 	  }
 	  fprintf(_FileLSCisAjs, "\n");
-
 
 	  /* zvo_ls_qcisajscktaltq.dat */
     for (i = 0; i < _nLSHam * _nLSHam * _nCisAjsCktAlt; i++) {
@@ -300,6 +314,7 @@ int CalculatePhysVal_fcmp(
 		A2_11=_QPhysQ[_NLSHam*_NPhys+_NPhys+i];//11
 		_Phys_LS[i]=A0+alpha*(A1_01+A1_10)+alpha*alpha*A2_11;
 		_Phys_LS[i]/=dnorm;
+    //fprintf(stdout, "Debug: i=%d, A0=%lf, A1_01=%lf, A1_10=%lf, A2_11=%lf, _Phys_LS=%lf.\n", i, creal(A0), creal(A1_01), creal(A1_10), creal(A2_11), creal(_Phys_LS[i]));
 	}
 	return 0;
 }
