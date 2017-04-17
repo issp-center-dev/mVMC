@@ -48,7 +48,7 @@ int PhysCalLanczos_real
 {
   int i=0;
 	int idx=0;
-	double alpha;
+	double alpha, ene, ene_v;
 	double alpha_p, ene_p, ene_vp;
 	double alpha_m, ene_m, ene_vm;
 	double *LS_CisAjs_real;
@@ -67,12 +67,29 @@ int PhysCalLanczos_real
 
 	CalculateEne(_QQQQ_real[2], _QQQQ_real[3], _QQQQ_real[10], _QQQQ_real[11], _QQQQ_real[15],
 	 &alpha_p,  &ene_p,  &ene_vp, &alpha_m,  &ene_m,  &ene_vm);
+
+	//determine alpha
+	if (ene_p > ene_m) {
+		alpha = alpha_m;
+		ene = ene_m;
+		ene_v = ene_vm;
+	}else {
+		alpha = alpha_p;
+		ene = ene_p;
+		ene_v = ene_vp;
+	}
+
+/*
 	fprintf(_FileLS, "% .18e  ", alpha_p);
 	fprintf(_FileLS, "% .18e  ", ene_p);
 	fprintf(_FileLS, "% .18e  ", ene_vp);
 	fprintf(_FileLS, "% .18e  ", alpha_m);
 	fprintf(_FileLS, "% .18e  ", ene_m);
 	fprintf(_FileLS, "% .18e \n", ene_vm);
+*/
+	fprintf(_FileLS, "% .18e  ", ene);
+	fprintf(_FileLS, "% .18e  ", ene_v);
+	fprintf(_FileLS, "% .18e  ", alpha);
 
 	/* zvo_ls_qqqq.dat */
   for (i = 0; i < _nLSHam * _nLSHam * _nLSHam * _nLSHam; i++) {
