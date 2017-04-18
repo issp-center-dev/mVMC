@@ -29,7 +29,7 @@ void cal_cisajs(struct BindStruct *X);
 
 void WriteHeader(char* cNKWidx, int NKWidx, FILE *fp){
   fprintf(fp, "======================\n");
-  fprintf(fp, cNKWidx);
+  fprintf(fp, cNKWidx, 0);
   fprintf(fp, "  %d\n", NKWidx);
   fprintf(fp, "======================\n");
   fprintf(fp, "======================\n");

@@ -85,6 +85,7 @@ int ReadDefFileNInt(
 	int itmp, info;
 	int iKWidx=0;
 	info=0;
+        char *cerr;
 
 	cFileNameListFile = malloc(sizeof(char)*D_CharTmpReadDef*KWIdxInt_end);
 	fprintf(stdout, "  Read File %s .\n", xNameListFile);
@@ -126,17 +127,17 @@ int ReadDefFileNInt(
 					/* Read modpara.def---------------------------------------*/
 					//TODO: add error procedure here when parameters are not enough.
 					//SetDefultValuesModPara(X);
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+					cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+                                        cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %d\n", ctmp, &itmp); //2
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //3
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //4
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //5
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+                                        cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //3
+                                        cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //4
+                                        cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //5
+                                        cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %s\n", ctmp, X->CDataFileHead); //6
-					fgets(ctmp2,sizeof(ctmp2)/sizeof(char), fp);
+                                        cerr = fgets(ctmp2,sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %s\n", ctmp, X->CParaFileHead); //7
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);   //8
+                                        cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);   //8
 
 					double dtmp;
 					while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp)!=NULL){
@@ -204,64 +205,64 @@ int ReadDefFileNInt(
 					break;//modpara file
 
 				case KWLocSpin:
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NLocSpn));
 					fclose(fp);
 					break;
 
 				case KWTrans:
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %d\n", ctmp,  &(X->NTransfer));
 					fclose(fp);
 					break;
 
 				case KWCoulombIntra:
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NCoulombIntra));
 					fclose(fp);
 					break;
 
 				case KWCoulombInter:
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NCoulombInter));
 					fclose(fp);
 					break;
 
 				case KWHund:
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NHundCoupling));
 					fclose(fp);
 					break;
 
 				case KWPairHop:
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NPairHopping));
 					fclose(fp);
 					break;
 
 				case KWExchange:
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NExchangeCoupling));
 					fclose(fp);
 					break;
 
             case KWOrbital:
-              fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-              fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+              cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+              cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
               sscanf(ctmp2,"%s %d\n", ctmp, &X->NOrbitalIdx);
               fclose(fp);
               break;
 
 				case KWOneBodyG:
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NCisAjs));
 					fclose(fp);
 					break;
@@ -275,8 +276,8 @@ int ReadDefFileNInt(
 					break;
 */
 				case KWInitial:
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
 					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NInitial));
 					fclose(fp);
 					break;
@@ -326,6 +327,7 @@ int ReadDefFileIdxPara(
 	int info;
 	double dReValue;
 	double dImValue;
+        char *cerr;
 	info=0;
 	for(iKWidx=KWLocSpin; iKWidx< KWIdxInt_end; iKWidx++){
 		strcpy(defname, cFileNameListFile[iKWidx]);
@@ -340,7 +342,7 @@ int ReadDefFileIdxPara(
 		}
 
 		/*=======================================================================*/
-		for(i=0;i<IgnoreLinesInDef;i++) fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+		for(i=0;i<IgnoreLinesInDef;i++) cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
 		idx=0;
 
 		switch(iKWidx){

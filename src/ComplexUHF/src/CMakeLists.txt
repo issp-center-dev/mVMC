@@ -11,11 +11,11 @@ set(SOURCES_UHF
         UHFmain.c output.c cal_energy.c green.c makeham.c diag.c initial.c check.c matrixlapack.c readdef.c
  )
 
-include_directories(sfmt)
+include_directories(../../sfmt)
 add_definitions(-DMEXP=19937)
 
 set(SOURCES_sfmt
-        sfmt/SFMT.c   
+        ../../sfmt/SFMT.c   
  )
 
 
