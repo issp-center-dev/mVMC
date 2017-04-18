@@ -396,7 +396,7 @@ void VMC_BF_MainCal(MPI_Comm comm) {
         db = CalculateDoubleOccupation(eleIdx, eleCfg, eleNum, eleProjCnt);
         StopTimer(41);
         if (!isfinite(e)) {
-            fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d e=%e\n", rank, sample, e);
+            fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d e=%e\n", rank, sample, creal(e));
             continue;
         }
 

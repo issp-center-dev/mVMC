@@ -55,6 +55,7 @@ int ReadGreen(char *xNameListFile, int Nca, int**caIdx, int Ncacadc, int**cacaDC
   char ctmp[D_FileNameMax], ctmp2[256];
   int itmp;
   int iKWidx=0;
+  char *cerr;
 
   int i,j,n,idx,idx0,idx1,info=0;
   int fidx=0; /* index for OptFlag */
@@ -81,7 +82,8 @@ int ReadGreen(char *xNameListFile, int Nca, int**caIdx, int Ncacadc, int**cacaDC
     }
 
     /*=======================================================================*/
-    for(i=0;i<IgnoreLinesInDef;i++) fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+    for (i = 0; i < IgnoreLinesInDef; i++)
+      cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
     idx=0;
     idx0=0;
     switch(iKWidx){
@@ -213,6 +215,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   char ctmp2[D_FileNameMax];
 
   int itmp;
+  char *cerr;
 
   int rank, info = 0;
   const int nBufInt = ParamIdxInt_End;
@@ -265,21 +268,21 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             /* Read modpara.def---------------------------------------*/
             //TODO: add error procedure here when parameters are not enough.
             SetDefultValuesModPara(bufInt, bufDouble);
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &itmp); //2
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //3
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //4
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //5
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //3
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //4
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //5
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %s\n", ctmp, CDataFileHead); //6
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sprintf(ctmp, "output/%s", CDataFileHead);
             strcpy(CDataFileHead, ctmp);
             sscanf(ctmp2, "%s %s\n", ctmp, CParaFileHead); //7
             sprintf(ctmp, "output/%s", CParaFileHead);
             strcpy(CParaFileHead, ctmp);
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);   //8
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);   //8
             info = system("mkdir -p output");
 
             double dtmp;
@@ -342,86 +345,86 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             break;//modpara file
 
           case KWLocSpin:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNLocSpin]);
             fclose(fp);
             break;
 
           case KWTrans:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNTrans]);
             fclose(fp);
             break;
 
           case KWCoulombIntra:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNCoulombIntra]);
             fclose(fp);
             break;
 
           case KWCoulombInter:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNCoulombInter]);
             fclose(fp);
             break;
 
           case KWHund:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNHund]);
             fclose(fp);
             break;
 
           case KWPairHop:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNPairHop]);
             fclose(fp);
             break;
 
           case KWExchange:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNExchange]);
             fclose(fp);
             break;
 
           case KWGutzwiller:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNGutz]);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgGutzwiller);
             fclose(fp);
             break;
 
           case KWJastrow:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNJast]);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgJastrow);
             fclose(fp);
             break;
 
           case KWDH2:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNDH2]);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgDH2);
             fclose(fp);
             break;
 
           case KWDH4:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNDH4]);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgDH4);
             fclose(fp);
             break;
@@ -439,10 +442,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
           case KWOrbital:
           case KWOrbitalAntiParallel:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOrbitAntiParallel]);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
             fclose(fp);
             iFlgOrbitalAP = 1;
@@ -456,10 +459,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             break;
 
           case KWOrbitalGeneral:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOrbit]);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
             fclose(fp);
             iFlgOrbitalGeneral = 1;
@@ -472,10 +475,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             break;
 
           case KWOrbitalParallel:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOrbitParallel]);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
             fclose(fp);
             //up-up and down-down
@@ -494,37 +497,37 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             break;
 
           case KWTransSym:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNQPTrans]);
             fclose(fp);
             break;
 
           case KWOneBodyG:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOneBodyG]);
             fclose(fp);
             break;
 
           case KWTwoBodyG:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNTwoBodyG]);
             fclose(fp);
             break;
 
 
           case KWTwoBodyGEx:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNTwoBodyGEx]);
             fclose(fp);
             break;
 
           case KWInterAll:
-            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNInterAll]);
             fclose(fp);
             break;
@@ -532,8 +535,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           case KWOptTrans:
             bufInt[IdxNQPOptTrans] = 1;
             if (FlagOptTrans > 0) {
-              fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-              fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+              cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+              cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
               sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNQPOptTrans]);
               if (bufInt[IdxNQPOptTrans] < 1) {
                 fprintf(stderr, "error: NQPOptTrans should be larger than 0.\n");
@@ -756,6 +759,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   char ctmp[D_FileNameMax], ctmp2[256];
   int itmp;
   int iKWidx=0;
+  char *cerr;
+  int ierr;
   
   int i,j,n,idx,idx0,idx1,info=0;
   int isite1, isite2, idxLanczos;
@@ -789,7 +794,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       }
 
       /*=======================================================================*/
-      for (i = 0; i < IgnoreLinesInDef; i++) fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+      for (i = 0; i < IgnoreLinesInDef; i++) 
+        cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
       idx = 0;
       idx0 = 0;
       switch (iKWidx) {
@@ -951,7 +957,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
           if (NGutzwillerIdx > 0) {
             idx0 = idx1 = 0;
             while (fscanf(fp, "%d ", &i) != EOF) {
-              fscanf(fp, "%d\n", &(GutzwillerIdx[i]));
+              ierr = fscanf(fp, "%d\n", &(GutzwillerIdx[i]));
               if (CheckSite(i, Nsite) != 0) {
                 fprintf(stderr, "Error: Site index is incorrect. \n");
                 info = 1;
@@ -962,7 +968,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             }
             fidx = 0;
             while (fscanf(fp, "%d ", &i) != EOF) {
-              fscanf(fp, "%d\n", &(OptFlag[2 * fidx])); // TBC real
+              ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx])); // TBC real
 
               OptFlag[2 * fidx + 1] = iComplexFlgGutzwiller; //  TBC imaginary
               fidx++;
@@ -992,14 +998,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 break;
               }
 
-              fscanf(fp, "%d\n", &(JastrowIdx[i][j]));
+              ierr = fscanf(fp, "%d\n", &(JastrowIdx[i][j]));
               JastrowIdx[i][i] = -1; // This case is Gutzwiller.
               idx0++;
               if (idx0 == Nsite * (Nsite - 1)) break;
             }
             fidx = NGutzwillerIdx;
             while (fscanf(fp, "%d ", &i) != EOF) {
-              fscanf(fp, "%d\n", &(OptFlag[2 * fidx])); // TBC real
+              ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx])); // TBC real
               OptFlag[2 * fidx + 1] = iComplexFlgJastrow; //  TBC imaginary
               //	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
               fidx++;
@@ -1031,7 +1037,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             }
             fidx = NGutzwillerIdx + NJastrowIdx;
             while (fscanf(fp, "%d ", &i) != EOF) {
-              fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));//TBC real
+              ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));//TBC real
               OptFlag[2 * fidx + 1] = iComplexFlgDH2; //  TBC imaginary
               //OptFlag[2*fidx+1] = 0; //  TBC imaginary
               fidx++;
@@ -1066,7 +1072,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             }
             fidx = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
             while (fscanf(fp, "%d ", &i) != EOF) {
-              fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
+              ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
               OptFlag[2 * fidx + 1] = iComplexFlgDH4; //  TBC imaginary
               //OptFlag[2*fidx+1] = 0; //  TBC imaginary
               fidx++;
@@ -1125,7 +1131,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               }
               fidx = NProj;
               while (fscanf(fp, "%d ", &i) != EOF) {
-                fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
+                ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
                 OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
                 //OptFlag[2*fidx+1] = 0; //  TBC imaginary
                 fidx++;
@@ -1170,7 +1176,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 
               fidx = NProj;
               while (fscanf(fp, "%d ", &i) != EOF) {
-                fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
+                ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
                 OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
                 //OptFlag[2*fidx+1] = 0; //  TBC imaginary
                 fidx++;
@@ -1226,7 +1232,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
           }
           fidx = NProj;
           while (fscanf(fp, "%d ", &i) != EOF) {
-            fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
+            ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
             OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
             //OptFlag[2*fidx+1] = 0; //  TBC imaginary
             fidx++;
@@ -1289,7 +1295,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 
           fidx = NProj;
           while (fscanf(fp, "%d ", &i) != EOF) {
-            fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
+            ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
             OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
             //OptFlag[2*fidx+1] = 0; //  TBC imaginary
             fidx++;
@@ -1311,21 +1317,21 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               itmp = 0;
               dReValue = 0;
               dImValue = 0;
-              fgets(ctmp2, D_CharTmpReadDef, fp);
+              cerr = fgets(ctmp2, D_CharTmpReadDef, fp);
               sscanf(ctmp2, "%d %lf %lf\n", &itmp, &dReValue, &dImValue);
               ParaQPTrans[itmp] = dReValue + I * dImValue;
             }
             idx = 0;
             if (APFlag == 0) {
               while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
-                fscanf(fp, "%d\n", &(QPTrans[i][j]));
+                ierr = fscanf(fp, "%d\n", &(QPTrans[i][j]));
                 QPTransSgn[i][j] = 1;
                 QPTransInv[i][QPTrans[i][j]] = j;
                 idx++;
               }
             } else { /* anti-periodic boundary mode */
               while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
-                fscanf(fp, "%d %d\n", &(QPTrans[i][j]), &(QPTransSgn[i][j]));
+                ierr = fscanf(fp, "%d %d\n", &(QPTrans[i][j]), &(QPTransSgn[i][j]));
                 QPTransInv[i][QPTrans[i][j]] = j;
                 idx++;
               }
@@ -1516,8 +1522,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
           if (FlagOptTrans > 0) {
             fidx = NProj + NOrbitalIdx;
             for (i = 0; i < NQPOptTrans; i++) {
-              fscanf(fp, "%d ", &itmp);
-              fscanf(fp, "%lf\n", &(ParaQPOptTrans[itmp]));
+              ierr = fscanf(fp, "%d ", &itmp);
+              ierr = fscanf(fp, "%lf\n", &(ParaQPOptTrans[itmp]));
               OptFlag[fidx] = 1;
               fidx++;
               count_idx++;
@@ -1525,13 +1531,13 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             idx = 0;
             if (APFlag == 0) {
               while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
-                fscanf(fp, "%d\n", &(QPOptTrans[i][j]));
+                ierr = fscanf(fp, "%d\n", &(QPOptTrans[i][j]));
                 QPOptTransSgn[i][j] = 1;
                 idx++;
               }
             } else { // anti-periodic boundary mode
               while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
-                fscanf(fp, "%d %d\n", &(QPOptTrans[i][j]), &(QPOptTransSgn[i][j]));
+                ierr = fscanf(fp, "%d %d\n", &(QPOptTrans[i][j]), &(QPOptTransSgn[i][j]));
                 idx++;
               }
             }
@@ -1543,7 +1549,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
         case KWBFRange:
           /*rangebf.def--------------------------*/
           if (Nrange > 0) {
-            for (i = 0; i < 5; i++) fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            for (i = 0; i < 5; i++) cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
             idx0 = idx1 = 0;
             while (fscanf(fp, "%d %d %d\n", &i, &j, &n) != EOF) {
               PosBF[i][idx0 % Nrange] = j;
@@ -1562,7 +1568,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 
         case KWBF:
           if (NBackFlowIdx > 0) {
-            for (i = 0; i < 5; i++) fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            for (i = 0; i < 5; i++) cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
             idx0 = idx1 = 0;
             for (i = 0; i < Nsite * Nsite; i++) {
               for (j = 0; j < Nsite * Nsite; j++) {
@@ -1576,7 +1582,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               if (idx0 == Nsite * Nsite * Nrange * Nrange) break;
             }
             while (fscanf(fp, "%d ", &i) != EOF) {
-              fscanf(fp, "%d\n", &(OptFlag[fidx]));
+              ierr = fscanf(fp, "%d\n", &(OptFlag[fidx]));
               //printf("idx1=%d, OptFlag=%d\n",idx1,OptFlag[fidx]);
               fidx++;
               idx1++;
@@ -1652,6 +1658,8 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
   int info=0;
   double tmp_real, tmp_comp;
   MPI_Comm_rank(comm, &rank);
+  char *cerr;
+  int ierr;
   
   if(rank==0) {
     for(iKWidx=KWInGutzwiller; iKWidx< KWIdxInt_end; iKWidx++){     
@@ -1664,12 +1672,12 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
         continue;
       }
       /*=======================================================================*/
-		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);//1
-		fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);//2
-		sscanf(ctmp2,"%s %d\n", ctmp, &idx);
-		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);//3
-		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);//4
-		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);//5
+      cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);//1
+      cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);//2
+      sscanf(ctmp2, "%s %d\n", ctmp, &idx);
+      cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);//3
+      cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);//4
+      cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);//5
 
 		switch(iKWidx){
         //get idx
@@ -1680,7 +1688,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
           continue;
         }
         for(i=0; i<NGutzwillerIdx; i++){
-          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
           Proj[i]=tmp_real+I*tmp_comp;
         }
         break;
@@ -1692,7 +1700,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
         }
         count= NGutzwillerIdx;
         for(i=count; i<count+NJastrowIdx; i++){
-          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
           Proj[i]=tmp_real+I*tmp_comp;
         }
         break;
@@ -1704,7 +1712,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
         }
         count =NGutzwillerIdx+NJastrowIdx;
         for(i=count; i<count+2*3*NDoublonHolon2siteIdx; i++){
-          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
           Proj[i]=tmp_real+I*tmp_comp;
         }       
         break;
@@ -1716,7 +1724,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
         }
         count =NGutzwillerIdx+NJastrowIdx+2*3*NDoublonHolon2siteIdx;
         for(i=count; i<count+2*5*NDoublonHolon4siteIdx; i++){
-          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
           Proj[i]=tmp_real+I*tmp_comp;
         }        
         break;
@@ -1727,7 +1735,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
           continue;
         }
         for(i=0; i<NSlater; i++){
-          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
           Slater[i]=tmp_real+I*tmp_comp;
         }  
         break;
@@ -1738,7 +1746,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
           continue;
         }
         for(i=0; i<NOptTrans; i++){
-          fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
+          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
           OptTrans[i]=tmp_real+I*tmp_comp;
         }  
         break;
