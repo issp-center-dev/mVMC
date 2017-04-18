@@ -196,7 +196,7 @@ double complex calHCA(const int ri, const int rj, const int s,
   }
 
   g = checkGF1(ri,rj,s,ip,eleIdx,eleCfg,eleNum);
-  if(fabs(g)>1.0e-12) {
+  if(cabs(g)>1.0e-12) {
     val = calHCA1(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
   } else {
     val = calHCA2(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
@@ -472,7 +472,7 @@ double complex calHCACA(const int ri, const int rj, const int rk, const int rl,
   }
 
   g = checkGF2(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum);
-  if(fabs(g)>1.0e-12) {
+  if(cabs(g)>1.0e-12) {
     val = calHCACA1(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
   } else {
     val = calHCACA2(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
