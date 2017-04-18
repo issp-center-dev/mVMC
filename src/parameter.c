@@ -25,16 +25,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#include "parameter.h"
+#ifndef _SRC_PARAMETER
+#define _SRC_PARAMETER
+
 #define D_AmpMax             4.0
-
-void InitParameter();
-int ReadInitParameter(char *initFile);
-void SyncModifiedParameter(MPI_Comm comm);
-void SetFlagShift();
-
-void shiftGJ();
-double shiftDH2();
-double shiftDH4();
 
 /* initialize variational parameters */
 void InitParameter() {
@@ -281,3 +276,4 @@ void SetFlagShift() {
   
   return;
 }
+#endif

@@ -25,19 +25,14 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-void CalculateNewPfMTwo_fcmp(const int mk, const int t, const int mi, const int s, 
-                        double complex *pfMNew, const int *eleIdx,
-                        const int qpStart, const int qpEnd, double complex *buffer);
-void CalculateNewPfMTwo2_fcmp(const int ma, const int s, const int mb, const int t,
-                         double complex *pfMNew, const int *eleIdx,
-                         const int qpStart, const int qpEnd);
+#include "pfupdate_two_fcmp.h"
+#ifndef _SRC_PFUPDATE_TWO_FCMP
+#define _SRC_PFUPDATE_TWO_FCMP
+
 void calculateNewPfMTwo_child_fcmp(const int ma, const int s, const int mb, const int t,
                               double complex *pfMNew, const int *eleIdx,
                               const int qpStart, const int qpEnd, const int qpidx,
                               double complex *vec_a, double complex *vec_b);
-void UpdateMAllTwo_fcmp(const int ma, const int s, const int mb, const int t,
-                   const int raOld, const int rbOld,
-                   const int *eleIdx, const int qpStart, const int qpEnd);
 void updateMAllTwo_child_fcmp(const int ma, const int s, const int mb, const int t,
                          const int raOld, const int rbOld,
                          const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
@@ -349,3 +344,4 @@ void updateMAllTwo_child_fcmp(const int ma, const int s, const int mb, const int
 }
 
 //e comp
+#endif

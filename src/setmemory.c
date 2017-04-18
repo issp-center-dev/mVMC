@@ -26,10 +26,13 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-void SetMemoryDef();
-void FreeMemoryDef();
-void SetMemory();
-void FreeMemory();
+
+#include <complex.h>
+#include "global.h"
+#include "setmemory.h"
+
+#ifndef _SRC_SETMEMORY
+#define _SRC_SETMEMORY
 
 void SetMemoryDef() {  
   int i;
@@ -94,22 +97,62 @@ void SetMemoryDef() {
     pInt += 4*Nsite;
   }
 
-  OrbitalIdx = (int**)malloc(sizeof(int*)*Nsite);
-  for(i=0;i<Nsite;i++) {
-    OrbitalIdx[i] = pInt;
-    pInt += Nsite;
+ /*[s] For BackFlow */
+  if(NBackFlowIdx>0) {
+      PosBF = (int**)malloc(sizeof(int*)*Nsite);
+      for(i=0;i<Nsite;i++) {
+          PosBF[i] = pInt;
+          pInt += Nrange;
+      }
+      RangeIdx = (int**)malloc(sizeof(int*)*Nsite);
+      for(i=0;i<Nsite;i++) {
+          RangeIdx[i] = pInt;
+          pInt += Nsite;
+      }
+      BackFlowIdx = (int**)malloc(sizeof(int*)*Nsite*Nsite);
+    for(i=0;i<Nsite*Nsite;i++) {
+      BackFlowIdx[i] = pInt;
+      pInt += Nsite*Nsite;
+    }
   }
+  /*[e] For BackFlow */
 
-  OrbitalSgn = (int**)malloc(sizeof(int*)*Nsite);
-  for(i=0;i<Nsite;i++) {
-    OrbitalSgn[i] = pInt;
-    pInt += Nsite;
+  if(iFlgOrbitalGeneral==0){//for spin conserved
+    OrbitalIdx = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      OrbitalIdx[i] = pInt;
+      pInt += Nsite;
+    }
+    OrbitalSgn = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      OrbitalSgn[i] = pInt;
+      pInt += Nsite;
+    }
+  }
+  else{//for spin not conserved
+    OrbitalIdx = (int**)malloc(sizeof(int*)*2*Nsite);
+    for(i=0;i<2*Nsite;i++) {
+      OrbitalIdx[i] = pInt;
+      pInt += 2*Nsite;
+    }
+    
+    OrbitalSgn = (int**)malloc(sizeof(int*)*2*Nsite);
+    for(i=0;i<2*Nsite;i++) {
+      OrbitalSgn[i] = pInt;
+      pInt += 2*Nsite;
+    }
   }
 
   QPTrans = (int**)malloc(sizeof(int*)*NQPTrans);
   for(i=0;i<NQPTrans;i++) {
     QPTrans[i] = pInt;
     pInt += Nsite;
+  }
+
+  QPTransInv = (int**)malloc(sizeof(int*)*NQPTrans);
+  for(i=0;i<NQPTrans;i++) {
+      QPTransInv[i] = pInt;
+      pInt += Nsite;
   }
 
   QPTransSgn = (int**)malloc(sizeof(int*)*NQPTrans);
@@ -179,8 +222,15 @@ void SetMemoryDef() {
 
   
   ParaQPOptTrans = pDouble;
-
   ParaQPTrans = (double complex*)malloc(sizeof(double complex)*(NQPTrans));
+
+  // LanczosGreen
+  if(NLanczosMode>1){
+    CisAjsCktAltLzIdx = malloc(sizeof(int*)*NCisAjsCktAltDC);
+    for(i=0;i<NCisAjsCktAltDC;i++) {
+      CisAjsCktAltLzIdx[i] = malloc(sizeof(int) * 2);
+    }
+  }
 
   return;
 }
@@ -206,29 +256,38 @@ void FreeMemoryDef() {
   free(CoulombInter);
   free(Transfer);
   free(LocSpn);
-
+  free(PosBF);
+  free(RangeIdx);
+  free(BackFlowIdx);
   return;
 }
 
 void SetMemory() {
+  int i,j,n;
 
   /***** Variational Parameters *****/
   Para     = (double complex*)malloc(sizeof(double complex)*(NPara)); 
   Proj     = Para;
-  Slater   = Para + NProj; 
-  OptTrans = Para + NProj + NSlater;
+  ProjBF   = Para + NProj;
+  Slater   = Para + NProj + NProjBF;
+  OptTrans = Para + NProj + NProjBF + NSlater;
 
   /***** Electron Configuration ******/
   EleIdx            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));
   EleCfg            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
   EleNum            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
   EleProjCnt        = (int*)malloc(sizeof(int)*( NVMCSample*NProj ));
+  EleProjBFCnt = (int*)malloc(sizeof(int)*( NVMCSample*4*4*Nsite*Nrange));
   logSqPfFullSlater = (double*)malloc(sizeof(double)*(NVMCSample));
+  SmpSltElmBF_real = (double *)malloc(sizeof(double)*(NVMCSample*NQPFull*(2*Nsite)*(2*Nsite)));
+  SmpEta = (double*)malloc(sizeof(double*)*NVMCSample*NQPFull*Nsite*Nsite);
+  SmpEtaFlag = (int*)malloc(sizeof(int*)*NVMCSample*NQPFull*Nsite*Nsite);
 
   TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
   TmpEleCfg         = TmpEleIdx + 2*Ne;
   TmpEleNum         = TmpEleCfg + 2*Nsite;
   TmpEleProjCnt     = TmpEleNum + 2*Nsite;
+  TmpEleProjBFCnt = TmpEleProjCnt + NProj;
 
   BurnEleIdx = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
   BurnEleCfg = BurnEleIdx + 2*Ne;
@@ -241,6 +300,19 @@ void SetMemory() {
   PfM = InvM + NQPFull*Nsize*Nsize;
 // for real TBC
   SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+  SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+  eta = (double complex**)malloc(sizeof(double complex*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+        eta[i] = (double complex*)malloc(sizeof(double complex)*Nsite);
+    }
+    etaFlag = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+        etaFlag[i] = (int*)malloc(sizeof(int)*Nsite);
+    }
+    BFSubIdx = (int**)malloc(sizeof(int*)*NrangeIdx);
+    for(i=0;i<NrangeIdx;i++) {
+        BFSubIdx[i] = (int*)malloc(sizeof(int)*NrangeIdx);
+    }
   InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
   PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
 
@@ -281,15 +353,27 @@ void SetMemory() {
     PhysCisAjsCktAlt   = PhysCisAjs       + NCisAjs;
     PhysCisAjsCktAltDC = PhysCisAjsCktAlt + NCisAjsCktAlt;
     LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
+
     if(NLanczosMode>0){
       QQQQ = (double complex*)malloc(sizeof(double complex)
         *(NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam) );
       LSLQ = QQQQ + NLSHam*NLSHam*NLSHam*NLSHam;
+      //for real
+      QQQQ_real = (double*)malloc(sizeof(double)
+      *(NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam) );
+      LSLQ_real = QQQQ_real + NLSHam*NLSHam*NLSHam*NLSHam;
+
       if(NLanczosMode>1){
         QCisAjsQ = (double complex*)malloc(sizeof(double complex)
-          *(NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAlt + NLSHam*NCisAjs) );
+          *(NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC + NLSHam*NCisAjs) );
         QCisAjsCktAltQ = QCisAjsQ + NLSHam*NLSHam*NCisAjs;
-        LSLCisAjs = QCisAjsCktAltQ + NLSHam*NLSHam*NCisAjsCktAlt;
+        LSLCisAjs = QCisAjsCktAltQ + NLSHam*NLSHam*NCisAjsCktAltDC;
+        //for real
+        QCisAjsQ_real = (double *)malloc(sizeof(double )
+        *(NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC + NLSHam*NCisAjs) );
+        QCisAjsCktAltQ_real = QCisAjsQ_real + NLSHam*NLSHam*NCisAjs;
+        LSLCisAjs_real = QCisAjsCktAltQ_real + NLSHam*NLSHam*NCisAjsCktAltDC;
+
       }
     }
   }
@@ -305,8 +389,10 @@ void FreeMemory() {
     free(PhysCisAjs);
     if(NLanczosMode>0){
       free(QQQQ);
+      free(QQQQ_real);
       if(NLanczosMode>1){
         free(QCisAjsQ);
+        free(QCisAjsQ_real);
       }
     }
   }
@@ -332,3 +418,5 @@ void FreeMemory() {
 
   return;
 }
+
+#endif

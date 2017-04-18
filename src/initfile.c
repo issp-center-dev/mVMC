@@ -25,14 +25,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita 
  *-------------------------------------------------------------*/
+#include "initfile.h"
 
-void InitFile(char *xNameListFile, int rank);
-void InitFilePhysCal(int i, int rank);
-void CloseFile(int rank);
-void CloseFilePhysCal(int rank);
-void FlushFile(int step, int rank);
-void writeConfig(char *xNameFile, char *fileName);
-int fileCopyAdd(char *inputFileName, FILE *outputFile);
+#ifndef _INITFILE_SRC
+#define _INITFILE_SRC
 
 void InitFile(char *xNameListFile, int rank) {
   char fileName[D_FileNameMax];
@@ -117,13 +113,22 @@ void InitFilePhysCal(int i, int rank) {
     FileLSQQQQ = fopen(fileName, "w");
     
     if(NLanczosMode>1){
+#ifdef _DEBUG
       sprintf(fileName, "%s_ls_qcisajsq_%03d.dat",
               CDataFileHead, idx);
       FileLSQCisAjsQ = fopen(fileName, "w");
-
-      sprintf(fileName, "%s_ls_qcisajscktaltq_%03d.dat", 
+      sprintf(fileName, "%s_ls_qcisajscktaltq_%03d.dat",
               CDataFileHead, idx);
       FileLSQCisAjsCktAltQ = fopen(fileName, "w");
+
+ #endif
+      sprintf(fileName, "%s_ls_cisajs_%03d.dat",
+              CDataFileHead, idx);
+      FileLSCisAjs = fopen(fileName, "w");
+
+      sprintf(fileName, "%s_ls_cisajscktalt_%03d.dat",
+              CDataFileHead, idx);
+      FileLSCisAjsCktAlt = fopen(fileName, "w");
     }
   }
 
@@ -165,8 +170,12 @@ void CloseFilePhysCal(int rank) {
     fclose(FileLSQQQQ);
     
     if(NLanczosMode>1){
+#ifdef _DEBUG
       fclose(FileLSQCisAjsQ);
       fclose(FileLSQCisAjsCktAltQ);
+#endif
+      fclose(FileLSCisAjs);
+      fclose(FileLSCisAjsCktAlt);
     }
   }
 
@@ -223,3 +232,5 @@ int fileCopyAdd(char *inputfileName, FILE *ofp){
 
   return 0;
 }
+
+#endif

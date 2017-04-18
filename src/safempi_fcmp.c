@@ -25,7 +25,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
+#pragma once
 #define D_MpiSendMax  1048576 /* 2^20 */
 
 void SafeMpiReduce_fcmp(double complex *send, double complex *recv, int nData, MPI_Comm comm);

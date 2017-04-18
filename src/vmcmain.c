@@ -27,6 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 /* #include "fjcoll.h" */
 #include "vmcmain.h"
+#include "physcal_lanczos.h"
 
 int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2);
 int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2);
@@ -351,8 +352,13 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          #pragma omp parallel for default(shared) private(tmp_i)
          for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
          StopTimer(69);
+         if(NProjBF ==0){
          // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-         VMCMakeSample_real(comm_child1);
+            VMCMakeSample_real(comm_child1);
+         }
+         else{
+            VMC_BF_MakeSample_real(comm_child1);
+         }
          // only for real TBC
          StartTimer(69);
          #pragma omp parallel for default(shared) private(tmp_i)
@@ -360,14 +366,24 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          StopTimer(69);
          // only for real TBC
       }else{
-        VMCMakeSample(comm_child1);
+         if(NProjBF ==0) {
+             VMCMakeSample(comm_child1);
+         }
+         else {
+             VMC_BF_MakeSample(comm_child1);
+         }
       } 
       StopTimer(3);
       StartTimer(4);
 #ifdef _DEBUG
       printf("Debug: step %d, MainCal.\n", step);
 #endif
-    VMCMainCal(comm_child1);
+      if(NProjBF ==0) {
+          VMCMainCal(comm_child1);
+      }
+      else{
+          VMC_BF_MainCal(comm_child1);
+      }
       StopTimer(4);
       StartTimer(21);
 #ifdef _DEBUG
@@ -443,31 +459,58 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     InitFilePhysCal(ismp, rank);
     
     StartTimer(3);
-
-    if(AllComplexFlag==0){
-      // only for real TBC
-      StartTimer(69);
+	if(NProjBF ==0) {
+	  if(AllComplexFlag==0){
+		  // only for real TBC
+		  StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
-      for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+		  for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
 #pragma omp parallel for default(shared) private(tmp_i)
-      for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
-      StopTimer(69);
-      // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-      VMCMakeSample_real(comm_child1);
-      // only for real TBC
-      StartTimer(69);
+		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+		  StopTimer(69);
+		  // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+		  VMCMakeSample_real(comm_child1);
+		  // only for real TBC
+		  StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
-      for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
-      StopTimer(69);
-      // only for real TBC
-    }else{
-      VMCMakeSample(comm_child1);
-    } 
+		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
+		  StopTimer(69);
+		  // only for real TBC
+	  }else{
+		  VMCMakeSample(comm_child1);
+	  }
+	}
+	else{
+	  if(AllComplexFlag==0){
+		  // only for real TBC
+		  StartTimer(69);
+		  for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+#pragma omp parallel for default(shared) private(tmp_i)
+		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+		  StopTimer(69);
+		  // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+		  VMC_BF_MakeSample_real(comm_child1);
+		  // only for real TBC
+		  StartTimer(69);
+#pragma omp parallel for default(shared) private(tmp_i)
+		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
+		  StopTimer(69);
+		  // only for real TBC
+	  }else{
+		VMC_BF_MakeSample(comm_child1);
+		}
+	}
+//    VMCMakeSample(comm_child1);
 
     StopTimer(3);
     StartTimer(4);
 
-    VMCMainCal(comm_child1);
+      if(NProjBF ==0) {
+          VMCMainCal(comm_child1);
+      }
+      else{
+          VMC_BF_MainCal(comm_child1);
+      }
 
     StopTimer(4);
     StartTimer(21);
@@ -491,77 +534,80 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   return 0;
 }
 
+
 void outputData() {
-  int i,j;
-  double x;
+  int i;
 
   /* zvo_out.dat */
- // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
-    fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)));
+  // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
+  fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot), cimag(Etot), creal(Etot2),
+          creal((Etot2 - Etot * Etot) / (Etot * Etot)));
 
   /* zvo_var.dat */
-  if(FlagBinary==0) { /* formatted output*/
+  if (FlagBinary == 0) { /* formatted output*/
     fprintf(FileVar, "% .18e % .18e 0.0 % .18e % .18e 0.0 ", creal(Etot), cimag(Etot), creal(Etot2), cimag(Etot2));
-    for(i=0;i<NPara;i++)   fprintf(FileVar, "% .18e % .18e 0.0 ", creal(Para[i]),cimag(Para[i]));
+    for (i = 0; i < NPara; i++) fprintf(FileVar, "% .18e % .18e 0.0 ", creal(Para[i]), cimag(Para[i]));
     fprintf(FileVar, "\n");
     //for(i=0;i<NPara;i++)  printf("DEBUG:i=%d: % .18e % .18e  \n",i, creal(Para[i]),cimag(Para[i]));
   } else { /* binary output */
-    fwrite(Para,sizeof(double),NPara,FileVar);
+    fwrite(Para, sizeof(double), NPara, FileVar);
   }
 
-  if(NVMCCalMode==1) {
+  if (NVMCCalMode == 1) {
     /* zvo_cisajs.dat */
-      if(NCisAjs>0) {
-          for (i = 0; i < NCisAjs; i++)
-              fprintf(FileCisAjs, "% .18e  % .18e ", creal(PhysCisAjs[i]), cimag(PhysCisAjs[i]));
-          fprintf(FileCisAjs, "\n");
+    if (NCisAjs > 0) {
+      if(NLanczosMode <2) {
+        for (i = 0; i < NCisAjs; i++) {
+          fprintf(FileCisAjs, "%d %d %d %d % .18e  % .18e \n", CisAjsIdx[i][0], CisAjsIdx[i][1], CisAjsIdx[i][2],
+                  CisAjsIdx[i][3], creal(PhysCisAjs[i]), cimag(PhysCisAjs[i]));
+        }
       }
+      else{
+        int idx=0;
+        for (i = 0; i < NCisAjsLz; i++) {
+          idx = iOneBodyGIdx[CisAjsLzIdx[i][0] + CisAjsLzIdx[i][1] * Nsite][CisAjsLzIdx[i][2] +
+                                                                            CisAjsLzIdx[i][3] * Nsite];
+          //fprintf(stdout, "Debug: idx= %d value= % .18e % .18e\n", idx, creal(PhysCisAjs[idx]), cimag(PhysCisAjs[idx]));
+          fprintf(FileCisAjs, "%d %d %d %d % .18e % .18e \n", CisAjsLzIdx[idx][0], CisAjsLzIdx[idx][1],
+                  CisAjsLzIdx[idx][2], CisAjsLzIdx[idx][3], creal(PhysCisAjs[idx]), cimag(PhysCisAjs[idx]));
+        }
+      }
+      fprintf(FileCisAjs, "\n");
+    }
     /* zvo_cisajscktalt.dat */
-      if(NCisAjsCktAlt>0) {
-          for (i = 0; i < NCisAjsCktAlt; i++)
-              fprintf(FileCisAjsCktAlt, "% .18e  % .18e ", creal(PhysCisAjsCktAlt[i]), cimag(PhysCisAjsCktAlt[i]));
-          fprintf(FileCisAjsCktAlt, "\n");
-      }
+    if (NCisAjsCktAlt > 0) {
+      for (i = 0; i < NCisAjsCktAlt; i++)
+        fprintf(FileCisAjsCktAlt, "% .18e  % .18e ", creal(PhysCisAjsCktAlt[i]), cimag(PhysCisAjsCktAlt[i]));
+      fprintf(FileCisAjsCktAlt, "\n");
+    }
 
     /* zvo_cisajscktaltdc.dat */
-      if(NCisAjsCktAltDC>0) {
-          for (i = 0; i < NCisAjsCktAltDC; i++)
-              fprintf(FileCisAjsCktAltDC, "% .18e % .18e  ", creal(PhysCisAjsCktAltDC[i]),
-                      cimag(PhysCisAjsCktAltDC[i]));
-          fprintf(FileCisAjsCktAltDC, "\n");
+    if (NCisAjsCktAltDC > 0) {
+      for (i = 0; i < NCisAjsCktAltDC; i++) {
+        fprintf(FileCisAjsCktAltDC, "%d %d %d %d %d %d %d %d % .18e % .18e\n",
+                CisAjsCktAltDCIdx[i][0], CisAjsCktAltDCIdx[i][1], CisAjsCktAltDCIdx[i][2], CisAjsCktAltDCIdx[i][3],
+                CisAjsCktAltDCIdx[i][4], CisAjsCktAltDCIdx[i][5], CisAjsCktAltDCIdx[i][6], CisAjsCktAltDCIdx[i][7],
+                creal(PhysCisAjsCktAltDC[i]), cimag(PhysCisAjsCktAltDC[i]));
       }
+      fprintf(FileCisAjsCktAltDC, "\n");
+    }
 
-    if(NLanczosMode>0){
-// ignorign Lanczos to be added
-      /* zvo_ls.dat */
-//      fprintf(FileLS, "% .18e  ", creal(QQQQ[2]));  /* H * I = QQQQ[1],[2],[4],[8] */      //TBC
-//      fprintf(FileLS, "% .18e  ", creal(QQQQ[3]));  /* H * H = QQQQ[3],[6],[9],[12] */     //TBC
-//      fprintf(FileLS, "% .18e  ", creal(QQQQ[2])); /* H^2 * I = QQQQ[5],[10] */           //TBC
-//      fprintf(FileLS, "% .18e  ", creal(QQQQ[11])); /* H^2 * H = QQQQ[7],[11],[13],[14] */ //TBC
-//      fprintf(FileLS, "% .18e\n", creal(QQQQ[15])); /* H^2 * H^2 = QQQQ[15] */             //TBC
-//
-//      /* zvo_ls_qqqq.dat */
-//      for(i=0;i<NLSHam*NLSHam*NLSHam*NLSHam;i++) {
-//        fprintf(FileLSQQQQ, "% .18e  ", creal(QQQQ[i]));
-//      }
-//      fprintf(FileLSQQQQ, "\n");
-//
-//      if(NLanczosMode>1){
-//        /* zvo_ls_qcisajsq.dat */
-//        for(i=0;i<NLSHam*NLSHam*NCisAjs;i++) {
-//          fprintf(FileLSQCisAjsQ, "% .18e  ", QCisAjsQ[i]);
-//        }
-//        fprintf(FileLSQCisAjsQ, "\n");
-//
-//        /* zvo_ls_qcisajscktaltq.dat */
-//        for(i=0;i<NLSHam*NLSHam*NCisAjsCktAlt;i++) {
-//          fprintf(FileLSQCisAjsCktAltQ, "% .18e  ", QCisAjsCktAltQ[i]);
-//        }
-//        fprintf(FileLSQCisAjsCktAltQ, "\n");
-//      }
+    if (NLanczosMode > 0) {
+      if (AllComplexFlag == 0) { //real
+		PhysCalLanczos_real(
+				QQQQ_real, QCisAjsQ_real, QCisAjsCktAltQ_real,
+				NLSHam, Nsite, NCisAjs, NCisAjsLz, iOneBodyGIdx, CisAjsLzIdx, NCisAjsCktAltDC, CisAjsCktAltDCIdx, NLanczosMode,
+				FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
+				FileLSCisAjs, FileLSCisAjsCktAlt);
+      }else { //complex
+		PhysCalLanczos_fcmp(
+				  QQQQ, QCisAjsQ, QCisAjsCktAltQ,
+				  NLSHam, Nsite, NCisAjs, NCisAjsLz, iOneBodyGIdx, CisAjsLzIdx, NCisAjsCktAltDC, CisAjsCktAltDCIdx, NLanczosMode,
+				  FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
+				  FileLSCisAjs, FileLSCisAjsCktAlt);
+      }
     }
   }
-
   return;
 }
 

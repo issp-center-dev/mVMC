@@ -25,13 +25,16 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-void WeightAverageWE(MPI_Comm comm);
-void WeightAverageSROpt(MPI_Comm comm);
-void WeightAverageSROpt_real(MPI_Comm comm);
-void WeightAverageGreenFunc(MPI_Comm comm);
+#include <complex.h>
+#include "global.h"
+#include "average.h"
+#ifndef _SRC_AVERAGE
+#define _SRC_AVERAGE
 
 void weightAverageReduce(int n, double *vec, MPI_Comm comm);
 void weightAverageReduce_fcmp(int n, double complex *vec, MPI_Comm comm);
+void weightAverageReduce_real(int n, double *vec, MPI_Comm comm);
+
 
 /* calculate average of Wc, Etot and Etot2 */
 /* All processes will have the result */
@@ -192,7 +195,7 @@ void WeightAverageSROpt_real(MPI_Comm comm) {
 void WeightAverageGreenFunc(MPI_Comm comm) {
   int n;
   double complex *vec;
-
+    double *vec_real;
   /* Green functions */
   /* CisAjs, CisAjsCktAlt and CisAjsCktAltDC */
   n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
@@ -202,17 +205,27 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
   if(NLanczosMode>0){
     /* QQQQ */
     n = NLSHam*NLSHam*NLSHam*NLSHam;
-    vec = QQQQ;
-    weightAverageReduce_fcmp(n,vec,comm);
-    
+      if(AllComplexFlag==0){
+        vec_real=QQQQ_real;
+        weightAverageReduce_real(n,vec_real,comm);
+      }
+      else{
+        vec = QQQQ;
+         weightAverageReduce_fcmp(n,vec,comm);
+      }
     if(NLanczosMode>1){
       /* QCisAjsQ and QCisAjsCktAltQ */
-      n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAlt;
-      vec = QCisAjsQ;
-      weightAverageReduce_fcmp(n,vec,comm);
+      n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC;
+        if(AllComplexFlag==0){
+            vec_real=QCisAjsQ_real;
+            weightAverageReduce_real(n,vec_real,comm);
+        }
+        else{
+            vec = QCisAjsQ;
+            weightAverageReduce_fcmp(n, vec, comm);
+        }
     }
-  }  
-
+  }
   return;
 }
 
@@ -273,3 +286,34 @@ void weightAverageReduce_fcmp(int n, double  complex *vec, MPI_Comm comm) {
 
   return;
 }
+
+void weightAverageReduce_real(int n, double *vec, MPI_Comm comm) {
+    int i;
+    const double invW = 1.0/Wc;
+    double *buf;
+    int rank,size;
+    MPI_Comm_rank(comm,&rank);
+    MPI_Comm_size(comm,&size);
+
+    if(size>1) {
+        RequestWorkSpaceDouble(n);
+        buf = GetWorkSpaceDouble(n);
+
+        SafeMpiReduce(vec,buf,n,comm);
+        if(rank==0) {
+#pragma omp parallel for default(shared) private(i)
+#pragma loop noalias
+            for(i=0;i<n;i++) vec[i] = buf[i] * invW;
+        }
+
+        ReleaseWorkSpaceDouble();
+    } else {
+#pragma omp parallel for default(shared) private(i)
+#pragma loop noalias
+        for(i=0;i<n;i++) vec[i] *= invW;
+    }
+
+    return;
+}
+
+#endif

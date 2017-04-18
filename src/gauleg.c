@@ -25,9 +25,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
+#include "gauleg.h"
+#pragma once
 #define GaussLeg_EPS 5.0e-14
-
 /* calculate n points x[] and weight w[] for integration from x1 to x2. */
 void GaussLeg(const double x1, const double x2, double *x, double *w, const int n){
   int m,j,i;

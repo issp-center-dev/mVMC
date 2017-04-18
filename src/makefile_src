@@ -45,13 +45,17 @@ workspace.c
 HEADERS = \
 include/avevar.h \
 include/global.h \
+include/locgrn_real.h \
+include/lslocgrn_real.h \
 include/parameter.h \
+include/pfupdate_two_real.h\
 include/readdef.h \
 include/readdef_core.h \
 include/safempi.h \
-include/safempi_fcmp.h \
-include/version.h \
-include/vmcmain.h
+include/safempi_fcmp.h\
+include/vmccal.h \
+include/vmcmain.h \
+
 
 all : 
 	cd pfapack; $(MAKE) -f makefile_pfapack
@@ -62,16 +66,13 @@ all :
 	cd ComplexUHF/src; $(MAKE) -f makefile_uhf
 
 vmc.out : $(OBJS) $(STDFACE)
-	$(CC) -o $(OUT) $(OBJS) $(STDFACE) $(OPTION) $(CFLAGS) $(LIBS)
+	$(CC) -o $(OUT) $(OBJS) $(STDFACE) $(OPTION) $(CFLAGS) $(REPORT) $(LIB) -I$(INCLUDE_DIR)
 
 vmcdry.out : vmcdry.o $(STDFACE)
 	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) $(LIBS)
 
 vmcmain.o : $(SOURCES) $(HEADERS)
-	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) -I ./include/
-
-vmcdry.o : vmcdry.c
-	$(CC) -c vmcdry.c $(OPTION) $(CFLAGS) -I ./include/
+	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) $(REPORT) -I$(INCLUDE_DIR)
 
 clean :
 	rm -f *.o vmc.out
