@@ -270,11 +270,12 @@ NStore         1
 
 {\bf 説明 :} [0] 変分パラメータの最適化、[1] 1 体・2 体のグリーン関数の計算。
  
-% \item  \verb|NLanczosMode|
+ \item  \verb|NLanczosMode|
 
-% {\bf 形式 :} int型 (デフォルト値 = 0)
+ {\bf 形式 :} int型 (デフォルト値 = 0)
 
-%{\bf 説明 :} [0] 何もしない、[1] Single Lanczos Step でエネルギーまで計算、[2] Single Lanczos Step で1 体・2 体のグリーン関数まで計算(条件: 1, 2 は\verb|NVMCCalMode| = 1のみ使用可能。また, pair hopping項, exchange 項がハミルトニアンに含まれる場合は使用できません)。
+{\bf 説明 :} [0] 何もしない、[1] Single Lanczos Step でエネルギーまで計算、[2] Single Lanczos Step でエネルギー, 1 体・2 体のグリーン関数まで計算(条件: 1, 2 は\verb|NVMCCalMode| = 1のみ使用可能。)
+%また, pair hopping項, exchange 項がハミルトニアンに含まれる場合は使用できません)。
  
  \item  \verb|NDataIdxStart|
 
