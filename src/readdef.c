@@ -642,7 +642,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NCoulombIntra = bufInt[IdxNCoulombIntra];
   NCoulombInter = bufInt[IdxNCoulombInter];
   NHundCoupling = bufInt[IdxNHund];
-  NPairHopping = bufInt[IdxNPairHop];
+  //NPairHopping = bufInt[IdxNPairHop];
+  NPairHopping = 2*bufInt[IdxNPairHop];
   NExchangeCoupling = bufInt[IdxNExchange];
   NGutzwillerIdx = bufInt[IdxNGutz];
   NJastrowIdx = bufInt[IdxNJast];
@@ -911,17 +912,20 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
           if (NPairHopping > 0) {
             while (fscanf(fp, "%d %d %lf\n",
                           &x0, &x1, &dReValue) != EOF) {
-              PairHopping[idx][0] = x0;
-              PairHopping[idx][1] = x1;
+              PairHopping[2*idx][0] = x0;
+              PairHopping[2*idx][1] = x1;
               if (CheckPairSite(x0, x1, Nsite) != 0) {
                 fprintf(stderr, "Error: Site index is incorrect. \n");
                 info = 1;
                 break;
               }
-              ParaPairHopping[idx] = dReValue;
+              ParaPairHopping[2*idx] = dReValue;
+              PairHopping[2*idx+1][0] = x1;
+              PairHopping[2*idx+1][1] = x0;
+              ParaPairHopping[2*idx+1] = dReValue;
               idx++;
             }
-            if (idx != NPairHopping) info = ReadDefFileError(defname);
+            if (2*idx != NPairHopping) info = ReadDefFileError(defname);
           }
           fclose(fp);
           break;
