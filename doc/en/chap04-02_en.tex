@@ -2152,3 +2152,13 @@ $[$double01$]$ and $[$double02$]$ show the real and imaginary part of $\langle c
 
 \end{itemize}
 
+\subsection{xxx\_ls\_out\_yyy.dat }
+This file is the outputted files for $\langle H \rangle$, $\langle H^2\rangle$, and the optimized parameter $\alpha$ obtained by Power Lanczos method. 
+This file is outputted when \verb|NVMCCalMode| = 1, \verb|NLanczosmode| = 1 or 2 are set in \verb|ModPara| file.
+Here, xxx is the header indicated by \verb|CDataFileHead| in \verb|ModPara| file and yyy is a number given by \verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|, where both \verb|NDataIdxStart| and \verb|NDataQtySmp| are defined in \verb|ModPara| file.
+
+\subsection{xxx\_ls\_cisajs\_yyy.dat }
+This file is the outputted files for one-body Green's function $\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle$ obtained by Power Lanczos method. The file format is same as the {xxx\_cisajs\_yyy.dat} file. This file is outputted when \verb|NVMCCalMode| = 1, \verb|NLanczosmode| = 2 are set in \verb|ModPara| file.
+
+\subsection{xxx\_ls\_cisajscktalt\_yyy.dat }
+This file is the outputted files for the two-body Green's function $\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle$ obtained by Power Lanczos method. The file format is same as the {xxx\_cisajscktalt\_yyy.dat} file. This file is outputted when \verb|NVMCCalMode| = 1, \verb|NLanczosmode| = 2 are set in \verb|ModPara| file.

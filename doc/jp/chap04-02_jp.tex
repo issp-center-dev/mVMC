@@ -2161,7 +2161,6 @@ xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|Mod
 $[$double01$]$が実部、$[$double02$]$が虚部を表します。\\
 \end{itemize}
 
-
 \subsection{xxx\_cisajscktalt\_yyy.dat }
 TwoBodyG指定ファイルで指定された二体グリーン関数$\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle$の計算結果を出力します。xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。以下にファイル例を記載します。
 
@@ -2212,6 +2211,19 @@ $[$int02$]$が$\sigma_1$、$[$int04$]$が$\sigma_2$、$[$int06$]$が$\sigma_3$�
 {\bf 説明 :} $\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle$の値を表します。\\
 $[$double01$]$が実部、$[$double02$]$が虚部を表します。\\
 \end{itemize}
+
+\subsection{xxx\_ls\_out\_yyy.dat }
+Power Lanczos法により求めた$\langle H \rangle$, $\langle H^2\rangle$および最適化パラメータ$\alpha$の順に出力されます。
+\verb|ModPara|指定ファイルで\verb|NVMCCalMode|=1, \verb|NLanczosmode|=1, 2に設定することで計算されます。
+xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。
+
+\subsection{xxx\_ls\_cisajs\_yyy.dat }
+Power Lanczos法により求めた, OneBodyG指定ファイルで指定された一体グリーン関数$\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle$の計算結果を出力します。
+ファイル形式は{xxx\_cisajs\_yyy.dat}ファイルと同じです。\verb|ModPara|指定ファイルで\verb|NVMCCalMode|=1, \verb|NLanczosmode|=2に設定することで計算されます。
+
+\subsection{xxx\_ls\_cisajscktalt\_yyy.dat }
+Power Lanczos法により求めた, TwoBodyG指定ファイルで指定された二体グリーン関数$\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle$の計算結果を出力します。ファイル形式は{xxx\_cisajscktalt\_yyy.dat}ファイルと同じです。\verb|ModPara|指定ファイルで\verb|NVMCCalMode| = 1, \verb|NLanczosmode| = 2 に設定することで計算されます。
+
 
 %----------------------------------------------------------
 %----------------------------------------------------------
