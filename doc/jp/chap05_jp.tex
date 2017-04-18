@@ -115,7 +115,53 @@ $f_{ij}$が平均場近似解として記述できることを示しています
 シングルスレータ行列式からパフィアンスレーター行列式がどのようにしてずれるのか、
 という点について定量的な基準を与えることを示しています。
 
-\section{Power Lanczos法}
-T. B. A.
-
+\section{Power-Lanczos法}
+このセクションでは、Power-Lanczos法での最適化パラメータ$\alpha$の決定方法について述べます。
+サンプリング数が有限のため、エネルギーの分散が常に正の値を取るよう計算を行うことが重要になります。
+また、ここではシングルステップのLanczos法を適用した後の物理量の計算についても説明します。
+\subsection{$\alpha$の決定}
+最初に, 変分モンテカルロ法のサンプリングに関して簡単に説明します。
+物理量$\hat{A}$は以下の手順で計算されます:
+\begin{align}
+&\langle \hat{A}\rangle = \frac{\langle \phi| \hat{A}|\phi \rangle}{\langle \phi| \phi \rangle} = \sum_{x} \rho(x) F(x, {\hat{A}}),\\
+& \rho(x)=\frac{|\langle \phi|x\rangle|^2}{\langle \phi | \phi \rangle}, ~~~~F(x,  {\hat{A}}) =  \frac{\langle x| \hat{A}|\phi \rangle}{\langle x| \phi \rangle}.
+\end{align}
+演算子の積$\hat{A}\hat{B}$を計算する場合には、以下の二通りの方法があります。
+\begin{align}
+&\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F(x, {\hat{A}\hat{B}}),\\
+&\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F^{\dag}(x, {\hat{A})F(x, \hat{B}}).
+\end{align}
+後述するように、後者の表記の方が数値的には安定します。
+例えば、エネルギーの期待値の分散$\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle$を考えてみると、
+分散は以下の2通りの方法で計算できます。
+\begin{align}
+&\sigma^2=\sum_{x} \rho(x) F(x,  (\hat{H}-\langle \hat{H}\rangle)^2) = \sum_{x} \rho(x) F(x,  \hat{H}^2) - \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 ,\\
+&\sigma^2=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}-\langle \hat{H}\rangle)F(x,  \hat{H}-\langle \hat{H}\rangle) = \sum_{x} \rho(x) F^{\dag}(x,  \hat{H}) F(x, \hat{H})- \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 
+\end{align}
+この定義から、後者の方法では常に正の値となることが保証されているのに対して、前者の方法では分散が正の値になることが必ずしも保証されないことが分かります。次に, シングルステップでのpower-Lanczos波動関数$|\phi\rangle =(1+\alpha \hat{H}) |\psi \rangle$に対するエネルギーの期待値とその分散を考えます。エネルギーは以下の式で計算されます：
+\begin{align}
+E_{LS}(\alpha) =\frac{\langle \phi| \hat{H} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{h_1 + \alpha(h_{2(20)} + h_{2(11)}) + \alpha^2 h_{3(12)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+\end{align}
+ここで、$h_1$, $h_{2(11)},~h_{2(20)},$ and $h_{3(12)}$を以下のように定義しました：
+\begin{align}
+&h_1 =\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}),\\
+&h_{2(11)}=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}) F(x, \hat{H}),\\
+&h_{2(20)}=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}^2),\\
+&h_{3(12)}=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H})F(x,  \hat{H}^2).
+\end{align}
+$\frac{\partial E_{LS}(\alpha)}{\partial \alpha}=0$の条件から$\alpha$の二次方程式が導出され, それを解くことで$\alpha$が決定されます。
+分散に関しても同様の手法で計算することが可能です。
+\subsection{物理量の計算}
+最適化パラメータ$\alpha$を用いることで, 演算子$\hat{A}$の期待値を以下の式から計算することが出来ます： 
+\begin{align}
+A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{A_0 + \alpha(A_{1(10)} + A_{1(01)}) + \alpha^2 A_{2(11)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+\end{align}
+ここで、$A_0$, $A_{1(10)},~A_{1(01)},$ and $A_{2(11)}$は
+\begin{align}
+&A_0 =\sum_{x} \rho(x) F(x,  \hat{A}),\\
+&A_{1(10)}=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}) F(x, \hat{A}),\\
+&A_{1(01)}=\sum_{x} \rho(x) F(x, \hat{A}\hat{H}),\\
+&A_{2(11)}=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H})F(x,  \hat{A}\hat{H}).
+\end{align}
+として定義される変数を表します。プログラムでは、この表式に基づき一体グリーン関数および二体グリーン関数の計算を行っています。
 %----------------------------------------------------------
