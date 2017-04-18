@@ -32,6 +32,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "./include/global.h"
 #include "safempi_fcmp.c"
 
+
+#define _NOTBACKFLOW
+
 int ReadDefFileError(const char *defname);
 int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm);
 int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm);
@@ -203,7 +206,7 @@ int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, i
   return icount;
 }
 
-int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
+int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   FILE *fp;
   char defname[D_FileNameMax];
   char ctmp[D_FileNameMax];
@@ -211,413 +214,402 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
 
   int itmp;
 
-  int rank, info=0;
-  const int nBufInt= ParamIdxInt_End;
-  const int nBufDouble= ParamIdxDouble_End;
-  const int nBufChar=D_FileNameMax;
+  int rank, info = 0;
+  const int nBufInt = ParamIdxInt_End;
+  const int nBufDouble = ParamIdxDouble_End;
+  const int nBufChar = D_FileNameMax;
   int bufInt[nBufInt];
   double bufDouble[nBufDouble];
-  int iKWidx=0;
-  int iFlgOrbitalSimple=0;
-  int iOrbitalComplex=0;
-  iFlgOrbitalGeneral=0;
+  int iKWidx = 0;
+  int iFlgOrbitalSimple = 0;
+  int iOrbitalComplex = 0;
+  iFlgOrbitalGeneral = 0;
   MPI_Comm_rank(comm, &rank);
 
-  if(rank==0) {
-    cFileNameListFile = malloc(sizeof(char)*D_CharTmpReadDef*KWIdxInt_end);
-    fprintf(stdout, "  Read File %s .\n", xNameListFile); 
-    if(GetFileName(xNameListFile, cFileNameListFile)!=0){
+  if (rank == 0) {
+    cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
+    fprintf(stdout, "  Read File %s .\n", xNameListFile);
+    if (GetFileName(xNameListFile, cFileNameListFile) != 0) {
       fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
-      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
-    
-    for(iKWidx=0; iKWidx< KWIdxInt_end; iKWidx++){ 
+
+    for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
       strcpy(defname, cFileNameListFile[iKWidx]);
-      if(strcmp(defname,"")==0){
-	switch (iKWidx){
-	case KWModPara:
-	case KWLocSpin:
-	  fprintf(stderr, "  Error: Need to make a def file for %s.\n", cKWListOfFileNameList[iKWidx]);
-	  MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
-	  break;
-	default:
-	  break;
-	}
+      if (strcmp(defname, "") == 0) {
+        switch (iKWidx) {
+          case KWModPara:
+          case KWLocSpin:
+            fprintf(stderr, "  Error: Need to make a def file for %s.\n", cKWListOfFileNameList[iKWidx]);
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+            break;
+          default:
+            break;
+        }
       }
     }
-    
-    for(iKWidx=0; iKWidx< KWIdxInt_end; iKWidx++){ 
+
+    for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
       strcpy(defname, cFileNameListFile[iKWidx]);
-      if(strcmp(defname,"")==0) continue;
-      fprintf(stdout,  "  Read File '%s' for %s.\n", defname, cKWListOfFileNameList[iKWidx]);
+      if (strcmp(defname, "") == 0) continue;
+      fprintf(stdout, "  Read File '%s' for %s.\n", defname, cKWListOfFileNameList[iKWidx]);
       fp = fopen(defname, "r");
-      if(fp==NULL){
-	info=ReadDefFileError(defname);
-	fclose(fp);
-	break;
-      }
-      else{
+      if (fp == NULL) {
+        info = ReadDefFileError(defname);
+        fclose(fp);
+        break;
+      } else {
 
-	switch(iKWidx){
-	case KWModPara:
-	  /* Read modpara.def---------------------------------------*/
-	  //TODO: add error procedure here when parameters are not enough.
-	  SetDefultValuesModPara(bufInt, bufDouble);
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &itmp); //2
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //3
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //4
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //5
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %s\n", ctmp, CDataFileHead); //6
-	  fgets(ctmp2,sizeof(ctmp2)/sizeof(char), fp);
-          sprintf(ctmp,"output/%s", CDataFileHead);
-          strcpy(CDataFileHead,ctmp);
-	  sscanf(ctmp2,"%s %s\n", ctmp, CParaFileHead); //7
-          sprintf(ctmp, "output/%s", CParaFileHead);
-          strcpy(CParaFileHead, ctmp);
-          fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);   //8
-          info = system("mkdir -p output");
+        switch (iKWidx) {
+          case KWModPara:
+            /* Read modpara.def---------------------------------------*/
+            //TODO: add error procedure here when parameters are not enough.
+            SetDefultValuesModPara(bufInt, bufDouble);
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &itmp); //2
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //3
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //4
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //5
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %s\n", ctmp, CDataFileHead); //6
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sprintf(ctmp, "output/%s", CDataFileHead);
+            strcpy(CDataFileHead, ctmp);
+            sscanf(ctmp2, "%s %s\n", ctmp, CParaFileHead); //7
+            sprintf(ctmp, "output/%s", CParaFileHead);
+            strcpy(CParaFileHead, ctmp);
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);   //8
+            info = system("mkdir -p output");
 
-	  double dtmp;
-	  while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp)!=NULL){
-	    if(*ctmp2 == '\n' || ctmp2[0] == '-')  continue;
-	    sscanf(ctmp2,"%s %lf\n", ctmp, &dtmp);
-        if(CheckWords(ctmp, "NVMCCalMode")==0){
-	      bufInt[IdxVMCCalcMode]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "NLanczosMode")==0){
-	      bufInt[IdxLanczosMode]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "NDataIdxStart")==0){
-	      bufInt[IdxDataIdxStart]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "NDataQtySmp")==0){
-	      bufInt[IdxDataQtySmp]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "Nsite")==0){
-	      bufInt[IdxNsite]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "Ne")==0 || CheckWords(ctmp, "Nelectron")==0 ){
-	      bufInt[IdxNe]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "NSPGaussLeg")==0){
-	      bufInt[IdxSPGaussLeg]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "NSPStot")==0){
-	      bufInt[IdxSPStot]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "NMPTrans")==0){
-	      bufInt[IdxMPTrans]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "NSROptItrStep")==0){
-	      bufInt[IdxSROptItrStep]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "NSROptItrSmp")==0){
-	      bufInt[IdxSROptItrSmp]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "DSROptRedCut")==0){
-	      bufDouble[IdxSROptRedCut]=(double)dtmp;
-	    }	
-	    else if(CheckWords(ctmp, "DSROptStaDel")==0){
-	      bufDouble[IdxSROptStaDel]=(double)dtmp;
-	    }	
-	    else if(CheckWords(ctmp, "DSROptStepDt")==0){
-	      bufDouble[IdxSROptStepDt]=(double)dtmp;
-	    }	
-	    else if(CheckWords(ctmp, "NVMCWarmUp")==0){
-	      bufInt[IdxVMCWarmUp]=(int)dtmp;
-	    }	
-	    else if(CheckWords(ctmp, "NVMCInterval")==0){
-	      bufInt[IdxVMCInterval]=(int)dtmp;
-	    }	
-	    else if(CheckWords(ctmp, "NVMCSample")==0){
-	      bufInt[IdxVMCSample]=(int)dtmp;
-	    }	
-	    else if(CheckWords(ctmp, "NExUpdatePath")==0){
-	      bufInt[IdxExUpdatePath]=(int)dtmp;
-	    }	
-	    else if(CheckWords(ctmp, "RndSeed")==0){
-	      bufInt[IdxRndSeed] = (int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "NSplitSize")==0){
-	      bufInt[IdxSplitSize]=(int)dtmp;
-	    }
-	    else if(CheckWords(ctmp, "NStore")==0){
-	      NStoreO=(int)dtmp;
-	    }
-	    else{
-	      fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
-	      info = ReadDefFileError(defname);
-	      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);			 
-	    }
-	  }
-	  if(bufInt[IdxRndSeed]<0) {
-	    bufInt[IdxRndSeed] = (int)time(NULL);
-	    fprintf(stdout, "  remark: Seed = %d\n", bufInt[IdxRndSeed]);
-	  }
-	  fclose(fp);
-	  break;//modpara file
+            double dtmp;
+            while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+              if (*ctmp2 == '\n' || ctmp2[0] == '-') continue;
+              sscanf(ctmp2, "%s %lf\n", ctmp, &dtmp);
+              if (CheckWords(ctmp, "NVMCCalMode") == 0) {
+                bufInt[IdxVMCCalcMode] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NLanczosMode") == 0) {
+                bufInt[IdxLanczosMode] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NDataIdxStart") == 0) {
+                bufInt[IdxDataIdxStart] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NDataQtySmp") == 0) {
+                bufInt[IdxDataQtySmp] = (int) dtmp;
+              } else if (CheckWords(ctmp, "Nsite") == 0) {
+                bufInt[IdxNsite] = (int) dtmp;
+              } else if (CheckWords(ctmp, "Ne") == 0 || CheckWords(ctmp, "Nelectron") == 0) {
+                bufInt[IdxNe] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NSPGaussLeg") == 0) {
+                bufInt[IdxSPGaussLeg] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NSPStot") == 0) {
+                bufInt[IdxSPStot] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NMPTrans") == 0) {
+                bufInt[IdxMPTrans] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NSROptItrStep") == 0) {
+                bufInt[IdxSROptItrStep] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NSROptItrSmp") == 0) {
+                bufInt[IdxSROptItrSmp] = (int) dtmp;
+              } else if (CheckWords(ctmp, "DSROptRedCut") == 0) {
+                bufDouble[IdxSROptRedCut] = (double) dtmp;
+              } else if (CheckWords(ctmp, "DSROptStaDel") == 0) {
+                bufDouble[IdxSROptStaDel] = (double) dtmp;
+              } else if (CheckWords(ctmp, "DSROptStepDt") == 0) {
+                bufDouble[IdxSROptStepDt] = (double) dtmp;
+              } else if (CheckWords(ctmp, "NVMCWarmUp") == 0) {
+                bufInt[IdxVMCWarmUp] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NVMCInterval") == 0) {
+                bufInt[IdxVMCInterval] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NVMCSample") == 0) {
+                bufInt[IdxVMCSample] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NExUpdatePath") == 0) {
+                bufInt[IdxExUpdatePath] = (int) dtmp;
+              } else if (CheckWords(ctmp, "RndSeed") == 0) {
+                bufInt[IdxRndSeed] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NSplitSize") == 0) {
+                bufInt[IdxSplitSize] = (int) dtmp;
+              } else if (CheckWords(ctmp, "NStore") == 0) {
+                NStoreO = (int) dtmp;
+              } else {
+                fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
+                info = ReadDefFileError(defname);
+                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+              }
+            }
+            if (bufInt[IdxRndSeed] < 0) {
+              bufInt[IdxRndSeed] = (int) time(NULL);
+              fprintf(stdout, "  remark: Seed = %d\n", bufInt[IdxRndSeed]);
+            }
+            fclose(fp);
+            break;//modpara file
 
-	case KWLocSpin:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNLocSpin]);
-	  fclose(fp);
-	  break;
+          case KWLocSpin:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNLocSpin]);
+            fclose(fp);
+            break;
 
-	case KWTrans:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNTrans]);
-	  fclose(fp);
-	  break;
+          case KWTrans:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNTrans]);
+            fclose(fp);
+            break;
 
-	case KWCoulombIntra:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNCoulombIntra]);
-	  fclose(fp);
-	  break;
+          case KWCoulombIntra:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNCoulombIntra]);
+            fclose(fp);
+            break;
 
-	case KWCoulombInter:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNCoulombInter]);
-	  fclose(fp);
-	  break;
+          case KWCoulombInter:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNCoulombInter]);
+            fclose(fp);
+            break;
 
-	case KWHund:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNHund]);
-	  fclose(fp);
-	  break;
-	  
-	case KWPairHop:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNPairHop]);
-	  fclose(fp);
-	  break;
-		  
-	case KWExchange:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNExchange]);
-	  fclose(fp);
-	  break;
+          case KWHund:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNHund]);
+            fclose(fp);
+            break;
 
-	case KWGutzwiller:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNGutz]);
-      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgGutzwiller);
-	  fclose(fp);
-	  break;
+          case KWPairHop:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNPairHop]);
+            fclose(fp);
+            break;
 
-	case KWJastrow:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNJast]);
-      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgJastrow);
-	  fclose(fp);
-	  break;
+          case KWExchange:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNExchange]);
+            fclose(fp);
+            break;
 
-	case KWDH2:
-      fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-      sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNDH2]);
-      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgDH2);
-	  fclose(fp);
-	  break;
+          case KWGutzwiller:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNGutz]);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgGutzwiller);
+            fclose(fp);
+            break;
 
-	case KWDH4:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNDH4]);
-      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgDH4);
-	  fclose(fp);
-	  break;
+          case KWJastrow:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNJast]);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgJastrow);
+            fclose(fp);
+            break;
 
-      /*
-	case KWOrbital:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOrbit]);
-      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-      sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgOrbital);
-	  fclose(fp);
-	  break;
-      */
-      
-    case KWOrbital:      
-    case KWOrbitalAntiParallel:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOrbitAntiParallel]);
-      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-      sscanf(ctmp2,"%s %d\n", ctmp, &iOrbitalComplex);
-	  fclose(fp);
-      iFlgOrbitalAP=1;
-      iNOrbitalAP=bufInt[IdxNOrbitAntiParallel];
-      bufInt[IdxNOrbit] += bufInt[IdxNOrbitAntiParallel];
-      iComplexFlgOrbital+=iOrbitalComplex;
-      if(iFlgOrbitalSimple==-1){
-	      fprintf(stderr, "error: Multiple definition of Orbital files.\n");
-	      info = ReadDefFileError(defname);
-      }
-	  break;
+          case KWDH2:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNDH2]);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgDH2);
+            fclose(fp);
+            break;
 
-    case KWOrbitalGeneral:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOrbit]);
-      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-      sscanf(ctmp2,"%s %d\n", ctmp, &iOrbitalComplex);
-	  fclose(fp);
-      iFlgOrbitalGeneral=1;
-      iComplexFlgOrbital = iOrbitalComplex;
-      if(iFlgOrbitalSimple==1){
-	      fprintf(stderr, "error: Multiple definition of Orbital files.\n");
-	      info = ReadDefFileError(defname);
-      }
-      iFlgOrbitalSimple = -1;
-	  break;
+          case KWDH4:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNDH4]);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgDH4);
+            fclose(fp);
+            break;
 
-    case KWOrbitalParallel:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOrbitParallel]);
-      fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-      sscanf(ctmp2,"%s %d\n", ctmp, &iOrbitalComplex);
-	  fclose(fp);
-      //up-up and down-down 
-      iNOrbitalP=bufInt[IdxNOrbitParallel];
-      bufInt[IdxNOrbit] += 2*bufInt[IdxNOrbitParallel];
-      if(bufInt[IdxNOrbitParallel] > 0){
-        iFlgOrbitalGeneral=1;
-      }
-      iComplexFlgOrbital+=iOrbitalComplex;
-      iFlgOrbitalAP=1;
+            /*
+          case KWOrbital:
+            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+            sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOrbit]);
+            fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+            sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgOrbital);
+            fclose(fp);
+            break;
+            */
 
-      if(iFlgOrbitalSimple==-1){
-	      fprintf(stderr, "error: Multiple definition of Orbital files.\n");
-	      info = ReadDefFileError(defname);
-      }
-	  break;
+          case KWOrbital:
+          case KWOrbitalAntiParallel:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOrbitAntiParallel]);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
+            fclose(fp);
+            iFlgOrbitalAP = 1;
+            iNOrbitalAP = bufInt[IdxNOrbitAntiParallel];
+            bufInt[IdxNOrbit] += bufInt[IdxNOrbitAntiParallel];
+            iComplexFlgOrbital += iOrbitalComplex;
+            if (iFlgOrbitalSimple == -1) {
+              fprintf(stderr, "error: Multiple definition of Orbital files.\n");
+              info = ReadDefFileError(defname);
+            }
+            break;
 
-	case KWTransSym:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNQPTrans]);
-	  fclose(fp);
-	  break;
-      
-	case KWOneBodyG:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOneBodyG]);
-	  fclose(fp);
-	  break;
+          case KWOrbitalGeneral:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOrbit]);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
+            fclose(fp);
+            iFlgOrbitalGeneral = 1;
+            iComplexFlgOrbital = iOrbitalComplex;
+            if (iFlgOrbitalSimple == 1) {
+              fprintf(stderr, "error: Multiple definition of Orbital files.\n");
+              info = ReadDefFileError(defname);
+            }
+            iFlgOrbitalSimple = -1;
+            break;
 
-	case KWTwoBodyG:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNTwoBodyG]);
-	  fclose(fp);
-	  break;
+          case KWOrbitalParallel:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOrbitParallel]);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
+            fclose(fp);
+            //up-up and down-down
+            iNOrbitalP = bufInt[IdxNOrbitParallel];
+            bufInt[IdxNOrbit] += 2 * bufInt[IdxNOrbitParallel];
+            if (bufInt[IdxNOrbitParallel] > 0) {
+              iFlgOrbitalGeneral = 1;
+            }
+            iComplexFlgOrbital += iOrbitalComplex;
+            iFlgOrbitalAP = 1;
+
+            if (iFlgOrbitalSimple == -1) {
+              fprintf(stderr, "error: Multiple definition of Orbital files.\n");
+              info = ReadDefFileError(defname);
+            }
+            break;
+
+          case KWTransSym:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNQPTrans]);
+            fclose(fp);
+            break;
+
+          case KWOneBodyG:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOneBodyG]);
+            fclose(fp);
+            break;
+
+          case KWTwoBodyG:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNTwoBodyG]);
+            fclose(fp);
+            break;
 
 
-	case KWTwoBodyGEx:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNTwoBodyGEx]);
-	  fclose(fp);
-	  break;
+          case KWTwoBodyGEx:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNTwoBodyGEx]);
+            fclose(fp);
+            break;
 
-	case KWInterAll:
-	  fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	  fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	  sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNInterAll]);
-	  fclose(fp);
-	  break;		
+          case KWInterAll:
+            fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNInterAll]);
+            fclose(fp);
+            break;
 
-	case KWOptTrans:
-	  bufInt[IdxNQPOptTrans]=1;
-	  if(FlagOptTrans>0) {
-	    fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-	    fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-	    sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNQPOptTrans]);
-	    if(bufInt[IdxNQPOptTrans]<1) {
-	      fprintf(stderr, "error: NQPOptTrans should be larger than 0.\n");
-	      info = ReadDefFileError(defname);
-	    }
-	  }
-	  fclose(fp);
-	  break;
+          case KWOptTrans:
+            bufInt[IdxNQPOptTrans] = 1;
+            if (FlagOptTrans > 0) {
+              fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+              fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+              sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNQPOptTrans]);
+              if (bufInt[IdxNQPOptTrans] < 1) {
+                fprintf(stderr, "error: NQPOptTrans should be larger than 0.\n");
+                info = ReadDefFileError(defname);
+              }
+            }
+            fclose(fp);
+            break;
 
-	case KWBFRange:
-		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-			fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-			sscanf(ctmp2,"%s %d %d\n", ctmp, &bufInt[IdxNrange], &bufInt[IdxNNz]);
-			fclose(fp);
-			break;
+          case KWBFRange:
+#ifdef _NOTBACKFLOW
+            fprintf(stderr, "error: Back Flow is not supported.\n");
+            info = ReadDefFileError(defname);
+#else
+          fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+          fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+          sscanf(ctmp2,"%s %d %d\n", ctmp, &bufInt[IdxNrange], &bufInt[IdxNNz]);
+#endif
+            fclose(fp);
+            break;
 
-	case KWBF:
-		fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-		fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-		sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNBF]);
-		fclose(fp);
-		break;
+          case KWBF:
+#ifdef _NOTBACKFLOW
+            fprintf(stderr, "error: Back Flow is not supported.\n");
+            info = ReadDefFileError(defname);
+#else
+          fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+          fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+          sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNBF]);
+#endif
+            fclose(fp);
+            break;
 
 
-	default:
-	  fclose(fp);
-	  break;
-	}//case KW
+          default:
+            fclose(fp);
+            break;
+        }//case KW
       }
     }
 
     //For Lanczos mode: Calculation of Green's function
-    
-    if(bufInt[IdxLanczosMode]>1){
+
+    if (bufInt[IdxLanczosMode] > 1) {
       //Get info of CisAjs and CisAjsCktAltDC
       int i;
-      NCisAjsLz=bufInt[IdxNOneBodyG];
+      NCisAjsLz = bufInt[IdxNOneBodyG];
       //bufInt[IdxNTwoBodyGEx] = bufInt[IdxNTwoBodyG];
-      CisAjsLzIdx = malloc(sizeof(int*)*NCisAjsLz);
-      for(i=0;i<NCisAjsLz;i++) {
-        CisAjsLzIdx[i] = malloc(sizeof(int)*4);
+      CisAjsLzIdx = malloc(sizeof(int *) * NCisAjsLz);
+      for (i = 0; i < NCisAjsLz; i++) {
+        CisAjsLzIdx[i] = malloc(sizeof(int) * 4);
       }
-      iOneBodyGIdx = malloc(sizeof(int*)*(2* bufInt[IdxNsite])); //For spin
+      iOneBodyGIdx = malloc(sizeof(int *) * (2 * bufInt[IdxNsite])); //For spin
       //pInt=iFlgOneBodyG[0];
-      for(i=0; i<2* bufInt[IdxNsite]; i++) {
-        iOneBodyGIdx[i] = malloc(sizeof(int)*(2* bufInt[IdxNsite]));
+      for (i = 0; i < 2 * bufInt[IdxNsite]; i++) {
+        iOneBodyGIdx[i] = malloc(sizeof(int) * (2 * bufInt[IdxNsite]));
       }
-      bufInt[IdxNOneBodyG] = CountOneBodyGForLanczos(xNameListFile, NCisAjsLz, bufInt[IdxNTwoBodyG], bufInt[IdxNsite], CisAjsLzIdx, iOneBodyGIdx);
+      bufInt[IdxNOneBodyG] = CountOneBodyGForLanczos(xNameListFile, NCisAjsLz, bufInt[IdxNTwoBodyG],
+                                                     bufInt[IdxNsite], CisAjsLzIdx, iOneBodyGIdx);
     }
-     
+
   }
-  
-  if(info!=0) {
-    if(rank==0) {
+
+  if (info != 0) {
+    if (rank == 0) {
       fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
     }
-    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  if(rank==0){
-    AllComplexFlag  = iComplexFlgGutzwiller+iComplexFlgJastrow+iComplexFlgDH2; //TBC
-    AllComplexFlag += iComplexFlgDH4+iComplexFlgOrbital;//TBC
+  if (rank == 0) {
+    AllComplexFlag = iComplexFlgGutzwiller + iComplexFlgJastrow + iComplexFlgDH2; //TBC
+    AllComplexFlag += iComplexFlgDH4 + iComplexFlgOrbital;//TBC
     //AllComplexFlag  = 1;//DEBUG
     // AllComplexFlag= 0 -> All real, !=0 -> complex
   }
-  
+
 #ifdef _mpi_use
   MPI_Bcast(bufInt, nBufInt, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
@@ -627,135 +619,133 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm){
   MPI_Bcast(CParaFileHead, nBufChar, MPI_CHAR, 0, comm);
 #endif /* _mpi_use */
 
-  NVMCCalMode            =  bufInt[IdxVMCCalcMode];
-  NLanczosMode           =  bufInt[IdxLanczosMode];
-  NDataIdxStart          =  bufInt[IdxDataIdxStart];
-  NDataQtySmp            =  bufInt[IdxDataQtySmp];
-  Nsite                  =  bufInt[IdxNsite];
-  Ne                     =  bufInt[IdxNe];
-  NSPGaussLeg            =  bufInt[IdxSPGaussLeg];
-  NSPStot                =  bufInt[IdxSPStot];
-  NMPTrans               =  bufInt[IdxMPTrans];
-  NSROptItrStep          =  bufInt[IdxSROptItrStep];
-  NSROptItrSmp           =  bufInt[IdxSROptItrSmp];
-  NSROptFixSmp           =  bufInt[IdxSROptFixSmp];
-  NVMCWarmUp             =  bufInt[IdxVMCWarmUp];
-  NVMCInterval           =  bufInt[IdxVMCInterval];
-  NVMCSample             =  bufInt[IdxVMCSample];
-  NExUpdatePath          =  bufInt[IdxExUpdatePath];
-  RndSeed                =  bufInt[IdxRndSeed];
-  NSplitSize             =  bufInt[IdxSplitSize];
-  NLocSpn                =  bufInt[IdxNLocSpin];
-  NTransfer              =  bufInt[IdxNTrans];
-  NCoulombIntra          =  bufInt[IdxNCoulombIntra];
-  NCoulombInter          =  bufInt[IdxNCoulombInter];
-  NHundCoupling          =  bufInt[IdxNHund];
-  NPairHopping           =  bufInt[IdxNPairHop];
-  NExchangeCoupling      =  bufInt[IdxNExchange];
-  NGutzwillerIdx         =  bufInt[IdxNGutz];
-  NJastrowIdx            =  bufInt[IdxNJast];
-  NDoublonHolon2siteIdx  =  bufInt[IdxNDH2];
-  NDoublonHolon4siteIdx  =  bufInt[IdxNDH4];
-  NOrbitalIdx            =  bufInt[IdxNOrbit];
-  NQPTrans               =  bufInt[IdxNQPTrans];
-  NCisAjs                =  bufInt[IdxNOneBodyG];
-  //fprintf(stdout, "Debug: NCisAjs=%d\n", NCisAjs); 
-  NCisAjsCktAlt          =  bufInt[IdxNTwoBodyGEx];
-  NCisAjsCktAltDC        =  bufInt[IdxNTwoBodyG];
-  NInterAll              =  bufInt[IdxNInterAll];
-  NQPOptTrans            =  bufInt[IdxNQPOptTrans];
-  Nrange                 =  bufInt[IdxNrange];
-  NBackFlowIdx           =  bufInt[IdxNBF];
-  Nz                     =  bufInt[IdxNNz];
-  DSROptRedCut           =  bufDouble[IdxSROptRedCut];
-  DSROptStaDel           =  bufDouble[IdxSROptStaDel];
-  DSROptStepDt           =  bufDouble[IdxSROptStepDt];
+  NVMCCalMode = bufInt[IdxVMCCalcMode];
+  NLanczosMode = bufInt[IdxLanczosMode];
+  NDataIdxStart = bufInt[IdxDataIdxStart];
+  NDataQtySmp = bufInt[IdxDataQtySmp];
+  Nsite = bufInt[IdxNsite];
+  Ne = bufInt[IdxNe];
+  NSPGaussLeg = bufInt[IdxSPGaussLeg];
+  NSPStot = bufInt[IdxSPStot];
+  NMPTrans = bufInt[IdxMPTrans];
+  NSROptItrStep = bufInt[IdxSROptItrStep];
+  NSROptItrSmp = bufInt[IdxSROptItrSmp];
+  NSROptFixSmp = bufInt[IdxSROptFixSmp];
+  NVMCWarmUp = bufInt[IdxVMCWarmUp];
+  NVMCInterval = bufInt[IdxVMCInterval];
+  NVMCSample = bufInt[IdxVMCSample];
+  NExUpdatePath = bufInt[IdxExUpdatePath];
+  RndSeed = bufInt[IdxRndSeed];
+  NSplitSize = bufInt[IdxSplitSize];
+  NLocSpn = bufInt[IdxNLocSpin];
+  NTransfer = bufInt[IdxNTrans];
+  NCoulombIntra = bufInt[IdxNCoulombIntra];
+  NCoulombInter = bufInt[IdxNCoulombInter];
+  NHundCoupling = bufInt[IdxNHund];
+  NPairHopping = bufInt[IdxNPairHop];
+  NExchangeCoupling = bufInt[IdxNExchange];
+  NGutzwillerIdx = bufInt[IdxNGutz];
+  NJastrowIdx = bufInt[IdxNJast];
+  NDoublonHolon2siteIdx = bufInt[IdxNDH2];
+  NDoublonHolon4siteIdx = bufInt[IdxNDH4];
+  NOrbitalIdx = bufInt[IdxNOrbit];
+  NQPTrans = bufInt[IdxNQPTrans];
+  NCisAjs = bufInt[IdxNOneBodyG];
+  //fprintf(stdout, "Debug: NCisAjs=%d\n", NCisAjs);
+  NCisAjsCktAlt = bufInt[IdxNTwoBodyGEx];
+  NCisAjsCktAltDC = bufInt[IdxNTwoBodyG];
+  NInterAll = bufInt[IdxNInterAll];
+  NQPOptTrans = bufInt[IdxNQPOptTrans];
+  Nrange = bufInt[IdxNrange];
+  NBackFlowIdx = bufInt[IdxNBF];
+  Nz = bufInt[IdxNNz];
+  DSROptRedCut = bufDouble[IdxSROptRedCut];
+  DSROptStaDel = bufDouble[IdxSROptStaDel];
+  DSROptStepDt = bufDouble[IdxSROptStepDt];
 
-  if(NMPTrans < 0) {
+  if (NMPTrans < 0) {
     APFlag = 1; /* anti-periodic boundary */
     NMPTrans *= -1;
   } else {
     APFlag = 0;
   }
 
-  if(DSROptStepDt < 0) {
+  if (DSROptStepDt < 0) {
     SRFlag = 1; /* diagonalization */
-    if(rank==0) fprintf(stderr, "remark: Diagonalization Mode\n");
+    if (rank == 0) fprintf(stderr, "remark: Diagonalization Mode\n");
     DSROptStepDt *= -1;
   } else {
     SRFlag = 0;
   }
-  Nsize   = 2*Ne;
-  Nsite2  = 2*Nsite;
+  Nsize = 2 * Ne;
+  Nsite2 = 2 * Nsite;
   NSlater = NOrbitalIdx;
-  NProj   = NGutzwillerIdx + NJastrowIdx
-    + 2*3*NDoublonHolon2siteIdx
-    + 2*5*NDoublonHolon4siteIdx;
-  NOptTrans = (FlagOptTrans>0) ? NQPOptTrans : 0;
+  NProj = NGutzwillerIdx + NJastrowIdx
+          + 2 * 3 * NDoublonHolon2siteIdx
+          + 2 * 5 * NDoublonHolon4siteIdx;
+  NOptTrans = (FlagOptTrans > 0) ? NQPOptTrans : 0;
 
   /* [s] For BackFlow */
-  if(NBackFlowIdx >0){
-    NrangeIdx = 3*(Nrange-1)/Nz+1; //For Nz-conectivity
-    NBFIdxTotal = (NrangeIdx-1)*(NrangeIdx)/2+(NrangeIdx);
-    NProjBF = NBFIdxTotal*NBackFlowIdx;
-  }
-  else{
-    NrangeIdx=0;
-    NBFIdxTotal=0;
-    NProjBF=0;
+  if (NBackFlowIdx > 0) {
+    NrangeIdx = 3 * (Nrange - 1) / Nz + 1; //For Nz-conectivity
+    NBFIdxTotal = (NrangeIdx - 1) * (NrangeIdx) / 2 + (NrangeIdx);
+    NProjBF = NBFIdxTotal * NBackFlowIdx;
+  } else {
+    NrangeIdx = 0;
+    NBFIdxTotal = 0;
+    NProjBF = 0;
   }
   /* [e] For BackFlow */
 
-  NPara   = NProj + NSlater + NOptTrans + NProjBF;
+  NPara = NProj + NSlater + NOptTrans + NProjBF;
   NQPFix = NSPGaussLeg * NMPTrans;
   NQPFull = NQPFix * NQPOptTrans;
-  SROptSize = NPara+1;
-  
+  SROptSize = NPara + 1;
+
   NTotalDefInt = Nsite /* LocSpn */
-    + 4*NTransfer /* Transfer */
-    + NCoulombIntra /* CoulombIntra */
-    + 2*NCoulombInter /* CoulombInter */
-    + 2*NHundCoupling /* HundCoupling */
-    + 2*NPairHopping /* PairHopping */
-    + 2*NExchangeCoupling /* ExchangeCoupling */
-    + Nsite /* GutzwillerIdx */
-    + Nsite*Nsite /* JastrowIdx */
-    + 2*Nsite*NDoublonHolon2siteIdx /* DoublonHolon2siteIdx */
-    + 4*Nsite*NDoublonHolon4siteIdx /* DoublonHolon4siteIdx */
-    + Nsite*Nsite /* OrbitalSgn */
-    + Nsite*NQPTrans /* QPTrans */
-	+  Nsite*NQPTrans /* QPTransInv */
-    + Nsite*NQPTrans /* QPTransSgn */
-    + 4*NCisAjs /* CisAjs */
-    + 8*NCisAjsCktAlt /* CisAjsCktAlt */
-    + 8*NCisAjsCktAltDC /* CisAjsCktAltDC */
-    + 8*NInterAll /* InterAll */
-    + Nsite*NQPOptTrans /* QPOptTrans */
-    + Nsite*NQPOptTrans /* QPOptTransSgn */
-    + 2*NPara; /* OptFlag */ // TBC
+                 + 4 * NTransfer /* Transfer */
+                 + NCoulombIntra /* CoulombIntra */
+                 + 2 * NCoulombInter /* CoulombInter */
+                 + 2 * NHundCoupling /* HundCoupling */
+                 + 2 * NPairHopping /* PairHopping */
+                 + 2 * NExchangeCoupling /* ExchangeCoupling */
+                 + Nsite /* GutzwillerIdx */
+                 + Nsite * Nsite /* JastrowIdx */
+                 + 2 * Nsite * NDoublonHolon2siteIdx /* DoublonHolon2siteIdx */
+                 + 4 * Nsite * NDoublonHolon4siteIdx /* DoublonHolon4siteIdx */
+                 + Nsite * Nsite /* OrbitalSgn */
+                 + Nsite * NQPTrans /* QPTrans */
+                 + Nsite * NQPTrans /* QPTransInv */
+                 + Nsite * NQPTrans /* QPTransSgn */
+                 + 4 * NCisAjs /* CisAjs */
+                 + 8 * NCisAjsCktAlt /* CisAjsCktAlt */
+                 + 8 * NCisAjsCktAltDC /* CisAjsCktAltDC */
+                 + 8 * NInterAll /* InterAll */
+                 + Nsite * NQPOptTrans /* QPOptTrans */
+                 + Nsite * NQPOptTrans /* QPOptTransSgn */
+                 + 2 * NPara; /* OptFlag */ // TBC
 
   //Orbitalidx
-  if(iFlgOrbitalGeneral==0){
-    NTotalDefInt += Nsite*Nsite;
+  if (iFlgOrbitalGeneral == 0) {
+    NTotalDefInt += Nsite * Nsite;
+  } else if (iFlgOrbitalGeneral == 0) {
+    NTotalDefInt += (2 * Nsite) * (2 * Nsite);
   }
-  else if(iFlgOrbitalGeneral==0){
-    NTotalDefInt += (2*Nsite)*(2*Nsite);
+
+  if (NBackFlowIdx > 0) {
+    NTotalDefInt +=
+            Nsite * Nsite * Nsite * Nsite; /* BackflowIdx */
   }
-  
-    if(NBackFlowIdx >0){
-        NTotalDefInt +=
-                Nsite*Nsite*Nsite*Nsite; /* BackflowIdx */
-    }
 
   NTotalDefDouble =
-    NCoulombIntra /* ParaCoulombIntra */
-    + NCoulombInter /* ParaCoulombInter */
-    + NHundCoupling /* ParaHondCoupling */
-    + NPairHopping  /* ParaPairHopping */
-    + NExchangeCoupling /* ParaExchangeCoupling */
-    //    + NQPTrans /* ParaQPTrans */
-    //+ NInterAll /* ParaInterAll */
-    + NQPOptTrans; /* ParaQPTransOpt */
+          NCoulombIntra /* ParaCoulombIntra */
+          + NCoulombInter /* ParaCoulombInter */
+          + NHundCoupling /* ParaHondCoupling */
+          + NPairHopping  /* ParaPairHopping */
+          + NExchangeCoupling /* ParaExchangeCoupling */
+          //    + NQPTrans /* ParaQPTrans */
+          //+ NInterAll /* ParaInterAll */
+          + NQPOptTrans; /* ParaQPTransOpt */
 
   return 0;
 }
