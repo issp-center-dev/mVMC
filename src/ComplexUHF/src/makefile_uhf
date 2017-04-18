@@ -1,5 +1,7 @@
 include ../../make.sys
 
+SFMT = sfmt/SFMT.o
+
 OBJS = \
 UHFmain.o \
 cal_energy.o \
@@ -10,7 +12,8 @@ initial.o \
 makeham.o \
 matrixlapack.o \
 output.o \
-readdef.o
+readdef.o \
+$(SFMT)
 
 SOURCES = \
 mfmemory.c \
@@ -19,6 +22,7 @@ xsetmem_def.c \
 xsetmem_large.c
 
 UHF : $(OBJS)
+	cd sfmt; $(MAKE) -f makefile_sfmt
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 SUFFIXES: .o .c
@@ -28,6 +32,8 @@ SUFFIXES: .o .c
 
 clean :
 	rm -f *.o UHF
+	cd sfmt; $(MAKE) -f makefile_sfmt clean
+
 
 UHFmain.o:include/Def.h
 UHFmain.o:mfmemory.c
