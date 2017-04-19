@@ -109,6 +109,51 @@ If you keep this PATH, you should write above in \verb|~/.bashrc|
 
 \end{screen}
 
+\subsection{Using \texttt{cmake}}
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize\\
+Before using cmake for sekirei, you must type 
+\begin{verbatim}
+source /home/issp/materiapps/tool/env.sh
+\end{verbatim}
+\end{screen}
+
+We can compile mVMC as
+\begin{verbatim}
+cd $HOME/build/mvmc
+cmake -DCONFIG=gcc $PathTomvmci
+make
+\end{verbatim}
+Here, we set a path to mVMC as \verb|$PathTomvmc|
+and to a build directory as \verb| $HOME/build/mvmc|.
+After compilation, \verb|src| folder is constructed below a \verb|$HOME/build/mvmc|
+folder and we obtain an executable \verb|vmc.out| in \verb|src/| directory.
+
+In the above example,
+we compile mVMC by using a gcc compiler.
+We can select a compiler by using the following options:
+\begin{itemize}
+\item \verb|sekirei| : ISSP system-B ``sekirei''
+\item \verb|fujitsu| : Fujitsu compiler 
+\item \verb|intel| : Intel compiler + Linux PC
+\item \verb|gcc| : GCC compiler + Linux PC.
+\end{itemize}
+An example of compiling mVMC by using the Intel compiler is shown as follows:
+\begin{verbatim}
+mkdir ./build
+cd ./build
+cmake -DCONFIG=intel ../
+make
+\end{verbatim}
+After compilation,
+\verb|src| folder is created below the \verb|build| folder and
+an execute \verb|vmc.out| in the \verb|src| folder.
+Please note that we must delete the \verb|build| folder and
+repeat the above operations when we change the compiler.
+
 \label{Sec:HowToInstall}
 
 \section{Directory structure}
