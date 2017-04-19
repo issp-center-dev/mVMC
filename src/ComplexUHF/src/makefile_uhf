@@ -28,12 +28,11 @@ UHF : $(OBJS)
 SUFFIXES: .o .c
 
 .c.o:
-	$(CC) $(CFLAGS) -I ./include -c $<
+	$(CC) $(CFLAGS) -I ./include -I ../../sfmt -c $<
 
 clean :
 	rm -f *.o UHF
 	cd ../../sfmt; $(MAKE) -f makefile_sfmt clean
-
 
 UHFmain.o:include/Def.h
 UHFmain.o:mfmemory.c
