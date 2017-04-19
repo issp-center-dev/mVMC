@@ -1266,6 +1266,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                   itmp = 1;
                 }
                 idx0++;
+                fij = iNOrbitalAP+2*fij+spn_i;
                 OrbitalIdx[all_i][all_j] = fij;
                 OrbitalSgn[all_i][all_j] = 1;
                 // Note F_{IJ}=-F_{JI}
@@ -1283,6 +1284,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                   itmp = 1;
                 }
                 idx0++;
+                fij = iNOrbitalAP+2*fij+spn_i;
                 OrbitalIdx[all_i][all_j] = fij;
                 OrbitalSgn[all_i][all_j] = fijSign;
                 // Note F_{IJ}=-F_{JI}
@@ -1293,7 +1295,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             }
           }
 
-          fidx = NProj;
+          fidx = NProj+iNOrbitalAP;
           while (fscanf(fp, "%d ", &i) != EOF) {
             ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
             OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
