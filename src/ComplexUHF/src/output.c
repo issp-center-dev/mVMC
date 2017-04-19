@@ -21,7 +21,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 #include "output.h"
 #include "mfmemory.c"
-#include "sfmt/SFMT.h"
+#include "SFMT.h"
 #include <matrixlapack.h>
 
 int MakeOrbitalFile(struct BindStruct *X);

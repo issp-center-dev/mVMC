@@ -41,7 +41,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "green.h"
 #include "cal_energy.h"
 #include "output.h"
-#include "sfmt/SFMT.h"
+#include "SFMT.h"
 
 double gettimeofday_sec(){
 //  struct timeval tv;
