@@ -39,6 +39,7 @@ Please read manuals of your compiler/library for more information.
 % !TEX root = userguide_en.tex
 %----------------------------------------------------------
 You can download mVMC in the following place.\\
+\url{https://github.com/issp-center-dev/mVMC/releases}
 
 You can obtain the mVMC directory by typing
 \begin{verbatim}
@@ -124,7 +125,7 @@ source /home/issp/materiapps/tool/env.sh
 We can compile mVMC as
 \begin{verbatim}
 cd $HOME/build/mvmc
-cmake -DCONFIG=gcc $PathTomvmci
+cmake -DCONFIG=gcc $PathTomvmc
 make
 \end{verbatim}
 Here, we set a path to mVMC as \verb|$PathTomvmc|
@@ -150,7 +151,7 @@ make
 \end{verbatim}
 After compilation,
 \verb|src| folder is created below the \verb|build| folder and
-an execute \verb|vmc.out| in the \verb|src| folder.
+an execute \verb|vmc.out in the \verb|src| folder.
 Please note that we must delete the \verb|build| folder and
 repeat the above operations when we change the compiler.
 

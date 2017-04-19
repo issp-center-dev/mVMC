@@ -58,7 +58,9 @@ The setting for optimizing variational parameters or not is given by the followi
 ~\\{\bf Jastrow (jastrowidx.def)}: Set the target parameters $v_{ij}$ in ${\cal P}_J$ to be optimized.
 ~\\{\bf DH2}:  Set the target 2-site doublon-holon correlation factor $\alpha_{2nt}^{d(h)}$ in ${\cal P}_{d-h}^{(2)}$ to be optimized.
 ~\\{\bf DH4}:  Set the target 4-site doublon-holon correlation factor $\alpha_{4nt}^{d(h)}$ in ${\cal P}_{d-h}^{(4)}$ to be optimized.
-~\\{\bf Orbital (orbitalidx.def)}: Set the pair orbital $f_{ij}$ in $|\phi_{\rm pair} \rangle$ to be optimized.
+~\\{\bf Orbital/OrbitalAntiParallel (orbitalidx.def)}: Set the pair orbital with anti-parallel spins $f_{i\uparrow j\downarrow}$ in $|\phi_{\rm pair} \rangle$ to be optimized.
+~\\{\bf OrbitalParallel}: Set the pair orbital with anti-parallel spins $f_{i\sigma j\sigma}$ in $|\phi_{\rm pair} \rangle$ to be optimized.
+~\\{\bf OrbitalGeneral}: Set the pair orbital with anti-parallel spins $f_{i\sigma j\sigma'}$ in $|\phi_{\rm pair} \rangle$ to be optimized.
 ~\\{\bf TransSym (qptransidx.def)}: Set the the momentum projection operators ${\cal L}_K$ and the lattice translational projection operators ${\cal L}_P$.
 
 \item[(5)~Initial variational parameters:]
@@ -67,7 +69,10 @@ The setting for optimizing variational parameters or not is given by the followi
 ~\\{\bf InJastrow}: Set the initial values of $v_{ij}$ in ${\cal P}_J$.
 ~\\{\bf InDH2}:  Set the initial values of $\alpha_{2nt}^{d(h)}$ in ${\cal P}_{d-h}^{(2)}$.
 ~\\{\bf InDH4}:  Set the initial values of $\alpha_{4nt}^{d(h)}$ in ${\cal P}_{d-h}^{(4)}$.
-~\\{\bf InOrbital}: Set the initial values of $ f_{ij}$ in $|\phi_{\rm pair} \rangle$.
+~\\{\bf InOrbital /InOrbitalAntiParallel}: Set the initial values of $ f_{i\uparrow j\downarrow}$ in $|\phi_{\rm pair} \rangle$.
+~\\{\bf InOrbitalParallel}: Set the initial values of $ f_{i\sigma j\sigma}$ in $|\phi_{\rm pair} \rangle$.
+~\\{\bf InOrbitalGeneral}: Set the initial values of $ f_{i\sigma j\sigma'}$ in $|\phi_{\rm pair} \rangle$.
+
 
 \item[(6)~Output:]
 ~\\{\bf OneBodyG  (greenone.def)}: Set the components of one-body green functions to output.
@@ -137,14 +142,21 @@ TwoBodyG	zcisajscktaltdc.def
            Jastrow & Charge Jastrow factors.\\
            DH2 & 2-site doublon-holon correlation factors.\\
            DH4 & 4-site doublon-holon correlation factors.\\
-           Orbital$^*$  & Pair orbital factors.\\
+           Orbital$^*$  & Pair orbital factors with anti-parallel spins $f_{i\uparrow j\downarrow}$.\\
+           OrbitalAntiParallel & Pair orbital factors with anti-parallel spins $f_{i\uparrow j\downarrow}$.\\
+           OrbitalParallel  & Pair orbital factors with parallel spins $f_{i\sigma j\sigma}$.\\
+           OrbitalGeneral  & Pair orbital factors $f_{i\sigma_1 j\sigma_2}$.\\
            TransSym$^*$  & Translational and lattice symmetry operation. \\ \hline
            %%%%%%%%%%%%%%%%%%
            InGutzwiller & Initial values of Gutzwiller factors.\\
            InJastrow & Initial values of charge Jastrow factors.\\
            InDH2 & Initial values of 2-site doublon-holon correlation factors.\\
            InDH4 & Initial values of 4-site doublon-holon correlation factors.\\
-           InOrbital & Initial values of pair orbital factors.\\ \hline
+           InOrbital & Initial values of pair orbital factors $f_{i\uparrow j\downarrow}$.\\
+           InOrbitalAntiParallel & Initial values of pair orbital factors $f_{i\uparrow j\downarrow}$.\\ 
+           InOrbitalParallel & Initial values of pair orbital factors $f_{i\sigma j\sigma}$.\\ 
+           InOrbitalGeneral & Initial values of pair orbital factors $f_{i\sigma_1 j\sigma_2}$.\\ 
+           \hline
            %%%%%%%%%%%%%%%%%%
            OneBodyG         &   Output components for Green functions $\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle$           \\   
            TwoBodyG &   Output components for Correlation functions $\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle$  \\   \hline
@@ -1455,8 +1467,232 @@ In the following, we define the total number of sites as $N_s$ and variational p
 \end{itemize}
 
 \newpage
-\subsection{Orbital file (orbitalidx.def)}
+\subsection{Orbital/OrbitalAntiParallel file (orbitalidx.def)}
 \label{Subsec:Orbital}
+This file sets the calculation conditions of pair orbitals
+\begin{equation}
+|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dag}c_{j\downarrow}^{\dag} \right]^{N/2}|0 \rangle.
+\end{equation}
+Site numbers $i, j$ and the variational parameters $f_{ij}$ are indicated.
+An example of the file format is shown as follows.
+
+\begin{minipage}{12.5cm}
+\begin{screen}
+\begin{verbatim}
+====================================
+NOrbitalIdx 64   
+ComplexType 0
+====================================
+====================================
+   0     0     0 
+   0     1     1 
+   0     2     2 
+   0     3     3 
+ (continue...)
+  15     9    62 
+  15    10    63 
+   0    1 
+   1    1 
+(continue...)
+  62    1 
+  63    1 
+\end{verbatim}
+\end{screen}
+\end{minipage}
+
+\subsubsection{File format}
+In the following, we define the total number of sites as $N_s$ and variational parameters as $N_{\rm o}$, respectively.  
+
+ \begin{itemize}
+   \item  Line 1: Header
+   \item  Line 2: [string01]~[int01]
+   \item  Line 3: [string02]~[int02]
+   \item  Lines 4 - 5:  Header
+   \item  Lines 6 - (5+$N_s^2$): [int03]~[int04]~[int05]~[int06]
+   \item  Lines (6+$N_s^2$ )- (5+$N_s^2+N_{\rm o}$): [int06]~[int07]
+  \end{itemize}
+\subsubsection{Parameters}
+ \begin{itemize}
+
+   \item  $[$string01$]$
+   
+    {\bf Type :} string-type (blank parameter not allowed)
+
+   {\bf Description :}  A keyword for total number of variational parameters. You can freely give a name of the keyword. 
+
+   \item  $[$int01$]$
+   
+    {\bf Type :} int-type (blank parameter not allowed)
+
+   {\bf Description :} An integer giving total number of variational parameters. 
+
+   \item  $[$string02$]$
+   
+    {\bf Type :} string-type (blank parameter not allowed)
+
+   {\bf Description :} A keyword for indicating the double or complex type of variational parameters. You can freely give a name of the keyword.
+   
+   \item  $[$int02$]$
+   
+    {\bf Type :} int-type (blank parameter not allowed)
+
+   {\bf Description :} An integer indicates the double or complex type of variational parameters (0: double, 1: complex). 
+
+  \item  $[$int03$]$, $[$int04$]$
+   
+ {\bf Type :} int-type (blank parameter not allowed)
+
+{\bf Description :} An integer giving a site index ($0<= [$int03$], [$int04$] <\verb|Nsite|$).
+ 
+ \item  $[$int05$]$
+   
+   {\bf Type :} int-type (blank parameter not allowed)
+
+  {\bf Description :} An integer setting kinds of variational  parameters ($0<= [$int05$]<[$int01]). 
+
+ \item  $[$int06$]$
+   
+   {\bf Type :} int-type
+
+  {\bf Description :} When the mode of the anti-periodic condition turns on (the mode turns on when the value of \verb|NMPTrans| in \verb|ModPara| file is negative), the sign of $f_{ij}$ is specified by setting $[$int06$]=\pm1$. This term can be omitted when the mode of the anti-periodic condition is off.
+
+ \item  $[$int07$]$
+   
+   {\bf Type :} int-type (blank parameter not allowed)
+
+  {\bf Description :} An integer giving kinds of variational  parameters ($0<= [$int06$]<[$int01]).   
+ \item  $[$int08$]$
+   
+   {\bf Type :} int-type (blank parameter not allowed)
+
+  {\bf Description :} An integer to select the target of variational parameters indicated at [int06] to be optimized or not (0: not optimize, 1: optimize).
+  
+  
+\end{itemize}
+
+\subsubsection{User rules}
+\begin{itemize}
+\item Headers cannot be omitted. 
+\item A program is terminated, when $[$int01$]$ is different from the total number of variational parameters defined in this file.
+\item A program is terminated, when $[$int02$]$ - $[$int09$]$ are out of range from the defined values.
+\end{itemize}
+
+\newpage
+\subsection{OrbitalParallel file}
+\label{Subsec:OrbitalaParallel}
+This file sets the calculation conditions of pair orbitals
+\begin{equation}
+|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} \sum_{\sigma}f_{i\sigma j\sigma}c_{i\sigma}^{\dag}c_{j\sigma}^{\dag} \right]^{N/2}|0 \rangle.
+\end{equation}
+Site numbers $i, j$, the spin index $\sigma$ and the variational parameters $f_{i\sigma j\sigma}$ are indicated.
+The indexes of $f_{i\sigma j\sigma}$  must satisfy the condition $i < j $, where $\sigma = 0$ or $1$ and 
+process will terminate when the condition is broken.
+An example of the file format is shown as follows.
+
+\begin{minipage}{12.5cm}
+\begin{screen}
+\begin{verbatim}
+====================================
+NOrbitalIdx 120  
+ComplexType 0
+====================================
+====================================
+   0     1     0
+   0     2     1 
+   0     3     2 
+ (continue...)
+  15    13    118
+  15    14    119
+   0    1 
+   1    1 
+(continue...)
+  118    1 
+  119    1 
+\end{verbatim}
+\end{screen}
+\end{minipage}
+
+\subsubsection{File format}
+In the following, we define the total number of sites as $N_s$ and variational parameters as $N_{\rm o}$, respectively.  
+
+ \begin{itemize}
+   \item  Line 1: Header
+   \item  Line 2: [string01]~[int01]
+   \item  Line 3: [string02]~[int02]
+   \item  Lines 4 - 5:  Header
+   \item  Lines 6 - (5+$N_s*(N_s-1)/2$): [int03]~[int04]~[int05]~[int06]
+   \item  Lines (6+$N_s*(N_s-1)/2$ )- (5+$N_s*(N_s-1)/2+N_{\rm o}$): [int06]~[int07]
+  \end{itemize}
+\subsubsection{Parameters}
+ \begin{itemize}
+
+   \item  $[$string01$]$
+   
+    {\bf Type :} string-type (blank parameter not allowed)
+
+   {\bf Description :}  A keyword for total number of variational parameters. You can freely give a name of the keyword. 
+
+   \item  $[$int01$]$
+   
+    {\bf Type :} int-type (blank parameter not allowed)
+
+   {\bf Description :} An integer giving total number of variational parameters. 
+
+   \item  $[$string02$]$
+   
+    {\bf Type :} string-type (blank parameter not allowed)
+
+   {\bf Description :} A keyword for indicating the double or complex type of variational parameters. You can freely give a name of the keyword.
+   
+   \item  $[$int02$]$
+   
+    {\bf Type :} int-type (blank parameter not allowed)
+
+   {\bf Description :} An integer indicates the double or complex type of variational parameters (0: double, 1: complex). 
+
+  \item  $[$int03$]$, $[$int04$]$
+   
+ {\bf Type :} int-type (blank parameter not allowed)
+
+{\bf Description :} An integer giving a site index ($0<= [$int03$], [$int04$] <\verb|Nsite|$).
+ 
+ \item  $[$int05$]$
+   
+   {\bf Type :} int-type (blank parameter not allowed)
+
+  {\bf Description :} An integer setting kinds of variational  parameters ($0<= [$int05$]<[$int01]). 
+
+ \item  $[$int06$]$
+   
+   {\bf Type :} int-type
+
+  {\bf Description :} When the mode of the anti-periodic condition turns on (the mode turns on when the value of \verb|NMPTrans| in \verb|ModPara| file is negative), the sign of $f_{ij}$ is specified by setting $[$int06$]=\pm1$. This term can be omitted when the mode of the anti-periodic condition is off.
+
+ \item  $[$int07$]$
+   
+   {\bf Type :} int-type (blank parameter not allowed)
+
+  {\bf Description :} An integer giving kinds of variational  parameters ($0<= [$int06$]<[$int01]).   
+ \item  $[$int08$]$
+   
+   {\bf Type :} int-type (blank parameter not allowed)
+
+  {\bf Description :} An integer to select the target of variational parameters indicated at [int06] to be optimized or not (0: not optimize, 1: optimize).
+  
+  
+\end{itemize}
+
+\subsubsection{User rules}
+\begin{itemize}
+\item Headers cannot be omitted. 
+\item A program is terminated, when $[$int01$]$ is different from the total number of variational parameters defined in this file.
+\item A program is terminated, when $[$int02$]$ - $[$int09$]$ are out of range from the defined values.
+\end{itemize}
+
+
+\newpage
+\subsection{OrbitalGeneral file}
+\label{Subsec:OrbitalaGeneral}
 This file sets the calculation conditions of pair orbitals
 \begin{equation}
 |\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} \sum_{\sigma_1, \sigma_2}f_{i\sigma_1j\sigma_2}c_{i\sigma_1}^{\dag}c_{j\sigma_2}^{\dag} \right]^{N/2}|0 \rangle.
@@ -1477,13 +1713,13 @@ ComplexType 0
    0  0  0  1  0
    0  0  1  1  1 
  (continue...)
-  14  0  15 1 253
+  14  0  15  1  253
   15  0  15  1  254
    0    1 
    1    1 
 (continue...)
   253   1 
-  254    1 
+  254   1 
 \end{verbatim}
 \end{screen}
 \end{minipage}
@@ -1571,6 +1807,7 @@ A total number of variational parameters $N_p$ is given by $N_s^2$, $2 N_s^2 -N_
 \item A program is terminated, when $[$int01$]$ is different from the total number of variational parameters defined in this file.
 \item A program is terminated, when $[$int02$]$ - $[$int10$]$ are out of range from the defined values.
 \end{itemize}
+
 
 \newpage
 \subsection{TransSym file (qptransidx.def)}
@@ -1673,7 +1910,7 @@ In the following, we define the total number of sites as $N_s$ and projection pa
 \label{Subsec:InputParam}
 This file sets the initial values of variational parameters.
 The kinds of variational parameters are specified by setting the following keywords in \verb|List| file (namelist.def):\\
-\verb|InGutzwiller|, \verb|InJastrow|, \verb|InDH2|, \verb|InDH4|, \verb|InOrbital|.\\
+\verb|InGutzwiller|, \verb|InJastrow|, \verb|InDH2|, \verb|InDH4|, \verb|InOrbital|, \verb|InOrbitalAntiParallel|, \verb|InOrbitalParallel|, \verb|InOrbitalGeneral|.\\
 The file format is common and an example of the \verb|InJastrow| file is shown as follows.
 
 \begin{minipage}{12.5cm}
