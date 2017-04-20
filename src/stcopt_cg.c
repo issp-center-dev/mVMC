@@ -168,6 +168,10 @@ int StochasticOptCG(MPI_Comm comm) {
       SROptO[2*pi] = SROptO_real[pi];
       SROptO[2*pi+1] = 0.0;
     }
+  }else{
+    //TODO
+    fprintf(stderr, "CG-SR (NStore=2) works only for real parameters now.");
+    return -1;
   }
 
   #pragma omp parallel for default(shared) private(pi)
