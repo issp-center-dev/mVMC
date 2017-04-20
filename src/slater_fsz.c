@@ -50,7 +50,7 @@ void UpdateSlaterElm_fsz() {
             tri0,tri1,trj0,trj1)
   #pragma loop noalias
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
-    printf("qpidx=%d \n",qpidx);
+    //printf("qpidx=%d \n",qpidx);
     // qpidx  = optidx*NQPFix+NSPGaussLeg*mpidx+spidx 
     // optidx will not be used
     optidx    = qpidx / NQPFix;   

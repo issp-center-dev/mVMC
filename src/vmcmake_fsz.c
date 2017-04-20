@@ -270,9 +270,9 @@ int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt
         eleSpn[mi+si*Ne]    = si;
       }
     }
-    for(mi=0;mi<2*Ne;mi++){
-      printf("DEBUG: %d %d %d\n",mi,eleIdx[mi],eleSpn[mi]);
-    }
+    ///for(mi=0;mi<2*Ne;mi++){
+    //  printf("DEBUG: %d %d %d\n",mi,eleIdx[mi],eleSpn[mi]);
+    //}
     
     /* itinerant electron */
     for(si=0;si<2;si++) { //note: Sz is not conserved quantity but initially we take Sz=0 
