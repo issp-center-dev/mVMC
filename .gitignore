@@ -39,3 +39,6 @@ tool/corplot
 tool/fourier
 doc/fourier/ja/_build/
 doc/fourier/en/_build/
+*.bak
+cmake-build-debug
+latex/

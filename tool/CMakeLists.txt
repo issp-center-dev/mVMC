@@ -13,4 +13,3 @@ target_link_libraries(fourier key2lower ${LAPACK_LIBRARIES})
 
 install(TARGETS fourier RUNTIME DESTINATION bin)
 install(TARGETS corplot RUNTIME DESTINATION bin)
-

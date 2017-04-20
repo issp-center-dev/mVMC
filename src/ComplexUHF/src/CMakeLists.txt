@@ -11,8 +11,15 @@ set(SOURCES_UHF
         UHFmain.c output.c cal_energy.c green.c makeham.c diag.c initial.c check.c matrixlapack.c readdef.c
  )
 
+include_directories(../../sfmt)
+add_definitions(-DMEXP=19937)
 
-add_executable(UHF ${SOURCES_UHF} )
+set(SOURCES_sfmt
+        ../../sfmt/SFMT.c   
+ )
+
+
+add_executable(UHF ${SOURCES_UHF} ${SOURCES_sfmt})
 target_link_libraries(UHF ${LAPACK_LIBRARIES})
 if(MPI_FOUND)
   target_link_libraries(UHF ${MPI_C_LIBRARIES})

@@ -25,16 +25,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#include "parameter.h"
+#ifndef _SRC_PARAMETER
+#define _SRC_PARAMETER
+
 #define D_AmpMax             4.0
-
-void InitParameter();
-int ReadInitParameter(char *initFile);
-void SyncModifiedParameter(MPI_Comm comm);
-void SetFlagShift();
-
-void shiftGJ();
-double shiftDH2();
-double shiftDH4();
 
 /* initialize variational parameters */
 void InitParameter() {
@@ -75,7 +70,7 @@ void InitParameter() {
 /* read initial vaules of variational parameters from initFile */
 int ReadInitParameter(char *initFile) {
   FILE *fp;
-  int i,xi;
+  int i, xi, ierr;
   double xtmp;
   double tmp_real,tmp_comp;
 
@@ -84,17 +79,17 @@ int ReadInitParameter(char *initFile) {
   if(fp!=NULL){
     while(fscanf(fp, "%lf ", &xtmp)!=EOF){
       //for(i=1;i<4;i++) fscanf(fp, "%lf ", &xtmp);
-      for(i=1;i<6;i++) fscanf(fp, "%lf ", &xtmp);
+      for (i = 1; i < 6; i++) ierr = fscanf(fp, "%lf ", &xtmp);
       for(xi=0;xi<NProj;xi++) {
-        fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
+        ierr = fscanf(fp, "%lf %lf %lf ", &tmp_real, &tmp_comp, &xtmp);
         Proj[xi] = tmp_real+tmp_comp*I; 
       }
       for(xi=0;xi<NSlater;xi++) {
-        fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
+        ierr = fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
         Slater[xi] = tmp_real+tmp_comp*I; 
       }
       for(xi=0;xi<NOptTrans;xi++) {
-        fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
+        ierr = fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
         OptTrans[xi] = tmp_real+tmp_comp*I; 
       }
     }
@@ -281,3 +276,4 @@ void SetFlagShift() {
   
   return;
 }
+#endif

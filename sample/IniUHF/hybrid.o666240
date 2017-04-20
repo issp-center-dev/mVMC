@@ -1,0 +1,59 @@
+Sun Apr  2 18:42:23 JST 2017
+opt
+mpijob CMD    : mpirun -f /tmp/mpiexec.params.m000900.27206
+mpijob PARAMS : -d /home/m0009/m000900/mVMC_test/2d_L4/UHF r1i0n0 24 omplace -nt 1
+        "./vmc.out" "-F" "5" "namelist.def"
+
+SGI MPT Placement option
+--------------------------
+omplace -nt 1
+
+Node   MPI
+------------
+r1i0n0 24
+
+Start: Read *def files.
+  Read File namelist.def .
+  Read File 'modpara.def' for ModPara.
+  Read File 'locspn.def' for LocSpin.
+  Read File 'trans.def' for Trans.
+  Read File 'coulombintra.def' for CoulombIntra.
+  Read File 'gutzwilleridx.def' for Gutzwiller.
+  Read File 'jastrowidx.def' for Jastrow.
+  Read File 'orbitalidx.def' for Orbital.
+  Read File 'qptransidx.def' for TransSym.
+  Read File 'zqp_orbital_opt.dat' for InOrbital.
+  Read File 'greenone.def' for OneBodyG.
+  Read File 'greentwo.def' for TwoBodyG.
+End  : Read *def files.
+Start: Read parameters from *def files.
+End  : Read parameters from *def files.
+Start: Set memories.
+End  : Set memories.
+Start: Initialize parameters.
+End  : Initialize parameters.
+Start: Initialize variables for quantum projection.
+End  : Initialize variables for quantum projection.
+Start: Optimize VMC parameters.
+Progress of Optimization: 0 %.
+Progress of Optimization: 5 %.
+Progress of Optimization: 10 %.
+Progress of Optimization: 15 %.
+Progress of Optimization: 20 %.
+Progress of Optimization: 25 %.
+Progress of Optimization: 30 %.
+Progress of Optimization: 35 %.
+Progress of Optimization: 40 %.
+Progress of Optimization: 45 %.
+Progress of Optimization: 50 %.
+Progress of Optimization: 55 %.
+Progress of Optimization: 60 %.
+Progress of Optimization: 65 %.
+Progress of Optimization: 70 %.
+Progress of Optimization: 75 %.
+Progress of Optimization: 80 %.
+Progress of Optimization: 85 %.
+Progress of Optimization: 90 %.
+Progress of Optimization: 95 %.
+End  : Optimize VMC parameters.
+Sun Apr  2 18:44:15 JST 2017

@@ -61,7 +61,7 @@ extern int omp_get_thread_num(void);
 
 #include "../safempi.c"
 #include "../safempi_fcmp.c"
-#include "../time.c"
+#include "../vmcclock.c"
 #include "../workspace.c"
 
 #ifdef _lapack
@@ -74,10 +74,8 @@ extern int omp_get_thread_num(void);
 
 #include "../gauleg.c"
 #include "../legendrepoly.c"
-#include "../splitloop.c"
 #include "../avevar.c"
 #include "../average.c"
-
 #include "../parameter.c"
 #include "../projection.c"
 #include "../slater.c"
@@ -85,7 +83,6 @@ extern int omp_get_thread_num(void);
 #include "../qp_real.c"
 #include "../matrix.c"
 #include "../pfupdate.c"
-#include "../pfupdate_real.c"
 #include "../pfupdate_two_fcmp.c"
 #include "../pfupdate_two_real.c"
 #include "../locgrn.c"
@@ -93,7 +90,7 @@ extern int omp_get_thread_num(void);
 #include "../calham.c"
 #include "../calham_real.c"
 #include "../calgrn.c"
-//#include "lslocgrn.c" // ignoring Lanczos To be added
+#include "../lslocgrn_real.c"
 #include "../setmemory.c"
 #include "../readdef.c"
 #include "../initfile.c"

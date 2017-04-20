@@ -21,13 +21,15 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 #include "output.h"
 #include "mfmemory.c"
+#include "SFMT.h"
+#include <matrixlapack.h>
 
 int MakeOrbitalFile(struct BindStruct *X);
 void cal_cisajs(struct BindStruct *X);
 
 void WriteHeader(char* cNKWidx, int NKWidx, FILE *fp){
   fprintf(fp, "======================\n");
-  fprintf(fp, cNKWidx);
+  fprintf(fp, cNKWidx, 0);
   fprintf(fp, "  %d\n", NKWidx);
   fprintf(fp, "======================\n");
   fprintf(fp, "======================\n");
@@ -98,8 +100,13 @@ void cal_cisajs(struct BindStruct *X){
             t_site_1    = site_1+Ns*spin_1;
             t_site_2    = site_2+Ns*spin_2;
             tmp         = X->Large.G[t_site_1][t_site_2];
-//            fprintf(fp," %4d %4d %4d %4d %.10lf %.10lf\n",site_1,site_2,spin_1,spin_2,cabs(tmp),carg(tmp));
-              fprintf(fp," %4d %4d %4d %4d %.10lf %.10lf\n",site_1,spin_1,site_2,spin_2,creal(tmp),cimag(tmp));
+            
+			  fprintf(fp, " %4d %4d %4d %4d %.10lf %.10lf\n", site_1, spin_1, site_2, spin_2, creal(tmp), cimag(tmp));
+			  
+			  if(t_site_1==t_site_2) {
+				  fprintf(stdout, " Debug: %4d %4d %4d %4d %.10lf %.10lf\n", site_1, spin_1, site_2, spin_2, cabs(tmp), carg(tmp));
+			  }
+			  
           }
         } 
       }
@@ -115,7 +122,48 @@ int MakeOrbitalFile(struct BindStruct *X){
   double complex *ParamOrbital;
   int *CountOrbital;
   int Orbitalidx;
+  int int_i,int_j,int_k,int_l,xMsize;
+  double complex **tmp_mat,**vec;
+  double *r;
   char fileName[256];
+//
+//[s] for anti-pararell, rediag
+  xMsize = X->Def.Nsite;  
+  c_malloc2(tmp_mat,xMsize,xMsize);
+  c_malloc2(vec,xMsize,xMsize);
+  d_malloc1(r,xMsize);
+  for(int_l = 0; int_l < 2*xMsize; int_l++){
+    for(int_k = 0; int_k < 2*X->Def.Ne; int_k++){
+      X->Large.R_SLT[int_l][int_k] = 0.0;
+    }
+  } 
+// for up 
+  for(int_i = 0;int_i < xMsize; int_i++){
+    for(int_j = 0;int_j < xMsize; int_j++){
+      tmp_mat[int_i][int_j] = X->Large.Ham[int_i][int_j];
+    }
+  }
+  ZHEEVall(xMsize,tmp_mat,r,vec);
+  for(int_k = 0; int_k < X->Def.Ne; int_k++){
+    for(int_l = 0; int_l < xMsize; int_l++){
+      X->Large.R_SLT[int_l][2*int_k] = (vec[int_k][int_l]);
+    }
+  }
+// for down
+  for(int_i = 0;int_i < xMsize; int_i++){
+    for(int_j = 0;int_j < xMsize; int_j++){
+      tmp_mat[int_i][int_j] = X->Large.Ham[int_i+xMsize][int_j+xMsize];
+    }
+  }
+  ZHEEVall(xMsize,tmp_mat,r,vec);
+  for(int_k = 0; int_k < X->Def.Ne; int_k++){
+    for(int_l = 0; int_l < xMsize; int_l++){
+      X->Large.R_SLT[int_l+xMsize][2*int_k+1] = (vec[int_k][int_l]);
+    }
+  }
+//[e] for anti-pararell
+
+ 
   
   if(X->Def.NOrbitalIdx>0){
     c_malloc2(UHF_Fij, X->Def.Nsite*2, X->Def.Nsite*2);
@@ -134,7 +182,18 @@ int MakeOrbitalFile(struct BindStruct *X){
       }
     }
 
-    c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
+
+	  for(i=0;i< X->Def.Nsite;i++) {
+		  for (ispin = 0; ispin < 2; ispin++) {
+			  for(n=0;n< 2*X->Def.Ne;n+=2) {
+				  isite = i + ispin * X->Def.Nsite;
+				  //printf("debug: Orbital: isite=%d, R_SLT_up=%lf, R_SLT_down=%lf \n", isite,
+				//		 creal(X->Large.R_SLT[isite][n]),
+				//		 creal(X->Large.R_SLT[isite][n + 1]));
+			  }
+		  }
+	  }
+	  c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
     i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
     for(i=0; i<X->Def.NOrbitalIdx; i++){
       ParamOrbital[i]=0;
@@ -151,6 +210,8 @@ int MakeOrbitalFile(struct BindStruct *X){
             if(Orbitalidx !=-1){
               ParamOrbital[Orbitalidx]+=UHF_Fij[isite][jsite];
               CountOrbital[Orbitalidx]+=1;
+              //printf("debug: Orbitaidx[%d][%d]=%d, UHF_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(UHF_Fij[isite][jsite]), cimag(UHF_Fij[isite][jsite]));
+              //printf("debug: Orbitaidx[%d][%d]=%d, ParamOrbital_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(ParamOrbital[Orbitalidx]), cimag(ParamOrbital[Orbitalidx]));
             }
           }
         }
@@ -159,7 +220,8 @@ int MakeOrbitalFile(struct BindStruct *X){
 
     for(i=0; i<X->Def.NOrbitalIdx; i++){
       ParamOrbital[i] /= (double)CountOrbital[i];
-      //printf("debug: Orbital: idx=%d, param=%lf, %lf \n", i, creal(ParamOrbital[i]), cimag(ParamOrbital[i]));
+		ParamOrbital[i] += genrand_real2()*pow(10.0,-X->Def.eps_int_slater);
+      //printf("debug: Orbital: idx=%d, param=%lf, %lf , count=%d \n", i, creal(ParamOrbital[i]), cimag(ParamOrbital[i]), CountOrbital[i]);
     };
     
     sprintf(fileName, "%s_orbital_opt.dat", X->Def.CParaFileHead);
@@ -167,6 +229,7 @@ int MakeOrbitalFile(struct BindStruct *X){
     
     c_free2(UHF_Fij, X->Def.Nsite*2, X->Def.Nsite*2);
     c_free1(ParamOrbital, X->Def.NOrbitalIdx);
+	i_free1(CountOrbital, X->Def.NOrbitalIdx);
     printf("Fij for mVMC are outputted to %s.\n", fileName);
 
   }
