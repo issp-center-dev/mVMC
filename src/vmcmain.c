@@ -335,7 +335,11 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   for(step=0;step<NSROptItrStep;step++) {
     if(rank==0){
       OutputTime(step);
-      if(step%(NSROptItrStep/20)==0){
+      if(NSROptItrStep<20){
+        iprogress = (int) (100.0*step/NSROptItrStep);
+        printf("Progress of Optimization: %d %%.\n", iprogress);
+      }
+      else if(step%(NSROptItrStep/20)==0){
         iprogress = (int) (100.0*step/NSROptItrStep);
         printf("Progress of Optimization: %d %%.\n", iprogress);
       }
