@@ -20,7 +20,7 @@ set(SOURCES_sfmt
 
 
 add_executable(UHF ${SOURCES_UHF} ${SOURCES_sfmt})
-target_link_libraries(UHF ${LAPACK_LIBRARIES})
+target_link_libraries(UHF ${LAPACK_LIBRARIES} m)
 if(MPI_FOUND)
   target_link_libraries(UHF ${MPI_C_LIBRARIES})
 endif(MPI_FOUND)
