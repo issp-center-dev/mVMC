@@ -41,8 +41,8 @@ void initial(struct BindStruct *X){
 
     for(int_i=0; int_i < X->Def.NInitial; int_i++){
       site_0  = X->Def.Initial[int_i][0]; 
-      site_1  = X->Def.Initial[int_i][1]; 
-      spin_0  = X->Def.Initial[int_i][2]; 
+      spin_0  = X->Def.Initial[int_i][1]; 
+      site_1  = X->Def.Initial[int_i][2]; 
       spin_1  = X->Def.Initial[int_i][3]; 
       
       //theta   = X->Def.ParaInitial_theta[int_i];

@@ -309,7 +309,7 @@ int ReadDefFileIdxPara(
 	int i, j;
     int idx, Orbitalidx;
 	int x0,x1,x2,x3;
-	int info;
+	int info,i_spin,j_spin;
 	double dReValue;
 	double dImValue;
 	info=0;
@@ -360,12 +360,12 @@ int ReadDefFileIdxPara(
 							   &dReValue,
 							   &dImValue);
 						X->ParaTransfer[idx]=dReValue+dImValue*I;
-                        //fprintf(stdout, "Debug: Transfer %d, %d %d %d %lf %lf \n", X->Transfer[idx][0], X->Transfer[idx][1], X->Transfer[idx][2], X->Transfer[idx][3], creal(X->ParaTransfer[idx]), cimag(X->ParaTransfer[idx]));
-                        if(X->Transfer[idx][1] != X->Transfer[idx][3]){
-							fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-							info = ReadDefFileError(defname);
-							break;
-						}
+                        fprintf(stdout, "Debug: Transfer %d, %d %d %d %lf %lf \n", X->Transfer[idx][0], X->Transfer[idx][1], X->Transfer[idx][2], X->Transfer[idx][3], creal(X->ParaTransfer[idx]), cimag(X->ParaTransfer[idx]));
+           //             if(X->Transfer[idx][1] != X->Transfer[idx][3]){
+					//		fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
+				//			info = ReadDefFileError(defname);
+			//				break;
+				//		}
 						idx++;
 					}
 					if(idx!=X->NTransfer) {
@@ -470,13 +470,15 @@ int ReadDefFileIdxPara(
             while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL)
 			  {
                 //TODO: Replace for spin dependent
-				  sscanf(ctmp2, "%d %d %d\n",
+				  sscanf(ctmp2, "%d %d %d %d %d\n",
 						 &i,
+             &i_spin, 
 						 &j,
+             &j_spin, 
 						 &Orbitalidx);
-                  (X->OrbitalIdx[i+X->Nsite*1][j+X->Nsite*0])=Orbitalidx;
+                  (X->OrbitalIdx[i+X->Nsite*i_spin][j+X->Nsite*j_spin])=Orbitalidx;
                   idx++;
-                  if(idx==X->Nsite*X->Nsite) break;
+                  if(idx==X->Nsite*(2*X->Nsite-1)) break;
 
                   /*
 				  sscanf(ctmp2, "%d %d %d %d %d\n",
@@ -491,7 +493,7 @@ int ReadDefFileIdxPara(
                   
                   */
             }
-            if(idx!=X->Nsite*X->Nsite) {
+            if(idx!=X->Nsite*(2*X->Nsite-1)) {
 				info=ReadDefFileError(defname);
             }
           }

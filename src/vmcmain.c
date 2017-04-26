@@ -338,7 +338,11 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     
     StartTimer(20);
     //printf("1 DUBUG make:step=%d \n",step);
-    UpdateSlaterElm_fsz();//UpdateSlaterElm_fcmp();
+    if(iFlgOrbitalGeneral==0){//sz is conserved
+      UpdateSlaterElm_fcmp();
+    }else{
+      UpdateSlaterElm_fsz();
+    } 
     //printf("2 DUBUG make:step=%d \n",step);
     UpdateQPWeight();
     StopTimer(20);
@@ -464,7 +468,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       StopTimer(69);
       // only for real TBC
     }else{
-      if(AllComplexFlag==0){
+      if(iFlgOrbitalGeneral==0){
         VMCMakeSample(comm_child1);
       }else{
         VMCMakeSample_fsz(comm_child1);
@@ -474,7 +478,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     StopTimer(3);
     StartTimer(4);
 
-    if(AllComplexFlag==0){
+    if(iFlgOrbitalGeneral==0){
       VMCMainCal(comm_child1);
     }else{
       VMCMainCal_fsz(comm_child1);

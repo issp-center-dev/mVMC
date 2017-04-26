@@ -127,8 +127,9 @@ int MakeOrbitalFile(struct BindStruct *X){
             jsite = j+jspin*X->Def.Nsite;
             UHF_Fij[isite][jsite]=0;
             for(n=0;n< 2*X->Def.Ne;n+=2){
-              UHF_Fij[isite][jsite]   +=  X->Large.R_SLT[isite][n]*X->Large.R_SLT[jsite][n+1];
+              UHF_Fij[isite][jsite]   +=  X->Large.R_SLT[isite][n]*X->Large.R_SLT[jsite][n+1]- X->Large.R_SLT[isite][n+1]*X->Large.R_SLT[jsite][n];
             }
+       //     printf(" %d %d: %d %d: %lf %lf \n",i,ispin,j,jspin,creal(UHF_Fij[isite][jsite]),cimag(UHF_Fij[isite][jsite]));
           }
         }
       }
@@ -149,7 +150,8 @@ int MakeOrbitalFile(struct BindStruct *X){
             jsite = j+jspin*X->Def.Nsite;
             Orbitalidx=X->Def.OrbitalIdx[isite][jsite];
             if(Orbitalidx !=-1){
-              ParamOrbital[Orbitalidx]+=UHF_Fij[isite][jsite];
+             // ParamOrbital[Orbitalidx]+=UHF_Fij[isite][jsite];
+              ParamOrbital[Orbitalidx]=UHF_Fij[isite][jsite];
               CountOrbital[Orbitalidx]+=1;
             }
           }
@@ -157,10 +159,10 @@ int MakeOrbitalFile(struct BindStruct *X){
       }
     }
 
-    for(i=0; i<X->Def.NOrbitalIdx; i++){
-      ParamOrbital[i] /= (double)CountOrbital[i];
+ //   for(i=0; i<X->Def.NOrbitalIdx; i++){
+ //     ParamOrbital[i] /= (double)CountOrbital[i];
       //printf("debug: Orbital: idx=%d, param=%lf, %lf \n", i, creal(ParamOrbital[i]), cimag(ParamOrbital[i]));
-    };
+ //   };
     
     sprintf(fileName, "%s_orbital_opt.dat", X->Def.CParaFileHead);
     Child_OutputOptData(fileName, "NOrbitalIdx", ParamOrbital, X->Def.NOrbitalIdx);

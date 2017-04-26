@@ -629,16 +629,16 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 		  Transfer[idx][3]=x3;
 		  ParaTransfer[idx]=dReValue+I*dImValue;
 
-          if(CheckPairSite(x0, x2, Nsite) !=0) {
+      if(CheckPairSite(x0, x2, Nsite) !=0) {
 			  fprintf(stderr, "Error: Site index is incorrect. \n");
 			  info = 1;
 			  break;
 		  }
-              if(Transfer[idx][1] != Transfer[idx][3]){
-				fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
+     // if(Transfer[idx][1] != Transfer[idx][3]){
+		//		fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
 				//info = ReadDefFileError(defname);
 				//break;
-			}
+		//	}
 	    idx++;
 	  }
 	  if(idx!=NTransfer) info = ReadDefFileError(defname);
@@ -1000,6 +1000,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 all_j = j+spn_j*Nsite; //fsz
                 if(CheckPairSite(i, j, Nsite) != 0){
                   fprintf(stderr, "Error: Site index is incorrect. \n");
+                  printf("XDEBUG: %d %d %d %d %d\n",i,j,all_i,all_j,Nsite);
                   info=1;
                   break;
                 }

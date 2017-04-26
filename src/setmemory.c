@@ -107,8 +107,7 @@ void SetMemoryDef() {
       OrbitalSgn[i] = pInt;
       pInt += Nsite;
     }
-  }
-  else{//for spin not conserved
+  }else{//for spin not conserved
     OrbitalIdx = (int**)malloc(sizeof(int*)*2*Nsite);
     for(i=0;i<2*Nsite;i++) {
       OrbitalIdx[i] = pInt;
