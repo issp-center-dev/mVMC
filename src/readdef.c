@@ -738,7 +738,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 			  info=1;
 			  break;
 		  }
-		  dReValue=ParaExchangeCoupling[idx];
+		  //dReValue=ParaExchangeCoupling[idx];
+		  ParaExchangeCoupling[idx]=dReValue;
 	    idx++;
 	  }
 	  if(idx!=NExchangeCoupling) info=ReadDefFileError(defname);
