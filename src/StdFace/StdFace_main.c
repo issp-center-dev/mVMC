@@ -361,7 +361,7 @@ static void PrintOrb(struct StdIntList *StdI) {
 
   for (isite = 0; isite < StdI->nsite; isite++) {
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
-      if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1) {
+      if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1) {
         fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, StdI->Orb[isite][jsite], StdI->AntiOrb[isite][jsite]);
       }
       else {
@@ -388,13 +388,16 @@ static void PrintOrb(struct StdIntList *StdI) {
 static void PrintOrbGC(struct StdIntList *StdI) {
   FILE *fp;
   int isite, jsite, NOrbGC, iOrbGC, isite1, jsite1, iorb;
-  int **OrbGC;
+  int **OrbGC, **AntiOrbGC;
 
   OrbGC = (int **)malloc(sizeof(int*) * StdI->nsite);
+  AntiOrbGC = (int **)malloc(sizeof(int*) * StdI->nsite);
   for (isite = 0; isite < StdI->nsite; isite++) {
     OrbGC[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
+    AntiOrbGC[isite] = (int *)malloc(sizeof(int) * StdI->nsite);
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
       OrbGC[isite][jsite] = StdI->Orb[isite][jsite];
+      AntiOrbGC[isite][jsite] = StdI->AntiOrb[isite][jsite];
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
    /*
@@ -443,7 +446,10 @@ static void PrintOrbGC(struct StdIntList *StdI) {
   for (isite = 0; isite < StdI->nsite; isite++) {
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
       if (isite >= jsite) continue;
-      fprintf(fp, "%5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite]);
+      if (StdI->AntiPeriod[0] == 1 || StdI->AntiPeriod[1] == 1 || StdI->AntiPeriod[2] == 1)
+        fprintf(fp, "%5d  %5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite], AntiOrbGC[isite][jsite]);
+      else
+        fprintf(fp, "%5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite]);
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
 
@@ -454,8 +460,12 @@ static void PrintOrbGC(struct StdIntList *StdI) {
   fclose(fp);
   fprintf(stdout, "    orbitalidxgc.def is written.\n");
 
-  for (isite = 0; isite < StdI->nsite; isite++) free(OrbGC[isite]);
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    free(OrbGC[isite]);
+    free(AntiOrbGC[isite]);
+  }
   free(OrbGC);
+  free(AntiOrbGC);
 }/*static void PrintOrbGC*/
 /**
  * Output .def file for Gutzwiller
