@@ -25,23 +25,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
-<<<<<<< HEAD
-inline double LogProjVal(const int *projCnt);
-inline double LogProjRatio(const int *projCntNew, const int *projCntOld);
-inline double ProjRatio(const int *projCntNew, const int *projCntOld);
-void MakeProjCnt(int *projCnt, const int *eleNum);
-void UpdateProjCnt(const int ri, const int rj, const int s,
-                   int *projCntNew, const int *projCntOld,
-                   const int *eleNum);
-void UpdateProjCnt_fsz(const int ri, const int rj, const int s,const int t,
-                   int *projCntNew, const int *projCntOld,
-                   const int *eleNum);
-=======
 #include "global.h"
 #include "math.h"
 #include "projection.h"
->>>>>>> develop
 
 double LogProjVal(const int *projCnt) {
     int idx;

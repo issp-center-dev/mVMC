@@ -377,38 +377,33 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          StopTimer(69);
          // only for real TBC
       }else{
-<<<<<<< HEAD
-        if(iFlgOrbitalGeneral==0){//sz is conserved
-          VMCMakeSample(comm_child1);//VMCMakeSample(comm_child1);
-        }else{
-          VMCMakeSample_fsz(comm_child1);//VMCMakeSample(comm_child1);
-        } 
-=======
+
          if(NProjBF ==0) {
-             VMCMakeSample(comm_child1);
+           if(iFlgOrbitalGeneral==0){//sz is conserved
+             VMCMakeSample(comm_child1);//VMCMakeSample(comm_child1);
+           }else{
+             VMCMakeSample_fsz(comm_child1);//VMCMakeSample(comm_child1);
+           } 
          }
          else {
              VMC_BF_MakeSample(comm_child1);
          }
->>>>>>> develop
       } 
       StopTimer(3);
       StartTimer(4);
 #ifdef _DEBUG
       printf("Debug: step %d, MainCal.\n", step);
 #endif
-<<<<<<< HEAD
-      if(iFlgOrbitalGeneral==0){//sz is conserved
-        VMCMainCal(comm_child1);
-      }else{//fsz
-        VMCMainCal_fsz(comm_child1); 
-=======
       if(NProjBF ==0) {
+        if(iFlgOrbitalGeneral==0){//sz is conserved
           VMCMainCal(comm_child1);
+        }else{//fsz
+          VMCMainCal_fsz(comm_child1); 
+        }
+
       }
       else{
-          VMC_BF_MainCal(comm_child1);
->>>>>>> develop
+        VMC_BF_MainCal(comm_child1);
       }
       StopTimer(4);
       StartTimer(21);
@@ -479,77 +474,63 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     StartTimer(3);
 	if(NProjBF ==0) {
 	  if(AllComplexFlag==0){
-		  // only for real TBC
-		  StartTimer(69);
+        // only for real TBC
+        StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
-		  for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+        for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
 #pragma omp parallel for default(shared) private(tmp_i)
-		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
-		  StopTimer(69);
-		  // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-		  VMCMakeSample_real(comm_child1);
-		  // only for real TBC
-		  StartTimer(69);
+        for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+        StopTimer(69);
+        // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+        VMCMakeSample_real(comm_child1);
+        // only for real TBC
+        StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
-<<<<<<< HEAD
-      for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
-      StopTimer(69);
-      // only for real TBC
-    }else{
-      if(iFlgOrbitalGeneral==0){
-        VMCMakeSample(comm_child1);
+        for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
+        StopTimer(69);
+        // only for real TBC
       }else{
-        VMCMakeSample_fsz(comm_child1);
+        if(iFlgOrbitalGeneral==0){
+          VMCMakeSample(comm_child1);
+        }else{
+          VMCMakeSample_fsz(comm_child1);
+        }
       }
-    } 
-=======
-		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
-		  StopTimer(69);
-		  // only for real TBC
-	  }else{
-		  VMCMakeSample(comm_child1);
-	  }
-	}
+    }
 	else{
 	  if(AllComplexFlag==0){
-		  // only for real TBC
-		  StartTimer(69);
-		  for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+        // only for real TBC
+        StartTimer(69);
+        for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
 #pragma omp parallel for default(shared) private(tmp_i)
-		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
-		  StopTimer(69);
-		  // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-		  VMC_BF_MakeSample_real(comm_child1);
-		  // only for real TBC
-		  StartTimer(69);
+        for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+        StopTimer(69);
+        // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+        VMC_BF_MakeSample_real(comm_child1);
+        // only for real TBC
+        StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
-		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
-		  StopTimer(69);
-		  // only for real TBC
+        for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
+        StopTimer(69);
+        // only for real TBC
 	  }else{
 		VMC_BF_MakeSample(comm_child1);
-		}
+      }
 	}
-//    VMCMakeSample(comm_child1);
->>>>>>> develop
 
     StopTimer(3);
     StartTimer(4);
 
-<<<<<<< HEAD
-    if(iFlgOrbitalGeneral==0){
-      VMCMainCal(comm_child1);
-    }else{
-      VMCMainCal_fsz(comm_child1);
+    if(NProjBF ==0) {
+      if(iFlgOrbitalGeneral==0){
+        VMCMainCal(comm_child1);
+      }else{
+        VMCMainCal_fsz(comm_child1);
+      }
     }
-=======
-      if(NProjBF ==0) {
-          VMCMainCal(comm_child1);
-      }
-      else{
-          VMC_BF_MainCal(comm_child1);
-      }
->>>>>>> develop
+    else{
+      VMC_BF_MainCal(comm_child1);
+    }
 
     StopTimer(4);
     StartTimer(21);

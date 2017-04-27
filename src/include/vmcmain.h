@@ -82,11 +82,8 @@ extern int omp_get_thread_num(void);
 #include "../qp_real.c"
 #include "../matrix.c"
 #include "../pfupdate.c"
-<<<<<<< HEAD
 #include "../pfupdate_real.c"
 #include "../pfupdate_fsz.c"
-=======
->>>>>>> develop
 #include "../pfupdate_two_fcmp.c"
 #include "../pfupdate_two_real.c"
 #include "../pfupdate_two_fsz.c"
@@ -97,12 +94,7 @@ extern int omp_get_thread_num(void);
 #include "../calham_real.c"
 #include "../calham_fsz.c"
 #include "../calgrn.c"
-<<<<<<< HEAD
 #include "../calgrn_fsz.c"
-//#include "lslocgrn.c" // ignoring Lanczos To be added
-=======
-#include "../lslocgrn_real.c"
->>>>>>> develop
 #include "../setmemory.c"
 #include "../readdef.c"
 #include "../initfile.c"

@@ -487,6 +487,7 @@ int ReadDefFileIdxPara(
           }
           idx =0;
 
+          /*
           while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
             sscanf(ctmp2, "%d %d %d\n",
                    &i,
@@ -499,6 +500,23 @@ int ReadDefFileIdxPara(
           if(idx!=X->Nsite*X->Nsite) {
             info=ReadDefFileError(defname);
           }
+          */
+          while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL)
+            {
+              //TODO: Replace for spin dependent
+              sscanf(ctmp2, "%d %d %d %d %d\n",
+                     &i,
+                     &i_spin, 
+                     &j,
+                     &j_spin, 
+                     &Orbitalidx);
+              (X->OrbitalIdx[i+X->Nsite*i_spin][j+X->Nsite*j_spin])=Orbitalidx;
+              idx++;
+              if(idx==X->Nsite*(2*X->Nsite-1)) break;
+            }
+          if(idx!=X->Nsite*(2*X->Nsite-1)) {
+            info=ReadDefFileError(defname);
+          } 
         }
         fclose(fp);
         break;
@@ -507,36 +525,6 @@ int ReadDefFileIdxPara(
           /*cisajs.def----------------------------------------*/
           if(X->NCisAjs>0){
             idx = 0;
-<<<<<<< HEAD
-            while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL)
-			  {
-                //TODO: Replace for spin dependent
-				  sscanf(ctmp2, "%d %d %d %d %d\n",
-						 &i,
-             &i_spin, 
-						 &j,
-             &j_spin, 
-						 &Orbitalidx);
-                  (X->OrbitalIdx[i+X->Nsite*i_spin][j+X->Nsite*j_spin])=Orbitalidx;
-                  idx++;
-                  if(idx==X->Nsite*(2*X->Nsite-1)) break;
-
-                  /*
-				  sscanf(ctmp2, "%d %d %d %d %d\n",
-						 &i,
-                         &ispin,
-						 &j,
-                         &jspin
-						 &Orbitalidx);
-                         X->OrbitalIdx[i+X->Nsite*ispin][j+X->Nsite*jspin]=Orbitalidx;
-                  idx++;
-                  if(idx==2*X->Nsite*2*X->Nsite) break;
-                  
-                  */
-            }
-            if(idx!=X->Nsite*(2*X->Nsite-1)) {
-				info=ReadDefFileError(defname);
-=======
             while( fscanf(fp, "%d %d %d %d\n",
                           &(x0), &(x1), &(x2), &(x3)) != EOF){
               X->CisAjs[idx][0] = x0;
@@ -552,7 +540,6 @@ int ReadDefFileIdxPara(
             }
             if(idx!=X->NCisAjs){
               info=ReadDefFileError(defname);
->>>>>>> develop
             }
           }
           fclose(fp);
