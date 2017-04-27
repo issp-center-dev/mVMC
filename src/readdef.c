@@ -1273,7 +1273,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 if (CheckPairSite(i, j, Nsite) != 0) {
                   fprintf(stderr, "Error: Site index is incorrect. \n");
                   info = 1;
->>>>>>> develop
+//>>>>>>> develop
                   break;
                 }
                 if (all_i >= all_j) {
