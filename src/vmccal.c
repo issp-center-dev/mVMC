@@ -540,13 +540,11 @@ void clearPhysQuantity(){
   int i,n;
   double complex *vec;
   double  *vec_real;
-<<<<<<< HEAD
+//[s] MERGE BY TM
   Wc = Etot = Etot2 = Sztot =0.0;//fsz
-=======
-  Wc = Etot = Etot2 = 0.0;
+  //Wc = Etot = Etot2 = 0.0;
   Dbtot = Dbtot2 = 0.0;
-
->>>>>>> develop
+//[e] MERGE BY TM
   if(NVMCCalMode==0) {
     /* SROptOO, SROptHO, SROptO */
     n = (2*SROptSize)*(2*SROptSize+2); // TBC

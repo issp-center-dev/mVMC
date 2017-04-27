@@ -189,11 +189,10 @@ int *EleIdx;     /* EleIdx[sample][mi+si*Ne] */
 int *EleCfg;     /* EleCfg[sample][ri+si*Nsite] */
 int *EleNum;     /* EleIdx[sample][ri+si*Nsite] */
 int *EleProjCnt; /* EleProjCnt[sample][proj] */
-<<<<<<< HEAD
+//[s] MERGE BY TM
 int *EleSpn;     /* EleIdx[sample][mi+si*Ne] */ //fsz
-=======
 int *EleProjBFCnt; /* EleProjCnt[sample][proj] */
->>>>>>> develop
+//[e] MERGE BY TM
 double *logSqPfFullSlater; /* logSqPfFullSlater[sample] */
 //double complex *SmpSltElmBF; /* logSqPfFullSlater[sample] */
 double *SmpSltElmBF_real; /* logSqPfFullSlater[sample] */
@@ -205,11 +204,10 @@ int *TmpEleIdx;
 int *TmpEleCfg;
 int *TmpEleNum;
 int *TmpEleProjCnt;
-<<<<<<< HEAD
+//[s] MERGE BY TM
 int *TmpEleSpn;
-=======
 int *TmpEleProjBFCnt;
->>>>>>> develop
+//[e] MERGE BY TM
 
 int *BurnEleIdx;
 int *BurnEleCfg;

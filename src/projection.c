@@ -279,7 +279,7 @@ void UpdateProjCnt(const int ri, const int rj, const int s,
 
 }
 
-<<<<<<< HEAD
+//[s] MERGE BY TM
 /* An electron with spin s hops from ri to rj with t. */
 // (ri,s) -> (rj,t) assuming s!=t
 void UpdateProjCnt_fsz(const int ri, const int rj, const int s,const int t,
@@ -393,7 +393,8 @@ void UpdateProjCnt_fsz(const int ri, const int rj, const int s,const int t,
   }
   
   return;
-=======
+}
+
 void MakeProjBFCnt(int *projCnt, const int *eleNum) {
     const int *n0 = eleNum;
     const int *n1 = eleNum + Nsite;
@@ -461,6 +462,5 @@ void MakeProjBFCnt(int *projCnt, const int *eleNum) {
     }
 
     return;
->>>>>>> develop
-
 }
+//[e] MERGE BY TM

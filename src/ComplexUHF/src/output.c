@@ -126,7 +126,8 @@ int MakeOrbitalFile(struct BindStruct *X){
   double complex **tmp_mat,**vec;
   double *r;
   char fileName[256];
-//
+
+/*this part only for anti-parallel
 //[s] for anti-pararell, rediag
   xMsize = X->Def.Nsite;  
   c_malloc2(tmp_mat,xMsize,xMsize);
@@ -162,7 +163,7 @@ int MakeOrbitalFile(struct BindStruct *X){
     }
   }
 //[e] for anti-pararell
-
+*/
  
   
   if(X->Def.NOrbitalIdx>0){
@@ -219,19 +220,13 @@ int MakeOrbitalFile(struct BindStruct *X){
         }
       }
     }
-
-<<<<<<< HEAD
- //   for(i=0; i<X->Def.NOrbitalIdx; i++){
- //     ParamOrbital[i] /= (double)CountOrbital[i];
-      //printf("debug: Orbital: idx=%d, param=%lf, %lf \n", i, creal(ParamOrbital[i]), cimag(ParamOrbital[i]));
- //   };
-=======
+//[s] MERGE BY TM
     for(i=0; i<X->Def.NOrbitalIdx; i++){
       ParamOrbital[i] /= (double)CountOrbital[i];
-		ParamOrbital[i] += genrand_real2()*pow(10.0,-X->Def.eps_int_slater);
+		  ParamOrbital[i] += genrand_real2()*pow(10.0,-X->Def.eps_int_slater);
       //printf("debug: Orbital: idx=%d, param=%lf, %lf , count=%d \n", i, creal(ParamOrbital[i]), cimag(ParamOrbital[i]), CountOrbital[i]);
     };
->>>>>>> develop
+//[e] MERGE BY TM
     
     sprintf(fileName, "%s_orbital_opt.dat", X->Def.CParaFileHead);
     Child_OutputOptData(fileName, "NOrbitalIdx", ParamOrbital, X->Def.NOrbitalIdx);

@@ -40,18 +40,17 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
 int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
                         double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
 
-<<<<<<< HEAD
+//[s] MERGE BY TM
 int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd);
 int calculateMAll_child_fsz(const int *eleIdx,const int *elesSpn, const int qpStart, const int qpEnd, const int qpidx,
                         double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
 // note: CalculateMAll_fsz,calculateMAll_child_fsz will be merged with *fcmp
-=======
 int calculateMAll_BF_real_child(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
                                 double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double *InvM_real);
 
 int calculateMAll_BF_fcmp_child(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
                                 double complex*bufM, int *iwork, double complex*work, int lwork, double *rwork, double complex* PfM_real, double complex*InvM_real);
->>>>>>> develop
+//[e] MERGE BY TM
 
 #ifdef _SYSTEM_A
   #define M_DGETRF DGETRF

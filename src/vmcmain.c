@@ -578,15 +578,14 @@ void outputData() {
   int i;
 
   /* zvo_out.dat */
-<<<<<<< HEAD
+//[s] MERGE BY TM
  // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
  //   fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)));
-    fprintf(FileOut, "% .18e % .18e  % .18e % .18e %.18e\n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)),Sztot);
-=======
+   fprintf(FileOut, "% .18e % .18e  % .18e % .18e %.18e\n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)),Sztot);
   // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
-  fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot), cimag(Etot), creal(Etot2),
-          creal((Etot2 - Etot * Etot) / (Etot * Etot)));
->>>>>>> develop
+ // fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot), cimag(Etot), creal(Etot2),
+ //         creal((Etot2 - Etot * Etot) / (Etot * Etot)));
+//[e] MERGE BY TM
 
   /* zvo_var.dat */
   if (FlagBinary == 0) { /* formatted output*/
