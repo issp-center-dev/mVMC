@@ -442,7 +442,7 @@ static void PrintOrbGC(struct StdIntList *StdI) {
 
   for (isite = 0; isite < StdI->nsite; isite++) {
     for (jsite = 0; jsite < StdI->nsite; jsite++) {
-      if (isite == jsite) continue;
+      if (isite <= jsite) continue;
       fprintf(fp, "%5d  %5d  %5d\n", isite, jsite, OrbGC[isite][jsite]);
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
