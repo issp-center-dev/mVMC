@@ -14,7 +14,7 @@ add_definitions(-DMEXP=19937)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/pfapack)
 
 set(SOURCES_vmcmain
-        vmcmain.c   
+        vmcmain.c physcal_lanczos.c splitloop.c 
  )
 
 set(SOURCES_sfmt
@@ -25,10 +25,15 @@ add_library(StdFace STATIC StdFace/ChainLattice.c StdFace/HoneycombLattice.c Std
 
 
 add_executable(vmcdry.out vmcdry.c)
-target_link_libraries(vmcdry.out StdFace)
+target_link_libraries(vmcdry.out StdFace m)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
+<<<<<<< HEAD
 
 target_link_libraries(vmc.out pfapack StdFace ${LAPACK_LIBRARIES})
+=======
+target_link_libraries(vmc.out StdFace)
+target_link_libraries(vmc.out pfapack StdFace ${LAPACK_LIBRARIES} m)
+>>>>>>> develop
 if(MPI_FOUND)
   target_link_libraries(vmc.out ${MPI_C_LIBRARIES})
 endif(MPI_FOUND)

@@ -133,5 +133,51 @@ In other word, the singular values including their numbers
 offers the quantitative criterion how the Pfaffian Slater determinant
 deviates from the single Slate determinant.
 
+\section{Power Lanczos method}
+In this section, we show how to determine $\alpha$ in the power-Lanczos method. Within the finite- number sampling, it is important to use the decomposition that guarantees the positive definitive relation for variance. We also explain the calculation of physical quantities after the single-step Lanczos method.
+\subsection{Determination of $\alpha$}
+First, we briefly explain the sampling procedure of the variational Monte Carlo (VMC) method.
+Physical properties $\hat{A}$ are calculated as follows:
+\begin{align}
+&\langle \hat{A}\rangle = \frac{\langle \phi| \hat{A}|\phi \rangle}{\langle \phi| \phi \rangle} = \sum_{x} \rho(x) F(x, {\hat{A}}),\\
+& \rho(x)=\frac{|\langle \phi|x\rangle|^2}{\langle \phi | \phi \rangle}, ~~~~F(x,  {\hat{A}}) =  \frac{\langle x| \hat{A}|\phi \rangle}{\langle x| \phi \rangle}.
+\end{align}
+There are two ways to calculate the product of the operators  $\hat{A}\hat{B}$.
+\begin{align}
+&\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F(x, {\hat{A}\hat{B}}),\\
+&\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F^{\dag}(x, {\hat{A})F(x, \hat{B}}).
+\end{align}
+As we explain later, in general, the latter way is numerical stable one. 
+For example, we consider the expectation value of the variance, 
+which is defined as $\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle$. There are two ways to calculate the variance.
+\begin{align}
+&\sigma^2=\sum_{x} \rho(x) F(x,  (\hat{H}-\langle \hat{H}\rangle)^2) = \sum_{x} \rho(x) F(x,  \hat{H}^2) - \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 ,\\
+&\sigma^2=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}-\langle \hat{H}\rangle)F(x,  \hat{H}-\langle \hat{H}\rangle) = \sum_{x} \rho(x) F^{\dag}(x,  \hat{H}) F(x, \hat{H})- \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 
+\end{align}
+From its definition, the latter way gives the positive definitive variance even for the finite sampling while the former way does not guarantee the positive definitiveness of the variance. Here, we consider the expectation values of energy and variance for the (single-step) power Lanczos wave function $|\phi\rangle =(1+\alpha \hat{H}) |\psi \rangle$. The energy is calculated as
+\begin{align}
+E_{LS}(\alpha) =\frac{\langle \phi| \hat{H} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{h_1 + \alpha(h_{2(20)} + h_{2(11)}) + \alpha^2 h_{3(12)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+\end{align}
+where we define $h_1$, $h_{2(11)},~h_{2(20)},$ and $h_{3(12)}$ as
+\begin{align}
+&h_1 =\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}),\\
+&h_{2(11)}=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}) F(x, \hat{H}),\\
+&h_{2(20)}=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}^2),\\
+&h_{3(12)}=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H})F(x,  \hat{H}^2).
+\end{align}
+From the condition $\frac{\partial E_{LS}(\alpha)}{\partial \alpha}=0$, i.e., by solving the quadratic equations, we can determine the
+ $\alpha$. The variance is calculate in the similar way.
+\subsection{Calculation of physical quantities}
+ By using the optimized parameter $\alpha$, we can calculate the expected value of the operator $\hat{A}$ as 
+\begin{align}
+A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{A_0 + \alpha(A_{1(10)} + A_{1(01)}) + \alpha^2 A_{2(11)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+\end{align}
+where we define $A_0$, $A_{1(10)},~A_{1(01)},$ and $A_{2(11)}$ as
+\begin{align}
+&A_0 =\sum_{x} \rho(x) F(x,  \hat{A}),\\
+&A_{1(10)}=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}) F(x, \hat{A}),\\
+&A_{1(01)}=\sum_{x} \rho(x) F(x, \hat{A}\hat{H}),\\
+&A_{2(11)}=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H})F(x,  \hat{A}\hat{H}).
+\end{align}
 
 %----------------------------------------------------------

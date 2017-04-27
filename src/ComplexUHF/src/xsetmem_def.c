@@ -45,6 +45,7 @@ c_malloc1(X.Bind.Def.ParaInitial, X.Bind.Def.NInitial);
 //d_malloc1(X.Bind.Def.ParaInitial, X.Bind.Def.NInitial);
 //d_malloc1(X.Bind.Def.ParaInitial_theta, X.Bind.Def.NInitial);
 i_malloc2(X.Bind.Def.OrbitalIdx, X.Bind.Def.Nsite*2, X.Bind.Def.Nsite*2);
+i_malloc2(X.Bind.Def.OrbitalSgn, X.Bind.Def.Nsite*2, X.Bind.Def.Nsite*2);
 
 	i_malloc2(X.Bind.Def.CisAjs, X.Bind.Def.NCisAjs, 4);
   	i_malloc2(X.Bind.Def.CisAjsCktAltDC, X.Bind.Def.NCisAjsCktAltDC, 8);

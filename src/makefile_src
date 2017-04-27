@@ -1,12 +1,15 @@
 include make.sys
 
-OUT = vmc.out
-SRC = vmcmain.c
 PFAPACK = pfapack/libpfapack.a
 SFMT = sfmt/SFMT.o
 STDFACE = StdFace/libStdFace.a
-OBJS = vmcmain.o $(PFAPACK) $(SFMT) $(STDFACE)
 OPTION = -D_mpi_use
+
+OBJS = \
+	physcal_lanczos.o \
+	splitloop.o \
+	vmcmain.o \
+	$(PFAPACK) $(SFMT) $(STDFACE)
 
 SOURCES = \
 average.c \
@@ -23,6 +26,7 @@ locgrn.c \
 locgrn_real.c \
 locgrn_fsz.c \
 lslocgrn.c \
+lslocgrn_real.c \
 matrix.c \
 parameter.c \
 pfupdate.c \
@@ -43,26 +47,52 @@ slater_fsz.c \
 splitloop.c \
 stcopt_dposv.c \
 stcopt_pdposv.c \
-time.c \
 vmccal.c \
 vmccal_fsz.c \
 vmcdry.c \
 vmcmain.c \
+vmcclock.c \
 vmcmake.c \
 vmcmake_fsz.c \
 vmcmake_real.c \
 workspace.c
 
 HEADERS = \
-include/avevar.h \
-include/global.h \
-include/parameter.h \
-include/readdef.h \
-include/readdef_core.h \
-include/safempi.h \
-include/safempi_fcmp.h \
-include/version.h \
-include/vmcmain.h
+./include/average.h \
+./include/avevar.h \
+./include/calgrn.h \
+./include/calham.h \
+./include/calham_real.h \
+./include/gauleg.h \
+./include/global.h \
+./include/initfile.h \
+./include/legendrepoly.h \
+./include/locgrn.h \
+./include/locgrn_real.h \
+./include/lslocgrn.h \
+./include/lslocgrn_real.h \
+./include/matrix.h \
+./include/parameter.h \
+./include/pfupdate.h \
+./include/pfupdate_real.h \
+./include/pfupdate_two_fcmp.h \
+./include/pfupdate_two_real.h \
+./include/physcal_lanczos.h \
+./include/projection.h \
+./include/qp.h \
+./include/qp_real.h \
+./include/readdef.h \
+./include/setmemory.h \
+./include/slater.h \
+./include/splitloop.h \
+./include/stcopt_dposv.h \
+./include/stcopt_pdposv.h \
+./include/version.h \
+./include/vmccal.h \
+./include/vmcmain.h \
+./include/vmcmake.h \
+./include/vmcmake_real.h \
+./include/workspace.h
 
 all : 
 	cd pfapack; $(MAKE) -f makefile_pfapack
@@ -72,22 +102,25 @@ all :
 	make -f makefile_src vmcdry.out
 	cd ComplexUHF/src; $(MAKE) -f makefile_uhf
 
-vmc.out : $(OBJS) $(STDFACE)
-	$(CC) -o $(OUT) $(OBJS) $(STDFACE) $(OPTION) $(CFLAGS) $(LIBS)
+vmc.out : $(OBJS)
+	$(CC) -o $@ $(OBJS) $(OPTION) $(CFLAGS) $(LIBS)
 
 vmcdry.out : vmcdry.o $(STDFACE)
-	$(CC) $< -o $@ $(STDFACE) $(OPTION) $(CFLAGS) $(LIBS)
+	$(CC) -o $@ $^ $(OPTION) $(CFLAGS) $(LIBS)
 
-vmcmain.o : $(SOURCES) $(HEADERS)
-	$(CC) -c $(SRC) $(OPTION) $(CFLAGS) -I ./include/
+SUFFIXES: .o .c
 
-vmcdry.o : vmcdry.c
-	$(CC) -c vmcdry.c $(OPTION) $(CFLAGS) -I ./include/
+.c.o:
+	$(CC) $(OPTION) $(CFLAGS) -I ./include -c $<
 
 clean :
-	rm -f *.o vmc.out
+	rm -f *.o vmc.out vmcdry.out
 	cd sfmt; $(MAKE) -f makefile_sfmt clean
 	cd pfapack; $(MAKE) -f makefile_pfapack clean
 	cd StdFace; $(MAKE) -f makefile_StdFace clean
 	cd ComplexUHF/src; $(MAKE) -f makefile_uhf clean
 
+physcal_lanczos.o:$(SOURCES) $(HEADERS)
+splitloop.o:$(SOURCES) $(HEADERS)
+vmcdry.o:$(SOURCES) $(HEADERS)
+vmcmain.o:$(SOURCES) $(HEADERS)

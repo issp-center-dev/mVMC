@@ -25,11 +25,14 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
-void InitQPWeight();
-double complex CalculateLogIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);
-double complex CalculateIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);
-void UpdateQPWeight();
+#include "qp.h"
+#ifndef _QP_SRC
+#define _QP_SRC
+#include "global.h"
+#include <complex.h>
+#include "legendrepoly.h"
+#include "workspace.h"
+#include "gauleg.h"
 
 /* calculate SPGLCos, SPGLSin and QPFullWeight */
 void InitQPWeight() {
@@ -143,3 +146,5 @@ void UpdateQPWeight() {
 
   return;
 }
+
+#endif
