@@ -1265,15 +1265,15 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
           /*orbitalidxt.def------------------------------------*/
           if (iNOrbitalP > 0) {
             idx0 = idx1 = 0;
-
+            itmp = 0;
             while (fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF) {
+              //fprintf(stdout, "Debug: test-1 %d %d %d %d\n", i, j, fij, idx0);
               for (spn_i = 0; spn_i < 2; spn_i++) {
                 all_i = i + spn_i * Nsite; //fsz
                 all_j = j + spn_i * Nsite; //fsz
                 if (CheckPairSite(i, j, Nsite) != 0) {
                   fprintf(stderr, "Error: Site index is incorrect. \n");
                   info = 1;
-//>>>>>>> develop
                   break;
                 }
                 if (all_i >= all_j) {
@@ -1286,7 +1286,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 // Note F_{IJ}=-F_{JI}
                 OrbitalIdx[all_j][all_i] = fij;
                 OrbitalSgn[all_j][all_i] = -1;
-                if (idx0 == (Nsite * (Nsite - 1)) / 2) break;
+              }
+              if (idx0 == (Nsite * (Nsite - 1)) ) {
+                //fprintf(stdout, "Debug: test-1-1 %d %d %d %d\n", i, j, fij, idx0);
+                break;
               }
             }
           } else { /* anti-periodic boundary mode */
@@ -1304,8 +1307,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 // Note F_{IJ}=-F_{JI}
                 OrbitalIdx[all_j][all_i] = fij;
                 OrbitalSgn[all_j][all_i] = -fijSign;
-                if (idx0 == ((Nsite * (Nsite - 1)) / 2)) break; //N*(N-1)
               }
+              if (idx0 == ((Nsite * (Nsite - 1)))) break; //N*(N-1)
             }
           }
 
@@ -1319,12 +1322,12 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             count_idx++;
           }
 
-          if (idx0 != (Nsite * (Nsite - 1)) / 2 || idx1 != iNOrbitalP) {
+          if (idx0 != (Nsite * (Nsite - 1))  || idx1 != iNOrbitalP || itmp==1) {
+            //fprintf(stdout, "Debug: test-1-1 %d %d %d \n", idx0, idx1, itmp);
             info = ReadDefFileError(defname);
           }
           fclose(fp);
           break;
-
 
         case KWTransSym:
           /*qptransidx.def------------------------------------*/
