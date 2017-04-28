@@ -35,7 +35,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define _SRC_SETMEMORY
 
 void SetMemoryDef() {  
-  int i;
+  int i, j;
   int *pInt;
   double *pDouble;
 
@@ -117,29 +117,23 @@ void SetMemoryDef() {
   }
   /*[e] For BackFlow */
 
-  if(iFlgOrbitalGeneral==0){//for spin conserved
-    OrbitalIdx = (int**)malloc(sizeof(int*)*Nsite);
-    for(i=0;i<Nsite;i++) {
-      OrbitalIdx[i] = pInt;
-      pInt += Nsite;
+  int NOrbit;
+  iFlgOrbitalGeneral==0 ? (NOrbit=Nsite): (NOrbit=2*Nsite);
+  OrbitalIdx = (int**)malloc(sizeof(int*)*NOrbit);
+  for(i=0;i<NOrbit;i++) {
+    OrbitalIdx[i] = pInt;
+    for(j=0;j<NOrbit;j++) {
+      OrbitalIdx[i][j]=0;
     }
-    OrbitalSgn = (int**)malloc(sizeof(int*)*Nsite);
-    for(i=0;i<Nsite;i++) {
-      OrbitalSgn[i] = pInt;
-      pInt += Nsite;
+    pInt += NOrbit;
+  }
+  OrbitalSgn = (int**)malloc(sizeof(int*)*NOrbit);
+  for(i=0;i<NOrbit;i++) {
+    OrbitalSgn[i] = pInt;
+    for(j=0;j<NOrbit;j++) {
+      OrbitalSgn[i][j]=0;
     }
-  }else{//for spin not conserved
-    OrbitalIdx = (int**)malloc(sizeof(int*)*2*Nsite);
-    for(i=0;i<2*Nsite;i++) {
-      OrbitalIdx[i] = pInt;
-      pInt += 2*Nsite;
-    }
-    
-    OrbitalSgn = (int**)malloc(sizeof(int*)*2*Nsite);
-    for(i=0;i<2*Nsite;i++) {
-      OrbitalSgn[i] = pInt;
-      pInt += 2*Nsite;
-    }
+    pInt += NOrbit;
   }
 
   QPTrans = (int**)malloc(sizeof(int*)*NQPTrans);
