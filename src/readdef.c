@@ -483,8 +483,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             fclose(fp);
             //up-up and down-down
             iNOrbitalP = bufInt[IdxNOrbitParallel];
-            //bufInt[IdxNOrbit] += 2 * bufInt[IdxNOrbitParallel];
-            bufInt[IdxNOrbit] += bufInt[IdxNOrbitParallel];
+            bufInt[IdxNOrbit] += 2*bufInt[IdxNOrbitParallel];
             if (bufInt[IdxNOrbitParallel] > 0) {
               iFlgOrbitalGeneral = 1;
             }
@@ -1317,12 +1316,16 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 
             fidx = NProj + iNOrbitalAP;
             while (fscanf(fp, "%d ", &i) != EOF) {
-              ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
-              OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
+              //ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
+              //OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
               //OptFlag[2*fidx+1] = 0; //  TBC imaginary
+              ierr = fscanf(fp, "%d\n", &(OptFlag[4 * fidx]));
+              OptFlag[4 * fidx + 1] = iComplexFlgOrbital;
+              OptFlag[4 * fidx + 2] = OptFlag[4 * fidx];
+              OptFlag[4 * fidx + 3] = iComplexFlgOrbital;
               fidx++;
               idx1++;
-              count_idx++;
+              count_idx+=2;
             }
             if (idx0 != (Nsite * (Nsite - 1)) || idx1 != iNOrbitalP || itmp == 1) {
               //fprintf(stdout, "Debug: test-1-1 %d %d %d \n", idx0, idx1, itmp);
