@@ -258,19 +258,15 @@ void FreeMemoryDef() {
 void SetMemory() {
   int i,j,n;
 
-  fprintf(stdout, "Debug 1-1-1\n");
-
   /***** Variational Parameters *****/
   //printf("DEBUG:opt=%d %d %d %d %d Ne=%d\n", AllComplexFlag,NPara,NProj,NSlater,NOrbitalIdx,Ne);
   Para     = (double complex*)malloc(sizeof(double complex)*(NPara));
-  fprintf(stdout, "Debug 1-1-2\n");
 
   Proj     = Para;
   ProjBF   = Para + NProj;
   Slater   = Para + NProj + NProjBF;
   OptTrans = Para + NProj + NProjBF + NSlater;
 
-  fprintf(stdout, "Debug 1-2\n");
   /***** Electron Configuration ******/
   EleIdx            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));
   EleCfg            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
@@ -285,7 +281,6 @@ void SetMemory() {
   SmpEta = (double*)malloc(sizeof(double*)*NVMCSample*NQPFull*Nsite*Nsite);
   SmpEtaFlag = (int*)malloc(sizeof(int*)*NVMCSample*NQPFull*Nsite*Nsite);
 
-  fprintf(stdout, "Debug 1-3\n");
   TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne));//fsz
   TmpEleCfg         = TmpEleIdx + 2*Ne;
   TmpEleNum         = TmpEleCfg + 2*Nsite;
@@ -301,7 +296,6 @@ void SetMemory() {
   BurnEleProjCnt    = BurnEleNum + 2*Nsite;
   BurnEleSpn        = BurnEleProjCnt + NProj; //fsz
 
-  fprintf(stdout, "Debug 1-4\n");
   /***** Slater Elements ******/
   SlaterElm = (double complex*)malloc( sizeof(double complex)*(NQPFull*(2*Nsite)*(2*Nsite)) );
   InvM = (double complex*)malloc( sizeof(double complex)*(NQPFull*(Nsize*Nsize+1)) );
@@ -324,7 +318,6 @@ void SetMemory() {
   InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
   PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
 
-  fprintf(stdout, "Debug 1-5\n");
   /***** Quantum Projection *****/
   QPFullWeight = (double complex*)malloc(sizeof(double complex)*(NQPFull+NQPFix+5*NSPGaussLeg));
   QPFixWeight= QPFullWeight + NQPFull;
