@@ -122,18 +122,18 @@ void SetMemoryDef() {
   OrbitalIdx = (int**)malloc(sizeof(int*)*NOrbit);
   for(i=0;i<NOrbit;i++) {
     OrbitalIdx[i] = pInt;
+    pInt += NOrbit;
     for(j=0;j<NOrbit;j++) {
       OrbitalIdx[i][j]=0;
     }
-    pInt += NOrbit;
   }
   OrbitalSgn = (int**)malloc(sizeof(int*)*NOrbit);
   for(i=0;i<NOrbit;i++) {
     OrbitalSgn[i] = pInt;
+    pInt += NOrbit;
     for(j=0;j<NOrbit;j++) {
       OrbitalSgn[i][j]=0;
     }
-    pInt += NOrbit;
   }
 
   QPTrans = (int**)malloc(sizeof(int*)*NQPTrans);

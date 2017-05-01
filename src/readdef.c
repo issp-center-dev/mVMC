@@ -429,17 +429,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             fclose(fp);
             break;
 
-            /*
-          case KWOrbital:
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-            sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOrbit]);
-            fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-            sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgOrbital);
-            fclose(fp);
-            break;
-            */
-
           case KWOrbital:
           case KWOrbitalAntiParallel:
             cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
@@ -786,13 +775,12 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	//[e] for Orbital idx
 
   MPI_Comm_rank(comm, &rank);
-  
+
   if(rank==0) {
     for (iKWidx = KWLocSpin; iKWidx < KWIdxInt_end; iKWidx++) {
       strcpy(defname, cFileNameListFile[iKWidx]);
-
       if (strcmp(defname, "") == 0) continue;
-
+      fprintf(stdout, "       %s.\n", defname);
       fp = fopen(defname, "r");
       if (fp == NULL) {
         info = ReadDefFileError(defname);
@@ -1315,15 +1303,18 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             }
 
             fidx = NProj + iNOrbitalAP;
+	    idx1=0;
+	    int idxOptFlag=0;
             while (fscanf(fp, "%d ", &i) != EOF) {
               //ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
               //OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
               //OptFlag[2*fidx+1] = 0; //  TBC imaginary
-              ierr = fscanf(fp, "%d\n", &(OptFlag[4 * fidx]));
-              OptFlag[4 * fidx + 1] = iComplexFlgOrbital;
-              OptFlag[4 * fidx + 2] = OptFlag[4 * fidx];
-              OptFlag[4 * fidx + 3] = iComplexFlgOrbital;
-              fidx++;
+	      idxOptFlag=2*(fidx+2*idx1);
+              ierr = fscanf(fp, "%d\n", &(OptFlag[idxOptFlag]));
+              OptFlag[idxOptFlag+1] = iComplexFlgOrbital;
+              OptFlag[idxOptFlag+2] = OptFlag[idxOptFlag];
+              OptFlag[idxOptFlag+3] = iComplexFlgOrbital;
+	      //fidx++;
               idx1++;
               count_idx+=2;
             }
@@ -1349,7 +1340,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             idx = 0;
             if (APFlag == 0) {
               while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
-                ierr = fscanf(fp, "%d\n", &(QPTrans[i][j]));
+                ierr = fscanf(fp, "%d\n", &itmp);
+		QPTrans[i][j]=itmp;
                 QPTransSgn[i][j] = 1;
                 QPTransInv[i][QPTrans[i][j]] = j;
                 idx++;
@@ -1625,6 +1617,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
           fclose(fp);
           break;
       }
+      //      fprintf(stdout, "Debug: finish. \n");
     }
 
     if (count_idx != NPara) {
@@ -1632,6 +1625,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       fprintf(stderr, "error: OptFlag is incomplete.\n");
       info = 1;
     }
+    fprintf(stdout, "finish reading parameters.\n");
   } /* if(rank==0) */
 
   if(FlagOptTrans<=0){
