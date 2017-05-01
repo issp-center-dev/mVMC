@@ -252,6 +252,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
     }
 
+    SetDefultValuesModPara(bufInt, bufDouble);
     for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
       strcpy(defname, cFileNameListFile[iKWidx]);
       if (strcmp(defname, "") == 0) continue;
@@ -267,7 +268,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           case KWModPara:
             /* Read modpara.def---------------------------------------*/
             //TODO: add error procedure here when parameters are not enough.
-            SetDefultValuesModPara(bufInt, bufDouble);
             cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
             cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &itmp); //2
@@ -429,29 +429,37 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             fclose(fp);
             break;
 
-            /*
-          case KWOrbital:
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-            sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOrbit]);
-            fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-            sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgOrbital);
-            fclose(fp);
-            break;
-            */
-
           case KWOrbital:
           case KWOrbitalAntiParallel:
             cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
             cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOrbitAntiParallel]);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iNOrbitalAP);
             cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
             fclose(fp);
             iFlgOrbitalAP = 1;
-            iNOrbitalAP = bufInt[IdxNOrbitAntiParallel];
-            bufInt[IdxNOrbit] += bufInt[IdxNOrbitAntiParallel];
+            bufInt[IdxNOrbit] += iNOrbitalAP;
             iComplexFlgOrbital += iOrbitalComplex;
+            if (iFlgOrbitalSimple == -1) {
+              fprintf(stderr, "error: Multiple definition of Orbital files.\n");
+              info = ReadDefFileError(defname);
+            }
+            break;
+
+          case KWOrbitalParallel:
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iNOrbitalP);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
+            fclose(fp);
+            bufInt[IdxNOrbit] += 2*iNOrbitalP; //up-up and down-down
+            if (iNOrbitalP > 0) {
+              iFlgOrbitalGeneral = 1;
+            }
+            iComplexFlgOrbital += iOrbitalComplex;
+            iFlgOrbitalAP = 1;
+
             if (iFlgOrbitalSimple == -1) {
               fprintf(stderr, "error: Multiple definition of Orbital files.\n");
               info = ReadDefFileError(defname);
@@ -472,28 +480,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
               info = ReadDefFileError(defname);
             }
             iFlgOrbitalSimple = -1;
-            break;
-
-          case KWOrbitalParallel:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOrbitParallel]);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
-            fclose(fp);
-            //up-up and down-down
-            iNOrbitalP = bufInt[IdxNOrbitParallel];
-            bufInt[IdxNOrbit] += 2*bufInt[IdxNOrbitParallel];
-            if (bufInt[IdxNOrbitParallel] > 0) {
-              iFlgOrbitalGeneral = 1;
-            }
-            iComplexFlgOrbital += iOrbitalComplex;
-            iFlgOrbitalAP = 1;
-
-            if (iFlgOrbitalSimple == -1) {
-              fprintf(stderr, "error: Multiple definition of Orbital files.\n");
-              info = ReadDefFileError(defname);
-            }
             break;
 
           case KWTransSym:
@@ -646,7 +632,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NCoulombIntra = bufInt[IdxNCoulombIntra];
   NCoulombInter = bufInt[IdxNCoulombInter];
   NHundCoupling = bufInt[IdxNHund];
-  //NPairHopping = bufInt[IdxNPairHop];
   NPairHopping = 2*bufInt[IdxNPairHop];
   NExchangeCoupling = bufInt[IdxNExchange];
   NGutzwillerIdx = bufInt[IdxNGutz];
@@ -668,6 +653,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   DSROptStaDel = bufDouble[IdxSROptStaDel];
   DSROptStepDt = bufDouble[IdxSROptStepDt];
 
+  //fprintf(stdout, "Debug: NOrbitalIdx=%d\n", NOrbitalIdx);
   if (NMPTrans < 0) {
     APFlag = 1; /* anti-periodic boundary */
     NMPTrans *= -1;
@@ -682,6 +668,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   } else {
     SRFlag = 0;
   }
+
   Nsize = 2 * Ne;
   Nsite2 = 2 * Nsite;
   NSlater = NOrbitalIdx;
@@ -793,6 +780,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 
       if (strcmp(defname, "") == 0) continue;
 
+      fprintf(stdout, "     %s\n", defname);
       fp = fopen(defname, "r");
       if (fp == NULL) {
         info = ReadDefFileError(defname);
@@ -1014,7 +1002,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	    //	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	    fidx++;
 	    idx1++;
-          count_idx++;
+      count_idx++;
 
       }
 	  if(idx0!=Nsite*(Nsite-1) || idx1!=NJastrowIdx) {
@@ -1323,6 +1311,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               OptFlag[4 * fidx + 1] = iComplexFlgOrbital;
               OptFlag[4 * fidx + 2] = OptFlag[4 * fidx];
               OptFlag[4 * fidx + 3] = iComplexFlgOrbital;
+              fprintf(stdout, "Debug: count=%d, fidx=%d \n", idx1, fidx);
               fidx++;
               idx1++;
               count_idx+=2;
@@ -2104,8 +2093,6 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxNDH2]=0;
   bufInt[IdxNDH4]=0;
   bufInt[IdxNOrbit]=0;
-  bufInt[IdxNOrbitAntiParallel]=0;
-  bufInt[IdxNOrbitParallel]=0;
   bufInt[IdxNQPTrans]=0;
   bufInt[IdxNOneBodyG]=0;
   bufInt[IdxNTwoBodyG]=0;
