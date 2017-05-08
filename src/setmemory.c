@@ -330,13 +330,27 @@ void SetMemory() {
   /***** Stocastic Reconfiguration *****/
   if(NVMCCalMode==0){
     //SR components are described by real and complex components of O
-    SROptOO = (double complex*)malloc( sizeof(double complex)*((2*SROptSize)*(2*SROptSize+2))) ; //TBC
-    SROptHO = SROptOO + (2*SROptSize)*(2*SROptSize); //TBC
-    SROptO  = SROptHO + (2*SROptSize);  //TBC
+    if(NStoreO<2){
+      SROptOO = (double complex*)malloc( sizeof(double complex)*((2*SROptSize)*(2*SROptSize+2))) ; //TBC
+      SROptHO = SROptOO + (2*SROptSize)*(2*SROptSize); //TBC
+      SROptO  = SROptHO + (2*SROptSize);  //TBC
+    }else{
+      // OO contains only <O_i> and <O_i O_i>
+      SROptOO = (double complex*)malloc( sizeof(double complex)*(2*SROptSize)*4) ; //TBC
+      SROptHO = SROptOO + 2*SROptSize*2; //TBC
+      SROptO  = SROptHO + 2*SROptSize;  //TBC
+    }
 //for real
-    SROptOO_real = (double*)malloc( sizeof(double )*((SROptSize)*(SROptSize+2))) ; //TBC
-    SROptHO_real = SROptOO_real + (SROptSize)*(SROptSize); //TBC
-    SROptO_real  = SROptHO_real + (SROptSize);  //TBC
+    if(NStoreO<2){
+      SROptOO_real = (double*)malloc( sizeof(double )*SROptSize*(SROptSize+2)) ; //TBC
+      SROptHO_real = SROptOO_real + (SROptSize)*(SROptSize); //TBC
+      SROptO_real  = SROptHO_real + (SROptSize);  //TBC
+    }else{
+      // OO contains only <O_i> and <O_i O_i>
+      SROptOO_real = (double*)malloc( sizeof(double )*SROptSize*4) ; //TBC
+      SROptHO_real = SROptOO_real + SROptSize*2; //TBC
+      SROptO_real  = SROptHO_real + SROptSize;  //TBC
+    }
 
     if(NStoreO!=0){
       if(AllComplexFlag==0){

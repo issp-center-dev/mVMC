@@ -35,6 +35,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "lslocgrn.c"
 #include "calgrn.c"
 
+// #define _DEBUG_VMCCAL
+
 void clearPhysQuantity();
 
 void calculateOptTransDiff(double complex *srOptO, const double complex ipAll);
@@ -85,7 +87,7 @@ void VMCMainCal(MPI_Comm comm) {
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
-#ifdef _DEBUG
+#ifdef _DEBUG_VMCCAL
   printf("  Debug: SplitLoop\n");
 #endif
   SplitLoop(&sampleStart,&sampleEnd,NVMCSample,rank,size);
@@ -106,7 +108,7 @@ void VMCMainCal(MPI_Comm comm) {
 //DEBUG
 
     StartTimer(40);
-#ifdef _DEBUG
+#ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: CalculateMAll \n",sample);
 #endif
     if(AllComplexFlag==0){
@@ -122,7 +124,7 @@ void VMCMainCal(MPI_Comm comm) {
       fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
       continue;
     }
-#ifdef _DEBUG
+#ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: CalculateIP \n",sample);
 #endif
     if(AllComplexFlag==0){
@@ -132,14 +134,14 @@ void VMCMainCal(MPI_Comm comm) {
     } 
 
     //x = LogProjVal(eleProjCnt);
-#ifdef _DEBUG
+#ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: LogProjVal \n",sample);
 #endif
     LogProjVal(eleProjCnt);
     /* calculate reweight */
     //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
     w =1.0;
-#ifdef _DEBUG
+#ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: isfinite \n",sample);
 #endif
     if( !isfinite(w) ) {
@@ -149,22 +151,26 @@ void VMCMainCal(MPI_Comm comm) {
 
     StartTimer(41);
     /* calculate energy */
-#ifdef _DEBUG
+#ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: calculateHam \n",sample);
 #endif
     if(AllComplexFlag==0){
-#ifdef _DEBUG
+#ifdef _DEBUG_VMCCAL
       printf("  Debug: sample=%d: calculateHam_real \n",sample);
 #endif
       e = CalculateHamiltonian_real(creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
     }else{
-#ifdef _DEBUG
+#ifdef _DEBUG_VMCCAL
       printf("  Debug: sample=%d: calculateHam_cmp \n",sample);
 #endif
       e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
     }
     //printf("DEBUG: rank=%d: sample=%d ip= %lf %lf\n",rank,sample,creal(ip),cimag(ip));
     StopTimer(41);
+
+#ifdef _DEBUG_VMCCAL
+    printf("  Debug: sample=%d: e = %lf %lf \n",sample, creal(e), cimag(e));
+#endif
     if( !isfinite(creal(e) + cimag(e)) ) {
       fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
       continue;
@@ -173,7 +179,7 @@ void VMCMainCal(MPI_Comm comm) {
     Wc += w;
     Etot  += w * e;
     Etot2 += w * conj(e) * e;
-#ifdef _DEBUG
+#ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: calculateOpt \n",sample);
 #endif
     if(NVMCCalMode==0) {
@@ -280,7 +286,7 @@ void VMCMainCal(MPI_Comm comm) {
   } /* end of for(sample) */
 
 // calculate OO and HO at NVMCCalMode==0
-  if(NStoreO!=0 && NVMCCalMode==0){
+  if(NStoreO>0 && NVMCCalMode==0){
     sampleSize=sampleEnd-sampleStart;
     if(AllComplexFlag==0){
       StartTimer(45);
@@ -547,13 +553,21 @@ void clearPhysQuantity(){
 //[e] MERGE BY TM
   if(NVMCCalMode==0) {
     /* SROptOO, SROptHO, SROptO */
-    n = (2*SROptSize)*(2*SROptSize+2); // TBC
+    if(NStoreO < 2){
+      n = (2*SROptSize)*(2*SROptSize+2); // TBC
+    }else{
+      n = (2*SROptSize)*4; // TBC
+    }
     vec = SROptOO;
     #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
 
 // only for real variables
-    n = (SROptSize)*(SROptSize+2); // TBC
+    if(NStoreO < 2){
+      n = (SROptSize)*(SROptSize+2); // TBC
+    }else{
+      n = (SROptSize)*4; // TBC
+    }
     vec_real = SROptOO_real;
     #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec_real[i] = 0.0;
@@ -625,15 +639,33 @@ extern int
 dgemm_(char *jobz, char *uplo, int *m, int *n, int *k, double *alpha, double *a, int *lda, double *b, int *ldb,
        double *beta, double *c, int *ldc);
 
+  int i,j;
   char jobz, uplo;
-  double alpha,beta;
+  double alpha,beta,o;
   
   alpha = 1.0;
   beta  = 0.0;
   
   jobz = 'N';
   uplo = 'T';
-  dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store_real,&srOptSize,srOptO_Store_real,&srOptSize,&beta,srOptOO_real,&srOptSize);
+  if(NStoreO==1){
+    dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store_real,&srOptSize,srOptO_Store_real,&srOptSize,&beta,srOptOO_real,&srOptSize);
+  }else{
+#pragma omp parallel for default(shared) private(i)
+#pragma loop noalias
+    for(i=0; i<srOptSize; ++i){
+      srOptOO_real[i] = 0.0;
+      srOptOO_real[i+srOptSize] = 0.0;
+    }
+    for(j=0; j<sampleSize; ++j){
+#pragma omp parallel for default(shared) private(i,o)
+#pragma loop noalias
+    for(i=0; i<srOptSize; ++i){
+      o = srOptO_Store_real[i+j*srOptSize];
+      srOptOO_real[i] += o;
+      srOptOO_real[i+srOptSize] += o*o;
+    }}
+  }
 
   return;
 }
@@ -648,15 +680,33 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
   extern int zgemm_(char *jobz, char *uplo, int *m,int *n,int *k,double complex *alpha,  double complex *a, int *lda, double complex *b, int *ldb,
                     double complex *beta,double complex *c,int *ldc);
 
+  int i,j;
   char jobz, uplo;
-  double complex alpha,beta;
+  double complex alpha,beta,o;
   
   alpha = 1.0;
   beta  = 0.0;
   
   jobz = 'N';
   uplo = 'C';
-  zgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
+  if(NStoreO==1){
+    zgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
+  }else{
+#pragma omp parallel for default(shared) private(i)
+#pragma loop noalias
+    for(i=0; i<srOptSize; ++i){
+      srOptOO[i] = 0.0;
+      srOptOO[i+srOptSize] = 0.0;
+    }
+    for(j=0; j<sampleSize; ++j){
+#pragma omp parallel for default(shared) private(i,o)
+#pragma loop noalias
+    for(i=0; i<srOptSize; ++i){
+      o = srOptO_Store[i+j*srOptSize];
+      srOptOO[i] += o;
+      srOptOO[i+srOptSize] += creal(o)*creal(o)+cimag(o)*cimag(o);
+    } }
+  }
 
   return;
 }

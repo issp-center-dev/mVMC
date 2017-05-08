@@ -29,6 +29,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "vmcmain.h"
 #include "physcal_lanczos.h"
 
+// #define _DEBUG
+// #define _DEBUG_DUMP_SROPTO_STORE
+// #define _DEBUG_DUMP_SROPTOO
+// #define _DEBUG_DUMP_PARA
+
 int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2);
 int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2);
 void outputData();
@@ -424,13 +429,68 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     ReduceCounter(comm_child2);
       StopTimer(21);
       StartTimer(22);
+
     /* output zvo_out and zvo_var */
     if(rank==0) outputData();
       StopTimer(22);
-      StartTimer(5);
-    info = StochasticOpt(comm_parent);
+
+#ifdef _DEBUG_DUMP_SROPTO_STORE
+    if(rank==0){
+      if(AllComplexFlag==0){
+        for(i=0;i<SROptSize*NVMCSample;i++){
+          fprintf(stderr, "DEBUG: SROptO_Store_real[%d]=%lf +I*%lf\n",i,creal(SROptO_Store_real[i]),cimag(SROptO_Store_real[i]));
+        } 
+      }else{
+        for(i=0;i<2*SROptSize*NVMCSample;i++){
+          fprintf(stderr, "DEBUG: SROptO_Store[%d]=%lf +I*%lf\n",i,creal(SROptO_Store[i]),cimag(SROptO_Store[i]));
+        } 
+      }
+    }
+#endif
+
+#ifdef _DEBUG_DUMP_SROPTOO
+    if(rank==0){
+      if(AllComplexFlag==0){
+        for(i=0;i<(NStoreO<2 ? SROptSize*SROptSize: SROptSize*2);i++){
+          fprintf(stderr, "DEBUG: SROptOO_real[%d]=%lf +I*%lf\n",i,creal(SROptOO_real[i]),cimag(SROptOO_real[i]));
+        } 
+        for(i=0;i<SROptSize;i++){
+          fprintf(stderr, "DEBUG: SROptHO_real[%d]=%lf +I*%lf\n",i,creal(SROptHO_real[i]),cimag(SROptHO_real[i]));
+        } 
+        for(i=0;i<SROptSize;i++){
+          fprintf(stderr, "DEBUG: SROptO_real[%d]=%lf +I*%lf\n",i,creal(SROptO_real[i]),cimag(SROptO_real[i]));
+        } 
+      }else{
+        for(i=0;i<(NStoreO<2 ? 2*SROptSize*(2*SROptSize): 2*SROptSize*2);i++){
+          fprintf(stderr, "DEBUG: SROptOO[%d]=%lf +I*%lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
+        } 
+        for(i=0;i<2*SROptSize;i++){
+          fprintf(stderr, "DEBUG: SROptHO[%d]=%lf +I*%lf\n",i,creal(SROptHO[i]),cimag(SROptHO[i]));
+        } 
+        for(i=0;i<2*SROptSize;i++){
+          fprintf(stderr, "DEBUG: SROptO[%d]=%lf +I*%lf\n",i,creal(SROptO[i]),cimag(SROptO[i]));
+        } 
+      }
+    }
+#endif
+
+    StartTimer(5);
+    if(NStoreO==2){
+      info = StochasticOptCG(comm_parent);
+    }else{
+      info = StochasticOpt(comm_parent);
+    }
     //info = StochasticOptDiag(comm_parent);
-      StopTimer(5);
+    StopTimer(5);
+
+#ifdef _DEBUG_DUMP_PARA
+    for(i=0; i<NPara; ++i){
+      fprintf(stderr, "DEBUG: Para[%d] = %lf %lf\n", i, creal(Para[i]), cimag(Para[i]));
+    }
+#endif
+
+    // DEBUG
+    // abort();
 
     if(info!=0) {
       if(rank==0) fprintf(stderr, "Error: StcOpt info=%d step=%d\n",info,step);
