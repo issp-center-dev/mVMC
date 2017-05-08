@@ -29,6 +29,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "stcopt_pdposv.h"
 #ifndef _SRC_STCOPT_PDPOSV
 #define _SRC_STCOPT_PDPOSV
+// #define _DEBUG_STCOPT_PDPOSV
 
 #ifdef _SYSTEM_A
  #define M_PDSYEVD PDSYEVD
@@ -121,6 +122,9 @@ int StochasticOpt(MPI_Comm comm) {
     //r[2*pi]   = creal(srOptOO[(2*pi+2)*(2*srOptSize+pi)+(2*pi+2)]) - creal(srOptOO[2*pi+2]) * creal(srOptOO[2*pi+2]);
     //r[2*pi+1] = creal(srOptOO[(2*pi+3)*(2*srOptSize+pi)+(2*pi+3)]) - creal(srOptOO[2*pi+3]) * creal(srOptOO[2*pi+3]);
     //printf("DEBUG: pi=%d: %lf %lf \n",pi,creal(srOptOO[pi]),cimag(srOptOO[pi]));
+#ifdef _DEBUG_STCOPT_PDPOSV
+  fprintf(stderr, "DEBUG in %s (%d): r[%d] = %lf\n", __FILE__, __LINE__, pi, r[pi]);
+#endif
   }
 
 // search for max and min
@@ -157,6 +161,11 @@ int StochasticOpt(MPI_Comm comm) {
   for(si=nSmat;si<2*nPara;si++) {
     smatToParaIdx[si] = -1; // parameters that will not be optimized
   }
+
+#ifdef _DEBUG_STCOPT_PDPOSV
+  printf("DEBUG in %s (%d): diagCutThreshold = %lg\n", __FILE__, __LINE__, diagCutThreshold);
+  printf("DEBUG in %s (%d): optNum, cutNum, nSmat, 2*nPara == %d, %d, %d, %d\n", __FILE__, __LINE__, optNum, cutNum, nSmat, 2*nPara);
+#endif
 
   StopTimer(50);
   StartTimer(51);
@@ -356,8 +365,22 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   }
 
   StopTimer(56);
+
+#ifdef _DEBUG_STCOPT_PDPOSV
+  for(ir=0; ir<vlocr; ++ir){
+    printf("%lg\n", g[ir]);
+  }
+  for(ic=0;ic<mlocc;ic++) {
+    for(ir=0;ir<mlocr;ir++) {
+      idx = ir + ic*mlocr; /* local index (row major) */
+      printf("%lg ", s[idx]);
+    }
+    printf("\n");
+  }
+#endif
+
   StartTimer(57);
-  
+
   /***** solve the linear equation S*r=g by PDPOSV *****/
   uplo='U'; n=nSmat; nrhs=1; is=1; js=1; ig=1; jg=1;
   M_PDPOSV(&uplo, &n, &nrhs, s, &is, &js, descs, 
@@ -393,6 +416,12 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   }
 
   StopTimer(58);
+
+#ifdef _DEBUG_STCOPT_PDPOSV
+  for(si=0; si<nSmat; ++si){
+    fprintf(stderr, "%lg\n", r[si]);
+  }
+#endif
 
   ReleaseWorkSpaceInt();
   ReleaseWorkSpaceDouble();

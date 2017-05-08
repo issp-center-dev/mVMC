@@ -47,6 +47,7 @@ slater_fsz.c \
 splitloop.c \
 stcopt_dposv.c \
 stcopt_pdposv.c \
+stcopt_cg.c \
 vmccal.c \
 vmccal_fsz.c \
 vmcdry.c \
