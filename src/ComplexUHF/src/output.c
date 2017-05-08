@@ -126,7 +126,8 @@ int MakeOrbitalFile(struct BindStruct *X){
   double complex **tmp_mat,**vec;
   double *r;
   char fileName[256];
-//
+
+/*this part only for anti-parallel
 //[s] for anti-pararell, rediag
   xMsize = X->Def.Nsite;  
   c_malloc2(tmp_mat,xMsize,xMsize);
@@ -162,7 +163,7 @@ int MakeOrbitalFile(struct BindStruct *X){
     }
   }
 //[e] for anti-pararell
-
+*/
  
   
   if(X->Def.NOrbitalIdx>0){
@@ -175,8 +176,9 @@ int MakeOrbitalFile(struct BindStruct *X){
             jsite = j+jspin*X->Def.Nsite;
             UHF_Fij[isite][jsite]=0;
             for(n=0;n< 2*X->Def.Ne;n+=2){
-              UHF_Fij[isite][jsite]   +=  X->Large.R_SLT[isite][n]*X->Large.R_SLT[jsite][n+1];
+              UHF_Fij[isite][jsite]   +=  X->Large.R_SLT[isite][n]*X->Large.R_SLT[jsite][n+1]- X->Large.R_SLT[isite][n+1]*X->Large.R_SLT[jsite][n];
             }
+       //     printf(" %d %d: %d %d: %lf %lf \n",i,ispin,j,jspin,creal(UHF_Fij[isite][jsite]),cimag(UHF_Fij[isite][jsite]));
           }
         }
       }
@@ -208,7 +210,8 @@ int MakeOrbitalFile(struct BindStruct *X){
             jsite = j+jspin*X->Def.Nsite;
             Orbitalidx=X->Def.OrbitalIdx[isite][jsite];
             if(Orbitalidx !=-1){
-              ParamOrbital[Orbitalidx]+=UHF_Fij[isite][jsite];
+             // ParamOrbital[Orbitalidx]+=UHF_Fij[isite][jsite];
+              ParamOrbital[Orbitalidx]=UHF_Fij[isite][jsite];
               CountOrbital[Orbitalidx]+=1;
               //printf("debug: Orbitaidx[%d][%d]=%d, UHF_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(UHF_Fij[isite][jsite]), cimag(UHF_Fij[isite][jsite]));
               //printf("debug: Orbitaidx[%d][%d]=%d, ParamOrbital_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(ParamOrbital[Orbitalidx]), cimag(ParamOrbital[Orbitalidx]));
@@ -217,12 +220,13 @@ int MakeOrbitalFile(struct BindStruct *X){
         }
       }
     }
-
+//[s] MERGE BY TM
     for(i=0; i<X->Def.NOrbitalIdx; i++){
       ParamOrbital[i] /= (double)CountOrbital[i];
-		ParamOrbital[i] += genrand_real2()*pow(10.0,-X->Def.eps_int_slater);
+		  ParamOrbital[i] += genrand_real2()*pow(10.0,-X->Def.eps_int_slater);
       //printf("debug: Orbital: idx=%d, param=%lf, %lf , count=%d \n", i, creal(ParamOrbital[i]), cimag(ParamOrbital[i]), CountOrbital[i]);
     };
+//[e] MERGE BY TM
     
     sprintf(fileName, "%s_orbital_opt.dat", X->Def.CParaFileHead);
     Child_OutputOptData(fileName, "NOrbitalIdx", ParamOrbital, X->Def.NOrbitalIdx);

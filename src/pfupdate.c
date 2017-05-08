@@ -34,6 +34,7 @@ double complex updateMAll_BF_fcmp_child(
         const int n, const int *msa,
         const int *eleIdx);
 
+
 /* Calculate new pfaffian. The ma-th electron with spin s hops. */
 void CalculateNewPfM(const int ma, const int s, double complex *pfMNew, const int *eleIdx,
                      const int qpStart, const int qpEnd) {
@@ -167,7 +168,7 @@ void updateMAll_child(const int ma, const int s, const int *eleIdx,
   for(msi=0;msi<nsize;msi++) vec1[msi] = 0.0+0.0*I; //TBC
 
   /* Calculate vec1[i] = sum_j invM[i][j] sltE[a][j] */
-  /* Note tah invM[i][j] = -invM[j][i] */
+  /* Note that invM[i][j] = -invM[j][i] */
   #pragma loop noalias
   for(msj=0;msj<nsize;msj++) {
     rsj = eleIdx[msj] + (msj/Ne)*Nsite;

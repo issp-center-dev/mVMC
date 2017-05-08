@@ -51,14 +51,14 @@ void UpdateSlaterElm_fcmp() {
   #pragma loop noalias
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
     // qpidx  = optidx*NQPFix+NSPGaussLeg*mpidx+spidx 
-    // optidx will not be used
-    optidx    = qpidx / NQPFix;   
-    mpidx     = (qpidx%NQPFix) / NSPGaussLeg;
-    spidx     = qpidx % NSPGaussLeg;
+    // NQPFix = NSPGaussLeg*NMPTrans
+    optidx    = qpidx / NQPFix;                // optidx -> optrans projection (will not be used ?)
+    mpidx     = (qpidx%NQPFix) / NSPGaussLeg;  // mpidx  -> momentum projection
+    spidx     = qpidx % NSPGaussLeg;           // spidx  -> spin     projection
 
-    xqpOpt    = QPOptTrans[optidx];
-    xqpOptSgn = QPOptTransSgn[optidx];
-    xqp       = QPTrans[mpidx];
+    xqpOpt    = QPOptTrans[optidx];    //
+    xqpOptSgn = QPOptTransSgn[optidx]; //
+    xqp       = QPTrans[mpidx];        //QPTrans[i][j]: i # of trans. op.,j origin of trans. op. 
     xqpSgn    = QPTransSgn[mpidx];
     cs        = SPGLCosSin[spidx];
     cc        = SPGLCosCos[spidx];
@@ -67,7 +67,7 @@ void UpdateSlaterElm_fcmp() {
     sltE      = SlaterElm + qpidx*Nsite2*Nsite2;
     
     for(ri=0;ri<Nsite;ri++) {
-      ori     = xqpOpt[ri];
+      ori     = xqpOpt[ri];           // ri (OptTrans) -> ori (Trans)-> tri
       tri     = xqp[ori];
       sgni    = xqpSgn[ori]*xqpOptSgn[ri];
       rsi0    = ri;
