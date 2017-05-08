@@ -44,9 +44,81 @@ int CheckSite(const int iSite, const int iMaxNum);
 int CheckPairSite(const int iSite1, const int iSite2, const int iMaxNum);
 int CheckQuadSite(const int iSite1, const int iSite2, const int iSite3, const int iSite4, const int iMaxNum);
 
+char* ReadBuffInt(FILE *fp, int *iNbuf){
+  char *cerr;
+  char ctmp[D_FileNameMax];
+  char ctmp2[D_FileNameMax];
+  cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+  if(cerr != NULL) {
+    cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+    sscanf(ctmp2, "%s %d\n", ctmp, iNbuf); //2
+  }
+  return cerr;
+}
+
+char* ReadBuffIntCmpFlg(FILE *fp, int *iNbuf, int *iComplexFlag){
+  char *cerr;
+  char ctmp[D_FileNameMax];
+  char ctmp2[D_FileNameMax];
+  cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+  if(cerr != NULL) {
+    cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+    sscanf(ctmp2, "%s %d\n", ctmp, iNbuf); //2
+    if(cerr != NULL) {
+      cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+      sscanf(ctmp2, "%s %d\n", ctmp, iComplexFlag);
+    }
+  }
+  return cerr;
+}
+
+
 int ReadDefFileError(const char *defname){
   fprintf(stderr, "error: %s (Broken file or Not exist)\n", defname);
   return 1;
+}
+
+///
+/// \param _iFlgOrbitalGeneral Flag of Orbital General
+/// \param _iFlgOrbitalAP Flag of Orbital General
+/// \param _iFlgOrbitalP
+/// \retval 0  normal
+/// \retval -1 multiple definition
+/// \retval -2 too few definition
+
+int JudgeOrbitalMode(int *_iFlgOrbitalGeneral, const int _iFlgOrbitalAP, const int _iFlgOrbitalP){
+
+  int iret=0;
+  //(General, AP, P)
+  if(*_iFlgOrbitalGeneral==1){
+    if(_iFlgOrbitalAP==0 && _iFlgOrbitalP==0){ //(1, 0, 0)
+      iret=0;
+    }
+    else{//(1, 1, 0) or (1, 0, 1) or (1, 1, 1)
+      iret= -1;
+    }
+  }
+  else{
+    if(_iFlgOrbitalAP==1){
+      if(_iFlgOrbitalP==1){ //(0, 1, 1)
+        *_iFlgOrbitalGeneral=1;
+        iret= 0;
+      }
+      else{ //(0, 1, 0)
+        iret= 0;
+      }
+    }
+    else{// (0, 0, 0) or (0, 0, 1)
+      iret= -2;
+    }
+  }
+  if(iret==-1) {
+    fprintf(stderr, "error: Multiple definition of Orbital files.\n");
+  }
+  else if(iret==-2){
+    fprintf(stderr, "error: Not exist any Orbital file or Need OrbitalAP file.\n");
+  }
+  return iret;
 }
 
 int ReadGreen(char *xNameListFile, int Nca, int**caIdx, int Ncacadc, int**cacaDCIdx, int Ns){
@@ -224,7 +296,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   int bufInt[nBufInt];
   double bufDouble[nBufDouble];
   int iKWidx = 0;
-  int iFlgOrbitalSimple = 0;
+  int iret=0;
+  int iFlgOrbitalAP=0;
+  int iFlgOrbitalP=0;
+
   int iOrbitalComplex = 0;
   iFlgOrbitalGeneral = 0;
   MPI_Comm_rank(comm, &rank);
@@ -263,7 +338,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         fclose(fp);
         break;
       } else {
-
         switch (iKWidx) {
           case KWModPara:
             /* Read modpara.def---------------------------------------*/
@@ -341,195 +415,102 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
               bufInt[IdxRndSeed] = (int) time(NULL);
               fprintf(stdout, "  remark: Seed = %d\n", bufInt[IdxRndSeed]);
             }
-            fclose(fp);
             break;//modpara file
 
           case KWLocSpin:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNLocSpin]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNLocSpin]);
             break;
 
           case KWTrans:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNTrans]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNTrans]);
             break;
 
           case KWCoulombIntra:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNCoulombIntra]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNCoulombIntra]);
             break;
 
           case KWCoulombInter:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNCoulombInter]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNCoulombInter]);
             break;
 
           case KWHund:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNHund]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNHund]);
             break;
 
           case KWPairHop:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNPairHop]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNPairHop]);
             break;
 
           case KWExchange:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNExchange]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNExchange]);
             break;
 
           case KWGutzwiller:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNGutz]);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgGutzwiller);
-            fclose(fp);
+            cerr= ReadBuffIntCmpFlg(fp, &bufInt[IdxNGutz], &iComplexFlgGutzwiller);
             break;
 
           case KWJastrow:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNJast]);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgJastrow);
-            fclose(fp);
+            cerr= ReadBuffIntCmpFlg(fp, &bufInt[IdxNJast], &iComplexFlgJastrow);
             break;
 
           case KWDH2:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNDH2]);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgDH2);
-            fclose(fp);
+            cerr= ReadBuffIntCmpFlg(fp, &bufInt[IdxNDH2], &iComplexFlgDH2);
             break;
 
           case KWDH4:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNDH4]);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &iComplexFlgDH4);
-            fclose(fp);
+            cerr= ReadBuffIntCmpFlg(fp, &bufInt[IdxNDH4], &iComplexFlgDH4);
             break;
 
           case KWOrbital:
           case KWOrbitalAntiParallel:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &iNOrbitalAP);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
-            fclose(fp);
+            cerr= ReadBuffIntCmpFlg(fp, &iNOrbitalAP, &iOrbitalComplex);
             iFlgOrbitalAP = 1;
             bufInt[IdxNOrbit] += iNOrbitalAP;
             iComplexFlgOrbital += iOrbitalComplex;
-            if (iFlgOrbitalSimple == -1) {
-              fprintf(stderr, "error: Multiple definition of Orbital files.\n");
-              info = ReadDefFileError(defname);
-            }
             break;
 
           case KWOrbitalParallel:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &iNOrbitalP);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
-            fclose(fp);
-            bufInt[IdxNOrbit] += 2*iNOrbitalP; //up-up and down-down
-            if (iNOrbitalP > 0) {
-              iFlgOrbitalGeneral = 1;
-            }
+            cerr= ReadBuffIntCmpFlg(fp, &iNOrbitalP, &iOrbitalComplex);
+            iFlgOrbitalP = 1;
+            bufInt[IdxNOrbit] += 2 * iNOrbitalP; //up-up and down-down
             iComplexFlgOrbital += iOrbitalComplex;
-            iFlgOrbitalAP = 1;
-
-            if (iFlgOrbitalSimple == -1) {
-              fprintf(stderr, "error: Multiple definition of Orbital files.\n");
-              info = ReadDefFileError(defname);
-            }
             break;
 
           case KWOrbitalGeneral:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOrbit]);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
-            fclose(fp);
+            cerr= ReadBuffIntCmpFlg(fp, &bufInt[IdxNOrbit], &iOrbitalComplex);
             iFlgOrbitalGeneral = 1;
-            iComplexFlgOrbital = iOrbitalComplex;
-            if (iFlgOrbitalSimple == 1) {
-              fprintf(stderr, "error: Multiple definition of Orbital files.\n");
-              info = ReadDefFileError(defname);
-            }
-            iFlgOrbitalSimple = -1;
+            iComplexFlgOrbital += iOrbitalComplex;
             break;
 
           case KWTransSym:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNQPTrans]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNQPTrans]);
             break;
 
           case KWOneBodyG:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOneBodyG]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNOneBodyG]);
             break;
 
           case KWTwoBodyG:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNTwoBodyG]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNTwoBodyG]);
             break;
 
-
           case KWTwoBodyGEx:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNTwoBodyGEx]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNTwoBodyGEx]);
             break;
 
           case KWInterAll:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNInterAll]);
-            fclose(fp);
+            cerr = ReadBuffInt(fp, &bufInt[IdxNInterAll]);
             break;
 
           case KWOptTrans:
             bufInt[IdxNQPOptTrans] = 1;
             if (FlagOptTrans > 0) {
-              cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-              cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-              sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNQPOptTrans]);
+              cerr = ReadBuffInt(fp, &bufInt[IdxNQPOptTrans]);
               if (bufInt[IdxNQPOptTrans] < 1) {
                 fprintf(stderr, "error: NQPOptTrans should be larger than 0.\n");
                 info = ReadDefFileError(defname);
               }
             }
-            fclose(fp);
             break;
 
           case KWBFRange:
@@ -541,7 +522,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
           sscanf(ctmp2,"%s %d %d\n", ctmp, &bufInt[IdxNrange], &bufInt[IdxNNz]);
 #endif
-            fclose(fp);
             break;
 
           case KWBF:
@@ -549,23 +529,24 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             fprintf(stderr, "error: Back Flow is not supported.\n");
             info = ReadDefFileError(defname);
 #else
-          fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-          fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-          sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNBF]);
+          cerr = ReadBuffInt(fp, &bufInt[IdxNBF]);
 #endif
-            fclose(fp);
             break;
-
 
           default:
-            fclose(fp);
             break;
         }//case KW
+        if(cerr == NULL){
+          info = ReadDefFileError(defname);
+        }
+        fclose(fp);
       }
     }
 
-    //For Lanczos mode: Calculation of Green's function
+    iret=JudgeOrbitalMode(&iFlgOrbitalGeneral, iFlgOrbitalAP, iFlgOrbitalP);
+    if(iret<0) info=iret;
 
+    //For Lanczos mode: Calculation of Green's function
     if (bufInt[IdxLanczosMode] > 1) {
       //Get info of CisAjs and CisAjsCktAltDC
       int i;
@@ -583,7 +564,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       bufInt[IdxNOneBodyG] = CountOneBodyGForLanczos(xNameListFile, NCisAjsLz, bufInt[IdxNTwoBodyG],
                                                      bufInt[IdxNsite], CisAjsLzIdx, iOneBodyGIdx);
     }
-
   }
 
   if (info != 0) {

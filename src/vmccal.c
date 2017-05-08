@@ -298,7 +298,7 @@ void VMCMainCal(MPI_Comm comm) {
 void VMC_BF_MainCal(MPI_Comm comm) {
     int *eleIdx, *eleCfg, *eleNum, *eleProjCnt, *eleProjBFCnt;
     double complex e, ip; //db is double?
-    double x, w, db;
+    double w, db;
     double we, sqrtw;
     int int_i, sampleSize, tmp_i;
     const int qpStart = 0;

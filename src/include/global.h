@@ -121,8 +121,6 @@ int NDoublonHolon4siteIdx, **DoublonHolon4siteIdx; /* DoublonHolon4siteIdx[idx][
 int NOrbitalIdx, **OrbitalIdx; /* [Nsite][Nsite] */
 int **OrbitalSgn; /* OrbitalSgn[Nsite][Nsite] = +1 or -1 */
 int iFlgOrbitalGeneral=0;
-int iFlgOrbitalAP=0;
-
 
 /* zqptransidx.def */
 int NQPTrans, **QPTrans, **QPTransInv; /* [NQPTrans][Nsite] */
