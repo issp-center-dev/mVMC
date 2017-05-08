@@ -405,7 +405,6 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
         }else{//fsz
           VMCMainCal_fsz(comm_child1); 
         }
-
       }
       else{
         VMC_BF_MainCal(comm_child1);
