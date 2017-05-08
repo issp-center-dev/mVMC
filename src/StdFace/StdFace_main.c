@@ -2094,7 +2094,14 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
   PrintExcitation(&StdI);
   PrintCalcMod(&StdI);
 #elif defined(_mVMC)
-  StdFace_PrintVal_i("ComplexType", &StdI.ComplexType, 0);
+  if(StdI.lGC == 0) StdFace_PrintVal_i("ComplexType", &StdI.ComplexType, 0);
+  else {
+    StdFace_PrintVal_i("ComplexType", &StdI.ComplexType, 1);
+    if (StdI.ComplexType != 1) {
+      fprintf(stderr, "\nERROR! ComplexType MUST be 1 for Grandcanonical.\n");
+      StdFace_exit(-1);
+    }/*if (StdI.ComplexType != 1)*/
+  }
   StdFace_generate_orb(&StdI);
   StdFace_Proj(&StdI);
   PrintJastrow(&StdI);

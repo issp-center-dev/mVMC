@@ -360,7 +360,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 #ifdef _DEBUG
       printf("Debug: step %d, MakeSample.\n", step);
 #endif
-     if(AllComplexFlag==0){
+     if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ // real & sz=0
         // only for real TBC
          StartTimer(69);
          #pragma omp parallel for default(shared) private(tmp_i)
@@ -371,8 +371,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          if(NProjBF ==0){
          // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
             VMCMakeSample_real(comm_child1);
-         }
-         else{
+         }else{
             VMC_BF_MakeSample_real(comm_child1);
          }
          // only for real TBC
@@ -382,9 +381,8 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          StopTimer(69);
          // only for real TBC
       }else{
-
          if(NProjBF ==0) {
-           if(iFlgOrbitalGeneral==0){//sz is conserved
+           if(iFlgOrbitalGeneral==0){// sz =0 & complex
              VMCMakeSample(comm_child1);//VMCMakeSample(comm_child1);
            }else{
              VMCMakeSample_fsz(comm_child1);//VMCMakeSample(comm_child1);
@@ -419,7 +417,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 #ifdef _DEBUG
       printf("Debug: step %d, SROpt.\n", step);
 #endif
-    if(AllComplexFlag==0){
+    if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz =0
       WeightAverageSROpt_real(comm_parent);
     }else{
       WeightAverageSROpt(comm_parent);
@@ -435,7 +433,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
 #ifdef _DEBUG_DUMP_SROPTO_STORE
     if(rank==0){
-      if(AllComplexFlag==0){
+      if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
         for(i=0;i<SROptSize*NVMCSample;i++){
           fprintf(stderr, "DEBUG: SROptO_Store_real[%d]=%lf +I*%lf\n",i,creal(SROptO_Store_real[i]),cimag(SROptO_Store_real[i]));
         } 
@@ -449,7 +447,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
 #ifdef _DEBUG_DUMP_SROPTOO
     if(rank==0){
-      if(AllComplexFlag==0){
+      if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
         for(i=0;i<(NStoreO<2 ? SROptSize*SROptSize: SROptSize*2);i++){
           fprintf(stderr, "DEBUG: SROptOO_real[%d]=%lf +I*%lf\n",i,creal(SROptOO_real[i]),cimag(SROptOO_real[i]));
         } 
@@ -532,7 +530,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     
     StartTimer(3);
 	if(NProjBF ==0) {
-	  if(AllComplexFlag==0){
+	  if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){//real & sz=0
         // only for real TBC
         StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
