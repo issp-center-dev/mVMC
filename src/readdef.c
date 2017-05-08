@@ -252,6 +252,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
     }
 
+    SetDefultValuesModPara(bufInt, bufDouble);
     for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
       strcpy(defname, cFileNameListFile[iKWidx]);
       if (strcmp(defname, "") == 0) continue;
@@ -267,7 +268,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           case KWModPara:
             /* Read modpara.def---------------------------------------*/
             //TODO: add error procedure here when parameters are not enough.
-            SetDefultValuesModPara(bufInt, bufDouble);
             cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
             cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &itmp); //2
@@ -433,29 +433,37 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             fclose(fp);
             break;
 
-            /*
-          case KWOrbital:
-            fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-            fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-            sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNOrbit]);
-            fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-            sscanf(ctmp2,"%s %d\n", ctmp, &iComplexFlgOrbital);
-            fclose(fp);
-            break;
-            */
-
           case KWOrbital:
           case KWOrbitalAntiParallel:
             cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
             cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOrbitAntiParallel]);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iNOrbitalAP);
             cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
             sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
             fclose(fp);
             iFlgOrbitalAP = 1;
-            iNOrbitalAP = bufInt[IdxNOrbitAntiParallel];
-            bufInt[IdxNOrbit] += bufInt[IdxNOrbitAntiParallel];
+            bufInt[IdxNOrbit] += iNOrbitalAP;
             iComplexFlgOrbital += iOrbitalComplex;
+            if (iFlgOrbitalSimple == -1) {
+              fprintf(stderr, "error: Multiple definition of Orbital files.\n");
+              info = ReadDefFileError(defname);
+            }
+            break;
+
+          case KWOrbitalParallel:
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iNOrbitalP);
+            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+            sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
+            fclose(fp);
+            bufInt[IdxNOrbit] += 2*iNOrbitalP; //up-up and down-down
+            if (iNOrbitalP > 0) {
+              iFlgOrbitalGeneral = 1;
+            }
+            iComplexFlgOrbital += iOrbitalComplex;
+            iFlgOrbitalAP = 1;
+
             if (iFlgOrbitalSimple == -1) {
               fprintf(stderr, "error: Multiple definition of Orbital files.\n");
               info = ReadDefFileError(defname);
@@ -476,28 +484,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
               info = ReadDefFileError(defname);
             }
             iFlgOrbitalSimple = -1;
-            break;
-
-          case KWOrbitalParallel:
-            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &bufInt[IdxNOrbitParallel]);
-            cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-            sscanf(ctmp2, "%s %d\n", ctmp, &iOrbitalComplex);
-            fclose(fp);
-            //up-up and down-down
-            iNOrbitalP = bufInt[IdxNOrbitParallel];
-            bufInt[IdxNOrbit] += 2 * bufInt[IdxNOrbitParallel];
-            if (bufInt[IdxNOrbitParallel] > 0) {
-              iFlgOrbitalGeneral = 1;
-            }
-            iComplexFlgOrbital += iOrbitalComplex;
-            iFlgOrbitalAP = 1;
-
-            if (iFlgOrbitalSimple == -1) {
-              fprintf(stderr, "error: Multiple definition of Orbital files.\n");
-              info = ReadDefFileError(defname);
-            }
             break;
 
           case KWTransSym:
@@ -621,6 +607,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(bufInt, nBufInt, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
+  MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
   MPI_Bcast(CDataFileHead, nBufChar, MPI_CHAR, 0, comm);
   MPI_Bcast(CParaFileHead, nBufChar, MPI_CHAR, 0, comm);
@@ -649,7 +636,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NCoulombIntra = bufInt[IdxNCoulombIntra];
   NCoulombInter = bufInt[IdxNCoulombInter];
   NHundCoupling = bufInt[IdxNHund];
-  //NPairHopping = bufInt[IdxNPairHop];
   NPairHopping = 2*bufInt[IdxNPairHop];
   NExchangeCoupling = bufInt[IdxNExchange];
   NGutzwillerIdx = bufInt[IdxNGutz];
@@ -673,6 +659,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   DSROptStepDt = bufDouble[IdxSROptStepDt];
   DSROptCGTol  = bufDouble[IdxSROptCGTol];
 
+  //fprintf(stdout, "Debug: NOrbitalIdx=%d\n", NOrbitalIdx);
   if (NMPTrans < 0) {
     APFlag = 1; /* anti-periodic boundary */
     NMPTrans *= -1;
@@ -687,6 +674,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   } else {
     SRFlag = 0;
   }
+
   Nsize = 2 * Ne;
   Nsite2 = 2 * Nsite;
   NSlater = NOrbitalIdx;
@@ -713,33 +701,37 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   SROptSize = NPara + 1;
 
   NTotalDefInt = Nsite /* LocSpn */
-                 + 4 * NTransfer /* Transfer */
-                 + NCoulombIntra /* CoulombIntra */
-                 + 2 * NCoulombInter /* CoulombInter */
-                 + 2 * NHundCoupling /* HundCoupling */
-                 + 2 * NPairHopping /* PairHopping */
-                 + 2 * NExchangeCoupling /* ExchangeCoupling */
-                 + Nsite /* GutzwillerIdx */
-                 + Nsite * Nsite /* JastrowIdx */
-                 + 2 * Nsite * NDoublonHolon2siteIdx /* DoublonHolon2siteIdx */
-                 + 4 * Nsite * NDoublonHolon4siteIdx /* DoublonHolon4siteIdx */
-                 + Nsite * Nsite /* OrbitalSgn */
-                 + Nsite * NQPTrans /* QPTrans */
-                 + Nsite * NQPTrans /* QPTransInv */
-                 + Nsite * NQPTrans /* QPTransSgn */
-                 + 4 * NCisAjs /* CisAjs */
-                 + 8 * NCisAjsCktAlt /* CisAjsCktAlt */
-                 + 8 * NCisAjsCktAltDC /* CisAjsCktAltDC */
-                 + 8 * NInterAll /* InterAll */
-                 + Nsite * NQPOptTrans /* QPOptTrans */
-                 + Nsite * NQPOptTrans /* QPOptTransSgn */
-                 + 2 * NPara; /* OptFlag */ // TBC
+    + 4*NTransfer /* Transfer */
+    + NCoulombIntra /* CoulombIntra */
+    + 2*NCoulombInter /* CoulombInter */
+    + 2*NHundCoupling /* HundCoupling */
+    + 2*NPairHopping /* PairHopping */
+    + 2*NExchangeCoupling /* ExchangeCoupling */
+    + Nsite /* GutzwillerIdx */
+    + Nsite*Nsite /* JastrowIdx */
+    + 2*Nsite*NDoublonHolon2siteIdx /* DoublonHolon2siteIdx */
+    + 4*Nsite*NDoublonHolon4siteIdx /* DoublonHolon4siteIdx */
+    //+ (2*Nsite)*(2*Nsite) /* OrbitalIdx */ //fsz
+    //+ (2*Nsite)*(2*Nsite) /* OrbitalSgn */ //fsz
+    + Nsite*NQPTrans /* QPTrans */
+    + Nsite * NQPTrans /* QPTransInv */
+    + Nsite*NQPTrans /* QPTransSgn */
+    + 4*NCisAjs /* CisAjs */
+    + 8*NCisAjsCktAlt /* CisAjsCktAlt */
+    + 8*NCisAjsCktAltDC /* CisAjsCktAltDC */
+    + 8*NInterAll /* InterAll */
+    + Nsite*NQPOptTrans /* QPOptTrans */
+    + Nsite*NQPOptTrans /* QPOptTransSgn */
+    + 2*NPara; /* OptFlag */ // TBC
 
   //Orbitalidx
-  if (iFlgOrbitalGeneral == 0) {
-    NTotalDefInt += Nsite * Nsite;
-  } else if (iFlgOrbitalGeneral == 0) {
-    NTotalDefInt += (2 * Nsite) * (2 * Nsite);
+  if(iFlgOrbitalGeneral==0){
+    NTotalDefInt += Nsite*Nsite; // OrbitalIdx
+    NTotalDefInt += Nsite*Nsite; // OrbitalSgn
+  }
+  else if(iFlgOrbitalGeneral==1){
+    NTotalDefInt += (2*Nsite)*(2*Nsite); //OrbitalIdx
+    NTotalDefInt += (2*Nsite)*(2*Nsite); //OrbitalSgn
   }
 
   if (NBackFlowIdx > 0) {
@@ -776,6 +768,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
   int x0,x1,x2,x3,x4,x5,x6,x7;
   double dReValue, dImValue;
   int rank;
+  int sgn;
 
 	//[s] for Orbital idx
 	int all_i, all_j;
@@ -786,13 +779,12 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
 	//[e] for Orbital idx
 
   MPI_Comm_rank(comm, &rank);
-  
+
   if(rank==0) {
     for (iKWidx = KWLocSpin; iKWidx < KWIdxInt_end; iKWidx++) {
       strcpy(defname, cFileNameListFile[iKWidx]);
-
       if (strcmp(defname, "") == 0) continue;
-
+      fprintf(stdout, "     %s\n", defname);
       fp = fopen(defname, "r");
       if (fp == NULL) {
         info = ReadDefFileError(defname);
@@ -801,415 +793,418 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
       }
 
       /*=======================================================================*/
-      for (i = 0; i < IgnoreLinesInDef; i++) 
-        cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-      idx = 0;
-      idx0 = 0;
-      switch (iKWidx) {
-        case KWLocSpin:
-          /* Read locspn.def----------------------------------------*/
-          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-            sscanf(ctmp2, "%d %d\n", &(x0), &(x1));
-            LocSpn[x0] = x1;
-            if (CheckSite(x0, Nsite) != 0) {
-              fprintf(stderr, "Error: Site index is incorrect.\n");
+      for(i=0;i<IgnoreLinesInDef;i++) fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+      idx=0;
+      idx0=0;
+      switch(iKWidx){
+      case KWLocSpin:
+	/* Read locspn.def----------------------------------------*/
+	while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
+	  sscanf(ctmp2, "%d %d\n", &(x0), &(x1) );
+      LocSpn[x0] = x1;
+      if(CheckSite(x0, Nsite)!=0){
+          fprintf(stderr, "Error: Site index is incorrect.\n");
+          info=1;
+		  break;
+      }
+	  idx++;
+	}
+	if(NLocSpn>2*Ne){
+	  fprintf(stderr, "Error: 2*Ne must satisfy the condition, 2*Ne >= NLocalSpin.\n");
+	  info=1;
+	}
+	if(NLocSpn>0 && NExUpdatePath==0){
+	  fprintf(stderr, "Error: NExUpdatePath (in modpara.def) must be 1.\n");
+	  info=1;
+	}
+	if(idx!=Nsite) info = ReadDefFileError(defname);
+	fclose(fp);	  
+	break;//locspn
+	      
+      case KWTrans:
+	/* transfer.def--------------------------------------*/
+	if(NTransfer>0){
+	  while( fscanf(fp, "%d %d %d %d %lf %lf\n",
+			&x0,&x1,&x2,&x3,
+			&dReValue, &dImValue)!=EOF){
+		  Transfer[idx][0]=x0;
+		  Transfer[idx][1]=x1;
+		  Transfer[idx][2]=x2;
+		  Transfer[idx][3]=x3;
+		  ParaTransfer[idx]=dReValue+I*dImValue;
+
+      if(CheckPairSite(x0, x2, Nsite) !=0) {
+			  fprintf(stderr, "Error: Site index is incorrect. \n");
+			  info = 1;
+			  break;
+		  }
+	    idx++;
+	  }
+	  if(idx!=NTransfer) info = ReadDefFileError(defname);
+	}
+	fclose(fp);
+	break;
+
+      case KWCoulombIntra:
+	/*coulombintra.def----------------------------------*/
+	if(NCoulombIntra>0){
+	  while( fscanf(fp, "%d %lf\n", 
+			&x0, &dReValue )!=EOF){
+		  CoulombIntra[idx]=x0;
+          if(CheckSite(x0, Nsite) != 0){
+              fprintf(stderr, "Error: Site index is incorrect. \n");
+              info=1;
+			  break;
+		  }
+		  ParaCoulombIntra[idx]=dReValue;
+	    idx++;
+	  }
+        if(idx!=NCoulombIntra) info = ReadDefFileError(defname);
+	}
+	fclose(fp);
+	break;
+
+      case KWCoulombInter:
+	/*coulombinter.def----------------------------------*/
+	if(NCoulombInter>0){
+	  while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
+	    sscanf(ctmp2, "%d %d %lf\n",
+		   &x0,&x1, &dReValue);
+		  CoulombInter[idx][0]=x0;
+		  CoulombInter[idx][1]=x1;
+          if(CheckPairSite(x0, x1, Nsite) !=0) {
+              fprintf(stderr, "Error: Site index is incorrect. \n");
+              info=1;
+			  break;
+		  }
+          ParaCoulombInter[idx]=dReValue;
+	    idx++;
+	  }
+	  if(idx!=NCoulombInter) info=ReadDefFileError(defname);
+	}
+	fclose(fp);
+	break;
+
+      case KWHund:
+	/*hund.def------------------------------------------*/
+	if(NHundCoupling>0){
+	  while( fscanf(fp, "%d %d %lf\n",
+			&x0,&x1, &dReValue)!=EOF){
+			HundCoupling[idx][0]=x0;
+			HundCoupling[idx][1]=x1;
+          if(CheckPairSite(x0, x1, Nsite) !=0) {
+              fprintf(stderr, "Error: Site index is incorrect. \n");
+              info=1;
+			  break;
+		  }
+          ParaHundCoupling[idx]=dReValue;
+	    idx++;
+	  }
+	  if(idx!=NHundCoupling) info=ReadDefFileError(defname);
+	}
+	fclose(fp);
+	break;
+
+      case KWPairHop:
+        /*pairhop.def---------------------------------------*/
+        if (NPairHopping > 0) {
+          while (fscanf(fp, "%d %d %lf\n",
+                        &x0, &x1, &dReValue) != EOF) {
+            PairHopping[2*idx][0] = x0;
+            PairHopping[2*idx][1] = x1;
+            if (CheckPairSite(x0, x1, Nsite) != 0) {
+              fprintf(stderr, "Error: Site index is incorrect. \n");
               info = 1;
               break;
             }
+            ParaPairHopping[2*idx] = dReValue;
+            PairHopping[2*idx+1][0] = x1;
+            PairHopping[2*idx+1][1] = x0;
+            ParaPairHopping[2*idx+1] = dReValue;
             idx++;
           }
-          if (NLocSpn > 2 * Ne) {
-            fprintf(stderr, "Error: 2*Ne must satisfy the condition, 2*Ne >= NLocalSpin.\n");
-            info = 1;
+          if (2*idx != NPairHopping) info = ReadDefFileError(defname);
+        }
+        fclose(fp);
+        break;
+	
+      case KWExchange:
+	/*exchange.def--------------------------------------*/
+	if(NExchangeCoupling>0){
+	  while( fscanf(fp, "%d %d %lf\n",
+					&x0,&x1, &dReValue)!=EOF){
+		  	ExchangeCoupling[idx][0]=x0;
+			ExchangeCoupling[idx][1]=x1;
+		  if(CheckPairSite(x0, x1, Nsite) !=0) {
+			  fprintf(stderr, "Error: Site index is incorrect. \n");
+			  info=1;
+			  break;
+		  }
+		  ParaExchangeCoupling[idx]=dReValue;
+	    idx++;
+	  }
+	  if(idx!=NExchangeCoupling) info=ReadDefFileError(defname);
+	}
+	fclose(fp);
+	break;
+
+      case KWGutzwiller:
+	/*gutzwilleridx.def---------------------------------*/
+	if(NGutzwillerIdx>0){
+	  idx0=idx1=0;
+	  while( fscanf(fp, "%d ", &i) != EOF){
+	    fscanf(fp, "%d\n", &(GutzwillerIdx[i]));
+		  if(CheckSite(i, Nsite) !=0){
+			  fprintf(stderr, "Error: Site index is incorrect. \n");
+			  info=1;
+			  break;
+		  }
+	    idx0++;
+	    if(idx0==Nsite) break;
+	  }
+      fidx=0;
+	  while( fscanf(fp, "%d ", &i) != EOF){
+	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
+
+	    OptFlag[2*fidx+1] = iComplexFlgGutzwiller; //  TBC imaginary
+	    fidx++;
+	    idx1++;
+        count_idx++;
+	  }
+	  if(idx0!=Nsite || idx1!=NGutzwillerIdx) {
+	    info=ReadDefFileError(defname);
+	  }
+	}
+	fclose(fp);
+	break;
+
+      case KWJastrow:
+	/*jastrowidx.def------------------------------------*/
+	if(NJastrowIdx>0){
+	  idx0 = idx1 = 0;
+	  while( fscanf(fp, "%d %d ", &i, &j) != EOF){
+	    if(i==j){
+	      fprintf(stderr, "Error in %s: [Condition] i neq j\n", defname);
+	      info=1;
+	      break;
+	    }
+		  if(CheckPairSite(i, j, Nsite) !=0) {
+			  fprintf(stderr, "Error: Site index is incorrect. \n");
+			  info=1;
+			  break;
+		  }
+
+		  fscanf(fp, "%d\n", &(JastrowIdx[i][j]));
+	    JastrowIdx[i][i] = -1; // This case is Gutzwiller.
+	    idx0++;
+	    if(idx0==Nsite*(Nsite-1)) break;
+	  }
+      fidx=NGutzwillerIdx;
+	  while( fscanf(fp, "%d ", &i) != EOF){
+	    fscanf(fp, "%d\n", &(OptFlag[2*fidx])); // TBC real
+	    OptFlag[2*fidx+1] = iComplexFlgJastrow; //  TBC imaginary
+	    //	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
+	    fidx++;
+	    idx1++;
+      count_idx++;
+
+      }
+	  if(idx0!=Nsite*(Nsite-1) || idx1!=NJastrowIdx) {
+	    info=ReadDefFileError(defname);
+	  }
+	}
+	fclose(fp);
+	break;
+	  
+      case KWDH2:
+	/*doublonholon2siteidx.def--------------------------*/
+	if(NDoublonHolon2siteIdx>0) {
+		idx0 = idx1 = 0;
+		while (fscanf(fp, "%d %d %d %d\n", &i, &(x0), &(x1), &n) != EOF) {
+			DoublonHolon2siteIdx[n][2 * i] = x0;
+			DoublonHolon2siteIdx[n][2 * i + 1] = x1;
+			if (CheckSite(i, Nsite) != 0 || CheckPairSite(x0, x1, Nsite) != 0) {
+				fprintf(stderr, "Error: Site index is incorrect. \n");
+				info = 1;
+				break;
+			}
+			idx0++;
+			if (idx0 == Nsite * NDoublonHolon2siteIdx) break;
+		}
+		fidx = NGutzwillerIdx + NJastrowIdx;
+		while (fscanf(fp, "%d ", &i) != EOF) {
+			fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));//TBC real
+			OptFlag[2 * fidx + 1] = iComplexFlgDH2; //  TBC imaginary
+			//OptFlag[2*fidx+1] = 0; //  TBC imaginary
+			fidx++;
+			idx1++;
+			count_idx++;
+		}
+		if (idx0 != Nsite * NDoublonHolon2siteIdx
+			|| idx1 != 2 * 3 * NDoublonHolon2siteIdx) {
+			info = ReadDefFileError(defname);
+		}
+	}
+	fclose(fp);
+	break;
+
+      case KWDH4:
+	/*doublonholon4siteidx.def--------------------------*/
+	if(NDoublonHolon4siteIdx>0){
+	  idx0 = idx1 = 0;
+	  while( fscanf(fp, "%d %d %d %d %d %d\n",
+			&i, &(x0), &(x1), &(x2), &(x3), &n) != EOF) {
+		  DoublonHolon4siteIdx[n][4 * i] = x0;
+		  DoublonHolon4siteIdx[n][4 * i + 1] = x1;
+		  DoublonHolon4siteIdx[n][4 * i + 2] = x2;
+		  DoublonHolon4siteIdx[n][4 * i + 3] = x3;
+		  if (CheckSite(i, Nsite) != 0 || CheckQuadSite(x0, x1, x2, x3, Nsite) != 0) {
+			  fprintf(stderr, "Error: Site index is incorrect. \n");
+			  info = 1;
+			  break;
+		  }
+		  idx0++;
+		  if (idx0 == Nsite * NDoublonHolon4siteIdx) break;
+	  }
+      fidx=NGutzwillerIdx+NJastrowIdx+2*3*NDoublonHolon2siteIdx;
+        while( fscanf(fp, "%d ", &i) != EOF){
+	    fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
+	    OptFlag[2*fidx+1] = iComplexFlgDH4; //  TBC imaginary
+	    //OptFlag[2*fidx+1] = 0; //  TBC imaginary
+	    fidx++;
+	    idx1++;
+            count_idx++;
+        }
+	  if(idx0!=Nsite*NDoublonHolon4siteIdx
+	     || idx1!=2*5*NDoublonHolon4siteIdx) {
+	    info=ReadDefFileError(defname);
+	  }
+	}
+	fclose(fp);
+	break;
+
+
+  case KWOrbital:        
+  case KWOrbitalAntiParallel:
+  /*orbitalidxs.def------------------------------------*/
+  if(iNOrbitalAP>0){
+    idx0 = idx1 = 0;
+    itmp=0;
+    if(iFlgOrbitalGeneral==0){
+      if(APFlag==0) {
+         while( fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF){
+		  		 spn_i = 0;
+			  	 spn_j = 1;
+
+			     all_i = i+spn_i*Nsite; //fsz
+           all_j = j+spn_j*Nsite; //fsz
+           if(CheckPairSite(i, j, Nsite) != 0){
+             fprintf(stderr, "Error: Site index is incorrect. \n");
+             info=1;
+             break;
+           }
+           if(all_i >= all_j){
+             itmp=1;
+           }
+           idx0++;
+           OrbitalIdx[i][j] = fij;
+           OrbitalSgn[i][j] = 1;
+           if(idx0==Nsite*Nsite) break;
+         }
+      }else { /* anti-periodic boundary mode */
+         while( fscanf(fp, "%d %d %d %d\n", &i, &j, &fij, &fijSign) != EOF){
+				   spn_i = 0;
+				   spn_j = 1;
+				   all_i = i+spn_i*Nsite; //fsz
+           all_j = j+spn_j*Nsite; //fsz
+           if(all_i >= all_j){
+             itmp=1;
+           }
+           idx0++;
+           OrbitalIdx[i][j]=fij;
+           OrbitalSgn[i][j] = fijSign;
+           if(idx0==Nsite*Nsite) break;
+         }
+      }
+      fidx=NProj;
+      while( fscanf(fp, "%d ", &i) != EOF){
+         fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
+         OptFlag[2*fidx+1] = iComplexFlgOrbital; //  TBC imaginary
+         //OptFlag[2*fidx+1] = 0; //  TBC imaginary
+         fidx ++;
+         idx1++;
+         count_idx++;
+      }
+    }else{// general orbital
+      if(APFlag==0) {
+        while( fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF){
+          spn_i = 0;
+          spn_j = 1;
+          all_i = i+spn_i*Nsite; //fsz
+          all_j = j+spn_j*Nsite; //fsz
+          if(CheckPairSite(i, j, Nsite) != 0){
+            fprintf(stderr, "Error: Site index is incorrect. \n");
+            info=1;
+            break;
           }
-          if (NLocSpn > 0 && NExUpdatePath == 0) {
-            fprintf(stderr, "Error: NExUpdatePath (in modpara.def) must be 1.\n");
-            info = 1;
+          if(all_i >= all_j){
+            itmp=1;
           }
-          if (idx != Nsite) info = ReadDefFileError(defname);
-          fclose(fp);
-          break;//locspn
-
-        case KWTrans:
-          /* transfer.def--------------------------------------*/
-          if (NTransfer > 0) {
-            while (fscanf(fp, "%d %d %d %d %lf %lf\n",
-                          &x0, &x1, &x2, &x3,
-                          &dReValue, &dImValue) != EOF) {
-              Transfer[idx][0] = x0;
-              Transfer[idx][1] = x1;
-              Transfer[idx][2] = x2;
-              Transfer[idx][3] = x3;
-              ParaTransfer[idx] = dReValue + I * dImValue;
-
-              if (CheckPairSite(x0, x2, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              if (Transfer[idx][1] != Transfer[idx][3]) {
-                fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-                info = ReadDefFileError(defname);
-                break;
-              }
-              idx++;
-            }
-            if (idx != NTransfer) info = ReadDefFileError(defname);
+          idx0++;
+          OrbitalIdx[all_i][all_j]=fij;
+          OrbitalSgn[all_i][all_j] = 1;
+          // Note F_{IJ}=-F_{JI}
+          OrbitalIdx[all_j][all_i]=fij;
+          OrbitalSgn[all_j][all_i] = -1;
+          if(idx0==(Nsite*Nsite)) break; 
+        }
+      }else { /* anti-periodic boundary mode */
+        while( fscanf(fp, "%d %d %d %d \n", &i, &j, &fij, &fijSign) != EOF){
+          spn_i = 0;
+          spn_j = 1;
+          all_i = i+spn_i*Nsite; //fsz
+          all_j = j+spn_j*Nsite; //fsz
+          if(all_i >= all_j){
+            itmp=1;
           }
-          fclose(fp);
-          break;
+          idx0++;
+          OrbitalIdx[all_i][all_j]=fij;
+          OrbitalSgn[all_i][all_j] = fijSign;
+          // Note F_{IJ}=-F_{JI}
+          OrbitalIdx[all_j][all_i]=fij;
+          OrbitalSgn[all_j][all_i] = -fijSign;
+          if(idx0==(Nsite*(Nsite))) break; //2N*(2N-1)/2
+       }
+     }
+     fidx=NProj;
+     while( fscanf(fp, "%d ", &i) != EOF){
+       fscanf(fp, "%d\n", &(OptFlag[2*fidx]));
+       OptFlag[2*fidx+1] = iComplexFlgOrbital; //  TBC imaginary
+       //OptFlag[2*fidx+1] = 0; //  TBC imaginary
+       fidx ++;
+       idx1++;
+       count_idx++;
+     }
+   }
+   if(idx0!=(Nsite*Nsite) || idx1!=iNOrbitalAP || itmp==1) {
+     info=ReadDefFileError(defname);
+   }
+  }
+  fclose(fp);
+  break;
 
-        case KWCoulombIntra:
-          /*coulombintra.def----------------------------------*/
-          if (NCoulombIntra > 0) {
-            while (fscanf(fp, "%d %lf\n",
-                          &x0, &dReValue) != EOF) {
-              CoulombIntra[idx] = x0;
-              if (CheckSite(x0, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              ParaCoulombIntra[idx] = dReValue;
-              idx++;
-            }
-            if (idx != NCoulombIntra) info = ReadDefFileError(defname);
-          }
-          fclose(fp);
-          break;
-
-        case KWCoulombInter:
-          /*coulombinter.def----------------------------------*/
-          if (NCoulombInter > 0) {
-            while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-              sscanf(ctmp2, "%d %d %lf\n",
-                     &x0, &x1, &dReValue);
-              CoulombInter[idx][0] = x0;
-              CoulombInter[idx][1] = x1;
-              if (CheckPairSite(x0, x1, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              ParaCoulombInter[idx] = dReValue;
-              idx++;
-            }
-            if (idx != NCoulombInter) info = ReadDefFileError(defname);
-          }
-          fclose(fp);
-          break;
-
-        case KWHund:
-          /*hund.def------------------------------------------*/
-          if (NHundCoupling > 0) {
-            while (fscanf(fp, "%d %d %lf\n",
-                          &x0, &x1, &dReValue) != EOF) {
-              HundCoupling[idx][0] = x0;
-              HundCoupling[idx][1] = x1;
-              if (CheckPairSite(x0, x1, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              ParaHundCoupling[idx] = dReValue;
-              idx++;
-            }
-            if (idx != NHundCoupling) info = ReadDefFileError(defname);
-          }
-          fclose(fp);
-          break;
-
-        case KWPairHop:
-          /*pairhop.def---------------------------------------*/
-          if (NPairHopping > 0) {
-            while (fscanf(fp, "%d %d %lf\n",
-                          &x0, &x1, &dReValue) != EOF) {
-              PairHopping[2*idx][0] = x0;
-              PairHopping[2*idx][1] = x1;
-              if (CheckPairSite(x0, x1, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              ParaPairHopping[2*idx] = dReValue;
-              PairHopping[2*idx+1][0] = x1;
-              PairHopping[2*idx+1][1] = x0;
-              ParaPairHopping[2*idx+1] = dReValue;
-              idx++;
-            }
-            if (2*idx != NPairHopping) info = ReadDefFileError(defname);
-          }
-          fclose(fp);
-          break;
-
-        case KWExchange:
-          /*exchange.def--------------------------------------*/
-          if (NExchangeCoupling > 0) {
-            while (fscanf(fp, "%d %d %lf\n",
-                          &x0, &x1, &dReValue) != EOF) {
-              ExchangeCoupling[idx][0] = x0;
-              ExchangeCoupling[idx][1] = x1;
-              if (CheckPairSite(x0, x1, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              ParaExchangeCoupling[idx] = dReValue;
-              idx++;
-            }
-            if (idx != NExchangeCoupling) info = ReadDefFileError(defname);
-          }
-          fclose(fp);
-          break;
-
-        case KWGutzwiller:
-          /*gutzwilleridx.def---------------------------------*/
-          if (NGutzwillerIdx > 0) {
-            idx0 = idx1 = 0;
-            while (fscanf(fp, "%d ", &i) != EOF) {
-              ierr = fscanf(fp, "%d\n", &(GutzwillerIdx[i]));
-              if (CheckSite(i, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              idx0++;
-              if (idx0 == Nsite) break;
-            }
-            fidx = 0;
-            while (fscanf(fp, "%d ", &i) != EOF) {
-              ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx])); // TBC real
-
-              OptFlag[2 * fidx + 1] = iComplexFlgGutzwiller; //  TBC imaginary
-              fidx++;
-              idx1++;
-              count_idx++;
-            }
-            if (idx0 != Nsite || idx1 != NGutzwillerIdx) {
-              info = ReadDefFileError(defname);
-            }
-          }
-          fclose(fp);
-          break;
-
-        case KWJastrow:
-          /*jastrowidx.def------------------------------------*/
-          if (NJastrowIdx > 0) {
-            idx0 = idx1 = 0;
-            while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
-              if (i == j) {
-                fprintf(stderr, "Error in %s: [Condition] i neq j\n", defname);
-                info = 1;
-                break;
-              }
-              if (CheckPairSite(i, j, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-
-              ierr = fscanf(fp, "%d\n", &(JastrowIdx[i][j]));
-              JastrowIdx[i][i] = -1; // This case is Gutzwiller.
-              idx0++;
-              if (idx0 == Nsite * (Nsite - 1)) break;
-            }
-            fidx = NGutzwillerIdx;
-            while (fscanf(fp, "%d ", &i) != EOF) {
-              ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx])); // TBC real
-              OptFlag[2 * fidx + 1] = iComplexFlgJastrow; //  TBC imaginary
-              //	    OptFlag[2*fidx+1] = 0; //  TBC imaginary
-              fidx++;
-              idx1++;
-              count_idx++;
-
-            }
-            if (idx0 != Nsite * (Nsite - 1) || idx1 != NJastrowIdx) {
-              info = ReadDefFileError(defname);
-            }
-          }
-          fclose(fp);
-          break;
-
-        case KWDH2:
-          /*doublonholon2siteidx.def--------------------------*/
-          if (NDoublonHolon2siteIdx > 0) {
-            idx0 = idx1 = 0;
-            while (fscanf(fp, "%d %d %d %d\n", &i, &(x0), &(x1), &n) != EOF) {
-              DoublonHolon2siteIdx[n][2 * i] = x0;
-              DoublonHolon2siteIdx[n][2 * i + 1] = x1;
-              if (CheckSite(i, Nsite) != 0 || CheckPairSite(x0, x1, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              idx0++;
-              if (idx0 == Nsite * NDoublonHolon2siteIdx) break;
-            }
-            fidx = NGutzwillerIdx + NJastrowIdx;
-            while (fscanf(fp, "%d ", &i) != EOF) {
-              ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));//TBC real
-              OptFlag[2 * fidx + 1] = iComplexFlgDH2; //  TBC imaginary
-              //OptFlag[2*fidx+1] = 0; //  TBC imaginary
-              fidx++;
-              idx1++;
-              count_idx++;
-            }
-            if (idx0 != Nsite * NDoublonHolon2siteIdx
-                || idx1 != 2 * 3 * NDoublonHolon2siteIdx) {
-              info = ReadDefFileError(defname);
-            }
-          }
-          fclose(fp);
-          break;
-
-        case KWDH4:
-          /*doublonholon4siteidx.def--------------------------*/
-          if (NDoublonHolon4siteIdx > 0) {
-            idx0 = idx1 = 0;
-            while (fscanf(fp, "%d %d %d %d %d %d\n",
-                          &i, &(x0), &(x1), &(x2), &(x3), &n) != EOF) {
-              DoublonHolon4siteIdx[n][4 * i] = x0;
-              DoublonHolon4siteIdx[n][4 * i + 1] = x1;
-              DoublonHolon4siteIdx[n][4 * i + 2] = x2;
-              DoublonHolon4siteIdx[n][4 * i + 3] = x3;
-              if (CheckSite(i, Nsite) != 0 || CheckQuadSite(x0, x1, x2, x3, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              idx0++;
-              if (idx0 == Nsite * NDoublonHolon4siteIdx) break;
-            }
-            fidx = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
-            while (fscanf(fp, "%d ", &i) != EOF) {
-              ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
-              OptFlag[2 * fidx + 1] = iComplexFlgDH4; //  TBC imaginary
-              //OptFlag[2*fidx+1] = 0; //  TBC imaginary
-              fidx++;
-              idx1++;
-              count_idx++;
-            }
-            if (idx0 != Nsite * NDoublonHolon4siteIdx
-                || idx1 != 2 * 5 * NDoublonHolon4siteIdx) {
-              info = ReadDefFileError(defname);
-            }
-          }
-          fclose(fp);
-          break;
-
-        case KWOrbital:
-        case KWOrbitalAntiParallel:
-          /*orbitalidxs.def------------------------------------*/
-          if (iNOrbitalAP > 0) {
-            idx0 = idx1 = 0;
-            itmp = 0;
-
-            if (iFlgOrbitalGeneral == 0) {
-              if (APFlag == 0) {
-                while (fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF) {
-                  spn_i = 0;
-                  spn_j = 1;
-                  all_i = i + spn_i * Nsite; //fsz
-                  all_j = j + spn_j * Nsite; //fsz
-                  if (CheckPairSite(i, j, Nsite) != 0) {
-                    fprintf(stderr, "Error: Site index is incorrect. \n");
-                    info = 1;
-                    break;
-                  }
-                  if (all_i >= all_j) {
-                    itmp = 1;
-                  }
-                  idx0++;
-                  OrbitalIdx[i][j] = fij;
-                  OrbitalSgn[i][j] = 1;
-                  if (idx0 == Nsite * Nsite) break;
-                }
-              } else { /* anti-periodic boundary mode */
-                while (fscanf(fp, "%d %d %d %d\n", &i, &j, &fij, &fijSign) != EOF) {
-                  spn_i = 0;
-                  spn_j = 1;
-                  all_i = i + spn_i * Nsite; //fsz
-                  all_j = j + spn_j * Nsite; //fsz
-                  if (all_i >= all_j) {
-                    itmp = 1;
-                  }
-                  idx0++;
-                  OrbitalIdx[i][j] = fij;
-                  OrbitalSgn[i][j] = fijSign;
-                  if (idx0 == Nsite * Nsite) break;
-                }
-              }
-              fidx = NProj;
-              while (fscanf(fp, "%d ", &i) != EOF) {
-                ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
-                OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
-                //OptFlag[2*fidx+1] = 0; //  TBC imaginary
-                fidx++;
-                idx1++;
-                count_idx++;
-              }
-            } else {
-              if (APFlag == 0) {
-                while (fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF) {
-                  spn_i = 0;
-                  spn_j = 1;
-                  all_i = i + spn_i * Nsite; //fsz
-                  all_j = j + spn_j * Nsite; //fsz
-                  if (CheckPairSite(i, j, Nsite) != 0) {
-                    fprintf(stderr, "Error: Site index is incorrect. \n");
-                    info = 1;
-                    break;
-                  }
-                  if (all_i >= all_j) {
-                    itmp = 1;
-                  }
-                  idx0++;
-                  OrbitalIdx[all_i][all_j] = fij;
-                  OrbitalSgn[all_i][all_j] = 1;
-                  if (idx0 == (Nsite * Nsite)) break;
-                }
-              } else { /* anti-periodic boundary mode */
-                while (fscanf(fp, "%d %d %d %d \n", &i, &j, &fij, &fijSign) != EOF) {
-                  spn_i = 0;
-                  spn_j = 1;
-                  all_i = i + spn_i * Nsite; //fsz
-                  all_j = j + spn_j * Nsite; //fsz
-                  if (all_i >= all_j) {
-                    itmp = 1;
-                  }
-                  idx0++;
-                  OrbitalIdx[all_i][all_j] = fij;
-                  OrbitalSgn[all_i][all_j] = fijSign;
-                  if (idx0 == (Nsite * Nsite)) break;
-                }
-              }
-
-              fidx = NProj;
-              while (fscanf(fp, "%d ", &i) != EOF) {
-                ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
-                OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
-                //OptFlag[2*fidx+1] = 0; //  TBC imaginary
-                fidx++;
-                idx1++;
-                count_idx++;
-              }
-            }
-            if (idx0 != (Nsite * Nsite) || idx1 != iNOrbitalAP || itmp == 1) {
-              info = ReadDefFileError(defname);
-            }
-          }
-          fclose(fp);
-          break;
-
-        case KWOrbitalGeneral:
-          if (APFlag == 0) {
-            while (fscanf(fp, "%d %d %d %d %d\n", &i, &spn_i, &j, &spn_j, &fij) != EOF) {
-              all_i = i + spn_i * Nsite; //fsz
-              all_j = j + spn_j * Nsite; //fsz
-              if (CheckPairSite(i, j, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
+      case KWOrbitalGeneral:
+     idx0 = idx1 = 0;
+     itmp=0;
+     //printf("idx0=%d idx1=%d itmp=%d \n",idx0,idx1,itmp);
+          if(APFlag==0) {
+            while( fscanf(fp, "%d %d %d %d %d\n", &i, &spn_i, &j, &spn_j, &fij) != EOF){
+                all_i = i+spn_i*Nsite; //fsz
+                all_j = j+spn_j*Nsite; //fsz
+                if(CheckPairSite(i, j, Nsite) != 0){
+                  fprintf(stderr, "Error: Site index is incorrect. \n");
+                  printf("XDEBUG: %d %d %d %d %d\n",i,j,all_i,all_j,Nsite);
+                  break;
               }
               if (all_i >= all_j) {
                 itmp = 1;
@@ -1262,65 +1257,77 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
           /*orbitalidxt.def------------------------------------*/
           if (iNOrbitalP > 0) {
             idx0 = idx1 = 0;
-
-            while (fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF) {
-              for (spn_i = 0; spn_i < 2; spn_i++) {
-                all_i = i + spn_i * Nsite; //fsz
-                all_j = j + spn_i * Nsite; //fsz
-                if (CheckPairSite(i, j, Nsite) != 0) {
-                  fprintf(stderr, "Error: Site index is incorrect. \n");
-                  info = 1;
+            itmp = 0;
+            int fij_org;
+            if (APFlag == 0) {
+              while (fscanf(fp, "%d %d %d\n", &i, &j, &fij_org) != EOF) {
+                //fprintf(stdout, "Debug: test-1 %d %d %d %d\n", i, j, fij, idx0);
+                for (spn_i = 0; spn_i < 2; spn_i++) {
+                  all_i = i + spn_i * Nsite; //fsz
+                  all_j = j + spn_i * Nsite; //fsz
+                  if (CheckPairSite(i, j, Nsite) != 0) {
+                    fprintf(stderr, "Error: Site index is incorrect. \n");
+                    info = 1;
+                    break;
+                  }
+                  if (all_i >= all_j) {
+                    itmp = 1;
+                  }
+                  idx0++;
+                  fij = iNOrbitalAP + 2 * fij_org + spn_i;
+                  OrbitalIdx[all_i][all_j] = fij;
+                  OrbitalSgn[all_i][all_j] = 1;
+                  // Note F_{IJ}=-F_{JI}
+                  OrbitalIdx[all_j][all_i] = fij;
+                  OrbitalSgn[all_j][all_i] = -1;
+                }
+                if (idx0 == (Nsite * (Nsite - 1))) {
+                  //fprintf(stdout, "Debug: test-1-1 %d %d %d %d\n", i, j, fij, idx0);
                   break;
                 }
-                if (all_i >= all_j) {
-                  itmp = 1;
+              }
+            } else { /* anti-periodic boundary mode */
+              while (fscanf(fp, "%d %d %d %d \n", &i, &j, &fij_org, &fijSign) != EOF) {
+                for (spn_i = 0; spn_i < 2; spn_i++) {
+                  all_i = i + spn_i * Nsite; //fsz
+                  all_j = j + spn_i * Nsite; //fsz
+                  if (all_i >= all_j) {
+                    itmp = 1;
+                  }
+                  idx0++;
+                  fij = iNOrbitalAP + 2 * fij_org + spn_i;
+                  OrbitalIdx[all_i][all_j] = fij;
+                  OrbitalSgn[all_i][all_j] = fijSign;
+                  // Note F_{IJ}=-F_{JI}
+                  OrbitalIdx[all_j][all_i] = fij;
+                  OrbitalSgn[all_j][all_i] = -fijSign;
                 }
-                idx0++;
-                fij = iNOrbitalAP+2*fij+spn_i;
-                OrbitalIdx[all_i][all_j] = fij;
-                OrbitalSgn[all_i][all_j] = 1;
-                // Note F_{IJ}=-F_{JI}
-                OrbitalIdx[all_j][all_i] = fij;
-                OrbitalSgn[all_j][all_i] = -1;
-                if (idx0 == (Nsite * (Nsite - 1)) / 2) break;
+                if (idx0 == ((Nsite * (Nsite - 1)))) break; //N*(N-1)
               }
             }
-          } else { /* anti-periodic boundary mode */
-            while (fscanf(fp, "%d %d %d %d \n", &i, &j, &fij, &fijSign) != EOF) {
-              for (spn_i = 0; spn_i < 2; spn_i++) {
-                all_i = i + spn_i * Nsite; //fsz
-                all_j = j + spn_i * Nsite; //fsz
-                if (all_i >= all_j) {
-                  itmp = 1;
-                }
-                idx0++;
-                fij = iNOrbitalAP+2*fij+spn_i;
-                OrbitalIdx[all_i][all_j] = fij;
-                OrbitalSgn[all_i][all_j] = fijSign;
-                // Note F_{IJ}=-F_{JI}
-                OrbitalIdx[all_j][all_i] = fij;
-                OrbitalSgn[all_j][all_i] = -fijSign;
-                if (idx0 == ((Nsite * (Nsite - 1)) / 2)) break; //N*(N-1)
-              }
+
+            fidx = NProj + iNOrbitalAP;
+	    idx1=0;
+	    int idxOptFlag=0;
+            while (fscanf(fp, "%d ", &i) != EOF) {
+              //ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
+              //OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
+              //OptFlag[2*fidx+1] = 0; //  TBC imaginary
+	      idxOptFlag=2*(fidx+2*idx1);
+              ierr = fscanf(fp, "%d\n", &(OptFlag[idxOptFlag]));
+              OptFlag[idxOptFlag+1] = iComplexFlgOrbital;
+              OptFlag[idxOptFlag+2] = OptFlag[idxOptFlag];
+              OptFlag[idxOptFlag+3] = iComplexFlgOrbital;
+              idx1++;
+              count_idx+=2;
             }
-          }
-
-          fidx = NProj+iNOrbitalAP;
-          while (fscanf(fp, "%d ", &i) != EOF) {
-            ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
-            OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
-            //OptFlag[2*fidx+1] = 0; //  TBC imaginary
-            fidx++;
-            idx1++;
-            count_idx++;
-          }
-
-          if (idx0 != (Nsite * (Nsite - 1)) / 2 || idx1 != iNOrbitalP) {
-            info = ReadDefFileError(defname);
+            if (idx0 != (Nsite * (Nsite - 1)) || idx1 != iNOrbitalP || itmp == 1) {
+              //fprintf(stdout, "Debug: test-1-1 %d %d %d \n", idx0, idx1, itmp);
+              info = ReadDefFileError(defname);
+            }
           }
           fclose(fp);
           break;
-
 
         case KWTransSym:
           /*qptransidx.def------------------------------------*/
@@ -1336,7 +1343,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             idx = 0;
             if (APFlag == 0) {
               while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
-                ierr = fscanf(fp, "%d\n", &(QPTrans[i][j]));
+                ierr = fscanf(fp, "%d\n", &itmp);
+		QPTrans[i][j]=itmp;
                 QPTransSgn[i][j] = 1;
                 QPTransInv[i][QPTrans[i][j]] = j;
                 idx++;
@@ -1382,11 +1390,12 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
                 break;
               }
 
-              if (x1 != x3) {
-                fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-                info = ReadDefFileError(defname);
-                break;
-              }
+          /* OrbitalIdx?
+          if(idx0!=(2*Nsite*Nsite-Nsite) || idx1!=NOrbitalIdx || itmp==1) {
+            //printf("DEBUG: idx0=%d idx1=%d itmp = %d \n",idx0,idx1,itmp);
+            info=ReadDefFileError(defname);
+          }
+          */
               idx++;
             }            
             if (NLanczosMode <2) {
@@ -1394,7 +1403,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             }
             else{
               if (idx != NCisAjsLz) info = ReadDefFileError(defname);
-            }            
+            }
           }
           fclose(fp);
           break;
@@ -1611,12 +1620,15 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
           fclose(fp);
           break;
       }
+      //      fprintf(stdout, "Debug: finish. \n");
     }
 
     if (count_idx != NPara) {
+      fprintf(stdout, "count_idx=%d, NPara=%d\n", count_idx, NPara);
       fprintf(stderr, "error: OptFlag is incomplete.\n");
       info = 1;
     }
+    fprintf(stdout, "finish reading parameters.\n");
   } /* if(rank==0) */
 
   if(FlagOptTrans<=0){
@@ -2089,8 +2101,6 @@ void SetDefultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxNDH2]=0;
   bufInt[IdxNDH4]=0;
   bufInt[IdxNOrbit]=0;
-  bufInt[IdxNOrbitAntiParallel]=0;
-  bufInt[IdxNOrbitParallel]=0;
   bufInt[IdxNQPTrans]=0;
   bufInt[IdxNOneBodyG]=0;
   bufInt[IdxNTwoBodyG]=0;

@@ -163,6 +163,7 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
       tmp =  GreenFunc2_real(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
       tmp += GreenFunc2_real(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
       myEnergy += ParaExchangeCoupling[idx] * tmp;
+      //printf("XDEBUG: idx=%d tmp=%lf %lf\n",idx,tmp,ParaExchangeCoupling[idx]);
     }
     
 #ifdef _DEBUG

@@ -38,4 +38,5 @@ if(LAPACK_FOUND)
 endif(LAPACK_FOUND)
 
 add_subdirectory(src)
+add_subdirectory(src/ComplexUHF)
 add_subdirectory(tool)

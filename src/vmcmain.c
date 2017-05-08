@@ -333,6 +333,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   MPI_Comm_rank(comm_parent, &rank);
 
   for(step=0;step<NSROptItrStep;step++) {
+    //printf("0 DUBUG make:step=%d \n",step);
     if(rank==0){
       OutputTime(step);
       if(NSROptItrStep<20){
@@ -346,10 +347,16 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }
     
     StartTimer(20);
-    UpdateSlaterElm_fcmp();
+    //printf("1 DUBUG make:step=%d \n",step);
+    if(iFlgOrbitalGeneral==0){//sz is conserved
+      UpdateSlaterElm_fcmp();
+    }else{
+      UpdateSlaterElm_fsz();
+    } 
+    //printf("2 DUBUG make:step=%d \n",step);
     UpdateQPWeight();
-      StopTimer(20);
-      StartTimer(3);
+    StopTimer(20);
+    StartTimer(3);
 #ifdef _DEBUG
       printf("Debug: step %d, MakeSample.\n", step);
 #endif
@@ -375,8 +382,13 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
          StopTimer(69);
          // only for real TBC
       }else{
+
          if(NProjBF ==0) {
-             VMCMakeSample(comm_child1);
+           if(iFlgOrbitalGeneral==0){//sz is conserved
+             VMCMakeSample(comm_child1);//VMCMakeSample(comm_child1);
+           }else{
+             VMCMakeSample_fsz(comm_child1);//VMCMakeSample(comm_child1);
+           } 
          }
          else {
              VMC_BF_MakeSample(comm_child1);
@@ -388,10 +400,15 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       printf("Debug: step %d, MainCal.\n", step);
 #endif
       if(NProjBF ==0) {
+        if(iFlgOrbitalGeneral==0){//sz is conserved
           VMCMainCal(comm_child1);
+        }else{//fsz
+          VMCMainCal_fsz(comm_child1); 
+        }
+
       }
       else{
-          VMC_BF_MainCal(comm_child1);
+        VMC_BF_MainCal(comm_child1);
       }
       StopTimer(4);
       StartTimer(21);
@@ -495,7 +512,6 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
   /* output zqp_opt */
   if(rank==0) OutputOptData();
-
   return 0;
 }
 
@@ -518,56 +534,63 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     StartTimer(3);
 	if(NProjBF ==0) {
 	  if(AllComplexFlag==0){
-		  // only for real TBC
-		  StartTimer(69);
+        // only for real TBC
+        StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
-		  for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+        for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
 #pragma omp parallel for default(shared) private(tmp_i)
-		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
-		  StopTimer(69);
-		  // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-		  VMCMakeSample_real(comm_child1);
-		  // only for real TBC
-		  StartTimer(69);
+        for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+        StopTimer(69);
+        // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+        VMCMakeSample_real(comm_child1);
+        // only for real TBC
+        StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
-		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
-		  StopTimer(69);
-		  // only for real TBC
-	  }else{
-		  VMCMakeSample(comm_child1);
-	  }
-	}
+        for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
+        StopTimer(69);
+        // only for real TBC
+      }else{
+        if(iFlgOrbitalGeneral==0){
+          VMCMakeSample(comm_child1);
+        }else{
+          VMCMakeSample_fsz(comm_child1);
+        }
+      }
+    }
 	else{
 	  if(AllComplexFlag==0){
-		  // only for real TBC
-		  StartTimer(69);
-		  for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+        // only for real TBC
+        StartTimer(69);
+        for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
 #pragma omp parallel for default(shared) private(tmp_i)
-		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
-		  StopTimer(69);
-		  // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-		  VMC_BF_MakeSample_real(comm_child1);
-		  // only for real TBC
-		  StartTimer(69);
+        for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
+        StopTimer(69);
+        // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+        VMC_BF_MakeSample_real(comm_child1);
+        // only for real TBC
+        StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
-		  for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
-		  StopTimer(69);
-		  // only for real TBC
+        for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
+        StopTimer(69);
+        // only for real TBC
 	  }else{
 		VMC_BF_MakeSample(comm_child1);
-		}
+      }
 	}
-//    VMCMakeSample(comm_child1);
 
     StopTimer(3);
     StartTimer(4);
 
-      if(NProjBF ==0) {
-          VMCMainCal(comm_child1);
+    if(NProjBF ==0) {
+      if(iFlgOrbitalGeneral==0){
+        VMCMainCal(comm_child1);
+      }else{
+        VMCMainCal_fsz(comm_child1);
       }
-      else{
-          VMC_BF_MainCal(comm_child1);
-      }
+    }
+    else{
+      VMC_BF_MainCal(comm_child1);
+    }
 
     StopTimer(4);
     StartTimer(21);
@@ -596,9 +619,14 @@ void outputData() {
   int i;
 
   /* zvo_out.dat */
+//[s] MERGE BY TM
+ // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
+ //   fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)));
+   fprintf(FileOut, "% .18e % .18e  % .18e % .18e %.18e\n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)),Sztot);
   // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
-  fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot), cimag(Etot), creal(Etot2),
-          creal((Etot2 - Etot * Etot) / (Etot * Etot)));
+ // fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot), cimag(Etot), creal(Etot2),
+ //         creal((Etot2 - Etot * Etot) / (Etot * Etot)));
+//[e] MERGE BY TM
 
   /* zvo_var.dat */
   if (FlagBinary == 0) { /* formatted output*/

@@ -35,7 +35,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define _SRC_SETMEMORY
 
 void SetMemoryDef() {  
-  int i;
+  int i, j;
   int *pInt;
   double *pDouble;
 
@@ -117,29 +117,22 @@ void SetMemoryDef() {
   }
   /*[e] For BackFlow */
 
-  if(iFlgOrbitalGeneral==0){//for spin conserved
-    OrbitalIdx = (int**)malloc(sizeof(int*)*Nsite);
-    for(i=0;i<Nsite;i++) {
-      OrbitalIdx[i] = pInt;
-      pInt += Nsite;
-    }
-    OrbitalSgn = (int**)malloc(sizeof(int*)*Nsite);
-    for(i=0;i<Nsite;i++) {
-      OrbitalSgn[i] = pInt;
-      pInt += Nsite;
+  int NOrbit;
+  iFlgOrbitalGeneral==0 ? (NOrbit=Nsite): (NOrbit=2*Nsite);
+  OrbitalIdx = (int**)malloc(sizeof(int*)*NOrbit);
+  for(i=0;i<NOrbit;i++) {
+    OrbitalIdx[i] = pInt;
+    pInt += NOrbit;
+    for(j=0;j<NOrbit;j++) {
+      OrbitalIdx[i][j]=0;
     }
   }
-  else{//for spin not conserved
-    OrbitalIdx = (int**)malloc(sizeof(int*)*2*Nsite);
-    for(i=0;i<2*Nsite;i++) {
-      OrbitalIdx[i] = pInt;
-      pInt += 2*Nsite;
-    }
-    
-    OrbitalSgn = (int**)malloc(sizeof(int*)*2*Nsite);
-    for(i=0;i<2*Nsite;i++) {
-      OrbitalSgn[i] = pInt;
-      pInt += 2*Nsite;
+  OrbitalSgn = (int**)malloc(sizeof(int*)*NOrbit);
+  for(i=0;i<NOrbit;i++) {
+    OrbitalSgn[i] = pInt;
+    pInt += NOrbit;
+    for(j=0;j<NOrbit;j++) {
+      OrbitalSgn[i][j]=0;
     }
   }
 
@@ -266,7 +259,9 @@ void SetMemory() {
   int i,j,n;
 
   /***** Variational Parameters *****/
-  Para     = (double complex*)malloc(sizeof(double complex)*(NPara)); 
+  //printf("DEBUG:opt=%d %d %d %d %d Ne=%d\n", AllComplexFlag,NPara,NProj,NSlater,NOrbitalIdx,Ne);
+  Para     = (double complex*)malloc(sizeof(double complex)*(NPara));
+
   Proj     = Para;
   ProjBF   = Para + NProj;
   Slater   = Para + NProj + NProjBF;
@@ -277,22 +272,29 @@ void SetMemory() {
   EleCfg            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
   EleNum            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
   EleProjCnt        = (int*)malloc(sizeof(int)*( NVMCSample*NProj ));
+//[s] MERGE BY TM
+  EleSpn            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));//fsz
   EleProjBFCnt = (int*)malloc(sizeof(int)*( NVMCSample*4*4*Nsite*Nrange));
+//[e] MERGE BY TM
   logSqPfFullSlater = (double*)malloc(sizeof(double)*(NVMCSample));
   SmpSltElmBF_real = (double *)malloc(sizeof(double)*(NVMCSample*NQPFull*(2*Nsite)*(2*Nsite)));
   SmpEta = (double*)malloc(sizeof(double*)*NVMCSample*NQPFull*Nsite*Nsite);
   SmpEtaFlag = (int*)malloc(sizeof(int*)*NVMCSample*NQPFull*Nsite*Nsite);
 
-  TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
+  TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne));//fsz
   TmpEleCfg         = TmpEleIdx + 2*Ne;
   TmpEleNum         = TmpEleCfg + 2*Nsite;
   TmpEleProjCnt     = TmpEleNum + 2*Nsite;
+//[s] MERGE BY TM
+  TmpEleSpn         = TmpEleProjCnt + NProj; //fsz
   TmpEleProjBFCnt = TmpEleProjCnt + NProj;
+//[e] MERGE BY TM
 
-  BurnEleIdx = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj));
-  BurnEleCfg = BurnEleIdx + 2*Ne;
-  BurnEleNum = BurnEleCfg + 2*Nsite;
-  BurnEleProjCnt = BurnEleNum + 2*Nsite;
+  BurnEleIdx        = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne)); //fsz
+  BurnEleCfg        = BurnEleIdx + 2*Ne;
+  BurnEleNum        = BurnEleCfg + 2*Nsite;
+  BurnEleProjCnt    = BurnEleNum + 2*Nsite;
+  BurnEleSpn        = BurnEleProjCnt + NProj; //fsz
 
   /***** Slater Elements ******/
   SlaterElm = (double complex*)malloc( sizeof(double complex)*(NQPFull*(2*Nsite)*(2*Nsite)) );

@@ -102,6 +102,7 @@ double complex CalculateLogIP_fcmp(double complex * const pfM, const int qpStart
     MPI_Allreduce(&ip, &ip2, 1, MPI_DOUBLE_COMPLEX, MPI_SUM, comm);//TBC
     ip = ip2;
   }
+  //printf("QDEBUG: ip= %lf %lf\n",creal(clog(ip)),cimag(clog(ip)));
   return clog(ip);
 }
 

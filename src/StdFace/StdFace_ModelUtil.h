@@ -81,4 +81,5 @@ void StdFace_Kagome_Boost(struct StdIntList *StdI);
 #elif defined(_mVMC)
 void StdFace_generate_orb(struct StdIntList *StdI);
 void StdFace_Proj(struct StdIntList *StdI);
+void PrintJastrow(struct StdIntList *StdI);
 #endif

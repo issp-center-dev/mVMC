@@ -42,8 +42,8 @@ void makeham(struct BindStruct *X){
     /*Transfer input*/
     for(int_i =0; int_i < X->Def.NTransfer; int_i++){
       site_1    = X->Def.Transfer[int_i][0];
-      site_2    = X->Def.Transfer[int_i][2];
       int_spin1  = X->Def.Transfer[int_i][1];
+      site_2    = X->Def.Transfer[int_i][2];
       int_spin2  = X->Def.Transfer[int_i][3];
 
       tmp       = -X->Def.ParaTransfer[int_i];

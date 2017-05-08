@@ -25,7 +25,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
-
 #include "global.h"
 #include "math.h"
 #include "projection.h"
@@ -266,6 +265,122 @@ void UpdateProjCnt(const int ri, const int rj, const int s,
 
 }
 
+//[s] MERGE BY TM
+/* An electron with spin s hops from ri to rj with t. */
+// (ri,s) -> (rj,t) assuming s!=t
+void UpdateProjCnt_fsz(const int ri, const int rj, const int s,const int t,
+                   int *projCntNew, const int *projCntOld,
+                   const int *eleNum) {
+  const int *n0=eleNum;
+  const int *n1=eleNum+Nsite;
+  int idx,offset;
+  int rk;
+  int xi,xn,xm;
+  int r0,r1,r2,r3;
+  const int *dh;
+  /* optimization for Kei */
+  const int nProj=NProj;
+  const int nSite=Nsite;
+
+  if(projCntNew!=projCntOld) {
+    for(idx=0;idx<nProj;idx++) projCntNew[idx] = projCntOld[idx];
+  }
+
+  if(ri==rj) return; // this part will be changed if we consider spin jastrow
+
+  if(NGutzwillerIdx>0){
+    idx = GutzwillerIdx[ri];
+    projCntNew[idx] -= n0[ri]+n1[ri]; // fsz tricky !
+    idx = GutzwillerIdx[rj];
+    projCntNew[idx] += n0[rj]*n1[rj];
+  }
+
+  if(NJastrowIdx>0){
+    offset = NGutzwillerIdx; 
+    /* update [ri][rj] */
+    if(ri<rj) idx = offset + JastrowIdx[ri][rj];
+    else  idx = offset + JastrowIdx[rj][ri];
+    projCntNew[idx] += n0[ri]+n1[ri]-n0[rj]-n1[rj]+1;
+    /* update [ri][rk] (rk != ri, rj) */
+    for(rk=0;rk<nSite;rk++) {
+      if(rk==rj) continue;
+      if(rk==ri) continue;
+      if(rk>ri) idx = offset + JastrowIdx[ri][rk];
+      else idx = offset + JastrowIdx[rk][ri]; 
+      projCntNew[idx] -= n0[rk]+n1[rk]-1;
+    }
+    /* update [rj][rk] (rk != ri, rj) */
+    for(rk=0;rk<nSite;rk++) {
+      if(rk==ri) continue;
+      if(rk==rj) continue;
+      if(rk>rj) idx = offset + JastrowIdx[rj][rk];
+      else idx = offset + JastrowIdx[rk][rj]; 
+      projCntNew[idx] += n0[rk]+n1[rk]-1;
+    }
+  }
+
+  if(NDoublonHolon2siteIdx==0 && NDoublonHolon4siteIdx==0) return;
+
+  offset = NGutzwillerIdx + NJastrowIdx;
+  for(idx=offset;idx<nProj;idx++) projCntNew[idx] = 0;
+
+  /* 2-site doublon-holon correlation factor */
+  offset = NGutzwillerIdx + NJastrowIdx;
+  #pragma omp parallel for default(shared) private(xn,dh,rk,xi,r0,r1,xm,idx)
+  for(xn=0;xn<NDoublonHolon2siteIdx;xn++) {
+    dh=DoublonHolon2siteIdx[xn];
+    for(rk=0;rk<Nsite;rk++) {
+      xi = n0[rk]+n1[rk];
+      if(xi==1) continue;
+      xi = xi/2; /* xi=0: holon, xi=1: doublon */
+      
+      r0 = dh[2*rk];
+      r1 = dh[2*rk+1];
+      if(xi==0) {
+        xm = n0[r0]*n1[r0] + n0[r1]*n1[r1]; /* count doublons on r0 and r1 */
+      } else { /* doublon */
+        xm = (1-n0[r0])*(1-n1[r0]) 
+          + (1-n0[r1])*(1-n1[r1]); /* count holons on r0 and r1 */
+      }
+      
+      idx = offset + xn + (xi+2*xm)*NDoublonHolon2siteIdx;
+      projCntNew[idx] += 1;
+      
+    }
+  }
+
+  /* 4-site doublon-holon correlation factor */
+  offset = NGutzwillerIdx + NJastrowIdx + 6*NDoublonHolon2siteIdx;
+  #pragma omp parallel for default(shared) private(xn,dh,rk,xi,r0,r1,r2,r3,xm,idx)
+  for(xn=0;xn<NDoublonHolon4siteIdx;xn++) {
+    dh=DoublonHolon4siteIdx[xn];
+    for(rk=0;rk<Nsite;rk++) {
+      xi = n0[rk]+n1[rk];
+      if(xi==1) continue;
+      xi = xi/2; /* xi=0: holon, xi=1: doublon */
+      
+      r0 = dh[4*rk];
+      r1 = dh[4*rk+1];
+      r2 = dh[4*rk+2];
+      r3 = dh[4*rk+3];
+      if(xi==0) {
+        /* count doublons on r0, r1, r2, r3 */
+        xm= n0[r0]*n1[r0] + n0[r1]*n1[r1]
+          + n0[r2]*n1[r2] + n0[r3]*n1[r3];
+      } else { /* doublon */
+        /* count holons on r0, r1, r2, r3 */
+        xm= (1-n0[r0])*(1-n1[r0]) + (1-n0[r1])*(1-n1[r1])
+          + (1-n0[r2])*(1-n1[r2]) + (1-n0[r3])*(1-n1[r3]);
+      }
+      
+      idx = offset + xn + (xi+2*xm)*NDoublonHolon4siteIdx;
+      projCntNew[idx] += 1;
+    }
+  }
+  
+  return;
+}
+
 void MakeProjBFCnt(int *projCnt, const int *eleNum) {
     const int *n0 = eleNum;
     const int *n1 = eleNum + Nsite;
@@ -333,5 +448,5 @@ void MakeProjBFCnt(int *projCnt, const int *eleNum) {
     }
 
     return;
-
 }
+//[e] MERGE BY TM
