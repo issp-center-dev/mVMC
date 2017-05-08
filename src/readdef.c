@@ -1314,10 +1314,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
               //OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
               //OptFlag[2*fidx+1] = 0; //  TBC imaginary
 	      idxOptFlag=2*(fidx+2*idx1);
-              ierr = fscanf(fp, "%d\n", &(OptFlag[idxOptFlag]));
-              OptFlag[idxOptFlag+1] = iComplexFlgOrbital;
-              OptFlag[idxOptFlag+2] = OptFlag[idxOptFlag];
-              OptFlag[idxOptFlag+3] = iComplexFlgOrbital;
+              ierr = fscanf(fp, "%d\n", &(OptFlag[idxOptFlag])); // up-up real
+              OptFlag[idxOptFlag+1] = iComplexFlgOrbital; // up-up imaginary
+              OptFlag[idxOptFlag+2] = OptFlag[idxOptFlag];// down-down real
+              OptFlag[idxOptFlag+3] = iComplexFlgOrbital; // down-down imaginary
               idx1++;
               count_idx+=2;
             }

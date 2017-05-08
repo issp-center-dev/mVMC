@@ -96,7 +96,7 @@ int StochasticOpt(MPI_Comm comm) {
 
   StartTimer(50);
 //[s] for only real variables TBC
-  if(AllComplexFlag==0){
+  if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real &  sz=0
     #pragma omp parallel for default(shared) private(i,int_x,int_y,j)
     #pragma loop noalias
     for(i=0;i<2*SROptSize*(2*SROptSize+2);i++){
