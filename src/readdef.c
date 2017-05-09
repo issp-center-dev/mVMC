@@ -339,7 +339,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     iret=GetInfoFromModPara(bufInt, bufDouble);
     if(iret != 0){
       if (rank == 0) {
-        fprintf(stderr, "error: ModPara file is incomplete.\n");
+        fprintf(stderr, "  Error: ModPara file is incomplete.\n");
       }
       MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
@@ -449,7 +449,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             if (FlagOptTrans > 0) {
               cerr = ReadBuffInt(fp, &bufInt[IdxNQPOptTrans]);
               if (bufInt[IdxNQPOptTrans] < 1) {
-                fprintf(stderr, "error: NQPOptTrans should be larger than 0.\n");
+                fprintf(stderr, "Error: NQPOptTrans should be larger than 0.\n");
                 info = ReadDefFileError(defname);
               }
             }
@@ -457,7 +457,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
           case KWBFRange:
 #ifdef _NOTBACKFLOW
-            fprintf(stderr, "error: Back Flow is not supported.\n");
+            fprintf(stderr, "Error: Back Flow is not supported.\n");
             info = ReadDefFileError(defname);
 #else
           fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
@@ -468,7 +468,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
           case KWBF:
 #ifdef _NOTBACKFLOW
-            fprintf(stderr, "error: Back Flow is not supported.\n");
+            fprintf(stderr, "Error: Back Flow is not supported.\n");
             info = ReadDefFileError(defname);
 #else
           cerr = ReadBuffInt(fp, &bufInt[IdxNBF]);
@@ -506,11 +506,30 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       bufInt[IdxNOneBodyG] = CountOneBodyGForLanczos(xNameListFile, NCisAjsLz, bufInt[IdxNTwoBodyG],
                                                      bufInt[IdxNsite], CisAjsLzIdx, iOneBodyGIdx);
     }
+
+    //Check LocSpn
+    if (bufInt[IdxNLocSpin] > 0) {
+      if(bufInt[IdxExUpdatePath]==0){
+        fprintf(stderr, "Error: NExUpdatePath (in modpara.def) must be 1.\n");
+        info = 1;
+      }
+      else if(bufInt[IdxNLocSpin] > 2 * bufInt[IdxNe]) {
+        fprintf(stderr, "Error: 2*Ne must satisfy the condition, 2*Ne >= NLocalSpin.\n");
+        info = 1;
+      }
+      else if(bufInt[IdxNLocSpin] == 2 * bufInt[IdxNe] && bufInt[IdxExUpdatePath]!=2){
+        fprintf(stderr, "Error: NExUpdatePath (in modpara.def) must be 2 when 2*Ne = NLocalSpin, i.e. spin system.\n");
+        info = 1;
+      }
+      if(info==1) {
+        fprintf(stderr, "  Error: ModPara file is incomplete.\n");
+      }
+    }
   }
 
   if (info != 0) {
     if (rank == 0) {
-      fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
+      fprintf(stderr, "Error: Definition files(*.def) are incomplete.\n");
     }
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
@@ -653,8 +672,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   }
 
   if (NBackFlowIdx > 0) {
-    NTotalDefInt +=
-            Nsite * Nsite * Nsite * Nsite; /* BackflowIdx */
+    NTotalDefInt += Nsite * Nsite * Nsite * Nsite; /* BackflowIdx */
   }
 
   NTotalDefDouble =
@@ -670,11 +688,129 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   return 0;
 }
 
+/**********************************/
+/* [s] Read Parameters from file  */
+/**********************************/
+int GetTransferInfo(FILE *fp, int **ArrayIdx, double complex*ArrayValue, int Nsite, int NArray, char *defname){
+  char ctmp2[256];
+  int idx=0, info=0;
+  int x0=0, x1=0, x2=0, x3=0;
+  double dReValue=0, dImValue=0;
+  if(NArray ==0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
+           &x0, &x1, &x2, &x3, &dReValue, &dImValue);
+    ArrayIdx[idx][0] = x0;
+    ArrayIdx[idx][1] = x1;
+    ArrayIdx[idx][2] = x2;
+    ArrayIdx[idx][3] = x3;
+
+    if (CheckPairSite(x0, x2, Nsite) != 0) {
+      fprintf(stderr, "Error: Site index is incorrect. \n");
+      info = 1;
+      break;
+    }
+    ArrayValue[idx] = dReValue+I*dImValue;
+    idx++;
+  }
+  if (idx != NArray) info = ReadDefFileError(defname);
+  return info;
+}
+
+int GetLocSpinInfo(FILE *fp, int *ArrayIdx, int Nsite, char *defname){
+  char ctmp2[256];
+  int idx=0, info=0;
+  int x0=0, x1=0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d \n", &x0, &x1);
+    ArrayIdx[x0] = x1;
+    if (CheckSite(x0, Nsite) != 0) {
+      fprintf(stderr, "Error: Site index is incorrect.\n");
+      info = 1;
+      break;
+    }
+    idx++;
+  }
+  if (idx != Nsite) info = ReadDefFileError(defname);
+  return info;
+}
+
+int GetInfoCoulombIntra(FILE *fp, int *ArrayIdx, double *ArrayValue, int Nsite, int NArray, char *defname){
+  char ctmp2[256];
+  int idx=0, info=0;
+  int x0=0, x1=0;
+  double dReValue=0;
+  if(NArray ==0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %lf\n", &x0, &dReValue);
+    ArrayIdx[idx] = x0;
+    if (CheckSite(x0, Nsite) != 0) {
+      fprintf(stderr, "Error: Site index is incorrect. \n");
+      info = 1;
+      break;
+    }
+    ArrayValue[idx] = dReValue;
+    idx++;
+  }
+  if (idx != NArray) info = ReadDefFileError(defname);
+  return info;
+}
+
+int GetInfoPairHop(FILE *fp, int **ArrayIdx, double *ArrayValue, int Nsite, int NArray, char *defname){
+  char ctmp2[256];
+  int idx=0, info=0;
+  int x0=0, x1=0;
+  double dReValue=0;
+  if(NArray ==0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d %lf\n", &x0, &x1, &dReValue);
+    ArrayIdx[2*idx][0] = x0;
+    ArrayIdx[2*idx][1] = x1;
+    ArrayValue[2*idx] = dReValue;
+    if (CheckPairSite(x0, x1, Nsite) != 0) {
+      fprintf(stderr, "Error: Site index is incorrect. \n");
+      info = 1;
+      break;
+    }
+    ArrayIdx[2*idx+1][0] = x1;
+    ArrayIdx[2*idx+1][1] = x0;
+    ArrayValue[2*idx+1] = dReValue;
+    idx++;
+  }
+  if (2*idx != NArray) info = ReadDefFileError(defname);
+  return info;
+}
+
+int ReadPairDValue(FILE *fp, int **ArrayIdx, double *ArrayValue, int Nsite, int NArray, char *defname){
+  char ctmp2[256];
+  int idx=0, info=0;
+  int x0=0, x1=0;
+  double dReValue=0;
+  if(NArray ==0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d %lf\n", &x0, &x1, &dReValue);
+    ArrayIdx[idx][0] = x0;
+    ArrayIdx[idx][1] = x1;
+    if (CheckPairSite(x0, x1, Nsite) != 0) {
+      fprintf(stderr, "Error: Site index is incorrect. \n");
+      info = 1;
+      break;
+    }
+    ArrayValue[idx] = dReValue;
+    idx++;
+  }
+  if (idx != NArray) info = ReadDefFileError(defname);
+  return info;
+}
+/**********************************/
+/* [e] Read Parameters from file  */
+/**********************************/
+
 int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   FILE *fp;
   char defname[D_FileNameMax];
   char ctmp[D_FileNameMax], ctmp2[256];
-  int itmp;
+  int itmp, iret;
   int iKWidx = 0;
   char *cerr;
   int ierr;
@@ -715,159 +851,35 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
       idx = 0;
       idx0 = 0;
       switch (iKWidx) {
-        case KWLocSpin:
-          /* Read locspn.def----------------------------------------*/
-          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-            sscanf(ctmp2, "%d %d\n", &(x0), &(x1));
-            LocSpn[x0] = x1;
-            if (CheckSite(x0, Nsite) != 0) {
-              fprintf(stderr, "Error: Site index is incorrect.\n");
-              info = 1;
-              break;
-            }
-            idx++;
-          }
-          if (NLocSpn > 2 * Ne) {
-            fprintf(stderr, "Error: 2*Ne must satisfy the condition, 2*Ne >= NLocalSpin.\n");
-            info = 1;
-          }
-          if (NLocSpn > 0 && NExUpdatePath == 0) {
-            fprintf(stderr, "Error: NExUpdatePath (in modpara.def) must be 1.\n");
-            info = 1;
-          }
-          if (idx != Nsite) info = ReadDefFileError(defname);
-          fclose(fp);
+        case KWLocSpin: /* Read locspn.def----------------------------------------*/
+          if(GetLocSpinInfo(fp, LocSpn, Nsite, defname) !=0) info=1;
           break;//locspn
 
-        case KWTrans:
-          /* transfer.def--------------------------------------*/
-          if (NTransfer > 0) {
-            while (fscanf(fp, "%d %d %d %d %lf %lf\n",
-                          &x0, &x1, &x2, &x3,
-                          &dReValue, &dImValue) != EOF) {
-              Transfer[idx][0] = x0;
-              Transfer[idx][1] = x1;
-              Transfer[idx][2] = x2;
-              Transfer[idx][3] = x3;
-              ParaTransfer[idx] = dReValue + I * dImValue;
-
-              if (CheckPairSite(x0, x2, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              idx++;
-            }
-            if (idx != NTransfer) info = ReadDefFileError(defname);
-          }
-          fclose(fp);
+        case KWTrans: /* transfer.def--------------------------------------*/
+          if (GetTransferInfo(fp, Transfer, ParaTransfer, Nsite, NTransfer, defname) != 0) info = 1;
           break;
 
-        case KWCoulombIntra:
-          /*coulombintra.def----------------------------------*/
-          if (NCoulombIntra > 0) {
-            while (fscanf(fp, "%d %lf\n",
-                          &x0, &dReValue) != EOF) {
-              CoulombIntra[idx] = x0;
-              if (CheckSite(x0, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              ParaCoulombIntra[idx] = dReValue;
-              idx++;
-            }
-            if (idx != NCoulombIntra) info = ReadDefFileError(defname);
-          }
-          fclose(fp);
+        case KWCoulombIntra: /*coulombintra.def----------------------------------*/
+          if(GetInfoCoulombIntra(fp, CoulombIntra, ParaCoulombIntra, Nsite, NCoulombIntra, defname) != 0) info =1;
           break;
 
-        case KWCoulombInter:
-          /*coulombinter.def----------------------------------*/
-          if (NCoulombInter > 0) {
-            while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-              sscanf(ctmp2, "%d %d %lf\n",
-                     &x0, &x1, &dReValue);
-              CoulombInter[idx][0] = x0;
-              CoulombInter[idx][1] = x1;
-              if (CheckPairSite(x0, x1, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              ParaCoulombInter[idx] = dReValue;
-              idx++;
-            }
-            if (idx != NCoulombInter) info = ReadDefFileError(defname);
-          }
-          fclose(fp);
+        case KWCoulombInter: /*coulombinter.def----------------------------------*/
+          if (ReadPairDValue(fp, CoulombInter, ParaCoulombInter, Nsite, NCoulombInter, defname) != 0) info = 1;
           break;
 
-        case KWHund:
-          /*hund.def------------------------------------------*/
-          if (NHundCoupling > 0) {
-            while (fscanf(fp, "%d %d %lf\n",
-                          &x0, &x1, &dReValue) != EOF) {
-              HundCoupling[idx][0] = x0;
-              HundCoupling[idx][1] = x1;
-              if (CheckPairSite(x0, x1, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              ParaHundCoupling[idx] = dReValue;
-              idx++;
-            }
-            if (idx != NHundCoupling) info = ReadDefFileError(defname);
-          }
-          fclose(fp);
+        case KWHund: /*hund.def------------------------------------------*/
+          if (ReadPairDValue(fp, HundCoupling, ParaHundCoupling, Nsite, NHundCoupling, defname) != 0) info = 1;
           break;
 
-        case KWPairHop:
-          /*pairhop.def---------------------------------------*/
-          if (NPairHopping > 0) {
-            while (fscanf(fp, "%d %d %lf\n",
-                          &x0, &x1, &dReValue) != EOF) {
-              PairHopping[2 * idx][0] = x0;
-              PairHopping[2 * idx][1] = x1;
-              if (CheckPairSite(x0, x1, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              ParaPairHopping[2 * idx] = dReValue;
-              PairHopping[2 * idx + 1][0] = x1;
-              PairHopping[2 * idx + 1][1] = x0;
-              ParaPairHopping[2 * idx + 1] = dReValue;
-              idx++;
-            }
-            if (2 * idx != NPairHopping) info = ReadDefFileError(defname);
-          }
-          fclose(fp);
+        case KWExchange: /*exchange.def--------------------------------------*/
+          if (ReadPairDValue(fp, ExchangeCoupling, ParaExchangeCoupling, Nsite, NExchangeCoupling, defname) != 0) info = 1;
           break;
 
-        case KWExchange:
-          /*exchange.def--------------------------------------*/
-          if (NExchangeCoupling > 0) {
-            while (fscanf(fp, "%d %d %lf\n",
-                          &x0, &x1, &dReValue) != EOF) {
-              ExchangeCoupling[idx][0] = x0;
-              ExchangeCoupling[idx][1] = x1;
-              if (CheckPairSite(x0, x1, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              ParaExchangeCoupling[idx] = dReValue;
-              idx++;
-            }
-            if (idx != NExchangeCoupling) info = ReadDefFileError(defname);
-          }
-          fclose(fp);
+        case KWPairHop: /*pairhop.def---------------------------------------*/
+          if(GetInfoPairHop(fp, PairHopping, ParaPairHopping, Nsite, NPairHopping, defname) !=0) info =1;
           break;
 
-        case KWGutzwiller:
-          /*gutzwilleridx.def---------------------------------*/
+        case KWGutzwiller: /*gutzwilleridx.def---------------------------------*/
           if (NGutzwillerIdx > 0) {
             idx0 = idx1 = 0;
             while (fscanf(fp, "%d ", &i) != EOF) {
@@ -893,7 +905,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
               info = ReadDefFileError(defname);
             }
           }
-          fclose(fp);
           break;
 
         case KWJastrow:
@@ -931,7 +942,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
               info = ReadDefFileError(defname);
             }
           }
-          fclose(fp);
           break;
 
         case KWDH2:
@@ -963,7 +973,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
               info = ReadDefFileError(defname);
             }
           }
-          fclose(fp);
           break;
 
         case KWDH4:
@@ -998,7 +1007,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
               info = ReadDefFileError(defname);
             }
           }
-          fclose(fp);
           break;
 
 
@@ -1108,7 +1116,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
               info = ReadDefFileError(defname);
             }
           }
-          fclose(fp);
           break;
 
         case KWOrbitalGeneral:
@@ -1166,8 +1173,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           if (idx0 != (2 * Nsite * Nsite - Nsite) || idx1 != NOrbitalIdx || itmp == 1) {
             info = ReadDefFileError(defname);
           }
-          fclose(fp);
-
           break;
 
         case KWOrbitalParallel:
@@ -1241,7 +1246,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
               info = ReadDefFileError(defname);
             }
           }
-          fclose(fp);
           break;
 
         case KWTransSym:
@@ -1273,7 +1277,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
             }
             if (idx != NQPTrans * Nsite) info = ReadDefFileError(defname);
           }
-          fclose(fp);
           break;
 
         case KWOneBodyG:
@@ -1318,7 +1321,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
               if (idx != NCisAjsLz) info = ReadDefFileError(defname);
             }
           }
-          fclose(fp);
           break;
 
 
@@ -1347,8 +1349,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
             }
             if (idx != NCisAjsCktAlt) info = ReadDefFileError(defname);
           }
-          fclose(fp);
-
           break;
 
         case KWTwoBodyG:
@@ -1403,7 +1403,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
             }
             if (idx != NCisAjsCktAltDC) info = ReadDefFileError(defname);
           }
-          fclose(fp);
           break;
 
         case KWInterAll:
@@ -1448,7 +1447,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
             /* do not terminate */
             /* info=ReadDefFileError(xNameListFile); */
           }
-          fclose(fp);
           break;
 
         case KWOptTrans:
@@ -1476,8 +1474,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
               }
             }
           }
-
-          fclose(fp);
           break;
 
         case KWBFRange:
@@ -1497,7 +1493,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
               info = ReadDefFileError(defname);
             }
           }
-          fclose(fp);
           break;
 
         case KWBF:
@@ -1526,14 +1521,12 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
               info = ReadDefFileError(defname);
             }
           }
-          fclose(fp);
           break;
 
         default:
-          fclose(fp);
           break;
       }
-      //      fprintf(stdout, "Debug: finish. \n");
+      fclose(fp);
     }
 
     if (count_idx != NPara) {
