@@ -27,48 +27,56 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 
 /*=================================================================================================*/
-struct DefineList{
-	int step;
-	char *CDataFileHead, *CParaFileHead, *CPathQtyExe, *CPathAveDev;
-  int nvec,k_exct;
-	int NDataIdxStart, NDataQtySmp;
+struct DefineList {
+    int step;
+    char *CDataFileHead, *CParaFileHead, *CPathQtyExe, *CPathAveDev;
+    int nvec, k_exct;
+    int NDataIdxStart, NDataQtySmp;
 
-	int NVMCCalMode, NLanczosMode;
+    int NVMCCalMode, NLanczosMode;
 
-	int Nsite, Ne, Nsize, IterationMax;
-  int print;
-  int eps_int;
-  double eps,mix;
-  int St;
-  int RndSeed;
-	int NMPTrans;
-	int eps_int_slater;
-	int APFlag;
-	int *LocSpn, NLocSpn, **All_pair;
+    int Nsite, Ne, Nsize, IterationMax;
+    int print;
+    int eps_int;
+    double eps, mix;
+    int St;
+    int RndSeed;
+    int NMPTrans;
+    int eps_int_slater;
+    int APFlag;
+    int *LocSpn, NLocSpn, **All_pair;
 
-	int *OptFlag, fidx;
-  unsigned int *Tpow;
+    int *OptFlag, fidx;
+    unsigned int *Tpow;
 
-  int *EDChemi, EDNChemi; double *EDParaChemi;
-  int **Transfer, **EDTransfer, NTransfer,EDNTransfer;
-  complex double *ParaTransfer;
-	int **CoulombIntra, NCoulombIntra;			double *ParaCoulombIntra;
-	int **CoulombInter, NCoulombInter;			double *ParaCoulombInter;
-	int **HundCoupling, NHundCoupling;			double *ParaHundCoupling;
-	int **PairHopping, NPairHopping;			double *ParaPairHopping;
-	int **ExchangeCoupling, NExchangeCoupling;	double *ParaExchangeCoupling;
-  int NOrbitalIdx, **OrbitalIdx; /* [Nsite][Nsite] */
-  int **OrbitalSgn; /* OrbitalSgn[2*Nsite][2*Nsite] = +1 or -1 */
-  int **Initial,NInitial;
-  complex double *ParaInitial;
-  //double *ParaInitial;
-  //double *ParaInitial_theta;
-  
+    int *EDChemi, EDNChemi;
+    double *EDParaChemi;
+    int **Transfer, **EDTransfer, NTransfer, EDNTransfer;
+    complex double *ParaTransfer;
+    int **CoulombIntra, NCoulombIntra;
+    double *ParaCoulombIntra;
+    int **CoulombInter, NCoulombInter;
+    double *ParaCoulombInter;
+    int **HundCoupling, NHundCoupling;
+    double *ParaHundCoupling;
+    int **PairHopping, NPairHopping;
+    double *ParaPairHopping;
+    int **ExchangeCoupling, NExchangeCoupling;
+    double *ParaExchangeCoupling;
+    int NOrbitalIdx, **OrbitalIdx; /* [Nsite][Nsite] */
+    int **OrbitalSgn; /* OrbitalSgn[2*Nsite][2*Nsite] = +1 or -1 */
+    int **Initial, NInitial;
+    complex double *ParaInitial;
+    //double *ParaInitial;
+    //double *ParaInitial_theta;
+    int NOrbitalAP;
 
-  int **CisAjs, NCisAjs;
-  int **CisAjsCktAltDC, NCisAjsCktAltDC;
 
-	
+    int **CisAjs, NCisAjs;
+    int **CisAjsCktAltDC, NCisAjsCktAltDC;
+
+    int iFlgOrbitalGeneral;
+
 };
 
 struct CheckList{
@@ -94,14 +102,16 @@ struct PhysList{
 struct TimeList{
   time_t start,mid1,mid2,end;
 };
+
 /*=================================================================================================*/
-struct BindStruct{
-	struct DefineList  Def;
-	struct CheckList   Check;
-	struct LargeList   Large;
-	struct PhysList    Phys;
-	struct TimeList    Time;
+struct BindStruct {
+		struct DefineList Def;
+		struct CheckList Check;
+		struct LargeList Large;
+		struct PhysList Phys;
+		struct TimeList Time;
 };
+
 /*=================================================================================================*/
 struct EDMainCalStruct{
 	struct BindStruct Bind;

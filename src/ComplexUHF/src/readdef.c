@@ -39,7 +39,8 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
   "Trans", "CoulombIntra", "CoulombInter",
   "Hund", "PairHop", "Exchange",
   "Gutzwiller", "Jastrow",
-  "DH2", "DH4", "Orbital",
+  "DH2", "DH4", "Orbital", "OrbitalAntiParallel",
+  "OrbitalParallel", "OrbitalGeneral",
   "TransSym", "InGutzwiller", "InJastrow",
   "InDH2", "InDH4", "InOrbital",
   "OneBodyG", "TwoBodyG", "TwoBodyGEx",
@@ -50,17 +51,18 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
 /**
  * Number of Keyword List in NameListFile for this program.
  **/
-enum KWIdxInt{
-  KWModPara, KWLocSpin,
-  KWTrans, KWCoulombIntra,KWCoulombInter,
-  KWHund, KWPairHop, KWExchange,
-  KWGutzwiller, KWJastrow,
-  KWDH2, KWDH4, KWOrbital,
-  KWTransSym, KWInGutzwiller, KWInJastrow,
-  KWInDH2, KWInDH4, KWInOrbital,
-  KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
-  KWInterAll, KWOptTrans, KWInOptTrans,
-  KWInitial,KWIdxInt_end
+enum KWIdxInt {
+    KWModPara, KWLocSpin,
+    KWTrans, KWCoulombIntra, KWCoulombInter,
+    KWHund, KWPairHop, KWExchange,
+    KWGutzwiller, KWJastrow,
+    KWDH2, KWDH4, KWOrbital, KWOrbitalAntiParallel,
+    KWOrbitalParallel, KWOrbitalGeneral,
+    KWTransSym, KWInGutzwiller, KWInJastrow,
+    KWInDH2, KWInDH4, KWInOrbital,
+    KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
+    KWInterAll, KWOptTrans, KWInOptTrans,
+    KWInitial, KWIdxInt_end
 };
 
 static char (*cFileNameListFile)[D_CharTmpReadDef];
@@ -72,33 +74,90 @@ int ReadDefFileError(
 	return 0;
 }
 
+int CheckPairSite(
+        const int iSite1,
+        const int iSite2,
+        const int iMaxNum
+);
+
 void SetInitialValue(struct DefineList *X);
+
+char* ReadBuffInt(FILE *fp, int *iNbuf){
+	char *cerr;
+	char ctmp[D_FileNameMax];
+	char ctmp2[D_FileNameMax];
+	cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+	if(cerr != NULL) {
+		cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+		sscanf(ctmp2, "%s %d\n", ctmp, iNbuf); //2
+	}
+	return cerr;
+}
+
+int JudgeOrbitalMode(int *_iFlgOrbitalGeneral, const int _iFlgOrbitalAP, const int _iFlgOrbitalP){
+
+  int iret=0;
+  //(General, AP, P)
+  if(*_iFlgOrbitalGeneral==1){
+    if(_iFlgOrbitalAP==0 && _iFlgOrbitalP==0){ //(1, 0, 0)
+      iret=0;
+    }
+    else{//(1, 1, 0) or (1, 0, 1) or (1, 1, 1)
+      iret= -1;
+    }
+  }
+  else{
+    if(_iFlgOrbitalAP==1){
+      if(_iFlgOrbitalP==1){ //(0, 1, 1)
+        *_iFlgOrbitalGeneral=1;
+        iret= 0;
+      }
+      else{ //(0, 1, 0)
+        iret= 0;
+      }
+    }
+    else{// (0, 0, 0) or (0, 0, 1)
+      iret= -2;
+    }
+  }
+  if(iret==-1) {
+    fprintf(stderr, "error: Multiple definition of Orbital files.\n");
+  }
+  else if(iret==-2){
+    fprintf(stderr, "error: Not exist any Orbital file or Need OrbitalAP file.\n");
+  }
+  return iret;
+}
+
 
 int ReadDefFileNInt(
 	char *xNameListFile, 
 	struct DefineList *X
-){
+) {
 	FILE *fp;
 	char defname[D_FileNameMaxReadDef];
 	char ctmp[D_CharTmpReadDef];
 	char ctmp2[D_FileNameMax];
 	int itmp, info;
-	int iKWidx=0;
-	info=0;
-        char *cerr;
+	int iKWidx = 0;
+	info = 0;
+	char *cerr;
+  int iNOrbitalAP=0;
+  int iNOrbitalP=0;
+  int iFlgOrbitalAP=0, iFlgOrbitalP=0;
 
-	cFileNameListFile = malloc(sizeof(char)*D_CharTmpReadDef*KWIdxInt_end);
+	cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
 	fprintf(stdout, "  Read File %s .\n", xNameListFile);
-	if(GetFileName(xNameListFile, cFileNameListFile)!=0){
-	  fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
-	  //	fprintf(stdout, " Error:  Read File %s .\n", xNameListFile);
-	  return(-1);
+	if (GetFileName(xNameListFile, cFileNameListFile) != 0) {
+		fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
+		//	fprintf(stdout, " Error:  Read File %s .\n", xNameListFile);
+		return (-1);
 	}
 
-	for(iKWidx=0; iKWidx< KWIdxInt_end; iKWidx++){
+	for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
 		strcpy(defname, cFileNameListFile[iKWidx]);
-		if(strcmp(defname,"")==0){
-			switch (iKWidx){
+		if (strcmp(defname, "") == 0) {
+			switch (iKWidx) {
 				case KWModPara:
 				case KWLocSpin:
 					fprintf(stderr, "  Error: Need to make a def file for %s.\n", cKWListOfFileNameList[iKWidx]);
@@ -109,205 +168,173 @@ int ReadDefFileNInt(
 		}
 	}
 
-    SetInitialValue(X);
+	SetInitialValue(X);
 
-    for(iKWidx=0; iKWidx< KWIdxInt_end; iKWidx++){
+	for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
 		strcpy(defname, cFileNameListFile[iKWidx]);
-		if(strcmp(defname,"")==0) continue;
-		fprintf(stdout,  "  Read File '%s' for %s.\n", defname, cKWListOfFileNameList[iKWidx]);
+		if (strcmp(defname, "") == 0) continue;
+		fprintf(stdout, "  Read File '%s' for %s.\n", defname, cKWListOfFileNameList[iKWidx]);
 		fp = fopen(defname, "r");
-		if(fp==NULL){
-			info=ReadDefFileError(defname);
+		if (fp == NULL) {
+			info = ReadDefFileError(defname);
 			fclose(fp);
 			break;
-		}
-		else{
-			switch(iKWidx){
+		} else {
+			switch (iKWidx) {
 				case KWModPara:
 					/* Read modpara.def---------------------------------------*/
 					//TODO: add error procedure here when parameters are not enough.
 					//SetDefultValuesModPara(X);
-					cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-                                        cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %d\n", ctmp, &itmp); //2
-                                        cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //3
-                                        cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //4
-                                        cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp); //5
-                                        cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %s\n", ctmp, X->CDataFileHead); //6
-                                        cerr = fgets(ctmp2,sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %s\n", ctmp, X->CParaFileHead); //7
-                                        cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);   //8
+					cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+					cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+					sscanf(ctmp2, "%s %d\n", ctmp, &itmp); //2
+					cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //3
+					cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //4
+					cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //5
+					cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+					sscanf(ctmp2, "%s %s\n", ctmp, X->CDataFileHead); //6
+					cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+					sscanf(ctmp2, "%s %s\n", ctmp, X->CParaFileHead); //7
+					cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);   //8
 
 					double dtmp;
-					while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp)!=NULL){
-						if(*ctmp2 == '\n' || ctmp2[0] == '-')  continue;
-						sscanf(ctmp2,"%s %lf\n", ctmp, &dtmp);
-						if(CheckWords(ctmp, "NVMCCalMode")==0 ||
-						   CheckWords(ctmp, "NLanczosMode")==0 ||
-                           CheckWords(ctmp, "NDataIdxStart")==0 ||
-                           CheckWords(ctmp, "NDataQtySmp")==0 ||
-                           CheckWords(ctmp, "NDataQtySmp")==0 ||
-                           CheckWords(ctmp, "NDataQtySmp")==0 ||
-                                CheckWords(ctmp, "NSPGaussLeg")==0 ||
-                                CheckWords(ctmp, "NSPStot")==0 ||
-                                CheckWords(ctmp, "NSROptItrStep")==0 ||
-                                CheckWords(ctmp, "NSROptItrSmp")==0 ||
-                                CheckWords(ctmp, "DSROptRedCut")==0 ||
-                                CheckWords(ctmp, "DSROptStaDel")==0 ||
-                                CheckWords(ctmp, "DSROptStepDt")==0 ||
-                                CheckWords(ctmp, "NVMCWarmUp")==0 ||
-                                CheckWords(ctmp, "NVMCInterval")==0 ||
-                                CheckWords(ctmp, "NVMCSample")==0 ||
-                                CheckWords(ctmp, "NExUpdatePath")==0 ||
-//                                CheckWords(ctmp, "RndSeed")==0 ||
-                                CheckWords(ctmp, "NSplitSize")==0 ||
-                                CheckWords(ctmp, "NStore")==0
-                           )
-                        {
-                            fprintf(stdout, "!! Warning: %s is not used for Hatree Fock Calculation. !!\n", ctmp);
+					while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+						if (*ctmp2 == '\n' || ctmp2[0] == '-') continue;
+						sscanf(ctmp2, "%s %lf\n", ctmp, &dtmp);
+						if (CheckWords(ctmp, "NVMCCalMode") == 0 ||
+								CheckWords(ctmp, "NLanczosMode") == 0 ||
+								CheckWords(ctmp, "NDataIdxStart") == 0 ||
+								CheckWords(ctmp, "NDataQtySmp") == 0 ||
+								CheckWords(ctmp, "NDataQtySmp") == 0 ||
+								CheckWords(ctmp, "NDataQtySmp") == 0 ||
+								CheckWords(ctmp, "NSPGaussLeg") == 0 ||
+								CheckWords(ctmp, "NSPStot") == 0 ||
+								CheckWords(ctmp, "NSROptItrStep") == 0 ||
+								CheckWords(ctmp, "NSROptItrSmp") == 0 ||
+								CheckWords(ctmp, "DSROptRedCut") == 0 ||
+								CheckWords(ctmp, "DSROptStaDel") == 0 ||
+								CheckWords(ctmp, "DSROptStepDt") == 0 ||
+								CheckWords(ctmp, "NVMCWarmUp") == 0 ||
+								CheckWords(ctmp, "NVMCInterval") == 0 ||
+								CheckWords(ctmp, "NVMCSample") == 0 ||
+								CheckWords(ctmp, "NExUpdatePath") == 0 ||
+								//                                CheckWords(ctmp, "RndSeed")==0 ||
+								CheckWords(ctmp, "NSplitSize") == 0 ||
+								CheckWords(ctmp, "NStore") == 0
+										) {
+							fprintf(stdout, "!! Warning: %s is not used for Hatree Fock Calculation. !!\n", ctmp);
 
 							continue;
-						}
-						else if(CheckWords(ctmp, "Nsite")==0){
-							X->Nsite=(int)dtmp;
-						}
-						else if(CheckWords(ctmp, "Ne")==0 || CheckWords(ctmp, "Nelectron")==0 ){
-							X->Ne=(int)dtmp;
-						}
-						else if(CheckWords(ctmp, "Mix")==0){
-							X->mix=dtmp;
-						}
-						else if(CheckWords(ctmp, "EPS")==0){
-							X->eps_int=(int)dtmp;
-						}
-						else if(CheckWords(ctmp, "Print")==0){
-							X->print=(int)dtmp;
-						}
-						else if(CheckWords(ctmp, "IterationMax")==0){
-							X->IterationMax=(int)dtmp;
-						}
-						else if(CheckWords(ctmp, "RndSeed")==0){
-							X->RndSeed=(int)dtmp;
-						}
-						else if(CheckWords(ctmp, "EpsSlater")==0){
-							X->eps_int_slater=(int)dtmp;
-						}
-						else if( CheckWords(ctmp, "NMPTrans")==0){
-							X->NMPTrans=(int) dtmp;
-						}
-						else{
+						} else if (CheckWords(ctmp, "Nsite") == 0) {
+							X->Nsite = (int) dtmp;
+						} else if (CheckWords(ctmp, "Ne") == 0 || CheckWords(ctmp, "Nelectron") == 0) {
+							X->Ne = (int) dtmp;
+						} else if (CheckWords(ctmp, "Mix") == 0) {
+							X->mix = dtmp;
+						} else if (CheckWords(ctmp, "EPS") == 0) {
+							X->eps_int = (int) dtmp;
+						} else if (CheckWords(ctmp, "Print") == 0) {
+							X->print = (int) dtmp;
+						} else if (CheckWords(ctmp, "IterationMax") == 0) {
+							X->IterationMax = (int) dtmp;
+						} else if (CheckWords(ctmp, "RndSeed") == 0) {
+							X->RndSeed = (int) dtmp;
+						} else if (CheckWords(ctmp, "EpsSlater") == 0) {
+							X->eps_int_slater = (int) dtmp;
+						} else if (CheckWords(ctmp, "NMPTrans") == 0) {
+							X->NMPTrans = (int) dtmp;
+						} else {
 							fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
 							info = ReadDefFileError(defname);
 						}
 					}
-					fclose(fp);
 					break;//modpara file
 
 				case KWLocSpin:
-                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NLocSpn));
-					fclose(fp);
+					cerr = ReadBuffInt(fp, &X->NLocSpn);
 					break;
 
 				case KWTrans:
-                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %d\n", ctmp,  &(X->NTransfer));
-					fclose(fp);
+					cerr = ReadBuffInt(fp, &X->NTransfer);
 					break;
 
 				case KWCoulombIntra:
-                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NCoulombIntra));
-					fclose(fp);
+					cerr = ReadBuffInt(fp, &X->NCoulombIntra);
 					break;
 
 				case KWCoulombInter:
-                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NCoulombInter));
-					fclose(fp);
+					cerr = ReadBuffInt(fp, &X->NCoulombInter);
 					break;
 
 				case KWHund:
-                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NHundCoupling));
-					fclose(fp);
+					cerr = ReadBuffInt(fp, &X->NHundCoupling);
 					break;
 
 				case KWPairHop:
-                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NPairHopping));
-					fclose(fp);
+					cerr = ReadBuffInt(fp, &X->NPairHopping);
 					break;
 
 				case KWExchange:
-                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NExchangeCoupling));
-					fclose(fp);
+					cerr = ReadBuffInt(fp, &X->NExchangeCoupling);
 					break;
 
-            case KWOrbital:
-              cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-              cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-              sscanf(ctmp2,"%s %d\n", ctmp, &X->NOrbitalIdx);
-              fclose(fp);
-              break;
+        case KWOrbital:
+        case KWOrbitalAntiParallel:
+          cerr = ReadBuffInt(fp, &iNOrbitalAP);
+          X->NOrbitalAP=iNOrbitalAP;
+          iFlgOrbitalAP = 1;
+          X->NOrbitalIdx += iNOrbitalAP;
+          break;
 
-				case KWOneBodyG:
-                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NCisAjs));
-					fclose(fp);
+        case KWOrbitalParallel:
+          cerr = ReadBuffInt(fp, &iNOrbitalP);
+          iFlgOrbitalP = 1;
+          X->NOrbitalIdx += 2 * iNOrbitalP; //up-up and down-down
+          break;
+
+        case KWOrbitalGeneral:
+          cerr = ReadBuffInt(fp, &X->NOrbitalIdx);
+          X->iFlgOrbitalGeneral = 1;
+          break;
+
+
+        case KWOneBodyG:
+					cerr = ReadBuffInt(fp, &X->NCisAjs);
 					break;
 
-/*
-				case KWInterAll:
-					fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-					fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %d\n", ctmp, &bufInt[IdxNInterAll]);
-					fclose(fp);
-					break;
-*/
 				case KWInitial:
-                                  cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-                                  cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-					sscanf(ctmp2,"%s %d\n", ctmp, &(X->NInitial));
-					fclose(fp);
+					cerr = ReadBuffInt(fp, &X->NInitial);
 					break;
 
 				default:
-					fclose(fp);
 					break;
 			}//case KW
+			fclose(fp);
 		}
-	if(info!=0) {
+		if (info != 0) {
+			fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
+			fprintf(stdout, " Error:  Read File %s .\n", defname);
+			return -1;
+		}
+	}
+
+  int iret=0;
+  iret=JudgeOrbitalMode(&X->iFlgOrbitalGeneral, iFlgOrbitalAP, iFlgOrbitalP);
+  if(iret<0) info=iret;
+
+  if (info != 0) {
 		fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
 		fprintf(stdout, " Error:  Read File %s .\n", defname);
 		return -1;
 	}
 
-    }
-
-	if(info!=0) {
-		fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
-		fprintf(stdout, " Error:  Read File %s .\n", defname);
-		return -1;
-	}
-
-	if(X->NMPTrans < 0) {
+	if (X->NMPTrans < 0) {
 		X->APFlag = 1; /* anti-periodic boundary */
 		X->NMPTrans *= -1;
 	} else {
 		X->APFlag = 0;
 	}
-	X->Nsize   = 2*X->Ne;
+	X->Nsize = 2 * X->Ne;
 	X->fidx = 0;
 	return 0;
 }
@@ -316,315 +343,325 @@ int ReadDefFileNInt(
 int ReadDefFileIdxPara(
 	char *xNameListFile, 
 	struct DefineList *X
-){
-	FILE *fp;
-	char defname[D_FileNameMaxReadDef];
-	char ctmp[D_FileNameMax], ctmp2[256];
-	int iKWidx=0;
-	int i, j;
-    int idx, Orbitalidx, Orbitalsgn;
-	int x0,x1,x2,x3;
-	int info,i_spin,j_spin;
-	double dReValue;
-	double dImValue;
-        char *cerr;
-	info=0;
-	for(iKWidx=KWLocSpin; iKWidx< KWIdxInt_end; iKWidx++){
-		strcpy(defname, cFileNameListFile[iKWidx]);
+) {
+  FILE *fp;
+  char defname[D_FileNameMaxReadDef];
+  char ctmp[D_FileNameMax], ctmp2[256];
+  int iKWidx = 0;
+  int i, j;
+  int spn_i, spn_j, all_i, all_j;
+  int fij;
+  int idx, Orbitalidx, Orbitalsgn;
+  int x0, x1, x2, x3;
+  int info, i_spin, j_spin;
+  double dReValue;
+  double dImValue;
+  char *cerr;
+  info = 0;
 
-		if(strcmp(defname,"")==0) continue;
+  //Initialize OrbitalIdx
+  // -1: not output
+  if(X->iFlgOrbitalGeneral==0) {
+    for (i = 0; i < X->Nsite; i++) {
+      for (j = 0; j < X->Nsite; j++) {
+        X->OrbitalIdx[i][j] = -1;
+      }
+    }
+  }
+  else{
+    for (i = 0; i < X->Nsite*2; i++) {
+      for (j = 0; j < X->Nsite*2; j++) {
+        X->OrbitalIdx[i][j] = -1;
+      }
+    }
+  }
 
-		fp = fopen(defname, "r");
-		if(fp==NULL){
-			info= ReadDefFileError(defname);
-			fclose(fp);
-			continue;
-		}
+  for (iKWidx = KWLocSpin; iKWidx < KWIdxInt_end; iKWidx++) {
+    strcpy(defname, cFileNameListFile[iKWidx]);
 
-		/*=======================================================================*/
-		for(i=0;i<IgnoreLinesInDef;i++) cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-		idx=0;
+    if (strcmp(defname, "") == 0) continue;
 
-		switch(iKWidx){
-			case KWLocSpin:
-				/* Read locspn.def----------------------------------------*/
-				while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
-					sscanf(ctmp2, "%d %d\n", &(x0), &(x1) );
-					X->LocSpn[x0] = x1;
-					idx++;
-				}
-				if(2 * X->Ne < X->NLocSpn){
-					fprintf(stderr, "Error: 2*Ne must be (2*Ne >= NLocalSpin).\n");
-					info=1;
-				}
-				if(idx!=X->Nsite){
-					info = ReadDefFileError(defname);
-				}
-				fclose(fp);
-				break;//locspn
+    fp = fopen(defname, "r");
+    if (fp == NULL) {
+      info = ReadDefFileError(defname);
+      fclose(fp);
+      continue;
+    }
 
-			case KWTrans:
-				/* transfer.def--------------------------------------*/
-				if(X->NTransfer>0){
-					while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
-                      dImValue=0;
-						sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
-							   &(X->Transfer[idx][0]),
-							   &(X->Transfer[idx][1]),
-							   &(X->Transfer[idx][2]),
-							   &(X->Transfer[idx][3]),
-							   &dReValue,
-							   &dImValue);
-						X->ParaTransfer[idx]=dReValue+dImValue*I;
-                        fprintf(stdout, "Debug: Transfer %d, %d %d %d %lf %lf \n", X->Transfer[idx][0], X->Transfer[idx][1], X->Transfer[idx][2], X->Transfer[idx][3], creal(X->ParaTransfer[idx]), cimag(X->ParaTransfer[idx]));
-           //             if(X->Transfer[idx][1] != X->Transfer[idx][3]){
-					//		fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-				//			info = ReadDefFileError(defname);
-			//				break;
-				//		}
-						idx++;
-					}
-					if(idx!=X->NTransfer) {
-						info = ReadDefFileError(defname);
-					}
-				}
-				fclose(fp);
-				break;
+    /*=======================================================================*/
+    for (i = 0; i < IgnoreLinesInDef; i++) cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+    idx = 0;
 
-			case KWCoulombIntra:
-				/*coulombintra.def----------------------------------*/
-				if(X->NCoulombIntra>0){
-					idx=0;
-					while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
-						sscanf(ctmp2, "%d %lf\n",
-							   &(X->CoulombIntra[idx][0]),
-							   &(X->ParaCoulombIntra[idx])
-						);
-                      //printf("Debug: CoulombIntra: idx = %d, para = %lf \n", X->CoulombIntra[idx][0],X->ParaCoulombIntra[idx]);
-                      idx++;
-					}
-					if(idx!=X->NCoulombIntra) {
-						info = ReadDefFileError(defname);
-					}
-				}
-				fclose(fp);
-				break;
+    switch (iKWidx) {
+      case KWLocSpin:
+        /* Read locspn.def----------------------------------------*/
+        while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+          sscanf(ctmp2, "%d %d\n", &(x0), &(x1));
+          X->LocSpn[x0] = x1;
+          idx++;
+        }
+        if (2 * X->Ne < X->NLocSpn) {
+          fprintf(stderr, "Error: 2*Ne must be (2*Ne >= NLocalSpin).\n");
+          info = 1;
+        }
+        if (idx != X->Nsite) {
+          info = ReadDefFileError(defname);
+        }
+        break;//locspn
 
-			case KWCoulombInter:
-				/*coulombinter.def----------------------------------*/
-				if(X->NCoulombInter>0){
-					while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
-						sscanf(ctmp2, "%d %d %lf\n",
-							   &(X->CoulombInter[idx][0]),
-							   &(X->CoulombInter[idx][1]),
-							   &(X->ParaCoulombInter[idx])
-						);
-						idx++;
-                        
-					}
-					if(idx!=X->NCoulombInter){
-						info=ReadDefFileError(defname);
-					}
-				}
-				fclose(fp);
-				break;
+      case KWTrans:
+        /* transfer.def--------------------------------------*/
+        if (X->NTransfer > 0) {
+          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            dImValue = 0;
+            sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
+                   &(X->Transfer[idx][0]),
+                   &(X->Transfer[idx][1]),
+                   &(X->Transfer[idx][2]),
+                   &(X->Transfer[idx][3]),
+                   &dReValue,
+                   &dImValue);
+            X->ParaTransfer[idx] = dReValue + dImValue * I;
+            //fprintf(stdout, "Debug: Transfer %d, %d %d %d %lf %lf \n", X->Transfer[idx][0], X->Transfer[idx][1], X->Transfer[idx][2], X->Transfer[idx][3], creal(X->ParaTransfer[idx]), cimag(X->ParaTransfer[idx]));
+            idx++;
+          }
+          if (idx != X->NTransfer) {
+            info = ReadDefFileError(defname);
+          }
+        }
+        break;
 
-			case KWHund:
-				/*hund.def------------------------------------------*/
-				if(X->NHundCoupling>0){
-					while( fscanf(fp, "%d %d %lf\n",
-								  &(X->HundCoupling[idx][0]),
-								  &(X->HundCoupling[idx][1]),
-								  &(X->ParaHundCoupling[idx]) )!=EOF){
-						idx++;
-					}
-					if(idx!=X->NHundCoupling) {
-						info = ReadDefFileError(defname);
-					}
-				}
-				fclose(fp);
-				break;
+      case KWCoulombIntra:
+        /*coulombintra.def----------------------------------*/
+        if (X->NCoulombIntra > 0) {
+          idx = 0;
+          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            sscanf(ctmp2, "%d %lf\n",
+                   &(X->CoulombIntra[idx][0]),
+                   &(X->ParaCoulombIntra[idx])
+            );
+            //printf("Debug: CoulombIntra: idx = %d, para = %lf \n", X->CoulombIntra[idx][0],X->ParaCoulombIntra[idx]);
+            idx++;
+          }
+          if (idx != X->NCoulombIntra) {
+            info = ReadDefFileError(defname);
+          }
+        }
+        break;
 
-			case KWPairHop:
-				/*pairhop.def---------------------------------------*/
-				if(X->NPairHopping>0){
-					while( fscanf(fp, "%d %d %lf\n",
-								  &(X->PairHopping[idx][0]),
-								  &(X->PairHopping[idx][1]),
-								  &(X->ParaPairHopping[idx]) )!=EOF){
-						idx++;
-					}
-					if(idx!=X->NPairHopping){
-						info=ReadDefFileError(defname);
-					}
-				}
-				fclose(fp);
-				break;
+      case KWCoulombInter:
+        /*coulombinter.def----------------------------------*/
+        if (X->NCoulombInter > 0) {
+          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            sscanf(ctmp2, "%d %d %lf\n",
+                   &(X->CoulombInter[idx][0]),
+                   &(X->CoulombInter[idx][1]),
+                   &(X->ParaCoulombInter[idx])
+            );
+            idx++;
 
-			case KWExchange:
-				/*exchange.def--------------------------------------*/
-				if(X->NExchangeCoupling>0){
-					while( fscanf(fp, "%d %d %lf\n",
-								  &(X->ExchangeCoupling[idx][0]),
-								  &(X->ExchangeCoupling[idx][1]),
-								  &(X->ParaExchangeCoupling[idx]) )!=EOF){
-						idx++;
-					}
-					if(idx!=X->NExchangeCoupling) {
-						info = ReadDefFileError(defname);
-					}
-				}
-				fclose(fp);
-				break;
+          }
+          if (idx != X->NCoulombInter) {
+            info = ReadDefFileError(defname);
+          }
+        }
+        break;
+
+      case KWHund:
+        /*hund.def------------------------------------------*/
+        if (X->NHundCoupling > 0) {
+          while (fscanf(fp, "%d %d %lf\n",
+                        &(X->HundCoupling[idx][0]),
+                        &(X->HundCoupling[idx][1]),
+                        &(X->ParaHundCoupling[idx])) != EOF) {
+            idx++;
+          }
+          if (idx != X->NHundCoupling) {
+            info = ReadDefFileError(defname);
+          }
+        }
+        break;
+
+      case KWPairHop:
+        /*pairhop.def---------------------------------------*/
+        if (X->NPairHopping > 0) {
+          while (fscanf(fp, "%d %d %lf\n",
+                        &(X->PairHopping[idx][0]),
+                        &(X->PairHopping[idx][1]),
+                        &(X->ParaPairHopping[idx])) != EOF) {
+            idx++;
+          }
+          if (idx != X->NPairHopping) {
+            info = ReadDefFileError(defname);
+          }
+        }
+        break;
+
+      case KWExchange:
+        /*exchange.def--------------------------------------*/
+        if (X->NExchangeCoupling > 0) {
+          while (fscanf(fp, "%d %d %lf\n",
+                        &(X->ExchangeCoupling[idx][0]),
+                        &(X->ExchangeCoupling[idx][1]),
+                        &(X->ParaExchangeCoupling[idx])) != EOF) {
+            idx++;
+          }
+          if (idx != X->NExchangeCoupling) {
+            info = ReadDefFileError(defname);
+          }
+        }
+        break;
 
       case KWOrbital:
-        /*orbitalidx.def------------------------------------*/
-        if(X->NOrbitalIdx>0){
-          for(i=0; i<X->Nsite*2; i++){
-            for(j=0; j<X->Nsite*2; j++){
-              X->OrbitalIdx[i][j] = -1;
-            }
-          }
-          idx =0;
-
-          /*
+      case KWOrbitalAntiParallel:
+        idx = 0;
+        if(X->iFlgOrbitalGeneral==0) {
           while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
             sscanf(ctmp2, "%d %d %d\n",
                    &i,
                    &j,
                    &Orbitalidx);
             X->OrbitalIdx[i+X->Nsite*0][j+X->Nsite*1]=Orbitalidx;
+            if(CheckPairSite(i, j, X->Nsite) != 0){
+              fprintf(stderr, "Error: Site index is incorrect. \n");
+              info=1;
+              break;
+            }
             idx++;
             if(idx==X->Nsite*X->Nsite) break;
           }
           if(idx!=X->Nsite*X->Nsite) {
             info=ReadDefFileError(defname);
           }
-          */
-          while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL)
-            {
-              //TODO: Replace for spin dependent
-              sscanf(ctmp2, "%d %d %d %d %d\n",
-                     &i,
-                     &i_spin, 
-                     &j,
-                     &j_spin, 
-                     &Orbitalidx);
-              (X->OrbitalIdx[i+X->Nsite*i_spin][j+X->Nsite*j_spin])=Orbitalidx;
-              idx++;
-              if(idx==X->Nsite*(2*X->Nsite-1)) break;
-            }
-          if(idx!=X->Nsite*(2*X->Nsite-1)) {
-            info=ReadDefFileError(defname);
-          } 
-        }
-        fclose(fp);
-        break;
-
-        case KWOneBodyG:
-          /*cisajs.def----------------------------------------*/
-          if(X->NCisAjs>0){
-            idx = 0;
-            while( fscanf(fp, "%d %d %d %d\n",
-                          &(x0), &(x1), &(x2), &(x3)) != EOF){
-              X->CisAjs[idx][0] = x0;
-              X->CisAjs[idx][1] = x1;
-              X->CisAjs[idx][2] = x2;
-              X->CisAjs[idx][3] = x3;
-              if(x1 != x3){
-                fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-                info = ReadDefFileError(defname);
-                break;
-              }
-              idx++;
-            }
-            if(idx!=X->NCisAjs){
-              info=ReadDefFileError(defname);
-            }
-          }
-          fclose(fp);
-          break;
-
-          /*
-			case KWInterAll:
-            //
-            if(X->NInterAll>0){
-            idx = 0;
-            while( fscanf(fp, "%d %d %d %d %d %d %d %d %lf %lf\n",
-            &(InterAll[idx][0]),
-            &(InterAll[idx][1]),//ispin1
-            &(InterAll[idx][2]),
-            &(InterAll[idx][3]),//ispin2
-            &(InterAll[idx][4]),
-            &(InterAll[idx][5]),//ispin3
-            &(InterAll[idx][6]),
-            &(InterAll[idx][7]),//ispin4
-            &dReValue,
-            &dImValue)!=EOF ){
-
-            ParaInterAll[idx]=dReValue+I*dImValue;
-
-            if(!((InterAll[idx][1] == InterAll[idx][3]
-            || InterAll[idx][5] == InterAll[idx][7])
-            ||
-            (InterAll[idx][1] == InterAll[idx][5]
-            || InterAll[idx][3]  == InterAll[idx][7])
-            )
-            )
-            {
-            fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-            info = ReadDefFileError(defname);
-            break;
+        }else{//general orbital
+          while( fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF){
+            spn_i = 0;
+            spn_j = 1;
+            all_i = i+spn_i*X->Nsite; //fsz
+            all_j = j+spn_j*X->Nsite; //fsz
+            if(CheckPairSite(i, j, X->Nsite) != 0){
+              fprintf(stderr, "Error: Site index is incorrect. \n");
+              info=1;
+              break;
             }
             idx++;
-            }
-            if(idx!=NInterAll) info=ReadDefFileError(defname);
-            } else {
-            // info=ReadDefFileError(xNameListFile);
-            }
-            fclose(fp);
-            break;
-          */
-        case KWInitial:
-          /*initial.def------------------------------------*/
-          if(X->NInitial>0){
-            idx = 0;
-            while(fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
-              dImValue=0;
-              sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
-                     &(X->Initial[idx][0]),
-                     &(X->Initial[idx][1]),
-                     &(X->Initial[idx][2]),
-                     &(X->Initial[idx][3]),
-                     &dReValue,
-                     &dImValue);
-              X->ParaInitial[idx]=dReValue+dImValue*I;
-              idx++;
-            }
+            X->OrbitalIdx[all_i][all_j]=fij;
+            // Note F_{IJ}=-F_{JI}
+            X->OrbitalIdx[all_j][all_i]=fij;
+            if(idx==(X->Nsite*X->Nsite)) break;
           }
-                
-          if(idx!=X->NInitial){
-            info=ReadDefFileError(defname);
+        }
+        break;
+
+      case KWOrbitalParallel:
+        /*orbitalidxt.def------------------------------------*/
+          idx = 0;
+          int fij_org;
+            while (fscanf(fp, "%d %d %d\n", &i, &j, &fij_org) != EOF) {
+              //fprintf(stdout, "Debug: test-1 %d %d %d %d\n", i, j, fij, idx0);
+              for (spn_i = 0; spn_i < 2; spn_i++) {
+                all_i = i + spn_i * X->Nsite; //fsz
+                all_j = j + spn_i * X->Nsite; //fsz
+                if (CheckPairSite(i, j, X->Nsite) != 0) {
+                  fprintf(stderr, "Error: Site index is incorrect. \n");
+                  info = 1;
+                  break;
+                }
+                idx++;
+                fij = X->NOrbitalAP + 2 * fij_org + spn_i;
+                X->OrbitalIdx[all_i][all_j] = fij;
+                X->OrbitalIdx[all_j][all_i] = fij;
+              }
+              if (idx == (X->Nsite * (X->Nsite - 1))) {
+                break;
+              }
+            }
+
+        break;
+
+      case KWOrbitalGeneral:
+        /*orbitalidx.def------------------------------------*/
+        if (X->NOrbitalIdx > 0) {
+          idx = 0;
+          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            //TODO: Replace for spin dependent
+            sscanf(ctmp2, "%d %d %d %d %d\n",
+                   &i,
+                   &i_spin,
+                   &j,
+                   &j_spin,
+                   &Orbitalidx);
+            (X->OrbitalIdx[i + X->Nsite * i_spin][j + X->Nsite * j_spin]) = Orbitalidx;
+            idx++;
+            if (idx == X->Nsite * (2 * X->Nsite - 1)) break;
           }
-          else {
-            //	 info=ReadDefFileError(xNameListFile);
+          if (idx != X->Nsite * (2 * X->Nsite - 1)) {
+            info = ReadDefFileError(defname);
           }
-          fclose(fp);
-          break;
+        }
+        break;
 
-        default:
-          fprintf(stdout, "!! Warning: %s is not used for Hatree Fock Calculation. !!\n", defname);
-          fclose(fp);
-          break;
-		}
-	}
+      case KWOneBodyG:
+        /*cisajs.def----------------------------------------*/
+        if (X->NCisAjs > 0) {
+          idx = 0;
+          while (fscanf(fp, "%d %d %d %d\n",
+                        &(x0), &(x1), &(x2), &(x3)) != EOF) {
+            X->CisAjs[idx][0] = x0;
+            X->CisAjs[idx][1] = x1;
+            X->CisAjs[idx][2] = x2;
+            X->CisAjs[idx][3] = x3;
+            if (x1 != x3) {
+              fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
+              info = ReadDefFileError(defname);
+              break;
+            }
+            idx++;
+          }
+          if (idx != X->NCisAjs) {
+            info = ReadDefFileError(defname);
+          }
+        }
+        break;
 
-	if(info!=0) {
-      fprintf(stderr, "error: Indices and Parameters of Definition files(*.def) are incomplete.\n");
-      return -1;
-	}
+      case KWInitial:
+        /*initial.def------------------------------------*/
+        if (X->NInitial > 0) {
+          idx = 0;
+          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            dImValue = 0;
+            sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
+                   &(X->Initial[idx][0]),
+                   &(X->Initial[idx][1]),
+                   &(X->Initial[idx][2]),
+                   &(X->Initial[idx][3]),
+                   &dReValue,
+                   &dImValue);
+            X->ParaInitial[idx] = dReValue + dImValue * I;
+            idx++;
+          }
+        }
 
-	return 0;
+        if (idx != X->NInitial) {
+          info = ReadDefFileError(defname);
+        } else {
+          //	 info=ReadDefFileError(xNameListFile);
+        }
+        break;
+
+      default:
+        fprintf(stdout, "!! Warning: %s is not used for Hatree Fock Calculation. !!\n", defname);
+        break;
+    }
+    fclose(fp);
+  }
+
+  if (info != 0) {
+    fprintf(stderr, "error: Indices and Parameters of Definition files(*.def) are incomplete.\n");
+    return -1;
+  }
+
+  return 0;
 }
 
 /**********************************************************************/
@@ -844,3 +881,78 @@ void SetInitialValue(struct DefineList *X){
   X->eps_int_slater=6;
 }
 
+
+/**
+ * @brief Check Site Number.
+ * @param[in] *iSite a site number.
+ * @param[in] iMaxNum Max site number.
+ * @retval 0 normally finished reading file.
+ * @retval -1 unnormally finished reading file.
+ * @version 0.1
+ * @author Takahiro Misawa (The University of Tokyo)
+ * @author Kazuyoshi Yoshimi (The University of Tokyo)
+ **/
+int CheckSite(
+        const int iSite,
+        const int iMaxNum
+)
+{
+  if(iSite>=iMaxNum || iSite < 0)  return(-1);
+  return 0;
+}
+
+/**
+ * @brief Check Site Number for a pair -> (siteA, siteB).
+ * @param[in] iSite1 a site number on a site A.
+ * @param[in] iSite2 a site number on a site B.
+ * @param[in] iMaxNum Max site number.
+ * @retval 0 normally finished reading file.
+ * @retval -1 unnormally finished reading file.
+ * @version 0.1
+ * @author Takahiro Misawa (The University of Tokyo)
+ * @author Kazuyoshi Yoshimi (The University of Tokyo)
+ **/
+int CheckPairSite(
+        const int iSite1,
+        const int iSite2,
+        const int iMaxNum
+)
+{
+  if(CheckSite(iSite1, iMaxNum)!=0){
+    return(-1);
+  }
+  if(CheckSite(iSite2, iMaxNum)!=0){
+    return(-1);
+  }
+  return 0;
+}
+
+/**
+ * @brief Check Site Number for a quad -> (siteA, siteB, siteC, siteD).
+ * @param[in] iSite1 a site number on site A.
+ * @param[in] iSite2 a site number on site B.
+ * @param[in] iSite3 a site number on site C.
+ * @param[in] iSite4 a site number on site D.
+ * @param[in] iMaxNum Max site number.
+ * @retval 0 normally finished reading file.
+ * @retval -1 unnormally finished reading file.
+ * @version 0.1
+ * @author Takahiro Misawa (The University of Tokyo)
+ * @author Kazuyoshi Yoshimi (The University of Tokyo)
+ **/
+int CheckQuadSite(
+        const int iSite1,
+        const int iSite2,
+        const int iSite3,
+        const int iSite4,
+        const int iMaxNum
+)
+{
+  if(CheckPairSite(iSite1, iSite2, iMaxNum)!=0){
+    return(-1);
+  }
+  if(CheckPairSite(iSite3, iSite4, iMaxNum)!=0){
+    return(-1);
+  }
+  return 0;
+}
