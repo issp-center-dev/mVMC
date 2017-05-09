@@ -64,23 +64,12 @@ void VMCMainCal_fsz(MPI_Comm comm) {
     eleNum = EleNum + sample*Nsite2;
     eleProjCnt = EleProjCnt + sample*NProj;
     eleSpn     = EleSpn + sample*Nsize; //fsz
-//DEBUG
-    /* for(i=0;i<Nsite;i++) {
-      printf("Debug: sample=%d: i=%d  up=%d down =%d \n",sample,i,eleCfg[i+0*Nsite],eleCfg[i+1*Nsite]);
-      }*/
-//DEBUG
 
     StartTimer(40);
 #ifdef _DEBUG
     printf("  Debug: sample=%d: CalculateMAll \n",sample);
 #endif
-//    if(AllComplexFlag==0){
-//       info = CalculateMAll_real(eleIdx,qpStart,qpEnd); // InvM_real,PfM_real will change
-//       #pragma omp parallel for default(shared) private(tmp_i)
-//       for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)  InvM[tmp_i]= InvM_real[tmp_i]; // InvM will be used in  SlaterElmDiff_fcmp
-//    }else{
-      info = CalculateMAll_fsz(eleIdx,eleSpn,qpStart,qpEnd);//info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd); // InvM,PfM will change
-//    }
+    info = CalculateMAll_fsz(eleIdx,eleSpn,qpStart,qpEnd);//info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd); // InvM,PfM will change
     StopTimer(40);
 
     if(info!=0) {
@@ -90,19 +79,12 @@ void VMCMainCal_fsz(MPI_Comm comm) {
 #ifdef _DEBUG
     printf("  Debug: sample=%d: CalculateIP \n",sample);
 #endif
-//    if(AllComplexFlag==0){
-//      ip = CalculateIP_real(PfM_real,qpStart,qpEnd,MPI_COMM_SELF);
-//    }else{
-      ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
-//    } 
-
-    //x = LogProjVal(eleProjCnt);
+    ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
 #ifdef _DEBUG
     printf("  Debug: sample=%d: LogProjVal \n",sample);
 #endif
-    LogProjVal(eleProjCnt);
+    //LogProjVal(eleProjCnt);
     /* calculate reweight */
-    //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
     w =1.0;
 #ifdef _DEBUG
     printf("  Debug: sample=%d: isfinite \n",sample);
@@ -117,20 +99,11 @@ void VMCMainCal_fsz(MPI_Comm comm) {
 #ifdef _DEBUG
     printf("  Debug: sample=%d: calculateHam \n",sample);
 #endif
-//    if(AllComplexFlag==0){
-//#ifdef _DEBUG
-//      printf("  Debug: sample=%d: calculateHam_real \n",sample);
-//#endif
-//      e = CalculateHamiltonian_real(creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
-//      Sz = 0.0; 
-//    }else{
 #ifdef _DEBUG
-      printf("  Debug: sample=%d: calculateHam_cmp \n",sample);
+    printf("  Debug: sample=%d: calculateHam_cmp \n",sample);
 #endif
-      e  = CalculateHamiltonian_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
-      Sz = CalculateSz_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
-//    }
-    //printf("DEBUG: rank=%d: sample=%d ip= %lf %lf e=%lf %lf\n",rank,sample,creal(ip),cimag(ip),creal(e),cimag(e));
+    e  = CalculateHamiltonian_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
+    Sz = CalculateSz_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
     StopTimer(41);
     if( !isfinite(creal(e) + cimag(e)) ) {
       fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
@@ -162,54 +135,21 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       if(FlagOptTrans>0) { // this part will be not used
         calculateOptTransDiff(SROptO+2*NProj+2*NSlater+2, ip); //TBC
       }
-//[s] this part will be used for real varaibles
-/*
-      if(AllComplexFlag==0){
-        #pragma loop noalias
-        for(i=0;i<SROptSize;i++){ 
-          srOptO_real[i] = creal(srOptO[2*i]);       
-        }
-      }
-*/
-//[e]
-
       StartTimer(43);
       /* Calculate OO and HO */
       if(NStoreO==0){
-
-        //for(int_i=0;int_i<SROptSize*2;int_i++){
-        //  printf("sample=%d: i=%d %lf %lf\n",SROptSize*2,int_i,creal(SROptO[int_i]),cimag(SROptO[int_i]));
-        //}
-        //calculateOO_matvec(SROptOO,SROptHO,SROptO,w,e,SROptSize);
-//        if(AllComplexFlag==0){
-//          calculateOO_real(SROptOO_real,SROptHO_real,SROptO_real,w,creal(e),SROptSize);
-//        }else{
-          calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
-//        } 
+        calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
       }else{
         we    = w*e;
         sqrtw = sqrt(w); 
-//        if(AllComplexFlag==0){
-//          #pragma omp parallel for default(shared) private(int_i)
-//          for(int_i=0;int_i<SROptSize;int_i++){
-//            // SROptO_Store for fortran
-//            SROptO_Store_real[int_i+sample*SROptSize]  = sqrtw*SROptO_real[int_i];
-//            SROptHO_real[int_i]                       += creal(we)*SROptO_real[int_i]; 
-//          }
-//        }else{
-        //for(int_i=0;int_i<SROptSize*2;int_i++){
-          //printf("sample=%d: i=%d %lf %lf\n",SROptSize*2,int_i,creal(SROptO[int_i]),cimag(SROptO[int_i]));
-        //}
-          #pragma omp parallel for default(shared) private(int_i)
-          for(int_i=0;int_i<SROptSize*2;int_i++){
-            // SROptO_Store for fortran
-            SROptO_Store[int_i+sample*(2*SROptSize)]  = sqrtw*SROptO[int_i];
-            SROptHO[int_i]                           += we*SROptO[int_i]; 
-          }
-//        }
+        #pragma omp parallel for default(shared) private(int_i)
+        for(int_i=0;int_i<SROptSize*2;int_i++){
+        // SROptO_Store for fortran
+          SROptO_Store[int_i+sample*(2*SROptSize)]  = sqrtw*SROptO[int_i];
+          SROptHO[int_i]                           += we*SROptO[int_i]; 
+        }
       } 
       StopTimer(43);
-
     } else if(NVMCCalMode==1) {
       StartTimer(42);
       /* Calculate Green Function */
@@ -217,21 +157,7 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       StopTimer(42);
 
       if(NLanczosMode>0){
-        // ignoring Lanczos: to be added
-        /* Calculate local QQQQ */
-        //StartTimer(43);
-        //LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-        //calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
-        //StopTimer(43);
-        //if(NLanczosMode>1){
-          /* Calculate local QcisAjsQ */
-          //StartTimer(44);
-          //LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
-          //calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
-          //calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
-          //                NCisAjsCktAlt,CisAjsCktAltIdx);
-          //StopTimer(44);
-        //}
+        // for sz!=0, Lanczso is not supported
       }
     }
   } /* end of for(sample) */
@@ -239,23 +165,9 @@ void VMCMainCal_fsz(MPI_Comm comm) {
 // calculate OO and HO at NVMCCalMode==0
   if(NStoreO!=0 && NVMCCalMode==0){
     sampleSize=sampleEnd-sampleStart;
-//    if(AllComplexFlag==0){
-//      StartTimer(45);
-//      calculateOO_Store_real(SROptOO_real,SROptHO_real,SROptO_Store_real,creal(w),creal(e),SROptSize,sampleSize);
-//      StopTimer(45);
-//    }else{
-      StartTimer(45);
-      calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
-      StopTimer(45);
-//    }
+    StartTimer(45);
+    calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
+    StopTimer(45);
   }
-/*
-  for(int_i=0;int_i<SROptSize*2;int_i++) {
-    printf("XHO %d: i=%d %lf %lf\n",SROptSize*2,int_i,creal(SROptHO[int_i]),cimag(SROptHO[int_i]));
-  }
-  for(int_i=0;int_i<SROptSize*2*(2*SROptSize+2);int_i++) {
-    printf("XOO %d: i=%d %lf %lf\n",SROptSize*2,int_i,creal(SROptOO[int_i]),cimag(SROptOO[int_i]));
-  }
-*/
   return;
 }

@@ -101,11 +101,6 @@ void VMCMainCal(MPI_Comm comm) {
     eleCfg = EleCfg + sample*Nsite2;
     eleNum = EleNum + sample*Nsite2;
     eleProjCnt = EleProjCnt + sample*NProj;
-//DEBUG
-    /* for(i=0;i<Nsite;i++) {
-      printf("Debug: sample=%d: i=%d  up=%d down =%d \n",sample,i,eleCfg[i+0*Nsite],eleCfg[i+1*Nsite]);
-      }*/
-//DEBUG
 
     StartTimer(40);
 #ifdef _DEBUG_VMCCAL
@@ -133,11 +128,9 @@ void VMCMainCal(MPI_Comm comm) {
       ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
     } 
 
-    //x = LogProjVal(eleProjCnt);
 #ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: LogProjVal \n",sample);
 #endif
-    LogProjVal(eleProjCnt);
     /* calculate reweight */
     //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
     w =1.0;
@@ -165,7 +158,6 @@ void VMCMainCal(MPI_Comm comm) {
 #endif
       e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
     }
-    //printf("DEBUG: rank=%d: sample=%d ip= %lf %lf\n",rank,sample,creal(ip),cimag(ip));
     StopTimer(41);
 
 #ifdef _DEBUG_VMCCAL
@@ -212,7 +204,6 @@ void VMCMainCal(MPI_Comm comm) {
       StartTimer(43);
       /* Calculate OO and HO */
       if(NStoreO==0){
-        //calculateOO_matvec(SROptOO,SROptHO,SROptO,w,e,SROptSize);
         if(AllComplexFlag==0){
           calculateOO_real(SROptOO_real,SROptHO_real,SROptO_real,w,creal(e),SROptSize);
         }else{
