@@ -296,7 +296,7 @@ void VMCMainCal(MPI_Comm comm) {
 void VMC_BF_MainCal(MPI_Comm comm) {
     int *eleIdx, *eleCfg, *eleNum, *eleProjCnt, *eleProjBFCnt;
     double complex e, ip; //db is double?
-    double x, w, db;
+    double w, db;
     double we, sqrtw;
     int int_i, sampleSize, tmp_i;
     const int qpStart = 0;
@@ -564,10 +564,9 @@ void clearPhysQuantity(){
     for(i=0;i<n;i++) vec_real[i] = 0.0;
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
-    n = 2*NCisAjs+NCisAjsCktAltDC+NCisAjsCktAltDC;
-
+    n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
     vec = PhysCisAjs;
-    #pragma omp parallel for default(shared) private(i)
+#pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
 
     if(NLanczosMode>0) {
