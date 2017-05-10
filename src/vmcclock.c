@@ -111,6 +111,7 @@ void OutputTimerParaOpt() {
   fprintf(fp,"      CalHamiltonian2      [72] %12.5lf\n",Timer[72]);
   fprintf(fp,"    ReturnSlaterElmDiff    [42] %12.5lf\n",Timer[42]);
   fprintf(fp,"    calculate OO and HO    [43] %12.5lf\n",Timer[43]);
+  fprintf(fp,"    multiply store OO      [45] %12.5lf\n",Timer[45]);
   fprintf(fp,"  StochasticOpt             [5] %12.5lf\n",Timer[5]);
   fprintf(fp,"    preprocess             [50] %12.5lf\n",Timer[50]);
   fprintf(fp,"    stcOptMain             [51] %12.5lf\n",Timer[51]);

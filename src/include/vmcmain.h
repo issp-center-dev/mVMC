@@ -58,6 +58,7 @@ extern int omp_get_thread_num(void);
 #include "../sfmt/SFMT.h"
 #include "version.h"
 #include "global.h"
+#include "blas_externs.h"
 
 #include "../safempi.c"
 #include "../safempi_fcmp.c"

@@ -1,9 +1,0 @@
-include ../make.sys
-
-OBJ = SFMT.o
-
-$(OBJ): SFMT.c
-	$(CC) $(CFLAGS) -DMEXP=19937 $(SFMTFLAGS) -c $< -o $@
-
-clean:
-	rm -f $(OBJ)

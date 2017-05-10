@@ -77,6 +77,7 @@ struct DefineList {
 
     int iFlgOrbitalGeneral;
 
+	
 };
 
 struct CheckList{

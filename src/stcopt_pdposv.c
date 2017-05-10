@@ -31,39 +31,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define _SRC_STCOPT_PDPOSV
 // #define _DEBUG_STCOPT_PDPOSV
 
-#ifdef _SYSTEM_A
- #define M_PDSYEVD PDSYEVD
- #define M_PDGEMV  PDGEMV
-#elif _lapack_small_nounderscore
- #define M_PDSYEVD pdsyevd
- #define M_PDGEMV  pdgemv
-#else
- #define M_NUMROC   numroc_
- #define M_DESCINIT descinit_
- #define M_PDSYEVD  pdsyevd_
- #define M_PDPOSV  pdposv_
- #define M_PDGEMV  pdgemv_
-#endif
-
-extern int Csys2blacs_handle(MPI_Comm comm);
-extern int Cblacs_gridinit(int *ictxt, char *order, int nprow, int npcol);
-extern int Cblacs_gridexit(int ictxt);
-extern int Cblacs_gridinfo(int ictxt, int *nprow, int *npcol, int *myprow, int *mypcol);
-extern int M_NUMROC(int *n, int *nb, int *iproc, int *isrcproc, int *nprocs);
-extern int M_DESCINIT(int *desc, int *m, int *n, int *mb, int *nb, int *irsrc,
-                      int *icsrc, int *ictxt, int *lld, int *info);
-extern void	M_PDSYEVD(const char* jobz, const char* uplo,
-                      const int* n, const double* a, const int* ia, const int* ja, const int* desca,
-                      double* w, double* z, const int* iz, const int* jz, const int* descz,
-                      double* work, const int* lwork, int* iwork, const int* liwork, int* info);
-extern int M_PDPOSV(char *uplo, int *n, int *nrhs, double *a, int *ia, int *ja, int *desca,
-                    double *b, int *ib, int *jb, int *descb, int *info);
-extern void M_PDGEMV(char *trans, int *m, int *n, double *alpha,
-                     double *a, int *ia, int *ja, int *desca,
-                     double *x, int *ix, int *jx, int *descx, int *incx,
-                     double *beta,
-                     double *y, int *iy, int *jy, int *descy, int *incy);
-
 int StochasticOpt(MPI_Comm comm) {
   const int nPara=NPara;
   const int srOptSize=SROptSize;
@@ -96,7 +63,7 @@ int StochasticOpt(MPI_Comm comm) {
 
   StartTimer(50);
 //[s] for only real variables TBC
-  if(AllComplexFlag==0){
+  if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real &  sz=0
     #pragma omp parallel for default(shared) private(i,int_x,int_y,j)
     #pragma loop noalias
     for(i=0;i<2*SROptSize*(2*SROptSize+2);i++){
