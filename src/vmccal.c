@@ -101,11 +101,6 @@ void VMCMainCal(MPI_Comm comm) {
     eleCfg = EleCfg + sample*Nsite2;
     eleNum = EleNum + sample*Nsite2;
     eleProjCnt = EleProjCnt + sample*NProj;
-//DEBUG
-    /* for(i=0;i<Nsite;i++) {
-      printf("Debug: sample=%d: i=%d  up=%d down =%d \n",sample,i,eleCfg[i+0*Nsite],eleCfg[i+1*Nsite]);
-      }*/
-//DEBUG
 
     StartTimer(40);
 #ifdef _DEBUG_VMCCAL
@@ -133,11 +128,9 @@ void VMCMainCal(MPI_Comm comm) {
       ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
     } 
 
-    //x = LogProjVal(eleProjCnt);
 #ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: LogProjVal \n",sample);
 #endif
-    LogProjVal(eleProjCnt);
     /* calculate reweight */
     //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
     w =1.0;
@@ -165,7 +158,7 @@ void VMCMainCal(MPI_Comm comm) {
 #endif
       e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
     }
-    //printf("DEBUG: rank=%d: sample=%d ip= %lf %lf\n",rank,sample,creal(ip),cimag(ip));
+    //printf("MDEBUG: %lf %lf \n",creal(e),cimag(e));
     StopTimer(41);
 
 #ifdef _DEBUG_VMCCAL
@@ -212,7 +205,6 @@ void VMCMainCal(MPI_Comm comm) {
       StartTimer(43);
       /* Calculate OO and HO */
       if(NStoreO==0){
-        //calculateOO_matvec(SROptOO,SROptHO,SROptO,w,e,SROptSize);
         if(AllComplexFlag==0){
           calculateOO_real(SROptOO_real,SROptHO_real,SROptO_real,w,creal(e),SROptSize);
         }else{
@@ -561,7 +553,6 @@ void clearPhysQuantity(){
     vec = SROptOO;
     #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
-
 // only for real variables
     if(NStoreO < 2){
       n = (SROptSize)*(SROptSize+2); // TBC
@@ -633,12 +624,6 @@ void calculateOptTransDiff(double complex *srOptO, const double complex ipAll) {
 void calculateOO_Store_real(double *srOptOO_real, double *srOptHO_real, double *srOptO_Store_real,
                  const double w, const double e, int srOptSize, int sampleSize) {
 
-//#define M_DGEM dgemm_
-
-extern int
-dgemm_(char *jobz, char *uplo, int *m, int *n, int *k, double *alpha, double *a, int *lda, double *b, int *ldb,
-       double *beta, double *c, int *ldc);
-
   int i,j;
   char jobz, uplo;
   double alpha,beta,o;
@@ -649,7 +634,7 @@ dgemm_(char *jobz, char *uplo, int *m, int *n, int *k, double *alpha, double *a,
   jobz = 'N';
   uplo = 'T';
   if(NStoreO==1){
-    dgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store_real,&srOptSize,srOptO_Store_real,&srOptSize,&beta,srOptOO_real,&srOptSize);
+    M_DGEMM(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store_real,&srOptSize,srOptO_Store_real,&srOptSize,&beta,srOptOO_real,&srOptSize);
   }else{
 #pragma omp parallel for default(shared) private(i)
 #pragma loop noalias
@@ -675,11 +660,6 @@ dgemm_(char *jobz, char *uplo, int *m, int *n, int *k, double *alpha, double *a,
 void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double complex *srOptO_Store,
                  const double w, const double complex e, int srOptSize, int sampleSize) {
 
-  //#define M_DGEM dgemm_
-
-  extern int zgemm_(char *jobz, char *uplo, int *m,int *n,int *k,double complex *alpha,  double complex *a, int *lda, double complex *b, int *ldb,
-                    double complex *beta,double complex *c,int *ldc);
-
   int i,j;
   char jobz, uplo;
   double complex alpha,beta,o;
@@ -690,7 +670,7 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
   jobz = 'N';
   uplo = 'C';
   if(NStoreO==1){
-    zgemm_(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
+    M_ZGEMM(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
   }else{
 #pragma omp parallel for default(shared) private(i)
 #pragma loop noalias
@@ -743,14 +723,6 @@ void calculateOO_matvec(double complex *srOptOO, double complex *srOptHO, const 
                  const double complex w, const double complex e, const int srOptSize) {
   double complex we=w*e;
 
-  #define M_ZAXPY zaxpy_
-  #define M_ZGERC zgerc_
-
-  extern int M_ZAXPY(const int *n, const double complex *alpha, const double complex *x, const int *incx,
-                     double complex *y, const int *incy);
-  extern int M_ZGERC(const int *m, const int *n, const double complex *alpha,
-                    const double complex *x, const int *incx, const double complex *y, const int *incy, 
-                    double complex *a, const int *lda);
   int m,n,incx,incy,lda;
   m=n=lda=2*srOptSize;
   incx=incy=1;
@@ -793,14 +765,7 @@ void calculateOO_real(double *srOptOO, double *srOptHO, const double *srOptO,
                  const double w, const double e, const int srOptSize) {
   double we=w*e;
 
-  #define M_DAXPY daxpy_
-  #define M_DGER dger_
 
-  extern int M_DAXPY(const int *n, const double *alpha, const double *x, const int *incx,
-                     double *y, const int *incy);
-  extern int M_DGER(const int *m, const int *n, const double *alpha,
-                    const double *x, const int *incx, const double *y, const int *incy, 
-                    double *a, const int *lda);
   int m,n,incx,incy,lda;
   m=n=lda=srOptSize;
   incx=incy=1;

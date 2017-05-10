@@ -376,7 +376,7 @@ int ReadDefFileIdxPara(
 							   &dReValue,
 							   &dImValue);
 						X->ParaTransfer[idx]=dReValue+dImValue*I;
-                        fprintf(stdout, "Debug: Transfer %d, %d %d %d %lf %lf \n", X->Transfer[idx][0], X->Transfer[idx][1], X->Transfer[idx][2], X->Transfer[idx][3], creal(X->ParaTransfer[idx]), cimag(X->ParaTransfer[idx]));
+                        //fprintf(stdout, "Debug: Transfer %d, %d %d %d %lf %lf \n", X->Transfer[idx][0], X->Transfer[idx][1], X->Transfer[idx][2], X->Transfer[idx][3], creal(X->ParaTransfer[idx]), cimag(X->ParaTransfer[idx]));
            //             if(X->Transfer[idx][1] != X->Transfer[idx][3]){
 					//		fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
 				//			info = ReadDefFileError(defname);
