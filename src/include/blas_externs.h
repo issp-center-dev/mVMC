@@ -23,67 +23,27 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _BLAS_EXTERNS_H
 #define _BLAS_EXTERNS_H
 
-#ifdef _SYSTEM_A
-  #define M_DAXPY DAXPY
-  #define M_DGEMM  DGEMM
-  #define M_DGEMV  DGEMV
-  #define M_DGER  DGER
-  #define M_DGER DGER
-  #define M_DGETRF DGETRF
-  #define M_DGETRI DGETRI
-  #define M_DPOSV  DPOSV
-  #define M_DSKPFA DSKPFA
-  #define M_PDGEMV  PDGEMV
-  #define M_PDSYEVD PDSYEVD
-  #define M_ZAXPY ZAXPY
-  #define M_ZGERC ZGERC
-  #define M_ZGETRF ZGETRF
-  #define M_ZGETRI ZGETRI
-  #define M_ZPOSV  ZPOSV
-  #define M_ZSKPFA ZSKPFA
-  #define M_ZGEMM ZGEMM
-#elif _lapack_small_nounderscore
-  #define M_DAXPY daxpy
-  #define M_DGEMM  dgemm
-  #define M_DGEMV  dgemv
-  #define M_DGER  dger
-  #define M_DGER dger
-  #define M_DGETRF dgetrf
-  #define M_DGETRI dgetri
-  #define M_DPOSV  dposv
-  #define M_DSKPFA dskpfa
-  #define M_PDGEMV  pdgemv
-  #define M_PDSYEVD pdsyevd
-  #define M_ZAXPY zaxpy
-  #define M_ZGERC zgerc
-  #define M_ZGETRF zgetrf
-  #define M_ZGETRI zgetri
-  #define M_ZPOSV  zposv
-  #define M_ZSKPFA zskpfa
-  #define M_ZGEMM zgemm
-#else
-  #define M_DAXPY daxpy_
-  #define M_DESCINIT descinit_
-  #define M_DGEMM  dgemm_
-  #define M_DGEMV  dgemv_
-  #define M_DGER  dger_
-  #define M_DGER dger_
-  #define M_DGETRF dgetrf_
-  #define M_DGETRI dgetri_
-  #define M_DPOSV  dposv_
-  #define M_DSKPFA dskpfa_
-  #define M_NUMROC   numroc_
-  #define M_PDGEMV  pdgemv_
-  #define M_PDPOSV  pdposv_
-  #define M_PDSYEVD  pdsyevd_
-  #define M_ZAXPY zaxpy_
-  #define M_ZGERC zgerc_
-  #define M_ZGETRF zgetrf_
-  #define M_ZGETRI zgetri_
-  #define M_ZPOSV  zposv_
-  #define M_ZSKPFA zskpfa_
-  #define M_ZGEMM zgemm_
-#endif
+#define M_DAXPY daxpy_
+#define M_DESCINIT descinit_
+#define M_DGEMM  dgemm_
+#define M_DGEMV  dgemv_
+#define M_DGER  dger_
+#define M_DGER dger_
+#define M_DGETRF dgetrf_
+#define M_DGETRI dgetri_
+#define M_DPOSV  dposv_
+#define M_DSKPFA dskpfa_
+#define M_NUMROC   numroc_
+#define M_PDGEMV  pdgemv_
+#define M_PDPOSV  pdposv_
+#define M_PDSYEVD  pdsyevd_
+#define M_ZAXPY zaxpy_
+#define M_ZGERC zgerc_
+#define M_ZGETRF zgetrf_
+#define M_ZGETRI zgetri_
+#define M_ZPOSV  zposv_
+#define M_ZSKPFA zskpfa_
+#define M_ZGEMM zgemm_
 
 // BLAS and LAPACK
 
