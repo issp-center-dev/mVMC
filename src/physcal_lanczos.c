@@ -196,7 +196,9 @@ int PhysCalLanczos_fcmp(
 					 creal(_QQQQ[10]), creal(_QQQQ[11]), creal(_QQQQ[15]),
 				 &alpha_p,  &ene_p,  &ene_vp, &alpha_m,  &ene_m,  &ene_vm)==0){
     fprintf(stderr,"Error: Lanczos method is failed due to illegal value of alpha.\n");
-    return -1;
+		free(LS_CisAjs);
+		free(LS_CisAjsCktAlt);
+		return -1;
 	}
 	//determine alpha
 	if (ene_p > ene_m) {
