@@ -328,7 +328,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   int step;
   int info;
   int rank;
-  int i,tmp_i;//DEBUG
+  int tmp_i;//DEBUG
   int iprogress;
   MPI_Comm_rank(comm_parent, &rank);
 
