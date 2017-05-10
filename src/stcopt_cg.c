@@ -115,7 +115,7 @@ int StochasticOptCG(MPI_Comm comm);
 void stcOptCG_Init(const int nSmat, int *const smatToParaIdx, double *VecCG); 
 int stcOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm);
 int operate_by_S(const int nSmat, double *x, double *y, double * process_y, double * stcO, MPI_Comm comm);
-inline double xdot(const int n, double * const p, double * const q);
+double xdot(const int n, double * const p, double * const q);
 
 int StochasticOptCG(MPI_Comm comm) {
   const int nPara=NPara;
@@ -645,7 +645,7 @@ void stcOptCG_Init(const int nSmat, int *const smatToParaIdx, double *VecCG) {
   return;
 }
 
-inline double xdot(const int n, double * const p, double * const q) {
+double xdot(const int n, double * const p, double * const q) {
   int i;
   double z=0;
   #pragma loop noalias

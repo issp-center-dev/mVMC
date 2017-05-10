@@ -258,7 +258,8 @@ int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, i
   }
   info=ReadGreen(xNameListFile, Nca, caIdx,  Ncacadc, cacaDCIdx, Ns);
   if( info !=0){
-      return (info);
+    free(cacaDCIdx);
+    return (info);
   }
 
   for(i=0; i<Nca; i++){

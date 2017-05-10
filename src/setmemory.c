@@ -365,7 +365,7 @@ void SetMemory() {
   /***** Physical Quantity *****/
   if(NVMCCalMode==1){
     PhysCisAjs  = (double complex*)malloc(sizeof(double complex)
-                    *(2*NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC));
+                    *(NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC));
     PhysCisAjsCktAlt   = PhysCisAjs       + NCisAjs;
     PhysCisAjsCktAltDC = PhysCisAjsCktAlt + NCisAjsCktAlt;
     LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
