@@ -68,7 +68,7 @@ struct DefineList{
   int **CisAjs, NCisAjs;
   int **CisAjsCktAltDC, NCisAjsCktAltDC;
 
-	
+	int iFlgOrbitalGeneral;
 };
 
 struct CheckList{
