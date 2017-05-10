@@ -233,10 +233,7 @@ int MakeOrbitalFile(struct BindStruct *X){
       i_free1(CountOrbital, X->Def.NOrbitalIdx);
       printf("Fij for mVMC are outputted to %s.\n", fileName);
 
-    } else {
-      return 0;
     }
   }
-
   return 0;
 }

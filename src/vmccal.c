@@ -35,7 +35,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "lslocgrn.c"
 #include "calgrn.c"
 
-// #define _DEBUG_VMCCAL
+//#define _DEBUG_VMCCAL
+//#define _DEBUG_VMCCAL_DETAIL
 
 void clearPhysQuantity();
 
@@ -97,6 +98,7 @@ void VMCMainCal(MPI_Comm comm) {
   clearPhysQuantity();
   StopTimer(24);
   for(sample=sampleStart;sample<sampleEnd;sample++) {
+
     eleIdx = EleIdx + sample*Nsize;
     eleCfg = EleCfg + sample*Nsite2;
     eleNum = EleNum + sample*Nsite2;
@@ -234,10 +236,16 @@ void VMCMainCal(MPI_Comm comm) {
     } else if(NVMCCalMode==1) {
       StartTimer(42);
       /* Calculate Green Function */
+#ifdef _DEBUG_VMCCAL
+      fprintf(stdout, "Debug: Start: CalcGreenFunc\n");
+#endif
       CalculateGreenFunc(w,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
       StopTimer(42);
 
       if(NLanczosMode>0){
+#ifdef _DEBUG_VMCCAL
+	fprintf(stdout, "Debug: Start: Lanczos\n");
+#endif
         // ignoring Lanczos: to be added
         /* Calculate local QQQQ */
         StartTimer(43);
@@ -272,7 +280,6 @@ void VMCMainCal(MPI_Comm comm) {
           }
           StopTimer(44);
         }
-
       }
     }
   } /* end of for(sample) */
@@ -290,6 +297,7 @@ void VMCMainCal(MPI_Comm comm) {
       StopTimer(45);
     }
   }
+
   return;
 }
 
