@@ -1178,7 +1178,7 @@ int CheckKW(
  * @brief Function of Validating value.
  * @param[in] icheckValue value to validate.
  * @param[in] ilowestValue lowest value which icheckValue can be set.
- * @param[in] iHighestValue heighest value which icheckValue can be set.
+ * @param[in] iHighestValue highest value which icheckValue can be set.
  * @retval 0 value is correct.
  * @retval -1 value is incorrect.
  * @author Kazuyoshi Yoshimi (The University of Tokyo)
