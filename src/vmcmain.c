@@ -518,6 +518,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   int rank;
   MPI_Comm_rank(comm_parent, &rank);
 
+  fprintf(stdout, "Start: UpdateSlaterElm.\n");
   StartTimer(20);
   if(iFlgOrbitalGeneral==0){//sz is conserved
     UpdateSlaterElm_fcmp();
@@ -525,13 +526,13 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     UpdateSlaterElm_fsz();
   } 
   StopTimer(20);
+  fprintf(stdout, "End  : UpdateSlaterElm.\n");
 
+  fprintf(stdout, "Start: Sampling.\n");
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
     if(rank==0) OutputTime(ismp);
     FlushFile(0,rank);
-
-    InitFilePhysCal(ismp, rank);
-    
+    InitFilePhysCal(ismp, rank);    
     StartTimer(3);
 	if(NProjBF ==0) {
 	  if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){//real & sz=0
@@ -563,7 +564,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
         }
       }
     }
-	else{
+    else{
 	  if(AllComplexFlag==0){
         // only for real TBC
         StartTimer(69);
@@ -586,7 +587,9 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
     StopTimer(3);
     StartTimer(4);
+    fprintf(stdout, "End  : Sampling.\n");
 
+    fprintf(stdout, "Start: Main calculation.\n");
     if(NProjBF ==0) {
       if(iFlgOrbitalGeneral==0){
         VMCMainCal(comm_child1);
@@ -596,7 +599,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }else{
       VMC_BF_MainCal(comm_child1);
     }
-
+    fprintf(stdout, "End  : Main calculation.\n");
     StopTimer(4);
     StartTimer(21);
 
