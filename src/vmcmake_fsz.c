@@ -106,7 +106,6 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
 //DEBUG
       CheckEleConfig_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn,comm);
 //DEBUG
-
       updateType = getUpdateType(NExUpdatePath);
 
       if(updateType==HOPPING) { /* hopping */

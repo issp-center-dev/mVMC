@@ -29,17 +29,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_STCOPT_DPOSV
 #define _SRC_STCOPT_DPOSV
 
-#ifdef _SYSTEM_A
- #define M_DPOSV  DPOSV
-#elif _lapack_small_nounderscore
- #define M_DPOSV  dposv
-#else
- #define M_DPOSV  dposv_
-#endif
-
-extern int M_DPOSV(char *uplo, int *n, int *nrhs, double *a, int *lda, double *b, int *ldb, int *info);
-
-
 int StochasticOpt(MPI_Comm comm) {
   double *s; /* the overlap matrix S */
   double *g; /* the energy gradient and the prameter change */
@@ -72,7 +61,7 @@ int StochasticOpt(MPI_Comm comm) {
     return info;
   }
 //[s] for only real variables TBC
-  if(AllComplexFlag==0){
+  if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){//real & sz=0
     #pragma omp parallel for default(shared) private(i,int_x,int_y,j)
     #pragma loop noalias
     for(i=0;i<2*SROptSize*(2*SROptSize+2);i++){

@@ -28,6 +28,7 @@ void diag(struct BindStruct *X){
     int int_i,int_j,int_k,int_l;
     double *r;
     double complex **tmp_mat,**vec;
+    double complex tmp_mlt;
     int mfint[7],xMsize;
 
  
@@ -39,6 +40,7 @@ void diag(struct BindStruct *X){
     for(int_i = 0;int_i < 2*xMsize; int_i++){
       for(int_j = 0;int_j < 2*xMsize; int_j++){
         tmp_mat[int_i][int_j] = X->Large.Ham[int_i][int_j];
+        //printf("Ham: %d %d: %lf %lf\n",int_i,int_j,creal(tmp_mat[int_i][int_j]),cimag(tmp_mat[int_i][int_j]));
 //[s] MERGE BY TM
 /*
         if(fabs(creal(X->Large.Ham[int_i][int_j]))>0.001){
@@ -50,6 +52,7 @@ void diag(struct BindStruct *X){
     }
 
     ZHEEVall(2*xMsize,tmp_mat,r,vec);
+//[e]check
     for(int_k = 0; int_k < 2*xMsize; int_k++){
       X->Large.EigenValues[int_k] = r[int_k];
       //fprintf(stdout, "Debug: Eigen[%d]=%lf\n", int_k, X->Large.EigenValues[int_k]);
@@ -59,10 +62,10 @@ void diag(struct BindStruct *X){
       for(int_l = 0; int_l < 2*xMsize; int_l++){
         //X->Large.R_SLT[int_l][int_k] = conj(vec[int_k][int_l]);
 //[s] MERGE BY TM
-        X->Large.R_SLT[int_l][int_k] = (vec[int_k][int_l]); // is this ok ?
-        X->Large.L_SLT[int_k][int_l] = conj(vec[int_k][int_l]); // is this ok ?
-        //X->Large.R_SLT[int_l][int_k] = conj(vec[int_k][int_l]); //original
-        //X->Large.L_SLT[int_k][int_l] = (vec[int_k][int_l]);     //original
+        X->Large.R_SLT[int_l][int_k] = conj(vec[int_k][int_l]); //original
+        X->Large.L_SLT[int_k][int_l] = (vec[int_k][int_l]);     //original
+        // R_SLT = U^{*}        
+        // L_SLT = U^{T}        
 //[e] MERGE BY TM
       }
     }

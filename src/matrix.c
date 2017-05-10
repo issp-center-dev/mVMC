@@ -52,42 +52,7 @@ int calculateMAll_BF_fcmp_child(const int *eleIdx, const int qpStart, const int 
                                 double complex*bufM, int *iwork, double complex*work, int lwork, double *rwork, double complex* PfM_real, double complex*InvM_real);
 //[e] MERGE BY TM
 
-#ifdef _SYSTEM_A
-  #define M_DGETRF DGETRF
-  #define M_DGETRI DGETRI
-  #define M_DSKPFA DSKPFA
-  #define M_ZGETRF ZGETRF
-  #define M_ZGETRI ZGETRI
-  #define M_ZSKPFA ZSKPFA
-#elif _lapack_small_nounderscore
-  #define M_DGETRF dgetrf
-  #define M_DGETRI dgetri
-  #define M_DSKPFA dskpfa
-  #define M_ZGETRF zgetrf
-  #define M_ZGETRI zgetri
-  #define M_ZSKPFA zskpfa
-#else
-  #define M_DGETRF dgetrf_
-  #define M_DGETRI dgetri_
-  #define M_DSKPFA dskpfa_
-  #define M_ZGETRF zgetrf_
-  #define M_ZGETRI zgetri_
-  #define M_ZSKPFA zskpfa_
-#endif
-
 #define D_PfLimit 1.0e-100
-
-extern int M_DGETRF(int *m, int *n, double *a, int *lda, int *ipiv, int *info);
-extern int M_DGETRI(int *n, double *a, int *lda, int *ipiv, double *work, int *lwork, int *info);
-extern int M_DSKPFA(const char *uplo, const char *mthd, const int *n,
-                    double *a, const int *lda, double *pfaff, int *iwork,
-                    double *work, const int *lwork, int *info);
-extern int M_ZGETRF(int *m, int *n, double complex *a, int *lda, int *ipiv, int *info);
-extern int M_ZGETRI(int *n, double complex *a, int *lda, int *ipiv, double complex *work, int *lwork, int *info);
-extern int M_ZSKPFA(const char *uplo, const char *mthd, const int *n,
-                    double complex *a, const int *lda, double complex *pfaff, int *iwork,
-                    double complex *work, const int *lwork, double *rwork, int *info);
-
 
 int getLWork() {
   char uplo='U', mthd='P';

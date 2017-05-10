@@ -33,15 +33,18 @@ void initial(struct BindStruct *X){
 
     Ns = X->Def.Nsite;
 
-    for(int_i=0; int_i < 2*X->Def.Nsite; int_i++){
-      for(int_j=0; int_j < 2*X->Def.Nsite; int_j++){
-        //X->Large.G[int_i][int_j]   = 0.0;
-		  X->Large.G[int_i][int_j]  =  1*genrand_real2(); /* uniform distribution [0,1) */
-		  //X->Large.G[int_i][int_j]  += 1*I*genrand_real2(); /* uniform distribution [0,1) */
-		  //X->Large.G[int_i][int_j]  /=sqrt(2.0);
-	  }
-    }
+    if(X->Def.NInitial==0){
+      for(int_i=0; int_i < 2*X->Def.Nsite; int_i++){
+        for(int_j=0; int_j < 2*X->Def.Nsite; int_j++){
+          //X->Large.G[int_i][int_j]   = 0.0;
+		      X->Large.G[int_i][int_j]  =  0.01*(genrand_real2()-0.5); /* uniform distribution [0,1) */
+		      //X->Large.G[int_i][int_j]  += 1*I*genrand_real2(); /* uniform distribution [0,1) */
+		      //X->Large.G[int_i][int_j]  /=sqrt(2.0);
+	      }
+      }
+    } 
 
+    printf("MDEBUG: %d \n",X->Def.NInitial);
 	//Case: Initial green's functions are defined.
     for(int_i=0; int_i < X->Def.NInitial; int_i++){
 //[s] MERGE BY TM
@@ -55,6 +58,7 @@ void initial(struct BindStruct *X){
       //tmp     = X->Def.ParaInitial[int_i]*(cos(theta)+I*sin(theta));
       //tmp     = I;
       tmp =X->Def.ParaInitial[int_i];
+      printf("int_i=%d %lf %lf \n",int_i,creal(tmp),cimag(tmp));
       t_site_0 = site_0+spin_0*Ns;
       t_site_1 = site_1+spin_1*Ns;
       X->Large.G[t_site_0][t_site_1]  = tmp ;

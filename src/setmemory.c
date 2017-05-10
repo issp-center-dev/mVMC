@@ -353,7 +353,7 @@ void SetMemory() {
     }
 
     if(NStoreO!=0){
-      if(AllComplexFlag==0){
+      if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
         SROptO_Store_real = (double *)malloc(sizeof(double)*(SROptSize*NVMCSample) );
       }else{
         SROptO_Store      = (double complex*)malloc( sizeof(double complex)*(2*SROptSize*NVMCSample) );
@@ -365,7 +365,7 @@ void SetMemory() {
   /***** Physical Quantity *****/
   if(NVMCCalMode==1){
     PhysCisAjs  = (double complex*)malloc(sizeof(double complex)
-                    *(2*NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC));
+                    *(NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NCisAjs));
     PhysCisAjsCktAlt   = PhysCisAjs       + NCisAjs;
     PhysCisAjsCktAltDC = PhysCisAjsCktAlt + NCisAjsCktAlt;
     LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;

@@ -216,13 +216,13 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
   if(NLanczosMode>0){
     /* QQQQ */
     n = NLSHam*NLSHam*NLSHam*NLSHam;
-      if(AllComplexFlag==0){
+      if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){
         vec_real=QQQQ_real;
         weightAverageReduce_real(n,vec_real,comm);
       }
       else{
         vec = QQQQ;
-         weightAverageReduce_fcmp(n,vec,comm);
+        weightAverageReduce_fcmp(n,vec,comm);
       }
     if(NLanczosMode>1){
       /* QCisAjsQ and QCisAjsCktAltQ */

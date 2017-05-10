@@ -42,7 +42,7 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
   RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
-#pragma omp parallel default(shared)\
+  #pragma omp parallel default(shared)		\
   private(myEleIdx,myEleNum,myProjCntNew,myBuffer,idx)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
@@ -50,7 +50,7 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
     myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
 
-    #pragma loop noalias
+#pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
     #pragma loop noalias
     for(idx=0;idx<Nsite2;idx++) myEleNum[idx] = eleNum[idx];
@@ -67,20 +67,11 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
                        myProjCntNew,myBuffer);
       LocalCisAjs[idx] = tmp;
     }
-
     #pragma omp master
     {StopTimer(50);StartTimer(51);}
     
     #pragma omp for private(idx,ri,rj,s,rk,rl,t,tmp) schedule(dynamic)
     for(idx=0;idx<NCisAjsCktAltDC;idx++) {
-      /*
-      ri = CisAjsCktAltDCIdx[idx][0];
-      rj = CisAjsCktAltDCIdx[idx][1];
-      s  = CisAjsCktAltDCIdx[idx][2];
-      rk = CisAjsCktAltDCIdx[idx][3];
-      rl = CisAjsCktAltDCIdx[idx][4];
-      t  = CisAjsCktAltDCIdx[idx][5];
-      */
       ri = CisAjsCktAltDCIdx[idx][0];
       rj = CisAjsCktAltDCIdx[idx][2];
       s  = CisAjsCktAltDCIdx[idx][1];
@@ -100,7 +91,7 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
     for(idx=0;idx<NCisAjs;idx++) {
       PhysCisAjs[idx] += w*LocalCisAjs[idx];
     }
-    
+
     #pragma omp master
     {StopTimer(52);StartTimer(53);}
 

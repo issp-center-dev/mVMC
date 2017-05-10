@@ -99,8 +99,6 @@ int GetKWWithIdx(char *ctmpLine, char *ctmp, int *itmp);
 int ValidateValue(const int icheckValue, const int ilowestValue, const int iHighestValue);
 int GetFileName(const char* cFileListNameFile, char cFileNameList[][D_CharTmpReadDef]);
 
-void SetDefultValuesModPara(int *buf, double* bufDouble);
-
 int ReadInputParameters(char *xNameListFile, MPI_Comm comm);
 
 // Flag for giving type of optimized parameters
