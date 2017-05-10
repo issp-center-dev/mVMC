@@ -182,63 +182,16 @@ int ReadGreen(char *xNameListFile, int Nca, int**caIdx, int Ncacadc, int**cacaDC
     switch(iKWidx){
       case KWOneBodyG:
         /*cisajs.def----------------------------------------*/
-        if(Nca>0){
-          idx = 0;
-          while( fscanf(fp, "%d %d %d %d\n",
-                        &(x0), &(x1), &(x2), &(x3)) != EOF){
-            caIdx[idx][0] = x0;
-            caIdx[idx][1] = x1;
-            caIdx[idx][2] = x2;
-            caIdx[idx][3] = x3;
-            if(CheckPairSite(x0, x2, Ns) != 0){
-              fprintf(stderr, "Error: Site index is incorrect. \n");
-              return(-1);
-            }
-
-            if(x1 != x3){
-              fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-              return(-1);
-            }
-            idx++;
-          }
-          if(idx!=Nca) info=ReadDefFileError(defname);
-        }
-        fclose(fp);
+        if(GetInfoOneBodyG(fp, caIdx, iOneBodyGIdx, 0, Ns, Nca, defname)!=0) return(-1);
         break;
       case KWTwoBodyG:
         /*cisajscktaltdc.def--------------------------------*/
-        if(Ncacadc>0){
-          idx = 0;
-          while( fscanf(fp, "%d %d %d %d %d %d %d %d\n",
-                        &(x0), &(x1), &(x2), &(x3), &(x4),
-                        &(x5), &(x6), &(x7) ) != EOF ){
-            cacaDCIdx[idx][0] = x0;
-            cacaDCIdx[idx][1] = x1;
-            cacaDCIdx[idx][2] = x2;
-            cacaDCIdx[idx][3] = x3;
-            cacaDCIdx[idx][4] = x4;
-            cacaDCIdx[idx][5] = x5;
-            cacaDCIdx[idx][6] = x6;
-            cacaDCIdx[idx][7] = x7;
-            idx++;
-            if(CheckQuadSite(x0, x2, x4, x6, Ns) != 0){
-              fprintf(stderr, "Error: Site index is incorrect. \n");
-              return(-1);
-            }
-
-            if(x1 != x3 || x5 != x7){
-              fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-              return(-1);
-            }
-          }
-          if(idx!=Ncacadc) info=ReadDefFileError(defname);
-        }
-        fclose(fp);
+        if(GetInfoTwoBodyG(fp, cacaDCIdx, cacaDCIdx, iOneBodyGIdx, caIdx, 0, Ns, Ncacadc, defname)!=0) return(-1);
         break;
       default:
-        fclose(fp);
         break;
     }
+    fclose(fp);
   }
   return 0;
 }
@@ -502,6 +455,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     iret=JudgeOrbitalMode(&iFlgOrbitalGeneral, iFlgOrbitalAP, iFlgOrbitalP);
     if(iret<0) info=iret;
 
+    //TODO: LanczosMode is not supported for Sz not conserved mode.
+
     //For Lanczos mode: Calculation of Green's function
     if (bufInt[IdxLanczosMode] > 1) {
       //Get info of CisAjs and CisAjsCktAltDC
@@ -717,6 +672,8 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   double dReValue, dImValue;
   int rank;
   int sgn;
+
+  int iNOneBodyG;
 
   //[s] for Orbital idx
   int all_i, all_j;
@@ -1038,199 +995,29 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWOneBodyG:
           /*cisajs.def----------------------------------------*/
-          if (NCisAjs > 0) {
-            idx = 0;
-            while (fscanf(fp, "%d %d %d %d\n",
-                          &(x0), &(x1), &(x2), &(x3)) != EOF) {
-              if (NLanczosMode < 2) {
-                CisAjsIdx[idx][0] = x0;
-                CisAjsIdx[idx][1] = x1;
-                CisAjsIdx[idx][2] = x2;
-                CisAjsIdx[idx][3] = x3;
-              } else {
-                isite1 = x0 + x1 * Nsite;
-                isite2 = x2 + x3 * Nsite;
-                idxLanczos = iOneBodyGIdx[isite1][isite2];
-                CisAjsIdx[idxLanczos][0] = x0;
-                CisAjsIdx[idxLanczos][1] = x1;
-                CisAjsIdx[idxLanczos][2] = x2;
-                CisAjsIdx[idxLanczos][3] = x3;
-                //fprintf(stdout, "Debug 1G: idxLanczos=%d\n", idxLanczos);
-              }
-
-              if (CheckPairSite(x0, x2, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-
-              /* OrbitalIdx?
-              if(idx0!=(2*Nsite*Nsite-Nsite) || idx1!=NOrbitalIdx || itmp==1) {
-                //printf("DEBUG: idx0=%d idx1=%d itmp = %d \n",idx0,idx1,itmp);
-                info=ReadDefFileError(defname);
-              }
-              */
-              idx++;
-            }
-            if (NLanczosMode < 2) {
-              if (idx != NCisAjs) info = ReadDefFileError(defname);
-            } else {
-              if (idx != NCisAjsLz) info = ReadDefFileError(defname);
-            }
-          }
+          iNOneBodyG = (NLanczosMode <2 ) ? NCisAjs : NCisAjsLz ;
+          if(GetInfoOneBodyG(fp, CisAjsIdx, iOneBodyGIdx, NLanczosMode, Nsite, iNOneBodyG, defname)!=0) info=1;
           break;
-
 
         case KWTwoBodyGEx:
           /*cisajscktalt.def----------------------------------*/
-
-          if (NCisAjsCktAlt > 0) {
-            idx = 0;
-            while (fscanf(fp, "%d %d %d %d %d %d %d %d\n",
-                          &(x0), &(x1), &(x2), &(x3), &(x4),
-                          &(x5), &(x6), &(x7)) != EOF) {
-              CisAjsCktAltIdx[idx][0] = x0;
-              CisAjsCktAltIdx[idx][1] = x1;
-              CisAjsCktAltIdx[idx][2] = x2;
-              CisAjsCktAltIdx[idx][3] = x3;
-              CisAjsCktAltIdx[idx][4] = x4;
-              CisAjsCktAltIdx[idx][5] = x5;
-              CisAjsCktAltIdx[idx][6] = x6;
-              CisAjsCktAltIdx[idx][7] = x7;
-              if (CheckQuadSite(x0, x2, x4, x6, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-              idx++;
-            }
-            if (idx != NCisAjsCktAlt) info = ReadDefFileError(defname);
-          }
+          if(GetInfoTwoBodyGEx(fp, CisAjsCktAltIdx, Nsite, NCisAjsCktAlt, defname)!=0) info=1;
           break;
 
         case KWTwoBodyG:
           /*cisajscktaltdc.def--------------------------------*/
-          if (NCisAjsCktAltDC > 0) {
-            idx = 0;
-            while (fscanf(fp, "%d %d %d %d %d %d %d %d\n",
-                          &(x0), &(x1), &(x2), &(x3), &(x4),
-                          &(x5), &(x6), &(x7)) != EOF) {
-              CisAjsCktAltDCIdx[idx][0] = x0;
-              CisAjsCktAltDCIdx[idx][1] = x1;
-              CisAjsCktAltDCIdx[idx][2] = x2;
-              CisAjsCktAltDCIdx[idx][3] = x3;
-              CisAjsCktAltDCIdx[idx][4] = x4;
-              CisAjsCktAltDCIdx[idx][5] = x5;
-              CisAjsCktAltDCIdx[idx][6] = x6;
-              CisAjsCktAltDCIdx[idx][7] = x7;
-
-              if (NLanczosMode > 1) {
-                isite1 = x0 + x1 * Nsite;
-                isite2 = x2 + x3 * Nsite;
-                idxLanczos = iOneBodyGIdx[isite1][isite2];
-                CisAjsIdx[idxLanczos][0] = x0;
-                CisAjsIdx[idxLanczos][1] = x1;
-                CisAjsIdx[idxLanczos][2] = x2;
-                CisAjsIdx[idxLanczos][3] = x3;
-                CisAjsCktAltLzIdx[idx][0] = iOneBodyGIdx[isite1][isite2];
-                //fprintf(stdout, "Debug 2G-1: idxLanczos=%d, x0=%d, x1=%d, x2=%d, x3=%d\n", idxLanczos, x0, x1, x2, x3);
-                isite1 = x4 + x5 * Nsite;
-                isite2 = x6 + x7 * Nsite;
-                idxLanczos = iOneBodyGIdx[isite1][isite2];
-                CisAjsIdx[idxLanczos][0] = x4;
-                CisAjsIdx[idxLanczos][1] = x5;
-                CisAjsIdx[idxLanczos][2] = x6;
-                CisAjsIdx[idxLanczos][3] = x7;
-                CisAjsCktAltLzIdx[idx][1] = iOneBodyGIdx[isite1][isite2];
-                //fprintf(stdout, "Debug 2G-2: idxLanczos=%d, x4=%d, x5=%d, x6=%d, x7=%d\n", idxLanczos, x4, x5, x6, x7);
-              }
-
-              idx++;
-              if (CheckQuadSite(x0, x2, x4, x6, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-
-              if (x1 != x3 || x5 != x7) {
-                fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-                info = ReadDefFileError(defname);
-                break;
-              }
-            }
-            if (idx != NCisAjsCktAltDC) info = ReadDefFileError(defname);
-          }
+          if(GetInfoTwoBodyG(fp, CisAjsCktAltDCIdx, CisAjsCktAltLzIdx, iOneBodyGIdx, CisAjsIdx, NLanczosMode, Nsite, NCisAjsCktAltDC, defname)!=0) info=1;
           break;
 
         case KWInterAll:
           /*interall.def---------------------------------------*/
-          if (NInterAll > 0) {
-            idx = 0;
-            while (fscanf(fp, "%d %d %d %d %d %d %d %d %lf %lf\n",
-                          &x0, &x1, &x2, &x3, &x4, &x5, &x6, &x7,
-                          &dReValue, &dImValue) != EOF) {
-              InterAll[idx][0] = x0;
-              InterAll[idx][1] = x1;
-              InterAll[idx][2] = x2;
-              InterAll[idx][3] = x3;
-              InterAll[idx][4] = x4;
-              InterAll[idx][5] = x5;
-              InterAll[idx][6] = x6;
-              InterAll[idx][7] = x7;
-
-              if (CheckQuadSite(x0, x2, x4, x6, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                info = 1;
-                break;
-              }
-
-              ParaInterAll[idx] = dReValue + I * dImValue;
-
-              if (!((InterAll[idx][1] == InterAll[idx][3]
-                     || InterAll[idx][5] == InterAll[idx][7])
-                    ||
-                    (InterAll[idx][1] == InterAll[idx][5]
-                     || InterAll[idx][3] == InterAll[idx][7])
-              )
-                      ) {
-                fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported in mVMC ver.1.0.\n");
-                info = ReadDefFileError(defname);
-                break;
-              }
-              idx++;
-            }
-            if (idx != NInterAll) info = ReadDefFileError(defname);
-          } else {
-            /* do not terminate */
-            /* info=ReadDefFileError(xNameListFile); */
-          }
+          if(GetInfoInterAll(fp, InterAll, ParaInterAll, Nsite, NInterAll, defname)!=0) info=1;
           break;
 
         case KWOptTrans:
           /*qpopttrans.def------------------------------------*/
-          if (FlagOptTrans > 0) {
-            fidx = NProj + NOrbitalIdx;
-            for (i = 0; i < NQPOptTrans; i++) {
-              ierr = fscanf(fp, "%d ", &itmp);
-              ierr = fscanf(fp, "%lf\n", &(ParaQPOptTrans[itmp]));
-              OptFlag[fidx] = 1;
-              fidx++;
-              count_idx++;
-            }
-            idx = 0;
-            if (APFlag == 0) {
-              while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
-                ierr = fscanf(fp, "%d\n", &(QPOptTrans[i][j]));
-                QPOptTransSgn[i][j] = 1;
-                idx++;
-              }
-            } else { // anti-periodic boundary mode
-              while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
-                ierr = fscanf(fp, "%d %d\n", &(QPOptTrans[i][j]), &(QPOptTransSgn[i][j]));
-                idx++;
-              }
-            }
-          }
+          fidx = NProj + NOrbitalIdx;
+          if(GetInfoOptTrans(fp, QPOptTrans, ParaQPOptTrans,OptFlag, QPOptTransSgn, FlagOptTrans, &count_idx,fidx, Nsite, NQPOptTrans, defname) !=0) info=1;
           break;
 
         case KWBFRange:
@@ -2178,8 +1965,196 @@ int GetInfoTransSym(FILE *fp, int **Array, int **ArraySgn, int **ArrayInv, doubl
     if (idx != Nsite * NArray) info = ReadDefFileError(defname);
   }
   return info;
-
 }
+
+int GetInfoOneBodyG(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int _NLanczosMode, int Nsite, int NArray, char *defname){
+  char ctmp2[256];
+  int idx=0, info=0;
+  int x0=0, x1=0, x2=0, x3=0;
+  int isite1=0, isite2=0;
+  int idxLanczos=0;
+  if(NArray ==0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d %d %d\n", &x0, &x1, &x2, &x3);
+    if(_NLanczosMode <2) { // Normal
+      ArrayIdx[idx][0] = x0;
+      ArrayIdx[idx][1] = x1;
+      ArrayIdx[idx][2] = x2;
+      ArrayIdx[idx][3] = x3;
+    }else{ //For Calc Green func by Lanczos mode
+      isite1 = x0 + x1 * Nsite;
+      isite2 = x2 + x3 * Nsite;
+      idxLanczos = ArrayToIdx[isite1][isite2];
+      ArrayIdx[idxLanczos][0] = x0;
+      ArrayIdx[idxLanczos][1] = x1;
+      ArrayIdx[idxLanczos][2] = x2;
+      ArrayIdx[idxLanczos][3] = x3;
+    }
+    if (CheckPairSite(x0, x2, Nsite) != 0) {
+      fprintf(stderr, "Error: Site index is incorrect. \n");
+      info = 1;
+      break;
+    }
+    idx++;
+  }
+
+  if (idx != NArray) info = ReadDefFileError(defname);
+  return info;
+}
+
+int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *defname){
+  char ctmp2[256];
+  int idx=0, info=0;
+  int x0=0, x1=0, x2=0, x3=0;
+  int x4=0, x5=0, x6=0, x7=0;
+  if(NArray ==0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d %d %d %d %d %d %d\n", &x0, &x1, &x2, &x3, &x4, &x5, &x6, &x7);
+    ArrayIdx[idx][0] = x0;
+    ArrayIdx[idx][1] = x1;
+    ArrayIdx[idx][2] = x2;
+    ArrayIdx[idx][3] = x3;
+    ArrayIdx[idx][4] = x4;
+    ArrayIdx[idx][5] = x5;
+    ArrayIdx[idx][6] = x6;
+    ArrayIdx[idx][7] = x7;
+    if (CheckQuadSite(x0, x2, x4, x6, Nsite) != 0) {
+      fprintf(stderr, "Error: Site index is incorrect. \n");
+      info = 1;
+      break;
+    }
+    idx++;
+  }
+  if (idx != NArray) info = ReadDefFileError(defname);
+  return info;
+}
+
+int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int **ArrayIdxTwoBodyGLz, int **ArrayToIdx, int **ArrayIdxOneBodyG, int _NLanczosMode, int Nsite, int NArray, char *defname){
+  char ctmp2[256];
+  int idx=0, info=0;
+  int x0=0, x1=0, x2=0, x3=0;
+  int x4=0, x5=0, x6=0, x7=0;
+  int isite1=0, isite2=0;
+  int idxLanczos=0;
+
+  if(NArray ==0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d %d %d %d %d %d %d\n", &x0, &x1, &x2, &x3, &x4, &x5, &x6, &x7);
+    ArrayIdx[idx][0] = x0;
+    ArrayIdx[idx][1] = x1;
+    ArrayIdx[idx][2] = x2;
+    ArrayIdx[idx][3] = x3;
+    ArrayIdx[idx][4] = x4;
+    ArrayIdx[idx][5] = x5;
+    ArrayIdx[idx][6] = x6;
+    ArrayIdx[idx][7] = x7;
+    if (CheckQuadSite(x0, x2, x4, x6, Nsite) != 0) {
+      fprintf(stderr, "Error: Site index is incorrect. \n");
+      info = 1;
+      break;
+    }
+
+    if(_NLanczosMode > 1){ //Calc TwoBodyG by Lanczos method
+      isite1 = x0 + x1 * Nsite;
+      isite2 = x2 + x3 * Nsite;
+      idxLanczos = ArrayToIdx[isite1][isite2];
+      ArrayIdxOneBodyG[idxLanczos][0] = x0;
+      ArrayIdxOneBodyG[idxLanczos][1] = x1;
+      ArrayIdxOneBodyG[idxLanczos][2] = x2;
+      ArrayIdxOneBodyG[idxLanczos][3] = x3;
+      ArrayIdxTwoBodyGLz[idx][0] = idxLanczos;
+
+      isite1 = x4 + x5 * Nsite;
+      isite2 = x6 + x7 * Nsite;
+      idxLanczos = ArrayToIdx[isite1][isite2];
+      ArrayIdxOneBodyG[idxLanczos][0] = x4;
+      ArrayIdxOneBodyG[idxLanczos][1] = x5;
+      ArrayIdxOneBodyG[idxLanczos][2] = x6;
+      ArrayIdxOneBodyG[idxLanczos][3] = x7;
+      ArrayIdxTwoBodyGLz[idx][1] = idxLanczos;
+    }
+    idx++;
+  }
+  if (idx != NArray) info = ReadDefFileError(defname);
+  return info;
+}
+
+int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara, int *ArrayOpt, int **ArraySgn, int _iFlagOptTrans, int *iOptCount, int _fidx, int Nsite, int NArray, char *defname) {
+  char ctmp2[256];
+  int idx = 0, info = 0;
+  int i = 0, j=0;
+  int itmp = 0, itmpsgn=0;
+  int fidx=_fidx;
+  double dReValue;
+  if (_iFlagOptTrans > 0) {
+    for (i = 0; i < NArray; i++) {
+      itmp = 0;
+      dReValue = 0;
+      fgets(ctmp2, D_CharTmpReadDef, fp);
+      sscanf(ctmp2, "%d %lf \n", &itmp, &dReValue);
+      ArrayPara[itmp] = dReValue;
+      ArrayOpt[fidx] =1;
+      fidx++;
+      (*iOptCount)++;
+    }
+    idx = 0;
+    while(fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp)!=NULL) {
+      sscanf(ctmp2, "%d %d %d %d\n", &i, &j, &itmp, &itmpsgn);
+      Array[i][j]=itmp;
+      ArraySgn[i][j] = itmpsgn;
+      idx++;
+    }
+    if(APFlag==0){
+      for(i =0; i<NArray; i++){
+        for(j=0; j<Nsite; j++) ArraySgn[i][j]=1;
+      }
+    }
+  }
+  return info;
+}
+
+int GetInfoInterAll(FILE *fp, int **ArrayIdx, double complex*ArrayValue, int Nsite, int NArray, char *defname){
+  char ctmp2[256];
+  int idx=0, info=0;
+  int x0=0, x1=0, x2=0, x3=0;
+  int x4=0, x5=0, x6=0, x7=0;
+  double dReValue=0, dImValue=0;
+
+  if(NArray ==0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d %d %d %d %d %d %d %lf %lf\n",
+           &x0, &x1, &x2, &x3, &x4, &x5, &x6, &x7,
+           &dReValue, &dImValue);
+
+    ArrayIdx[idx][0] = x0;
+    ArrayIdx[idx][1] = x1;
+    ArrayIdx[idx][2] = x2;
+    ArrayIdx[idx][3] = x3;
+    ArrayIdx[idx][4] = x4;
+    ArrayIdx[idx][5] = x5;
+    ArrayIdx[idx][6] = x6;
+    ArrayIdx[idx][7] = x7;
+
+    if (CheckQuadSite(x0, x2, x4, x6, Nsite) != 0) {
+      fprintf(stderr, "Error: Site index is incorrect. \n");
+      info = 1;
+      break;
+    }
+
+    ArrayValue[idx] = dReValue+I*dImValue;
+
+    if (!((x1 == x3 || x5 == x7) ||
+          (x1 == x5 || x3 == x7))) {
+      fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported for InterAll.\n");
+      info = ReadDefFileError(defname);
+      break;
+    }
+    idx++;
+  }
+  if (idx != NArray) info = ReadDefFileError(defname);
+  return info;
+}
+
 /**********************************/
 /* [e] Read Parameters from file  */
 /**********************************/
