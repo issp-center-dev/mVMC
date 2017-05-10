@@ -288,6 +288,7 @@ int ReadDefFileNInt(
 
         case KWOrbitalParallel:
           cerr = ReadBuffInt(fp, &iNOrbitalP);
+          X->NOrbitalP=2*iNOrbitalP;//up-up and down-down
           iFlgOrbitalP = 1;
           X->NOrbitalIdx += 2 * iNOrbitalP; //up-up and down-down
           break;

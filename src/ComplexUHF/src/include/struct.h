@@ -69,7 +69,7 @@ struct DefineList {
     complex double *ParaInitial;
     //double *ParaInitial;
     //double *ParaInitial_theta;
-    int NOrbitalAP;
+    int NOrbitalAP,NOrbitalP;
 
 
     int **CisAjs, NCisAjs;
