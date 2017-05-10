@@ -234,8 +234,6 @@ int MakeOrbitalFile(struct BindStruct *X){
       printf("Fij for mVMC are outputted to %s.\n", fileName);
 
     }
-  }else {
-    return 0;
   }
   return 0;
 }
