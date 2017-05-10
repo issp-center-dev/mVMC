@@ -519,7 +519,11 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   MPI_Comm_rank(comm_parent, &rank);
 
   StartTimer(20);
-  UpdateSlaterElm_fcmp();
+  if(iFlgOrbitalGeneral==0){//sz is conserved
+    UpdateSlaterElm_fcmp();
+  }else{
+    UpdateSlaterElm_fsz();
+  } 
   StopTimer(20);
 
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
@@ -550,6 +554,11 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
         if(iFlgOrbitalGeneral==0){
           VMCMakeSample(comm_child1);
         }else{
+//[s]MDEBUG
+          //for(tmp_i=0;tmp_i<NSlater;tmp_i++){
+          //  printf("MDEBUG: %d %lf %lf \n",tmp_i,creal(Slater[tmp_i]),cimag(Slater[tmp_i]));
+          //}
+//[e]MDEBUG
           VMCMakeSample_fsz(comm_child1);
         }
       }
@@ -584,8 +593,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       }else{
         VMCMainCal_fsz(comm_child1);
       }
-    }
-    else{
+    }else{
       VMC_BF_MainCal(comm_child1);
     }
 

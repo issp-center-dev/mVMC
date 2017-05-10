@@ -158,6 +158,7 @@ void VMCMainCal(MPI_Comm comm) {
 #endif
       e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
     }
+    //printf("MDEBUG: %lf %lf \n",creal(e),cimag(e));
     StopTimer(41);
 
 #ifdef _DEBUG_VMCCAL
@@ -552,7 +553,6 @@ void clearPhysQuantity(){
     vec = SROptOO;
     #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
-
 // only for real variables
     if(NStoreO < 2){
       n = (SROptSize)*(SROptSize+2); // TBC
