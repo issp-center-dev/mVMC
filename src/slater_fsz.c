@@ -51,53 +51,48 @@ void UpdateSlaterElm_fsz() {
   #pragma loop noalias
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
     //printf("qpidx=%d \n",qpidx);
+    // note: NQPFix = NSPGaussLeg * NMPTrans, NQPFull = NQPFix * NQPOptTrans(=1);
     // qpidx  = optidx*NQPFix+NSPGaussLeg*mpidx+spidx 
     // optidx will not be used
-    optidx    = qpidx / NQPFix;   
-    mpidx     = (qpidx%NQPFix) / NSPGaussLeg;
-    spidx     = qpidx % NSPGaussLeg;
+    optidx    = qpidx / NQPFix;              // optidx =0:  
+    mpidx     = (qpidx%NQPFix) / NSPGaussLeg;// mpidx !=0: momentum projection
+    spidx     = qpidx % NSPGaussLeg;         // spidx  =0: spin projection 
 
-    xqpOpt    = QPOptTrans[optidx];
-    xqpOptSgn = QPOptTransSgn[optidx];
-    xqp       = QPTrans[mpidx];
-    xqpSgn    = QPTransSgn[mpidx];
-//    cs        = SPGLCosSin[spidx];
+    xqpOpt    = QPOptTrans[optidx];          // xqpOpta   = 1
+    xqpOptSgn = QPOptTransSgn[optidx];       // xqpOptSgn = 1
+    xqp       = QPTrans[mpidx];              // xqp[*]=QPTrans[mpidx][*] 
+    xqpSgn    = QPTransSgn[mpidx];           // xqpSgn[*]=QPTransSgn[mpidx][*] 
+//    cs        = SPGLCosSin[spidx]; // spin projection is not used fsz
 //    cc        = SPGLCosCos[spidx];
 //    ss        = SPGLSinSin[spidx];
     
     sltE      = SlaterElm + qpidx*Nsite2*Nsite2;
     // for fsz: only for translational projection
-    // spin projection will be implemented
+    // spin projection is not implemented in ver.1.0
     for(ri=0;ri<Nsite;ri++) {
-      //printf("DEBUG:ri=%d \n",ri);
-      ori     = xqpOpt[ri];
-      tri     = xqp[ori];
-      tri0    = tri; // fsz up
+      ori     = xqpOpt[ri]; // ori = ri
+      tri     = xqp[ori];   // ori -> tri momentum projection
+      tri0    = tri;        // fsz up
       tri1    = tri0+Nsite; // fsz down
-      //printf("DEBUG:tri0=%d tri1=%d sgni=%d\n",tri0,tri1,sgni);
       sgni    = xqpSgn[ori]*xqpOptSgn[ri];
-      rsi0    = ri; // up
+      rsi0    = ri;       // up
       rsi1    = ri+Nsite; // down
-      sltE_i0 = sltE + rsi0*Nsite2;
-      sltE_i1 = sltE + rsi1*Nsite2;
+      sltE_i0 = sltE + rsi0*Nsite2; // sltE_i0[*]=sltE[rsi0*Nsite2][*]
+      sltE_i1 = sltE + rsi1*Nsite2; // sltE_i1[*]=sltE[rsi1*Nsite2][*]
       
       for(rj=0;rj<Nsite;rj++) {
-        //printf("DEBUG:rj=%d \n",rj);
+        //
         orj  = xqpOpt[rj];
         trj  = xqp[orj];
-        //printf("DEBUG:rj=%d orj=%d trj=%d\n",rj,orj,trj);
-        trj0 = trj; // fsz up
+        //
+        trj0 = trj;       // fsz up
         trj1 = trj+Nsite; // fsz down
         sgnj = xqpSgn[orj]*xqpOptSgn[rj];
-        //printf("DUBUG:trj0=%d trj1=%d sgnj=%d\n",trj0,trj1,sgnj);
+        //
         rsj0 = rj;
         rsj1 = rj+Nsite;
-        //printf("DEBUG:rsj0=%d rsj1=%d \n",rsj0,rsj1);
+        //
 // for fsz        
-        //printf("DEBUG: tri0=%d tri1=%d trj0=%d trj1=%d: orb=%d \n",tri0,tri1,trj0,trj1,OrbitalIdx[tri0][trj0]);
-        //printf("DEBUG: tri0=%d tri1=%d trj0=%d trj1=%d: orb=%d \n",tri0,tri1,trj0,trj1,OrbitalIdx[tri0][trj1]);
-        //printf("DEBUG: tri0=%d tri1=%d trj0=%d trj1=%d: orb=%d \n",tri0,tri1,trj0,trj1,OrbitalIdx[tri1][trj0]);
-        //printf("DEBUG: tri0=%d tri1=%d trj0=%d trj1=%d: orb=%d \n",tri0,tri1,trj0,trj1,OrbitalIdx[tri1][trj1]);
         slt_i0j0        = Slater[ OrbitalIdx[tri0][trj0] ] * (double)(OrbitalSgn[tri0][trj0]*sgni*sgnj);
         slt_j0i0        = Slater[ OrbitalIdx[trj0][tri0] ] * (double)(OrbitalSgn[trj0][tri0]*sgni*sgnj);
 
@@ -110,40 +105,25 @@ void UpdateSlaterElm_fsz() {
         slt_i1j1        = Slater[ OrbitalIdx[tri1][trj1] ] * (double)(OrbitalSgn[tri1][trj1]*sgni*sgnj);
         slt_j1i1        = Slater[ OrbitalIdx[trj1][tri1] ] * (double)(OrbitalSgn[trj1][tri1]*sgni*sgnj);
 
+        // F_{IJ}-F_{JI}
         sltE_i0[rsj0] =  slt_i0j0-slt_j0i0;   // up   - up
         sltE_i0[rsj1] =  slt_i0j1-slt_j1i0;   // up   - down
         sltE_i1[rsj0] =  slt_i1j0-slt_j0i1;   // down - up
         sltE_i1[rsj1] =  slt_i1j1-slt_j1i1;   // down - down 
-/*
-        printf("XDEBUG: rsi0=%d rsj0=%d:tri0=%d trj0=%d : orbi0j0=%d %lf orbj0i0=%d %lf: %lf  \n",rsi0,rsj0,tri0,trj0,OrbitalIdx[tri0][trj0],creal(Slater[OrbitalIdx[tri0][trj0]]),OrbitalIdx[trj0][tri0],creal(Slater[OrbitalIdx[trj0][tri0]]),creal(sltE_i0[rsj0]));
-        printf("XDEBUG: rsi0=%d rsj1=%d:tri0=%d trj1=%d : orbi0j1=%d %lf orbj1i0=%d %lf: %lf  \n",rsi0,rsj1,tri0,trj1,OrbitalIdx[tri0][trj1],creal(Slater[OrbitalIdx[tri0][trj1]]),OrbitalIdx[trj1][tri0],creal(Slater[OrbitalIdx[trj1][tri0]]),creal(sltE_i0[rsj1]));
-        printf("XDEBUG: rsi1=%d rsj0=%d:tri1=%d trj0=%d : orbi1j0=%d %lf orbj0i1=%d %lf: %lf  \n",rsi1,rsj0,tri1,trj0,OrbitalIdx[tri1][trj0],creal(Slater[OrbitalIdx[tri1][trj0]]),OrbitalIdx[trj0][tri1],creal(Slater[OrbitalIdx[trj0][tri1]]),creal(sltE_i1[rsj0]));
-        printf("XDEBUG: rsi1=%d rsj1=%d:tri1=%d trj1=%d : orbi1j1=%d %lf orbj1i1=%d %lf: %lf  \n",rsi1,rsj1,tri1,trj1,OrbitalIdx[tri1][trj1],creal(Slater[OrbitalIdx[tri1][trj1]]),OrbitalIdx[trj1][tri1],creal(Slater[OrbitalIdx[trj1][tri1]]),creal(sltE_i1[rsj1]));
-*/
-/*
-        slt_ij = Slater[ OrbitalIdx[tri][trj] ] * (double)(OrbitalSgn[tri][trj]*sgni*sgnj);
-        slt_ji = Slater[ OrbitalIdx[trj][tri] ] * (double)(OrbitalSgn[trj][tri]*sgni*sgnj);
-        
-        sltE_i0[rsj0] = -(slt_ij - slt_ji)*cs;   // up   - up
-        sltE_i0[rsj1] =   slt_ij*cc + slt_ji*ss; // up   - down
-        sltE_i1[rsj0] = -slt_ij*ss - slt_ji*cc;  // down - up
-        sltE_i1[rsj1] =  (slt_ij - slt_ji)*cs;   // down - down 
-*/
-      }
-    }
-  }
-
+      }// for rj 
+    }// for ri
+  }//for qpidx
   return;
 }
 
 // Calculating Tr[Inv[M]*D_k(X)]
 void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *eleIdx,int *eleSpn) {
   const int nBuf=NSlater*NQPFull;
-  const int nsize = Nsize;
+  const int nsize = Nsize;       // Nsize=2*Ne
   const int ne = Ne;
-  const int nQPFull = NQPFull;
+  const int nQPFull = NQPFull;   // note: NQPFix = NSPGaussLeg * NMPTrans, NQPFull = NQPFix * NQPOptTrans(=1);
   const int nMPTrans = NMPTrans; // number of translational operators
-  const int nSlater = NSlater;
+  const int nSlater = NSlater;   // number of slater
   const int nTrans = NMPTrans * NQPOptTrans; //usually NQPOptTrans=1
 
   const double complex invIP = 1.0/ip;
@@ -180,7 +160,7 @@ void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *ele
 // this loop for making transObrIdx,transOrbSgn
 // transOrbIdx (NMPTrans * NQPOptTrans)*(nsize*nsize) nsize=2Ne
 // transOrbSgn (NMPTrans * NQPOptTrans)*(nsize*nsize) nsize=2Ne
-  for(qpidx=0;qpidx<nTrans;qpidx++) {//only for trans op. // nTran=nMPTrans*NQPOptTrans: usually nMPTrans
+  for(qpidx=0;qpidx<nTrans;qpidx++) {//only for trans op. // nTran=nMPTrans*(NQPOptTrans=1)=nMPTrans
     optidx    = qpidx / nMPTrans;                // qpidx=mpidx+nMPTrans*optidx
     mpidx     = qpidx % nMPTrans; 
                                                  // QPOptTrans:     NQPOptTrans* Nsite matrix :  usually NQPOptTrans = 1
@@ -193,7 +173,7 @@ void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *ele
     tOrbSgn   = transOrbSgn + qpidx*nsize*nsize; // tOrbSgn : sign of f_ij
     for(msi=0;msi<nsize;msi++) {                 // nsize=2*Ne including spin degrees of freedom
       ri           = eleIdx[msi];                //  ri  : postion where the msi-th electron exists  
-      si           = eleSpn[msi];            //  si  : spin of the msi-th electron  :fsz
+      si           = eleSpn[msi];                //  si  : spin of the msi-th electron  :fsz
       ori          = xqpOpt[ri];                 // ori  : ri -> ori -> tri
       tri          = xqp[ori]+si*Nsite;          // tri  : fsz
       sgni         = xqpSgn[ori]*xqpOptSgn[ri];  // sgni :
@@ -230,12 +210,12 @@ void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *ele
 
     #pragma loop norecurrence
     for(msi=0;msi<nsize;msi++) { //fsz
-      tOrbIdx_i = tOrbIdx + msi*nsize;         // tOrbIdx_i[] = tOrbIdx[msi][msj]
-      tOrbSgn_i = tOrbSgn + msi*nsize;         // tOrbSgn_i[] = tOrbSgn[msi][msj]
-      invM_i    = invM + msi*nsize;            // invM[]      = invM[msi][]
-      for(msj=0;msj<nsize;msj++) {                // up-up
+      tOrbIdx_i = tOrbIdx + msi*nsize;         // tOrbIdx_i[*] = tOrbIdx[msi][*]
+      tOrbSgn_i = tOrbSgn + msi*nsize;         // tOrbSgn_i[*] = tOrbSgn[msi][*]
+      invM_i    = invM + msi*nsize;            // invM[]       = invM[msi][]
+      for(msj=0;msj<nsize;msj++) {             // 
         orbidx       = tOrbIdx_i[msj];         // 
-        buf[orbidx] += -1.0*invM_i[msj]*cs*tOrbSgn_i[msj]; // invM[msi][msj]
+        buf[orbidx] += -1.0*invM_i[msj]*cs*tOrbSgn_i[msj]; // invM[msi][msj]// 2*(1/2)=1
       }
     }
   }

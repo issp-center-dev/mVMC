@@ -1344,7 +1344,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
             if (APFlag == 0) {
               while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
                 ierr = fscanf(fp, "%d\n", &itmp);
-		QPTrans[i][j]=itmp;
+	             	QPTrans[i][j]=itmp; // i= # of qp, j=origin, itmp=distination: j->itmp for i
                 QPTransSgn[i][j] = 1;
                 QPTransInv[i][QPTrans[i][j]] = j;
                 idx++;
@@ -1631,7 +1631,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm){
     fprintf(stdout, "finish reading parameters.\n");
   } /* if(rank==0) */
 
-  if(FlagOptTrans<=0){
+  if(FlagOptTrans<=0){ // initialization of QPOptTrans
     ParaQPOptTrans[0]=1.0;
     for(i=0;i<Nsite;++i) {
       QPOptTrans[0][i] = i;
