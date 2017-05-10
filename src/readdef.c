@@ -1418,6 +1418,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
   int rank;
   int count=0;
   int info=0;
+  int iNTotalIdx;
   double tmp_real, tmp_comp;
   MPI_Comm_rank(comm, &rank);
   char *cerr;
@@ -1451,7 +1452,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
         }
         for(i=0; i<NGutzwillerIdx; i++){
           ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
-          Proj[i]=tmp_real+I*tmp_comp;
+          Proj[idx]=tmp_real+I*tmp_comp;
         }
         break;
         
@@ -1463,7 +1464,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
         count= NGutzwillerIdx;
         for(i=count; i<count+NJastrowIdx; i++){
           ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
-          Proj[i]=tmp_real+I*tmp_comp;
+          Proj[idx]=tmp_real+I*tmp_comp;
         }
         break;
         
@@ -1475,7 +1476,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
         count =NGutzwillerIdx+NJastrowIdx;
         for(i=count; i<count+2*3*NDoublonHolon2siteIdx; i++){
           ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
-          Proj[i]=tmp_real+I*tmp_comp;
+          Proj[idx]=tmp_real+I*tmp_comp;
         }       
         break;
         
@@ -1487,19 +1488,45 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
         count =NGutzwillerIdx+NJastrowIdx+2*3*NDoublonHolon2siteIdx;
         for(i=count; i<count+2*5*NDoublonHolon4siteIdx; i++){
           ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
-          Proj[i]=tmp_real+I*tmp_comp;
+          Proj[idx]=tmp_real+I*tmp_comp;
         }        
         break;
         
       case KWInOrbital:
-        if(idx != NOrbitalIdx){
-          info=1;
+      case KWInOrbitalAntiParallel:
+        iNTotalIdx = (iFlgOrbitalGeneral > 0) ? iNOrbitalAP : NOrbitalIdx;
+        if (idx != iNTotalIdx){
+          info = 1;
           continue;
         }
-        for(i=0; i<NSlater; i++){
-          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
-          Slater[i]=tmp_real+I*tmp_comp;
-        }  
+        for (i = 0; i < iNTotalIdx; i++) {
+          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+          Slater[idx] = tmp_real + I * tmp_comp;
+        }
+        break;
+
+      case KWInOrbitalParallel:
+        if(idx != iNOrbitalP){
+          info = 1;
+          continue;
+        }
+        for (i = 0; i < iNOrbitalP; i++) {
+          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+          Slater[iNOrbitalAP*2*idx] = tmp_real + I * tmp_comp; //up-up
+          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+          Slater[iNOrbitalAP+2*idx+1] = tmp_real + I * tmp_comp;//down-down
+        }
+        break;
+
+      case KWInorbitalGeneral:
+        if(idx != NOrbitalIdx){
+          info = 1;
+          continue;
+        }
+        for (i = 0; i < NOrbitalIdx; i++) {
+          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+          Slater[idx] = tmp_real + I * tmp_comp; //up-up
+        }
         break;
         
       case KWInOptTrans:
@@ -1509,7 +1536,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
         }
         for(i=0; i<NOptTrans; i++){
           ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real,&tmp_comp);
-          OptTrans[i]=tmp_real+I*tmp_comp;
+          OptTrans[idx]=tmp_real+I*tmp_comp;
         }  
         break;
         
@@ -1878,6 +1905,9 @@ int  GetInfoFromModPara(int *bufInt, double* bufDouble) {
   const int nBufChar = D_FileNameMax;
   int iKWidx = 0;
   int iret=0;
+  int iNCond=-1;
+  int i2Sz=0;
+  int iFreeSzFlag=-1; //-1: GrandCanonical, 0: Sz-fixed
 
   for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
     strcpy(defname, cFileNameListFile[iKWidx]);
@@ -1925,7 +1955,10 @@ int  GetInfoFromModPara(int *bufInt, double* bufDouble) {
               bufInt[IdxNsite] = (int) dtmp;
             } else if (CheckWords(ctmp, "Ne") == 0 || CheckWords(ctmp, "Nelectron") == 0) {
               bufInt[IdxNe] = (int) dtmp;
-            } else if (CheckWords(ctmp, "NSPGaussLeg") == 0) {
+            } else if(CheckWords(ctmp, "Ncond") == 0){
+              iNCond=(int) dtmp;
+            }
+            else if (CheckWords(ctmp, "NSPGaussLeg") == 0) {
               bufInt[IdxSPGaussLeg] = (int) dtmp;
             } else if (CheckWords(ctmp, "NSPStot") == 0) {
               bufInt[IdxSPStot] = (int) dtmp;
