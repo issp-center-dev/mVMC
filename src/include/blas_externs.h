@@ -28,7 +28,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define M_DGEMM  dgemm_
 #define M_DGEMV  dgemv_
 #define M_DGER  dger_
-#define M_DGER dger_
 #define M_DGETRF dgetrf_
 #define M_DGETRI dgetri_
 #define M_DPOSV  dposv_
@@ -70,9 +69,6 @@ extern int M_ZSKPFA(const char *uplo, const char *mthd, const int *n,
                     double complex *work, const int *lwork, double *rwork, int *info);
 extern int M_DAXPY(const int *n, const double *alpha, const double *x, const int *incx,
                    double *y, const int *incy);
-extern int M_DGER(const int *m, const int *n, const double *alpha,
-                  const double *x, const int *incx, const double *y, const int *incy, 
-                  double *a, const int *lda);
 extern int M_ZAXPY(const int *n, const double complex *alpha, const double complex *x, const int *incx,
                    double complex *y, const int *incy);
 extern int M_ZGERC(const int *m, const int *n, const double complex *alpha,
