@@ -54,7 +54,7 @@ int GetInfoGutzwiller(FILE *fp, int *ArrayIdx, int *ArrayOpt, int iComplxFlag, i
 int GetInfoJastrow(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int fidx, int Nsite, int NArray, char *defname);
 int GetInfoDH2(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nsite, int NArray, char *defname);
 int GetInfoDH4(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nsite, int NArray, char *defname);
-int GetInfoTransSym(FILE *fp, int **Array, int **ArraySgn, int **ArrayInv, double complex *ArrayPara, int Nsite, int NArray, char *defname);
+int GetInfoTransSym(FILE *fp, int **Array, int **ArraySgn, int **ArrayInv, double complex *ArrayPara, int _APFlag, int Nsite, int NArray, char *defname);
 
 
 char* ReadBuffInt(FILE *fp, int *iNbuf){
@@ -754,109 +754,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWOrbital:
         case KWOrbitalAntiParallel:
           /*orbitalidxs.def------------------------------------*/
-          if (iNOrbitalAP > 0) {
-            idx0 = idx1 = 0;
-            itmp = 0;
-            if (iFlgOrbitalGeneral == 0) {
-              if (APFlag == 0) {
-                while (fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF) {
-                  spn_i = 0;
-                  spn_j = 1;
-
-                  all_i = i + spn_i * Nsite; //fsz
-                  all_j = j + spn_j * Nsite; //fsz
-                  if (CheckPairSite(i, j, Nsite) != 0) {
-                    fprintf(stderr, "Error: Site index is incorrect. \n");
-                    info = 1;
-                    break;
-                  }
-                  if (all_i >= all_j) {
-                    itmp = 1;
-                  }
-                  idx0++;
-                  OrbitalIdx[i][j] = fij;
-                  OrbitalSgn[i][j] = 1;
-                  if (idx0 == Nsite * Nsite) break;
-                }
-              } else { /* anti-periodic boundary mode */
-                while (fscanf(fp, "%d %d %d %d\n", &i, &j, &fij, &fijSign) != EOF) {
-                  spn_i = 0;
-                  spn_j = 1;
-                  all_i = i + spn_i * Nsite; //fsz
-                  all_j = j + spn_j * Nsite; //fsz
-                  if (all_i >= all_j) {
-                    itmp = 1;
-                  }
-                  idx0++;
-                  OrbitalIdx[i][j] = fij;
-                  OrbitalSgn[i][j] = fijSign;
-                  if (idx0 == Nsite * Nsite) break;
-                }
-              }
-              fidx = NProj;
-              while (fscanf(fp, "%d ", &i) != EOF) {
-                fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
-                OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
-                //OptFlag[2*fidx+1] = 0; //  TBC imaginary
-                fidx++;
-                idx1++;
-                count_idx++;
-              }
-            } else {// general orbital
-              if (APFlag == 0) {
-                while (fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF) {
-                  spn_i = 0;
-                  spn_j = 1;
-                  all_i = i + spn_i * Nsite; //fsz
-                  all_j = j + spn_j * Nsite; //fsz
-                  if (CheckPairSite(i, j, Nsite) != 0) {
-                    fprintf(stderr, "Error: Site index is incorrect. \n");
-                    info = 1;
-                    break;
-                  }
-                  if (all_i >= all_j) {
-                    itmp = 1;
-                  }
-                  idx0++;
-                  OrbitalIdx[all_i][all_j] = fij;
-                  OrbitalSgn[all_i][all_j] = 1;
-                  // Note F_{IJ}=-F_{JI}
-                  OrbitalIdx[all_j][all_i] = fij;
-                  OrbitalSgn[all_j][all_i] = -1;
-                  if (idx0 == (Nsite * Nsite)) break;
-                }
-              } else { /* anti-periodic boundary mode */
-                while (fscanf(fp, "%d %d %d %d \n", &i, &j, &fij, &fijSign) != EOF) {
-                  spn_i = 0;
-                  spn_j = 1;
-                  all_i = i + spn_i * Nsite; //fsz
-                  all_j = j + spn_j * Nsite; //fsz
-                  if (all_i >= all_j) {
-                    itmp = 1;
-                  }
-                  idx0++;
-                  OrbitalIdx[all_i][all_j] = fij;
-                  OrbitalSgn[all_i][all_j] = fijSign;
-                  // Note F_{IJ}=-F_{JI}
-                  OrbitalIdx[all_j][all_i] = fij;
-                  OrbitalSgn[all_j][all_i] = -fijSign;
-                  if (idx0 == (Nsite * (Nsite))) break; //2N*(2N-1)/2
-                }
-              }
-              fidx = NProj;
-              while (fscanf(fp, "%d ", &i) != EOF) {
-                fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
-                OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
-                //OptFlag[2*fidx+1] = 0; //  TBC imaginary
-                fidx++;
-                idx1++;
-                count_idx++;
-              }
-            }
-            if (idx0 != (Nsite * Nsite) || idx1 != iNOrbitalAP || itmp == 1) {
-              info = ReadDefFileError(defname);
-            }
-          }
+          fidx = NProj;
+          if(GetInfoOrbitalAntiParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
+          fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalAP, defname)!=0) info=1;
           break;
 
         case KWOrbitalGeneral:
@@ -990,7 +890,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWTransSym:
           /*qptransidx.def------------------------------------*/
-          if(GetInfoTransSym(fp, QPTrans, QPTransSgn, QPTransInv, ParaQPTrans, Nsite, NQPTrans, defname)!=0) info=1;
+          if(GetInfoTransSym(fp, QPTrans, QPTransSgn, QPTransInv, ParaQPTrans, APFlag, Nsite, NQPTrans, defname)!=0) info=1;
           break;
 
         case KWOneBodyG:
@@ -1017,7 +917,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWOptTrans:
           /*qpopttrans.def------------------------------------*/
           fidx = NProj + NOrbitalIdx;
-          if(GetInfoOptTrans(fp, QPOptTrans, ParaQPOptTrans,OptFlag, QPOptTransSgn, FlagOptTrans, &count_idx,fidx, Nsite, NQPOptTrans, defname) !=0) info=1;
+          if(GetInfoOptTrans(fp, QPOptTrans, ParaQPOptTrans,OptFlag, QPOptTransSgn, FlagOptTrans, &count_idx,fidx, APFlag, Nsite, NQPOptTrans, defname) !=0) info=1;
           break;
 
         case KWBFRange:
@@ -1028,8 +928,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
             while (fscanf(fp, "%d %d %d\n", &i, &j, &n) != EOF) {
               PosBF[i][idx0 % Nrange] = j;
               RangeIdx[i][j] = n;
-              //printf("PosBF[%d][%d]=%d\n",i,idx0 % Nrange, PosBF[i][idx0 % Nrange]);
-              //if(globalrank==0)printf("RangeIdx[%d][%d]=%d\n",i,j, RangeIdx[i][j]);
               idx0++;
               if (idx0 == Nsite * Nrange) break;
             }
@@ -1933,7 +1831,8 @@ int GetInfoDH4(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iO
   return info;
 }
 
-int GetInfoTransSym(FILE *fp, int **Array, int **ArraySgn, int **ArrayInv, double complex *ArrayPara, int Nsite, int NArray, char *defname) {
+int GetInfoTransSym(FILE *fp, int **Array, int **ArraySgn, int **ArrayInv, double complex *ArrayPara,
+                    int _APFlag, int Nsite, int NArray, char *defname) {
   char ctmp2[256];
   int idx = 0, info = 0;
   int i = 0, j=0;
@@ -1957,7 +1856,7 @@ int GetInfoTransSym(FILE *fp, int **Array, int **ArraySgn, int **ArrayInv, doubl
       ArrayInv[i][itmp]=j;
       idx++;
     }
-    if(APFlag==0){
+    if(_APFlag==0){
       for(i =0; i<NArray; i++){
         for(j=0; j<Nsite; j++) ArraySgn[i][j]=1;
       }
@@ -2079,7 +1978,8 @@ int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int **ArrayIdxTwoBodyGLz, int **Ar
   return info;
 }
 
-int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara, int *ArrayOpt, int **ArraySgn, int _iFlagOptTrans, int *iOptCount, int _fidx, int Nsite, int NArray, char *defname) {
+int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara, int *ArrayOpt, int **ArraySgn,
+                    int _iFlagOptTrans, int *iOptCount, int _fidx, int _APFlag, int Nsite, int NArray, char *defname) {
   char ctmp2[256];
   int idx = 0, info = 0;
   int i = 0, j=0;
@@ -2104,7 +2004,7 @@ int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara, int *ArrayOpt, int
       ArraySgn[i][j] = itmpsgn;
       idx++;
     }
-    if(APFlag==0){
+    if(_APFlag==0){
       for(i =0; i<NArray; i++){
         for(j=0; j<Nsite; j++) ArraySgn[i][j]=1;
       }
@@ -2113,7 +2013,8 @@ int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara, int *ArrayOpt, int
   return info;
 }
 
-int GetInfoInterAll(FILE *fp, int **ArrayIdx, double complex*ArrayValue, int Nsite, int NArray, char *defname){
+int GetInfoInterAll(FILE *fp, int **ArrayIdx, double complex*ArrayValue,
+                    int Nsite, int NArray, char *defname){
   char ctmp2[256];
   int idx=0, info=0;
   int x0=0, x1=0, x2=0, x3=0;
@@ -2155,6 +2056,76 @@ int GetInfoInterAll(FILE *fp, int **ArrayIdx, double complex*ArrayValue, int Nsi
   return info;
 }
 
+int GetInfoOrbitalAntiParallel(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, int *iOptCount,
+                               int _fidx, int _iComplexFlag, int _iFlagOrbitalGeneral, int _APFlag, int Nsite, int NArray, char *defname) {
+  char ctmp2[256];
+  int i, j;
+  int idx0 = 0, idx1 = 0;
+  int itmp = 0, info=0;
+  int spn_i, spn_j;
+  int all_i, all_j;
+  int fij = 0, fijSign = 1;
+  int fidx=_fidx;
+
+  if (NArray == 0) return 0;
+
+  if (_iFlagOrbitalGeneral == 0) {
+    while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+      sscanf(ctmp2, "%d %d %d %d \n", &i, &j, &fij, &fijSign);
+      if (CheckPairSite(i, j, Nsite) != 0) {
+        fprintf(stderr, "Error: Site index is incorrect. \n");
+        return -1;
+      }
+      idx0++;
+      Array[i][j] = fij;
+      ArraySgn[i][j] = fijSign;
+      if (idx0 == Nsite * Nsite) break;
+    }
+
+    if (_APFlag == 0) {
+      for (i = 0; i < Nsite; i++) {
+        for (j = 0; j < Nsite; j++) {
+          ArraySgn[i][j] = 1;
+        }
+      }
+    }
+  } else { //_iFlagOrbitalGeneral == 0
+    while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+      sscanf(ctmp2, "%d %d %d %d \n", &i, &j, &fij, &fijSign);
+      spn_i = 0; spn_j = 1;
+      all_i = i + spn_i * Nsite; //fsz
+      all_j = j + spn_j * Nsite; //fsz
+      if (CheckPairSite(i, j, Nsite) != 0) {
+        fprintf(stderr, "Error: Site index is incorrect. \n");
+        return -1;
+      }
+      if (all_i >= all_j) itmp = 1;
+      idx0++;
+      Array[all_i][all_j] = fij;
+      ArraySgn[all_i][all_j] = fijSign;
+      // Note F_{IJ}=-F_{JI}
+      Array[all_j][all_i] = fij;
+      ArraySgn[all_j][all_i] = -fijSign;
+      if (idx0 == (Nsite * Nsite)) break;
+    }
+
+    if (_APFlag == 0) {
+      for (i = 0; i < Nsite; i++) {
+        for (j = Nsite; j < 2*Nsite; j++) {
+          ArraySgn[i][j] = 1;
+          ArraySgn[j][i] = -1;
+        }
+      }
+    }
+  }
+
+  idx1=GetInfoOpt(fp, ArrayOpt, _iComplexFlag, iOptCount, fidx);
+  if (idx0 != Nsite * Nsite || idx1 != NArray || itmp==1) {
+    info = ReadDefFileError(defname);
+  }
+
+  return info;
+}
 /**********************************/
 /* [e] Read Parameters from file  */
 /**********************************/
