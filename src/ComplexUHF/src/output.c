@@ -103,9 +103,9 @@ void cal_cisajs(struct BindStruct *X){
             
 			  fprintf(fp, " %4d %4d %4d %4d %.10lf %.10lf\n", site_1, spin_1, site_2, spin_2, creal(tmp), cimag(tmp));
 			  
-			  if(t_site_1==t_site_2) {
-				  fprintf(stdout, " Debug: %4d %4d %4d %4d %.10lf %.10lf\n", site_1, spin_1, site_2, spin_2, cabs(tmp), carg(tmp));
-			  }
+			//  if(t_site_1==t_site_2) {
+		  //		  fprintf(stdout, " Debug: %4d %4d %4d %4d %.10lf %.10lf\n", site_1, spin_1, site_2, spin_2, cabs(tmp), carg(tmp));
+			//  }
 			  
           }
         } 
@@ -176,7 +176,7 @@ int MakeOrbitalFile(struct BindStruct *X){
             jsite = j+jspin*X->Def.Nsite;
             UHF_Fij[isite][jsite]=0;
             for(n=0;n< 2*X->Def.Ne;n+=2){
-              UHF_Fij[isite][jsite]   +=  X->Large.R_SLT[isite][n]*X->Large.R_SLT[jsite][n+1]- X->Large.R_SLT[isite][n+1]*X->Large.R_SLT[jsite][n];
+              UHF_Fij[isite][jsite]   +=  conj(X->Large.R_SLT[isite][n])*conj(X->Large.R_SLT[jsite][n+1])- conj(X->Large.R_SLT[isite][n+1])*conj(X->Large.R_SLT[jsite][n]);
             }
        //     printf(" %d %d: %d %d: %lf %lf \n",i,ispin,j,jspin,creal(UHF_Fij[isite][jsite]),cimag(UHF_Fij[isite][jsite]));
           }
