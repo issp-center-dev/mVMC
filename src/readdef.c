@@ -767,74 +767,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWOrbitalParallel:
           /*orbitalidxt.def------------------------------------*/
-          if (iNOrbitalP > 0) {
-            idx0 = idx1 = 0;
-            itmp = 0;
-            int fij_org;
-            if (APFlag == 0) {
-              while (fscanf(fp, "%d %d %d\n", &i, &j, &fij_org) != EOF) {
-                //fprintf(stdout, "Debug: test-1 %d %d %d %d\n", i, j, fij, idx0);
-                for (spn_i = 0; spn_i < 2; spn_i++) {
-                  all_i = i + spn_i * Nsite; //fsz
-                  all_j = j + spn_i * Nsite; //fsz
-                  if (CheckPairSite(i, j, Nsite) != 0) {
-                    fprintf(stderr, "Error: Site index is incorrect. \n");
-                    info = 1;
-                    break;
-                  }
-                  if (all_i >= all_j) {
-                    itmp = 1;
-                  }
-                  idx0++;
-                  fij = iNOrbitalAP + 2 * fij_org + spn_i;
-                  OrbitalIdx[all_i][all_j] = fij;
-                  OrbitalSgn[all_i][all_j] = 1;
-                  // Note F_{IJ}=-F_{JI}
-                  OrbitalIdx[all_j][all_i] = fij;
-                  OrbitalSgn[all_j][all_i] = -1;
-                }
-                if (idx0 == (Nsite * (Nsite - 1))) {
-                  //fprintf(stdout, "Debug: test-1-1 %d %d %d %d\n", i, j, fij, idx0);
-                  break;
-                }
-              }
-            } else { /* anti-periodic boundary mode */
-              while (fscanf(fp, "%d %d %d %d \n", &i, &j, &fij_org, &fijSign) != EOF) {
-                for (spn_i = 0; spn_i < 2; spn_i++) {
-                  all_i = i + spn_i * Nsite; //fsz
-                  all_j = j + spn_i * Nsite; //fsz
-                  if (all_i >= all_j) {
-                    itmp = 1;
-                  }
-                  idx0++;
-                  fij = iNOrbitalAP + 2 * fij_org + spn_i;
-                  OrbitalIdx[all_i][all_j] = fij;
-                  OrbitalSgn[all_i][all_j] = fijSign;
-                  // Note F_{IJ}=-F_{JI}
-                  OrbitalIdx[all_j][all_i] = fij;
-                  OrbitalSgn[all_j][all_i] = -fijSign;
-                }
-                if (idx0 == ((Nsite * (Nsite - 1)))) break; //N*(N-1)
-              }
-            }
-
-            fidx = NProj + iNOrbitalAP;
-            idx1 = 0;
-            int idxOptFlag = 0;
-            while (fscanf(fp, "%d ", &i) != EOF) {
-              idxOptFlag = 2 * (fidx + 2 * idx1);
-              ierr = fscanf(fp, "%d\n", &(OptFlag[idxOptFlag])); //up-up real
-              OptFlag[idxOptFlag + 1] = iComplexFlgOrbital;//up-up imag
-              OptFlag[idxOptFlag + 2] = OptFlag[idxOptFlag];//down-down real
-              OptFlag[idxOptFlag + 3] = iComplexFlgOrbital;// down-down imag
-              idx1++;
-              count_idx += 2;
-            }
-            if (idx0 != (Nsite * (Nsite - 1)) || idx1 != iNOrbitalP || itmp == 1) {
-              //fprintf(stdout, "Debug: test-1-1 %d %d %d \n", idx0, idx1, itmp);
-              info = ReadDefFileError(defname);
-            }
-          }
+          fidx = NProj+iNOrbitalAP;
+          if(GetInfoOrbitalParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
+                                   fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalP, iNOrbitalAP, defname)!=0) info=1;
           break;
 
         case KWTransSym:
@@ -1654,6 +1589,23 @@ int ReadPairDValue(FILE *fp, int **ArrayIdx, double *ArrayValue, int Nsite, int 
   return info;
 }
 
+int GetInfoOptOrbitalParalell(FILE *fp, int *ArrayOpt, int iComplxFlag, int *iTotalOptCount, int fidx){
+  int i;
+  int iLocalOptCount=0;
+  int idxOptFlag=0;
+  while (fscanf(fp, "%d ", &i) != EOF) {
+    idxOptFlag = 2 * (fidx + 2 * iLocalOptCount);
+    fscanf(fp, "%d\n", &(ArrayOpt[idxOptFlag])); // up-up real
+    ArrayOpt[idxOptFlag + 1] = iComplxFlag; //  up-up imag
+    ArrayOpt[idxOptFlag + 2] = ArrayOpt[idxOptFlag]; //  up-up imag
+    ArrayOpt[idxOptFlag + 3] = iComplxFlag; //  up-up imag
+    fidx++;
+    (iLocalOptCount)++;
+    (*iTotalOptCount)+=2;
+  }
+  return (iLocalOptCount);
+}
+
 int GetInfoOpt(FILE *fp, int *ArrayOpt, int iComplxFlag, int *iTotalOptCount, int fidx){
   int i;
   int iLocalOptCount=0;
@@ -1666,6 +1618,7 @@ int GetInfoOpt(FILE *fp, int *ArrayOpt, int iComplxFlag, int *iTotalOptCount, in
   }
   return (iLocalOptCount);
 }
+
 
 int GetInfoGutzwiller(FILE *fp, int *ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int Nsite, int NArray, char *defname) {
   char ctmp2[256];
@@ -2117,6 +2070,64 @@ int GetInfoOrbitalGeneral(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, 
 
   idx1=GetInfoOpt(fp, ArrayOpt, _iComplexFlag, iOptCount, fidx);
   if (idx0 != (2 * Nsite * Nsite - Nsite) || idx1 != NArray || itmp==1) {
+    info = ReadDefFileError(defname);
+  }
+
+  return info;
+}
+
+int GetInfoOrbitalParallel(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, int *iOptCount,
+                          int _fidx, int _iComplexFlag, int _iFlagOrbitalGeneral, int _APFlag, int Nsite, int NArray, int NArrayAP, char *defname) {
+  char ctmp2[256];
+  int i, j;
+  int idx0 = 0, idx1 = 0;
+  int itmp = 0, info = 0;
+  int spn_i, spn_j;
+  int all_i, all_j;
+  int fij = 0, fijSign = 1, fij_org;
+  int fidx = _fidx;
+
+  if (NArray == 0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d %d %d\n", &i, &j, &fij_org, &fijSign);
+
+    if (CheckPairSite(i, j, Nsite) != 0) {
+      fprintf(stderr, "Error: Site index is incorrect. \n");
+      return -1;
+    }
+
+    for (spn_i = 0; spn_i < 2; spn_i++) {
+      all_i = i + spn_i * Nsite; //fsz
+      all_j = j + spn_i * Nsite; //fsz
+      if (all_i >= all_j) itmp = 1;
+      idx0++;
+      fij = NArrayAP + 2 * fij_org + spn_i;
+
+      Array[all_i][all_j] = fij;
+      ArraySgn[all_i][all_j] = fijSign;
+      // Note F_{IJ}=-F_{JI}
+      Array[all_j][all_i] = fij;
+      ArraySgn[all_j][all_i] = -fijSign;
+    }
+    if (idx0 == (Nsite * (Nsite - 1))) break;
+  }
+
+  if (_APFlag == 0) {
+    for (spn_i = 0; spn_i < 2; spn_i++) {
+      for (i = 0; i < Nsite; i++) {
+        for (j = i + 1; j < Nsite; j++) {
+          all_i = i + spn_i * Nsite; //fsz
+          all_j = j + spn_i * Nsite; //fsz
+          ArraySgn[all_i][all_j] = 1;
+          ArraySgn[all_j][all_i] = -1;
+        }
+      }
+    }
+  }
+
+
+  idx1=GetInfoOptOrbitalParalell(fp, ArrayOpt, _iComplexFlag, iOptCount, fidx);
+  if (idx0 != (Nsite * (Nsite - 1)) || idx1 != NArray || itmp==1) {
     info = ReadDefFileError(defname);
   }
 
