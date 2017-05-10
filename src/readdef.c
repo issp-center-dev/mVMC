@@ -760,61 +760,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           break;
 
         case KWOrbitalGeneral:
-          idx0 = idx1 = 0;
-          itmp = 0;
-          //printf("idx0=%d idx1=%d itmp=%d \n",idx0,idx1,itmp);
-          if (APFlag == 0) {
-            while (fscanf(fp, "%d %d %d %d %d\n", &i, &spn_i, &j, &spn_j, &fij) != EOF) {
-              all_i = i + spn_i * Nsite; //fsz
-              all_j = j + spn_j * Nsite; //fsz
-              if (CheckPairSite(i, j, Nsite) != 0) {
-                fprintf(stderr, "Error: Site index is incorrect. \n");
-                printf("XDEBUG: %d %d %d %d %d\n", i, j, all_i, all_j, Nsite);
-                break;
-              }
-              if (all_i >= all_j) {
-                itmp = 1;
-              }
-              idx0++;
-              OrbitalIdx[all_i][all_j] = fij;
-              OrbitalSgn[all_i][all_j] = 1;
-              // Note F_{IJ}=-F_{JI}
-              OrbitalIdx[all_j][all_i] = fij;
-              OrbitalSgn[all_j][all_i] = -1;
-              if (idx0 == (2 * Nsite * Nsite - Nsite)) break;
-            }
-          } else { /* anti-periodic boundary mode */
-            while (fscanf(fp, "%d %d %d %d \n", &i, &j, &fij, &fijSign) != EOF) {
-              spn_i = 0;
-              spn_j = 1;
-              all_i = i + spn_i * Nsite; //fsz
-              all_j = j + spn_j * Nsite; //fsz
-              if (all_i >= all_j) {
-                itmp = 1;
-              }
-              idx0++;
-              OrbitalIdx[all_i][all_j] = fij;
-              OrbitalSgn[all_i][all_j] = fijSign;
-              // Note F_{IJ}=-F_{JI}
-              OrbitalIdx[all_j][all_i] = fij;
-              OrbitalSgn[all_j][all_i] = -fijSign;
-              if (idx0 == (2 * Nsite * Nsite - Nsite)) break; //2N*(2N-1)/2
-            }
-          }
           fidx = NProj;
-          while (fscanf(fp, "%d ", &i) != EOF) {
-            ierr = fscanf(fp, "%d\n", &(OptFlag[2 * fidx]));
-            OptFlag[2 * fidx + 1] = iComplexFlgOrbital; //  TBC imaginary
-            //OptFlag[2*fidx+1] = 0; //  TBC imaginary
-            fidx++;
-            idx1++;
-            count_idx++;
-          }
-
-          if (idx0 != (2 * Nsite * Nsite - Nsite) || idx1 != NOrbitalIdx || itmp == 1) {
-            info = ReadDefFileError(defname);
-          }
-          break;
+          if(GetInfoOrbitalGeneral(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
+                                        fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalAP, defname)!=0) info=1;
+         break;
 
         case KWOrbitalParallel:
           /*orbitalidxt.def------------------------------------*/
@@ -2121,6 +2070,53 @@ int GetInfoOrbitalAntiParallel(FILE *fp, int **Array, int *ArrayOpt, int **Array
 
   idx1=GetInfoOpt(fp, ArrayOpt, _iComplexFlag, iOptCount, fidx);
   if (idx0 != Nsite * Nsite || idx1 != NArray || itmp==1) {
+    info = ReadDefFileError(defname);
+  }
+
+  return info;
+}
+
+int GetInfoOrbitalGeneral(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, int *iOptCount,
+                               int _fidx, int _iComplexFlag, int _iFlagOrbitalGeneral, int _APFlag, int Nsite, int NArray, char *defname) {
+  char ctmp2[256];
+  int i, j;
+  int idx0 = 0, idx1 = 0;
+  int itmp = 0, info = 0;
+  int spn_i, spn_j;
+  int all_i, all_j;
+  int fij = 0, fijSign = 1;
+  int fidx = _fidx;
+
+  if (NArray == 0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d %d %d %d %d\n", &i, &spn_i, &j, &spn_j, &fij, &fijSign);
+    all_i = i + spn_i * Nsite; //fsz
+    all_j = j + spn_j * Nsite; //fsz
+    if (CheckPairSite(i, j, Nsite) != 0) {
+      fprintf(stderr, "Error: Site index is incorrect. \n");
+      return -1;
+    }
+    if (all_i >= all_j) itmp = 1;
+    idx0++;
+    Array[all_i][all_j] = fij;
+    ArraySgn[all_i][all_j] = fijSign;
+    // Note F_{IJ}=-F_{JI}
+    Array[all_j][all_i] = fij;
+    ArraySgn[all_j][all_i] = -fijSign;
+    if (idx0 == (2 * Nsite * Nsite - Nsite)) break; //2N*(2N-1)/2
+  }
+
+  if (_APFlag == 0) {
+    for (i = 0; i < 2 * Nsite; i++) {
+      for (j = i + 1; j < 2 * Nsite; j++) {
+        ArraySgn[i][j] = 1;
+        ArraySgn[j][i] = -1;
+      }
+    }
+  }
+
+  idx1=GetInfoOpt(fp, ArrayOpt, _iComplexFlag, iOptCount, fidx);
+  if (idx0 != (2 * Nsite * Nsite - Nsite) || idx1 != NArray || itmp==1) {
     info = ReadDefFileError(defname);
   }
 
