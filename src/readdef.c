@@ -765,7 +765,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWOrbitalGeneral:
           fidx = NProj;
           if(GetInfoOrbitalGeneral(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
-                                        fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalAP, defname)!=0) info=1;
+                                        fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, NOrbitalIdx, defname)!=0) info=1;
          break;
 
         case KWOrbitalParallel:
