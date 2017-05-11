@@ -491,6 +491,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
         }
       }
     }
+
   }
 
   /* store SROptO[] */

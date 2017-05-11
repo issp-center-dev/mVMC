@@ -151,8 +151,8 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
     }
 
 #ifdef _DEBUG
-#pragma omp master
-    printf("    Debug: ExchangeCoupling, NExchangeCoupling=%d\n", NExchangeCoulpling);
+//#pragma omp master
+    //printf("    Debug: ExchangeCoupling, NExchangeCoupling=%d\n", NExchangeCoulpling);
 #endif
     /* Exchange Coupling */
     #pragma omp for private(idx,ri,rj,tmp) schedule(dynamic) nowait

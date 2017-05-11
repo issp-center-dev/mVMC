@@ -361,7 +361,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     UpdateQPWeight();
     StopTimer(20);
     StartTimer(3);
-#ifdef _DEBUG
+#ifdef _DEBUG_DETAIL
       printf("Debug: step %d, MakeSample.\n", step);
 #endif
      if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ // real & sz=0
@@ -398,7 +398,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       } 
       StopTimer(3);
       StartTimer(4);
-#ifdef _DEBUG
+#ifdef _DEBUG_DETAIL
       printf("Debug: step %d, MainCal.\n", step);
 #endif
       if(NProjBF ==0) {
@@ -413,12 +413,12 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       }
       StopTimer(4);
       StartTimer(21);
-#ifdef _DEBUG
+#ifdef _DEBUG_DETAIL
       printf("Debug: step %d, AverageWE.\n", step);
 #endif
     WeightAverageWE(comm_parent);
       StartTimer(25);//DEBUG
-#ifdef _DEBUG
+#ifdef _DEBUG_DETAIL
       printf("Debug: step %d, SROpt.\n", step);
 #endif
     if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz =0
