@@ -183,10 +183,10 @@ int MakeOrbitalFile(struct BindStruct *X){
     }
     printf(" %d %d %d \n",X->Def.NOrbitalAP,X->Def.NOrbitalP,X->Def.NOrbitalIdx);
 //[s] For AntiParallel
-    c_malloc1(ParamOrbital, X->Def.NOrbitalAP);
-    i_malloc1(CountOrbital, X->Def.NOrbitalAP);
-    //ParamOrbital = (double complex*)malloc((X->Def.NOrbitalAP)*sizeof(double complex));
-    //CountOrbital = (int*)malloc((X->Def.NOrbitalAP)*sizeof(int));
+    c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
+    i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
+    //c_malloc1(ParamOrbital, X->Def.NOrbitalAP);
+    //i_malloc1(CountOrbital, X->Def.NOrbitalAP);
     for (i = 0; i < X->Def.NOrbitalAP; i++) {
       ParamOrbital[i] = 0;
       CountOrbital[i] = 0;
@@ -209,13 +209,13 @@ int MakeOrbitalFile(struct BindStruct *X){
     sprintf(fileName, "%s_APOrbital_opt.dat", X->Def.CParaFileHead);
     Child_OutputOptData(fileName, "NOrbitalAP", ParamOrbital, X->Def.NOrbitalAP);
 
-    c_free1(ParamOrbital, X->Def.NOrbitalAP);
-    i_free1(CountOrbital, X->Def.NOrbitalAP);
+    //c_free1(ParamOrbital, X->Def.NOrbitalAP);
+    //i_free1(CountOrbital, X->Def.NOrbitalAP);
 //[e] For AntiParallel
 
 //[s] For Parallel
-    c_malloc1(ParamOrbital, X->Def.NOrbitalP);
-    i_malloc1(CountOrbital, X->Def.NOrbitalP);
+    //c_malloc1(ParamOrbital, X->Def.NOrbitalP);
+    //i_malloc1(CountOrbital, X->Def.NOrbitalP);
     for (i = 0; i < X->Def.NOrbitalP; i++) {
       ParamOrbital[i] = 0;
       CountOrbital[i] = 0;
@@ -245,13 +245,13 @@ int MakeOrbitalFile(struct BindStruct *X){
     sprintf(fileName, "%s_POrbital_opt.dat", X->Def.CParaFileHead);
     Child_OutputOptData(fileName, "NOrbitalP", ParamOrbital, X->Def.NOrbitalP);
 
-    c_free1(ParamOrbital, X->Def.NOrbitalP);
-    i_free1(CountOrbital, X->Def.NOrbitalP);
+    //c_free1(ParamOrbital, X->Def.NOrbitalP);
+    //i_free1(CountOrbital, X->Def.NOrbitalP);
 //[e] For Parallel
 
 //[s] For general
-    c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
-    i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
+    //c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
+    //i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
     for (i = 0; i < X->Def.NOrbitalIdx; i++) {
       ParamOrbital[i] = 0;
       CountOrbital[i] = 0;
