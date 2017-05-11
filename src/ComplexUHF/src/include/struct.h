@@ -76,6 +76,7 @@ struct DefineList {
     int **CisAjsCktAltDC, NCisAjsCktAltDC;
 
     int iFlgOrbitalGeneral;
+    int OrbitalOutputMode;
 
 	
 };

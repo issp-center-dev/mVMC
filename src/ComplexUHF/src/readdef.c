@@ -94,13 +94,14 @@ char* ReadBuffInt(FILE *fp, int *iNbuf){
 	return cerr;
 }
 
-int JudgeOrbitalMode(int *_iFlgOrbitalGeneral, const int _iFlgOrbitalAP, const int _iFlgOrbitalP){
+int JudgeOrbitalMode(int *_iFlgOrbitalGeneral, const int _iFlgOrbitalAP, const int _iFlgOrbitalP,int *OutputMode){
 
   int iret=0;
   //(General, AP, P)
   if(*_iFlgOrbitalGeneral==1){
     if(_iFlgOrbitalAP==0 && _iFlgOrbitalP==0){ //(1, 0, 0)
-      iret=0;
+      iret=0; 
+      *OutputMode = 0;   // only general
     }
     else{//(1, 1, 0) or (1, 0, 1) or (1, 1, 1)
       iret= -1;
@@ -111,9 +112,11 @@ int JudgeOrbitalMode(int *_iFlgOrbitalGeneral, const int _iFlgOrbitalAP, const i
       if(_iFlgOrbitalP==1){ //(0, 1, 1)
         *_iFlgOrbitalGeneral=1;
         iret= 0;
+        *OutputMode = 2; // AP + P
       }
       else{ //(0, 1, 0)
         iret= 0;
+        *OutputMode = 1; // AP
       }
     }
     else{// (0, 0, 0) or (0, 0, 1)
@@ -320,7 +323,7 @@ int ReadDefFileNInt(
 	}
 
   int iret=0;
-  iret=JudgeOrbitalMode(&X->iFlgOrbitalGeneral, iFlgOrbitalAP, iFlgOrbitalP);
+  iret=JudgeOrbitalMode(&X->iFlgOrbitalGeneral, iFlgOrbitalAP, iFlgOrbitalP,&X->OrbitalOutputMode);
   if(iret<0) info=iret;
 
   if (info != 0) {
