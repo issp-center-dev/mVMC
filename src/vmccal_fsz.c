@@ -49,7 +49,7 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
-#ifdef _DEBUG
+#ifdef __DEBUG_DETAILDETAIL
   printf("  Debug: SplitLoop\n");
 #endif
   SplitLoop(&sampleStart,&sampleEnd,NVMCSample,rank,size);
@@ -66,7 +66,7 @@ void VMCMainCal_fsz(MPI_Comm comm) {
     eleSpn     = EleSpn + sample*Nsize; //fsz
 
     StartTimer(40);
-#ifdef _DEBUG
+#ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: CalculateMAll \n",sample);
 #endif
     info = CalculateMAll_fsz(eleIdx,eleSpn,qpStart,qpEnd);//info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd); // InvM,PfM will change
@@ -76,17 +76,17 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
       continue;
     }
-#ifdef _DEBUG
+#ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: CalculateIP \n",sample);
 #endif
     ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
-#ifdef _DEBUG
+#ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: LogProjVal \n",sample);
 #endif
     //LogProjVal(eleProjCnt);
     /* calculate reweight */
     w =1.0;
-#ifdef _DEBUG
+#ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: isfinite \n",sample);
 #endif
     if( !isfinite(w) ) {
@@ -96,10 +96,10 @@ void VMCMainCal_fsz(MPI_Comm comm) {
 
     StartTimer(41);
     /* calculate energy */
-#ifdef _DEBUG
+#ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: calculateHam \n",sample);
 #endif
-#ifdef _DEBUG
+#ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: calculateHam_cmp \n",sample);
 #endif
     e  = CalculateHamiltonian_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
@@ -115,7 +115,7 @@ void VMCMainCal_fsz(MPI_Comm comm) {
     Etot  += w * e;
     Sztot += w * Sz;
     Etot2 += w * conj(e) * e;
-#ifdef _DEBUG
+#ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: calculateOpt \n",sample);
 #endif
     if(NVMCCalMode==0) {
