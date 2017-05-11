@@ -316,9 +316,13 @@ int main(int argc, char* argv[])
   /* close output files */
   if(rank0==0) CloseFile(rank0);
 
+  if(rank0==0) fprintf(stdout,"Start: Free Memory.\n");
   FreeMemory();
   FreeMemoryDef();
+  if(rank0==0) fprintf(stdout,"End: Free Memory.\n");
+
   MPI_Finalize();
+  if(rank0==0) fprintf(stdout,"Finish calculation.\n");
 
   return info;
 }
@@ -508,7 +512,12 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   if(rank==0) OutputTime(NSROptItrStep);
 
   /* output zqp_opt */
-  if(rank==0) OutputOptData();
+  if(rank==0) {
+    fprintf(stdout, "Start: Output opt params.\n");
+    OutputOptData();
+    fprintf(stdout, "End: Output opt params.\n");
+  }
+
   return 0;
 }
 
@@ -518,7 +527,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   int rank;
   MPI_Comm_rank(comm_parent, &rank);
 
-  fprintf(stdout, "Start: UpdateSlaterElm.\n");
+  if(rank==0) fprintf(stdout, "Start: UpdateSlaterElm.\n");
   StartTimer(20);
   if(iFlgOrbitalGeneral==0){//sz is conserved
     UpdateSlaterElm_fcmp();
@@ -526,9 +535,9 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     UpdateSlaterElm_fsz();
   } 
   StopTimer(20);
-  fprintf(stdout, "End  : UpdateSlaterElm.\n");
+  if(rank==0) fprintf(stdout, "End  : UpdateSlaterElm.\n");
 
-  fprintf(stdout, "Start: Sampling.\n");
+  if(rank==0) fprintf(stdout, "Start: Sampling.\n");
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
     if(rank==0) OutputTime(ismp);
     FlushFile(0,rank);
@@ -587,9 +596,9 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
     StopTimer(3);
     StartTimer(4);
-    fprintf(stdout, "End  : Sampling.\n");
+    if(rank==0) fprintf(stdout, "End  : Sampling.\n");
 
-    fprintf(stdout, "Start: Main calculation.\n");
+    if(rank==0) fprintf(stdout, "Start: Main calculation.\n");
     if(NProjBF ==0) {
       if(iFlgOrbitalGeneral==0){
         VMCMainCal(comm_child1);
@@ -599,7 +608,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }else{
       VMC_BF_MainCal(comm_child1);
     }
-    fprintf(stdout, "End  : Main calculation.\n");
+    if(rank==0) fprintf(stdout, "End  : Main calculation.\n");
     StopTimer(4);
     StartTimer(21);
 
