@@ -481,7 +481,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     StopTimer(5);
 
 #ifdef _DEBUG_DUMP_PARA
-    for(i=0; i<NPara; ++i){
+    for(int i=0; i<NPara; ++i){
       fprintf(stderr, "DEBUG: Para[%d] = %lf %lf\n", i, creal(Para[i]), cimag(Para[i]));
     }
 #endif

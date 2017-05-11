@@ -21,16 +21,23 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 
 #ifdef MVMC_SRCG_REAL
-  #define fn_StochasticOptCG StochasticOptCG
-  #define fn_StochasticOptCG_Init StochasticOptCG_Init
-  #define fn_StochasticOptCG_Main StochasticOptCG_Main
-  #define fn_operate_by_S operate_by_S
-  #define fn_xdot xdot
+  #define fn_StochasticOptCG StochasticOptCG_real
+  #define fn_StochasticOptCG_Init StochasticOptCG_Init_real
+  #define fn_StochasticOptCG_Main StochasticOptCG_Main_real
+  #define fn_operate_by_S operate_by_S_real
+  #define fn_xdot xdot_real
 
   #define elemtype double
   #define CONJ(x) (x)
   #define CREAL(x) (x)
   #define CIMAG(x) (0.0)
+  #define Gemv M_DGEMV
+  #define Gemm M_DGEMM
+  #define Ger M_DGER
+  #define allreduce SafeMpiAllReduce
+  #define request_workspace RequestWorkSpaceDouble
+  #define get_workspace GetWorkSpaceDouble
+  #define release_workspace ReleaseWorkSpaceDouble
 
   #define OFFSET 1
 #else // MVMC_SRCG_REAL
@@ -39,6 +46,14 @@ along with this program. If not, see http://www.gnu.org/licenses/.
   #define fn_StochasticOptCG_Main StochasticOptCG_Main_fcmp
   #define fn_operate_by_S operate_by_S_fcmp
   #define fn_xdot xdot_fcmp
+
+  #define Gemv M_ZGEMV
+  #define Gemm M_ZGEMM
+  #define Ger M_ZGERC
+  #define allreduce SafeMpiAllReduce_fcmp
+  #define request_workspace RequestWorkSpaceComplex
+  #define get_workspace GetWorkSpaceComplex
+  #define release_workspace ReleaseWorkSpaceComplex
 
   #define elemtype double complex
   #define CONJ(x) conj(x)
@@ -124,10 +139,17 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   diagCutThreshold = sDiagMax*DSROptRedCut;
   si = 0;
   for(pi=0;pi<nPara;pi++) {
+#ifdef MVMC_SRCG_REAL
+    if(OptFlag[2*pi]!=1) { /* fixed by OptFlag */
+      optNum++;
+      continue;
+    }
+#else
     if(OptFlag[pi]!=1) { /* fixed by OptFlag */
       optNum++;
       continue;
     }
+#endif
 
     sDiag = sDiagElm[pi];
     if(sDiag < diagCutThreshold) { /* fixed by diagCut */
@@ -153,13 +175,8 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   // RequestWorkSpaceDouble(2*SROptSize*(NVMCSample+7) + NVMCSample);
   // VecCG  = GetWorkSpaceDouble(2*SROptSize*(NVMCSample+7) + NVMCSample);
 
-#ifdef MVMC_SRCG_REAL
-  RequestWorkSpaceDouble(nSmat*(NVMCSample+8) + NVMCSample);
-  VecCG  = GetWorkSpaceDouble(nSmat*(NVMCSample+8) + NVMCSample);
-#else
-  RequestWorkSpaceComplex(nSmat*(NVMCSample+8) + NVMCSample);
-  VecCG  = GetWorkSpaceComplex(nSmat*(NVMCSample+8) + NVMCSample);
-#endif
+  request_workspace(nSmat*(NVMCSample+8) + NVMCSample);
+  VecCG  = get_workspace(nSmat*(NVMCSample+8) + NVMCSample);
 
   /*
   x = VecCG;              //GetWorkSpaceDouble(nSmat)
@@ -218,10 +235,10 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 
 #ifdef MVMC_SRCG_REAL
     uplo='U';
-    dposv_(&uplo, &n, &nrhs, s, &lds, g, &ldg, &info);
+    M_DPOSV(&uplo, &n, &nrhs, s, &lds, g, &ldg, &info);
 #else
     uplo='U';
-    zposv_(&uplo, &n, &nrhs, s, &lds, g, &ldg, &info);
+    M_ZPOSV(&uplo, &n, &nrhs, s, &lds, g, &ldg, &info);
 #endif
     for(i=0; i<nSmat; ++i){
       VecCG[i] = g[i];
@@ -279,11 +296,15 @@ int fn_StochasticOptCG(MPI_Comm comm) {
     #pragma loop norecurrence para
     for(si=0;si<nSmat;si++) {
       pi = smatToParaIdx[si];
+#ifdef MVMC_SRCG_REAL
+      para[pi]     += r[si];
+#else
       if(pi%2==0){
-        para[pi/2]     += CREAL(r[si]);  // real
+        para[pi/2]     += creal(r[si]);  // real
       }else{
-        para[(pi-1)/2] += CREAL(r[si])*I; // imag
+        para[(pi-1)/2] += creal(r[si])*I; // imag
       }
+#endif
     }
   }
 
@@ -295,12 +316,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 #endif
 
   StopTimer(52);
-#ifdef MVMC_SRCG_REAL
-  ReleaseWorkSpaceDouble();
-#else
-  ReleaseWorkSpaceComplex();
-#endif
-
+  release_workspace();
 
 #ifdef _DEBUG_STCOPT_CG
   printf("DEBUG in %s (%d): End StochasticOptCG\n", __FILE__, __LINE__);
@@ -408,12 +424,6 @@ int fn_StochasticOptCG_Main(const int nSmat, elemtype *VecCG, MPI_Comm comm) {
 /* S is the overlap matrix*/
 /* S[i][j] = OO[i+1][j+1] - OO[i+1][0] * OO[0][j+1]; */
 int fn_operate_by_S(int nSmat, elemtype *x, elemtype *y, elemtype * process_y, elemtype * stcO, MPI_Comm comm) {
-#ifdef MVMC_SRCG_REAL
-  #define Gemv M_DGEMV
-#else
-  #define Gemv M_ZGEMV
-#endif
-
   elemtype *stcOd, *stcOs, *sdiag;
   int rank,size,info=0;
   int i,si;
@@ -462,11 +472,7 @@ int fn_operate_by_S(int nSmat, elemtype *x, elemtype *y, elemtype * process_y, e
   
   MPI_Barrier(comm);
   /* compute <OO>*x */
-#ifdef MVMC_SRCG_REAL
-  SafeMpiAllReduce(process_y, y, nSmat, comm);
-#else
-  SafeMpiAllReduce_fcmp(process_y, y, nSmat, comm);
-#endif
+  allreduce(process_y, y, nSmat, comm);
  
   /* compute <O>*x */
   coef = fn_xdot(nSmat, stcO, x);
@@ -491,26 +497,15 @@ int fn_operate_by_S(int nSmat, elemtype *x, elemtype *y, elemtype * process_y, e
   S2 = (elemtype*)calloc(nSmat*nSmat, sizeof(elemtype));
 
   printf("DEBUG in %s (%d): S = OO * OO'\n", __FILE__, __LINE__);
-#ifdef MVMC_SRCG_REAL
-  M_DGEMM(&trans2, &trans1, &nSmat, &nSmat, &NVMCSample, &alpha, stcOs, &nSmat, stcOs, &nSmat, &beta, S, &nSmat);
-#else
-  M_ZGEMM(&trans2, &trans1, &nSmat, &nSmat, &NVMCSample, &alpha, stcOs, &nSmat, stcOs, &nSmat, &beta, S, &nSmat);
-#endif
+  Gemm(&trans2, &trans1, &nSmat, &nSmat, &NVMCSample, &alpha, stcOs, &nSmat, stcOs, &nSmat, &beta, S, &nSmat);
+
   printf("DEBUG in %s (%d): S2 = O * O'\n", __FILE__, __LINE__);
-#ifdef MVMC_SRCG_REAL
-  M_DGER(&nSmat, &nSmat, &alpha, stcO, &incx, stcO, &incy, S2, &nSmat);
-#else
-  M_ZGERC(&nSmat, &nSmat, &alpha, stcO, &incx, stcO, &incy, S2, &nSmat);
-#endif
+  Ger(&nSmat, &nSmat, &alpha, stcO, &incx, stcO, &incy, S2, &nSmat);
 
   printf("DEBUG in %s (%d): process_y = S*x\n", __FILE__, __LINE__);
   Gemv(&trans2, &nSmat, &nSmat, &alpha, S, &nSmat, x, &incx, &beta, process_y, &incy);
   printf("DEBUG in %s (%d): allreduce process_y into y2\n", __FILE__, __LINE__);
-#ifdef MVMC_SRCG_REAL
-  SafeMpiAllReduce(process_y, y2, nSmat, comm);
-#else
-  SafeMpiAllReduce_fcmp(process_y, y2, nSmat, comm);
-#endif
+  allreduce(process_y, y2, nSmat, comm);
 
   printf("DEBUG in %s (%d): y2 = -S2*x + invW * y2\n", __FILE__, __LINE__);
   Gemv(&trans2, &nSmat, &nSmat, &malpha, S2, &nSmat, x, &incx, &invW, y2, &incy);
@@ -535,7 +530,6 @@ int fn_operate_by_S(int nSmat, elemtype *x, elemtype *y, elemtype * process_y, e
 
   return info;
 
-#undef Gemv
 }
 
 void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, elemtype *VecCG) {
@@ -606,6 +600,10 @@ void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, elemtype
   }
 
 #ifdef _DEBUG_STCOPT_CG
+  for(i=0; i<nSmat; ++i){
+    printf("%lg\n", g[i]);
+  }
+
   fprintf(stderr, "DEBUG in %s (%d): End stcOptCG_Init\n", __FILE__, __LINE__);
 #endif
 
@@ -633,5 +631,12 @@ inline elemtype fn_xdot(const int n, elemtype * const p, elemtype * const q) {
 #undef CONJ
 #undef CREAL
 #undef CIMAG
+#undef Gemv
+#undef Gemm
+#undef Ger
+#undef allreduce
+#undef request_workspace
+#undef get_workspace
+#undef release_workspace
 
 #undef OFFSET

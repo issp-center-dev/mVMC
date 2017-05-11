@@ -29,6 +29,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_STCOPT_DPOSV
 #define _SRC_STCOPT_DPOSV
 
+// #define _DEBUG_STCOPT_DPOSV
+
 int StochasticOpt(MPI_Comm comm) {
   double *s; /* the overlap matrix S */
   double *g; /* the energy gradient and the prameter change */
@@ -51,7 +53,7 @@ int StochasticOpt(MPI_Comm comm) {
   int info=0;
   int rank,size;
 // for real
-  int int_x,int_y,j,i;
+  int int_x,int_y,j,i,idx;
 
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
@@ -87,6 +89,10 @@ int StochasticOpt(MPI_Comm comm) {
     /* sDiagElm is temporarily used for diagonal elements of S */
     /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
     sDiagElm[pi]  = creal(SROptOO[(pi+2)*(2*SROptSize)+(pi+2)]) - creal(SROptOO[pi+2]) * creal(SROptOO[pi+2]);
+
+#ifdef _DEBUG_STCOPT_DPOSV
+    fprintf(stderr, "DEBUG in %s (%d): sDiagElm[%d] = %lf\n", __FILE__, __LINE__, pi, sDiagElm[pi]);
+#endif
   }
 
   sDiag = sDiagElm[0];
@@ -121,6 +127,11 @@ int StochasticOpt(MPI_Comm comm) {
     smatToParaIdx[si] = -1;
   }
 
+#ifdef _DEBUG_STCOPT_DPOSV
+  printf("DEBUG in %s (%d): diagCutThreshold = %lg\n", __FILE__, __LINE__, diagCutThreshold);
+  printf("DEBUG in %s (%d): optNum, cutNum, nSmat, 2*NPara == %d, %d, %d, %d\n", __FILE__, __LINE__, optNum, cutNum, nSmat, 2*NPara);
+#endif
+
   ReleaseWorkSpaceDouble();
   s = GetWorkSpaceDouble(nSmat*nSmat);
   g = GetWorkSpaceDouble(nSmat);
@@ -131,6 +142,20 @@ int StochasticOpt(MPI_Comm comm) {
   StartTimer(56);
   stcOptInit(s,g,nSmat,smatToParaIdx);
   StopTimer(56);
+
+#ifdef _DEBUG_STCOPT_DPOSV
+  for(i=0; i<nSmat; ++i){
+    printf("%lg\n", g[i]);
+  }
+  for(j=0;j<nSmat;j++) {
+    for(i=0;i<nSmat;i++) {
+      idx = i + j*nSmat; /* local index (row major) */
+      printf("%lg ", s[idx]);
+    }
+    printf("\n");
+  }
+#endif
+
   StartTimer(57);
   info = stcOptMain(s,g,nSmat);
   /* g is overwritten with the parameter change. */
@@ -150,6 +175,12 @@ int StochasticOpt(MPI_Comm comm) {
   }
   fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e % .5e % .5e %5d\n",NPara,nSmat,optNum,cutNum,
           sDiagMax,sDiagMin,rmax,smatToParaIdx[simax]);
+
+#ifdef _DEBUG_STCOPT_DPOSV
+  for(si=0; si<nSmat; ++si){
+    fprintf(stderr, "%lg\n", g[si]);
+  }
+#endif
 
   /*** check inf and nan ***/
   for(si=0;si<nSmat;si++) {

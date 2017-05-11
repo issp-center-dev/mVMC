@@ -29,6 +29,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "stcopt_pdposv.h"
 #ifndef _SRC_STCOPT_PDPOSV
 #define _SRC_STCOPT_PDPOSV
+
 // #define _DEBUG_STCOPT_PDPOSV
 
 int StochasticOpt(MPI_Comm comm) {
@@ -60,6 +61,8 @@ int StochasticOpt(MPI_Comm comm) {
   int rank,size;
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
+
+  printf("fuga\n");
 
   StartTimer(50);
 //[s] for only real variables TBC

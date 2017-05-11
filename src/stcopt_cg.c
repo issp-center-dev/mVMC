@@ -21,7 +21,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 
 // #define _DEBUG_STCOPT_CG
-#define _DEBUG_STCOPT_CG_GEMV
+// #define _DEBUG_STCOPT_CG_GEMV
 // #define _DEBUG_STCOPT_CG_LAPACK
 
 #define MVMC_SRCG_REAL
@@ -29,3 +29,12 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #undef MVMC_SRCG_REAL
 #include "stcopt_cg_impl.c"
 
+int StochasticOptCG(MPI_Comm comm)
+{
+  int ret=0;
+  if(AllComplexFlag==0){
+    ret = StochasticOptCG_real(comm);
+  }else{
+    ret = StochasticOptCG_fcmp(comm);
+  }
+}
