@@ -63,6 +63,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
   #define OFFSET 2
 #endif
 
+#define print_val(x) fprintf(stderr, "%lg ", CREAL(x))
+#define println_val(x) fprintf(stderr, "%lg\n", CREAL(x))
+
 
 int fn_StochasticOptCG(MPI_Comm comm);
 void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, elemtype *VecCG); 
@@ -198,7 +201,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   info = fn_StochasticOptCG_Main(nSmat, VecCG, comm);
 #ifdef _DEBUG_STCOPT_CG
   for(si=0; si<nSmat; ++si){
-    printf("%lg\n", CREAL(VecCG[si]));
+    println_val(VecCG[si]);
   }
 #endif
 #else // _DEBUG_STCOPT_CG_LAPACK
@@ -223,13 +226,13 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 
 #ifdef _DEBUG_STCOPT_CG
     for(i=0; i<nSmat; ++i){
-      printf("%lg\n", CREAL(VecCG[i+nSmat]));
+      println_val(VecCG[i+nSmat]);
     }
     for(i=0; i<nSmat; ++i){
       for(j=0; j<nSmat; ++j){
-        printf("%lg ", CREAL(s[j+i*nSmat]));
+        print_val(s[j+i*nSmat]);
       }
-      printf("\n");
+      fprintf(stderr, "\n");
     }
 #endif
 
@@ -246,7 +249,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 
 #ifdef _DEBUG_STCOPT_CG
     for(i=0; i<nSmat; ++i){
-      printf("%lg\n", CREAL(VecCG[i]));
+      println_val(VecCG[i]);
     }
 #endif
 
@@ -311,7 +314,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 #ifdef _DEBUG_STCOPT_CG
   for(si=0; si<nSmat; ++si){
       pi = smatToParaIdx[si];
-      printf("%d %d %lg\n", si, pi, CREAL(r[si]));
+      fprintf(stderr, "%d %d %lg\n", si, pi, CREAL(r[si]));
   }
 #endif
 
@@ -319,7 +322,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   release_workspace();
 
 #ifdef _DEBUG_STCOPT_CG
-  printf("DEBUG in %s (%d): End StochasticOptCG\n", __FILE__, __LINE__);
+  fprintf(stderr, "DEBUG in %s (%d): End StochasticOptCG\n", __FILE__, __LINE__);
 #endif
   return info;
 }
@@ -341,7 +344,7 @@ int fn_StochasticOptCG_Main(const int nSmat, elemtype *VecCG, MPI_Comm comm) {
   elemtype  *r, *g, *q, *d, *x, *process_y;
 
 #ifdef _DEBUG_STCOPT_CG
-  printf("DEBUG in %s (%d): Start stcOptCG_Main\n", __FILE__, __LINE__);
+  fprintf(stderr, "DEBUG in %s (%d): Start stcOptCG_Main\n", __FILE__, __LINE__);
 #endif
   
   x = VecCG;              //GetWorkSpaceDouble(nSmat)
@@ -371,7 +374,7 @@ int fn_StochasticOptCG_Main(const int nSmat, elemtype *VecCG, MPI_Comm comm) {
     //check convergence 
     //if(rank==0) printf("%d: %d %.3e\n",rank, iter,delta);
 #ifdef _DEBUG_STCOPT_CG
-    printf("delta = %lg, cg_thresh = %lg\n", delta, cg_thresh);
+    fprintf(stderr, "delta = %lg, cg_thresh = %lg\n", delta, cg_thresh);
 #endif
     if (delta < cg_thresh) break;
 
@@ -413,8 +416,8 @@ int fn_StochasticOptCG_Main(const int nSmat, elemtype *VecCG, MPI_Comm comm) {
   }
 
 #ifdef _DEBUG_STCOPT_CG
-  printf("DEBUG in %s (%d): iter = %d\n", __FILE__, __LINE__, iter);
-  printf("DEBUG in %s (%d): End stcOptCG_Main\n", __FILE__, __LINE__);
+  fprintf(stderr, "DEBUG in %s (%d): iter = %d\n", __FILE__, __LINE__, iter);
+  fprintf(stderr, "DEBUG in %s (%d): End stcOptCG_Main\n", __FILE__, __LINE__);
 #endif
 
   return iter;
@@ -428,7 +431,8 @@ int fn_operate_by_S(int nSmat, elemtype *x, elemtype *y, elemtype * process_y, e
   int rank,size,info=0;
   int i,si;
   int incx = 1, incy = 1;
-  elemtype a, coef;
+  double coef;
+  elemtype a;
   elemtype alpha = 1.0, beta = 0.0;
   elemtype invW = 1.0/Wc;
 #ifdef MVMC_SRCG_REAL
@@ -469,19 +473,27 @@ int fn_operate_by_S(int nSmat, elemtype *x, elemtype *y, elemtype * process_y, e
   Gemv(&trans1, &nSmat, &NVMCSample, &alpha, stcOs, &nSmat, x, &incx, &beta, stcOd, &incy);
   /* process_y[sidx] = sum{sample} O[sidx][sample] * Od[sample] ; */
   Gemv(&trans2, &nSmat, &NVMCSample, &alpha, stcOs, &nSmat, stcOd, &incx, &beta, process_y, &incy);
+
+#ifndef MVMC_SRCG_REAL
+  #pragma omp parallel for default(shared) private(si)
+  #pragma loop noalias
+  for(si=0;si<nSmat;++si) {
+    process_y[si] = creal(process_y[si]);
+  }
+#endif
   
   MPI_Barrier(comm);
   /* compute <OO>*x */
   allreduce(process_y, y, nSmat, comm);
  
   /* compute <O>*x */
-  coef = fn_xdot(nSmat, stcO, x);
+  coef = CREAL(fn_xdot(nSmat, stcO, x));
 
   /* y = S*x */
   #pragma omp parallel for default(shared) private(si)
   #pragma loop noalias
   for(si=0;si<nSmat;++si) {
-    y[si] = invW*y[si] - coef*stcO[si];
+    y[si] = invW*y[si] - coef*CREAL(stcO[si]);
     /* modify diagonal elements */
     // y[si] += DSROptStaDel * x[si];
 
@@ -491,23 +503,23 @@ int fn_operate_by_S(int nSmat, elemtype *x, elemtype *y, elemtype * process_y, e
   StopTimer(53);
 
 #ifdef _DEBUG_STCOPT_CG_GEMV
-  printf("DEBUG in %s (%d): Start STCOPT_CG_GEMV\n", __FILE__, __LINE__);
+  fprintf(stderr, "DEBUG in %s (%d): Start STCOPT_CG_GEMV\n", __FILE__, __LINE__);
   y2 = (elemtype*)calloc(nSmat, sizeof(elemtype));
   S = (elemtype*)calloc(nSmat*nSmat, sizeof(elemtype));
   S2 = (elemtype*)calloc(nSmat*nSmat, sizeof(elemtype));
 
-  printf("DEBUG in %s (%d): S = OO * OO'\n", __FILE__, __LINE__);
+  fprintf(stderr, "DEBUG in %s (%d): S = OO * OO'\n", __FILE__, __LINE__);
   Gemm(&trans2, &trans1, &nSmat, &nSmat, &NVMCSample, &alpha, stcOs, &nSmat, stcOs, &nSmat, &beta, S, &nSmat);
 
-  printf("DEBUG in %s (%d): S2 = O * O'\n", __FILE__, __LINE__);
+  fprintf(stderr, "DEBUG in %s (%d): S2 = O * O'\n", __FILE__, __LINE__);
   Ger(&nSmat, &nSmat, &alpha, stcO, &incx, stcO, &incy, S2, &nSmat);
 
-  printf("DEBUG in %s (%d): process_y = S*x\n", __FILE__, __LINE__);
+  fprintf(stderr, "DEBUG in %s (%d): process_y = S*x\n", __FILE__, __LINE__);
   Gemv(&trans2, &nSmat, &nSmat, &alpha, S, &nSmat, x, &incx, &beta, process_y, &incy);
-  printf("DEBUG in %s (%d): allreduce process_y into y2\n", __FILE__, __LINE__);
+  fprintf(stderr, "DEBUG in %s (%d): allreduce process_y into y2\n", __FILE__, __LINE__);
   allreduce(process_y, y2, nSmat, comm);
 
-  printf("DEBUG in %s (%d): y2 = -S2*x + invW * y2\n", __FILE__, __LINE__);
+  fprintf(stderr, "DEBUG in %s (%d): y2 = -S2*x + invW * y2\n", __FILE__, __LINE__);
   Gemv(&trans2, &nSmat, &nSmat, &malpha, S2, &nSmat, x, &incx, &invW, y2, &incy);
  
   /* modify diagonal elements */
@@ -519,13 +531,13 @@ int fn_operate_by_S(int nSmat, elemtype *x, elemtype *y, elemtype * process_y, e
 
   fprintf(stderr, "DEBUG in %s (%d): index y1 y2 diff\n", __FILE__, __LINE__);
   for(si=0; si<nSmat; ++si){
-    fprintf(stderr, "%d %lg %lg %lg\n", si, CREAL(y[si]), CREAL(y2[si]), CREAL(y[si]-y2[si]));
+    fprintf(stderr, "%d (%lg %lg) (%lg %lg) (%lg %lg)\n", si, CREAL(y[si]), CIMAG(y[si]), CREAL(y2[si]), CIMAG(y2[si]), CREAL(y[si]-y2[si]), CIMAG(y[si]-y2[si]));
   }
   
   free(S2);
   free(S);
   free(y2);
-  printf("DEBUG in %s (%d): End STCOPT_CG_GEMV\n", __FILE__, __LINE__);
+  fprintf(stderr, "DEBUG in %s (%d): End STCOPT_CG_GEMV\n", __FILE__, __LINE__);
 #endif // _DEBUG_STCOPT_CG_GEMV
 
   return info;
@@ -579,7 +591,7 @@ void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, elemtype
     #pragma omp parallel for default(shared) private(si,pi,idx)
     #pragma loop noalias
     for(si=0;si<nSmat;++si) {
-      pi = smatToParaIdx[si]/OFFSET;
+      pi = smatToParaIdx[si];
       
       idx = si + i*nSmat; /* column major */
       stcOs[idx] = CONJ(srOptO_Store[offset+pi+OFFSET]);
@@ -601,7 +613,7 @@ void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, elemtype
 
 #ifdef _DEBUG_STCOPT_CG
   for(i=0; i<nSmat; ++i){
-    printf("%lg\n", g[i]);
+    println_val(g[i]);
   }
 
   fprintf(stderr, "DEBUG in %s (%d): End stcOptCG_Init\n", __FILE__, __LINE__);
@@ -620,7 +632,6 @@ inline elemtype fn_xdot(const int n, elemtype * const p, elemtype * const q) {
   return z;
 }
 
-
 #undef fn_StochasticOptCG
 #undef fn_StochasticOptCG_Init
 #undef fn_StochasticOptCG_Main
@@ -638,5 +649,7 @@ inline elemtype fn_xdot(const int n, elemtype * const p, elemtype * const q) {
 #undef request_workspace
 #undef get_workspace
 #undef release_workspace
+#undef print_val
+#undef println_val
 
 #undef OFFSET
