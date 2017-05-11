@@ -42,8 +42,7 @@ void Child_OutputOptData(char* cFileName, char* cNKWidx, double complex *Para, i
   fp_out = fopen(cFileName, "w");
   WriteHeader(cNKWidx, Nidx,  fp_out);
   for(i=0; i<Nidx; i++){
-    fprintf(fp_out, "%d % .18e % .18e \n",
-            i, creal(Para[i]), cimag(Para[i]));
+    fprintf(fp_out, "%d % .18e % .18e \n",i,creal(Para[i]),cimag(Para[i]));
   }
   fclose(fp_out);
 }
@@ -181,59 +180,113 @@ int MakeOrbitalFile(struct BindStruct *X){
           }
         }
       }
-
-      for (i = 0; i < X->Def.Nsite; i++) {
-        for (ispin = 0; ispin < 2; ispin++) {
-          for (n = 0; n < 2 * X->Def.Ne; n += 2) {
-            isite = i + ispin * X->Def.Nsite;
-            //printf("debug: Orbital: isite=%d, R_SLT_up=%lf, R_SLT_down=%lf \n", isite,
-            //		 creal(X->Large.R_SLT[isite][n]),
-            //		 creal(X->Large.R_SLT[isite][n + 1]));
-          }
+    }
+    printf(" %d %d %d \n",X->Def.NOrbitalAP,X->Def.NOrbitalP,X->Def.NOrbitalIdx);
+//[s] For AntiParallel
+    c_malloc1(ParamOrbital, X->Def.NOrbitalAP);
+    i_malloc1(CountOrbital, X->Def.NOrbitalAP);
+    //ParamOrbital = (double complex*)malloc((X->Def.NOrbitalAP)*sizeof(double complex));
+    //CountOrbital = (int*)malloc((X->Def.NOrbitalAP)*sizeof(int));
+    for (i = 0; i < X->Def.NOrbitalAP; i++) {
+      ParamOrbital[i] = 0;
+      CountOrbital[i] = 0;
+    }
+    for(i = 0; i < X->Def.Nsite; i++) {
+      for(j = 0; j < X->Def.Nsite; j++) {
+        isite = i + 0 * X->Def.Nsite;
+        jsite = j + 1 * X->Def.Nsite;
+        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+        if(Orbitalidx != -1) {
+          ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
+          CountOrbital[Orbitalidx] += 1;
         }
       }
-      c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
-      i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
-      for (i = 0; i < X->Def.NOrbitalIdx; i++) {
-        ParamOrbital[i] = 0;
-        CountOrbital[i] = 0;
-      }
+    }
+    for (i = 0; i < X->Def.NOrbitalP; i++) {
+      ParamOrbital[i] /= (double) CountOrbital[i];
+      ParamOrbital[i] += genrand_real2() * pow(10.0, -X->Def.eps_int_slater);
+    }
+    sprintf(fileName, "%s_APOrbital_opt.dat", X->Def.CParaFileHead);
+    Child_OutputOptData(fileName, "NOrbitalAP", ParamOrbital, X->Def.NOrbitalAP);
 
-      for (ispin = 0; ispin < 2; ispin++) {
-        for (jspin = 0; jspin < 2; jspin++) {
-          for (i = 0; i < X->Def.Nsite; i++) {
-            for (j = 0; j < X->Def.Nsite; j++) {
-              isite = i + ispin * X->Def.Nsite;
-              jsite = j + jspin * X->Def.Nsite;
-              Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
-              if (Orbitalidx != -1) {
-                // ParamOrbital[Orbitalidx]+=UHF_Fij[isite][jsite];
-                ParamOrbital[Orbitalidx] = UHF_Fij[isite][jsite];
-                CountOrbital[Orbitalidx] += 1;
-                //printf("debug: Orbitaidx[%d][%d]=%d, UHF_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(UHF_Fij[isite][jsite]), cimag(UHF_Fij[isite][jsite]));
-                //printf("debug: Orbitaidx[%d][%d]=%d, ParamOrbital_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(ParamOrbital[Orbitalidx]), cimag(ParamOrbital[Orbitalidx]));
-              }
+    c_free1(ParamOrbital, X->Def.NOrbitalAP);
+    i_free1(CountOrbital, X->Def.NOrbitalAP);
+//[e] For AntiParallel
+
+//[s] For Parallel
+    c_malloc1(ParamOrbital, X->Def.NOrbitalP);
+    i_malloc1(CountOrbital, X->Def.NOrbitalP);
+    for (i = 0; i < X->Def.NOrbitalP; i++) {
+      ParamOrbital[i] = 0;
+      CountOrbital[i] = 0;
+    }
+    for(i = 0; i < X->Def.Nsite; i++) {
+      for(j = 0; j < X->Def.Nsite; j++) {
+        isite = i + 0 * X->Def.Nsite;
+        jsite = j + 0 * X->Def.Nsite;
+        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+        if(Orbitalidx != -1) {
+          ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
+          CountOrbital[Orbitalidx] += 1;
+        }
+        isite = i + 1 * X->Def.Nsite;
+        jsite = j + 1 * X->Def.Nsite;
+        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+        if(Orbitalidx != -1) {
+          ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
+          CountOrbital[Orbitalidx] += 1;
+        }
+      }
+    }
+    for (i = 0; i < X->Def.NOrbitalP; i++) {
+      ParamOrbital[i] /= (double) CountOrbital[i];
+      ParamOrbital[i] += genrand_real2() * pow(10.0, -X->Def.eps_int_slater);
+    }
+    sprintf(fileName, "%s_POrbital_opt.dat", X->Def.CParaFileHead);
+    Child_OutputOptData(fileName, "NOrbitalP", ParamOrbital, X->Def.NOrbitalP);
+
+    c_free1(ParamOrbital, X->Def.NOrbitalP);
+    i_free1(CountOrbital, X->Def.NOrbitalP);
+//[e] For Parallel
+
+//[s] For general
+    c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
+    i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
+    for (i = 0; i < X->Def.NOrbitalIdx; i++) {
+      ParamOrbital[i] = 0;
+      CountOrbital[i] = 0;
+    }
+    for (ispin = 0; ispin < 2; ispin++) {
+      for (jspin = 0; jspin < 2; jspin++) {
+        for (i = 0; i < X->Def.Nsite; i++) {
+          for (j = 0; j < X->Def.Nsite; j++) {
+            isite = i + ispin * X->Def.Nsite;
+            jsite = j + jspin * X->Def.Nsite;
+            Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+            if (Orbitalidx != -1) {
+              // ParamOrbital[Orbitalidx]+=UHF_Fij[isite][jsite];
+              ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
+              CountOrbital[Orbitalidx] += 1;
+              //printf("debug: Orbitaidx[%d][%d]=%d, UHF_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(UHF_Fij[isite][jsite]), cimag(UHF_Fij[isite][jsite]));
+              //printf("debug: Orbitaidx[%d][%d]=%d, ParamOrbital_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(ParamOrbital[Orbitalidx]), cimag(ParamOrbital[Orbitalidx]));
             }
           }
         }
       }
-//[s] MERGE BY TM
-      for (i = 0; i < X->Def.NOrbitalIdx; i++) {
-        ParamOrbital[i] /= (double) CountOrbital[i];
-        ParamOrbital[i] += genrand_real2() * pow(10.0, -X->Def.eps_int_slater);
-        //printf("debug: Orbital: idx=%d, param=%lf, %lf , count=%d \n", i, creal(ParamOrbital[i]), cimag(ParamOrbital[i]), CountOrbital[i]);
-      };
-//[e] MERGE BY TM
-
-      sprintf(fileName, "%s_orbital_opt.dat", X->Def.CParaFileHead);
-      Child_OutputOptData(fileName, "NOrbitalIdx", ParamOrbital, X->Def.NOrbitalIdx);
-
-      c_free2(UHF_Fij, X->Def.Nsite * 2, X->Def.Nsite * 2);
-      c_free1(ParamOrbital, X->Def.NOrbitalIdx);
-      i_free1(CountOrbital, X->Def.NOrbitalIdx);
-      printf("Fij for mVMC are outputted to %s.\n", fileName);
-
     }
+    for (i = 0; i < X->Def.NOrbitalIdx; i++) {
+      ParamOrbital[i] /= (double) CountOrbital[i];
+      ParamOrbital[i] += genrand_real2() * pow(10.0, -X->Def.eps_int_slater);
+      //printf("debug: Orbital: idx=%d, param=%lf, %lf , count=%d \n", i, creal(ParamOrbital[i]), cimag(ParamOrbital[i]), CountOrbital[i]);
+    }
+    sprintf(fileName, "%s_GeneralOrbital_opt.dat", X->Def.CParaFileHead);
+    Child_OutputOptData(fileName, "NOrbitalIdx", ParamOrbital, X->Def.NOrbitalIdx);
+
+    c_free1(ParamOrbital, X->Def.NOrbitalIdx);
+    i_free1(CountOrbital, X->Def.NOrbitalIdx);
+//[e] For general
+    printf("Fij for mVMC are outputted to %s.\n", fileName);
+    c_free2(UHF_Fij, X->Def.Nsite * 2, X->Def.Nsite * 2);
   }
   return 0;
 }
