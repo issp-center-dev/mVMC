@@ -125,6 +125,7 @@ int MakeOrbitalFile(struct BindStruct *X){
   double complex **tmp_mat,**vec;
   double *r;
   char fileName[256];
+  int ini,fin,tmp_i;
 
 /*this part only for anti-parallel
 //[s] for anti-pararell, rediag
@@ -181,7 +182,7 @@ int MakeOrbitalFile(struct BindStruct *X){
         }
       }
     }
-    printf(" %d %d %d \n",X->Def.NOrbitalAP,X->Def.NOrbitalP,X->Def.NOrbitalIdx);
+    //printf(" %d %d %d \n",X->Def.NOrbitalAP,X->Def.NOrbitalP,X->Def.NOrbitalIdx);
 //[s] For AntiParallel
     c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
     i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
@@ -202,7 +203,7 @@ int MakeOrbitalFile(struct BindStruct *X){
         }
       }
     }
-    for (i = 0; i < X->Def.NOrbitalP; i++) {
+    for (i = 0; i < X->Def.NOrbitalAP; i++) {
       ParamOrbital[i] /= (double) CountOrbital[i];
       ParamOrbital[i] += genrand_real2() * pow(10.0, -X->Def.eps_int_slater);
     }
@@ -216,12 +217,14 @@ int MakeOrbitalFile(struct BindStruct *X){
 //[s] For Parallel
     //c_malloc1(ParamOrbital, X->Def.NOrbitalP);
     //i_malloc1(CountOrbital, X->Def.NOrbitalP);
-    for (i = 0; i < X->Def.NOrbitalP; i++) {
+    ini =  X->Def.NOrbitalAP;
+    fin =  X->Def.NOrbitalAP + X->Def.NOrbitalP;
+    for (i =  ini; i < fin; i++) {
       ParamOrbital[i] = 0;
       CountOrbital[i] = 0;
     }
     for(i = 0; i < X->Def.Nsite; i++) {
-      for(j = 0; j < X->Def.Nsite; j++) {
+      for(j = i+1; j < X->Def.Nsite; j++) {
         isite = i + 0 * X->Def.Nsite;
         jsite = j + 0 * X->Def.Nsite;
         Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
@@ -238,9 +241,14 @@ int MakeOrbitalFile(struct BindStruct *X){
         }
       }
     }
-    for (i = 0; i < X->Def.NOrbitalP; i++) {
+    for (i =  ini; i < fin; i++) {
+      printf("MDEBUG: %d %d\n",i, CountOrbital[i]);
       ParamOrbital[i] /= (double) CountOrbital[i];
       ParamOrbital[i] += genrand_real2() * pow(10.0, -X->Def.eps_int_slater);
+    }
+    for (i =  ini; i < fin; i++) {
+      tmp_i = i-ini;
+      ParamOrbital[tmp_i] = ParamOrbital[i];
     }
     sprintf(fileName, "%s_POrbital_opt.dat", X->Def.CParaFileHead);
     Child_OutputOptData(fileName, "NOrbitalP", ParamOrbital, X->Def.NOrbitalP);

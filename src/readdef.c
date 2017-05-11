@@ -1525,15 +1525,17 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm)
 
       case KWInOrbitalParallel:
         fprintf(stdout, "Read InOrbitalParallel File. \n");
-        if(idx != iNOrbitalP){
+        //printf("MDEBUG: %d %d \n",idx,iNOrbitalP);
+        if((idx/2) != iNOrbitalP){
           info = 1;
           continue;
         }
-        for (i = 0; i < iNOrbitalP; i++) {
+        for (i = 0; i < 2*iNOrbitalP; i++) {
           ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
-          Slater[iNOrbitalAP*2*idx] = tmp_real + I * tmp_comp; //up-up
-          ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
-          Slater[iNOrbitalAP+2*idx+1] = tmp_real + I * tmp_comp;//down-down
+          Slater[iNOrbitalAP+idx]   = tmp_real + I * tmp_comp; //up-up
+          //printf("MDEBUG: %d %d %d %lf\n",i,idx,iNOrbitalP,tmp_real,tmp_comp);
+          //ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+          //Slater[iNOrbitalAP+idx+1] = tmp_real + I * tmp_comp;//down-down
         }
         break;
 
