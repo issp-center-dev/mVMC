@@ -1658,7 +1658,6 @@ int GetInfoOptOrbitalParalell(FILE *fp, int *ArrayOpt, int iComplxFlag, int *iTo
     ArrayOpt[idxOptFlag + 1] = iComplxFlag; //  up-up imag
     ArrayOpt[idxOptFlag + 2] = ArrayOpt[idxOptFlag]; //  up-up imag
     ArrayOpt[idxOptFlag + 3] = iComplxFlag; //  up-up imag
-    fidx++;
     (iLocalOptCount)++;
     (*iTotalOptCount)+=2;
   }
