@@ -459,7 +459,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
         }
       }*/
     }else{
-    /* TODO: Check
+    // TODO: Check
       #pragma loop norecurrence
       for(msi=0;msi<ne;msi++) {
         tOrbIdx_i = tOrbIdx + msi*nsize;
@@ -491,7 +491,6 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
         }
       }
     }
-  */
   }
 
   /* store SROptO[] */
