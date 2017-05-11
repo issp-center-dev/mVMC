@@ -160,7 +160,7 @@ void OutputOptData() {
           count_i += iNOrbitalAP;
           sprintf(fileName, "%s_orbitalParallel_opt.dat", CParaFileHead);
           Child_OutputOptData(fp, fileName, "NOrbitalParallelIdx",
-                              iNOrbitalP, 2*iNOrbitalP, count_i, n);
+                              2*iNOrbitalP, 2*iNOrbitalP, count_i, n);
           count_i += 2*iNOrbitalP;
         }else{// use OrbitalGeneral
           sprintf(fileName, "%s_orbital_general_opt.dat", CParaFileHead);
