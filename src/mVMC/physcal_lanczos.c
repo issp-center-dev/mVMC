@@ -56,15 +56,6 @@ int PhysCalLanczos_real
 	LS_CisAjs_real = (double*)malloc(sizeof(double)*_nCisAjs);
 	LS_CisAjsCktAlt_real = (double*)malloc(sizeof(double)*_nCisAjsCktAlt);
 
-	/* zvo_ls.dat */
-	/*
-  fprintf(_FileLS, "% .18e  ", _QQQQ_real[2]);  // H * I = QQQQ[1],[2],[4],[8]       //TBC
-  fprintf(_FileLS, "% .18e  ", _QQQQ_real[3]);  // H * H = QQQQ[3],[6],[9],[12]      //TBC
-  fprintf(_FileLS, "% .18e  ", _QQQQ_real[10]); // H^2 * I = QQQQ[5],[10]            //TBC
-  fprintf(_FileLS, "% .18e  ", _QQQQ_real[11]); // H^2 * H = QQQQ[7],[11],[13],[14]  //TBC
-  fprintf(_FileLS, "% .18e\n", _QQQQ_real[15]); // H^2 * H^2 = QQQQ[15]              //TBC
-	*/
-
 	CalculateEne(_QQQQ_real[2], _QQQQ_real[3], _QQQQ_real[10], _QQQQ_real[11], _QQQQ_real[15],
 	 &alpha_p,  &ene_p,  &ene_vp, &alpha_m,  &ene_m,  &ene_vm);
 
@@ -79,14 +70,6 @@ int PhysCalLanczos_real
 		ene_v = ene_vp;
 	}
 
-/*
-	fprintf(_FileLS, "% .18e  ", alpha_p);
-	fprintf(_FileLS, "% .18e  ", ene_p);
-	fprintf(_FileLS, "% .18e  ", ene_vp);
-	fprintf(_FileLS, "% .18e  ", alpha_m);
-	fprintf(_FileLS, "% .18e  ", ene_m);
-	fprintf(_FileLS, "% .18e \n", ene_vm);
-*/
 	fprintf(_FileLS, "% .18e  ", ene);
 	fprintf(_FileLS, "% .18e  ", ene_v);
 	fprintf(_FileLS, "% .18e  ", alpha);
@@ -120,8 +103,6 @@ int PhysCalLanczos_real
 	  for (i = 0; i < _nCisAjsLz; i++) {
 			idx=_iOneBodyGIdx[_CisAjsLzIdx[i][0]+_CisAjsLzIdx[i][1]*_Ns][_CisAjsLzIdx[i][2]+_CisAjsLzIdx[i][3]*_Ns];
       fprintf(_FileLSCisAjs, "%d %d %d %d % .18e 0.0 \n", _CisAjsLzIdx[idx][0], _CisAjsLzIdx[idx][1], _CisAjsLzIdx[idx][2], _CisAjsLzIdx[idx][3], LS_CisAjs_real[idx]);
-      //fprintf(_FileLSCisAjs, "% .18e 0.0 ", LS_CisAjs_real[idx]);
-		  //fprintf(_FileLSCisAjs, "%d % .18e  \n", i, LS_CisAjs_real[i]);
 	  }
 	  fprintf(_FileLSCisAjs, "\n");
 
@@ -138,7 +119,6 @@ int PhysCalLanczos_real
 							_nLSHam, LS_CisAjsCktAlt_real);
 	  /* zvo_ls_cisajscktalt.dat */
 	  for (i = 0; i < _nCisAjsCktAlt; i++) {
-		  //fprintf(_FileLSCisAjsCktAlt, "% .18e 0.0 ", LS_CisAjsCktAlt_real[i]);
       fprintf(_FileLSCisAjsCktAlt, "%d %d %d %d %d %d %d %d % .18e 0.0\n",
               _CisAjsCktAlt[i][0], _CisAjsCktAlt[i][1], _CisAjsCktAlt[i][2], _CisAjsCktAlt[i][3],
               _CisAjsCktAlt[i][4], _CisAjsCktAlt[i][5], _CisAjsCktAlt[i][6], _CisAjsCktAlt[i][7],
@@ -184,14 +164,6 @@ int PhysCalLanczos_fcmp(
 	LS_CisAjsCktAlt = (double complex*)malloc(sizeof(double complex)*_nCisAjsCktAlt);
 
 	/* zvo_ls.dat */
-	/*
-  fprintf(_FileLS, "% .18e  ", creal(_QQQQ[2]));  // H * I = _QQQQ[1],[2],[4],[8]       //TBC
-  fprintf(_FileLS, "% .18e  ", creal(_QQQQ[3]));  // H * H = _QQQQ[3],[6],[9],[12]      //TBC
-  fprintf(_FileLS, "% .18e  ", creal(_QQQQ[10])); // H^2 * I = _QQQQ[5],[10]            //TBC
-  fprintf(_FileLS, "% .18e  ", creal(_QQQQ[11])); // H^2 * H = _QQQQ[7],[11],[13],[14]  //TBC
-  fprintf(_FileLS, "% .18e\n", creal(_QQQQ[15])); // H^2 * H^2 = _QQQQ[15]              //TBC
-*/
-
 	if(!CalculateEne(creal(_QQQQ[2]),creal(_QQQQ[3]),
 					 creal(_QQQQ[10]), creal(_QQQQ[11]), creal(_QQQQ[15]),
 				 &alpha_p,  &ene_p,  &ene_vp, &alpha_m,  &ene_m,  &ene_vm)==0){
@@ -211,14 +183,6 @@ int PhysCalLanczos_fcmp(
 		ene_v = ene_vp;
 	}
 
-/*
-	fprintf(_FileLS, "% .18e  ", alpha_p);
-	fprintf(_FileLS, "% .18e  ", ene_p);
-	fprintf(_FileLS, "% .18e  ", ene_vp);
-	fprintf(_FileLS, "% .18e  ", alpha_m);
-	fprintf(_FileLS, "% .18e  ", ene_m);
-	fprintf(_FileLS, "% .18e \n", ene_vm);
-*/
 	fprintf(_FileLS, "% .18e  ", ene);
 	fprintf(_FileLS, "% .18e  ", ene_v);
 	fprintf(_FileLS, "% .18e  ", alpha);
@@ -266,7 +230,6 @@ int PhysCalLanczos_fcmp(
               _CisAjsCktAlt[i][0], _CisAjsCktAlt[i][1], _CisAjsCktAlt[i][2], _CisAjsCktAlt[i][3],
               _CisAjsCktAlt[i][4], _CisAjsCktAlt[i][5], _CisAjsCktAlt[i][6], _CisAjsCktAlt[i][7],
               creal(LS_CisAjsCktAlt[i]), cimag(LS_CisAjsCktAlt[i]));
-		  //fprintf(_FileLSCisAjsCktAlt, "% .18e % .18e ", creal(LS_CisAjsCktAlt[i]), cimag(LS_CisAjsCktAlt[i]));
 	  }
 	  fprintf(_FileLSCisAjsCktAlt, "\n");
   }
