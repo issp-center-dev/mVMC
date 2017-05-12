@@ -189,7 +189,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
   }
 
   fp = fopen("calcmod.def", "w");
-  fprintf(fp, "#CalcType = 0:Lanczos, 1:TPQCalc, 2:FullDiag, 4:CG\n");
+  fprintf(fp, "#CalcType = 0:Lanczos, 1:TPQCalc, 2:FullDiag, 3:CG\n");
   fprintf(fp, "#CalcModel = 0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 4:SpinGC, 5:KondoGC\n");
   fprintf(fp, "#Restart = 0:None, 1:Save, 2:Restart&Save, 3:Restart\n");
   fprintf(fp, "#CalcSpec = 0:None, 1:Normal, 2:No H*Phi, 3:Save, 4:Restart, 5:Restart&Save\n");
@@ -2023,7 +2023,8 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
     StdI.lGC = 1;
   }
 #if defined(_HPhi)
-  else if(strcmp(StdI.model, "spingcboost") == 0) {
+  else if(strcmp(StdI.model, "spingcboost") == 0 ||
+    strcmp(StdI.model, "spingccma") == 0) {
     strcpy(StdI.model, "spin\0");
     StdI.lGC = 1;
     StdI.lBoost = 1;
