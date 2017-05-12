@@ -43,6 +43,7 @@ int NLanczosMode; /* mode of the single Lanczos step
                      0: none, 1: only energy, 2: Green functions */
 
 int NStoreO; /* choice of store O: 0-> normal other-> store  */
+int NSRCG; /* choice of solver for Sx=g: 0-> (Sca)LAPACK other-> CG  */
 
 int NDataIdxStart; /* starting value of the file index */
 int NDataQtySmp; /* the number of output files */

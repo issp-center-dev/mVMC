@@ -448,7 +448,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 #ifdef _DEBUG_DUMP_SROPTOO
     if(rank==0){
       if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
-        for(i=0;i<(NStoreO<2 ? SROptSize*SROptSize: SROptSize*2);i++){
+        for(i=0;i<(NSRCG==0 ? SROptSize*SROptSize: SROptSize*2);i++){
           fprintf(stderr, "DEBUG: SROptOO_real[%d]=%lf +I*%lf\n",i,creal(SROptOO_real[i]),cimag(SROptOO_real[i]));
         } 
         for(i=0;i<SROptSize;i++){
@@ -458,7 +458,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
           fprintf(stderr, "DEBUG: SROptO_real[%d]=%lf +I*%lf\n",i,creal(SROptO_real[i]),cimag(SROptO_real[i]));
         } 
       }else{
-        for(i=0;i<(NStoreO<2 ? 2*SROptSize*(2*SROptSize): 2*SROptSize*2);i++){
+        for(i=0;i<(NSRCG==0 ? 2*SROptSize*(2*SROptSize): 2*SROptSize*2);i++){
           fprintf(stderr, "DEBUG: SROptOO[%d]=%lf +I*%lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
         } 
         for(i=0;i<2*SROptSize;i++){
@@ -472,7 +472,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 #endif
 
     StartTimer(5);
-    if(NStoreO==2){
+    if(NSRCG!=0){
       info = StochasticOptCG(comm_parent);
     }else{
       info = StochasticOpt(comm_parent);

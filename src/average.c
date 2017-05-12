@@ -81,7 +81,7 @@ void WeightAverageSROpt(MPI_Comm comm) {
   MPI_Comm_size(comm,&size);
 
   /* SROptOO and SROptHO */ // except for SROptO 
-  if(NStoreO < 2){
+  if(NSRCG == 0){
     n = 2*SROptSize*(2*SROptSize+1);
   }else{
     n = 2*SROptSize*3;
@@ -118,7 +118,7 @@ void WeightAverageSROpt_real(MPI_Comm comm) {
   MPI_Comm_size(comm,&size);
 
   /* SROptOO and SROptHO */ // except for SROptO 
-  if(NStoreO < 2){
+  if(NSRCG == 0){
     n = SROptSize*(SROptSize+1);
   }else{
     n = SROptSize*3;

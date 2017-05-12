@@ -206,7 +206,7 @@ void VMCMainCal(MPI_Comm comm) {
 
       StartTimer(43);
       /* Calculate OO and HO */
-      if(NStoreO==0){
+      if(NSRCG==0 && NStoreO==0){
         if(AllComplexFlag==0){
           calculateOO_real(SROptOO_real,SROptHO_real,SROptO_real,w,creal(e),SROptSize);
         }else{
@@ -285,16 +285,18 @@ void VMCMainCal(MPI_Comm comm) {
   } /* end of for(sample) */
 
 // calculate OO and HO at NVMCCalMode==0
-  if(NStoreO>0 && NVMCCalMode==0){
-    sampleSize=sampleEnd-sampleStart;
-    if(AllComplexFlag==0){
-      StartTimer(45);
-      calculateOO_Store_real(SROptOO_real,SROptHO_real,SROptO_Store_real,creal(w),creal(e),SROptSize,sampleSize);
-      StopTimer(45);
-    }else{
-      StartTimer(45);
-      calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
-      StopTimer(45);
+  if(NVMCCalMode==0){
+    if(NSRCG!=0 || NStoreO!=0){
+      sampleSize=sampleEnd-sampleStart;
+      if(AllComplexFlag==0){
+        StartTimer(45);
+        calculateOO_Store_real(SROptOO_real,SROptHO_real,SROptO_Store_real,creal(w),creal(e),SROptSize,sampleSize);
+        StopTimer(45);
+      }else{
+        StartTimer(45);
+        calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
+        StopTimer(45);
+      }
     }
   }
 
@@ -454,7 +456,7 @@ void VMC_BF_MainCal(MPI_Comm comm) {
 
             StartTimer(43);
             /* Calculate OO and HO */
-            if (NStoreO == 0) {
+            if (NSRCG==0 && NStoreO == 0) {
                 if (AllComplexFlag == 0) {
                     calculateOO_real(SROptOO_real, SROptHO_real, SROptO_real, w, creal(e), SROptSize);
                 } else {
@@ -522,17 +524,19 @@ void VMC_BF_MainCal(MPI_Comm comm) {
     } /* end of for(sample) */
 
     // calculate OO and HO at NVMCCalMode==0
-    if(NStoreO!=0 && NVMCCalMode==0){
-        sampleSize=sampleEnd-sampleStart;
-        if(AllComplexFlag==0){
-            StartTimer(45);
-            calculateOO_Store_real(SROptOO_real,SROptHO_real,SROptO_Store_real,creal(w),creal(e),SROptSize,sampleSize);
-            StopTimer(45);
-        }else{
-            StartTimer(45);
-            calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
-            StopTimer(45);
-        }
+    if(NVMCCalMode==0){
+      if(NStoreO!=0 || NSRCG!=0){
+          sampleSize=sampleEnd-sampleStart;
+          if(AllComplexFlag==0){
+              StartTimer(45);
+              calculateOO_Store_real(SROptOO_real,SROptHO_real,SROptO_Store_real,creal(w),creal(e),SROptSize,sampleSize);
+              StopTimer(45);
+          }else{
+              StartTimer(45);
+              calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
+              StopTimer(45);
+          }
+      }
     }
 
     InvM = InvM_Moto;
@@ -553,19 +557,19 @@ void clearPhysQuantity(){
 //[e] MERGE BY TM
   if(NVMCCalMode==0) {
     /* SROptOO, SROptHO, SROptO */
-    if(NStoreO < 2){
-      n = (2*SROptSize)*(2*SROptSize+2); // TBC
-    }else{
+    if(NSRCG!=0){
       n = (2*SROptSize)*4; // TBC
+    }else{
+      n = (2*SROptSize)*(2*SROptSize+2); // TBC
     }
     vec = SROptOO;
     #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
 // only for real variables
-    if(NStoreO < 2){
-      n = (SROptSize)*(SROptSize+2); // TBC
-    }else{
+    if(NSRCG!=0){
       n = (SROptSize)*4; // TBC
+    }else{
+      n = (SROptSize)*(SROptSize+2); // TBC
     }
     vec_real = SROptOO_real;
     #pragma omp parallel for default(shared) private(i)
@@ -640,7 +644,7 @@ void calculateOO_Store_real(double *srOptOO_real, double *srOptHO_real, double *
   
   jobz = 'N';
   uplo = 'T';
-  if(NStoreO==1){
+  if(NSRCG==0){
     M_DGEMM(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store_real,&srOptSize,srOptO_Store_real,&srOptSize,&beta,srOptOO_real,&srOptSize);
   }else{
 #pragma omp parallel for default(shared) private(i)
@@ -676,7 +680,7 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
   
   jobz = 'N';
   uplo = 'C';
-  if(NStoreO==1){
+  if(NSRCG==0){
     M_ZGEMM(&jobz,&uplo,&srOptSize,&srOptSize,&sampleSize,&alpha,srOptO_Store,&srOptSize,srOptO_Store,&srOptSize,&beta,srOptOO,&srOptSize);
   }else{
 #pragma omp parallel for default(shared) private(i)
