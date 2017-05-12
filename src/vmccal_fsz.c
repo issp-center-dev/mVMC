@@ -138,7 +138,7 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       }
       StartTimer(43);
       /* Calculate OO and HO */
-      if(NStoreO==0){
+      if(NSRCG==0 && NStoreO==0){
         calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
       }else{
         we    = w*e;
@@ -164,11 +164,13 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   } /* end of for(sample) */
 
 // calculate OO and HO at NVMCCalMode==0
-  if(NStoreO!=0 && NVMCCalMode==0){
-    sampleSize=sampleEnd-sampleStart;
-    StartTimer(45);
-    calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
-    StopTimer(45);
+  if(NVMCCalMode==0){
+    if(NStoreO!=0 || NSRCG!=0){
+      sampleSize=sampleEnd-sampleStart;
+      StartTimer(45);
+      calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
+      StopTimer(45);
+    }
   }
   return;
 }

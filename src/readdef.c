@@ -515,6 +515,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 #ifdef _mpi_use
   MPI_Bcast(bufInt, nBufInt, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
+  MPI_Bcast(&NSRCG, 1, MPI_INT, 0, comm); // for NCG
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
@@ -1407,6 +1408,7 @@ void SetDefaultValuesModPara(int *bufInt, double* bufDouble){
   bufDouble[IdxSROptStepDt]=0.02;
   bufDouble[IdxSROptCGTol]=0.00001;
   NStoreO=1;
+  NSRCG=0;
 }
 
 int  GetInfoFromModPara(int *bufInt, double* bufDouble) {
@@ -1511,6 +1513,8 @@ int  GetInfoFromModPara(int *bufInt, double* bufDouble) {
               bufInt[IdxSplitSize] = (int) dtmp;
             } else if (CheckWords(ctmp, "NStore") == 0) {
               NStoreO = (int) dtmp;
+            } else if (CheckWords(ctmp, "NSRCG") == 0) {
+              NSRCG = (int) dtmp;
             } else {
               fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
               iret = ReadDefFileError(defname);

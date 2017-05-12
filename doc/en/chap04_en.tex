@@ -629,6 +629,18 @@ The whole step number to optimize variational parameters by SR method. Only used
 
 {\bf Description :} The time step using in the SR method. 
  
+\item \verb|NSROptCGMaxIter|
+
+{\bf Type :} int-type (default value: 100)
+
+{\bf Description :} The maximum number of CG steps for the SR method. Only used for \verb|NSRCG|!=0.
+ 
+\item \verb|DSROptCGTol|
+
+{\bf Type :} double-type (default value: 0.00001)
+
+{\bf Description :} The convergence condition of a CG step in the SR method. Only used for \verb|NSRCG|!=0.
+ 
 \item \verb|NVMCWarmUp|
 
 {\bf Type :} int-type (Positive integer, default value: 10)
@@ -670,6 +682,12 @@ The whole step number to optimize variational parameters by SR method. Only used
 {\bf Type :} int-type (0 or 1, default value: 1)
 
 {\bf Description :} The option of applying matrix-matrix product to calculate expected values $\langle O_k O_l \rangle$ (0: off, 1: on).  
+This speeds up calculation but increases the amount of memory usage from $O(N_\text{p}^2)$ to $O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})$, where $N_\text{p}$ is the number of the variational parameters and $N_\text{MCS}$ is the number of Monte Carlo sampling.
+\item \verb|NSRCG|
+
+{\bf Type :} int-type (0 or 1, default value: 0)
+
+{\bf Description :} The option of solving $Sx=g$ in the SR method without construting $S$ matrix~\cite{NeuscammanUmrigarChan}. (0: off, 1: on). This reduces the amount of memory usage from $O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})$ to $O(N_\text{p}) + O(N_\text{p}N_\text{MCS})$ when $N_\text{p} > N_\text{MCS}$.
   
 \item  \verb|ComplexType|
   

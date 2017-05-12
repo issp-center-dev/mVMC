@@ -30,6 +30,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define M_DGER  dger_
 #define M_ZAXPY zaxpy_
 #define M_ZGEMM zgemm_
+#define M_ZGEMV zgemv_
 #define M_ZGERC zgerc_
 
 // LAPACK
@@ -67,6 +68,9 @@ extern void M_ZGEMM(const char *transa, const char *transb, const int *m, const 
                     const double complex *alpha, const double complex *a, const int *lda,
                     const double complex *b, const int *ldb, const double complex *beta,
                     double complex *c, const int *ldc);
+extern void M_ZGEMV(const char *trans, const int *m, const int *n, const double complex *alpha,
+                    const double complex *a, const int *lda, const double complex *x, const int *incx,
+                    const double complex *beta, double complex *y, const int *incy);
 extern void M_DGER(const int *m, const int *n, const double *alpha, const double *x, const int *incx,
                    const double *y, const int *incy, double *a, const int *lda);
 extern void M_ZGERC(const int *m, const int *n, const double complex *alpha, const double complex *x, const int *incx,
@@ -82,6 +86,9 @@ extern void M_DGETRF(const int* m, const int* n, double* a, const int* lda,
 extern void M_DGETRI(const int* n, double* a, const int* lda,
                      const int* ipiv, double* work, const int* lwork,
                      int* info );
+extern void M_ZPOSV(const char* uplo, const int* n, const int* nrhs,
+                    double complex* a, const int* lda, double complex* b,
+                    const int* ldb, int* info );
 extern void M_ZGETRF(const int* m, const int* n, double complex* a,
                      const int* lda, int* ipiv, int* info );
 extern void M_ZGETRI(const int* n, double complex* a, const int* lda,

@@ -361,6 +361,18 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 {\bf 説明 :} {SR法で使用する刻み幅。手法論文\cite{Tahara2008}の$\Delta t$に対応。}
  
+\item \verb|NSROptCGMaxIter|
+
+{\bf 形式 :} int型 (デフォルト値 = 100)
+
+{\bf 説明 :} {SR-CG法での、CG法の繰り返し回数の上限。\verb|NSRCG|!=0 の場合のみ使用されます。}
+ 
+\item \verb|DSROptCGTol|
+
+{\bf 形式 :} double型 (デフォルト値 = 0.00001)
+
+{\bf 説明 :} {SR-CG法での、CG法の収束判定条件。\verb|NSRCG|!=0 の場合のみ使用されます。}
+ 
 \item \verb|NVMCWarmUp|
 
 {\bf 形式 :} int型 (1以上、デフォルト値=10)
@@ -399,9 +411,15 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 \item \verb|NStore|
 
-{\bf 形式 :} int型 (1以上、デフォルト値=1)
+{\bf 形式 :} int型 (0もしくは1、デフォルト値=1)
 
-{\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にして高速化するオプション(1で機能On、{モンテカルロサンプリング数に応じてメモリの消費が増大します})。
+{\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にして高速化するオプション(1で機能On、{モンテカルロサンプリング数に応じてメモリの消費が増大します}\footnote{使用メモリ量が、$O(N_\text{p}^2)$ から $O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})$ になります。})。
+ 
+\item \verb|NSRCG|
+
+{\bf 形式 :} int型 (0もしくは1、デフォルト値=0)
+
+{\bf 説明 :} SR法で連立一次方程式 $Sx=g$ を解くときに、$S$ を陽に構築せずに解くことでメモリを削減する\footnote{使用メモリ量は、$O(N_\text{p}) + O(N_\text{p}N_\text{MCS})$ です。}オプション\cite{NeuscammanUmrigarChan}(1で機能On, \verb|NStore| は1に固定されます)。
  
  \end{itemize}
 
