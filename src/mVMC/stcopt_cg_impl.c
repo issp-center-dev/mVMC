@@ -259,7 +259,7 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
   int si,pi,pj,idx;
   int rank, size, info;
   int iter;
-  int max_iter=NSROptCGMaxIter;
+  int max_iter = (NSROptCGMaxIter > 0 ? NSROptCGMaxIter : nSmat);
   double delta, beta;
   double alpha;
   double cg_thresh = DSROptCGTol*DSROptCGTol * (double)nSmat * (double)nSmat;
@@ -531,7 +531,7 @@ void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm){
 #undef fn_StochasticOptCG_Init
 #undef fn_StochasticOptCG_Main
 #undef fn_operate_by_S
-#undef fn_print_Smat
+#undef fn_print_Smat_stderr
 
 #undef CREAL
 #undef CIMAG

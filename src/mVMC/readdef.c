@@ -1398,7 +1398,7 @@ void SetDefaultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxNTwoBodyGEx]=0;
   bufInt[IdxNInterAll]=0;
   bufInt[IdxNQPOptTrans]=1;
-  bufInt[IdxSROptCGMaxIter]=100;
+  bufInt[IdxSROptCGMaxIter]=0;
   bufInt[IdxNBF]=0;
   bufInt[IdxNrange]=0;
   bufInt[IdxNNz]=0;

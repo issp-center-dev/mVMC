@@ -586,9 +586,9 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
  
 \item \verb|NSROptCGMaxIter|
 
-{\bf 形式 :} int型 (デフォルト値 = 100)
+{\bf 形式 :} int型 (デフォルト値 = 0)
 
-{\bf 説明 :} {SR-CG法での、CG法の繰り返し回数の上限。\verb|NSRCG|!=0 の場合のみ使用されます。}
+{\bf 説明 :} {SR-CG法での、CG法の繰り返し回数の上限。 0以下を指定した場合、最大で$S$ 行列のサイズの数だけ実行するようになります。 \verb|NSRCG|!=0 の場合のみ使用されます。}
  
 \item \verb|DSROptCGTol|
 
