@@ -66,31 +66,46 @@ struct StdIntList *StdI,
   StdI->transindx[StdI->ntrans][3] = jspin;
   StdI->ntrans = StdI->ntrans + 1;
 }
-
 /**
-*
-* Add Hopping and Local potential for the both spin
-*
-* @author Mitsuaki Kawamura (The University of Tokyo)
+ Add Hopping for the both spin
+ @author Mitsuaki Kawamura (The University of Tokyo)
 */
 void StdFace_Hopping(
 struct StdIntList *StdI,
   double complex trans0 /**< [in] Hopping integral t, mu, etc. */,
   int isite /**< [in] i for c_{i sigma}^dagger*/,
-  int jsite /**< [in] j for c_{j sigma'}*/,
-  int loff
+  int jsite /**< [in] j for c_{j sigma'}*/
   )
 {
   int ispin;
 
   for (ispin = 0; ispin < 2; ispin++) {
     StdFace_trans(StdI, trans0, jsite, ispin, isite, ispin);
-    if(loff == 1)
-      StdFace_trans(StdI, conj(trans0), isite, ispin, jsite, ispin);
+    StdFace_trans(StdI, conj(trans0), isite, ispin, jsite, ispin);
   }/*for (ispin = 0; ispin < 2; ispin++)*/
-
-}
-
+}/*void StdFace_Hopping*/
+/**
+ Add intra-Coulomb, magnetic field, chemical potential for the
+ itenerant electron
+ @author Mitsuaki Kawamura (The University of Tokyo)
+*/
+void StdFace_HubbardLocal(
+  struct StdIntList *StdI,
+  double mu0 /**< [in] Chemical potential*/,
+  double h0 /**< [in] Longitudinal magnetic feild*/,
+  double Gamma0 /**< [in] Transvers magnetic feild*/,
+  double U0 /**< [in] Intra-site Coulomb potential*/,
+  int isite /**< [in] i for c_{i sigma}^dagger*/
+)
+{
+  StdFace_trans(StdI, mu0 + 0.5 * h0, isite, 0, isite, 0);
+  StdFace_trans(StdI, mu0 - 0.5 * h0, isite, 1, isite, 1);
+  StdFace_trans(StdI, -0.5 * Gamma0, isite, 1, isite, 0);
+  StdFace_trans(StdI, -0.5 * Gamma0, isite, 0, isite, 1);
+  StdI->Cintra[StdI->NCintra] = StdI->U;
+  StdI->CintraIndx[StdI->NCintra][0] = isite;
+  StdI->NCintra += 1;
+}/*void StdFace_HubbardLocal*/
 /**
 *
 * Add Longitudinal magnetic field to the list
@@ -184,7 +199,11 @@ struct StdIntList *StdI,
     StdI->CinterIndx[StdI->NCinter][1] = jsite;
     StdI->NCinter += 1;
 
-    if (fabs(J[0][1]) < 0.000001 && fabs(J[1][0]) < 0.000001) {
+    if (fabs(J[0][1]) < 0.000001 && fabs(J[1][0]) < 0.000001
+#if defined(_mVMC)
+      && abs(J[0][0] - J[1][1]) < 0.000001
+#endif
+      ) {
 
       ExGeneral = 0;
 
@@ -204,7 +223,7 @@ struct StdIntList *StdI,
       StdI->PLIndx[StdI->NPairLift][0] = isite;
       StdI->PLIndx[StdI->NPairLift][1] = jsite;
       StdI->NPairLift += 1;
-    }
+    }/*if (fabs(J[0][1]) < 0.000001 && fabs(J[1][0]) < 0.000001)*/
   }
   /*
    For S != 1/2 spin or off-diagonal interaction
