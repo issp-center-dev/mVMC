@@ -72,7 +72,9 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
 
   StartTimer(30);
   if(BurnFlag==0) {
-    //printf("DEBUG: make1: \n");
+#ifdef _DEBUG_DETAIL
+    printf("DEBUG: make1: \n");
+#endif
     makeInitialSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn,
                       qpStart,qpEnd,comm);
 //DEBUG
@@ -83,14 +85,18 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
   }
   
   CalculateMAll_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
- // printf("DEBUG: maker1: PfM=%lf\n",creal(PfM[0]));
+#ifdef _DEBUG_DETAIL
+  printf("DEBUG: maker1: PfM=%lf\n",creal(PfM[0]));
+#endif
   logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
   if( !isfinite(creal(logIpOld) + cimag(logIpOld)) ) {
     if(rank==0) fprintf(stderr,"waring: VMCMakeSample remakeSample logIpOld=%e\n",creal(logIpOld)); //TBC
     makeInitialSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn,
                       qpStart,qpEnd,comm);
     CalculateMAll_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
-    //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
+#ifdef _DEBUG_DETAIL
+    printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
+#endif
     logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
     BurnFlag = 0;
   }
@@ -103,6 +109,9 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
 
   for(outStep=0;outStep<nOutStep;outStep++) {
     for(inStep=0;inStep<nInStep;inStep++) {
+#ifdef _DEBUG_DETAIL
+      fprintf(stdout, "instep=%d/%d, outstep=%d/%d\n", inStep,nInStep, outStep, nOutStep);
+#endif
 //DEBUG
       CheckEleConfig_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn,comm);
 //DEBUG
@@ -231,13 +240,25 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
     /* save Electron Configuration */
     if(outStep >= nOutStep-NVMCSample) {
       sample = outStep-(nOutStep-NVMCSample);
+      #ifdef _DEBUG_DETAIL
+      fprintf(stdout, "Debug: save Electron Configuration.\n");
+      #endif
       saveEleConfig_fsz(sample,logIpOld,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn);
     }
     StopTimer(35);
-
   } /* end of outstep */
+#ifdef _DEBUG_DETAIL
+  fprintf(stdout, "Debug: finish step\n");
+#endif
 
+#ifdef _DEBUG_DETAIL
+  fprintf(stdout, "Debug: copyToBurnSample_fsz\n");
+#endif
   copyToBurnSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn);
+#ifdef _DEBUG_DETAIL
+  fprintf(stdout, "Debug: Finish copyToBurnSample_fsz\n");
+#endif
+
   BurnFlag=1;
   return;
 }
@@ -322,7 +343,8 @@ int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt
 void copyFromBurnSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,int *eleSpn) {
   int i,n;
   const int *burnEleIdx = BurnEleIdx;// BurnEleIdx is global
-  n = Nsize + 2*Nsite + 2*Nsite + NProj+Nsite;//fsz
+//  n = Nsize + 2*Nsite + 2*Nsite + NProj+Nsite;//fsz
+  n = Nsize + 2*Nsite + 2*Nsite + NProj+Nsize;//fsz
   #pragma loop noalias
   for(i=0;i<n;i++) eleIdx[i] = burnEleIdx[i]; 
   return;
@@ -331,7 +353,8 @@ void copyFromBurnSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjC
 void copyToBurnSample_fsz(const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,const int *eleSpn) {
   int i,n;
   int *burnEleIdx = BurnEleIdx;
-  n = Nsize + 2*Nsite + 2*Nsite + NProj+Nsite;//fsz
+  //n = Nsize + 2*Nsite + 2*Nsite + NProj+Nsite;//fsz
+  n = Nsize + 2*Nsite + 2*Nsite + NProj+Nsize;//fsz
   #pragma loop noalias
   for(i=0;i<n;i++) burnEleIdx[i] = eleIdx[i];
   return;
