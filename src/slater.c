@@ -459,17 +459,18 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
         }
       }*/
     }else{
+    // TODO: Check
       #pragma loop norecurrence
       for(msi=0;msi<ne;msi++) {
         tOrbIdx_i = tOrbIdx + msi*nsize;
         invM_i = invM + msi*nsize;
         for(msj=0;msj<ne;msj++) {
-          /* si=0 sj=0*/
+          // si=0 sj=0
           orbidx = tOrbIdx_i[msj];
           buf[orbidx] += invM_i[msj]*ss*tOrbSgn_i[msj];
         }
         for(msj=ne;msj<nsize;msj++) {
-          /* si=0 sj=1*/
+          // si=0 sj=1
           orbidx = tOrbIdx_i[msj];
           buf[orbidx] -= invM_i[msj]*cs*tOrbSgn_i[msj];
         }
@@ -479,17 +480,18 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
         tOrbIdx_i = tOrbIdx + msi*nsize;
         invM_i = invM + msi*nsize;
         for(msj=0;msj<ne;msj++) {
-          /* si=1 sj=0*/
+          // si=1 sj=0
           orbidx = tOrbIdx_i[msj];
           buf[orbidx] += invM_i[msj]*ss*tOrbSgn_i[msj];
         }
         for(msj=ne;msj<nsize;msj++) {
-          /* si=1 sj=1*/
+          // si=1 sj=1
           orbidx = tOrbIdx_i[msj];
           buf[orbidx] -= invM_i[msj]*cs*tOrbSgn_i[msj];
         }
       }
     }
+
   }
 
   /* store SROptO[] */
@@ -629,7 +631,8 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
     tOrbIdx = transOrbIdx + mpidx*nsize*nsize;
     sltE = SlaterElm + qpidx*Nsite2*Nsite2;
     invM = InvM + qpidx*Nsize*Nsize;
-    buf = buffer + qpidx*Nsize*Nsize;
+    //buf = buffer + qpidx*Nsize*Nsize;
+    buf = bufM + qpidx*Nsize*Nsize;
     pfM = PfM[qpidx];
     //flagTmp = etaFlag + qpidx*Nsite*Nsite;
 

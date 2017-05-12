@@ -26,6 +26,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #include "readdef.h"
+#include "global.h"
 #include "avevar.h"
 #ifndef _SRC_AVEVAR
 #define _SRC_AVEVAR
@@ -146,10 +147,28 @@ void OutputOptData() {
     }
 
     if(NSlater != 0){
-      sprintf(fileName, "%s_orbital_opt.dat", CParaFileHead);
-      Child_OutputOptData(fp, fileName, "NOrbitalIdx",
-			  NSlater, NSlater, count_i, n);
-      count_i +=NSlater;
+      if(iFlgOrbitalGeneral==0) {
+        sprintf(fileName, "%s_orbital_opt.dat", CParaFileHead);
+        Child_OutputOptData(fp, fileName, "NOrbitalIdx",
+                            NSlater, NSlater, count_i, n);
+        count_i +=NSlater;
+      }else{
+        if(iNOrbitalP !=0){//use OrbitalParallel and Orbital AntiParallel
+          sprintf(fileName, "%s_orbitalAntiParallel_opt.dat", CParaFileHead);
+          Child_OutputOptData(fp, fileName, "NOrbitalAntiParallelIdx",
+                              iNOrbitalAP, iNOrbitalAP, count_i, n);
+          count_i += iNOrbitalAP;
+          sprintf(fileName, "%s_orbitalParallel_opt.dat", CParaFileHead);
+          Child_OutputOptData(fp, fileName, "NOrbitalParallelIdx",
+                              2*iNOrbitalP, 2*iNOrbitalP, count_i, n);
+          count_i += 2*iNOrbitalP;
+        }else{// use OrbitalGeneral
+          sprintf(fileName, "%s_orbital_general_opt.dat", CParaFileHead);
+          Child_OutputOptData(fp, fileName, "NOrbitalIdx",
+                              NSlater, NSlater, count_i, n);
+          count_i +=NSlater;
+        }
+      }
     }
 
     if(NOptTrans !=0){
