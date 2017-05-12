@@ -27,8 +27,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
   #define fn_operate_by_S operate_by_S_real
   #define fn_print_Smat_stderr print_Smat_stderr_real
 
-  #define elemtype double
-  #define CONJ(x) (x)
   #define CREAL(x) (x)
   #define CIMAG(x) (0.0)
 
@@ -42,8 +40,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
   #define fn_operate_by_S operate_by_S_fcmp
   #define fn_print_Smat_stderr print_Smat_stderr_fcmp
 
-  #define elemtype double complex
-  #define CONJ(x) conj(x)
   #define CREAL(x) creal(x)
   #define CIMAG(x) cimag(x)
 
@@ -52,22 +48,20 @@ along with this program. If not, see http://www.gnu.org/licenses/.
   #define SIZE_VecCG (nSmat*8 + 2*NVMCSample*(nSmat+1))
 #endif
 
-#define print_val(x) fprintf(stderr, "%lg ", CREAL(x))
-#define println_val(x) fprintf(stderr, "%lg\n", CREAL(x))
-
 /*
-   x :: nSmat
-   g :: nSmat
-   sdiag :: nSmat
-   stcO :: nSmat
-   stcOs_real :: nSmat*NVMCSample
-   stcOs_imag :: nSmat*NVMCSample (Complex) or 0 (Real)
-   y_real :: NVMCSample
-   y_imag :: NVMCSample (Complex) or 0 (Real)
-   z_local :: nSmat
-   q :: nSmat
-   d :: nSmat
-   r :: nSmat
+  layout of VecCG 
+  x :: nSmat
+  g :: nSmat
+  sdiag :: nSmat
+  stcO :: nSmat
+  stcOs_real :: nSmat*NVMCSample
+  stcOs_imag :: nSmat*NVMCSample (Complex) or 0 (Real)
+  y_real :: NVMCSample
+  y_imag :: NVMCSample (Complex) or 0 (Real)
+  z_local :: nSmat
+  q :: nSmat
+  d :: nSmat
+  r :: nSmat
 */
 
 int fn_StochasticOptCG(MPI_Comm comm);
@@ -80,11 +74,11 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   const int nPara=OFFSET*NPara;
   const int srOptSize=SROptSize;
 #ifdef MVMC_SRCG_REAL
-  const elemtype *srOptO=SROptOO_real;
-  const elemtype *srOptOOdiag=SROptOO_real + srOptSize;
+  const double *srOptO=SROptOO_real;
+  const double *srOptOOdiag=SROptOO_real + srOptSize;
 #else
-  const elemtype *srOptO=SROptOO;
-  const elemtype *srOptOOdiag=SROptOO + 2*srOptSize;
+  const double complex *srOptO=SROptOO;
+  const double complex *srOptOOdiag=SROptOO + 2*srOptSize;
 #endif
 
   double sDiagElm[nPara]; /* the parameter change */
@@ -187,7 +181,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   info = fn_StochasticOptCG_Main(nSmat, VecCG, comm);
 #ifdef _DEBUG_STCOPT_CG
   for(si=0; si<nSmat; ++si){
-    println_val(VecCG[si]);
+    fprintf(stderr, "%lg\n", VecCG[si]);
   }
 #endif
 
@@ -206,7 +200,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
     }
 
     fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e % .5e % .5e %5d, %d\n",NPara,nSmat,optNum,cutNum,
-            sDiagMax,sDiagMin,CREAL(rmax),smatToParaIdx[simax], info);
+            sDiagMax,sDiagMin,rmax,smatToParaIdx[simax], info);
     //fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e %5d, %d\n",NPara,nSmat,optNum,cutNum,
     //        rmax,smatToParaIdx[simax], info);
   }
@@ -215,8 +209,8 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   /*** check inf and nan ***/
   if(rank==0) {
     for(si=0;si<nSmat;si++) {
-      if( !isfinite(CREAL(r[si])) ) {
-        fprintf(stderr, "StcOpt: r[%d]=%.10lf\n",si,CREAL(r[si]));
+      if( !isfinite(r[si]) ) {
+        fprintf(stderr, "StcOpt: r[%d]=%.10lf\n",si,r[si]);
         info = 1;
         break;
       }
@@ -246,7 +240,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 #ifdef _DEBUG_STCOPT_CG
   for(si=0; si<nSmat; ++si){
       pi = smatToParaIdx[si];
-      fprintf(stderr, "%d %d %lg\n", si, pi, CREAL(r[si]));
+      fprintf(stderr, "%d %d %lg\n", si, pi, r[si]);
   }
 #endif
 
@@ -502,7 +496,7 @@ void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, double *
 
 #ifdef _DEBUG_STCOPT_CG
   for(i=0; i<nSmat; ++i){
-    println_val(g[i]);
+    fprintf(stderr, "%lg\n", g[i]);
   }
 
   fprintf(stderr, "DEBUG in %s (%d): End stcOptCG_Init\n", __FILE__, __LINE__);
@@ -539,12 +533,8 @@ void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm){
 #undef fn_operate_by_S
 #undef fn_print_Smat
 
-#undef elemtype
-#undef CONJ
 #undef CREAL
 #undef CIMAG
-#undef print_val
-#undef println_val
 #undef OFFSET
 #undef USE_IMAG
 #undef SIZE_VecCG
