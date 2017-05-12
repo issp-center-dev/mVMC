@@ -55,7 +55,7 @@ inline void MPI_Comm_rank(MPI_Comm comm, int *rank) {*rank = 0; return;}
 extern int omp_get_max_threads(void);
 extern int omp_get_thread_num(void);
 
-#include "../sfmt/SFMT.h"
+#include "../../sfmt/SFMT.h"
 #include "version.h"
 #include "global.h"
 #include "blas_externs.h"

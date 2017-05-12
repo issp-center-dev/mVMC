@@ -44,6 +44,7 @@ if(LAPACK_FOUND)
   add_definitions(-D_lapack)
 endif(LAPACK_FOUND)
 
-add_subdirectory(src)
 add_subdirectory(src/ComplexUHF)
+add_subdirectory(src/pfapack)
+add_subdirectory(src/mVMC)
 add_subdirectory(tool)
