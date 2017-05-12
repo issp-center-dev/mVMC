@@ -84,7 +84,7 @@ enum ParamIdxInt{
 	IdxNQPTrans, IdxNOneBodyG, IdxNTwoBodyG,
   IdxNTwoBodyGEx, IdxNInterAll, IdxNQPOptTrans,
   IdxSROptCGMaxIter,
-  IdxNBF,IdxNrange, IdxNNz,
+  IdxNBF,IdxNrange, IdxNNz, Idx2Sz, IdxNCond,
   ParamIdxInt_End
 };
 

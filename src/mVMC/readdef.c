@@ -55,7 +55,19 @@ int GetInfoJastrow(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int
 int GetInfoDH2(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nsite, int NArray, char *defname);
 int GetInfoDH4(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nsite, int NArray, char *defname);
 int GetInfoTransSym(FILE *fp, int **Array, int **ArraySgn, int **ArrayInv, double complex *ArrayPara, int _APFlag, int Nsite, int NArray, char *defname);
-
+int GetInfoOrbitalParallel(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, int *iOptCount,
+                           int _fidx, int _iComplexFlag, int _iFlagOrbitalGeneral, int _APFlag, int Nsite, int NArray, int NArrayAP, char *defname);
+int GetInfoOrbitalAntiParallel(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, int *iOptCount,
+                               int _fidx, int _iComplexFlag, int _iFlagOrbitalGeneral, int _APFlag, int Nsite, int NArray, char *defname);
+int GetInfoInterAll(FILE *fp, int **ArrayIdx, double complex*ArrayValue,
+                    int Nsite, int NArray, char *defname);
+int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara, int *ArrayOpt, int **ArraySgn,
+                    int _iFlagOptTrans, int *iOptCount, int _fidx, int _APFlag, int Nsite, int NArray, char *defname);
+int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int **ArrayIdxTwoBodyGLz, int **ArrayToIdx, int **ArrayIdxOneBodyG, int _NLanczosMode, int Nsite, int NArray, char *defname);
+int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *defname);
+int GetInfoOrbitalGeneral(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, int *iOptCount,
+                          int _fidx, int _iComplexFlag, int _iFlagOrbitalGeneral, int _APFlag, int Nsite, int NArray, char *defname);
+int GetInfoOneBodyG(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int _NLanczosMode, int Nsite, int NArray, char *defname);
 
 char* ReadBuffInt(FILE *fp, int *iNbuf){
   char *cerr;
@@ -479,6 +491,34 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                                                      bufInt[IdxNsite], CisAjsLzIdx, iOneBodyGIdx);
     }
 
+    //CalcNCond
+    if(bufInt[IdxNCond] != -1){
+      if(bufInt[IdxNCond]%2 != 0){
+        fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
+        info = 1;
+      }
+      else bufInt[IdxNe]=(bufInt[IdxNLocSpin]+bufInt[IdxNCond])/2;
+    }
+
+    //CheckGeneral Orbital
+    if(bufInt[Idx2Sz] !=0){
+      if(iOrbitalComplex != 1){
+        fprintf(stderr, "Error: OrbitalParallel or OrbitalGeneral files must be needed when 2Sz !=0 (in modpara.def).\n");
+        info=1;
+      }
+    }
+
+    if(OrbitalComlex==1){
+      if(bufInt[IdxSPGaussLeg] > 1){    //Check NSPGaussLeg
+        fprintf(stderr, "Error: SPGaussLeg (in modpara.def) must be 0 when orbital is general.\n");
+        info=1;
+      }
+      else if(bufIdx[IdxLanczosMode] !=0){
+        fprintf(stderr, "Error: Lanczos mode is not supported when orbital is general.\n");
+        info=1;
+      }
+    }
+
     //Check LocSpn
     if (bufInt[IdxNLocSpin] > 0) {
       if(bufInt[IdxExUpdatePath]==0){
@@ -497,6 +537,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         fprintf(stderr, "  Error: ModPara file is incomplete.\n");
       }
     }
+
   }
 
   if (info != 0) {
@@ -567,6 +608,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   DSROptStaDel = bufDouble[IdxSROptStaDel];
   DSROptStepDt = bufDouble[IdxSROptStepDt];
   DSROptCGTol  = bufDouble[IdxSROptCGTol];
+  TwoSz=bufInt[Idx2Sz];
 
   if (NMPTrans < 0) {
     APFlag = 1; /* anti-periodic boundary */
@@ -1402,6 +1444,8 @@ void SetDefaultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxNBF]=0;
   bufInt[IdxNrange]=0;
   bufInt[IdxNNz]=0;
+  bufInt[Idx2Sz]=0;
+  bufInt[IdxNCond]=-1;
 
   bufDouble[IdxSROptRedCut]=0.001;
   bufDouble[IdxSROptStaDel]=0.02;
@@ -1427,7 +1471,7 @@ int  GetInfoFromModPara(int *bufInt, double* bufDouble) {
   const int nBufChar = D_FileNameMax;
   int iKWidx = 0;
   int iret=0;
-  int iNCond=-1;
+  int iNCond=0;
   int i2Sz=0;
   int iFreeSzFlag=-1; //-1: GrandCanonical, 0: Sz-fixed
   fprintf(stdout, "Start: Read ModPara File .\n");
@@ -1477,7 +1521,9 @@ int  GetInfoFromModPara(int *bufInt, double* bufDouble) {
             } else if (CheckWords(ctmp, "Ne") == 0 || CheckWords(ctmp, "Nelectron") == 0) {
               bufInt[IdxNe] = (int) dtmp;
             } else if(CheckWords(ctmp, "Ncond") == 0){
-              iNCond=(int) dtmp;
+              bufInt[IdxNCond]=(int) dtmp;
+            } else if(CheckWords(ctmp, "2Sz") == 0) {
+              bufInt[Idx2Sz]=(int) dtmp;
             }
             else if (CheckWords(ctmp, "NSPGaussLeg") == 0) {
               bufInt[IdxSPGaussLeg] = (int) dtmp;

@@ -54,6 +54,7 @@ int Nup;   /* the number of electrons with up spin */
 int Nsize; /* the number of electrons = 2*Ne */
 int Nsite2; /* 2*Nsite */
 int Nz; /* connecivity */
+int TwoSz;
 
 int NSPGaussLeg; /* the number of points for the Gauss-Legendre quadrature */
 int NSPStot; /* S of Spin projection */
