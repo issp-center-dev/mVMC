@@ -25,53 +25,56 @@ along with this program. If not, see http://www.gnu.org/licenses/.
   #define fn_StochasticOptCG_Init StochasticOptCG_Init_real
   #define fn_StochasticOptCG_Main StochasticOptCG_Main_real
   #define fn_operate_by_S operate_by_S_real
-  #define fn_xdot xdot_real
+  #define fn_print_Smat_stderr print_Smat_stderr_real
 
   #define elemtype double
   #define CONJ(x) (x)
   #define CREAL(x) (x)
   #define CIMAG(x) (0.0)
-  #define Gemv M_DGEMV
-  #define Gemm M_DGEMM
-  #define Ger M_DGER
-  #define allreduce SafeMpiAllReduce
-  #define request_workspace RequestWorkSpaceDouble
-  #define get_workspace GetWorkSpaceDouble
-  #define release_workspace ReleaseWorkSpaceDouble
 
-  #define OFFSET 1
+  #define OFFSET (1)
+  #define USE_IMAG (0)
+  #define SIZE_VecCG (nSmat*8 + NVMCSample*(nSmat+1))
 #else // MVMC_SRCG_REAL
   #define fn_StochasticOptCG StochasticOptCG_fcmp
   #define fn_StochasticOptCG_Init StochasticOptCG_Init_fcmp
   #define fn_StochasticOptCG_Main StochasticOptCG_Main_fcmp
   #define fn_operate_by_S operate_by_S_fcmp
-  #define fn_xdot xdot_fcmp
-
-  #define Gemv M_ZGEMV
-  #define Gemm M_ZGEMM
-  #define Ger M_ZGERC
-  #define allreduce SafeMpiAllReduce_fcmp
-  #define request_workspace RequestWorkSpaceComplex
-  #define get_workspace GetWorkSpaceComplex
-  #define release_workspace ReleaseWorkSpaceComplex
+  #define fn_print_Smat_stderr print_Smat_stderr_fcmp
 
   #define elemtype double complex
   #define CONJ(x) conj(x)
   #define CREAL(x) creal(x)
   #define CIMAG(x) cimag(x)
 
-  #define OFFSET 2
+  #define OFFSET (2)
+  #define USE_IMAG (1)
+  #define SIZE_VecCG (nSmat*8 + 2*NVMCSample*(nSmat+1))
 #endif
 
 #define print_val(x) fprintf(stderr, "%lg ", CREAL(x))
 #define println_val(x) fprintf(stderr, "%lg\n", CREAL(x))
 
+/*
+   x :: nSmat
+   g :: nSmat
+   sdiag :: nSmat
+   stcO :: nSmat
+   stcOs_real :: nSmat*NVMCSample
+   stcOs_imag :: nSmat*NVMCSample (Complex) or 0 (Real)
+   y_real :: NVMCSample
+   y_imag :: NVMCSample (Complex) or 0 (Real)
+   z_local :: nSmat
+   q :: nSmat
+   d :: nSmat
+   r :: nSmat
+*/
 
 int fn_StochasticOptCG(MPI_Comm comm);
-void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, elemtype *VecCG); 
-int fn_StochasticOptCG_Main(const int nSmat, elemtype *VecCG, MPI_Comm comm);
-int fn_operate_by_S(const int nSmat, elemtype *x, elemtype *y, elemtype * process_y, elemtype * stcO, MPI_Comm comm);
-inline elemtype fn_xdot(const int n, elemtype * const p, elemtype * const q);
+void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, double *VecCG); 
+int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm);
+int fn_operate_by_S(const int nSmat, double *x, double *z, double *VecCG, MPI_Comm comm);
+void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm);
 
 int fn_StochasticOptCG(MPI_Comm comm) {
   const int nPara=OFFSET*NPara;
@@ -95,16 +98,13 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   int si; /* index for matrix S */
   int pi; /* index for variational parameters */
 
-  elemtype rmax;
+  double rmax;
   int simax;
   int info=0;
 
   double complex *para=Para;
- //double VecCG[SROptSize*(NVMCSample+7) + NVMCSample];
-  elemtype *VecCG;
-  //double *stcOd, *stcOs, *stcO;
-  //double  *r, *g, *y, *d, *x, *process_y;
-  elemtype *r;
+  double *VecCG;
+  double *r;
 
 
   int rank,size;
@@ -175,90 +175,22 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   StopTimer(50);
   StartTimer(51);
   
-  // RequestWorkSpaceDouble(2*SROptSize*(NVMCSample+7) + NVMCSample);
-  // VecCG  = GetWorkSpaceDouble(2*SROptSize*(NVMCSample+7) + NVMCSample);
-
-  request_workspace(nSmat*(NVMCSample+8) + NVMCSample);
-  VecCG  = get_workspace(nSmat*(NVMCSample+8) + NVMCSample);
-
-  /*
-  x = VecCG;              //GetWorkSpaceDouble(nSmat)
-  g = x  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  q = g  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  d = q  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  r = d  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  process_y = r  + nSmat; //GetWorkSpaceDouble(nSmat)
-  stcO = process_y + nSmat;                     //GetWorkSpaceDouble(nSmat)
-  stcOs = stcO  + nSmat;            //GetWorkSpaceDouble(nSmat*NVMCSample)
-  stcOd = stcOs + nSmat*NVMCSample; //GetWorkSpaceDouble(NVMCSample)
-  sdiag = stcOd + NVMCSample;
-  */
-  
+  RequestWorkSpaceDouble(SIZE_VecCG);
+  VecCG = GetWorkSpaceDouble(SIZE_VecCG);
   fn_StochasticOptCG_Init(nSmat, smatToParaIdx, VecCG);
 
+#ifdef _DEBUG_STCOPT_CG_PRINT_SMAT
+  fn_print_Smat_stderr(nSmat, VecCG, comm);
+  abort();
+#endif
 
-#ifndef _DEBUG_STCOPT_CG_LAPACK
   info = fn_StochasticOptCG_Main(nSmat, VecCG, comm);
 #ifdef _DEBUG_STCOPT_CG
   for(si=0; si<nSmat; ++si){
     println_val(VecCG[si]);
   }
 #endif
-#else // _DEBUG_STCOPT_CG_LAPACK
-  {
-    /* for POSV */
-    char uplo;
-    char transN='N', transT='T';
-    int i,j,n,nrhs,lds,ldg,info;
-    elemtype alpha=1.0, beta=0.0;
-    elemtype *s = (elemtype*)calloc(nSmat*nSmat, sizeof(elemtype));
-    elemtype *xs= (elemtype*)calloc(nSmat, sizeof(elemtype));
-    elemtype *process_y= (elemtype*)calloc(nSmat, sizeof(elemtype));
-    elemtype *g = VecCG + nSmat;
-    elemtype *sdiag = VecCG + 7*nSmat + nSmat*NVMCSample + NVMCSample;
 
-    n=nSmat; nrhs=1; lds=n; ldg=n;
-    for(i=0; i<nSmat; ++i){
-      xs[i] = 1.0;
-      fn_operate_by_S(nSmat, xs, s+i*nSmat, process_y, VecCG+6*nSmat, comm);
-      xs[i] = 0.0;
-    }
-
-#ifdef _DEBUG_STCOPT_CG
-    for(i=0; i<nSmat; ++i){
-      println_val(VecCG[i+nSmat]);
-    }
-    for(i=0; i<nSmat; ++i){
-      for(j=0; j<nSmat; ++j){
-        print_val(s[j+i*nSmat]);
-      }
-      fprintf(stderr, "\n");
-    }
-#endif
-
-#ifdef MVMC_SRCG_REAL
-    uplo='U';
-    M_DPOSV(&uplo, &n, &nrhs, s, &lds, g, &ldg, &info);
-#else
-    uplo='U';
-    M_ZPOSV(&uplo, &n, &nrhs, s, &lds, g, &ldg, &info);
-#endif
-    for(i=0; i<nSmat; ++i){
-      VecCG[i] = g[i];
-    }
-
-#ifdef _DEBUG_STCOPT_CG
-    for(i=0; i<nSmat; ++i){
-      println_val(VecCG[i]);
-    }
-#endif
-
-    free(process_y);
-    free(xs);
-    free(s);
-  }
-#endif // _DEBUG_STCOPT_CG_LAPACK
-  
   StopTimer(51);
   StartTimer(52);
 
@@ -319,7 +251,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 #endif
 
   StopTimer(52);
-  release_workspace();
+  ReleaseWorkSpaceDouble();
 
 #ifdef _DEBUG_STCOPT_CG
   fprintf(stderr, "DEBUG in %s (%d): End StochasticOptCG\n", __FILE__, __LINE__);
@@ -329,35 +261,37 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 
 /* calculate the parameter change r[nSmat] from SOpt.
    Solve S*x = g */
-int fn_StochasticOptCG_Main(const int nSmat, elemtype *VecCG, MPI_Comm comm) {
+int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
   int si,pi,pj,idx;
   int rank, size, info;
   int iter;
   int max_iter=NSROptCGMaxIter;
   double delta, beta;
-  elemtype alpha;
+  double alpha;
   double cg_thresh = DSROptCGTol*DSROptCGTol * (double)nSmat * (double)nSmat;
   //double cg_thresh = DSROptRedCut;
 
   const int srOptSize=SROptSize;
-  elemtype *stcOd, *stcOs, *stcO, *sdiag;
-  elemtype  *r, *g, *q, *d, *x, *process_y;
+  double *x, *g, *sdiag, *stcO, *stcOs_real;
+  double *stcOs_imag, *y_real, *y_imag, *z_local;
+  double *q, *d, *r;
 
 #ifdef _DEBUG_STCOPT_CG
   fprintf(stderr, "DEBUG in %s (%d): Start stcOptCG_Main\n", __FILE__, __LINE__);
 #endif
   
-  x = VecCG;              //GetWorkSpaceDouble(nSmat)
-  g = x  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  q = g  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  d = q  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  r = d  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  process_y = r  + nSmat; //GetWorkSpaceDouble(nSmat)
-  
-  stcO = process_y + nSmat;                     //GetWorkSpaceDouble(nSmat)
-  stcOs = stcO  + nSmat;            //GetWorkSpaceDouble(nSmat*NVMCSample)
-  stcOd = stcOs + nSmat*NVMCSample; //GetWorkSpaceDouble(NVMCSample)
-  sdiag = stcOd + NVMCSample;
+  x = VecCG;
+  g = x + nSmat;
+  sdiag = g + nSmat;
+  stcO = sdiag + nSmat;
+  stcOs_real = stcO + nSmat;
+  stcOs_imag = stcOs_real + NVMCSample*nSmat;
+  y_real = stcOs_imag + USE_IMAG*NVMCSample*nSmat;
+  y_imag = y_real + NVMCSample;
+  z_local = y_imag + USE_IMAG*NVMCSample;
+  q = z_local + nSmat;
+  d = q + nSmat;
+  r = d + nSmat;
   
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
@@ -368,7 +302,7 @@ int fn_StochasticOptCG_Main(const int nSmat, elemtype *VecCG, MPI_Comm comm) {
     d[si] = r[si] = g[si];
   }
 
-  delta = CREAL(fn_xdot(nSmat, r, r));
+  delta = xdot(nSmat, r, r);
 
   for(iter=0; iter < max_iter; iter++){
     //check convergence 
@@ -379,8 +313,8 @@ int fn_StochasticOptCG_Main(const int nSmat, elemtype *VecCG, MPI_Comm comm) {
     if (delta < cg_thresh) break;
 
     // compute vector q=S*d
-    fn_operate_by_S(nSmat, d, q, process_y, stcO, comm);
-    alpha = delta/fn_xdot(nSmat,d,q);
+    fn_operate_by_S(nSmat, d, q, VecCG, comm);
+    alpha = delta/xdot(nSmat,d,q);
   
     // update solution vector x=x+alpha*d
     #pragma omp parallel for default(shared) private(si)
@@ -390,7 +324,7 @@ int fn_StochasticOptCG_Main(const int nSmat, elemtype *VecCG, MPI_Comm comm) {
     }
     // update residual vector r=r-alpha*q, q=S*d
     if((iter+1) % 20 == 0){
-      fn_operate_by_S(nSmat, x, r, process_y, stcO, comm);
+      fn_operate_by_S(nSmat, x, r, VecCG, comm);
       #pragma omp parallel for default(shared) private(si)
       #pragma loop noalias
       for(si=0;si<nSmat;++si) {
@@ -403,7 +337,7 @@ int fn_StochasticOptCG_Main(const int nSmat, elemtype *VecCG, MPI_Comm comm) {
         r[si] = r[si] - alpha*q[si];
       }
     }
-    beta = CREAL(fn_xdot(nSmat,r,r))/delta;
+    beta = xdot(nSmat,r,r)/delta;
 
     //update the norm of residual vector r
     delta = beta*delta;
@@ -423,34 +357,31 @@ int fn_StochasticOptCG_Main(const int nSmat, elemtype *VecCG, MPI_Comm comm) {
   return iter;
 }
 
-/* calculate  y = S*x */
+/* calculate  z = S*x */
 /* S is the overlap matrix*/
 /* S[i][j] = OO[i+1][j+1] - OO[i+1][0] * OO[0][j+1]; */
-int fn_operate_by_S(int nSmat, elemtype *x, elemtype *y, elemtype * process_y, elemtype * stcO, MPI_Comm comm) {
-  elemtype *stcOd, *stcOs, *sdiag;
+int fn_operate_by_S(int nSmat, double *x, double *z, double *VecCG, MPI_Comm comm) {
   int rank,size,info=0;
   int i,si;
   int incx = 1, incy = 1;
   double coef;
-  elemtype a;
-  elemtype alpha = 1.0, beta = 0.0;
-  elemtype invW = 1.0/Wc;
-#ifdef MVMC_SRCG_REAL
-  char trans1='T';
-#else
-  char trans1='C';
-#endif
-  char trans2='N';
+  double one = 1.0, zero = 0.0;
+  double invW = 1.0/Wc;
+  char transT='T';
+  char transN='N';
 
-#ifdef _DEBUG_STCOPT_CG_GEMV
-  elemtype malpha = -1.0;
-  elemtype *y2;
-  elemtype *S, *S2;
-#endif
-  stcOs = stcO  + nSmat;            //GetWorkSpaceDouble(nSmat*NVMCSample)
-  stcOd = stcOs + nSmat*NVMCSample; //GetWorkSpaceDouble(NVMCSample)
-  sdiag = stcOd + NVMCSample;            //GetWorkSpaceDouble(nSmat)
-  
+  double *sdiag, *stcO, *stcOs_real, *stcOs_imag;
+  double *y_real, *y_imag;
+  double *z_local;
+
+  sdiag = VecCG + 2*nSmat;
+  stcO = sdiag + nSmat;
+  stcOs_real = stcO + nSmat;
+  stcOs_imag = stcOs_real + NVMCSample*nSmat;
+  y_real = stcOs_imag + USE_IMAG*NVMCSample*nSmat;
+  y_imag = y_real + NVMCSample;
+  z_local = y_imag + USE_IMAG*NVMCSample;
+
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
@@ -460,97 +391,57 @@ int fn_operate_by_S(int nSmat, elemtype *x, elemtype *y, elemtype * process_y, e
   #pragma omp parallel for default(shared) private(si)
   #pragma loop noalias
   for(si=0;si<nSmat;++si) {
-    y[si] = 0.0;
-    process_y[si] = 0.0;
-  }
-  #pragma omp parallel for default(shared) private(i)
-  #pragma loop noalias
-  for(i=0;i<NVMCSample;++i) {
-    stcOd[i] = 0.0;
+    z[si] = 0.0;
+    z_local[si] = 0.0;
   }
 
-  /* Od[sample] = sum{sidx} x[sidx] * O[sidx][sample] ; */
-  Gemv(&trans1, &nSmat, &NVMCSample, &alpha, stcOs, &nSmat, x, &incx, &beta, stcOd, &incy);
-  /* process_y[sidx] = sum{sample} O[sidx][sample] * Od[sample] ; */
-  Gemv(&trans2, &nSmat, &NVMCSample, &alpha, stcOs, &nSmat, stcOd, &incx, &beta, process_y, &incy);
+  // y_real[sample] = sum{si} x[si] * O_real[si][sample]
+  M_DGEMV(&transT, &nSmat, &NVMCSample, &one, stcOs_real, &nSmat, x, &incx, &zero, y_real, &incy);
+#ifndef MVMC_SRCG_REAL
+  // y_imag[sample] = sum{si} x[si] * O_imag[si][sample]
+  M_DGEMV(&transT, &nSmat, &NVMCSample, &one, stcOs_imag, &nSmat, x, &incx, &zero, y_imag, &incy);
+#endif
+
+  // z_local[si] = sum{sample} O_real[si][sample] * y_real[sample] + O_imag[si][sample] * y_imag[sample]
+  M_DGEMV(&transN, &nSmat, &NVMCSample, &one, stcOs_real, &nSmat, y_real, &incx, &zero, z_local, &incy);
 
 #ifndef MVMC_SRCG_REAL
-  #pragma omp parallel for default(shared) private(si)
-  #pragma loop noalias
-  for(si=0;si<nSmat;++si) {
-    process_y[si] = creal(process_y[si]);
-  }
+  M_DGEMV(&transN, &nSmat, &NVMCSample, &one, stcOs_imag, &nSmat, y_imag, &incx, &one, z_local, &incy);
 #endif
-  
+
   MPI_Barrier(comm);
   /* compute <OO>*x */
-  allreduce(process_y, y, nSmat, comm);
+  SafeMpiAllReduce(z_local, z, nSmat, comm);
  
   /* compute <O>*x */
-  coef = CREAL(fn_xdot(nSmat, stcO, x));
+  coef = xdot(nSmat, stcO, x);
 
   /* y = S*x */
   #pragma omp parallel for default(shared) private(si)
   #pragma loop noalias
   for(si=0;si<nSmat;++si) {
-    y[si] = invW*y[si] - coef*CREAL(stcO[si]);
+    z[si] = invW*z[si] - coef*stcO[si];
     /* modify diagonal elements */
-    // y[si] += DSROptStaDel * x[si];
+    // z[si] += DSROptStaDel * x[si];
 
-    y[si] += sdiag[si]*DSROptStaDel*x[si];
+    z[si] += sdiag[si]*DSROptStaDel*x[si];
   }
 
   StopTimer(53);
 
-#ifdef _DEBUG_STCOPT_CG_GEMV
-  fprintf(stderr, "DEBUG in %s (%d): Start STCOPT_CG_GEMV\n", __FILE__, __LINE__);
-  y2 = (elemtype*)calloc(nSmat, sizeof(elemtype));
-  S = (elemtype*)calloc(nSmat*nSmat, sizeof(elemtype));
-  S2 = (elemtype*)calloc(nSmat*nSmat, sizeof(elemtype));
-
-  fprintf(stderr, "DEBUG in %s (%d): S = OO * OO'\n", __FILE__, __LINE__);
-  Gemm(&trans2, &trans1, &nSmat, &nSmat, &NVMCSample, &alpha, stcOs, &nSmat, stcOs, &nSmat, &beta, S, &nSmat);
-
-  fprintf(stderr, "DEBUG in %s (%d): S2 = O * O'\n", __FILE__, __LINE__);
-  Ger(&nSmat, &nSmat, &alpha, stcO, &incx, stcO, &incy, S2, &nSmat);
-
-  fprintf(stderr, "DEBUG in %s (%d): process_y = S*x\n", __FILE__, __LINE__);
-  Gemv(&trans2, &nSmat, &nSmat, &alpha, S, &nSmat, x, &incx, &beta, process_y, &incy);
-  fprintf(stderr, "DEBUG in %s (%d): allreduce process_y into y2\n", __FILE__, __LINE__);
-  allreduce(process_y, y2, nSmat, comm);
-
-  fprintf(stderr, "DEBUG in %s (%d): y2 = -S2*x + invW * y2\n", __FILE__, __LINE__);
-  Gemv(&trans2, &nSmat, &nSmat, &malpha, S2, &nSmat, x, &incx, &invW, y2, &incy);
- 
-  /* modify diagonal elements */
-  #pragma omp parallel for default(shared) private(si)
-  #pragma loop noalias
-  for(si=0;si<nSmat;++si) {
-    y2[si] += DSROptStaDel * x[si];
-  }
-
-  fprintf(stderr, "DEBUG in %s (%d): index y1 y2 diff\n", __FILE__, __LINE__);
-  for(si=0; si<nSmat; ++si){
-    fprintf(stderr, "%d (%lg %lg) (%lg %lg) (%lg %lg)\n", si, CREAL(y[si]), CIMAG(y[si]), CREAL(y2[si]), CIMAG(y2[si]), CREAL(y[si]-y2[si]), CIMAG(y[si]-y2[si]));
-  }
-  
-  free(S2);
-  free(S);
-  free(y2);
-  fprintf(stderr, "DEBUG in %s (%d): End STCOPT_CG_GEMV\n", __FILE__, __LINE__);
-#endif // _DEBUG_STCOPT_CG_GEMV
-
   return info;
-
 }
 
-void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, elemtype *VecCG) {
+void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, double *VecCG) {
   const double dt = 2.0*DSROptStepDt;
   int i;
   int si,sj,pi,pj,idx,offset;
-  elemtype *stcOd, *stcOs, *stcO;
-  elemtype  *r, *g, *y, *d, *x, *process_y;
-  elemtype *sdiag;
+
+  double *x, *g;
+  double *sdiag, *stcO, *stcOs_real, *stcOs_imag;
+  double *y_real, *y_imag, *z_local;
+  double *q, *d, *r;
+
 #ifdef MVMC_SRCG_REAL
   const double *srOptO=SROptOO_real;
   const double *srOptOOdiag=SROptOO_real + SROptSize;
@@ -568,21 +459,16 @@ void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, elemtype
   fprintf(stderr, "DEBUG in %s (%d): Start stcOptCG_Init\n", __FILE__, __LINE__);
 #endif
   
-  x = VecCG;              //GetWorkSpaceDouble(nSmat)
-  g = x  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  y = g  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  d = y  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  r = d  + nSmat;         //GetWorkSpaceDouble(nSmat)
-  process_y = r  + nSmat; //GetWorkSpaceDouble(nSmat)
-  
-  stcO = process_y + nSmat;         //GetWorkSpaceDouble(nSmat)
-  stcOs = stcO  + nSmat;            //GetWorkSpaceDouble(nSmat*NVMCSample)
-  stcOd = stcOs + nSmat*NVMCSample; //GetWorkSpaceDouble(NVMCSample)
-  sdiag = stcOd + NVMCSample;            //GetWorkSpaceDouble(nSmat)
+  x = VecCG;
+  g = x + nSmat;
+  sdiag = g + nSmat;
+  stcO = sdiag + nSmat;
+  stcOs_real = stcO + nSmat;
+  stcOs_imag = stcOs_real + NVMCSample*nSmat;
   
   #pragma omp parallel for default(shared) private(si)
   #pragma loop noalias
-  for(si=0;si<nSmat*(NVMCSample+8) + NVMCSample;si++) {
+  for(si=0;si<SIZE_VecCG;si++) {
     VecCG[si] = 0.0;
   }
 
@@ -594,7 +480,10 @@ void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, elemtype
       pi = smatToParaIdx[si];
       
       idx = si + i*nSmat; /* column major */
-      stcOs[idx] = CONJ(srOptO_Store[offset+pi+OFFSET]);
+      stcOs_real[idx] = CREAL(srOptO_Store[offset+pi+OFFSET]);
+#ifndef MVMC_SRCG_REAL
+      stcOs_imag[idx] = CIMAG(srOptO_Store[offset+pi+OFFSET]);
+#endif
     }
   }
 
@@ -622,34 +511,41 @@ void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, elemtype
   return;
 }
 
-inline elemtype fn_xdot(const int n, elemtype * const p, elemtype * const q) {
-  int i;
-  elemtype z=0;
-  #pragma loop noalias
-  for(i=0;i<n;i++) {
-    z += CONJ(p[i])*q[i];
+void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm){
+  int si, sj;
+  double* S = (double*)calloc(nSmat*nSmat, sizeof(double));
+  double* xs = (double*)calloc(nSmat, sizeof(double));
+
+  for(si=0; si<nSmat; ++si){
+    xs[si] = 1.0;
+    fn_operate_by_S(nSmat, xs, S+si*nSmat, VecCG, comm);
+    xs[si] = 0.0;
   }
-  return z;
+
+  for(si=0; si<nSmat; ++si){
+  for(sj=0; sj<nSmat; ++sj){
+    fprintf(stderr, "%lg ", S[si+nSmat*sj]);
+  }
+  fprintf(stderr, "\n");
+  }
+
+  free(xs);
+  free(S);
 }
 
 #undef fn_StochasticOptCG
 #undef fn_StochasticOptCG_Init
 #undef fn_StochasticOptCG_Main
 #undef fn_operate_by_S
-#undef fn_xdot
+#undef fn_print_Smat
 
 #undef elemtype
 #undef CONJ
 #undef CREAL
 #undef CIMAG
-#undef Gemv
-#undef Gemm
-#undef Ger
-#undef allreduce
-#undef request_workspace
-#undef get_workspace
-#undef release_workspace
 #undef print_val
 #undef println_val
-
 #undef OFFSET
+#undef USE_IMAG
+#undef SIZE_VecCG
+

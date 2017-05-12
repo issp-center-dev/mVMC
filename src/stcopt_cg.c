@@ -21,8 +21,17 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 
 // #define _DEBUG_STCOPT_CG
-// #define _DEBUG_STCOPT_CG_GEMV
-// #define _DEBUG_STCOPT_CG_LAPACK
+// #define _DEBUG_STCOPT_CG_PRINT_SMAT
+
+inline double xdot(const int n, const double * const p, const double * const q) {
+  int i;
+  double z=0;
+  #pragma loop noalias
+  for(i=0;i<n;i++) {
+    z += p[i]*q[i];
+  }
+  return z;
+}
 
 #define MVMC_SRCG_REAL
 #include "stcopt_cg_impl.c"
