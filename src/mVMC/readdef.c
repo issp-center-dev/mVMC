@@ -508,12 +508,12 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
     }
 
-    if(OrbitalComlex==1){
+    if(iOrbitalComplex==1){
       if(bufInt[IdxSPGaussLeg] > 1){    //Check NSPGaussLeg
         fprintf(stderr, "Error: SPGaussLeg (in modpara.def) must be 0 when orbital is general.\n");
         info=1;
       }
-      else if(bufIdx[IdxLanczosMode] !=0){
+      else if(bufInt[IdxLanczosMode] !=0){
         fprintf(stderr, "Error: Lanczos mode is not supported when orbital is general.\n");
         info=1;
       }
