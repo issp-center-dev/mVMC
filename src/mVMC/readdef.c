@@ -501,6 +501,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     }
 
     //CheckGeneral Orbital
+    printf("bufInt[Idx2Sz]=%d \n",bufInt[Idx2Sz]);
     if(bufInt[Idx2Sz] !=0){
       if(iOrbitalComplex != 1){
         fprintf(stderr, "Error: OrbitalParallel or OrbitalGeneral files must be needed when 2Sz !=0 (in modpara.def).\n");
@@ -1444,7 +1445,7 @@ void SetDefaultValuesModPara(int *bufInt, double* bufDouble){
   bufInt[IdxNBF]=0;
   bufInt[IdxNrange]=0;
   bufInt[IdxNNz]=0;
-  bufInt[Idx2Sz]=0;
+  bufInt[Idx2Sz]=-1;// -1: sz is not fixed :fsz
   bufInt[IdxNCond]=-1;
 
   bufDouble[IdxSROptRedCut]=0.001;

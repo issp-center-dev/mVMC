@@ -477,7 +477,16 @@ UpdateType getUpdateType(int path) {
   } else if (path==1) {
     return (genrand_real2()<0.5) ? EXCHANGE : HOPPING; /* exchange or hopping */
   } else if (path==2) {
-    return EXCHANGE;
+    if(iFlgOrbitalGeneral==0){
+      return EXCHANGE;
+    }else{
+      //return EXCHANGE;
+      if(TwoSz<0){ //fsz
+        return (genrand_real2()<0.5) ? EXCHANGE : LOCALSPINFLIP; /* exchange or localspinflip */ //fsz
+      }else{
+        return EXCHANGE ; /* exchange */
+      } 
+    }
   }
   return NONE;
 }

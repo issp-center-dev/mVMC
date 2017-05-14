@@ -104,6 +104,7 @@ void VMCMainCal_fsz(MPI_Comm comm) {
 #endif
     e  = CalculateHamiltonian_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
     Sz = CalculateSz_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
+    //printf("MDEBUG: Sz=%lf \n",Sz);
 		//printf("MDEBUG: e= %lf %lf ip= %lf %lf \n",creal(e),cimag(e),creal(ip),cimag(ip));
     StopTimer(41);
     if( !isfinite(creal(e) + cimag(e)) ) {
