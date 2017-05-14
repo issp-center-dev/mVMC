@@ -1395,10 +1395,7 @@ static void CheckModPara(struct StdIntList *StdI)
       StdI->nelec = StdI->nelec / 2;
     }
     if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
-    else {
-      StdFace_NotUsed_i("2Sz", StdI->Sz2);
-      StdI->Sz2 = 0;
-    }/*if (strcmp(StdI->model, "hubbard") == 0)*/
+    else StdFace_PrintVal_i("2Sz", &StdI->Sz2, -1);
 #endif
   }
   else if (strcmp(StdI->model, "spin") == 0) {
@@ -1409,10 +1406,7 @@ static void CheckModPara(struct StdIntList *StdI)
 #else
     StdI->nelec = StdI->nsite / 2;
     if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
-    else {
-      StdFace_NotUsed_i("2Sz", StdI->Sz2);
-      StdI->Sz2 = 0;
-    }
+    else StdFace_PrintVal_i("2Sz", &StdI->Sz2, -1);
 #endif
   }/*else if (strcmp(StdI->model, "spin") == 0)*/
   else if (strcmp(StdI->model, "kondo") == 0) {
@@ -1432,10 +1426,7 @@ static void CheckModPara(struct StdIntList *StdI)
       StdI->nelec = (StdI->nelec + StdI->nsite / 2) / 2;
     }
     if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
-    else {
-      StdFace_NotUsed_i("2Sz", StdI->Sz2);
-      StdI->Sz2 = 0;
-    }
+    else StdFace_PrintVal_i("2Sz", &StdI->Sz2, -1);
 #endif
   }/*else if (strcmp(StdI->model, "kondo") == 0)*/
 }/*static void CheckModPara*/
