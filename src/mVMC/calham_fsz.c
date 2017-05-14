@@ -59,7 +59,7 @@ double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, co
   const int *n1 = eleNum + Nsite;
   double complex e=0.0, tmp;
   int idx;
-  int ri,rj,s,rk,rl,t;
+  int ri,rj,s,rk,rl,t,u,v;
   int *myEleIdx, *myEleNum, *myProjCntNew,*myEleSpn;
   double complex *myBuffer;
   double complex myEnergy;
@@ -74,7 +74,7 @@ double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, co
   reduction(+:e)
   */
 #pragma omp parallel default(none)                                      \
-  private(myEleIdx,myEleSpn,myEleNum,myProjCntNew,myBuffer,myEnergy, idx, ri, rj, rk, rl, s, t) \
+  private(myEleIdx,myEleSpn,myEleNum,myProjCntNew,myBuffer,myEnergy, idx, ri, rj, rk, rl, s, t,u,v) \
   firstprivate(ip, Nsize, Nsite2, NProj, NQPFull, NCoulombIntra, CoulombIntra, ParaCoulombIntra, \
                NCoulombInter, CoulombInter, ParaCoulombInter, NHundCoupling, HundCoupling, ParaHundCoupling, \
                NTransfer, Transfer, ParaTransfer, NPairHopping, PairHopping, ParaPairHopping, \
@@ -175,14 +175,16 @@ double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, co
     #pragma omp for private(idx,ri,rj,s,rk,rl,t) schedule(dynamic) nowait
     for(idx=0;idx<NInterAll;idx++) {
       ri = InterAll[idx][0];
+      s  = InterAll[idx][1];
       rj = InterAll[idx][2];
-      s  = InterAll[idx][3];
+      t  = InterAll[idx][3];
       rk = InterAll[idx][4];
+      u  = InterAll[idx][5];
       rl = InterAll[idx][6];
-      t  = InterAll[idx][7];
+      v  = InterAll[idx][7];
       
       myEnergy += ParaInterAll[idx]
-        * GreenFunc2_fsz(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,myProjCntNew,myBuffer);
+        * GreenFunc2_fsz2(ri,rj,rk,rl,s,t,u,v,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,myProjCntNew,myBuffer);
     }
 
     #pragma omp master
