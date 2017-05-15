@@ -1015,7 +1015,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "Nsite          %d\n", StdI->nsite);
   fprintf(fp, "Ncond          %-5d\n", StdI->nelec);
   fprintf(fp, "NSPGaussLeg    %d\n", StdI->NSPGaussLeg);
-  fprintf(fp, "2Sz            %d\n", StdI->Sz2);
+  if (StdI->Sz2 != StdI->NaN_i) fprintf(fp, "2Sz            %d\n", StdI->Sz2);
   fprintf(fp, "NMPTrans       %d\n", StdI->NMPTrans);
   fprintf(fp, "NSROptItrStep  %d\n", StdI->NSROptItrStep);
   fprintf(fp, "NSROptItrSmp   %d\n", StdI->NSROptItrSmp);
@@ -1388,7 +1388,6 @@ static void CheckModPara(struct StdIntList *StdI)
 #else
     StdFace_RequiredVal_i("nelec", StdI->nelec);
     if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
-    else StdFace_PrintVal_i("2Sz", &StdI->Sz2, -1);
 #endif
   }
   else if (strcmp(StdI->model, "spin") == 0) {
@@ -1399,7 +1398,6 @@ static void CheckModPara(struct StdIntList *StdI)
 #else
     StdI->nelec = 0;
     if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
-    else StdFace_PrintVal_i("2Sz", &StdI->Sz2, -1);
 #endif
   }/*else if (strcmp(StdI->model, "spin") == 0)*/
   else if (strcmp(StdI->model, "kondo") == 0) {
@@ -1412,7 +1410,6 @@ static void CheckModPara(struct StdIntList *StdI)
 #else
     StdFace_RequiredVal_i("nelec", StdI->nelec);
     if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
-    else StdFace_PrintVal_i("2Sz", &StdI->Sz2, -1);
 #endif
   }/*else if (strcmp(StdI->model, "kondo") == 0)*/
 }/*static void CheckModPara*/
