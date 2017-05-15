@@ -51,8 +51,8 @@ void InitParameter() {
   else{
     for(i=0;i<NSlater;i++){
       if(OptFlag[2*i+2*NProj] > 0){ //TBC
-        Slater[i] =  1*genrand_real2(); /* uniform distribution [0,1) */
-        Slater[i] += 1*I*genrand_real2(); /* uniform distribution [0,1) */
+        Slater[i] =  2*(genrand_real2()-0.5); /* uniform distribution [0,1) */
+        Slater[i] += 2*I*(genrand_real2()-0.5); /* uniform distribution [0,1) */
         Slater[i] /=sqrt(2.0);
       } else {
         Slater[i] = 0.0;

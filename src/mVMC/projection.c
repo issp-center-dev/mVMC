@@ -42,7 +42,7 @@ double LogProjRatio(const int *projCntNew, const int *projCntOld) {
     int idx;
     double z=0;
     for(idx=0;idx<NProj;idx++) {
-        z += creal(Proj[idx]) * (double)(projCntNew[idx]-projCntOld[idx]); //TBC
+        z += creal(Proj[idx]) * (double)(projCntNew[idx]-projCntOld[idx]); //TBC we assume gutzwiller and jastrow is real
     }
     return z;
 }

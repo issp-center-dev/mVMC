@@ -645,7 +645,7 @@ void makeCandidate_exchange_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *reje
   return;
 }
 //
-// mi (ri,s) -> mi (ri,1-t) // local spin flip for local spin
+// mi (ri,s) -> mi (ri,1-s) // local spin flip for local spin
 void makeCandidate_LocalSpinFlip_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn) {
   const int icnt_max = Nsite*Nsite;
@@ -658,9 +658,12 @@ void makeCandidate_LocalSpinFlip_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *
     mi = gen_rand32()%Nsize;
     s  = eleSpn[mi] ; //fsz 
     t  = 1-s;
+    //t  = (genrand_real2()<0.5) ? s : 1-s; //fsz
     ri = eleIdx[mi];  //fsz
-    rj = ri;  //fsz // note ! we accume local spin
+    rj = ri;  //fsz // note ! we assume local spin
   } while (LocSpn[ri] == 0);
+
+  //if(t==s) flag=1;
 
   *mi_ = mi;
   *ri_ = ri;
