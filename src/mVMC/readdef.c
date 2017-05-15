@@ -501,18 +501,22 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     }
 
     //CheckGeneral Orbital
-    printf("bufInt[Idx2Sz]=%d \n",bufInt[Idx2Sz]);
+    //printf("bufInt[Idx2Sz]=%d \n",bufInt[Idx2Sz]);
     if(bufInt[Idx2Sz] !=0){
       //if(iOrbitalComplex != 1){
       if(iFlgOrbitalGeneral!=1){
         fprintf(stderr, "Error: OrbitalParallel or OrbitalGeneral files must be needed when 2Sz !=0 (in modpara.def).\n");
         info=1;
       }
+      else if(bufInt[Idx2Sz]%2 !=0 && bufInt[Idx2Sz]!=-1){
+        fprintf(stderr, "Error: 2Sz (in modpara.def) must be even number.\n");
+        info=1;
+      }
     }
 
-    if(iOrbitalComplex==1){
+    if(iFlgOrbitalGeneral==1){
       if(bufInt[IdxSPGaussLeg] > 1){    //Check NSPGaussLeg
-        fprintf(stderr, "Error: SPGaussLeg (in modpara.def) must be 0 when orbital is general.\n");
+        fprintf(stderr, "Error: SPGaussLeg (in modpara.def) must be 0 or 1 when orbital is general.\n");
         info=1;
       }
       else if(bufInt[IdxLanczosMode] !=0){
@@ -523,16 +527,16 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
     //Check LocSpn
     if (bufInt[IdxNLocSpin] > 0) {
-      if(bufInt[IdxExUpdatePath]==0){
+      if(bufInt[IdxNLocSpin] == 2 * bufInt[IdxNe] && bufInt[IdxExUpdatePath]!=2){
+        fprintf(stderr, "Error: NExUpdatePath (in modpara.def) must be 2 when 2*Ne = NLocalSpin, i.e. spin system.\n");
+        info = 1;
+      }
+      else if(bufInt[IdxExUpdatePath]==0){
         fprintf(stderr, "Error: NExUpdatePath (in modpara.def) must be 1.\n");
         info = 1;
       }
       else if(bufInt[IdxNLocSpin] > 2 * bufInt[IdxNe]) {
         fprintf(stderr, "Error: 2*Ne must satisfy the condition, 2*Ne >= NLocalSpin.\n");
-        info = 1;
-      }
-      else if(bufInt[IdxNLocSpin] == 2 * bufInt[IdxNe] && bufInt[IdxExUpdatePath]!=2){
-        fprintf(stderr, "Error: NExUpdatePath (in modpara.def) must be 2 when 2*Ne = NLocalSpin, i.e. spin system.\n");
         info = 1;
       }
       if(info==1) {
@@ -1526,6 +1530,10 @@ int  GetInfoFromModPara(int *bufInt, double* bufDouble) {
               bufInt[IdxNCond]=(int) dtmp;
             } else if(CheckWords(ctmp, "2Sz") == 0) {
               bufInt[Idx2Sz]=(int) dtmp;
+              if (bufInt[Idx2Sz]==-1){
+                fprintf(stdout, "Error: 2Sz must be even number.\n");
+                return(-1);
+              }
             }
             else if (CheckWords(ctmp, "NSPGaussLeg") == 0) {
               bufInt[IdxSPGaussLeg] = (int) dtmp;

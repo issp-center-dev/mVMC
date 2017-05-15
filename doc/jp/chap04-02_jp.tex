@@ -309,7 +309,21 @@ NStore         1
 
 {\bf 形式 :} {int型 (1以上、必須)}
 
-{\bf 説明 :} $\uparrow$電子の個数。$S_z=0$部分空間で計算するので、$\uparrow$電子と$\downarrow$電子の個数は等しい。
+{\bf 説明 :} 電子のペア数(電子数は2 \verb|Nelectron|で与えられる)。
+%$\uparrow$電子の個数。 
+%$S_z=0$部分空間で計算するので、$\uparrow$電子と$\downarrow$電子の個数は等しい。
+
+\item  \verb|NCond|
+
+{\bf 形式 :} {int型 (0以上)}
+
+{\bf 説明 :} 伝導電子の数。
+
+\item  \verb|2Sz|
+
+{\bf 形式 :} {int型}
+
+{\bf 説明 :} 2$S_z$の値。電子がペアを組むため, 2$S_z$は偶数で指定する必要がある。
 
  \item  \verb|NSPGaussLeg|
 

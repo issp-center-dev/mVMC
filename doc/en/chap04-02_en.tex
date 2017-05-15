@@ -317,7 +317,19 @@ NStore         1
 
 {\bf Type :} int-type (Positive integer)
 
-{\bf Description :} The electron number with $\uparrow$ spin. Since the calculation is done at the partial space $S_z=0$,  the electron number with $\uparrow$ spin is equal to that with $\downarrow$ spin.
+{\bf Description :} The number of electron pairs (the electron number is given by 2 \verb|Nelectron|).
+
+\item  \verb|Ncond|
+
+{\bf Type :} int-type (greater than 0)
+
+{\bf Description :} The number of conduction electrons.
+
+\item  \verb|2Sz|
+
+{\bf Type :} int-type 
+
+{\bf Description :} The value of $2S_z$. Since the electrons form pair,  $2S_z$ must be even number.
 
  \item  \verb|NSPGaussLeg|
 
