@@ -14,53 +14,46 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 #include "initial.h"
 #include "../../sfmt/SFMT.h"
 
-void initial(struct BindStruct *X){
+void initial(struct BindStruct *X) {
 
-    int int_i,int_j;
-    int spin_0,spin_1;
-    int site_0,site_1;
-    int t_site_0,t_site_1;
-    int Ns;
-    double complex tmp;
+  int int_i, int_j;
+  int spin_0, spin_1;
+  int site_0, site_1;
+  int t_site_0, t_site_1;
+  int Ns;
+  double complex tmp;
 
-    Ns = X->Def.Nsite;
+  Ns = X->Def.Nsite;
 
-    if(X->Def.NInitial==0){
-      for(int_i=0; int_i < 2*X->Def.Nsite; int_i++){
-        for(int_j=0; int_j < 2*X->Def.Nsite; int_j++){
-          //X->Large.G[int_i][int_j]   = 0.0;
-		      X->Large.G[int_i][int_j]  =  0.01*(genrand_real2()-0.5); /* uniform distribution [0,1) */
-		      //X->Large.G[int_i][int_j]  += 1*I*genrand_real2(); /* uniform distribution [0,1) */
-		      //X->Large.G[int_i][int_j]  /=sqrt(2.0);
-	      }
+  if (X->Def.NInitial == 0) {
+    for (int_i = 0; int_i < 2 * X->Def.Nsite; int_i++) {
+      for (int_j = 0; int_j < 2 * X->Def.Nsite; int_j++) {
+        //X->Large.G[int_i][int_j]   = 0.0;
+        X->Large.G[int_i][int_j] = 0.01 * (genrand_real2() - 0.5); /* uniform distribution [0,1) */
+        //X->Large.G[int_i][int_j]  += 1*I*genrand_real2(); /* uniform distribution [0,1) */
+        //X->Large.G[int_i][int_j]  /=sqrt(2.0);
       }
-    } 
-
-    //printf("MDEBUG: %d \n",X->Def.NInitial);
-	//Case: Initial green's functions are defined.
-    for(int_i=0; int_i < X->Def.NInitial; int_i++){
-//[s] MERGE BY TM
-      site_0  = X->Def.Initial[int_i][0]; 
-      spin_0  = X->Def.Initial[int_i][1]; 
-      site_1  = X->Def.Initial[int_i][2]; 
-      spin_1  = X->Def.Initial[int_i][3]; 
-//[e] MERGE BY TM
-      
-      //theta   = X->Def.ParaInitial_theta[int_i];
-      //tmp     = X->Def.ParaInitial[int_i]*(cos(theta)+I*sin(theta));
-      //tmp     = I;
-      tmp =X->Def.ParaInitial[int_i];
-      printf("int_i=%d %lf %lf \n",int_i,creal(tmp),cimag(tmp));
-      t_site_0 = site_0+spin_0*Ns;
-      t_site_1 = site_1+spin_1*Ns;
-      X->Large.G[t_site_0][t_site_1]  = tmp ;
     }
+  }
+
+  //Case: Initial green's functions are defined.
+  for (int_i = 0; int_i < X->Def.NInitial; int_i++) {
+    site_0 = X->Def.Initial[int_i][0];
+    spin_0 = X->Def.Initial[int_i][1];
+    site_1 = X->Def.Initial[int_i][2];
+    spin_1 = X->Def.Initial[int_i][3];
+    tmp = X->Def.ParaInitial[int_i];
+    printf("int_i=%d %lf %lf \n", int_i, creal(tmp), cimag(tmp));
+    t_site_0 = site_0 + spin_0 * Ns;
+    t_site_1 = site_1 + spin_1 * Ns;
+    X->Large.G[t_site_0][t_site_1] = tmp;
+  }
 }

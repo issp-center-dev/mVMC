@@ -36,7 +36,7 @@ struct DefineList {
     int NVMCCalMode, NLanczosMode;
 
     int Nsite, Ne, Nsize, IterationMax;
-		int TwoSz, Ncond;
+    int TwoSz, Ncond;
     int print;
     int eps_int;
     double eps, mix;
@@ -70,7 +70,7 @@ struct DefineList {
     complex double *ParaInitial;
     //double *ParaInitial;
     //double *ParaInitial_theta;
-    int NOrbitalAP,NOrbitalP;
+    int NOrbitalAP, NOrbitalP;
 
 
     int **CisAjs, NCisAjs;
@@ -79,45 +79,46 @@ struct DefineList {
     int iFlgOrbitalGeneral;
     int OrbitalOutputMode;
 
-	
+
 };
 
-struct CheckList{
-  int idim_max,sdim; 
-  double max_mem;
+struct CheckList {
+    int idim_max, sdim;
+    double max_mem;
 };
 
-struct LargeList{
-    double complex **Ham,**G,**G_old; 
-    double complex **R_SLT,**L_SLT;
+struct LargeList {
+    double complex **Ham, **G, **G_old;
+    double complex **R_SLT, **L_SLT;
     double *EigenValues;
     double *tmp;
 };
 
-struct PhysList{
-	double energy,doublon;
-  double rest,num;
-	double *spin_real_cor;
-  double *charge_real_cor;
-  double *loc_spin_z;
-  double Target_energy;
-};	
-struct TimeList{
-  time_t start,mid1,mid2,end;
+struct PhysList {
+    double energy, doublon;
+    double rest, num;
+    double *spin_real_cor;
+    double *charge_real_cor;
+    double *loc_spin_z;
+    double Target_energy;
+};
+
+struct TimeList {
+    time_t start, mid1, mid2, end;
 };
 
 /*=================================================================================================*/
 struct BindStruct {
-		struct DefineList Def;
-		struct CheckList Check;
-		struct LargeList Large;
-		struct PhysList Phys;
-		struct TimeList Time;
+    struct DefineList Def;
+    struct CheckList Check;
+    struct LargeList Large;
+    struct PhysList Phys;
+    struct TimeList Time;
 };
 
 /*=================================================================================================*/
-struct EDMainCalStruct{
-	struct BindStruct Bind;
+struct EDMainCalStruct {
+    struct BindStruct Bind;
 };
 
 

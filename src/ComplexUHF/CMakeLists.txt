@@ -8,7 +8,7 @@ endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 include_directories(include)
 
 set(SOURCES_UHF
-        UHFmain.c output.c cal_energy.c green.c makeham.c diag.c initial.c check.c matrixlapack.c readdef.c
+        UHFmain.c output.c cal_energy.c green.c makeham.c diag.c initial.c matrixlapack.c readdef.c
  )
 
 include_directories(../sfmt)

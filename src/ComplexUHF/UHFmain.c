@@ -34,7 +34,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "mfmemory.c"
 #include "matrixlapack.h"
 #include "readdef.h"
-#include "check.h"
 #include "initial.h"
 #include "makeham.h"
 #include "diag.h"
@@ -96,7 +95,6 @@ int main(int argc, char* argv[]){
       exit(1);
     };
     
-    check(&(X.Bind)); 
     /*LARGE VECTORS ARE ALLOCATED*/
 #include "xsetmem_large.c"
     /*---------------------------*/

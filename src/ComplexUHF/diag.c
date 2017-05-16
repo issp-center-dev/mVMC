@@ -23,24 +23,24 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "diag.h"
 #include "mfmemory.c"
 
-void diag(struct BindStruct *X){
+void diag(struct BindStruct *X) {
 
-    int int_i,int_j,int_k,int_l;
-    double *r;
-    double complex **tmp_mat,**vec;
-    double complex tmp_mlt;
-    int mfint[7],xMsize;
+  int int_i, int_j, int_k, int_l;
+  double *r;
+  double complex **tmp_mat, **vec;
+  double complex tmp_mlt;
+  int mfint[7], xMsize;
 
- 
-    xMsize = X->Def.Nsite;  
-    c_malloc2(tmp_mat,2*xMsize,2*xMsize);
-    c_malloc2(vec,2*xMsize,2*xMsize);
-    d_malloc1(r,2*xMsize);
 
-    for(int_i = 0;int_i < 2*xMsize; int_i++){
-      for(int_j = 0;int_j < 2*xMsize; int_j++){
-        tmp_mat[int_i][int_j] = X->Large.Ham[int_i][int_j];
-        //printf("Ham: %d %d: %lf %lf\n",int_i,int_j,creal(tmp_mat[int_i][int_j]),cimag(tmp_mat[int_i][int_j]));
+  xMsize = X->Def.Nsite;
+  c_malloc2(tmp_mat, 2 * xMsize, 2 * xMsize);
+  c_malloc2(vec, 2 * xMsize, 2 * xMsize);
+  d_malloc1(r, 2 * xMsize);
+
+  for (int_i = 0; int_i < 2 * xMsize; int_i++) {
+    for (int_j = 0; int_j < 2 * xMsize; int_j++) {
+      tmp_mat[int_i][int_j] = X->Large.Ham[int_i][int_j];
+      //printf("Ham: %d %d: %lf %lf\n",int_i,int_j,creal(tmp_mat[int_i][int_j]),cimag(tmp_mat[int_i][int_j]));
 //[s] MERGE BY TM
 /*
         if(fabs(creal(X->Large.Ham[int_i][int_j]))>0.001){
@@ -48,29 +48,29 @@ void diag(struct BindStruct *X){
         }
 */
 //[e] MERGE BY TM
-      }
     }
+  }
 
-    ZHEEVall(2*xMsize,tmp_mat,r,vec);
+  ZHEEVall(2 * xMsize, tmp_mat, r, vec);
 //[e]check
-    for(int_k = 0; int_k < 2*xMsize; int_k++){
-      X->Large.EigenValues[int_k] = r[int_k];
-      //fprintf(stdout, "Debug: Eigen[%d]=%lf\n", int_k, X->Large.EigenValues[int_k]);
-    }
-    //For zero-temperature to generate pair-orbitals
-    for(int_k = 0; int_k < 2*X->Def.Ne; int_k++){
-      for(int_l = 0; int_l < 2*xMsize; int_l++){
-        //X->Large.R_SLT[int_l][int_k] = conj(vec[int_k][int_l]);
+  for (int_k = 0; int_k < 2 * xMsize; int_k++) {
+    X->Large.EigenValues[int_k] = r[int_k];
+    //fprintf(stdout, "Debug: Eigen[%d]=%lf\n", int_k, X->Large.EigenValues[int_k]);
+  }
+  //For zero-temperature to generate pair-orbitals
+  for (int_k = 0; int_k < 2 * X->Def.Ne; int_k++) {
+    for (int_l = 0; int_l < 2 * xMsize; int_l++) {
+      //X->Large.R_SLT[int_l][int_k] = conj(vec[int_k][int_l]);
 //[s] MERGE BY TM
-        X->Large.R_SLT[int_l][int_k] = conj(vec[int_k][int_l]); //original
-        X->Large.L_SLT[int_k][int_l] = (vec[int_k][int_l]);     //original
-        // R_SLT = U^{*}        
-        // L_SLT = U^{T}        
+      X->Large.R_SLT[int_l][int_k] = conj(vec[int_k][int_l]); //original
+      X->Large.L_SLT[int_k][int_l] = (vec[int_k][int_l]);     //original
+      // R_SLT = U^{*}
+      // L_SLT = U^{T}
 //[e] MERGE BY TM
-      }
     }
+  }
 //	exit(1);
-    c_free2(tmp_mat,2*xMsize,2*xMsize);
-    c_free2(vec,2*xMsize,2*xMsize);
-    d_free1(r,2*xMsize);
+  c_free2(tmp_mat, 2 * xMsize, 2 * xMsize);
+  c_free2(vec, 2 * xMsize, 2 * xMsize);
+  d_free1(r, 2 * xMsize);
 }
