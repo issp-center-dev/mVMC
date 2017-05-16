@@ -377,9 +377,9 @@ The whole step number to optimize variational parameters by SR method. Only used
  
 \item \verb|DSROptCGTol|
 
-{\bf Type :} double-type (default value: 0.00001)
+{\bf Type :} double-type (default value: 1.0e-10)
 
-{\bf Description :} The convergence condition of a CG step in the SR method. Only used for \verb|NSRCG|!=0.
+{\bf Description :} The convergence condition of a CG step in the SR method. CG method runs until the root mean square of the residues becomes below this value. Only used for \verb|NSRCG|!=0.
  
 \item \verb|NVMCWarmUp|
 

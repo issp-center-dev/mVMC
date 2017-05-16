@@ -584,18 +584,6 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 {\bf 説明 :} {SR法で使用する刻み幅。手法論文\cite{Tahara2008}の$\Delta t$に対応。}
  
-\item \verb|NSROptCGMaxIter|
-
-{\bf 形式 :} int型 (デフォルト値 = 0)
-
-{\bf 説明 :} {SR-CG法での、CG法の繰り返し回数の上限。 0以下を指定した場合、最大で$S$ 行列のサイズの数だけ実行するようになります。 \verb|NSRCG|!=0 の場合のみ使用されます。}
- 
-\item \verb|DSROptCGTol|
-
-{\bf 形式 :} double型 (デフォルト値 = 0.00001)
-
-{\bf 説明 :} {SR-CG法での、CG法の収束判定条件。\verb|NSRCG|!=0 の場合のみ使用されます。}
- 
 \item \verb|NVMCWarmUp|
 
 {\bf 形式 :} int型 (1以上、デフォルト値=10)

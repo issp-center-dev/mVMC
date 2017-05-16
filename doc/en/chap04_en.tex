@@ -629,18 +629,6 @@ The whole step number to optimize variational parameters by SR method. Only used
 
 {\bf Description :} The time step using in the SR method. 
  
-\item \verb|NSROptCGMaxIter|
-
-{\bf Type :} int-type (default value: 0)
-
-{\bf Description :} The maximum number of CG steps for the SR method. If this is zero or negative, CG steps will be run as many as the size of $S$ matrix at maximum. Only used for \verb|NSRCG|!=0.
- 
-\item \verb|DSROptCGTol|
-
-{\bf Type :} double-type (default value: 0.00001)
-
-{\bf Description :} The convergence condition of a CG step in the SR method. Only used for \verb|NSRCG|!=0.
- 
 \item \verb|NVMCWarmUp|
 
 {\bf Type :} int-type (Positive integer, default value: 10)

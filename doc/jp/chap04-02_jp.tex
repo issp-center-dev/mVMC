@@ -369,9 +369,9 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
  
 \item \verb|DSROptCGTol|
 
-{\bf 形式 :} double型 (デフォルト値 = 0.00001)
+{\bf 形式 :} double型 (デフォルト値 = 1.0e-10)
 
-{\bf 説明 :} {SR-CG法での、CG法の収束判定条件。\verb|NSRCG|!=0 の場合のみ使用されます。}
+{\bf 説明 :} {SR-CG法での、CG法の収束判定条件。残差ベクトルの要素の自乗平均平方根がこの値以下になったらCG 法を終了します。 \verb|NSRCG|!=0 の場合のみ使用されます。}
  
 \item \verb|NVMCWarmUp|
 
