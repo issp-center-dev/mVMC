@@ -54,7 +54,7 @@ void InitParameter() {
         Slater[i] =  2*(genrand_real2()-0.5); /* uniform distribution [-1,1) */
         Slater[i] += 2*I*(genrand_real2()-0.5); /* uniform distribution [-1,1) */
         Slater[i] /=sqrt(2.0);
-        printf("i=%d: %lf %lf \n",i,creal(Slater[i]),cimag(Slater[i]));
+        //printf("i=%d: %lf %lf \n",i,creal(Slater[i]),cimag(Slater[i]));
       } else {
         Slater[i] = 0.0;
       }

@@ -480,7 +480,7 @@ UpdateType getUpdateType(int path) {
     if(iFlgOrbitalGeneral==0){
       return EXCHANGE;
     }else{
-      if(TwoSz<0){ //fsz
+      if(TwoSz==-1){ //Sz is not conserved
         return (genrand_real2()<0.5) ? EXCHANGE : LOCALSPINFLIP; /* exchange or localspinflip */ //fsz
       }else{
         return EXCHANGE ; /* exchange */

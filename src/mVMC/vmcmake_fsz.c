@@ -48,7 +48,9 @@ void revertEleConfig_fsz(int mi, int org_ri, int dst_r, int org_spn,int dst_spn,
                      int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn);
 void CheckEleConfig_fsz(int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn,MPI_Comm comm);
 int CheckEleNum_fsz(int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn,MPI_Comm comm);
-void makeCandidate_LocalSpinFlip_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
+void makeCandidate_LocalSpinFlip_localspin(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn);
+void makeCandidate_LocalSpinFlip_conduction(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn);
 //typedef enum {HOPPING, EXCHANGE, NONE} UpdateType;
 //UpdateType getUpdateType(int path);
@@ -131,9 +133,16 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
         Counter[0]++;
 
         StartTimer(31);
-        if(TwoSz<0){//fsz
-          makeCandidate_hopping_fsz(&mi, &ri, &rj, &s,&t, &rejectFlag,
+        if(TwoSz==-1){//total spin is not conserved
+///[s] MDEBUG
+          if(genrand_real2()<0.5){ // this ratio can be changed
+            makeCandidate_hopping_fsz(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+          }else{
+            makeCandidate_LocalSpinFlip_conduction(&mi, &ri, &rj, &s,&t, &rejectFlag,
+                              TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+          } 
+///[e] MDEBUG
         }else{ //csz : t=s
           makeCandidate_hopping_csz(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
@@ -239,7 +248,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
         Counter[0]++;
 
         StartTimer(31);
-        makeCandidate_LocalSpinFlip_fsz(&mi, &ri, &rj, &s,&t, &rejectFlag,
+        makeCandidate_LocalSpinFlip_localspin(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
         StopTimer(31);
 
@@ -645,8 +654,8 @@ void makeCandidate_exchange_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *reje
   return;
 }
 //
-// mi (ri,s) -> mi (ri,1-s) // local spin flip for local spin
-void makeCandidate_LocalSpinFlip_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
+// mi (ri,s) -> mi (ri,1-s) // local spin flip for conduction
+void makeCandidate_LocalSpinFlip_localspin(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn) {
   const int icnt_max = Nsite*Nsite;
   int icnt;
@@ -674,6 +683,38 @@ void makeCandidate_LocalSpinFlip_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *
 
   return;
 }
+//
+// mi (ri,s) -> mi (ri,1-s) // local spin flip for conduction electrons
+void makeCandidate_LocalSpinFlip_conduction(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn) {
+  const int icnt_max = Nsite*Nsite;
+  int icnt;
+  int mi, ri, rj, s, flag,tmp_rj;
+  int t; //fsz
+
+  flag = 0; // FALSE
+  do {
+    mi = gen_rand32()%Nsize;
+    s  = eleSpn[mi] ; //fsz 
+    t  = 1-s;
+    //t  = (genrand_real2()<0.5) ? s : 1-s; //fsz
+    ri = eleIdx[mi];  //fsz
+    rj = ri;  //fsz // note ! we assume local spin
+  } while (LocSpn[ri] == 1 || eleCfg[ri+t*Nsite] != -1);
+
+  //if(t==s) flag=1;
+
+  *mi_ = mi;
+  *ri_ = ri;
+  *rj_ = rj;
+  *s_  = s;
+  *t_  = t;
+  *rejectFlag_ = flag;
+
+  return;
+}
+
+
 
 
 
