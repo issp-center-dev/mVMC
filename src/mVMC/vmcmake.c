@@ -480,12 +480,17 @@ UpdateType getUpdateType(int path) {
     if(iFlgOrbitalGeneral==0){
       return EXCHANGE;
     }else{
-      //return EXCHANGE;
       if(TwoSz<0){ //fsz
         return (genrand_real2()<0.5) ? EXCHANGE : LOCALSPINFLIP; /* exchange or localspinflip */ //fsz
       }else{
         return EXCHANGE ; /* exchange */
       } 
+    }
+  }else if(path==3){ //for KondoGC
+    if(genrand_real2()<0.5){ // for conduction electrons
+      return HOPPING; /* hopping */
+　　}else{　　// Exchange for conductions and local spins, localspinflip for local spins　
+      return (genrand_real2()<0.5) ? EXCHANGE : LOCALSPINFLIP; /* exchange or localspinflip */
     }
   }
   return NONE;
