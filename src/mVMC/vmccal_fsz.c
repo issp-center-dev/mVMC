@@ -115,6 +115,7 @@ void VMCMainCal_fsz(MPI_Comm comm) {
     Wc    += w;
     Etot  += w * e;
     Sztot += w * Sz;
+    Sztot2 += w * Sz*Sz;
     Etot2 += w * conj(e) * e;
 #ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: calculateOpt \n",sample);

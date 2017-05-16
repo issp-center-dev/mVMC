@@ -551,7 +551,7 @@ void clearPhysQuantity(){
   double complex *vec;
   double  *vec_real;
 //[s] MERGE BY TM
-  Wc = Etot = Etot2 = Sztot =0.0;//fsz
+  Wc = Etot = Etot2 = Sztot=Sztot2 =0.0;//fsz
   //Wc = Etot = Etot2 = 0.0;
   Dbtot = Dbtot2 = 0.0;
 //[e] MERGE BY TM
