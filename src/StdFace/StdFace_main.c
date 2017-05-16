@@ -1388,17 +1388,16 @@ static void CheckModPara(struct StdIntList *StdI)
 #else
     StdFace_RequiredVal_i("nelec", StdI->nelec);
     if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
+    else StdFace_NotUsed_i("2Sz", StdI->Sz2);
 #endif
   }
   else if (strcmp(StdI->model, "spin") == 0) {
     StdFace_NotUsed_i("nelec", StdI->nelec);
-#if defined(_HPhi)
+#if defined(_mVMC)
+    StdI->nelec = 0;
+#endif
     if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
     else StdFace_NotUsed_i("2Sz", StdI->Sz2);
-#else
-    StdI->nelec = 0;
-    if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
-#endif
   }/*else if (strcmp(StdI->model, "spin") == 0)*/
   else if (strcmp(StdI->model, "kondo") == 0) {
 #if defined(_HPhi)
@@ -1410,6 +1409,7 @@ static void CheckModPara(struct StdIntList *StdI)
 #else
     StdFace_RequiredVal_i("nelec", StdI->nelec);
     if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
+    else StdFace_NotUsed_i("2Sz", StdI->Sz2);
 #endif
   }/*else if (strcmp(StdI->model, "kondo") == 0)*/
 }/*static void CheckModPara*/
