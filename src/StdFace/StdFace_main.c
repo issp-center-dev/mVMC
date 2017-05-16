@@ -500,7 +500,7 @@ static void PrintGutzwiller(struct StdIntList *StdI)
   fp = fopen("gutzwilleridx.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NGutzwillerIdx %10d\n", NGutzwiller);
-  fprintf(fp, "ComplexType %10d\n", StdI->ComplexType);
+  fprintf(fp, "ComplexType %10d\n", 0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "=============================================\n");
 
@@ -1015,7 +1015,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "Nsite          %d\n", StdI->nsite);
   fprintf(fp, "Ncond          %-5d\n", StdI->nelec);
   fprintf(fp, "NSPGaussLeg    %d\n", StdI->NSPGaussLeg);
-  fprintf(fp, "2Sz            %d\n", StdI->Sz2);
+  if (StdI->Sz2 != StdI->NaN_i) fprintf(fp, "2Sz            %d\n", StdI->Sz2);
   fprintf(fp, "NMPTrans       %d\n", StdI->NMPTrans);
   fprintf(fp, "NSROptItrStep  %d\n", StdI->NSROptItrStep);
   fprintf(fp, "NSROptItrSmp   %d\n", StdI->NSROptItrSmp);
@@ -1363,7 +1363,10 @@ static void CheckModPara(struct StdIntList *StdI)
 
   if (strcmp(StdI->model, "hubbard") == 0) StdI->NExUpdatePath = 0;
   else if (strcmp(StdI->model, "spin") == 0) StdI->NExUpdatePath = 2;
-  else if (strcmp(StdI->model, "kondo") == 0) StdI->NExUpdatePath = 1;
+  else if (strcmp(StdI->model, "kondo") == 0) { 
+    if(StdI->lGC==0) StdI->NExUpdatePath = 1; 
+    else StdI->NExUpdatePath = 3;
+  }
   fprintf(stdout, "  %15s = %-10d\n", "NExUpdatePath", StdI->NExUpdatePath);
 
   StdFace_PrintVal_i("RndSeed", &StdI->RndSeed, 123456789);
@@ -1388,19 +1391,16 @@ static void CheckModPara(struct StdIntList *StdI)
 #else
     StdFace_RequiredVal_i("nelec", StdI->nelec);
     if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
-    else StdFace_PrintVal_i("2Sz", &StdI->Sz2, -1);
+    else StdFace_NotUsed_i("2Sz", StdI->Sz2);
 #endif
   }
   else if (strcmp(StdI->model, "spin") == 0) {
     StdFace_NotUsed_i("nelec", StdI->nelec);
-#if defined(_HPhi)
+#if defined(_mVMC)
+    StdI->nelec = 0;
+#endif
     if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
     else StdFace_NotUsed_i("2Sz", StdI->Sz2);
-#else
-    StdI->nelec = 0;
-    if (StdI->lGC == 0) StdFace_RequiredVal_i("2Sz", StdI->Sz2);
-    else StdFace_PrintVal_i("2Sz", &StdI->Sz2, -1);
-#endif
   }/*else if (strcmp(StdI->model, "spin") == 0)*/
   else if (strcmp(StdI->model, "kondo") == 0) {
 #if defined(_HPhi)
@@ -1412,7 +1412,7 @@ static void CheckModPara(struct StdIntList *StdI)
 #else
     StdFace_RequiredVal_i("nelec", StdI->nelec);
     if (StdI->lGC == 0) StdFace_PrintVal_i("2Sz", &StdI->Sz2, 0);
-    else StdFace_PrintVal_i("2Sz", &StdI->Sz2, -1);
+    else StdFace_NotUsed_i("2Sz", StdI->Sz2);
 #endif
   }/*else if (strcmp(StdI->model, "kondo") == 0)*/
 }/*static void CheckModPara*/
