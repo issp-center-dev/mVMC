@@ -500,7 +500,7 @@ static void PrintGutzwiller(struct StdIntList *StdI)
   fp = fopen("gutzwilleridx.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NGutzwillerIdx %10d\n", NGutzwiller);
-  fprintf(fp, "ComplexType %10d\n", StdI->ComplexType);
+  fprintf(fp, "ComplexType %10d\n", 0);
   fprintf(fp, "=============================================\n");
   fprintf(fp, "=============================================\n");
 
