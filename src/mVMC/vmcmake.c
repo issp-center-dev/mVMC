@@ -477,7 +477,21 @@ UpdateType getUpdateType(int path) {
   } else if (path==1) {
     return (genrand_real2()<0.5) ? EXCHANGE : HOPPING; /* exchange or hopping */
   } else if (path==2) {
-    return EXCHANGE;
+    if(iFlgOrbitalGeneral==0){
+      return EXCHANGE;
+    }else{
+      if(TwoSz==-1){ //Sz is not conserved
+        return (genrand_real2()<0.5) ? EXCHANGE : LOCALSPINFLIP; /* exchange or localspinflip */ //fsz
+      }else{
+        return EXCHANGE ; /* exchange */
+      } 
+    }
+  }else if(path==3){ //for KondoGC
+    if(genrand_real2()<0.5){ // for conduction electrons
+      return HOPPING; /* hopping */
+    }else{/* Exchange for conductions and local spins, localspinflip for local spins　*/
+      return (genrand_real2()<0.5) ? EXCHANGE : LOCALSPINFLIP; /* exchange or localspinflip */
+    }
   }
   return NONE;
 }
