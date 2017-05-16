@@ -1363,7 +1363,10 @@ static void CheckModPara(struct StdIntList *StdI)
 
   if (strcmp(StdI->model, "hubbard") == 0) StdI->NExUpdatePath = 0;
   else if (strcmp(StdI->model, "spin") == 0) StdI->NExUpdatePath = 2;
-  else if (strcmp(StdI->model, "kondo") == 0) StdI->NExUpdatePath = 1;
+  else if (strcmp(StdI->model, "kondo") == 0) { 
+    if(StdI->lGC==0) StdI->NExUpdatePath = 1; 
+    else StdI->NExUpdatePath = 3;
+  }
   fprintf(stdout, "  %15s = %-10d\n", "NExUpdatePath", StdI->NExUpdatePath);
 
   StdFace_PrintVal_i("RndSeed", &StdI->RndSeed, 123456789);
