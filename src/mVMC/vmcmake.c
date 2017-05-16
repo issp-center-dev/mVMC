@@ -489,7 +489,7 @@ UpdateType getUpdateType(int path) {
   }else if(path==3){ //for KondoGC
     if(genrand_real2()<0.5){ // for conduction electrons
       return HOPPING; /* hopping */
-　　}else{　　// Exchange for conductions and local spins, localspinflip for local spins　
+    }else{/* Exchange for conductions and local spins, localspinflip for local spins　*/
       return (genrand_real2()<0.5) ? EXCHANGE : LOCALSPINFLIP; /* exchange or localspinflip */
     }
   }
