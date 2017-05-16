@@ -44,7 +44,7 @@ void initial(struct BindStruct *X){
       }
     } 
 
-    printf("MDEBUG: %d \n",X->Def.NInitial);
+    //printf("MDEBUG: %d \n",X->Def.NInitial);
 	//Case: Initial green's functions are defined.
     for(int_i=0; int_i < X->Def.NInitial; int_i++){
 //[s] MERGE BY TM

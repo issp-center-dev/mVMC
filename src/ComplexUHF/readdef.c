@@ -221,7 +221,6 @@ int ReadDefFileNInt(
 								CheckWords(ctmp, "NVMCInterval") == 0 ||
 								CheckWords(ctmp, "NVMCSample") == 0 ||
 								CheckWords(ctmp, "NExUpdatePath") == 0 ||
-								//                                CheckWords(ctmp, "RndSeed")==0 ||
 								CheckWords(ctmp, "NSplitSize") == 0 ||
 								CheckWords(ctmp, "NStore") == 0
 										) {
@@ -232,7 +231,16 @@ int ReadDefFileNInt(
 							X->Nsite = (int) dtmp;
 						} else if (CheckWords(ctmp, "Ne") == 0 || CheckWords(ctmp, "Nelectron") == 0) {
 							X->Ne = (int) dtmp;
-						} else if (CheckWords(ctmp, "Mix") == 0) {
+						} else if(CheckWords(ctmp, "Ncond") == 0){
+              X->Ncond=(int) dtmp;
+            } else if(CheckWords(ctmp, "2Sz") == 0) {
+              X->TwoSz = (int) dtmp;
+              if (X->TwoSz == -1) {
+                fprintf(stdout, "Error: 2Sz must be even number.\n");
+                return (-1);
+              }
+            }
+            else if (CheckWords(ctmp, "Mix") == 0) {
 							X->mix = dtmp;
 						} else if (CheckWords(ctmp, "EPS") == 0) {
 							X->eps_int = (int) dtmp;
@@ -332,7 +340,28 @@ int ReadDefFileNInt(
 		return -1;
 	}
 
-	if (X->NMPTrans < 0) {
+  //CalcNCond
+  if(X->Ncond != -1){
+    if(X->Ncond%2 != 0){
+      fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
+      return -1;
+    }
+    else X->Ne=(X->NLocSpn+X->Ncond)/2;
+  }
+
+  //CheckGeneral Orbital
+  if(X->TwoSz !=0){
+    if(X->iFlgOrbitalGeneral!=1){
+      fprintf(stderr, "Error: OrbitalParallel or OrbitalGeneral files must be needed when 2Sz !=0 (in modpara.def).\n");
+      return -1;
+    }
+    else if(X->TwoSz%2 !=0 && X->TwoSz!=-1){
+      fprintf(stderr, "Error: 2Sz (in modpara.def) must be even number.\n");
+      return -1;
+    }
+  }
+
+  if (X->NMPTrans < 0) {
 		X->APFlag = 1; /* anti-periodic boundary */
 		X->NMPTrans *= -1;
 	} else {
@@ -883,6 +912,8 @@ void SetInitialValue(struct DefineList *X){
   X->print=0;
   X->IterationMax=2000;
   X->eps_int_slater=6;
+  X->Ncond=0;
+  X->TwoSz=-1;
 }
 
 

@@ -116,7 +116,7 @@ int main(int argc, char* argv[]){
 
 	/* initialize Mersenne Twister */
 	init_gen_rand(X.Bind.Def.RndSeed);
-  printf("MDEBUG: XXX \n");
+  //printf("MDEBUG: XXX \n");
 	initial(&(X.Bind));
     sprintf(sdt,"%s_check.dat",X.Bind.Def.CDataFileHead);
     fp=fopen(sdt,"w");

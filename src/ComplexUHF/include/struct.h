@@ -36,6 +36,7 @@ struct DefineList {
     int NVMCCalMode, NLanczosMode;
 
     int Nsite, Ne, Nsize, IterationMax;
+		int TwoSz, Ncond;
     int print;
     int eps_int;
     double eps, mix;
