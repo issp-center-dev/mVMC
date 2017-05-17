@@ -516,8 +516,9 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
     if(iFlgOrbitalGeneral==1){
       if(bufInt[IdxSPGaussLeg] > 1){    //Check NSPGaussLeg
-        fprintf(stderr, "Error: SPGaussLeg (in modpara.def) must be 0 or 1 when orbital is general.\n");
-        info=1;
+        fprintf(stdout, "Warning: SPGaussLeg (in modpara.def) must be 0 or 1 when orbital is general.\n");
+        fprintf(stdout, "         SPGaussLeg set as 1.\n");
+        bufInt[IdxSPGaussLeg]=1;
       }
       else if(bufInt[IdxLanczosMode] !=0){
         fprintf(stderr, "Error: Lanczos mode is not supported when orbital is general.\n");
