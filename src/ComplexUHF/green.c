@@ -19,28 +19,37 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License 
 along with this program. If not, see http://www.gnu.org/licenses/. 
 */
-#include "check.h"
-int check(struct BindStruct *X){
-/*
-    FILE *fp;
-	  int i,j,k,tmp,den,num,tmp_sdim;
-    int cnt_trans,match,cnt_pair;
-    unsigned int u_tmp;
-*/
-    //idim_max
-/*
-	  num=1;
-	  tmp=X->Def.Nsite;
-*/
-	  //X->Check.idim_max=tmp*tmp;
-	  //X->Check.max_mem=X->Check.idim_max*8.0/(pow(10,9))*8;
-	  //printf("MAX DIMENSION idim_max=%d \n",X->Check.idim_max);
-	  //printf("REQUIRED MEMORY  max_mem=%lf GB \n",X->Check.max_mem);
-    //fp = fopen("CHECK_Memory.dat","w");
-	  //fprintf(fp,"MAX DIMENSION idim_max=%d \n",X->Check.idim_max);
-	  //fprintf(fp,"REQUIRED MEMORY  max_mem=%lf GB \n",X->Check.max_mem);
-    //close(fp);
+#include "green.h"
+#include "matrixlapack.h"
+#include "mfmemory.c"
 
-	  return 0;
-}    
-    
+void green(struct BindStruct *X) {
+
+  double complex **R_Mat;
+  int int_i, int_j;
+  int mfint[7], xMsize, Ne;
+
+  //   printf("OK \n");
+
+  xMsize = X->Def.Nsite;
+  Ne = X->Def.Ne;
+
+  c_malloc2(R_Mat, 2 * xMsize, 2 * xMsize);
+
+  for (int_i = 0; int_i < 2 * xMsize; int_i++) {
+    for (int_j = 0; int_j < 2 * xMsize; int_j++) {
+      X->Large.G_old[int_i][int_j] = X->Large.G[int_i][int_j];
+      R_Mat[int_i][int_j] = 0.0;
+    }
+  }
+
+  cmp_MMProd(2 * xMsize, 2 * Ne, X->Large.R_SLT, X->Large.L_SLT, R_Mat);
+
+  for (int_i = 0; int_i < 2 * xMsize; int_i++) {
+    for (int_j = 0; int_j < 2 * xMsize; int_j++) {
+      X->Large.G[int_i][int_j] = R_Mat[int_i][int_j];
+      //fprintf(stdout, "DEBUG: X->Large.G[%d][%d]=%lf, %lf \n", int_i, int_j,creal(X->Large.G[int_i][int_j]), cimag(X->Large.G[int_i][int_j]));
+    }
+  }
+  c_free2(R_Mat, 2 * xMsize, 2 * xMsize);
+}

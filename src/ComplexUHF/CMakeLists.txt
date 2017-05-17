@@ -1,30 +1,23 @@
-cmake_minimum_required(VERSION 2.8.0 FATAL_ERROR)
-project(UHF NONE)
+# include guard
+cmake_minimum_required(VERSION 2.8.0 )
 
-if(CONFIG)
-  message(STATUS "Loading configration: " ${PROJECT_SOURCE_DIR}/config/${CONFIG}.cmake)
-  include(${PROJECT_SOURCE_DIR}/config/${CONFIG}.cmake)
-endif(CONFIG)
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Type of build" FORCE)
-endif(NOT CMAKE_BUILD_TYPE)
-message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
+if(${CMAKE_PROJECT_NAME} STREQUAL "Project")
+  message(FATAL_ERROR "cmake should be executed not for 'src' subdirectory, but for the top directory of UHF.")
+endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 
-find_package(OpenMP)
-if(OPENMP_FOUND)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-endif(OPENMP_FOUND)
+include_directories(include)
 
-find_package(MPI)
-if(MPI_FOUND)
-  include_directories(${MPI_C_INCLUDE_PATH})
-  add_definitions(-D_mpi_use)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MPI_C_LINK_FLAGS}")
-endif(MPI_FOUND)
+set(SOURCES_UHF
+        UHFmain.c output.c cal_energy.c green.c makeham.c diag.c initial.c matrixlapack.c readdef.c
+ )
 
-find_package(LAPACK)
-if(LAPACK_FOUND)
-  add_definitions(-D_lapack)
-endif(LAPACK_FOUND)
+include_directories(../sfmt)
+add_definitions(-DMEXP=19937)
 
-add_subdirectory(src)
+set(SOURCES_sfmt
+        ../sfmt/SFMT.c   
+ )
+
+add_executable(UHF ${SOURCES_UHF} ${SOURCES_sfmt})
+target_link_libraries(UHF ${LAPACK_LIBRARIES} m)
+

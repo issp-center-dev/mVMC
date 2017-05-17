@@ -34,7 +34,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "mfmemory.c"
 #include "matrixlapack.h"
 #include "readdef.h"
-#include "check.h"
 #include "initial.h"
 #include "makeham.h"
 #include "diag.h"
@@ -96,7 +95,6 @@ int main(int argc, char* argv[]){
       exit(1);
     };
     
-    check(&(X.Bind)); 
     /*LARGE VECTORS ARE ALLOCATED*/
 #include "xsetmem_large.c"
     /*---------------------------*/
@@ -116,7 +114,7 @@ int main(int argc, char* argv[]){
 
 	/* initialize Mersenne Twister */
 	init_gen_rand(X.Bind.Def.RndSeed);
-  printf("MDEBUG: XXX \n");
+  //printf("MDEBUG: XXX \n");
 	initial(&(X.Bind));
     sprintf(sdt,"%s_check.dat",X.Bind.Def.CDataFileHead);
     fp=fopen(sdt,"w");
