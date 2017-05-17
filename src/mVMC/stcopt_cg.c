@@ -32,6 +32,7 @@ inline double xdot(const int n, const double * const p, const double * const q) 
   }
   return z;
 }
+extern inline double xdot(const int n, const double * const p, const double * const q);
 
 #define MVMC_SRCG_REAL
 #include "stcopt_cg_impl.c"
