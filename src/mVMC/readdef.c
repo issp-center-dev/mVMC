@@ -2105,8 +2105,7 @@ int GetInfoInterAll(FILE *fp, int **ArrayIdx, double complex *ArrayValue,
 
     ArrayValue[idx] = dReValue + I * dImValue;
 
-    if (!((x1 == x3 || x5 == x7) ||
-          (x1 == x5 || x3 == x7))) {
+    if (TwoSz != -1 && !(x1 == x3 && x5 == x7)) {
       fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported for InterAll.\n");
       info = ReadDefFileError(defname);
       break;
