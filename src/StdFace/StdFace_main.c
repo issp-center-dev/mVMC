@@ -1411,7 +1411,7 @@ static void CheckModPara(struct StdIntList *StdI)
 
   StdFace_PrintVal_i("RndSeed", &StdI->RndSeed, 123456789);
   StdFace_PrintVal_i("NSplitSize", &StdI->NSplitSize, 1);
-  StdFace_PrintVal_i("NStore", &StdI->NStore, 0);
+  StdFace_PrintVal_i("NStore", &StdI->NStore, 1);
   StdFace_PrintVal_i("NSRCG", &StdI->NSRCG, 0);
 
   StdFace_PrintVal_d("DSROptRedCut", &StdI->DSROptRedCut, 0.001);

@@ -54,9 +54,9 @@ We explain each keywords as follows:
 \item \verb|model|
 
   {\bf Type :} String (Choose from \verb|"Fermion Hubbard"|, \verb|"Spin"|, \verb|"Kondo Lattice"|
-  %,\verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, \verb|"Kondo LatticeGC"|
+  ,\verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, \verb|"Kondo LatticeGC"|
   )
-%\footnote{GC=Grand Canonical}
+\footnote{GC=Grand Canonical}
 
 {\bf Description :} The target model is specified with this parameter;
 \verb|"Fermion Hubbard"| denotes
@@ -87,13 +87,15 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 \right\}.
 \label{fml4_1_kondo}
 \end{align}
-%\verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, and \verb|"Kondo LatticeGC"|
-%indicate 
-%grand canonical ensemble of the Fermion in the Hubbard model [Eqn. (\ref{fml4_1_hubbard})],
-%grand canonical ensemble in the Spin model [Eqn. (\ref{fml4_1_spin})],
-%and
-%grand canonical ensemble in Kondo lattice model [Eqn. (\ref{fml4_1_kondo})],
-%respectively.
+\verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, and \verb|"Kondo LatticeGC"|
+indicate 
+the $S_z$-unconserved Fermion in the Hubbard model [Eqn. (\ref{fml4_1_hubbard})],
+the $S_z$-unconserved Spin model [Eqn. (\ref{fml4_1_spin})],
+and
+the $S_z$-unconserved Kondo lattice model [Eqn. (\ref{fml4_1_kondo})],
+respectively.
+Note: Although these flags has a word ``GC''(=grandcanonical),
+the number of electrons are conserved in these system. 
 
 \item \verb|lattice|
 
@@ -526,18 +528,18 @@ If both \verb|J'| and the set of the couplings (\verb|J'x, J'y, J'z|),
 
 \item \verb|phase0|, \verb|phase1|
 
-  {\bf Type :} Double complex (\verb|1.0| as defaults)
+  {\bf Type :} Double (\verb|0.0| as defaults)
   
   {\bf Description :}
-  We can specify the phase for the prefactor for the hopping through the cell boundary
-  with these parameter.
+  We can specify the phase for the hopping through the cell boundary
+  with these parameter (unit: degree).
   These fuctor for the $\vec{a}_0$ direction and the $\vec{a}_1$ direction can be specified independently.
   For the one-dimensional system, only \verb|phase0| can be used.
   For example, a fopping from $i$-th site to $j$-th site through the cell boundary with the positive direction
   becomes as 
   \begin{align}
-    \exp(i \times {\rm phase0}) \times t {\hat c}_{j \sigma}^\dagger {\hat c}_{i \sigma}
-    + \exp(-i \times {\rm phase0}) \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{j \sigma}
+    \exp(i \times {\rm phase0}\times\pi/180) \times t {\hat c}_{j \sigma}^\dagger {\hat c}_{i \sigma}
+    + \exp(-i \times {\rm phase0}\times\pi/180) \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{j \sigma}
   \end{align}
 
 \end{itemize}
@@ -579,20 +581,25 @@ If both \verb|J'| and the set of the couplings (\verb|J'x, J'y, J'z|),
 
  \item  \verb|NSPGaussLeg|
 
-{\bf Type :} {int-type (Positive integer, default value: 1)}
+{\bf Type :} int-type (Positive integer, default value is 8 for \verb|2Sz=0|)
 
 {\bf Description :} The mesh number for the Gauss-legendre quadrature about $\beta$ integration ($S_y$ rotation) for the spin quantum-number projection in actual numerical calculation.
 
  \item  \verb|NSPStot|
 
-{\bf Type :} int-type ( greater than 0,  default value: 0)
+{\bf Type :} int-type ( greater equal 0,  default value is 0 for \verb|2Sz=0|)
 
-{\bf Description :}   The spin quantum-number. 
+{\bf Description :} The total spin quantum-number. 
+
+ \item  \verb|2Sz|
+
+{\bf Type :} int-type ( greater equal 0,  default value is 0)
+
+{\bf Description :} The spin quantum-number $S_z$. 
 
 \item  \verb|NMPTrans|
 
-  {\bf Type :} int-type (Positive integer.
-  As a defalut, The number of translational vectors in the sublattice)
+  {\bf Type :} int-type (Positive integer. Default \verb|1|)
 
   {\bf Description :} 
   The number of the momentum and lattice translational quantum-number projection.
@@ -679,7 +686,7 @@ This speeds up calculation but increases the amount of memory usage from $O(N_\t
   
 \item  \verb|ComplexType|
   
-  {\bf Type :} int-type (\verb|0| or \verb|1|. \verb|0| as a default)
+  {\bf Type :} int-type (\verb|0| or \verb|1|. Default value is \verb|0| for the $S_z$-conserved system and \verb|1| for the $S_z$-unconserved system.)
 
   {\bf Description :}
   If it is \verb|0|, only the real part of the variational parameters are optimized.
