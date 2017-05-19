@@ -46,7 +46,7 @@ G_{ij\sigma\sigma'}(x)=\frac{\langle \psi | c_{i\sigma}^{\dag} c_{j\sigma'} | \p
 \section{{パフィアン行列式とスレータ行列式の関係}}
 \label{sec:PuffAndSlater}
 このセクションでは、パフィアン行列式とスレータ行列式の関係および$f_{ij}$の特異値分解の意味について説明します。
-\subsection{$f_{ij}$と$\Phi_{in\sigma}$の関係}
+\subsection{$f_{ij}$と$\Phi_{in\sigma}$の関係~(スピン反平行の場合)}
 パフィアンスレーター行列式(多変数変分モンテカルロ法の一体部分)は
 \begin{equation}
 |\phi_{\rm Pf}\rangle=\Big(\sum_{i,j=1}^{N_{s}}f_{ij}c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)^{N_{\rm e}/2}|0\rangle,
@@ -94,6 +94,21 @@ f_{ij}=\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}.
 として表されることが分かります。なお、この形式はシングルスレーター行列式で与えられる$f_{ij}$の表式の一つであり、
 実際にはペアを組む自由度(どの$\mu(n)$を選ぶか)およびゲージの自由度(すなわち$\Phi$の符号の自由度)に依存します。
 この自由度の多さが$f_{ij}$の冗長性につながっています。
+
+\subsection{$F_{IJ}$と$\Phi_{In}$の関係~(スピン平行も含めた場合)}
+以下の同種スピンのペアリングも考えたパフィアン波動関数と
+スレーター波動関数を考えます(ここで$I,J$はスピン自由度も含めたサイトのインデックス).
+\begin{align}
+|\phi_{\rm Pf}\rangle&=\Big(\sum_{I,J=1}^{2N_{s}}f_{IJ}c_{I}^{\dagger}c_{J}^{\dagger}\Big)^{N_{\rm e}/2}|0\rangle, \\
+|\phi_{\rm SL}\rangle&=\Big(\prod_{n=1}^{N_{e}}\psi_{n}^{\dagger}\Big)|0\rangle,~~\psi_{n}^{\dagger}=\sum_{I=1}^{2N_{s}}\Phi_{In}c^{\dagger}_{I}.
+\end{align}
+スピン反平行の場合とほぼ同様の議論を用いることで、
+\begin{align}
+F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{In}\Phi_{Jn+1}-\Phi_{Jn}\Phi_{In+1}\Big).
+\end{align}
+の関係を示すことができます。
+これはスピン反平行の場合にもそのまま適用できるので、
+mVMC ver1.0ではこの表式を使用しています。
 
 \subsection{$f_{ij}$の特異値分解}
 行列$F$, $\Phi_{\uparrow}$, $\Phi_{\downarrow}$,$\Sigma$を
