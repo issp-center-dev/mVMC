@@ -33,16 +33,17 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 void OutputTime(int step) {
   time_t tx;
-  double pHop,pEx;
+  double pHop,pEx,pLSF;
 
   tx = time(NULL);
   if(step==0) {
-    fprintf(FileTime, "%05d  acc_hop acc_ex  n_hop    n_ex     : %s", step, ctime(&tx));
+    fprintf(FileTime, "%05d  acc_hop acc_ex  acc_lsf n_hop    n_ex      n_lsf   : %s", step, ctime(&tx));
   } else {
     pHop = (Counter[0] == 0) ? 0.0 : (double)Counter[1] / (double)Counter[0];
     pEx  = (Counter[2] == 0) ? 0.0 : (double)Counter[3] / (double)Counter[2];
-    fprintf(FileTime, "%05d  %.5lf %.5lf %-8d %-8d : %s", step, pHop,pEx,
-            Counter[0], Counter[2], ctime(&tx));
+    pLSF = (Counter[4] == 0) ? 0.0 : (double)Counter[5] / (double)Counter[4];
+    fprintf(FileTime, "%05d  %.5lf %.5lf %.5lf %-8d %-8d  %-8d: %s", step, pHop,pEx,pLSF,
+            Counter[0], Counter[2],Counter[4], ctime(&tx));
   }
 }
 
@@ -101,6 +102,11 @@ void OutputTimerParaOpt() {
   fprintf(fp,"      CalculateNewPfMTwo2  [66] %12.5lf\n",Timer[66]);
   fprintf(fp,"      CalculateLogIP       [67] %12.5lf\n",Timer[67]);
   fprintf(fp,"      UpdateMAllTwo        [68] %12.5lf\n",Timer[68]);
+  fprintf(fp,"    lspinflip update       [36] %12.5lf\n",Timer[36]);
+  fprintf(fp,"      UpdateProjCnt       [600] %12.5lf\n",Timer[600]);
+  fprintf(fp,"      CalculateNewPfMTwo2 [601] %12.5lf\n",Timer[601]);
+  fprintf(fp,"      CalculateLogIP      [602] %12.5lf\n",Timer[602]);
+  fprintf(fp,"      UpdateMAllTwo       [603] %12.5lf\n",Timer[603]);
   fprintf(fp,"    recal PfM and InvM     [34] %12.5lf\n",Timer[34]);
   fprintf(fp,"    save electron config   [35] %12.5lf\n",Timer[35]);
   fprintf(fp,"  VMCMainCal                [4] %12.5lf\n",Timer[4]);
@@ -157,6 +163,11 @@ void OutputTimerPhysCal() {
   fprintf(fp,"      CalculateNewPfMTwo2  [66] %12.5lf\n",Timer[66]);
   fprintf(fp,"      CalculateLogIP       [67] %12.5lf\n",Timer[67]);
   fprintf(fp,"      UpdateMAllTwo        [68] %12.5lf\n",Timer[68]);
+  fprintf(fp,"    lspinflip update       [36] %12.5lf\n",Timer[36]);
+  fprintf(fp,"      UpdateProjCnt       [600] %12.5lf\n",Timer[600]);
+  fprintf(fp,"      CalculateNewPfMTwo2 [601] %12.5lf\n",Timer[601]);
+  fprintf(fp,"      CalculateLogIP      [602] %12.5lf\n",Timer[602]);
+  fprintf(fp,"      UpdateMAllTwo       [603] %12.5lf\n",Timer[603]);
   fprintf(fp,"    recal PfM and InvM     [34] %12.5lf\n",Timer[34]);
   fprintf(fp,"    save electron config   [35] %12.5lf\n",Timer[35]);
   fprintf(fp,"  VMCMainCal                [4] %12.5lf\n",Timer[4]);

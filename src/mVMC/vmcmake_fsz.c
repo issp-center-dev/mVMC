@@ -34,7 +34,6 @@ void copyToBurnSample_fsz(const int *eleIdx, const int *eleCfg, const int *eleNu
 void saveEleConfig_fsz(const int sample, const double complex logIp,
                    const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,const int *eleSpn);
 //void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum);
-//void ReduceCounter(MPI_Comm comm);
 void makeCandidate_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn);
 void makeCandidate_hopping_csz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
@@ -72,6 +71,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
   int qpStart,qpEnd;
   int rejectFlag;
   int rank,size;
+  int flag_hop;
   int tmp_mi,tmp_ri,tmp_num;//fsz DEBUG
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
@@ -115,7 +115,10 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
   nOutStep = (BurnFlag==0) ? NVMCWarmUp+NVMCSample : NVMCSample+1;
   nInStep = NVMCInterval * Nsite;
 
-  for(i=0;i<4;i++) Counter[i]=0;  /* reset counter */
+  for(i=0;i<Counter_max;i++) Counter[i]=0;  /* reset counter */
+  // Counter[0] ->  Hopping  all,      Counter[1] ->  Hopping accept
+  // Counter[2] ->  exchange all,      Counter[3] ->  exchange accept
+  // Counter[4] ->  localspinflip all, Counter[5] ->  localspin flip accept
 
   for(outStep=0;outStep<nOutStep;outStep++) {
     for(inStep=0;inStep<nInStep;inStep++) {
@@ -130,20 +133,23 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
       updateType = getUpdateType(NExUpdatePath);
 
       if(updateType==HOPPING) { /* hopping */
-        Counter[0]++;
 
         StartTimer(31);
+        flag_hop = 0;
         if(TwoSz==-1){//total spin is not conserved
-///[s] MDEBUG
           if(genrand_real2()<0.5){ // this ratio can be changed
+            flag_hop = 1;
+            Counter[0]++;
             makeCandidate_hopping_fsz(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
           }else{
+            Counter[4]++;
             makeCandidate_LocalSpinFlip_conduction(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
           } 
-///[e] MDEBUG
         }else{ //csz : t=s
+          flag_hop = 1;
+          Counter[0]++;
           makeCandidate_hopping_csz(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
         } 
@@ -152,7 +158,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
         if(rejectFlag) continue; 
 
         StartTimer(32);
-          StartTimer(60);
+        StartTimer(60);
         /* The mi-th electron with spin s hops to site rj with t */
         updateEleConfig_fsz(mi,ri,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         if(s==t){
@@ -185,7 +191,11 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
           logIpOld = logIpNew;
           nAccept++;
-          Counter[1]++;
+          if(flag_hop==1){// hopping
+            Counter[1]++;
+          }else{// local spin flip
+            Counter[5]++;
+          }
         } else { /* reject */ //(ri,s) <- (rj,t)
           revertEleConfig_fsz(mi,ri,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         }
@@ -199,7 +209,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
         StopTimer(31);
         if(rejectFlag) continue;
 
-        StartTimer(33);
+        StartTimer(33); //LSF
         StartTimer(65);
 
         /* The mi-th electron with spin s exchanges with the electron on site rj with spin 1-s */
@@ -245,7 +255,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
         }
         StopTimer(33);
       }else if (updateType==LOCALSPINFLIP){
-        Counter[0]++;
+        Counter[4]++;
 
         StartTimer(31);
         makeCandidate_LocalSpinFlip_localspin(&mi, &ri, &rj, &s,&t, &rejectFlag,
@@ -254,32 +264,23 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
 
         if(rejectFlag) continue; 
 
-        StartTimer(32);
-        StartTimer(60);
+        StartTimer(36);
+        StartTimer(600);
         /* The mi-th electron with spin s hops to site rj with t */
         // note we assume t=1-s,rj = ri
         //
-        //printf("\n");
-        //printf("MDEBUG: mi=%d: ri=%d rj=%d s=%d t=%d\n",mi,ri,rj,s,t);
-        //printf("MDEBUG: mi=%d: TmeEleIx=%d TmpEleSpn=%d\n",mi,TmpEleIdx[mi],TmpEleSpn[mi]);
         updateEleConfig_fsz(mi,ri,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
-        //printf("MDEBUG: mi=%d: TmeEleIx=%d TmpEleSpn=%d\n",mi,TmpEleIdx[mi],TmpEleSpn[mi]);
-        //printf("\n");
-        //if(s==t){  // this part shuld not be used
-        //  UpdateProjCnt(ri,rj,s,projCntNew,TmpEleProjCnt,TmpEleNum);
-        //}else{
         UpdateProjCnt_fsz(ri,rj,s,t,projCntNew,TmpEleProjCnt,TmpEleNum);
-        //}   
-        StopTimer(60);
-        StartTimer(61);
+        StopTimer(600);
+        StartTimer(601);
         CalculateNewPfM2_fsz(mi,t,pfMNew,TmpEleIdx,TmpEleSpn,qpStart,qpEnd); // fsz: s->t 
-        StopTimer(61);
+        StopTimer(610);
 
-        StartTimer(62);
+        StartTimer(602);
         /* calculate inner product <phi|L|x> */
         //logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
         logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
-        StopTimer(62);
+        StopTimer(602);
 
         /* Metroplis */
         x = LogProjRatio(projCntNew,TmpEleProjCnt);
@@ -293,18 +294,18 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
         //printf("\n");
         if(w > genrand_real2()) { /* accept */
             // UpdateMAll will change SlaterElm, InvM (including PfM)
-            StartTimer(63);
+            StartTimer(603);
             UpdateMAll_fsz(mi,t,TmpEleIdx,TmpEleSpn,qpStart,qpEnd); // fsz : s->t
-            StopTimer(63);
+            StopTimer(603);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
           logIpOld = logIpNew;
           nAccept++;
-          Counter[1]++;
+          Counter[5]++;
         } else { /* reject */ //(ri,s) <- (rj,t)
           revertEleConfig_fsz(mi,ri,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         }
-        StopTimer(32);
+        StopTimer(36);
       }
 
       if(nAccept>Nsite) {
@@ -502,24 +503,6 @@ void saveEleConfig_fsz(const int sample, const double complex logIp,
 
 //  return;
 //}
-/*
-void ReduceCounter(MPI_Comm comm) {
-  #ifdef _mpi_use
-  int n=4;
-  int recv[n];
-  int i;
-  int rank,size;
-  MPI_Comm_size(comm,&size);
-  MPI_Comm_rank(comm,&rank);
-
-  MPI_Allreduce(Counter,recv,n,MPI_INT,MPI_SUM,comm);
-  if(rank==0) {
-    for(i=0;i<n;i++) Counter[i] = recv[i];
-  }
-  #endif
-  return;
-}
-*/
 
 // mi (ri,s) -> mi (rj,t)
 void makeCandidate_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,

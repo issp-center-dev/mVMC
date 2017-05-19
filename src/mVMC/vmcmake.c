@@ -82,7 +82,7 @@ void VMCMakeSample(MPI_Comm comm) {
   nOutStep = (BurnFlag==0) ? NVMCWarmUp+NVMCSample : NVMCSample+1;
   nInStep = NVMCInterval * Nsite;
 
-  for(i=0;i<4;i++) Counter[i]=0;  /* reset counter */
+  for(i=0;i<Counter_max;i++) Counter[i]=0;  /* reset counter */
 
   for(outStep=0;outStep<nOutStep;outStep++) {
     for(inStep=0;inStep<nInStep;inStep++) {
@@ -363,7 +363,7 @@ void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum) {
 
 void ReduceCounter(MPI_Comm comm) {
   #ifdef _mpi_use
-  int n=4;
+  int n=Counter_max;
   int recv[n];
   int i;
   int rank,size;
@@ -546,7 +546,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
     nOutStep = (BurnFlag == 0) ? NVMCWarmUp + NVMCSample : NVMCSample + 1;
     nInStep = NVMCInterval * Nsite;
 
-    for (i = 0; i < 4; i++) Counter[i] = 0;  /* reset counter */
+    for (i = 0; i < Counter_max; i++) Counter[i] = 0;  /* reset counter */
 
     for (outStep = 0; outStep < nOutStep; outStep++) {
         for (inStep = 0; inStep < nInStep; inStep++) {

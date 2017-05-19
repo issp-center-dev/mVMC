@@ -84,7 +84,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
   nOutStep = (BurnFlag == 0) ? NVMCWarmUp + NVMCSample : NVMCSample + 1;
   nInStep = NVMCInterval * Nsite;
 
-  for (i = 0; i < 4; i++) Counter[i] = 0;  /* reset counter */
+  for (i = 0; i < Counter_max; i++) Counter[i] = 0;  /* reset counter */
 
   for (outStep = 0; outStep < nOutStep; outStep++) {
     for (inStep = 0; inStep < nInStep; inStep++) {
@@ -349,7 +349,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   nOutStep = (BurnFlag == 0) ? NVMCWarmUp + NVMCSample : NVMCSample + 1;
   nInStep = NVMCInterval * Nsite;
 
-  for (i = 0; i < 4; i++) Counter[i] = 0;  /* reset counter */
+  for (i = 0; i < Counter_max; i++) Counter[i] = 0;  /* reset counter */
 
   for (outStep = 0; outStep < nOutStep; outStep++) {
     for (inStep = 0; inStep < nInStep; inStep++) {

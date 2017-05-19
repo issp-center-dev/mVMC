@@ -312,8 +312,8 @@ FILE *FileLSCisAjsCktAlt;
 /* FILE *FileOpt;    /\* zqp_opt *\/ */
 
 /***** HitachiTimer *****/
-const int NTimer=100;
-double Timer[100], TimerStart[100];
+const int NTimer=1000;
+double Timer[1000], TimerStart[1000];
 
 /* flag for  SROptimization*/
 int SRFlag; /* 0: periodic, 1: Diagonalization */
@@ -325,7 +325,9 @@ int NThread;
 int LapackLWork;
 
 /***** counter for vmcMake *****/
-int Counter[4] = {0,0,0,0};
+int Counter[6] = {0,0,0,0,0,0};
+int Counter_max = 6;
 /* 0: hopping, 1: hopping accept, 2: exchange try, 3: exchange accept */
+/* 4: local spin flip try, 5 local spin flip accept*/
 
 #endif /*  _INCLUDE_GLOBAL */
