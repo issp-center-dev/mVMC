@@ -337,7 +337,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   MPI_Comm_rank(comm_parent, &rank);
 
   for(step=0;step<NSROptItrStep;step++) {
-    //printf("0 DUBUG make:step=%d \n",step);
+    //printf("0 DUBUG make:step=%d TwoSz=%d\n",step,TwoSz);
     if(rank==0){
       OutputTime(step);
       if(NSROptItrStep<20){

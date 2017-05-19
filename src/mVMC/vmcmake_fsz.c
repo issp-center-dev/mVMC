@@ -133,7 +133,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
       updateType = getUpdateType(NExUpdatePath);
 
       if(updateType==HOPPING) { /* hopping */
-
+        
         StartTimer(31);
         flag_hop = 0;
         if(TwoSz==-1){//total spin is not conserved
@@ -683,6 +683,11 @@ void makeCandidate_LocalSpinFlip_conduction(int *mi_, int *ri_, int *rj_, int *s
     //t  = (genrand_real2()<0.5) ? s : 1-s; //fsz
     ri = eleIdx[mi];  //fsz
     rj = ri;  //fsz // note ! we assume local spin
+    if(icnt> icnt_max){ // all doublons can not be accepted
+      flag = 1; // TRUE
+      break;
+    }
+    icnt+=1;
   } while (LocSpn[ri] == 1 || eleCfg[ri+t*Nsite] != -1);
 
   //if(t==s) flag=1;
