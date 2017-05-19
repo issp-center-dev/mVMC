@@ -385,7 +385,7 @@ static void PrintOrb(struct StdIntList *StdI) {
  *
  * @author Mitsuaki Kawamura (The University of Tokyo)
  */
-static void PrintOrbGC(struct StdIntList *StdI) {
+static void PrintOrbPara(struct StdIntList *StdI) {
   FILE *fp;
   int isite, jsite, NOrbGC, iOrbGC, isite1, jsite1, iorb;
   int **OrbGC, **AntiOrbGC;
@@ -436,7 +436,7 @@ static void PrintOrbGC(struct StdIntList *StdI) {
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
 
-  fp = fopen("orbitalidxgc.def", "w");
+  fp = fopen("orbitalidxpara.def", "w");
   fprintf(fp, "=============================================\n");
   fprintf(fp, "NOrbitalIdx %10d\n", NOrbGC);
   fprintf(fp, "ComplexType %10d\n", StdI->ComplexType);
@@ -458,7 +458,7 @@ static void PrintOrbGC(struct StdIntList *StdI) {
 
   fflush(fp);
   fclose(fp);
-  fprintf(stdout, "    orbitalidxgc.def is written.\n");
+  fprintf(stdout, "    orbitalidxpara.def is written.\n");
 
   for (isite = 0; isite < StdI->nsite; isite++) {
     free(OrbGC[isite]);
@@ -466,7 +466,7 @@ static void PrintOrbGC(struct StdIntList *StdI) {
   }
   free(OrbGC);
   free(AntiOrbGC);
-}/*static void PrintOrbGC*/
+}/*static void PrintOrbPara*/
 /**
  * Output .def file for Gutzwiller
  *
@@ -988,7 +988,8 @@ static void PrintNamelist(struct StdIntList *StdI){
   fprintf(                         fp, "      Gutzwiller  gutzwilleridx.def\n");
   fprintf(                         fp, "         Jastrow  jastrowidx.def\n");
   fprintf(                         fp, "         Orbital  orbitalidx.def\n");
-  if (StdI->lGC == 1) fprintf(     fp, " OrbitalParallel  orbitalidxgc.def\n");
+  if (StdI->lGC == 1 || (StdI->Sz2 != 0 && StdI->Sz2 != StdI->NaN_i))
+    fprintf(fp, " OrbitalParallel  orbitalidxgc.def\n");
   fprintf(                         fp, "        TransSym  qptransidx.def\n");
 #endif
   
@@ -2126,7 +2127,7 @@ void StdFace_main(char *fname  /**< [in] Input file name for the standard mode *
   StdFace_Proj(&StdI);
   PrintJastrow(&StdI);
   if(StdI.lGC == 1 || (StdI.Sz2 != 0 && StdI.Sz2 != StdI.NaN_i) )
-    PrintOrbGC(&StdI);
+    PrintOrbPara(&StdI);
   PrintGutzwiller(&StdI);
   PrintOrb(&StdI);
 #endif
