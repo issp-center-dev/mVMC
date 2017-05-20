@@ -325,7 +325,7 @@ double complex GreenFunc2_fsz2(const int ri, const int rj, const int rk, const i
   z = ProjRatio(projCntNew,eleProjCnt);
 
   /* calculate Pfaffian */
-  CalculateNewPfMTwo_fsz(ml, v, mj, t, pfMNew, eleIdx,eleSpn, 0, NQPFull, bufV); // ml -> rk,u; mj -> ri,s
+  CalculateNewPfMTwo_fsz(ml, u, mj, s, pfMNew, eleIdx,eleSpn, 0, NQPFull, bufV); // ml -> rk,u; mj -> ri,s
   z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
   /* revert hopping */

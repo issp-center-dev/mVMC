@@ -183,8 +183,13 @@ double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, co
       rl = InterAll[idx][6];
       v  = InterAll[idx][7];
       
-      myEnergy += ParaInterAll[idx]
-        * GreenFunc2_fsz2(ri,rj,rk,rl,s,t,u,v,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,myProjCntNew,myBuffer);
+      if(s==t && u==v){
+        myEnergy += ParaInterAll[idx]
+          * GreenFunc2_fsz(ri,rj,rk,rl,s,u,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,myProjCntNew,myBuffer);
+      }else{
+        myEnergy += ParaInterAll[idx]
+          * GreenFunc2_fsz2(ri,rj,rk,rl,s,t,u,v,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,myProjCntNew,myBuffer);
+      } 
     }
 
     #pragma omp master
