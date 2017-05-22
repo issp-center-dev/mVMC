@@ -112,16 +112,6 @@ If you keep this PATH, you should write above in \verb|~/.bashrc|
 
 \subsection{Using \texttt{cmake}}
 
-\begin{screen}
-\Large 
-{\bf Tips}
-\normalsize\\
-Before using cmake for sekirei, you must type 
-\begin{verbatim}
-source /home/issp/materiapps/tool/env.sh
-\end{verbatim}
-\end{screen}
-
 We can compile mVMC as
 \begin{verbatim}
 cd $HOME/build/mvmc
@@ -165,6 +155,11 @@ repeat the above operations when we change the compiler.
 \Large 
 {\bf Tips}
 \normalsize\\
+Before using cmake for sekirei, you must type 
+\begin{verbatim}
+source /home/issp/materiapps/tool/env.sh
+\end{verbatim}
+
 When we type the following in sekirei, 
 \begin{verbatim}
 cmake -DCONFIG=sekirei ../ -DUSE_SCALAPACK=ON ,

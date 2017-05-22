@@ -43,7 +43,9 @@ UHFで指定するファイルは以下のファイルです。
 \item{\verb|Hund|}
 \item{\verb|PairHop|}
 \item{\verb|Exchange|}
-\item{\verb|Orbital|}
+\item{\verb|Orbital|/\verb|OrbitalAntiParallel|}
+\item{\verb|OrbitalParallel|}
+\item{\verb|OrbitalGeneral|}
 \item{\verb|Initial|}
 \end{itemize}
 基本的にはmVMCと同じファイルとなりますが、
@@ -153,8 +155,8 @@ $ UHF namelist.def
 \end{screen}
 \end{minipage}
 
-\item{zvo\_orbital\_opt.dat:} スレータ行列式から生成した$f_{ij}$。\verb|InOrbital|ファイルと同じ形式のファイルが出力されます。
-$f_{ij}$が\verb|Orbital|ファイルを参照し計算され、同種のパラメータについては平均化した値が採用されます。
+\item{zvo\_orbital\_opt.dat:} スレータ行列式から生成した$f_{ij}$。\verb|InOrbital|,\verb|InOrbitalAntiParallel|, \verb|InOrbitalParallel|,\verb|InOrbitalAntiGeneral|ファイルと同じ形式のファイルが出力されます。
+$f_{ij}$が\verb|Orbital|, \verb|OrbitalAntiParallel|, \verb|OrbitalParallel|,\verb|OrbitalAntiGeneral|ファイルを参照し計算され、同種のパラメータについては平均化した値が採用されます。
 
 \end{itemize}
 

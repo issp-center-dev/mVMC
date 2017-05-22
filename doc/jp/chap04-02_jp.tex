@@ -524,7 +524,6 @@ NlocalSpin     6
 \begin{align}
 {\cal H}_T =-\sum_{ij\sigma_1\sigma2} t_{ij\sigma_1\sigma2}c_{i\sigma_1}^{\dag}c_{j\sigma_2}
 \end{align}
-{なお、ver. 1.0では$S_z=0$の場合の計算のみ対応しているため、$\sigma_1=\sigma_2$となるようにしてください。}
 
 以下にファイル例を記載します。\\
 \begin{minipage}{12.5cm}
@@ -624,9 +623,6 @@ NTransfer      24
 {\cal H}_{I}=\sum_{i,j,k,l}\sum_{\sigma_1,\sigma_2, \sigma_3, \sigma_4}
 I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}
 \end{equation}
-{なお、ver. 1.0では$S_z=0$の場合の計算のみ対応しているため、$\sigma_1=\sigma_2$、$\sigma_3=\sigma_4$となるようにしてください。}
-{また、スピン系には未対応です。}
-
 以下にファイル例を記載します。\\
 \begin{minipage}{12.5cm}
 \begin{screen}
@@ -2223,22 +2219,22 @@ NCisAjsCktAltDC        576
  \begin{table*}[h!]
 \begin{center}
   \begin{tabular}{|ll|} \hline
-           Name     & Details for corresponding files       \\   \hline\hline
-           ***\_opt.dat       &  All optimized parameters.       \\ \hline 
+           ファイル名     & 対応するファイルの中身       \\   \hline\hline
+           ***\_opt.dat       &  最適化された全パラメータ.       \\ \hline 
            %%%%%%%%%%%%%%%%%%  
-           ***\_gutzwiller\_opt.dat       &   Optimized gutzwiller factors.  \\
-           ***\_jastrow\_opt.dat        &  Optimized jastrow factors.         \\ 
-           ***\_doublonHolon2site\_opt.dat  &   Optimized 2-site doublon-holon correlation factors.  \\  
-           ***\_doublonHolon4site\_opt.dat  &   Optimized 4-site doublon-holon correlation factors. \\  
-           ***\_orbital\_opt.dat  &   Optimized pair orbital factors. \\  \hline
-           xxx\_out\_yyy.dat &  Energy and deviation.\\ 
-           xxx\_var\_yyy.dat &  Progress information for optimizing variational parameters.\\  \hline
-           xxx\_CalcTimer.dat & Computation time for each processes.\\  
-           xxx\_time\_zzz.dat & Progress information for MonteCalro samplings.\\  \hline
+           ***\_gutzwiller\_opt.dat       &   最適化されたGutzwiller因子.  \\
+           ***\_jastrow\_opt.dat        &  最適化されたJastrow因子.         \\ 
+           ***\_doublonHolon2site\_opt.dat  &   最適化された2サイトダブロン-ホロン相関因子.  \\  
+           ***\_doublonHolon4site\_opt.dat  &   最適化された4サイトダブロン-ホロン相関因子. \\  
+           ***\_orbital\_opt.dat  &   最適化されたペア軌道因子. \\  \hline
+           xxx\_out\_yyy.dat &  エネルギーとその分散.\\ 
+           xxx\_var\_yyy.dat &  パラメータ最適化過程の情報.\\  \hline
+           xxx\_CalcTimer.dat & 各プロセスに対する計算時間に関する情報.\\  
+           xxx\_time\_zzz.dat & モンテカルロサンプリングの過程に関する情報.\\  \hline
            \hline
            %%%%%%%%%%%%%%%%%%
-           xxx\_cisajs\_yyy.dat & One body Green's functions.\\
-           xxx\_cisajscktalt\_yyy.dat & Correlation functions.\\
+           xxx\_cisajs\_yyy.dat & 一体グリーン関数.\\
+           xxx\_cisajscktalt\_yyy.dat & 二体グリーン関数.\\
 \hline
   \end{tabular}
 \end{center}

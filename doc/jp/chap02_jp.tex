@@ -111,17 +111,6 @@ $ make mvmc
 
 \subsection{cmakeを使う方法}
 
-\begin{screen}
-\Large 
-{\bf Tips}
-\normalsize\\
-sekirei で cmake を利用するには
-\begin{verbatim}
-source /home/issp/materiapps/tool/env.sh
-\end{verbatim}
-をあらかじめ実行する必要があります。
-\end{screen}
-
 mVMCを展開したディレクトリのパスを\$PathTomvmc、ビルドディレクトリを\$HOME/build/mvmc (任意の場所を指定可能)とした場合に、
 \begin{verbatim}
 cd $HOME/build/mvmc
@@ -156,7 +145,13 @@ make
 \Large 
 {\bf Tips}
 \normalsize\\
-sekirei で ScaLAPACK を利用するには
+sekirei で cmake を利用するには
+\begin{verbatim}
+source /home/issp/materiapps/tool/env.sh
+\end{verbatim}
+をあらかじめ実行する必要があります。
+
+またScaLAPACK を利用するには
 \begin{verbatim}
 cmake -DCONFIG=sekirei ../ -DUSE_SCALAPACK=ON
 \end{verbatim}
