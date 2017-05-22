@@ -86,7 +86,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
     makeInitialSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn,
                       qpStart,qpEnd,comm);
 //DEBUG
-    CheckEleConfig_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn,comm);
+    //CheckEleConfig_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn,comm);
     //total_num= CheckEleNum_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn,comm);
     //printf("%d \n",total_num);
 //DEBUG
@@ -126,7 +126,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
       fprintf(stdout, "instep=%d/%d, outstep=%d/%d\n", inStep,nInStep, outStep, nOutStep);
 #endif
 //DEBUG
-      CheckEleConfig_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn,comm);
+      //CheckEleConfig_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn,comm);
       //total_num= CheckEleNum_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn,comm);
       //printf("%d \n",total_num);
 //DEBUG
