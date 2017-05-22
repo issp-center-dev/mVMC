@@ -10,3 +10,4 @@ int stcOptMainDiag(double *const r, int const nSmat, int *const smatToParaIdx,
 
 #endif
 #endif
+

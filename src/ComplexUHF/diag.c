@@ -28,7 +28,7 @@ void diag(struct BindStruct *X) {
   int int_i, int_j, int_k, int_l;
   double *r;
   double complex **tmp_mat, **vec;
-  double complex tmp_mlt;
+  //double complex tmp_mlt;
   int mfint[7], xMsize;
 
 

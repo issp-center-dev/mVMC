@@ -123,12 +123,12 @@ int MakeOrbitalFile(struct BindStruct *X){
   double complex **UHF_Fij;
   double complex *ParamOrbital;
   int *CountOrbital;
-  int Orbitalidx;
-  int int_i,int_j,int_k,int_l,xMsize;
-  double complex **tmp_mat,**vec;
-  double *r;
-  char fileName[256];
-  int ini,fin,tmp_i;
+  //int Orbitalidx;
+  //int int_i,int_j,int_k,int_l,xMsize;
+  //double complex **tmp_mat,**vec;
+  //double *r;
+  //char fileName[256];
+  //int ini,fin,tmp_i;
 
 /*this part only for anti-parallel
 //[s] for anti-pararell, rediag

@@ -384,7 +384,7 @@ int ReadDefFileIdxPara(
   int i, j;
   int spn_i, spn_j, all_i, all_j;
   int fij;
-  int idx, Orbitalidx, Orbitalsgn;
+  int idx, Orbitalidx;//, Orbitalsgn;
   int x0, x1, x2, x3;
   int info, i_spin, j_spin;
   double dReValue;

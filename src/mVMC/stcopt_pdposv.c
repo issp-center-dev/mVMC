@@ -400,22 +400,22 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
 
 int StochasticOptDiag(MPI_Comm comm) {
   const int nPara=NPara;
-  const int srOptSize=SROptSize;
-  const double complex *srOptOO=SROptOO;
+  //const int srOptSize=SROptSize;
+  //const double complex *srOptOO=SROptOO;
 
   double *r; /* the parameter change */
   int nSmat;
   int smatToParaIdx[NPara];
 
-  int cutNum=0,optNum=0;
-  double sDiag,sDiagMax,sDiagMin;
-  double diagCutThreshold;
+  int optNum=0;//cutNum=0
+  //double sDiag,sDiagMax,sDiagMin;
+  //double diagCutThreshold;
 
   int si; /* index for matrix S */
   int pi; /* index for variational parameters */
 
-  double rmax;
-  int simax;
+  //double rmax;
+  //int simax;
   int info=0;
 
   double complex *para=Para;
@@ -497,10 +497,10 @@ int stcOptMainDiag(double *const r, int const nSmat, int *const smatToParaIdx,
   int *irToParaIdx, *icToParaIdx; /* tables for local index to Para index */
 
   /* for MPI */
-  int rank,size,i;
+  int rank,size;//,i;
   int dims[2]={0,0};
-  int *rcounts, *displs; /* for gatherv */
-  int *grIdx, *grIdxAll;
+  //int *rcounts, *displs; /* for gatherv */
+  int *grIdx;//, *grIdxAll;
   MPI_Comm comm_col;
 
   /* for BLACS */
@@ -540,12 +540,12 @@ int stcOptMainDiag(double *const r, int const nSmat, int *const smatToParaIdx,
   double complex *srOptOO=SROptOO;
   double complex *srOptHO=SROptHO;
   
-  int si,sj,pi,pj,idx;
+  int si,pi,pj,idx;//sj
   int ir,ic;
 
   double rmax;
   int imax;
-  FILE *fp;
+  //FILE *fp;
 
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);

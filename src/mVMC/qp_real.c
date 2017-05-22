@@ -69,3 +69,4 @@ double  CalculateIP_real(double* const pfM, const int qpStart, const int qpEnd, 
   return ip;
 }
 #endif
+

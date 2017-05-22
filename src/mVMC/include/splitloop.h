@@ -31,3 +31,4 @@ void SplitLoop(int *start, int *end,
                       const int loopLength, 
                       const int mpiRank, const int mpiSize);
 #endif
+
