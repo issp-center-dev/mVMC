@@ -665,19 +665,9 @@ SUBROUTINE read_corrfile()
      filename = TRIM(filehead) // "_cisajscktalt" // TRIM(filetail(iwfc))
      OPEN(fi, file = TRIM(filename))
      !
-     IF(calctype == 4) THEN
-        !
-        ! mVMC
-        !
-        READ(fi,*) cor0_r(1:2, 1:ncor2)
-     ELSE
-        !
-        ! HPhi
-        !
-        DO icor = 1, ncor2
-           READ(fi,*) itmp(1:8), cor0_r(1:2, icor)
-        END DO
-     END IF
+     DO icor = 1, ncor2
+        READ(fi,*) itmp(1:8), cor0_r(1:2, icor)
+     END DO
      !
      CLOSE(fi)
      !
