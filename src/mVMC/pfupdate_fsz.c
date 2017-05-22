@@ -53,7 +53,6 @@ void CalculateNewPfM_fsz(const int ma, const int s, double complex *pfMNew, cons
 
   /* optimization for Kei */
   const int nsize = Nsize;
-  const int ne = Ne;
 
   #pragma loop noalias
   for(qpidx=0;qpidx<qpNum;qpidx++) {
@@ -92,7 +91,6 @@ void CalculateNewPfM2_fsz(const int ma, const int s, double complex *pfMNew, con
 
   /* optimization for Kei */
   const int nsize = Nsize;
-  const int ne = Ne;
 
   #pragma omp parallel for default(shared)        \
     private(qpidx,msj,sltE_a,invM_a,ratio,rsj)

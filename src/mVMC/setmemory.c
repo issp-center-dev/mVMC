@@ -256,7 +256,7 @@ void FreeMemoryDef() {
 }
 
 void SetMemory() {
-  int i,j,n;
+  int i;
 
   /***** Variational Parameters *****/
   //printf("DEBUG:opt=%d %d %d %d %d Ne=%d\n", AllComplexFlag,NPara,NProj,NSlater,NOrbitalIdx,Ne);

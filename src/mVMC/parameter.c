@@ -71,7 +71,7 @@ void InitParameter() {
 /* read initial vaules of variational parameters from initFile */
 int ReadInitParameter(char *initFile) {
   FILE *fp;
-  int i, xi, ierr;
+  int i, xi;
   double xtmp;
   double tmp_real,tmp_comp;
 
@@ -80,17 +80,17 @@ int ReadInitParameter(char *initFile) {
   if(fp!=NULL){
     while(fscanf(fp, "%lf ", &xtmp)!=EOF){
       //for(i=1;i<4;i++) fscanf(fp, "%lf ", &xtmp);
-      for (i = 1; i < 6; i++) ierr = fscanf(fp, "%lf ", &xtmp);
+      for (i = 1; i < 6; i++) fscanf(fp, "%lf ", &xtmp);
       for(xi=0;xi<NProj;xi++) {
-        ierr = fscanf(fp, "%lf %lf %lf ", &tmp_real, &tmp_comp, &xtmp);
+        fscanf(fp, "%lf %lf %lf ", &tmp_real, &tmp_comp, &xtmp);
         Proj[xi] = tmp_real+tmp_comp*I; 
       }
       for(xi=0;xi<NSlater;xi++) {
-        ierr = fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
+        fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
         Slater[xi] = tmp_real+tmp_comp*I; 
       }
       for(xi=0;xi<NOptTrans;xi++) {
-        ierr = fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
+        fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
         OptTrans[xi] = tmp_real+tmp_comp*I; 
       }
     }

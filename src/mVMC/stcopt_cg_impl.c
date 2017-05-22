@@ -256,8 +256,8 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 /* calculate the parameter change r[nSmat] from SOpt.
    Solve S*x = g */
 int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
-  int si,pi,pj,idx;
-  int rank, size, info;
+  int si;
+  int rank, size;
   int iter;
   int max_iter = (NSROptCGMaxIter > 0 ? NSROptCGMaxIter : nSmat);
   double delta, beta;
@@ -265,7 +265,6 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
   double cg_thresh = DSROptCGTol*DSROptCGTol * (double)nSmat * (double)nSmat;
   //double cg_thresh = DSROptRedCut;
 
-  const int srOptSize=SROptSize;
   double *x, *g, *sdiag, *stcO, *stcOs_real;
   double *stcOs_imag, *y_real, *y_imag, *z_local;
   double *q, *d, *r;
@@ -356,7 +355,7 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
 /* S[i][j] = OO[i+1][j+1] - OO[i+1][0] * OO[0][j+1]; */
 int fn_operate_by_S(int nSmat, double *x, double *z, double *VecCG, MPI_Comm comm) {
   int rank,size,info=0;
-  int i,si;
+  int si;
   int incx = 1, incy = 1;
   double coef;
   double one = 1.0, zero = 0.0;
@@ -429,12 +428,10 @@ int fn_operate_by_S(int nSmat, double *x, double *z, double *VecCG, MPI_Comm com
 void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, double *VecCG) {
   const double dt = 2.0*DSROptStepDt;
   int i;
-  int si,sj,pi,pj,idx,offset;
+  int si,pi,idx,offset;
 
   double *x, *g;
-  double *sdiag, *stcO, *stcOs_real, *stcOs_imag;
-  double *y_real, *y_imag, *z_local;
-  double *q, *d, *r;
+  double *sdiag, *stcO, *stcOs_real;
 
 #ifdef MVMC_SRCG_REAL
   const double *srOptO=SROptOO_real;
@@ -442,6 +439,7 @@ void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, double *
   const double *srOptO_Store = SROptO_Store_real;
   const double *srOptHO=SROptHO_real;
 #else
+  double *stcOs_imag;
   const double complex *srOptO=SROptOO;
   const double complex *srOptOOdiag=SROptOO + 2*SROptSize;
   const double complex *srOptO_Store = SROptO_Store;
@@ -458,8 +456,10 @@ void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, double *
   sdiag = g + nSmat;
   stcO = sdiag + nSmat;
   stcOs_real = stcO + nSmat;
+#ifndef MVMC_SRCG_REAL
   stcOs_imag = stcOs_real + NVMCSample*nSmat;
-  
+#endif
+
   #pragma omp parallel for default(shared) private(si)
   #pragma loop noalias
   for(si=0;si<SIZE_VecCG;si++) {

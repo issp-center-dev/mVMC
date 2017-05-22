@@ -66,13 +66,11 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
   int projCntNew[NProj];
   double complex pfMNew[NQPFull];
   double x,w; // TBC x will be complex number
-  int total_num;
 
   int qpStart,qpEnd;
   int rejectFlag;
   int rank,size;
   int flag_hop;
-  int tmp_mi,tmp_ri,tmp_num;//fsz DEBUG
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
 
@@ -86,6 +84,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
     makeInitialSample_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleSpn,
                       qpStart,qpEnd,comm);
 //DEBUG
+    //int total_num;
     //CheckEleConfig_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn,comm);
     //total_num= CheckEleNum_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn,comm);
     //printf("%d \n",total_num);
@@ -351,7 +350,7 @@ int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt
   const int nsize = Nsize;
   const int nsite2 = Nsite2;
   int flag=1,flagRdc,loop=0;
-  int ri,mi,si,msi,rsi;
+  int ri,si,msi,rsi;
   int X_mi,tmp_TwoSz;
   int rank,size;
   MPI_Comm_size(comm,&size);
@@ -509,7 +508,7 @@ void makeCandidate_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, in
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn) {
   const int icnt_max = Nsite*Nsite;
   int icnt;
-  int mi, ri, rj, s, flag,tmp_rj;
+  int mi, ri, rj, s, flag;
   int t; //fsz
 
   flag = 0; // FALSE
@@ -544,7 +543,7 @@ void makeCandidate_hopping_csz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, in
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn) {
   const int icnt_max = Nsite*Nsite;
   int icnt;
-  int mi, ri, rj, s, flag,tmp_rj;
+  int mi, ri, rj, s, flag;
   int t; //fsz
 
   flag = 0; // FALSE
@@ -640,9 +639,7 @@ void makeCandidate_exchange_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *reje
 // mi (ri,s) -> mi (ri,1-s) // local spin flip for conduction
 void makeCandidate_LocalSpinFlip_localspin(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn) {
-  const int icnt_max = Nsite*Nsite;
-  int icnt;
-  int mi, ri, rj, s, flag,tmp_rj;
+  int mi, ri, rj, s, flag;
   int t; //fsz
 
   flag = 0; // FALSE
@@ -672,7 +669,7 @@ void makeCandidate_LocalSpinFlip_conduction(int *mi_, int *ri_, int *rj_, int *s
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn) {
   const int icnt_max = Nsite*Nsite;
   int icnt;
-  int mi, ri, rj, s, flag,tmp_rj;
+  int mi, ri, rj, s, flag;
   int t; //fsz
 
   flag = 0; // FALSE
@@ -734,7 +731,7 @@ void revertEleConfig_fsz(int mi, int org_r, int dst_r, int org_spn,int dst_spn,
 }
 
 int CheckEleNum_fsz(int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn,MPI_Comm comm){
-  int mi,ri,si;
+  int ri,si;
   int total_num;
 
   total_num=0;

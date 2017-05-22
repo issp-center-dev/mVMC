@@ -53,7 +53,7 @@ int StochasticOpt(MPI_Comm comm) {
   int info=0;
   int rank,size;
 // for real
-  int int_x,int_y,j,i,idx;
+  int int_x,int_y,j,i;
 
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);

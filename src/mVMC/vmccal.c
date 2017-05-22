@@ -312,14 +312,14 @@ void VMC_BF_MainCal(MPI_Comm comm) {
   int sample, sampleStart, sampleEnd;
   int i, info;
   double complex *InvM_Moto, *PfM_Moto;
-  double *InvM_real_Moto, *PfM_real_Moto;
+//  double *InvM_real_Moto, *PfM_real_Moto;
 
   /* optimazation for Kei */
   const int nProj = NProj;
   double complex *srOptO = SROptO;
   double *srOptO_real = SROptO_real;
 
-  double rtmp;
+//  double rtmp;
 
   int rank, size;
   MPI_Comm_size(comm, &size);
@@ -336,8 +336,8 @@ void VMC_BF_MainCal(MPI_Comm comm) {
   InvM_Moto = InvM;
   PfM_Moto = PfM;
 
-  InvM_real_Moto = InvM_real;
-  PfM_real_Moto = PfM_real;
+//  InvM_real_Moto = InvM_real;
+//  PfM_real_Moto = PfM_real;
 
   for (sample = sampleStart; sample < sampleEnd; sample++) {
     eleIdx = EleIdx + sample * Nsize;
