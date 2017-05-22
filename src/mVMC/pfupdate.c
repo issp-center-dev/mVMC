@@ -223,7 +223,6 @@ void CalculateNewPfMBF(const int *icount, const int *msaTmp,
                        const int qpStart, const int qpEnd, const double complex* bufM) {
   //#pragma procedure serial
   int i;
-  const int nsize = Nsize;
   const int qpNum = qpEnd-qpStart;
   int qpidx;
   int *msa;
@@ -262,10 +261,7 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int
   //double complex mat[n2*n2]; /* mat[n2][n2] */
   double complex *mat; /* mat[n2][n2] */
   double complex *mat_k;
-  double complex *invMat; /* mat[n2][n2] */
   //double complex matUV[n2*nsize]; /* mat[n2][nsize] */
-  double complex *matUV; /* mat[n2][nsize] */
-  double complex *invMat_k, *matUV_i, *matUV_j;
   double sgn;
 
   int rsi,rsk,msi,msj,k,l;
@@ -273,10 +269,9 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int
 
   /* for ZSKPFA */
   char uplo='U', mthd='P';
-  int m,nn,lda,info=0;
+  int nn,lda,info=0;
   double complex pfaff;
   int iwork[n2];
-  int iwork2[n2];
   //double complex work[n2*n2]; /* [n2][n2] */
   double complex *work; /* [n2][n2] */
   double rwork[n2*n2]; /* [n2][n2] */
@@ -375,13 +370,12 @@ void UpdateMAll_BF_fcmp(const int *icount, const int *msaTmp,
                         const int qpStart, const int qpEnd)
 {
 #pragma procedure serial
-  const int nsize = Nsize;
   const int qpNum = qpEnd-qpStart;
   int qpidx;
   //double complex *sltE;
   //double complex *sltE_i;
   int *msa;
-  int msi,msj,rsi,rsj,i;
+  int i;
   //int *hop;
   //double complex diff;
 

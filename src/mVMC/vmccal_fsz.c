@@ -39,12 +39,12 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   const int qpStart=0;
   const int qpEnd=NQPFull;
   int sample,sampleStart,sampleEnd,sampleSize;
-  int i,info,tmp_i;
+  int i,info;
 
   /* optimazation for Kei */
   const int nProj=NProj;
   double complex *srOptO = SROptO;
-  double         *srOptO_real = SROptO_real;
+//  double         *srOptO_real = SROptO_real;
 
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);

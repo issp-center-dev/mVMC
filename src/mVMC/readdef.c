@@ -184,15 +184,10 @@ int JudgeOrbitalMode(int *_iFlgOrbitalGeneral, const int _iFlgOrbitalAP, const i
 int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **cacaDCIdx, int Ns) {
   FILE *fp;
   char defname[D_FileNameMax];
-  char ctmp[D_FileNameMax], ctmp2[256];
-  int itmp;
+  char ctmp[D_FileNameMax];
   int iKWidx = 0;
   char *cerr;
-
-  int i, j, n, idx, idx0, idx1, info = 0;
-  int fidx = 0; /* index for OptFlag */
-  int count_idx = 0;
-  int x0, x1, x2, x3, x4, x5, x6, x7;
+  int i, info = 0;
 
   cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
   fprintf(stdout, "  Read File %s .\n", xNameListFile);
@@ -216,8 +211,7 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
     /*=======================================================================*/
     for (i = 0; i < IgnoreLinesInDef; i++)
       cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-    idx = 0;
-    idx0 = 0;
+      if(cerr == NULL) return(-1);
     switch (iKWidx) {
       case KWOneBodyG:
         /*cisajs.def----------------------------------------*/
@@ -232,7 +226,7 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
     }
     fclose(fp);
   }
-  return 0;
+  return info;
 }
 
 ///
@@ -245,9 +239,7 @@ int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, i
 
   int info = 0;
   int i, j, isite1, isite2;
-  int *pInt;
   int icount = 0;
-  int NFullOneBodyG = Ns * 2 * Ns * 2;
   int **cacaDCIdx;
 
   cacaDCIdx = malloc(sizeof(int *) * Ncacadc);
@@ -297,10 +289,6 @@ int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, i
 int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   FILE *fp;
   char defname[D_FileNameMax];
-  char ctmp[D_FileNameMax];
-  char ctmp2[D_FileNameMax];
-
-  int itmp;
   char *cerr;
 
   int rank, info = 0;
@@ -733,30 +721,16 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   FILE *fp;
   char defname[D_FileNameMax];
-  char ctmp[D_FileNameMax], ctmp2[256];
-  int itmp, iret;
+  char ctmp[D_FileNameMax];
   int iKWidx = 0;
   char *cerr;
-  int ierr;
-
-  int i, j, n, idx, idx0, idx1, info = 0;
-  int isite1, isite2, idxLanczos;
+  int i, j, n, idx0, idx1, info = 0;
   int fidx = 0; /* index for OptFlag */
   int count_idx = 0;
-  int x0, x1, x2, x3, x4, x5, x6, x7;
-  double dReValue, dImValue;
+  int x0, x1;
   int rank;
-  int sgn;
 
   int iNOneBodyG;
-
-  //[s] for Orbital idx
-  int all_i, all_j;
-  int iSzFreeFlg = 0; // 0: SzConserved, 1:SzFree
-  int fij = 0;
-  int fijSign = 1;
-  int spn_i, spn_j;
-  //[e] for Orbital idx
 
   MPI_Comm_rank(comm, &rank);
 
@@ -774,7 +748,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
       /*=======================================================================*/
       for (i = 0; i < IgnoreLinesInDef; i++) fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-      idx = 0;
       idx0 = 0;
       switch (iKWidx) {
         case KWLocSpin: /* Read locspn.def----------------------------------------*/
@@ -903,7 +876,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWBFRange:
           /*rangebf.def--------------------------*/
           if (Nrange > 0) {
-            for (i = 0; i < 5; i++) cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            for (i = 0; i < 5; i++){
+              cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+              if(cerr == NULL) info=1;
+            }
             idx0 = idx1 = 0;
             while (fscanf(fp, "%d %d %d\n", &i, &j, &n) != EOF) {
               PosBF[i][idx0 % Nrange] = j;
@@ -919,7 +895,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWBF:
           if (NBackFlowIdx > 0) {
-            for (i = 0; i < 5; i++) cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            for (i = 0; i < 5; i++){
+              cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+              if(cerr == NULL) info=1;
+            }
             idx0 = idx1 = 0;
             for (i = 0; i < Nsite * Nsite; i++) {
               for (j = 0; j < Nsite * Nsite; j++) {
@@ -933,7 +912,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
               if (idx0 == Nsite * Nsite * Nrange * Nrange) break;
             }
             while (fscanf(fp, "%d ", &i) != EOF) {
-              ierr = fscanf(fp, "%d\n", &(OptFlag[fidx]));
+              fscanf(fp, "%d\n", &(OptFlag[fidx]));
               //printf("idx1=%d, OptFlag=%d\n",idx1,OptFlag[fidx]);
               fidx++;
               idx1++;
@@ -1020,7 +999,6 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
   double tmp_real, tmp_comp;
   MPI_Comm_rank(comm, &rank);
   char *cerr;
-  int ierr;
   if (rank == 0) {
     for (iKWidx = KWInGutzwiller; iKWidx < KWIdxInt_end; iKWidx++) {
       strcpy(defname, cFileNameListFile[iKWidx]);
@@ -1033,11 +1011,16 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
       }
       /*=======================================================================*/
       cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);//1
+      if(cerr == NULL) return -1;
       cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);//2
+      if(cerr == NULL) return -1;
       sscanf(ctmp2, "%s %d\n", ctmp, &idx);
       cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);//3
+      if(cerr == NULL) return -1;
       cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);//4
+      if(cerr == NULL) return -1;
       cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);//5
+      if(cerr == NULL) return -1;
 
       switch (iKWidx) {
         //get idx
@@ -1049,7 +1032,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
             continue;
           }
           for (i = 0; i < NGutzwillerIdx; i++) {
-            ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Proj[idx] = tmp_real + I * tmp_comp;
           }
           break;
@@ -1062,7 +1045,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           }
           count = NGutzwillerIdx;
           for (i = count; i < count + NJastrowIdx; i++) {
-            ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Proj[idx] = tmp_real + I * tmp_comp;
           }
           break;
@@ -1075,7 +1058,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           }
           count = NGutzwillerIdx + NJastrowIdx;
           for (i = count; i < count + 2 * 3 * NDoublonHolon2siteIdx; i++) {
-            ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Proj[idx] = tmp_real + I * tmp_comp;
           }
           break;
@@ -1088,7 +1071,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           }
           count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
           for (i = count; i < count + 2 * 5 * NDoublonHolon4siteIdx; i++) {
-            ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Proj[idx] = tmp_real + I * tmp_comp;
           }
           break;
@@ -1102,7 +1085,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
             continue;
           }
           for (i = 0; i < iNTotalIdx; i++) {
-            ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Slater[idx] = tmp_real + I * tmp_comp;
           }
           break;
@@ -1115,7 +1098,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
             continue;
           }
           for (i = 0; i < 2 * iNOrbitalParallel; i++) {
-            ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Slater[iNOrbitalAntiParallel + idx] = tmp_real + I * tmp_comp; //up-up
             //printf("MDEBUG: %d %d %d %lf\n",i,idx,iNOrbitalParallel,tmp_real,tmp_comp);
             //ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
@@ -1130,7 +1113,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
             continue;
           }
           for (i = 0; i < NOrbitalIdx; i++) {
-            ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Slater[idx] = tmp_real + I * tmp_comp; //up-up
           }
           break;
@@ -1142,7 +1125,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
             continue;
           }
           for (i = 0; i < NOptTrans; i++) {
-            ierr = fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             OptTrans[idx] = tmp_real + I * tmp_comp;
           }
           break;
@@ -1165,7 +1148,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
     }
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  return 0;
+  return info;
 }
 
 
@@ -1505,22 +1488,15 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
   int itmp;
   char *cerr;
 
-  int info = 0;
-  const int nBufInt = ParamIdxInt_End;
-  const int nBufDouble = ParamIdxDouble_End;
-  const int nBufChar = D_FileNameMax;
   int iKWidx = 0;
   int iret = 0;
-  int iNCond = 0;
-  int i2Sz = 0;
-  int iFreeSzFlag = -1; //-1: GrandCanonical, 0: Sz-fixed
   fprintf(stdout, "Start: Read ModPara File .\n");
   for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
     strcpy(defname, cFileNameListFile[iKWidx]);
     if (strcmp(defname, "") == 0) continue;
     fp = fopen(defname, "r");
     if (fp == NULL) {
-      info = ReadDefFileError(defname);
+      iret=ReadDefFileError(defname);
       fclose(fp);
       break;
     } else {
@@ -1528,20 +1504,29 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
         case KWModPara:
           /* Read modpara.def---------------------------------------*/
           cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+          if(cerr == NULL) return -1;
           cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+          if(cerr == NULL) return -1;
           sscanf(ctmp2, "%s %d\n", ctmp, &itmp); //2
           cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //3
+          if(cerr == NULL) return -1;
           cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //4
+          if(cerr == NULL) return -1;
           cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //5
+          if(cerr == NULL) return -1;
           cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+          if(cerr == NULL) return -1;
           sscanf(ctmp2, "%s %s\n", ctmp, CDataFileHead); //6
           cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+          if(cerr == NULL) return -1;
           sprintf(ctmp, "output/%s", CDataFileHead);
           strcpy(CDataFileHead, ctmp);
           sscanf(ctmp2, "%s %s\n", ctmp, CParaFileHead); //7
           sprintf(ctmp, "output/%s", CParaFileHead);
           strcpy(CParaFileHead, ctmp);
           cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);   //8
+          if(cerr == NULL) return -1;
+
           iret = system("mkdir -p output");
 
           double dtmp;
@@ -1676,7 +1661,7 @@ int GetLocSpinInfo(FILE *fp, int *ArrayIdx, int Nsite, char *defname) {
 int GetInfoCoulombIntra(FILE *fp, int *ArrayIdx, double *ArrayValue, int Nsite, int NArray, char *defname) {
   char ctmp2[256];
   int idx = 0, info = 0;
-  int x0 = 0, x1 = 0;
+  int x0 = 0;
   double dReValue = 0;
   if (NArray == 0) return 0;
   while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
@@ -1773,7 +1758,6 @@ int GetInfoOpt(FILE *fp, int *ArrayOpt, int iComplxFlag, int *iTotalOptCount, in
 
 int GetInfoGutzwiller(FILE *fp, int *ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int Nsite, int NArray,
                       char *defname) {
-  char ctmp2[256];
   int idx0 = 0, idx1 = 0, info = 0;
   int i = 0;
   int fidx = 0;
@@ -1801,7 +1785,6 @@ int GetInfoGutzwiller(FILE *fp, int *ArrayIdx, int *ArrayOpt, int iComplxFlag, i
 
 int GetInfoJastrow(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nsite,
                    int NArray, char *defname) {
-  char ctmp2[256];
   int idx0 = 0, idx1 = 0, info = 0;
   int i = 0, j = 0;
   int fidx = _fidx;
@@ -1834,7 +1817,6 @@ int GetInfoJastrow(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int
 int
 GetInfoDH2(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nsite, int NArray,
            char *defname) {
-  char ctmp2[256];
   int idx0 = 0, idx1 = 0, info = 0;
   int i = 0, x0 = 0, x1 = 0, n = 0;
   int fidx = _fidx;
@@ -1862,7 +1844,6 @@ GetInfoDH2(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCo
 int
 GetInfoDH4(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nsite, int NArray,
            char *defname) {
-  char ctmp2[256];
   int idx0 = 0, idx1 = 0, info = 0;
   int i = 0, x0 = 0, x1 = 0, x2 = 0, x3 = 0, n = 0;
   int fidx = _fidx;
@@ -2244,7 +2225,7 @@ int GetInfoOrbitalParallel(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn,
   int i, j;
   int idx0 = 0, idx1 = 0;
   int itmp = 0, info = 0;
-  int spn_i, spn_j;
+  int spn_i;
   int all_i, all_j;
   int fij = 0, fijSign = 1, fij_org;
   int fidx = _fidx;

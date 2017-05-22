@@ -311,14 +311,15 @@ double complex calculateNewPfMN_child(const int qpidx, const int n, const int *m
 
   /* for DSKPFA */
   char uplo='U', mthd='P';
-  int nn,lda,info=0;
+  int lda,info=0;
   double complex pfaff;
   int iwork[n2];
   double complex work[n2*n2]; /* [n2][n2] */
   int lwork = n2*n2;
   double *rwork = GetWorkSpaceThreadDouble(LapackLWork); //TBC for rwork
 
-  nn=lda=n2;
+  //int nn;
+  //nn=lda=n2;
 
   sltE = SlaterElm + qpidx*Nsite2*Nsite2;
   invM = InvM + qpidx*Nsize*Nsize;
@@ -402,13 +403,8 @@ double complex calculateNewPfMN_child(const int qpidx, const int n, const int *m
 double complex GreenFunc1BF(const int ri, const int rj, const int s, const double complex ip, double complex *bufM,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
                     int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double complex *buffer) {
-  double complex z,logz;
-  int msi,mj,msj,rsi,rsj;
-  int qpidx,i;
-  const int nsize=Nsize;
-  double complex* sltE;
-  double complex* sltE_i;
-  double complex* bufM_i, *bufM_i2;
+  double complex z;
+  int mj,msj,rsi,rsj;
   //double complex bufM[NQPFull*Nsize*Nsize];
   double complex* pfMNew = buffer; /* NQPFull */
   int msaTmp[NQPFull*Nsite],icount[NQPFull];

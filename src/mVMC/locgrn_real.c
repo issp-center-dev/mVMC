@@ -410,13 +410,8 @@ double calculateNewPfMN_real_child(const int qpidx, const int n, const int *msa,
 double GreenFunc1BF_real(const int ri, const int rj, const int s, const double ip, double *bufM,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
                     int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer) {
-  double z,logz;
-  int msi,mj,msj,rsi,rsj;
-  int qpidx,i;
-  const int nsize=Nsize;
-  double *sltE;
-  double *sltE_i;
-  double *bufM_i, *bufM_i2;
+  double z;
+  int mj,msj,rsi,rsj;
   //double complex bufM[NQPFull*Nsize*Nsize];
   double *pfMNew_real = buffer; /* NQPFull */
   int msaTmp[NQPFull*Nsite],icount[NQPFull];

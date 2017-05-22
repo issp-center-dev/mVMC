@@ -253,18 +253,15 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
   const int nTrans = NMPTrans * NQPOptTrans;
   const double complex invIP = 1.0/ip;
   
-  int xi,xj,xk,xl,xn,xm,xid,xih,xjd,xjh,xkd,xkh,xld;
-  int xidh,xihd,xjhd,xjdh,xkdh,xkhd,xldh,xlhd;
-  int s,idx,idx2,idx3,idx4,rtmp,rsk,rstmp,rsi,rsj,msi0,msi1,msj0,msj1;
+  int xk,xl,xn,xm;
+  int s,idx,rsi,rsj;
   //double eta;
-  const int *n0=eleNum;
-  const int *n1=eleNum+Nsite;
   int mi,mj,msi,msj,msk,msl,ri,rj,rk,rl;
-  int tri,trj,trk,trl;
-  int mpidx,spidx,orbidx,orbidx2,orbsgn,qpidx,i;
+  int tri,trj;
+  int mpidx,spidx,orbidx,orbsgn,qpidx,i;
   double complex cs,cc,ss;
   int *xqp, *xqpInv;
-  double complex *invM,*invM_i,*invM_j,*invM_k,*invM_l;
+  double complex *invM,*invM_i,*invM_k;
 //  const int *bfCnt0=eleProjBFCnt;
 //  const int *bfCnt1=eleProjBFCnt + 4*Nsite*Nrange;
   const int *bfCnt2=eleProjBFCnt + 8*Nsite*Nrange;
@@ -274,7 +271,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
 
   int *orbitalIdx_i,*orbitalSgn_i;
   int *transOrbIdx; /* transOrbIdx[mpidx][msi][msj] */
-  int *transOrbSgn; /* transOrbSgn[mpidx][msi][msj] */
+//  int *transOrbSgn; /* transOrbSgn[mpidx][msi][msj] */
   int *tOrbIdx,*tOrbIdx_i;
   int *tOrbSgn_i;
   double complex *buf,*buffer;
@@ -297,7 +294,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
   RequestWorkSpaceComplex(NQPFull*NSlater);
 
   transOrbIdx = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbIdx[mpidx][msi][msj] */
-  transOrbSgn = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbSgn[mpidx][msi][msj] */
+//  transOrbSgn = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbSgn[mpidx][msi][msj] */
   buffer = GetWorkSpaceComplex(NQPFull*NSlater);
   
   for(i=0;i<nBuf;i++) buffer[i]=0.0;
@@ -343,7 +340,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
   #pragma omp parallel for default(shared)        \
     private(qpidx,mpidx,spidx,cs,cc,ss,           \
             tOrbIdx,invM,buf,msi,msj,             \
-            ri,rj,rk,tri,trj,idx,xkd,xkh,xid,xjd, \
+            ri,rj,rk,tri,trj,idx, \
             tOrbIdx_i,invM_i,orbidx)
   #pragma loop noalias
   for(qpidx=0;qpidx<nQPFull;qpidx++) {
@@ -524,48 +521,29 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
                    const int *eleProjBFCnt) {
 
   const double complex invIP = 1.0/ip;
-  int s,t,idx,idx2,rk,rtmp,rsk,rstmp,rl,rtmp2,rtl,rttmp,rsi,rsj;
-  double complex t_ki, t_lj;
-  //double eta;
-  const int *n0=eleNum;
-  const int *n1=eleNum+Nsite;
   int msi,msj,ri,rj,tri,trj;
-  int mpidx,spidx,orbidx,qpidx,i;
-  double complex cs,cc,ss;
+  int mpidx,qpidx;
   int *xqp;
   const double complex *invM,*invM_i;
 
   int *orbitalIdx_i;
-  int *transOrbIdx, *transOrbSgn; /* transOrbIdx[mpidx][msi][msj] */
+  int *transOrbIdx; /* transOrbIdx[mpidx][msi][msj] */
   int *tOrbIdx,*tOrbIdx_i;
-  int *tOrbSgn,*tOrbSgn_i;
-  double complex *buf,*buf_i;
-  double complex logz,tmp;
+  double complex tmp;
 
-  const int nBuf=(Nsize*Nsize)*NQPFull;
   const int nsize = Nsize;
   const int ne = Ne;
   const int nQPFull = NQPFull;
   const int nMPTrans = NMPTrans;
   const int nTrans = NMPTrans * NQPOptTrans;
-  const int nSlater = NSlater;
-  int islater;
-
-  int m,n,k,lda,ldb,ldc;
-  double complex alpha, beta;
-  char transa, transb;
 
   int bfidx;
-  const double complex *sltE;
-  const double complex *sltE_i,*sltE_j,*sltE_k;
-  double complex *buffer;
   //double bufM[NQPFull*16*Nsize*Nsize];
   double complex *bufM;
-  double complex *bufM_i, *bufM_i2, *bufM_ni;
+  double complex *bufM_i;
   //double complex trM0=0.0,trM1=0.0,trM2=0.0,trM3=0.0,trM4=0.0,trM5=0.0,trM6=0.0;
   double complex trM[NProjBF];
   double complex pfM;
-  int *flagTmp;
   int rki,rkj,rli,rlj;
   const int nSite=Nsite;
   const int nRange=Nrange;
@@ -575,8 +553,7 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
   const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
   const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
   int **posBF = PosBF;
-  int xi,xj,xk,xl,xn,xm,xid,xih,xjd,xjh,xlh,xkh;
-  int xidh,xihd,xjhd,xjdh,xkdh,xkhd,xldh,xlhd;
+  int xk,xl,xn,xm;
   int dki,dlj,nidx,midx,itmp;
 
   RequestWorkSpaceInt(2*nTrans*Nsize*Nsize);
@@ -584,7 +561,7 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
   RequestWorkSpaceComplex(16*NQPFull*Nsize*Nsize);
 
   transOrbIdx = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbIdx[mpidx][msi][msj] */
-  transOrbSgn = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbSgn[mpidx][msi][msj] */
+  //transOrbSgn = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbSgn[mpidx][msi][msj] */
   //buffer = GetWorkSpaceDouble(NQPFull*NSlater);
   bufM = GetWorkSpaceComplex(16*NQPFull*Nsize*Nsize);
 
@@ -614,25 +591,20 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
   }
 
   #pragma omp parallel for default(shared)        \
-    private(qpidx,mpidx,spidx,cs,cc,ss,           \
-            xid,xih,xjd,xjh,xkh,xlh,rtmp,rtmp2,   \
-            s,t,rk,rsk,rtl,rl,idx,idx2,           \
-            sltE,sltE_i,sltE_j,sltE_k,            \
-            rstmp,rttmp,t_ki,t_lj,                \
-            tOrbIdx,invM,buf,msi,msj,             \
-            tOrbIdx_i,invM_i,orbidx)              
+    private(qpidx,mpidx,           \
+            tOrbIdx,invM,msi,msj,             \
+            tOrbIdx_i,invM_i)
     //reduction(-:trM0,trM1,trM2)
   #pragma loop noalias
   for(qpidx=0;qpidx<nQPFull;qpidx++) {
     mpidx = qpidx / NSPGaussLeg;
-    spidx = qpidx % NSPGaussLeg;
     xqp = QPTrans[mpidx];
 
     tOrbIdx = transOrbIdx + mpidx*nsize*nsize;
-    sltE = SlaterElm + qpidx*Nsite2*Nsite2;
+    //sltE = SlaterElm + qpidx*Nsite2*Nsite2;
     invM = InvM + qpidx*Nsize*Nsize;
     //buf = buffer + qpidx*Nsize*Nsize;
-    buf = bufM + qpidx*Nsize*Nsize;
+    //buf = bufM + qpidx*Nsize*Nsize;
     pfM = PfM[qpidx];
     //flagTmp = etaFlag + qpidx*Nsite*Nsite;
 
@@ -646,15 +618,14 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
     for(msi=0;msi<ne;msi++) {
       ri = eleIdx[msi];
       tri = xqp[ri];
-      rsi = ri + (msi/Ne)*Nsite;
+      //rsi = ri + (msi/Ne)*Nsite;
       bufM_i = bufM + msi*Nsize;
-      sltE_i = sltE + rsi*Nsite2;
       invM_i = invM + msi*Nsize;
       #pragma loop norecurrence
       for(msj=ne;msj<nsize;msj++) {
         rj = eleIdx[msj];
         trj = xqp[rj];
-        rsj = rj + (msj/Ne)*Nsite;
+        //rsj = rj + (msj/Ne)*Nsite;
         if(etaFlag[tri][trj] == 0){
           bufM_i[msj] = 0.0;
         }else{
@@ -676,17 +647,16 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
     for(msi=0;msi<ne;msi++) {
       ri = eleIdx[msi];
       tri = xqp[ri];
-      rsi = eleIdx[msi] + (msi/Ne)*Nsite;
+      //rsi = eleIdx[msi] + (msi/Ne)*Nsite;
       bufM_i = bufM + msi*Nsize;
       invM_i = invM + msi*Nsize;
-      xid = n0[tri]*n1[tri];
+      //xid = n0[tri]*n1[tri];
       #pragma loop norecurrence
       for(msj=ne;msj<nsize;msj++) {
         rj = eleIdx[msj];
         trj = xqp[rj];
-        rsj = eleIdx[msj] + (msj/Ne)*Nsite;
-        sltE_j = sltE + rsj*Nsite2;
-        xjd = n0[trj]*n1[trj];
+        //rsj = eleIdx[msj] + (msj/Ne)*Nsite;
+        //xjd = n0[trj]*n1[trj];
 
         for(xn=0;xn<4;xn++) {
           for(xm=0;xm<4;xm++){
@@ -696,7 +666,7 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
             bfCnt0_m=bfCnt0+xm*nSiteRange;
             bfCnt1_m=bfCnt1+xm*nSiteRange;
             
-            bufM_ni = bufM_i + (4*xn+xm)*Nsize*Nsize;
+            //bufM_ni = bufM_i + (4*xn+xm)*Nsize*Nsize;
             for(xk=0;xk<nRange;xk++) {
               rki=posBF[tri][xk];
               rkj=posBF[trj][xk];
@@ -750,36 +720,15 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
 
 
 void MakeSlaterElmBF_fcmp(const int *eleNum, const int *eleProjBFCnt) {
-  const int *n0=eleNum;
-  const int *n1=eleNum+Nsite;
-  const int *bfCnt0=eleProjBFCnt;
-  const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
-  const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
-  int **posBF = PosBF;
-  int xi,xj,xk,xl,xn,xm,xid,xih,xjd,xjh,xlh,xkh;
-  int xidh,xihd,xjhd,xjdh,xkdh,xkhd,xldh,xlhd;
-  int s,idx, rk,rtmp;
-  int t,idx2,rl,rtmp2;
-  int rki,rkj,rli,rlj;
   int icount, jcount;
   //double eta;
-  int ri,ori,tri,sgni,rsi0,rsi1;
-  int rj,orj,trj,sgnj,rsj0,rsj1;
-  int qpidx,mpidx,spidx,optidx;
+  int ri,tri,rsi0,rsi1;
+  int rj,trj,rsj0,rsj1;
+  int qpidx,mpidx,spidx;
   double complex cs,cc,ss;
   double complex slt_ij,slt_ji;
-  double complex tmp_ij,tmp_ji;
-  int *xqp, *xqpSgn, *xqpOpt, *xqpOptSgn;
+  int *xqp;
   double complex *sltE,*sltE_i0,*sltE_i1;
-  double complex sum_ij,sum_ji;
-  int *flagTmp;
-  const int nSite=Nsite;
-  const int nRange=Nrange;
-  const int nSiteRange = nRange*nSite;
-  int idx_ik,idx_jk,idx_il,idx_jl;
-  int bfidx;
-  int dki,dlj,nidx,midx,itmp;
-
 
 #pragma omp parallel for default(shared)        \
     private(qpidx,mpidx,spidx,xqp,cs,cc,ss,sltE,  \
@@ -833,8 +782,8 @@ void MakeSlaterElmBF_fcmp(const int *eleNum, const int *eleProjBFCnt) {
 
 void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, int *ijcount, double complex* slt_ji, int *jicount, const int *eleProjBFCnt){
   int xn,xm,xk,xl;
-  int rki,rkj,rli,rlj;
-  int idx_ik,idx_jk,idx_il,idx_jl;
+  int rki,rlj;
+  int idx_ik,idx_jk,idx_jl;
   int bfidx;
   int dki,dlj,nidx,midx,xtmp;
   const int nSite=Nsite;
@@ -861,7 +810,7 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, i
 
       for(xk=0;xk<nRange;xk++) {
         rki=posBF[tri][xk];
-        rkj=posBF[trj][xk];
+        //rkj=posBF[trj][xk];
         idx_ik=tri*nRange+xk;
         idx_jk=trj*nRange+xk;
 
@@ -876,9 +825,9 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, i
         *jicount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
 
         for(xl=0;xl<nRange;xl++){
-          rli=posBF[tri][xl];
+          //rli=posBF[tri][xl];
           rlj=posBF[trj][xl];
-          idx_il=tri*nRange+xl;
+          //idx_il=tri*nRange+xl;
           idx_jl=trj*nRange+xl;
 
           dlj = RangeIdx[trj][rlj];
@@ -915,8 +864,8 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, i
 
 void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijcount, double* slt_ji, int *jicount, const int *eleProjBFCnt){
   int xn,xm,xk,xl;
-  int rki,rkj,rli,rlj;
-  int idx_ik,idx_jk,idx_il,idx_jl;
+  int rki,rlj;
+  int idx_ik,idx_jk,idx_jl;
   int bfidx;
   int dki,dlj,nidx,midx,xtmp;
   const int nSite=Nsite;
@@ -943,7 +892,7 @@ void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijco
 
       for(xk=0;xk<nRange;xk++) {
         rki=posBF[tri][xk];
-        rkj=posBF[trj][xk];
+        //rkj=posBF[trj][xk];
         idx_ik=tri*nRange+xk;
         idx_jk=trj*nRange+xk;
 
@@ -958,9 +907,9 @@ void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijco
         *jicount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
 
         for(xl=0;xl<nRange;xl++){
-          rli=posBF[tri][xl];
+          //rli=posBF[tri][xl];
           rlj=posBF[trj][xl];
-          idx_il=tri*nRange+xl;
+          //idx_il=tri*nRange+xl;
           idx_jl=trj*nRange+xl;
 
           dlj = RangeIdx[trj][rlj];
@@ -997,42 +946,23 @@ void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijco
 
 void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int u,
                        const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex*sltElmTmp){
-  const int *n0=eleNum;
-  const int *n1=eleNum+Nsite;
-  const int rua=ra+Nsite*u, rub=rb+Nsite*u;
   int **posBF = PosBF;
   const int mua = ma + Ne*u;
-  int trua, trub, trsi, trsj;
-  int s,idx, rk,rtmp;
-  int t,idx2,rl,rtmp2;
-  double eta;
-  int ri,ori,tri,sgni,rsi0,rsi1;
-  int rj,orj,trj,sgnj,rsj0,rsj1;
-  int qpidx,mpidx,spidx,optidx;
-  double complex cs,cc,ss;
+  int trua, trub;
+  int idx, rtmp;
+  int ri,tri,rsi0,rsi1;
+  int rj,trj,rsj0,rsj1;
+  int qpidx,mpidx;
   double complex slt_ij,slt_ji;
-  double complex tmp_ij,tmp_ji;
-  int *xqp, *xqpInv, *xqpSgn, *xqpOpt, *xqpOptSgn;
+  int *xqp, *xqpInv;
   double complex*sltE,*sltE_i0,*sltE_i1;
   int rsz[Nsite2];
   int rhop0[Nsite2],rhop1[Nsite2];
-  double complex*pTrans_i;
-  int zidx,zidx2,rsi,rsj,msi,msj,itmp,hop,icount,mi,mj;
+  int zidx,hop,icount;
   int jcount[Nsite],jcount1[Nsite];
   int jcountTmp[Nsite][Nsite],jcount1Tmp[Nsite][Nsite];
-  int ri0,ri1,mi0,mi1,mj0,mj1,flag,hidx,itmp0=0,itmp1=0;
+  int mi0,mi1,flag,hidx,itmp0=0,itmp1=0;
   int ijcount,jicount;
-  int rki,rkj,rli,rlj;
-  const int nSite=Nsite;
-  const int nRange=Nrange;
-  const int nSiteRange = nRange*nSite;
-  int idx_ik,idx_jk,idx_il,idx_jl;
-  int bfidx;
-  int xn,xm,xk,xl;
-  int dki,dlj,nidx,midx,xtmp,xtmp2;
-  const int *bfCnt0=eleProjBFCnt;
-  const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
-  const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
   double complex sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
 
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
@@ -1040,7 +970,6 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
     itmp0=0;
     itmp1=0;
     mpidx = qpidx / NSPGaussLeg;
-    spidx = qpidx % NSPGaussLeg;
 
     xqp = QPTrans[mpidx];
     xqpInv = QPTransInv[mpidx];
@@ -1078,7 +1007,6 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
     msa[qpidx*Nsite+hop]= ma + Ne*u;
     hop++;
 
-    itmp=0;
     for(zidx=0;zidx<icount;zidx++){
       jcount[zidx]=0;
       jcount1[zidx]=0;
@@ -1208,49 +1136,33 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
 
 void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
                           const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex* sltElmTmp){
-  const int *n0=eleNum;
-  const int *n1=eleNum+Nsite;
-  const int rua=ra+Nsite*u, rub=rb+Nsite*u;
   int **posBF = PosBF;
   //int rua=ra+Nsite*u, rub=rb+Nsite*u;
   const int mua = ma + Ne*u;
-  int trua, trub, trsi, trsj;
-  int s,idx, rk,rtmp;
-  int t,idx2,rl,rtmp2;
-  double eta;
-  int ri,ori,tri,sgni,rsi0,rsi1;
-  int rj,orj,trj,sgnj,rsj0,rsj1;
-  int qpidx,mpidx,spidx,optidx;
-  double complex cs,cc,ss;
+  int trua, trub;
+  int idx, rtmp;
+  int ri,tri,rsi0,rsi1;
+  int rj,trj,rsj0,rsj1;
+  int qpidx,mpidx;
   double complex slt_ij,slt_ji;
-  double complex tmp_ij,tmp_ji;
-  int *xqp, *xqpInv, *xqpSgn, *xqpOpt, *xqpOptSgn;
+  int *xqp, *xqpInv;
   double complex *sltE,*sltE_i0,*sltE_i1;
   //double complex pTrans[Nsite2*Nsite2];
   //double complex *pTrans_i;
   int rsz[Nsite2];
   int rhop0[Nsite2],rhop1[Nsite2];
-  double complex* pTrans_i;
-  int zidx,zidx2,rsi,rsj,msi,msj,itmp,hop,icount,mi,mj;
+  int zidx,itmp,hop,icount;
   int jcount[Nsite],jcount1[Nsite];
-  int ri0,ri1,mi0,mi1,mj0,mj1,flag,hidx,itmp0=0,itmp1=0;
+  int mi0,mi1,flag,hidx,itmp0=0,itmp1=0;
   int ijcount,jicount;
-  int rki,rkj,rli,rlj;
-  const int nSite=Nsite;
-  const int nRange=Nrange;
-  const int nSiteRange = nRange*nSite;
 
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
     itmp0=0;
     itmp1=0;
     mpidx = qpidx / NSPGaussLeg;
-    spidx = qpidx % NSPGaussLeg;
 
     xqp = QPTrans[mpidx];
     xqpInv = QPTransInv[mpidx];
-    cs = SPGLCosSin[spidx];
-    cc = SPGLCosCos[spidx];
-    ss = SPGLSinSin[spidx];
 
     sltE = sltElmTmp + qpidx*Nsite2*Nsite2;
 
@@ -1291,15 +1203,15 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
       jcount1[zidx]=0;
     }
     //#pragma omp parallel for reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
-    //private(zidx,mi0,mi1,jcount,jcount1,itmp,  \
-    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,     \
-    //        ijcount,jicount,qpidx,hop,itmp1,itmp0,\
-    //        rj,trj,rsj0,rsj1,slt_ij,slt_ji) \
+    //private(zidx,mi0,mi1,jcount,jcount1,itmp,
+    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,
+    //        ijcount,jicount,qpidx,hop,itmp1,itmp0,
+    //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
 
-    //#pragma omp parallel for default(shared)        \
-    //private(zidx,mi0,mi1,  \
-    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,     \
-    //        ijcount,jicount,qpidx,\
+    //#pragma omp parallel for default(shared)
+    //private(zidx,mi0,mi1,
+    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,
+    //        ijcount,jicount,qpidx,
     //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
     //reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
     //#pragma loop noalias
@@ -1387,50 +1299,34 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
 
 void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const int u, 
                      const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp){
-  const int *n0=eleNum;
-  const int *n1=eleNum+Nsite;
-  const int rua=ra+Nsite*u, rub=rb+Nsite*u;
   int **posBF = PosBF;
   //int rua=ra+Nsite*u, rub=rb+Nsite*u;
   const int mua = ma + Ne*u;
-  int trua, trub, trsi, trsj;
-  int s,idx, rk,rtmp;
-  int t,idx2,rl,rtmp2;
-  double eta;
-  int ri,ori,tri,sgni,rsi0,rsi1;
-  int rj,orj,trj,sgnj,rsj0,rsj1;
-  int qpidx,mpidx,spidx,optidx;
-  double cs,cc,ss;
+  int trua, trub;
+  int idx, rtmp;
+  int ri,tri,rsi0,rsi1;
+  int rj,trj,rsj0,rsj1;
+  int qpidx,mpidx;
   double slt_ij,slt_ji;
-  double tmp_ij,tmp_ji;
-  int *xqp, *xqpInv, *xqpSgn, *xqpOpt, *xqpOptSgn;
+  int *xqp, *xqpInv;
   double *sltE,*sltE_i0,*sltE_i1;
   //double complex pTrans[Nsite2*Nsite2];
   //double complex *pTrans_i;
   int rsz[Nsite2];
   int rhop0[Nsite2],rhop1[Nsite2];
-  double *pTrans_i;
-  int zidx,zidx2,rsi,rsj,msi,msj,itmp,hop,icount,mi,mj;
+  int zidx,itmp,hop,icount;
   int jcount[Nsite],jcount1[Nsite];
-  int ri0,ri1,mi0,mi1,mj0,mj1,flag,hidx,itmp0=0,itmp1=0;
+  int mi0,mi1,flag,hidx,itmp0=0,itmp1=0;
   int ijcount,jicount;
-  int rki,rkj,rli,rlj;
-  const int nSite=Nsite;
-  const int nRange=Nrange;
-  const int nSiteRange = nRange*nSite;
 
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
     itmp0=0;
     itmp1=0;
     mpidx = qpidx / NSPGaussLeg;
-    spidx = qpidx % NSPGaussLeg;
 
     xqp = QPTrans[mpidx];
     xqpInv = QPTransInv[mpidx];
-    cs = SPGLCosSin[spidx];
-    cc = SPGLCosCos[spidx];
-    ss = SPGLSinSin[spidx];
-    
+
     sltE = sltElmTmp + qpidx*Nsite2*Nsite2;
 
     icount=0;
@@ -1470,15 +1366,15 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
       jcount1[zidx]=0;
     }
     //#pragma omp parallel for reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
-    //private(zidx,mi0,mi1,jcount,jcount1,itmp,  \
-    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,     \
-    //        ijcount,jicount,qpidx,hop,itmp1,itmp0,\
-    //        rj,trj,rsj0,rsj1,slt_ij,slt_ji) \
+    //private(zidx,mi0,mi1,jcount,jcount1,itmp,
+    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,
+    //        ijcount,jicount,qpidx,hop,itmp1,itmp0,
+    //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
     
-    //#pragma omp parallel for default(shared)        \
-    //private(zidx,mi0,mi1,  \
-    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,     \
-    //        ijcount,jicount,qpidx,\
+    //#pragma omp parallel for default(shared)
+    //private(zidx,mi0,mi1,
+    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,
+    //        ijcount,jicount,qpidx,
     //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
     //reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
     //#pragma loop noalias
@@ -1568,7 +1464,7 @@ void StoreSlaterElmBF_fcmp(complex double *bufM){
   int qpidx,rsi,rsj;
   const double complex* sltE;
   const double complex* sltE_i;
-  double complex*bufM_i, *bufM_i2;
+  double complex*bufM_i;
 
   /* store SlaterElmBF before hopping */
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
@@ -1591,7 +1487,7 @@ void StoreSlaterElmBF_real(double *bufM){
   int qpidx,rsi,rsj;
   const double * sltE;
   const double * sltE_i;
-  double *bufM_i, *bufM_i2;
+  double *bufM_i;
 
   /* store SlaterElmBF before hopping */
   for(qpidx=0;qpidx<NQPFull;qpidx++) {

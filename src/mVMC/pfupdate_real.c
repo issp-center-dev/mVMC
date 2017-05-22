@@ -226,7 +226,6 @@ void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
                        const int qpStart, const int qpEnd, const double *bufM) {
   //#pragma procedure serial
   int i;
-  const int nsize = Nsize;
   const int qpNum = qpEnd-qpStart;
   int qpidx;
   //double *sltE;
@@ -274,10 +273,6 @@ double calculateNewPfMBFN4_real_child(const int qpidx, const int n, const int *m
   //double complex mat[n2*n2]; /* mat[n2][n2] */
   double *mat; /* mat[n2][n2] */
   double *mat_k;
-  double *invMat; /* mat[n2][n2] */
-  //double complex matUV[n2*nsize]; /* mat[n2][nsize] */
-  double *matUV; /* mat[n2][nsize] */
-  double *invMat_k, *matUV_i, *matUV_j;
   double sgn;
 
   int rsi,rsk,msi,msj,k,l;
@@ -285,13 +280,11 @@ double calculateNewPfMBFN4_real_child(const int qpidx, const int n, const int *m
 
   /* for ZSKPFA */
   char uplo='U', mthd='P';
-  int m,nn,lda,info=0;
+  int nn,lda,info=0;
   double pfaff;
   int iwork[n2];
-  int iwork2[n2];
   //double complex work[n2*n2]; /* [n2][n2] */
   double *work; /* [n2][n2] */
-  double rwork[n2*n2]; /* [n2][n2] */
   int lwork = n2*n2;
   nn=lda=n2;
 
@@ -387,13 +380,12 @@ void UpdateMAll_BF_real(const int *icount, const int *msaTmp,
                   double *pfMNew, const int *eleIdx,
                   const int qpStart, const int qpEnd) {
 #pragma procedure serial
-  const int nsize = Nsize;
   const int qpNum = qpEnd-qpStart;
   int qpidx;
   //double complex *sltE;
   //double complex *sltE_i;
   int *msa;
-  int msi,msj,rsi,rsj,i;
+  int i;
   //int *hop;
   //double complex diff;
 
@@ -447,7 +439,6 @@ double updateMAll_BF_real_child(const int qpidx, const int n, const int *msa,
   int iwork[n2];
   int iwork2[n2];
   //double complex work[n2*n2]; /* [n2][n2] */
-  double rwork[n2*n2]; /* [n2][n2] */
   double *work; /* [n2][n2] */
   double *work2; /* [n2][n2] */
   int lwork = n2*n2;

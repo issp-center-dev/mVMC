@@ -32,9 +32,8 @@ void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *ele
 void UpdateSlaterElm_fsz() {
   int ri,ori,tri,sgni,rsi0,rsi1;
   int rj,orj,trj,sgnj,rsj0,rsj1;
-  int qpidx,mpidx,spidx,optidx;
+  int qpidx,mpidx,optidx;
   int tri0,tri1,trj0,trj1; //fsz
-  double cs,cc,ss;
   double complex slt_i0j0,slt_j0i0;
   double complex slt_i0j1,slt_j1i0;
   double complex slt_i1j0,slt_j0i1;
@@ -43,8 +42,8 @@ void UpdateSlaterElm_fsz() {
   double complex *sltE,*sltE_i0,*sltE_i1;
 
   #pragma omp parallel for default(shared)        \
-    private(qpidx,optidx,mpidx,spidx,                      \
-            xqpOpt,xqpOptSgn,xqp,xqpSgn,cs,cc,ss,sltE,     \
+    private(qpidx,optidx,mpidx,                   \
+            xqpOpt,xqpOptSgn,xqp,xqpSgn,sltE,     \
             ri,ori,tri,sgni,rsi0,rsi1,sltE_i0,sltE_i1,      \
             rj,orj,trj,sgnj,rsj0,rsj1,slt_i0j0,slt_j0i0,slt_i0j1,slt_j1i0,slt_i1j0,slt_j0i1,slt_i1j1,slt_j1i1,\
             tri0,tri1,trj0,trj1)
@@ -56,7 +55,7 @@ void UpdateSlaterElm_fsz() {
     // optidx will not be used
     optidx    = qpidx / NQPFix;              // optidx =0:  
     mpidx     = (qpidx%NQPFix) / NSPGaussLeg;// mpidx !=0: momentum projection
-    spidx     = qpidx % NSPGaussLeg;         // spidx  =0: spin projection 
+//  spidx     = qpidx % NSPGaussLeg;         // spidx  =0: spin projection
 
     xqpOpt    = QPOptTrans[optidx];          // xqpOpta   = 1
     xqpOptSgn = QPOptTransSgn[optidx];       // xqpOptSgn = 1
@@ -120,7 +119,6 @@ void UpdateSlaterElm_fsz() {
 void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *eleIdx,int *eleSpn) {
   const int nBuf=NSlater*NQPFull;
   const int nsize = Nsize;       // Nsize=2*Ne
-  const int ne = Ne;
   const int nQPFull = NQPFull;   // note: NQPFix = NSPGaussLeg * NMPTrans, NQPFull = NQPFix * NQPOptTrans(=1);
   const int nMPTrans = NMPTrans; // number of translational operators
   const int nSlater = NSlater;   // number of slater
@@ -128,10 +126,9 @@ void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *ele
 
   const double complex invIP = 1.0/ip;
   int msi,msj,ri,rj,ori,orj,tri,trj,sgni,sgnj;
-  int mpidx,spidx,orbidx,qpidx,optidx,i;
-  int tri0,tri1,trj0,trj1;
+  int mpidx,orbidx,qpidx,optidx,i;
   int si,sj;//fsz
-  double complex cs,cc,ss; // including Pf
+  double complex cs; // including Pf
   int *xqp,*xqpSgn,*xqpOpt,*xqpOptSgn;
   double complex *invM,*invM_i;
 
@@ -193,13 +190,12 @@ void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *ele
   }
 // calculating Tr(X^{-1}*dX/df_{msi,msj})=-2*alpha(sigma(msi),sigma(msj))(X^{-1})_{msi,msj}
   #pragma omp parallel for default(shared)        \
-    private(qpidx,mpidx,spidx,cs,cc,ss,                   \
+    private(qpidx,mpidx,cs,                   \
             tOrbIdx,tOrbSgn,invM,buf,msi,msj,             \
             tOrbIdx_i,tOrbSgn_i,invM_i,orbidx)
   #pragma loop noalias
   for(qpidx=0;qpidx<nQPFull;qpidx++) { // nQPFull = NQPFix * NQPOptTrans: usually = NSPGaussLeg * NMPTrans
     mpidx = qpidx / NSPGaussLeg;       // qpidx   = NSPGaussLeg*mpidx + spidx
-    spidx = qpidx % NSPGaussLeg;
 
     cs = PfM[qpidx];// * SPGLCosSin[spidx]; //  PfM
 

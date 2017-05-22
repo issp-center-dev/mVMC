@@ -504,7 +504,6 @@ void VMC_BF_MakeSample(MPI_Comm comm)
   int mi, mj, ri, rj, s, t, i;
   int nAccept = 0;
   int sample;
-  int tmp_i;
 
   double complex logIpOld, logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
   int projCntNew[NProj];
@@ -702,7 +701,6 @@ int makeInitialSampleBF(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, 
   int flag = 1, flagRdc, loop = 0;
   int ri, mi, si, msi, rsi;
   int rank, size;
-  int tmp_i;
 
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
@@ -788,13 +786,12 @@ void copyToBurnSampleBF(const int *eleIdx) {
 void saveEleConfigBF(const int sample, const double logIp,
                      const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,
                      const int *eleProjBFCnt) {
-  int i, j, offset;
+  int i, offset;
   double x;
   const int nsize = Nsize;
-  const int nsite = Nsite;
   const int nsite2 = Nsite2;
   const int nProj = NProj;
-  const int nQPFull = NQPFull;
+  //const int nQPFull = NQPFull;
 
   offset = sample * nsize;
 #pragma loop noalias
