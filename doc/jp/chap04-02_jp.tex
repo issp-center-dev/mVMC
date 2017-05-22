@@ -2279,7 +2279,9 @@ SR法で最適化されたペア軌道の変分パラメータが出力されま
 \subsection{xxx\_out\_yyy.dat}
 ビン毎の計算情報として、
 \begin{equation}
-\langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2} \nonumber
+\langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2},
+\langle S^z \rangle, \langle (S^z)^2 \rangle
+\nonumber.
 \end{equation}
 が順に出力されます。$\langle H \rangle$については実部と虚部がそれぞれ出力され、それ以外は実部のみ出力されます。
 xxxには\verb|CDataFileHead|で指定されるヘッダが、yyyには\verb|ModPara|ファイルの\verb|NDataIdxStart|, \verb|NDataQtySmp|に従い\verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|の順に記載されます。以下に出力例を記載します。

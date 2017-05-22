@@ -2245,7 +2245,9 @@ The optimized pair orbitals by SR method are outputted. The file format is same 
 \subsection{xxx\_out\_yyy.dat}
 The calculation information at each bins are outputted in the order:
 \begin{equation}
-\langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2} \nonumber.
+\langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2},
+\langle S^z \rangle, \langle (S^z)^2 \rangle
+\nonumber.
 \end{equation}
 The type of $\langle H \rangle$ is a complex number, and that of the others is a real number.
 Here, xxx is the header indicated by \verb|CDataFileHead| in \verb|ModPara| file and yyy is a number given by \verb|NDataIdxStart|$\cdots$\verb|NDataIdxStart|+\verb|NDataQtySmp|, where both \verb|NDataIdxStart| and \verb|NDataQtySmp| are defined in \verb|ModPara| file.
