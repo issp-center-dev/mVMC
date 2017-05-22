@@ -8,8 +8,8 @@
 mVMC requires the following packages:
 \begin{itemize}
 \item C compiler (intel, Fujitsu, GNU, etc. )
-\item ScaLAPACK library (intel MKL, Fujitsu, ATLAS, etc.)
 \item MPI library
+\item Option: ScaLAPACK library (intel MKL, Fujitsu, ATLAS, etc.)
 \end{itemize}
 
 \begin{screen}
@@ -152,8 +152,32 @@ make
 After compilation,
 \verb|src| folder is created below the \verb|build| folder and
 an execute \verb|vmc.out in the \verb|src| folder.
+We can select ScaLAPACK instead of LAPACK for vmc calculation 
+by adding the following as the cmake option
+\begin{verbatim}
+-DUSE_SCALAPACK=ON -DSCALAPACK_LIBRARIES="xxx".
+\end{verbatim}
+Here, xxx is the libraries to use ScaLAPACK.
 Please note that we must delete the \verb|build| folder and
 repeat the above operations when we change the compiler.
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize\\
+When we type the following in sekirei, 
+\begin{verbatim}
+cmake -DCONFIG=sekirei ../ -DUSE_SCALAPACK=ON ,
+\end{verbatim}
+\verb$-DSCALAPACK_LIBRARIES$ is automatically set as
+\begin{verbatim}
+-DSCALAPACK_LIBRARIES="\${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 
+-lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core
+-lmkl_blacs_sgimpt_lp64".
+\end{verbatim}
+When the path to libraries for ScaLAPACK is different in your circumstance,
+please set \verb$-DSCALAPACK_LIBRARIES$ as the correct path.
+\end{screen}
 
 \label{Sec:HowToInstall}
 
@@ -197,16 +221,14 @@ When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└─Kagome/\\
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└──$\cdots$\\
 ├──src/\\
-│~~~~~~~~~~├──**.c\\
-│~~~~~~~~~~├──**.h\\
+│~~~~~~~~~~├──mVMC/\\
+│~~~~~~~~~~│~~~~~~├─ **.c\\
+│~~~~~~~~~~│~~~~~~└──include/\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~└──**.h\\
 │~~~~~~~~~~├──ComplexUHF/\\
-│~~~~~~~~~~│~~~~~~~└──src/\\
-│~~~~~~~~~~│~~~~~~~~~~~~~~~~├─ **.c\\
-│~~~~~~~~~~│~~~~~~~~~~~~~~~~└──include/\\
-│~~~~~~~~~~│~~~~~~~~~~~~~~~~~~~~~~~~~~~└──**.h\\
-│~~~~~~~~~~├──makefile\_src\\
-│~~~~~~~~~~├──include/\\
-│~~~~~~~~~~│~~~~~~~└──**.h\\
+│~~~~~~~~~~│~~~~~~├─ **.c\\
+│~~~~~~~~~~│~~~~~~└──include/\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~└──**.h\\
 │~~~~~~~~~~├──StdFace/\\
 │~~~~~~~~~~│~~~~~~~├──**.c\\
 │~~~~~~~~~~│~~~~~~~└──**.h\\

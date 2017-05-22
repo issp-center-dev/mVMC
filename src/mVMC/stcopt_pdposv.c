@@ -62,8 +62,6 @@ int StochasticOpt(MPI_Comm comm) {
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
-  printf("fuga\n");
-
   StartTimer(50);
 //[s] for only real variables TBC
   if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real &  sz=0
