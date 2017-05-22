@@ -47,4 +47,5 @@ int StochasticOptCG(MPI_Comm comm)
   }else{
     ret = StochasticOptCG_fcmp(comm);
   }
+  return ret;
 }
