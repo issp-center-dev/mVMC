@@ -21,11 +21,6 @@ add_library(StdFace STATIC ../StdFace/ChainLattice.c ../StdFace/HoneycombLattice
 
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../pfapack)
 
-if(USE_SCALAPACK AND (NOT SCALAPACK_LIBRARY_DIR MATCHES ""))
-  message(STATUS ${SCALAPACK_LIBRARY_DIR})
-  link_directories(${SCALAPACK_LIBRARY_DIR})
-endif(USE_SCALAPACK AND (NOT SCALAPACK_LIBRARY_DIR MATCHES ""))
-
 add_executable(vmcdry.out vmcdry.c)
 target_link_libraries(vmcdry.out StdFace m)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
@@ -33,10 +28,12 @@ target_link_libraries(vmc.out StdFace)
 target_link_libraries(vmc.out pfapack StdFace ${LAPACK_LIBRARIES} m)
 
 if(USE_SCALAPACK)
-  separate_arguments(SCALAPACK_LIBRARIES)
-  foreach(sc_lib IN LISTS SCALAPACK_LIBRARIES)
+  string(REGEX REPLACE [[-L[ ]*]] "-L" sc_libs ${SCALAPACK_LIBRARIES})
+  string(REGEX REPLACE [[[ ]+]] ";" sc_libs ${sc_libs})
+  foreach(sc_lib IN LISTS sc_libs)
     target_link_libraries(vmc.out ${sc_lib})
   endforeach(sc_lib)
+  message(STATUS "SCALAPACK_LIBRARIES: ${SCALAPACK_LIBRARIES}")
 endif(USE_SCALAPACK)
 
 if(MPI_FOUND)
