@@ -914,293 +914,293 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, i
 
 
 void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijcount, double* slt_ji, int *jicount, const int *eleProjBFCnt){
-    int xn,xm,xk,xl;
-    int rki,rkj,rli,rlj;
-    int idx_ik,idx_jk,idx_il,idx_jl;
-    int bfidx;
-    int dki,dlj,nidx,midx,xtmp;
-    const int nSite=Nsite;
-    const int nRange=Nrange;
-    const int nSiteRange = nRange*nSite;
-    const int *bfCnt0=eleProjBFCnt;
-    const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
-    const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
-    double eta;
-    int **posBF = PosBF;
+  int xn,xm,xk,xl;
+  int rki,rkj,rli,rlj;
+  int idx_ik,idx_jk,idx_il,idx_jl;
+  int bfidx;
+  int dki,dlj,nidx,midx,xtmp;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nSiteRange = nRange*nSite;
+  const int *bfCnt0=eleProjBFCnt;
+  const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
+  const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
+  double eta;
+  int **posBF = PosBF;
 
-    *slt_ij = 0.0;
-    *slt_ji = 0.0;
-    *ijcount = 0;
-    *jicount = 0;
-    //#pragma omp parallel for reduction(+:slt_ij,slt_ji)
-    for(xn=0;xn<4;xn++){
-        bfCnt0_n=bfCnt0+xn*nSiteRange;
-        bfCnt1_n=bfCnt1+xn*nSiteRange;
-        for(xm=0;xm<4;xm++){
-            if(xm==0 && xn == 0) continue;
-            bfCnt0_m=bfCnt0+xm*nSiteRange;
-            bfCnt1_m=bfCnt1+xm*nSiteRange;
+  *slt_ij = 0.0;
+  *slt_ji = 0.0;
+  *ijcount = 0;
+  *jicount = 0;
+  //#pragma omp parallel for reduction(+:slt_ij,slt_ji)
+  for(xn=0;xn<4;xn++){
+    bfCnt0_n=bfCnt0+xn*nSiteRange;
+    bfCnt1_n=bfCnt1+xn*nSiteRange;
+    for(xm=0;xm<4;xm++){
+      if(xm==0 && xn == 0) continue;
+      bfCnt0_m=bfCnt0+xm*nSiteRange;
+      bfCnt1_m=bfCnt1+xm*nSiteRange;
 
-            for(xk=0;xk<nRange;xk++) {
-                rki=posBF[tri][xk];
-                rkj=posBF[trj][xk];
-                idx_ik=tri*nRange+xk;
-                idx_jk=trj*nRange+xk;
+      for(xk=0;xk<nRange;xk++) {
+        rki=posBF[tri][xk];
+        rkj=posBF[trj][xk];
+        idx_ik=tri*nRange+xk;
+        idx_jk=trj*nRange+xk;
 
-                dki = RangeIdx[tri][rki];
-                xtmp = 4*dki+xn;
-                nidx = xtmp-3-dki;
-                if(xtmp%4==0){nidx=-1;}
-                if(xtmp==0){nidx=0;}
-                if(nidx<0){continue;}
+        dki = RangeIdx[tri][rki];
+        xtmp = 4*dki+xn;
+        nidx = xtmp-3-dki;
+        if(xtmp%4==0){nidx=-1;}
+        if(xtmp==0){nidx=0;}
+        if(nidx<0){continue;}
 
-                *ijcount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
-                *jicount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
+        *ijcount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
+        *jicount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
 
-                for(xl=0;xl<nRange;xl++){
-                    rli=posBF[tri][xl];
-                    rlj=posBF[trj][xl];
-                    idx_il=tri*nRange+xl;
-                    idx_jl=trj*nRange+xl;
+        for(xl=0;xl<nRange;xl++){
+          rli=posBF[tri][xl];
+          rlj=posBF[trj][xl];
+          idx_il=tri*nRange+xl;
+          idx_jl=trj*nRange+xl;
 
-                    dlj = RangeIdx[trj][rlj];
-                    xtmp = 4*dlj+xm;
-                    midx = xtmp-3-dlj;
-                    if(xtmp%4==0){midx=-1;}
-                    if(xtmp==0){midx=0;}
-                    if(midx<0){continue;}
-                    bfidx=BFSubIdx[nidx][midx];
+          dlj = RangeIdx[trj][rlj];
+          xtmp = 4*dlj+xm;
+          midx = xtmp-3-dlj;
+          if(xtmp%4==0){midx=-1;}
+          if(xtmp==0){midx=0;}
+          if(midx<0){continue;}
+          bfidx=BFSubIdx[nidx][midx];
 
-                    //printf("ProjBF[%d]=%.2e\n",bfidx,ProjBF[bfidx]);
-                    //printf("OrbitalSgn[%d][%d]=%d\n",rki,rlj,OrbitalSgn[rki][rlj]);
-                    //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
-                    //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
-                    *slt_ij += -ProjBF[bfidx]*bfCnt0_n[idx_ik]*bfCnt1_m[idx_jl]*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
-                    *slt_ji += -ProjBF[bfidx]*bfCnt1_n[idx_ik]*bfCnt0_m[idx_jl]*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
-                }
-            }
+          //printf("ProjBF[%d]=%.2e\n",bfidx,ProjBF[bfidx]);
+          //printf("OrbitalSgn[%d][%d]=%d\n",rki,rlj,OrbitalSgn[rki][rlj]);
+          //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
+          //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
+          *slt_ij += -ProjBF[bfidx]*bfCnt0_n[idx_ik]*bfCnt1_m[idx_jl]*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
+          *slt_ji += -ProjBF[bfidx]*bfCnt1_n[idx_ik]*bfCnt0_m[idx_jl]*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
         }
+      }
     }
+  }
 
-    if(*ijcount == 0){eta = 1.0;}
-    else{eta = creal(ProjBF[0]);} //TODO: Check
-    *slt_ij += eta*Slater[ OrbitalIdx[tri][trj] ]*OrbitalSgn[tri][trj];
+  if(*ijcount == 0){eta = 1.0;}
+  else{eta = creal(ProjBF[0]);} //TODO: Check
+  *slt_ij += eta*Slater[ OrbitalIdx[tri][trj] ]*OrbitalSgn[tri][trj];
 
-    if(*jicount == 0){eta = 1.0;}
-    else{eta = creal(ProjBF[0]);}
-    *slt_ji += eta*Slater[ OrbitalIdx[trj][tri] ]*OrbitalSgn[trj][tri];
+  if(*jicount == 0){eta = 1.0;}
+  else{eta = creal(ProjBF[0]);}
+  *slt_ji += eta*Slater[ OrbitalIdx[trj][tri] ]*OrbitalSgn[trj][tri];
 
-    return;
+  return;
 
 }
 
 
 void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int u,
                        const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex*sltElmTmp){
-    const int *n0=eleNum;
-    const int *n1=eleNum+Nsite;
-    const int rua=ra+Nsite*u, rub=rb+Nsite*u;
-    int **posBF = PosBF;
-    const int mua = ma + Ne*u;
-    int trua, trub, trsi, trsj;
-    int s,idx, rk,rtmp;
-    int t,idx2,rl,rtmp2;
-    double eta;
-    int ri,ori,tri,sgni,rsi0,rsi1;
-    int rj,orj,trj,sgnj,rsj0,rsj1;
-    int qpidx,mpidx,spidx,optidx;
-    double complex cs,cc,ss;
-    double complex slt_ij,slt_ji;
-    double complex tmp_ij,tmp_ji;
-    int *xqp, *xqpInv, *xqpSgn, *xqpOpt, *xqpOptSgn;
-    double complex*sltE,*sltE_i0,*sltE_i1;
-    int rsz[Nsite2];
-    int rhop0[Nsite2],rhop1[Nsite2];
-    double complex*pTrans_i;
-    int zidx,zidx2,rsi,rsj,msi,msj,itmp,hop,icount,mi,mj;
-    int jcount[Nsite],jcount1[Nsite];
-    int jcountTmp[Nsite][Nsite],jcount1Tmp[Nsite][Nsite];
-    int ri0,ri1,mi0,mi1,mj0,mj1,flag,hidx,itmp0=0,itmp1=0;
-    int ijcount,jicount;
-    int rki,rkj,rli,rlj;
-    const int nSite=Nsite;
-    const int nRange=Nrange;
-    const int nSiteRange = nRange*nSite;
-    int idx_ik,idx_jk,idx_il,idx_jl;
-    int bfidx;
-    int xn,xm,xk,xl;
-    int dki,dlj,nidx,midx,xtmp,xtmp2;
-    const int *bfCnt0=eleProjBFCnt;
-    const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
-    const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
-    double complex sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
+  const int *n0=eleNum;
+  const int *n1=eleNum+Nsite;
+  const int rua=ra+Nsite*u, rub=rb+Nsite*u;
+  int **posBF = PosBF;
+  const int mua = ma + Ne*u;
+  int trua, trub, trsi, trsj;
+  int s,idx, rk,rtmp;
+  int t,idx2,rl,rtmp2;
+  double eta;
+  int ri,ori,tri,sgni,rsi0,rsi1;
+  int rj,orj,trj,sgnj,rsj0,rsj1;
+  int qpidx,mpidx,spidx,optidx;
+  double complex cs,cc,ss;
+  double complex slt_ij,slt_ji;
+  double complex tmp_ij,tmp_ji;
+  int *xqp, *xqpInv, *xqpSgn, *xqpOpt, *xqpOptSgn;
+  double complex*sltE,*sltE_i0,*sltE_i1;
+  int rsz[Nsite2];
+  int rhop0[Nsite2],rhop1[Nsite2];
+  double complex*pTrans_i;
+  int zidx,zidx2,rsi,rsj,msi,msj,itmp,hop,icount,mi,mj;
+  int jcount[Nsite],jcount1[Nsite];
+  int jcountTmp[Nsite][Nsite],jcount1Tmp[Nsite][Nsite];
+  int ri0,ri1,mi0,mi1,mj0,mj1,flag,hidx,itmp0=0,itmp1=0;
+  int ijcount,jicount;
+  int rki,rkj,rli,rlj;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nSiteRange = nRange*nSite;
+  int idx_ik,idx_jk,idx_il,idx_jl;
+  int bfidx;
+  int xn,xm,xk,xl;
+  int dki,dlj,nidx,midx,xtmp,xtmp2;
+  const int *bfCnt0=eleProjBFCnt;
+  const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
+  const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
+  double complex sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
 
-    for(qpidx=0;qpidx<NQPFull;qpidx++) {
-        StartTimer(91);
-        itmp0=0;
-        itmp1=0;
-        mpidx = qpidx / NSPGaussLeg;
-        spidx = qpidx % NSPGaussLeg;
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    StartTimer(91);
+    itmp0=0;
+    itmp1=0;
+    mpidx = qpidx / NSPGaussLeg;
+    spidx = qpidx % NSPGaussLeg;
 
-        xqp = QPTrans[mpidx];
-        xqpInv = QPTransInv[mpidx];
+    xqp = QPTrans[mpidx];
+    xqpInv = QPTransInv[mpidx];
 
-        sltE = sltElmTmp + qpidx*Nsite2*Nsite2;
+    sltE = sltElmTmp + qpidx*Nsite2*Nsite2;
 
-        icount=0;
-        trua = xqpInv[ra];
-        rsz[icount] = trua;
-        icount++;
-        for(idx=0;idx<Nrange;idx++) {
-            rtmp=posBF[trua][idx];
-            flag=0;
-            for(zidx=0;zidx<icount;zidx++){
-                if(rsz[zidx] == rtmp) flag=1;
-            }
-            if(flag==1) continue;
-            rsz[icount] = rtmp;
-            icount++;
-        }
-        trub = xqpInv[rb];
-        rsz[icount] = trub;
-        icount++;
-        for(idx=0;idx<Nrange;idx++) {
-            rtmp=posBF[trub][idx];
-            flag=0;
-            for(zidx=0;zidx<icount;zidx++){
-                if(rsz[zidx] == rtmp) flag=1;
-            }
-            if(flag==1) continue;
-            rsz[icount] = rtmp;
-            icount++;
-        }
-        hop=0;
-        msa[qpidx*Nsite+hop]= ma + Ne*u;
-        hop++;
+    icount=0;
+    trua = xqpInv[ra];
+    rsz[icount] = trua;
+    icount++;
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trua][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    trub = xqpInv[rb];
+    rsz[icount] = trub;
+    icount++;
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trub][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    hop=0;
+    msa[qpidx*Nsite+hop]= ma + Ne*u;
+    hop++;
 
-        itmp=0;
-        for(zidx=0;zidx<icount;zidx++){
-            jcount[zidx]=0;
-            jcount1[zidx]=0;
-            for(rj=0;rj<Nsite;rj++){
-                jcountTmp[rj][zidx] = 0;
-                jcount1Tmp[rj][zidx] = 0;
-            }
-        }
+    itmp=0;
+    for(zidx=0;zidx<icount;zidx++){
+      jcount[zidx]=0;
+      jcount1[zidx]=0;
+      for(rj=0;rj<Nsite;rj++){
+        jcountTmp[rj][zidx] = 0;
+        jcount1Tmp[rj][zidx] = 0;
+      }
+    }
 
 #pragma omp parallel for default(shared)
-        for(zidx=0;zidx<Nsite*Nsite;zidx++){
-            sltElm[zidx] = 0.0;
-            sltElm2[zidx] = 0.0;
-        }
+    for(zidx=0;zidx<Nsite*Nsite;zidx++){
+      sltElm[zidx] = 0.0;
+      sltElm2[zidx] = 0.0;
+    }
 
-        StopTimer(91);
-        StartTimer(92);
+    StopTimer(91);
+    StartTimer(92);
 #pragma omp parallel for default(shared) \
-      private(zidx,  \
-          ri,tri,rsi0,rsi1,rj,trj,rsj0,rsj1, \
-           ijcount,jicount,slt_ij,slt_ji)
-        for(zidx=0;zidx<icount*Nsite;zidx++){
-            ri  = rsz[zidx/Nsite];
-            tri = xqp[ri];
-            rsi0 = ri;
-            rsi1 = ri+Nsite;
+    private(zidx,  \
+        ri,tri,rsi0,rsi1,rj,trj,rsj0,rsj1, \
+        ijcount,jicount,slt_ij,slt_ji)
+    for(zidx=0;zidx<icount*Nsite;zidx++){
+      ri  = rsz[zidx/Nsite];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
 
-            rj = zidx%Nsite;
-            trj = xqp[rj];
-            rsj0 = rj;
-            rsj1 = rj+Nsite;
+      rj = zidx%Nsite;
+      trj = xqp[rj];
+      rsj0 = rj;
+      rsj1 = rj+Nsite;
 
-            SubSlaterElmBF_fcmp(tri,trj,&slt_ij,&ijcount,&slt_ji,&jicount,eleProjBFCnt);
+      SubSlaterElmBF_fcmp(tri,trj,&slt_ij,&ijcount,&slt_ji,&jicount,eleProjBFCnt);
 
-            sltElm[tri*Nsite+trj] = slt_ij;
-            sltElm2[tri*Nsite+trj] = slt_ji;
-        }
+      sltElm[tri*Nsite+trj] = slt_ij;
+      sltElm2[tri*Nsite+trj] = slt_ji;
+    }
 
-        StopTimer(92);
-        StartTimer(93);
-        for(zidx=0;zidx<icount*Nsite;zidx++){
-            ri  = rsz[zidx/Nsite];
-            tri = xqp[ri];
-            rsi0 = ri;
-            rsi1 = ri+Nsite;
+    StopTimer(92);
+    StartTimer(93);
+    for(zidx=0;zidx<icount*Nsite;zidx++){
+      ri  = rsz[zidx/Nsite];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
 
-            rj = zidx%Nsite;
-            trj = xqp[rj];
-            rsj0 = rj;
-            rsj1 = rj+Nsite;
+      rj = zidx%Nsite;
+      trj = xqp[rj];
+      rsj0 = rj;
+      rsj1 = rj+Nsite;
 
-            sltE_i0 = sltE + rsi0*Nsite2;
-            sltE_i1 = sltE + rsi1*Nsite2;
+      sltE_i0 = sltE + rsi0*Nsite2;
+      sltE_i1 = sltE + rsi1*Nsite2;
 
-            slt_ij = sltElm[tri*Nsite+trj];
-            slt_ji = sltElm2[tri*Nsite+trj];
+      slt_ij = sltElm[tri*Nsite+trj];
+      slt_ji = sltElm2[tri*Nsite+trj];
 
-            if(sltE_i0[rsj1] != slt_ij){
-                sltE_i0[rsj1] = slt_ij;
-                jcountTmp[rj][zidx/Nsite]=1;
-            }
-            if(sltE_i1[rsj0] != -slt_ji){
-                sltE_i1[rsj0] = -slt_ji;
-                jcount1Tmp[rj][zidx/Nsite]=1;
-            }
-        }
+      if(sltE_i0[rsj1] != slt_ij){
+        sltE_i0[rsj1] = slt_ij;
+        jcountTmp[rj][zidx/Nsite]=1;
+      }
+      if(sltE_i1[rsj0] != -slt_ji){
+        sltE_i1[rsj0] = -slt_ji;
+        jcount1Tmp[rj][zidx/Nsite]=1;
+      }
+    }
 
-        for(zidx=0;zidx<icount*Nsite;zidx++){
-            jcount[zidx/Nsite] += jcountTmp[zidx%Nsite][zidx/Nsite];
-            jcount1[zidx/Nsite]+= jcount1Tmp[zidx%Nsite][zidx/Nsite];
-        }
+    for(zidx=0;zidx<icount*Nsite;zidx++){
+      jcount[zidx/Nsite] += jcountTmp[zidx%Nsite][zidx/Nsite];
+      jcount1[zidx/Nsite]+= jcount1Tmp[zidx%Nsite][zidx/Nsite];
+    }
 
-        //#pragma loop noalias
-        for(zidx=0;zidx<icount;zidx++){
-            ri  = rsz[zidx];
-            tri = xqp[ri];
-            rsi0 = ri;
-            rsi1 = ri+Nsite;
-            mi0 = eleCfg[rsi0];
-            mi1 = eleCfg[rsi1];
+    //#pragma loop noalias
+    for(zidx=0;zidx<icount;zidx++){
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      mi0 = eleCfg[rsi0];
+      mi1 = eleCfg[rsi1];
 
-            //if((jcount == Nsite)){
-            if((jcount[zidx] >= 1)){
-                rhop0[itmp0] = rsi0;
-                itmp0++;
-            }
-            //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
-            if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
-                msa[qpidx*Nsite+hop]=mi0;
-                hop++;
-            }
-            //if((jcount1 == Nsite) ){
-            if((jcount1[zidx] >= 1) ){
-                rhop1[itmp1] = rsi1;
-                itmp1++;
-            }
-            //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
-            if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
-                msa[qpidx*Nsite+hop]=mi1+Ne;
-                hop++;
-            }
-        }
-        for(hidx=0;hidx<itmp0;hidx++){
-            rsi0= rhop0[hidx];
-            for(rj=0;rj<Nsite;rj++) {
-                rsj0 = rj;
-                rsj1 = rj+Nsite;
-                sltE[rsj1*Nsite2+rsi0]=-sltE[rsi0*Nsite2+rsj1];
-            }
-        }
-        for(hidx=0;hidx<itmp1;hidx++){
-            rsi1= rhop1[hidx];
-            for(rj=0;rj<Nsite;rj++) {
-                rsj0 = rj;
-                rsj1 = rj+Nsite;
-                sltE[rsj0*Nsite2+rsi1]=-sltE[rsi1*Nsite2+rsj0];
-            }
-        }
+      //if((jcount == Nsite)){
+      if((jcount[zidx] >= 1)){
+        rhop0[itmp0] = rsi0;
+        itmp0++;
+      }
+      //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
+      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+        msa[qpidx*Nsite+hop]=mi0;
+        hop++;
+      }
+      //if((jcount1 == Nsite) ){
+      if((jcount1[zidx] >= 1) ){
+        rhop1[itmp1] = rsi1;
+        itmp1++;
+      }
+      //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
+      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+        msa[qpidx*Nsite+hop]=mi1+Ne;
+        hop++;
+      }
+    }
+    for(hidx=0;hidx<itmp0;hidx++){
+      rsi0= rhop0[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj1*Nsite2+rsi0]=-sltE[rsi0*Nsite2+rsj1];
+      }
+    }
+    for(hidx=0;hidx<itmp1;hidx++){
+      rsi1= rhop1[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj0*Nsite2+rsi1]=-sltE[rsi1*Nsite2+rsj0];
+      }
+    }
 
-        hopNum[qpidx] = hop;
+    hopNum[qpidx] = hop;
 
-        StopTimer(93);
+    StopTimer(93);
     }
 
     return ;
@@ -1208,181 +1208,181 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
 
 void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
                           const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex* sltElmTmp){
-    const int *n0=eleNum;
-    const int *n1=eleNum+Nsite;
-    const int rua=ra+Nsite*u, rub=rb+Nsite*u;
-    int **posBF = PosBF;
-    //int rua=ra+Nsite*u, rub=rb+Nsite*u;
-    const int mua = ma + Ne*u;
-    int trua, trub, trsi, trsj;
-    int s,idx, rk,rtmp;
-    int t,idx2,rl,rtmp2;
-    double eta;
-    int ri,ori,tri,sgni,rsi0,rsi1;
-    int rj,orj,trj,sgnj,rsj0,rsj1;
-    int qpidx,mpidx,spidx,optidx;
-    double complex cs,cc,ss;
-    double complex slt_ij,slt_ji;
-    double complex tmp_ij,tmp_ji;
-    int *xqp, *xqpInv, *xqpSgn, *xqpOpt, *xqpOptSgn;
-    double complex *sltE,*sltE_i0,*sltE_i1;
-    //double complex pTrans[Nsite2*Nsite2];
-    //double complex *pTrans_i;
-    int rsz[Nsite2];
-    int rhop0[Nsite2],rhop1[Nsite2];
-    double complex* pTrans_i;
-    int zidx,zidx2,rsi,rsj,msi,msj,itmp,hop,icount,mi,mj;
-    int jcount[Nsite],jcount1[Nsite];
-    int ri0,ri1,mi0,mi1,mj0,mj1,flag,hidx,itmp0=0,itmp1=0;
-    int ijcount,jicount;
-    int rki,rkj,rli,rlj;
-    const int nSite=Nsite;
-    const int nRange=Nrange;
-    const int nSiteRange = nRange*nSite;
+  const int *n0=eleNum;
+  const int *n1=eleNum+Nsite;
+  const int rua=ra+Nsite*u, rub=rb+Nsite*u;
+  int **posBF = PosBF;
+  //int rua=ra+Nsite*u, rub=rb+Nsite*u;
+  const int mua = ma + Ne*u;
+  int trua, trub, trsi, trsj;
+  int s,idx, rk,rtmp;
+  int t,idx2,rl,rtmp2;
+  double eta;
+  int ri,ori,tri,sgni,rsi0,rsi1;
+  int rj,orj,trj,sgnj,rsj0,rsj1;
+  int qpidx,mpidx,spidx,optidx;
+  double complex cs,cc,ss;
+  double complex slt_ij,slt_ji;
+  double complex tmp_ij,tmp_ji;
+  int *xqp, *xqpInv, *xqpSgn, *xqpOpt, *xqpOptSgn;
+  double complex *sltE,*sltE_i0,*sltE_i1;
+  //double complex pTrans[Nsite2*Nsite2];
+  //double complex *pTrans_i;
+  int rsz[Nsite2];
+  int rhop0[Nsite2],rhop1[Nsite2];
+  double complex* pTrans_i;
+  int zidx,zidx2,rsi,rsj,msi,msj,itmp,hop,icount,mi,mj;
+  int jcount[Nsite],jcount1[Nsite];
+  int ri0,ri1,mi0,mi1,mj0,mj1,flag,hidx,itmp0=0,itmp1=0;
+  int ijcount,jicount;
+  int rki,rkj,rli,rlj;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nSiteRange = nRange*nSite;
 
-    for(qpidx=0;qpidx<NQPFull;qpidx++) {
-        itmp0=0;
-        itmp1=0;
-        mpidx = qpidx / NSPGaussLeg;
-        spidx = qpidx % NSPGaussLeg;
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    itmp0=0;
+    itmp1=0;
+    mpidx = qpidx / NSPGaussLeg;
+    spidx = qpidx % NSPGaussLeg;
 
-        xqp = QPTrans[mpidx];
-        xqpInv = QPTransInv[mpidx];
-        cs = SPGLCosSin[spidx];
-        cc = SPGLCosCos[spidx];
-        ss = SPGLSinSin[spidx];
+    xqp = QPTrans[mpidx];
+    xqpInv = QPTransInv[mpidx];
+    cs = SPGLCosSin[spidx];
+    cc = SPGLCosCos[spidx];
+    ss = SPGLSinSin[spidx];
 
-        sltE = sltElmTmp + qpidx*Nsite2*Nsite2;
+    sltE = sltElmTmp + qpidx*Nsite2*Nsite2;
 
-        icount=0;
-        trua = xqpInv[ra];
-        rsz[icount] = trua;
-        icount++;
-        for(idx=0;idx<Nrange;idx++) {
-            rtmp=posBF[trua][idx];
-            flag=0;
-            for(zidx=0;zidx<icount;zidx++){
-                if(rsz[zidx] == rtmp) flag=1;
-            }
-            if(flag==1) continue;
-            rsz[icount] = rtmp;
-            icount++;
-        }
-        trub = xqpInv[rb];
-        rsz[icount] = trub;
-        icount++;
-        for(idx=0;idx<Nrange;idx++) {
-            rtmp=posBF[trub][idx];
-            flag=0;
-            for(zidx=0;zidx<icount;zidx++){
-                if(rsz[zidx] == rtmp) flag=1;
-            }
-            if(flag==1) continue;
-            rsz[icount] = rtmp;
-            icount++;
-        }
-        hop=0;
-        msa[qpidx*Nsite+hop]= ma + Ne*u;
-        hop++;
+    icount=0;
+    trua = xqpInv[ra];
+    rsz[icount] = trua;
+    icount++;
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trua][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    trub = xqpInv[rb];
+    rsz[icount] = trub;
+    icount++;
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trub][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    hop=0;
+    msa[qpidx*Nsite+hop]= ma + Ne*u;
+    hop++;
 
-        itmp=0;
-        for(zidx=0;zidx<icount;zidx++){
-            jcount[zidx]=0;
-            jcount1[zidx]=0;
-        }
-        //#pragma omp parallel for reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
-        //private(zidx,mi0,mi1,jcount,jcount1,itmp,  \
+    itmp=0;
+    for(zidx=0;zidx<icount;zidx++){
+      jcount[zidx]=0;
+      jcount1[zidx]=0;
+    }
+    //#pragma omp parallel for reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
+    //private(zidx,mi0,mi1,jcount,jcount1,itmp,  \
     //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,     \
     //        ijcount,jicount,qpidx,hop,itmp1,itmp0,\
     //        rj,trj,rsj0,rsj1,slt_ij,slt_ji) \
 
-        //#pragma omp parallel for default(shared)        \
+    //#pragma omp parallel for default(shared)        \
     //private(zidx,mi0,mi1,  \
     //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,     \
     //        ijcount,jicount,qpidx,\
     //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
-        //reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
-        //#pragma loop noalias
-        for(zidx=0;zidx<icount*Nsite;zidx++) {
-            ri  = rsz[zidx/Nsite];
-            tri = xqp[ri];
-            rsi0 = ri;
-            rsi1 = ri+Nsite;
-            sltE_i0 = sltE + rsi0*Nsite2;
-            sltE_i1 = sltE + rsi1*Nsite2;
+    //reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
+    //#pragma loop noalias
+    for(zidx=0;zidx<icount*Nsite;zidx++) {
+      ri  = rsz[zidx/Nsite];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      sltE_i0 = sltE + rsi0*Nsite2;
+      sltE_i1 = sltE + rsi1*Nsite2;
 
-            mi0 = eleCfg[rsi0];
-            mi1 = eleCfg[rsi1];
+      mi0 = eleCfg[rsi0];
+      mi1 = eleCfg[rsi1];
 
-            rj = zidx%Nsite;
-            trj = xqp[rj];
-            rsj0 = rj;
-            rsj1 = rj+Nsite;
+      rj = zidx%Nsite;
+      trj = xqp[rj];
+      rsj0 = rj;
+      rsj1 = rj+Nsite;
 
-            SubSlaterElmBF_fcmp(tri,trj,&slt_ij,&ijcount,&slt_ji,&jicount,eleProjBFCnt);
+      SubSlaterElmBF_fcmp(tri,trj,&slt_ij,&ijcount,&slt_ji,&jicount,eleProjBFCnt);
 
-            if(sltE_i0[rsj1] != slt_ij){
-                sltE_i0[rsj1] = slt_ij;
-                jcount[zidx/Nsite]++;
-            }
-            if(sltE_i1[rsj0] != -slt_ji){
-                sltE_i1[rsj0] = -slt_ji;
-                jcount1[zidx/Nsite]++;
-            }
-            itmp++;
-        }
-        for(zidx=0;zidx<icount;zidx++){
-            ri  = rsz[zidx];
-            tri = xqp[ri];
-            rsi0 = ri;
-            rsi1 = ri+Nsite;
-            mi0 = eleCfg[rsi0];
-            mi1 = eleCfg[rsi1];
+      if(sltE_i0[rsj1] != slt_ij){
+        sltE_i0[rsj1] = slt_ij;
+        jcount[zidx/Nsite]++;
+      }
+      if(sltE_i1[rsj0] != -slt_ji){
+        sltE_i1[rsj0] = -slt_ji;
+        jcount1[zidx/Nsite]++;
+      }
+      itmp++;
+    }
+    for(zidx=0;zidx<icount;zidx++){
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      mi0 = eleCfg[rsi0];
+      mi1 = eleCfg[rsi1];
 
-            //if((jcount == Nsite)){
-            if((jcount[zidx] >= 1)){
-                rhop0[itmp0] = rsi0;
-                itmp0++;
-            }
-            //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
-            if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
-                msa[qpidx*Nsite+hop]=mi0;
-                hop++;
-            }
-            //if((jcount1 == Nsite) ){
-            if((jcount1[zidx] >= 1) ){
-                rhop1[itmp1] = rsi1;
-                itmp1++;
-            }
-            //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
-            if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
-                msa[qpidx*Nsite+hop]=mi1+Ne;
-                hop++;
-            }
-        }
-        for(hidx=0;hidx<itmp0;hidx++){
-            rsi0= rhop0[hidx];
-            for(rj=0;rj<Nsite;rj++) {
-                rsj0 = rj;
-                rsj1 = rj+Nsite;
-                sltE[rsj1*Nsite2+rsi0]=-sltE[rsi0*Nsite2+rsj1];
-            }
-        }
-        for(hidx=0;hidx<itmp1;hidx++){
-            rsi1= rhop1[hidx];
-            for(rj=0;rj<Nsite;rj++) {
-                rsj0 = rj;
-                rsj1 = rj+Nsite;
-                sltE[rsj0*Nsite2+rsi1]=-sltE[rsi1*Nsite2+rsj0];
-            }
-        }
+      //if((jcount == Nsite)){
+      if((jcount[zidx] >= 1)){
+        rhop0[itmp0] = rsi0;
+        itmp0++;
+      }
+      //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
+      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+        msa[qpidx*Nsite+hop]=mi0;
+        hop++;
+      }
+      //if((jcount1 == Nsite) ){
+      if((jcount1[zidx] >= 1) ){
+        rhop1[itmp1] = rsi1;
+        itmp1++;
+      }
+      //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
+      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+        msa[qpidx*Nsite+hop]=mi1+Ne;
+        hop++;
+      }
+    }
+    for(hidx=0;hidx<itmp0;hidx++){
+      rsi0= rhop0[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj1*Nsite2+rsi0]=-sltE[rsi0*Nsite2+rsj1];
+      }
+    }
+    for(hidx=0;hidx<itmp1;hidx++){
+      rsi1= rhop1[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj0*Nsite2+rsi1]=-sltE[rsi1*Nsite2+rsj0];
+      }
+    }
 
-        hopNum[qpidx] = hop;
+    hopNum[qpidx] = hop;
 
     }
 
     return ;
-}
+    }
 
 
 void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const int u, 
@@ -1519,25 +1519,25 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
       mi1 = eleCfg[rsi1];
       
       //if((jcount == Nsite)){
-        if((jcount[zidx] >= 1)){
-          rhop0[itmp0] = rsi0;
-          itmp0++;
-        }
+      if((jcount[zidx] >= 1)){
+        rhop0[itmp0] = rsi0;
+        itmp0++;
+      }
       //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
-        if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
-          msa[qpidx*Nsite+hop]=mi0;
-          hop++;
-        }
+      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+        msa[qpidx*Nsite+hop]=mi0;
+        hop++;
+      }
       //if((jcount1 == Nsite) ){
-        if((jcount1[zidx] >= 1) ){
-          rhop1[itmp1] = rsi1;
-          itmp1++;
-        }
+      if((jcount1[zidx] >= 1) ){
+        rhop1[itmp1] = rsi1;
+        itmp1++;
+      }
       //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
-        if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
-          msa[qpidx*Nsite+hop]=mi1+Ne;
-          hop++;
-        }
+      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+        msa[qpidx*Nsite+hop]=mi1+Ne;
+        hop++;
+      }
     }
     for(hidx=0;hidx<itmp0;hidx++){
       rsi0= rhop0[hidx];
@@ -1565,46 +1565,46 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
 
 
 void StoreSlaterElmBF_fcmp(complex double *bufM){
-    int qpidx,rsi,rsj;
-    const double complex* sltE;
-    const double complex* sltE_i;
-    double complex*bufM_i, *bufM_i2;
+  int qpidx,rsi,rsj;
+  const double complex* sltE;
+  const double complex* sltE_i;
+  double complex*bufM_i, *bufM_i2;
 
-    /* store SlaterElmBF before hopping */
-    for(qpidx=0;qpidx<NQPFull;qpidx++) {
-        sltE = SlaterElmBF + qpidx*Nsite2*Nsite2;
-        for(rsi=0;rsi<Nsite2;rsi++) {
-            bufM_i = bufM + rsi*Nsite2 + qpidx*Nsite2*Nsite2;
-            sltE_i = sltE + rsi*Nsite2;
-            //#pragma loop norecurrence
-            for(rsj=0;rsj<Nsite2;rsj++) {
-                bufM_i[rsj] = sltE_i[rsj];
-                //printf("bufM[%d]=%.5e\n",msi*Nsize+msj,cabs(bufM[msi*Nsize+msj]));
-            }
-        }
+  /* store SlaterElmBF before hopping */
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    sltE = SlaterElmBF + qpidx*Nsite2*Nsite2;
+    for(rsi=0;rsi<Nsite2;rsi++) {
+      bufM_i = bufM + rsi*Nsite2 + qpidx*Nsite2*Nsite2;
+      sltE_i = sltE + rsi*Nsite2;
+      //#pragma loop norecurrence
+      for(rsj=0;rsj<Nsite2;rsj++) {
+        bufM_i[rsj] = sltE_i[rsj];
+        //printf("bufM[%d]=%.5e\n",msi*Nsize+msj,cabs(bufM[msi*Nsize+msj]));
+      }
     }
+  }
 
-    return;
+  return;
 }
 
 void StoreSlaterElmBF_real(double *bufM){
-    int qpidx,rsi,rsj;
-    const double * sltE;
-    const double * sltE_i;
-    double *bufM_i, *bufM_i2;
+  int qpidx,rsi,rsj;
+  const double * sltE;
+  const double * sltE_i;
+  double *bufM_i, *bufM_i2;
 
-    /* store SlaterElmBF before hopping */
-    for(qpidx=0;qpidx<NQPFull;qpidx++) {
-        sltE = SlaterElmBF_real + qpidx*Nsite2*Nsite2;
-        for(rsi=0;rsi<Nsite2;rsi++) {
-            bufM_i = bufM + rsi*Nsite2 + qpidx*Nsite2*Nsite2;
-            sltE_i = sltE + rsi*Nsite2;
-            //#pragma loop norecurrence
-            for(rsj=0;rsj<Nsite2;rsj++) {
-                bufM_i[rsj] = sltE_i[rsj];
-                //printf("bufM[%d]=%.5e\n",msi*Nsize+msj,cabs(bufM[msi*Nsize+msj]));
-            }
-        }
+  /* store SlaterElmBF before hopping */
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    sltE = SlaterElmBF_real + qpidx*Nsite2*Nsite2;
+    for(rsi=0;rsi<Nsite2;rsi++) {
+      bufM_i = bufM + rsi*Nsite2 + qpidx*Nsite2*Nsite2;
+      sltE_i = sltE + rsi*Nsite2;
+      //#pragma loop norecurrence
+      for(rsj=0;rsj<Nsite2;rsj++) {
+        bufM_i[rsj] = sltE_i[rsj];
+        //printf("bufM[%d]=%.5e\n",msi*Nsize+msj,cabs(bufM[msi*Nsize+msj]));
+      }
     }
-    return;
+  }
+  return;
 }

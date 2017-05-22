@@ -35,21 +35,21 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 //int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
 //                        double *bufM, int *iwork, double *work, int lwork);
 int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
-                             double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double *InvM_real);
+    double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double *InvM_real);
 
 int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
-                        double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
+    double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
 
 //[s] MERGE BY TM
 int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd);
 int calculateMAll_child_fsz(const int *eleIdx,const int *elesSpn, const int qpStart, const int qpEnd, const int qpidx,
-                        double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
+    double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork);
 // note: CalculateMAll_fsz,calculateMAll_child_fsz will be merged with *fcmp
 int calculateMAll_BF_real_child(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
-                                double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double *InvM_real);
+    double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double *InvM_real);
 
 int calculateMAll_BF_fcmp_child(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
-                                double complex*bufM, int *iwork, double complex*work, int lwork, double *rwork, double complex* PfM_real, double complex*InvM_real);
+    double complex*bufM, int *iwork, double complex*work, int lwork, double *rwork, double complex* PfM_real, double complex*InvM_real);
 //[e] MERGE BY TM
 
 #define D_PfLimit 1.0e-100
@@ -113,8 +113,8 @@ int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, co
 
   RequestWorkSpaceThreadDouble(LapackLWork); // TBC for rwork
 
-  #pragma omp parallel default(shared)              \
-    private(myIWork,myWork,myInfo,myBufM)
+#pragma omp parallel default(shared)              \
+  private(myIWork,myWork,myInfo,myBufM)
   {
     myIWork = GetWorkSpaceThreadInt(Nsize); // int
 
@@ -123,14 +123,14 @@ int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, co
 
     myRWork = GetWorkSpaceThreadDouble(LapackLWork); //TBC for rwork
 
-    #pragma omp for private(qpidx)
+#pragma omp for private(qpidx)
     for(qpidx=0;qpidx<qpNum;qpidx++) {
       if(info!=0) continue;
-      
+
       myInfo = calculateMAll_child_fsz(eleIdx,eleSpn, qpStart, qpEnd, qpidx,
-                                   myBufM, myIWork, myWork, LapackLWork,myRWork);
+          myBufM, myIWork, myWork, LapackLWork,myRWork);
       if(myInfo!=0) {
-        #pragma omp critical
+#pragma omp critical
         info=myInfo;
       }
     }
@@ -143,8 +143,8 @@ int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, co
 }
 
 int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd, const int qpidx,
-                        double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork) {
-  #pragma procedure serial
+    double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork) {
+#pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
   int msi,msj;
   int rsi,rsj;
@@ -170,12 +170,12 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
   /* bufM[msj][msi] = -sltE[rsi][rsj] */
-  #pragma loop noalias
+#pragma loop noalias
   for(msi=0;msi<nsize;msi++) {
     rsi = eleIdx[msi] + eleSpn[msi]*Nsite;//fsz
     bufM_i = bufM + msi*Nsize;
     sltE_i = sltE + rsi*Nsite2;
-    #pragma loop norecurrence
+#pragma loop norecurrence
     for(msj=0;msj<nsize;msj++) {
       rsj = eleIdx[msj] + eleSpn[msj]*Nsite;//fsz
       bufM_i[msj] = -sltE_i[rsj];
@@ -185,7 +185,7 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
 
   /* copy bufM to invM */
   /* For Pfaffian calculation, invM is used as second buffer */
-  #pragma loop noalias
+#pragma loop noalias
   for(msi=0;msi<nsize*nsize;msi++) {
     invM[msi] = bufM[msi];
   }
@@ -208,13 +208,13 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
   //for(msi=0;msi<nsize*nsize;msi++) {
   //  printf("DEBUG: M_ZGETRF %d %lf %lf \n",msi,creal(bufM[msi]),cimag(bufM[msi]));
   //}
-  
+
   M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
   if(info!=0) return info;
-  
+
   /* store InvM */
   /* BufM is column-major, InvM is row-major */
-  #pragma loop noalias
+#pragma loop noalias
   for(msi=0;msi<nsize;msi++) {
     invM_i = invM + msi*Nsize;
     bufM_i = bufM + msi*Nsize;
@@ -252,8 +252,8 @@ int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd) {
 
   RequestWorkSpaceThreadDouble(LapackLWork); // TBC for rwork
 
-  #pragma omp parallel default(shared)              \
-    private(myIWork,myWork,myInfo,myBufM, myRWork) //TODO: Check to add myRWork is correct or not.
+#pragma omp parallel default(shared)              \
+  private(myIWork,myWork,myInfo,myBufM, myRWork) //TODO: Check to add myRWork is correct or not.
   {
     myIWork = GetWorkSpaceThreadInt(Nsize); // int
 
@@ -262,14 +262,14 @@ int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd) {
 
     myRWork = GetWorkSpaceThreadDouble(LapackLWork); //TBC for rwork
 
-    #pragma omp for private(qpidx)
+#pragma omp for private(qpidx)
     for(qpidx=0;qpidx<qpNum;qpidx++) {
       if(info!=0) continue;
-      
+
       myInfo = calculateMAll_child_fcmp(eleIdx, qpStart, qpEnd, qpidx,
-                                   myBufM, myIWork, myWork, LapackLWork,myRWork);
+          myBufM, myIWork, myWork, LapackLWork,myRWork);
       if(myInfo!=0) {
-        #pragma omp critical
+#pragma omp critical
         info=myInfo;
       }
     }
@@ -282,8 +282,8 @@ int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd) {
 }
 
 int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
-                        double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork) {
-  #pragma procedure serial
+    double complex *bufM, int *iwork, double complex *work, int lwork,double *rwork) {
+#pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
   int msi,msj;
   int rsi,rsj;
@@ -308,22 +308,22 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
   /* bufM[msj][msi] = -sltE[rsi][rsj] */
-  #pragma loop noalias
+#pragma loop noalias
   for(msi=0;msi<nsize;msi++) {
     rsi = eleIdx[msi] + (msi/Ne)*Nsite;
     bufM_i = bufM + msi*Nsize;
     sltE_i = sltE + rsi*Nsite2;
-    #pragma loop norecurrence
+#pragma loop norecurrence
     for(msj=0;msj<nsize;msj++) {
       rsj = eleIdx[msj] + (msj/Ne)*Nsite;
       bufM_i[msj] = -sltE_i[rsj];
-//      printf("DEBUG: msi=%d msj=%d bufM=%lf %lf \n",msi,msj,creal(bufM_i[msj]),cimag(bufM_i[msj]));
+      //      printf("DEBUG: msi=%d msj=%d bufM=%lf %lf \n",msi,msj,creal(bufM_i[msj]),cimag(bufM_i[msj]));
     }
   }
 
   /* copy bufM to invM */
   /* For Pfaffian calculation, invM is used as second buffer */
-  #pragma loop noalias
+#pragma loop noalias
   for(msi=0;msi<nsize*nsize;msi++) {
     invM[msi] = bufM[msi];
   }
@@ -346,13 +346,13 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   //for(msi=0;msi<nsize*nsize;msi++) {
   //  printf("DEBUG: M_ZGETRF %d %lf %lf \n",msi,creal(bufM[msi]),cimag(bufM[msi]));
   //}
-  
+
   M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
   if(info!=0) return info;
-  
+
   /* store InvM */
   /* BufM is column-major, InvM is row-major */
-  #pragma loop noalias
+#pragma loop noalias
   for(msi=0;msi<nsize;msi++) {
     invM_i = invM + msi*Nsize;
     bufM_i = bufM + msi*Nsize;
@@ -385,7 +385,7 @@ int CalculateMAll_BF_fcmp(const int *eleIdx, const int qpStart, const int qpEnd)
   RequestWorkSpaceThreadDouble(LapackLWork); // TBC for rwork
 
 #pragma omp parallel default(shared)              \
-    private(myIWork,myWork,myRWork, myInfo,myBufM) //TODO: Check to add myRWork is correct or not.
+  private(myIWork,myWork,myRWork, myInfo,myBufM) //TODO: Check to add myRWork is correct or not.
   {
     myIWork = GetWorkSpaceThreadInt(Nsize);
     myBufM = GetWorkSpaceThreadComplex(Nsize*Nsize);
@@ -398,7 +398,7 @@ int CalculateMAll_BF_fcmp(const int *eleIdx, const int qpStart, const int qpEnd)
       if(info!=0) continue;
 
       myInfo = calculateMAll_BF_fcmp_child(eleIdx, qpStart, qpEnd, qpidx,
-                                           myBufM, myIWork, myWork, LapackLWork, myRWork, PfM, InvM);
+          myBufM, myIWork, myWork, LapackLWork, myRWork, PfM, InvM);
       if(myInfo!=0) {
 #pragma omp critical
         info=myInfo;
@@ -412,20 +412,19 @@ int CalculateMAll_BF_fcmp(const int *eleIdx, const int qpStart, const int qpEnd)
   return info;
 }
 
-int calculateMAll_BF_fcmp_child
-        (
-                const int *eleIdx,
-                const int qpStart,
-                const int qpEnd,
-                const int qpidx,
-                double complex*bufM,
-                int *iwork,
-                double complex*work,
-                int lwork,
-                double* rwork,
-                double complex* PfM,
-                double complex* InvM
-        )
+int calculateMAll_BF_fcmp_child(
+       const int *eleIdx,
+       const int qpStart,
+       const int qpEnd,
+       const int qpidx,
+       double complex*bufM,
+       int *iwork,
+       double complex*work,
+       int lwork,
+       double* rwork,
+       double complex* PfM,
+       double complex* InvM
+       )
 {
 #pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
@@ -516,23 +515,23 @@ int CalculateMAll_real(const int *eleIdx, const int qpStart, const int qpEnd) {
   RequestWorkSpaceThreadInt(Nsize);
   RequestWorkSpaceThreadDouble(Nsize*Nsize+LapackLWork);
 
-  #pragma omp parallel default(shared)              \
-    private(myIWork,myWork,myInfo,myBufM)
+#pragma omp parallel default(shared)              \
+  private(myIWork,myWork,myInfo,myBufM)
   {
     myIWork = GetWorkSpaceThreadInt(Nsize);
     myBufM = GetWorkSpaceThreadDouble(Nsize*Nsize);
     myWork = GetWorkSpaceThreadDouble(LapackLWork);
-    #pragma omp for private(qpidx)
+#pragma omp for private(qpidx)
     for(qpidx=0;qpidx<qpNum;qpidx++) {
       if(info!=0) continue;
-      
-//      myInfo = calculateMAll_child_real(eleIdx, qpStart, qpEnd, qpidx,
- //                                  myBufM, myIWork, myWork, LapackLWork);
-        myInfo = calculateMAll_child_real(eleIdx, qpStart, qpEnd, qpidx,
-                                          myBufM, myIWork, myWork, LapackLWork, PfM_real, InvM_real);
+
+      //      myInfo = calculateMAll_child_real(eleIdx, qpStart, qpEnd, qpidx,
+      //                                  myBufM, myIWork, myWork, LapackLWork);
+      myInfo = calculateMAll_child_real(eleIdx, qpStart, qpEnd, qpidx,
+                                        myBufM, myIWork, myWork, LapackLWork, PfM_real, InvM_real);
 
       if(myInfo!=0) {
-        #pragma omp critical
+#pragma omp critical
         info=myInfo;
       }
     }
@@ -546,7 +545,7 @@ int CalculateMAll_real(const int *eleIdx, const int qpStart, const int qpEnd) {
 //int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
 //                        double *bufM, int *iwork, double *work, int lwork) {
 int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
-                        double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double *InvM_real) {
+    double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double *InvM_real) {
 #pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
   int msi,msj;
@@ -572,14 +571,14 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
   /* bufM[msj][msi] = -sltE[rsi][rsj] */
-  #pragma loop noalias
+#pragma loop noalias
   for(msi=0;msi<nsize;msi++) {
     rsi = eleIdx[msi] + (msi/Ne)*Nsite;
     bufM_i = bufM + msi*Nsize;
     sltE_i = sltE + rsi*Nsite2;
     //printf("Debug: bufM=%ld, sltE=%ld\n", bufM, sltE);
     //    printf("Debug: bufM_i=%ld, sltE_i=%ld, rsi=%ld\n", bufM_i, sltE_i, rsi);
-    #pragma loop norecurrence
+#pragma loop norecurrence
     for(msj=0;msj<nsize;msj++) {
       rsj = eleIdx[msj] + (msj/Ne)*Nsite;
       bufM_i[msj] = -sltE_i[rsj];
@@ -587,17 +586,17 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
     }
   }
   /*
-  printf("DEBUG: n=%d \n",n);
-  for(msi=0;msi<nsize;msi++){
-    for(msj=0;msj<nsize;msj++){
-      printf("DEBUG: msi=%d msj=%d bufM %lf \n",msi,msj,bufM[msi+msj*n]);
-    }
-  }
-  */
+     printf("DEBUG: n=%d \n",n);
+     for(msi=0;msi<nsize;msi++){
+     for(msj=0;msj<nsize;msj++){
+     printf("DEBUG: msi=%d msj=%d bufM %lf \n",msi,msj,bufM[msi+msj*n]);
+     }
+     }
+     */
 
   /* copy bufM to invM */
   /* For Pfaffian calculation, invM is used as second buffer */
-  #pragma loop noalias
+#pragma loop noalias
   for(msi=0;msi<nsize*nsize;msi++) {
     invM[msi] = bufM[msi];
   }
@@ -612,14 +611,14 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   /* DInv */
   M_DGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
   if(info!=0) return info;
-  
+
   //  printf("Debug: M_DGETRI\n");
   M_DGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
   if(info!=0) return info;
-  
+
   /* store InvM */
   /* BufM is column-major, InvM is row-major */
-  #pragma loop noalias
+#pragma loop noalias
   for(msi=0;msi<nsize;msi++) {
     invM_i = invM + msi*Nsize;
     bufM_i = bufM + msi*Nsize;
@@ -648,7 +647,7 @@ int CalculateMAll_BF_real(const int *eleIdx, const int qpStart, const int qpEnd)
   RequestWorkSpaceThreadDouble(Nsize*Nsize+LapackLWork);
 
 #pragma omp parallel default(shared)              \
-    private(myIWork,myWork,myInfo,myBufM)
+  private(myIWork,myWork,myInfo,myBufM)
   {
     myIWork = GetWorkSpaceThreadInt(Nsize);
     myBufM = GetWorkSpaceThreadDouble(Nsize*Nsize);
@@ -659,7 +658,7 @@ int CalculateMAll_BF_real(const int *eleIdx, const int qpStart, const int qpEnd)
       if(info!=0) continue;
 
       myInfo = calculateMAll_BF_real_child(eleIdx, qpStart, qpEnd, qpidx,
-                                     myBufM, myIWork, myWork, LapackLWork, PfM_real, InvM_real);
+          myBufM, myIWork, myWork, LapackLWork, PfM_real, InvM_real);
       if(myInfo!=0) {
 #pragma omp critical
         info=myInfo;
@@ -673,7 +672,7 @@ int CalculateMAll_BF_real(const int *eleIdx, const int qpStart, const int qpEnd)
 }
 
 int calculateMAll_BF_real_child(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
-                          double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double* InvM_real) {
+    double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double* InvM_real) {
 #pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
   int msi,msj;

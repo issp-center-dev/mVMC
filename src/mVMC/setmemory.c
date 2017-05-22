@@ -99,17 +99,17 @@ void SetMemoryDef() {
 
  /*[s] For BackFlow */
   if(NBackFlowIdx>0) {
-      PosBF = (int**)malloc(sizeof(int*)*Nsite);
-      for(i=0;i<Nsite;i++) {
-          PosBF[i] = pInt;
-          pInt += Nrange;
-      }
-      RangeIdx = (int**)malloc(sizeof(int*)*Nsite);
-      for(i=0;i<Nsite;i++) {
-          RangeIdx[i] = pInt;
-          pInt += Nsite;
-      }
-      BackFlowIdx = (int**)malloc(sizeof(int*)*Nsite*Nsite);
+    PosBF = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      PosBF[i] = pInt;
+      pInt += Nrange;
+    }
+    RangeIdx = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      RangeIdx[i] = pInt;
+      pInt += Nsite;
+    }
+    BackFlowIdx = (int**)malloc(sizeof(int*)*Nsite*Nsite);
     for(i=0;i<Nsite*Nsite;i++) {
       BackFlowIdx[i] = pInt;
       pInt += Nsite*Nsite;
@@ -144,8 +144,8 @@ void SetMemoryDef() {
 
   QPTransInv = (int**)malloc(sizeof(int*)*NQPTrans);
   for(i=0;i<NQPTrans;i++) {
-      QPTransInv[i] = pInt;
-      pInt += Nsite;
+    QPTransInv[i] = pInt;
+    pInt += Nsite;
   }
 
   QPTransSgn = (int**)malloc(sizeof(int*)*NQPTrans);
@@ -305,15 +305,15 @@ void SetMemory() {
   SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
   eta = (double complex**)malloc(sizeof(double complex*)*Nsite);
     for(i=0;i<Nsite;i++) {
-        eta[i] = (double complex*)malloc(sizeof(double complex)*Nsite);
+      eta[i] = (double complex*)malloc(sizeof(double complex)*Nsite);
     }
     etaFlag = (int**)malloc(sizeof(int*)*Nsite);
     for(i=0;i<Nsite;i++) {
-        etaFlag[i] = (int*)malloc(sizeof(int)*Nsite);
+      etaFlag[i] = (int*)malloc(sizeof(int)*Nsite);
     }
     BFSubIdx = (int**)malloc(sizeof(int*)*NrangeIdx);
     for(i=0;i<NrangeIdx;i++) {
-        BFSubIdx[i] = (int*)malloc(sizeof(int)*NrangeIdx);
+      BFSubIdx[i] = (int*)malloc(sizeof(int)*NrangeIdx);
     }
   InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
   PfM_real       = InvM_real + NQPFull*Nsize*Nsize;

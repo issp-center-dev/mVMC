@@ -164,7 +164,7 @@ double complex GreenFunc2_fsz(const int ri, const int rj, const int rk, const in
       else return GreenFunc1_fsz(rk,rl,s,ip,eleIdx,eleCfg,eleNum,
                              eleProjCnt,eleSpn,projCntNew,buffer); /* CksAls */
     }
-  } if(s!=t) {
+  }else{
     if(rk==rl) { /* CisAjsNkt */
       if(eleNum[rtk]==0) return 0.0;
       else if(ri==rj) return eleNum[rsi];
@@ -281,23 +281,23 @@ double complex GreenFunc2_fsz2(const int ri, const int rj, const int rk, const i
     }
   }else if(XJ == XK){
    if(XK == XL){
-      // I != J=K=L  #11
-      if(eleNum[XJ]==0) return 0.0; // 
-      else return GreenFunc1_fsz2(ri,rj,s,t,ip,eleIdx,eleCfg,eleNum,
+     // I != J=K=L  #11
+     if(eleNum[XJ]==0) return 0.0; // 
+     else return GreenFunc1_fsz2(ri,rj,s,t,ip,eleIdx,eleCfg,eleNum,
                             eleProjCnt,eleSpn,projCntNew,buffer); /* CisAjt */
    }else{
-      // I != J=K !=L  #12
-      if(eleNum[XJ]==1) return 0.0; // 
-      else return GreenFunc1_fsz2(ri,rl,s,v,ip,eleIdx,eleCfg,eleNum,
+     // I != J=K !=L  #12
+     if(eleNum[XJ]==1) return 0.0; // 
+     else return GreenFunc1_fsz2(ri,rl,s,v,ip,eleIdx,eleCfg,eleNum,
                             eleProjCnt,eleSpn,projCntNew,buffer); /* CisAlv */
    } 
   }else if(XJ == XL){
-      // I != J=L !=K  #13
-      return 0.0; // 
+    // I != J=L !=K  #13
+    return 0.0; // 
   }else if(XK == XL){
-      // I != J != K =L  #14
-      if(eleNum[XK]==0) return 0.0; // 
-      else return GreenFunc1_fsz2(ri,rj,s,t,ip,eleIdx,eleCfg,eleNum,
+    // I != J != K =L  #14
+    if(eleNum[XK]==0) return 0.0; // 
+    else return GreenFunc1_fsz2(ri,rj,s,t,ip,eleIdx,eleCfg,eleNum,
                             eleProjCnt,eleSpn,projCntNew,buffer); /* CisAjt */
   }
      

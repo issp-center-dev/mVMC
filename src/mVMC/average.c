@@ -209,7 +209,7 @@ void WeightAverageSROpt_real(MPI_Comm comm) {
 void WeightAverageGreenFunc(MPI_Comm comm) {
   int n;
   double complex *vec;
-    double *vec_real;
+  double *vec_real;
   /* Green functions */
   /* CisAjs, CisAjsCktAlt and CisAjsCktAltDC */
   n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
@@ -219,25 +219,25 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
   if(NLanczosMode>0){
     /* QQQQ */
     n = NLSHam*NLSHam*NLSHam*NLSHam;
-      if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){
-        vec_real=QQQQ_real;
-        weightAverageReduce_real(n,vec_real,comm);
-      }
-      else{
-        vec = QQQQ;
-        weightAverageReduce_fcmp(n,vec,comm);
-      }
+    if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){
+      vec_real=QQQQ_real;
+      weightAverageReduce_real(n,vec_real,comm);
+    }
+    else{
+      vec = QQQQ;
+      weightAverageReduce_fcmp(n,vec,comm);
+    }
     if(NLanczosMode>1){
       /* QCisAjsQ and QCisAjsCktAltQ */
       n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC;
-        if(AllComplexFlag==0){
-            vec_real=QCisAjsQ_real;
-            weightAverageReduce_real(n,vec_real,comm);
-        }
-        else{
-            vec = QCisAjsQ;
-            weightAverageReduce_fcmp(n, vec, comm);
-        }
+      if(AllComplexFlag==0){
+        vec_real=QCisAjsQ_real;
+        weightAverageReduce_real(n,vec_real,comm);
+      }
+      else{
+        vec = QCisAjsQ;
+        weightAverageReduce_fcmp(n, vec, comm);
+      }
     }
   }
   return;
@@ -310,21 +310,21 @@ void weightAverageReduce_real(int n, double *vec, MPI_Comm comm) {
     MPI_Comm_size(comm,&size);
 
     if(size>1) {
-        RequestWorkSpaceDouble(n);
-        buf = GetWorkSpaceDouble(n);
+      RequestWorkSpaceDouble(n);
+      buf = GetWorkSpaceDouble(n);
 
-        SafeMpiReduce(vec,buf,n,comm);
-        if(rank==0) {
+      SafeMpiReduce(vec,buf,n,comm);
+      if(rank==0) {
 #pragma omp parallel for default(shared) private(i)
 #pragma loop noalias
-            for(i=0;i<n;i++) vec[i] = buf[i] * invW;
-        }
+        for(i=0;i<n;i++) vec[i] = buf[i] * invW;
+      }
 
-        ReleaseWorkSpaceDouble();
+      ReleaseWorkSpaceDouble();
     } else {
 #pragma omp parallel for default(shared) private(i)
 #pragma loop noalias
-        for(i=0;i<n;i++) vec[i] *= invW;
+      for(i=0;i<n;i++) vec[i] *= invW;
     }
 
     return;

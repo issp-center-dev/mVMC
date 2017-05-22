@@ -112,7 +112,7 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
       else return GreenFunc1(rk,rl,s,ip,eleIdx,eleCfg,eleNum,
                              eleProjCnt,projCntNew,buffer); /* CksAls */
     }
-  } if(s!=t) {
+  }else{
     if(rk==rl) { /* CisAjsNkt */
       if(eleNum[rtk]==0) return 0.0;
       else if(ri==rj) return eleNum[rsi];

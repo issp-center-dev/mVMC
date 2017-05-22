@@ -166,16 +166,16 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
         }else{
           UpdateProjCnt_fsz(ri,rj,s,t,projCntNew,TmpEleProjCnt,TmpEleNum);
         }   
-          StopTimer(60);
-          StartTimer(61);
+        StopTimer(60);
+        StartTimer(61);
         CalculateNewPfM2_fsz(mi,t,pfMNew,TmpEleIdx,TmpEleSpn,qpStart,qpEnd); // fsz: s->t 
-          StopTimer(61);
+        StopTimer(61);
 
-          StartTimer(62);
+        StartTimer(62);
         /* calculate inner product <phi|L|x> */
         //logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
         logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
-          StopTimer(62);
+        StopTimer(62);
 
         /* Metroplis */
         x = LogProjRatio(projCntNew,TmpEleProjCnt);
@@ -183,10 +183,10 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
         if( !isfinite(w) ) w = -1.0; /* should be rejected */
 
         if(w > genrand_real2()) { /* accept */
-            // UpdateMAll will change SlaterElm, InvM (including PfM)
-            StartTimer(63);
-            UpdateMAll_fsz(mi,t,TmpEleIdx,TmpEleSpn,qpStart,qpEnd); // fsz : s->t
-            StopTimer(63);
+          // UpdateMAll will change SlaterElm, InvM (including PfM)
+          StartTimer(63);
+          UpdateMAll_fsz(mi,t,TmpEleIdx,TmpEleSpn,qpStart,qpEnd); // fsz : s->t
+          StopTimer(63);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
           logIpOld = logIpNew;
@@ -293,10 +293,10 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
         //printf("%lf: %d %d, %d %d, %d %d, %d %d \n",w,TmpEleNum[0+0*Nsite],TmpEleNum[0+1*Nsite],TmpEleNum[1+0*Nsite],TmpEleNum[1+1*Nsite],TmpEleNum[2+0*Nsite],TmpEleNum[2+1*Nsite],TmpEleNum[3+0*Nsite],TmpEleNum[3+1*Nsite]);
         //printf("\n");
         if(w > genrand_real2()) { /* accept */
-            // UpdateMAll will change SlaterElm, InvM (including PfM)
-            StartTimer(603);
-            UpdateMAll_fsz(mi,t,TmpEleIdx,TmpEleSpn,qpStart,qpEnd); // fsz : s->t
-            StopTimer(603);
+          // UpdateMAll will change SlaterElm, InvM (including PfM)
+          StartTimer(603);
+          UpdateMAll_fsz(mi,t,TmpEleIdx,TmpEleSpn,qpStart,qpEnd); // fsz : s->t
+          StopTimer(603);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
           logIpOld = logIpNew;
@@ -426,7 +426,7 @@ int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt
       MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
     }
   } while (flag>0);
- 
+
   return 0;
 }
 
@@ -734,35 +734,35 @@ void revertEleConfig_fsz(int mi, int org_r, int dst_r, int org_spn,int dst_spn,
 }
 
 int CheckEleNum_fsz(int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn,MPI_Comm comm){
-   int mi,ri,si;
-   int total_num;
-   
-   total_num=0;
-   for(ri=0;ri<Nsite;ri++){
-     for(si=0;si<2;si++){
-       total_num+=eleNum[ri+si*Nsite];
-     }
-   }
-   return total_num;
+  int mi,ri,si;
+  int total_num;
+
+  total_num=0;
+  for(ri=0;ri<Nsite;ri++){
+    for(si=0;si<2;si++){
+      total_num+=eleNum[ri+si*Nsite];
+    }
+  }
+  return total_num;
 }
 
 void CheckEleConfig_fsz(int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn,MPI_Comm comm){
-   int mi,ri,si;
-   int check_ri,check_si;
-   int rank;
-   MPI_Comm_rank(comm,&rank);
-   
-   for(ri=0;ri<Nsite;ri++){
-     for(si=0;si<2;si++){
-       mi = eleCfg[ri+si*Nsite];
-       if(mi>=0){
-         check_ri = eleIdx[mi];
-         check_si = eleSpn[mi];
-         if(ri!=check_ri || si!=check_si){
-           if(rank==0) fprintf(stderr, "error: vmcmakesample: fatal error in making sample: mi %d :ri %d %d: si %d %d\n",mi,ri,check_ri,si,check_si);
-           MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
-         }
-       }
-     }
-   }
+  int mi,ri,si;
+  int check_ri,check_si;
+  int rank;
+  MPI_Comm_rank(comm,&rank);
+
+  for(ri=0;ri<Nsite;ri++){
+    for(si=0;si<2;si++){
+      mi = eleCfg[ri+si*Nsite];
+      if(mi>=0){
+        check_ri = eleIdx[mi];
+        check_si = eleSpn[mi];
+        if(ri!=check_ri || si!=check_si){
+          if(rank==0) fprintf(stderr, "error: vmcmakesample: fatal error in making sample: mi %d :ri %d %d: si %d %d\n",mi,ri,check_ri,si,check_si);
+          MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+        }
+      }
+    }
+  }
 }

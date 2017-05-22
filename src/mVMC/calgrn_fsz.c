@@ -101,10 +101,10 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
       v  = CisAjsCktAltDCIdx[idx][5];
 
       if(s==t && u==v){
-         tmp = GreenFunc2_fsz(ri,rj,rk,rl,s,u,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,
+        tmp = GreenFunc2_fsz(ri,rj,rk,rl,s,u,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,
                        myProjCntNew,myBuffer);
       }else{
-         tmp = GreenFunc2_fsz2(ri,rj,rk,rl,s,t,u,v,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,
+        tmp = GreenFunc2_fsz2(ri,rj,rk,rl,s,t,u,v,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,
                        myProjCntNew,myBuffer);
       }
       PhysCisAjsCktAltDC[idx] += w*tmp;
