@@ -1,0 +1,65 @@
+include ../make.sys
+
+SFMT = ../sfmt/SFMT.o
+
+OBJS = \
+cal_energy.o \
+diag.o \
+green.o \
+initial.o \
+makeham.o \
+matrixlapack.o \
+output.o \
+readdef.o \
+UHFmain.o
+
+UHF : $(OBJS)
+	cd ../sfmt; $(MAKE) -f makefile_sfmt
+	$(CC) -o $@ $(OBJS) $(SFMT) $(CFLAGS) $(LIBS)
+
+SUFFIXES: .o .c
+
+.c.o:
+	$(CC) $(CFLAGS) -I ./include -I ../sfmt -c $<
+
+clean :
+	rm -f *.o UHF
+	cd ../sfmt; $(MAKE) -f makefile_sfmt clean
+
+UHFmain.o:include/Def.h
+UHFmain.o:mfmemory.c
+UHFmain.o:include/matrixlapack.h
+UHFmain.o:include/readdef.h
+UHFmain.o:include/initial.h
+UHFmain.o:include/makeham.h
+UHFmain.o:include/diag.h
+UHFmain.o:include/green.h
+UHFmain.o:include/cal_energy.h
+UHFmain.o:include/output.h
+UHFmain.o:../sfmt/SFMT.h
+UHFmain.o:xsetmem_def.c
+UHFmain.o:xsetmem_large.c
+cal_energy.o:include/cal_energy.h
+diag.o:include/matrixlapack.h
+diag.o:include/diag.h
+diag.o:mfmemory.c
+green.o:include/green.h
+green.o:include/matrixlapack.h
+green.o:mfmemory.c
+initial.o:include/initial.h
+initial.o:../sfmt/SFMT.h
+makeham.o:include/makeham.h
+matrixlapack.o:include/matrixlapack.h
+matrixlapack.o:mfmemory.c
+output.o:include/output.h
+output.o:mfmemory.c
+output.o:../sfmt/SFMT.h
+readdef.o:include/readdef.h
+include/Def.h:include/struct.h
+include/cal_energy.h:include/Def.h
+include/diag.h:include/Def.h
+include/green.h:include/Def.h
+include/initial.h:include/Def.h
+include/makeham.h:include/Def.h
+include/output.h:include/Def.h
+include/readdef.h:include/Def.h

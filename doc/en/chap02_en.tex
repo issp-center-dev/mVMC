@@ -46,6 +46,72 @@ You can obtain the mVMC directory by typing
 $ tar xzvf mVMC-xxx.tar.gz
 \end{verbatim}
 
+There are two kind of procedures to install mVMC.
+
+\subsection{Using \texttt{mVMCconfig.sh}}
+
+Please run \verb|mVMCconfig.sh| script in the mVMC directory as follow
+(for ISSP system-B ''sekirei''):
+\begin{verbatim}
+$ bash mVMCconfig.sh sekirei
+\end{verbatim}
+Then environmental configuration file \verb|make.sys| is generated in 
+\verb|src/| directory.
+The command-line argument of \verb|mVMCconfig.sh| is as follows:
+\begin{itemize}
+\item \verb|sekirei| : ISSP system-B ''sekirei''
+\item \verb|kei| : K computer and ISSP system-C ''maki''
+\item \verb|intel-openmpi| : Intel compiler + OpenMPI
+\item \verb|intel-mpich| : Intel compiler + MPICH2
+\item \verb|intel-intelmpi| : Intel compiler + IntelMPI
+\item \verb|gcc-openmpi| : GCC + OpenMPI
+\item \verb|gcc-mpich-mkl| : GCC + MPICH + MKL
+\end{itemize}
+
+\verb|make.sys| is as follows (for ISSP-system-B ''sekirei''):
+\begin{verbatim}
+CC = mpicc
+F90 = mpif90
+CFLAGS = -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
+FFLAGS = -O3 -implicitnone -xHost
+LIBS = -L $(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 \
+       -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
+\end{verbatim}
+We explain macros of this file as: 
+\begin{itemize}
+\item \verb|CC| : C compiler (\verb|mpicc|, \verb|mpifccpx|)
+\item \verb|F90| : fortran compiler (\verb|ifort|, \verb|frtpx|)
+\item \verb|Libs| : Linker option
+\item \verb|CFLAGS| : C compile option
+\item \verb|FFLAGS| : fortran compile option
+\end{itemize}
+
+
+Then you are ready to compile mVMC.
+Please type
+\begin{verbatim}
+$ make mvmc
+\end{verbatim}
+and obtain \verb|vmc.out| and \verb|vmcdry.out| in \verb|src/| directory;
+you should add this directory to the \verb|$PATH|.
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize
+
+You can make a PATH to mVMC as follows:
+\\
+\verb|$ export PATH=${PATH}:|\textit{mVMC\_top\_directory}\verb|/src/|
+\\
+If you keep this PATH, you should write above in \verb|~/.bashrc|
+(for \verb|bash| as a login shell)
+
+\end{screen}
+
+\subsection{Using \texttt{cmake}}
+
 \begin{screen}
 \Large 
 {\bf Tips}
@@ -95,6 +161,7 @@ repeat the above operations when we change the compiler.
 When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.\\
 \\
 ├──COPYING\\
+├──mVMCconfig.sh\\
 ├──doc/\\
 │~~~~~~├──bib/\\
 │~~~~~~│~~~~~~├──elsart-num\_mod.bst\\
@@ -137,18 +204,22 @@ When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.
 │~~~~~~~~~~│~~~~~~~~~~~~~~~~├─ **.c\\
 │~~~~~~~~~~│~~~~~~~~~~~~~~~~└──include/\\
 │~~~~~~~~~~│~~~~~~~~~~~~~~~~~~~~~~~~~~~└──**.h\\
+│~~~~~~~~~~├──makefile\_src\\
 │~~~~~~~~~~├──include/\\
 │~~~~~~~~~~│~~~~~~~└──**.h\\
 │~~~~~~~~~~├──StdFace/\\
 │~~~~~~~~~~│~~~~~~~├──**.c\\
 │~~~~~~~~~~│~~~~~~~└──**.h\\
 │~~~~~~~~~~├──pfapack/\\
+│~~~~~~~~~~│~~~~~~~├──makefile\_pfapack\\
 │~~~~~~~~~~│~~~~~~~└──**.f\\
 │~~~~~~~~~~└──sfmt/\\
+│~~~~~~~~~~~~~~~~~~├──makefkie\_sfmt\\
 │~~~~~~~~~~~~~~~~~~├──**.c\\
 │~~~~~~~~~~~~~~~~~~└──**.h\\
 └──tool/\\
-~~~~~~~~~~~└──**.F90\\
+~~~~~~~~~~~├──**.f90\\
+~~~~~~~~~~~└──makefile\_tool\\
 
 \newpage
 \section{Basic usage}

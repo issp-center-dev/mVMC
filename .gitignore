@@ -33,7 +33,7 @@ doc/jp/userguide_jp.synctex
 doc/en/userguide_en.out
 doc/en/userguide_en.pdf
 doc/en/userguide_en.synctex
-src/ComplexUHF/src/UHF
+src/ComplexUHF/UHF
 tool/corplot
 *.mod
 tool/fourier
