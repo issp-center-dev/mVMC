@@ -323,7 +323,7 @@ int ReadDefFileNInt(
 			}//case KW
 			fclose(fp);
 		}
-		if (info != 0 || cerr = NULL) {
+		if (info != 0 || cerr == NULL) {
 			fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
 			fprintf(stdout, " Error:  Read File %s .\n", defname);
 			return -1;
