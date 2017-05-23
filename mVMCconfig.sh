@@ -1,15 +1,22 @@
 #!/bin/bash
+echo ""
+echo "####################  NOTICE  ########################"
+echo " mVMCconfig.sh will be removed in the future release,"
+echo " and we will support only CMake."
+echo "######################################################"
+echo ""
 if [ -z ${1} ] || [ ${1} = "help" ]; then
     echo ""
     echo "Usage:"
     echo "./config.sh system_name"
     echo " system_name should be chosen from below:"
-    echo "        sekirei : ISSP system-B"
-    echo "        fujitsu : Fujitsu K computer & FX10"
-    echo "  intel-openmpi : Intel Compiler + OpenMPI"
-    echo "    intel-mpich : Intel Compiler + MPICH2 (or IntelMPI)"
-    echo "    gcc-openmpi : GCC + OpenMPI"
-    echo "  gcc-mpich-mkl : GCC + MPICH + MKL"
+    echo "         sekirei : ISSP system-B"
+    echo "         fujitsu : Fujitsu K computer & FX10"
+    echo "   intel-openmpi : Intel Compiler + OpenMPI"
+    echo "     intel-mpich : Intel Compiler + MPICH2"
+    echo "  intel-intelmpi : Intel Compiler + IntelMPI"
+    echo "     gcc-openmpi : GCC + OpenMPI"
+    echo "   gcc-mpich-mkl : GCC + MPICH + MKL"
 #    echo "        kashiwa : Remain for compatibility"
 #    echo "        jupiter : Remain for compatibility"
 #    echo "            sol : Remain for compatibility"
@@ -79,6 +86,15 @@ FFLAGS = -O3 -xHost -openmp -implicitnone
 LIBS = -openmp -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -lpthread -lm -openmp
 SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
 EOF
+    elif [ ${1} = "intel-intelmpi" ]; then
+        cat > src/make.sys <<EOF
+CC = mpiicc
+F90 = mpiifort
+CFLAGS = -O3 -xHost -qopenmp -no-prec-div -Wno-unknown-pragmas -I \${MKLROOT}/include
+FFLAGS = -O3 -xHost -qopenmp -implicitnone
+LIBS = -qopenmp -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_intelmpi_lp64 -lpthread -lm -ldl
+SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
+EOF
     elif [ ${1} = "gcc-openmpi" ]; then
         cat > src/make.sys <<EOF
 CC = mpicc
@@ -135,7 +151,7 @@ help:
 	@echo ""
 
 mvmc:
-	cd src;make -f makefile_src
+	cd src/mVMC/;make -f makefile_src
 	cd tool;make -f makefile_tool
 
 userguide:
@@ -145,7 +161,7 @@ userguide:
 	cd doc/fourier/en; make html latexpdfja
 
 clean:
-	cd src; make -f makefile_src clean
+	cd src/mVMC/; make -f makefile_src clean
 	cd tool; make -f makefile_tool clean
 
 veryclean:

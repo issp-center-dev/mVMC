@@ -10,7 +10,7 @@ mVMCのコンパイル$\cdot$使用には次のものが必要です。
 \item Cコンパイラ (インテル、富士通、GNUなど)
 \item MPIライブラリ
 \item LAPACKライブラリ (インテルMKL, 富士通, ATLASなど)
-\item ScaLAPACKライブラリ
+\item オプション：ScaLAPACKライブラリ
 \end{itemize}
 
 \begin{screen}
@@ -39,6 +39,8 @@ source /opt/intel/mkl/bin/mklvars.sh
 \section{インストール方法}
 
 mVMC は次の場所からダウンロードできます。\\
+\url{https://github.com/issp-center-dev/mVMC/releases}
+
 
 ダウンロードしたファイルを次のように展開してください。
 \begin{verbatim}
@@ -60,7 +62,8 @@ $ bash mVMCconfig.sh sekirei
 \item \verb|sekirei| : 物性研究所システムB ''sekirei''
 \item \verb|kei| : 京コンピューターおよび物性研究所システムC ''maki''(FX10)
 \item \verb|intel-openmpi| : Intel コンパイラ + OpenMPI
-\item \verb|intel-mpich| : Intelコンパイラ + MPICH2 (or IntelMPI)
+\item \verb|intel-mpich| : Intelコンパイラ + MPICH2
+\item \verb|intel-intelmpi| : Intelコンパイラ + IntelMPI
 \item \verb|gcc-mpich-mkl| : GCC + MPICH + MKL
 \item \verb|gcc-openmpi| : GCC + OpenMPI
 \end{itemize}
@@ -106,6 +109,61 @@ $ make mvmc
 \verb|~/.bashrc|ファイルに上記のコマンドを記載します。
 \end{screen}
 
+\subsection{cmakeを使う方法}
+
+mVMCを展開したディレクトリのパスを\$PathTomvmc、ビルドディレクトリを\$HOME/build/mvmc (任意の場所を指定可能)とした場合に、
+\begin{verbatim}
+cd $HOME/build/mvmc
+cmake -DCONFIG=gcc $PathTomvmc
+make
+\end{verbatim}
+でコンパイルすることができます。コンパイル後、\$HOME/build/mvmc 直下にsrcフォルダが作成され、実行ファイルであるvmc.outがそのフォルダ内に作成されます。
+
+なお、上の例ではgccコンパイラを前提としたコンパイルになっていますが、
+\begin{itemize}
+\item \verb|sekirei| : 物性研究所システムB ''sekirei''
+\item \verb|fujitsu| : 富士通コンパイラ
+\item \verb|intel| : intelコンパイラ + Linux PC
+\item \verb|gcc| : GCC + Linux PC
+\end{itemize}
+のオプションが用意されています。以下、mVMCを展開したディレクトリでビルドする例を示します(intelコンパイラの場合)。
+\begin{verbatim}
+mkdir ./build
+cd ./build
+cmake -DCONFIG=intel ../
+make
+\end{verbatim}
+実行後、buildフォルダ直下にsrcフォルダが作成され、vmc.outがsrcフォルダ内に作成されます。
+また、LAPACKに代わりScaLAPACKを計算に使用することが可能です。その場合には、
+\begin{verbatim}
+-DUSE_SCALAPACK=ON -DSCALAPACK_LIBRARIES="xxx"
+\end{verbatim}
+をcmakeをする際に付け加えてください(xxxにはScaLAPACKを利用するためのライブラリ一式を指定します)。
+なお、コンパイラを変更しコンパイルし直したい場合には、都度buildフォルダごと削除を行った上で、新規に上記作業を行うことをお薦めします。
+
+\begin{screen}
+\Large 
+{\bf Tips}
+\normalsize\\
+sekirei で cmake を利用するには
+\begin{verbatim}
+source /home/issp/materiapps/tool/env.sh
+\end{verbatim}
+をあらかじめ実行する必要があります。
+
+またScaLAPACK を利用するには
+\begin{verbatim}
+cmake -DCONFIG=sekirei ../ -DUSE_SCALAPACK=ON
+\end{verbatim}
+を行うと、デフォルトで
+\begin{verbatim}
+-DSCALAPACK_LIBRARIES="\${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 
+-lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core
+-lmkl_blacs_sgimpt_lp64"
+\end{verbatim}
+が指定されます。ライブラリへのパスが異なる場合には、\verb$-DSCALAPACK_LIBRARIES$を適宜変更してください。
+\end{screen}
+
 \section{ディレクトリ構成}
 mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示します。\\
 \\
@@ -146,16 +204,14 @@ mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└─Kagome/\\
 │~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└──$\cdots$\\
 ├──src/\\
-│~~~~~~~~~~├──**.c\\
-│~~~~~~~~~~├──**.h\\
+│~~~~~~~~~~├──mVMC/\\
+│~~~~~~~~~~│~~~~~~├─ **.c\\
+│~~~~~~~~~~│~~~~~~└──include/\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~└──**.h\\
 │~~~~~~~~~~├──ComplexUHF/\\
-│~~~~~~~~~~│~~~~~~~└──src/\\
-│~~~~~~~~~~│~~~~~~~~~~~~~~~~├─ **.c\\
-│~~~~~~~~~~│~~~~~~~~~~~~~~~~└──include/\\
-│~~~~~~~~~~│~~~~~~~~~~~~~~~~~~~~~~~~~~~└──**.h\\
-│~~~~~~~~~~├──makefile\_src\\
-│~~~~~~~~~~├──include/\\
-│~~~~~~~~~~│~~~~~~~└──**.h\\
+│~~~~~~~~~~│~~~~~~├─ **.c\\
+│~~~~~~~~~~│~~~~~~└──include/\\
+│~~~~~~~~~~│~~~~~~~~~~~~~~└──**.h\\
 │~~~~~~~~~~├──StdFace/\\
 │~~~~~~~~~~│~~~~~~~├──**.c\\
 │~~~~~~~~~~│~~~~~~~└──**.h\\

@@ -9,6 +9,6 @@ a1Lsub = 3
 model = "Spin"
 lattice = "Kagome"
 J = 1.0
-NSplitSize = 2
 2Sz = 0
 NSROptItrStep = 600
+//NVMCCalMode = 1

@@ -5,3 +5,5 @@ t = 1.0
 J = 4.0
 nelec = 4
 NSROptItrStep = 300
+//NVMCCalMode = 1
+2Sz = 0

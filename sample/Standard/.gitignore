@@ -12,6 +12,7 @@ jastrowidx.def
 doublonholon2siteidx.def
 doublonholon4siteidx.def
 orbitalidx.def
+orbitalidxpara.def
 qptransidx.def
 greenone.def
 greentwo.def
@@ -29,6 +30,8 @@ geometry.dat
 zqp_gutzwiller_opt.dat
 zqp_jastrow_opt.dat
 zqp_orbital_opt.dat
+zqp_orbitalAntiParallel_opt.dat
+zqp_orbitalParallel_opt.dat
 correlation.dat
 correlation.gp
 kpoints.dat

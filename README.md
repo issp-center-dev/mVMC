@@ -49,4 +49,4 @@ We hope that you cite the following URL when you publish the results using mVMC 
 URL: [https://github.com/issp-center-dev/mVMC](https://github.com/issp-center-dev/mVMC)
 
 ## Authors
-Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido,  Mitsuaki Kawamura, Kazuyoshi Yoshimi, Takeo Kato, Masatoshi Imada.
+Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Yuichi Motoyama, Mitsuaki Kawamura, Kazuyoshi Yoshimi, Takeo Kato, Masatoshi Imada.

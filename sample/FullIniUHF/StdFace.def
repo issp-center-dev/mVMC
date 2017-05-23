@@ -1,0 +1,9 @@
+W = 4
+L = 4
+Wsub = 4
+Lsub = 4
+model = "FermionHubbard"
+lattice = "Tetragonal"
+t = 1.0
+U = 4.0
+nelec = 16

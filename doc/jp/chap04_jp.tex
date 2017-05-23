@@ -12,10 +12,10 @@
 \begin{screen}
 \begin{verbatim}
 W = 2
- L = 4
- model = "spin"
+L = 4
+model = "spin"
 
- lattice = "triangular lattice"
+lattice = "triangular lattice"
 //mu = 1.0
 // t = -1.0
 // t' = -0.5
@@ -53,7 +53,7 @@ J'=-0.5
 \item \verb|model|
 
   {\bf 形式 :} 文字列(\verb|"Fermion Hubbard"|, \verb|"Spin"|, \verb|"Kondo Lattice"|
-  %,\verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, \verb|"Kondo LatticeGC"|
+  ,\verb|"Fermion HubbardGC"|, \verb|"SpinGC"|, \verb|"Kondo LatticeGC"|
   のいずれか)
 
 {\bf 説明 :} 計算対象の模型を指定します。
@@ -88,11 +88,13 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 \label{fml4_1_kondo}
 \end{align}
 に対応します。
-%また、
-%\verb|"Fermion HubbardGC"|、\verb|"SpinGC"|、\verb|"Kondo LatticeGC"|はそれぞれ
-%グランドカノニカル集団のフェルミ粒子Hubbard模型[式(\ref{fml4_1_hubbard})]、
-%グランドカノニカル集団のスピン模型[式(\ref{fml4_1_spin})]、
-%グランドカノニカル集団の近藤格子模型[式(\ref{fml4_1_kondo})]に対応します。
+また、
+\verb|"Fermion HubbardGC"|、\verb|"SpinGC"|、\verb|"Kondo LatticeGC"|はそれぞれ
+$S_z$非保存でのフェルミ粒子Hubbard模型[式(\ref{fml4_1_hubbard})]、
+スピン模型[式(\ref{fml4_1_spin})]、
+近藤格子模型[式(\ref{fml4_1_kondo})]に対応します。
+${\mathcal H}\Phi$との互換性からGC(=グランドカノニカル)と付いていますが、
+粒子数は保存していますのでご注意ください。
 
 \item \verb|lattice|
 
@@ -484,16 +486,17 @@ Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
 
 \item \verb|phase0|, \verb|phase1|
 
-  {\bf 形式 :} 複素数(デフォルトでは\verb|1.0|)
+  {\bf 形式 :} 実数 (デフォルトでは\verb|0.0|)
   
-  {\bf 説明 :} 計算するセルの境界をまたいだホッピング項に付く因子の位相を指定することが出来ます。
+  {\bf 説明 :} 計算するセルの境界をまたいだホッピング項に付く因子の位相を指定することが出来ます
+  (単位:度)。
   $\vec{a}_0$方向、$\vec{a}_1$方向それぞれ別の位相因子を用いることが出来ます。
   １次元系では\verb|phase0|のみ使用できます。
   例えば、$i$サイトから$j$サイトへのホッピングで、
   正の方向に境界をまたいだ場合には次のようになります。
   \begin{align}
-    \exp(i \times {\rm phase0}) \times t {\hat c}_{j \sigma}^\dagger {\hat c}_{i \sigma}
-    + \exp(-i \times {\rm phase0}) \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{j \sigma}
+    \exp(i \times {\rm phase0} \times \pi/180) \times t {\hat c}_{j \sigma}^\dagger {\hat c}_{i \sigma}
+    + \exp(-i \times {\rm phase0} \times\pi/180) \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{j \sigma}
   \end{align}
 
 \end{itemize}
@@ -535,19 +538,26 @@ Figs. \ref{fig_chap04_1_lattice}, \ref{fig_chap04_1_honeycomb},\ref{fig_kagome}
 
 \item  \verb|NSPGaussLeg|
 
-  {\bf 形式 :} {int型 (1以上、{デフォルト値 = 8})}
+  {\bf 形式 :} int型 (1以上、デフォルト値は$S_z$保存系で\verb|2Sz=0|の時は\verb|8|)
 
   {\bf 説明 :} スピン量子数射影の$\beta$積分($S^y$回転)のGauss-Legendre求積法の分点数。
+  $S_z$保存系で\verb|2Sz=0|ではない場合と$S_z$非保存系では使われません。
 
 \item  \verb|NSPStot|
 
   {\bf 形式 :} int型 (0以上、{デフォルト値 = 0})
 
-  {\bf 説明 :}  スピン量子数。
+  {\bf 説明 :}  全スピン量子数。
+
+\item  \verb|2Sz|
+
+  {\bf 形式 :} int型 (0以上、デフォルト値 = 0)
+
+  {\bf 説明 :}  スピン量子数$S_z$。
 
 \item  \verb|NMPTrans|
 
-  {\bf 形式 :} int型 (1以上、{デフォルト値は副格子内部の並進ベクトルの数})
+  {\bf 形式 :} int型 (1以上、デフォルト値は1)
 
   {\bf 説明 :} 
   運動量・格子対称性の量子数射影の個数。
@@ -618,11 +628,17 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
 {\bf 形式 :} int型 (0もしくは1、デフォルト値=1)
 
-{\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にして高速化するオプション(1で機能On、{モンテカルロサンプリング数に応じてメモリの消費が増大します})。
+{\bf 説明 :} 期待値$\langle O_k O_l \rangle$を計算するとき行列-行列積にして高速化するオプション(1で機能On、{モンテカルロサンプリング数に応じてメモリの消費が増大します}\footnote{使用メモリ量が、$O(N_\text{p}^2)$ から $O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})$ になります。})。
+ 
+\item \verb|NSRCG|
+
+{\bf 形式 :} int型 (0もしくは1、デフォルト値=0)
+
+{\bf 説明 :} SR法で連立一次方程式 $Sx=g$ を解くときに、$S$ を陽に構築せずに解くことでメモリを削減する\footnote{使用メモリ量は、$O(N_\text{p}) + O(N_\text{p}N_\text{MCS})$ です。}オプション\cite{NeuscammanUmrigarChan}(1で機能On, \verb|NStore| は1に固定されます)。
  
 \item  \verb|ComplexType|
   
-  {\bf 形式 :} int型 (\verb|0|もしくは\verb|1|、デフォルト値\verb|0|)
+  {\bf 形式 :} int型 (\verb|0|もしくは\verb|1|、デフォルト値は$S_z$保存系では\verb|0|、非保存系では\verb|1|)
 
   {\bf 説明 :} \verb|0|のとき変分パラメータの実部のみを、\verb|1|のとき実部/虚部両方を最適化します。
 
@@ -633,11 +649,9 @@ SR 法で最適化する場合の全ステップ数。\verb|NVMCCalMode|=0の場
 
   {\bf 説明 :} 計算を行う相関関数を指定します。
 \verb|"none"|の場合は相関関数を計算しません。
-\verb|"correlation"|を指定した場合には、1体部分はすべての$i, \sigma$について
-$\langle c_{i \sigma}^{\dagger}c_{i \sigma} \rangle$を、
-2体部分はすべての$i, j, \sigma, \sigma'$について
-$\langle c_{i \sigma}^{\dagger}c_{i \sigma} c_{j \sigma'}^{\dagger}c_{j \sigma'} \rangle$
-を計算します。
+\verb|"correlation"|を指定した場合には、付属のユーティリティ
+\verb|fourier|でサポートするものに対応した相関関数を計算します。
+詳しくは\verb|doc/fourier/|内のマニュアルを参照してください。
 \verb|"full"|を指定した場合には、
 1体部分はすべての$i, j, \sigma, \sigma'$について
 $\langle c_{i \sigma}^{\dagger}c_{j \sigma'} \rangle$を、
