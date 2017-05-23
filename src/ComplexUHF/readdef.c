@@ -323,7 +323,7 @@ int ReadDefFileNInt(
 			}//case KW
 			fclose(fp);
 		}
-		if (info != 0) {
+		if (info != 0 || cerr = NULL) {
 			fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
 			fprintf(stdout, " Error:  Read File %s .\n", defname);
 			return -1;
@@ -422,7 +422,10 @@ int ReadDefFileIdxPara(
     }
 
     /*=======================================================================*/
-    for (i = 0; i < IgnoreLinesInDef; i++) cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+    for (i = 0; i < IgnoreLinesInDef; i++){
+      cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+      if(cerr==NULL) return -1;
+    }
     idx = 0;
 
     switch (iKWidx) {
