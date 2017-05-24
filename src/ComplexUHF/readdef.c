@@ -283,6 +283,7 @@ int ReadDefFileNInt(
 
 				case KWPairHop:
 					cerr = ReadBuffInt(fp, &X->NPairHopping);
+                    X->NPairHopping*=2;
 					break;
 
 				case KWExchange:
@@ -522,12 +523,15 @@ int ReadDefFileIdxPara(
         /*pairhop.def---------------------------------------*/
         if (X->NPairHopping > 0) {
           while (fscanf(fp, "%d %d %lf\n",
-                        &(X->PairHopping[idx][0]),
-                        &(X->PairHopping[idx][1]),
-                        &(X->ParaPairHopping[idx])) != EOF) {
+                        &(X->PairHopping[2*idx][0]),
+                        &(X->PairHopping[2*idx][1]),
+                        &(X->ParaPairHopping[2*idx])) != EOF) {
+            X->PairHopping[2*idx+1][0]=X->PairHopping[2*idx][1];
+            X->PairHopping[2*idx+1][1]=X->PairHopping[2*idx][0];
+            X->ParaPairHopping[2*idx+1]=X->ParaPairHopping[2*idx];
             idx++;
           }
-          if (idx != X->NPairHopping) {
+          if (idx != X->NPairHopping/2) {
             info = ReadDefFileError(defname);
           }
         }
