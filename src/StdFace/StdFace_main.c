@@ -66,7 +66,6 @@ static void StdFace_LargeValue(struct StdIntList *StdI) {
 /**
 @brief Print calcmod.def
 @author Mitsuaki Kawamura (The University of Tokyo)
-
 */
 static void PrintCalcMod(struct StdIntList *StdI)
 {
@@ -388,14 +387,15 @@ static void PrintOrb(struct StdIntList *StdI) {
 }/*void PrintOrb*/
 /**
 @brief Output parallel orbitalIdx
-
 @author Mitsuaki Kawamura (The University of Tokyo)
 */
 static void PrintOrbPara(struct StdIntList *StdI) {
   FILE *fp;
   int isite, jsite, NOrbGC, iOrbGC, isite1, jsite1, iorb;
   int **OrbGC, **AntiOrbGC;
-
+  /**@brief
+  (1) Copy from anti-parallel orbital index
+  */
   OrbGC = (int **)malloc(sizeof(int*) * StdI->nsite);
   AntiOrbGC = (int **)malloc(sizeof(int*) * StdI->nsite);
   for (isite = 0; isite < StdI->nsite; isite++) {
@@ -406,9 +406,9 @@ static void PrintOrbPara(struct StdIntList *StdI) {
       AntiOrbGC[isite][jsite] = StdI->AntiOrb[isite][jsite];
     }/*for (jsite = 0; jsite < isite; jsite++)*/
   }/*for (isite = 0; isite < StdI->nsite; isite++)*/
-   /*
-   Symmetrize
-   */
+  /**@brief
+  (2) Symmetrize
+  */
   for (iorb = 0; iorb < StdI->NOrb; iorb++) {
     for (isite = 0; isite < StdI->nsite; isite++) {
       for (jsite = 0; jsite < StdI->nsite; jsite++) {
@@ -702,7 +702,8 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
 @brief Make all characters lower
 @author Mitsuaki Kawamura (The University of Tokyo)
 */
-static void Text2Lower(char *value /**<[inout] @brief Keyword or value*/){
+static void Text2Lower(char *value //!<[inout] @brief Keyword or value
+){
   char value2;
   int valuelen, ii;
 
@@ -716,7 +717,8 @@ static void Text2Lower(char *value /**<[inout] @brief Keyword or value*/){
 @brief Remove : space etc. from keyword and value in an iput file
 @author Mitsuaki Kawamura (The University of Tokyo)
 */
-static void TrimSpaceQuote(char *value /**<[inout] @brief Keyword or value*/){
+static void TrimSpaceQuote(char *value //!<[inout] @brief Keyword or value
+){
   char value2[256];
   int valuelen, valuelen2, ii;
 
