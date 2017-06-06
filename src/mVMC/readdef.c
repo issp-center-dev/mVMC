@@ -1851,10 +1851,10 @@ GetInfoDH4(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCo
     idx0 = idx1 = 0;
     while (fscanf(fp, "%d %d %d %d %d %d\n",
                   &i, &(x0), &(x1), &(x2), &(x3), &n) != EOF) {
-      ArrayIdx[n][2 * i] = x0;
-      ArrayIdx[n][2 * i + 1] = x1;
-      ArrayIdx[n][2 * i + 2] = x2;
-      ArrayIdx[n][2 * i + 3] = x3;
+      ArrayIdx[n][4 * i] = x0;
+      ArrayIdx[n][4 * i + 1] = x1;
+      ArrayIdx[n][4 * i + 2] = x2;
+      ArrayIdx[n][4 * i + 3] = x3;
       if (CheckSite(i, Nsite) != 0 || CheckQuadSite(x0, x1, x2, x3, Nsite) != 0) {
         fprintf(stderr, "Error: Site index is incorrect. \n");
         info = 1;
