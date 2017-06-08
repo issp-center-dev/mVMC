@@ -263,8 +263,8 @@ SUBROUTINE read_filename()
      !
      nwfc = numave
      ALLOCATE(filetail(nwfc))
-     DO iwfc = idx_start, idx_start + numave - 1
-        WRITE(filetail(iwfc),'(a,i3.3,a)') "_", iwfc, ".dat"
+     DO iwfc = 1, nwfc
+        WRITE(filetail(iwfc),'(a,i3.3,a)') "_", iwfc - 1 + idx_start, ".dat"
      END DO
      !
      WRITE(*,*) "    Method : mVMC"
