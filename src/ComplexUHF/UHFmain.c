@@ -118,9 +118,11 @@ int main(int argc, char* argv[]){
 	initial(&(X.Bind));
     sprintf(sdt,"%s_check.dat",X.Bind.Def.CDataFileHead);
     fp=fopen(sdt,"w");
+    fprintf(fp,"#step,residue,       energy,           # of electrons\n");
+    fclose(fp);
 
     printf("\n########Start: Hartree-Fock calculation ###########\n");
-    printf("stp, rest, energy\n");
+    printf("stp, residue, energy\n");
     for(i=0;i<X.Bind.Def.IterationMax;i++){
       X.Bind.Def.step=i;
      t_0 = gettimeofday_sec();
@@ -131,28 +133,35 @@ int main(int argc, char* argv[]){
      green(&(X.Bind));
      t_3 = gettimeofday_sec();
      cal_energy(&(X.Bind));
-     printf("%d %.12lf %.12lf \n", X.Bind.Def.step ,X.Bind.Phys.rest,X.Bind.Phys.energy);
+     //printf("%d %.12lf %.12lf \n", X.Bind.Def.step ,X.Bind.Phys.rest,X.Bind.Phys.energy);
+     printf(" %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
 
-        t_4 = gettimeofday_sec();
+     t_4 = gettimeofday_sec();
+     sprintf(sdt,"%s_check.dat",X.Bind.Def.CDataFileHead);
+     fp=fopen(sdt,"a");
      fprintf(fp," %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
-     if(X.Bind.Def.print==1){
-       printf(" %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
-       printf("all: %lf \n",t_4-t_0);
-       printf("makeham: %lf \n",t_1-t_0);
-       printf("diag: %lf \n",t_2-t_1);
-       printf("green: %lf \n",t_3-t_2);
-       printf("cal: %lf \n",t_4-t_3);
-     }
+     fclose(fp);
+     //if(X.Bind.Def.print==1){
+       //printf(" %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
+       //printf("\n");
+       //printf("all: %lf \n",t_4-t_0);
+       //printf("makeham: %lf \n",t_1-t_0);
+       //printf("diag: %lf \n",t_2-t_1);
+       //printf("green: %lf \n",t_3-t_2);
+       //printf("cal: %lf \n",t_4-t_3);
+       //printf("\n");
+     //}
      if(X.Bind.Phys.rest < X.Bind.Def.eps){
        break;
      } 
     } 
-    fclose(fp);
 
     if(i<X.Bind.Def.IterationMax){
       printf("\nHartree-Fock calculation is finished at %d step. \n\n",i);
     }else{
       printf("\n!! Hartree-Fock calculation is not finished at %d  step!! \n",i);
+      printf("\n!! Green functions at the last step are output (these are not converged )!!! \n");
+      output(&(X.Bind));
       return -1;
     }
     printf("########Finish: Hartree-Fock calculation ###########\n");

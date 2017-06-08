@@ -44,6 +44,9 @@ void initial(struct BindStruct *X) {
     }
   }
 
+  if(X->Def.print==1){
+    printf("#[s]output initial Green functions\n");
+  }
   //Case: Initial green's functions are defined.
   for (int_i = 0; int_i < X->Def.NInitial; int_i++) {
     site_0 = X->Def.Initial[int_i][0];
@@ -51,9 +54,15 @@ void initial(struct BindStruct *X) {
     site_1 = X->Def.Initial[int_i][2];
     spin_1 = X->Def.Initial[int_i][3];
     tmp = X->Def.ParaInitial[int_i];
-    printf("int_i=%d %lf %lf \n", int_i, creal(tmp), cimag(tmp));
+
+    if(X->Def.print==1){
+      printf("%d %lf %lf \n", int_i, creal(tmp), cimag(tmp));
+    }
     t_site_0 = site_0 + spin_0 * Ns;
     t_site_1 = site_1 + spin_1 * Ns;
     X->Large.G[t_site_0][t_site_1] = tmp;
+  }
+  if(X->Def.print==1){
+    printf("#[e]output initial Green functions\n");
   }
 }
