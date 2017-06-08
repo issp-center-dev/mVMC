@@ -54,7 +54,7 @@ int GetLocSpinInfo(FILE *fp, int *ArrayIdx, int Nsite, char *defname);
 
 int GetInfoCoulombIntra(FILE *fp, int *ArrayIdx, double *ArrayValue, int Nsite, int NArray, char *defname);
 
-int GetInfoPairHop(FILE *fp, int **ArrayIdx, double *ArrayValue, int Nsite, int NArray, char *defname);
+int ReadPairHopValue(FILE *fp, int **ArrayIdx, double *ArrayValue, int Nsite, int NArray, char *defname);
 
 int ReadPairDValue(FILE *fp, int **ArrayIdx, double *ArrayValue, int Nsite, int NArray, char *defname);
 
@@ -776,7 +776,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           break;
 
         case KWPairHop: /*pairhop.def---------------------------------------*/
-          if (GetInfoPairHop(fp, PairHopping, ParaPairHopping, Nsite, NPairHopping, defname) != 0) info = 1;
+          if (ReadPairHopValue(fp, PairHopping, ParaPairHopping, Nsite, NPairHopping, defname) != 0) info = 1;
           break;
 
         case KWGutzwiller: /*gutzwilleridx.def---------------------------------*/
@@ -1679,7 +1679,7 @@ int GetInfoCoulombIntra(FILE *fp, int *ArrayIdx, double *ArrayValue, int Nsite, 
   return info;
 }
 
-int GetInfoPairHop(FILE *fp, int **ArrayIdx, double *ArrayValue, int Nsite, int NArray, char *defname) {
+int ReadPairHopValue(FILE *fp, int **ArrayIdx, double *ArrayValue, int Nsite, int NArray, char *defname) {
   char ctmp2[256];
   int idx = 0, info = 0;
   int x0 = 0, x1 = 0;
@@ -1851,10 +1851,10 @@ GetInfoDH4(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCo
     idx0 = idx1 = 0;
     while (fscanf(fp, "%d %d %d %d %d %d\n",
                   &i, &(x0), &(x1), &(x2), &(x3), &n) != EOF) {
-      ArrayIdx[n][2 * i] = x0;
-      ArrayIdx[n][2 * i + 1] = x1;
-      ArrayIdx[n][2 * i + 2] = x2;
-      ArrayIdx[n][2 * i + 3] = x3;
+      ArrayIdx[n][4 * i] = x0;
+      ArrayIdx[n][4 * i + 1] = x1;
+      ArrayIdx[n][4 * i + 2] = x2;
+      ArrayIdx[n][4 * i + 3] = x3;
       if (CheckSite(i, Nsite) != 0 || CheckQuadSite(x0, x1, x2, x3, Nsite) != 0) {
         fprintf(stderr, "Error: Site index is incorrect. \n");
         info = 1;

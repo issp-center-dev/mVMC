@@ -1,7 +1,0 @@
-         ModPara  modpara.def
-         LocSpin  locspn.def
-           Trans  trans.def
-    CoulombIntra  coulombintra.def
-        OneBodyG  greenone.def
-        TwoBodyG  greentwo.def
-         Orbital  orbitalidx.def

@@ -1,0 +1,6 @@
+         ModPara  modpara.def
+         LocSpin  locspn.def
+           Trans  trans.def
+    CoulombIntra  coulombintra.def
+         Orbital  orbitalidx.def
+         Initial  initial.def
