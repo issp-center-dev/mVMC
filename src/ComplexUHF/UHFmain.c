@@ -141,16 +141,16 @@ int main(int argc, char* argv[]){
      fp=fopen(sdt,"a");
      fprintf(fp," %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
      fclose(fp);
-     if(X.Bind.Def.print==1){
+     //if(X.Bind.Def.print==1){
        //printf(" %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
-       printf("\n");
-       printf("all: %lf \n",t_4-t_0);
-       printf("makeham: %lf \n",t_1-t_0);
-       printf("diag: %lf \n",t_2-t_1);
-       printf("green: %lf \n",t_3-t_2);
-       printf("cal: %lf \n",t_4-t_3);
-       printf("\n");
-     }
+       //printf("\n");
+       //printf("all: %lf \n",t_4-t_0);
+       //printf("makeham: %lf \n",t_1-t_0);
+       //printf("diag: %lf \n",t_2-t_1);
+       //printf("green: %lf \n",t_3-t_2);
+       //printf("cal: %lf \n",t_4-t_3);
+       //printf("\n");
+     //}
      if(X.Bind.Phys.rest < X.Bind.Def.eps){
        break;
      } 
