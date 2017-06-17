@@ -171,15 +171,17 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   StopTimer(56);
 
 #ifdef _DEBUG_STCOPT
+  fprintf(stderr, "g:\n");
   for(ir=0; ir<vlocr; ++ir){
-    printf("%lg\n", g[ir]);
+    fprintf(stderr, "%lg\n", g[ir]);
   }
+  fprintf(stderr, "S:\n");
   for(ic=0;ic<mlocc;ic++) {
     for(ir=0;ir<mlocr;ir++) {
       idx = ir + ic*mlocr; /* local index (row major) */
-      printf("%lg ", s[idx]);
+      fprintf(stderr, "%lg ", s[idx]);
     }
-    printf("\n");
+    fprintf(stderr, "\n");
   }
 #endif
 
@@ -222,6 +224,7 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
   StopTimer(58);
 
 #ifdef _DEBUG_STCOPT
+  fprintf(stderr, "r:\n");
   for(si=0; si<nSmat; ++si){
     fprintf(stderr, "%lg\n", r[si]);
   }
