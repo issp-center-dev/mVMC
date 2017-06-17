@@ -28,6 +28,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 // #define _DEBUG_STCOPT
 
+#include "stcopt.h"
+
 int StochasticOpt(MPI_Comm comm) {
   const int nPara=NPara;
   const int srOptSize=SROptSize;
