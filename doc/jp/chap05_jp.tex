@@ -28,8 +28,8 @@
 \begin{equation}
 \langle A \rangle =\sum_x \rho(x) \frac{\langle \psi| A | x\rangle }{\langle \psi |x \rangle} 
 \end{equation}
-と書き直した後、$x$に関する和を重み付きサンプリングをマルコフ連鎖モンテカルロ法により
-実行しています。Local Green's function $G_{ij\sigma\sigma'}(x)$は
+と書き直した後、$x$に関する和をマルコフ連鎖モンテカルロ法により
+評価しています。Local Green's function $G_{ij\sigma\sigma'}(x)$は
 \begin{equation}
 G_{ij\sigma\sigma'}(x)=\frac{\langle \psi | c_{i\sigma}^{\dag} c_{j\sigma'} | \psi \rangle}{\langle \psi | x \rangle}
 \end{equation}
@@ -42,7 +42,7 @@ G_{ij\sigma\sigma'}(x)=\frac{\langle \psi | c_{i\sigma}^{\dag} c_{j\sigma'} | \p
 スピン系の計算において一体項(\verb|transfer|), \verb|InterAll|形式での相互作用, 
 相関関数のインデックスの指定にはBogoliubov表現が使われています。
 一般に、スピンの演算子は次のようにフェルミオンの生成$\cdot$消滅演算子$c_{i \sigma}$,
-$c_{i \sigma}^\dagger$によって書き換えることができます。
+$c_{i \sigma}^\dagger$によって書き換えることができます:
 \begin{align}
   S_{i z} &= \sum_{\sigma = -S}^{S} \sigma c_{i \sigma}^\dagger c_{i \sigma}
   \\
@@ -57,25 +57,28 @@ $c_{i \sigma}^\dagger$によって書き換えることができます。
 本パッケージでは、$S=1/2$のスピン系のみ取り扱っており、上記の式で
 $S=1/2$と置いたものを用いています。
 
-\section{{パフィアン行列式とスレーター行列式の関係}}
+\section{{パフィアン-スレーター行列式の性質}}
 \label{sec:PuffAndSlater}
 
-この節では, パフィアン行列式とスレーター行列式の関係および$f_{ij}$の特異値分解の意味について説明します。
+この節では, パフィアン-スレーター行列式のもつ性質について簡単にまとめます。
+\ref{sec:PfaffianAP}節と\ref{sec:PfaffianP}節でパフィアン-スレーター行列式と単一スレーター行列式の間の関係を導出し、
+\ref{sec:PfaffianSingular}節で$f_{ij}$の特異値分解の意味について説明します。
 
 \subsection{$f_{ij}$と$\Phi_{in\sigma}$の関係~(スピン反平行の場合)}
+\label{sec:PfaffianAP}
 
-パフィアン-スレーター行列式(多変数変分モンテカルロ法の一体部分)は
+多変数変分モンテカルロ法で試行波動関数の一体部分として用いられるパフィアン-スレーター行列式は
 \begin{equation}
 |\phi_{\rm Pf}\rangle=\Big(\sum_{i,j=1}^{N_{s}}f_{ij}c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)^{N_{\rm e}/2}|0\rangle,
 \end{equation}
 のように定義されます。ここで, $N_{s}$はサイト数, $N_{e}$は全電子数, $f_{ij}$は変分パラメータです。
-簡単化のため, 以降$f_{ij}$は実数と仮定します。また, シングルスレーター行列式として
+簡単化のため, 以降$f_{ij}$は実数と仮定します。また, 単一スレーター行列式として
 \begin{align}
 |\phi_{\rm SL}\rangle&=\Big(\prod_{n=1}^{N_{e}/2}\psi_{n\uparrow}^{\dagger}\Big)
 \Big(\prod_{m=1}^{N_{e}/2}\psi_{m\downarrow}^{\dagger}\Big)|0\rangle, \\
 \psi_{n\sigma}^{\dagger}&=\sum_{i=1}^{N_{s}}\Phi_{in\sigma}c^{\dagger}_{i\sigma}.
 \end{align}
-を定義します。ただし, $\Phi$は正規直行基底であり, クロネッカーのデルタ$\delta_{nm}$を用い
+を定義します。ただし, $\Phi$は正規直交基底であり, クロネッカーのデルタ$\delta_{nm}$を用い
 \begin{equation}
 \sum_{i=1}^{N_{s}}\Phi_{in\sigma}\Phi_{im\sigma}=\delta_{nm},
 \end{equation}
@@ -88,13 +91,13 @@ G_{ij\sigma}=\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle
 \end{align}
 が導かれます。
 
-次に, $\phi_{\rm SL}$を変形し, $f_{ij}$と$\Phi_{in\sigma}$の関係をあらわにします。
-$\psi^{\dagger}_{n\sigma}$の交換関係を用いると, $\phi_{\rm SL}$は
+次に, $|\phi_{\rm SL}\rangle $を変形し, $f_{ij}$と$\Phi_{in\sigma}$の間に成り立つ関係式を示します。
+$\psi^{\dagger}_{n\sigma}$の交換関係を用いると, $|\phi_{\rm SL}\rangle $は
 \begin{align}
 |\phi_{\rm SL}\rangle \propto \prod_{n=1}^{N_{e}/2}\Big(\psi_{n\uparrow}^{\dagger}\psi_{\mu(n)\downarrow}^{\dagger}\Big)|0\rangle,
 \end{align}
 と書き換えられます。ここで, $\mu(n)$は$n= 1, 2, \cdots, N_{e}/2$の置換を表します。
-ここで議論を簡単にするため, 同一のペア$n=\mu(n)$を採用します。
+議論を簡単にするため, 同一のペア$n=\mu(n)$となる場合を考えましょう。
 このとき, $K_{n}^{\dagger}=\psi_{n\uparrow}^{\dagger}\psi_{n\downarrow}^{\dagger}$として, 
 $K_{n}^{\dagger}K_{m}^{\dagger}=K_{m}^{\dagger}K_{n}^{\dagger}$の関係を用いることで, 
 \begin{align}
@@ -102,55 +105,62 @@ $K_{n}^{\dagger}K_{m}^{\dagger}=K_{m}^{\dagger}K_{n}^{\dagger}$の関係を用�
 =\prod_{n=1}^{N_{e}/2} K_{n}^{\dagger}|0\rangle \\
 &\propto\Big(\sum_{n=1}^{\frac{N_{e}}{2}}K_{n}^{\dagger}\Big)^{\frac{N_{e}}{2}} |0\rangle
 =\Big(\sum_{i,j=1}^{N_{s}}\Big[\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}\Big]
-c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)|0\rangle,
+c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)^{N_e/2}|0\rangle,
 \end{align}
-の関係が得られます。これより$f_{ij}$はシングルスレーター行列式の係数により
+の関係が得られます。これより$f_{ij}$は単一スレーター行列式の係数により
 \begin{align}
 f_{ij}=\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}.
 \end{align}
-として表されることが分かります。なお, この形式はシングルスレーター行列式で与えられる$f_{ij}$の表式の一つであり, 
-実際にはペアを組む自由度(どの$\mu(n)$を選ぶか)およびゲージの自由度(すなわち$\Phi$の符号の自由度)に依存します。
+として表されることが分かります。なお, この形式は単一スレーター行列式で与えられる$f_{ij}$の表式の一つであり, 
+実際にはペアを組む自由度(どの$\mu(n)$を選ぶか)およびゲージの自由度(すなわち$\Phi_{in\sigma}$の符号の自由度)に依存します。
 この自由度の多さが$f_{ij}$の冗長性につながっています。
 
-\subsection{$F_{IJ}$と$\Phi_{In}$の関係~(スピン平行も含めた場合)}
-以下の同種スピンのペアリングも考えたパフィアン波動関数と
-スレーター波動関数を考えます(ここで$I,J$はスピン自由度も含めたサイトのインデックス).
+\subsection{$F_{IJ}$と$\Phi_{In\sigma}$の関係~(スピン平行も含めた場合)}
+\label{sec:PfaffianP}
+
+前節で考察したパフィアン-スレーター波動関数と単一スレーター波動関数の間の関係は、
+同種スピンのペアリングも考えた場合に拡張することができます。
+パフィアン-スレーター波動関数とスレーター波動関数をそれぞれ
 \begin{align}
-|\phi_{\rm Pf}\rangle&=\Big(\sum_{I,J=1}^{2N_{s}}f_{IJ}c_{I}^{\dagger}c_{J}^{\dagger}\Big)^{N_{\rm e}/2}|0\rangle, \\
+|\phi_{\rm Pf}\rangle&=\Big(\sum_{I,J=1}^{2N_{s}}F_{IJ}c_{I}^{\dagger}c_{J}^{\dagger}\Big)^{N_{\rm e}/2}|0\rangle, \\
 |\phi_{\rm SL}\rangle&=\Big(\prod_{n=1}^{N_{e}}\psi_{n}^{\dagger}\Big)|0\rangle,~~\psi_{n}^{\dagger}=\sum_{I=1}^{2N_{s}}\Phi_{In}c^{\dagger}_{I}.
 \end{align}
+と定義します。ここで$I,J$はスピン自由度も含めたサイトのインデックスです。
 スピン反平行の場合とほぼ同様の議論を用いることで, 
 \begin{align}
 F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{In}\Phi_{Jn+1}-\Phi_{Jn}\Phi_{In+1}\Big).
 \end{align}
-の関係を示すことができます。
-これはスピン反平行の場合にもそのまま適用できるので, 
-mVMC ver1.0ではこの表式を使用しています。
+の関係を示すことができます。これはスピン反平行のペアリングにもそのまま適用できるので, 
+mVMC ver1.0以降ではこの表式を使用しています。
 
 \subsection{$f_{ij}$の特異値分解}
-行列$F$, $\Phi_{\uparrow}$, $\Phi_{\downarrow}$,$\Sigma$を
+\label{sec:PfaffianSingular}
+
+行列$F$, $\Phi_{\uparrow}$, $\Phi_{\downarrow}$, $\Sigma$を
 \begin{align}
 &(F)_{ij}=f_{ij},~~~ 
 (\Phi_{\uparrow})_{in}=\Phi_{in\uparrow},~~~ 
 (\Phi_{\downarrow})_{in}=\Phi_{in\downarrow}, \\
-&\Sigma={\rm diag}[1,\cdots,1,0,0,0]~~~\text{({\rm \# of 1} = $N_{e}/2$)}.
+&\Sigma={\rm diag}[\underbrace{1,\cdots,1}_{N_e/2},0,0,0],
 \end{align}
-として定義します。これらの記法を用いると, $f_{ij}$(すなわち$F$)の特異値分解は
+として定義します。前節のように$f_{ij}$(すなわち$F$)が単一スレーター行列と関係づけられて
+いるとき、$F$の特異値分解は
 \begin{align}
 F=\Phi_{\uparrow}\Sigma\Phi_{\downarrow}^{t}.
 \end{align}
-として記述することができます。
-この結果は, もし非ゼロの特異値が$N_{e}/2$個存在し, 
-かつ全ての$F$の非ゼロの特異値が$1$であった場合, 
-$f_{ij}$が平均場近似解として記述できることを示しています。
+となることを示すことができます。
+この結果は、一般に$F$を特異値分解したとき、非ゼロの特異値が$N_{e}/2$個存在し, 
+かつ全ての$F$の非ゼロの特異値が$1$であった場合, $f_{ij}$が単一スレーター波動関数を
+記述すること(つまり平均場近似解として記述できること)を表しています。
 言い換えると, 特異値の非ゼロ成分の数とその値が, 
 シングルスレータ行列式からパフィアンスレーター行列式がどのようにしてずれるのか, 
 という点について定量的な基準を与えることを示しています。
 
 \section{Power-Lanczos法}
+
 このセクションでは, Power-Lanczos法での最適化パラメータ$\alpha$の決定方法について述べます。
-サンプリング数が有限のため, エネルギーの分散が常に正の値を取るよう計算を行うことが重要になります。
 また, ここではシングルステップのLanczos法を適用した後の物理量の計算についても説明します。
+
 \subsection{$\alpha$の決定}
 最初に, 変分モンテカルロ法のサンプリングに関して簡単に説明します。
 物理量$\hat{A}$は以下の手順で計算されます:
@@ -167,8 +177,9 @@ $f_{ij}$が平均場近似解として記述できることを示しています
 例えば, エネルギーの期待値の分散$\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle$を考えてみると, 
 分散は以下の2通りの方法で計算できます。
 \begin{align}
-&\sigma^2=\sum_{x} \rho(x) F(x,  (\hat{H}-\langle \hat{H}\rangle)^2) = \sum_{x} \rho(x) F(x,  \hat{H}^2) - \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 ,\\
-&\sigma^2=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}-\langle \hat{H}\rangle)F(x,  \hat{H}-\langle \hat{H}\rangle) = \sum_{x} \rho(x) F^{\dag}(x,  \hat{H}) F(x, \hat{H})- \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 
+\sigma^2 &=\sum_{x} \rho(x) F(x,  (\hat{H}-\langle \hat{H}\rangle)^2) = \sum_{x} \rho(x) F(x,  \hat{H}^2) - \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 ,\\
+\sigma^2 &=\sum_{x} \rho(x) F^{\dag}(x,  \hat{H}-\langle \hat{H}\rangle)F(x,  \hat{H}-\langle \hat{H}\rangle) \nonumber \\
+&= \sum_{x} \rho(x) F^{\dag}(x,  \hat{H}) F(x, \hat{H})- \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 
 \end{align}
 この定義から, 後者の方法では常に正の値となることが保証されているのに対して, 前者の方法では分散が正の値になることが必ずしも保証されないことが分かります。次に, シングルステップでのpower-Lanczos波動関数$|\phi\rangle =(1+\alpha \hat{H}) |\psi \rangle$に対するエネルギーの期待値とその分散を考えます。エネルギーは以下の式で計算されます：
 \begin{align}
