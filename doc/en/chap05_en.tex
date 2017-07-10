@@ -2,31 +2,40 @@
 %----------------------------------------------------------
 \chapter{{Algorithm}}
 \label{Ch:algorithm}
-\section{Variational MonteCalro Method}
-In Variational MonteCalro (VMC) method, the importance sampling is performed in the system constructed by the Malkov chain toward the appropriate complete system.
-Here, we choose the real spatial arrangement $\{| x\rangle\}$ at $S_z = 0$ as the complete system.
+\section{Variational Monte Calro Method}
+
+The variational Monte Carlo (VMC) method is a method for calculating approximate wave functions 
+of a ground state and low-lying excited states by optimizing variational parameters included in a trial
+wave function. 
+In calculating expectation values of physical quantities for the trial wave functions,
+the Markov chain Monte Carlo method is applied for efficient important sampling.
+
+In the present package, we choose a spatial configuration for electrons as a complete set of bases in sampling:
 \begin{equation}
 | x\rangle =  \prod_{n=1}^{N/2} c_{r_{n\uparrow}}^{\dag} \prod_{n=1}^{N/2} c_{r_{n\downarrow}}^{\dag} |0 \rangle,
 \end{equation}
-where we set $r_{n\sigma}$ as the position of $n$-th electron with $\sigma (=\uparrow \rm{or} \downarrow)$ spin.
-
-\subsection{Importance sampling}
-When the importance of Malkov chain is defined by
-\begin{equation}
-\rho(x)=\frac{|\langle x| \psi \rangle|^2}{\langle \psi | \psi \rangle} \ge 0, \sum{x} \rho(x)=1,
-\end{equation}
-the expected value of the operator $A$ is given by
+where $r_{n\sigma}$ is a position of $n$-th electron with $\sigma (=\uparrow \rm{or} \downarrow)$ spin,
+and $c_{r_{n\sigma}}^{\dag}$ is a creation operator of electrons.
+By using this set of bases, the expectation value of an operator $A$ is expressed as
 \begin{equation}
 \langle A \rangle =\frac{\langle \psi| A| \psi \rangle}{\langle \psi | \psi \rangle} 
-=\sum_x \frac{\langle \psi| A | x\rangle \langle x| \psi \rangle}{\langle \psi |\psi \rangle} 
-=\sum_x \rho(x) \frac{\langle \psi| A | x\rangle }{\langle \psi |x \rangle} .
+=\sum_x \frac{\langle \psi| A | x\rangle \langle x| \psi \rangle}{\langle \psi |\psi \rangle}.
 \end{equation}
-In VMC, the summation in terms of $x$ is replaced by the importance sampling.
-Then, local Green's function $G_{ij\sigma\sigma'}(x)$ is defined by
+If we define a weight of the Markov chain Monte Carlo method as
 \begin{equation}
-G_{ij\sigma\sigma'}(x)=\frac{\langle \psi | c_{i\sigma}^{\dag} c_{j\sigma'} | \psi \rangle}{\langle \psi | x \rangle}.
+\rho(x)=\frac{|\langle x| \psi \rangle|^2}{\langle \psi | \psi \rangle} \ge 0, \quad \sum_{x} \rho(x)=1,
 \end{equation}
-In mVMC, the Mersenne twister method is used for sampling as the random number generator \cite{Mutsuo2008}. 
+we can rewrite $\langle A \rangle$ in the following form:
+\begin{equation}
+\langle A \rangle =\sum_x \rho(x) \frac{\langle \psi| A | x\rangle }{\langle \psi |x \rangle}.
+\end{equation}
+By using this form, the Markov chain Monte Carlo method is performed for sampling
+with respect to $x$. The local Green's function $G_{ij\sigma\sigma'}(x)$, which is defined as
+\begin{equation}
+G_{ij\sigma\sigma'}(x)=\frac{\langle \psi | c_{i\sigma}^{\dag} c_{j\sigma'} | \psi \rangle}{\langle \psi | x \rangle},
+\end{equation}
+is also evaluated by the same sampling method by taking $A = c_{i\sigma}^{\dag} c_{j\sigma'}$.
+We adopt the Mersenne twister method as a random number generator for sampling~\cite{Mutsuo2008}. 
 
 \section{Bogoliubov representation}\label{sec_bogoliubov_rep}
 
