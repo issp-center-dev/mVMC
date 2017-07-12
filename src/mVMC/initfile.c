@@ -106,7 +106,7 @@ void InitFilePhysCal(int i, int rank) {
   }
   
   if(NLanczosMode>0){
-    sprintf(fileName, "%s_ls_%03d.dat", CDataFileHead, idx);
+    sprintf(fileName, "%s_ls_out_%03d.dat", CDataFileHead, idx);
     FileLS = fopen(fileName, "w");
 
     sprintf(fileName, "%s_ls_qqqq_%03d.dat", CDataFileHead, idx);
