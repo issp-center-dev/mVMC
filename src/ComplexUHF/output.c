@@ -182,7 +182,7 @@ int MakeOrbitalFile(struct BindStruct *X){
           for(n=0;n< X->Def.Ne;n++){
             tmp += tmp_SLT_U[int_i][n]*tmp_SLT_D[int_j][n];
           }
-          printf(" %d %d %lf %lf \n",int_i,int_j,creal(tmp),cimag(tmp));
+          //printf(" %d %d %lf %lf \n",int_i,int_j,creal(tmp),cimag(tmp));
           AP_UHF_fij[int_i][int_j] = tmp;
         }
       }
@@ -250,11 +250,11 @@ void OutputAntiParallel_2(struct BindStruct *X,double complex **UHF_Fij,double c
        isite = i + 0 * X->Def.Nsite;
        jsite = j + 1 * X->Def.Nsite;
        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
-       printf(" %d %d %d \n", isite,jsite,Orbitalidx);
+       //printf(" %d %d %d \n", isite,jsite,Orbitalidx);
        if(Orbitalidx != -1) {
          ParamOrbital[Orbitalidx] += UHF_Fij[i][j];
          CountOrbital[Orbitalidx] += 1;
-         printf(" %d %d %d %lf %lf \n", isite,jsite,Orbitalidx,creal(ParamOrbital[Orbitalidx]),cimag(ParamOrbital[Orbitalidx]));
+         //printf(" %d %d %d %lf %lf \n", isite,jsite,Orbitalidx,creal(ParamOrbital[Orbitalidx]),cimag(ParamOrbital[Orbitalidx]));
        }
      }
    }
