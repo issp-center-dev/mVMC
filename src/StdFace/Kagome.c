@@ -15,6 +15,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+/**@file
+@brief Standard mode for the kagome lattice
+*/
 #include "StdFace_vals.h"
 #include "StdFace_ModelUtil.h"
 #include <stdlib.h>
@@ -24,14 +27,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 /**
-*
-* Setup a Hamiltonian for the Kagome lattice
-*
-* @author Mitsuaki Kawamura (The University of Tokyo)
+@brief Setup a Hamiltonian for the Kagome lattice
+@author Mitsuaki Kawamura (The University of Tokyo)
 */
-void StdFace_Kagome(struct StdIntList *StdI, char *model)
+void StdFace_Kagome(
+  struct StdIntList *StdI//!<[inout]
+)
 {
-  int isite, jsite, kCell;
+  int isite, jsite, isiteUC, kCell, ntransMax, nintrMax;
   int iL, iW;
   FILE *fp;
   double complex Cphase;
@@ -39,8 +42,8 @@ void StdFace_Kagome(struct StdIntList *StdI, char *model)
   fprintf(stdout, "\n");
   fprintf(stdout, "#######  Parameter Summary  #######\n");
   fprintf(stdout, "\n");
-  /*
-  Initialize Cell
+  /**@brief
+  (1) Compute the shape of the super-cell and sites in the super-cell
   */
   fp = fopen("lattice.gp", "w");
   /**/
@@ -63,7 +66,9 @@ void StdFace_Kagome(struct StdIntList *StdI, char *model)
   StdI->tau[0][0] = 0.0; StdI->tau[0][1] = 0.0; StdI->tau[0][2] = 0.0;
   StdI->tau[1][0] = 0.5; StdI->tau[1][1] = 0.0; StdI->tau[1][2] = 0.0;
   StdI->tau[2][0] = 0.0; StdI->tau[2][1] = 0.5; StdI->tau[2][2] = 0.0;
-  /**/
+  /**@brief
+  (2) check & store parameters of Hamiltonian
+  */
   fprintf(stdout, "\n  @ Hamiltonian \n\n");
   /**/
   StdFace_NotUsed_J("J1'", StdI->J1pAll, StdI->J1p);
@@ -124,12 +129,13 @@ void StdFace_Kagome(struct StdIntList *StdI, char *model)
       StdFace_InputSpin(StdI, StdI->J, StdI->JAll, "J");
     }/*if (model != "hubbard")*/
 
-  }/*if (model != "spin")*/
+  }/*if (model != "spin")@@*/
   fprintf(stdout, "\n  @ Numerical conditions\n\n");
-  /*
-   Local Spin
+  /**@brief
+  (3) Set local spin flag (StdIntList::locspinflag) and
+  the number of sites (StdIntList::nsite)
   */
-  StdI->nsite = 3 * StdI->NCell;
+  StdI->nsite = StdI->NsiteUC * StdI->NCell;
   if (strcmp(StdI->model, "kondo") == 0 ) StdI->nsite *= 2;
   StdI->locspinflag = (int *)malloc(sizeof(int) * StdI->nsite);
   /**/
@@ -142,64 +148,57 @@ void StdFace_Kagome(struct StdIntList *StdI, char *model)
       StdI->locspinflag[iL] = StdI->S2;
       StdI->locspinflag[iL + StdI->nsite / 2] = 0;
     }
-  /*
-  The number of Transfer & Interaction
+  /**@brief
+  (4) Compute the upper limit of the number of Transfer & Interaction and malloc them.
   */
-  if (strcmp(StdI->model, "spin") == 0 ) {
-    StdI->ntrans = StdI->nsite * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
-    StdI->nintr = StdI->NCell * (StdI->NsiteUC/*D*/ + 6/*J*/ + 6/*J'*/)
+  if (strcmp(StdI->model, "spin") == 0 ) {//>>
+    ntransMax = StdI->nsite * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
+    nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + 6/*J*/ + 6/*J'*/)
       * (3 * StdI->S2 + 1) * (3 * StdI->S2 + 1);
   }
   else {
-    StdI->ntrans = StdI->NCell * 2/*spin*/ * (2 * StdI->NsiteUC/*mu+h+Gamma*/ + 12/*t*/ + 12/*t'*/);
-    StdI->nintr = StdI->NCell * (StdI->NsiteUC/*U*/ + 4 * (6/*V*/ + 6/*V'*/));
+    ntransMax = StdI->NCell * 2/*spin*/ * (2 * StdI->NsiteUC/*mu+h+Gamma*/ + 12/*t*/ + 12/*t'*/);
+    nintrMax = StdI->NCell * (StdI->NsiteUC/*U*/ + 4 * (6/*V*/ + 6/*V'*/));
 
     if (strcmp(StdI->model, "kondo") == 0) {
-      StdI->ntrans += StdI->nsite / 2 * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
-      StdI->nintr += StdI->nsite / 2 * (3 * StdI->S2 + 1) * (3 * StdI->S2 + 1);
+      ntransMax += StdI->nsite / 2 * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
+      nintrMax += StdI->nsite / 2 * (3 * StdI->S2 + 1) * (3 * StdI->S2 + 1);
     }/*if (strcmp(StdI->model, "kondo") == 0)*/
-  }
+  }//<<
   /**/
-  StdFace_MallocInteractions(StdI);
-  /*
-  Set Transfer & Interaction
+  StdFace_MallocInteractions(StdI, ntransMax, nintrMax);
+  /**@brief
+  (5) Set Transfer & Interaction
   */
-  StdI->ntrans = 0;
-  StdI->nintr = 0;
   for (kCell = 0; kCell < StdI->NCell; kCell++) {
     /**/
     iW = StdI->Cell[kCell][0];
     iL = StdI->Cell[kCell][1];
-    /*
+    /*>>
     Local term
     */
     isite = StdI->NsiteUC * kCell;
     if (strcmp(StdI->model, "kondo") == 0 ) isite += StdI->nsite / 2;
     /**/
     if (strcmp(StdI->model, "spin") == 0 ) {
-      StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, isite);
-      StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, isite + 1);
-      StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, isite + 2);
-      StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite, isite);
-      StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite + 1, isite + 1);
-      StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite + 2, isite + 2);
+      for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++) {
+        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, isite + isiteUC);
+        StdFace_GeneralJ(StdI, StdI->D, StdI->S2, StdI->S2, isite + isiteUC, isite + isiteUC);
+      }/*for (jsite = 0; jsite < StdI->NsiteUC; jsite++)*/
     }/*if (strcmp(StdI->model, "spin") == 0 )*/
     else {
-      StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, StdI->U, isite);
-      StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, StdI->U, isite + 1);
-      StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, StdI->U, isite + 2);
+      for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++)
+        StdFace_HubbardLocal(StdI, StdI->mu, -StdI->h, -StdI->Gamma, StdI->U, isite + isiteUC);
       /**/
       if (strcmp(StdI->model, "kondo") == 0 ) {
         jsite = StdI->NsiteUC * kCell;
-        StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite, jsite);
-        StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite + 1, jsite + 1);
-        StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite + 2, jsite + 2);
-        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, jsite);
-        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, jsite + 1);
-        StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, jsite + 2);
+        for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++) {
+          StdFace_GeneralJ(StdI, StdI->J, 1, StdI->S2, isite + isiteUC, jsite + isiteUC);
+          StdFace_MagField(StdI, StdI->S2, -StdI->h, -StdI->Gamma, jsite + isiteUC);
+        }/*for (isiteUC = 0; isiteUC < StdI->NsiteUC; isiteUC++)*/
       }/*if (strcmp(StdI->model, "kondo") == 0 )*/
-    }/*if (strcmp(StdI->model, "spin") != 0 )*/
-    /*
+    }/*if (strcmp(StdI->model, "spin") != 0 )<<*/
+    /*>>
     Nearest neighbor intra cell 0 -> 1
     */
     StdFace_SetLabel(StdI, fp, iW, iL, 0, 0, 0, 1, &isite, &jsite, 1, &Cphase);
@@ -210,7 +209,7 @@ void StdFace_Kagome(struct StdIntList *StdI, char *model)
     else {
       StdFace_Hopping(StdI, Cphase * StdI->t2, isite, jsite);
       StdFace_Coulomb(StdI, StdI->V2, isite, jsite);
-    }
+    }//<<
     /*
     Nearest neighbor intra cell 0 -> 2
     */

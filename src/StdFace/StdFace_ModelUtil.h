@@ -56,23 +56,23 @@ void StdFace_SetLabel(struct StdIntList *StdI, FILE *fp,
   int iW, int iL, int diW, int diL, int isiteUC, int jsiteUC,
   int *isite, int *jsite, int connect, double complex *Cphase);
 void StdFace_PrintGeometry(struct StdIntList *StdI);
-void StdFace_MallocInteractions(struct StdIntList *StdI);
+void StdFace_MallocInteractions(struct StdIntList *StdI, int ntransMax, int nintrMax);
 void StdFace_FindSite(struct StdIntList *StdI,
   int iW, int iL, int iH, int diW, int diL, int diH,
   int isiteUC, int jsiteUC,
   int *isite, int *jsite, double complex *Cphase);
 void StdFace_PrintXSF(struct StdIntList *StdI);
 
-void StdFace_Tetragonal(struct StdIntList *StdI, char *model);
-void StdFace_Chain(struct StdIntList *StdI, char *model);
-void StdFace_Ladder(struct StdIntList *StdI, char *model);
-void StdFace_Triangular(struct StdIntList *StdI, char *model);
-void StdFace_Honeycomb(struct StdIntList *StdI, char *model);
-void StdFace_Kagome(struct StdIntList *StdI, char *model);
-void StdFace_Orthorhombic(struct StdIntList *StdI, char *model);
-void StdFace_FCOrtho(struct StdIntList *StdI, char *model);
-void StdFace_Pyrochlore(struct StdIntList *StdI, char *model);
-void StdFace_Wannier90(struct StdIntList *StdI, char *model);
+void StdFace_Tetragonal(struct StdIntList *StdI);
+void StdFace_Chain(struct StdIntList *StdI);
+void StdFace_Ladder(struct StdIntList *StdI);
+void StdFace_Triangular(struct StdIntList *StdI);
+void StdFace_Honeycomb(struct StdIntList *StdI);
+void StdFace_Kagome(struct StdIntList *StdI);
+void StdFace_Orthorhombic(struct StdIntList *StdI);
+void StdFace_FCOrtho(struct StdIntList *StdI);
+void StdFace_Pyrochlore(struct StdIntList *StdI);
+void StdFace_Wannier90(struct StdIntList *StdI);
 
 #if defined(_HPhi)
 void StdFace_Chain_Boost(struct StdIntList *StdI);
