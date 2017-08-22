@@ -531,7 +531,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
 
   CalculateMAll_BF_fcmp(TmpEleIdx, qpStart, qpEnd);
   logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
-  if (!isfinite(logIpOld)) {
+  if (! (isfinite(creal(logIpOld)) && isfinite(cimag(logIpOld)))) {
     if (rank == 0) fprintf(stderr, "waring: VMCMakeSample remakeSample logIpOld=%e\n", creal(logIpOld)); //TBC
     makeInitialSampleBF(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt, TmpEleProjBFCnt,
                         qpStart, qpEnd, comm);
