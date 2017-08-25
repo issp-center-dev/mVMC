@@ -30,167 +30,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_STCOPT_PDPOSV
 #define _SRC_STCOPT_PDPOSV
 
-// #define _DEBUG_STCOPT_PDPOSV
-
-int StochasticOpt(MPI_Comm comm) {
-  const int nPara=NPara;
-  const int srOptSize=SROptSize;
-  const double complex *srOptOO=SROptOO;
-  //const double         *srOptOO= SROptOO_real;
-
-  double r[2*SROptSize]; /* the parameter change */
-  int nSmat;
-  int smatToParaIdx[2*NPara];//TBC
-
-  int cutNum=0,optNum=0;
-  double sDiag,sDiagMax,sDiagMin;
-  double diagCutThreshold;
-
-  int si; /* index for matrix S */
-  int pi; /* index for variational parameters */
-
-  double rmax;
-  int simax;
-  int info=0;
-
-// for real
-  int int_x,int_y,j,i;
-
-  double complex *para=Para;
-
-  int rank,size;
-  MPI_Comm_rank(comm,&rank);
-  MPI_Comm_size(comm,&size);
-
-  StartTimer(50);
-//[s] for only real variables TBC
-  if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real &  sz=0
-    #pragma omp parallel for default(shared) private(i,int_x,int_y,j)
-    #pragma loop noalias
-    for(i=0;i<2*SROptSize*(2*SROptSize+2);i++){
-      int_x  = i%(2*SROptSize);
-      int_y  = (i-int_x)/(2*SROptSize);
-      if(int_x%2==0 && int_y%2==0){
-        j          = int_x/2+(int_y/2)*SROptSize;
-        SROptOO[i] = SROptOO_real[j];// only real part TBC
-      }else{
-        SROptOO[i] = 0.0+0.0*I;
-      }
-    }
-  }
-//[e]
-  #pragma omp parallel for default(shared) private(pi)
-  #pragma loop noalias
-  for(pi=0;pi<2*nPara;pi++) {
-    //for(pi=0;pi<nPara;pi++) {
-    /* r[i] is temporarily used for diagonal elements of S */
-    /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
-    //r[pi]   = creal(srOptOO[(pi+2)*(2*srOptSize)+(pi+2)]) - creal(srOptOO[pi+2] * srOptOO[pi+2]);
-    r[pi]   = creal(srOptOO[(pi+2)*(2*srOptSize)+(pi+2)]) - creal(srOptOO[pi+2]) * creal(srOptOO[pi+2]);
-    //r[2*pi]   = creal(srOptOO[(2*pi+2)*(2*srOptSize+pi)+(2*pi+2)]) - creal(srOptOO[2*pi+2]) * creal(srOptOO[2*pi+2]);
-    //r[2*pi+1] = creal(srOptOO[(2*pi+3)*(2*srOptSize+pi)+(2*pi+3)]) - creal(srOptOO[2*pi+3]) * creal(srOptOO[2*pi+3]);
-    //printf("DEBUG: pi=%d: %lf %lf \n",pi,creal(srOptOO[pi]),cimag(srOptOO[pi]));
-#ifdef _DEBUG_STCOPT_PDPOSV
-  fprintf(stderr, "DEBUG in %s (%d): r[%d] = %lf\n", __FILE__, __LINE__, pi, r[pi]);
-#endif
-  }
-
-// search for max and min
-  sDiag = r[0];
-  sDiagMax=sDiag; sDiagMin=sDiag;
-  for(pi=0;pi<2*nPara;pi++) {
-    sDiag = r[pi];
-    if(sDiag>sDiagMax) sDiagMax=sDiag;
-    if(sDiag<sDiagMin) sDiagMin=sDiag;
-  }
-
-// threshold
-// optNum = number of parameters 
-// cutNum: number of paramers that are cut
-  diagCutThreshold = sDiagMax*DSROptRedCut;
-  si = 0;
-  for(pi=0;pi<2*nPara;pi++) {
-    //printf("DEBUG: nPara=%d pi=%d OptFlag=%d r=%lf\n",nPara,pi,OptFlag[pi],r[pi]);
-    if(OptFlag[pi]!=1) { /* fixed by OptFlag */
-      optNum++;
-      continue; //skip sDiag
-    }
-// s:this part will be skipped if OptFlag[pi]!=1
-    sDiag = r[pi];
-    if(sDiag < diagCutThreshold) { /* fixed by diagCut */
-      cutNum++;
-    } else { /* optimized */
-      smatToParaIdx[si] = pi; // si -> restricted parameters , pi -> full paramer 0 <-> 2*NPara
-      si += 1;
-    }
-// e
-  }
-  nSmat = si;
-  for(si=nSmat;si<2*nPara;si++) {
-    smatToParaIdx[si] = -1; // parameters that will not be optimized
-  }
-
-#ifdef _DEBUG_STCOPT_PDPOSV
-  printf("DEBUG in %s (%d): diagCutThreshold = %lg\n", __FILE__, __LINE__, diagCutThreshold);
-  printf("DEBUG in %s (%d): optNum, cutNum, nSmat, 2*nPara == %d, %d, %d, %d\n", __FILE__, __LINE__, optNum, cutNum, nSmat, 2*nPara);
-#endif
-
-  StopTimer(50);
-  StartTimer(51);
-
-
-  //printf("DEBUG: nSmat=%d \n",nSmat);
-  /* calculate r[i]: global vector [nSmat] */
-  info = stcOptMain(r, nSmat, smatToParaIdx, comm);
-
-  StopTimer(51);
-  StartTimer(52);
-
-  /*** print zqp_SRinfo.dat ***/
-  if(rank==0) {
-    if(info!=0) fprintf(stderr, "StcOpt: DPOSV info=%d\n",info);
-    rmax = r[0]; simax=0;;
-    for(si=0;si<nSmat;si++) {
-      if(fabs(rmax) < fabs(r[si])) {
-        rmax = r[si]; simax=si;
-      }
-    }
-
-    fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e % .5e % .5e %5d\n",NPara,nSmat,optNum,cutNum,
-            sDiagMax,sDiagMin,rmax,smatToParaIdx[simax]);
-  }
-
-  /*** check inf and nan ***/
-  if(rank==0) {
-    for(si=0;si<nSmat;si++) {
-      if( !isfinite(r[si]) ) {
-        fprintf(stderr, "StcOpt: r[%d]=%.10lf\n",si,r[si]);
-        info = 1;
-        break;
-      }
-    }
-  }
-  MPI_Bcast(&info, 1, MPI_INT, 0, comm);
-
-  /* update variational parameters */
-  if(info==0 && rank==0) {
-    #pragma omp parallel for default(shared) private(si,pi)
-    #pragma loop noalias
-    #pragma loop norecurrence para
-    for(si=0;si<nSmat;si++) {
-      pi = smatToParaIdx[si];
-      if(pi%2==0){
-        para[pi/2]     += r[si];  // real
-      }else{
-        para[(pi-1)/2] += r[si]*I; // imag
-      }
-    }
-  }
-
-  StopTimer(52);
-  return info;
-}
-
 /* calculate the parameter change r[nSmat] from SOpt.
    The result is gathered in rank 0. */
 int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm comm) {
@@ -307,12 +146,10 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
 
       /* S[i][j] = xOO[i+1][j+1] - xOO[0][i+1] * xOO[0][j+1]; */
       s[idx] = creal(srOptOO[(pi+2)*(2*srOptSize)+(pj+2)]) - creal(srOptOO[pi+2]) * creal(srOptOO[pj+2]);
-      //s[idx] = creal(srOptOO[(pi+2)*(2*srOptSize)+(pj+2)]) - creal(srOptOO[pi+2]*srOptOO[pj+2]);
       /* modify diagonal elements */
       //printf("DEBUG: idx=%d %d %d s[]=%lf \n",idx,pi,pj,s[idx]);
       //printf("XDEBUG %d %d %lf \n",ic,ir,s[idx]);
       if(pi==pj) s[idx] *= ratioDiag; // TBC
-      //if(pi==pj) s[idx] +=0.5;   // TBC
     }
   }
 
@@ -327,23 +164,24 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
       /* energy gradient = 2.0*( xHO[i+1] - xHO[0] * xOO[0][i+1]) */
       /* g[i] = -dt * (energy gradient) */
       g[ir] = -dSROptStepDt*2.0*(creal(srOptHO[pi+2]) - srOptHO_0 * creal(srOptOO[pi+2]));
-      //g[ir] = -dSROptStepDt*2.0*(creal(srOptHO[pi+2]) - creal(srOptHO_0 * srOptOO[pi+2]));
       //printf("ZDEBUG: %d %lf \n",ir,g[ir]);
     }
   }
 
   StopTimer(56);
 
-#ifdef _DEBUG_STCOPT_PDPOSV
+#ifdef _DEBUG_STCOPT
+  fprintf(stderr, "g:\n");
   for(ir=0; ir<vlocr; ++ir){
-    printf("%lg\n", g[ir]);
+    fprintf(stderr, "%lg\n", g[ir]);
   }
+  fprintf(stderr, "S:\n");
   for(ic=0;ic<mlocc;ic++) {
     for(ir=0;ir<mlocr;ir++) {
       idx = ir + ic*mlocr; /* local index (row major) */
-      printf("%lg ", s[idx]);
+      fprintf(stderr, "%lg ", s[idx]);
     }
-    printf("\n");
+    fprintf(stderr, "\n");
   }
 #endif
 
@@ -385,7 +223,8 @@ int stcOptMain(double *r, const int nSmat, const int *smatToParaIdx, MPI_Comm co
 
   StopTimer(58);
 
-#ifdef _DEBUG_STCOPT_PDPOSV
+#ifdef _DEBUG_STCOPT
+  fprintf(stderr, "r:\n");
   for(si=0; si<nSmat; ++si){
     fprintf(stderr, "%lg\n", r[si]);
   }

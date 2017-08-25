@@ -472,7 +472,7 @@ int calculateMAll_BF_fcmp_child(
   /* calculate Pf M */
   M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
   if(info!=0) return info;
-  if(!isfinite(pfaff)) return qpidx+1;
+  if(!(isfinite(creal(pfaff)) && isfinite(cimag(pfaff)))) return qpidx+1;
   PfM[qpidx] = pfaff;
 
   /* DInv */

@@ -98,7 +98,7 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
       rk = CisAjsCktAltDCIdx[idx][4];
       u  = CisAjsCktAltDCIdx[idx][5];
       rl = CisAjsCktAltDCIdx[idx][6];
-      v  = CisAjsCktAltDCIdx[idx][5];
+      v  = CisAjsCktAltDCIdx[idx][7];
 
       if(s==t && u==v){
         tmp = GreenFunc2_fsz(ri,rj,rk,rl,s,u,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,

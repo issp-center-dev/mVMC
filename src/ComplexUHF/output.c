@@ -27,6 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 int MakeOrbitalFile(struct BindStruct *X);
 void cal_cisajs(struct BindStruct *X);
 void OutputAntiParallel(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital);
+void OutputAntiParallel_2(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital);
 void OutputParallel(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital);
 void OutputGeneral(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital);
 
@@ -122,92 +123,151 @@ int MakeOrbitalFile(struct BindStruct *X){
   int isite, jsite;
   double complex **UHF_Fij;
   double complex *ParamOrbital;
+  
   int *CountOrbital;
-  //int Orbitalidx;
-  //int int_i,int_j,int_k,int_l,xMsize;
-  //double complex **tmp_mat,**vec;
-  //double *r;
-  //char fileName[256];
-  //int ini,fin,tmp_i;
+/*this part only for anti-parallel*/
+  int Orbitalidx;
+  int int_i,int_j,int_k,int_l,xMsize;
+  double complex **tmp_mat,**vec,**tmp_SLT_U,**tmp_SLT_D,**AP_UHF_fij;
+  double complex tmp;
+  double *r;
+  char fileName[256];
+  int ini,fin,tmp_i;
 
-/*this part only for anti-parallel
+/*this part only for anti-parallel*/
 //[s] for anti-pararell, rediag
-  xMsize = X->Def.Nsite;  
-  c_malloc2(tmp_mat,xMsize,xMsize);
-  c_malloc2(vec,xMsize,xMsize);
-  d_malloc1(r,xMsize);
-  for(int_l = 0; int_l < 2*xMsize; int_l++){
-    for(int_k = 0; int_k < 2*X->Def.Ne; int_k++){
-      X->Large.R_SLT[int_l][int_k] = 0.0;
-    }
-  } 
-// for up 
-  for(int_i = 0;int_i < xMsize; int_i++){
-    for(int_j = 0;int_j < xMsize; int_j++){
-      tmp_mat[int_i][int_j] = X->Large.Ham[int_i][int_j];
-    }
-  }
-  ZHEEVall(xMsize,tmp_mat,r,vec);
-  for(int_k = 0; int_k < X->Def.Ne; int_k++){
-    for(int_l = 0; int_l < xMsize; int_l++){
-      X->Large.R_SLT[int_l][2*int_k] = (vec[int_k][int_l]);
-    }
-  }
-// for down
-  for(int_i = 0;int_i < xMsize; int_i++){
-    for(int_j = 0;int_j < xMsize; int_j++){
-      tmp_mat[int_i][int_j] = X->Large.Ham[int_i+xMsize][int_j+xMsize];
-    }
-  }
-  ZHEEVall(xMsize,tmp_mat,r,vec);
-  for(int_k = 0; int_k < X->Def.Ne; int_k++){
-    for(int_l = 0; int_l < xMsize; int_l++){
-      X->Large.R_SLT[int_l+xMsize][2*int_k+1] = (vec[int_k][int_l]);
-    }
-  }
+  if(X->Def.NOrbitalIdx>0){/*[s]X->Def.NOrbitalIdx>0 */
+    if(X->Def.OrbitalOutputMode==1){/*[s]X->Def.OrbitalOutputMode==1 */
+      xMsize = X->Def.Nsite;  
+      c_malloc2(tmp_mat,xMsize,xMsize);
+      c_malloc2(vec,xMsize,xMsize);
+      c_malloc2(tmp_SLT_U,xMsize,xMsize);
+      c_malloc2(tmp_SLT_D,xMsize,xMsize);
+      c_malloc2(AP_UHF_fij,xMsize,xMsize);
+      d_malloc1(r,xMsize);
+      for(int_l = 0; int_l < xMsize; int_l++){
+        for(int_k = 0; int_k < xMsize; int_k++){
+          tmp_SLT_U[int_l][int_k] = 0.0;
+          tmp_SLT_D[int_l][int_k] = 0.0;
+        }
+      } 
+  // for up 
+      for(int_i = 0;int_i < xMsize; int_i++){
+        for(int_j = 0;int_j < xMsize; int_j++){
+          tmp_mat[int_i][int_j] = X->Large.Ham[int_i][int_j];
+        }
+      }
+      ZHEEVall(xMsize,tmp_mat,r,vec);
+      for(int_k = 0; int_k < xMsize; int_k++){ // int_k = n
+        for(int_l = 0; int_l < xMsize; int_l++){
+          tmp_SLT_U[int_l][int_k] = vec[int_k][int_l];
+        }
+      }
+  // for down
+      for(int_i = 0;int_i < xMsize; int_i++){
+        for(int_j = 0;int_j < xMsize; int_j++){
+          tmp_mat[int_i][int_j] = X->Large.Ham[int_i+xMsize][int_j+xMsize];
+        }
+      }
+      ZHEEVall(xMsize,tmp_mat,r,vec);
+      for(int_k = 0; int_k < xMsize; int_k++){ // int_k: Ne
+        for(int_l = 0; int_l < xMsize; int_l++){
+          tmp_SLT_D[int_l][int_k] = (vec[int_k][int_l]);
+        }
+      }
+  
+      for(int_i = 0; int_i < xMsize; int_i++){ // int_k: Ne
+        for(int_j = 0; int_j < xMsize; int_j++){
+          tmp = 0.0;
+          for(n=0;n< X->Def.Ne;n++){
+            tmp += tmp_SLT_U[int_i][n]*tmp_SLT_D[int_j][n];
+          }
+          //printf(" %d %d %lf %lf \n",int_i,int_j,creal(tmp),cimag(tmp));
+          AP_UHF_fij[int_i][int_j] = tmp;
+        }
+      }
+  
+      c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
+      i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
+      OutputAntiParallel_2(X,AP_UHF_fij,ParamOrbital,CountOrbital);
+      c_free1(ParamOrbital, X->Def.NOrbitalIdx);
+      i_free1(CountOrbital, X->Def.NOrbitalIdx);
+    }/*[s]X->Def.OrbitalOutputMode==1 */
 //[e] for anti-pararell
-*/
-  if(X->Def.NOrbitalIdx>0){
-    c_malloc2(UHF_Fij, X->Def.Nsite*2, X->Def.Nsite*2);
-    for(ispin=0; ispin<2; ispin++){
-      for(jspin=0; jspin<2; jspin++){
-        for(i=0;i< X->Def.Nsite;i++){
-          for(j=0;j< X->Def.Nsite;j++){
-            isite = i+ispin*X->Def.Nsite;
-            jsite = j+jspin*X->Def.Nsite;
-            UHF_Fij[isite][jsite]=0;
-            for(n=0;n< 2*X->Def.Ne;n+=2){
-              UHF_Fij[isite][jsite]   +=  conj(X->Large.R_SLT[isite][n])*conj(X->Large.R_SLT[jsite][n+1])- conj(X->Large.R_SLT[isite][n+1])*conj(X->Large.R_SLT[jsite][n]);
+    else{
+      c_malloc2(UHF_Fij, X->Def.Nsite*2, X->Def.Nsite*2);
+      for(ispin=0; ispin<2; ispin++){
+        for(jspin=0; jspin<2; jspin++){
+          for(i=0;i< X->Def.Nsite;i++){
+            for(j=0;j< X->Def.Nsite;j++){
+              isite = i+ispin*X->Def.Nsite;
+              jsite = j+jspin*X->Def.Nsite;
+              UHF_Fij[isite][jsite]=0;
+              for(n=0;n< 2*X->Def.Ne;n+=2){
+                UHF_Fij[isite][jsite]   +=  conj(X->Large.R_SLT[isite][n])*conj(X->Large.R_SLT[jsite][n+1])- conj(X->Large.R_SLT[isite][n+1])*conj(X->Large.R_SLT[jsite][n]);
+              }
             }
           }
         }
       }
-    }
-    //printf(" %d %d %d \n",X->Def.NOrbitalAP,X->Def.NOrbitalP,X->Def.NOrbitalIdx);
-    if(X->Def.OrbitalOutputMode>0){
-      c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
-      i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
+      //printf(" %d %d %d \n",X->Def.NOrbitalAP,X->Def.NOrbitalP,X->Def.NOrbitalIdx);
+      if(X->Def.OrbitalOutputMode==2){ // AP+P
+        c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
+        i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
 //
-      OutputAntiParallel(X,UHF_Fij,ParamOrbital,CountOrbital);
-      if(X->Def.OrbitalOutputMode==2){
-        OutputParallel(X,UHF_Fij,ParamOrbital,CountOrbital);
+        OutputAntiParallel(X,UHF_Fij,ParamOrbital,CountOrbital);
+        if(X->Def.OrbitalOutputMode==2){
+          OutputParallel(X,UHF_Fij,ParamOrbital,CountOrbital);
+        }
+//
+        c_free1(ParamOrbital, X->Def.NOrbitalIdx);
+        i_free1(CountOrbital, X->Def.NOrbitalIdx);
+      }else if(X->Def.OrbitalOutputMode==0){ // Only General
+        c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
+        i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
+//
+        OutputGeneral(X,UHF_Fij,ParamOrbital,CountOrbital);
+//
+        c_free1(ParamOrbital, X->Def.NOrbitalIdx);
+        i_free1(CountOrbital, X->Def.NOrbitalIdx);
       }
-//
-      c_free1(ParamOrbital, X->Def.NOrbitalIdx);
-      i_free1(CountOrbital, X->Def.NOrbitalIdx);
-    }else if(X->Def.OrbitalOutputMode==0){ 
-      c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
-      i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
-//
-      OutputGeneral(X,UHF_Fij,ParamOrbital,CountOrbital);
-//
-      c_free1(ParamOrbital, X->Def.NOrbitalIdx);
-      i_free1(CountOrbital, X->Def.NOrbitalIdx);
+      c_free2(UHF_Fij, X->Def.Nsite * 2, X->Def.Nsite * 2);
     }
-    c_free2(UHF_Fij, X->Def.Nsite * 2, X->Def.Nsite * 2);
-  }
+  }/*[e]X->Def.NOrbitalIdx>0 */
   return 0;
 }
+
+void OutputAntiParallel_2(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital){
+   int i,j,Orbitalidx,isite,jsite;
+   char fileName[256];
+
+   for (i = 0; i < X->Def.NOrbitalIdx; i++) { // all clear
+     ParamOrbital[i] = 0;
+     CountOrbital[i] = 0;
+   }
+   for(i = 0; i < X->Def.Nsite; i++) {
+     for(j = 0; j < X->Def.Nsite; j++) {
+       isite = i + 0 * X->Def.Nsite;
+       jsite = j + 1 * X->Def.Nsite;
+       Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+       //printf(" %d %d %d \n", isite,jsite,Orbitalidx);
+       if(Orbitalidx != -1) {
+         ParamOrbital[Orbitalidx] += UHF_Fij[i][j];
+         CountOrbital[Orbitalidx] += 1;
+         //printf(" %d %d %d %lf %lf \n", isite,jsite,Orbitalidx,creal(ParamOrbital[Orbitalidx]),cimag(ParamOrbital[Orbitalidx]));
+       }
+     }
+   }
+   for (i = 0; i < X->Def.NOrbitalAP; i++) {
+     ParamOrbital[i] /= (double) CountOrbital[i];
+     ParamOrbital[i] += genrand_real2() * pow(10.0, -X->Def.eps_int_slater);
+   }
+   sprintf(fileName, "%s_APOrbital_opt.dat", X->Def.CParaFileHead);
+   Child_OutputOptData(fileName, "NOrbitalAP", ParamOrbital, X->Def.NOrbitalAP);
+   printf("fij for mVMC are outputted to %s.\n", fileName);
+}
+
+
 
 void OutputAntiParallel(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital){
    int i,j,Orbitalidx,isite,jsite;

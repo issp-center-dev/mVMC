@@ -65,6 +65,8 @@ extern int omp_get_thread_num(void);
 #include "../vmcclock.c"
 #include "../workspace.c"
 
+#include "../stcopt.c"
+
 #ifdef _lapack
  #include "../stcopt_dposv.c"
 #else
