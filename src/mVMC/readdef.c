@@ -1033,7 +1033,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           }
           for (i = 0; i < NGutzwillerIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
-            Proj[idx] = tmp_real + I * tmp_comp;
+            Proj[i] = tmp_real + I * tmp_comp;
           }
           break;
 
@@ -1046,7 +1046,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           count = NGutzwillerIdx;
           for (i = count; i < count + NJastrowIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
-            Proj[idx] = tmp_real + I * tmp_comp;
+            Proj[i] = tmp_real + I * tmp_comp;
           }
           break;
 
@@ -1059,7 +1059,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           count = NGutzwillerIdx + NJastrowIdx;
           for (i = count; i < count + 2 * 3 * NDoublonHolon2siteIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
-            Proj[idx] = tmp_real + I * tmp_comp;
+            Proj[i] = tmp_real + I * tmp_comp;
           }
           break;
 
@@ -1072,7 +1072,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
           for (i = count; i < count + 2 * 5 * NDoublonHolon4siteIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
-            Proj[idx] = tmp_real + I * tmp_comp;
+            Proj[i] = tmp_real + I * tmp_comp;
           }
           break;
 
