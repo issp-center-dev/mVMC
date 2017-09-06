@@ -1031,7 +1031,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
             info = 1;
             continue;
           }
-          count = 0
+          count = 0;
           for (i = 0; i < NGutzwillerIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Proj[idx+count] = tmp_real + I * tmp_comp;
