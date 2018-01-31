@@ -21,9 +21,15 @@ UHF近似では揺らぎ :math:`\delta A \equiv A-\langle A \rangle` の一次�
 .. math::
 
    \begin{aligned}
-   n_ {i}n_{j} &=& (\langle n_{i} \rangle +\delta n_i) (\langle n_{j} \rangle +\delta n_j) - \left[ \langle c_{i}^{\dag}c_j \rangle +\delta (c_{i}^{\dag}c_j ) \right] \left[ \langle c_{j}^{\dag}c_i \rangle +\delta (c_{j}^{\dag}c_i )\right] \nonumber\\
-   &\sim&\langle n_{i} \rangle n_j+\langle n_{j} \rangle  n_i - \langle c_{i}^{\dag}c_j \rangle  c_{j}^{\dag}c_i  -  \langle c_{j}^{\dag}c_i \rangle c_{i}^{\dag}c_j 
-   -\langle n_{i} \rangle \langle n_j \rangle +  \langle c_{j}^{\dag}c_i \rangle \langle c_{i}^{\dag}c_j \rangle
+   n_ {i}n_{j} &=
+   (\langle n_{i} \rangle +\delta n_i) (\langle n_{j} \rangle +\delta n_j)
+   - \left[ \langle c_{i}^{\dagger}c_j \rangle +\delta (c_{i}^{\dagger}c_j ) \right]
+     \left[ \langle c_{j}^{\dagger}c_i \rangle +\delta (c_{j}^{\dagger}c_i )\right]
+   \nonumber\\
+   &\sim
+   \langle n_{i} \rangle n_j+\langle n_{j} \rangle  n_i
+   - \langle c_{i}^{\dagger}c_j \rangle  c_{j}^{\dagger}c_i  -  \langle c_{j}^{\dagger}c_i \rangle c_{i}^{\dagger}c_j 
+   -\langle n_{i} \rangle \langle n_j \rangle +  \langle c_{j}^{\dagger}c_i \rangle \langle c_{i}^{\dagger}c_j \rangle
    \end{aligned}
 
 と近似されます。このような形式で、その他の相互作用についても近似を行うことで、一体問題に帰着させることができます。
@@ -39,9 +45,9 @@ UHF近似では揺らぎ :math:`\delta A \equiv A-\langle A \rangle` の一次�
 
 コンパイルはmVMCのコンパイルと同様にmVMCのフォルダ直下で
 
-::
+.. code-block:: bash
 
-    $ make mvmc
+   $ make mvmc
 
 を実行することで行われます。コンパイルが終了すると、
 ``src/ComplexUHF/src`` に実行ファイル ``UHF`` が作成されます。
@@ -52,8 +58,8 @@ UHF近似では揺らぎ :math:`\delta A \equiv A-\langle A \rangle` の一次�
 入力ファイル指定用ファイル (namelsit.def)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-| UHFで指定するファイルは以下のファイルです。
-  ``namelist.def`` は :ref:`InputFileList` で定義されているファイルと同じ様式です。
+UHFで指定するファイルは以下のファイルです。
+``namelist.def`` は :ref:`InputFileList` で定義されているファイルと同じ様式です。
 
 -  ``ModPara``
 
@@ -105,23 +111,28 @@ UHFで指定するパラメータは以下のパラメータです。
 ``Nsite``,
 ``Ne`` はmVMCと共通のパラメータで、以下の三つがUHF独特のパラメータです。
 
--  | ``Mix``
-   | linear
-     mixingをdouble型で指定します。mix=1とすると完全に新しいGreen関数に置き換えられます。
+-  ``Mix``
+   
+   linear
+   mixingをdouble型で指定します。mix=1とすると完全に新しいGreen関数に置き換えられます。
 
--  | ``EPS``
-   | 収束判定条件をint型で指定します。新しく計算されたGreen関数と一つ前のGreen関数の残差が :math:`10^{-\verb|eps|}` の場合に、計算が打ち切られます。
+-  ``EPS``
+      
+   収束判定条件をint型で指定します。新しく計算されたGreen関数と一つ前のGreen関数の残差が
+   :math:`10^{-\verb|eps|}` の場合に、計算が打ち切られます。
 
--  | ``IterationMax``
-   | ループの最大数をint型で指定します。
+-  ``IterationMax``
+      
+   ループの最大数をint型で指定します。
 
 なお、mVMCで使用するその他パラメータが存在する場合はWarningが標準出力されます(計算は中断せずに実行されます)。
 
 Initialファイル
 ^^^^^^^^^^^^^^^
 
-グリーン関数 :math:`G_{ij\sigma_1\sigma_2}\equiv \langle c_{i\sigma_1}^\dag c_{j\sigma_2}\rangle` の初期値を与えます。
-ファイル様式は ``Trans`` ファイルと同じで、 :math:`t_{ij\sigma_1\sigma_2}` の代わりに :math:`G_{ij\sigma_1\sigma_2}` の値を記述します。
+グリーン関数 :math:`G_{ij\sigma_1\sigma_2}\equiv \langle c_{i\sigma_1}^\dagger c_{j\sigma_2}\rangle` の初期値を与えます。
+ファイル様式は ``Trans`` ファイルと同じで、 :math:`t_{ij\sigma_1\sigma_2}` の代わりに
+:math:`G_{ij\sigma_1\sigma_2}` の値を記述します。
 なお、値を指定しないグリーン関数には０が入ります。
 
 使用方法
@@ -129,7 +140,7 @@ Initialファイル
 
 UHF自体はmVMCと同じように
 
-::
+.. code-block:: bash
 
     $ UHF namelist.def
 
@@ -145,7 +156,9 @@ UHF自体はmVMCと同じように
 
 計算後に出力されるファイルおよび出力例は以下の通りです。
 
--  | zvo\_result.dat: エネルギーと粒子数が出力されます。
+-  zvo\_result.dat:
+
+   エネルギーと粒子数が出力されます。
 
    ::
 
@@ -153,6 +166,7 @@ UHF自体はmVMCと同じように
         num    36.0000000000
 
 -  zvo\_check.dat:
+
    イタレーションのステップ数、グリーン関数の残差の絶対値の平均、収束過程のエネルギー、粒子数を順に出力します。
 
    ::
@@ -163,9 +177,10 @@ UHF自体はmVMCと同じように
         3  0.000681060599 -82.973664527606 36.000000
        ...
 
--  | zvo\_UHF\_cisajs.dat:
-     収束した一体グリーン関数 :math:`G_{ij\sigma_1\sigma_2}\equiv\langle c_{i\sigma_1}^{\dag}c_{j\sigma_2}\rangle` 。
-   | 全成分について :math:`i, \sigma_1, j, \sigma_2, {\rm Re}\left[G_{ij\sigma_1\sigma_2}\right], {\rm Im}\left[G_{ij\sigma_1\sigma_2}\right]` の順に出力されます。
+-  zvo\_UHF\_cisajs.dat:
+          
+   収束した一体グリーン関数 :math:`G_{ij\sigma_1\sigma_2}\equiv\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle` 。
+   全成分について :math:`i, \sigma_1, j, \sigma_2, {\rm Re}\left[G_{ij\sigma_1\sigma_2}\right], {\rm Im}\left[G_{ij\sigma_1\sigma_2}\right]` の順に出力されます。
 
    ::
 
@@ -173,10 +188,11 @@ UHF自体はmVMCと同じように
            0    0    0    1 0.4610257618 0.0003115503
            0    1    0    0 0.4610257618 -0.0003115503
            0    1    0    1 0.4962444717 0.0000000000
-        ...
+           ...
 
--  | zvo\_eigen.dat:
-     収束したハミルトニアンの固有値が低エネルギー順に出力されます。
+-  zvo\_eigen.dat:
+
+   収束したハミルトニアンの固有値が低エネルギー順に出力されます。
 
    ::
 
@@ -186,6 +202,7 @@ UHF自体はmVMCと同じように
         ...
 
 -  zvo\_gap.dat:
+           
    全電子数を :math:`N_{\rm tot}` とした場合に、 :math:`\Delta E= E(N_{\rm tot}+1)-E(N_{\rm tot})` が出力されます。
 
    ::
@@ -193,7 +210,9 @@ UHF自体はmVMCと同じように
          5.2208232631
 
 -  zvo\_orbital\_opt.dat:
+            
    スレータ行列式から生成した :math:`f_{ij}` 。 ``InOrbital``, ``InOrbitalAntiParallel``,
    ``InOrbitalParallel``, ``InOrbitalAntiGeneral`` ファイルと同じ形式のファイルが出力されます。
    :math:`f_{ij}` が ``Orbital``, ``OrbitalAntiParallel``,
-   ``OrbitalParallel``, ``OrbitalAntiGeneral`` ファイルを参照し計算され、同種のパラメータについては平均化した値が採用されます。
+   ``OrbitalParallel``, ``OrbitalAntiGeneral`` ファイルを参照し計算され、
+   同種のパラメータについては平均化した値が採用されます。
