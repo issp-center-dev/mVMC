@@ -48,5 +48,9 @@ The mVMC package is developed based on the [mVMC-mini](https://github.com/fiber-
 We hope that you cite the following URL when you publish the results using mVMC (after writing the paper for mVMC, we will replace the URL to the paper's reference):  
 URL: [https://github.com/issp-center-dev/mVMC](https://github.com/issp-center-dev/mVMC)
 
+## Tutorials
+Lecture notes and sample scripts used in Hands-on
+are available at [mVMC-tutorial](https://github.com/issp-center-dev/mVMC-tutorial)
+
 ## Authors
 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Yuichi Motoyama, Mitsuaki Kawamura, Kazuyoshi Yoshimi, Takeo Kato, Masatoshi Imada.
