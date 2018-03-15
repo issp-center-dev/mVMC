@@ -11,11 +11,11 @@
 .. toctree::
    :maxdepth: 3
 
-   fourier_overview_ja.rst
-   fourier_tutorial_ja.rst
-   fourier_format_ja.rst
-   fourier_util_ja.rst
-   fourier_contact_ja.rst
+   overview
+   tutorial
+   format
+   util
+   contact
 
 .. Indices and tables
 .. ==================

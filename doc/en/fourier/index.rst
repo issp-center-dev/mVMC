@@ -11,11 +11,11 @@ HPhi/mVMC Fourie-Transformation utility
 .. toctree::
    :maxdepth: 3
 
-   fourier_overview_en.rst
-   fourier_tutorial_en.rst
-   fourier_format_en.rst
-   fourier_util_en.rst
-   fourier_contact_en.rst
+   overview
+   tutorial
+   format
+   util
+   contact
 
 .. Indices and tables
 .. ==================
