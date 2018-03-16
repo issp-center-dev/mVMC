@@ -3,23 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Manual for mVMC
-===============
-
+.. _wannier:
+   
+Downfolding with Wannier functions
+==================================
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-   intro.rst
-   start.rst
-   tutorial.rst
-   standard.rst
-   expert.rst
-   output.rst
-   algorithm.rst
-   appendix.rst
-   fourier/index
-   wannier/index
-   acknowledge.rst
+   overview
+   tutorial
+   parameter
+   format
+   contact
 
 .. Indices and tables
 .. ==================
