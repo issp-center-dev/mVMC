@@ -1,11 +1,6 @@
 &PARAM_CHIQW
 Num_freq_grid = 1
-!Ecut_for_eps = 
 flg_cRPA = 1
-MPI_num_proc_per_qcomm = 1
-MPI_num_qcomm = 4
-!flg_calc_type = 2
-!n_calc_q = 8
 /
 &PARAM_WANNIER
 N_wannier = 3

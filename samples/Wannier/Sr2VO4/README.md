@@ -10,8 +10,8 @@ First, we compute the charge density with DFT.
 $ pw.x -in scf.in
 ```
 The pseudopotential (UPF file) are downloaded from
-[Standard Solid State Pseudopotentials (SSSP)](http://materialscloud.org/sssp/)
-http://materialscloud.org/sssp/pseudos/SSSP_eff_PBE.tar.gz
+[The SG15 Optimized Norm-Conserving Vanderbilt (ONCV) pseudopotentials](www.quantum-simulation.org/potentials/sg15_oncv/)
+http://www.quantum-simulation.org/potentials/sg15_oncv/sg15_oncv_upf_2015-10-07.tar.gz
 
 Then perform non-scf calculation and convert the result into RESPACK format.
 ``` bash

@@ -17,9 +17,10 @@ DFT計算はQuantumESPRESSOで行う.
 
 .. literalinclude:: ../../../samples/Wannier/Sr2VO4/scf.in
 
-The pseudopotential (UPF file) are downloaded from
-`Standard Solid State Pseudopotentials (SSSP) <http://materialscloud.org/sssp/>`_
-http://materialscloud.org/sssp/pseudos/SSSP_eff_PBE.tar.gz
+擬ポテンシャル (UPF ファイル) は
+`The SG15 Optimized Norm-Conserving Vanderbilt (ONCV) pseudopotentials <www.quantum-simulation.org/potentials/sg15_oncv/>`_ のものを使う.
+
+http://www.quantum-simulation.org/potentials/sg15_oncv/sg15_oncv_upf_2015-10-07.tar.gz
 
 QuantumESPRESSO内のプログラム ``pw.x`` を使う.
 
