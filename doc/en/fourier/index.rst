@@ -5,8 +5,8 @@
 
 .. _fourier:   
    
-HPhi/mVMC Fourie-Transformation utility
-=======================================
+HPhi/mVMC Fourier-Transformation utility
+========================================
 
 .. toctree::
    :maxdepth: 3
