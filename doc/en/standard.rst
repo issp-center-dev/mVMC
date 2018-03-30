@@ -506,7 +506,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
    **Type :** Double (``0.0`` as defaults)
 
    **Description :** We can specify the phase for the hopping through
-   the cell boundary with these parameter (unit: degree). These fuctor
+   the cell boundary with these parameter (unit: degree). These factors
    for the :math:`\vec{a}_0` direction and the :math:`\vec{a}_1`
    direction can be specified independently. For the one-dimensional
    system, only ``phase0`` can be used. For example, a fopping from
@@ -527,7 +527,7 @@ Parameters for the numerical condition
 
    **Type :** int-type (must be specified)
 
-   **Description :** The number of itenerant electrons. It is the sum of
+   **Description :** The number of itinerant electrons. It is the sum of
    the :math:`\uparrow` and :math:`\downarrow` electrons.
 
 -  ``NVMCCalMode``
@@ -683,7 +683,7 @@ Parameters for the numerical condition
    **Type :** int-type (0 or 1, default value: 0)
 
    **Description :** The option of solving :math:`Sx=g` in the SR method
-   without construting :math:`S`
+   without constructing :math:`S`
    matrix [NeuscammanUmrigarChan_ ]. (0: off, 1: on).
    This reduces the amount of memory usage from
    :math:`O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})` to

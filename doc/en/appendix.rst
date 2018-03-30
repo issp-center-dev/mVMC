@@ -64,7 +64,7 @@ file ``UHF`` is generated in ``src/ComplexUHF/src``.
 Input files
 ~~~~~~~~~~~
 
-A file for assigning input files (namelsit.def)
+A file for assigning input files (namelist.def)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The following files are needed to use the program of UHF. The format

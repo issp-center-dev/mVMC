@@ -574,7 +574,7 @@ Keywords and parameters
    **Type :** int-type (0 or 1, default value: 0)
 
    **Description :** The option of solving :math:`Sx=g` in the SR method
-   without construting :math:`S`
+   without constructing :math:`S`
    matrix [NeuscammanUmrigarChan_ ]. (0: off, 1: on).
    This reduces the amount of memory usage from
    :math:`O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})` to
@@ -989,7 +989,7 @@ Use rules
 CoulombInter file (coulombinter.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Hamiltonian for the coulombintrer interactions
+The Hamiltonian for the coulombinter interactions
 
 .. math::
 

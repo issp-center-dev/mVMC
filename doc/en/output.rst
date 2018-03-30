@@ -92,7 +92,7 @@ Output file for doublonHolon 2-site factors
 (\*\*\*\_doublonHolon2site\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The optimized 2-site doublon-holon crrelation factors by SR method are
+The optimized 2-site doublon-holon correlation factors by SR method are
 outputted. The file format is same as the ``InDH2`` file defined in Sec.
 :ref:`InputParam`.
 
@@ -100,7 +100,7 @@ Output file for doublonHolon 4-site factors
 (\*\*\*\_doublonHolon4site\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The optimized 4-site doublon-holon crrelation factors by SR method are
+The optimized 4-site doublon-holon correlation factors by SR method are
 outputted. The file format is same as the ``InDH4`` file defined in Sec.
 :ref:`InputParam`.
 

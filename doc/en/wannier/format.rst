@@ -36,7 +36,7 @@ By editing this file, we can modify the number of orbitals treated in HPhi/mVMC.
 
 * Line 5 - end
 
-  Wannier centres in the fractional coordinate. They are used by the Fourier utility.
+  Wannier centers in the fractional coordinate. They are used by the Fourier utility.
   
 Hopping, Coulomb, exchange integrals
 ------------------------------------
