@@ -515,13 +515,14 @@ void makeCandidate_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, in
   do {
     mi = gen_rand32()%Nsize;
     s  = eleSpn[mi] ; //fsz 
-    t  = (genrand_real2()<0.5) ? s : 1-s; //fsz
+    //t  = (genrand_real2()<0.5) ? s : 1-s; //fsz
     ri = eleIdx[mi];  //fsz
   } while (LocSpn[ri] == 1);
 
   icnt = 0;
   do {
     rj = gen_rand32()%Nsite;
+    t  = (genrand_real2()<0.5) ? 0 : 1; //fsz
     if(icnt> icnt_max){
       flag = 1; // TRUE
       break;
@@ -668,7 +669,7 @@ void makeCandidate_LocalSpinFlip_localspin(int *mi_, int *ri_, int *rj_, int *s_
 void makeCandidate_LocalSpinFlip_conduction(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn) {
   const int icnt_max = Nsite*Nsite;
-  int icnt;
+  int icnt=0;
   int mi, ri, rj, s, flag;
   int t; //fsz
 
