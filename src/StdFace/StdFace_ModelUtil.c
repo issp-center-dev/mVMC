@@ -1156,33 +1156,36 @@ void StdFace_InputHopp(
 */
 void StdFace_PrintGeometry(struct StdIntList *StdI) {
   FILE *fp;
-  int isite, iCell;
+  int isite, iCell, ii;
 
   fp = fopen("geometry.dat", "w");
 
-  fprintf(fp, "%25.15e %25.15e %25.15e\n", StdI->direct[0][0], StdI->direct[0][1], StdI->direct[0][2]);
-  fprintf(fp, "%25.15e %25.15e %25.15e\n", StdI->direct[1][0], StdI->direct[1][1], StdI->direct[1][2]);
-  fprintf(fp, "%25.15e %25.15e %25.15e\n", StdI->direct[2][0], StdI->direct[2][1], StdI->direct[2][2]);
-  fprintf(fp, "%25.15e %25.15e %25.15e\n", StdI->phase[0], StdI->phase[1], StdI->phase[2]);
-  fprintf(fp, "%d %d %d\n", StdI->box[0][0], StdI->box[0][1], StdI->box[0][2]);
-  fprintf(fp, "%d %d %d\n", StdI->box[1][0], StdI->box[1][1], StdI->box[1][2]);
-  fprintf(fp, "%d %d %d\n", StdI->box[2][0], StdI->box[2][1], StdI->box[2][2]);
+  for (ii = 0; ii < 3; ii++) 
+    fprintf(fp, "%25.15e %25.15e %25.15e\n", 
+      StdI->direct[ii][0], StdI->direct[ii][1], StdI->direct[ii][2]);
+  fprintf(fp, "%25.15e %25.15e %25.15e\n", 
+    StdI->phase[0], StdI->phase[1], StdI->phase[2]);
+  for (ii = 0; ii < 3; ii++)
+    fprintf(fp, "%d %d %d\n",
+      StdI->box[ii][0], StdI->box[ii][1], StdI->box[ii][2]);
 
   for (iCell = 0; iCell < StdI->NCell; iCell++) {
     for (isite = 0; isite < StdI->NsiteUC; isite++) {
-      fprintf(fp, "%25.15e %25.15e %25.15e\n",
-        StdI->tau[isite][0] + (double)StdI->Cell[iCell][0],
-        StdI->tau[isite][1] + (double)StdI->Cell[iCell][1],
-        StdI->tau[isite][2] + (double)StdI->Cell[iCell][2]);
+      fprintf(fp, "%d %d %d %d\n",
+        StdI->Cell[iCell][0] - StdI->Cell[0][0],
+        StdI->Cell[iCell][1] - StdI->Cell[0][1],
+        StdI->Cell[iCell][2] - StdI->Cell[0][2],
+        isite);
     }/*for (isite = 0; isite < StdI->NsiteUC; isite++)*/
   }/* for (iCell = 0; iCell < StdI->NCell; iCell++)*/
   if (strcmp(StdI->model, "kondo") == 0) {
     for (iCell = 0; iCell < StdI->NCell; iCell++) {
       for (isite = 0; isite < StdI->NsiteUC; isite++) {
-        fprintf(fp, "%25.15e %25.15e %25.15e\n",
-          StdI->tau[isite][0] + (double)StdI->Cell[iCell][0],
-          StdI->tau[isite][1] + (double)StdI->Cell[iCell][1],
-          StdI->tau[isite][2] + (double)StdI->Cell[iCell][2]);
+        fprintf(fp, "%d %d %d %d\n",
+          StdI->Cell[iCell][0] - StdI->Cell[0][0],
+          StdI->Cell[iCell][1] - StdI->Cell[0][1],
+          StdI->Cell[iCell][2] - StdI->Cell[0][2],
+          isite + StdI->NsiteUC);
       }/*for (isite = 0; isite < StdI->NsiteUC; isite++)*/
     }/* for (iCell = 0; iCell < StdI->NCell; iCell++)*/
   }

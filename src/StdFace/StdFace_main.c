@@ -1320,7 +1320,7 @@ static void PrintModPara(struct StdIntList *StdI)
 static void Print1Green(struct StdIntList *StdI)
 {
   FILE *fp;
-  int ngreen, igreen, store;
+  int ngreen, igreen, store, xkondo;
   int isite, jsite, ispin, jspin, SiMax, SjMax;
   int **greenindx;
   /*
@@ -1338,24 +1338,60 @@ static void Print1Green(struct StdIntList *StdI)
         ngreen = 0;
       }/*if (store == 1)*/
 
-      for (isite = 0; isite < StdI->nsite; isite++) {
+      if (strcmp(StdI->model, "kondo") == 0) xkondo = 2;
+      else xkondo = 1;
 
-        if (StdI->locspinflag[isite] == 0) SiMax = 1;
-        else SiMax = StdI->locspinflag[isite];
+      if (StdI->ioutputmode == 1) {
+        for (isite = 0; isite < StdI->NsiteUC*xkondo; isite++) {
 
-        for (ispin = 0; ispin <= SiMax; ispin++) {
-          for (jsite = 0; jsite < StdI->nsite; jsite++) {
+          if (isite >= StdI->NsiteUC) isite += StdI->nsite / 2;
 
-            if (StdI->locspinflag[jsite] == 0) SjMax = 1;
-            else SjMax = StdI->locspinflag[jsite];
+          if (StdI->locspinflag[isite] == 0) SiMax = 1;
+          else SiMax = StdI->locspinflag[isite];
 
-            for (jspin = 0; jspin <= SjMax; jspin++) {
+          for (ispin = 0; ispin <= SiMax; ispin++) {
+            for (jsite = 0; jsite < StdI->nsite; jsite++) {
 
-              if (isite != jsite &&
-                (StdI->locspinflag[isite] != 0 && StdI->locspinflag[jsite] != 0)) continue;
+              if (StdI->locspinflag[jsite] == 0) SjMax = 1;
+              else SjMax = StdI->locspinflag[jsite];
 
-              if (StdI->ioutputmode == 2 || ispin == jspin)
-              {
+              for (jspin = 0; jspin <= SjMax; jspin++) {
+
+                if (isite != jsite &&
+                  (StdI->locspinflag[isite] != 0 && StdI->locspinflag[jsite] != 0)) continue;
+
+                if (ispin == jspin){
+                  if (store == 1) {
+                    greenindx[ngreen][0] = isite;
+                    greenindx[ngreen][1] = ispin;
+                    greenindx[ngreen][2] = jsite;
+                    greenindx[ngreen][3] = jspin;
+                  }
+                  ngreen++;
+                }
+
+              }/*for (jspin = 0; jspin <= SjMax; jspin++)*/
+            }/*for (jsite = 0; jsite < StdI->nsite; jsite++)*/
+          }/*for (ispin = 0; ispin <= SiMax; ispin++)*/
+        }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+      }/*if (StdI->ioutputmode == 1)*/
+      else {
+        for (isite = 0; isite < StdI->nsite; isite++) {
+
+          if (StdI->locspinflag[isite] == 0) SiMax = 1;
+          else SiMax = StdI->locspinflag[isite];
+
+          for (ispin = 0; ispin <= SiMax; ispin++) {
+            for (jsite = 0; jsite < StdI->nsite; jsite++) {
+
+              if (StdI->locspinflag[jsite] == 0) SjMax = 1;
+              else SjMax = StdI->locspinflag[jsite];
+
+              for (jspin = 0; jspin <= SjMax; jspin++) {
+
+                if (isite != jsite &&
+                  (StdI->locspinflag[isite] != 0 && StdI->locspinflag[jsite] != 0)) continue;
+
                 if (store == 1) {
                   greenindx[ngreen][0] = isite;
                   greenindx[ngreen][1] = ispin;
@@ -1363,13 +1399,13 @@ static void Print1Green(struct StdIntList *StdI)
                   greenindx[ngreen][3] = jspin;
                 }
                 ngreen++;
-              }
 
-            }/*for (jspin = 0; jspin <= SjMax; jspin++)*/
-          }/*for (jsite = 0; jsite < StdI->nsite; jsite++)*/
-        }/*for (ispin = 0; ispin <= SiMax; ispin++)*/
-      }/*for (isite = 0; isite < StdI->nsite; isite++)*/
-    }
+              }/*for (jspin = 0; jspin <= SjMax; jspin++)*/
+            }/*for (jsite = 0; jsite < StdI->nsite; jsite++)*/
+          }/*for (ispin = 0; ispin <= SiMax; ispin++)*/
+        }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+      }/*if (StdI->ioutputmode == 2)*/
+    }/*if (StdI->ioutputmode != 0)*/
 
     fp = fopen("greenone.def", "w");
     fprintf(fp, "===============================\n");
@@ -1399,7 +1435,7 @@ static void Print1Green(struct StdIntList *StdI)
 */
 static void Print2Green(struct StdIntList *StdI) {
   FILE *fp;
-  int ngreen, store, igreen;
+  int ngreen, store, igreen, xkondo;
   int site1, site2, site3, site4;
   int spin1, spin2, spin3, spin4;
   int S1Max, S2Max, S3Max, S4Max;
@@ -1418,7 +1454,12 @@ static void Print2Green(struct StdIntList *StdI) {
         ngreen = 0;
       }/*if (store == 1)*/
 
-      for (site1 = 0; site1 < StdI->nsite; site1++) {
+      if (strcmp(StdI->model, "kondo") == 0) xkondo = 2;
+      else xkondo = 1;
+
+      for (site1 = 0; site1 < StdI->NsiteUC*xkondo; site1++) {
+
+        if (site1 >= StdI->NsiteUC) site1 += StdI->nsite / 2;
 
         if (StdI->locspinflag[site1] == 0) S1Max = 1;
         else S1Max = StdI->locspinflag[site1];
@@ -2564,12 +2605,12 @@ void StdFace_main(
 
 @section sec_stan_proc Overall procedure
 
-If you want to create new lattice file, do as these files.
+If you want to create a new lattice file, the following procedures are needed.
 
--# Copy one of laattice files such as Kagome.c 
+-# Copy one of lattice files such as Kagome.c 
    (Probably the most similar one) and rename it.
 -# @ref sec_lattice
--# Add that function in the header file, StdFace_ModelUtil.h
+-# Add the function in the header file, StdFace_ModelUtil.h.
 -# Add entry at
    @dontinclude StdFace_main.c
    @skip StdFace\_main
@@ -2581,29 +2622,29 @@ If you want to create new lattice file, do as these files.
 <HR> 
 @section sec_lattice Modify lattice model file
 
-To create new lattice file, please modify the following part
+To create a new lattice file, please modify the following part
 (Kagome.c as an example):
 
 @dontinclude Kagome.c
 Define function as
 @skip StdFace\_Kagome(
 @until {
-Lattice parameter used only in geometry.dat and lattice.gp
+Lattice parameters are used only in geometry.dat and lattice.gp
 @skip StdFace\_PrintVal\_d
 @until Ly
-these are unit lattice vectors.\n
+These are unit lattice vectors.\n
 Just call this function to initialize all lattice related parameters
 @skipline StdFace\_InitSite
-where "2" indicates 2D
+where "2" indicates 2D.
 @skip tau
 @until tau\[2\]\[0\]
-These are the fractional coordinate of internal sites.
+These are the fractional coordinates of internal sites.
 Then set parameters of Hamiltonian
 @skip StdFace\_NotUsed\_J
 @until @@
-to determine the default value of them and unused parameters.
-For more details, please see the description of each functions.
-Then Compute the upper limit of the number of Transfer & Interaction and malloc them.
+to determine the default values of them and unused parameters.
+For more details, please see the description of each function.
+Then compute the upper limit of the number of Transfer & Interaction and malloc them.
 @skip >>
 @until <<
 Please estimate the number of bonds per site.
@@ -2616,9 +2657,7 @@ Probably, it is not necessary to modify this part.
 The non-local term is as follows:
 @skip >>
 @until <<
-For more details, please see each functions.
-
-StdFace_Kagome_Boost()? Forget!!
+For more details, please see each function.
 
 @page page_addstandardval Add new input variable into Standard mode
 
