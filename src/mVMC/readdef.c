@@ -1959,7 +1959,7 @@ int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *def
     ArrayIdx[idx][5] = x5;
     ArrayIdx[idx][6] = x6;
     ArrayIdx[idx][7] = x7;
-    if (CheckQuadSite(x0, x2, x4, x6, Nsite) != 0) {
+    if (CheckQuadSite(x2, x3, x5, x6, Nsite) != 0) {
       fprintf(stderr, "Error: Site index is incorrect. \n");
       info = 1;
       break;
