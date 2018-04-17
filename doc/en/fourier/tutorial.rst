@@ -3,29 +3,57 @@
 Tutorial
 ========
 
-This tutorial is done by using the input file
-in ``sample/Standard/Spin/HeisenbergSquare/``.
+In this tutorial, we explain through a sample calculation of
+the 8-site Hubbard model on the square lattice.
 
 Run HPhi/vmc.out
 ----------------
 
 - For :math:`{\mathcal H}\Phi`
 
-  Calculate the ground state and the correlation function at that state.
+  We calculate the ground state and the correlation function with
+  the following input file
+  
+  ::
+   
+     a0w = 2
+     a0l = 2
+     a1w = -2
+     a1l = 2
+     model="Hubbard"
+     method="CG"
+     lattice="square"
+     t=1.0
+     U=8.0
+     nelec = 8
+     2Sz=0
   
   .. code-block:: bash
 
-     $ ../../../../src/HPhi -s StdFace.def
+     $ HPhi -s input
 
 - For mVMC
 
-  Optimize the trial wavefunction.
+  First, we optimize the trial wavefunction with the following input
+  
+  ::
+   
+     a0w = 2
+     a0l = 2
+     a1w = -2
+     a1l = 2
+     model="Hubbard"
+     lattice="square"
+     t=1.0
+     U=8.0
+     nelec = 8
+     2Sz=0
   
   .. code-block:: bash
 
-     $ ../../../../src/vmc.out -s StdFace.def
+     $ vmc.out -s input
 
-  Add the following line in ``StdFace.def`` to compute the correlation function.
+  We add the following line to the input file to compute the correlation function.
 
   ::
 
@@ -35,7 +63,7 @@ Run HPhi/vmc.out
   
   .. code-block:: bash
 
-     $ ../../../../src/vmc.out -s StdFace.def output/zqp_opt.dat
+     $ vmc.out -s input output/zqp_opt.dat
          
 Then the one- and two-body correlation function are written to files
 in the ``output/`` directory.
@@ -51,11 +79,17 @@ Fourier transformation of correlation functions
 -----------------------------------------------
 
 Perform the Fourier transformation of the correlation function
-by using the utility ``fourier``.
+by using the utility ``greenr2k``.
 
 .. code-block:: bash
 
-   $ ../../../../tool/fourier namelist.def geometry.dat
+   $ echo "4 20
+   G 0 0 0
+   X 0.5 0 0
+   M 0.5 0.5 0
+   G 0 0 0
+   16 16 1" >> geometry.dat
+   $ greenr2k namelist.def geometry.dat
      
 Then the Fourier-transformed correlation functions are
 written to a file in ``output/``.
@@ -72,45 +106,22 @@ Related files
 Display correlation functions
 -----------------------------
 
-Plot the correlation function in the :math:`k` space
-by using the utility ``corplot``.
+Plot the correlation function in the *k* space
+by using gnuplot.
 
-.. code-block:: bash
+.. code-block:: gnuplot
 
-   $ ../../../../tool/corplot output/zvo_corr.dat
-
-Then the following message appears in the terminal.
-
-::
-
-    #####  Plot Start  #####
-
-       Please specify target number from below (0 or Ctrl-C to exit):
-
-       Real Part Without ErrorBar
-         [ 1] Up-Up [ 2] Down-Down [ 3] Density-Density [ 4] SzSz [ 5] S+S- [ 6] S-S+
-       Imaginary Part Without ErrorBar
-         [11] Up-Up [12] Down-Down [13] Density-Density [14] SzSz [15] S+S- [16] S-S+
-       Real Part With ErrorBar
-         [21] Up-Up [22] Down-Down [23] Density-Density [24] SzSz [25] S+S- [26] S-S+
-       Imaginary Part With ErrorBar
-         [31] Up-Up [32] Down-Down [33] Density-Density [34] SzSz [35] S+S- [36] S-S+
-
-       Target : 
-
-Type a number corresponding to the quantity to be plotted (for example ``4``)
-and press ``Enter``,
-then gnuplot is launched and the 3D figure is displayed (Fig. :num:`corplotpng`).
+   load "kpath.gp"
+   plot "output/zvo_corr_eigen0.dat" u 1:12 w l
 
 .. _corplotpng:
 
 .. figure:: ../../figs/corplot.png
 
-            The 3D picture when ``Target : 4``.
-            The solid black lines indicate the Brillouin zone.
+   The spin-spin correlation :math:`\langle{\bf S}_{\bf k}\cdot{\bf S}_{\bf k}\rangle`
+   (Column 12).
 
 Related files
 
-- kpoint.dat (:ref:`kpoint`)
-- correlation.gp (:ref:`gnuplot`)
-- correlation.dat (:ref:`correlation`)
+- kpath.gp (:ref:`gnuplot`)
+- output/zvo_corr.dat (:ref:`zvocorr`)

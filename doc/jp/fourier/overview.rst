@@ -22,13 +22,13 @@
    :nowrap:
 
    \begin{align}
-   \langle {\hat c}_{{\bf k} \uparrow}^{\dagger} {\hat c}_{{\bf k} \uparrow}\rangle
-   &\equiv \frac{1}{N_{\rm cell}} \sum_{i j}^{N_{\rm site}} e^{-i {\bf k}\cdot({\bf R}_i - {\bf R}_j)}
-   \langle {\hat c}_{i \uparrow}^{\dagger} {\hat c}_{j \uparrow}\rangle
+   \langle {\hat c}_{{\bf k} \alpha \uparrow}^{\dagger} {\hat c}_{{\bf k} \beta \uparrow}\rangle
+   &\equiv \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot{\bf R}}
+   \langle {\hat c}_{{\bf 0} \alpha \uparrow}^{\dagger} {\hat c}_{{\bf R} \beta \uparrow}\rangle
    \\
-   \langle {\hat c}_{{\bf k} \downarrow}^{\dagger} {\hat c}_{{\bf k} \downarrow}\rangle
-   &\equiv \frac{1}{N_{\rm cell}} \sum_{i j}^{N_{\rm site}} e^{-i {\bf k}\cdot({\bf R}_i - {\bf R}_j)}
-   \langle {\hat c}_{i \downarrow}^{\dagger} {\hat c}_{j \downarrow}\rangle
+   \langle {\hat c}_{{\bf k} \alpha \downarrow}^{\dagger} {\hat c}_{{\bf k} \beta \downarrow}\rangle
+   &\equiv \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot {\bf R}}
+   \langle {\hat c}_{{\bf 0} \alpha \downarrow}^{\dagger} {\hat c}_{{\bf R} \beta \downarrow}\rangle
    \end{align}
 
 密度-密度相関
@@ -36,10 +36,10 @@
 .. math::
 
    \begin{align}
-   \langle {\hat \rho}_{\bf k} {\hat \rho}_{\bf k}\rangle
-   \equiv \frac{1}{N_{\rm cell}^2} \sum_{i j}^{N_{\rm site}} e^{-i {\bf k}\cdot({\bf R}_i - {\bf R}_j)}
-   \langle ({\hat \rho}_{i} - \langle {\hat \rho}_{i} \rangle)
-           ({\hat \rho}_{j} - \langle {\hat \rho}_{j} \rangle) \rangle
+   \langle {\hat \rho}_{{\bf k}\alpha} {\hat \rho}_{{\bf k}\beta}\rangle
+   \equiv \frac{1}{N_{\bf R}} \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot{\bf R}}
+   \langle ({\hat \rho}_{{\bf 0}\alpha} - \langle {\hat \rho}_{{\bf 0}\alpha} \rangle)
+           ({\hat \rho}_{{\bf R}\beta} - \langle {\hat \rho}_{{\bf R}\beta} \rangle) \rangle
    \end{align}
 
 スピン-スピン相関
@@ -48,16 +48,15 @@
    :nowrap:
 
    \begin{align}
-   \langle {\hat S}_{\bf k}^{z} {\hat S}_{\bf k}^{z} \rangle
-   &\equiv \frac{1}{N_{\rm cell}^2} \sum_{i j}^{N_{\rm site}} e^{-i {\bf k}\cdot({\bf R}_i - {\bf R}_j)}
-   \langle {\hat S}_{i}^{z} {\hat S}_{j}^{z} \rangle
+   \langle {\hat S}_{{\bf k}\alpha}^{z} {\hat S}_{{\bf k}\beta}^{z} \rangle
+   &\equiv \frac{1}{N_{\bf R}} \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot{\bf R}}
+   \langle {\hat S}_{{\bf 0}\alpha}^{z} {\hat S}_{{\bf R}\beta}^{z} \rangle
    \\
-   \langle {\hat S}_{\bf k}^{+} {\hat S}_{\bf k}^{-} \rangle
-   &\equiv \frac{1}{N_{\rm cell}^2} \sum_{i j}^{N_{\rm site}} e^{-i {\bf k}\cdot({\bf R}_i - {\bf R}_j)}
-   \langle {\hat S}_{i}^{+} {\hat S}_{j}^{-} \rangle
+   \langle {\hat S}_{{\bf k}\alpha}^{+} {\hat S}_{{\bf k}\beta}^{-} \rangle
+   &\equiv \frac{1}{N_{\bf R}} \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot{\bf R}}
+   \langle {\hat S}_{{\bf 0}\alpha}^{+} {\hat S}_{{\bf R}\beta}^{-} \rangle
    \\
-   \langle {\hat {\bf S}}_{\bf k} \cdot {\hat {\bf S}}_{\bf k} \rangle
-   &\equiv \frac{1}{N_{\rm cell}^2} \sum_{i j}^{N_{\rm site}} e^{-i {\bf k}\cdot({\bf R}_i - {\bf R}_j)}
-   \langle {\hat {\bf S}}_{i} \cdot {\hat {\bf S}}_{j} \rangle
+   \langle {\hat {\bf S}}_{{\bf k}\alpha} \cdot {\hat {\bf S}}_{{\bf k}\beta} \rangle
+   &\equiv \frac{1}{N_{\bf R}} \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot{\bf R}}
+   \langle {\hat {\bf S}}_{{\bf 0}\alpha} \cdot {\hat {\bf S}}_{{\bf R}\beta} \rangle
    \end{align}
-

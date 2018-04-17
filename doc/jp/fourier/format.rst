@@ -5,46 +5,49 @@
 
 .. _geometry:
 
-ジオメトリー
-------------
+サイトの位置と軌道のインデックス, *k* 点
+----------------------------------------
 
 :ref:`tutorial` でのファイル名は ``geometry.dat`` .
+各サイトの位置と軌道の情報は
 mVMC/:math:`{\mathcal H}\Phi` のスタンンダードモードを用いた場合には
-上記のファイル名で自動的に生成されるので, とくに気にする必要はない.
+自動的に生成される.
 
 ::
 
-   1.000000     0.000000     0.000000  (1)
-   0.000000     1.000000     0.000000  (1)
-   0.000000     0.000000     1.000000  (1)
-   0.000000     0.000000     0.000000  (2)
-   4 0 0                               (3)
-   0 4 0                               (3)
-   0 0 1                               (3)
-   0.000000     0.000000     0.000000  (4)
-   1.000000     0.000000     0.000000  (4)
-   2.000000     0.000000     0.000000  (4)
-   3.000000     0.000000     0.000000  (4)
-   0.000000     1.000000     0.000000  (4)
-   1.000000     1.000000     0.000000  (4)
-   2.000000     1.000000     0.000000  (4)
-   3.000000     1.000000     0.000000  (4)
-   0.000000     2.000000     0.000000  (4)
-   1.000000     2.000000     0.000000  (4)
-   2.000000     2.000000     0.000000  (4)
-   3.000000     2.000000     0.000000  (4)
-   0.000000     3.000000     0.000000  (4)
-   1.000000     3.000000     0.000000  (4)
-   2.000000     3.000000     0.000000  (4)
-   3.000000     3.000000     0.000000  (4)
+   1.000000000000000e+00     0.000000000000000e+00     0.000000000000000e+00 (1)
+   0.000000000000000e+00     1.000000000000000e+00     0.000000000000000e+00 (1)
+   0.000000000000000e+00     0.000000000000000e+00     1.000000000000000e+00 (1)
+   0.000000000000000e+00     0.000000000000000e+00     0.000000000000000e+00 (2)
+   2 2 0        (3)
+   -2 2 0       (3)
+   0 0 1        (3)
+   0 0 0 0      (4)
+   -1 1 0 0     (4)
+   0 1 0 0      (4)
+   1 1 0 0      (4)
+   -1 2 0 0     (4)
+   0 2 0 0      (4)
+   1 2 0 0      (4)
+   0 3 0 0      (4)
+   4 20         (5)
+   G 0 0 0      (6)
+   X 0.5 0 0    (6)
+   M 0.5 0.5 0  (6)
+   G 0 0 0      (6)
+   16 16 1      (7)
 
-#. 単位格子ベクトル. 任意の単位.
+#. 単位格子ベクトル. 任意の単位 (スタンダードモードで自動生成).
 #. 1体項がシミュレーションセルの境界を跨いだときに付く位相(単位degree)
+   (スタンダードモードで自動生成)   
 #. シミュレーションセルの形状を指定する三本の整数ベクトル.
    スタンダードモードの入力パラメーター ``a0W``, ``a0L``, ``a0H``, ``a1W``...
-   に対応する.
-#. 各サイトの座標. 単位格子ベクトルに対するフラクショナル座標として入力する.
-   
+   に対応する(スタンダードモードで自動生成).
+#. 各サイトの座標結晶並進ベクトル(指数)および内部座標(軌道)のインデックス
+   (スタンダードモードで自動生成).
+#. *k* パスのノード(対称性の高い点)の数と, ノード間の *k* 点の分割数.
+#. *k* ノードのラベルとフラクショナル座標
+#. 運動量分布関数のFermiSurferファイルを作成する時の *k* グリッド
 
 サイト表示の1体および2体相関関数
 --------------------------------
@@ -62,33 +65,38 @@ mVMC/:math:`{\mathcal H}\Phi` で計算する相関関数を指定する.
 :ref:`supported` にある相関関数を計算するためには, 
 以下のようにインデックスを指定する必要がある.
 
-- :math:`\langle {\hat c}_{{\bf k} \uparrow}^{\dagger} {\hat c}_{{\bf k} \uparrow}\rangle`
+- :math:`\langle {\hat c}_{{\bf k}\alpha\uparrow}^{\dagger} {\hat c}_{{\bf k}\beta\uparrow}\rangle`
 
-  :math:`\langle {\hat c}_{i \uparrow}^{\dagger} {\hat c}_{j \uparrow}\rangle`
-  に対して, :math:`i` および :math:`j` がそれぞれ全てのサイトを網羅するようにする.
+  :math:`\langle {\hat c}_{{\bf 0}\alpha\uparrow}^{\dagger} {\hat c}_{{\bf R}\beta\uparrow}\rangle`
+  に対して, :math:`{\bf R}` が全ての単位胞,
+  :math:`\alpha` および :math:`\beta` がそれぞれ全ての軌道を網羅するようにする.
   
-- :math:`\langle {\hat c}_{{\bf k} \downarrow}^{\dagger} {\hat c}_{{\bf k} \downarrow}\rangle`
+- :math:`\langle {\hat c}_{{\bf k}\alpha\downarrow}^{\dagger} {\hat c}_{{\bf k}\beta\downarrow}\rangle`
 
-  :math:`\langle {\hat c}_{i \downarrow}^{\dagger} {\hat c}_{j \downarrow}\rangle`
-  に対して, :math:`i` および :math:`j` がそれぞれ全てのサイトを網羅するようにする.
+  :math:`\langle {\hat c}_{{\bf 0}\alpha\downarrow}^{\dagger} {\hat c}_{{\bf R}\beta\downarrow}\rangle`
+  に対して, :math:`{\bf R}` が全ての単位胞,
+  :math:`\alpha` および :math:`\beta` がそれぞれ全ての軌道を網羅するようにする.
   
-- :math:`\langle {\hat \rho}_{\bf k} {\hat \rho}_{\bf k}\rangle` および
-  :math:`\langle {\hat S}_{\bf k}^{z} {\hat S}_{\bf k}^{z} \rangle`
+- :math:`\langle {\hat \rho}_{{\bf k}\alpha} {\hat \rho}_{{\bf k}\beta}\rangle` および
+  :math:`\langle {\hat S}_{{\bf k}\alpha}^{z} {\hat S}_{{\bf k}\beta}^{z} \rangle`
 
-  :math:`\langle {\hat c}_{i \sigma}^{\dagger} {\hat c}_{i \sigma} {\hat c}_{j \sigma'}^{\dagger} {\hat c}_{j \sigma'}\rangle`
-  に対して, :math:`i` および :math:`j` がそれぞれ全てのサイトを網羅し,
+  :math:`\langle {\hat c}_{{\bf 0}\alpha\sigma}^{\dagger} {\hat c}_{{\bf 0}\alpha\sigma} {\hat c}_{{\bf R}\beta \sigma'}^{\dagger} {\hat c}_{{\bf R}\beta \sigma'}\rangle`
+  に対して, :math:`{\bf R}` が全ての単位胞,
+  :math:`\alpha` および :math:`\beta` がそれぞれ全ての軌道を網羅し,
   :math:`\sigma` および :math:`\sigma'` が :math:`\uparrow`, :math:`\downarrow` を網羅するようにする.
 
-- :math:`\langle {\hat S}_{\bf k}^{+} {\hat S}_{\bf k}^{-} \rangle` および
-  :math:`\langle {\hat {\bf S}}_{\bf k} \cdot {\hat {\bf S}}_{\bf k} \rangle`
+- :math:`\langle {\hat S}_{{\bf k}\alpha}^{+} {\hat S}_{{\bf k}\beta}^{-} \rangle` および
+  :math:`\langle {\hat {\bf S}}_{{\bf k}\alpha} \cdot {\hat {\bf S}}_{{\bf k}\beta} \rangle`
 
   :math:`{\mathcal H}\Phi` の場合は
-  :math:`\langle {\hat c}_{i \sigma}^{\dagger} {\hat c}_{i -\sigma} {\hat c}_{j -\sigma}^{\dagger} {\hat c}_{j \sigma}\rangle`
-  に対して, :math:`i` および :math:`j` がそれぞれ全てのサイトを網羅し,
+  :math:`\langle {\hat c}_{{\bf 0}\alpha\sigma}^{\dagger} {\hat c}_{{\bf 0}\alpha-\sigma} {\hat c}_{{\bf R}\beta -\sigma}^{\dagger} {\hat c}_{{\bf R}\beta \sigma}\rangle`
+  に対して, :math:`{\bf R}` が全ての単位胞,
+  :math:`\alpha` および :math:`\beta` がそれぞれ全ての軌道を網羅し,
   :math:`\sigma` が :math:`\uparrow`, :math:`\downarrow` を網羅するようにする.
   mVMC の場合は
-  :math:`\langle {\hat c}_{i \sigma}^{\dagger} {\hat c}_{j \sigma} {\hat c}_{j -\sigma}^{\dagger} {\hat c}_{i -\sigma}\rangle`
-  に対して, :math:`i` および :math:`j` がそれぞれ全てのサイトを網羅し,
+  :math:`\langle {\hat c}_{{\bf 0}\alpha\sigma}^{\dagger} {\hat c}_{{\bf R}\beta \sigma} {\hat c}_{{\bf R}\beta -\sigma}^{\dagger} {\hat c}_{{\bf 0}\alpha-\sigma}\rangle`
+  に対して, :math:`{\bf R}` が全ての単位胞,
+  :math:`\alpha` および :math:`\beta` がそれぞれ全ての軌道を網羅し,
   :math:`\sigma` が :math:`\uparrow`, :math:`\downarrow` を網羅するようにする.
   いずれの場合も演算子の順番に注意にすること.
   
@@ -108,143 +116,53 @@ mVMC/:math:`{\mathcal H}\Phi` によって計算され,
 ``output/zvo_cisajs_001.dat`` および ``output/zvo_cisajscktalt_001.dat`` (mVMC), 
 ``output/zvo_cisajs.dat`` および ``output/zvo_cisajscktalt.dat`` (:math:`{\mathcal H}\Phi`).
 
-``fourier`` ユーティリティはこのファイルを読み込んで計算を行う.
+``greenr2k`` ユーティリティはこのファイルを読み込んで計算を行う.
 この時, (スタンダードモードを使わず自分でインデックスを指定するなどにより)
 :ref:`greenindex` で挙げたインデックスの相関関数のなかで欠けているものがある場合,
 それを 0 として扱う.
 
 .. _zvocorr:
 
-プリミティブゾーン内の相関関数
-------------------------------
+*k* パス上での相関関数
+----------------------
 
 Fourier変換された相関関数(波数表示)が入っている.
-ユーティリイティ ``fourier`` によって生成される.
-:ref:`tutorial` でのファイル名は ``output/zvo_corr.dat`` である.
+ユーティリイティ ``greenr2k`` によって生成される.
+:ref:`tutorial` でのファイル名は ``output/zvo_corr_eigen0.dat`` である.
 
 ::
    
-   #HPhi          16                                              (1)
-   # kx[1] ky[2] kz[3](Cart.) UpUp[4,5] (Re. Im.) DownDown[6,7]   (2)
-   # Density[8,9] SzSz[10,11] S+S-[12,13] S-S+[14,15]             (2)
-   #k-offset      0.0000000      0.0000000      0.0000000         (3)
-   0.00000E+00    0.00000E+00    0.00000E+00    0.31250E-01  .... (4)
-   0.15708E+01    0.00000E+00    0.00000E+00    0.31250E-01  .... (4)
+   # k-length[1]
+   # Orbital  1 to Orbital  1
+   #  UpUp[   2,   3] (Re. Im.) DownDown[   4,   5]
+   #  Density[   6,   7] SzSz[   8,   9] S+S-[  10,  11] S.S[  12,  13]
+   0.00000E+00    0.88211E+00   -0.50000E-09    0.88211E+00    0.40000E-09 ... 
+   0.25000E-01    0.87976E+00   -0.46625E-09    0.87976E+00    0.42882E-09 ...
+   0.50000E-01    0.87276E+00   -0.42841E-09    0.87276E+00    0.45201E-09 ...
    :                                                               :
 
-#. ``HPhi`` の出力から作成された場合には ``"#HPhi"``,
-   ``vmc.out`` の出力から作成された場合には ``"#mVMC"`` と書かれる.
-   それに続く整数は, プリミティブ ブリルアンゾーン内の :math:`k` 点の数である.
-#. 各カラムに出力されている量の説明.
-#. シミュレーションセルの境界を跨ぐ一体項に位相が付く場合の,
-   一体相関関数の :math:`k` 点の変位.
-   すなわち, この後の行の4〜7列目の一体相関関数は,
-   1〜3列目の :math:`k` 点からこのオフセットの分だけずれた点のものである.
-#. :math:`k` 点(デカルト座標)と相関関数.
-   それぞれの相関関数の実部と虚部が書かれている.
-   
-.. _kpoint:
-
-corplot用 *k* 点ファイル
-------------------------
-
-``fourier`` ユーティリティで生成され, 
-``corplot`` ユーティリティでプロットを行う時に読み込まれる.
-ファイル名は ``kpoint.dat`` である.
-
-::
-   
-   81           9                                      (1)
-   0.62832E+01    0.00000E+00    0.00000E+00           (2)
-   0.00000E+00    0.62832E+01    0.00000E+00           (2)
-   0.00000E+00    0.00000E+00    0.62832E+01           (2)
-   -0.62832E+01   -0.62832E+01    0.00000E+00      1   (3)
-   -0.47124E+01   -0.62832E+01    0.00000E+00      2   (3)
-   -0.31416E+01   -0.62832E+01    0.00000E+00      3
-   -0.15708E+01   -0.62832E+01    0.00000E+00      4
-   0.00000E+00   -0.62832E+01    0.00000E+00      1
-   0.15708E+01   -0.62832E+01    0.00000E+00      2
-   0.31416E+01   -0.62832E+01    0.00000E+00      3
-   0.47124E+01   -0.62832E+01    0.00000E+00      4
-
-#. ``corplot`` でプロットされる :math:`k` 点の総数および
-   gnuplot のsplotで表示する時の :math:`k` 点の区切り.
-#. 逆格子ベクトル(デカルト座標)
-#. :math:`k` ベクトル(デカルト座標)と,
-   その :math:`k` 点と等価なプリミティブゾーン内の :math:`k` 点のインデックス.
-   このインデックスは :ref:`zvocorr` での :math:`k` 点の番号に対応している.
-   
+はじめに各カラムに出力されている量の説明がコメントとして書かれ,
+それに続いて *k* 点の距離とそれぞれの相関関数の実部と虚部が書かれている.
+      
 .. _gnuplot:
 
 gnuplot スクリプト
 ------------------
 
-``corplot`` にて作成され,
-内部で起動した gnuplot によって読み込まれる.
-``corplot`` とは別に 直接gnuplotを起動して, ``load`` でよみこむことも可能である.
-ファイル名は ``correlation.gp`` である.
+``greenr2k`` にて作成される.
+gnuplotでこれを読み込むことでグラフ中に *k* 点のラベルを表示する.
+ファイル名は ``kpath.gp`` である.
 
 .. code-block:: gnuplot
 
-   #set terminal pdf color enhanced \    (1)
-   #dashed dl 1.0 size 20.0cm, 20.0cm    (1)
-   #set output 'correlation.pdf'         (1)
-   #set view 60.0, 30.0                  (1)
-
-   set view equal xy
-   set ticslevel 0
-   set hidden3d
-   set xlabel 'kx'
-   set ylabel 'ky'
-   set zrange [    0.25000E-10:    0.18435E+00]
-
-   set pm3d
-   set pm3d interpolate 5, 5
-   set view 0.0, 0.0
-
-   #####  Set Brillouin-Zone Boundary  #####
-
-   set arrow from    -0.31416E+01,   -0.31416E+01,    ...
-   set arrow from    -0.31416E+01,    0.31416E+01,    ...
-   :
-   #####  End Set Brillouin-Zone Boundary  #####
-
-   splot \
-   'correlation.dat' u 1:2:3 w l tit '1' (2)
-   pause -1
-
-#. 図をPDFファイルに出力したい時には,
-   この行の先頭のコメントアウトを外す.
-   論文等に貼る図を作るときには, 適宜この後にフォントの設定等を書く.
-   詳しくは gnuplot のマニュアル等を参照.
-#. :ref:`correlation` のファイルをプロットしている.
+   set xtics ('G'     0.00000, 'X'     0.50000, 'M'     1.00000, 'G'    1.70711)
+   set ylabel 'Correlation function'
+   set grid xtics lt 1 lc 0
 
 .. _correlation:
 
-広範囲の *k* 点での相関関数
----------------------------
+運動量分布関数の等値面をプロットするためのFermiSurferファイル
+-------------------------------------------------------------
 
-``corplot`` にて作成され,
-内部で起動した gnuplot によって,
-:ref:`gnuplot` を経由して読み込まれる.
-ファイル名は ``correlation.dat``
-
-::
-
-   -0.62832E+01   -0.62832E+01    0.18435E+00    0.00000E+00
-   -0.47124E+01   -0.62832E+01    0.36159E-01    0.00000E+00
-   -0.31416E+01   -0.62832E+01    0.20921E-01    0.00000E+00
-   -0.15708E+01   -0.62832E+01    0.36159E-01    0.00000E+00
-    0.00000E+00   -0.62832E+01    0.18435E+00    0.00000E+00
-    0.15708E+01   -0.62832E+01    0.36159E-01    0.00000E+00
-    0.31416E+01   -0.62832E+01    0.20921E-01    0.00000E+00
-    0.47124E+01   -0.62832E+01    0.36159E-01    0.00000E+00
-    0.62832E+01   -0.62832E+01    0.18435E+00    0.00000E+00
-
-   -0.62832E+01   -0.47124E+01    0.36159E-01    0.00000E+00
-   -0.47124E+01   -0.47124E+01    0.20921E-01    0.00000E+00
-   -0.31416E+01   -0.47124E+01    0.11372E-01    0.00000E+00
-   :
-
-1, 2列目は :math:`k` ベクトル(デカルト座標)を表す.
-3列目は相関関数, 4列目はその標準誤差を表す.
+``greenr2k`` にて作成される.
+ファイル名は ``output/zvo_corr_eigen0.dat.frmsf``
