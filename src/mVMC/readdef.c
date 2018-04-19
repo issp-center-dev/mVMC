@@ -1749,7 +1749,7 @@ int GetInfoOpt(FILE *fp, int *ArrayOpt, int iComplxFlag, int *iTotalOptCount, in
   while (fscanf(fp, "%d ", &i) != EOF) {
     fscanf(fp, "%d\n", &(ArrayOpt[2 * fidx])); // TBC real
     if(iComplxFlag>0){
-      ArrayOpt[2 * fidx + 1] = 1; //  TBC imaginary
+      ArrayOpt[2 * fidx + 1] = ArrayOpt[2 * fidx]; //  TBC imaginary
     }
     fidx++;
     (iLocalOptCount)++;
