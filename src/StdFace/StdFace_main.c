@@ -2515,7 +2515,9 @@ void StdFace_main(
     || strcmp(StdI->lattice, "chainlattice") == 0) StdFace_Chain(StdI);
   else if (strcmp(StdI->lattice, "face-centeredorthorhombic") == 0
     || strcmp(StdI->lattice, "fcorthorhombic") == 0
-    || strcmp(StdI->lattice, "fco") == 0) StdFace_FCOrtho(StdI);
+    || strcmp(StdI->lattice, "fco") == 0
+    || strcmp(StdI->lattice, "face-centeredcubic") == 0
+    || strcmp(StdI->lattice, "fcc") == 0) StdFace_FCOrtho(StdI);
   else if (strcmp(StdI->lattice, "honeycomb") == 0
     || strcmp(StdI->lattice, "honeycomblattice") == 0) StdFace_Honeycomb(StdI);
   else if (strcmp(StdI->lattice, "kagome") == 0
@@ -2523,7 +2525,8 @@ void StdFace_main(
   else if (strcmp(StdI->lattice, "ladder") == 0
     || strcmp(StdI->lattice, "ladderlattice") == 0) StdFace_Ladder(StdI);
   else if (strcmp(StdI->lattice, "orthorhombic") == 0
-    || strcmp(StdI->lattice, "simpleorthorhombic") == 0) StdFace_Orthorhombic(StdI);
+    || strcmp(StdI->lattice, "simpleorthorhombic") == 0
+    || strcmp(StdI->lattice, "cubic") == 0) StdFace_Orthorhombic(StdI);
   else if (strcmp(StdI->lattice, "pyrochlore") == 0) StdFace_Pyrochlore(StdI);
   else if (strcmp(StdI->lattice, "tetragonal") == 0
     || strcmp(StdI->lattice, "tetragonallattice") == 0

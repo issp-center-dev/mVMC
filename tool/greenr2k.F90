@@ -764,7 +764,7 @@ SUBROUTINE output_cor()
   REAL(8) :: dk(3), dk_cart(3), xk(nk), &
   &          xk_label(nnode), klength
   CHARACTER(256) :: filename
-  COMPLEX(8),ALLOCATABLE :: cor_ave(:,:,:,:), cor_err(:,:,:,:)
+  COMPLEX(8),ALLOCATABLE :: cor_mvmc(:,:,:,:,:)
   !
   ! Compute x-position for plotting band
   !
@@ -794,29 +794,29 @@ SUBROUTINE output_cor()
      !
      ! mVMC
      !
-     ALLOCATE(cor_ave(ikk,6,norb,norb), cor_err(ikk,6,norb,norb))
+     ALLOCATE(cor_mvmc(ikk,6,2,norb,norb))
      !
      ! Average
      !
-     cor_ave(1:ikk,1:6,1:norb,1:norb) = SUM(cor_k(1:ikk,1:6,1:norb,1:norb,1:nwfc), 5) / DBLE(nwfc)
+     cor_mvmc(1:ikk,1:6,1,1:norb,1:norb) = SUM(cor_k(1:ikk,1:6,1:norb,1:norb,1:nwfc), 5) / DBLE(nwfc)
      !
      ! Variance
      !
-     cor_err(1:ikk,1:6,1:norb,1:norb) = 0d0
+     cor_mvmc(1:ikk,1:6,2,1:norb,1:norb) = 0d0
      DO iwfc = 1, nwfc
-        cor_err(1:ikk,1:6,1:norb,1:norb) = cor_err(1:ikk,1:6,1:norb,1:norb) &
-        & + CMPLX( DBLE(cor_k(1:ikk,1:6,1:norb,1:norb,iwfc) - cor_ave(1:ikk,1:6,1:norb,1:norb))**2, &
-        &         AIMAG(cor_k(1:ikk,1:6,1:norb,1:norb,iwfc) - cor_ave(1:ikk,1:6,1:norb,1:norb))**2, &
+        cor_mvmc(1:ikk,1:6,2,1:norb,1:norb) = cor_mvmc(1:ikk,1:6,2,1:norb,1:norb) &
+        & + CMPLX( DBLE(cor_k(1:ikk,1:6,1:norb,1:norb,iwfc) - cor_mvmc(1:ikk,1:6,1,1:norb,1:norb))**2, &
+        &         AIMAG(cor_k(1:ikk,1:6,1:norb,1:norb,iwfc) - cor_mvmc(1:ikk,1:6,1,1:norb,1:norb))**2, &
         &         KIND(0d0))
      END DO
      !
      ! Standard Error
      !
      IF(nwfc == 1) THEN
-        cor_err(1:ikk,1:6,1:norb,1:norb) = CMPLX(0d0, 0d0, KIND(0d0))
+        cor_mvmc(1:ikk,1:6,2,1:norb,1:norb) = CMPLX(0d0, 0d0, KIND(0d0))
      ELSE
-        cor_err(1:ikk,1:6,1:norb,1:norb) = CMPLX(SQRT( DBLE(cor_err(1:ikk,1:6,1:norb,1:norb))), &
-        &                                       SQRT(AIMAG(cor_err(1:ikk,1:6,1:norb,1:norb))), KIND(0d0)) &
+        cor_mvmc(1:ikk,1:6,2,1:norb,1:norb) = CMPLX(SQRT( DBLE(cor_mvmc(1:ikk,1:6,2,1:norb,1:norb))), &
+        &                                           SQRT(AIMAG(cor_mvmc(1:ikk,1:6,2,1:norb,1:norb))), KIND(0d0)) &
         &                               / SQRT(DBLE(nwfc * (nwfc - 1)))
      END IF
      !
@@ -841,12 +841,12 @@ SUBROUTINE output_cor()
      END DO
      !
      DO ik = 1, ikk
-        WRITE(fo,'(1000e15.5)') cor_ave(ik,1:6, 1:norb, 1:norb), cor_err(ik,1:6, 1:norb, 1:norb)
+        WRITE(fo,'(1000e15.5)') xk(ik), cor_mvmc(ik, 1:6, 1:2, 1:norb, 1:norb)
      END DO
      !
      CLOSE(fo)
      !
-     DEALLOCATE(cor_ave, cor_err)
+     DEALLOCATE(cor_mvmc)
      !
   ELSE
      !
