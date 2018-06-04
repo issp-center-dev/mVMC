@@ -1,8 +1,8 @@
 L = 16
-Lsub = 2
+Lsub = 4
 model = "Spin"
 lattice = "chain"
 J = 1.0
-NSROptItrStep = 300
+NSROptItrStep = 400
 NVMCSample = 100
 2Sz = 0

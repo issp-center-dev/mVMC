@@ -1,12 +1,14 @@
 x=1
-end=10
+end=11
+rm -r ./output*
 while [ $x -lt $end ]
 do
+    x0=`expr 5 \* $x + 12345`
     cp ./StdFace_org.def ./StdFace.def
-    echo "RndSeed = $x" >> StdFace.def
+    echo "RndSeed = $x0" >> StdFace.def
     ./vmc.out -s ./StdFace.def
-    x=`expr $x + 12345`
     mv ./output ./output$x
+    x=`expr $x + 1`
 done
 
 cp ./StdFace_org.def ./StdFace_org.def.bak
