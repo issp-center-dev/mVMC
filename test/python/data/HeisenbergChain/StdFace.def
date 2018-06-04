@@ -1,0 +1,10 @@
+L = 16
+Lsub = 2
+model = "Spin"
+lattice = "chain"
+J = 1.0
+NSROptItrStep = 300
+NVMCSample = 100
+2Sz = 0
+//NVMCCalMode = 1
+RndSeed = 12345

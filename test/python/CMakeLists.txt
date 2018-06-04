@@ -12,7 +12,7 @@ foreach(testfile ${TEST_FILES})
 endforeach()
 
 set(python_test_src
-  test_Spin
+  test_HeisenbergChain
 )
 
 foreach(test ${python_test_src})
