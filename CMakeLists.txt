@@ -61,3 +61,13 @@ add_subdirectory(src/ComplexUHF)
 add_subdirectory(src/pfapack)
 add_subdirectory(src/mVMC)
 add_subdirectory(tool)
+
+# Build and enable tests
+# testing setup
+# enable_testing() must be called in the top-level CMakeLists.txt before any add_subdirectory() is called.
+option(Testing "Enable testing" OFF)
+
+if (Testing)
+  enable_testing(test)
+  add_subdirectory(test)
+endif()
