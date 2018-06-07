@@ -2415,7 +2415,7 @@ void StdFace_main(
     else if (strcmp(keyword, "a2lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[2][1]);
     else if (strcmp(keyword, "a2wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[2][0]);
     else if (strcmp(keyword, "complextype") == 0) StoreWithCheckDup_i(keyword, value, &StdI->ComplexType);
-    else if (strcmp(keyword, "cdatafilehead") == 0) StoreWithCheckDup_s(keyword, value, StdI->CParaFileHead);
+    else if (strcmp(keyword, "cdatafilehead") == 0) StoreWithCheckDup_s(keyword, value, StdI->CDataFileHead);
     else if (strcmp(keyword, "cparafilehead") == 0) StoreWithCheckDup_s(keyword, value, StdI->CParaFileHead);
     else if (strcmp(keyword, "dsroptredcut") == 0) StoreWithCheckDup_d(keyword, value, &StdI->DSROptRedCut);
     else if (strcmp(keyword, "dsroptstadel") == 0) StoreWithCheckDup_d(keyword, value, &StdI->DSROptStaDel);
