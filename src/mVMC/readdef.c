@@ -556,6 +556,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
     }
 
+  }//rank 0
+
+  if (rank == 0) {
+    AllComplexFlag = iComplexFlgGutzwiller + iComplexFlgJastrow + iComplexFlgDH2; //TBC
+    AllComplexFlag += iComplexFlgDH4 + iComplexFlgOrbital;//TBC
+    //AllComplexFlag  = 1;//DEBUG
+    // AllComplexFlag= 0 -> All real, !=0 -> complex
+    if(AllComplexFlag == 0 && iFlgOrbitalGeneral == 1){
+        fprintf(stderr, "Error: Variational parameters should be complex when orbital is general in this version.\n");
+        info = 1;
+    }
   }
 
   if (info != 0) {
@@ -564,13 +575,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     }
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  if (rank == 0) {
-    AllComplexFlag = iComplexFlgGutzwiller + iComplexFlgJastrow + iComplexFlgDH2; //TBC
-    AllComplexFlag += iComplexFlgDH4 + iComplexFlgOrbital;//TBC
-    //AllComplexFlag  = 1;//DEBUG
-    // AllComplexFlag= 0 -> All real, !=0 -> complex
-  }
-
+  
 #ifdef _mpi_use
   MPI_Bcast(bufInt, nBufInt, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
@@ -1031,9 +1036,10 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
             info = 1;
             continue;
           }
+          count = 0;
           for (i = 0; i < NGutzwillerIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
-            Proj[idx] = tmp_real + I * tmp_comp;
+            Proj[idx+count] = tmp_real + I * tmp_comp;
           }
           break;
 
@@ -1046,7 +1052,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           count = NGutzwillerIdx;
           for (i = count; i < count + NJastrowIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
-            Proj[idx] = tmp_real + I * tmp_comp;
+            Proj[idx+count] = tmp_real + I * tmp_comp;
           }
           break;
 
@@ -1059,7 +1065,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           count = NGutzwillerIdx + NJastrowIdx;
           for (i = count; i < count + 2 * 3 * NDoublonHolon2siteIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
-            Proj[idx] = tmp_real + I * tmp_comp;
+            Proj[idx+count] = tmp_real + I * tmp_comp;
           }
           break;
 
@@ -1072,7 +1078,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
           for (i = count; i < count + 2 * 5 * NDoublonHolon4siteIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
-            Proj[idx] = tmp_real + I * tmp_comp;
+            Proj[idx+count] = tmp_real + I * tmp_comp;
           }
           break;
 
@@ -1747,7 +1753,9 @@ int GetInfoOpt(FILE *fp, int *ArrayOpt, int iComplxFlag, int *iTotalOptCount, in
   int iLocalOptCount = 0;
   while (fscanf(fp, "%d ", &i) != EOF) {
     fscanf(fp, "%d\n", &(ArrayOpt[2 * fidx])); // TBC real
-    ArrayOpt[2 * fidx + 1] = iComplxFlag; //  TBC imaginary
+    if(iComplxFlag>0){
+      ArrayOpt[2 * fidx + 1] = ArrayOpt[2 * fidx]; //  TBC imaginary
+    }
     fidx++;
     (iLocalOptCount)++;
     (*iTotalOptCount)++;
@@ -1958,7 +1966,7 @@ int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *def
     ArrayIdx[idx][5] = x5;
     ArrayIdx[idx][6] = x6;
     ArrayIdx[idx][7] = x7;
-    if (CheckQuadSite(x0, x2, x4, x6, Nsite) != 0) {
+    if (CheckQuadSite(x2, x3, x5, x6, Nsite) != 0) {
       fprintf(stderr, "Error: Site index is incorrect. \n");
       info = 1;
       break;

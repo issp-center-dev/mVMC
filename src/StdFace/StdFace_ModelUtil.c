@@ -76,19 +76,46 @@ void StdFace_Hopping(
 struct StdIntList *StdI,//!<[inout]
   double complex trans0,//!<[in] Hopping integral @f$t@f$
   int isite,//!<[in] @f$i@f$ for @f$c_{i \sigma}^\dagger@f$
-  int jsite//!<[in] @f$j@f$ for @f$c_{j \sigma}@f$
+  int jsite,//!<[in] @f$j@f$ for @f$c_{j \sigma}@f$
+  double *dR//!<[in] R_i - R_j
 )
 {
-  int ispin;
+  int ispin, it, ii;
+  double complex Cphase, coef;
   /**@brief
    Both @f$c_{i \sigma}^\dagger c_{j \sigma}@f$ and
   @f$c_{j \sigma}^\dagger c_{i \sigma}@f$ for every spin channel
   (@f$\sigma@f$) is specified
   */
-  for (ispin = 0; ispin < 2; ispin++) {
-    StdFace_trans(StdI, trans0, jsite, ispin, isite, ispin);
-    StdFace_trans(StdI, conj(trans0), isite, ispin, jsite, ispin);
-  }/*for (ispin = 0; ispin < 2; ispin++)*/
+#if defined(_HPhi)
+  if (strcmp(StdI->method, "timeevolution") == 0 && StdI->PumpBody == 1) {
+    for (it = 0; it < StdI->Lanczos_max; it++) {
+      Cphase = 0.0f;
+      for (ii = 0; ii < 3; ii++) Cphase += /*2.0*StdI->pi */ StdI->At[it][ii] * dR[ii];
+      coef = cos(Cphase) + I * sin(-Cphase);
+      for (ispin = 0; ispin < 2; ispin++) {
+        StdI->pump[it][StdI->npump[it]] = coef * trans0;
+        StdI->pumpindx[it][StdI->npump[it]][0] = isite;
+        StdI->pumpindx[it][StdI->npump[it]][1] = ispin;
+        StdI->pumpindx[it][StdI->npump[it]][2] = jsite;
+        StdI->pumpindx[it][StdI->npump[it]][3] = ispin;
+        StdI->npump[it] = StdI->npump[it] + 1;
+
+        StdI->pump[it][StdI->npump[it]] = conj(coef * trans0);
+        StdI->pumpindx[it][StdI->npump[it]][0] = jsite;
+        StdI->pumpindx[it][StdI->npump[it]][1] = ispin;
+        StdI->pumpindx[it][StdI->npump[it]][2] = isite;
+        StdI->pumpindx[it][StdI->npump[it]][3] = ispin;
+        StdI->npump[it] = StdI->npump[it] + 1;
+      }/*for (ispin = 0; ispin < 2; ispin++)*/
+    }/*for (it = 0; it < StdI->Lanczos_max; it++)*/
+  }/*if (strcmp(StdI->method, "timeevolution") == 0)*/
+  else
+#endif
+    for (ispin = 0; ispin < 2; ispin++) {
+      StdFace_trans(StdI, trans0, jsite, ispin, isite, ispin);
+      StdFace_trans(StdI, conj(trans0), isite, ispin, jsite, ispin);
+    }/*for (ispin = 0; ispin < 2; ispin++)*/
 }/*void StdFace_Hopping*/
 /**
 @brief Add intra-Coulomb, magnetic field, chemical potential for the
@@ -691,7 +718,7 @@ void StdFace_InitSite(
       * StdI->box[1][(ii + 2) % 3]
       * StdI->box[2][(ii + 1) % 3];
   }
-  printf("         Number of Cell = %d\n", abs(StdI->NCell));
+  printf("   Number of Cell = %d\n", abs(StdI->NCell));
   if (StdI->NCell == 0) {
     StdFace_exit(-1);
   }
@@ -805,11 +832,16 @@ void StdFace_FindSite(
   int jsiteUC,//!<[in] Intrinsic site index of final site
   int *isite,//!<[out] initial site
   int *jsite,//!<[out] final site
-  double complex *Cphase//!<[out] Boundary phase, if it across boundary
+  double complex *Cphase,//!<[out] Boundary phase, if it across boundary
+  double *dR//!<[out] R_i - R_j in the fractional coordinate
 )
 {
   int iCell, jCell, kCell, ii;
   int nBox[3], jCellV[3];
+  /**/
+  dR[0] = - (double)diW + StdI->tau[isiteUC][0] - StdI->tau[jsiteUC][0];
+  dR[1] = - (double)diL + StdI->tau[isiteUC][1] - StdI->tau[jsiteUC][1];
+  dR[2] = - (double)diH + StdI->tau[isiteUC][2] - StdI->tau[jsiteUC][2];
   /**/
   jCellV[0] = iW + diW;
   jCellV[1] = iL + diL;
@@ -854,14 +886,15 @@ void StdFace_SetLabel(
   int *isite,//!<[out] initial site 
   int *jsite,//!<[out] final site 
   int connect,//!<[in] 1 for nearest neighbor, 2 for 2nd nearest
-  double complex *Cphase//!<[out] Boundary phase, if it across boundary
+  double complex *Cphase,//!<[out] Boundary phase, if it across boundary
+  double *dR//!<[out] R_i - R_j
 )
 {
   double xi, yi, xj, yj;
   /**@brief
   First print the reversed one
   */
-  StdFace_FindSite(StdI, iW, iL, 0, -diW, -diL, 0, jsiteUC, isiteUC, isite, jsite, Cphase);
+  StdFace_FindSite(StdI, iW, iL, 0, -diW, -diL, 0, jsiteUC, isiteUC, isite, jsite, Cphase, dR);
 
   xi = StdI->direct[0][0] * ((double)iW + StdI->tau[jsiteUC][0])
      + StdI->direct[1][0] * ((double)iL + StdI->tau[jsiteUC][1]);
@@ -881,7 +914,7 @@ void StdFace_SetLabel(
   /**@brief
   Then print the normal one, these are different when they cross boundary.
   */
-  StdFace_FindSite(StdI, iW, iL, 0, diW, diL, 0, isiteUC, jsiteUC, isite, jsite, Cphase);
+  StdFace_FindSite(StdI, iW, iL, 0, diW, diL, 0, isiteUC, jsiteUC, isite, jsite, Cphase, dR);
 
   xi = StdI->direct[1][0] * ((double)iL + StdI->tau[isiteUC][1])
      + StdI->direct[0][0] * ((double)iW + StdI->tau[isiteUC][0]);
@@ -1123,33 +1156,36 @@ void StdFace_InputHopp(
 */
 void StdFace_PrintGeometry(struct StdIntList *StdI) {
   FILE *fp;
-  int isite, iCell;
+  int isite, iCell, ii;
 
   fp = fopen("geometry.dat", "w");
 
-  fprintf(fp, "%25.15e %25.15e %25.15e\n", StdI->direct[0][0], StdI->direct[0][1], StdI->direct[0][2]);
-  fprintf(fp, "%25.15e %25.15e %25.15e\n", StdI->direct[1][0], StdI->direct[1][1], StdI->direct[1][2]);
-  fprintf(fp, "%25.15e %25.15e %25.15e\n", StdI->direct[2][0], StdI->direct[2][1], StdI->direct[2][2]);
-  fprintf(fp, "%25.15e %25.15e %25.15e\n", StdI->phase[0], StdI->phase[1], StdI->phase[2]);
-  fprintf(fp, "%d %d %d\n", StdI->box[0][0], StdI->box[0][1], StdI->box[0][2]);
-  fprintf(fp, "%d %d %d\n", StdI->box[1][0], StdI->box[1][1], StdI->box[1][2]);
-  fprintf(fp, "%d %d %d\n", StdI->box[2][0], StdI->box[2][1], StdI->box[2][2]);
+  for (ii = 0; ii < 3; ii++) 
+    fprintf(fp, "%25.15e %25.15e %25.15e\n", 
+      StdI->direct[ii][0], StdI->direct[ii][1], StdI->direct[ii][2]);
+  fprintf(fp, "%25.15e %25.15e %25.15e\n", 
+    StdI->phase[0], StdI->phase[1], StdI->phase[2]);
+  for (ii = 0; ii < 3; ii++)
+    fprintf(fp, "%d %d %d\n",
+      StdI->box[ii][0], StdI->box[ii][1], StdI->box[ii][2]);
 
   for (iCell = 0; iCell < StdI->NCell; iCell++) {
     for (isite = 0; isite < StdI->NsiteUC; isite++) {
-      fprintf(fp, "%25.15e %25.15e %25.15e\n",
-        StdI->tau[isite][0] + (double)StdI->Cell[iCell][0],
-        StdI->tau[isite][1] + (double)StdI->Cell[iCell][1],
-        StdI->tau[isite][2] + (double)StdI->Cell[iCell][2]);
+      fprintf(fp, "%d %d %d %d\n",
+        StdI->Cell[iCell][0] - StdI->Cell[0][0],
+        StdI->Cell[iCell][1] - StdI->Cell[0][1],
+        StdI->Cell[iCell][2] - StdI->Cell[0][2],
+        isite);
     }/*for (isite = 0; isite < StdI->NsiteUC; isite++)*/
   }/* for (iCell = 0; iCell < StdI->NCell; iCell++)*/
   if (strcmp(StdI->model, "kondo") == 0) {
     for (iCell = 0; iCell < StdI->NCell; iCell++) {
       for (isite = 0; isite < StdI->NsiteUC; isite++) {
-        fprintf(fp, "%25.15e %25.15e %25.15e\n",
-          StdI->tau[isite][0] + (double)StdI->Cell[iCell][0],
-          StdI->tau[isite][1] + (double)StdI->Cell[iCell][1],
-          StdI->tau[isite][2] + (double)StdI->Cell[iCell][2]);
+        fprintf(fp, "%d %d %d %d\n",
+          StdI->Cell[iCell][0] - StdI->Cell[0][0],
+          StdI->Cell[iCell][1] - StdI->Cell[0][1],
+          StdI->Cell[iCell][2] - StdI->Cell[0][2],
+          isite + StdI->NsiteUC);
       }/*for (isite = 0; isite < StdI->NsiteUC; isite++)*/
     }/* for (iCell = 0; iCell < StdI->NCell; iCell++)*/
   }
@@ -1165,6 +1201,9 @@ void StdFace_MallocInteractions(
   int nintrMax//!<[in] upper limit of the number of interaction
 ) {
   int ii;
+#if defined(_HPhi)
+  int it;
+#endif
   /**@brief
   (1) Transfer StdIntList::trans, StdIntList::transindx
   */
@@ -1174,6 +1213,21 @@ void StdFace_MallocInteractions(
     StdI->transindx[ii] = (int *)malloc(sizeof(int) * 4);
   }
   StdI->ntrans = 0;
+#if defined(_HPhi)
+  if (strcmp(StdI->method, "timeevolution") == 0 && StdI->PumpBody == 1) {
+    StdI->npump = (int *)malloc(sizeof(int) * StdI->Lanczos_max);
+    StdI->pumpindx = (int ***)malloc(sizeof(int**) * StdI->Lanczos_max);
+    StdI->pump = (double complex **)malloc(sizeof(double complex*) * StdI->Lanczos_max);
+    for (it = 0; it < StdI->Lanczos_max; it++) {
+      StdI->npump[it] = 0;
+      StdI->pumpindx[it] = (int **)malloc(sizeof(int*) * ntransMax);
+      StdI->pump[it] = (double complex *)malloc(sizeof(double complex) * ntransMax);
+      for (ii = 0; ii < ntransMax; ii++) {
+        StdI->pumpindx[it][ii] = (int *)malloc(sizeof(int) * 4);
+      }
+    }/*for (it = 0; it < StdI->Lanczos_max;)*/
+  }/*if (strcmp(StdI->method, "timeevolution") == 0*/
+#endif
   /**@brief
   (2) InterAll StdIntList::intr, StdIntList::intrindx
   */
@@ -1228,6 +1282,15 @@ void StdFace_MallocInteractions(
     StdI->PLIndx[ii] = (int *)malloc(sizeof(int) * 2);
   }
   StdI->NPairLift = 0;
+  /**@brief
+  (7) PairHopp StdIntList::PairHopp, StdIntList::PHIndx
+  */
+  StdI->PHIndx = (int **)malloc(sizeof(int*) * nintrMax);
+  StdI->PairHopp = (double *)malloc(sizeof(double) * nintrMax);
+  for (ii = 0; ii < nintrMax; ii++) {
+    StdI->PHIndx[ii] = (int *)malloc(sizeof(int) * 2);
+  }
+  StdI->NPairHopp = 0;
 }/*void StdFace_MallocInteractions*/
 #if defined(_mVMC)
 /**
@@ -1413,11 +1476,11 @@ static void StdFace_InitSiteSub(struct StdIntList *StdI)
   StdI->NCellsub = 0;
   for (ii = 0; ii < 3; ii++) {
     StdI->NCellsub += StdI->boxsub[0][ii]
-      * StdI->boxsub[1][(ii + 1) % 3]
-      * StdI->boxsub[2][(ii + 2) % 3]
-      - StdI->boxsub[0][ii]
-      * StdI->boxsub[1][(ii + 2) % 3]
-      * StdI->boxsub[2][(ii + 1) % 3];
+                    * StdI->boxsub[1][(ii + 1) % 3]
+                    * StdI->boxsub[2][(ii + 2) % 3]
+                    - StdI->boxsub[0][ii]
+                    * StdI->boxsub[1][(ii + 2) % 3]
+                    * StdI->boxsub[2][(ii + 1) % 3];
   }
   printf("         Number of Cell in the sublattice: %d\n", abs(StdI->NCellsub));
   if (StdI->NCellsub == 0) {
@@ -1427,7 +1490,7 @@ static void StdFace_InitSiteSub(struct StdIntList *StdI)
   for (ii = 0; ii < 3; ii++) {
     for (jj = 0; jj < 3; jj++) {
       StdI->rboxsub[ii][jj] = StdI->boxsub[(ii + 1) % 3][(jj + 1) % 3] * StdI->boxsub[(ii + 2) % 3][(jj + 2) % 3]
-        - StdI->boxsub[(ii + 1) % 3][(jj + 2) % 3] * StdI->boxsub[(ii + 2) % 3][(jj + 1) % 3];
+                            - StdI->boxsub[(ii + 1) % 3][(jj + 2) % 3] * StdI->boxsub[(ii + 2) % 3][(jj + 1) % 3];
     }
   }
   if (StdI->NCellsub < 0) {
@@ -1588,6 +1651,7 @@ void PrintJastrow(struct StdIntList *StdI) {
   int dCell, iCell;//, jCell, dCellv[3];
   int **Jastrow;
   double complex Cphase;
+  double dR[3];
 
   Jastrow = (int **)malloc(sizeof(int*) * StdI->nsite);
   for (isite = 0; isite < StdI->nsite; isite++) 
@@ -1683,7 +1747,7 @@ void PrintJastrow(struct StdIntList *StdI) {
         StdFace_FindSite(StdI,
           0, 0, 0,
           -StdI->Cell[dCell][0], -StdI->Cell[dCell][1], -StdI->Cell[dCell][2],
-          0, 0, &isite, &jsite, &Cphase);
+          0, 0, &isite, &jsite, &Cphase, dR);
         if (strcmp(StdI->model, "kondo") == 0) jsite += -StdI->NCell * StdI->NsiteUC;
         iCell = jsite / StdI->NsiteUC;
         if (iCell < dCell) {
@@ -1712,7 +1776,7 @@ void PrintJastrow(struct StdIntList *StdI) {
               StdFace_FindSite(StdI,
                 StdI->Cell[iCell][0], StdI->Cell[iCell][1], StdI->Cell[iCell][2],
                 StdI->Cell[dCell][0], StdI->Cell[dCell][1], StdI->Cell[dCell][2],
-                isiteUC, jsiteUC, &isite, &jsite, &Cphase);
+                isiteUC, jsiteUC, &isite, &jsite, &Cphase, dR);
 
               Jastrow[isite][jsite] = NJastrow;
               Jastrow[jsite][isite] = NJastrow;

@@ -171,7 +171,7 @@ int StochasticOpt(MPI_Comm comm) {
 
   /* update variational parameters */
   if(info==0 && rank==0) {
-    #pragma omp parallel for default(shared) private(si,pi)
+    //#pragma omp parallel for default(shared) private(si,pi)
     #pragma loop noalias
     #pragma loop norecurrence para
     for(si=0;si<nSmat;si++) {

@@ -28,6 +28,7 @@ struct StdIntList {
   int NaN_i;/**<@brief It is used for initializing input parameter. 
             This means that a parameter wich is not specified in input file.
             Set in StdFace_ResetVals().*/
+  double pi;/**<@brief @f$\pi=3.14...@f$*/
   /*
   Parameters for LATTICE
   */
@@ -140,7 +141,6 @@ struct StdIntList {
   int *locspinflag;/**<@brief [StdIntList::nsite] LocSpin in Expert mode, 
                    malloc and set in each lattice file.*/
   int ntrans;/**<@brief Number of transfer, counted in each lattice file.*/
-  int Ltrans;/**<@brief Print trans.def or not, set in PrintTrans().*/
   int **transindx;/**<@brief [StdIntList::ntrans][4] Site/spin indices of 
                   one-body term, malloc in StdFace_MallocInteractions()
                   and set in StdFace_trans().*/
@@ -197,6 +197,14 @@ struct StdIntList {
   double *PairLift;/**<@brief [StdIntList::NPairLift] Coefficient of 
                    pair-lift term, malloc in StdFace_MallocInteractions()
                    and set in StdFace_intr().*/
+  int NPairHopp;/**<@brief Number of pair-hopping term, counted in each lattice file.*/
+  int LPairHopp;/**<@brief Print pairhopp.def or not, set in PrintInteractions().*/
+  int **PHIndx;/**<@brief [StdIntList::NPairLift][2] Site indices of
+               pair-hopping term, malloc in StdFace_MallocInteractions()
+               and set in StdFace_intr().*/
+  double *PairHopp;/**<@brief [StdIntList::NPairLift] Coefficient of
+                   pair-hopping term, malloc in StdFace_MallocInteractions()
+                   and set in StdFace_intr().*/
   int lBoost;
   /*
    Calculation conditions
@@ -207,23 +215,16 @@ struct StdIntList {
   int S2;/**<@brief Total spin |S| of a local spin, input from file.*/
   char outputmode[256];/**<@brief Select amount of correlation function,
                        input from file.*/
-  char CDataFileHead[256];/**<@brief String fron tof the output files,
-                          input from file*/
+  char CDataFileHead[256];/**<@brief Header of the output files.
+                          Input from file*/
   int Sz2;/**<@brief Total Sz, input from file.*/
   int ioutputmode;/**<@brief Switch associated to StdIntList::outputmode*/
   /*
    Wannier90 mode
   */
-  char W90_hr[256];/**<@brief Name of hopping parameter file from wannier90,
-                   input from file.*/
-  char W90_geom[256];/**<@brief Name of geometry file from wannier90 converter,
-                   input from file.*/
-  int W90_nt;/**<@brief Number of transfer in wannier90 HR file.*/
-  int **W90_indx;/**<@brief [StdIntList::W90_nt][5] Hopping index, 
-                 malloc in read_W90().*/
-  double complex *W90_t;/**<@brief [StdIntList::W90_nt] Hopping parameter, 
-                 malloc in read_W90().*/
-  double W90_cutoff;/**<@brief Cutoof for the hopping in wannier90, input from file*/
+  double cutoff_t;/**<@brief Cutoof for the hopping in wannier90, input from file*/
+  double cutoff_u;/**<@brief Cutoof for the Coulomb in wannier90, input from file*/
+  double cutoff_j;/**<@brief Cutoof for the Hund in wannier90, input from file*/
 #if defined(_HPhi)
   /*
   HPhi modpara
@@ -250,18 +251,39 @@ struct StdIntList {
   int **list_6spin_star;/**<@brief */
   int num_pivot;/**<@brief */
   int ishift_nspin;/**<@brief */
-  /*Spectrum*/
+  /*
+  Spectrum
+  */
   char CalcSpec[256];/**<@brief The name of mode for spectrum, input from file.*/
   char SpectrumType[256];/**<@brief The type of mode for spectrum, input from file.*/
   int Nomega;/**<@brief Number of frequencies, input from file.*/
   double OmegaMax;/**<@brief Maximum of frequency for spectrum, input from file.*/
   double OmegaMin;/**<@brief Minimum of frequency for spectrum, input from file.*/
   double OmegaIm;/**<@brief Imaginary part of frequency.*/
-  double SpectrumQL;/**<@brief wavenumver (q-vector) in fractional coordinate*/
-  double SpectrumQW;/**<@brief wavenumver (q-vector) in fractional coordinate*/
-  double SpectrumQH;/**<@brief wavenumver (q-vector) in fractional coordinate*/
+  double SpectrumQ[3];/**<@brief wavenumver (q-vector) in fractional coordinate*/
   int SpectrumBody;/**<@brief one- or two-body excitation, defined from
                    StdIntList::SpectrumType*/
+  /*
+  Time evolution
+  */
+  double dt;/**<@brief Time step*/
+  double tshift;/**<@brief Shift of time-step of laser*/
+  double tdump;/**<@brief Time scale of dumping*/
+  double freq;/**<@brief Frequency of laser*/
+  double Uquench;/**<@brief Quenched on-site potential*/
+  double VecPot[3];/**<@brief Vector potential*/
+  char PumpType[256];/**<@brief The type of pump*/
+  int PumpBody;/**<@brief one- or two-body pumping, defined from
+                   StdIntList::PumpType*/
+  int *npump;/**<@brief [StdIntList::nt] Number of transfer, counted in each lattice file.*/
+  int ***pumpindx;/**<@brief [StdIntList::nt][StdIntList::npump][4] Site/spin indices of
+                  one-body term, malloc in StdFace_MallocInteractions()
+                  and set in StdFace_trans().*/
+  double complex **pump;/**<@brief [StdIntList::nt][StdIntList::npump] Coefficient of
+                        one-body term, malloc in StdFace_MallocInteractions()
+                        and set in StdFace_trans().*/
+  double **At;/**<@brief [StdIntList::nt][3] Vector potential.*/
+  int ExpandCoef;/**<@brief The number of Hamiltonian-vector operation for the time-evolution*/
 #elif defined(_mVMC)
   /*mVMC modpara*/
   char CParaFileHead[256];/**<@brief Header of the optimized wavefunction,

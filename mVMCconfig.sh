@@ -155,10 +155,8 @@ mvmc:
 	cd tool;make -f makefile_tool
 
 userguide:
-	cd doc/jp/;make -f makefile_doc_jp;
-	cd doc/en/;make -f makefile_doc_en;
-	cd doc/fourier/ja; make html latexpdfja
-	cd doc/fourier/en; make html latexpdfja
+	cd doc/jp; make html latexpdfja
+	cd doc/en; make html latexpdfja
 
 clean:
 	cd src/mVMC/; make -f makefile_src clean
@@ -166,10 +164,8 @@ clean:
 
 veryclean:
 	make clean
-	cd doc/jp; make -f makefile_doc_jp clean
-	cd doc/en; make -f makefile_doc_en clean
-	cd doc/fourier/ja; make clean
-	cd doc/fourier/en; make clean
+	cd doc/jp; make clean
+	cd doc/en; make clean
 	rm -f src/make.sys makefile
 EOF
 fi
