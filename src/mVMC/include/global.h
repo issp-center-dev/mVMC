@@ -268,6 +268,7 @@ double complex *PhysCisAjs; /* [NCisAjs] */
 double complex *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */
 double complex *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
 double complex *LocalCisAjs; /* [NCisAjs] */
+double complex *LocalCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
 
 double complex Sztot,Sztot2; /* <Sz>,<Sz^2> */
 

@@ -365,10 +365,11 @@ void SetMemory() {
   /***** Physical Quantity *****/
   if(NVMCCalMode==1){
     PhysCisAjs  = (double complex*)malloc(sizeof(double complex)
-                    *(NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NCisAjs));
+                    *(NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NCisAjs+NCisAjsCktAltDC));
     PhysCisAjsCktAlt   = PhysCisAjs       + NCisAjs;
     PhysCisAjsCktAltDC = PhysCisAjsCktAlt + NCisAjsCktAlt;
     LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
+    LocalCisAjsCktAltDC = LocalCisAjs + NCisAjs;
 
     if(NLanczosMode>0){
       QQQQ = (double complex*)malloc(sizeof(double complex)

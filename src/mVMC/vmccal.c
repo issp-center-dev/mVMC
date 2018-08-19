@@ -68,6 +68,16 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
                           const int nLSHam, const int nCA, const int nCACA,
                           int **cacaIdx);
 
+void calculateQCACAQ_real_alt(double *qcacaq, const double *lslq, const double w,
+                              const int nLSHam, const int nCA, const int nCACA,
+                              const double h1, const double ip,
+                              int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
+
+void calculateQCACAQ_alt(double complex *qcacaq, const double complex *lslq, const double w,
+                         const int nLSHam, const int nCA, const int nCACA,
+                         const double complex h1, const double complex ip,
+                         int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
+
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
   double complex e,ip;
@@ -266,15 +276,19 @@ void VMCMainCal(MPI_Comm comm) {
             
             LSLocalCisAjs_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
             calculateQCAQ_real(QCisAjsQ_real,LSLCisAjs_real,LSLQ_real,w,NLSHam,NCisAjs);
-            calculateQCACAQ_real(QCisAjsCktAltQ_real,LSLCisAjs_real,w,NLSHam,NCisAjs,
-                            NCisAjsCktAltDC, CisAjsCktAltLzIdx);
+            //calculateQCACAQ_real(QCisAjsCktAltQ_real,LSLCisAjs_real,w,NLSHam,NCisAjs,
+            //                NCisAjsCktAltDC, CisAjsCktAltLzIdx);
+            calculateQCACAQ_real_alt(QCisAjsCktAltQ_real,LSLQ_real,w,NLSHam,NCisAjs,
+                                     NCisAjsCktAltDC,creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
             
           }
           else{
             LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
             calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
-            calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
-                            NCisAjsCktAltDC,CisAjsCktAltLzIdx);
+            //calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
+            //                NCisAjsCktAltDC,CisAjsCktAltLzIdx);
+            calculateQCACAQ_alt(QCisAjsCktAltQ,LSLQ,w,NLSHam,NCisAjs,
+                                NCisAjsCktAltDC,e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
           }
           StopTimer(44);
         }
@@ -918,5 +932,67 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
 
   return;
 
+}
+
+void calculateQCACAQ_real_alt(double *qcacaq, const double *lslq, const double w,
+                              const int nLSHam, const int nCA, const int nCACA,
+                              const double h1, const double ip,
+                              int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt) {
+  const int n=nLSHam*nLSHam*nCACA;
+  int rq,rp,ri,rj,rk,rl,s,t,idx;
+  int i,tmp;
+
+# pragma omp for private(i,tmp,idx,rp,rq,ri,rj,rk,rl,s,t)
+  for(i=0;i<n;++i) {
+    idx = i%nCACA;   tmp = i/nCACA;
+    rp = tmp%nLSHam; tmp = tmp/nLSHam;
+    rq = tmp%nLSHam;
+
+    if (rq) {
+      // Calls 2-body routines to evaluate HCACA.
+      ri = CisAjsCktAltDCIdx[idx][0];
+      rj = CisAjsCktAltDCIdx[idx][2];
+      s  = CisAjsCktAltDCIdx[idx][1];
+      rk = CisAjsCktAltDCIdx[idx][4];
+      rl = CisAjsCktAltDCIdx[idx][6];
+      t  = CisAjsCktAltDCIdx[idx][5];
+      qcacaq[i] += w * lslq[rp*nLSHam] * calHCACA_real(ri,rj,rk,rl,s,t,h1,ip,
+                                                       eleIdx,eleCfg,eleNum,eleProjCnt);
+    } else
+      qcacaq[i] += w * lslq[rp*nLSHam] * LocalCisAjsCktAltDC[idx];
+  }
+
+  return;
+}
+
+void calculateQCACAQ_alt(double complex *qcacaq, const double complex *lslq, const double w,
+                         const int nLSHam, const int nCA, const int nCACA,
+                         const double complex h1, const double complex ip,
+                         int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt) {
+  const int n=nLSHam*nLSHam*nCACA;
+  int rq,rp,ri,rj,rk,rl,s,t,idx;
+  int i,tmp;
+
+# pragma omp for private(i,tmp,idx,rp,rq,ri,rj,rk,rl,s,t)
+  for(i=0;i<n;++i) {
+    idx = i%nCACA;   tmp = i/nCACA;
+    rp = tmp%nLSHam; tmp = tmp/nLSHam;
+    rq = tmp%nLSHam;
+
+    if (rq) {
+      // Calls 2-body routines to evaluate HCACA.
+      ri = CisAjsCktAltDCIdx[idx][0];
+      rj = CisAjsCktAltDCIdx[idx][2];
+      s  = CisAjsCktAltDCIdx[idx][1];
+      rk = CisAjsCktAltDCIdx[idx][4];
+      rl = CisAjsCktAltDCIdx[idx][6];
+      t  = CisAjsCktAltDCIdx[idx][5];
+      qcacaq[i] += w * lslq[rp*nLSHam] * calHCACA(ri,rj,rk,rl,s,t,h1,ip,
+                                                  eleIdx,eleCfg,eleNum,eleProjCnt);
+    } else
+      qcacaq[i] += w * lslq[rp*nLSHam] * LocalCisAjsCktAltDC[idx];
+  }
+
+  return;
 }
 #endif
