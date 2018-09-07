@@ -2,7 +2,8 @@
 
 A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
 
-====
+### What is mVMC ?
+
 mVMC (many-variable Variational Monte Carlo method)
 is a software for performing the highly-accurate 
 variational Monte Carlo calculations
