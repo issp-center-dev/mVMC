@@ -46,8 +46,9 @@ GNU General Public License version 3 ([GPL v3](http://www.gnu.org/licenses/gpl-3
 
 The mVMC package is developed based on the [mVMC-mini](https://github.com/fiber-miniapp/mVMC-mini) program. The license of mVMC-mini is "The BSD 3-Clause License".
 
-We hope that you cite the following URL when you publish the results using mVMC (after writing the paper for mVMC, we will replace the URL to the paper's reference):  
-URL: [https://github.com/issp-center-dev/mVMC](https://github.com/issp-center-dev/mVMC)
+We would appreciate if you cite the following article in your research with mVMC:  
+mVMC - Open-source software for many-variable variational Monte Carlo method, Takahiro Misawa, Satoshi Morita, Kazuyoshi Yoshimi, Mitsuaki Kawamura, Yuichi Motoyama, Kota Ido, Takahiro Ohgoe, Masatoshi Imada, Takeo Kato, [arXiv:1711.11418]
+(https://arxiv.org/abs/1711.11418)
 
 ## Tutorials
 Lecture notes and sample scripts used in Hands-on
