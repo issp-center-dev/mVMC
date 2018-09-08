@@ -20,17 +20,21 @@ A broad spectrum of users including experimental scientists is cordially welcome
 
 
 ### Methods
+
 many-variable variational Monte Carlo method
 
 
 ### Target models
+
 Hubbard model, Heisenberg model, Kondo lattice model, multi-orbital Hubbard model
 
 ### Available physical quantities
+
 specific heat, susceptibility, ground state energy, structure factors
 
 
 ## Requirement
+
 - C compiler (intel, Fujitsu, GNU, etc. ) 
 - ScaLAPACK library (intel MKL, Fujitsu, ATLAS, etc.) 
 - MPI library
@@ -47,12 +51,13 @@ GNU General Public License version 3 ([GPL v3](http://www.gnu.org/licenses/gpl-3
 The mVMC package is developed based on the [mVMC-mini](https://github.com/fiber-miniapp/mVMC-mini) program. The license of mVMC-mini is "The BSD 3-Clause License".
 
 We would appreciate if you cite the following article in your research with mVMC:  
-mVMC - Open-source software for many-variable variational Monte Carlo method, Takahiro Misawa, Satoshi Morita, Kazuyoshi Yoshimi, Mitsuaki Kawamura, Yuichi Motoyama, Kota Ido, Takahiro Ohgoe, Masatoshi Imada, Takeo Kato, [arXiv:1711.11418]
-(https://arxiv.org/abs/1711.11418)
+mVMC - Open-source software for many-variable variational Monte Carlo method, Takahiro Misawa, Satoshi Morita, Kazuyoshi Yoshimi, Mitsuaki Kawamura, Yuichi Motoyama, Kota Ido, Takahiro Ohgoe, Masatoshi Imada, Takeo Kato, [arXiv:1711.11418](https://arxiv.org/abs/1711.11418).
 
 ## Tutorials
+
 Lecture notes and sample scripts used in Hands-on
 are available at [mVMC-tutorial](https://github.com/issp-center-dev/mVMC-tutorial)
 
 ## Authors
+
 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Yuichi Motoyama, Mitsuaki Kawamura, Kazuyoshi Yoshimi, Takeo Kato, Masatoshi Imada.
