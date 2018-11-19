@@ -271,8 +271,14 @@ int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, i
   for (i = 0; i < Ncacadc; i++) {
     isite1 = cacaDCIdx[i][0] + cacaDCIdx[i][1] * Ns;
     isite2 = cacaDCIdx[i][2] + cacaDCIdx[i][3] * Ns;
+    /*
     if (iFlgOneBodyG[isite1][isite2] == -1) {
       iFlgOneBodyG[isite1][isite2] = icount;
+      icount++;
+    }
+     */
+    if (iFlgOneBodyG[isite1][isite2] == -1) {
+      iFlgOneBodyG[isite2][isite1] = icount;
       icount++;
     }
     isite1 = cacaDCIdx[i][4] + cacaDCIdx[i][5] * Ns;
@@ -1999,8 +2005,12 @@ int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int **ArrayIdxTwoBodyGLz, int **Ar
     }
 
     if (_NLanczosMode > 1) { //Calc TwoBodyG by Lanczos method
+      /*
       isite1 = x0 + x1 * Nsite;
       isite2 = x2 + x3 * Nsite;
+      */
+      isite1 = x2 + x3 * Nsite;
+      isite2 = x0 + x1 * Nsite;
       idxLanczos = ArrayToIdx[isite1][isite2];
       ArrayIdxOneBodyG[idxLanczos][0] = x0;
       ArrayIdxOneBodyG[idxLanczos][1] = x1;
