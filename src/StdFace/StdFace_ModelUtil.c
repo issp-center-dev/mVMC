@@ -28,6 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mpi.h>
 #endif
 
+
+
 /**
 @brief MPI Abortation wrapper
 @author Mitsuaki Kawamura (The University of Tokyo)

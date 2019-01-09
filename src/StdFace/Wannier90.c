@@ -25,6 +25,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 #include <complex.h>
 #include <string.h>
+#include "setmemory.h"
+
 /**
 @brief Read Geometry file for wannier90
 @author Mitsuaki Kawamura (The University of Tokyo)
@@ -55,8 +57,7 @@ static void geometry_W90(
   ierr = fscanf(fp, "%d", &StdI->NsiteUC);
   fprintf(stdout, "    Number of Correlated Sites = %d\n", StdI->NsiteUC);
 
-  StdI->tau = (double **)malloc(sizeof(double*) * StdI->NsiteUC);
-  for (ii = 0; ii < StdI->NsiteUC; ii++) StdI->tau[ii] = (double *)malloc(sizeof(double) * 3);
+  StdI->tau = d_2d_allocate(StdI->NsiteUC, 3, StdI->tau);
 
   for (isite = 0; isite < StdI->NsiteUC; isite++)
     ierr = fscanf(fp, "%lf%lf%lf", &StdI->tau[isite][0], &StdI->tau[isite][1], &StdI->tau[isite][2]);
@@ -73,11 +74,13 @@ static void geometry_W90(
 /**
 @brief Read Wannier90 hamiltonian file (*_hr) and compute the number of effective term
 @author Mitsuaki Kawamura (The University of Tokyo)
+@author Kazuyoshi Yoshimi (The University of Tokyo)
 */
 static int read_W90_query(
   struct StdIntList *StdI,//!<[inout]
   char *filename,//!<[in] Input file name
-  double cutoff//!<[in] Threshold for the Hamiltonian 
+  double cutoff,//!<[in] Threshold for the Hamiltonian
+  double lambda//!<[in] Scale factor
 ) 
 {
   FILE *fp;
@@ -103,17 +106,11 @@ static int read_W90_query(
   fprintf(stdout, "             Number of Wannier = %d\n", nWan);
   fprintf(stdout, "   Number of Wigner-Seitz Cell = %d\n", nWSC);
   /*
-   Allocation of matgrix element and its index
+   Allocation of matrix elements and its index
   */
-  Mat_tot = (double complex ***)malloc(sizeof(double complex **) * nWSC);
-  indx_tot = (int **)malloc(sizeof(int*) * nWSC);
-  for (iWSC = 0; iWSC < nWSC; iWSC++) {
-    Mat_tot[iWSC] = (double complex **)malloc(sizeof(double complex *) * nWan);
-    indx_tot[iWSC] = (int *)malloc(sizeof(int) * 3);
-    for (iWan = 0; iWan < nWan; iWan++) {
-      Mat_tot[iWSC][iWan] = (double complex *)malloc(sizeof(double complex) * nWan);
-    }
-  }
+  Mat_tot = cd_3d_allocate(nWSC, nWan, nWan, Mat_tot);
+  indx_tot = i_2d_allocate(nWSC, 3, indx_tot);
+
   /*
   Read body
   */
@@ -124,8 +121,8 @@ static int read_W90_query(
           &indx_tot[iWSC][0], &indx_tot[iWSC][1], &indx_tot[iWSC][2], &iWan0, &jWan0,
           &dtmp[0], &dtmp[1]);
         if(iWan0 <= StdI->NsiteUC && jWan0 <= StdI->NsiteUC)
-          Mat_tot[iWSC][iWan0 - 1][jWan0 - 1] = dtmp[0] + I * dtmp[1];
-      }
+          Mat_tot[iWSC][iWan0 - 1][jWan0 - 1] = lambda*(dtmp[0] + I * dtmp[1]);
+        }
     }
     /**@brief
     (1) Apply inversion symmetry and delete duplication
@@ -153,7 +150,7 @@ static int read_W90_query(
   }/*for (iWSC = 0; iWSC < nWSC; iWSC++)*/
   fclose(fp);
   /**@brief
-  (3-1)  Compute the number of terms lerger than cut-off.
+  (3-1)  Compute the number of terms larger than cut-off.
   */
   fprintf(stdout, "\n      EFFECTIVE terms:\n");
   fprintf(stdout, "           R0   R1   R2 band_i band_f Hamiltonian\n");
@@ -172,13 +169,6 @@ static int read_W90_query(
   }
   fprintf(stdout, "      Total number of EFFECTIVE term = %d\n", nMat);
 
-  for (iWSC = 0; iWSC < nWSC; iWSC++) {
-    for (iWan = 0; iWan < nWan; iWan++) {
-      free(Mat_tot[iWSC][iWan]);
-    }
-    free(Mat_tot[iWSC]);
-    free(indx_tot[iWSC]);
-  }
   free(Mat_tot);
   free(indx_tot);
 
@@ -217,15 +207,9 @@ static void read_W90(
   /*
   Malloc Matrix elements and their indices
   */
-  Mat_tot = (double complex ***)malloc(sizeof(double complex **) * nWSC);
-  indx_tot = (int **)malloc(sizeof(int*) * nWSC);
-  for (iWSC = 0; iWSC < nWSC; iWSC++) {
-    Mat_tot[iWSC] = (double complex **)malloc(sizeof(double complex *) * nWan);
-    indx_tot[iWSC] = (int *)malloc(sizeof(int) * 3);
-    for (iWan = 0; iWan < nWan; iWan++) {
-      Mat_tot[iWSC][iWan] = (double complex *)malloc(sizeof(double complex) * nWan);
-    }
-  }
+  Mat_tot = cd_3d_allocate(nWSC, nWan, nWan, Mat_tot);
+  indx_tot = i_2d_allocate(nWSC, 3, indx_tot);
+
   /*
   Read body
   */
@@ -284,13 +268,6 @@ static void read_W90(
     }/*for (iWan = 0; iWan < StdI->NsiteUC; iWan++)*/
   }/*for (iWSC = 0; iWSC < nWSC; iWSC++)*/
 
-  for (iWSC = 0; iWSC < nWSC; iWSC++) {
-    for (iWan = 0; iWan < nWan; iWan++) {
-      free(Mat_tot[iWSC][iWan]);
-    }
-    free(Mat_tot[iWSC]);
-    free(indx_tot[iWSC]);
-  }
   free(Mat_tot);
   free(indx_tot);
 }/*static int read_W90(struct StdIntList *StdI, char *model)*//**
@@ -324,16 +301,22 @@ void StdFace_Wannier90(
   StdFace_PrintVal_d("phase1", &StdI->phase[1], 0.0);
   StdFace_PrintVal_d("phase2", &StdI->phase[2], 0.0);
   StdFace_InitSite(StdI, fp, 3);
+
+
+  StdFace_PrintVal_d("cutoff_r_t", &StdI->cutoff_r_t, 0);
+  StdFace_PrintVal_d("cutoff_r_j", &StdI->cutoff_r_j, 0);
+  StdFace_PrintVal_d("cutoff_r_u", &StdI->cutoff_r_u, 0);
+  StdFace_PrintVal_d("lambda", &StdI->lambda, 1.0);
+
   /*
   Read Hopping
   */
   fprintf(stdout, "\n  @ Wannier90 hopping \n\n");
   StdFace_PrintVal_d("cutoff_t", &StdI->cutoff_t, 1.0e-8);
   sprintf(filename, "%s_hr.dat", StdI->CDataFileHead);
-  n_t = read_W90_query(StdI, filename, StdI->cutoff_t);
+  n_t = read_W90_query(StdI, filename, StdI->cutoff_t, 1.0);
   W90_t = (double complex *)malloc(sizeof(double complex) * n_t);
-  t_indx = (int **)malloc(sizeof(int*) * n_t);
-  for (ii = 0; ii < n_t; ii++) t_indx[ii] = (int *)malloc(sizeof(int) * 5);
+  t_indx = i_2d_allocate(n_t, 5, t_indx);
   read_W90(StdI, filename, StdI->cutoff_t, W90_t, t_indx);
   /*
   Read Coulomb
@@ -341,10 +324,9 @@ void StdFace_Wannier90(
   fprintf(stdout, "\n  @ Wannier90 Coulomb \n\n");
   StdFace_PrintVal_d("cutoff_u", &StdI->cutoff_u, 1.0e-8);
   sprintf(filename, "%s_ur.dat", StdI->CDataFileHead);
-  n_u = read_W90_query(StdI, filename, StdI->cutoff_u);
+  n_u = read_W90_query(StdI, filename, StdI->cutoff_u, StdI->lambda);
   W90_u = (double complex *)malloc(sizeof(double complex) * n_u);
-  u_indx = (int **)malloc(sizeof(int*) * n_u);
-  for (ii = 0; ii < n_u; ii++) u_indx[ii] = (int *)malloc(sizeof(int) * 5);
+  u_indx = i_2d_allocate(n_u, 5, u_indx);
   read_W90(StdI, filename, StdI->cutoff_u, W90_u, u_indx);
   /*
   Read Hund
@@ -352,10 +334,9 @@ void StdFace_Wannier90(
   fprintf(stdout, "\n  @ Wannier90 Hund \n\n");
   StdFace_PrintVal_d("cutoff_j", &StdI->cutoff_j, 1.0e-8);
   sprintf(filename, "%s_jr.dat", StdI->CDataFileHead);
-  n_j = read_W90_query(StdI, filename, StdI->cutoff_j);
+  n_j = read_W90_query(StdI, filename, StdI->cutoff_j, StdI->lambda);
   W90_j = (double complex *)malloc(sizeof(double complex) * n_j);
-  j_indx = (int **)malloc(sizeof(int*) * n_j);
-  for (ii = 0; ii < n_j; ii++) j_indx[ii] = (int *)malloc(sizeof(int) * 5);
+  j_indx = i_2d_allocate(n_j, 5, j_indx);
   read_W90(StdI, filename, StdI->cutoff_j, W90_j, j_indx);
   /**@brief
   (2) check & store parameters of Hamiltonian
@@ -545,13 +526,10 @@ void StdFace_Wannier90(
   StdFace_PrintXSF(StdI);
   StdFace_PrintGeometry(StdI);
 
-  for (it = 0; it < n_t; it++) free(t_indx[it]);
   free(t_indx);
   free(W90_t);
-  for (it = 0; it < n_u; it++) free(u_indx[it]);
   free(u_indx);
   free(W90_u); 
-  for (it = 0; it < n_j; it++) free(j_indx[it]);
   free(j_indx);
   free(W90_j); 
   if (strcmp(StdI->model, "spin") == 0) free(Uspin);

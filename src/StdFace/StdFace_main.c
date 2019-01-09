@@ -798,15 +798,15 @@ static void PrintGutzwiller(struct StdIntList *StdI)
 }/*static void PrintGutzwiller*/
 #endif
 /**
-@brief Clear grobal variables in the standard mode
-All variables refered in this function is modified.
+@brief Clear global variables in the standard mode
+All variables referred in this function is modified.
 @author Mitsuaki Kawamura (The University of Tokyo)
 */
 static void StdFace_ResetVals(struct StdIntList *StdI) {
   int i, j;
   double NaN_d;
   /*
-  NaN is used for not inputed variable
+  NaN is used for not inputted variable
   */
   NaN_d = 0.0 / 0.0;
   StdI->NaN_i = 2147483647;
@@ -880,9 +880,13 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   strcpy(StdI->lattice, "****\0");
   strcpy(StdI->outputmode, "****\0");
   strcpy(StdI->CDataFileHead, "****\0");
+  StdI->cutoff_r_t = NaN_d;
+  StdI->cutoff_r_u = NaN_d;
+  StdI->cutoff_r_j = NaN_d;
   StdI->cutoff_t = NaN_d;
   StdI->cutoff_u = NaN_d;
   StdI->cutoff_j = NaN_d;
+  StdI->lambda = NaN_d;
 #if defined(_HPhi)
   StdI->LargeValue = NaN_d;
   StdI->OmegaMax = NaN_d;
@@ -2227,9 +2231,13 @@ void StdFace_main(
     else if (strcmp(keyword, "a2h") == 0) StoreWithCheckDup_i(keyword, value, &StdI->box[2][2]);
     else if (strcmp(keyword, "a2l") == 0) StoreWithCheckDup_i(keyword, value, &StdI->box[2][1]);
     else if (strcmp(keyword, "a2w") == 0) StoreWithCheckDup_i(keyword, value, &StdI->box[2][0]);
+    else if (strcmp(keyword, "cutoff_r_t") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_r_t);
+    else if (strcmp(keyword, "cutoff_r_j") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_r_j);
+    else if (strcmp(keyword, "cutoff_r_u") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_r_u);
     else if (strcmp(keyword, "cutoff_j") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_j);
     else if (strcmp(keyword, "cutoff_t") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_t);
     else if (strcmp(keyword, "cutoff_u") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_u);
+    else if (strcmp(keyword, "lambda") == 0) StoreWithCheckDup_d(keyword, value, &StdI->lambda);
     else if (strcmp(keyword, "d") == 0) StoreWithCheckDup_d(keyword, value, &StdI->D[2][2]);
     else if (strcmp(keyword, "gamma") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Gamma);
     else if (strcmp(keyword, "h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->h);
