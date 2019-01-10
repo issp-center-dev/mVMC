@@ -1154,7 +1154,6 @@ static void PrintLocSpin(struct StdIntList *StdI) {
 static void PrintTrans(struct StdIntList *StdI){
   FILE *fp;
   int jtrans, ktrans, ntrans0;
-
   for (jtrans = 0; jtrans < StdI->ntrans; jtrans++){
     for (ktrans = jtrans + 1; ktrans < StdI->ntrans; ktrans++){
       if (StdI->transindx[jtrans][0] == StdI->transindx[ktrans][0]

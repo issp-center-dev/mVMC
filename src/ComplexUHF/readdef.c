@@ -153,7 +153,6 @@ int ReadDefFileNInt(
 	fprintf(stdout, "  Read File %s .\n", xNameListFile);
 	if (GetFileName(xNameListFile, cFileNameListFile) != 0) {
 		fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
-		//	fprintf(stdout, " Error:  Read File %s .\n", xNameListFile);
 		return (-1);
 	}
 
@@ -353,6 +352,7 @@ int ReadDefFileNInt(
   //CheckGeneral Orbital
   if(X->TwoSz !=0){
     if(X->iFlgOrbitalGeneral!=1){
+      fprintf(stderr, "Error:2Sz=%d\n", X->TwoSz);
       fprintf(stderr, "Error: OrbitalParallel or OrbitalGeneral files must be needed when 2Sz !=0 (in modpara.def).\n");
       return -1;
     }
@@ -882,21 +882,24 @@ int GetFileName(
 		}
 		/*!< Check KW */
 		if( CheckKW(ctmpKW, cKWListOfFileNameList, KWIdxInt_end, &itmpKWidx)!=0 ){
-
-			fprintf(stderr, "Error: Wrong keywords '%s' in %s.\n", ctmpKW, cFileListNameFile);
+			fprintf(stderr, "Warning: Wrong keywords '%s' in %s.\n", ctmpKW, cFileListNameFile);
+			/*
 			fprintf(stderr, "%s", "Choose Keywords as follows: \n");
 			for(i=0; i<KWIdxInt_end;i++){
 				fprintf(stderr, "%s \n", cKWListOfFileNameList[i]);
 			}
 			fclose(fplist);
 			return(-1);
-		}
-		/*!< Check cFileNameList to prevent from double registering the file name */
-		if(strcmp(cFileNameList[itmpKWidx], "") !=0){
-			fprintf(stderr, "Error: Same keywords exist in %s.\n", cFileListNameFile);
-			fclose(fplist);
-			return(-1);
-		}
+			*/
+        }
+        else {
+            /*!< Check cFileNameList to prevent from double registering the file name */
+            if (strcmp(cFileNameList[itmpKWidx], "") != 0) {
+                fprintf(stderr, "Error: Same keywords exist in %s.\n", cFileListNameFile);
+                fclose(fplist);
+                return (-1);
+            }
+        }
 		/*!< Copy FileName */
 		strcpy(cFileNameList[itmpKWidx], ctmpFileName);
 	}

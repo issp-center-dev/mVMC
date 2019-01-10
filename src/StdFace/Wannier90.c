@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 #include <complex.h>
 #include <string.h>
-#include "setmemory.h"
+#include "../common/setmemory.h"
 
 /**
 @brief Read Geometry file for wannier90
@@ -57,7 +57,7 @@ static void geometry_W90(
   ierr = fscanf(fp, "%d", &StdI->NsiteUC);
   fprintf(stdout, "    Number of Correlated Sites = %d\n", StdI->NsiteUC);
 
-  StdI->tau = d_2d_allocate(StdI->NsiteUC, 3, StdI->tau);
+  StdI->tau = d_2d_allocate(StdI->NsiteUC, 3);
 
   for (isite = 0; isite < StdI->NsiteUC; isite++)
     ierr = fscanf(fp, "%lf%lf%lf", &StdI->tau[isite][0], &StdI->tau[isite][1], &StdI->tau[isite][2]);
@@ -108,8 +108,10 @@ static int read_W90_query(
   /*
    Allocation of matrix elements and its index
   */
-  Mat_tot = cd_3d_allocate(nWSC, nWan, nWan, Mat_tot);
-  indx_tot = i_2d_allocate(nWSC, 3, indx_tot);
+  //Mat_tot = cd_3d_allocate(nWSC, nWan, nWan, Mat_tot);
+  Mat_tot = cd_3d_allocate(nWSC, nWan, nWan);
+  //indx_tot = i_2d_allocate(nWSC, 3, indx_tot);
+  indx_tot = i_2d_allocate(nWSC, 3);
 
   /*
   Read body
@@ -169,8 +171,8 @@ static int read_W90_query(
   }
   fprintf(stdout, "      Total number of EFFECTIVE term = %d\n", nMat);
 
-  free(Mat_tot);
-  free(indx_tot);
+  free_cd_3d_allocate(Mat_tot);
+  free_i_2d_allocate(indx_tot);
 
   return nMat;
 }/*static int read_W90_query(struct StdIntList *StdI, char *model)*/
@@ -207,9 +209,9 @@ static void read_W90(
   /*
   Malloc Matrix elements and their indices
   */
-  Mat_tot = cd_3d_allocate(nWSC, nWan, nWan, Mat_tot);
-  indx_tot = i_2d_allocate(nWSC, 3, indx_tot);
-
+  Mat_tot = cd_3d_allocate(nWSC, nWan, nWan);
+  //indx_tot = i_2d_allocate(nWSC, 3, indx_tot);
+  indx_tot = i_2d_allocate(nWSC, 3);
   /*
   Read body
   */
@@ -268,8 +270,8 @@ static void read_W90(
     }/*for (iWan = 0; iWan < StdI->NsiteUC; iWan++)*/
   }/*for (iWSC = 0; iWSC < nWSC; iWSC++)*/
 
-  free(Mat_tot);
-  free(indx_tot);
+  free_cd_3d_allocate(Mat_tot);
+  free_i_2d_allocate(indx_tot);
 }/*static int read_W90(struct StdIntList *StdI, char *model)*//**
 @brief Setup a Hamiltonian for the Wannier90 *_hr.dat
 @author Mitsuaki Kawamura (The University of Tokyo)
@@ -316,7 +318,8 @@ void StdFace_Wannier90(
   sprintf(filename, "%s_hr.dat", StdI->CDataFileHead);
   n_t = read_W90_query(StdI, filename, StdI->cutoff_t, 1.0);
   W90_t = (double complex *)malloc(sizeof(double complex) * n_t);
-  t_indx = i_2d_allocate(n_t, 5, t_indx);
+  //t_indx = i_2d_allocate(n_t, 5, t_indx);
+  t_indx = i_2d_allocate(n_t, 5);
   read_W90(StdI, filename, StdI->cutoff_t, W90_t, t_indx);
   /*
   Read Coulomb
@@ -326,7 +329,8 @@ void StdFace_Wannier90(
   sprintf(filename, "%s_ur.dat", StdI->CDataFileHead);
   n_u = read_W90_query(StdI, filename, StdI->cutoff_u, StdI->lambda);
   W90_u = (double complex *)malloc(sizeof(double complex) * n_u);
-  u_indx = i_2d_allocate(n_u, 5, u_indx);
+  //u_indx = i_2d_allocate(n_u, 5, u_indx);
+  u_indx = i_2d_allocate(n_u, 5);
   read_W90(StdI, filename, StdI->cutoff_u, W90_u, u_indx);
   /*
   Read Hund
@@ -336,7 +340,8 @@ void StdFace_Wannier90(
   sprintf(filename, "%s_jr.dat", StdI->CDataFileHead);
   n_j = read_W90_query(StdI, filename, StdI->cutoff_j, StdI->lambda);
   W90_j = (double complex *)malloc(sizeof(double complex) * n_j);
-  j_indx = i_2d_allocate(n_j, 5, j_indx);
+  //j_indx = i_2d_allocate(n_j, 5, j_indx);
+  j_indx = i_2d_allocate(n_j, 5);
   read_W90(StdI, filename, StdI->cutoff_j, W90_j, j_indx);
   /**@brief
   (2) check & store parameters of Hamiltonian
@@ -526,12 +531,12 @@ void StdFace_Wannier90(
   StdFace_PrintXSF(StdI);
   StdFace_PrintGeometry(StdI);
 
-  free(t_indx);
+  free_i_2d_allocate(t_indx);
   free(W90_t);
-  free(u_indx);
-  free(W90_u); 
-  free(j_indx);
-  free(W90_j); 
+  free_i_2d_allocate(u_indx);
+  free(W90_u);
+  free_i_2d_allocate(j_indx);
+  free(W90_j);
   if (strcmp(StdI->model, "spin") == 0) free(Uspin);
 
 }/*void StdFace_Wannier90*/

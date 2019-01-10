@@ -20,8 +20,9 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see http://www.gnu.org/licenses/. 
 */
 #include <matrixlapack.h>
+#include "../common/setmemory.h"
 #include "diag.h"
-#include "mfmemory.c"
+//#include "mfmemory.c"
 
 void diag(struct BindStruct *X) {
 
@@ -33,9 +34,13 @@ void diag(struct BindStruct *X) {
 
 
   xMsize = X->Def.Nsite;
-  c_malloc2(tmp_mat, 2 * xMsize, 2 * xMsize);
-  c_malloc2(vec, 2 * xMsize, 2 * xMsize);
-  d_malloc1(r, 2 * xMsize);
+
+  tmp_mat = cd_2d_allocate(2 * xMsize, 2 * xMsize);
+  vec = cd_2d_allocate(2 * xMsize, 2 * xMsize);
+  r = d_1d_allocate(2 * xMsize);
+  //c_malloc2(tmp_mat, 2 * xMsize, 2 * xMsize);
+  //c_malloc2(vec, 2 * xMsize, 2 * xMsize);
+  //d_malloc1(r, 2 * xMsize);
 
   for (int_i = 0; int_i < 2 * xMsize; int_i++) {
     for (int_j = 0; int_j < 2 * xMsize; int_j++) {
@@ -70,7 +75,7 @@ void diag(struct BindStruct *X) {
     }
   }
 //	exit(1);
-  c_free2(tmp_mat, 2 * xMsize, 2 * xMsize);
-  c_free2(vec, 2 * xMsize, 2 * xMsize);
-  d_free1(r, 2 * xMsize);
+  free_cd_2d_allocate(tmp_mat);
+  free_cd_2d_allocate(vec);
+  free_d_1d_allocate(r);
 }

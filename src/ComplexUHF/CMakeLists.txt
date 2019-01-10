@@ -6,7 +6,7 @@ if(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 
 include_directories(include)
-
+include_directories(../common)
 set(SOURCES_UHF
         UHFmain.c output.c cal_energy.c green.c makeham.c diag.c initial.c matrixlapack.c readdef.c
  )
