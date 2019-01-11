@@ -31,7 +31,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 
 #include "Def.h"
-#include "mfmemory.c"
 #include "matrixlapack.h"
 #include "readdef.h"
 #include "initial.h"

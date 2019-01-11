@@ -31,7 +31,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 /*=================================================================================================*/
 #include "matrixlapack.h"
 #include <stdlib.h>
-#include "mfmemory.c"
 
 int dgetrf_(int *m, int *n, double *a, int *lda, int *ipiv, int *info);
 int dgetri_(int *n, double *a, int *lda, int *ipiv, double *work, int *lwork, int *info);

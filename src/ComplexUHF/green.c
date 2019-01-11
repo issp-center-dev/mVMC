@@ -21,20 +21,18 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 #include "green.h"
 #include "matrixlapack.h"
-#include "mfmemory.c"
+#include "../common/setmemory.h"
 
 void green(struct BindStruct *X) {
 
   double complex **R_Mat;
   int int_i, int_j;
-  int mfint[7], xMsize, Ne;
-
-  //   printf("OK \n");
+  int  xMsize, Ne;
 
   xMsize = X->Def.Nsite;
   Ne = X->Def.Ne;
 
-  c_malloc2(R_Mat, 2 * xMsize, 2 * xMsize);
+  R_Mat = cd_2d_allocate(2 * xMsize, 2 * xMsize);
 
   for (int_i = 0; int_i < 2 * xMsize; int_i++) {
     for (int_j = 0; int_j < 2 * xMsize; int_j++) {
@@ -51,5 +49,5 @@ void green(struct BindStruct *X) {
       //fprintf(stdout, "DEBUG: X->Large.G[%d][%d]=%lf, %lf \n", int_i, int_j,creal(X->Large.G[int_i][int_j]), cimag(X->Large.G[int_i][int_j]));
     }
   }
-  c_free2(R_Mat, 2 * xMsize, 2 * xMsize);
+  free_cd_2d_allocate(R_Mat);
 }

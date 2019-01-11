@@ -20,9 +20,9 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see http://www.gnu.org/licenses/. 
 */
 #include "output.h"
-#include "mfmemory.c"
 #include "SFMT.h"
 #include <matrixlapack.h>
+#include "../common/setmemory.h"
 
 int MakeOrbitalFile(struct BindStruct *X);
 void cal_cisajs(struct BindStruct *X);
@@ -126,25 +126,22 @@ int MakeOrbitalFile(struct BindStruct *X){
   
   int *CountOrbital;
 /*this part only for anti-parallel*/
-  int Orbitalidx;
   int int_i,int_j,int_k,int_l,xMsize;
   double complex **tmp_mat,**vec,**tmp_SLT_U,**tmp_SLT_D,**AP_UHF_fij;
   double complex tmp;
   double *r;
-  char fileName[256];
-  int ini,fin,tmp_i;
 
 /*this part only for anti-parallel*/
 //[s] for anti-pararell, rediag
   if(X->Def.NOrbitalIdx>0){/*[s]X->Def.NOrbitalIdx>0 */
     if(X->Def.OrbitalOutputMode==1){/*[s]X->Def.OrbitalOutputMode==1 */
-      xMsize = X->Def.Nsite;  
-      c_malloc2(tmp_mat,xMsize,xMsize);
-      c_malloc2(vec,xMsize,xMsize);
-      c_malloc2(tmp_SLT_U,xMsize,xMsize);
-      c_malloc2(tmp_SLT_D,xMsize,xMsize);
-      c_malloc2(AP_UHF_fij,xMsize,xMsize);
-      d_malloc1(r,xMsize);
+      xMsize = X->Def.Nsite;
+      tmp_mat = cd_2d_allocate(xMsize,xMsize);
+      vec = cd_2d_allocate(xMsize,xMsize);
+      tmp_SLT_D = cd_2d_allocate(xMsize,xMsize);
+      tmp_SLT_U = cd_2d_allocate(xMsize,xMsize);
+      AP_UHF_fij = cd_2d_allocate(xMsize,xMsize);
+      r = d_1d_allocate(xMsize);
       for(int_l = 0; int_l < xMsize; int_l++){
         for(int_k = 0; int_k < xMsize; int_k++){
           tmp_SLT_U[int_l][int_k] = 0.0;
@@ -186,16 +183,22 @@ int MakeOrbitalFile(struct BindStruct *X){
           AP_UHF_fij[int_i][int_j] = tmp;
         }
       }
-  
-      c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
-      i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
+
+      ParamOrbital = cd_1d_allocate(X->Def.NOrbitalIdx);
+      CountOrbital = i_1d_allocate(X->Def.NOrbitalIdx);
       OutputAntiParallel_2(X,AP_UHF_fij,ParamOrbital,CountOrbital);
-      c_free1(ParamOrbital, X->Def.NOrbitalIdx);
-      i_free1(CountOrbital, X->Def.NOrbitalIdx);
+      free_cd_1d_allocate(ParamOrbital);
+      free_i_1d_allocate(CountOrbital);
+      free_cd_2d_allocate(tmp_mat);
+      free_cd_2d_allocate(vec);
+      free_cd_2d_allocate(tmp_SLT_D);
+      free_cd_2d_allocate(tmp_SLT_U);
+      free_cd_2d_allocate(AP_UHF_fij);
+      free_d_1d_allocate(r);
     }/*[s]X->Def.OrbitalOutputMode==1 */
 //[e] for anti-pararell
     else{
-      c_malloc2(UHF_Fij, X->Def.Nsite*2, X->Def.Nsite*2);
+      UHF_Fij = cd_2d_allocate(X->Def.Nsite*2, X->Def.Nsite*2);
       for(ispin=0; ispin<2; ispin++){
         for(jspin=0; jspin<2; jspin++){
           for(i=0;i< X->Def.Nsite;i++){
@@ -212,26 +215,26 @@ int MakeOrbitalFile(struct BindStruct *X){
       }
       //printf(" %d %d %d \n",X->Def.NOrbitalAP,X->Def.NOrbitalP,X->Def.NOrbitalIdx);
       if(X->Def.OrbitalOutputMode==2){ // AP+P
-        c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
-        i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
+          ParamOrbital = cd_1d_allocate(X->Def.NOrbitalIdx);
+          CountOrbital = i_1d_allocate(X->Def.NOrbitalIdx);
 //
         OutputAntiParallel(X,UHF_Fij,ParamOrbital,CountOrbital);
         if(X->Def.OrbitalOutputMode==2){
           OutputParallel(X,UHF_Fij,ParamOrbital,CountOrbital);
         }
 //
-        c_free1(ParamOrbital, X->Def.NOrbitalIdx);
-        i_free1(CountOrbital, X->Def.NOrbitalIdx);
+        free_cd_1d_allocate(ParamOrbital);
+        free_i_1d_allocate(CountOrbital);
       }else if(X->Def.OrbitalOutputMode==0){ // Only General
-        c_malloc1(ParamOrbital, X->Def.NOrbitalIdx);
-        i_malloc1(CountOrbital, X->Def.NOrbitalIdx);
+          ParamOrbital = cd_1d_allocate(X->Def.NOrbitalIdx);
+          CountOrbital = i_1d_allocate(X->Def.NOrbitalIdx);
 //
         OutputGeneral(X,UHF_Fij,ParamOrbital,CountOrbital);
 //
-        c_free1(ParamOrbital, X->Def.NOrbitalIdx);
-        i_free1(CountOrbital, X->Def.NOrbitalIdx);
+          free_cd_1d_allocate(ParamOrbital);
+          free_i_1d_allocate(CountOrbital);
       }
-      c_free2(UHF_Fij, X->Def.Nsite * 2, X->Def.Nsite * 2);
+      free_cd_2d_allocate(UHF_Fij);
     }
   }/*[e]X->Def.NOrbitalIdx>0 */
   return 0;

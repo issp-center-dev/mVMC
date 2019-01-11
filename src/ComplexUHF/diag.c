@@ -30,7 +30,7 @@ void diag(struct BindStruct *X) {
   double *r;
   double complex **tmp_mat, **vec;
   //double complex tmp_mlt;
-  int mfint[7], xMsize;
+  int xMsize;
 
 
   xMsize = X->Def.Nsite;
@@ -38,9 +38,6 @@ void diag(struct BindStruct *X) {
   tmp_mat = cd_2d_allocate(2 * xMsize, 2 * xMsize);
   vec = cd_2d_allocate(2 * xMsize, 2 * xMsize);
   r = d_1d_allocate(2 * xMsize);
-  //c_malloc2(tmp_mat, 2 * xMsize, 2 * xMsize);
-  //c_malloc2(vec, 2 * xMsize, 2 * xMsize);
-  //d_malloc1(r, 2 * xMsize);
 
   for (int_i = 0; int_i < 2 * xMsize; int_i++) {
     for (int_j = 0; int_j < 2 * xMsize; int_j++) {
