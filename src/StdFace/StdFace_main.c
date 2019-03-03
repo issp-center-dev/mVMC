@@ -403,7 +403,7 @@ static void PrintExcitation(struct StdIntList *StdI) {
     fprintf(fp, "=============================================\n");
     for (isite = 0; isite < StdI->nsite; isite++) {
       for (ispin = 0; ispin < NumOp; ispin++) {
-        fprintf(fp, "%d %d %d %d 0 %25.15f %25.15f\n", 
+        fprintf(fp, "%d %d %d %d 1 %25.15f %25.15f\n", 
           isite, spin[ispin][0], isite, spin[ispin][1],
           fourier_r[isite] * coef[ispin], fourier_i[isite] * coef[ispin]);
       }
@@ -2503,7 +2503,7 @@ void StdFace_main(
     else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Wsub);
 #endif
     else {
-      fprintf(stdout, "ERROR ! Unsupported Keyword !\n");
+      fprintf(stdout, "ERROR ! Unsupported Keyword in Standard mode!\n");
       StdFace_exit(-1);
     }
   }
