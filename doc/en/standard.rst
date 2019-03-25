@@ -147,10 +147,10 @@ Parameters about the kind of a calculation
    .. figure:: ../figs/chap04_1_honeycomb.png
       :width: 15.00000cm
 
-      Schematic illustration of the anisotropic honeycomb lattice. The
-      nearest neighbor hopping integral, spin coupling, offsite Coulomb
-      integral depend on the bond direction. Those between second
-      nearest neighbor sites are not supported. 
+      Schematic illustration of the anisotropic honeycomb lattice.
+      The first/second/third nearest neighbor hopping integral,
+      spin coupling, and offsite
+      Coulomb integral depend on the bond direction.
 
    .. _kagomepng:
 
@@ -319,17 +319,22 @@ non-local terms are specified in the different way from
 ``Honeycomb Lattice``, ``Kagome``. Below, the available parameters for
 each lattice are shown in Table [table\_interactions].
 
-================================ ======== ========= ============= ========= ====== ======
-Interactions                     1D chain 2D square 2D triangular Honeycomb Kagome Ladder
-================================ ======== ========= ============= ========= ====== ======
-``J``, ``t``, ``V`` (simplified) OK       OK        OK            OK        OK     NG                       
-``J'``, ``t'``, ``V'``           OK       OK        OK            OK        OK     NG                       
-``J0``, ``t0``, ``V0``           OK       OK        OK            OK        OK     OK           
-``J1``, ``t1``, ``V1``           NG       OK        OK            OK        OK     OK           
-``J2``, ``t2``, ``V2``           NG       NG        OK            OK        OK     OK           
-``J1'``, ``t1'``, ``V1'``        NG       NG        NG            NG        NG     OK           
-``J2'``, ``t2'``, ``V2'``        NG       NG        NG            NG        NG     OK           
-================================ ======== ========= ============= ========= ====== ======
+====================================== ======== ========= ============= ========= ====== ======
+Interactions                           1D chain 2D square 2D triangular Honeycomb Kagome Ladder
+====================================== ======== ========= ============= ========= ====== ======
+``J``, ``t``, ``V`` (simplified)       OK       OK        OK            OK        OK     NG
+``J0``, ``t0``, ``V0``                 OK       OK        OK            OK        OK     OK
+``J1``, ``t1``, ``V1``                 NG       OK        OK            OK        OK     OK
+``J2``, ``t2``, ``V2``                 NG       NG        OK            OK        OK     OK
+``J'``, ``t'``, ``V'`` (simplified)    OK       OK        OK            OK        OK     NG
+``J0'``, ``t0'``, ``V0'``              OK       OK        OK            OK        OK     NG
+``J1'``, ``t1'``, ``V1'``              NG       OK        OK            OK        OK     OK
+``J2'``, ``t2'``, ``V2'``              NG       NG        OK            OK        OK     OK
+``J''``, ``t''``, ``V''`` (simplified) OK       OK        OK            OK        NG     NG
+``J0''``, ``t0''``, ``V0''``           OK       OK        OK            OK        NG     NG
+``J1''``, ``t1''``, ``V1''``           NG       OK        OK            OK        NG     NG
+``J2''``, ``t2''``, ``V2''``           NG       NG        OK            OK        NG     NG
+====================================== ======== ========= ============= ========= ====== ======
 
 Table: Interactions for each models defined in an input file. We can
 define spin couplings as matrix format.
@@ -386,33 +391,86 @@ Non-local terms for other than Ladder
 
 Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 
--  ``t0``, ``t1``, ``t2``
+-  ``t``, ``t0``, ``t1``, ``t2``
 
    **Type :** Complex
 
-   **Description :** (Hubbard and Kondo lattice model) Nearest neighbor
-   hoppings for each direction (See Figs.
-   :num:`latticepng` -:num:`kagomepng` . These bonds are depicted
-   with different line styles.) are specified with these parameter. If
-   there is no bond dependence of the nearest-neighbor hoppings, the
-   simplified parameter ``t`` is available to specify ``t0``, ``t1``,
-   and ``t2`` as ``t0 = t1 = t2 = t``. If both ``t`` and the set of the
-   hoppings (``t0``, ``t1``, ``t2``) are specified, ``vmcdry.out`` will
-   stop.
+   **Description :** (Hubbard and Kondo lattice model) The nearest
+   neighbor hoppings for each direction (see :numref:`fig_chap04_1_lattice` -
+   :numref:`fig_kagome` )
+   are specified with these parameters. If there is no bond dependence
+   of the hoppings, the simplified parameter ``t`` is available to
+   specify ``t0``, ``t1``, and ``t2`` as ``t0 = t1 = t2 = t``. If both
+   ``t`` and the set of the hoppings (``t0``, ``t1``, ``t2``) are
+   specified, the program will stop.
 
--  ``V0``, ``V1``, ``V2``
+-  ``t'``, ``t0'``, ``t1'``, ``t2'``
+
+   **Type :** Complex
+
+   **Description :** (Hubbard and Kondo lattice model) The second nearest
+   neighbor hoppings for each direction (see :numref:`fig_chap04_1_lattice` - :numref:`fig_kagome` )
+   are specified with these parameter.
+   If there is no bond dependence
+   of the hoppings, the simplified parameter ``t'`` is available to
+   specify ``t0'``, ``t1'``, and ``t2'`` as ``t0' = t1' = t2' = t'``. If both
+   ``t'`` and the set of the hoppings (``t0'``, ``t1'``, ``t2'``) are
+   specified, the program will stop.
+   
+-  ``t''``, ``t0''``, ``t1''``, ``t2''``
+
+   **Type :** Complex
+
+   **Description :** (Hubbard and Kondo lattice model) The third nearest
+   neighbor hoppings for each direction (see :numref:`fig_chap04_1_lattice` - :numref:`fig_kagome` )
+   are specified with these parameter.
+   If there is no bond dependence
+   of the hoppings, the simplified parameter ``t''`` is available to
+   specify ``t0''``, ``t1''``, and ``t2''`` as ``t0'' = t1'' = t2'' = t''``. If both
+   ``t''`` and the set of the hoppings (``t0''``, ``t1''``, ``t2''``) are
+   specified, the program will stop.
+ 
+-  ``V``, ``V0``, ``V1``, ``V2``
 
    **Type :** Real
 
-   **Description :** (Hubbard and Kondo lattice model) Nearest-neighbor
-   offsite Coulomb integrals :math:`V` for each direction (See Figs.
-   :num:`latticepng` -:num:`kagomepng` . These bonds are depicted
-   with different line styles.) are specified with these parameters. If
-   there is no bond dependence of the nearest-neighbor offsite Coulomb
-   integrals, the simplified parameter ``V`` is available to specify
-   ``V0``, ``V1``, and ``V2`` as ``V0 = V1 = V2 = V``. If both ``V`` and
-   the set of the Coulomb integrals (``V0``, ``V1``, ``V2``) are
-   specified, ``vmcdry.out`` will stop.
+   **Description :** (Hubbard and Kondo lattice model) The nearest
+   neighbor offsite Coulomb integrals :math:`V` for each direction
+   (see :numref:`fig_chap04_1_lattice` - :numref:`fig_kagome` )
+   are specified with these parameters. If there is no bond dependence
+   of the offsite Coulomb integrals, the simplified parameter ``V`` is
+   available to specify ``V0``, ``V1``, and ``V2`` as
+   ``V0 = V1 = V2 = V``. If both ``V`` and the set of the Coulomb
+   integrals (``V0``, ``V1``, ``V2``) are specified, the program will
+   stop.
+
+-  ``V'``, ``V0'``, ``V1'``, ``V2'``
+
+   **Type :** Real
+
+   **Description :** (Hubbard and Kondo lattice model) The second nearest
+   neighbor-offsite Coulomb integrals :math:`V'` for each direction (see :numref:`fig_chap04_1_lattice` - :numref:`fig_kagome` )
+   are specified with this parameter.
+   If there is no bond dependence
+   of the offsite Coulomb integrals, the simplified parameter ``V'`` is
+   available to specify ``V0'``, ``V1'``, and ``V2'`` as
+   ``V0' = V1' = V2' = V'``. If both ``V'`` and the set of the Coulomb
+   integrals (``V0'``, ``V1'``, ``V2'``) are specified, the program will
+   stop.
+
+-  ``V''``, ``V0''``, ``V1''``, ``V2''``
+
+   **Type :** Real
+
+   **Description :** (Hubbard and Kondo lattice model) The third nearest
+   neighbor-offsite Coulomb integrals :math:`V'` for each direction (see :numref:`fig_chap04_1_lattice` - :numref:`fig_kagome` )
+   are specified with this parameter.
+   If there is no bond dependence
+   of the offsite Coulomb integrals, the simplified parameter ``V''`` is
+   available to specify ``V0''``, ``V1''``, and ``V2''`` as
+   ``V0'' = V1'' = V2'' = V''``. If both ``V''`` and the set of the Coulomb
+   integrals (``V0''``, ``V1''``, ``V2''``) are specified, the program will
+   stop.
 
 -  ``J0x``, ``J0y``, ``J0z``, ``J0xy``, ``J0yx``, ``J0xz``, ``J0zx``,
    ``J0yz``, ``J0zy``
@@ -469,37 +527,45 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
       couplings, please specify the non-zero couplings in the
       twenty-seven parameters from ``J0x`` to ``J2zy``.
 
--  ``t'``
-
-   **Type :** Complex
-
-   **Description :** (Hubbard and Kondo lattice model) Nearest neighbor
-   hoppings for each direction (See Figs.
-   :num:`latticepng` -:num:`kagomepng` ) are specified with these
-   parameter.
-
--  ``V'``
-
-   **Type :** Real
-
-   **Description :** (Hubbard and Kondo lattice model) Nearest
-   neighbor-offsite Coulomb integrals :math:`V` for each direction (See
-   Figs. :num:`latticepng` -:num:`kagomepng` ) are specified with
-   these parameters.
-
 -  ``J'x``, ``J'y``, ``J'z``, ``J'xy``, ``J'yx``, ``J'xz``, ``J'zx``,
    ``J'yz``, ``J'zy``
+-  ``J0'x``, ``J0'y``, ``J0'z``, ``J0'xy``, ``J0'yx``, ``J0'xz``, ``J0'zx``,
+   ``J0'yz``, ``J0'zy``
+-  ``J1'x``, ``J1'y``, ``J1'z``, ``J1'xy``, ``J1'yx``, ``J1'xz``, ``J1'zx``,
+   ``J1'yz``, ``J1'zy``
+-  ``J2'x``, ``J2'y``, ``J2'z``, ``J2'xy``, ``J2'yx``, ``J2'xz``, ``J2'zx``,
+   ``J2'yz``, ``J2'zy``
 
    **Type :** Real
 
-   **Description :** (Spin model) Second nearest-neighbor exchange
+   **Description :** (Spin model) The second nearest neighbor exchange
    couplings are specified. However, for ``lattice = Honeycomb Lattice``
-   and ``lattice = Kagome`` with ``model=SpinGCBoost``, the second
-   nearest-neighbor exchange couplings are not available in the
-   :math:`Standard` mode. If the simplified parameter ``J'`` is
-   specified, instead of ``J'x, J'y, J'z``, the exchange couplings are
-   set as ``J'x = J'y = J'z = J'``. If both ``J'`` and the set of the
-   couplings (``J'x, J'y, J'z``), ``vmcdry.out`` will stop.
+   and ``lattice = Kagome`` with ``model=SpinGCCMA``, the second nearest
+   neighbor exchange couplings are not available in the :math:`Standard`
+   mode. If the simplified parameter ``J'`` is specified, instead of
+   ``J'x, J'y, J'z``, the exchange couplings are set as
+   ``J'x = J'y = J'z = J'``. If both ``J'`` and the set of the couplings
+   (``J'x, J'y, J'z``) are specified, the program will stop.
+
+-  ``J''x``, ``J''y``, ``J''z``, ``J''xy``, ``J''yx``, ``J''xz``, ``J''zx``,
+   ``J''yz``, ``J''zy``
+-  ``J0''x``, ``J0''y``, ``J0''z``, ``J0''xy``, ``J0''yx``, ``J0''xz``, ``J0''zx``,
+   ``J0''yz``, ``J0''zy``
+-  ``J1''x``, ``J1''y``, ``J1''z``, ``J1''xy``, ``J1''yx``, ``J1''xz``, ``J1''zx``,
+   ``J1''yz``, ``J1''zy``
+-  ``J2''x``, ``J2''y``, ``J2''z``, ``J2''xy``, ``J2''yx``, ``J2''xz``, ``J2''zx``,
+   ``J2''yz``, ``J2''zy``
+
+   **Type :** Real
+
+   **Description :** (Spin model) The third nearest neighbor exchange
+   couplings are specified. However, for ``lattice = Honeycomb Lattice``
+   and ``lattice = Kagome`` with ``model=SpinGCCMA``, the third nearest
+   neighbor exchange couplings are not available in the :math:`Standard`
+   mode. If the simplified parameter ``J''`` is specified, instead of
+   ``J''x, J''y, J''z``, the exchange couplings are set as
+   ``J''x = J''y = J''z = J''``. If both ``J''`` and the set of the couplings
+   (``J''x, J''y, J''z``) are specified, the program will stop.
 
 -  ``phase0``, ``phase1``
 

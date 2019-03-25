@@ -403,7 +403,7 @@ static void PrintExcitation(struct StdIntList *StdI) {
     fprintf(fp, "=============================================\n");
     for (isite = 0; isite < StdI->nsite; isite++) {
       for (ispin = 0; ispin < NumOp; ispin++) {
-        fprintf(fp, "%d %d %d %d 0 %25.15f %25.15f\n", 
+        fprintf(fp, "%d %d %d %d 1 %25.15f %25.15f\n", 
           isite, spin[ispin][0], isite, spin[ispin][1],
           fourier_r[isite] * coef[ispin], fourier_i[isite] * coef[ispin]);
       }
@@ -467,13 +467,13 @@ static void VectorPotential(struct StdIntList *StdI) {
         time = StdI->dt*(double)it;
         for (ii = 0; ii < 3; ii++) {
           StdI->At[it][ii] = StdI->VecPot[ii] * cos(StdI->freq*(time - StdI->tshift))
-            * exp(-0.5* (time - StdI->tshift)*(time - StdI->tshift) / StdI->tdump*StdI->tdump);
+            * exp(-0.5* (time - StdI->tshift)*(time - StdI->tshift) / (StdI->tdump*StdI->tdump));
           Et[it][ii] = -StdI->VecPot[ii]
             * (
             (StdI->tshift - time) / (StdI->tdump*StdI->tdump) * cos(StdI->freq*(time - StdI->tshift))
               - StdI->freq* sin(StdI->freq*(time - StdI->tshift))
               )
-            * exp(-0.5* (time - StdI->tshift)*(time - StdI->tshift) / StdI->tdump*StdI->tdump);
+            * exp(-0.5* (time - StdI->tshift)*(time - StdI->tshift) / (StdI->tdump*StdI->tdump));
         }
       }/*for (it = 0; it < StdI->Lanczos_max; it++)*/
       StdI->PumpBody = 1;
@@ -822,13 +822,17 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->Height = StdI->NaN_i;
   StdI->JAll = NaN_d;
   StdI->JpAll = NaN_d;
+  StdI->JpAll = NaN_d;
   StdI->JppAll = NaN_d;
   StdI->J0All = NaN_d;
   StdI->J0pAll = NaN_d;
+  StdI->J0ppAll = NaN_d;
   StdI->J1All = NaN_d;
   StdI->J1pAll = NaN_d;
+  StdI->J1ppAll = NaN_d;
   StdI->J2All = NaN_d;
   StdI->J2pAll = NaN_d;
+  StdI->J2ppAll = NaN_d;
   for (i = 0; i < 3; i++) {
     for (j = 0; j < 3; j++) {
       StdI->J[i][j] = NaN_d;
@@ -836,10 +840,13 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
       StdI->Jpp[i][j] = NaN_d;
       StdI->J0[i][j] = NaN_d;
       StdI->J0p[i][j] = NaN_d;
+      StdI->J0pp[i][j] = NaN_d;
       StdI->J1[i][j] = NaN_d;
       StdI->J1p[i][j] = NaN_d;
+      StdI->J1pp[i][j] = NaN_d;
       StdI->J2[i][j] = NaN_d;
       StdI->J2p[i][j] = NaN_d;
+      StdI->J2pp[i][j] = NaN_d;
       StdI->D[i][j] = 0.0;
     }
   }
@@ -856,20 +863,26 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->tpp = NaN_d;
   StdI->t0 = NaN_d;
   StdI->t0p = NaN_d;
+  StdI->t0pp = NaN_d;
   StdI->t1 = NaN_d;
   StdI->t1p = NaN_d;
+  StdI->t1pp = NaN_d;
   StdI->t2 = NaN_d;
   StdI->t2p = NaN_d;
+  StdI->t2pp = NaN_d;
   StdI->U = NaN_d;
   StdI->V = NaN_d;
   StdI->Vp = NaN_d;
   StdI->Vpp = NaN_d;
   StdI->V0 = NaN_d;
   StdI->V0p = NaN_d;
+  StdI->V0pp = NaN_d;
   StdI->V1 = NaN_d;
   StdI->V1p = NaN_d;
+  StdI->V1pp = NaN_d;
   StdI->V2 = NaN_d;
   StdI->V2p = NaN_d;
+  StdI->V2pp = NaN_d;
   StdI->W = StdI->NaN_i;
   for (i = 0; i < 3; i++)StdI->phase[i] = NaN_d;
   StdI->pi180 = StdI->pi / 180.0;
@@ -886,7 +899,12 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->cutoff_t = NaN_d;
   StdI->cutoff_u = NaN_d;
   StdI->cutoff_j = NaN_d;
-  StdI->lambda = NaN_d;
+  StdI->cutoff_length_t = NaN_d;
+  StdI->cutoff_length_U = NaN_d;
+  StdI->cutoff_length_J = NaN_d;
+  for (i = 0; i < 3; i++)StdI->cutoff_tR[i] = StdI->NaN_i;
+  for (i = 0; i < 3; i++)StdI->cutoff_UR[i] = StdI->NaN_i;
+  for (i = 0; i < 3; i++)StdI->cutoff_JR[i] = StdI->NaN_i;
 #if defined(_HPhi)
   StdI->LargeValue = NaN_d;
   StdI->OmegaMax = NaN_d;
@@ -2234,9 +2252,20 @@ void StdFace_main(
     else if (strcmp(keyword, "cutoff_r_j") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_r_j);
     else if (strcmp(keyword, "cutoff_r_u") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_r_u);
     else if (strcmp(keyword, "cutoff_j") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_j);
+    else if (strcmp(keyword, "cutoff_jh") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_JR[2]);
+    else if (strcmp(keyword, "cutoff_jl") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_JR[1]);
+    else if (strcmp(keyword, "cutoff_jw") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_JR[0]);
+    else if (strcmp(keyword, "cutoff_length_j") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_length_J);
+    else if (strcmp(keyword, "cutoff_length_u") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_length_U);
+    else if (strcmp(keyword, "cutoff_length_t") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_length_t);
     else if (strcmp(keyword, "cutoff_t") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_t);
+    else if (strcmp(keyword, "cutoff_th") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_tR[2]);
+    else if (strcmp(keyword, "cutoff_tl") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_tR[1]);
+    else if (strcmp(keyword, "cutoff_tw") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_tR[0]);
     else if (strcmp(keyword, "cutoff_u") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_u);
-    else if (strcmp(keyword, "lambda") == 0) StoreWithCheckDup_d(keyword, value, &StdI->lambda);
+    else if (strcmp(keyword, "cutoff_uh") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_UR[2]);
+    else if (strcmp(keyword, "cutoff_ul") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_UR[1]);
+    else if (strcmp(keyword, "cutoff_uw") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_UR[0]);
     else if (strcmp(keyword, "d") == 0) StoreWithCheckDup_d(keyword, value, &StdI->D[2][2]);
     else if (strcmp(keyword, "gamma") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Gamma);
     else if (strcmp(keyword, "h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->h);
@@ -2275,6 +2304,16 @@ void StdFace_main(
     else if (strcmp(keyword, "j0'z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0p[2][2]);
     else if (strcmp(keyword, "j0'zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0p[2][0]);
     else if (strcmp(keyword, "j0'zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0p[2][1]);
+    else if (strcmp(keyword, "j0''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0ppAll);
+    else if (strcmp(keyword, "j0''x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[0][0]);
+    else if (strcmp(keyword, "j0''xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[0][1]);
+    else if (strcmp(keyword, "j0''xz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[0][2]);
+    else if (strcmp(keyword, "j0''y") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[1][1]);
+    else if (strcmp(keyword, "j0''yx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[1][0]);
+    else if (strcmp(keyword, "j0''yz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[1][2]);
+    else if (strcmp(keyword, "j0''z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[2][2]);
+    else if (strcmp(keyword, "j0''zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[2][0]);
+    else if (strcmp(keyword, "j0''zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[2][1]);
     else if (strcmp(keyword, "j1") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1All);
     else if (strcmp(keyword, "j1x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1[0][0]);
     else if (strcmp(keyword, "j1xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1[0][1]);
@@ -2295,6 +2334,16 @@ void StdFace_main(
     else if (strcmp(keyword, "j1'z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1p[2][2]);
     else if (strcmp(keyword, "j1'zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1p[2][0]);
     else if (strcmp(keyword, "j1'zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1p[2][1]);
+    else if (strcmp(keyword, "j1''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1ppAll);
+    else if (strcmp(keyword, "j1''x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[0][0]);
+    else if (strcmp(keyword, "j1''xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[0][1]);
+    else if (strcmp(keyword, "j1''xz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[0][2]);
+    else if (strcmp(keyword, "j1''y") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[1][1]);
+    else if (strcmp(keyword, "j1''yx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[1][0]);
+    else if (strcmp(keyword, "j1''yz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[1][2]);
+    else if (strcmp(keyword, "j1''z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[2][2]);
+    else if (strcmp(keyword, "j1''zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[2][0]);
+    else if (strcmp(keyword, "j1''zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[2][1]);
     else if (strcmp(keyword, "j2") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2All);
     else if (strcmp(keyword, "j2x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2[0][0]);
     else if (strcmp(keyword, "j2xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2[0][1]);
@@ -2315,6 +2364,16 @@ void StdFace_main(
     else if (strcmp(keyword, "j2'z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2p[2][2]);
     else if (strcmp(keyword, "j2'zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2p[2][0]);
     else if (strcmp(keyword, "j2'zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2p[2][1]);
+    else if (strcmp(keyword, "j2''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2ppAll);
+    else if (strcmp(keyword, "j2''x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[0][0]);
+    else if (strcmp(keyword, "j2''xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[0][1]);
+    else if (strcmp(keyword, "j2''xz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[0][2]);
+    else if (strcmp(keyword, "j2''y") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[1][1]);
+    else if (strcmp(keyword, "j2''yx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[1][0]);
+    else if (strcmp(keyword, "j2''yz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[1][2]);
+    else if (strcmp(keyword, "j2''z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[2][2]);
+    else if (strcmp(keyword, "j2''zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[2][0]);
+    else if (strcmp(keyword, "j2''zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[2][1]);
     else if (strcmp(keyword, "j'") == 0) StoreWithCheckDup_d(keyword, value, &StdI->JpAll);
     else if (strcmp(keyword, "j'x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Jp[0][0]);
     else if (strcmp(keyword, "j'xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Jp[0][1]);
@@ -2352,20 +2411,26 @@ void StdFace_main(
     else if (strcmp(keyword, "t") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t);
     else if (strcmp(keyword, "t0") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t0);
     else if (strcmp(keyword, "t0'") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t0p);
+    else if (strcmp(keyword, "t0''") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t0pp);
     else if (strcmp(keyword, "t1") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t1);
     else if (strcmp(keyword, "t1'") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t1p);
+    else if (strcmp(keyword, "t1''") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t1pp);
     else if (strcmp(keyword, "t2") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t2);
     else if (strcmp(keyword, "t2'") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t2p);
+    else if (strcmp(keyword, "t2''") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t2pp);
     else if (strcmp(keyword, "t'") == 0) StoreWithCheckDup_c(keyword, value, &StdI->tp);
     else if (strcmp(keyword, "t''") == 0) StoreWithCheckDup_c(keyword, value, &StdI->tpp);
     else if (strcmp(keyword, "u") == 0) StoreWithCheckDup_d(keyword, value, &StdI->U);
     else if (strcmp(keyword, "v") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V);
     else if (strcmp(keyword, "v0") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V0);
     else if (strcmp(keyword, "v0'") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V0p);
+    else if (strcmp(keyword, "v0''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V0pp);
     else if (strcmp(keyword, "v1") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V1);
     else if (strcmp(keyword, "v1'") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V1p);
+    else if (strcmp(keyword, "v1''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V1pp);
     else if (strcmp(keyword, "v2") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V2);
-    else if (strcmp(keyword, "v2p") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V2);
+    else if (strcmp(keyword, "v2'") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V2p);
+    else if (strcmp(keyword, "v2''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V2pp);
     else if (strcmp(keyword, "v'") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Vp);
     else if (strcmp(keyword, "v''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Vpp);
     else if (strcmp(keyword, "w") == 0) StoreWithCheckDup_i(keyword, value, &StdI->W);
@@ -2447,7 +2512,7 @@ void StdFace_main(
     else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Wsub);
 #endif
     else {
-      fprintf(stdout, "ERROR ! Unsupported Keyword !\n");
+      fprintf(stdout, "ERROR ! Unsupported Keyword in Standard mode!\n");
       StdFace_exit(-1);
     }
   }
@@ -2522,9 +2587,7 @@ void StdFace_main(
     || strcmp(StdI->lattice, "chainlattice") == 0) StdFace_Chain(StdI);
   else if (strcmp(StdI->lattice, "face-centeredorthorhombic") == 0
     || strcmp(StdI->lattice, "fcorthorhombic") == 0
-    || strcmp(StdI->lattice, "fco") == 0
-    || strcmp(StdI->lattice, "face-centeredcubic") == 0
-    || strcmp(StdI->lattice, "fcc") == 0) StdFace_FCOrtho(StdI);
+    || strcmp(StdI->lattice, "fco") == 0) StdFace_FCOrtho(StdI);
   else if (strcmp(StdI->lattice, "honeycomb") == 0
     || strcmp(StdI->lattice, "honeycomblattice") == 0) StdFace_Honeycomb(StdI);
   else if (strcmp(StdI->lattice, "kagome") == 0
@@ -2532,8 +2595,7 @@ void StdFace_main(
   else if (strcmp(StdI->lattice, "ladder") == 0
     || strcmp(StdI->lattice, "ladderlattice") == 0) StdFace_Ladder(StdI);
   else if (strcmp(StdI->lattice, "orthorhombic") == 0
-    || strcmp(StdI->lattice, "simpleorthorhombic") == 0
-    || strcmp(StdI->lattice, "cubic") == 0) StdFace_Orthorhombic(StdI);
+    || strcmp(StdI->lattice, "simpleorthorhombic") == 0) StdFace_Orthorhombic(StdI);
   else if (strcmp(StdI->lattice, "pyrochlore") == 0) StdFace_Pyrochlore(StdI);
   else if (strcmp(StdI->lattice, "tetragonal") == 0
     || strcmp(StdI->lattice, "tetragonallattice") == 0
