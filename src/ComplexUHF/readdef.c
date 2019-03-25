@@ -331,9 +331,11 @@ int ReadDefFileNInt(
         }
     }
 
-  int iret=0;
-  iret=JudgeOrbitalMode(&X->iFlgOrbitalGeneral, iFlgOrbitalAP, iFlgOrbitalP,&X->OrbitalOutputMode);
-  if(iret<0) info=iret;
+	if (X->iFlgOrbital == 1) {
+        int iret = 0;
+        iret = JudgeOrbitalMode(&X->iFlgOrbitalGeneral, iFlgOrbitalAP, iFlgOrbitalP, &X->OrbitalOutputMode);
+        if (iret < 0) info = iret;
+    }
 
   if (info != 0) {
 		fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
@@ -343,24 +345,28 @@ int ReadDefFileNInt(
 
   //CalcNCond
   if(X->Ncond != -1){
-    if(X->Ncond%2 != 0){
-      fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
-      return -1;
-    }
-    else X->Ne=(X->NLocSpn+X->Ncond)/2;
+      if(X->iFlgOrbital == 1) {
+          if (X->Ncond % 2 != 0) {
+              fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
+              return -1;
+          } else X->Ne = (X->NLocSpn + X->Ncond) / 2;
+      }
+      else X->Ne = (X->NLocSpn + X->Ncond) / 2; //ToDO: check
   }
 
   //CheckGeneral Orbital
-  if(X->TwoSz !=0){
-    if(X->iFlgOrbitalGeneral!=1){
-      fprintf(stderr, "Error:2Sz=%d\n", X->TwoSz);
-      fprintf(stderr, "Error: OrbitalParallel or OrbitalGeneral files must be needed when 2Sz !=0 (in modpara.def).\n");
-      return -1;
-    }
-    else if(X->TwoSz%2 !=0 && X->TwoSz!=-1){
-      fprintf(stderr, "Error: 2Sz (in modpara.def) must be even number.\n");
-      return -1;
-    }
+  if(X->TwoSz !=0) {
+      if (X->iFlgOrbital == 1) {
+          if (X->iFlgOrbitalGeneral != 1) {
+              fprintf(stderr, "Error:2Sz=%d\n", X->TwoSz);
+              fprintf(stderr,
+                      "Error: OrbitalParallel or OrbitalGeneral files must be needed when 2Sz !=0 (in modpara.def).\n");
+              return -1;
+          } else if (X->TwoSz % 2 != 0 && X->TwoSz != -1) {
+              fprintf(stderr, "Error: 2Sz (in modpara.def) must be even number.\n");
+              return -1;
+          }
+      }
   }
 
   if (X->NMPTrans < 0) {

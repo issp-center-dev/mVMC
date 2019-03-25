@@ -75,16 +75,21 @@ void output(struct BindStruct *X){
   fclose(fp);
   printf("Eigenvalues are outputted to %s.\n", sdt);
 
-  sprintf(sdt,"%s_gap.dat",X->Def.CDataFileHead);
-  fp=fopen(sdt,"w");
-  tmp =  X->Large.EigenValues[X->Def.Ne*2-1];
-  tmp =  X->Large.EigenValues[X->Def.Ne*2] - tmp;
-  fprintf(fp,"  %.10lf \n",tmp);
-  fclose(fp);
-  printf("Energy gaps are outputted to %s.\n", sdt);
+  //ToDo: Check: Is it correct for Sz != 0 ?
+  if(X->Def.TwoSz ==0) {
+      sprintf(sdt, "%s_gap.dat", X->Def.CDataFileHead);
+      fp = fopen(sdt, "w");
+      tmp = X->Large.EigenValues[X->Def.Ne * 2 - 1];
+      tmp = X->Large.EigenValues[X->Def.Ne * 2] - tmp;
+      fprintf(fp, "  %.10lf \n", tmp);
+      fclose(fp);
+      printf("Energy gaps are outputted to %s.\n", sdt);
+  }
   cal_cisajs(X);
 
-  MakeOrbitalFile(X);
+  if(X->Def.iFlgOrbital == 1) {
+      MakeOrbitalFile(X);
+  }
 }
 
 void cal_cisajs(struct BindStruct *X){
