@@ -65,6 +65,7 @@ struct DefineList {
     double *ParaPairHopping;
     int **ExchangeCoupling, NExchangeCoupling;
     double *ParaExchangeCoupling;
+    int iFlgOrbital;
     int NOrbitalIdx, **OrbitalIdx; /* [Nsite][Nsite] */
     int **OrbitalSgn; /* OrbitalSgn[2*Nsite][2*Nsite] = +1 or -1 */
     int **Initial, NInitial;
