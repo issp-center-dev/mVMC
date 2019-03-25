@@ -893,9 +893,6 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   strcpy(StdI->lattice, "****\0");
   strcpy(StdI->outputmode, "****\0");
   strcpy(StdI->CDataFileHead, "****\0");
-  StdI->cutoff_r_t = NaN_d;
-  StdI->cutoff_r_u = NaN_d;
-  StdI->cutoff_r_j = NaN_d;
   StdI->cutoff_t = NaN_d;
   StdI->cutoff_u = NaN_d;
   StdI->cutoff_j = NaN_d;
@@ -2248,9 +2245,6 @@ void StdFace_main(
     else if (strcmp(keyword, "a2h") == 0) StoreWithCheckDup_i(keyword, value, &StdI->box[2][2]);
     else if (strcmp(keyword, "a2l") == 0) StoreWithCheckDup_i(keyword, value, &StdI->box[2][1]);
     else if (strcmp(keyword, "a2w") == 0) StoreWithCheckDup_i(keyword, value, &StdI->box[2][0]);
-    else if (strcmp(keyword, "cutoff_r_t") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_r_t);
-    else if (strcmp(keyword, "cutoff_r_j") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_r_j);
-    else if (strcmp(keyword, "cutoff_r_u") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_r_u);
     else if (strcmp(keyword, "cutoff_j") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_j);
     else if (strcmp(keyword, "cutoff_jh") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_JR[2]);
     else if (strcmp(keyword, "cutoff_jl") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_JR[1]);

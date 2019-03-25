@@ -254,8 +254,7 @@ int ReadDefFileNInt(
 						} else if (CheckWords(ctmp, "NMPTrans") == 0) {
 							X->NMPTrans = (int) dtmp;
 						} else {
-							fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
-							info = ReadDefFileError(defname);
+							fprintf(stdout, "  Warning: keyword \" %s \" is incorrect. \n", ctmp);
 						}
 					}
 					break;//modpara file

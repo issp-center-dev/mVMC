@@ -143,7 +143,7 @@ static int read_W90_query(
           dtmp[1] = 0.0;
         }
         if(iWan0 <= StdI->NsiteUC && jWan0 <= StdI->NsiteUC)
-          Mat_tot[iWSC][iWan0 - 1][jWan0 - 1] = lambda*(dtmp[0] + I * dtmp[1]);
+          Mat_tot[iWSC][iWan0 - 1][jWan0 - 1] = (dtmp[0] + I * dtmp[1]);
         }
     }
     /**@brief
