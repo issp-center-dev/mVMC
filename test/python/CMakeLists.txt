@@ -13,6 +13,8 @@ endforeach()
 
 set(python_test_src
   test_HeisenbergChain
+  test_UHF_HubbardSquare
+  test_UHF_HubbardTriangular
 )
 
 foreach(test ${python_test_src})
