@@ -35,7 +35,7 @@ def read_trans_def(filename, total_site):
 
 class TestAtomic(unittest.TestCase):
 
-    def test_HeisenbergChain(self):
+    def test_HubbardTri(self):
 
         # run
         for _file in glob.glob("%s/*.def" %dir):
@@ -52,11 +52,11 @@ class TestAtomic(unittest.TestCase):
             self.assertTrue(_test.all())
 
         # get results
-        array_calc = read_opt_def("./zqp_APOrbital_opt.dat", 64)
-        ref_ave = read_opt_def("%s/ref/zqp_APOrbital_opt.dat" %dir, 64)
-        testArray = (abs(array_calc-ref_ave) < 1e-8)
-        for _test in testArray:
-            self.assertTrue(_test.all())
+        #array_calc = read_opt_def("./zqp_APOrbital_opt.dat", 64)
+        #ref_ave = read_opt_def("%s/ref/zqp_APOrbital_opt.dat" %dir, 64)
+        #testArray = (abs(array_calc-ref_ave) < 1e-8)
+        #for _test in testArray:
+        #    self.assertTrue(_test.all())
 
         # get results
         array_calc = read_trans_def("./zvo_UHF_cisajs.dat", 8)
