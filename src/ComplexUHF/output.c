@@ -51,44 +51,41 @@ void Child_OutputOptData(char* cFileName, char* cNKWidx, double complex *Para, i
   fclose(fp_out);
 }
 
-void output(struct BindStruct *X){
-  
+void output(struct BindStruct *X) {
+
   FILE *fp;
   char sdt[256];
   int i;
   double tmp;
 
 
-  sprintf(sdt,"%s_result.dat",X->Def.CDataFileHead);
-  fp=fopen(sdt,"w");
-  fprintf(fp," energy %.10lf \n",X->Phys.energy);
-  fprintf(fp," num    %.10lf \n",X->Phys.num);
+  sprintf(sdt, "%s_result.dat", X->Def.CDataFileHead);
+  fp = fopen(sdt, "w");
+  fprintf(fp, " energy %.10lf \n", X->Phys.energy);
+  fprintf(fp, " num    %.10lf \n", X->Phys.num);
   fclose(fp);
   printf("Energy and num are outputted to %s.\n", sdt);
 
-  sprintf(sdt,"%s_eigen.dat",X->Def.CDataFileHead);
-  fp=fopen(sdt,"w");
-  for(i=0;i< X->Def.Nsite*2;i++){
-    tmp =  X->Large.EigenValues[i];
-    fprintf(fp," %d  %.10lf \n",i+1,tmp);
+  sprintf(sdt, "%s_eigen.dat", X->Def.CDataFileHead);
+  fp = fopen(sdt, "w");
+  for (i = 0; i < X->Def.Nsite * 2; i++) {
+    tmp = X->Large.EigenValues[i];
+    fprintf(fp, " %d  %.10lf \n", i + 1, tmp);
   }
   fclose(fp);
   printf("Eigenvalues are outputted to %s.\n", sdt);
 
-  //ToDo: Check: Is it correct for Sz != 0 ?
-  if(X->Def.TwoSz ==0) {
-      sprintf(sdt, "%s_gap.dat", X->Def.CDataFileHead);
-      fp = fopen(sdt, "w");
-      tmp = X->Large.EigenValues[X->Def.Ne * 2 - 1];
-      tmp = X->Large.EigenValues[X->Def.Ne * 2] - tmp;
-      fprintf(fp, "  %.10lf \n", tmp);
-      fclose(fp);
-      printf("Energy gaps are outputted to %s.\n", sdt);
-  }
+  sprintf(sdt, "%s_gap.dat", X->Def.CDataFileHead);
+  fp = fopen(sdt, "w");
+  tmp = X->Large.EigenValues[X->Def.Nsize - 1];
+  tmp = X->Large.EigenValues[X->Def.Nsize] - tmp;
+  fprintf(fp, "  %.10lf \n", tmp);
+  fclose(fp);
+  printf("Energy gaps are outputted to %s.\n", sdt);
   cal_cisajs(X);
 
-  if(X->Def.iFlgOrbital == 1) {
-      MakeOrbitalFile(X);
+  if (X->Def.iFlgOrbital == 1) {
+    MakeOrbitalFile(X);
   }
 }
 

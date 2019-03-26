@@ -27,10 +27,9 @@ void green(struct BindStruct *X) {
 
   double complex **R_Mat;
   int int_i, int_j;
-  int  xMsize, Ne;
+  int  xMsize;
 
   xMsize = X->Def.Nsite;
-  Ne = X->Def.Ne;
 
   R_Mat = cd_2d_allocate(2 * xMsize, 2 * xMsize);
 
@@ -41,7 +40,7 @@ void green(struct BindStruct *X) {
     }
   }
 
-  cmp_MMProd(2 * xMsize, 2 * Ne, X->Large.R_SLT, X->Large.L_SLT, R_Mat);
+  cmp_MMProd(2 * xMsize, X->Def.Nsize, X->Large.R_SLT, X->Large.L_SLT, R_Mat);
 
   for (int_i = 0; int_i < 2 * xMsize; int_i++) {
     for (int_j = 0; int_j < 2 * xMsize; int_j++) {

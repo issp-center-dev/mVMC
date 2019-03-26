@@ -350,8 +350,9 @@ int ReadDefFileNInt(
               fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
               return -1;
           } else X->Ne = (X->NLocSpn + X->Ncond) / 2;
+          X->Nsize = 2 * X->Ne;
       }
-      else X->Ne = (X->NLocSpn + X->Ncond) / 2; //ToDO: check
+      else X->Nsize = X->NLocSpn + X->Ncond;
   }
 
   //CheckGeneral Orbital
@@ -375,7 +376,6 @@ int ReadDefFileNInt(
 	} else {
 		X->APFlag = 0;
 	}
-	X->Nsize = 2 * X->Ne;
 	X->fidx = 0;
 	return 0;
 }

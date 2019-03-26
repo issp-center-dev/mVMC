@@ -25,8 +25,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 X.Bind.Large.Ham = cd_2d_allocate(2*X.Bind.Def.Nsite, 2*X.Bind.Def.Nsite);
 X.Bind.Large.G = cd_2d_allocate(2*X.Bind.Def.Nsite, 2*X.Bind.Def.Nsite);
 X.Bind.Large.G_old = cd_2d_allocate(2*X.Bind.Def.Nsite, 2*X.Bind.Def.Nsite);
-X.Bind.Large.R_SLT = cd_2d_allocate(2*X.Bind.Def.Nsite, 2*X.Bind.Def.Ne);
-X.Bind.Large.L_SLT = cd_2d_allocate(2*X.Bind.Def.Ne, 2*X.Bind.Def.Nsite);
+X.Bind.Large.R_SLT = cd_2d_allocate(2*X.Bind.Def.Nsite, X.Bind.Def.Nsize);
+X.Bind.Large.L_SLT = cd_2d_allocate(X.Bind.Def.Nsize, 2*X.Bind.Def.Nsite);
 X.Bind.Large.EigenValues = d_1d_allocate(2*X.Bind.Def.Nsite);
 printf("LARGE ALLOCATE FINISH !\n");
  

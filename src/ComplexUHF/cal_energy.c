@@ -41,7 +41,7 @@ void cal_energy(struct BindStruct *X) {
   Ns = X->Def.Nsite;
 
   E_band = 0.0;
-  for (int_k = 0; int_k < X->Def.Ne * 2; int_k++) {
+  for (int_k = 0; int_k < X->Def.Nsize; int_k++) {
     E_band += X->Large.EigenValues[int_k];
   }
   //printf("E_band=%lf \n",E_band);
