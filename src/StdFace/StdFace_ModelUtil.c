@@ -80,14 +80,16 @@ struct StdIntList *StdI,//!<[inout]
   double *dR//!<[in] R_i - R_j
 )
 {
-  int ispin, it, ii;
-  double complex Cphase, coef;
+  int ispin;
   /**@brief
    Both @f$c_{i \sigma}^\dagger c_{j \sigma}@f$ and
   @f$c_{j \sigma}^\dagger c_{i \sigma}@f$ for every spin channel
   (@f$\sigma@f$) is specified
   */
 #if defined(_HPhi)
+  int it, ii;
+  double complex Cphase, coef;
+
   if (strcmp(StdI->method, "timeevolution") == 0 && StdI->PumpBody == 1) {
     for (it = 0; it < StdI->Lanczos_max; it++) {
       Cphase = 0.0f;
