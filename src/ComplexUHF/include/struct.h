@@ -29,6 +29,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 /*=================================================================================================*/
 #pragma once
 struct DefineList {
+    int iFlg_Fock;
     int step;
     char *CDataFileHead, *CParaFileHead, *CPathQtyExe, *CPathAveDev;
     int nvec, k_exct;
@@ -65,6 +66,8 @@ struct DefineList {
     double *ParaPairHopping;
     int **ExchangeCoupling, NExchangeCoupling;
     double *ParaExchangeCoupling;
+    int **InterAll, NInterAll;
+    complex double *ParaInterAll;
     int iFlgOrbital;
     int NOrbitalIdx, **OrbitalIdx; /* [Nsite][Nsite] */
     int **OrbitalSgn; /* OrbitalSgn[2*Nsite][2*Nsite] = +1 or -1 */
@@ -73,7 +76,6 @@ struct DefineList {
     //double *ParaInitial;
     //double *ParaInitial_theta;
     int NOrbitalAP, NOrbitalP;
-
 
     int **CisAjs, NCisAjs;
     int **CisAjsCktAltDC, NCisAjsCktAltDC;

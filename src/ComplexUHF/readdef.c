@@ -149,6 +149,11 @@ int ReadDefFileNInt(
     int iNOrbitalP=0;
     int iFlgOrbitalAP=0, iFlgOrbitalP=0;
     X->iFlgOrbital = 0;
+#if Fock == 1
+    X->iFlg_Fock = 1;
+#else
+    X->iFlg_Fock = 0;
+#endif
 
 	cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
 	fprintf(stdout, "  Read File %s .\n", xNameListFile);
@@ -286,6 +291,10 @@ int ReadDefFileNInt(
 
                 case KWExchange:
                     cerr = ReadBuffInt(fp, &X->NExchangeCoupling);
+                    break;
+
+                case KWInterAll:
+                    cerr = ReadBuffInt(fp, &X->NInterAll);
                     break;
 
                 case KWOrbital:
@@ -554,6 +563,30 @@ int ReadDefFileIdxPara(
             idx++;
           }
           if (idx != X->NExchangeCoupling) {
+            info = ReadDefFileError(defname);
+          }
+        }
+        break;
+
+      case KWInterAll:
+        X->iFlg_Fock = 1;
+        /*inteall.def--------------------------------------*/
+        if (X->NInterAll > 0) {
+          while (fscanf(fp, "%d %d %d %d %d %d %d %d %lf %lf\n",
+                        &(X->InterAll[idx][0]),
+                        &(X->InterAll[idx][1]),
+                        &(X->InterAll[idx][2]),
+                        &(X->InterAll[idx][3]),
+                        &(X->InterAll[idx][4]),
+                        &(X->InterAll[idx][5]),
+                        &(X->InterAll[idx][6]),
+                        &(X->InterAll[idx][7]),
+                        &dReValue,
+                        &dImValue) != EOF) {
+            X->ParaInterAll[idx] = dReValue + dImValue * I;
+            idx++;
+          }
+          if (idx != X->NInterAll) {
             info = ReadDefFileError(defname);
           }
         }

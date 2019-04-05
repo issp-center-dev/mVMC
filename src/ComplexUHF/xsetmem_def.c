@@ -41,6 +41,8 @@ void setmem(struct EDMainCalStruct* X) {
     X->Bind.Def.ParaPairHopping = d_1d_allocate(X->Bind.Def.NPairHopping);
     X->Bind.Def.ExchangeCoupling = i_2d_allocate(X->Bind.Def.NExchangeCoupling, 2);
     X->Bind.Def.ParaExchangeCoupling = d_1d_allocate(X->Bind.Def.NExchangeCoupling);
+    X->Bind.Def.InterAll = i_2d_allocate(X->Bind.Def.NInterAll, 8);
+    X->Bind.Def.ParaInterAll = cd_1d_allocate(X->Bind.Def.NInterAll);
     X->Bind.Def.Initial = i_2d_allocate(X->Bind.Def.NInitial, 4);
     X->Bind.Def.ParaInitial = cd_1d_allocate(X->Bind.Def.NInitial);
     X->Bind.Def.OrbitalIdx = i_2d_allocate(X->Bind.Def.Nsite * 2, X->Bind.Def.Nsite * 2);

@@ -260,7 +260,7 @@ struct StdIntList *StdI,//!<[inout]
 
     if (fabs(J[0][1]) < 0.000001 && fabs(J[1][0]) < 0.000001
 #if defined(_mVMC)
-      && abs(J[0][0] - J[1][1]) < 0.000001
+      && fabs(J[0][0] - J[1][1]) < 0.000001
 #endif
       ) {
       /**@brief
