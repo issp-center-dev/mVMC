@@ -20,4 +20,4 @@ set(SOURCES_sfmt
 
 add_executable(UHF ${SOURCES_UHF} ${SOURCES_sfmt})
 target_link_libraries(UHF ${LAPACK_LIBRARIES} m)
-
+install(TARGETS UHF RUNTIME DESTINATION bin)
