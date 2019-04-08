@@ -199,8 +199,8 @@ void makeham(struct BindStruct *X) {
       X->Large.Ham[s_site_3][s_site_4] += tmp * X->Large.G[s_site_1][s_site_2];
 
       /*Off-Diagonal Fock term*/
-      X->Large.Ham[s_site_1][s_site_4] += -tmp * X->Large.G[s_site_2][s_site_3];
-      X->Large.Ham[s_site_2][s_site_3] += -tmp * X->Large.G[s_site_1][s_site_4];
+      X->Large.Ham[s_site_1][s_site_4] += -tmp * X->Large.G[s_site_3][s_site_2];
+      X->Large.Ham[s_site_3][s_site_2] += -tmp * X->Large.G[s_site_1][s_site_4];
 
       if (s_site_2 == s_site_3){
         X->Large.Ham[s_site_1][s_site_4] += tmp;
