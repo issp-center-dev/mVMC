@@ -252,6 +252,7 @@ struct StdIntList {
   int cutoff_tR[3];
   int cutoff_UR[3];
   int cutoff_JR[3];
+  int double_counting;
 #if defined(_HPhi)
   /*
   HPhi modpara

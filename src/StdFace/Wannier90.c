@@ -80,10 +80,10 @@ static void read_W90(
   double cutoff,//!<[in] Threshold for the Hamiltonian 
   int *cutoff_R,
   double cutoff_length,
-  int itUJD,
-  int *NtUJD,
-  int ***tUJDindx,//!<[out] R, band index of matrix element
-  double complex **tUJD//!<[out] Matrix element
+  int itUJ,
+  int *NtUJ,
+  int ***tUJindx,//!<[out] R, band index of matrix element
+  double complex **tUJ//!<[out] Matrix element
 )
 {
   FILE *fp;
@@ -178,7 +178,7 @@ static void read_W90(
   */
   fprintf(stdout, "\n      EFFECTIVE terms:\n");
   fprintf(stdout, "           R0   R1   R2 band_i band_f Hamiltonian\n");
-  NtUJD[itUJD] = 0;
+  NtUJ[itUJ] = 0;
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
     for (iWan = 0; iWan < StdI->NsiteUC; iWan++) {
       for (jWan = 0; jWan < StdI->NsiteUC; jWan++) {
@@ -186,29 +186,29 @@ static void read_W90(
           fprintf(stdout, "        %5d%5d%5d%5d%5d%12.6f%12.6f\n",
             indx_tot[iWSC][0], indx_tot[iWSC][1], indx_tot[iWSC][2], iWan, jWan,
             creal(Mat_tot[iWSC][iWan][jWan]), cimag(Mat_tot[iWSC][iWan][jWan]));
-          NtUJD[itUJD] += 1;
+          NtUJ[itUJ] += 1;
         }
       }
     }
   }
-  fprintf(stdout, "      Total number of EFFECTIVE term = %d\n", NtUJD[itUJD]);
-  tUJD[itUJD] = (double complex *)malloc(sizeof(double complex) * NtUJD[itUJD]);
-  tUJDindx[itUJD] = (int **)malloc(sizeof(int*) * NtUJD[itUJD]);
-  for (ii = 0; ii < NtUJD[itUJD]; ii++) tUJDindx[itUJD][ii] = (int *)malloc(sizeof(int) * 5);
+  fprintf(stdout, "      Total number of EFFECTIVE term = %d\n", NtUJ[itUJ]);
+  tUJ[itUJ] = (double complex *)malloc(sizeof(double complex) * NtUJ[itUJ]);
+  tUJindx[itUJ] = (int **)malloc(sizeof(int*) * NtUJ[itUJ]);
+  for (ii = 0; ii < NtUJ[itUJ]; ii++) tUJindx[itUJ][ii] = (int *)malloc(sizeof(int) * 5);
   /**@brief
   Then Store to the hopping Integeral and
   its site index.
   */
-  NtUJD[itUJD] = 0;
+  NtUJ[itUJ] = 0;
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
     for (iWan = 0; iWan < StdI->NsiteUC; iWan++) {
       for (jWan = 0; jWan < StdI->NsiteUC; jWan++) {
         if (cutoff < cabs(Mat_tot[iWSC][iWan][jWan])) {
-          for (ii = 0; ii < 3; ii++) tUJDindx[itUJD][NtUJD[itUJD]][ii] = indx_tot[iWSC][ii];
-          tUJDindx[itUJD][NtUJD[itUJD]][3] = iWan;
-          tUJDindx[itUJD][NtUJD[itUJD]][4] = jWan;
-          tUJD[itUJD][NtUJD[itUJD]] = Mat_tot[iWSC][iWan][jWan];
-          NtUJD[itUJD] += 1;
+          for (ii = 0; ii < 3; ii++) tUJindx[itUJ][NtUJ[itUJ]][ii] = indx_tot[iWSC][ii];
+          tUJindx[itUJ][NtUJ[itUJ]][3] = iWan;
+          tUJindx[itUJ][NtUJ[itUJ]][4] = jWan;
+          tUJ[itUJ][NtUJ[itUJ]] = Mat_tot[iWSC][iWan][jWan];
+          NtUJ[itUJ] += 1;
         }
       }/*for (jWan = 0; jWan < StdI->NsiteUC; jWan++)*/
     }/*for (iWan = 0; iWan < StdI->NsiteUC; iWan++)*/
@@ -223,7 +223,191 @@ static void read_W90(
   }
   free(Mat_tot);
   free(indx_tot);
-}/*static int read_W90(struct StdIntList *StdI, char *model)*//**
+}/*static int read_W90(struct StdIntList *StdI, char *model)*/
+/**
+ @brief Read RESPACK Density-matrix file (*_dr.dat)
+ @author Mitsuaki Kawamura (The University of Tokyo)
+*/
+static double complex***** read_density_matrix(
+  struct StdIntList *StdI,//!<[inout]
+  char *filename//!<[in] Input file name
+)
+{
+  FILE *fp;
+  int ierr, nWan, nWSC, iWSC, iWan, jWan, iWan0, jWan0, ii, Rmax[3], Rmin[3], NR[3], i0, i1, i2;
+  double dtmp[2];
+  char ctmp[256], *ctmp2;
+  double complex ***Mat_tot, *****DenMat;
+  int **indx_tot;
+  /*
+  Header part
+  */
+  fp = fopen(filename, "r");
+  ctmp2 = fgets(ctmp, 256, fp);
+  ierr = fscanf(fp, "%d", &nWan);
+  if (ierr == EOF) printf("%d %s\n", ierr, ctmp2);
+  ierr = fscanf(fp, "%d", &nWSC);
+  for (iWSC = 0; iWSC < nWSC; iWSC++) {
+    ierr = fscanf(fp, "%d", &ii);
+  }
+  /*
+  Malloc Matrix elements and their indices
+  */
+  Mat_tot = (double complex ***)malloc(sizeof(double complex **) * nWSC);
+  indx_tot = (int **)malloc(sizeof(int*) * nWSC);
+  for (iWSC = 0; iWSC < nWSC; iWSC++) {
+    Mat_tot[iWSC] = (double complex **)malloc(sizeof(double complex *) * nWan);
+    indx_tot[iWSC] = (int *)malloc(sizeof(int) * 3);
+    for (iWan = 0; iWan < nWan; iWan++) {
+      Mat_tot[iWSC][iWan] = (double complex *)malloc(sizeof(double complex) * nWan);
+    }
+  }
+  /*
+  Read body
+  */
+  for (ii = 0; ii < 3; ii++) {
+    Rmin[ii] = 0;
+    Rmax[ii] = 0;
+  }
+  for (iWSC = 0; iWSC < nWSC; iWSC++) {
+    for (iWan = 0; iWan < nWan; iWan++) {
+      for (jWan = 0; jWan < nWan; jWan++) {
+        ierr = fscanf(fp, "%d%d%d%d%d%lf%lf",
+          &indx_tot[iWSC][0], &indx_tot[iWSC][1], &indx_tot[iWSC][2],
+          &iWan0, &jWan0,
+          &dtmp[0], &dtmp[1]);
+        if (iWan0 <= StdI->NsiteUC && jWan0 <= StdI->NsiteUC)
+          Mat_tot[iWSC][iWan0 - 1][jWan0 - 1] = dtmp[0] + I * dtmp[1];
+        for (ii = 0; ii < 3; ii++) {
+          if (indx_tot[iWSC][ii] < Rmin[ii]) Rmin[ii] = indx_tot[iWSC][ii];
+          if (indx_tot[iWSC][ii] > Rmax[ii]) Rmax[ii] = indx_tot[iWSC][ii];
+        }
+      }
+    }
+  }/*for (iWSC = 0; iWSC < nWSC; iWSC++)*/
+  fclose(fp);
+  for (ii = 0; ii < 3; ii++) NR[ii] = Rmax[ii] - Rmin[ii] + 1;
+  fprintf(stdout, "      Minimum R : %d %d %d\n", Rmin[0], Rmin[1], Rmin[2]);
+  fprintf(stdout, "      Maximum R : %d %d %d\n", Rmax[0], Rmax[1], Rmax[2]);
+  fprintf(stdout, "      Numver of R : %d %d %d\n", NR[0], NR[1], NR[2]);
+
+  DenMat = (double complex *****)malloc(sizeof(double complex ****)*NR[0]);
+  DenMat = DenMat - Rmin[0]; // base shift
+  for (i0 = Rmin[0]; i0 <= Rmax[0]; i0++) {
+    DenMat[i0] = (double complex ****)malloc(sizeof(double complex ***)*NR[1]);
+    DenMat[i0] = DenMat[i0] - Rmin[1]; // base shift
+    for (i1 = Rmin[1]; i1 <= Rmax[1]; i1++) {
+      DenMat[i0][i1] = (double complex ***)malloc(sizeof(double complex **)*NR[2]);
+      DenMat[i0][i1] = DenMat[i0][i1] - Rmin[2]; // base shift
+      for (i2 = Rmin[2]; i2 <= Rmax[2]; i2++) {
+        DenMat[i0][i1][i2] = (double complex **)malloc(sizeof(double complex *) * StdI->NsiteUC);
+        for (iWan = 0; iWan < StdI->NsiteUC; iWan++) {
+          DenMat[i0][i1][i2][iWan] = (double complex *)malloc(sizeof(double complex) * StdI->NsiteUC);
+          for (jWan = 0; jWan < StdI->NsiteUC; jWan++)DenMat[i0][i1][i2][iWan][jWan] = 0.0;
+        }
+      }
+    }
+  }
+  for (iWSC = 0; iWSC < nWSC; iWSC++) 
+    for (iWan = 0; iWan < nWan; iWan++)
+      for (jWan = 0; jWan < nWan; jWan++)
+        DenMat[indx_tot[iWSC][0]][indx_tot[iWSC][1]][indx_tot[iWSC][2]][iWan][jWan]
+        = Mat_tot[iWSC][iWan][jWan];
+
+  for (iWSC = 0; iWSC < nWSC; iWSC++) {
+    for (iWan = 0; iWan < nWan; iWan++) {
+      free(Mat_tot[iWSC][iWan]);
+    }
+    free(Mat_tot[iWSC]);
+    free(indx_tot[iWSC]);
+  }
+  free(Mat_tot);
+  free(indx_tot);
+
+  return DenMat;
+}/*static int read_W90(struct StdIntList *StdI, char *model)*/
+/**
+@brief Print the initial guess of UHF
+@author Mitsuaki Kawamura (The University of Tokyo)
+*/
+static void PrintUHFinitial(
+  struct StdIntList *StdI,
+  int *NtUJ,
+  double complex **tUJ,
+  double complex *****DenMat,
+  int ***tUJindx
+) {
+  FILE *fp;
+  int iW, iL, iH, kCell, it, isite, jsite ,NIniGuess, ispin;
+  double dR[3];
+  double complex Cphase, **IniGuess;
+
+  IniGuess = (double complex **)malloc(sizeof(double complex*) * StdI->nsite);
+  for (isite = 0; isite < StdI->nsite; isite++) 
+    IniGuess[isite] = (double complex *)malloc(sizeof(double complex) * StdI->nsite);
+
+  for (kCell = 0; kCell < StdI->NCell; kCell++) {
+    /**/
+    iW = StdI->Cell[kCell][0];
+    iL = StdI->Cell[kCell][1];
+    iH = StdI->Cell[kCell][2];
+    /*
+    Coulomb integral (U)
+    */
+    for (it = 0; it < NtUJ[1]; it++) {
+      StdFace_FindSite(StdI, iW, iL, iH,
+        tUJindx[1][it][0], tUJindx[1][it][1], tUJindx[1][it][2],
+        tUJindx[1][it][3], tUJindx[1][it][4], &isite, &jsite, &Cphase, dR);
+      IniGuess[isite][jsite] = DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
+                                     [tUJindx[1][it][3]][tUJindx[1][it][4]] * 0.5;
+    }/*for (it = 0; it < NtUJ[1]; it++)*/
+    /*
+    Wxchange integral (J)
+    */
+    for (it = 0; it < NtUJ[2]; it++) {
+      StdFace_FindSite(StdI, iW, iL, iH,
+        tUJindx[2][it][0], tUJindx[2][it][1], tUJindx[2][it][2],
+        tUJindx[2][it][3], tUJindx[2][it][4], &isite, &jsite, &Cphase, dR);
+      IniGuess[isite][jsite] = DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
+                                     [tUJindx[2][it][3]][tUJindx[2][it][4]] * 0.5;
+    }/*for (it = 0; it < NtUJ[1]; it++)*/
+  }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
+
+  NIniGuess = 0;
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    for (jsite = 0; jsite < StdI->nsite; jsite++) {
+      if (cabs(IniGuess[isite][jsite]) > 1.0e-6)NIniGuess += 1;
+    }/*for (jsite = 0; jsite < StdI->nsite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+
+  fp = fopen("initial.def", "w");
+  fprintf(fp, "======================== \n");
+  fprintf(fp, "NInitialGuess %7d  \n", NIniGuess*2);
+  fprintf(fp, "======================== \n");
+  fprintf(fp, "========i_j_s_tijs====== \n");
+  fprintf(fp, "======================== \n");
+
+  for (isite = 0; isite < StdI->nsite; isite++) {
+    for (jsite = 0; jsite < StdI->nsite; jsite++) {
+      if (cabs(IniGuess[isite][jsite]) > 1.0e-6) 
+        for (ispin = 0; ispin < 2; ispin++) {
+          fprintf(fp, "%5d %5d %5d %5d %25.15f %25.15f\n",
+            jsite, ispin, isite, ispin,
+            0.5*creal(IniGuess[isite][jsite]),
+            0.5*cimag(IniGuess[isite][jsite]));
+        }
+    }/*for (jsite = 0; jsite < StdI->nsite; jsite++)*/
+  }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+
+  fflush(fp);
+  fclose(fp);
+  fprintf(stdout, "      initial.def is written.\n");
+
+  for (isite = 0; isite < StdI->nsite; isite++)
+    free(IniGuess[isite]);
+  free(IniGuess);
+}/*static void PrintTrans*/
+/**
 @brief Setup a Hamiltonian for the Wannier90 *_hr.dat
 @author Mitsuaki Kawamura (The University of Tokyo)
 */
@@ -235,11 +419,11 @@ void StdFace_Wannier90(
   int iL, iW, iH, kCell, it, ii;
   double Jtmp[3][3] = { {0.0} };
   FILE *fp;
-  double complex Cphase;
+  double complex Cphase, DenMat0;
   double dR[3], *Uspin;
-  int NtUJD[4];
-  double complex **tUJD;
-  int ***tUJDindx;
+  int NtUJ[3];
+  double complex **tUJ, *****DenMat;
+  int ***tUJindx;
   char filename[263];
   /**@brief
   (1) Compute the shape of the super-cell and sites in the super-cell
@@ -253,9 +437,10 @@ void StdFace_Wannier90(
   StdFace_InitSite(StdI, fp, 3);
   fprintf(stdout, "\n  @ Wannier90 Geometry \n\n");
   geometry_W90(StdI);
+  StdFace_PrintVal_i("DoubleCounting", &StdI->double_counting, 1);
 
-  tUJD = (double complex **)malloc(sizeof(double complex*) * 4);
-  tUJDindx = (int ***)malloc(sizeof(int**) * 4);
+  tUJ = (double complex **)malloc(sizeof(double complex*) * 3);
+  tUJindx = (int ***)malloc(sizeof(int**) * 3);
 
   /*
   Read Hopping
@@ -266,7 +451,7 @@ void StdFace_Wannier90(
   sprintf(filename, "%s_hr.dat", StdI->CDataFileHead);
   read_W90(StdI, filename,
     StdI->cutoff_t, StdI->cutoff_tR, StdI->cutoff_length_t,
-     0, NtUJD, tUJDindx, tUJD);
+     0, NtUJ, tUJindx, tUJ);
   /*
   Read Coulomb
   */
@@ -276,7 +461,7 @@ void StdFace_Wannier90(
   sprintf(filename, "%s_ur.dat", StdI->CDataFileHead);
   read_W90(StdI, filename,
     StdI->cutoff_u, StdI->cutoff_UR, StdI->cutoff_length_U, 
-    1, NtUJD, tUJDindx, tUJD);
+    1, NtUJ, tUJindx, tUJ);
   /*
   Read Hund
   */
@@ -286,15 +471,13 @@ void StdFace_Wannier90(
   sprintf(filename, "%s_jr.dat", StdI->CDataFileHead);
   read_W90(StdI, filename,
     StdI->cutoff_j, StdI->cutoff_JR, StdI->cutoff_length_J, 
-    2, NtUJD, tUJDindx, tUJD);
+    2, NtUJ, tUJindx, tUJ);
   /*
   Read Density matrix
   */
   fprintf(stdout, "\n  @ Wannier90 Density-matrix \n\n");
-  sprintf(filename, "%s_jr.dat", StdI->CDataFileHead);
-  read_W90(StdI, filename,
-    StdI->cutoff_j, StdI->cutoff_JR, StdI->cutoff_length_J,
-    3, NtUJD, tUJDindx, tUJD);
+  sprintf(filename, "%s_dr.dat", StdI->CDataFileHead);
+  DenMat = read_density_matrix(StdI, filename);
   /**@brief
   (2) check & store parameters of Hamiltonian
   */
@@ -331,12 +514,13 @@ void StdFace_Wannier90(
   */
   if (strcmp(StdI->model, "spin") == 0 ) {
     ntransMax = StdI->nsite * (StdI->S2 + 1/*h*/ + 2 * StdI->S2/*Gamma*/);
-    nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + NtUJD[0]/*J*/ + NtUJD[1] + NtUJD[2])
+    nintrMax = StdI->NCell * (StdI->NsiteUC/*D*/ + NtUJ[0]/*J*/ + NtUJ[1] + NtUJ[2])
       * (3 * StdI->S2 + 1) * (3 * StdI->S2 + StdI->NsiteUC);
   }
   else if (strcmp(StdI->model, "hubbard") == 0) {
-    ntransMax = StdI->NCell * 2/*spin*/ * (2 * StdI->NsiteUC/*mu+h+Gamma*/ + NtUJD[0] * 2/*t*/);
-    nintrMax = StdI->NCell * (NtUJD[1] + NtUJD[2] + StdI->NsiteUC);
+    ntransMax = StdI->NCell * 2/*spin*/ * (2 * StdI->NsiteUC/*mu+h+Gamma*/ + NtUJ[0] * 2/*t*/
+      + NtUJ[1] * 2 * 2/*DC(U)*/ + NtUJ[2] * 2 * 2/*DC(J)*/);
+    nintrMax = StdI->NCell * (NtUJ[1] + NtUJ[2] + StdI->NsiteUC);
   }
   /**/
   StdFace_MallocInteractions(StdI, ntransMax, nintrMax);
@@ -345,10 +529,10 @@ void StdFace_Wannier90(
   */
   if (strcmp(StdI->model, "spin") == 0) {
     Uspin = (double *)malloc(sizeof(double) * StdI->NsiteUC);
-    for (it = 0; it < NtUJD[1]; it++)
-      if (tUJDindx[1][it][0] == 0 && tUJDindx[1][it][1] == 0 && tUJDindx[1][it][2] == 0
-        && tUJDindx[1][it][3] == tUJDindx[1][it][4])     
-        Uspin[tUJDindx[1][it][3]] = creal(tUJD[1][it]);
+    for (it = 0; it < NtUJ[1]; it++)
+      if (tUJindx[1][it][0] == 0 && tUJindx[1][it][1] == 0 && tUJindx[1][it][2] == 0
+        && tUJindx[1][it][3] == tUJindx[1][it][4])     
+        Uspin[tUJindx[1][it][3]] = creal(tUJ[1][it]);
   }/*if (strcmp(StdI->model, "spin") == 0)*/
   /**@brief
   (5) Set Transfer & Interaction
@@ -374,17 +558,17 @@ void StdFace_Wannier90(
     /*
      Hopping
     */
-    for (it = 0; it < NtUJD[0]; it++) {
+    for (it = 0; it < NtUJ[0]; it++) {
       /*
        Local term
       */
-      if (tUJDindx[0][it][0] == 0 && tUJDindx[0][it][1] == 0 && tUJDindx[0][it][2] == 0
-        && tUJDindx[0][it][3] == tUJDindx[0][it][4])
+      if (tUJindx[0][it][0] == 0 && tUJindx[0][it][1] == 0 && tUJindx[0][it][2] == 0
+        && tUJindx[0][it][3] == tUJindx[0][it][4])
       {
         if (strcmp(StdI->model, "hubbard") == 0) {
-          isite = StdI->NsiteUC*kCell + tUJDindx[0][it][3];
+          isite = StdI->NsiteUC*kCell + tUJindx[0][it][3];
           for (ispin = 0; ispin < 2; ispin++) {
-            StdI->trans[StdI->ntrans] = -tUJD[0][it];
+            StdI->trans[StdI->ntrans] = -tUJ[0][it];
             StdI->transindx[StdI->ntrans][0] = isite;
             StdI->transindx[StdI->ntrans][1] = ispin;
             StdI->transindx[StdI->ntrans][2] = isite;
@@ -398,100 +582,163 @@ void StdFace_Wannier90(
          Non-local term
         */
         StdFace_FindSite(StdI, iW, iL, iH,
-          tUJDindx[0][it][0], tUJDindx[0][it][1], tUJDindx[0][it][2],
-          tUJDindx[0][it][3], tUJDindx[0][it][4], &isite, &jsite, &Cphase, dR);
+          tUJindx[0][it][0], tUJindx[0][it][1], tUJindx[0][it][2],
+          tUJindx[0][it][3], tUJindx[0][it][4], &isite, &jsite, &Cphase, dR);
         if (strcmp(StdI->model, "spin") == 0) {
           for (ii = 0; ii < 3; ii++) 
-            Jtmp[ii][ii] = 2.0 * tUJD[0][it] * conj(tUJD[0][it])
-            * (1.0 / Uspin[tUJDindx[0][it][3]] + 1.0 / Uspin[tUJDindx[0][it][4]]);
+            Jtmp[ii][ii] = 2.0 * tUJ[0][it] * conj(tUJ[0][it])
+            * (1.0 / Uspin[tUJindx[0][it][3]] + 1.0 / Uspin[tUJindx[0][it][4]]);
           StdFace_GeneralJ(StdI, Jtmp, StdI->S2, StdI->S2, isite, jsite);
         }/*if (strcmp(StdI->model, "spin") == 0 )*/
         else {
-          StdFace_Hopping(StdI, - Cphase * tUJD[0][it], isite, jsite, dR);
+          StdFace_Hopping(StdI, - Cphase * tUJ[0][it], jsite, isite, dR);
         }
       }/*Non-local term*/
-    }/*for (it = 0; it < NtUJD[0]; it++)*/
+    }/*for (it = 0; it < NtUJ[0]; it++)*/
     /*
     Coulomb integral (U)
     */
-    for (it = 0; it < NtUJD[1]; it++) {
+    for (it = 0; it < NtUJ[1]; it++) {
       /*
       Local term
       */
-      if (tUJDindx[1][it][0] == 0 && tUJDindx[1][it][1] == 0 && tUJDindx[1][it][2] == 0
-        && tUJDindx[1][it][3] == tUJDindx[1][it][4])
+      if (tUJindx[1][it][0] == 0 && tUJindx[1][it][1] == 0 && tUJindx[1][it][2] == 0
+        && tUJindx[1][it][3] == tUJindx[1][it][4])
       {
-        StdI->Cintra[StdI->NCintra] = creal(tUJD[1][it]);
-        StdI->CintraIndx[StdI->NCintra][0] = StdI->NsiteUC*kCell + tUJDindx[1][it][3];
+        StdI->Cintra[StdI->NCintra] = creal(tUJ[1][it]);
+        StdI->CintraIndx[StdI->NCintra][0] = StdI->NsiteUC*kCell + tUJindx[1][it][3];
         StdI->NCintra += 1;
+        /*
+        Double-counting correction @f$0.5 U_{0ii} D_{0ii}@f$
+        */
+        if (StdI->double_counting == 1) {
+          isite = StdI->NsiteUC*kCell + tUJindx[0][it][3];
+          for (ispin = 0; ispin < 2; ispin++) {
+            DenMat0 = DenMat[0][0][0][tUJindx[1][it][3]][tUJindx[1][it][3]];
+            StdI->trans[StdI->ntrans] = 0.5*creal(tUJ[1][it])*DenMat0;
+            StdI->transindx[StdI->ntrans][0] = isite;
+            StdI->transindx[StdI->ntrans][1] = ispin;
+            StdI->transindx[StdI->ntrans][2] = isite;
+            StdI->transindx[StdI->ntrans][3] = ispin;
+            StdI->ntrans = StdI->ntrans + 1;
+          }/*for (ispin = 0; ispin < 2; ispin++)*/
+        }
       }/*Local term*/
       else {
         /*
         Non-local term
         */
         StdFace_FindSite(StdI, iW, iL, iH,
-          tUJDindx[1][it][0], tUJDindx[1][it][1], tUJDindx[1][it][2],
-          tUJDindx[1][it][3], tUJDindx[1][it][4], &isite, &jsite, &Cphase, dR);
-        StdFace_Coulomb(StdI, creal(tUJD[1][it]), isite, jsite);
+          tUJindx[1][it][0], tUJindx[1][it][1], tUJindx[1][it][2],
+          tUJindx[1][it][3], tUJindx[1][it][4], &isite, &jsite, &Cphase, dR);
+        StdFace_Coulomb(StdI, creal(tUJ[1][it]), isite, jsite);
+        /*
+        Double-counting correction
+        */
+        if (StdI->double_counting == 1) {
+          for (ispin = 0; ispin < 2; ispin++) {
+            /*
+            @f$sum_{R,j} U_{Rij} D_{0jj} (Local)@f$
+            */
+            DenMat0 = DenMat[0][0][0][tUJindx[1][it][4]][tUJindx[1][it][4]];
+            StdI->trans[StdI->ntrans] = creal(tUJ[1][it])*DenMat0;
+            StdI->transindx[StdI->ntrans][0] = isite;
+            StdI->transindx[StdI->ntrans][1] = ispin;
+            StdI->transindx[StdI->ntrans][2] = isite;
+            StdI->transindx[StdI->ntrans][3] = ispin;
+            StdI->ntrans = StdI->ntrans + 1;
+          }/*for (ispin = 0; ispin < 2; ispin++)*/
+          /*
+          @f$-0.5U_{Rij} D_{Rjj}@f$
+          */
+          DenMat0 = DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
+            [tUJindx[1][it][3]][tUJindx[1][it][4]];
+          StdFace_Hopping(StdI, -0.5*Cphase * creal(tUJ[1][it])*DenMat0, jsite, isite, dR);
+        }/*if (StdI->double_counting == 1)*/
       }/*Non-local term*/
-    }/*for (it = 0; it < NtUJD[0]; it++)*/
+    }/*for (it = 0; it < NtUJ[0]; it++)*/
     /*
      Hund coupling (J)
     */
-    for (it = 0; it < NtUJD[2]; it++) {
+    for (it = 0; it < NtUJ[2]; it++) {
       /*
       Local term should not be computed
       */
-      if (tUJDindx[2][it][0] != 0 || tUJDindx[2][it][1] != 0 || tUJDindx[2][it][2] != 0
-        || tUJDindx[2][it][3] != tUJDindx[2][it][4])
+      if (tUJindx[2][it][0] != 0 || tUJindx[2][it][1] != 0 || tUJindx[2][it][2] != 0
+        || tUJindx[2][it][3] != tUJindx[2][it][4])
       {
         StdFace_FindSite(StdI, iW, iL, iH,
-          tUJDindx[2][it][0], tUJDindx[2][it][1], tUJDindx[2][it][2],
-          tUJDindx[2][it][3], tUJDindx[2][it][4], &isite, &jsite, &Cphase, dR);
+          tUJindx[2][it][0], tUJindx[2][it][1], tUJindx[2][it][2],
+          tUJindx[2][it][3], tUJindx[2][it][4], &isite, &jsite, &Cphase, dR);
 
-        StdI->Hund[StdI->NHund] = creal(tUJD[2][it]);
+        StdI->Hund[StdI->NHund] = creal(tUJ[2][it]);
         StdI->HundIndx[StdI->NHund][0] = isite;
         StdI->HundIndx[StdI->NHund][1] = jsite;
         StdI->NHund += 1;
 
         if (strcmp(StdI->model, "hubbard") == 0) {
-          StdI->Ex[StdI->NEx] = creal(tUJD[2][it]);
+          StdI->Ex[StdI->NEx] = creal(tUJ[2][it]);
           StdI->ExIndx[StdI->NEx][0] = isite;
           StdI->ExIndx[StdI->NEx][1] = jsite;
           StdI->NEx += 1;
 
-          StdI->PairHopp[StdI->NPairHopp] = creal(tUJD[2][it]);
+          StdI->PairHopp[StdI->NPairHopp] = creal(tUJ[2][it]);
           StdI->PHIndx[StdI->NPairHopp][0] = isite;
           StdI->PHIndx[StdI->NPairHopp][1] = jsite;
           StdI->NPairHopp += 1;
         }
         else {
 #if defined(_mVMC)
-          StdI->Ex[StdI->NEx] = creal(tUJD[2][it]);
+          StdI->Ex[StdI->NEx] = creal(tUJ[2][it]);
 #else
-          StdI->Ex[StdI->NEx] = -creal(tUJD[2][it]);
+          StdI->Ex[StdI->NEx] = -creal(tUJ[2][it]);
 #endif
           StdI->ExIndx[StdI->NEx][0] = isite;
           StdI->ExIndx[StdI->NEx][1] = jsite;
           StdI->NEx += 1;
+          /*
+          Double-counting correction
+          */
+          if (StdI->double_counting == 1) {
+            for (ispin = 0; ispin < 2; ispin++) {
+              /*
+              @f$-0.5 sum_{R,j} J_{Rij} D_{0jj}@f$
+              */
+              DenMat0 = DenMat[0][0][0][tUJindx[2][it][4]][tUJindx[2][it][4]];
+              StdI->trans[StdI->ntrans] = -0.5*creal(tUJ[2][it]) *DenMat0;
+              StdI->transindx[StdI->ntrans][0] = isite;
+              StdI->transindx[StdI->ntrans][1] = ispin;
+              StdI->transindx[StdI->ntrans][2] = isite;
+              StdI->transindx[StdI->ntrans][3] = ispin;
+              StdI->ntrans = StdI->ntrans + 1;
+            }/*for (ispin = 0; ispin < 2; ispin++)*/
+            /*
+            @f$J_{Rij} (D_{Rjj}+2{\rm Re}[D_{Rjj])@f$
+            */
+            DenMat0 = DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
+                            [tUJindx[2][it][3]][tUJindx[2][it][4]];
+            StdFace_Hopping(StdI, 
+              0.5*Cphase * creal(tUJ[2][it])*(DenMat0 + 2.0*creal(DenMat0)), jsite, isite, dR);
+          }/*if (StdI->double_counting == 1)*/
         }
       }/*Non-local term*/
-    }/*for (it = 0; it < NtUJD[0]; it++)*/
+    }/*for (it = 0; it < NtUJ[0]; it++)*/
   }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
   fclose(fp);
+  PrintUHFinitial(StdI, NtUJ, tUJ, DenMat, tUJindx);
   StdFace_PrintXSF(StdI);
   StdFace_PrintGeometry(StdI);
 
-  for (it = 0; it < NtUJD[0]; it++) free(tUJDindx[0][it]);
-  free(tUJDindx[0]);
-  free(tUJD[0]);
-  for (it = 0; it < NtUJD[1]; it++) free(tUJDindx[1][it]);
-  free(tUJDindx[1]);
-  free(tUJD[1]); 
-  for (it = 0; it < NtUJD[2]; it++) free(tUJDindx[2][it]);
-  free(tUJDindx[2]);
-  free(tUJD[2]); 
+  for (it = 0; it < NtUJ[0]; it++) free(tUJindx[0][it]);
+  free(tUJindx[0]);
+  free(tUJ[0]);
+  for (it = 0; it < NtUJ[1]; it++) free(tUJindx[1][it]);
+  free(tUJindx[1]);
+  free(tUJ[1]); 
+  for (it = 0; it < NtUJ[2]; it++) free(tUJindx[2][it]);
+  free(tUJindx[2]);
+  free(tUJ[2]); 
   if (strcmp(StdI->model, "spin") == 0) free(Uspin);
 
 }/*void StdFace_Wannier90*/

@@ -960,6 +960,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   for (i = 0; i < 3; i++)StdI->cutoff_tR[i] = StdI->NaN_i;
   for (i = 0; i < 3; i++)StdI->cutoff_UR[i] = StdI->NaN_i;
   for (i = 0; i < 3; i++)StdI->cutoff_JR[i] = StdI->NaN_i;
+  StdI->double_counting = StdI->NaN_i;
 #if defined(_HPhi)
   StdI->LargeValue = NaN_d;
   StdI->OmegaMax = NaN_d;
@@ -1308,6 +1309,7 @@ static void PrintNamelist(struct StdIntList *StdI){
   if (StdI->lGC == 1 || (StdI->Sz2 != 0 && StdI->Sz2 != StdI->NaN_i))
     fprintf(fp, " OrbitalParallel  orbitalidxpara.def\n");
   fprintf(                         fp, "        TransSym  qptransidx.def\n");
+  fprintf(fp, "        Initial  initial.def\n");
 #endif
   
   fflush(fp);
@@ -2320,6 +2322,7 @@ void StdFace_main(
     else if (strcmp(keyword, "cutoff_ul") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_UR[1]);
     else if (strcmp(keyword, "cutoff_uw") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_UR[0]);
     else if (strcmp(keyword, "d") == 0) StoreWithCheckDup_d(keyword, value, &StdI->D[2][2]);
+    else if (strcmp(keyword, "doublecounting") == 0) StoreWithCheckDup_i(keyword, value, &StdI->double_counting);
     else if (strcmp(keyword, "gamma") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Gamma);
     else if (strcmp(keyword, "h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->h);
     else if (strcmp(keyword, "height") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Height);
