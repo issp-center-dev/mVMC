@@ -352,6 +352,13 @@ static void PrintUHFinitial(
     iL = StdI->Cell[kCell][1];
     iH = StdI->Cell[kCell][2];
     /*
+     Diagonal term
+    */
+    for (isite = 0; isite < StdI->NsiteUC; isite++) {
+      jsite = isite + StdI->NsiteUC*kCell;
+      IniGuess[jsite][jsite] = DenMat[0][0][0][isite][isite];
+    }
+    /*
     Coulomb integral (U)
     */
     for (it = 0; it < NtUJ[1]; it++) {
@@ -523,7 +530,7 @@ void StdFace_Wannier90(
   }
   else if (strcmp(StdI->model, "hubbard") == 0) {
     ntransMax = StdI->NCell * 2/*spin*/ * (2 * StdI->NsiteUC/*mu+h+Gamma*/ + NtUJ[0] * 2/*t*/
-      + NtUJ[1] * 2 * 3/*DC(U)*/ + NtUJ[2] * 2 * 3/*DC(J)*/);
+      + NtUJ[1] * 2 * 3/*DC(U)*/ + NtUJ[2] * 2 * 2/*DC(J)*/);
     nintrMax = StdI->NCell * (NtUJ[1] + NtUJ[2] + StdI->NsiteUC);
   }
   /**/
@@ -700,16 +707,6 @@ void StdFace_Wannier90(
           StdI->PHIndx[StdI->NPairHopp][0] = isite;
           StdI->PHIndx[StdI->NPairHopp][1] = jsite;
           StdI->NPairHopp += 1;
-        }
-        else {
-#if defined(_mVMC)
-          StdI->Ex[StdI->NEx] = creal(tUJ[2][it]);
-#else
-          StdI->Ex[StdI->NEx] = -creal(tUJ[2][it]);
-#endif
-          StdI->ExIndx[StdI->NEx][0] = isite;
-          StdI->ExIndx[StdI->NEx][1] = jsite;
-          StdI->NEx += 1;
           /*
           Double-counting correction
           */
@@ -744,6 +741,16 @@ void StdFace_Wannier90(
             StdFace_Hopping(StdI, 
               0.5*Cphase * creal(tUJ[2][it])*(DenMat0 + 2.0*creal(DenMat0)), jsite, isite, dR);
           }/*if (StdI->double_counting == 1)*/
+        }
+        else {
+#if defined(_mVMC)
+          StdI->Ex[StdI->NEx] = creal(tUJ[2][it]);
+#else
+          StdI->Ex[StdI->NEx] = -creal(tUJ[2][it]);
+#endif
+          StdI->ExIndx[StdI->NEx][0] = isite;
+          StdI->ExIndx[StdI->NEx][1] = jsite;
+          StdI->NEx += 1;
         }
       }/*Non-local term*/
     }/*for (it = 0; it < NtUJ[0]; it++)*/
