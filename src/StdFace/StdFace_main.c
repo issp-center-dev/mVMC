@@ -1309,7 +1309,8 @@ static void PrintNamelist(struct StdIntList *StdI){
   if (StdI->lGC == 1 || (StdI->Sz2 != 0 && StdI->Sz2 != StdI->NaN_i))
     fprintf(fp, " OrbitalParallel  orbitalidxpara.def\n");
   fprintf(                         fp, "        TransSym  qptransidx.def\n");
-  fprintf(fp, "        Initial  initial.def\n");
+  if(strcmp(StdI->lattice, "wannier90") == 0)
+    fprintf(fp, "        Initial  initial.def\n");
 #endif
   
   fflush(fp);
