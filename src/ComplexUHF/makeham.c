@@ -64,11 +64,11 @@ void makeham(struct BindStruct *X) {
 
     X->Large.Ham[u_site_1][u_site_1] += tmp * X->Large.G[d_site_1][d_site_1];
     X->Large.Ham[d_site_1][d_site_1] += tmp * X->Large.G[u_site_1][u_site_1];
-//#if Fock==1
-    /*Off-Diagonal Fock term*/
-    X->Large.Ham[u_site_1][d_site_1] += -1.0 * tmp * X->Large.G[d_site_1][u_site_1];
-    X->Large.Ham[d_site_1][u_site_1] += -1.0 * tmp * X->Large.G[u_site_1][d_site_1];
-//#endif
+    if (X->Def.iFlg_Fock == 1) {
+      /*Off-Diagonal Fock term*/
+      X->Large.Ham[u_site_1][d_site_1] += -1.0 * tmp * X->Large.G[d_site_1][u_site_1];
+      X->Large.Ham[d_site_1][u_site_1] += -1.0 * tmp * X->Large.G[u_site_1][d_site_1];
+    }
   }
   /*Inter U input*/
   for (int_i = 0; int_i < X->Def.NCoulombInter; int_i++) {
@@ -208,4 +208,13 @@ void makeham(struct BindStruct *X) {
 
     }
   }
+
+  /* For Debug
+  for (int_i = 0; int_i < 2 * X->Def.Nsite; int_i++) {
+    for (int_j = 0; int_j < 2 * X->Def.Nsite; int_j++) {
+      printf("%d %d %lf\n", int_i, int_j, X->Large.Ham[int_i][int_j]);
+    }
+  }
+  exit(0);
+   */
 }

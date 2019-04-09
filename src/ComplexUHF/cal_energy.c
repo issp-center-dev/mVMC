@@ -174,7 +174,7 @@ void cal_energy(struct BindStruct *X) {
       s_site_3 = site_3 + spin_3 * Ns;
       s_site_4 = site_4 + spin_4 * Ns;
       E_InterAll += ctmp * X->Large.G[s_site_1][s_site_2] * X->Large.G[s_site_3][s_site_4];
-      E_InterAll -= ctmp * X->Large.G[s_site_1][s_site_3] * X->Large.G[s_site_2][s_site_4];
+      E_InterAll -= ctmp * X->Large.G[s_site_1][s_site_4] * X->Large.G[s_site_3][s_site_2];
     }
   }
   /*Calculating Total Enegy*/

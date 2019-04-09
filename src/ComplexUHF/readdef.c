@@ -186,7 +186,7 @@ int ReadDefFileNInt(
         if (fp == NULL) {
             info = ReadDefFileError(defname);
             fclose(fp);
-            break;
+            return (-1);
         } else {
             switch (iKWidx) {
                 case KWModPara:

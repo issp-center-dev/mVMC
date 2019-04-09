@@ -8,7 +8,8 @@ import math
 import subprocess
 import itertools
 
-dir="data/UHF_InterAll_Diagonal"    
+dir_diag = "data/UHF_InterAll_Diagonal"    
+dir_exchange =  "data/UHF_InterAll_Exchange"
 
 def read_opt_def(filename, total_site):
     rf = open(filename, "r")
@@ -51,6 +52,15 @@ def change_coulombInter_to_Interall(filename, total_int):
                                               int(line1[1]), j_spin, int(line1[1]), j_spin, float(line1[2]), 0.0))
     return _arr_int_all
 
+def change_exchange_to_Interall(filename, total_int):
+    _arr_int_all = []
+    with open(filename, "r") as rf:
+        for line in rf.readlines()[5:]:
+            line1 = line.split()
+            _arr_int_all.append((int(line1[0]), 0, int(line1[1]), 0, int(line1[1]), 1, int(line1[0]), 1, float(line1[2]), 0.0))
+            _arr_int_all.append((int(line1[0]), 1, int(line1[1]), 1, int(line1[1]), 0, int(line1[0]), 0, float(line1[2]), 0.0))
+    return _arr_int_all
+
 
 def MakeHeader(file, comment, number):
     file.write("========================\n")
@@ -72,8 +82,8 @@ class TestAtomic(unittest.TestCase):
 
     def test_Diagonal(self):
         # run
-        self.assertIs(0, os.system("../../src/mVMC/vmcdry.out %s/stan.in" %dir))        
-        for _file in glob.glob("%s/*.def" %dir):
+        self.assertIs(0, os.system("../../src/mVMC/vmcdry.out %s/stan.in" %dir_diag))        
+        for _file in glob.glob("%s/*.def" %dir_diag):
             file_name = os.path.split(_file)
             shutil.copyfile(_file, "./%s" %file_name[1])
 
@@ -82,17 +92,17 @@ class TestAtomic(unittest.TestCase):
         write_Interall("interall.def", arr_int)
             
         # run
-        self.assertIs(0, os.system("../../src/ComplexUHF/UHF %s/namelist_all.def" %dir))        
+        self.assertIs(0, os.system("../../src/ComplexUHF/UHF %s/namelist_all.def" %dir_diag))        
         # get results
         array_calc = read_out("./zvo_eigen.dat")
-        ref_ave = read_out("%s/ref/zvo_eigen.dat" %dir)
+        ref_ave = read_out("%s/ref/zvo_eigen.dat" %dir_diag)
         testArray = (abs(array_calc-ref_ave) < 1e-8)
         for _test in testArray:
             self.assertTrue(_test.all())
 
         # get results
         array_calc = read_trans_def("./zvo_UHF_cisajs.dat", 8)
-        ref_ave = read_trans_def("%s/ref/zvo_UHF_cisajs.dat" %dir, 8)
+        ref_ave = read_trans_def("%s/ref/zvo_UHF_cisajs.dat" %dir_diag, 8)
         testArray = (abs(array_calc-ref_ave) < 1e-8)
         for _test in testArray:
             self.assertTrue(_test.all())
@@ -100,6 +110,39 @@ class TestAtomic(unittest.TestCase):
          #clean directory
         subprocess.call("rm ./*.dat", shell = True)
         subprocess.call("rm ./*.def", shell = True)
+
+    def test_Exchange(self):
+        # copy
+        for _file in glob.glob("%s/*.def" %dir_exchange):
+            file_name = os.path.split(_file)
+            shutil.copyfile(_file, "./%s" %file_name[1])
+
+        arr_int = change_coulombIntra_to_Interall("coulombintra.def", 4)
+        arr_int += change_exchange_to_Interall("exchange.def", 4)
+
+        
+        write_Interall("interall.def", arr_int)
+            
+        # run
+        self.assertIs(0, os.system("../../src/ComplexUHF/UHF %s/namelist_all.def" %dir_exchange))        
+        # get results
+        array_calc = read_out("./zvo_eigen.dat")
+        ref_ave = read_out("%s/ref/zvo_eigen.dat" %dir_exchange)
+        testArray = (abs(array_calc-ref_ave) < 1e-8)
+        for _test in testArray:
+            self.assertTrue(_test.all())
+
+        # get results
+        array_calc = read_trans_def("./zvo_UHF_cisajs.dat", 8)
+        ref_ave = read_trans_def("%s/ref/zvo_UHF_cisajs.dat" %dir_exchange, 8)
+        testArray = (abs(array_calc-ref_ave) < 1e-8)
+        for _test in testArray:
+            self.assertTrue(_test.all())
+        
+         #clean directory
+        subprocess.call("rm ./*.dat", shell = True)
+        subprocess.call("rm ./*.def", shell = True)
+
         
 if __name__ == '__main__':
     unittest.main()
