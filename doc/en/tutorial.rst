@@ -258,8 +258,8 @@ By seeing these informations, the conversion of the calculation can be
 judged. By using gnuplot, we can check the evolution of
 :math:`\langle H \rangle` as follows:
 
-.. code-block:: gnuplot
-
+::
+   
    gnuplot> plot "zvo_out_001.dat" u 1
 
 The details of these outputted files are shown in :ref:`OutputFile`.

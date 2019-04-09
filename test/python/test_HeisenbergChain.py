@@ -13,7 +13,7 @@ def read_out(filename):
 class TestAtomic(unittest.TestCase):
     def test_HeisenbergChain(self):
         # run
-#        self.assertIs(0, os.system("../../src/mVMC/vmc.out -s %s/StdFace.def" %dir))        
+        self.assertIs(0, os.system("../../src/mVMC/vmc.out -s %s/StdFace.def" %dir))        
         # get results
         array_calc = read_out("./output/zqp_opt.dat")[0:2]
         ref_ave = read_out("%s/ref/ref_mean.dat" %dir)[0:2]

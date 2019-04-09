@@ -204,6 +204,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
     else if (strcmp(StdI->CalcSpec, "restart_in") == 0) iCalcSpec = 4;
     else if (strcmp(StdI->CalcSpec, "restartsave") == 0 ||
              strcmp(StdI->CalcSpec, "restart")     == 0) iCalcSpec = 5;
+    else if (strcmp(StdI->CalcSpec, "scratch") == 0) iCalcSpec = 6;
     else {
       fprintf(stdout, "\n ERROR ! CalcSpec : %s\n", StdI->CalcSpec);
       StdFace_exit(-1);
@@ -214,7 +215,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
   fprintf(fp, "#CalcType = 0:Lanczos, 1:TPQCalc, 2:FullDiag, 3:CG, 4:Time-evolution\n");
   fprintf(fp, "#CalcModel = 0:Hubbard, 1:Spin, 2:Kondo, 3:HubbardGC, 4:SpinGC, 5:KondoGC\n");
   fprintf(fp, "#Restart = 0:None, 1:Save, 2:Restart&Save, 3:Restart\n");
-  fprintf(fp, "#CalcSpec = 0:None, 1:Normal, 2:No H*Phi, 3:Save, 4:Restart, 5:Restart&Save\n");
+  fprintf(fp, "#CalcSpec = 0:None, 1:Normal, 2:No H*Phi, 3:Save, 4:Restart, 5:Restart&Save, 6:Scratch\n");
   fprintf(fp, "CalcType %3d\n", iCalcType);
   fprintf(fp, "CalcModel %3d\n", iCalcModel);
   fprintf(fp, "ReStart %3d\n", iRestart);
@@ -233,8 +234,8 @@ static void PrintCalcMod(struct StdIntList *StdI)
 */
 static void PrintExcitation(struct StdIntList *StdI) {
   FILE *fp;
-  int NumOp, **spin, isite, ispin, icell, itau;
-  double *coef, pi, Cphase, S, Sz;
+  int NumOp, **spin, isite, ispin, icell, itau, iEx, lR;
+  double *coef, Cphase, S, Sz;
   double *fourier_r, *fourier_i;
 
   if (strcmp(StdI->model, "spin") == 0 && StdI->S2 > 1) {
@@ -279,10 +280,12 @@ static void PrintExcitation(struct StdIntList *StdI) {
       spin[1][1] = 1;
     }
     StdI->SpectrumBody = 2;
+    lR = 0;
   }
   else {
     fprintf(stdout, "     SpectrumType = %s\n", StdI->SpectrumType);
-    if (strcmp(StdI->SpectrumType, "szsz") == 0) {
+    if (strcmp(StdI->SpectrumType, "szsz") == 0 ||
+        strcmp(StdI->SpectrumType, "szsz_r") == 0) {
       if (strcmp(StdI->model, "spin") == 0) {
         NumOp = StdI->S2 + 1;
         for (ispin = 0; ispin <= StdI->S2; ispin++) {
@@ -301,9 +304,12 @@ static void PrintExcitation(struct StdIntList *StdI) {
         spin[1][0] = 1;
         spin[1][1] = 1;
       }
+      if (strcmp(StdI->SpectrumType, "szsz") == 0) lR = 0;
+      else lR = 1;
       StdI->SpectrumBody = 2;
     }
-    else if (strcmp(StdI->SpectrumType, "s+s-") == 0) {
+    else if (strcmp(StdI->SpectrumType, "s+s-") == 0 ||
+             strcmp(StdI->SpectrumType, "s+s-_r") == 0) {
       if (strcmp(StdI->model, "spin") == 0 && StdI->S2 > 1) {
         NumOp = StdI->S2;
         S = (double)StdI->S2 * 0.5;
@@ -320,28 +326,39 @@ static void PrintExcitation(struct StdIntList *StdI) {
         spin[0][0] = 0;
         spin[0][1] = 1;
       }
+      if (strcmp(StdI->SpectrumType, "s+s-") == 0) lR = 0;
+      else lR = 1;
       StdI->SpectrumBody = 2;
     }
-    else if (strcmp(StdI->SpectrumType, "density") == 0) {
+    else if (strcmp(StdI->SpectrumType, "density") == 0 ||
+             strcmp(StdI->SpectrumType, "density_r") == 0) {
       NumOp = 2;
-      coef[0] = 1,0;
+      coef[0] = 1.0;
       coef[1] = 1.0;
       spin[0][0] = 0;
       spin[0][1] = 0;
       spin[1][0] = 1;
       spin[1][1] = 1;
+      if (strcmp(StdI->SpectrumType, "density") == 0) lR = 0;
+      else lR = 1;
       StdI->SpectrumBody = 2;
     }
-    else if (strcmp(StdI->SpectrumType, "up") == 0) {
+    else if (strcmp(StdI->SpectrumType, "up") == 0 ||
+             strcmp(StdI->SpectrumType, "up_r") == 0) {
       NumOp = 1;
       coef[0] = 1.0;
       spin[0][0] = 0;
+      if (strcmp(StdI->SpectrumType, "up") == 0) lR = 0;
+      else lR = 1;
       StdI->SpectrumBody = 1;
     }
-    else if (strcmp(StdI->SpectrumType, "down") == 0) {
+    else if (strcmp(StdI->SpectrumType, "down") == 0 ||
+             strcmp(StdI->SpectrumType, "down_r") == 0) {
       NumOp = 1;
       coef[0] = 1.0;
       spin[0][0] = 1;
+      if (strcmp(StdI->SpectrumType, "down") == 0) lR = 0;
+      else lR = 1;
       StdI->SpectrumBody = 1;
     }
     else {
@@ -371,45 +388,87 @@ static void PrintExcitation(struct StdIntList *StdI) {
   if (StdI->SpectrumBody == 1) {
     fp = fopen("single.def", "w");
     fprintf(fp, "=============================================\n");
-    if (strcmp(StdI->model, "kondo") == 0) {
-      fprintf(fp, "NSingle %d\n", StdI->nsite / 2 * NumOp);
-    }
-    else {
-      fprintf(fp, "NSingle %d\n", StdI->nsite * NumOp);
-    }
+    if (lR == 0) fprintf(fp, "NSingle %d\n", 2);
+    else fprintf(fp, "NSingle %d\n", 1+ StdI->nsite);
     fprintf(fp, "=============================================\n");
     fprintf(fp, "============== Single Excitation ============\n");
     fprintf(fp, "=============================================\n");
-    if (strcmp(StdI->model, "kondo") == 0) {
-      for (isite = StdI->nsite / 2; isite < StdI->nsite; isite++) {
-        fprintf(fp, "%d %d 0 %25.15f %25.15f\n", isite, spin[0][0],
-          fourier_r[isite] * coef[0], fourier_i[isite] * coef[0]);
-      }/*for (isite = 0; isite < StdI->nsite; isite++)*/
-    }/*if (strcmp(StdI->model, "kondo") == 0)*/
+    if (lR == 0) {
+      if (strcmp(StdI->model, "kondo") == 0) {
+        for (iEx = 0; iEx < 2; iEx++) {
+          fprintf(fp, "%d\n", StdI->nsite / 2 * NumOp);
+          for (isite = StdI->nsite / 2; isite < StdI->nsite; isite++) {
+            fprintf(fp, "%d %d 0 %25.15f %25.15f\n", isite, spin[0][0],
+              fourier_r[isite] * coef[0], fourier_i[isite] * coef[0]);
+          }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+        }/*for (iEx = 0; iEx < 2; iEx++)*/
+      }/*if (strcmp(StdI->model, "kondo") == 0)*/
+      else {
+        for (iEx = 0; iEx < 2; iEx++) {
+          fprintf(fp, "%d\n", StdI->nsite * NumOp);
+          for (isite = 0; isite < StdI->nsite; isite++) {
+            fprintf(fp, "%d %d 0 %25.15f %25.15f\n", isite, spin[0][0],
+              fourier_r[isite] * coef[0], fourier_i[isite] * coef[0]);
+          }/*for (isite = 0; isite < StdI->nsite; isite++)*/
+        }/*for (iEx = 0; iEx < 2; iEx++)*/
+      }
+    }/*if (lR == 0)*/
     else {
-      for (isite = 0; isite < StdI->nsite; isite++) {
-        fprintf(fp, "%d %d 0 %25.15f %25.15f\n", isite, spin[0][0],
-          fourier_r[isite] * coef[0], fourier_i[isite] * coef[0]);
-      }/*for (isite = 0; isite < StdI->nsite; isite++)*/
-    }
+      if (strcmp(StdI->model, "kondo") == 0) {
+        fprintf(fp, "%d\n", NumOp);
+        fprintf(fp, "%d %d 0 %25.15f 0.0\n", StdI->nsite / 2, spin[0][0], coef[0]);
+        for (isite = StdI->nsite / 2; isite < StdI->nsite; isite++) {
+          fprintf(fp, "%d\n", NumOp);
+          fprintf(fp, "%d %d 0 %25.15f 0.0\n", isite, spin[0][0], coef[0]);
+        }
+      }
+      else {
+        fprintf(fp, "%d\n", NumOp);
+        fprintf(fp, "%d %d 0 %25.15f 0.0\n", 0, spin[0][0], coef[0]);
+        for (isite = 0; isite < StdI->nsite; isite++) {
+          fprintf(fp, "%d\n", NumOp);
+          fprintf(fp, "%d %d 0 %25.15f 0.0\n", isite, spin[0][0], coef[0]);
+        }
+      }
+    }/*if (lR != 0)*/
     fprintf(stdout, "      single.def is written.\n\n");
-  }
+  }/*if (StdI->SpectrumBody == 1)*/
   else {
     fp = fopen("pair.def", "w");
     fprintf(fp, "=============================================\n");
-    fprintf(fp, "NPair %d\n", StdI->nsite * NumOp);
+    if (lR == 0) fprintf(fp, "NPair %d\n", 2);
+    else fprintf(fp, "NSingle %d\n", 1 + StdI->nsite);
     fprintf(fp, "=============================================\n");
     fprintf(fp, "=============== Pair Excitation =============\n");
     fprintf(fp, "=============================================\n");
-    for (isite = 0; isite < StdI->nsite; isite++) {
+    if (lR == 0) {
+      for (iEx = 0; iEx < 2; iEx++) {
+        fprintf(fp, "%d\n", StdI->nsite * NumOp);
+        for (isite = 0; isite < StdI->nsite; isite++) {
+          for (ispin = 0; ispin < NumOp; ispin++) {
+            fprintf(fp, "%d %d %d %d 1 %25.15f %25.15f\n",
+              isite, spin[ispin][0], isite, spin[ispin][1],
+              fourier_r[isite] * coef[ispin], fourier_i[isite] * coef[ispin]);
+          }
+        }
+      }/*for (iEx = 0; iEx < 2; iEx++)*/
+    }/*if (lR == 0)*/
+    else {
+      fprintf(fp, "%d\n", NumOp);
       for (ispin = 0; ispin < NumOp; ispin++) {
-        fprintf(fp, "%d %d %d %d 1 %25.15f %25.15f\n", 
-          isite, spin[ispin][0], isite, spin[ispin][1],
-          fourier_r[isite] * coef[ispin], fourier_i[isite] * coef[ispin]);
+        fprintf(fp, "%d %d %d %d 1 %25.15f 0.0\n",
+          0, spin[ispin][0], 0, spin[ispin][1], coef[ispin]);
       }
-    }
+      for (isite = 0; isite < StdI->nsite; isite++) {
+        fprintf(fp, "%d\n", NumOp);
+        for (ispin = 0; ispin < NumOp; ispin++) {
+          fprintf(fp, "%d %d %d %d 1 %25.15f 0.0\n",
+            isite, spin[ispin][0], isite, spin[ispin][1], coef[ispin]);
+        }
+      }
+    }/*if (lR != 0)*/
     fprintf(stdout, "        pair.def is written.\n\n");
-  }
+  }/*if (StdI->SpectrumBody == 2)*/
   fflush(fp);
   fclose(fp);
 
@@ -428,10 +487,9 @@ static void PrintExcitation(struct StdIntList *StdI) {
 */
 static void VectorPotential(struct StdIntList *StdI) {
   FILE *fp;
-  int it, ii, isite, icell, itau, itrans, jsite, jcell, jtau, ntrans0;
-  double Cphase, time, dR[3];
+  int it, ii;
+  double time;
   double **Et;
-  double complex coef;
 
   fprintf(stdout, "\n  @ Time-evolution\n\n");
 
@@ -525,7 +583,7 @@ static void VectorPotential(struct StdIntList *StdI) {
 */
 static void PrintPump(struct StdIntList *StdI) {
   FILE *fp;
-  int it, ii, isite, ipump, jpump, npump0;
+  int it, isite, ipump, jpump, npump0;
 
   if (StdI->PumpBody == 1) {
 
@@ -902,6 +960,7 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   for (i = 0; i < 3; i++)StdI->cutoff_tR[i] = StdI->NaN_i;
   for (i = 0; i < 3; i++)StdI->cutoff_UR[i] = StdI->NaN_i;
   for (i = 0; i < 3; i++)StdI->cutoff_JR[i] = StdI->NaN_i;
+  StdI->double_counting = StdI->NaN_i;
 #if defined(_HPhi)
   StdI->LargeValue = NaN_d;
   StdI->OmegaMax = NaN_d;
@@ -1249,6 +1308,8 @@ static void PrintNamelist(struct StdIntList *StdI){
   if (StdI->lGC == 1 || (StdI->Sz2 != 0 && StdI->Sz2 != StdI->NaN_i))
     fprintf(fp, " OrbitalParallel  orbitalidxpara.def\n");
   fprintf(                         fp, "        TransSym  qptransidx.def\n");
+  if(strcmp(StdI->lattice, "wannier90") == 0)
+    fprintf(fp, "        Initial  initial.def\n");
 #endif
   
   fflush(fp);
@@ -2261,6 +2322,7 @@ void StdFace_main(
     else if (strcmp(keyword, "cutoff_ul") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_UR[1]);
     else if (strcmp(keyword, "cutoff_uw") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_UR[0]);
     else if (strcmp(keyword, "d") == 0) StoreWithCheckDup_d(keyword, value, &StdI->D[2][2]);
+    else if (strcmp(keyword, "doublecounting") == 0) StoreWithCheckDup_i(keyword, value, &StdI->double_counting);
     else if (strcmp(keyword, "gamma") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Gamma);
     else if (strcmp(keyword, "h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->h);
     else if (strcmp(keyword, "height") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Height);

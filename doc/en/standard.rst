@@ -396,8 +396,8 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
    **Type :** Complex
 
    **Description :** (Hubbard and Kondo lattice model) The nearest
-   neighbor hoppings for each direction (see :numref:`fig_chap04_1_lattice` -
-   :numref:`fig_kagome` )
+   neighbor hoppings for each direction (see :num:`fig_chap04_1_lattice` -
+   :num:`fig_kagome` )
    are specified with these parameters. If there is no bond dependence
    of the hoppings, the simplified parameter ``t`` is available to
    specify ``t0``, ``t1``, and ``t2`` as ``t0 = t1 = t2 = t``. If both
@@ -409,7 +409,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
    **Type :** Complex
 
    **Description :** (Hubbard and Kondo lattice model) The second nearest
-   neighbor hoppings for each direction (see :numref:`fig_chap04_1_lattice` - :numref:`fig_kagome` )
+   neighbor hoppings for each direction (see :num:`fig_chap04_1_lattice` - :num:`fig_kagome` )
    are specified with these parameter.
    If there is no bond dependence
    of the hoppings, the simplified parameter ``t'`` is available to
@@ -422,7 +422,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
    **Type :** Complex
 
    **Description :** (Hubbard and Kondo lattice model) The third nearest
-   neighbor hoppings for each direction (see :numref:`fig_chap04_1_lattice` - :numref:`fig_kagome` )
+   neighbor hoppings for each direction (see :num:`fig_chap04_1_lattice` - :num:`fig_kagome` )
    are specified with these parameter.
    If there is no bond dependence
    of the hoppings, the simplified parameter ``t''`` is available to
@@ -436,7 +436,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 
    **Description :** (Hubbard and Kondo lattice model) The nearest
    neighbor offsite Coulomb integrals :math:`V` for each direction
-   (see :numref:`fig_chap04_1_lattice` - :numref:`fig_kagome` )
+   (see :num:`fig_chap04_1_lattice` - :num:`fig_kagome` )
    are specified with these parameters. If there is no bond dependence
    of the offsite Coulomb integrals, the simplified parameter ``V`` is
    available to specify ``V0``, ``V1``, and ``V2`` as
@@ -449,7 +449,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
    **Type :** Real
 
    **Description :** (Hubbard and Kondo lattice model) The second nearest
-   neighbor-offsite Coulomb integrals :math:`V'` for each direction (see :numref:`fig_chap04_1_lattice` - :numref:`fig_kagome` )
+   neighbor-offsite Coulomb integrals :math:`V'` for each direction (see :num:`fig_chap04_1_lattice` - :num:`fig_kagome` )
    are specified with this parameter.
    If there is no bond dependence
    of the offsite Coulomb integrals, the simplified parameter ``V'`` is
@@ -463,7 +463,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
    **Type :** Real
 
    **Description :** (Hubbard and Kondo lattice model) The third nearest
-   neighbor-offsite Coulomb integrals :math:`V'` for each direction (see :numref:`fig_chap04_1_lattice` - :numref:`fig_kagome` )
+   neighbor-offsite Coulomb integrals :math:`V'` for each direction (see :num:`fig_chap04_1_lattice` - :num:`fig_kagome` )
    are specified with this parameter.
    If there is no bond dependence
    of the offsite Coulomb integrals, the simplified parameter ``V''`` is
