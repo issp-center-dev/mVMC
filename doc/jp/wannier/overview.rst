@@ -45,7 +45,7 @@ mVMC および :math:`{\mathcal H}\Phi` を用いて,
    \quad (R, j) \neq (0, i),
    \\
    D_{R i j} &\equiv \sum_{\sigma}
-   \left\langle c_{R' j \sigma}^{\dagger} c_{0 i \sigma}\right\rangle_{\rm KS}.
+   \left\langle c_{R j \sigma}^{\dagger} c_{0 i \sigma}\right\rangle_{\rm KS}.
    \end{aligned}
 
 要件
