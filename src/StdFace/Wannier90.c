@@ -359,7 +359,9 @@ static void PrintUHFinitial(
         tUJindx[1][it][0], tUJindx[1][it][1], tUJindx[1][it][2],
         tUJindx[1][it][3], tUJindx[1][it][4], &isite, &jsite, &Cphase, dR);
       IniGuess[isite][jsite] = DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
-                                     [tUJindx[1][it][3]][tUJindx[1][it][4]] * 0.5;
+                                     [tUJindx[1][it][3]][tUJindx[1][it][4]];
+      IniGuess[jsite][isite] = conj(DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
+                                          [tUJindx[1][it][3]][tUJindx[1][it][4]]);
     }/*for (it = 0; it < NtUJ[1]; it++)*/
     /*
     Wxchange integral (J)
@@ -369,7 +371,9 @@ static void PrintUHFinitial(
         tUJindx[2][it][0], tUJindx[2][it][1], tUJindx[2][it][2],
         tUJindx[2][it][3], tUJindx[2][it][4], &isite, &jsite, &Cphase, dR);
       IniGuess[isite][jsite] = DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
-                                     [tUJindx[2][it][3]][tUJindx[2][it][4]] * 0.5;
+                                     [tUJindx[2][it][3]][tUJindx[2][it][4]];
+      IniGuess[jsite][isite] = conj(DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
+                                          [tUJindx[2][it][3]][tUJindx[2][it][4]]);
     }/*for (it = 0; it < NtUJ[1]; it++)*/
   }/*for (kCell = 0; kCell < StdI->NCell; kCell++)*/
 
@@ -519,7 +523,7 @@ void StdFace_Wannier90(
   }
   else if (strcmp(StdI->model, "hubbard") == 0) {
     ntransMax = StdI->NCell * 2/*spin*/ * (2 * StdI->NsiteUC/*mu+h+Gamma*/ + NtUJ[0] * 2/*t*/
-      + NtUJ[1] * 2 * 2/*DC(U)*/ + NtUJ[2] * 2 * 2/*DC(J)*/);
+      + NtUJ[1] * 2 * 3/*DC(U)*/ + NtUJ[2] * 2 * 3/*DC(J)*/);
     nintrMax = StdI->NCell * (NtUJ[1] + NtUJ[2] + StdI->NsiteUC);
   }
   /**/
@@ -612,7 +616,7 @@ void StdFace_Wannier90(
         Double-counting correction @f$0.5 U_{0ii} D_{0ii}@f$
         */
         if (StdI->double_counting == 1) {
-          isite = StdI->NsiteUC*kCell + tUJindx[0][it][3];
+          isite = StdI->NsiteUC*kCell + tUJindx[1][it][3];
           for (ispin = 0; ispin < 2; ispin++) {
             DenMat0 = DenMat[0][0][0][tUJindx[1][it][3]][tUJindx[1][it][3]];
             StdI->trans[StdI->ntrans] = 0.5*creal(tUJ[1][it])*DenMat0;
@@ -638,13 +642,23 @@ void StdFace_Wannier90(
         if (StdI->double_counting == 1) {
           for (ispin = 0; ispin < 2; ispin++) {
             /*
-            @f$sum_{R,j} U_{Rij} D_{0jj} (Local)@f$
+            @f$sum_{(R,j)(>0,i)} U_{Rij} D_{0jj} (Local)@f$
             */
             DenMat0 = DenMat[0][0][0][tUJindx[1][it][4]][tUJindx[1][it][4]];
             StdI->trans[StdI->ntrans] = creal(tUJ[1][it])*DenMat0;
             StdI->transindx[StdI->ntrans][0] = isite;
             StdI->transindx[StdI->ntrans][1] = ispin;
             StdI->transindx[StdI->ntrans][2] = isite;
+            StdI->transindx[StdI->ntrans][3] = ispin;
+            StdI->ntrans = StdI->ntrans + 1;
+            /*
+            @f$sum_{(R,j)(>0,i)} U_{Rij} D_{0jj} (Local)@f$
+            */
+            DenMat0 = DenMat[0][0][0][tUJindx[1][it][3]][tUJindx[1][it][3]];
+            StdI->trans[StdI->ntrans] = creal(tUJ[1][it])*DenMat0;
+            StdI->transindx[StdI->ntrans][0] = jsite;
+            StdI->transindx[StdI->ntrans][1] = ispin;
+            StdI->transindx[StdI->ntrans][2] = jsite;
             StdI->transindx[StdI->ntrans][3] = ispin;
             StdI->ntrans = StdI->ntrans + 1;
           }/*for (ispin = 0; ispin < 2; ispin++)*/
@@ -702,13 +716,23 @@ void StdFace_Wannier90(
           if (StdI->double_counting == 1) {
             for (ispin = 0; ispin < 2; ispin++) {
               /*
-              @f$-0.5 sum_{R,j} J_{Rij} D_{0jj}@f$
+              @f$- \frac{1}{2}sum_{(R,j)(>0,i)} J_{Rij} D_{0jj}@f$
               */
               DenMat0 = DenMat[0][0][0][tUJindx[2][it][4]][tUJindx[2][it][4]];
               StdI->trans[StdI->ntrans] = -0.5*creal(tUJ[2][it]) *DenMat0;
               StdI->transindx[StdI->ntrans][0] = isite;
               StdI->transindx[StdI->ntrans][1] = ispin;
               StdI->transindx[StdI->ntrans][2] = isite;
+              StdI->transindx[StdI->ntrans][3] = ispin;
+              StdI->ntrans = StdI->ntrans + 1;
+              /*
+              @f$- \frac{1}{2}sum_{(R,j)(>0,i)} J_{Rij} D_{0jj}@f$
+              */
+              DenMat0 = DenMat[0][0][0][tUJindx[2][it][3]][tUJindx[2][it][3]];
+              StdI->trans[StdI->ntrans] = -0.5*creal(tUJ[2][it]) *DenMat0;
+              StdI->transindx[StdI->ntrans][0] = jsite;
+              StdI->transindx[StdI->ntrans][1] = ispin;
+              StdI->transindx[StdI->ntrans][2] = jsite;
               StdI->transindx[StdI->ntrans][3] = ispin;
               StdI->ntrans = StdI->ntrans + 1;
             }/*for (ispin = 0; ispin < 2; ispin++)*/
