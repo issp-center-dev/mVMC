@@ -37,6 +37,7 @@ src/ComplexUHF/UHF
 tool/corplot
 *.mod
 tool/fourier
+tool/greenr2k
 doc/fourier/ja/_build/
 doc/fourier/en/_build/
 *.bak
