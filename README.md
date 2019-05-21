@@ -30,7 +30,7 @@ Hubbard model, Heisenberg model, Kondo lattice model, multi-orbital Hubbard mode
 
 ### Available physical quantities
 
-specific heat, susceptibility, ground state energy, structure factors
+ground-state energy, spin/charge structure factors, superconducting correlations, etc.
 
 
 ## Requirement
@@ -51,7 +51,9 @@ GNU General Public License version 3 ([GPL v3](http://www.gnu.org/licenses/gpl-3
 The mVMC package is developed based on the [mVMC-mini](https://github.com/fiber-miniapp/mVMC-mini) program. The license of mVMC-mini is "The BSD 3-Clause License".
 
 We would appreciate if you cite the following article in your research with mVMC:  
-mVMC - Open-source software for many-variable variational Monte Carlo method, Takahiro Misawa, Satoshi Morita, Kazuyoshi Yoshimi, Mitsuaki Kawamura, Yuichi Motoyama, Kota Ido, Takahiro Ohgoe, Masatoshi Imada, Takeo Kato, [arXiv:1711.11418](https://arxiv.org/abs/1711.11418).
+mVMC - Open-source software for many-variable variational Monte Carlo method, Takahiro Misawa, Satoshi Morita, Kazuyoshi Yoshimi, Mitsuaki Kawamura, Yuichi Motoyama, Kota Ido, Takahiro Ohgoe, Masatoshi Imada, Takeo Kato, 
+[Computer Physics Communications, 235, 447-462 (2019)](https://www.sciencedirect.com/science/article/pii/S0010465518303102)
+
 
 ## Tutorials
 
