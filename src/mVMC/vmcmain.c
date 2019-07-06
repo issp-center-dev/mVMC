@@ -402,7 +402,6 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       }
     } 
     StopTimer(3);
-    printf("Debug: step %d, MainCal.\n", step);
     StartTimer(4);
 #ifdef _DEBUG_DETAIL
     printf("Debug: step %d, MainCal.\n", step);
