@@ -23,16 +23,14 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * Variational Monte Carlo
  * fast Pfaffian update
  *-------------------------------------------------------------
- * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-#include "pfupdate_fsz.h"
-#ifndef _PFUDATE_FSZ_SRC
-#define _PFUDATE_FSZ_SRC
-
+#include "pfupdate_fsz_real.h"
+#ifndef _PFUDATE_FSZ_REAL_SRC
+#define _PFUDATE_FSZ_REAL_SRC
 
 /* Calculate new pfaffian. The ma-th electron with spin s hops. */
-void CalculateNewPfM_fsz(const int ma, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
+void CalculateNewPfM_fsz_real(const int ma, const int s, double *pfMNew, const int *eleIdx,const int *eleSpn,
                      const int qpStart, const int qpEnd) {
   #pragma procedure serial
   const int qpNum = qpEnd-qpStart;
@@ -42,36 +40,32 @@ void CalculateNewPfM_fsz(const int ma, const int s, double complex *pfMNew, cons
 
   int qpidx;
   int msj,rsj;
-  const double complex *sltE_a; /* update elements of msa-th row */
-  const double complex *invM_a;
-  double complex ratio;
+  const double *sltE_a; /* update elements of msa-th row */
+  const double *invM_a;
+  double ratio;
 
   /* optimization for Kei */
   const int nsize = Nsize;
 
   #pragma loop noalias
   for(qpidx=0;qpidx<qpNum;qpidx++) {
-    sltE_a = SlaterElm + (qpidx+qpStart)*Nsite2*Nsite2 + rsa*Nsite2;
-    invM_a = InvM + qpidx*Nsize*Nsize + msa*Nsize;
+    sltE_a = SlaterElm_real + (qpidx+qpStart)*Nsite2*Nsite2 + rsa*Nsite2;
+    invM_a = InvM_real + qpidx*Nsize*Nsize + msa*Nsize;
 
     ratio = 0.0;
     for(msj=0;msj<nsize;msj++) { //fsz
       rsj = eleIdx[msj]+eleSpn[msj]*Nsite;//fsz
       ratio += invM_a[msj] * sltE_a[rsj];
     }
-//    for(msj=ne;msj<nsize;msj++) {
-//      rsj = eleIdx[msj] + Nsite;
-//      ratio += invM_a[msj] * sltE_a[rsj];
- //   }
-
-    pfMNew[qpidx] = -ratio*PfM[qpidx];
+    
+    pfMNew[qpidx] = -ratio*PfM_real[qpidx];
   }
 
   return;
 }
 
 /* thread parallel version of CalculateNewPfM_fsz */
-void CalculateNewPfM2_fsz(const int ma, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
+void CalculateNewPfM2_fsz_real(const int ma, const int s, double *pfMNew, const int *eleIdx,const int *eleSpn,
                      const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;
   //const int msa = ma+s*Ne;
@@ -80,9 +74,9 @@ void CalculateNewPfM2_fsz(const int ma, const int s, double complex *pfMNew, con
 
   int qpidx;
   int msj,rsj;
-  const double complex *sltE_a; /* update elements of msa-th row */
-  const double complex *invM_a;
-  double complex ratio;
+  const double *sltE_a; /* update elements of msa-th row */
+  const double *invM_a;
+  double ratio;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -91,53 +85,49 @@ void CalculateNewPfM2_fsz(const int ma, const int s, double complex *pfMNew, con
     private(qpidx,msj,sltE_a,invM_a,ratio,rsj)
   #pragma loop noalias
   for(qpidx=0;qpidx<qpNum;qpidx++) {
-    sltE_a = SlaterElm + (qpidx+qpStart)*Nsite2*Nsite2 + rsa*Nsite2;
-    invM_a = InvM + qpidx*Nsize*Nsize + msa*Nsize;
+    sltE_a = SlaterElm_real + (qpidx+qpStart)*Nsite2*Nsite2 + rsa*Nsite2;
+    invM_a = InvM_real + qpidx*Nsize*Nsize + msa*Nsize;
 
     ratio = 0.0;
     for(msj=0;msj<nsize;msj++) {
       rsj = eleIdx[msj]+eleSpn[msj]*Nsite;//fsz
       ratio += invM_a[msj] * sltE_a[rsj];
     }
-/*    for(msj=ne;msj<nsize;msj++) {
-      rsj = eleIdx[msj] + Nsite;
-      ratio += invM_a[msj] * sltE_a[rsj];
-    }*/
 
-    pfMNew[qpidx] = -ratio*PfM[qpidx];
+    pfMNew[qpidx] = -ratio*PfM_real[qpidx];
   }
 
   return;
 }
 
 /* Update PfM and InvM. The ma-th electron with spin s hops to site ra=eleIdx[msi] */
-void UpdateMAll_fsz(const int ma, const int s, const int *eleIdx,const int *eleSpn,
+void UpdateMAll_fsz_real(const int ma, const int s, const int *eleIdx,const int *eleSpn,
                 const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;
   int qpidx;
-  double complex *vec1,*vec2;
+  double *vec1,*vec2;
 
-  RequestWorkSpaceThreadComplex(2*Nsize);
+  RequestWorkSpaceThreadDouble(2*Nsize);
 
   #pragma omp parallel default(shared) private(vec1,vec2)
   {
-    vec1 = GetWorkSpaceThreadComplex(Nsize);
-    vec2 = GetWorkSpaceThreadComplex(Nsize);
+    vec1 = GetWorkSpaceThreadDouble(Nsize);
+    vec2 = GetWorkSpaceThreadDouble(Nsize);
    
     #pragma omp for private(qpidx)
     #pragma loop nounroll
     for(qpidx=0;qpidx<qpNum;qpidx++) {
-      updateMAll_child_fsz(ma, s, eleIdx,eleSpn, qpStart, qpEnd, qpidx, vec1, vec2);
+      updateMAll_child_fsz_real(ma, s, eleIdx,eleSpn, qpStart, qpEnd, qpidx, vec1, vec2);
     }
   }
 
-  ReleaseWorkSpaceThreadComplex();
+  ReleaseWorkSpaceThreadDouble();
   return;
 }
 
-void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int *eleSpn,
+void updateMAll_child_fsz_real(const int ma, const int s, const int *eleIdx,const int *eleSpn,
                       const int qpStart, const int qpEnd, const int qpidx,
-                      double complex *vec1, double complex *vec2) {
+                      double *vec1, double *vec2) {
   #pragma procedure serial
   /* const int qpNum = qpEnd-qpStart; */
   //const int msa = ma+s*Ne;
@@ -147,18 +137,18 @@ void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int
 
   int msi,msj,rsj;
 
-  const double complex *sltE_a; /* update elements of msa-th row */
-  double complex sltE_aj;
-  double complex *invM;
-  double complex *invM_i,*invM_j,*invM_a;
+  const double *sltE_a; /* update elements of msa-th row */
+  double sltE_aj;
+  double *invM;
+  double *invM_i,*invM_j,*invM_a;
 
-  double complex vec1_i,vec2_i;
-  double complex invVec1_a;
-  double complex tmp;
+  double vec1_i,vec2_i;
+  double invVec1_a;
+  double tmp;
 
-  sltE_a = SlaterElm + (qpidx+qpStart)*Nsite2*Nsite2 + rsa*Nsite2;
+  sltE_a = SlaterElm_real + (qpidx+qpStart)*Nsite2*Nsite2 + rsa*Nsite2;
 
-  invM = InvM + qpidx*Nsize*Nsize;
+  invM = InvM_real + qpidx*Nsize*Nsize;
   invM_a = invM + msa*Nsize;
 
   for(msi=0;msi<nsize;msi++) vec1[msi] = 0.0+0.0*I; //TBC
@@ -180,7 +170,7 @@ void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int
   /* Update Pfaffian */
   /* Calculate -1.0/bufV_a to reduce devision */
   tmp = vec1[msa];
-  PfM[qpidx] *= -tmp;
+  PfM_real[qpidx] *= -tmp;
   invVec1_a = -1.0/tmp;
 
   /* Calculate vec2[i] = -InvM[a][i]/vec1[a] */
