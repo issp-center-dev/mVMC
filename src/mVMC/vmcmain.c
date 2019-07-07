@@ -550,7 +550,8 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     InitFilePhysCal(ismp, rank);    
     StartTimer(3);
     if(NProjBF ==0) {
-      if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){//real & sz=0
+      //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){//real & sz=0
+      if(AllComplexFlag==0){//real
         // only for real TBC
         StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
@@ -559,7 +560,11 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
         for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
         StopTimer(69);
         // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-        VMCMakeSample_real(comm_child1);
+        if(iFlgOrbitalGeneral==0){
+          VMCMakeSample_real(comm_child1);
+        }else{
+          VMCMakeSample_fsz_real(comm_child1);
+        }
         // only for real TBC
         StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
@@ -570,11 +575,6 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
         if(iFlgOrbitalGeneral==0){
           VMCMakeSample(comm_child1);
         }else{
-          //[s]MDEBUG
-          //for(tmp_i=0;tmp_i<NSlater;tmp_i++){
-          //  printf("MDEBUG: %d %lf %lf \n",tmp_i,creal(Slater[tmp_i]),cimag(Slater[tmp_i]));
-          //}
-          //[e]MDEBUG
           VMCMakeSample_fsz(comm_child1);
         }
       }
