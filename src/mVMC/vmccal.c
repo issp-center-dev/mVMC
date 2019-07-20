@@ -68,15 +68,15 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
                           const int nLSHam, const int nCA, const int nCACA,
                           int **cacaIdx);
 
-void calculateQCACAQ_real_alt(double *qcacaq, const double *lslq, const double w,
-                              const int nLSHam, const int nCA, const int nCACA,
-                              const double h1, const double ip,
-                              int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
+void calculateQCACAQDC_real(double *qcacaq, const double *lslq, const double w,
+                            const int nLSHam, const int nCA, const int nCACA,
+                            int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                            const double h1, const double ip);
 
-void calculateQCACAQ_alt(double complex *qcacaq, const double complex *lslq, const double w,
-                         const int nLSHam, const int nCA, const int nCACA,
-                         const double complex h1, const double complex ip,
-                         int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
+void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const double w,
+                       const int nLSHam, const int nCA, const int nCACA,
+                       int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                       const double complex h1, const double complex ip);
 
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
@@ -278,8 +278,8 @@ void VMCMainCal(MPI_Comm comm) {
             calculateQCAQ_real(QCisAjsQ_real,LSLCisAjs_real,LSLQ_real,w,NLSHam,NCisAjs);
             //calculateQCACAQ_real(QCisAjsCktAltQ_real,LSLCisAjs_real,w,NLSHam,NCisAjs,
             //                NCisAjsCktAltDC, CisAjsCktAltLzIdx);
-            calculateQCACAQ_real_alt(QCisAjsCktAltQ_real,LSLQ_real,w,NLSHam,NCisAjs,
-                                     NCisAjsCktAltDC,creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
+            calculateQCACAQDC_real(QCisAjsCktAltQ_real,LSLQ_real,w,NLSHam,NCisAjs,
+                                   NCisAjsCktAltDC,eleIdx,eleCfg,eleNum,eleProjCnt,creal(e),creal(ip));
             
           }
           else{
@@ -287,8 +287,8 @@ void VMCMainCal(MPI_Comm comm) {
             calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
             //calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
             //                NCisAjsCktAltDC,CisAjsCktAltLzIdx);
-            calculateQCACAQ_alt(QCisAjsCktAltQ,LSLQ,w,NLSHam,NCisAjs,
-                                NCisAjsCktAltDC,e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+            calculateQCACAQDC(QCisAjsCktAltQ,LSLQ,w,NLSHam,NCisAjs,
+                              NCisAjsCktAltDC,eleIdx,eleCfg,eleNum,eleProjCnt,e,ip);
           }
           StopTimer(44);
         }
@@ -934,10 +934,10 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
 
 }
 
-void calculateQCACAQ_real_alt(double *qcacaq, const double *lslq, const double w,
-                              const int nLSHam, const int nCA, const int nCACA,
-                              const double h1, const double ip,
-                              int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt) {
+void calculateQCACAQ_real(double *qcacaq, const double *lslq, const double w,
+                          const int nLSHam, const int nCA, const int nCACA,
+                          int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                          const double h1, const double ip) {
   const int n=nLSHam*nLSHam*nCACA;
   int rq,rp,ri,rj,rk,rl,s,t,idx;
   int i,tmp;
@@ -965,10 +965,10 @@ void calculateQCACAQ_real_alt(double *qcacaq, const double *lslq, const double w
   return;
 }
 
-void calculateQCACAQ_alt(double complex *qcacaq, const double complex *lslq, const double w,
-                         const int nLSHam, const int nCA, const int nCACA,
-                         const double complex h1, const double complex ip,
-                         int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt) {
+void calculateQCACAQ(double complex *qcacaq, const double complex *lslq, const double w,
+                     const int nLSHam, const int nCA, const int nCACA,
+                     int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                     const double complex h1, const double complex ip) {
   const int n=nLSHam*nLSHam*nCACA;
   int rq,rp,ri,rj,rk,rl,s,t,idx;
   int i,tmp;
