@@ -942,7 +942,6 @@ void calculateQCACAQDC_real(double *qcacaq, const double *lslq, const double w,
   int rq,rp,ri,rj,rk,rl,s,t,idx;
   int i,tmp;
 
-# pragma omp for private(i,tmp,idx,rp,rq,ri,rj,rk,rl,s,t)
   for(i=0;i<n;++i) {
     idx = i%nCACA;   tmp = i/nCACA;
     rp = tmp%nLSHam; tmp = tmp/nLSHam;
@@ -973,7 +972,6 @@ void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const
   int rq,rp,ri,rj,rk,rl,s,t,idx;
   int i,tmp;
 
-# pragma omp for private(i,tmp,idx,rp,rq,ri,rj,rk,rl,s,t)
   for(i=0;i<n;++i) {
     idx = i%nCACA;   tmp = i/nCACA;
     rp = tmp%nLSHam; tmp = tmp/nLSHam;
