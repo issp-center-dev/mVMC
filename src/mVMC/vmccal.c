@@ -965,10 +965,10 @@ void calculateQCACAQDC_real(double *qcacaq, const double *lslq, const double w,
   return;
 }
 
-void calculateQCACAQCDC(double complex *qcacaq, const double complex *lslq, const double w,
-                        const int nLSHam, const int nCA, const int nCACA,
-                        int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
-                        const double complex h1, const double complex ip) {
+void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const double w,
+                       const int nLSHam, const int nCA, const int nCACA,
+                       int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                       const double complex h1, const double complex ip) {
   const int n=nLSHam*nLSHam*nCACA;
   int rq,rp,ri,rj,rk,rl,s,t,idx;
   int i,tmp;
