@@ -252,7 +252,7 @@ int PhysCalLanczos_fcmp(
     }
     fprintf(_FileLSCisAjsCktAltDC, "\n");
 
-    CalculatePhysVal_real(_QQQQ[2], _QQQQ[3],
+    CalculatePhysVal_fcmp(_QQQQ[2], _QQQQ[3],
               alpha, _QCisAjsCktAltQ, _nCisAjsCktAlt,
               _nLSHam, LS_CisAjsCktAlt);
     /* zvo_ls_cisajscktaltex.dat */
