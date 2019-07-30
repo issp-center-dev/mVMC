@@ -18,9 +18,9 @@ class TestSpinChain(unittest.TestCase):
         array_calc = read_out("./output/zqp_opt.dat")[0:2]
         ref_ave = read_out("%s/ref/ref_mean.dat" %dir)[0:2]
         ref_std = read_out("%s/ref/ref_std.dat" %dir)[0:2]
-        testTrue = (3.*ref_std > abs(array_calc - ref_ave))
-        testArray = abs(array_calc[testTrue] < 1e-8)
-        for _test in testArray:
+        ref = abs(array_calc - ref_ave)
+        testTrue = np.where((3.*ref_std >= ref) & (ref<1e-8)) 
+        for _test in testTrue:
             self.assertTrue(_test)
         
 if __name__ == '__main__':
