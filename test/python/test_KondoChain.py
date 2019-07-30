@@ -19,8 +19,8 @@ class TestKondoChain(unittest.TestCase):
         ref_ave = read_out("%s/ref/ref_mean.dat" %dir)[0:2]
         ref_std = read_out("%s/ref/ref_std.dat" %dir)[0:2]
         ref = abs(array_calc - ref_ave)
-        testTrue = np.where((3.*ref_std >= ref) & (ref<1e-8)) 
-        for _test in testArray:
+        testTrue = np.logical_and(abs(3.*ref_std-ref)<1e-8 ,ref<1e-8)
+        for _test in testTrue:
             self.assertTrue(_test)
         
 if __name__ == '__main__':
