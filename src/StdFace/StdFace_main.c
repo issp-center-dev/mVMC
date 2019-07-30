@@ -1211,7 +1211,7 @@ static void PrintLocSpin(struct StdIntList *StdI) {
   fprintf(fp, "================================ \n");
   fprintf(fp, "NlocalSpin %5d  \n", nlocspin);
   fprintf(fp, "================================ \n");
-  fprintf(fp, "========i_0LocSpn_1IteElc ====== \n");
+  fprintf(fp, "========i_0IteElc_1LocSpn ====== \n");
   fprintf(fp, "================================ \n");
 
   for (isite = 0; isite < StdI->nsite; isite++)
