@@ -2,7 +2,8 @@
 
 A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
 
-====
+### What is mVMC ?
+
 mVMC (many-variable Variational Monte Carlo method)
 is a software for performing the highly-accurate 
 variational Monte Carlo calculations
@@ -19,17 +20,21 @@ A broad spectrum of users including experimental scientists is cordially welcome
 
 
 ### Methods
+
 many-variable variational Monte Carlo method
 
 
 ### Target models
+
 Hubbard model, Heisenberg model, Kondo lattice model, multi-orbital Hubbard model
 
 ### Available physical quantities
-specific heat, susceptibility, ground state energy, structure factors
+
+ground-state energy, spin/charge structure factors, superconducting correlations, etc.
 
 
 ## Requirement
+
 - C compiler (intel, Fujitsu, GNU, etc. ) 
 - ScaLAPACK library (intel MKL, Fujitsu, ATLAS, etc.) 
 - MPI library
@@ -45,12 +50,16 @@ GNU General Public License version 3 ([GPL v3](http://www.gnu.org/licenses/gpl-3
 
 The mVMC package is developed based on the [mVMC-mini](https://github.com/fiber-miniapp/mVMC-mini) program. The license of mVMC-mini is "The BSD 3-Clause License".
 
-We hope that you cite the following URL when you publish the results using mVMC (after writing the paper for mVMC, we will replace the URL to the paper's reference):  
-URL: [https://github.com/issp-center-dev/mVMC](https://github.com/issp-center-dev/mVMC)
+We would appreciate if you cite the following article in your research with mVMC:  
+mVMC - Open-source software for many-variable variational Monte Carlo method, Takahiro Misawa, Satoshi Morita, Kazuyoshi Yoshimi, Mitsuaki Kawamura, Yuichi Motoyama, Kota Ido, Takahiro Ohgoe, Masatoshi Imada, Takeo Kato, 
+[Computer Physics Communications, 235, 447-462 (2019)](https://www.sciencedirect.com/science/article/pii/S0010465518303102)
+
 
 ## Tutorials
+
 Lecture notes and sample scripts used in Hands-on
 are available at [mVMC-tutorial](https://github.com/issp-center-dev/mVMC-tutorial)
 
 ## Authors
+
 Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Yuichi Motoyama, Mitsuaki Kawamura, Kazuyoshi Yoshimi, Takeo Kato, Masatoshi Imada.
