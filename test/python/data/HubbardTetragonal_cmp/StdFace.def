@@ -12,3 +12,4 @@ NVMCSample=500
 2Sz = 0
 RndSeed=1
 //NVMCCalMode = 1
+ComplexType = 1
