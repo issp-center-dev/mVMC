@@ -18,6 +18,7 @@ set(python_test_src
   test_HeisenbergChain_cmp
   test_HubbardTetragonal_cmp
   test_KondoChain_cmp
+  test_KondoChain_Stot1_cmp
 )
 
 foreach(test ${python_test_src})
