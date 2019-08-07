@@ -25,6 +25,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 #include <complex.h>
 #include <string.h>
+#include "setmemory.h"
+
 /**
 @brief Read Geometry file for wannier90
 @author Mitsuaki Kawamura (The University of Tokyo)
@@ -41,6 +43,10 @@ static void geometry_W90(
   fprintf(stdout, "    Wannier90 Geometry file = %s\n", filename);
 
   fp = fopen(filename, "r");
+  if (fp == NULL){
+    fprintf(stderr, "\n  Error: Fail to open the file %s. \n\n", filename);
+    StdFace_exit(-1);
+  }
   /**@brief
    Direct lattice vector StdIntList::direct
   */
@@ -83,6 +89,7 @@ static void read_W90(
   int itUJ,
   int *NtUJ,
   int ***tUJindx,//!<[out] R, band index of matrix element
+  double lambda,
   double complex **tUJ//!<[out] Matrix element
 )
 {
@@ -91,11 +98,16 @@ static void read_W90(
   double dtmp[2], dR[3], length;
   char ctmp[256], *ctmp2;
   double complex ***Mat_tot;
-  int **indx_tot;
+  double *Weight_tot;
+  int **indx_tot,*Band_lattice, *Model_lattice;
   /*
   Header part
   */
   fp = fopen(filename, "r");
+  if (fp == NULL){
+    fprintf(stderr, "\n  Error: Fail to open the file %s. \n\n", filename);
+    StdFace_exit(-1);
+  }
   ctmp2 = fgets(ctmp, 256, fp);
   ierr = fscanf(fp, "%d", &nWan);
   if (ierr == EOF) printf("%d %s\n", ierr, ctmp2);
@@ -103,6 +115,10 @@ static void read_W90(
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
     ierr = fscanf(fp, "%d", &ii);
   }
+
+  Weight_tot = d_1d_allocate(nWSC);
+  Band_lattice = i_1d_allocate(3);
+  Model_lattice = i_1d_allocate(3);
   /*
   Malloc Matrix elements and their indices
   */
@@ -145,7 +161,7 @@ static void read_W90(
           dtmp[1] = 0.0;
         }
         if (iWan0 <= StdI->NsiteUC && jWan0 <= StdI->NsiteUC)
-          Mat_tot[iWSC][iWan0 - 1][jWan0 - 1] = dtmp[0] + I * dtmp[1];
+          Mat_tot[iWSC][iWan0 - 1][jWan0 - 1] = lambda *(dtmp[0] + I * dtmp[1]);
       }
     }
     /**@brief
@@ -173,8 +189,30 @@ static void read_W90(
       }
   }/*for (iWSC = 0; iWSC < nWSC; iWSC++)*/
   fclose(fp);
+
+  /*
+   * (2) Apply weight
+   */
+  // Get Lattice length
+  for (iWSC = 0; iWSC < nWSC; iWSC++) {
+    for (ii = 0; ii < 3; ii++) {
+      if (abs(indx_tot[iWSC][ii]) > Band_lattice[ii]) Band_lattice[ii] = abs(indx_tot[iWSC][ii]);
+    }
+  }
+  for (iWSC = 0; iWSC < nWSC; iWSC++) Weight_tot[iWSC] = 1.0;
+  Model_lattice[0] = StdI->W %2 == 0 ? StdI->W/2 : 0;
+  Model_lattice[1] = StdI->L %2 == 0 ? StdI->L/2 : 0;
+  Model_lattice[2] = StdI->Height %2 == 0 ? StdI->Height/2 : 0;
+  for (ii = 0; ii < 3; ii++) {
+    if (Model_lattice[ii] < Band_lattice[ii] && Model_lattice[ii] != 0) {
+      for (iWSC = 0; iWSC < nWSC; iWSC++) {
+        if (abs(indx_tot[iWSC][ii]) == Model_lattice[ii]) Weight_tot[iWSC] *= 0.5;
+      }
+    }
+  }
+
   /**@brief
-  (3-1)  Compute the number of terms lerger than cut-off.
+  (3-1)  Compute the number of terms larger than cut-off.
   */
   fprintf(stdout, "\n      EFFECTIVE terms:\n");
   fprintf(stdout, "           R0   R1   R2 band_i band_f Hamiltonian\n");
@@ -182,6 +220,7 @@ static void read_W90(
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
     for (iWan = 0; iWan < StdI->NsiteUC; iWan++) {
       for (jWan = 0; jWan < StdI->NsiteUC; jWan++) {
+        Mat_tot[iWSC][iWan][jWan] *=  Weight_tot[iWSC];
         if (cutoff < cabs(Mat_tot[iWSC][iWan][jWan])) {
           fprintf(stdout, "        %5d%5d%5d%5d%5d%12.6f%12.6f\n",
             indx_tot[iWSC][0], indx_tot[iWSC][1], indx_tot[iWSC][2], iWan, jWan,
@@ -196,8 +235,7 @@ static void read_W90(
   tUJindx[itUJ] = (int **)malloc(sizeof(int*) * NtUJ[itUJ]);
   for (ii = 0; ii < NtUJ[itUJ]; ii++) tUJindx[itUJ][ii] = (int *)malloc(sizeof(int) * 5);
   /**@brief
-  Then Store to the hopping Integeral and
-  its site index.
+  Then Store the hopping Integrals and their site indexes.
   */
   NtUJ[itUJ] = 0;
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
@@ -223,6 +261,9 @@ static void read_W90(
   }
   free(Mat_tot);
   free(indx_tot);
+  free_d_1d_allocate(Weight_tot);
+  free_i_1d_allocate(Model_lattice);
+  free_i_1d_allocate(Band_lattice);
 }/*static int read_W90(struct StdIntList *StdI, char *model)*/
 /**
  @brief Read RESPACK Density-matrix file (*_dr.dat)
@@ -418,6 +459,14 @@ static void PrintUHFinitial(
     free(IniGuess[isite]);
   free(IniGuess);
 }/*static void PrintTrans*/
+
+enum dcmode {
+    NOTCORRECT,
+    HARTREE,
+    HARTREE_U,
+    FULL
+};
+
 /**
 @brief Setup a Hamiltonian for the Wannier90 *_hr.dat
 @author Mitsuaki Kawamura (The University of Tokyo)
@@ -448,8 +497,36 @@ void StdFace_Wannier90(
   StdFace_InitSite(StdI, fp, 3);
   fprintf(stdout, "\n  @ Wannier90 Geometry \n\n");
   geometry_W90(StdI);
-  StdFace_PrintVal_i("DoubleCounting", &StdI->double_counting, 1);
 
+  // Set parameters to tune the strength of interactions
+  if (isnan(StdI->lambda)){ // Lambda is not defined.
+    StdFace_PrintVal_d("lambda_U", &StdI->lambda_U, 1.0);
+    StdFace_PrintVal_d("lambda_V", &StdI->lambda_J, 1.0);
+  }
+  else{
+    StdFace_PrintVal_d("lambda_U", &StdI->lambda_U, StdI->lambda);
+    StdFace_PrintVal_d("lambda_V", &StdI->lambda_J, StdI->lambda);
+  }
+  if(StdI->lambda_U < 0.0 || StdI->lambda_J < 0.0 ){
+    fprintf(stderr, "\n  Error: the value of lambda_U / lambda_J must be greater than or equal to 0. \n\n");
+    StdFace_exit(-1);
+  }
+  
+  //StdFace_PrintVal_i("DoubleCounting", &StdI->double_counting, 1);
+  enum dcmode idcmode;
+  if (strcmp(StdI->double_counting_mode, "none") == 0 || strcmp(StdI->double_counting_mode, "****") ==0) idcmode = NOTCORRECT;
+  else if (strcmp(StdI->double_counting_mode, "hartree") == 0) idcmode = HARTREE;
+  else if (strcmp(StdI->double_counting_mode, "hartree_u") == 0) idcmode = HARTREE_U;
+  else if (strcmp(StdI->double_counting_mode, "full") == 0) idcmode = FULL;
+  else{
+    fprintf(stderr, "\n  Error: the word of doublecounting is not correct (select from none, hartree, hartree_u, full). \n\n");
+    StdFace_exit(-1);
+  }
+  StdFace_PrintVal_d("alpha", &StdI->alpha, 0.5);
+  if (StdI->alpha>1.0 || StdI->alpha< 0.0){
+    fprintf(stderr, "\n  Error: the value of alpha must be in the range 0<= alpha <= 1. \n\n");
+    StdFace_exit(-1);
+  }
   tUJ = (double complex **)malloc(sizeof(double complex*) * 3);
   tUJindx = (int ***)malloc(sizeof(int**) * 3);
 
@@ -462,7 +539,7 @@ void StdFace_Wannier90(
   sprintf(filename, "%s_hr.dat", StdI->CDataFileHead);
   read_W90(StdI, filename,
     StdI->cutoff_t, StdI->cutoff_tR, StdI->cutoff_length_t,
-     0, NtUJ, tUJindx, tUJ);
+     0, NtUJ, tUJindx, 1.0, tUJ);
   /*
   Read Coulomb
   */
@@ -472,7 +549,7 @@ void StdFace_Wannier90(
   sprintf(filename, "%s_ur.dat", StdI->CDataFileHead);
   read_W90(StdI, filename,
     StdI->cutoff_u, StdI->cutoff_UR, StdI->cutoff_length_U, 
-    1, NtUJ, tUJindx, tUJ);
+    1, NtUJ, tUJindx, StdI->lambda_U, tUJ);
   /*
   Read Hund
   */
@@ -482,7 +559,7 @@ void StdFace_Wannier90(
   sprintf(filename, "%s_jr.dat", StdI->CDataFileHead);
   read_W90(StdI, filename,
     StdI->cutoff_j, StdI->cutoff_JR, StdI->cutoff_length_J, 
-    2, NtUJ, tUJindx, tUJ);
+    2, NtUJ, tUJindx, StdI->lambda_J, tUJ);
   /*
   Read Density matrix
   */
@@ -622,11 +699,12 @@ void StdFace_Wannier90(
         /*
         Double-counting correction @f$0.5 U_{0ii} D_{0ii}@f$
         */
-        if (StdI->double_counting == 1) {
+        //if (StdI->double_counting == 1) {
+        if (idcmode != NOTCORRECT) { //Hartree or Hartree-Fock correction
           isite = StdI->NsiteUC*kCell + tUJindx[1][it][3];
           for (ispin = 0; ispin < 2; ispin++) {
             DenMat0 = DenMat[0][0][0][tUJindx[1][it][3]][tUJindx[1][it][3]];
-            StdI->trans[StdI->ntrans] = 0.5*creal(tUJ[1][it])*DenMat0;
+            StdI->trans[StdI->ntrans] = StdI->alpha*creal(tUJ[1][it])*DenMat0;
             StdI->transindx[StdI->ntrans][0] = isite;
             StdI->transindx[StdI->ntrans][1] = ispin;
             StdI->transindx[StdI->ntrans][2] = isite;
@@ -646,7 +724,8 @@ void StdFace_Wannier90(
         /*
         Double-counting correction
         */
-        if (StdI->double_counting == 1) {
+        //if (StdI->double_counting == 1) {
+        if (idcmode != NOTCORRECT) {//Hartree or Hartree-Fock correction
           for (ispin = 0; ispin < 2; ispin++) {
             /*
             @f$sum_{(R,j)(>0,i)} U_{Rij} D_{0jj} (Local)@f$
@@ -672,9 +751,11 @@ void StdFace_Wannier90(
           /*
           @f$-0.5U_{Rij} D_{Rjj}@f$
           */
-          DenMat0 = DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
+          if(idcmode == FULL) { //Hartree-Forck correction
+            DenMat0 = DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
             [tUJindx[1][it][3]][tUJindx[1][it][4]];
-          StdFace_Hopping(StdI, -0.5*Cphase * creal(tUJ[1][it])*DenMat0, jsite, isite, dR);
+            StdFace_Hopping(StdI, -0.5 * Cphase * creal(tUJ[1][it]) * DenMat0, jsite, isite, dR);
+          }
         }/*if (StdI->double_counting == 1)*/
       }/*Non-local term*/
     }/*for (it = 0; it < NtUJ[0]; it++)*/
@@ -710,13 +791,14 @@ void StdFace_Wannier90(
           /*
           Double-counting correction
           */
-          if (StdI->double_counting == 1) {
+          //if (StdI->double_counting == 1) {
+          if (idcmode != NOTCORRECT && idcmode != HARTREE_U) {
             for (ispin = 0; ispin < 2; ispin++) {
               /*
               @f$- \frac{1}{2}sum_{(R,j)(>0,i)} J_{Rij} D_{0jj}@f$
               */
               DenMat0 = DenMat[0][0][0][tUJindx[2][it][4]][tUJindx[2][it][4]];
-              StdI->trans[StdI->ntrans] = -0.5*creal(tUJ[2][it]) *DenMat0;
+              StdI->trans[StdI->ntrans] = -(1.0-StdI->alpha)*creal(tUJ[2][it]) *DenMat0;
               StdI->transindx[StdI->ntrans][0] = isite;
               StdI->transindx[StdI->ntrans][1] = ispin;
               StdI->transindx[StdI->ntrans][2] = isite;
@@ -726,7 +808,7 @@ void StdFace_Wannier90(
               @f$- \frac{1}{2}sum_{(R,j)(>0,i)} J_{Rij} D_{0jj}@f$
               */
               DenMat0 = DenMat[0][0][0][tUJindx[2][it][3]][tUJindx[2][it][3]];
-              StdI->trans[StdI->ntrans] = -0.5*creal(tUJ[2][it]) *DenMat0;
+              StdI->trans[StdI->ntrans] = -(1.0-StdI->alpha)*creal(tUJ[2][it]) *DenMat0;
               StdI->transindx[StdI->ntrans][0] = jsite;
               StdI->transindx[StdI->ntrans][1] = ispin;
               StdI->transindx[StdI->ntrans][2] = jsite;
@@ -736,10 +818,12 @@ void StdFace_Wannier90(
             /*
             @f$J_{Rij} (D_{Rjj}+2{\rm Re}[D_{Rjj])@f$
             */
-            DenMat0 = DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
-                            [tUJindx[2][it][3]][tUJindx[2][it][4]];
-            StdFace_Hopping(StdI, 
-              0.5*Cphase * creal(tUJ[2][it])*(DenMat0 + 2.0*creal(DenMat0)), jsite, isite, dR);
+            if(idcmode == FULL) { //Hartree-Forck correction
+              DenMat0 = DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
+              [tUJindx[2][it][3]][tUJindx[2][it][4]];
+              StdFace_Hopping(StdI,
+                              0.5 * Cphase * creal(tUJ[2][it]) * (DenMat0 + 2.0 * creal(DenMat0)), jsite, isite, dR);
+            }
           }/*if (StdI->double_counting == 1)*/
         }
         else {

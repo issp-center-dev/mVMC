@@ -252,7 +252,12 @@ struct StdIntList {
   int cutoff_tR[3];
   int cutoff_UR[3];
   int cutoff_JR[3];
-  int double_counting;
+  double lambda; /**<@brief Tuning parameter of U and J in wannier90, input from file.*/
+  double lambda_U; /**<@brief Tuning parameter of U in wannier90, input from file.*/
+  double lambda_J; /**<@brief Tuning parameter of J in wannier90, input from file.*/
+  char double_counting_mode[256];/**<@brief Select mode of double counting, input from file.*/
+  double alpha;/**<@brief Tuning parameter of chemical potential correction in wannier90, input from file.*/
+
 #if defined(_HPhi)
   /*
   HPhi modpara
@@ -261,6 +266,7 @@ struct StdIntList {
   char Restart[256];/**<@brief The name of restart mode, input from file.*/
   char InitialVecType[256];/**<@brief The name of initialguess-type, input from file.*/
   char EigenVecIO[256];/**<@brief The name of I/O mode for eigenvector, input from file*/
+  char HamIO[256];/**<@brief The name of I/O mode for Hamiltonian, input from file*/
   int FlgTemp;/**<@brief */
   int Lanczos_max;/**<@brief The maxixmum number of iterations, input from file*/
   int initial_iv; /**<@brief the number for generating random number, input from file.*/
@@ -287,11 +293,13 @@ struct StdIntList {
   int Nomega;/**<@brief Number of frequencies, input from file.*/
   double OmegaMax;/**<@brief Maximum of frequency for spectrum, input from file.*/
   double OmegaMin;/**<@brief Minimum of frequency for spectrum, input from file.*/
+  double OmegaOrg;/**<@brief Origin of frequency for spectrum, input from file.*/
   double OmegaIm;/**<@brief Imaginary part of frequency.*/
   double SpectrumQ[3];/**<@brief wavenumver (q-vector) in fractional coordinate*/
   int SpectrumBody;/**<@brief one- or two-body excitation, defined from
                    StdIntList::SpectrumType*/
-  /*
+  char OutputExVec[256];/**<@brief The name of output mode for the excited vector, input from file.*/
+    /*
   Time evolution
   */
   double dt;/**<@brief Time step*/
