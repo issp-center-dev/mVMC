@@ -576,6 +576,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         fprintf(stderr, "Error: Variational parameters should be complex when orbital is general in this version.\n");
         info = 1;
     }
+    if(iComplexFlgOrbital > 0){
+      iComplexFlgOrbital = 1;
+      fprintf(stderr, "Warning: All the pairings are treated as complex variational parameters.\n");
+    }
   }
 
   if (info != 0) {
@@ -827,7 +831,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           /*orbitalidxs.def------------------------------------*/
           fidx = NProj;
           if (GetInfoOrbitalAntiParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
-                                         fidx, iComplexFlgOrbitalAntiParallel, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalAntiParallel,
+                                         fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalAntiParallel,
                                          defname) != 0)
             info = 1;
           break;
@@ -835,7 +839,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWOrbitalGeneral:
           fidx = NProj;
           if (GetInfoOrbitalGeneral(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
-                                    fidx, iComplexFlgOrbitalGeneral, iFlgOrbitalGeneral, APFlag, Nsite, NOrbitalIdx,
+                                    fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, NOrbitalIdx,
                                     defname) != 0)
             info = 1;
           break;
@@ -844,7 +848,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           /*orbitalidxt.def------------------------------------*/
           fidx = NProj + iNOrbitalAntiParallel;
           if (GetInfoOrbitalParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
-                                     fidx, iComplexFlgOrbitalParallel, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalParallel,
+                                     fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalParallel,
                                      iNOrbitalAntiParallel, defname) != 0)
             info = 1;
           break;
