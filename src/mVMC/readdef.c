@@ -410,6 +410,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffIntCmpFlg(fp, &iNOrbitalAntiParallel, &iOrbitalComplex);
             iFlgOrbitalAntiParallel = 1;
             bufInt[IdxNOrbit] += iNOrbitalAntiParallel;
+            iComplexFlgOrbitalAntiParallel = iOrbitalComplex;
             iComplexFlgOrbital += iOrbitalComplex;
             break;
 
@@ -417,12 +418,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffIntCmpFlg(fp, &iNOrbitalParallel, &iOrbitalComplex);
             iFlgOrbitalParallel = 1;
             bufInt[IdxNOrbit] += 2 * iNOrbitalParallel; //up-up and down-down
+            iComplexFlgOrbitalParallel = iOrbitalComplex;
             iComplexFlgOrbital += iOrbitalComplex;
             break;
 
           case KWOrbitalGeneral:
             cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNOrbit], &iOrbitalComplex);
             iFlgOrbitalGeneral = 1;
+            iComplexFlgOrbitalGeneral = iOrbitalComplex;
             iComplexFlgOrbital += iOrbitalComplex;
             break;
 
@@ -824,7 +827,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           /*orbitalidxs.def------------------------------------*/
           fidx = NProj;
           if (GetInfoOrbitalAntiParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
-                                         fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalAntiParallel,
+                                         fidx, iComplexFlgOrbitalAntiParallel, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalAntiParallel,
                                          defname) != 0)
             info = 1;
           break;
@@ -832,7 +835,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWOrbitalGeneral:
           fidx = NProj;
           if (GetInfoOrbitalGeneral(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
-                                    fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, NOrbitalIdx,
+                                    fidx, iComplexFlgOrbitalGeneral, iFlgOrbitalGeneral, APFlag, Nsite, NOrbitalIdx,
                                     defname) != 0)
             info = 1;
           break;
@@ -841,7 +844,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           /*orbitalidxt.def------------------------------------*/
           fidx = NProj + iNOrbitalAntiParallel;
           if (GetInfoOrbitalParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
-                                     fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalParallel,
+                                     fidx, iComplexFlgOrbitalParallel, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalParallel,
                                      iNOrbitalAntiParallel, defname) != 0)
             info = 1;
           break;
