@@ -1,0 +1,196 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Manual for mVMC &#8212; mVMC 1.0.3 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="What is mVMC?" href="intro.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="intro.html" title="What is mVMC?"
+             accesskey="N">next</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">mVMC 1.0.3 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="manual-for-mvmc">
+<h1>Manual for mVMC<a class="headerlink" href="#manual-for-mvmc" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">What is mVMC?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#overview-of-mvmc">Overview of mVMC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#license">License</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#copyright">Copyright</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#contributors">Contributors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#operating-environment">Operating environment</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="start.html">How to use mVMC?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="start.html#prerequisite">Prerequisite</a></li>
+<li class="toctree-l2"><a class="reference internal" href="start.html#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="start.html#directory-structure">Directory structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="start.html#basic-usage">Basic usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="start.html#printing-version-id">Printing version ID</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#list-of-sample-files">List of sample files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#heisenberg-model">Heisenberg model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#input-files-for-expert-mode">Input files for Expert mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#fourier-transformation-of-correlation-functions">Fourier transformation of correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="standard.html">Input files for Standard mode</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="standard.html#parameters-about-the-kind-of-a-calculation">Parameters about the kind of a calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard.html#parameters-for-the-lattice">Parameters for the lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard.html#sublattice">Sublattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard.html#parameters-for-the-hamiltonian">Parameters for the Hamiltonian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard.html#parameters-for-the-numerical-condition">Parameters for the numerical condition</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="expert.html">Input files for Expert mode</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#list-file-for-input-files-namelist-def">List file for Input files (namelist.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#modpara-file-modpara-def">ModPara file (modpara.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#locspin-file-locspn-def">LocSpin file (locspn.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#trans-file-trans-def">Trans file (trans.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#interall-file">InterAll file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#coulombintra-file-coulombintra-def">CoulombIntra file (coulombintra.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#coulombinter-file-coulombinter-def">CoulombInter file (coulombinter.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#hund-file-hund-def">Hund file (hund.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#pairhop-file">PairHop file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#exchange-file-exchange-def">Exchange file (exchange.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#gutzwiller-file-gutzwiller-def">Gutzwiller file (gutzwiller.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#jastrow-file-jastrow-def">Jastrow file (jastrow.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#dh2-file">DH2 file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#dh4-file">DH4 file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#orbital-orbitalantiparallel-file-orbitalidx-def">Orbital/OrbitalAntiParallel file (orbitalidx.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#orbitalparallel-file">OrbitalParallel file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#orbitalgeneral-file">OrbitalGeneral file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#transsym-file-qptransidx-def">TransSym file (qptransidx.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#files-to-set-initial-values-of-variational-parameters">Files to set initial values of variational parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#onebodyg-file-greenone-def">OneBodyG file (greenone.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#twobodyg-file-greentwo-def">TwoBodyG file (greentwo.def)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="output.html">Output files</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="output.html#output-file-for-variational-parameters-opt-dat">Output file for variational parameters (***_opt.dat)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat">Output files for variational parameters at each steps (xxx_var_yyy.dat)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#xxx-out-yyy-dat">xxx_out_yyy.dat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#xxx-calctimer-dat">xxx_CalcTimer.dat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#xxx-time-zzz-dat">xxx_time_zzz.dat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#xxx-cisajs-yyy-dat">xxx_cisajs_yyy.dat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#xxx-cisajscktalt-yyy-dat">xxx_cisajscktalt_yyy.dat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#xxx-ls-cisajs-yyy-dat">xxx_ls_cisajs_yyy.dat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#xxx-ls-cisajscktalt-yyy-dat">xxx_ls_cisajscktalt_yyy.dat</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="algorithm.html">Algorithm</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="algorithm.html#variational-monte-calro-method">Variational Monte Calro Method</a></li>
+<li class="toctree-l2"><a class="reference internal" href="algorithm.html#bogoliubov-representation">Bogoliubov representation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="algorithm.html#properties-of-the-pfaffian-slater-determinant">Properties of the Pfaffian-Slater determinant</a></li>
+<li class="toctree-l2"><a class="reference internal" href="algorithm.html#power-lanczos-method">Power Lanczos method</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="appendix.html">Program for the unrestricted Hartree-Fock approximation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="appendix.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="appendix.html#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fourier/index.html">HPhi/mVMC Fourier-Transformation utility</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fourier/overview.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fourier/tutorial.html">Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fourier/format.html">File format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fourier/util.html">Behavior of <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code> utility</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fourier/contact.html">Contact</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wannier/index.html">Downfolding with Wannier functions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wannier/overview.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wannier/tutorial.html">Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wannier/parameter.html">Input parameter for Standard mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wannier/format.html">File format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wannier/contact.html">Contact</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledge.html">Acknowledgement</a></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="#">
+              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="next chapter">What is mVMC?</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="intro.html" title="What is mVMC?"
+             >next</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">mVMC 1.0.3 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, mVMC team.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4.
+    </div>
+  </body>
+</html>

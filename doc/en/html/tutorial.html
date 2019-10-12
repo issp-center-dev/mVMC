@@ -1,0 +1,404 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Tutorial &#8212; mVMC 1.0.3 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Input files for Standard mode" href="standard.html" />
+    <link rel="prev" title="How to use mVMC?" href="start.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="standard.html" title="Input files for Standard mode"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="start.html" title="How to use mVMC?"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.0.3 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="tutorial">
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="list-of-sample-files">
+<h2>List of sample files<a class="headerlink" href="#list-of-sample-files" title="Permalink to this headline">¶</a></h2>
+<p>There are following tutorials in <code class="docutils literal notranslate"><span class="pre">samples/Standard/</span></code>.</p>
+<ul>
+<li><p class="first">The Hubbard model on the two dimensional square lattice</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">samples/Standard/Hubbard/square/</span></code>)</p>
+</li>
+<li><p class="first">The Hubbard model on the two dimensional triangular lattice</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">samples/Standard/Hubbard/triangular/</span></code>)</p>
+</li>
+<li><p class="first">The one dimensional Kondo chain</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">samples/Standard/Kondo/chain/</span></code>)</p>
+</li>
+<li><p class="first">The one dimensional antiferromagnetic Heisenberg chain</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">samples/Standard/Spin/HeisenbergChain/HeisenbergChain/</span></code>)</p>
+</li>
+<li><p class="first">The antiferromagnetic Heisenberg model on the two dimensional square
+lattice</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">samples/Standard/Spin/HeisenbergSquare/</span></code>)</p>
+</li>
+<li><p class="first">The antiferromagnetic Heisenberg model on the two dimensional Kagome
+lattice</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">samples/Standard/Spin/Kagome/</span></code>)</p>
+</li>
+</ul>
+<p>We can perform these tutorials in the same way. In the following, the
+tutorial of the one dimensional antiferromagnetic Heisenberg chain is
+shown.</p>
+</div>
+<div class="section" id="heisenberg-model">
+<h2>Heisenberg model<a class="headerlink" href="#heisenberg-model" title="Permalink to this headline">¶</a></h2>
+<p>This tutorial should be performed in</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sample</span><span class="o">/</span><span class="n">Standard</span><span class="o">/</span><span class="n">Spin</span><span class="o">/</span><span class="n">HeisenbergChain</span><span class="o">/.</span>
+</pre></div>
+</div>
+<p>This directory contains the following things:</p>
+<p>The input file: StdFace.def</p>
+<p>reference outputs: reference/</p>
+<p>In this case, we treat the one dimensional antiferromagnetic Heisenberg
+chain which has a nearest neighbor spin coupling.</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+{\hat H} = J \sum_{i=1}^{L} {\hat {\boldsymbol S}}_i \cdot {\hat {\boldsymbol S}}_{i+1}
+\end{aligned}\]</div>
+<p>The input file is as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">L</span> <span class="o">=</span> <span class="mi">16</span>
+<span class="n">Lsub</span><span class="o">=</span><span class="mi">4</span>
+<span class="n">model</span> <span class="o">=</span> <span class="s2">&quot;Spin&quot;</span>
+<span class="n">lattice</span> <span class="o">=</span> <span class="s2">&quot;chain lattice&quot;</span>
+<span class="n">J</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="mi">2</span><span class="n">Sz</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">NMPtrans</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+<p>In this tutorial, J and the number of sites are set to 1 (arbitrary
+unit) and 16 respectively.</p>
+<div class="section" id="running">
+<h3>Running<a class="headerlink" href="#running" title="Permalink to this headline">¶</a></h3>
+<p>We execute the following command.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ mpiexec -np number-of-processes Path/vmcdry.out -s StdFace.def
+</pre></div>
+</div>
+<p>The MPI command depends on your system (such as <code class="docutils literal notranslate"><span class="pre">mpiexec</span></code>, <code class="docutils literal notranslate"><span class="pre">mpirun</span></code>,
+<code class="docutils literal notranslate"><span class="pre">mpijob</span></code>, <code class="docutils literal notranslate"><span class="pre">poe</span></code>, etc.). Then, the calculation starts and the
+following standard message is outputted in the terminal.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>######  Standard Intarface Mode STARTS  ######
+
+  Open Standard-Mode Inputfile StdFace.def
+
+  KEYWORD : l                    | VALUE : 16
+  KEYWORD : lsub                 | VALUE : 4
+  KEYWORD : model                | VALUE : spin
+  KEYWORD : lattice              | VALUE : chain
+  KEYWORD : j                    | VALUE : 1.0
+  KEYWORD : nmptrans             | VALUE : 1
+
+#######  Parameter Summary  #######
+
+  @ Lattice Size &amp; Shape
+
+                L = 16
+             Lsub = 4
+                L = 16
+                W = 1
+           phase0 = 0.00000     ######  DEFAULT VALUE IS USED  ######
+
+  @ Hamiltonian
+
+               2S = 1           ######  DEFAULT VALUE IS USED  ######
+                h = 0.00000     ######  DEFAULT VALUE IS USED  ######
+            Gamma = 0.00000     ######  DEFAULT VALUE IS USED  ######
+                D = 0.00000     ######  DEFAULT VALUE IS USED  ######
+              J0x = 1.00000
+              J0y = 1.00000
+              J0z = 1.00000
+
+  @ Numerical conditions
+
+             Lsub = 4
+             Wsub = 1
+      ioutputmode = 1           ######  DEFAULT VALUE IS USED  ######
+
+######  Print Expert input files  ######
+
+    qptransidx.def is written.
+         filehead = zvo         ######  DEFAULT VALUE IS USED  ######
+         filehead = zqp         ######  DEFAULT VALUE IS USED  ######
+      NVMCCalMode = 0           ######  DEFAULT VALUE IS USED  ######
+     NLanczosMode = 0           ######  DEFAULT VALUE IS USED  ######
+    NDataIdxStart = 1           ######  DEFAULT VALUE IS USED  ######
+      NDataQtySmp = 1           ######  DEFAULT VALUE IS USED  ######
+      NSPGaussLeg = 8           ######  DEFAULT VALUE IS USED  ######
+         NMPTrans = 1
+    NSROptItrStep = 1000        ######  DEFAULT VALUE IS USED  ######
+     NSROptItrSmp = 100         ######  DEFAULT VALUE IS USED  ######
+       NVMCWarmUp = 10          ######  DEFAULT VALUE IS USED  ######
+     NVMCInterval = 1           ######  DEFAULT VALUE IS USED  ######
+       NVMCSample = 1000        ######  DEFAULT VALUE IS USED  ######
+    NExUpdatePath = 2
+          RndSeed = 123456789   ######  DEFAULT VALUE IS USED  ######
+       NSplitSize = 1           ######  DEFAULT VALUE IS USED  ######
+           NStore = 0           ######  DEFAULT VALUE IS USED  ######
+     DSROptRedCut = 0.00100     ######  DEFAULT VALUE IS USED  ######
+     DSROptStaDel = 0.02000     ######  DEFAULT VALUE IS USED  ######
+     DSROptStepDt = 0.02000     ######  DEFAULT VALUE IS USED  ######
+          NSPStot = 0           ######  DEFAULT VALUE IS USED  ######
+      ComplexType = 0           ######  DEFAULT VALUE IS USED  ######
+    locspn.def is written.
+    trans.def is written.
+    interall.def is written.
+    jastrowidx.def is written.
+    coulombintra.def is written.
+    coulombinter.def is written.
+    hund.def is written.
+    exchange.def is written.
+    orbitalidx.def is written.
+    gutzwilleridx.def is written.
+    namelist.def is written.
+    modpara.def is written.
+    greenone.def is written.
+    greentwo.def is written.
+
+######  Input files are generated.  ######
+-----------
+Start: Read *def files.
+  Read File namelist.def .
+  Read File &#39;modpara.def&#39; for ModPara.
+  Read File &#39;locspn.def&#39; for LocSpin.
+  Read File &#39;trans.def&#39; for Trans.
+  Read File &#39;coulombintra.def&#39; for CoulombIntra.
+  Read File &#39;coulombinter.def&#39; for CoulombInter.
+  Read File &#39;hund.def&#39; for Hund.
+  Read File &#39;exchange.def&#39; for Exchange.
+  Read File &#39;gutzwilleridx.def&#39; for Gutzwiller.
+  Read File &#39;jastrowidx.def&#39; for Jastrow.
+  Read File &#39;orbitalidx.def&#39; for Orbital.
+  Read File &#39;qptransidx.def&#39; for TransSym.
+  Read File &#39;greenone.def&#39; for OneBodyG.
+  Read File &#39;greentwo.def&#39; for TwoBodyG.
+End  : Read *def files.
+Start: Read parameters from *def files.
+End  : Read parameters from *def files.
+Start: Set memories.
+End  : Set memories.
+Start: Initialize parameters.
+End  : Initialize parameters.
+Start: Initialize variables for quantum projection.
+End  : Initialize variables for quantum projection.
+Start: Optimize VMC parameters.
+End  : Optimize VMC parameters.
+-----------
+</pre></div>
+</div>
+<p>In the beginning of this run, files describing the detail of considered
+Hamiltonian</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">locspin.def</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">trans.def</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">coulombinter.def</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">coulombintra.def</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">exchange.def</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">hund.def</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">namelist.def</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">modpara.def</span></code></li>
+</ul>
+<p>and files for setting variational parameters</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">gutzwilleridx.def</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">jastrowidx.def</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">orbitalidx.def</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">qptransidx.def</span></code></li>
+</ul>
+<p>and files specifying elements of correlation functions that will be
+calculated</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">greenone.def</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">greentwo.def</span></code></li>
+</ul>
+<p>are generated. The details of these files are shown in <a class="reference internal" href="expert.html#howtoexpert"><span class="std std-ref">Input files for Expert mode</span></a>.</p>
+<p>During the calculation, the following files are outputted in
+<code class="docutils literal notranslate"><span class="pre">output</span></code> directory:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">zvo_SRinfo</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zvo_out_001</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zvo_time_001</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zvo_var_001</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zvo_CalcTimer</span><span class="o">.</span><span class="n">dat</span>
+</pre></div>
+</div>
+<p>In <code class="docutils literal notranslate"><span class="pre">zvo_out_001.dat</span></code>, the following quantities are outputted at each
+bins</p>
+<div class="math notranslate nohighlight">
+\[\langle H \rangle, \langle H^2 \rangle,
+\frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2} \nonumber.\]</div>
+<p>By seeing these informations, the conversion of the calculation can be
+judged. By using gnuplot, we can check the evolution of
+<span class="math notranslate nohighlight">\(\langle H \rangle\)</span> as follows:</p>
+<div class="highlight-gnuplot notranslate"><div class="highlight"><pre><span></span>gnuplot&gt; plot &quot;zvo_out_001.dat&quot; u 1
+</pre></div>
+</div>
+<p>The details of these outputted files are shown in <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">Output files</span></a>.</p>
+</div>
+<div class="section" id="output-results">
+<h3>Output results<a class="headerlink" href="#output-results" title="Permalink to this headline">¶</a></h3>
+<p>After finishing calculation normally, the files for the energy, the
+deviation, the optimized variational parameters and the time of
+execution for each calculation steps are outputted in <code class="docutils literal notranslate"><span class="pre">output/</span></code>
+directory. In the following, the outputted files are shown</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">gutzwiller_opt</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">jastrow_opt</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">orbital_opt</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zqp_opt</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">ClacTimer</span><span class="o">.</span><span class="n">dat</span>
+</pre></div>
+</div>
+<p>The details of these outputted files are shown in <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">Output files</span></a>.</p>
+</div>
+<div class="section" id="calculation-of-green-functions">
+<h3>Calculation of Green functions<a class="headerlink" href="#calculation-of-green-functions" title="Permalink to this headline">¶</a></h3>
+<p>After changing the value of <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> from 0 to 1 in
+<code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> file, we execute the following command. When we add
+<code class="docutils literal notranslate"><span class="pre">&quot;zqp_opt.dat&quot;</span></code> after <code class="docutils literal notranslate"><span class="pre">&quot;namelist.dat&quot;</span></code> as a command-line argument as
+follows, the calculation of Green functions is done by using the
+optimized variational parameters.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ Path/vmc.out -e namelist.def output/zqp_opt.dat
+</pre></div>
+</div>
+<p>After the calculation finishes, the following files are outputted in
+<code class="docutils literal notranslate"><span class="pre">output/</span></code> directory.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">zvo_cisajs_001</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zvo_cisajscktalt_001</span><span class="o">.</span><span class="n">dat</span>
+</pre></div>
+</div>
+<p>The details of these outputted files are shown in <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">Output files</span></a>.</p>
+</div>
+</div>
+<div class="section" id="input-files-for-expert-mode">
+<h2>Input files for Expert mode<a class="headerlink" href="#input-files-for-expert-mode" title="Permalink to this headline">¶</a></h2>
+<p>In mVMC, the calculation is done by reading input files categorized by
+the following six parts.</p>
+<ol class="arabic simple">
+<li>List:
+Specify the kinds and names of input files.</li>
+<li>Basic parameters:
+Specify the basic parameters.</li>
+<li>Set Hamiltonian:
+Specify the Hamiltonian.</li>
+<li>Set condition of variational parameters :
+Specify the variational parameters to be optimized.</li>
+<li>Initial variational parameters:
+Specify the initial values of the variational parameters.</li>
+<li>Output:
+Specify the components of one-body and two-body Green’s functions to
+be outputted.</li>
+</ol>
+<p>The calculation for complex models can be done by directly making above
+input files. The details for each files are shown in <a class="reference internal" href="expert.html#howtoexpert"><span class="std std-ref">Input files for Expert mode</span></a>.</p>
+</div>
+<div class="section" id="fourier-transformation-of-correlation-functions">
+<h2>Fourier transformation of correlation functions<a class="headerlink" href="#fourier-transformation-of-correlation-functions" title="Permalink to this headline">¶</a></h2>
+<p>This package has a utility which performs the Fourier transformation of
+the correlation function and plots that function.
+For more details, please see <a class="reference internal" href="fourier/index.html#fourier"><span class="std std-ref">HPhi/mVMC Fourier-Transformation utility</span></a>.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Tutorial</a><ul>
+<li><a class="reference internal" href="#list-of-sample-files">List of sample files</a></li>
+<li><a class="reference internal" href="#heisenberg-model">Heisenberg model</a><ul>
+<li><a class="reference internal" href="#running">Running</a></li>
+<li><a class="reference internal" href="#output-results">Output results</a></li>
+<li><a class="reference internal" href="#calculation-of-green-functions">Calculation of Green functions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#input-files-for-expert-mode">Input files for Expert mode</a></li>
+<li><a class="reference internal" href="#fourier-transformation-of-correlation-functions">Fourier transformation of correlation functions</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="start.html"
+                        title="previous chapter">How to use mVMC?</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="standard.html"
+                        title="next chapter">Input files for Standard mode</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/tutorial.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="standard.html" title="Input files for Standard mode"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="start.html" title="How to use mVMC?"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.0.3 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, mVMC team.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4.
+    </div>
+  </body>
+</html>

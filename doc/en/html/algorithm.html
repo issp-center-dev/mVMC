@@ -1,0 +1,387 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Algorithm &#8212; mVMC 1.0.3 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Program for the unrestricted Hartree-Fock approximation" href="appendix.html" />
+    <link rel="prev" title="Output files" href="output.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="appendix.html" title="Program for the unrestricted Hartree-Fock approximation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="output.html" title="Output files"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.0.3 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="algorithm">
+<h1>Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="variational-monte-calro-method">
+<h2>Variational Monte Calro Method<a class="headerlink" href="#variational-monte-calro-method" title="Permalink to this headline">¶</a></h2>
+<p>The variational Monte Carlo (VMC) method is a method for calculating
+approximate wave functions of a ground state and low-lying excited
+states by optimizing variational parameters included in a trial wave
+function. In calculating expectation values of physical quantities for
+the trial wave functions, the Markov chain Monte Carlo method is applied
+for efficient important sampling.</p>
+<p>In the mVMC package, we choose a spatial configuration for electrons as
+a complete set of bases in sampling:</p>
+<div class="math notranslate nohighlight">
+\[| x\rangle =  \prod_{n=1}^{N/2} c_{r_{n\uparrow}}^{\dagger} \prod_{n=1}^{N/2} c_{r_{n\downarrow}}^{\dagger} |0 \rangle,\]</div>
+<p>where <span class="math notranslate nohighlight">\(r_{n\sigma}\)</span> is a position of <span class="math notranslate nohighlight">\(n\)</span>-th electron with
+<span class="math notranslate nohighlight">\(\sigma (=\uparrow \rm{or} \downarrow)\)</span> spin, and
+<span class="math notranslate nohighlight">\(c_{r_{n\sigma}}^{\dagger}\)</span> is a creation operator of electrons. By
+using this basis set, the expectation value of an operator <span class="math notranslate nohighlight">\(A\)</span> is
+expressed as</p>
+<div class="math notranslate nohighlight">
+\[\langle A \rangle =\frac{\langle \psi| A| \psi \rangle}{\langle \psi | \psi \rangle}
+=\sum_x \frac{\langle \psi| A | x\rangle \langle x| \psi \rangle}{\langle \psi |\psi \rangle}.\]</div>
+<p>If we define a weight of the Markov chain Monte Carlo method as</p>
+<div class="math notranslate nohighlight">
+\[\rho(x)=\frac{|\langle x| \psi \rangle|^2}{\langle \psi | \psi \rangle} \ge 0, \quad \sum_{x} \rho(x)=1,\]</div>
+<p>we can rewrite <span class="math notranslate nohighlight">\(\langle A \rangle\)</span> in the following form:</p>
+<div class="math notranslate nohighlight">
+\[\langle A \rangle =\sum_x \rho(x) \frac{\langle \psi| A | x\rangle }{\langle \psi |x \rangle}.\]</div>
+<p>By using this form, the Markov chain Monte Carlo method is performed
+for sampling with respect to <span class="math notranslate nohighlight">\(x\)</span>. The local Green’s function
+<span class="math notranslate nohighlight">\(G_{ij\sigma\sigma'}(x)\)</span>, which is defined as</p>
+<div class="math notranslate nohighlight">
+\[G_{ij\sigma\sigma'}(x)=\frac{\langle \psi | c_{i\sigma}^{\dagger} c_{j\sigma'} | \psi \rangle}{\langle \psi | x \rangle},\]</div>
+<p>is also evaluated by the same sampling method by taking
+<span class="math notranslate nohighlight">\(A = c_{i\sigma}^{\dagger} c_{j\sigma'}\)</span>. We adopt the Mersenne
+twister method as a random number generator for
+sampling [<a class="reference external" href="http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT">Mutsuo2008</a> ].</p>
+</div>
+<div class="section" id="bogoliubov-representation">
+<h2>Bogoliubov representation<a class="headerlink" href="#bogoliubov-representation" title="Permalink to this headline">¶</a></h2>
+<p>In the VMC calculation for spin systems, we use the Bogoliubov
+representation. In the input files defining the one-body term
+(<code class="docutils literal notranslate"><span class="pre">transfer</span></code>) and the two-body term (<code class="docutils literal notranslate"><span class="pre">InterAll</span></code>), and the output
+files for correlation functions, the indices must be assigned by the
+Bogoliubov representation, in which the spin operators are generally
+expressed by creation/annihilation operators of fermions as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+S_{i z} &amp;= \sum_{\sigma = -S}^{S} \sigma c_{i \sigma}^\dagger c_{i \sigma},
+\\
+S_{i}^+ &amp;= \sum_{\sigma = -S}^{S-1}
+\sqrt{S(S+1) - \sigma(\sigma+1)}
+c_{i \sigma+1}^\dagger c_{i \sigma},
+\\
+S_{i}^- &amp;= \sum_{\sigma = -S}^{S-1}
+\sqrt{S(S+1) - \sigma(\sigma+1)}
+c_{i \sigma}^\dagger c_{i \sigma+1}.
+\end{aligned}\end{split}\]</div>
+<p>Since the present package support only <span class="math notranslate nohighlight">\(S=1/2\)</span> spin systems, the
+Bogoliubov representation obtained by substituting <span class="math notranslate nohighlight">\(S=1/2\)</span> into
+the above equations is used.</p>
+</div>
+<div class="section" id="properties-of-the-pfaffian-slater-determinant">
+<span id="puffandslater"></span><h2>Properties of the Pfaffian-Slater determinant<a class="headerlink" href="#properties-of-the-pfaffian-slater-determinant" title="Permalink to this headline">¶</a></h2>
+<p>In this section, we explain some properties of the Pfaffian-Slater
+determinant. We derive the general relation between a Pfaffian-Slater
+determinant and a single Slater determinant in <a class="reference internal" href="#pfaffianap"><span class="std std-ref">Antiparallel Pfaffian</span></a>
+and <a class="reference internal" href="#pfaffianp"><span class="std std-ref">General Pfaffian</span></a> . We also discuss meaning of the singular value
+decomposition of coefficients <span class="math notranslate nohighlight">\(f_{ij}\)</span> in
+<a class="reference internal" href="#pfaffiansingular"><span class="std std-ref">SVD</span></a>.</p>
+<div class="section" id="relation-between-and-the-case-of-the-anti-parallel-pairing">
+<span id="pfaffianap"></span><h3>Relation between <span class="math notranslate nohighlight">\(f_{ij}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> (the case of the anti-parallel pairing)<a class="headerlink" href="#relation-between-and-the-case-of-the-anti-parallel-pairing" title="Permalink to this headline">¶</a></h3>
+<p>In the many-variable variational Monte Carlo (mVMC) method, the one-body
+part of the trial wave function is expressed by the Pfaffian Slater
+determinant defined as</p>
+<div class="math notranslate nohighlight">
+\[|\phi_{\rm Pf}\rangle=\Big(\sum_{i,j=1}^{N_{s}}f_{ij}
+c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)^{N_{\rm e}/2}|0\rangle,\]</div>
+<p>where <span class="math notranslate nohighlight">\(N_{s}\)</span> is number of sites, <span class="math notranslate nohighlight">\(N_{e}\)</span> is number of
+total particles, and <span class="math notranslate nohighlight">\(f_{ij}\)</span> are variational parameters. For
+simplicity, we assume that <span class="math notranslate nohighlight">\(f_{ij}\)</span> are a real number. The single
+Slater determinant is defined as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+|\phi_{\rm SL}\rangle&amp;=\Big(\prod_{n=1}^{N_{e}/2}\psi_{n\uparrow}^{\dagger}\Big)
+\Big(\prod_{m=1}^{N_{e}/2}\psi_{m\downarrow}^{\dagger}\Big)|0\rangle, \\
+\psi_{n\sigma}^{\dagger}&amp;=\sum_{i=1}^{N_{s}}\Phi_{in\sigma}c^{\dagger}_{i\sigma},
+\end{aligned}\end{split}\]</div>
+<p>Here, <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> is an orthonormal basis, i.e., satisfies</p>
+<div class="math notranslate nohighlight">
+\[\sum_{i=1}^{N_{s}}\Phi_{in\sigma}\Phi_{im\sigma}=\delta_{nm},\]</div>
+<p>where <span class="math notranslate nohighlight">\(\delta_{nm}\)</span> is the Kronecker’s delta. From this
+orthogonality, we can prove the relation</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+[\psi^{\dagger}_{n\sigma},\psi_{m\sigma}]_{+}&amp;=\delta_{nm},\\
+G_{ij\sigma}=\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle
+&amp;=\frac{\langle \phi_{\rm SL}| c_{i\sigma}^{\dagger}c_{j\sigma} | \phi_{\rm SL}\rangle}{\langle \phi_{\rm SL}|\phi_{\rm SL}\rangle } \\
+&amp;=\sum_{n} \Phi_{in\sigma} \Phi_{jn\sigma}.
+\end{aligned}\end{split}\]</div>
+<p>Next, let us prove the relation between <span class="math notranslate nohighlight">\(f_{ij}\)</span> and
+<span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> by modifying <span class="math notranslate nohighlight">\(|\phi_{\rm SL}\rangle\)</span>. By
+the commutation relation for <span class="math notranslate nohighlight">\(\psi^{\dagger}_{n\sigma}\)</span>,
+<span class="math notranslate nohighlight">\(|\phi_{\rm SL}\rangle\)</span> is rewritten as</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+|\phi_{\rm SL}\rangle \propto \prod_{n=1}^{N_{e}/2}\Big(\psi_{n\uparrow}^{\dagger}\psi_{\mu(n)\downarrow}^{\dagger}\Big)|0\rangle,
+\end{aligned}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\mu(n)\)</span> represents permutation of a sequence of natural
+numbers, <span class="math notranslate nohighlight">\(n= 1, 2, \cdots, N_{e}/2\)</span>. For simplicity, let us take
+identity permutation (<span class="math notranslate nohighlight">\(\mu(n) = n\)</span>). By defining
+<span class="math notranslate nohighlight">\(K_{n}^{\dagger}=\psi_{n\uparrow}^{\dagger}\psi_{n\downarrow}^{\dagger}\)</span>,
+and by using the relation
+<span class="math notranslate nohighlight">\(K_{n}^{\dagger}K_{m}^{\dagger}=K_{m}^{\dagger}K_{n}^{\dagger}\)</span>,
+we can derive the relation</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+|\phi_{\rm SL}\rangle &amp;\propto \prod_{n=1}^{N_{e}/2}\Big(\psi_{n\uparrow}^{\dagger}\psi_{n\downarrow}^{\dagger}\Big)|0\rangle
+=\prod_{n=1}^{N_{e}/2} K_{n}^{\dagger}|0\rangle \\
+&amp;\propto\Big(\sum_{n=1}^{\frac{N_{e}}{2}}K_{n}^{\dagger}\Big)^{\frac{N_{e}}{2}} |0\rangle
+=\Big(\sum_{i,j=1}^{N_{s}}\Big[\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}\Big]
+c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)|0\rangle.
+\end{aligned}\end{split}\]</div>
+<p>This result indicates that <span class="math notranslate nohighlight">\(f_{ij}\)</span> is expressed by the
+coefficients of the single Slater determinant as</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+f_{ij}=\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}.
+\end{aligned}\]</div>
+<p>We note that this is one of a number of possible expressions of
+<span class="math notranslate nohighlight">\(f_{ij}\)</span> derived from one single Slater determinant. Since
+<span class="math notranslate nohighlight">\(f_{ij}\)</span> depends not only on the choice of the pairing degrees of
+freedom (i.e., the choice of <span class="math notranslate nohighlight">\(\mu(n)\)</span>) but also on the choice of
+the gauge degrees of freedom (i.e., the sign of
+<span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span>), the parameter <span class="math notranslate nohighlight">\(f_{ij}\)</span> has huge
+redundancy.</p>
+</div>
+<div class="section" id="relation-between-and-the-case-of-the-general-pairing">
+<span id="pfaffianp"></span><h3>Relation between <span class="math notranslate nohighlight">\(F_{IJ}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{In\sigma}\)</span> (the case of the general pairing)<a class="headerlink" href="#relation-between-and-the-case-of-the-general-pairing" title="Permalink to this headline">¶</a></h3>
+<p>We extend the relation between the Pfaffian-Slater wave function and the
+single Slater wave function into the general pairing case including the
+spin-parallel pairing. We define the Pfaffian-Slater wave function and
+the single Slater wave function as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+|\phi_{\rm Pf}\rangle&amp;=\Big(\sum_{I,J=1}^{2N_{s}}F_{IJ}c_{I}^{\dagger}c_{J}^{\dagger}\Big)^{N_{\rm e}/2}|0\rangle, \\
+|\phi_{\rm SL}\rangle&amp;=\Big(\prod_{n=1}^{N_{e}}\psi_{n}^{\dagger}\Big)|0\rangle,~~\psi_{n}^{\dagger}=\sum_{I=1}^{2N_{s}}\Phi_{In}c^{\dagger}_{I},
+\end{aligned}\end{split}\]</div>
+<p>respectively, where <span class="math notranslate nohighlight">\(I\)</span>, <span class="math notranslate nohighlight">\(J\)</span> denote the site index
+including the spin degrees of freedom. By the similar argument as the
+anti-parallel pairing case, we can derive the following relation:</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{In}\Phi_{Jn+1}-\Phi_{Jn}\Phi_{In+1}\Big).
+\end{aligned}\]</div>
+<p>Because this relation hold for the case of anti-parallel pairing, we
+employ this relation in mVMC ver 1.0 and later.</p>
+</div>
+<div class="section" id="singular-value-decomposition-of">
+<span id="pfaffiansingular"></span><h3>Singular value decomposition of <span class="math notranslate nohighlight">\(f_{ij}\)</span><a class="headerlink" href="#singular-value-decomposition-of" title="Permalink to this headline">¶</a></h3>
+<p>We define matrices <span class="math notranslate nohighlight">\(F\)</span>, <span class="math notranslate nohighlight">\(\Phi_{\uparrow}\)</span>,
+<span class="math notranslate nohighlight">\(\Phi_{\downarrow}\)</span>, and <span class="math notranslate nohighlight">\(\Sigma\)</span> as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+&amp;(F)_{ij}=f_{ij},~~~
+(\Phi_{\uparrow})_{in}=\Phi_{in\uparrow},~~~
+(\Phi_{\downarrow})_{in}=\Phi_{in\downarrow}, \\
+&amp;\Sigma={\rm diag}[\underbrace{1,\cdots,1}_{N_e/2},0,0,0].
+\end{aligned}\end{split}\]</div>
+<p>When <span class="math notranslate nohighlight">\(f_{ij}\)</span> (i.e., the matrix <span class="math notranslate nohighlight">\(F\)</span>) is related with a
+single Slater determinant of the wave function, we can show that the
+singular value decomposition of <span class="math notranslate nohighlight">\(F\)</span> becomes</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+F=\Phi_{\uparrow}\Sigma\Phi_{\downarrow}^{t}.
+\end{aligned}\]</div>
+<p>This result indicates that when the number of nonzero singular values
+is <span class="math notranslate nohighlight">\(N_{e}/2\)</span>, and when all the nonzero singular values of
+<span class="math notranslate nohighlight">\(F\)</span> are one in the singular value decomposition of <span class="math notranslate nohighlight">\(F\)</span>, the
+Pfaffian-Slater wave function parametrized by <span class="math notranslate nohighlight">\(f_{ij}\)</span> coincides
+with a single Slater determinant (i.e. a solution of the mean-field
+approximation). In other words, the numbers of the nonzero singular
+values and their difference from one offer a quantitative criterion how
+the Pfaffian-Slater determinant deviates from the single Slate
+determinant.</p>
+</div>
+</div>
+<div class="section" id="power-lanczos-method">
+<h2>Power Lanczos method<a class="headerlink" href="#power-lanczos-method" title="Permalink to this headline">¶</a></h2>
+<p>In this section, we show how to determine <span class="math notranslate nohighlight">\(\alpha\)</span> in the
+power-Lanczos method. We also explain the calculation of physical
+quantities after the single-step Lanczos method.</p>
+<div class="section" id="determination-of">
+<h3>Determination of <span class="math notranslate nohighlight">\(\alpha\)</span><a class="headerlink" href="#determination-of" title="Permalink to this headline">¶</a></h3>
+<p>First, we briefly explain the sampling procedure of the variational
+Monte Carlo (VMC) method. Physical properties <span class="math notranslate nohighlight">\(\hat{A}\)</span> are
+calculated as follows:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+&amp;\langle \hat{A}\rangle = \frac{\langle \phi| \hat{A}|\phi \rangle}{\langle \phi| \phi \rangle} = \sum_{x} \rho(x) F(x, {\hat{A}}),\\
+&amp; \rho(x)=\frac{|\langle \phi|x\rangle|^2}{\langle \phi | \phi \rangle}, ~~~~F(x,  {\hat{A}}) =  \frac{\langle x| \hat{A}|\phi \rangle}{\langle x| \phi \rangle}.
+\end{aligned}\end{split}\]</div>
+<p>There are two ways to calculate the product of the operators
+<span class="math notranslate nohighlight">\(\hat{A}\hat{B}\)</span>.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+&amp;\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F(x, {\hat{A}\hat{B}}),\\
+&amp;\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F^{\dagger}(x, {\hat{A})F(x, \hat{B}}).
+\end{aligned}\end{split}\]</div>
+<p>As we explain later, in general, the latter way is numerical stable
+one. For example, we consider the expectation value of the variance,
+which is defined as
+<span class="math notranslate nohighlight">\(\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle\)</span>.
+There are two ways to calculate the variance.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+\sigma^2&amp;=\sum_{x} \rho(x) F(x,  (\hat{H}-\langle \hat{H}\rangle)^2) = \sum_{x} \rho(x) F(x,  \hat{H}^2) - \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 ,\\
+\sigma^2&amp;=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}-\langle \hat{H}\rangle)F(x,  \hat{H}-\langle \hat{H}\rangle) \nonumber \\
+&amp;= \sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}) F(x, \hat{H})- \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2
+\end{aligned}\end{split}\]</div>
+<p>From its definition, the latter way gives the positive definitive
+variance even for the finite sampling while the former way does not
+guarantee the positive definitiveness of the variance. Here, we consider
+the expectation values of energy and variance for the (single-step)
+power Lanczos wave function
+<span class="math notranslate nohighlight">\(|\phi\rangle =(1+\alpha \hat{H}) |\psi \rangle\)</span>. The energy is
+calculated as</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+E_{LS}(\alpha) =\frac{\langle \phi| \hat{H} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{h_1 + \alpha(h_{2(20)} + h_{2(11)}) + \alpha^2 h_{3(12)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+\end{aligned}\]</div>
+<p>where we define <span class="math notranslate nohighlight">\(h_1\)</span>, <span class="math notranslate nohighlight">\(h_{2(11)},~h_{2(20)},\)</span> and
+<span class="math notranslate nohighlight">\(h_{3(12)}\)</span> as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+&amp;h_1 =\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}),\\
+&amp;h_{2(11)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}) F(x, \hat{H}),\\
+&amp;h_{2(20)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}^2),\\
+&amp;h_{3(12)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H})F(x,  \hat{H}^2).
+\end{aligned}\end{split}\]</div>
+<p>From the condition
+<span class="math notranslate nohighlight">\(\frac{\partial E_{LS}(\alpha)}{\partial \alpha}=0\)</span>, i.e., by
+solving the quadratic equations, we can determine the <span class="math notranslate nohighlight">\(\alpha\)</span>.
+The variance is calculate in the similar way.</p>
+</div>
+<div class="section" id="calculation-of-physical-quantities">
+<h3>Calculation of physical quantities<a class="headerlink" href="#calculation-of-physical-quantities" title="Permalink to this headline">¶</a></h3>
+<p>By using the optimized parameter <span class="math notranslate nohighlight">\(\alpha\)</span>, we can calculate the
+expected value of the operator <span class="math notranslate nohighlight">\(\hat{A}\)</span> as</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{A_0 + \alpha(A_{1(10)} + A_{1(01)}) + \alpha^2 A_{2(11)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+\end{aligned}\]</div>
+<p>where we define <span class="math notranslate nohighlight">\(A_0\)</span>, <span class="math notranslate nohighlight">\(A_{1(10)},~A_{1(01)},\)</span> and
+<span class="math notranslate nohighlight">\(A_{2(11)}\)</span> as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+&amp;A_0 =\sum_{x} \rho(x) F(x,  \hat{A}),\\
+&amp;A_{1(10)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}) F(x, \hat{A}),\\
+&amp;A_{1(01)}=\sum_{x} \rho(x) F(x, \hat{A}\hat{H}),\\
+&amp;A_{2(11)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H})F(x,  \hat{A}\hat{H}).
+\end{aligned}\end{split}\]</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Algorithm</a><ul>
+<li><a class="reference internal" href="#variational-monte-calro-method">Variational Monte Calro Method</a></li>
+<li><a class="reference internal" href="#bogoliubov-representation">Bogoliubov representation</a></li>
+<li><a class="reference internal" href="#properties-of-the-pfaffian-slater-determinant">Properties of the Pfaffian-Slater determinant</a><ul>
+<li><a class="reference internal" href="#relation-between-and-the-case-of-the-anti-parallel-pairing">Relation between <span class="math notranslate nohighlight">\(f_{ij}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> (the case of the anti-parallel pairing)</a></li>
+<li><a class="reference internal" href="#relation-between-and-the-case-of-the-general-pairing">Relation between <span class="math notranslate nohighlight">\(F_{IJ}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{In\sigma}\)</span> (the case of the general pairing)</a></li>
+<li><a class="reference internal" href="#singular-value-decomposition-of">Singular value decomposition of <span class="math notranslate nohighlight">\(f_{ij}\)</span></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#power-lanczos-method">Power Lanczos method</a><ul>
+<li><a class="reference internal" href="#determination-of">Determination of <span class="math notranslate nohighlight">\(\alpha\)</span></a></li>
+<li><a class="reference internal" href="#calculation-of-physical-quantities">Calculation of physical quantities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="output.html"
+                        title="previous chapter">Output files</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="appendix.html"
+                        title="next chapter">Program for the unrestricted Hartree-Fock approximation</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/algorithm.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="appendix.html" title="Program for the unrestricted Hartree-Fock approximation"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="output.html" title="Output files"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.0.3 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, mVMC team.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4.
+    </div>
+  </body>
+</html>

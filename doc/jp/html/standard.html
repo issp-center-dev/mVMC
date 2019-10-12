@@ -1,0 +1,739 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>スタンダードモード用入力ファイル書式 &#8212; mVMC 1.0.3 ドキュメント</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/translations.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="検索" href="search.html" />
+    <link rel="next" title="エキスパートモード入力ファイル書式" href="expert.html" />
+    <link rel="prev" title="チュートリアル" href="tutorial.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="総合索引"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="expert.html" title="エキスパートモード入力ファイル書式"
+             accesskey="N">次へ</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="チュートリアル"
+             accesskey="P">前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.0.3 ドキュメント</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="howtostandard">
+<span id="id1"></span><h1>スタンダードモード用入力ファイル書式<a class="headerlink" href="#howtostandard" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p>スタンダードモード用入力ファイルは次のような格好をしています。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">W</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">L</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">model</span> <span class="o">=</span> <span class="s2">&quot;spin&quot;</span>
+
+<span class="n">lattice</span> <span class="o">=</span> <span class="s2">&quot;triangular lattice&quot;</span>
+<span class="o">//</span><span class="n">mu</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="o">//</span> <span class="n">t</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+<span class="o">//</span> <span class="n">t</span><span class="s1">&#39; = -0.5</span>
+<span class="o">//</span> <span class="n">U</span> <span class="o">=</span> <span class="mf">8.0</span>
+<span class="o">//</span><span class="n">V</span> <span class="o">=</span> <span class="mf">4.0</span>
+<span class="o">//</span><span class="n">V</span><span class="s1">&#39;=2.0</span>
+<span class="n">J</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+<span class="n">J</span><span class="s1">&#39;=-0.5</span>
+<span class="o">//</span> <span class="n">nelec</span> <span class="o">=</span> <span class="mi">8</span>
+</pre></div>
+</div>
+<p>大まかなルールは次のとおりです。</p>
+<ul class="simple">
+<li>各行にはひと組ずつキーワード(<code class="docutils literal notranslate"><span class="pre">=</span></code> の前)と
+パラメーター(<code class="docutils literal notranslate"><span class="pre">=</span></code> の後)が書かれており間は <code class="docutils literal notranslate"><span class="pre">=</span></code> で区切られています。</li>
+<li>各キーワードは順不同に記述できます。</li>
+<li>空白行、または <code class="docutils literal notranslate"><span class="pre">//</span></code> で始まる行(コメントアウト)は読み飛ばされます。</li>
+<li>各キーワード、パラメーターの大文字 <span class="math notranslate nohighlight">\(\cdot\)</span> 小文字は区別されません。
+ダブルクオート、空白は無視されます。</li>
+<li>必ず指定しなければいけないパラメーター、
+指定しない場合デフォルト値が使われるパラメーター、
+(他のパラメーターの組み合わせによっては)使われないパラメーターが存在します。
+使われないパラメーターが指定された場合にはプログラムは終了し、
+入力ファイルをチェックするようにというメッセージが英語で表示されます。</li>
+</ul>
+<p>次に各キーワードの説明をします。</p>
+<div class="section" id="id2">
+<h2>計算の種類に関する必須パラメーター<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">model</span></code></p>
+<p><strong>形式 :</strong> 文字列( <code class="docutils literal notranslate"><span class="pre">&quot;Fermion</span> <span class="pre">Hubbard&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Spin&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;Kondo</span> <span class="pre">Lattice&quot;</span></code> , <code class="docutils literal notranslate"><span class="pre">&quot;Fermion</span> <span class="pre">HubbardGC&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;SpinGC&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;Kondo</span> <span class="pre">LatticeGC&quot;</span></code> のいずれか)</p>
+<p><strong>説明 :</strong> 計算対象の模型を指定します。
+文字列 <code class="docutils literal notranslate"><span class="pre">&quot;Fermion</span> <span class="pre">Hubbard&quot;</span></code> は、カノニカル集団のフェルミ粒子Hubbard模型</p>
+<div class="math notranslate nohighlight" id="equation-hubbard">
+<span class="eqno">(1)<a class="headerlink" href="#equation-hubbard" title="この数式へのパーマリンク">¶</a></span>\[\begin{aligned}
+H = - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma}
+- \sum_{i \neq j \sigma} t_{i j} c^\dagger_{i \sigma} c_{j \sigma}
++ \sum_{i} U n_{i \uparrow} n_{i \downarrow}
++ \sum_{i \neq j} V_{i j} n_{i} n_{j},
+\end{aligned}\]</div>
+<p>文字列 <code class="docutils literal notranslate"><span class="pre">&quot;Spin&quot;</span></code> はカノニカル集団のスピン模型
+( <span class="math notranslate nohighlight">\(\sigma_1, \sigma_2=x, y, z\)</span> )</p>
+<div class="math notranslate nohighlight" id="equation-spin">
+<span class="eqno">(2)<a class="headerlink" href="#equation-spin" title="この数式へのパーマリンク">¶</a></span>\[\begin{split}\begin{aligned}
+H &amp;= -h \sum_{i} S_{i z} - \Gamma \sum_{i} S_{i x} + D \sum_{i} S_{i z} S_{i z}
+\nonumber \\
+&amp;+ \sum_{i j, \sigma_1}J_{i j \sigma_1} S_{i \sigma_1} S_{j \sigma_1}+ \sum_{i j, \sigma_1 \neq \sigma_2} J_{i j \sigma_1 \sigma_2} S_{i \sigma_1} S_{j \sigma_2} ,
+\end{aligned}\end{split}\]</div>
+<p>文字列 <code class="docutils literal notranslate"><span class="pre">&quot;Kondo</span> <span class="pre">Lattice&quot;</span></code> はカノニカル集団の近藤格子模型
+(Hubbard模型と同様に <span class="math notranslate nohighlight">\(U\)</span> と <span class="math notranslate nohighlight">\(J\)</span> を入れることも可能)</p>
+<div class="math notranslate nohighlight" id="equation-kondo">
+<span class="eqno">(3)<a class="headerlink" href="#equation-kondo" title="この数式へのパーマリンク">¶</a></span>\[\begin{split}\begin{aligned}
+H &amp;= - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma}
+- t \sum_{\langle i j \rangle \sigma} c^\dagger_{i \sigma} c_{j \sigma}
++ \frac{J}{2} \sum_{i} \left\{
+S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
++ S_{i}^{-} c_{i \uparrow}^\dagger c_{i \downarrow}
++ S_{i z} (n_{i \uparrow} - n_{i \downarrow})\right\}
+\nonumber \\
+&amp; +  \sum_{i} U n_{i \uparrow} n_{i \downarrow}
++ \sum_{i \neq j} V_{i j} n_{i} n_{j}
+,
+\end{aligned}\end{split}\]</div>
+<p>に対応します。 また、
+<code class="docutils literal notranslate"><span class="pre">&quot;Fermion</span> <span class="pre">HubbardGC&quot;</span></code> 、 <code class="docutils literal notranslate"><span class="pre">&quot;SpinGC&quot;</span></code> 、 <code class="docutils literal notranslate"><span class="pre">&quot;Kondo</span> <span class="pre">LatticeGC&quot;</span></code> はそれぞれ
+<span class="math notranslate nohighlight">\(S_z\)</span> 非保存でのフェルミ粒子Hubbard模型[式 <a class="reference internal" href="#equation-hubbard">(1)</a> ]、
+スピン模型[式 <a class="reference internal" href="#equation-spin">(2)</a> ]、
+近藤格子模型[式 <a class="reference internal" href="#equation-kondo">(3)</a> ]に対応します。
+<span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span> との互換性からGC(=グランドカノニカル)と付いていますが、
+粒子数は保存していますのでご注意ください。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">lattice</span></code></p>
+<p><strong>形式 :</strong> 文字列( <code class="docutils literal notranslate"><span class="pre">&quot;Chain</span> <span class="pre">Lattice&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Square</span> <span class="pre">Lattice&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;Triangular</span> <span class="pre">Lattice&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Honeycomb</span> <span class="pre">Lattice&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Kagome&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;Ladder&quot;</span></code> のいずれか)</p>
+<p><strong>説明 :</strong> 格子の形状を指定します。 上記文字列はそれぞれ1次元鎖(Fig.
+[ <a href="#latticepng">2</a> ](a))、 2次元正方格子(Fig.
+[ <a href="#latticepng">2</a> ](b))、 2次元三角格子(Fig.
+[ <a href="#latticepng">2</a> ](c))、 2次元異方的蜂の巣格子(Fig.
+[ <a href="#honeycombpng">3</a> ])、 カゴメ格子(Fig. [ <a href="#kagomepng">4</a> ])、
+梯子格子(Fig. [ <a href="#ladderpng">5</a> ])に対応します。</p>
+<div class="figure" id="id17">
+<span id="latticepng"></span><a class="reference internal image-reference" href="_images/chap04_1_lattice.png"><img alt="_images/chap04_1_lattice.png" src="_images/chap04_1_lattice.png" style="width: 15.00000cm;" /></a>
+<p class="caption"><span class="caption-text">Figure 2: (a)1次元鎖、(b)2次元正方格子、(c)2次元三角格子の模式図.
+ホッピング積分、オフサイトクーロン積分、スピン結合は、
+再近接サイト間(マゼンタの実線)ではそれぞれ <span class="math notranslate nohighlight">\(t,V,J\)</span> となり、
+次近接サイト間(緑の破線)ではそれぞれ <span class="math notranslate nohighlight">\(t',V',J'\)</span> となります。</span></p>
+</div>
+<div class="figure" id="id18">
+<span id="honeycombpng"></span><a class="reference internal image-reference" href="_images/chap04_1_honeycomb.png"><img alt="_images/chap04_1_honeycomb.png" src="_images/chap04_1_honeycomb.png" style="width: 15.00000cm;" /></a>
+<p class="caption"><span class="caption-text">Figure 3: 2次元異方的蜂の巣格子の模式図.
+ホッピング積分、オフサイトクーロン積分、スピン結合は、
+ボンドの方向によって異なります。
+また、次近接のホッピング積分、オフサイトクーロン積分、スピン結合
+には対応していません。</span></p>
+</div>
+<div class="figure" id="id19">
+<span id="kagomepng"></span><a class="reference internal image-reference" href="_images/kagome.png"><img alt="_images/kagome.png" src="_images/kagome.png" style="width: 15.00000cm;" /></a>
+<p class="caption"><span class="caption-text">Figure 4: カゴメ格子の模式図.</span></p>
+</div>
+<div class="figure" id="id20">
+<span id="ladderpng"></span><a class="reference internal image-reference" href="_images/ladder.png"><img alt="_images/ladder.png" src="_images/ladder.png" style="width: 10.00000cm;" /></a>
+<p class="caption"><span class="caption-text">Figure 5: 梯子格子の模式図.</span></p>
+</div>
+</li>
+</ul>
+</div>
+<div class="section" id="id3">
+<h2>格子に関するパラメーター<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<div class="section" id="id4">
+<h3>1次元鎖<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>Fig. [ <a href="#latticepng">2</a> ](a)</p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">L</span></code></p>
+<p><strong>形式 :</strong> 自然数</p>
+<p><strong>説明 :</strong> 鎖の長さを指定します.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="id5">
+<h3>梯子格子<a class="headerlink" href="#id5" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>Fig. [ <a href="#ladderpng">5</a> ]</p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">L</span></code></p>
+<p><strong>形式 :</strong> 自然数</p>
+<p><strong>説明 :</strong> 梯子の長さを指定します.</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">W</span></code></p>
+<p><strong>形式 :</strong> 自然数</p>
+<p><strong>説明 :</strong> 梯子の本数を指定します.</p>
+</li>
+</ul>
+<div class="figure" id="id21">
+<span id="unitlatticepng"></span><a class="reference internal image-reference" href="_images/chap04_1_unitlattice.png"><img alt="_images/chap04_1_unitlattice.png" src="_images/chap04_1_unitlattice.png" style="width: 15.00000cm;" /></a>
+<p class="caption"><span class="caption-text">Figure 6: 三角格子において、 <span class="math notranslate nohighlight">\({\vec a}_0 = (6, 2), {\vec a}_1 = (2, 4)\)</span> とした場合のセル形状。
+<span class="math notranslate nohighlight">\({\vec a}_0\)</span> (マゼンタ)および <span class="math notranslate nohighlight">\({\vec a}_1\)</span> (グリーン)
+で囲まれた部分(サイト数は20)が計算するセルとなる。</span></p>
+</div>
+</div>
+<div class="section" id="id6">
+<h3>正方格子、 三角格子、 蜂の巣格子、 カゴメ格子<a class="headerlink" href="#id6" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>正方格子[Fig. [ <a href="#latticepng">2</a> ](b)]、 三角格子[Fig. [ <a href="#latticepng">2</a> ](c)]、 蜂の巣格子(Fig. [ <a href="#honeycombpng">3</a> ])、 カゴメ格子(Fig. [ <a href="#kagomepng">4</a> ])</p>
+<p>これらの格子では、標準の単位胞(図中の黒の破線を参照)を用いて格子形状を指定する方法と、
+それらとは別の方向に格子ベクトルを取る方法が選択できます。
+また、両方を指定した場合にはプログラムを終了します。</p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">W</span></code>, <code class="docutils literal notranslate"><span class="pre">L</span></code></p>
+<p><strong>形式 :</strong> 自然数</p>
+<p><strong>説明 :</strong> 標準の単位胞の並び方を指定します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">a0W</span></code>, <code class="docutils literal notranslate"><span class="pre">a0L</span></code>, <code class="docutils literal notranslate"><span class="pre">a1W</span></code>, <code class="docutils literal notranslate"><span class="pre">a1L</span></code></p>
+<p><strong>形式 :</strong> 自然数</p>
+<p><strong>説明 :</strong>
+格子を指定する2本のベクトル( <span class="math notranslate nohighlight">\({\vec a}_0, {\vec a}_1\)</span>)
+を指定します (Fig. [ <a href="#unitlatticepng">6</a> ])。
+これらのベクトルは標準の並進ベクトルを基底とした座標(Fractional
+coordinate) で指定されます。</p>
+</li>
+</ul>
+<p>スタンダードモードで出力される <code class="docutils literal notranslate"><span class="pre">lattice.gp</span></code> (1次元鎖、梯子格子では出力されません)
+というファイルを使うと、
+自分の意図した通りの格子のとり方になっているかどうかを確かめる事が出来ます。
+このファイルは、次のようにして <code class="docutils literal notranslate"><span class="pre">gnuplot</span></code> に読み込ませることが出来ます。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ gnuplot lattice.gp
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="id7">
+<h2>副格子<a class="headerlink" href="#id7" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>以下パラメータを用いると変分波動関数のペア軌道部分に副格子の周期性を持たせることが出来ます。</p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">a0Wsub</span></code>, <code class="docutils literal notranslate"><span class="pre">a0Lsub</span></code>, <code class="docutils literal notranslate"><span class="pre">a1Wsub</span></code>, <code class="docutils literal notranslate"><span class="pre">a1Lsub</span></code>, <code class="docutils literal notranslate"><span class="pre">Wsub</span></code>, <code class="docutils literal notranslate"><span class="pre">Lsub</span></code></p>
+<p><strong>形式 :</strong> 自然数。デフォルトでは <code class="docutils literal notranslate"><span class="pre">a0Wsub=a0W</span></code>, <code class="docutils literal notranslate"><span class="pre">a0Lsub=a0L</span></code>,
+<code class="docutils literal notranslate"><span class="pre">a1Wsub=a1W</span></code>, <code class="docutils literal notranslate"><span class="pre">a1Lsub=a1L</span></code>, <code class="docutils literal notranslate"><span class="pre">Wsub=W</span></code>, <code class="docutils literal notranslate"><span class="pre">Lsub=L</span></code> となる。
+すなわち副格子を用いず、変分波動関数のすべてのパラメーターが独立に変化する。</p>
+<p><strong>説明 :</strong> これらのパラメーターの指定の仕方は <code class="docutils literal notranslate"><span class="pre">a0W</span></code>, <code class="docutils literal notranslate"><span class="pre">a0L</span></code>,
+<code class="docutils literal notranslate"><span class="pre">a1W</span></code>, <code class="docutils literal notranslate"><span class="pre">a1L</span></code>, <code class="docutils literal notranslate"><span class="pre">W</span></code>, <code class="docutils literal notranslate"><span class="pre">L</span></code> と同様です。
+ただし、元の計算セルが副格子に整合しない場合にはプログラムを終了します。</p>
+</li>
+</ul>
+</div>
+<div class="section" id="id8">
+<h2>ハミルトニアンの各項の係数<a class="headerlink" href="#id8" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>デフォルト値は特に記載されていないものについては0に設定してあります。
+型が複素数のパラメータは「実部, 虚部」(間に“,”)の形式で指定し、
+実数の場合には「実部」で指定が可能です。</p>
+<div class="section" id="id9">
+<h3>局所項<a class="headerlink" href="#id9" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">mu</span></code></p>
+<p><strong>形式 :</strong> 実数</p>
+<p><strong>説明 :</strong>
+Hubbardおよび近藤格子模型での化学ポテンシャルを指定します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">U</span></code></p>
+<p><strong>形式 :</strong> 実数</p>
+<p><strong>説明 :</strong>
+Hubbardおよび近藤格子模型でのオンサイトクーロン積分を指定します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">Jx</span></code>, <code class="docutils literal notranslate"><span class="pre">Jy</span></code>, <code class="docutils literal notranslate"><span class="pre">Jz</span></code>, <code class="docutils literal notranslate"><span class="pre">Jxy</span></code>, <code class="docutils literal notranslate"><span class="pre">Jyx</span></code>, <code class="docutils literal notranslate"><span class="pre">Jxz</span></code>, <code class="docutils literal notranslate"><span class="pre">Jzx</span></code>, <code class="docutils literal notranslate"><span class="pre">Jyz</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Jzy</span></code></p>
+<p><strong>形式 :</strong> 実数</p>
+<p><strong>説明 :</strong>
+近藤格子模型での、局在電子と遍歴電子のスピン結合を指定します。
+また対角項について,
+<code class="docutils literal notranslate"><span class="pre">Jx,</span> <span class="pre">Jy,</span> <span class="pre">Jz</span></code> を指定する代わりに、パラメータ <code class="docutils literal notranslate"><span class="pre">J</span></code> を指定すると
+<code class="docutils literal notranslate"><span class="pre">Jx</span> <span class="pre">=</span> <span class="pre">Jy</span> <span class="pre">=</span> <span class="pre">Jz</span> <span class="pre">=</span> <span class="pre">J</span></code> が代入されます。 <code class="docutils literal notranslate"><span class="pre">J</span></code> を指定した上で <code class="docutils literal notranslate"><span class="pre">Jx</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Jy</span></code>, <code class="docutils literal notranslate"><span class="pre">Jz</span></code> を指定した場合はプログラムを終了します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">h</span></code>, <code class="docutils literal notranslate"><span class="pre">Gamma</span></code>, <code class="docutils literal notranslate"><span class="pre">D</span></code></p>
+<p><strong>形式 :</strong> 実数</p>
+<p><strong>説明 :</strong>
+スピン模型での縦磁場、横磁場、異方性パラメータを指定します。</p>
+</li>
+</ul>
+<p>下記の非局所項は、梯子格子の場合とそれ以外(１次元鎖、矩形格子、三角格子、蜂の巣格子、カゴメ格子)
+の場合で指定の仕方が異なります。
+また、各格子で指定可能なパラメーターをTable
+[table_interactions]に表します。</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="35%" />
+<col width="9%" />
+<col width="10%" />
+<col width="10%" />
+<col width="13%" />
+<col width="13%" />
+<col width="10%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">相互作用</th>
+<th class="head">1次元鎖</th>
+<th class="head">矩形格子</th>
+<th class="head">三角格子</th>
+<th class="head">蜂の巣格子</th>
+<th class="head">カゴメ格子</th>
+<th class="head">梯子格子</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">J</span></code>, <code class="docutils literal notranslate"><span class="pre">t</span></code>, <code class="docutils literal notranslate"><span class="pre">V</span></code> (省略形)</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>NG</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">J'</span></code>, <code class="docutils literal notranslate"><span class="pre">t'</span></code>, <code class="docutils literal notranslate"><span class="pre">V'</span></code></td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>NG</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">J0</span></code>, <code class="docutils literal notranslate"><span class="pre">t0</span></code>, <code class="docutils literal notranslate"><span class="pre">V0</span></code></td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">J1</span></code>, <code class="docutils literal notranslate"><span class="pre">t1</span></code>, <code class="docutils literal notranslate"><span class="pre">V1</span></code></td>
+<td>NG</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">J2</span></code>, <code class="docutils literal notranslate"><span class="pre">t2</span></code>, <code class="docutils literal notranslate"><span class="pre">V2</span></code></td>
+<td>NG</td>
+<td>NG</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+<td>OK</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">J1'</span></code>, <code class="docutils literal notranslate"><span class="pre">t1'</span></code>, <code class="docutils literal notranslate"><span class="pre">V1'</span></code></td>
+<td>NG</td>
+<td>NG</td>
+<td>NG</td>
+<td>NG</td>
+<td>NG</td>
+<td>OK</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">J2'</span></code> , <code class="docutils literal notranslate"><span class="pre">t2'</span></code>, <code class="docutils literal notranslate"><span class="pre">V2'</span></code></td>
+<td>NG</td>
+<td>NG</td>
+<td>NG</td>
+<td>NG</td>
+<td>NG</td>
+<td>OK</td>
+</tr>
+</tbody>
+</table>
+<p>Table: 各格子で定義可能な相互作用一覧。ただし、スピン結合については行列として与えることが可能。</p>
+</div>
+<div class="section" id="id10">
+<h3>非局所項[梯子格子]<a class="headerlink" href="#id10" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>Fig. [ <a href="#ladderpng">5</a> ]</p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">t0</span></code>, <code class="docutils literal notranslate"><span class="pre">t1</span></code>, <code class="docutils literal notranslate"><span class="pre">t1'</span></code>, <code class="docutils literal notranslate"><span class="pre">t2</span></code>, <code class="docutils literal notranslate"><span class="pre">t2'</span></code></p>
+<p><strong>形式 :</strong> 複素数</p>
+<p><strong>説明 :</strong> 梯子格子でのホッピング(Fig.
+[ <a href="#ladderpng">5</a> ]参照)を指定します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">V0</span></code>, <code class="docutils literal notranslate"><span class="pre">V1</span></code>, <code class="docutils literal notranslate"><span class="pre">V1'</span></code>, <code class="docutils literal notranslate"><span class="pre">V2</span></code>, <code class="docutils literal notranslate"><span class="pre">V2'</span></code></p>
+<p><strong>形式 :</strong> 実数</p>
+<p><strong>説明 :</strong> 梯子格子でのオフサイトクーロン積分 (Fig.
+[ <a href="#ladderpng">5</a> ]参照)を指定します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">J0x</span></code>, <code class="docutils literal notranslate"><span class="pre">J0y</span></code>, <code class="docutils literal notranslate"><span class="pre">J0z</span></code>, <code class="docutils literal notranslate"><span class="pre">J0xy</span></code>, <code class="docutils literal notranslate"><span class="pre">J0yx</span></code>, <code class="docutils literal notranslate"><span class="pre">J0xz</span></code>, <code class="docutils literal notranslate"><span class="pre">J0zx</span></code>,
+<code class="docutils literal notranslate"><span class="pre">J0yz</span></code>, <code class="docutils literal notranslate"><span class="pre">J0zy</span></code></p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">J1x</span></code>, <code class="docutils literal notranslate"><span class="pre">J1y</span></code>, <code class="docutils literal notranslate"><span class="pre">J1z</span></code>, <code class="docutils literal notranslate"><span class="pre">J1xy</span></code>, <code class="docutils literal notranslate"><span class="pre">J1yx</span></code>, <code class="docutils literal notranslate"><span class="pre">J1xz</span></code>, <code class="docutils literal notranslate"><span class="pre">J1zx</span></code>,
+<code class="docutils literal notranslate"><span class="pre">J1yz</span></code>, <code class="docutils literal notranslate"><span class="pre">J1zy</span></code></p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">J1'x</span></code>, <code class="docutils literal notranslate"><span class="pre">J1'y</span></code>, <code class="docutils literal notranslate"><span class="pre">J1'z</span></code>, <code class="docutils literal notranslate"><span class="pre">J1'xy</span></code>, <code class="docutils literal notranslate"><span class="pre">J1'yx</span></code>, <code class="docutils literal notranslate"><span class="pre">J1'xz</span></code>,
+<code class="docutils literal notranslate"><span class="pre">J1'zx</span></code>, <code class="docutils literal notranslate"><span class="pre">J1'yz</span></code>, <code class="docutils literal notranslate"><span class="pre">J1'zy</span></code></p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">J2x</span></code>, <code class="docutils literal notranslate"><span class="pre">J2y</span></code>, <code class="docutils literal notranslate"><span class="pre">J2z</span></code>, <code class="docutils literal notranslate"><span class="pre">J2xy</span></code>, <code class="docutils literal notranslate"><span class="pre">J2yx</span></code>, <code class="docutils literal notranslate"><span class="pre">J2xz</span></code>, <code class="docutils literal notranslate"><span class="pre">J2zx</span></code>,
+<code class="docutils literal notranslate"><span class="pre">J2yz</span></code>, <code class="docutils literal notranslate"><span class="pre">J2zy</span></code></p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">J2'x</span></code>, <code class="docutils literal notranslate"><span class="pre">J2'y</span></code>, <code class="docutils literal notranslate"><span class="pre">J2'z</span></code>, <code class="docutils literal notranslate"><span class="pre">J2'xy</span></code>, <code class="docutils literal notranslate"><span class="pre">J2'yx</span></code>, <code class="docutils literal notranslate"><span class="pre">J2'xz</span></code>,
+<code class="docutils literal notranslate"><span class="pre">J2'zx</span></code>, <code class="docutils literal notranslate"><span class="pre">J2'yz</span></code>, <code class="docutils literal notranslate"><span class="pre">J2'zy</span></code></p>
+<p><strong>形式 :</strong> 実数</p>
+<p><strong>説明 :</strong> 梯子格子でのスピン相互作用 (Fig.
+[ <a href="#ladderpng">5</a> ]参照)を指定します。
+また対角項について、例えば <code class="docutils literal notranslate"><span class="pre">J0x,</span> <span class="pre">J0y,</span> <span class="pre">J0z</span></code> を指定する代わりに
+パラメータ <code class="docutils literal notranslate"><span class="pre">J0</span></code> を指定すると
+<code class="docutils literal notranslate"><span class="pre">J0x</span> <span class="pre">=</span> <span class="pre">J0y</span> <span class="pre">=</span> <span class="pre">J0z</span> <span class="pre">=</span> <span class="pre">J0</span></code> が代入されます。
+<code class="docutils literal notranslate"><span class="pre">J0</span></code> を指定した上で <code class="docutils literal notranslate"><span class="pre">J0x,</span> <span class="pre">J0y,</span> <span class="pre">J0z</span></code> 等も指定した場合はプログラムを終了します。
+<code class="docutils literal notranslate"><span class="pre">J1</span></code>, <code class="docutils literal notranslate"><span class="pre">J1'</span></code>, <code class="docutils literal notranslate"><span class="pre">J2</span></code>, <code class="docutils literal notranslate"><span class="pre">J2'</span></code> についても同様です。</p>
+</li>
+</ul>
+</div>
+<div class="section" id="id11">
+<h3>非局所項 (梯子格子以外)<a class="headerlink" href="#id11" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>Figs. [ <a href="#latticepng">2</a> ], [ <a href="#honeycombpng">3</a> ], [ <a href="#kagomepng">4</a> ])]</p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">t0</span></code>, <code class="docutils literal notranslate"><span class="pre">t1</span></code>, <code class="docutils literal notranslate"><span class="pre">t2</span></code></p>
+<p><strong>形式 :</strong> 複素数</p>
+<p><strong>説明 :</strong>
+Hubbardおよび近藤格子模型での、最近接サイト間の各方向のホッピングを指定します。
+Figs. [ <a href="#latticepng">2</a> ],
+[ <a href="#honeycombpng">3</a> ],[ <a href="#kagomepng">4</a> ]
+のそれぞれのボンド(異なる線種で表されています)に対応するホッピングに関して別々の値を取るように
+刷ることが可能です。 また、最近接ホッピング( <code class="docutils literal notranslate"><span class="pre">t0</span></code>, <code class="docutils literal notranslate"><span class="pre">t1</span></code>,
+<code class="docutils literal notranslate"><span class="pre">t2</span></code>)に関して、 ボンド方向依存性(もしくは異方性)
+がない場合は <code class="docutils literal notranslate"><span class="pre">t0</span></code>, <code class="docutils literal notranslate"><span class="pre">t1</span></code>, <code class="docutils literal notranslate"><span class="pre">t2</span></code> を
+別々に指定する代わりにパラメータ <code class="docutils literal notranslate"><span class="pre">t</span></code> で一括指定( <code class="docutils literal notranslate"><span class="pre">t0</span> <span class="pre">=</span> <span class="pre">t1</span> <span class="pre">=</span> <span class="pre">t2</span> <span class="pre">=</span> <span class="pre">t</span></code>)
+を行うことが出来ます。
+<code class="docutils literal notranslate"><span class="pre">t</span></code> と <code class="docutils literal notranslate"><span class="pre">t0</span></code> 等の両方が指定された場合にはプログラムを終了します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">V0</span></code>, <code class="docutils literal notranslate"><span class="pre">V1</span></code>, <code class="docutils literal notranslate"><span class="pre">V2</span></code></p>
+<p><strong>形式 :</strong> 実数</p>
+<p><strong>説明 :</strong>
+Hubbardおよび近藤格子模型での、最近接サイト間のCoulomb積分を指定します。
+また、最近接サイト間のCoulomb積分( <code class="docutils literal notranslate"><span class="pre">V0</span></code>, <code class="docutils literal notranslate"><span class="pre">V1</span></code>, <code class="docutils literal notranslate"><span class="pre">V2</span></code>)に関して、
+ボンド方向依存性(もしくは異方性) がない場合は <code class="docutils literal notranslate"><span class="pre">V0</span></code>, <code class="docutils literal notranslate"><span class="pre">V1</span></code>,
+<code class="docutils literal notranslate"><span class="pre">V2</span></code> を
+別々に指定する代わりにパラメータ <code class="docutils literal notranslate"><span class="pre">V</span></code> で一括指定( <code class="docutils literal notranslate"><span class="pre">V0</span> <span class="pre">=</span> <span class="pre">V1</span> <span class="pre">=</span> <span class="pre">V2</span> <span class="pre">=</span> <span class="pre">V</span></code>)
+を行うことが出来ます。
+<code class="docutils literal notranslate"><span class="pre">V</span></code> と <code class="docutils literal notranslate"><span class="pre">V0</span></code> 等の両方が指定された場合にはプログラムを終了します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">J0x</span></code>, <code class="docutils literal notranslate"><span class="pre">J0y</span></code>, <code class="docutils literal notranslate"><span class="pre">J0z</span></code>, <code class="docutils literal notranslate"><span class="pre">J0xy</span></code>, <code class="docutils literal notranslate"><span class="pre">J0yx</span></code>, <code class="docutils literal notranslate"><span class="pre">J0xz</span></code>, <code class="docutils literal notranslate"><span class="pre">J0zx</span></code>,
+<code class="docutils literal notranslate"><span class="pre">J0yz</span></code>, <code class="docutils literal notranslate"><span class="pre">J0zy</span></code></p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">J1x</span></code>, <code class="docutils literal notranslate"><span class="pre">J1y</span></code>, <code class="docutils literal notranslate"><span class="pre">J1z</span></code>, <code class="docutils literal notranslate"><span class="pre">J1xy</span></code>, <code class="docutils literal notranslate"><span class="pre">J1yx</span></code>, <code class="docutils literal notranslate"><span class="pre">J1xz</span></code>, <code class="docutils literal notranslate"><span class="pre">J1zx</span></code>,
+<code class="docutils literal notranslate"><span class="pre">J1yz</span></code>, <code class="docutils literal notranslate"><span class="pre">J1zy</span></code></p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">J2x</span></code>, <code class="docutils literal notranslate"><span class="pre">J2y</span></code>, <code class="docutils literal notranslate"><span class="pre">J2z</span></code>, <code class="docutils literal notranslate"><span class="pre">J2xy</span></code>, <code class="docutils literal notranslate"><span class="pre">J2yx</span></code>, <code class="docutils literal notranslate"><span class="pre">J2xz</span></code>, <code class="docutils literal notranslate"><span class="pre">J2zx</span></code>,
+<code class="docutils literal notranslate"><span class="pre">J2yz</span></code>, <code class="docutils literal notranslate"><span class="pre">J2zy</span></code></p>
+<p><strong>形式 :</strong> 実数</p>
+<p><strong>説明 :</strong>
+スピン模型での、最近接サイト間のスピン相互作用を指定します。
+また対角項について、例えば <code class="docutils literal notranslate"><span class="pre">J0x,</span> <span class="pre">J0y,</span> <span class="pre">J0z</span></code> を指定する代わりに
+パラメータ <code class="docutils literal notranslate"><span class="pre">J0</span></code> を指定すると
+<code class="docutils literal notranslate"><span class="pre">J0x</span> <span class="pre">=</span> <span class="pre">J0y</span> <span class="pre">=</span> <span class="pre">J0z</span> <span class="pre">=</span> <span class="pre">J0</span></code> が代入されます。
+<code class="docutils literal notranslate"><span class="pre">J0</span></code> を指定した上で <code class="docutils literal notranslate"><span class="pre">J0x,</span> <span class="pre">J0y,</span> <span class="pre">J0z</span></code> 等も指定した場合はプログラムを終了します。
+<code class="docutils literal notranslate"><span class="pre">J1</span></code>, <code class="docutils literal notranslate"><span class="pre">J2</span></code> についても同様です。</p>
+<p>最近接スピン間相互作用のボンド方向依存性がない場合には、 <code class="docutils literal notranslate"><span class="pre">Jx</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Jy</span></code>, <code class="docutils literal notranslate"><span class="pre">Jz</span></code>, <code class="docutils literal notranslate"><span class="pre">Jxy</span></code>, <code class="docutils literal notranslate"><span class="pre">Jyx</span></code>, <code class="docutils literal notranslate"><span class="pre">Jxz</span></code>, <code class="docutils literal notranslate"><span class="pre">Jzx</span></code>, <code class="docutils literal notranslate"><span class="pre">Jyz</span></code>, <code class="docutils literal notranslate"><span class="pre">Jzy</span></code>
+を指定すると、 <code class="docutils literal notranslate"><span class="pre">J0x</span> <span class="pre">=</span> <span class="pre">J1x</span> <span class="pre">=</span> <span class="pre">J2x</span> <span class="pre">=</span> <span class="pre">Jx</span></code> のようにすべてのボンド方向のスピン間相互作用に
+同じ値を代入することが出来ます。
+<code class="docutils literal notranslate"><span class="pre">Jx</span></code> <span class="math notranslate nohighlight">\(\sim\)</span> <code class="docutils literal notranslate"><span class="pre">Jzy</span></code> 系列のどれかと <code class="docutils literal notranslate"><span class="pre">J0x</span></code> <span class="math notranslate nohighlight">\(\sim\)</span> <code class="docutils literal notranslate"><span class="pre">J2zy</span></code> 系列のどれかを両方指定した
+場合にはプログラムを終了します。
+以下に最近接間スピン相互作用の指定方法の例を挙げます。</p>
+<ul>
+<li><p class="first">ボンド方向依存性、スピン方向依存性、相互作用の非対角成分( <span class="math notranslate nohighlight">\(J_{x y}\)</span> 等)がない場合</p>
+<p><code class="docutils literal notranslate"><span class="pre">J</span></code> を指定</p>
+</li>
+<li><p class="first">ボンド方向依存性、相互作用の非対角成分がなく、スピン方向依存性がある場合</p>
+<p><code class="docutils literal notranslate"><span class="pre">Jx,</span> <span class="pre">Jy,</span> <span class="pre">Jz</span></code> のうち <code class="docutils literal notranslate"><span class="pre">0</span></code> でないものを指定</p>
+</li>
+<li><p class="first">ボンド方向依存性がなく、スピン方向依存性、相互作用の非対角成分がある場合</p>
+<p><code class="docutils literal notranslate"><span class="pre">Jx,</span> <span class="pre">Jy,</span> <span class="pre">Jz,</span> <span class="pre">Jxy,</span> <span class="pre">Jyz,</span> <span class="pre">Jxz,</span> <span class="pre">Jyx,</span> <span class="pre">Jzy,</span> <span class="pre">Jzx</span></code> のうち <code class="docutils literal notranslate"><span class="pre">0</span></code> でないものを指定</p>
+</li>
+<li><p class="first">スピン方向依存性、相互作用の非対角成分がなく、ボンド方向依存性がある場合</p>
+<p><code class="docutils literal notranslate"><span class="pre">J0,</span> <span class="pre">J1,</span> <span class="pre">J2</span></code> のうち <code class="docutils literal notranslate"><span class="pre">0</span></code> でないものを指定</p>
+</li>
+<li><p class="first">スピン方向依存性がなく、ボンド方向依存性、相互作用の非対角成分がある場合</p>
+<p><code class="docutils literal notranslate"><span class="pre">J0x,</span> <span class="pre">J0y,</span> <span class="pre">J0z,</span> <span class="pre">J1x,</span> <span class="pre">J1y,</span> <span class="pre">J1z,</span> <span class="pre">J2x,</span> <span class="pre">J2y,</span> <span class="pre">J2z</span></code> のうち <code class="docutils literal notranslate"><span class="pre">0</span></code> でないものを指定</p>
+</li>
+<li><p class="first">ボンド方向依存性、スピン方向依存性、相互作用の非対角成分がある場合</p>
+<p><code class="docutils literal notranslate"><span class="pre">J0x</span></code> <span class="math notranslate nohighlight">\(\sim\)</span> <code class="docutils literal notranslate"><span class="pre">J2zy</span></code> のすべてのうち <code class="docutils literal notranslate"><span class="pre">0</span></code> でないものを指定</p>
+</li>
+</ul>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">t'</span></code></p>
+<p><strong>形式 :</strong> 複素数</p>
+<p><strong>説明 :</strong>
+Hubbardおよび近藤格子模型での、次近接サイト間の各方向のホッピングを指定します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">V'</span></code></p>
+<p><strong>形式 :</strong> 実数</p>
+<p><strong>説明 :</strong>
+Hubbardおよび近藤格子模型での、次近接サイト間のCoulomb積分を指定します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">J'x</span></code>, <code class="docutils literal notranslate"><span class="pre">J'y</span></code>, <code class="docutils literal notranslate"><span class="pre">J'z</span></code>, <code class="docutils literal notranslate"><span class="pre">J'xy</span></code>, <code class="docutils literal notranslate"><span class="pre">J'yx</span></code>, <code class="docutils literal notranslate"><span class="pre">J'xz</span></code>, <code class="docutils literal notranslate"><span class="pre">J'zx</span></code>,
+<code class="docutils literal notranslate"><span class="pre">J'yz</span></code>, <code class="docutils literal notranslate"><span class="pre">J'zy</span></code></p>
+<p><strong>形式 :</strong> 実数</p>
+<p><strong>説明 :</strong>
+スピン模型での、次近接サイト間のスピン相互作用を指定します。
+また対角項について、 <code class="docutils literal notranslate"><span class="pre">J'x,</span> <span class="pre">J'y,</span> <span class="pre">J'z</span></code> を指定する代わりに
+パラメータ <code class="docutils literal notranslate"><span class="pre">J'</span></code> を指定すると
+<code class="docutils literal notranslate"><span class="pre">J'x</span> <span class="pre">=</span> <span class="pre">J'y</span> <span class="pre">=</span> <span class="pre">J'z</span> <span class="pre">=</span> <span class="pre">J'</span></code> が代入されます。
+<code class="docutils literal notranslate"><span class="pre">J'</span></code> を指定した上で <code class="docutils literal notranslate"><span class="pre">J'x,</span> <span class="pre">J'y,</span> <span class="pre">J'z</span></code> も指定した場合はプログラムを終了します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">phase0</span></code>, <code class="docutils literal notranslate"><span class="pre">phase1</span></code></p>
+<p><strong>形式 :</strong> 実数 (デフォルトでは``0.0``)</p>
+<p><strong>説明 :</strong>
+計算するセルの境界をまたいだホッピング項に付く因子の位相を指定することが出来ます
+(単位:度)。
+<span class="math notranslate nohighlight">\(\vec{a}_0\)</span> 方向、 <span class="math notranslate nohighlight">\(\vec{a}_1\)</span> 方向それぞれ別の位相因子を用いることが出来ます。
+１次元系では <code class="docutils literal notranslate"><span class="pre">phase0</span></code> のみ使用できます。
+例えば、 <span class="math notranslate nohighlight">\(i\)</span> サイトから <span class="math notranslate nohighlight">\(j\)</span> サイトへのホッピングで、
+正の方向に境界をまたいだ場合には次のようになります。</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+    \exp(i \times {\rm phase0} \times \pi/180) \times t {\hat c}_{j \sigma}^\dagger {\hat c}_{i \sigma}
+    + \exp(-i \times {\rm phase0} \times\pi/180) \times t^* {\hat c}_{i \sigma}^\dagger {\hat c}_{j \sigma}
+  \end{aligned}\]</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="id12">
+<h2>計算条件のパラメーター<a class="headerlink" href="#id12" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">nelec</span></code></p>
+<p><strong>形式 :</strong> int型 (1以上、必須)</p>
+<p><strong>説明 :</strong> 伝導電子の数。
+<span class="math notranslate nohighlight">\(\uparrow\)</span> 電子と <span class="math notranslate nohighlight">\(\downarrow\)</span> 電子の個数を足したものを入力してください。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code></p>
+<p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>
+<p><strong>説明 :</strong> [0] 変分パラメータの最適化、[1] 1 体・2
+体のグリーン関数の計算。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code></p>
+<p><strong>形式 :</strong> int型 (デフォルト値 = 1)</p>
+<p><strong>説明 :</strong> 出力ファイルの付加番号。 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> = 0
+の場合は <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> が出力され、 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> = 1
+の場合は、 <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> から連番で <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> 個のファイルを出力します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code></p>
+<p><strong>形式 :</strong> int型 (デフォルト値 = 1)</p>
+<p><strong>説明 :</strong> 出力ファイルのセット数。 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> = 1
+の場合に使用します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code></p>
+<p><strong>形式 :</strong> int型
+(1以上、デフォルト値は:math:<cite>S_z</cite> 保存系で <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code> の時は <code class="docutils literal notranslate"><span class="pre">8</span></code>)</p>
+<p><strong>説明 :</strong>
+スピン量子数射影の <span class="math notranslate nohighlight">\(\beta\)</span> 積分( <span class="math notranslate nohighlight">\(S^y\)</span> 回転)のGauss-Legendre求積法の分点数。
+<span class="math notranslate nohighlight">\(S_z\)</span> 保存系で <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code> ではない場合と <span class="math notranslate nohighlight">\(S_z\)</span> 非保存系では使われません。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NSPStot</span></code></p>
+<p><strong>形式 :</strong> int型 (0以上、デフォルト値 = 0)</p>
+<p><strong>説明 :</strong> 全スピン量子数。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">2Sz</span></code></p>
+<p><strong>形式 :</strong> int型 (0以上、デフォルト値 = 0)</p>
+<p><strong>説明 :</strong> スピン量子数 <span class="math notranslate nohighlight">\(S_z\)</span> 。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code></p>
+<p><strong>形式 :</strong> int型 (1以上、デフォルト値は1)</p>
+<p><strong>説明 :</strong> 運動量・格子対称性の量子数射影の個数。
+TransSymファイルで指定した重みで上から <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> 個まで使用する。射影を行わない場合は1に設定する。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NSROptItrStep</span></code></p>
+<p><strong>形式 :</strong> int型 (1以上、デフォルト値 = 1000)</p>
+<p><strong>説明 :</strong> SR
+法で最適化する場合の全ステップ数。 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> =0の場合のみ使用されます。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NSROptItrSmp</span></code></p>
+<p><strong>形式 :</strong> int型 (1以上数、デフォルト値 = <code class="docutils literal notranslate"><span class="pre">NSROptItrStep</span></code>/10)</p>
+<p><strong>説明 :</strong>
+<code class="docutils literal notranslate"><span class="pre">NSROptItrStep</span></code> ステップ中、最後の <code class="docutils literal notranslate"><span class="pre">NSROptItrSmp</span></code> ステップでの各変分パラメータの平均値を最適値とする。 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> =0の場合のみ使用されます。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">DSROptRedCut</span></code></p>
+<p><strong>形式 :</strong> double型 (デフォルト値 = 0.001)</p>
+<p><strong>説明 :</strong> SR
+法安定化因子。手法論文[<a class="reference external" href="http://dx.doi.org/10.1143/JPSJ.77.114701">Tahara2008</a> ]の <span class="math notranslate nohighlight">\(\varepsilon_{\rm wf}\)</span> に対応。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">DSROptStaDel</span></code></p>
+<p><strong>形式 :</strong> double型 (デフォルト値 = 0.02)</p>
+<p><strong>説明 :</strong> SR
+法安定化因子。手法論文[<a class="reference external" href="http://dx.doi.org/10.1143/JPSJ.77.114701">Tahara2008</a> ]の <span class="math notranslate nohighlight">\(\varepsilon\)</span> に対応。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">DSROptStepDt</span></code></p>
+<p><strong>形式 :</strong> double型 (デフォルト値 = 0.02)</p>
+<p><strong>説明 :</strong>
+SR法で使用する刻み幅。手法論文[<a class="reference external" href="http://dx.doi.org/10.1143/JPSJ.77.114701">Tahara2008</a> ]の <span class="math notranslate nohighlight">\(\Delta t\)</span> に対応。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NVMCWarmUp</span></code></p>
+<p><strong>形式 :</strong> int型 (1以上、デフォルト値=10)</p>
+<p><strong>説明 :</strong> マルコフ連鎖の空回し回数。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NVMCInterval</span></code></p>
+<p><strong>形式 :</strong> int型 (1以上、デフォルト値=1)</p>
+<p><strong>説明 :</strong> サンプル間のステップ間隔。ローカル更新を <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> ×
+<code class="docutils literal notranslate"><span class="pre">NVMCInterval</span></code> 回行います。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code></p>
+<p><strong>形式 :</strong> int型 (1以上、デフォルト値=1000)</p>
+<p><strong>説明 :</strong> 期待値計算に使用するサンプル数。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">RndSeed</span></code></p>
+<p><strong>形式 :</strong> int型 (デフォルト値 = 123456789)</p>
+<p><strong>説明 :</strong> 乱数の初期seed。MPI 並列では各計算機に <code class="docutils literal notranslate"><span class="pre">RndSeed</span></code> +my
+rank+1 で初期seed が与えられます。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code></p>
+<p><strong>形式 :</strong> int型 (1以上、デフォルト値=1)</p>
+<p><strong>説明 :</strong> MPI内部並列を行う場合の並列数。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NStore</span></code></p>
+<p><strong>形式 :</strong> int型 (0もしくは1、デフォルト値=1)</p>
+<p><strong>説明 :</strong>
+期待値 <span class="math notranslate nohighlight">\(\langle O_k O_l \rangle\)</span> を計算するとき行列-行列積にして高速化するオプション(1で機能On、モンテカルロサンプリング数に応じてメモリの消費が増大します <a class="footnote-reference" href="#id15" id="id13">[1]</a>)。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">NSRCG</span></code></p>
+<p><strong>形式 :</strong> int型 (0もしくは1、デフォルト値=0)</p>
+<p><strong>説明 :</strong> SR法で連立一次方程式 <span class="math notranslate nohighlight">\(Sx=g\)</span>
+を解くときに、 <span class="math notranslate nohighlight">\(S\)</span>
+を陽に構築せずに解くことでメモリを削減する <a class="footnote-reference" href="#id16" id="id14">[2]</a> オプション[<a class="reference external" href="https://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045103">NeuscammanUmrigarChan</a> ](1で機能On,
+<code class="docutils literal notranslate"><span class="pre">NStore</span></code> は1に固定されます)。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">ComplexType</span></code></p>
+<p><strong>形式 :</strong> int型
+(<code class="docutils literal notranslate"><span class="pre">0</span></code> もしくは <code class="docutils literal notranslate"><span class="pre">1</span></code> 、デフォルト値は <span class="math notranslate nohighlight">\(S_z\)</span> 保存系では <code class="docutils literal notranslate"><span class="pre">0</span></code> 、非保存系では <code class="docutils literal notranslate"><span class="pre">1</span></code>)</p>
+<p><strong>説明 :</strong>
+<code class="docutils literal notranslate"><span class="pre">0</span></code> のとき変分パラメータの実部のみを、 <code class="docutils literal notranslate"><span class="pre">1</span></code> のとき実部/虚部両方を最適化します。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">OutputMode</span></code></p>
+<p><strong>形式 :</strong> <code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;correlation&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;full&quot;</span></code> のいずれか
+(デフォルトは``correlation``)</p>
+<p><strong>説明 :</strong> 計算を行う相関関数を指定します。
+<code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code> の場合は相関関数を計算しません。
+<code class="docutils literal notranslate"><span class="pre">&quot;correlation&quot;</span></code> を指定した場合には、付属のユーティリティ
+<code class="docutils literal notranslate"><span class="pre">fourier</span></code> でサポートするものに対応した相関関数を計算します。
+詳しくは <code class="docutils literal notranslate"><span class="pre">doc/fourier/</span></code> 内のマニュアルを参照してください。
+<code class="docutils literal notranslate"><span class="pre">&quot;full&quot;</span></code> を指定した場合には、
+1体部分はすべての <span class="math notranslate nohighlight">\(i, j, \sigma, \sigma'\)</span> について
+<span class="math notranslate nohighlight">\(\langle c_{i \sigma}^{\dagger}c_{j \sigma'} \rangle\)</span> を、
+2体部分はすべての <span class="math notranslate nohighlight">\(i_1, i_2, i_3, i_4, \sigma_1, \sigma_2, \sigma_3, \sigma_4\)</span> について
+<span class="math notranslate nohighlight">\(\langle c_{i_1 \sigma_1}^{\dagger}c_{i_2 \sigma_2} c_{i_3 \sigma_3}^{\dagger}c_{i_4 \sigma_4} \rangle\)</span>
+を計算します。
+スピン系の演算子はBogoliubov表現により生成消滅演算子で表されています。
+詳しくは <a class="reference internal" href="algorithm.html#bogoliubovrep"><span class="std std-ref">Bogoliubov表現</span></a> をご覧ください。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code></p>
+<p><strong>形式 :</strong> string型 (デフォルト値 <code class="docutils literal notranslate"><span class="pre">&quot;zvo&quot;</span></code>)</p>
+<p><strong>説明 :</strong>
+アウトプットファイルのヘッダ。例えば、一体のGreen関数の出力ファイル名が <strong>xxx_cisajs.dat</strong> として出力されます(xxxに <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定した文字が記載)。</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code></p>
+<p><strong>形式 :</strong> string型 (デフォルト値 <code class="docutils literal notranslate"><span class="pre">&quot;zqp&quot;</span></code>)</p>
+<p><strong>説明 :</strong>
+最適化された変分パラメータの出力ファイル名のヘッダ。最適化された変分パラメータが <strong>xxx_opt.dat</strong> ファイルとして出力されます(xxxに <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> で指定した文字が記載)。</p>
+</li>
+</ul>
+<table class="docutils footnote" frame="void" id="id15" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id13">[1]</a></td><td>使用メモリ量が、 <span class="math notranslate nohighlight">\(O(N_\text{p}^2)\)</span> から
+<span class="math notranslate nohighlight">\(O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})\)</span> になります。</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id16" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id14">[2]</a></td><td>使用メモリ量は、 <span class="math notranslate nohighlight">\(O(N_\text{p}) + O(N_\text{p}N_\text{MCS})\)</span>
+です。</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">目次</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">スタンダードモード用入力ファイル書式</a><ul>
+<li><a class="reference internal" href="#id2">計算の種類に関する必須パラメーター</a></li>
+<li><a class="reference internal" href="#id3">格子に関するパラメーター</a><ul>
+<li><a class="reference internal" href="#id4">1次元鎖</a></li>
+<li><a class="reference internal" href="#id5">梯子格子</a></li>
+<li><a class="reference internal" href="#id6">正方格子、 三角格子、 蜂の巣格子、 カゴメ格子</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id7">副格子</a></li>
+<li><a class="reference internal" href="#id8">ハミルトニアンの各項の係数</a><ul>
+<li><a class="reference internal" href="#id9">局所項</a></li>
+<li><a class="reference internal" href="#id10">非局所項[梯子格子]</a></li>
+<li><a class="reference internal" href="#id11">非局所項 (梯子格子以外)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id12">計算条件のパラメーター</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>前のトピックへ</h4>
+  <p class="topless"><a href="tutorial.html"
+                        title="前の章へ">チュートリアル</a></p>
+  <h4>次のトピックへ</h4>
+  <p class="topless"><a href="expert.html"
+                        title="次の章へ">エキスパートモード入力ファイル書式</a></p>
+  <div role="note" aria-label="source link">
+    <h3>このページ</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/standard.rst.txt"
+            rel="nofollow">ソースコードを表示</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="検索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="総合索引"
+             >索引</a></li>
+        <li class="right" >
+          <a href="expert.html" title="エキスパートモード入力ファイル書式"
+             >次へ</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="チュートリアル"
+             >前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.0.3 ドキュメント</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, mVMC team.
+      このドキュメントは <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4 で生成しました。
+    </div>
+  </body>
+</html>
