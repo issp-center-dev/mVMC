@@ -1,4 +1,4 @@
-.. include:: ../bib/ref.txt
+.. include:: ../../bib/ref.txt
 
 .. _HOwToStandard:
              
@@ -130,7 +130,7 @@ Parameters about the kind of a calculation
 
    .. _latticepng:
    
-   .. figure:: ../figs/chap04_1_lattice.png
+   .. figure:: ../../figs/chap04_1_lattice.png
       :width: 15.00000cm
 
       Schematic illustration of (a) one dimensional chain lattice, (b)
@@ -144,7 +144,7 @@ Parameters about the kind of a calculation
 
    .. _honeycombpng:
 
-   .. figure:: ../figs/chap04_1_honeycomb.png
+   .. figure:: ../../figs/chap04_1_honeycomb.png
       :width: 15.00000cm
 
       Schematic illustration of the anisotropic honeycomb lattice.
@@ -154,14 +154,14 @@ Parameters about the kind of a calculation
 
    .. _kagomepng:
 
-   .. figure:: ../figs/kagome.png
+   .. figure:: ../../figs/kagome.png
       :width: 10.00000cm
 
       Schematic illustration of the Kagome lattice. 
 
    .. _ladderpng:
 
-   .. figure:: ../figs/ladder.png
+   .. figure:: ../../figs/ladder.png
       :width: 10.00000cm
 
       Schematic illustration of the ladder lattice.
@@ -202,7 +202,7 @@ Fig. :num:`ladderpng`
 
    .. _unitlatticepng:
 
-   .. figure:: ../figs/chap04_1_unitlattice.png
+   .. figure:: ../../figs/chap04_1_unitlattice.png
       :width: 15.00000cm
 
       The shape of the numerical cell when

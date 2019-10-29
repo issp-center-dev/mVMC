@@ -190,67 +190,68 @@ change the compiler.
 
 Directory structure
 -------------------
+ When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.
 
-| When mVMC-xxx.tar.gz is unzipped, the following directory structure is
-  composed.
-| ├──COPYING
-| ├──mVMCconfig.sh
-| ├──doc/
-| │      ├──bib/
-| │      │      ├──elsart-num\_mod.bst
-| │      │      └──userguide.bib
-| │      ├──figs/
-| │      │      ├──\*.pdf
-| │      │      └──\*.xbb
-| │      ├──fourier/
-| │      │      ├──en/
-| │      │      ├──figs/
-| │      │      └──ja/
-| │      ├──jp/
-| │      │      └──\*.tex
-| │      └──en/
-| │             └──\*.tex
-| ├──sample/
-| │      └──Standard/
-| │                  ├──Hubbard/
-| │                  │      ├─square/
-| │                  │      │      ├──StdFace.def
-| │                  │      │      └──reference/
-| │                  │      │                 └──\*\*.dat
-| │                  │      └─triangular/
-| │                  │            └──\ :math:`\cdots`
-| │                  ├──Kondo/
-| │                  │      └─chain/
-| │                  │            └──\ :math:`\cdots`
-| │                  └──Spin/
-| │                              ├─HeisenbergChain/
-| │                              │      └──\ :math:`\cdots`
-| │                              ├─HeisenbergSquare/
-| │                              │      └──\ :math:`\cdots`
-| │                              └─Kagome/
-| │                                     └──\ :math:`\cdots`
-| ├──src/
-| │          ├──mVMC/
-| │          │      ├─ \*\*.c
-| │          │      └──include/
-| │          │              └──\*\*.h
-| │          ├──ComplexUHF/
-| │          │      ├─ \*\*.c
-| │          │      └──include/
-| │          │              └──\*\*.h
-| │          ├──StdFace/
-| │          │       ├──\*\*.c
-| │          │       └──\*\*.h
-| │          ├──pfapack/
-| │          │       ├──makefile\_pfapack
-| │          │       └──\*\*.f
-| │          └──sfmt/
-| │                  ├──makefkie\_sfmt
-| │                  ├──\*\*.c
-| │                  └──\*\*.h
-| └──tool/
-|            ├──\*\*.f90
-|            └──makefile\_tool
+::
+   
+   | |──COPYING
+   | |──mVMCconfig.sh
+   | |──doc/
+   | │      |──bib/
+   | │      │      |──elsart-num\_mod.bst
+   | │      │     |──userguide.bib
+   | │      |──figs/
+   | │      │      |──\*.pdf
+   | │      │     |──\*.xbb
+   | │      |──fourier/
+   | │      │      |──en/
+   | │      │      |──figs/
+   | │      │     |──ja/
+   | │      |──jp/
+   | │      │     |──\*.tex
+   | │     |──en/
+   | │            |──\*.tex
+   | |──sample/
+   | │     |──Standard/
+   | │                  |──Hubbard/
+   | │                  │      |─square/
+   | │                  │      │      |──StdFace.def
+   | │                  │      │     |──reference/
+   | │                  │      │                |──\*\*.dat
+   | │                  │     |─triangular/
+   | │                  │           |──\ :math:`\cdots`
+   | │                  |──Kondo/
+   | │                  │     |─chain/
+   | │                  │           |──\ :math:`\cdots`
+   | │                 |──Spin/
+   | │                              |─HeisenbergChain/
+   | │                              │     |──\ :math:`\cdots`
+   | │                              |─HeisenbergSquare/
+   | │                              │     |──\ :math:`\cdots`
+   | │                             |─Kagome/
+   | │                                    |──\ :math:`\cdots`
+   | |──src/
+   | │          |──mVMC/
+   | │          │      |─ \*\*.c
+   | │          │     |──include/
+   | │          │             |──\*\*.h
+   | │          |──ComplexUHF/
+   | │          │      |─ \*\*.c
+   | │          │     |──include/
+   | │          │             |──\*\*.h
+   | │          |──StdFace/
+   | │          │       |──\*\*.c
+   | │          │      |──\*\*.h
+   | │          |──pfapack/
+   | │          │       |──makefile\_pfapack
+   | │          │      |──\*\*.f
+   | │          |──sfmt/
+   | │                  |──makefkie\_sfmt
+   | │                  |──\*\*.c
+   | │                 |──\*\*.h
+   | |──tool/
+   |           |──\*\*.f90
+   |           |──makefile\_tool
 
 Basic usage
 -----------
