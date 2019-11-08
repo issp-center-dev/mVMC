@@ -25,8 +25,13 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita 
  *-------------------------------------------------------------*/
-
-void VMCMainCal_fsz(MPI_Comm comm);
+#ifndef _SRC_VMCCAL_FSZ
+#define _SRC_VMCCAL_FSZ
+#include "vmccal_fsz.h"
+#include "matrix.h"
+#include "calham_fsz_real.h"
+#include "calham_fsz.h"
+#include "calgrn_fsz.h"
 
 void VMCMainCal_fsz(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt,*eleSpn; //fsz
@@ -44,7 +49,8 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   /* optimazation for Kei */
   const int nProj=NProj;
   double complex *srOptO = SROptO;
-//  double         *srOptO_real = SROptO_real;
+  double         *srOptO_real = SROptO_real;
+  int tmp_i;
 
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);
@@ -69,7 +75,14 @@ void VMCMainCal_fsz(MPI_Comm comm) {
 #ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: CalculateMAll \n",sample);
 #endif
-    info = CalculateMAll_fsz(eleIdx,eleSpn,qpStart,qpEnd);//info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd); // InvM,PfM will change
+    //info = CalculateMAll_fsz(eleIdx,eleSpn,qpStart,qpEnd);//info = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd); // InvM,PfM will change
+    if(AllComplexFlag==0){
+      info = CalculateMAll_fsz_real(eleIdx,eleSpn,qpStart,qpEnd); // InvM_real,PfM_real will change
+#pragma omp parallel for default(shared) private(tmp_i)
+      for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)  InvM[tmp_i]= InvM_real[tmp_i]; // InvM will be used in  SlaterElmDiff_fcmp
+    }else{
+      info = CalculateMAll_fsz(eleIdx,eleSpn,qpStart,qpEnd); // InvM,PfM will change
+    }
     StopTimer(40);
 
     if(info!=0) {
@@ -79,7 +92,12 @@ void VMCMainCal_fsz(MPI_Comm comm) {
 #ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: CalculateIP \n",sample);
 #endif
-    ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+    //ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+    if(AllComplexFlag==0){
+      ip = CalculateIP_real(PfM_real,qpStart,qpEnd,MPI_COMM_SELF);
+    }else{
+      ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+    } 
 #ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: LogProjVal \n",sample);
 #endif
@@ -102,7 +120,18 @@ void VMCMainCal_fsz(MPI_Comm comm) {
 #ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: calculateHam_cmp \n",sample);
 #endif
-    e  = CalculateHamiltonian_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
+    //e  = CalculateHamiltonian_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
+    if(AllComplexFlag==0){
+#ifdef _DEBUG_VMCCAL
+      printf("  Debug: sample=%d: calculateHam_real \n",sample);
+#endif
+      e = CalculateHamiltonian_fsz_real(creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);
+    }else{
+#ifdef _DEBUG_VMCCAL
+      printf("  Debug: sample=%d: calculateHam_cmp \n",sample);
+#endif
+      e = CalculateHamiltonian_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);
+    }
     Sz = CalculateSz_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);//fsz
     //printf("MDEBUG: Sz=%lf \n",Sz);
     //printf("MDEBUG: e= %lf %lf ip= %lf %lf \n",creal(e),cimag(e),creal(ip),cimag(ip));
@@ -138,18 +167,47 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       if(FlagOptTrans>0) { // this part will be not used
         calculateOptTransDiff(SROptO+2*NProj+2*NSlater+2, ip); //TBC
       }
+      //[s] this part will be used for real varaibles
+      if(AllComplexFlag==0){
+#pragma loop noalias
+        for(i=0;i<SROptSize;i++){ 
+          srOptO_real[i] = creal(srOptO[2*i]);       
+        }
+      }
+      //[e]
+      
       StartTimer(43);
       /* Calculate OO and HO */
       if(NSRCG==0 && NStoreO==0){
-        calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
+        //calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
+        if(AllComplexFlag==0){
+          calculateOO_real(SROptOO_real,SROptHO_real,SROptO_real,w,creal(e),SROptSize);
+        }else{
+          calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
+        } 
       }else{
         we    = w*e;
         sqrtw = sqrt(w); 
-        #pragma omp parallel for default(shared) private(int_i)
+        /*#pragma omp parallel for default(shared) private(int_i)
         for(int_i=0;int_i<SROptSize*2;int_i++){
         // SROptO_Store for fortran
           SROptO_Store[int_i+sample*(2*SROptSize)]  = sqrtw*SROptO[int_i];
           SROptHO[int_i]                           += we*SROptO[int_i]; 
+        }*/
+        if(AllComplexFlag==0){
+          #pragma omp parallel for default(shared) private(int_i)
+          for(int_i=0;int_i<SROptSize;int_i++){
+            // SROptO_Store for fortran
+            SROptO_Store_real[int_i+sample*SROptSize]  = sqrtw*SROptO_real[int_i];
+            SROptHO_real[int_i]                       += creal(we)*SROptO_real[int_i]; 
+          }
+        }else{
+          #pragma omp parallel for default(shared) private(int_i)
+          for(int_i=0;int_i<SROptSize*2;int_i++){
+            // SROptO_Store for fortran
+            SROptO_Store[int_i+sample*(2*SROptSize)]  = sqrtw*SROptO[int_i];
+            SROptHO[int_i]                           += we*SROptO[int_i]; 
+          }
         }
       } 
       StopTimer(43);
@@ -169,10 +227,21 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   if(NVMCCalMode==0){
     if(NStoreO!=0 || NSRCG!=0){
       sampleSize=sampleEnd-sampleStart;
-      StartTimer(45);
+      /*StartTimer(45);
       calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
-      StopTimer(45);
+      StopTimer(45);*/
+      if(AllComplexFlag==0){
+        StartTimer(45);
+        calculateOO_Store_real(SROptOO_real,SROptHO_real,SROptO_Store_real,creal(w),creal(e),SROptSize,sampleSize);
+        StopTimer(45);
+      }else{
+        StartTimer(45);
+        calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
+        StopTimer(45);
+      }
     }
   }
   return;
 }
+
+#endif
