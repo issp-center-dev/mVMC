@@ -3,15 +3,15 @@ import os
 import filecmp
 import numpy as np
 
-dir="data/HeisenbergChain"
+dir="data/HubbardTetragonal"
 
 def read_out(filename):
     # drop the first two columns
     array = np.loadtxt(filename, dtype='float').astype('float')
     return array
 
-class TestSpinChain(unittest.TestCase):
-    def test_SpinChain(self):
+class TestHubbardTetragonal(unittest.TestCase):
+    def test_Tetragonal(self):
         # run
         self.assertIs(0, os.system("../../src/mVMC/vmc.out -s %s/StdFace.def" %dir))        
         # get results

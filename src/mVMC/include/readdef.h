@@ -110,3 +110,6 @@ int iComplexFlgJastrow=0;
 int iComplexFlgDH2=0;
 int iComplexFlgDH4=0;
 int iComplexFlgOrbital=0;
+int iComplexFlgOrbitalAntiParallel=0;
+int iComplexFlgOrbitalParallel=0;
+int iComplexFlgOrbitalGeneral=0;

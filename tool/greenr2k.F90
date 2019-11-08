@@ -738,7 +738,7 @@ SUBROUTINE fourier_cor()
         fmat(ik,ir) = CMPLX(0d0, 0d0, KIND(1d0))
         DO ireq = 1, nreq(ir)
            theta = - tpi * DOT_PRODUCT(kvec(1:3,ik), DBLE(irv(1:3,ireq,ir))) &
-           &     + tpi * phase(ireq,ir)
+           &     + phase(ireq,ir)
            fmat(ik,ir) = fmat(ik,ir) + CMPLX(COS(theta), SIN(theta), KIND(1d0))
         END DO
         fmat(ik,ir) = fmat(ik,ir) / DBLE(nreq(ir))

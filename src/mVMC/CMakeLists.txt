@@ -17,7 +17,7 @@ set(SOURCES_sfmt
         ../sfmt/SFMT.c   
  )
 
-add_library(StdFace STATIC ../StdFace/ChainLattice.c ../StdFace/HoneycombLattice.c ../StdFace/SquareLattice.c ../StdFace/StdFace_main.c ../StdFace/StdFace_ModelUtil.c ../StdFace/TriangularLattice.c ../StdFace/Ladder.c ../StdFace/Kagome.c ../StdFace/Orthorhombic.c ../StdFace/Pyrochlore.c ../StdFace/Wannier90.c ../StdFace/FCOrtho.c)
+add_library(StdFace STATIC ../StdFace/ChainLattice.c ../StdFace/HoneycombLattice.c ../StdFace/SquareLattice.c ../StdFace/StdFace_main.c ../StdFace/StdFace_ModelUtil.c ../StdFace/TriangularLattice.c ../StdFace/Ladder.c ../StdFace/Kagome.c ../StdFace/Orthorhombic.c ../StdFace/Pyrochlore.c ../StdFace/Wannier90.c ../StdFace/FCOrtho.c ../StdFace/setmemory.c)
 
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../pfapack)
 

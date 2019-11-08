@@ -66,8 +66,11 @@ add_subdirectory(tool)
 # testing setup
 # enable_testing() must be called in the top-level CMakeLists.txt before any add_subdirectory() is called.
 option(Testing "Enable testing" OFF)
-
 if (Testing)
   enable_testing(test)
   add_subdirectory(test)
 endif()
+
+if (Document)
+  add_subdirectory(doc)
+endif(Document)
