@@ -410,6 +410,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffIntCmpFlg(fp, &iNOrbitalAntiParallel, &iOrbitalComplex);
             iFlgOrbitalAntiParallel = 1;
             bufInt[IdxNOrbit] += iNOrbitalAntiParallel;
+            iComplexFlgOrbitalAntiParallel = iOrbitalComplex;
             iComplexFlgOrbital += iOrbitalComplex;
             break;
 
@@ -417,12 +418,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffIntCmpFlg(fp, &iNOrbitalParallel, &iOrbitalComplex);
             iFlgOrbitalParallel = 1;
             bufInt[IdxNOrbit] += 2 * iNOrbitalParallel; //up-up and down-down
+            iComplexFlgOrbitalParallel = iOrbitalComplex;
             iComplexFlgOrbital += iOrbitalComplex;
             break;
 
           case KWOrbitalGeneral:
             cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNOrbit], &iOrbitalComplex);
             iFlgOrbitalGeneral = 1;
+            iComplexFlgOrbitalGeneral = iOrbitalComplex;
             iComplexFlgOrbital += iOrbitalComplex;
             break;
 
@@ -572,6 +575,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     if(AllComplexFlag == 0 && iFlgOrbitalGeneral == 1){
         fprintf(stderr, "Error: Variational parameters should be complex when orbital is general in this version.\n");
         info = 1;
+    }
+    if(iComplexFlgOrbital > 0){
+      iComplexFlgOrbital = 1;
+      fprintf(stderr, "Warning: All the pairings are treated as complex variational parameters.\n");
     }
   }
 
