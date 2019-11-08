@@ -44,11 +44,11 @@ else()
 endif()
 
 find_package(MPI)
-if(MPI_FOUND)
+if(MPI_C_FOUND)
   include_directories(${MPI_C_INCLUDE_PATH})
   add_definitions(-D_mpi_use)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MPI_C_LINK_FLAGS}")
-endif(MPI_FOUND)
+endif(MPI_C_FOUND)
 
 find_package(LAPACK)
 if(USE_SCALAPACK MATCHES OFF)
