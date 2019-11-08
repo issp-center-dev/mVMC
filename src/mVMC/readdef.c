@@ -572,21 +572,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     AllComplexFlag += iComplexFlgDH4 + iComplexFlgOrbital;//TBC
     //AllComplexFlag  = 1;//DEBUG
     // AllComplexFlag= 0 -> All real, !=0 -> complex
-//<<<<<<< real_general
     //if(AllComplexFlag == 0 && iFlgOrbitalGeneral == 1){
     //    fprintf(stderr, "Error: Variational parameters should be complex when orbital is general in this version.\n");
     //    info = 1;
     //}
-//=======
-    //if(AllComplexFlag == 0 && iFlgOrbitalGeneral == 1){
-    //    fprintf(stderr, "Error: Variational parameters should be complex when orbital is general in this version.\n");
-    //    info = 1;
-    //}
-    //if(iComplexFlgOrbital > 0){
-    //  iComplexFlgOrbital = 1;
-    //  fprintf(stderr, "Warning: All the pairings are treated as complex variational parameters.\n");
-    //}
-//>>>>>>> develop
+    if(iComplexFlgOrbital > 0){
+      iComplexFlgOrbital = 1;
+      fprintf(stderr, "Warning: All the pairings are treated as complex variational parameters.\n");
+    }
   }
 
   if (info != 0) {
