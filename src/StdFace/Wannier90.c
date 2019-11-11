@@ -25,7 +25,56 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 #include <complex.h>
 #include <string.h>
-#include "../common/setmemory.h"
+#include "setmemory.h"
+
+void _calc_inverse_matrix(double cutoff_Rvec[][3], double inverse_matrix[][3]) {
+  double NMatrix[3][3] = {{},
+                          {}};
+  int i, j;
+  for (i = 0; i < 3; i++) {
+    for (j = 0; j < 3; j++) {
+      NMatrix[i][j] = cutoff_Rvec[i][j];
+    }
+  }
+
+  double det = NMatrix[0][0] * NMatrix[1][1] * NMatrix[2][2];
+  det += NMatrix[1][0] * NMatrix[2][1] * NMatrix[0][2];
+  det += NMatrix[2][0] * NMatrix[0][1] * NMatrix[1][2];
+  det -= NMatrix[2][0] * NMatrix[1][1] * NMatrix[0][2];
+  det -= NMatrix[1][0] * NMatrix[0][1] * NMatrix[2][2];
+  det -= NMatrix[0][0] * NMatrix[2][1] * NMatrix[1][2];
+
+  inverse_matrix[0][0] = NMatrix[1][1]*NMatrix[2][2] - NMatrix[1][2] * NMatrix[2][1];
+  inverse_matrix[0][1] = -(NMatrix[0][1]*NMatrix[2][2] - NMatrix[0][2] * NMatrix[2][1]);
+  inverse_matrix[0][2] = NMatrix[0][1]*NMatrix[1][2] - NMatrix[0][2] * NMatrix[1][1];
+
+  inverse_matrix[1][0] = -(NMatrix[1][0]*NMatrix[2][2] - NMatrix[2][0] * NMatrix[1][2]);
+  inverse_matrix[1][1] = NMatrix[0][0]*NMatrix[2][2] - NMatrix[0][2] * NMatrix[2][0];
+  inverse_matrix[1][2] = -(NMatrix[0][0]*NMatrix[1][2] - NMatrix[0][2] * NMatrix[1][0]);
+
+  inverse_matrix[2][0] = NMatrix[1][0]*NMatrix[2][1] - NMatrix[2][0] * NMatrix[1][1];
+  inverse_matrix[2][1] = -(NMatrix[0][0]*NMatrix[2][1] - NMatrix[2][0] * NMatrix[0][1]);
+  inverse_matrix[2][2] = NMatrix[0][0]*NMatrix[1][1] - NMatrix[0][1] * NMatrix[1][0];
+
+  for (i = 0; i < 3; i++) {
+    for (j = 0; j < 3; j++) {
+      inverse_matrix[i][j] /= det;
+    }
+  }
+}
+
+int _check_in_box(int *rvec, double inverse_matrix[][3])
+{
+  double judge_vec[3]={};
+  int i, j;
+  for (i =0; i<3; i++) {
+    for (j = 0; j < 3; j++) {
+      judge_vec[i] += rvec[j]*inverse_matrix[j][i] ;
+    }
+  }
+
+  return (fabs(judge_vec[0])<= 1 && fabs(judge_vec[1])<= 1 && fabs(judge_vec[2])<= 1);
+}
 
 /**
 @brief Read Geometry file for wannier90
@@ -43,6 +92,10 @@ static void geometry_W90(
   fprintf(stdout, "    Wannier90 Geometry file = %s\n", filename);
 
   fp = fopen(filename, "r");
+  if (fp == NULL){
+    fprintf(stderr, "\n  Error: Fail to open the file %s. \n\n", filename);
+    StdFace_exit(-1);
+  }
   /**@brief
    Direct lattice vector StdIntList::direct
   */
@@ -80,23 +133,33 @@ static void read_W90(
   char *filename,//!<[in] Input file name
   double cutoff,//!<[in] Threshold for the Hamiltonian
   int *cutoff_R,
+  double cutoff_Rvec[][3],
   double cutoff_length,
   int itUJ,
   int *NtUJ,
   int ***tUJindx,//!<[out] R, band index of matrix element
+  double lambda,
   double complex **tUJ//!<[out] Matrix element
 )
 {
   FILE *fp;
   int ierr, nWan, nWSC, iWSC, jWSC, iWan, jWan, iWan0, jWan0, ii, jj;
+  int flg_vec = (cutoff_Rvec[0][0] != StdI->NaN_i);
   double dtmp[2], dR[3], length;
   char ctmp[256], *ctmp2;
   double complex ***Mat_tot;
-  int **indx_tot;
+  double inverse_rvec[3][3]={{},{}};
+  double *Weight_tot;
+  int **indx_tot,*Band_lattice, *Model_lattice;
+
   /*
   Header part
   */
   fp = fopen(filename, "r");
+  if (fp == NULL){
+    fprintf(stderr, "\n  Error: Fail to open the file %s. \n\n", filename);
+    StdFace_exit(-1);
+  }
   ctmp2 = fgets(ctmp, 256, fp);
   ierr = fscanf(fp, "%d", &nWan);
   if (ierr == EOF) printf("%d %s\n", ierr, ctmp2);
@@ -104,13 +167,27 @@ static void read_W90(
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
     ierr = fscanf(fp, "%d", &ii);
   }
+
+  Weight_tot = d_1d_allocate(nWSC);
+  Band_lattice = i_1d_allocate(3);
+  Model_lattice = i_1d_allocate(3);
   /*
   Malloc Matrix elements and their indices
   */
-  //Mat_tot = cd_3d_allocate(nWSC, nWan, nWan, Mat_tot);
-  Mat_tot = cd_3d_allocate(nWSC, nWan, nWan);
-  //indx_tot = i_2d_allocate(nWSC, 3, indx_tot);
-  indx_tot = i_2d_allocate(nWSC, 3);
+  Mat_tot = (double complex ***)malloc(sizeof(double complex **) * nWSC);
+  indx_tot = (int **)malloc(sizeof(int*) * nWSC);
+  for (iWSC = 0; iWSC < nWSC; iWSC++) {
+    Mat_tot[iWSC] = (double complex **)malloc(sizeof(double complex *) * nWan);
+    indx_tot[iWSC] = (int *)malloc(sizeof(int) * 3);
+    for (iWan = 0; iWan < nWan; iWan++) {
+      Mat_tot[iWSC][iWan] = (double complex *)malloc(sizeof(double complex) * nWan);
+    }
+  }
+
+  if(flg_vec){
+    //Get Inverse Matrix for cutoff_Rvec
+    _calc_inverse_matrix(cutoff_Rvec, inverse_rvec);
+  }
 
   /*
   Read body
@@ -135,14 +212,24 @@ static void read_W90(
           dtmp[0] = 0.0;
           dtmp[1] = 0.0;
         }
-        if (abs(indx_tot[iWSC][0]) > cutoff_R[0] ||
-          abs(indx_tot[iWSC][1]) > cutoff_R[1] ||
-          abs(indx_tot[iWSC][2]) > cutoff_R[2]) {
-          dtmp[0] = 0.0;
-          dtmp[1] = 0.0;
+        if(flg_vec){
+          //Calculate coefficient
+          //Judge inner box or not.
+          if(!_check_in_box(indx_tot[iWSC], inverse_rvec)){
+            dtmp[0] = 0.0;
+            dtmp[1] = 0.0;
+          }
+        }
+        else {
+          if (abs(indx_tot[iWSC][0]) > cutoff_R[0] ||
+              abs(indx_tot[iWSC][1]) > cutoff_R[1] ||
+              abs(indx_tot[iWSC][2]) > cutoff_R[2]) {
+            dtmp[0] = 0.0;
+            dtmp[1] = 0.0;
+          }
         }
         if (iWan0 <= StdI->NsiteUC && jWan0 <= StdI->NsiteUC)
-          Mat_tot[iWSC][iWan0 - 1][jWan0 - 1] = dtmp[0] + I * dtmp[1];
+          Mat_tot[iWSC][iWan0 - 1][jWan0 - 1] = lambda *(dtmp[0] + I * dtmp[1]);
       }
     }
     /**@brief
@@ -170,6 +257,31 @@ static void read_W90(
       }
   }/*for (iWSC = 0; iWSC < nWSC; iWSC++)*/
   fclose(fp);
+
+  /*
+   * (2) Apply weight
+   */
+  // Get Lattice length
+  for (iWSC = 0; iWSC < nWSC; iWSC++) {
+    for (ii = 0; ii < 3; ii++) {
+      if (abs(indx_tot[iWSC][ii]) > Band_lattice[ii]) Band_lattice[ii] = abs(indx_tot[iWSC][ii]);
+    }
+  }
+
+  for (iWSC = 0; iWSC < nWSC; iWSC++) Weight_tot[iWSC] = 1.0;
+  if (StdI->W != StdI->NaN_i && StdI->L != StdI->NaN_i && StdI->Height != StdI->NaN_i ) {
+    Model_lattice[0] = StdI->W % 2 == 0 ? StdI->W / 2 : 0;
+    Model_lattice[1] = StdI->L % 2 == 0 ? StdI->L / 2 : 0;
+    Model_lattice[2] = StdI->Height % 2 == 0 ? StdI->Height / 2 : 0;
+    for (ii = 0; ii < 3; ii++) {
+      if (Model_lattice[ii] < Band_lattice[ii] && Model_lattice[ii] != 0) {
+        for (iWSC = 0; iWSC < nWSC; iWSC++) {
+          if (abs(indx_tot[iWSC][ii]) == Model_lattice[ii]) Weight_tot[iWSC] *= 0.5;
+        }
+      }
+    }
+  }
+
   /**@brief
   (3-1)  Compute the number of terms larger than cut-off.
   */
@@ -179,6 +291,7 @@ static void read_W90(
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
     for (iWan = 0; iWan < StdI->NsiteUC; iWan++) {
       for (jWan = 0; jWan < StdI->NsiteUC; jWan++) {
+        Mat_tot[iWSC][iWan][jWan] *=  Weight_tot[iWSC];
         if (cutoff < cabs(Mat_tot[iWSC][iWan][jWan])) {
           fprintf(stdout, "        %5d%5d%5d%5d%5d%12.6f%12.6f\n",
             indx_tot[iWSC][0], indx_tot[iWSC][1], indx_tot[iWSC][2], iWan, jWan,
@@ -193,8 +306,7 @@ static void read_W90(
   tUJindx[itUJ] = (int **)malloc(sizeof(int*) * NtUJ[itUJ]);
   for (ii = 0; ii < NtUJ[itUJ]; ii++) tUJindx[itUJ][ii] = (int *)malloc(sizeof(int) * 5);
   /**@brief
-  Then Store to the hopping Integeral and
-  its site index.
+  Then Store the hopping Integrals and their site indexes.
   */
   NtUJ[itUJ] = 0;
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
@@ -220,7 +332,12 @@ static void read_W90(
   }
   free(Mat_tot);
   free(indx_tot);
+  free_d_1d_allocate(Weight_tot);
+  free_i_1d_allocate(Model_lattice);
+  free_i_1d_allocate(Band_lattice);
 }/*static int read_W90(struct StdIntList *StdI, char *model)*/
+
+
 /**
  @brief Read RESPACK Density-matrix file (*_dr.dat)
  @author Mitsuaki Kawamura (The University of Tokyo)
@@ -409,6 +526,14 @@ static void PrintUHFinitial(
     free(IniGuess[isite]);
   free(IniGuess);
 }/*static void PrintTrans*/
+
+enum dcmode {
+    NOTCORRECT,
+    HARTREE,
+    HARTREE_U,
+    FULL
+};
+
 /**
 
 @brief Setup a Hamiltonian for the Wannier90 *_hr.dat
@@ -428,6 +553,7 @@ void StdFace_Wannier90(
   double complex **tUJ, *****DenMat;
   int ***tUJindx;
   char filename[263];
+  char tempwords[263];
   /**@brief
   (1) Compute the shape of the super-cell and sites in the super-cell
   */
@@ -440,8 +566,36 @@ void StdFace_Wannier90(
   StdFace_InitSite(StdI, fp, 3);
   fprintf(stdout, "\n  @ Wannier90 Geometry \n\n");
   geometry_W90(StdI);
-  StdFace_PrintVal_i("DoubleCounting", &StdI->double_counting, 1);
 
+  // Set parameters to tune the strength of interactions
+  if (isnan(StdI->lambda)){ // Lambda is not defined.
+    StdFace_PrintVal_d("lambda_U", &StdI->lambda_U, 1.0);
+    StdFace_PrintVal_d("lambda_J", &StdI->lambda_J, 1.0);
+  }
+  else{
+    StdFace_PrintVal_d("lambda_U",&StdI->lambda_U, StdI->lambda);
+    StdFace_PrintVal_d("lambda_J", &StdI->lambda_J, StdI->lambda);
+  }
+  if(StdI->lambda_U < 0.0 || StdI->lambda_J < 0.0 ){
+    fprintf(stderr, "\n  Error: the value of lambda_U / lambda_J must be greater than or equal to 0. \n\n");
+    StdFace_exit(-1);
+  }
+  
+  //StdFace_PrintVal_i("DoubleCounting", &StdI->double_counting, 1);
+  enum dcmode idcmode;
+  if (strcmp(StdI->double_counting_mode, "none") == 0 || strcmp(StdI->double_counting_mode, "****") ==0) idcmode = NOTCORRECT;
+  else if (strcmp(StdI->double_counting_mode, "hartree") == 0) idcmode = HARTREE;
+  else if (strcmp(StdI->double_counting_mode, "hartree_u") == 0) idcmode = HARTREE_U;
+  else if (strcmp(StdI->double_counting_mode, "full") == 0) idcmode = FULL;
+  else{
+    fprintf(stderr, "\n  Error: the word of doublecounting is not correct (select from none, hartree, hartree_u, full). \n\n");
+    StdFace_exit(-1);
+  }
+  StdFace_PrintVal_d("alpha", &StdI->alpha, 0.5);
+  if (StdI->alpha>1.0 || StdI->alpha< 0.0){
+    fprintf(stderr, "\n  Error: the value of alpha must be in the range 0<= alpha <= 1. \n\n");
+    StdFace_exit(-1);
+  }
   tUJ = (double complex **)malloc(sizeof(double complex*) * 3);
   tUJindx = (int ***)malloc(sizeof(int**) * 3);
 
@@ -451,30 +605,66 @@ void StdFace_Wannier90(
   fprintf(stdout, "\n  @ Wannier90 hopping \n\n");
   StdFace_PrintVal_d("cutoff_t", &StdI->cutoff_t, 1.0e-8);
   StdFace_PrintVal_d("cutoff_length_t", &StdI->cutoff_length_t, -1.0);
+  if (StdI->W != StdI->NaN_i) StdFace_PrintVal_i("cutoff_tR[0]", &StdI->cutoff_tR[0], (int)((StdI->W-1)/2));
+  if (StdI->L != StdI->NaN_i) StdFace_PrintVal_i("cutoff_tR[1]", &StdI->cutoff_tR[1], (int)((StdI->L-1)/2));
+  if (StdI->Height != StdI->NaN_i) StdFace_PrintVal_i("cutoff_tR[2]", &StdI->cutoff_tR[2], (int)((StdI->Height-1)/2));
+
+  int i, j;
+  for(i = 0; i <3 ; i++) {
+    for(j = 0; j <3 ; j++) {
+      if (StdI->box[i][j] != StdI->NaN_i)
+        sprintf(tempwords, "cutoff_tVec[%d][%d]", i, j);
+        StdFace_PrintVal_d(tempwords, &StdI->cutoff_tVec[i][j], ((double)(StdI->box[i][j]) * 0.5));
+    }
+  }
+
   sprintf(filename, "%s_hr.dat", StdI->CDataFileHead);
   read_W90(StdI, filename,
-    StdI->cutoff_t, StdI->cutoff_tR, StdI->cutoff_length_t,
-     0, NtUJ, tUJindx, tUJ);
+    StdI->cutoff_t, StdI->cutoff_tR, StdI->cutoff_tVec, StdI->cutoff_length_t,
+     0, NtUJ, tUJindx, 1.0, tUJ);
   /*
   Read Coulomb
   */
   fprintf(stdout, "\n  @ Wannier90 Coulomb \n\n");
   StdFace_PrintVal_d("cutoff_u", &StdI->cutoff_u, 1.0e-8);
-  StdFace_PrintVal_d("cutoff_length_U", &StdI->cutoff_length_U, -1.0);
+  StdFace_PrintVal_d("cutoff_length_U", &StdI->cutoff_length_U, 0.3);
+  StdFace_PrintVal_i("cutoff_UR[0]", &StdI->cutoff_UR[0], 0);
+  StdFace_PrintVal_i("cutoff_UR[1]", &StdI->cutoff_UR[1], 0);
+  StdFace_PrintVal_i("cutoff_UR[2]", &StdI->cutoff_UR[2], 0);
+  for(i = 0; i <3 ; i++) {
+    for(j = 0; j <3 ; j++) {
+      if (StdI->box[i][j] != StdI->NaN_i)
+        sprintf(tempwords, "cutoff_UVec[%d][%d]", i, j);
+      StdFace_PrintVal_d(tempwords, &StdI->cutoff_UVec[i][j], ((double)(StdI->box[i][j]) * 0.5));
+    }
+  }
+
   sprintf(filename, "%s_ur.dat", StdI->CDataFileHead);
   read_W90(StdI, filename,
-    StdI->cutoff_u, StdI->cutoff_UR, StdI->cutoff_length_U, 
-    1, NtUJ, tUJindx, tUJ);
+    StdI->cutoff_u, StdI->cutoff_UR, StdI->cutoff_UVec, StdI->cutoff_length_U,
+    1, NtUJ, tUJindx, StdI->lambda_U, tUJ);
   /*
   Read Hund
   */
   fprintf(stdout, "\n  @ Wannier90 Hund \n\n");
   StdFace_PrintVal_d("cutoff_j", &StdI->cutoff_j, 1.0e-8);
-  StdFace_PrintVal_d("cutoff_length_J", &StdI->cutoff_length_J, -1.0);
+  StdFace_PrintVal_d("cutoff_length_J", &StdI->cutoff_length_J, 0.3);
+  StdFace_PrintVal_i("cutoff_JR[0]", &StdI->cutoff_JR[0], 0);
+  StdFace_PrintVal_i("cutoff_JR[1]", &StdI->cutoff_JR[1], 0);
+  StdFace_PrintVal_i("cutoff_JR[2]", &StdI->cutoff_JR[2], 0);
+  for(i = 0; i <3 ; i++) {
+    for(j = 0; j <3 ; j++) {
+      if (StdI->box[i][j] != StdI->NaN_i)
+        sprintf(tempwords, "cutoff_JVec[%d][%d]", i, j);
+      StdFace_PrintVal_d(tempwords, &StdI->cutoff_JVec[i][j],  ((double)(StdI->box[i][j]) * 0.5));
+    }
+  }
+
+
   sprintf(filename, "%s_jr.dat", StdI->CDataFileHead);
   read_W90(StdI, filename,
-    StdI->cutoff_j, StdI->cutoff_JR, StdI->cutoff_length_J, 
-    2, NtUJ, tUJindx, tUJ);
+    StdI->cutoff_j, StdI->cutoff_JR, StdI->cutoff_JVec, StdI->cutoff_length_J,
+    2, NtUJ, tUJindx, StdI->lambda_J, tUJ);
   /*
   Read Density matrix
   */
@@ -614,11 +804,12 @@ void StdFace_Wannier90(
         /*
         Double-counting correction @f$0.5 U_{0ii} D_{0ii}@f$
         */
-        if (StdI->double_counting == 1) {
+        //if (StdI->double_counting == 1) {
+        if (idcmode != NOTCORRECT) { //Hartree or Hartree-Fock correction
           isite = StdI->NsiteUC*kCell + tUJindx[1][it][3];
           for (ispin = 0; ispin < 2; ispin++) {
             DenMat0 = DenMat[0][0][0][tUJindx[1][it][3]][tUJindx[1][it][3]];
-            StdI->trans[StdI->ntrans] = 0.5*creal(tUJ[1][it])*DenMat0;
+            StdI->trans[StdI->ntrans] = StdI->alpha*creal(tUJ[1][it])*DenMat0;
             StdI->transindx[StdI->ntrans][0] = isite;
             StdI->transindx[StdI->ntrans][1] = ispin;
             StdI->transindx[StdI->ntrans][2] = isite;
@@ -638,7 +829,8 @@ void StdFace_Wannier90(
         /*
         Double-counting correction
         */
-        if (StdI->double_counting == 1) {
+        //if (StdI->double_counting == 1) {
+        if (idcmode != NOTCORRECT) {//Hartree or Hartree-Fock correction
           for (ispin = 0; ispin < 2; ispin++) {
             /*
             @f$sum_{(R,j)(>0,i)} U_{Rij} D_{0jj} (Local)@f$
@@ -664,9 +856,11 @@ void StdFace_Wannier90(
           /*
           @f$-0.5U_{Rij} D_{Rjj}@f$
           */
-          DenMat0 = DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
+          if(idcmode == FULL) { //Hartree-Forck correction
+            DenMat0 = DenMat[tUJindx[1][it][0]][tUJindx[1][it][1]][tUJindx[1][it][2]]
             [tUJindx[1][it][3]][tUJindx[1][it][4]];
-          StdFace_Hopping(StdI, -0.5*Cphase * creal(tUJ[1][it])*DenMat0, jsite, isite, dR);
+            StdFace_Hopping(StdI, -0.5 * Cphase * creal(tUJ[1][it]) * DenMat0, jsite, isite, dR);
+          }
         }/*if (StdI->double_counting == 1)*/
       }/*Non-local term*/
     }/*for (it = 0; it < NtUJ[0]; it++)*/
@@ -702,13 +896,14 @@ void StdFace_Wannier90(
           /*
           Double-counting correction
           */
-          if (StdI->double_counting == 1) {
+          //if (StdI->double_counting == 1) {
+          if (idcmode != NOTCORRECT && idcmode != HARTREE_U) {
             for (ispin = 0; ispin < 2; ispin++) {
               /*
               @f$- \frac{1}{2}sum_{(R,j)(>0,i)} J_{Rij} D_{0jj}@f$
               */
               DenMat0 = DenMat[0][0][0][tUJindx[2][it][4]][tUJindx[2][it][4]];
-              StdI->trans[StdI->ntrans] = -0.5*creal(tUJ[2][it]) *DenMat0;
+              StdI->trans[StdI->ntrans] = -(1.0-StdI->alpha)*creal(tUJ[2][it]) *DenMat0;
               StdI->transindx[StdI->ntrans][0] = isite;
               StdI->transindx[StdI->ntrans][1] = ispin;
               StdI->transindx[StdI->ntrans][2] = isite;
@@ -718,7 +913,7 @@ void StdFace_Wannier90(
               @f$- \frac{1}{2}sum_{(R,j)(>0,i)} J_{Rij} D_{0jj}@f$
               */
               DenMat0 = DenMat[0][0][0][tUJindx[2][it][3]][tUJindx[2][it][3]];
-              StdI->trans[StdI->ntrans] = -0.5*creal(tUJ[2][it]) *DenMat0;
+              StdI->trans[StdI->ntrans] = -(1.0-StdI->alpha)*creal(tUJ[2][it]) *DenMat0;
               StdI->transindx[StdI->ntrans][0] = jsite;
               StdI->transindx[StdI->ntrans][1] = ispin;
               StdI->transindx[StdI->ntrans][2] = jsite;
@@ -728,10 +923,12 @@ void StdFace_Wannier90(
             /*
             @f$J_{Rij} (D_{Rjj}+2{\rm Re}[D_{Rjj])@f$
             */
-            DenMat0 = DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
-                            [tUJindx[2][it][3]][tUJindx[2][it][4]];
-            StdFace_Hopping(StdI, 
-              0.5*Cphase * creal(tUJ[2][it])*(DenMat0 + 2.0*creal(DenMat0)), jsite, isite, dR);
+            if(idcmode == FULL) { //Hartree-Forck correction
+              DenMat0 = DenMat[tUJindx[2][it][0]][tUJindx[2][it][1]][tUJindx[2][it][2]]
+              [tUJindx[2][it][3]][tUJindx[2][it][4]];
+              StdFace_Hopping(StdI,
+                              0.5 * Cphase * creal(tUJ[2][it]) * (DenMat0 + 2.0 * creal(DenMat0)), jsite, isite, dR);
+            }
           }/*if (StdI->double_counting == 1)*/
         }
         else {
