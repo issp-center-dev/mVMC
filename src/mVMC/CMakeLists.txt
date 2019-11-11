@@ -7,6 +7,8 @@ if(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 
 include_directories(include)
+include_directories(../common)
+include_directories(../StdFace)
 add_definitions(-DMEXP=19937)
 
 set(SOURCES_vmcmain

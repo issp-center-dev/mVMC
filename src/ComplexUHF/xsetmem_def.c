@@ -20,32 +20,33 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see http://www.gnu.org/licenses/. 
 */
 /* 2009.07.08*/
-
-	ui_malloc1(X.Bind.Def.Tpow, 2*X.Bind.Def.Nsite+1);
-	i_malloc1(X.Bind.Def.LocSpn, X.Bind.Def.Nsite);
-	i_malloc2(X.Bind.Def.All_pair, X.Bind.Def.Nsite*X.Bind.Def.Nsite, 2);
-	d_malloc1(X.Bind.Phys.spin_real_cor, X.Bind.Def.Nsite*X.Bind.Def.Nsite);
-d_malloc1(X.Bind.Phys.charge_real_cor, X.Bind.Def.Nsite*X.Bind.Def.Nsite);
-d_malloc1(X.Bind.Phys.loc_spin_z, X.Bind.Def.Nsite*X.Bind.Def.Nsite);
-  
-	i_malloc2(X.Bind.Def.Transfer, X.Bind.Def.NTransfer, 4);
-	c_malloc1(X.Bind.Def.ParaTransfer, X.Bind.Def.NTransfer);
-	i_malloc2(X.Bind.Def.CoulombIntra, X.Bind.Def.NCoulombIntra, 1);
-	d_malloc1(X.Bind.Def.ParaCoulombIntra, X.Bind.Def.NCoulombIntra);
-	i_malloc2(X.Bind.Def.CoulombInter, X.Bind.Def.NCoulombInter, 2);
-	d_malloc1(X.Bind.Def.ParaCoulombInter, X.Bind.Def.NCoulombInter);
-	i_malloc2(X.Bind.Def.HundCoupling, X.Bind.Def.NHundCoupling, 2);
-	d_malloc1(X.Bind.Def.ParaHundCoupling, X.Bind.Def.NHundCoupling);
-	i_malloc2(X.Bind.Def.PairHopping, X.Bind.Def.NPairHopping, 2);
-	d_malloc1(X.Bind.Def.ParaPairHopping, X.Bind.Def.NPairHopping);
-	i_malloc2(X.Bind.Def.ExchangeCoupling, X.Bind.Def.NExchangeCoupling, 2);
-	d_malloc1(X.Bind.Def.ParaExchangeCoupling, X.Bind.Def.NExchangeCoupling);
-	i_malloc2(X.Bind.Def.Initial, X.Bind.Def.NInitial, 4);
-c_malloc1(X.Bind.Def.ParaInitial, X.Bind.Def.NInitial);
-//d_malloc1(X.Bind.Def.ParaInitial, X.Bind.Def.NInitial);
-//d_malloc1(X.Bind.Def.ParaInitial_theta, X.Bind.Def.NInitial);
-i_malloc2(X.Bind.Def.OrbitalIdx, X.Bind.Def.Nsite*2, X.Bind.Def.Nsite*2);
-i_malloc2(X.Bind.Def.OrbitalSgn, X.Bind.Def.Nsite*2, X.Bind.Def.Nsite*2);
-
-	i_malloc2(X.Bind.Def.CisAjs, X.Bind.Def.NCisAjs, 4);
-  	i_malloc2(X.Bind.Def.CisAjsCktAltDC, X.Bind.Def.NCisAjsCktAltDC, 8);
+#include "struct.h"
+#include "../common/setmemory.h"
+void setmem(struct EDMainCalStruct* X) {
+    X->Bind.Def.Tpow = i_1d_allocate(2 * X->Bind.Def.Nsite + 1);
+    X->Bind.Def.LocSpn = i_1d_allocate(X->Bind.Def.Nsite);
+    X->Bind.Def.All_pair = i_2d_allocate(X->Bind.Def.Nsite * X->Bind.Def.Nsite, 2);
+    X->Bind.Phys.spin_real_cor = d_1d_allocate(X->Bind.Def.Nsite * X->Bind.Def.Nsite);
+    X->Bind.Phys.charge_real_cor = d_1d_allocate(X->Bind.Def.Nsite * X->Bind.Def.Nsite);
+    X->Bind.Phys.loc_spin_z = d_1d_allocate(X->Bind.Def.Nsite * X->Bind.Def.Nsite);
+    X->Bind.Def.Transfer = i_2d_allocate(X->Bind.Def.NTransfer, 4);
+    X->Bind.Def.ParaTransfer = cd_1d_allocate(X->Bind.Def.NTransfer);
+    X->Bind.Def.CoulombIntra = i_2d_allocate(X->Bind.Def.NCoulombIntra, 1);
+    X->Bind.Def.ParaCoulombIntra = d_1d_allocate(X->Bind.Def.NCoulombIntra);
+    X->Bind.Def.CoulombInter = i_2d_allocate(X->Bind.Def.NCoulombInter, 2);
+    X->Bind.Def.ParaCoulombInter = d_1d_allocate(X->Bind.Def.NCoulombInter);
+    X->Bind.Def.HundCoupling = i_2d_allocate(X->Bind.Def.NHundCoupling, 2);
+    X->Bind.Def.ParaHundCoupling = d_1d_allocate(X->Bind.Def.NHundCoupling);
+    X->Bind.Def.PairHopping = i_2d_allocate(X->Bind.Def.NPairHopping, 2);
+    X->Bind.Def.ParaPairHopping = d_1d_allocate(X->Bind.Def.NPairHopping);
+    X->Bind.Def.ExchangeCoupling = i_2d_allocate(X->Bind.Def.NExchangeCoupling, 2);
+    X->Bind.Def.ParaExchangeCoupling = d_1d_allocate(X->Bind.Def.NExchangeCoupling);
+    X->Bind.Def.InterAll = i_2d_allocate(X->Bind.Def.NInterAll, 8);
+    X->Bind.Def.ParaInterAll = cd_1d_allocate(X->Bind.Def.NInterAll);
+    X->Bind.Def.Initial = i_2d_allocate(X->Bind.Def.NInitial, 4);
+    X->Bind.Def.ParaInitial = cd_1d_allocate(X->Bind.Def.NInitial);
+    X->Bind.Def.OrbitalIdx = i_2d_allocate(X->Bind.Def.Nsite * 2, X->Bind.Def.Nsite * 2);
+    X->Bind.Def.OrbitalSgn = i_2d_allocate(X->Bind.Def.Nsite * 2, X->Bind.Def.Nsite * 2);
+    X->Bind.Def.CisAjs = i_2d_allocate(X->Bind.Def.NCisAjs, 4);
+    X->Bind.Def.CisAjsCktAltDC = i_2d_allocate(X->Bind.Def.NCisAjsCktAltDC, 8);
+}

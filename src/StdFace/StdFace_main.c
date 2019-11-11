@@ -837,15 +837,15 @@ static void PrintGutzwiller(struct StdIntList *StdI)
 }/*static void PrintGutzwiller*/
 #endif
 /**
-@brief Clear grobal variables in the standard mode
-All variables refered in this function is modified.
+@brief Clear global variables in the standard mode
+All variables referred in this function is modified.
 @author Mitsuaki Kawamura (The University of Tokyo)
 */
 static void StdFace_ResetVals(struct StdIntList *StdI) {
   int i, j;
   double NaN_d;
   /*
-  NaN is used for not inputed variable
+  NaN is used for not inputted variable
   */
   NaN_d = 0.0 / 0.0;
   StdI->NaN_i = 2147483647;
@@ -1224,7 +1224,6 @@ static void PrintLocSpin(struct StdIntList *StdI) {
 static void PrintTrans(struct StdIntList *StdI){
   FILE *fp;
   int jtrans, ktrans, ntrans0;
-
   for (jtrans = 0; jtrans < StdI->ntrans; jtrans++){
     for (ktrans = jtrans + 1; ktrans < StdI->ntrans; ktrans++){
       if (StdI->transindx[jtrans][0] == StdI->transindx[ktrans][0]

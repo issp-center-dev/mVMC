@@ -336,12 +336,12 @@ struct StdIntList {
   int NSPGaussLeg;/**<@brief Number of Gauss-Legendre points for spin projection,
                   input from file.*/
   int NMPTrans;/**<@brief Number of translation symmetry*/
-  int NSROptItrStep;/**<@brief Number of iterations for stocastic reconfiguration*/
+  int NSROptItrStep;/**<@brief Number of iterations for stochastic reconfiguration*/
   int NSROptItrSmp;/**<@brief Number of steps for sampling*/
   int NSROptFixSmp;/**<@brief */
-  double DSROptRedCut;/**<@brief Stocastic reconfiguration parameter, input from file.*/
-  double DSROptStaDel;/**<@brief Stocastic reconfiguration parameter, input from file.*/
-  double DSROptStepDt;/**<@brief Stocastic reconfiguration parameter, input from file.*/
+  double DSROptRedCut;/**<@brief Stochastic reconfiguration parameter, input from file.*/
+  double DSROptStaDel;/**<@brief Stochastic reconfiguration parameter, input from file.*/
+  double DSROptStepDt;/**<@brief Stochastic reconfiguration parameter, input from file.*/
   int NVMCWarmUp;/**<@brief */
   int NVMCInterval;/**<@brief */
   int NVMCSample;/**<@brief */

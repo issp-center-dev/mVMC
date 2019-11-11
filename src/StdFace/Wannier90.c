@@ -110,8 +110,7 @@ static void geometry_W90(
   ierr = fscanf(fp, "%d", &StdI->NsiteUC);
   fprintf(stdout, "    Number of Correlated Sites = %d\n", StdI->NsiteUC);
 
-  StdI->tau = (double **)malloc(sizeof(double*) * StdI->NsiteUC);
-  for (ii = 0; ii < StdI->NsiteUC; ii++) StdI->tau[ii] = (double *)malloc(sizeof(double) * 3);
+  StdI->tau = d_2d_allocate(StdI->NsiteUC, 3);
 
   for (isite = 0; isite < StdI->NsiteUC; isite++)
     ierr = fscanf(fp, "%lf%lf%lf", &StdI->tau[isite][0], &StdI->tau[isite][1], &StdI->tau[isite][2]);
@@ -132,7 +131,7 @@ static void geometry_W90(
 static void read_W90(
   struct StdIntList *StdI,//!<[inout]
   char *filename,//!<[in] Input file name
-  double cutoff,//!<[in] Threshold for the Hamiltonian 
+  double cutoff,//!<[in] Threshold for the Hamiltonian
   int *cutoff_R,
   double cutoff_Rvec[][3],
   double cutoff_length,
@@ -368,15 +367,9 @@ static double complex***** read_density_matrix(
   /*
   Malloc Matrix elements and their indices
   */
-  Mat_tot = (double complex ***)malloc(sizeof(double complex **) * nWSC);
-  indx_tot = (int **)malloc(sizeof(int*) * nWSC);
-  for (iWSC = 0; iWSC < nWSC; iWSC++) {
-    Mat_tot[iWSC] = (double complex **)malloc(sizeof(double complex *) * nWan);
-    indx_tot[iWSC] = (int *)malloc(sizeof(int) * 3);
-    for (iWan = 0; iWan < nWan; iWan++) {
-      Mat_tot[iWSC][iWan] = (double complex *)malloc(sizeof(double complex) * nWan);
-    }
-  }
+  Mat_tot = cd_3d_allocate(nWSC, nWan, nWan);
+  //indx_tot = i_2d_allocate(nWSC, 3, indx_tot);
+  indx_tot = i_2d_allocate(nWSC, 3);
   /*
   Read body
   */
@@ -542,6 +535,7 @@ enum dcmode {
 };
 
 /**
+
 @brief Setup a Hamiltonian for the Wannier90 *_hr.dat
 @author Mitsuaki Kawamura (The University of Tokyo)
 */
