@@ -14,6 +14,16 @@ set(SPHINX_PDF_DIR ${CMAKE_CURRENT_BINARY_DIR}/pdf)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/conf.py ${CMAKE_CURRENT_BINARY_DIR})
 
+add_custom_target(doc-ja-html ALL
+  COMMAND
+    ${SPHINX_EXECUTABLE}
+    -b html
+    -d ${SPHINX_CACHE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${SPHINX_HTML_DIR}
+  )
+
+
 add_custom_target(doc-ja-pdf ALL
   COMMAND
     ${SPHINX_EXECUTABLE}
