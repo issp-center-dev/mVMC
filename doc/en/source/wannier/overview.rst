@@ -18,7 +18,7 @@ In RESPACK, the screened direct integrals :math:`U_{mn}({\bf R},\omega)` and the
    w_{n{\bf R}}^*({\bf r'}) w_{m{\bf 0}}({\bf r'}). 
    \end{aligned}
 
-Here, :math:`V` is the volume of the crystal, :math:`w_ {i {\bf R}}({\bf r})` is the :math:`i` -th wannier function at :math:`\bf R` -th cell, :math:`W({\bf r,r'}, \omega)` is the screened Coulomb interactions, respectively. In the following, the components at :math:`\omega=0` are only considered. Then, the Hamiltonian of the two-body interactions are given as follows:
+Here, :math:`V` is the volume of the crystal, :math:`w_ {n {\bf R}}({\bf r})` is the :math:`n`-th wannier function at :math:`\bf R`-th cell, :math:`W({\bf r,r'}, \omega)` is the screened Coulomb interactions, respectively. In the following, the components at :math:`\omega=0` are only considered. Then, the Hamiltonian of the two-body interactions are given as follows:
 
 .. math::
    \begin{aligned}
@@ -26,7 +26,7 @@ Here, :math:`V` is the volume of the crystal, :math:`w_ {i {\bf R}}({\bf r})` is
    &+ J_{mn}({\bf R}_{ij})(c_{im, \sigma}^{\dagger}c_{jn,\rho}^{\dagger}c_{im,\rho}c_{jn,\sigma} + c_{im, \sigma}^{\dagger}c_{im,\rho}^{\dagger}c_{jn,\rho}c_{jn,\sigma}  )\Bigr],
    \end{aligned}
 
-where :math:`{\bf R}_{ij} \equiv {\bf R}_i-{\bf R}_j` . Since mVMC and :math:`{\mathcal H}\Phi` cannot directly treat the following type of interactions :math:`{c_{i, \sigma}^{\dagger}c_{j, \rho}^{\dagger}c_{k, \rho'}c_{l, \sigma'}}` , the Hamiltonian must be rewritten as follows:
+where :math:`{\bf R}_{ij} \equiv {\bf R}_i-{\bf R}_j` . :math:`{\bf R}_i` is the position vector of the :math:`i`-th cell. Since mVMC and :math:`{\mathcal H}\Phi` cannot directly treat the following type of interactions :math:`{c_{i, \sigma}^{\dagger}c_{j, \rho}^{\dagger}c_{k, \rho'}c_{l, \sigma'}}` , the Hamiltonian must be rewritten as follows:
 
 .. math::
    \begin{aligned}
@@ -64,7 +64,7 @@ where  :math:`t_{mn}^{\rm DC}({\bf R}_{ij})` is the one-body correction term giv
    \end{aligned}
 
 Here, :math:`t_{mm}^{\rm DC}({\bf 0})` is the term to correct the chemical potntial, :math:`t_{mn}^{\rm DC}({\bf R}_{ij})` is term to correct transfer integrals
-. These terms are introduced to avoid double counting in analyzing the lattice model. To adopt theses corrections or not can be selected by the option ``doublecounting`` in the input file. The strength of :math:`U_{Rij}` and :math:`J_{Rij}` can be controled by multiplying tuning parameters :math:`\lambda_U, \lambda_J`. For details, see ``Input parameters for Standard mode``.
+. :math:`\alpha` is the tuning parameter for one-body correction from the on-site Coulomb interactions. These terms are introduced to avoid double counting in analyzing the lattice model. To adopt these corrections or not can be selected by the option ``doublecounting`` in the input file. The strength of :math:`U_{Rij}` and :math:`J_{Rij}` can be controled by multiplying tuning parameters :math:`\lambda_U, \lambda_J`. For details, see ``Input parameters for Standard mode``.
 
 Prerequisite
 ------------

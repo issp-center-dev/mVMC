@@ -29,7 +29,7 @@ listed in parentheses correspond to the file made by vmcdry.out.
 
        \begin{aligned}
        {\cal H}&={\cal H}_T+{\cal H}_U+{\cal H}_V+{\cal H}_H+{\cal H}_E+{\cal H}_P+{\cal H}_I,\\
-       {\cal H}_T&=-\sum_{i, j}\sum_{\sigma_1, \sigma2}t_{ij\sigma_1\sigma_2} c_{i\sigma_1}^{\dagger}c_{j\sigma_2},\\
+       {\cal H}_T&=-\sum_{i, j}\sum_{\sigma_1, \sigma_2}t_{ij\sigma_1\sigma_2} c_{i\sigma_1}^{\dagger}c_{j\sigma_2},\\
        {\cal H}_U&=\sum_{i} U_i n_ {i \uparrow}n_{i \downarrow},\\
        {\cal H}_V&=\sum_{i,j} V_{ij}n_ {i}n_{j},\\
        {\cal H}_H&=-\sum_{i,j}J_{ij}^{\rm Hund} (n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow}),\\
@@ -621,9 +621,6 @@ File format
 Parameters
 ^^^^^^^^^^
 
-Parameters
-^^^^^^^^^^
-
 -  [ string01 ]
 
    **Type :** string-type (blank parameter not allowed)
@@ -676,8 +673,8 @@ The Hamiltonian for general one-body interactions
 .. math::
 
    \begin{aligned}
-   {\cal H}_{T} =-\sum_{ij\sigma_1\sigma2}
-   t_{ij\sigma_1\sigma2}c_{i\sigma_1}^{\dagger}c_{j\sigma_2},\end{aligned}
+   {\cal H}_{T} =-\sum_{ij\sigma_1\sigma_2}
+   t_{ij\sigma_1\sigma_2}c_{i\sigma_1}^{\dagger}c_{j\sigma_2},\end{aligned}
 
 is added to the whole Hamiltonian by setting the parameters
 :math:`t_{ij\sigma_1\sigma2}`. An example of the file format is shown
