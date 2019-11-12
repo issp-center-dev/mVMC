@@ -19,7 +19,7 @@ RESPACKでは, 遮蔽直接積分 :math:`U_{mn}({\bf R},\omega)` および遮蔽
    w_{n{\bf R}}^*({\bf r'}) w_{m{\bf 0}}({\bf r'}). 
    \end{aligned}
 
-ここで, :math:`V` は結晶の体積, :math:`w_ {i {\bf R}}({\bf r})` はセル :math:`\bf R` の :math:`i` 番目のワニエ関数, :math:`W({\bf r,r'}, \omega)` は遮蔽クーロン相互作用をそれぞれ表す. 以下, :math:`\omega=0` の成分のみを考慮する. この時、二体相互作用部分のハミルトニアンは以下の形式で与えられる：
+ここで, :math:`V` は結晶の体積, :math:`w_ {n {\bf R}}({\bf r})` はセル :math:`\bf R` の :math:`n` 番目のワニエ関数, :math:`W({\bf r,r'}, \omega)` は遮蔽クーロン相互作用をそれぞれ表す. 以下, :math:`\omega=0` の成分のみを考慮する. この時、二体相互作用部分のハミルトニアンは以下の形式で与えられる：
 
 .. math::
    \begin{aligned}
@@ -27,7 +27,7 @@ RESPACKでは, 遮蔽直接積分 :math:`U_{mn}({\bf R},\omega)` および遮蔽
    &+ J_{mn}({\bf R}_{ij})(c_{im, \sigma}^{\dagger}c_{jn,\rho}^{\dagger}c_{im,\rho}c_{jn,\sigma} + c_{im, \sigma}^{\dagger}c_{im,\rho}^{\dagger}c_{jn,\rho}c_{jn,\sigma}  )\Bigr],
    \end{aligned}
 
-ただし, :math:`{\bf R}_{ij} \equiv {\bf R}_i-{\bf R}_j` とした. ここで, mVMCおよび :math:`{\mathcal H}\Phi` では, :math:`{c_{i, \sigma}^{\dagger}c_{j, \rho}^{\dagger}c_{k, \rho'}c_{l, \sigma'}}` の型の相互作用の入力には対応していないため, 以下のように書き換えたハミルトニアンで定義される：
+ただし, :math:`{\bf R}_{ij} \equiv {\bf R}_i-{\bf R}_j` とした. :math:`{\bf R}_i` は :math:`i` 番目のセルの位置ベクトルである. ここで, mVMCおよび :math:`{\mathcal H}\Phi` では, :math:`{c_{i, \sigma}^{\dagger}c_{j, \rho}^{\dagger}c_{k, \rho'}c_{l, \sigma'}}` の型の相互作用の入力には対応していないため, 以下のように書き換えたハミルトニアンで定義される：
 
 .. math::
    \begin{aligned}
@@ -65,7 +65,7 @@ RESPACKでは, 遮蔽直接積分 :math:`U_{mn}({\bf R},\omega)` および遮蔽
    \left\langle c_{im \sigma}^{\dagger} c_{jn \sigma}\right\rangle_{\rm KS},
    \end{aligned}
 
-で与えられる. ここで, :math:`t_{mm}^{\rm DC}({\bf 0})` は化学ポテンシャルの補正項, :math:`t_{mn}^{\rm DC}({\bf R}_{ij})` はFock項に対する補正項を表す. これらは模型を解く際のダブルカウンティングを避けるために導入され, オプションでON/OFFの切り替えが可能になっている. また, 直接積分 :math:`U_{mn}(\bf{R}_{ij})` および交換積分 :math:`J_{mn}({\bf R}_{ij})` をそれぞれ :math:`\lambda_U, \lambda_J` 倍し調節するためのパラメータも用意されている. 
+で与えられる. ここで, :math:`t_{mm}^{\rm DC}({\bf 0})` は化学ポテンシャルの補正項, :math:`t_{mn}^{\rm DC}({\bf R}_{ij})` はFock項に対する補正項を表す. :math:`\alpha` はオンサイト相互作用による補正項への寄与を調整するパラメータを表す. これらは模型を解く際のダブルカウンティングを避けるために導入され, オプションでON/OFFの切り替えが可能になっている. また, 直接積分 :math:`U_{mn}(\bf{R}_{ij})` および交換積分 :math:`J_{mn}({\bf R}_{ij})` をそれぞれ :math:`\lambda_U, \lambda_J` 倍し調節するためのパラメータも用意されている. 
    
 要件
 ----
