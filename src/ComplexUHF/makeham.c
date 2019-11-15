@@ -23,7 +23,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 void makeham(struct BindStruct *X) {
 
-  int int_i, int_j, site_1, site_2, int_spin1, int_spin2;
+  int int_i, int_j, site_1, site_2, site_3, site_4;
+  int int_spin1, int_spin2, int_spin3, int_spin4;
+  int s_site_1, s_site_2, s_site_3, s_site_4;
   int t_site_1, t_site_2;
   int u_site_1, u_site_2;
   int d_site_1, d_site_2;
@@ -62,11 +64,11 @@ void makeham(struct BindStruct *X) {
 
     X->Large.Ham[u_site_1][u_site_1] += tmp * X->Large.G[d_site_1][d_site_1];
     X->Large.Ham[d_site_1][d_site_1] += tmp * X->Large.G[u_site_1][u_site_1];
-//#if Fock==1
-    /*Off-Diagonal Fock term*/
-    X->Large.Ham[u_site_1][d_site_1] += -1.0 * tmp * X->Large.G[d_site_1][u_site_1];
-    X->Large.Ham[d_site_1][u_site_1] += -1.0 * tmp * X->Large.G[u_site_1][d_site_1];
-//#endif
+    if (X->Def.iFlg_Fock == 1) {
+      /*Off-Diagonal Fock term*/
+      X->Large.Ham[u_site_1][d_site_1] += -1.0 * tmp * X->Large.G[d_site_1][u_site_1];
+      X->Large.Ham[d_site_1][u_site_1] += -1.0 * tmp * X->Large.G[u_site_1][d_site_1];
+    }
   }
   /*Inter U input*/
   for (int_i = 0; int_i < X->Def.NCoulombInter; int_i++) {
@@ -87,19 +89,19 @@ void makeham(struct BindStruct *X) {
     charge = X->Large.G[u_site_1][u_site_1] + X->Large.G[d_site_1][d_site_1];
     X->Large.Ham[u_site_2][u_site_2] += tmp * charge;
     X->Large.Ham[d_site_2][d_site_2] += tmp * charge;
-#if Fock == 1
-    /*Diagonal Fock term*/
-    X->Large.Ham[u_site_1][u_site_2] += -tmp * X->Large.G[u_site_2][u_site_1];
-    X->Large.Ham[u_site_2][u_site_1] += -tmp * X->Large.G[u_site_1][u_site_2];
-    X->Large.Ham[d_site_1][d_site_2] += -tmp * X->Large.G[d_site_2][d_site_1];
-    X->Large.Ham[d_site_2][d_site_1] += -tmp * X->Large.G[d_site_1][d_site_2];
-    /*Off-Diagonal Fock term*/
-    X->Large.Ham[u_site_1][d_site_2] += -tmp * X->Large.G[d_site_2][u_site_1];
-    X->Large.Ham[d_site_2][u_site_1] += -tmp * X->Large.G[u_site_1][d_site_2];
+    if (X->Def.iFlg_Fock == 1) {
+      /*Diagonal Fock term*/
+      X->Large.Ham[u_site_1][u_site_2] += -tmp * X->Large.G[u_site_2][u_site_1];
+      X->Large.Ham[u_site_2][u_site_1] += -tmp * X->Large.G[u_site_1][u_site_2];
+      X->Large.Ham[d_site_1][d_site_2] += -tmp * X->Large.G[d_site_2][d_site_1];
+      X->Large.Ham[d_site_2][d_site_1] += -tmp * X->Large.G[d_site_1][d_site_2];
+      /*Off-Diagonal Fock term*/
+      X->Large.Ham[u_site_1][d_site_2] += -tmp * X->Large.G[d_site_2][u_site_1];
+      X->Large.Ham[d_site_2][u_site_1] += -tmp * X->Large.G[u_site_1][d_site_2];
 
-    X->Large.Ham[u_site_2][d_site_1] += -tmp * X->Large.G[d_site_1][u_site_2];
-    X->Large.Ham[d_site_1][u_site_2] += -tmp * X->Large.G[u_site_2][d_site_1];
-#endif
+      X->Large.Ham[u_site_2][d_site_1] += -tmp * X->Large.G[d_site_1][u_site_2];
+      X->Large.Ham[d_site_1][u_site_2] += -tmp * X->Large.G[u_site_2][d_site_1];
+    }
   }
   /*Hund input*/
   for (int_i = 0; int_i < X->Def.NHundCoupling; int_i++) {
@@ -118,61 +120,101 @@ void makeham(struct BindStruct *X) {
 
     X->Large.Ham[u_site_2][u_site_2] += tmp * X->Large.G[u_site_1][u_site_1];
     X->Large.Ham[d_site_2][d_site_2] += tmp * X->Large.G[d_site_1][d_site_1];
-#if Fock == 1
-    /*Diagonal Fock term*/
-    X->Large.Ham[u_site_1][u_site_2] += -tmp * X->Large.G[u_site_2][u_site_1];
-    X->Large.Ham[u_site_2][u_site_1] += -tmp * X->Large.G[u_site_1][u_site_2];
+    if (X->Def.iFlg_Fock == 1) {
+      /*Diagonal Fock term*/
+      X->Large.Ham[u_site_1][u_site_2] += -tmp * X->Large.G[u_site_2][u_site_1];
+      X->Large.Ham[u_site_2][u_site_1] += -tmp * X->Large.G[u_site_1][u_site_2];
 
-    X->Large.Ham[d_site_1][d_site_2] += -tmp * X->Large.G[d_site_2][d_site_1];
-    X->Large.Ham[d_site_2][d_site_1] += -tmp * X->Large.G[d_site_1][d_site_2];
-#endif
-
+      X->Large.Ham[d_site_1][d_site_2] += -tmp * X->Large.G[d_site_2][d_site_1];
+      X->Large.Ham[d_site_2][d_site_1] += -tmp * X->Large.G[d_site_1][d_site_2];
+    }
   }
-  /*Exchange input*/
-  for (int_i = 0; int_i < X->Def.NExchangeCoupling; int_i++) {
-    site_1 = X->Def.ExchangeCoupling[int_i][0];
-    site_2 = X->Def.ExchangeCoupling[int_i][1];
-    tmp = X->Def.ParaExchangeCoupling[int_i];
+  if (X->Def.iFlg_Fock == 1) {
 
-    u_site_1 = site_1 + 0 * Ns;
-    d_site_1 = site_1 + 1 * Ns;
+    /*Exchange input*/
+    for (int_i = 0; int_i < X->Def.NExchangeCoupling; int_i++) {
+      site_1 = X->Def.ExchangeCoupling[int_i][0];
+      site_2 = X->Def.ExchangeCoupling[int_i][1];
+      tmp = X->Def.ParaExchangeCoupling[int_i];
 
-    u_site_2 = site_2 + 0 * Ns;
-    d_site_2 = site_2 + 1 * Ns;
-#if Fock == 1
-    /*Diagonal Fock term*/
-    X->Large.Ham[u_site_1][u_site_2] += tmp * X->Large.G[d_site_2][d_site_1];
-    X->Large.Ham[d_site_2][d_site_1] += tmp * X->Large.G[u_site_1][u_site_2];
+      u_site_1 = site_1 + 0 * Ns;
+      d_site_1 = site_1 + 1 * Ns;
 
-    X->Large.Ham[d_site_1][d_site_2] += tmp * X->Large.G[u_site_2][u_site_1];
-    X->Large.Ham[u_site_2][u_site_1] += tmp * X->Large.G[d_site_1][d_site_2];
+      u_site_2 = site_2 + 0 * Ns;
+      d_site_2 = site_2 + 1 * Ns;
 
-    /*Off-Diagonal Fock term*/
-    X->Large.Ham[u_site_1][d_site_1] += -tmp * X->Large.G[d_site_2][u_site_2];
-    X->Large.Ham[u_site_2][d_site_2] += -tmp * X->Large.G[d_site_1][u_site_1];
+      /*Diagonal Fock term*/
+      X->Large.Ham[u_site_1][u_site_2] += tmp * X->Large.G[d_site_2][d_site_1];
+      X->Large.Ham[d_site_2][d_site_1] += tmp * X->Large.G[u_site_1][u_site_2];
 
-    X->Large.Ham[d_site_1][u_site_1] += -tmp * X->Large.G[u_site_2][d_site_2];
-    X->Large.Ham[d_site_2][u_site_2] += -tmp * X->Large.G[u_site_1][d_site_1];
-#endif
+      X->Large.Ham[d_site_1][d_site_2] += tmp * X->Large.G[u_site_2][u_site_1];
+      X->Large.Ham[u_site_2][u_site_1] += tmp * X->Large.G[d_site_1][d_site_2];
+
+      /*Off-Diagonal Fock term*/
+      X->Large.Ham[u_site_1][d_site_1] += -tmp * X->Large.G[d_site_2][u_site_2];
+      X->Large.Ham[u_site_2][d_site_2] += -tmp * X->Large.G[d_site_1][u_site_1];
+
+      X->Large.Ham[d_site_1][u_site_1] += -tmp * X->Large.G[u_site_2][d_site_2];
+      X->Large.Ham[d_site_2][u_site_2] += -tmp * X->Large.G[u_site_1][d_site_1];
+    }
+    /*PariHopping input*/
+    for (int_i = 0; int_i < X->Def.NPairHopping; int_i++) {
+      site_1 = X->Def.PairHopping[int_i][0];
+      site_2 = X->Def.PairHopping[int_i][1];
+      tmp = X->Def.ParaPairHopping[int_i];
+      u_site_1 = site_1 + 0 * Ns;
+      d_site_1 = site_1 + 1 * Ns;
+
+      u_site_2 = site_2 + 0 * Ns;
+      d_site_2 = site_2 + 1 * Ns;
+
+      /*Diagonal Fock term*/
+      X->Large.Ham[u_site_1][u_site_2] += tmp * X->Large.G[d_site_1][d_site_2];
+      X->Large.Ham[d_site_1][d_site_2] += tmp * X->Large.G[u_site_1][u_site_2];
+
+      /*Off-Diagonal Fock term*/
+      X->Large.Ham[u_site_1][d_site_2] += -tmp * X->Large.G[d_site_1][u_site_2];
+      X->Large.Ham[d_site_1][u_site_2] += -tmp * X->Large.G[u_site_1][d_site_2];
+    }
+
+    /*InterAll input*/
+    for (int_i = 0; int_i < X->Def.NInterAll; int_i++) {
+      site_1 = X->Def.InterAll[int_i][0];
+      int_spin1 = X->Def.InterAll[int_i][1];
+      site_2 = X->Def.InterAll[int_i][2];
+      int_spin2 = X->Def.InterAll[int_i][3];
+      site_3 = X->Def.InterAll[int_i][4];
+      int_spin3 = X->Def.InterAll[int_i][5];
+      site_4 = X->Def.InterAll[int_i][6];
+      int_spin4 = X->Def.InterAll[int_i][7];
+      tmp = X->Def.ParaInterAll[int_i];
+
+      s_site_1 = site_1 + int_spin1 * Ns;
+      s_site_2 = site_2 + int_spin2 * Ns;
+      s_site_3 = site_3 + int_spin3 * Ns;
+      s_site_4 = site_4 + int_spin4 * Ns;
+
+      /*Diagonal Fock term*/
+      X->Large.Ham[s_site_1][s_site_2] += tmp * X->Large.G[s_site_3][s_site_4];
+      X->Large.Ham[s_site_3][s_site_4] += tmp * X->Large.G[s_site_1][s_site_2];
+
+      /*Off-Diagonal Fock term*/
+      X->Large.Ham[s_site_1][s_site_4] += -tmp * X->Large.G[s_site_3][s_site_2];
+      X->Large.Ham[s_site_3][s_site_2] += -tmp * X->Large.G[s_site_1][s_site_4];
+
+      if (s_site_2 == s_site_3){
+        X->Large.Ham[s_site_1][s_site_4] += tmp;
+      }
+
+    }
   }
-  /*PariHopping input*/
-  for (int_i = 0; int_i < X->Def.NPairHopping; int_i++) {
-    site_1 = X->Def.PairHopping[int_i][0];
-    site_2 = X->Def.PairHopping[int_i][1];
-    tmp = X->Def.ParaPairHopping[int_i];
-    u_site_1 = site_1 + 0 * Ns;
-    d_site_1 = site_1 + 1 * Ns;
 
-    u_site_2 = site_2 + 0 * Ns;
-    d_site_2 = site_2 + 1 * Ns;
-#if Fock == 1
-    /*Diagonal Fock term*/
-    X->Large.Ham[u_site_1][u_site_2] += tmp * X->Large.G[d_site_1][d_site_2];
-    X->Large.Ham[d_site_1][d_site_2] += tmp * X->Large.G[u_site_1][u_site_2];
-
-    /*Off-Diagonal Fock term*/
-    X->Large.Ham[u_site_1][d_site_2] += -tmp * X->Large.G[d_site_1][u_site_2];
-    X->Large.Ham[d_site_1][u_site_2] += -tmp * X->Large.G[u_site_1][d_site_2];
-#endif
+  /* For Debug
+  for (int_i = 0; int_i < 2 * X->Def.Nsite; int_i++) {
+    for (int_j = 0; int_j < 2 * X->Def.Nsite; int_j++) {
+      printf("%d %d %lf\n", int_i, int_j, X->Large.Ham[int_i][int_j]);
+    }
   }
+  exit(0);
+   */
 }

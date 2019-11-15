@@ -364,7 +364,8 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 #ifdef _DEBUG_DETAIL
     printf("Debug: step %d, MakeSample.\n", step);
 #endif
-    if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ // real & sz=0
+    //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ // real & sz=0
+    if(AllComplexFlag==0){ // real
       // only for real TBC
       StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
@@ -372,11 +373,15 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 #pragma omp parallel for default(shared) private(tmp_i)
       for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
       StopTimer(69);
-      if(NProjBF ==0){
-        // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-        VMCMakeSample_real(comm_child1);
-      }else{
-        VMC_BF_MakeSample_real(comm_child1);
+      if(iFlgOrbitalGeneral==0){ // Orbital
+        if(NProjBF ==0){
+          // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
+          VMCMakeSample_real(comm_child1);
+        }else{
+          VMC_BF_MakeSample_real(comm_child1);
+        }
+      }else{//OrbitalPara, OrbitalGeneral
+        VMCMakeSample_fsz_real(comm_child1);
       }
       // only for real TBC
       StartTimer(69);
@@ -384,7 +389,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM[tmp_i]      = InvM_real[tmp_i]+0.0*I;
       StopTimer(69);
       // only for real TBC
-    }else{
+    }else{// complex
       if(NProjBF ==0) {
         if(iFlgOrbitalGeneral==0){// sz =0 & complex
           VMCMakeSample(comm_child1);//VMCMakeSample(comm_child1);
@@ -420,7 +425,8 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 #ifdef _DEBUG_DETAIL
     printf("Debug: step %d, SROpt.\n", step);
 #endif
-    if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz =0
+    //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz =0
+    if(AllComplexFlag==0){ //real 
       WeightAverageSROpt_real(comm_parent);
     }else{
       WeightAverageSROpt(comm_parent);
@@ -435,7 +441,8 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
 #ifdef _DEBUG_DUMP_SROPTO_STORE
     if(rank==0){
-      if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
+      if(AllComplexFlag==0){ //real & sz=0
+      //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
         for(i=0;i<SROptSize*NVMCSample;i++){
           fprintf(stderr, "DEBUG: SROptO_Store_real[%d]=%lf +I*%lf\n",i,creal(SROptO_Store_real[i]),cimag(SROptO_Store_real[i]));
         } 
@@ -449,7 +456,8 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
 #ifdef _DEBUG_DUMP_SROPTOO
     if(rank==0){
-      if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
+      if(AllComplexFlag==0){ //real
+      //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
         for(i=0;i<(NSRCG==0 ? SROptSize*SROptSize: SROptSize*2);i++){
           fprintf(stderr, "DEBUG: SROptOO_real[%d]=%lf +I*%lf\n",i,creal(SROptOO_real[i]),cimag(SROptOO_real[i]));
         } 
@@ -542,7 +550,8 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     InitFilePhysCal(ismp, rank);    
     StartTimer(3);
     if(NProjBF ==0) {
-      if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){//real & sz=0
+      //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){//real & sz=0
+      if(AllComplexFlag==0){//real
         // only for real TBC
         StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
@@ -551,7 +560,11 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
         for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
         StopTimer(69);
         // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
-        VMCMakeSample_real(comm_child1);
+        if(iFlgOrbitalGeneral==0){
+          VMCMakeSample_real(comm_child1);
+        }else{
+          VMCMakeSample_fsz_real(comm_child1);
+        }
         // only for real TBC
         StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
@@ -562,11 +575,6 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
         if(iFlgOrbitalGeneral==0){
           VMCMakeSample(comm_child1);
         }else{
-          //[s]MDEBUG
-          //for(tmp_i=0;tmp_i<NSlater;tmp_i++){
-          //  printf("MDEBUG: %d %lf %lf \n",tmp_i,creal(Slater[tmp_i]),cimag(Slater[tmp_i]));
-          //}
-          //[e]MDEBUG
           VMCMakeSample_fsz(comm_child1);
         }
       }

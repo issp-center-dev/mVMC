@@ -353,7 +353,8 @@ void SetMemory() {
     }
 
     if(NSRCG==1 || NStoreO!=0){
-      if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
+      //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
+      if(AllComplexFlag==0){ //real & sz=0
         SROptO_Store_real = (double *)malloc(sizeof(double)*(SROptSize*NVMCSample) );
       }else{
         SROptO_Store      = (double complex*)malloc( sizeof(double complex)*(2*SROptSize*NVMCSample) );

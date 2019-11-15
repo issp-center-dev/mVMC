@@ -26,15 +26,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-void CalculateNewPfM_fsz(const int mi, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
-                     const int qpStart, const int qpEnd);
-void CalculateNewPfM2_fsz(const int ma, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
-                     const int qpStart, const int qpEnd);
-void UpdateMAll_fsz(const int mi, const int s, const int *eleIdx,const int *eleSpn,
-                const int qpStart, const int qpEnd);
-void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int *eleSpn,
-                      const int qpStart, const int qpEnd, const int qpidx,
-                      double complex *vec1, double complex *vec2);
+#include "pfupdate_fsz.h"
+#ifndef _PFUDATE_FSZ_SRC
+#define _PFUDATE_FSZ_SRC
+
 
 /* Calculate new pfaffian. The ma-th electron with spin s hops. */
 void CalculateNewPfM_fsz(const int ma, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
@@ -216,3 +211,5 @@ void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int
 
   return;
 }
+
+#endif

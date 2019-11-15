@@ -145,15 +145,20 @@ int ReadDefFileNInt(
 	int iKWidx = 0;
 	info = 0;
 	char *cerr;
-  int iNOrbitalAP=0;
-  int iNOrbitalP=0;
-  int iFlgOrbitalAP=0, iFlgOrbitalP=0;
+	int iNOrbitalAP=0;
+    int iNOrbitalP=0;
+    int iFlgOrbitalAP=0, iFlgOrbitalP=0;
+    X->iFlgOrbital = 0;
+#if Fock == 1
+    X->iFlg_Fock = 1;
+#else
+    X->iFlg_Fock = 0;
+#endif
 
 	cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
 	fprintf(stdout, "  Read File %s .\n", xNameListFile);
 	if (GetFileName(xNameListFile, cFileNameListFile) != 0) {
 		fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
-		//	fprintf(stdout, " Error:  Read File %s .\n", xNameListFile);
 		return (-1);
 	}
 
@@ -174,166 +179,172 @@ int ReadDefFileNInt(
 	SetInitialValue(X);
 
 	for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
-		strcpy(defname, cFileNameListFile[iKWidx]);
-		if (strcmp(defname, "") == 0) continue;
-		fprintf(stdout, "  Read File '%s' for %s.\n", defname, cKWListOfFileNameList[iKWidx]);
-		fp = fopen(defname, "r");
-		if (fp == NULL) {
-			info = ReadDefFileError(defname);
-			fclose(fp);
-			break;
-		} else {
-			switch (iKWidx) {
-				case KWModPara:
-					/* Read modpara.def---------------------------------------*/
-					//TODO: add error procedure here when parameters are not enough.
-					//SetDefultValuesModPara(X);
-					cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-					cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-					sscanf(ctmp2, "%s %d\n", ctmp, &itmp); //2
-					cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //3
-					cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //4
-					cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //5
-					cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-					sscanf(ctmp2, "%s %s\n", ctmp, X->CDataFileHead); //6
-					cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-					sscanf(ctmp2, "%s %s\n", ctmp, X->CParaFileHead); //7
-					cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);   //8
+        strcpy(defname, cFileNameListFile[iKWidx]);
+        if (strcmp(defname, "") == 0) continue;
+        fprintf(stdout, "  Read File '%s' for %s.\n", defname, cKWListOfFileNameList[iKWidx]);
+        fp = fopen(defname, "r");
+        if (fp == NULL) {
+            info = ReadDefFileError(defname);
+            fclose(fp);
+            return (-1);
+        } else {
+            switch (iKWidx) {
+                case KWModPara:
+                    /* Read modpara.def---------------------------------------*/
+                    //TODO: add error procedure here when parameters are not enough.
+                    //SetDefultValuesModPara(X);
+                    cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+                    cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+                    sscanf(ctmp2, "%s %d\n", ctmp, &itmp); //2
+                    cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //3
+                    cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //4
+                    cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp); //5
+                    cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+                    sscanf(ctmp2, "%s %s\n", ctmp, X->CDataFileHead); //6
+                    cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+                    sscanf(ctmp2, "%s %s\n", ctmp, X->CParaFileHead); //7
+                    cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);   //8
 
-					double dtmp;
-					while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-						if (*ctmp2 == '\n' || ctmp2[0] == '-') continue;
-						sscanf(ctmp2, "%s %lf\n", ctmp, &dtmp);
-						if (CheckWords(ctmp, "NVMCCalMode") == 0 ||
-								CheckWords(ctmp, "NLanczosMode") == 0 ||
-								CheckWords(ctmp, "NDataIdxStart") == 0 ||
-								CheckWords(ctmp, "NDataQtySmp") == 0 ||
-								CheckWords(ctmp, "NDataQtySmp") == 0 ||
-								CheckWords(ctmp, "NDataQtySmp") == 0 ||
-								CheckWords(ctmp, "NSPGaussLeg") == 0 ||
-								CheckWords(ctmp, "NSPStot") == 0 ||
-								CheckWords(ctmp, "NSROptItrStep") == 0 ||
-								CheckWords(ctmp, "NSROptItrSmp") == 0 ||
-								CheckWords(ctmp, "DSROptRedCut") == 0 ||
-								CheckWords(ctmp, "DSROptStaDel") == 0 ||
-								CheckWords(ctmp, "DSROptStepDt") == 0 ||
-								CheckWords(ctmp, "NVMCWarmUp") == 0 ||
-								CheckWords(ctmp, "NVMCInterval") == 0 ||
-								CheckWords(ctmp, "NVMCSample") == 0 ||
-								CheckWords(ctmp, "NExUpdatePath") == 0 ||
-								CheckWords(ctmp, "NSplitSize") == 0 ||
-								CheckWords(ctmp, "NStore") == 0
-										) {
-							fprintf(stdout, "!! Warning: %s is not used for Hatree Fock Calculation. !!\n", ctmp);
+                    double dtmp;
+                    while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+                        if (*ctmp2 == '\n' || ctmp2[0] == '-') continue;
+                        sscanf(ctmp2, "%s %lf\n", ctmp, &dtmp);
+                        if (CheckWords(ctmp, "NVMCCalMode") == 0 ||
+                            CheckWords(ctmp, "NLanczosMode") == 0 ||
+                            CheckWords(ctmp, "NDataIdxStart") == 0 ||
+                            CheckWords(ctmp, "NDataQtySmp") == 0 ||
+                            CheckWords(ctmp, "NDataQtySmp") == 0 ||
+                            CheckWords(ctmp, "NDataQtySmp") == 0 ||
+                            CheckWords(ctmp, "NSPGaussLeg") == 0 ||
+                            CheckWords(ctmp, "NSPStot") == 0 ||
+                            CheckWords(ctmp, "NSROptItrStep") == 0 ||
+                            CheckWords(ctmp, "NSROptItrSmp") == 0 ||
+                            CheckWords(ctmp, "DSROptRedCut") == 0 ||
+                            CheckWords(ctmp, "DSROptStaDel") == 0 ||
+                            CheckWords(ctmp, "DSROptStepDt") == 0 ||
+                            CheckWords(ctmp, "NVMCWarmUp") == 0 ||
+                            CheckWords(ctmp, "NVMCInterval") == 0 ||
+                            CheckWords(ctmp, "NVMCSample") == 0 ||
+                            CheckWords(ctmp, "NExUpdatePath") == 0 ||
+                            CheckWords(ctmp, "NSplitSize") == 0 ||
+                            CheckWords(ctmp, "NStore") == 0
+                                ) {
+                            fprintf(stdout, "!! Warning: %s is not used for Hatree Fock Calculation. !!\n", ctmp);
 
-							continue;
-						} else if (CheckWords(ctmp, "Nsite") == 0) {
-							X->Nsite = (int) dtmp;
-						} else if (CheckWords(ctmp, "Ne") == 0 || CheckWords(ctmp, "Nelectron") == 0) {
-							X->Ne = (int) dtmp;
-						} else if(CheckWords(ctmp, "Ncond") == 0){
-              X->Ncond=(int) dtmp;
-            } else if(CheckWords(ctmp, "2Sz") == 0) {
-              X->TwoSz = (int) dtmp;
-              if (X->TwoSz == -1) {
-                fprintf(stdout, "Error: 2Sz must be even number.\n");
-                return (-1);
-              }
-            }
-            else if (CheckWords(ctmp, "Mix") == 0) {
-							X->mix = dtmp;
-						} else if (CheckWords(ctmp, "EPS") == 0) {
-							X->eps_int = (int) dtmp;
-						} else if (CheckWords(ctmp, "Print") == 0) {
-							X->print = (int) dtmp;
-						} else if (CheckWords(ctmp, "IterationMax") == 0) {
-							X->IterationMax = (int) dtmp;
-						} else if (CheckWords(ctmp, "RndSeed") == 0) {
-							X->RndSeed = (int) dtmp;
-						} else if (CheckWords(ctmp, "EpsSlater") == 0) {
-							X->eps_int_slater = (int) dtmp;
-						} else if (CheckWords(ctmp, "NMPTrans") == 0) {
-							X->NMPTrans = (int) dtmp;
-						} else {
-							fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
-							info = ReadDefFileError(defname);
-						}
-					}
-					break;//modpara file
+                            continue;
+                        } else if (CheckWords(ctmp, "Nsite") == 0) {
+                            X->Nsite = (int) dtmp;
+                        } else if (CheckWords(ctmp, "Ne") == 0 || CheckWords(ctmp, "Nelectron") == 0) {
+                            X->Ne = (int) dtmp;
+                        } else if (CheckWords(ctmp, "Ncond") == 0) {
+                            X->Ncond = (int) dtmp;
+                        } else if (CheckWords(ctmp, "2Sz") == 0) {
+                            X->TwoSz = (int) dtmp;
+                            if (X->TwoSz == -1) {
+                                fprintf(stdout, "Error: 2Sz must be even number.\n");
+                                return (-1);
+                            }
+                        } else if (CheckWords(ctmp, "Mix") == 0) {
+                            X->mix = dtmp;
+                        } else if (CheckWords(ctmp, "EPS") == 0) {
+                            X->eps_int = (int) dtmp;
+                        } else if (CheckWords(ctmp, "Print") == 0) {
+                            X->print = (int) dtmp;
+                        } else if (CheckWords(ctmp, "IterationMax") == 0) {
+                            X->IterationMax = (int) dtmp;
+                        } else if (CheckWords(ctmp, "RndSeed") == 0) {
+                            X->RndSeed = (int) dtmp;
+                        } else if (CheckWords(ctmp, "EpsSlater") == 0) {
+                            X->eps_int_slater = (int) dtmp;
+                        } else if (CheckWords(ctmp, "NMPTrans") == 0) {
+                            X->NMPTrans = (int) dtmp;
+                        } else {
+                            fprintf(stdout, "  Warning: keyword \" %s \" is incorrect. \n", ctmp);
+                        }
+                    }
+                    break;//modpara file
 
-				case KWLocSpin:
-					cerr = ReadBuffInt(fp, &X->NLocSpn);
-					break;
+                case KWLocSpin:
+                    cerr = ReadBuffInt(fp, &X->NLocSpn);
+                    break;
 
-				case KWTrans:
-					cerr = ReadBuffInt(fp, &X->NTransfer);
-					break;
+                case KWTrans:
+                    cerr = ReadBuffInt(fp, &X->NTransfer);
+                    break;
 
-				case KWCoulombIntra:
-					cerr = ReadBuffInt(fp, &X->NCoulombIntra);
-					break;
+                case KWCoulombIntra:
+                    cerr = ReadBuffInt(fp, &X->NCoulombIntra);
+                    break;
 
-				case KWCoulombInter:
-					cerr = ReadBuffInt(fp, &X->NCoulombInter);
-					break;
+                case KWCoulombInter:
+                    cerr = ReadBuffInt(fp, &X->NCoulombInter);
+                    break;
 
-				case KWHund:
-					cerr = ReadBuffInt(fp, &X->NHundCoupling);
-					break;
+                case KWHund:
+                    cerr = ReadBuffInt(fp, &X->NHundCoupling);
+                    break;
 
-				case KWPairHop:
-					cerr = ReadBuffInt(fp, &X->NPairHopping);
-                    X->NPairHopping*=2;
-					break;
+                case KWPairHop:
+                    cerr = ReadBuffInt(fp, &X->NPairHopping);
+                    X->NPairHopping *= 2;
+                    break;
 
-				case KWExchange:
-					cerr = ReadBuffInt(fp, &X->NExchangeCoupling);
-					break;
+                case KWExchange:
+                    cerr = ReadBuffInt(fp, &X->NExchangeCoupling);
+                    break;
 
-        case KWOrbital:
-        case KWOrbitalAntiParallel:
-          cerr = ReadBuffInt(fp, &iNOrbitalAP);
-          X->NOrbitalAP=iNOrbitalAP;
-          iFlgOrbitalAP = 1;
-          X->NOrbitalIdx += iNOrbitalAP;
-          break;
+                case KWInterAll:
+                    cerr = ReadBuffInt(fp, &X->NInterAll);
+                    break;
 
-        case KWOrbitalParallel:
-          cerr = ReadBuffInt(fp, &iNOrbitalP);
-          X->NOrbitalP=2*iNOrbitalP;//up-up and down-down
-          iFlgOrbitalP = 1;
-          X->NOrbitalIdx += 2 * iNOrbitalP; //up-up and down-down
-          break;
+                case KWOrbital:
+                case KWOrbitalAntiParallel:
+                    X->iFlgOrbital = 1;
+                    cerr = ReadBuffInt(fp, &iNOrbitalAP);
+                    X->NOrbitalAP = iNOrbitalAP;
+                    iFlgOrbitalAP = 1;
+                    X->NOrbitalIdx += iNOrbitalAP;
+                    break;
 
-        case KWOrbitalGeneral:
-          cerr = ReadBuffInt(fp, &X->NOrbitalIdx);
-          X->iFlgOrbitalGeneral = 1;
-          break;
+                case KWOrbitalParallel:
+                    X->iFlgOrbital = 1;
+                    cerr = ReadBuffInt(fp, &iNOrbitalP);
+                    X->NOrbitalP = 2 * iNOrbitalP;//up-up and down-down
+                    iFlgOrbitalP = 1;
+                    X->NOrbitalIdx += 2 * iNOrbitalP; //up-up and down-down
+                    break;
 
+                case KWOrbitalGeneral:
+                    X->iFlgOrbital = 1;
+                    cerr = ReadBuffInt(fp, &X->NOrbitalIdx);
+                    X->iFlgOrbitalGeneral = 1;
+                    break;
 
-        case KWOneBodyG:
-					cerr = ReadBuffInt(fp, &X->NCisAjs);
-					break;
+                case KWOneBodyG:
+                    cerr = ReadBuffInt(fp, &X->NCisAjs);
+                    break;
 
-				case KWInitial:
-					cerr = ReadBuffInt(fp, &X->NInitial);
-					break;
+                case KWInitial:
+                    cerr = ReadBuffInt(fp, &X->NInitial);
+                    break;
 
-				default:
-					break;
-			}//case KW
-			fclose(fp);
-		}
-		if (info != 0 || cerr == NULL) {
-			fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
-			fprintf(stdout, " Error:  Read File %s .\n", defname);
-			return -1;
-		}
-	}
+                default:
+                    break;
+            }//case KW
+            fclose(fp);
+        }
+        if (info != 0 || cerr == NULL) {
+            fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
+            fprintf(stdout, " Error:  Read File %s .\n", defname);
+            return -1;
+        }
+    }
 
-  int iret=0;
-  iret=JudgeOrbitalMode(&X->iFlgOrbitalGeneral, iFlgOrbitalAP, iFlgOrbitalP,&X->OrbitalOutputMode);
-  if(iret<0) info=iret;
+	if (X->iFlgOrbital == 1) {
+        int iret = 0;
+        iret = JudgeOrbitalMode(&X->iFlgOrbitalGeneral, iFlgOrbitalAP, iFlgOrbitalP, &X->OrbitalOutputMode);
+        if (iret < 0) info = iret;
+    }
 
   if (info != 0) {
 		fprintf(stderr, "error: Definition files(*.def) are incomplete.\n");
@@ -343,23 +354,29 @@ int ReadDefFileNInt(
 
   //CalcNCond
   if(X->Ncond != -1){
-    if(X->Ncond%2 != 0){
-      fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
-      return -1;
-    }
-    else X->Ne=(X->NLocSpn+X->Ncond)/2;
+      if(X->iFlgOrbital == 1) {
+          if (X->Ncond % 2 != 0) {
+              fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
+              return -1;
+          } else X->Ne = (X->NLocSpn + X->Ncond) / 2;
+          X->Nsize = 2 * X->Ne;
+      }
+      else X->Nsize = X->NLocSpn + X->Ncond;
   }
 
   //CheckGeneral Orbital
-  if(X->TwoSz !=0){
-    if(X->iFlgOrbitalGeneral!=1){
-      fprintf(stderr, "Error: OrbitalParallel or OrbitalGeneral files must be needed when 2Sz !=0 (in modpara.def).\n");
-      return -1;
-    }
-    else if(X->TwoSz%2 !=0 && X->TwoSz!=-1){
-      fprintf(stderr, "Error: 2Sz (in modpara.def) must be even number.\n");
-      return -1;
-    }
+  if(X->TwoSz !=0) {
+      if (X->iFlgOrbital == 1) {
+          if (X->iFlgOrbitalGeneral != 1) {
+              fprintf(stderr, "Error:2Sz=%d\n", X->TwoSz);
+              fprintf(stderr,
+                      "Error: OrbitalParallel or OrbitalGeneral files must be needed when 2Sz !=0 (in modpara.def).\n");
+              return -1;
+          } else if (X->TwoSz % 2 != 0 && X->TwoSz != -1) {
+              fprintf(stderr, "Error: 2Sz (in modpara.def) must be even number.\n");
+              return -1;
+          }
+      }
   }
 
   if (X->NMPTrans < 0) {
@@ -368,7 +385,6 @@ int ReadDefFileNInt(
 	} else {
 		X->APFlag = 0;
 	}
-	X->Nsize = 2 * X->Ne;
 	X->fidx = 0;
 	return 0;
 }
@@ -547,6 +563,30 @@ int ReadDefFileIdxPara(
             idx++;
           }
           if (idx != X->NExchangeCoupling) {
+            info = ReadDefFileError(defname);
+          }
+        }
+        break;
+
+      case KWInterAll:
+        X->iFlg_Fock = 1;
+        /*inteall.def--------------------------------------*/
+        if (X->NInterAll > 0) {
+          while (fscanf(fp, "%d %d %d %d %d %d %d %d %lf %lf\n",
+                        &(X->InterAll[idx][0]),
+                        &(X->InterAll[idx][1]),
+                        &(X->InterAll[idx][2]),
+                        &(X->InterAll[idx][3]),
+                        &(X->InterAll[idx][4]),
+                        &(X->InterAll[idx][5]),
+                        &(X->InterAll[idx][6]),
+                        &(X->InterAll[idx][7]),
+                        &dReValue,
+                        &dImValue) != EOF) {
+            X->ParaInterAll[idx] = dReValue + dImValue * I;
+            idx++;
+          }
+          if (idx != X->NInterAll) {
             info = ReadDefFileError(defname);
           }
         }
@@ -882,21 +922,24 @@ int GetFileName(
 		}
 		/*!< Check KW */
 		if( CheckKW(ctmpKW, cKWListOfFileNameList, KWIdxInt_end, &itmpKWidx)!=0 ){
-
-			fprintf(stderr, "Error: Wrong keywords '%s' in %s.\n", ctmpKW, cFileListNameFile);
+			fprintf(stderr, "Warning: Wrong keywords '%s' in %s.\n", ctmpKW, cFileListNameFile);
+			/*
 			fprintf(stderr, "%s", "Choose Keywords as follows: \n");
 			for(i=0; i<KWIdxInt_end;i++){
 				fprintf(stderr, "%s \n", cKWListOfFileNameList[i]);
 			}
 			fclose(fplist);
 			return(-1);
-		}
-		/*!< Check cFileNameList to prevent from double registering the file name */
-		if(strcmp(cFileNameList[itmpKWidx], "") !=0){
-			fprintf(stderr, "Error: Same keywords exist in %s.\n", cFileListNameFile);
-			fclose(fplist);
-			return(-1);
-		}
+			*/
+        }
+        else {
+            /*!< Check cFileNameList to prevent from double registering the file name */
+            if (strcmp(cFileNameList[itmpKWidx], "") != 0) {
+                fprintf(stderr, "Error: Same keywords exist in %s.\n", cFileListNameFile);
+                fclose(fplist);
+                return (-1);
+            }
+        }
 		/*!< Copy FileName */
 		strcpy(cFileNameList[itmpKWidx], ctmpFileName);
 	}

@@ -63,39 +63,51 @@ struct StdIntList {
   double complex tp;/**<@brief 2nd-nearest hopping, input parameter*/
   double complex t0;/**<@brief Anisotropic hopping (1st), input parameter*/
   double complex t0p;/**<@brief Anisotropic hopping (2nd), input parameter*/
+  double complex t0pp;/**<@brief Anisotropic hopping (3rd), input parameter*/
   double complex t1;/**<@brief Anisotropic hopping (1st), input parameter*/
   double complex t1p;/**<@brief Anisotropic hopping (2nd), input parameter*/
+  double complex t1pp;/**<@brief Anisotropic hopping (3rd), input parameter*/
   double complex t2;/**<@brief Anisotropic hopping (1st), input parameter*/
   double complex t2p;/**<@brief Anisotropic hopping (2nd), input parameter*/
+  double complex t2pp;/**<@brief Anisotropic hopping (3rd), input parameter*/
   double complex tpp;/**<@brief 3rd-nearest hopping, input parameter*/
   double U;/**<@brief On-site Coulomb potential, input parameter*/
   double V;/**<@brief Off-site Coulomb potential (1st), input parameter*/
   double Vp;/**<@brief Off-site Coulomb potential (2nd), input parameter*/
   double V0;/**<@brief Anisotropic Coulomb potential (1st), input parameter*/
   double V0p;/**<@brief Anisotropic Coulomb potential (2nd), input parameter*/
+  double V0pp;/**<@brief Anisotropic Coulomb potential (3rd), input parameter*/
   double V1;/**<@brief Anisotropic Coulomb potential (1st), input parameter*/
   double V1p;/**<@brief Anisotropic Coulomb potential (2nd), input parameter*/
+  double V1pp;/**<@brief Anisotropic Coulomb potential (3rd), input parameter*/
   double V2;/**<@brief Anisotropic Coulomb potential (1st), input parameter*/
   double V2p;/**<@brief Anisotropic Coulomb potential (2nd), input parameter*/
+  double V2pp;/**<@brief Anisotropic Coulomb potential (3rd), input parameter*/
   double Vpp;/**<@brief Off-site Coulomb potential (3rd), input parameter*/
   /**/
   double JAll;/**<@brief Isotropic, diagonal spin coupling (1st Near.), 
               input parameter J.*/
   double JpAll;/**<@brief Isotropic, diagonal spin coupling (2nd Near), 
                input parameter Jp.*/
-  double J0All;/**<@brief Anisotropic, diagonal spin coupling (1nd Near), 
+  double J0All;/**<@brief Anisotropic, diagonal spin coupling (1st Near), 
                input parameter J0.*/
   double J0pAll;/**<@brief Anisotropic, diagonal spin coupling (2nd Near), 
                input parameter J0'.*/
-  double J1All;/**<@brief Anisotropic, diagonal spin coupling (1nd Near), 
+  double J0ppAll;/**<@brief Anisotropic, diagonal spin coupling (3rd Near),
+               input parameter J0''.*/
+  double J1All;/**<@brief Anisotropic, diagonal spin coupling (1st Near),
                input parameter J1.*/
   double J1pAll;/**<@brief Anisotropic, diagonal spin coupling (2nd Near), 
                input parameter J1'.*/
-  double J2All;/**<@brief Anisotropic, diagonal spin coupling (1nd Near), 
+  double J1ppAll;/**<@brief Anisotropic, diagonal spin coupling (3rd Near),
+               input parameter J1''.*/
+  double J2All;/**<@brief Anisotropic, diagonal spin coupling (1st Near),
                input parameter J2.*/
   double J2pAll;/**<@brief Anisotropic, diagonal spin coupling (2nd Near), 
                input parameter J2'.*/
-  double JppAll;/**<@brief Isotropic, diagonal spin coupling (3rd Near), 
+  double J2ppAll;/**<@brief Anisotropic, diagonal spin coupling (3rd Near),
+               input parameter J2''.*/
+  double JppAll;/**<@brief Isotropic, diagonal spin coupling (3rd Near),
                input parameter J''.*/
   double J[3][3];/**<@brief Isotropic, diagonal/off-diagonal spin coupling
                  (1st Near.), input parameter Jx, Jy, Jz, Jxy, etc.*/
@@ -107,17 +119,26 @@ struct StdIntList {
   double J0p[3][3];/**<@brief Isotropic, diagonal/off-diagonal spin coupling
                    (2nd Near.), input parameter J0'x, J0'y, J0'z, J0'xy, etc. 
                    or set in StdFace_InputSpin().*/
+  double J0pp[3][3];/**<@brief Isotropic, diagonal/off-diagonal spin coupling
+                   (3rd Near.), input parameter J0''x, J0''y, J0''z, J0''xy, etc.
+                   or set in StdFace_InputSpin().*/
   double J1[3][3];/**<@brief Isotropic, diagonal/off-diagonal spin coupling
                   (1st Near.), input parameter J1x, J1y, J1z, J1xy, etc. 
                   or set in StdFace_InputSpinNN().*/
   double J1p[3][3];/**<@brief Isotropic, diagonal/off-diagonal spin coupling
                    (2nd Near.), input parameter J1'x, J1'y, J1'z, J1'xy, etc. 
                    or set in StdFace_InputSpin().*/
+  double J1pp[3][3];/**<@brief Isotropic, diagonal/off-diagonal spin coupling
+                   (3rd Near.), input parameter J1''x, J1''y, J1''z, J1''xy, etc.
+                   or set in StdFace_InputSpin().*/
   double J2[3][3];/**<@brief Isotropic, diagonal/off-diagonal spin coupling
                   (1st Near.), input parameter J2x, J2y, J2z, J2xy, etc. 
                   or set in StdFace_InputSpinNN().*/
   double J2p[3][3];/**<@brief Isotropic, diagonal/off-diagonal spin coupling
                    (2nd Near.), input parameter J2'x, J2'y, J2'z, J2'xy, etc. 
+                   or set in StdFace_InputSpin().*/
+  double J2pp[3][3];/**<@brief Isotropic, diagonal/off-diagonal spin coupling
+                   (3rd Near.), input parameter J2''x, J2''y, J2''z, J2''xy, etc.
                    or set in StdFace_InputSpin().*/
   double Jpp[3][3];/**<@brief Isotropic, diagonal/off-diagonal spin coupling
                    (3rd Near.), input parameter J''x, J''y, J''z, J''xy, etc.*/
@@ -225,6 +246,22 @@ struct StdIntList {
   double cutoff_t;/**<@brief Cutoof for the hopping in wannier90, input from file*/
   double cutoff_u;/**<@brief Cutoof for the Coulomb in wannier90, input from file*/
   double cutoff_j;/**<@brief Cutoof for the Hund in wannier90, input from file*/
+  double cutoff_length_t; /**<@brief Cutoof for R in wannier90, input from file.*/
+  double cutoff_length_U; /**<@brief Cutoof for R in wannier90, input from file.*/
+  double cutoff_length_J; /**<@brief Cutoof for R in wannier90, input from file.*/
+  int cutoff_tR[3];
+  int cutoff_UR[3];
+  int cutoff_JR[3];
+  double cutoff_tVec[3][3];
+  double cutoff_UVec[3][3];
+  double cutoff_JVec[3][3];
+
+  double lambda; /**<@brief Tuning parameter of U and J in wannier90, input from file.*/
+  double lambda_U; /**<@brief Tuning parameter of U in wannier90, input from file.*/
+  double lambda_J; /**<@brief Tuning parameter of J in wannier90, input from file.*/
+  char double_counting_mode[256];/**<@brief Select mode of double counting, input from file.*/
+  double alpha;/**<@brief Tuning parameter of chemical potential correction in wannier90, input from file.*/
+
 #if defined(_HPhi)
   /*
   HPhi modpara
@@ -233,6 +270,7 @@ struct StdIntList {
   char Restart[256];/**<@brief The name of restart mode, input from file.*/
   char InitialVecType[256];/**<@brief The name of initialguess-type, input from file.*/
   char EigenVecIO[256];/**<@brief The name of I/O mode for eigenvector, input from file*/
+  char HamIO[256];/**<@brief The name of I/O mode for Hamiltonian, input from file*/
   int FlgTemp;/**<@brief */
   int Lanczos_max;/**<@brief The maxixmum number of iterations, input from file*/
   int initial_iv; /**<@brief the number for generating random number, input from file.*/
@@ -259,11 +297,13 @@ struct StdIntList {
   int Nomega;/**<@brief Number of frequencies, input from file.*/
   double OmegaMax;/**<@brief Maximum of frequency for spectrum, input from file.*/
   double OmegaMin;/**<@brief Minimum of frequency for spectrum, input from file.*/
+  double OmegaOrg;/**<@brief Origin of frequency for spectrum, input from file.*/
   double OmegaIm;/**<@brief Imaginary part of frequency.*/
   double SpectrumQ[3];/**<@brief wavenumver (q-vector) in fractional coordinate*/
   int SpectrumBody;/**<@brief one- or two-body excitation, defined from
                    StdIntList::SpectrumType*/
-  /*
+  char OutputExVec[256];/**<@brief The name of output mode for the excited vector, input from file.*/
+    /*
   Time evolution
   */
   double dt;/**<@brief Time step*/
@@ -296,12 +336,12 @@ struct StdIntList {
   int NSPGaussLeg;/**<@brief Number of Gauss-Legendre points for spin projection,
                   input from file.*/
   int NMPTrans;/**<@brief Number of translation symmetry*/
-  int NSROptItrStep;/**<@brief Number of iterations for stocastic reconfiguration*/
+  int NSROptItrStep;/**<@brief Number of iterations for stochastic reconfiguration*/
   int NSROptItrSmp;/**<@brief Number of steps for sampling*/
   int NSROptFixSmp;/**<@brief */
-  double DSROptRedCut;/**<@brief Stocastic reconfiguration parameter, input from file.*/
-  double DSROptStaDel;/**<@brief Stocastic reconfiguration parameter, input from file.*/
-  double DSROptStepDt;/**<@brief Stocastic reconfiguration parameter, input from file.*/
+  double DSROptRedCut;/**<@brief Stochastic reconfiguration parameter, input from file.*/
+  double DSROptStaDel;/**<@brief Stochastic reconfiguration parameter, input from file.*/
+  double DSROptStepDt;/**<@brief Stochastic reconfiguration parameter, input from file.*/
   int NVMCWarmUp;/**<@brief */
   int NVMCInterval;/**<@brief */
   int NVMCSample;/**<@brief */
