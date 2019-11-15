@@ -31,7 +31,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 
 #include "Def.h"
-#include "mfmemory.c"
 #include "matrixlapack.h"
 #include "readdef.h"
 #include "initial.h"
@@ -41,13 +40,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "cal_energy.h"
 #include "output.h"
 #include "SFMT.h"
-
-double gettimeofday_sec(){
-//  struct timeval tv;
-//  gettimeofday(&tv, NULL);
-// return tv.tv_sec + (double)tv.tv_usec*1e-6;
-return 0;
-}
+#include "xsetmem_def.c"
 
 /*global variables---------------------------------------------*/
 struct EDMainCalStruct X;
@@ -59,16 +52,9 @@ int main(int argc, char* argv[]){
     //time_t start,mid1,mid2,end;
     char sdt[256];
     FILE *fp;
-
-    double t_0,t_1,t_2,t_3,t_4;
-    
-    int mfint[7];/*for malloc*/
     int i;
     
     double tmp_eps;
-
-    //time start
-    X.Bind.Time.start=time(NULL);
 
 	if(argc==1 || argc>3){
       //ERROR
@@ -88,7 +74,8 @@ int main(int argc, char* argv[]){
     };
 	
     /*ALLOCATE-------------------------------------------*/
-#include "xsetmem_def.c"
+//#include "xsetmem_def.c"
+    setmem(&X);
     /*-----------------------------------------------------*/
     
     if(ReadDefFileIdxPara(argv[1], &(X.Bind.Def))!=0){
@@ -125,32 +112,16 @@ int main(int argc, char* argv[]){
     printf("stp, residue, energy\n");
     for(i=0;i<X.Bind.Def.IterationMax;i++){
       X.Bind.Def.step=i;
-     t_0 = gettimeofday_sec();
      makeham(&(X.Bind));
-     t_1 = gettimeofday_sec();
      diag(&(X.Bind));
-     t_2 = gettimeofday_sec();
      green(&(X.Bind));
-     t_3 = gettimeofday_sec();
      cal_energy(&(X.Bind));
-     //printf("%d %.12lf %.12lf \n", X.Bind.Def.step ,X.Bind.Phys.rest,X.Bind.Phys.energy);
      printf(" %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
-
-     t_4 = gettimeofday_sec();
      sprintf(sdt,"%s_check.dat",X.Bind.Def.CDataFileHead);
      fp=fopen(sdt,"a");
      fprintf(fp," %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
      fclose(fp);
-     //if(X.Bind.Def.print==1){
-       //printf(" %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
-       //printf("\n");
-       //printf("all: %lf \n",t_4-t_0);
-       //printf("makeham: %lf \n",t_1-t_0);
-       //printf("diag: %lf \n",t_2-t_1);
-       //printf("green: %lf \n",t_3-t_2);
-       //printf("cal: %lf \n",t_4-t_3);
-       //printf("\n");
-     //}
+
      if(X.Bind.Phys.rest < X.Bind.Def.eps){
        break;
      } 

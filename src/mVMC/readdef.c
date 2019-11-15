@@ -267,7 +267,7 @@ int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, i
       icount++;
     }
   }
-  //cisajscktalt -> cisajs, cktalt
+  //cisajscktalt -> cisajs, cltakt (Note: indecies of the latter Green's function are modified)
   for (i = 0; i < Ncacadc; i++) {
     isite1 = cacaDCIdx[i][0] + cacaDCIdx[i][1] * Ns;
     isite2 = cacaDCIdx[i][2] + cacaDCIdx[i][3] * Ns;
@@ -275,12 +275,18 @@ int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, i
       iFlgOneBodyG[isite1][isite2] = icount;
       icount++;
     }
+
+    /*
     isite1 = cacaDCIdx[i][4] + cacaDCIdx[i][5] * Ns;
     isite2 = cacaDCIdx[i][6] + cacaDCIdx[i][7] * Ns;
+    */
+    isite1 = cacaDCIdx[i][6] + cacaDCIdx[i][7] * Ns;
+    isite2 = cacaDCIdx[i][4] + cacaDCIdx[i][5] * Ns;
     if (iFlgOneBodyG[isite1][isite2] == -1) {
       iFlgOneBodyG[isite1][isite2] = icount;
       icount++;
     }
+    
   }
   free(cacaDCIdx);
   return icount;
@@ -404,6 +410,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffIntCmpFlg(fp, &iNOrbitalAntiParallel, &iOrbitalComplex);
             iFlgOrbitalAntiParallel = 1;
             bufInt[IdxNOrbit] += iNOrbitalAntiParallel;
+            iComplexFlgOrbitalAntiParallel = iOrbitalComplex;
             iComplexFlgOrbital += iOrbitalComplex;
             break;
 
@@ -411,12 +418,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffIntCmpFlg(fp, &iNOrbitalParallel, &iOrbitalComplex);
             iFlgOrbitalParallel = 1;
             bufInt[IdxNOrbit] += 2 * iNOrbitalParallel; //up-up and down-down
+            iComplexFlgOrbitalParallel = iOrbitalComplex;
             iComplexFlgOrbital += iOrbitalComplex;
             break;
 
           case KWOrbitalGeneral:
             cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNOrbit], &iOrbitalComplex);
             iFlgOrbitalGeneral = 1;
+            iComplexFlgOrbitalGeneral = iOrbitalComplex;
             iComplexFlgOrbital += iOrbitalComplex;
             break;
 
@@ -556,6 +565,21 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
     }
 
+  }//rank 0
+
+  if (rank == 0) {
+    AllComplexFlag = iComplexFlgGutzwiller + iComplexFlgJastrow + iComplexFlgDH2; //TBC
+    AllComplexFlag += iComplexFlgDH4 + iComplexFlgOrbital;//TBC
+    //AllComplexFlag  = 1;//DEBUG
+    // AllComplexFlag= 0 -> All real, !=0 -> complex
+    //if(AllComplexFlag == 0 && iFlgOrbitalGeneral == 1){
+    //    fprintf(stderr, "Error: Variational parameters should be complex when orbital is general in this version.\n");
+    //    info = 1;
+    //}
+    if(iComplexFlgOrbital > 0){
+      iComplexFlgOrbital = 1;
+      fprintf(stderr, "Warning: All the pairings are treated as complex variational parameters.\n");
+    }
   }
 
   if (info != 0) {
@@ -564,13 +588,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     }
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  if (rank == 0) {
-    AllComplexFlag = iComplexFlgGutzwiller + iComplexFlgJastrow + iComplexFlgDH2; //TBC
-    AllComplexFlag += iComplexFlgDH4 + iComplexFlgOrbital;//TBC
-    //AllComplexFlag  = 1;//DEBUG
-    // AllComplexFlag= 0 -> All real, !=0 -> complex
-  }
-
+  
 #ifdef _mpi_use
   MPI_Bcast(bufInt, nBufInt, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
@@ -1950,17 +1968,18 @@ int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *def
   int idx = 0, info = 0;
   int x0 = 0, x1 = 0, x2 = 0, x3 = 0;
   int x4 = 0, x5 = 0, x6 = 0, x7 = 0;
+  //Debug
   if (NArray == 0) return 0;
   while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
     sscanf(ctmp2, "%d %d %d %d %d %d %d %d\n", &x0, &x1, &x2, &x3, &x4, &x5, &x6, &x7);
-    ArrayIdx[idx][0] = x0;
-    ArrayIdx[idx][1] = x1;
-    ArrayIdx[idx][2] = x2;
-    ArrayIdx[idx][3] = x3;
-    ArrayIdx[idx][4] = x4;
-    ArrayIdx[idx][5] = x5;
-    ArrayIdx[idx][6] = x6;
-    ArrayIdx[idx][7] = x7;
+    ArrayIdx[idx][0] = x0; // Index to OneBodyG1
+    ArrayIdx[idx][1] = x1; // Index to OneBodyG2
+    ArrayIdx[idx][2] = x2; // G1:site i
+    ArrayIdx[idx][3] = x3; // G1:site j
+    ArrayIdx[idx][4] = x4; // G1:sigma1
+    ArrayIdx[idx][5] = x5; // G2:site l
+    ArrayIdx[idx][6] = x6; // G2:site k
+    ArrayIdx[idx][7] = x7; // G2:sigma2
     if (CheckQuadSite(x2, x3, x5, x6, Nsite) != 0) {
       fprintf(stderr, "Error: Site index is incorrect. \n");
       info = 1;
@@ -1984,14 +2003,14 @@ int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int **ArrayIdxTwoBodyGLz, int **Ar
   if (NArray == 0) return 0;
   while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
     sscanf(ctmp2, "%d %d %d %d %d %d %d %d\n", &x0, &x1, &x2, &x3, &x4, &x5, &x6, &x7);
-    ArrayIdx[idx][0] = x0;
-    ArrayIdx[idx][1] = x1;
-    ArrayIdx[idx][2] = x2;
-    ArrayIdx[idx][3] = x3;
-    ArrayIdx[idx][4] = x4;
-    ArrayIdx[idx][5] = x5;
-    ArrayIdx[idx][6] = x6;
-    ArrayIdx[idx][7] = x7;
+    ArrayIdx[idx][0] = x0; //G1: site i
+    ArrayIdx[idx][1] = x1; //G1: sigma i
+    ArrayIdx[idx][2] = x2; //G1: site j
+    ArrayIdx[idx][3] = x3; //G1: sigma j
+    ArrayIdx[idx][4] = x4; //G2: site k
+    ArrayIdx[idx][5] = x5; //G2: sigma k
+    ArrayIdx[idx][6] = x6; //G2: site l
+    ArrayIdx[idx][7] = x7; //G2: sigma l
     if (CheckQuadSite(x0, x2, x4, x6, Nsite) != 0) {
       fprintf(stderr, "Error: Site index is incorrect. \n");
       info = 1;
@@ -1999,22 +2018,41 @@ int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int **ArrayIdxTwoBodyGLz, int **Ar
     }
 
     if (_NLanczosMode > 1) { //Calc TwoBodyG by Lanczos method
+      
       isite1 = x0 + x1 * Nsite;
-      isite2 = x2 + x3 * Nsite;
+      isite2 = x2 + x3 * Nsite;      
       idxLanczos = ArrayToIdx[isite1][isite2];
+      
       ArrayIdxOneBodyG[idxLanczos][0] = x0;
       ArrayIdxOneBodyG[idxLanczos][1] = x1;
       ArrayIdxOneBodyG[idxLanczos][2] = x2;
       ArrayIdxOneBodyG[idxLanczos][3] = x3;
+      /*
+      ArrayIdxOneBodyG[idxLanczos][0] = x2;
+      ArrayIdxOneBodyG[idxLanczos][1] = x3;
+      ArrayIdxOneBodyG[idxLanczos][2] = x0;
+      ArrayIdxOneBodyG[idxLanczos][3] = x1;
+      */
       ArrayIdxTwoBodyGLz[idx][0] = idxLanczos;
 
+      /*
       isite1 = x4 + x5 * Nsite;
       isite2 = x6 + x7 * Nsite;
+      */
+      isite1 = x6 + x7 * Nsite;
+      isite2 = x4 + x5 * Nsite;
       idxLanczos = ArrayToIdx[isite1][isite2];
+      ArrayIdxOneBodyG[idxLanczos][0] = x6;
+      ArrayIdxOneBodyG[idxLanczos][1] = x7;
+      ArrayIdxOneBodyG[idxLanczos][2] = x4;
+      ArrayIdxOneBodyG[idxLanczos][3] = x5;
+
+      /*
       ArrayIdxOneBodyG[idxLanczos][0] = x4;
       ArrayIdxOneBodyG[idxLanczos][1] = x5;
       ArrayIdxOneBodyG[idxLanczos][2] = x6;
       ArrayIdxOneBodyG[idxLanczos][3] = x7;
+      */
       ArrayIdxTwoBodyGLz[idx][1] = idxLanczos;
     }
     idx++;

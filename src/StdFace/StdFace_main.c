@@ -83,7 +83,8 @@ static void PrintCalcMod(struct StdIntList *StdI)
 {
   FILE *fp;
   int iCalcType, iCalcModel, iRestart, iCalcSpec, 
-    iCalcEigenvec, iInitialVecTpye, InputEigenVec, OutputEigenVec;
+    iCalcEigenvec, iInitialVecTpye, InputEigenVec, OutputEigenVec,
+    iInputHam, iOutputHam, iOutputExVec;
   /*
   First, check all parameters and exit if invalid parameters
   */
@@ -188,6 +189,25 @@ static void PrintCalcMod(struct StdIntList *StdI)
   }/*if (strcmp(StdI->EigenVecIO, "****") != 0)*/
   if (strcmp(StdI->method, "timeevolution") == 0) InputEigenVec = 1;
   /*
+   * HamIO
+   */
+  iOutputHam = 0;
+  iInputHam = 0;
+  if (strcmp(StdI->HamIO, "****") == 0) {
+    strcpy(StdI->HamIO, "none\0");
+    fprintf(stdout, "         HamIO = none        ######  DEFAULT VALUE IS USED  ######\n");
+  }/*if (strcmp(StdI->HamIO, "****") == 0)*/
+  else {
+    fprintf(stdout, "         HamIO = %s\n", StdI->HamIO);
+    if (strcmp(StdI->HamIO, "none") == 0){ iOutputHam = 0; iInputHam=0;}
+    else if (strcmp(StdI->HamIO, "out") == 0) iOutputHam = 1;
+    else if (strcmp(StdI->HamIO, "in") == 0) iInputHam = 1;
+    else {
+      fprintf(stdout, "\n ERROR ! HamIO mode : %s\n", StdI->HamIO);
+      StdFace_exit(-1);
+    }
+  }
+  /*
   CalcSpec
   */
   if (strcmp(StdI->CalcSpec, "****") == 0) {
@@ -209,6 +229,23 @@ static void PrintCalcMod(struct StdIntList *StdI)
       StdFace_exit(-1);
     }
   }/*if (strcmp(StdI->CalcSpec, "****") != 0)*/
+  /*
+  OutputExcitedVec
+  */
+  iOutputExVec = 0;
+  if (strcmp(StdI->OutputExVec, "****") == 0) {
+    strcpy(StdI->OutputExVec, "none\0");
+    fprintf(stdout, "         OutputExcitedVec = none        ######  DEFAULT VALUE IS USED  ######\n");
+  }/*if (strcmp(StdI->OutputExVec, "****") == 0)*/
+  else {
+    fprintf(stdout, "         OutputExcitedVec = %s\n", StdI->OutputExVec);
+    if (strcmp(StdI->OutputExVec, "none") == 0) iOutputExVec = 0;
+    else if (strcmp(StdI->OutputExVec, "out") == 0) iOutputExVec = 1;
+    else {
+      fprintf(stdout, "\n ERROR ! OutputExcitedVec : %s\n", StdI->OutputExVec);
+      StdFace_exit(-1);
+    }
+  }/*if (strcmp(StdI->OutputExVec, "****") != 0)*/
 
   fp = fopen("calcmod.def", "w");
   fprintf(fp, "#CalcType = 0:Lanczos, 1:TPQCalc, 2:FullDiag, 3:CG, 4:Time-evolution\n");
@@ -223,6 +260,9 @@ static void PrintCalcMod(struct StdIntList *StdI)
   fprintf(fp, "InitialVecType %3d\n", iInitialVecTpye);
   fprintf(fp, "InputEigenVec %3d\n", InputEigenVec);
   fprintf(fp, "OutputEigenVec %3d\n", OutputEigenVec);
+  fprintf(fp, "InputHam %3d\n", iInputHam);
+  fprintf(fp, "OutputHam %3d\n", iOutputHam);
+  fprintf(fp, "OutputExVec %3d\n", iOutputExVec);
   fflush(fp);
   fclose(fp);
   fprintf(stdout, "     calcmod.def is written.\n\n");
@@ -234,7 +274,7 @@ static void PrintCalcMod(struct StdIntList *StdI)
 static void PrintExcitation(struct StdIntList *StdI) {
   FILE *fp;
   int NumOp, **spin, isite, ispin, icell, itau;
-  double *coef, pi, Cphase, S, Sz;
+  double *coef, Cphase, S, Sz;
   double *fourier_r, *fourier_i;
 
   if (strcmp(StdI->model, "spin") == 0 && StdI->S2 > 1) {
@@ -324,7 +364,7 @@ static void PrintExcitation(struct StdIntList *StdI) {
     }
     else if (strcmp(StdI->SpectrumType, "density") == 0) {
       NumOp = 2;
-      coef[0] = 1,0;
+      coef[0] = 1.0;
       coef[1] = 1.0;
       spin[0][0] = 0;
       spin[0][1] = 0;
@@ -403,7 +443,7 @@ static void PrintExcitation(struct StdIntList *StdI) {
     fprintf(fp, "=============================================\n");
     for (isite = 0; isite < StdI->nsite; isite++) {
       for (ispin = 0; ispin < NumOp; ispin++) {
-        fprintf(fp, "%d %d %d %d 0 %25.15f %25.15f\n", 
+        fprintf(fp, "%d %d %d %d 1 %25.15f %25.15f\n", 
           isite, spin[ispin][0], isite, spin[ispin][1],
           fourier_r[isite] * coef[ispin], fourier_i[isite] * coef[ispin]);
       }
@@ -428,10 +468,9 @@ static void PrintExcitation(struct StdIntList *StdI) {
 */
 static void VectorPotential(struct StdIntList *StdI) {
   FILE *fp;
-  int it, ii, isite, icell, itau, itrans, jsite, jcell, jtau, ntrans0;
-  double Cphase, time, dR[3];
+  int it, ii;
+  double time;
   double **Et;
-  double complex coef;
 
   fprintf(stdout, "\n  @ Time-evolution\n\n");
 
@@ -467,13 +506,13 @@ static void VectorPotential(struct StdIntList *StdI) {
         time = StdI->dt*(double)it;
         for (ii = 0; ii < 3; ii++) {
           StdI->At[it][ii] = StdI->VecPot[ii] * cos(StdI->freq*(time - StdI->tshift))
-            * exp(-0.5* (time - StdI->tshift)*(time - StdI->tshift) / StdI->tdump*StdI->tdump);
+            * exp(-0.5* (time - StdI->tshift)*(time - StdI->tshift) / (StdI->tdump*StdI->tdump));
           Et[it][ii] = -StdI->VecPot[ii]
             * (
             (StdI->tshift - time) / (StdI->tdump*StdI->tdump) * cos(StdI->freq*(time - StdI->tshift))
               - StdI->freq* sin(StdI->freq*(time - StdI->tshift))
               )
-            * exp(-0.5* (time - StdI->tshift)*(time - StdI->tshift) / StdI->tdump*StdI->tdump);
+            * exp(-0.5* (time - StdI->tshift)*(time - StdI->tshift) / (StdI->tdump*StdI->tdump));
         }
       }/*for (it = 0; it < StdI->Lanczos_max; it++)*/
       StdI->PumpBody = 1;
@@ -525,7 +564,7 @@ static void VectorPotential(struct StdIntList *StdI) {
 */
 static void PrintPump(struct StdIntList *StdI) {
   FILE *fp;
-  int it, ii, isite, ipump, jpump, npump0;
+  int it, isite, ipump, jpump, npump0;
 
   if (StdI->PumpBody == 1) {
 
@@ -798,15 +837,15 @@ static void PrintGutzwiller(struct StdIntList *StdI)
 }/*static void PrintGutzwiller*/
 #endif
 /**
-@brief Clear grobal variables in the standard mode
-All variables refered in this function is modified.
+@brief Clear global variables in the standard mode
+All variables referred in this function is modified.
 @author Mitsuaki Kawamura (The University of Tokyo)
 */
 static void StdFace_ResetVals(struct StdIntList *StdI) {
   int i, j;
   double NaN_d;
   /*
-  NaN is used for not inputed variable
+  NaN is used for not inputted variable
   */
   NaN_d = 0.0 / 0.0;
   StdI->NaN_i = 2147483647;
@@ -822,13 +861,17 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->Height = StdI->NaN_i;
   StdI->JAll = NaN_d;
   StdI->JpAll = NaN_d;
+  StdI->JpAll = NaN_d;
   StdI->JppAll = NaN_d;
   StdI->J0All = NaN_d;
   StdI->J0pAll = NaN_d;
+  StdI->J0ppAll = NaN_d;
   StdI->J1All = NaN_d;
   StdI->J1pAll = NaN_d;
+  StdI->J1ppAll = NaN_d;
   StdI->J2All = NaN_d;
   StdI->J2pAll = NaN_d;
+  StdI->J2ppAll = NaN_d;
   for (i = 0; i < 3; i++) {
     for (j = 0; j < 3; j++) {
       StdI->J[i][j] = NaN_d;
@@ -836,10 +879,13 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
       StdI->Jpp[i][j] = NaN_d;
       StdI->J0[i][j] = NaN_d;
       StdI->J0p[i][j] = NaN_d;
+      StdI->J0pp[i][j] = NaN_d;
       StdI->J1[i][j] = NaN_d;
       StdI->J1p[i][j] = NaN_d;
+      StdI->J1pp[i][j] = NaN_d;
       StdI->J2[i][j] = NaN_d;
       StdI->J2p[i][j] = NaN_d;
+      StdI->J2pp[i][j] = NaN_d;
       StdI->D[i][j] = 0.0;
     }
   }
@@ -856,20 +902,26 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   StdI->tpp = NaN_d;
   StdI->t0 = NaN_d;
   StdI->t0p = NaN_d;
+  StdI->t0pp = NaN_d;
   StdI->t1 = NaN_d;
   StdI->t1p = NaN_d;
+  StdI->t1pp = NaN_d;
   StdI->t2 = NaN_d;
   StdI->t2p = NaN_d;
+  StdI->t2pp = NaN_d;
   StdI->U = NaN_d;
   StdI->V = NaN_d;
   StdI->Vp = NaN_d;
   StdI->Vpp = NaN_d;
   StdI->V0 = NaN_d;
   StdI->V0p = NaN_d;
+  StdI->V0pp = NaN_d;
   StdI->V1 = NaN_d;
   StdI->V1p = NaN_d;
+  StdI->V1pp = NaN_d;
   StdI->V2 = NaN_d;
   StdI->V2p = NaN_d;
+  StdI->V2pp = NaN_d;
   StdI->W = StdI->NaN_i;
   for (i = 0; i < 3; i++)StdI->phase[i] = NaN_d;
   StdI->pi180 = StdI->pi / 180.0;
@@ -880,13 +932,33 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   strcpy(StdI->lattice, "****\0");
   strcpy(StdI->outputmode, "****\0");
   strcpy(StdI->CDataFileHead, "****\0");
+  strcpy(StdI->double_counting_mode, "****\0");
   StdI->cutoff_t = NaN_d;
   StdI->cutoff_u = NaN_d;
   StdI->cutoff_j = NaN_d;
-#if defined(_HPhi)
+  StdI->cutoff_length_t = NaN_d;
+  StdI->cutoff_length_U = NaN_d;
+  StdI->cutoff_length_J = NaN_d;
+  StdI->lambda = NaN_d;
+  StdI->lambda_U = NaN_d;
+  StdI->lambda_J = NaN_d;
+  StdI->alpha = NaN_d;
+  for (i = 0; i < 3; i++)StdI->cutoff_tR[i] = StdI->NaN_i;
+  for (i = 0; i < 3; i++)StdI->cutoff_UR[i] = StdI->NaN_i;
+  for (i = 0; i < 3; i++)StdI->cutoff_JR[i] = StdI->NaN_i;
+  for (i = 0; i < 3; i++){
+    for (j = 0; j < 3; j++){
+      StdI->cutoff_tVec[i][j] = NaN_d;
+      StdI->cutoff_UVec[i][j] = NaN_d;
+      StdI->cutoff_JVec[i][j] = NaN_d;
+    }
+  }
+
+  #if defined(_HPhi)
   StdI->LargeValue = NaN_d;
   StdI->OmegaMax = NaN_d;
   StdI->OmegaMin = NaN_d;
+  StdI->OmegaOrg = NaN_d;
   StdI->OmegaIm = NaN_d;
   StdI->Nomega = StdI->NaN_i;
   for (i = 0; i < 3; i++)StdI->SpectrumQ[i] = NaN_d;
@@ -894,8 +966,10 @@ static void StdFace_ResetVals(struct StdIntList *StdI) {
   strcpy(StdI->Restart, "****\0");
   strcpy(StdI->EigenVecIO, "****\0");
   strcpy(StdI->InitialVecType, "****\0");
+  strcpy(StdI->HamIO, "****\0");
   strcpy(StdI->CalcSpec, "****\0");
   strcpy(StdI->SpectrumType, "****\0");
+  strcpy(StdI->OutputExVec, "****\0");
   StdI->FlgTemp = 1;
   StdI->Lanczos_max = StdI->NaN_i;
   StdI->initial_iv = StdI->NaN_i;
@@ -1150,7 +1224,6 @@ static void PrintLocSpin(struct StdIntList *StdI) {
 static void PrintTrans(struct StdIntList *StdI){
   FILE *fp;
   int jtrans, ktrans, ntrans0;
-
   for (jtrans = 0; jtrans < StdI->ntrans; jtrans++){
     for (ktrans = jtrans + 1; ktrans < StdI->ntrans; ktrans++){
       if (StdI->transindx[jtrans][0] == StdI->transindx[ktrans][0]
@@ -1270,7 +1343,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "NOmega         %-5d\n", StdI->Nomega);
   fprintf(fp, "OmegaMax       %-25.15e %-25.15e\n", StdI->OmegaMax, StdI->OmegaIm);
   fprintf(fp, "OmegaMin       %-25.15e %-25.15e\n", StdI->OmegaMin, StdI->OmegaIm);
-  fprintf(fp, "OmegaOrg       0.0 0.0\n");
+  fprintf(fp, "OmegaOrg       %-25.15e %-25.15e\n", StdI->OmegaOrg, 0.0);
   if (strcmp(StdI->method, "timeevolution") == 0)
     fprintf(fp, "ExpandCoef     %-5d\n", StdI->ExpandCoef);
 #elif defined(_mVMC)
@@ -1672,6 +1745,7 @@ static void CheckModPara(struct StdIntList *StdI)
   StdFace_PrintVal_i("NOmega", &StdI->Nomega, 200);
   StdFace_PrintVal_d("OmegaMax", &StdI->OmegaMax, StdI->LargeValue*StdI->nsite);
   StdFace_PrintVal_d("OmegaMin", &StdI->OmegaMin, -StdI->LargeValue*StdI->nsite);
+  StdFace_PrintVal_d("OmegaOrg", &StdI->OmegaOrg, 0.0);
   StdFace_PrintVal_d("OmegaIm", &StdI->OmegaIm, 0.01* (int)StdI->LargeValue);
 #elif defined(_mVMC)
   if (strcmp(StdI->CParaFileHead, "****") == 0) {
@@ -2228,9 +2302,53 @@ void StdFace_main(
     else if (strcmp(keyword, "a2l") == 0) StoreWithCheckDup_i(keyword, value, &StdI->box[2][1]);
     else if (strcmp(keyword, "a2w") == 0) StoreWithCheckDup_i(keyword, value, &StdI->box[2][0]);
     else if (strcmp(keyword, "cutoff_j") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_j);
+    else if (strcmp(keyword, "cutoff_jh") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_JR[2]);
+    else if (strcmp(keyword, "cutoff_jl") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_JR[1]);
+    else if (strcmp(keyword, "cutoff_jw") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_JR[0]);
+    else if (strcmp(keyword, "cutoff_j_a0w") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_JVec[0][0]);
+    else if (strcmp(keyword, "cutoff_j_a0l") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_JVec[0][1]);
+    else if (strcmp(keyword, "cutoff_j_a0h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_JVec[0][2]);
+    else if (strcmp(keyword, "cutoff_j_a1w") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_JVec[1][0]);
+    else if (strcmp(keyword, "cutoff_j_a1l") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_JVec[1][1]);
+    else if (strcmp(keyword, "cutoff_j_a1h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_JVec[1][2]);
+    else if (strcmp(keyword, "cutoff_j_a2w") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_JVec[2][0]);
+    else if (strcmp(keyword, "cutoff_j_a2l") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_JVec[2][1]);
+    else if (strcmp(keyword, "cutoff_j_a2h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_JVec[2][2]);
+    else if (strcmp(keyword, "cutoff_length_j") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_length_J);
+    else if (strcmp(keyword, "cutoff_length_u") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_length_U);
+    else if (strcmp(keyword, "cutoff_length_t") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_length_t);
     else if (strcmp(keyword, "cutoff_t") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_t);
+    else if (strcmp(keyword, "cutoff_th") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_tR[2]);
+    else if (strcmp(keyword, "cutoff_tl") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_tR[1]);
+    else if (strcmp(keyword, "cutoff_tw") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_tR[0]);
+    else if (strcmp(keyword, "cutoff_t_a0w") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_tVec[0][0]);
+    else if (strcmp(keyword, "cutoff_t_a0l") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_tVec[0][1]);
+    else if (strcmp(keyword, "cutoff_t_a0h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_tVec[0][2]);
+    else if (strcmp(keyword, "cutoff_t_a1w") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_tVec[1][0]);
+    else if (strcmp(keyword, "cutoff_t_a1l") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_tVec[1][1]);
+    else if (strcmp(keyword, "cutoff_t_a1h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_tVec[1][2]);
+    else if (strcmp(keyword, "cutoff_t_a2w") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_tVec[2][0]);
+    else if (strcmp(keyword, "cutoff_t_a2l") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_tVec[2][1]);
+    else if (strcmp(keyword, "cutoff_t_a2h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_tVec[2][2]);
     else if (strcmp(keyword, "cutoff_u") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_u);
+    else if (strcmp(keyword, "cutoff_uh") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_UR[2]);
+    else if (strcmp(keyword, "cutoff_ul") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_UR[1]);
+    else if (strcmp(keyword, "cutoff_uw") == 0) StoreWithCheckDup_i(keyword, value, &StdI->cutoff_UR[0]);
+    else if (strcmp(keyword, "cutoff_u_a0w") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_UVec[0][0]);
+    else if (strcmp(keyword, "cutoff_u_a0l") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_UVec[0][1]);
+    else if (strcmp(keyword, "cutoff_u_a0h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_UVec[0][2]);
+    else if (strcmp(keyword, "cutoff_u_a1w") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_UVec[1][0]);
+    else if (strcmp(keyword, "cutoff_u_a1l") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_UVec[1][1]);
+    else if (strcmp(keyword, "cutoff_u_a1h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_UVec[1][2]);
+    else if (strcmp(keyword, "cutoff_u_a2w") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_UVec[2][0]);
+    else if (strcmp(keyword, "cutoff_u_a2l") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_UVec[2][1]);
+    else if (strcmp(keyword, "cutoff_u_a2h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->cutoff_UVec[2][2]);
+    else if (strcmp(keyword, "lambda") == 0) StoreWithCheckDup_d(keyword, value, &StdI->lambda);
+    else if (strcmp(keyword, "lambda_u") == 0) StoreWithCheckDup_d(keyword, value, &StdI->lambda_U);
+    else if (strcmp(keyword, "lambda_j") == 0) StoreWithCheckDup_d(keyword, value, &StdI->lambda_J);
+    else if (strcmp(keyword, "alpha") == 0) StoreWithCheckDup_d(keyword, value, &StdI->alpha);
     else if (strcmp(keyword, "d") == 0) StoreWithCheckDup_d(keyword, value, &StdI->D[2][2]);
+    else if (strcmp(keyword, "doublecounting") == 0) StoreWithCheckDup_sl(keyword, value, StdI->double_counting_mode);
     else if (strcmp(keyword, "gamma") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Gamma);
     else if (strcmp(keyword, "h") == 0) StoreWithCheckDup_d(keyword, value, &StdI->h);
     else if (strcmp(keyword, "height") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Height);
@@ -2268,6 +2386,16 @@ void StdFace_main(
     else if (strcmp(keyword, "j0'z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0p[2][2]);
     else if (strcmp(keyword, "j0'zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0p[2][0]);
     else if (strcmp(keyword, "j0'zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0p[2][1]);
+    else if (strcmp(keyword, "j0''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0ppAll);
+    else if (strcmp(keyword, "j0''x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[0][0]);
+    else if (strcmp(keyword, "j0''xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[0][1]);
+    else if (strcmp(keyword, "j0''xz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[0][2]);
+    else if (strcmp(keyword, "j0''y") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[1][1]);
+    else if (strcmp(keyword, "j0''yx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[1][0]);
+    else if (strcmp(keyword, "j0''yz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[1][2]);
+    else if (strcmp(keyword, "j0''z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[2][2]);
+    else if (strcmp(keyword, "j0''zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[2][0]);
+    else if (strcmp(keyword, "j0''zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J0pp[2][1]);
     else if (strcmp(keyword, "j1") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1All);
     else if (strcmp(keyword, "j1x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1[0][0]);
     else if (strcmp(keyword, "j1xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1[0][1]);
@@ -2288,6 +2416,16 @@ void StdFace_main(
     else if (strcmp(keyword, "j1'z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1p[2][2]);
     else if (strcmp(keyword, "j1'zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1p[2][0]);
     else if (strcmp(keyword, "j1'zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1p[2][1]);
+    else if (strcmp(keyword, "j1''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1ppAll);
+    else if (strcmp(keyword, "j1''x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[0][0]);
+    else if (strcmp(keyword, "j1''xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[0][1]);
+    else if (strcmp(keyword, "j1''xz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[0][2]);
+    else if (strcmp(keyword, "j1''y") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[1][1]);
+    else if (strcmp(keyword, "j1''yx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[1][0]);
+    else if (strcmp(keyword, "j1''yz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[1][2]);
+    else if (strcmp(keyword, "j1''z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[2][2]);
+    else if (strcmp(keyword, "j1''zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[2][0]);
+    else if (strcmp(keyword, "j1''zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J1pp[2][1]);
     else if (strcmp(keyword, "j2") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2All);
     else if (strcmp(keyword, "j2x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2[0][0]);
     else if (strcmp(keyword, "j2xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2[0][1]);
@@ -2308,6 +2446,16 @@ void StdFace_main(
     else if (strcmp(keyword, "j2'z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2p[2][2]);
     else if (strcmp(keyword, "j2'zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2p[2][0]);
     else if (strcmp(keyword, "j2'zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2p[2][1]);
+    else if (strcmp(keyword, "j2''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2ppAll);
+    else if (strcmp(keyword, "j2''x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[0][0]);
+    else if (strcmp(keyword, "j2''xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[0][1]);
+    else if (strcmp(keyword, "j2''xz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[0][2]);
+    else if (strcmp(keyword, "j2''y") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[1][1]);
+    else if (strcmp(keyword, "j2''yx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[1][0]);
+    else if (strcmp(keyword, "j2''yz") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[1][2]);
+    else if (strcmp(keyword, "j2''z") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[2][2]);
+    else if (strcmp(keyword, "j2''zx") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[2][0]);
+    else if (strcmp(keyword, "j2''zy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->J2pp[2][1]);
     else if (strcmp(keyword, "j'") == 0) StoreWithCheckDup_d(keyword, value, &StdI->JpAll);
     else if (strcmp(keyword, "j'x") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Jp[0][0]);
     else if (strcmp(keyword, "j'xy") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Jp[0][1]);
@@ -2345,20 +2493,26 @@ void StdFace_main(
     else if (strcmp(keyword, "t") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t);
     else if (strcmp(keyword, "t0") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t0);
     else if (strcmp(keyword, "t0'") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t0p);
+    else if (strcmp(keyword, "t0''") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t0pp);
     else if (strcmp(keyword, "t1") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t1);
     else if (strcmp(keyword, "t1'") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t1p);
+    else if (strcmp(keyword, "t1''") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t1pp);
     else if (strcmp(keyword, "t2") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t2);
     else if (strcmp(keyword, "t2'") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t2p);
+    else if (strcmp(keyword, "t2''") == 0) StoreWithCheckDup_c(keyword, value, &StdI->t2pp);
     else if (strcmp(keyword, "t'") == 0) StoreWithCheckDup_c(keyword, value, &StdI->tp);
     else if (strcmp(keyword, "t''") == 0) StoreWithCheckDup_c(keyword, value, &StdI->tpp);
     else if (strcmp(keyword, "u") == 0) StoreWithCheckDup_d(keyword, value, &StdI->U);
     else if (strcmp(keyword, "v") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V);
     else if (strcmp(keyword, "v0") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V0);
     else if (strcmp(keyword, "v0'") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V0p);
+    else if (strcmp(keyword, "v0''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V0pp);
     else if (strcmp(keyword, "v1") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V1);
     else if (strcmp(keyword, "v1'") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V1p);
+    else if (strcmp(keyword, "v1''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V1pp);
     else if (strcmp(keyword, "v2") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V2);
-    else if (strcmp(keyword, "v2p") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V2);
+    else if (strcmp(keyword, "v2'") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V2p);
+    else if (strcmp(keyword, "v2''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->V2pp);
     else if (strcmp(keyword, "v'") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Vp);
     else if (strcmp(keyword, "v''") == 0) StoreWithCheckDup_d(keyword, value, &StdI->Vpp);
     else if (strcmp(keyword, "w") == 0) StoreWithCheckDup_i(keyword, value, &StdI->W);
@@ -2378,6 +2532,7 @@ void StdFace_main(
     else if (strcmp(keyword, "dt") == 0) StoreWithCheckDup_d(keyword, value, &StdI->dt);
     else if (strcmp(keyword, "flgtemp") == 0) StoreWithCheckDup_i(keyword, value, &StdI->FlgTemp);
     else if (strcmp(keyword, "freq") == 0) StoreWithCheckDup_d(keyword, value, &StdI->freq);
+    else if (strcmp(keyword, "hamio") == 0) StoreWithCheckDup_sl(keyword, value, StdI->HamIO);
     else if (strcmp(keyword, "initialvectype") == 0) StoreWithCheckDup_sl(keyword, value, StdI->InitialVecType);
     else if (strcmp(keyword, "initial_iv") == 0) StoreWithCheckDup_i(keyword, value, &StdI->initial_iv);
     else if (strcmp(keyword, "lanczoseps") == 0) StoreWithCheckDup_i(keyword, value, &StdI->LanczosEps);
@@ -2390,7 +2545,9 @@ void StdFace_main(
     else if (strcmp(keyword, "nvec") == 0) StoreWithCheckDup_i(keyword, value, &StdI->nvec);
     else if (strcmp(keyword, "omegamax") == 0) StoreWithCheckDup_d(keyword, value, &StdI->OmegaMax);
     else if (strcmp(keyword, "omegamin") == 0) StoreWithCheckDup_d(keyword, value, &StdI->OmegaMin);
+    else if (strcmp(keyword, "omegaorg") == 0) StoreWithCheckDup_d(keyword, value, &StdI->OmegaOrg);
     else if (strcmp(keyword, "omegaim") == 0) StoreWithCheckDup_d(keyword, value, &StdI->OmegaIm);
+    else if (strcmp(keyword, "outputexcitedvec") == 0) StoreWithCheckDup_sl(keyword, value, StdI->OutputExVec);
     else if (strcmp(keyword, "pumptype") == 0) StoreWithCheckDup_sl(keyword, value, StdI->PumpType);
     else if (strcmp(keyword, "restart") == 0) StoreWithCheckDup_sl(keyword, value, StdI->Restart);
     else if (strcmp(keyword, "spectrumqh") == 0) StoreWithCheckDup_d(keyword, value, &StdI->SpectrumQ[2]);
@@ -2415,7 +2572,6 @@ void StdFace_main(
     else if (strcmp(keyword, "a2lsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[2][1]);
     else if (strcmp(keyword, "a2wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->boxsub[2][0]);
     else if (strcmp(keyword, "complextype") == 0) StoreWithCheckDup_i(keyword, value, &StdI->ComplexType);
-    else if (strcmp(keyword, "cdatafilehead") == 0) StoreWithCheckDup_s(keyword, value, StdI->CDataFileHead);
     else if (strcmp(keyword, "cparafilehead") == 0) StoreWithCheckDup_s(keyword, value, StdI->CParaFileHead);
     else if (strcmp(keyword, "dsroptredcut") == 0) StoreWithCheckDup_d(keyword, value, &StdI->DSROptRedCut);
     else if (strcmp(keyword, "dsroptstadel") == 0) StoreWithCheckDup_d(keyword, value, &StdI->DSROptStaDel);
@@ -2441,7 +2597,7 @@ void StdFace_main(
     else if (strcmp(keyword, "wsub") == 0) StoreWithCheckDup_i(keyword, value, &StdI->Wsub);
 #endif
     else {
-      fprintf(stdout, "ERROR ! Unsupported Keyword !\n");
+      fprintf(stdout, "ERROR ! Unsupported Keyword in Standard mode!\n");
       StdFace_exit(-1);
     }
   }
@@ -2516,9 +2672,7 @@ void StdFace_main(
     || strcmp(StdI->lattice, "chainlattice") == 0) StdFace_Chain(StdI);
   else if (strcmp(StdI->lattice, "face-centeredorthorhombic") == 0
     || strcmp(StdI->lattice, "fcorthorhombic") == 0
-    || strcmp(StdI->lattice, "fco") == 0
-    || strcmp(StdI->lattice, "face-centeredcubic") == 0
-    || strcmp(StdI->lattice, "fcc") == 0) StdFace_FCOrtho(StdI);
+    || strcmp(StdI->lattice, "fco") == 0) StdFace_FCOrtho(StdI);
   else if (strcmp(StdI->lattice, "honeycomb") == 0
     || strcmp(StdI->lattice, "honeycomblattice") == 0) StdFace_Honeycomb(StdI);
   else if (strcmp(StdI->lattice, "kagome") == 0
@@ -2526,8 +2680,7 @@ void StdFace_main(
   else if (strcmp(StdI->lattice, "ladder") == 0
     || strcmp(StdI->lattice, "ladderlattice") == 0) StdFace_Ladder(StdI);
   else if (strcmp(StdI->lattice, "orthorhombic") == 0
-    || strcmp(StdI->lattice, "simpleorthorhombic") == 0
-    || strcmp(StdI->lattice, "cubic") == 0) StdFace_Orthorhombic(StdI);
+    || strcmp(StdI->lattice, "simpleorthorhombic") == 0) StdFace_Orthorhombic(StdI);
   else if (strcmp(StdI->lattice, "pyrochlore") == 0) StdFace_Pyrochlore(StdI);
   else if (strcmp(StdI->lattice, "tetragonal") == 0
     || strcmp(StdI->lattice, "tetragonallattice") == 0

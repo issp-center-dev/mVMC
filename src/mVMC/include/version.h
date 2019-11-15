@@ -29,7 +29,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 /* <major>.<minor>.<patch>-<prerelease> */
 #define VERSION_MAJOR  1
 #define VERSION_MINOR  0
-#define VERSION_PATCH  2
+#define VERSION_PATCH  3
 #define VERSION_PRERELEASE  "" /* "alpha", "beta.1", etc. */
 
 

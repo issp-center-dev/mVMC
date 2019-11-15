@@ -26,14 +26,17 @@ void cal_energy(struct BindStruct *X) {
   //time_t start,end;
   //FILE *fp;
   //char sdt[256];
-  int int_i, int_j, int_k, site_1, site_2;
+  int int_i, int_j, int_k, site_1, site_2, site_3, site_4;
   double tmp, charge_1, charge_2;
+  complex double ctmp;
   double E_band, E_CoulombIntra, E_CoulombInter, E_HundCoupling;
-  double E_ExchangeCoupling, E_PairHopping;
+  double E_ExchangeCoupling, E_PairHopping, E_InterAll;
   double num, mix;
   int xMsize;
   int u_site_1, u_site_2;
   int d_site_1, d_site_2;
+  int s_site_1, s_site_2, s_site_3, s_site_4;
+  int spin_1, spin_2, spin_3, spin_4;
   int Ns;
 
 
@@ -41,7 +44,7 @@ void cal_energy(struct BindStruct *X) {
   Ns = X->Def.Nsite;
 
   E_band = 0.0;
-  for (int_k = 0; int_k < X->Def.Ne * 2; int_k++) {
+  for (int_k = 0; int_k < X->Def.Nsize; int_k++) {
     E_band += X->Large.EigenValues[int_k];
   }
   //printf("E_band=%lf \n",E_band);
@@ -55,10 +58,10 @@ void cal_energy(struct BindStruct *X) {
     d_site_1 = site_1 + 1 * Ns;
     //printf("site_1=%d %lf %lf\n",site_1,tmp,X->Large.G[0][site_1][site_1]);
     E_CoulombIntra += -1.0 * tmp * X->Large.G[u_site_1][u_site_1] * X->Large.G[d_site_1][d_site_1];
-#if Fock == 1
     /*Off-Diagonal Fock term*/
-    E_CoulombIntra += 1.0 * tmp * X->Large.G[u_site_1][d_site_1] * X->Large.G[d_site_1][u_site_1];
-#endif
+    if (X->Def.iFlg_Fock == 1) {
+        E_CoulombIntra += 1.0 * tmp * X->Large.G[u_site_1][d_site_1] * X->Large.G[d_site_1][u_site_1];
+    }
   }
   //printf("E_CoulombIntra=%lf \n",E_CoulombIntra);
   /*Inter U energy*/
@@ -79,14 +82,14 @@ void cal_energy(struct BindStruct *X) {
     E_CoulombInter += -1.0 * tmp * charge_1 * charge_2;
 
     /*Diagonal Fock term*/
-#if Fock == 1
-    //printf("Diagonal Fock 1\n");
-    E_CoulombInter += 1.0 * tmp * X->Large.G[u_site_1][u_site_2] * X->Large.G[u_site_2][u_site_1];
-    E_CoulombInter += 1.0 * tmp * X->Large.G[d_site_1][d_site_2] * X->Large.G[d_site_2][d_site_1];
-    /*Off-Diagonal Fock term*/
-    E_CoulombInter += 1.0 * tmp * X->Large.G[u_site_1][d_site_2] * X->Large.G[d_site_2][u_site_1];
-    E_CoulombInter += 1.0 * tmp * X->Large.G[d_site_1][u_site_2] * X->Large.G[u_site_2][d_site_1];
-#endif
+    if (X->Def.iFlg_Fock == 1) {
+      //printf("Diagonal Fock 1\n");
+      E_CoulombInter += 1.0 * tmp * X->Large.G[u_site_1][u_site_2] * X->Large.G[u_site_2][u_site_1];
+      E_CoulombInter += 1.0 * tmp * X->Large.G[d_site_1][d_site_2] * X->Large.G[d_site_2][d_site_1];
+      /*Off-Diagonal Fock term*/
+      E_CoulombInter += 1.0 * tmp * X->Large.G[u_site_1][d_site_2] * X->Large.G[d_site_2][u_site_1];
+      E_CoulombInter += 1.0 * tmp * X->Large.G[d_site_1][u_site_2] * X->Large.G[u_site_2][d_site_1];
+    }
   }
   //printf("E_CoulombInter=%lf \n",E_CoulombInter);
   /*Hund energy*/
@@ -105,58 +108,78 @@ void cal_energy(struct BindStruct *X) {
     E_HundCoupling += -1.0 * tmp * X->Large.G[u_site_1][u_site_1] * X->Large.G[u_site_2][u_site_2];
     E_HundCoupling += -1.0 * tmp * X->Large.G[d_site_1][d_site_1] * X->Large.G[d_site_2][d_site_2];
 
-#if Fock == 1
-    /*Diagonal Fock term*/
-    E_HundCoupling += 1.0 * tmp * X->Large.G[u_site_1][u_site_2] * X->Large.G[u_site_2][u_site_1];
-    E_HundCoupling += 1.0 * tmp * X->Large.G[d_site_1][d_site_2] * X->Large.G[d_site_2][d_site_1];
-#endif
+    if (X->Def.iFlg_Fock == 1) {
+      /*Diagonal Fock term*/
+      E_HundCoupling += 1.0 * tmp * X->Large.G[u_site_1][u_site_2] * X->Large.G[u_site_2][u_site_1];
+      E_HundCoupling += 1.0 * tmp * X->Large.G[d_site_1][d_site_2] * X->Large.G[d_site_2][d_site_1];
+    }
   }
 
   /*Exchange energy*/
   E_ExchangeCoupling = 0.0;
-  for (int_i = 0; int_i < X->Def.NExchangeCoupling; int_i++) {
-    site_1 = X->Def.ExchangeCoupling[int_i][0];
-    site_2 = X->Def.ExchangeCoupling[int_i][1];
-    tmp = X->Def.ParaExchangeCoupling[int_i];
+  if (X->Def.iFlg_Fock == 1) {
+    for (int_i = 0; int_i < X->Def.NExchangeCoupling; int_i++) {
+      site_1 = X->Def.ExchangeCoupling[int_i][0];
+      site_2 = X->Def.ExchangeCoupling[int_i][1];
+      tmp = X->Def.ParaExchangeCoupling[int_i];
 
-    u_site_1 = site_1 + 0 * Ns;
-    d_site_1 = site_1 + 1 * Ns;
+      u_site_1 = site_1 + 0 * Ns;
+      d_site_1 = site_1 + 1 * Ns;
 
-    u_site_2 = site_2 + 0 * Ns;
-    d_site_2 = site_2 + 1 * Ns;
+      u_site_2 = site_2 + 0 * Ns;
+      d_site_2 = site_2 + 1 * Ns;
 
-#if Fock == 1
-    /*Diagonal Fock term*/
-    E_ExchangeCoupling += -1.0 * tmp * X->Large.G[u_site_1][u_site_2] * X->Large.G[d_site_2][d_site_1];
-    E_ExchangeCoupling += -1.0 * tmp * X->Large.G[d_site_1][d_site_2] * X->Large.G[u_site_2][u_site_1];
+      /*Diagonal Fock term*/
+      E_ExchangeCoupling += -1.0 * tmp * X->Large.G[u_site_1][u_site_2] * X->Large.G[d_site_2][d_site_1];
+      E_ExchangeCoupling += -1.0 * tmp * X->Large.G[d_site_1][d_site_2] * X->Large.G[u_site_2][u_site_1];
 
-    /*Off-Diagonal Fock term*/
-    E_ExchangeCoupling += 1.0 * tmp * X->Large.G[u_site_1][d_site_1] * X->Large.G[d_site_2][u_site_2];
-    E_ExchangeCoupling += 1.0 * tmp * X->Large.G[d_site_1][u_site_1] * X->Large.G[u_site_2][d_site_2];
-#endif
-  }
+      /*Off-Diagonal Fock term*/
+      E_ExchangeCoupling += 1.0 * tmp * X->Large.G[u_site_1][d_site_1] * X->Large.G[d_site_2][u_site_2];
+      E_ExchangeCoupling += 1.0 * tmp * X->Large.G[d_site_1][u_site_1] * X->Large.G[u_site_2][d_site_2];
+    }
 
-  /*PairHopping energy*/
-  E_PairHopping = 0.0;
-  for (int_i = 0; int_i < X->Def.NPairHopping; int_i++) {
-    site_1 = X->Def.PairHopping[int_i][0];
-    site_2 = X->Def.PairHopping[int_i][1];
-    tmp = X->Def.ParaPairHopping[int_i];
+    /*PairHopping energy*/
+    E_PairHopping = 0.0;
+    for (int_i = 0; int_i < X->Def.NPairHopping; int_i++) {
+      site_1 = X->Def.PairHopping[int_i][0];
+      site_2 = X->Def.PairHopping[int_i][2];
 
-    u_site_1 = site_1 + 0 * Ns;
-    d_site_1 = site_1 + 1 * Ns;
+      tmp = X->Def.ParaPairHopping[int_i];
 
-    u_site_2 = site_2 + 0 * Ns;
-    d_site_2 = site_2 + 1 * Ns;
-    /*Diagonal Fock term*/
-#if Fock == 1
-    E_PairHopping += -1.0 * tmp * X->Large.G[u_site_1][u_site_2] * X->Large.G[d_site_1][d_site_2];
-    E_PairHopping += 1.0 * tmp * X->Large.G[u_site_1][d_site_2] * X->Large.G[d_site_1][u_site_2];
-#endif
+      u_site_1 = site_1 + 0 * Ns;
+      d_site_1 = site_1 + 1 * Ns;
+
+      u_site_2 = site_2 + 0 * Ns;
+      d_site_2 = site_2 + 1 * Ns;
+      /*Diagonal Fock term*/
+      E_PairHopping += -1.0 * tmp * X->Large.G[u_site_1][u_site_2] * X->Large.G[d_site_1][d_site_2];
+      E_PairHopping += 1.0 * tmp * X->Large.G[u_site_1][d_site_2] * X->Large.G[d_site_1][u_site_2];
+    }
+
+    /*InterAll energy */
+    E_InterAll = 0.0;
+    for (int_i = 0; int_i < X->Def.NInterAll; int_i++) {
+      site_1 = X->Def.InterAll[int_i][0];
+      spin_1 = X->Def.InterAll[int_i][1];
+      site_2 = X->Def.InterAll[int_i][2];
+      spin_2 = X->Def.InterAll[int_i][3];
+      site_3 = X->Def.InterAll[int_i][4];
+      spin_3 = X->Def.InterAll[int_i][5];
+      site_4 = X->Def.InterAll[int_i][6];
+      spin_4 = X->Def.InterAll[int_i][7];
+      ctmp = X->Def.ParaInterAll[int_i];
+
+      s_site_1 = site_1 + spin_1 * Ns;
+      s_site_2 = site_2 + spin_2 * Ns;
+      s_site_3 = site_3 + spin_3 * Ns;
+      s_site_4 = site_4 + spin_4 * Ns;
+      E_InterAll += ctmp * X->Large.G[s_site_1][s_site_2] * X->Large.G[s_site_3][s_site_4];
+      E_InterAll -= ctmp * X->Large.G[s_site_1][s_site_4] * X->Large.G[s_site_3][s_site_2];
+    }
   }
   /*Calculating Total Enegy*/
   X->Phys.energy = E_band + E_CoulombIntra + E_CoulombInter + E_HundCoupling;
-  X->Phys.energy += E_ExchangeCoupling + E_PairHopping;
+  X->Phys.energy += E_ExchangeCoupling + E_PairHopping + E_InterAll;
 
   mix = X->Def.mix;
   X->Phys.rest = 0.0;

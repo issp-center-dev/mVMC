@@ -1,0 +1,10 @@
+         ModPara  modpara.def
+         LocSpin  locspn.def
+           Trans  trans.def
+    CoulombIntra  coulombintra.def
+	Exchange  exchange.def
+        OneBodyG  greenone.def
+        TwoBodyG  greentwo.def
+      Gutzwiller  gutzwilleridx.def
+         Jastrow  jastrowidx.def
+        TransSym  qptransidx.def

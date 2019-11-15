@@ -1,0 +1,8 @@
+L = 4
+model = "FermionHubbard"
+lattice = "chain"
+t = 1.0
+U = 4.0
+V = 1.0
+nelec = 4
+2Sz = 0
