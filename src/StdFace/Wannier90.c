@@ -179,8 +179,12 @@ static void read_W90(
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
     Mat_tot[iWSC] = (double complex **)malloc(sizeof(double complex *) * nWan);
     indx_tot[iWSC] = (int *)malloc(sizeof(int) * 3);
+    for (jj=0; jj<3; jj++) indx_tot[iWSC][jj] = 0;
     for (iWan = 0; iWan < nWan; iWan++) {
       Mat_tot[iWSC][iWan] = (double complex *)malloc(sizeof(double complex) * nWan);
+      for (jWan = 0; jWan < nWan; jWan++) {
+	Mat_tot[iWSC][iWan][jWan] = 0.0;
+      }
     }
   }
 
@@ -261,6 +265,7 @@ static void read_W90(
   /*
    * (2) Apply weight
    */
+  for (ii = 0; ii < 3; ii++) Band_lattice[ii] = 0;
   // Get Lattice length
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
     for (ii = 0; ii < 3; ii++) {
