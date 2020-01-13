@@ -28,8 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "setmemory.h"
 
 void _calc_inverse_matrix(double cutoff_Rvec[][3], double inverse_matrix[][3]) {
-  double NMatrix[3][3] = {{},
-                          {}};
+  double NMatrix[3][3] = {0};
   int i, j;
   for (i = 0; i < 3; i++) {
     for (j = 0; j < 3; j++) {
@@ -65,7 +64,7 @@ void _calc_inverse_matrix(double cutoff_Rvec[][3], double inverse_matrix[][3]) {
 
 int _check_in_box(int *rvec, double inverse_matrix[][3])
 {
-  double judge_vec[3]={};
+  double judge_vec[3]={0};
   int i, j;
   for (i =0; i<3; i++) {
     for (j = 0; j < 3; j++) {
@@ -148,7 +147,7 @@ static void read_W90(
   double dtmp[2], dR[3], length;
   char ctmp[256], *ctmp2;
   double complex ***Mat_tot;
-  double inverse_rvec[3][3]={{},{}};
+  double inverse_rvec[3][3]={0};
   double *Weight_tot;
   int **indx_tot,*Band_lattice, *Model_lattice;
 
