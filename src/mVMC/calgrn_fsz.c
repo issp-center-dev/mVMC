@@ -25,9 +25,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------
  * by Satoshi Morita
  *-------------------------------------------------------------*/
+#include "calgrn_fsz.h"
+#ifndef _CALGRN_FSZ_SRC
+#define _CALGRN_FSZ_SRC
 
-void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx, int *eleCfg,
-                         int *eleNum, int *eleSpn, int *eleProjCnt);
 
 void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx, int *eleCfg,
                          int *eleNum, int *eleSpn,int *eleProjCnt) {
@@ -136,3 +137,4 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
   ReleaseWorkSpaceThreadComplex();
   return;
 }
+#endif
