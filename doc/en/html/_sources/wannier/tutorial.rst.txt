@@ -14,9 +14,9 @@ SCF calculation of charge density
 First, we perform the SCF calculation of the charge density.
 The input file is as follows:
 
-:download:`scf.in <../../../samples/Wannier/Sr2VO4/scf.in>`
+:download:`scf.in <../../../../samples/Wannier/Sr2VO4/scf.in>`
 
-.. literalinclude:: ../../../samples/Wannier/Sr2VO4/scf.in
+.. literalinclude:: ../../../../samples/Wannier/Sr2VO4/scf.in
 
 The pseudopotential (UPF file) are downloaded from
 `The SG15 Optimized Norm-Conserving Vanderbilt (ONCV) pseudopotentials <www.quantum-simulation.org/potentials/sg15_oncv/>`_.
@@ -32,9 +32,9 @@ We use the program ``pw.x`` in QuantumESPRESSO as follows.
 (Optional) Band structure
 -------------------------
 
-:download:`band.in <../../../samples/Wannier/Sr2VO4/band.in>`
+:download:`band.in <../../../../samples/Wannier/Sr2VO4/band.in>`
 
-.. literalinclude:: ../../../samples/Wannier/Sr2VO4/band.in
+.. literalinclude:: ../../../../samples/Wannier/Sr2VO4/band.in
 
 We use ``pw.x``.
                     
@@ -42,9 +42,9 @@ We use ``pw.x``.
 
    $ pw.x -in band.in
 
-:download:`bands.in <../../../samples/Wannier/Sr2VO4/bands.in>`
+:download:`bands.in <../../../../samples/Wannier/Sr2VO4/bands.in>`
 
-.. literalinclude:: ../../../samples/Wannier/Sr2VO4/bands.in
+.. literalinclude:: ../../../../samples/Wannier/Sr2VO4/bands.in
 
 We use ``bands.x`` QuantumESPRESSO.
                     
@@ -58,9 +58,9 @@ GnuPlot etc.
 Kohn-Sham orbitals for Wannier
 ------------------------------
 
-:download:`nscf.in <../../../samples/Wannier/Sr2VO4/nscf.in>`
+:download:`nscf.in <../../../../samples/Wannier/Sr2VO4/nscf.in>`
 
-.. literalinclude:: ../../../samples/Wannier/Sr2VO4/nscf.in
+.. literalinclude:: ../../../../samples/Wannier/Sr2VO4/nscf.in
 
 We use ``pw.x`` as
                     
@@ -78,9 +78,9 @@ The command-line argument is the name of ``[prefix].save`` directory.
 Wannier function, dielectric function, effective interaction
 ------------------------------------------------------------
 
-:download:`respack.in <../../../samples/Wannier/Sr2VO4/respack.in>`
+:download:`respack.in <../../../../samples/Wannier/Sr2VO4/respack.in>`
 
-.. literalinclude:: ../../../samples/Wannier/Sr2VO4/respack.in
+.. literalinclude:: ../../../../samples/Wannier/Sr2VO4/respack.in
 
 We use ``calc_wannier``, ``calc_chiqw``, ``calc_j3d``,
 ``calc_w3d`` in RESPACK.
@@ -108,9 +108,9 @@ If we do not specify that argument, the default value ``zvo`` is used.
 
 Then we can run HPhi/mVMC with the standard mode.
                     
-:download:`respack.in <../../../samples/Wannier/Sr2VO4/stan.in>`
+:download:`respack.in <../../../../samples/Wannier/Sr2VO4/stan.in>`
 
-.. literalinclude:: ../../../samples/Wannier/Sr2VO4/stan.in
+.. literalinclude:: ../../../../samples/Wannier/Sr2VO4/stan.in
 
 .. code-block:: bash
 

@@ -3,7 +3,7 @@ Input parameter for Standard mode
 
 We show the following example of the input file.
 
-.. literalinclude:: ../../../samples/Wannier/Sr2VO4/stan.in
+.. literalinclude:: ../../../../samples/Wannier/Sr2VO4/stan.in
 
 The input parameters for the Standard mode to perform calculation
 of the downfolded model are as follows: 
