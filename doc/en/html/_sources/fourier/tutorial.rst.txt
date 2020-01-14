@@ -1,4 +1,4 @@
-.. _tutorial:
+.. _Tutorial:
 
 Tutorial
 ========
@@ -116,7 +116,7 @@ by using gnuplot.
 
 .. _corplotpng:
 
-.. figure:: ../../figs/corplot.png
+.. figure:: ../../../figs/corplot.png
 
    The spin-spin correlation :math:`\langle{\bf S}_{\bf k}\cdot{\bf S}_{\bf k}\rangle`
    (Column 12).

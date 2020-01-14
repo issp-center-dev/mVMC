@@ -1,4 +1,4 @@
-.. include:: ../bib/ref.txt
+.. include:: ../../bib/ref.txt
 
 .. _OutputFile:
              
@@ -72,41 +72,36 @@ a number given by
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 ``ModPara`` file.
 
-Output file for gutzwiller factors
-(\*\*\*\_gutzwiller\_opt.dat)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Output file for gutzwiller factors (\*\*\*\_gutzwiller\_opt.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The optimized Gutzwiller factors by SR method are outputted. The file
 format is same as the ``InGutzwiller`` file defined in Sec.
 :ref:`InputParam`.
 
-Output file for jastrow factors
-(\*\*\*\_jastrow\_opt.dat)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Output file for jastrow factors (\*\*\*\_jastrow\_opt.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The optimized Jastrow factors by SR method are outputted. The file
 format is same as the ``InJastrow`` file defined in Sec.
 :ref:`InputParam`.
 
-Output file for doublonHolon 2-site factors
-(\*\*\*\_doublonHolon2site\_opt.dat)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Output file for doublonHolon 2-site factors (\*\*\*\_doublonHolon2site\_opt.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The optimized 2-site doublon-holon correlation factors by SR method are
 outputted. The file format is same as the ``InDH2`` file defined in Sec.
 :ref:`InputParam`.
 
-Output file for doublonHolon 4-site factors
-(\*\*\*\_doublonHolon4site\_opt.dat)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Output file for doublonHolon 4-site factors (\*\*\*\_doublonHolon4site\_opt.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The optimized 4-site doublon-holon correlation factors by SR method are
 outputted. The file format is same as the ``InDH4`` file defined in Sec.
 :ref:`InputParam`.
 
-Output file for pair orbitals
-(\*\*\*\_orbital\_opt.dat)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Output file for pair orbitals (\*\*\*\_orbital\_opt.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The optimized pair orbitals by SR method are outputted. The file format
 is same as the ``InOrbital`` file defined in Sec. :ref:`InputParam`.

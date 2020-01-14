@@ -4,22 +4,34 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>What is mVMC? &#8212; mVMC 1.0.3 ドキュメント</title>
+    
+    <title>What is mVMC? &#8212; mVMC 1.1.0 ドキュメント</title>
+    
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/translations.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="索引" href="genindex.html" />
     <link rel="search" title="検索" href="search.html" />
     <link rel="next" title="How to use mVMC?" href="start.html" />
     <link rel="prev" title="汎用多変数変分モンテカルロ法パッケージ mVMC マニュアル" href="index.html" /> 
-  </head><body>
+  </head>
+  <body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>ナビゲーション</h3>
       <ul>
@@ -32,7 +44,7 @@
         <li class="right" >
           <a href="index.html" title="汎用多変数変分モンテカルロ法パッケージ mVMC マニュアル"
              accesskey="P">前へ</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.0.3 ドキュメント</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.1.0 ドキュメント</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -70,7 +82,7 @@ Monte Carlo method [mVMC])は
 基本的な模型に対しては、 ユーザーは10行程度の
 一つのファイルを用意するだけで 容易に計算を実行することができます。
 また、同一のファイルを用いて、
-<span class="math notranslate nohighlight">\(\mathcal{H}\Phi\)</span> [<a class="reference external" href="http://ma.cms-initiative.jp/ja/listapps/hphi">HPhi</a> ]による厳密対角化法の計算も実行できることから、
+<span class="math">\(\mathcal{H}\Phi\)</span> [<a class="reference external" href="http://ma.cms-initiative.jp/ja/listapps/hphi">HPhi</a> ]による厳密対角化法の計算も実行できることから、
 ユーザーは小さなシステムサイズで計算精度を確認しながら,
 厳密対角化では到達できないシステムサイズの 計算を行なうことができます。
 mVMCを実験研究者や量子化学の研究者などの 分野を超えた幅広いユーザー
@@ -88,12 +100,12 @@ mVMCを実験研究者や量子化学の研究者などの 分野を超えた幅
 <p>mVMCでは以下の流れで計算を行います。</p>
 <ol class="arabic simple">
 <li>入力ファイル(*.def)の読込</li>
-<li><span class="math notranslate nohighlight">\(\langle {\cal H} \rangle\)</span>を最小化するように変分パラメータ<span class="math notranslate nohighlight">\(\vec{\alpha}\)</span>を最適化</li>
+<li><span class="math">\(\langle {\cal H} \rangle\)</span>を最小化するように変分パラメータ<span class="math">\(\vec{\alpha}\)</span>を最適化</li>
 <li>一体・二体Green関数の計算</li>
 <li>変分パラメータ・期待値の出力</li>
 </ol>
 <p>計算では「実空間配置
-<span class="math notranslate nohighlight">\(|x\rangle\)</span>の生成からサンプリングまでを並列して行い、期待値を計算する際に一つにまとめる」という単純な並列化を行っています。各計算機クラスターで所定の手続きに従って、
+<span class="math">\(|x\rangle\)</span>の生成からサンプリングまでを並列して行い、期待値を計算する際に一つにまとめる」という単純な並列化を行っています。各計算機クラスターで所定の手続きに従って、
 並列数を指定すれば MPI
 を用いた並列計算を勝手に行われますが、並列を行わない場合 (single core)
 もMPI を呼び出すため、MPI ジョブを禁止してる環境 (物性研 system B
@@ -122,6 +134,7 @@ Public License version 3（GPL v3）に準じて配布されています。</p>
 <h3>開発貢献者<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <p>本ソフトウェアは以下の開発貢献者により開発されています。</p>
 <ul class="simple">
+<li>ver.1.1.0 (2019/11/15リリース)</li>
 <li>ver.1.0.3 (2018/7/23リリース)</li>
 <li>ver.1.0.2 (2017/8/25リリース)</li>
 <li>ver.1.0.1 (2017/6/8リリース)</li>
@@ -201,14 +214,12 @@ Public License version 3（GPL v3）に準じて配布されています。</p>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>クイック検索</h3>
-    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="検索" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="検索" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -227,12 +238,12 @@ Public License version 3（GPL v3）に準じて配布されています。</p>
         <li class="right" >
           <a href="index.html" title="汎用多変数変分モンテカルロ法パッケージ mVMC マニュアル"
              >前へ</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.0.3 ドキュメント</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.1.0 ドキュメント</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      このドキュメントは <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4 で生成しました。
+      このドキュメントは <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2 で生成しました。
     </div>
   </body>
 </html>

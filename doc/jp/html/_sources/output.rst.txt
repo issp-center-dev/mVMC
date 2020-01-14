@@ -1,4 +1,4 @@
-.. include:: ../bib/ref.txt
+.. include:: ../../bib/ref.txt
 
 .. _outputfile:
              
@@ -7,8 +7,6 @@
 
 出力ファイルの一覧は下記の通りです。\*\*\*には ``ModPara`` ファイルの ``CParaFileHead`` で指定されるヘッダが、xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
 ``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。また、zzzには ``ModPara`` ファイルの ``NDataIdxStart`` が記載されます。
-
-[h!]
 
 +--------------------------------------+-----------------------------------------------+
 | ファイル名                           | 対応するファイルの中身                        |
@@ -72,16 +70,14 @@ Jastrow因子出力ファイル(\*\*\*\_jastrow\_opt.dat)
 SR法で最適化されたJastrow因子が出力されます。
 出力形式は :ref:`InputParam` のInJastrow指定ファイルと同じです。
 
-2サイトダブロンホロン相関因子出力ファイル
-(\*\*\*\_doublonHolon2site\_opt.dat)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2サイトダブロンホロン相関因子出力ファイル(\*\*\*\_doublonHolon2site\_opt.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 SR法で最適化された2サイトのdoublon-holon相関因子が出力されます。
 出力形式は :ref:`InputParam` のInDH2指定ファイルと同じです。
 
-4サイトダブロンホロン相関因子出力ファイル
-(\*\*\*\_doublonHolon4site\_opt.dat)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+4サイトダブロンホロン相関因子出力ファイル(\*\*\*\_doublonHolon4site\_opt.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 SR法で最適化された4サイトのdoublon-holon相関因子が出力されます。
 出力形式は :ref:`InputParam` のInDH4指定ファイルと同じです。
@@ -108,8 +104,6 @@ xxx\_out\_yyy.dat
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
 ``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。以下に出力例を記載します。
 
-13cm
-
 ::
 
     1.151983765704212992e+01  8.124622418360909482e-01  \
@@ -124,8 +118,6 @@ xxx\_CalcTimer.dat
 ~~~~~~~~~~~~~~~~~~~
 
 計算終了後に、処理毎の計算処理時間が処理名、処理に割り当てられた識別番号、実行秒数の順に出力されます。出力例は以下の通りです。
-
-15.5cm
 
 ::
 
@@ -180,8 +172,6 @@ xxx\_time\_zzz.dat
   n\_ex)および実行した際の時間を順に出力します。xxxには ``CDataFileHead`` で指定されるヘッダが、zzzには ``ModPara`` ファイルの ``NDataIdxStart`` が記載されます。
   出力例は以下の通りです。
 
-15.5cm
-
 ::
 
     00000  acc_hop acc_ex  n_hop    n_ex     : Mon Jul 25 14:03:29 2016
@@ -199,8 +189,6 @@ xxx\_cisajs\_yyy.dat
 OneBodyG指定ファイルで指定された一体グリーン関数 :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle` の計算結果を出力します。
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
 ``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。以下にファイル例を記載します。
-
-12.5cm
 
 ::
 

@@ -4,28 +4,48 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Downfolding with Wannier functions &#8212; mVMC 1.0.3 documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    
+    <title>Downfolding with Wannier functions &#8212; mVMC 1.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" src="../_static/documentation_options.js"></script>
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Overview" href="overview.html" />
-    <link rel="prev" title="Contact" href="../fourier/contact.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
-  </head><body>
-  
+    <link rel="prev" title="Contact" href="../fourier/contact.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="overview.html" title="Overview"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../fourier/contact.html" title="Contact"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
 
     <div class="document">
       <div class="documentwrapper">
@@ -48,10 +68,10 @@
 <li class="toctree-l2"><a class="reference internal" href="tutorial.html#quantum-lattice-mode-for-hphi-mvmc">Quantum lattice mode for HPhi/mVMC</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="parameter.html">Input parameter for Standard mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameter.html">Input parameters for Standard mode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="format.html">File format</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="format.html#geometry">Geometry</a></li>
-<li class="toctree-l2"><a class="reference internal" href="format.html#hopping-coulomb-exchange-integrals">Hopping, Coulomb, exchange integrals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="format.html#hopping-coulomb-exchange-integrals-charge-densities">Hopping, Coulomb, exchange integrals, charge densities</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="contact.html">Contact</a></li>
@@ -65,80 +85,54 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-<p class="logo">
-  <a href="../index.html">
-    <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
-    
-  </a>
-</p>
-
-
-
-
-
-
-
-
-<h3>Navigation</h3>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../start.html">How to use mVMC?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../standard.html">Input files for Standard mode</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../expert.html">Input files for Expert mode</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../output.html">Output files</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../algorithm.html">Algorithm</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../appendix.html">Program for the unrestricted Hartree-Fock approximation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../fourier/index.html">HPhi/mVMC Fourier-Transformation utility</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Downfolding with Wannier functions</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="overview.html">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
-<li class="toctree-l2"><a class="reference internal" href="parameter.html">Input parameter for Standard mode</a></li>
-<li class="toctree-l2"><a class="reference internal" href="format.html">File format</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contact.html">Contact</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../acknowledge.html">Acknowledgement</a></li>
-</ul>
-
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="../fourier/contact.html" title="previous chapter">Contact</a></li>
-      <li>Next: <a href="overview.html" title="next chapter">Overview</a></li>
-  </ul></li>
-</ul>
-</div>
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../fourier/contact.html"
+                        title="previous chapter">Contact</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="overview.html"
+                        title="next chapter">Overview</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/wannier/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
-    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="footer">
-      &copy;2017, mVMC team.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
-      
-      |
-      <a href="../_sources/wannier/index.rst.txt"
-          rel="nofollow">Page source</a>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="overview.html" title="Overview"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../fourier/contact.html" title="Contact"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.1.0 documentation</a> &#187;</li> 
+      </ul>
     </div>
-
-    
-
-    
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, mVMC team.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
   </body>
 </html>

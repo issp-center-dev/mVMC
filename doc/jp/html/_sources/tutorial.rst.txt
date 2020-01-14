@@ -57,8 +57,6 @@ Heisenberg模型におけるサンプル入力ファイル: ``StdFace.def``
 
 | インプットファイルの中身は次のとおりです。
 
-10cm
-
 ::
 
     L = 16
@@ -77,7 +75,7 @@ Heisenberg模型におけるサンプル入力ファイル: ``StdFace.def``
 
 実行コマンドは次のとおりです。
 
-``$ mpiexec -np `` `` `` ``/vmc.out -s StdFace.def``
+``$ mpiexec -np "プロセス数"  "パス"/vmc.out -s StdFace.def``
 
 使っているシステムによっては ``mpiexec`` コマンドではなく ``mpirun`` や ``mpijob`` 、
 ``poe`` となる場合もあります。
@@ -233,8 +231,6 @@ Heisenberg模型におけるサンプル入力ファイル: ``StdFace.def``
 
 その後実際に計算が行われ、以下のファイルが情報として ``output/`` ディレクトリに出力されます。
 
-12cm
-
 ::
 
     zvo_SRinfo.dat
@@ -264,8 +260,6 @@ gnuplotを用いる場合には、次のようにして表示することが出�
   ディレクトリに出力されます。
   以下に、このサンプルでの出力ファイルを記載します。
 
-12cm
-
 ::
 
     gutzwiller_opt.dat
@@ -284,12 +278,10 @@ Green関数の計算
 ``"namelist.dat"`` の後ろに ``"zqp_opt.dat"`` を付け加えることで、
 一つ前の計算で最適化された変分パラメータを使用した計算が行われます。
 
-``$ `` ``/vmc.out -e namelist.def output/zqp_opt.dat``
+``$  "パス"/vmc.out -e namelist.def output/zqp_opt.dat``
 
 | 計算が終了すると以下のファイルが ``output/``
   ディレクトリに出力されます。
-
-12cm
 
 ::
 

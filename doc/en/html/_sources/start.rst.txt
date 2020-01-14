@@ -190,9 +190,8 @@ change the compiler.
 
 Directory structure
 -------------------
-
-| When mVMC-xxx.tar.gz is unzipped, the following directory structure is
-  composed.
+ When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.
+   
 | ├──COPYING
 | ├──mVMCconfig.sh
 | ├──doc/
@@ -218,17 +217,17 @@ Directory structure
 | │                  │      │      └──reference/
 | │                  │      │                 └──\*\*.dat
 | │                  │      └─triangular/
-| │                  │            └──\ :math:`\cdots`
+| │                  │            └── :math:`\cdots`
 | │                  ├──Kondo/
 | │                  │      └─chain/
-| │                  │            └──\ :math:`\cdots`
+| │                  │            └── :math:`\cdots`
 | │                  └──Spin/
 | │                              ├─HeisenbergChain/
-| │                              │      └──\ :math:`\cdots`
+| │                              │      └── :math:`\cdots`
 | │                              ├─HeisenbergSquare/
-| │                              │      └──\ :math:`\cdots`
+| │                              │      └── :math:`\cdots`
 | │                              └─Kagome/
-| │                                     └──\ :math:`\cdots`
+| │                                     └── :math:`\cdots`
 | ├──src/
 | │          ├──mVMC/
 | │          │      ├─ \*\*.c

@@ -1,4 +1,4 @@
-.. include:: ../bib/ref.txt
+.. include:: ../../bib/ref.txt
 
 アルゴリズム
 ============
@@ -18,7 +18,7 @@
 
 .. math::
 
-   | x\rangle = \prod_{n=1}^{N/2} c_{r_{n\uparrow}}^{\dagger} \prod_{n=1}^{N/2}
+   | x\rangle = \prod_{n=1}^{N_e/2} c_{r_{n\uparrow}}^{\dagger} \prod_{n=1}^{N_e/2}
    c_{r_{n\downarrow}}^{\dagger} |0 \rangle
 
 ここで,
@@ -66,8 +66,8 @@ Bogoliubov表現
 スピン系の計算において一体項( ``transfer``),
 ``InterAll`` 形式での相互作用,
 相関関数のインデックスの指定にはBogoliubov表現が使われています。
-一般に、スピンの演算子は次のようにフェルミオンの生成 :math:`\cdot` 消滅演算子 :math:`c_{i \sigma}`,
-:math:`c_{i \sigma}^\dagger` によって書き換えることができます:
+一般に、スピンの演算子は次のようにフェルミオンの生成 :math:`\cdot` 消滅演算子 :math:`c_{i \sigma}^\dagger`,
+:math:`c_{i \sigma}` によって書き換えることができます:
 
 .. math::
 
@@ -98,8 +98,8 @@ Bogoliubov表現
 
 .. _PfaffianAP:
 
-:math:`f_{ij}` と :math:`\Phi_{in\sigma}` の関係 (スピン反平行の場合)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:math:`f_{ij}` と :math:`\Phi_{in\sigma}` の関係 (スピン反平行の場合)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 多変数変分モンテカルロ法で試行波動関数の一体部分として用いられるパフィアン-スレーター行列式は
 
@@ -133,7 +133,7 @@ Bogoliubov表現
 .. math::
 
    \begin{aligned}
-   [\psi^{\dagger}_{n\sigma},\psi_{m\sigma}]_{+}&=\delta_{nm},\\
+   {[\psi^{\dagger}_{n\sigma}, \psi_{m\sigma}]}_{+}&=\delta_{nm},\\
    G_{ij\sigma}=\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle 
    &=\frac{\langle \phi_{\rm SL}| c_{i\sigma}^{\dagger}c_{j\sigma} | \phi_{\rm SL}\rangle}{\langle \phi_{\rm SL}|\phi_{\rm SL}\rangle } \\
    &=\sum_{n} \Phi_{in\sigma} \Phi_{jn\sigma}.
@@ -186,8 +186,8 @@ Bogoliubov表現
 
 .. _PfaffianP:
 
-:math:`F_{IJ}` と :math:`\Phi_{In\sigma}` の関係 (スピン平行も含めた場合)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:math:`F_{IJ}` と :math:`\Phi_{In}` の関係 (スピン平行も含めた場合)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 前節で考察したパフィアン-スレーター波動関数と単一スレーター波動関数の間の関係は、
 同種スピンのペアリングも考えた場合に拡張することができます。
@@ -205,7 +205,7 @@ Bogoliubov表現
 .. math::
 
    \begin{aligned}
-   F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{In}\Phi_{Jn+1}-\Phi_{Jn}\Phi_{In+1}\Big).
+   F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{I,2n-1}\Phi_{J,2n}-\Phi_{J,2n-1}\Phi_{I,2n}\Big).
    \end{aligned}
 
 の関係を示すことができます。これはスピン反平行のペアリングにもそのまま適用できるので,
@@ -214,7 +214,7 @@ mVMC ver1.0以降ではこの表式を使用しています。
 .. _PfaffianSingular:
 
 :math:`f_{ij}` の特異値分解
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 行列 :math:`F`, :math:`\Phi_{\uparrow}`, :math:`\Phi_{\downarrow}`,
 :math:`\Sigma` を
@@ -253,7 +253,7 @@ Power-Lanczos法での最適化パラメータ :math:`\alpha` の決定方法に
 ここではシングルステップのLanczos法を適用した後の物理量の計算についても説明します。
 
 :math:`\alpha` の決定
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 最初に, 変分モンテカルロ法のサンプリングに関して簡単に説明します。
 物理量 :math:`\hat{A}` は以下の手順で計算されます:

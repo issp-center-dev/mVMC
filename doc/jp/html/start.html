@@ -4,22 +4,34 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>How to use mVMC? &#8212; mVMC 1.0.3 ドキュメント</title>
+    
+    <title>How to use mVMC? &#8212; mVMC 1.1.0 ドキュメント</title>
+    
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/translations.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="索引" href="genindex.html" />
     <link rel="search" title="検索" href="search.html" />
     <link rel="next" title="チュートリアル" href="tutorial.html" />
     <link rel="prev" title="What is mVMC?" href="intro.html" /> 
-  </head><body>
+  </head>
+  <body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>ナビゲーション</h3>
       <ul>
@@ -32,7 +44,7 @@
         <li class="right" >
           <a href="intro.html" title="What is mVMC?"
              accesskey="P">前へ</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.0.3 ドキュメント</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.1.0 ドキュメント</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -45,7 +57,7 @@
 <h1>How to use mVMC?<a class="headerlink" href="#how-to-use-mvmc" title="このヘッドラインへのパーマリンク">¶</a></h1>
 <div class="section" id="id1">
 <h2>要件<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h2>
-<p>mVMCのコンパイル <span class="math notranslate nohighlight">\(\cdot\)</span> 使用には次のものが必要です。</p>
+<p>mVMCのコンパイル <span class="math">\(\cdot\)</span> 使用には次のものが必要です。</p>
 <ul class="simple">
 <li>Cコンパイラ (インテル、富士通、GNUなど)</li>
 <li>MPIライブラリ</li>
@@ -57,15 +69,15 @@
 <p><strong>intelコンパイラーでの設定</strong></p>
 <p>intelコンパイラを使用する場合には、コンパイラに付属の設定用スクリプトを使用するのが簡単です。</p>
 <p>64ビットOSでbashを使っている場合には</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /opt/intel/bin/compilervars.sh intel64
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /opt/intel/bin/compilervars.sh intel64
 </pre></div>
 </div>
 <p>または</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /opt/intel/bin/iccvars.sh intel64
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /opt/intel/bin/iccvars.sh intel64
 $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 </pre></div>
 </div>
-<p class="last">等を <code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code> に記載してください。
+<p class="last">等を <code class="docutils literal"><span class="pre">~/.bashrc</span></code> に記載してください。
 詳しくはお手持ちのコンパイラ、ライブラリのマニュアルをお読みください。</p>
 </div>
 </div>
@@ -74,31 +86,31 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 <p>mVMC は次の場所からダウンロードできます。
 <a class="reference external" href="https://github.com/issp-center-dev/mVMC/releases">https://github.com/issp-center-dev/mVMC/releases</a></p>
 <p>ダウンロードしたファイルを次のように展開してください。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ tar xzvf mVMC-xxx.tar.gz
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ tar xzvf mVMC-xxx.tar.gz
 </pre></div>
 </div>
 <p>mVMCは次の2通りの方法でインストールできます。</p>
 <div class="section" id="mvmcconfig-sh">
-<h3><code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> を使う方法<a class="headerlink" href="#mvmcconfig-sh" title="このヘッドラインへのパーマリンク">¶</a></h3>
-<p>展開したディレクトリのなかにある <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> スクリプトを次のように実行してください。
+<h3><code class="docutils literal"><span class="pre">mVMCconfig.sh</span></code> を使う方法<a class="headerlink" href="#mvmcconfig-sh" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>展開したディレクトリのなかにある <code class="docutils literal"><span class="pre">mVMCconfig.sh</span></code> スクリプトを次のように実行してください。
 (物性研システムB”sekirei”の場合)</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ bash mVMCconfig.sh sekirei
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ bash mVMCconfig.sh sekirei
 </pre></div>
 </div>
-<p>これによりコンパイル環境設定ファイル <code class="docutils literal notranslate"><span class="pre">make.sys</span></code> が <code class="docutils literal notranslate"><span class="pre">src/</span></code> ディレクトリに作られます。
-<code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> の引数は次のものに対応しています。</p>
+<p>これによりコンパイル環境設定ファイル <code class="docutils literal"><span class="pre">make.sys</span></code> が <code class="docutils literal"><span class="pre">src/</span></code> ディレクトリに作られます。
+<code class="docutils literal"><span class="pre">mVMCconfig.sh</span></code> の引数は次のものに対応しています。</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">sekirei</span></code> : 物性研究所システムB &quot;sekirei&quot;</li>
-<li><code class="docutils literal notranslate"><span class="pre">kei</span></code> : 京コンピューターおよび物性研究所システムC &quot;maki&quot;(FX10)</li>
-<li><code class="docutils literal notranslate"><span class="pre">intel-openmpi</span></code> : Intel コンパイラ + OpenMPI</li>
-<li><code class="docutils literal notranslate"><span class="pre">intel-mpich</span></code> : Intelコンパイラ + MPICH2</li>
-<li><code class="docutils literal notranslate"><span class="pre">intel-intelmpi</span></code> : Intelコンパイラ + IntelMPI</li>
-<li><code class="docutils literal notranslate"><span class="pre">gcc-mpich-mkl</span></code> : GCC + MPICH + MKL</li>
-<li><code class="docutils literal notranslate"><span class="pre">gcc-openmpi</span></code> : GCC + OpenMPI</li>
+<li><code class="docutils literal"><span class="pre">sekirei</span></code> : 物性研究所システムB 「sekirei」</li>
+<li><code class="docutils literal"><span class="pre">kei</span></code> : 京コンピューターおよび物性研究所システムC 「maki」(FX10)</li>
+<li><code class="docutils literal"><span class="pre">intel-openmpi</span></code> : Intel コンパイラ + OpenMPI</li>
+<li><code class="docutils literal"><span class="pre">intel-mpich</span></code> : Intelコンパイラ + MPICH2</li>
+<li><code class="docutils literal"><span class="pre">intel-intelmpi</span></code> : Intelコンパイラ + IntelMPI</li>
+<li><code class="docutils literal"><span class="pre">gcc-mpich-mkl</span></code> : GCC + MPICH + MKL</li>
+<li><code class="docutils literal"><span class="pre">gcc-openmpi</span></code> : GCC + OpenMPI</li>
 </ul>
-<p><code class="docutils literal notranslate"><span class="pre">make.sys</span></code> の中身は次のようになっています(物性研システムB
-&quot;sekirei&quot;の場合)。</p>
-<div class="highlight-makefile notranslate"><div class="highlight"><pre><span></span><span class="nv">CC</span> <span class="o">=</span> mpicc
+<p><code class="docutils literal"><span class="pre">make.sys</span></code> の中身は次のようになっています(物性研システムB
+「sekirei」の場合)。</p>
+<div class="highlight-makefile"><div class="highlight"><pre><span></span><span class="nv">CC</span> <span class="o">=</span> mpicc
 <span class="nv">F90</span> <span class="o">=</span> mpif90
 <span class="nv">CFLAGS</span> <span class="o">=</span> -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
 <span class="nv">FFLAGS</span> <span class="o">=</span> -O3 -implicitnone -xHost
@@ -109,52 +121,52 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 </div>
 <p>となります。それぞれのマクロ(変数)の説明は次のとおりです。</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">CC</span></code> : C コンパイラー( <code class="docutils literal notranslate"><span class="pre">mpicc</span></code>, <code class="docutils literal notranslate"><span class="pre">mpifccpx</span></code> など)</li>
-<li><code class="docutils literal notranslate"><span class="pre">F90</span></code> : fortran コンパイラー( <code class="docutils literal notranslate"><span class="pre">ifort</span></code>, <code class="docutils literal notranslate"><span class="pre">frtpx</span></code> など)</li>
-<li><code class="docutils literal notranslate"><span class="pre">LIBS</span></code> : リンカーオプション。</li>
-<li><code class="docutils literal notranslate"><span class="pre">CFLAGS</span></code> : C コンパイルオプション。</li>
-<li><code class="docutils literal notranslate"><span class="pre">FFLAGS</span></code> : fortran コンパイルオプション。</li>
+<li><code class="docutils literal"><span class="pre">CC</span></code> : C コンパイラー( <code class="docutils literal"><span class="pre">mpicc</span></code>, <code class="docutils literal"><span class="pre">mpifccpx</span></code> など)</li>
+<li><code class="docutils literal"><span class="pre">F90</span></code> : fortran コンパイラー( <code class="docutils literal"><span class="pre">ifort</span></code>, <code class="docutils literal"><span class="pre">frtpx</span></code> など)</li>
+<li><code class="docutils literal"><span class="pre">LIBS</span></code> : リンカーオプション。</li>
+<li><code class="docutils literal"><span class="pre">CFLAGS</span></code> : C コンパイルオプション。</li>
+<li><code class="docutils literal"><span class="pre">FFLAGS</span></code> : fortran コンパイルオプション。</li>
 </ul>
 <p>これでコンパイルのための準備が整います。その後</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ make mvmc
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ make mvmc
 </pre></div>
 </div>
-<p>とすることで実行可能ファイル <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> 、 <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> が <code class="docutils literal notranslate"><span class="pre">src/内に</span></code> 生成されるので、
+<p>とすることで実行可能ファイル <code class="docutils literal"><span class="pre">vmc.out</span></code> 、 <code class="docutils literal"><span class="pre">vmcdry.out</span></code> が <code class="docutils literal"><span class="pre">src/内に</span></code> 生成されるので、
 このディレクトリにパスを通すか、
 パスの通っている場所にシンボリックリンクを作ってください。</p>
 <p>実行ファイルにパスを通す時には、次のようにします。
-<code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">export</span> <span class="pre">PATH=${PATH}:</span></code> <code class="docutils literal notranslate"><span class="pre">/src/</span></code>
-この設定を常に残すには、例えばログインシェルが <code class="docutils literal notranslate"><span class="pre">bash</span></code> の場合には
-<code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code> ファイルに上記のコマンドを記載します。</p>
+<code class="docutils literal"><span class="pre">$</span> <span class="pre">export</span> <span class="pre">PATH=${PATH}:</span></code> <code class="docutils literal"><span class="pre">/src/</span></code>
+この設定を常に残すには、例えばログインシェルが <code class="docutils literal"><span class="pre">bash</span></code> の場合には
+<code class="docutils literal"><span class="pre">~/.bashrc</span></code> ファイルに上記のコマンドを記載します。</p>
 </div>
 <div class="section" id="cmake">
 <h3>cmakeを使う方法<a class="headerlink" href="#cmake" title="このヘッドラインへのパーマリンク">¶</a></h3>
 <p>mVMCを展開したディレクトリのパスを$PathTomvmc、ビルドディレクトリを$HOME/build/mvmc
 (任意の場所を指定可能)とした場合に、</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="nv">$HOME</span>/build/mvmc
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="nv">$HOME</span>/build/mvmc
 cmake -DCONFIG<span class="o">=</span>gcc <span class="nv">$PathTomvmc</span>
 make
 </pre></div>
 </div>
-<p>でコンパイルすることができます。コンパイル後、 <code class="docutils literal notranslate"><span class="pre">$HOME/build/mvmc</span></code>
-直下に <code class="docutils literal notranslate"><span class="pre">src</span></code> フォルダが作成され、実行ファイルである <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> がそのフォルダ内に作成されます。</p>
+<p>でコンパイルすることができます。コンパイル後、 <code class="docutils literal"><span class="pre">$HOME/build/mvmc</span></code>
+直下に <code class="docutils literal"><span class="pre">src</span></code> フォルダが作成され、実行ファイルである <code class="docutils literal"><span class="pre">vmc.out</span></code> がそのフォルダ内に作成されます。</p>
 <p>なお、上の例ではgccコンパイラを前提としたコンパイルになっていますが、</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">sekirei</span></code> : 物性研究所システムB &quot;sekirei&quot;</li>
-<li><code class="docutils literal notranslate"><span class="pre">fujitsu</span></code> : 富士通コンパイラ</li>
-<li><code class="docutils literal notranslate"><span class="pre">intel</span></code> : intelコンパイラ + Linux PC</li>
-<li><code class="docutils literal notranslate"><span class="pre">gcc</span></code> : GCC + Linux PC</li>
+<li><code class="docutils literal"><span class="pre">sekirei</span></code> : 物性研究所システムB 「sekirei」</li>
+<li><code class="docutils literal"><span class="pre">fujitsu</span></code> : 富士通コンパイラ</li>
+<li><code class="docutils literal"><span class="pre">intel</span></code> : intelコンパイラ + Linux PC</li>
+<li><code class="docutils literal"><span class="pre">gcc</span></code> : GCC + Linux PC</li>
 </ul>
 <p>のオプションが用意されています。以下、mVMCを展開したディレクトリでビルドする例を示します(intelコンパイラの場合)。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir ./build
+<div class="highlight-bash"><div class="highlight"><pre><span></span>mkdir ./build
 <span class="nb">cd</span> ./build
 cmake -DCONFIG<span class="o">=</span>intel ../
 make
 </pre></div>
 </div>
-<p>実行後、 <code class="docutils literal notranslate"><span class="pre">build/</span></code> フォルダ直下に <code class="docutils literal notranslate"><span class="pre">src/</span></code> フォルダが作成され、 <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> が <code class="docutils literal notranslate"><span class="pre">src/</span></code> フォルダ内に作成されます。
+<p>実行後、 <code class="docutils literal"><span class="pre">build/</span></code> フォルダ直下に <code class="docutils literal"><span class="pre">src/</span></code> フォルダが作成され、 <code class="docutils literal"><span class="pre">vmc.out</span></code> が <code class="docutils literal"><span class="pre">src/</span></code> フォルダ内に作成されます。
 また、LAPACKに代わりScaLAPACKを計算に使用することが可能です。その場合には、</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">DUSE_SCALAPACK</span><span class="o">=</span><span class="n">ON</span> <span class="o">-</span><span class="n">DSCALAPACK_LIBRARIES</span><span class="o">=</span><span class="s2">&quot;xxx&quot;</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">DUSE_SCALAPACK</span><span class="o">=</span><span class="n">ON</span> <span class="o">-</span><span class="n">DSCALAPACK_LIBRARIES</span><span class="o">=</span><span class="s2">&quot;xxx&quot;</span>
 </pre></div>
 </div>
 <p>をcmakeをする際に付け加えてください(xxxにはScaLAPACKを利用するためのライブラリ一式を指定します)。
@@ -162,22 +174,22 @@ make
 <div class="admonition note">
 <p class="first admonition-title">注釈</p>
 <p>sekirei で cmake を利用するには</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /home/issp/materiapps/tool/env.sh
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /home/issp/materiapps/tool/env.sh
 </pre></div>
 </div>
 <p>をあらかじめ実行する必要があります。</p>
 <p>またScaLAPACK を利用するには</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake -DCONFIG<span class="o">=</span>sekirei ../ -DUSE_SCALAPACK<span class="o">=</span>ON
+<div class="highlight-bash"><div class="highlight"><pre><span></span>cmake -DCONFIG<span class="o">=</span>sekirei ../ -DUSE_SCALAPACK<span class="o">=</span>ON
 </pre></div>
 </div>
 <p>を行うと、デフォルトで</p>
-<div class="last highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">DSCALAPACK_LIBRARIES</span><span class="o">=</span><span class="s2">&quot;\$</span><span class="si">{MKLROOT}</span><span class="s2">/lib/intel64 -lmkl_scalapack_lp64</span>
+<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">DSCALAPACK_LIBRARIES</span><span class="o">=</span><span class="s2">&quot;\$</span><span class="si">{MKLROOT}</span><span class="s2">/lib/intel64 -lmkl_scalapack_lp64</span>
 <span class="o">-</span><span class="n">lmkl_intel_lp64</span> <span class="o">-</span><span class="n">lmkl_intel_thread</span> <span class="o">-</span><span class="n">lmkl_core</span>
 <span class="o">-</span><span class="n">lmkl_blacs_sgimpt_lp64</span><span class="s2">&quot;</span>
 </pre></div>
 </div>
 </div>
-<p>が指定されます。ライブラリへのパスが異なる場合には、 <code class="docutils literal notranslate"><span class="pre">-DSCALAPACK_LIBRARIES</span></code> を適宜変更してください。</p>
+<p>が指定されます。ライブラリへのパスが異なる場合には、 <code class="docutils literal"><span class="pre">-DSCALAPACK_LIBRARIES</span></code> を適宜変更してください。</p>
 </div>
 </div>
 <div class="section" id="id3">
@@ -209,17 +221,17 @@ make
 <div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──reference/</div>
 <div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──**.dat</div>
 <div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─triangular/</div>
-<div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="math notranslate nohighlight">\(\cdots\)</span></div>
+<div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="math">\(\cdots\)</span></div>
 <div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├──Kondo/</div>
 <div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─chain/</div>
-<div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="math notranslate nohighlight">\(\cdots\)</span></div>
+<div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="math">\(\cdots\)</span></div>
 <div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└──Spin/</div>
 <div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─HeisenbergChain/</div>
-<div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="math notranslate nohighlight">\(\cdots\)</span></div>
+<div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="math">\(\cdots\)</span></div>
 <div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─HeisenbergSquare/</div>
-<div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="math notranslate nohighlight">\(\cdots\)</span></div>
+<div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="math">\(\cdots\)</span></div>
 <div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─Kagome/</div>
-<div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="math notranslate nohighlight">\(\cdots\)</span></div>
+<div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="math">\(\cdots\)</span></div>
 <div class="line">├──src/</div>
 <div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├──mVMC/</div>
 <div class="line">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ **.c</div>
@@ -270,13 +282,13 @@ make
 </li>
 <li><p class="first">スタンダードモードの入力ファイルの作成</p>
 <p>あらかじめ用意されたいくつかのモデル(HeisenbergモデルやHubbardモデル)や格子(正方格子など)を指定し、
-それらに対するいくつかのパラメーター(最近接 <span class="math notranslate nohighlight">\(\cdot\)</span> 次近接スピン結合やオンサイトクーロン積分など)を設定します。
+それらに対するいくつかのパラメーター(最近接 <span class="math">\(\cdot\)</span> 次近接スピン結合やオンサイトクーロン積分など)を設定します。
 各ファイルは <a class="reference internal" href="standard.html#howtostandard"><span class="std std-ref">スタンダードモード用入力ファイル書式</span></a> に従い記載してください。</p>
 </li>
 <li><p class="first">実行</p>
-<p>作成した入力ファイル名を引数として <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> を実行します。
-このとき入力ファイル名の前にオプション <code class="docutils literal notranslate"><span class="pre">-s</span></code> を付けます。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ mpiexec -np プロセス数 パス/vmc.out -s 入力ファイル
+<p>作成した入力ファイル名を引数として <code class="docutils literal"><span class="pre">vmc.out</span></code> を実行します。
+このとき入力ファイル名の前にオプション <code class="docutils literal"><span class="pre">-s</span></code> を付けます。</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ mpiexec -np プロセス数 パス/vmc.out -s 入力ファイル
 </pre></div>
 </div>
 <p>ワークステーションやスパコン等でキューイングシステムを利用している場合は
@@ -284,27 +296,27 @@ make
 詳しくはお使いのシステムのマニュアルをご参照ください。</p>
 </li>
 <li><p class="first">途中経過</p>
-<p>計算実行の経過についてカレントディレクトリ直下の <code class="docutils literal notranslate"><span class="pre">output/</span></code>
+<p>計算実行の経過についてカレントディレクトリ直下の <code class="docutils literal"><span class="pre">output/</span></code>
 ディレクトリ(無ければ作られる)にログファイルが出力されます。
 出力されるファイルの詳細に関しては <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">出力ファイル</span></a> を参考にしてください。</p>
 </li>
 <li><p class="first">最終結果</p>
-<p>計算が正常終了した場合、 計算モードに従い <code class="docutils literal notranslate"><span class="pre">output/</span></code>
+<p>計算が正常終了した場合、 計算モードに従い <code class="docutils literal"><span class="pre">output/</span></code>
 ディレクトリに計算結果ファイルが出力されます。
 出力されるファイルの詳細に関しては <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">出力ファイル</span></a> を参考にしてください。</p>
 </li>
 <li><p class="first">エキスパートモードの入力ファイルの作成と実行</p>
 <p>上の例ではエキスパートモードのファイルを自動生成した後そのまま計算を開始していますが、
-エキスパートモードのファイルの生成のみを行う場合には <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> を実行します。
+エキスパートモードのファイルの生成のみを行う場合には <code class="docutils literal"><span class="pre">vmcdry.out</span></code> を実行します。
 MPIは使用しません。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ パス/vmcdry.out 入力ファイル
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ パス/vmcdry.out 入力ファイル
 </pre></div>
 </div>
-<p>このとき生成されたファイルを必要に応じて手動で編集したのち、 <code class="docutils literal notranslate"><span class="pre">-e</span></code>
+<p>このとき生成されたファイルを必要に応じて手動で編集したのち、 <code class="docutils literal"><span class="pre">-e</span></code>
 というオプションの後に
-<code class="docutils literal notranslate"><span class="pre">namelist/def</span></code> というファイルを引数として <code class="docutils literal notranslate"><span class="pre">vmcd.out</span></code>
+<code class="docutils literal"><span class="pre">namelist/def</span></code> というファイルを引数として <code class="docutils literal"><span class="pre">vmcd.out</span></code>
 を実行します。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ mpiexec -np プロセス数 パス/vmc.out -e namelist.def
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ mpiexec -np プロセス数 パス/vmc.out -e namelist.def
 </pre></div>
 </div>
 <p>以降はスタンダードモードと同様です。</p>
@@ -312,15 +324,15 @@ MPIは使用しません。</p>
 </ol>
 <p><strong>OpenMPスレッド数の指定</strong></p>
 <p>実行時のOpenMPのスレッド数を指定する場合は、
-<code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> を実行する前に以下の様にしてください(16スレッドの場合)。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">16</span>
+<code class="docutils literal"><span class="pre">vmc.out</span></code> を実行する前に以下の様にしてください(16スレッドの場合)。</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">16</span>
 </pre></div>
 </div>
 <div class="section" id="id5">
 <h3>バージョン番号の確認<a class="headerlink" href="#id5" title="このヘッドラインへのパーマリンク">¶</a></h3>
-<p>次のように <code class="docutils literal notranslate"><span class="pre">-v</span></code> オプションをつけて <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code>,
-<code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> を実行すると, バージョン番号を標準出力した後終了します。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ パス/vmcdry.out -v
+<p>次のように <code class="docutils literal"><span class="pre">-v</span></code> オプションをつけて <code class="docutils literal"><span class="pre">vmc.out</span></code>,
+<code class="docutils literal"><span class="pre">vmcdry.out</span></code> を実行すると, バージョン番号を標準出力した後終了します。</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ パス/vmcdry.out -v
 $ パス/vmc.out -v
 </pre></div>
 </div>
@@ -342,7 +354,7 @@ $ パス/vmc.out -v
 <li><a class="reference internal" href="#">How to use mVMC?</a><ul>
 <li><a class="reference internal" href="#id1">要件</a></li>
 <li><a class="reference internal" href="#id2">インストール方法</a><ul>
-<li><a class="reference internal" href="#mvmcconfig-sh"><code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> を使う方法</a></li>
+<li><a class="reference internal" href="#mvmcconfig-sh"><code class="docutils literal"><span class="pre">mVMCconfig.sh</span></code> を使う方法</a></li>
 <li><a class="reference internal" href="#cmake">cmakeを使う方法</a></li>
 </ul>
 </li>
@@ -370,14 +382,12 @@ $ パス/vmc.out -v
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>クイック検索</h3>
-    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="検索" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="検索" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -396,12 +406,12 @@ $ パス/vmc.out -v
         <li class="right" >
           <a href="intro.html" title="What is mVMC?"
              >前へ</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.0.3 ドキュメント</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.1.0 ドキュメント</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      このドキュメントは <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4 で生成しました。
+      このドキュメントは <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2 で生成しました。
     </div>
   </body>
 </html>

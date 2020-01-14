@@ -1,4 +1,4 @@
-.. include:: ../bib/ref.txt
+.. include:: ../../bib/ref.txt
 
 Algorithm
 =========
@@ -18,7 +18,7 @@ a complete set of bases in sampling:
 
 .. math::
 
-   | x\rangle =  \prod_{n=1}^{N/2} c_{r_{n\uparrow}}^{\dagger} \prod_{n=1}^{N/2} c_{r_{n\downarrow}}^{\dagger} |0 \rangle,
+   | x\rangle =  \prod_{n=1}^{N_e/2} c_{r_{n\uparrow}}^{\dagger} \prod_{n=1}^{N_e/2} c_{r_{n\downarrow}}^{\dagger} |0 \rangle,
 
 where :math:`r_{n\sigma}` is a position of :math:`n`\ -th electron with
 :math:`\sigma (=\uparrow \rm{or} \downarrow)` spin, and
@@ -187,7 +187,7 @@ redundancy.
 
 .. _PfaffianP:
 
-Relation between :math:`F_{IJ}` and :math:`\Phi_{In\sigma}` (the case of the general pairing)
+Relation between :math:`F_{IJ}` and :math:`\Phi_{In}` (the case of the general pairing)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We extend the relation between the Pfaffian-Slater wave function and the
@@ -209,7 +209,7 @@ anti-parallel pairing case, we can derive the following relation:
 .. math::
 
    \begin{aligned}
-   F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{In}\Phi_{Jn+1}-\Phi_{Jn}\Phi_{In+1}\Big).
+   F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{I,2n-1}\Phi_{J,2n}-\Phi_{J,2n-1}\Phi_{I,2n}\Big).
    \end{aligned}
 
 Because this relation hold for the case of anti-parallel pairing, we

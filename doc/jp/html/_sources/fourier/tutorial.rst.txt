@@ -116,7 +116,7 @@ gnuplotを使って,
 
 .. _corplotpng:
      
-.. figure:: ../../figs/corplot.png
+.. figure:: ../../../figs/corplot.png
 
    相関関数 :math:`\langle{\bf S}_{\bf k}\cdot{\bf S}_{\bf k}\rangle` (12列目)を
    プロットした図.
