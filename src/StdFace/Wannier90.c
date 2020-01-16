@@ -28,8 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "setmemory.h"
 
 void _calc_inverse_matrix(double cutoff_Rvec[][3], double inverse_matrix[][3]) {
-  double NMatrix[3][3] = {{},
-                          {}};
+  double NMatrix[3][3];
   int i, j;
   for (i = 0; i < 3; i++) {
     for (j = 0; j < 3; j++) {
@@ -65,8 +64,9 @@ void _calc_inverse_matrix(double cutoff_Rvec[][3], double inverse_matrix[][3]) {
 
 int _check_in_box(int *rvec, double inverse_matrix[][3])
 {
-  double judge_vec[3]={};
+  double judge_vec[3];
   int i, j;
+  for (i =0; i<3; i++) judge_vec[i] = 0;
   for (i =0; i<3; i++) {
     for (j = 0; j < 3; j++) {
       judge_vec[i] += rvec[j]*inverse_matrix[j][i] ;
@@ -148,10 +148,15 @@ static void read_W90(
   double dtmp[2], dR[3], length;
   char ctmp[256], *ctmp2;
   double complex ***Mat_tot;
-  double inverse_rvec[3][3]={{},{}};
+  double inverse_rvec[3][3];
   double *Weight_tot;
   int **indx_tot,*Band_lattice, *Model_lattice;
 
+  for (ii=0; ii<3; ii++){
+    for (jj=0; jj<3; jj++){
+      inverse_rvec[ii][jj] = 0;
+    }
+  }  
   /*
   Header part
   */
@@ -179,8 +184,12 @@ static void read_W90(
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
     Mat_tot[iWSC] = (double complex **)malloc(sizeof(double complex *) * nWan);
     indx_tot[iWSC] = (int *)malloc(sizeof(int) * 3);
+    for (jj=0; jj<3; jj++) indx_tot[iWSC][jj] = 0;
     for (iWan = 0; iWan < nWan; iWan++) {
       Mat_tot[iWSC][iWan] = (double complex *)malloc(sizeof(double complex) * nWan);
+      for (jWan = 0; jWan < nWan; jWan++) {
+	Mat_tot[iWSC][iWan][jWan] = 0.0;
+      }
     }
   }
 
@@ -261,6 +270,7 @@ static void read_W90(
   /*
    * (2) Apply weight
    */
+  for (ii = 0; ii < 3; ii++) Band_lattice[ii] = 0;
   // Get Lattice length
   for (iWSC = 0; iWSC < nWSC; iWSC++) {
     for (ii = 0; ii < 3; ii++) {
