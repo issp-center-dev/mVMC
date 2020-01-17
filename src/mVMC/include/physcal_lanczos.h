@@ -7,6 +7,7 @@ int PhysCalLanczos_real(
  double *_QQQQ_real,
  double *_QCisAjsQ_real,
  double *_QCisAjsCktAltQ_real,
+ double *_QCisAjsCktAltQDC_real,
  const int _nLSHam,
  const int _Ns,
  const int _nCisAjs,
@@ -14,20 +15,23 @@ int PhysCalLanczos_real(
  int **_iOneBodyGIdx,
  int **_CisAjsLzIdx,
  const int _nCisAjsCktAlt,
- int **_CisAjsCktAlt,
+ const int _nCisAjsCktAltDC,
+ int **_CisAjsCktAltDC,
  const int _NLanczosmode,
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,
  FILE *_FileLSQCisAjsCktAltQ,
  FILE *_FileLSCisAjs,
- FILE *_FileLSCisAjsCktAlt
+ FILE *_FileLSCisAjsCktAlt,
+ FILE *_FileLSCisAjsCktAltDC
 );
 
 int PhysCalLanczos_fcmp(
  double complex* _QQQQ,
  double complex* _QCisAjsQ,
  double complex* _QCisAjsCktAltQ,
+ double complex* _QCisAjsCktAltQDC,
  const int _nLSHam,
  const int _Ns,
  const int _nCisAjs,
@@ -35,14 +39,16 @@ int PhysCalLanczos_fcmp(
  int **_iOneBodyGIdx,
  int **_CisAjsLzIdx,
  const int _nCisAjsCktAlt,
- int **_CisAjsCktAlt,
+ const int _nCisAjsCktAltDC,
+ int **_CisAjsCktAltDC,
  const int _NLanczosmode,
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,
  FILE *_FileLSQCisAjsCktAltQ,
  FILE *_FileLSCisAjs,
- FILE *_FileLSCisAjsCktAlt
+ FILE *_FileLSCisAjsCktAlt,
+ FILE *_FileLSCisAjsCktAltDC
 );
 #endif
 

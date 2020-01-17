@@ -81,7 +81,7 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
 
       tmp = GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,
                        myProjCntNew,myBuffer);
-      PhysCisAjsCktAltDC[idx] += w*tmp;
+      LocalCisAjsCktAltDC[idx] = tmp;
     }
     
     #pragma omp master
@@ -90,6 +90,11 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
     #pragma omp for private(idx) nowait
     for(idx=0;idx<NCisAjs;idx++) {
       PhysCisAjs[idx] += w*LocalCisAjs[idx];
+    }
+
+    #pragma omp for private(idx) nowait
+    for (idx=0;idx<NCisAjsCktAltDC;idx++) {
+      PhysCisAjsCktAltDC[idx] += w*LocalCisAjsCktAltDC[idx];
     }
 
     #pragma omp master
