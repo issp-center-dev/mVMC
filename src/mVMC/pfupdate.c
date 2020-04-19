@@ -351,8 +351,9 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int
   }
 
   /* calculate Pf M */
-  //TODO: CHECK rwork is real
-  M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+  //TODO: CHECK rwork is real <-- [R-Xu] Not needed anymore?
+  info = 1; // Skipping inverse.
+  M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork/*, rwork*/, &info);
   //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
 
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
@@ -588,7 +589,9 @@ double complex updateMAll_BF_fcmp_child(
   }
 
   /* calculate Pf M */
-  M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+  // [R-Xu] NOTE: Again coverage-0 code. Skipping.
+  info = 1; // Skip Pfaffine inverse.
+  M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork/*, rwork*/, &info);
   //M_DSKPFA(&uplo, &mthd, &nn, invM, &lda, &pfaff, iwork, work, &lwork, &info);
   //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
 

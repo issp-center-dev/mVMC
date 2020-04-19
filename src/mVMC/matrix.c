@@ -69,7 +69,7 @@ int getLWork_fcmp() {
   lwork=-1;
   M_ZGETRI(&n, &a, &lda, &iwork, &optSize1, &lwork, &info);
   lwork=-1;
-  M_ZSKPFA(&uplo, &mthd, &n, &a, &lda, &pfaff, &iwork, &optSize2, &lwork, &rwork, &info);
+  M_ZSKPFA(&uplo, &mthd, &n, &a, &lda, &pfaff, &iwork, &optSize2, &lwork/*, &rwork*/, &info);
 
   lwork = (creal(optSize1)>creal(optSize2)) ? (int)creal(optSize1) : (int)creal(optSize2);
   return lwork;
@@ -132,9 +132,9 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
   int rsi,rsj;
 
   char uplo='U', mthd='P';
-  int m,n,lda,info=0;
+  int m,n,nsq,one,lda,info=0;
   //int nspn = 2*Ne+2*Nsite+2*Nsite+NProj; this is useful?
-  double complex pfaff;
+  double complex pfaff,minus_one;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -148,6 +148,9 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
   double complex *bufM_i, *bufM_i2;
 
   m=n=lda=Nsize;
+  nsq=n*n;
+  one=1;
+  minus_one=-1.0;
 
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
@@ -178,35 +181,18 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
   //    printf("DEBUG: msi=%d msj=%d bufM %lf %lf \n",msi,msj,creal(bufM[msi+msj*n]),cimag(bufM[msi+msj*n]));
   //  }
   //}
-  M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
+  M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work/*, rwork*/, &lwork, &info);
   //printf("DEBUG: pfaff=%lf %lf\n",creal(pfaff),cimag(pfaff));
   if(info!=0) return info;
   if(!isfinite(creal(pfaff) + cimag(pfaff))) return qpidx+1;
   PfM[qpidx] = pfaff;
 
   /* DInv */
-  M_ZGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
-  if(info!=0) return info;
-  //for(msi=0;msi<nsize*nsize;msi++) {
-  //  printf("DEBUG: M_ZGETRF %d %lf %lf \n",msi,creal(bufM[msi]),cimag(bufM[msi]));
-  //}
+  // M_ZGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
+  // M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
 
-  M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
-  if(info!=0) return info;
-
-  /* store InvM */
-  /* BufM is column-major, InvM is row-major */
-#pragma loop noalias
-  for(msi=0;msi<nsize;msi++) {
-    invM_i = invM + msi*Nsize;
-    bufM_i = bufM + msi*Nsize;
-    bufM_i2 = bufM + msi;
-    for(msj=0;msj<nsize;msj++) {
-      invM_i[msj] = 0.5*(bufM_i2[msj*nsize] - bufM_i[msj]);
-      //printf("DEBUG: msj=%d invM=%lf %lf \n",msj,creal(invM_i[msj]),cimag(invM_i[msj]));
-      /* invM[i][j] = 0.5*(bufM[i][j]-bufM[j][i]) */
-    }
-  }
+  // InvM -> InvM(T) -> -InvM
+  M_ZSCAL(&nsq, &minus_one, InvM, &one);
 
   return info;
 }
@@ -388,8 +374,8 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   int rsi,rsj;
 
   char uplo='U', mthd='P';
-  int m,n,lda,info=0;
-  double complex pfaff;
+  int m,n,nsq,lda,one,info=0;
+  double complex pfaff,minus_one;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -403,6 +389,9 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   double complex *bufM_i, *bufM_i2;
 
   m=n=lda=Nsize;
+  nsq=n*n;
+  one=1;
+  minus_one=-1.0;
 
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
@@ -426,6 +415,7 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   for(msi=0;msi<nsize*nsize;msi++) {
     invM[msi] = bufM[msi];
   }
+  // [TODO] Now bufM is not needed. Remove.
   /* calculate Pf M */
   //printf("DEBUG: n=%d \n",n);
   //for(msi=0;msi<nsize;msi++){
@@ -433,35 +423,19 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   //    printf("DEBUG: msi=%d msj=%d bufM %lf %lf \n",msi,msj,creal(bufM[msi+msj*n]),cimag(bufM[msi+msj*n]));
   //  }
   //}
-  M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
-  //printf("DEBUG: pfaff=%lf %lf\n",creal(pfaff),cimag(pfaff));
+  M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work/*, rwork*/, &lwork, &info);
+  // printf("DEBUG: pfaff=%lf %lf\n",creal(pfaff),cimag(pfaff));
   if(info!=0) return info;
   if(!isfinite(creal(pfaff) + cimag(pfaff))) return qpidx+1;
   PfM[qpidx] = pfaff;
 
   /* DInv */
-  M_ZGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
-  if(info!=0) return info;
-  //for(msi=0;msi<nsize*nsize;msi++) {
-  //  printf("DEBUG: M_ZGETRF %d %lf %lf \n",msi,creal(bufM[msi]),cimag(bufM[msi]));
-  //}
+  // M_ZGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
+  // M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
 
-  M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
-  if(info!=0) return info;
-
-  /* store InvM */
-  /* BufM is column-major, InvM is row-major */
-#pragma loop noalias
-  for(msi=0;msi<nsize;msi++) {
-    invM_i = invM + msi*Nsize;
-    bufM_i = bufM + msi*Nsize;
-    bufM_i2 = bufM + msi;
-    for(msj=0;msj<nsize;msj++) {
-      invM_i[msj] = 0.5*(bufM_i2[msj*nsize] - bufM_i[msj]);
-      //printf("DEBUG: msj=%d invM=%lf %lf \n",msj,creal(invM_i[msj]),cimag(invM_i[msj]));
-      /* invM[i][j] = 0.5*(bufM[i][j]-bufM[j][i]) */
-    }
-  }
+  /* mVMC's handling InvM as row-major,
+   * i.e. InvM needs a transpose, InvM -> -InvM according antisymmetric properties. */
+  M_ZSCAL(&nsq, &minus_one, InvM, &one);
 
   return info;
 }
@@ -569,7 +543,10 @@ int calculateMAll_BF_fcmp_child(
     invM[msi] = bufM[msi];
   }
   /* calculate Pf M */
-  M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
+  // [R-Xu] Coverage-0 code. Skipping inverse only.
+  // NOTE: One may want to modify this according to calculateMAll_fcmp_child if he needs BF.
+  info = 1; // Skip inverse.
+  M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork/*, rwork*/, &info);
   if(info!=0) return info;
   if(!(isfinite(creal(pfaff)) && isfinite(cimag(pfaff)))) return qpidx+1;
   PfM[qpidx] = pfaff;
@@ -651,8 +628,8 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   int rsi,rsj;
 
   char uplo='U', mthd='P';
-  int m,n,lda,info=0;
-  double pfaff;
+  int m,n,nsq,one,lda,info=0;
+  double pfaff,minus_one;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -666,6 +643,9 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   double *bufM_i, *bufM_i2;
 
   m=n=lda=Nsize;
+  nsq=n*n;
+  one=1;
+  minus_one=-1.0;
 
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
@@ -708,25 +688,11 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
 
   //  printf("Debug: M_DGETRF\n");
   /* DInv */
-  M_DGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
-  if(info!=0) return info;
+  // M_DGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
+  // M_DGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
 
-  //  printf("Debug: M_DGETRI\n");
-  M_DGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
-  if(info!=0) return info;
-
-  /* store InvM */
-  /* BufM is column-major, InvM is row-major */
-#pragma loop noalias
-  for(msi=0;msi<nsize;msi++) {
-    invM_i = invM + msi*Nsize;
-    bufM_i = bufM + msi*Nsize;
-    bufM_i2 = bufM + msi;
-    for(msj=0;msj<nsize;msj++) {
-      invM_i[msj] = 0.5*(bufM_i2[msj*nsize] - bufM_i[msj]);
-      /* invM[i][j] = 0.5*(bufM[i][j]-bufM[j][i]) */
-    }
-  }
+  // InvM -> InvM' = -InvM
+  M_DSCAL(&nsq, &minus_one, invM, &one);
 
   return info;
 }
@@ -816,6 +782,11 @@ int calculateMAll_BF_real_child(const int *eleIdx, const int qpStart, const int 
     invM[msi] = bufM[msi];
   }
   /* calculate Pf M */
+  // [R-Xu]
+  // NOTE: This piece of code is coverage 0, i.e. cannot be tested
+  //       hence I'm keeping GETRF and GETRI to safety.
+  // TODO: If anyone'd like to utilize this, try to use Pfaffine's inv-mode and remove GETRF&GETRI.
+  info = 1; // Skip inverse.
   M_DSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, &info);
   if(info!=0) return info;
   if(!isfinite(pfaff)) return qpidx+1;
