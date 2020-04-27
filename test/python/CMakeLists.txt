@@ -22,6 +22,8 @@ find_package(PythonInterp 2.7 REQUIRED)
 
 set(python_test_vmc_model
   HeisenbergChain
+  HubbardChain
+  HubbardChain_cmp
   HubbardTetragonal
   KondoChain
   HeisenbergChain_cmp
