@@ -24,6 +24,7 @@ set(python_test_vmc_model
   HeisenbergChain
   HubbardChain
   HubbardChain_cmp
+  HeisenbergChain_fsz
   HubbardTetragonal
   KondoChain
   HeisenbergChain_cmp
