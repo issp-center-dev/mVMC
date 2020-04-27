@@ -28,7 +28,8 @@ os.chdir(workdir)
 
 bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
 
-result = subprocess.call([bin_to_test, "-s", "%s/StdFace.def" % refdir])
+#result = subprocess.call([bin_to_test, "-s", "%s/StdFace.def" % refdir])
+result = subprocess.call([bin_to_test, "-s", "%s/StdFace.def" % refdir, "%s/initial.def" % refdir])
 if result != 0:
     sys.exit(result)
 
