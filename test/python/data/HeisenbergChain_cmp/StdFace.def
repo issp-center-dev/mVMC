@@ -1,11 +1,13 @@
-L = 8
+L = 6
 Lsub = 2
 model = "Spin"
 lattice = "chain"
 J = 1.0
 NSROptItrStep = 1000
-NVMCSample = 500
+NVMCSample = 100
 2Sz = 0
-//NVMCCalMode = 1
-RndSeed = 1
+DSROptRedCut  = 1e-10
+DSROptStaDel  = 1e-5
+DSROptStepDt  = 1e-2
 ComplexType = 1
+RndSeed = 1
