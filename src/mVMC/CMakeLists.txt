@@ -8,7 +8,9 @@ endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 
 include_directories(include)
 include_directories(../common)
-include_directories(../StdFace)
+
+# include_directories("${STDFACE_DIR)}/src")
+
 add_definitions(-DMEXP=19937)
 
 set(SOURCES_vmcmain
@@ -19,7 +21,21 @@ set(SOURCES_sfmt
         ../sfmt/SFMT.c   
  )
 
-add_library(StdFace STATIC ../StdFace/src/ChainLattice.c ../StdFace/src/HoneycombLattice.c ../StdFace/src/SquareLattice.c ../StdFace/src/StdFace_main.c ../StdFace/src/StdFace_ModelUtil.c ../StdFace/src/TriangularLattice.c ../StdFace/src/Ladder.c ../StdFace/src/Kagome.c ../StdFace/src/Orthorhombic.c ../StdFace/src/Pyrochlore.c ../StdFace/src/Wannier90.c ../StdFace/src/FCOrtho.c ../StdFace/src/setmemory.c)
+add_library(StdFace STATIC
+  ${STDFACE_DIR}/src/ChainLattice.c
+  ${STDFACE_DIR}/src/HoneycombLattice.c
+  ${STDFACE_DIR}/src/SquareLattice.c
+  ${STDFACE_DIR}/src/StdFace_main.c
+  ${STDFACE_DIR}/src/StdFace_ModelUtil.c
+  ${STDFACE_DIR}/src/TriangularLattice.c
+  ${STDFACE_DIR}/src/Ladder.c
+  ${STDFACE_DIR}/src/Kagome.c
+  ${STDFACE_DIR}/src/Orthorhombic.c
+  ${STDFACE_DIR}/src/Pyrochlore.c
+  ${STDFACE_DIR}/src/Wannier90.c
+  ${STDFACE_DIR}/src/FCOrtho.c
+  ${STDFACE_DIR}/src/setmemory.c
+)
 
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../pfapack)
 
