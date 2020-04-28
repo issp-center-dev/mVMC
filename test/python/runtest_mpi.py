@@ -27,10 +27,10 @@ os.makedirs(workdir)
 os.chdir(workdir)
 
 bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
-mpi_command = 'mpi'
+mpi_command = 'mpirun'
 
 #result = subprocess.call([bin_to_test, "-s", "%s/StdFace.def" % refdir])
-result = subprocess.call(["%s -np 2" % mpi_command,bin_to_test, "-s", "%s/StdFace.def" % refdir, "%s/initial.def" % refdir])
+result = subprocess.call(["%s -np 4" % mpi_command,bin_to_test, "-s", "%s/StdFace.def" % refdir, "%s/initial.def" % refdir])
 if result != 0:
     sys.exit(result)
 

@@ -42,7 +42,18 @@ set(python_test_vmc_model
 )
 
 set(python_test_vmc_model_mpi
-  HeisenbergChain_cmp
+  HeisenbergChain_mpi
+  HeisenbergChain_cmp_mpi
+  HeisenbergChain_fsz_mpi
+  HubbardChain_mpi
+  HubbardChain_cmp_mpi
+  HubbardChain_fsz_mpi
+  HubbardTetragonal_mpi
+  HubbardTetragonal_MomentumProjection_mpi
+  KondoChain_mpi
+  KondoChain_cmp_mpi
+  KondoChain_fsz_mpi
+  KondoChain_Stot1_cmp_mpi
 )
 
 set(python_test_vmc_model_mode1
@@ -57,6 +68,10 @@ set(python_test_uhf_model
 )
 
 foreach(model ${python_test_vmc_model})
+    add_python_vmc_test(${model})
+endforeach(model)
+
+foreach(model ${python_test_vmc_model_mpi})
     add_python_vmc_test(${model})
 endforeach(model)
 
