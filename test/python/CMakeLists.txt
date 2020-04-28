@@ -31,6 +31,7 @@ set(python_test_vmc_model
   HubbardTetragonal_MomentumProjection
   KondoChain
   KondoChain_cmp
+  KondoChain_fsz
   KondoChain_Stot1_cmp
 )
 
