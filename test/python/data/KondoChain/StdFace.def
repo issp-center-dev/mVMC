@@ -7,3 +7,4 @@ nelec = 4
 NSROptItrStep = 200
 NVMCSample    = 500
 2Sz = 0
+RndSeed = 1
