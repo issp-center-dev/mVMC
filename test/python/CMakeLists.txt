@@ -1,5 +1,6 @@
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mode1.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_UHF.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_UHF_InterAll.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
@@ -12,6 +13,11 @@ function(add_python_vmc_test_mode1 model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_mode1.py ${model})
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_vmc_test_mode1)
+
+function(add_python_vmc_test_mpi model)
+    add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_mpi.py ${model})
+    set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_mpi)
 
 function(add_python_uhf_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_UHF.py ${model})
@@ -33,6 +39,10 @@ set(python_test_vmc_model
   KondoChain_cmp
   KondoChain_fsz
   KondoChain_Stot1_cmp
+)
+
+set(python_test_vmc_model_mpi
+  HeisenbergChain_cmp
 )
 
 set(python_test_vmc_model_mode1
