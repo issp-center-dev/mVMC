@@ -22,13 +22,14 @@ find_package(PythonInterp 2.7 REQUIRED)
 
 set(python_test_vmc_model
   HeisenbergChain
+  HeisenbergChain_cmp
+  HeisenbergChain_fsz
   HubbardChain
   HubbardChain_cmp
-  HeisenbergChain_fsz
+  HubbardChain_fsz
   HubbardTetragonal
+  HubbardTetragonal_MomentumProjection
   KondoChain
-  HeisenbergChain_cmp
-  HubbardTetragonal_cmp
   KondoChain_cmp
   KondoChain_Stot1_cmp
 )
