@@ -37,6 +37,7 @@ set(python_test_vmc_model
 
 set(python_test_vmc_model_mode1
   SpinChainLanczos
+  HubbardChainLanczos
 )
 
 
