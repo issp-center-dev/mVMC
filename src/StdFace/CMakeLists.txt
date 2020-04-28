@@ -12,5 +12,5 @@ function(git_clone uri name branch)
 endfunction()
 
 git_clone(https://github.com/issp-center-dev/StdFace clone 
-         19616999f42e602e47ea26e0dfcb7754065f7f91
+         master
          )
