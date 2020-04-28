@@ -1353,7 +1353,7 @@ static void PrintModPara(struct StdIntList *StdI)
   fprintf(fp, "CParaFileHead  %s\n", StdI->CParaFileHead);
   fprintf(fp, "--------------------\n");
   fprintf(fp, "NVMCCalMode    %d\n", StdI->NVMCCalMode);
-  /*fprintf(fp, "NLanczosMode   %d\n", StdI->NLanczosMode);*/
+  fprintf(fp, "NLanczosMode   %d\n", StdI->NLanczosMode);
   fprintf(fp, "--------------------\n");
   fprintf(fp, "NDataIdxStart  %d\n", StdI->NDataIdxStart);
   fprintf(fp, "NDataQtySmp    %d\n", StdI->NDataQtySmp);

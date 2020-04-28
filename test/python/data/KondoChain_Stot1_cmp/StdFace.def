@@ -1,0 +1,12 @@
+L = 4
+model = "Kondolattice"
+lattice = "chain"
+t = 1.0
+J = 4.0
+nelec = 4
+NSROptItrStep = 200
+NVMCSample    = 500
+//NVMCCalMode = 1
+2Sz = 0
+ComplexType = 1
+NSPStot   =     1

@@ -15,7 +15,7 @@ if __name__ == '__main__':
     for i in range(2, 11):
         filename = "output{0}/zqp_opt.dat".format(i) 
         array = np.append(array, read_out(filename))
-    array = array.reshape(10, array.shape[0]/10)
+    array = array.reshape(10, array.shape[0]//10)
     std = np.std( array, axis = 0 )
     ave = np.mean( array, axis = 0 )
     np.savetxt("ref_std.dat", X = std)
