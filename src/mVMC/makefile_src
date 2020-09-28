@@ -1,6 +1,6 @@
 include ../make.sys
 
-PFAPACK = $(Pfaffine_ROOT)/src/libpfaffine.a # ../pfapack/libpfapack.a
+PFAPACK = # ../pfapack/libpfapack.a
 SFMT = ../sfmt/SFMT.o
 STDFACE = ../StdFace/libStdFace.a
 OPTION = -D_mpi_use
