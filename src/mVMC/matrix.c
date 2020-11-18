@@ -192,7 +192,7 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
   // M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
 
   // InvM -> InvM(T) -> -InvM
-  M_ZSCAL(&nsq, &minus_one, InvM, &one);
+  M_ZSCAL(&nsq, &minus_one, invM, &one);
 
   return info;
 }
@@ -435,7 +435,7 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
 
   /* mVMC's handling InvM as row-major,
    * i.e. InvM needs a transpose, InvM -> -InvM according antisymmetric properties. */
-  M_ZSCAL(&nsq, &minus_one, InvM, &one);
+  M_ZSCAL(&nsq, &minus_one, invM, &one);
 
   return info;
 }
