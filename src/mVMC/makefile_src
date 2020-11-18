@@ -1,6 +1,6 @@
 include ../make.sys
 
-PFAPACK = # ../pfapack/libpfapack.a
+PFAPACK = ../pfapack/libpfapack.a
 SFMT = ../sfmt/SFMT.o
 STDFACE = ../StdFace/libStdFace.a
 OPTION = -D_mpi_use
@@ -96,7 +96,7 @@ HEADERS = \
 ./include/workspace.h
 
 all : 
-	# cd ../pfapack; $(MAKE) -f makefile_pfapack
+	cd ../pfapack; $(MAKE) -f makefile_pfapack
 	cd ../sfmt; $(MAKE) -f makefile_sfmt
 	cd ../StdFace; $(MAKE) -f makefile_StdFace libStdFace.a
 	make -f makefile_src vmc.out
