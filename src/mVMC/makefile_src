@@ -1,6 +1,8 @@
 include ../make.sys
 
 PFAPACK = ../pfapack/libpfapack.a
+PFAFFINE = ../pfaffine/src/libpfaffine.a
+PFUPDATES = ../pfupdates/pfupdates.o
 SFMT = ../sfmt/SFMT.o
 STDFACE = ../StdFace/libStdFace.a
 OPTION = -D_mpi_use
@@ -9,7 +11,8 @@ OBJS = \
 	physcal_lanczos.o \
 	splitloop.o \
 	vmcmain.o \
-	$(PFAPACK) $(SFMT) $(STDFACE)
+	$(PFAPACK) $(SFMT) $(STDFACE) \
+	$(PFAFFINE) $(PFUPDATES)
 
 SOURCES = \
 average.c \
@@ -97,6 +100,8 @@ HEADERS = \
 
 all : 
 	cd ../pfapack; $(MAKE) -f makefile_pfapack
+	cd ../pfaffine; $(MAKE) -f makefile lib
+	cd ../pfupdates; $(MAKE) -f makefile_pfupdates
 	cd ../sfmt; $(MAKE) -f makefile_sfmt
 	cd ../StdFace; $(MAKE) -f makefile_StdFace libStdFace.a
 	make -f makefile_src vmc.out
@@ -118,6 +123,8 @@ clean :
 	rm -f *.o vmc.out vmcdry.out
 	cd ../sfmt; $(MAKE) -f makefile_sfmt clean
 	cd ../pfapack; $(MAKE) -f makefile_pfapack clean
+	cd ../pfaffine; $(MAKE) -f makefile clean
+	cd ../pfupdates; $(MAKE) -f makefile_pfupdates clean
 	cd ../StdFace; $(MAKE) -f makefile_StdFace clean
 	cd ../ComplexUHF; $(MAKE) -f makefile_uhf clean
 

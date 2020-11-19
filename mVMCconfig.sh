@@ -130,11 +130,26 @@ EOF
         exit
     fi
 
+    echo "CXX = #Specify a valid C++ compiler." >> src/make.sys
+    echo "BLIS_ROOT = #Specify your xrq-phys/BLIS installation here." >> src/make.sys
+    echo "# CFLAGS += -D_pfaffine -D_pf_block_update #Uncomment to use optimization." >> src/make.sys
     echo "cat src/make.sys"
     cat src/make.sys
 
+    echo 
+    echo "Checking out submodules for fast Pfaffian computation."
+    # Clone Pfaffine if submodule not loaded.
+    if [ ! -e src/pfaffine ]; then
+	git submodule update --init --recursive
+    fi
+    # Link make.sys to make.inc for Pfaffine
+    if [ ! -e src/pfaffine/make.inc ]; then
+	ln -s \$(PWD)/src/make.sys src/pfaffine/make.inc;
+    fi
+
     echo
-    echo "config DONE"
+    echo "Config is not done yet."
+    echo "Please edit make.sys and specify BLIS_ROOT, etc."
     echo
 
     cat > makefile <<EOF

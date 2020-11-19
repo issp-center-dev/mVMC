@@ -1,0 +1,14 @@
+include ../make.sys
+
+OBJ = pfupdates.o
+SRC = pf_interface.cc
+HDR = pf_interface.h orbital_mat.tcc skmv.tcc updated_tdi.tcc
+
+$(OBJ): $(SRC) $(HDR) 
+	$(CXX) $(CXXFLAGS) -D_CC_IMPL -c $< -o $@ \
+		-I../pfaffine/src \
+		-I$(BLIS_ROOT)/include \
+		-I$(BLIS_ROOT)/include/blis
+
+clean:
+	rm -f $(OBJ)
