@@ -10,7 +10,7 @@
 #define orbv( i, ctype ) ( (orbital_mat<ctype> *)orbv[i] )
 #define objv( i, ctype ) ( (updated_tdi<ctype> *)objv[i] )
 
-#define EXPANDNAME( cblachar, funcname ) funcname##_##cblachar
+#define EXPANDNAME( funcname, cblachar ) funcname##_##cblachar
 
 #define GENIMPL( ctype, cblachar ) \
   void EXPANDNAME( updated_tdi_v_init, cblachar ) \
@@ -91,7 +91,7 @@ GENIMPL( ccdcmplx, z )
 { \
   _Pragma("omp parallel for default(shared)") \
   for (int iqp = 0; iqp < num_qp; ++iqp) \
-    objv(iqp, ctype)->push_update_safe(osi, msj, true); \
+    objv(iqp, ctype)->push_update_safe(osi, msj, cal_pfa!=0); \
 }
 GENIMPL( float,    s )
 GENIMPL( double,   d )
@@ -122,7 +122,7 @@ GENIMPL( ccdcmplx, z )
           break; \
         } \
     objv(iqp, ctype)->push_update(osi, msj, false); \
-    objv(iqp, ctype)->push_update(osk, msl, true); \
+    objv(iqp, ctype)->push_update(osk, msl, cal_pfa!=0); \
   } \
 }
 GENIMPL( float,    s )
@@ -138,7 +138,7 @@ GENIMPL( ccdcmplx, z )
       void     *objv[] ) \
 { \
   for (int iqp = 0; iqp < num_qp; ++iqp) { \
-    objv(iqp, ctype)->pop_update(false); \
+    objv(iqp, ctype)->pop_update(cal_pfa!=0); \
   } \
 }
 GENIMPL( float,    s )

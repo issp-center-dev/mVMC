@@ -15,15 +15,17 @@
 #ifndef _CC_IMPL
 typedef _Complex double ccdcmplx;
 typedef _Complex float  ccscmplx;
+#else
+extern "C" {
 #endif
 
 // Function naming scheme:
 // updated_tdi_[v means ``operate on vector'']_[operation]_[datatype].
 
-#define EXPANDNAME( cblachar, funcname ) funcname##_##cblachar
+#define EXPANDNAME( funcname, cblachar ) funcname##_##cblachar
 
 #define GENDEF( ctype, cblachar ) \
-  extern "C" void EXPANDNAME( updated_tdi_v_init, cblachar ) \
+   void EXPANDNAME( updated_tdi_v_init, cblachar ) \
     ( uint64_t  num_qp, \
       uint64_t  nsite, \
       uint64_t  norbs, \
@@ -40,36 +42,36 @@ typedef _Complex float  ccscmplx;
 
 GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( scomplex, c )
-GENDEF( dcomplex, z )
+GENDEF( ccscmplx, c )
+GENDEF( ccdcmplx, z )
 #undef GENDEF
 
 #define GENDEF( ctype, cblachar ) \
-  extern "C" void EXPANDNAME( updated_tdi_v_free, cblachar ) \
+   void EXPANDNAME( updated_tdi_v_free, cblachar ) \
     ( uint64_t  num_qp, \
       void     *objv[], \
       void     *orbv[] );
 
 GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( scomplex, c )
-GENDEF( dcomplex, z )
+GENDEF( ccscmplx, c )
+GENDEF( ccdcmplx, z )
 #undef GENDEF
 
 #define GENDEF( ctype, cblachar ) \
-  extern "C" void EXPANDNAME( updated_tdi_v_get_pfa, cblachar ) \
+   void EXPANDNAME( updated_tdi_v_get_pfa, cblachar ) \
     ( uint64_t  num_qp, \
       ctype     pfav[], \
       void     *objv[] );
 
 GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( scomplex, c )
-GENDEF( dcomplex, z )
+GENDEF( ccscmplx, c )
+GENDEF( ccdcmplx, z )
 #undef GENDEF
 
 #define GENDEF( ctype, cblachar ) \
-  extern "C" void EXPANDNAME( updated_tdi_v_push, cblachar ) \
+   void EXPANDNAME( updated_tdi_v_push, cblachar ) \
     ( uint64_t  num_qp, \
       int64_t   osi, \
       int64_t   msj, \
@@ -78,12 +80,12 @@ GENDEF( dcomplex, z )
 
 GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( scomplex, c )
-GENDEF( dcomplex, z )
+GENDEF( ccscmplx, c )
+GENDEF( ccdcmplx, z )
 #undef GENDEF
 
 #define GENDEF( ctype, cblachar ) \
-  extern "C" void EXPANDNAME( updated_tdi_v_push_pair, cblachar ) \
+   void EXPANDNAME( updated_tdi_v_push_pair, cblachar ) \
     ( uint64_t  num_qp, \
       int64_t   osi, \
       int64_t   msj, \
@@ -94,21 +96,25 @@ GENDEF( dcomplex, z )
 
 GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( scomplex, c )
-GENDEF( dcomplex, z )
+GENDEF( ccscmplx, c )
+GENDEF( ccdcmplx, z )
 #undef GENDEF
 
 #define GENDEF( ctype, cblachar ) \
-  extern "C" void EXPANDNAME( updated_tdi_v_pop, cblachar ) \
+   void EXPANDNAME( updated_tdi_v_pop, cblachar ) \
     ( uint64_t  num_qp, \
       int64_t   cal_pfa, \
       void     *objv[] );
 
 GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( scomplex, c )
-GENDEF( dcomplex, z )
+GENDEF( ccscmplx, c )
+GENDEF( ccdcmplx, z )
 #undef GENDEF
 
 #undef EXPANDNAME
+
+#ifdef _CC_IMPL
+}
+#endif
 
