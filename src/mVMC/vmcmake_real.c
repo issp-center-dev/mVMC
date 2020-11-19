@@ -76,7 +76,6 @@ void VMCMakeSample_real(MPI_Comm comm) {
   // TODO: Compute from qpStart to qpEnd to support loop splitting.
   void *pfOrbital[NQPFull];
   void *pfUpdator[NQPFull];
-  int NBlockUpdateSize;
   // TODO: Make it input parameter.
   if (NExUpdatePath == 0)
     NBlockUpdateSize = 4;

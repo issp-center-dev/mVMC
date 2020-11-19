@@ -77,6 +77,7 @@ int NVMCWarmUp; /* Monte Carlo steps for warming up */
 int NVMCInterval; /* sampling interval [MCS] */ 
 int NVMCSample; /* the number of samples */
 int NExUpdatePath; /* update by exchange hopping  0: off, 1: on */
+int NBlockUpdateSize; /* {DEFINED: _pf_block_update} size of block Pfaffian update */
 
 int RndSeed; /* seed for pseudorandom number generator */
 int NSplitSize; /* the number of inner MPI processes */
