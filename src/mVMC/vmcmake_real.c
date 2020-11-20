@@ -172,12 +172,12 @@ void VMCMakeSample_real(MPI_Comm comm) {
         if (!isfinite(w)) w = -1.0; /* should be rejected */
 
         if (w > genrand_real2()) { /* accept */
-          // UpdateMAll will change SlaterElm, InvM (including PfM)
           StartTimer(63);
 #ifdef _pf_block_update
           // Inv already updated. Only need to get PfM again.
           updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
 #else
+          // UpdateMAll will change SlaterElm, InvM (including PfM)
           UpdateMAll_real(mi, s, TmpEleIdx, qpStart, qpEnd);
           //            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
 #endif
