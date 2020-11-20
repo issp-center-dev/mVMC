@@ -7,6 +7,15 @@
 // In implementation, this should appear AFTER blis.h.
 #include "pf_interface.h"
 
+// Non-# Pragma support differs from compiler to compiler
+#if defined(__INTEL_COMPILER)
+#define OMP_PARALLEL_FOR_SHARED __pragma(omp parallel for default(shared))
+#elif defined(__GNUC__)
+#define OMP_PARALLEL_FOR_SHARED _Pragma("omp parallel for default(shared)")
+#else
+#error "Valid non-preprocessor _pragma() not found."
+#endif
+
 #define orbv( i, ctype ) ( (orbital_mat<ctype> *)orbv[i] )
 #define objv( i, ctype ) ( (updated_tdi<ctype> *)objv[i] )
 
@@ -28,7 +37,7 @@
       void     *objv[], \
       void     *orbv[] ) \
 { \
-  _Pragma("omp parallel for default(shared)") \
+  OMP_PARALLEL_FOR_SHARED \
   for (int iqp = 0; iqp < num_qp; ++iqp) { \
     orbv[iqp] = new orbital_mat<ctype>( \
         BLIS_UPPER, norbs, orbmat_base + iqp * orbmat_stride, norbs); \
@@ -89,7 +98,7 @@ GENIMPL( ccdcmplx, z )
       int64_t   cal_pfa, \
       void     *objv[] ) \
 { \
-  _Pragma("omp parallel for default(shared)") \
+  OMP_PARALLEL_FOR_SHARED \
   for (int iqp = 0; iqp < num_qp; ++iqp) \
     objv(iqp, ctype)->push_update_safe(osi, msj, cal_pfa!=0); \
 }
@@ -109,7 +118,7 @@ GENIMPL( ccdcmplx, z )
       int64_t   cal_pfa, \
       void     *objv[] ) \
 { \
-  _Pragma("omp parallel for default(shared)") \
+  OMP_PARALLEL_FOR_SHARED \
   for (int iqp = 0; iqp < num_qp; ++iqp) { \
     auto &from_i = objv(iqp, ctype)->from_idx; \
     if (from_i.size() > objv(iqp, ctype)->mmax - 2) \
