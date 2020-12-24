@@ -144,7 +144,7 @@ EOF
     fi
     # Link make.sys to make.inc for Pfaffine
     if [ ! -e src/pfaffine/make.inc ]; then
-	ln -s \$(PWD)/src/make.sys src/pfaffine/make.inc;
+	ln -s $PWD/src/make.sys src/pfaffine/make.inc;
     fi
 
     echo
