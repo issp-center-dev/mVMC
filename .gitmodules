@@ -1,0 +1,4 @@
+[submodule "src/pfaffine"]
+	path = src/pfaffine
+	url = https://github.com/xrq-phys/Pfaffine
+	branch = blis

@@ -350,9 +350,14 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int
     mat[n2*k + k] = 0.0; /* diagonal elements */
   }
 
-  /* calculate Pf M */
-  //TODO: CHECK rwork is real
+  /* Calculate Pf M */
+  //TODO: CHECK rwork is real <-- [R-Xu] Not needed anymore?
+#ifdef _pfaffine
+  info = 1; // Skipping inverse.
+  M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork/*, rwork*/, &info);
+#else
   M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+#endif
   //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
 
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
@@ -587,8 +592,13 @@ double complex updateMAll_BF_fcmp_child(
     }
   }
 
-  /* calculate Pf M */
+  /* Calculate Pf M */
+#ifdef _pfaffine
+  info = 1; // Skip Pfaffine inverse.
+  M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork/*, rwork*/, &info);
+#else
   M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+#endif
   //M_DSKPFA(&uplo, &mthd, &nn, invM, &lda, &pfaff, iwork, work, &lwork, &info);
   //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
 

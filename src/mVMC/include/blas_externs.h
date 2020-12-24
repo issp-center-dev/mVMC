@@ -24,6 +24,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define _BLAS_EXTERNS_H
 
 // BLAS
+#define M_DDOT ddot_
+#define M_DZASUM dzasum_
+#define M_DZNRM2 dznrm2_
+#define M_DSCAL dscal_
+#define M_ZSCAL zscal_
 #define M_DAXPY daxpy_
 #define M_DGEMM  dgemm_
 #define M_DGEMV  dgemv_
@@ -41,9 +46,15 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define M_ZGETRI zgetri_
 #define M_ZPOSV  zposv_
 
-// pfaPACK
+// Skew-symmetric LAPACK-level routines:
+// Vendor switch: PFAPACK77 or Pfaffine
+#ifdef _pfaffine
+#define M_DSKPFA m_dskpfa_
+#define M_ZSKPFA m_zskpfa_
+#else
 #define M_DSKPFA dskpfa_
 #define M_ZSKPFA zskpfa_
+#endif
 
 // pBLAS
 #define M_PDGEMV  pdgemv_
@@ -58,6 +69,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 // BLAS
 
+extern double M_DDOT(const int *n, const double *x, const int *incx, const double *y, const int *incy);
+extern double M_DZNRM2(const int *n, const double complex *x, const int *incx);
+extern void M_DSCAL(const int *n, const double *a, double *x, const int *incx);
+extern void M_ZSCAL(const int *n, const double complex *a, double complex *x, const int *incx);
 extern void M_DGEMV(const char *trans, const int *m, const int *n, const double *alpha,
                     const double *a, const int *lda, const double *x, const int *incx,
                     const double *beta, double *y, const int *incy);
@@ -101,7 +116,11 @@ extern int M_DSKPFA(const char *uplo, const char *mthd, const int *n,
                     double *work, const int *lwork, int *info);
 extern int M_ZSKPFA(const char *uplo, const char *mthd, const int *n,
                     double complex *a, const int *lda, double complex *pfaff, int *iwork,
-                    double complex *work, const int *lwork, double *rwork, int *info);
+                    double complex *work, const int *lwork,
+#ifndef _pfaffine
+                    double *rwork,
+#endif
+                    int *info);
 
 // pBLAS
 extern void M_PDGEMV(const char *trans, const int *m, const int *n,

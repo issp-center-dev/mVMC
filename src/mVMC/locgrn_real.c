@@ -397,6 +397,9 @@ double calculateNewPfMN_real_child(const int qpidx, const int n, const int *msa,
   }
 
   /* calculate Pf M */
+  // TODO: Maybe block updating is faster than recalculation of Pfaffian.
+  //       Maybe I'll also give support for this in Pfaffine.
+  info = 1; // Skip inverse.
   M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
 
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;

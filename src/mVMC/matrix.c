@@ -69,7 +69,11 @@ int getLWork_fcmp() {
   lwork=-1;
   M_ZGETRI(&n, &a, &lda, &iwork, &optSize1, &lwork, &info);
   lwork=-1;
+#ifdef _pfaffine
+  M_ZSKPFA(&uplo, &mthd, &n, &a, &lda, &pfaff, &iwork, &optSize2, &lwork/*, &rwork*/, &info);
+#else
   M_ZSKPFA(&uplo, &mthd, &n, &a, &lda, &pfaff, &iwork, &optSize2, &lwork, &rwork, &info);
+#endif
 
   lwork = (creal(optSize1)>creal(optSize2)) ? (int)creal(optSize1) : (int)creal(optSize2);
   return lwork;
@@ -132,9 +136,9 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
   int rsi,rsj;
 
   char uplo='U', mthd='P';
-  int m,n,lda,info=0;
+  int m,n,nsq,one,lda,info=0;
   //int nspn = 2*Ne+2*Nsite+2*Nsite+NProj; this is useful?
-  double complex pfaff;
+  double complex pfaff,minus_one;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -148,6 +152,9 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
   double complex *bufM_i, *bufM_i2;
 
   m=n=lda=Nsize;
+  nsq=n*n;
+  one=1;
+  minus_one=-1.0;
 
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
@@ -161,52 +168,39 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
     for(msj=0;msj<nsize;msj++) {
       rsj = eleIdx[msj] + eleSpn[msj]*Nsite;//fsz
       bufM_i[msj] = -sltE_i[rsj];
-      //printf("DEBUG: msi=%d msj=%d: rsi=%d rsj=%d :bufM=%lf %lf \n",msi,msj,rsi,rsj,creal(bufM_i[msj]),cimag(bufM_i[msj]));
     }
   }
 
-  /* copy bufM to invM */
-  /* For Pfaffian calculation, invM is used as second buffer */
-#pragma loop noalias
-  for(msi=0;msi<nsize*nsize;msi++) {
+#ifdef _pfaffine
+  info=0; /* Fused Pfaffian/inverse computation. */
+  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work/*, rwork*/, &lwork, &info);
+#else
+  /* Pfaffian/inverse computed separately. */
+  /* Copy bufM to invM before using bufM to compute Pfaffian. */
+  for(msi=0;msi<nsize*nsize;msi++)
     invM[msi] = bufM[msi];
-  }
-  /* calculate Pf M */
-  //printf("DEBUG: n=%d \n",n);
-  //for(msi=0;msi<nsize;msi++){
-  //  for(msj=0;msj<nsize;msj++){
-  //    printf("DEBUG: msi=%d msj=%d bufM %lf %lf \n",msi,msj,creal(bufM[msi+msj*n]),cimag(bufM[msi+msj*n]));
-  //  }
-  //}
-  M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
-  //printf("DEBUG: pfaff=%lf %lf\n",creal(pfaff),cimag(pfaff));
+
+  /* Calculate Pf M */
+  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+#endif
+
   if(info!=0) return info;
   if(!isfinite(creal(pfaff) + cimag(pfaff))) return qpidx+1;
   PfM[qpidx] = pfaff;
 
-  /* DInv */
-  M_ZGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
-  if(info!=0) return info;
-  //for(msi=0;msi<nsize*nsize;msi++) {
-  //  printf("DEBUG: M_ZGETRF %d %lf %lf \n",msi,creal(bufM[msi]),cimag(bufM[msi]));
-  //}
+#ifdef _pfaffine
+  /* For fused Pfaffian/inverse, inv(M) is already stored in bufM.
+   * Now to transpose (.* -1) it to invM. */
+  for(msi=0;msi<nsize*nsize;msi++)
+    invM[msi] = -bufM[msi];
+#else
+  /* Calculate inverse. */
+  M_ZGETRF(&m, &n, invM, &lda, iwork, &info); /* ipiv = iwork */
+  M_ZGETRI(&n, invM, &lda, iwork, work, &lwork, &info);
 
-  M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
-  if(info!=0) return info;
-
-  /* store InvM */
-  /* BufM is column-major, InvM is row-major */
-#pragma loop noalias
-  for(msi=0;msi<nsize;msi++) {
-    invM_i = invM + msi*Nsize;
-    bufM_i = bufM + msi*Nsize;
-    bufM_i2 = bufM + msi;
-    for(msj=0;msj<nsize;msj++) {
-      invM_i[msj] = 0.5*(bufM_i2[msj*nsize] - bufM_i[msj]);
-      //printf("DEBUG: msj=%d invM=%lf %lf \n",msj,creal(invM_i[msj]),cimag(invM_i[msj]));
-      /* invM[i][j] = 0.5*(bufM[i][j]-bufM[j][i]) */
-    }
-  }
+  /* InvM -> InvM(T) -> -InvM */
+  M_ZSCAL(&nsq, &minus_one, invM, &one);
+#endif
 
   return info;
 }
@@ -261,9 +255,9 @@ int calculateMAll_child_fsz_real(const int *eleIdx,const int *eleSpn, const int 
   int rsi,rsj;
 
   char uplo='U', mthd='P';
-  int m,n,lda,info=0;
+  int m,n,lda,one,nsq,info=0;
   //int nspn = 2*Ne+2*Nsite+2*Nsite+NProj; this is useful?
-  double pfaff;
+  double pfaff,minus_one;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -277,6 +271,9 @@ int calculateMAll_child_fsz_real(const int *eleIdx,const int *eleSpn, const int 
   double *bufM_i, *bufM_i2;
 
   m=n=lda=Nsize;
+  nsq=n*n;
+  one=1;
+  minus_one=-1.0;
 
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
@@ -293,37 +290,37 @@ int calculateMAll_child_fsz_real(const int *eleIdx,const int *eleSpn, const int 
     }
   }
 
-  /* copy bufM to invM */
-  /* For Pfaffian calculation, invM is used as second buffer */
-#pragma loop noalias
-  for(msi=0;msi<nsize*nsize;msi++) {
+#ifdef _pfaffine
+  info=0; /* Fused Pfaffian/inverse computation. */
+#else
+  /* Pfaffian/inverse computed separately. */
+  /* Copy bufM to invM before using bufM to compute Pfaffian. */
+  for(msi=0;msi<nsize*nsize;msi++)
     invM[msi] = bufM[msi];
-  }
-  /* calculate Pf M */
-  M_DSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, &info);
+#endif
+
+  /* Calculate Pf M */
+  M_DSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, &info);
+
   if(info!=0) return info;
   if(!isfinite(pfaff)) return qpidx+1;
   PfM_real[qpidx] = pfaff;
 
-  /* DInv */
-  M_DGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
+#ifdef _pfaffine
+  /* inv(M) already stored in bufM.
+   * Transpose (.* -1) to invM. */
+  for(msi=0;msi<nsize*nsize;msi++)
+    invM[msi] = -bufM[msi];
+#else
+  /* Calculate inverse. */
+  M_DGETRF(&m, &n, invM, &lda, iwork, &info); /* ipiv = iwork */
+  if(info!=0) return info;
+  M_DGETRI(&n, invM, &lda, iwork, work, &lwork, &info);
   if(info!=0) return info;
 
-  M_DGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
-  if(info!=0) return info;
-
-  /* store InvM */
-  /* BufM is column-major, InvM is row-major */
-#pragma loop noalias
-  for(msi=0;msi<nsize;msi++) {
-    invM_i = invM + msi*Nsize;
-    bufM_i = bufM + msi*Nsize;
-    bufM_i2 = bufM + msi;
-    for(msj=0;msj<nsize;msj++) {
-      invM_i[msj] = 0.5*(bufM_i2[msj*nsize] - bufM_i[msj]);
-      /* invM[i][j] = 0.5*(bufM[i][j]-bufM[j][i]) */
-    }
-  }
+  /* InvM -> InvM(T) -> -InvM */
+  M_DSCAL(&nsq, &minus_one, invM, &one);
+#endif
 
   return info;
 }
@@ -388,8 +385,8 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   int rsi,rsj;
 
   char uplo='U', mthd='P';
-  int m,n,lda,info=0;
-  double complex pfaff;
+  int m,n,nsq,lda,one,info=0;
+  double complex pfaff,minus_one;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -403,6 +400,9 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   double complex *bufM_i, *bufM_i2;
 
   m=n=lda=Nsize;
+  nsq=n*n;
+  one=1;
+  minus_one=-1.0;
 
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
@@ -416,52 +416,40 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
     for(msj=0;msj<nsize;msj++) {
       rsj = eleIdx[msj] + (msj/Ne)*Nsite;
       bufM_i[msj] = -sltE_i[rsj];
-      //      printf("DEBUG: msi=%d msj=%d bufM=%lf %lf \n",msi,msj,creal(bufM_i[msj]),cimag(bufM_i[msj]));
     }
   }
 
-  /* copy bufM to invM */
-  /* For Pfaffian calculation, invM is used as second buffer */
-#pragma loop noalias
-  for(msi=0;msi<nsize*nsize;msi++) {
+#ifdef _pfaffine
+  info=0; /* Fused Pfaffian/inverse computation. */
+  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work/*, rwork*/, &lwork, &info);
+#else
+  /* Pfaffian/inverse computed separately. */
+  /* Copy bufM to invM before using bufM to compute Pfaffian. */
+  for(msi=0;msi<nsize*nsize;msi++)
     invM[msi] = bufM[msi];
-  }
-  /* calculate Pf M */
-  //printf("DEBUG: n=%d \n",n);
-  //for(msi=0;msi<nsize;msi++){
-  //  for(msj=0;msj<nsize;msj++){
-  //    printf("DEBUG: msi=%d msj=%d bufM %lf %lf \n",msi,msj,creal(bufM[msi+msj*n]),cimag(bufM[msi+msj*n]));
-  //  }
-  //}
-  M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
-  //printf("DEBUG: pfaff=%lf %lf\n",creal(pfaff),cimag(pfaff));
+
+  /* Calculate Pf M */
+  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+#endif
+
   if(info!=0) return info;
   if(!isfinite(creal(pfaff) + cimag(pfaff))) return qpidx+1;
   PfM[qpidx] = pfaff;
 
-  /* DInv */
-  M_ZGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
-  if(info!=0) return info;
-  //for(msi=0;msi<nsize*nsize;msi++) {
-  //  printf("DEBUG: M_ZGETRF %d %lf %lf \n",msi,creal(bufM[msi]),cimag(bufM[msi]));
-  //}
+#ifdef _pfaffine
+  /* inv(M) already stored in bufM.
+   * Transpose (.* -1) to invM. */
+  for(msi=0;msi<nsize*nsize;msi++)
+    invM[msi] = -bufM[msi];
+#else
+  /* Calculate inverse. */
+  M_ZGETRF(&m, &n, invM, &lda, iwork, &info); /* ipiv = iwork */
+  M_ZGETRI(&n, invM, &lda, iwork, work, &lwork, &info);
 
-  M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
-  if(info!=0) return info;
-
-  /* store InvM */
-  /* BufM is column-major, InvM is row-major */
-#pragma loop noalias
-  for(msi=0;msi<nsize;msi++) {
-    invM_i = invM + msi*Nsize;
-    bufM_i = bufM + msi*Nsize;
-    bufM_i2 = bufM + msi;
-    for(msj=0;msj<nsize;msj++) {
-      invM_i[msj] = 0.5*(bufM_i2[msj*nsize] - bufM_i[msj]);
-      //printf("DEBUG: msj=%d invM=%lf %lf \n",msj,creal(invM_i[msj]),cimag(invM_i[msj]));
-      /* invM[i][j] = 0.5*(bufM[i][j]-bufM[j][i]) */
-    }
-  }
+  /* mVMC's handling InvM as row-major,
+   * i.e. InvM needs a transpose, InvM -> -InvM according antisymmetric properties. */
+  M_ZSCAL(&nsq, &minus_one, invM, &one);
+#endif
 
   return info;
 }
@@ -531,8 +519,8 @@ int calculateMAll_BF_fcmp_child(
   int rsi,rsj;
 
   char uplo='U', mthd='P';
-  int m,n,lda,info=0;
-  double complex pfaff;
+  int m,n,lda,nsq,one,info=0;
+  double complex pfaff,minus_one;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -546,6 +534,9 @@ int calculateMAll_BF_fcmp_child(
   double complex*bufM_i, *bufM_i2;
 
   m=n=lda=Nsize;
+  nsq=n*n;
+  one=1;
+  minus_one=-1.0;
 
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
@@ -562,36 +553,38 @@ int calculateMAll_BF_fcmp_child(
     }
   }
 
-  /* copy bufM to invM */
-  /* For Pfaffian calculation, invM is used as second buffer */
-#pragma loop noalias
-  for(msi=0;msi<nsize*nsize;msi++) {
+#ifdef _pfaffine
+  info=0; /* Fused Pfaffian/inverse computation. */
+  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork/*, rwork*/, &info);
+#else
+  /* Pfaffian/inverse computed separately. */
+  /* Copy bufM to invM before using bufM to compute Pfaffian. */
+  for(msi=0;msi<nsize*nsize;msi++)
     invM[msi] = bufM[msi];
-  }
-  /* calculate Pf M */
-  M_ZSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
+
+  /* Calculate Pf M */
+  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+#endif
+
   if(info!=0) return info;
   if(!(isfinite(creal(pfaff)) && isfinite(cimag(pfaff)))) return qpidx+1;
   PfM[qpidx] = pfaff;
 
-  /* DInv */
-  M_ZGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
+#ifdef _pfaffine
+  /* inv(M) already stored in bufM.
+   * Transpose (.* -1) to invM. */
+  for(msi=0;msi<nsize*nsize;msi++)
+    invM[msi] = -bufM[msi];
+#else
+  /* Calculate inverse. */
+  M_ZGETRF(&m, &n, invM, &lda, iwork, &info); /* ipiv = iwork */
+  if(info!=0) return info;
+  M_ZGETRI(&n, invM, &lda, iwork, work, &lwork, &info);
   if(info!=0) return info;
 
-  M_ZGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
-  if(info!=0) return info;
-
-  /* store InvM */
-  /* BufM is column-major, InvM is row-major */
-#pragma loop noalias
-  for(msi=0;msi<nsize;msi++) {
-    invM_i = invM + msi*Nsize;
-    bufM_i = bufM + msi*Nsize;
-    bufM_i2 = bufM + msi;
-    for(msj=0;msj<nsize;msj++) {
-      invM_i[msj] = 0.5*(bufM_i2[msj*nsize] - bufM_i[msj]);
-    }
-  }
+  /* InvM -> InvM(T) -> -InvM */
+  M_ZSCAL(&nsq, &minus_one, invM, &one);
+#endif
 
   return info;
 }
@@ -651,8 +644,8 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   int rsi,rsj;
 
   char uplo='U', mthd='P';
-  int m,n,lda,info=0;
-  double pfaff;
+  int m,n,nsq,one,lda,info=0;
+  double pfaff,minus_one;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -666,6 +659,9 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   double *bufM_i, *bufM_i2;
 
   m=n=lda=Nsize;
+  nsq=n*n;
+  one=1;
+  minus_one=-1.0;
 
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
@@ -675,8 +671,6 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
     rsi = eleIdx[msi] + (msi/Ne)*Nsite;
     bufM_i = bufM + msi*Nsize;
     sltE_i = sltE + rsi*Nsite2;
-    //printf("Debug: bufM=%ld, sltE=%ld\n", bufM, sltE);
-    //    printf("Debug: bufM_i=%ld, sltE_i=%ld, rsi=%ld\n", bufM_i, sltE_i, rsi);
 #pragma loop norecurrence
     for(msj=0;msj<nsize;msj++) {
       rsj = eleIdx[msj] + (msj/Ne)*Nsite;
@@ -684,49 +678,36 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
 
     }
   }
-  /*
-     printf("DEBUG: n=%d \n",n);
-     for(msi=0;msi<nsize;msi++){
-     for(msj=0;msj<nsize;msj++){
-     printf("DEBUG: msi=%d msj=%d bufM %lf \n",msi,msj,bufM[msi+msj*n]);
-     }
-     }
-     */
 
-  /* copy bufM to invM */
-  /* For Pfaffian calculation, invM is used as second buffer */
-#pragma loop noalias
-  for(msi=0;msi<nsize*nsize;msi++) {
+#ifdef _pfaffine
+  info=0; /* Fused Pfaffian/inverse computation. */
+#else
+  /* Pfaffian/inverse computed separately. */
+  /* Copy bufM to invM before using bufM to compute Pfaffian. */
+  for(msi=0;msi<nsize*nsize;msi++)
     invM[msi] = bufM[msi];
-  }
+#endif
 
   /* calculate Pf M */
-  M_DSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, &info);
+  M_DSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, &info);
+
   if(info!=0) return info;
   if(!isfinite(pfaff)) return qpidx+1;
   PfM_real[qpidx] = pfaff;
 
-  //  printf("Debug: M_DGETRF\n");
-  /* DInv */
-  M_DGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
-  if(info!=0) return info;
+#ifdef _pfaffine
+  /* inv(M) already stored in bufM.
+   * Transpose (.* -1) to invM. */
+  for(msi=0;msi<nsize*nsize;msi++)
+    invM[msi] = -bufM[msi];
+#else
+  /* Compute inverse */
+  M_DGETRF(&m, &n, invM, &lda, iwork, &info); /* ipiv = iwork */
+  M_DGETRI(&n, invM, &lda, iwork, work, &lwork, &info);
 
-  //  printf("Debug: M_DGETRI\n");
-  M_DGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
-  if(info!=0) return info;
-
-  /* store InvM */
-  /* BufM is column-major, InvM is row-major */
-#pragma loop noalias
-  for(msi=0;msi<nsize;msi++) {
-    invM_i = invM + msi*Nsize;
-    bufM_i = bufM + msi*Nsize;
-    bufM_i2 = bufM + msi;
-    for(msj=0;msj<nsize;msj++) {
-      invM_i[msj] = 0.5*(bufM_i2[msj*nsize] - bufM_i[msj]);
-      /* invM[i][j] = 0.5*(bufM[i][j]-bufM[j][i]) */
-    }
-  }
+  // InvM -> InvM' = -InvM
+  M_DSCAL(&nsq, &minus_one, invM, &one);
+#endif
 
   return info;
 }
@@ -778,8 +759,8 @@ int calculateMAll_BF_real_child(const int *eleIdx, const int qpStart, const int 
   int rsi,rsj;
 
   char uplo='U', mthd='P';
-  int m,n,lda,info=0;
-  double pfaff;
+  int m,n,nsq,one,lda,info=0;
+  double pfaff,minus_one;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -793,6 +774,9 @@ int calculateMAll_BF_real_child(const int *eleIdx, const int qpStart, const int 
   double *bufM_i, *bufM_i2;
 
   m=n=lda=Nsize;
+  nsq=n*n;
+  one=1;
+  minus_one=-1.0;
 
   /* store bufM */
   /* Note that bufM is column-major and skew-symmetric. */
@@ -809,37 +793,37 @@ int calculateMAll_BF_real_child(const int *eleIdx, const int qpStart, const int 
     }
   }
 
-  /* copy bufM to invM */
-  /* For Pfaffian calculation, invM is used as second buffer */
-#pragma loop noalias
-  for(msi=0;msi<nsize*nsize;msi++) {
+#ifdef _pfaffine
+  info=0; /* Fused Pfaffian/inverse computation. */
+#else
+  /* Pfaffian/inverse computed separately. */
+  /* Copy bufM to invM before using bufM to compute Pfaffian. */
+  for(msi=0;msi<nsize*nsize;msi++)
     invM[msi] = bufM[msi];
-  }
-  /* calculate Pf M */
-  M_DSKPFA(&uplo, &mthd, &n, invM, &lda, &pfaff, iwork, work, &lwork, &info);
+#endif
+
+  /* Calculate Pf M */
+  M_DSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, &info);
+
   if(info!=0) return info;
   if(!isfinite(pfaff)) return qpidx+1;
   PfM_real[qpidx] = pfaff;
 
-  /* DInv */
-  M_DGETRF(&m, &n, bufM, &lda, iwork, &info); /* ipiv = iwork */
+#ifdef _pfaffine
+  /* inv(M) already stored in bufM.
+   * Transpose (.* -1) to invM. */
+  for(msi=0;msi<nsize*nsize;msi++)
+    invM[msi] = -bufM[msi];
+#else
+  /* Compute inverse. */
+  M_DGETRF(&m, &n, invM, &lda, iwork, &info); /* ipiv = iwork */
+  if(info!=0) return info;
+  M_DGETRI(&n, invM, &lda, iwork, work, &lwork, &info);
   if(info!=0) return info;
 
-  M_DGETRI(&n, bufM, &lda, iwork, work, &lwork, &info);
-  if(info!=0) return info;
-
-  /* store InvM */
-  /* BufM is column-major, InvM is row-major */
-#pragma loop noalias
-  for(msi=0;msi<nsize;msi++) {
-    invM_i = invM + msi*Nsize;
-    bufM_i = bufM + msi*Nsize;
-    bufM_i2 = bufM + msi;
-    for(msj=0;msj<nsize;msj++) {
-      invM_i[msj] = 0.5*(bufM_i2[msj*nsize] - bufM_i[msj]);
-      /* invM[i][j] = 0.5*(bufM[i][j]-bufM[j][i]) */
-    }
-  }
+  // InvM -> InvM' = -InvM
+  M_DSCAL(&nsq, &minus_one, invM, &one);
+#endif
 
   return info;
 }

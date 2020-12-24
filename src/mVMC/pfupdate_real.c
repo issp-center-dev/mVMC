@@ -362,6 +362,7 @@ double calculateNewPfMBFN4_real_child(const int qpidx, const int n, const int *m
 
   /* calculate Pf M */
   //M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+  info = 1; // Skip Pfaffine's inverse.
   M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
 
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
@@ -543,6 +544,10 @@ double updateMAll_BF_real_child(const int qpidx, const int n, const int *msa,
     }
   }
   /* DInv */
+  // NOTE: This routines is not called in current version (i.e. lcoal coverage 0),
+  //       hence cannot be tested. I'm keeping GETRF and GETRI here.
+  // TODO: If anyone's interested in utilizing this routine, she or he might want to
+  //       utilize inverse feature of Pfaffine skpfa.
   m=nn=lda=n2;
   //M_ZGETRF(&m, &nn, invMat, &lda, iwork2, &info); /* ipiv = iwork */
   M_DGETRF(&m, &nn, invMat, &lda, iwork2, &info); /* ipiv = iwork */
@@ -596,6 +601,8 @@ double updateMAll_BF_real_child(const int qpidx, const int n, const int *msa,
   /* calculate Pf M */
   //M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
   //M_DSKPFA(&uplo, &mthd, &nn, invM, &lda, &pfaff, iwork, work, &lwork, &info);
+  // As stated above, I'm now only setting Pfaffine to skip optinal inverse.
+  info = 1; // This is parameter for skipping inversion.
   M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
 
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
