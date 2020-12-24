@@ -6,7 +6,7 @@ PFUPDATES = ../pfupdates/pfupdates.o
 SFMT = ../sfmt/SFMT.o
 STDFACE = ../StdFace/libStdFace.a
 OPTION = -D_mpi_use
-LIB += -L$(BLIS_ROOT)/lib -lblis
+LIBS += -L$(BLIS_ROOT)/lib -lblis
 
 OBJS = \
 	physcal_lanczos.o \
