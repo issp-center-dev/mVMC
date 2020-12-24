@@ -6,13 +6,14 @@ PFUPDATES = ../pfupdates/pfupdates.o
 SFMT = ../sfmt/SFMT.o
 STDFACE = ../StdFace/libStdFace.a
 OPTION = -D_mpi_use
+LIB += -L$(BLIS_ROOT)/lib -lblis
 
 OBJS = \
 	physcal_lanczos.o \
 	splitloop.o \
 	vmcmain.o \
 	$(PFAPACK) $(SFMT) $(STDFACE) \
-	$(PFAFFINE) $(PFUPDATES)
+	$(PFUPDATES) $(PFAFFINE)
 
 SOURCES = \
 average.c \
