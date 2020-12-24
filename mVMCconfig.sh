@@ -139,12 +139,12 @@ EOF
     echo 
     echo "Checking out submodules for fast Pfaffian computation."
     # Clone Pfaffine if submodule not loaded.
-    if [ ! -e src/pfaffine ]; then
-	git submodule update --init --recursive
+    if [ ! -e src/pfaffine/src ]; then
+        git submodule update --init --recursive
     fi
     # Link make.sys to make.inc for Pfaffine
     if [ ! -e src/pfaffine/make.inc ]; then
-	ln -s $PWD/src/make.sys src/pfaffine/make.inc;
+        ln -s $PWD/src/make.sys src/pfaffine/make.inc;
     fi
 
     echo
