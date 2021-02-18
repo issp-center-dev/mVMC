@@ -101,7 +101,7 @@ HEADERS = \
 
 all : 
 	cd ../pfapack; $(MAKE) -f makefile_pfapack
-	cd ../pfaffine; $(MAKE) -f makefile lib
+	cd ../pfaffine; $(MAKE) -C src libpfaffine.a
 	cd ../pfupdates; $(MAKE) -f makefile_pfupdates
 	cd ../sfmt; $(MAKE) -f makefile_sfmt
 	cd ../StdFace; $(MAKE) -f makefile_StdFace libStdFace.a

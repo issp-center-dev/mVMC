@@ -239,14 +239,14 @@ template <typename T> struct updated_tdi {
       // Do nothing if nothing is to be updated.
       return false;
 
-    if (nq_updated == k_cal - 1) {
+    for (; nq_updated < k_cal; ++nq_updated) {
       // Update single column. Use SKMV.
       #ifdef UseBoost
       skmv(uplo, n, T(1.0), &M(0, 0), M.size1(), &U(0, nq_updated), &Q(0, nq_updated));
       #else
       skmv(uplo, n, T(1.0), &M(0, 0), M.ld, &U(0, nq_updated), &Q(0, nq_updated));
       #endif
-    } else {
+    } /* else {
       // Update multiple columns. Use SKMM.
       #ifdef UseBoost
       skmm(BLIS_LEFT, uplo, BLIS_NO_CONJUGATE, BLIS_NO_TRANSPOSE, n, k_cal - nq_updated,
@@ -259,6 +259,7 @@ template <typename T> struct updated_tdi {
       #endif
     }
     nq_updated = k_cal;
+    */
     return true;
   }
 

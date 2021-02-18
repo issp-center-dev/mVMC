@@ -1,5 +1,9 @@
 include ../make.sys
 
+ifeq ($(BLIS_ROOT),)
+	BLIS_ROOT = ../pfaffine/src/dep
+endif
+
 OBJ = pfupdates.o
 SRC = pf_interface.cc
 HDR = pf_interface.h orbital_mat.tcc skmv.tcc updated_tdi.tcc
