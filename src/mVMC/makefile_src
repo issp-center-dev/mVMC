@@ -6,7 +6,11 @@ PFUPDATES = ../pfupdates/pfupdates.o
 SFMT = ../sfmt/SFMT.o
 STDFACE = ../StdFace/libStdFace.a
 OPTION = -D_mpi_use
-LIBS += -L$(BLIS_ROOT)/lib -lblis
+
+# Not defining BLIS_ROOT indicates a MKL compilation.
+ifneq ($(BLIS_ROOT),)
+        LIBS += -L$(BLIS_ROOT)/lib -lblis
+endif
 
 OBJS = \
 	physcal_lanczos.o \
