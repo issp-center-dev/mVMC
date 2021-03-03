@@ -585,6 +585,7 @@ template <typename T> struct updated_tdi {
       for (dim_t j = 0; j < k; ++j)
         memcpy(&AB(0, k + j), &P(0, j), nelec * sizeof(T));
 
+    # if 0
     // Copy AB to ABC for TRMM interface.
     for (dim_t j = 0; j < 2 * k - 1; ++j)
       // inv(A)*U  [ 0 + + +
@@ -607,6 +608,22 @@ template <typename T> struct updated_tdi {
     #else
     skr2k(uplo, BLIS_NO_TRANSPOSE, nelec, 2 * k - 1, T(1.0), &ABC(0, 1), ABC.ld,
           &AB(0, 1), AB.ld, T(1.0), &M(0, 0), M.ld);
+    #endif
+    #else
+    gemm(BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE,
+         nelec, 2 * k, 2 * k,
+         T(1.0),
+         &AB(), AB.ld,
+         &C(), C.ld,
+         T(0.0),
+         &ABC(), ABC.ld);
+    gemmt(uplo, BLIS_NO_TRANSPOSE, BLIS_TRANSPOSE,
+          nelec, 2 * k,
+          T(1.0),
+          &ABC(), ABC.ld,
+          &AB(), AB.ld,
+          T(1.0),
+          &M(), M.ld);
     #endif
 
     // Identity update to complete antisymmetric matrix.
