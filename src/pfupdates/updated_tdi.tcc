@@ -384,8 +384,9 @@ template <typename T> struct updated_tdi {
       assemble_C_BMB();
 
       // If it's the first update Pfafian can be directly read out.
-      if (k == 0) {
-        PfaRatio = -UMV(0, 0);
+      if (k == 1) {
+        PfaRatio = -UMV(0, 0) + T(1.0);
+        delete[] pfwork;
         return;
       }
 
