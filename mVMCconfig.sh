@@ -27,8 +27,8 @@ else
     # Check config entries one by one.
     if [ ${1} = "gcc-fujitsu" ]; then #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         cat > src/make.sys <<EOF
-CC = fcc -Nclang
-CXX = FCC -Nclang
+CC = mpifcc -Nclang
+CXX = mpiFCC -Nclang
 F90 = frt
 FFLAGS = -DNDEBUG -DFUJITSU -Kfast
 CFLAGS = -DNDEBUG -Ofast -fopenmp
