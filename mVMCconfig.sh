@@ -1,126 +1,187 @@
 #!/bin/bash
-echo ""
-echo "####################  NOTICE  ########################"
-echo " mVMCconfig.sh will be removed in the future release,"
-echo " and we will support only CMake."
-echo "######################################################"
-echo ""
 if [ -z ${1} ] || [ ${1} = "help" ]; then
     echo ""
     echo "Usage:"
-    echo "./config.sh system_name"
+    echo "./mVMCconfig.sh system_name"
     echo " system_name should be chosen from below:"
-    echo "         sekirei : ISSP system-B"
-    echo "         fujitsu : Fujitsu K computer & FX10"
-    echo "   intel-openmpi : Intel Compiler + OpenMPI"
-    echo "     intel-mpich : Intel Compiler + MPICH2"
-    echo "  intel-intelmpi : Intel Compiler + IntelMPI"
-    echo "     gcc-openmpi : GCC + OpenMPI"
-    echo "   gcc-mpich-mkl : GCC + MPICH + MKL"
-#    echo "        kashiwa : Remain for compatibility"
-#    echo "        jupiter : Remain for compatibility"
-#    echo "            sol : Remain for compatibility"
-#    echo "          reims : Remain for compatibility"
+    echo "  gcc-fujitsu : GCC/FCC Mixed Compile"
+    echo "               (Customized config for Supercomputer Fugaku.)"
+    echo "   intel-impi : Intel Compiler + IntelMPI"
+    echo "               (ISSP System-C users should use this config.)"
+    echo "    intel-mpi : Intel Compiler + OpenMPI/MPICH2"
+    echo "    aocc-aocl : AMD AOCC + AOCL + OpenMPI/MPICH2"
+    echo "     gcc-aocl : GCC + AOCL + OpenMPI/MPICH2"
+    echo "               (ISSP System-B users should use this config.)"
+    echo "  gcc-mkl-mpi : GCC + MKL + OpenMPI/MPICH2"
+    echo "  gcc-x86-mpi : GCC + OpenMPI/MPICH2 on generic x86_64"
+    echo "               (Not recommended. Install MKL, AOCL or libFLAME.)"
+    echo "  gcc-arm-mpi : GCC + OpenMPI/MPICH2 on Armv8-A"
     echo ""
 else
-    if [ ${1} = "sekirei" ]; then
+    if [ ! -e ${PWD}/mVMCconfig.sh ]; then
+	echo "Error: Out-out-place configuration not supported."
+	echo "       Please run config in mVMC source directory."
+	exit
+    fi
+
+    # Check config entries one by one.
+    if [ ${1} = "gcc-fujitsu" ]; then #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         cat > src/make.sys <<EOF
-CC = mpicc
-F90 = mpif90
-CFLAGS = -O3 -xHost -qopenmp -no-prec-div -Wno-unknown-pragmas
-FFLAGS = -O3 -xHost -qopenmp -implicitnone
-LIBS = -qopenmp -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
-SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
+CC = fcc -Nclang
+CXX = FCC -Nclang
+F90 = frt
+FFLAGS = -DNDEBUG -DFUJITSU -Kfast
+CFLAGS = -DNDEBUG -Ofast -fopenmp
+CXXFLAGS = -DNDEBUG -Ofast -fopenmp
+CFLAGS += -D_lapack -D_pf_block_update # -D_pfaffine
+CXXFLAGS += -DBLAS_EXTERNAL
+
+BLIS_ROOT = # Specify your installation of BLIS > v0.8.
+LIBS = -SSL2 -lm -lpthread
+SFMTFLAGS =
 EOF
-    elif [ ${1} = "kashiwa" ]; then
-        cat > src/make.sys <<EOF
-CC = mpicc
-F90 = mpif90
-CFLAGS = -O3 -xHost -openmp -no-prec-div -Wno-unknown-pragmas
-FFLAGS = -O3 -xHost -openmp -implicitnone
-LIBS = -openmp -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm -openmp
-SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
+	echo "Notice: mVMC for Fugaku cannot be compiled on the login node."
+	echo "        Please submit a single-node job to compile:"
+	echo "        $ pjsub compile.psh"
+	cat > compile.psh <<EOF
+#!/bin/bash
+#PJM -L "node=1"
+#PJM -L "rscunit=rscunit_ft01"
+#PJM -L "rscgrp=small"
+#PJM -L "elapse=10:00"
+#PJM -S
+make -j48 mvmc
 EOF
-    elif [ ${1} = "fujitsu" ]; then
-        cat > src/make.sys <<EOF
-CC = mpifccpx
-F90 = mpifrtpx
-CFLAGS = -Kfast,parallel,ocl,openmp
-FFLAGS = -Kfast,parallel,ocl,openmp,auto -AT -Cpp -D FUJITSU
-LIBS = -Kfast,parallel,ocl,openmp -SCALAPACK -SSL2BLAMP
-SFMTFLAGS = -Kfast,ocl,nomemalias
-EOF
-    elif [ ${1} = "intel-openmpi" ]; then
-        cat > src/make.sys <<EOF
-CC = mpicc
-F90 = mpif90
-CFLAGS = -O3 -xHost -qopenmp -no-prec-div -Wno-unknown-pragmas -I \${MKLROOT}/include
-FFLAGS = -O3 -xHost -qopenmp -implicitnone
-LIBS = -qopenmp -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_openmpi_lp64 -lpthread -lm -ldl
-SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
-EOF
-    elif [ ${1} = "sol" ]; then
-        cat > src/make.sys <<EOF
-CC = mpicc
-F90 = mpif90
-CFLAGS = -O3 -xHost -openmp -no-prec-div -Wno-unknown-pragmas
-FFLAGS = -O3 -xHost -openmp -implicitnone
-LIBS = -openmp -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_openmpi_lp64 -lpthread -lm -openmp
-SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
-EOF
-    elif [ ${1} = "intel-mpich" ]; then
-        cat > src/make.sys <<EOF
-CC = mpicc
-F90 = mpif90
-CFLAGS = -O3 -xHost -qopenmp -no-prec-div -Wno-unknown-pragmas -I \${MKLROOT}/include
-FFLAGS = -O3 -xHost -qopenmp -implicitnone
-LIBS = -qopenmp -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_intelmpi_lp64 -lpthread -lm -ldl
-SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
-EOF
-    elif [ ${1} = "reims" ]; then
-        cat > src/make.sys <<EOF
-CC = mpicc
-F90 = mpif90
-CFLAGS = -O3 -xHost -openmp -no-prec-div -Wno-unknown-pragmas
-FFLAGS = -O3 -xHost -openmp -implicitnone
-LIBS = -openmp -L \$(MKLROOT)/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -lpthread -lm -openmp
-SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
-EOF
-    elif [ ${1} = "intel-intelmpi" ]; then
+    elif [ ${1} = "intel-impi" ]; then #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         cat > src/make.sys <<EOF
 CC = mpiicc
-F90 = mpiifort
-CFLAGS = -O3 -xHost -qopenmp -no-prec-div -Wno-unknown-pragmas -I \${MKLROOT}/include
-FFLAGS = -O3 -xHost -qopenmp -implicitnone
-LIBS = -qopenmp -L \${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_intelmpi_lp64 -lpthread -lm -ldl
-SFMTFLAGS = -no-ansi-alias -DHAVE_SSE2
-EOF
-    elif [ ${1} = "gcc-openmpi" ]; then
-        cat > src/make.sys <<EOF
-CC = mpicc
-F90 = gfortran
-CFLAGS = -O3 -fopenmp
-FFLAGS = -O3 -fopenmp -fimplicit-none
-LIBS = -fopenmp -lblacs-openmpi -lscalapack-openmpi -llapack -lblas -lm
-SFMTFLAGS =
-EOF
-    elif [ ${1} = "gcc-mpich-mkl" ]; then
-        cat > src/make.sys <<EOF
-CC = mpicc
-F90 = gfortran
-CFLAGS = -O3 -fopenmp -I\${MKLROOT}/include
-FFLAGS = -O3 -fopenmp -fimplicit-none
-LIBS = -fopenmp -L\${MKLROOT}/lib -Wl,-rpath,\${MKLROOT}/lib -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_mpich_lp64 -lpthread -lm -ldl
-SFMTFLAGS =
-EOF
-    elif [ ${1} = "jupiter" ]; then
-        cat > src/make.sys <<EOF
-CC = mpicc
-F90 = mpif90
-CFLAGS = -O3 -no-prec-div -xP -Wno-unknown-pragmas -D_lapack
+CXX = mpiicpc
+F90 = ifort
 FFLAGS = -O3 -implicitnone
-LIBS = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lguide -lpthread -lm -openmp
-SFMTFLAGS = -no-ansi-alias
+CFLAGS = -O3 -qopenmp -Wno-unknown-pragmas
+CXXFLAGS = -O3 -std=gnu++14 -fpic -qopenmp
+CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL
+
+BLIS_ROOT = # Specify your installation of BLIS > v0.8.
+LIBS = -mkl=sequential -lm -lpthread
+SFMTFLAGS =
+EOF
+	echo "Notice: Recommended modules for System-C Enaga:"
+	echo "        intel/20.0.1 intel-mkl/20.0.1 intel-mpi/2019.7 gcc/7.2.0"
+    elif [ ${1} = "intel-mpi" ]; then #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        cat > src/make.sys <<EOF
+export MPICH_CC = icc
+export MPICH_CXX = icpc
+export OMPI_CC = icc
+export OMPI_CXX = icpc
+CC = mpicc
+CXX = mpicxx
+F90 = ifort
+FFLAGS = -O3 -implicitnone
+CFLAGS = -O3 -qopenmp -Wno-unknown-pragmas
+CXXFLAGS = -O3 -std=gnu++14 -fpic -qopenmp
+CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL
+
+BLIS_ROOT = # Specify your installation of BLIS > v0.8.
+LIBS = -mkl=sequential -lm -lpthread
+SFMTFLAGS =
+EOF
+    elif [ ${1} = "aocc-aocl" ]; then #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        cat > src/make.sys <<EOF
+export MPICH_CC = clang
+export MPICH_CXX = clang++
+export OMPI_CC = clang
+export OMPI_CXX = clang++
+CC = mpicc
+CXX = mpicxx
+F90 = flang
+FFLAGS = -O3
+CFLAGS = -O3 -fopenmp
+CXXFLAGS = -O3 -fPIC
+CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
+CXXFLAGS +=
+
+BLIS_ROOT = # Specify your installation of BLIS > v0.8.
+LIBS = -lflame -lm -lpthread
+SFMTFLAGS =
+EOF
+    elif [ ${1} = "gcc-aocl" ]; then #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        cat > src/make.sys <<EOF
+export MPICH_CC = gcc
+export MPICH_CXX = g++
+export OMPI_CC = gcc
+export OMPI_CXX = g++
+CC = mpicc
+CXX = mpicxx
+F90 = gfortran
+FFLAGS = -O3 -fimplicit-none
+CFLAGS = -O3 -fopenmp
+CXXFLAGS = -O3 -fPIC
+CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
+CXXFLAGS +=
+
+BLIS_ROOT = # Specify your installation of BLIS > v0.8.
+LIBS = -lflame -lm -lpthread
+SFMTFLAGS =
+EOF
+    elif [ ${1} = "gcc-mkl-mpi" ]; then #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        cat > src/make.sys <<EOF
+export MPICH_CC = gcc
+export MPICH_CXX = g++
+export OMPI_CC = gcc
+export OMPI_CXX = g++
+CC = mpicc
+CXX = mpicxx
+F90 = gfortran
+FFLAGS = -O3 -fimplicit-none
+CFLAGS = -O3 -fopenmp
+CXXFLAGS = -O3
+CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
+CXXFLAGS += -DBLAS_EXTERNAL
+
+BLIS_ROOT = # Specify your installation of BLIS > v0.8.
+LIBS = -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lm -lpthread
+SFMTFLAGS =
+EOF
+    elif [ ${1} = "gcc-x86-mpi" ]; then #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        cat > src/make.sys <<EOF
+export MPICH_CC = gcc
+export MPICH_CXX = g++
+export OMPI_CC = gcc
+export OMPI_CXX = g++
+CC = mpicc
+CXX = mpicxx
+F90 = gfortran
+FFLAGS = -O3 -fimplicit-none
+CFLAGS = -O3 -fopenmp
+CXXFLAGS = -O3
+CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
+CXXFLAGS +=
+
+BLIS_ROOT = # Specify your installation of BLIS > v0.8.
+LIBS = -llapack -lm -lpthread
+SFMTFLAGS =
+EOF
+    elif [ ${1} = "gcc-arm-mpi" ]; then #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        cat > src/make.sys <<EOF
+export MPICH_CC = gcc
+export MPICH_CXX = g++
+export OMPI_CC = gcc
+export OMPI_CXX = g++
+CC = mpicc
+CXX = mpicxx
+F90 = gfortran
+FFLAGS = -O3 -fimplicit-none
+CFLAGS = -O3 -fopenmp
+CXXFLAGS = -O3
+CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
+CXXFLAGS += # -DBLAS_EXTERNAL
+
+BLIS_ROOT = # Specify your installation of BLIS > v0.8.
+LIBS = -llapack -lm -lpthread
+SFMTFLAGS =
 EOF
     else
         echo ""
@@ -129,13 +190,7 @@ EOF
         echo ""
         exit
     fi
-
-    echo "CXX = #Specify a valid C++ compiler." >> src/make.sys
-    echo "BLIS_ROOT = #Specify your xrq-phys/BLIS installation here." >> src/make.sys
-    echo "# CFLAGS += -D_pfaffine -D_pf_block_update #Uncomment to use optimization." >> src/make.sys
-    echo "cat src/make.sys"
     cat src/make.sys
-
     echo 
     echo "Checking out submodules for fast Pfaffian computation."
     # Clone Pfaffine if submodule not loaded.
@@ -143,9 +198,7 @@ EOF
         git submodule update --init --recursive
     fi
     # Link make.sys to make.inc for Pfaffine
-    if [ ! -e src/pfaffine/make.inc ]; then
-        ln -s $PWD/src/make.sys src/pfaffine/make.inc;
-    fi
+    ln -s $PWD/src/make.sys src/pfaffine/make.inc;
 
     echo
     echo "Config is not done yet."
@@ -160,27 +213,22 @@ help:
 	@echo ""
 	@echo "<entry> is chosen from below"
 	@echo "      mvmc : Build simulator mVMC in src/ and tool/"
-	@echo " userguide : Generate userguid_jp.pdf & userguide_en.pdf in doc/"
-	@echo "     clean : Remove all generated files excepting makefile and doc/"
-	@echo " veryclean : Remove all generated files including makefile and doc/"
+	@echo "     clean : Remove all generated files excepting makefile"
+	@echo " veryclean : Remove all generated files including makefile"
 	@echo ""
 
 mvmc:
-	cd src/mVMC/;make -f makefile_src
-	cd tool;make -f makefile_tool
-
-userguide:
-	cd doc/jp; make html latexpdfja
-	cd doc/en; make html latexpdfja
+	make -C src/mVMC -f makefile_src
+	make -C tool     -f makefile_tool
 
 clean:
-	cd src/mVMC/; make -f makefile_src clean
-	cd tool; make -f makefile_tool clean
+	rm -rf  src/blis-install
+	make -C src/blis-build            clean
+	make -C src/mVMC -f makefile_src  clean
+	make -C tool     -f makefile_tool clean
 
 veryclean:
 	make clean
-	cd doc/jp; make clean
-	cd doc/en; make clean
 	rm -f src/make.sys makefile
 EOF
 fi
