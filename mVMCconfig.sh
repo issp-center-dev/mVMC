@@ -218,17 +218,17 @@ help:
 	@echo ""
 
 mvmc:
-	make -C src/mVMC -f makefile_src
-	make -C tool     -f makefile_tool
+	\$(MAKE) -C src/mVMC -f makefile_src
+	\$(MAKE) -C tool     -f makefile_tool
 
 clean:
 	rm -rf  src/blis-install
-	make -C src/blis-build            clean
-	make -C src/mVMC -f makefile_src  clean
-	make -C tool     -f makefile_tool clean
+	\$(MAKE) -C src/blis-build            clean
+	\$(MAKE) -C src/mVMC -f makefile_src  clean
+	\$(MAKE) -C tool     -f makefile_tool clean
 
 veryclean:
-	make clean
+	\$(MAKE) clean
 	rm -f src/make.sys makefile
 EOF
 fi
