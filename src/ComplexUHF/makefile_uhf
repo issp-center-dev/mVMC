@@ -15,7 +15,7 @@ readdef.o \
 UHFmain.o
 
 UHF : $(OBJS)
-	cd ../sfmt; $(MAKE) -f makefile_sfmt
+	$(MAKE) -C ../sfmt -f makefile_sfmt
 	$(CC) -o $@ $(OBJS) $(SFMT) $(CFLAGS) $(LIBS)
 
 SUFFIXES: .o .c
@@ -25,7 +25,7 @@ SUFFIXES: .o .c
 
 clean :
 	rm -f *.o UHF
-	cd ../sfmt; $(MAKE) -f makefile_sfmt clean
+	$(MAKE) -C ../sfmt -f makefile_sfmt clean
 
 UHFmain.o:include/Def.h
 UHFmain.o:include/matrixlapack.h
