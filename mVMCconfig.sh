@@ -139,7 +139,7 @@ FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3
 CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS += -DBLAS_EXTERNAL
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL
 
 BLIS_ROOT = # Specify your installation of BLIS > v0.8.
 LIBS = -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lm -lpthread
