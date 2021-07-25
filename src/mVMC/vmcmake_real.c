@@ -78,7 +78,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
   void *pfUpdator[NQPFull];
   // TODO: Make it input parameter.
   if (NExUpdatePath == 0)
-    NBlockUpdateSize = 4;
+    NBlockUpdateSize = 2;
   else
     NBlockUpdateSize = 20;
 
@@ -189,7 +189,9 @@ void VMCMakeSample_real(MPI_Comm comm) {
           Counter[1]++;
         } else { /* reject */
 #ifdef _pf_block_update
+          StartTimer(61);
           updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
+          StopTimer(61);
 #endif
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
         }
@@ -260,8 +262,10 @@ void VMCMakeSample_real(MPI_Comm comm) {
           Counter[3]++;
         } else { /* reject */
 #ifdef _pf_block_update
+          StartTimer(66);
           updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
           updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
+          StopTimer(66);
 #endif
           revertEleConfig(mj, rj, ri, t, TmpEleIdx, TmpEleCfg, TmpEleNum);
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
