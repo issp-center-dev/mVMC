@@ -54,7 +54,7 @@ double CalculateHamiltonian_fsz_real(const double ip, int *eleIdx, const int *el
   firstprivate(ip, Nsize, Nsite2, NProj, NQPFull, NCoulombIntra, CoulombIntra, ParaCoulombIntra, \
                NCoulombInter, CoulombInter, ParaCoulombInter, NHundCoupling, HundCoupling, ParaHundCoupling, \
                NTransfer, Transfer, ParaTransfer, NPairHopping, PairHopping, ParaPairHopping, \
-               NExchangeCoupling, ExchangeCoupling, ParaExchangeCoupling, NInterAll, InterAll, ParaInterAll, n0, n1, ip) \
+               NExchangeCoupling, ExchangeCoupling, ParaExchangeCoupling, NInterAll, InterAll, ParaInterAll, n0, n1) \
   shared(eleCfg, eleProjCnt, eleIdx, eleNum,eleSpn) reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
