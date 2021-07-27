@@ -1,0 +1,16 @@
+L             = 6
+Lsub          = 6
+model         = "HubbardGC"
+lattice       = "chain"
+U             = 4.0
+t             = 1.0
+Nelec         = 6
+h             = 1.0
+gamma         = 0.5
+NSROptItrStep = 200
+NVMCSample    = 2000
+DSROptRedCut  = 1e-10
+DSROptStaDel  = 1e-2
+DSROptStepDt  = 1e-2
+ComplexType   = 1
+RndSeed       = 1
