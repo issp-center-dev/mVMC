@@ -24,7 +24,7 @@ function(add_python_uhf_test model)
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_uhf_test)
 
-find_package(PythonInterp 2.7 REQUIRED)
+find_package(PythonInterp 3.6 REQUIRED)
 
 set(python_test_vmc_model
   HeisenbergChain
