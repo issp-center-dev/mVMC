@@ -1,0 +1,12 @@
+L = 4
+model = "KondolatticeGC"
+lattice = "chain"
+t = 1.0
+J = 4.0
+h = 4
+gamma = 1
+ncond = 4
+NSROptItrStep = 200
+NVMCSample    = 1000
+ComplexType = 1
+RndSeed     = 1

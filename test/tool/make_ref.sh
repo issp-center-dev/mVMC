@@ -6,7 +6,7 @@ do
     x0=`expr 5 \* $x + 12345`
     cp ./StdFace_org.def ./StdFace.def
     echo "RndSeed = $x0" >> StdFace.def
-    ./vmc.out -s ./StdFace.def
+    ./vmc.out -s ./StdFace.def ./initial.def
     mv ./output ./output$x
     x=`expr $x + 1`
 done
