@@ -9,7 +9,9 @@ OPTION = -D_mpi_use
 
 # Not defining BLIS_ROOT indicates a MKL compilation.
 ifneq ($(BLIS_ROOT),)
-        LIBS += -L$(BLIS_ROOT)/lib -lblis
+	# This is better handled by make.sys due to linkage order.
+        # LIBS += -L$(BLIS_ROOT)/lib -lblis
+        LIBS += -Wl,-rpath,$(BLIS_ROOT)/lib
 endif
 
 OBJS = \
