@@ -6,3 +6,6 @@
 	path = src/blis
 	url = https://github.com/xrq-phys/blis
 	branch = mvmc
+[submodule "src/pfapack"]
+	path = src/pfapack
+	url = https://github.com/xrq-phys/pfapack

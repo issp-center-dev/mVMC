@@ -1,6 +1,6 @@
 include ../make.sys
 
-PFAPACK = ../pfapack/libpfapack.a
+PFAPACK = ../pfapack/fortran/libpfapack.a
 PFAFFINE = ../pfaffine/src/libpfaffine.a
 PFUPDATES = ../pfupdates/pfupdates.o
 SFMT = ../sfmt/SFMT.o
@@ -106,7 +106,7 @@ HEADERS = \
 ./include/workspace.h
 
 all : 
-	$(MAKE) -C ../pfapack     -f makefile_pfapack
+	$(MAKE) -C ../pfapack/fortran                libpfapack.a
 	$(MAKE) -C ../pfaffine/src                   libpfaffine.a
 	$(MAKE) -C ../pfupdates  -f makefile_pfupdates
 	$(MAKE) -C ../sfmt       -f makefile_sfmt
@@ -128,12 +128,12 @@ SUFFIXES: .o .c
 
 clean :
 	rm -f *.o vmc.out vmcdry.out
-	$(MAKE) -C ../sfmt       -f makefile_sfmt      clean
-	$(MAKE) -C ../pfapack    -f makefile_pfapack   clean
-	$(MAKE) -C ../pfaffine   -f makefile           clean
-	$(MAKE) -C ../pfupdates  -f makefile_pfupdates clean
-	$(MAKE) -C ../StdFace    -f makefile_StdFace   clean
-	$(MAKE) -C ../ComplexUHF -f makefile_uhf       clean
+	$(MAKE) -C ../sfmt            -f makefile_sfmt      clean
+	$(MAKE) -C ../pfapack/fortran -f makefile           clean
+	$(MAKE) -C ../pfaffine        -f makefile           clean
+	$(MAKE) -C ../pfupdates       -f makefile_pfupdates clean
+	$(MAKE) -C ../StdFace         -f makefile_StdFace   clean
+	$(MAKE) -C ../ComplexUHF      -f makefile_uhf       clean
 
 physcal_lanczos.o:$(SOURCES) $(HEADERS)
 splitloop.o:$(SOURCES) $(HEADERS)
