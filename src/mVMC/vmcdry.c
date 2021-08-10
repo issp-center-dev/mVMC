@@ -28,6 +28,11 @@ void StdFace_main(char *fname);
 
 int main(int argc, char *argv[])
 {
+  if (argc == 1){
+    printf("Usage: %s StdFace.def\n");
+    return 1;
+  }
+
   if (strcmp(argv[1], "-v") == 0) {
     printVersion();
     exit(0);

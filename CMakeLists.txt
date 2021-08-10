@@ -14,6 +14,8 @@ endif(NOT CMAKE_BUILD_TYPE)
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+
+option(GIT_SUBMODULE_UPDATE "execute `git submodule update` automatically" ON)
 enable_language(C Fortran)
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
@@ -57,6 +59,30 @@ if(USE_SCALAPACK MATCHES OFF)
   endif(LAPACK_FOUND)
 endif()
 
+# git submodule update
+# ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+  set(STDFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace/submodule")
+  # Update submodules as needed
+  if(GIT_SUBMODULE_UPDATE)
+    message(STATUS "Submodule update")
+    execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      RESULT_VARIABLE GIT_SUBMOD_RESULT)
+    if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+      message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+    endif()
+  endif()
+
+  if(NOT EXISTS "${STDFACE_DIR}/CMakeLists.txt")
+    message(FATAL_ERROR "The submodule StdFace were not downloaded! GIT_SUBMODULE_UPDATE was turned off or failed. Please update submodules and try again.")
+  endif()
+else()
+  set(STDFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace/clone")
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace")
+endif()
+
 add_subdirectory(src/ComplexUHF)
 add_subdirectory(src/pfapack)
 add_subdirectory(src/mVMC)
@@ -65,7 +91,7 @@ add_subdirectory(tool)
 # Build and enable tests
 # testing setup
 # enable_testing() must be called in the top-level CMakeLists.txt before any add_subdirectory() is called.
-option(Testing "Enable testing" OFF)
+option(Testing "Enable testing" ON)
 if (Testing)
   enable_testing(test)
   add_subdirectory(test)
