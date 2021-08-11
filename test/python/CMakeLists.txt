@@ -65,6 +65,7 @@ set(python_test_vmc_model_mode1
 set(python_test_uhf_model
   UHF_HubbardSquare
   UHF_HubbardTriangular
+  UHF_InterAll_N2
 )
 
 foreach(model ${python_test_vmc_model})
