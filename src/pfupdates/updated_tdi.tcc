@@ -81,22 +81,22 @@ template <typename T> struct updated_tdi {
     }
 
     // Allocate scratchpad.
-    signed *iPovFull = new signed[nelec + 1];
+    signed *iPivFull = new signed[nelec + 1];
     dim_t lwork = nelec * npanel_big;
     T *pfwork = new T[lwork];
 
     #ifdef UseBoost
-    signed info = skpfa(uplo, nelec, &M(0, 0), M.size1(), &G(0, 0), G.size1(), iPovFull,
+    signed info = skpfa(uplo, nelec, &M(0, 0), M.size1(), &G(0, 0), G.size1(), iPivFull,
                         true, &Pfa, pfwork, lwork);
     #else
-    signed info = skpfa(uplo, nelec, &M(0, 0), M.ld, &G(0, 0), G.ld, iPovFull,
+    signed info = skpfa(uplo, nelec, &M(0, 0), M.ld, &G(0, 0), G.ld, iPivFull,
                         true, &Pfa, pfwork, lwork);
     #endif
 #ifdef _DEBUG
     cerr << "SKPFA+INV: n=" << nelec << " info=" << info << endl;
 #endif
 
-    delete[] iPovFull;
+    delete[] iPivFull;
     delete[] pfwork;
     #ifndef UseBoost
     delete[](&G(0, 0));
