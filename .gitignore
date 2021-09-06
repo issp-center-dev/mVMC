@@ -2,6 +2,7 @@
 makefile
 Makefile
 make.sys
+make-ext.sys
 *backup*
 *cisajs*.dat
 *Time*
@@ -25,6 +26,7 @@ GRTAGS
 GTAGS
 .idea
 .DS_Store
+src/blis-install
 doc/userguide_en.pdf
 doc/userguide_jp.pdf
 doc/jp/userguide_jp.out
@@ -43,3 +45,4 @@ doc/fourier/en/_build/
 *.bak
 cmake-build-debug
 latex/
+dist/

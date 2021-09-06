@@ -58,7 +58,7 @@ if(USE_SCALAPACK MATCHES OFF)
 endif()
 
 add_subdirectory(src/ComplexUHF)
-add_subdirectory(src/pfapack)
+add_subdirectory(src/pfapack/fortran)
 add_subdirectory(src/mVMC)
 add_subdirectory(tool)
 

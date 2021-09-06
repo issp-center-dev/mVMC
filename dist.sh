@@ -5,6 +5,10 @@
 # $ git clean -f -d -x
 # #####################################################
 #
+# Clone all submodules
+#
+git submodule update -i -r
+#
 # Version ID
 #
 major=`awk '$2=="VERSION_MAJOR"{print $3}' src/mVMC/include/version.h`

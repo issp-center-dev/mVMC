@@ -274,12 +274,27 @@ void SetMemory() {
   EleProjCnt        = (int*)malloc(sizeof(int)*( NVMCSample*NProj ));
 //[s] MERGE BY TM
   EleSpn            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));//fsz
-  EleProjBFCnt = (int*)malloc(sizeof(int)*( NVMCSample*4*4*Nsite*Nrange));
 //[e] MERGE BY TM
   logSqPfFullSlater = (double*)malloc(sizeof(double)*(NVMCSample));
-  SmpSltElmBF_real = (double *)malloc(sizeof(double)*(NVMCSample*NQPFull*(2*Nsite)*(2*Nsite)));
-  SmpEta = (double*)malloc(sizeof(double*)*NVMCSample*NQPFull*Nsite*Nsite);
-  SmpEtaFlag = (int*)malloc(sizeof(int*)*NVMCSample*NQPFull*Nsite*Nsite);
+  if (NBackFlowIdx > 0) {
+    EleProjBFCnt = (int*)malloc(sizeof(int)*( NVMCSample*4*4*Nsite*Nrange));
+    SmpSltElmBF_real = (double *)malloc(sizeof(double)*(NVMCSample*NQPFull*(2*Nsite)*(2*Nsite)));
+    SmpEta = (double*)malloc(sizeof(double*)*NVMCSample*NQPFull*Nsite*Nsite);
+    SmpEtaFlag = (int*)malloc(sizeof(int*)*NVMCSample*NQPFull*Nsite*Nsite);
+    SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+    eta = (double complex**)malloc(sizeof(double complex*)*Nsite);
+      for(i=0;i<Nsite;i++) {
+          eta[i] = (double complex*)malloc(sizeof(double complex)*Nsite);
+      }
+      etaFlag = (int**)malloc(sizeof(int*)*Nsite);
+      for(i=0;i<Nsite;i++) {
+          etaFlag[i] = (int*)malloc(sizeof(int)*Nsite);
+      }
+      BFSubIdx = (int**)malloc(sizeof(int*)*NrangeIdx);
+      for(i=0;i<NrangeIdx;i++) {
+          BFSubIdx[i] = (int*)malloc(sizeof(int)*NrangeIdx);
+      }
+  }
 
   TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne));//fsz
   TmpEleCfg         = TmpEleIdx + 2*Ne;
@@ -302,19 +317,7 @@ void SetMemory() {
   PfM = InvM + NQPFull*Nsize*Nsize;
 // for real TBC
   SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
-  SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
-  eta = (double complex**)malloc(sizeof(double complex*)*Nsite);
-    for(i=0;i<Nsite;i++) {
-      eta[i] = (double complex*)malloc(sizeof(double complex)*Nsite);
-    }
-    etaFlag = (int**)malloc(sizeof(int*)*Nsite);
-    for(i=0;i<Nsite;i++) {
-      etaFlag[i] = (int*)malloc(sizeof(int)*Nsite);
-    }
-    BFSubIdx = (int**)malloc(sizeof(int*)*NrangeIdx);
-    for(i=0;i<NrangeIdx;i++) {
-      BFSubIdx[i] = (int*)malloc(sizeof(int)*NrangeIdx);
-    }
+
   InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
   PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
 

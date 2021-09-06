@@ -36,6 +36,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "splitloop.h"
 #include "qp.h"
 
+#ifdef _pf_block_update
+// Block-update extension.
+#include "../pfupdates/pf_interface.h"
+#endif
+
 void VMCMakeSample(MPI_Comm comm) {
   int outStep,nOutStep;
   int inStep,nInStep;
@@ -65,14 +70,50 @@ void VMCMakeSample(MPI_Comm comm) {
     copyFromBurnSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt);
   }
   
+#ifdef _pf_block_update
+  // TODO: Compute from qpStart to qpEnd to support loop splitting.
+  void *pfOrbital[NQPFull];
+  void *pfUpdator[NQPFull];
+  // TODO: Make it input parameter.
+  if (NExUpdatePath == 0)
+    NBlockUpdateSize = 4;
+  else
+    NBlockUpdateSize = 20;
+
+  // Set one universal EleSpn.
+  for (mi=0; mi<Ne;  mi++) EleSpn[mi] = 0;
+  for (mi=Ne;mi<Ne*2;mi++) EleSpn[mi] = 1;
+  // Initialize.
+  updated_tdi_v_init_z(NQPFull, Nsite, Nsite2, Nsize,
+                       SlaterElm, Nsite2*Nsite2,
+                       InvM, Nsize*Nsize,
+                       TmpEleIdx, EleSpn,
+                       NBlockUpdateSize,
+                       pfUpdator, pfOrbital);
+  updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+#else
   CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+#endif
   // printf("DEBUG: maker1: PfM=%lf\n",creal(PfM[0]));
   logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
+
   if( !isfinite(creal(logIpOld) + cimag(logIpOld)) ) {
     if(rank==0) fprintf(stderr,"waring: VMCMakeSample remakeSample logIpOld=%e\n",creal(logIpOld)); //TBC
     makeInitialSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,
                       qpStart,qpEnd,comm);
+#ifdef _pf_block_update
+    // Clear and reinitialize.
+    updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital);
+    updated_tdi_v_init_z(NQPFull, Nsite, Nsite2, Nsize,
+                         SlaterElm, Nsite2*Nsite2,
+                         InvM, Nsize*Nsize,
+                         TmpEleIdx, EleSpn,
+                         NBlockUpdateSize,
+                         pfUpdator, pfOrbital);
+    updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+#else
     CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+#endif
     //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
     logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
     BurnFlag = 0;
@@ -106,11 +147,14 @@ void VMCMakeSample(MPI_Comm comm) {
         UpdateProjCnt(ri,rj,s,projCntNew,TmpEleProjCnt,TmpEleNum);
         StopTimer(60);
 
-  //TODO:Add        StartTimer
-
         StartTimer(61);
+#ifdef _pf_block_update
+        updated_tdi_v_push_z(NQPFull, rj+s*Nsite, mi+s*Ne, 1, pfUpdator);
+        updated_tdi_v_get_pfa_z(NQPFull, pfMNew, pfUpdator);
+#else
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
+#endif
         //printf("DEBUG: out %d in %d pfMNew=%lf \n",outStep,inStep,creal(pfMNew[0]));
         StopTimer(61);
 
@@ -126,10 +170,14 @@ void VMCMakeSample(MPI_Comm comm) {
         if( !isfinite(w) ) w = -1.0; /* should be rejected */
 
         if(w > genrand_real2()) { /* accept */
-          // UpdateMAll will change SlaterElm, InvM (including PfM)
           StartTimer(63);
+#ifdef _pf_block_update
+          // Inv already updated. Only need to get PfM again.
+          updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+#else
+          // UpdateMAll will change SlaterElm, InvM (including PfM)
           UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
-          //            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
+#endif
           StopTimer(63);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
@@ -137,6 +185,9 @@ void VMCMakeSample(MPI_Comm comm) {
           nAccept++;
           Counter[1]++;
         } else { /* reject */
+#ifdef _pf_block_update
+          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
+#endif
           revertEleConfig(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum);
         }
         StopTimer(32);
@@ -168,7 +219,15 @@ void VMCMakeSample(MPI_Comm comm) {
         StopTimer(65);
         StartTimer(66);
 
+#ifdef _pf_block_update
+        updated_tdi_v_push_pair_z(NQPFull,
+                                  rj+s*Nsite, mi+s*Ne,
+                                  ri+t*Nsite, mj+t*Ne,
+                                  1, pfUpdator);
+        updated_tdi_v_get_pfa_z(NQPFull, pfMNew, pfUpdator);
+#else
         CalculateNewPfMTwo2_fcmp(mi, s, mj, t, pfMNew, TmpEleIdx, qpStart, qpEnd);
+#endif
         StopTimer(66);
         StartTimer(67);
 
@@ -184,7 +243,12 @@ void VMCMakeSample(MPI_Comm comm) {
 
         if(w > genrand_real2()) { /* accept */
           StartTimer(68);
+#ifdef _pf_block_update
+          // Inv already updated. Only need to get PfM again.
+          updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+#else
           UpdateMAllTwo_fcmp(mi, s, mj, t, ri, rj, TmpEleIdx,qpStart,qpEnd);
+#endif
           StopTimer(68);
 
           for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
@@ -192,6 +256,10 @@ void VMCMakeSample(MPI_Comm comm) {
           nAccept++;
           Counter[3]++;
         } else { /* reject */
+#ifdef _pf_block_update
+          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
+#endif
           revertEleConfig(mj,rj,ri,t,TmpEleIdx,TmpEleCfg,TmpEleNum);
           revertEleConfig(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum);
         }
@@ -199,9 +267,21 @@ void VMCMakeSample(MPI_Comm comm) {
       }
 
       if(nAccept>Nsite) {
+        // Recalculate PfM and InvM.
         StartTimer(34);
-        /* recal PfM and InvM */
+#ifdef _pf_block_update
+        // Clear and reinitialize.
+        updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital);
+        updated_tdi_v_init_z(NQPFull, Nsite, Nsite2, Nsize,
+                             SlaterElm, Nsite2*Nsite2,
+                             InvM, Nsize*Nsize,
+                             TmpEleIdx, EleSpn,
+                             NBlockUpdateSize,
+                             pfUpdator, pfOrbital);
+        updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+#else
         CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
+#endif
         //printf("DEBUG: maker3: PfM=%lf\n",creal(PfM[0]));
         logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
         StopTimer(34);
@@ -221,6 +301,12 @@ void VMCMakeSample(MPI_Comm comm) {
 
   copyToBurnSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt);
   BurnFlag=1;
+
+#ifdef _pf_block_update
+  // Free-up updator space.
+  updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital);
+#endif
+
   return;
 }
 

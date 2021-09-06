@@ -569,8 +569,11 @@ double complex GreenFunc2_fsz2(const int ri, const int rj, const int rk, const i
 //  }
 //
 //  /* calculate Pf M */
+//  // Coverage-0 and commented out,
+//  // but should be useful sometimes.
 //  //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
-//  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
+//  info = 1; // Skipping inverse.
+//  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork/*, rwork*/, &info);
 //
 //  sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
 //
