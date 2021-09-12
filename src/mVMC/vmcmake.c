@@ -74,11 +74,16 @@ void VMCMakeSample(MPI_Comm comm) {
   // TODO: Compute from qpStart to qpEnd to support loop splitting.
   void *pfOrbital[NQPFull];
   void *pfUpdator[NQPFull];
-  // TODO: Make it input parameter.
-  if (NExUpdatePath == 0)
-    NBlockUpdateSize = 4;
-  else
-    NBlockUpdateSize = 20;
+  // Read block size from input.
+  const char *optBlockSize = getenv("VMC_BLOCK_UPDATE_SIZE");
+  if (optBlockSize)
+    NBlockUpdateSize = atoi(optBlockSize);
+  // Fall back to default if input is invalid.
+  if (NBlockUpdateSize < 1 || NBlockUpdateSize > 100)
+    if (NExUpdatePath == 0)
+      NBlockUpdateSize = 4;
+    else
+      NBlockUpdateSize = 20;
 
   // Set one universal EleSpn.
   for (mi=0; mi<Ne;  mi++) EleSpn[mi] = 0;
