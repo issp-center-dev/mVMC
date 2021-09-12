@@ -1,4 +1,11 @@
 #!/bin/bash
+
+# Update submodules first.
+if [ ! -z $(which git) ] && [ -d .git ]; then
+    echo "Updating (cloning) submodules..."
+    git submodule update -r -i
+fi
+
 if [ -z ${1} ] || [ ${1} = "help" ]; then
     echo ""
     echo "Usage:"
@@ -68,7 +75,7 @@ FFLAGS = -O3 -implicitnone
 CFLAGS = -O3 -qopenmp -Wno-unknown-pragmas
 CXXFLAGS = -O3 -std=gnu++14 -fpic -qopenmp
 CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS += -DMKL -DBLAS_EXTERNAL
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -mkl=sequential -lm -lpthread
@@ -94,7 +101,7 @@ FFLAGS = -O3 -implicitnone
 CFLAGS = -O3 -qopenmp -Wno-unknown-pragmas
 CXXFLAGS = -O3 -std=gnu++14 -fpic -qopenmp
 CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS += -DMKL -DBLAS_EXTERNAL
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -mkl=sequential -lm -lpthread
@@ -166,7 +173,7 @@ FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3
 CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS += -DMKL -DBLAS_EXTERNAL
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lm -lpthread
@@ -214,7 +221,7 @@ FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3
 CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS += # -DBLAS_EXTERNAL
+CXXFLAGS += # -DBLAS_EXTERNAL # -DF77_COMPLEX_RET_INTEL # For Apple.
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -llapack -lm -lpthread
