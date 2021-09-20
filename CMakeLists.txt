@@ -29,6 +29,39 @@ else()
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran} ${CMAKE_Fortran_FLAGS_RELEASE}")
 endif()
 
+if(NOT STDFACE_DIR)
+  # git submodule update
+  # ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
+  find_package(Git QUIET)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace/clone")
+    set(STDFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace/clone")
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace")
+  elseif(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+    set(STDFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace/submodule")
+    # Update submodules as needed
+    if(GIT_SUBMODULE_UPDATE)
+      message(STATUS "Submodule update")
+      execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+      if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+        message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+      endif()
+    endif()
+  else()
+    set(STDFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace/clone")
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace")
+  endif()
+
+  if(NOT EXISTS "${STDFACE_DIR}/CMakeLists.txt")
+    message(FATAL_ERROR "Automatic download of the submodule StdFace failed! Please run 'sh ${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace/download.sh' to download manually.")
+  endif()
+else()
+  if(NOT EXISTS "${STDFACE_DIR}/CMakeLists.txt")
+    message(FATAL_ERROR "STDFACE_DIR is manually set to ${STDFACE_DIR}, but ${STDFACE_DIR}/CMakeLists.txt does not exists")
+  endif()
+endif()
+
 if(CMAKE_C_COMPILER_ID STREQUAL "Intel")
   if("${CMAKE_C_COMPILER_VERSION}" VERSION_LESS "15.0.0.20140528")
      set(OMP_FLAG_Intel "-openmp")

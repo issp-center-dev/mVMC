@@ -7,8 +7,9 @@ if(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 
 include_directories(include)
+set(SOURCES_COMMON ../common/setmemory.c)
 include_directories(../common)
-include_directories(../StdFace)
+include_directories(${STDFACE_DIR})
 add_definitions(-DMEXP=19937)
 
 set(SOURCES_vmcmain
@@ -19,15 +20,29 @@ set(SOURCES_sfmt
         ../sfmt/SFMT.c   
  )
 
-add_library(StdFace STATIC ../StdFace/ChainLattice.c ../StdFace/HoneycombLattice.c ../StdFace/SquareLattice.c ../StdFace/StdFace_main.c ../StdFace/StdFace_ModelUtil.c ../StdFace/TriangularLattice.c ../StdFace/Ladder.c ../StdFace/Kagome.c ../StdFace/Orthorhombic.c ../StdFace/Pyrochlore.c ../StdFace/Wannier90.c ../StdFace/FCOrtho.c ../StdFace/setmemory.c)
+set(SOURCES_STDFACE
+${STDFACE_DIR}/src/ChainLattice.c
+${STDFACE_DIR}/src/FCOrtho.c
+${STDFACE_DIR}/src/HoneycombLattice.c
+${STDFACE_DIR}/src/Kagome.c
+${STDFACE_DIR}/src/Ladder.c
+${STDFACE_DIR}/src/Orthorhombic.c
+${STDFACE_DIR}/src/Pyrochlore.c
+${STDFACE_DIR}/src/SquareLattice.c
+${STDFACE_DIR}/src/StdFace_main.c
+${STDFACE_DIR}/src/StdFace_ModelUtil.c
+${STDFACE_DIR}/src/TriangularLattice.c
+${STDFACE_DIR}/src/Wannier90.c)
 
+add_library(StdFace STATIC ${SOURCES_STDFACE})
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../pfapack)
 
-add_executable(vmcdry.out vmcdry.c)
+add_executable(vmcdry.out vmcdry.c ${SOURCES_COMMON})
 target_link_libraries(vmcdry.out StdFace m)
-add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
+add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt} ${SOURCES_COMMON})
 target_link_libraries(vmc.out StdFace)
 target_link_libraries(vmc.out pfapack StdFace ${LAPACK_LIBRARIES} m)
+#target_link_libraries(vmc.out StdFace ${LAPACK_LIBRARIES} m)
 
 if(USE_SCALAPACK)
   string(REGEX REPLACE "-L[ ]+" "-L" sc_libs ${SCALAPACK_LIBRARIES})
