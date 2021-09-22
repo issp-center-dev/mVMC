@@ -12,9 +12,9 @@ if(NOT DEFINED BLIS_ARTIFACT_CONFIG)
       OUTPUT_VARIABLE UARCH_INTEL)
     if(NOT "${UARCH_INTEL} " STREQUAL " ")
       set(BLIS_ARTIFACT_CONFIG "intel64")
-    else("${UARCH_INTEL} " STREQUAL " ")
+    else()
       set(BLIS_ARTIFACT_CONFIG "amd64")
-    endif("${UARCH_INTEL} " STREQUAL " ")
+    endif()
   elseif(${ARCHITECTURE} STREQUAL "aarch64" OR
       ${ARCHITECTURE} STREQUAL "arm64")
       # Currently SVE requires being set manually.

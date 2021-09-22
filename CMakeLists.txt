@@ -18,6 +18,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 enable_language(C Fortran)
 if(PFAFFIAN_BLOCKED)
   enable_language(CXX)
+  set(CMAKE_CXX_STANDARD 11)
 endif(PFAFFIAN_BLOCKED)
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
