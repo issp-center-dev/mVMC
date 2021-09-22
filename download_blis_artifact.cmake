@@ -26,7 +26,7 @@ endif(NOT DEFINED BLIS_ARTIFACT_CONFIG)
 
 message(STATUS "Downloading BLIS artifact...")
 
-set(BLIS_ARCHIVE libblis_artifact.tar.gz)
+set(BLIS_ARCHIVE ${CMAKE_CURRENT_BINARY_DIR}/libblis_artifact.tar.gz)
 if(${BLIS_ARTIFACT_CONFIG} STREQUAL "intel64")
   set(BLIS_ARTIFACT_URL https://github.com/xrq-phys/blis/releases/download/sv0.8.1+arm/libblis_intel64_gcc.tar.gz)
 elseif(${BLIS_ARTIFACT_CONFIG} STREQUAL "amd64")
@@ -41,6 +41,7 @@ else()
   message(FATAL_ERROR "Not BLIS artifact available.")
 endif()
 
+message("${BLIS_ARTIFACT_URL} ${BLIS_ARCHIVE}")
 file(DOWNLOAD "${BLIS_ARTIFACT_URL}" "${BLIS_ARCHIVE}")
 
 add_custom_command(
