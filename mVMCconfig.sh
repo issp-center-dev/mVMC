@@ -130,6 +130,19 @@ EOF
         exit
     fi
 
+    if [ ! -e src/StdFace/src/makefile_StdFace ]; then
+	if [ ! -z "$(which git)" ]; then
+	    git submodule update -r -i
+	fi
+	
+	if [ ! -e src/StdFace/src/makefile_StdFace ]; then
+	    echo "Failed to locate StdFace submodule. Please check the archive or Git repository."
+	    exit
+	fi
+    fi
+    echo "cd src/StdFace; ln -s ../make.sys .; cd ../.."
+    cd src/StdFace; ln -s ../make.sys .; cd ../..
+
     echo "cat src/make.sys"
     cat src/make.sys
 
@@ -151,21 +164,21 @@ help:
 	@echo ""
 
 mvmc:
-	cd src/mVMC/;make -f makefile_src
-	cd tool;make -f makefile_tool
+	\$(MAKE) -C src/mVMC/ -f makefile_src
+	\$(MAKE) -C tool      -f makefile_tool
 
-userguide:
-	cd doc/jp; make html latexpdfja
-	cd doc/en; make html latexpdfja
+# userguide:
+# 	cd doc/jp; \$(MAKE) html latexpdfja
+# 	cd doc/en; \$(MAKE) html latexpdfja
 
 clean:
-	cd src/mVMC/; make -f makefile_src clean
-	cd tool; make -f makefile_tool clean
+	\$(MAKE) -C src/mVMC/ -f makefile_src clean
+	\$(MAKE) -C tool      -f makefile_tool clean
 
 veryclean:
-	make clean
-	cd doc/jp; make clean
-	cd doc/en; make clean
-	rm -f src/make.sys makefile
+	\$(MAKE) clean
+	# cd doc/jp; \$(MAKE) clean
+	# cd doc/en; \$(MAKE) clean
+	rm -f src/\$(MAKE).sys makefile
 EOF
 fi
