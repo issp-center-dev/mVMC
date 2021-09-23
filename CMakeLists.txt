@@ -61,9 +61,10 @@ endif()
 
 # git submodule update
 # ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
+set(MVMC ON) # Option for upstream StdFace.
 find_package(Git QUIET)
+set(STDFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace")
 if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
-  set(STDFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace/submodule")
   # Update submodules as needed
   if(GIT_SUBMODULE_UPDATE)
     message(STATUS "Submodule update")
@@ -78,10 +79,8 @@ if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
   if(NOT EXISTS "${STDFACE_DIR}/CMakeLists.txt")
     message(FATAL_ERROR "The submodule StdFace were not downloaded! GIT_SUBMODULE_UPDATE was turned off or failed. Please update submodules and try again.")
   endif()
-else()
-  set(STDFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace/clone")
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/StdFace")
 endif()
+add_subdirectory("${STDFACE_DIR}")
 
 add_subdirectory(src/ComplexUHF)
 add_subdirectory(src/pfapack)
