@@ -83,16 +83,11 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
   // TODO: Compute from qpStart to qpEnd to support loop splitting.
   void *pfOrbital[NQPFull];
   void *pfUpdator[NQPFull];
-  // Read block size from input.
-  const char *optBlockSize = getenv("VMC_BLOCK_UPDATE_SIZE");
-  if (optBlockSize)
-    NBlockUpdateSize = atoi(optBlockSize);
-  // Fall back to default if input is invalid.
-  if (NBlockUpdateSize < 1 || NBlockUpdateSize > 100)
-    if (NExUpdatePath == 0)
-      NBlockUpdateSize = 4;
-    else
-      NBlockUpdateSize = 20;
+  // TODO: Make it input parameter.
+  if (NExUpdatePath == 0)
+    NBlockUpdateSize = 4;
+  else
+    NBlockUpdateSize = 20;
 
   // Initialize with free spin configuration.
   updated_tdi_v_init_z(NQPFull, Nsite, Nsite2, Nsize,

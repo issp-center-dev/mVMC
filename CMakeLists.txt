@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.8.0 FATAL_ERROR)
 project(mVMC NONE)
 
 option(USE_SCALAPACK "Use Scalapack" OFF)
-option(PFAFFIAN_BLOCKED "Use blocked-update Pfaffian to speed up." OFF)
 
 add_definitions(-D_mVMC)
 if(CONFIG)
@@ -16,10 +15,6 @@ message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 enable_language(C Fortran)
-if(PFAFFIAN_BLOCKED)
-  enable_language(CXX)
-  set(CMAKE_CXX_STANDARD 11)
-endif(PFAFFIAN_BLOCKED)
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
@@ -61,14 +56,6 @@ if(USE_SCALAPACK MATCHES OFF)
     add_definitions(-D_lapack)
   endif(LAPACK_FOUND)
 endif()
-
-if(PFAFFIAN_BLOCKED)
-  add_definitions(-D_pf_block_update)
-  include("download_blis_artifact.cmake")
-  # Must set BLIS artifact BEFORE adding pfupdates target.
-  add_subdirectory(src/pfupdates)
-  add_dependencies(pfupdates blis_include)
-endif(PFAFFIAN_BLOCKED)
 
 add_subdirectory(src/ComplexUHF)
 add_subdirectory(src/pfapack/fortran)
