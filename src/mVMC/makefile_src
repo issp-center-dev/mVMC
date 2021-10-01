@@ -1,15 +1,25 @@
 include ../make.sys
 
-PFAPACK = ../pfapack/libpfapack.a
+PFAPACK = ../pfapack/fortran/libpfapack.a
+PFAFFINE = ../pfaffine/src/libpfaffine.a
+PFUPDATES = ../pfupdates/pfupdates.o
 SFMT = ../sfmt/SFMT.o
-STDFACE = ../StdFace/src/libStdFace.a
+STDFACE = ../StdFace/libStdFace.a
 OPTION = -D_mpi_use
+
+# Not defining BLIS_ROOT indicates a MKL compilation.
+ifneq ($(BLIS_ROOT),)
+	# This is better handled by make.sys due to linkage order.
+        # LIBS += -L$(BLIS_ROOT)/lib -lblis
+        LIBS += -Wl,-rpath,$(BLIS_ROOT)/lib
+endif
 
 OBJS = \
 	physcal_lanczos.o \
 	splitloop.o \
 	vmcmain.o \
-	$(PFAPACK) $(SFMT) $(STDFACE)
+	$(PFAPACK) $(SFMT) $(STDFACE) \
+	$(PFUPDATES) $(PFAFFINE)
 
 SOURCES = \
 average.c \
@@ -96,18 +106,20 @@ HEADERS = \
 ./include/workspace.h
 
 all : 
-	$(MAKE) -C ../pfapack -f makefile_pfapack
-	$(MAKE) -C ../sfmt    -f makefile_sfmt
-	$(MAKE) -C ../StdFace/src -f makefile_StdFace libStdFace.a
-	make -f makefile_src vmc.out
-	make -f makefile_src vmcdry.out
+	$(MAKE) -C ../pfapack/fortran                libpfapack.a
+	$(MAKE) -C ../pfaffine/src                   libpfaffine.a
+	$(MAKE) -C ../pfupdates  -f makefile_pfupdates
+	$(MAKE) -C ../sfmt       -f makefile_sfmt
+	$(MAKE) -C ../StdFace    -f makefile_StdFace libStdFace.a
+	$(MAKE)                  -f makefile_src vmc.out
+	$(MAKE)                  -f makefile_src vmcdry.out
 	$(MAKE) -C ../ComplexUHF -f makefile_uhf
 
 vmc.out : $(OBJS)
-	$(CC) -o $@ $(OBJS) $(OPTION) $(CFLAGS) $(LIBS)
+	$(CXX) -o $@ $(OBJS) $(OPTION) $(CFLAGS) $(LIBS)
 
 vmcdry.out : vmcdry.o $(STDFACE)
-	$(CC) -o $@ $^ $(OPTION) $(CFLAGS) $(LIBS)
+	$(CXX) -o $@ $^ $(OPTION) $(CFLAGS) $(LIBS)
 
 SUFFIXES: .o .c
 
@@ -116,10 +128,12 @@ SUFFIXES: .o .c
 
 clean :
 	rm -f *.o vmc.out vmcdry.out
-	$(MAKE) -C ../sfmt        -f makefile_sfmt clean
-	$(MAKE) -C ../pfapack     -f makefile_pfapack clean
-	$(MAKE) -C ../StdFace/src -f makefile_StdFace clean
-	$(MAKE) -C ../ComplexUHF  -f makefile_uhf clean
+	$(MAKE) -C ../sfmt            -f makefile_sfmt      clean
+	$(MAKE) -C ../pfapack/fortran -f makefile           clean
+	$(MAKE) -C ../pfaffine        -f makefile           clean
+	$(MAKE) -C ../pfupdates       -f makefile_pfupdates clean
+	$(MAKE) -C ../StdFace         -f makefile_StdFace   clean
+	$(MAKE) -C ../ComplexUHF      -f makefile_uhf       clean
 
 physcal_lanczos.o:$(SOURCES) $(HEADERS)
 splitloop.o:$(SOURCES) $(HEADERS)
