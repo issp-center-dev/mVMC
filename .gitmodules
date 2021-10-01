@@ -9,3 +9,6 @@
 [submodule "src/pfapack"]
 	path = src/pfapack
 	url = https://github.com/xrq-phys/pfapack
+[submodule "src/StdFace/submodule"]
+	path = src/StdFace
+	url = https://github.com/issp-center-dev/StdFace
