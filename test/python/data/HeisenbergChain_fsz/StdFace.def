@@ -1,0 +1,13 @@
+L = 6
+Lsub = 2
+model = "SpinGC"
+lattice = "chain"
+J = 1.0
+h = -0.5
+Gamma = 0.6
+NSROptItrStep = 1000
+NVMCSample    = 500
+DSROptRedCut  = 1e-8
+DSROptStaDel  = 1e-2
+DSROptStepDt  = 3e-3
+RndSeed       = 1

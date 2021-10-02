@@ -284,7 +284,7 @@ double complex calHCA1(const int ri, const int rj, const int s,
 
   ReleaseWorkSpaceInt();
   ReleaseWorkSpaceComplex();
-  return e*z*ipNew/ip;
+  return e*conj(z*ipNew/ip);
 }
 
 /* calculate <psi| H C_is A_js |x>/<psi|x> for <psi|CA|x>/<psi|x>=0 */

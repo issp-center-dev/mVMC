@@ -24,7 +24,7 @@ HPhi/vmc.out の実行
      lattice="square"
      t=1.0
      U=8.0
-     nelec = 8
+     ncond = 8
      2Sz=0
   
   .. code-block:: bash
@@ -46,7 +46,7 @@ HPhi/vmc.out の実行
      lattice="square"
      t=1.0
      U=8.0
-     nelec = 8
+     ncond = 8
      2Sz=0
   
   .. code-block:: bash

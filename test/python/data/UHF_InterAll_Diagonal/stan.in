@@ -4,5 +4,5 @@ lattice = "chain"
 t = 1.0
 U = 4.0
 V = 1.0
-nelec = 4
+ncond = 4
 2Sz = 0

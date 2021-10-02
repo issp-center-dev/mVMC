@@ -1,0 +1,9 @@
+ ModPara         modpara.def
+ LocSpin         locspn.def
+ Trans           PH_QLMS_1body.def
+ InterAll        PH_QLMS_2body.def
+ OneBodyG        1bodyG.def
+ Gutzwiller      gutzwilleridx.def
+ Jastrow         jastrowidx.def
+ Orbital         orbitalidx.def
+ TransSym        qptransidx.def 

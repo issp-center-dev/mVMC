@@ -612,10 +612,10 @@ END SUBROUTINE read_corrindx
 SUBROUTINE read_corrfile()
   !
   USE fourier_val, ONLY : filehead, filetail, nwfc, calctype, &  
-  &                       ncor1, ncor2, indx, cor, norb, nr
+  &                       ncor1, ncor2, indx, cor, norb, nr, irv
   IMPLICIT NONE
   !
-  INTEGER :: fi = 10, icor, itmp(8), iwfc, iorb, jorb, ir
+  INTEGER :: fi = 10, icor, itmp(8), iwfc, iorb, jorb, ir, ir0
   COMPLEX(8),ALLOCATABLE :: cor0(:)
   REAL(8) :: cor0_r(2)
   CHARACTER(256) :: filename
@@ -624,6 +624,13 @@ SUBROUTINE read_corrfile()
   ALLOCATE(cor0(0:MAX(ncor1,ncor2)))
   cor(1:nr,1:6,1:norb,1:norb,1:nwfc) = CMPLX(0d0, 0d0, KIND(1d0))
   cor0(0) = CMPLX(0d0, 0d0, KIND(1d0))
+  !
+  DO ir = 1, nr
+     IF(all(irv(1:3, 1, ir) == 0)) THEN
+        ir0 = ir
+        EXIT
+     END IF
+  END DO
   !
   DO iwfc = 1, nwfc
      !
@@ -675,8 +682,8 @@ SUBROUTINE read_corrfile()
               &                            + cor0(indx(ir, 6, jorb, iorb))
               !
               cor(ir, 3, jorb, iorb, iwfc) = cor(ir, 3,   jorb, iorb, iwfc) &
-              &                        - SUM(cor(ir, 1:2, jorb, iorb, iwfc)) &
-              &                        * SUM(cor(ir, 1:2, jorb, iorb, iwfc))
+              &                       - SUM(cor(ir0, 1:2, iorb, iorb, iwfc)) &
+              &                       * SUM(cor(ir0, 1:2, jorb, jorb, iwfc))
               !
               cor(ir, 4, jorb, iorb, iwfc) = cor0(indx(ir, 3, jorb, iorb)) &
               &                            - cor0(indx(ir, 4, jorb, iorb)) &

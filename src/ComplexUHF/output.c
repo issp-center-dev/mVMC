@@ -245,16 +245,20 @@ int MakeOrbitalFile(struct BindStruct *X){
 void OutputAntiParallel_2(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital){
    int i,j,Orbitalidx,isite,jsite;
    char fileName[256];
+   FILE *fp;
 
    for (i = 0; i < X->Def.NOrbitalIdx; i++) { // all clear
      ParamOrbital[i] = 0;
      CountOrbital[i] = 0;
    }
+   sprintf(fileName, "%s_AP_Fij.dat", X->Def.CParaFileHead);
+   fp=fopen(fileName,"w"); 
    for(i = 0; i < X->Def.Nsite; i++) {
      for(j = 0; j < X->Def.Nsite; j++) {
        isite = i + 0 * X->Def.Nsite;
        jsite = j + 1 * X->Def.Nsite;
        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+       fprintf(fp," %d %d %lf %lf\n",i,j,creal(UHF_Fij[i][j]),cimag(UHF_Fij[i][j]));
        //printf(" %d %d %d \n", isite,jsite,Orbitalidx);
        if(Orbitalidx != -1) {
          ParamOrbital[Orbitalidx] += UHF_Fij[i][j];
@@ -263,6 +267,7 @@ void OutputAntiParallel_2(struct BindStruct *X,double complex **UHF_Fij,double c
        }
      }
    }
+   fclose(fp);
    for (i = 0; i < X->Def.NOrbitalAP; i++) {
      ParamOrbital[i] /= (double) CountOrbital[i];
      ParamOrbital[i] += genrand_real2() * pow(10.0, -X->Def.eps_int_slater);
@@ -277,22 +282,27 @@ void OutputAntiParallel_2(struct BindStruct *X,double complex **UHF_Fij,double c
 void OutputAntiParallel(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital){
    int i,j,Orbitalidx,isite,jsite;
    char fileName[256];
+   FILE *fp;
 
    for (i = 0; i < X->Def.NOrbitalIdx; i++) { // all clear
      ParamOrbital[i] = 0;
      CountOrbital[i] = 0;
    }
+   sprintf(fileName, "%s_AP_Fij.dat", X->Def.CParaFileHead);
+   fp=fopen(fileName,"w"); 
    for(i = 0; i < X->Def.Nsite; i++) {
      for(j = 0; j < X->Def.Nsite; j++) {
        isite = i + 0 * X->Def.Nsite;
        jsite = j + 1 * X->Def.Nsite;
        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+       fprintf(fp," %d %d %lf %lf\n",i,j,creal(UHF_Fij[isite][jsite]),cimag(UHF_Fij[isite][jsite]));
        if(Orbitalidx != -1) {
          ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
          CountOrbital[Orbitalidx] += 1;
        }
      }
    }
+   fclose(fp);
    for (i = 0; i < X->Def.NOrbitalAP; i++) {
      ParamOrbital[i] /= (double) CountOrbital[i];
      ParamOrbital[i] += genrand_real2() * pow(10.0, -X->Def.eps_int_slater);
@@ -305,6 +315,7 @@ void OutputAntiParallel(struct BindStruct *X,double complex **UHF_Fij,double com
 void OutputParallel(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital){
    int i,j,Orbitalidx,isite,jsite,ini,fin,tmp_i;
    char fileName[256];
+   FILE *fp;
 
    ini =  X->Def.NOrbitalAP;
    fin =  X->Def.NOrbitalAP + X->Def.NOrbitalP;
@@ -313,11 +324,14 @@ void OutputParallel(struct BindStruct *X,double complex **UHF_Fij,double complex
       ParamOrbital[i] = 0;
       CountOrbital[i] = 0;
    }
+   sprintf(fileName, "%s_P_Fij.dat", X->Def.CParaFileHead);
+   fp=fopen(fileName,"w"); 
    for(i = 0; i < X->Def.Nsite; i++) {
      for(j = i+1; j < X->Def.Nsite; j++) {
        isite = i + 0 * X->Def.Nsite;
        jsite = j + 0 * X->Def.Nsite;
        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+       fprintf(fp," %d %d %lf %lf\n",isite,jsite,creal(UHF_Fij[isite][jsite]),cimag(UHF_Fij[isite][jsite]));
        if(Orbitalidx != -1) {
          ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
          CountOrbital[Orbitalidx] += 1;
@@ -325,12 +339,14 @@ void OutputParallel(struct BindStruct *X,double complex **UHF_Fij,double complex
        isite = i + 1 * X->Def.Nsite;
        jsite = j + 1 * X->Def.Nsite;
        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+       fprintf(fp," %d %d %lf %lf\n",isite,jsite,creal(UHF_Fij[isite][jsite]),cimag(UHF_Fij[isite][jsite]));
        if(Orbitalidx != -1) {
          ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
          CountOrbital[Orbitalidx] += 1;
        } 
      }//for(j = i+1; j < X->Def.Nsite; j++) 
    }//for(i = 0; i < X->Def.Nsite; i++) 
+   fclose(fp);
    for (i =  ini; i < fin; i++) {
      ParamOrbital[i] /= (double) CountOrbital[i];
      ParamOrbital[i] += genrand_real2() * pow(10.0, -X->Def.eps_int_slater);
@@ -347,10 +363,13 @@ void OutputParallel(struct BindStruct *X,double complex **UHF_Fij,double complex
 void OutputGeneral(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital){
    int i,j,Orbitalidx,isite,jsite,ispin,jspin;
    char fileName[256];
+   FILE *fp;
    for (i = 0; i < X->Def.NOrbitalIdx; i++) {
      ParamOrbital[i] = 0;
      CountOrbital[i] = 0;
    }
+   sprintf(fileName, "%s_General_Fij.dat", X->Def.CParaFileHead);
+   fp=fopen(fileName,"w"); 
    for (ispin = 0; ispin < 2; ispin++) {
      for (jspin = 0; jspin < 2; jspin++) {
        for (i = 0; i < X->Def.Nsite; i++) {
@@ -358,6 +377,7 @@ void OutputGeneral(struct BindStruct *X,double complex **UHF_Fij,double complex 
            isite = i + ispin * X->Def.Nsite;
            jsite = j + jspin * X->Def.Nsite;
            Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+           fprintf(fp," %d %d %lf %lf\n",isite,jsite,creal(UHF_Fij[isite][jsite]),cimag(UHF_Fij[isite][jsite]));
            if (Orbitalidx != -1) {
              // ParamOrbital[Orbitalidx]+=UHF_Fij[isite][jsite];
              ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
@@ -369,6 +389,7 @@ void OutputGeneral(struct BindStruct *X,double complex **UHF_Fij,double complex 
        }
      }
     }
+    fclose(fp);
     for (i = 0; i < X->Def.NOrbitalIdx; i++) {
        ParamOrbital[i] /= (double) CountOrbital[i];
        ParamOrbital[i] += genrand_real2() * pow(10.0, -X->Def.eps_int_slater);
