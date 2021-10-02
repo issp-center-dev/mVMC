@@ -64,15 +64,6 @@ if(USE_SCALAPACK MATCHES OFF)
   endif(LAPACK_FOUND)
 endif()
 
-if(PFAFFIAN_BLOCKED)
-  add_definitions(-D_pf_block_update)
-  include("download_blis_artifact.cmake")
-  # Must set BLIS artifact BEFORE adding pfupdates target.
-  add_subdirectory(src/pfupdates)
-  add_dependencies(pfupdates blis_include)
-endif(PFAFFIAN_BLOCKED)
-
-
 
 # git submodule update
 # ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
@@ -97,8 +88,16 @@ if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
 endif()
 add_subdirectory("${STDFACE_DIR}")
 
+if(PFAFFIAN_BLOCKED)
+  add_definitions(-D_pf_block_update)
+  include("download_blis_artifact.cmake")
+  # Must set BLIS artifact BEFORE adding pfupdates target.
+  add_subdirectory(src/pfupdates)
+  add_dependencies(pfupdates blis_include)
+endif(PFAFFIAN_BLOCKED)
+
 add_subdirectory(src/ComplexUHF)
-add_subdirectory(src/pfapack)
+add_subdirectory(src/pfapack/fortran)
 add_subdirectory(src/mVMC)
 add_subdirectory(tool)
 
