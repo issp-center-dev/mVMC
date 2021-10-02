@@ -241,6 +241,7 @@ EOF
     fi
     cat src/make.sys
     cat src/make-ext.sys
+    ln -s $PWD/src/make.sys src/StdFace/make.sys;
     ln -s $PWD/src/make.sys src/pfaffine/make.inc;
     ln -s $PWD/src/make.sys src/pfapack/fortran/make.inc;
 
