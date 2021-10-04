@@ -14,4 +14,4 @@ set(BLA_VENDOR "Intel10_64lp" CACHE STRING "" FORCE)
 
 # for BLIS & block pfaffian
 set(BLIS_ARTIFACT_CONFIG "intel64")
-set(PFAFFIAN_BLOCKED OFF)
+#set(PFAFFIAN_BLOCKED OFF)
