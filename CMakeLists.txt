@@ -64,6 +64,15 @@ if(USE_SCALAPACK MATCHES OFF)
   endif(LAPACK_FOUND)
 endif()
 
+# Build and enable tests
+# testing setup
+# enable_testing() must be called in the top-level CMakeLists.txt before any add_subdirectory() is called.
+option(Testing "Enable testing" ON)
+if (Testing)
+  enable_testing(test)
+  add_subdirectory(test)
+endif()
+
 
 # git submodule update
 # ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
@@ -96,20 +105,11 @@ if(PFAFFIAN_BLOCKED)
   add_dependencies(pfupdates blis_include)
 endif(PFAFFIAN_BLOCKED)
 
+if (Document)
+  add_subdirectory(doc)
+endif(Document)
+
 add_subdirectory(src/ComplexUHF)
 add_subdirectory(src/pfapack/fortran)
 add_subdirectory(src/mVMC)
 add_subdirectory(tool)
-
-# Build and enable tests
-# testing setup
-# enable_testing() must be called in the top-level CMakeLists.txt before any add_subdirectory() is called.
-option(Testing "Enable testing" ON)
-if (Testing)
-  enable_testing(test)
-  add_subdirectory(test)
-endif()
-
-if (Document)
-  add_subdirectory(doc)
-endif(Document)
