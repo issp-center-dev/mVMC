@@ -71,18 +71,18 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
   RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
-  /*
-#pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy,idx)  \
-  reduction(+:e)
-  */
-#pragma omp parallel default(none)                                      \
+  // shared variables: eleCfg, eleProjCnt, eleIdx, eleNum
+  // implicitly shared variables: [ip].
+  // OpenMP =3.X does NOT allow specifying implicitly shared variable [ip]
+  // as shared(), while in OpenMP >4.0 [ip] MUST be specified.
+  // Hence we have to fall back to default(shared) here.
+#pragma omp parallel default(shared)                                      \
   private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy, idx, ri, rj, rk, rl, s, t) \
   firstprivate(Nsize, Nsite2, NProj, NQPFull, NCoulombIntra, CoulombIntra, ParaCoulombIntra, \
                NCoulombInter, CoulombInter, ParaCoulombInter, NHundCoupling, HundCoupling, ParaHundCoupling, \
                NTransfer, Transfer, ParaTransfer, NPairHopping, PairHopping, ParaPairHopping, \
                NExchangeCoupling, ExchangeCoupling, ParaExchangeCoupling, NInterAll, InterAll, ParaInterAll, n0, n1) \
-  shared(eleCfg, eleProjCnt, eleIdx, eleNum, ip) reduction(+:e)
+  shared(eleCfg, eleProjCnt, eleIdx, eleNum) reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);

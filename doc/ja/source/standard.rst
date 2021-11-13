@@ -22,7 +22,7 @@
     //V'=2.0
     J = -1.0
     J'=-0.5
-    // nelec = 8
+    // ncond = 8
 
 大まかなルールは次のとおりです。
 
@@ -529,7 +529,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 計算条件のパラメーター
 ~~~~~~~~~~~~~~~~~~~~~~
 
--  ``nelec``
+-  ``ncond``
 
    **形式 :** int型 (1以上、必須)
 

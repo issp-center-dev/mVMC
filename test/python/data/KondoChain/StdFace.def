@@ -1,0 +1,10 @@
+L = 4
+model = "Kondolattice"
+lattice = "chain"
+t = 1.0
+J = 4.0
+ncond = 4
+NSROptItrStep = 200
+NVMCSample    = 500
+2Sz = 0
+RndSeed = 1

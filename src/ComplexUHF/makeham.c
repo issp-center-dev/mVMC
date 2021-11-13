@@ -29,7 +29,7 @@ void makeham(struct BindStruct *X) {
   int t_site_1, t_site_2;
   int u_site_1, u_site_2;
   int d_site_1, d_site_2;
-  int Ns;
+  int Ns,flag;
   double charge;
   double complex tmp;
 
@@ -194,27 +194,36 @@ void makeham(struct BindStruct *X) {
       s_site_3 = site_3 + int_spin3 * Ns;
       s_site_4 = site_4 + int_spin4 * Ns;
 
-      /*Diagonal Fock term*/
-      X->Large.Ham[s_site_1][s_site_2] += tmp * X->Large.G[s_site_3][s_site_4];
-      X->Large.Ham[s_site_3][s_site_4] += tmp * X->Large.G[s_site_1][s_site_2];
-
-      /*Off-Diagonal Fock term*/
-      X->Large.Ham[s_site_1][s_site_4] += -tmp * X->Large.G[s_site_3][s_site_2];
-      X->Large.Ham[s_site_3][s_site_2] += -tmp * X->Large.G[s_site_1][s_site_4];
-
-      if (s_site_2 == s_site_3){
-        X->Large.Ham[s_site_1][s_site_4] += tmp;
+      flag = 1;
+      if (s_site_1 == s_site_2 && s_site_3 == s_site_4){
+        if (s_site_1 == s_site_3){
+           flag = -1; 
+        }
       }
-
+      if (flag==1){
+        /*Diagonal Fock term*/
+        X->Large.Ham[s_site_1][s_site_2] += tmp * X->Large.G[s_site_3][s_site_4];
+        X->Large.Ham[s_site_3][s_site_4] += tmp * X->Large.G[s_site_1][s_site_2];
+        //printf("%d %d %d %d \n",s_site_1,s_site_2,s_site_3,s_site_4);
+ 
+        /*Off-Diagonal Fock term*/
+        X->Large.Ham[s_site_1][s_site_4] += -tmp * X->Large.G[s_site_3][s_site_2];
+        X->Large.Ham[s_site_3][s_site_2] += -tmp * X->Large.G[s_site_1][s_site_4];
+        if (s_site_2 == s_site_3){
+          X->Large.Ham[s_site_1][s_site_4] += tmp;
+        }
+      }else{
+        X->Large.Ham[s_site_1][s_site_1] += tmp;
+      } 
     }
   }
 
-  /* For Debug
+  /*For Debug
   for (int_i = 0; int_i < 2 * X->Def.Nsite; int_i++) {
     for (int_j = 0; int_j < 2 * X->Def.Nsite; int_j++) {
       printf("%d %d %lf\n", int_i, int_j, X->Large.Ham[int_i][int_j]);
     }
   }
-  exit(0);
-   */
+  */
+  //exit(0);
 }

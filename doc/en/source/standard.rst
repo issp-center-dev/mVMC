@@ -22,7 +22,7 @@ An example of input file for the standard mode is shown below:
     //V'=2.0
     J = -1.0
     J'=-0.5
-    // nelec = 8
+    // ncond = 8
 
 **Basic rules for input files**
 
@@ -589,7 +589,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 Parameters for the numerical condition
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  ``nelec``
+-  ``ncond``
 
    **Type :** int-type (must be specified)
 

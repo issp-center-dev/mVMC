@@ -1,0 +1,16 @@
+L = 10
+Lsub = 2
+model = "Hubbard"
+lattice = "chain"
+U = 8
+t = 1
+ncond = 10
+2Sz = 0
+NSROptItrStep = 2000
+NVMCSample    = 1000
+DSROptRedCut  = 1e-10
+DSROptStaDel  = 1e-2
+DSROptStepDt  = 1e-2
+RndSeed = 1
+NVMCCalMode   =  1
+NLanczosMode   =  1

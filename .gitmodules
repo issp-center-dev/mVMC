@@ -1,0 +1,14 @@
+[submodule "src/pfaffine"]
+	path = src/pfaffine
+	url = https://github.com/xrq-phys/Pfaffine
+	branch = blis
+[submodule "src/blis"]
+	path = src/blis
+	url = https://github.com/xrq-phys/blis
+	branch = mvmc
+[submodule "src/pfapack"]
+	path = src/pfapack
+	url = https://github.com/xrq-phys/pfapack
+[submodule "src/StdFace/submodule"]
+	path = src/StdFace
+	url = https://github.com/issp-center-dev/StdFace

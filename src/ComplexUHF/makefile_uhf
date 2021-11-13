@@ -3,6 +3,7 @@ include ../make.sys
 SFMT = ../sfmt/SFMT.o
 
 OBJS = \
+../common/setmemory.c \
 cal_energy.o \
 diag.o \
 green.o \
@@ -14,7 +15,7 @@ readdef.o \
 UHFmain.o
 
 UHF : $(OBJS)
-	cd ../sfmt; $(MAKE) -f makefile_sfmt
+	$(MAKE) -C ../sfmt -f makefile_sfmt
 	$(CC) -o $@ $(OBJS) $(SFMT) $(CFLAGS) $(LIBS)
 
 SUFFIXES: .o .c
@@ -24,10 +25,9 @@ SUFFIXES: .o .c
 
 clean :
 	rm -f *.o UHF
-	cd ../sfmt; $(MAKE) -f makefile_sfmt clean
+	$(MAKE) -C ../sfmt -f makefile_sfmt clean
 
 UHFmain.o:include/Def.h
-UHFmain.o:mfmemory.c
 UHFmain.o:include/matrixlapack.h
 UHFmain.o:include/readdef.h
 UHFmain.o:include/initial.h
@@ -42,17 +42,13 @@ UHFmain.o:xsetmem_large.c
 cal_energy.o:include/cal_energy.h
 diag.o:include/matrixlapack.h
 diag.o:include/diag.h
-diag.o:mfmemory.c
 green.o:include/green.h
 green.o:include/matrixlapack.h
-green.o:mfmemory.c
 initial.o:include/initial.h
 initial.o:../sfmt/SFMT.h
 makeham.o:include/makeham.h
 matrixlapack.o:include/matrixlapack.h
-matrixlapack.o:mfmemory.c
 output.o:include/output.h
-output.o:mfmemory.c
 output.o:../sfmt/SFMT.h
 readdef.o:include/readdef.h
 include/Def.h:include/struct.h
