@@ -166,8 +166,6 @@ mVMC is tested in the following platform:
 
 -  The supercomputer system-C enaga in ISSP
 
--  Fugaku
-
 -  OpenMPI + Intel Compiler + MKL
 
 -  MPICH + Intel Compiler + MKL

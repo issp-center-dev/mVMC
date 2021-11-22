@@ -144,8 +144,6 @@ Public License version 3（GPL v3）に準じて配布されています。
 
 -  東京大学物性研究所スーパーコンピューターシステムC「enaga」
 
--  富岳
-
 -  OpenMPI + Intel Compiler + MKL
 
 -  MPICH + Intel Compiler + MKL
