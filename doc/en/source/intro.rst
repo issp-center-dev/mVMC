@@ -136,7 +136,8 @@ This software is developed by following contributors.
          (Department of Applied Physics, The University of Tokyo)
 
       -  Kota Ido
-         (Department of Applied Physics, The University of Tokyo)
+         (The Institute for Solid State Physics, The University of
+         Tokyo)
 
       -  Masatoshi Imada
          (Department of Applied Physics, The University of Tokyo)
