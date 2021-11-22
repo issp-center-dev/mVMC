@@ -102,6 +102,8 @@ Contributors
 
 This software is developed by following contributors.
 
+-  ver.1.2.0 (released at 2021/11/22)
+
 -  ver.1.1.0 (released at 2019/11/15)
 
 -  ver.1.0.3 (released at 2018/7/23)
