@@ -1,0 +1,162 @@
+
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>概要 &#8212; mVMC 1.2.0 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/translations.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="チュートリアル" href="tutorial.html" />
+    <link rel="prev" title="相関関数のFourier変換ユーティリティー" href="index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="総合索引"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="チュートリアル"
+             accesskey="N">次へ</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="相関関数のFourier変換ユーティリティー"
+             accesskey="P">前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">相関関数のFourier変換ユーティリティー</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">概要</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="id1">
+<h1>概要<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p>本資料は, mVMC および <span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span> で計算された
+サイト表示の相関関数をFourier変換し, 出力するユーティリティに関するマニュアルである.</p>
+<section id="id2">
+<h2>要件<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>本ユーティリティの使用要件はmVMC および <span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span> と同じである.</p>
+</section>
+<section id="supported">
+<span id="id3"></span><h2>対応する量<a class="headerlink" href="#supported" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>本ユーティリティは以下の相関関数のFourier変換に対応している.</p>
+<p>1体相関</p>
+<div class="math notranslate nohighlight">
+\begin{align}
+\langle {\hat c}_{{\bf k} \alpha \uparrow}^{\dagger} {\hat c}_{{\bf k} \beta \uparrow}\rangle
+&amp;\equiv \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot{\bf R}}
+\langle {\hat c}_{{\bf 0} \alpha \uparrow}^{\dagger} {\hat c}_{{\bf R} \beta \uparrow}\rangle
+\\
+\langle {\hat c}_{{\bf k} \alpha \downarrow}^{\dagger} {\hat c}_{{\bf k} \beta \downarrow}\rangle
+&amp;\equiv \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot {\bf R}}
+\langle {\hat c}_{{\bf 0} \alpha \downarrow}^{\dagger} {\hat c}_{{\bf R} \beta \downarrow}\rangle
+\end{align}</div><p>密度-密度相関</p>
+<div class="math notranslate nohighlight">
+\[\begin{align}
+\langle {\hat \rho}_{{\bf k}\alpha} {\hat \rho}_{{\bf k}\beta}\rangle
+\equiv \frac{1}{N_{\bf R}} \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot{\bf R}}
+\langle ({\hat \rho}_{{\bf 0}\alpha} - \langle {\hat \rho}_{{\bf 0}\alpha} \rangle)
+        ({\hat \rho}_{{\bf R}\beta} - \langle {\hat \rho}_{{\bf R}\beta} \rangle) \rangle
+\end{align}\]</div>
+<p>スピン-スピン相関</p>
+<div class="math notranslate nohighlight">
+\begin{align}
+\langle {\hat S}_{{\bf k}\alpha}^{z} {\hat S}_{{\bf k}\beta}^{z} \rangle
+&amp;\equiv \frac{1}{N_{\bf R}} \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot{\bf R}}
+\langle {\hat S}_{{\bf 0}\alpha}^{z} {\hat S}_{{\bf R}\beta}^{z} \rangle
+\\
+\langle {\hat S}_{{\bf k}\alpha}^{+} {\hat S}_{{\bf k}\beta}^{-} \rangle
+&amp;\equiv \frac{1}{N_{\bf R}} \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot{\bf R}}
+\langle {\hat S}_{{\bf 0}\alpha}^{+} {\hat S}_{{\bf R}\beta}^{-} \rangle
+\\
+\langle {\hat {\bf S}}_{{\bf k}\alpha} \cdot {\hat {\bf S}}_{{\bf k}\beta} \rangle
+&amp;\equiv \frac{1}{N_{\bf R}} \sum_{\bf R}^{N_{\bf R}} e^{-i {\bf k}\cdot{\bf R}}
+\langle {\hat {\bf S}}_{{\bf 0}\alpha} \cdot {\hat {\bf S}}_{{\bf R}\beta} \rangle
+\end{align}</div></section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">目次</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">概要</a><ul>
+<li><a class="reference internal" href="#id2">要件</a></li>
+<li><a class="reference internal" href="#supported">対応する量</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>前のトピックへ</h4>
+  <p class="topless"><a href="index.html"
+                        title="前の章へ">相関関数のFourier変換ユーティリティー</a></p>
+  <h4>次のトピックへ</h4>
+  <p class="topless"><a href="tutorial.html"
+                        title="次の章へ">チュートリアル</a></p>
+  <div role="note" aria-label="source link">
+    <h3>このページ</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/fourier/overview.rst.txt"
+            rel="nofollow">ソースコードを表示</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="総合索引"
+             >索引</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="チュートリアル"
+             >次へ</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="相関関数のFourier変換ユーティリティー"
+             >前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >相関関数のFourier変換ユーティリティー</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">概要</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+    </div>
+  </body>
+</html>
