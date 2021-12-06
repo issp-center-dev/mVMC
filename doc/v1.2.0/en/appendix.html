@@ -1,0 +1,322 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Program for the unrestricted Hartree-Fock approximation &#8212; mVMC 1.2.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css" />
+    
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="HPhi/mVMC Fourier-Transformation utility" href="fourier/index.html" />
+    <link rel="prev" title="Algorithm" href="algorithm.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="fourier/index.html" title="HPhi/mVMC Fourier-Transformation utility"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="algorithm.html" title="Algorithm"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Program for the unrestricted Hartree-Fock approximation</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="program-for-the-unrestricted-hartree-fock-approximation">
+<h1>Program for the unrestricted Hartree-Fock approximation<a class="headerlink" href="#program-for-the-unrestricted-hartree-fock-approximation" title="Permalink to this headline">¶</a></h1>
+<p>In mVMC package, there is a program to calculate the initial values of
+the pair orbital parameters <span class="math notranslate nohighlight">\(f_{ij}\)</span> by using the unrestricted
+Hartree-Fock (UHF) approximation (relation between Pfaffian Slater
+determinant and single Slater determinant is explained in sec.
+<a class="reference internal" href="algorithm.html#puffandslater"><span class="std std-ref">Properties of the Pfaffian-Slater determinant</span></a>). It is noted that the target system of this program
+is the itinerant electron system.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>In UHF approximation, two-body interaction terms are approximated as
+one-body interaction terms by taking into account of the fluctuation,
+<span class="math notranslate nohighlight">\(\delta A \equiv A-\langle A \rangle\)</span>, up to the first order. As
+an example, we consider the inter-site coulomb interactions</p>
+<div class="math notranslate nohighlight">
+\[{\cal H}_V = \sum_{i,j}V_{ij} n_ {i}n_{j},\]</div>
+<p>where we define <span class="math notranslate nohighlight">\(i\equiv (i, \sigma)\)</span>,
+<span class="math notranslate nohighlight">\(j\equiv (j, \sigma')\)</span> for simplicity. Then, the interaction terms
+can be approximated as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+n_ {i}n_{j} &amp;= (\langle n_{i} \rangle +\delta n_i) (\langle n_{j} \rangle +\delta n_j)
+- \left[ \langle c_{i}^{\dagger}c_j \rangle +\delta (c_{i}^{\dagger}c_j ) \right]
+  \left[ \langle c_{j}^{\dagger}c_i \rangle +\delta (c_{j}^{\dagger}c_i )\right]
+\nonumber\\
+&amp;\sim
+\langle n_{i} \rangle n_j+\langle n_{j} \rangle  n_i - \langle c_{i}^{\dagger}c_j \rangle  c_{j}^{\dagger}c_i
+- \langle c_{j}^{\dagger}c_i \rangle c_{i}^{\dagger}c_j
+- \langle n_{i} \rangle \langle n_j \rangle +  \langle c_{j}^{\dagger}c_i \rangle \langle c_{i}^{\dagger}c_j \rangle.
+\end{aligned}\end{split}\]</div>
+<p>Also for other types of interaction, the problem can be attributed to a
+one-body problem by using a similar approximation. Actual calculation is
+performed iteratively until that self-consistent solution for the mean
+values of the above observables are obtained.</p>
+<section id="source-code">
+<h3>Source code<a class="headerlink" href="#source-code" title="Permalink to this headline">¶</a></h3>
+<p>A set of source codes are included in the directory
+<code class="docutils literal notranslate"><span class="pre">src/ComplexUHF/src</span></code>.</p>
+</section>
+<section id="how-to-compile">
+<h3>How to compile<a class="headerlink" href="#how-to-compile" title="Permalink to this headline">¶</a></h3>
+<p>To compile source codes, move to the directory just below the main
+directory of mVMC, and execute</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ make mvmc
+</pre></div>
+</div>
+<p>in a similar way as the compile of mVMC. After compiling, an executable
+file <code class="docutils literal notranslate"><span class="pre">UHF</span></code> is generated in <code class="docutils literal notranslate"><span class="pre">src/ComplexUHF/src</span></code>.</p>
+</section>
+<section id="input-files">
+<h3>Input files<a class="headerlink" href="#input-files" title="Permalink to this headline">¶</a></h3>
+<section id="a-file-for-assigning-input-files-namelist-def">
+<h4>A file for assigning input files (namelist.def)<a class="headerlink" href="#a-file-for-assigning-input-files-namelist-def" title="Permalink to this headline">¶</a></h4>
+<p>The following files are needed to use the program of UHF. The format
+of <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> is the same as defined in <a class="reference internal" href="expert.html#inputfilelist"><span class="std std-ref">List file for Input files (namelist.def)</span></a>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ModPara</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LocSpin</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Trans</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Hund</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PairHop</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Exchange</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OrbitalParallel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Initial</span></code></p></li>
+</ul>
+<p>Although the format of these files are the same as those for mVMC
+basically, the following items are different:</p>
+<ul class="simple">
+<li><p>Parameters assigned in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file.</p></li>
+<li><p>Addition of <code class="docutils literal notranslate"><span class="pre">Initial</span></code> file.</p></li>
+</ul>
+<p>We explain details of the format of these files as follows.</p>
+</section>
+<section id="parameters-assigned-in-modpara-file">
+<h4>Parameters assigned in ModPara file<a class="headerlink" href="#parameters-assigned-in-modpara-file" title="Permalink to this headline">¶</a></h4>
+<p>The parameters needed in the program of UHF are as follows:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Nsite</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ne</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Mix</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EPS</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">IterationMax</span></code></p></li>
+</ul>
+<p>The parameters, <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> and <code class="docutils literal notranslate"><span class="pre">Ne</span></code>, are common as mVMC. The other
+three parameters are specific to UHF:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">Mix</span></code></p>
+<p>Linear mixing is assigned by double-type. When mix=1, a new Green’s
+function is fully updated without using a old one.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EPS</span></code></p>
+<p>A condition for convergence is assigned by int-type. When a
+residual error between a new Green’s function and a previous one is
+less than <span class="math notranslate nohighlight">\(10^{-\verb|eps|}\)</span>, the iteration of calculation is
+stopped.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">IterationMax</span></code></p>
+<p>A maximum number of the loop is assigned by int-type.</p>
+</li>
+</ul>
+<p>If there are the other parameters for mVMC in this file , warning is
+output to the standard output (the calculation is not stopped).</p>
+</section>
+<section id="initial-file">
+<h4>Initial file<a class="headerlink" href="#initial-file" title="Permalink to this headline">¶</a></h4>
+<p>Initial values of Green’s function
+<span class="math notranslate nohighlight">\(G_{ij\sigma_1\sigma_2}\equiv \langle c_{i\sigma_1}^\dagger c_{j\sigma_2}\rangle\)</span>
+are given. The format is the same as <code class="docutils literal notranslate"><span class="pre">Trans</span></code> file, and instead of
+<span class="math notranslate nohighlight">\(t_{ij\sigma_1\sigma_2}\)</span>, values of <span class="math notranslate nohighlight">\(G_{ij\sigma_1\sigma_2}\)</span>
+are described. Green’s function is set as zero if values are not given.</p>
+</section>
+</section>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>Calculation of UHF is performed by the same way as mVMC, i.e., by
+executing the command</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ UHF namelist.def
+</pre></div>
+</div>
+<p>The routine of the calculation is as follows.</p>
+<ol class="arabic simple">
+<li><p>Reading files</p></li>
+<li><p>Construction of a Hamiltonian</p></li>
+<li><p>Self-consistent calculation of Green’s function</p></li>
+<li><p>Output of <span class="math notranslate nohighlight">\(f_{ij}\)</span> and other files</p></li>
+</ol>
+<p>Examples of output after calculation are as follows.</p>
+<ul>
+<li><p>zvo_result.dat:</p>
+<p>The energy and the particle number are output.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">energy</span> <span class="o">-</span><span class="mf">15.2265348135</span>
+<span class="n">num</span>    <span class="mf">36.0000000000</span>
+</pre></div>
+</div>
+</li>
+<li><p>zvo_check.dat:</p>
+<p>The step number of the iteration, the mean of the
+absolute value of the residual error in Green’s function, the energy
+in convergence process, and the particle number are output in order.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="mi">0</span>  <span class="mf">0.004925645652</span> <span class="o">-</span><span class="mf">544.963484605164</span> <span class="mf">36.000000</span>
+ <span class="mi">1</span>  <span class="mf">0.002481594941</span> <span class="o">-</span><span class="mf">278.304285708488</span> <span class="mf">36.000000</span>
+ <span class="mi">2</span>  <span class="mf">0.001274395448</span> <span class="o">-</span><span class="mf">147.247026925130</span> <span class="mf">36.000000</span>
+ <span class="mi">3</span>  <span class="mf">0.000681060599</span> <span class="o">-</span><span class="mf">82.973664527606</span> <span class="mf">36.000000</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+</li>
+<li><p>zvo_UHF_cisajs.dat:</p>
+<p>Convergent one-body Green’s function
+<span class="math notranslate nohighlight">\(G_{ij\sigma_1\sigma_2}\equiv\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle\)</span>
+is output.
+For all the components,
+<span class="math notranslate nohighlight">\(i, \sigma_1, j, \sigma_2, {\rm Re}\left[G_{ij\sigma_1\sigma_2}\right], {\rm Im}\left[G_{ij\sigma_1\sigma_2}\right]\)</span>
+are output in order.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>   <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">0</span> <span class="mf">0.5037555283</span> <span class="mf">0.0000000000</span>
+   <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">1</span> <span class="mf">0.4610257618</span> <span class="mf">0.0003115503</span>
+   <span class="mi">0</span>    <span class="mi">1</span>    <span class="mi">0</span>    <span class="mi">0</span> <span class="mf">0.4610257618</span> <span class="o">-</span><span class="mf">0.0003115503</span>
+   <span class="mi">0</span>    <span class="mi">1</span>    <span class="mi">0</span>    <span class="mi">1</span> <span class="mf">0.4962444717</span> <span class="mf">0.0000000000</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+</li>
+<li><p>zvo_eigen.dat:</p>
+<p>Convergent eigenvalues of the Hamiltonian are
+output in ascending order.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span>  <span class="o">-</span><span class="mf">2.9425069199</span>
+<span class="mi">2</span>  <span class="o">-</span><span class="mf">2.9425069198</span>
+<span class="mi">3</span>  <span class="o">-</span><span class="mf">1.5005359205</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+</li>
+<li><p>zvo_gap.dat:</p>
+<p>For the total electron number <span class="math notranslate nohighlight">\(N_{\rm tot}\)</span>, the
+energy difference <span class="math notranslate nohighlight">\(\Delta E= E(N_{\rm tot}+1)-E(N_{\rm tot})\)</span>
+is output.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mf">5.2208232631</span>
+</pre></div>
+</div>
+</li>
+<li><p>zvo_orbital_opt.dat:</p>
+<p><span class="math notranslate nohighlight">\(f_{ij}\)</span> generated from the Slater
+determinant. The file with the same format as
+<code class="docutils literal notranslate"><span class="pre">InOrbital</span></code>,<code class="docutils literal notranslate"><span class="pre">InOrbitalAntiParallel</span></code>,
+<code class="docutils literal notranslate"><span class="pre">InOrbitalParallel</span></code>,<code class="docutils literal notranslate"><span class="pre">InOrbitalAntiGeneral</span></code> file is output. By
+referring <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>, <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code>,
+<code class="docutils literal notranslate"><span class="pre">OrbitalParallel</span></code>,<code class="docutils literal notranslate"><span class="pre">OrbitalAntiGeneral</span></code> file, <span class="math notranslate nohighlight">\(f_{ij}\)</span> is
+calculated (for the same type of parameters, the averaged value is
+calculated).</p>
+</li>
+</ul>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Program for the unrestricted Hartree-Fock approximation</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a><ul>
+<li><a class="reference internal" href="#source-code">Source code</a></li>
+<li><a class="reference internal" href="#how-to-compile">How to compile</a></li>
+<li><a class="reference internal" href="#input-files">Input files</a><ul>
+<li><a class="reference internal" href="#a-file-for-assigning-input-files-namelist-def">A file for assigning input files (namelist.def)</a></li>
+<li><a class="reference internal" href="#parameters-assigned-in-modpara-file">Parameters assigned in ModPara file</a></li>
+<li><a class="reference internal" href="#initial-file">Initial file</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#usage">Usage</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="algorithm.html"
+                        title="previous chapter">Algorithm</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="fourier/index.html"
+                        title="next chapter">HPhi/mVMC Fourier-Transformation utility</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/appendix.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="fourier/index.html" title="HPhi/mVMC Fourier-Transformation utility"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="algorithm.html" title="Algorithm"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Program for the unrestricted Hartree-Fock approximation</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.2.0.
+    </div>
+  </body>
+</html>

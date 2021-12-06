@@ -1,0 +1,391 @@
+
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>How to use mVMC? &#8212; mVMC 1.2.0 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css" />
+    
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/translations.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="検索" href="search.html" />
+    <link rel="next" title="チュートリアル" href="tutorial.html" />
+    <link rel="prev" title="What is mVMC?" href="intro.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="総合索引"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="チュートリアル"
+             accesskey="N">次へ</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="What is mVMC?"
+             accesskey="P">前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">How to use mVMC?</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="how-to-use-mvmc">
+<h1>How to use mVMC?<a class="headerlink" href="#how-to-use-mvmc" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<section id="id1">
+<h2>要件<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>mVMCのコンパイル <span class="math notranslate nohighlight">\(\cdot\)</span> 使用には次のものが必要です。</p>
+<ul class="simple">
+<li><p>Cコンパイラ (インテル、富士通、GNUなど)</p></li>
+<li><p>MPIライブラリ</p></li>
+<li><p>LAPACKライブラリ (インテルMKL, 富士通, ATLASなど)</p></li>
+<li><p>オプション：ScaLAPACKライブラリ</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">注釈</p>
+<p><strong>intelコンパイラーでの設定</strong></p>
+<p>intelコンパイラを使用する場合には、コンパイラに付属の設定用スクリプトを使用するのが簡単です。</p>
+<p>64ビットOSでbashを使っている場合には</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /opt/intel/bin/compilervars.sh intel64
+</pre></div>
+</div>
+<p>または</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /opt/intel/bin/iccvars.sh intel64
+$ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
+</pre></div>
+</div>
+<p>等を <code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code> に記載してください。
+詳しくはお手持ちのコンパイラ、ライブラリのマニュアルをお読みください。</p>
+</div>
+</section>
+<section id="id2">
+<h2>インストール方法<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>mVMC は次の場所からダウンロードできます。
+<a class="reference external" href="https://github.com/issp-center-dev/mVMC/releases">https://github.com/issp-center-dev/mVMC/releases</a></p>
+<p>ダウンロードしたファイルを次のように展開してください。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ tar xzvf mVMC-xxx.tar.gz
+</pre></div>
+</div>
+<p>mVMCは次の2通りの方法でインストールできます。</p>
+<section id="mvmcconfig-sh">
+<h3><code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> を使う方法<a class="headerlink" href="#mvmcconfig-sh" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>展開したディレクトリのなかにある <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> スクリプトを次のように実行してください。
+(物性研システムB”sekirei”の場合)</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ bash mVMCconfig.sh sekirei
+</pre></div>
+</div>
+<p>これによりコンパイル環境設定ファイル <code class="docutils literal notranslate"><span class="pre">make.sys</span></code> が <code class="docutils literal notranslate"><span class="pre">src/</span></code> ディレクトリに作られます。
+<code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> の引数は次のものに対応しています。</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">sekirei</span></code> : 物性研究所システムB &quot;sekirei&quot;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">kei</span></code> : 京コンピューターおよび物性研究所システムC &quot;maki&quot;(FX10)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">intel-openmpi</span></code> : Intel コンパイラ + OpenMPI</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">intel-mpich</span></code> : Intelコンパイラ + MPICH2</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">intel-intelmpi</span></code> : Intelコンパイラ + IntelMPI</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gcc-mpich-mkl</span></code> : GCC + MPICH + MKL</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gcc-openmpi</span></code> : GCC + OpenMPI</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">make.sys</span></code> の中身は次のようになっています(物性研システムB
+&quot;sekirei&quot;の場合)。</p>
+<div class="highlight-makefile notranslate"><div class="highlight"><pre><span></span><span class="nv">CC</span> <span class="o">=</span> mpicc
+<span class="nv">F90</span> <span class="o">=</span> mpif90
+<span class="nv">CFLAGS</span> <span class="o">=</span> -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
+<span class="nv">FFLAGS</span> <span class="o">=</span> -O3 -implicitnone -xHost
+<span class="nv">LIBS</span> <span class="o">=</span> -L <span class="k">$(</span>MKLROOT<span class="k">)</span>/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 <span class="se">\</span>
+        -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
+<span class="nv">SFMTFLAGS</span> <span class="o">=</span> -no-ansi-alias -DHAVE_SSE2
+</pre></div>
+</div>
+<p>となります。それぞれのマクロ(変数)の説明は次のとおりです。</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">CC</span></code> : C コンパイラー( <code class="docutils literal notranslate"><span class="pre">mpicc</span></code>, <code class="docutils literal notranslate"><span class="pre">mpifccpx</span></code> など)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">F90</span></code> : fortran コンパイラー( <code class="docutils literal notranslate"><span class="pre">ifort</span></code>, <code class="docutils literal notranslate"><span class="pre">frtpx</span></code> など)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LIBS</span></code> : リンカーオプション。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CFLAGS</span></code> : C コンパイルオプション。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FFLAGS</span></code> : fortran コンパイルオプション。</p></li>
+</ul>
+<p>これでコンパイルのための準備が整います。その後</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ make mvmc
+</pre></div>
+</div>
+<p>とすることで実行可能ファイル <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> 、 <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> が <code class="docutils literal notranslate"><span class="pre">src/内に</span></code> 生成されるので、
+このディレクトリにパスを通すか、
+パスの通っている場所にシンボリックリンクを作ってください。</p>
+<p>実行ファイルにパスを通す時には、次のようにします。
+<code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">export</span> <span class="pre">PATH=${PATH}:</span></code> <code class="docutils literal notranslate"><span class="pre">/src/</span></code>
+この設定を常に残すには、例えばログインシェルが <code class="docutils literal notranslate"><span class="pre">bash</span></code> の場合には
+<code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code> ファイルに上記のコマンドを記載します。</p>
+</section>
+<section id="cmake">
+<h3>cmakeを使う方法<a class="headerlink" href="#cmake" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>mVMCを展開したディレクトリのパスを$PathTomvmc、ビルドディレクトリを$HOME/build/mvmc
+(任意の場所を指定可能)とした場合に、</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="nv">$HOME</span>/build/mvmc
+cmake -DCONFIG<span class="o">=</span>gcc <span class="nv">$PathTomvmc</span>
+make
+</pre></div>
+</div>
+<p>でコンパイルすることができます。コンパイル後、 <code class="docutils literal notranslate"><span class="pre">$HOME/build/mvmc</span></code>
+直下に <code class="docutils literal notranslate"><span class="pre">src</span></code> フォルダが作成され、実行ファイルである <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> がそのフォルダ内に作成されます。</p>
+<p>なお、上の例ではgccコンパイラを前提としたコンパイルになっていますが、</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">sekirei</span></code> : 物性研究所システムB &quot;sekirei&quot;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fujitsu</span></code> : 富士通コンパイラ</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">intel</span></code> : intelコンパイラ + Linux PC</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gcc</span></code> : GCC + Linux PC</p></li>
+</ul>
+<p>のオプションが用意されています。以下、mVMCを展開したディレクトリでビルドする例を示します(intelコンパイラの場合)。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir ./build
+<span class="nb">cd</span> ./build
+cmake -DCONFIG<span class="o">=</span>intel ../
+make
+</pre></div>
+</div>
+<p>実行後、 <code class="docutils literal notranslate"><span class="pre">build/</span></code> フォルダ直下に <code class="docutils literal notranslate"><span class="pre">src/</span></code> フォルダが作成され、 <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> が <code class="docutils literal notranslate"><span class="pre">src/</span></code> フォルダ内に作成されます。
+また、LAPACKに代わりScaLAPACKを計算に使用することが可能です。その場合には、</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">DUSE_SCALAPACK</span><span class="o">=</span><span class="n">ON</span> <span class="o">-</span><span class="n">DSCALAPACK_LIBRARIES</span><span class="o">=</span><span class="s2">&quot;xxx&quot;</span>
+</pre></div>
+</div>
+<p>をcmakeをする際に付け加えてください(xxxにはScaLAPACKを利用するためのライブラリ一式を指定します)。
+なお、コンパイラを変更しコンパイルし直したい場合には、都度buildフォルダごと削除を行った上で、新規に上記作業を行うことをお薦めします。</p>
+<div class="admonition note">
+<p class="admonition-title">注釈</p>
+<p>sekirei で cmake を利用するには</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /home/issp/materiapps/tool/env.sh
+</pre></div>
+</div>
+<p>をあらかじめ実行する必要があります。</p>
+<p>またScaLAPACK を利用するには</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake -DCONFIG<span class="o">=</span>sekirei ../ -DUSE_SCALAPACK<span class="o">=</span>ON
+</pre></div>
+</div>
+<p>を行うと、デフォルトで</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">DSCALAPACK_LIBRARIES</span><span class="o">=</span><span class="s2">&quot;\$</span><span class="si">{MKLROOT}</span><span class="s2">/lib/intel64 -lmkl_scalapack_lp64</span>
+<span class="o">-</span><span class="n">lmkl_intel_lp64</span> <span class="o">-</span><span class="n">lmkl_intel_thread</span> <span class="o">-</span><span class="n">lmkl_core</span>
+<span class="o">-</span><span class="n">lmkl_blacs_sgimpt_lp64</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+</div>
+<p>が指定されます。ライブラリへのパスが異なる場合には、 <code class="docutils literal notranslate"><span class="pre">-DSCALAPACK_LIBRARIES</span></code> を適宜変更してください。</p>
+</section>
+</section>
+<section id="id3">
+<h2>ディレクトリ構成<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示します。:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>.
+|-- CMakeLists.txt
+|-- COPYING
+|-- README.md
+|-- config/
+|   |-- fujitsu.cmake
+|   |-- gcc.cmake
+|   |-- intel.cmake
+|   `-- sekirei.cmake
+|-- dist.sh*
+|-- doc/
+|   |-- CMakeLists.txt
+|   |-- bib/
+|   |-- en/
+|   |-- figs/
+|   |-- ja/
+|   |-- package/
+|   `-- userguide.html
+|-- mVMCconfig.sh
+|-- samples/
+|   |-- Standard/
+|   |   |-- Hubbard/
+|   |   |-- Kondo/
+|   |   `-- Spin/
+|   `-- Wannier/
+|       |-- Sr2CuO3/
+|       `-- Sr2VO4/
+|-- src/
+|   |-- ComplexUHF/
+|   |-- StdFace/
+|   |-- common/
+|   |-- mVMC/
+|   |-- pfapack/
+|   `-- sfmt/
+|-- test/
+|   |-- CMakeLists.txt
+|   |-- python/
+|   `-- tool/
+`-- tool/
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h2>基本的な使い方<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>mVMCは次の二つのいずれかのモードで動作します。</p>
+<ul>
+<li><p>エキスパートモード</p>
+<p>mVMCでは一般的な格子フェルミオン/スピン系に対応しており、
+各サイト毎にホッピング等を別々に指定することが出来ます。
+これにより計算対象の柔軟な指定が可能となりますが、用意する入力ファイルは多く、
+計算のセットアップは比較的煩雑になります。</p>
+</li>
+<li><p>スタンダードモード</p>
+<p>典型的なモデル(正方格子上のHeisenbergモデルなど)では、
+計算するセルのサイズや共通の相互作用項の大きさなど少数のパラメーターのみを入力して
+エキスパートモード用の入力ファイルを自動生成し、計算をすることが出来ます。
+計算対象はエキスパートモードに比べて限られますが、比較的容易に計算をセットアップすることが出来ます。
+また、エキスパートモード用の入力ファイルを自動生成した後、計算をする前にそれらを手動で編集して
+より広範なモデルに対応させることも可能です。</p>
+</li>
+</ul>
+<p>これらのモードを用いて次の用に計算を行います。</p>
+<ol class="arabic">
+<li><p>計算用ディレクトリの作成</p>
+<p>計算シナリオ名を記載したディレクトリを作成します。</p>
+</li>
+<li><p>スタンダードモードの入力ファイルの作成</p>
+<p>あらかじめ用意されたいくつかのモデル(HeisenbergモデルやHubbardモデル)や格子(正方格子など)を指定し、
+それらに対するいくつかのパラメーター(最近接 <span class="math notranslate nohighlight">\(\cdot\)</span> 次近接スピン結合やオンサイトクーロン積分など)を設定します。
+各ファイルは <a class="reference internal" href="standard.html#howtostandard"><span class="std std-ref">スタンダードモード用入力ファイル書式</span></a> に従い記載してください。</p>
+</li>
+<li><p>実行</p>
+<p>作成した入力ファイル名を引数として <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> を実行します。
+このとき入力ファイル名の前にオプション <code class="docutils literal notranslate"><span class="pre">-s</span></code> を付けます。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ mpiexec -np プロセス数 パス/vmc.out -s 入力ファイル
+</pre></div>
+</div>
+<p>ワークステーションやスパコン等でキューイングシステムを利用している場合は
+プロセス数をジョブ投入コマンドの引数として与える場合があります。
+詳しくはお使いのシステムのマニュアルをご参照ください。</p>
+</li>
+<li><p>途中経過</p>
+<p>計算実行の経過についてカレントディレクトリ直下の <code class="docutils literal notranslate"><span class="pre">output/</span></code>
+ディレクトリ(無ければ作られる)にログファイルが出力されます。
+出力されるファイルの詳細に関しては <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">出力ファイル</span></a> を参考にしてください。</p>
+</li>
+<li><p>最終結果</p>
+<p>計算が正常終了した場合、 計算モードに従い <code class="docutils literal notranslate"><span class="pre">output/</span></code>
+ディレクトリに計算結果ファイルが出力されます。
+出力されるファイルの詳細に関しては <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">出力ファイル</span></a> を参考にしてください。</p>
+</li>
+<li><p>エキスパートモードの入力ファイルの作成と実行</p>
+<p>上の例ではエキスパートモードのファイルを自動生成した後そのまま計算を開始していますが、
+エキスパートモードのファイルの生成のみを行う場合には <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> を実行します。
+MPIは使用しません。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ パス/vmcdry.out 入力ファイル
+</pre></div>
+</div>
+<p>このとき生成されたファイルを必要に応じて手動で編集したのち、 <code class="docutils literal notranslate"><span class="pre">-e</span></code>
+というオプションの後に
+<code class="docutils literal notranslate"><span class="pre">namelist/def</span></code> というファイルを引数として <code class="docutils literal notranslate"><span class="pre">vmcd.out</span></code>
+を実行します。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ mpiexec -np プロセス数 パス/vmc.out -e namelist.def
+</pre></div>
+</div>
+<p>以降はスタンダードモードと同様です。</p>
+</li>
+</ol>
+<p><strong>OpenMPスレッド数の指定</strong></p>
+<p>実行時のOpenMPのスレッド数を指定する場合は、
+<code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> を実行する前に以下の様にしてください(16スレッドの場合)。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">16</span>
+</pre></div>
+</div>
+<section id="id5">
+<h3>バージョン番号の確認<a class="headerlink" href="#id5" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>次のように <code class="docutils literal notranslate"><span class="pre">-v</span></code> オプションをつけて <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code>,
+<code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> を実行すると, バージョン番号を標準出力した後終了します。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ パス/vmcdry.out -v
+$ パス/vmc.out -v
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">目次</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">How to use mVMC?</a><ul>
+<li><a class="reference internal" href="#id1">要件</a></li>
+<li><a class="reference internal" href="#id2">インストール方法</a><ul>
+<li><a class="reference internal" href="#mvmcconfig-sh"><code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> を使う方法</a></li>
+<li><a class="reference internal" href="#cmake">cmakeを使う方法</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id3">ディレクトリ構成</a></li>
+<li><a class="reference internal" href="#id4">基本的な使い方</a><ul>
+<li><a class="reference internal" href="#id5">バージョン番号の確認</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>前のトピックへ</h4>
+  <p class="topless"><a href="intro.html"
+                        title="前の章へ">What is mVMC?</a></p>
+  <h4>次のトピックへ</h4>
+  <p class="topless"><a href="tutorial.html"
+                        title="次の章へ">チュートリアル</a></p>
+  <div role="note" aria-label="source link">
+    <h3>このページ</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/start.rst.txt"
+            rel="nofollow">ソースコードを表示</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="総合索引"
+             >索引</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="チュートリアル"
+             >次へ</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="What is mVMC?"
+             >前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">How to use mVMC?</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.2.0.
+    </div>
+  </body>
+</html>

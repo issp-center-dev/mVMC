@@ -1,0 +1,448 @@
+
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>出力ファイル &#8212; mVMC 1.2.0 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css" />
+    
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/translations.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="検索" href="search.html" />
+    <link rel="next" title="アルゴリズム" href="algorithm.html" />
+    <link rel="prev" title="エキスパートモード入力ファイル書式" href="expert.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="総合索引"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="algorithm.html" title="アルゴリズム"
+             accesskey="N">次へ</a> |</li>
+        <li class="right" >
+          <a href="expert.html" title="エキスパートモード入力ファイル書式"
+             accesskey="P">前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">出力ファイル</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="outputfile">
+<span id="id1"></span><h1>出力ファイル<a class="headerlink" href="#outputfile" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p>出力ファイルの一覧は下記の通りです。***には <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> で指定されるヘッダが、xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。また、zzzには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> が記載されます。</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 45%" />
+<col style="width: 55%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>ファイル名</p></th>
+<th class="head"><p>対応するファイルの中身</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>***_opt.dat</p></td>
+<td><p>最適化された全パラメータ.</p></td>
+</tr>
+<tr class="row-odd"><td><p>***_gutzwiller_opt.dat</p></td>
+<td><p>最適化されたGutzwiller因子.</p></td>
+</tr>
+<tr class="row-even"><td><p>***_jastrow_opt.dat</p></td>
+<td><p>最適化されたJastrow因子.</p></td>
+</tr>
+<tr class="row-odd"><td><p>***_doublonHolon2site_opt.dat</p></td>
+<td><p>最適化された2サイトダブロン-ホロン相関因子.</p></td>
+</tr>
+<tr class="row-even"><td><p>***_doublonHolon4site_opt.dat</p></td>
+<td><p>最適化された4サイトダブロン-ホロン相関因子.</p></td>
+</tr>
+<tr class="row-odd"><td><p>***_orbital_opt.dat</p></td>
+<td><p>最適化されたペア軌道因子.</p></td>
+</tr>
+<tr class="row-even"><td><p>xxx_out_yyy.dat</p></td>
+<td><p>エネルギーとその分散.</p></td>
+</tr>
+<tr class="row-odd"><td><p>xxx_var_yyy.dat</p></td>
+<td><p>パラメータ最適化過程の情報.</p></td>
+</tr>
+<tr class="row-even"><td><p>xxx_CalcTimer.dat</p></td>
+<td><p>各プロセスに対する計算時間に関する情報.</p></td>
+</tr>
+<tr class="row-odd"><td><p>xxx_time_zzz.dat</p></td>
+<td><p>モンテカルロサンプリングの過程に関する情報.</p></td>
+</tr>
+<tr class="row-even"><td><p>xxx_cisajs_yyy.dat</p></td>
+<td><p>一体グリーン関数.</p></td>
+</tr>
+<tr class="row-odd"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
+<td><p>二体グリーン関数.</p></td>
+</tr>
+</tbody>
+</table>
+<section id="opt-dat">
+<h2>変分パラメータ出力ファイル(***_opt.dat)<a class="headerlink" href="#opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>SR法で最適化された変分パラメータとエネルギーが一斉出力されます。
+変分パラメータが一斉に読み込めるため、変分パラメータ最適化後の物理量の計算を行う場合に使用します。
+出力されるデータは</p>
+<div class="math notranslate nohighlight">
+\[\langle H \rangle, \langle H^2 \rangle, g_i, v_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij} \nonumber\]</div>
+<p>で、それぞれの平均値と標準偏差が出力されます(平均値は実数、虚数の順に、標準偏差は実数のみ出力)。
+なお、全データが1行で出力され、数値の間は半角空白で区切られます。
+***には <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> で指定されるヘッダが記載されます。</p>
+</section>
+<section id="xxx-var-yyy-dat">
+<h2>ステップ別変分パラメータ出力ファイル(xxx_var_yyy.dat)<a class="headerlink" href="#xxx-var-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>SR 法の各ステップにおける変分パラメータとエネルギーがzqp_opt.dat
+と同形式で“追記しながら” 出力されます(標準偏差はゼロ)が出力されます。
+xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。</p>
+</section>
+<section id="gutzwiller-gutzwiller-opt-dat">
+<h2>Gutzwiller因子出力ファイル(***_gutzwiller_opt.dat)<a class="headerlink" href="#gutzwiller-gutzwiller-opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>SR法で最適化されたGutzwiller因子が出力されます。
+出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInGutzwiller指定ファイルと同じです。</p>
+</section>
+<section id="jastrow-jastrow-opt-dat">
+<h2>Jastrow因子出力ファイル(***_jastrow_opt.dat)<a class="headerlink" href="#jastrow-jastrow-opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>SR法で最適化されたJastrow因子が出力されます。
+出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInJastrow指定ファイルと同じです。</p>
+</section>
+<section id="doublonholon2site-opt-dat">
+<h2>2サイトダブロンホロン相関因子出力ファイル(***_doublonHolon2site_opt.dat)<a class="headerlink" href="#doublonholon2site-opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>SR法で最適化された2サイトのdoublon-holon相関因子が出力されます。
+出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInDH2指定ファイルと同じです。</p>
+</section>
+<section id="doublonholon4site-opt-dat">
+<h2>4サイトダブロンホロン相関因子出力ファイル(***_doublonHolon4site_opt.dat)<a class="headerlink" href="#doublonholon4site-opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>SR法で最適化された4サイトのdoublon-holon相関因子が出力されます。
+出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInDH4指定ファイルと同じです。</p>
+</section>
+<section id="orbital-opt-dat">
+<h2>ペア軌道出力ファイル(***_orbital_opt.dat)<a class="headerlink" href="#orbital-opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>SR法で最適化されたペア軌道の変分パラメータが出力されます。
+出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInOrbital指定ファイルと同じです。</p>
+</section>
+<section id="xxx-out-yyy-dat">
+<h2>xxx_out_yyy.dat<a class="headerlink" href="#xxx-out-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>ビン毎の計算情報として、</p>
+<div class="math notranslate nohighlight">
+\[\langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2},
+\langle S^z \rangle, \langle (S^z)^2 \rangle
+\nonumber.\]</div>
+<p>が順に出力されます。 <span class="math notranslate nohighlight">\(\langle H \rangle\)</span> については実部と虚部がそれぞれ出力され、それ以外は実部のみ出力されます。
+xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。以下に出力例を記載します。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>1.151983765704212992e+01  8.124622418360909482e-01  \
+1.619082955438887268e+02  2.019905203939084959e-01
+1.288482613817423150e+01  5.006903733262847433e-01
+1.972000325276957824e+02  1.824505193695792893e-01
+1.308897206011880421e+01  5.701244886956570168e-01  \
+2.072610167083121837e+02  2.029162857569105916e-01
+…
+</pre></div>
+</div>
+</section>
+<section id="xxx-calctimer-dat">
+<h2>xxx_CalcTimer.dat<a class="headerlink" href="#xxx-calctimer-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>計算終了後に、処理毎の計算処理時間が処理名、処理に割り当てられた識別番号、実行秒数の順に出力されます。出力例は以下の通りです。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">All</span>                         <span class="p">[</span><span class="mi">0</span><span class="p">]</span>     <span class="mf">15.90724</span>
+<span class="n">Initialization</span>              <span class="p">[</span><span class="mi">1</span><span class="p">]</span>      <span class="mf">0.04357</span>
+  <span class="n">read</span> <span class="n">options</span>             <span class="p">[</span><span class="mi">10</span><span class="p">]</span>      <span class="mf">0.00012</span>
+  <span class="n">ReadDefFile</span>              <span class="p">[</span><span class="mi">11</span><span class="p">]</span>      <span class="mf">0.00082</span>
+  <span class="n">SetMemory</span>                <span class="p">[</span><span class="mi">12</span><span class="p">]</span>      <span class="mf">0.00002</span>
+  <span class="n">InitParameter</span>            <span class="p">[</span><span class="mi">13</span><span class="p">]</span>      <span class="mf">0.03026</span>
+<span class="n">VMCParaOpt</span>                  <span class="p">[</span><span class="mi">2</span><span class="p">]</span>     <span class="mf">15.86367</span>
+  <span class="n">VMCMakeSample</span>             <span class="p">[</span><span class="mi">3</span><span class="p">]</span>     <span class="mf">12.85650</span>
+    <span class="n">makeInitialSample</span>      <span class="p">[</span><span class="mi">30</span><span class="p">]</span>      <span class="mf">0.20219</span>
+    <span class="n">make</span> <span class="n">candidate</span>         <span class="p">[</span><span class="mi">31</span><span class="p">]</span>      <span class="mf">0.02553</span>
+    <span class="n">hopping</span> <span class="n">update</span>         <span class="p">[</span><span class="mi">32</span><span class="p">]</span>     <span class="mf">12.51967</span>
+      <span class="n">UpdateProjCnt</span>        <span class="p">[</span><span class="mi">60</span><span class="p">]</span>      <span class="mf">7.41864</span>
+      <span class="n">CalculateNewPfM2</span>     <span class="p">[</span><span class="mi">61</span><span class="p">]</span>      <span class="mf">3.67098</span>
+      <span class="n">CalculateLogIP</span>       <span class="p">[</span><span class="mi">62</span><span class="p">]</span>      <span class="mf">0.07599</span>
+      <span class="n">UpdateMAll</span>           <span class="p">[</span><span class="mi">63</span><span class="p">]</span>      <span class="mf">1.27466</span>
+    <span class="n">exchange</span> <span class="n">update</span>        <span class="p">[</span><span class="mi">33</span><span class="p">]</span>      <span class="mf">0.00000</span>
+      <span class="n">UpdateProjCnt</span>        <span class="p">[</span><span class="mi">65</span><span class="p">]</span>      <span class="mf">0.00000</span>
+      <span class="n">CalculateNewPfMTwo2</span>  <span class="p">[</span><span class="mi">66</span><span class="p">]</span>      <span class="mf">0.00000</span>
+      <span class="n">CalculateLogIP</span>       <span class="p">[</span><span class="mi">67</span><span class="p">]</span>      <span class="mf">0.00000</span>
+      <span class="n">UpdateMAllTwo</span>        <span class="p">[</span><span class="mi">68</span><span class="p">]</span>      <span class="mf">0.00000</span>
+    <span class="n">recal</span> <span class="n">PfM</span> <span class="ow">and</span> <span class="n">InvM</span>     <span class="p">[</span><span class="mi">34</span><span class="p">]</span>      <span class="mf">0.08294</span>
+    <span class="n">save</span> <span class="n">electron</span> <span class="n">config</span>   <span class="p">[</span><span class="mi">35</span><span class="p">]</span>      <span class="mf">0.00232</span>
+  <span class="n">VMCMainCal</span>                <span class="p">[</span><span class="mi">4</span><span class="p">]</span>      <span class="mf">2.45481</span>
+    <span class="n">CalculateMAll</span>          <span class="p">[</span><span class="mi">40</span><span class="p">]</span>      <span class="mf">0.47556</span>
+    <span class="n">LocEnergyCal</span>           <span class="p">[</span><span class="mi">41</span><span class="p">]</span>      <span class="mf">0.79754</span>
+      <span class="n">CalHamiltonian0</span>      <span class="p">[</span><span class="mi">70</span><span class="p">]</span>      <span class="mf">0.00259</span>
+      <span class="n">CalHamiltonian1</span>      <span class="p">[</span><span class="mi">71</span><span class="p">]</span>      <span class="mf">0.18765</span>
+      <span class="n">CalHamiltonian2</span>      <span class="p">[</span><span class="mi">72</span><span class="p">]</span>      <span class="mf">0.00107</span>
+    <span class="n">ReturnSlaterElmDiff</span>    <span class="p">[</span><span class="mi">42</span><span class="p">]</span>      <span class="mf">0.40035</span>
+    <span class="n">calculate</span> <span class="n">OO</span> <span class="ow">and</span> <span class="n">HO</span>    <span class="p">[</span><span class="mi">43</span><span class="p">]</span>      <span class="mf">0.68045</span>
+  <span class="n">StochasticOpt</span>             <span class="p">[</span><span class="mi">5</span><span class="p">]</span>      <span class="mf">0.30489</span>
+    <span class="n">preprocess</span>             <span class="p">[</span><span class="mi">50</span><span class="p">]</span>      <span class="mf">0.02587</span>
+    <span class="n">stcOptMain</span>             <span class="p">[</span><span class="mi">51</span><span class="p">]</span>      <span class="mf">0.25471</span>
+      <span class="n">initBLACS</span>            <span class="p">[</span><span class="mi">55</span><span class="p">]</span>      <span class="mf">0.06564</span>
+      <span class="n">calculate</span> <span class="n">S</span> <span class="ow">and</span> <span class="n">g</span>    <span class="p">[</span><span class="mi">56</span><span class="p">]</span>      <span class="mf">0.05603</span>
+      <span class="n">DPOSV</span>                <span class="p">[</span><span class="mi">57</span><span class="p">]</span>      <span class="mf">0.09833</span>
+      <span class="n">gatherParaChange</span>     <span class="p">[</span><span class="mi">58</span><span class="p">]</span>      <span class="mf">0.02774</span>
+    <span class="n">postprocess</span>            <span class="p">[</span><span class="mi">52</span><span class="p">]</span>      <span class="mf">0.02372</span>
+  <span class="n">UpdateSlaterElm</span>          <span class="p">[</span><span class="mi">20</span><span class="p">]</span>      <span class="mf">0.02556</span>
+  <span class="n">WeightAverage</span>            <span class="p">[</span><span class="mi">21</span><span class="p">]</span>      <span class="mf">0.06676</span>
+  <span class="n">outputData</span>               <span class="p">[</span><span class="mi">22</span><span class="p">]</span>      <span class="mf">0.10554</span>
+  <span class="n">SyncModifiedParameter</span>    <span class="p">[</span><span class="mi">23</span><span class="p">]</span>      <span class="mf">0.02151</span>
+</pre></div>
+</div>
+</section>
+<section id="xxx-time-zzz-dat">
+<h2>xxx_time_zzz.dat<a class="headerlink" href="#xxx-time-zzz-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<div class="line-block">
+<div class="line">計算情報としてビン毎にサンプリング数、hoppingおよびexchangeのアップデートに対するacceptance
+ratio(acc_hopp, acc_ex)、それぞれのアップデートの試行回数(n_hopp,
+n_ex)および実行した際の時間を順に出力します。xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、zzzには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> が記載されます。
+出力例は以下の通りです。</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>00000  acc_hop acc_ex  n_hop    n_ex     : Mon Jul 25 14:03:29 2016
+00001  0.59688 0.00000 320      0        : Mon Jul 25 14:03:30 2016
+00002  0.47727 0.00000 176      0        : Mon Jul 25 14:03:30 2016
+00003  0.50000 0.00000 176      0        : Mon Jul 25 14:03:30 2016
+00004  0.49432 0.00000 176      0        : Mon Jul 25 14:03:30 2016
+00005  0.57386 0.00000 176      0        : Mon Jul 25 14:03:30 2016
+00006  0.55114 0.00000 176      0        : Mon Jul 25 14:03:30 2016
+…
+</pre></div>
+</div>
+</section>
+<section id="xxx-cisajs-yyy-dat">
+<h2>xxx_cisajs_yyy.dat<a class="headerlink" href="#xxx-cisajs-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>OneBodyG指定ファイルで指定された一体グリーン関数 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle\)</span> の計算結果を出力します。
+xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。以下にファイル例を記載します。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>0    0    0    0 0.4452776740 0.0000000000
+0    1    0    1 0.4452776740 0.0000000000
+1    0    1    0 0.5000000000 0.0000000000
+1    1    1    1 0.5000000000 0.0000000000
+2    0    2    0 0.4452776740 0.0000000000
+2    1    2    1 0.4452776740 0.0000000000
+3    0    3    0 0.5000000000 0.0000000000
+3    1    3    1 0.5000000000 0.0000000000
+…
+</pre></div>
+</div>
+<section id="id2">
+<h3>ファイル形式<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int04 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span></p></li>
+</ul>
+</section>
+<section id="id3">
+<h3>パラメータ<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<ul>
+<li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span></p>
+<p><strong>形式 :</strong> int型</p>
+<p><strong>説明 :</strong>
+サイト番号を指定する整数。 <span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(i\)</span> サイト、 <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(j\)</span> サイトを表します。</p>
+</li>
+<li><p><span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> int04 <span class="math notranslate nohighlight">\(]\)</span></p>
+<p><strong>形式 :</strong> int型</p>
+<div class="line-block">
+<div class="line"><strong>説明 :</strong>
+スピンを指定する整数。 <span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(\sigma_1\)</span> 、 <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(\sigma_2\)</span> に対応します。</div>
+<div class="line">0: アップスピン</div>
+<div class="line">1: ダウンスピン</div>
+<div class="line">を表します。</div>
+</div>
+</li>
+<li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span></p>
+<p><strong>形式 :</strong> double型</p>
+<div class="line-block">
+<div class="line"><strong>説明 :</strong>
+<span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle\)</span> の値を表します。</div>
+<div class="line"><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span> が実部、 <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span> が虚部を表します。</div>
+</div>
+</li>
+</ul>
+</section>
+</section>
+<section id="xxx-cisajscktalt-yyy-dat">
+<h2>xxx_cisajscktalt_yyy.dat<a class="headerlink" href="#xxx-cisajscktalt-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>TwoBodyG指定ファイルで指定された二体グリーン関数 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle\)</span> の計算結果を出力します。xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。以下にファイル例を記載します。</p>
+<p>15cm</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>0    0    0    0    0    0    0    0 0.4452776740 0.0000000000
+0    0    0    0    0    1    0    1 0.1843355815 0.0000000000
+0    0    0    0    1    0    1    0 0.1812412105 0.0000000000
+0    0    0    0    1    1    1    1 0.2640364635 0.0000000000
+0    0    0    0    2    0    2    0 0.0279690007 0.0000000000
+0    0    0    0    2    1    2    1 0.2009271524 0.0000000000
+0    0    0    0    3    0    3    0 0.2512810778 0.0000000000
+0    0    0    0    3    1    3    1 0.1939965962 0.0000000000
+…
+</pre></div>
+</div>
+<section id="id4">
+<h3>ファイル形式<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int04 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int05 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int06 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int07 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int08 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span></p></li>
+</ul>
+</section>
+<section id="id5">
+<h3>パラメータ<a class="headerlink" href="#id5" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<ul>
+<li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>,
+<span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> int05 <span class="math notranslate nohighlight">\(]\)</span>,
+<span class="math notranslate nohighlight">\([\)</span> int07 <span class="math notranslate nohighlight">\(]\)</span></p>
+<p><strong>形式 :</strong> int型</p>
+<p><strong>説明 :</strong> サイト番号を指定する整数。
+<span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(i\)</span> サイト、 <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(j\)</span> サイト、 <span class="math notranslate nohighlight">\([\)</span> int05 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(k\)</span> サイト、 <span class="math notranslate nohighlight">\([\)</span> int07 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(l\)</span> サイトを表します。</p>
+</li>
+<li><p><span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span>,
+<span class="math notranslate nohighlight">\([\)</span> int04 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> int06 <span class="math notranslate nohighlight">\(]\)</span>,
+<span class="math notranslate nohighlight">\([\)</span> int08 <span class="math notranslate nohighlight">\(]\)</span></p>
+<p><strong>形式 :</strong> int型</p>
+<div class="line-block">
+<div class="line"><strong>説明 :</strong> スピンを指定する整数。
+<span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(\sigma_1\)</span> 、 <span class="math notranslate nohighlight">\([\)</span> int04 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(\sigma_2\)</span> 、 <span class="math notranslate nohighlight">\([\)</span> int06 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(\sigma_3\)</span> 、 <span class="math notranslate nohighlight">\([\)</span> int08 <span class="math notranslate nohighlight">\(]\)</span> が <span class="math notranslate nohighlight">\(\sigma_4\)</span> に対応します。</div>
+<div class="line">0: アップスピン</div>
+<div class="line">1: ダウンスピン</div>
+<div class="line">を表します。</div>
+</div>
+</li>
+<li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span></p>
+<p><strong>形式 :</strong> double型</p>
+<div class="line-block">
+<div class="line"><strong>説明 :</strong>
+<span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle\)</span> の値を表します。</div>
+<div class="line"><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span> が実部、 <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span> が虚部を表します。</div>
+</div>
+</li>
+</ul>
+</section>
+</section>
+<section id="xxx-ls-out-yyy-dat">
+<h2>xxx_ls_out_yyy.dat<a class="headerlink" href="#xxx-ls-out-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>Power Lanczos法により求めた <span class="math notranslate nohighlight">\(\langle H \rangle\)</span>,
+<span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> および最適化パラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> の順に出力されます。
+<code class="docutils literal notranslate"><span class="pre">ModPara</span></code> 指定ファイルで <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> =1, <code class="docutils literal notranslate"><span class="pre">NLanczosmode</span></code> =1,
+2に設定することで計算されます。
+xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。</p>
+</section>
+<section id="xxx-ls-cisajs-yyy-dat">
+<h2>xxx_ls_cisajs_yyy.dat<a class="headerlink" href="#xxx-ls-cisajs-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>Power Lanczos法により求めた,
+OneBodyG指定ファイルで指定された一体グリーン関数 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle\)</span> の計算結果を出力します。
+ファイル形式はxxx_cisajs_yyy.datファイルと同じです。 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> 指定ファイルで <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> =1,
+<code class="docutils literal notranslate"><span class="pre">NLanczosmode</span></code> =2に設定することで計算されます。</p>
+</section>
+<section id="xxx-ls-cisajscktalt-yyy-dat">
+<h2>xxx_ls_cisajscktalt_yyy.dat<a class="headerlink" href="#xxx-ls-cisajscktalt-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>Power Lanczos法により求めた,
+TwoBodyG指定ファイルで指定された二体グリーン関数 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle\)</span> の計算結果を出力します。ファイル形式はxxx_cisajscktalt_yyy.datファイルと同じです。 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> 指定ファイルで <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code>
+= 1, <code class="docutils literal notranslate"><span class="pre">NLanczosmode</span></code> = 2 に設定することで計算されます。</p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">目次</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">出力ファイル</a><ul>
+<li><a class="reference internal" href="#opt-dat">変分パラメータ出力ファイル(***_opt.dat)</a></li>
+<li><a class="reference internal" href="#xxx-var-yyy-dat">ステップ別変分パラメータ出力ファイル(xxx_var_yyy.dat)</a></li>
+<li><a class="reference internal" href="#gutzwiller-gutzwiller-opt-dat">Gutzwiller因子出力ファイル(***_gutzwiller_opt.dat)</a></li>
+<li><a class="reference internal" href="#jastrow-jastrow-opt-dat">Jastrow因子出力ファイル(***_jastrow_opt.dat)</a></li>
+<li><a class="reference internal" href="#doublonholon2site-opt-dat">2サイトダブロンホロン相関因子出力ファイル(***_doublonHolon2site_opt.dat)</a></li>
+<li><a class="reference internal" href="#doublonholon4site-opt-dat">4サイトダブロンホロン相関因子出力ファイル(***_doublonHolon4site_opt.dat)</a></li>
+<li><a class="reference internal" href="#orbital-opt-dat">ペア軌道出力ファイル(***_orbital_opt.dat)</a></li>
+<li><a class="reference internal" href="#xxx-out-yyy-dat">xxx_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-calctimer-dat">xxx_CalcTimer.dat</a></li>
+<li><a class="reference internal" href="#xxx-time-zzz-dat">xxx_time_zzz.dat</a></li>
+<li><a class="reference internal" href="#xxx-cisajs-yyy-dat">xxx_cisajs_yyy.dat</a><ul>
+<li><a class="reference internal" href="#id2">ファイル形式</a></li>
+<li><a class="reference internal" href="#id3">パラメータ</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#xxx-cisajscktalt-yyy-dat">xxx_cisajscktalt_yyy.dat</a><ul>
+<li><a class="reference internal" href="#id4">ファイル形式</a></li>
+<li><a class="reference internal" href="#id5">パラメータ</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-ls-cisajs-yyy-dat">xxx_ls_cisajs_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-ls-cisajscktalt-yyy-dat">xxx_ls_cisajscktalt_yyy.dat</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>前のトピックへ</h4>
+  <p class="topless"><a href="expert.html"
+                        title="前の章へ">エキスパートモード入力ファイル書式</a></p>
+  <h4>次のトピックへ</h4>
+  <p class="topless"><a href="algorithm.html"
+                        title="次の章へ">アルゴリズム</a></p>
+  <div role="note" aria-label="source link">
+    <h3>このページ</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/output.rst.txt"
+            rel="nofollow">ソースコードを表示</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="総合索引"
+             >索引</a></li>
+        <li class="right" >
+          <a href="algorithm.html" title="アルゴリズム"
+             >次へ</a> |</li>
+        <li class="right" >
+          <a href="expert.html" title="エキスパートモード入力ファイル書式"
+             >前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">出力ファイル</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.2.0.
+    </div>
+  </body>
+</html>

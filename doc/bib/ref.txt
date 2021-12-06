@@ -1,9 +1,0 @@
-.. _Tahara2008: http://dx.doi.org/10.1143/JPSJ.77.114701
-.. _Mutsuo2008: http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT
-.. _PFAPACK: https://dl.acm.org/citation.cfm?doid=2331130.2331138
-.. _HPhi: http://ma.cms-initiative.jp/ja/listapps/hphi
-.. _Morita2015: http://journals.jps.jp/doi/abs/10.7566/JPSJ.84.024720
-.. _Misawa2014: https://journals.aps.org/prb/abstract/10.1103/PhysRevB.90.115137
-.. _ImadaMiyake: http://journals.jps.jp/doi/abs/10.1143/JPSJ.79.112001
-.. _Gros: https://www.sciencedirect.com/science/article/pii/0003491689900778
-.. _NeuscammanUmrigarChan: https://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045103
