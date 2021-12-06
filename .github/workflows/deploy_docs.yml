@@ -67,7 +67,7 @@ jobs:
           git config --local user.name "${GIT_USER}"
           git config --local user.email "${GIT_EMAIL}"
           git remote set-url origin git@github.com:${GITHUB_REPOSITORY}.git
-          git add manual
+          git add doc
           if git commit -m "Deploy docs to ${TARGET_NAME} by GitHub Actions triggered by ${GITHUB_SHA}"
           then
             git push origin gh-pages
