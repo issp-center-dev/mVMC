@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>ファイルフォーマット &#8212; mVMC 1.2.0 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/translations.js"></script>
+    
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="Contact" href="contact.html" />
+    <link rel="prev" title="スタンダードモードの入力パラメーター" href="parameter.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="総合索引"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="contact.html" title="Contact"
+             accesskey="N">次へ</a> |</li>
+        <li class="right" >
+          <a href="parameter.html" title="スタンダードモードの入力パラメーター"
+             accesskey="P">前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Wannier関数を用いたダウンフォールディング</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ファイルフォーマット</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="id1">
+<h1>ファイルフォーマット<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<p>HPhi/mVMCのスタンダードモードでは以下のファイルを読み込む.
+これらのファイルはRESPACKのプログラムを実行すると,
+<code class="docutils literal notranslate"><span class="pre">dir-model</span></code> ディレクトリに <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]=zvo</span></code> として自動出力される.</p>
+<section id="id2">
+<h2>ジオメトリー<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>ファイル名は <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_geom.dat</span></code>.
+このファイルを必要に応じて修正することで取り扱う軌道数を変更できる.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="mf">1.917800</span> <span class="mf">1.917800</span> <span class="mf">6.280100</span>
+<span class="mf">1.917800</span> <span class="o">-</span><span class="mf">1.917800</span> <span class="mf">6.280100</span>
+<span class="mf">1.917800</span> <span class="mf">1.917800</span> <span class="o">-</span><span class="mf">6.280100</span>
+<span class="mi">3</span>
+<span class="mf">0.000000</span> <span class="o">-</span><span class="mf">0.000000</span> <span class="o">-</span><span class="mf">0.000000</span>
+<span class="o">-</span><span class="mf">0.000000</span> <span class="o">-</span><span class="mf">0.000000</span> <span class="o">-</span><span class="mf">0.000000</span>
+<span class="mf">0.000000</span> <span class="mf">0.000000</span> <span class="mf">0.000000</span>
+</pre></div>
+</div>
+<ul>
+<li><p>1 - 3行目</p>
+<p>結晶並進ベクトル. デカルト座標系で任意単位.</p>
+</li>
+<li><p>4行目</p>
+<p>mVMC/HPhiで取り入れる, ユニットセルあたりの軌道数.
+Wannier関数の数よりも少なくすることも可能であり,
+その場合には先頭からこの数の分だけの軌道を取り入れたモデルが構築される.</p>
+</li>
+<li><p>5行目以降</p>
+<p>各軌道のWannier中心 (フラクショナル座標). Fourier変換ツールで使われる.
+なお, ここで定義されたWannier関数の順番が, 以下の4つのファイルのWannier関数のインデックスに対応する.</p>
+</li>
+</ul>
+</section>
+<section id="coulomb">
+<h2>ホッピング, Coulomb積分, 交換積分, 電荷密度<a class="headerlink" href="#coulomb" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>ファイル名は <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_hr.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_ur.dat</span></code>,
+<code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_jr.dat</span></code>,  <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_dr.dat</span></code>.
+Wannier90のホッピング積分の形式に従う(詳細はwannier90のuser_guideの <code class="docutils literal notranslate"><span class="pre">8.19</span> <span class="pre">seedname_hr.dat</span></code> を参照のこと).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">wannier90</span> <span class="nb">format</span> <span class="k">for</span> <span class="n">mvmcdry</span>
+<span class="mi">8</span>
+<span class="mi">343</span>
+<span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>
+<span class="o">...</span>
+ <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>    <span class="mi">1</span>    <span class="mi">1</span>   <span class="mf">0.0004104251</span>  <span class="o">-</span><span class="mf">0.0000000000</span>
+ <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>    <span class="mi">1</span>    <span class="mi">2</span>   <span class="mf">0.0001515941</span>  <span class="o">-</span><span class="mf">0.0000000006</span>
+ <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>    <span class="mi">1</span>    <span class="mi">3</span>  <span class="o">-</span><span class="mf">0.0001515941</span>   <span class="mf">0.0000000002</span>
+</pre></div>
+</div>
+<ul>
+<li><p>1行目</p>
+<p>ファイルヘッダ</p>
+</li>
+<li><p>2行目</p>
+<p>Wannier関数の数.</p>
+</li>
+<li><p>3行目</p>
+<p>スーパーセルの数 <code class="docutils literal notranslate"><span class="pre">nrpts</span></code> .</p>
+</li>
+<li><p>4行- 5 + int(<code class="docutils literal notranslate"><span class="pre">nrpts</span></code>/15) 行</p>
+<p>各スーパーセルでの縮退値 (基本的には1).</p>
+</li>
+<li><p>6 + int(<code class="docutils literal notranslate"><span class="pre">nrpts</span></code>/15) 行 -</p>
+<p>1-3列がスーパーセルの格子ベクトル,
+4列目が原点のWannier軌道のインデックス,
+5列目がスーパーセルのWannier軌道のインデックス,
+6列目が実数値, 7列目が虚数値をそれぞれ与える.</p>
+</li>
+</ul>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">目次</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">ファイルフォーマット</a><ul>
+<li><a class="reference internal" href="#id2">ジオメトリー</a></li>
+<li><a class="reference internal" href="#coulomb">ホッピング, Coulomb積分, 交換積分, 電荷密度</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>前のトピックへ</h4>
+  <p class="topless"><a href="parameter.html"
+                        title="前の章へ">スタンダードモードの入力パラメーター</a></p>
+  <h4>次のトピックへ</h4>
+  <p class="topless"><a href="contact.html"
+                        title="次の章へ">Contact</a></p>
+  <div role="note" aria-label="source link">
+    <h3>このページ</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/wannier/format.rst.txt"
+            rel="nofollow">ソースコードを表示</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="総合索引"
+             >索引</a></li>
+        <li class="right" >
+          <a href="contact.html" title="Contact"
+             >次へ</a> |</li>
+        <li class="right" >
+          <a href="parameter.html" title="スタンダードモードの入力パラメーター"
+             >前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Wannier関数を用いたダウンフォールディング</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ファイルフォーマット</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+    </div>
+  </body>
+</html>

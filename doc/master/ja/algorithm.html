@@ -1,0 +1,372 @@
+
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>アルゴリズム &#8212; mVMC 1.2.0 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css" />
+    
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/translations.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="検索" href="search.html" />
+    <link rel="next" title="非制限Hartree-Fock近似プログラム" href="appendix.html" />
+    <link rel="prev" title="出力ファイル" href="output.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="総合索引"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="appendix.html" title="非制限Hartree-Fock近似プログラム"
+             accesskey="N">次へ</a> |</li>
+        <li class="right" >
+          <a href="output.html" title="出力ファイル"
+             accesskey="P">前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">アルゴリズム</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="id1">
+<h1>アルゴリズム<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<section id="id2">
+<h2>変分モンテカルロ法<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>変分モンテカルロ法では, 試行波動関数を用意して,
+その試行波動関数が含むパラメータを
+変分原理に従って最適化することで量子多体系の基底状態(または低励起エネルギー状態)の波動関数を
+近似的に求めます。 試行波動関数に対する物理量の期待値を計算する部分で,
+マルコフ連鎖モンテカルロ法を利用し,
+効率よく重み付きサンプリングを行います。</p>
+<p>本パッケージでは,
+サンプリングに用いる完全系として電子の実空間配置 <span class="math notranslate nohighlight">\(| x\rangle\)</span> をとっています:</p>
+<div class="math notranslate nohighlight">
+\[| x\rangle = \prod_{n=1}^{N_e/2} c_{r_{n\uparrow}}^{\dagger} \prod_{n=1}^{N_e/2}
+c_{r_{n\downarrow}}^{\dagger} |0 \rangle\]</div>
+<p>ここで,
+<span class="math notranslate nohighlight">\(r_{n\sigma}\)</span> は <span class="math notranslate nohighlight">\(n\)</span> 番目の電子(スピン <span class="math notranslate nohighlight">\(\sigma\)</span>)の位置,
+<span class="math notranslate nohighlight">\(c_{r_{n\sigma}}^{\dagger}\)</span> はその位置での
+電子(スピン <span class="math notranslate nohighlight">\(\sigma\)</span>)の生成演算子を表します。この基底を用いると,
+演算子 <span class="math notranslate nohighlight">\(A\)</span> の期待値は</p>
+<div class="math notranslate nohighlight">
+\[\langle A \rangle =\frac{\langle \psi| A| \psi \rangle}{\langle \psi | \psi \rangle}
+=\sum_x \frac{\langle \psi| A | x\rangle \langle x| \psi \rangle}{\langle \psi |\psi \rangle}\]</div>
+<p>となるため, マルコフ連鎖の重みを</p>
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}\rho(x)=\frac{|\langle x| \psi \rangle|^2}{\langle \psi | \psi \rangle} \ge 0, \quad \sum_{x} \rho(x)=1\\と定義して,\end{aligned}\end{align} \]</div>
+<div class="math notranslate nohighlight">
+\[\langle A \rangle =\sum_x \rho(x) \frac{\langle \psi| A | x\rangle }{\langle \psi |x \rangle}\]</div>
+<p>と書き直した後、<span class="math notranslate nohighlight">\(x\)</span> に関する和をマルコフ連鎖モンテカルロ法により
+評価しています。Local Green’s function
+<span class="math notranslate nohighlight">\(G_{ij\sigma\sigma'}(x)\)</span> は</p>
+<div class="math notranslate nohighlight">
+\[G_{ij\sigma\sigma'}(x)=\frac{\langle \psi | c_{i\sigma}^{\dagger} c_{j\sigma'}
+| \psi \rangle}{\langle \psi | x \rangle}\]</div>
+<p>と定義されますが,
+これも演算子 <span class="math notranslate nohighlight">\(A\)</span> を <span class="math notranslate nohighlight">\(c_{i\sigma}^{\dagger} c_{j\sigma'}\)</span> ととることで,
+同じ方法により重み付きサンプリングを行うことができます。 なお,
+サンプリングに使用する乱数生成については,
+メルセンヌツイスター法を使用しています[<a class="reference external" href="http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT">Mutsuo2008</a> ]。</p>
+</section>
+<section id="bogoliubov">
+<span id="bogoliubovrep"></span><h2>Bogoliubov表現<a class="headerlink" href="#bogoliubov" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>スピン系の計算において一体項( <code class="docutils literal notranslate"><span class="pre">transfer</span></code>),
+<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> 形式での相互作用,
+相関関数のインデックスの指定にはBogoliubov表現が使われています。
+一般に、スピンの演算子は次のようにフェルミオンの生成 <span class="math notranslate nohighlight">\(\cdot\)</span> 消滅演算子 <span class="math notranslate nohighlight">\(c_{i \sigma}^\dagger\)</span>,
+<span class="math notranslate nohighlight">\(c_{i \sigma}\)</span> によって書き換えることができます:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+S_{i z} &amp;= \sum_{\sigma = -S}^{S} \sigma c_{i \sigma}^\dagger c_{i \sigma}
+\\
+S_{i}^+ &amp;= \sum_{\sigma = -S}^{S-1}
+\sqrt{S(S+1) - \sigma(\sigma+1)}
+c_{i \sigma+1}^\dagger c_{i \sigma}
+\\
+S_{i}^- &amp;= \sum_{\sigma = -S}^{S-1}
+\sqrt{S(S+1) - \sigma(\sigma+1)}
+c_{i \sigma}^\dagger c_{i \sigma+1}
+\end{aligned}\end{split}\]</div>
+<p>本パッケージでは、 <span class="math notranslate nohighlight">\(S=1/2\)</span> のスピン系のみ取り扱っており、上記の式で
+<span class="math notranslate nohighlight">\(S=1/2\)</span> と置いたものを用いています。</p>
+</section>
+<section id="puffandslater">
+<span id="id3"></span><h2>パフィアン-スレーター行列式の性質<a class="headerlink" href="#puffandslater" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>この節では,
+パフィアン-スレーター行列式のもつ性質について簡単にまとめます。
+<a class="reference internal" href="#pfaffianap"><span class="std std-ref">次節</span></a> と <a class="reference internal" href="#pfaffianp"><span class="std std-ref">次々節</span></a> でパフィアン-スレーター行列式と単一スレーター行列式の間の関係を導出し、
+<a class="reference internal" href="#pfaffiansingular"><span class="std std-ref">最後</span></a> に <span class="math notranslate nohighlight">\(f_{ij}\)</span> の特異値分解の意味について説明します。</p>
+<section id="f-ij-phi-in-sigma">
+<span id="pfaffianap"></span><h3><span class="math notranslate nohighlight">\(f_{ij}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> の関係 (スピン反平行の場合)<a class="headerlink" href="#f-ij-phi-in-sigma" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>多変数変分モンテカルロ法で試行波動関数の一体部分として用いられるパフィアン-スレーター行列式は</p>
+<div class="math notranslate nohighlight">
+\[|\phi_{\rm Pf}\rangle=\Big(\sum_{i,j=1}^{N_{s}}f_{ij}
+c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)^{N_{\rm e}/2}|0\rangle,\]</div>
+<p>のように定義されます。ここで, <span class="math notranslate nohighlight">\(N_{s}\)</span> はサイト数,
+<span class="math notranslate nohighlight">\(N_{e}\)</span> は全電子数, <span class="math notranslate nohighlight">\(f_{ij}\)</span> は変分パラメータです。
+簡単化のため, 以降 <span class="math notranslate nohighlight">\(f_{ij}\)</span> は実数と仮定します。また,
+単一スレーター行列式として</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+|\phi_{\rm SL}\rangle&amp;=\Big(\prod_{n=1}^{N_{e}/2}\psi_{n\uparrow}^{\dagger}\Big)
+\Big(\prod_{m=1}^{N_{e}/2}\psi_{m\downarrow}^{\dagger}\Big)|0\rangle, \\
+\psi_{n\sigma}^{\dagger}&amp;=\sum_{i=1}^{N_{s}}\Phi_{in\sigma}c^{\dagger}_{i\sigma}.
+\end{aligned}\end{split}\]</div>
+<p>を定義します。ただし, <span class="math notranslate nohighlight">\(\Phi\)</span> は正規直交基底であり,
+クロネッカーのデルタ <span class="math notranslate nohighlight">\(\delta_{nm}\)</span> を用い</p>
+<div class="math notranslate nohighlight">
+\[\sum_{i=1}^{N_{s}}\Phi_{in\sigma}\Phi_{im\sigma}=\delta_{nm},\]</div>
+<p>で表されます。この直交性の関係から, 以下の関係式</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+{[\psi^{\dagger}_{n\sigma}, \psi_{m\sigma}]}_{+}&amp;=\delta_{nm},\\
+G_{ij\sigma}=\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle
+&amp;=\frac{\langle \phi_{\rm SL}| c_{i\sigma}^{\dagger}c_{j\sigma} | \phi_{\rm SL}\rangle}{\langle \phi_{\rm SL}|\phi_{\rm SL}\rangle } \\
+&amp;=\sum_{n} \Phi_{in\sigma} \Phi_{jn\sigma}.
+\end{aligned}\end{split}\]</div>
+<p>が導かれます。</p>
+<p>次に, <span class="math notranslate nohighlight">\(|\phi_{\rm SL}\rangle\)</span> を変形し,
+<span class="math notranslate nohighlight">\(f_{ij}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> の間に成り立つ関係式を示します。
+<span class="math notranslate nohighlight">\(\psi^{\dagger}_{n\sigma}\)</span> の交換関係を用いると,
+<span class="math notranslate nohighlight">\(|\phi_{\rm SL}\rangle\)</span> は</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+|\phi_{\rm SL}\rangle \propto \prod_{n=1}^{N_{e}/2}
+\Big(\psi_{n\uparrow}^{\dagger}\psi_{\mu(n)\downarrow}^{\dagger}\Big)|0\rangle,
+\end{aligned}\]</div>
+<p>と書き換えられます。ここで,
+<span class="math notranslate nohighlight">\(\mu(n)\)</span> は <span class="math notranslate nohighlight">\(n= 1, 2, \cdots, N_{e}/2\)</span> の置換を表します。
+議論を簡単にするため,
+同一のペア <span class="math notranslate nohighlight">\(n=\mu(n)\)</span> となる場合を考えましょう。 このとき,
+<span class="math notranslate nohighlight">\(K_{n}^{\dagger}=\psi_{n\uparrow}^{\dagger}\psi_{n\downarrow}^{\dagger}\)</span> として,
+<span class="math notranslate nohighlight">\(K_{n}^{\dagger}K_{m}^{\dagger}=K_{m}^{\dagger}K_{n}^{\dagger}\)</span> の関係を用いることで,</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+|\phi_{\rm SL}\rangle &amp;\propto \prod_{n=1}^{N_{e}/2}\Big(\psi_{n\uparrow}^{\dagger}\psi_{n\downarrow}^{\dagger}\Big)|0\rangle
+=\prod_{n=1}^{N_{e}/2} K_{n}^{\dagger}|0\rangle \\
+&amp;\propto\Big(\sum_{n=1}^{\frac{N_{e}}{2}}K_{n}^{\dagger}\Big)^{\frac{N_{e}}{2}} |0\rangle
+=\Big(\sum_{i,j=1}^{N_{s}}\Big[\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}\Big]
+c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger}\Big)^{N_e/2}|0\rangle,
+\end{aligned}\end{split}\]</div>
+<p>の関係が得られます。これより <span class="math notranslate nohighlight">\(f_{ij}\)</span> は単一スレーター行列式の係数により</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+f_{ij}=\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}.
+\end{aligned}\]</div>
+<p>として表されることが分かります。なお,
+この形式は単一スレーター行列式で与えられる <span class="math notranslate nohighlight">\(f_{ij}\)</span> の表式の一つであり,
+実際にはペアを組む自由度(どの <span class="math notranslate nohighlight">\(\mu(n)\)</span> を選ぶか)およびゲージの自由度
+(すなわち <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> の符号の自由度)に依存します。
+この自由度の多さが <span class="math notranslate nohighlight">\(f_{ij}\)</span> の冗長性につながっています。</p>
+</section>
+<section id="f-ij-phi-in">
+<span id="pfaffianp"></span><h3><span class="math notranslate nohighlight">\(F_{IJ}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{In}\)</span> の関係 (スピン平行も含めた場合)<a class="headerlink" href="#f-ij-phi-in" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>前節で考察したパフィアン-スレーター波動関数と単一スレーター波動関数の間の関係は、
+同種スピンのペアリングも考えた場合に拡張することができます。
+パフィアン-スレーター波動関数とスレーター波動関数をそれぞれ</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+|\phi_{\rm Pf}\rangle&amp;=\Big(\sum_{I,J=1}^{2N_{s}}F_{IJ}c_{I}^{\dagger}c_{J}^{\dagger}\Big)^{N_{\rm e}/2}|0\rangle, \\
+|\phi_{\rm SL}\rangle&amp;=\Big(\prod_{n=1}^{N_{e}}\psi_{n}^{\dagger}\Big)|0\rangle,~~\psi_{n}^{\dagger}=\sum_{I=1}^{2N_{s}}\Phi_{In}c^{\dagger}_{I}.\end{aligned}\end{split}\]</div>
+<p>と定義します。ここで <span class="math notranslate nohighlight">\(I,J\)</span> はスピン自由度も含めたサイトのインデックスです。
+スピン反平行の場合とほぼ同様の議論を用いることで,</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{I,2n-1}\Phi_{J,2n}-\Phi_{J,2n-1}\Phi_{I,2n}\Big).
+\end{aligned}\]</div>
+<p>の関係を示すことができます。これはスピン反平行のペアリングにもそのまま適用できるので,
+mVMC ver1.0以降ではこの表式を使用しています。</p>
+</section>
+<section id="f-ij">
+<span id="pfaffiansingular"></span><h3><span class="math notranslate nohighlight">\(f_{ij}\)</span> の特異値分解<a class="headerlink" href="#f-ij" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>行列 <span class="math notranslate nohighlight">\(F\)</span>, <span class="math notranslate nohighlight">\(\Phi_{\uparrow}\)</span>, <span class="math notranslate nohighlight">\(\Phi_{\downarrow}\)</span>,
+<span class="math notranslate nohighlight">\(\Sigma\)</span> を</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+&amp;(F)_{ij}=f_{ij},~~~
+(\Phi_{\uparrow})_{in}=\Phi_{in\uparrow},~~~
+(\Phi_{\downarrow})_{in}=\Phi_{in\downarrow}, \\
+&amp;\Sigma={\rm diag}[\underbrace{1,\cdots,1}_{N_e/2},0,0,0],\end{aligned}\end{split}\]</div>
+<p>として定義します。前節のように <span class="math notranslate nohighlight">\(f_{ij}\)</span> (すなわち:math:<cite>F</cite>)が単一スレーター行列と関係づけられて
+いるとき、 <span class="math notranslate nohighlight">\(F\)</span> の特異値分解は</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+F=\Phi_{\uparrow}\Sigma\Phi_{\downarrow}^{t}.\end{aligned}\]</div>
+<p>となることを示すことができます。
+この結果は、一般に <span class="math notranslate nohighlight">\(F\)</span> を特異値分解したとき、非ゼロの特異値が <span class="math notranslate nohighlight">\(N_{e}/2\)</span> 個存在し,
+かつ全ての <span class="math notranslate nohighlight">\(F\)</span> の非ゼロの特異値が <span class="math notranslate nohighlight">\(1\)</span> であった場合,
+<span class="math notranslate nohighlight">\(f_{ij}\)</span> が単一スレーター波動関数を
+記述すること(つまり平均場近似解として記述できること)を表しています。
+言い換えると, 特異値の非ゼロ成分の数とその値が,
+シングルスレータ行列式からパフィアンスレーター行列式がどのようにしてずれるのか,
+という点について定量的な基準を与えることを示しています。</p>
+</section>
+</section>
+<section id="power-lanczos">
+<h2>Power-Lanczos法<a class="headerlink" href="#power-lanczos" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<p>このセクションでは,
+Power-Lanczos法での最適化パラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> の決定方法について述べます。
+また,
+ここではシングルステップのLanczos法を適用した後の物理量の計算についても説明します。</p>
+<section id="alpha">
+<h3><span class="math notranslate nohighlight">\(\alpha\)</span> の決定<a class="headerlink" href="#alpha" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>最初に, 変分モンテカルロ法のサンプリングに関して簡単に説明します。
+物理量 <span class="math notranslate nohighlight">\(\hat{A}\)</span> は以下の手順で計算されます:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+&amp;\langle \hat{A}\rangle = \frac{\langle \phi| \hat{A}|\phi \rangle}{\langle \phi| \phi \rangle} = \sum_{x} \rho(x) F(x, {\hat{A}}),\\
+&amp; \rho(x)=\frac{|\langle \phi|x\rangle|^2}{\langle \phi | \phi \rangle}, ~~~~F(x,  {\hat{A}}) =  \frac{\langle x| \hat{A}|\phi \rangle}{\langle x| \phi \rangle}.\end{aligned}\end{split}\]</div>
+<p>演算子の積 <span class="math notranslate nohighlight">\(\hat{A}\hat{B}\)</span> を計算する場合には,
+以下の二通りの方法があります。</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+&amp;\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F(x, {\hat{A}\hat{B}}),\\
+&amp;\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F^{\dagger}(x, {\hat{A})F(x, \hat{B}}).\end{aligned}\end{split}\]</div>
+<p>後述するように, 後者の表記の方が数値的には安定します。 例えば,
+エネルギーの期待値の分散 <span class="math notranslate nohighlight">\(\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle\)</span> を考えてみると,
+分散は以下の2通りの方法で計算できます。</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+\sigma^2 &amp;=\sum_{x} \rho(x) F(x,  (\hat{H}-\langle \hat{H}\rangle)^2) = \sum_{x} \rho(x) F(x,  \hat{H}^2) - \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 ,\\
+\sigma^2 &amp;=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}-\langle \hat{H}\rangle)F(x,  \hat{H}-\langle \hat{H}\rangle) \nonumber \\
+&amp;= \sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}) F(x, \hat{H})- \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2
+\end{aligned}\end{split}\]</div>
+<p>この定義から,
+後者の方法では常に正の値となることが保証されているのに対して,
+前者の方法では分散が正の値になることが必ずしも保証されないことが分かります。次に,
+シングルステップでのpower-Lanczos波動関数 <span class="math notranslate nohighlight">\(|\phi\rangle =(1+\alpha \hat{H}) |\psi \rangle\)</span>
+に対するエネルギーの期待値とその分散を考えます。エネルギーは以下の式で計算されます：</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+E_{LS}(\alpha) =\frac{\langle \phi| \hat{H} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{h_1 + \alpha(h_{2(20)} + h_{2(11)}) + \alpha^2 h_{3(12)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+\end{aligned}\]</div>
+<p>ここで, <span class="math notranslate nohighlight">\(h_1\)</span>, <span class="math notranslate nohighlight">\(h_{2(11)},~h_{2(20)},\)</span> and
+<span class="math notranslate nohighlight">\(h_{3(12)}\)</span> を以下のように定義しました：</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+&amp;h_1 =\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}),\\
+&amp;h_{2(11)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}) F(x, \hat{H}),\\
+&amp;h_{2(20)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}^2),\\
+&amp;h_{3(12)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H})F(x,  \hat{H}^2).\end{aligned}\end{split}\]</div>
+<p><span class="math notranslate nohighlight">\(\frac{\partial E_{LS}(\alpha)}{\partial \alpha}=0\)</span> の条件から
+<span class="math notranslate nohighlight">\(\alpha\)</span> の二次方程式が導出され,
+それを解くことで <span class="math notranslate nohighlight">\(\alpha\)</span> が決定されます。
+分散に関しても同様の手法で計算することが可能です。</p>
+</section>
+<section id="id4">
+<h3>物理量の計算<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<p>最適化パラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> を用いることで,
+演算子 <span class="math notranslate nohighlight">\(\hat{A}\)</span> の期待値を以下の式から計算することが出来ます：</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{A_0 + \alpha(A_{1(10)} + A_{1(01)}) + \alpha^2 A_{2(11)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+\end{aligned}\]</div>
+<p>ここで, <span class="math notranslate nohighlight">\(A_0\)</span>, <span class="math notranslate nohighlight">\(A_{1(10)},~A_{1(01)},\)</span> and
+<span class="math notranslate nohighlight">\(A_{2(11)}\)</span> は</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+&amp;A_0 =\sum_{x} \rho(x) F(x,  \hat{A}),\\
+&amp;A_{1(10)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}) F(x, \hat{A}),\\
+&amp;A_{1(01)}=\sum_{x} \rho(x) F(x, \hat{A}\hat{H}),\\
+&amp;A_{2(11)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H})F(x,  \hat{A}\hat{H}).\end{aligned}\end{split}\]</div>
+<p>として定義される変数を表します。プログラムでは,
+この表式に基づき一体グリーン関数および二体グリーン関数の計算を行っています。</p>
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">目次</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">アルゴリズム</a><ul>
+<li><a class="reference internal" href="#id2">変分モンテカルロ法</a></li>
+<li><a class="reference internal" href="#bogoliubov">Bogoliubov表現</a></li>
+<li><a class="reference internal" href="#puffandslater">パフィアン-スレーター行列式の性質</a><ul>
+<li><a class="reference internal" href="#f-ij-phi-in-sigma"><span class="math notranslate nohighlight">\(f_{ij}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> の関係 (スピン反平行の場合)</a></li>
+<li><a class="reference internal" href="#f-ij-phi-in"><span class="math notranslate nohighlight">\(F_{IJ}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{In}\)</span> の関係 (スピン平行も含めた場合)</a></li>
+<li><a class="reference internal" href="#f-ij"><span class="math notranslate nohighlight">\(f_{ij}\)</span> の特異値分解</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#power-lanczos">Power-Lanczos法</a><ul>
+<li><a class="reference internal" href="#alpha"><span class="math notranslate nohighlight">\(\alpha\)</span> の決定</a></li>
+<li><a class="reference internal" href="#id4">物理量の計算</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>前のトピックへ</h4>
+  <p class="topless"><a href="output.html"
+                        title="前の章へ">出力ファイル</a></p>
+  <h4>次のトピックへ</h4>
+  <p class="topless"><a href="appendix.html"
+                        title="次の章へ">非制限Hartree-Fock近似プログラム</a></p>
+  <div role="note" aria-label="source link">
+    <h3>このページ</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/algorithm.rst.txt"
+            rel="nofollow">ソースコードを表示</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="総合索引"
+             >索引</a></li>
+        <li class="right" >
+          <a href="appendix.html" title="非制限Hartree-Fock近似プログラム"
+             >次へ</a> |</li>
+        <li class="right" >
+          <a href="output.html" title="出力ファイル"
+             >前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">アルゴリズム</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+    </div>
+  </body>
+</html>
