@@ -34,7 +34,7 @@ rm -rf build-docs
 
 # Make archive
 git-archive-all \
-  --extra=doc/mVMC_ja.pdf \
-  --extra=doc/mVMC_en.pdf \
+  --extra=doc/mVMC-${vid}_ja.pdf \
+  --extra=doc/mVMC-${vid}_en.pdf \
   --prefix=mVMC-${vid} \
   mVMC-${vid}.tar.gz
