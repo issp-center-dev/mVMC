@@ -75,20 +75,14 @@ MODULE fourier_routine
   !
   IMPLICIT NONE
   !
+  INTERFACE
+     SUBROUTINE key2lower(key) BIND(c)
+       USE,INTRINSIC :: iso_c_binding
+       CHARACTER(KIND=C_CHAR) :: key(*)
+     END SUBROUTINE key2lower
+  END INTERFACE
+  !
 CONTAINS
-!
-SUBROUTINE key2lower(key)
-  CHARACTER(*) :: key
-  !
-  INTEGER :: ii, acode
-  !
-  DO ii = 1, LEN(TRIM(key))
-     acode = IACHAR(key(ii:ii))
-     IF(65 <= acode .AND. acode <= 90) THEN
-        key(ii:ii) = ACHAR(acode + 32)
-     END IF
-  END DO
-END SUBROUTINE key2lower
 !
 ! Read from HPhi/mVMC input files
 !
@@ -867,13 +861,7 @@ SUBROUTINE output_cor()
         END DO
         !
         DO ik = 1, ikk
-           WRITE(fo,'(e15.5)',advance="no") xk(ik)
-           DO iorb = 1, norb
-              DO jorb = 1, norb
-                 WRITE(fo,'(24e15.5)',advance="no") cor_ave(ik,1:6, jorb, iorb), cor_err(ik,1:6, jorb, iorb)
-              END DO
-           END DO
-           WRITE(fo,*)
+           WRITE(fo,'(1000e15.5)') xk(ik), cor_ave(ik,1:6, 1:norb, 1:norb), cor_err(ik,1:6, 1:norb, 1:norb)
         END DO
         !
         CLOSE(fo)

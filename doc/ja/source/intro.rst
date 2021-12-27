@@ -75,11 +75,8 @@ mVMCでは以下の流れで計算を行います。
 本ソフトウェアのプログラムパッケージおよびソースコード一式はGNU General
 Public License version 3（GPL v3）に準じて配布されています。
 
-| mVMCを引用する際には、以下のmVMCに関する論文を引用、またはURLを記載してください
-
-| mVMCの論文: Takahiro Misawa, Satoshi Morita, Kazuyoshi Yoshimi, Mitsuaki Kawamura, Yuichi Motoyama,
-  Kota Ido, Takahiro Ohgoe, Masatoshi, and Takeo Kato, Comp. Phys. Commun. **235** 447-462 (2019).
-
+| mVMCを引用する際には、以下のURLを記載してください
+  (mVMCに関する代表論文執筆後は、そちらへの引用に変更する予定です)。
 | URL: https://github.com/issp-center-dev/mVMC
 
 コピーライト
@@ -94,8 +91,6 @@ Public License version 3（GPL v3）に準じて配布されています。
 ~~~~~~~~~~
 
 本ソフトウェアは以下の開発貢献者により開発されています。
-
--  ver.1.2.0 (2021/11/22リリース)
 
 -  ver.1.1.0 (2019/11/15リリース)
 
@@ -115,15 +110,13 @@ Public License version 3（GPL v3）に準じて配布されています。
 
    -  開発者
 
-      -  三澤 貴宏 (北京量子信息科学研究院)
+      -  三澤 貴宏 (東京大学 物性研究所)
 
       -  森田 悟史 (東京大学 物性研究所)
 
-      -  許 如清   (東京大学 理学系研究科)
-
       -  大越 孝洋 (東京大学 大学院工学系研究科)
 
-      -  井戸 康太 (東京大学 物性研究所)
+      -  井戸 康太 (東京大学 大学院工学系研究科)
 
       -  今田 正俊 (東京大学 大学院工学系研究科)
 
@@ -142,9 +135,9 @@ Public License version 3（GPL v3）に準じて配布されています。
 
 以下の環境で動作することを確認しています。
 
--  東京大学物性研究所スーパーコンピューターシステムB「ohtaka」
+-  東京大学物性研究所スーパーコンピューターシステムB「sekirei」
 
--  東京大学物性研究所スーパーコンピューターシステムC「enaga」
+-  京コンピューター
 
 -  OpenMPI + Intel Compiler + MKL
 
