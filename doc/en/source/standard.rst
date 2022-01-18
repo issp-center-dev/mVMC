@@ -232,7 +232,7 @@ using the following two methods.
    **Type :** Integer
 
    **Description :** We can specify two vectors
-   (:math:`{\vec a}_0, {\vec a}_1`) that surrounds the numerical cell
+   (:math:`{\vec a}_0, {\vec a}_1`) that surround the numerical cell
    (Fig. :num:`unitlatticepng` ). These vectors should be
    specified in the Fractional coordinate.
 
