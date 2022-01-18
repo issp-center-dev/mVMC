@@ -42,7 +42,7 @@ An example of input file for the standard mode is shown below:
    1. Parameters that must be specified (if not, ``vmcdry.out`` will
       stop with error messages),
 
-   2. Parameters that is not necessary be specified (if not, default
+   2. Parameters that are not necessary be specified (if not, default
       values are used),
 
    3. Parameters that must not be specified (if specified,
@@ -52,7 +52,7 @@ An example of input file for the standard mode is shown below:
    system. If you choose "model=spin", you should not specify
    ":math:`t`".
 
-We explain each keywords as follows:
+We explain each keyword as follows:
 
 Parameters about the kind of a calculation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
