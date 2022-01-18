@@ -110,7 +110,7 @@ Parameters about the kind of a calculation
    [Eqn. :eq:`hubbard` ], the :math:`S_z`-unconserved Spin model
    [Eqn. :eq:`spin` ], and the :math:`S_z`-unconserved Kondo
    lattice model [Eqn. :eq:`kondo` ], respectively. Note: Although
-   these flags has a word "GC"(=grandcanonical), the number of electrons
+   these flags have a word "GC"(=grandcanonical), the number of electrons
    are conserved in these system.
 
 -  ``lattice``
