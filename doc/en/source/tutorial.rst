@@ -267,7 +267,7 @@ The details of these outputted files are shown in :ref:`OutputFile`.
 Output results
 ^^^^^^^^^^^^^^
 
-After finishing calculation normally, the files for the energy, the
+After finishing the calculation normally, the files for the energy, the
 deviation, the optimized variational parameters and the time of
 execution for each calculation steps are outputted in ``output/``
 directory. In the following, the outputted files are shown
