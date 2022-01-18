@@ -236,7 +236,7 @@ using the following two methods.
    (Fig. :num:`unitlatticepng` ). These vectors should be
    specified in the Fractional coordinate.
 
-If we use both of these method, ``vmcdry.out`` stops.
+If we use both of these methods, ``vmcdry.out`` stops.
 
 We can check the shape of the numerical cell by using a file
 ``lattice.gp`` (only for square, trianguler, honeycomb, and kagome
