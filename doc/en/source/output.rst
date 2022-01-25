@@ -56,11 +56,11 @@ energy optimized by the SR method are outputted in the following order:
 The type of average values is a complex number, while that of the
 deviation is a real number. Since the initial values of all variational
 parameters are specified at the beginning of the calculation, the
-calculation of physical quantities is done by using this file file.
+calculation of physical quantities is done by using this file.
 Here, \*\*\* is the header indicated by ``CParaFileHead`` in ``ModPara``
 file.
 
-Output files for variational parameters at each steps (xxx\_var\_yyy.dat)
+Output files for variational parameters at each step (xxx\_var\_yyy.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The average and deviation values of variational parameters and the
@@ -138,9 +138,9 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 xxx\_CalcTimer.dat 
 ~~~~~~~~~~~~~~~~~~~
 
-After finishing calculation, the processing time is outputted in the
-order of the name, the number assigned by the process and the seconds at
-each processes. An example of outputted file is shown as follows.
+After finishing the calculation, the processing time is outputted in the
+order of the name, the number assigned by the process, and the seconds at
+each process. An example of outputted file is shown as follows.
 
 ::
 
@@ -160,7 +160,7 @@ xxx\_time\_zzz.dat
 The calculation information at each bins are outputted in the order of
 the sampling number, the acceptance ratio for hopping and exchange term
 (acc\_hopp, acc\_ex), trial numbers to update for hopping and exchange
-term (n\_hopp, n\_ex) and the time stamp. Here, xxx is the header
+term (n\_hopp, n\_ex), and the time stamp. Here, xxx is the header
 indicated by ``CDataFileHead`` in ``ModPara`` file and zzz is a number
 given by ``NDataIdxStart`` in ``ModPara``. An example of outputted file
 is shown as follows.
