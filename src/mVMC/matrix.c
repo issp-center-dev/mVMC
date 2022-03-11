@@ -69,11 +69,7 @@ int getLWork_fcmp() {
   lwork=-1;
   M_ZGETRI(&n, &a, &lda, &iwork, &optSize1, &lwork, &info);
   lwork=-1;
-#ifdef _pfaffine
-  M_ZSKPFA(&uplo, &mthd, &n, &a, &lda, &pfaff, &iwork, &optSize2, &lwork/*, &rwork*/, &info);
-#else
   M_ZSKPFA(&uplo, &mthd, &n, &a, &lda, &pfaff, &iwork, &optSize2, &lwork, &rwork, &info);
-#endif
 
   lwork = (creal(optSize1)>creal(optSize2)) ? (int)creal(optSize1) : (int)creal(optSize2);
   return lwork;

@@ -1,8 +1,8 @@
 include ../make.sys
 
 PFAPACK = ../pfapack/fortran/libpfapack.a
-PFAFFINE = ../pfaffine/src/libpfaffine.a
 PFUPDATES = ../pfupdates/pfupdates.o
+LTL2INV = ../ltl2inv/ltl2inv.o
 SFMT = ../sfmt/SFMT.o
 STDFACE = ../StdFace/src/libStdFace.a
 OPTION = -D_mpi_use
@@ -19,7 +19,7 @@ OBJS = \
 	splitloop.o \
 	vmcmain.o \
 	$(PFAPACK) $(SFMT) $(STDFACE) \
-	$(PFUPDATES) $(PFAFFINE)
+	$(PFUPDATES) $(LTL2INV)
 
 SOURCES = \
 average.c \
@@ -107,7 +107,7 @@ HEADERS = \
 
 all : 
 	$(MAKE) -C ../pfapack/fortran                libpfapack.a
-	$(MAKE) -C ../pfaffine/src                   libpfaffine.a
+	$(MAKE) -C ../ltl2inv     -f makefile_ltl2inv
 	$(MAKE) -C ../pfupdates   -f makefile_pfupdates
 	$(MAKE) -C ../sfmt        -f makefile_sfmt
 	$(MAKE) -C ../StdFace/src -f makefile_StdFace libStdFace.a
@@ -130,7 +130,7 @@ clean :
 	rm -f *.o vmc.out vmcdry.out
 	$(MAKE) -C ../sfmt            -f makefile_sfmt      clean
 	$(MAKE) -C ../pfapack/fortran -f makefile           clean
-	$(MAKE) -C ../pfaffine        -f makefile           clean
+	$(MAKE) -C ../ltl2inv         -f makefile_ltl2inv   clean
 	$(MAKE) -C ../pfupdates       -f makefile_pfupdates clean
 	$(MAKE) -C ../StdFace/src     -f makefile_StdFace   clean
 	$(MAKE) -C ../ComplexUHF      -f makefile_uhf       clean

@@ -46,15 +46,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define M_ZGETRI zgetri_
 #define M_ZPOSV  zposv_
 
-// Skew-symmetric LAPACK-level routines:
-// Vendor switch: PFAPACK77 or Pfaffine
-#ifdef _pfaffine
-#define M_DSKPFA m_dskpfa_
-#define M_ZSKPFA m_zskpfa_
-#else
+// Pfapack
 #define M_DSKPFA dskpfa_
 #define M_ZSKPFA zskpfa_
-#endif
+#define M_DSKTRF dsktrf_
+#define M_ZSKTRF zsktrf_
 
 // pBLAS
 #define M_PDGEMV  pdgemv_
@@ -116,11 +112,13 @@ extern int M_DSKPFA(const char *uplo, const char *mthd, const int *n,
                     double *work, const int *lwork, int *info);
 extern int M_ZSKPFA(const char *uplo, const char *mthd, const int *n,
                     double complex *a, const int *lda, double complex *pfaff, int *iwork,
-                    double complex *work, const int *lwork,
-#ifndef _pfaffine
-                    double *rwork,
-#endif
-                    int *info);
+                    double complex *work, const int *lwork, double *rwork, int *info);
+extern int M_DSKTRF(const char *uplo, const char *mode, const int *n,
+                    double *a, const int *lda, int *ipiv,
+                    double *work, const int *lwork, int *info);
+extern int M_ZSKTRF(const char *uplo, const char *mode, const int *n,
+                    double complex *a, const int *lda, int *ipiv,
+                    double complex *work, const int *lwork, int *info);
 
 // pBLAS
 extern void M_PDGEMV(const char *trans, const int *m, const int *n,
