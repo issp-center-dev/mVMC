@@ -8,6 +8,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "blalink.hh"
+#include "blalink_gemmt.hh"
 #include "colmaj.hh"
 #include <iostream>
 

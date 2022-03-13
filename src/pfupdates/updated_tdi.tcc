@@ -8,6 +8,7 @@
 #pragma once
 #include "orbital_mat.tcc"
 #include "blalink.hh"
+#include "blalink_gemmt.hh"
 #include "pfaffian.tcc"
 #include "invert.tcc"
 #include "skr2k.tcc"

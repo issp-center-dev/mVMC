@@ -8,8 +8,7 @@ endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 add_definitions(-DBLAS_EXTERNAL)
 add_definitions(-DF77_COMPLEX_RET_INTEL)
 include_directories(../common)
-include_directories(../ltl2inv)
 
-add_library(pfupdates STATIC pf_interface.cc)
-target_compile_definitions(pfupdates PRIVATE -D_CC_IMPL)
+add_library(ltl2inv STATIC ltl2inv.cc)
+target_compile_definitions(ltl2inv PRIVATE -D_CC_IMPL)
 

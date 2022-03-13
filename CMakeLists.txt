@@ -17,11 +17,8 @@ message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 option(GIT_SUBMODULE_UPDATE "execute `git submodule update` automatically" ON)
-enable_language(C Fortran)
-if(PFAFFIAN_BLOCKED)
-  enable_language(CXX)
-  set(CMAKE_CXX_STANDARD 11)
-endif(PFAFFIAN_BLOCKED)
+enable_language(C CXX Fortran)
+set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
@@ -103,7 +100,11 @@ if(PFAFFIAN_BLOCKED)
   # Must set BLIS artifact BEFORE adding pfupdates target.
   add_subdirectory(src/pfupdates)
   add_dependencies(pfupdates blis_include)
+else(PFAFFIAN_BLOCKED)
+  # Use bundled blis.h
+  include_directories(src/common/deps)
 endif(PFAFFIAN_BLOCKED)
+add_subdirectory(src/ltl2inv)
 
 if (Document)
   add_subdirectory(doc)

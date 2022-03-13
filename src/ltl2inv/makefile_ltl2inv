@@ -1,9 +1,5 @@
 include ../make.sys
 
-ifeq ($(BLIS_ROOT),)
-	BLIS_ROOT = ../pfaffine/src/dep
-endif
-
 OBJ = ltl2inv.o
 SRC = ltl2inv.cc
 HDR = invert.tcc pfaffian.tcc \

@@ -145,19 +145,6 @@ void cdotu_(scomplex *rho, dim_t *n, void *sx, dim_t *incx, void *sy, dim_t *inc
 void zdotu_(dcomplex *rho, dim_t *n, void *sx, dim_t *incx, void *sy, dim_t *incy);
 #endif
 
-// gemmt is not part of BLAS standard,
-// but exposed by BLIS>v0.8 and recent versions of MKL.
-#ifdef MKL
-void sgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, float *alpha,
-             float *a, dim_t *lda, float *b, dim_t *ldb, float *beta, float *c, dim_t *ldc);
-void dgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, double *alpha,
-             double *a, dim_t *lda, double *b, dim_t *ldb, double *beta, double *c, dim_t *ldc);
-void cgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, void *alpha,
-             void *a, dim_t *lda, void *b, dim_t *ldb, void *beta, void *c, dim_t *ldc);
-void zgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, void *alpha,
-             void *a, dim_t *lda, void *b, dim_t *ldb, void *beta, void *c, dim_t *ldc);
-#endif
-
 // }
 #endif
 
