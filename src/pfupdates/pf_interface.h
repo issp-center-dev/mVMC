@@ -40,9 +40,9 @@ extern "C" {
       void     *objv[], \
       void     *orbv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
@@ -52,9 +52,9 @@ GENDEF( ccdcmplx, z )
       void     *objv[], \
       void     *orbv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
@@ -64,9 +64,9 @@ GENDEF( ccdcmplx, z )
       ctype     pfav[], \
       void     *objv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
@@ -78,9 +78,9 @@ GENDEF( ccdcmplx, z )
       int64_t   cal_pfa, \
       void     *objv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
@@ -94,9 +94,9 @@ GENDEF( ccdcmplx, z )
       int64_t   cal_pfa, \
       void     *objv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
@@ -106,9 +106,9 @@ GENDEF( ccdcmplx, z )
       int64_t   cal_pfa, \
       void     *objv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
