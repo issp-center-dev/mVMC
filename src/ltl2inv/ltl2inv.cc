@@ -16,10 +16,10 @@ void ltl2inv_c(int n, ccscmplx *A_, int ldA, int *iPiv, ccscmplx *vT, ccscmplx *
 void ltl2inv_z(int n, ccdcmplx *A_, int ldA, int *iPiv, ccdcmplx *vT, ccdcmplx *M_, int ldM) { ltl2inv<ccdcmplx>(n, A_, ldA, iPiv, vT, M_, ldM); }
 
 
-void ltl2pfa_s(int n, float    *A_, int ldA, int *iPiv) { ltl2pfa<float   >(n, A_, ldA, iPiv); }
-void ltl2pfa_d(int n, double   *A_, int ldA, int *iPiv) { ltl2pfa<double  >(n, A_, ldA, iPiv); }
-void ltl2pfa_c(int n, ccscmplx *A_, int ldA, int *iPiv) { ltl2pfa<ccscmplx>(n, A_, ldA, iPiv); }
-void ltl2pfa_z(int n, ccdcmplx *A_, int ldA, int *iPiv) { ltl2pfa<ccdcmplx>(n, A_, ldA, iPiv); }
+void ltl2pfa_s(int n, float    *A_, int ldA, int *iPiv, float    *Pfa) { *Pfa = ltl2pfa<float   >(n, A_, ldA, iPiv); }
+void ltl2pfa_d(int n, double   *A_, int ldA, int *iPiv, double   *Pfa) { *Pfa = ltl2pfa<double  >(n, A_, ldA, iPiv); }
+void ltl2pfa_c(int n, ccscmplx *A_, int ldA, int *iPiv, ccscmplx *Pfa) { *Pfa = ltl2pfa<ccscmplx>(n, A_, ldA, iPiv); }
+void ltl2pfa_z(int n, ccdcmplx *A_, int ldA, int *iPiv, ccdcmplx *Pfa) { *Pfa = ltl2pfa<ccdcmplx>(n, A_, ldA, iPiv); }
 
 }
 

@@ -49,13 +49,59 @@ void ltl2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
     if (iPiv[j]-1 != j)
       swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
 
-  // TODO: GEMMT?
+  // TODO: Write triangular also.
   trmm(BLIS_LEFT, BLIS_LOWER, BLIS_TRANSPOSE, BLIS_UNIT_DIAG,
-    n, n, T(1.0), &M(0, 0), ldM, &A(0, 0), ldA);
+       n, n, T(1.0), &M(0, 0), ldM, &A(0, 0), ldA);
 
   // In-place permute rows.
   for (int i = n-1; i >= 0; --i)
     if (iPiv[i]-1 != i)
       swap(n, &A(i, 0), ldA, &A(iPiv[i]-1, 0), ldA);
+}
+
+template <typename T>
+void utu2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
+{
+  colmaj<T> A(A_, ldA);
+  colmaj<T> M(M_, ldM);
+
+  // Set M.
+  for (int j = 0; j < n; ++j)
+    for (int i = 0; i < n; ++i)
+      M(i, j) = T(!(i - j));
+
+  trtri(BLIS_UPPER, BLIS_UNIT_DIAG, n-1, &A(0, 1), ldA);
+  lacpy(BLIS_UPPER, n-2, n-2, &A(0, 2), ldA, &M(0, 1), ldM);
+
+  for (int i = 0; i < n-1; ++i)
+    vT[i] = -A(i, i+1);
+  sktdsmx<T>(n, vT, &M(0, 0), ldM, &A(0, 0), ldA);
+
+  // In-place permute columns.
+  for (int j = 0; j < n; ++j)
+    if (iPiv[j]-1 != j)
+      swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
+
+  // TODO: Write triangular also.
+  trmm(BLIS_LEFT, BLIS_UPPER, BLIS_TRANSPOSE, BLIS_UNIT_DIAG,
+       n, n, T(1.0), &M(0, 0), ldM, &A(0, 0), ldA);
+
+  // In-place permute rows.
+  for (int i = 0; i < n; ++i)
+    if (iPiv[i]-1 != i)
+      swap(n, &A(i, 0), ldA, &A(iPiv[i]-1, 0), ldA);
+}
+
+template <typename T>
+void ltl2inv(uplo_t uplo, int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
+{
+  switch (uplo) {
+  case BLIS_LOWER:
+    ltl2inv(n, A_, ldA, iPiv, vT, M_, ldM); break;
+  case BLIS_UPPER:
+    utu2inv(n, A_, ldA, iPiv, vT, M_, ldM); break;
+  default:
+    break;
+  }
 }
 

@@ -137,6 +137,26 @@ float sdot_(dim_t *n, float *sx, dim_t *incx, float *sy, dim_t *incy);
 double ddot_(dim_t *n, double *sx, dim_t *incx, double *sy, dim_t *incy);
 scomplex cdotc_(dim_t *n, void *sx, dim_t *incx, void *sy, dim_t *incy);
 dcomplex zdotc_(dim_t *n, void *sx, dim_t *incx, void *sy, dim_t *incy);
+#ifndef F77_COMPLEX_RET_INTEL
+scomplex cdotu_(dim_t *n, void *sx, dim_t *incx, void *sy, dim_t *incy);
+dcomplex zdotu_(dim_t *n, void *sx, dim_t *incx, void *sy, dim_t *incy);
+#else
+void cdotu_(scomplex *rho, dim_t *n, void *sx, dim_t *incx, void *sy, dim_t *incy);
+void zdotu_(dcomplex *rho, dim_t *n, void *sx, dim_t *incx, void *sy, dim_t *incy);
+#endif
+
+// gemmt is not part of BLAS standard,
+// but exposed by BLIS>v0.8 and recent versions of MKL.
+#ifdef MKL
+void sgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, float *alpha,
+             float *a, dim_t *lda, float *b, dim_t *ldb, float *beta, float *c, dim_t *ldc);
+void dgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, double *alpha,
+             double *a, dim_t *lda, double *b, dim_t *ldb, double *beta, double *c, dim_t *ldc);
+void cgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, void *alpha,
+             void *a, dim_t *lda, void *b, dim_t *ldb, void *beta, void *c, dim_t *ldc);
+void zgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, void *alpha,
+             void *a, dim_t *lda, void *b, dim_t *ldb, void *beta, void *c, dim_t *ldc);
+#endif
 
 // }
 #endif
@@ -163,6 +183,11 @@ void ssktrf_(char *uplo, char *mode, dim_t *n, float *a, dim_t *lda, int *ipiv, 
 void dsktrf_(char *uplo, char *mode, dim_t *n, double *a, dim_t *lda, int *ipiv, double *work, dim_t *lwork, int *info);
 void csktrf_(char *uplo, char *mode, dim_t *n, void *a, dim_t *lda, int *ipiv, void *work, dim_t *lwork, int *info);
 void zsktrf_(char *uplo, char *mode, dim_t *n, void *a, dim_t *lda, int *ipiv, void *work, dim_t *lwork, int *info);
+
+void sskpfa_(char *uplo, char *mthd, dim_t *n, float *a, dim_t *lda, float *pfa, int *ipiv, float *work, dim_t *lwork, int *info);
+void dskpfa_(char *uplo, char *mthd, dim_t *n, double *a, dim_t *lda, double *pfa, int *ipiv, double *work, dim_t *lwork, int *info);
+void cskpfa_(char *uplo, char *mthd, dim_t *n, void *a, dim_t *lda, void *pfa, int *ipiv, void *work, dim_t *lwork, void *rwork, int *info);
+void zskpfa_(char *uplo, char *mthd, dim_t *n, void *a, dim_t *lda, void *pfa, int *ipiv, void *work, dim_t *lwork, void *rwork, int *info);
 
 // }
 

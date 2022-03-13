@@ -6,11 +6,12 @@ endif
 
 OBJ = pfupdates.o
 SRC = pf_interface.cc
-HDR = pf_interface.h orbital_mat.tcc skmv.tcc updated_tdi.tcc
+HDR = pf_interface.h orbital_mat.tcc skmv.tcc skr2k.tcc skslc.tcc updated_tdi.tcc \
+	  ../common/blalink.hh ../common/blalink_fort.h ../common/colmaj.hh
 
 $(OBJ): $(SRC) $(HDR) 
 	$(CXX) $(CXXFLAGS) -D_CC_IMPL -c $< -o $@ \
-		-I../pfaffine/src \
+		-I../common -I../ltl2inv \
 		-I$(BLIS_ROOT)/include \
 		-I$(BLIS_ROOT)/include/blis
 

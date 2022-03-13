@@ -6,10 +6,12 @@ endif
 
 OBJ = ltl2inv.o
 SRC = ltl2inv.cc
-HDR = blalink.hh blalink_fort.h colmaj.hh invert.tcc pfaffian.tcc
+HDR = invert.tcc pfaffian.tcc \
+	  ../common/blalink.hh ../common/blalink_fort.h ../common/colmaj.hh
 
 $(OBJ): $(SRC) $(HDR) 
 	$(CXX) $(CXXFLAGS) -D_CC_IMPL -c $< -o $@ \
+		-I../common \
 		-I$(BLIS_ROOT)/include \
 		-I$(BLIS_ROOT)/include/blis
 
