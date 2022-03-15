@@ -3,6 +3,7 @@ project(mVMC NONE)
 
 option(USE_SCALAPACK "Use Scalapack" OFF)
 option(PFAFFIAN_BLOCKED "Use blocked-update Pfaffian to speed up." OFF)
+option(USE_GEMMT "Use GEMMT. Recommended regardless blocked-Pfaffian-update." ON)
 
 add_definitions(-D_mVMC)
 if(CONFIG)
@@ -17,8 +18,10 @@ message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 option(GIT_SUBMODULE_UPDATE "execute `git submodule update` automatically" ON)
-enable_language(C CXX Fortran)
-set(CMAKE_CXX_STANDARD 11)
+
+# First, enables C language only.
+# External packages only use their C API.
+enable_language(C)
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
@@ -26,6 +29,7 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_MACOSX_RPATH 1)
 
+# TODO: Is this really needed?
 if("${CMAKE_BUILD_TYPE}" MATCHES "Debug")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG}")
 else()
@@ -34,18 +38,19 @@ else()
 endif()
 
 if(CMAKE_C_COMPILER_ID STREQUAL "Intel")
+  # TODO: Really needs separation?
   if("${CMAKE_C_COMPILER_VERSION}" VERSION_LESS "15.0.0.20140528")
      set(OMP_FLAG_Intel "-openmp")
   else()
     set(OMP_FLAG_Intel "-qopenmp")
   endif()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OMP_FLAG_Intel}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OMP_FLAG_Intel}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OMP_FLAG_Intel}")
 else()
   find_package(OpenMP)
   if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
   endif(OPENMP_FOUND)	
 endif()
 
@@ -56,11 +61,25 @@ if(MPI_C_FOUND)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MPI_C_LINK_FLAGS}")
 endif(MPI_C_FOUND)
 
+# BLAS/LAPACK/Pfapack77 needs Fortran interface.
+enable_language(Fortran)
+
 find_package(LAPACK)
 if(USE_SCALAPACK MATCHES OFF)
   if(LAPACK_FOUND)
     add_definitions(-D_lapack)
   endif(LAPACK_FOUND)
+endif()
+
+if(PFAFFIAN_BLOCKED
+    OR USE_GEMMT)
+  set(Require_BLIS ON)
+endif()
+
+if(BLA_VENDOR MATCHES "Intel10*"
+    OR BLAS_LIBRARIES MATCHES "/*mkl*")
+  add_definitions(-DMKL)
+  set(Require_BLIS OFF)
 endif()
 
 # Build and enable tests
@@ -96,17 +115,21 @@ if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
 endif()
 add_subdirectory("${STDFACE_DIR}")
 
-if(PFAFFIAN_BLOCKED)
-  add_definitions(-D_pf_block_update)
+# C++ support for pfupdates & ltl2inv.
+enable_language(CXX)
+set(CMAKE_CXX_STANDARD 11)
+
+if(Require_BLIS)
   include("download_blis_artifact.cmake")
-  # Must set BLIS artifact BEFORE adding pfupdates target.
-  add_subdirectory(src/pfupdates)
-  add_dependencies(pfupdates blis_include)
-else(PFAFFIAN_BLOCKED)
+else(Require_BLIS)
   # Use bundled blis.h
   include_directories(src/common/deps)
+endif(Require_BLIS)
+
+if(PFAFFIAN_BLOCKED)
+  add_definitions(-D_pf_block_update)
+  add_subdirectory(src/pfupdates)
 endif(PFAFFIAN_BLOCKED)
-add_subdirectory(src/ltl2inv)
 
 if (Document)
   add_subdirectory(doc)
@@ -114,5 +137,6 @@ endif(Document)
 
 add_subdirectory(src/ComplexUHF)
 add_subdirectory(src/pfapack/fortran)
+add_subdirectory(src/ltl2inv)
 add_subdirectory(src/mVMC)
 add_subdirectory(tool)

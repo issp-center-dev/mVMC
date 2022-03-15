@@ -500,6 +500,49 @@ typedef enum
 #endif
 // end bli_type_defs.h
 
+// begin bli_param_map.h
+BLIS_INLINE void bli_param_map_netlib_to_blis_side( char side, side_t* blis_side )
+{
+	if      ( side == 'l' || side == 'L' ) *blis_side = BLIS_LEFT;
+	else if ( side == 'r' || side == 'R' ) *blis_side = BLIS_RIGHT;
+	else
+	{
+		*blis_side = BLIS_LEFT;
+	}
+}
+
+BLIS_INLINE void bli_param_map_netlib_to_blis_uplo( char uplo, uplo_t* blis_uplo )
+{
+	if      ( uplo == 'l' || uplo == 'L' ) *blis_uplo = BLIS_LOWER;
+	else if ( uplo == 'u' || uplo == 'U' ) *blis_uplo = BLIS_UPPER;
+	else
+	{
+		*blis_uplo = BLIS_LOWER;
+	}
+}
+
+BLIS_INLINE void bli_param_map_netlib_to_blis_trans( char trans, trans_t* blis_trans )
+{
+	if      ( trans == 'n' || trans == 'N' ) *blis_trans = BLIS_NO_TRANSPOSE;
+	else if ( trans == 't' || trans == 'T' ) *blis_trans = BLIS_TRANSPOSE;
+	else if ( trans == 'c' || trans == 'C' ) *blis_trans = BLIS_CONJ_TRANSPOSE;
+	else
+	{
+		*blis_trans = BLIS_NO_TRANSPOSE;
+	}
+}
+
+BLIS_INLINE void bli_param_map_netlib_to_blis_diag( char diag, diag_t* blis_diag )
+{
+	if      ( diag == 'n' || diag == 'N' ) *blis_diag = BLIS_NONUNIT_DIAG;
+	else if ( diag == 'u' || diag == 'U' ) *blis_diag = BLIS_UNIT_DIAG;
+	else
+	{
+		*blis_diag = BLIS_NONUNIT_DIAG;
+	}
+}
+// end bli_param_map.h
+
 // End extern "C" construct block.
 #ifdef __cplusplus
 }

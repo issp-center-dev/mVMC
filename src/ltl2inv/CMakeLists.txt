@@ -9,6 +9,7 @@ add_definitions(-DBLAS_EXTERNAL)
 add_definitions(-DF77_COMPLEX_RET_INTEL)
 include_directories(../common)
 
-add_library(ltl2inv STATIC ltl2inv.cc)
+# TODO: Move blalink_gemmt.c to other subprojects?
+add_library(ltl2inv STATIC ltl2inv.cc blalink_gemmt.c)
 target_compile_definitions(ltl2inv PRIVATE -D_CC_IMPL)
 
