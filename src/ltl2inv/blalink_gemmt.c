@@ -10,8 +10,14 @@
 // Redefine GEMMT Fortran from BLIS (which is built without BLAS API).
 // Required by Pfapack77.
 #define BLAGEN_MAC(cctype, ctype, cchar) \
-    void cchar##gemmt_(char *uplo_, char *transa_, char *transb_, int *m, int *k, ctype *alpha, \
-                       ctype *a, int *lda, ctype *b, int *ldb, ctype *beta, ctype *c, int *ldc) \
+    void cchar##gemmt_(const char *uplo_, \
+                       const char *transa_, \
+                       const char *transb_, \
+                       const int *m, const int *k, \
+                       const ctype *alpha, \
+                       const ctype *a, const int *lda, \
+                       const ctype *b, const int *ldb, \
+                       const ctype *beta, ctype *c, const int *ldc) \
     { \
         uplo_t uploc; \
         trans_t transa; \

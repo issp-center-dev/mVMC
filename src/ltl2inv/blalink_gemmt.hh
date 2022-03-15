@@ -61,6 +61,7 @@ inline void gemmt(uplo_t uploc,
                       (ctype *)&beta, \
                       (ctype *)c, &ldc); \
     }
+extern "C" {
 void sgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, float *alpha,
              float *a, dim_t *lda, float *b, dim_t *ldb, float *beta, float *c, dim_t *ldc);
 void dgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, double *alpha,
@@ -69,6 +70,7 @@ void cgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, void *a
              void *a, dim_t *lda, void *b, dim_t *ldb, void *beta, void *c, dim_t *ldc);
 void zgemmt_(char *uplo, char *transa, char *transb, dim_t *m, dim_t *k, void *alpha,
              void *a, dim_t *lda, void *b, dim_t *ldb, void *beta, void *c, dim_t *ldc);
+}
 #endif
 BLALINK_MAC( float,    float,    s )
 BLALINK_MAC( double,   double,   d )

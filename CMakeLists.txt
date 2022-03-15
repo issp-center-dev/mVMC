@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(mVMC NONE)
 
 option(USE_SCALAPACK "Use Scalapack" OFF)
@@ -78,8 +78,27 @@ endif()
 
 if(BLA_VENDOR MATCHES "Intel10*"
     OR BLAS_LIBRARIES MATCHES "/*mkl*")
+  # Don't require BLIS when MKL is used.
   add_definitions(-DMKL)
+  add_definitions(-DBLAS_EXTERNAL)
+  add_definitions(-DF77_COMPLEX_RET_INTEL)
   set(Require_BLIS OFF)
+elseif(BLA_VENDOR MATCHES "FLA*"
+    OR BLAS_LIBRARIES MATCHES "/*blis*")
+  # Skip extra BLIS if it's already the BLAS vendor.
+  list(GET BLAS_LIBRARIES 0 BLIS_FIRST_LIB)
+  get_filename_component(BLIS_LIB_DIR ${BLIS_FIRST_LIB} DIRECTORY)
+  include_directories(${BLIS_LIB_DIR}/../include)
+  include_directories(${BLIS_LIB_DIR}/../include/blis)
+  set(Require_BLIS OFF)
+else()
+  # BLAS vendor preference:
+  # External > BLIS > Reference
+  if(DEFINED BLA_VENDOR)
+    add_definitions(-DBLAS_EXTERNAL)
+    # TODO: Identify non-Intel style complex number return.
+    add_definitions(-DF77_COMPLEX_RET_INTEL)
+  endif()
 endif()
 
 # Build and enable tests
