@@ -23,10 +23,10 @@
                            transa, transb, \
                            *m, *k, \
                            alpha, \
-                           a, 1, &lda, \
-                           b, 1, &ldb, \
+                           a, 1, *lda, \
+                           b, 1, *ldb, \
                            beta, \
-                           c, 1, &ldc); \
+                           c, 1, *ldc); \
     }
 BLAGEN_MAC( float,    float,    s )
 BLAGEN_MAC( double,   double,   d )
