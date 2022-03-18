@@ -1177,7 +1177,7 @@ PairHopカップリングをハミルトニアンに付け加えます。付け�
 Exchange指定ファイル (exchange.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Exchangeカップリングをハミルトニアンに付け加えます。 電子系の場合には
+Exchangeカップリングをハミルトニアンに付け加えます。 電子系,スピン系の両方の場合に
 
 .. math::
 
@@ -1185,13 +1185,7 @@ Exchangeカップリングをハミルトニアンに付け加えます。 電�
    (c_ {i \uparrow}^{\dagger}c_{j\uparrow}c_{j \downarrow}^{\dagger}c_{i  \downarrow}
    +c_ {i \downarrow}^{\dagger}c_{j\downarrow}c_{j \uparrow}^{\dagger}c_{i  \uparrow})
 
-が付け加えられ、スピン系の場合には
-
-.. math::
-
-   {\cal H}_E =\sum_{i,j}J_{ij}^{\rm Ex} (S_i^+S_j^-+S_i^-S_j^+)
-
-が付け加えられます。 以下にファイル例を記載します。
+が付け加えられます(スピン系の場合にHPhiとは定義が異なりますので注意してください)。
 
 ::
 

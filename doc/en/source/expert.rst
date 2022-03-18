@@ -1234,6 +1234,7 @@ The Hamiltonian for exchange couplings
    +c_ {i \downarrow}^{\dagger}c_{j\downarrow}c_{j \uparrow}^{\dagger}c_{i  \uparrow})
 
 is added to the whole Hamiltonian by setting :math:`J_{ij}^{\rm Ex}`.
+Note that, for spin systems, the definition of the Exchange is different from that in HPhi.
 An example of the file format is shown as follows.
 
 ::
