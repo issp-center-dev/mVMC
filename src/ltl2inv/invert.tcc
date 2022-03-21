@@ -6,6 +6,7 @@
 #pragma once
 #include "colmaj.hh"
 #include "blalink.hh"
+#include "trmmt.tcc"
 
 template <typename T>
 void sktdsmx(int n, T *vT, T *B_, int ldB, T *C_, int ldC)
@@ -32,6 +33,9 @@ void ltl2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
   colmaj<T> A(A_, ldA);
   colmaj<T> M(M_, ldM);
 
+  int npanel_trmm = ilaenv_lauum<T>(BLIS_LOWER, n);
+  int full = npanel_trmm <= 1 || npanel_trmm >= n;
+
   // Set M.
   for (int j = 0; j < n; ++j)
     for (int i = 0; i < n; ++i)
@@ -44,14 +48,23 @@ void ltl2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
     vT[i] = A(i+1, i);
   sktdsmx<T>(n, vT, &M(0, 0), ldM, &A(0, 0), ldA);
 
+  if (!full) {
+    trmmt(BLIS_LOWER, BLIS_UNIT_DIAG, n, T(1.0), M, A);
+    for (int j = 0; j < n; ++j) {
+      A(j, j) = 0.0;
+      for (int i = 0; i < j; ++i)
+        A(i, j) = -A(j, i);
+    }
+  }
+
   // In-place permute columns.
   for (int j = n-1; j >= 0; --j)
     if (iPiv[j]-1 != j)
       swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
 
-  // TODO: Write triangular also.
-  trmm(BLIS_LEFT, BLIS_LOWER, BLIS_TRANSPOSE, BLIS_UNIT_DIAG,
-       n, n, T(1.0), &M(0, 0), ldM, &A(0, 0), ldA);
+  if (full)
+    trmm(BLIS_LEFT, BLIS_LOWER, BLIS_TRANSPOSE, BLIS_UNIT_DIAG,
+         n, n, T(1.0), &M(0, 0), ldM, &A(0, 0), ldA);
 
   // In-place permute rows.
   for (int i = n-1; i >= 0; --i)
@@ -65,6 +78,9 @@ void utu2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
   colmaj<T> A(A_, ldA);
   colmaj<T> M(M_, ldM);
 
+  int npanel_trmm = ilaenv_lauum<T>(BLIS_UPPER, n);
+  int full = npanel_trmm <= 1 || npanel_trmm >= n;
+
   // Set M.
   for (int j = 0; j < n; ++j)
     for (int i = 0; i < n; ++i)
@@ -77,14 +93,23 @@ void utu2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
     vT[i] = -A(i, i+1);
   sktdsmx<T>(n, vT, &M(0, 0), ldM, &A(0, 0), ldA);
 
+  if (!full) {
+    trmmt(BLIS_UPPER, BLIS_UNIT_DIAG, n, T(1.0), M, A);
+      for (int j = 0; j < n; ++j) {
+        A(j, j) = 0.0;
+        for (int i = j + 1; i < n; ++i)
+          A(i, j) = -A(j, i);
+      }
+  }
+
   // In-place permute columns.
   for (int j = 0; j < n; ++j)
     if (iPiv[j]-1 != j)
       swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
 
-  // TODO: Write triangular also.
-  trmm(BLIS_LEFT, BLIS_UPPER, BLIS_TRANSPOSE, BLIS_UNIT_DIAG,
-       n, n, T(1.0), &M(0, 0), ldM, &A(0, 0), ldA);
+  if (full)
+    trmm(BLIS_LEFT, BLIS_UPPER, BLIS_TRANSPOSE, BLIS_UNIT_DIAG,
+         n, n, T(1.0), &M(0, 0), ldM, &A(0, 0), ldA);
 
   // In-place permute rows.
   for (int i = 0; i < n; ++i)
