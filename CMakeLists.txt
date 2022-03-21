@@ -96,8 +96,6 @@ else()
   # External > BLIS > Reference
   if(DEFINED BLA_VENDOR)
     add_definitions(-DBLAS_EXTERNAL)
-    # TODO: Identify non-Intel style complex number return.
-    add_definitions(-DF77_COMPLEX_RET_INTEL)
   endif()
 endif()
 
