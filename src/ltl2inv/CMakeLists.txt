@@ -11,6 +11,6 @@ endif()
 include_directories(../common)
 
 # TODO: Move blalink_gemmt.c to other subprojects?
-add_library(ltl2inv STATIC ltl2inv.cc blalink_gemmt.c)
+add_library(ltl2inv STATIC ltl2inv.cc blalink_gemmt.c ilaenv_lauum.cc)
 target_compile_definitions(ltl2inv PRIVATE -D_CC_IMPL)
 

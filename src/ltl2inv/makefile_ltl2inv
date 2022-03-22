@@ -1,7 +1,7 @@
 include ../make.sys
 
 OBJ = ltl2inv.o
-SRC = ltl2inv.cc
+SRC = ltl2inv.cc blalink_gemmt.c ilaenv_lauum.cc
 HDR = invert.tcc pfaffian.tcc \
 	  ../common/blalink.hh ../common/blalink_fort.h ../common/colmaj.hh
 
