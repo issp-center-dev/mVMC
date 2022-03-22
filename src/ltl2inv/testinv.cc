@@ -1,13 +1,21 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
+#include <chrono>
 
 #include "colmaj.hh"
 #include "invert.tcc"
 
+struct info_t {
+    double err;
+    long long tim;
+};
+
 template <typename T>
-double test_decomp2inv(uplo_t uplo, int n)
+info_t test_decomp2inv(uplo_t uplo, int n)
 {
+    using namespace std::chrono;
+
     colmaj<T> A(new T[n * n], n);
     colmaj<T> M(new T[n * n], n);
     colmaj<T> X(new T[n * n], n);
@@ -40,6 +48,8 @@ double test_decomp2inv(uplo_t uplo, int n)
         }
     }
 
+    auto start = high_resolution_clock::now();
+
     sktrf<T>(uplo, n, &X(0, 0), n, ipiv, &M(0, 0), n*n);
     switch (uplo) {
     case BLIS_LOWER:
@@ -49,6 +59,8 @@ double test_decomp2inv(uplo_t uplo, int n)
     default:
         break;
     }
+
+    auto tim = duration_cast<nanoseconds>(high_resolution_clock::now() - start).count();
 
     gemm<T>(BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE,
             n, n, n,
@@ -88,24 +100,25 @@ double test_decomp2inv(uplo_t uplo, int n)
     delete[] ipiv;
     delete[] vT;
 
-    return err;
+    return info_t{ err, tim };
 }
 
 int main(void)
 {
-    printf("double     10x10 lower err=%e.\n", test_decomp2inv<double>  (BLIS_LOWER, 10));
-    printf("float      10x10 lower err=%e.\n", test_decomp2inv<float>   (BLIS_LOWER, 10));
-    printf("dcomplex   10x10 lower err=%e.\n", test_decomp2inv<ccdcmplx>(BLIS_LOWER, 10));
-    printf("double   200x200 lower err=%e.\n", test_decomp2inv<double>  (BLIS_LOWER, 200));
-    printf("float    200x200 lower err=%e.\n", test_decomp2inv<float>   (BLIS_LOWER, 200));
-    printf("dcomplex 200x200 lower err=%e.\n", test_decomp2inv<ccdcmplx>(BLIS_LOWER, 200));
+    info_t info; int n;
+    n= 10; info = test_decomp2inv<double>  (BLIS_LOWER, n); printf("double   n=%5d lower err=%e at %6lfgflops.\n", n, info.err, 1.33*std::pow(10 ,3)/info.tim);
+    n= 10; info = test_decomp2inv<float>   (BLIS_LOWER, n); printf("float    n=%5d lower err=%e at %6lfgflops.\n", n, info.err, 1.33*std::pow(10 ,3)/info.tim);
+    n= 10; info = test_decomp2inv<ccdcmplx>(BLIS_LOWER, n); printf("dcomplex n=%5d lower err=%e at %6lfgflops.\n", n, info.err, 5.33*std::pow(10 ,3)/info.tim);
+    n=200; info = test_decomp2inv<double>  (BLIS_LOWER, n); printf("double   n=%5d lower err=%e at %6lfgflops.\n", n, info.err, 1.33*std::pow(200,3)/info.tim);
+    n=200; info = test_decomp2inv<float>   (BLIS_LOWER, n); printf("float    n=%5d lower err=%e at %6lfgflops.\n", n, info.err, 1.33*std::pow(200,3)/info.tim);
+    n=200; info = test_decomp2inv<ccdcmplx>(BLIS_LOWER, n); printf("dcomplex n=%5d lower err=%e at %6lfgflops.\n", n, info.err, 5.33*std::pow(200,3)/info.tim);
 
-    printf("double     10x10 upper err=%e.\n", test_decomp2inv<double>  (BLIS_UPPER, 10));
-    printf("float      10x10 upper err=%e.\n", test_decomp2inv<float>   (BLIS_UPPER, 10));
-    printf("dcomplex   10x10 upper err=%e.\n", test_decomp2inv<ccdcmplx>(BLIS_UPPER, 10));
-    printf("double   200x200 upper err=%e.\n", test_decomp2inv<double>  (BLIS_UPPER, 200));
-    printf("float    200x200 upper err=%e.\n", test_decomp2inv<float>   (BLIS_UPPER, 200));
-    printf("dcomplex 200x200 upper err=%e.\n", test_decomp2inv<ccdcmplx>(BLIS_UPPER, 200));
+    n= 10; info = test_decomp2inv<double>  (BLIS_UPPER, n); printf("double   n=%5d upper err=%e at %6lfgflops.\n", n, info.err, 1.33*std::pow(10 ,3)/info.tim);
+    n= 10; info = test_decomp2inv<float>   (BLIS_UPPER, n); printf("float    n=%5d upper err=%e at %6lfgflops.\n", n, info.err, 1.33*std::pow(10 ,3)/info.tim);
+    n= 10; info = test_decomp2inv<ccdcmplx>(BLIS_UPPER, n); printf("dcomplex n=%5d upper err=%e at %6lfgflops.\n", n, info.err, 5.33*std::pow(10 ,3)/info.tim);
+    n=200; info = test_decomp2inv<double>  (BLIS_UPPER, n); printf("double   n=%5d upper err=%e at %6lfgflops.\n", n, info.err, 1.33*std::pow(200,3)/info.tim);
+    n=200; info = test_decomp2inv<float>   (BLIS_UPPER, n); printf("float    n=%5d upper err=%e at %6lfgflops.\n", n, info.err, 1.33*std::pow(200,3)/info.tim);
+    n=200; info = test_decomp2inv<ccdcmplx>(BLIS_UPPER, n); printf("dcomplex n=%5d upper err=%e at %6lfgflops.\n", n, info.err, 5.33*std::pow(200,3)/info.tim);
 
     return 0;
 }
