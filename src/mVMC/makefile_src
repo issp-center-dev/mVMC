@@ -2,7 +2,7 @@ include ../make.sys
 
 PFAPACK = ../pfapack/fortran/libpfapack.a
 PFUPDATES = ../pfupdates/pfupdates.o
-LTL2INV = ../ltl2inv/ltl2inv.o
+LTL2INV = ../ltl2inv/ltl2inv.a
 SFMT = ../sfmt/SFMT.o
 STDFACE = ../StdFace/src/libStdFace.a
 OPTION = -D_mpi_use

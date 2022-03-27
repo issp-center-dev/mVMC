@@ -1,15 +1,29 @@
 include ../make.sys
 
-OBJ = ltl2inv.o
+OBJ = ltl2inv.o blalink_gemmt.o ilaenv_lauum.o
 SRC = ltl2inv.cc blalink_gemmt.c ilaenv_lauum.cc
 HDR = invert.tcc pfaffian.tcc \
 	  ../common/blalink.hh ../common/blalink_fort.h ../common/colmaj.hh
 
-$(OBJ): $(SRC) $(HDR) 
-	$(CXX) $(CXXFLAGS) -D_CC_IMPL -c $< -o $@ \
+ltl2inv.a: $(OBJ)
+	$(AR) rvu $@ $(OBJ)
+
+clean:
+	rm -f $(OBJ)
+
+SUFFIXES: .o .c
+
+.c.o: $(HDR)
+	$(CC) $(OPTION) $(CFLAGS) -c $< -o $@ \
+		-Wno-incompatible-pointer-types-discards-qualifiers \
 		-I../common \
 		-I$(BLIS_ROOT)/include \
 		-I$(BLIS_ROOT)/include/blis
 
-clean:
-	rm -f $(OBJ)
+SUFFIXES: .o .cc
+
+.cc.o: $(HDR)
+	$(CXX) $(CXXFLAGS) -D_CC_IMPL -c $< -o $@ \
+		-I../common \
+		-I$(BLIS_ROOT)/include \
+		-I$(BLIS_ROOT)/include/blis
