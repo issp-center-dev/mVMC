@@ -7,7 +7,6 @@
 #include "colmaj.hh"
 #include "blalink.hh"
 #include "trmmt.tcc"
-#include "skswp.tcc"
 
 template <typename T>
 void sktdsmx(int n, T *vT, T *B_, int ldB, T *C_, int ldC)
@@ -51,39 +50,26 @@ void ltl2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
 
   if (!full) {
     trmmt(BLIS_LOWER, BLIS_UNIT_DIAG, n, T(1.0), M, A);
-
-    // Antisymmetric swapping.
-    // for (int j = n-1; j >= 0; --j)
-    //   if (iPiv[j]-1 != j)
-    //     skswp(BLIS_LOWER, n, A, iPiv[j]-1, j);
-
-    // Complete antisymm.
     for (int j = 0; j < n; ++j) {
       A(j, j) = 0.0;
       for (int i = 0; i < j; ++i)
         A(i, j) = -A(j, i);
     }
-    // Swap.
-    for (int j = n-1; j >= 0; --j)
-      if (iPiv[j]-1 != j) {
-        swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
-        swap(n, &A(j, 0), ldA, &A(iPiv[j]-1, 0), ldA);
-      }
-  } else {
+  }
 
-    // In-place permute columns.
-    for (int j = n-1; j >= 0; --j)
-      if (iPiv[j]-1 != j)
-        swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
+  // In-place permute columns.
+  for (int j = n-1; j >= 0; --j)
+    if (iPiv[j]-1 != j)
+      swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
 
+  if (full)
     trmm(BLIS_LEFT, BLIS_LOWER, BLIS_TRANSPOSE, BLIS_UNIT_DIAG,
          n, n, T(1.0), &M(0, 0), ldM, &A(0, 0), ldA);
 
-    // In-place permute rows.
-    for (int i = n-1; i >= 0; --i)
-      if (iPiv[i]-1 != i)
-        swap(n, &A(i, 0), ldA, &A(iPiv[i]-1, 0), ldA);
-  }
+  // In-place permute rows.
+  for (int i = n-1; i >= 0; --i)
+    if (iPiv[i]-1 != i)
+      swap(n, &A(i, 0), ldA, &A(iPiv[i]-1, 0), ldA);
 }
 
 template <typename T>
@@ -109,39 +95,26 @@ void utu2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
 
   if (!full) {
     trmmt(BLIS_UPPER, BLIS_UNIT_DIAG, n, T(1.0), M, A);
+      for (int j = 0; j < n; ++j) {
+        A(j, j) = 0.0;
+        for (int i = j + 1; i < n; ++i)
+          A(i, j) = -A(j, i);
+      }
+  }
 
-    // Antisymmetric swapping.
-    for (int j = 0; j < n; ++j)
-      if (iPiv[j]-1 != j)
-        skswp(BLIS_UPPER, n, A, j, iPiv[j]-1);
+  // In-place permute columns.
+  for (int j = 0; j < n; ++j)
+    if (iPiv[j]-1 != j)
+      swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
 
-    // Complete antisymm.
-    for (int j = 0; j < n; ++j) {
-      A(j, j) = 0.0;
-      for (int i = j + 1; i < n; ++i)
-        A(i, j) = -A(j, i);
-    }
-    // Swap.
-    // for (int j = 0; j < n; ++j)
-    //   if (iPiv[j]-1 != j) {
-    //     swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
-    //     swap(n, &A(j, 0), ldA, &A(iPiv[j]-1, 0), ldA);
-    //   }
-  } else {
-
-    // In-place permute columns.
-    for (int j = 0; j < n; ++j)
-      if (iPiv[j]-1 != j)
-        swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
-
+  if (full)
     trmm(BLIS_LEFT, BLIS_UPPER, BLIS_TRANSPOSE, BLIS_UNIT_DIAG,
          n, n, T(1.0), &M(0, 0), ldM, &A(0, 0), ldA);
 
-    // In-place permute rows.
-    for (int i = 0; i < n; ++i)
-      if (iPiv[i]-1 != i)
-        swap(n, &A(i, 0), ldA, &A(iPiv[i]-1, 0), ldA);
-  }
+  // In-place permute rows.
+  for (int i = 0; i < n; ++i)
+    if (iPiv[i]-1 != i)
+      swap(n, &A(i, 0), ldA, &A(iPiv[i]-1, 0), ldA);
 }
 
 template <typename T>
