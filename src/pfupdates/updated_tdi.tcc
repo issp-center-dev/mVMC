@@ -408,7 +408,9 @@ template <typename T> struct updated_tdi {
       nq_updated = k;
 
     // Compute new (previous, in fact) Pfaffian.
-    if (compute_pfa) {
+    if (!k)
+      PfaRatio = 1.0;
+    else if (compute_pfa) {
       // All compute_pfa requires first K-1 of Q.
       require_Q(false);
 
