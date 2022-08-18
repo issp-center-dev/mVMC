@@ -16,8 +16,8 @@ T ltl2pfa(int n, T *A_, int ldA, int *iPiv)
   for (int i = 0; i < n; i += 2) {
     pfa *= -A(i+1, i);
 
+    if (iPiv[i  ]-1 != i  ) pfa = -pfa;
     if (iPiv[i+1]-1 != i+1) pfa = -pfa;
-    if (iPiv[i+2]-1 != i+2) pfa = -pfa;
   }
   return pfa;
 }
@@ -31,8 +31,8 @@ T utu2pfa(int n, T *A_, int ldA, int *iPiv)
   for (int i = 0; i < n; i += 2) {
     pfa *= A(i, i+1);
 
+    if (iPiv[i  ]-1 != i  ) pfa = -pfa;
     if (iPiv[i+1]-1 != i+1) pfa = -pfa;
-    if (iPiv[i+2]-1 != i+2) pfa = -pfa;
   }
   return pfa;
 }
