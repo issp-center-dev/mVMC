@@ -162,15 +162,15 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
     }
   }
 
-  M_ZSKTRF("L", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
+  M_ZSKTRF("U", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
   if(info!=0) return info;
 
-  ltl2pfa_z(n, invM, lda, iwork, &pfaff);
+  utu2pfa_z(n, invM, lda, iwork, &pfaff);
   if(!isfinite(creal(pfaff) + cimag(pfaff))) return qpidx+1;
   PfM[qpidx] = pfaff;
 
   /* Calculate inverse. */
-  ltl2inv_z(n, invM, lda, iwork, work, bufM, lda);
+  utu2inv_z(n, invM, lda, iwork, work, bufM, lda);
 
   /* InvM -> InvM(T) -> -InvM */
   M_ZSCAL(&nsq, &minus_one, invM, &one);
@@ -261,15 +261,15 @@ int calculateMAll_child_fsz_real(const int *eleIdx,const int *eleSpn, const int 
   }
 
   /* Calculate Pf M */
-  M_DSKTRF("L", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
+  M_DSKTRF("U", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
   if(info!=0) return info;
 
-  ltl2pfa_d(n, invM, lda, iwork, &pfaff);
+  utu2pfa_d(n, invM, lda, iwork, &pfaff);
   if(!isfinite(pfaff)) return qpidx+1;
   PfM_real[qpidx] = pfaff;
 
   /* Calculate inverse. */
-  ltl2inv_d(n, invM, lda, iwork, work, bufM, lda);
+  utu2inv_d(n, invM, lda, iwork, work, bufM, lda);
 
   /* InvM -> InvM(T) -> -InvM */
   M_DSCAL(&nsq, &minus_one, invM, &one);
@@ -369,15 +369,15 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   }
 
   /* Calculate Pf M */
-  M_ZSKTRF("L", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
+  M_ZSKTRF("U", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
   if(info!=0) return info;
 
-  ltl2pfa_z(n, invM, lda, iwork, &pfaff);
+  utu2pfa_z(n, invM, lda, iwork, &pfaff);
   if(!isfinite(creal(pfaff) + cimag(pfaff))) return qpidx+1;
   PfM[qpidx] = pfaff;
 
   /* Calculate inverse. */
-  ltl2inv_z(n, invM, lda, iwork, work, bufM, lda);
+  utu2inv_z(n, invM, lda, iwork, work, bufM, lda);
 
   /* mVMC's handling InvM as row-major,
    * i.e. InvM needs a transpose, InvM -> -InvM according antisymmetric properties. */
@@ -596,15 +596,15 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   }
 
   /* calculate Pf M */
-  M_DSKTRF("L", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
+  M_DSKTRF("U", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
   if(info!=0) return info;
 
-  ltl2pfa_d(n, invM, lda, iwork, &pfaff);
+  utu2pfa_d(n, invM, lda, iwork, &pfaff);
   if(!isfinite(pfaff)) return qpidx+1;
   PfM_real[qpidx] = pfaff;
 
   /* Compute inverse */
-  ltl2inv_d(n, invM, lda, iwork, work, bufM, lda);
+  utu2inv_d(n, invM, lda, iwork, work, bufM, lda);
 
   // InvM -> InvM' = -InvM
   // TODO: Include this in ltl2inv

@@ -123,6 +123,10 @@ extern void ltl2pfa_d(int n, double *A_, int ldA, int *iPiv, double *Pfa);
 extern void ltl2inv_d(int n, double *A_, int ldA, int *iPiv, double *vT, double *M_, int ldM);
 extern void ltl2pfa_z(int n, double complex *A_, int ldA, int *iPiv, double complex *Pfa);
 extern void ltl2inv_z(int n, double complex *A_, int ldA, int *iPiv, double complex *vT, double complex *M_, int ldM);
+extern void utu2pfa_d(int n, double *A_, int ldA, int *iPiv, double *Pfa);
+extern void utu2inv_d(int n, double *A_, int ldA, int *iPiv, double *vT, double *M_, int ldM);
+extern void utu2pfa_z(int n, double complex *A_, int ldA, int *iPiv, double complex *Pfa);
+extern void utu2inv_z(int n, double complex *A_, int ldA, int *iPiv, double complex *vT, double complex *M_, int ldM);
 
 // pBLAS
 extern void M_PDGEMV(const char *trans, const int *m, const int *n,
