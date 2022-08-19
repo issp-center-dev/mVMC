@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>Tutorial &#8212; mVMC 1.2.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
@@ -44,9 +45,9 @@
           <div class="body" role="main">
             
   <section id="tutorial">
-<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this heading">¶</a></h1>
 <section id="list-of-sample-files">
-<h2>List of sample files<a class="headerlink" href="#list-of-sample-files" title="Permalink to this headline">¶</a></h2>
+<h2>List of sample files<a class="headerlink" href="#list-of-sample-files" title="Permalink to this heading">¶</a></h2>
 <p>There are following tutorials in <code class="docutils literal notranslate"><span class="pre">samples/Standard/</span></code>.</p>
 <ul>
 <li><p>The Hubbard model on the two dimensional square lattice</p>
@@ -75,7 +76,7 @@ tutorial of the one dimensional antiferromagnetic Heisenberg chain is
 shown.</p>
 </section>
 <section id="heisenberg-model">
-<h2>Heisenberg model<a class="headerlink" href="#heisenberg-model" title="Permalink to this headline">¶</a></h2>
+<h2>Heisenberg model<a class="headerlink" href="#heisenberg-model" title="Permalink to this heading">¶</a></h2>
 <p>This tutorial should be performed in</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sample</span><span class="o">/</span><span class="n">Standard</span><span class="o">/</span><span class="n">Spin</span><span class="o">/</span><span class="n">HeisenbergChain</span><span class="o">/.</span>
 </pre></div>
@@ -102,7 +103,7 @@ chain which has a nearest neighbor spin coupling.</p>
 <p>In this tutorial, J and the number of sites are set to 1 (arbitrary
 unit) and 16 respectively.</p>
 <section id="running">
-<h3>Running<a class="headerlink" href="#running" title="Permalink to this headline">¶</a></h3>
+<h3>Running<a class="headerlink" href="#running" title="Permalink to this heading">¶</a></h3>
 <p>We execute the following command.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ mpiexec -np number-of-processes Path/vmcdry.out -s StdFace.def
 </pre></div>
@@ -267,7 +268,7 @@ judged. By using gnuplot, we can check the evolution of
 <p>The details of these outputted files are shown in <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">Output files</span></a>.</p>
 </section>
 <section id="output-results">
-<h3>Output results<a class="headerlink" href="#output-results" title="Permalink to this headline">¶</a></h3>
+<h3>Output results<a class="headerlink" href="#output-results" title="Permalink to this heading">¶</a></h3>
 <p>After finishing calculation normally, the files for the energy, the
 deviation, the optimized variational parameters and the time of
 execution for each calculation steps are outputted in <code class="docutils literal notranslate"><span class="pre">output/</span></code>
@@ -282,7 +283,7 @@ directory. In the following, the outputted files are shown</p>
 <p>The details of these outputted files are shown in <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">Output files</span></a>.</p>
 </section>
 <section id="calculation-of-green-functions">
-<h3>Calculation of Green functions<a class="headerlink" href="#calculation-of-green-functions" title="Permalink to this headline">¶</a></h3>
+<h3>Calculation of Green functions<a class="headerlink" href="#calculation-of-green-functions" title="Permalink to this heading">¶</a></h3>
 <p>After changing the value of <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> from 0 to 1 in
 <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> file, we execute the following command. When we add
 <code class="docutils literal notranslate"><span class="pre">&quot;zqp_opt.dat&quot;</span></code> after <code class="docutils literal notranslate"><span class="pre">&quot;namelist.dat&quot;</span></code> as a command-line argument as
@@ -301,7 +302,7 @@ optimized variational parameters.</p>
 </section>
 </section>
 <section id="input-files-for-expert-mode">
-<h2>Input files for Expert mode<a class="headerlink" href="#input-files-for-expert-mode" title="Permalink to this headline">¶</a></h2>
+<h2>Input files for Expert mode<a class="headerlink" href="#input-files-for-expert-mode" title="Permalink to this heading">¶</a></h2>
 <p>In mVMC, the calculation is done by reading input files categorized by
 the following six parts.</p>
 <ol class="arabic simple">
@@ -323,7 +324,7 @@ be outputted.</p></li>
 input files. The details for each files are shown in <a class="reference internal" href="expert.html#howtoexpert"><span class="std std-ref">Input files for Expert mode</span></a>.</p>
 </section>
 <section id="fourier-transformation-of-correlation-functions">
-<h2>Fourier transformation of correlation functions<a class="headerlink" href="#fourier-transformation-of-correlation-functions" title="Permalink to this headline">¶</a></h2>
+<h2>Fourier transformation of correlation functions<a class="headerlink" href="#fourier-transformation-of-correlation-functions" title="Permalink to this heading">¶</a></h2>
 <p>This package has a utility which performs the Fourier transformation of
 the correlation function and plots that function.
 For more details, please see <a class="reference internal" href="fourier/index.html#fourier"><span class="std std-ref">HPhi/mVMC Fourier-Transformation utility</span></a>.</p>
@@ -340,8 +341,9 @@ For more details, please see <a class="reference internal" href="fourier/index.h
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">Table of Contents</a></h3>
-  <ul>
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">Tutorial</a><ul>
 <li><a class="reference internal" href="#list-of-sample-files">List of sample files</a></li>
 <li><a class="reference internal" href="#heisenberg-model">Heisenberg model</a><ul>
@@ -356,12 +358,17 @@ For more details, please see <a class="reference internal" href="fourier/index.h
 </li>
 </ul>
 
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="start.html"
-                        title="previous chapter">How to use mVMC?</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="standard.html"
-                        title="next chapter">Input files for Standard mode</a></p>
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="start.html"
+                          title="previous chapter">How to use mVMC?</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="standard.html"
+                          title="next chapter">Input files for Standard mode</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -378,7 +385,7 @@ For more details, please see <a class="reference internal" href="fourier/index.h
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -401,7 +408,7 @@ For more details, please see <a class="reference internal" href="fourier/index.h
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

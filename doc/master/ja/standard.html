@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>スタンダードモード用入力ファイル書式 &#8212; mVMC 1.2.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script src="_static/translations.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -45,7 +46,7 @@
           <div class="body" role="main">
             
   <section id="howtostandard">
-<span id="id1"></span><h1>スタンダードモード用入力ファイル書式<a class="headerlink" href="#howtostandard" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<span id="id1"></span><h1>スタンダードモード用入力ファイル書式<a class="headerlink" href="#howtostandard" title="この見出しへのパーマリンク">¶</a></h1>
 <p>スタンダードモード用入力ファイルは次のような格好をしています。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">W</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="n">L</span> <span class="o">=</span> <span class="mi">4</span>
@@ -79,7 +80,7 @@
 </ul>
 <p>次に各キーワードの説明をします。</p>
 <section id="id2">
-<h2>計算の種類に関する必須パラメーター<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>計算の種類に関する必須パラメーター<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">model</span></code></p>
 <p><strong>形式 :</strong> 文字列( <code class="docutils literal notranslate"><span class="pre">&quot;Fermion</span> <span class="pre">Hubbard&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Spin&quot;</span></code>,
@@ -168,9 +169,9 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 </ul>
 </section>
 <section id="id3">
-<h2>格子に関するパラメーター<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>格子に関するパラメーター<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
 <section id="id4">
-<h3>1次元鎖<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>1次元鎖<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
 <p>Fig. <a href="#latticepng">2</a> (a)</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">L</span></code></p>
@@ -180,7 +181,7 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 </ul>
 </section>
 <section id="id5">
-<h3>梯子格子<a class="headerlink" href="#id5" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>梯子格子<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
 <p>Fig. <a href="#ladderpng">5</a></p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">L</span></code></p>
@@ -202,7 +203,7 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 </figure>
 </section>
 <section id="id6">
-<h3>正方格子、 三角格子、 蜂の巣格子、 カゴメ格子<a class="headerlink" href="#id6" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>正方格子、 三角格子、 蜂の巣格子、 カゴメ格子<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h3>
 <p>正方格子[Fig. <a href="#latticepng">2</a> (b)]、 三角格子[Fig. <a href="#latticepng">2</a> (c)]、 蜂の巣格子(Fig. <a href="#honeycombpng">3</a>)、 カゴメ格子(Fig. <a href="#kagomepng">4</a>)</p>
 <p>これらの格子では、標準の単位胞(図中の黒の破線を参照)を用いて格子形状を指定する方法と、
 それらとは別の方向に格子ベクトルを取る方法が選択できます。
@@ -231,7 +232,7 @@ coordinate) で指定されます。</p>
 </section>
 </section>
 <section id="id7">
-<h2>副格子<a class="headerlink" href="#id7" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>副格子<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h2>
 <p>以下パラメータを用いると変分波動関数のペア軌道部分に副格子の周期性を持たせることが出来ます。</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">a0Wsub</span></code>, <code class="docutils literal notranslate"><span class="pre">a0Lsub</span></code>, <code class="docutils literal notranslate"><span class="pre">a1Wsub</span></code>, <code class="docutils literal notranslate"><span class="pre">a1Lsub</span></code>, <code class="docutils literal notranslate"><span class="pre">Wsub</span></code>, <code class="docutils literal notranslate"><span class="pre">Lsub</span></code></p>
@@ -245,12 +246,12 @@ coordinate) で指定されます。</p>
 </ul>
 </section>
 <section id="id8">
-<h2>ハミルトニアンの各項の係数<a class="headerlink" href="#id8" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>ハミルトニアンの各項の係数<a class="headerlink" href="#id8" title="この見出しへのパーマリンク">¶</a></h2>
 <p>デフォルト値は特に記載されていないものについては0に設定してあります。
 型が複素数のパラメータは「実部, 虚部」(間に“,”)の形式で指定し、
 実数の場合には「実部」で指定が可能です。</p>
 <section id="id9">
-<h3>局所項<a class="headerlink" href="#id9" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>局所項<a class="headerlink" href="#id9" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">mu</span></code></p>
 <p><strong>形式 :</strong> 実数</p>
@@ -283,15 +284,6 @@ Hubbardおよび近藤格子模型でのオンサイトクーロン積分を指�
 また、各格子で指定可能なパラメーターをTable
 [table_interactions]に表します。</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 40%" />
-<col style="width: 8%" />
-<col style="width: 9%" />
-<col style="width: 9%" />
-<col style="width: 12%" />
-<col style="width: 12%" />
-<col style="width: 9%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>相互作用</p></th>
 <th class="head"><p>1次元鎖</p></th>
@@ -404,7 +396,7 @@ Hubbardおよび近藤格子模型でのオンサイトクーロン積分を指�
 <p>Table: 各格子で定義可能な相互作用一覧。ただし、スピン結合については行列として与えることが可能。</p>
 </section>
 <section id="id10">
-<h3>非局所項[梯子格子]<a class="headerlink" href="#id10" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>非局所項[梯子格子]<a class="headerlink" href="#id10" title="この見出しへのパーマリンク">¶</a></h3>
 <p>Fig. <a href="#ladderpng">5</a></p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">t0</span></code>, <code class="docutils literal notranslate"><span class="pre">t1</span></code>, <code class="docutils literal notranslate"><span class="pre">t1'</span></code>, <code class="docutils literal notranslate"><span class="pre">t2</span></code>, <code class="docutils literal notranslate"><span class="pre">t2'</span></code></p>
@@ -439,7 +431,7 @@ Hubbardおよび近藤格子模型でのオンサイトクーロン積分を指�
 </ul>
 </section>
 <section id="id11">
-<h3>非局所項 (梯子格子以外)<a class="headerlink" href="#id11" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>非局所項 (梯子格子以外)<a class="headerlink" href="#id11" title="この見出しへのパーマリンク">¶</a></h3>
 <p>Figs. <a href="#latticepng">2</a> , <a href="#honeycombpng">3</a> , <a href="#kagomepng">4</a></p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">t</span></code>, <code class="docutils literal notranslate"><span class="pre">t0</span></code>, <code class="docutils literal notranslate"><span class="pre">t1</span></code>, <code class="docutils literal notranslate"><span class="pre">t2</span></code></p>
@@ -589,7 +581,7 @@ Hubbardおよび近藤格子模型での、第三近接サイト間のCoulomb積
 </section>
 </section>
 <section id="id12">
-<h2>計算条件のパラメーター<a class="headerlink" href="#id12" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>計算条件のパラメーター<a class="headerlink" href="#id12" title="この見出しへのパーマリンク">¶</a></h2>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">ncond</span></code></p>
 <p><strong>形式 :</strong> int型 (1以上、必須)</p>
@@ -682,13 +674,13 @@ rank+1 で初期seed が与えられます。</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">NStore</span></code></p>
 <p><strong>形式 :</strong> int型 (0もしくは1、デフォルト値=1)</p>
 <p><strong>説明 :</strong>
-期待値 <span class="math notranslate nohighlight">\(\langle O_k O_l \rangle\)</span> を計算するとき行列-行列積にして高速化するオプション(1で機能On、モンテカルロサンプリング数に応じてメモリの消費が増大します <a class="footnote-reference brackets" href="#id15" id="id13">1</a>)。</p>
+期待値 <span class="math notranslate nohighlight">\(\langle O_k O_l \rangle\)</span> を計算するとき行列-行列積にして高速化するオプション(1で機能On、モンテカルロサンプリング数に応じてメモリの消費が増大します <a class="footnote-reference brackets" href="#id15" id="id13" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>)。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NSRCG</span></code></p>
 <p><strong>形式 :</strong> int型 (0もしくは1、デフォルト値=0)</p>
 <p><strong>説明 :</strong> SR法で連立一次方程式 <span class="math notranslate nohighlight">\(Sx=g\)</span>
 を解くときに、 <span class="math notranslate nohighlight">\(S\)</span>
-を陽に構築せずに解くことでメモリを削減する <a class="footnote-reference brackets" href="#id16" id="id14">2</a> オプション[<a class="reference external" href="https://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045103">NeuscammanUmrigarChan</a> ](1で機能On,
+を陽に構築せずに解くことでメモリを削減する <a class="footnote-reference brackets" href="#id16" id="id14" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> オプション[<a class="reference external" href="https://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045103">NeuscammanUmrigarChan</a> ](1で機能On,
 <code class="docutils literal notranslate"><span class="pre">NStore</span></code> は1に固定されます)。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ComplexType</span></code></p>
@@ -725,16 +717,18 @@ rank+1 で初期seed が与えられます。</p>
 最適化された変分パラメータの出力ファイル名のヘッダ。最適化された変分パラメータが <strong>xxx_opt.dat</strong> ファイルとして出力されます(xxxに <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> で指定した文字が記載)。</p>
 </li>
 </ul>
-<dl class="footnote brackets">
-<dt class="label" id="id15"><span class="brackets"><a class="fn-backref" href="#id13">1</a></span></dt>
-<dd><p>使用メモリ量が、 <span class="math notranslate nohighlight">\(O(N_\text{p}^2)\)</span> から
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id15" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id13">1</a><span class="fn-bracket">]</span></span>
+<p>使用メモリ量が、 <span class="math notranslate nohighlight">\(O(N_\text{p}^2)\)</span> から
 <span class="math notranslate nohighlight">\(O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})\)</span> になります。</p>
-</dd>
-<dt class="label" id="id16"><span class="brackets"><a class="fn-backref" href="#id14">2</a></span></dt>
-<dd><p>使用メモリ量は、 <span class="math notranslate nohighlight">\(O(N_\text{p}) + O(N_\text{p}N_\text{MCS})\)</span>
+</aside>
+<aside class="footnote brackets" id="id16" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id14">2</a><span class="fn-bracket">]</span></span>
+<p>使用メモリ量は、 <span class="math notranslate nohighlight">\(O(N_\text{p}) + O(N_\text{p}N_\text{MCS})\)</span>
 です。</p>
-</dd>
-</dl>
+</aside>
+</aside>
 </section>
 </section>
 
@@ -748,8 +742,9 @@ rank+1 で初期seed が与えられます。</p>
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">目次</a></h3>
-  <ul>
+  <div>
+    <h3><a href="index.html">目次</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">スタンダードモード用入力ファイル書式</a><ul>
 <li><a class="reference internal" href="#id2">計算の種類に関する必須パラメーター</a></li>
 <li><a class="reference internal" href="#id3">格子に関するパラメーター</a><ul>
@@ -770,12 +765,17 @@ rank+1 で初期seed が与えられます。</p>
 </li>
 </ul>
 
-  <h4>前のトピックへ</h4>
-  <p class="topless"><a href="tutorial.html"
-                        title="前の章へ">チュートリアル</a></p>
-  <h4>次のトピックへ</h4>
-  <p class="topless"><a href="expert.html"
-                        title="次の章へ">エキスパートモード入力ファイル書式</a></p>
+  </div>
+  <div>
+    <h4>前のトピックへ</h4>
+    <p class="topless"><a href="tutorial.html"
+                          title="前の章へ">チュートリアル</a></p>
+  </div>
+  <div>
+    <h4>次のトピックへ</h4>
+    <p class="topless"><a href="expert.html"
+                          title="次の章へ">エキスパートモード入力ファイル書式</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>このページ</h3>
     <ul class="this-page-menu">
@@ -792,7 +792,7 @@ rank+1 で初期seed が与えられます。</p>
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -815,7 +815,7 @@ rank+1 で初期seed が与えられます。</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

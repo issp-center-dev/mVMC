@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>Tutorial &#8212; mVMC 1.2.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
@@ -45,11 +46,11 @@
           <div class="body" role="main">
             
   <section id="tutorial">
-<span id="id1"></span><h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<span id="id1"></span><h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this heading">¶</a></h1>
 <p>In this tutorial, we explain through a sample calculation of
 the 8-site Hubbard model on the square lattice.</p>
 <section id="run-hphi-vmc-out">
-<h2>Run HPhi/vmc.out<a class="headerlink" href="#run-hphi-vmc-out" title="Permalink to this headline">¶</a></h2>
+<h2>Run HPhi/vmc.out<a class="headerlink" href="#run-hphi-vmc-out" title="Permalink to this heading">¶</a></h2>
 <ul>
 <li><p>For <span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span></p>
 <p>We calculate the ground state and the correlation function with
@@ -109,7 +110,7 @@ in the <code class="docutils literal notranslate"><span class="pre">output/</spa
 </ul>
 </section>
 <section id="fourier-transformation-of-correlation-functions">
-<h2>Fourier transformation of correlation functions<a class="headerlink" href="#fourier-transformation-of-correlation-functions" title="Permalink to this headline">¶</a></h2>
+<h2>Fourier transformation of correlation functions<a class="headerlink" href="#fourier-transformation-of-correlation-functions" title="Permalink to this heading">¶</a></h2>
 <p>Perform the Fourier transformation of the correlation function
 by using the utility <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code>.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">echo</span> <span class="s2">&quot;4 20</span>
@@ -134,11 +135,11 @@ written to a file in <code class="docutils literal notranslate"><span class="pre
 </ul>
 </section>
 <section id="display-correlation-functions">
-<h2>Display correlation functions<a class="headerlink" href="#display-correlation-functions" title="Permalink to this headline">¶</a></h2>
+<h2>Display correlation functions<a class="headerlink" href="#display-correlation-functions" title="Permalink to this heading">¶</a></h2>
 <p>Plot the correlation function in the <em>k</em> space
 by using gnuplot.</p>
-<div class="highlight-gnuplot notranslate"><div class="highlight"><pre><span></span><span class="k">load</span> <span class="s">&quot;kpath.gp&quot;</span>
-<span class="k">plot</span> <span class="s">&quot;output/zvo_corr_eigen0.dat&quot;</span> <span class="nb">u</span> <span class="mi">1</span><span class="o">:</span><span class="mi">12</span> <span class="nb">w</span> <span class="n">l</span>
+<div class="highlight-gnuplot notranslate"><div class="highlight"><pre><span></span><span class="k">load</span><span class="w"> </span><span class="s">&quot;kpath.gp&quot;</span><span class="w"></span>
+<span class="k">plot</span><span class="w"> </span><span class="s">&quot;output/zvo_corr_eigen0.dat&quot;</span><span class="w"> </span><span class="nb">u</span><span class="w"> </span><span class="mi">1</span><span class="o">:</span><span class="mi">12</span><span class="w"> </span><span class="nb">w</span><span class="w"> </span><span class="n">l</span><span class="w"></span>
 </pre></div>
 </div>
 <figure class="align-default" id="id2">
@@ -166,8 +167,9 @@ by using gnuplot.</p>
             <p class="logo"><a href="../index.html">
               <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="../index.html">Table of Contents</a></h3>
-  <ul>
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">Tutorial</a><ul>
 <li><a class="reference internal" href="#run-hphi-vmc-out">Run HPhi/vmc.out</a></li>
 <li><a class="reference internal" href="#fourier-transformation-of-correlation-functions">Fourier transformation of correlation functions</a></li>
@@ -176,12 +178,17 @@ by using gnuplot.</p>
 </li>
 </ul>
 
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="overview.html"
-                        title="previous chapter">Overview</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="format.html"
-                        title="next chapter">File format</a></p>
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="overview.html"
+                          title="previous chapter">Overview</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="format.html"
+                          title="next chapter">File format</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -198,7 +205,7 @@ by using gnuplot.</p>
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -222,7 +229,7 @@ by using gnuplot.</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

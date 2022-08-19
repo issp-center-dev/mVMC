@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>チュートリアル &#8212; mVMC 1.2.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
     <script src="../_static/translations.js"></script>
     
@@ -45,7 +46,7 @@
           <div class="body" role="main">
             
   <section id="tutorialwannier">
-<span id="id1"></span><h1>チュートリアル<a class="headerlink" href="#tutorialwannier" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<span id="id1"></span><h1>チュートリアル<a class="headerlink" href="#tutorialwannier" title="この見出しへのパーマリンク">¶</a></h1>
 <p>このチュートリアルでは Sr<sub>2</sub>CuO<sub>3</sub> を例に,
 1次元1軌道Hubbardモデルにダウンフォールドし,
 HPhi/mVMCで計算するまでの一連の流れを示す.
@@ -54,7 +55,7 @@ DFT計算はQuantumESPRESSOで行う.
 <p>なお, 実際の研究では必要に応じ, 各ソルバーの入力ファイル等を調整する.
 入力ファイルの詳細については, 各ソルバーのマニュアルを参考にすること.</p>
 <section id="scf">
-<h2>電荷密度のSCF計算<a class="headerlink" href="#scf" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>電荷密度のSCF計算<a class="headerlink" href="#scf" title="この見出しへのパーマリンク">¶</a></h2>
 <p>まず, DFTによる電荷密度のSCF計算を行う.</p>
 <p><a class="reference download internal" download="" href="../_downloads/fc8a03ca4d72a607207c9c468c338dd3/scf.in"><code class="xref download docutils literal notranslate"><span class="pre">scf.in</span></code></a></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">CONTROL</span>
@@ -102,7 +103,7 @@ DFT計算はQuantumESPRESSOで行う.
 </div>
 </section>
 <section id="optional">
-<h2>(Optional) バンド計算と描画<a class="headerlink" href="#optional" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>(Optional) バンド計算と描画<a class="headerlink" href="#optional" title="この見出しへのパーマリンク">¶</a></h2>
 <p><a class="reference download internal" download="" href="../_downloads/da167c3c214ea2b40788f448a3605d0b/band.in"><code class="xref download docutils literal notranslate"><span class="pre">band.in</span></code></a></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">CONTROL</span>
  <span class="n">calculation</span> <span class="o">=</span> <span class="s1">&#39;bands&#39;</span>
@@ -206,7 +207,7 @@ DFT計算はQuantumESPRESSOで行う.
 <p>出力された <code class="docutils literal notranslate"><span class="pre">bands.out.gnu</span></code> をGnuPlotなどで読み込んでバンドを描く.</p>
 </section>
 <section id="kohn-sham">
-<h2>Kohn-Sham軌道の計算<a class="headerlink" href="#kohn-sham" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>Kohn-Sham軌道の計算<a class="headerlink" href="#kohn-sham" title="この見出しへのパーマリンク">¶</a></h2>
 <p><a class="reference download internal" download="" href="../_downloads/b593b96ec06a24a051e56aa0df84bd84/nscf.in"><code class="xref download docutils literal notranslate"><span class="pre">nscf.in</span></code></a></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">CONTROL</span>
  <span class="n">calculation</span> <span class="o">=</span> <span class="s1">&#39;nscf&#39;</span>
@@ -255,7 +256,7 @@ DFT計算はQuantumESPRESSOで行う.
 </div>
 </section>
 <section id="wannier">
-<h2>Wannier関数, 誘電関数, 有効相互作用の計算<a class="headerlink" href="#wannier" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>Wannier関数, 誘電関数, 有効相互作用の計算<a class="headerlink" href="#wannier" title="この見出しへのパーマリンク">¶</a></h2>
 <p><a class="reference download internal" download="" href="../_downloads/b37127883768c5403e364998cb94cc7f/respack.in"><code class="xref download docutils literal notranslate"><span class="pre">respack.in</span></code></a></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&amp;PARAM_CHIQW
 Num_freq_grid = 1
@@ -316,7 +317,7 @@ Wannier90の形式で <code class="docutils literal notranslate"><span class="pr
 (RESPACKのバージョン20190227 以前では,  <code class="docutils literal notranslate"><span class="pre">dir-mvmc</span></code> ディレクトリ)</p>
 </section>
 <section id="hphi-mvmc">
-<h2>HPhi/mVMCによるモデル計算<a class="headerlink" href="#hphi-mvmc" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>HPhi/mVMCによるモデル計算<a class="headerlink" href="#hphi-mvmc" title="この見出しへのパーマリンク">¶</a></h2>
 <p>HPhi/mVMCのスタンダードモードを利用することで,
 <code class="docutils literal notranslate"><span class="pre">dir-model</span></code> のファイルを読み込み該当したモデルの計算ができる.
 最初に <code class="docutils literal notranslate"><span class="pre">dir-model</span></code> 以下のファイル一式を, 実行するディレクトリに移したあとに,
@@ -359,8 +360,9 @@ $ HPhi -s stan.in
             <p class="logo"><a href="../index.html">
               <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="../index.html">目次</a></h3>
-  <ul>
+  <div>
+    <h3><a href="../index.html">目次</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">チュートリアル</a><ul>
 <li><a class="reference internal" href="#scf">電荷密度のSCF計算</a></li>
 <li><a class="reference internal" href="#optional">(Optional) バンド計算と描画</a></li>
@@ -371,12 +373,17 @@ $ HPhi -s stan.in
 </li>
 </ul>
 
-  <h4>前のトピックへ</h4>
-  <p class="topless"><a href="overview.html"
-                        title="前の章へ">概要</a></p>
-  <h4>次のトピックへ</h4>
-  <p class="topless"><a href="parameter.html"
-                        title="次の章へ">スタンダードモードの入力パラメーター</a></p>
+  </div>
+  <div>
+    <h4>前のトピックへ</h4>
+    <p class="topless"><a href="overview.html"
+                          title="前の章へ">概要</a></p>
+  </div>
+  <div>
+    <h4>次のトピックへ</h4>
+    <p class="topless"><a href="parameter.html"
+                          title="次の章へ">スタンダードモードの入力パラメーター</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>このページ</h3>
     <ul class="this-page-menu">
@@ -393,7 +400,7 @@ $ HPhi -s stan.in
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -417,7 +424,7 @@ $ HPhi -s stan.in
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

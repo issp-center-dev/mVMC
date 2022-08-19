@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>How to use mVMC? &#8212; mVMC 1.2.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
@@ -43,9 +44,9 @@
           <div class="body" role="main">
             
   <section id="how-to-use-mvmc">
-<h1>How to use mVMC?<a class="headerlink" href="#how-to-use-mvmc" title="Permalink to this headline">¶</a></h1>
+<h1>How to use mVMC?<a class="headerlink" href="#how-to-use-mvmc" title="Permalink to this heading">¶</a></h1>
 <section id="prerequisite">
-<h2>Prerequisite<a class="headerlink" href="#prerequisite" title="Permalink to this headline">¶</a></h2>
+<h2>Prerequisite<a class="headerlink" href="#prerequisite" title="Permalink to this heading">¶</a></h2>
 <p>mVMC requires the following packages:</p>
 <ul class="simple">
 <li><p>C compiler (intel, Fujitsu, GNU, etc. )</p></li>
@@ -70,7 +71,7 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 </div>
 </section>
 <section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">¶</a></h2>
 <p>You can download mVMC in the following place.
 <a class="reference external" href="https://github.com/issp-center-dev/mVMC/releases">https://github.com/issp-center-dev/mVMC/releases</a></p>
 <p>You can obtain the mVMC directory by typing</p>
@@ -79,7 +80,7 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 </div>
 <p>There are two kind of procedures to install mVMC.</p>
 <section id="using-mvmcconfig-sh">
-<h3>Using <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code><a class="headerlink" href="#using-mvmcconfig-sh" title="Permalink to this headline">¶</a></h3>
+<h3>Using <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code><a class="headerlink" href="#using-mvmcconfig-sh" title="Permalink to this heading">¶</a></h3>
 <p>Please run <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> script in the mVMC directory as follow (for
 ISSP system-B “sekirei”):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ bash mVMCconfig.sh sekirei
@@ -127,7 +128,7 @@ If you keep this PATH, you should write above in <code class="docutils literal n
 <code class="docutils literal notranslate"><span class="pre">bash</span></code> as a login shell)</p>
 </section>
 <section id="using-cmake">
-<h3>Using <code class="docutils literal notranslate"><span class="pre">cmake</span></code><a class="headerlink" href="#using-cmake" title="Permalink to this headline">¶</a></h3>
+<h3>Using <code class="docutils literal notranslate"><span class="pre">cmake</span></code><a class="headerlink" href="#using-cmake" title="Permalink to this heading">¶</a></h3>
 <p>We can compile mVMC as</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="nv">$HOME</span>/build/mvmc
 cmake -DCONFIG<span class="o">=</span>gcc <span class="nv">$PathTomvmc</span>
@@ -186,7 +187,7 @@ circumstance, please set <code class="docutils literal notranslate"><span class=
 </section>
 </section>
 <section id="directory-structure">
-<h2>Directory structure<a class="headerlink" href="#directory-structure" title="Permalink to this headline">¶</a></h2>
+<h2>Directory structure<a class="headerlink" href="#directory-structure" title="Permalink to this heading">¶</a></h2>
 <blockquote>
 <div><p>When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>.
@@ -233,7 +234,7 @@ circumstance, please set <code class="docutils literal notranslate"><span class=
 </div></blockquote>
 </section>
 <section id="basic-usage">
-<h2>Basic usage<a class="headerlink" href="#basic-usage" title="Permalink to this headline">¶</a></h2>
+<h2>Basic usage<a class="headerlink" href="#basic-usage" title="Permalink to this heading">¶</a></h2>
 <p>mVMC works as whether the following two modes:</p>
 <ul>
 <li><p>Expert mode</p>
@@ -310,7 +311,7 @@ as follows (in case of 16 threads) before the running:</p>
 </div>
 </section>
 <section id="printing-version-id">
-<h2>Printing version ID<a class="headerlink" href="#printing-version-id" title="Permalink to this headline">¶</a></h2>
+<h2>Printing version ID<a class="headerlink" href="#printing-version-id" title="Permalink to this heading">¶</a></h2>
 <p>By using <code class="docutils literal notranslate"><span class="pre">-v</span></code> option as follows, you can check which version of mVMC
 you are using.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ PATH/vmcdry.out -v
@@ -330,8 +331,9 @@ $ PATH/vmc.out -v
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">Table of Contents</a></h3>
-  <ul>
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">How to use mVMC?</a><ul>
 <li><a class="reference internal" href="#prerequisite">Prerequisite</a></li>
 <li><a class="reference internal" href="#installation">Installation</a><ul>
@@ -346,12 +348,17 @@ $ PATH/vmc.out -v
 </li>
 </ul>
 
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="intro.html"
-                        title="previous chapter">What is mVMC?</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="tutorial.html"
-                        title="next chapter">Tutorial</a></p>
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="intro.html"
+                          title="previous chapter">What is mVMC?</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="tutorial.html"
+                          title="next chapter">Tutorial</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -368,7 +375,7 @@ $ PATH/vmc.out -v
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -391,7 +398,7 @@ $ PATH/vmc.out -v
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

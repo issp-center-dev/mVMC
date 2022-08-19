@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>チュートリアル &#8212; mVMC 1.2.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script src="_static/translations.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -45,9 +46,9 @@
           <div class="body" role="main">
             
   <section id="id1">
-<h1>チュートリアル<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<h1>チュートリアル<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
 <section id="id2">
-<h2>サンプルファイル一覧<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>サンプルファイル一覧<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
 <p>mVMCでは <code class="docutils literal notranslate"><span class="pre">sample/Standard/</span></code> 以下に次のサンプルを用意しています。</p>
 <ul>
 <li><p>2次元正方格子Hubbardモデル</p>
@@ -73,7 +74,7 @@
 以下ではHeisenberg模型について説明します。</p>
 </section>
 <section id="heisenberg">
-<h2>Heisenberg模型<a class="headerlink" href="#heisenberg" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>Heisenberg模型<a class="headerlink" href="#heisenberg" title="この見出しへのパーマリンク">¶</a></h2>
 <p>以下のチュートリアルはディレクトリ</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sample</span><span class="o">/</span><span class="n">Standard</span><span class="o">/</span><span class="n">Spin</span><span class="o">/</span><span class="n">HeisenbergChain</span><span class="o">/</span>
 </pre></div>
@@ -102,7 +103,7 @@
 <div class="line">この例ではスピン結合 <span class="math notranslate nohighlight">\(J=1\)</span> (任意単位)とし、サイト数は16としました。</div>
 </div>
 <section id="id3">
-<h3>計算実行<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>計算実行<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h3>
 <p>実行コマンドは次のとおりです。</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">mpiexec</span> <span class="pre">-np</span> <span class="pre">&quot;プロセス数&quot;</span>&#160; <span class="pre">&quot;パス&quot;/vmc.out</span> <span class="pre">-s</span> <span class="pre">StdFace.def</span></code></p>
 <p>使っているシステムによっては <code class="docutils literal notranslate"><span class="pre">mpiexec</span></code> コマンドではなく <code class="docutils literal notranslate"><span class="pre">mpirun</span></code> や <code class="docutils literal notranslate"><span class="pre">mpijob</span></code> 、
@@ -263,7 +264,7 @@ gnuplotを用いる場合には、次のようにして表示することが出�
 </div>
 </section>
 <section id="id4">
-<h3>計算結果出力<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>計算結果出力<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
 <div class="line-block">
 <div class="line">計算が正常終了すると、エネルギー、エネルギーの分散、
 変分パラメータおよび計算実行時間を記載したファイルが <code class="docutils literal notranslate"><span class="pre">output/</span></code>
@@ -280,7 +281,7 @@ gnuplotを用いる場合には、次のようにして表示することが出�
 <p>各ファイルの詳細については <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">出力ファイル</span></a> をご覧ください。</p>
 </section>
 <section id="green">
-<h3>Green関数の計算<a class="headerlink" href="#green" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>Green関数の計算<a class="headerlink" href="#green" title="この見出しへのパーマリンク">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> ファイル中の <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> を0から1に変更の上、以下のコマンドを実行します。
 下記のように 実行時のコマンドライン引数として
 <code class="docutils literal notranslate"><span class="pre">&quot;namelist.dat&quot;</span></code> の後ろに <code class="docutils literal notranslate"><span class="pre">&quot;zqp_opt.dat&quot;</span></code> を付け加えることで、
@@ -301,7 +302,7 @@ gnuplotを用いる場合には、次のようにして表示することが出�
 </section>
 </section>
 <section id="id5">
-<h2>エキスパートユーザー向け<a class="headerlink" href="#id5" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>エキスパートユーザー向け<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h2>
 <p>mVMCでは、以下の6つに分類される入力ファイルを読み込み、計算実行を行います。</p>
 <dl class="simple">
 <dt>(1) List:</dt><dd><p>詳細入力ファイルの種類と名前を指定するファイル</p>
@@ -321,7 +322,7 @@ gnuplotを用いる場合には、次のようにして表示することが出�
 ファイルの詳細については <a class="reference internal" href="expert.html#howtoexpert"><span class="std std-ref">エキスパートモード入力ファイル書式</span></a> をご覧ください。</p>
 </section>
 <section id="id6">
-<h2>相関関数のフーリエ変換<a class="headerlink" href="#id6" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>相関関数のフーリエ変換<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h2>
 <p>このパッケージには、上で求めた相関関数をフーリエ変換し、プロットするユーティリティーが付属しています。
 詳しくは <a class="reference internal" href="fourier/index.html#fourier"><span class="std std-ref">相関関数のFourier変換ユーティリティー</span></a> を参照してください。</p>
 </section>
@@ -337,8 +338,9 @@ gnuplotを用いる場合には、次のようにして表示することが出�
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">目次</a></h3>
-  <ul>
+  <div>
+    <h3><a href="index.html">目次</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">チュートリアル</a><ul>
 <li><a class="reference internal" href="#id2">サンプルファイル一覧</a></li>
 <li><a class="reference internal" href="#heisenberg">Heisenberg模型</a><ul>
@@ -353,12 +355,17 @@ gnuplotを用いる場合には、次のようにして表示することが出�
 </li>
 </ul>
 
-  <h4>前のトピックへ</h4>
-  <p class="topless"><a href="start.html"
-                        title="前の章へ">How to use mVMC?</a></p>
-  <h4>次のトピックへ</h4>
-  <p class="topless"><a href="standard.html"
-                        title="次の章へ">スタンダードモード用入力ファイル書式</a></p>
+  </div>
+  <div>
+    <h4>前のトピックへ</h4>
+    <p class="topless"><a href="start.html"
+                          title="前の章へ">How to use mVMC?</a></p>
+  </div>
+  <div>
+    <h4>次のトピックへ</h4>
+    <p class="topless"><a href="standard.html"
+                          title="次の章へ">スタンダードモード用入力ファイル書式</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>このページ</h3>
     <ul class="this-page-menu">
@@ -375,7 +382,7 @@ gnuplotを用いる場合には、次のようにして表示することが出�
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -398,7 +405,7 @@ gnuplotを用いる場合には、次のようにして表示することが出�
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

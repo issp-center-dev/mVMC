@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>Algorithm &#8212; mVMC 1.2.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
@@ -44,9 +45,9 @@
           <div class="body" role="main">
             
   <section id="algorithm">
-<h1>Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h1>
+<h1>Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this heading">¶</a></h1>
 <section id="variational-monte-calro-method">
-<h2>Variational Monte Calro Method<a class="headerlink" href="#variational-monte-calro-method" title="Permalink to this headline">¶</a></h2>
+<h2>Variational Monte Calro Method<a class="headerlink" href="#variational-monte-calro-method" title="Permalink to this heading">¶</a></h2>
 <p>The variational Monte Carlo (VMC) method is a method for calculating
 approximate wave functions of a ground state and low-lying excited
 states by optimizing variational parameters included in a trial wave
@@ -82,7 +83,7 @@ twister method as a random number generator for
 sampling [<a class="reference external" href="http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT">Mutsuo2008</a> ].</p>
 </section>
 <section id="bogoliubov-representation">
-<h2>Bogoliubov representation<a class="headerlink" href="#bogoliubov-representation" title="Permalink to this headline">¶</a></h2>
+<h2>Bogoliubov representation<a class="headerlink" href="#bogoliubov-representation" title="Permalink to this heading">¶</a></h2>
 <p>In the VMC calculation for spin systems, we use the Bogoliubov
 representation. In the input files defining the one-body term
 (<code class="docutils literal notranslate"><span class="pre">transfer</span></code>) and the two-body term (<code class="docutils literal notranslate"><span class="pre">InterAll</span></code>), and the output
@@ -106,7 +107,7 @@ Bogoliubov representation obtained by substituting <span class="math notranslate
 the above equations is used.</p>
 </section>
 <section id="properties-of-the-pfaffian-slater-determinant">
-<span id="puffandslater"></span><h2>Properties of the Pfaffian-Slater determinant<a class="headerlink" href="#properties-of-the-pfaffian-slater-determinant" title="Permalink to this headline">¶</a></h2>
+<span id="puffandslater"></span><h2>Properties of the Pfaffian-Slater determinant<a class="headerlink" href="#properties-of-the-pfaffian-slater-determinant" title="Permalink to this heading">¶</a></h2>
 <p>In this section, we explain some properties of the Pfaffian-Slater
 determinant. We derive the general relation between a Pfaffian-Slater
 determinant and a single Slater determinant in <a class="reference internal" href="#pfaffianap"><span class="std std-ref">Antiparallel Pfaffian</span></a>
@@ -114,7 +115,7 @@ and <a class="reference internal" href="#pfaffianp"><span class="std std-ref">Ge
 decomposition of coefficients <span class="math notranslate nohighlight">\(f_{ij}\)</span> in
 <a class="reference internal" href="#pfaffiansingular"><span class="std std-ref">SVD</span></a>.</p>
 <section id="relation-between-f-ij-and-phi-in-sigma-the-case-of-the-anti-parallel-pairing">
-<span id="pfaffianap"></span><h3>Relation between <span class="math notranslate nohighlight">\(f_{ij}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> (the case of the anti-parallel pairing)<a class="headerlink" href="#relation-between-f-ij-and-phi-in-sigma-the-case-of-the-anti-parallel-pairing" title="Permalink to this headline">¶</a></h3>
+<span id="pfaffianap"></span><h3>Relation between <span class="math notranslate nohighlight">\(f_{ij}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> (the case of the anti-parallel pairing)<a class="headerlink" href="#relation-between-f-ij-and-phi-in-sigma-the-case-of-the-anti-parallel-pairing" title="Permalink to this heading">¶</a></h3>
 <p>In the many-variable variational Monte Carlo (mVMC) method, the one-body
 part of the trial wave function is expressed by the Pfaffian Slater
 determinant defined as</p>
@@ -181,7 +182,7 @@ the gauge degrees of freedom (i.e., the sign of
 redundancy.</p>
 </section>
 <section id="relation-between-f-ij-and-phi-in-the-case-of-the-general-pairing">
-<span id="pfaffianp"></span><h3>Relation between <span class="math notranslate nohighlight">\(F_{IJ}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{In}\)</span> (the case of the general pairing)<a class="headerlink" href="#relation-between-f-ij-and-phi-in-the-case-of-the-general-pairing" title="Permalink to this headline">¶</a></h3>
+<span id="pfaffianp"></span><h3>Relation between <span class="math notranslate nohighlight">\(F_{IJ}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{In}\)</span> (the case of the general pairing)<a class="headerlink" href="#relation-between-f-ij-and-phi-in-the-case-of-the-general-pairing" title="Permalink to this heading">¶</a></h3>
 <p>We extend the relation between the Pfaffian-Slater wave function and the
 single Slater wave function into the general pairing case including the
 spin-parallel pairing. We define the Pfaffian-Slater wave function and
@@ -202,7 +203,7 @@ F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{I,2n-1}\Phi_{J,2n}-\Phi_{J,2n-1}\P
 employ this relation in mVMC ver 1.0 and later.</p>
 </section>
 <section id="singular-value-decomposition-of-f-ij">
-<span id="pfaffiansingular"></span><h3>Singular value decomposition of <span class="math notranslate nohighlight">\(f_{ij}\)</span><a class="headerlink" href="#singular-value-decomposition-of-f-ij" title="Permalink to this headline">¶</a></h3>
+<span id="pfaffiansingular"></span><h3>Singular value decomposition of <span class="math notranslate nohighlight">\(f_{ij}\)</span><a class="headerlink" href="#singular-value-decomposition-of-f-ij" title="Permalink to this heading">¶</a></h3>
 <p>We define matrices <span class="math notranslate nohighlight">\(F\)</span>, <span class="math notranslate nohighlight">\(\Phi_{\uparrow}\)</span>,
 <span class="math notranslate nohighlight">\(\Phi_{\downarrow}\)</span>, and <span class="math notranslate nohighlight">\(\Sigma\)</span> as</p>
 <div class="math notranslate nohighlight">
@@ -231,12 +232,12 @@ determinant.</p>
 </section>
 </section>
 <section id="power-lanczos-method">
-<h2>Power Lanczos method<a class="headerlink" href="#power-lanczos-method" title="Permalink to this headline">¶</a></h2>
+<h2>Power Lanczos method<a class="headerlink" href="#power-lanczos-method" title="Permalink to this heading">¶</a></h2>
 <p>In this section, we show how to determine <span class="math notranslate nohighlight">\(\alpha\)</span> in the
 power-Lanczos method. We also explain the calculation of physical
 quantities after the single-step Lanczos method.</p>
 <section id="determination-of-alpha">
-<h3>Determination of <span class="math notranslate nohighlight">\(\alpha\)</span><a class="headerlink" href="#determination-of-alpha" title="Permalink to this headline">¶</a></h3>
+<h3>Determination of <span class="math notranslate nohighlight">\(\alpha\)</span><a class="headerlink" href="#determination-of-alpha" title="Permalink to this heading">¶</a></h3>
 <p>First, we briefly explain the sampling procedure of the variational
 Monte Carlo (VMC) method. Physical properties <span class="math notranslate nohighlight">\(\hat{A}\)</span> are
 calculated as follows:</p>
@@ -289,7 +290,7 @@ solving the quadratic equations, we can determine the <span class="math notransl
 The variance is calculate in the similar way.</p>
 </section>
 <section id="calculation-of-physical-quantities">
-<h3>Calculation of physical quantities<a class="headerlink" href="#calculation-of-physical-quantities" title="Permalink to this headline">¶</a></h3>
+<h3>Calculation of physical quantities<a class="headerlink" href="#calculation-of-physical-quantities" title="Permalink to this heading">¶</a></h3>
 <p>By using the optimized parameter <span class="math notranslate nohighlight">\(\alpha\)</span>, we can calculate the
 expected value of the operator <span class="math notranslate nohighlight">\(\hat{A}\)</span> as</p>
 <div class="math notranslate nohighlight">
@@ -319,8 +320,9 @@ A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rang
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">Table of Contents</a></h3>
-  <ul>
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">Algorithm</a><ul>
 <li><a class="reference internal" href="#variational-monte-calro-method">Variational Monte Calro Method</a></li>
 <li><a class="reference internal" href="#bogoliubov-representation">Bogoliubov representation</a></li>
@@ -339,12 +341,17 @@ A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rang
 </li>
 </ul>
 
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="output.html"
-                        title="previous chapter">Output files</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="appendix.html"
-                        title="next chapter">Program for the unrestricted Hartree-Fock approximation</a></p>
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="output.html"
+                          title="previous chapter">Output files</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="appendix.html"
+                          title="next chapter">Program for the unrestricted Hartree-Fock approximation</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -361,7 +368,7 @@ A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rang
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -384,7 +391,7 @@ A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rang
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

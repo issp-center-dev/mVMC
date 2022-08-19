@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>ファイルフォーマット &#8212; mVMC 1.2.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
     <script src="../_static/translations.js"></script>
     
@@ -45,12 +46,12 @@
           <div class="body" role="main">
             
   <section id="id1">
-<h1>ファイルフォーマット<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<h1>ファイルフォーマット<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
 <p>HPhi/mVMCのスタンダードモードでは以下のファイルを読み込む.
 これらのファイルはRESPACKのプログラムを実行すると,
 <code class="docutils literal notranslate"><span class="pre">dir-model</span></code> ディレクトリに <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]=zvo</span></code> として自動出力される.</p>
 <section id="id2">
-<h2>ジオメトリー<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>ジオメトリー<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
 <p>ファイル名は <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_geom.dat</span></code>.
 このファイルを必要に応じて修正することで取り扱う軌道数を変更できる.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="mf">1.917800</span> <span class="mf">1.917800</span> <span class="mf">6.280100</span>
@@ -78,7 +79,7 @@ Wannier関数の数よりも少なくすることも可能であり,
 </ul>
 </section>
 <section id="coulomb">
-<h2>ホッピング, Coulomb積分, 交換積分, 電荷密度<a class="headerlink" href="#coulomb" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>ホッピング, Coulomb積分, 交換積分, 電荷密度<a class="headerlink" href="#coulomb" title="この見出しへのパーマリンク">¶</a></h2>
 <p>ファイル名は <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_hr.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_ur.dat</span></code>,
 <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_jr.dat</span></code>,  <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_dr.dat</span></code>.
 Wannier90のホッピング積分の形式に従う(詳細はwannier90のuser_guideの <code class="docutils literal notranslate"><span class="pre">8.19</span> <span class="pre">seedname_hr.dat</span></code> を参照のこと).</p>
@@ -125,8 +126,9 @@ Wannier90のホッピング積分の形式に従う(詳細はwannier90のuser_gu
             <p class="logo"><a href="../index.html">
               <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="../index.html">目次</a></h3>
-  <ul>
+  <div>
+    <h3><a href="../index.html">目次</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">ファイルフォーマット</a><ul>
 <li><a class="reference internal" href="#id2">ジオメトリー</a></li>
 <li><a class="reference internal" href="#coulomb">ホッピング, Coulomb積分, 交換積分, 電荷密度</a></li>
@@ -134,12 +136,17 @@ Wannier90のホッピング積分の形式に従う(詳細はwannier90のuser_gu
 </li>
 </ul>
 
-  <h4>前のトピックへ</h4>
-  <p class="topless"><a href="parameter.html"
-                        title="前の章へ">スタンダードモードの入力パラメーター</a></p>
-  <h4>次のトピックへ</h4>
-  <p class="topless"><a href="contact.html"
-                        title="次の章へ">Contact</a></p>
+  </div>
+  <div>
+    <h4>前のトピックへ</h4>
+    <p class="topless"><a href="parameter.html"
+                          title="前の章へ">スタンダードモードの入力パラメーター</a></p>
+  </div>
+  <div>
+    <h4>次のトピックへ</h4>
+    <p class="topless"><a href="contact.html"
+                          title="次の章へ">Contact</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>このページ</h3>
     <ul class="this-page-menu">
@@ -156,7 +163,7 @@ Wannier90のホッピング積分の形式に従う(詳細はwannier90のuser_gu
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -180,7 +187,7 @@ Wannier90のホッピング積分の形式に従う(詳細はwannier90のuser_gu
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

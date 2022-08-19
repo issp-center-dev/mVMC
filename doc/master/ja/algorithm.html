@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>アルゴリズム &#8212; mVMC 1.2.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script src="_static/translations.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -45,9 +46,9 @@
           <div class="body" role="main">
             
   <section id="id1">
-<h1>アルゴリズム<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<h1>アルゴリズム<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
 <section id="id2">
-<h2>変分モンテカルロ法<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>変分モンテカルロ法<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
 <p>変分モンテカルロ法では, 試行波動関数を用意して,
 その試行波動関数が含むパラメータを
 変分原理に従って最適化することで量子多体系の基底状態(または低励起エネルギー状態)の波動関数を
@@ -85,7 +86,7 @@ c_{r_{n\downarrow}}^{\dagger} |0 \rangle\]</div>
 メルセンヌツイスター法を使用しています[<a class="reference external" href="http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT">Mutsuo2008</a> ]。</p>
 </section>
 <section id="bogoliubov">
-<span id="bogoliubovrep"></span><h2>Bogoliubov表現<a class="headerlink" href="#bogoliubov" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<span id="bogoliubovrep"></span><h2>Bogoliubov表現<a class="headerlink" href="#bogoliubov" title="この見出しへのパーマリンク">¶</a></h2>
 <p>スピン系の計算において一体項( <code class="docutils literal notranslate"><span class="pre">transfer</span></code>),
 <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> 形式での相互作用,
 相関関数のインデックスの指定にはBogoliubov表現が使われています。
@@ -107,13 +108,13 @@ c_{i \sigma}^\dagger c_{i \sigma+1}
 <span class="math notranslate nohighlight">\(S=1/2\)</span> と置いたものを用いています。</p>
 </section>
 <section id="puffandslater">
-<span id="id3"></span><h2>パフィアン-スレーター行列式の性質<a class="headerlink" href="#puffandslater" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<span id="id3"></span><h2>パフィアン-スレーター行列式の性質<a class="headerlink" href="#puffandslater" title="この見出しへのパーマリンク">¶</a></h2>
 <p>この節では,
 パフィアン-スレーター行列式のもつ性質について簡単にまとめます。
 <a class="reference internal" href="#pfaffianap"><span class="std std-ref">次節</span></a> と <a class="reference internal" href="#pfaffianp"><span class="std std-ref">次々節</span></a> でパフィアン-スレーター行列式と単一スレーター行列式の間の関係を導出し、
 <a class="reference internal" href="#pfaffiansingular"><span class="std std-ref">最後</span></a> に <span class="math notranslate nohighlight">\(f_{ij}\)</span> の特異値分解の意味について説明します。</p>
 <section id="f-ij-phi-in-sigma">
-<span id="pfaffianap"></span><h3><span class="math notranslate nohighlight">\(f_{ij}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> の関係 (スピン反平行の場合)<a class="headerlink" href="#f-ij-phi-in-sigma" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<span id="pfaffianap"></span><h3><span class="math notranslate nohighlight">\(f_{ij}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> の関係 (スピン反平行の場合)<a class="headerlink" href="#f-ij-phi-in-sigma" title="この見出しへのパーマリンク">¶</a></h3>
 <p>多変数変分モンテカルロ法で試行波動関数の一体部分として用いられるパフィアン-スレーター行列式は</p>
 <div class="math notranslate nohighlight">
 \[|\phi_{\rm Pf}\rangle=\Big(\sum_{i,j=1}^{N_{s}}f_{ij}
@@ -176,7 +177,7 @@ f_{ij}=\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}.
 この自由度の多さが <span class="math notranslate nohighlight">\(f_{ij}\)</span> の冗長性につながっています。</p>
 </section>
 <section id="f-ij-phi-in">
-<span id="pfaffianp"></span><h3><span class="math notranslate nohighlight">\(F_{IJ}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{In}\)</span> の関係 (スピン平行も含めた場合)<a class="headerlink" href="#f-ij-phi-in" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<span id="pfaffianp"></span><h3><span class="math notranslate nohighlight">\(F_{IJ}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{In}\)</span> の関係 (スピン平行も含めた場合)<a class="headerlink" href="#f-ij-phi-in" title="この見出しへのパーマリンク">¶</a></h3>
 <p>前節で考察したパフィアン-スレーター波動関数と単一スレーター波動関数の間の関係は、
 同種スピンのペアリングも考えた場合に拡張することができます。
 パフィアン-スレーター波動関数とスレーター波動関数をそれぞれ</p>
@@ -194,7 +195,7 @@ F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{I,2n-1}\Phi_{J,2n}-\Phi_{J,2n-1}\P
 mVMC ver1.0以降ではこの表式を使用しています。</p>
 </section>
 <section id="f-ij">
-<span id="pfaffiansingular"></span><h3><span class="math notranslate nohighlight">\(f_{ij}\)</span> の特異値分解<a class="headerlink" href="#f-ij" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<span id="pfaffiansingular"></span><h3><span class="math notranslate nohighlight">\(f_{ij}\)</span> の特異値分解<a class="headerlink" href="#f-ij" title="この見出しへのパーマリンク">¶</a></h3>
 <p>行列 <span class="math notranslate nohighlight">\(F\)</span>, <span class="math notranslate nohighlight">\(\Phi_{\uparrow}\)</span>, <span class="math notranslate nohighlight">\(\Phi_{\downarrow}\)</span>,
 <span class="math notranslate nohighlight">\(\Sigma\)</span> を</p>
 <div class="math notranslate nohighlight">
@@ -219,13 +220,13 @@ F=\Phi_{\uparrow}\Sigma\Phi_{\downarrow}^{t}.\end{aligned}\]</div>
 </section>
 </section>
 <section id="power-lanczos">
-<h2>Power-Lanczos法<a class="headerlink" href="#power-lanczos" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>Power-Lanczos法<a class="headerlink" href="#power-lanczos" title="この見出しへのパーマリンク">¶</a></h2>
 <p>このセクションでは,
 Power-Lanczos法での最適化パラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> の決定方法について述べます。
 また,
 ここではシングルステップのLanczos法を適用した後の物理量の計算についても説明します。</p>
 <section id="alpha">
-<h3><span class="math notranslate nohighlight">\(\alpha\)</span> の決定<a class="headerlink" href="#alpha" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3><span class="math notranslate nohighlight">\(\alpha\)</span> の決定<a class="headerlink" href="#alpha" title="この見出しへのパーマリンク">¶</a></h3>
 <p>最初に, 変分モンテカルロ法のサンプリングに関して簡単に説明します。
 物理量 <span class="math notranslate nohighlight">\(\hat{A}\)</span> は以下の手順で計算されます:</p>
 <div class="math notranslate nohighlight">
@@ -270,7 +271,7 @@ E_{LS}(\alpha) =\frac{\langle \phi| \hat{H} |\phi\rangle}{\langle \phi|\phi\rang
 分散に関しても同様の手法で計算することが可能です。</p>
 </section>
 <section id="id4">
-<h3>物理量の計算<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>物理量の計算<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
 <p>最適化パラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> を用いることで,
 演算子 <span class="math notranslate nohighlight">\(\hat{A}\)</span> の期待値を以下の式から計算することが出来ます：</p>
 <div class="math notranslate nohighlight">
@@ -301,8 +302,9 @@ A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rang
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">目次</a></h3>
-  <ul>
+  <div>
+    <h3><a href="index.html">目次</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">アルゴリズム</a><ul>
 <li><a class="reference internal" href="#id2">変分モンテカルロ法</a></li>
 <li><a class="reference internal" href="#bogoliubov">Bogoliubov表現</a></li>
@@ -321,12 +323,17 @@ A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rang
 </li>
 </ul>
 
-  <h4>前のトピックへ</h4>
-  <p class="topless"><a href="output.html"
-                        title="前の章へ">出力ファイル</a></p>
-  <h4>次のトピックへ</h4>
-  <p class="topless"><a href="appendix.html"
-                        title="次の章へ">非制限Hartree-Fock近似プログラム</a></p>
+  </div>
+  <div>
+    <h4>前のトピックへ</h4>
+    <p class="topless"><a href="output.html"
+                          title="前の章へ">出力ファイル</a></p>
+  </div>
+  <div>
+    <h4>次のトピックへ</h4>
+    <p class="topless"><a href="appendix.html"
+                          title="次の章へ">非制限Hartree-Fock近似プログラム</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>このページ</h3>
     <ul class="this-page-menu">
@@ -343,7 +350,7 @@ A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rang
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -366,7 +373,7 @@ A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rang
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>出力ファイル &#8212; mVMC 1.2.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script src="_static/translations.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -45,14 +46,10 @@
           <div class="body" role="main">
             
   <section id="outputfile">
-<span id="id1"></span><h1>出力ファイル<a class="headerlink" href="#outputfile" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<span id="id1"></span><h1>出力ファイル<a class="headerlink" href="#outputfile" title="この見出しへのパーマリンク">¶</a></h1>
 <p>出力ファイルの一覧は下記の通りです。***には <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> で指定されるヘッダが、xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
 <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。また、zzzには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> が記載されます。</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 45%" />
-<col style="width: 55%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>ファイル名</p></th>
 <th class="head"><p>対応するファイルの中身</p></th>
@@ -98,7 +95,7 @@
 </tbody>
 </table>
 <section id="opt-dat">
-<h2>変分パラメータ出力ファイル(***_opt.dat)<a class="headerlink" href="#opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>変分パラメータ出力ファイル(***_opt.dat)<a class="headerlink" href="#opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>SR法で最適化された変分パラメータとエネルギーが一斉出力されます。
 変分パラメータが一斉に読み込めるため、変分パラメータ最適化後の物理量の計算を行う場合に使用します。
 出力されるデータは</p>
@@ -109,39 +106,39 @@
 ***には <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> で指定されるヘッダが記載されます。</p>
 </section>
 <section id="xxx-var-yyy-dat">
-<h2>ステップ別変分パラメータ出力ファイル(xxx_var_yyy.dat)<a class="headerlink" href="#xxx-var-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>ステップ別変分パラメータ出力ファイル(xxx_var_yyy.dat)<a class="headerlink" href="#xxx-var-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>SR 法の各ステップにおける変分パラメータとエネルギーがzqp_opt.dat
 と同形式で“追記しながら” 出力されます(標準偏差はゼロ)が出力されます。
 xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
 <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。</p>
 </section>
 <section id="gutzwiller-gutzwiller-opt-dat">
-<h2>Gutzwiller因子出力ファイル(***_gutzwiller_opt.dat)<a class="headerlink" href="#gutzwiller-gutzwiller-opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>Gutzwiller因子出力ファイル(***_gutzwiller_opt.dat)<a class="headerlink" href="#gutzwiller-gutzwiller-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>SR法で最適化されたGutzwiller因子が出力されます。
 出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInGutzwiller指定ファイルと同じです。</p>
 </section>
 <section id="jastrow-jastrow-opt-dat">
-<h2>Jastrow因子出力ファイル(***_jastrow_opt.dat)<a class="headerlink" href="#jastrow-jastrow-opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>Jastrow因子出力ファイル(***_jastrow_opt.dat)<a class="headerlink" href="#jastrow-jastrow-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>SR法で最適化されたJastrow因子が出力されます。
 出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInJastrow指定ファイルと同じです。</p>
 </section>
 <section id="doublonholon2site-opt-dat">
-<h2>2サイトダブロンホロン相関因子出力ファイル(***_doublonHolon2site_opt.dat)<a class="headerlink" href="#doublonholon2site-opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>2サイトダブロンホロン相関因子出力ファイル(***_doublonHolon2site_opt.dat)<a class="headerlink" href="#doublonholon2site-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>SR法で最適化された2サイトのdoublon-holon相関因子が出力されます。
 出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInDH2指定ファイルと同じです。</p>
 </section>
 <section id="doublonholon4site-opt-dat">
-<h2>4サイトダブロンホロン相関因子出力ファイル(***_doublonHolon4site_opt.dat)<a class="headerlink" href="#doublonholon4site-opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>4サイトダブロンホロン相関因子出力ファイル(***_doublonHolon4site_opt.dat)<a class="headerlink" href="#doublonholon4site-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>SR法で最適化された4サイトのdoublon-holon相関因子が出力されます。
 出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInDH4指定ファイルと同じです。</p>
 </section>
 <section id="orbital-opt-dat">
-<h2>ペア軌道出力ファイル(***_orbital_opt.dat)<a class="headerlink" href="#orbital-opt-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>ペア軌道出力ファイル(***_orbital_opt.dat)<a class="headerlink" href="#orbital-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>SR法で最適化されたペア軌道の変分パラメータが出力されます。
 出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInOrbital指定ファイルと同じです。</p>
 </section>
 <section id="xxx-out-yyy-dat">
-<h2>xxx_out_yyy.dat<a class="headerlink" href="#xxx-out-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>xxx_out_yyy.dat<a class="headerlink" href="#xxx-out-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>ビン毎の計算情報として、</p>
 <div class="math notranslate nohighlight">
 \[\langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2},
@@ -161,7 +158,7 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 </div>
 </section>
 <section id="xxx-calctimer-dat">
-<h2>xxx_CalcTimer.dat<a class="headerlink" href="#xxx-calctimer-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>xxx_CalcTimer.dat<a class="headerlink" href="#xxx-calctimer-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>計算終了後に、処理毎の計算処理時間が処理名、処理に割り当てられた識別番号、実行秒数の順に出力されます。出力例は以下の通りです。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">All</span>                         <span class="p">[</span><span class="mi">0</span><span class="p">]</span>     <span class="mf">15.90724</span>
 <span class="n">Initialization</span>              <span class="p">[</span><span class="mi">1</span><span class="p">]</span>      <span class="mf">0.04357</span>
@@ -209,7 +206,7 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 </div>
 </section>
 <section id="xxx-time-zzz-dat">
-<h2>xxx_time_zzz.dat<a class="headerlink" href="#xxx-time-zzz-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>xxx_time_zzz.dat<a class="headerlink" href="#xxx-time-zzz-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <div class="line-block">
 <div class="line">計算情報としてビン毎にサンプリング数、hoppingおよびexchangeのアップデートに対するacceptance
 ratio(acc_hopp, acc_ex)、それぞれのアップデートの試行回数(n_hopp,
@@ -228,7 +225,7 @@ n_ex)および実行した際の時間を順に出力します。xxxには <code
 </div>
 </section>
 <section id="xxx-cisajs-yyy-dat">
-<h2>xxx_cisajs_yyy.dat<a class="headerlink" href="#xxx-cisajs-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>xxx_cisajs_yyy.dat<a class="headerlink" href="#xxx-cisajs-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>OneBodyG指定ファイルで指定された一体グリーン関数 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle\)</span> の計算結果を出力します。
 xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
 <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。以下にファイル例を記載します。</p>
@@ -244,13 +241,13 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 </pre></div>
 </div>
 <section id="id2">
-<h3>ファイル形式<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h3>
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int04 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span></p></li>
 </ul>
 </section>
 <section id="id3">
-<h3>パラメータ<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span></p>
 <p><strong>形式 :</strong> int型</p>
@@ -279,7 +276,7 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 </section>
 </section>
 <section id="xxx-cisajscktalt-yyy-dat">
-<h2>xxx_cisajscktalt_yyy.dat<a class="headerlink" href="#xxx-cisajscktalt-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>xxx_cisajscktalt_yyy.dat<a class="headerlink" href="#xxx-cisajscktalt-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>TwoBodyG指定ファイルで指定された二体グリーン関数 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle\)</span> の計算結果を出力します。xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
 <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。以下にファイル例を記載します。</p>
 <p>15cm</p>
@@ -295,13 +292,13 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 </pre></div>
 </div>
 <section id="id4">
-<h3>ファイル形式<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int04 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int05 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int06 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int07 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int08 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span></p></li>
 </ul>
 </section>
 <section id="id5">
-<h3>パラメータ<a class="headerlink" href="#id5" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>,
 <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> int05 <span class="math notranslate nohighlight">\(]\)</span>,
@@ -334,7 +331,7 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 </section>
 </section>
 <section id="xxx-ls-out-yyy-dat">
-<h2>xxx_ls_out_yyy.dat<a class="headerlink" href="#xxx-ls-out-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>xxx_ls_out_yyy.dat<a class="headerlink" href="#xxx-ls-out-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>Power Lanczos法により求めた <span class="math notranslate nohighlight">\(\langle H \rangle\)</span>,
 <span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> および最適化パラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> の順に出力されます。
 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> 指定ファイルで <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> =1, <code class="docutils literal notranslate"><span class="pre">NLanczosmode</span></code> =1,
@@ -343,14 +340,14 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。</p>
 </section>
 <section id="xxx-ls-cisajs-yyy-dat">
-<h2>xxx_ls_cisajs_yyy.dat<a class="headerlink" href="#xxx-ls-cisajs-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>xxx_ls_cisajs_yyy.dat<a class="headerlink" href="#xxx-ls-cisajs-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>Power Lanczos法により求めた,
 OneBodyG指定ファイルで指定された一体グリーン関数 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle\)</span> の計算結果を出力します。
 ファイル形式はxxx_cisajs_yyy.datファイルと同じです。 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> 指定ファイルで <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> =1,
 <code class="docutils literal notranslate"><span class="pre">NLanczosmode</span></code> =2に設定することで計算されます。</p>
 </section>
 <section id="xxx-ls-cisajscktalt-yyy-dat">
-<h2>xxx_ls_cisajscktalt_yyy.dat<a class="headerlink" href="#xxx-ls-cisajscktalt-yyy-dat" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>xxx_ls_cisajscktalt_yyy.dat<a class="headerlink" href="#xxx-ls-cisajscktalt-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>Power Lanczos法により求めた,
 TwoBodyG指定ファイルで指定された二体グリーン関数 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle\)</span> の計算結果を出力します。ファイル形式はxxx_cisajscktalt_yyy.datファイルと同じです。 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> 指定ファイルで <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code>
 = 1, <code class="docutils literal notranslate"><span class="pre">NLanczosmode</span></code> = 2 に設定することで計算されます。</p>
@@ -367,8 +364,9 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">目次</a></h3>
-  <ul>
+  <div>
+    <h3><a href="index.html">目次</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">出力ファイル</a><ul>
 <li><a class="reference internal" href="#opt-dat">変分パラメータ出力ファイル(***_opt.dat)</a></li>
 <li><a class="reference internal" href="#xxx-var-yyy-dat">ステップ別変分パラメータ出力ファイル(xxx_var_yyy.dat)</a></li>
@@ -397,12 +395,17 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 </li>
 </ul>
 
-  <h4>前のトピックへ</h4>
-  <p class="topless"><a href="expert.html"
-                        title="前の章へ">エキスパートモード入力ファイル書式</a></p>
-  <h4>次のトピックへ</h4>
-  <p class="topless"><a href="algorithm.html"
-                        title="次の章へ">アルゴリズム</a></p>
+  </div>
+  <div>
+    <h4>前のトピックへ</h4>
+    <p class="topless"><a href="expert.html"
+                          title="前の章へ">エキスパートモード入力ファイル書式</a></p>
+  </div>
+  <div>
+    <h4>次のトピックへ</h4>
+    <p class="topless"><a href="algorithm.html"
+                          title="次の章へ">アルゴリズム</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>このページ</h3>
     <ul class="this-page-menu">
@@ -419,7 +422,7 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -442,7 +445,7 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

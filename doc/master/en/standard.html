@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>Input files for Standard mode &#8212; mVMC 1.2.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
@@ -44,7 +45,7 @@
           <div class="body" role="main">
             
   <section id="input-files-for-standard-mode">
-<span id="howtostandard"></span><h1>Input files for Standard mode<a class="headerlink" href="#input-files-for-standard-mode" title="Permalink to this headline">¶</a></h1>
+<span id="howtostandard"></span><h1>Input files for Standard mode<a class="headerlink" href="#input-files-for-standard-mode" title="Permalink to this heading">¶</a></h1>
 <p>An example of input file for the standard mode is shown below:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">W</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="n">L</span> <span class="o">=</span> <span class="mi">4</span>
@@ -64,8 +65,8 @@
 </div>
 <p><strong>Basic rules for input files</strong></p>
 <ul>
-<li><p>In each line, there is a set of a keyword (before an ” <code class="docutils literal notranslate"><span class="pre">=</span></code>”) and a
-parameter(after an ” <code class="docutils literal notranslate"><span class="pre">=</span></code>”); they are separated by ” <code class="docutils literal notranslate"><span class="pre">=</span></code>”.</p></li>
+<li><p>In each line, there is a set of a keyword (before an “ <code class="docutils literal notranslate"><span class="pre">=</span></code>”) and a
+parameter(after an “ <code class="docutils literal notranslate"><span class="pre">=</span></code>”); they are separated by “ <code class="docutils literal notranslate"><span class="pre">=</span></code>”.</p></li>
 <li><p>You can describe keywords in a random order.</p></li>
 <li><p>Empty lines and lines beginning in a “<code class="docutils literal notranslate"><span class="pre">//</span></code>”(comment outs) are
 skipped.</p></li>
@@ -87,12 +88,12 @@ system. If you choose “model=spin”, you should not specify
 </ul>
 <p>We explain each keywords as follows:</p>
 <section id="parameters-about-the-kind-of-a-calculation">
-<h2>Parameters about the kind of a calculation<a class="headerlink" href="#parameters-about-the-kind-of-a-calculation" title="Permalink to this headline">¶</a></h2>
+<h2>Parameters about the kind of a calculation<a class="headerlink" href="#parameters-about-the-kind-of-a-calculation" title="Permalink to this heading">¶</a></h2>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">model</span></code></p>
 <p><strong>Type :</strong> String (Choose from <code class="docutils literal notranslate"><span class="pre">&quot;Fermion</span> <span class="pre">Hubbard&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Spin&quot;</span></code>,
 <code class="docutils literal notranslate"><span class="pre">&quot;Kondo</span> <span class="pre">Lattice&quot;</span></code> , <code class="docutils literal notranslate"><span class="pre">&quot;Fermion</span> <span class="pre">HubbardGC&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;SpinGC&quot;</span></code>,
-<code class="docutils literal notranslate"><span class="pre">&quot;Kondo</span> <span class="pre">LatticeGC&quot;</span></code> )  <a class="footnote-reference brackets" href="#id2" id="id1">1</a></p>
+<code class="docutils literal notranslate"><span class="pre">&quot;Kondo</span> <span class="pre">LatticeGC&quot;</span></code> )  <a class="footnote-reference brackets" href="#id2" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a></p>
 <p><strong>Description :</strong> The target model is specified with this parameter;
 <code class="docutils literal notranslate"><span class="pre">&quot;Fermion</span> <span class="pre">Hubbard&quot;</span></code> denotes the canonical ensemble of the Fermion
 in the Hubbard model</p>
@@ -181,9 +182,9 @@ Coulomb integral depend on the bond direction.</span><a class="headerlink" href=
 </ul>
 </section>
 <section id="parameters-for-the-lattice">
-<h2>Parameters for the lattice<a class="headerlink" href="#parameters-for-the-lattice" title="Permalink to this headline">¶</a></h2>
+<h2>Parameters for the lattice<a class="headerlink" href="#parameters-for-the-lattice" title="Permalink to this heading">¶</a></h2>
 <section id="chain-lattice">
-<h3>Chain lattice<a class="headerlink" href="#chain-lattice" title="Permalink to this headline">¶</a></h3>
+<h3>Chain lattice<a class="headerlink" href="#chain-lattice" title="Permalink to this heading">¶</a></h3>
 <p>Fig. <a href="#latticepng">2</a> (a)</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">L</span></code></p>
@@ -194,7 +195,7 @@ parameter.</p>
 </ul>
 </section>
 <section id="ladder-lattice">
-<h3>Ladder lattice<a class="headerlink" href="#ladder-lattice" title="Permalink to this headline">¶</a></h3>
+<h3>Ladder lattice<a class="headerlink" href="#ladder-lattice" title="Permalink to this heading">¶</a></h3>
 <p>Fig. <a href="#ladderpng">5</a></p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">L</span></code></p>
@@ -220,7 +221,7 @@ to be calculated (20 sites).</span><a class="headerlink" href="#id7" title="Perm
 </ul>
 </section>
 <section id="square-lattice-triangular-lattice-honeycomb-lattice-kagome-lattice">
-<h3>Square lattice , Triangular lattice, Honeycomb lattice, Kagome lattice<a class="headerlink" href="#square-lattice-triangular-lattice-honeycomb-lattice-kagome-lattice" title="Permalink to this headline">¶</a></h3>
+<h3>Square lattice , Triangular lattice, Honeycomb lattice, Kagome lattice<a class="headerlink" href="#square-lattice-triangular-lattice-honeycomb-lattice-kagome-lattice" title="Permalink to this heading">¶</a></h3>
 <p>Square lattice [Fig. <a href="#latticepng">2</a> (b)], Triangular lattice[Fig. <a href="#latticepng">2</a> (c)], Honeycomb lattice(Fig. <a href="#honeycombpng">3</a> ), Kagome lattice(Fig. <a href="#kagomepng">4</a> )</p>
 <p>In these lattices, we can specify the shape of the numerical cell by
 using the following two methods.</p>
@@ -250,7 +251,7 @@ lattice) which is written in the Standard mode. This file can be read by
 </section>
 </section>
 <section id="sublattice">
-<h2>Sublattice<a class="headerlink" href="#sublattice" title="Permalink to this headline">¶</a></h2>
+<h2>Sublattice<a class="headerlink" href="#sublattice" title="Permalink to this heading">¶</a></h2>
 <p>By using the following parameters, we can force the pair-orbital
 symmetrical to the translation of the sublattice.</p>
 <ul>
@@ -265,14 +266,14 @@ is incommensurate with the original lattice, <code class="docutils literal notra
 </ul>
 </section>
 <section id="parameters-for-the-hamiltonian">
-<h2>Parameters for the Hamiltonian<a class="headerlink" href="#parameters-for-the-hamiltonian" title="Permalink to this headline">¶</a></h2>
+<h2>Parameters for the Hamiltonian<a class="headerlink" href="#parameters-for-the-hamiltonian" title="Permalink to this heading">¶</a></h2>
 <p>A default value is set as <span class="math notranslate nohighlight">\(0\)</span> unless a specific value is not
 defined in a description. Table [table_interactions] shows the
 parameters for each models. In the case of a complex type, a file format
-is ” <em>a real part, an imaginary part</em> ” while in the case of a real
-type, only ” <em>a real part</em> “.</p>
+is “ <em>a real part, an imaginary part</em> “ while in the case of a real
+type, only “ <em>a real part</em> “.</p>
 <section id="local-terms">
-<h3>Local terms<a class="headerlink" href="#local-terms" title="Permalink to this headline">¶</a></h3>
+<h3>Local terms<a class="headerlink" href="#local-terms" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">mu</span></code></p>
 <p><strong>Type :</strong> Real</p>
@@ -311,15 +312,6 @@ non-local terms are specified in the different way from
 <code class="docutils literal notranslate"><span class="pre">Honeycomb</span> <span class="pre">Lattice</span></code>, <code class="docutils literal notranslate"><span class="pre">Kagome</span></code>. Below, the available parameters for
 each lattice are shown in Table [table_interactions].</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 43%" />
-<col style="width: 9%" />
-<col style="width: 10%" />
-<col style="width: 15%" />
-<col style="width: 10%" />
-<col style="width: 7%" />
-<col style="width: 7%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Interactions</p></th>
 <th class="head"><p>1D chain</p></th>
@@ -433,7 +425,7 @@ each lattice are shown in Table [table_interactions].</p>
 define spin couplings as matrix format.</p>
 </section>
 <section id="non-local-terms-for-ladder-lattice">
-<h3>Non-local terms for Ladder lattice<a class="headerlink" href="#non-local-terms-for-ladder-lattice" title="Permalink to this headline">¶</a></h3>
+<h3>Non-local terms for Ladder lattice<a class="headerlink" href="#non-local-terms-for-ladder-lattice" title="Permalink to this heading">¶</a></h3>
 <p>Fig. <a href="#ladderpng">5</a></p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">t0</span></code>, <code class="docutils literal notranslate"><span class="pre">t1</span></code>, <code class="docutils literal notranslate"><span class="pre">t1'</span></code>, <code class="docutils literal notranslate"><span class="pre">t2</span></code>, <code class="docutils literal notranslate"><span class="pre">t2'</span></code></p>
@@ -471,7 +463,7 @@ simplified parameters, <code class="docutils literal notranslate"><span class="p
 </ul>
 </section>
 <section id="non-local-terms-for-other-than-ladder">
-<h3>Non-local terms for other than Ladder<a class="headerlink" href="#non-local-terms-for-other-than-ladder" title="Permalink to this headline">¶</a></h3>
+<h3>Non-local terms for other than Ladder<a class="headerlink" href="#non-local-terms-for-other-than-ladder" title="Permalink to this heading">¶</a></h3>
 <p>Figs. <a href="#latticepng">2</a> , <a href="#honeycombpng">3</a> , <a href="#kagomepng">4</a></p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">t</span></code>, <code class="docutils literal notranslate"><span class="pre">t0</span></code>, <code class="docutils literal notranslate"><span class="pre">t1</span></code>, <code class="docutils literal notranslate"><span class="pre">t2</span></code></p>
@@ -644,7 +636,7 @@ the positive direction becomes as</p>
 </section>
 </section>
 <section id="parameters-for-the-numerical-condition">
-<h2>Parameters for the numerical condition<a class="headerlink" href="#parameters-for-the-numerical-condition" title="Permalink to this headline">¶</a></h2>
+<h2>Parameters for the numerical condition<a class="headerlink" href="#parameters-for-the-numerical-condition" title="Permalink to this heading">¶</a></h2>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">ncond</span></code></p>
 <p><strong>Type :</strong> int-type (must be specified)</p>
@@ -798,7 +790,7 @@ representation (See [sec_bogoliubov_rep]).</p>
 <p><strong>Type :</strong> string-type (default : <code class="docutils literal notranslate"><span class="pre">&quot;zvo&quot;</span></code>)</p>
 <p><strong>Description :</strong> A header for output files. For example, the output
 filename for one body Green’s function becomes
-” <strong>xxx_cisajs_yyy.dat</strong>” (xxx are characters set by
+“ <strong>xxx_cisajs_yyy.dat</strong>” (xxx are characters set by
 <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> and yyy are numbers given by numbers from
 <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> to <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code>).</p>
 </li>
@@ -811,11 +803,12 @@ set by <code class="docutils literal notranslate"><span class="pre">CParaFileHea
 <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> to <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> -1).</p>
 </li>
 </ul>
-<dl class="footnote brackets">
-<dt class="label" id="id2"><span class="brackets"><a class="fn-backref" href="#id1">1</a></span></dt>
-<dd><p>GC=Grand Canonical</p>
-</dd>
-</dl>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id2" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>GC=Grand Canonical</p>
+</aside>
+</aside>
 </section>
 </section>
 
@@ -829,8 +822,9 @@ set by <code class="docutils literal notranslate"><span class="pre">CParaFileHea
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">Table of Contents</a></h3>
-  <ul>
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">Input files for Standard mode</a><ul>
 <li><a class="reference internal" href="#parameters-about-the-kind-of-a-calculation">Parameters about the kind of a calculation</a></li>
 <li><a class="reference internal" href="#parameters-for-the-lattice">Parameters for the lattice</a><ul>
@@ -851,12 +845,17 @@ set by <code class="docutils literal notranslate"><span class="pre">CParaFileHea
 </li>
 </ul>
 
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="tutorial.html"
-                        title="previous chapter">Tutorial</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="expert.html"
-                        title="next chapter">Input files for Expert mode</a></p>
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="tutorial.html"
+                          title="previous chapter">Tutorial</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="expert.html"
+                          title="next chapter">Input files for Expert mode</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -873,7 +872,7 @@ set by <code class="docutils literal notranslate"><span class="pre">CParaFileHea
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -896,7 +895,7 @@ set by <code class="docutils literal notranslate"><span class="pre">CParaFileHea
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

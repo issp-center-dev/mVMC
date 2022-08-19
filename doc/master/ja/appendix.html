@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>非制限Hartree-Fock近似プログラム &#8212; mVMC 1.2.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script src="_static/translations.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -45,12 +46,12 @@
           <div class="body" role="main">
             
   <section id="hartree-fock">
-<h1>非制限Hartree-Fock近似プログラム<a class="headerlink" href="#hartree-fock" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<h1>非制限Hartree-Fock近似プログラム<a class="headerlink" href="#hartree-fock" title="この見出しへのパーマリンク">¶</a></h1>
 <p>mVMCでは補助プログラムとして、多変数変分モンテカルロ法のペア軌道 <span class="math notranslate nohighlight">\(f_{ij}\)</span> の初期値を
 非制限Hartree-Fock(UHF)近似から与えるためのプログラムを用意しています(対応関係は <a class="reference internal" href="algorithm.html#puffandslater"><span class="std std-ref">パフィアン-スレーター行列式の性質</span></a> を参照)。
 なお、本プログラムは遍歴電子系を対象としており、スピン系、近藤系では正しく動作しません。</p>
 <section id="id1">
-<h2>概要<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>概要<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h2>
 <p>UHF近似では揺らぎ <span class="math notranslate nohighlight">\(\delta A \equiv A-\langle A \rangle\)</span> の一次までを考慮することで、二体項を一体項へと近似します。
 たとえば、サイト間クーロン相互作用</p>
 <div class="math notranslate nohighlight">
@@ -72,11 +73,11 @@ n_ {i}n_{j} &amp;=
 <p>と近似されます。このような形式で、その他の相互作用についても近似を行うことで、一体問題に帰着させることができます。
 計算では、上記の各平均値がself-consistentになるまで計算を行います。</p>
 <section id="id2">
-<h3>ソースコード<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>ソースコード<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h3>
 <p>ソースコード一式は <code class="docutils literal notranslate"><span class="pre">src/ComplexUHF/src</span></code> 以下に入っています。</p>
 </section>
 <section id="id3">
-<h3>コンパイル方法<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>コンパイル方法<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h3>
 <p>コンパイルはmVMCのコンパイルと同様にmVMCのフォルダ直下で</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ make mvmc
 </pre></div>
@@ -85,9 +86,9 @@ n_ {i}n_{j} &amp;=
 <code class="docutils literal notranslate"><span class="pre">src/ComplexUHF/src</span></code> に実行ファイル <code class="docutils literal notranslate"><span class="pre">UHF</span></code> が作成されます。</p>
 </section>
 <section id="id4">
-<h3>必要な入力ファイル<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>必要な入力ファイル<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
 <section id="namelsit-def">
-<h4>入力ファイル指定用ファイル (namelsit.def)<a class="headerlink" href="#namelsit-def" title="このヘッドラインへのパーマリンク">¶</a></h4>
+<h4>入力ファイル指定用ファイル (namelsit.def)<a class="headerlink" href="#namelsit-def" title="この見出しへのパーマリンク">¶</a></h4>
 <p>UHFで指定するファイルは以下のファイルです。
 <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> は <a class="reference internal" href="expert.html#inputfilelist"><span class="std std-ref">入力ファイル指定用ファイル(namelist.def)</span></a> で定義されているファイルと同じ様式です。</p>
 <ul class="simple">
@@ -112,7 +113,7 @@ n_ {i}n_{j} &amp;=
 <p>がmVMCと異なります。以下、その詳細を記載します。</p>
 </section>
 <section id="modpara">
-<h4>ModParaファイルで指定するパラメータ<a class="headerlink" href="#modpara" title="このヘッドラインへのパーマリンク">¶</a></h4>
+<h4>ModParaファイルで指定するパラメータ<a class="headerlink" href="#modpara" title="この見出しへのパーマリンク">¶</a></h4>
 <p>UHFで指定するパラメータは以下のパラメータです。</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">Nsite</span></code></p></li>
@@ -139,7 +140,7 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
 <p>なお、mVMCで使用するその他パラメータが存在する場合はWarningが標準出力されます(計算は中断せずに実行されます)。</p>
 </section>
 <section id="initial">
-<h4>Initialファイル<a class="headerlink" href="#initial" title="このヘッドラインへのパーマリンク">¶</a></h4>
+<h4>Initialファイル<a class="headerlink" href="#initial" title="この見出しへのパーマリンク">¶</a></h4>
 <p>グリーン関数 <span class="math notranslate nohighlight">\(G_{ij\sigma_1\sigma_2}\equiv \langle c_{i\sigma_1}^\dagger c_{j\sigma_2}\rangle\)</span> の初期値を与えます。
 ファイル様式は <code class="docutils literal notranslate"><span class="pre">Trans</span></code> ファイルと同じで、 <span class="math notranslate nohighlight">\(t_{ij\sigma_1\sigma_2}\)</span> の代わりに
 <span class="math notranslate nohighlight">\(G_{ij\sigma_1\sigma_2}\)</span> の値を記述します。
@@ -148,7 +149,7 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
 </section>
 </section>
 <section id="id5">
-<h2>使用方法<a class="headerlink" href="#id5" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>使用方法<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h2>
 <p>UHF自体はmVMCと同じように</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ UHF namelist.def
 </pre></div>
@@ -226,8 +227,9 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">目次</a></h3>
-  <ul>
+  <div>
+    <h3><a href="index.html">目次</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">非制限Hartree-Fock近似プログラム</a><ul>
 <li><a class="reference internal" href="#id1">概要</a><ul>
 <li><a class="reference internal" href="#id2">ソースコード</a></li>
@@ -245,12 +247,17 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
 </li>
 </ul>
 
-  <h4>前のトピックへ</h4>
-  <p class="topless"><a href="algorithm.html"
-                        title="前の章へ">アルゴリズム</a></p>
-  <h4>次のトピックへ</h4>
-  <p class="topless"><a href="fourier/index.html"
-                        title="次の章へ">相関関数のFourier変換ユーティリティー</a></p>
+  </div>
+  <div>
+    <h4>前のトピックへ</h4>
+    <p class="topless"><a href="algorithm.html"
+                          title="前の章へ">アルゴリズム</a></p>
+  </div>
+  <div>
+    <h4>次のトピックへ</h4>
+    <p class="topless"><a href="fourier/index.html"
+                          title="次の章へ">相関関数のFourier変換ユーティリティー</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>このページ</h3>
     <ul class="this-page-menu">
@@ -267,7 +274,7 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -290,7 +297,7 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

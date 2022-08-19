@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>Output files &#8212; mVMC 1.2.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
@@ -44,7 +45,7 @@
           <div class="body" role="main">
             
   <section id="output-files">
-<span id="outputfile"></span><h1>Output files<a class="headerlink" href="#output-files" title="Permalink to this headline">¶</a></h1>
+<span id="outputfile"></span><h1>Output files<a class="headerlink" href="#output-files" title="Permalink to this heading">¶</a></h1>
 <p>The list of output files are shown in Table [Table:Output], where ***
 and xxx are the header indicated by
 <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code>,``CDataFileHead`` in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file, respectively.
@@ -54,10 +55,6 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file and zzz is a number given by <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> in
 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code>.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 38%" />
-<col style="width: 62%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Name</p></th>
 <th class="head"><p>Details for corresponding files</p></th>
@@ -103,7 +100,7 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 </tbody>
 </table>
 <section id="output-file-for-variational-parameters-opt-dat">
-<h2>Output file for variational parameters (***_opt.dat)<a class="headerlink" href="#output-file-for-variational-parameters-opt-dat" title="Permalink to this headline">¶</a></h2>
+<h2>Output file for variational parameters (***_opt.dat)<a class="headerlink" href="#output-file-for-variational-parameters-opt-dat" title="Permalink to this heading">¶</a></h2>
 <p>The average and deviation values of variational parameters and the
 energy optimized by the SR method are outputted in the following order:</p>
 <div class="math notranslate nohighlight">
@@ -117,7 +114,7 @@ Here, *** is the header indicated by <code class="docutils literal notranslate">
 file.</p>
 </section>
 <section id="output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat">
-<h2>Output files for variational parameters at each steps (xxx_var_yyy.dat)<a class="headerlink" href="#output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat" title="Permalink to this headline">¶</a></h2>
+<h2>Output files for variational parameters at each steps (xxx_var_yyy.dat)<a class="headerlink" href="#output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>The average and deviation values of variational parameters and the
 energy optimized by the SR method are postscripted by the order same as
 $$$_opt.dat file (the deviation is always outputted as 0). Here, xxx is
@@ -128,36 +125,36 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file.</p>
 </section>
 <section id="output-file-for-gutzwiller-factors-gutzwiller-opt-dat">
-<h2>Output file for gutzwiller factors (***_gutzwiller_opt.dat)<a class="headerlink" href="#output-file-for-gutzwiller-factors-gutzwiller-opt-dat" title="Permalink to this headline">¶</a></h2>
+<h2>Output file for gutzwiller factors (***_gutzwiller_opt.dat)<a class="headerlink" href="#output-file-for-gutzwiller-factors-gutzwiller-opt-dat" title="Permalink to this heading">¶</a></h2>
 <p>The optimized Gutzwiller factors by SR method are outputted. The file
 format is same as the <code class="docutils literal notranslate"><span class="pre">InGutzwiller</span></code> file defined in Sec.
 <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">Files to set initial values of variational parameters</span></a>.</p>
 </section>
 <section id="output-file-for-jastrow-factors-jastrow-opt-dat">
-<h2>Output file for jastrow factors (***_jastrow_opt.dat)<a class="headerlink" href="#output-file-for-jastrow-factors-jastrow-opt-dat" title="Permalink to this headline">¶</a></h2>
+<h2>Output file for jastrow factors (***_jastrow_opt.dat)<a class="headerlink" href="#output-file-for-jastrow-factors-jastrow-opt-dat" title="Permalink to this heading">¶</a></h2>
 <p>The optimized Jastrow factors by SR method are outputted. The file
 format is same as the <code class="docutils literal notranslate"><span class="pre">InJastrow</span></code> file defined in Sec.
 <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">Files to set initial values of variational parameters</span></a>.</p>
 </section>
 <section id="output-file-for-doublonholon-2-site-factors-doublonholon2site-opt-dat">
-<h2>Output file for doublonHolon 2-site factors (***_doublonHolon2site_opt.dat)<a class="headerlink" href="#output-file-for-doublonholon-2-site-factors-doublonholon2site-opt-dat" title="Permalink to this headline">¶</a></h2>
+<h2>Output file for doublonHolon 2-site factors (***_doublonHolon2site_opt.dat)<a class="headerlink" href="#output-file-for-doublonholon-2-site-factors-doublonholon2site-opt-dat" title="Permalink to this heading">¶</a></h2>
 <p>The optimized 2-site doublon-holon correlation factors by SR method are
 outputted. The file format is same as the <code class="docutils literal notranslate"><span class="pre">InDH2</span></code> file defined in Sec.
 <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">Files to set initial values of variational parameters</span></a>.</p>
 </section>
 <section id="output-file-for-doublonholon-4-site-factors-doublonholon4site-opt-dat">
-<h2>Output file for doublonHolon 4-site factors (***_doublonHolon4site_opt.dat)<a class="headerlink" href="#output-file-for-doublonholon-4-site-factors-doublonholon4site-opt-dat" title="Permalink to this headline">¶</a></h2>
+<h2>Output file for doublonHolon 4-site factors (***_doublonHolon4site_opt.dat)<a class="headerlink" href="#output-file-for-doublonholon-4-site-factors-doublonholon4site-opt-dat" title="Permalink to this heading">¶</a></h2>
 <p>The optimized 4-site doublon-holon correlation factors by SR method are
 outputted. The file format is same as the <code class="docutils literal notranslate"><span class="pre">InDH4</span></code> file defined in Sec.
 <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">Files to set initial values of variational parameters</span></a>.</p>
 </section>
 <section id="output-file-for-pair-orbitals-orbital-opt-dat">
-<h2>Output file for pair orbitals (***_orbital_opt.dat)<a class="headerlink" href="#output-file-for-pair-orbitals-orbital-opt-dat" title="Permalink to this headline">¶</a></h2>
+<h2>Output file for pair orbitals (***_orbital_opt.dat)<a class="headerlink" href="#output-file-for-pair-orbitals-orbital-opt-dat" title="Permalink to this heading">¶</a></h2>
 <p>The optimized pair orbitals by SR method are outputted. The file format
 is same as the <code class="docutils literal notranslate"><span class="pre">InOrbital</span></code> file defined in Sec. <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">Files to set initial values of variational parameters</span></a>.</p>
 </section>
 <section id="xxx-out-yyy-dat">
-<h2>xxx_out_yyy.dat<a class="headerlink" href="#xxx-out-yyy-dat" title="Permalink to this headline">¶</a></h2>
+<h2>xxx_out_yyy.dat<a class="headerlink" href="#xxx-out-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>The calculation information at each bins are outputted in the order:</p>
 <div class="math notranslate nohighlight">
 \[\langle H \rangle, \langle H^2 \rangle,
@@ -181,7 +178,7 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 </div>
 </section>
 <section id="xxx-calctimer-dat">
-<h2>xxx_CalcTimer.dat<a class="headerlink" href="#xxx-calctimer-dat" title="Permalink to this headline">¶</a></h2>
+<h2>xxx_CalcTimer.dat<a class="headerlink" href="#xxx-calctimer-dat" title="Permalink to this heading">¶</a></h2>
 <p>After finishing calculation, the processing time is outputted in the
 order of the name, the number assigned by the process and the seconds at
 each processes. An example of outputted file is shown as follows.</p>
@@ -198,7 +195,7 @@ each processes. An example of outputted file is shown as follows.</p>
 </div>
 </section>
 <section id="xxx-time-zzz-dat">
-<h2>xxx_time_zzz.dat<a class="headerlink" href="#xxx-time-zzz-dat" title="Permalink to this headline">¶</a></h2>
+<h2>xxx_time_zzz.dat<a class="headerlink" href="#xxx-time-zzz-dat" title="Permalink to this heading">¶</a></h2>
 <p>The calculation information at each bins are outputted in the order of
 the sampling number, the acceptance ratio for hopping and exchange term
 (acc_hopp, acc_ex), trial numbers to update for hopping and exchange
@@ -218,7 +215,7 @@ is shown as follows.</p>
 </div>
 </section>
 <section id="xxx-cisajs-yyy-dat">
-<h2>xxx_cisajs_yyy.dat<a class="headerlink" href="#xxx-cisajs-yyy-dat" title="Permalink to this headline">¶</a></h2>
+<h2>xxx_cisajs_yyy.dat<a class="headerlink" href="#xxx-cisajs-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file is the outputted files for one-body Green’s function
 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle\)</span>. The target
 components are set in the input file with the keyword “OneBodyG”. Here,
@@ -240,13 +237,13 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 </pre></div>
 </div>
 <section id="file-format">
-<h3>File format<a class="headerlink" href="#file-format" title="Permalink to this headline">¶</a></h3>
+<h3>File format<a class="headerlink" href="#file-format" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>[int01]  [int02]  [int03]  [int04]  [double01]  [double02]</p></li>
 </ul>
 </section>
 <section id="parameters">
-<h3>Parameters<a class="headerlink" href="#parameters" title="Permalink to this headline">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#parameters" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[int01], [int03]</p>
 <p><strong>Type :</strong> Int</p>
@@ -279,7 +276,7 @@ respectively.</div>
 </section>
 </section>
 <section id="xxx-cisajscktalt-yyy-dat">
-<h2>xxx_cisajscktalt_yyy.dat<a class="headerlink" href="#xxx-cisajscktalt-yyy-dat" title="Permalink to this headline">¶</a></h2>
+<h2>xxx_cisajscktalt_yyy.dat<a class="headerlink" href="#xxx-cisajscktalt-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file is the outputted files for the two-body Green’s function
 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle\)</span>.
 The target components are set in the input file with the keyword
@@ -300,13 +297,13 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 </pre></div>
 </div>
 <section id="id1">
-<h3>File format<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>[int01]  [int02]  [int03]  [int04]  [int05]  [int06]  [int07]  [int08]  [double01]  [double02].</p></li>
 </ul>
 </section>
 <section id="id2">
-<h3>Parameters<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[int01],
 [int03],[int05],
@@ -343,7 +340,7 @@ respectively.</p>
 </section>
 </section>
 <section id="xxx-ls-out-yyy-dat">
-<h2>xxx_ls_out_yyy.dat<a class="headerlink" href="#xxx-ls-out-yyy-dat" title="Permalink to this headline">¶</a></h2>
+<h2>xxx_ls_out_yyy.dat<a class="headerlink" href="#xxx-ls-out-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file is the outputted files for <span class="math notranslate nohighlight">\(\langle H \rangle\)</span>,
 <span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span>, and the optimized parameter <span class="math notranslate nohighlight">\(\alpha\)</span>
 obtained by Power Lanczos method. This file is outputted when
@@ -355,7 +352,7 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file.</p>
 </section>
 <section id="xxx-ls-cisajs-yyy-dat">
-<h2>xxx_ls_cisajs_yyy.dat<a class="headerlink" href="#xxx-ls-cisajs-yyy-dat" title="Permalink to this headline">¶</a></h2>
+<h2>xxx_ls_cisajs_yyy.dat<a class="headerlink" href="#xxx-ls-cisajs-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file is the outputted files for one-body Green’s function
 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle\)</span> obtained by
 Power Lanczos method. The file format is same as the
@@ -363,7 +360,7 @@ xxx_cisajs_yyy.dat file. This file is outputted when <code class="docutils liter
 1, <code class="docutils literal notranslate"><span class="pre">NLanczosmode</span></code> = 2 are set in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file.</p>
 </section>
 <section id="xxx-ls-cisajscktalt-yyy-dat">
-<h2>xxx_ls_cisajscktalt_yyy.dat<a class="headerlink" href="#xxx-ls-cisajscktalt-yyy-dat" title="Permalink to this headline">¶</a></h2>
+<h2>xxx_ls_cisajscktalt_yyy.dat<a class="headerlink" href="#xxx-ls-cisajscktalt-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file is the outputted files for the two-body Green’s function
 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle\)</span>
 obtained by Power Lanczos method. The file format is same as the
@@ -382,8 +379,9 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">Table of Contents</a></h3>
-  <ul>
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">Output files</a><ul>
 <li><a class="reference internal" href="#output-file-for-variational-parameters-opt-dat">Output file for variational parameters (***_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat">Output files for variational parameters at each steps (xxx_var_yyy.dat)</a></li>
@@ -412,12 +410,17 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 </li>
 </ul>
 
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="expert.html"
-                        title="previous chapter">Input files for Expert mode</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="algorithm.html"
-                        title="next chapter">Algorithm</a></p>
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="expert.html"
+                          title="previous chapter">Input files for Expert mode</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="algorithm.html"
+                          title="next chapter">Algorithm</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -434,7 +437,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -457,7 +460,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>

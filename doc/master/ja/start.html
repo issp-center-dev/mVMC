@@ -4,7 +4,7 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>How to use mVMC? &#8212; mVMC 1.2.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -13,6 +13,7 @@
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script src="_static/translations.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -45,9 +46,9 @@
           <div class="body" role="main">
             
   <section id="how-to-use-mvmc">
-<h1>How to use mVMC?<a class="headerlink" href="#how-to-use-mvmc" title="このヘッドラインへのパーマリンク">¶</a></h1>
+<h1>How to use mVMC?<a class="headerlink" href="#how-to-use-mvmc" title="この見出しへのパーマリンク">¶</a></h1>
 <section id="id1">
-<h2>要件<a class="headerlink" href="#id1" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>要件<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h2>
 <p>mVMCのコンパイル <span class="math notranslate nohighlight">\(\cdot\)</span> 使用には次のものが必要です。</p>
 <ul class="simple">
 <li><p>Cコンパイラ (インテル、富士通、GNUなど)</p></li>
@@ -73,7 +74,7 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 </div>
 </section>
 <section id="id2">
-<h2>インストール方法<a class="headerlink" href="#id2" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>インストール方法<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
 <p>mVMC は次の場所からダウンロードできます。
 <a class="reference external" href="https://github.com/issp-center-dev/mVMC/releases">https://github.com/issp-center-dev/mVMC/releases</a></p>
 <p>ダウンロードしたファイルを次のように展開してください。</p>
@@ -82,7 +83,7 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 </div>
 <p>mVMCは次の2通りの方法でインストールできます。</p>
 <section id="mvmcconfig-sh">
-<h3><code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> を使う方法<a class="headerlink" href="#mvmcconfig-sh" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> を使う方法<a class="headerlink" href="#mvmcconfig-sh" title="この見出しへのパーマリンク">¶</a></h3>
 <p>展開したディレクトリのなかにある <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> スクリプトを次のように実行してください。
 (物性研システムB”sekirei”の場合)</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ bash mVMCconfig.sh sekirei
@@ -131,7 +132,7 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 <code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code> ファイルに上記のコマンドを記載します。</p>
 </section>
 <section id="cmake">
-<h3>cmakeを使う方法<a class="headerlink" href="#cmake" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>cmakeを使う方法<a class="headerlink" href="#cmake" title="この見出しへのパーマリンク">¶</a></h3>
 <p>mVMCを展開したディレクトリのパスを$PathTomvmc、ビルドディレクトリを$HOME/build/mvmc
 (任意の場所を指定可能)とした場合に、</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="nv">$HOME</span>/build/mvmc
@@ -184,7 +185,7 @@ make
 </section>
 </section>
 <section id="id3">
-<h2>ディレクトリ構成<a class="headerlink" href="#id3" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>ディレクトリ構成<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
 <p>mVMC-xxx.gzを解凍後に構成されるディレクトリ構成を以下に示します。:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>.
 |-- CMakeLists.txt
@@ -229,7 +230,7 @@ make
 </div>
 </section>
 <section id="id4">
-<h2>基本的な使い方<a class="headerlink" href="#id4" title="このヘッドラインへのパーマリンク">¶</a></h2>
+<h2>基本的な使い方<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h2>
 <p>mVMCは次の二つのいずれかのモードで動作します。</p>
 <ul>
 <li><p>エキスパートモード</p>
@@ -301,7 +302,7 @@ MPIは使用しません。</p>
 </pre></div>
 </div>
 <section id="id5">
-<h3>バージョン番号の確認<a class="headerlink" href="#id5" title="このヘッドラインへのパーマリンク">¶</a></h3>
+<h3>バージョン番号の確認<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
 <p>次のように <code class="docutils literal notranslate"><span class="pre">-v</span></code> オプションをつけて <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code>,
 <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> を実行すると, バージョン番号を標準出力した後終了します。</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ パス/vmcdry.out -v
@@ -322,8 +323,9 @@ $ パス/vmc.out -v
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/mVMC.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">目次</a></h3>
-  <ul>
+  <div>
+    <h3><a href="index.html">目次</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">How to use mVMC?</a><ul>
 <li><a class="reference internal" href="#id1">要件</a></li>
 <li><a class="reference internal" href="#id2">インストール方法</a><ul>
@@ -340,12 +342,17 @@ $ パス/vmc.out -v
 </li>
 </ul>
 
-  <h4>前のトピックへ</h4>
-  <p class="topless"><a href="intro.html"
-                        title="前の章へ">What is mVMC?</a></p>
-  <h4>次のトピックへ</h4>
-  <p class="topless"><a href="tutorial.html"
-                        title="次の章へ">チュートリアル</a></p>
+  </div>
+  <div>
+    <h4>前のトピックへ</h4>
+    <p class="topless"><a href="intro.html"
+                          title="前の章へ">What is mVMC?</a></p>
+  </div>
+  <div>
+    <h4>次のトピックへ</h4>
+    <p class="topless"><a href="tutorial.html"
+                          title="次の章へ">チュートリアル</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>このページ</h3>
     <ul class="this-page-menu">
@@ -362,7 +369,7 @@ $ パス/vmc.out -v
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -385,7 +392,7 @@ $ パス/vmc.out -v
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
     </div>
   </body>
 </html>
