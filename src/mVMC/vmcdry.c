@@ -29,7 +29,7 @@ void StdFace_main(char *fname);
 int main(int argc, char *argv[])
 {
   if (argc == 1){
-    printf("Usage: %s StdFace.def\n");
+    printf("Usage: %s StdFace.def\n", argv[0]);
     return 1;
   }
 
