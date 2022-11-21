@@ -142,7 +142,7 @@ void cal_energy(struct BindStruct *X) {
     E_PairHopping = 0.0;
     for (int_i = 0; int_i < X->Def.NPairHopping; int_i++) {
       site_1 = X->Def.PairHopping[int_i][0];
-      site_2 = X->Def.PairHopping[int_i][2];
+      site_2 = X->Def.PairHopping[int_i][1];
 
       tmp = X->Def.ParaPairHopping[int_i];
 
