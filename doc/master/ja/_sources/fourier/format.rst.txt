@@ -10,7 +10,7 @@
 
 :ref:`tutorial` でのファイル名は ``geometry.dat`` .
 各サイトの位置と軌道の情報は
-mVMC/:math:`{\mathcal H}\Phi` のスタンンダードモードを用いた場合には
+mVMC/:math:`{\mathcal H}\Phi` のスタンダードモードを用いた場合には
 自動的に生成される.
 
 ::

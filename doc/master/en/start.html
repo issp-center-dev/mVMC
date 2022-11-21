@@ -15,6 +15,7 @@
     <script src="_static/underscore.js"></script>
     <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -264,7 +265,7 @@ Coulomb integral, etc.) for them. The input file format is described
 in <a class="reference internal" href="standard.html#howtostandard"><span class="std std-ref">Input files for Standard mode</span></a>.</p>
 </li>
 <li><p>Run</p>
-<p>Run a executable <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> in terminal by specifying the name of
+<p>Run an executable <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> in terminal by specifying the name of
 input file written in previous step (option <code class="docutils literal notranslate"><span class="pre">-s</span></code> is required).</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ mpiexec -np number-of-processes Path/vmc.out -s Input-file-name
 </pre></div>
@@ -287,7 +288,7 @@ are shown in <a class="reference internal" href="output.html#outputfile"><span c
 <li><p>Prepare and run Expert mode</p>
 <p>In the above case, the calculation starts as soon as input files for
 Expert mode are generated. If we only generate files without starting
-the calculation, we can use a executable <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> as follows
+the calculation, we can use an executable <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> as follows
 (MPI is not used in this step):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ Path/vmcdry.out Input-file-name
 </pre></div>
@@ -398,7 +399,7 @@ $ PATH/vmc.out -v
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
     </div>
   </body>
 </html>

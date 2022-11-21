@@ -15,6 +15,7 @@
     <script src="_static/underscore.js"></script>
     <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
@@ -109,12 +110,12 @@ energy optimized by the SR method are outputted in the following order:</p>
 <p>The type of average values is a complex number, while that of the
 deviation is a real number. Since the initial values of all variational
 parameters are specified at the beginning of the calculation, the
-calculation of physical quantities is done by using this file file.
+calculation of physical quantities is done by using this file.
 Here, *** is the header indicated by <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code>
 file.</p>
 </section>
-<section id="output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat">
-<h2>Output files for variational parameters at each steps (xxx_var_yyy.dat)<a class="headerlink" href="#output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<section id="output-files-for-variational-parameters-at-each-step-xxx-var-yyy-dat">
+<h2>Output files for variational parameters at each step (xxx_var_yyy.dat)<a class="headerlink" href="#output-files-for-variational-parameters-at-each-step-xxx-var-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>The average and deviation values of variational parameters and the
 energy optimized by the SR method are postscripted by the order same as
 $$$_opt.dat file (the deviation is always outputted as 0). Here, xxx is
@@ -179,9 +180,9 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 </section>
 <section id="xxx-calctimer-dat">
 <h2>xxx_CalcTimer.dat<a class="headerlink" href="#xxx-calctimer-dat" title="Permalink to this heading">¶</a></h2>
-<p>After finishing calculation, the processing time is outputted in the
-order of the name, the number assigned by the process and the seconds at
-each processes. An example of outputted file is shown as follows.</p>
+<p>After finishing the calculation, the processing time is outputted in the
+order of the name, the number assigned by the process, and the seconds at
+each process. An example of outputted file is shown as follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">All</span>                         <span class="p">[</span><span class="mi">0</span><span class="p">]</span>     <span class="mf">15.90724</span>
 <span class="n">Initialization</span>              <span class="p">[</span><span class="mi">1</span><span class="p">]</span>      <span class="mf">0.04357</span>
   <span class="n">read</span> <span class="n">options</span>             <span class="p">[</span><span class="mi">10</span><span class="p">]</span>      <span class="mf">0.00012</span>
@@ -199,7 +200,7 @@ each processes. An example of outputted file is shown as follows.</p>
 <p>The calculation information at each bins are outputted in the order of
 the sampling number, the acceptance ratio for hopping and exchange term
 (acc_hopp, acc_ex), trial numbers to update for hopping and exchange
-term (n_hopp, n_ex) and the time stamp. Here, xxx is the header
+term (n_hopp, n_ex), and the time stamp. Here, xxx is the header
 indicated by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file and zzz is a number
 given by <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code>. An example of outputted file
 is shown as follows.</p>
@@ -384,7 +385,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
     <ul>
 <li><a class="reference internal" href="#">Output files</a><ul>
 <li><a class="reference internal" href="#output-file-for-variational-parameters-opt-dat">Output file for variational parameters (***_opt.dat)</a></li>
-<li><a class="reference internal" href="#output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat">Output files for variational parameters at each steps (xxx_var_yyy.dat)</a></li>
+<li><a class="reference internal" href="#output-files-for-variational-parameters-at-each-step-xxx-var-yyy-dat">Output files for variational parameters at each step (xxx_var_yyy.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-gutzwiller-factors-gutzwiller-opt-dat">Output file for gutzwiller factors (***_gutzwiller_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-jastrow-factors-jastrow-opt-dat">Output file for jastrow factors (***_jastrow_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-doublonholon-2-site-factors-doublonholon2site-opt-dat">Output file for doublonHolon 2-site factors (***_doublonHolon2site_opt.dat)</a></li>
@@ -460,7 +461,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
     </div>
   </body>
 </html>

@@ -15,6 +15,7 @@
     <script src="_static/underscore.js"></script>
     <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
@@ -76,7 +77,7 @@ are ignored.</p></li>
 <ol class="arabic simple">
 <li><p>Parameters that must be specified (if not, <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> will
 stop with error messages),</p></li>
-<li><p>Parameters that is not necessary be specified (if not, default
+<li><p>Parameters that are not necessary be specified (if not, default
 values are used),</p></li>
 <li><p>Parameters that must not be specified (if specified,
 <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> will stop with error messages).</p></li>
@@ -86,7 +87,7 @@ system. If you choose “model=spin”, you should not specify
 “<span class="math notranslate nohighlight">\(t\)</span>”.</p>
 </li>
 </ul>
-<p>We explain each keywords as follows:</p>
+<p>We explain each keyword as follows:</p>
 <section id="parameters-about-the-kind-of-a-calculation">
 <h2>Parameters about the kind of a calculation<a class="headerlink" href="#parameters-about-the-kind-of-a-calculation" title="Permalink to this heading">¶</a></h2>
 <ul>
@@ -129,7 +130,7 @@ indicate the <span class="math notranslate nohighlight">\(S_z\)</span>-unconserv
 [Eqn. <a class="reference internal" href="#equation-hubbard">(1)</a> ], the <span class="math notranslate nohighlight">\(S_z\)</span>-unconserved Spin model
 [Eqn. <a class="reference internal" href="#equation-spin">(2)</a> ], and the <span class="math notranslate nohighlight">\(S_z\)</span>-unconserved Kondo
 lattice model [Eqn. <a class="reference internal" href="#equation-kondo">(3)</a> ], respectively. Note: Although
-these flags has a word “GC”(=grandcanonical), the number of electrons
+these flags have a word “GC”(=grandcanonical), the number of electrons
 are conserved in these system.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">lattice</span></code></p>
@@ -235,12 +236,12 @@ specified with these parameter.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">a0W</span></code>, <code class="docutils literal notranslate"><span class="pre">a0L</span></code>, <code class="docutils literal notranslate"><span class="pre">a1W</span></code>, <code class="docutils literal notranslate"><span class="pre">a1L</span></code></p>
 <p><strong>Type :</strong> Integer</p>
 <p><strong>Description :</strong> We can specify two vectors
-(<span class="math notranslate nohighlight">\({\vec a}_0, {\vec a}_1\)</span>) that surrounds the numerical cell
+(<span class="math notranslate nohighlight">\({\vec a}_0, {\vec a}_1\)</span>) that surround the numerical cell
 (Fig. <a href="#unitlatticepng">6</a> ). These vectors should be
 specified in the Fractional coordinate.</p>
 </li>
 </ul>
-<p>If we use both of these method, <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> stops.</p>
+<p>If we use both of these methods, <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> stops.</p>
 <p>We can check the shape of the numerical cell by using a file
 <code class="docutils literal notranslate"><span class="pre">lattice.gp</span></code> (only for square, trianguler, honeycomb, and kagome
 lattice) which is written in the Standard mode. This file can be read by
@@ -895,7 +896,7 @@ set by <code class="docutils literal notranslate"><span class="pre">CParaFileHea
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
     </div>
   </body>
 </html>

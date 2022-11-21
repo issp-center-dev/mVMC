@@ -15,6 +15,7 @@
     <script src="../_static/underscore.js"></script>
     <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -51,7 +52,7 @@ into single orbital 1D Hubbard model,
 and simulate that model with HPhi/mVMC.
 We use QuantumESPRESSO for the DFT calculation.
 Input files are served in <code class="docutils literal notranslate"><span class="pre">samples/Wannier/Sr2CuO3</span></code> directory.</p>
-<p>In actual studies, the input files etc. of each solver should be modified for more high accuracy calculation.
+<p>In actual studies, the input files, etc. of each solver should be modified for more high accuracy calculation.
 Please refer to the manuals of each solver for the details of the input files.</p>
 <section id="scf-calculation-of-charge-density">
 <h2>SCF calculation of charge density<a class="headerlink" href="#scf-calculation-of-charge-density" title="Permalink to this heading">¶</a></h2>
@@ -320,9 +321,9 @@ The format of these files is Wannier90 format and the data such as the hopping i
 <section id="quantum-lattice-mode-for-hphi-mvmc">
 <h2>Quantum lattice mode for HPhi/mVMC<a class="headerlink" href="#quantum-lattice-mode-for-hphi-mvmc" title="Permalink to this heading">¶</a></h2>
 <p>Using standard mode of HPhi/mVMC, the calculation will be done by reading the files in <code class="docutils literal notranslate"><span class="pre">dir-model</span></code> folder.
-First, the files in <code class="docutils literal notranslate"><span class="pre">dir-model</span></code> directory should be moved to the current directry.
+First, the files in <code class="docutils literal notranslate"><span class="pre">dir-model</span></code> directory should be moved to the current directory.
 Then, the calculation will be started by using standard mode.
-For example, in HPhi, the calculation will be dobe by typing the following command:</p>
+For example, in HPhi, the calculation will be done by typing the following command:</p>
 <p><a class="reference download internal" download="" href="../_downloads/2230fa7451cede3854a6deef75032ce9/stan.in"><code class="xref download docutils literal notranslate"><span class="pre">stan.in</span></code></a></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="s2">&quot;Hubbard&quot;</span>
 <span class="n">lattice</span> <span class="o">=</span> <span class="s2">&quot;wannier90&quot;</span>
@@ -424,7 +425,7 @@ $ HPhi -s stan.in
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.1.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
     </div>
   </body>
 </html>
