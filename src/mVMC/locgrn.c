@@ -73,10 +73,10 @@ double complex GreenFunc1(const int ri, const int rj, const int s, const double 
 
 /* Calculate 2-body Green function <psi|CisAjsCktAlt|x>/<psi|x> */
 /* buffer size = NQPFull+2*Nsize */
-double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl,
+double complex GreenFunc2_(const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  int *projCntNew, double complex *buffer) {
+                  int *projCntNew, double complex *buffer, int *lazy_buffer) {
   double complex z;
   int mj,msj,ml,mtl;
   int rsi,rsj,rtk,rtl;
@@ -145,8 +145,20 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
   z = ProjRatio(projCntNew,eleProjCnt);
 
   /* calculate Pfaffian */
-  CalculateNewPfMTwo_fcmp(ml, t, mj, s, pfMNew, eleIdx, 0, NQPFull, bufV);
-  z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  if (!lazy_buffer) {
+    CalculateNewPfMTwo_fcmp(ml, t, mj, s, pfMNew, eleIdx, 0, NQPFull, bufV);
+    z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  } else {
+    // Save invocation hook instead of calling.
+    // REMEMBER THE ORDER OF S/T, ML, MJ.
+    lazy_buffer[0] = mj;
+    lazy_buffer[1] = ml;
+    lazy_buffer[2] = msj; //< to edit to ri, revert to rj
+    lazy_buffer[3] = mtl; //< to edit to rk, revert to rl
+    lazy_buffer[4] = ri;
+    lazy_buffer[5] = rk;
+    lazy_buffer[6] = 1; //< "is delayed" flag..
+  }
 
   /* revert hopping */
   eleIdx[mtl] = rl;
@@ -159,6 +171,12 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
   return conj(z/ip);//TBC
 }
 
+double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const double complex ip,
+                  int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
+                  int *projCntNew, double complex *buffer) {
+  return GreenFunc2_(ri, rj, rk, rl, s, t, ip, eleIdx, eleCfg, eleNum, eleProjCnt, projCntNew, buffer, 0);
+}
 
 // ignore GreenFuncN: to be added
 

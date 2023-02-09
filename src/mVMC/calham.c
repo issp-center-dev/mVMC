@@ -67,6 +67,11 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
   double complex *myBuffer;
   double complex myEnergy;
 
+  int *lazy_info = malloc(7 * sizeof(int) * NExchangeCoupling * 2);
+  double complex *lazy_ip = malloc(sizeof(double) * NExchangeCoupling * 2);
+  double complex *lazy_pfa = malloc(sizeof(double) * NExchangeCoupling * 2);
+  memset(lazy_info, 0, 7 * NExchangeCoupling * 2);
+
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
   RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
@@ -82,7 +87,7 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
                NCoulombInter, CoulombInter, ParaCoulombInter, NHundCoupling, HundCoupling, ParaHundCoupling, \
                NTransfer, Transfer, ParaTransfer, NPairHopping, PairHopping, ParaPairHopping, \
                NExchangeCoupling, ExchangeCoupling, ParaExchangeCoupling, NInterAll, InterAll, ParaInterAll, n0, n1) \
-  shared(eleCfg, eleProjCnt, eleIdx, eleNum) reduction(+:e)
+  shared(eleCfg, eleProjCnt, eleIdx, eleNum, lazy_info) reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
@@ -158,9 +163,27 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
       ri = ExchangeCoupling[idx][0];
       rj = ExchangeCoupling[idx][1];
     
-      tmp =  GreenFunc2(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
-      tmp += GreenFunc2(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
-      myEnergy += ParaExchangeCoupling[idx] * tmp;
+      lazy_ip[idx * 2]     = ParaExchangeCoupling[idx] * GreenFunc2_(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer, lazy_info + 7 * (idx * 2));
+      lazy_ip[idx * 2 + 1] = ParaExchangeCoupling[idx] * GreenFunc2_(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer, lazy_info + 7 * (idx * 2 + 1));
+      if ( !lazy_info[7 * (idx * 2)     + 6] ) myEnergy += lazy_ip[idx * 2];
+      if ( !lazy_info[7 * (idx * 2 + 1) + 6] ) myEnergy += lazy_ip[idx * 2 + 1];
+    }
+    #pragma omp barrier
+    #pragma omp for private(idx,ri,rj,tmp) schedule(dynamic) nowait
+    for(idx=0;idx<NExchangeCoupling*2;idx++) {
+      int *lazy_info_loc = lazy_info + 7 * idx;
+      if ( lazy_info_loc[6] ) {
+        int msj = lazy_info_loc[2];
+        int mtl = lazy_info_loc[3];
+        rj = myEleIdx[msj];
+        rl = myEleIdx[mtl];
+        myEleIdx[msj] = lazy_info_loc[4];
+        myEleIdx[mtl] = lazy_info_loc[5];
+        CalculateNewPfMTwo_fcmp(lazy_info_loc[1], mtl/Ne, lazy_info_loc[0], msj/Ne, myBuffer, myEleIdx, 0, NQPFull, myBuffer+NQPFull);
+        myEnergy += CalculateIP_fcmp(myBuffer, 0, NQPFull, MPI_COMM_SELF) * lazy_ip[idx];
+        myEleIdx[msj] = rj;
+        myEleIdx[mtl] = rl;
+      }
     }
 
     /* Inter All */
@@ -182,6 +205,9 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
 
     e += myEnergy;
   }
+  free(lazy_info);
+  free(lazy_ip);
+  free(lazy_pfa);
 
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();
