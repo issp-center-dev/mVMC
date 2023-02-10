@@ -68,9 +68,9 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
   double complex myEnergy;
 
   int *lazy_info = malloc(7 * sizeof(int) * NExchangeCoupling * 2);
-  double complex *lazy_ip = malloc(sizeof(double) * NExchangeCoupling * 2);
-  double complex *lazy_pfa = malloc(sizeof(double) * NExchangeCoupling * 2);
-  memset(lazy_info, 0, 7 * NExchangeCoupling * 2);
+  double complex *lazy_ip = malloc(sizeof(double complex) * NExchangeCoupling * 2);
+  double complex *lazy_pfa = malloc(sizeof(double complex) * NExchangeCoupling * 2);
+  memset(lazy_info, 0, 7 * NExchangeCoupling * 2 * sizeof(int));
 
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
   RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
@@ -180,7 +180,7 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
         myEleIdx[msj] = lazy_info_loc[4];
         myEleIdx[mtl] = lazy_info_loc[5];
         CalculateNewPfMTwo_fcmp(lazy_info_loc[1], mtl/Ne, lazy_info_loc[0], msj/Ne, myBuffer, myEleIdx, 0, NQPFull, myBuffer+NQPFull);
-        myEnergy += CalculateIP_fcmp(myBuffer, 0, NQPFull, MPI_COMM_SELF) * lazy_ip[idx];
+        myEnergy += conj(CalculateIP_fcmp(myBuffer, 0, NQPFull, MPI_COMM_SELF)) * lazy_ip[idx];
         myEleIdx[msj] = rj;
         myEleIdx[mtl] = rl;
       }
