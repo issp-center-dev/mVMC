@@ -30,6 +30,20 @@ jobs:
           make -j4
           sudo make install
 
+      - name: blis
+        working-directory: ${{runner.workspace}}
+        run: |
+          mkdir blis
+          cd blis
+          git init
+          git remote add origin https://github.com/flame/blis
+          git fetch --depth 1 origin e3d352f1fcc93e6a46fde1aa4a7f0a18fb27bd42
+          git checkout FETCH_HEAD
+          ./configure -t none -p ${{runner.workspace}}/blis-inst x86_64
+          make -j8 install
+          cd ${{runner.workspace}}/blis-inst
+          tar -zcvf ${{runner.workspace}}/libblis_artifact.tar.gz include lib
+
       - name: make workspace
         run: cmake -E make_directory ${{runner.workspace}}/build
 
@@ -38,6 +52,9 @@ jobs:
         shell: bash
         run: |
           cmake -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+          # Override downloaded artifact.
+          # TODO: Rebuild the artifacts.
+          mv ${{runner.workspace}}/libblis_artifact.tar.gz .
 
       - name: build
         working-directory: ${{runner.workspace}}/build
