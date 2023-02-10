@@ -24,6 +24,11 @@ jobs:
         run: |
           wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
           tar -zxvf eigen-3.4.0.tar.gz
+          mkdir eigen-build
+          cd eigen-build
+          cmake ../eigen-3.4.0
+          make -j4
+          sudo make install
 
       - name: make workspace
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -32,7 +37,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: |
-          cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_PREFIX_PATH=${{runner.workspace}}/eigen-3.4.0 -DEigen3_DIR=${{runner.workspace}}/eigen-3.4.0/cmake $GITHUB_WORKSPACE
+          cmake -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
 
       - name: build
         working-directory: ${{runner.workspace}}/build

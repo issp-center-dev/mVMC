@@ -11,7 +11,7 @@ endif()
 include_directories(../pfapack/c_interface)
 
 # Require Eigen
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 add_library(ltl2inv STATIC ilaenv_lauum.cc gemmt2blas.cc ltl2inv.cc)
