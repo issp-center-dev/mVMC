@@ -53,6 +53,7 @@ add_custom_target(blis_target
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/lib/libblis.a)
 add_custom_target(blis_include
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/include/blis/blis.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/blis)
 
 add_library(blis STATIC IMPORTED GLOBAL)

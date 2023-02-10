@@ -137,6 +137,7 @@ enable_language(CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 if(Require_BLIS)
+  add_definitions(-D_BLIS)
   include("download_blis_artifact.cmake")
 else(Require_BLIS)
   # Use bundled blis.h
