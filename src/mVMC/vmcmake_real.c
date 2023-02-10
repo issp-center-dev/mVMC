@@ -76,6 +76,8 @@ void VMCMakeSample_real(MPI_Comm comm) {
   // TODO: Compute from qpStart to qpEnd to support loop splitting.
   void *pfOrbital[NQPFull];
   void *pfUpdator[NQPFull];
+  void *pfMat[NQPFull];
+  void *pfMap[NQPFull];
   // Read block size from input.
   const char *optBlockSize = getenv("VMC_BLOCK_UPDATE_SIZE");
   if (optBlockSize)
@@ -96,7 +98,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
                        InvM_real, Nsize*Nsize,
                        TmpEleIdx, EleSpn,
                        NBlockUpdateSize,
-                       pfUpdator, pfOrbital);
+                       pfUpdator, pfOrbital, pfMat, pfMap);
   updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
 #else
   CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
@@ -110,13 +112,13 @@ void VMCMakeSample_real(MPI_Comm comm) {
                       qpStart, qpEnd, comm);
 #ifdef _pf_block_update
     // Clear and reinitialize.
-    updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital);
+    updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital, pfMat, pfMap);
     updated_tdi_v_init_d(NQPFull, Nsite, Nsite2, Nsize,
                          SlaterElm_real, Nsite2*Nsite2,
                          InvM_real, Nsize*Nsize,
                          TmpEleIdx, EleSpn,
                          NBlockUpdateSize,
-                         pfUpdator, pfOrbital);
+                         pfUpdator, pfOrbital, pfMat, pfMap);
     updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
 #else
     CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
@@ -283,13 +285,13 @@ void VMCMakeSample_real(MPI_Comm comm) {
         StartTimer(34);
 #ifdef _pf_block_update
         // Clear and reinitialize.
-        updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital);
+        updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital, pfMat, pfMap);
         updated_tdi_v_init_d(NQPFull, Nsite, Nsite2, Nsize,
                              SlaterElm_real, Nsite2*Nsite2,
                              InvM_real, Nsize*Nsize,
                              TmpEleIdx, EleSpn,
                              NBlockUpdateSize,
-                             pfUpdator, pfOrbital);
+                             pfUpdator, pfOrbital, pfMat, pfMap);
         updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
 #else
         CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
@@ -316,7 +318,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
 #ifdef _pf_block_update
   // Free-up updator space.
-  updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital);
+  updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital, pfMat, pfMap);
 #endif
 
   return;
