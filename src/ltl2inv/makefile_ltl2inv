@@ -15,7 +15,6 @@ SUFFIXES: .o .c
 .c.o: $(HDR)
 	$(CC) $(OPTION) $(CFLAGS) -c $< -o $@ \
 		-Wno-incompatible-pointer-types-discards-qualifiers \
-		-I../common \
 		-I../pfapack/c_interface \
 		-I$(BLIS_ROOT)/include \
 		-I$(BLIS_ROOT)/include/blis
@@ -24,7 +23,6 @@ SUFFIXES: .o .cc
 
 .cc.o: $(HDR)
 	$(CXX) $(CXXFLAGS) -D_CC_IMPL -c $< -o $@ \
-		-I../common \
 		-I../pfapack/c_interface \
 		-I$(BLIS_ROOT)/include \
 		-I$(BLIS_ROOT)/include/blis
