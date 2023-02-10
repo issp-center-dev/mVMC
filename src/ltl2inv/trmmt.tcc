@@ -4,31 +4,39 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #pragma once
-#include "colmaj.hh"
-#include "blalink.hh"
+#include "lapack2eigen.hh"
 #include "ilaenv_lauum.hh"
 
 
-template <typename T>
-inline void trmmt(uplo_t uploab, diag_t diaga, int n, T alpha, colmaj<T> &A, colmaj<T> &B)
+template <typename Mat>
+inline void trmmt(const char &uploAB, const char &diagA, const typename Mat::Scalar &alpha, Mat &A, Mat &B)
 {
-  int npanel = ilaenv_lauum<T>(uploab, n);
+  using namespace Eigen;
+  using T = typename Mat::Scalar;
+  int n = A.rows();
+  int npanel = ilaenv_lauum<T>(uploAB, n);
 
-  if (uploab == BLIS_UPPER) {
+  if (uploAB == 'U' || uploAB == 'u') {
     // A upper => A' lower -> write to UPPER part of B.
     for (int j = 0; j < n; j += npanel) {
       int nloc = std::min<int>(npanel, n - j);
 
-      trmm<T>(BLIS_LEFT, BLIS_UPPER, BLIS_TRANSPOSE, diaga,
-              j+nloc, nloc, alpha, &A(0, 0), A.ld, &B(0, j), B.ld);
+      auto Bslice = B(seq(0, j+nloc-1), seq(j, j+nloc-1));
+      if (diagA == 'U' || diagA == 'u')
+        Bslice = A(seq(0, j+nloc-1), seq(0, j+nloc-1)).template triangularView<UnitUpper>().transpose() * Bslice * alpha;
+      else
+        Bslice = A(seq(0, j+nloc-1), seq(0, j+nloc-1)).template triangularView<Upper>().transpose() * Bslice * alpha;
     }
   } else {
     // A lower => A' upper -> write to LOWER part of B.
     for (int j = 0; j < n; j += npanel) {
       int nloc = std::min<int>(npanel, n - j);
 
-      trmm<T>(BLIS_LEFT, BLIS_LOWER, BLIS_TRANSPOSE, diaga,
-              n-j, nloc, alpha, &A(j, j), A.ld, &B(j, j), B.ld);
+      auto Bslice = B(seq(j, n-1), seq(j, j+nloc-1));
+      if (diagA == 'U' || diagA == 'u')
+        Bslice = A(seq(j, n-1), seq(j, n-1)).template triangularView<UnitLower>().transpose() * Bslice * alpha;
+      else
+        Bslice = A(seq(j, n-1), seq(j, n-1)).template triangularView<Lower>().transpose() * Bslice * alpha;
     }
   }
 }

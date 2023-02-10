@@ -4,15 +4,15 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #pragma once
-#include "colmaj.hh"
-#include "blalink.hh"
+#include "lapack2eigen.hh"
 #include "trmmt.tcc"
+#include "error.hh"
 
-template <typename T>
-void sktdsmx(int n, T *vT, T *B_, int ldB, T *C_, int ldC)
+template <typename Vec, typename Mat>
+void sktdsmx(const Vec &vT, const Mat &B, Mat &C)
 {
-  colmaj<T> B(B_, ldB);
-  colmaj<T> C(C_, ldC);
+  int n = B.rows();
+  assert_(B.cols() == n && C.cols() == n && C.rows() == n, "sktdsmx: Dimension mismatch.");
 
   for (int j = 0; j < n; ++j)
     C(1, j) = B(0, j) / -vT[0];
@@ -27,13 +27,13 @@ void sktdsmx(int n, T *vT, T *B_, int ldB, T *C_, int ldC)
       C(i-1, j) = (B(i, j) + C(i+1, j) * vT[i]) / vT[i-1];
 }
 
-template <typename T>
-void ltl2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
+template <typename iVec, typename Vec, typename Mat>
+void ltl2inv(Mat &A, const iVec &iPiv, Vec &vT, Mat &M)
 {
-  colmaj<T> A(A_, ldA);
-  colmaj<T> M(M_, ldM);
-
-  int npanel_trmm = ilaenv_lauum<T>(BLIS_LOWER, n);
+  using namespace Eigen;
+  using T = typename Mat::Scalar;
+  int n = A.rows();
+  int npanel_trmm = ilaenv_lauum<T>('L', n);
   int full = npanel_trmm <= 1 || npanel_trmm >= n;
 
   // Set M.
@@ -41,15 +41,21 @@ void ltl2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
     for (int i = 0; i < n; ++i)
       M(i, j) = T(!(i - j));
 
-  trtri(BLIS_LOWER, BLIS_UNIT_DIAG, n-1, &A(1, 0), ldA);
-  lacpy(BLIS_LOWER, n-2, n-2, &A(2, 0), ldA, &M(2, 1), ldM);
+  l2e::le_mat_t<T> A_(A);
+  l2e::le_mat_t<T> M_(M);
+  l2e::le_mat_t<T> A_Lx(A(seq(1, n-1), seq(0, n-2)));
+  l2e::le_mat_t<T> A_L(A(seq(2, n-1), seq(0, n-3)));
+  l2e::le_mat_t<T> M_L(M(seq(2, n-1), seq(1, n-2)));
+
+  trtri('L', 'U', A_Lx);
+  lacpy('L', A_L, M_L);
 
   for (int i = 0; i < n-1; ++i)
     vT[i] = A(i+1, i);
-  sktdsmx<T>(n, vT, &M(0, 0), ldM, &A(0, 0), ldA);
+  sktdsmx(vT, M, A);
 
   if (!full) {
-    trmmt(BLIS_LOWER, BLIS_UNIT_DIAG, n, T(1.0), M, A);
+    trmmt('L', 'U', T(1.0), M, A);
     for (int j = 0; j < n; ++j) {
       A(j, j) = 0.0;
       for (int i = 0; i < j; ++i)
@@ -60,25 +66,24 @@ void ltl2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
   // In-place permute columns.
   for (int j = n-1; j >= 0; --j)
     if (iPiv[j]-1 != j)
-      swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
+      A(Eigen::all, j).swap(A(Eigen::all, iPiv[j] - 1));
 
   if (full)
-    trmm(BLIS_LEFT, BLIS_LOWER, BLIS_TRANSPOSE, BLIS_UNIT_DIAG,
-         n, n, T(1.0), &M(0, 0), ldM, &A(0, 0), ldA);
+    A = M.template triangularView<UnitLower>().transpose() * A;
 
   // In-place permute rows.
   for (int i = n-1; i >= 0; --i)
     if (iPiv[i]-1 != i)
-      swap(n, &A(i, 0), ldA, &A(iPiv[i]-1, 0), ldA);
+      A(i, Eigen::all).swap(A(iPiv[i] - 1, Eigen::all));
 }
 
-template <typename T>
-void utu2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
+template <typename iVec, typename Vec, typename Mat>
+void utu2inv(Mat &A, const iVec &iPiv, Vec &vT, Mat &M)
 {
-  colmaj<T> A(A_, ldA);
-  colmaj<T> M(M_, ldM);
-
-  int npanel_trmm = ilaenv_lauum<T>(BLIS_UPPER, n);
+  using namespace Eigen;
+  using T = typename Mat::Scalar;
+  int n = A.rows();
+  int npanel_trmm = ilaenv_lauum<T>('U', n);
   int full = npanel_trmm <= 1 || npanel_trmm >= n;
 
   // Set M.
@@ -86,15 +91,21 @@ void utu2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
     for (int i = 0; i < n; ++i)
       M(i, j) = T(!(i - j));
 
-  trtri(BLIS_UPPER, BLIS_UNIT_DIAG, n-1, &A(0, 1), ldA);
-  lacpy(BLIS_UPPER, n-2, n-2, &A(0, 2), ldA, &M(0, 1), ldM);
+  l2e::le_mat_t<T> A_(A);
+  l2e::le_mat_t<T> M_(M);
+  l2e::le_mat_t<T> A_Ux(A(seq(0, n-2), seq(1, n-1)));
+  l2e::le_mat_t<T> A_U(A(seq(0, n-3), seq(2, n-1)));
+  l2e::le_mat_t<T> M_U(M(seq(0, n-3), seq(1, n-2)));
+
+  trtri('U', 'U', A_Ux);
+  lacpy('U', A_U, M_U);
 
   for (int i = 0; i < n-1; ++i)
     vT[i] = -A(i, i+1);
-  sktdsmx<T>(n, vT, &M(0, 0), ldM, &A(0, 0), ldA);
+  sktdsmx(vT, M, A);
 
   if (!full) {
-    trmmt(BLIS_UPPER, BLIS_UNIT_DIAG, n, T(1.0), M, A);
+    trmmt('U', 'U', T(1.0), M, A);
       for (int j = 0; j < n; ++j) {
         A(j, j) = 0.0;
         for (int i = j + 1; i < n; ++i)
@@ -105,26 +116,27 @@ void utu2inv(int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
   // In-place permute columns.
   for (int j = 0; j < n; ++j)
     if (iPiv[j]-1 != j)
-      swap(n, &A(0, j), 1, &A(0, iPiv[j]-1), 1);
+      A(Eigen::all, j).swap(A(Eigen::all, iPiv[j]-1));
 
   if (full)
-    trmm(BLIS_LEFT, BLIS_UPPER, BLIS_TRANSPOSE, BLIS_UNIT_DIAG,
-         n, n, T(1.0), &M(0, 0), ldM, &A(0, 0), ldA);
+    A = M.template triangularView<UnitUpper>().transpose() * A;
 
   // In-place permute rows.
   for (int i = 0; i < n; ++i)
     if (iPiv[i]-1 != i)
-      swap(n, &A(i, 0), ldA, &A(iPiv[i]-1, 0), ldA);
+      A(i, Eigen::all).swap(A(iPiv[i]-1, Eigen::all));
 }
 
-template <typename T>
-void ltl2inv(uplo_t uplo, int n, T *A_, int ldA, int *iPiv, T *vT, T *M_, int ldM)
+template <typename iVec, typename Vec, typename Mat>
+void ltl2inv(const char uplo, Mat &A, const iVec &iPiv, Vec &vT, Mat &M)
 {
   switch (uplo) {
-  case BLIS_LOWER:
-    ltl2inv(n, A_, ldA, iPiv, vT, M_, ldM); break;
-  case BLIS_UPPER:
-    utu2inv(n, A_, ldA, iPiv, vT, M_, ldM); break;
+  case 'l':
+  case 'L':
+    ltl2inv(A, iPiv, vT, M); break;
+  case 'u':
+  case 'U':
+    utu2inv(A, iPiv, vT, M); break;
   default:
     break;
   }
