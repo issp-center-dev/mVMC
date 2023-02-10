@@ -37,11 +37,6 @@ which follows "The BSD 3-Clause License".
 #include "splitloop.h"
 #include "vmcmake.h"
 
-#ifdef _pf_block_update
-// Block-update extension.
-#include "../pfupdates/pf_interface.h"
-#endif
-
 void VMCMakeSample_real(MPI_Comm comm) {
   int outStep, nOutStep;
   int inStep, nInStep;

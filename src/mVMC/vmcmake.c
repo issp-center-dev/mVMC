@@ -36,11 +36,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "splitloop.h"
 #include "qp.h"
 
-#ifdef _pf_block_update
-// Block-update extension.
-#include "../pfupdates/pf_interface.h"
-#endif
-
 void VMCMakeSample(MPI_Comm comm) {
   int outStep,nOutStep;
   int inStep,nInStep;

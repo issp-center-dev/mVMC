@@ -12,7 +12,7 @@
 #include "stdint.h"
 
 // Redefine double complex for (future) non-C99 compatibility.
-#ifndef _CC_IMPL
+#ifndef __cplusplus
 typedef _Complex double ccdcmplx;
 typedef _Complex float  ccscmplx;
 #else
@@ -118,7 +118,7 @@ GENDEF( ccdcmplx, z )
 
 #undef EXPANDNAME
 
-#ifdef _CC_IMPL
+#ifdef __cplusplus
 }
 #endif
 
