@@ -8,8 +8,8 @@
 #include "trmmt.tcc"
 #include "error.hh"
 
-template <typename Vec, typename Mat>
-void sktdsmx(const Vec &vT, const Mat &B, Mat &C)
+template <typename Vec, typename Mat, typename Mat_>
+void sktdsmx(const Vec &vT, const Mat &B, Mat_ &C)
 {
   int n = B.rows();
   assert_(B.cols() == n && C.cols() == n && C.rows() == n, "sktdsmx: Dimension mismatch.");
@@ -27,8 +27,8 @@ void sktdsmx(const Vec &vT, const Mat &B, Mat &C)
       C(i-1, j) = (B(i, j) + C(i+1, j) * vT[i]) / vT[i-1];
 }
 
-template <typename iVec, typename Vec, typename Mat>
-void ltl2inv(Mat &A, const iVec &iPiv, Vec &vT, Mat &M)
+template <typename iVec, typename Vec, typename Mat, typename Mat_>
+void ltl2inv(Mat &A, const iVec &iPiv, Vec &vT, Mat_ &M)
 {
   using namespace Eigen;
   using T = typename Mat::Scalar;
@@ -77,8 +77,8 @@ void ltl2inv(Mat &A, const iVec &iPiv, Vec &vT, Mat &M)
       A(i, Eigen::all).swap(A(iPiv[i] - 1, Eigen::all));
 }
 
-template <typename iVec, typename Vec, typename Mat>
-void utu2inv(Mat &A, const iVec &iPiv, Vec &vT, Mat &M)
+template <typename iVec, typename Vec, typename Mat, typename Mat_>
+void utu2inv(Mat &A, const iVec &iPiv, Vec &vT, Mat_ &M)
 {
   using namespace Eigen;
   using T = typename Mat::Scalar;
@@ -127,8 +127,8 @@ void utu2inv(Mat &A, const iVec &iPiv, Vec &vT, Mat &M)
       A(i, Eigen::all).swap(A(iPiv[i]-1, Eigen::all));
 }
 
-template <typename iVec, typename Vec, typename Mat>
-void ltl2inv(const char uplo, Mat &A, const iVec &iPiv, Vec &vT, Mat &M)
+template <typename iVec, typename Vec, typename Mat, typename Mat_>
+void ltl2inv(const char uplo, Mat &A, const iVec &iPiv, Vec &vT, Mat_ &M)
 {
   switch (uplo) {
   case 'l':

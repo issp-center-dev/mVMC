@@ -7,29 +7,29 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-#include "blalink.hh"
-#include "blalink_gemmt.hh"
-#include "colmaj.hh"
+#pragma once
+#include "lapack2eigen.hh"
 #include <iostream>
 
 
-template <typename T>
-inline void skr2k(uplo_t uploc,
-                  trans_t transab,
-                  dim_t m, dim_t k,
-                  T alpha,
-                  T *_A, inc_t ldA,
-                  T *_B, inc_t ldB,
-                  T beta,
-                  T *_C, inc_t ldC)
+template <typename Mat0, typename Mat1, typename Mat2>
+inline void skr2k(const char &uploC,
+                  const char &transAB,
+                  const typename Mat2::Scalar &alpha,
+                  const Mat0 &A,
+                  const Mat1 &B,
+                  const typename Mat2::Scalar &beta,
+                        Mat2 &C)
 {
-    T one = 1.0;
-    if (transab == BLIS_NO_TRANSPOSE) {
-        gemmt<T>(uploc, BLIS_NO_TRANSPOSE, BLIS_TRANSPOSE, m, k, alpha, _A, ldA, _B, ldB, beta, _C, ldC);
-        gemmt<T>(uploc, BLIS_NO_TRANSPOSE, BLIS_TRANSPOSE, m, k,-alpha, _B, ldB, _A, ldA, one , _C, ldC);
+    using T = typename Mat0::Scalar;
+
+    l2e::le_mat_t<T> C_(C);
+    if (transAB == 'N' || transAB == 'n') {
+        gemmt<T>(uploC, 'N', 'T',  alpha, l2e::le_mat_t<T>(A), l2e::le_mat_t<T>(B), beta, C_);
+        gemmt<T>(uploC, 'N', 'T', -alpha, l2e::le_mat_t<T>(B), l2e::le_mat_t<T>(A), T(1), C_);
     } else {
-        gemmt<T>(uploc, BLIS_TRANSPOSE, BLIS_NO_TRANSPOSE, m, k, alpha, _A, ldA, _B, ldB, beta, _C, ldC);
-        gemmt<T>(uploc, BLIS_TRANSPOSE, BLIS_NO_TRANSPOSE, m, k,-alpha, _B, ldB, _A, ldA, one , _C, ldC);
+        gemmt<T>(uploC, 'T', 'N',  alpha, l2e::le_mat_t<T>(A), l2e::le_mat_t<T>(B), beta, C_);
+        gemmt<T>(uploC, 'T', 'N', -alpha, l2e::le_mat_t<T>(B), l2e::le_mat_t<T>(A), T(1), C_);
     }
 }
 

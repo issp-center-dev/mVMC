@@ -8,8 +8,8 @@
 #include "ilaenv_lauum.hh"
 
 
-template <typename Mat>
-inline void trmmt(const char &uploAB, const char &diagA, const typename Mat::Scalar &alpha, Mat &A, Mat &B)
+template <typename Mat, typename Mat_>
+inline void trmmt(const char &uploAB, const char &diagA, const typename Mat::Scalar &alpha, Mat &A, Mat_ &B)
 {
   using namespace Eigen;
   using T = typename Mat::Scalar;

@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "updated_tdi.tcc"
+#include "orbital_mat.tcc"
 // In implementation, this should appear AFTER blis.h.
 #include "pf_interface.h"
 
@@ -16,8 +17,15 @@
 #error "Valid non-preprocessor _pragma() not found."
 #endif
 
-#define orbv( i, ctype ) ( (orbital_mat<ctype> *)orbv[i] )
-#define objv( i, ctype ) ( (updated_tdi<ctype> *)objv[i] )
+using namespace Eigen;
+using namespace vmc::orbital;
+template <typename T>
+using matrix_t = Map<Matrix<T, Dynamic, Dynamic>, 0, OuterStride<> >;
+
+#define matv( i, ctype ) ( (                        matrix_t<ctype>     *)matv[i] )
+#define mapv( i, ctype ) ( (                        matrix_t<ctype>     *)mapv[i] )
+#define orbv( i, ctype ) ( (            orbital_mat<matrix_t<ctype> >   *)orbv[i] )
+#define objv( i, ctype ) ( (updated_tdi<orbital_mat<matrix_t<ctype> > > *)objv[i] )
 
 #define EXPANDNAME( funcname, cblachar ) funcname##_##cblachar
 
@@ -35,19 +43,23 @@
       int32_t  *elespn, \
       uint64_t  mmax, \
       void     *objv[], \
-      void     *orbv[] ) \
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] ) \
 { \
   OMP_PARALLEL_FOR_SHARED \
   for (int iqp = 0; iqp < num_qp; ++iqp) { \
-    orbv[iqp] = new orbital_mat<ctype>( \
-        BLIS_UPPER, norbs, orbmat_base + iqp * orbmat_stride, norbs); \
-    objv[iqp] = new updated_tdi<ctype>( \
-        *orbv(iqp, ctype), nelec, invmat_base + iqp * invmat_stride, nelec, mmax); \
+    mapv[iqp] = new matrix_t<ctype>(orbmat_base + iqp * orbmat_stride, norbs, norbs, OuterStride<>(norbs)); \
+    matv[iqp] = new matrix_t<ctype>(invmat_base + iqp * invmat_stride, nelec, nelec, OuterStride<>(nelec)); \
+    orbv[iqp] = new orbital_mat<matrix_t<ctype>>('U', norbs, *mapv(iqp, ctype) ); \
+    objv[iqp] = new updated_tdi<orbital_mat<matrix_t<ctype>>> \
+        ( *orbv(iqp, ctype), *matv(iqp, ctype), nelec, mmax); \
 \
     /* Compute initial. */ \
-    auto &cfg_i = objv(iqp, ctype)->elem_cfg; \
+    vmc::config_manager::base_t cfg_i(nelec); \
     for (int msi = 0; msi < nelec; ++msi) \
       cfg_i.at(msi) = eleidx[msi] + elespn[msi]*nsite; \
+    objv(iqp, ctype)->attach_config(cfg_i); \
     objv(iqp, ctype)->initialize(); \
   } \
 }
@@ -61,11 +73,15 @@ GENIMPL( ccdcmplx, z )
   void EXPANDNAME( updated_tdi_v_free, cblachar ) \
     ( uint64_t  num_qp, \
       void     *objv[], \
-      void     *orbv[] ) \
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] ) \
 { \
   for (int iqp = 0; iqp < num_qp; ++iqp) { \
     delete orbv(iqp, ctype); \
     delete objv(iqp, ctype); \
+    delete matv(iqp, ctype); \
+    delete mapv(iqp, ctype); \
   } \
 }
 // GENIMPL( float,    s )
@@ -82,7 +98,7 @@ GENIMPL( ccdcmplx, z )
 { \
   /* Minus sign appears from that SlaterElm is in fact interpreted as row-major. */ \
   for (int iqp = 0; iqp < num_qp; ++iqp) \
-    pfav[iqp] = -objv(iqp, ctype)->get_Pfa(); \
+    pfav[iqp] = -objv(iqp, ctype)->get_amplitude(); \
 }
 // GENIMPL( float,    s )
 GENIMPL( double,   d )
@@ -120,7 +136,7 @@ GENIMPL( ccdcmplx, z )
 { \
   OMP_PARALLEL_FOR_SHARED \
   for (int iqp = 0; iqp < num_qp; ++iqp) { \
-    auto &from_i = objv(iqp, ctype)->from_idx; \
+    const auto &from_i = objv(iqp, ctype)->get_config_manager().from_idx(); \
     if (from_i.size() > objv(iqp, ctype)->mmax - 2) \
       objv(iqp, ctype)->merge_updates(); \
     else \

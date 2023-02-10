@@ -38,7 +38,9 @@ extern "C" {
       int32_t  *elespn, \
       uint64_t  mmax, \
       void     *objv[], \
-      void     *orbv[] );
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] );
 
 // GENDEF( float,    s )
 GENDEF( double,   d )
@@ -50,7 +52,9 @@ GENDEF( ccdcmplx, z )
    void EXPANDNAME( updated_tdi_v_free, cblachar ) \
     ( uint64_t  num_qp, \
       void     *objv[], \
-      void     *orbv[] );
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] );
 
 // GENDEF( float,    s )
 GENDEF( double,   d )
