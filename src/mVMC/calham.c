@@ -196,11 +196,33 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
       if ( !*lazy_info_odd  ) myEnergy += lazy_ip[idx * 2 + 1];
     }
     #pragma omp barrier
-    updated_tdi_v_omp_proc_batch_greentwo_z(NQPFull, NExchangeCoupling*2,
-                                            lazy_info, lazy_info + NExchangeCoupling*2,
-                                            lazy_rsi, lazy_msj,
-                                            lazy_pfa,
-                                            pfUpdator, pfOrbital, pfMat, pfMap);
+#if 1
+    int num_qp_var0 = 0;
+    // Pack lazy info.
+    for (idx=0; idx<NExchangeCoupling*2; ++idx)
+      if (lazy_info[idx]) {
+        if (omp_get_thread_num() == 0) {
+          lazy_rsi[num_qp_var0 * 2    ] = lazy_rsi[idx * 2]; \
+          lazy_rsi[num_qp_var0 * 2 + 1] = lazy_rsi[idx * 2 + 1]; \
+          lazy_msj[num_qp_var0 * 2    ] = lazy_msj[idx * 2]; \
+          lazy_msj[num_qp_var0 * 2 + 1] = lazy_msj[idx * 2 + 1]; \
+          lazy_info[NExchangeCoupling*2 + num_qp_var0] = idx; \
+        }
+        num_qp_var0++;
+      }
+    #pragma omp barrier
+    updated_tdi_v_omp_var0_proc_batch_greentwo_z(NQPFull, num_qp_var0,
+                                                 NULL, lazy_info + NExchangeCoupling*2,
+                                                 lazy_rsi, lazy_msj,
+                                                 lazy_pfa,
+                                                 pfUpdator, pfOrbital, pfMat, pfMap);
+#else
+    updated_tdi_v_omp_var1_proc_batch_greentwo_z(NQPFull, NExchangeCoupling*2,
+                                                 lazy_info, lazy_info + NExchangeCoupling*2,
+                                                 lazy_rsi, lazy_msj,
+                                                 lazy_pfa,
+                                                 pfUpdator, pfOrbital, pfMat, pfMap);
+#endif
     #pragma omp barrier
     #pragma omp for private(idx,ri,rj,tmp) schedule(dynamic) nowait
     for(idx=0;idx<NExchangeCoupling*2;idx++)

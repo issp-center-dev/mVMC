@@ -214,7 +214,48 @@ GENIMPL( ccdcmplx, z )
 #undef GENIMPL
 
 #define GENIMPL( ctype, cblachar ) \
-  void EXPANDNAME( updated_tdi_v_omp_proc_batch_greentwo, cblachar ) \
+  void EXPANDNAME( updated_tdi_v_omp_var0_proc_batch_greentwo, cblachar ) \
+    ( uint64_t  num_qp, \
+      int       num_gf, \
+      int       needs_comput[], /* Already packed. var0 only does unpacking. */ \
+      int       unpack_idx[],   /* Already packed. var0 only does unpacking. */ \
+      int       to_orbs_[],     /* Already packed. var0 only does unpacking. */ \
+      int       from_ids_[],    /* Already packed. var0 only does unpacking. */ \
+      ctype     pfav[], \
+      void     *objv[], \
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] ) \
+{ \
+  const int ith = omp_get_thread_num(); \
+  const int nth = omp_get_num_threads(); \
+\
+  /* Partitioning. */ \
+  const int qpCountThread = (num_qp + nth - 1) / nth; \
+  const int qpStart = qpCountThread * ith; \
+  const int qpEnd = std::min(int(num_qp), qpCountThread + qpStart); \
+\
+  Eigen::Map<VectorXi>  to_orbs( to_orbs_, num_gf * 2); \
+  Eigen::Map<VectorXi> from_ids(from_ids_, num_gf * 2); \
+\
+  for (int iqp = qpStart; iqp < qpEnd; ++iqp) { \
+    Eigen::Vector<ctype, Eigen::Dynamic> pfaBatch = \
+      objv(iqp, ctype)->batch_query_amplitudes(2, to_orbs, from_ids); \
+    pfaBatch *= objv(iqp, ctype)->get_amplitude(); \
+\
+    /* Unpack computed Pfaffians. */ \
+    for (int igf = 0; igf < num_gf; ++igf) \
+      pfav[unpack_idx[igf] * num_qp + iqp] = pfaBatch[igf]; \
+  } \
+}
+// GENIMPL( float,    s )
+GENIMPL( double,   d )
+// GENIMPL( ccscmplx, c )
+GENIMPL( ccdcmplx, z )
+#undef GENIMPL
+
+#define GENIMPL( ctype, cblachar ) \
+  void EXPANDNAME( updated_tdi_v_omp_var1_proc_batch_greentwo, cblachar ) \
     ( uint64_t  num_qp, \
       int       num_gf, \
       int       needs_comput[], \

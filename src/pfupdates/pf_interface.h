@@ -141,8 +141,8 @@ GENDEF( double,   d )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
-#define GENDEF( ctype, cblachar ) \
-  void EXPANDNAME( updated_tdi_v_omp_proc_batch_greentwo, cblachar ) \
+#define GENDEF( ctype, infix, cblachar ) \
+  void EXPANDNAME( updated_tdi_v_omp_## infix ##_proc_batch_greentwo, cblachar ) \
     ( uint64_t  num_qp, \
       int       num_gf, \
       int       needs_comput[], \
@@ -154,10 +154,14 @@ GENDEF( ccdcmplx, z )
       void     *orbv[], \
       void     *matv[], \
       void     *mapv[] );
-// GENDEF( float,    s )
-GENDEF( double,   d )
-// GENDEF( ccscmplx, c )
-GENDEF( ccdcmplx, z )
+// GENDEF( float, var0,    s )
+// GENDEF( float, var1,    s )
+GENDEF( double, var0,   d )
+GENDEF( double, var1,   d )
+// GENDEF( ccscmplx, var0, c )
+// GENDEF( ccscmplx, var1, c )
+GENDEF( ccdcmplx, var0, z )
+GENDEF( ccdcmplx, var1, z )
 #undef GENDEF
 
 #undef EXPANDNAME
