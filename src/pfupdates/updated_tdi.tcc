@@ -68,6 +68,14 @@ private:
 
 public:
 
+  void initialize_precomputed(T Pfa_) {
+    elem_cfg.merge_config();
+    elem_cfg.reserve_space(mmax);
+    nq_updated = 0;
+    Pfa = Pfa_;
+    PfaRatio = 1.0;
+  }
+
   void initialize() {
     using namespace std;
     elem_cfg.merge_config();
@@ -530,7 +538,8 @@ public:
   /**
    * Complete antisymmetric matrix.
    */
-  static void skcomplete(const char &uplo_, matrix_t &A) {
+  template <typename Mat>
+  static void skcomplete(const char &uplo_, Mat &A) {
     const index_t n = A.rows();
 
     for (index_t j = 0; j < n; ++j) {
@@ -568,7 +577,8 @@ public:
     uplo = uplo_new;
   }
 
-  Eigen::Vector<amp_t, Eigen::Dynamic> batch_query_amplitudes(int N, idxvec_t to_orbs, idxvec_t from_ids) {
+  Eigen::Vector<amp_t, Eigen::Dynamic> batch_query_amplitudes
+      (int N, const Eigen::Map<idxvec_t> &to_orbs, const Eigen::Map<idxvec_t> &from_ids) {
     using namespace Eigen;
     using ampvec_t = Eigen::Vector<amp_t, Eigen::Dynamic>;
 
@@ -646,24 +656,24 @@ public:
       for (index_t o = 0; o < N-1; ++o)
         for (index_t l = 0; l < o; ++l)
           if (upper)
-            CCur(l, o) = -UCur(all, o).transpose() * QCur(all, l) -
+            CCur(l, o) = -(UCur(all, o).transpose() * QCur(all, l))(0,0) -
               Xij(to_orbs(l1 * N + l), to_orbs(l1 * N + o)) +
               Xij(elem_cfg.config_base(from_ids(l1 * N + l)),
                   elem_cfg.config_base(from_ids(l1 * N + o)));
           else
-            CCur(o, l) =  UCur(all, o).transpose() * QCur(all, l) -
+            CCur(o, l) =  (UCur(all, o).transpose() * QCur(all, l))(0,0) -
               Xij(to_orbs(l1 * N + l), to_orbs(l1 * N + o)) +
               Xij(elem_cfg.config_base(from_ids(l1 * N + l)),
                   elem_cfg.config_base(from_ids(l1 * N + o)));
       {
         for (index_t l = 0; l < N-1; ++l)
           if (upper)
-            CCur(l, N-1) = -UbF(all, l1).transpose() * QCur(all, l) -
+            CCur(l, N-1) = -(UbF(all, l1).transpose() * QCur(all, l))(0,0) -
               Xij(to_orbs(l1 * N + l), to_orbs(l1 * N + N-1)) +
               Xij(elem_cfg.config_base(from_ids(l1 * N + l)),
                   elem_cfg.config_base(from_ids(l1 * N + N-1)));
           else
-            CCur(N-1, l) =  UbF(all, l1).transpose() * QCur(all, l) -
+            CCur(N-1, l) =  (UbF(all, l1).transpose() * QCur(all, l))(0,0) -
               Xij(to_orbs(l1 * N + l), to_orbs(l1 * N + N-1)) +
               Xij(elem_cfg.config_base(from_ids(l1 * N + l)),
                   elem_cfg.config_base(from_ids(l1 * N + N-1)));

@@ -7,14 +7,15 @@
 #include "orbital_mat.tcc"
 // In implementation, this should appear AFTER blis.h.
 #include "pf_interface.h"
+#include <omp.h>
 
 // Non-# Pragma support differs from compiler to compiler
 #if defined(__INTEL_COMPILER)
-#define OMP_PARALLEL_FOR_SHARED __pragma(omp parallel for default(shared))
+#define _ccPragma(_1) __pragma(_1)
 #elif defined(__GNUC__)
-#define OMP_PARALLEL_FOR_SHARED _Pragma("omp parallel for default(shared)")
+#define _ccPragma(_1) _Pragma(#_1)
 #else
-#error "Valid non-preprocessor _pragma() not found."
+#error "Valid non-preprocessor _Pragma() not found."
 #endif
 
 using namespace Eigen;
@@ -28,6 +29,46 @@ using matrix_t = Map<Matrix<T, Dynamic, Dynamic>, 0, OuterStride<> >;
 #define objv( i, ctype ) ( (updated_tdi<orbital_mat<matrix_t<ctype> > > *)objv[i] )
 
 #define EXPANDNAME( funcname, cblachar ) funcname##_##cblachar
+
+#define GENIMPL( ctype, cblachar ) \
+  void EXPANDNAME( updated_tdi_v_seq_init_precomp, cblachar ) \
+    ( uint64_t  num_qp, \
+      uint64_t  nsite, \
+      uint64_t  norbs, \
+      uint64_t  nelec, \
+      ctype    *orbmat_base, \
+      int64_t   orbmat_stride, \
+      ctype    *invmat_base, \
+      int64_t   invmat_stride, \
+      int32_t  *eleidx, \
+      int32_t  *elespn, \
+      uint64_t  mmax, \
+      ctype     pfav[], \
+      void     *objv[], \
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] ) \
+{ \
+  for (int iqp = 0; iqp < num_qp; ++iqp) { \
+    mapv[iqp] = new matrix_t<ctype>(orbmat_base + iqp * orbmat_stride, norbs, norbs, OuterStride<>(norbs)); \
+    matv[iqp] = new matrix_t<ctype>(invmat_base + iqp * invmat_stride, nelec, nelec, OuterStride<>(nelec)); \
+    orbv[iqp] = new orbital_mat<matrix_t<ctype>>('U', norbs, *mapv(iqp, ctype) ); \
+    objv[iqp] = new updated_tdi<orbital_mat<matrix_t<ctype>>> \
+        ( *orbv(iqp, ctype), *matv(iqp, ctype), nelec, mmax); \
+\
+    /* Compute initial. */ \
+    vmc::config_manager::base_t cfg_i(nelec); \
+    for (int msi = 0; msi < nelec; ++msi) \
+      cfg_i.at(msi) = eleidx[msi] + elespn[msi]*nsite; \
+    objv(iqp, ctype)->attach_config(cfg_i); \
+    objv(iqp, ctype)->initialize_precomputed(pfav[iqp]); \
+  } \
+}
+// GENIMPL( float,    s )
+GENIMPL( double,   d )
+// GENIMPL( ccscmplx, c )
+GENIMPL( ccdcmplx, z )
+#undef GENIMPL
 
 #define GENIMPL( ctype, cblachar ) \
   void EXPANDNAME( updated_tdi_v_init, cblachar ) \
@@ -47,7 +88,7 @@ using matrix_t = Map<Matrix<T, Dynamic, Dynamic>, 0, OuterStride<> >;
       void     *matv[], \
       void     *mapv[] ) \
 { \
-  OMP_PARALLEL_FOR_SHARED \
+  _ccPragma(omp parallel for default(shared)) \
   for (int iqp = 0; iqp < num_qp; ++iqp) { \
     mapv[iqp] = new matrix_t<ctype>(orbmat_base + iqp * orbmat_stride, norbs, norbs, OuterStride<>(norbs)); \
     matv[iqp] = new matrix_t<ctype>(invmat_base + iqp * invmat_stride, nelec, nelec, OuterStride<>(nelec)); \
@@ -114,7 +155,7 @@ GENIMPL( ccdcmplx, z )
       int64_t   cal_pfa, \
       void     *objv[] ) \
 { \
-  OMP_PARALLEL_FOR_SHARED \
+  _ccPragma(omp parallel for default(shared)) \
   for (int iqp = 0; iqp < num_qp; ++iqp) \
     objv(iqp, ctype)->push_update_safe(osi, msj, cal_pfa!=0); \
 }
@@ -134,7 +175,7 @@ GENIMPL( ccdcmplx, z )
       int64_t   cal_pfa, \
       void     *objv[] ) \
 { \
-  OMP_PARALLEL_FOR_SHARED \
+  _ccPragma(omp parallel for default(shared)) \
   for (int iqp = 0; iqp < num_qp; ++iqp) { \
     const auto &from_i = objv(iqp, ctype)->get_config_manager().from_idx(); \
     if (from_i.size() > objv(iqp, ctype)->mmax - 2) \
@@ -164,6 +205,60 @@ GENIMPL( ccdcmplx, z )
 { \
   for (int iqp = 0; iqp < num_qp; ++iqp) { \
     objv(iqp, ctype)->pop_update(cal_pfa!=0); \
+  } \
+}
+// GENIMPL( float,    s )
+GENIMPL( double,   d )
+// GENIMPL( ccscmplx, c )
+GENIMPL( ccdcmplx, z )
+#undef GENIMPL
+
+#define GENIMPL( ctype, cblachar ) \
+  void EXPANDNAME( updated_tdi_v_omp_proc_batch_greentwo, cblachar ) \
+    ( uint64_t  num_qp, \
+      int       num_gf, \
+      int       needs_comput[], \
+      int       unpack_idx[], \
+      int       to_orbs[], \
+      int       from_ids[], \
+      ctype     pfav[], \
+      void     *objv[], \
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] ) \
+{ \
+  int ith = omp_get_thread_num(); \
+  int nth = omp_get_num_threads(); \
+\
+  int gf_count = 0; \
+  for (int i = 0; i < num_gf; ++i) \
+    if ( needs_comput[i] ) { \
+      if ( ith == 0 ) { \
+        /* Pack info space. */ \
+        to_orbs[gf_count * 2    ] = to_orbs[i * 2]; \
+        to_orbs[gf_count * 2 + 1] = to_orbs[i * 2 + 1]; \
+        from_ids[gf_count * 2    ] = from_ids[i * 2]; \
+        from_ids[gf_count * 2 + 1] = from_ids[i * 2 + 1]; \
+        unpack_idx[gf_count] = i; \
+      } \
+      /* Count Green's funcs. */ \
+      gf_count++; \
+    } \
+\
+  int gf_cnt_thread = (gf_count + nth - 1) / nth; \
+  int gfStart = gf_cnt_thread * ith; \
+  int gfEnd = std::min(gf_count, gfStart + gf_cnt_thread); \
+\
+  Eigen::Map<VectorXi>  to_orbs_thread( to_orbs + gfStart * 2, (gfEnd - gfStart) * 2); \
+  Eigen::Map<VectorXi> from_ids_thread(from_ids + gfStart * 2, (gfEnd - gfStart) * 2); \
+\
+  for (int iqp = 0; iqp < num_qp; ++iqp) { \
+    Eigen::Vector<ctype, Eigen::Dynamic> pfaBatch = \
+      objv(iqp, ctype)->batch_query_amplitudes(2, to_orbs_thread, from_ids_thread); \
+\
+    /* Unpack computed Pfaffians. */ \
+    for (int igf = gfStart; igf < gfEnd; ++igf) \
+      pfav[unpack_idx[igf] * num_qp + iqp] = pfaBatch[igf - gfStart]; \
   } \
 }
 // GENIMPL( float,    s )

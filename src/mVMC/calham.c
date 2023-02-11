@@ -67,10 +67,16 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
   double complex *myBuffer;
   double complex myEnergy;
 
-  int *lazy_info = malloc(7 * sizeof(int) * NExchangeCoupling * 2);
-  double complex *lazy_ip = malloc(sizeof(double complex) * NExchangeCoupling * 2);
-  double complex *lazy_pfa = malloc(sizeof(double complex) * NExchangeCoupling * 2);
-  memset(lazy_info, 0, 7 * NExchangeCoupling * 2 * sizeof(int));
+  int *lazy_info = malloc(    sizeof(int) * NExchangeCoupling * 2 * 2);
+  int *lazy_rsi  = malloc(2 * sizeof(int) * NExchangeCoupling * 2);
+  int *lazy_msj  = malloc(2 * sizeof(int) * NExchangeCoupling * 2);
+  double complex *lazy_ip  = malloc(sizeof(double complex) * NExchangeCoupling * 2);
+  double complex *lazy_pfa = malloc(sizeof(double complex) * NExchangeCoupling * 2 * NQPFull);
+  memset(lazy_info,                          0, sizeof(int) * NExchangeCoupling * 2);
+  memset(lazy_info + NExchangeCoupling * 2, -1, sizeof(int) * NExchangeCoupling * 2);
+
+  for (int mi=0; mi<Ne;  mi++) EleSpn[mi] = 0;
+  for (int mi=Ne;mi<Ne*2;mi++) EleSpn[mi] = 1;
 
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
   RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
@@ -93,6 +99,20 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
     myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
+
+    void *pfOrbital[NQPFull];
+    void *pfUpdator[NQPFull];
+    void *pfMat[NQPFull];
+    void *pfMap[NQPFull];
+
+    // Attaching thread-private objects to thread-shared InvM.
+    // These objects no long need mutating states in this use. Just functor-like stuff.
+    updated_tdi_v_seq_init_precomp_z(NQPFull, Nsite, Nsite2, Nsize,
+                                     SlaterElm, Nsite2*Nsite2,
+                                     InvM, Nsize*Nsize,
+                                     eleIdx, EleSpn,
+                                     2 /* GF @ measure: 2 at max. */, PfM,
+                                     pfUpdator, pfOrbital, pfMat, pfMap);
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -163,28 +183,29 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
       ri = ExchangeCoupling[idx][0];
       rj = ExchangeCoupling[idx][1];
     
-      lazy_ip[idx * 2]     = ParaExchangeCoupling[idx] * GreenFunc2_(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer, lazy_info + 7 * (idx * 2));
-      lazy_ip[idx * 2 + 1] = ParaExchangeCoupling[idx] * GreenFunc2_(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer, lazy_info + 7 * (idx * 2 + 1));
-      if ( !lazy_info[7 * (idx * 2)     + 6] ) myEnergy += lazy_ip[idx * 2];
-      if ( !lazy_info[7 * (idx * 2 + 1) + 6] ) myEnergy += lazy_ip[idx * 2 + 1];
+      int *lazy_info_even = lazy_info + idx * 2;
+      int *lazy_info_odd  = lazy_info + idx * 2 + 1;
+      int *lazy_rsi_even  = lazy_rsi + (idx * 2    ) * 2;
+      int *lazy_rsi_odd   = lazy_rsi + (idx * 2 + 1) * 2;
+      int *lazy_msj_even  = lazy_msj + (idx * 2    ) * 2;
+      int *lazy_msj_odd   = lazy_msj + (idx * 2 + 1) * 2;
+
+      lazy_ip[idx * 2]     = ParaExchangeCoupling[idx] * GreenFunc2_(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer, lazy_info_even, lazy_rsi_even, lazy_msj_even);
+      lazy_ip[idx * 2 + 1] = ParaExchangeCoupling[idx] * GreenFunc2_(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer, lazy_info_odd, lazy_rsi_odd, lazy_msj_odd);
+      if ( !*lazy_info_even ) myEnergy += lazy_ip[idx * 2];
+      if ( !*lazy_info_odd  ) myEnergy += lazy_ip[idx * 2 + 1];
     }
     #pragma omp barrier
+    updated_tdi_v_omp_proc_batch_greentwo_z(NQPFull, NExchangeCoupling*2,
+                                            lazy_info, lazy_info + NExchangeCoupling*2,
+                                            lazy_rsi, lazy_msj,
+                                            lazy_pfa,
+                                            pfUpdator, pfOrbital, pfMat, pfMap);
+    #pragma omp barrier
     #pragma omp for private(idx,ri,rj,tmp) schedule(dynamic) nowait
-    for(idx=0;idx<NExchangeCoupling*2;idx++) {
-      int *lazy_info_loc = lazy_info + 7 * idx;
-      if ( lazy_info_loc[6] ) {
-        int msj = lazy_info_loc[2];
-        int mtl = lazy_info_loc[3];
-        rj = myEleIdx[msj];
-        rl = myEleIdx[mtl];
-        myEleIdx[msj] = lazy_info_loc[4];
-        myEleIdx[mtl] = lazy_info_loc[5];
-        CalculateNewPfMTwo_fcmp(lazy_info_loc[1], mtl/Ne, lazy_info_loc[0], msj/Ne, myBuffer, myEleIdx, 0, NQPFull, myBuffer+NQPFull);
-        myEnergy += conj(CalculateIP_fcmp(myBuffer, 0, NQPFull, MPI_COMM_SELF)) * lazy_ip[idx];
-        myEleIdx[msj] = rj;
-        myEleIdx[mtl] = rl;
-      }
-    }
+    for(idx=0;idx<NExchangeCoupling*2;idx++)
+      if ( lazy_info[idx] )
+        myEnergy += conj(CalculateIP_fcmp(lazy_pfa + idx * NQPFull, 0, NQPFull, MPI_COMM_SELF)) * lazy_ip[idx];
 
     /* Inter All */
     #pragma omp for private(idx,ri,rj,s,rk,rl,t) schedule(dynamic) nowait
@@ -204,8 +225,13 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
     {StopTimer(72);}
 
     e += myEnergy;
+
+    // Freeing within OMP region is thread-private.
+    updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital, pfMat, pfMap);
   }
   free(lazy_info);
+  free(lazy_rsi);
+  free(lazy_msj);
   free(lazy_ip);
   free(lazy_pfa);
 

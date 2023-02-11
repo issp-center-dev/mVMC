@@ -76,7 +76,8 @@ double complex GreenFunc1(const int ri, const int rj, const int s, const double 
 double complex GreenFunc2_(const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  int *projCntNew, double complex *buffer, int *lazy_buffer) {
+                  int *projCntNew, double complex *buffer,
+                  int *lazy_info, int *lazy_rsi, int *lazy_msj) {
   double complex z;
   int mj,msj,ml,mtl;
   int rsi,rsj,rtk,rtl;
@@ -145,19 +146,16 @@ double complex GreenFunc2_(const int ri, const int rj, const int rk, const int r
   z = ProjRatio(projCntNew,eleProjCnt);
 
   /* calculate Pfaffian */
-  if (!lazy_buffer) {
+  if (!lazy_info) {
     CalculateNewPfMTwo_fcmp(ml, t, mj, s, pfMNew, eleIdx, 0, NQPFull, bufV);
     z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
   } else {
     // Save invocation hook instead of calling.
-    // REMEMBER THE ORDER OF S/T, ML, MJ.
-    lazy_buffer[0] = mj;
-    lazy_buffer[1] = ml;
-    lazy_buffer[2] = msj; //< to edit to ri, revert to rj
-    lazy_buffer[3] = mtl; //< to edit to rk, revert to rl
-    lazy_buffer[4] = ri;
-    lazy_buffer[5] = rk;
-    lazy_buffer[6] = 1; //< "is delayed" flag..
+    lazy_msj[0] = msj; //< to edit to ri, revert to rj
+    lazy_msj[1] = mtl; //< to edit to rk, revert to rl
+    lazy_rsi[0] = rsi;
+    lazy_rsi[1] = rtk;
+    lazy_info[0] = 1; //< "is delayed" flag..
   }
 
   /* revert hopping */
@@ -175,7 +173,7 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
                   const int s, const int t, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
                   int *projCntNew, double complex *buffer) {
-  return GreenFunc2_(ri, rj, rk, rl, s, t, ip, eleIdx, eleCfg, eleNum, eleProjCnt, projCntNew, buffer, 0);
+  return GreenFunc2_(ri, rj, rk, rl, s, t, ip, eleIdx, eleCfg, eleNum, eleProjCnt, projCntNew, buffer, 0, 0, 0);
 }
 
 // ignore GreenFuncN: to be added

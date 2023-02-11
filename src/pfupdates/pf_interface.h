@@ -25,6 +25,31 @@ extern "C" {
 #define EXPANDNAME( funcname, cblachar ) funcname##_##cblachar
 
 #define GENDEF( ctype, cblachar ) \
+  void EXPANDNAME( updated_tdi_v_seq_init_precomp, cblachar ) \
+    ( uint64_t  num_qp, \
+      uint64_t  nsite, \
+      uint64_t  norbs, \
+      uint64_t  nelec, \
+      ctype    *orbmat_base, \
+      int64_t   orbmat_stride, \
+      ctype    *invmat_base, \
+      int64_t   invmat_stride, \
+      int32_t  *eleidx, \
+      int32_t  *elespn, \
+      uint64_t  mmax, \
+      ctype     pfav[], \
+      void     *objv[], \
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] );
+// GENDEF( float,    s )
+GENDEF( double,   d )
+// GENDEF( ccscmplx, c )
+GENDEF( ccdcmplx, z )
+#undef GENDEF
+
+
+#define GENDEF( ctype, cblachar ) \
    void EXPANDNAME( updated_tdi_v_init, cblachar ) \
     ( uint64_t  num_qp, \
       uint64_t  nsite, \
@@ -110,6 +135,25 @@ GENDEF( ccdcmplx, z )
       int64_t   cal_pfa, \
       void     *objv[] );
 
+// GENDEF( float,    s )
+GENDEF( double,   d )
+// GENDEF( ccscmplx, c )
+GENDEF( ccdcmplx, z )
+#undef GENDEF
+
+#define GENDEF( ctype, cblachar ) \
+  void EXPANDNAME( updated_tdi_v_omp_proc_batch_greentwo, cblachar ) \
+    ( uint64_t  num_qp, \
+      int       num_gf, \
+      int       needs_comput[], \
+      int       unpack_idx[], \
+      int       to_orbs[], \
+      int       from_ids[], \
+      ctype     pfav[], \
+      void     *objv[], \
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] );
 // GENDEF( float,    s )
 GENDEF( double,   d )
 // GENDEF( ccscmplx, c )
