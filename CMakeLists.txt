@@ -136,6 +136,10 @@ add_subdirectory("${STDFACE_DIR}")
 enable_language(CXX)
 set(CMAKE_CXX_STANDARD 11)
 
+# Require Eigen
+find_package(Eigen3 3.4 REQUIRED NO_MODULE)
+include_directories(${EIGEN3_INCLUDE_DIR})
+
 if(Require_BLIS)
   add_definitions(-D_BLIS)
   include("download_blis_artifact.cmake")
