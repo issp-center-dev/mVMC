@@ -41,7 +41,7 @@ FFLAGS = -DNDEBUG -DFUJITSU -Kfast
 CFLAGS = -DNDEBUG -Ofast -fopenmp
 CXXFLAGS = -DNDEBUG -Ofast -fopenmp
 CFLAGS += -D_lapack -D_pf_block_update
-CXXFLAGS += -DBLAS_EXTERNAL -D_BLIS
+CXXFLAGS += -DBLAS_EXTERNAL -D_BLIS -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.so -SSL2 -lm -lpthread
@@ -75,7 +75,7 @@ FFLAGS = -O3 -implicitnone
 CFLAGS = -O3 -qopenmp -Wno-unknown-pragmas
 CXXFLAGS = -O3 -std=gnu++14 -fpic -qopenmp
 CFLAGS += -D_lapack -D_pf_block_update
-CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -mkl=sequential -lm -lpthread
@@ -101,7 +101,7 @@ FFLAGS = -O3 -implicitnone
 CFLAGS = -O3 -qopenmp -Wno-unknown-pragmas
 CXXFLAGS = -O3 -std=gnu++14 -fpic -qopenmp
 CFLAGS += -D_lapack -D_pf_block_update
-CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -mkl=sequential -lm -lpthread
@@ -125,7 +125,7 @@ FFLAGS = -O3
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3 -fPIC
 CFLAGS += -D_lapack -D_pf_block_update
-CXXFLAGS += -D_BLIS
+CXXFLAGS += -D_BLIS -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = -lflame \$(BLIS_ROOT)/lib/libblis.a -lm -lpthread
@@ -149,7 +149,7 @@ FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3 -fPIC
 CFLAGS += -D_lapack -D_pf_block_update
-CXXFLAGS += -D_BLIS
+CXXFLAGS += -D_BLIS -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = -lflame \$(BLIS_ROOT)/lib/libblis.a -lm -lpthread
@@ -173,7 +173,7 @@ FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3
 CFLAGS += -D_lapack -D_pf_block_update
-CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL -D_BLIS
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL -D_BLIS -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lm -lpthread
@@ -197,7 +197,7 @@ FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3
 CFLAGS += -D_lapack -D_pf_block_update
-CXXFLAGS += -D_BLIS
+CXXFLAGS += -D_BLIS -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -llapack -lm -lpthread
@@ -221,7 +221,7 @@ FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3
 CFLAGS += -D_lapack -D_pf_block_update
-CXXFLAGS += -D_BLIS # -DBLAS_EXTERNAL # -DF77_COMPLEX_RET_INTEL # For Apple.
+CXXFLAGS += -D_BLIS -DEIGEN_USE_BLAS # -DBLAS_EXTERNAL # -DF77_COMPLEX_RET_INTEL # For Apple.
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -llapack -lm -lpthread

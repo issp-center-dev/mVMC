@@ -139,6 +139,8 @@ set(CMAKE_CXX_STANDARD 11)
 # Require Eigen
 find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 include_directories(${EIGEN3_INCLUDE_DIR})
+# We surely want to offload mmuls to BLAS.
+add_definitions(-DEIGEN_USE_BLAS)
 
 if(Require_BLIS)
   add_definitions(-D_BLIS)
