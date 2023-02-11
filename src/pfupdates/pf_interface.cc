@@ -255,6 +255,7 @@ GENIMPL( ccdcmplx, z )
   for (int iqp = 0; iqp < num_qp; ++iqp) { \
     Eigen::Vector<ctype, Eigen::Dynamic> pfaBatch = \
       objv(iqp, ctype)->batch_query_amplitudes(2, to_orbs_thread, from_ids_thread); \
+    pfaBatch *= objv(iqp, ctype)->get_amplitude(); \
 \
     /* Unpack computed Pfaffians. */ \
     for (int igf = gfStart; igf < gfEnd; ++igf) \
