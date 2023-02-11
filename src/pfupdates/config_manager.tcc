@@ -9,6 +9,7 @@
 #include "error.hh"
 #include <random>
 #include <vector>
+#include <tuple>
 #include <cstdint>
 
 namespace vmc
