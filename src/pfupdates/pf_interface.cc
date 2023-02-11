@@ -227,30 +227,46 @@ GENIMPL( ccdcmplx, z )
       void     *matv[], \
       void     *mapv[] ) \
 { \
-  int ith = omp_get_thread_num(); \
-  int nth = omp_get_num_threads(); \
+  const int ith = omp_get_thread_num(); \
+  const int nth = omp_get_num_threads(); \
 \
+  /* Count Green's funcs. */ \
   int gf_count = 0; \
   for (int i = 0; i < num_gf; ++i) \
+    if ( needs_comput[i] ) \
+      gf_count++; \
+\
+  /* Partitioning. */ \
+  int gfCountThread = (gf_count + nth - 1) / nth; \
+  const int gfStart = gfCountThread * ith; \
+  gfCountThread = std::min(gf_count - gfStart, gfCountThread); \
+\
+  /* Pack info space. */ \
+  gf_count = -gfStart; \
+  int *to_orbs_thread_, *from_ids_thread_, *unpack_idx_thread; \
+  for (int i = 0; i < num_gf && gf_count < gfCountThread; ++i) \
     if ( needs_comput[i] ) { \
-      if ( ith == 0 ) { \
-        /* Pack info space. */ \
-        to_orbs[gf_count * 2    ] = to_orbs[i * 2]; \
-        to_orbs[gf_count * 2 + 1] = to_orbs[i * 2 + 1]; \
-        from_ids[gf_count * 2    ] = from_ids[i * 2]; \
-        from_ids[gf_count * 2 + 1] = from_ids[i * 2 + 1]; \
-        unpack_idx[gf_count] = i; \
+      if ( gf_count >= 0 ) { \
+        if ( gf_count == 0 ) { \
+          /* Pin down scratchpad spots. */ \
+          to_orbs_thread_   = to_orbs  + i * 2; \
+          from_ids_thread_  = from_ids + i * 2; \
+          unpack_idx_thread = unpack_idx + i; \
+          unpack_idx_thread[0] = i; \
+        } else { \
+          /* 0th idx already in the place. Pack from 1st. */ \
+          to_orbs_thread_[gf_count * 2    ] = to_orbs[i * 2]; \
+          to_orbs_thread_[gf_count * 2 + 1] = to_orbs[i * 2 + 1]; \
+          from_ids_thread_[gf_count * 2    ] = from_ids[i * 2]; \
+          from_ids_thread_[gf_count * 2 + 1] = from_ids[i * 2 + 1]; \
+          unpack_idx_thread[gf_count] = i; \
+        } \
       } \
-      /* Count Green's funcs. */ \
       gf_count++; \
     } \
 \
-  int gf_cnt_thread = (gf_count + nth - 1) / nth; \
-  int gfStart = gf_cnt_thread * ith; \
-  int gfEnd = std::min(gf_count, gfStart + gf_cnt_thread); \
-\
-  Eigen::Map<VectorXi>  to_orbs_thread( to_orbs + gfStart * 2, (gfEnd - gfStart) * 2); \
-  Eigen::Map<VectorXi> from_ids_thread(from_ids + gfStart * 2, (gfEnd - gfStart) * 2); \
+  Eigen::Map<VectorXi>  to_orbs_thread( to_orbs_thread_, gfCountThread * 2); \
+  Eigen::Map<VectorXi> from_ids_thread(from_ids_thread_, gfCountThread * 2); \
 \
   for (int iqp = 0; iqp < num_qp; ++iqp) { \
     Eigen::Vector<ctype, Eigen::Dynamic> pfaBatch = \
@@ -258,8 +274,8 @@ GENIMPL( ccdcmplx, z )
     pfaBatch *= objv(iqp, ctype)->get_amplitude(); \
 \
     /* Unpack computed Pfaffians. */ \
-    for (int igf = gfStart; igf < gfEnd; ++igf) \
-      pfav[unpack_idx[igf] * num_qp + iqp] = pfaBatch[igf - gfStart]; \
+    for (int igf = 0; igf < gfCountThread; ++igf) \
+      pfav[unpack_idx_thread[igf] * num_qp + iqp] = pfaBatch[igf]; \
   } \
 }
 // GENIMPL( float,    s )
