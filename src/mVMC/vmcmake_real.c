@@ -78,11 +78,12 @@ void VMCMakeSample_real(MPI_Comm comm) {
   if (optBlockSize)
     NBlockUpdateSize = atoi(optBlockSize);
   // Fall back to default if input is invalid.
-  if (NBlockUpdateSize < 1 || NBlockUpdateSize > 100)
+  if (NBlockUpdateSize < 1 || NBlockUpdateSize > 100) {
     if (NExUpdatePath == 0)
       NBlockUpdateSize = 2;
     else
       NBlockUpdateSize = 20;
+  }
 
   // Set one universal EleSpn.
   for (mi=0; mi<Ne;  mi++) EleSpn[mi] = 0;

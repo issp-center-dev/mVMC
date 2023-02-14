@@ -90,11 +90,12 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
   if (optBlockSize)
     NBlockUpdateSize = atoi(optBlockSize);
   // Fall back to default if input is invalid.
-  if (NBlockUpdateSize < 1 || NBlockUpdateSize > 100)
+  if (NBlockUpdateSize < 1 || NBlockUpdateSize > 100) {
     if (NExUpdatePath == 0)
       NBlockUpdateSize = 4;
     else
       NBlockUpdateSize = 20;
+  }
 
   // Initialize with free spin configuration.
   updated_tdi_v_init_z(NQPFull, Nsite, Nsite2, Nsize,
