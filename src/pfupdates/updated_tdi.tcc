@@ -8,12 +8,12 @@
 #pragma once
 #include "orbital_mat.tcc"
 #include "blalink.hh"
-#include "skpfa.hh"
-#include "sktdi.hh"
+#include "blalink_gemmt.hh"
+#include "pfaffian.tcc"
+#include "invert.tcc"
 #include "skr2k.tcc"
 #include "skslc.tcc"
 #include "skmv.tcc"
-#include "optpanel.hh"
 #include <iostream>
 #include <vector>
 
@@ -26,8 +26,6 @@ template <typename T> struct updated_tdi {
 
   // Performance tuning constants.
   const bool single_hop_alpha; ///< Whether to simplify k=1 situations.
-  const dim_t npanel_big;
-  const dim_t npanel_sub;
 
   // Matrix M.
   matrix_t<T> M;
@@ -42,7 +40,7 @@ template <typename T> struct updated_tdi {
   matrix_t<T> W;
   matrix_t<T> UMU, UMV, VMV;
   matrix_t<T> Cp;       ///< C+BMB = [ W -I; I 0 ] + [ UMU UMV; -UMV VMV ]
-  matrix_t<T> Gc;       ///< Gaussian vectors when tri-diagonalizing C.
+  matrix_t<T> Gc;       ///< Used to be Gaussian vectors. Now just scratchpads.
   signed *const cPov; ///< Pivot when tri-diagonalizing C.
   T Pfa;
   T PfaRatio; //< Updated Pfaffian / Base Pfaffian.
@@ -55,11 +53,7 @@ template <typename T> struct updated_tdi {
   void initialize() {
     using namespace std;
     auto &cfg = elem_cfg;
-    #ifdef UseBoost
-    matrix_t<T> G(nelec, nelec);
-    #else
     matrix_t<T> G(new T[nelec * nelec], nelec);
-    #endif
     from_idx.clear();
     to_site.clear();
     from_idx.reserve(mmax * sizeof(dim_t));
@@ -81,30 +75,23 @@ template <typename T> struct updated_tdi {
     }
 
     // Allocate scratchpad.
-    signed *iPivFull = new signed[nelec + 1];
-    dim_t lwork = nelec * npanel_big;
-    T *pfwork = new T[lwork];
+    T *vT = new T[nelec-1];
+    signed *iPiv = new signed[nelec];
 
-    #ifdef UseBoost
-    signed info = skpfa(uplo, nelec, &M(0, 0), M.size1(), &G(0, 0), G.size1(), iPivFull,
-                        true, &Pfa, pfwork, lwork);
-    #else
-    signed info = skpfa(uplo, nelec, &M(0, 0), M.ld, &G(0, 0), G.ld, iPivFull,
-                        true, &Pfa, pfwork, lwork);
-    #endif
+    // Perform LTL factorization regardless of `uplo`.
+    signed info = sktrf(uplo, nelec, &M(0, 0), M.ld, iPiv, &G(0, 0), G.ld * nelec);
+    Pfa = ltl2pfa(uplo, nelec, &M(0, 0), M.ld, iPiv);
+    ltl2inv(uplo, nelec, &M(0, 0), M.ld, iPiv, vT, &G(0, 0), G.ld);
 #ifdef _DEBUG
     cerr << "SKPFA+INV: n=" << nelec << " info=" << info << endl;
 #endif
 
-    delete[] iPivFull;
-    delete[] pfwork;
-    #ifndef UseBoost
+    delete[] vT;
+    delete[] iPiv;
     delete[](&G(0, 0));
-    #endif
   }
 
   ~updated_tdi() {
-    #ifndef UseBoost
     delete[](&U(0, 0));
     delete[](&Q(0, 0));
 
@@ -115,7 +102,6 @@ template <typename T> struct updated_tdi {
     delete[](&UMU(0, 0));
     delete[](&UMV(0, 0));
     delete[](&VMV(0, 0));
-    #endif
 
     delete[] cPov;
   }
@@ -123,30 +109,14 @@ template <typename T> struct updated_tdi {
   updated_tdi(orbital_mat<T> &Xij_, std::vector<dim_t> &cfg, T *M_, inc_t ldM,
               dim_t mmax_)
       : Xij(Xij_), nelec(cfg.size()), mmax(mmax_), nq_updated(0),
-        single_hop_alpha(true), npanel_big(optpanel(nelec, 4)), npanel_sub(4),
-    #ifdef UseBoost
-        M(nelec, nelec),
-        U(nelec, mmax * 2), Q(nelec, mmax * 2),
-        P(nelec, mmax), W(mmax, mmax),
-        UMU(mmax, mmax), UMV(mmax, mmax),
-        VMV(mmax, mmax), Cp(2 * mmax, 2 * mmax),
-        Gc(2 * mmax, 2 * mmax),
-    #else
-        M(M_, ldM),
+        single_hop_alpha(true), M(M_, ldM),
         U(new T[nelec * mmax * 2], nelec), Q(new T[nelec * mmax * 2], nelec),
         P(&Q(0, mmax), Q.ld), W(new T[mmax * mmax], mmax),
         UMU(new T[mmax * mmax], mmax), UMV(new T[mmax * mmax], mmax),
         VMV(new T[mmax * mmax], mmax), Cp(new T[2 * mmax * 2 * mmax], 2 * mmax),
         Gc(new T[2 * mmax * 2 * mmax], 2 * mmax),
-    #endif
         cPov(new signed[2 * mmax + 1]), Pfa(0.0), PfaRatio(1.0), elem_cfg(cfg),
         from_idx(0), to_site(0), uplo(BLIS_UPPER) {
-    #ifdef UseBoost
-    colmaj<T> M_tmp(M_, ldM);
-    for (dim_t j = 0; j < nelec; ++j)
-      for (dim_t i = 0; i < nelec; ++i)
-        M(i, j) = M_tmp(i, j);
-    #endif
     initialize();
   }
 
@@ -154,8 +124,7 @@ template <typename T> struct updated_tdi {
   updated_tdi(orbital_mat<T> &Xij_, std::vector<dim_t> &cfg, matrix_t<T> &M_,
               dim_t mmax_)
       : Xij(Xij_), nelec(cfg.size()), mmax(mmax_), nq_updated(0),
-        single_hop_alpha(true), npanel_big(optpanel(nelec, 4)), npanel_sub(4),
-        M(M_),
+        single_hop_alpha(true), M(M_),
         U(new T[nelec * mmax * 2], nelec), Q(new T[nelec * mmax * 2], nelec),
         P(&Q(0, mmax), Q.ld), W(new T[mmax * mmax], mmax),
         UMU(new T[mmax * mmax], mmax), UMV(new T[mmax * mmax], mmax),
@@ -169,31 +138,14 @@ template <typename T> struct updated_tdi {
   // Unsafe construction without initializaion.
   updated_tdi(orbital_mat<T> &Xij_, dim_t nelec_, T *M_, inc_t ldM, dim_t mmax_) 
       : Xij(Xij_), nelec(nelec_), mmax(mmax_), nq_updated(0),
-        single_hop_alpha(true), npanel_big(optpanel(nelec, 4)), npanel_sub(4),
-    #ifdef UseBoost
-        M(nelec, nelec),
-        U(nelec, mmax * 2), Q(nelec, mmax * 2),
-        P(nelec, mmax), W(mmax, mmax),
-        UMU(mmax, mmax), UMV(mmax, mmax),
-        VMV(mmax, mmax), Cp(2 * mmax, 2 * mmax),
-        Gc(2 * mmax, 2 * mmax),
-    #else
-        M(M_, ldM),
+        single_hop_alpha(true), M(M_, ldM),
         U(new T[nelec * mmax * 2], nelec), Q(new T[nelec * mmax * 2], nelec),
         P(&Q(0, mmax), Q.ld), W(new T[mmax * mmax], mmax),
         UMU(new T[mmax * mmax], mmax), UMV(new T[mmax * mmax], mmax),
         VMV(new T[mmax * mmax], mmax), Cp(new T[2 * mmax * 2 * mmax], 2 * mmax),
         Gc(new T[2 * mmax * 2 * mmax], 2 * mmax),
-    #endif
         cPov(new signed[2 * mmax + 1]), Pfa(0.0), PfaRatio(1.0), elem_cfg(nelec, 0),
-        from_idx(0), to_site(0), uplo(BLIS_UPPER) { 
-    #ifdef UseBoost
-    colmaj<T> M_tmp(M_, ldM);
-    for (dim_t j = 0; j < nelec; ++j)
-      for (dim_t i = 0; i < nelec; ++i)
-        M(i, j) = M_tmp(i, j);
-    #endif
-  }
+        from_idx(0), to_site(0), uplo(BLIS_UPPER) { }
 
   T get_Pfa() { return Pfa * PfaRatio; }
 
@@ -241,22 +193,12 @@ template <typename T> struct updated_tdi {
 
     for (; nq_updated < k_cal; ++nq_updated) {
       // Update single column. Use SKMV.
-      #ifdef UseBoost
-      skmv(uplo, n, T(1.0), &M(0, 0), M.size1(), &U(0, nq_updated), &Q(0, nq_updated));
-      #else
       skmv(uplo, n, T(1.0), &M(0, 0), M.ld, &U(0, nq_updated), &Q(0, nq_updated));
-      #endif
     } /* else {
       // Update multiple columns. Use SKMM.
-      #ifdef UseBoost
-      skmm(BLIS_LEFT, uplo, BLIS_NO_CONJUGATE, BLIS_NO_TRANSPOSE, n, k_cal - nq_updated,
-           T(1.0), &M(0, 0), M.size1(), &U(0, nq_updated), U.size1(),
-           T(0.0), &Q(0, nq_updated), Q.size1());
-      #else
       skmm(BLIS_LEFT, uplo, BLIS_NO_CONJUGATE, BLIS_NO_TRANSPOSE, n, k_cal - nq_updated,
            T(1.0), &M(0, 0), M.ld, &U(0, nq_updated), U.ld,
            T(0.0), &Q(0, nq_updated), Q.ld);
-      #endif
     }
     nq_updated = k_cal;
     */
@@ -278,6 +220,8 @@ template <typename T> struct updated_tdi {
         case BLIS_LOWER:
           // Always assume l < o to calculate one less column of Q.
           UMU(o, l) = dot(n, &U(0, o), 1, &Q(0, l), 1);
+          break;
+        default:
           break;
         }
     return true;
@@ -372,9 +316,6 @@ template <typename T> struct updated_tdi {
     if (compute_pfa) {
       // NOTE: Update k to be new size.
       k += 1;
-      // Allocate scratchpad.
-      dim_t lwork = 2 * k * npanel_sub;
-      T *pfwork = new T[lwork];
 
       // Calculate unupdated columns of U.
       require_Q(false);
@@ -386,25 +327,17 @@ template <typename T> struct updated_tdi {
       // If it's the first update Pfafian can be directly read out.
       if (k == 1) {
         PfaRatio = -UMV(0, 0) + T(1.0);
-        delete[] pfwork;
         return;
       }
 
       // Compute pfaffian.
-      #ifdef UseBoost
-      signed info = skpfa(uplo, 2 * k, &Cp(0, 0), Cp.size1(), &Gc(0, 0), Gc.size1(), cPov,
-                          false, &PfaRatio, pfwork, lwork);
-      #else
-      signed info = skpfa(uplo, 2 * k, &Cp(0, 0), Cp.ld, &Gc(0, 0), Gc.ld, cPov,
-                          false, &PfaRatio, pfwork, lwork);
-      #endif
+      signed info = skpfa(uplo, 2 * k, &Cp(0, 0), Cp.ld, &PfaRatio, cPov, &Gc(0, 0), Gc.ld * 2 * k);
 #ifdef _DEBUG
       cerr << "SKPFA: info=" << info << endl;
 #endif
       // Pfaffian of C = [ W -I; I 0 ].
       PfaRatio *= pow(-1.0, k * (k + 1) / 2);
 
-      delete[] pfwork;
     } else
       // Set to 0.0 to denote dirty.
       PfaRatio = 0.0;
@@ -475,7 +408,9 @@ template <typename T> struct updated_tdi {
       nq_updated = k;
 
     // Compute new (previous, in fact) Pfaffian.
-    if (compute_pfa) {
+    if (!k)
+      PfaRatio = 1.0;
+    else if (compute_pfa) {
       // All compute_pfa requires first K-1 of Q.
       require_Q(false);
 
@@ -483,19 +418,10 @@ template <typename T> struct updated_tdi {
       require_UMU();
       // Reassemble C and scratchpads.
       assemble_C_BMB();
-      dim_t lwork = 2 * k * npanel_sub;
-      T *pfwork = new T[lwork];
 
-      #ifdef UseBoost
-      signed info = skpfa(uplo, 2 * k, &Cp(0, 0), Cp.size1(), &Gc(0, 0), Gc.size1(), cPov,
-                          false, &PfaRatio, pfwork, lwork);
-      #else
-      signed info = skpfa(uplo, 2 * k, &Cp(0, 0), Cp.ld, &Gc(0, 0), Gc.ld, cPov,
-                          false, &PfaRatio, pfwork, lwork);
-      #endif
+      signed info = skpfa(uplo, 2 * k, &Cp(0, 0), Cp.ld, &PfaRatio, cPov, &Gc(0, 0), Gc.ld * 2 * k);
       PfaRatio *= pow(-1.0, k * (k + 1) / 2);
 
-      delete[] pfwork;
     } else
       // Set to 0.0 to denote dirty.
       PfaRatio = 0.0;
@@ -510,38 +436,31 @@ template <typename T> struct updated_tdi {
       return;
 
     // Allocate scratchpad.
-    dim_t lwork = 2 * k * npanel_sub;
-    T *pfwork = new T[lwork];
-    
+    T *vT = new T[2 * k - 1];
+
     // Update whole Q.
     require_Q(true);
 
-    // If M is dirty, redo the tridiagonal factorization.
-    if (PfaRatio == T(0.0)) {
-      require_UMU();
-      assemble_C_BMB();
-      #ifdef UseBoost
-      signed info = skpfa(uplo, 2 * k, &Cp(0, 0), Cp.size1(), &Gc(0, 0), Gc.size1(), cPov,
-                          false, &PfaRatio, pfwork, lwork);
-      #else
-      signed info = skpfa(uplo, 2 * k, &Cp(0, 0), Cp.ld, &Gc(0, 0), Gc.ld, cPov,
-                          false, &PfaRatio, pfwork, lwork);
-      #endif
-      PfaRatio *= pow(-1.0, k * (k + 1) / 2);
-    }
-
     if (k == 1) {
+      // M is dirty.
+      if (PfaRatio == T(0.0)) {
+        require_UMU();
+        assemble_C_BMB();
+        PfaRatio = -Cp(0, 1);
+      }
       // Trivial inverse.
       Cp(0, 1) = T(-1.0) / Cp(0, 1);
       Cp(1, 0) = T(-1.0) / Cp(1, 0);
-    } else
-      #ifdef UseBoost
-      signed info = sktdi(uplo, 2 * k, &Cp(0, 0), Cp.size1(), &Gc(0, 0), Gc.size1(), cPov,
-                          pfwork, lwork);
-      #else
-      signed info = sktdi(uplo, 2 * k, &Cp(0, 0), Cp.ld, &Gc(0, 0), Gc.ld, cPov,
-                          pfwork, lwork);
-      #endif
+    } else {
+      // Redo the tridiagonal factorization.
+      require_UMU();
+      assemble_C_BMB();
+      signed info = sktrf(uplo, 2 * k, &Cp(0, 0), Cp.ld, cPov, &Gc(0, 0), Gc.ld * 2 * k);
+      // PfaRatio is dirty.
+      if (PfaRatio == T(0.0))
+        PfaRatio = ltl2pfa(uplo, 2 * k, &Cp(0, 0), Cp.ld, cPov) * T(pow(-1.0, k * (k + 1) / 2));
+      ltl2inv(uplo, 2 * k, &Cp(0, 0), Cp.ld, cPov, vT, &Gc(0, 0), Gc.ld);
+    }
     inv_update(k, Cp);
 
     // Apply hopping.
@@ -553,36 +472,24 @@ template <typename T> struct updated_tdi {
     Pfa *= PfaRatio;
     PfaRatio = 1.0;
 
-    delete[] pfwork;
+    delete[] vT;
   }
 
   void inv_update(dim_t k, matrix_t<T> &C) {
-    #ifdef UseBoost
-    matrix_t<T> &ABC = U; ///< Use U as inv(A)*B*upper(C) buffer.
-    matrix_t<T> &AB = Q;
-    #else
     matrix_t<T> ABC(&U(0, 0), U.ld); ///< Use U as inv(A)*B*upper(C) buffer.
     matrix_t<T> AB(&Q(0, 0), Q.ld);
-    #endif
 
     if (k == 1 && single_hop_alpha) {
       // k == 1 requires no copying
-      #ifdef UseBoost
-      skr2k(uplo, BLIS_NO_TRANSPOSE, nelec, 1, C(0, 1), &Q(0, 0), Q.size1(),
-            &P(0, 0), P.size1(), T(1.0), &M(0, 0), M.size1());
-      #else
       skr2k(uplo, BLIS_NO_TRANSPOSE, nelec, 1, C(0, 1), &Q(0, 0), Q.ld,
             &P(0, 0), P.ld, T(1.0), &M(0, 0), M.ld);
-      #endif
       // See below for reason of calling this procedule.
       // update_uplo(uplo);
       return;
     }
 
     // Close empty space between Q and P.
-    #ifndef UseBoost
     if (k != mmax)
-    #endif
       for (dim_t j = 0; j < k; ++j)
         memcpy(&AB(0, k + j), &P(0, j), nelec * sizeof(T));
 
@@ -594,22 +501,12 @@ template <typename T> struct updated_tdi {
       //             0 0 0 +
       //             0 0 0 0 ] => AB[:, 0:2] -> ABC[:, 1:3]
       memcpy(&ABC(0, j + 1), &AB(0, j), nelec * sizeof(T));
-    #ifdef UseBoost
-    trmm(BLIS_RIGHT, BLIS_UPPER, BLIS_NO_TRANSPOSE, nelec, 2 * k - 1, T(1.0),
-         &C(0, 1), C.size1(), &ABC(0, 1), ABC.size1());
-    #else
     trmm(BLIS_RIGHT, BLIS_UPPER, BLIS_NO_TRANSPOSE, nelec, 2 * k - 1, T(1.0),
          &C(0, 1), C.ld, &ABC(0, 1), ABC.ld);
-    #endif
 
     // Update: write to M.
-    #ifdef UseBoost
-    skr2k(uplo, BLIS_NO_TRANSPOSE, nelec, 2 * k - 1, T(1.0), &ABC(0, 1), ABC.size1(),
-          &AB(0, 1), AB.size1(), T(1.0), &M(0, 0), M.size1());
-    #else
     skr2k(uplo, BLIS_NO_TRANSPOSE, nelec, 2 * k - 1, T(1.0), &ABC(0, 1), ABC.ld,
           &AB(0, 1), AB.ld, T(1.0), &M(0, 0), M.ld);
-    #endif
     #else
     gemm(BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE,
          nelec, 2 * k, 2 * k,

@@ -392,12 +392,7 @@ double complex calculateNewPfMN_child(const int qpidx, const int n, const int *m
   /* calculate Pf M */
   //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
   //M_ZSKPFA(&uplo, &mthd, &n, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
-#ifdef _pfaffine
-  info = 1; // Skip inverse.
-  M_ZSKPFA(&uplo, &mthd, &n, mat, &lda, &pfaff, iwork, work, &lwork/*, rwork*/, &info);
-#else
   M_ZSKPFA(&uplo, &mthd, &n, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
-#endif
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
 
   return sgn * pfaff * PfM[qpidx];

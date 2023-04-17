@@ -4,10 +4,10 @@ include ../src/make.sys
 .SUFFIXES : .o .F90
 .SUFFIXES : .o .c
 
-all:greenr2k
+all: greenr2k
 
-greenr2k:greenr2k.o key2lower.o
-	$(F90) greenr2k.o key2lower.o $(LIBS) -o $@
+greenr2k: greenr2k.o
+	$(F90) greenr2k.o $(LIBS) -o $@
 
 .F90.o:
 	$(F90) -c $< $(FFLAGS)
