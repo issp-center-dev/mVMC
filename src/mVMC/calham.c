@@ -240,33 +240,33 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
 
     /* Batch-compute 2-body Green's functions. */
     #pragma omp barrier
-#if 0
-    int num_qp_var0 = 0;
-    // Pack lazy info.
-    for (idx=0; idx<nHamiltonianTwo; ++idx)
-      if (lazy_info[idx]) {
-        if (omp_get_thread_num() == 0) {
-          lazy_rsi[num_qp_var0 * 2    ] = lazy_rsi[idx * 2]; \
-          lazy_rsi[num_qp_var0 * 2 + 1] = lazy_rsi[idx * 2 + 1]; \
-          lazy_msj[num_qp_var0 * 2    ] = lazy_msj[idx * 2]; \
-          lazy_msj[num_qp_var0 * 2 + 1] = lazy_msj[idx * 2 + 1]; \
-          lazy_info[nHamiltonianTwo + num_qp_var0] = idx; \
+    if ( Nsize <= 200 ) { // Heuristics: Huge Nelec seems to cause parallelize-over-nGF spill L2.
+      int num_qp_var0 = 0;
+      // Pack lazy info.
+      for (idx=0; idx<nHamiltonianTwo; ++idx)
+        if (lazy_info[idx]) {
+          if (omp_get_thread_num() == 0) {
+            lazy_rsi[num_qp_var0 * 2    ] = lazy_rsi[idx * 2]; \
+            lazy_rsi[num_qp_var0 * 2 + 1] = lazy_rsi[idx * 2 + 1]; \
+            lazy_msj[num_qp_var0 * 2    ] = lazy_msj[idx * 2]; \
+            lazy_msj[num_qp_var0 * 2 + 1] = lazy_msj[idx * 2 + 1]; \
+            lazy_info[nHamiltonianTwo + num_qp_var0] = idx; \
+          }
+          num_qp_var0++;
         }
-        num_qp_var0++;
-      }
-    #pragma omp barrier
-    updated_tdi_v_omp_var0_proc_batch_greentwo_z(NQPFull, num_qp_var0,
-                                                 NULL, lazy_info + nHamiltonianTwo,
-                                                 lazy_rsi, lazy_msj,
-                                                 lazy_pfa,
-                                                 pfUpdator, pfOrbital, pfMat, pfMap);
-#else
-    updated_tdi_v_omp_var1_proc_batch_greentwo_z(NQPFull, nHamiltonianTwo,
-                                                 lazy_info, lazy_info + nHamiltonianTwo,
-                                                 lazy_rsi, lazy_msj,
-                                                 lazy_pfa,
-                                                 pfUpdator, pfOrbital, pfMat, pfMap);
-#endif
+      #pragma omp barrier
+      updated_tdi_v_omp_var0_proc_batch_greentwo_z(NQPFull, num_qp_var0,
+                                                   NULL, lazy_info + nHamiltonianTwo,
+                                                   lazy_rsi, lazy_msj,
+                                                   lazy_pfa,
+                                                   pfUpdator, pfOrbital, pfMat, pfMap);
+    } else {
+      updated_tdi_v_omp_var1_proc_batch_greentwo_z(NQPFull, nHamiltonianTwo,
+                                                   lazy_info, lazy_info + nHamiltonianTwo,
+                                                   lazy_rsi, lazy_msj,
+                                                   lazy_pfa,
+                                                   pfUpdator, pfOrbital, pfMat, pfMap);
+    }
     #pragma omp barrier
     #pragma omp for private(idx,ri,rj,tmp) schedule(dynamic) nowait
     for(idx=0;idx<nHamiltonianTwo;idx++)
