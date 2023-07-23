@@ -15,7 +15,7 @@ the low-energy effective models. One of the most reliable theoretical
 tools for treating the strongly correlated electron systems is the exact
 diagonalization method. However, applicable range of system size is
 strongly limited in the exact diagonalization method. Variational Monte
-Carlo method [Gros_ ] is one of the promising ways to perform
+Carlo method [Gros_ ] is one of promising way to perform
 the high-accuracy calculations for the larger system sizes beyond exact
 diagonalization method. Although the strong limitation of the
 variational wave function is the origin of the poor accuracy of the
