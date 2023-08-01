@@ -4,8 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #pragma once
-#include "blalink.hh"
 
 template <typename T>
-int ilaenv_lauum(uplo_t uplo, int n);
+int ilaenv_lauum(const char uplo, const int n);
 

@@ -136,7 +136,14 @@ add_subdirectory("${STDFACE_DIR}")
 enable_language(CXX)
 set(CMAKE_CXX_STANDARD 11)
 
+# Require Eigen
+find_package(Eigen3 3.4 REQUIRED NO_MODULE)
+include_directories(${EIGEN3_INCLUDE_DIR})
+# We surely want to offload mmuls to BLAS.
+add_definitions(-DEIGEN_USE_BLAS)
+
 if(Require_BLIS)
+  add_definitions(-D_BLIS)
   include("download_blis_artifact.cmake")
 else(Require_BLIS)
   # Use bundled blis.h
@@ -145,11 +152,11 @@ endif(Require_BLIS)
 
 if(PFAFFIAN_BLOCKED)
   add_definitions(-D_pf_block_update)
-  add_subdirectory(src/pfupdates)
-  if(Require_BLIS)
-    add_dependencies(pfupdates blis_include)
-  endif(Require_BLIS)
 endif(PFAFFIAN_BLOCKED)
+add_subdirectory(src/pfupdates)
+if(Require_BLIS)
+  add_dependencies(pfupdates blis_include)
+endif(Require_BLIS)
 
 if (Document)
   add_subdirectory(doc)

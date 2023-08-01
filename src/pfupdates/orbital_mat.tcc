@@ -6,33 +6,36 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #pragma once
-#include "blis.h"
-#include "colmaj.hh"
+#include <Eigen/Dense>
 #include <random>
-template <typename T>
-using matrix_t = colmaj<T>;
 
-template <typename T>
+namespace vmc
+{
+namespace orbital
+{
+template <typename matrix_t_>
 struct orbital_mat
 {
-  const uplo_t uplo;
-  const dim_t nsite;
-  matrix_t<T> X; ///< nsite*nsite.
+  using matrix_t = matrix_t_;
+  using T = typename matrix_t::Scalar;
+  using index_t = int32_t;
 
-  orbital_mat(uplo_t uplo_, dim_t nsite_, T *X_, inc_t ldX)
-      : uplo(uplo_), nsite(nsite_),
-        X(X_, ldX) { }
+  const char uplo;
+  const index_t norb_;
+  matrix_t &X; ///< norb*norb.
 
-  orbital_mat(uplo_t uplo_, dim_t nsite_, matrix_t<T> &X_)
-  : uplo(uplo_), nsite(nsite_), X(X_) { }
+  orbital_mat(char uplo_, index_t norb__, matrix_t &X_)
+  : uplo(uplo_), norb_(norb__), X(X_) { }
 
-  void randomize(double amplitude, unsigned seed) { 
+  virtual index_t norb() { return norb_; }
+
+  virtual void randomize(double amplitude, unsigned seed) {
     using namespace std;
     mt19937_64 rng(seed);
     uniform_real_distribution<double> dist(-0.1, 1.0);
 
-    for (dim_t j = 0; j < nsite; ++j) {
-      for (dim_t i = 0; i < j; ++i) {
+    for (index_t j = 0; j < norb_; ++j) {
+      for (index_t i = 0; i < j; ++i) {
         X(i, j) = T(dist(rng)) * amplitude;
         X(j, i) = -X(i, j);
       }
@@ -42,18 +45,28 @@ struct orbital_mat
 
   void randomize(double amplitude) { randomize(amplitude, 511); }
 
-  T operator()(dim_t osi, dim_t osj) {
+  virtual index_t pack_idx(index_t osi, index_t osj) {
+    abort();
+  }
+
+  virtual void unpack_idx(index_t &osi, index_t &osj, index_t idx) {
+    abort();
+  }
+
+  virtual T operator()(index_t osi, index_t osj) {
     if (osi == osj)
       return T(0.0);
 
     switch (uplo) {
-    case BLIS_UPPER:
+    case 'U':
+    case 'u':
       if (osi < osj)
         return X(osi, osj);
       else
         return -X(osj, osi);
     
-    case BLIS_LOWER:
+    case 'L':
+    case 'l':
       if (osi > osj)
         return X(osi, osj);
       else
@@ -64,3 +77,5 @@ struct orbital_mat
     }
   }
 };
+}
+}

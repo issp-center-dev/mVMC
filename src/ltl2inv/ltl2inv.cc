@@ -10,24 +10,42 @@
 
 extern "C" {
 
-void ltl2inv_s(int n, float    *A_, int ldA, int *iPiv, float    *vT, float    *M_, int ldM) { ltl2inv<float   >(n, A_, ldA, iPiv, vT, M_, ldM); }
-void ltl2inv_d(int n, double   *A_, int ldA, int *iPiv, double   *vT, double   *M_, int ldM) { ltl2inv<double  >(n, A_, ldA, iPiv, vT, M_, ldM); }
-void ltl2inv_c(int n, ccscmplx *A_, int ldA, int *iPiv, ccscmplx *vT, ccscmplx *M_, int ldM) { ltl2inv<ccscmplx>(n, A_, ldA, iPiv, vT, M_, ldM); }
-void ltl2inv_z(int n, ccdcmplx *A_, int ldA, int *iPiv, ccdcmplx *vT, ccdcmplx *M_, int ldM) { ltl2inv<ccdcmplx>(n, A_, ldA, iPiv, vT, M_, ldM); }
-void utu2inv_s(int n, float    *A_, int ldA, int *iPiv, float    *vT, float    *M_, int ldM) { utu2inv<float   >(n, A_, ldA, iPiv, vT, M_, ldM); }
-void utu2inv_d(int n, double   *A_, int ldA, int *iPiv, double   *vT, double   *M_, int ldM) { utu2inv<double  >(n, A_, ldA, iPiv, vT, M_, ldM); }
-void utu2inv_c(int n, ccscmplx *A_, int ldA, int *iPiv, ccscmplx *vT, ccscmplx *M_, int ldM) { utu2inv<ccscmplx>(n, A_, ldA, iPiv, vT, M_, ldM); }
-void utu2inv_z(int n, ccdcmplx *A_, int ldA, int *iPiv, ccdcmplx *vT, ccdcmplx *M_, int ldM) { utu2inv<ccdcmplx>(n, A_, ldA, iPiv, vT, M_, ldM); }
+#define GENDEF(schema, cchar, ctype, cctype) \
+void schema ##2inv_## cchar(int n, cctype *A_, int ldA, int *iPiv, cctype *vT, cctype *M_, int ldM) \
+{ \
+  using namespace Eigen; \
+  Map<Matrix<cctype, Dynamic, Dynamic>, 0, OuterStride<> > A(A_, n, n, OuterStride<>(ldA)); \
+  Map<Matrix<cctype, Dynamic, Dynamic>, 0, OuterStride<> > M(M_, n, n, OuterStride<>(ldM)); \
+  Map<VectorXi> Piv(iPiv, n); \
+  Map<Vector<cctype, Dynamic>> T(vT, n); \
+  schema ##2inv(A, Piv, vT, M); \
+}
+GENDEF(ltl, s, float,    float)
+GENDEF(ltl, d, double,   double)
+GENDEF(ltl, c, ccscmplx, ccscmplx)
+GENDEF(ltl, z, ccdcmplx, ccdcmplx)
+GENDEF(utu, s, float,    float)
+GENDEF(utu, d, double,   double)
+GENDEF(utu, c, ccscmplx, ccscmplx)
+GENDEF(utu, z, ccdcmplx, ccdcmplx)
 
-
-void ltl2pfa_s(int n, float    *A_, int ldA, int *iPiv, float    *Pfa) { *Pfa = ltl2pfa<float   >(n, A_, ldA, iPiv); }
-void ltl2pfa_d(int n, double   *A_, int ldA, int *iPiv, double   *Pfa) { *Pfa = ltl2pfa<double  >(n, A_, ldA, iPiv); }
-void ltl2pfa_c(int n, ccscmplx *A_, int ldA, int *iPiv, ccscmplx *Pfa) { *Pfa = ltl2pfa<ccscmplx>(n, A_, ldA, iPiv); }
-void ltl2pfa_z(int n, ccdcmplx *A_, int ldA, int *iPiv, ccdcmplx *Pfa) { *Pfa = ltl2pfa<ccdcmplx>(n, A_, ldA, iPiv); }
-void utu2pfa_s(int n, float    *A_, int ldA, int *iPiv, float    *Pfa) { *Pfa = utu2pfa<float   >(n, A_, ldA, iPiv); }
-void utu2pfa_d(int n, double   *A_, int ldA, int *iPiv, double   *Pfa) { *Pfa = utu2pfa<double  >(n, A_, ldA, iPiv); }
-void utu2pfa_c(int n, ccscmplx *A_, int ldA, int *iPiv, ccscmplx *Pfa) { *Pfa = utu2pfa<ccscmplx>(n, A_, ldA, iPiv); }
-void utu2pfa_z(int n, ccdcmplx *A_, int ldA, int *iPiv, ccdcmplx *Pfa) { *Pfa = utu2pfa<ccdcmplx>(n, A_, ldA, iPiv); }
+#undef GENDEF
+#define GENDEF(schema, cchar, ctype, cctype) \
+void schema ##2pfa_## cchar(int n, cctype *A_, int ldA, int *iPiv, cctype *Pfa) \
+{ \
+  using namespace Eigen; \
+  Map<Matrix<cctype, Dynamic, Dynamic>, 0, OuterStride<> > A(A_, n, n, OuterStride<>(ldA)); \
+  Map<VectorXi> Piv(iPiv, n); \
+  *Pfa = schema ##2pfa(A, Piv); \
+}
+GENDEF(ltl, s, float,    float)
+GENDEF(ltl, d, double,   double)
+GENDEF(ltl, c, ccscmplx, ccscmplx)
+GENDEF(ltl, z, ccdcmplx, ccdcmplx)
+GENDEF(utu, s, float,    float)
+GENDEF(utu, d, double,   double)
+GENDEF(utu, c, ccscmplx, ccscmplx)
+GENDEF(utu, z, ccdcmplx, ccdcmplx)
 
 }
 

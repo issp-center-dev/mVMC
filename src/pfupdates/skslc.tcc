@@ -6,28 +6,29 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-#include "colmaj.hh"
+#pragma once
+#include "lapack2eigen.hh"
 
-template<typename T>
-inline signed skslc(uplo_t uploA,
-                    unsigned n,
-                    unsigned i,
-                    T *x,
-                    T *_A, unsigned ldA)
+template<typename Mat>
+inline Eigen::Matrix<typename Mat::Scalar, Eigen::Dynamic, 1>
+  skslc(const char &uploA, unsigned i, const Mat &A)
 {
-    colmaj<T> A(_A, ldA);
+    Eigen::Matrix<typename Mat::Scalar, Eigen::Dynamic, 1> x(A.rows());
+
     x[i] = 0.0;
     switch (uploA) {
-    case BLIS_UPPER:
+    case 'U':
+    case 'u':
         for (unsigned j = 0; j < i; ++j)
             x[j] =  A(j, i);
-        for (unsigned j = i+1; j < n; ++j)
+        for (unsigned j = i+1; j < A.rows(); ++j)
             x[j] = -A(i, j);
-        return 0;
+        break;
 
     default:
         std::cerr << "SKSLC: Lower triangular storage not implemented. Sorry." << std::endl;
-        return err_info(Pfaffine_NOT_IMPLEMNTED, 0);
+        break;;
     }
+    return x;
 }
 

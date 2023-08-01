@@ -36,11 +36,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "splitloop.h"
 #include "qp.h"
 
-#ifdef _pf_block_update
-// Block-update extension.
-#include "../pfupdates/pf_interface.h"
-#endif
-
 void VMCMakeSample(MPI_Comm comm) {
   int outStep,nOutStep;
   int inStep,nInStep;
@@ -74,16 +69,19 @@ void VMCMakeSample(MPI_Comm comm) {
   // TODO: Compute from qpStart to qpEnd to support loop splitting.
   void *pfOrbital[NQPFull];
   void *pfUpdator[NQPFull];
+  void *pfMat[NQPFull];
+  void *pfMap[NQPFull];
   // Read block size from input.
   const char *optBlockSize = getenv("VMC_BLOCK_UPDATE_SIZE");
   if (optBlockSize)
     NBlockUpdateSize = atoi(optBlockSize);
   // Fall back to default if input is invalid.
-  if (NBlockUpdateSize < 1 || NBlockUpdateSize > 100)
+  if (NBlockUpdateSize < 1 || NBlockUpdateSize > 100) {
     if (NExUpdatePath == 0)
       NBlockUpdateSize = 4;
     else
       NBlockUpdateSize = 20;
+  }
 
   // Set one universal EleSpn.
   for (mi=0; mi<Ne;  mi++) EleSpn[mi] = 0;
@@ -94,7 +92,7 @@ void VMCMakeSample(MPI_Comm comm) {
                        InvM, Nsize*Nsize,
                        TmpEleIdx, EleSpn,
                        NBlockUpdateSize,
-                       pfUpdator, pfOrbital);
+                       pfUpdator, pfOrbital, pfMat, pfMap);
   updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
 #else
   CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
@@ -108,13 +106,13 @@ void VMCMakeSample(MPI_Comm comm) {
                       qpStart,qpEnd,comm);
 #ifdef _pf_block_update
     // Clear and reinitialize.
-    updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital);
+    updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital, pfMat, pfMap);
     updated_tdi_v_init_z(NQPFull, Nsite, Nsite2, Nsize,
                          SlaterElm, Nsite2*Nsite2,
                          InvM, Nsize*Nsize,
                          TmpEleIdx, EleSpn,
                          NBlockUpdateSize,
-                         pfUpdator, pfOrbital);
+                         pfUpdator, pfOrbital, pfMat, pfMap);
     updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
 #else
     CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
@@ -276,13 +274,13 @@ void VMCMakeSample(MPI_Comm comm) {
         StartTimer(34);
 #ifdef _pf_block_update
         // Clear and reinitialize.
-        updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital);
+        updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital, pfMat, pfMap);
         updated_tdi_v_init_z(NQPFull, Nsite, Nsite2, Nsize,
                              SlaterElm, Nsite2*Nsite2,
                              InvM, Nsize*Nsize,
                              TmpEleIdx, EleSpn,
                              NBlockUpdateSize,
-                             pfUpdator, pfOrbital);
+                             pfUpdator, pfOrbital, pfMat, pfMap);
         updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
 #else
         CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
@@ -309,7 +307,7 @@ void VMCMakeSample(MPI_Comm comm) {
 
 #ifdef _pf_block_update
   // Free-up updator space.
-  updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital);
+  updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital, pfMat, pfMap);
 #endif
 
   return;

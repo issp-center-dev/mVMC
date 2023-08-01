@@ -125,10 +125,11 @@ double complex GreenFunc1_fsz2(const int ri, const int rj, const int s,const int
 
 /* Calculate 2-body Green function <psi|CisAjsCktAlt|x>/<psi|x> */
 /* buffer size = NQPFull+2*Nsize */
-double complex GreenFunc2_fsz(const int ri, const int rj, const int rk, const int rl,
+double complex GreenFunc2_fsz_(const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
-                  int *projCntNew, double complex *buffer) {
+                  int *projCntNew, double complex *buffer,
+                  int *lazy_info, int *lazy_rsi, int *lazy_msj) {
   double complex z;
   int mj,msj,ml,mtl;
   int rsi,rsj,rtk,rtl;
@@ -199,8 +200,17 @@ double complex GreenFunc2_fsz(const int ri, const int rj, const int rk, const in
   z = ProjRatio(projCntNew,eleProjCnt);
 
   /* calculate Pfaffian */
-  CalculateNewPfMTwo_fsz(ml, t, mj, s, pfMNew, eleIdx,eleSpn, 0, NQPFull, bufV);
-  z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  if (!lazy_info) {
+    CalculateNewPfMTwo_fsz(ml, t, mj, s, pfMNew, eleIdx,eleSpn, 0, NQPFull, bufV);
+    z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  } else {
+    // Save invocation hook instead of calling.
+    lazy_msj[0] = msj; //< to edit to ri, revert to rj
+    lazy_msj[1] = mtl; //< to edit to rk, revert to rl
+    lazy_rsi[0] = rsi;
+    lazy_rsi[1] = rtk;
+    lazy_info[0] = 1; //< "is delayed" flag..
+  }
 
   /* revert hopping */
   eleIdx[mtl] = rl;
@@ -215,12 +225,21 @@ double complex GreenFunc2_fsz(const int ri, const int rj, const int rk, const in
   return conj(z/ip);//TBC
 }
 
-/* Calculate 2-body Green function <psi|CisAjtCkuAlv|x>/<psi|x> */
-/* buffer size = NQPFull+2*Nsize */
-double complex GreenFunc2_fsz2(const int ri, const int rj, const int rk, const int rl,
-                  const int s, const int t,const int u,const int v, const double complex ip,
+double complex GreenFunc2_fsz(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
                   int *projCntNew, double complex *buffer) {
+  return GreenFunc2_fsz_(ri, rj, rk, rl, s, t, ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn,
+                         projCntNew, buffer, 0, 0, 0);
+}
+
+/* Calculate 2-body Green function <psi|CisAjtCkuAlv|x>/<psi|x> */
+/* buffer size = NQPFull+2*Nsize */
+double complex GreenFunc2_fsz2_(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t,const int u,const int v, const double complex ip,
+                  int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, double complex *buffer,
+                  int *lazy_info, int *lazy_rsi, int *lazy_msj) {
   double complex z;
   //int mj,msj,ml,mtl;
   int mj,ml; // mj: (rj,t) -> (ri,s) ml:(rl,v) -> (rk,u)
@@ -325,8 +344,16 @@ double complex GreenFunc2_fsz2(const int ri, const int rj, const int rk, const i
   z = ProjRatio(projCntNew,eleProjCnt);
 
   /* calculate Pfaffian */
-  CalculateNewPfMTwo_fsz(ml, u, mj, s, pfMNew, eleIdx,eleSpn, 0, NQPFull, bufV); // ml -> rk,u; mj -> ri,s
-  z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  if (!lazy_info) {
+    CalculateNewPfMTwo_fsz(ml, u, mj, s, pfMNew, eleIdx,eleSpn, 0, NQPFull, bufV); // ml -> rk,u; mj -> ri,s
+    z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  } else {
+    lazy_msj[0] = mj;
+    lazy_msj[1] = ml;
+    lazy_rsi[0] = XI;
+    lazy_rsi[1] = XK;
+    lazy_info[0] = 1;
+  }
 
   /* revert hopping */
   eleIdx[ml]  = rl;  // ml : (rl,v)
@@ -342,6 +369,13 @@ double complex GreenFunc2_fsz2(const int ri, const int rj, const int rk, const i
 }
 
 
+double complex GreenFunc2_fsz2(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t,const int u,const int v, const double complex ip,
+                  int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, double complex *buffer) {
+  return GreenFunc2_fsz2_(ri, rj, rk, rl, s, t, u, v, ip,
+                          eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn, projCntNew, buffer, 0, 0, 0);
+}
 
 // ignore GreenFuncN: to be added
 

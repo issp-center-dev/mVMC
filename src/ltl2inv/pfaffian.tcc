@@ -4,47 +4,83 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #pragma once
-#include "colmaj.hh"
-#include "blalink.hh"
+#include "lapack2eigen.hh"
 
-template <typename T>
-T ltl2pfa(int n, T *A_, int ldA, int *iPiv)
+
+template <typename T_>
+struct SignedLogScale
 {
-  T pfa = 1.0;
-  colmaj<T> A(A_, ldA);
+  using T = T_;
 
-  for (int i = 0; i < n; i += 2) {
+  T_  val;
+  int sgn;
+};
+
+
+template <typename Mat, typename Vec,
+          typename Amp = typename Mat::Scalar>
+SignedLogScale<Amp> utu2logpfa(const Mat &A, const Vec &iPiv)
+{
+  SignedLogScale<Amp> logpfa{ 0.0, 1 };
+
+  for (int i = 0; i < A.rows(); i += 2) {
+    logpfa.val += std::log(std::abs(Amp( A(i, i+1) )));
+    logpfa.sgn *= A(i, i+1) > 0 ? 1 : -1;
+
+    if (iPiv(i)  -1 != i  ) logpfa.sgn *= -1;
+    if (iPiv(i+1)-1 != i+1) logpfa.sgn *= -1;
+  }
+  return logpfa;
+}
+
+// Additional parameter for return type deduction.
+template <typename Mat, typename Vec, typename Ret>
+Ret utu2logpfa(const Mat &A, const Vec &iPiv, Ret &ret)
+{ return utu2logpfa<Mat, Vec, typename Ret::T>(A, iPiv); }
+
+
+
+template <typename Mat, typename Vec,
+          typename Amp = typename Mat::Scalar>
+Amp ltl2pfa(const Mat &A, const Vec &iPiv)
+{
+  Amp pfa = 1.0;
+
+  for (int i = 0; i < A.rows(); i += 2) {
     pfa *= -A(i+1, i);
 
-    if (iPiv[i  ]-1 != i  ) pfa = -pfa;
-    if (iPiv[i+1]-1 != i+1) pfa = -pfa;
+    if (iPiv(i)  -1 != i  ) pfa = -pfa;
+    if (iPiv(i+1)-1 != i+1) pfa = -pfa;
   }
   return pfa;
 }
 
-template <typename T>
-T utu2pfa(int n, T *A_, int ldA, int *iPiv)
+template <typename Mat, typename Vec,
+          typename Amp = typename Mat::Scalar>
+Amp utu2pfa(const Mat &A, const Vec &iPiv)
 {
-  T pfa = 1.0;
-  colmaj<T> A(A_, ldA);
+  Amp pfa = 1.0;
 
-  for (int i = 0; i < n; i += 2) {
+  for (int i = 0; i < A.rows(); i += 2) {
     pfa *= A(i, i+1);
 
-    if (iPiv[i  ]-1 != i  ) pfa = -pfa;
-    if (iPiv[i+1]-1 != i+1) pfa = -pfa;
+    if (iPiv(i)  -1 != i  ) pfa = -pfa;
+    if (iPiv(i+1)-1 != i+1) pfa = -pfa;
   }
   return pfa;
 }
 
-template <typename T>
-T ltl2pfa(uplo_t uplo, int n, T *A_, int ldA, int *iPiv)
+template <typename Mat, typename Vec,
+          typename Amp = typename Mat::Scalar>
+Amp ltl2pfa(const char &uplo, const Mat &A, const Vec &iPiv)
 {
   switch (uplo) {
-  case BLIS_LOWER:
-    return ltl2pfa(n, A_, ldA, iPiv);
-  case BLIS_UPPER:
-    return utu2pfa(n, A_, ldA, iPiv);
+  case 'l':
+  case 'L':
+    return ltl2pfa(A, iPiv);
+  case 'u':
+  case 'U':
+    return utu2pfa(A, iPiv);
   default:
     return 0.0;
   }
