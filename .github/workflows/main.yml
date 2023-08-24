@@ -23,7 +23,7 @@ jobs:
       - name: brew
         if: ${{ runner.os == 'macOS' }}
         run: |
-          brew install openmpi scalapack
+          brew install openmpi scalapack libomp
 
       - name: pip
         run: |
@@ -38,6 +38,7 @@ jobs:
         shell: bash
         run: |
           if [ ${{ runner.os }} = "macOS" ] ; then
+            export CC=gcc-11
             export FC=gfortran-11
           fi
           cmake -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
