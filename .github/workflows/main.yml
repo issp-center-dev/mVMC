@@ -38,7 +38,6 @@ jobs:
         shell: bash
         run: |
           if [ ${{ runner.os }} = "macOS" ] ; then
-            export CC=gcc-11
             export FC=gfortran-11
             cmake -Dconfig=apple -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
           else
