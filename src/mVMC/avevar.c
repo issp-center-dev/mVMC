@@ -146,6 +146,81 @@ void OutputOptData() {
       count_i +=2*5*NDoublonHolon4siteIdx;
     }
 
+//RBM
+    if(NChargeRBM_PhysLayerIdx != 0){
+      sprintf(fileName, "%s_chargeRBM_physlayer_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NChargeRBM_PhysLayerIdx",
+			  NChargeRBM_PhysLayerIdx, NChargeRBM_PhysLayerIdx, 
+			  count_i, n);
+      count_i += NChargeRBM_PhysLayerIdx;
+    }
+
+    if(NSpinRBM_PhysLayerIdx != 0){
+      sprintf(fileName, "%s_spinRBM_physlayer_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NSpinRBM_PhysLayerIdx",
+			  NSpinRBM_PhysLayerIdx, NSpinRBM_PhysLayerIdx, 
+			  count_i, n);
+      count_i += NSpinRBM_PhysLayerIdx;
+    }
+
+    if(NGeneralRBM_PhysLayerIdx != 0){
+      sprintf(fileName, "%s_generalRBM_physlayer_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NGeneralRBM_PhysLayerIdx",
+			  NGeneralRBM_PhysLayerIdx, NGeneralRBM_PhysLayerIdx, 
+			  count_i, n);
+      count_i += NGeneralRBM_PhysLayerIdx;
+    }
+
+    if(NChargeRBM_HiddenLayerIdx != 0){
+      sprintf(fileName, "%s_chargeRBM_hiddenlayer_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NChargeRBM_HiddenLayerIdx",
+			  NChargeRBM_HiddenLayerIdx, NChargeRBM_HiddenLayerIdx, 
+			  count_i, n);
+      count_i += NChargeRBM_HiddenLayerIdx;
+    }
+
+    if(NSpinRBM_HiddenLayerIdx != 0){
+      sprintf(fileName, "%s_spinRBM_hiddenlayer_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NSpinRBM_HiddenLayerIdx",
+			  NSpinRBM_HiddenLayerIdx, NSpinRBM_HiddenLayerIdx, 
+			  count_i, n);
+      count_i += NSpinRBM_HiddenLayerIdx;
+    }
+
+    if(NGeneralRBM_HiddenLayerIdx != 0){
+      sprintf(fileName, "%s_generalRBM_hiddenlayer_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NGeneralRBM_HiddenLayerIdx",
+			  NGeneralRBM_HiddenLayerIdx, NGeneralRBM_HiddenLayerIdx, 
+			  count_i, n);
+      count_i += NGeneralRBM_HiddenLayerIdx;
+    }
+
+
+    if(NChargeRBM_PhysHiddenIdx != 0){
+      sprintf(fileName, "%s_chargeRBM_physhidden_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NChargeRBM_PhysHiddenIdx",
+			  NChargeRBM_PhysHiddenIdx, NChargeRBM_PhysHiddenIdx, 
+			  count_i, n);
+      count_i += NChargeRBM_PhysHiddenIdx;
+    }
+
+    if(NSpinRBM_PhysHiddenIdx != 0){
+      sprintf(fileName, "%s_spinRBM_physhidden_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NSpinRBM_PhysHiddenIdx",
+			  NSpinRBM_PhysHiddenIdx, NSpinRBM_PhysHiddenIdx, 
+			  count_i, n);
+      count_i += NSpinRBM_PhysHiddenIdx;
+    }
+
+    if(NGeneralRBM_PhysHiddenIdx != 0){
+      sprintf(fileName, "%s_generalRBM_physhidden_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NGeneralRBM_PhysHiddenIdx",
+			  NGeneralRBM_PhysHiddenIdx, NGeneralRBM_PhysHiddenIdx, 
+			  count_i, n);
+      count_i += NGeneralRBM_PhysHiddenIdx;
+    }
+//RBM
+
     if(NSlater != 0){
       if(iFlgOrbitalGeneral==0) {
         sprintf(fileName, "%s_orbital_opt.dat", CParaFileHead);

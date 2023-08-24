@@ -115,4 +115,6 @@ extern int omp_get_thread_num(void);
 #include "../vmccal.c"
 #include "../vmccal_fsz.c"
 
+#include "../rbm.c"
+
 #endif /* _VMC_INCLUDE_FILES */
