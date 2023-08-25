@@ -1,21 +1,17 @@
-
 <!DOCTYPE html>
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Tutorial &#8212; mVMC 1.2.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/classic.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
     
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-    <script src="../_static/jquery.js"></script>
-    <script src="../_static/underscore.js"></script>
-    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../_static/doctools.js"></script>
-    <script src="../_static/sphinx_highlight.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=4c8675c2"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -99,7 +95,7 @@ The input file is as follows:</p>
 Put the pseudopotential files into <code class="docutils literal notranslate"><span class="pre">../pseudo</span></code> directory.</p>
 <p><a class="reference external" href="http://www.quantum-simulation.org/potentials/sg15_oncv/sg15_oncv_upf_2015-10-07.tar.gz">http://www.quantum-simulation.org/potentials/sg15_oncv/sg15_oncv_upf_2015-10-07.tar.gz</a></p>
 <p>We use the program <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> in QuantumESPRESSO as follows.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pw.x -in scf.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pw.x<span class="w"> </span>-in<span class="w"> </span>scf.in
 </pre></div>
 </div>
 </section>
@@ -191,7 +187,7 @@ Put the pseudopotential files into <code class="docutils literal notranslate"><s
 </pre></div>
 </div>
 <p>We use <code class="docutils literal notranslate"><span class="pre">pw.x</span></code>.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pw.x -in band.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pw.x<span class="w"> </span>-in<span class="w"> </span>band.in
 </pre></div>
 </div>
 <p><a class="reference download internal" download="" href="../_downloads/b1ec3039cdf0202e36301d36c1f37b1a/bands.in"><code class="xref download docutils literal notranslate"><span class="pre">bands.in</span></code></a></p>
@@ -202,7 +198,7 @@ Put the pseudopotential files into <code class="docutils literal notranslate"><s
 </pre></div>
 </div>
 <p>We use <code class="docutils literal notranslate"><span class="pre">bands.x</span></code> QuantumESPRESSO.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ bands.x -in bands.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>bands.x<span class="w"> </span>-in<span class="w"> </span>bands.in
 </pre></div>
 </div>
 <p>We can plot the band structure by reading output <code class="docutils literal notranslate"><span class="pre">bands.out.gnu</span></code> from
@@ -248,12 +244,12 @@ GnuPlot etc.</p>
 </pre></div>
 </div>
 <p>We use <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> as</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pw.x -in nscf.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pw.x<span class="w"> </span>-in<span class="w"> </span>nscf.in
 </pre></div>
 </div>
 <p>Then, we use the utility <code class="docutils literal notranslate"><span class="pre">qe2respack.py</span></code> which is included in the RESPACK package.
 The command-line argument is the name of <code class="docutils literal notranslate"><span class="pre">[prefix].save</span></code> directory.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ qe2respack.py sr2cuo3.save
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>qe2respack.py<span class="w"> </span>sr2cuo3.save
 </pre></div>
 </div>
 </section>
@@ -308,10 +304,10 @@ iz_intJ_max = 1
 </div>
 <p>We use <code class="docutils literal notranslate"><span class="pre">calc_wannier</span></code>, <code class="docutils literal notranslate"><span class="pre">calc_chiqw</span></code>, <code class="docutils literal notranslate"><span class="pre">calc_j3d</span></code>,
 <code class="docutils literal notranslate"><span class="pre">calc_w3d</span></code> in RESPACK.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ calc_wannier &lt; respack.in
-$ calc_chiqw &lt; respack.in
-$ calc_w3d &lt; respack.in
-$ calc_j3d &lt; respack.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>calc_wannier<span class="w"> </span>&lt;<span class="w"> </span>respack.in
+$<span class="w"> </span>calc_chiqw<span class="w"> </span>&lt;<span class="w"> </span>respack.in
+$<span class="w"> </span>calc_w3d<span class="w"> </span>&lt;<span class="w"> </span>respack.in
+$<span class="w"> </span>calc_j3d<span class="w"> </span>&lt;<span class="w"> </span>respack.in
 </pre></div>
 </div>
 <p>After finishing calculations, the files are outputted in <code class="docutils literal notranslate"><span class="pre">dir-model</span></code> folder.
@@ -344,8 +340,8 @@ For example, in HPhi, the calculation will be done by typing the following comma
 <span class="n">cutoff_j</span> <span class="o">=</span> <span class="mf">0.02</span>
 </pre></div>
 </div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ cp ./dir-model/* .
-$ HPhi -s stan.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>cp<span class="w"> </span>./dir-model/*<span class="w"> </span>.
+$<span class="w"> </span>HPhi<span class="w"> </span>-s<span class="w"> </span>stan.in
 </pre></div>
 </div>
 </section>
@@ -424,8 +420,8 @@ $ HPhi -s stan.in
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
     </div>
   </body>
 </html>

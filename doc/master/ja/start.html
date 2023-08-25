@@ -1,22 +1,18 @@
-
 <!DOCTYPE html>
 
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>How to use mVMC? &#8212; mVMC 1.2.0 ドキュメント</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
-    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="_static/doctools.js"></script>
-    <script src="_static/sphinx_highlight.js"></script>
-    <script src="_static/translations.js"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=d59cce6c"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/translations.js?v=4dbe4bdc"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <link rel="index" title="索引" href="genindex.html" />
@@ -62,12 +58,12 @@
 <p><strong>intelコンパイラーでの設定</strong></p>
 <p>intelコンパイラを使用する場合には、コンパイラに付属の設定用スクリプトを使用するのが簡単です。</p>
 <p>64ビットOSでbashを使っている場合には</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /opt/intel/bin/compilervars.sh intel64
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>/opt/intel/bin/compilervars.sh<span class="w"> </span>intel64
 </pre></div>
 </div>
 <p>または</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /opt/intel/bin/iccvars.sh intel64
-$ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>/opt/intel/bin/iccvars.sh<span class="w"> </span>intel64
+$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>/opt/intel/mkl/bin/mklvars.sh
 </pre></div>
 </div>
 <p>等を <code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code> に記載してください。
@@ -79,7 +75,7 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 <p>mVMC は次の場所からダウンロードできます。
 <a class="reference external" href="https://github.com/issp-center-dev/mVMC/releases">https://github.com/issp-center-dev/mVMC/releases</a></p>
 <p>ダウンロードしたファイルを次のように展開してください。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ tar xzvf mVMC-xxx.tar.gz
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>tar<span class="w"> </span>xzvf<span class="w"> </span>mVMC-xxx.tar.gz
 </pre></div>
 </div>
 <p>mVMCは次の2通りの方法でインストールできます。</p>
@@ -87,7 +83,7 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 <h3><code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> を使う方法<a class="headerlink" href="#mvmcconfig-sh" title="この見出しへのパーマリンク">¶</a></h3>
 <p>展開したディレクトリのなかにある <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> スクリプトを次のように実行してください。
 (物性研システムB”sekirei”の場合)</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ bash mVMCconfig.sh sekirei
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>bash<span class="w"> </span>mVMCconfig.sh<span class="w"> </span>sekirei
 </pre></div>
 </div>
 <p>これによりコンパイル環境設定ファイル <code class="docutils literal notranslate"><span class="pre">make.sys</span></code> が <code class="docutils literal notranslate"><span class="pre">src/</span></code> ディレクトリに作られます。
@@ -103,13 +99,13 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">make.sys</span></code> の中身は次のようになっています(物性研システムB
 &quot;sekirei&quot;の場合)。</p>
-<div class="highlight-makefile notranslate"><div class="highlight"><pre><span></span><span class="nv">CC</span> <span class="o">=</span> mpicc
-<span class="nv">F90</span> <span class="o">=</span> mpif90
-<span class="nv">CFLAGS</span> <span class="o">=</span> -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
-<span class="nv">FFLAGS</span> <span class="o">=</span> -O3 -implicitnone -xHost
-<span class="nv">LIBS</span> <span class="o">=</span> -L <span class="k">$(</span>MKLROOT<span class="k">)</span>/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 <span class="se">\</span>
-        -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
-<span class="nv">SFMTFLAGS</span> <span class="o">=</span> -no-ansi-alias -DHAVE_SSE2
+<div class="highlight-makefile notranslate"><div class="highlight"><pre><span></span><span class="nv">CC</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>mpicc
+<span class="nv">F90</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>mpif90
+<span class="nv">CFLAGS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>-O3<span class="w"> </span>-no-prec-div<span class="w"> </span>-xHost<span class="w"> </span>-qopenmp<span class="w"> </span>-Wno-unknown-pragmas
+<span class="nv">FFLAGS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>-O3<span class="w"> </span>-implicitnone<span class="w"> </span>-xHost
+<span class="nv">LIBS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>-L<span class="w"> </span><span class="k">$(</span>MKLROOT<span class="k">)</span>/lib/intel64<span class="w"> </span>-lmkl_scalapack_lp64<span class="w"> </span>-lmkl_intel_lp64<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>-lmkl_intel_thread<span class="w"> </span>-lmkl_core<span class="w"> </span>-lmkl_blacs_sgimpt_lp64<span class="w"> </span>-lpthread<span class="w"> </span>-lm
+<span class="nv">SFMTFLAGS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>-no-ansi-alias<span class="w"> </span>-DHAVE_SSE2
 </pre></div>
 </div>
 <p>となります。それぞれのマクロ(変数)の説明は次のとおりです。</p>
@@ -121,7 +117,7 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 <li><p><code class="docutils literal notranslate"><span class="pre">FFLAGS</span></code> : fortran コンパイルオプション。</p></li>
 </ul>
 <p>これでコンパイルのための準備が整います。その後</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ make mvmc
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>make<span class="w"> </span>mvmc
 </pre></div>
 </div>
 <p>とすることで実行可能ファイル <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> 、 <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> が <code class="docutils literal notranslate"><span class="pre">src/内に</span></code> 生成されるので、
@@ -136,8 +132,8 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 <h3>cmakeを使う方法<a class="headerlink" href="#cmake" title="この見出しへのパーマリンク">¶</a></h3>
 <p>mVMCを展開したディレクトリのパスを$PathTomvmc、ビルドディレクトリを$HOME/build/mvmc
 (任意の場所を指定可能)とした場合に、</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="nv">$HOME</span>/build/mvmc
-cmake -DCONFIG<span class="o">=</span>gcc <span class="nv">$PathTomvmc</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span><span class="nv">$HOME</span>/build/mvmc
+cmake<span class="w"> </span>-DCONFIG<span class="o">=</span>gcc<span class="w"> </span><span class="nv">$PathTomvmc</span>
 make
 </pre></div>
 </div>
@@ -151,9 +147,9 @@ make
 <li><p><code class="docutils literal notranslate"><span class="pre">gcc</span></code> : GCC + Linux PC</p></li>
 </ul>
 <p>のオプションが用意されています。以下、mVMCを展開したディレクトリでビルドする例を示します(intelコンパイラの場合)。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir ./build
-<span class="nb">cd</span> ./build
-cmake -DCONFIG<span class="o">=</span>intel ../
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>./build
+<span class="nb">cd</span><span class="w"> </span>./build
+cmake<span class="w"> </span>-DCONFIG<span class="o">=</span>intel<span class="w"> </span>../
 make
 </pre></div>
 </div>
@@ -167,12 +163,12 @@ make
 <div class="admonition note">
 <p class="admonition-title">注釈</p>
 <p>sekirei で cmake を利用するには</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /home/issp/materiapps/tool/env.sh
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>/home/issp/materiapps/tool/env.sh
 </pre></div>
 </div>
 <p>をあらかじめ実行する必要があります。</p>
 <p>またScaLAPACK を利用するには</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake -DCONFIG<span class="o">=</span>sekirei ../ -DUSE_SCALAPACK<span class="o">=</span>ON
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>-DCONFIG<span class="o">=</span>sekirei<span class="w"> </span>../<span class="w"> </span>-DUSE_SCALAPACK<span class="o">=</span>ON
 </pre></div>
 </div>
 <p>を行うと、デフォルトで</p>
@@ -262,7 +258,7 @@ make
 <li><p>実行</p>
 <p>作成した入力ファイル名を引数として <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> を実行します。
 このとき入力ファイル名の前にオプション <code class="docutils literal notranslate"><span class="pre">-s</span></code> を付けます。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ mpiexec -np プロセス数 パス/vmc.out -s 入力ファイル
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>mpiexec<span class="w"> </span>-np<span class="w"> </span>プロセス数<span class="w"> </span>パス/vmc.out<span class="w"> </span>-s<span class="w"> </span>入力ファイル
 </pre></div>
 </div>
 <p>ワークステーションやスパコン等でキューイングシステムを利用している場合は
@@ -283,14 +279,14 @@ make
 <p>上の例ではエキスパートモードのファイルを自動生成した後そのまま計算を開始していますが、
 エキスパートモードのファイルの生成のみを行う場合には <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> を実行します。
 MPIは使用しません。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ パス/vmcdry.out 入力ファイル
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>パス/vmcdry.out<span class="w"> </span>入力ファイル
 </pre></div>
 </div>
 <p>このとき生成されたファイルを必要に応じて手動で編集したのち、 <code class="docutils literal notranslate"><span class="pre">-e</span></code>
 というオプションの後に
 <code class="docutils literal notranslate"><span class="pre">namelist/def</span></code> というファイルを引数として <code class="docutils literal notranslate"><span class="pre">vmcd.out</span></code>
 を実行します。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ mpiexec -np プロセス数 パス/vmc.out -e namelist.def
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>mpiexec<span class="w"> </span>-np<span class="w"> </span>プロセス数<span class="w"> </span>パス/vmc.out<span class="w"> </span>-e<span class="w"> </span>namelist.def
 </pre></div>
 </div>
 <p>以降はスタンダードモードと同様です。</p>
@@ -299,15 +295,15 @@ MPIは使用しません。</p>
 <p><strong>OpenMPスレッド数の指定</strong></p>
 <p>実行時のOpenMPのスレッド数を指定する場合は、
 <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> を実行する前に以下の様にしてください(16スレッドの場合)。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">16</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">16</span>
 </pre></div>
 </div>
 <section id="id5">
 <h3>バージョン番号の確認<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
 <p>次のように <code class="docutils literal notranslate"><span class="pre">-v</span></code> オプションをつけて <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code>,
 <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> を実行すると, バージョン番号を標準出力した後終了します。</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ パス/vmcdry.out -v
-$ パス/vmc.out -v
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>パス/vmcdry.out<span class="w"> </span>-v
+$<span class="w"> </span>パス/vmc.out<span class="w"> </span>-v
 </pre></div>
 </div>
 </section>
@@ -392,8 +388,8 @@ $ パス/vmc.out -v
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    &#169; 著作権 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
     </div>
   </body>
 </html>

@@ -1,22 +1,18 @@
-
 <!DOCTYPE html>
 
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>チュートリアル &#8212; mVMC 1.2.0 ドキュメント</title>
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/classic.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
     
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-    <script src="../_static/jquery.js"></script>
-    <script src="../_static/underscore.js"></script>
-    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../_static/doctools.js"></script>
-    <script src="../_static/sphinx_highlight.js"></script>
-    <script src="../_static/translations.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=d59cce6c"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/translations.js?v=4dbe4bdc"></script>
     
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
@@ -99,7 +95,7 @@ DFT計算はQuantumESPRESSOで行う.
 実行ディレクトリの直上に <code class="docutils literal notranslate"><span class="pre">pseudo</span></code> ディレクトリを作成して, そこに収める.</p>
 <p><a class="reference external" href="http://www.quantum-simulation.org/potentials/sg15_oncv/sg15_oncv_upf_2015-10-07.tar.gz">http://www.quantum-simulation.org/potentials/sg15_oncv/sg15_oncv_upf_2015-10-07.tar.gz</a></p>
 <p>SCF 計算には QuantumESPRESSO内のプログラム <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> を使う.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pw.x -in scf.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pw.x<span class="w"> </span>-in<span class="w"> </span>scf.in
 </pre></div>
 </div>
 </section>
@@ -191,7 +187,7 @@ DFT計算はQuantumESPRESSOで行う.
 </pre></div>
 </div>
 <p>ここでも <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> を使う.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pw.x -in band.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pw.x<span class="w"> </span>-in<span class="w"> </span>band.in
 </pre></div>
 </div>
 <p><a class="reference download internal" download="" href="../_downloads/b1ec3039cdf0202e36301d36c1f37b1a/bands.in"><code class="xref download docutils literal notranslate"><span class="pre">bands.in</span></code></a></p>
@@ -202,7 +198,7 @@ DFT計算はQuantumESPRESSOで行う.
 </pre></div>
 </div>
 <p>QuantumESPRESSOの <code class="docutils literal notranslate"><span class="pre">bands.x</span></code> を使う.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ bands.x -in bands.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>bands.x<span class="w"> </span>-in<span class="w"> </span>bands.in
 </pre></div>
 </div>
 <p>出力された <code class="docutils literal notranslate"><span class="pre">bands.out.gnu</span></code> をGnuPlotなどで読み込んでバンドを描く.</p>
@@ -247,12 +243,12 @@ DFT計算はQuantumESPRESSOで行う.
 </pre></div>
 </div>
 <p>ここでも <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> を使う.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pw.x -in nscf.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pw.x<span class="w"> </span>-in<span class="w"> </span>nscf.in
 </pre></div>
 </div>
 <p>次にRESPACKに付属のユーティリティー <code class="docutils literal notranslate"><span class="pre">qe2respack.py</span></code> を使う.
 引数は <code class="docutils literal notranslate"><span class="pre">[prefix].save</span></code> ディレクトリ名.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ qe2respack.py sr2cuo3.save
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>qe2respack.py<span class="w"> </span>sr2cuo3.save
 </pre></div>
 </div>
 </section>
@@ -307,10 +303,10 @@ iz_intJ_max = 1
 </div>
 <p>RESPACKのプログラム <code class="docutils literal notranslate"><span class="pre">calc_wannier</span></code>, <code class="docutils literal notranslate"><span class="pre">calc_chiqw</span></code>, <code class="docutils literal notranslate"><span class="pre">calc_j3d</span></code>,
 <code class="docutils literal notranslate"><span class="pre">calc_w3d</span></code> を使う.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ calc_wannier &lt; respack.in
-$ calc_chiqw &lt; respack.in
-$ calc_w3d &lt; respack.in
-$ calc_j3d &lt; respack.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>calc_wannier<span class="w"> </span>&lt;<span class="w"> </span>respack.in
+$<span class="w"> </span>calc_chiqw<span class="w"> </span>&lt;<span class="w"> </span>respack.in
+$<span class="w"> </span>calc_w3d<span class="w"> </span>&lt;<span class="w"> </span>respack.in
+$<span class="w"> </span>calc_j3d<span class="w"> </span>&lt;<span class="w"> </span>respack.in
 </pre></div>
 </div>
 <p>これにより, RESPACKによって出力されたホッピング等のファイルが,
@@ -344,8 +340,8 @@ Wannier90の形式で <code class="docutils literal notranslate"><span class="pr
 <span class="n">cutoff_j</span> <span class="o">=</span> <span class="mf">0.02</span>
 </pre></div>
 </div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ cp ./dir-model/* .
-$ HPhi -s stan.in
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>cp<span class="w"> </span>./dir-model/*<span class="w"> </span>.
+$<span class="w"> </span>HPhi<span class="w"> </span>-s<span class="w"> </span>stan.in
 </pre></div>
 </div>
 </section>
@@ -424,8 +420,8 @@ $ HPhi -s stan.in
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    &#169; 著作権 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
     </div>
   </body>
 </html>

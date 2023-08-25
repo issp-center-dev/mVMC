@@ -1,21 +1,17 @@
-
 <!DOCTYPE html>
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Tutorial &#8212; mVMC 1.2.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/classic.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
     
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-    <script src="../_static/jquery.js"></script>
-    <script src="../_static/underscore.js"></script>
-    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../_static/doctools.js"></script>
-    <script src="../_static/sphinx_highlight.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=4c8675c2"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="../genindex.html" />
@@ -69,7 +65,7 @@ the following input file</p>
 <span class="mi">2</span><span class="n">Sz</span><span class="o">=</span><span class="mi">0</span>
 </pre></div>
 </div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ HPhi -s input
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>HPhi<span class="w"> </span>-s<span class="w"> </span>input
 </pre></div>
 </div>
 </li>
@@ -87,7 +83,7 @@ the following input file</p>
 <span class="mi">2</span><span class="n">Sz</span><span class="o">=</span><span class="mi">0</span>
 </pre></div>
 </div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ vmc.out -s input
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>vmc.out<span class="w"> </span>-s<span class="w"> </span>input
 </pre></div>
 </div>
 <p>We add the following line to the input file to compute the correlation function.</p>
@@ -95,7 +91,7 @@ the following input file</p>
 </pre></div>
 </div>
 <p>Compute the correlation function.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ vmc.out -s input output/zqp_opt.dat
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>vmc.out<span class="w"> </span>-s<span class="w"> </span>input<span class="w"> </span>output/zqp_opt.dat
 </pre></div>
 </div>
 </li>
@@ -114,13 +110,13 @@ in the <code class="docutils literal notranslate"><span class="pre">output/</spa
 <h2>Fourier transformation of correlation functions<a class="headerlink" href="#fourier-transformation-of-correlation-functions" title="Permalink to this heading">¶</a></h2>
 <p>Perform the Fourier transformation of the correlation function
 by using the utility <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code>.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">echo</span> <span class="s2">&quot;4 20</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;4 20</span>
 <span class="s2">G 0 0 0</span>
 <span class="s2">X 0.5 0 0</span>
 <span class="s2">M 0.5 0.5 0</span>
 <span class="s2">G 0 0 0</span>
-<span class="s2">16 16 1&quot;</span> &gt;&gt; geometry.dat
-$ greenr2k namelist.def geometry.dat
+<span class="s2">16 16 1&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>geometry.dat
+$<span class="w"> </span>greenr2k<span class="w"> </span>namelist.def<span class="w"> </span>geometry.dat
 </pre></div>
 </div>
 <p>Then the Fourier-transformed correlation functions are
@@ -139,8 +135,8 @@ written to a file in <code class="docutils literal notranslate"><span class="pre
 <h2>Display correlation functions<a class="headerlink" href="#display-correlation-functions" title="Permalink to this heading">¶</a></h2>
 <p>Plot the correlation function in the <em>k</em> space
 by using gnuplot.</p>
-<div class="highlight-gnuplot notranslate"><div class="highlight"><pre><span></span><span class="k">load</span><span class="w"> </span><span class="s">&quot;kpath.gp&quot;</span><span class="w"></span>
-<span class="k">plot</span><span class="w"> </span><span class="s">&quot;output/zvo_corr_eigen0.dat&quot;</span><span class="w"> </span><span class="nb">u</span><span class="w"> </span><span class="mi">1</span><span class="o">:</span><span class="mi">12</span><span class="w"> </span><span class="nb">w</span><span class="w"> </span><span class="n">l</span><span class="w"></span>
+<div class="highlight-gnuplot notranslate"><div class="highlight"><pre><span></span><span class="k">load</span><span class="w"> </span><span class="s">&quot;kpath.gp&quot;</span>
+<span class="k">plot</span><span class="w"> </span><span class="s">&quot;output/zvo_corr_eigen0.dat&quot;</span><span class="w"> </span><span class="nb">u</span><span class="w"> </span><span class="mi">1</span><span class="o">:</span><span class="mi">12</span><span class="w"> </span><span class="nb">w</span><span class="w"> </span><span class="n">l</span>
 </pre></div>
 </div>
 <figure class="align-default" id="id2">
@@ -229,8 +225,8 @@ by using gnuplot.</p>
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
     </div>
   </body>
 </html>

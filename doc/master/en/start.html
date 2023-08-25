@@ -1,21 +1,17 @@
-
 <!DOCTYPE html>
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>How to use mVMC? &#8212; mVMC 1.2.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
-    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="_static/doctools.js"></script>
-    <script src="_static/sphinx_highlight.js"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=4c8675c2"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -60,12 +56,12 @@
 <p>When you use the intel compiler, you can use easily scripts attached to
 the compiler. In the case of the bash in 64 bit OS, write the following
 in your <code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code>:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /opt/intel/bin/compilervars.sh intel64
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>/opt/intel/bin/compilervars.sh<span class="w"> </span>intel64
 </pre></div>
 </div>
 <p>or</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /opt/intel/bin/iccvars.sh intel64
-$ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>/opt/intel/bin/iccvars.sh<span class="w"> </span>intel64
+$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>/opt/intel/mkl/bin/mklvars.sh
 </pre></div>
 </div>
 <p>Please read manuals of your compiler/library for more information.</p>
@@ -76,7 +72,7 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 <p>You can download mVMC in the following place.
 <a class="reference external" href="https://github.com/issp-center-dev/mVMC/releases">https://github.com/issp-center-dev/mVMC/releases</a></p>
 <p>You can obtain the mVMC directory by typing</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ tar xzvf mVMC-xxx.tar.gz
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>tar<span class="w"> </span>xzvf<span class="w"> </span>mVMC-xxx.tar.gz
 </pre></div>
 </div>
 <p>There are two kind of procedures to install mVMC.</p>
@@ -84,7 +80,7 @@ $ <span class="nb">source</span> /opt/intel/mkl/bin/mklvars.sh
 <h3>Using <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code><a class="headerlink" href="#using-mvmcconfig-sh" title="Permalink to this heading">¶</a></h3>
 <p>Please run <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> script in the mVMC directory as follow (for
 ISSP system-B “sekirei”):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ bash mVMCconfig.sh sekirei
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>bash<span class="w"> </span>mVMCconfig.sh<span class="w"> </span>sekirei
 </pre></div>
 </div>
 <p>Then environmental configuration file <code class="docutils literal notranslate"><span class="pre">make.sys</span></code> is generated in
@@ -100,13 +96,13 @@ follows:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">gcc-mpich-mkl</span></code> : GCC + MPICH + MKL</p></li>
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">make.sys</span></code> is as follows (for ISSP-system-B “sekirei”):</p>
-<div class="highlight-makefile notranslate"><div class="highlight"><pre><span></span><span class="nv">CC</span> <span class="o">=</span> mpicc
-<span class="nv">F90</span> <span class="o">=</span> mpif90
-<span class="nv">CFLAGS</span> <span class="o">=</span> -O3 -no-prec-div -xHost -qopenmp -Wno-unknown-pragmas
-<span class="nv">FFLAGS</span> <span class="o">=</span> -O3 -implicitnone -xHost
-<span class="nv">LIBS</span> <span class="o">=</span> -L <span class="k">$(</span>MKLROOT<span class="k">)</span>/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 <span class="se">\</span>
-        -lmkl_intel_thread -lmkl_core -lmkl_blacs_sgimpt_lp64 -lpthread -lm
-<span class="nv">SFMTFLAGS</span> <span class="o">=</span> -no-ansi-alias -DHAVE_SSE2
+<div class="highlight-makefile notranslate"><div class="highlight"><pre><span></span><span class="nv">CC</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>mpicc
+<span class="nv">F90</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>mpif90
+<span class="nv">CFLAGS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>-O3<span class="w"> </span>-no-prec-div<span class="w"> </span>-xHost<span class="w"> </span>-qopenmp<span class="w"> </span>-Wno-unknown-pragmas
+<span class="nv">FFLAGS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>-O3<span class="w"> </span>-implicitnone<span class="w"> </span>-xHost
+<span class="nv">LIBS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>-L<span class="w"> </span><span class="k">$(</span>MKLROOT<span class="k">)</span>/lib/intel64<span class="w"> </span>-lmkl_scalapack_lp64<span class="w"> </span>-lmkl_intel_lp64<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>-lmkl_intel_thread<span class="w"> </span>-lmkl_core<span class="w"> </span>-lmkl_blacs_sgimpt_lp64<span class="w"> </span>-lpthread<span class="w"> </span>-lm
+<span class="nv">SFMTFLAGS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>-no-ansi-alias<span class="w"> </span>-DHAVE_SSE2
 </pre></div>
 </div>
 <p>We explain macros of this file as:</p>
@@ -118,7 +114,7 @@ follows:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">FFLAGS</span></code> : fortran compile option</p></li>
 </ul>
 <p>Then you are ready to compile mVMC. Please type</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ make mvmc
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>make<span class="w"> </span>mvmc
 </pre></div>
 </div>
 <p>and obtain <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> and <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> in <code class="docutils literal notranslate"><span class="pre">src/</span></code> directory; you
@@ -131,8 +127,8 @@ If you keep this PATH, you should write above in <code class="docutils literal n
 <section id="using-cmake">
 <h3>Using <code class="docutils literal notranslate"><span class="pre">cmake</span></code><a class="headerlink" href="#using-cmake" title="Permalink to this heading">¶</a></h3>
 <p>We can compile mVMC as</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="nv">$HOME</span>/build/mvmc
-cmake -DCONFIG<span class="o">=</span>gcc <span class="nv">$PathTomvmc</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span><span class="nv">$HOME</span>/build/mvmc
+cmake<span class="w"> </span>-DCONFIG<span class="o">=</span>gcc<span class="w"> </span><span class="nv">$PathTomvmc</span>
 make
 </pre></div>
 </div>
@@ -150,9 +146,9 @@ select a compiler by using the following options:</p>
 </ul>
 <p>An example of compiling mVMC by using the Intel compiler is shown as
 follows:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir ./build
-<span class="nb">cd</span> ./build
-cmake -DCONFIG<span class="o">=</span>intel ../
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>./build
+<span class="nb">cd</span><span class="w"> </span>./build
+cmake<span class="w"> </span>-DCONFIG<span class="o">=</span>intel<span class="w"> </span>../
 make
 </pre></div>
 </div>
@@ -169,11 +165,11 @@ change the compiler.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Before using cmake for sekirei, you must type</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> /home/issp/materiapps/tool/env.sh
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>/home/issp/materiapps/tool/env.sh
 </pre></div>
 </div>
 <p>When we type the following in sekirei,</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ cmake -DCONFIG<span class="o">=</span>sekirei ../ -DUSE_SCALAPACK<span class="o">=</span>ON ,
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>cmake<span class="w"> </span>-DCONFIG<span class="o">=</span>sekirei<span class="w"> </span>../<span class="w"> </span>-DUSE_SCALAPACK<span class="o">=</span>ON<span class="w"> </span>,
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">-DSCALAPACK_LIBRARIES</span></code> is automatically set as</p>
@@ -267,7 +263,7 @@ in <a class="reference internal" href="standard.html#howtostandard"><span class=
 <li><p>Run</p>
 <p>Run an executable <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> in terminal by specifying the name of
 input file written in previous step (option <code class="docutils literal notranslate"><span class="pre">-s</span></code> is required).</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ mpiexec -np number-of-processes Path/vmc.out -s Input-file-name
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>mpiexec<span class="w"> </span>-np<span class="w"> </span>number-of-processes<span class="w"> </span>Path/vmc.out<span class="w"> </span>-s<span class="w"> </span>Input-file-name
 </pre></div>
 </div>
 <p>When you use a queuing system in workstations or super computers,
@@ -290,13 +286,13 @@ are shown in <a class="reference internal" href="output.html#outputfile"><span c
 Expert mode are generated. If we only generate files without starting
 the calculation, we can use an executable <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> as follows
 (MPI is not used in this step):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ Path/vmcdry.out Input-file-name
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>Path/vmcdry.out<span class="w"> </span>Input-file-name
 </pre></div>
 </div>
 <p>Then, we can edit generated files by hand and run a executable
 <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> with <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> as an argument (option <code class="docutils literal notranslate"><span class="pre">-e</span></code> is
 required) as follows:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ mpiexec -np number-of-processes Path/vmc.out -e namelist.def
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>mpiexec<span class="w"> </span>-np<span class="w"> </span>number-of-processes<span class="w"> </span>Path/vmc.out<span class="w"> </span>-e<span class="w"> </span>namelist.def
 </pre></div>
 </div>
 </li>
@@ -306,7 +302,7 @@ required) as follows:</p>
 <p><strong>The number of threads for OpenMP</strong></p>
 <p>If you specify the number of OpenMP threads for mVMC, you should set it
 as follows (in case of 16 threads) before the running:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">export</span> <span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">16</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">16</span>
 </pre></div>
 </div>
 </div>
@@ -315,8 +311,8 @@ as follows (in case of 16 threads) before the running:</p>
 <h2>Printing version ID<a class="headerlink" href="#printing-version-id" title="Permalink to this heading">¶</a></h2>
 <p>By using <code class="docutils literal notranslate"><span class="pre">-v</span></code> option as follows, you can check which version of mVMC
 you are using.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ PATH/vmcdry.out -v
-$ PATH/vmc.out -v
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>PATH/vmcdry.out<span class="w"> </span>-v
+$<span class="w"> </span>PATH/vmc.out<span class="w"> </span>-v
 </pre></div>
 </div>
 </section>
@@ -398,8 +394,8 @@ $ PATH/vmc.out -v
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
     </div>
   </body>
 </html>
