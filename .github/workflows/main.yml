@@ -4,15 +4,26 @@ on: [push]
 
 jobs:
   ctest:
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: ["ubuntu-22.04", "macos-11", "ubuntu-20.04"]
+      fail-fast: false
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: apt
+        if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt update
           sudo apt install liblapack-dev openmpi-bin libopenmpi-dev libscalapack-openmpi-dev
+
+      - name: brew
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          brew install openmpi scalapack libomp
 
       - name: pip
         run: |
@@ -26,7 +37,13 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: |
-          cmake -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+          if [ ${{ runner.os }} = "macOS" ] ; then
+            # CONFIG=apple requires gfortran but macOS runner has not, but gfortran-11, 12, ...
+            ln -s `which gfortran-11` gfortran
+            env PATH=`pwd`:$PATH HOMEBREW_PREFIX=/usr/local cmake -DCONFIG=apple -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+          else
+            cmake -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+          fi
 
       - name: build
         working-directory: ${{runner.workspace}}/build
