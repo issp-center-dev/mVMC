@@ -9,3 +9,4 @@ rm -r output
 rm -r __pycache__
 rm green*
 rm stan_aft.in  stan_opt.in
+rm -r uhf random
