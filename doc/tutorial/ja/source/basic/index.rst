@@ -6,3 +6,4 @@
 
    ./hubbard_dimer.rst
    ./hubbard_chain.rst
+   ./hubbard_square.rst

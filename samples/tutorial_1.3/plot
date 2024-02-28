@@ -4,5 +4,5 @@ p[:][:] \
 "random/opt/zvo_out_001.dat" u 1 t "Random initial", \
 "uhf/opt/zvo_out_001.dat" u 1 t "UHF initial", \
 -12.566554520605 w l  t "UHF", \
--0.85136*16 w l lc -1 t "exact diagonalization"
+-13.621855 w l lc -1 t "exact diagonalization"
 pause -1
