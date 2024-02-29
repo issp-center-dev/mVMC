@@ -28,10 +28,11 @@ mVMCの引用文献としては、下記の論文をご記載ください。
 チュートリアル
 --------
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 3
    :numbered: 4
 
    basic/index
+   advanced/index
 
 .. Indices and tables
 .. ==================

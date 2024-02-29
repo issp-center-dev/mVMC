@@ -1,0 +1,17 @@
+W             = 4       
+Wsub          = 2       
+L             = 4       
+Lsub          = 2       
+lattice       = "square"
+model         = "Hubbard"   
+t             = 1.0      
+U             = -4.0      
+ncond         = 10
+2Sz           = 0        
+NVMCSample    = 5000      
+NSROptItrStep = 100      
+NMPTrans      = 1        
+NSPStot       = 0        
+NVMCCalMode   = 1        
+NDataIdxStart = 0        
+NDataQtySmp   = 5        
