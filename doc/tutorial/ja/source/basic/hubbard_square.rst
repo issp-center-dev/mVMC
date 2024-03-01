@@ -27,7 +27,7 @@
 
 UHF初期状態での最適化
 """""""""""""""""""""""""""""""
-次に、UHF (Unrestricted Hartree-Fock) 近似で得られた :math:`\prod_n (\sum_{i\sigma} \Phi_{in\sigma} c^{\dagger}_{i\sigma}) |0\rangle` からペアリング関数 :math:`(\sum_{i,j} f_{ij} c^{\dagger}_{i\uparrow} c^{\dagger}_{j\downarrow})^{N} |0\rangle` を構築し、それをmVMCの初期状態として最適化を行ってみます。詳細は論文等で紹介されているので割愛しますが、次の関係式から構築することができます。
+次に、UHF (Unrestricted Hartree-Fock) 近似で得られた :math:`\prod_n (\sum_{i\sigma} \Phi_{in\sigma} c^{\dagger}_{i\sigma}) |0\rangle` からペアリング関数 :math:`(\sum_{i,j} f_{ij} c^{\dagger}_{i\uparrow} c^{\dagger}_{j\downarrow})^{N} |0\rangle` を構築し、それをmVMCの初期状態として最適化を行ってみます。詳細は論文等(例えば文献2を参照)で紹介されているので割愛しますが、次の関係式から構築することができます。
 
  .. math::
   
@@ -58,3 +58,8 @@ UHF初期状態での最適化
 
 下図は、上図を拡大したものになっています。
 紫点が乱数ペアリングを初期状態にした結果、緑点がUHF近似から構築した状態を初期状態にした結果です。水色線と黒線は、それぞれ、UHFで得られたエネルギーと厳密対角化で得られるエネルギーです。UHF近似による初期状態を使ったほうが、初期ステップでのエネルギー値が低く、少ない最適化ステップ数で収束していることがわかります。
+
+参考文献
+""""""""""""""""""""""
+#. `ISSPデータリポジトリ <https://isspns-gitlab.issp.u-tokyo.ac.jp/mvmc-dev/mvmc-tutorial>`_ 
+#. https://issp-center-dev.github.io/mVMC/doc/master/ja/algorithm.html#puffandslater
