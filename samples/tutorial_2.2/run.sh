@@ -1,7 +1,7 @@
 #[s] definitions of executions
 MPI=" "
-VMC="../../build/src/mVMC/vmc.out"
-VMCDRY="../../build/src/mVMC/vmcdry.out"
+VMC="path2vmc.out"       
+VMCDRY="path2vmcdry.out" 
 #[e] definitions of executions
 
 #python3 MakeInput.py input.toml
