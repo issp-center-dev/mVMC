@@ -7,7 +7,7 @@ Hubbardダイマー
  H = -t \sum_{\sigma} \left( c_{0\sigma}^{\dagger}c_{1\sigma}+{\rm H.c.} \right)
    +U \sum_{i=0,1} n_{i\uparrow}n_{i\downarrow}
 
-文献2に記載されているように、Hubbard dimerの基底状態 :math:`\ket{{\rm GS}}` は、 
+文献2に記載されているように、Hubbard dimerの基底状態 :math:`|{\rm GS} \rangle` は、 
 
 .. math:: 
 
@@ -18,12 +18,12 @@ Hubbardダイマー
 .. math:: 
   :label: exact_gs
 
-  \ket{{\rm GS}} = \left[ \frac{\sqrt{1-\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{0\downarrow}^{\dagger} + c_{1\uparrow}^{\dagger} c_{1\downarrow}^{\dagger} \right)
-  + \frac{\sqrt{1+\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{1\downarrow}^{\dagger} - c_{0\downarrow}^{\dagger} c_{1\uparrow}^{\dagger} \right) \right] \ket{0}
+  | {\rm GS} \rangle = \left[ \frac{\sqrt{1-\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{0\downarrow}^{\dagger} + c_{1\uparrow}^{\dagger} c_{1\downarrow}^{\dagger} \right)
+  + \frac{\sqrt{1+\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{1\downarrow}^{\dagger} - c_{0\downarrow}^{\dagger} c_{1\uparrow}^{\dagger} \right) \right] |0 \rangle
   
   
 
-ここで :math:`\ket{0}`  は真空状態を表しています。上記の状態はmVMCで実装されているペアリング波動関数で厳密に表現することができます。
+ここで :math:`|0 \rangle`  は真空状態を表しています。上記の状態はmVMCで実装されているペアリング波動関数で厳密に表現することができます。
 
 波動関数の最適化
 """""""""""""""""""""""""""""""
@@ -118,9 +118,9 @@ Hubbard模型を含んだ遍歴電子系をスタンダードモードで取り�
   2 -4.000000000000000000e+00  0.000000000000000000e+00 
   3 -1.653364791408409529e+00  0.000000000000000000e+00 
 
-5行目のヘッダ以降の数値が、最適化されたペアリング波動関数の情報です。一列目が変分パラメータのインデックス、二列目が変分パラメータの実部、三列目がその虚部です。今回は実数での計算になっているため、三列目は全て0が出力されています。なお、ここで出力されている値は、最適化の最終ステップから``NSROptItrSmp``ステップ数分前までの変分パラメータの平均値となっています。。(``NSROptItrSmp``は``modpara.def``で設定できます。)
+5行目のヘッダ以降の数値が、最適化されたペアリング波動関数の情報です。一列目が変分パラメータのインデックス、二列目が変分パラメータの実部、三列目がその虚部です。今回は実数での計算になっているため、三列目は全て0が出力されています。なお、ここで出力されている値は、最適化の最終ステップから ``NSROptItrSmp`` ステップ数分前までの変分パラメータの平均値となっています。( ``NSROptItrSmp`` は ``modpara.def`` で設定できます。)
 
-変分パラメータのインデックスとペアリングの関係は、``orbitalidx.def`` に記載されています。次のコマンドを実行してください::
+変分パラメータのインデックスとペアリングの関係は、 ``orbitalidx.def`` に記載されています。次のコマンドを実行してください::
 
   cat orbitalidx.def
 
@@ -140,7 +140,7 @@ Hubbard模型を含んだ遍歴電子系をスタンダードモードで取り�
     2      1
     3      1
 
-5行目のヘッダ以降の数値が、ペアリング波動関数 :math:`\left(\sum_{i,j} f_{ij} c^{\dagger}_{i\uparrow} c^{\dagger}_{j\downarrow}\right) \ket{0}` に含まれる変分パラメータ :math:`f_{ij}` の情報です。一列目が変分パラメータ :math:`f_{ij}` の サイトインデックス:math:`i` 、二列目が:math:`f_{ij}` の :math:`j` 、三列目が :math:`f_{ij}` のインデックスです。
+5行目のヘッダ以降の数値が、ペアリング波動関数 :math:`\left(\sum_{i,j} f_{ij} c^{\dagger}_{i\uparrow} c^{\dagger}_{j\downarrow}\right) | 0 \rangle` に含まれる変分パラメータ :math:`f_{ij}` の情報です。一列目が変分パラメータ :math:`f_{ij}` の サイトインデックス :math:`i` 、二列目が :math:`f_{ij}` の :math:`j` 、三列目が :math:`f_{ij}` のインデックスです。
 
 基底状態の厳密解 :eq:`exact_gs` によると、ペアリング波動関数の変分パラメータは次のようになることが期待されます。
 
@@ -164,13 +164,13 @@ Hubbard模型を含んだ遍歴電子系をスタンダードモードで取り�
 初期状態の設定
 """""""""""""""""""""""""""""""
 
-全スピンの大きさSが0の場合、一番エネルギーが高い励起状態 :math:`\ket{{\rm ES}}` とそのエネルギー :math:`E_{{\rm ES}}` は次のように表されます。
+全スピンの大きさ :math:`S_{\rm tot}` が0の場合、一番エネルギーが高い励起状態 :math:`|{\rm ES} \rangle` とそのエネルギー :math:`E_{{\rm ES}}` は次のように表されます。
 
 .. math:: 
   :label: exact_es
 
-  \ket{{\rm ES}} = \left[ \frac{\sqrt{1+\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{0\downarrow}^{\dagger} + c_{1\uparrow}^{\dagger} c_{1\downarrow}^{\dagger} \right)
-  - \frac{\sqrt{1-\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{1\downarrow}^{\dagger} - c_{0\downarrow}^{\dagger} c_{1\uparrow}^{\dagger} \right) \right] \ket{0},
+  |{\rm ES} \rangle = \left[ \frac{\sqrt{1+\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{0\downarrow}^{\dagger} + c_{1\uparrow}^{\dagger} c_{1\downarrow}^{\dagger} \right)
+  - \frac{\sqrt{1-\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{1\downarrow}^{\dagger} - c_{0\downarrow}^{\dagger} c_{1\uparrow}^{\dagger} \right) \right] |0 \rangle,
    
 
 .. math:: 

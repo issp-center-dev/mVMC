@@ -33,7 +33,7 @@
 extensions = ['sphinx.ext.mathjax']
 mathjax_pass = ['https://cdnjs.com/']
 math_number_all = True
-spelling_lang='en_US'
+spelling_lang='ja'
 spelling_word_list_filename='spelling_wordlist.txt'
 numfig = True
 
@@ -55,7 +55,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'HΦ Tutorial'
+project = u'mVMC Tutorial'
 copyright = u'2020-, The University of Tokyo'
 author = u'The University of Tokyo'
 
@@ -64,7 +64,7 @@ author = u'The University of Tokyo'
 # built documents.
 #
 # The short X.Y version.
-version = '3.2'
+version = '1.2'
 # The full version, including alpha/beta/rc tags.
 release = u''
 
@@ -73,7 +73,7 @@ release = u''
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = 'en'
+language = 'ja'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
