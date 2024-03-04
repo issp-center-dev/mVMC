@@ -89,10 +89,10 @@ int GetInfoInterAll(FILE *fp, int **ArrayIdx, double complex *ArrayValue,
 int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara, int *ArrayOpt, int **ArraySgn,
                     int _iFlagOptTrans, int *iOptCount, int _fidx, int _APFlag, int Nsite, int NArray, char *defname);
 
-int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int **ArrayIdxTwoBodyGLz, int **ArrayToIdx, int **ArrayIdxOneBodyG,
-                    int _NLanczosMode, int Nsite, int NArray, char *defname);
+int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *defname);
 
-int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *defname);
+int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int **ArrayIdxOneBodyG, 
+                      int Nsite, int NArray, char *defname);
 
 int GetInfoOrbitalGeneral(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, int *iOptCount,
                           int _fidx, int _iComplexFlag, int _iFlagOrbitalGeneral, int _APFlag, int Nsite, int NArray,
@@ -181,7 +181,7 @@ int JudgeOrbitalMode(int *_iFlgOrbitalGeneral, const int _iFlgOrbitalAP, const i
   return iret;
 }
 
-int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **cacaDCIdx, int Ns) {
+int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **cacaIdx, int Ns) {
   FILE *fp;
   char defname[D_FileNameMax];
   char ctmp[D_FileNameMax];
@@ -217,9 +217,10 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
         /*cisajs.def----------------------------------------*/
         if (GetInfoOneBodyG(fp, caIdx, iOneBodyGIdx, 0, Ns, Nca, defname) != 0) return (-1);
         break;
-      case KWTwoBodyG:
-        /*cisajscktaltdc.def--------------------------------*/
-        if (GetInfoTwoBodyG(fp, cacaDCIdx, cacaDCIdx, iOneBodyGIdx, caIdx, 0, Ns, Ncacadc, defname) != 0) return (-1);
+      case KWTwoBodyGEx:
+        /*cisajscktalt.def----------------------------------*/
+        /*load as if it's DC for index rearranging----------*/
+        if (GetInfoTwoBodyG(fp, cacaIdx, Ns, Ncacadc, defname) != 0) return (-1);
         break;
       default:
         break;
@@ -235,27 +236,34 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
 /// \param Ncacadc Number of CisAjsCktAltDC
 /// \param Ns Number of sites
 /// \return Number of calculation target
-int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, int **caIdx, int **iFlgOneBodyG) {
+int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, int **iFlgOneBodyG) {
 
   int info = 0;
   int i, j, isite1, isite2;
   int icount = 0;
-  int **cacaDCIdx;
+  int **cacaIdx;
+  int **caIdx;
 
-  cacaDCIdx = malloc(sizeof(int *) * Ncacadc);
-  //pInt=cacaDCIdx[0];
-  for (i = 0; i < Ncacadc; i++) {
-    cacaDCIdx[i] = malloc(sizeof(int) * 8);
-  }
+  cacaIdx = malloc(sizeof(int *) * Ncacadc);
+  for (i = 0; i < Ncacadc; i++)
+    cacaIdx[i] = malloc(sizeof(int) * 8);
+  caIdx = malloc(sizeof(int *) * Nca);
+  for (i = 0; i < Nca; i++)
+    caIdx[i] = malloc(sizeof(int) * 4);
 
   for (i = 0; i < 2 * Ns; i++) {
     for (j = 0; j < 2 * Ns; j++) {
       iFlgOneBodyG[i][j] = -1;
     }
   }
-  info = ReadGreen(xNameListFile, Nca, caIdx, Ncacadc, cacaDCIdx, Ns);
+  info = ReadGreen(xNameListFile, Nca, caIdx, Ncacadc, cacaIdx, Ns);
   if (info != 0) {
-    free(cacaDCIdx);
+    for (i = 0; i < Ncacadc; i++)
+      free(cacaIdx[i]);
+    free(cacaIdx);
+    for (i = 0; i < Nca; i++)
+      free(caIdx[i]);
+    free(caIdx);
     return (info);
   }
 
@@ -269,8 +277,8 @@ int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, i
   }
   //cisajscktalt -> cisajs, cltakt (Note: indecies of the latter Green's function are modified)
   for (i = 0; i < Ncacadc; i++) {
-    isite1 = cacaDCIdx[i][0] + cacaDCIdx[i][1] * Ns;
-    isite2 = cacaDCIdx[i][2] + cacaDCIdx[i][3] * Ns;
+    isite1 = cacaIdx[i][0] + cacaIdx[i][1] * Ns;
+    isite2 = cacaIdx[i][2] + cacaIdx[i][3] * Ns;
     if (iFlgOneBodyG[isite1][isite2] == -1) {
       iFlgOneBodyG[isite1][isite2] = icount;
       icount++;
@@ -280,15 +288,20 @@ int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, i
     isite1 = cacaDCIdx[i][4] + cacaDCIdx[i][5] * Ns;
     isite2 = cacaDCIdx[i][6] + cacaDCIdx[i][7] * Ns;
     */
-    isite1 = cacaDCIdx[i][6] + cacaDCIdx[i][7] * Ns;
-    isite2 = cacaDCIdx[i][4] + cacaDCIdx[i][5] * Ns;
+    isite1 = cacaIdx[i][6] + cacaIdx[i][7] * Ns;
+    isite2 = cacaIdx[i][4] + cacaIdx[i][5] * Ns;
     if (iFlgOneBodyG[isite1][isite2] == -1) {
       iFlgOneBodyG[isite1][isite2] = icount;
       icount++;
     }
     
   }
-  free(cacaDCIdx);
+  for (i = 0; i < Ncacadc; i++)
+    free(cacaIdx[i]);
+  free(cacaIdx);
+  for (i = 0; i < Nca; i++)
+    free(caIdx[i]);
+  free(caIdx);
   return icount;
 }
 
@@ -496,23 +509,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
     //TODO: LanczosMode is not supported for Sz not conserved mode.
 
-    //For Lanczos mode: Calculation of Green's function
-    if (bufInt[IdxLanczosMode] > 1) {
-      //Get info of CisAjs and CisAjsCktAltDC
+    //For indirect calculation of Green's function
+    if (bufInt[IdxNTwoBodyGEx] > 0 || bufInt[IdxLanczosMode] > 1) {
+      //Get info of CisAjs and CisAjsCktAlt(GreenTwoEx as if it's DC)
       int i;
-      NCisAjsLz = bufInt[IdxNOneBodyG];
-      //bufInt[IdxNTwoBodyGEx] = bufInt[IdxNTwoBodyG];
-      CisAjsLzIdx = malloc(sizeof(int *) * NCisAjsLz);
-      for (i = 0; i < NCisAjsLz; i++) {
-        CisAjsLzIdx[i] = malloc(sizeof(int) * 4);
-      }
       iOneBodyGIdx = malloc(sizeof(int *) * (2 * bufInt[IdxNsite])); //For spin
-      //pInt=iFlgOneBodyG[0];
       for (i = 0; i < 2 * bufInt[IdxNsite]; i++) {
         iOneBodyGIdx[i] = malloc(sizeof(int) * (2 * bufInt[IdxNsite]));
       }
-      bufInt[IdxNOneBodyG] = CountOneBodyGForLanczos(xNameListFile, NCisAjsLz, bufInt[IdxNTwoBodyG],
-                                                     bufInt[IdxNsite], CisAjsLzIdx, iOneBodyGIdx);
+      bufInt[IdxNOneBodyG] = CountOneBodyGForLanczos(xNameListFile, 
+                                                     bufInt[IdxNOneBodyG], bufInt[IdxNTwoBodyGEx],
+                                                     bufInt[IdxNsite], iOneBodyGIdx);
     }
 
     //CalcNCond
@@ -703,7 +710,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                  + Nsite * NQPTrans /* QPTransInv */
                  + Nsite * NQPTrans /* QPTransSgn */
                  + 4 * NCisAjs /* CisAjs */
-                 + 8 * NCisAjsCktAlt /* CisAjsCktAlt */
+                 + 2 * NCisAjsCktAlt /* CisAjsCktAlt */
                  + 8 * NCisAjsCktAltDC /* CisAjsCktAltDC */
                  + 8 * NInterAll /* InterAll */
                  + Nsite * NQPOptTrans /* QPOptTrans */
@@ -747,8 +754,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   int count_idx = 0;
   int x0, x1;
   int rank;
-
-  int iNOneBodyG;
 
   MPI_Comm_rank(comm, &rank);
 
@@ -862,19 +867,17 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWOneBodyG:
           /*cisajs.def----------------------------------------*/
-          iNOneBodyG = (NLanczosMode < 2) ? NCisAjs : NCisAjsLz;
-          if (GetInfoOneBodyG(fp, CisAjsIdx, iOneBodyGIdx, NLanczosMode, Nsite, iNOneBodyG, defname) != 0) info = 1;
+          if (GetInfoOneBodyG(fp, CisAjsIdx, iOneBodyGIdx, NCisAjsCktAlt>0, Nsite, NCisAjs, defname) != 0) info = 1;
           break;
 
         case KWTwoBodyGEx:
           /*cisajscktalt.def----------------------------------*/
-          if (GetInfoTwoBodyGEx(fp, CisAjsCktAltIdx, Nsite, NCisAjsCktAlt, defname) != 0) info = 1;
+          if (GetInfoTwoBodyGEx(fp, CisAjsCktAltIdx, iOneBodyGIdx, CisAjsIdx, Nsite, NCisAjsCktAlt, defname) != 0) info = 1;
           break;
 
         case KWTwoBodyG:
           /*cisajscktaltdc.def--------------------------------*/
-          if (GetInfoTwoBodyG(fp, CisAjsCktAltDCIdx, CisAjsCktAltLzIdx, iOneBodyGIdx, CisAjsIdx, NLanczosMode, Nsite,
-                              NCisAjsCktAltDC, defname) != 0)
+          if (GetInfoTwoBodyG(fp, CisAjsCktAltDCIdx, Nsite, NCisAjsCktAltDC, defname) != 0)
             info = 1;
           break;
 
@@ -981,9 +984,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   */
 #ifdef _mpi_use
   SafeMpiBcastInt(LocSpn, NTotalDefInt, comm);
-  if (NLanczosMode > 1) {
-    SafeMpiBcastInt(CisAjsCktAltLzIdx[0], NCisAjsCktAltDC * 2, comm);
-  }
   SafeMpiBcast_fcmp(ParaTransfer, NTransfer + NInterAll, comm);
   SafeMpiBcast(ParaCoulombIntra, NTotalDefDouble, comm);
   SafeMpiBcast_fcmp(ParaQPTrans, NQPTrans, comm);
@@ -1928,7 +1928,7 @@ int GetInfoTransSym(FILE *fp, int **Array, int **ArraySgn, int **ArrayInv, doubl
 }
 
 int
-GetInfoOneBodyG(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int _NLanczosMode, int Nsite, int NArray, char *defname) {
+GetInfoOneBodyG(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int IndirectGFOn, int Nsite, int NArray, char *defname) {
   char ctmp2[256];
   int idx = 0, info = 0;
   int x0 = 0, x1 = 0, x2 = 0, x3 = 0;
@@ -1937,12 +1937,12 @@ GetInfoOneBodyG(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int _NLanczosMode, i
   if (NArray == 0) return 0;
   while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
     sscanf(ctmp2, "%d %d %d %d\n", &x0, &x1, &x2, &x3);
-    if (_NLanczosMode < 2) { // Normal
+    if (!IndirectGFOn) { // Normal
       ArrayIdx[idx][0] = x0;
       ArrayIdx[idx][1] = x1;
       ArrayIdx[idx][2] = x2;
       ArrayIdx[idx][3] = x3;
-    } else { //For Calc Green func by Lanczos mode
+    } else { //For Calc Green func indirectly
       isite1 = x0 + x1 * Nsite;
       isite2 = x2 + x3 * Nsite;
       idxLanczos = ArrayToIdx[isite1][isite2];
@@ -1959,28 +1959,50 @@ GetInfoOneBodyG(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int _NLanczosMode, i
     idx++;
   }
 
-  if (idx != NArray) info = ReadDefFileError(defname);
+  if (!IndirectGFOn && idx != NArray) 
+    info = ReadDefFileError(defname);
   return info;
 }
 
-int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *defname) {
+// Formerly CisAjsCktAlt
+int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int **ArrayIdxOneBodyG, 
+                      int Nsite, int NArray, char *defname) {
   char ctmp2[256];
   int idx = 0, info = 0;
   int x0 = 0, x1 = 0, x2 = 0, x3 = 0;
   int x4 = 0, x5 = 0, x6 = 0, x7 = 0;
-  //Debug
+  int isite1 = 0, isite2 = 0;
+  int idxLanczos = 0;
+
   if (NArray == 0) return 0;
   while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
     sscanf(ctmp2, "%d %d %d %d %d %d %d %d\n", &x0, &x1, &x2, &x3, &x4, &x5, &x6, &x7);
-    ArrayIdx[idx][0] = x0; // Index to OneBodyG1
-    ArrayIdx[idx][1] = x1; // Index to OneBodyG2
-    ArrayIdx[idx][2] = x2; // G1:site i
-    ArrayIdx[idx][3] = x3; // G1:site j
-    ArrayIdx[idx][4] = x4; // G1:sigma1
-    ArrayIdx[idx][5] = x5; // G2:site l
-    ArrayIdx[idx][6] = x6; // G2:site k
-    ArrayIdx[idx][7] = x7; // G2:sigma2
-    if (CheckQuadSite(x2, x3, x5, x6, Nsite) != 0) {
+    
+    isite1 = x0 + x1 * Nsite;
+    isite2 = x2 + x3 * Nsite;
+    idxLanczos = ArrayToIdx[isite1][isite2];
+    ArrayIdxOneBodyG[idxLanczos][0] = x0;
+    ArrayIdxOneBodyG[idxLanczos][1] = x1;
+    ArrayIdxOneBodyG[idxLanczos][2] = x2;
+    ArrayIdxOneBodyG[idxLanczos][3] = x3;
+    ArrayIdx[idx][0] = idxLanczos;
+    
+    isite1 = x6 + x7 * Nsite;
+    isite2 = x4 + x5 * Nsite;
+    idxLanczos = ArrayToIdx[isite1][isite2];
+    /*
+    ArrayIdxOneBodyG[idxLanczos][0] = x4;
+    ArrayIdxOneBodyG[idxLanczos][1] = x5;
+    ArrayIdxOneBodyG[idxLanczos][2] = x6;
+    ArrayIdxOneBodyG[idxLanczos][3] = x7;
+     */
+    ArrayIdxOneBodyG[idxLanczos][0] = x6;
+    ArrayIdxOneBodyG[idxLanczos][1] = x7;
+    ArrayIdxOneBodyG[idxLanczos][2] = x4;
+    ArrayIdxOneBodyG[idxLanczos][3] = x5;
+    ArrayIdx[idx][1] = idxLanczos;
+    
+    if (CheckQuadSite(x0, x2, x4, x6, Nsite) != 0) {
       fprintf(stderr, "Error: Site index is incorrect. \n");
       info = 1;
       break;
@@ -1991,8 +2013,8 @@ int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *def
   return info;
 }
 
-int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int **ArrayIdxTwoBodyGLz, int **ArrayToIdx, int **ArrayIdxOneBodyG,
-                    int _NLanczosMode, int Nsite, int NArray, char *defname) {
+// Formerly CisAjsCktAltDC
+int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *defname) {
   char ctmp2[256];
   int idx = 0, info = 0;
   int x0 = 0, x1 = 0, x2 = 0, x3 = 0;
@@ -2017,44 +2039,6 @@ int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int **ArrayIdxTwoBodyGLz, int **Ar
       break;
     }
 
-    if (_NLanczosMode > 1) { //Calc TwoBodyG by Lanczos method
-      
-      isite1 = x0 + x1 * Nsite;
-      isite2 = x2 + x3 * Nsite;      
-      idxLanczos = ArrayToIdx[isite1][isite2];
-      
-      ArrayIdxOneBodyG[idxLanczos][0] = x0;
-      ArrayIdxOneBodyG[idxLanczos][1] = x1;
-      ArrayIdxOneBodyG[idxLanczos][2] = x2;
-      ArrayIdxOneBodyG[idxLanczos][3] = x3;
-      /*
-      ArrayIdxOneBodyG[idxLanczos][0] = x2;
-      ArrayIdxOneBodyG[idxLanczos][1] = x3;
-      ArrayIdxOneBodyG[idxLanczos][2] = x0;
-      ArrayIdxOneBodyG[idxLanczos][3] = x1;
-      */
-      ArrayIdxTwoBodyGLz[idx][0] = idxLanczos;
-
-      /*
-      isite1 = x4 + x5 * Nsite;
-      isite2 = x6 + x7 * Nsite;
-      */
-      isite1 = x6 + x7 * Nsite;
-      isite2 = x4 + x5 * Nsite;
-      idxLanczos = ArrayToIdx[isite1][isite2];
-      ArrayIdxOneBodyG[idxLanczos][0] = x6;
-      ArrayIdxOneBodyG[idxLanczos][1] = x7;
-      ArrayIdxOneBodyG[idxLanczos][2] = x4;
-      ArrayIdxOneBodyG[idxLanczos][3] = x5;
-
-      /*
-      ArrayIdxOneBodyG[idxLanczos][0] = x4;
-      ArrayIdxOneBodyG[idxLanczos][1] = x5;
-      ArrayIdxOneBodyG[idxLanczos][2] = x6;
-      ArrayIdxOneBodyG[idxLanczos][3] = x7;
-      */
-      ArrayIdxTwoBodyGLz[idx][1] = idxLanczos;
-    }
     idx++;
   }
   if (idx != NArray) info = ReadDefFileError(defname);
