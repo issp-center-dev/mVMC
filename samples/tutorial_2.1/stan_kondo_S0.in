@@ -1,0 +1,17 @@
+L = 6
+Lsub = 2
+model = "Kondo"
+lattice = "chain"
+t = 1
+J = 4
+ncond = 6
+NSPGaussLeg = 8  
+2Sz = 0
+NSPStot = 0
+NSROptItrStep =  600
+NSROptItrSmp  =  100
+NVMCSample    =  1000
+DSROptRedCut  = 1e-8
+DSROptStaDel  = 1e-2
+DSROptStepDt  = 1e-2
+//NVMCCalMode = 1

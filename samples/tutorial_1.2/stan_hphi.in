@@ -1,0 +1,9 @@
+L             = 6
+model         = "Hubbard"
+lattice       = "chain"
+method        = "CG"
+U             = 4.0
+t             = 1.0
+2Sz           = 0
+nelec         = 6
+exct          = 8
