@@ -53,4 +53,4 @@ jobs:
       - name: ctest
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: ctest -V
+        run: ctest --output-on-failure -V -R HeisenbergChain
