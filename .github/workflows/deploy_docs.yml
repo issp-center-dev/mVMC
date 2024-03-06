@@ -64,6 +64,11 @@ jobs:
             mkdir -p "gh-pages/doc/${TARGET_NAME}"
             cp -r "main/build/doc/${lang}/source/html" "gh-pages/doc/${TARGET_NAME}/${lang}"
           done
+          for lang in ja; do
+            rm -rf "gh-pages/doc/${TARGET_NAME}/tutorial/${lang}"
+            mkdir -p "gh-pages/doc/${TARGET_NAME}"/tutorial/
+            cp -r "main/build/doc/tutorial/${lang}/source/html" "gh-pages/doc/${TARGET_NAME}/tutorial/${lang}"
+          done
           cd gh-pages
           git config --local user.name "${GIT_USER}"
           git config --local user.email "${GIT_EMAIL}"
