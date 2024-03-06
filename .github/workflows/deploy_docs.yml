@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - develop
       - gh_actions  # test branch
       - '!gh-pages'
     tags: '*'
