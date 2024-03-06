@@ -42,7 +42,7 @@ jobs:
         cmake -E make_directory build
         cd build
         cmake -DDocument=ON -DENABLE_MPI=OFF ../
-        make doc-ja-html doc-en-html
+        make doc-ja-html doc-en-html tutorial-ja-html
 
     - name: Deploy Configuration
       run: |
@@ -58,7 +58,7 @@ jobs:
         TARGET_NAME: ${{ env.GITHUB_REF_SLUG }}
       run: |
           cd ${GITHUB_WORKSPACE}
-          for lang in ja en; do
+          for lang in ja en tutorial/ja; do
             rm -rf "gh-pages/doc/${TARGET_NAME}/${lang}"
             mkdir -p "gh-pages/doc/${TARGET_NAME}"
             cp -r "main/build/doc/${lang}/source/html" "gh-pages/doc/${TARGET_NAME}/${lang}"
