@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>HPhi/mVMC Fourier-Transformation utility &#8212; mVMC 1.2.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=4c8675c2"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Overview" href="overview.html" />
+    <link rel="prev" title="Program for the unrestricted Hartree-Fock approximation" href="../appendix.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="overview.html" title="Overview"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../appendix.html" title="Program for the unrestricted Hartree-Fock approximation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.2.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">HPhi/mVMC Fourier-Transformation utility</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="hphi-mvmc-fourier-transformation-utility">
+<span id="fourier"></span><h1>HPhi/mVMC Fourier-Transformation utility<a class="headerlink" href="#hphi-mvmc-fourier-transformation-utility" title="Permalink to this heading">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#prerequisite">Prerequisite</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#supported-quantities">Supported quantities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#run-hphi-vmc-out">Run HPhi/vmc.out</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#fourier-transformation-of-correlation-functions">Fourier transformation of correlation functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#display-correlation-functions">Display correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="format.html">File format</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="format.html#geometry">Geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="format.html#one-and-two-body-correlation-function-in-the-site-representation">One- and Two-body correlation function in the site representation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="format.html#specify-the-index-of-correlation-function-to-be-computed">Specify the index of correlation function to be computed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="format.html#results-of-correlation-function-in-the-site-representation">Results of correlation function in the site representation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="format.html#correlation-functions-on-the-k-path">Correlation functions on the <em>k</em> path</a></li>
+<li class="toctree-l2"><a class="reference internal" href="format.html#gnuplot-script">gnuplot script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="format.html#fermisurfer-file-to-display-the-isosurface-of-the-momentum-distribution">FermiSurfer file to display the isosurface of the momentum distribution</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="util.html">Behavior of <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code> utility</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="util.html#hphi-lanczos">HPhi-Lanczos</a></li>
+<li class="toctree-l2"><a class="reference internal" href="util.html#hphi-tpq">HPhi-TPQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="util.html#hphi-full-diagonalization-and-lobcg">HPhi-Full diagonalization and LOBCG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="util.html#mvmc">mVMC</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contact.html">Contact</a></li>
+</ul>
+</div>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="../appendix.html"
+                          title="previous chapter">Program for the unrestricted Hartree-Fock approximation</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="overview.html"
+                          title="next chapter">Overview</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/fourier/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="overview.html" title="Overview"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../appendix.html" title="Program for the unrestricted Hartree-Fock approximation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.2.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">HPhi/mVMC Fourier-Transformation utility</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+  </body>
+</html>

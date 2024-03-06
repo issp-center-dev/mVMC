@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>2.1. 量子数射影を用いたスピンギャップ計算 &#8212; mVMC Tutorial  ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2aa0fae8"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="2.2. 引力Hubbard模型における超伝導相関関数計算" href="sc_correlation.html" />
+    <link rel="prev" title="2. 応用編" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="id1">
+<h1><span class="section-number">2.1. </span>量子数射影を用いたスピンギャップ計算<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
+<p>量子数射影を用いることで、最適化する波動関数に対して特定の量子数を持たせることができます。このチュートリアルでは、一次元Heisenberg模型と一次元近藤格子模型を対象に、量子数射影をを用いてスピンギャップ <span class="math notranslate nohighlight">\(\Delta_{\rm S}\)</span> を計算する方法を説明します。</p>
+<p>スピンギャップ <span class="math notranslate nohighlight">\(\Delta_{\rm S}=0\)</span> は、 <span class="math notranslate nohighlight">\(S_{\rm tot}=0\)</span> 空間での最低エネルギーと <span class="math notranslate nohighlight">\(S_{\rm tot}=1\)</span> 空間での最低エネルギーの差として定義されます。すなわち</p>
+<div class="math notranslate nohighlight" id="equation-advanced-spin-gap-0">
+<span class="eqno">(2.1)<a class="headerlink" href="#equation-advanced-spin-gap-0" title="この数式へのパーマリンク">¶</a></span>\[\Delta_{\rm S} = E_{S_{\rm tot}=1} - E_{S_{\rm tot}=0}.\]</div>
+<p>を計算する必要があります。ここで、 <span class="math notranslate nohighlight">\(E_{S_{\rm tot}=1}\)</span> と <span class="math notranslate nohighlight">\(E_{S_{\rm tot}=0}\)</span> はそれぞれ、 <span class="math notranslate nohighlight">\(S_{\rm tot}=1\)</span> での全エネルギー と <span class="math notranslate nohighlight">\(S_{\rm tot}=0\)</span> での全エネルギーです。これらの全エネルギーは、mVMCで実装されているスピン量子数射影を用いれば計算することができます。</p>
+<section id="heisenberg">
+<h2><span class="section-number">2.1.1. </span>一次元Heisenberg模型<a class="headerlink" href="#heisenberg" title="この見出しへのパーマリンク">¶</a></h2>
+<p>まず、システムサイズ <span class="math notranslate nohighlight">\(L=8\)</span> での一次元Heisenberg模型におけるスピンギャプを計算します。一次元Heisenberg模型は次式で定義されます。</p>
+<div class="math notranslate nohighlight" id="equation-advanced-spin-gap-1">
+<span class="eqno">(2.2)<a class="headerlink" href="#equation-advanced-spin-gap-1" title="この数式へのパーマリンク">¶</a></span>\[H = J \sum_{\langle i,j\rangle}\boldsymbol{S}_{i} \cdot \boldsymbol{S}_{j},\ \boldsymbol{S}_{i} = \frac{1}{2} \sum_{\alpha,\beta} c_{i\alpha}^{\dagger} \boldsymbol{\sigma}_{\alpha\beta} c_{i\beta}.\]</div>
+<p>ここで、 <span class="math notranslate nohighlight">\(\boldsymbol{\sigma}\)</span> はパウリ行列です。 <span class="math notranslate nohighlight">\(S=1/2\)</span> の場合には、この模型の基底状態は  <span class="math notranslate nohighlight">\(\Delta_{\rm S}=0\)</span> であることが知られています。</p>
+<p>次のコマンドを実行してください。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run.sh spin
+</pre></div>
+</div>
+<p>コマンドを実行すると、 <code class="docutils literal notranslate"><span class="pre">spin</span></code> ディレクトリが作成され、その中に <span class="math notranslate nohighlight">\(S_{\rm tot}=0\)</span> での最適化結果 <code class="docutils literal notranslate"><span class="pre">output_s0</span></code> と <span class="math notranslate nohighlight">\(S_{\rm tot}=1\)</span> での最適化結果 <code class="docutils literal notranslate"><span class="pre">output_s1</span></code> が保存されています。</p>
+<p>最適化の結果を可視化するために、次のコマンドを実行してください。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>gnuplot plot_spin
+</pre></div>
+</div>
+<p>すると、次のような図が得られます。</p>
+<a class="reference internal image-reference" href="../_images/tutorial2.1_spin.png"><img alt="../_images/tutorial2.1_spin.png" class="align-center" src="../_images/tutorial2.1_spin.png" style="width: 446.25px; height: 241.25px;" /></a>
+<p>紫点と緑点が、それぞれ <span class="math notranslate nohighlight">\(S_{\rm tot}=0\)</span> 空間での最適化結果と <span class="math notranslate nohighlight">\(S_{\rm tot}=1\)</span> 空間でのmVMCによる最適化結果です。水色線とオレンジ線は、厳密対角化によって得られたそれぞれの空間における最低エネルギーを示しています。
+次の図のように、最後の最適化付近を拡大してみると、mVMCは厳密対角化によって得られた結果とよく一致していることがわかります。このように、mVMCでは、量子数射影を用いることで、それぞれの空間における最低エネルギーを求めることができます。</p>
+<a class="reference internal image-reference" href="../_images/tutorial2.1_spin_zoom.png"><img alt="../_images/tutorial2.1_spin_zoom.png" class="align-center" src="../_images/tutorial2.1_spin_zoom.png" style="width: 446.25px; height: 241.25px;" /></a>
+<p>この結果から、スピンギャップ  <span class="math notranslate nohighlight">\(\Delta_{\rm S}\)</span> を計算することができます。本来は最適化した波動関数を用いて物理量測定を行い、エネルギー期待値を求めるべきですが、ここでは最適化結果のエネルギーを直接用いて値を見積もります。
+最適化が正常終了すると、 <code class="docutils literal notranslate"><span class="pre">output</span></code> ディレクトリに <code class="docutils literal notranslate"><span class="pre">zqp_opt.dat</span></code> というファイルが出力されます。このファイルには、最後の最適化ステップから <code class="docutils literal notranslate"><span class="pre">NSROptItrSmp</span></code> 分の区間における最適化された波動関数のパラメータの平均値だけでなく、同区間におけるエネルギー値などといった物理量の平均値も出力されています。エネルギー(の実部)は、 <code class="docutils literal notranslate"><span class="pre">zqp_opt.dat</span></code> ファイルの初めに記載されています。</p>
+<p><code class="docutils literal notranslate"><span class="pre">spin/output_s0</span></code> と <code class="docutils literal notranslate"><span class="pre">spin/output_s1</span></code> ディレクトリにある <code class="docutils literal notranslate"><span class="pre">zqp_opt.dat</span></code> ファイルからエネルギー値を習得した結果は <code class="docutils literal notranslate"><span class="pre">spin/spin_gap.dat</span></code> に出力されています。 <code class="docutils literal notranslate"><span class="pre">spin_gap.dat</span></code> の中身は次のようになっています。</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#E0_from_zqp_opt.dat   E1_from_zqp_opt.dat   Delta_s=E1-E0
+-3.65109 -3.12842 .52267
+</pre></div>
+</div>
+<p>ここで、最後の列がスピンギャップ  <span class="math notranslate nohighlight">\(\Delta_{\rm S}\)</span> の値となっています。</p>
+<section id="id2">
+<h3><span class="section-number">2.1.1.1. </span>演習<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p>物理量測定を行い、エネルギー期待値と誤差を求め、スピンギャップ値を計算してください。</p></li>
+<li><p>システムサイズ <span class="math notranslate nohighlight">\(L\)</span> を大きくしていき、スピンギャップ  <span class="math notranslate nohighlight">\(\Delta_{\rm S}\)</span> のシステムサイズ依存性を確認してください。</p></li>
+</ul>
+</section>
+</section>
+<section id="id3">
+<h2><span class="section-number">2.1.2. </span>一次元近藤格子模型<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
+<p>同じ計算をシステムサイズ <span class="math notranslate nohighlight">\(L=4\)</span> でのハーフフィリングにおける一次元近藤格子模型に対して行います。近藤格子模型は、伝導層と局在スピン層が交換相互作用で結合している模型です。そのため、ユニットセルあたり2自由度あることになります。一次元近藤格子模型は次式で定義されます。</p>
+<div class="math notranslate nohighlight" id="equation-advanced-spin-gap-2">
+<span class="eqno">(2.3)<a class="headerlink" href="#equation-advanced-spin-gap-2" title="この数式へのパーマリンク">¶</a></span>\[H = -t \sum_{\langle i, j \rangle , \sigma} c^{\dagger}_{i\sigma {\rm c}} c_{j\sigma {\rm c}} + J \sum_{i}\boldsymbol{S}_{i {\rm c}} \cdot \boldsymbol{S}_{i {\rm s}}.\]</div>
+<p>ここで、 <span class="math notranslate nohighlight">\(c^{\dagger}_{i\sigma {\rm c}}/c_{i\sigma {\rm c}}\)</span> は伝導層の生成/消滅演算子、 <span class="math notranslate nohighlight">\(\boldsymbol{S}_{i {\rm c}}\)</span> は伝導層のスピン演算子、 <span class="math notranslate nohighlight">\(\boldsymbol{S}_{i {\rm s}}\)</span> は局在スピン層のスピン演算子です。 <span class="math notranslate nohighlight">\(S=1/2\)</span> の場合には、この模型の基底状態は  <span class="math notranslate nohighlight">\(\Delta_{\rm S} \neq 0\)</span> であることが知られています。(詳細は参考文献2を参照してください。)</p>
+<p>次のコマンドを実行した後、Heisenberg模型でのチュートリアル同様、最適化過程をプロットしてみてください。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run.sh kondo
+gnuplot plot_kondo
+</pre></div>
+</div>
+<p>すると、次のような図が得られます。</p>
+<a class="reference internal image-reference" href="../_images/tutorial2.1_kondo.png"><img alt="../_images/tutorial2.1_kondo.png" class="align-center" src="../_images/tutorial2.1_kondo.png" style="width: 466.25px; height: 236.25px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial2.1_kondo_zoom.png"><img alt="../_images/tutorial2.1_kondo_zoom.png" class="align-center" src="../_images/tutorial2.1_kondo_zoom.png" style="width: 466.25px; height: 236.25px;" /></a>
+<p>凡例はHeisenberg模型の場合と同じです。一次元近藤格子模型の場合においても、mVMCの最適化結果は厳密対角化によって得られた結果に収束していっていることがわかります。なお、最適化から得られたエネルギーをもとに計算したスピンギャップ <span class="math notranslate nohighlight">\(\Delta_{\rm S}\)</span> の値は、 <code class="docutils literal notranslate"><span class="pre">kondo/spin_gap.dat</span></code> に出力されています。</p>
+<section id="id4">
+<h3><span class="section-number">2.1.2.1. </span>演習<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p>物理量測定を行い、エネルギー期待値と誤差を求め、スピンギャップ値を計算してください。</p></li>
+<li><p>システムサイズ <span class="math notranslate nohighlight">\(L\)</span> を大きくしていき、スピンギャップ  <span class="math notranslate nohighlight">\(\Delta_{\rm S}\)</span> のシステムサイズ依存性を確認してください。</p></li>
+</ul>
+</section>
+</section>
+<section id="id5">
+<h2><span class="section-number">2.1.3. </span>参考文献<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h2>
+<ol class="arabic simple">
+<li><p><a class="reference external" href="https://isspns-gitlab.issp.u-tokyo.ac.jp/mvmc-dev/mvmc-tutorial">ISSPデータリポジトリ</a></p></li>
+<li><p>H. Tsunetsugu, M. Sigrist, and K. Ueda, <a class="reference external" href="https://journals.aps.org/rmp/abstract/10.1103/RevModPhys.69.809">Rev. Mod. Phys. 69, 809 (1997)</a></p></li>
+</ol>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../basic/index.html">1. 基本編</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">2. 応用編</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">2.1. 量子数射影を用いたスピンギャップ計算</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#heisenberg">2.1.1. 一次元Heisenberg模型</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id3">2.1.2. 一次元近藤格子模型</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id5">2.1.3. 参考文献</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="sc_correlation.html">2.2. 引力Hubbard模型における超伝導相関関数計算</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">2. </span>応用編</a><ul>
+      <li>Previous: <a href="index.html" title="前の章へ"><span class="section-number">2. </span>応用編</a></li>
+      <li>Next: <a href="sc_correlation.html" title="次の章へ"><span class="section-number">2.2. </span>引力Hubbard模型における超伝導相関関数計算</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020-, The University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/advanced/spin_gap.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

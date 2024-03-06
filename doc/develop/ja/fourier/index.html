@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>相関関数のFourier変換ユーティリティー &#8212; mVMC 1.2.0 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=d59cce6c"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="概要" href="overview.html" />
+    <link rel="prev" title="非制限Hartree-Fock近似プログラム" href="../appendix.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="総合索引"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="overview.html" title="概要"
+             accesskey="N">次へ</a> |</li>
+        <li class="right" >
+          <a href="../appendix.html" title="非制限Hartree-Fock近似プログラム"
+             accesskey="P">前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">相関関数のFourier変換ユーティリティー</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="fourier">
+<span id="id1"></span><h1>相関関数のFourier変換ユーティリティー<a class="headerlink" href="#fourier" title="この見出しへのパーマリンク">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">概要</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#id2">要件</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#supported">対応する量</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">チュートリアル</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#hphi-vmc-out">HPhi/vmc.out の実行</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#id2">相関関数のフーリエ変換</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#id3">相関関数のプロット</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="format.html">ファイルフォーマット</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="format.html#k">サイトの位置と軌道のインデックス, <em>k</em> 点</a></li>
+<li class="toctree-l2"><a class="reference internal" href="format.html#id2">サイト表示の1体および2体相関関数</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="format.html#greenindex">計算する相関関数のインデックスの指定</a></li>
+<li class="toctree-l3"><a class="reference internal" href="format.html#zvocisajs">サイト表示の1体および2体相関関数の計算結果</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="format.html#zvocorr"><em>k</em> パス上での相関関数</a></li>
+<li class="toctree-l2"><a class="reference internal" href="format.html#gnuplot">gnuplot スクリプト</a></li>
+<li class="toctree-l2"><a class="reference internal" href="format.html#fermisurfer">運動量分布関数の等値面をプロットするためのFermiSurferファイル</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="util.html"><code class="docutils literal notranslate"><span class="pre">greenr2k</span></code> ユーティリティの動作について</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="util.html#hphi-lanczos">HPhi-Lanczos</a></li>
+<li class="toctree-l2"><a class="reference internal" href="util.html#hphi-tpq">HPhi-TPQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="util.html#hphi-lobcg">HPhi-全対角化およびLOBCG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="util.html#mvmc">mVMC</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contact.html">Contact</a></li>
+</ul>
+</div>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <div>
+    <h4>前のトピックへ</h4>
+    <p class="topless"><a href="../appendix.html"
+                          title="前の章へ">非制限Hartree-Fock近似プログラム</a></p>
+  </div>
+  <div>
+    <h4>次のトピックへ</h4>
+    <p class="topless"><a href="overview.html"
+                          title="次の章へ">概要</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>このページ</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/fourier/index.rst.txt"
+            rel="nofollow">ソースコードを表示</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="総合索引"
+             >索引</a></li>
+        <li class="right" >
+          <a href="overview.html" title="概要"
+             >次へ</a> |</li>
+        <li class="right" >
+          <a href="../appendix.html" title="非制限Hartree-Fock近似プログラム"
+             >前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">相関関数のFourier変換ユーティリティー</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; 著作権 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+  </body>
+</html>

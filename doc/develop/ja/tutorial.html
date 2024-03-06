@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>チュートリアル &#8212; mVMC 1.2.0 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
+    
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=d59cce6c"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/translations.js?v=4dbe4bdc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="検索" href="search.html" />
+    <link rel="next" title="スタンダードモード用入力ファイル書式" href="standard.html" />
+    <link rel="prev" title="How to use mVMC?" href="start.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="総合索引"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="standard.html" title="スタンダードモード用入力ファイル書式"
+             accesskey="N">次へ</a> |</li>
+        <li class="right" >
+          <a href="start.html" title="How to use mVMC?"
+             accesskey="P">前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">チュートリアル</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="id1">
+<h1>チュートリアル<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
+<section id="id2">
+<h2>サンプルファイル一覧<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
+<p>mVMCでは <code class="docutils literal notranslate"><span class="pre">sample/Standard/</span></code> 以下に次のサンプルを用意しています。</p>
+<ul>
+<li><p>2次元正方格子Hubbardモデル</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">sample/Standard/Hubbard/square/</span></code>)</p>
+</li>
+<li><p>2次元三角格子Hubbardモデル</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">sample/Standard/Hubbard/triangular/</span></code>)</p>
+</li>
+<li><p>1次元近藤格子モデル</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">sample/Standard/Kondo/chain/</span></code>)</p>
+</li>
+<li><p>1次元反強磁性的Heisenbergモデル</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">sample/Standard/Spin/HeisenbergChain/</span></code>)</p>
+</li>
+<li><p>2次元正方格子反強磁性的Heisenbergモデル</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">sample/Standard/Spin/HeisenbergSquare/</span></code>)</p>
+</li>
+<li><p>2次元カゴメ格子反強磁性的Heisenbergモデル</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">sample/Standard/Spin/Kagome/</span></code>)</p>
+</li>
+</ul>
+<p>これらのチュートリアルの実行方法は全て同じ手順で実行することが可能です。
+以下ではHeisenberg模型について説明します。</p>
+</section>
+<section id="heisenberg">
+<h2>Heisenberg模型<a class="headerlink" href="#heisenberg" title="この見出しへのパーマリンク">¶</a></h2>
+<p>以下のチュートリアルはディレクトリ</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sample</span><span class="o">/</span><span class="n">Standard</span><span class="o">/</span><span class="n">Spin</span><span class="o">/</span><span class="n">HeisenbergChain</span><span class="o">/</span>
+</pre></div>
+</div>
+<p>内で行います。 このディレクトには以下のファイルがあります.</p>
+<p>Heisenberg模型におけるサンプル入力ファイル: <code class="docutils literal notranslate"><span class="pre">StdFace.def</span></code></p>
+<p>参照用出力ディレクトリ: <code class="docutils literal notranslate"><span class="pre">reference/</span></code></p>
+<p>この例では1次元のHeisenberg鎖(最近接サイト間の反強磁性的スピン結合のみを持つ)を考察します。</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+  {\hat H} = J \sum_{i=1}^{L} {\hat {\boldsymbol S}}_i \cdot {\hat {\boldsymbol S}}_{i+1}\end{aligned}\]</div>
+<div class="line-block">
+<div class="line">インプットファイルの中身は次のとおりです。</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">L</span> <span class="o">=</span> <span class="mi">16</span>
+<span class="n">Lsub</span><span class="o">=</span><span class="mi">4</span>
+<span class="n">model</span> <span class="o">=</span> <span class="s2">&quot;Spin&quot;</span>
+<span class="n">lattice</span> <span class="o">=</span> <span class="s2">&quot;chain lattice&quot;</span>
+<span class="n">J</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="mi">2</span><span class="n">Sz</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">NMPtrans</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line">この例ではスピン結合 <span class="math notranslate nohighlight">\(J=1\)</span> (任意単位)とし、サイト数は16としました。</div>
+</div>
+<section id="id3">
+<h3>計算実行<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h3>
+<p>実行コマンドは次のとおりです。</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">mpiexec</span> <span class="pre">-np</span> <span class="pre">&quot;プロセス数&quot;</span>&#160; <span class="pre">&quot;パス&quot;/vmc.out</span> <span class="pre">-s</span> <span class="pre">StdFace.def</span></code></p>
+<p>使っているシステムによっては <code class="docutils literal notranslate"><span class="pre">mpiexec</span></code> コマンドではなく <code class="docutils literal notranslate"><span class="pre">mpirun</span></code> や <code class="docutils literal notranslate"><span class="pre">mpijob</span></code> 、
+<code class="docutils literal notranslate"><span class="pre">poe</span></code> となる場合もあります。</p>
+<p>この実行による標準出力は次のとおりです。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">######  Standard Intarface Mode STARTS  ######</span>
+
+  <span class="n">Open</span> <span class="n">Standard</span><span class="o">-</span><span class="n">Mode</span> <span class="n">Inputfile</span> <span class="n">StdFace</span><span class="o">.</span><span class="k">def</span>
+
+  <span class="nf">KEYWORD</span> <span class="p">:</span> <span class="n">l</span>                    <span class="o">|</span> <span class="n">VALUE</span> <span class="p">:</span> <span class="mi">16</span>
+  <span class="n">KEYWORD</span> <span class="p">:</span> <span class="n">lsub</span>                 <span class="o">|</span> <span class="n">VALUE</span> <span class="p">:</span> <span class="mi">4</span>
+  <span class="n">KEYWORD</span> <span class="p">:</span> <span class="n">model</span>                <span class="o">|</span> <span class="n">VALUE</span> <span class="p">:</span> <span class="n">spin</span>
+  <span class="n">KEYWORD</span> <span class="p">:</span> <span class="n">lattice</span>              <span class="o">|</span> <span class="n">VALUE</span> <span class="p">:</span> <span class="n">chain</span>
+  <span class="n">KEYWORD</span> <span class="p">:</span> <span class="n">j</span>                    <span class="o">|</span> <span class="n">VALUE</span> <span class="p">:</span> <span class="mf">1.0</span>
+  <span class="n">KEYWORD</span> <span class="p">:</span> <span class="n">nmptrans</span>             <span class="o">|</span> <span class="n">VALUE</span> <span class="p">:</span> <span class="mi">1</span>
+
+<span class="c1">#######  Parameter Summary  #######</span>
+
+  <span class="o">@</span> <span class="n">Lattice</span> <span class="n">Size</span> <span class="o">&amp;</span> <span class="n">Shape</span>
+
+                <span class="n">L</span> <span class="o">=</span> <span class="mi">16</span>
+             <span class="n">Lsub</span> <span class="o">=</span> <span class="mi">4</span>
+                <span class="n">L</span> <span class="o">=</span> <span class="mi">16</span>
+                <span class="n">W</span> <span class="o">=</span> <span class="mi">1</span>
+           <span class="n">phase0</span> <span class="o">=</span> <span class="mf">0.00000</span>     <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+
+  <span class="o">@</span> <span class="n">Hamiltonian</span>
+
+               <span class="mi">2</span><span class="n">S</span> <span class="o">=</span> <span class="mi">1</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+                <span class="n">h</span> <span class="o">=</span> <span class="mf">0.00000</span>     <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+            <span class="n">Gamma</span> <span class="o">=</span> <span class="mf">0.00000</span>     <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="mf">0.00000</span>     <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+              <span class="n">J0x</span> <span class="o">=</span> <span class="mf">1.00000</span>
+              <span class="n">J0y</span> <span class="o">=</span> <span class="mf">1.00000</span>
+              <span class="n">J0z</span> <span class="o">=</span> <span class="mf">1.00000</span>
+
+  <span class="o">@</span> <span class="n">Numerical</span> <span class="n">conditions</span>
+
+             <span class="n">Lsub</span> <span class="o">=</span> <span class="mi">4</span>
+             <span class="n">Wsub</span> <span class="o">=</span> <span class="mi">1</span>
+      <span class="n">ioutputmode</span> <span class="o">=</span> <span class="mi">1</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+
+<span class="c1">######  Print Expert input files  ######</span>
+
+    <span class="n">qptransidx</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+         <span class="n">filehead</span> <span class="o">=</span> <span class="n">zvo</span>         <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+         <span class="n">filehead</span> <span class="o">=</span> <span class="n">zqp</span>         <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+      <span class="n">NVMCCalMode</span> <span class="o">=</span> <span class="mi">0</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+     <span class="n">NLanczosMode</span> <span class="o">=</span> <span class="mi">0</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+    <span class="n">NDataIdxStart</span> <span class="o">=</span> <span class="mi">1</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+      <span class="n">NDataQtySmp</span> <span class="o">=</span> <span class="mi">1</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+      <span class="n">NSPGaussLeg</span> <span class="o">=</span> <span class="mi">8</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+         <span class="n">NMPTrans</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">NSROptItrStep</span> <span class="o">=</span> <span class="mi">1000</span>        <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+     <span class="n">NSROptItrSmp</span> <span class="o">=</span> <span class="mi">100</span>         <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+       <span class="n">NVMCWarmUp</span> <span class="o">=</span> <span class="mi">10</span>          <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+     <span class="n">NVMCInterval</span> <span class="o">=</span> <span class="mi">1</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+       <span class="n">NVMCSample</span> <span class="o">=</span> <span class="mi">1000</span>        <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+    <span class="n">NExUpdatePath</span> <span class="o">=</span> <span class="mi">2</span>
+          <span class="n">RndSeed</span> <span class="o">=</span> <span class="mi">123456789</span>   <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+       <span class="n">NSplitSize</span> <span class="o">=</span> <span class="mi">1</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+           <span class="n">NStore</span> <span class="o">=</span> <span class="mi">0</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+     <span class="n">DSROptRedCut</span> <span class="o">=</span> <span class="mf">0.00100</span>     <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+     <span class="n">DSROptStaDel</span> <span class="o">=</span> <span class="mf">0.02000</span>     <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+     <span class="n">DSROptStepDt</span> <span class="o">=</span> <span class="mf">0.02000</span>     <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+          <span class="n">NSPStot</span> <span class="o">=</span> <span class="mi">0</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+      <span class="n">ComplexType</span> <span class="o">=</span> <span class="mi">0</span>           <span class="c1">######  DEFAULT VALUE IS USED  ######</span>
+    <span class="n">locspn</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">trans</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">interall</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">jastrowidx</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">coulombintra</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">coulombinter</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">hund</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">exchange</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">orbitalidx</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">gutzwilleridx</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">namelist</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">modpara</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">greenone</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+    <span class="n">greentwo</span><span class="o">.</span><span class="k">def</span> <span class="nf">is</span> <span class="n">written</span><span class="o">.</span>
+
+<span class="c1">######  Input files are generated.  ######</span>
+
+<span class="o">-----------</span>
+<span class="n">Start</span><span class="p">:</span> <span class="n">Read</span> <span class="o">*</span><span class="k">def</span> <span class="nf">files</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="n">namelist</span><span class="o">.</span><span class="k">def</span> <span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;modpara.def&#39;</span> <span class="k">for</span> <span class="n">ModPara</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;locspn.def&#39;</span> <span class="k">for</span> <span class="n">LocSpin</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;trans.def&#39;</span> <span class="k">for</span> <span class="n">Trans</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;coulombintra.def&#39;</span> <span class="k">for</span> <span class="n">CoulombIntra</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;coulombinter.def&#39;</span> <span class="k">for</span> <span class="n">CoulombInter</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;hund.def&#39;</span> <span class="k">for</span> <span class="n">Hund</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;exchange.def&#39;</span> <span class="k">for</span> <span class="n">Exchange</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;gutzwilleridx.def&#39;</span> <span class="k">for</span> <span class="n">Gutzwiller</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;jastrowidx.def&#39;</span> <span class="k">for</span> <span class="n">Jastrow</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;orbitalidx.def&#39;</span> <span class="k">for</span> <span class="n">Orbital</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;qptransidx.def&#39;</span> <span class="k">for</span> <span class="n">TransSym</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;greenone.def&#39;</span> <span class="k">for</span> <span class="n">OneBodyG</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;greentwo.def&#39;</span> <span class="k">for</span> <span class="n">TwoBodyG</span><span class="o">.</span>
+<span class="n">End</span>  <span class="p">:</span> <span class="n">Read</span> <span class="o">*</span><span class="k">def</span> <span class="nf">files</span><span class="o">.</span>
+<span class="n">Start</span><span class="p">:</span> <span class="n">Read</span> <span class="n">parameters</span> <span class="kn">from</span> <span class="o">*</span><span class="k">def</span> <span class="nf">files</span><span class="o">.</span>
+<span class="n">End</span>  <span class="p">:</span> <span class="n">Read</span> <span class="n">parameters</span> <span class="kn">from</span> <span class="o">*</span><span class="k">def</span> <span class="nf">files</span><span class="o">.</span>
+<span class="n">Start</span><span class="p">:</span> <span class="n">Set</span> <span class="n">memories</span><span class="o">.</span>
+<span class="n">End</span>  <span class="p">:</span> <span class="n">Set</span> <span class="n">memories</span><span class="o">.</span>
+<span class="n">Start</span><span class="p">:</span> <span class="n">Initialize</span> <span class="n">parameters</span><span class="o">.</span>
+<span class="n">End</span>  <span class="p">:</span> <span class="n">Initialize</span> <span class="n">parameters</span><span class="o">.</span>
+<span class="n">Start</span><span class="p">:</span> <span class="n">Initialize</span> <span class="n">variables</span> <span class="k">for</span> <span class="n">quantum</span> <span class="n">projection</span><span class="o">.</span>
+<span class="n">End</span>  <span class="p">:</span> <span class="n">Initialize</span> <span class="n">variables</span> <span class="k">for</span> <span class="n">quantum</span> <span class="n">projection</span><span class="o">.</span>
+<span class="n">Start</span><span class="p">:</span> <span class="n">Optimize</span> <span class="n">VMC</span> <span class="n">parameters</span><span class="o">.</span>
+<span class="n">End</span>  <span class="p">:</span> <span class="n">Optimize</span> <span class="n">VMC</span> <span class="n">parameters</span><span class="o">.</span>
+<span class="o">-----------</span>
+</pre></div>
+</div>
+<p>この実行でははじめにエキスパートモード用の入力ファイルとして、
+ハミルトニアンの詳細を記述するファイル</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">locspin.def</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">trans.def</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">coulombinter.def</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">coulombintra.def</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">exchange.def</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hund.def</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">namelist.def</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">modpara.def</span></code></p></li>
+</ul>
+<p>と、変分パラメータを設定するファイル</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">gutzwilleridx.def</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">jastrowidx.def</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">orbitalidx.def</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">qptransidx.def</span></code></p></li>
+</ul>
+<p>結果として出力する相関関数の要素を指定するファイル</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">greenone.def</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">greentwo.def</span></code></p></li>
+</ul>
+<p>が生成されます。 各ファイルの詳細については <a class="reference internal" href="expert.html#howtoexpert"><span class="std std-ref">エキスパートモード入力ファイル書式</span></a> をご覧ください。</p>
+<p>その後実際に計算が行われ、以下のファイルが情報として <code class="docutils literal notranslate"><span class="pre">output/</span></code> ディレクトリに出力されます。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">zvo_SRinfo</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zvo_out_001</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zvo_time_001</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zvo_var_001</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zvo_CalcTimer</span><span class="o">.</span><span class="n">dat</span>
+</pre></div>
+</div>
+<p>なお、 <code class="docutils literal notranslate"><span class="pre">zvo_out_001.dat</span></code> には、ビン毎の計算情報として、</p>
+<div class="math notranslate nohighlight">
+\[\langle H \rangle, \langle H^2 \rangle, \frac{\langle H^2 \rangle- \langle H \rangle^2 }{\langle H \rangle^2} \nonumber\]</div>
+<p>が順に出力されますので、収束性の目安として利用することが可能です。
+gnuplotを用いる場合には、次のようにして表示することが出来ます( <span class="math notranslate nohighlight">\(\langle H \rangle\)</span> の場合)。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">plot</span> <span class="s2">&quot;zvo_out_001.dat&quot;</span> <span class="n">u</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line">各ファイルの詳細については <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">出力ファイル</span></a> をご覧ください。</div>
+</div>
+</section>
+<section id="id4">
+<h3>計算結果出力<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
+<div class="line-block">
+<div class="line">計算が正常終了すると、エネルギー、エネルギーの分散、
+変分パラメータおよび計算実行時間を記載したファイルが <code class="docutils literal notranslate"><span class="pre">output/</span></code>
+ディレクトリに出力されます。
+以下に、このサンプルでの出力ファイルを記載します。</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">gutzwiller_opt</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">jastrow_opt</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">orbital_opt</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zqp_opt</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">ClacTimer</span><span class="o">.</span><span class="n">dat</span>
+</pre></div>
+</div>
+<p>各ファイルの詳細については <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">出力ファイル</span></a> をご覧ください。</p>
+</section>
+<section id="green">
+<h3>Green関数の計算<a class="headerlink" href="#green" title="この見出しへのパーマリンク">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> ファイル中の <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> を0から1に変更の上、以下のコマンドを実行します。
+下記のように 実行時のコマンドライン引数として
+<code class="docutils literal notranslate"><span class="pre">&quot;namelist.dat&quot;</span></code> の後ろに <code class="docutils literal notranslate"><span class="pre">&quot;zqp_opt.dat&quot;</span></code> を付け加えることで、
+一つ前の計算で最適化された変分パラメータを使用した計算が行われます。</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span>&#160; <span class="pre">&quot;パス&quot;/vmc.out</span> <span class="pre">-e</span> <span class="pre">namelist.def</span> <span class="pre">output/zqp_opt.dat</span></code></p>
+<div class="line-block">
+<div class="line">計算が終了すると以下のファイルが <code class="docutils literal notranslate"><span class="pre">output/</span></code>
+ディレクトリに出力されます。</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">zvo_cisajs_001</span><span class="o">.</span><span class="n">dat</span>
+<span class="n">zvo_cisajscktalt_001</span><span class="o">.</span><span class="n">dat</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line">各ファイルの詳細については <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">出力ファイル</span></a> をご覧ください。</div>
+</div>
+</section>
+</section>
+<section id="id5">
+<h2>エキスパートユーザー向け<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h2>
+<p>mVMCでは、以下の6つに分類される入力ファイルを読み込み、計算実行を行います。</p>
+<dl class="simple">
+<dt>(1) List:</dt><dd><p>詳細入力ファイルの種類と名前を指定するファイル</p>
+</dd>
+<dt>(2) Basic parameters:</dt><dd><p>基本的なパラメータを指定するファイル</p>
+</dd>
+<dt>(3) Set Hamiltonian:</dt><dd><p>ハミルトニアンを指定するファイル</p>
+</dd>
+<dt>(4) Set condition of variational parameters :</dt><dd><p>最適化する変分パラメータを指定するファイル</p>
+</dd>
+<dt>(5) Initial variational parameters:</dt><dd><p>変分パラメータの初期値を指定するファイル</p>
+</dd>
+<dt>(6) Output:</dt><dd><p>出力する一体・二体グリーン関数の成分を指定するファイル</p>
+</dd>
+</dl>
+<p>上記で分類されるファイルを直接作成・指定することで、より複雑な計算を行うことが可能です。
+ファイルの詳細については <a class="reference internal" href="expert.html#howtoexpert"><span class="std std-ref">エキスパートモード入力ファイル書式</span></a> をご覧ください。</p>
+</section>
+<section id="id6">
+<h2>相関関数のフーリエ変換<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h2>
+<p>このパッケージには、上で求めた相関関数をフーリエ変換し、プロットするユーティリティーが付属しています。
+詳しくは <a class="reference internal" href="fourier/index.html#fourier"><span class="std std-ref">相関関数のFourier変換ユーティリティー</span></a> を参照してください。</p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <div>
+    <h3><a href="index.html">目次</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">チュートリアル</a><ul>
+<li><a class="reference internal" href="#id2">サンプルファイル一覧</a></li>
+<li><a class="reference internal" href="#heisenberg">Heisenberg模型</a><ul>
+<li><a class="reference internal" href="#id3">計算実行</a></li>
+<li><a class="reference internal" href="#id4">計算結果出力</a></li>
+<li><a class="reference internal" href="#green">Green関数の計算</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id5">エキスパートユーザー向け</a></li>
+<li><a class="reference internal" href="#id6">相関関数のフーリエ変換</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>前のトピックへ</h4>
+    <p class="topless"><a href="start.html"
+                          title="前の章へ">How to use mVMC?</a></p>
+  </div>
+  <div>
+    <h4>次のトピックへ</h4>
+    <p class="topless"><a href="standard.html"
+                          title="次の章へ">スタンダードモード用入力ファイル書式</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>このページ</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/tutorial.rst.txt"
+            rel="nofollow">ソースコードを表示</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="総合索引"
+             >索引</a></li>
+        <li class="right" >
+          <a href="standard.html" title="スタンダードモード用入力ファイル書式"
+             >次へ</a> |</li>
+        <li class="right" >
+          <a href="start.html" title="How to use mVMC?"
+             >前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">チュートリアル</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; 著作権 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+  </body>
+</html>
