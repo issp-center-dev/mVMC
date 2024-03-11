@@ -83,19 +83,22 @@
 <tr class="row-odd"><td><p>xxx_out_yyy.dat</p></td>
 <td><p>エネルギーとその分散.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_var_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_SRinfo.dat</p></td>
+<td><p>SR法に関連した情報.</p></td>
+</tr>
+<tr class="row-odd"><td><p>xxx_var_yyy.dat</p></td>
 <td><p>パラメータ最適化過程の情報.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_CalcTimer.dat</p></td>
+<tr class="row-even"><td><p>xxx_CalcTimer.dat</p></td>
 <td><p>各プロセスに対する計算時間に関する情報.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_time_zzz.dat</p></td>
+<tr class="row-odd"><td><p>xxx_time_zzz.dat</p></td>
 <td><p>モンテカルロサンプリングの過程に関する情報.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_cisajs_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_cisajs_yyy.dat</p></td>
 <td><p>一体グリーン関数.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
 <td><p>二体グリーン関数.</p></td>
 </tr>
 </tbody>
@@ -164,6 +167,20 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 1.972000325276957824e+02  1.824505193695792893e-01
 1.308897206011880421e+01  5.701244886956570168e-01  \
 2.072610167083121837e+02  2.029162857569105916e-01
+…
+</pre></div>
+</div>
+</section>
+<section id="xxx-srinfo-dat-dat">
+<h2>xxx_SRinfo.dat.dat<a class="headerlink" href="#xxx-srinfo-dat-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p>各最適化ステップごとに、
+変分パラメータ数 <code class="docutils literal notranslate"><span class="pre">Npara</span></code> 、S行列の次元数 <code class="docutils literal notranslate"><span class="pre">Msize</span></code> 、 <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> などの入力ファイルで最適化しないと指定した実パラメータ数 <code class="docutils literal notranslate"><span class="pre">optCut</span></code> 、 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">DSROptRedCut</span></code> の値により削減された実パラメータ数 <code class="docutils literal notranslate"><span class="pre">diagCut</span></code> 、S行列の対角成分の最大値 <code class="docutils literal notranslate"><span class="pre">sDiagMax</span></code> と最小値 <code class="docutils literal notranslate"><span class="pre">sDiagMin</span></code> 、変分パラメータの変化量の最大値 <code class="docutils literal notranslate"><span class="pre">absRmax</span></code> とそのパラメータインデックス <code class="docutils literal notranslate"><span class="pre">imax</span></code> といったSR法による最適化情報が順に出力されます。
+xxxには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが記載されます。以下に出力例を記載します。なお、変分パラメータが実変数( <code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> )として扱われた場合、虚部のパラメータ数は <code class="docutils literal notranslate"><span class="pre">optCut</span></code> にカウントされます。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax
+4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4
+4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0
+4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0
+4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0
 …
 </pre></div>
 </div>
@@ -388,6 +405,7 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#rbm-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat">RBM相関因子出力ファイル(***_generalRBM_physlayer_opt.dat, ***_generalRBM_hiddenlayer_opt.dat, ***_generalRBM_physhidden_opt.dat)</a></li>
 <li><a class="reference internal" href="#orbital-opt-dat">ペア軌道出力ファイル(***_orbital_opt.dat)</a></li>
 <li><a class="reference internal" href="#xxx-out-yyy-dat">xxx_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-srinfo-dat-dat">xxx_SRinfo.dat.dat</a></li>
 <li><a class="reference internal" href="#xxx-calctimer-dat">xxx_CalcTimer.dat</a></li>
 <li><a class="reference internal" href="#xxx-time-zzz-dat">xxx_time_zzz.dat</a></li>
 <li><a class="reference internal" href="#xxx-cisajs-yyy-dat">xxx_cisajs_yyy.dat</a><ul>
