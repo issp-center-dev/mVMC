@@ -9,7 +9,13 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-22.04", "ubuntu-20.04", "macos-latest"]
+        ompsize: [1, 4]
+        exclude:
+          - os: "macos-latest"
+            ompsize: 4
       fail-fast: false
+    env:
+      OMP_NUM_THREADS: ${{ matrix.ompsize }}
 
     steps:
       - uses: actions/checkout@v4
@@ -60,5 +66,3 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: ctest -V
-        env:
-          OMP_NUM_THREADS: 1
