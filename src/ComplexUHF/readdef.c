@@ -400,8 +400,9 @@ int ReadDefFileIdxPara(
   int iKWidx = 0;
   int i, j;
   int spn_i, spn_j, all_i, all_j;
-  int fij;
-  int idx, Orbitalidx;//, Orbitalsgn;
+  int fij, fijsgn;
+  int ndata;
+  int idx, Orbitalidx, Orbitalsgn;
   int x0, x1, x2, x3;
   int info, i_spin, j_spin;
   double dReValue;
@@ -415,6 +416,7 @@ int ReadDefFileIdxPara(
     for (i = 0; i < X->Nsite; i++) {
       for (j = 0; j < X->Nsite; j++) {
         X->OrbitalIdx[i][j] = -1;
+        X->OrbitalSgn[i][j] = 0;
       }
     }
   }
@@ -422,6 +424,7 @@ int ReadDefFileIdxPara(
     for (i = 0; i < X->Nsite*2; i++) {
       for (j = 0; j < X->Nsite*2; j++) {
         X->OrbitalIdx[i][j] = -1;
+        X->OrbitalSgn[i][j] = 0;
       }
     }
   }
@@ -597,11 +600,17 @@ int ReadDefFileIdxPara(
         idx = 0;
         if(X->iFlgOrbitalGeneral==0) {
           while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
-            sscanf(ctmp2, "%d %d %d\n",
+            ndata = sscanf(ctmp2, "%d %d %d %d\n",
                    &i,
                    &j,
-                   &Orbitalidx);
+                   &Orbitalidx,
+                   &Orbitalsgn);
+            //printf("Debug: %d %d %d %d %d\n", ndata, i, j, Orbitalidx, Orbitalsgn);
             X->OrbitalIdx[i+X->Nsite*0][j+X->Nsite*1]=Orbitalidx;
+            if (ndata == 3){ //sgn does not exist in input file
+              Orbitalsgn = 1;
+            }
+            X->OrbitalSgn[i+X->Nsite*0][j+X->Nsite*1]=Orbitalsgn;
             if(CheckPairSite(i, j, X->Nsite) != 0){
               fprintf(stderr, "Error: Site index is incorrect. \n");
               info=1;
@@ -614,11 +623,17 @@ int ReadDefFileIdxPara(
             info=ReadDefFileError(defname);
           }
         }else{//general orbital
-          while( fscanf(fp, "%d %d %d\n", &i, &j, &fij) != EOF){
+          //while( fscanf(fp, "%d %d %d %d\n", &i, &j, &fij, &fijsgn) != EOF){
+          while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
+            ndata = sscanf(ctmp2, "%d %d %d %d\n", &i, &j, &fij, &fijsgn);
             spn_i = 0;
             spn_j = 1;
             all_i = i+spn_i*X->Nsite; //fsz
             all_j = j+spn_j*X->Nsite; //fsz
+            if (ndata == 3){ //sgn does not exist in input file
+              fijsgn = 1;
+            }
+            //printf("Debug: %d %d %d %d %d\n", ndata, i, j, fij, fijsgn);
             if(CheckPairSite(i, j, X->Nsite) != 0){
               fprintf(stderr, "Error: Site index is incorrect. \n");
               info=1;
@@ -626,8 +641,10 @@ int ReadDefFileIdxPara(
             }
             idx++;
             X->OrbitalIdx[all_i][all_j]=fij;
+            X->OrbitalSgn[all_i][all_j]=fijsgn;
             // Note F_{IJ}=-F_{JI}
             X->OrbitalIdx[all_j][all_i]=fij;
+            X->OrbitalSgn[all_j][all_i]=-fijsgn;
             if(idx==(X->Nsite*X->Nsite)) break;
           }
         }
@@ -637,8 +654,14 @@ int ReadDefFileIdxPara(
         /*orbitalidxt.def------------------------------------*/
           idx = 0;
           int fij_org;
-            while (fscanf(fp, "%d %d %d\n", &i, &j, &fij_org) != EOF) {
+            //while (fscanf(fp, "%d %d %d %d\n", &i, &j, &fij_org, &fijsgn) != EOF) {
+            while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
+              ndata = sscanf(ctmp2, "%d %d %d %d\n", &i, &j, &fij_org, &fijsgn);
               //fprintf(stdout, "Debug: test-1 %d %d %d %d\n", i, j, fij, idx0);
+              if (ndata == 3){ //sgn does not exist in input file
+                fijsgn = 1;
+              }
+              //printf("Debug: %d %d %d %d %d\n", ndata, i, j, fij_org, fijsgn);
               for (spn_i = 0; spn_i < 2; spn_i++) {
                 all_i = i + spn_i * X->Nsite; //fsz
                 all_j = j + spn_i * X->Nsite; //fsz
@@ -650,7 +673,9 @@ int ReadDefFileIdxPara(
                 idx++;
                 fij = X->NOrbitalAP + 2 * fij_org + spn_i;
                 X->OrbitalIdx[all_i][all_j] = fij;
+                X->OrbitalSgn[all_i][all_j] = fijsgn;
                 X->OrbitalIdx[all_j][all_i] = fij;
+                X->OrbitalSgn[all_j][all_i] = -fijsgn;
               }
               if (idx == (X->Nsite * (X->Nsite - 1))) {
                 break;
@@ -665,13 +690,19 @@ int ReadDefFileIdxPara(
           idx = 0;
           while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
             //TODO: Replace for spin dependent
-            sscanf(ctmp2, "%d %d %d %d %d\n",
+            ndata = sscanf(ctmp2, "%d %d %d %d %d %d\n",
                    &i,
                    &i_spin,
                    &j,
                    &j_spin,
-                   &Orbitalidx);
+                   &Orbitalidx,
+                   &Orbitalsgn);
+            if (ndata == 5){ //sgn does not exist in input file
+              Orbitalsgn = 1;
+            }
+            //printf("Debug: %d %d %d %d %d %d %d\n", ndata, i, i_spin, j, j_spin, Orbitalidx, Orbitalsgn);
             (X->OrbitalIdx[i + X->Nsite * i_spin][j + X->Nsite * j_spin]) = Orbitalidx;
+            (X->OrbitalSgn[i + X->Nsite * i_spin][j + X->Nsite * j_spin]) = Orbitalsgn;
             idx++;
             if (idx == X->Nsite * (2 * X->Nsite - 1)) break;
           }

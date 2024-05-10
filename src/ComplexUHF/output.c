@@ -243,7 +243,7 @@ int MakeOrbitalFile(struct BindStruct *X){
 }
 
 void OutputAntiParallel_2(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital){
-   int i,j,Orbitalidx,isite,jsite;
+   int i,j,Orbitalidx,Orbitalsgn, isite,jsite;
    char fileName[256];
    FILE *fp;
 
@@ -258,10 +258,11 @@ void OutputAntiParallel_2(struct BindStruct *X,double complex **UHF_Fij,double c
        isite = i + 0 * X->Def.Nsite;
        jsite = j + 1 * X->Def.Nsite;
        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+       Orbitalsgn = X->Def.OrbitalSgn[isite][jsite];
        fprintf(fp," %d %d %lf %lf\n",i,j,creal(UHF_Fij[i][j]),cimag(UHF_Fij[i][j]));
        //printf(" %d %d %d \n", isite,jsite,Orbitalidx);
        if(Orbitalidx != -1) {
-         ParamOrbital[Orbitalidx] += UHF_Fij[i][j];
+         ParamOrbital[Orbitalidx] += UHF_Fij[i][j]*Orbitalsgn;
          CountOrbital[Orbitalidx] += 1;
          //printf(" %d %d %d %lf %lf \n", isite,jsite,Orbitalidx,creal(ParamOrbital[Orbitalidx]),cimag(ParamOrbital[Orbitalidx]));
        }
@@ -280,7 +281,7 @@ void OutputAntiParallel_2(struct BindStruct *X,double complex **UHF_Fij,double c
 
 
 void OutputAntiParallel(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital){
-   int i,j,Orbitalidx,isite,jsite;
+   int i,j,Orbitalidx,Orbitalsgn,isite,jsite;
    char fileName[256];
    FILE *fp;
 
@@ -295,9 +296,10 @@ void OutputAntiParallel(struct BindStruct *X,double complex **UHF_Fij,double com
        isite = i + 0 * X->Def.Nsite;
        jsite = j + 1 * X->Def.Nsite;
        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+       Orbitalsgn = X->Def.OrbitalSgn[isite][jsite];
        fprintf(fp," %d %d %lf %lf\n",i,j,creal(UHF_Fij[isite][jsite]),cimag(UHF_Fij[isite][jsite]));
        if(Orbitalidx != -1) {
-         ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
+         ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite]*Orbitalsgn;
          CountOrbital[Orbitalidx] += 1;
        }
      }
@@ -313,7 +315,7 @@ void OutputAntiParallel(struct BindStruct *X,double complex **UHF_Fij,double com
 }
 
 void OutputParallel(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital){
-   int i,j,Orbitalidx,isite,jsite,ini,fin,tmp_i;
+   int i,j,Orbitalidx,Orbitalsgn,isite,jsite,ini,fin,tmp_i;
    char fileName[256];
    FILE *fp;
 
@@ -331,17 +333,19 @@ void OutputParallel(struct BindStruct *X,double complex **UHF_Fij,double complex
        isite = i + 0 * X->Def.Nsite;
        jsite = j + 0 * X->Def.Nsite;
        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+       Orbitalsgn = X->Def.OrbitalSgn[isite][jsite];
        fprintf(fp," %d %d %lf %lf\n",isite,jsite,creal(UHF_Fij[isite][jsite]),cimag(UHF_Fij[isite][jsite]));
        if(Orbitalidx != -1) {
-         ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
+         ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite]*Orbitalsgn;
          CountOrbital[Orbitalidx] += 1;
        }
        isite = i + 1 * X->Def.Nsite;
        jsite = j + 1 * X->Def.Nsite;
        Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+       Orbitalsgn = X->Def.OrbitalSgn[isite][jsite];
        fprintf(fp," %d %d %lf %lf\n",isite,jsite,creal(UHF_Fij[isite][jsite]),cimag(UHF_Fij[isite][jsite]));
        if(Orbitalidx != -1) {
-         ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
+         ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite]*Orbitalsgn;
          CountOrbital[Orbitalidx] += 1;
        } 
      }//for(j = i+1; j < X->Def.Nsite; j++) 
@@ -361,7 +365,7 @@ void OutputParallel(struct BindStruct *X,double complex **UHF_Fij,double complex
 }
 
 void OutputGeneral(struct BindStruct *X,double complex **UHF_Fij,double complex *ParamOrbital,int *CountOrbital){
-   int i,j,Orbitalidx,isite,jsite,ispin,jspin;
+   int i,j,Orbitalidx,Orbitalsgn,isite,jsite,ispin,jspin;
    char fileName[256];
    FILE *fp;
    for (i = 0; i < X->Def.NOrbitalIdx; i++) {
@@ -377,10 +381,11 @@ void OutputGeneral(struct BindStruct *X,double complex **UHF_Fij,double complex 
            isite = i + ispin * X->Def.Nsite;
            jsite = j + jspin * X->Def.Nsite;
            Orbitalidx = X->Def.OrbitalIdx[isite][jsite];
+           Orbitalsgn = X->Def.OrbitalSgn[isite][jsite];
            fprintf(fp," %d %d %lf %lf\n",isite,jsite,creal(UHF_Fij[isite][jsite]),cimag(UHF_Fij[isite][jsite]));
            if (Orbitalidx != -1) {
              // ParamOrbital[Orbitalidx]+=UHF_Fij[isite][jsite];
-             ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite];
+             ParamOrbital[Orbitalidx] += UHF_Fij[isite][jsite]*Orbitalsgn;
              CountOrbital[Orbitalidx] += 1;
              //printf("debug: Orbitaidx[%d][%d]=%d, UHF_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(UHF_Fij[isite][jsite]), cimag(UHF_Fij[isite][jsite]));
              //printf("debug: Orbitaidx[%d][%d]=%d, ParamOrbital_Fij=%lf, %lf \n", isite, jsite, Orbitalidx, creal(ParamOrbital[Orbitalidx]), cimag(ParamOrbital[Orbitalidx]));
