@@ -1,6 +1,9 @@
 name: CI
 
-on: [push]
+on:
+  push:
+  schedule:
+    - cron: '0 0 1,15 * *' # JST 9:00 on 1st and 15th every month
 
 jobs:
   ctest:
@@ -12,7 +15,7 @@ jobs:
         ompsize: [1, 4]
         exclude:
           - os: "macos-latest"
-            ompsize: 4
+            ompsize: 4 # OMP on macOS is too slow
       fail-fast: false
     env:
       OMP_NUM_THREADS: ${{ matrix.ompsize }}
