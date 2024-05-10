@@ -60,3 +60,5 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: ctest -V
+        env:
+          OMP_NUM_THREADS: 1
