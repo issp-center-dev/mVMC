@@ -8,7 +8,7 @@ jobs:
 
     strategy:
       matrix:
-        os: ["ubuntu-22.04", "ubuntu-20.04", "macos-latest", "macos-13"]
+        os: ["ubuntu-22.04", "ubuntu-20.04", "macos-latest"]
       fail-fast: false
 
     steps:
@@ -44,10 +44,12 @@ jobs:
           if [ ${{ runner.os }} = "macOS" ] ; then
             # CONFIG=apple requires gfortran but macOS runner has not, but gfortran-11, 12, ...
             ln -s `which gfortran-11` gfortran
-            env PATH=`pwd`:$PATH HOMEBREW_PREFIX=/opt/homebrew cmake -DCONFIG=apple -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+            env PATH=`pwd`:$PATH cmake -DCONFIG=apple -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
           else
             cmake -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
           fi
+        env:
+          HOMEBREW_PREFIX: /opt/homebrew
 
       - name: build
         working-directory: ${{runner.workspace}}/build
