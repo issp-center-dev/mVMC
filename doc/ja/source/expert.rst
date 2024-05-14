@@ -2542,10 +2542,10 @@ TransSym指定ファイル(qptransidx.def)
     ====================================
     == TrIdx_TrWeight_and_TrIdx_i_xi  ==
     ====================================
-       0  1.000000
-       1  1.000000
-       2  1.000000
-       3  1.000000
+       0  1.000000  0.000000
+       1  1.000000  0.000000
+       2  1.000000  0.000000
+       3  1.000000  0.000000
        0     0    0
      (continue...)
        3    12    1
@@ -2562,7 +2562,7 @@ TransSym指定ファイル(qptransidx.def)
 
 -  3-5行: ヘッダ(何が書かれても問題ありません)。
 
--  6 - (5+ :math:`N_{\rm TS}`)行: [int02] [double01]
+-  6 - (5+ :math:`N_{\rm TS}`)行: [int02] [double01] [double02]
 
 -  (6+ :math:`N_{\rm TS}`) -
    (5+ :math:`(N_s+1) \times N_{\rm TS}`)行：[int03] [int04] [int05] [int06]
@@ -2595,7 +2595,14 @@ TransSym指定ファイル(qptransidx.def)
    **形式 :** double型 (空白不可)
 
    **説明 :**
-   射影パターン :math:`(\alpha, {\boldsymbol R})` の重み :math:`p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})` を指定します。
+   射影パターン :math:`(\alpha, {\boldsymbol R})` の重み :math:`p_{\alpha}\exp (i{\boldsymbol K}\cdot {\boldsymbol R})` の実部を指定します。
+
+-  [ double02 ]
+
+   **形式 :** double型
+
+   **説明 :**
+   射影パターン :math:`(\alpha, {\boldsymbol R})` の重み :math:`p_{\alpha}\exp (i{\boldsymbol K}\cdot {\boldsymbol R})` の虚部を指定します。
 
 -  [ int03 ]
 

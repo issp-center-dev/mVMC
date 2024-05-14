@@ -2689,10 +2689,10 @@ not done. An example of the file format is shown as follows.
     ====================================
     == TrIdx_TrWeight_and_TrIdx_i_xi  ==
     ====================================
-       0  1.000000
-       1  1.000000
-       2  1.000000
-       3  1.000000
+       0  1.000000  0.000000
+       1  1.000000  0.000000
+       2  1.000000  0.000000
+       3  1.000000  0.000000
        0     0    0
      (continue...)
        3    12    1
@@ -2710,7 +2710,7 @@ projection patterns as :math:`N_{\rm TS}`, respectively.
 
 -  Lines 3 - 5: Header
 
--  Lines 6 - (5+ :math:`N_{\rm TS})`: [int02] [double01]
+-  Lines 6 - (5+ :math:`N_{\rm TS})`: [int02] [double01] [double02]
 
 -  Lines (6+ :math:`N_{\rm TS}`) - (5+ :math:`(N_s+1) \times N_{\rm TS}`):
    [int03] [int04] [int05] [int06]
@@ -2744,8 +2744,16 @@ Parameters
 
    **Type :** double-type (blank parameter not allowed)
 
-   **Description :** The weight
-   :math:`p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})` of the projection
+   **Description :** The real part of the weight
+   :math:`p_{\alpha}\exp (i{\boldsymbol K}\cdot {\boldsymbol R})` of the projection
+   pattern :math:`(\alpha, {\boldsymbol R})`.
+
+-  [ double02 ]
+
+   **Type :** double-type 
+
+   **Description :** The imaginary part of weight
+   :math:`p_{\alpha}\exp (i{\boldsymbol K}\cdot {\boldsymbol R})` of the projection
    pattern :math:`(\alpha, {\boldsymbol R})`.
 
 -  [ int03 ]
