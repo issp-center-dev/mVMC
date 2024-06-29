@@ -244,8 +244,7 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
 
     /* Batch-compute 2-body Green's functions. */
     #pragma omp barrier
-    // if ( Nsize <= 100 ) // Heuristics: Huge Nelec seems to cause parallelize-over-nGF spill L2.
-    if ( 1 )
+    if ( Nsize <= 400 ) // Heuristics: Huge Nelec seems to cause parallelize-over-nGF spill L2.
     {
       int num_qp_var0 = 0;
       // Pack lazy info.
