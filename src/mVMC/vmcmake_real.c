@@ -61,7 +61,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
   StartTimer(30);
   if (BurnFlag == 0) {
-    makeInitialSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
+    makeInitialSample_real(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
                       qpStart, qpEnd, comm);
   } else {
     copyFromBurnSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt);
@@ -104,7 +104,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
   if (!isfinite(logIpOld)) {
     if (rank == 0) fprintf(stderr, "waring: VMCMakeSample remakeSample logIpOld=%e\n", creal(logIpOld)); //TBC
-    makeInitialSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
+    makeInitialSample_real(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
                       qpStart, qpEnd, comm);
 #ifdef _pf_block_update
     // Clear and reinitialize.
