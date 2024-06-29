@@ -259,7 +259,6 @@ double CalculateHamiltonian_real(const double ip, int *eleIdx, const int *eleCfg
           }
           num_qp_var0++;
         }
-      fprintf(stdout, "GF2: %d / %d\n", num_qp_var0, nHamiltonianTwo);
       #pragma omp barrier
       updated_tdi_v_omp_var0_proc_batch_greentwo_d(NQPFull, num_qp_var0,
                                                    NULL, lazy_info + nHamiltonianTwo,
