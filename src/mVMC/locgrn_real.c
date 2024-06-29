@@ -77,10 +77,11 @@ double  GreenFunc1_real(const int ri, const int rj, const int s, const double ip
 
 /* Calculate 2-body Green function <psi|CisAjsCktAlt|x>/<psi|x> */
 /* buffer size = NQPFull+2*Nsize */
-double GreenFunc2_real(const int ri, const int rj, const int rk, const int rl,
+double GreenFunc2_real_(const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t, const double ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  int *projCntNew, double *buffer) {
+                  int *projCntNew, double *buffer,
+                  int *lazy_info, int *lazy_rsi, int *lazy_msj) {
   double z;
   int mj,msj,ml,mtl;
   int rsi,rsj,rtk,rtl;
@@ -149,8 +150,17 @@ double GreenFunc2_real(const int ri, const int rj, const int rk, const int rl,
   z = ProjRatio(projCntNew,eleProjCnt);
 
   /* calculate Pfaffian */
-  CalculateNewPfMTwo_real(ml, t, mj, s, pfMNew_real, eleIdx, 0, NQPFull, bufV);
-  z *= CalculateIP_real(pfMNew_real, 0, NQPFull, MPI_COMM_SELF);
+  if (!lazy_info) {
+    CalculateNewPfMTwo_real(ml, t, mj, s, pfMNew_real, eleIdx, 0, NQPFull, bufV);
+    z *= CalculateIP_real(pfMNew_real, 0, NQPFull, MPI_COMM_SELF);
+  } else {
+    // Save invocation hook instead of calling.
+    lazy_msj[0] = msj; //< to edit to ri, revert to rj
+    lazy_msj[1] = mtl; //< to edit to rk, revert to rl
+    lazy_rsi[0] = rsi;
+    lazy_rsi[1] = rtk;
+    lazy_info[0] = 1; //< "is delayed" flag..
+  }
 
   /* revert hopping */
   eleIdx[mtl] = rl;
@@ -161,6 +171,13 @@ double GreenFunc2_real(const int ri, const int rj, const int rk, const int rl,
   eleNum[rsi] = 0;
 
   return z/ip;//TBC
+}
+
+double GreenFunc2_real(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const double ip,
+                  int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
+                  int *projCntNew, double *buffer) {
+  return GreenFunc2_real_(ri, rj, rk, rl, s, t, ip, eleIdx, eleCfg, eleNum, eleProjCnt, projCntNew, buffer, 0, 0, 0);
 }
 
 
