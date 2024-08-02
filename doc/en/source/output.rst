@@ -328,7 +328,7 @@ xxx\_ls\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~
 
 This file is the outputted files for :math:`\langle H \rangle`,
-:math:`\langle H^2\rangle`, and the optimized parameter :math:`\alpha`
+:math:`(\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2`, and the optimized parameter :math:`\alpha`
 obtained by Power Lanczos method. This file is outputted when
 ``NVMCCalMode`` = 1, ``NLanczosmode`` = 1 or 2 are set in ``ModPara``
 file. Here, xxx is the header indicated by ``CDataFileHead`` in
