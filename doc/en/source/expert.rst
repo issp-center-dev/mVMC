@@ -243,47 +243,52 @@ User rules
 
 -  When the head of line is ``#``, the line is skipped.
 
-===================== ===================================================================================
-Keywords              Details for corresponding files
-===================== ===================================================================================
-ModPara :math:`^*`    Parameters for calculation.
-LocSpin :math:`^*`    Configurations of the local spins for Hamiltonian.
-Trans                 Transfer and chemical potential for Hamiltonian.
-InterAll              Two-body interactions for Hamiltonian.
-CoulombIntra          CoulombIntra interactions.
-CoulombInter          CoulombInter interactions.
-Hund                  Hund couplings.
-PairHop               Pair hopping couplings.
-Exchange              Exchange couplings.
-Gutzwiller            Gutzwiller factors.
-Jastrow               Charge Jastrow factors.
-DH2                   2-site doublon-holon correlation factors.
-DH4                   4-site doublon-holon correlation factors.
-GeneralRBM_PhysLayer  A part of the general RBM correlation factor including variational parameters in a physical layer :math:`\alpha_{i\sigma}`.
-
- GeneralRBM_HiddenLayer A part of the general RBM correlation factor including variational parameters in a hidden layer :math:`\h_{k}`.
- GeneralRBM_PhysHidden  A part of the general RBM correlation factor including variational parameters which connect physical and hidden layers :math:`\W_{i\sigma k}`.
-Orbital :math:`^*`    Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
-OrbitalAntiParallel   Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
-OrbitalParallel       Pair orbital factors with parallel spins :math:`f_{i\sigma j\sigma}`.
-OrbitalGeneral        Pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
-TransSym :math:`^*`   Translational and lattice symmetry operation.
-InGutzwiller          Initial values of Gutzwiller factors.
-InJastrow             Initial values of charge Jastrow factors.
-InDH2                 Initial values of 2-site doublon-holon correlation factors.
-InDH4                 Initial values of 4-site doublon-holon correlation factors.
- InGeneralRBM_PhysLayer  Initial values of variational parameters of the general RBM correlation factors in a physical layer :math:`\alpha_{i\sigma}`.
- InGeneralRBM_HiddenLayer  Initial values of variational parameters of the general RBM correlation factors in a hidden layer :math:`\h_{k}`.
- InGeneralRBM_PhysHidden   Initial values of variational parameters of the general RBM correlation factors which connect physical and hidden layers :math:`\W_{i\sigma k}`.
-InOrbital             Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
-InOrbitalAntiParallel Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
-InOrbitalParallel     Initial values of pair orbital factors :math:`f_{i\sigma j\sigma}`.
-InOrbitalGeneral      Initial values of pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
-OneBodyG              Output components for Green functions
-                      :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle`
-TwoBodyG              Output components for Correlation functions
-                      :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle`
-===================== ===================================================================================
+======================== ===================================================================================
+Keywords                 Details for corresponding files
+======================== ===================================================================================
+ModPara :math:`^*`       Parameters for calculation.
+LocSpin :math:`^*`       Configurations of the local spins for Hamiltonian.
+Trans                    Transfer and chemical potential for Hamiltonian.
+InterAll                 Two-body interactions for Hamiltonian.
+CoulombIntra             CoulombIntra interactions.
+CoulombInter             CoulombInter interactions.
+Hund                     Hund couplings.
+PairHop                  Pair hopping couplings.
+Exchange                 Exchange couplings.
+Gutzwiller               Gutzwiller factors.
+Jastrow                  Charge Jastrow factors.
+DH2                      2-site doublon-holon correlation factors.
+DH4                      4-site doublon-holon correlation factors.
+GeneralRBM_PhysLayer     A part of the general RBM correlation factor including variational parameters 
+                         in a physical layer :math:`\alpha_{i\sigma}`.
+GeneralRBM_HiddenLayer   A part of the general RBM correlation factor including variational parameters 
+                         in a hidden layer :math:`h_{k}`.
+GeneralRBM_PhysHidden    A part of the general RBM correlation factor including variational parameters 
+                         which connect physical and hidden layers :math:`W_{i\sigma k}`.
+Orbital :math:`^*`       Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
+OrbitalAntiParallel      Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
+OrbitalParallel          Pair orbital factors with parallel spins :math:`f_{i\sigma j\sigma}`.
+OrbitalGeneral           Pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
+TransSym :math:`^*`      Translational and lattice symmetry operation.
+InGutzwiller             Initial values of Gutzwiller factors.
+InJastrow                Initial values of charge Jastrow factors.
+InDH2                    Initial values of 2-site doublon-holon correlation factors.
+InDH4                    Initial values of 4-site doublon-holon correlation factors.
+InGeneralRBM_PhysLayer   Initial values of variational parameters of the general RBM correlation factors 
+                         in a physical layer :math:`\alpha_{i\sigma}`.
+InGeneralRBM_HiddenLayer Initial values of variational parameters of the general RBM correlation factors 
+                         in a hidden layer :math:`h_{k}`.
+InGeneralRBM_PhysHidden  Initial values of variational parameters of the general RBM correlation factors 
+                         which connect physical and hidden layers :math:`W_{i\sigma k}`.
+InOrbital                Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
+InOrbitalAntiParallel    Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
+InOrbitalParallel        Initial values of pair orbital factors :math:`f_{i\sigma j\sigma}`.
+InOrbitalGeneral         Initial values of pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
+OneBodyG                 Output components for Green functions
+                         :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle`
+TwoBodyG                 Output components for Correlation functions
+                         :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle`
+======================== ===================================================================================
 
 ModPara file (modpara.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1850,7 +1855,7 @@ User rules
 
 
 GeneralRBM_PhysLayer file
-~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 In the general RBM correlation factors, 
 
 .. math::
@@ -1982,7 +1987,7 @@ User rules
 
 
 GeneralRBM_HiddenLayer file
-~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 In the general RBM correlation factors, 
 
 .. math::
@@ -2108,7 +2113,7 @@ User rules
 
 
 GeneralRBM_PhysHidden file
-~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 In the general RBM correlation factors, 
 
 .. math::
@@ -2258,6 +2263,7 @@ This file sets the calculation conditions of pair orbitals
 
    |\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s}
    f_{ij}c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger} \right]^{N/2}|0 \rangle.
+
 
 Site numbers :math:`i, j` and the variational parameters :math:`f_{ij}`
 are indicated. An example of the file format is shown as follows.
@@ -2689,10 +2695,10 @@ not done. An example of the file format is shown as follows.
     ====================================
     == TrIdx_TrWeight_and_TrIdx_i_xi  ==
     ====================================
-       0  1.000000
-       1  1.000000
-       2  1.000000
-       3  1.000000
+       0  1.000000  0.000000
+       1  1.000000  0.000000
+       2  1.000000  0.000000
+       3  1.000000  0.000000
        0     0    0
      (continue...)
        3    12    1
@@ -2710,7 +2716,7 @@ projection patterns as :math:`N_{\rm TS}`, respectively.
 
 -  Lines 3 - 5: Header
 
--  Lines 6 - (5+ :math:`N_{\rm TS})`: [int02] [double01]
+-  Lines 6 - (5+ :math:`N_{\rm TS})`: [int02] [double01] [double02]
 
 -  Lines (6+ :math:`N_{\rm TS}`) - (5+ :math:`(N_s+1) \times N_{\rm TS}`):
    [int03] [int04] [int05] [int06]
@@ -2745,8 +2751,17 @@ Parameters
    **Type :** double-type (blank parameter not allowed)
 
    **Description :** The weight
-   :math:`p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})` of the projection
+   Real part of :math:`p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})` of the projection
    pattern :math:`(\alpha, {\boldsymbol R})`.
+
+-  [ double02 ]
+
+   **Type :** double-type (blank parameter not allowed)
+
+   **Description :** The weight
+   Imaginary part of :math:`p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})` of the projection
+   pattern :math:`(\alpha, {\boldsymbol R})`.
+
 
 -  [ int03 ]
 
