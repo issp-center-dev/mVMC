@@ -626,12 +626,9 @@ double complex calHCACA1(const int ri, const int rj, const int rk, const int rl,
 
   ReleaseWorkSpaceInt();
   ReleaseWorkSpaceComplex();
-  if (FlagRBM) {
-    return e*conj(z*ipNew/ip);
-  }
-  else {
-    return e*z*ipNew/ip;
-  }
+
+  return e*conj(z*ipNew/ip);
+
 }
 
 /* calculate <psi| H C_is A_js C_kt A_lt|x>/<psi|x> for <psi|CACA|x>/<psi|x>=0 */
