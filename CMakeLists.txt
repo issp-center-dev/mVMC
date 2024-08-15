@@ -112,6 +112,7 @@ endif()
 # git submodule update
 # ref: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 option(MVMC "build mvmc" ON) # Option for upstream StdFace.
+option(TestStdFace "run test for StdFace" OFF)
 find_package(Git QUIET)
 
 if(NOT STDFACE_DIR)
