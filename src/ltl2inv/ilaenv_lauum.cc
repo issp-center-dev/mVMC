@@ -13,7 +13,8 @@ template <> int ilaenv_lauum<cctype>(uplo_t uplo, int n) \
     char uplo_ = uplo2char(uplo); \
     int ispec = 1; \
     int dummy = 0; \
-    return ilaenv_(&ispec, #name, &uplo_, &n, &dummy, &dummy, &dummy); \
+    int n_ = n; \
+    return ilaenv_(&ispec, #name, &uplo_, &n_, &dummy, &dummy, &dummy); \
 }
 EXPANDMAC( float,    SLAUUM )
 EXPANDMAC( double,   DLAUUM )
