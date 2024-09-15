@@ -8,7 +8,10 @@
 extern "C" {
 #endif
 
+/*
 int ilaenv_(const int *ispec, const char *name, const char *opts, const int *n1, const int *n2, const int *n3, const int *n4);
+*/
+int ilaenv_wrap(int ispec, const char *name, const char *opts, int n1, int n2, int n3, int n4);
 
 #ifdef __cplusplus
 }

@@ -2,7 +2,7 @@
 # additional libomp and gfortran installation required
 # mac computers are suggested to use this configuration for better performance
 
-if(NOT $ENV{HOMEBREW_PREFIX})
+if(NOT DEFINED ENV{HOMEBREW_PREFIX})
   message(FATAL "Homebrew is not installed. Please install Homebrew first.")
 endif()
 
