@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #pragma once
 #include "locgrn.h"
 #include "projection.h"
+#include "rbm.h"
 #include "pfupdate.h"
 #include "pfupdate_two_fcmp.h"
 #include "qp.h"
@@ -39,7 +40,7 @@ double complex calculateNewPfMN_child(const int qpidx, const int n, const int *m
 /* buffer size = NQPFull */
 double complex GreenFunc1(const int ri, const int rj, const int s, const double complex  ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  int *projCntNew, double complex *buffer) {
+                  int *projCntNew, const double complex *rbmCnt, double complex *rbmCntNew, double complex *buffer) {
   double complex z;
   int mj,msj,rsi,rsj;
   double complex *pfMNew = buffer; /* NQPFull */
@@ -57,7 +58,16 @@ double complex GreenFunc1(const int ri, const int rj, const int s, const double 
   eleNum[rsj] = 0;
   eleNum[rsi] = 1;
   UpdateProjCnt(rj, ri, s, projCntNew, eleProjCnt, eleNum);
+
+  if (FlagRBM) {
+  UpdateRBMCnt(rj, ri, s, rbmCntNew, rbmCnt, eleNum);
   z = ProjRatio(projCntNew,eleProjCnt);
+  z *= RBMRatio(rbmCntNew,rbmCnt);
+  }
+  else {
+  UpdateProjCnt(rj, ri, s, projCntNew, eleProjCnt, eleNum);
+  z = ProjRatio(projCntNew,eleProjCnt);
+  }
 
   /* calculate Pfaffian */
   CalculateNewPfM(mj, s, pfMNew, eleIdx, 0, NQPFull);
@@ -76,7 +86,7 @@ double complex GreenFunc1(const int ri, const int rj, const int s, const double 
 double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  int *projCntNew, double complex *buffer) {
+                  int *projCntNew, const double complex *rbmCnt, double complex *rbmCntNew, double complex *buffer) {
   double complex z;
   int mj,msj,ml,mtl;
   int rsi,rsj,rtk,rtl;
@@ -92,36 +102,36 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
     if(rk==rl) { /* CisAjsNks */
       if(eleNum[rtk]==0) return 0.0;
       else return GreenFunc1(ri,rj,s,ip,eleIdx,eleCfg,eleNum,
-                             eleProjCnt,projCntNew,buffer); /* CisAjs */
+                             eleProjCnt,projCntNew,rbmCnt,rbmCntNew,buffer); /* CisAjs */
     }else if(rj==rl) {
       return 0.0; /* CisAjsCksAjs (j!=k) */
     }else if(ri==rl) { /* AjsCksNis */
       if(eleNum[rsi]==0) return 0.0;
       else if(rj==rk) return 1.0-eleNum[rsj];
       else return -GreenFunc1(rk,rj,s,ip,eleIdx,eleCfg,eleNum,
-                              eleProjCnt,projCntNew,buffer); /* -CksAjs */
+                              eleProjCnt,projCntNew,rbmCnt,rbmCntNew,buffer); /* -CksAjs */
     }else if(rj==rk) { /* CisAls(1-Njs) */
       if(eleNum[rsj]==1) return 0.0;
       else if(ri==rl) return eleNum[rsi];
       else return GreenFunc1(ri,rl,s,ip,eleIdx,eleCfg,eleNum,
-                             eleProjCnt,projCntNew,buffer); /* CisAls */
+                             eleProjCnt,projCntNew,rbmCnt,rbmCntNew,buffer); /* CisAls */
     }else if(ri==rk) {
       return 0.0; /* CisAjsCisAls (i!=j) */
     }else if(ri==rj) { /* NisCksAls (i!=k,l) */
       if(eleNum[rsi]==0) return 0.0;
       else return GreenFunc1(rk,rl,s,ip,eleIdx,eleCfg,eleNum,
-                             eleProjCnt,projCntNew,buffer); /* CksAls */
+                             eleProjCnt,projCntNew,rbmCnt,rbmCntNew,buffer); /* CksAls */
     }
   }else{
     if(rk==rl) { /* CisAjsNkt */
       if(eleNum[rtk]==0) return 0.0;
       else if(ri==rj) return eleNum[rsi];
       else return GreenFunc1(ri,rj,s,ip,eleIdx,eleCfg,eleNum,
-                             eleProjCnt,projCntNew,buffer); /* CisAjs */
+                             eleProjCnt,projCntNew,rbmCnt,rbmCntNew,buffer); /* CisAjs */
     }else if(ri==rj) { /* NisCktAlt */
       if(eleNum[rsi]==0) return 0.0;
       else return GreenFunc1(rk,rl,t,ip,eleIdx,eleCfg,eleNum,
-                             eleProjCnt,projCntNew,buffer); /* CktAlt */
+                             eleProjCnt,projCntNew,rbmCnt,rbmCntNew,buffer); /* CktAlt */
     }
   }
 
@@ -137,12 +147,21 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
   eleNum[rtl] = 0;
   eleNum[rtk] = 1;
   UpdateProjCnt(rl, rk, t, projCntNew, eleProjCnt, eleNum);
+  if (FlagRBM) {
+    UpdateRBMCnt(rl, rk, t, rbmCntNew, rbmCnt, eleNum);
+  }
   eleIdx[msj] = ri;
   eleNum[rsj] = 0;
   eleNum[rsi] = 1;
   UpdateProjCnt(rj, ri, s, projCntNew, projCntNew, eleNum);
+  if (FlagRBM) {
+    UpdateRBMCnt(rj, ri, s, rbmCntNew, rbmCntNew, eleNum);
+  }
 
   z = ProjRatio(projCntNew,eleProjCnt);
+  if (FlagRBM) {
+    z *= RBMRatio(rbmCntNew,rbmCnt);
+  }
 
   /* calculate Pfaffian */
   CalculateNewPfMTwo_fcmp(ml, t, mj, s, pfMNew, eleIdx, 0, NQPFull, bufV);
@@ -172,7 +191,7 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
 
 double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  double complex *buffer, int *bufferInt){
+                  const double complex *rbmCnt, double complex *rbmCntNew, double complex *buffer, int *bufferInt){
   int ri,rj,rk,rl,si,sj,sk,mj;
   int k,l,m,rsk;
   double complex z,x;
@@ -195,7 +214,7 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
     ri = rsi[0]%Nsite;
     rj = rsj[0]%Nsite;
     si = rsi[0]/Nsite;
-    return GreenFunc1(ri,rj,si,ip,eleIdx,eleCfg,eleNum,eleProjCnt,projCntNew,buffer);
+    return GreenFunc1(ri,rj,si,ip,eleIdx,eleCfg,eleNum,eleProjCnt,projCntNew,rbmCnt,rbmCntNew,buffer);
   } else if(n==2) {
     ri = rsi[0]%Nsite;
     rj = rsj[0]%Nsite;
@@ -203,7 +222,7 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
     rk = rsi[1]%Nsite;
     rl = rsj[1]%Nsite;
     sk = rsi[1]/Nsite;
-    return GreenFunc2(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt,projCntNew,buffer);
+    return GreenFunc2(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt,projCntNew,rbmCnt,rbmCntNew,buffer);
   }
 
   /* reduction */
@@ -218,7 +237,7 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
           rsi[m] = rsi[m+1];
           rsj[m] = rsj[m+1];
         }
-        return GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,buffer,bufferInt);
+        return GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,rbmCntNew,buffer,bufferInt);
       }
       /* rsj[k] == rsj[l] */
       if(rsk==rsj[l]) return 0;
@@ -234,7 +253,7 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
         rsi[m] = rsi[m+1];
         rsj[m] = rsj[m+1];
       }
-      return GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,buffer,bufferInt);
+      return GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,rbmCntNew,buffer,bufferInt);
     }
     for(l=k+1;l<n;l++) {
       /* rsi[k] == rsi[l] */
@@ -246,7 +265,7 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
           rsi[m] = rsi[m+1];
           rsj[m] = rsj[m+1];
         }
-        return (-1.0)*GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,buffer,bufferInt);
+        return (-1.0)*GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,rbmCntNew,buffer,bufferInt);
       }
     }
     /* check electron number */
@@ -392,12 +411,7 @@ double complex calculateNewPfMN_child(const int qpidx, const int n, const int *m
   /* calculate Pf M */
   //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
   //M_ZSKPFA(&uplo, &mthd, &n, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
-#ifdef _pfaffine
-  info = 1; // Skip inverse.
-  M_ZSKPFA(&uplo, &mthd, &n, mat, &lda, &pfaff, iwork, work, &lwork/*, rwork*/, &info);
-#else
   M_ZSKPFA(&uplo, &mthd, &n, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
-#endif
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
 
   return sgn * pfaff * PfM[qpidx];

@@ -6,7 +6,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #pragma once
-#include "colmaj.tcc"
+#include "colmaj.hh"
 #include "blalink.hh"
 #include <vector>
 

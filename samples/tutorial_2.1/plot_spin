@@ -1,0 +1,8 @@
+set xlabel "optimization step"
+set ylabel "total energy"
+p \
+"spin/output_s0/zvo_out_001.dat" u 1 t "mVMC, S=0", \
+"spin/output_s1/zvo_out_001.dat" u 1 t "mVMC, S=1", \
+-3.651093 w l lw 2 t "exact diagonalization, S=0", \
+-3.128419 w l lw 2 t "exact diagonalization, S=1"
+pause -1

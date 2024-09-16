@@ -11,8 +11,8 @@ with open('zqp_opt.dat') as f:
     #print(data)
     #print(len(data))
 cnt_max = len(data)
-var_org = np.zeros([cnt_max], dtype=np.float)
-var_new = np.zeros([cnt_max], dtype=np.float)
+var_org = np.zeros([cnt_max], dtype=np.float64)
+var_new = np.zeros([cnt_max], dtype=np.float64)
 
 random.seed(0)
 for i in range(0,cnt_max):

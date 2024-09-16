@@ -1,24 +1,47 @@
 name: CI
 
 on:
-  - push
-  - pull_request
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 1,15 * *' # JST 9:00 on 1st and 15th every month
 
 jobs:
   ctest:
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: ["ubuntu-22.04", "ubuntu-20.04", "macos-latest"]
+        ompsize: [1, 4]
+        exclude:
+          - os: "macos-latest"
+            ompsize: 4 # OMP on macOS is too slow
+      fail-fast: false
+    env:
+      OMP_NUM_THREADS: ${{ matrix.ompsize }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: apt
+        if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt update
           sudo apt install liblapack-dev openmpi-bin libopenmpi-dev libscalapack-openmpi-dev
 
+      - name: brew
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          brew install openmpi scalapack libomp blis
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
       - name: pip
         run: |
-          python -m pip install numpy
           python3 -m pip install numpy
 
       - name: make workspace
@@ -28,7 +51,12 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: |
-          cmake -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+          if [ ${{ runner.os }} = "macOS" ] ; then
+            # CONFIG=apple requires gfortran but macOS runner has not, but gfortran-11, 12, ...
+            cmake -DCONFIG=apple -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_Fortran_COMPILER=gfortran-14 $GITHUB_WORKSPACE
+          else
+            cmake -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+          fi
 
       - name: build
         working-directory: ${{runner.workspace}}/build

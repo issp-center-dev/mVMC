@@ -74,11 +74,12 @@
     .. math::
 
        \begin{aligned}
-       |\psi \rangle &= {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
+       |\psi \rangle &= {\cal N}_{General RBM} {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
        {\cal P}_G&=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right],\\
        {\cal P}_J&=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1)(n_j-1)\right],\\
        {\cal P}_{d-h}^{(2)}&= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right],\\
        {\cal P}_{d-h}^{(4)}&= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right],\\
+       {\cal N}_{\rm General RBM}&= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_h} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right],\\
        {\cal L}_S&=\frac{2S+1}{8 \pi^2}\int d\Omega P_s(\cos \beta) \hat{R}(\Omega),\\
        {\cal L}_K&=\frac{1}{N_s}\sum_{{\boldsymbol R}}e^{i {\boldsymbol K} \cdot{\boldsymbol R} } \hat{T}_{\boldsymbol R},\\
        {\cal L}_P&=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha},
@@ -118,6 +119,15 @@
       
     **DH4**:
     :math:`{\cal P}_{d-h}^{(4)}` で表される4サイトのダブロン・ホロン相関因子を指定します。
+
+    **GeneralRBM_PhysLayer**:
+    :math:`{\cal N}_{\rm General RBM}` で表されるRBM相関因子のうち、最適化の対象とする変分パラメータ :math:`a_{i\sigma}` を指定します。
+
+    **GeneralRBM_HiddenLayer**:
+    :math:`{\cal N}_{\rm General RBM}` で表されるRBM相関因子のうち、最適化の対象とする変分パラメータ :math:`h_{k}` を指定します。
+
+    **GeneralRBM_PhysHidden**:
+    :math:`{\cal N}_{\rm General RBM}` で表されるRBM相関因子のうち、最適化の対象とする変分パラメータ :math:`W_{i\sigma k}` を指定します。
        
     **Orbital/OrbitalAntiParallel (orbitalidx.def)**:
     スピンが反平行のペア軌道 :math:`|\phi_{\rm pair} \rangle` を設定します。
@@ -149,6 +159,15 @@
     **InDH4**:
     :math:`{\cal P}_{d-h}^{(4)}` 内の4サイトのダブロン・ホロン相関因子
     :math:`\alpha_{4nt}^{d(h)}` の初期値を設定します。
+
+    **InGeneralRBM_PhysLayer**:
+    :math:`{\cal N}_{\rm General RBM}` で表されるRBM相関因子のうち、最適化の対象とする変分パラメータ :math:`a_{i\sigma}` の初期値を設定します。
+
+    **InGeneralRBM_HiddenLayer**:
+    :math:`{\cal N}_{\rm General RBM}` で表されるRBM相関因子のうち、最適化の対象とする変分パラメータ :math:`h_{k}` の初期値を設定します。
+
+    **InGeneralRBM_PhysHidden**:
+    :math:`{\cal N}_{\rm General RBM}` で表されるRBM相関因子のうち、最適化の対象とする変分パラメータ :math:`W_{i\sigma k}` の初期値を設定します。
        
     **InOrbital/InOrbitalAntiParallel**:
     ペア軌道 :math:`|\phi_{\rm pair} \rangle` の :math:`f_{i\uparrow j\downarrow}`
@@ -239,7 +258,10 @@
  Gutzwiller              最適化するGutzwiller因子を設定します。                                    
  Jastrow                 最適化する電荷Jastrow因子を指定します。                                   
  DH2                     最適化する2サイトダブロン・ホロン相関因子を指定します。                   
- DH4                     最適化する4サイトダブロン・ホロン相関因子を指定します。                   
+ DH4                     最適化する4サイトダブロン・ホロン相関因子を指定します。 
+ GeneralRBM_PhysLayer    一般的なRBM相関因子のうち、最適化する物理層での変分パラメータを指定します。
+ GeneralRBM_HiddenLayer  一般的なRBM相関因子のうち、最適化する隠れ層での変分パラメータを指定します。
+ GeneralRBM_PhysHidden   一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータを指定します。                  
  Orbital :math:`^*`      反平行のスピンを持つペア軌道因子を指定します。                            
  OrbitalAntiParallel     反平行のスピンを持つペア軌道因子を指定します。                            
  OrbitalParallel         平行のスピンを持つペア軌道因子を指定します。                              
@@ -248,7 +270,10 @@
  InGutzwiller            Gutzwiller因子の初期値を設定します。                                      
  InJastrow               電荷Jastrow因子の初期値を設定します。                                     
  InDH2                   2サイトダブロン・ホロン相関因子の初期値を設定します。                     
- InDH4                   4サイトダブロン・ホロン相関因子の初期値を設定します。                     
+ InDH4                   4サイトダブロン・ホロン相関因子の初期値を設定します。
+ InGeneralRBM_PhysLayer    一般的なRBM相関因子のうち、最適化する物理層での変分パラメータの初期値を設定します。
+ InGeneralRBM_HiddenLayer  一般的なRBM相関因子のうち、最適化する隠れ層での変分パラメータの初期値を設定します。
+ InGeneralRBM_PhysHidden   一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータの初期値を設定します。               
  InOrbital               ペア軌道因子 :math:`f_{i\uparrow j\downarrow}` の初期値を設定します。   
  InOrbitalAntiParallel   ペア軌道因子 :math:`f_{i\uparrow j\downarrow}` の初期値を設定します。   
  InOrbitalParallel       ペア軌道因子 :math:`f_{i\sigma j\sigma}` の初期値を設定します。         
@@ -294,7 +319,8 @@ ModParaファイル (modpara.def)
     NExUpdatePath  0
     RndSeed        11272
     NSplitSize     1
-    NStore         1  
+    NStore         1
+    NneuronGeneral 32  
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -551,6 +577,12 @@ ModParaファイル (modpara.def)
    を解くときに、 :math:`S`
    を陽に構築せずに解くことでメモリを削減する [4]_ オプション[NeuscammanUmrigarChan_ ](1で機能On,
    ``NStore`` は1に固定されます)。
+
+-  ``NneuronGeneral``
+
+   **形式 :** int型 (デフォルト値=0)
+
+   **説明 :** RBMの隠れ層にあるニューロン数 :math:`N_{\rm General RBM}`を指定する整数。
 
 LocSpin指定ファイル(locspn.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1177,7 +1209,7 @@ PairHopカップリングをハミルトニアンに付け加えます。付け�
 Exchange指定ファイル (exchange.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Exchangeカップリングをハミルトニアンに付け加えます。 電子系の場合には
+Exchangeカップリングをハミルトニアンに付け加えます。 電子系,スピン系の両方の場合に
 
 .. math::
 
@@ -1185,13 +1217,7 @@ Exchangeカップリングをハミルトニアンに付け加えます。 電�
    (c_ {i \uparrow}^{\dagger}c_{j\uparrow}c_{j \downarrow}^{\dagger}c_{i  \downarrow}
    +c_ {i \downarrow}^{\dagger}c_{j\downarrow}c_{j \uparrow}^{\dagger}c_{i  \uparrow})
 
-が付け加えられ、スピン系の場合には
-
-.. math::
-
-   {\cal H}_E =\sum_{i,j}J_{ij}^{\rm Ex} (S_i^+S_j^-+S_i^-S_j^+)
-
-が付け加えられます。 以下にファイル例を記載します。
+が付け加えられます(スピン系の場合にHPhiとは定義が異なりますので注意してください)。
 
 ::
 
@@ -1757,6 +1783,383 @@ DH4指定ファイル
 
 -  [ int02 ]-[ int10 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
 
+GeneralRBM_PhysLayer指定ファイル
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+RBM因子
+
+.. math:: 
+   
+   {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
+
+のうち、 :math:`\exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] ` の設定を行います。指定するパラメータはサイト番号 :math:`i`、スピン番号 :math:`\sigma`、および :math:`a_{i \sigma}` の変分パラメータの番号です。以下にファイル例を記載します。
+
+::
+
+    --------------------
+    NRBM_PhysLayerIdx	1
+    ComplexType	1
+    i s RBM_PhysLayer_Idx
+    --------------------
+     0	0	 0
+     0	1	 0
+     1	0	 0
+     1	1	 0
+     (continue...)
+     0    1 
+
+ファイル形式
+^^^^^^^^^^^^
+
+以下のように行数に応じ異なる形式をとります( :math:`N_s` はサイト数、 :math:`N_v` は変分パラメータの種類の数)。
+
+-  1行: ヘッダ(何が書かれても問題ありません)。
+
+-  2行: [string01] [int01]
+
+-  3行: [string02] [int02]
+
+-  4-5行: ヘッダ(何が書かれても問題ありません)。
+
+-  6 - (5+ :math:`2N_s`) 行: [int03] [int04] [int05] 
+
+-  (6+ :math:`2N_s` ) -
+   (5+ :math:`2N_s` + :math:`N_v`)行：[int06] [int07]
+
+パラメータ
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :**
+   :math:`a_{i \sigma }` の変分パラメータの種類の総数のキーワード名を指定します(任意)。
+
+-  [ int01 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** :math:`a_{i \sigma }` の変分パラメータの種類の総数を指定します。
+
+-  [ string02 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :**
+   :math:`a_{i \sigma }` の変分パラメータの型を指定するためのキーワード名を指定します(任意)。
+
+-  [ int02 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`a_{i \sigma }` の変分パラメータの型を指定します。0が実数、1が複素数に対応します。
+
+-  [ int03 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   サイト番号を指定する整数。0以上 ``Nsite`` 未満で指定します。
+
+-  [ int04 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   スピン番号を指定する整数。0もしくは1で指定します。
+
+-  [ int05 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`a_{i \sigma }` の変分パラメータの種類を表します。0以上[int01]未満で指定します。
+
+-  [ int06 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`a_{i \sigma }` の変分パラメータの種類を表します(最適化有無の設定用)。0以上[int01]未満で指定します。
+
+-  [ int07 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   [int06]で指定した :math:`a_{i \sigma }` の変分パラメータの最適化有無を設定します。最適化する場合は1、最適化しない場合は0とします。
+
+使用ルール
+^^^^^^^^^^
+
+本ファイルを使用するにあたってのルールは以下の通りです。
+
+-  本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。
+  
+-  本機能は ``ComplexType=1`` かつ ペア軌道のうち ``Orbital`` のみを指定したVMC計算のみ使用可能です。Power Lanczosの計算には対応していません。
+
+-  行数固定で読み込みを行う為、ヘッダの省略はできません。
+
+-  [ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
+
+-  [ int02 ]-[ int07 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
+
+
+GeneralRBM_HiddenLayer指定ファイル
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+RBM因子
+
+.. math:: 
+   
+   {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
+
+
+のうち、 :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] ` の隠れ層のみが関わる箇所の設定を行います。指定するパラメータは隠れニューロンの番号 :math:`k` と :math:`h_{k}` の変分パラメータの番号です。以下にファイル例を記載します。
+
+::
+
+    --------------------
+    NRBM_HiddenLayerIdx	2
+    ComplexType	1
+    k RBM_HiddenLayer_Idx
+    --------------------
+     0	0
+     1	0
+     2	0
+     3	0
+     (continue...)
+     0    1 
+     1    1 
+
+ファイル形式
+^^^^^^^^^^^^
+
+以下のように行数に応じ異なる形式をとります( :math:`N_{\rm neuronGeneral}` は隠れニューロンの数、 :math:`N_v` は変分パラメータの種類の数)。
+
+-  1行: ヘッダ(何が書かれても問題ありません)。
+
+-  2行: [string01] [int01]
+
+-  3行: [string02] [int02]
+
+-  4-5行: ヘッダ(何が書かれても問題ありません)。
+
+-  6 - (5+ :math:`N_{\rm neuronGeneral}`) 行: [int03] [int04] 
+
+-  (6+ :math:`N_{\rm neuronGeneral}` ) -
+   (5+ :math:`N_{\rm neuronGeneral}` + :math:`N_v`)行：[int05] [int06]
+
+パラメータ
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :**
+   :math:`h_{k}` の変分パラメータの種類の総数のキーワード名を指定します(任意)。
+
+-  [ int01 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** :math:`h_{k}` の変分パラメータの種類の総数を指定します。
+
+-  [ string02 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :**
+   :math:`h_{k}` の変分パラメータの型を指定するためのキーワード名を指定します(任意)。
+
+-  [ int02 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`h_{k}` の変分パラメータの型を指定します。0が実数、1が複素数に対応します。
+
+-  [ int03 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   サイト番号を指定する整数。0以上 ``NneuronGeneral`` 未満で指定します。
+
+-  [ int04 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`h_{k}` の変分パラメータの種類を表します。0以上[int01]未満で指定します。
+
+-  [ int05 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`h_{k}` の変分パラメータの種類を表します(最適化有無の設定用)。0以上[int01]未満で指定します。
+
+-  [ int06 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   [int06]で指定した :math:`h_{k}` の変分パラメータの最適化有無を設定します。最適化する場合は1、最適化しない場合は0とします。
+
+使用ルール
+^^^^^^^^^^
+
+本ファイルを使用するにあたってのルールは以下の通りです。
+
+-  本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。
+  
+-  本機能は ``ComplexType=1`` かつ ペア軌道のうち ``Orbital`` のみを指定したVMC計算のみ使用可能です。Power Lanczosの計算には対応していません。
+
+-  行数固定で読み込みを行う為、ヘッダの省略はできません。
+
+-  [ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
+
+-  [ int02 ]-[ int06 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
+
+GeneralRBM_PhysHidden指定ファイル
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+RBM因子
+
+.. math:: 
+   
+   {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
+
+
+のうち、 :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] ` の隠れ層と物理層どちらも関わる箇所の設定を行います。指定するパラメータはサイト番号、スピン番号、および隠れニューロンの番号 :math:`i \sigma k` と :math:`W_{i \sigma k}` の変分パラメータの番号です。以下にファイル例を記載します。
+
+::
+
+    --------------------
+    NRBM_HiddenLayerIdx	32
+    ComplexType	1
+    i s k RBM_PhysHidden_Idx
+    --------------------
+     0	0   0   0
+     0	1   0   1
+     1	0   0   2
+     1	1   0   3
+     2	0   0   4
+     2	1   0   5
+     (continue...)
+     0    1 
+     1    1
+     (continue...) 
+
+ファイル形式
+^^^^^^^^^^^^
+
+以下のように行数に応じ異なる形式をとります( :math:`N_s` はサイト数、:math:`N_{\rm neuronGeneral}` は隠れニューロンの数、 :math:`N_v` は変分パラメータの種類の数)。
+
+-  1行: ヘッダ(何が書かれても問題ありません)。
+
+-  2行: [string01] [int01]
+
+-  3行: [string02] [int02]
+
+-  4-5行: ヘッダ(何が書かれても問題ありません)。
+
+-  6 - (5+ :math:`2 N_s N_{\rm neuronGeneral}`) 行: [int03] [int04] [int05] [int06]
+
+-  (6+ :math:`2 N_s N_{\rm neuronGeneral}` ) -
+   (5+ :math:`2 N_s N_{\rm neuronGeneral}` + :math:`N_v`)行：[int07] [int08]
+
+パラメータ
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :**
+   :math:`W_{i \sigma k}` の変分パラメータの種類の総数のキーワード名を指定します(任意)。
+
+-  [ int01 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** :math:`W_{i \sigma k}` の変分パラメータの種類の総数を指定します。
+
+-  [ string02 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :**
+   :math:`W_{i \sigma k}` の変分パラメータの型を指定するためのキーワード名を指定します(任意)。
+
+-  [ int02 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`W_{i \sigma k}` の変分パラメータの型を指定します。0が実数、1が複素数に対応します。
+
+-  [ int03 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   サイト番号を指定する整数。0以上 ``Nsite`` 未満で指定します。
+
+-  [ int04 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   スピン番号を指定する整数。0もしくは1で指定します。
+
+-  [ int05 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   サイト番号を指定する整数。0以上 ``NneuronGeneral`` 未満で指定します。
+
+-  [ int06 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`W_{i \sigma k}` の変分パラメータの種類を表します。0以上[int01]未満で指定します。
+
+-  [ int07 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`W_{i \sigma k}` の変分パラメータの種類を表します(最適化有無の設定用)。0以上[int01]未満で指定します。
+
+-  [ int08 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   [int06]で指定した :math:`W_{i \sigma k}` の変分パラメータの最適化有無を設定します。最適化する場合は1、最適化しない場合は0とします。
+
+使用ルール
+^^^^^^^^^^
+
+本ファイルを使用するにあたってのルールは以下の通りです。
+
+-  本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。
+  
+-  本機能は ``ComplexType=1`` かつ ペア軌道のうち ``Orbital`` のみを指定したVMC計算のみ使用可能です。Power Lanczosの計算には対応していません。
+
+-  行数固定で読み込みを行う為、ヘッダの省略はできません。
+
+-  [ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
+
+-  [ int02 ]-[ int08 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
+
 Orbital/OrbitalAntiParallel指定ファイル(orbitalidx.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1864,7 +2267,7 @@ Orbital/OrbitalAntiParallel指定ファイル(orbitalidx.def)
    **形式 :** int型 (空白不可)
 
    **説明 :**
-   [int06]で指定した変分パラメータの最適化有無を設定します。最適化する場合は1、最適化しない場合は0とします。
+   [int07]で指定した変分パラメータの最適化有無を設定します。最適化する場合は1、最適化しない場合は0とします。
 
 使用ルール
 ^^^^^^^^^^
@@ -2234,7 +2637,7 @@ TransSym指定ファイル(qptransidx.def)
 
 各変分パラメータの初期値を設定することが可能です。
 変分パラメータの種類は :ref:`InputFileList` において
-``InGutzwiller``, ``InJastrow``, ``InDH2``, ``InDH4``, ``InOrbital``,
+``InGutzwiller``, ``InJastrow``, ``InDH2``, ``InDH4``,  ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer``, ``InGeneralRBM_PhysHidden``, ``InOrbital``,
 ``InOrbitalAntiParallel``, ``InOrbitalParallel``, ``InOrbitalGeneral``
 をキーワードとして指定することで区別します。なお、ファイルフォーマットは全て共通です。
 以下、 ``InJastrow`` ファイルの例を記載します。
@@ -2300,6 +2703,8 @@ TransSym指定ファイル(qptransidx.def)
 ^^^^^^^^^^
 
 本ファイルを使用するにあたってのルールは以下の通りです。
+
+- RBM相関因子のインプット機能は、現バージョンではベータ版です。今後のバージョンアップにより、ファイル形式や実装が変更される可能性があります。本機能を使用する際は、十分な検証を行ってください。
 
 -  行数固定で読み込みを行う為、ヘッダの省略はできません。
 

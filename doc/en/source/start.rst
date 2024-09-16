@@ -268,7 +268,7 @@ We can calculate by using these modes as follows:
 
 #. Run
 
-   Run an executable ``vmc.out`` in terminal by specifying the name of
+   Run a executable ``vmc.out`` in terminal by specifying the name of
    input file written in previous step (option ``-s`` is required).
 
    .. code-block:: bash
@@ -296,7 +296,7 @@ We can calculate by using these modes as follows:
 
    In the above case, the calculation starts as soon as input files for
    Expert mode are generated. If we only generate files without starting
-   the calculation, we can use an executable ``vmcdry.out`` as follows
+   the calculation, we can use a executable ``vmcdry.out`` as follows
    (MPI is not used in this step):
 
    .. code-block:: bash

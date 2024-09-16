@@ -1,0 +1,7 @@
+set log y
+set xlabel "distance"
+set ylabel "1s-SC cor"
+p \
+"Result_1swave.dat" u 1:2:3 w ye pt 6 ps 2 t "mVMC", \
+"hphi_Result_1swave" u 1:2:3 w lp t "exact diagonalizaqtion"
+pause -1

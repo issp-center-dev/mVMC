@@ -32,7 +32,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "./include/global.h"
 #include "safempi_fcmp.c"
 
-
 #define _NOTBACKFLOW
 
 int ReadDefFileError(const char *defname);
@@ -100,6 +99,17 @@ int GetInfoOrbitalGeneral(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, 
 
 int
 GetInfoOneBodyG(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int _NLanczosMode, int Nsite, int NArray, char *defname);
+
+//RBM
+int GetInfoRBM_Layer(FILE *fp, int *ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nlayer, int NArray,
+                      char *defname);
+int GetInfoGeneralRBM_Layer(FILE *fp, int *ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nlayer, int NArray,
+                      char *defname);
+int GetInfoRBM_PhysHidden(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nlayer, int Nlayer2, int NArray,
+                      char *defname);
+int GetInfoGeneralRBM_PhysHidden(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nlayer, int Nlayer2, int NArray,
+                      char *defname);
+//RBM
 
 char *ReadBuffInt(FILE *fp, int *iNbuf) {
   char *cerr;
@@ -307,6 +317,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   int iret = 0;
   int iFlgOrbitalAntiParallel = 0;
   int iFlgOrbitalParallel = 0;
+  int itmp = 0;
 
   int iOrbitalComplex = 0;
   iFlgOrbitalGeneral = 0;
@@ -344,6 +355,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
+ /*
+    Block_size is using for Tuning of RBMRatio function.
+    It must be multiple of 8.
+ */
+    if((bufInt[IdxNBlockSize_RBMRatio]%8)>0) {
+      itmp=bufInt[IdxNBlockSize_RBMRatio]/8;
+      if(itmp==0) itmp=1;
+      bufInt[IdxNBlockSize_RBMRatio]=itmp*8;
+      printf("\n --- Notice --- \n");
+      printf("NBlockSize_RBMRatio Adjust to %d\n\n",bufInt[IdxNBlockSize_RBMRatio]);
+    }
 
     for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
       strcpy(defname, cFileNameListFile[iKWidx]);
@@ -396,6 +418,47 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           case KWJastrow:
             cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNJast], &iComplexFlgJastrow);
             break;
+
+//RBM
+          case KWGeneralRBM_HiddenLayer:
+            cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNGeneralRBM_HiddenLayer], &iComplexFlgGeneralRBM_HiddenLayer);
+            FlagRBM=1;
+            break;
+          case KWChargeRBM_HiddenLayer:
+            cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNChargeRBM_HiddenLayer], &iComplexFlgChargeRBM_HiddenLayer);
+            FlagRBM=1;
+            break;
+          case KWSpinRBM_HiddenLayer:
+            cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNSpinRBM_HiddenLayer], &iComplexFlgSpinRBM_HiddenLayer);
+            FlagRBM=1;
+            break;
+
+          case KWGeneralRBM_PhysLayer:
+            cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNGeneralRBM_PhysLayer], &iComplexFlgGeneralRBM_PhysLayer);
+            FlagRBM=1;
+            break;
+          case KWChargeRBM_PhysLayer:
+            cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNChargeRBM_PhysLayer], &iComplexFlgChargeRBM_PhysLayer);
+            FlagRBM=1;
+            break;
+          case KWSpinRBM_PhysLayer:
+            cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNSpinRBM_PhysLayer], &iComplexFlgSpinRBM_PhysLayer);
+            FlagRBM=1;
+            break;
+
+          case KWGeneralRBM_PhysHidden:
+            cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNGeneralRBM_PhysHidden], &iComplexFlgGeneralRBM_PhysHidden);
+            FlagRBM=1;
+            break;
+          case KWChargeRBM_PhysHidden:
+            cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNChargeRBM_PhysHidden], &iComplexFlgChargeRBM_PhysHidden);
+            FlagRBM=1;
+            break;
+          case KWSpinRBM_PhysHidden:
+            cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNSpinRBM_PhysHidden], &iComplexFlgSpinRBM_PhysHidden);
+            FlagRBM=1;
+            break;
+//RBM
 
           case KWDH2:
             cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNDH2], &iComplexFlgDH2);
@@ -591,6 +654,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   
 #ifdef _mpi_use
   MPI_Bcast(bufInt, nBufInt, MPI_INT, 0, comm);
+  MPI_Bcast(&FlagRBM, 1, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
   MPI_Bcast(&NSRCG, 1, MPI_INT, 0, comm); // for NCG
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
@@ -646,6 +710,28 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   DSROptCGTol = bufDouble[IdxSROptCGTol];
   TwoSz = bufInt[Idx2Sz];
 
+  Nneuron = bufInt[IdxNneuron];
+  NneuronGeneral = bufInt[IdxNneuronGeneral];
+  NneuronCharge = bufInt[IdxNneuronCharge];
+  NneuronSpin = bufInt[IdxNneuronSpin];
+  Nneuron += NneuronCharge+NneuronSpin+NneuronGeneral;
+
+  NGeneralRBM_HiddenLayerIdx = bufInt[IdxNGeneralRBM_HiddenLayer];
+  NGeneralRBM_PhysLayerIdx   = bufInt[IdxNGeneralRBM_PhysLayer];
+  NGeneralRBM_PhysHiddenIdx  = bufInt[IdxNGeneralRBM_PhysHidden];
+  NChargeRBM_HiddenLayerIdx = bufInt[IdxNChargeRBM_HiddenLayer];
+  NChargeRBM_PhysLayerIdx   = bufInt[IdxNChargeRBM_PhysLayer];
+  NChargeRBM_PhysHiddenIdx  = bufInt[IdxNChargeRBM_PhysHidden];
+  NSpinRBM_HiddenLayerIdx = bufInt[IdxNSpinRBM_HiddenLayer];
+  NSpinRBM_PhysLayerIdx   = bufInt[IdxNSpinRBM_PhysLayer];
+  NSpinRBM_PhysHiddenIdx  = bufInt[IdxNSpinRBM_PhysHidden];
+  NBlockSize_RBMRatio  = bufInt[IdxNBlockSize_RBMRatio];
+  
+  NRBM_PhysHiddenIdx  = NChargeRBM_PhysHiddenIdx + NSpinRBM_PhysHiddenIdx + NGeneralRBM_PhysHiddenIdx;
+  NRBM_PhysLayerIdx   = NChargeRBM_PhysLayerIdx + NSpinRBM_PhysLayerIdx + NGeneralRBM_PhysLayerIdx;
+  NRBM_HiddenLayerIdx = NChargeRBM_HiddenLayerIdx + NSpinRBM_HiddenLayerIdx + NGeneralRBM_HiddenLayerIdx;
+  NRBM = NRBM_HiddenLayerIdx + NRBM_PhysLayerIdx + NRBM_PhysHiddenIdx;
+
   if (NMPTrans < 0) {
     APFlag = 1; /* anti-periodic boundary */
     NMPTrans *= -1;
@@ -681,7 +767,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   }
   /* [e] For BackFlow */
 
-  NPara = NProj + NSlater + NOptTrans + NProjBF;
+  NPara = NProj + NSlater + NOptTrans + NProjBF + NRBM * FlagRBM;
   NQPFix = NSPGaussLeg * NMPTrans;
   NQPFull = NQPFix * NQPOptTrans;
   SROptSize = NPara + 1;
@@ -708,7 +794,22 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                  + 8 * NInterAll /* InterAll */
                  + Nsite * NQPOptTrans /* QPOptTrans */
                  + Nsite * NQPOptTrans /* QPOptTransSgn */
+                 //RBM
+                 + FlagRBM * (
+                   NneuronCharge /* ChargeRMB_HiddenLayerIdx */ 
+                 + Nsite /* ChargeRMB_PhysLayerIdx */ 
+                 + Nsite*NneuronCharge /* ChargeRMB_PhysHiddenIdx */ 
+                 + NneuronSpin /* SpinRMB_HiddenLayerIdx */ 
+                 + Nsite /* SpinRMB_PhysLayerIdx */ 
+                 + Nsite*NneuronSpin /* SpinRMB_PhysHiddenIdx */ 
+                 + NneuronGeneral /* RMB_HiddenLayerIdx */ 
+                 + Nsite2 /* RMB_PhysLayerIdx */ 
+                 + Nsite2*NneuronGeneral /* RMB_PhysHiddenIdx */
+                 )
+                 //RBM
                  + 2 * NPara; /* OptFlag */ // TBC
+
+
 
   //Orbitalidx
   if (iFlgOrbitalGeneral == 0) {
@@ -826,10 +927,85 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
             info = 1;
           break;
 
+//RBM
+        case KWChargeRBM_PhysLayer:
+          /*doublonholon4siteidx.def--------------------------*/
+          fidx = NProj;
+          if (GetInfoRBM_Layer(fp, ChargeRBM_PhysLayerIdx, OptFlag, iComplexFlgChargeRBM_PhysLayer, 
+                         &count_idx, fidx, Nsite, NChargeRBM_PhysLayerIdx, defname) != 0)
+            info = 1;
+          break;
+
+        case KWSpinRBM_PhysLayer:
+          /*doublonholon4siteidx.def--------------------------*/
+          fidx = NProj+NChargeRBM_PhysLayerIdx;
+          if (GetInfoRBM_Layer(fp, SpinRBM_PhysLayerIdx, OptFlag, iComplexFlgSpinRBM_PhysLayer, 
+                         &count_idx, fidx, Nsite, NSpinRBM_PhysLayerIdx, defname) != 0)
+            info = 1;
+          break;
+
+        case KWGeneralRBM_PhysLayer:
+          /*doublonholon4siteidx.def--------------------------*/
+          fidx = NProj+NChargeRBM_PhysLayerIdx + NSpinRBM_PhysLayerIdx;
+          if (GetInfoGeneralRBM_Layer(fp, GeneralRBM_PhysLayerIdx, OptFlag, iComplexFlgGeneralRBM_PhysLayer, 
+                         &count_idx, fidx, Nsite, NGeneralRBM_PhysLayerIdx, defname) != 0)
+            info = 1;
+          break;
+
+
+        case KWChargeRBM_HiddenLayer:
+          /*doublonholon4siteidx.def--------------------------*/
+          fidx = NProj+NRBM_PhysLayerIdx;
+          if (GetInfoRBM_Layer(fp, ChargeRBM_HiddenLayerIdx, OptFlag, iComplexFlgChargeRBM_HiddenLayer, 
+                         &count_idx, fidx, NneuronCharge, NChargeRBM_HiddenLayerIdx, defname) != 0)
+            info = 1;
+          break;
+
+        case KWSpinRBM_HiddenLayer:
+          /*doublonholon4siteidx.def--------------------------*/
+          fidx = NProj+NRBM_PhysLayerIdx+NChargeRBM_HiddenLayerIdx;
+          if (GetInfoRBM_Layer(fp, SpinRBM_HiddenLayerIdx, OptFlag, iComplexFlgSpinRBM_HiddenLayer, 
+                         &count_idx, fidx, NneuronSpin, NSpinRBM_HiddenLayerIdx, defname) != 0)
+            info = 1;
+          break;
+        
+        case KWGeneralRBM_HiddenLayer:
+          /*doublonholon4siteidx.def--------------------------*/
+          fidx = NProj+NRBM_PhysLayerIdx+NChargeRBM_HiddenLayerIdx+NSpinRBM_HiddenLayerIdx;
+          if (GetInfoRBM_Layer(fp, GeneralRBM_HiddenLayerIdx, OptFlag, iComplexFlgGeneralRBM_HiddenLayer, 
+                         &count_idx, fidx, NneuronGeneral, NGeneralRBM_HiddenLayerIdx, defname) != 0)
+            info = 1;
+          break;
+
+
+        case KWChargeRBM_PhysHidden:
+          /*doublonholon4siteidx.def--------------------------*/
+          fidx = NProj+NRBM_PhysLayerIdx+NRBM_HiddenLayerIdx;
+          if (GetInfoRBM_PhysHidden(fp, ChargeRBM_PhysHiddenIdx, OptFlag, iComplexFlgChargeRBM_PhysHidden, 
+                         &count_idx, fidx, Nsite, NneuronCharge, NChargeRBM_PhysHiddenIdx, defname) != 0)
+            info = 1;
+          break;
+
+        case KWSpinRBM_PhysHidden:
+          /*doublonholon4siteidx.def--------------------------*/
+          fidx = NProj+NRBM_PhysLayerIdx+NRBM_HiddenLayerIdx+NChargeRBM_PhysHiddenIdx;
+          if (GetInfoRBM_PhysHidden(fp, SpinRBM_PhysHiddenIdx, OptFlag, iComplexFlgSpinRBM_PhysHidden, 
+                         &count_idx, fidx, Nsite, NneuronSpin, NSpinRBM_PhysHiddenIdx, defname) != 0)
+            info = 1;
+          break;
+
+        case KWGeneralRBM_PhysHidden:
+          /*doublonholon4siteidx.def--------------------------*/
+          fidx = NProj+NRBM_PhysLayerIdx+NRBM_HiddenLayerIdx+NChargeRBM_PhysHiddenIdx+NSpinRBM_PhysHiddenIdx;
+          if (GetInfoGeneralRBM_PhysHidden(fp, GeneralRBM_PhysHiddenIdx, OptFlag, iComplexFlgGeneralRBM_PhysHidden, 
+                         &count_idx, fidx, Nsite, NneuronGeneral, NGeneralRBM_PhysHiddenIdx, defname) != 0)
+            info = 1;
+          break;
+//RBM
         case KWOrbital:
         case KWOrbitalAntiParallel:
           /*orbitalidxs.def------------------------------------*/
-          fidx = NProj;
+          fidx = NProj + FlagRBM * NRBM;
           if (GetInfoOrbitalAntiParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
                                          fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalAntiParallel,
                                          defname) != 0)
@@ -837,7 +1013,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           break;
 
         case KWOrbitalGeneral:
-          fidx = NProj;
+          fidx = NProj + FlagRBM * NRBM;
           if (GetInfoOrbitalGeneral(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
                                     fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, NOrbitalIdx,
                                     defname) != 0)
@@ -846,7 +1022,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWOrbitalParallel:
           /*orbitalidxt.def------------------------------------*/
-          fidx = NProj + iNOrbitalAntiParallel;
+          fidx = NProj+ FlagRBM * NRBM + iNOrbitalAntiParallel;
           if (GetInfoOrbitalParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
                                      fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalParallel,
                                      iNOrbitalAntiParallel, defname) != 0)
@@ -1094,6 +1270,138 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
             Proj[idx+count] = tmp_real + I * tmp_comp;
           }
           break;
+
+//RBM
+        case KWInChargeRBM_PhysLayer:
+          fprintf(stdout, "Read InChargeRBM_PhysLayer File. \n");
+          if (idx != NChargeRBM_PhysLayerIdx) {
+            info = 1;
+            continue;
+          }
+          //count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          count = 0;
+          for (i = count; i < count + NChargeRBM_PhysLayerIdx; i++) {
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            RBM[idx + count] = tmp_real + I * tmp_comp;
+          }
+          break;
+
+
+        case KWInSpinRBM_PhysLayer:
+          fprintf(stdout, "Read InSpinRBM_PhysLayer File. \n");
+          if (idx != NSpinRBM_PhysLayerIdx) {
+            info = 1;
+            continue;
+          }
+          //count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          count = NChargeRBM_PhysLayerIdx;
+          for (i = count; i < count + NSpinRBM_PhysLayerIdx; i++) {
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            RBM[idx + count] = tmp_real + I * tmp_comp;
+          }
+          break;
+
+        case KWInGeneralRBM_PhysLayer:
+          fprintf(stdout, "Read InGeneralRBM_PhysLayer File. \n");
+          if (idx != NGeneralRBM_PhysLayerIdx) {
+            info = 1;
+            continue;
+          }
+          //count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          count = NChargeRBM_PhysLayerIdx + NSpinRBM_PhysLayerIdx;
+          for (i = count; i < count + NGeneralRBM_PhysLayerIdx; i++) {
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            RBM[idx + count] = tmp_real + I * tmp_comp;
+          }
+          break;
+
+
+
+        case KWInChargeRBM_HiddenLayer:
+          fprintf(stdout, "Read InChargeRBM_HiddenLayer File. \n");
+          if (idx != NChargeRBM_HiddenLayerIdx) {
+            info = 1;
+            continue;
+          }
+          //count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          count = NRBM_PhysLayerIdx;
+          for (i = count; i < count + NChargeRBM_HiddenLayerIdx; i++) {
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            RBM[idx + count] = tmp_real + I * tmp_comp;
+          }
+          break;
+
+        case KWInSpinRBM_HiddenLayer:
+          fprintf(stdout, "Read InSpinRBM_HiddenLayer File. \n");
+          if (idx != NSpinRBM_HiddenLayerIdx) {
+            info = 1;
+            continue;
+          }
+          //count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          count = NRBM_PhysLayerIdx+NChargeRBM_HiddenLayerIdx;
+          for (i = count; i < count + NSpinRBM_HiddenLayerIdx; i++) {
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            RBM[idx + count] = tmp_real + I * tmp_comp;
+          }
+          break;
+
+        case KWInGeneralRBM_HiddenLayer:
+          fprintf(stdout, "Read InGeneralRBM_HiddenLayer File. \n");
+          if (idx != NGeneralRBM_HiddenLayerIdx) {
+            info = 1;
+            continue;
+          }
+          //count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          count = NRBM_PhysLayerIdx+NChargeRBM_HiddenLayerIdx+NSpinRBM_HiddenLayerIdx;
+          for (i = count; i < count + NGeneralRBM_HiddenLayerIdx; i++) {
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            RBM[idx + count] = tmp_real + I * tmp_comp;
+          }
+          break;
+
+
+        case KWInChargeRBM_PhysHidden:
+          fprintf(stdout, "Read InChargeRBM_PhysHidden File. \n");
+          if (idx != NChargeRBM_PhysHiddenIdx) {
+            info = 1;
+            continue;
+          }
+          //count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          count = NRBM_PhysLayerIdx + NRBM_HiddenLayerIdx;
+          for (i = count; i < count + NChargeRBM_PhysHiddenIdx; i++) {
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            RBM[idx + count] = tmp_real + I * tmp_comp;
+          }
+          break;
+
+        case KWInSpinRBM_PhysHidden:
+          fprintf(stdout, "Read InSpinRBM_PhysHidden File. \n");
+          if (idx != NSpinRBM_PhysHiddenIdx) {
+            info = 1;
+            continue;
+          }
+          //count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          count = NRBM_PhysLayerIdx + NRBM_HiddenLayerIdx + NChargeRBM_PhysHiddenIdx;
+          for (i = count; i < count + NSpinRBM_PhysHiddenIdx; i++) {
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            RBM[idx + count] = tmp_real + I * tmp_comp;
+          }
+          break;
+
+        case KWInGeneralRBM_PhysHidden:
+          fprintf(stdout, "Read InGeneralRBM_PhysHidden File. \n");
+          if (idx != NGeneralRBM_PhysHiddenIdx) {
+            info = 1;
+            continue;
+          }
+          //count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          count = NRBM_PhysLayerIdx + NRBM_HiddenLayerIdx + NChargeRBM_PhysHiddenIdx + NSpinRBM_PhysHiddenIdx;
+          for (i = count; i < count + NGeneralRBM_PhysHiddenIdx; i++) {
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            RBM[idx + count] = tmp_real + I * tmp_comp;
+          }
+          break;
+//RBM
 
         case KWInOrbital:
         case KWInOrbitalAntiParallel:
@@ -1489,6 +1797,23 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[Idx2Sz] = -1;// -1: sz is not fixed :fsz
   bufInt[IdxNCond] = -1;
 
+//RBM 
+  bufInt[IdxNneuron] = 0;
+  bufInt[IdxNneuronGeneral] = 0;
+  bufInt[IdxNneuronCharge] = 0;
+  bufInt[IdxNneuronSpin] = 0;
+  bufInt[IdxNChargeRBM_HiddenLayer] = 0;
+  bufInt[IdxNChargeRBM_PhysLayer]   = 0;
+  bufInt[IdxNChargeRBM_PhysHidden]  = 0;
+  bufInt[IdxNSpinRBM_HiddenLayer] = 0;
+  bufInt[IdxNSpinRBM_PhysLayer]   = 0;
+  bufInt[IdxNSpinRBM_PhysHidden]  = 0;
+  bufInt[IdxNGeneralRBM_HiddenLayer] = 0;
+  bufInt[IdxNGeneralRBM_PhysLayer]   = 0;
+  bufInt[IdxNGeneralRBM_PhysHidden]  = 0;
+  bufInt[IdxNBlockSize_RBMRatio]  = 200;
+//RBM
+
   bufDouble[IdxSROptRedCut] = 0.001;
   bufDouble[IdxSROptStaDel] = 0.02;
   bufDouble[IdxSROptStepDt] = 0.02;
@@ -1608,6 +1933,18 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               NStoreO = (int) dtmp;
             } else if (CheckWords(ctmp, "NSRCG") == 0) {
               NSRCG = (int) dtmp;
+//RBM
+            } else if (CheckWords(ctmp, "Nneuron") == 0) {
+              bufInt[IdxNneuron] = (int) dtmp;
+            } else if (CheckWords(ctmp, "NneuronCharge") == 0) {
+              bufInt[IdxNneuronCharge] = (int) dtmp;
+            } else if (CheckWords(ctmp, "NneuronSpin") == 0) {
+              bufInt[IdxNneuronSpin] = (int) dtmp;
+            } else if (CheckWords(ctmp, "NneuronGeneral") == 0) {
+              bufInt[IdxNneuronGeneral] = (int) dtmp;
+            } else if (CheckWords(ctmp, "NBlockSize_RBMRatio") == 0) {
+              bufInt[IdxNBlockSize_RBMRatio] = (int) dtmp;
+//RBM
             } else {
               fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
               iret = ReadDefFileError(defname);
@@ -2317,6 +2654,114 @@ int GetInfoOrbitalParallel(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn,
 
   return info;
 }
+
+int GetInfoRBM_Layer(FILE *fp, int *ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nlayer, int NArray,
+                      char *defname) {
+  int idx0 = 0, idx1 = 0, info = 0;
+  int i = 0;
+  int fidx = _fidx;
+
+  if (NArray > 0) {
+    idx0 = idx1 = 0;
+    while (fscanf(fp, "%d ", &i) != EOF) {
+      fscanf(fp, "%d\n", &(ArrayIdx[i]));
+      if (CheckSite(i, Nlayer) != 0) {
+        fprintf(stderr, "Error: Layer index is incorrect. (i=%d, Nlayer=%d) \n",i,Nlayer);
+        info = 1;
+        break;
+      }
+      idx0++;
+      if (idx0 == Nlayer) break;
+    }
+    
+    idx1 = GetInfoOpt(fp, ArrayOpt, iComplxFlag, iOptCount, fidx);
+    if (idx0 != Nlayer || idx1 != NArray) {
+      info = ReadDefFileError(defname);
+    }
+  }
+  return info;
+}
+
+int GetInfoGeneralRBM_Layer(FILE *fp, int *ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nlayer, int NArray,
+                      char *defname) {
+  int idx0 = 0, idx1 = 0, info = 0;
+  int i = 0, s = 0;
+  int fidx = _fidx;
+
+  if (NArray > 0) {
+    idx0 = idx1 = 0;
+    while (fscanf(fp, "%d %d ", &i, &s) != EOF) {
+      fscanf(fp, "%d\n", &(ArrayIdx[i + s*Nsite]));
+      if (CheckSite(i, Nlayer) != 0 || CheckSite(s, 2) != 0) {
+        fprintf(stderr, "Error: Layer index is incorrect. (i=%d, Nlayer=%d) \n",i,Nlayer);
+        info = 1;
+        break;
+      }
+      idx0++;
+      if (idx0 == 2*Nlayer) break;
+    }
+    
+    idx1 = GetInfoOpt(fp, ArrayOpt, iComplxFlag, iOptCount, fidx);
+    if (idx0 != 2*Nlayer || idx1 != NArray) {
+      info = ReadDefFileError(defname);
+    }
+  }
+  return info;
+}
+
+
+int GetInfoRBM_PhysHidden(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nlayer, int Nlayer2, int NArray,
+                      char *defname) {
+  int idx0 = 0, idx1 = 0, info = 0;
+  int i = 0, j = 0;
+  int fidx = _fidx;
+  if (NArray > 0) {
+    while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
+      if (CheckSite(i, Nlayer) != 0 || CheckSite(j, Nlayer2)) {
+        fprintf(stderr, "Error: Site index is incorrect. \n");
+        info = 1;
+        break;
+      }
+
+      fscanf(fp, "%d\n", &(ArrayIdx[i][j]));
+      idx0++;
+      if (idx0 == Nlayer * Nlayer2) break;
+    }
+    idx1 = GetInfoOpt(fp, ArrayOpt, iComplxFlag, iOptCount, fidx);
+    if (idx0 != Nlayer * Nlayer2 || idx1 != NArray) {
+      info = ReadDefFileError(defname);
+    }
+  }
+  return info;
+
+}
+
+int GetInfoGeneralRBM_PhysHidden(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nlayer, int Nlayer2, int NArray,
+                      char *defname) {
+  int idx0 = 0, idx1 = 0, info = 0;
+  int i = 0, j = 0, s = 0;
+  int fidx = _fidx;
+  if (NArray > 0) {
+    while (fscanf(fp, "%d %d %d ", &i, &s, &j) != EOF) {
+      if (CheckSite(i, Nlayer) != 0 || CheckSite(s, 2) != 0 || CheckSite(j, Nlayer2) != 0) {
+        fprintf(stderr, "Error: Site index is incorrect. \n");
+        info = 1;
+        break;
+      }
+
+      fscanf(fp, "%d\n", &(ArrayIdx[i+s*Nsite][j]) );
+      idx0++;
+      if (idx0 == 2*Nlayer * Nlayer2) break;
+    }
+    idx1 = GetInfoOpt(fp, ArrayOpt, iComplxFlag, iOptCount, fidx);
+    if (idx0 != 2*Nlayer * Nlayer2 || idx1 != NArray) {
+      info = ReadDefFileError(defname);
+    }
+  }
+  return info;
+
+}
+
 /**********************************/
 /* [e] Read Parameters from file  */
 /**********************************/

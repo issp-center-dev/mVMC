@@ -97,6 +97,40 @@ void SetMemoryDef() {
     pInt += 4*Nsite;
   }
 
+//RBM
+  if (FlagRBM) {
+    ChargeRBM_PhysLayerIdx = pInt;
+    pInt += Nsite;
+    SpinRBM_PhysLayerIdx = pInt;
+    pInt += Nsite;
+    GeneralRBM_PhysLayerIdx = pInt;
+    pInt += Nsite2;
+  
+    ChargeRBM_HiddenLayerIdx = pInt;
+    pInt += NneuronCharge;
+    SpinRBM_HiddenLayerIdx = pInt;
+    pInt += NneuronSpin;
+    GeneralRBM_HiddenLayerIdx = pInt;
+    pInt += NneuronGeneral;
+  
+    ChargeRBM_PhysHiddenIdx = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      ChargeRBM_PhysHiddenIdx[i] = pInt;
+      pInt += NneuronCharge;
+    }
+    SpinRBM_PhysHiddenIdx = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      SpinRBM_PhysHiddenIdx[i] = pInt;
+      pInt += NneuronSpin;
+    }
+    GeneralRBM_PhysHiddenIdx = (int**)malloc(sizeof(int*)*Nsite2);
+    for(i=0;i<Nsite2;i++) {
+      GeneralRBM_PhysHiddenIdx[i] = pInt;
+      pInt += NneuronGeneral;
+    }
+  }
+//RBM
+
  /*[s] For BackFlow */
   if(NBackFlowIdx>0) {
     PosBF = (int**)malloc(sizeof(int*)*Nsite);
@@ -263,9 +297,10 @@ void SetMemory() {
   Para     = (double complex*)malloc(sizeof(double complex)*(NPara));
 
   Proj     = Para;
-  ProjBF   = Para + NProj;
-  Slater   = Para + NProj + NProjBF;
-  OptTrans = Para + NProj + NProjBF + NSlater;
+  RBM      = Para + NProj;
+  ProjBF   = Para + NProj + FlagRBM*NRBM;
+  Slater   = Para + NProj + FlagRBM*NRBM + NProjBF;
+  OptTrans = Para + NProj + FlagRBM*NRBM + NProjBF + NSlater;
 
   /***** Electron Configuration ******/
   EleIdx            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));
@@ -275,13 +310,14 @@ void SetMemory() {
 //[s] MERGE BY TM
   EleSpn            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));//fsz
 //[e] MERGE BY TM
-  logSqPfFullSlater = (double*)malloc(sizeof(double)*(NVMCSample));
+    logSqPfFullSlater = (double*)malloc(sizeof(double)*(NVMCSample));
+  //EleProjBFCnt = (int*)malloc(sizeof(int)*( NVMCSample*4*4*Nsite*Nrange));
   if (NBackFlowIdx > 0) {
     EleProjBFCnt = (int*)malloc(sizeof(int)*( NVMCSample*4*4*Nsite*Nrange));
     SmpSltElmBF_real = (double *)malloc(sizeof(double)*(NVMCSample*NQPFull*(2*Nsite)*(2*Nsite)));
     SmpEta = (double*)malloc(sizeof(double*)*NVMCSample*NQPFull*Nsite*Nsite);
     SmpEtaFlag = (int*)malloc(sizeof(int*)*NVMCSample*NQPFull*Nsite*Nsite);
-    SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+        SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
     eta = (double complex**)malloc(sizeof(double complex*)*Nsite);
       for(i=0;i<Nsite;i++) {
           eta[i] = (double complex*)malloc(sizeof(double complex)*Nsite);
@@ -311,6 +347,14 @@ void SetMemory() {
   BurnEleProjCnt    = BurnEleNum + 2*Nsite;
   BurnEleSpn        = BurnEleProjCnt + NProj; //fsz
 
+//RBM
+  if (FlagRBM) {
+    RBMCnt = (double complex*)malloc( sizeof(double complex)*( NVMCSample*(NRBM_PhysLayerIdx+Nneuron) ) );
+    TmpRBMCnt = (double complex*)malloc( sizeof(double complex)*(NRBM_PhysLayerIdx+Nneuron) );
+    BurnRBMCnt = (double complex*)malloc( sizeof(double complex)*(NRBM_PhysLayerIdx+Nneuron) );
+  }
+//RBM
+
   /***** Slater Elements ******/
   SlaterElm = (double complex*)malloc( sizeof(double complex)*(NQPFull*(2*Nsite)*(2*Nsite)) );
   InvM = (double complex*)malloc( sizeof(double complex)*(NQPFull*(Nsize*Nsize+1)) );
@@ -318,6 +362,21 @@ void SetMemory() {
 // for real TBC
   SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
 
+  if (FlagRBM) {
+    SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+    eta = (double complex**)malloc(sizeof(double complex*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      eta[i] = (double complex*)malloc(sizeof(double complex)*Nsite);
+    }
+    etaFlag = (int**)malloc(sizeof(int*)*Nsite);
+    for(i=0;i<Nsite;i++) {
+      etaFlag[i] = (int*)malloc(sizeof(int)*Nsite);
+    }
+    BFSubIdx = (int**)malloc(sizeof(int*)*NrangeIdx);
+    for(i=0;i<NrangeIdx;i++) {
+      BFSubIdx[i] = (int*)malloc(sizeof(int)*NrangeIdx);
+    }
+  }
   InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
   PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
 
