@@ -163,7 +163,7 @@ void SetMemoryDef() {
   CisAjsCktAltIdx = (int**)malloc(sizeof(int*)*NCisAjsCktAlt);
   for(i=0;i<NCisAjsCktAlt;i++) {
     CisAjsCktAltIdx[i] = pInt;
-    pInt += 2;
+    pInt += 8;
   }
 
   CisAjsCktAltDCIdx = (int**)malloc(sizeof(int*)*NCisAjsCktAltDC);
@@ -217,17 +217,19 @@ void SetMemoryDef() {
   ParaQPOptTrans = pDouble;
   ParaQPTrans = (double complex*)malloc(sizeof(double complex)*(NQPTrans));
 
+  // LanczosGreen
+  if(NLanczosMode>1){
+    CisAjsCktAltLzIdx = malloc(sizeof(int*)*NCisAjsCktAltDC);
+    for(i=0;i<NCisAjsCktAltDC;i++) {
+      CisAjsCktAltLzIdx[i] = malloc(sizeof(int) * 2);
+    }
+  }
+
   return;
 }
 
 void FreeMemoryDef() {
-  int i, rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank==0 && NCisAjsCktAlt>0) {
-    for(i=0;i<2*Nsite;i++)
-      free(iOneBodyGIdx[i]);
-    free(iOneBodyGIdx);
-  } 
+  free(ParaTransfer);
 
   free(QPOptTransSgn);
   free(QPOptTrans);
@@ -241,7 +243,6 @@ void FreeMemoryDef() {
   free(DoublonHolon4siteIdx);
   free(DoublonHolon2siteIdx);
   free(JastrowIdx);
-  free(ParaTransfer);
   free(ExchangeCoupling);
   free(PairHopping);
   free(HundCoupling);
@@ -368,11 +369,10 @@ void SetMemory() {
   /***** Physical Quantity *****/
   if(NVMCCalMode==1){
     PhysCisAjs  = (double complex*)malloc(sizeof(double complex)
-                    *(NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NCisAjs+NCisAjsCktAltDC));
+                    *(NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NCisAjs));
     PhysCisAjsCktAlt   = PhysCisAjs       + NCisAjs;
     PhysCisAjsCktAltDC = PhysCisAjsCktAlt + NCisAjsCktAlt;
     LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
-    LocalCisAjsCktAltDC = LocalCisAjs + NCisAjs;
 
     if(NLanczosMode>0){
       QQQQ = (double complex*)malloc(sizeof(double complex)
@@ -385,16 +385,14 @@ void SetMemory() {
 
       if(NLanczosMode>1){
         QCisAjsQ = (double complex*)malloc(sizeof(double complex)
-          *(NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*(NCisAjsCktAltDC+NCisAjsCktAlt) + NLSHam*NCisAjs) );
+          *(NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC + NLSHam*NCisAjs) );
         QCisAjsCktAltQ = QCisAjsQ + NLSHam*NLSHam*NCisAjs;
-        QCisAjsCktAltQDC = QCisAjsCktAltQ + NLSHam*NLSHam*NCisAjsCktAlt;
-        LSLCisAjs = QCisAjsCktAltQDC + NLSHam*NLSHam*NCisAjsCktAltDC;
+        LSLCisAjs = QCisAjsCktAltQ + NLSHam*NLSHam*NCisAjsCktAltDC;
         //for real
         QCisAjsQ_real = (double *)malloc(sizeof(double )
-        *(NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*(NCisAjsCktAltDC+NCisAjsCktAlt) + NLSHam*NCisAjs) );
+        *(NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC + NLSHam*NCisAjs) );
         QCisAjsCktAltQ_real = QCisAjsQ_real + NLSHam*NLSHam*NCisAjs;
-        QCisAjsCktAltQDC_real = QCisAjsCktAltQ_real + NLSHam*NLSHam*NCisAjsCktAlt;
-        LSLCisAjs_real = QCisAjsCktAltQDC_real + NLSHam*NLSHam*NCisAjsCktAltDC;
+        LSLCisAjs_real = QCisAjsCktAltQ_real + NLSHam*NLSHam*NCisAjsCktAltDC;
 
       }
     }

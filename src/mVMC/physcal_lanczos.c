@@ -29,7 +29,6 @@ int PhysCalLanczos_real
  double *_QQQQ_real,
  double *_QCisAjsQ_real,
  double *_QCisAjsCktAltQ_real,
- double *_QCisAjsCktAltQDC_real,
  const int _nLSHam,
  const int _Ns,
  const int _nCisAjs,
@@ -37,16 +36,14 @@ int PhysCalLanczos_real
  int **_iOneBodyGIdx,
  int **_CisAjsLzIdx,
  const int _nCisAjsCktAlt,
- const int _nCisAjsCktAltDC,
- int **_CisAjsCktAltDC,
+ int **_CisAjsCktAlt,
  const int _NLanczosmode,
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,
  FILE *_FileLSQCisAjsCktAltQ,
  FILE *_FileLSCisAjs,
- FILE *_FileLSCisAjsCktAlt,
- FILE *_FileLSCisAjsCktAltDC
+ FILE *_FileLSCisAjsCktAlt
  )
 {
   int i=0;
@@ -56,10 +53,8 @@ int PhysCalLanczos_real
   double alpha_m, ene_m, ene_vm;
   double *LS_CisAjs_real;
   double *LS_CisAjsCktAlt_real;
-  double *LS_CisAjsCktAltDC_real;
   LS_CisAjs_real = (double*)malloc(sizeof(double)*_nCisAjs);
   LS_CisAjsCktAlt_real = (double*)malloc(sizeof(double)*_nCisAjsCktAlt);
-  LS_CisAjsCktAltDC_real = (double*)malloc(sizeof(double)*_nCisAjsCktAltDC);
 
   CalculateEne(_QQQQ_real[2], _QQQQ_real[3], _QQQQ_real[10], _QQQQ_real[11], _QQQQ_real[15],
    &alpha_p,  &ene_p,  &ene_vp, &alpha_m,  &ene_m,  &ene_vm);
@@ -120,29 +115,20 @@ int PhysCalLanczos_real
 #endif
 
     CalculatePhysVal_real(_QQQQ_real[2], _QQQQ_real[3],
-              alpha, _QCisAjsCktAltQDC_real, _nCisAjsCktAltDC,
-              _nLSHam, LS_CisAjsCktAltDC_real);
-    /* zvo_ls_cisajscktalt.dat */
-    for (i = 0; i < _nCisAjsCktAltDC; i++) {
-      fprintf(_FileLSCisAjsCktAltDC, "%d %d %d %d %d %d %d %d % .18e 0.0\n",
-              _CisAjsCktAltDC[i][0], _CisAjsCktAltDC[i][1], _CisAjsCktAltDC[i][2], _CisAjsCktAltDC[i][3],
-              _CisAjsCktAltDC[i][4], _CisAjsCktAltDC[i][5], _CisAjsCktAltDC[i][6], _CisAjsCktAltDC[i][7],
-              LS_CisAjsCktAltDC_real[i]);
-    }
-    fprintf(_FileLSCisAjsCktAltDC, "\n");
-
-    CalculatePhysVal_real(_QQQQ_real[2], _QQQQ_real[3],
               alpha, _QCisAjsCktAltQ_real, _nCisAjsCktAlt,
               _nLSHam, LS_CisAjsCktAlt_real);
-    /* zvo_ls_cisajscktaltex.dat */
+    /* zvo_ls_cisajscktalt.dat */
     for (i = 0; i < _nCisAjsCktAlt; i++) {
-      fprintf(_FileLSCisAjsCktAlt, "% .18e 0.0 ", LS_CisAjsCktAlt_real[i]); // LS_CisAjsCktAlt_real
+      fprintf(_FileLSCisAjsCktAlt, "%d %d %d %d %d %d %d %d % .18e 0.0\n",
+              _CisAjsCktAlt[i][0], _CisAjsCktAlt[i][1], _CisAjsCktAlt[i][2], _CisAjsCktAlt[i][3],
+              _CisAjsCktAlt[i][4], _CisAjsCktAlt[i][5], _CisAjsCktAlt[i][6], _CisAjsCktAlt[i][7],
+              LS_CisAjsCktAlt_real[i]);
+
     }
     fprintf(_FileLSCisAjsCktAlt, "\n");
   }
   free(LS_CisAjs_real);
   free(LS_CisAjsCktAlt_real);
-  free(LS_CisAjsCktAltDC_real);
   return 0;
 }
 
@@ -150,7 +136,6 @@ int PhysCalLanczos_fcmp(
  double complex* _QQQQ,
  double complex* _QCisAjsQ,
  double complex* _QCisAjsCktAltQ,
- double complex* _QCisAjsCktAltQDC,
  const int _nLSHam,
  const int _Ns,
  const int _nCisAjs,
@@ -158,16 +143,14 @@ int PhysCalLanczos_fcmp(
  int **_iOneBodyGIdx,
  int **_CisAjsLzIdx,
  const int _nCisAjsCktAlt,
- const int _nCisAjsCktAltDC,
- int **_CisAjsCktAltDC,
+ int **_CisAjsCktAlt,
  const int _NLanczosmode,
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,
  FILE *_FileLSQCisAjsCktAltQ,
  FILE *_FileLSCisAjs,
- FILE *_FileLSCisAjsCktAlt,
- FILE *_FileLSCisAjsCktAltDC
+ FILE *_FileLSCisAjsCktAlt
 )
 {
   int i=0;
@@ -177,10 +160,8 @@ int PhysCalLanczos_fcmp(
   double alpha_m, ene_m, ene_vm;
   double complex*LS_CisAjs;
   double complex*LS_CisAjsCktAlt;
-  double complex*LS_CisAjsCktAltDC;
   LS_CisAjs = (double complex*)malloc(sizeof(double complex)*_nCisAjs);
   LS_CisAjsCktAlt = (double complex*)malloc(sizeof(double complex)*_nCisAjsCktAlt);
-  LS_CisAjsCktAltDC = (double complex*)malloc(sizeof(double complex)*_nCisAjsCktAltDC);
 
   /* zvo_ls.dat */
   if(!CalculateEne(creal(_QQQQ[2]),creal(_QQQQ[3]),
@@ -241,29 +222,19 @@ int PhysCalLanczos_fcmp(
     fprintf(_FileLSQCisAjsCktAltQ, "\n");
 #endif
     CalculatePhysVal_fcmp(_QQQQ[2], _QQQQ[3],
-              alpha, _QCisAjsCktAltQDC, _nCisAjsCktAltDC,
-              _nLSHam, LS_CisAjsCktAltDC);
-    /* zvo_ls_cisajscktalt.dat */
-    for (i = 0; i < _nCisAjsCktAltDC; i++) {
-      fprintf(_FileLSCisAjsCktAltDC, "%d %d %d %d %d %d %d %d % .18e % .18e\n",
-              _CisAjsCktAltDC[i][0], _CisAjsCktAltDC[i][1], _CisAjsCktAltDC[i][2], _CisAjsCktAltDC[i][3],
-              _CisAjsCktAltDC[i][4], _CisAjsCktAltDC[i][5], _CisAjsCktAltDC[i][6], _CisAjsCktAltDC[i][7],
-              creal(LS_CisAjsCktAltDC[i]), cimag(LS_CisAjsCktAltDC[i]));
-    }
-    fprintf(_FileLSCisAjsCktAltDC, "\n");
-
-    CalculatePhysVal_fcmp(_QQQQ[2], _QQQQ[3],
               alpha, _QCisAjsCktAltQ, _nCisAjsCktAlt,
               _nLSHam, LS_CisAjsCktAlt);
-    /* zvo_ls_cisajscktaltex.dat */
+    /* zvo_ls_cisajs.dat */
     for (i = 0; i < _nCisAjsCktAlt; i++) {
-      fprintf(_FileLSCisAjsCktAlt, "% .18e % .18e ", creal(LS_CisAjsCktAlt[i]), cimag(LS_CisAjsCktAlt[i])); // LS_CisAjsCktAlt_real
+      fprintf(_FileLSCisAjsCktAlt, "%d %d %d %d %d %d %d %d % .18e % .18e\n",
+              _CisAjsCktAlt[i][0], _CisAjsCktAlt[i][1], _CisAjsCktAlt[i][2], _CisAjsCktAlt[i][3],
+              _CisAjsCktAlt[i][4], _CisAjsCktAlt[i][5], _CisAjsCktAlt[i][6], _CisAjsCktAlt[i][7],
+              creal(LS_CisAjsCktAlt[i]), cimag(LS_CisAjsCktAlt[i]));
     }
     fprintf(_FileLSCisAjsCktAlt, "\n");
   }
   free(LS_CisAjs);
   free(LS_CisAjsCktAlt);
-  free(LS_CisAjsCktAltDC);
   return 0;
 }
 

@@ -142,9 +142,10 @@ double *ParaQPOptTrans;
 
 /* for Green functions */
 int NCisAjs,         **CisAjsIdx;         /* [NCisAjs][3] */
-int NCisAjsCktAlt,   **CisAjsCktAltIdx;   /* [NCisAjsCktAlt][2] */
+int NCisAjsCktAlt,   **CisAjsCktAltIdx;   /* [NCisAjsCktAlt][8] */
 int NCisAjsCktAltDC, **CisAjsCktAltDCIdx; /* [NCisAjsCktAltDC][6] */
-int **iOneBodyGIdx; /* For GF2 indirect measurement */
+int NCisAjsLz, **CisAjsLzIdx, **iOneBodyGIdx; /* For Lanczos method only for rank 0*/
+int NCisAjsCktAltLz, **CisAjsCktAltLzIdx;
 
 /* Optimization flag */
 int *OptFlag; /* [NPara]  1: optimized, 0 or 2: fixed */
@@ -268,7 +269,6 @@ double complex *PhysCisAjs; /* [NCisAjs] */
 double complex *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */
 double complex *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
 double complex *LocalCisAjs; /* [NCisAjs] */
-double complex *LocalCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
 
 double complex Sztot,Sztot2; /* <Sz>,<Sz^2> */
 
@@ -286,13 +286,10 @@ double *LSLQ_real; /* [NLSHam][NLSHam]*/                      //TBC
 
 double complex *QCisAjsQ; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/ //TBC
 double complex *QCisAjsCktAltQ; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/ //TBC
-double complex *QCisAjsCktAltQDC; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt] 
-                                     DC Lanczos Calculation */
 double complex *LSLCisAjs; /* [NLSHam][NCisAjs]*/                //TBC
 
 double *QCisAjsQ_real; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/ //TBC
 double *QCisAjsCktAltQ_real; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/ //TBC
-double *QCisAjsCktAltQDC_real; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/
 double *LSLCisAjs_real; /* [NLSHam][NCisAjs]*/                //TBC
 
 /***** Output File *****/
@@ -308,10 +305,8 @@ FILE *FileLS;
 FILE *FileLSQQQQ;
 FILE *FileLSQCisAjsQ;
 FILE *FileLSQCisAjsCktAltQ;
-FILE *FileLSQCisAjsCktAltQ;
 FILE *FileLSCisAjs;
 FILE *FileLSCisAjsCktAlt;
-FILE *FileLSCisAjsCktAltDC;
 
 
 /* FILE *FileTimerList; */
