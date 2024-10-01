@@ -69,6 +69,16 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
                           const int nLSHam, const int nCA, const int nCACA,
                           int **cacaIdx);
 
+void calculateQCACAQDC_real(double *qcacaq, const double *lslq, const double w,
+                            const int nLSHam, const int nCA, const int nCACA,
+                            int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                            const double h1, const double ip);
+
+void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const double w,
+                       const int nLSHam, const int nCA, const int nCACA,
+                       int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                       const double complex h1, const double complex ip,double complex *rbmCnt);
+
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
   double complex e,ip;
@@ -276,14 +286,18 @@ void VMCMainCal(MPI_Comm comm) {
             LSLocalCisAjs_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
             calculateQCAQ_real(QCisAjsQ_real,LSLCisAjs_real,LSLQ_real,w,NLSHam,NCisAjs);
             calculateQCACAQ_real(QCisAjsCktAltQ_real,LSLCisAjs_real,w,NLSHam,NCisAjs,
-                            NCisAjsCktAltDC, CisAjsCktAltLzIdx);
+                                 NCisAjsCktAlt, CisAjsCktAltIdx);
+            calculateQCACAQDC_real(QCisAjsCktAltQDC_real,LSLQ_real,w,NLSHam,NCisAjs,
+                                   NCisAjsCktAltDC,eleIdx,eleCfg,eleNum,eleProjCnt,creal(e),creal(ip));
             
           }
           else{
             LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
             calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
             calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
-                            NCisAjsCktAltDC,CisAjsCktAltLzIdx);
+                            NCisAjsCktAlt,CisAjsCktAltIdx);
+            calculateQCACAQDC(QCisAjsCktAltQDC,LSLQ,w,NLSHam,NCisAjs,
+                              NCisAjsCktAltDC,eleIdx,eleCfg,eleNum,eleProjCnt,e,ip,rbmCnt);
           }
           StopTimer(44);
         }
@@ -517,12 +531,12 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
             LSLocalCisAjs_real(creal(e), creal(ip), eleIdx, eleCfg, eleNum, eleProjCnt);
             calculateQCAQ_real(QCisAjsQ_real, LSLCisAjs_real, LSLQ_real, w, NLSHam, NCisAjs);
             calculateQCACAQ_real(QCisAjsCktAltQ_real, LSLCisAjs_real, w, NLSHam, NCisAjs,
-                NCisAjsCktAltDC, CisAjsCktAltLzIdx);
+                NCisAjsCktAltDC, CisAjsCktAltIdx);
           } else {
             LSLocalCisAjs(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt, rbmCnt);
             calculateQCAQ(QCisAjsQ, LSLCisAjs, LSLQ, w, NLSHam, NCisAjs);
             calculateQCACAQ(QCisAjsCktAltQ, LSLCisAjs, w, NLSHam, NCisAjs,
-                NCisAjsCktAltDC, CisAjsCktAltLzIdx);
+                NCisAjsCktAltDC, CisAjsCktAltIdx);
             return;
           }
           StopTimer(44);
@@ -605,13 +619,13 @@ void clearPhysQuantity(){
       if(NLanczosMode>1) {
         /* QCisAjsQ, QCisAjsCktAltQ, LSLCisAjs */
         //[TODO]: Check the value n
-        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC
+        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*(NCisAjsCktAltDC+NCisAjsCktAlt)
           + NLSHam*NCisAjs;
         vec = QCisAjsQ;
 #pragma omp parallel for default(shared) private(i)
         for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
 
-        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC
+        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*(NCisAjsCktAltDC+NCisAjsCktAlt)
           + NLSHam*NCisAjs;
         vec_real = QCisAjsQ_real;
 #pragma omp parallel for default(shared) private(i)
@@ -928,5 +942,65 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
 
   return;
 
+}
+
+void calculateQCACAQDC_real(double *qcacaq, const double *lslq, const double w,
+                            const int nLSHam, const int nCA, const int nCACA,
+                            int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                            const double h1, const double ip) {
+  const int n=nLSHam*nLSHam*nCACA;
+  int rq,rp,ri,rj,rk,rl,s,t,idx;
+  int i,tmp;
+
+  for(i=0;i<n;++i) {
+    idx = i%nCACA;   tmp = i/nCACA;
+    rp = tmp%nLSHam; tmp = tmp/nLSHam;
+    rq = tmp%nLSHam;
+
+    if (rq) {
+      // Calls 2-body routines to evaluate HCACA.
+      ri = CisAjsCktAltDCIdx[idx][0];
+      rj = CisAjsCktAltDCIdx[idx][2];
+      s  = CisAjsCktAltDCIdx[idx][1];
+      rk = CisAjsCktAltDCIdx[idx][4];
+      rl = CisAjsCktAltDCIdx[idx][6];
+      t  = CisAjsCktAltDCIdx[idx][5];
+      qcacaq[i] += w * lslq[rp*nLSHam] * calHCACA_real(ri,rj,rk,rl,s,t,h1,ip,
+                                                       eleIdx,eleCfg,eleNum,eleProjCnt);
+    } else
+      qcacaq[i] += w * lslq[rp*nLSHam] * LocalCisAjsCktAltDC[idx];
+  }
+
+  return;
+}
+
+void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const double w,
+                       const int nLSHam, const int nCA, const int nCACA,
+                       int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                       const double complex h1, const double complex ip,double complex *rbmCnt) {
+  const int n=nLSHam*nLSHam*nCACA;
+  int rq,rp,ri,rj,rk,rl,s,t,idx;
+  int i,tmp;
+
+  for(i=0;i<n;++i) {
+    idx = i%nCACA;   tmp = i/nCACA;
+    rp = tmp%nLSHam; tmp = tmp/nLSHam;
+    rq = tmp%nLSHam;
+
+    if (rq) {
+      // Calls 2-body routines to evaluate HCACA.
+      ri = CisAjsCktAltDCIdx[idx][0];
+      rj = CisAjsCktAltDCIdx[idx][2];
+      s  = CisAjsCktAltDCIdx[idx][1];
+      rk = CisAjsCktAltDCIdx[idx][4];
+      rl = CisAjsCktAltDCIdx[idx][6];
+      t  = CisAjsCktAltDCIdx[idx][5];
+      qcacaq[i] += w * lslq[rp*nLSHam] * calHCACA(ri,rj,rk,rl,s,t,h1,ip,
+                                                  eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
+    } else
+      qcacaq[i] += w * lslq[rp*nLSHam] * LocalCisAjsCktAltDC[idx];
+  }
+
+  return;
 }
 #endif
