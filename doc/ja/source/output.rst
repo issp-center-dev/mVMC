@@ -327,7 +327,7 @@ xxx\_ls\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Power Lanczos法により求めた :math:`\langle H \rangle`,
-:math:`\langle H^2\rangle` および最適化パラメータ :math:`\alpha` の順に出力されます。
+:math:`(\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2` および最適化パラメータ :math:`\alpha` の順に出力されます。
 ``ModPara`` 指定ファイルで ``NVMCCalMode`` =1, ``NLanczosmode`` =1,
 2に設定することで計算されます。
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
