@@ -225,6 +225,125 @@ and “TransSym”.</p></li>
 <li><p>If keywords or filenames are incorrect, the program is terminated.</p></li>
 <li><p>When the head of line is <code class="docutils literal notranslate"><span class="pre">#</span></code>, the line is skipped.</p></li>
 </ul>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Keywords</p></th>
+<th class="head"><p>Details for corresponding files</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>ModPara <span class="math notranslate nohighlight">\(^*\)</span></p></td>
+<td><p>Parameters for calculation.</p></td>
+</tr>
+<tr class="row-odd"><td><p>LocSpin <span class="math notranslate nohighlight">\(^*\)</span></p></td>
+<td><p>Configurations of the local spins for Hamiltonian.</p></td>
+</tr>
+<tr class="row-even"><td><p>Trans</p></td>
+<td><p>Transfer and chemical potential for Hamiltonian.</p></td>
+</tr>
+<tr class="row-odd"><td><p>InterAll</p></td>
+<td><p>Two-body interactions for Hamiltonian.</p></td>
+</tr>
+<tr class="row-even"><td><p>CoulombIntra</p></td>
+<td><p>CoulombIntra interactions.</p></td>
+</tr>
+<tr class="row-odd"><td><p>CoulombInter</p></td>
+<td><p>CoulombInter interactions.</p></td>
+</tr>
+<tr class="row-even"><td><p>Hund</p></td>
+<td><p>Hund couplings.</p></td>
+</tr>
+<tr class="row-odd"><td><p>PairHop</p></td>
+<td><p>Pair hopping couplings.</p></td>
+</tr>
+<tr class="row-even"><td><p>Exchange</p></td>
+<td><p>Exchange couplings.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Gutzwiller</p></td>
+<td><p>Gutzwiller factors.</p></td>
+</tr>
+<tr class="row-even"><td><p>Jastrow</p></td>
+<td><p>Charge Jastrow factors.</p></td>
+</tr>
+<tr class="row-odd"><td><p>DH2</p></td>
+<td><p>2-site doublon-holon correlation factors.</p></td>
+</tr>
+<tr class="row-even"><td><p>DH4</p></td>
+<td><p>4-site doublon-holon correlation factors.</p></td>
+</tr>
+<tr class="row-odd"><td><p>GeneralRBM_PhysLayer</p></td>
+<td><p>A part of the general RBM correlation factor including variational parameters
+in a physical layer <span class="math notranslate nohighlight">\(\alpha_{i\sigma}\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>GeneralRBM_HiddenLayer</p></td>
+<td><p>A part of the general RBM correlation factor including variational parameters
+in a hidden layer <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>GeneralRBM_PhysHidden</p></td>
+<td><p>A part of the general RBM correlation factor including variational parameters
+which connect physical and hidden layers <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>Orbital <span class="math notranslate nohighlight">\(^*\)</span></p></td>
+<td><p>Pair orbital factors with anti-parallel spins <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>OrbitalAntiParallel</p></td>
+<td><p>Pair orbital factors with anti-parallel spins <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>OrbitalParallel</p></td>
+<td><p>Pair orbital factors with parallel spins <span class="math notranslate nohighlight">\(f_{i\sigma j\sigma}\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>OrbitalGeneral</p></td>
+<td><p>Pair orbital factors <span class="math notranslate nohighlight">\(f_{i\sigma_1 j\sigma_2}\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>TransSym <span class="math notranslate nohighlight">\(^*\)</span></p></td>
+<td><p>Translational and lattice symmetry operation.</p></td>
+</tr>
+<tr class="row-odd"><td><p>InGutzwiller</p></td>
+<td><p>Initial values of Gutzwiller factors.</p></td>
+</tr>
+<tr class="row-even"><td><p>InJastrow</p></td>
+<td><p>Initial values of charge Jastrow factors.</p></td>
+</tr>
+<tr class="row-odd"><td><p>InDH2</p></td>
+<td><p>Initial values of 2-site doublon-holon correlation factors.</p></td>
+</tr>
+<tr class="row-even"><td><p>InDH4</p></td>
+<td><p>Initial values of 4-site doublon-holon correlation factors.</p></td>
+</tr>
+<tr class="row-odd"><td><p>InGeneralRBM_PhysLayer</p></td>
+<td><p>Initial values of variational parameters of the general RBM correlation factors
+in a physical layer <span class="math notranslate nohighlight">\(\alpha_{i\sigma}\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>InGeneralRBM_HiddenLayer</p></td>
+<td><p>Initial values of variational parameters of the general RBM correlation factors
+in a hidden layer <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>InGeneralRBM_PhysHidden</p></td>
+<td><p>Initial values of variational parameters of the general RBM correlation factors
+which connect physical and hidden layers <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>InOrbital</p></td>
+<td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>InOrbitalAntiParallel</p></td>
+<td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>InOrbitalParallel</p></td>
+<td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\sigma j\sigma}\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>InOrbitalGeneral</p></td>
+<td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\sigma_1 j\sigma_2}\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>OneBodyG</p></td>
+<td><p>Output components for Green functions
+<span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>TwoBodyG</p></td>
+<td><p>Output components for Correlation functions
+<span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle\)</span></p></td>
+</tr>
+</tbody>
+</table>
 </section>
 </section>
 <section id="modpara-file-modpara-def">
@@ -2158,10 +2277,10 @@ not done. An example of the file format is shown as follows.</p>
 <span class="o">====================================</span>
 <span class="o">==</span> <span class="n">TrIdx_TrWeight_and_TrIdx_i_xi</span>  <span class="o">==</span>
 <span class="o">====================================</span>
-   <span class="mi">0</span>  <span class="mf">1.000000</span>
-   <span class="mi">1</span>  <span class="mf">1.000000</span>
-   <span class="mi">2</span>  <span class="mf">1.000000</span>
-   <span class="mi">3</span>  <span class="mf">1.000000</span>
+   <span class="mi">0</span>  <span class="mf">1.000000</span>  <span class="mf">0.000000</span>
+   <span class="mi">1</span>  <span class="mf">1.000000</span>  <span class="mf">0.000000</span>
+   <span class="mi">2</span>  <span class="mf">1.000000</span>  <span class="mf">0.000000</span>
+   <span class="mi">3</span>  <span class="mf">1.000000</span>  <span class="mf">0.000000</span>
    <span class="mi">0</span>     <span class="mi">0</span>    <span class="mi">0</span>
  <span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
    <span class="mi">3</span>    <span class="mi">12</span>    <span class="mi">1</span>
@@ -2176,7 +2295,7 @@ projection patterns as <span class="math notranslate nohighlight">\(N_{\rm TS}\)
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
 <li><p>Lines 3 - 5: Header</p></li>
-<li><p>Lines 6 - (5+ <span class="math notranslate nohighlight">\(N_{\rm TS})\)</span>: [int02] [double01]</p></li>
+<li><p>Lines 6 - (5+ <span class="math notranslate nohighlight">\(N_{\rm TS})\)</span>: [int02] [double01] [double02]</p></li>
 <li><p>Lines (6+ <span class="math notranslate nohighlight">\(N_{\rm TS}\)</span>) - (5+ <span class="math notranslate nohighlight">\((N_s+1) \times N_{\rm TS}\)</span>):
 [int03] [int04] [int05] [int06]</p></li>
 </ul>
@@ -2203,7 +2322,13 @@ patterns.</p>
 <li><p>[ double01 ]</p>
 <p><strong>Type :</strong> double-type (blank parameter not allowed)</p>
 <p><strong>Description :</strong> The weight
-<span class="math notranslate nohighlight">\(p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})\)</span> of the projection
+Real part of <span class="math notranslate nohighlight">\(p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})\)</span> of the projection
+pattern <span class="math notranslate nohighlight">\((\alpha, {\boldsymbol R})\)</span>.</p>
+</li>
+<li><p>[ double02 ]</p>
+<p><strong>Type :</strong> double-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> The weight
+Imaginary part of <span class="math notranslate nohighlight">\(p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})\)</span> of the projection
 pattern <span class="math notranslate nohighlight">\((\alpha, {\boldsymbol R})\)</span>.</p>
 </li>
 <li><p>[ int03 ]</p>

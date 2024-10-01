@@ -37,11 +37,13 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_out\_yyy.dat                        | Energy and deviation.                                                                                                  |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| xxx\_SRinfo.dat                          | Information related to SR optimization method.                                                                         |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_var\_yyy.dat                        | Progress information for optimizing variational parameters.                                                            |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_CalcTimer.dat                       | Computation time for each processes.                                                                                   |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
-| xxx\_time\_zzz.dat                       | Progress information for Monte Carlo samplings.                                                                         |
+| xxx\_time\_zzz.dat                       | Progress information for Monte Carlo samplings.                                                                        |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_cisajs\_yyy.dat                     | One body Green’s functions.                                                                                            |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
@@ -147,6 +149,26 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
     1.308897206011880421e+01  5.701244886956570168e-01  \
     2.072610167083121837e+02  2.029162857569105916e-01
     ...
+
+xxx\_SRinfo.dat.dat
+~~~~~~~~~~~~~~~~~~~~~
+
+This file provides the optimization information by the SR method at each step. 
+From the left column, the number of variational parameters as complex numbers ``Npara``, the dimension of the S metric matrix ``Msize``, the number of variational parameters that are not optimized in the input files for trial wavefunctions such as ``Orbital``, the number of variational parameters cut by the value of ``DSROptRedCut`` in the ``ModPara`` file ``diagCut``, the maximum and minimum values of the diagonal components of the S matrix ``sDiagMax`` and ``sDiagMin``, the maximum value of the change in the variational parameters ``absRmax`` and its parameter index ``imax`` are outputted. 
+The header specified by ``CDataFileHead`` in the ``ModPara`` file is described in xxx.
+An example of the file format is as follows.
+Note that the number of imaginary parameters is counted in ``optCut`` when the variational parameters are treated as real variables (``ComplexType=0``).
+
+::
+
+    #Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax
+    4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4
+    4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0
+    4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0
+    4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0
+    …
+
+
 
 xxx\_CalcTimer.dat 
 ~~~~~~~~~~~~~~~~~~~
@@ -328,7 +350,7 @@ xxx\_ls\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~
 
 This file is the outputted files for :math:`\langle H \rangle`,
-:math:`\langle H^2\rangle`, and the optimized parameter :math:`\alpha`
+:math:`(\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2`, and the optimized parameter :math:`\alpha`
 obtained by Power Lanczos method. This file is outputted when
 ``NVMCCalMode`` = 1, ``NLanczosmode`` = 1 or 2 are set in ``ModPara``
 file. Here, xxx is the header indicated by ``CDataFileHead`` in
