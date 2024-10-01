@@ -230,7 +230,7 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
     }
     if(NLanczosMode>1){
       /* QCisAjsQ and QCisAjsCktAltQ */
-      n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*(NCisAjsCktAltDC+NCisAjsCktAlt);
+      n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC;
       if(AllComplexFlag==0){
         vec_real=QCisAjsQ_real;
         weightAverageReduce_real(n,vec_real,comm);
