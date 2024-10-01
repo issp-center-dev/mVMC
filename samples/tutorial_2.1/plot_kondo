@@ -1,0 +1,8 @@
+set xlabel "optimization step"
+set ylabel "total energy"
+p \
+"kondo/output_s0/zvo_out_001.dat" u 1 t "mVMC, S=0", \
+"kondo/output_s1/zvo_out_001.dat" u 1 t "mVMC, S=1", \
+-19.0251276267899421 w l lw 2 t "exact diagonalization, S=0", \
+-16.1561048387100463  w l lw 2 t "exact diagonalization, S=1"
+pause -1

@@ -27,6 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #ifndef _SRC_VMCCAL
 #define _SRC_VMCCAL
+
 #include "vmccal.h"
 #include "matrix.h"
 #include "calham_real.h"
@@ -95,6 +96,9 @@ void VMCMainCal(MPI_Comm comm) {
   double complex *srOptO = SROptO;
   double         *srOptO_real = SROptO_real;
 
+  double complex *rbmCnt;
+  const int nSizeRBM=NRBM_PhysLayerIdx + Nneuron;
+
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
@@ -113,6 +117,7 @@ void VMCMainCal(MPI_Comm comm) {
     eleCfg = EleCfg + sample*Nsite2;
     eleNum = EleNum + sample*Nsite2;
     eleProjCnt = EleProjCnt + sample*NProj;
+    rbmCnt = RBMCnt + sample*nSizeRBM;
 
     StartTimer(40);
 #ifdef _DEBUG_VMCCAL
@@ -168,7 +173,7 @@ void VMCMainCal(MPI_Comm comm) {
 #ifdef _DEBUG_VMCCAL
       printf("  Debug: sample=%d: calculateHam_cmp \n",sample);
 #endif
-      e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+      e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
     }
     //printf("MDEBUG: %lf %lf \n",creal(e),cimag(e));
     StopTimer(41);
@@ -197,13 +202,17 @@ void VMCMainCal(MPI_Comm comm) {
         srOptO[(i+1)*2+1]   = 0.0+0.0*I;               // odd  comp
       }
 
+      if (FlagRBM) {
+        RBMDiff(SROptO+2*NProj+2,rbmCnt,eleNum); 
+      }
+
       StartTimer(42);
       /* SlaterElmDiff */
-      SlaterElmDiff_fcmp(SROptO+2*NProj+2,ip,eleIdx); //TBC: using InvM not InvM_real
+      SlaterElmDiff_fcmp(SROptO+2*NProj+2*NRBM+2,ip,eleIdx); //TBC: using InvM not InvM_real
       StopTimer(42);
 
       if(FlagOptTrans>0) { // this part will be not used
-        calculateOptTransDiff(SROptO+2*NProj+2*NSlater+2, ip); //TBC
+        calculateOptTransDiff(SROptO+2*NProj+2*FlagRBM*NRBM+2*NSlater+2, ip); //TBC
       }
       //[s] this part will be used for real varaibles
       if(AllComplexFlag==0){
@@ -249,7 +258,7 @@ void VMCMainCal(MPI_Comm comm) {
 #ifdef _DEBUG_VMCCAL
       fprintf(stdout, "Debug: Start: CalcGreenFunc\n");
 #endif
-      CalculateGreenFunc(w,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+      CalculateGreenFunc(w,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
       StopTimer(42);
 
       if(NLanczosMode>0){
@@ -263,7 +272,7 @@ void VMCMainCal(MPI_Comm comm) {
           LSLocalQ_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt, LSLQ_real);
           calculateQQQQ_real(QQQQ_real,LSLQ_real,w,NLSHam);
         }else{
-          LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt, LSLQ);
+          LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt, LSLQ);
           calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
         }
         StopTimer(43);
@@ -283,7 +292,7 @@ void VMCMainCal(MPI_Comm comm) {
             
           }
           else{
-            LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+            LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
             calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
             calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
                             NCisAjsCktAlt,CisAjsCktAltIdx);
@@ -500,8 +509,9 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
       /* Calculate Green Function */
       CalculateGreenFuncBF(w, ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt);
       StopTimer(42);
+      double complex *rbmCnt;
 
-      if (NLanczosMode > 0) {
+      if (NLanczosMode > 0 && !FlagRBM) {
         // ignoring Lanczos: to be added
         /* Calculate local QQQQ */
         StartTimer(43);
@@ -509,7 +519,7 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
           LSLocalQ_real(creal(e), creal(ip), eleIdx, eleCfg, eleNum, eleProjCnt, LSLQ_real);
           calculateQQQQ_real(QQQQ_real, LSLQ_real, w, NLSHam);
         } else {
-          LSLocalQ(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt, LSLQ);
+          LSLocalQ(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt, rbmCnt, LSLQ);
           calculateQQQQ(QQQQ, LSLQ, w, NLSHam);
           return;
         }
@@ -523,7 +533,7 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
             calculateQCACAQ_real(QCisAjsCktAltQ_real, LSLCisAjs_real, w, NLSHam, NCisAjs,
                 NCisAjsCktAltDC, CisAjsCktAltIdx);
           } else {
-            LSLocalCisAjs(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt);
+            LSLocalCisAjs(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt, rbmCnt);
             calculateQCAQ(QCisAjsQ, LSLCisAjs, LSLQ, w, NLSHam, NCisAjs);
             calculateQCACAQ(QCisAjsCktAltQ, LSLCisAjs, w, NLSHam, NCisAjs,
                 NCisAjsCktAltDC, CisAjsCktAltIdx);

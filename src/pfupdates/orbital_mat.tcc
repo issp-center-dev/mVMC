@@ -7,20 +7,10 @@
  */
 #pragma once
 #include "blis.h"
-#include "colmaj.tcc"
+#include "colmaj.hh"
 #include <random>
-#ifdef UseBoost
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/vector.hpp>
-#include <boost/numeric/ublas/io.hpp>
-template <typename T>
-using matrix_t = boost::numeric::ublas::matrix<T, boost::numeric::ublas::column_major>;
-template <typename T>
-using vector_t = boost::numeric::ublas::vector<T>;
-#else
 template <typename T>
 using matrix_t = colmaj<T>;
-#endif
 
 template <typename T>
 struct orbital_mat
@@ -31,16 +21,7 @@ struct orbital_mat
 
   orbital_mat(uplo_t uplo_, dim_t nsite_, T *X_, inc_t ldX)
       : uplo(uplo_), nsite(nsite_),
-  #ifdef UseBoost
-        X(nsite, nsite) {
-    colmaj<T> X_tmp(X_, ldX);
-    for (dim_t j = 0; j < nsite; ++j)
-      for (dim_t i = 0; i < nsite; ++i)
-        X(i, j) = X_tmp(i, j);
-  }
-  #else
         X(X_, ldX) { }
-  #endif
 
   orbital_mat(uplo_t uplo_, dim_t nsite_, matrix_t<T> &X_)
   : uplo(uplo_), nsite(nsite_), X(X_) { }

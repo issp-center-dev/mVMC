@@ -1,7 +1,3 @@
-[submodule "src/pfaffine"]
-	path = src/pfaffine
-	url = https://github.com/xrq-phys/Pfaffine
-	branch = blis
 [submodule "src/blis"]
 	path = src/blis
 	url = https://github.com/xrq-phys/blis

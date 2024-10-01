@@ -51,9 +51,9 @@
     objv(iqp, ctype)->initialize(); \
   } \
 }
-GENIMPL( float,    s )
+// GENIMPL( float,    s )
 GENIMPL( double,   d )
-GENIMPL( ccscmplx, c )
+// GENIMPL( ccscmplx, c )
 GENIMPL( ccdcmplx, z )
 #undef GENIMPL
 
@@ -68,9 +68,9 @@ GENIMPL( ccdcmplx, z )
     delete objv(iqp, ctype); \
   } \
 }
-GENIMPL( float,    s )
+// GENIMPL( float,    s )
 GENIMPL( double,   d )
-GENIMPL( ccscmplx, c )
+// GENIMPL( ccscmplx, c )
 GENIMPL( ccdcmplx, z )
 #undef GENIMPL
 
@@ -84,9 +84,9 @@ GENIMPL( ccdcmplx, z )
   for (int iqp = 0; iqp < num_qp; ++iqp) \
     pfav[iqp] = -objv(iqp, ctype)->get_Pfa(); \
 }
-GENIMPL( float,    s )
+// GENIMPL( float,    s )
 GENIMPL( double,   d )
-GENIMPL( ccscmplx, c )
+// GENIMPL( ccscmplx, c )
 GENIMPL( ccdcmplx, z )
 #undef GENIMPL
 
@@ -102,9 +102,9 @@ GENIMPL( ccdcmplx, z )
   for (int iqp = 0; iqp < num_qp; ++iqp) \
     objv(iqp, ctype)->push_update_safe(osi, msj, cal_pfa!=0); \
 }
-GENIMPL( float,    s )
+// GENIMPL( float,    s )
 GENIMPL( double,   d )
-GENIMPL( ccscmplx, c )
+// GENIMPL( ccscmplx, c )
 GENIMPL( ccdcmplx, z )
 #undef GENIMPL
 
@@ -134,9 +134,9 @@ GENIMPL( ccdcmplx, z )
     objv(iqp, ctype)->push_update(osk, msl, cal_pfa!=0); \
   } \
 }
-GENIMPL( float,    s )
+// GENIMPL( float,    s )
 GENIMPL( double,   d )
-GENIMPL( ccscmplx, c )
+// GENIMPL( ccscmplx, c )
 GENIMPL( ccdcmplx, z )
 #undef GENIMPL
 
@@ -150,9 +150,9 @@ GENIMPL( ccdcmplx, z )
     objv(iqp, ctype)->pop_update(cal_pfa!=0); \
   } \
 }
-GENIMPL( float,    s )
+// GENIMPL( float,    s )
 GENIMPL( double,   d )
-GENIMPL( ccscmplx, c )
+// GENIMPL( ccscmplx, c )
 GENIMPL( ccdcmplx, z )
 #undef GENIMPL
 

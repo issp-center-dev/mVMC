@@ -35,10 +35,22 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
   "Trans", "CoulombIntra", "CoulombInter",
   "Hund", "PairHop", "Exchange",
   "Gutzwiller", "Jastrow",
-  "DH2", "DH4", "Orbital", "OrbitalAntiParallel",
+  "DH2", "DH4", 
+  //RBM
+  "ChargeRBM_HiddenLayer","ChargeRBM_PhysLayer", "ChargeRBM_PhysHidden",
+  "SpinRBM_HiddenLayer","SpinRBM_PhysLayer", "SpinRBM_PhysHidden",
+  "GeneralRBM_HiddenLayer","GeneralRBM_PhysLayer", "GeneralRBM_PhysHidden",
+  //RBM
+  "Orbital", "OrbitalAntiParallel",
   "OrbitalParallel", "OrbitalGeneral",
   "TransSym", "InGutzwiller", "InJastrow",
-  "InDH2", "InDH4", "InOrbital", "InOrbitalAntiParallel",
+  "InDH2", "InDH4", 
+  //RBM
+  "InChargeRBM_HiddenLayer","InChargeRBM_PhysLayer", "InChargeRBM_PhysHidden",
+  "InSpinRBM_HiddenLayer","InSpinRBM_PhysLayer", "InSpinRBM_PhysHidden",
+  "InGeneralRBM_HiddenLayer","InGeneralRBM_PhysLayer", "InGeneralRBM_PhysHidden",
+  //RBM
+  "InOrbital", "InOrbitalAntiParallel",
 	"InOrbitalParallel", "InOrbitalGeneral",
   "OneBodyG", "TwoBodyG", "TwoBodyGEx",
   "InterAll", "OptTrans", "InOptTrans",
@@ -53,10 +65,22 @@ enum KWIdxInt{
   KWTrans, KWCoulombIntra,KWCoulombInter,
   KWHund, KWPairHop, KWExchange,
   KWGutzwiller, KWJastrow,
-  KWDH2, KWDH4, KWOrbital, KWOrbitalAntiParallel,
+  KWDH2, KWDH4, 
+  //RBM
+  KWChargeRBM_HiddenLayer,KWChargeRBM_PhysLayer,KWChargeRBM_PhysHidden,
+  KWSpinRBM_HiddenLayer,KWSpinRBM_PhysLayer,KWSpinRBM_PhysHidden,
+  KWGeneralRBM_HiddenLayer,KWGeneralRBM_PhysLayer,KWGeneralRBM_PhysHidden,
+  //RBM
+  KWOrbital, KWOrbitalAntiParallel,
 	KWOrbitalParallel, KWOrbitalGeneral,
   KWTransSym, KWInGutzwiller, KWInJastrow,
-  KWInDH2, KWInDH4, KWInOrbital,KWInOrbitalAntiParallel,
+  KWInDH2, KWInDH4, 
+  //RBM
+  KWInChargeRBM_HiddenLayer,KWInChargeRBM_PhysLayer,KWInChargeRBM_PhysHidden,
+  KWInSpinRBM_HiddenLayer,KWInSpinRBM_PhysLayer,KWInSpinRBM_PhysHidden,
+  KWInGeneralRBM_HiddenLayer,KWInGeneralRBM_PhysLayer,KWInGeneralRBM_PhysHidden,
+  //RBM
+  KWInOrbital,KWInOrbitalAntiParallel,
 	KWInOrbitalParallel, KWInorbitalGeneral,
   KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
   KWInterAll, KWOptTrans, KWInOptTrans,
@@ -73,6 +97,9 @@ static char (*cFileNameListFile)[D_CharTmpReadDef];
 enum ParamIdxInt{
   IdxVMCCalcMode, IdxLanczosMode, IdxDataIdxStart, 
   IdxDataQtySmp, IdxNsite, IdxNe, 
+  //RBM
+  IdxNneuron, IdxNneuronCharge, IdxNneuronSpin,IdxNneuronGeneral,
+  //RBM
   IdxSPGaussLeg, IdxSPStot, IdxMPTrans,
   IdxSROptItrStep, IdxSROptItrSmp, IdxSROptFixSmp,
   IdxVMCWarmUp, IdxVMCInterval, IdxVMCSample,
@@ -80,7 +107,14 @@ enum ParamIdxInt{
   IdxNLocSpin,IdxNTrans,IdxNCoulombIntra,
   IdxNCoulombInter, IdxNHund, IdxNPairHop, 
   IdxNExchange, IdxNGutz, IdxNJast,
-  IdxNDH2, IdxNDH4, IdxNOrbit, IdxNOrbitGeneral,
+  IdxNDH2, IdxNDH4, 
+  //RBM
+  IdxNChargeRBM_HiddenLayer,IdxNChargeRBM_PhysLayer, IdxNChargeRBM_PhysHidden,
+  IdxNSpinRBM_HiddenLayer,IdxNSpinRBM_PhysLayer, IdxNSpinRBM_PhysHidden,
+  IdxNGeneralRBM_HiddenLayer,IdxNGeneralRBM_PhysLayer, IdxNGeneralRBM_PhysHidden,
+  IdxNBlockSize_RBMRatio,
+  //RBM
+  IdxNOrbit, IdxNOrbitGeneral,
 	IdxNQPTrans, IdxNOneBodyG, IdxNTwoBodyG,
   IdxNTwoBodyGEx, IdxNInterAll, IdxNQPOptTrans,
   IdxSROptCGMaxIter,
@@ -113,3 +147,14 @@ int iComplexFlgOrbital=0;
 int iComplexFlgOrbitalAntiParallel=0;
 int iComplexFlgOrbitalParallel=0;
 int iComplexFlgOrbitalGeneral=0;
+//RBM
+int iComplexFlgGeneralRBM_PhysLayer=0;
+int iComplexFlgGeneralRBM_HiddenLayer=0;
+int iComplexFlgGeneralRBM_PhysHidden=0;
+int iComplexFlgChargeRBM_PhysLayer=0;
+int iComplexFlgChargeRBM_HiddenLayer=0;
+int iComplexFlgChargeRBM_PhysHidden=0;
+int iComplexFlgSpinRBM_PhysLayer=0;
+int iComplexFlgSpinRBM_HiddenLayer=0;
+int iComplexFlgSpinRBM_PhysHidden=0;
+//RBM

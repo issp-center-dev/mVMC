@@ -37,9 +37,31 @@ void InitParameter() {
   //printf("AllComplexFlag=%d \n",AllComplexFlag);
   #pragma omp parallel for default(shared) private(i)
   for(i=0;i<NProj;i++) Proj[i] = 0.0;
+
+  if (FlagRBM) {
+    if(AllComplexFlag==0){
+      for(i=0;i<NRBM;i++){
+        if(OptFlag[2*i+2*NProj] > 0){ //TBC
+          RBM[i]  =   0.01*(genrand_real2() -0.5)/(double)Nneuron; /* uniform distribution [0,1) */
+        } else {
+          RBM[i] = 0.0;
+        }
+      }
+    }else{
+      for(i=0;i<NRBM;i++){
+        if(OptFlag[2*i+2*NProj] > 0){ //TBC
+          RBM[i]  =   1e-2*genrand_real2()*cexp(2.0*I*M_PI*genrand_real2());
+          //RBM[i]  =   1e-2*genrand_real2()*cexp(2.0*I*M_PI*genrand_real2())/(double)Nneuron;
+        } else {
+          RBM[i] = 0.0;
+        }
+      }
+    }
+  }
+
   if(AllComplexFlag==0){
     for(i=0;i<NSlater;i++){
-      if(OptFlag[2*i+2*NProj] > 0){ //TBC
+      if(OptFlag[2*i+2*NProj + 2*FlagRBM*NRBM] > 0){ //TBC
         Slater[i] =  2*(genrand_real2()-0.5); /* uniform distribution [-1,1) */
         //Slater[i] =  1*genrand_real2(); /* uniform distribution [0,1) */
         //Slater[i] += 1*I*genrand_real2(); /* uniform distribution [0,1) */
@@ -51,7 +73,7 @@ void InitParameter() {
   }
   else{
     for(i=0;i<NSlater;i++){
-      if(OptFlag[2*i+2*NProj] > 0){ //TBC
+      if(OptFlag[2*i+2*NProj + 2*FlagRBM*NRBM] > 0){ //TBC
         Slater[i] =  2*(genrand_real2()-0.5); /* uniform distribution [-1,1) */
         Slater[i] += 2*I*(genrand_real2()-0.5); /* uniform distribution [-1,1) */
         Slater[i] /=sqrt(2.0);
@@ -60,8 +82,8 @@ void InitParameter() {
         Slater[i] = 0.0;
       }
     }
- 
   }
+
   for(i=0;i<NOptTrans;i++){
     OptTrans[i] = ParaQPOptTrans[i];
   }
@@ -85,6 +107,13 @@ int ReadInitParameter(char *initFile) {
       for(xi=0;xi<NProj;xi++) {
         fscanf(fp, "%lf %lf %lf ", &tmp_real, &tmp_comp, &xtmp);
         Proj[xi] = tmp_real+tmp_comp*I; 
+      }
+      if (FlagRBM) {
+        for(xi=0;xi<NRBM;xi++) {
+          fscanf(fp, "%lf %lf %lf ", &tmp_real, &tmp_comp, &xtmp);
+//        printf("RBM[%d] = %.3e %.3e\n",xi,tmp_real, tmp_comp);
+          RBM[xi] = tmp_real+tmp_comp*I; 
+        }
       }
       for(xi=0;xi<NSlater;xi++) {
         fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);

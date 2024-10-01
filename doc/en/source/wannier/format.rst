@@ -27,9 +27,9 @@ By editing this file, we can modify the number of orbitals treated in HPhi/mVMC.
 
 * Line 4
 
-  The number of orbitals per unit cell treated by mVMC/HPhi.
+  The number of orbitals par unit cell treated by mVMC/HPhi.
   When we reduce the number by editing this file,
-  the model includes the same number of orbitals from the top.
+  the model including the same number of orbitals from the top.
 
 * Line 5 - end
 
