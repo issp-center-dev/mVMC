@@ -77,7 +77,7 @@ void calculateQCACAQDC_real(double *qcacaq, const double *lslq, const double w,
 void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const double w,
                        const int nLSHam, const int nCA, const int nCACA,
                        int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
-                       const double complex h1, const double complex ip);
+                       const double complex h1, const double complex ip,double complex *rbmCnt);
 
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
@@ -297,7 +297,7 @@ void VMCMainCal(MPI_Comm comm) {
             calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
                             NCisAjsCktAlt,CisAjsCktAltIdx);
             calculateQCACAQDC(QCisAjsCktAltQDC,LSLQ,w,NLSHam,NCisAjs,
-                              NCisAjsCktAltDC,eleIdx,eleCfg,eleNum,eleProjCnt,e,ip);
+                              NCisAjsCktAltDC,eleIdx,eleCfg,eleNum,eleProjCnt,e,ip,rbmCnt);
           }
           StopTimer(44);
         }
@@ -977,7 +977,7 @@ void calculateQCACAQDC_real(double *qcacaq, const double *lslq, const double w,
 void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const double w,
                        const int nLSHam, const int nCA, const int nCACA,
                        int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
-                       const double complex h1, const double complex ip) {
+                       const double complex h1, const double complex ip,double complex *rbmCnt) {
   const int n=nLSHam*nLSHam*nCACA;
   int rq,rp,ri,rj,rk,rl,s,t,idx;
   int i,tmp;
@@ -996,7 +996,7 @@ void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const
       rl = CisAjsCktAltDCIdx[idx][6];
       t  = CisAjsCktAltDCIdx[idx][5];
       qcacaq[i] += w * lslq[rp*nLSHam] * calHCACA(ri,rj,rk,rl,s,t,h1,ip,
-                                                  eleIdx,eleCfg,eleNum,eleProjCnt);
+                                                  eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
     } else
       qcacaq[i] += w * lslq[rp*nLSHam] * LocalCisAjsCktAltDC[idx];
   }
