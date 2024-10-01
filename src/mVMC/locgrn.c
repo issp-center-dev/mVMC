@@ -288,6 +288,10 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
 
   MakeProjCnt(projCntNew,eleNum);
   x = ProjRatio(projCntNew,eleProjCnt);
+  if (FlagRBM) {
+    MakeRBMCnt(rbmCntNew, eleNum);
+    x *= RBMRatio(rbmCntNew,rbmCnt);
+  }
 
   /* calculateNewPfM */
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
@@ -304,7 +308,7 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
     eleNum[rsi[k]] = 0;
   }
 
-  return x*z/ip;
+  return conj(x*z/ip);
 }
 
 //
