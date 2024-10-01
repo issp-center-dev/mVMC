@@ -23,9 +23,9 @@ set(SOURCES_sfmt
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../pfapack)
 
 add_executable(vmcdry.out vmcdry.c)
-target_link_libraries(vmcdry.out StdFace m)
+target_link_libraries(vmcdry.out StdFace_mvmc m)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
-target_link_libraries(vmc.out StdFace)
+target_link_libraries(vmc.out StdFace_mvmc m)
 target_link_libraries(vmc.out pfapack)
 target_link_libraries(vmc.out ltl2inv)
 if(PFAFFIAN_BLOCKED)
