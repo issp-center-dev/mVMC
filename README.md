@@ -62,4 +62,4 @@ are available at [mVMC-tutorial](https://github.com/issp-center-dev/mVMC-tutoria
 
 ## Authors
 
-Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, Yuichi Motoyama, Mitsuaki Kawamura, Kazuyoshi Yoshimi, Takeo Kato, Masatoshi Imada.
+Takahiro Misawa, Satoshi Morita, Takahiro Ohgoe, Kota Ido, RuQing G. Xu, Yuichi Motoyama, Mitsuaki Kawamura, Kazuyoshi Yoshimi, Takeo Kato, Masatoshi Imada.
