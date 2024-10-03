@@ -38,6 +38,17 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
   int *myEleIdx, *myEleNum, *myProjCntNew;
   double complex *myBuffer;
 
+  int *lazy_info = malloc(    sizeof(int) * NCisAjsCktAltDC * 2);
+  int *lazy_rsi  = malloc(2 * sizeof(int) * NCisAjsCktAltDC);
+  int *lazy_msj  = malloc(2 * sizeof(int) * NCisAjsCktAltDC);
+  double complex *lazy_ip  = malloc(sizeof(double complex) * NCisAjsCktAltDC);
+  double complex *lazy_pfa = malloc(sizeof(double complex) * NCisAjsCktAltDC * NQPFull);
+  memset(lazy_info,                    0, sizeof(int) * NCisAjsCktAltDC);
+  memset(lazy_info + NCisAjsCktAltDC, -1, sizeof(int) * NCisAjsCktAltDC);
+
+  for (int mi=0; mi<Ne;  mi++) EleSpn[mi] = 0;
+  for (int mi=Ne;mi<Ne*2;mi++) EleSpn[mi] = 1;
+
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
   RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
@@ -49,6 +60,20 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
     myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
+
+    void *pfOrbital[NQPFull];
+    void *pfUpdator[NQPFull];
+    void *pfMat[NQPFull];
+    void *pfMap[NQPFull];
+
+    // Attaching thread-private objects to thread-shared InvM.
+    // These objects no long need mutating states in this use. Just functor-like stuff.
+    updated_tdi_v_seq_init_precomp_z(NQPFull, Nsite, Nsite2, Nsize,
+                                     SlaterElm, Nsite2*Nsite2,
+                                     InvM, Nsize*Nsize,
+                                     eleIdx, EleSpn,
+                                     2 /* GF @ measure: 2 at max. */, PfM,
+                                     pfUpdator, pfOrbital, pfMat, pfMap);
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -70,7 +95,7 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
     #pragma omp master
     {StopTimer(50);StartTimer(51);}
     
-    #pragma omp for private(idx,ri,rj,s,rk,rl,t,tmp) schedule(dynamic)
+    #pragma omp for private(idx,ri,rj,s,rk,rl,t) schedule(dynamic)
     for(idx=0;idx<NCisAjsCktAltDC;idx++) {
       ri = CisAjsCktAltDCIdx[idx][0];
       rj = CisAjsCktAltDCIdx[idx][2];
@@ -79,11 +104,57 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
       rl = CisAjsCktAltDCIdx[idx][6];
       t  = CisAjsCktAltDCIdx[idx][5];
 
-      tmp = GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,
-                       myProjCntNew,myBuffer);
-      PhysCisAjsCktAltDC[idx] += w*tmp;
+      int *lazy_info_loc = lazy_info + idx;
+      int *lazy_rsi_loc  = lazy_rsi  + idx * 2;
+      int *lazy_msj_loc  = lazy_msj  + idx * 2;
+      double complex *lazy_ip_loc = lazy_ip + idx;
+
+      *lazy_ip_loc = w *
+        GreenFunc2_(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer,
+          lazy_info_loc, lazy_rsi_loc, lazy_msj_loc);
+      if ( !*lazy_info_loc ) {
+        PhysCisAjsCktAltDC[idx] += *lazy_ip_loc;
+      } /* else {
+        // Reverse lookup for the idx
+        *lazy_info_loc = idx + 1;
+      } */
     }
-    
+
+    /* Batch-compute 2-body Green's functions. */
+    #pragma omp barrier
+    if ( Nsize <= 200 ) { // Heuristics: Huge Nelec seems to cause parallelize-over-nGF spill L2.
+      int num_qp_var0 = 0;
+      // Pack lazy info.
+      for (idx=0; idx<NCisAjsCktAltDC; ++idx)
+        if (lazy_info[idx]) {
+          if (omp_get_thread_num() == 0) {
+            lazy_rsi[num_qp_var0 * 2    ] = lazy_rsi[idx * 2]; \
+            lazy_rsi[num_qp_var0 * 2 + 1] = lazy_rsi[idx * 2 + 1]; \
+            lazy_msj[num_qp_var0 * 2    ] = lazy_msj[idx * 2]; \
+            lazy_msj[num_qp_var0 * 2 + 1] = lazy_msj[idx * 2 + 1]; \
+            lazy_info[NCisAjsCktAltDC + num_qp_var0] = idx; \
+          }
+          num_qp_var0++;
+        }
+      #pragma omp barrier
+      updated_tdi_v_omp_var0_proc_batch_greentwo_z(NQPFull, num_qp_var0,
+                                                   NULL, lazy_info + NCisAjsCktAltDC,
+                                                   lazy_rsi, lazy_msj,
+                                                   lazy_pfa,
+                                                   pfUpdator, pfOrbital, pfMat, pfMap);
+    } else {
+      updated_tdi_v_omp_var1_proc_batch_greentwo_z(NQPFull, NCisAjsCktAltDC,
+                                                   lazy_info, lazy_info + NCisAjsCktAltDC,
+                                                   lazy_rsi, lazy_msj,
+                                                   lazy_pfa,
+                                                   pfUpdator, pfOrbital, pfMat, pfMap);
+    }
+    #pragma omp barrier
+    #pragma omp for private(idx) schedule(dynamic) nowait
+    for(idx=0;idx<NCisAjsCktAltDC;idx++)
+      if ( lazy_info[idx] )
+        PhysCisAjsCktAltDC[idx] += conj(CalculateIP_fcmp(lazy_pfa + idx * NQPFull, 0, NQPFull, MPI_COMM_SELF)) * lazy_ip[idx];
+
     #pragma omp master
     {StopTimer(51);StartTimer(52);}
 
@@ -105,6 +176,11 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
     #pragma omp master
     {StopTimer(53);}
   }
+  free(lazy_info);
+  free(lazy_rsi);
+  free(lazy_msj);
+  free(lazy_ip);
+  free(lazy_pfa);
 
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();

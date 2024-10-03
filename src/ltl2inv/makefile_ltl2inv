@@ -1,0 +1,28 @@
+include ../make.sys
+
+OBJ = ilaenv_lauum.o gemmt2blas.o ltl2inv.o
+SRC = ilaenv_lauum.cc gemmt2blas.cc ltl2inv.cc
+HDR = ilaenv.h ilaenv_lauum.hh lapack2eigen.hh error.hh eigen_gemmt.tcc invert.tcc pfaffian.tcc trmmt.tcc
+
+ltl2inv.a: $(OBJ)
+	$(AR) rvu $@ $(OBJ)
+
+clean:
+	rm -f $(OBJ)
+
+SUFFIXES: .o .c
+
+.c.o: $(HDR)
+	$(CC) $(OPTION) $(CFLAGS) -c $< -o $@ \
+		-Wno-incompatible-pointer-types-discards-qualifiers \
+		-I../pfapack/c_interface \
+		-I$(BLIS_ROOT)/include \
+		-I$(BLIS_ROOT)/include/blis
+
+SUFFIXES: .o .cc
+
+.cc.o: $(HDR)
+	$(CXX) $(CXXFLAGS) -D_CC_IMPL -c $< -o $@ \
+		-I../pfapack/c_interface \
+		-I$(BLIS_ROOT)/include \
+		-I$(BLIS_ROOT)/include/blis

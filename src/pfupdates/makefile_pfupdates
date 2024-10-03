@@ -1,16 +1,15 @@
 include ../make.sys
 
-ifeq ($(BLIS_ROOT),)
-	BLIS_ROOT = ../pfaffine/src/dep
-endif
-
 OBJ = pfupdates.o
 SRC = pf_interface.cc
-HDR = pf_interface.h orbital_mat.tcc skmv.tcc updated_tdi.tcc
+HDR = pf_interface.h \
+		orbital_mat.tcc skmv.tcc skr2k.tcc skslc.tcc updated_tdi.tcc \
+		../ltl2inv/eigen_gemmt.tcc ../ltl2inv/invert.tcc ../ltl2inv/pfaffian.tcc ../ltl2inv/trmmt.tcc \
+		../ltl2inv/error.hh ../ltl2inv/ilaenv_lauum.hh ../ltl2inv/lapack2eigen.hh
 
 $(OBJ): $(SRC) $(HDR) 
 	$(CXX) $(CXXFLAGS) -D_CC_IMPL -c $< -o $@ \
-		-I../pfaffine/src \
+		-I../pfapack/c_interface -I../ltl2inv \
 		-I$(BLIS_ROOT)/include \
 		-I$(BLIS_ROOT)/include/blis
 

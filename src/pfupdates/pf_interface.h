@@ -12,7 +12,7 @@
 #include "stdint.h"
 
 // Redefine double complex for (future) non-C99 compatibility.
-#ifndef _CC_IMPL
+#ifndef __cplusplus
 typedef _Complex double ccdcmplx;
 typedef _Complex float  ccscmplx;
 #else
@@ -23,6 +23,31 @@ extern "C" {
 // updated_tdi_[v means ``operate on vector'']_[operation]_[datatype].
 
 #define EXPANDNAME( funcname, cblachar ) funcname##_##cblachar
+
+#define GENDEF( ctype, cblachar ) \
+  void EXPANDNAME( updated_tdi_v_seq_init_precomp, cblachar ) \
+    ( uint64_t  num_qp, \
+      uint64_t  nsite, \
+      uint64_t  norbs, \
+      uint64_t  nelec, \
+      ctype    *orbmat_base, \
+      int64_t   orbmat_stride, \
+      ctype    *invmat_base, \
+      int64_t   invmat_stride, \
+      int32_t  *eleidx, \
+      int32_t  *elespn, \
+      uint64_t  mmax, \
+      ctype     pfav[], \
+      void     *objv[], \
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] );
+// GENDEF( float,    s )
+GENDEF( double,   d )
+// GENDEF( ccscmplx, c )
+GENDEF( ccdcmplx, z )
+#undef GENDEF
+
 
 #define GENDEF( ctype, cblachar ) \
    void EXPANDNAME( updated_tdi_v_init, cblachar ) \
@@ -38,11 +63,13 @@ extern "C" {
       int32_t  *elespn, \
       uint64_t  mmax, \
       void     *objv[], \
-      void     *orbv[] );
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
@@ -50,11 +77,13 @@ GENDEF( ccdcmplx, z )
    void EXPANDNAME( updated_tdi_v_free, cblachar ) \
     ( uint64_t  num_qp, \
       void     *objv[], \
-      void     *orbv[] );
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
@@ -64,9 +93,9 @@ GENDEF( ccdcmplx, z )
       ctype     pfav[], \
       void     *objv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
@@ -78,9 +107,9 @@ GENDEF( ccdcmplx, z )
       int64_t   cal_pfa, \
       void     *objv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
@@ -94,9 +123,9 @@ GENDEF( ccdcmplx, z )
       int64_t   cal_pfa, \
       void     *objv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
 #undef GENDEF
 
@@ -106,15 +135,38 @@ GENDEF( ccdcmplx, z )
       int64_t   cal_pfa, \
       void     *objv[] );
 
-GENDEF( float,    s )
+// GENDEF( float,    s )
 GENDEF( double,   d )
-GENDEF( ccscmplx, c )
+// GENDEF( ccscmplx, c )
 GENDEF( ccdcmplx, z )
+#undef GENDEF
+
+#define GENDEF( ctype, infix, cblachar ) \
+  void EXPANDNAME( updated_tdi_v_omp_## infix ##_proc_batch_greentwo, cblachar ) \
+    ( uint64_t  num_qp, \
+      int       num_gf, \
+      int       needs_comput[], \
+      int       unpack_idx[], \
+      int       to_orbs[], \
+      int       from_ids[], \
+      ctype     pfav[], \
+      void     *objv[], \
+      void     *orbv[], \
+      void     *matv[], \
+      void     *mapv[] );
+// GENDEF( float, var0,    s )
+// GENDEF( float, var1,    s )
+GENDEF( double, var0,   d )
+GENDEF( double, var1,   d )
+// GENDEF( ccscmplx, var0, c )
+// GENDEF( ccscmplx, var1, c )
+GENDEF( ccdcmplx, var0, z )
+GENDEF( ccdcmplx, var1, z )
 #undef GENDEF
 
 #undef EXPANDNAME
 
-#ifdef _CC_IMPL
+#ifdef __cplusplus
 }
 #endif
 

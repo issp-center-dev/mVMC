@@ -37,11 +37,6 @@ which follows "The BSD 3-Clause License".
 #include "splitloop.h"
 #include "vmcmake.h"
 
-#ifdef _pf_block_update
-// Block-update extension.
-#include "../pfupdates/pf_interface.h"
-#endif
-
 void VMCMakeSample_real(MPI_Comm comm) {
   int outStep, nOutStep;
   int inStep, nInStep;
@@ -66,7 +61,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
   StartTimer(30);
   if (BurnFlag == 0) {
-    makeInitialSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
+    makeInitialSample_real(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
                       qpStart, qpEnd, comm);
   } else {
     copyFromBurnSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt);
@@ -76,16 +71,19 @@ void VMCMakeSample_real(MPI_Comm comm) {
   // TODO: Compute from qpStart to qpEnd to support loop splitting.
   void *pfOrbital[NQPFull];
   void *pfUpdator[NQPFull];
+  void *pfMat[NQPFull];
+  void *pfMap[NQPFull];
   // Read block size from input.
   const char *optBlockSize = getenv("VMC_BLOCK_UPDATE_SIZE");
   if (optBlockSize)
     NBlockUpdateSize = atoi(optBlockSize);
   // Fall back to default if input is invalid.
-  if (NBlockUpdateSize < 1 || NBlockUpdateSize > 100)
+  if (NBlockUpdateSize < 1 || NBlockUpdateSize > 100) {
     if (NExUpdatePath == 0)
       NBlockUpdateSize = 2;
     else
       NBlockUpdateSize = 20;
+  }
 
   // Set one universal EleSpn.
   for (mi=0; mi<Ne;  mi++) EleSpn[mi] = 0;
@@ -96,7 +94,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
                        InvM_real, Nsize*Nsize,
                        TmpEleIdx, EleSpn,
                        NBlockUpdateSize,
-                       pfUpdator, pfOrbital);
+                       pfUpdator, pfOrbital, pfMat, pfMap);
   updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
 #else
   CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
@@ -106,17 +104,17 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
   if (!isfinite(logIpOld)) {
     if (rank == 0) fprintf(stderr, "waring: VMCMakeSample remakeSample logIpOld=%e\n", creal(logIpOld)); //TBC
-    makeInitialSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
+    makeInitialSample_real(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
                       qpStart, qpEnd, comm);
 #ifdef _pf_block_update
     // Clear and reinitialize.
-    updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital);
+    updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital, pfMat, pfMap);
     updated_tdi_v_init_d(NQPFull, Nsite, Nsite2, Nsize,
                          SlaterElm_real, Nsite2*Nsite2,
                          InvM_real, Nsize*Nsize,
                          TmpEleIdx, EleSpn,
                          NBlockUpdateSize,
-                         pfUpdator, pfOrbital);
+                         pfUpdator, pfOrbital, pfMat, pfMap);
     updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
 #else
     CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
@@ -283,13 +281,13 @@ void VMCMakeSample_real(MPI_Comm comm) {
         StartTimer(34);
 #ifdef _pf_block_update
         // Clear and reinitialize.
-        updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital);
+        updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital, pfMat, pfMap);
         updated_tdi_v_init_d(NQPFull, Nsite, Nsite2, Nsize,
                              SlaterElm_real, Nsite2*Nsite2,
                              InvM_real, Nsize*Nsize,
                              TmpEleIdx, EleSpn,
                              NBlockUpdateSize,
-                             pfUpdator, pfOrbital);
+                             pfUpdator, pfOrbital, pfMat, pfMap);
         updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
 #else
         CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
@@ -316,7 +314,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
 #ifdef _pf_block_update
   // Free-up updator space.
-  updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital);
+  updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital, pfMat, pfMap);
 #endif
 
   return;

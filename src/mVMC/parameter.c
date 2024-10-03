@@ -29,7 +29,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_PARAMETER
 #define _SRC_PARAMETER
 
-#define D_AmpMax             4.0
+#define D_AmpMax             0.5
 
 /* initialize variational parameters */
 void InitParameter() {

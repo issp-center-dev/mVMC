@@ -73,10 +73,11 @@ double complex GreenFunc1(const int ri, const int rj, const int s, const double 
 
 /* Calculate 2-body Green function <psi|CisAjsCktAlt|x>/<psi|x> */
 /* buffer size = NQPFull+2*Nsize */
-double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl,
+double complex GreenFunc2_(const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  int *projCntNew, double complex *buffer) {
+                  int *projCntNew, double complex *buffer,
+                  int *lazy_info, int *lazy_rsi, int *lazy_msj) {
   double complex z;
   int mj,msj,ml,mtl;
   int rsi,rsj,rtk,rtl;
@@ -145,8 +146,17 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
   z = ProjRatio(projCntNew,eleProjCnt);
 
   /* calculate Pfaffian */
-  CalculateNewPfMTwo_fcmp(ml, t, mj, s, pfMNew, eleIdx, 0, NQPFull, bufV);
-  z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  if (!lazy_info) {
+    CalculateNewPfMTwo_fcmp(ml, t, mj, s, pfMNew, eleIdx, 0, NQPFull, bufV);
+    z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  } else {
+    // Save invocation hook instead of calling.
+    lazy_msj[0] = msj; //< to edit to ri, revert to rj
+    lazy_msj[1] = mtl; //< to edit to rk, revert to rl
+    lazy_rsi[0] = rsi;
+    lazy_rsi[1] = rtk;
+    lazy_info[0] = 1; //< "is delayed" flag..
+  }
 
   /* revert hopping */
   eleIdx[mtl] = rl;
@@ -159,6 +169,12 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
   return conj(z/ip);//TBC
 }
 
+double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const double complex ip,
+                  int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
+                  int *projCntNew, double complex *buffer) {
+  return GreenFunc2_(ri, rj, rk, rl, s, t, ip, eleIdx, eleCfg, eleNum, eleProjCnt, projCntNew, buffer, 0, 0, 0);
+}
 
 // ignore GreenFuncN: to be added
 
@@ -392,12 +408,7 @@ double complex calculateNewPfMN_child(const int qpidx, const int n, const int *m
   /* calculate Pf M */
   //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
   //M_ZSKPFA(&uplo, &mthd, &n, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
-#ifdef _pfaffine
-  info = 1; // Skip inverse.
-  M_ZSKPFA(&uplo, &mthd, &n, mat, &lda, &pfaff, iwork, work, &lwork/*, rwork*/, &info);
-#else
   M_ZSKPFA(&uplo, &mthd, &n, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
-#endif
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
 
   return sgn * pfaff * PfM[qpidx];

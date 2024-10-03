@@ -72,6 +72,7 @@ extern int omp_get_thread_num(void);
 #else
  #include "../stcopt_pdposv.c"
 #endif
+#include "../../pfupdates/pf_interface.h"
 
 #include "../stcopt_cg.c"
 

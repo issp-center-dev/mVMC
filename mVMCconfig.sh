@@ -40,8 +40,8 @@ F90 = frt
 FFLAGS = -DNDEBUG -DFUJITSU -Kfast
 CFLAGS = -DNDEBUG -Ofast -fopenmp
 CXXFLAGS = -DNDEBUG -Ofast -fopenmp
-CFLAGS += -D_lapack -D_pf_block_update # -D_pfaffine
-CXXFLAGS += -DBLAS_EXTERNAL
+CFLAGS += -D_lapack -D_pf_block_update
+CXXFLAGS += -DBLAS_EXTERNAL -D_BLIS -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.so -SSL2 -lm -lpthread
@@ -74,8 +74,8 @@ F90 = ifort
 FFLAGS = -O3 -implicitnone
 CFLAGS = -O3 -qopenmp -Wno-unknown-pragmas
 CXXFLAGS = -O3 -std=gnu++14 -fpic -qopenmp
-CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL
+CFLAGS += -D_lapack -D_pf_block_update
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -mkl=sequential -lm -lpthread
@@ -100,8 +100,8 @@ F90 = ifort
 FFLAGS = -O3 -implicitnone
 CFLAGS = -O3 -qopenmp -Wno-unknown-pragmas
 CXXFLAGS = -O3 -std=gnu++14 -fpic -qopenmp
-CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL
+CFLAGS += -D_lapack -D_pf_block_update
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -mkl=sequential -lm -lpthread
@@ -124,8 +124,8 @@ F90 = flang
 FFLAGS = -O3
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3 -fPIC
-CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS +=
+CFLAGS += -D_lapack -D_pf_block_update
+CXXFLAGS += -D_BLIS -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = -lflame \$(BLIS_ROOT)/lib/libblis.a -lm -lpthread
@@ -148,8 +148,8 @@ F90 = gfortran
 FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3 -fPIC
-CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS +=
+CFLAGS += -D_lapack -D_pf_block_update
+CXXFLAGS += -D_BLIS -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = -lflame \$(BLIS_ROOT)/lib/libblis.a -lm -lpthread
@@ -172,8 +172,8 @@ F90 = gfortran
 FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3
-CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL
+CFLAGS += -D_lapack -D_pf_block_update
+CXXFLAGS += -DMKL -DBLAS_EXTERNAL -DF77_COMPLEX_RET_INTEL -D_BLIS -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lm -lpthread
@@ -196,8 +196,8 @@ F90 = gfortran
 FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3
-CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS +=
+CFLAGS += -D_lapack -D_pf_block_update
+CXXFLAGS += -D_BLIS -DEIGEN_USE_BLAS
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -llapack -lm -lpthread
@@ -220,8 +220,8 @@ F90 = gfortran
 FFLAGS = -O3 -fimplicit-none
 CFLAGS = -O3 -fopenmp
 CXXFLAGS = -O3
-CFLAGS += -D_lapack -D_pf_block_update -D_pfaffine
-CXXFLAGS += # -DBLAS_EXTERNAL # -DF77_COMPLEX_RET_INTEL # For Apple.
+CFLAGS += -D_lapack -D_pf_block_update
+CXXFLAGS += -D_BLIS -DEIGEN_USE_BLAS # -DBLAS_EXTERNAL # -DF77_COMPLEX_RET_INTEL # For Apple.
 
 BLIS_ROOT = ${PWD}/src/blis-install
 LIBS = \$(BLIS_ROOT)/lib/libblis.a -llapack -lm -lpthread
@@ -242,7 +242,6 @@ EOF
     cat src/make.sys
     cat src/make-ext.sys
     ln -s $PWD/src/make.sys src/StdFace/make.sys;
-    ln -s $PWD/src/make.sys src/pfaffine/make.inc;
     ln -s $PWD/src/make.sys src/pfapack/fortran/make.inc;
 
     cat > makefile <<EOF
