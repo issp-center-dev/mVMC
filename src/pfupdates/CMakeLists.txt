@@ -5,7 +5,7 @@ if(${CMAKE_PROJECT_NAME} STREQUAL "Project")
   message(FATAL_ERROR "cmake should be executed not for 'src' subdirectory, but for the top directory of mVMC.")
 endif(${CMAKE_PROJECT_NAME} STREQUAL "Project")
 
-if(${ARCHITECTURE} STREQUAL "x86_64")
+if("${ARCHITECTURE}" STREQUAL "x86_64")
   add_definitions(-DF77_COMPLEX_RET_INTEL)
 endif()
 include_directories(../ltl2inv)
