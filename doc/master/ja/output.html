@@ -68,11 +68,23 @@
 <tr class="row-even"><td><p>***_doublonHolon4site_opt.dat</p></td>
 <td><p>最適化された4サイトダブロン-ホロン相関因子.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_orbital_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_generalRBM_physlayer_opt.dat</p></td>
+<td><p>最適化されたRBM相関因子のうち、物理層のみに関わる変分パラメータ.</p></td>
+</tr>
+<tr class="row-even"><td><p>***_generalRBM_hiddenlayer_opt.dat</p></td>
+<td><p>最適化されたRBM相関因子のうち、隠れ層のみに関わる変分パラメータ.</p></td>
+</tr>
+<tr class="row-odd"><td><p>***_generalRBM_physhidden_opt.dat</p></td>
+<td><p>最適化されたRBM相関因子のうち、物理層と隠れ層を繋ぐ変分パラメータ.</p></td>
+</tr>
+<tr class="row-even"><td><p>***_orbital_opt.dat</p></td>
 <td><p>最適化されたペア軌道因子.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_out_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_out_yyy.dat</p></td>
 <td><p>エネルギーとその分散.</p></td>
+</tr>
+<tr class="row-even"><td><p>xxx_SRinfo.dat</p></td>
+<td><p>SR法に関連した情報.</p></td>
 </tr>
 <tr class="row-odd"><td><p>xxx_var_yyy.dat</p></td>
 <td><p>パラメータ最適化過程の情報.</p></td>
@@ -97,7 +109,7 @@
 変分パラメータが一斉に読み込めるため、変分パラメータ最適化後の物理量の計算を行う場合に使用します。
 出力されるデータは</p>
 <div class="math notranslate nohighlight">
-\[\langle H \rangle, \langle H^2 \rangle, g_i, v_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij} \nonumber\]</div>
+\[\langle H \rangle, \langle H^2 \rangle, g_i, v_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, a_{i\sigma}, b_{k}, W_{i\sigma k}, f_{ij} \nonumber\]</div>
 <p>で、それぞれの平均値と標準偏差が出力されます(平均値は実数、虚数の順に、標準偏差は実数のみ出力)。
 なお、全データが1行で出力され、数値の間は半角空白で区切られます。
 ***には <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> で指定されるヘッダが記載されます。</p>
@@ -129,6 +141,11 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 <p>SR法で最適化された4サイトのdoublon-holon相関因子が出力されます。
 出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInDH4指定ファイルと同じです。</p>
 </section>
+<section id="rbm-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat">
+<h2>RBM相関因子出力ファイル(***_generalRBM_physlayer_opt.dat, ***_generalRBM_hiddenlayer_opt.dat, ***_generalRBM_physhidden_opt.dat)<a class="headerlink" href="#rbm-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p>SR法で最適化されたRBM相関因子が出力されます。
+それぞれの出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInGeneralRBM_PhysLayer, InGeneralRBM_HiddenLayer, InGeneralRBM_PhysHidden指定ファイルと同じです。</p>
+</section>
 <section id="orbital-opt-dat">
 <h2>ペア軌道出力ファイル(***_orbital_opt.dat)<a class="headerlink" href="#orbital-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>SR法で最適化されたペア軌道の変分パラメータが出力されます。
@@ -150,6 +167,20 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 1.972000325276957824e+02  1.824505193695792893e-01
 1.308897206011880421e+01  5.701244886956570168e-01  \
 2.072610167083121837e+02  2.029162857569105916e-01
+…
+</pre></div>
+</div>
+</section>
+<section id="xxx-srinfo-dat-dat">
+<h2>xxx_SRinfo.dat.dat<a class="headerlink" href="#xxx-srinfo-dat-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p>各最適化ステップごとに、
+変分パラメータ数 <code class="docutils literal notranslate"><span class="pre">Npara</span></code> 、S行列の次元数 <code class="docutils literal notranslate"><span class="pre">Msize</span></code> 、 <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> などの入力ファイルで最適化しないと指定した実パラメータ数 <code class="docutils literal notranslate"><span class="pre">optCut</span></code> 、 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">DSROptRedCut</span></code> の値により削減された実パラメータ数 <code class="docutils literal notranslate"><span class="pre">diagCut</span></code> 、S行列の対角成分の最大値 <code class="docutils literal notranslate"><span class="pre">sDiagMax</span></code> と最小値 <code class="docutils literal notranslate"><span class="pre">sDiagMin</span></code> 、変分パラメータの変化量の最大値 <code class="docutils literal notranslate"><span class="pre">absRmax</span></code> とそのパラメータインデックス <code class="docutils literal notranslate"><span class="pre">imax</span></code> といったSR法による最適化情報が順に出力されます。
+xxxには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが記載されます。以下に出力例を記載します。なお、変分パラメータが実変数( <code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> )として扱われた場合、虚部のパラメータ数は <code class="docutils literal notranslate"><span class="pre">optCut</span></code> にカウントされます。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax
+4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4
+4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0
+4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0
+4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0
 …
 </pre></div>
 </div>
@@ -330,7 +361,7 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 <section id="xxx-ls-out-yyy-dat">
 <h2>xxx_ls_out_yyy.dat<a class="headerlink" href="#xxx-ls-out-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>Power Lanczos法により求めた <span class="math notranslate nohighlight">\(\langle H \rangle\)</span>,
-<span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> および最適化パラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> の順に出力されます。
+<span class="math notranslate nohighlight">\((\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2\)</span> および最適化パラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> の順に出力されます。
 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> 指定ファイルで <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> =1, <code class="docutils literal notranslate"><span class="pre">NLanczosmode</span></code> =1,
 2に設定することで計算されます。
 xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
@@ -371,8 +402,10 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#jastrow-jastrow-opt-dat">Jastrow因子出力ファイル(***_jastrow_opt.dat)</a></li>
 <li><a class="reference internal" href="#doublonholon2site-opt-dat">2サイトダブロンホロン相関因子出力ファイル(***_doublonHolon2site_opt.dat)</a></li>
 <li><a class="reference internal" href="#doublonholon4site-opt-dat">4サイトダブロンホロン相関因子出力ファイル(***_doublonHolon4site_opt.dat)</a></li>
+<li><a class="reference internal" href="#rbm-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat">RBM相関因子出力ファイル(***_generalRBM_physlayer_opt.dat, ***_generalRBM_hiddenlayer_opt.dat, ***_generalRBM_physhidden_opt.dat)</a></li>
 <li><a class="reference internal" href="#orbital-opt-dat">ペア軌道出力ファイル(***_orbital_opt.dat)</a></li>
 <li><a class="reference internal" href="#xxx-out-yyy-dat">xxx_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-srinfo-dat-dat">xxx_SRinfo.dat.dat</a></li>
 <li><a class="reference internal" href="#xxx-calctimer-dat">xxx_CalcTimer.dat</a></li>
 <li><a class="reference internal" href="#xxx-time-zzz-dat">xxx_time_zzz.dat</a></li>
 <li><a class="reference internal" href="#xxx-cisajs-yyy-dat">xxx_cisajs_yyy.dat</a><ul>

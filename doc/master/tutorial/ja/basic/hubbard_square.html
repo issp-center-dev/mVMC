@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>1.3. 二次元Hubbard模型 &#8212; mVMC Tutorial  ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2aa0fae8"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="2. 応用編" href="../advanced/index.html" />
+    <link rel="prev" title="1.2. 一次元Hubbard模型" href="hubbard_chain.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="hubbard">
+<h1><span class="section-number">1.3. </span>二次元Hubbard模型<a class="headerlink" href="#hubbard" title="この見出しへのパーマリンク">¶</a></h1>
+<p>このチュートリアルでは、次の式で定義されるハーフフィリングにおける正方格子上の拡張Hubbard模型の基底状態を乱数ペアリングと平均場近似を元に構築した状態、それぞれを初期状態にして計算します。</p>
+<div class="math notranslate nohighlight" id="equation-basic-hubbard-square-0">
+<span class="eqno">(1.11)<a class="headerlink" href="#equation-basic-hubbard-square-0" title="この数式へのパーマリンク">¶</a></span>\[H = -t \sum_{\langle i,j\rangle, \sigma}c_{i\sigma}^{\dagger}c_{j\sigma} + U \sum_{i} n_{i\uparrow}n_{i\downarrow} + V \sum_{i&lt;j} n_{i}n_{j},\ n_i = n_{i\uparrow} + n_{i\downarrow}\]</div>
+<p>ハミルトニアンの係数は <span class="math notranslate nohighlight">\(t=1\)</span> 、 <span class="math notranslate nohighlight">\(U=4\)</span> 、 <span class="math notranslate nohighlight">\(V=0\)</span> としています。変更したい場合は、 <code class="docutils literal notranslate"><span class="pre">MakeInput.py</span></code> を直接修正してください。</p>
+<p>なお、このチュートリアルは、 <a class="reference external" href="https://isspns-gitlab.issp.u-tokyo.ac.jp/mvmc-dev/mvmc-tutorial">ISSPデータリポジトリ</a> に登録されているチュートリアルを元にしています。</p>
+<section id="id1">
+<h2><span class="section-number">1.3.1. </span>乱数初期状態での最適化<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h2>
+<p>まず、乱数ペアリングの状態を初期状態として最適化を行います。mVMCの場合、初期状態を指定しないと自動的に乱数ペアリング状態が初期状態として用いられます。次のコマンドを実行してください。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run.sh
+</pre></div>
+</div>
+<p>このコマンドを実行すると、tutorial_1.2 一次元Hubbard模型で説明した内容が全て実行されます。</p>
+<section id="id2">
+<h3><span class="section-number">1.3.1.1. </span>演習<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p>得られた <code class="docutils literal notranslate"><span class="pre">SqNq.dat</span></code> を使って、スピン構造因子 <span class="math notranslate nohighlight">\(S(\boldsymbol{q})\)</span> をプロットし、 <span class="math notranslate nohighlight">\(\boldsymbol{q}=(\pi, \pi)\)</span> にピークを持つことを確認してください。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MakeInput.py</span></code> を修正して、相互作用パラメータ <span class="math notranslate nohighlight">\(U\)</span> と <span class="math notranslate nohighlight">\(V\)</span> の値を変えた場合、スピン構造因子がどのように変化するのかを調べてみてください。</p></li>
+</ul>
+</section>
+</section>
+<section id="uhf">
+<h2><span class="section-number">1.3.2. </span>UHF初期状態での最適化<a class="headerlink" href="#uhf" title="この見出しへのパーマリンク">¶</a></h2>
+<p>次に、UHF (Unrestricted Hartree-Fock) 近似で得られた <span class="math notranslate nohighlight">\(\prod_n (\sum_{i\sigma} \Phi_{in\sigma} c^{\dagger}_{i\sigma}) |0\rangle\)</span> からペアリング関数 <span class="math notranslate nohighlight">\((\sum_{i,j} f_{ij} c^{\dagger}_{i\uparrow} c^{\dagger}_{j\downarrow})^{N} |0\rangle\)</span> を構築し、それをmVMCの初期状態として最適化を行ってみます。詳細は論文等(例えば文献2を参照)で紹介されているので割愛しますが、次の関係式から構築することができます。</p>
+<blockquote>
+<div><div class="math notranslate nohighlight" id="equation-basic-hubbard-square-1">
+<span class="eqno">(1.12)<a class="headerlink" href="#equation-basic-hubbard-square-1" title="この数式へのパーマリンク">¶</a></span>\[f_{ij} = \sum_{n} \Phi_{in\uparrow} \Phi_{jn\downarrow}\]</div>
+</div></blockquote>
+<p>ここで、 <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> はUHF近似で得られた一電子軌道を、 <span class="math notranslate nohighlight">\(n\)</span> はUHF近似の固有状態のインデックスを表しています。mVMCパッケージに含まれているUHFコードを使用することで、上述の式に基づいて <code class="docutils literal notranslate"><span class="pre">InOrbital</span></code> の形式に合わせた <span class="math notranslate nohighlight">\(f_{ij}\)</span> を出力してくれます。</p>
+<p><code class="docutils literal notranslate"><span class="pre">sh</span> <span class="pre">run.sh</span></code> を実行した後で、次のコマンドを実行してください。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run_uhf.sh
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">run_uhf.sh</span></code> は <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> とほとんど同じです。主な違いは15、16行目の:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>${UHF}  namelist.def
+echo &quot; InOrbital zqp_APOrbital_opt.dat &quot; &gt;&gt; namelist.def
+</pre></div>
+</div>
+<p>です。一行目ではUHFコードを実行し、二行目ではUHFコードで構築された <span class="math notranslate nohighlight">\(f_{ij}\)</span> が出力されたファイル <code class="docutils literal notranslate"><span class="pre">zqp_APOrbital_opt.dat</span></code> をmVMCの入力ファイル <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> に追記しています。</p>
+<p>正常に実行された場合、 <code class="docutils literal notranslate"><span class="pre">gnuplot</span> <span class="pre">plot</span></code> を実行すると、次のようなグラフが得られます。</p>
+<a class="reference internal image-reference" href="../_images/tutorial1.3_gs_opt.png"><img alt="../_images/tutorial1.3_gs_opt.png" class="align-center" src="../_images/tutorial1.3_gs_opt.png" style="width: 545.0px; height: 350.0px;" /></a>
+<a class="reference internal image-reference" href="../_images/tutorial1.3_gs_opt_zoom.png"><img alt="../_images/tutorial1.3_gs_opt_zoom.png" class="align-center" src="../_images/tutorial1.3_gs_opt_zoom.png" style="width: 545.0px; height: 350.0px;" /></a>
+<p>下図は、上図を拡大したものになっています。
+紫点が乱数ペアリングを初期状態にした結果、緑点がUHF近似から構築した状態を初期状態にした結果です。水色線と黒線は、それぞれ、UHFで得られたエネルギーと厳密対角化で得られるエネルギーです。UHF近似による初期状態を使ったほうが、初期ステップでのエネルギー値が低く、少ない最適化ステップ数で収束していることがわかります。</p>
+</section>
+<section id="id3">
+<h2><span class="section-number">1.3.3. </span>参考文献<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
+<ol class="arabic simple">
+<li><p><a class="reference external" href="https://isspns-gitlab.issp.u-tokyo.ac.jp/mvmc-dev/mvmc-tutorial">ISSPデータリポジトリ</a></p></li>
+<li><p><a class="reference external" href="https://issp-center-dev.github.io/mVMC/doc/master/ja/algorithm.html#puffandslater">https://issp-center-dev.github.io/mVMC/doc/master/ja/algorithm.html#puffandslater</a></p></li>
+</ol>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">1. 基本編</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="hubbard_dimer.html">1.1. Hubbardダイマー</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hubbard_chain.html">1.2. 一次元Hubbard模型</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">1.3. 二次元Hubbard模型</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">1.3.1. 乱数初期状態での最適化</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#uhf">1.3.2. UHF初期状態での最適化</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id3">1.3.3. 参考文献</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../advanced/index.html">2. 応用編</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">1. </span>基本編</a><ul>
+      <li>Previous: <a href="hubbard_chain.html" title="前の章へ"><span class="section-number">1.2. </span>一次元Hubbard模型</a></li>
+      <li>Next: <a href="../advanced/index.html" title="次の章へ"><span class="section-number">2. </span>応用編</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020-, The University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/basic/hubbard_square.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

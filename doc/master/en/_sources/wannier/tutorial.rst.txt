@@ -10,7 +10,7 @@ We use QuantumESPRESSO for the DFT calculation.
 Input files are served in ``samples/Wannier/Sr2CuO3`` directory.
 
 
-In actual studies, the input files, etc. of each solver should be modified for more high accuracy calculation.
+In actual studies, the input files etc. of each solver should be modified for more high accuracy calculation.
 Please refer to the manuals of each solver for the details of the input files.
 
 SCF calculation of charge density
@@ -107,9 +107,9 @@ Quantum lattice mode for HPhi/mVMC
 ----------------------------------
 
 Using standard mode of HPhi/mVMC, the calculation will be done by reading the files in ``dir-model`` folder.
-First, the files in ``dir-model`` directory should be moved to the current directory.
+First, the files in ``dir-model`` directory should be moved to the current directry.
 Then, the calculation will be started by using standard mode.
-For example, in HPhi, the calculation will be done by typing the following command:
+For example, in HPhi, the calculation will be dobe by typing the following command:
                     
 :download:`stan.in <../../../../samples/Wannier/Sr2CuO3/stan.in>`
 

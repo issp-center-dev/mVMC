@@ -73,11 +73,23 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 <tr class="row-even"><td><p>***_doublonHolon4site_opt.dat</p></td>
 <td><p>Optimized 4-site doublon-holon correlation factors.</p></td>
 </tr>
+<tr class="row-odd"><td><p>***_generalRBM_physlayer_opt.dat</p></td>
+<td><p>Optimized variational parameters of the general RBM correlation factors only in a physical layer.</p></td>
+</tr>
+<tr class="row-even"><td><p>***_generalRBM_hiddenlayer_opt.dat</p></td>
+<td><p>Optimized variational parameters of the general RBM correlation factors only in a hidden layer.</p></td>
+</tr>
 <tr class="row-odd"><td><p>***_orbital_opt.dat</p></td>
+<td><p>Optimized variational parameters of the general RBM correlation factors which connect physical and hidden layers.</p></td>
+</tr>
+<tr class="row-even"><td><p>***_orbital_opt.dat</p></td>
 <td><p>Optimized pair orbital factors.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_out_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_out_yyy.dat</p></td>
 <td><p>Energy and deviation.</p></td>
+</tr>
+<tr class="row-even"><td><p>xxx_SRinfo.dat</p></td>
+<td><p>Information related to SR optimization method.</p></td>
 </tr>
 <tr class="row-odd"><td><p>xxx_var_yyy.dat</p></td>
 <td><p>Progress information for optimizing variational parameters.</p></td>
@@ -86,7 +98,7 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 <td><p>Computation time for each processes.</p></td>
 </tr>
 <tr class="row-odd"><td><p>xxx_time_zzz.dat</p></td>
-<td><p>Progress information for MonteCalro samplings.</p></td>
+<td><p>Progress information for Monte Carlo samplings.</p></td>
 </tr>
 <tr class="row-even"><td><p>xxx_cisajs_yyy.dat</p></td>
 <td><p>One body Green’s functions.</p></td>
@@ -106,12 +118,12 @@ energy optimized by the SR method are outputted in the following order:</p>
 <p>The type of average values is a complex number, while that of the
 deviation is a real number. Since the initial values of all variational
 parameters are specified at the beginning of the calculation, the
-calculation of physical quantities is done by using this file.
+calculation of physical quantities is done by using this file file.
 Here, *** is the header indicated by <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code>
 file.</p>
 </section>
-<section id="output-files-for-variational-parameters-at-each-step-xxx-var-yyy-dat">
-<h2>Output files for variational parameters at each step (xxx_var_yyy.dat)<a class="headerlink" href="#output-files-for-variational-parameters-at-each-step-xxx-var-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<section id="output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat">
+<h2>Output files for variational parameters at each steps (xxx_var_yyy.dat)<a class="headerlink" href="#output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>The average and deviation values of variational parameters and the
 energy optimized by the SR method are postscripted by the order same as
 $$$_opt.dat file (the deviation is always outputted as 0). Here, xxx is
@@ -145,6 +157,12 @@ outputted. The file format is same as the <code class="docutils literal notransl
 outputted. The file format is same as the <code class="docutils literal notranslate"><span class="pre">InDH4</span></code> file defined in Sec.
 <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">Files to set initial values of variational parameters</span></a>.</p>
 </section>
+<section id="output-files-for-general-rbm-factors-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat">
+<h2>Output files for general RBM factors(***_generalRBM_physlayer_opt.dat, ***_generalRBM_hiddenlayer_opt.dat, ***_generalRBM_physhidden_opt.dat)<a class="headerlink" href="#output-files-for-general-rbm-factors-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat" title="Permalink to this heading">¶</a></h2>
+<p>The optimized general RBM correlation factors by SR method are outputted.
+The file format is same as the <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_PhysLayer</span></code>, <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_HiddenLayer</span></code> and <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_PhysHidden</span></code> files defined in Sec.
+<a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">Files to set initial values of variational parameters</span></a>.</p>
+</section>
 <section id="output-file-for-pair-orbitals-orbital-opt-dat">
 <h2>Output file for pair orbitals (***_orbital_opt.dat)<a class="headerlink" href="#output-file-for-pair-orbitals-orbital-opt-dat" title="Permalink to this heading">¶</a></h2>
 <p>The optimized pair orbitals by SR method are outputted. The file format
@@ -174,11 +192,27 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 </pre></div>
 </div>
 </section>
+<section id="xxx-srinfo-dat-dat">
+<h2>xxx_SRinfo.dat.dat<a class="headerlink" href="#xxx-srinfo-dat-dat" title="Permalink to this heading">¶</a></h2>
+<p>This file provides the optimization information by the SR method at each step.
+From the left column, the number of variational parameters as complex numbers <code class="docutils literal notranslate"><span class="pre">Npara</span></code>, the dimension of the S metric matrix <code class="docutils literal notranslate"><span class="pre">Msize</span></code>, the number of variational parameters that are not optimized in the input files for trial wavefunctions such as <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>, the number of variational parameters cut by the value of <code class="docutils literal notranslate"><span class="pre">DSROptRedCut</span></code> in the <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file <code class="docutils literal notranslate"><span class="pre">diagCut</span></code>, the maximum and minimum values of the diagonal components of the S matrix <code class="docutils literal notranslate"><span class="pre">sDiagMax</span></code> and <code class="docutils literal notranslate"><span class="pre">sDiagMin</span></code>, the maximum value of the change in the variational parameters <code class="docutils literal notranslate"><span class="pre">absRmax</span></code> and its parameter index <code class="docutils literal notranslate"><span class="pre">imax</span></code> are outputted.
+The header specified by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in the <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file is described in xxx.
+An example of the file format is as follows.
+Note that the number of imaginary parameters is counted in <code class="docutils literal notranslate"><span class="pre">optCut</span></code> when the variational parameters are treated as real variables (<code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code>).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax
+4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4
+4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0
+4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0
+4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0
+…
+</pre></div>
+</div>
+</section>
 <section id="xxx-calctimer-dat">
 <h2>xxx_CalcTimer.dat<a class="headerlink" href="#xxx-calctimer-dat" title="Permalink to this heading">¶</a></h2>
-<p>After finishing the calculation, the processing time is outputted in the
-order of the name, the number assigned by the process, and the seconds at
-each process. An example of outputted file is shown as follows.</p>
+<p>After finishing calculation, the processing time is outputted in the
+order of the name, the number assigned by the process and the seconds at
+each processes. An example of outputted file is shown as follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">All</span>                         <span class="p">[</span><span class="mi">0</span><span class="p">]</span>     <span class="mf">15.90724</span>
 <span class="n">Initialization</span>              <span class="p">[</span><span class="mi">1</span><span class="p">]</span>      <span class="mf">0.04357</span>
   <span class="n">read</span> <span class="n">options</span>             <span class="p">[</span><span class="mi">10</span><span class="p">]</span>      <span class="mf">0.00012</span>
@@ -196,7 +230,7 @@ each process. An example of outputted file is shown as follows.</p>
 <p>The calculation information at each bins are outputted in the order of
 the sampling number, the acceptance ratio for hopping and exchange term
 (acc_hopp, acc_ex), trial numbers to update for hopping and exchange
-term (n_hopp, n_ex), and the time stamp. Here, xxx is the header
+term (n_hopp, n_ex) and the time stamp. Here, xxx is the header
 indicated by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file and zzz is a number
 given by <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code>. An example of outputted file
 is shown as follows.</p>
@@ -339,7 +373,7 @@ respectively.</p>
 <section id="xxx-ls-out-yyy-dat">
 <h2>xxx_ls_out_yyy.dat<a class="headerlink" href="#xxx-ls-out-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file is the outputted files for <span class="math notranslate nohighlight">\(\langle H \rangle\)</span>,
-<span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span>, and the optimized parameter <span class="math notranslate nohighlight">\(\alpha\)</span>
+<span class="math notranslate nohighlight">\((\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2\)</span>, and the optimized parameter <span class="math notranslate nohighlight">\(\alpha\)</span>
 obtained by Power Lanczos method. This file is outputted when
 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> = 1, <code class="docutils literal notranslate"><span class="pre">NLanczosmode</span></code> = 1 or 2 are set in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code>
 file. Here, xxx is the header indicated by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in
@@ -381,13 +415,15 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
     <ul>
 <li><a class="reference internal" href="#">Output files</a><ul>
 <li><a class="reference internal" href="#output-file-for-variational-parameters-opt-dat">Output file for variational parameters (***_opt.dat)</a></li>
-<li><a class="reference internal" href="#output-files-for-variational-parameters-at-each-step-xxx-var-yyy-dat">Output files for variational parameters at each step (xxx_var_yyy.dat)</a></li>
+<li><a class="reference internal" href="#output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat">Output files for variational parameters at each steps (xxx_var_yyy.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-gutzwiller-factors-gutzwiller-opt-dat">Output file for gutzwiller factors (***_gutzwiller_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-jastrow-factors-jastrow-opt-dat">Output file for jastrow factors (***_jastrow_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-doublonholon-2-site-factors-doublonholon2site-opt-dat">Output file for doublonHolon 2-site factors (***_doublonHolon2site_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-doublonholon-4-site-factors-doublonholon4site-opt-dat">Output file for doublonHolon 4-site factors (***_doublonHolon4site_opt.dat)</a></li>
+<li><a class="reference internal" href="#output-files-for-general-rbm-factors-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat">Output files for general RBM factors(***_generalRBM_physlayer_opt.dat, ***_generalRBM_hiddenlayer_opt.dat, ***_generalRBM_physhidden_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-pair-orbitals-orbital-opt-dat">Output file for pair orbitals (***_orbital_opt.dat)</a></li>
 <li><a class="reference internal" href="#xxx-out-yyy-dat">xxx_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-srinfo-dat-dat">xxx_SRinfo.dat.dat</a></li>
 <li><a class="reference internal" href="#xxx-calctimer-dat">xxx_CalcTimer.dat</a></li>
 <li><a class="reference internal" href="#xxx-time-zzz-dat">xxx_time_zzz.dat</a></li>
 <li><a class="reference internal" href="#xxx-cisajs-yyy-dat">xxx_cisajs_yyy.dat</a><ul>

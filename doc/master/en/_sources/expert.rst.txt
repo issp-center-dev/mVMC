@@ -75,11 +75,12 @@ listed in parentheses correspond to the file made by vmcdry.out.
     .. math::
 
        \begin{aligned}
-       |\psi \rangle &= {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
+       |\psi \rangle &= {\cal N}_{General RBM} {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
        {\cal P}_G&=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right],\\
        {\cal P}_J&=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1)(n_j-1)\right],\\
        {\cal P}_{d-h}^{(2)}&= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right],\\
        {\cal P}_{d-h}^{(4)}&= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right],\\
+       {\cal N}_{\rm General RBM}&= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_h} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right],\\
        {\cal L}_S&=\frac{2S+1}{8 \pi^2}\int d\Omega P_s(\cos \beta) \hat{R}(\Omega),\\
        {\cal L}_K&=\frac{1}{N_s}\sum_{{\boldsymbol R}}e^{i {\boldsymbol K} \cdot{\boldsymbol R} } \hat{T}_{\boldsymbol R},\\
        {\cal L}_P&=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha},\end{aligned}
@@ -122,6 +123,12 @@ listed in parentheses correspond to the file made by vmcdry.out.
     :math:`\alpha_{4nt}^{d(h)}` in :math:`{\cal P}_{d-h}^{(4)}` to be
     optimized.
 
+    **GeneralRBM_PhysLayer**: Set the target variational parameters :math:`a_{i\sigma}` in the RBM correlation factor :math:`{\cal N}_{\rm General RBM}`.
+
+    **GeneralRBM_HiddenLayer**: Set the target variational parameters :math:`h_{k}` in the RBM correlation factor :math:`{\cal N}_{\rm General RBM}`.
+
+    **GeneralRBM_PhysHidden**: Set the target variational parameters :math:`W_{i\sigma k}` in the RBM correlation factor :math:`{\cal N}_{\rm General RBM}`.
+
     **Orbital/OrbitalAntiParallel (orbitalidx.def)**: Set the pair
     orbital with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`
     in :math:`|\phi_{\rm pair} \rangle` to be optimized.
@@ -155,6 +162,12 @@ listed in parentheses correspond to the file made by vmcdry.out.
     
     **InDH4**: Set the initial values of :math:`\alpha_{4nt}^{d(h)}`
     in :math:`{\cal P}_{d-h}^{(4)}`.
+
+    **InGeneralRBM_PhysLayer**: Set the initial values of :math:`a_{i\sigma}` in the RBM correlation factor :math:`{\cal N}_{\rm General RBM}`.
+
+    **InGeneralRBM_HiddenLayer**: Set the initial values of :math:`h_{k}` in the RBM correlation factor :math:`{\cal N}_{\rm General RBM}`.
+
+    **InGeneralRBM_PhysHidden**: Set the initial values of :math:`W_{i\sigma k}` in the RBM correlation factor :math:`{\cal N}_{\rm General RBM}`.
     
     **InOrbital /InOrbitalAntiParallel**: Set the initial values of
     :math:`f_{i\uparrow j\downarrow}` in
@@ -230,40 +243,52 @@ User rules
 
 -  When the head of line is ``#``, the line is skipped.
 
-===================== ===================================================================================
-Keywords              Details for corresponding files
-===================== ===================================================================================
-ModPara :math:`^*`    Parameters for calculation.
-LocSpin :math:`^*`    Configurations of the local spins for Hamiltonian.
-Trans                 Transfer and chemical potential for Hamiltonian.
-InterAll              Two-body interactions for Hamiltonian.
-CoulombIntra          CoulombIntra interactions.
-CoulombInter          CoulombInter interactions.
-Hund                  Hund couplings.
-PairHop               Pair hopping couplings.
-Exchange              Exchange couplings.
-Gutzwiller            Gutzwiller factors.
-Jastrow               Charge Jastrow factors.
-DH2                   2-site doublon-holon correlation factors.
-DH4                   4-site doublon-holon correlation factors.
-Orbital :math:`^*`    Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
-OrbitalAntiParallel   Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
-OrbitalParallel       Pair orbital factors with parallel spins :math:`f_{i\sigma j\sigma}`.
-OrbitalGeneral        Pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
-TransSym :math:`^*`   Translational and lattice symmetry operation.
-InGutzwiller          Initial values of Gutzwiller factors.
-InJastrow             Initial values of charge Jastrow factors.
-InDH2                 Initial values of 2-site doublon-holon correlation factors.
-InDH4                 Initial values of 4-site doublon-holon correlation factors.
-InOrbital             Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
-InOrbitalAntiParallel Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
-InOrbitalParallel     Initial values of pair orbital factors :math:`f_{i\sigma j\sigma}`.
-InOrbitalGeneral      Initial values of pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
-OneBodyG              Output components for Green functions
-                      :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle`
-TwoBodyG              Output components for Correlation functions
-                      :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle`
-===================== ===================================================================================
+======================== ===================================================================================
+Keywords                 Details for corresponding files
+======================== ===================================================================================
+ModPara :math:`^*`       Parameters for calculation.
+LocSpin :math:`^*`       Configurations of the local spins for Hamiltonian.
+Trans                    Transfer and chemical potential for Hamiltonian.
+InterAll                 Two-body interactions for Hamiltonian.
+CoulombIntra             CoulombIntra interactions.
+CoulombInter             CoulombInter interactions.
+Hund                     Hund couplings.
+PairHop                  Pair hopping couplings.
+Exchange                 Exchange couplings.
+Gutzwiller               Gutzwiller factors.
+Jastrow                  Charge Jastrow factors.
+DH2                      2-site doublon-holon correlation factors.
+DH4                      4-site doublon-holon correlation factors.
+GeneralRBM_PhysLayer     A part of the general RBM correlation factor including variational parameters 
+                         in a physical layer :math:`\alpha_{i\sigma}`.
+GeneralRBM_HiddenLayer   A part of the general RBM correlation factor including variational parameters 
+                         in a hidden layer :math:`h_{k}`.
+GeneralRBM_PhysHidden    A part of the general RBM correlation factor including variational parameters 
+                         which connect physical and hidden layers :math:`W_{i\sigma k}`.
+Orbital :math:`^*`       Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
+OrbitalAntiParallel      Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
+OrbitalParallel          Pair orbital factors with parallel spins :math:`f_{i\sigma j\sigma}`.
+OrbitalGeneral           Pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
+TransSym :math:`^*`      Translational and lattice symmetry operation.
+InGutzwiller             Initial values of Gutzwiller factors.
+InJastrow                Initial values of charge Jastrow factors.
+InDH2                    Initial values of 2-site doublon-holon correlation factors.
+InDH4                    Initial values of 4-site doublon-holon correlation factors.
+InGeneralRBM_PhysLayer   Initial values of variational parameters of the general RBM correlation factors 
+                         in a physical layer :math:`\alpha_{i\sigma}`.
+InGeneralRBM_HiddenLayer Initial values of variational parameters of the general RBM correlation factors 
+                         in a hidden layer :math:`h_{k}`.
+InGeneralRBM_PhysHidden  Initial values of variational parameters of the general RBM correlation factors 
+                         which connect physical and hidden layers :math:`W_{i\sigma k}`.
+InOrbital                Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
+InOrbitalAntiParallel    Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
+InOrbitalParallel        Initial values of pair orbital factors :math:`f_{i\sigma j\sigma}`.
+InOrbitalGeneral         Initial values of pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
+OneBodyG                 Output components for Green functions
+                         :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle`
+TwoBodyG                 Output components for Correlation functions
+                         :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle`
+======================== ===================================================================================
 
 ModPara file (modpara.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1234,6 +1259,7 @@ The Hamiltonian for exchange couplings
    +c_ {i \downarrow}^{\dagger}c_{j\downarrow}c_{j \uparrow}^{\dagger}c_{i  \uparrow})
 
 is added to the whole Hamiltonian by setting :math:`J_{ij}^{\rm Ex}`.
+Note that, for spin systems, the definition of the Exchange is different from that in HPhi.
 An example of the file format is shown as follows.
 
 ::
@@ -1827,6 +1853,407 @@ User rules
 -  A program is terminated, when [ int02 ] -
    [ int10 ] are out of range from the defined values.
 
+
+GeneralRBM_PhysLayer file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In the general RBM correlation factors, 
+
+.. math::
+
+   {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
+
+
+this file sets the calculation conditions of  :math:`\exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] ` .
+A site index :math:`i`, a spin index :math:`\sigma` and the variational parameters
+:math:`a_{i \sigma}` are specified. An example of the file format is shown as
+follows.
+
+::
+
+    --------------------
+    NRBM_PhysLayerIdx	1
+    ComplexType	1
+    i s RBM_PhysLayer_Idx
+    --------------------
+     0	0	 0
+     0	1	 0
+     1	0	 0
+     1	1	 0
+     (continue...)
+     0    1 
+
+File format
+^^^^^^^^^^^
+
+In the following, we define the total number of sites as :math:`N_s` and
+variational parameters as :math:`N_{v}`, respectively.
+
+-  Line 1: Header
+
+-  Line 2: [string01] [int01]
+
+-  Line 3: [string02] [int02]
+
+-  Lines 4 - 5: Header
+
+-  Lines 6 - (5+ :math:`2N_s`): [int03] [int04] [int05] 
+
+-  Lines (6+ :math:`2N_s` ) -
+   (5+  :math:`2N_s` + :math:`N_v`): [int06] [int07]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for total number of variational
+   parameters :math:`a_{i\sigma}`. You can freely give a name of the keyword.
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving total number of variational
+   parameters :math:`a_{i\sigma}`.
+
+-  [ string02 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for indicating the double or complex type
+   of variational parameters :math:`a_{i\sigma}`. You can freely give a name
+   of the keyword.
+
+-  [ int02 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer indicates the double or complex type of
+   variational parameters :math:`a_{i\sigma}` (0: double, 1: complex).
+
+-  [ int03 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving a site index
+   (0 :math:`\leq` [ int03 ] :math:`<` ``Nsite``).
+
+-  [ int04 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving a spin index
+   ([int04] = 0 or 1).
+
+-  [ int05 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer setting kinds of variational parameters
+   :math:`v_{ij}` (0 :math:`\leq` [ int05 ] :math:`<` [ int01]).
+
+-  [ int06 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving kinds of variational parameters
+   (0 :math:`\leq` [ int06 ] :math:`<` [ int01]).
+
+-  [ int07 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer to select the target of variational
+   parameters indicated at [int06] to be optimized or not (0: not
+   optimize, 1: optimize).
+
+User rules
+^^^^^^^^^^
+
+-  This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.
+  
+-  This function is available only for the VMC calculation with ``ComplexType=1`` and ``Orbital``. This function is not available for the Power Lanczos calculations.
+
+-  Headers cannot be omitted.
+
+-  A program is terminated, when [ int01 ] is
+   different from the total number of variational parameters defined in
+   this file.
+
+-  A program is terminated, when [ int02 ] -
+   [ int07 ] are out of range from the defined values.
+
+
+GeneralRBM_HiddenLayer file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In the general RBM correlation factors, 
+
+.. math::
+
+   {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
+
+
+this file sets the calculation conditions of :math:`b_k` in :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] `.
+A hidden neuron index :math:`k` and the variational parameters
+:math:`h_{k}` are specified. An example of the file format is shown as
+follows.
+
+::
+
+    --------------------
+    NRBM_HiddenLayerIdx	2
+    ComplexType	1
+    k RBM_HiddenLayer_Idx
+    --------------------
+     0	0
+     1	0
+     2	0
+     3	0
+     (continue...)
+     0    1 
+     1    1 
+
+File format
+^^^^^^^^^^^
+
+In the following, we define the total number of neurons as :math:`N_{\rm neuronGeneral}` and
+variational parameters as :math:`N_{v}`, respectively.
+
+-  Line 1: Header
+
+-  Line 2: [string01] [int01]
+
+-  Line 3: [string02] [int02]
+
+-  Lines 4 - 5: Header
+
+-  Lines 6 - (5+:math:`N_{\rm neuronGeneral}`): [int03] [int04] 
+
+-  Lines (6+ :math:`N_{\rm neuronGeneral}` ) -
+   (5+ :math:`N_{\rm neuronGeneral}` + :math:`N_v`): [int05] [int06]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for total number of variational
+   parameters :math:`h_{k}`. You can freely give a name of the keyword.
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving total number of variational
+   parameters :math:`h_{k}`.
+
+-  [ string02 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for indicating the double or complex type
+   of variational parameters :math:`h_{k}`. You can freely give a name
+   of the keyword.
+
+-  [ int02 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer indicates the double or complex type of
+   variational parameters :math:`h_{k}` (0: double, 1: complex).
+
+-  [ int03 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving a neuron index
+   (0 :math:`\leq` [ int03 ] :math:`<` ``NneuronGeneral``).
+
+-  [ int04 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer setting kinds of variational parameters
+   :math:`h_{k}` (0 :math:`\leq` [ int05 ] :math:`<` [ int01]).
+
+-  [ int05 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving kinds of variational parameters
+   (0 :math:`\leq` [ int06 ] :math:`<` [ int01]).
+
+-  [ int06 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer to select the target of variational
+   parameters indicated at [int06] to be optimized or not (0: not
+   optimize, 1: optimize).
+
+User rules
+^^^^^^^^^^
+
+-  This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.
+  
+-  This function is available only for the VMC calculation with ``ComplexType=1`` and ``Orbital``. This function is not available for the Power Lanczos calculations.
+
+-  Headers cannot be omitted.
+
+-  A program is terminated, when [ int01 ] is
+   different from the total number of variational parameters defined in
+   this file.
+
+-  A program is terminated, when [ int02 ] -
+   [ int06 ] are out of range from the defined values.
+
+
+GeneralRBM_PhysHidden file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In the general RBM correlation factors, 
+
+.. math::
+
+   {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
+
+
+this file sets the calculation conditions of :math:`W_{i\sigma k}` in :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] `.
+A site index :math:`i`, a spin index :math:`\sigma`, a hidden neuron index :math:`k` and the variational parameters
+:math:`W_{i\sigma k}` are specified. An example of the file format is shown as
+follows.
+
+::
+
+    --------------------
+    NRBM_HiddenLayerIdx	32
+    ComplexType	1
+    i s k RBM_PhysHidden_Idx
+    --------------------
+     0	0   0   0
+     0	1   0   1
+     1	0   0   2
+     1	1   0   3
+     2	0   0   4
+     2	1   0   5
+     (continue...)
+     0    1 
+     1    1
+     (continue...) 
+
+File format
+^^^^^^^^^^^
+
+In the following, we define the total number of sites as :math:`N_s`, the total number of neurons as :math:`N_{\rm neuronGeneral}` and
+variational parameters as :math:`N_{v}`.
+
+-  Line 1: Header
+
+-  Line 2: [string01] [int01]
+
+-  Line 3: [string02] [int02]
+
+-  Lines 4 - 5: Header
+
+-  Lines 6 - (5+:math:`2 N_s N_{\rm neuronGeneral}`): [int03] [int04] [int05] [int06]
+
+-  Lines (6+ :math:`2 N_s N_{\rm neuronGeneral}` ) -
+   (5+ :math:`2 N_s N_{\rm neuronGeneral}` + :math:`N_v`): [int07] [int08]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for total number of variational
+   parameters :math:`W_{i \sigma k}`. You can freely give a name of the keyword.
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving total number of variational
+   parameters :math:`W_{i \sigma k}`.
+
+-  [ string02 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for indicating the double or complex type
+   of variational parameters :math:`W_{i \sigma k}`. You can freely give a name
+   of the keyword.
+
+-  [ int02 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer indicates the double or complex type of
+   variational parameters :math:`W_{i \sigma k}` (0: double, 1: complex).
+
+-  [ int03 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving a site index
+   (0 :math:`\leq` [ int03 ] :math:`<` ``Nsite``).
+
+-  [ int04 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving a spin index
+   ([ int03 ] = 0 or 1  ).
+
+-  [ int05 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving a neuron index
+   (0 :math:`\leq` [ int03 ] :math:`<` ``NneuronGeneral``).
+
+-  [ int06 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer setting kinds of variational parameters
+   :math:`W_{i \sigma k}` (0 :math:`\leq` [ int05 ] :math:`<` [ int01]).
+
+-  [ int07 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving kinds of variational parameters
+   (0 :math:`\leq` [ int06 ] :math:`<` [ int01]).
+
+-  [ int08 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer to select the target of variational
+   parameters indicated at [int06] to be optimized or not (0: not
+   optimize, 1: optimize).
+
+User rules
+^^^^^^^^^^
+
+-  This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.
+  
+-  This function is available only for the VMC calculation with ``ComplexType=1`` and ``Orbital``. This function is not available for the Power Lanczos calculations.
+
+-  Headers cannot be omitted.
+
+-  A program is terminated, when [ int01 ] is
+   different from the total number of variational parameters defined in
+   this file.
+
+-  A program is terminated, when [ int02 ] -
+   [ int06 ] are out of range from the defined values.
+
 Orbital/OrbitalAntiParallel file (orbitalidx.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1836,6 +2263,7 @@ This file sets the calculation conditions of pair orbitals
 
    |\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s}
    f_{ij}c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger} \right]^{N/2}|0 \rangle.
+
 
 Site numbers :math:`i, j` and the variational parameters :math:`f_{ij}`
 are indicated. An example of the file format is shown as follows.
@@ -2267,10 +2695,10 @@ not done. An example of the file format is shown as follows.
     ====================================
     == TrIdx_TrWeight_and_TrIdx_i_xi  ==
     ====================================
-       0  1.000000
-       1  1.000000
-       2  1.000000
-       3  1.000000
+       0  1.000000  0.000000
+       1  1.000000  0.000000
+       2  1.000000  0.000000
+       3  1.000000  0.000000
        0     0    0
      (continue...)
        3    12    1
@@ -2288,7 +2716,7 @@ projection patterns as :math:`N_{\rm TS}`, respectively.
 
 -  Lines 3 - 5: Header
 
--  Lines 6 - (5+ :math:`N_{\rm TS})`: [int02] [double01]
+-  Lines 6 - (5+ :math:`N_{\rm TS})`: [int02] [double01] [double02]
 
 -  Lines (6+ :math:`N_{\rm TS}`) - (5+ :math:`(N_s+1) \times N_{\rm TS}`):
    [int03] [int04] [int05] [int06]
@@ -2323,8 +2751,17 @@ Parameters
    **Type :** double-type (blank parameter not allowed)
 
    **Description :** The weight
-   :math:`p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})` of the projection
+   Real part of :math:`p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})` of the projection
    pattern :math:`(\alpha, {\boldsymbol R})`.
+
+-  [ double02 ]
+
+   **Type :** double-type (blank parameter not allowed)
+
+   **Description :** The weight
+   Imaginary part of :math:`p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})` of the projection
+   pattern :math:`(\alpha, {\boldsymbol R})`.
+
 
 -  [ int03 ]
 
@@ -2374,7 +2811,7 @@ Files to set initial values of variational parameters
 This file sets the initial values of variational parameters. The kinds
 of variational parameters are specified by setting the following
 keywords in ``List`` file (namelist.def):
-``InGutzwiller``, ``InJastrow``, ``InDH2``, ``InDH4``, ``InOrbital``,
+``InGutzwiller``, ``InJastrow``, ``InDH2``, ``InDH4``, ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer``, ``InGeneralRBM_PhysHidden``, ``InOrbital``,
 ``InOrbitalAntiParallel``, ``InOrbitalParallel``,
 ``InOrbitalGeneral``.
 The file format is common and an example of the ``InJastrow`` file is

@@ -92,7 +92,7 @@ Properties of the Pfaffian-Slater determinant
 In this section, we explain some properties of the Pfaffian-Slater
 determinant. We derive the general relation between a Pfaffian-Slater
 determinant and a single Slater determinant in :ref:`Antiparallel Pfaffian <PfaffianAP>`
-and :ref:`General Pfaffian <PfaffianP>` . We also discuss the meaning of the singular value
+and :ref:`General Pfaffian <PfaffianP>` . We also discuss meaning of the singular value
 decomposition of coefficients :math:`f_{ij}` in
 :ref:`SVD <PfaffianSingular>`.
 
@@ -190,7 +190,7 @@ redundancy.
 Relation between :math:`F_{IJ}` and :math:`\Phi_{In}` (the case of the general pairing)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We extend the relationship between the Pfaffian-Slater wave function and the
+We extend the relation between the Pfaffian-Slater wave function and the
 single Slater wave function into the general pairing case including the
 spin-parallel pairing. We define the Pfaffian-Slater wave function and
 the single Slater wave function as

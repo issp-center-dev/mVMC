@@ -97,11 +97,12 @@ this categorized files. In mVMC, the variational wave function is
 given as</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{aligned}
-|\psi \rangle &amp;= {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
+|\psi \rangle &amp;= {\cal N}_{General RBM} {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
 {\cal P}_G&amp;=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right],\\
 {\cal P}_J&amp;=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1)(n_j-1)\right],\\
 {\cal P}_{d-h}^{(2)}&amp;= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right],\\
 {\cal P}_{d-h}^{(4)}&amp;= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right],\\
+{\cal N}_{\rm General RBM}&amp;= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_h} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right],\\
 {\cal L}_S&amp;=\frac{2S+1}{8 \pi^2}\int d\Omega P_s(\cos \beta) \hat{R}(\Omega),\\
 {\cal L}_K&amp;=\frac{1}{N_s}\sum_{{\boldsymbol R}}e^{i {\boldsymbol K} \cdot{\boldsymbol R} } \hat{T}_{\boldsymbol R},\\
 {\cal L}_P&amp;=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha},\end{aligned}\end{split}\]</div>
@@ -135,6 +136,9 @@ optimized.</p>
 <p><strong>DH4</strong>: Set the target 4-site doublon-holon correlation factor
 <span class="math notranslate nohighlight">\(\alpha_{4nt}^{d(h)}\)</span> in <span class="math notranslate nohighlight">\({\cal P}_{d-h}^{(4)}\)</span> to be
 optimized.</p>
+<p><strong>GeneralRBM_PhysLayer</strong>: Set the target variational parameters <span class="math notranslate nohighlight">\(a_{i\sigma}\)</span> in the RBM correlation factor <span class="math notranslate nohighlight">\({\cal N}_{\rm General RBM}\)</span>.</p>
+<p><strong>GeneralRBM_HiddenLayer</strong>: Set the target variational parameters <span class="math notranslate nohighlight">\(h_{k}\)</span> in the RBM correlation factor <span class="math notranslate nohighlight">\({\cal N}_{\rm General RBM}\)</span>.</p>
+<p><strong>GeneralRBM_PhysHidden</strong>: Set the target variational parameters <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span> in the RBM correlation factor <span class="math notranslate nohighlight">\({\cal N}_{\rm General RBM}\)</span>.</p>
 <p><strong>Orbital/OrbitalAntiParallel (orbitalidx.def)</strong>: Set the pair
 orbital with anti-parallel spins <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>
 in <span class="math notranslate nohighlight">\(|\phi_{\rm pair} \rangle\)</span> to be optimized.</p>
@@ -160,6 +164,9 @@ random values as default values.</p>
 in <span class="math notranslate nohighlight">\({\cal P}_{d-h}^{(2)}\)</span>.</p>
 <p><strong>InDH4</strong>: Set the initial values of <span class="math notranslate nohighlight">\(\alpha_{4nt}^{d(h)}\)</span>
 in <span class="math notranslate nohighlight">\({\cal P}_{d-h}^{(4)}\)</span>.</p>
+<p><strong>InGeneralRBM_PhysLayer</strong>: Set the initial values of <span class="math notranslate nohighlight">\(a_{i\sigma}\)</span> in the RBM correlation factor <span class="math notranslate nohighlight">\({\cal N}_{\rm General RBM}\)</span>.</p>
+<p><strong>InGeneralRBM_HiddenLayer</strong>: Set the initial values of <span class="math notranslate nohighlight">\(h_{k}\)</span> in the RBM correlation factor <span class="math notranslate nohighlight">\({\cal N}_{\rm General RBM}\)</span>.</p>
+<p><strong>InGeneralRBM_PhysHidden</strong>: Set the initial values of <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span> in the RBM correlation factor <span class="math notranslate nohighlight">\({\cal N}_{\rm General RBM}\)</span>.</p>
 <p><strong>InOrbital /InOrbitalAntiParallel</strong>: Set the initial values of
 <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span> in
 <span class="math notranslate nohighlight">\(|\phi_{\rm pair} \rangle\)</span>.</p>
@@ -264,32 +271,56 @@ and “TransSym”.</p></li>
 <tr class="row-even"><td><p>DH4</p></td>
 <td><p>4-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>Orbital <span class="math notranslate nohighlight">\(^*\)</span></p></td>
+<tr class="row-odd"><td><p>GeneralRBM_PhysLayer</p></td>
+<td><p>A part of the general RBM correlation factor including variational parameters
+in a physical layer <span class="math notranslate nohighlight">\(\alpha_{i\sigma}\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>GeneralRBM_HiddenLayer</p></td>
+<td><p>A part of the general RBM correlation factor including variational parameters
+in a hidden layer <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>GeneralRBM_PhysHidden</p></td>
+<td><p>A part of the general RBM correlation factor including variational parameters
+which connect physical and hidden layers <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>Orbital <span class="math notranslate nohighlight">\(^*\)</span></p></td>
 <td><p>Pair orbital factors with anti-parallel spins <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>OrbitalAntiParallel</p></td>
+<tr class="row-odd"><td><p>OrbitalAntiParallel</p></td>
 <td><p>Pair orbital factors with anti-parallel spins <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>OrbitalParallel</p></td>
+<tr class="row-even"><td><p>OrbitalParallel</p></td>
 <td><p>Pair orbital factors with parallel spins <span class="math notranslate nohighlight">\(f_{i\sigma j\sigma}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>OrbitalGeneral</p></td>
+<tr class="row-odd"><td><p>OrbitalGeneral</p></td>
 <td><p>Pair orbital factors <span class="math notranslate nohighlight">\(f_{i\sigma_1 j\sigma_2}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>TransSym <span class="math notranslate nohighlight">\(^*\)</span></p></td>
+<tr class="row-even"><td><p>TransSym <span class="math notranslate nohighlight">\(^*\)</span></p></td>
 <td><p>Translational and lattice symmetry operation.</p></td>
 </tr>
-<tr class="row-even"><td><p>InGutzwiller</p></td>
+<tr class="row-odd"><td><p>InGutzwiller</p></td>
 <td><p>Initial values of Gutzwiller factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InJastrow</p></td>
+<tr class="row-even"><td><p>InJastrow</p></td>
 <td><p>Initial values of charge Jastrow factors.</p></td>
 </tr>
-<tr class="row-even"><td><p>InDH2</p></td>
+<tr class="row-odd"><td><p>InDH2</p></td>
 <td><p>Initial values of 2-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InDH4</p></td>
+<tr class="row-even"><td><p>InDH4</p></td>
 <td><p>Initial values of 4-site doublon-holon correlation factors.</p></td>
+</tr>
+<tr class="row-odd"><td><p>InGeneralRBM_PhysLayer</p></td>
+<td><p>Initial values of variational parameters of the general RBM correlation factors
+in a physical layer <span class="math notranslate nohighlight">\(\alpha_{i\sigma}\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>InGeneralRBM_HiddenLayer</p></td>
+<td><p>Initial values of variational parameters of the general RBM correlation factors
+in a hidden layer <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>InGeneralRBM_PhysHidden</p></td>
+<td><p>Initial values of variational parameters of the general RBM correlation factors
+which connect physical and hidden layers <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p>InOrbital</p></td>
 <td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
@@ -1104,6 +1135,7 @@ file.</p></li>
 (c_ {i \uparrow}^{\dagger}c_{j\uparrow}c_{j \downarrow}^{\dagger}c_{i  \downarrow}
 +c_ {i \downarrow}^{\dagger}c_{j\downarrow}c_{j \uparrow}^{\dagger}c_{i  \uparrow})\]</div>
 <p>is added to the whole Hamiltonian by setting <span class="math notranslate nohighlight">\(J_{ij}^{\rm Ex}\)</span>.
+Note that, for spin systems, the definition of the Exchange is different from that in HPhi.
 An example of the file format is shown as follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">======================</span>
 <span class="n">NExchange</span> <span class="mi">6</span>
@@ -1583,6 +1615,317 @@ this file.</p></li>
 </ul>
 </section>
 </section>
+<section id="generalrbm-physlayer-file">
+<h2>GeneralRBM_PhysLayer file<a class="headerlink" href="#generalrbm-physlayer-file" title="Permalink to this heading">¶</a></h2>
+<p>In the general RBM correlation factors,</p>
+<div class="math notranslate nohighlight">
+\[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
+<p>this file sets the calculation conditions of  <span class="math notranslate nohighlight">\(\exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] ` .
+A site index :math:`i\)</span>, a spin index <span class="math notranslate nohighlight">\(\sigma\)</span> and the variational parameters
+<span class="math notranslate nohighlight">\(a_{i \sigma}\)</span> are specified. An example of the file format is shown as
+follows.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--------------------</span>
+<span class="n">NRBM_PhysLayerIdx</span>   <span class="mi">1</span>
+<span class="n">ComplexType</span> <span class="mi">1</span>
+<span class="n">i</span> <span class="n">s</span> <span class="n">RBM_PhysLayer_Idx</span>
+<span class="o">--------------------</span>
+ <span class="mi">0</span>  <span class="mi">0</span>        <span class="mi">0</span>
+ <span class="mi">0</span>  <span class="mi">1</span>        <span class="mi">0</span>
+ <span class="mi">1</span>  <span class="mi">0</span>        <span class="mi">0</span>
+ <span class="mi">1</span>  <span class="mi">1</span>        <span class="mi">0</span>
+ <span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
+ <span class="mi">0</span>    <span class="mi">1</span>
+</pre></div>
+</div>
+<section id="id39">
+<h3>File format<a class="headerlink" href="#id39" title="Permalink to this heading">¶</a></h3>
+<p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
+variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</span>, respectively.</p>
+<ul class="simple">
+<li><p>Line 1: Header</p></li>
+<li><p>Line 2: [string01] [int01]</p></li>
+<li><p>Line 3: [string02] [int02]</p></li>
+<li><p>Lines 4 - 5: Header</p></li>
+<li><p>Lines 6 - (5+ <span class="math notranslate nohighlight">\(2N_s\)</span>): [int03] [int04] [int05]</p></li>
+<li><p>Lines (6+ <span class="math notranslate nohighlight">\(2N_s\)</span> ) -
+(5+  <span class="math notranslate nohighlight">\(2N_s\)</span> + <span class="math notranslate nohighlight">\(N_v\)</span>): [int06] [int07]</p></li>
+</ul>
+</section>
+<section id="id40">
+<h3>Parameters<a class="headerlink" href="#id40" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>[ string01 ]</p>
+<p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> A keyword for total number of variational
+parameters <span class="math notranslate nohighlight">\(a_{i\sigma}\)</span>. You can freely give a name of the keyword.</p>
+</li>
+<li><p>[ int01 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving total number of variational
+parameters <span class="math notranslate nohighlight">\(a_{i\sigma}\)</span>.</p>
+</li>
+<li><p>[ string02 ]</p>
+<p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> A keyword for indicating the double or complex type
+of variational parameters <span class="math notranslate nohighlight">\(a_{i\sigma}\)</span>. You can freely give a name
+of the keyword.</p>
+</li>
+<li><p>[ int02 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer indicates the double or complex type of
+variational parameters <span class="math notranslate nohighlight">\(a_{i\sigma}\)</span> (0: double, 1: complex).</p>
+</li>
+<li><p>[ int03 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving a site index
+(0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int03 ] <span class="math notranslate nohighlight">\(&lt;\)</span> <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>).</p>
+</li>
+<li><p>[ int04 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving a spin index
+([int04] = 0 or 1).</p>
+</li>
+<li><p>[ int05 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer setting kinds of variational parameters
+<span class="math notranslate nohighlight">\(v_{ij}\)</span> (0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int05 ] <span class="math notranslate nohighlight">\(&lt;\)</span> [ int01]).</p>
+</li>
+<li><p>[ int06 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving kinds of variational parameters
+(0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int06 ] <span class="math notranslate nohighlight">\(&lt;\)</span> [ int01]).</p>
+</li>
+<li><p>[ int07 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer to select the target of variational
+parameters indicated at [int06] to be optimized or not (0: not
+optimize, 1: optimize).</p>
+</li>
+</ul>
+</section>
+<section id="id41">
+<h3>User rules<a class="headerlink" href="#id41" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
+<li><p>This function is available only for the VMC calculation with <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> and <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>. This function is not available for the Power Lanczos calculations.</p></li>
+<li><p>Headers cannot be omitted.</p></li>
+<li><p>A program is terminated, when [ int01 ] is
+different from the total number of variational parameters defined in
+this file.</p></li>
+<li><p>A program is terminated, when [ int02 ] -
+[ int07 ] are out of range from the defined values.</p></li>
+</ul>
+</section>
+</section>
+<section id="generalrbm-hiddenlayer-file">
+<h2>GeneralRBM_HiddenLayer file<a class="headerlink" href="#generalrbm-hiddenlayer-file" title="Permalink to this heading">¶</a></h2>
+<p>In the general RBM correlation factors,</p>
+<div class="math notranslate nohighlight">
+\[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
+<p>this file sets the calculation conditions of <span class="math notranslate nohighlight">\(b_k\)</span> in <span class="math notranslate nohighlight">\(\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] `.
+A hidden neuron index :math:`k\)</span> and the variational parameters
+<span class="math notranslate nohighlight">\(h_{k}\)</span> are specified. An example of the file format is shown as
+follows.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--------------------</span>
+<span class="n">NRBM_HiddenLayerIdx</span> <span class="mi">2</span>
+<span class="n">ComplexType</span> <span class="mi">1</span>
+<span class="n">k</span> <span class="n">RBM_HiddenLayer_Idx</span>
+<span class="o">--------------------</span>
+ <span class="mi">0</span>  <span class="mi">0</span>
+ <span class="mi">1</span>  <span class="mi">0</span>
+ <span class="mi">2</span>  <span class="mi">0</span>
+ <span class="mi">3</span>  <span class="mi">0</span>
+ <span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
+ <span class="mi">0</span>    <span class="mi">1</span>
+ <span class="mi">1</span>    <span class="mi">1</span>
+</pre></div>
+</div>
+<section id="id42">
+<h3>File format<a class="headerlink" href="#id42" title="Permalink to this heading">¶</a></h3>
+<p>In the following, we define the total number of neurons as <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> and
+variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</span>, respectively.</p>
+<ul class="simple">
+<li><p>Line 1: Header</p></li>
+<li><p>Line 2: [string01] [int01]</p></li>
+<li><p>Line 3: [string02] [int02]</p></li>
+<li><p>Lines 4 - 5: Header</p></li>
+<li><p>Lines 6 - (5+:math:<cite>N_{rm neuronGeneral}</cite>): [int03] [int04]</p></li>
+<li><p>Lines (6+ <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> ) -
+(5+ <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> + <span class="math notranslate nohighlight">\(N_v\)</span>): [int05] [int06]</p></li>
+</ul>
+</section>
+<section id="id43">
+<h3>Parameters<a class="headerlink" href="#id43" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>[ string01 ]</p>
+<p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> A keyword for total number of variational
+parameters <span class="math notranslate nohighlight">\(h_{k}\)</span>. You can freely give a name of the keyword.</p>
+</li>
+<li><p>[ int01 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving total number of variational
+parameters <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p>
+</li>
+<li><p>[ string02 ]</p>
+<p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> A keyword for indicating the double or complex type
+of variational parameters <span class="math notranslate nohighlight">\(h_{k}\)</span>. You can freely give a name
+of the keyword.</p>
+</li>
+<li><p>[ int02 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer indicates the double or complex type of
+variational parameters <span class="math notranslate nohighlight">\(h_{k}\)</span> (0: double, 1: complex).</p>
+</li>
+<li><p>[ int03 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving a neuron index
+(0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int03 ] <span class="math notranslate nohighlight">\(&lt;\)</span> <code class="docutils literal notranslate"><span class="pre">NneuronGeneral</span></code>).</p>
+</li>
+<li><p>[ int04 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer setting kinds of variational parameters
+<span class="math notranslate nohighlight">\(h_{k}\)</span> (0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int05 ] <span class="math notranslate nohighlight">\(&lt;\)</span> [ int01]).</p>
+</li>
+<li><p>[ int05 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving kinds of variational parameters
+(0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int06 ] <span class="math notranslate nohighlight">\(&lt;\)</span> [ int01]).</p>
+</li>
+<li><p>[ int06 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer to select the target of variational
+parameters indicated at [int06] to be optimized or not (0: not
+optimize, 1: optimize).</p>
+</li>
+</ul>
+</section>
+<section id="id44">
+<h3>User rules<a class="headerlink" href="#id44" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
+<li><p>This function is available only for the VMC calculation with <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> and <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>. This function is not available for the Power Lanczos calculations.</p></li>
+<li><p>Headers cannot be omitted.</p></li>
+<li><p>A program is terminated, when [ int01 ] is
+different from the total number of variational parameters defined in
+this file.</p></li>
+<li><p>A program is terminated, when [ int02 ] -
+[ int06 ] are out of range from the defined values.</p></li>
+</ul>
+</section>
+</section>
+<section id="generalrbm-physhidden-file">
+<h2>GeneralRBM_PhysHidden file<a class="headerlink" href="#generalrbm-physhidden-file" title="Permalink to this heading">¶</a></h2>
+<p>In the general RBM correlation factors,</p>
+<div class="math notranslate nohighlight">
+\[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
+<p>this file sets the calculation conditions of <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span> in <span class="math notranslate nohighlight">\(\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] `.
+A site index :math:`i\)</span>, a spin index <span class="math notranslate nohighlight">\(\sigma\)</span>, a hidden neuron index <span class="math notranslate nohighlight">\(k\)</span> and the variational parameters
+<span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span> are specified. An example of the file format is shown as
+follows.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--------------------</span>
+<span class="n">NRBM_HiddenLayerIdx</span> <span class="mi">32</span>
+<span class="n">ComplexType</span> <span class="mi">1</span>
+<span class="n">i</span> <span class="n">s</span> <span class="n">k</span> <span class="n">RBM_PhysHidden_Idx</span>
+<span class="o">--------------------</span>
+ <span class="mi">0</span>  <span class="mi">0</span>   <span class="mi">0</span>   <span class="mi">0</span>
+ <span class="mi">0</span>  <span class="mi">1</span>   <span class="mi">0</span>   <span class="mi">1</span>
+ <span class="mi">1</span>  <span class="mi">0</span>   <span class="mi">0</span>   <span class="mi">2</span>
+ <span class="mi">1</span>  <span class="mi">1</span>   <span class="mi">0</span>   <span class="mi">3</span>
+ <span class="mi">2</span>  <span class="mi">0</span>   <span class="mi">0</span>   <span class="mi">4</span>
+ <span class="mi">2</span>  <span class="mi">1</span>   <span class="mi">0</span>   <span class="mi">5</span>
+ <span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
+ <span class="mi">0</span>    <span class="mi">1</span>
+ <span class="mi">1</span>    <span class="mi">1</span>
+ <span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="id45">
+<h3>File format<a class="headerlink" href="#id45" title="Permalink to this heading">¶</a></h3>
+<p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span>, the total number of neurons as <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> and
+variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</span>.</p>
+<ul class="simple">
+<li><p>Line 1: Header</p></li>
+<li><p>Line 2: [string01] [int01]</p></li>
+<li><p>Line 3: [string02] [int02]</p></li>
+<li><p>Lines 4 - 5: Header</p></li>
+<li><p>Lines 6 - (5+:math:<cite>2 N_s N_{rm neuronGeneral}</cite>): [int03] [int04] [int05] [int06]</p></li>
+<li><p>Lines (6+ <span class="math notranslate nohighlight">\(2 N_s N_{\rm neuronGeneral}\)</span> ) -
+(5+ <span class="math notranslate nohighlight">\(2 N_s N_{\rm neuronGeneral}\)</span> + <span class="math notranslate nohighlight">\(N_v\)</span>): [int07] [int08]</p></li>
+</ul>
+</section>
+<section id="id46">
+<h3>Parameters<a class="headerlink" href="#id46" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>[ string01 ]</p>
+<p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> A keyword for total number of variational
+parameters <span class="math notranslate nohighlight">\(W_{i \sigma k}\)</span>. You can freely give a name of the keyword.</p>
+</li>
+<li><p>[ int01 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving total number of variational
+parameters <span class="math notranslate nohighlight">\(W_{i \sigma k}\)</span>.</p>
+</li>
+<li><p>[ string02 ]</p>
+<p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> A keyword for indicating the double or complex type
+of variational parameters <span class="math notranslate nohighlight">\(W_{i \sigma k}\)</span>. You can freely give a name
+of the keyword.</p>
+</li>
+<li><p>[ int02 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer indicates the double or complex type of
+variational parameters <span class="math notranslate nohighlight">\(W_{i \sigma k}\)</span> (0: double, 1: complex).</p>
+</li>
+<li><p>[ int03 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving a site index
+(0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int03 ] <span class="math notranslate nohighlight">\(&lt;\)</span> <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>).</p>
+</li>
+<li><p>[ int04 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving a spin index
+([ int03 ] = 0 or 1  ).</p>
+</li>
+<li><p>[ int05 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving a neuron index
+(0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int03 ] <span class="math notranslate nohighlight">\(&lt;\)</span> <code class="docutils literal notranslate"><span class="pre">NneuronGeneral</span></code>).</p>
+</li>
+<li><p>[ int06 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer setting kinds of variational parameters
+<span class="math notranslate nohighlight">\(W_{i \sigma k}\)</span> (0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int05 ] <span class="math notranslate nohighlight">\(&lt;\)</span> [ int01]).</p>
+</li>
+<li><p>[ int07 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving kinds of variational parameters
+(0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int06 ] <span class="math notranslate nohighlight">\(&lt;\)</span> [ int01]).</p>
+</li>
+<li><p>[ int08 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer to select the target of variational
+parameters indicated at [int06] to be optimized or not (0: not
+optimize, 1: optimize).</p>
+</li>
+</ul>
+</section>
+<section id="id47">
+<h3>User rules<a class="headerlink" href="#id47" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
+<li><p>This function is available only for the VMC calculation with <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> and <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>. This function is not available for the Power Lanczos calculations.</p></li>
+<li><p>Headers cannot be omitted.</p></li>
+<li><p>A program is terminated, when [ int01 ] is
+different from the total number of variational parameters defined in
+this file.</p></li>
+<li><p>A program is terminated, when [ int02 ] -
+[ int06 ] are out of range from the defined values.</p></li>
+</ul>
+</section>
+</section>
 <section id="orbital-orbitalantiparallel-file-orbitalidx-def">
 <h2>Orbital/OrbitalAntiParallel file (orbitalidx.def)<a class="headerlink" href="#orbital-orbitalantiparallel-file-orbitalidx-def" title="Permalink to this heading">¶</a></h2>
 <p>This file sets the calculation conditions of pair orbitals</p>
@@ -1610,8 +1953,8 @@ are indicated. An example of the file format is shown as follows.</p>
   <span class="mi">63</span>    <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id39">
-<h3>File format<a class="headerlink" href="#id39" title="Permalink to this heading">¶</a></h3>
+<section id="id48">
+<h3>File format<a class="headerlink" href="#id48" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}\)</span>, respectively.</p>
 <ul class="simple">
@@ -1624,8 +1967,8 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}
 [int06] [int07]</p></li>
 </ul>
 </section>
-<section id="id40">
-<h3>Parameters<a class="headerlink" href="#id40" title="Permalink to this heading">¶</a></h3>
+<section id="id49">
+<h3>Parameters<a class="headerlink" href="#id49" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1678,8 +2021,8 @@ optimize, 1: optimize).</p>
 </li>
 </ul>
 </section>
-<section id="id41">
-<h3>User rules<a class="headerlink" href="#id41" title="Permalink to this heading">¶</a></h3>
+<section id="id50">
+<h3>User rules<a class="headerlink" href="#id50" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -1720,8 +2063,8 @@ shown as follows.</p>
   <span class="mi">119</span>    <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id42">
-<h3>File format<a class="headerlink" href="#id42" title="Permalink to this heading">¶</a></h3>
+<section id="id51">
+<h3>File format<a class="headerlink" href="#id51" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}\)</span>, respectively.</p>
 <ul class="simple">
@@ -1734,8 +2077,8 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}
 (5+ <span class="math notranslate nohighlight">\(N_s*(N_s-1)/2+N_{\rm o}\)</span>): [int06] [int07]</p></li>
 </ul>
 </section>
-<section id="id43">
-<h3>Parameters<a class="headerlink" href="#id43" title="Permalink to this heading">¶</a></h3>
+<section id="id52">
+<h3>Parameters<a class="headerlink" href="#id52" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1788,8 +2131,8 @@ optimize, 1: optimize).</p>
 </li>
 </ul>
 </section>
-<section id="id44">
-<h3>User rules<a class="headerlink" href="#id44" title="Permalink to this heading">¶</a></h3>
+<section id="id53">
+<h3>User rules<a class="headerlink" href="#id53" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -1830,8 +2173,8 @@ example of the file format is shown as follows.</p>
   <span class="mi">254</span>   <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id45">
-<h3>File format<a class="headerlink" href="#id45" title="Permalink to this heading">¶</a></h3>
+<section id="id54">
+<h3>File format<a class="headerlink" href="#id54" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}\)</span>, respectively. A total
 number of variational parameters <span class="math notranslate nohighlight">\(N_p\)</span> is given by <span class="math notranslate nohighlight">\(N_s^2\)</span>,
@@ -1847,8 +2190,8 @@ unconserved system, respectively.</p>
 <li><p>Lines (6+ <span class="math notranslate nohighlight">\(N_p\)</span>) - (5+ <span class="math notranslate nohighlight">\(N_p+N_{\rm o}\)</span>): [int09] [int10]</p></li>
 </ul>
 </section>
-<section id="id46">
-<h3>Parameters<a class="headerlink" href="#id46" title="Permalink to this heading">¶</a></h3>
+<section id="id55">
+<h3>Parameters<a class="headerlink" href="#id55" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1906,8 +2249,8 @@ optimize, 1: optimize).</p>
 </li>
 </ul>
 </section>
-<section id="id47">
-<h3>User rules<a class="headerlink" href="#id47" title="Permalink to this heading">¶</a></h3>
+<section id="id56">
+<h3>User rules<a class="headerlink" href="#id56" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -1934,31 +2277,31 @@ not done. An example of the file format is shown as follows.</p>
 <span class="o">====================================</span>
 <span class="o">==</span> <span class="n">TrIdx_TrWeight_and_TrIdx_i_xi</span>  <span class="o">==</span>
 <span class="o">====================================</span>
-   <span class="mi">0</span>  <span class="mf">1.000000</span>
-   <span class="mi">1</span>  <span class="mf">1.000000</span>
-   <span class="mi">2</span>  <span class="mf">1.000000</span>
-   <span class="mi">3</span>  <span class="mf">1.000000</span>
+   <span class="mi">0</span>  <span class="mf">1.000000</span>  <span class="mf">0.000000</span>
+   <span class="mi">1</span>  <span class="mf">1.000000</span>  <span class="mf">0.000000</span>
+   <span class="mi">2</span>  <span class="mf">1.000000</span>  <span class="mf">0.000000</span>
+   <span class="mi">3</span>  <span class="mf">1.000000</span>  <span class="mf">0.000000</span>
    <span class="mi">0</span>     <span class="mi">0</span>    <span class="mi">0</span>
  <span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
    <span class="mi">3</span>    <span class="mi">12</span>    <span class="mi">1</span>
    <span class="mi">3</span>    <span class="mi">13</span>    <span class="mi">2</span>
 </pre></div>
 </div>
-<section id="id48">
-<h3>File format<a class="headerlink" href="#id48" title="Permalink to this heading">¶</a></h3>
+<section id="id57">
+<h3>File format<a class="headerlink" href="#id57" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 projection patterns as <span class="math notranslate nohighlight">\(N_{\rm TS}\)</span>, respectively.</p>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
 <li><p>Lines 3 - 5: Header</p></li>
-<li><p>Lines 6 - (5+ <span class="math notranslate nohighlight">\(N_{\rm TS})\)</span>: [int02] [double01]</p></li>
+<li><p>Lines 6 - (5+ <span class="math notranslate nohighlight">\(N_{\rm TS})\)</span>: [int02] [double01] [double02]</p></li>
 <li><p>Lines (6+ <span class="math notranslate nohighlight">\(N_{\rm TS}\)</span>) - (5+ <span class="math notranslate nohighlight">\((N_s+1) \times N_{\rm TS}\)</span>):
 [int03] [int04] [int05] [int06]</p></li>
 </ul>
 </section>
-<section id="id49">
-<h3>Parameters<a class="headerlink" href="#id49" title="Permalink to this heading">¶</a></h3>
+<section id="id58">
+<h3>Parameters<a class="headerlink" href="#id58" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1979,7 +2322,13 @@ patterns.</p>
 <li><p>[ double01 ]</p>
 <p><strong>Type :</strong> double-type (blank parameter not allowed)</p>
 <p><strong>Description :</strong> The weight
-<span class="math notranslate nohighlight">\(p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})\)</span> of the projection
+Real part of <span class="math notranslate nohighlight">\(p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})\)</span> of the projection
+pattern <span class="math notranslate nohighlight">\((\alpha, {\boldsymbol R})\)</span>.</p>
+</li>
+<li><p>[ double02 ]</p>
+<p><strong>Type :</strong> double-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> The weight
+Imaginary part of <span class="math notranslate nohighlight">\(p_{\alpha}\cos ({\boldsymbol K}\cdot {\boldsymbol R})\)</span> of the projection
 pattern <span class="math notranslate nohighlight">\((\alpha, {\boldsymbol R})\)</span>.</p>
 </li>
 <li><p>[ int03 ]</p>
@@ -2006,8 +2355,8 @@ be omitted when the mode of the anti-periodic condition is off.</p>
 </li>
 </ul>
 </section>
-<section id="id50">
-<h3>User rules<a class="headerlink" href="#id50" title="Permalink to this heading">¶</a></h3>
+<section id="id59">
+<h3>User rules<a class="headerlink" href="#id59" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2023,7 +2372,7 @@ this file.</p></li>
 <p>This file sets the initial values of variational parameters. The kinds
 of variational parameters are specified by setting the following
 keywords in <code class="docutils literal notranslate"><span class="pre">List</span></code> file (namelist.def):
-<code class="docutils literal notranslate"><span class="pre">InGutzwiller</span></code>, <code class="docutils literal notranslate"><span class="pre">InJastrow</span></code>, <code class="docutils literal notranslate"><span class="pre">InDH2</span></code>, <code class="docutils literal notranslate"><span class="pre">InDH4</span></code>, <code class="docutils literal notranslate"><span class="pre">InOrbital</span></code>,
+<code class="docutils literal notranslate"><span class="pre">InGutzwiller</span></code>, <code class="docutils literal notranslate"><span class="pre">InJastrow</span></code>, <code class="docutils literal notranslate"><span class="pre">InDH2</span></code>, <code class="docutils literal notranslate"><span class="pre">InDH4</span></code>, <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_PhysLayer</span></code>, <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_HiddenLayer</span></code>, <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_PhysHidden</span></code>, <code class="docutils literal notranslate"><span class="pre">InOrbital</span></code>,
 <code class="docutils literal notranslate"><span class="pre">InOrbitalAntiParallel</span></code>, <code class="docutils literal notranslate"><span class="pre">InOrbitalParallel</span></code>,
 <code class="docutils literal notranslate"><span class="pre">InOrbitalGeneral</span></code>.
 The file format is common and an example of the <code class="docutils literal notranslate"><span class="pre">InJastrow</span></code> file is
@@ -2039,8 +2388,8 @@ shown as follows.</p>
 <span class="mi">27</span> <span class="o">-</span><span class="mf">9.017586139930480749e-02</span>  <span class="mf">0.000000000000000000e+00</span>
 </pre></div>
 </div>
-<section id="id51">
-<h3>File format<a class="headerlink" href="#id51" title="Permalink to this heading">¶</a></h3>
+<section id="id60">
+<h3>File format<a class="headerlink" href="#id60" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of variational parameters
 as <span class="math notranslate nohighlight">\(N_v\)</span>.</p>
 <ul class="simple">
@@ -2050,8 +2399,8 @@ as <span class="math notranslate nohighlight">\(N_v\)</span>.</p>
 <li><p>Lines 6 - (5+ <span class="math notranslate nohighlight">\(N_v\)</span>): [int03] [double01] [double02]</p></li>
 </ul>
 </section>
-<section id="id52">
-<h3>Parameters<a class="headerlink" href="#id52" title="Permalink to this heading">¶</a></h3>
+<section id="id61">
+<h3>Parameters<a class="headerlink" href="#id61" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2080,8 +2429,8 @@ indicated by [int01].</p>
 </li>
 </ul>
 </section>
-<section id="id53">
-<h3>User rules<a class="headerlink" href="#id53" title="Permalink to this heading">¶</a></h3>
+<section id="id62">
+<h3>User rules<a class="headerlink" href="#id62" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2127,8 +2476,8 @@ of file format is shown as follows.</p>
    <span class="mi">11</span>     <span class="mi">1</span>    <span class="mi">11</span>     <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id54">
-<h3>File format<a class="headerlink" href="#id54" title="Permalink to this heading">¶</a></h3>
+<section id="id63">
+<h3>File format<a class="headerlink" href="#id63" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -2136,8 +2485,8 @@ of file format is shown as follows.</p>
 <li><p>Lines 6 -: [int02]  [int03]  [int04]  [int05]</p></li>
 </ul>
 </section>
-<section id="id55">
-<h3>Parameters<a class="headerlink" href="#id55" title="Permalink to this heading">¶</a></h3>
+<section id="id64">
+<h3>Parameters<a class="headerlink" href="#id64" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2162,8 +2511,8 @@ functions.</p>
 </li>
 </ul>
 </section>
-<section id="id56">
-<h3>Use rules<a class="headerlink" href="#id56" title="Permalink to this heading">¶</a></h3>
+<section id="id65">
+<h3>Use rules<a class="headerlink" href="#id65" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2215,8 +2564,8 @@ An example of file format is shown as follows.</p>
     <span class="o">...</span>
 </pre></div>
 </div>
-<section id="id57">
-<h3>File format<a class="headerlink" href="#id57" title="Permalink to this heading">¶</a></h3>
+<section id="id66">
+<h3>File format<a class="headerlink" href="#id66" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -2225,8 +2574,8 @@ An example of file format is shown as follows.</p>
 [int02]  [int03]  [int04]  [int05]  [int06]  [int07]  [int08]  [int09]</p></li>
 </ul>
 </section>
-<section id="id58">
-<h3>Parameters<a class="headerlink" href="#id58" title="Permalink to this heading">¶</a></h3>
+<section id="id67">
+<h3>Parameters<a class="headerlink" href="#id67" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2257,8 +2606,8 @@ functions.</p>
 </li>
 </ul>
 </section>
-<section id="id59">
-<h3>Use rules<a class="headerlink" href="#id59" title="Permalink to this heading">¶</a></h3>
+<section id="id68">
+<h3>Use rules<a class="headerlink" href="#id68" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2371,46 +2720,64 @@ range from the defined values.</p></li>
 <li><a class="reference internal" href="#id38">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#orbital-orbitalantiparallel-file-orbitalidx-def">Orbital/OrbitalAntiParallel file (orbitalidx.def)</a><ul>
+<li><a class="reference internal" href="#generalrbm-physlayer-file">GeneralRBM_PhysLayer file</a><ul>
 <li><a class="reference internal" href="#id39">File format</a></li>
 <li><a class="reference internal" href="#id40">Parameters</a></li>
 <li><a class="reference internal" href="#id41">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#orbitalparallel-file">OrbitalParallel file</a><ul>
+<li><a class="reference internal" href="#generalrbm-hiddenlayer-file">GeneralRBM_HiddenLayer file</a><ul>
 <li><a class="reference internal" href="#id42">File format</a></li>
 <li><a class="reference internal" href="#id43">Parameters</a></li>
 <li><a class="reference internal" href="#id44">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#orbitalgeneral-file">OrbitalGeneral file</a><ul>
+<li><a class="reference internal" href="#generalrbm-physhidden-file">GeneralRBM_PhysHidden file</a><ul>
 <li><a class="reference internal" href="#id45">File format</a></li>
 <li><a class="reference internal" href="#id46">Parameters</a></li>
 <li><a class="reference internal" href="#id47">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#transsym-file-qptransidx-def">TransSym file (qptransidx.def)</a><ul>
+<li><a class="reference internal" href="#orbital-orbitalantiparallel-file-orbitalidx-def">Orbital/OrbitalAntiParallel file (orbitalidx.def)</a><ul>
 <li><a class="reference internal" href="#id48">File format</a></li>
 <li><a class="reference internal" href="#id49">Parameters</a></li>
 <li><a class="reference internal" href="#id50">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#files-to-set-initial-values-of-variational-parameters">Files to set initial values of variational parameters</a><ul>
+<li><a class="reference internal" href="#orbitalparallel-file">OrbitalParallel file</a><ul>
 <li><a class="reference internal" href="#id51">File format</a></li>
 <li><a class="reference internal" href="#id52">Parameters</a></li>
 <li><a class="reference internal" href="#id53">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#onebodyg-file-greenone-def">OneBodyG file (greenone.def)</a><ul>
+<li><a class="reference internal" href="#orbitalgeneral-file">OrbitalGeneral file</a><ul>
 <li><a class="reference internal" href="#id54">File format</a></li>
 <li><a class="reference internal" href="#id55">Parameters</a></li>
-<li><a class="reference internal" href="#id56">Use rules</a></li>
+<li><a class="reference internal" href="#id56">User rules</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#transsym-file-qptransidx-def">TransSym file (qptransidx.def)</a><ul>
+<li><a class="reference internal" href="#id57">File format</a></li>
+<li><a class="reference internal" href="#id58">Parameters</a></li>
+<li><a class="reference internal" href="#id59">User rules</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#files-to-set-initial-values-of-variational-parameters">Files to set initial values of variational parameters</a><ul>
+<li><a class="reference internal" href="#id60">File format</a></li>
+<li><a class="reference internal" href="#id61">Parameters</a></li>
+<li><a class="reference internal" href="#id62">User rules</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#onebodyg-file-greenone-def">OneBodyG file (greenone.def)</a><ul>
+<li><a class="reference internal" href="#id63">File format</a></li>
+<li><a class="reference internal" href="#id64">Parameters</a></li>
+<li><a class="reference internal" href="#id65">Use rules</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#twobodyg-file-greentwo-def">TwoBodyG file (greentwo.def)</a><ul>
-<li><a class="reference internal" href="#id57">File format</a></li>
-<li><a class="reference internal" href="#id58">Parameters</a></li>
-<li><a class="reference internal" href="#id59">Use rules</a></li>
+<li><a class="reference internal" href="#id66">File format</a></li>
+<li><a class="reference internal" href="#id67">Parameters</a></li>
+<li><a class="reference internal" href="#id68">Use rules</a></li>
 </ul>
 </li>
 </ul>
