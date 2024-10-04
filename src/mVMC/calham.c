@@ -57,18 +57,19 @@ double CalculateDoubleOccupation(int *eleIdx, const int *eleCfg,
 }
 
 double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const int *eleCfg,
-                             int *eleNum, const int *eleProjCnt) {
+                             int *eleNum, const int *eleProjCnt, const double complex *rbmCnt) {
   const int *n0 = eleNum;
   const int *n1 = eleNum + Nsite;
   double complex e=0.0, tmp;
   int idx;
   int ri,rj,s,rk,rl,t;
   int *myEleIdx, *myEleNum, *myProjCntNew;
+  double complex *myRBMCntNew;
   double complex *myBuffer;
   double complex myEnergy;
 
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
-  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
+  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize + FlagRBM * (NRBM_PhysLayerIdx + Nneuron));
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
   // shared variables: eleCfg, eleProjCnt, eleIdx, eleNum
@@ -77,16 +78,19 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
   // as shared(), while in OpenMP >4.0 [ip] MUST be specified.
   // Hence we have to fall back to default(shared) here.
 #pragma omp parallel default(shared)                                      \
-  private(myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy, idx, ri, rj, rk, rl, s, t) \
-  firstprivate(Nsize, Nsite2, NProj, NQPFull, NCoulombIntra, CoulombIntra, ParaCoulombIntra, \
+  private(myRBMCntNew, myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy, idx, ri, rj, rk, rl, s, t) \
+  firstprivate(NRBM_PhysLayerIdx, Nneuron, Nsize, Nsite2, NProj, NQPFull, NCoulombIntra, CoulombIntra, ParaCoulombIntra, \
                NCoulombInter, CoulombInter, ParaCoulombInter, NHundCoupling, HundCoupling, ParaHundCoupling, \
                NTransfer, Transfer, ParaTransfer, NPairHopping, PairHopping, ParaPairHopping, \
                NExchangeCoupling, ExchangeCoupling, ParaExchangeCoupling, NInterAll, InterAll, ParaInterAll, n0, n1) \
-  shared(eleCfg, eleProjCnt, eleIdx, eleNum) reduction(+:e)
+  shared(eleCfg, eleProjCnt, eleIdx, eleNum, rbmCnt, FlagRBM) reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
+    if (FlagRBM) {
+      myRBMCntNew  = GetWorkSpaceThreadComplex(NRBM_PhysLayerIdx+Nneuron);
+    }
     myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
 
     #pragma loop noalias
@@ -135,7 +139,7 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
       s  = Transfer[idx][3];
       
       myEnergy -= ParaTransfer[idx]
-        * GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
+        * GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt, myRBMCntNew, myBuffer);
       /* Caution: negative sign */
     }
 
@@ -149,7 +153,7 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
       rj = PairHopping[idx][1];
     
       myEnergy += ParaPairHopping[idx]
-        * GreenFunc2(ri,rj,ri,rj,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
+        * GreenFunc2(ri,rj,ri,rj,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,myRBMCntNew,myBuffer);
     }
 
     /* Exchange Coupling */
@@ -157,9 +161,9 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
     for(idx=0;idx<NExchangeCoupling;idx++) {
       ri = ExchangeCoupling[idx][0];
       rj = ExchangeCoupling[idx][1];
-    
-      tmp =  GreenFunc2(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
-      tmp += GreenFunc2(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
+
+      tmp =  GreenFunc2(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,myRBMCntNew,myBuffer);
+      tmp += GreenFunc2(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,myRBMCntNew,myBuffer);
       myEnergy += ParaExchangeCoupling[idx] * tmp;
     }
 
@@ -174,7 +178,7 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
       t  = InterAll[idx][7];
       
       myEnergy += ParaInterAll[idx]
-        * GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
+        * GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,myRBMCntNew,myBuffer);
     }
 
     #pragma omp master
@@ -246,6 +250,9 @@ double complex CalculateHamiltonian1(const double complex ip, int *eleIdx, const
   double complex *myBuffer;
   double complex myEnergy;
 
+  const double complex *rbmCnt;
+  double complex *rbmCntNew;
+
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
   RequestWorkSpaceThreadComplex(NQPFull);
   /* GreenFunc1: NQPFull */
@@ -274,7 +281,7 @@ double complex CalculateHamiltonian1(const double complex ip, int *eleIdx, const
       s  = Transfer[idx][3];
       
       myEnergy -= ParaTransfer[idx]
-        * GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
+        * GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
       /* Caution: negative sign */
     }
 
@@ -297,6 +304,9 @@ double complex CalculateHamiltonian2(const double complex ip, int *eleIdx, const
   int *myEleIdx, *myEleNum, *myProjCntNew;
   double complex *myBuffer;
   double complex myEnergy;
+
+  const double complex *rbmCnt;
+  double complex *rbmCntNew;
 
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
   RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
@@ -326,7 +336,7 @@ double complex CalculateHamiltonian2(const double complex ip, int *eleIdx, const
     
       myEnergy += ParaPairHopping[idx]
         * GreenFunc2(ri,rj,ri,rj,0,1,ip,myEleIdx,eleCfg,myEleNum,
-                     eleProjCnt,myProjCntNew,myBuffer);
+                     eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
     }
 
     /* Exchange Coupling */
@@ -334,11 +344,11 @@ double complex CalculateHamiltonian2(const double complex ip, int *eleIdx, const
     for(idx=0;idx<NExchangeCoupling;idx++) {
       ri = ExchangeCoupling[idx][0];
       rj = ExchangeCoupling[idx][1];
-    
+
       tmp =  GreenFunc2(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,
-                        eleProjCnt,myProjCntNew,myBuffer);
+                        eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
       tmp += GreenFunc2(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,
-                        eleProjCnt,myProjCntNew,myBuffer);
+                        eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
       myEnergy += ParaExchangeCoupling[idx] * tmp;
     }
 
@@ -351,10 +361,10 @@ double complex CalculateHamiltonian2(const double complex ip, int *eleIdx, const
       rk = InterAll[idx][4];
       rl = InterAll[idx][6];
       t  = InterAll[idx][7];
-      
+
       myEnergy += ParaInterAll[idx]
         * GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,
-                     eleProjCnt,myProjCntNew,myBuffer);
+                     eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
     }
 
     e += myEnergy;
@@ -460,8 +470,12 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
       ri = PairHopping[idx][0];
       rj = PairHopping[idx][1];
 
-      myEnergy += ParaPairHopping[idx]
-                  * GreenFunc2(ri,rj,ri,rj,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
+      if (!FlagRBM) {
+        const double complex *rbmCnt;
+        double complex *rbmCntNew;
+        myEnergy += ParaPairHopping[idx]
+                    * GreenFunc2(ri,rj,ri,rj,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
+      }
     }
 
     /* Exchange Coupling */
@@ -470,9 +484,13 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
       ri = ExchangeCoupling[idx][0];
       rj = ExchangeCoupling[idx][1];
 
-      tmp =  GreenFunc2(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
-      tmp += GreenFunc2(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
-      myEnergy += ParaExchangeCoupling[idx] * tmp;
+      if (!FlagRBM) {
+        const double complex *rbmCnt;
+        double complex *rbmCntNew;
+        tmp =  GreenFunc2(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
+        tmp += GreenFunc2(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
+        myEnergy += ParaExchangeCoupling[idx] * tmp;
+      }
     }
 
     /* Inter All */
@@ -484,8 +502,12 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
       rk = InterAll[idx][4];
       rl = InterAll[idx][6];
       t  = InterAll[idx][7];
-      myEnergy += ParaInterAll[idx]
-                  * GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
+      if (!FlagRBM) {
+        const double complex *rbmCnt;
+        double complex *rbmCntNew;
+        myEnergy += ParaInterAll[idx]
+                    * GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
+      }
     }
 
 #pragma omp master

@@ -27,6 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #ifndef _SRC_VMCCAL
 #define _SRC_VMCCAL
+
 #include "vmccal.h"
 #include "matrix.h"
 #include "calham_real.h"
@@ -68,6 +69,16 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
                           const int nLSHam, const int nCA, const int nCACA,
                           int **cacaIdx);
 
+void calculateQCACAQDC_real(double *qcacaq, const double *lslq, const double w,
+                            const int nLSHam, const int nCA, const int nCACA,
+                            int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                            const double h1, const double ip);
+
+void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const double w,
+                       const int nLSHam, const int nCA, const int nCACA,
+                       int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                       const double complex h1, const double complex ip,double complex *rbmCnt);
+
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
   double complex e,ip;
@@ -84,6 +95,9 @@ void VMCMainCal(MPI_Comm comm) {
   const int nProj=NProj;
   double complex *srOptO = SROptO;
   double         *srOptO_real = SROptO_real;
+
+  double complex *rbmCnt;
+  const int nSizeRBM=NRBM_PhysLayerIdx + Nneuron;
 
   int rank,size,int_i;
   MPI_Comm_size(comm,&size);
@@ -103,6 +117,7 @@ void VMCMainCal(MPI_Comm comm) {
     eleCfg = EleCfg + sample*Nsite2;
     eleNum = EleNum + sample*Nsite2;
     eleProjCnt = EleProjCnt + sample*NProj;
+    rbmCnt = RBMCnt + sample*nSizeRBM;
 
     StartTimer(40);
 #ifdef _DEBUG_VMCCAL
@@ -158,7 +173,7 @@ void VMCMainCal(MPI_Comm comm) {
 #ifdef _DEBUG_VMCCAL
       printf("  Debug: sample=%d: calculateHam_cmp \n",sample);
 #endif
-      e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+      e = CalculateHamiltonian(ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
     }
     //printf("MDEBUG: %lf %lf \n",creal(e),cimag(e));
     StopTimer(41);
@@ -187,13 +202,17 @@ void VMCMainCal(MPI_Comm comm) {
         srOptO[(i+1)*2+1]   = 0.0+0.0*I;               // odd  comp
       }
 
+      if (FlagRBM) {
+        RBMDiff(SROptO+2*NProj+2,rbmCnt,eleNum); 
+      }
+
       StartTimer(42);
       /* SlaterElmDiff */
-      SlaterElmDiff_fcmp(SROptO+2*NProj+2,ip,eleIdx); //TBC: using InvM not InvM_real
+      SlaterElmDiff_fcmp(SROptO+2*NProj+2*NRBM+2,ip,eleIdx); //TBC: using InvM not InvM_real
       StopTimer(42);
 
       if(FlagOptTrans>0) { // this part will be not used
-        calculateOptTransDiff(SROptO+2*NProj+2*NSlater+2, ip); //TBC
+        calculateOptTransDiff(SROptO+2*NProj+2*FlagRBM*NRBM+2*NSlater+2, ip); //TBC
       }
       //[s] this part will be used for real varaibles
       if(AllComplexFlag==0){
@@ -239,7 +258,7 @@ void VMCMainCal(MPI_Comm comm) {
 #ifdef _DEBUG_VMCCAL
       fprintf(stdout, "Debug: Start: CalcGreenFunc\n");
 #endif
-      CalculateGreenFunc(w,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+      CalculateGreenFunc(w,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
       StopTimer(42);
 
       if(NLanczosMode>0){
@@ -253,7 +272,7 @@ void VMCMainCal(MPI_Comm comm) {
           LSLocalQ_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt, LSLQ_real);
           calculateQQQQ_real(QQQQ_real,LSLQ_real,w,NLSHam);
         }else{
-          LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt, LSLQ);
+          LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt, LSLQ);
           calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
         }
         StopTimer(43);
@@ -267,14 +286,18 @@ void VMCMainCal(MPI_Comm comm) {
             LSLocalCisAjs_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
             calculateQCAQ_real(QCisAjsQ_real,LSLCisAjs_real,LSLQ_real,w,NLSHam,NCisAjs);
             calculateQCACAQ_real(QCisAjsCktAltQ_real,LSLCisAjs_real,w,NLSHam,NCisAjs,
-                            NCisAjsCktAltDC, CisAjsCktAltLzIdx);
+                                 NCisAjsCktAlt, CisAjsCktAltIdx);
+            calculateQCACAQDC_real(QCisAjsCktAltQDC_real,LSLQ_real,w,NLSHam,NCisAjs,
+                                   NCisAjsCktAltDC,eleIdx,eleCfg,eleNum,eleProjCnt,creal(e),creal(ip));
             
           }
           else{
-            LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
+            LSLocalCisAjs(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
             calculateQCAQ(QCisAjsQ,LSLCisAjs,LSLQ,w,NLSHam,NCisAjs);
             calculateQCACAQ(QCisAjsCktAltQ,LSLCisAjs,w,NLSHam,NCisAjs,
-                            NCisAjsCktAltDC,CisAjsCktAltLzIdx);
+                            NCisAjsCktAlt,CisAjsCktAltIdx);
+            calculateQCACAQDC(QCisAjsCktAltQDC,LSLQ,w,NLSHam,NCisAjs,
+                              NCisAjsCktAltDC,eleIdx,eleCfg,eleNum,eleProjCnt,e,ip,rbmCnt);
           }
           StopTimer(44);
         }
@@ -486,8 +509,9 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
       /* Calculate Green Function */
       CalculateGreenFuncBF(w, ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt);
       StopTimer(42);
+      double complex *rbmCnt;
 
-      if (NLanczosMode > 0) {
+      if (NLanczosMode > 0 && !FlagRBM) {
         // ignoring Lanczos: to be added
         /* Calculate local QQQQ */
         StartTimer(43);
@@ -495,7 +519,7 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
           LSLocalQ_real(creal(e), creal(ip), eleIdx, eleCfg, eleNum, eleProjCnt, LSLQ_real);
           calculateQQQQ_real(QQQQ_real, LSLQ_real, w, NLSHam);
         } else {
-          LSLocalQ(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt, LSLQ);
+          LSLocalQ(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt, rbmCnt, LSLQ);
           calculateQQQQ(QQQQ, LSLQ, w, NLSHam);
           return;
         }
@@ -507,12 +531,12 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
             LSLocalCisAjs_real(creal(e), creal(ip), eleIdx, eleCfg, eleNum, eleProjCnt);
             calculateQCAQ_real(QCisAjsQ_real, LSLCisAjs_real, LSLQ_real, w, NLSHam, NCisAjs);
             calculateQCACAQ_real(QCisAjsCktAltQ_real, LSLCisAjs_real, w, NLSHam, NCisAjs,
-                NCisAjsCktAltDC, CisAjsCktAltLzIdx);
+                NCisAjsCktAltDC, CisAjsCktAltIdx);
           } else {
-            LSLocalCisAjs(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt);
+            LSLocalCisAjs(e, ip, eleIdx, eleCfg, eleNum, eleProjCnt, rbmCnt);
             calculateQCAQ(QCisAjsQ, LSLCisAjs, LSLQ, w, NLSHam, NCisAjs);
             calculateQCACAQ(QCisAjsCktAltQ, LSLCisAjs, w, NLSHam, NCisAjs,
-                NCisAjsCktAltDC, CisAjsCktAltLzIdx);
+                NCisAjsCktAltDC, CisAjsCktAltIdx);
             return;
           }
           StopTimer(44);
@@ -595,13 +619,13 @@ void clearPhysQuantity(){
       if(NLanczosMode>1) {
         /* QCisAjsQ, QCisAjsCktAltQ, LSLCisAjs */
         //[TODO]: Check the value n
-        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC
+        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*(NCisAjsCktAltDC+NCisAjsCktAlt)
           + NLSHam*NCisAjs;
         vec = QCisAjsQ;
 #pragma omp parallel for default(shared) private(i)
         for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
 
-        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*NCisAjsCktAltDC
+        n = NLSHam*NLSHam*NCisAjs + NLSHam*NLSHam*(NCisAjsCktAltDC+NCisAjsCktAlt)
           + NLSHam*NCisAjs;
         vec_real = QCisAjsQ_real;
 #pragma omp parallel for default(shared) private(i)
@@ -918,5 +942,65 @@ void calculateQCACAQ_real(double *qcacaq, const double *lslca, const double w,
 
   return;
 
+}
+
+void calculateQCACAQDC_real(double *qcacaq, const double *lslq, const double w,
+                            const int nLSHam, const int nCA, const int nCACA,
+                            int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                            const double h1, const double ip) {
+  const int n=nLSHam*nLSHam*nCACA;
+  int rq,rp,ri,rj,rk,rl,s,t,idx;
+  int i,tmp;
+
+  for(i=0;i<n;++i) {
+    idx = i%nCACA;   tmp = i/nCACA;
+    rp = tmp%nLSHam; tmp = tmp/nLSHam;
+    rq = tmp%nLSHam;
+
+    if (rq) {
+      // Calls 2-body routines to evaluate HCACA.
+      ri = CisAjsCktAltDCIdx[idx][0];
+      rj = CisAjsCktAltDCIdx[idx][2];
+      s  = CisAjsCktAltDCIdx[idx][1];
+      rk = CisAjsCktAltDCIdx[idx][4];
+      rl = CisAjsCktAltDCIdx[idx][6];
+      t  = CisAjsCktAltDCIdx[idx][5];
+      qcacaq[i] += w * lslq[rp*nLSHam] * calHCACA_real(ri,rj,rk,rl,s,t,h1,ip,
+                                                       eleIdx,eleCfg,eleNum,eleProjCnt);
+    } else
+      qcacaq[i] += w * lslq[rp*nLSHam] * LocalCisAjsCktAltDC[idx];
+  }
+
+  return;
+}
+
+void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const double w,
+                       const int nLSHam, const int nCA, const int nCACA,
+                       int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                       const double complex h1, const double complex ip,double complex *rbmCnt) {
+  const int n=nLSHam*nLSHam*nCACA;
+  int rq,rp,ri,rj,rk,rl,s,t,idx;
+  int i,tmp;
+
+  for(i=0;i<n;++i) {
+    idx = i%nCACA;   tmp = i/nCACA;
+    rp = tmp%nLSHam; tmp = tmp/nLSHam;
+    rq = tmp%nLSHam;
+
+    if (rq) {
+      // Calls 2-body routines to evaluate HCACA.
+      ri = CisAjsCktAltDCIdx[idx][0];
+      rj = CisAjsCktAltDCIdx[idx][2];
+      s  = CisAjsCktAltDCIdx[idx][1];
+      rk = CisAjsCktAltDCIdx[idx][4];
+      rl = CisAjsCktAltDCIdx[idx][6];
+      t  = CisAjsCktAltDCIdx[idx][5];
+      qcacaq[i] += w * lslq[rp*nLSHam] * calHCACA(ri,rj,rk,rl,s,t,h1,ip,
+                                                  eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
+    } else
+      qcacaq[i] += w * lslq[rp*nLSHam] * LocalCisAjsCktAltDC[idx];
+  }
+
+  return;
 }
 #endif

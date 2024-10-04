@@ -14,33 +14,41 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 ``ModPara`` file and zzz is a number given by ``NDataIdxStart`` in
 ``ModPara``.
 
-+--------------------------------------+---------------------------------------------------------------+
-| Name                                 | Details for corresponding files                               |
-+======================================+===============================================================+
-| \*\*\*\_opt.dat                      | All optimized parameters.                                     |
-+--------------------------------------+---------------------------------------------------------------+
-| \*\*\*\_gutzwiller\_opt.dat          | Optimized gutzwiller factors.                                 |
-+--------------------------------------+---------------------------------------------------------------+
-| \*\*\*\_jastrow\_opt.dat             | Optimized jastrow factors.                                    |
-+--------------------------------------+---------------------------------------------------------------+
-| \*\*\*\_doublonHolon2site\_opt.dat   | Optimized 2-site doublon-holon correlation factors.           |
-+--------------------------------------+---------------------------------------------------------------+
-| \*\*\*\_doublonHolon4site\_opt.dat   | Optimized 4-site doublon-holon correlation factors.           |
-+--------------------------------------+---------------------------------------------------------------+
-| \*\*\*\_orbital\_opt.dat             | Optimized pair orbital factors.                               |
-+--------------------------------------+---------------------------------------------------------------+
-| xxx\_out\_yyy.dat                    | Energy and deviation.                                         |
-+--------------------------------------+---------------------------------------------------------------+
-| xxx\_var\_yyy.dat                    | Progress information for optimizing variational parameters.   |
-+--------------------------------------+---------------------------------------------------------------+
-| xxx\_CalcTimer.dat                   | Computation time for each processes.                          |
-+--------------------------------------+---------------------------------------------------------------+
-| xxx\_time\_zzz.dat                   | Progress information for MonteCalro samplings.                |
-+--------------------------------------+---------------------------------------------------------------+
-| xxx\_cisajs\_yyy.dat                 | One body Green’s functions.                                   |
-+--------------------------------------+---------------------------------------------------------------+
-| xxx\_cisajscktalt\_yyy.dat           | Correlation functions.                                        |
-+--------------------------------------+---------------------------------------------------------------+
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| Name                                     | Details for corresponding files                                                                                        |
++==========================================+========================================================================================================================+
+| \*\*\*\_opt.dat                          | All optimized parameters.                                                                                              |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| \*\*\*\_gutzwiller\_opt.dat              | Optimized gutzwiller factors.                                                                                          |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| \*\*\*\_jastrow\_opt.dat                 | Optimized jastrow factors.                                                                                             |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| \*\*\*\_doublonHolon2site\_opt.dat       | Optimized 2-site doublon-holon correlation factors.                                                                    |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| \*\*\*\_doublonHolon4site\_opt.dat       | Optimized 4-site doublon-holon correlation factors.                                                                    |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| \*\*\*\_generalRBM\_physlayer\_opt.dat   | Optimized variational parameters of the general RBM correlation factors only in a physical layer.                      |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| \*\*\*\_generalRBM\_hiddenlayer\_opt.dat | Optimized variational parameters of the general RBM correlation factors only in a hidden layer.                        |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+|  \*\*\*\_orbital\_opt.dat                | Optimized variational parameters of the general RBM correlation factors which connect physical and hidden layers.      |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| \*\*\*\_orbital\_opt.dat                 | Optimized pair orbital factors.                                                                                        |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| xxx\_out\_yyy.dat                        | Energy and deviation.                                                                                                  |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| xxx\_SRinfo.dat                          | Information related to SR optimization method.                                                                         |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| xxx\_var\_yyy.dat                        | Progress information for optimizing variational parameters.                                                            |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| xxx\_CalcTimer.dat                       | Computation time for each processes.                                                                                   |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| xxx\_time\_zzz.dat                       | Progress information for Monte Carlo samplings.                                                                        |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| xxx\_cisajs\_yyy.dat                     | One body Green’s functions.                                                                                            |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| xxx\_cisajscktalt\_yyy.dat               | Correlation functions.                                                                                                 |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 
 Output file for variational parameters (\*\*\*\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -56,11 +64,11 @@ energy optimized by the SR method are outputted in the following order:
 The type of average values is a complex number, while that of the
 deviation is a real number. Since the initial values of all variational
 parameters are specified at the beginning of the calculation, the
-calculation of physical quantities is done by using this file.
+calculation of physical quantities is done by using this file file.
 Here, \*\*\* is the header indicated by ``CParaFileHead`` in ``ModPara``
 file.
 
-Output files for variational parameters at each step (xxx\_var\_yyy.dat)
+Output files for variational parameters at each steps (xxx\_var\_yyy.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The average and deviation values of variational parameters and the
@@ -100,6 +108,13 @@ The optimized 4-site doublon-holon correlation factors by SR method are
 outputted. The file format is same as the ``InDH4`` file defined in Sec.
 :ref:`InputParam`.
 
+Output files for general RBM factors(\*\*\*\_generalRBM\_physlayer\_opt.dat, \*\*\*\_generalRBM\_hiddenlayer\_opt.dat, \*\*\*\_generalRBM\_physhidden\_opt.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The optimized general RBM correlation factors by SR method are outputted. 
+The file format is same as the ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer`` and ``InGeneralRBM_PhysHidden`` files defined in Sec.
+:ref:`InputParam`.
+
 Output file for pair orbitals (\*\*\*\_orbital\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -135,12 +150,32 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
     2.072610167083121837e+02  2.029162857569105916e-01
     ...
 
+xxx\_SRinfo.dat.dat
+~~~~~~~~~~~~~~~~~~~~~
+
+This file provides the optimization information by the SR method at each step. 
+From the left column, the number of variational parameters as complex numbers ``Npara``, the dimension of the S metric matrix ``Msize``, the number of variational parameters that are not optimized in the input files for trial wavefunctions such as ``Orbital``, the number of variational parameters cut by the value of ``DSROptRedCut`` in the ``ModPara`` file ``diagCut``, the maximum and minimum values of the diagonal components of the S matrix ``sDiagMax`` and ``sDiagMin``, the maximum value of the change in the variational parameters ``absRmax`` and its parameter index ``imax`` are outputted. 
+The header specified by ``CDataFileHead`` in the ``ModPara`` file is described in xxx.
+An example of the file format is as follows.
+Note that the number of imaginary parameters is counted in ``optCut`` when the variational parameters are treated as real variables (``ComplexType=0``).
+
+::
+
+    #Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax
+    4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4
+    4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0
+    4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0
+    4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0
+    …
+
+
+
 xxx\_CalcTimer.dat 
 ~~~~~~~~~~~~~~~~~~~
 
-After finishing the calculation, the processing time is outputted in the
-order of the name, the number assigned by the process, and the seconds at
-each process. An example of outputted file is shown as follows.
+After finishing calculation, the processing time is outputted in the
+order of the name, the number assigned by the process and the seconds at
+each processes. An example of outputted file is shown as follows.
 
 ::
 
@@ -160,7 +195,7 @@ xxx\_time\_zzz.dat
 The calculation information at each bins are outputted in the order of
 the sampling number, the acceptance ratio for hopping and exchange term
 (acc\_hopp, acc\_ex), trial numbers to update for hopping and exchange
-term (n\_hopp, n\_ex), and the time stamp. Here, xxx is the header
+term (n\_hopp, n\_ex) and the time stamp. Here, xxx is the header
 indicated by ``CDataFileHead`` in ``ModPara`` file and zzz is a number
 given by ``NDataIdxStart`` in ``ModPara``. An example of outputted file
 is shown as follows.
@@ -315,7 +350,7 @@ xxx\_ls\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~
 
 This file is the outputted files for :math:`\langle H \rangle`,
-:math:`\langle H^2\rangle`, and the optimized parameter :math:`\alpha`
+:math:`(\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2`, and the optimized parameter :math:`\alpha`
 obtained by Power Lanczos method. This file is outputted when
 ``NVMCCalMode`` = 1, ``NLanczosmode`` = 1 or 2 are set in ``ModPara``
 file. Here, xxx is the header indicated by ``CDataFileHead`` in

@@ -130,6 +130,20 @@ int iFlgOrbitalGeneral=0;
 int iNOrbitalParallel=0;
 int iNOrbitalAntiParallel=0;
 
+/* restricted Boltzman Machine for variational parameters */
+int Nneuron,NneuronGeneral,NneuronCharge,NneuronSpin;
+int NRBM_HiddenLayerIdx,NRBM_PhysLayerIdx,NRBM_PhysHiddenIdx;
+int NGeneralRBM_HiddenLayerIdx, *GeneralRBM_HiddenLayerIdx; /* [Nneuron] */
+int NGeneralRBM_PhysLayerIdx,   *GeneralRBM_PhysLayerIdx;   /* [Nsite2] */
+int NGeneralRBM_PhysHiddenIdx, **GeneralRBM_PhysHiddenIdx;  /* [Nsite2][Nneuron] */
+int NChargeRBM_HiddenLayerIdx, *ChargeRBM_HiddenLayerIdx; /* [Nneuron] */
+int NChargeRBM_PhysLayerIdx,   *ChargeRBM_PhysLayerIdx;   /* [Nsite] */
+int NChargeRBM_PhysHiddenIdx, **ChargeRBM_PhysHiddenIdx;  /* [Nsite][Nneuron] */
+int NSpinRBM_HiddenLayerIdx, *SpinRBM_HiddenLayerIdx; /* [Nneuron] */
+int NSpinRBM_PhysLayerIdx,   *SpinRBM_PhysLayerIdx;   /* [Nsite] */
+int NSpinRBM_PhysHiddenIdx, **SpinRBM_PhysHiddenIdx;  /* [Nsite][Nneuron] */
+int NBlockSize_RBMRatio;  /* block size for RBMRatio function. It is Tuning for performance. */
+
 /* zqptransidx.def */
 int NQPTrans, **QPTrans, **QPTransInv; /* [NQPTrans][Nsite] */
 int **QPTransSgn; /* QPTransSgn[NQPTrans][NSite] = +1 or -1 */
@@ -142,14 +156,16 @@ double *ParaQPOptTrans;
 
 /* for Green functions */
 int NCisAjs,         **CisAjsIdx;         /* [NCisAjs][3] */
-int NCisAjsCktAlt,   **CisAjsCktAltIdx;   /* [NCisAjsCktAlt][8] */
+int NCisAjsCktAlt,   **CisAjsCktAltIdx;   /* [NCisAjsCktAlt][2] */
 int NCisAjsCktAltDC, **CisAjsCktAltDCIdx; /* [NCisAjsCktAltDC][6] */
-int NCisAjsLz, **CisAjsLzIdx, **iOneBodyGIdx; /* For Lanczos method only for rank 0*/
-int NCisAjsCktAltLz, **CisAjsCktAltLzIdx;
+int **iOneBodyGIdx; /* For GF2 indirect measurement */
 
 /* Optimization flag */
 int *OptFlag; /* [NPara]  1: optimized, 0 or 2: fixed */
 int AllComplexFlag;/* 0 -> all real variables, !=0-> including complex variables*/
+
+/* flag for RBM */
+int FlagRBM=0;
 
 /* flag for anti-periodic boundry condition */
 int APFlag; /* 0: periodic, 1: anti-periodic */
@@ -172,6 +188,7 @@ int NFileFlushInterval=1;
 /***** Variational Parameters *****/
 int NPara; /* the total number of variational prameters NPara= NProj + NSlater+ NOptTrans */ 
 int NProj;    /* the number of correlation factor */
+int NRBM, NRBM_PhysLayerIdx, NRBM_HiddenLayerIdx;
 int NProjBF;    /* the number of correlation factor */
 int NSlater;  /* the number of pair orbital (f_ij) = NOrbitalIdx */
 int NOptTrans; /* the number of weights for OptTrans. This is used only for variatonal parameters */
@@ -179,6 +196,7 @@ int NOptTrans; /* the number of weights for OptTrans. This is used only for vari
 int **etaFlag;   /* Back Flow correlation factor (eta = 1.0 or ProjBF[0])*/
 double complex *Para;   /* variatonal parameters */
 double complex *Proj;   /* correlation factor (Proj    =Para) */
+double complex *RBM;   /*  (Proj    =Para) */
 double complex *ProjBF; /* Back flow correlation factor (Proj    =Para) */
 double complex *Slater; /* pair orbital       (Slater  =Para+NProj) */
 double complex *OptTrans; /* weights          (OptTrans=Para+NProj+NSlater) */
@@ -197,6 +215,7 @@ int *EleNum;     /* EleIdx[sample][ri+si*Nsite] */
 int *EleProjCnt; /* EleProjCnt[sample][proj] */
 //[s] MERGE BY TM
 int *EleSpn;     /* EleIdx[sample][mi+si*Ne] */ //fsz
+double complex *RBMCnt;
 int *EleProjBFCnt; /* EleProjCnt[sample][proj] */
 //[e] MERGE BY TM
 double *logSqPfFullSlater; /* logSqPfFullSlater[sample] */
@@ -214,12 +233,14 @@ int *TmpEleProjCnt;
 int *TmpEleSpn;
 int *TmpEleProjBFCnt;
 //[e] MERGE BY TM
+double complex *TmpRBMCnt;
 
 int *BurnEleIdx;
 int *BurnEleCfg;
 int *BurnEleNum;
 int *BurnEleProjCnt;
 int *BurnEleSpn;
+double complex *BurnRBMCnt;
 int BurnFlag=0; /* 0: off, 1: on */
 
 /***** Slater Elements ******/
@@ -269,6 +290,7 @@ double complex *PhysCisAjs; /* [NCisAjs] */
 double complex *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */
 double complex *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
 double complex *LocalCisAjs; /* [NCisAjs] */
+double complex *LocalCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
 
 double complex Sztot,Sztot2; /* <Sz>,<Sz^2> */
 
@@ -286,10 +308,13 @@ double *LSLQ_real; /* [NLSHam][NLSHam]*/                      //TBC
 
 double complex *QCisAjsQ; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/ //TBC
 double complex *QCisAjsCktAltQ; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/ //TBC
+double complex *QCisAjsCktAltQDC; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt] 
+                                     DC Lanczos Calculation */
 double complex *LSLCisAjs; /* [NLSHam][NCisAjs]*/                //TBC
 
 double *QCisAjsQ_real; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/ //TBC
 double *QCisAjsCktAltQ_real; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/ //TBC
+double *QCisAjsCktAltQDC_real; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/
 double *LSLCisAjs_real; /* [NLSHam][NCisAjs]*/                //TBC
 
 /***** Output File *****/
@@ -305,8 +330,10 @@ FILE *FileLS;
 FILE *FileLSQQQQ;
 FILE *FileLSQCisAjsQ;
 FILE *FileLSQCisAjsCktAltQ;
+FILE *FileLSQCisAjsCktAltQ;
 FILE *FileLSCisAjs;
 FILE *FileLSCisAjsCktAlt;
+FILE *FileLSCisAjsCktAltDC;
 
 
 /* FILE *FileTimerList; */
@@ -315,6 +342,7 @@ FILE *FileLSCisAjsCktAlt;
 /***** HitachiTimer *****/
 const int NTimer=1000;
 double Timer[1000], TimerStart[1000];
+double ccc[100];
 
 /* flag for  SROptimization*/
 int SRFlag; /* 0: periodic, 1: Diagonalization */

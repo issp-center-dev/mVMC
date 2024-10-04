@@ -1,0 +1,6 @@
+set xlabel "optimization step"
+set ylabel "total energy"
+p[:][:] \
+"output/zvo_out_001.dat" u 1 t "mVMC",\
+-0.828427 w l lc -1 t "exact diagonalization"
+pause -1

@@ -42,7 +42,7 @@ An example of input file for the standard mode is shown below:
    1. Parameters that must be specified (if not, ``vmcdry.out`` will
       stop with error messages),
 
-   2. Parameters that are not necessary be specified (if not, default
+   2. Parameters that is not necessary be specified (if not, default
       values are used),
 
    3. Parameters that must not be specified (if specified,
@@ -52,7 +52,7 @@ An example of input file for the standard mode is shown below:
    system. If you choose "model=spin", you should not specify
    ":math:`t`".
 
-We explain each keyword as follows:
+We explain each keywords as follows:
 
 Parameters about the kind of a calculation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -110,7 +110,7 @@ Parameters about the kind of a calculation
    [Eqn. :eq:`hubbard` ], the :math:`S_z`-unconserved Spin model
    [Eqn. :eq:`spin` ], and the :math:`S_z`-unconserved Kondo
    lattice model [Eqn. :eq:`kondo` ], respectively. Note: Although
-   these flags have a word "GC"(=grandcanonical), the number of electrons
+   these flags has a word "GC"(=grandcanonical), the number of electrons
    are conserved in these system.
 
 -  ``lattice``
@@ -232,11 +232,11 @@ using the following two methods.
    **Type :** Integer
 
    **Description :** We can specify two vectors
-   (:math:`{\vec a}_0, {\vec a}_1`) that surround the numerical cell
+   (:math:`{\vec a}_0, {\vec a}_1`) that surrounds the numerical cell
    (Fig. :num:`unitlatticepng` ). These vectors should be
    specified in the Fractional coordinate.
 
-If we use both of these methods, ``vmcdry.out`` stops.
+If we use both of these method, ``vmcdry.out`` stops.
 
 We can check the shape of the numerical cell by using a file
 ``lattice.gp`` (only for square, trianguler, honeycomb, and kagome

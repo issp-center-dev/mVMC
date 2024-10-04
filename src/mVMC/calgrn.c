@@ -30,25 +30,28 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define _CALGRN_SRC
 
 void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, int *eleCfg,
-                        int *eleNum, int *eleProjCnt) {
+                        int *eleNum, int *eleProjCnt, const double complex *rbmCnt) {
 
   int idx,idx0,idx1;
   int ri,rj,s,rk,rl,t;
   double complex tmp;
   int *myEleIdx, *myEleNum, *myProjCntNew;
   double complex *myBuffer;
+  double complex *myRBMCntNew;
 
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
-  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
+  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize + FlagRBM*NRBM_PhysLayerIdx+Nneuron);
+  //RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
 
-  #pragma omp parallel default(shared)		\
-  private(myEleIdx,myEleNum,myProjCntNew,myBuffer,idx)
+#pragma omp parallel default(shared)		\
+  private(myRBMCntNew, myEleIdx,myEleNum,myProjCntNew,myBuffer,idx)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
     myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
+    myRBMCntNew  = GetWorkSpaceThreadComplex(NRBM_PhysLayerIdx+Nneuron);
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -64,7 +67,7 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
       rj = CisAjsIdx[idx][2];
       s  = CisAjsIdx[idx][3];
       tmp = GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,
-                       myProjCntNew,myBuffer);
+                       myProjCntNew,rbmCnt,myRBMCntNew, myBuffer);
       LocalCisAjs[idx] = tmp;
     }
     #pragma omp master
@@ -80,8 +83,8 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
       t  = CisAjsCktAltDCIdx[idx][5];
 
       tmp = GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,
-                       myProjCntNew,myBuffer);
-      PhysCisAjsCktAltDC[idx] += w*tmp;
+                       myProjCntNew,rbmCnt,myRBMCntNew,myBuffer);
+      LocalCisAjsCktAltDC[idx] = tmp;
     }
     
     #pragma omp master
@@ -90,6 +93,11 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
     #pragma omp for private(idx) nowait
     for(idx=0;idx<NCisAjs;idx++) {
       PhysCisAjs[idx] += w*LocalCisAjs[idx];
+    }
+
+    #pragma omp for private(idx) nowait
+    for (idx=0;idx<NCisAjsCktAltDC;idx++) {
+      PhysCisAjsCktAltDC[idx] += w*LocalCisAjsCktAltDC[idx];
     }
 
     #pragma omp master
@@ -168,8 +176,12 @@ void CalculateGreenFuncBF(const double w, const double ip, int *eleIdx, int *ele
       rk = CisAjsCktAltDCIdx[idx][4];
       rl = CisAjsCktAltDCIdx[idx][6];
       t  = CisAjsCktAltDCIdx[idx][5];
-      tmp = GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,
-                       myProjCntNew,myBuffer);
+      if (!FlagRBM) {
+        const double complex *rbmCnt;
+        double complex *rbmCntNew;
+        tmp = GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,
+                         myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
+      }
       PhysCisAjsCktAltDC[idx] += w*tmp;
     }
 

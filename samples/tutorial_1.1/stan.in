@@ -1,0 +1,16 @@
+L = 2
+Lsub = 2
+model = "FermionHubbard"
+lattice = "chain"
+t = 0.5
+U = 4.0
+ncond = 2
+NSPGaussLeg = 1  
+2Sz = 0
+NSROptItrStep =  100
+NSROptItrSmp  =  10
+NVMCSample    =  1000
+DSROptRedCut  = 1e-8
+DSROptStaDel  = 1e-2
+DSROptStepDt  = 1e-2
+//NVMCCalMode = 1

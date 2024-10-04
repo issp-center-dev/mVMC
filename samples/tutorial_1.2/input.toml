@@ -1,0 +1,13 @@
+[lattice]
+Lx      = 6
+Ly      = 1 
+Lz      = 1
+orb_num = 1 
+model_type = "Hubbard"
+[mVMC]
+sub_x   = 2
+sub_y   = 1 
+sub_z   = 1 
+[mVMC_aft]
+modpara   = "modpara.def"
+directory = "aft"

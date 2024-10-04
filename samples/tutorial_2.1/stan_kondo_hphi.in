@@ -1,0 +1,9 @@
+L    = 6
+model  = "Kondo"
+method = "CG"
+lattice = "chain"
+t = 1
+J = 4
+ncond = 6
+2Sz = 0
+exct = 2
