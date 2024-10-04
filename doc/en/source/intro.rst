@@ -102,6 +102,8 @@ Contributors
 
 This software is developed by following contributors.
 
+-  ver.1.3.0 (released at 2024/10/11)
+
 -  ver.1.2.0 (released at 2021/11/22)
 
 -  ver.1.1.0 (released at 2019/11/15)
@@ -165,9 +167,9 @@ Operating environment
 
 mVMC is tested in the following platform:
 
--  The supercomputer system-B sekirei in ISSP
+-  The supercomputer system-B ohtaka in ISSP
 
--  The supercomputer system-C enaga in ISSP
+-  The supercomputer system-C kugui in ISSP
 
 -  OpenMPI + Intel Compiler + MKL
 
