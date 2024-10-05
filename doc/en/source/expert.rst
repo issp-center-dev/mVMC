@@ -243,52 +243,80 @@ User rules
 
 -  When the head of line is ``#``, the line is skipped.
 
-======================== ===================================================================================
-Keywords                 Details for corresponding files
-======================== ===================================================================================
-ModPara :math:`^*`       Parameters for calculation.
-LocSpin :math:`^*`       Configurations of the local spins for Hamiltonian.
-Trans                    Transfer and chemical potential for Hamiltonian.
-InterAll                 Two-body interactions for Hamiltonian.
-CoulombIntra             CoulombIntra interactions.
-CoulombInter             CoulombInter interactions.
-Hund                     Hund couplings.
-PairHop                  Pair hopping couplings.
-Exchange                 Exchange couplings.
-Gutzwiller               Gutzwiller factors.
-Jastrow                  Charge Jastrow factors.
-DH2                      2-site doublon-holon correlation factors.
-DH4                      4-site doublon-holon correlation factors.
-GeneralRBM_PhysLayer     A part of the general RBM correlation factor including variational parameters 
-                         in a physical layer :math:`\alpha_{i\sigma}`.
-GeneralRBM_HiddenLayer   A part of the general RBM correlation factor including variational parameters 
-                         in a hidden layer :math:`h_{k}`.
-GeneralRBM_PhysHidden    A part of the general RBM correlation factor including variational parameters 
-                         which connect physical and hidden layers :math:`W_{i\sigma k}`.
-Orbital :math:`^*`       Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
-OrbitalAntiParallel      Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
-OrbitalParallel          Pair orbital factors with parallel spins :math:`f_{i\sigma j\sigma}`.
-OrbitalGeneral           Pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
-TransSym :math:`^*`      Translational and lattice symmetry operation.
-InGutzwiller             Initial values of Gutzwiller factors.
-InJastrow                Initial values of charge Jastrow factors.
-InDH2                    Initial values of 2-site doublon-holon correlation factors.
-InDH4                    Initial values of 4-site doublon-holon correlation factors.
-InGeneralRBM_PhysLayer   Initial values of variational parameters of the general RBM correlation factors 
-                         in a physical layer :math:`\alpha_{i\sigma}`.
-InGeneralRBM_HiddenLayer Initial values of variational parameters of the general RBM correlation factors 
-                         in a hidden layer :math:`h_{k}`.
-InGeneralRBM_PhysHidden  Initial values of variational parameters of the general RBM correlation factors 
-                         which connect physical and hidden layers :math:`W_{i\sigma k}`.
-InOrbital                Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
-InOrbitalAntiParallel    Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
-InOrbitalParallel        Initial values of pair orbital factors :math:`f_{i\sigma j\sigma}`.
-InOrbitalGeneral         Initial values of pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
-OneBodyG                 Output components for Green functions
-                         :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle`
-TwoBodyG                 Output components for Correlation functions
-                         :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle`
-======================== ===================================================================================
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Keywords                 
+     - Details for corresponding files
+   * - ModPara :math:`^*`       
+     - Parameters for calculation.
+   * - LocSpin :math:`^*`       
+     - Configurations of the local spins for Hamiltonian.
+   * - Trans                    
+     - Transfer and chemical potential for Hamiltonian.
+   * - InterAll                 
+     - Two-body interactions for Hamiltonian.
+   * - CoulombIntra             
+     - CoulombIntra interactions.
+   * - CoulombInter             
+     - CoulombInter interactions.
+   * - Hund                     
+     - Hund couplings.
+   * - PairHop                  
+     - Pair hopping couplings.
+   * - Exchange                 
+     - Exchange couplings.
+   * - Gutzwiller               
+     - Gutzwiller factors.
+   * - Jastrow                  
+     - Charge Jastrow factors.
+   * - DH2                      
+     - 2-site doublon-holon correlation factors.
+   * - DH4                      
+     - 4-site doublon-holon correlation factors.
+   * - GeneralRBM_PhysLayer     
+     - A part of the general RBM correlation factor including variational parameters in a physical layer :math:`\alpha_{i\sigma}`.
+   * - GeneralRBM_HiddenLayer   
+     - A part of the general RBM correlation factor including variational parameters in a hidden layer :math:`h_{k}`.
+   * - GeneralRBM_PhysHidden    
+     - A part of the general RBM correlation factor including variational parameters which connect physical and hidden layers :math:`W_{i\sigma k}`.
+   * - Orbital :math:`^*`       
+     - Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
+   * - OrbitalAntiParallel      
+     - Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
+   * - OrbitalParallel          
+     - Pair orbital factors with parallel spins :math:`f_{i\sigma j\sigma}`.
+   * - OrbitalGeneral           
+     - Pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
+   * - TransSym :math:`^*`      
+     - Translational and lattice symmetry operation.
+   * - InGutzwiller             
+     - Initial values of Gutzwiller factors.
+   * - InJastrow                
+     - Initial values of charge Jastrow factors.
+   * - InDH2                    
+     - Initial values of 2-site doublon-holon correlation factors.
+   * - InDH4                    
+     - Initial values of 4-site doublon-holon correlation factors.
+   * - InGeneralRBM_PhysLayer   
+     - Initial values of variational parameters of the general RBM correlation factors in a physical layer :math:`\alpha_{i\sigma}`.
+   * - InGeneralRBM_HiddenLayer 
+     - Initial values of variational parameters of the general RBM correlation factors in a hidden layer :math:`h_{k}`.
+   * - InGeneralRBM_PhysHidden  
+     - Initial values of variational parameters of the general RBM correlation factors which connect physical and hidden layers :math:`W_{i\sigma k}`.
+   * - InOrbital                
+     - Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
+   * - InOrbitalAntiParallel    
+     - Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
+   * - InOrbitalParallel        
+     - Initial values of pair orbital factors :math:`f_{i\sigma j\sigma}`.
+   * - InOrbitalGeneral         
+     - Initial values of pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
+   * - OneBodyG                 
+     - Output components for Green functions :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle`
+   * - TwoBodyG                 
+     - Output components for Correlation functions :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle`
 
 ModPara file (modpara.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
