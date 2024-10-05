@@ -243,44 +243,81 @@
 
 -  :math:`\#` で始まる行は読み飛ばされます。
 
-========================== ===========================================================================================  
- Keywords                  対応するファイルの概要                                                    
-========================== ===========================================================================================   
- ModPara :math:`^*`        計算用のパラメータを指定します。                                          
- LocSpin :math:`^*`        局在・遍歴スピンを指定します。                                            
- Trans                     一般的な一体相互作用を指定します。                                        
- InterAll                  一般的な二体相互作用を指定します。                                        
- CoulombIntra              内部クーロン相互作用を指定します。                                        
- CoulombInter              サイト間クーロン相互作用を指定します。                                    
- Hund                      フント結合を指定します。                                                  
- PairHop                   ペアホッピング相互作用を指定します。                                      
- Exchange                  交換相互作用を指定します。                                                
- Gutzwiller                最適化するGutzwiller因子を設定します。                                    
- Jastrow                   最適化する電荷Jastrow因子を指定します。                                   
- DH2                       最適化する2サイトダブロン・ホロン相関因子を指定します。                   
- DH4                       最適化する4サイトダブロン・ホロン相関因子を指定します。 
- GeneralRBM_PhysLayer      一般的なRBM相関因子のうち、最適化する物理層での変分パラメータを指定します。
- GeneralRBM_HiddenLayer    一般的なRBM相関因子のうち、最適化する隠れ層での変分パラメータを指定します。
- GeneralRBM_PhysHidden     一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータを指定します。                  
- Orbital :math:`^*`        反平行のスピンを持つペア軌道因子を指定します。                            
- OrbitalAntiParallel       反平行のスピンを持つペア軌道因子を指定します。                            
- OrbitalParallel           平行のスピンを持つペア軌道因子を指定します。                              
- OrbitalGeneral            ペア軌道因子を指定します。                                                
- TransSym :math:`^*`       並進・格子対称演算子を設定します。                                        
- InGutzwiller              Gutzwiller因子の初期値を設定します。                                      
- InJastrow                 電荷Jastrow因子の初期値を設定します。                                     
- InDH2                     2サイトダブロン・ホロン相関因子の初期値を設定します。                     
- InDH4                     4サイトダブロン・ホロン相関因子の初期値を設定します。
- InGeneralRBM_PhysLayer    一般的なRBM相関因子のうち、最適化する物理層での変分パラメータの初期値を設定します。
- InGeneralRBM_HiddenLayer  一般的なRBM相関因子のうち、最適化する隠れ層での変分パラメータの初期値を設定します。
- InGeneralRBM_PhysHidden   一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータの初期値を設定します。               
- InOrbital                 ペア軌道因子 :math:`f_{i\uparrow j\downarrow}` の初期値を設定します。   
- InOrbitalAntiParallel     ペア軌道因子 :math:`f_{i\uparrow j\downarrow}` の初期値を設定します。   
- InOrbitalParallel         ペア軌道因子 :math:`f_{i\sigma j\sigma}` の初期値を設定します。         
- InOrbitalGeneral          ペア軌道因子 :math:`f_{i\sigma j\sigma'}` の初期値を設定します。        
- OneBodyG                  出力する一体グリーン関数を指定します。                                    
- TwoBodyG                  出力する二体グリーン関数を指定します。                                    
-========================== ===========================================================================================   
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Keywords                  
+     - 対応するファイルの概要                                                    
+   * - ModPara :math:`^*`        
+     - 計算用のパラメータを指定します。                                          
+   * - LocSpin :math:`^*`        
+     - 局在・遍歴スピンを指定します。                                            
+   * - Trans                     
+     - 一般的な一体相互作用を指定します。                                        
+   * - InterAll                  
+     - 一般的な二体相互作用を指定します。                                        
+   * - CoulombIntra              
+     - 内部クーロン相互作用を指定します。                                        
+   * - CoulombInter              
+     - サイト間クーロン相互作用を指定します。                                    
+   * - Hund                      
+     - フント結合を指定します。                                                  
+   * - PairHop                   
+     - ペアホッピング相互作用を指定します。                                      
+   * - Exchange                  
+     - 交換相互作用を指定します。                                                
+   * - Gutzwiller                
+     - 最適化するGutzwiller因子を設定します。                                    
+   * - Jastrow                   
+     - 最適化する電荷Jastrow因子を指定します。                                   
+   * - DH2                       
+     - 最適化する2サイトダブロン・ホロン相関因子を指定します。                   
+   * - DH4                       
+     - 最適化する4サイトダブロン・ホロン相関因子を指定します。 
+   * - GeneralRBM_PhysLayer      
+     - 一般的なRBM相関因子のうち、最適化する物理層での変分パラメータを指定します。
+   * - GeneralRBM_HiddenLayer    
+     - 一般的なRBM相関因子のうち、最適化する隠れ層での変分パラメータを指定します。
+   * - GeneralRBM_PhysHidden     
+     - 一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータを指定します。                  
+   * - Orbital :math:`^*`        
+     - 反平行のスピンを持つペア軌道因子を指定します。                            
+   * - OrbitalAntiParallel       
+     - 反平行のスピンを持つペア軌道因子を指定します。                            
+   * - OrbitalParallel           
+     - 平行のスピンを持つペア軌道因子を指定します。                              
+   * - OrbitalGeneral            
+     - ペア軌道因子を指定します。                                                
+   * - TransSym :math:`^*`       
+     - 並進・格子対称演算子を設定します。                                        
+   * - InGutzwiller              
+     - Gutzwiller因子の初期値を設定します。                                      
+   * - InJastrow                 
+     - 電荷Jastrow因子の初期値を設定します。                                     
+   * - InDH2                     
+     - 2サイトダブロン・ホロン相関因子の初期値を設定します。                     
+   * - InDH4                     
+     - 4サイトダブロン・ホロン相関因子の初期値を設定します。
+   * - InGeneralRBM_PhysLayer    
+     - 一般的なRBM相関因子のうち、最適化する物理層での変分パラメータの初期値を設定します。
+   * - InGeneralRBM_HiddenLayer  
+     - 一般的なRBM相関因子のうち、最適化する隠れ層での変分パラメータの初期値を設定します。
+   * - InGeneralRBM_PhysHidden   
+     - 一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータの初期値を設定します。               
+   * - InOrbital                 
+     - ペア軌道因子 :math:`f_{i\uparrow j\downarrow}` の初期値を設定します。   
+   * - InOrbitalAntiParallel     
+     - ペア軌道因子 :math:`f_{i\uparrow j\downarrow}` の初期値を設定します。   
+   * - InOrbitalParallel         
+     - ペア軌道因子 :math:`f_{i\sigma j\sigma}` の初期値を設定します。         
+   * - InOrbitalGeneral          
+     - ペア軌道因子 :math:`f_{i\sigma j\sigma'}` の初期値を設定します。        
+   * - OneBodyG                  
+     - 出力する一体グリーン関数を指定します。                                    
+   * - TwoBodyG                  
+     - 出力する二体グリーン関数を指定します。                                    
 
 ModParaファイル (modpara.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
