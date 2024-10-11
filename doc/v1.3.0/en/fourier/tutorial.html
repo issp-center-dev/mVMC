@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Tutorial &#8212; mVMC 1.3.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=3d533f9b"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="File format" href="format.html" />
+    <link rel="prev" title="Overview" href="overview.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="format.html" title="File format"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="overview.html" title="Overview"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.3.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">HPhi/mVMC Fourier-Transformation utility</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Tutorial</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="tutorial">
+<span id="id1"></span><h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this heading">¶</a></h1>
+<p>In this tutorial, we explain through a sample calculation of
+the 8-site Hubbard model on the square lattice.</p>
+<section id="run-hphi-vmc-out">
+<h2>Run HPhi/vmc.out<a class="headerlink" href="#run-hphi-vmc-out" title="Permalink to this heading">¶</a></h2>
+<ul>
+<li><p>For <span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span></p>
+<p>We calculate the ground state and the correlation function with
+the following input file</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">a0w</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">a0l</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">a1w</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
+<span class="n">a1l</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">model</span><span class="o">=</span><span class="s2">&quot;Hubbard&quot;</span>
+<span class="n">method</span><span class="o">=</span><span class="s2">&quot;CG&quot;</span>
+<span class="n">lattice</span><span class="o">=</span><span class="s2">&quot;square&quot;</span>
+<span class="n">t</span><span class="o">=</span><span class="mf">1.0</span>
+<span class="n">U</span><span class="o">=</span><span class="mf">8.0</span>
+<span class="n">ncond</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="mi">2</span><span class="n">Sz</span><span class="o">=</span><span class="mi">0</span>
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>HPhi<span class="w"> </span>-s<span class="w"> </span>input
+</pre></div>
+</div>
+</li>
+<li><p>For mVMC</p>
+<p>First, we optimize the trial wavefunction with the following input</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">a0w</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">a0l</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">a1w</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
+<span class="n">a1l</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">model</span><span class="o">=</span><span class="s2">&quot;Hubbard&quot;</span>
+<span class="n">lattice</span><span class="o">=</span><span class="s2">&quot;square&quot;</span>
+<span class="n">t</span><span class="o">=</span><span class="mf">1.0</span>
+<span class="n">U</span><span class="o">=</span><span class="mf">8.0</span>
+<span class="n">ncond</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="mi">2</span><span class="n">Sz</span><span class="o">=</span><span class="mi">0</span>
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>vmc.out<span class="w"> </span>-s<span class="w"> </span>input
+</pre></div>
+</div>
+<p>We add the following line to the input file to compute the correlation function.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">NVMCCalMode</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>Compute the correlation function.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>vmc.out<span class="w"> </span>-s<span class="w"> </span>input<span class="w"> </span>output/zqp_opt.dat
+</pre></div>
+</div>
+</li>
+</ul>
+<p>Then the one- and two-body correlation function are written to files
+in the <code class="docutils literal notranslate"><span class="pre">output/</span></code> directory.</p>
+<p>Related files</p>
+<ul class="simple">
+<li><p>StdFace.def (See the manuals for mVMC/<span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span>)</p></li>
+<li><p>zqp_opt.dat (See the manual for mVMC)</p></li>
+<li><p>greenone.def (<a class="reference internal" href="format.html#greenindex"><span class="std std-ref">Specify the index of correlation function to be computed</span></a>)</p></li>
+<li><p>greentwo.def (<a class="reference internal" href="format.html#greenindex"><span class="std std-ref">Specify the index of correlation function to be computed</span></a>)</p></li>
+</ul>
+</section>
+<section id="fourier-transformation-of-correlation-functions">
+<h2>Fourier transformation of correlation functions<a class="headerlink" href="#fourier-transformation-of-correlation-functions" title="Permalink to this heading">¶</a></h2>
+<p>Perform the Fourier transformation of the correlation function
+by using the utility <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;4 20</span>
+<span class="s2">G 0 0 0</span>
+<span class="s2">X 0.5 0 0</span>
+<span class="s2">M 0.5 0.5 0</span>
+<span class="s2">G 0 0 0</span>
+<span class="s2">16 16 1&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>geometry.dat
+$<span class="w"> </span>greenr2k<span class="w"> </span>namelist.def<span class="w"> </span>geometry.dat
+</pre></div>
+</div>
+<p>Then the Fourier-transformed correlation functions are
+written to a file in <code class="docutils literal notranslate"><span class="pre">output/</span></code>.</p>
+<p>Related files</p>
+<ul class="simple">
+<li><p>output/zvo_cisajs_001.dat (<a class="reference internal" href="format.html#zvocisajs"><span class="std std-ref">Results of correlation function in the site representation</span></a>)</p></li>
+<li><p>output/zvo_cisajs.dat (<a class="reference internal" href="format.html#zvocisajs"><span class="std std-ref">Results of correlation function in the site representation</span></a>)</p></li>
+<li><p>output/zvo_cisajscktalt_001.dat (<a class="reference internal" href="format.html#zvocisajs"><span class="std std-ref">Results of correlation function in the site representation</span></a>)</p></li>
+<li><p>output/zvo_cisajscktalt.dat (<a class="reference internal" href="format.html#zvocisajs"><span class="std std-ref">Results of correlation function in the site representation</span></a>)</p></li>
+<li><p>geometry.dat (<a class="reference internal" href="format.html#geometry"><span class="std std-ref">Geometry</span></a>)</p></li>
+<li><p>output/zvo_corr.dat (<a class="reference internal" href="format.html#zvocorr"><span class="std std-ref">Correlation functions on the k path</span></a>)</p></li>
+</ul>
+</section>
+<section id="display-correlation-functions">
+<h2>Display correlation functions<a class="headerlink" href="#display-correlation-functions" title="Permalink to this heading">¶</a></h2>
+<p>Plot the correlation function in the <em>k</em> space
+by using gnuplot.</p>
+<div class="highlight-gnuplot notranslate"><div class="highlight"><pre><span></span><span class="k">load</span><span class="w"> </span><span class="s">&quot;kpath.gp&quot;</span>
+<span class="k">plot</span><span class="w"> </span><span class="s">&quot;output/zvo_corr_eigen0.dat&quot;</span><span class="w"> </span><span class="nb">u</span><span class="w"> </span><span class="mi">1</span><span class="o">:</span><span class="mi">12</span><span class="w"> </span><span class="nb">w</span><span class="w"> </span><span class="n">l</span>
+</pre></div>
+</div>
+<figure class="align-default" id="id2">
+<span id="corplotpng"></span><img alt="../_images/corplot.png" src="../_images/corplot.png" />
+<figcaption>
+<p><span class="caption-text">Figure 1: The spin-spin correlation <span class="math notranslate nohighlight">\(\langle{\bf S}_{\bf k}\cdot{\bf S}_{\bf k}\rangle\)</span>
+(Column 12).</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>Related files</p>
+<ul class="simple">
+<li><p>kpath.gp (<a class="reference internal" href="format.html#gnuplot"><span class="std std-ref">gnuplot script</span></a>)</p></li>
+<li><p>output/zvo_corr.dat (<a class="reference internal" href="format.html#zvocorr"><span class="std std-ref">Correlation functions on the k path</span></a>)</p></li>
+</ul>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">Tutorial</a><ul>
+<li><a class="reference internal" href="#run-hphi-vmc-out">Run HPhi/vmc.out</a></li>
+<li><a class="reference internal" href="#fourier-transformation-of-correlation-functions">Fourier transformation of correlation functions</a></li>
+<li><a class="reference internal" href="#display-correlation-functions">Display correlation functions</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="overview.html"
+                          title="previous chapter">Overview</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="format.html"
+                          title="next chapter">File format</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/fourier/tutorial.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="format.html" title="File format"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="overview.html" title="Overview"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.3.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >HPhi/mVMC Fourier-Transformation utility</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Tutorial</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+  </body>
+</html>

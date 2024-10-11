@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Welcome to mVMC&#39;s tutorial! &#8212; mVMC Tutorial  ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=2aa0fae8"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/translations.js?v=4dbe4bdc"></script>
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="検索" href="search.html" />
+    <link rel="next" title="1. 基本編" href="basic/index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="welcome-to-mvmc-s-tutorial">
+<h1>Welcome to mVMC's tutorial!<a class="headerlink" href="#welcome-to-mvmc-s-tutorial" title="この見出しへのパーマリンク">¶</a></h1>
+<section id="mvmc-s-tutorial">
+<h2>mVMC's tutorialについて<a class="headerlink" href="#mvmc-s-tutorial" title="この見出しへのパーマリンク">¶</a></h2>
+<p>本ページでは、量子スピン系や遍歴電子系といった様々な量子格子系を解析できる変分モンテカルロ法が実装されたオープンソースソフトウェアmVMCの使い方を解説します。
+mVMCについては、公式ページ <a class="reference external" href="https://github.com/issp-center-dev/mVMC">https://github.com/issp-center-dev/mVMC</a>
+もしくは論文 <a class="reference external" href="https://www.sciencedirect.com/science/article/pii/S0010465518303102">Comp. Phys. Commun. 235 447-462 (2019).</a> をご参照ください。</p>
+</section>
+<section id="id1">
+<h2>ライセンス<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h2>
+<p>mVMCのマニュアルおよびソースコード一式はGNU General
+Public License version 3（GPL v3）に準じて下記リンク先で配布されています。</p>
+<div class="line-block">
+<div class="line">URL: <a class="reference external" href="https://github.com/issp-center-dev/mVMC">https://github.com/issp-center-dev/mVMC</a></div>
+</div>
+<p>mVMCの引用文献としては、下記の論文をご記載ください。</p>
+<div class="line-block">
+<div class="line">mVMCの論文: Takahiro Misawa, Satoshi Morita, Kazuyoshi Yoshimi, Mitsuaki Kawamura, Yuichi Motoyama,
+Kota Ido, Takahiro Ohgoe, Masatoshi, and Takeo Kato, <a class="reference external" href="https://www.sciencedirect.com/science/article/pii/S0010465518303102">Comp. Phys. Commun. 235 447-462 (2019).</a></div>
+</div>
+</section>
+<section id="id3">
+<h2>チュートリアル<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="basic/index.html">1. 基本編</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="basic/hubbard_dimer.html">1.1. Hubbardダイマー</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="basic/hubbard_dimer.html#id1">1.1.1. 波動関数の最適化</a></li>
+<li class="toctree-l3"><a class="reference internal" href="basic/hubbard_dimer.html#id5">1.1.2. 初期状態の設定</a></li>
+<li class="toctree-l3"><a class="reference internal" href="basic/hubbard_dimer.html#id7">1.1.3. 参考文献</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="basic/hubbard_chain.html">1.2. 一次元Hubbard模型</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="basic/hubbard_chain.html#id1">1.2.1. スタンダードモードの入力ファイル生成</a></li>
+<li class="toctree-l3"><a class="reference internal" href="basic/hubbard_chain.html#id2">1.2.2. 波動関数の最適化</a></li>
+<li class="toctree-l3"><a class="reference internal" href="basic/hubbard_chain.html#id3">1.2.3. 物理量測定</a></li>
+<li class="toctree-l3"><a class="reference internal" href="basic/hubbard_chain.html#id4">1.2.4. 後処理スクリプトの実行</a></li>
+<li class="toctree-l3"><a class="reference internal" href="basic/hubbard_chain.html#id6">1.2.5. 参考文献</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="basic/hubbard_square.html">1.3. 二次元Hubbard模型</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="basic/hubbard_square.html#id1">1.3.1. 乱数初期状態での最適化</a></li>
+<li class="toctree-l3"><a class="reference internal" href="basic/hubbard_square.html#uhf">1.3.2. UHF初期状態での最適化</a></li>
+<li class="toctree-l3"><a class="reference internal" href="basic/hubbard_square.html#id3">1.3.3. 参考文献</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="advanced/index.html">2. 応用編</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="advanced/spin_gap.html">2.1. 量子数射影を用いたスピンギャップ計算</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="advanced/spin_gap.html#heisenberg">2.1.1. 一次元Heisenberg模型</a></li>
+<li class="toctree-l3"><a class="reference internal" href="advanced/spin_gap.html#id3">2.1.2. 一次元近藤格子模型</a></li>
+<li class="toctree-l3"><a class="reference internal" href="advanced/spin_gap.html#id5">2.1.3. 参考文献</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="advanced/sc_correlation.html">2.2. 引力Hubbard模型における超伝導相関関数計算</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="advanced/sc_correlation.html#id1">2.2.1. 波動関数の最適化</a></li>
+<li class="toctree-l3"><a class="reference internal" href="advanced/sc_correlation.html#id2">2.2.2. 相関関数の測定</a></li>
+<li class="toctree-l3"><a class="reference internal" href="advanced/sc_correlation.html#id3">2.2.3. 超伝導相関関数の計算</a></li>
+<li class="toctree-l3"><a class="reference internal" href="advanced/sc_correlation.html#id5">2.2.4. 参考文献</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="#">
+    <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="basic/index.html">1. 基本編</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced/index.html">2. 応用編</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="basic/index.html" title="次の章へ"><span class="section-number">1. </span>基本編</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020-, The University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>1.1. Hubbardダイマー &#8212; mVMC Tutorial  ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2aa0fae8"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="1.2. 一次元Hubbard模型" href="hubbard_chain.html" />
+    <link rel="prev" title="1. 基本編" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="hubbard">
+<h1><span class="section-number">1.1. </span>Hubbardダイマー<a class="headerlink" href="#hubbard" title="この見出しへのパーマリンク">¶</a></h1>
+<p>このチュートリアルでは、ハーフフィリングにおけるHubbardダイマーの基底状態と励起状態のエネルギーを計算します。</p>
+<div class="math notranslate nohighlight" id="equation-basic-hubbard-dimer-0">
+<span class="eqno">(1.1)<a class="headerlink" href="#equation-basic-hubbard-dimer-0" title="この数式へのパーマリンク">¶</a></span>\[H = -t \sum_{\sigma} \left( c_{0\sigma}^{\dagger}c_{1\sigma}+{\rm H.c.} \right)
+  +U \sum_{i=0,1} n_{i\uparrow}n_{i\downarrow}\]</div>
+<p>文献2に記載されているように、Hubbard dimerの基底状態 <span class="math notranslate nohighlight">\(|{\rm GS} \rangle\)</span> は、</p>
+<div class="math notranslate nohighlight" id="equation-basic-hubbard-dimer-1">
+<span class="eqno">(1.2)<a class="headerlink" href="#equation-basic-hubbard-dimer-1" title="この数式へのパーマリンク">¶</a></span>\[\alpha=\frac{U}{\sqrt{U^2+16t^2}}\]</div>
+<p>を用いると、次のように表されます。</p>
+<div class="math notranslate nohighlight" id="equation-exact-gs">
+<span class="eqno">(1.3)<a class="headerlink" href="#equation-exact-gs" title="この数式へのパーマリンク">¶</a></span>\[| {\rm GS} \rangle = \left[ \frac{\sqrt{1-\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{0\downarrow}^{\dagger} + c_{1\uparrow}^{\dagger} c_{1\downarrow}^{\dagger} \right)
++ \frac{\sqrt{1+\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{1\downarrow}^{\dagger} - c_{0\downarrow}^{\dagger} c_{1\uparrow}^{\dagger} \right) \right] |0 \rangle\]</div>
+<p>ここで <span class="math notranslate nohighlight">\(|0 \rangle\)</span>  は真空状態を表しています。上記の状態はmVMCで実装されているペアリング波動関数で厳密に表現することができます。</p>
+<section id="id1">
+<h2><span class="section-number">1.1.1. </span>波動関数の最適化<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h2>
+<section id="id2">
+<h3><span class="section-number">1.1.1.1. </span>スタンダードモード<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h3>
+<p>インプットファイル <code class="docutils literal notranslate"><span class="pre">samples/tutorial_1.1/stan1.in</span></code> を使って、基底状態のエネルギーを計算します。
+中身は次のようになっています:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>L = 2
+Lsub = 2
+model = &quot;FermionHubbard&quot;
+lattice = &quot;chain&quot;
+t = 0.5
+U = 4.0
+ncond = 2
+NSPGaussLeg = 1  //default:8
+2Sz = 0
+NSROptItrStep =  100
+NSROptItrSmp  =  10
+NVMCSample    =  100
+</pre></div>
+</div>
+<p>次のコマンドでmVMCを実行してください。</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>vmc.out -s stan.in
+</pre></div>
+</div>
+<p>計算結果は、 <code class="docutils literal notranslate"><span class="pre">output</span></code> ディレクトリに出力されます。
+エネルギーの最適化過程を確認するために、 <code class="docutils literal notranslate"><span class="pre">output/zvo_out_001.dat</span></code> を確認してみます。このファイルには、各最適化ステップごとにエネルギーなどの物理量が記載されています。エネルギーは一列目に出力されています。次のコマンドを実行してください:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>gnuplot plot
+</pre></div>
+</div>
+<p>実行すると、下記のようなグラフが表示されます。</p>
+<a class="reference internal image-reference" href="../_images/tutorial1.1_gs_opt.png"><img alt="../_images/tutorial1.1_gs_opt.png" class="align-center" src="../_images/tutorial1.1_gs_opt.png" style="width: 407.5px; height: 220.0px;" /></a>
+<p>紫の点がmVMCによるエネルギーの最適化過程を、黒の実線がHPhiを用いた厳密解の結果を示しています。ちゃんと収束していることを確認するには、最後のステップ数付近を拡大してみてください。モンテカルロサンプルリングをしているためエネルギー値に揺らぎがありますが、下記のようにエネルギーが落ち着いていたら収束しているといえます。</p>
+<a class="reference internal image-reference" href="../_images/tutorial1.1_gs_opt_zoom.png"><img alt="../_images/tutorial1.1_gs_opt_zoom.png" class="align-center" src="../_images/tutorial1.1_gs_opt_zoom.png" style="width: 407.5px; height: 220.0px;" /></a>
+</section>
+<section id="id3">
+<h3><span class="section-number">1.1.1.2. </span>エキスパートモード<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h3>
+<p>Hubbard模型を含んだ遍歴電子系をスタンダードモードで取り扱う場合、指定した副格子構造を有したGutzwiller-Jastrow相関因子がデフォルトで使用されます。ここではスタンダードモードで生成した入力ファイルを元に、相関因子を用いないmVMC計算をエキスパートモードで実行します。</p>
+<p>スタンダードモードで生成された入力ファイル <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> には、次のようにキーワードに対応したファイル名が記載されています。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>       ModPara  modpara.def
+     LocSpin  locspn.def
+       Trans  trans.def
+CoulombIntra  coulombintra.def
+    OneBodyG  greenone.def
+    TwoBodyG  greentwo.def
+  Gutzwiller  gutzwilleridx.def
+     Jastrow  jastrowidx.def
+     Orbital  orbitalidx.def
+    TransSym  qptransidx.def
+</pre></div>
+</div>
+<p>相関因子を使わないようにするには、GutzwillerとJastrowの行をコメントアウトする、もしくは削除する必要があります。(コメントアウトには#を用います。)
+たとえば次のようなsedコマンドを使うと、 <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> 中のGutzwillerとJastrowの行をコメントアウトできます:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sed -i -e &quot;s/Gutzwiller/#Gutzwiller/&quot; namelist.def
+sed -i -e &quot;s/Jastrow/#Jastrow/&quot; namelist.def
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> を修正したら、:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>vmc.out -e namelist.def
+</pre></div>
+</div>
+<p>もしくは:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>vmc.out namelist.def
+</pre></div>
+</div>
+<p>を実行してください。計算が終了したら、スタンダードモードの時と同様にエネルギーの最適化過程を確認し、エネルギーが一定値に収束していることを確認してください。</p>
+<p>最適化されたペアリング波動関数の情報は、<code class="docutils literal notranslate"><span class="pre">output/zqp_orbital_opt.dat</span></code> に出力されています。次のコマンドを実行してください:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cat output/zqp_orbital_opt.dat
+</pre></div>
+</div>
+<p>結果は、大まかに次のようになっているかと思われます。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>======================
+NOrbitalIdx  4
+======================
+======================
+======================
+0 -1.653588951124364659e+00  0.000000000000000000e+00
+1 -3.983375054723054198e+00  0.000000000000000000e+00
+2 -4.000000000000000000e+00  0.000000000000000000e+00
+3 -1.653364791408409529e+00  0.000000000000000000e+00
+</pre></div>
+</div>
+<p>5行目のヘッダ以降の数値が、最適化されたペアリング波動関数の情報です。一列目が変分パラメータのインデックス、二列目が変分パラメータの実部、三列目がその虚部です。今回は実数での計算になっているため、三列目は全て0が出力されています。なお、ここで出力されている値は、最適化の最終ステップから <code class="docutils literal notranslate"><span class="pre">NSROptItrSmp</span></code> ステップ数分前までの変分パラメータの平均値となっています。( <code class="docutils literal notranslate"><span class="pre">NSROptItrSmp</span></code> は <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> で設定できます。)</p>
+<p>変分パラメータのインデックスとペアリングの関係は、 <code class="docutils literal notranslate"><span class="pre">orbitalidx.def</span></code> に記載されています。次のコマンドを実行してください:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cat orbitalidx.def
+</pre></div>
+</div>
+<p>すると次のような出力が得られます。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>=============================================
+NOrbitalIdx          4
+ComplexType          0
+=============================================
+=============================================
+  0      0      0
+  0      1      1
+  1      0      2
+  1      1      3
+  0      1
+  1      1
+  2      1
+  3      1
+</pre></div>
+</div>
+<p>5行目のヘッダ以降の数値が、ペアリング波動関数 <span class="math notranslate nohighlight">\(\left(\sum_{i,j} f_{ij} c^{\dagger}_{i\uparrow} c^{\dagger}_{j\downarrow}\right) | 0 \rangle\)</span> に含まれる変分パラメータ <span class="math notranslate nohighlight">\(f_{ij}\)</span> の情報です。一列目が変分パラメータ <span class="math notranslate nohighlight">\(f_{ij}\)</span> の サイトインデックス <span class="math notranslate nohighlight">\(i\)</span> 、二列目が <span class="math notranslate nohighlight">\(f_{ij}\)</span> の <span class="math notranslate nohighlight">\(j\)</span> 、三列目が <span class="math notranslate nohighlight">\(f_{ij}\)</span> のインデックスです。</p>
+<p>基底状態の厳密解 <a class="reference internal" href="#equation-exact-gs">(1.3)</a> によると、ペアリング波動関数の変分パラメータは次のようになることが期待されます。</p>
+<div class="math notranslate nohighlight" id="equation-basic-hubbard-dimer-2">
+<span class="eqno">(1.4)<a class="headerlink" href="#equation-basic-hubbard-dimer-2" title="この数式へのパーマリンク">¶</a></span>\[\frac{f_{00}}{f_{01}} = \frac{\sqrt{1-\alpha}}{\sqrt{1+\alpha}}\]</div>
+<p>上記の関係式を満たすよう変分パラメータが最適化されていそうかを確認してください。たとえば、 <code class="docutils literal notranslate"><span class="pre">bc</span> <span class="pre">-l</span></code> コマンドを使うと下記のように簡単に確認できます。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$bc -l
+&gt;&gt;&gt; a=1/sqrt(2)
+&gt;&gt;&gt; sqrt(1-a)/sqrt(1+a)
+.41421356237309504880
+&gt;&gt;&gt; -1.653588951124364659/-3.983375054723054198
+.41512258534724672475
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h3><span class="section-number">1.1.1.3. </span>演習<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
+<p>ハーフフィリングにおけるHubbard dimerの基底エネルギーの厳密解は <span class="math notranslate nohighlight">\(E=\frac{U}{2}\times(1 - \sqrt{(1+(4t/U)^2)})\)</span> となります。mVMCのスタンダードモード用の入力ファイル <code class="docutils literal notranslate"><span class="pre">samples/tutorial_1.1/stan1.in</span></code> を参考にして、厳密解の相互作用Uを再現できるか確かめてください。</p>
+</section>
+</section>
+<section id="id5">
+<h2><span class="section-number">1.1.2. </span>初期状態の設定<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h2>
+<p>全スピンの大きさ <span class="math notranslate nohighlight">\(S_{\rm tot}\)</span> が0の場合、一番エネルギーが高い励起状態 <span class="math notranslate nohighlight">\(|{\rm ES} \rangle\)</span> とそのエネルギー <span class="math notranslate nohighlight">\(E_{{\rm ES}}\)</span> は次のように表されます。</p>
+<div class="math notranslate nohighlight" id="equation-exact-es">
+<span class="eqno">(1.5)<a class="headerlink" href="#equation-exact-es" title="この数式へのパーマリンク">¶</a></span>\[|{\rm ES} \rangle = \left[ \frac{\sqrt{1+\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{0\downarrow}^{\dagger} + c_{1\uparrow}^{\dagger} c_{1\downarrow}^{\dagger} \right)
+- \frac{\sqrt{1-\alpha}}{2} \left( c_{0\uparrow}^{\dagger}c_{1\downarrow}^{\dagger} - c_{0\downarrow}^{\dagger} c_{1\uparrow}^{\dagger} \right) \right] |0 \rangle,\]</div>
+<div class="math notranslate nohighlight" id="equation-basic-hubbard-dimer-3">
+<span class="eqno">(1.6)<a class="headerlink" href="#equation-basic-hubbard-dimer-3" title="この数式へのパーマリンク">¶</a></span>\[E_{{\rm ES}}=\frac{U}{2}\times(1 + \sqrt{(1+(4t/U)^2)})\]</div>
+<p>ここでは、励起状態 <a class="reference internal" href="#equation-exact-es">(1.5)</a> を初期状態として使って、基底状態最適化を行なってみます。これまでの計算では、変分パラメータ <span class="math notranslate nohighlight">\(f_{ij}\)</span> の値を指定せずにmVMCを実行していました。指定しない場合、 <span class="math notranslate nohighlight">\(f_{ij}\)</span> は乱数が自動的に振られるように実装されています。</p>
+<p>今回のチュートリアルのように、ペアリング波動関数の初期状態を設定するためには、 <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> に <code class="docutils literal notranslate"><span class="pre">InOrbital</span></code> キーワードを追加してください。たとえば基底状態の最適化で得られた  <code class="docutils literal notranslate"><span class="pre">zqp_orbital_opt.dat</span></code> を流用すると、次のような最適化過程を得られます。</p>
+<figure class="align-center" id="es-opt">
+<a class="reference internal image-reference" href="../_images/tutorial1.1_es_opt.png"><img alt="../_images/tutorial1.1_es_opt.png" src="../_images/tutorial1.1_es_opt.png" style="width: 396.25px; height: 258.75px;" /></a>
+</figure>
+<p>紫のデータ点がmVMCの最適化過程を、黒実線が厳密解のエネルギーを示しています。正しく設定できていると、最適化過程の初めのエネルギーが励起状態のエネルギーに近い値になっていることが確認できます。なお、初期状態が励起固有状態に近いほど、最適化過程では励起状態にトラップされてしまい、基底状態には収束しづらくなります。</p>
+<section id="id6">
+<h3><span class="section-number">1.1.2.1. </span>演習<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h3>
+<p>上述の説明やマニュアルを参考に、 準安定な励起状態を作ってみてください。</p>
+</section>
+</section>
+<section id="id7">
+<h2><span class="section-number">1.1.3. </span>参考文献<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h2>
+<ol class="arabic simple">
+<li><p>HPhi tutorial, <a class="reference external" href="https://issp-center-dev.github.io/HPhi/manual/develop/tutorial/en/html/zero_temperature/hubbard_dimer.html">https://issp-center-dev.github.io/HPhi/manual/develop/tutorial/en/html/zero_temperature/hubbard_dimer.html</a></p></li>
+<li><p>高田康民, 多体問題特論 --第一原理からの多電子問題--, 朝倉書店 (2009).</p></li>
+</ol>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">1. 基本編</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">1.1. Hubbardダイマー</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">1.1.1. 波動関数の最適化</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id5">1.1.2. 初期状態の設定</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id7">1.1.3. 参考文献</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hubbard_chain.html">1.2. 一次元Hubbard模型</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hubbard_square.html">1.3. 二次元Hubbard模型</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../advanced/index.html">2. 応用編</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">1. </span>基本編</a><ul>
+      <li>Previous: <a href="index.html" title="前の章へ"><span class="section-number">1. </span>基本編</a></li>
+      <li>Next: <a href="hubbard_chain.html" title="次の章へ"><span class="section-number">1.2. </span>一次元Hubbard模型</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020-, The University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/basic/hubbard_dimer.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

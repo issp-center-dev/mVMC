@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>チュートリアル &#8212; mVMC 1.3.0 ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=a4498435"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="next" title="スタンダードモードの入力パラメーター" href="parameter.html" />
+    <link rel="prev" title="概要" href="overview.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="総合索引"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="parameter.html" title="スタンダードモードの入力パラメーター"
+             accesskey="N">次へ</a> |</li>
+        <li class="right" >
+          <a href="overview.html" title="概要"
+             accesskey="P">前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.3.0 ドキュメント</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Wannier関数を用いたダウンフォールディング</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">チュートリアル</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="tutorialwannier">
+<span id="id1"></span><h1>チュートリアル<a class="headerlink" href="#tutorialwannier" title="この見出しへのパーマリンク">¶</a></h1>
+<p>このチュートリアルでは Sr<sub>2</sub>CuO<sub>3</sub> を例に,
+1次元1軌道Hubbardモデルにダウンフォールドし,
+HPhi/mVMCで計算するまでの一連の流れを示す.
+DFT計算はQuantumESPRESSOで行う.
+入力ファイルは <code class="docutils literal notranslate"><span class="pre">samples/Wannier/Sr2CuO3</span></code> ディレクトリにある.</p>
+<p>なお, 実際の研究では必要に応じ, 各ソルバーの入力ファイル等を調整する.
+入力ファイルの詳細については, 各ソルバーのマニュアルを参考にすること.</p>
+<section id="scf">
+<h2>電荷密度のSCF計算<a class="headerlink" href="#scf" title="この見出しへのパーマリンク">¶</a></h2>
+<p>まず, DFTによる電荷密度のSCF計算を行う.</p>
+<p><a class="reference download internal" download="" href="../_downloads/fc8a03ca4d72a607207c9c468c338dd3/scf.in"><code class="xref download docutils literal notranslate"><span class="pre">scf.in</span></code></a></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">CONTROL</span>
+ <span class="n">calculation</span> <span class="o">=</span> <span class="s1">&#39;scf&#39;</span>
+  <span class="n">pseudo_dir</span> <span class="o">=</span> <span class="s1">&#39;../pseudo&#39;</span>
+<span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;sr2cuo3&#39;</span>
+<span class="o">/</span>
+<span class="o">&amp;</span><span class="n">SYSTEM</span>
+       <span class="n">ibrav</span> <span class="o">=</span> <span class="mi">0</span>
+         <span class="n">nat</span> <span class="o">=</span> <span class="mi">6</span>
+        <span class="n">ntyp</span> <span class="o">=</span> <span class="mi">3</span>
+     <span class="n">ecutwfc</span> <span class="o">=</span> <span class="mf">30.000000</span>
+     <span class="n">ecutrho</span> <span class="o">=</span> <span class="mf">240.000000</span>
+ <span class="n">occupations</span> <span class="o">=</span> <span class="s1">&#39;tetrahedra_opt&#39;</span>
+<span class="o">/</span>
+<span class="o">&amp;</span><span class="n">ELECTRONS</span>
+<span class="n">mixing_beta</span> <span class="o">=</span> <span class="mf">0.3</span>
+<span class="o">/</span>
+<span class="n">CELL_PARAMETERS</span> <span class="n">angstrom</span>
+ <span class="o">-</span><span class="mf">1.749305</span> <span class="mf">1.955690</span> <span class="mf">6.351200</span>
+ <span class="mf">1.749305</span> <span class="o">-</span><span class="mf">1.955690</span> <span class="mf">6.351200</span>
+ <span class="mf">1.749305</span> <span class="mf">1.955690</span> <span class="o">-</span><span class="mf">6.351200</span>
+<span class="n">ATOMIC_SPECIES</span>
+ <span class="n">Sr</span> <span class="mf">87.620000</span> <span class="n">Sr_ONCV_PBE</span><span class="o">-</span><span class="mf">1.0</span><span class="o">.</span><span class="n">upf</span>
+ <span class="n">Cu</span> <span class="mf">63.546000</span> <span class="n">Cu_ONCV_PBE</span><span class="o">-</span><span class="mf">1.0</span><span class="o">.</span><span class="n">upf</span>
+ <span class="n">O</span> <span class="mf">15.999400</span> <span class="n">O_ONCV_PBE</span><span class="o">-</span><span class="mf">1.0</span><span class="o">.</span><span class="n">upf</span>
+<span class="n">ATOMIC_POSITIONS</span> <span class="n">crystal</span>
+ <span class="n">Sr</span> <span class="mf">0.851940</span> <span class="mf">0.351940</span> <span class="mf">0.500000</span>
+ <span class="n">Sr</span> <span class="mf">0.148060</span> <span class="mf">0.648060</span> <span class="mf">0.500000</span>
+ <span class="n">Cu</span> <span class="mf">0.500000</span> <span class="mf">0.000000</span> <span class="mf">0.500000</span>
+ <span class="n">O</span> <span class="mf">0.654110</span> <span class="mf">0.154110</span> <span class="mf">0.500000</span>
+ <span class="n">O</span> <span class="mf">0.345890</span> <span class="mf">0.845890</span> <span class="mf">0.500000</span>
+ <span class="n">O</span> <span class="mf">0.000000</span> <span class="mf">0.000000</span> <span class="mf">0.000000</span>
+<span class="n">K_POINTS</span> <span class="n">automatic</span>
+ <span class="mi">4</span> <span class="mi">4</span> <span class="mi">4</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>擬ポテンシャル (UPF ファイル) は
+<a class="reference external" href="www.quantum-simulation.org/potentials/sg15_oncv/">The SG15 Optimized Norm-Conserving Vanderbilt (ONCV) pseudopotentials</a> のものを使う.
+実行ディレクトリの直上に <code class="docutils literal notranslate"><span class="pre">pseudo</span></code> ディレクトリを作成して, そこに収める.</p>
+<p><a class="reference external" href="http://www.quantum-simulation.org/potentials/sg15_oncv/sg15_oncv_upf_2015-10-07.tar.gz">http://www.quantum-simulation.org/potentials/sg15_oncv/sg15_oncv_upf_2015-10-07.tar.gz</a></p>
+<p>SCF 計算には QuantumESPRESSO内のプログラム <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> を使う.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pw.x<span class="w"> </span>-in<span class="w"> </span>scf.in
+</pre></div>
+</div>
+</section>
+<section id="optional">
+<h2>(Optional) バンド計算と描画<a class="headerlink" href="#optional" title="この見出しへのパーマリンク">¶</a></h2>
+<p><a class="reference download internal" download="" href="../_downloads/da167c3c214ea2b40788f448a3605d0b/band.in"><code class="xref download docutils literal notranslate"><span class="pre">band.in</span></code></a></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">CONTROL</span>
+ <span class="n">calculation</span> <span class="o">=</span> <span class="s1">&#39;bands&#39;</span>
+  <span class="n">pseudo_dir</span> <span class="o">=</span> <span class="s1">&#39;../pseudo&#39;</span>
+<span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;sr2cuo3&#39;</span>
+<span class="o">/</span>
+<span class="o">&amp;</span><span class="n">SYSTEM</span>
+       <span class="n">ibrav</span> <span class="o">=</span> <span class="mi">0</span>
+         <span class="n">nat</span> <span class="o">=</span> <span class="mi">6</span>
+        <span class="n">ntyp</span> <span class="o">=</span> <span class="mi">3</span>
+     <span class="n">ecutwfc</span> <span class="o">=</span> <span class="mf">30.000000</span>
+     <span class="n">ecutrho</span> <span class="o">=</span> <span class="mf">240.000000</span>
+        <span class="n">nbnd</span> <span class="o">=</span> <span class="mi">35</span>
+<span class="o">/</span>
+<span class="o">&amp;</span><span class="n">ELECTRONS</span>
+<span class="o">/</span>
+<span class="n">CELL_PARAMETERS</span> <span class="n">angstrom</span>
+ <span class="o">-</span><span class="mf">1.749305</span> <span class="mf">1.955690</span> <span class="mf">6.351200</span>
+ <span class="mf">1.749305</span> <span class="o">-</span><span class="mf">1.955690</span> <span class="mf">6.351200</span>
+ <span class="mf">1.749305</span> <span class="mf">1.955690</span> <span class="o">-</span><span class="mf">6.351200</span>
+<span class="n">ATOMIC_SPECIES</span>
+ <span class="n">Sr</span> <span class="mf">87.620000</span> <span class="n">Sr_ONCV_PBE</span><span class="o">-</span><span class="mf">1.0</span><span class="o">.</span><span class="n">upf</span>
+ <span class="n">Cu</span> <span class="mf">63.546000</span> <span class="n">Cu_ONCV_PBE</span><span class="o">-</span><span class="mf">1.0</span><span class="o">.</span><span class="n">upf</span>
+ <span class="n">O</span> <span class="mf">15.999400</span> <span class="n">O_ONCV_PBE</span><span class="o">-</span><span class="mf">1.0</span><span class="o">.</span><span class="n">upf</span>
+<span class="n">ATOMIC_POSITIONS</span> <span class="n">crystal</span>
+ <span class="n">Sr</span> <span class="mf">0.851940</span> <span class="mf">0.351940</span> <span class="mf">0.500000</span>
+ <span class="n">Sr</span> <span class="mf">0.148060</span> <span class="mf">0.648060</span> <span class="mf">0.500000</span>
+ <span class="n">Cu</span> <span class="mf">0.500000</span> <span class="mf">0.000000</span> <span class="mf">0.500000</span>
+ <span class="n">O</span> <span class="mf">0.654110</span> <span class="mf">0.154110</span> <span class="mf">0.500000</span>
+ <span class="n">O</span> <span class="mf">0.345890</span> <span class="mf">0.845890</span> <span class="mf">0.500000</span>
+ <span class="n">O</span> <span class="mf">0.000000</span> <span class="mf">0.000000</span> <span class="mf">0.000000</span>
+<span class="n">K_POINTS</span> <span class="n">crystal</span>
+          <span class="mi">50</span>
+        <span class="mf">0.5000000000</span>    <span class="mf">0.5000000000</span>   <span class="o">-</span><span class="mf">0.5000000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.4994075000</span>    <span class="mf">0.5005925000</span>   <span class="o">-</span><span class="mf">0.4428337500</span>    <span class="mf">1.0</span>
+        <span class="mf">0.4988150000</span>    <span class="mf">0.5011850000</span>   <span class="o">-</span><span class="mf">0.3856675000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.4982225000</span>    <span class="mf">0.5017775000</span>   <span class="o">-</span><span class="mf">0.3285012500</span>    <span class="mf">1.0</span>
+        <span class="mf">0.4976300000</span>    <span class="mf">0.5023700000</span>   <span class="o">-</span><span class="mf">0.2713350000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.4970375000</span>    <span class="mf">0.5029625000</span>   <span class="o">-</span><span class="mf">0.2141687500</span>    <span class="mf">1.0</span>
+        <span class="mf">0.4964450000</span>    <span class="mf">0.5035550000</span>   <span class="o">-</span><span class="mf">0.1570025000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.4958525000</span>    <span class="mf">0.5041475000</span>   <span class="o">-</span><span class="mf">0.0998362500</span>    <span class="mf">1.0</span>
+        <span class="mf">0.4952600000</span>    <span class="mf">0.5047400000</span>   <span class="o">-</span><span class="mf">0.0426700000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.5337666667</span>    <span class="mf">0.4662333333</span>   <span class="o">-</span><span class="mf">0.0811750000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.5722733333</span>    <span class="mf">0.4277266667</span>   <span class="o">-</span><span class="mf">0.1196800000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.6107800000</span>    <span class="mf">0.3892200000</span>   <span class="o">-</span><span class="mf">0.1581850000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.6492866667</span>    <span class="mf">0.3507133333</span>   <span class="o">-</span><span class="mf">0.1966900000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.6877933333</span>    <span class="mf">0.3122066667</span>   <span class="o">-</span><span class="mf">0.2351950000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.7263000000</span>    <span class="mf">0.2737000000</span>   <span class="o">-</span><span class="mf">0.2737000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.6810400000</span>    <span class="mf">0.3189600000</span>   <span class="o">-</span><span class="mf">0.3189600000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.6357800000</span>    <span class="mf">0.3642200000</span>   <span class="o">-</span><span class="mf">0.3642200000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.5905200000</span>    <span class="mf">0.4094800000</span>   <span class="o">-</span><span class="mf">0.4094800000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.5452600000</span>    <span class="mf">0.4547400000</span>   <span class="o">-</span><span class="mf">0.4547400000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.5000000000</span>    <span class="mf">0.5000000000</span>   <span class="o">-</span><span class="mf">0.5000000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.3333333333</span>    <span class="mf">0.3333333333</span>   <span class="o">-</span><span class="mf">0.3333333333</span>    <span class="mf">1.0</span>
+        <span class="mf">0.1666666667</span>    <span class="mf">0.1666666667</span>   <span class="o">-</span><span class="mf">0.1666666667</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.0625000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.1250000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.1875000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.2500000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.3125000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.3750000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.4375000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.5000000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0426700000</span>   <span class="o">-</span><span class="mf">0.0426700000</span>    <span class="mf">0.5047400000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0811750000</span>   <span class="o">-</span><span class="mf">0.0811750000</span>    <span class="mf">0.4662333333</span>    <span class="mf">1.0</span>
+        <span class="mf">0.1196800000</span>   <span class="o">-</span><span class="mf">0.1196800000</span>    <span class="mf">0.4277266667</span>    <span class="mf">1.0</span>
+        <span class="mf">0.1581850000</span>   <span class="o">-</span><span class="mf">0.1581850000</span>    <span class="mf">0.3892200000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.1966900000</span>   <span class="o">-</span><span class="mf">0.1966900000</span>    <span class="mf">0.3507133333</span>    <span class="mf">1.0</span>
+        <span class="mf">0.2351950000</span>   <span class="o">-</span><span class="mf">0.2351950000</span>    <span class="mf">0.3122066667</span>    <span class="mf">1.0</span>
+        <span class="mf">0.2737000000</span>   <span class="o">-</span><span class="mf">0.2737000000</span>    <span class="mf">0.2737000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.2280833333</span>   <span class="o">-</span><span class="mf">0.2280833333</span>    <span class="mf">0.2280833333</span>    <span class="mf">1.0</span>
+        <span class="mf">0.1824666667</span>   <span class="o">-</span><span class="mf">0.1824666667</span>    <span class="mf">0.1824666667</span>    <span class="mf">1.0</span>
+        <span class="mf">0.1368500000</span>   <span class="o">-</span><span class="mf">0.1368500000</span>    <span class="mf">0.1368500000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0912333333</span>   <span class="o">-</span><span class="mf">0.0912333333</span>    <span class="mf">0.0912333333</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0456166667</span>   <span class="o">-</span><span class="mf">0.0456166667</span>    <span class="mf">0.0456166667</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.0833333333</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.1666666667</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.2500000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.3333333333</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.4166666667</span>    <span class="mf">0.0000000000</span>    <span class="mf">0.0000000000</span>    <span class="mf">1.0</span>
+        <span class="mf">0.5000000000</span>    <span class="mf">0.0000000000</span>   <span class="o">-</span><span class="mf">0.0000000000</span>    <span class="mf">1.0</span>
+</pre></div>
+</div>
+<p>ここでも <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> を使う.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pw.x<span class="w"> </span>-in<span class="w"> </span>band.in
+</pre></div>
+</div>
+<p><a class="reference download internal" download="" href="../_downloads/b1ec3039cdf0202e36301d36c1f37b1a/bands.in"><code class="xref download docutils literal notranslate"><span class="pre">bands.in</span></code></a></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">BANDS</span>
+      <span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;sr2cuo3&#39;</span>
+       <span class="n">lsym</span> <span class="o">=</span> <span class="o">.</span><span class="n">false</span><span class="o">.</span>
+<span class="o">/</span>
+</pre></div>
+</div>
+<p>QuantumESPRESSOの <code class="docutils literal notranslate"><span class="pre">bands.x</span></code> を使う.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>bands.x<span class="w"> </span>-in<span class="w"> </span>bands.in
+</pre></div>
+</div>
+<p>出力された <code class="docutils literal notranslate"><span class="pre">bands.out.gnu</span></code> をGnuPlotなどで読み込んでバンドを描く.</p>
+</section>
+<section id="kohn-sham">
+<h2>Kohn-Sham軌道の計算<a class="headerlink" href="#kohn-sham" title="この見出しへのパーマリンク">¶</a></h2>
+<p><a class="reference download internal" download="" href="../_downloads/b593b96ec06a24a051e56aa0df84bd84/nscf.in"><code class="xref download docutils literal notranslate"><span class="pre">nscf.in</span></code></a></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">CONTROL</span>
+ <span class="n">calculation</span> <span class="o">=</span> <span class="s1">&#39;nscf&#39;</span>
+  <span class="n">pseudo_dir</span> <span class="o">=</span> <span class="s1">&#39;../pseudo&#39;</span>
+  <span class="n">wf_collect</span> <span class="o">=</span> <span class="o">.</span><span class="n">true</span><span class="o">.</span>
+      <span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;sr2cuo3&#39;</span>
+<span class="o">/</span>
+<span class="o">&amp;</span><span class="n">SYSTEM</span>
+       <span class="n">ibrav</span> <span class="o">=</span> <span class="mi">0</span>
+         <span class="n">nat</span> <span class="o">=</span> <span class="mi">6</span>
+        <span class="n">ntyp</span> <span class="o">=</span> <span class="mi">3</span>
+     <span class="n">ecutwfc</span> <span class="o">=</span> <span class="mf">30.000000</span>
+     <span class="n">ecutrho</span> <span class="o">=</span> <span class="mf">240.000000</span>
+ <span class="n">occupations</span> <span class="o">=</span> <span class="s1">&#39;tetrahedra_opt&#39;</span>
+        <span class="n">nbnd</span> <span class="o">=</span> <span class="mi">35</span>
+<span class="o">/</span>
+<span class="o">&amp;</span><span class="n">ELECTRONS</span>
+<span class="o">/</span>
+<span class="n">CELL_PARAMETERS</span> <span class="n">angstrom</span>
+ <span class="o">-</span><span class="mf">1.749305</span> <span class="mf">1.955690</span> <span class="mf">6.351200</span>
+ <span class="mf">1.749305</span> <span class="o">-</span><span class="mf">1.955690</span> <span class="mf">6.351200</span>
+ <span class="mf">1.749305</span> <span class="mf">1.955690</span> <span class="o">-</span><span class="mf">6.351200</span>
+<span class="n">ATOMIC_SPECIES</span>
+ <span class="n">Sr</span> <span class="mf">87.620000</span> <span class="n">Sr_ONCV_PBE</span><span class="o">-</span><span class="mf">1.0</span><span class="o">.</span><span class="n">upf</span>
+ <span class="n">Cu</span> <span class="mf">63.546000</span> <span class="n">Cu_ONCV_PBE</span><span class="o">-</span><span class="mf">1.0</span><span class="o">.</span><span class="n">upf</span>
+ <span class="n">O</span> <span class="mf">15.999400</span> <span class="n">O_ONCV_PBE</span><span class="o">-</span><span class="mf">1.0</span><span class="o">.</span><span class="n">upf</span>
+<span class="n">ATOMIC_POSITIONS</span> <span class="n">crystal</span>
+ <span class="n">Sr</span> <span class="mf">0.851940</span> <span class="mf">0.351940</span> <span class="mf">0.500000</span>
+ <span class="n">Sr</span> <span class="mf">0.148060</span> <span class="mf">0.648060</span> <span class="mf">0.500000</span>
+ <span class="n">Cu</span> <span class="mf">0.500000</span> <span class="mf">0.000000</span> <span class="mf">0.500000</span>
+ <span class="n">O</span> <span class="mf">0.654110</span> <span class="mf">0.154110</span> <span class="mf">0.500000</span>
+ <span class="n">O</span> <span class="mf">0.345890</span> <span class="mf">0.845890</span> <span class="mf">0.500000</span>
+ <span class="n">O</span> <span class="mf">0.000000</span> <span class="mf">0.000000</span> <span class="mf">0.000000</span>
+<span class="n">K_POINTS</span> <span class="n">automatic</span>
+ <span class="mi">4</span> <span class="mi">4</span> <span class="mi">4</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>ここでも <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> を使う.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pw.x<span class="w"> </span>-in<span class="w"> </span>nscf.in
+</pre></div>
+</div>
+<p>次にRESPACKに付属のユーティリティー <code class="docutils literal notranslate"><span class="pre">qe2respack.py</span></code> を使う.
+引数は <code class="docutils literal notranslate"><span class="pre">[prefix].save</span></code> ディレクトリ名.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>qe2respack.py<span class="w"> </span>sr2cuo3.save
+</pre></div>
+</div>
+</section>
+<section id="wannier">
+<h2>Wannier関数, 誘電関数, 有効相互作用の計算<a class="headerlink" href="#wannier" title="この見出しへのパーマリンク">¶</a></h2>
+<p><a class="reference download internal" download="" href="../_downloads/b37127883768c5403e364998cb94cc7f/respack.in"><code class="xref download docutils literal notranslate"><span class="pre">respack.in</span></code></a></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&amp;PARAM_CHIQW
+Num_freq_grid = 1
+!Ecut_for_eps = 
+flg_cRPA = 1
+/
+&amp;PARAM_WANNIER
+N_wannier = 1
+Lower_energy_window = 8
+Upper_energy_window = 13
+N_initial_guess = 1
+/
+dx2 0.2 0.500000 0.000000 0.50000 0.0 0.0 1.0  0.0 1.0 0.0 1.0 0.0 0.0
+&amp;PARAM_INTERPOLATION
+N_sym_points = 10
+!dense = 20, 24, 28
+/
+0.50000 0.50000 -0.50000
+0.49526 0.50474 -0.04267
+0.72630 0.27370 -0.27370
+0.50000 0.50000 -0.50000
+0.00000 0.00000 0.00000
+0.00000 0.00000 0.50000
+0.04267 -0.04267 0.50474
+0.27370 -0.27370 0.27370
+0.00000 0.00000 0.00000
+0.50000 0.00000 0.00000
+&amp;PARAM_VISUALIZATION
+flg_vis_wannier = 1,
+ix_vis_min = -1,
+ix_vis_max = 2,
+iy_vis_min = -1,
+iy_vis_max = 1,
+iz_vis_min = -1,
+iz_vis_max = 2
+/
+&amp;PARAM_CALC_INT
+calc_ifreq = 1
+ix_intJ_min = -1
+ix_intJ_max = 1
+iy_intJ_min = -1
+iy_intJ_max = 1
+iz_intJ_min = -1
+iz_intJ_max = 1
+/
+</pre></div>
+</div>
+<p>RESPACKのプログラム <code class="docutils literal notranslate"><span class="pre">calc_wannier</span></code>, <code class="docutils literal notranslate"><span class="pre">calc_chiqw</span></code>, <code class="docutils literal notranslate"><span class="pre">calc_j3d</span></code>,
+<code class="docutils literal notranslate"><span class="pre">calc_w3d</span></code> を使う.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>calc_wannier<span class="w"> </span>&lt;<span class="w"> </span>respack.in
+$<span class="w"> </span>calc_chiqw<span class="w"> </span>&lt;<span class="w"> </span>respack.in
+$<span class="w"> </span>calc_w3d<span class="w"> </span>&lt;<span class="w"> </span>respack.in
+$<span class="w"> </span>calc_j3d<span class="w"> </span>&lt;<span class="w"> </span>respack.in
+</pre></div>
+</div>
+<p>これにより, RESPACKによって出力されたホッピング等のファイルが,
+Wannier90の形式で <code class="docutils literal notranslate"><span class="pre">dir-model</span></code> ディレクトリに格納される.
+(RESPACKのバージョン20190227 以前では,  <code class="docutils literal notranslate"><span class="pre">dir-mvmc</span></code> ディレクトリ)</p>
+</section>
+<section id="hphi-mvmc">
+<h2>HPhi/mVMCによるモデル計算<a class="headerlink" href="#hphi-mvmc" title="この見出しへのパーマリンク">¶</a></h2>
+<p>HPhi/mVMCのスタンダードモードを利用することで,
+<code class="docutils literal notranslate"><span class="pre">dir-model</span></code> のファイルを読み込み該当したモデルの計算ができる.
+最初に <code class="docutils literal notranslate"><span class="pre">dir-model</span></code> 以下のファイル一式を, 実行するディレクトリに移したあとに,
+スタンダードモードで計算実行を行えばよい.
+例えば, HPhiの場合は以下のコマンドを打つことで計算が実行される(mVMCでもほぼ同様).</p>
+<p><a class="reference download internal" download="" href="../_downloads/2230fa7451cede3854a6deef75032ce9/stan.in"><code class="xref download docutils literal notranslate"><span class="pre">stan.in</span></code></a></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="s2">&quot;Hubbard&quot;</span>
+<span class="n">lattice</span> <span class="o">=</span> <span class="s2">&quot;wannier90&quot;</span>
+<span class="n">a0w</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">a0l</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">a0h</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">a1w</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">a1l</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">a1h</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">a2w</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">a2l</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">a2h</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">method</span> <span class="o">=</span> <span class="s2">&quot;TPQ&quot;</span>
+<span class="n">nelec</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">exct</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">cutoff_t</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">cutoff_u</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">cutoff_j</span> <span class="o">=</span> <span class="mf">0.02</span>
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>cp<span class="w"> </span>./dir-model/*<span class="w"> </span>.
+$<span class="w"> </span>HPhi<span class="w"> </span>-s<span class="w"> </span>stan.in
+</pre></div>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <div>
+    <h3><a href="../index.html">目次</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">チュートリアル</a><ul>
+<li><a class="reference internal" href="#scf">電荷密度のSCF計算</a></li>
+<li><a class="reference internal" href="#optional">(Optional) バンド計算と描画</a></li>
+<li><a class="reference internal" href="#kohn-sham">Kohn-Sham軌道の計算</a></li>
+<li><a class="reference internal" href="#wannier">Wannier関数, 誘電関数, 有効相互作用の計算</a></li>
+<li><a class="reference internal" href="#hphi-mvmc">HPhi/mVMCによるモデル計算</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>前のトピックへ</h4>
+    <p class="topless"><a href="overview.html"
+                          title="前の章へ">概要</a></p>
+  </div>
+  <div>
+    <h4>次のトピックへ</h4>
+    <p class="topless"><a href="parameter.html"
+                          title="次の章へ">スタンダードモードの入力パラメーター</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>このページ</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/wannier/tutorial.rst.txt"
+            rel="nofollow">ソースコードを表示</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>ナビゲーション</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="総合索引"
+             >索引</a></li>
+        <li class="right" >
+          <a href="parameter.html" title="スタンダードモードの入力パラメーター"
+             >次へ</a> |</li>
+        <li class="right" >
+          <a href="overview.html" title="概要"
+             >前へ</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.3.0 ドキュメント</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Wannier関数を用いたダウンフォールディング</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">チュートリアル</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; 著作権 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+  </body>
+</html>

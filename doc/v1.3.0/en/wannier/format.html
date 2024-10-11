@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>File format &#8212; mVMC 1.3.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=3d533f9b"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Contact" href="contact.html" />
+    <link rel="prev" title="Input parameters for Standard mode" href="parameter.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="contact.html" title="Contact"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="parameter.html" title="Input parameters for Standard mode"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.3.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Downfolding with Wannier functions</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">File format</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="file-format">
+<h1>File format<a class="headerlink" href="#file-format" title="Permalink to this heading">¶</a></h1>
+<p>Standard mode of HPhi/mVMC reads the following files.
+We can obtain these files by executing RESPACK.
+The files are outputted in the <code class="docutils literal notranslate"><span class="pre">dir-model</span></code> directory.</p>
+<section id="geometry">
+<h2>Geometry<a class="headerlink" href="#geometry" title="Permalink to this heading">¶</a></h2>
+<p>The file name is <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_geom.dat</span></code>.
+By editing this file, we can modify the number of orbitals treated in HPhi/mVMC.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="mf">1.917800</span> <span class="mf">1.917800</span> <span class="mf">6.280100</span>
+<span class="mf">1.917800</span> <span class="o">-</span><span class="mf">1.917800</span> <span class="mf">6.280100</span>
+<span class="mf">1.917800</span> <span class="mf">1.917800</span> <span class="o">-</span><span class="mf">6.280100</span>
+<span class="mi">3</span>
+<span class="mf">0.000000</span> <span class="o">-</span><span class="mf">0.000000</span> <span class="o">-</span><span class="mf">0.000000</span>
+<span class="o">-</span><span class="mf">0.000000</span> <span class="o">-</span><span class="mf">0.000000</span> <span class="o">-</span><span class="mf">0.000000</span>
+<span class="mf">0.000000</span> <span class="mf">0.000000</span> <span class="mf">0.000000</span>
+</pre></div>
+</div>
+<ul>
+<li><p>Lines 1 - 3</p>
+<p>Unit lattice vectors in the Cartesian coordinate (arbitrary unit).</p>
+</li>
+<li><p>Line 4</p>
+<p>The number of orbitals par unit cell treated by mVMC/HPhi.
+When we reduce the number by editing this file,
+the model including the same number of orbitals from the top.</p>
+</li>
+<li><p>Line 5 - end</p>
+<p>Wannier centers in the fractional coordinate. They are used by the Fourier utility.
+The order in which wannier functions are defined corresponds to the index of wannier functions
+in the following four files.</p>
+</li>
+</ul>
+</section>
+<section id="hopping-coulomb-exchange-integrals-charge-densities">
+<h2>Hopping, Coulomb, exchange integrals, charge densities<a class="headerlink" href="#hopping-coulomb-exchange-integrals-charge-densities" title="Permalink to this heading">¶</a></h2>
+<p>The file names are <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_hr.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_ur.dat</span></code>,
+, <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_jr.dat</span></code> and <code class="docutils literal notranslate"><span class="pre">[CDataFileHead]_dr.dat</span></code>, respectively.
+They are formatted as the hopping-integral file of Wannier90 is used.
+See details in the <code class="docutils literal notranslate"><span class="pre">8.19</span> <span class="pre">seedname_hr.dat</span></code> in the user_guide for wannier90.</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">wannier90</span> <span class="nb">format</span> <span class="k">for</span> <span class="n">mvmcdry</span>
+<span class="mi">8</span>
+<span class="mi">343</span>
+<span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>
+<span class="o">...</span>
+ <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>    <span class="mi">1</span>    <span class="mi">1</span>   <span class="mf">0.0004104251</span>  <span class="o">-</span><span class="mf">0.0000000000</span>
+ <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>    <span class="mi">1</span>    <span class="mi">2</span>   <span class="mf">0.0001515941</span>  <span class="o">-</span><span class="mf">0.0000000006</span>
+ <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>   <span class="o">-</span><span class="mi">3</span>    <span class="mi">1</span>    <span class="mi">3</span>  <span class="o">-</span><span class="mf">0.0001515941</span>   <span class="mf">0.0000000002</span>
+</pre></div>
+</div>
+<ul>
+<li><p>Line 1</p>
+<p>File Header</p>
+</li>
+<li><p>Line 2</p>
+<p>Total number of wannier functions.</p>
+</li>
+<li><p>Line 3</p>
+<p>Total number of super cells <code class="docutils literal notranslate"><span class="pre">nrpts</span></code> .</p>
+</li>
+<li><p>Line 4- Line 5 + int(<code class="docutils literal notranslate"><span class="pre">nrpts</span></code>/15)</p>
+<p>The degeneracy at each super cell (basically, the number is set as 1).</p>
+</li>
+<li><p>Line 6 + int(<code class="docutils literal notranslate"><span class="pre">nrpts</span></code>/15) -</p>
+<p>1-3rd columns: The supercell lattice vectors.</p>
+<p>4-th column: The index of wannier functions at the original cell.</p>
+<p>5-th column: The index of wannier functions at the supercell.</p>
+<p>6(7)-th column: The real (imaginary) value.</p>
+</li>
+</ul>
+</div></blockquote>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">File format</a><ul>
+<li><a class="reference internal" href="#geometry">Geometry</a></li>
+<li><a class="reference internal" href="#hopping-coulomb-exchange-integrals-charge-densities">Hopping, Coulomb, exchange integrals, charge densities</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="parameter.html"
+                          title="previous chapter">Input parameters for Standard mode</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="contact.html"
+                          title="next chapter">Contact</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/wannier/format.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="contact.html" title="Contact"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="parameter.html" title="Input parameters for Standard mode"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.3.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Downfolding with Wannier functions</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">File format</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+  </body>
+</html>

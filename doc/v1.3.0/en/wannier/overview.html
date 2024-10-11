@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Overview &#8212; mVMC 1.3.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=3d533f9b"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Tutorial" href="tutorial.html" />
+    <link rel="prev" title="Downfolding with Wannier functions" href="index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="Tutorial"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Downfolding with Wannier functions"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.3.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Downfolding with Wannier functions</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Overview</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h1>
+<p>In this document, we introduce how we compute downfolded models
+with mVMC or <span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span> in conjunction to
+<a class="reference external" href="https://sites.google.com/view/kazuma7k6r">RESPACK</a>.
+In RESPACK, the screened direct integrals <span class="math notranslate nohighlight">\(U_{mn}({\bf R},\omega)\)</span> and the screened exchanged integrals <span class="math notranslate nohighlight">\(J_{mn}({\bf R},\omega)\)</span> are given as follows:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+U_{mn}({\bf R},\omega)&amp;=&amp;\int_V d{\bf r} \int_V  d{\bf r'}
+w_{m{\bf 0}}^*({\bf r}) w_{m{\bf 0}}({\bf r})
+W({\bf r,r'},\omega)
+w_{n{\bf R}}^*({\bf r'}) w_{n{\bf R}}({\bf r'}),\nonumber\\
+J_{mn}({\bf R},\omega)&amp;=&amp;\int_V  d{\bf r}\int_V d{\bf r'}
+w_{m{\bf 0}}^*({\bf r}) w_{n{\bf R}}({\bf r})
+W({\bf r,r'},\omega)
+w_{n{\bf R}}^*({\bf r'}) w_{m{\bf 0}}({\bf r'}).
+\end{aligned}\end{split}\]</div>
+<p>Here, <span class="math notranslate nohighlight">\(V\)</span> is the volume of the crystal, <span class="math notranslate nohighlight">\(w_ {n {\bf R}}({\bf r})\)</span> is the <span class="math notranslate nohighlight">\(n\)</span>-th wannier function at <span class="math notranslate nohighlight">\(\bf R\)</span>-th cell, <span class="math notranslate nohighlight">\(W({\bf r,r'}, \omega)\)</span> is the screened Coulomb interactions, respectively. In the following, the components at <span class="math notranslate nohighlight">\(\omega=0\)</span> are only considered. Then, the Hamiltonian of the two-body interactions are given as follows:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+{\cal H}_{\rm int} &amp;= \frac{1}{2}\sum_{\sigma\rho }\sum_{ij}\sum_{nm} \Bigl[ U_{mn}({\bf R}_{ij})c_{im, \sigma}^{\dagger}c_{jn, \rho}^{\dagger}c_{jn, \rho}c_{im, \sigma}\nonumber\\
+&amp;+ J_{mn}({\bf R}_{ij})(c_{im, \sigma}^{\dagger}c_{jn,\rho}^{\dagger}c_{im,\rho}c_{jn,\sigma} + c_{im, \sigma}^{\dagger}c_{im,\rho}^{\dagger}c_{jn,\rho}c_{jn,\sigma}  )\Bigr],
+\end{aligned}\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\({\bf R}_{ij} \equiv {\bf R}_i-{\bf R}_j\)</span> . <span class="math notranslate nohighlight">\({\bf R}_i\)</span> is the position vector of the <span class="math notranslate nohighlight">\(i\)</span>-th cell. Since mVMC and <span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span> cannot directly treat the following type of interactions <span class="math notranslate nohighlight">\({c_{i, \sigma}^{\dagger}c_{j, \rho}^{\dagger}c_{k, \rho'}c_{l, \sigma'}}\)</span> , the Hamiltonian must be rewritten as follows:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+{\cal H}_{\rm int} &amp;= \sum_{i,m} U_{mm}({\bf 0})n_{im,\uparrow} n_{im, \downarrow} +\sum_{(i,m)&lt;(j,n)}U_{mn}({\bf R}_{ij})n_{im}n_{jn}\nonumber\\
+&amp; - \sum_{(i,m)&lt;(j,n)}J_{mn}({\bf R}_{ij})(n_{im, \uparrow}n_{jn,\uparrow}+n_{im, \downarrow}n_{jn,\downarrow}) \nonumber\\
+&amp; + \sum_{(i,m)&lt;(j,n)}J_{mn}({\bf R}_{ij})(c_{im, \uparrow}^{\dagger}c_{jn,\downarrow}^{\dagger}c_{im,\downarrow}c_{jn,\uparrow}+{\rm h.c.}) \nonumber\\
+&amp; + \sum_{(i,m)&lt;(j,n)}J_{mn}({\bf R}_{ij}) (c_{im, \uparrow}^{\dagger}c_{im,\downarrow}^{\dagger}c_{jn,\downarrow}c_{jn,\uparrow} + {\rm h.c.} ).
+\end{aligned}\end{split}\]</div>
+<p>The lattice model is defined by the following Hamiltonian:</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+{\cal H} &amp;=
+\sum_{m,n, i, j,\sigma}
+\left[t_{mn}({\bf R}_{ij}) - t_{mn}^{\rm DC}({\bf R}_{ij})\right] c_{im \sigma}^{\dagger} c_{jn \sigma}
++ {\cal H}_{int},
+\end{aligned}\]</div>
+<p>where  <span class="math notranslate nohighlight">\(t_{mn}^{\rm DC}({\bf R}_{ij})\)</span> is the one-body correction term given as:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+t_{mm}^{\rm DC}({\bf 0}) &amp;\equiv \alpha U_{mm}({\bf 0}) D_{mm}({\bf 0})
++ \sum_{({\bf R}, n) \neq ({\bf 0}, m)} U_{m n} ({\bf R})D_{nn}({\bf 0})\\
+&amp; - (1-\alpha) \sum_{({\bf R}, n) \neq ({\bf 0}, 0)} J_{m n}({\bf R}) D_{nn}({\bf R}),\\
+t_{mn}^{\rm DC}({\bf R}_{ij}) &amp;\equiv \frac{1}{2} J_{mn}({\bf R}_{ij}) \left(D_{nm}({\bf R}_{ji}) + 2 {\rm Re} [D_{nm}({\bf R}_{ji})]\right)\\
+&amp;-\frac{1}{2}  U_{mn}({\bf R}_{ij}) D_{nm}({\bf R}_{ji}),
+\quad ({\bf R}_{ij}, m) \neq ({\bf 0}, n),
+\\
+D_{mn}({\bf R}_{ij}) &amp;\equiv \sum_{\sigma}
+\left\langle c_{im \sigma}^{\dagger} c_{jn \sigma}\right\rangle_{\rm KS},
+\end{aligned}\end{split}\]</div>
+<p>Here, <span class="math notranslate nohighlight">\(t_{mm}^{\rm DC}({\bf 0})\)</span> is the term to correct the chemical potntial, <span class="math notranslate nohighlight">\(t_{mn}^{\rm DC}({\bf R}_{ij})\)</span> is term to correct transfer integrals
+. <span class="math notranslate nohighlight">\(\alpha\)</span> is the tuning parameter for one-body correction from the on-site Coulomb interactions. These terms are introduced to avoid double counting in analyzing the lattice model. To adopt these corrections or not can be selected by the option <code class="docutils literal notranslate"><span class="pre">doublecounting</span></code> in the input file. The strength of <span class="math notranslate nohighlight">\(U_{Rij}\)</span> and <span class="math notranslate nohighlight">\(J_{Rij}\)</span> can be controled by multiplying tuning parameters <span class="math notranslate nohighlight">\(\lambda_U, \lambda_J\)</span>. For details, see <code class="docutils literal notranslate"><span class="pre">Input</span> <span class="pre">parameters</span> <span class="pre">for</span> <span class="pre">Standard</span> <span class="pre">mode</span></code>.</p>
+<section id="prerequisite">
+<h2>Prerequisite<a class="headerlink" href="#prerequisite" title="Permalink to this heading">¶</a></h2>
+<p>We compute the Kohn-Sham orbitals with
+<a class="reference external" href="http://www.quantum-espresso.org/">QuantumESPRESSO</a>
+or
+<a class="reference external" href="http://xtapp.cp.is.s.u-tokyo.ac.jp/">xTAPP</a>,
+and obtain the Wannier function, the dielectric function,
+the effective interaction with RESPACK,
+and simulate quantum lattice models with
+mVMC or <span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span>.
+Therefore, these programs must be available in our machine.</p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+            </a></p>
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">Overview</a><ul>
+<li><a class="reference internal" href="#prerequisite">Prerequisite</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="index.html"
+                          title="previous chapter">Downfolding with Wannier functions</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="tutorial.html"
+                          title="next chapter">Tutorial</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/wannier/overview.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="Tutorial"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Downfolding with Wannier functions"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">mVMC 1.3.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Downfolding with Wannier functions</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Overview</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2017, mVMC team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+  </body>
+</html>

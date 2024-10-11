@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>2.2. 引力Hubbard模型における超伝導相関関数計算 &#8212; mVMC Tutorial  ドキュメント</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=66c3864b" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2aa0fae8"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/translations.js?v=4dbe4bdc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="検索" href="../search.html" />
+    <link rel="prev" title="2.1. 量子数射影を用いたスピンギャップ計算" href="spin_gap.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="hubbard">
+<h1><span class="section-number">2.2. </span>引力Hubbard模型における超伝導相関関数計算<a class="headerlink" href="#hubbard" title="この見出しへのパーマリンク">¶</a></h1>
+<p>mVMCは、任意の一体相関関数 <span class="math notranslate nohighlight">\(c^{\dagger}_{i\sigma_i}c_{j\sigma_j}\)</span> および二体相関関数 <span class="math notranslate nohighlight">\(c^{\dagger}_{i\sigma_i}c_{j\sigma_j} c^{\dagger}_{k\sigma_k}c_{l\sigma_l}\)</span> を測定できます。これらを組み合わせることで、これまでのチュートリアルで紹介してきたスピン構造因子などの物理量を求めることができます。
+このチュートリアルでは、ホールドープされた正方格子上の引力Hubbard模型における超伝導相関関数を計算する方法を説明します。</p>
+<p>Hubbard模型は次のように定義されます。</p>
+<div class="math notranslate nohighlight" id="equation-advanced-sc-correlation-0">
+<span class="eqno">(2.4)<a class="headerlink" href="#equation-advanced-sc-correlation-0" title="この数式へのパーマリンク">¶</a></span>\[H = -t \sum_{\langle i,j\rangle, \sigma}c_{i\sigma}^{\dagger}c_{j\sigma} + U \sum_{i} n_{i\uparrow}n_{i\downarrow}.\]</div>
+<p>これまでのチュートリアルでは、相互作用項 <span class="math notranslate nohighlight">\(U\)</span> を斥力項として取り扱ってきましたが、今回は <span class="math notranslate nohighlight">\(U=-4\)</span> として引力項として取り扱います。各相互作用項を変更したい場合は、 <code class="docutils literal notranslate"><span class="pre">stan_opt.in</span></code> 等を直接修正してください。</p>
+<p>なお、このチュートリアルは、 <a class="reference external" href="https://isspns-gitlab.issp.u-tokyo.ac.jp/mvmc-dev/mvmc-tutorial">ISSPデータリポジトリ</a> に登録されているチュートリアルがもとになっています。</p>
+<p>これまでのチュートリアルと同様に、次のコマンドを実行すると本チュートリアルの内容が全て実行されます。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sh run.sh
+</pre></div>
+</div>
+<p>実行スクリプトの中身は以下の通りです。</p>
+<section id="id1">
+<h2><span class="section-number">2.2.1. </span>波動関数の最適化<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h2>
+<p>まず、乱数ペアリングの状態を初期状態として最適化を行います。
+今回のチュートリアルでは、 <code class="docutils literal notranslate"><span class="pre">MakeInput.py</span></code> を用いず、 <code class="docutils literal notranslate"><span class="pre">tutorial_2.2</span></code> ディレクトリにある <code class="docutils literal notranslate"><span class="pre">stan_opt.in</span></code> を使用します。スクリプトでは、次のコマンドを実行しています。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>${VMCDRY} ./stan_opt.in
+${MPI} ${VMC} namelist.def
+cp ./output/zqp_opt.dat .
+mv output opt
+</pre></div>
+</div>
+<p>ここで <code class="docutils literal notranslate"><span class="pre">${VMCDRY}</span></code> は <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> 、 <code class="docutils literal notranslate"><span class="pre">${VMC}</span></code> は <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> へのパスを指定しています。 また、 <code class="docutils literal notranslate"><span class="pre">${MPI}</span></code> は MPI実行コマンドを指します。
+最適化が終わりましたら、 <code class="docutils literal notranslate"><span class="pre">opt/zvo_out_001.dat</span></code> をプロットしてみて、波動関数の最適化が収束していることを確認してください。</p>
+</section>
+<section id="id2">
+<h2><span class="section-number">2.2.2. </span>相関関数の測定<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
+<p>続いて、最適化した波動関数を用いて相関関数を測定します。mVMCのスタンダードモードで生成される相関関数は、並進対照な波動関数に対して用いられるスピン構造因子と電荷構造因子が計算できるように設定されております。そのため、1sの超伝導相関関数を計算するためには、自分で相関関数を定義する必要があります。このチュートリアルでは、1sの超伝導相関関数を計算するために、 <code class="docutils literal notranslate"><span class="pre">SCGreen.py</span></code> というスクリプトを用意しています。このスクリプトを実行すると、 <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code> と <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> に対応する相関関数の定義ファイル <code class="docutils literal notranslate"><span class="pre">green1</span></code> と <code class="docutils literal notranslate"><span class="pre">SC_1swave</span></code> が生成されます。これらの定義ファイルを用いてmVMCの物理量測定を行います。測定が終わったら、出力ディレクトリを <code class="docutils literal notranslate"><span class="pre">aft</span></code> という名前に変更します。これらの一連の操作は、ジョブスクリプト <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> 内の次のコマンドに対応しています。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>python3 SCGreen.py input.toml
+${VMCDRY}     ./stan_aft.in
+cp green1     greenone.def
+cp SC_1swave  greentwo.def
+${MPI} ${VMC} namelist.def ./zqp_opt.dat
+mv output aft
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h2><span class="section-number">2.2.3. </span>超伝導相関関数の計算<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
+<p>最後に、測定した相関関数を用いて1s超伝導相関関数を計算します。1s超伝導相関関数は次のように定義されます。</p>
+<blockquote>
+<div><div class="math notranslate nohighlight" id="equation-sc-cor">
+<span class="eqno">(2.5)<a class="headerlink" href="#equation-sc-cor" title="この数式へのパーマリンク">¶</a></span>\[P(\boldsymbol{r}) = \frac{1}{N_s} \sum_{\boldsymbol{r}'} \langle \Delta^{\dagger} (\boldsymbol{r}') \Delta (\boldsymbol{r}'+\boldsymbol{r}) + \Delta (\boldsymbol{r}') \Delta^{\dagger} (\boldsymbol{r}'+\boldsymbol{r}) \rangle,\]</div>
+<div class="math notranslate nohighlight" id="equation-advanced-sc-correlation-1">
+<span class="eqno">(2.6)<a class="headerlink" href="#equation-advanced-sc-correlation-1" title="この数式へのパーマリンク">¶</a></span>\[\Delta (\boldsymbol{r}) = \frac{1}{\sqrt{2}} \left(  c_{\boldsymbol{r}\uparrow}c_{\boldsymbol{r}\downarrow} - c_{\boldsymbol{r}\downarrow} c_{\boldsymbol{r}\uparrow}  \right),\]</div>
+<div class="math notranslate nohighlight" id="equation-advanced-sc-correlation-2">
+<span class="eqno">(2.7)<a class="headerlink" href="#equation-advanced-sc-correlation-2" title="この数式へのパーマリンク">¶</a></span>\[\Delta^{\dagger} (\boldsymbol{r}) = \frac{1}{\sqrt{2}} \left(  c^{\dagger}_{\boldsymbol{r}\downarrow}c^{\dagger}_{\boldsymbol{r}\uparrow} - c^{\dagger}_{\boldsymbol{r}\uparrow} c^{\dagger}_{\boldsymbol{r}\downarrow}  \right).\]</div>
+</div></blockquote>
+<p>式 <a class="reference internal" href="#equation-sc-cor">(2.5)</a> を計算するために、このチュートリアルでは <code class="docutils literal notranslate"><span class="pre">CalcSC.py</span></code> というスクリプトを用意しています。 <code class="docutils literal notranslate"><span class="pre">CalcSC.py</span></code> を実行すると、距離 <span class="math notranslate nohighlight">\(|\boldsymbol{r}|\)</span> に依存した1s超伝導相関関数の最大絶対値が <code class="docutils literal notranslate"><span class="pre">Result_1swave.dat</span></code> というファイルに出力されます。ジョブスクリプトでは、エネルギー等の計算と合わせて、次のコマンドで実行されます。:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>python3 VMClocal.py  input.toml
+python3 CalcSC.py    input.toml
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">gnuplot</span> <span class="pre">plot</span></code> を実行することで、 厳密対角化の結果とともに <code class="docutils literal notranslate"><span class="pre">Result_1swave.dat</span></code> をプロットすることができます。
+計算が正常終了していると、次のような図が出力されます。</p>
+<a class="reference internal image-reference" href="../_images/tutorial2.2_sc_cor.png"><img alt="../_images/tutorial2.2_sc_cor.png" class="align-center" src="../_images/tutorial2.2_sc_cor.png" style="width: 472.5px; height: 265.0px;" /></a>
+<p>紫丸がmVMCの結果を、緑線が厳密対角化の結果を表しています。mVMCの結果は厳密対角化での振る舞いを再現していることがわかります。</p>
+<section id="id4">
+<h3><span class="section-number">2.2.3.1. </span>演習<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p>引力相互作用を斥力にした場合、1sの超伝導相関関数がどのように変化するかを調べてください。</p></li>
+<li><p>1s超伝導相関関数の <span class="math notranslate nohighlight">\(U\)</span> 依存性を調べてください。</p></li>
+</ul>
+</section>
+</section>
+<section id="id5">
+<h2><span class="section-number">2.2.4. </span>参考文献<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h2>
+<ol class="arabic simple">
+<li><p><a class="reference external" href="https://isspns-gitlab.issp.u-tokyo.ac.jp/mvmc-dev/mvmc-tutorial">ISSPデータリポジトリ</a></p></li>
+</ol>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>ナビゲーション</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../basic/index.html">1. 基本編</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">2. 応用編</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="spin_gap.html">2.1. 量子数射影を用いたスピンギャップ計算</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">2.2. 引力Hubbard模型における超伝導相関関数計算</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">2.2.1. 波動関数の最適化</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">2.2.2. 相関関数の測定</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id3">2.2.3. 超伝導相関関数の計算</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id5">2.2.4. 参考文献</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html"><span class="section-number">2. </span>応用編</a><ul>
+      <li>Previous: <a href="spin_gap.html" title="前の章へ"><span class="section-number">2.1. </span>量子数射影を用いたスピンギャップ計算</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">クイック検索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="検索" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020-, The University of Tokyo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/advanced/sc_correlation.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
