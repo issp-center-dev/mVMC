@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Input files for Expert mode &#8212; mVMC 1.2.0 documentation</title>
+    <title>Input files for Expert mode &#8212; mVMC 1.3.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=4c8675c2"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3d533f9b"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -31,7 +31,7 @@
         <li class="right" >
           <a href="standard.html" title="Input files for Standard mode"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.3.0 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Input files for Expert mode</a></li> 
       </ul>
     </div>  
@@ -226,6 +226,10 @@ and “TransSym”.</p></li>
 <li><p>When the head of line is <code class="docutils literal notranslate"><span class="pre">#</span></code>, the line is skipped.</p></li>
 </ul>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 70.0%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Keywords</p></th>
 <th class="head"><p>Details for corresponding files</p></th>
@@ -272,16 +276,13 @@ and “TransSym”.</p></li>
 <td><p>4-site doublon-holon correlation factors.</p></td>
 </tr>
 <tr class="row-odd"><td><p>GeneralRBM_PhysLayer</p></td>
-<td><p>A part of the general RBM correlation factor including variational parameters
-in a physical layer <span class="math notranslate nohighlight">\(\alpha_{i\sigma}\)</span>.</p></td>
+<td><p>A part of the general RBM correlation factor including variational parameters in a physical layer <span class="math notranslate nohighlight">\(\alpha_{i\sigma}\)</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p>GeneralRBM_HiddenLayer</p></td>
-<td><p>A part of the general RBM correlation factor including variational parameters
-in a hidden layer <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p></td>
+<td><p>A part of the general RBM correlation factor including variational parameters in a hidden layer <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p></td>
 </tr>
 <tr class="row-odd"><td><p>GeneralRBM_PhysHidden</p></td>
-<td><p>A part of the general RBM correlation factor including variational parameters
-which connect physical and hidden layers <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span>.</p></td>
+<td><p>A part of the general RBM correlation factor including variational parameters which connect physical and hidden layers <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p>Orbital <span class="math notranslate nohighlight">\(^*\)</span></p></td>
 <td><p>Pair orbital factors with anti-parallel spins <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
@@ -311,16 +312,13 @@ which connect physical and hidden layers <span class="math notranslate nohighlig
 <td><p>Initial values of 4-site doublon-holon correlation factors.</p></td>
 </tr>
 <tr class="row-odd"><td><p>InGeneralRBM_PhysLayer</p></td>
-<td><p>Initial values of variational parameters of the general RBM correlation factors
-in a physical layer <span class="math notranslate nohighlight">\(\alpha_{i\sigma}\)</span>.</p></td>
+<td><p>Initial values of variational parameters of the general RBM correlation factors in a physical layer <span class="math notranslate nohighlight">\(\alpha_{i\sigma}\)</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p>InGeneralRBM_HiddenLayer</p></td>
-<td><p>Initial values of variational parameters of the general RBM correlation factors
-in a hidden layer <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p></td>
+<td><p>Initial values of variational parameters of the general RBM correlation factors in a hidden layer <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p></td>
 </tr>
 <tr class="row-odd"><td><p>InGeneralRBM_PhysHidden</p></td>
-<td><p>Initial values of variational parameters of the general RBM correlation factors
-which connect physical and hidden layers <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span>.</p></td>
+<td><p>Initial values of variational parameters of the general RBM correlation factors which connect physical and hidden layers <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p>InOrbital</p></td>
 <td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
@@ -335,12 +333,10 @@ which connect physical and hidden layers <span class="math notranslate nohighlig
 <td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\sigma_1 j\sigma_2}\)</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p>OneBodyG</p></td>
-<td><p>Output components for Green functions
-<span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle\)</span></p></td>
+<td><p>Output components for Green functions <span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle\)</span></p></td>
 </tr>
 <tr class="row-odd"><td><p>TwoBodyG</p></td>
-<td><p>Output components for Correlation functions
-<span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle\)</span></p></td>
+<td><p>Output components for Correlation functions <span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle\)</span></p></td>
 </tr>
 </tbody>
 </table>
@@ -2828,7 +2824,7 @@ range from the defined values.</p></li>
         <li class="right" >
           <a href="standard.html" title="Input files for Standard mode"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.2.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.3.0 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Input files for Expert mode</a></li> 
       </ul>
     </div>
