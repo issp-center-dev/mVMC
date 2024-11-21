@@ -44,6 +44,7 @@ int NLanczosMode; /* mode of the single Lanczos step
 
 int NStoreO; /* choice of store O: 0-> normal other-> store  */
 int NSRCG; /* choice of solver for Sx=g: 0-> (Sca)LAPACK other-> CG  */
+int reweight; /* 1: reweight in vmccal.c, vmccal_fsz.c, other: no reweight, default 0   */
 
 int NDataIdxStart; /* starting value of the file index */
 int NDataQtySmp; /* the number of output files */

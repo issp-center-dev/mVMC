@@ -36,7 +36,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 void VMCMainCal_fsz(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt,*eleSpn; //fsz
   double complex e,ip;
-  double w;
+  double w,x;
   double sqrtw;
   double complex we;
   double Sz;
@@ -101,9 +101,15 @@ void VMCMainCal_fsz(MPI_Comm comm) {
 #ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: LogProjVal \n",sample);
 #endif
-    //LogProjVal(eleProjCnt);
     /* calculate reweight */
-    w =1.0;
+    x = LogProjVal(eleProjCnt);
+    if (reweight==1){
+       w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
+    }else{
+       w =1.0;
+    }	    
+    //LogProjVal(eleProjCnt);
+    //w =1.0;
 #ifdef _DEBUG_DETAIL
     printf("  Debug: sample=%d: isfinite \n",sample);
 #endif
