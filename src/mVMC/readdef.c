@@ -692,6 +692,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&NSRCG, 1, MPI_INT, 0, comm); // for NCG
   MPI_Bcast(&RescaleSmat, 1, MPI_INT, 0, comm); // for Rescale S matrix
   MPI_Bcast(&useDiagScale, 1, MPI_INT, 0, comm); // for Jacobi preconditioned CG
+  MPI_Bcast(&reweight, 1, MPI_INT, 0, comm); // for reweight
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
@@ -1899,6 +1900,7 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   NSRCG = 0;
   RescaleSmat  = 0;
   useDiagScale = 0;
+  reweight = 0;
 
   bufInt[IdxNx] = 1;
   bufInt[IdxNy] = 1;
@@ -2022,6 +2024,8 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               RescaleSmat = (int) dtmp;
             } else if (CheckWords(ctmp, "useDiagScale") == 0) {
               useDiagScale = (int) dtmp;
+            } else if (CheckWords(ctmp, "reweight") == 0) {
+              reweight = (int) dtmp;
 //RBM
             } else if (CheckWords(ctmp, "Nneuron") == 0) {
               bufInt[IdxNneuron] = (int) dtmp;
