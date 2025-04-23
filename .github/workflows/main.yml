@@ -18,6 +18,7 @@ jobs:
           - os: "macos-latest"
             ompsize: 4 # OMP on macOS is too slow
       fail-fast: false
+
     env:
       OMP_NUM_THREADS: ${{ matrix.ompsize }}
 
