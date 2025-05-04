@@ -83,9 +83,22 @@ void VMCMakeSample_real(MPI_Comm comm) {
   // Fall back to default if input is invalid.
   if (NBlockUpdateSize < 1 || NBlockUpdateSize > 100)
     if (NExUpdatePath == 0)
+      // Simple stragegy for hopping.
       NBlockUpdateSize = 2;
-    else
-      NBlockUpdateSize = 20;
+    else {
+      const char *adaptiveBlocking = getenv("VMC_EXCHANGE_ADAPTIVE_BLOCKING");
+      const int adjustBlock = adaptiveBlocking && atoi(adaptiveBlocking) && Counter[2] != 0;
+      const double acceptance = adjustBlock ? (double)Counter[3] / Counter[2] : 1.0;
+      // Exchange updates may yield very low acc-ratio. Adjust block size accordingly.
+      if (acceptance < 0.01)
+        NBlockUpdateSize = 2;
+      else if (acceptance < 0.05)
+        NBlockUpdateSize = 4;
+      else if (acceptance < 0.10)
+        NBlockUpdateSize = 8;
+      else
+        NBlockUpdateSize = 20;
+    }
 
   // Set one universal EleSpn.
   for (mi=0; mi<Ne;  mi++) EleSpn[mi] = 0;
