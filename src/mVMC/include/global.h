@@ -359,4 +359,6 @@ int Counter_max = 6;
 /* 0: hopping, 1: hopping accept, 2: exchange try, 3: exchange accept */
 /* 4: local spin flip try, 5 local spin flip accept*/
 
+int useDiagScale=0;
+
 #endif /*  _INCLUDE_GLOBAL */

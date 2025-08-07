@@ -200,6 +200,7 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
   int i, info = 0;
 
   cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
+  // free at vmcmain.c
   fprintf(stdout, "  Read File %s .\n", xNameListFile);
   if (GetFileName(xNameListFile, cFileNameListFile) != 0) {
     fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
@@ -745,6 +746,15 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   } else {
     APFlag = 0;
   }
+
+  if (NSRCG == 2){
+    useDiagScale = 1;
+    NSRCG = 1;
+    if (rank == 0) printf("remark: use preconditioned CG (Diag Scale)\n");
+  } else {
+    useDiagScale = 0;
+  }
+
 
   if (DSROptStepDt < 0) {
     SRFlag = 1; /* diagonalization */
@@ -1959,9 +1969,10 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
         default:
           break;
       }
+      fclose(fp);
     }
   }
-  fclose(fp);
+  //fclose(fp);
   fprintf(stdout, "End: Read ModPara File .\n");
   return iret;
 }
@@ -2105,6 +2116,8 @@ int GetInfoOpt(FILE *fp, int *ArrayOpt, int iComplxFlag, int *iTotalOptCount, in
     fscanf(fp, "%d\n", &(ArrayOpt[2 * fidx])); // TBC real
     if(iComplxFlag>0){
       ArrayOpt[2 * fidx + 1] = ArrayOpt[2 * fidx]; //  TBC imaginary
+    }else{
+      ArrayOpt[2 * fidx + 1] = 0;
     }
     fidx++;
     (iLocalOptCount)++;
