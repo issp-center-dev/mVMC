@@ -24,6 +24,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
   #define fn_StochasticOptCG StochasticOptCG_real
   #define fn_StochasticOptCG_Init StochasticOptCG_Init_real
   #define fn_StochasticOptCG_Main StochasticOptCG_Main_real
+  #define fn_StochasticOptPreconCG_DiagScale_Main StochasticOptPreconCG_DiagScale_Main_real
   #define fn_operate_by_S operate_by_S_real
   #define fn_print_Smat_stderr print_Smat_stderr_real
 
@@ -37,6 +38,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
   #define fn_StochasticOptCG StochasticOptCG_fcmp
   #define fn_StochasticOptCG_Init StochasticOptCG_Init_fcmp
   #define fn_StochasticOptCG_Main StochasticOptCG_Main_fcmp
+  #define fn_StochasticOptPreconCG_DiagScale_Main StochasticOptPreconCG_DiagScale_Main_fcmp
   #define fn_operate_by_S operate_by_S_fcmp
   #define fn_print_Smat_stderr print_Smat_stderr_fcmp
 
@@ -67,6 +69,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 int fn_StochasticOptCG(MPI_Comm comm);
 void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, double *VecCG); 
 int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm);
+int fn_StochasticOptPreconCG_DiagScale_Main(const int nSmat, double *VecCG, MPI_Comm comm);
 int fn_operate_by_S(const int nSmat, double *x, double *z, double *VecCG, MPI_Comm comm);
 void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm);
 
@@ -178,7 +181,11 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   abort();
 #endif
 
-  info = fn_StochasticOptCG_Main(nSmat, VecCG, comm);
+  if (useDiagScale){
+    info = fn_StochasticOptPreconCG_DiagScale_Main(nSmat, VecCG, comm);
+  }else{
+    info = fn_StochasticOptCG_Main(nSmat, VecCG, comm);
+  }
 #ifdef _DEBUG_STCOPT_CG
   for(si=0; si<nSmat; ++si){
     fprintf(stderr, "%lg\n", VecCG[si]);
@@ -251,6 +258,117 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   fprintf(stderr, "DEBUG in %s (%d): End StochasticOptCG\n", __FILE__, __LINE__);
 #endif
   return info;
+}
+
+/* calculate the parameter change r[nSmat] from SOpt.
+   Solve S*x = g */
+int fn_StochasticOptPreconCG_DiagScale_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
+  int si;
+  int rank, size;
+  int iter;
+  int max_iter = (NSROptCGMaxIter > 0 ? NSROptCGMaxIter : nSmat);
+  double delta, beta;
+  double alpha;
+  double cg_thresh = DSROptCGTol*DSROptCGTol * (double)nSmat * (double)nSmat;
+  //double cg_thresh = DSROptRedCut;
+
+  double *x, *g, *sdiag, *stcO, *stcOs_real;
+  double *stcOs_imag, *y_real, *y_imag, *z_local;
+  double *q, *d, *r;
+
+#ifdef _DEBUG_STCOPT_CG
+  fprintf(stderr, "DEBUG in %s (%d): Start stcOptCG_Main\n", __FILE__, __LINE__);
+#endif
+  
+  x = VecCG;
+  g = x + nSmat;
+  sdiag = g + nSmat;
+  stcO = sdiag + nSmat;
+  stcOs_real = stcO + nSmat;
+  stcOs_imag = stcOs_real + NVMCSample*nSmat;
+  y_real = stcOs_imag + USE_IMAG*NVMCSample*nSmat;
+  y_imag = y_real + NVMCSample;
+  z_local = y_imag + USE_IMAG*NVMCSample;
+  q = z_local + nSmat;
+  d = q + nSmat;
+  r = d + nSmat;
+  
+  MPI_Comm_rank(comm,&rank);
+  MPI_Comm_size(comm,&size);
+
+  fn_operate_by_S(nSmat, x, r, VecCG, comm);
+  #pragma omp parallel for default(shared) private(si)
+  #pragma loop noalias
+  for(si=0;si<nSmat;++si) {
+    r[si] = g[si]-r[si];
+  }
+
+  #pragma omp parallel for default(shared) private(si)
+  #pragma loop noalias
+  for(si=0;si<nSmat;++si) {
+    d[si] = r[si]/((1.0+DSROptStaDel)*sdiag[si]);
+  }
+
+  delta = xdot(nSmat, r, d);
+
+  for(iter=0; iter < max_iter; iter++){
+    //check convergence 
+    //if(rank==0) printf("%d: %d %.3e\n",rank, iter,delta);
+#ifdef _DEBUG_STCOPT_CG
+    fprintf(stderr, "delta = %lg, cg_thresh = %lg\n", delta, cg_thresh);
+#endif
+    if (delta < cg_thresh) break;
+
+    // compute vector q=S*d
+    fn_operate_by_S(nSmat, d, q, VecCG, comm);
+    alpha = delta/xdot(nSmat,d,q);
+  
+    // update solution vector x=x+alpha*d
+    #pragma omp parallel for default(shared) private(si)
+    #pragma loop noalias
+    for(si=0;si<nSmat;++si) {
+      x[si] = x[si] + alpha*d[si];
+    }
+    // update residual vector r=r-alpha*q, q=S*d
+    if((iter+1) % 20 == 0){
+      fn_operate_by_S(nSmat, x, r, VecCG, comm);
+      #pragma omp parallel for default(shared) private(si)
+      #pragma loop noalias
+      for(si=0;si<nSmat;++si) {
+        r[si] = g[si] - r[si];
+      }
+    }else{
+      #pragma omp parallel for default(shared) private(si)
+      #pragma loop noalias
+      for(si=0;si<nSmat;++si) {
+        r[si] = r[si] - alpha*q[si];
+      }
+    }
+
+    #pragma omp parallel for default(shared) private(si)
+    #pragma loop noalias
+    for(si=0;si<nSmat;++si) {
+      q[si] = r[si]/((1.0+DSROptStaDel)*sdiag[si]);
+    }
+    beta = xdot(nSmat,r,q)/delta;
+
+    //update the norm of residual vector r
+    delta = beta*delta;
+    // update direction vector d
+    #pragma omp parallel for default(shared) private(si)
+    #pragma loop noalias
+    for(si=0;si<nSmat;++si) {
+      //d[si] = r[si] + beta*d[si];
+      d[si] = q[si] + beta*d[si];
+    }
+  }
+
+#ifdef _DEBUG_STCOPT_CG
+  fprintf(stderr, "DEBUG in %s (%d): iter = %d\n", __FILE__, __LINE__, iter);
+  fprintf(stderr, "DEBUG in %s (%d): End stcOptCG_Main\n", __FILE__, __LINE__);
+#endif
+
+  return iter;
 }
 
 /* calculate the parameter change r[nSmat] from SOpt.
@@ -349,6 +467,8 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
 
   return iter;
 }
+
+
 
 /* calculate  z = S*x */
 /* S is the overlap matrix*/
@@ -530,6 +650,7 @@ void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm){
 #undef fn_StochasticOptCG
 #undef fn_StochasticOptCG_Init
 #undef fn_StochasticOptCG_Main
+#undef fn_StochasticOptPreconCG_DiagScale_Main
 #undef fn_operate_by_S
 #undef fn_print_Smat_stderr
 
