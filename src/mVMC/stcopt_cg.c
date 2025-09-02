@@ -43,8 +43,10 @@ int StochasticOptCG(MPI_Comm comm)
 {
   int ret=0;
   if(AllComplexFlag==0){
+    if(RescaleSmat) Rescale4SRCG_real(comm);
     ret = StochasticOptCG_real(comm);
   }else{
+    if(RescaleSmat) Rescale4SRCG_fcmp(comm);
     ret = StochasticOptCG_fcmp(comm);
   }
   return ret;

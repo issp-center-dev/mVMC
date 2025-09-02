@@ -360,5 +360,6 @@ int Counter_max = 6;
 /* 4: local spin flip try, 5 local spin flip accept*/
 
 int useDiagScale=0;
+int RescaleSmat=0;
 
 #endif /*  _INCLUDE_GLOBAL */

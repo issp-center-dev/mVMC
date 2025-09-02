@@ -21,6 +21,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 
 #ifdef MVMC_SRCG_REAL
+  #define fn_Rescale4SRCG Rescale4SRCG_real
+  
   #define fn_StochasticOptCG StochasticOptCG_real
   #define fn_StochasticOptCG_Init StochasticOptCG_Init_real
   #define fn_StochasticOptCG_Main StochasticOptCG_Main_real
@@ -35,6 +37,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
   #define USE_IMAG (0)
   #define SIZE_VecCG (nSmat*8 + NVMCSample*(nSmat+1))
 #else // MVMC_SRCG_REAL
+  #define fn_Rescale4SRCG Rescale4SRCG_fcmp
+  
   #define fn_StochasticOptCG StochasticOptCG_fcmp
   #define fn_StochasticOptCG_Init StochasticOptCG_Init_fcmp
   #define fn_StochasticOptCG_Main StochasticOptCG_Main_fcmp
@@ -72,6 +76,7 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm);
 int fn_StochasticOptPreconCG_DiagScale_Main(const int nSmat, double *VecCG, MPI_Comm comm);
 int fn_operate_by_S(const int nSmat, double *x, double *z, double *VecCG, MPI_Comm comm);
 void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm);
+void fn_Rescale4SRCG(MPI_Comm comm);
 
 int fn_StochasticOptCG(MPI_Comm comm) {
   const int nPara=OFFSET*NPara;
@@ -646,6 +651,98 @@ void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm){
   free(xs);
   free(S);
 }
+
+void fn_Rescale4SRCG(MPI_Comm comm) {
+  int i, ismp;
+  int info=0;
+  int int_x,int_y,j,all_i;
+  double tmp;
+  int si; /* index for matrix S */
+  int pi; /* index for variational parameters */
+  
+  const int nPara=NPara;
+  const int srOptSize=SROptSize;
+  #ifdef MVMC_SRCG_REAL
+    double *srOptO=SROptOO_real;
+    double *srOptHO=SROptHO_real;
+    double *srOptOO=SROptOO_real + OFFSET*srOptSize;
+    double *srOptO_Store=SROptO_Store_real;
+  #else
+    double complex *srOptO=SROptOO;
+    double complex *srOptHO=SROptHO;
+    double complex *srOptOO=SROptOO + OFFSET*srOptSize;
+    double complex *srOptO_Store=SROptO_Store;
+  #endif
+
+
+
+  int rank, size;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+
+  double srOptOO_ProjMax,srOptOO_SlaterMax;
+  double rescaleOO_SlaterRatio, rescaleO_SlaterRatio;
+  double *r; /* the parameter change */
+  
+  RequestWorkSpaceDouble(OFFSET*nPara);
+  r = GetWorkSpaceDouble(OFFSET*nPara);
+
+  #pragma omp parallel for default(shared) private(pi)
+  #pragma loop noalias
+  for(pi=0;pi<OFFSET*nPara;pi++) {
+    /* r[i] is temporarily used for diagonal elements of S */
+    /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
+    r[pi]   = creal(srOptOO[pi+OFFSET]) - creal(srOptO[pi+OFFSET]) * creal(srOptO[pi+OFFSET]);
+#ifdef _DEBUG_STCOPT
+  fprintf(stderr, "DEBUG in %s (%d): r[%d] = %lf\n", __FILE__, __LINE__, pi, r[pi]);
+#endif
+  }	
+  
+/*[s] rescale*/
+  srOptOO_ProjMax=fabs(r[0]);
+  for (  pi=0; pi < OFFSET*NProj; pi ++ ) {
+		if ( srOptOO_ProjMax < fabs(r[pi]) ) srOptOO_ProjMax = fabs(r[pi]) ;
+  }
+  srOptOO_SlaterMax=fabs(r[OFFSET*NProj]);
+  for (  pi=OFFSET*NProj; pi < OFFSET*NPara; pi ++ ) {
+		if ( srOptOO_SlaterMax < fabs(r[pi]) ) srOptOO_SlaterMax = fabs(r[pi]) ;
+  }
+  if(srOptOO_SlaterMax < 1e-10 ) {
+     srOptOO_SlaterMax = 1e-10 ; 
+  }
+  rescaleOO_SlaterRatio = srOptOO_ProjMax / srOptOO_SlaterMax ;
+  rescaleO_SlaterRatio = sqrt(rescaleOO_SlaterRatio);
+  
+  #pragma omp parallel for default(shared) private(i)
+  #pragma loop noalias
+  for(i = OFFSET*NProj; i < OFFSET*nPara; i ++ ) {
+     srOptOO[i+OFFSET] *= rescaleOO_SlaterRatio;
+     srOptO[i+OFFSET]  *= rescaleO_SlaterRatio;
+     srOptHO[i+OFFSET] *= rescaleO_SlaterRatio;
+  } 
+
+  #pragma omp parallel for default(shared) private(ismp, i)
+  #pragma loop noalias
+  for(ismp = 0; ismp < NVMCSample; ismp ++ ) {
+    for(i = OFFSET*NProj; i < OFFSET*nPara; i ++ ) {
+     srOptO_Store[i+OFFSET + ismp*OFFSET*srOptSize] *= rescaleO_SlaterRatio;
+    }
+  }
+
+  #pragma omp parallel for default(shared) private(i)
+  #pragma loop noalias
+  for(i = 0; i < NSlater; i ++ ) {
+    Slater[i] /= rescaleO_SlaterRatio ; 
+  } 
+
+  ReleaseWorkSpaceDouble();
+
+  return;
+}
+
+
+
+#undef fn_Rescale4SRCG
 
 #undef fn_StochasticOptCG
 #undef fn_StochasticOptCG_Init

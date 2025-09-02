@@ -665,6 +665,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&FlagRBM, 1, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
   MPI_Bcast(&NSRCG, 1, MPI_INT, 0, comm); // for NCG
+  MPI_Bcast(&RescaleSmat, 1, MPI_INT, 0, comm); // for Rescale S matrix
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
@@ -755,6 +756,9 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     useDiagScale = 0;
   }
 
+  if (RescaleSmat){
+    if (rank == 0) printf("remark: rescale S matrix \n");
+  }
 
   if (DSROptStepDt < 0) {
     SRFlag = 1; /* diagonalization */
@@ -1830,6 +1834,8 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufDouble[IdxSROptCGTol] = 1.0e-10;
   NStoreO = 1;
   NSRCG = 0;
+  RescaleSmat = 0;
+
 }
 
 int GetInfoFromModPara(int *bufInt, double *bufDouble) {
@@ -1943,6 +1949,8 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               NStoreO = (int) dtmp;
             } else if (CheckWords(ctmp, "NSRCG") == 0) {
               NSRCG = (int) dtmp;
+            } else if (CheckWords(ctmp, "RescaleSmat") == 0) {
+              RescaleSmat = (int) dtmp;
 //RBM
             } else if (CheckWords(ctmp, "Nneuron") == 0) {
               bufInt[IdxNneuron] = (int) dtmp;
