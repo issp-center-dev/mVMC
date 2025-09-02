@@ -699,14 +699,8 @@ void fn_Rescale4SRCG(MPI_Comm comm) {
   }	
   
 /*[s] rescale*/
-  srOptOO_ProjMax=fabs(r[0]);
-  for (  pi=0; pi < OFFSET*NProj; pi ++ ) {
-		if ( srOptOO_ProjMax < fabs(r[pi]) ) srOptOO_ProjMax = fabs(r[pi]) ;
-  }
-  srOptOO_SlaterMax=fabs(r[OFFSET*NProj]);
-  for (  pi=OFFSET*NProj; pi < OFFSET*NPara; pi ++ ) {
-		if ( srOptOO_SlaterMax < fabs(r[pi]) ) srOptOO_SlaterMax = fabs(r[pi]) ;
-  }
+  srOptOO_ProjMax   = get_absmax(0,            OFFSET*NProj, r);
+  srOptOO_SlaterMax = get_absmax(OFFSET*NProj, OFFSET*nPara, r);
   if(srOptOO_SlaterMax < 1e-10 ) {
      srOptOO_SlaterMax = 1e-10 ; 
   }
