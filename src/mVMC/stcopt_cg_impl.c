@@ -654,10 +654,6 @@ void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm){
 
 void fn_Rescale4SRCG(MPI_Comm comm) {
   int i, ismp;
-  int info=0;
-  int int_x,int_y,j,all_i;
-  double tmp;
-  int si; /* index for matrix S */
   int pi; /* index for variational parameters */
   
   const int nPara=NPara;
@@ -673,12 +669,6 @@ void fn_Rescale4SRCG(MPI_Comm comm) {
     double complex *srOptOO=SROptOO + OFFSET*srOptSize;
     double complex *srOptO_Store=SROptO_Store;
   #endif
-
-
-
-  int rank, size;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
 
   double srOptOO_ProjMax,srOptOO_SlaterMax;
   double rescaleOO_SlaterRatio, rescaleO_SlaterRatio;
@@ -698,7 +688,6 @@ void fn_Rescale4SRCG(MPI_Comm comm) {
 #endif
   }	
   
-/*[s] rescale*/
   srOptOO_ProjMax   = get_absmax(0,            OFFSET*NProj, r);
   srOptOO_SlaterMax = get_absmax(OFFSET*NProj, OFFSET*nPara, r);
   if(srOptOO_SlaterMax < 1e-10 ) {
