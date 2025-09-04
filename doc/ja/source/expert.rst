@@ -615,6 +615,12 @@ ModParaファイル (modpara.def)
    を陽に構築せずに解くことでメモリを削減する [4]_ オプション[NeuscammanUmrigarChan_ ](1で機能On,
    ``NStore`` は1に固定されます)。
 
+-  ``useDiagScale``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=0)
+
+   **説明 :** SR法での連立一次方程式 :math:`Sx=g` をCG法により解く際に、 Point Jacobi法 (:math:`S` 行列の対角スケーリング)による前処理付きCG法を使用するオプション(1で機能ON, ``NSRCG=1`` である必要がある)。
+
 -  ``NneuronGeneral``
 
    **形式 :** int型 (デフォルト値=0)
