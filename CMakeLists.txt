@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5...3.10)
 project(mVMC NONE)
+
+# Make submodule packages with old cmake available from CMake4.0 or later.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.10)
 
 option(USE_SCALAPACK "Use Scalapack" OFF)
 option(PFAFFIAN_BLOCKED "Use blocked-update Pfaffian to speed up." OFF)
@@ -40,7 +43,7 @@ endif()
 if(CMAKE_C_COMPILER_ID STREQUAL "Intel")
   # TODO: Really needs separation?
   if("${CMAKE_C_COMPILER_VERSION}" VERSION_LESS "15.0.0.20140528")
-     set(OMP_FLAG_Intel "-openmp")
+    set(OMP_FLAG_Intel "-openmp")
   else()
     set(OMP_FLAG_Intel "-qopenmp")
   endif()
@@ -51,7 +54,7 @@ else()
   if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_C_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-  endif(OPENMP_FOUND)	
+  endif(OPENMP_FOUND)
 endif()
 
 find_package(MPI)

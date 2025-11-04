@@ -12,12 +12,13 @@ jobs:
 
     strategy:
       matrix:
-        os: ["ubuntu-22.04", "ubuntu-20.04", "macos-latest"]
+        os: ["ubuntu-latest", "macos-latest"]
         ompsize: [1, 4]
         exclude:
           - os: "macos-latest"
             ompsize: 4 # OMP on macOS is too slow
       fail-fast: false
+
     env:
       OMP_NUM_THREADS: ${{ matrix.ompsize }}
 
