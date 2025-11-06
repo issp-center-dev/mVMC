@@ -48,6 +48,7 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
   RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
   
+  /*
   for(idx=0;idx<NTwist;idx++) {
     weight = 0.0;
     for(site_idx=0;site_idx<2*Nsite;site_idx++) {
@@ -71,6 +72,7 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
     }
     PhysTwist[idx] += w*cexp(I*two_pi*weight);
   }
+  */
 
 #pragma omp parallel default(shared)\
   private(myEleIdx,myEleNum,myEleSpn,myProjCntNew,myBuffer,idx)
@@ -159,7 +161,33 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
     }
 
     #pragma omp master
-    {StopTimer(53);}
+    {StopTimer(53);StartTimer(54);}
+    
+    for(idx=0;idx<NTwist;idx++) {
+      weight = 0.0;
+      #pragma omp for private(site_idx, ri, s, rsi, x,y,z, Wx, Wy,Wz,tmp) reduction(+:weight)
+      for(site_idx=0;site_idx<2*Nsite;site_idx++) {
+        ri  = TwistIdx[idx][2*site_idx];
+        s   = TwistIdx[idx][2*site_idx+1];
+        rsi = ri + s*Nsite;
+      
+        x = LatticeIdx[ri][0];
+        y = LatticeIdx[ri][1];
+        z = LatticeIdx[ri][2];
+      
+        Wx = ParaTwist[idx][3*site_idx + 0];
+        Wy = ParaTwist[idx][3*site_idx + 1];
+        Wz = ParaTwist[idx][3*site_idx + 2];
+        tmp = x*Wx + y*Wy + z*Wz; 
+      
+        weight += tmp*(double)myEleNum[rsi];
+      }
+      PhysTwist[idx] += w*cexp(I*two_pi*weight);
+    }
+
+
+    #pragma omp master
+    {StopTimer(54);}
   }
 
   ReleaseWorkSpaceThreadInt();
