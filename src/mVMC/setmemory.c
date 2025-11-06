@@ -215,7 +215,7 @@ void SetMemoryDef() {
   TwistIdx = (int**)malloc(sizeof(int*)*NTwist);
   for(i=0;i<NTwist;i++) {
     TwistIdx[i] = pInt;
-    pInt += Nsite*2;
+    pInt += 2*Nsite*2;
   }
   
   InterAll = (int**)malloc(sizeof(int*)*NInterAll);

@@ -855,7 +855,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                  + Nsite * NQPOptTrans /* QPOptTrans */
                  + Nsite * NQPOptTrans /* QPOptTransSgn */
                  + 4*Nsite /* LatticeIdx */
-                 + NTwist*Nsite*2 /* TwistIdx */
+                 + NTwist*2*Nsite*2 /* TwistIdx */
                  //RBM
                  + FlagRBM * (
                    NneuronCharge /* ChargeRMB_HiddenLayerIdx */ 
