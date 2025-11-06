@@ -601,7 +601,8 @@ void clearPhysQuantity(){
     }
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
-    n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
+    //n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
+    n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC + NTwist;
     vec = PhysCisAjs;
 #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;

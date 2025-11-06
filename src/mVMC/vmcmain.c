@@ -688,6 +688,13 @@ void outputData() {
       fprintf(FileCisAjsCktAltDC, "\n");
     }
 
+    /* zvo_twist.dat */
+    if (NTwist > 0) {
+      for (i = 0; i < NTwist; i++){
+        fprintf(FileTwist, "% .18e  % .18e \n", creal(PhysTwist[i]), cimag(PhysTwist[i]));
+      }
+    }
+
     if (NLanczosMode > 0) {
       if (AllComplexFlag == 0) { //real
         PhysCalLanczos_real(

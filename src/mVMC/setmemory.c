@@ -455,9 +455,10 @@ void SetMemory() {
                     *(NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NCisAjs+NCisAjsCktAltDC + NTwist));
     PhysCisAjsCktAlt   = PhysCisAjs       + NCisAjs;
     PhysCisAjsCktAltDC = PhysCisAjsCktAlt + NCisAjsCktAlt;
-    LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
+    PhysTwist = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
+    LocalCisAjs = PhysTwist + NTwist;
+    //LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
     LocalCisAjsCktAltDC = LocalCisAjs + NCisAjs;
-    PhysTwist = LocalCisAjsCktAltDC + NCisAjsCktAltDC;
 
     if(NLanczosMode>0){
       QQQQ = (double complex*)malloc(sizeof(double complex)
