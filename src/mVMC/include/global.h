@@ -338,6 +338,7 @@ FILE *FileSRinfo; /* zvo_SRinfo.dat */
 FILE *FileCisAjs;
 FILE *FileCisAjsCktAlt;
 FILE *FileCisAjsCktAltDC;
+FILE *FileTwist;
 FILE *FileLS;
 FILE *FileLSQQQQ;
 FILE *FileLSQCisAjsQ;

@@ -104,7 +104,12 @@ void InitFilePhysCal(int i, int rank) {
     sprintf(fileName, "%s_cisajscktalt_%03d.dat", CDataFileHead, idx);
     FileCisAjsCktAltDC = fopen(fileName, "w");
   }
-  
+ 
+  if(NTwist>0){
+    sprintf(fileName, "%s_twist_%03d.dat", CDataFileHead, idx);
+    FileTwist = fopen(fileName, "w");
+  }
+ 
   if(NLanczosMode>0){
     sprintf(fileName, "%s_ls_out_%03d.dat", CDataFileHead, idx);
     FileLS = fopen(fileName, "w");
@@ -126,15 +131,9 @@ void InitFilePhysCal(int i, int rank) {
               CDataFileHead, idx);
       FileLSCisAjs = fopen(fileName, "w");
 
-      // CACA
-      sprintf(fileName, "%s_ls_cisajscktaltex_%03d.dat",
-              CDataFileHead, idx);
-      FileLSCisAjsCktAlt = fopen(fileName, "w");
-
-      // CACADC
       sprintf(fileName, "%s_ls_cisajscktalt_%03d.dat",
               CDataFileHead, idx);
-      FileLSCisAjsCktAltDC = fopen(fileName, "w");
+      FileLSCisAjsCktAlt = fopen(fileName, "w");
     }
   }
 
@@ -170,7 +169,10 @@ void CloseFilePhysCal(int rank) {
   if(NCisAjsCktAltDC>0){
     fclose(FileCisAjsCktAltDC);
   }
-  
+  if(NTwist>0){
+    fclose(FileTwist);
+  }
+
   if(NLanczosMode>0){
     fclose(FileLS);
     fclose(FileLSQQQQ);
@@ -182,7 +184,6 @@ void CloseFilePhysCal(int rank) {
 #endif
       fclose(FileLSCisAjs);
       fclose(FileLSCisAjsCktAlt);
-      fclose(FileLSCisAjsCktAltDC);
     }
   }
 
