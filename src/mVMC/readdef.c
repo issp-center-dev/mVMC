@@ -533,7 +533,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             if (cerr != NULL) {
               cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
               sscanf(ctmp2,"%s %d %d %d %d\n", ctmp, &bufInt[IdxNx], &bufInt[IdxNy], &bufInt[IdxNz], &bufInt[IdxNorb]);
-              printf("Nx=%d Ny=%d Nz=%d Norb=%d\n",bufInt[IdxNx], bufInt[IdxNy], bufInt[IdxNz], bufInt[IdxNorb]);
+              //printf("Nx=%d Ny=%d Nz=%d Norb=%d\n",bufInt[IdxNx], bufInt[IdxNy], bufInt[IdxNz], bufInt[IdxNorb]);
             }
             //cerr = ReadBuffInt(fp, &bufInt[IdxNx], &bufInt[IdxNy], &bufInt[IdxNz], &bufInt[IdxNorb]);
             
@@ -542,7 +542,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           case KWTwist:
             cerr = ReadBuffInt(fp, &bufInt[IdxNTwist]);
             //cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNTwist], &bufInt[IdxNdivideTwist]);
-            printf("NTwist=%d \n",bufInt[IdxNTwist]);
+            //printf("NTwist=%d \n",bufInt[IdxNTwist]);
             //printf("NTwist=%d %d\n",bufInt[IdxNTwist], bufInt[IdxNdivideTwist]);
             break;
 
@@ -2847,7 +2847,7 @@ int GetInfoLattice(FILE *fp, int **ArrayIdx, int NArray, int nx, int ny, int nz,
       break;
     }
 
-    printf("GetInfoLattice, idx=%d: %d %d %d %d\n",idx,x1,x2,x3,x4);
+    //printf("GetInfoLattice, idx=%d: %d %d %d %d\n",idx,x1,x2,x3,x4);
   }
   if (idx+1 != NArray) info = ReadDefFileError(defname);
   return info;
@@ -2880,7 +2880,7 @@ int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int N
     //ArrayValue[idx][1] = dReValueY + I * dImValueY;
     //ArrayValue[idx][2] = dReValueZ + I * dImValueZ;
     //printf("GetInfoTwist, idx=%d: i=%d s=%d %.2e %.2e %.2e %.2e %.2e %.2e\n",idx,ArrayIdx[idx][0],ArrayIdx[idx][1],creal(ArrayValue[idx][0]),cimag(ArrayValue[idx][0]), creal(ArrayValue[idx][1]),cimag(ArrayValue[idx][1]), creal(ArrayValue[idx][2]),cimag(ArrayValue[idx][2]) );
-    printf("GetInfoTwist, idx=%d, i=%d s=%d %.2e %.2e %.2e\n",idx,ArrayIdx[twist_idx][2*idx],ArrayIdx[twist_idx][2*idx+1], ArrayValue[twist_idx][3*idx], ArrayValue[twist_idx][3*idx+1], ArrayValue[twist_idx][3*idx+2] );
+    //printf("GetInfoTwist, idx=%d, i=%d s=%d %.2e %.2e %.2e\n",idx,ArrayIdx[twist_idx][2*idx],ArrayIdx[twist_idx][2*idx+1], ArrayValue[twist_idx][3*idx], ArrayValue[twist_idx][3*idx+1], ArrayValue[twist_idx][3*idx+2] );
     idx++;
   }
   if (idx != NArray) info = ReadDefFileError(defname);

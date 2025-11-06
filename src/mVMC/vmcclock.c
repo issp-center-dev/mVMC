@@ -181,6 +181,7 @@ void OutputTimerPhysCal() {
   fprintf(fp,"      GreenFunc2           [51] %12.5lf\n",Timer[51]);
   fprintf(fp,"      addPhysCA            [52] %12.5lf\n",Timer[52]);
   fprintf(fp,"      addPhysCACA          [53] %12.5lf\n",Timer[53]);
+  fprintf(fp,"      addPhysTwist         [54] %12.5lf\n",Timer[54]);
   fprintf(fp,"    Lanczos1               [43] %12.5lf\n",Timer[43]);
   fprintf(fp,"    Lanczos2               [44] %12.5lf\n",Timer[44]);
   fprintf(fp,"  UpdateSlaterElm          [20] %12.5lf\n",Timer[20]);
