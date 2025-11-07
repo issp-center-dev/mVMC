@@ -2855,7 +2855,7 @@ int GetInfoLattice(FILE *fp, int **ArrayIdx, int NArray, int nx, int ny, int nz,
 
 int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int NArray, char *defname) {
   char ctmp2[256];
-  int idx = 0, info = 0;
+  int idx = 0, idx0=0, info = 0;
   int twist_idx = 0, i = 0, s = 0;
   double dReValueX = 0, dImValueX = 0;
   double dReValueY = 0, dImValueY = 0;
@@ -2879,11 +2879,14 @@ int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int N
     //ArrayValue[idx][0] = dReValueX + I * dImValueX;
     //ArrayValue[idx][1] = dReValueY + I * dImValueY;
     //ArrayValue[idx][2] = dReValueZ + I * dImValueZ;
-    //printf("GetInfoTwist, idx=%d: i=%d s=%d %.2e %.2e %.2e %.2e %.2e %.2e\n",idx,ArrayIdx[idx][0],ArrayIdx[idx][1],creal(ArrayValue[idx][0]),cimag(ArrayValue[idx][0]), creal(ArrayValue[idx][1]),cimag(ArrayValue[idx][1]), creal(ArrayValue[idx][2]),cimag(ArrayValue[idx][2]) );
-    //printf("GetInfoTwist, idx=%d, i=%d s=%d %.2e %.2e %.2e\n",idx,ArrayIdx[twist_idx][2*idx],ArrayIdx[twist_idx][2*idx+1], ArrayValue[twist_idx][3*idx], ArrayValue[twist_idx][3*idx+1], ArrayValue[twist_idx][3*idx+2] );
+    printf("GetInfoTwist, idx=%d, i=%d s=%d %.2e %.2e %.2e\n",idx,ArrayIdx[twist_idx][2*idx],ArrayIdx[twist_idx][2*idx+1], ArrayValue[twist_idx][3*idx], ArrayValue[twist_idx][3*idx+1], ArrayValue[twist_idx][3*idx+2] );
     idx++;
+    idx0++;
+    if (idx == 2*Nsite){
+      idx=0;
+    }
   }
-  if (idx != NArray) info = ReadDefFileError(defname);
+  if (idx0 != NArray) info = ReadDefFileError(defname);
   return info;
 }
 
