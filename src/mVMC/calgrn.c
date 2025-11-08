@@ -119,8 +119,9 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
 
     #pragma omp master
     {StopTimer(53);StartTimer(54);}
-    
+
     for(idx=0;idx<NTwist;idx++) {
+      #pragma omp single
       weight = 0.0;
       #pragma omp for private(site_idx, ri, s, rsi, x,y,z, Wx, Wy,Wz,tmp) reduction(+:weight)
       for(site_idx=0;site_idx<2*Nsite;site_idx++) {
@@ -139,6 +140,7 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
       
         weight += tmp*(double)myEleNum[rsi];
       }
+      #pragma omp single
       PhysTwist[idx] += w*cexp(I*two_pi*weight);
     }
 
