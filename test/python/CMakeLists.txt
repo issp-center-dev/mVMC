@@ -5,6 +5,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert.py DESTINATION ${CMAKE_BINA
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sr.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_UHF.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_UHF_InterAll.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert_phys.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -25,6 +26,12 @@ function(add_python_vmc_test_expert model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_expert.py ${model})
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_vmc_test_expert)
+
+function(add_python_vmc_test_expert_phys model)
+    add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_expert_phys.py ${model})
+    set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_expert_phys)
+
 
 function(add_python_vmc_test_sr model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_sr.py ${model})
@@ -78,6 +85,12 @@ set(python_test_vmc_model_expert
   GeneralRBM_cmp
 )
 
+set(python_test_vmc_model_expert_phys
+  Twist_SSH_cmp
+  Twist_SSH_fsz
+)
+
+
 set(python_test_vmc_model_sr
   HubbardChain_DiagCG
   HubbardChain_cmp_DiagCG
@@ -107,6 +120,11 @@ endforeach(model)
 foreach(model ${python_test_vmc_model_expert})
     add_python_vmc_test_expert(${model})
 endforeach(model)
+
+foreach(model ${python_test_vmc_model_expert_phys})
+    add_python_vmc_test_expert_phys(${model})
+endforeach(model)
+
 
 foreach(model ${python_test_vmc_model_sr})
     add_python_vmc_test_sr(${model})
