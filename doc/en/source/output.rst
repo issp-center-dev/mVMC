@@ -49,6 +49,8 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_cisajscktalt\_yyy.dat               | Correlation functions.                                                                                                 |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| xxx\_twist\_yyy.dat                      | Twist operators.                                                                                                       |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 
 Output file for variational parameters (\*\*\*\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -345,6 +347,35 @@ Parameters
    show the real and imaginary part of
    :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle`,
    respectively.
+
+xxx\_twist\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~
+
+This file is the outputted files for the Twist operator  :math:`P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle`. The target components are set in the input file with the keyword "Twist". Here, xxx is the header indicated by ``CDataFileHead`` in ``ModPara`` file and yyy is a number given by ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp``, where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in ``ModPara`` file. An example of the file format is as follows.
+
+::
+
+        -8.450000000179783144e-02  -5.022947287359245602e-03  8.464915829324838603e-02  -3.082219356298420809e+00 
+        9.193000000026863017e-01  2.424870552459427574e-03  9.193031980810983939e-01  2.637729716822964383e-03
+        …
+
+File format
+^^^^^^^^^^^^
+
+-  :math:`[` double01 :math:`]`  :math:`[` double02 :math:`]`  :math:`[` double03 :math:`]`  :math:`[` double04 :math:`]`
+
+Parameters
+^^^^^^^^^^^^
+
+-  :math:`[` double01 :math:`]`, :math:`[` double02 :math:`]`, :math:`[` double03 :math:`]`, :math:`[` double04 :math:`]`
+
+   **Type :** double
+
+   | **Description :**
+   | These represent the value of the Twist operator
+     :math:`P^{(\alpha)}`.
+   | :math:`[` double01 :math:`]` is the real part, :math:`[` double02 :math:`]` is the imaginary part, :math:`[` double03 :math:`]` is the absolute value, and :math:`[` double04 :math:`]` is the phase (:math:`\arg P^{(\alpha)}`).
+
 
 xxx\_ls\_out\_yyy.dat 
 ~~~~~~~~~~~~~~~~~~~~~~
