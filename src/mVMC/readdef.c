@@ -111,6 +111,10 @@ int GetInfoGeneralRBM_PhysHidden(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iC
                       char *defname);
 //RBM
 
+int GetInfoLattice(FILE *fp, int **ArrayIdx, int NArray, int nx, int ny, int nz, int norb, char *defname);
+//int GetInfoTwist(FILE *fp, int **ArrayIdx, int NArray, char *defname);
+int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int NArray, char *defname);
+
 char *ReadBuffInt(FILE *fp, int *iNbuf) {
   char *cerr;
   char ctmp[D_FileNameMax];
@@ -200,6 +204,7 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
   int i, info = 0;
 
   cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
+  // free at vmcmain.c
   fprintf(stdout, "  Read File %s .\n", xNameListFile);
   if (GetFileName(xNameListFile, cFileNameListFile) != 0) {
     fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
@@ -319,6 +324,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   FILE *fp;
   char defname[D_FileNameMax];
   char *cerr;
+  char ctmp[D_FileNameMax];
+  char ctmp2[D_FileNameMax];
 
   int rank, info = 0;
   const int nBufInt = ParamIdxInt_End;
@@ -521,6 +528,25 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffInt(fp, &bufInt[IdxNTwoBodyGEx]);
             break;
 
+          case KWLattice:
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            if (cerr != NULL) {
+              cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+              sscanf(ctmp2,"%s %d %d %d %d\n", ctmp, &bufInt[IdxNx], &bufInt[IdxNy], &bufInt[IdxNz], &bufInt[IdxNorb]);
+              //printf("Nx=%d Ny=%d Nz=%d Norb=%d\n",bufInt[IdxNx], bufInt[IdxNy], bufInt[IdxNz], bufInt[IdxNorb]);
+            }
+            //cerr = ReadBuffInt(fp, &bufInt[IdxNx], &bufInt[IdxNy], &bufInt[IdxNz], &bufInt[IdxNorb]);
+            
+            break;
+          
+          case KWTwist:
+            cerr = ReadBuffInt(fp, &bufInt[IdxNTwist]);
+            //cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNTwist], &bufInt[IdxNdivideTwist]);
+            //printf("NTwist=%d \n",bufInt[IdxNTwist]);
+            //printf("NTwist=%d %d\n",bufInt[IdxNTwist], bufInt[IdxNdivideTwist]);
+            break;
+
+
           case KWInterAll:
             cerr = ReadBuffInt(fp, &bufInt[IdxNInterAll]);
             break;
@@ -664,6 +690,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&FlagRBM, 1, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
   MPI_Bcast(&NSRCG, 1, MPI_INT, 0, comm); // for NCG
+  MPI_Bcast(&RescaleSmat, 1, MPI_INT, 0, comm); // for Rescale S matrix
+  MPI_Bcast(&useDiagScale, 1, MPI_INT, 0, comm); // for Jacobi preconditioned CG
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
@@ -716,6 +744,12 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   DSROptStepDt = bufDouble[IdxSROptStepDt];
   DSROptCGTol = bufDouble[IdxSROptCGTol];
   TwoSz = bufInt[Idx2Sz];
+  
+  Nx = bufInt[IdxNx];
+  Ny = bufInt[IdxNy];
+  Nz = bufInt[IdxNz];
+  Norb = bufInt[IdxNorb];
+  NTwist  = bufInt[IdxNTwist];
 
   Nneuron = bufInt[IdxNneuron];
   NneuronGeneral = bufInt[IdxNneuronGeneral];
@@ -744,6 +778,25 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     NMPTrans *= -1;
   } else {
     APFlag = 0;
+  }
+
+  if (NSRCG == 2){
+    useDiagScale = 1;
+    NSRCG = 1;
+  //  if (rank == 0) printf("remark: use preconditioned CG (Diag Scale)\n");
+  } //else {
+  //  useDiagScale = 0;
+  //}
+  if (useDiagScale){
+    if(NSRCG == 1){
+      if (rank == 0) printf("remark: use preconditioned CG (Diag Scale)\n");
+    }else{
+      if (rank == 0) printf("remark: not use preconditioned CG (Diag Scale) because NSRCG=%d != 1. Use direct method instead.\n",NSRCG);
+    }
+  }
+
+  if (RescaleSmat){
+    if (rank == 0) printf("remark: rescale S matrix \n");
   }
 
   if (DSROptStepDt < 0) {
@@ -801,6 +854,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                  + 8 * NInterAll /* InterAll */
                  + Nsite * NQPOptTrans /* QPOptTrans */
                  + Nsite * NQPOptTrans /* QPOptTransSgn */
+                 + 4*Nsite /* LatticeIdx */
+                 + NTwist*2*Nsite*2 /* TwistIdx */
                  //RBM
                  + FlagRBM * (
                    NneuronCharge /* ChargeRMB_HiddenLayerIdx */ 
@@ -839,6 +894,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       + NExchangeCoupling /* ParaExchangeCoupling */
       //    + NQPTrans /* ParaQPTrans */
       //+ NInterAll /* ParaInterAll */
+      + NTwist*3*Nsite*2 /* ParaTwist */
       + NQPOptTrans; /* ParaQPTransOpt */
 
   return 0;
@@ -1056,6 +1112,17 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           if (GetInfoTwoBodyG(fp, CisAjsCktAltDCIdx, Nsite, NCisAjsCktAltDC, defname) != 0)
             info = 1;
           break;
+
+        case KWLattice:
+          /*lattice.def---------------------------------------*/
+          if (GetInfoLattice(fp, LatticeIdx, Nsite, Nx, Ny, Nz, Norb, defname) != 0) info = 1;
+          break;
+
+        case KWTwist:
+          /*twist.def---------------------------------------*/
+          if (GetInfoTwist(fp, TwistIdx, ParaTwist, Nsite, NTwist*Nsite*2, defname) != 0) info = 1;
+          break;
+
 
         case KWInterAll:
           /*interall.def---------------------------------------*/
@@ -1820,6 +1887,14 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufDouble[IdxSROptCGTol] = 1.0e-10;
   NStoreO = 1;
   NSRCG = 0;
+  RescaleSmat  = 0;
+  useDiagScale = 0;
+
+  bufInt[IdxNx] = 1;
+  bufInt[IdxNy] = 1;
+  bufInt[IdxNz] = 1;
+  bufInt[IdxNorb] = 1;
+  bufInt[IdxNTwist] = 0;
 }
 
 int GetInfoFromModPara(int *bufInt, double *bufDouble) {
@@ -1933,6 +2008,10 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               NStoreO = (int) dtmp;
             } else if (CheckWords(ctmp, "NSRCG") == 0) {
               NSRCG = (int) dtmp;
+            } else if (CheckWords(ctmp, "RescaleSmat") == 0) {
+              RescaleSmat = (int) dtmp;
+            } else if (CheckWords(ctmp, "useDiagScale") == 0) {
+              useDiagScale = (int) dtmp;
 //RBM
             } else if (CheckWords(ctmp, "Nneuron") == 0) {
               bufInt[IdxNneuron] = (int) dtmp;
@@ -1959,9 +2038,10 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
         default:
           break;
       }
+      fclose(fp);
     }
   }
-  fclose(fp);
+  //fclose(fp);
   fprintf(stdout, "End: Read ModPara File .\n");
   return iret;
 }
@@ -2105,6 +2185,8 @@ int GetInfoOpt(FILE *fp, int *ArrayOpt, int iComplxFlag, int *iTotalOptCount, in
     fscanf(fp, "%d\n", &(ArrayOpt[2 * fidx])); // TBC real
     if(iComplxFlag>0){
       ArrayOpt[2 * fidx + 1] = ArrayOpt[2 * fidx]; //  TBC imaginary
+    }else{
+      ArrayOpt[2 * fidx + 1] = 0;
     }
     fidx++;
     (iLocalOptCount)++;
@@ -2745,6 +2827,70 @@ int GetInfoGeneralRBM_PhysHidden(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iC
   return info;
 
 }
+
+int GetInfoLattice(FILE *fp, int **ArrayIdx, int NArray, int nx, int ny, int nz, int norb, char *defname) {
+  char ctmp2[256];
+  int idx = 0, info = 0;
+  int x1 = 0, x2 = 0, x3 = 0, x4 = 0;
+  if (NArray == 0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d %d %d %d\n",
+           &idx, &x1, &x2, &x3, &x4);
+    ArrayIdx[idx][0] = x1;
+    ArrayIdx[idx][1] = x2;
+    ArrayIdx[idx][2] = x3;
+    ArrayIdx[idx][3] = x4;
+
+    if (CheckSite(x1, nx) != 0 || CheckSite(x2, ny) != 0 || CheckSite(x3, nz) != 0 || CheckSite(x4, norb) != 0) {
+      fprintf(stderr, "Error: Site index for Lattice is incorrect. \n");
+      info = 1;
+      break;
+    }
+
+    //printf("GetInfoLattice, idx=%d: %d %d %d %d\n",idx,x1,x2,x3,x4);
+  }
+  if (idx+1 != NArray) info = ReadDefFileError(defname);
+  return info;
+}
+
+int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int NArray, char *defname) {
+  char ctmp2[256];
+  int idx = 0, idx0=0, info = 0;
+  int twist_idx = 0, i = 0, s = 0;
+  double dReValueX = 0, dImValueX = 0;
+  double dReValueY = 0, dImValueY = 0;
+  double dReValueZ = 0, dImValueZ = 0;
+  if (NArray == 0) return 0;
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    sscanf(ctmp2, "%d %d %d %lf %lf %lf \n",
+           &twist_idx, &i, &s, &dReValueX, &dReValueY, &dReValueZ);
+    //sscanf(ctmp2, "%d %d %d %lf %lf %lf %lf %lf %lf\n",
+           //&twist_idx, &i, &s, &dReValueX, &dImValueX, &dReValueY, &dImValueY, &dReValueZ, &dImValueZ);
+    ArrayIdx[twist_idx][2*idx]   = i;
+    ArrayIdx[twist_idx][2*idx+1] = s;
+      if (CheckSite(i, Nsite) != 0) {
+        fprintf(stderr, "Error: Site index is incorrect. \n");
+        info = 1;
+        break;
+      }
+    ArrayValue[twist_idx][3*idx]   = dReValueX;
+    ArrayValue[twist_idx][3*idx+1] = dReValueY;
+    ArrayValue[twist_idx][3*idx+2] = dReValueZ;
+    //ArrayValue[idx][0] = dReValueX + I * dImValueX;
+    //ArrayValue[idx][1] = dReValueY + I * dImValueY;
+    //ArrayValue[idx][2] = dReValueZ + I * dImValueZ;
+    printf("GetInfoTwist, idx=%d, i=%d s=%d %.2e %.2e %.2e\n",idx,ArrayIdx[twist_idx][2*idx],ArrayIdx[twist_idx][2*idx+1], ArrayValue[twist_idx][3*idx], ArrayValue[twist_idx][3*idx+1], ArrayValue[twist_idx][3*idx+2] );
+    idx++;
+    idx0++;
+    if (idx == 2*Nsite){
+      idx=0;
+    }
+  }
+  if (idx0 != NArray) info = ReadDefFileError(defname);
+  return info;
+}
+
+
 
 /**********************************/
 /* [e] Read Parameters from file  */

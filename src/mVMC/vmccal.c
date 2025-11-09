@@ -587,18 +587,22 @@ void clearPhysQuantity(){
     vec = SROptOO;
     #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
-// only for real variables
-    if(NSRCG!=0){
-      n = (SROptSize)*4; // TBC
-    }else{
-      n = (SROptSize)*(SROptSize+2); // TBC
+    
+    if (AllComplexFlag == 0){
+    // only for real variables
+      if(NSRCG!=0){
+        n = (SROptSize)*4; // TBC
+      }else{
+        n = (SROptSize)*(SROptSize+2); // TBC
+      }
+      vec_real = SROptOO_real;
+      #pragma omp parallel for default(shared) private(i)
+      for(i=0;i<n;i++) vec_real[i] = 0.0;
     }
-    vec_real = SROptOO_real;
-    #pragma omp parallel for default(shared) private(i)
-    for(i=0;i<n;i++) vec_real[i] = 0.0;
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
-    n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
+    //n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
+    n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC + NTwist;
     vec = PhysCisAjs;
 #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;

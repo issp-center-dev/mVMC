@@ -300,6 +300,18 @@ double complex *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */
 double complex *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
 double complex *LocalCisAjs; /* [NCisAjs] */
 
+/* for Lattice index */
+int NLattice, Nx, Ny, Nz, Norb;
+int **LatticeIdx;         /* [Nsite][4] */
+
+/* for Twist operator */
+int NTwist, NdivideTwist, **TwistIdx;         /* TwistIdx -> SiteIdx, SpinIdx */
+//int NTwist;         /* NTwist */
+double **ParaTwist;         /* [NTwist][3*Nsite*2] */
+double complex *PhysTwist; /* [NTwist] */
+
+
+
 const int NLSHam = 2; /* 0: I, 1: H */
 double complex *QQQQ; /* QQQQ[NLSHam][NLSHam][NLSHam][NLSHam]*/  //TBC
 double complex *LSLQ; /* [NLSHam][NLSHam]*/                      //TBC
@@ -326,6 +338,7 @@ FILE *FileSRinfo; /* zvo_SRinfo.dat */
 FILE *FileCisAjs;
 FILE *FileCisAjsCktAlt;
 FILE *FileCisAjsCktAltDC;
+FILE *FileTwist;
 FILE *FileLS;
 FILE *FileLSQQQQ;
 FILE *FileLSQCisAjsQ;
@@ -358,5 +371,8 @@ int Counter[6] = {0,0,0,0,0,0};
 int Counter_max = 6;
 /* 0: hopping, 1: hopping accept, 2: exchange try, 3: exchange accept */
 /* 4: local spin flip try, 5 local spin flip accept*/
+
+int useDiagScale=0;
+int RescaleSmat=0;
 
 #endif /*  _INCLUDE_GLOBAL */

@@ -270,6 +270,8 @@ int main(int argc, char* argv[])
       info=1;
     }
   }
+  // free fileDefList
+  if(rank0==0) free(cFileNameListFile);
   if(rank0==0) fprintf(stdout,"End  : Initialize parameters.\n");
   //[e] add read parameters respectively
   
@@ -684,6 +686,14 @@ void outputData() {
                 creal(PhysCisAjsCktAltDC[i]), cimag(PhysCisAjsCktAltDC[i]));
       }
       fprintf(FileCisAjsCktAltDC, "\n");
+    }
+
+    /* zvo_twist.dat */
+    if (NTwist > 0) {
+      for (i = 0; i < NTwist; i++){
+        fprintf(FileTwist, "%.18e  %.18e  %.18e  %.18e \n", creal(PhysTwist[i]), cimag(PhysTwist[i]),cabs(PhysTwist[i]),carg(PhysTwist[i]));
+        //fprintf(FileTwist, "% .18e  % .18e \n", creal(PhysTwist[i]), cimag(PhysTwist[i]));
+      }
     }
 
     if (NLanczosMode > 0) {

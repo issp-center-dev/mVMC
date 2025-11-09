@@ -32,6 +32,18 @@ inline double xdot(const int n, const double * const p, const double * const q) 
   }
   return z;
 }
+
+inline double get_absmax(int idx_start, int idx_end, const double * const p) {
+  int pi;
+  double absval_max=fabs(p[idx_start]);
+
+  #pragma loop noalias
+  for (  pi=idx_start+1; pi < idx_end; pi ++ ) {
+		if ( absval_max < fabs(p[pi]) ) absval_max = fabs(p[pi]) ;
+  }
+  return absval_max;
+}
+
 extern inline double xdot(const int n, const double * const p, const double * const q);
 
 #define MVMC_SRCG_REAL
@@ -43,8 +55,10 @@ int StochasticOptCG(MPI_Comm comm)
 {
   int ret=0;
   if(AllComplexFlag==0){
+    if(RescaleSmat) Rescale4SRCG_real(comm);
     ret = StochasticOptCG_real(comm);
   }else{
+    if(RescaleSmat) Rescale4SRCG_fcmp(comm);
     ret = StochasticOptCG_fcmp(comm);
   }
   return ret;
