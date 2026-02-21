@@ -122,6 +122,7 @@ double complex*ParaInterAll;
 /* for variational parameters */
 int NGutzwillerIdx, *GutzwillerIdx; /* [Nsite] */
 int NJastrowIdx, **JastrowIdx; /* [Nsite][Nsite] */
+int NSpinJastrowIdx, **SpinJastrowIdx; /* [Nsite][Nsite] */
 int NDoublonHolon2siteIdx, **DoublonHolon2siteIdx; /* DoublonHolon2siteIdx[idx][2*Nsite] */
 int NDoublonHolon4siteIdx, **DoublonHolon4siteIdx; /* DoublonHolon4siteIdx[idx][4*Nsite] */
 int NOrbitalIdx, **OrbitalIdx; /* [Nsite][Nsite] */

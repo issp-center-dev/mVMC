@@ -432,6 +432,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNJast], &iComplexFlgJastrow);
             break;
 
+          case KWSpinJastrow:
+            cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNSpinJast], &iComplexFlgSpinJastrow);
+            break;
+
 //RBM
           case KWGeneralRBM_HiddenLayer:
             cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNGeneralRBM_HiddenLayer], &iComplexFlgGeneralRBM_HiddenLayer);
@@ -638,7 +642,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   }//rank 0
 
   if (rank == 0) {
-    AllComplexFlag = iComplexFlgGutzwiller + iComplexFlgJastrow + iComplexFlgDH2; //TBC
+    AllComplexFlag = iComplexFlgGutzwiller + iComplexFlgJastrow + iComplexFlgSpinJastrow + iComplexFlgDH2; //TBC
     AllComplexFlag += iComplexFlgDH4 + iComplexFlgOrbital;//TBC
     //AllComplexFlag  = 1;//DEBUG
     // AllComplexFlag= 0 -> All real, !=0 -> complex
@@ -698,6 +702,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NExchangeCoupling = bufInt[IdxNExchange];
   NGutzwillerIdx = bufInt[IdxNGutz];
   NJastrowIdx = bufInt[IdxNJast];
+  NSpinJastrowIdx = bufInt[IdxNSpinJast];
   NDoublonHolon2siteIdx = bufInt[IdxNDH2];
   NDoublonHolon4siteIdx = bufInt[IdxNDH4];
   NOrbitalIdx = bufInt[IdxNOrbit];
@@ -757,7 +762,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   Nsize = 2 * Ne;
   Nsite2 = 2 * Nsite;
   NSlater = NOrbitalIdx;
-  NProj = NGutzwillerIdx + NJastrowIdx
+  NProj = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx
           + 2 * 3 * NDoublonHolon2siteIdx
           + 2 * 5 * NDoublonHolon4siteIdx;
   NOptTrans = (FlagOptTrans > 0) ? NQPOptTrans : 0;
@@ -788,6 +793,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                  + 2 * NExchangeCoupling /* ExchangeCoupling */
                  + Nsite /* GutzwillerIdx */
                  + Nsite * Nsite /* JastrowIdx */
+                 + Nsite * Nsite /* SpinJastrowIdx */
                  + 2 * Nsite * NDoublonHolon2siteIdx /* DoublonHolon2siteIdx */
                  + 4 * Nsite * NDoublonHolon4siteIdx /* DoublonHolon4siteIdx */
                  //+ (2*Nsite)*(2*Nsite) /* OrbitalIdx */ //fsz
@@ -916,9 +922,16 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
             info = 1;
           break;
 
+        case KWSpinJastrow:
+          fidx = NGutzwillerIdx + NJastrowIdx;
+          if (GetInfoJastrow(fp, SpinJastrowIdx, OptFlag, iComplexFlgSpinJastrow, &count_idx, fidx, Nsite, NSpinJastrowIdx,
+                             defname) != 0)
+            info = 1;
+          break;
+
         case KWDH2:
           /*doublonholon2siteidx.def--------------------------*/
-          fidx = NGutzwillerIdx + NJastrowIdx;
+          fidx = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx;
           if (GetInfoDH2(fp, DoublonHolon2siteIdx, OptFlag, iComplexFlgDH2, &count_idx, fidx, Nsite,
                          NDoublonHolon2siteIdx, defname) != 0)
             info = 1;
@@ -926,7 +939,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWDH4:
           /*doublonholon4siteidx.def--------------------------*/
-          fidx = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          fidx = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
           if (GetInfoDH4(fp, DoublonHolon4siteIdx, OptFlag, iComplexFlgDH4, &count_idx, fidx, Nsite,
                          NDoublonHolon4siteIdx, defname) != 0)
             info = 1;
@@ -1245,13 +1258,26 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           }
           break;
 
+        case KWInSpinJastrow:
+          fprintf(stdout, "Read InSpinJastrow File. \n");
+          if (idx != NSpinJastrowIdx) {
+            info = 1;
+            continue;
+          }
+          count = NGutzwillerIdx + NJastrowIdx;
+          for (i = count; i < count + NSpinJastrowIdx; i++) {
+            fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
+            Proj[idx+count] = tmp_real + I * tmp_comp;
+          }
+          break;
+
         case KWInDH2:
           fprintf(stdout, "Read InDH2 File. \n");
           if (idx != NDoublonHolon2siteIdx) {
             info = 1;
             continue;
           }
-          count = NGutzwillerIdx + NJastrowIdx;
+          count = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx;
           for (i = count; i < count + 2 * 3 * NDoublonHolon2siteIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Proj[idx+count] = tmp_real + I * tmp_comp;
@@ -1264,7 +1290,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
             info = 1;
             continue;
           }
-          count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          count = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
           for (i = count; i < count + 2 * 5 * NDoublonHolon4siteIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Proj[idx+count] = tmp_real + I * tmp_comp;
@@ -1781,6 +1807,7 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[IdxNExchange] = 0;
   bufInt[IdxNGutz] = 0;
   bufInt[IdxNJast] = 0;
+  bufInt[IdxNSpinJast] = 0;
   bufInt[IdxNDH2] = 0;
   bufInt[IdxNDH4] = 0;
   bufInt[IdxNOrbit] = 0;
