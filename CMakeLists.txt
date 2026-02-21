@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5...3.10)
 project(mVMC NONE)
+
+# Make submodule packages with old cmake available from CMake4.0 or later.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.10)
 
 option(USE_SCALAPACK "Use Scalapack" OFF)
 option(PFAFFIAN_BLOCKED "Use blocked-update Pfaffian to speed up." OFF)
