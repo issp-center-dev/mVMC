@@ -337,7 +337,7 @@ void UpdateProjCnt_fsz(const int ri, const int rj, const int s,const int t,
         projCntNew[idx] += dm*(n0[rk]-n1[rk]);
       }
     } else {
-      /* pair (ri,rj) */
+      /* pair (ri,rj): delta(m_ri*m_rj) = dm_i*m_rj_new + dm_j*m_ri_new - dm_i*dm_j */
       if(ri<rj) idx = offset + SpinJastrowIdx[ri][rj];
       else idx = offset + SpinJastrowIdx[rj][ri];
       projCntNew[idx] += dm_i*(n0[rj]-n1[rj]) + dm_j*(n0[ri]-n1[ri]) - dm_i*dm_j;
