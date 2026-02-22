@@ -32,7 +32,7 @@ endfunction(add_python_uhf_test)
 
 # Suppress warnings about PythonInterp package.
 # TODO: replace it with find_package(Python3 REQUIRED
-cmake_policy(SET CMP0148 OLD)
+#cmake_policy(SET CMP0148 OLD)
 find_package(PythonInterp 3.6 REQUIRED)
 
 set(python_test_vmc_model
