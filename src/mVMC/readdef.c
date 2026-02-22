@@ -635,6 +635,34 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
     }
 
+    //Check NExUpdatePath=6 (doublon-only pair hopping)
+    if (bufInt[IdxExUpdatePath] == 6) {
+      if (bufInt[IdxNLocSpin] > 0) {
+        fprintf(stderr, "Error: NExUpdatePath=6 (doublon-only) is not compatible with NLocalSpin > 0.\n");
+        info = 1;
+      }
+      if (FlagRBM > 0) {
+        fprintf(stderr, "Error: NExUpdatePath=6 (doublon-only) is not compatible with RBM (current implementation).\n");
+        info = 1;
+      }
+      if (bufInt[IdxNBF] > 0) {
+        fprintf(stderr, "Error: NExUpdatePath=6 (doublon-only) is not compatible with NBackFlowIdx > 0.\n");
+        info = 1;
+      }
+      if (iFlgOrbitalGeneral == 1) {
+        fprintf(stderr, "Error: NExUpdatePath=6 (doublon-only) is not compatible with iFlgOrbitalGeneral=1 (FSZ).\n");
+        info = 1;
+      }
+      if (bufInt[IdxNe] <= 0) {
+        fprintf(stderr, "Error: NExUpdatePath=6 (doublon-only) requires Ne > 0.\n");
+        info = 1;
+      }
+      if (bufInt[IdxNe] >= bufInt[IdxNsite]) {
+        fprintf(stderr, "Error: NExUpdatePath=6 (doublon-only) requires Ne < Nsite (need empty sites for pair hopping).\n");
+        info = 1;
+      }
+    }
+
   }//rank 0
 
   if (rank == 0) {

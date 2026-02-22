@@ -594,7 +594,7 @@ Keywords and parameters
 
    **Description :** The option for local update about exchange terms.
    0: not update, 1: update for electron system. For Spin system, the
-   value must be 2.
+   value must be 2. For doublon-only sampling (pair hopping), set to 6.
 
 -  ``RndSeed``
 

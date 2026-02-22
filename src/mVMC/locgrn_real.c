@@ -50,6 +50,9 @@ double  GreenFunc1_real(const int ri, const int rj, const int s, const double ip
 
   if(ri==rj) return eleNum[ri+s*Nsite];
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
+  if(NExUpdatePath==6) { /* doublon-only: hopping would break doublon at source site */
+    if(eleNum[rj+(1-s)*Nsite]==1) return 0.0;
+  }
 
   mj = eleCfg[rj+s*Nsite];
   msj = mj + s*Ne;

@@ -276,6 +276,75 @@ void VMCMakeSample_real(MPI_Comm comm) {
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
         }
         StopTimer(33);
+
+      } else if (updateType == PAIRHOPPING) { /* pair hopping (doublon-only) */
+        Counter[2]++;
+
+        StartTimer(31);
+        makeCandidate_pairhopping(&mi, &mj, &ri, &rj, &rejectFlag,
+                                  TmpEleIdx, TmpEleCfg);
+        StopTimer(31);
+
+        if (rejectFlag) continue;
+
+        StartTimer(33);
+        StartTimer(65);
+
+        /* Up electron mi hops from ri to rj */
+        updateEleConfig(mi, ri, rj, 0, TmpEleIdx, TmpEleCfg, TmpEleNum);
+        UpdateProjCnt(ri, rj, 0, projCntNew, TmpEleProjCnt, TmpEleNum);
+        /* Down electron mj hops from ri to rj */
+        updateEleConfig(mj, ri, rj, 1, TmpEleIdx, TmpEleCfg, TmpEleNum);
+        UpdateProjCnt(ri, rj, 1, projCntNew, projCntNew, TmpEleNum);
+
+        StopTimer(65);
+        StartTimer(66);
+
+#ifdef _pf_block_update
+        updated_tdi_v_push_pair_d(NQPFull,
+                                  rj+0*Nsite, mi+0*Ne,
+                                  rj+1*Nsite, mj+1*Ne,
+                                  1, pfUpdator);
+        updated_tdi_v_get_pfa_d(NQPFull, pfMNew_real, pfUpdator);
+#else
+        CalculateNewPfMTwo2_real(mi, 0, mj, 1, pfMNew_real, TmpEleIdx, qpStart, qpEnd);
+#endif
+        StopTimer(66);
+        StartTimer(67);
+
+        /* calculate inner product <phi|L|x> */
+        logIpNew = CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm);
+        StopTimer(67);
+
+        /* Metropolis */
+        x = LogProjRatio(projCntNew, TmpEleProjCnt);
+        w = exp(2.0 * (x + (logIpNew - logIpOld)));
+        if (!isfinite(w)) w = -1.0; /* should be rejected */
+
+        if (w > genrand_real2()) { /* accept */
+          StartTimer(68);
+#ifdef _pf_block_update
+          updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
+#else
+          UpdateMAllTwo_real(mi, 0, mj, 1, ri, ri, TmpEleIdx, qpStart, qpEnd);
+#endif
+          StopTimer(68);
+
+          for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
+          logIpOld = logIpNew;
+          nAccept++;
+          Counter[3]++;
+        } else { /* reject */
+#ifdef _pf_block_update
+          StartTimer(66);
+          updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
+          StopTimer(66);
+#endif
+          revertEleConfig(mj, ri, rj, 1, TmpEleIdx, TmpEleCfg, TmpEleNum);
+          revertEleConfig(mi, ri, rj, 0, TmpEleIdx, TmpEleCfg, TmpEleNum);
+        }
+        StopTimer(33);
       }
 
       if (nAccept > Nsite) {
