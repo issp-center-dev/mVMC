@@ -76,7 +76,7 @@ endif()
 
 if(PFAFFIAN_BLOCKED AND NOT USE_GEMMT)
   message(WARNING "PFAFFIAN_BLOCKED requires BLIS. Enabling USE_GEMMT automatically.")
-  set(USE_GEMMT ON)
+  set(USE_GEMMT ON CACHE BOOL "Use GEMMT. Recommended regardless blocked-Pfaffian-update." FORCE)
 endif()
 
 if(PFAFFIAN_BLOCKED
