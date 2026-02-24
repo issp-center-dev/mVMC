@@ -676,6 +676,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       iComplexFlgOrbital = 1;
       fprintf(stderr, "Warning: All the pairings are treated as complex variational parameters.\n");
     }
+    if(FlagRBM == 1 && AllComplexFlag == 0){
+      fprintf(stderr, "Error: RBM requires complex variational parameters (AllComplexFlag != 0).\n");
+      info = 1;
+    }
   }
 
   if (info != 0) {

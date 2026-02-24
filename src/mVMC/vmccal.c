@@ -151,10 +151,14 @@ void VMCMainCal(MPI_Comm comm) {
     x = LogProjVal(eleProjCnt);
     /* calculate reweight */
     if (reweight==1){
-       w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
+       w = 2.0*(log(cabs(ip))+x);
+       if (FlagRBM) {
+         w += 2.0*creal(LogWeightRBM(rbmCnt));
+       }
+       w = exp(w - logSqPfFullSlater[sample]);
     }else{
        w =1.0;
-    }	    
+    }
 
 #ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: isfinite \n",sample);
