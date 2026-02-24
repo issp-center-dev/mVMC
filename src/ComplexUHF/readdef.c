@@ -71,7 +71,7 @@ int ReadDefFileError(
 	const char *defname
 ){
 	printf("Error: %s (Broken file or Not exist)\n", defname);
-	return 0;
+	return 1;
 }
 
 int CheckPairSite(
@@ -437,7 +437,6 @@ int ReadDefFileIdxPara(
     fp = fopen(defname, "r");
     if (fp == NULL) {
       info = ReadDefFileError(defname);
-      fclose(fp);
       continue;
     }
 
@@ -740,6 +739,7 @@ int ReadDefFileIdxPara(
         if (X->NInitial > 0) {
           idx = 0;
           while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            if (idx >= X->NInitial) break;
             dImValue = 0;
             sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
                    &(X->Initial[idx][0]),
