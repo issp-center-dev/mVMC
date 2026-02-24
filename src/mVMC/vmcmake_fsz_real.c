@@ -147,27 +147,53 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
 //DEBUG
       updateType = getUpdateType(NExUpdatePath);
 
-      if(updateType==HOPPING) { /* hopping */
-        
+      if (updateType == HOPPING || updateType == SPINHOPPING) { /* hopping or localized spin hopping */
+
         StartTimer(31);
         flag_hop = 0;
-        if(TwoSz==-1){//total spin is not conserved
-          if(genrand_real2()<0.5){ // this ratio can be changed
-            flag_hop = 1;
-            Counter[0]++;
-            makeCandidate_hopping_fsz(&mi, &ri, &rj, &s,&t, &rejectFlag,
+	switch(updateType){
+	  case HOPPING:
+            if(TwoSz==-1){//total spin is not conserved
+              if(genrand_real2()<0.5){ // this ratio can be changed
+                flag_hop = 1;
+                Counter[0]++;
+                makeCandidate_hopping_fsz(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
-          }else{
-            Counter[4]++;
-            makeCandidate_LocalSpinFlip_conduction(&mi, &ri, &rj, &s,&t, &rejectFlag,
+              }else{
+                Counter[4]++;
+                makeCandidate_LocalSpinFlip_conduction(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
-          } 
-        }else{ //csz : t=s
-          flag_hop = 1;
-          Counter[0]++;
-          makeCandidate_hopping_csz(&mi, &ri, &rj, &s,&t, &rejectFlag,
+              }
+            }else{ //csz : t=s
+              flag_hop = 1;
+              Counter[0]++;
+              makeCandidate_hopping_csz(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
-        } 
+            }
+	    break;
+	  case SPINHOPPING:
+            if(TwoSz==-1){//total spin is not conserved
+              if(genrand_real2()<0.5){ // this ratio can be changed
+                flag_hop = 1;
+                Counter[0]++;
+                makeCandidate_spin_hopping_fsz(&mi, &ri, &rj, &s,&t, &rejectFlag,
+                              TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+              }else{
+                Counter[4]++;
+                makeCandidate_LocalSpinFlip_conduction(&mi, &ri, &rj, &s,&t, &rejectFlag,
+                              TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+              }
+            }else{ //csz : t=s
+              flag_hop = 1;
+              Counter[0]++;
+              makeCandidate_spin_hopping_csz(&mi, &ri, &rj, &s,&t, &rejectFlag,
+                              TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+            }
+	    break;
+	  default:
+    	    if (rank == 0) fprintf(stderr, "error: strange updateType \n");
+	    exit(1);
+	}
         StopTimer(31);
 
         if(rejectFlag) continue; 
@@ -465,15 +491,28 @@ int makeInitialSample_fsz_real(int *eleIdx, int *eleCfg, int *eleNum, int *elePr
       }
     }
     /* itinerant electron */
-    for(X_mi=0;X_mi<Nsize;X_mi++) { 
-      si = eleSpn[X_mi];
-      if(eleIdx[X_mi]== -1) {
-        do {
-          ri = gen_rand32()%Nsite;
-        } while (eleCfg[ri+si*Nsite]!= -1 || LocSpn[ri]==1); // seeking empty and itinerant site
-        eleCfg[ri+si*Nsite]     = X_mi; // buggged 4/26
-        eleIdx[X_mi]            = ri;
-        //eleSpn[mi+si*Ne]        = si;
+    if (NExUpdatePath == 4 || NExUpdatePath == 5){ //for t-J
+      for(X_mi=0;X_mi<Nsize;X_mi++) {
+        si = eleSpn[X_mi];
+        if(eleIdx[X_mi]== -1) {
+          do {
+            ri = gen_rand32()%Nsite;
+          } while (eleCfg[ri+si*Nsite]!= -1 || eleCfg[ri+(1-si)*Nsite]!= -1 || LocSpn[ri]==1); // seeking empty and itinerant site
+          eleCfg[ri+si*Nsite]     = X_mi;
+          eleIdx[X_mi]            = ri;
+        }
+      }
+    }else{
+      for(X_mi=0;X_mi<Nsize;X_mi++) {
+        si = eleSpn[X_mi];
+        if(eleIdx[X_mi]== -1) {
+          do {
+            ri = gen_rand32()%Nsite;
+          } while (eleCfg[ri+si*Nsite]!= -1 || LocSpn[ri]==1); // seeking empty and itinerant site
+          eleCfg[ri+si*Nsite]     = X_mi; // buggged 4/26
+          eleIdx[X_mi]            = ri;
+          //eleSpn[mi+si*Ne]        = si;
+        }
       }
     }
     /* EleNum */
