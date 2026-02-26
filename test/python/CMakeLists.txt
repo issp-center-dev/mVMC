@@ -78,6 +78,10 @@ set(python_test_vmc_model_mode1
 
 set(python_test_vmc_model_expert
   GeneralRBM_cmp
+  HeisenbergChain_SpinJastrow
+  HeisenbergChain_fsz_SpinJastrow
+  HubbardChain_SpinJastrow
+  HubbardChain_fsz_SpinJastrow
 )
 
 set(python_test_uhf_model
