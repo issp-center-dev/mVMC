@@ -1,0 +1,53 @@
+name: Collect traffic (clones)
+
+on:
+  schedule:
+    # cron は UTC。分00は高負荷で遅延/ドロップし得るので、毎時の頭は避ける。 :contentReference[oaicite:3]{index=3}
+    - cron: "23 3 * * *"  # 毎日 03:23 UTC (JSTなら 12:23)
+  workflow_dispatch:
+
+# push してファイル更新するので contents: write が必要。 :contentReference[oaicite:4]{index=4}
+permissions:
+  contents: write
+
+concurrency:
+  group: traffic-clones
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch clones and update files
+        env:
+          # 403 になる場合は、ここに fine-grained PAT を入れる（Secrets -> TRAFFIC_TOKEN）
+          TRAFFIC_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/fetch_clones.py
+
+      - name: Commit & push (if changed)
+        run: |
+          if git status --porcelain | grep .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+            git add traffic/
+            git commit -m "chore: update clones traffic (daily)"
+
+            BRANCH="${GITHUB_REF#refs/heads/}"
+            git push origin "HEAD:${BRANCH}"
+          else
+            echo "No changes"
+          fi
