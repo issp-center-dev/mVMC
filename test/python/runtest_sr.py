@@ -45,9 +45,14 @@ array_calc_cg = read_out("./output/zqp_opt.dat")[4:]
 
 result = 0
 if array_calc_sr.shape != array_calc_cg.shape:
+    print("shape mismatch: sr={} cg={}".format(array_calc_sr.shape, array_calc_cg.shape))
     sys.exit(-1)
-diff = np.abs(np.mean(array_calc_sr - array_calc_cg))
-if diff >= 1e-8:
+
+abs_diff = np.abs(array_calc_sr - array_calc_cg)
+mean_abs_diff = np.mean(abs_diff)
+max_abs_diff = np.max(abs_diff)
+if mean_abs_diff >= 1e-8:
+    print("SR-CG mismatch: mean_abs_diff={:.3e}, max_abs_diff={:.3e}".format(mean_abs_diff, max_abs_diff))
     result = -1
 
 sys.exit(result)
