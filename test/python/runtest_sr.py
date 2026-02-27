@@ -37,14 +37,16 @@ subprocess.call(["mv", "output", "output_sr"])
 
 
 result_cg = subprocess.call([bin_to_test, "-s", "%s/StdFace_CG.def" % refdir])
-if result != 0:
-    sys.exit(result)
+if result_cg != 0:
+    sys.exit(result_cg)
 
 
 array_calc_cg = read_out("./output/zqp_opt.dat")[4:]
 
 result = 0
-diff = np.mean(array_calc_sr - array_calc_cg)
+if array_calc_sr.shape != array_calc_cg.shape:
+    sys.exit(-1)
+diff = np.max(np.abs(array_calc_sr - array_calc_cg))
 if diff >= 1e-8:
     result = -1
 

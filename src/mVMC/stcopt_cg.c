@@ -35,6 +35,7 @@ inline double xdot(const int n, const double * const p, const double * const q) 
 
 inline double get_absmax(int idx_start, int idx_end, const double * const p) {
   int pi;
+  if (idx_end <= idx_start) return 0.0;
   double absval_max=fabs(p[idx_start]);
 
   #pragma loop noalias

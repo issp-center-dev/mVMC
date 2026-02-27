@@ -658,6 +658,9 @@ void fn_Rescale4SRCG(MPI_Comm comm) {
   
   const int nPara=NPara;
   const int srOptSize=SROptSize;
+  if (NProj <= 0 || NProj >= nPara) {
+    return;
+  }
   #ifdef MVMC_SRCG_REAL
     double *srOptO=SROptOO_real;
     double *srOptHO=SROptHO_real;
@@ -690,6 +693,10 @@ void fn_Rescale4SRCG(MPI_Comm comm) {
   
   srOptOO_ProjMax   = get_absmax(0,            OFFSET*NProj, r);
   srOptOO_SlaterMax = get_absmax(OFFSET*NProj, OFFSET*nPara, r);
+  if(srOptOO_ProjMax < 1e-10 ) {
+     ReleaseWorkSpaceDouble();
+     return;
+  }
   if(srOptOO_SlaterMax < 1e-10 ) {
      srOptOO_SlaterMax = 1e-10 ; 
   }
@@ -739,4 +746,3 @@ void fn_Rescale4SRCG(MPI_Comm comm) {
 #undef OFFSET
 #undef USE_IMAG
 #undef SIZE_VecCG
-
