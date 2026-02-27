@@ -40,7 +40,7 @@ inline double get_absmax(int idx_start, int idx_end, const double * const p) {
 
   #pragma loop noalias
   for (  pi=idx_start+1; pi < idx_end; pi ++ ) {
-		if ( absval_max < fabs(p[pi]) ) absval_max = fabs(p[pi]) ;
+    if ( absval_max < fabs(p[pi]) ) absval_max = fabs(p[pi]) ;
   }
   return absval_max;
 }
