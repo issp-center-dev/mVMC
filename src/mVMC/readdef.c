@@ -765,6 +765,16 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   }
 
   if (RescaleSmat){
+    if (!(NSRCG == 1 || NStoreO != 0)) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "error: invalid RescaleSmat configuration. "
+                "RescaleSmat=1 requires NSRCG==1 or NStoreO!=0, "
+                "but got NSRCG=%d, NStoreO=%d.\n",
+                NSRCG, NStoreO);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
     if (rank == 0) printf("remark: rescale S matrix \n");
   }
 

@@ -655,9 +655,11 @@ void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm){
 void fn_Rescale4SRCG(MPI_Comm comm) {
   int i, ismp;
   int pi; /* index for variational parameters */
+  int rank;
   
   const int nPara=NPara;
   const int srOptSize=SROptSize;
+  MPI_Comm_rank(comm, &rank);
   if (NProj <= 0 || NProj >= nPara) {
     return;
   }
@@ -672,6 +674,25 @@ void fn_Rescale4SRCG(MPI_Comm comm) {
     double complex *srOptOO=SROptOO + OFFSET*srOptSize;
     double complex *srOptO_Store=SROptO_Store;
   #endif
+
+  if (srOptO_Store == NULL) {
+    if (rank == 0) {
+      #ifdef MVMC_SRCG_REAL
+      fprintf(stderr,
+              "error: RescaleSmat requested but SROptO_Store_real is not allocated "
+              "(NSRCG=%d, NStoreO=%d, AllComplexFlag=%d). "
+              "Set NSRCG=1 or NStoreO!=0.\n",
+              NSRCG, NStoreO, AllComplexFlag);
+      #else
+      fprintf(stderr,
+              "error: RescaleSmat requested but SROptO_Store is not allocated "
+              "(NSRCG=%d, NStoreO=%d, AllComplexFlag=%d). "
+              "Set NSRCG=1 or NStoreO!=0.\n",
+              NSRCG, NStoreO, AllComplexFlag);
+      #endif
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
 
   double srOptOO_ProjMax,srOptOO_SlaterMax;
   double rescaleOO_SlaterRatio, rescaleO_SlaterRatio;
