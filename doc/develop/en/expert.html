@@ -590,6 +590,14 @@ This reduces the amount of memory usage from
 <span class="math notranslate nohighlight">\(O(N_\text{p}) + O(N_\text{p}N_\text{MCS})\)</span> when
 <span class="math notranslate nohighlight">\(N_\text{p} &gt; N_\text{MCS}\)</span>.</p>
 </li>
+<li><p><code class="docutils literal notranslate"><span class="pre">useDiagScale</span></code></p>
+<p><strong>Type :</strong> int-type (0 or 1, default value: 0)</p>
+<p><strong>Description :</strong> The option of using the point Jacobi method (scaling by diagonal elements of <span class="math notranslate nohighlight">\(S\)</span> matrix) when solving the linear equation <span class="math notranslate nohighlight">\(Sx=g\)</span> in the SR method by CG method (0: off, 1: on, <code class="docutils literal notranslate"><span class="pre">NSRCG</span></code> must be 1).</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NneuronGeneral</span></code></p>
+<p><strong>Type :</strong> int-type (default value: 0)</p>
+<p><strong>Description :</strong> The number of neurons <span class="math notranslate nohighlight">\(N_{\rm General RBM}\)</span> in the hidden layer of RBM.</p>
+</li>
 </ul>
 </section>
 </section>

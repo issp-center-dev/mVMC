@@ -565,6 +565,10 @@ rank+1 で初期seed が与えられます。</p>
 を陽に構築せずに解くことでメモリを削減する <a class="footnote-reference brackets" href="#id78" id="id9" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a> オプション[<a class="reference external" href="https://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045103">NeuscammanUmrigarChan</a> ](1で機能On,
 <code class="docutils literal notranslate"><span class="pre">NStore</span></code> は1に固定されます)。</p>
 </li>
+<li><p><code class="docutils literal notranslate"><span class="pre">useDiagScale</span></code></p>
+<p><strong>形式 :</strong> int型 (0もしくは1、デフォルト値=0)</p>
+<p><strong>説明 :</strong> SR法での連立一次方程式 <span class="math notranslate nohighlight">\(Sx=g\)</span> をCG法により解く際に、 Point Jacobi法 (<span class="math notranslate nohighlight">\(S\)</span> 行列の対角スケーリング)による前処理付きCG法を使用するオプション(1で機能ON, <code class="docutils literal notranslate"><span class="pre">NSRCG=1</span></code> である必要がある)。</p>
+</li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NneuronGeneral</span></code></p>
 <p><strong>形式 :</strong> int型 (デフォルト値=0)</p>
 <p><strong>説明 :</strong> RBMの隠れ層にあるニューロン数 <span class="math notranslate nohighlight">\(N_{\rm General RBM}\)</span> を指定する整数。</p>
