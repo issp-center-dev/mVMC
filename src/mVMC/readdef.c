@@ -200,7 +200,6 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
   int i, info = 0;
 
   cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
-  // free at vmcmain.c
   fprintf(stdout, "  Read File %s .\n", xNameListFile);
   if (GetFileName(xNameListFile, cFileNameListFile) != 0) {
     fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
@@ -665,8 +664,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&FlagRBM, 1, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
   MPI_Bcast(&NSRCG, 1, MPI_INT, 0, comm); // for NCG
-  MPI_Bcast(&RescaleSmat, 1, MPI_INT, 0, comm); // for Rescale S matrix
-  MPI_Bcast(&useDiagScale, 1, MPI_INT, 0, comm); // for Jacobi preconditioned CG
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
@@ -747,35 +744,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     NMPTrans *= -1;
   } else {
     APFlag = 0;
-  }
-
-  if (NSRCG == 2){
-    useDiagScale = 1;
-    NSRCG = 1;
-  //  if (rank == 0) printf("remark: use preconditioned CG (Diag Scale)\n");
-  } //else {
-  //  useDiagScale = 0;
-  //}
-  if (useDiagScale){
-    if(NSRCG == 1){
-      if (rank == 0) printf("remark: use preconditioned CG (Diag Scale)\n");
-    }else{
-      if (rank == 0) printf("remark: not use preconditioned CG (Diag Scale) because NSRCG=%d != 1. Use direct method instead.\n",NSRCG);
-    }
-  }
-
-  if (RescaleSmat){
-    if (!(NSRCG == 1 || NStoreO != 0)) {
-      if (rank == 0) {
-        fprintf(stderr,
-                "error: invalid RescaleSmat configuration. "
-                "RescaleSmat=1 requires NSRCG==1 or NStoreO!=0, "
-                "but got NSRCG=%d, NStoreO=%d.\n",
-                NSRCG, NStoreO);
-      }
-      MPI_Abort(comm, EXIT_FAILURE);
-    }
-    if (rank == 0) printf("remark: rescale S matrix \n");
   }
 
   if (DSROptStepDt < 0) {
@@ -1852,9 +1820,6 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufDouble[IdxSROptCGTol] = 1.0e-10;
   NStoreO = 1;
   NSRCG = 0;
-  RescaleSmat  = 0;
-  useDiagScale = 0;
-
 }
 
 int GetInfoFromModPara(int *bufInt, double *bufDouble) {
@@ -1968,10 +1933,6 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               NStoreO = (int) dtmp;
             } else if (CheckWords(ctmp, "NSRCG") == 0) {
               NSRCG = (int) dtmp;
-            } else if (CheckWords(ctmp, "RescaleSmat") == 0) {
-              RescaleSmat = (int) dtmp;
-            } else if (CheckWords(ctmp, "useDiagScale") == 0) {
-              useDiagScale = (int) dtmp;
 //RBM
             } else if (CheckWords(ctmp, "Nneuron") == 0) {
               bufInt[IdxNneuron] = (int) dtmp;
@@ -1998,10 +1959,9 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
         default:
           break;
       }
-      fclose(fp);
     }
   }
-  //fclose(fp);
+  fclose(fp);
   fprintf(stdout, "End: Read ModPara File .\n");
   return iret;
 }
@@ -2145,8 +2105,6 @@ int GetInfoOpt(FILE *fp, int *ArrayOpt, int iComplxFlag, int *iTotalOptCount, in
     fscanf(fp, "%d\n", &(ArrayOpt[2 * fidx])); // TBC real
     if(iComplxFlag>0){
       ArrayOpt[2 * fidx + 1] = ArrayOpt[2 * fidx]; //  TBC imaginary
-    }else{
-      ArrayOpt[2 * fidx + 1] = 0;
     }
     fidx++;
     (iLocalOptCount)++;

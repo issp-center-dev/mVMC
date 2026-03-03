@@ -271,15 +271,11 @@ void FreeMemoryDef() {
   free(CisAjsIdx);
   free(QPTransSgn);
   free(QPTrans);
-  free(QPTransInv);
   free(OrbitalIdx);
-  free(OrbitalSgn);
   free(DoublonHolon4siteIdx);
   free(DoublonHolon2siteIdx);
   free(JastrowIdx);
   free(ParaTransfer);
-  free(ParaCoulombIntra);
-  free(ParaQPTrans);
   free(ExchangeCoupling);
   free(PairHopping);
   free(HundCoupling);
@@ -363,11 +359,7 @@ void SetMemory() {
   InvM = (double complex*)malloc( sizeof(double complex)*(NQPFull*(Nsize*Nsize+1)) );
   PfM = InvM + NQPFull*Nsize*Nsize;
 // for real TBC
-  if (AllComplexFlag == 0){
-    SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
-    InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
-    PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
-  }
+  SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
 
   if (FlagRBM) {
     SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
@@ -384,6 +376,8 @@ void SetMemory() {
       BFSubIdx[i] = (int*)malloc(sizeof(int)*NrangeIdx);
     }
   }
+  InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
+  PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
 
   /***** Quantum Projection *****/
   QPFullWeight = (double complex*)malloc(sizeof(double complex)*(NQPFull+NQPFix+5*NSPGaussLeg));
@@ -408,17 +402,15 @@ void SetMemory() {
       SROptO  = SROptHO + 2*SROptSize;  //TBC
     }
 //for real
-    if (AllComplexFlag == 0){
-      if(NSRCG==0){
-        SROptOO_real = (double*)malloc( sizeof(double )*SROptSize*(SROptSize+2)) ; //TBC
-        SROptHO_real = SROptOO_real + (SROptSize)*(SROptSize); //TBC
-        SROptO_real  = SROptHO_real + (SROptSize);  //TBC
-      }else{
-        // OO contains only <O_i> and <O_i O_i> in SR-CG
-        SROptOO_real = (double*)malloc( sizeof(double )*SROptSize*4) ; //TBC
-        SROptHO_real = SROptOO_real + SROptSize*2; //TBC
-        SROptO_real  = SROptHO_real + SROptSize;  //TBC
-      }
+    if(NSRCG==0){
+      SROptOO_real = (double*)malloc( sizeof(double )*SROptSize*(SROptSize+2)) ; //TBC
+      SROptHO_real = SROptOO_real + (SROptSize)*(SROptSize); //TBC
+      SROptO_real  = SROptHO_real + (SROptSize);  //TBC
+    }else{
+      // OO contains only <O_i> and <O_i O_i> in SR-CG
+      SROptOO_real = (double*)malloc( sizeof(double )*SROptSize*4) ; //TBC
+      SROptHO_real = SROptOO_real + SROptSize*2; //TBC
+      SROptO_real  = SROptHO_real + SROptSize;  //TBC
     }
 
     if(NSRCG==1 || NStoreO!=0){
@@ -489,17 +481,6 @@ void FreeMemory() {
   if(NVMCCalMode==0){
     free(SROptData);
     free(SROptOO);
-    //for real
-    if (AllComplexFlag == 0){
-        free(SROptOO_real);
-    }
-    if(NSRCG==1 || NStoreO!=0){
-      if(AllComplexFlag==0){ //real & sz=0
-        free(SROptO_Store_real);
-      }else{
-        free(SROptO_Store);
-      }
-    }
   }
 
   free(QPFullWeight);
@@ -507,18 +488,11 @@ void FreeMemory() {
   free(InvM);
   free(SlaterElm);
 
-  if (AllComplexFlag == 0){
-    free(InvM_real);
-    free(SlaterElm_real);
-  }
-
   free(BurnEleIdx);
   free(TmpEleIdx);
   free(logSqPfFullSlater);
   free(EleProjCnt);
   free(EleIdx);
-  free(EleNum);
-  free(EleSpn);
   free(EleCfg);
 
   free(Para);
