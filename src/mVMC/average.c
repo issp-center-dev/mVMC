@@ -212,8 +212,7 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
   double *vec_real;
   /* Green functions */
   /* CisAjs, CisAjsCktAlt and CisAjsCktAltDC */
-  //n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
-  n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NTwist;
+  n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
   vec = PhysCisAjs;
   weightAverageReduce_fcmp(n,vec,comm);
   
