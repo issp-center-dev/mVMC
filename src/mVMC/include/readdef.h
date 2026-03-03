@@ -91,7 +91,7 @@ enum KWIdxInt{
 /**
  * File Name List in NameListFile.
  **/
-static char (*cFileNameListFile)[D_CharTmpReadDef];
+extern char (*cFileNameListFile)[D_CharTmpReadDef];
 
 
 enum ParamIdxInt{

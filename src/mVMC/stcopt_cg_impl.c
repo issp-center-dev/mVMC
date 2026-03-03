@@ -107,6 +107,9 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   double complex *para=Para;
   double *VecCG;
   double *r;
+  int std_info;
+  int fallback_iter;
+  static int fallback_info_printed = 0;
 
 
   int rank,size;
@@ -188,6 +191,30 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 
   if (useDiagScale){
     info = fn_StochasticOptPreconCG_DiagScale_Main(nSmat, VecCG, comm);
+    if (info < 0) {
+      fallback_iter = -info - 1;
+      if (fallback_iter < 0) fallback_iter = 0;
+      if (rank == 0) {
+        if (!fallback_info_printed) {
+          fprintf(stderr,
+                  "remark: in zqp_SRinfo.dat, negative info means "
+                  "DiagScale fallback at iteration (info=-(iter+1)).\n");
+          fallback_info_printed = 1;
+        }
+        fprintf(stderr,
+                "warning: preconditioned CG became numerically unstable at "
+                "iter=%d. Fallback to standard CG.\n",
+                fallback_iter);
+      }
+      fn_StochasticOptCG_Init(nSmat, smatToParaIdx, VecCG);
+      std_info = fn_StochasticOptCG_Main(nSmat, VecCG, comm);
+      if (rank == 0) {
+        fprintf(stderr,
+                "remark: standard CG after fallback finished with iter=%d.\n",
+                std_info);
+      }
+      info = -(fallback_iter + 1);
+    }
   }else{
     info = fn_StochasticOptCG_Main(nSmat, VecCG, comm);
   }
@@ -274,7 +301,10 @@ int fn_StochasticOptPreconCG_DiagScale_Main(const int nSmat, double *VecCG, MPI_
   int max_iter = (NSROptCGMaxIter > 0 ? NSROptCGMaxIter : nSmat);
   double delta, beta;
   double alpha;
+  double delta_new, dq;
   double cg_thresh = DSROptCGTol*DSROptCGTol * (double)nSmat * (double)nSmat;
+  const double precon_factor = 1.0 + DSROptStaDel;
+  const double precon_diag_eps = 1.0e-12;
   //double cg_thresh = DSROptRedCut;
 
   double *x, *g, *sdiag, *stcO, *stcOs_real;
@@ -308,13 +338,18 @@ int fn_StochasticOptPreconCG_DiagScale_Main(const int nSmat, double *VecCG, MPI_
     r[si] = g[si]-r[si];
   }
 
-  #pragma omp parallel for default(shared) private(si)
+  #pragma omp parallel for default(shared) private(si,dq)
   #pragma loop noalias
   for(si=0;si<nSmat;++si) {
-    d[si] = r[si]/((1.0+DSROptStaDel)*sdiag[si]);
+    dq = precon_factor * sdiag[si];
+    if (!isfinite(dq) || fabs(dq) < precon_diag_eps) {
+      dq = (dq < 0.0 ? -precon_diag_eps : precon_diag_eps);
+    }
+    d[si] = r[si]/dq;
   }
 
   delta = xdot(nSmat, r, d);
+  if (!isfinite(delta)) return -(0+1);
 
   for(iter=0; iter < max_iter; iter++){
     //check convergence 
@@ -322,11 +357,15 @@ int fn_StochasticOptPreconCG_DiagScale_Main(const int nSmat, double *VecCG, MPI_
 #ifdef _DEBUG_STCOPT_CG
     fprintf(stderr, "delta = %lg, cg_thresh = %lg\n", delta, cg_thresh);
 #endif
-    if (delta < cg_thresh) break;
+    if (!isfinite(delta)) return -(iter+1);
+    if (fabs(delta) < cg_thresh) break;
 
     // compute vector q=S*d
     fn_operate_by_S(nSmat, d, q, VecCG, comm);
-    alpha = delta/xdot(nSmat,d,q);
+    dq = xdot(nSmat,d,q);
+    if (!isfinite(dq) || fabs(dq) < 1.0e-20) return -(iter+1);
+    alpha = delta/dq;
+    if (!isfinite(alpha)) return -(iter+1);
   
     // update solution vector x=x+alpha*d
     #pragma omp parallel for default(shared) private(si)
@@ -350,15 +389,23 @@ int fn_StochasticOptPreconCG_DiagScale_Main(const int nSmat, double *VecCG, MPI_
       }
     }
 
-    #pragma omp parallel for default(shared) private(si)
+    #pragma omp parallel for default(shared) private(si,dq)
     #pragma loop noalias
     for(si=0;si<nSmat;++si) {
-      q[si] = r[si]/((1.0+DSROptStaDel)*sdiag[si]);
+      dq = precon_factor * sdiag[si];
+      if (!isfinite(dq) || fabs(dq) < precon_diag_eps) {
+        dq = (dq < 0.0 ? -precon_diag_eps : precon_diag_eps);
+      }
+      q[si] = r[si]/dq;
     }
-    beta = xdot(nSmat,r,q)/delta;
+    delta_new = xdot(nSmat,r,q);
+    if (!isfinite(delta_new)) return -(iter+1);
+    if (fabs(delta) < 1.0e-20) return -(iter+1);
+    beta = delta_new/delta;
+    if (!isfinite(beta)) return -(iter+1);
 
     //update the norm of residual vector r
-    delta = beta*delta;
+    delta = delta_new;
     // update direction vector d
     #pragma omp parallel for default(shared) private(si)
     #pragma loop noalias
