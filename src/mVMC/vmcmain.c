@@ -270,6 +270,8 @@ int main(int argc, char* argv[])
       info=1;
     }
   }
+  // free fileDefList
+  if(rank0==0) free(cFileNameListFile);
   if(rank0==0) fprintf(stdout,"End  : Initialize parameters.\n");
   //[e] add read parameters respectively
   

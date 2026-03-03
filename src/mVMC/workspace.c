@@ -67,12 +67,16 @@ void FreeWorkSpaceAll() {
   for(i=0;i<NThread;i++) {
     free(WorkSpaceThreadInt[i]);
     free(WorkSpaceThreadDouble[i]);
+    free(WorkSpaceThreadComplex[i]);
   }
 
+  free(WorkSpaceThreadComplexNow);
+  free(WorkSpaceThreadComplex);
   free(WorkSpaceThreadDoubleNow);
   free(WorkSpaceThreadDouble);
   free(WorkSpaceThreadIntNow);
   free(WorkSpaceThreadInt);
+  free(WorkSpaceComplex);
   free(WorkSpaceDouble);
   free(WorkSpaceInt);
 
