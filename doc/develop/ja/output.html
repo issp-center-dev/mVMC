@@ -101,6 +101,9 @@
 <tr class="row-odd"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
 <td><p>二体グリーン関数.</p></td>
 </tr>
+<tr class="row-even"><td><p>xxx_twist_yyy.dat</p></td>
+<td><p>Twist演算子の期待値.</p></td>
+</tr>
 </tbody>
 </table>
 <section id="opt-dat">
@@ -358,6 +361,35 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 </ul>
 </section>
 </section>
+<section id="xxx-twist-yyy-dat">
+<h2>xxx_twist_yyy.dat<a class="headerlink" href="#xxx-twist-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p>Twist指定ファイルで指定されたTwist演算子 <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span> の計算結果を出力します。xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。以下にファイル例を記載します。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>-8.450000000179783144e-02  -5.022947287359245602e-03  8.464915829324838603e-02  -3.082219356298420809e+00
+9.193000000026863017e-01  2.424870552459427574e-03  9.193031980810983939e-01  2.637729716822964383e-03
+…
+</pre></div>
+</div>
+<section id="id6">
+<h3>ファイル形式<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p></li>
+</ul>
+</section>
+<section id="id7">
+<h3>パラメータ<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h3>
+<ul>
+<li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p>
+<p><strong>形式 :</strong> double型</p>
+<div class="line-block">
+<div class="line"><strong>説明 :</strong>
+<span class="math notranslate nohighlight">\(P^{(\alpha)}\)</span> の値を表します。</div>
+<div class="line"><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span> が実部、 <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span> が虚部、<span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span> が絶対値、 <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span> が位相(<span class="math notranslate nohighlight">\(\arg P^{(\alpha)}\)</span>)を表します。</div>
+</div>
+</li>
+</ul>
+</section>
+</section>
 <section id="xxx-ls-out-yyy-dat">
 <h2>xxx_ls_out_yyy.dat<a class="headerlink" href="#xxx-ls-out-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>Power Lanczos法により求めた <span class="math notranslate nohighlight">\(\langle H \rangle\)</span>,
@@ -416,6 +448,11 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#xxx-cisajscktalt-yyy-dat">xxx_cisajscktalt_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id4">ファイル形式</a></li>
 <li><a class="reference internal" href="#id5">パラメータ</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
+<li><a class="reference internal" href="#id6">ファイル形式</a></li>
+<li><a class="reference internal" href="#id7">パラメータ</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>

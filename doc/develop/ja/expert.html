@@ -179,6 +179,10 @@ c_{i\sigma_1}^{\dagger}c_{j\sigma_2}^{\dagger} \right]^{N/2}|0 \rangle,\]</div>
 <li><p>出力:</p>
 <p><strong>OneBodyG (greenone.def)</strong>:出力する一体Green関数を指定します。</p>
 <p><strong>TwoBodyG (greentwo.def)</strong>:出力する二体Green関数を指定します。</p>
+<p><strong>Twist (twist.def)</strong>:出力するTwist演算子を指定します。</p>
+</li>
+<li><p>その他:</p>
+<p><strong>Lattice (lattice.def)</strong>:サイト番号に対するユニットセル内部座標を含めた格子ベクトルを指定します。Twist演算子計算時に使用されます。</p>
 </li>
 </ol>
 <section id="namelist-def">
@@ -335,6 +339,12 @@ TransSymです。それ以外のキーワードについては、指定がない
 </tr>
 <tr class="row-odd"><td><p>TwoBodyG</p></td>
 <td><p>出力する二体グリーン関数を指定します。</p></td>
+</tr>
+<tr class="row-even"><td><p>Twist</p></td>
+<td><p>出力するTwist演算子を指定します。</p></td>
+</tr>
+<tr class="row-odd"><td><p>Lattice</p></td>
+<td><p>サイト番号に対するユニットセル内部座標を含めた格子ベクトルを指定します。Twist演算子計算時に使用されます。</p></td>
 </tr>
 </tbody>
 </table>
@@ -1644,7 +1654,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 <p>RBM因子</p>
 <div class="math notranslate nohighlight">
 \[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
-<p>のうち、 <span class="math notranslate nohighlight">\(\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] ` の隠れ層のみが関わる箇所の設定を行います。指定するパラメータは隠れニューロンの番号 :math:`k\)</span> と <span class="math notranslate nohighlight">\(h_{k}\)</span> の変分パラメータの番号です。以下にファイル例を記載します。</p>
+<p>のうち、 <span class="math notranslate nohighlight">\(\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\)</span> の隠れ層のみが関わる箇所の設定を行います。指定するパラメータは隠れニューロンの番号 <span class="math notranslate nohighlight">\(k\)</span> と <span class="math notranslate nohighlight">\(h_{k}\)</span> の変分パラメータの番号です。以下にファイル例を記載します。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--------------------</span>
 <span class="n">NRBM_HiddenLayerIdx</span> <span class="mi">2</span>
 <span class="n">ComplexType</span> <span class="mi">1</span>
@@ -1733,7 +1743,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 <p>RBM因子</p>
 <div class="math notranslate nohighlight">
 \[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
-<p>のうち、 <span class="math notranslate nohighlight">\(\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] ` の隠れ層と物理層どちらも関わる箇所の設定を行います。指定するパラメータはサイト番号、スピン番号、および隠れニューロンの番号 :math:`i \sigma k\)</span> と <span class="math notranslate nohighlight">\(W_{i \sigma k}\)</span> の変分パラメータの番号です。以下にファイル例を記載します。</p>
+<p>のうち、 <span class="math notranslate nohighlight">\(\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\)</span> の隠れ層と物理層どちらも関わる箇所の設定を行います。 指定するパラメータはサイト番号、スピン番号、および隠れニューロンの番号 <span class="math notranslate nohighlight">\(i \sigma k\)</span> と <span class="math notranslate nohighlight">\(W_{i \sigma k}\)</span> の変分パラメータの番号です。以下にファイル例を記載します。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--------------------</span>
 <span class="n">NRBM_HiddenLayerIdx</span> <span class="mi">32</span>
 <span class="n">ComplexType</span> <span class="mi">1</span>
@@ -2452,6 +2462,169 @@ NCisAjsCktAltDC        576
 </aside>
 </section>
 </section>
+<section id="twist-twist-def">
+<h2>Twist指定ファイル(twist.def)<a class="headerlink" href="#twist-twist-def" title="この見出しへのパーマリンク">¶</a></h2>
+<p>計算・出力するTwist演算子 <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span> を指定します。位置演算子 <span class="math notranslate nohighlight">\(\mu_i\)</span> はLattice指定ファイル(lattice.def)で定義します。
+以下にファイル例を記載します。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>--------------------
+NTwist      2
+--------------------
+idx_site_s_x_y_z
+--------------------
+0   0       0       0.0     0.0     0.0
+0   1       0       0.0     0.0     0.0
+0   2       0       0.0     0.0     0.0
+0   3       0       0.0     0.0     0.0
+0   4       0       0.0     0.0     0.0
+0   5       0       0.0     0.0     0.0
+0   0       1       0.3333333333    0.0     0.0
+0   1       1       0.3333333333    0.0     0.0
+0   2       1       0.3333333333    0.0     0.0
+0   3       1       0.3333333333    0.0     0.0
+0   4       1       0.3333333333    0.0     0.0
+0   5       1       0.3333333333    0.0     0.0
+1   0       0       0.3333333333    0.0     0.0
+1   1       0       0.3333333333    0.0     0.0
+    …
+</pre></div>
+</div>
+<section id="id79">
+<h3>ファイル形式<a class="headerlink" href="#id79" title="この見出しへのパーマリンク">¶</a></h3>
+<p>以下のように行数に応じ異なる形式をとります。</p>
+<ul class="simple">
+<li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
+<li><p>2行: [string01] [int01]</p></li>
+<li><p>3-5行: ヘッダ(何が書かれても問題ありません)。</p></li>
+<li><p>6行以降:
+[int02]  [int03]  [int04]  [double01]  [double02]  [double03]</p></li>
+</ul>
+</section>
+<section id="id80">
+<h3>パラメータ<a class="headerlink" href="#id80" title="この見出しへのパーマリンク">¶</a></h3>
+<ul>
+<li><p>[ string01 ]</p>
+<p><strong>形式 :</strong> string型 (空白不可)</p>
+<p><strong>説明 :</strong> Twist演算子の総数のキーワード名を指定します(任意)。</p>
+</li>
+<li><p>[ int01 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong> Twist演算子の総数を指定します。</p>
+</li>
+<li><p>[ int02 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong>
+Twist演算子の番号 <span class="math notranslate nohighlight">\(\alpha\)</span> を指定する整数。0以上 [ int01 ] 未満で指定します。</p>
+</li>
+<li><p>[ int03 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong>
+サイト番号を指定する整数。0以上 <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> 未満で指定します。</p>
+</li>
+<li><p>[ int04 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<div class="line-block">
+<div class="line"><strong>説明 :</strong> スピンを指定する整数。</div>
+<div class="line">0: アップスピン</div>
+<div class="line">1: ダウンスピン</div>
+<div class="line">を選択することが出来ます。</div>
+</div>
+</li>
+<li><p>[ double01 ], [ double02 ],
+[ double03 ]</p>
+<p><strong>形式 :</strong> double型 (空白不可)</p>
+<p><strong>説明 :</strong> 各座標方向 <span class="math notranslate nohighlight">\(\mu = x, y, z\)</span> に対応するTwist成分
+<span class="math notranslate nohighlight">\(c^{(\alpha)\mu}_{i\sigma}\)</span> を指定します。 <span class="math notranslate nohighlight">\(x\)</span> 方向成分を [ double01 ]、 <span class="math notranslate nohighlight">\(y\)</span> 方向成分を [ double02 ]、 <span class="math notranslate nohighlight">\(z\)</span> 方向成分を [ double03 ] に指定します。</p>
+</li>
+</ul>
+</section>
+<section id="id81">
+<h3>使用ルール<a class="headerlink" href="#id81" title="この見出しへのパーマリンク">¶</a></h3>
+<p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
+<ul class="simple">
+<li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
+<li><p>各Twist演算子を指定するにあたり、全てのサイト・スピンの組み合わせを指定する必要があります。</p></li>
+</ul>
+</section>
+</section>
+<section id="lattice-lattice-def">
+<h2>Lattice指定ファイル(lattice.def)<a class="headerlink" href="#lattice-lattice-def" title="この見出しへのパーマリンク">¶</a></h2>
+<p>サイト番号 <span class="math notranslate nohighlight">\(i\)</span> に対応する位置演算子 <span class="math notranslate nohighlight">\(\mu_i\)</span> とユニットセル内の軌道番号を定義します。
+以下にファイル例を記載します。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>--------------------
+NLattice  4 4 4 2
+--------------------
+i_x_y_z_orb
+--------------------
+0 0 0 0 0
+1 0 0 0 1
+2 1 0 0 0
+3 1 0 0 1
+4 2 0 0 0
+5 2 0 0 1
+    …
+</pre></div>
+</div>
+<section id="id82">
+<h3>ファイル形式<a class="headerlink" href="#id82" title="この見出しへのパーマリンク">¶</a></h3>
+<p>以下のように行数に応じ異なる形式をとります。</p>
+<ul class="simple">
+<li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
+<li><p>2行: [string01] [int01] [int02]  [int03]  [int04]</p></li>
+<li><p>3-5行: ヘッダ(何が書かれても問題ありません)。</p></li>
+<li><p>6行以降:
+[int05]  [int06]  [int07]  [int08]  [int09]</p></li>
+</ul>
+</section>
+<section id="id83">
+<h3>パラメータ<a class="headerlink" href="#id83" title="この見出しへのパーマリンク">¶</a></h3>
+<ul>
+<li><p>[ string01 ]</p>
+<p><strong>形式 :</strong> string型 (空白不可)</p>
+<p><strong>説明 :</strong> キーワード名を指定します(任意)。</p>
+</li>
+<li><p>[ int01 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong> 位置演算子 <span class="math notranslate nohighlight">\(\mu\)</span> の <span class="math notranslate nohighlight">\(x\)</span> 方向の最大値を指定します。</p>
+</li>
+<li><p>[ int02 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong> 位置演算子 <span class="math notranslate nohighlight">\(\mu\)</span> の <span class="math notranslate nohighlight">\(y\)</span> 方向の最大値を指定します。</p>
+</li>
+<li><p>[ int03 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong> 位置演算子 <span class="math notranslate nohighlight">\(\mu\)</span> の <span class="math notranslate nohighlight">\(z\)</span> 方向の最大値を指定します。</p>
+</li>
+<li><p>[ int04 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<div class="line-block">
+<div class="line"><strong>説明 :</strong> ユニットセル内の軌道数を指定します。</div>
+</div>
+</li>
+<li><p>[ int05 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong>
+サイト番号を指定する整数。0以上 <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> 未満で指定します。</p>
+</li>
+<li><p>[ int06 ], [ int07 ],
+[ int08 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong> サイト番号 [ int05 ] に対応するユニットセル位置演算子 <span class="math notranslate nohighlight">\(\mu_i\)</span> の各座標方向 <span class="math notranslate nohighlight">\(\mu = x, y, z\)</span> の値を指定します。 <span class="math notranslate nohighlight">\(x, y, z\)</span> 方向成分をそれぞれ 0以上かつ [ int01 ], [ int02 ], [ int03 ] 未満で指定します。</p>
+</li>
+<li><p>[ int09 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong> サイト番号 [ int05 ] に対応するユニットセル内の軌道番号を指定します。0以上 [ int04 ] 未満で指定します。</p>
+</li>
+</ul>
+</section>
+<section id="id84">
+<h3>使用ルール<a class="headerlink" href="#id84" title="この見出しへのパーマリンク">¶</a></h3>
+<p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
+<ul class="simple">
+<li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
+<li><p>全てのサイト番号を指定する必要があります。</p></li>
+</ul>
+</section>
+</section>
 </section>
 
 
@@ -2610,6 +2783,18 @@ NCisAjsCktAltDC        576
 <li><a class="reference internal" href="#id74">ファイル形式</a></li>
 <li><a class="reference internal" href="#id75">パラメータ</a></li>
 <li><a class="reference internal" href="#id76">使用ルール</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#twist-twist-def">Twist指定ファイル(twist.def)</a><ul>
+<li><a class="reference internal" href="#id79">ファイル形式</a></li>
+<li><a class="reference internal" href="#id80">パラメータ</a></li>
+<li><a class="reference internal" href="#id81">使用ルール</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#lattice-lattice-def">Lattice指定ファイル(lattice.def)</a><ul>
+<li><a class="reference internal" href="#id82">ファイル形式</a></li>
+<li><a class="reference internal" href="#id83">パラメータ</a></li>
+<li><a class="reference internal" href="#id84">使用ルール</a></li>
 </ul>
 </li>
 </ul>

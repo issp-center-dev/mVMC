@@ -106,6 +106,9 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 <tr class="row-odd"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
 <td><p>Correlation functions.</p></td>
 </tr>
+<tr class="row-even"><td><p>xxx_twist_yyy.dat</p></td>
+<td><p>Twist operators.</p></td>
+</tr>
 </tbody>
 </table>
 <section id="output-file-for-variational-parameters-opt-dat">
@@ -370,6 +373,35 @@ respectively.</p>
 </ul>
 </section>
 </section>
+<section id="xxx-twist-yyy-dat">
+<h2>xxx_twist_yyy.dat<a class="headerlink" href="#xxx-twist-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<p>This file is the outputted files for the Twist operator  <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span>. The target components are set in the input file with the keyword “Twist”. Here, xxx is the header indicated by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file and yyy is a number given by <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code>, where both <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> and <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> are defined in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file. An example of the file format is as follows.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>-8.450000000179783144e-02  -5.022947287359245602e-03  8.464915829324838603e-02  -3.082219356298420809e+00
+9.193000000026863017e-01  2.424870552459427574e-03  9.193031980810983939e-01  2.637729716822964383e-03
+…
+</pre></div>
+</div>
+<section id="id3">
+<h3>File format<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>Parameters<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p>
+<p><strong>Type :</strong> double</p>
+<div class="line-block">
+<div class="line"><strong>Description :</strong></div>
+<div class="line">These represent the value of the Twist operator
+<span class="math notranslate nohighlight">\(P^{(\alpha)}\)</span>.</div>
+<div class="line"><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span> is the real part, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span> is the imaginary part, <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span> is the absolute value, and <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span> is the phase (<span class="math notranslate nohighlight">\(\arg P^{(\alpha)}\)</span>).</div>
+</div>
+</li>
+</ul>
+</section>
+</section>
 <section id="xxx-ls-out-yyy-dat">
 <h2>xxx_ls_out_yyy.dat<a class="headerlink" href="#xxx-ls-out-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file is the outputted files for <span class="math notranslate nohighlight">\(\langle H \rangle\)</span>,
@@ -434,6 +466,11 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 <li><a class="reference internal" href="#xxx-cisajscktalt-yyy-dat">xxx_cisajscktalt_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id1">File format</a></li>
 <li><a class="reference internal" href="#id2">Parameters</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
+<li><a class="reference internal" href="#id3">File format</a></li>
+<li><a class="reference internal" href="#id4">Parameters</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>

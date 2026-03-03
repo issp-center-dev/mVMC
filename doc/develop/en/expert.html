@@ -180,6 +180,11 @@ in <span class="math notranslate nohighlight">\({\cal P}_{d-h}^{(4)}\)</span>.</
 functions to output.</p>
 <p><strong>TwoBodyG (greentwo.def)</strong>: Set the components of two-body green
 functions to output.</p>
+<p><strong>Twist (twist.def)</strong>: Set the components of twist operators to
+output.</p>
+</li>
+<li><p>Others:</p>
+<p><strong>Lattice (lattice.def)</strong>: Set the position of each site.</p>
 </li>
 </ol>
 <section id="list-file-for-input-files-namelist-def">
@@ -337,6 +342,12 @@ and “TransSym”.</p></li>
 </tr>
 <tr class="row-odd"><td><p>TwoBodyG</p></td>
 <td><p>Output components for Correlation functions <span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>Twist</p></td>
+<td><p>Output components for Twist operators <span class="math notranslate nohighlight">\(\langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>Lattice</p></td>
+<td><p>Position of each site.</p></td>
 </tr>
 </tbody>
 </table>
@@ -2623,6 +2634,163 @@ range from the defined values.</p></li>
 </ul>
 </section>
 </section>
+<section id="twist-file-twist-def">
+<h2>Twist file (twist.def)<a class="headerlink" href="#twist-file-twist-def" title="Permalink to this heading">¶</a></h2>
+<p>This file sets the target components to calculate and output the
+Twist operator
+<span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span>.
+Position operator <span class="math notranslate nohighlight">\(\mu_i\)</span> is defined in Lattice definition file (lattice.def).
+An example of file format is shown as follows.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>--------------------
+NTwist      2
+--------------------
+idx_site_s_x_y_z
+--------------------
+0   0       0       0.0     0.0     0.0
+0   1       0       0.0     0.0     0.0
+0   2       0       0.0     0.0     0.0
+0   3       0       0.0     0.0     0.0
+0   4       0       0.0     0.0     0.0
+0   5       0       0.0     0.0     0.0
+0   0       1       0.3333333333    0.0     0.0
+0   1       1       0.3333333333    0.0     0.0
+0   2       1       0.3333333333    0.0     0.0
+0   3       1       0.3333333333    0.0     0.0
+0   4       1       0.3333333333    0.0     0.0
+0   5       1       0.3333333333    0.0     0.0
+1   0       0       0.3333333333    0.0     0.0
+1   1       0       0.3333333333    0.0     0.0
+    …
+</pre></div>
+</div>
+<section id="id69">
+<h3>File format<a class="headerlink" href="#id69" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Line 1: Header</p></li>
+<li><p>Line 2: [string01] [int01]</p></li>
+<li><p>Lines 3 - 5: Header</p></li>
+<li><p>Lines 6 -:
+[int02]  [int03]  [int04]  [double01]  [double02]  [double03]</p></li>
+</ul>
+</section>
+<section id="id70">
+<h3>Parameters<a class="headerlink" href="#id70" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>[ string01 ]</p>
+<p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> A keyword for total number of Twist operators. You can freely give a name of the keyword.</p>
+</li>
+<li><p>[ int01 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving the total number of Twist operators.</p>
+</li>
+<li><p>[ int02 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong>
+An integer giving a Twist operator index <span class="math notranslate nohighlight">\(\alpha\)</span>. You can specify it as an integer from 0 to [ int01 ]-1.</p>
+</li>
+<li><p>[ int03 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong>
+An integer giving a site index (0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int03 ] <span class="math notranslate nohighlight">\(&lt;\)</span> <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>).</p>
+</li>
+<li><p>[ int04 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong>
+An integer giving a spin index,
+0: up-spin,
+1: down-spin.</p>
+</li>
+<li><p>[ double01 ], [ double02 ],
+[ double03 ]</p>
+<p><strong>Type :</strong> double-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> <span class="math notranslate nohighlight">\(c^{(\alpha)\mu}_{i\sigma}\)</span> for <span class="math notranslate nohighlight">\(\mu = x, y, z\)</span>, <span class="math notranslate nohighlight">\(c^{(\alpha)\mu}_{i\sigma}\)</span>. You need to specify the <span class="math notranslate nohighlight">\(x\)</span> direction component as [ double01 ], the <span class="math notranslate nohighlight">\(y\)</span> direction component as [ double02 ], and the <span class="math notranslate nohighlight">\(z\)</span> direction component as [ double03 ].</p>
+</li>
+</ul>
+</section>
+<section id="id71">
+<h3>Use rules<a class="headerlink" href="#id71" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Headers cannot be omitted.</p></li>
+<li><p>All the combinations of sites and spins must be specified to designate each Twist operator.</p></li>
+</ul>
+</section>
+</section>
+<section id="lattice-file-lattice-def">
+<h2>Lattice file (lattice.def)<a class="headerlink" href="#lattice-file-lattice-def" title="Permalink to this heading">¶</a></h2>
+<p>This file defines the position operator <span class="math notranslate nohighlight">\(\mu_i\)</span> corresponding to site number <span class="math notranslate nohighlight">\(i\)</span> and the orbital number in the unit cell.
+An example of file format is shown as follows.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>--------------------
+NLattice  4 4 4 2
+--------------------
+i_x_y_z_orb
+--------------------
+0 0 0 0 0
+1 0 0 0 1
+2 1 0 0 0
+3 1 0 0 1
+4 2 0 0 0
+5 2 0 0 1
+    …
+</pre></div>
+</div>
+<section id="id72">
+<h3>File format<a class="headerlink" href="#id72" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Line 1: Header</p></li>
+<li><p>Line 2: [string01] [int01] [int02]  [int03]  [int04]</p></li>
+<li><p>Lines 3 - 5: Header</p></li>
+<li><p>Lines 6 -: [int05]  [int06]  [int07]  [int08]  [int09]</p></li>
+</ul>
+</section>
+<section id="id73">
+<h3>Parameters<a class="headerlink" href="#id73" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>[ string01 ]</p>
+<p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> A keyword name (optional).</p>
+</li>
+<li><p>[ int01 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving the maximum value in the <span class="math notranslate nohighlight">\(x\)</span> direction for the position operator <span class="math notranslate nohighlight">\(\mu\)</span>.</p>
+</li>
+<li><p>[ int02 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving the maximum value in the <span class="math notranslate nohighlight">\(y\)</span> direction for the position operator <span class="math notranslate nohighlight">\(\mu\)</span>.</p>
+</li>
+<li><p>[ int03 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving the maximum value in the <span class="math notranslate nohighlight">\(z\)</span> direction for the position operator <span class="math notranslate nohighlight">\(\mu\)</span>.</p>
+</li>
+<li><p>[ int04 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving the number of orbitals in the unit cell.</p>
+</li>
+<li><p>[ int05 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong>
+An integer giving a site index (0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int05 ] <span class="math notranslate nohighlight">\(&lt;\)</span> <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>).</p>
+</li>
+<li><p>[ int06 ], [ int07 ],
+[ int08 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving the position operator <span class="math notranslate nohighlight">\(\mu_i\)</span> for site number [ int05 ] in each coordinate direction <span class="math notranslate nohighlight">\(\mu = x, y, z\)</span>. You can specify the <span class="math notranslate nohighlight">\(x, y, z\)</span> direction components as 0 or greater and less than [ int01 ], [ int02 ], [ int03 ].</p>
+</li>
+<li><p>[ int09 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving the orbital index in the unit cell corresponding to site number [ int05 ]. You can specify it as an integer from 0 to [ int04 ]-1.</p>
+</li>
+</ul>
+</section>
+<section id="usage-rules">
+<h3>Usage rules<a class="headerlink" href="#usage-rules" title="Permalink to this heading">¶</a></h3>
+<p>The rules for using this file are as follows:</p>
+<ul class="simple">
+<li><p>Headers cannot be omitted.</p></li>
+<li><p>All the site indices must be specified.</p></li>
+</ul>
+</section>
+</section>
 </section>
 
 
@@ -2782,6 +2950,18 @@ range from the defined values.</p></li>
 <li><a class="reference internal" href="#id66">File format</a></li>
 <li><a class="reference internal" href="#id67">Parameters</a></li>
 <li><a class="reference internal" href="#id68">Use rules</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#twist-file-twist-def">Twist file (twist.def)</a><ul>
+<li><a class="reference internal" href="#id69">File format</a></li>
+<li><a class="reference internal" href="#id70">Parameters</a></li>
+<li><a class="reference internal" href="#id71">Use rules</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#lattice-file-lattice-def">Lattice file (lattice.def)</a><ul>
+<li><a class="reference internal" href="#id72">File format</a></li>
+<li><a class="reference internal" href="#id73">Parameters</a></li>
+<li><a class="reference internal" href="#usage-rules">Usage rules</a></li>
 </ul>
 </li>
 </ul>
