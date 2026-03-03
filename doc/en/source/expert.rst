@@ -187,6 +187,13 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **TwoBodyG (greentwo.def)**: Set the components of two-body green
     functions to output.
 
+    **Twist (twist.def)**: Set the components of twist operators to
+    output.
+
+(7) Others:
+
+    **Lattice (lattice.def)**: Set the position of each site.
+
 .. _InputFileList:
     
 List file for Input files (namelist.def)
@@ -317,6 +324,10 @@ User rules
      - Output components for Green functions :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle`
    * - TwoBodyG                 
      - Output components for Correlation functions :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle`
+   * - Twist                    
+     - Output components for Twist operators :math:`\langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle`
+   * - Lattice                  
+     - Position of each site.
 
 ModPara file (modpara.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3131,3 +3142,194 @@ Use rules
 -  A program is terminated, when
    [ int02 ]-[ int09 ] are out of
    range from the defined values.
+
+
+Twist file (twist.def)
+~~~~~~~~~~~~~~~~~~~~~~
+
+This file sets the target components to calculate and output the
+Twist operator
+:math:`P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle`.
+Position operator :math:`\mu_i` is defined in Lattice definition file (lattice.def).
+An example of file format is shown as follows. 
+
+::
+
+    --------------------
+    NTwist	2
+    --------------------
+    idx_site_s_x_y_z
+    --------------------
+    0	0	0	0.0	0.0	0.0
+    0	1	0	0.0	0.0	0.0
+    0	2	0	0.0	0.0	0.0
+    0	3	0	0.0	0.0	0.0
+    0	4	0	0.0	0.0	0.0
+    0	5	0	0.0	0.0	0.0
+    0	0	1	0.3333333333	0.0	0.0
+    0	1	1	0.3333333333	0.0	0.0
+    0	2	1	0.3333333333	0.0	0.0
+    0	3	1	0.3333333333	0.0	0.0
+    0	4	1	0.3333333333	0.0	0.0
+    0	5	1	0.3333333333	0.0	0.0
+    1	0	0	0.3333333333	0.0	0.0
+    1	1	0	0.3333333333	0.0	0.0
+        …
+
+File format
+^^^^^^^^^^^
+
+-  Line 1: Header
+
+-  Line 2: [string01] [int01]
+
+-  Lines 3 - 5: Header
+
+-  Lines 6 -:
+   [int02]  [int03]  [int04]  [double01]  [double02]  [double03]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for total number of Twist operators. You can freely give a name of the keyword.
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the total number of Twist operators.
+
+-  [ int02 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :**
+   An integer giving a Twist operator index :math:`\alpha`. You can specify it as an integer from 0 to [ int01 ]-1.
+
+-  [ int03 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :**
+   An integer giving a site index (0 :math:`\leq` [ int03 ] :math:`<` ``Nsite``).
+
+-  [ int04 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :**
+   An integer giving a spin index,
+   0: up-spin,
+   1: down-spin.
+
+-  [ double01 ], [ double02 ],
+   [ double03 ]
+
+   **Type :** double-type (blank parameter not allowed)
+
+   **Description :** :math:`c^{(\alpha)\mu}_{i\sigma}` for :math:`\mu = x, y, z`, :math:`c^{(\alpha)\mu}_{i\sigma}`. You need to specify the :math:`x` direction component as [ double01 ], the :math:`y` direction component as [ double02 ], and the :math:`z` direction component as [ double03 ].
+
+Use rules
+^^^^^^^^^^
+
+-  Headers cannot be omitted.
+
+-  All the combinations of sites and spins must be specified to designate each Twist operator.
+
+Lattice file (lattice.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file defines the position operator :math:`\mu_i` corresponding to site number :math:`i` and the orbital number in the unit cell.
+An example of file format is shown as follows.
+
+::
+
+    --------------------
+    NLattice  4 4 4 2
+    --------------------
+    i_x_y_z_orb
+    --------------------
+    0 0 0 0 0
+    1 0 0 0 1
+    2 1 0 0 0
+    3 1 0 0 1
+    4 2 0 0 0
+    5 2 0 0 1
+        …
+
+File format
+^^^^^^^^^^^^
+
+- Line 1: Header
+
+- Line 2: [string01] [int01] [int02]  [int03]  [int04]
+
+- Lines 3 - 5: Header
+
+- Lines 6 -: [int05]  [int06]  [int07]  [int08]  [int09]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword name (optional).
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the maximum value in the :math:`x` direction for the position operator :math:`\mu`.
+
+-  [ int02 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the maximum value in the :math:`y` direction for the position operator :math:`\mu`.
+
+-  [ int03 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the maximum value in the :math:`z` direction for the position operator :math:`\mu`.
+
+-  [ int04 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the number of orbitals in the unit cell.
+
+-  [ int05 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :**
+   An integer giving a site index (0 :math:`\leq` [ int05 ] :math:`<` ``Nsite``).
+
+-  [ int06 ], [ int07 ],
+   [ int08 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the position operator :math:`\mu_i` for site number [ int05 ] in each coordinate direction :math:`\mu = x, y, z`. You can specify the :math:`x, y, z` direction components as 0 or greater and less than [ int01 ], [ int02 ], [ int03 ].
+
+-  [ int09 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the orbital index in the unit cell corresponding to site number [ int05 ]. You can specify it as an integer from 0 to [ int04 ]-1.
+
+Usage rules
+^^^^^^^^^^^
+
+The rules for using this file are as follows:
+
+-  Headers cannot be omitted.
+
+-  All the site indices must be specified.

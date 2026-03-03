@@ -206,6 +206,18 @@ void SetMemoryDef() {
     pInt += 8;
   }
 
+  LatticeIdx = (int**)malloc(sizeof(int*)*Nsite);
+  for(i=0;i<Nsite;i++) {
+    LatticeIdx[i] = pInt;
+    pInt += 4;
+  }
+
+  TwistIdx = (int**)malloc(sizeof(int*)*NTwist);
+  for(i=0;i<NTwist;i++) {
+    TwistIdx[i] = pInt;
+    pInt += 2*Nsite*2;
+  }
+  
   InterAll = (int**)malloc(sizeof(int*)*NInterAll);
   for(i=0;i<NInterAll;i++) {
     InterAll[i] = pInt;
@@ -247,7 +259,12 @@ void SetMemoryDef() {
 //  ParaQPTrans = pDouble;
 //  pDouble +=  NQPTrans;
 
-  
+  ParaTwist = (double**)malloc(sizeof(double*)*NTwist);
+  for(i=0;i<NTwist;i++) {
+    ParaTwist[i] = pDouble;
+    pDouble += 3*Nsite*2;
+  }
+
   ParaQPOptTrans = pDouble;
   ParaQPTrans = (double complex*)malloc(sizeof(double complex)*(NQPTrans));
 
@@ -435,10 +452,12 @@ void SetMemory() {
   /***** Physical Quantity *****/
   if(NVMCCalMode==1){
     PhysCisAjs  = (double complex*)malloc(sizeof(double complex)
-                    *(NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NCisAjs+NCisAjsCktAltDC));
+                    *(NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NCisAjs+NCisAjsCktAltDC + NTwist));
     PhysCisAjsCktAlt   = PhysCisAjs       + NCisAjs;
     PhysCisAjsCktAltDC = PhysCisAjsCktAlt + NCisAjsCktAlt;
-    LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
+    PhysTwist = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
+    LocalCisAjs = PhysTwist + NTwist;
+    //LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
     LocalCisAjsCktAltDC = LocalCisAjs + NCisAjs;
 
     if(NLanczosMode>0){
