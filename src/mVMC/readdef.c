@@ -2889,7 +2889,6 @@ int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int N
     //ArrayValue[idx][0] = dReValueX + I * dImValueX;
     //ArrayValue[idx][1] = dReValueY + I * dImValueY;
     //ArrayValue[idx][2] = dReValueZ + I * dImValueZ;
-    printf("GetInfoTwist, idx=%d, i=%d s=%d %.2e %.2e %.2e\n",idx,ArrayIdx[twist_idx][2*idx],ArrayIdx[twist_idx][2*idx+1], ArrayValue[twist_idx][3*idx], ArrayValue[twist_idx][3*idx+1], ArrayValue[twist_idx][3*idx+2] );
     idx++;
     idx0++;
     if (idx == 2*Nsite){
