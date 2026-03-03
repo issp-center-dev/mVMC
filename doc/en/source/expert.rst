@@ -634,6 +634,18 @@ Keywords and parameters
    :math:`O(N_\text{p}) + O(N_\text{p}N_\text{MCS})` when
    :math:`N_\text{p} > N_\text{MCS}`.
 
+-  ``useDiagScale``
+
+   **Type :** int-type (0 or 1, default value: 0)
+
+   **Description :** The option of using the point Jacobi method (scaling by diagonal elements of :math:`S` matrix) when solving the linear equation :math:`Sx=g` in the SR method by CG method (0: off, 1: on, ``NSRCG`` must be 1).
+
+-  ``NneuronGeneral``
+
+   **Type :** int-type (default value: 0)
+
+   **Description :** The number of neurons :math:`N_{\rm General RBM}` in the hidden layer of RBM.
+
 LocSpin file (locspn.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
