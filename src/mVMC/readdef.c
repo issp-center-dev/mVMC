@@ -201,8 +201,16 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
   char *cerr;
   int i, info = 0;
 
+  if (cFileNameListFile != NULL) {
+    free(cFileNameListFile);
+    cFileNameListFile = NULL;
+  }
   cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
-  // free at vmcmain.c
+  if (cFileNameListFile == NULL) {
+    fprintf(stderr, "  error: Memory allocation failed for filename list.\n");
+    return -1;
+  }
+  // freed at vmcmain.c
   fprintf(stdout, "  Read File %s .\n", xNameListFile);
   if (GetFileName(xNameListFile, cFileNameListFile) != 0) {
     fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
@@ -763,6 +771,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       if (rank == 0) printf("remark: use preconditioned CG (Diag Scale)\n");
     }else{
       if (rank == 0) printf("remark: not use preconditioned CG (Diag Scale) because NSRCG=%d != 1. Use direct method instead.\n",NSRCG);
+      useDiagScale = 0;
     }
   }
 

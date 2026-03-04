@@ -10,8 +10,12 @@ import numpy as np
 
 def read_out(filename):
     # drop the first two columns
-    array = np.loadtxt(filename, dtype="float").astype("float")
-    return array
+    array = np.loadtxt(filename, dtype="float")
+    if array.ndim == 1:
+        array = array[2:]
+    else:
+        array = array[:, 2:]
+    return array.astype("float")
 
 
 if len(sys.argv) == 1:
