@@ -753,7 +753,7 @@ void fn_Rescale4SRCG(MPI_Comm comm) {
   for(pi=0;pi<OFFSET*nPara;pi++) {
     /* r[i] is temporarily used for diagonal elements of S */
     /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
-    r[pi]   = creal(srOptOO[pi+OFFSET]) - creal(srOptO[pi+OFFSET]) * creal(srOptO[pi+OFFSET]);
+    r[pi]   = CREAL(srOptOO[pi+OFFSET]) - CREAL(srOptO[pi+OFFSET]) * CREAL(srOptO[pi+OFFSET]);
 #ifdef _DEBUG_STCOPT
   fprintf(stderr, "DEBUG in %s (%d): r[%d] = %lf\n", __FILE__, __LINE__, pi, r[pi]);
 #endif
