@@ -631,6 +631,25 @@ ModParaファイル (modpara.def)
 
    **説明 :** SR法での連立一次方程式 :math:`Sx=g` をCG法により解く際に、 Point Jacobi法 (:math:`S` 行列の対角スケーリング)による前処理付きCG法を使用するオプション(1で機能ON, ``NSRCG=1`` である必要がある)。
 
+   ``NSRCG=2`` を指定した場合も受理され、内部では
+   ``NSRCG=1`` かつ ``useDiagScale=1`` として扱われます。
+
+-  ``RescaleSmat``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=0)
+
+   **説明 :** SR-CGで :math:`Sx=g` を解く前に、Slater関連ブロックを
+   リスケーリングするオプション(1で機能ON)。
+   ``RescaleSmat=1`` を使う場合は ``NSRCG=1`` または ``NStore`` != 0
+   が必要です。
+   ``ModPara`` でのSR-CGの典型設定は次の通りです。
+
+   ::
+
+       NSRCG = 1
+       useDiagScale = 1
+       RescaleSmat = 1
+
 -  ``NneuronGeneral``
 
    **形式 :** int型 (デフォルト値=0)

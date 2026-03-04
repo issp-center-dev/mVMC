@@ -238,9 +238,9 @@ int fn_StochasticOptCG(MPI_Comm comm) {
       }
     }
 
-    fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e % .5e % .5e %5d, %d\n",NPara,nSmat,optNum,cutNum,
+    fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e % .5e % .5e %5d %d\n",NPara,nSmat,optNum,cutNum,
             sDiagMax,sDiagMin,rmax,smatToParaIdx[simax], info);
-    //fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e %5d, %d\n",NPara,nSmat,optNum,cutNum,
+    //fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e %5d %d\n",NPara,nSmat,optNum,cutNum,
     //        rmax,smatToParaIdx[simax], info);
   }
   info=0;
