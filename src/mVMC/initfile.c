@@ -45,8 +45,13 @@ void InitFile(char *xNameListFile, int rank) {
     sprintf(fileName, "%s_SRinfo.dat", CDataFileHead);
     FileSRinfo = fopen(fileName, "w");
     if(SRFlag == 0){
-      fprintf(FileSRinfo,
-            "#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax       imax\n");
+      if (NSRCG != 0) {
+        fprintf(FileSRinfo,
+              "#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax       imax info\n");
+      } else {
+        fprintf(FileSRinfo,
+              "#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax       imax\n");
+      }
     }else{
       fprintf(FileSRinfo,
             "#Npara Msize optCut diagCut sEigenMax  sEigenMin    absRmax       imax\n");
