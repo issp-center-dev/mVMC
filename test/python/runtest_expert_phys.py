@@ -41,18 +41,26 @@ if "Twist" in sys.argv[1]:
   output_file = "./output/zvo_twist_001.dat"
 
 array_calc = read_out(output_file)
-if "Twist" in sys.argv[1]:
-  array_calc[:,3] = np.exp(1j * array_calc[:,3])
 
 num_lines = array_calc.shape[0]
 ref_ave = read_out("%s/ref/ref_mean.dat" % refdir)
 ref_std = read_out("%s/ref/ref_std.dat" % refdir)
 
 result = 0
-for diff, s in zip(array_calc - ref_ave, ref_std):
-    diff = np.abs(diff)
-    #if diff >= 3 * s and diff >= 1e-8:
-    if np.any(diff >= 3 * s):
+if "Twist" in sys.argv[1]:
+    # Columns 0-2: physical values, compare with absolute diff
+    diff_phys = np.abs(array_calc[:, 0:3] - ref_ave[:, 0:3])
+    if np.any(diff_phys >= 3 * ref_std[:, 0:3]):
         result = -1
+    # Column 3: phase from carg(...). Compare via wrap diff so a phase
+    # near +/-pi does not appear far from a phase near -/+pi.
+    phase_diff = np.angle(np.exp(1j * (array_calc[:, 3] - ref_ave[:, 3])))
+    if np.any(np.abs(phase_diff) >= 3 * ref_std[:, 3]):
+        result = -1
+else:
+    for diff, s in zip(array_calc - ref_ave, ref_std):
+        diff = np.abs(diff)
+        if np.any(diff >= 3 * s):
+            result = -1
 
 sys.exit(result)
