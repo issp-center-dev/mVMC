@@ -640,8 +640,8 @@ ModParaファイル (modpara.def)
 
    **説明 :** SR-CGで :math:`Sx=g` を解く前に、Slater関連ブロックを
    リスケーリングするオプション(1で機能ON)。
-   ``RescaleSmat=1`` を使う場合は ``NSRCG=1`` または ``NStore`` != 0
-   が必要です。
+   ``RescaleSmat=1`` を使う場合は ``NSRCG=1`` が必要です
+   (リスケーリングはSR-CG経路でのみ適用されます)。
    ``ModPara`` でのSR-CGの典型設定は次の通りです。
 
    ::

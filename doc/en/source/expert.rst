@@ -660,7 +660,7 @@ Keywords and parameters
 
    **Description :** The option of rescaling Slater-related blocks in SR-CG
    before solving :math:`Sx=g` (0: off, 1: on). ``RescaleSmat=1`` requires
-   ``NSRCG=1`` or ``NStore`` != 0.
+   ``NSRCG=1`` (the rescaling is only applied along the SR-CG path).
    Typical settings for SR-CG in ``ModPara`` are:
 
    ::

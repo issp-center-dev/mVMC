@@ -807,13 +807,12 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   }
 
   if (RescaleSmat){
-    if (!(NSRCG == 1 || NStoreO != 0)) {
+    if (NSRCG != 1) {
       if (rank == 0) {
         fprintf(stderr,
                 "error: invalid RescaleSmat configuration. "
-                "RescaleSmat=1 requires NSRCG==1 or NStoreO!=0, "
-                "but got NSRCG=%d, NStoreO=%d.\n",
-                NSRCG, NStoreO);
+                "RescaleSmat=1 requires NSRCG==1, but got NSRCG=%d.\n",
+                NSRCG);
       }
       MPI_Abort(comm, EXIT_FAILURE);
     }
