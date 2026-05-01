@@ -229,23 +229,32 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
     fp = fopen(defname, "r");
     if (fp == NULL) {
       info = ReadDefFileError(defname);
-      fclose(fp);
       continue;
     }
 
     /*=======================================================================*/
-    for (i = 0; i < IgnoreLinesInDef; i++)
+    for (i = 0; i < IgnoreLinesInDef; i++) {
       cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-      if(cerr == NULL) return(-1);
+      if (cerr == NULL) {
+        fclose(fp);
+        return (-1);
+      }
+    }
     switch (iKWidx) {
       case KWOneBodyG:
         /*cisajs.def----------------------------------------*/
-        if (GetInfoOneBodyG(fp, caIdx, iOneBodyGIdx, 0, Ns, Nca, defname) != 0) return (-1);
+        if (GetInfoOneBodyG(fp, caIdx, iOneBodyGIdx, 0, Ns, Nca, defname) != 0) {
+          fclose(fp);
+          return (-1);
+        }
         break;
       case KWTwoBodyGEx:
         /*cisajscktalt.def----------------------------------*/
         /*load as if it's DC for index rearranging----------*/
-        if (GetInfoTwoBodyG(fp, cacaIdx, Ns, Ncacadc, defname) != 0) return (-1);
+        if (GetInfoTwoBodyG(fp, cacaIdx, Ns, Ncacadc, defname) != 0) {
+          fclose(fp);
+          return (-1);
+        }
         break;
       default:
         break;
