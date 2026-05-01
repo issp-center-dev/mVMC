@@ -752,7 +752,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NQPOptTrans = bufInt[IdxNQPOptTrans];
   Nrange = bufInt[IdxNrange];
   NBackFlowIdx = bufInt[IdxNBF];
-  Nz = bufInt[IdxNNz];
+  NzBF = bufInt[IdxNNz];
   NSROptCGMaxIter = bufInt[IdxSROptCGMaxIter];
   DSROptRedCut = bufDouble[IdxSROptRedCut];
   DSROptStaDel = bufDouble[IdxSROptStaDel];
@@ -863,7 +863,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
   /* [s] For BackFlow */
   if (NBackFlowIdx > 0) {
-    NrangeIdx = 3 * (Nrange - 1) / Nz + 1; //For Nz-conectivity
+    NrangeIdx = 3 * (Nrange - 1) / NzBF + 1; //For BF connectivity
     NBFIdxTotal = (NrangeIdx - 1) * (NrangeIdx) / 2 + (NrangeIdx);
     NProjBF = NBFIdxTotal * NBackFlowIdx;
   } else {

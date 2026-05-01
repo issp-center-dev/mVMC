@@ -53,7 +53,7 @@ int Ne;    /* the number of electrons with up spin */
 int Nup;   /* the number of electrons with up spin */
 int Nsize; /* the number of electrons = 2*Ne */
 int Nsite2; /* 2*Nsite */
-int Nz; /* connecivity */
+int NzBF; /* BF connectivity */
 int TwoSz;
 
 int NSPGaussLeg; /* the number of points for the Gauss-Legendre quadrature */
@@ -301,12 +301,11 @@ double complex *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
 double complex *LocalCisAjs; /* [NCisAjs] */
 
 /* for Lattice index */
-int NLattice, Nx, Ny, Nz, Norb;
+int Nx, Ny, Nz, Norb;
 int **LatticeIdx;         /* [Nsite][4] */
 
 /* for Twist operator */
-int NTwist, NdivideTwist, **TwistIdx;         /* TwistIdx -> SiteIdx, SpinIdx */
-//int NTwist;         /* NTwist */
+int NTwist, **TwistIdx;         /* TwistIdx -> SiteIdx, SpinIdx */
 double **ParaTwist;         /* [NTwist][3*Nsite*2] */
 double complex *PhysTwist; /* [NTwist] */
 
