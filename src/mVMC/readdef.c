@@ -828,6 +828,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     SRFlag = 0;
   }
 
+  if (SRFlag != 0 && NSRCG != 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "error: SR-CG (NSRCG=%d) cannot be combined with diagonalization mode "
+              "(DSROptStepDt < 0). Use either DSROptStepDt > 0 with SR-CG, "
+              "or DSROptStepDt < 0 with NSRCG=0.\n",
+              NSRCG);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+
   Nsize = 2 * Ne;
   Nsite2 = 2 * Nsite;
   NSlater = NOrbitalIdx;
