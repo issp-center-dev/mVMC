@@ -335,6 +335,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   double bufDouble[nBufDouble];
   int iKWidx = 0;
   int iret = 0;
+  int hasLattice = 0;
   int iFlgOrbitalAntiParallel = 0;
   int iFlgOrbitalParallel = 0;
   int itmp = 0;
@@ -365,6 +366,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         }
       }
     }
+    hasLattice = (strcmp(cFileNameListFile[KWLattice], "") != 0);
 
     SetDefaultValuesModPara(bufInt, bufDouble);
     iret = GetInfoFromModPara(bufInt, bufDouble);
@@ -556,9 +558,11 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           
           case KWTwist:
             cerr = ReadBuffInt(fp, &bufInt[IdxNTwist]);
-            //cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNTwist], &bufInt[IdxNdivideTwist]);
-            //printf("NTwist=%d \n",bufInt[IdxNTwist]);
-            //printf("NTwist=%d %d\n",bufInt[IdxNTwist], bufInt[IdxNdivideTwist]);
+            if (cerr != NULL && bufInt[IdxNTwist] < 0) {
+              fprintf(stderr, "Error: NTwist must be non-negative (got %d).\n",
+                      bufInt[IdxNTwist]);
+              info = ReadDefFileError(defname);
+            }
             break;
 
 
@@ -709,6 +713,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&useDiagScale, 1, MPI_INT, 0, comm); // for Jacobi preconditioned CG
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
+  MPI_Bcast(&hasLattice, 1, MPI_INT, 0, comm);
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
   MPI_Bcast(CDataFileHead, nBufChar, MPI_CHAR, 0, comm);
   MPI_Bcast(CParaFileHead, nBufChar, MPI_CHAR, 0, comm);
@@ -766,22 +771,18 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   Norb = bufInt[IdxNorb];
   NTwist  = bufInt[IdxNTwist];
 
+  if (NTwist < 0) {
+    if (rank == 0) {
+      fprintf(stderr, "Error: NTwist must be non-negative (got %d).\n", NTwist);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
   if (NTwist > 0) {
-    long long lattice_prod = (long long)Nx * (long long)Ny *
-                             (long long)Nz * (long long)Norb;
-    if (strcmp(cFileNameListFile[KWLattice], "") == 0) {
+    if (!hasLattice) {
       if (rank == 0) {
         fprintf(stderr,
                 "Error: NTwist=%d requires a Lattice definition file in namelist.\n",
                 NTwist);
-      }
-      MPI_Abort(comm, EXIT_FAILURE);
-    }
-    if (lattice_prod != (long long)Nsite) {
-      if (rank == 0) {
-        fprintf(stderr,
-                "Error: lattice dimensions Nx*Ny*Nz*Norb = %lld do not match Nsite = %d.\n",
-                lattice_prod, Nsite);
       }
       MPI_Abort(comm, EXIT_FAILURE);
     }

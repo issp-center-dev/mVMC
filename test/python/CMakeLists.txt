@@ -32,6 +32,11 @@ function(add_python_vmc_test_expert_phys model)
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_vmc_test_expert_phys)
 
+function(add_python_vmc_test_expert_phys_mpi test_name model)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_expert_phys.py ${model})
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2")
+endfunction(add_python_vmc_test_expert_phys_mpi)
+
 
 function(add_python_vmc_test_sr model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_sr.py ${model})
@@ -127,6 +132,9 @@ endforeach(model)
 foreach(model ${python_test_vmc_model_expert_phys})
     add_python_vmc_test_expert_phys(${model})
 endforeach(model)
+
+add_python_vmc_test_expert_phys_mpi(Twist_SSH_cmp_mpi Twist_SSH_cmp)
+add_python_vmc_test_expert_phys_mpi(Twist_SSH_fsz_mpi Twist_SSH_fsz)
 
 
 foreach(model ${python_test_vmc_model_sr})

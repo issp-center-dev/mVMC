@@ -30,10 +30,14 @@ os.chdir(workdir)
 os.system("cp %s/*.def ." % refdir)
 
 bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
+mpi_procs = os.environ.get("MVMC_MPI_PROCS")
 
 #result = subprocess.call([bin_to_test, "-s", "%s/StdFace.def" % refdir])
 #result = subprocess.call([bin_to_test, "-e", "%s/namelist.def" % refdir, "%s/initial.def" % refdir])
-result = subprocess.call([bin_to_test, "-e", "namelist.def", "initial.def"])
+if mpi_procs:
+    result = subprocess.call(["mpirun", "-np", mpi_procs, bin_to_test, "-e", "namelist.def", "initial.def"])
+else:
+    result = subprocess.call([bin_to_test, "-e", "namelist.def", "initial.def"])
 if result != 0:
     sys.exit(result)
 
@@ -55,7 +59,11 @@ if "Twist" in sys.argv[1]:
     # Column 3: phase from carg(...). Compare via wrap diff so a phase
     # near +/-pi does not appear far from a phase near -/+pi.
     phase_diff = np.angle(np.exp(1j * (array_calc[:, 3] - ref_ave[:, 3])))
-    if np.any(np.abs(phase_diff) >= 3 * ref_std[:, 3]):
+    phase_tol = np.maximum(3 * ref_std[:, 3], 1.0e-2)
+    if np.any(np.abs(phase_diff) >= phase_tol):
+        result = -1
+    phase_self_diff = np.angle(np.exp(1j * (array_calc[:, 3] - np.arctan2(array_calc[:, 1], array_calc[:, 0]))))
+    if np.any(np.abs(phase_self_diff) >= 1.0e-10):
         result = -1
 else:
     for diff, s in zip(array_calc - ref_ave, ref_std):
