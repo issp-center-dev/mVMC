@@ -532,11 +532,26 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
             if (cerr != NULL) {
               cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-              sscanf(ctmp2,"%s %d %d %d %d\n", ctmp, &bufInt[IdxNx], &bufInt[IdxNy], &bufInt[IdxNz], &bufInt[IdxNorb]);
-              //printf("Nx=%d Ny=%d Nz=%d Norb=%d\n",bufInt[IdxNx], bufInt[IdxNy], bufInt[IdxNz], bufInt[IdxNorb]);
+              if (cerr != NULL) {
+                int scanned_lat = sscanf(ctmp2, "%s %d %d %d %d\n",
+                                         ctmp,
+                                         &bufInt[IdxNx], &bufInt[IdxNy],
+                                         &bufInt[IdxNz], &bufInt[IdxNorb]);
+                if (scanned_lat != 5) {
+                  fprintf(stderr,
+                          "Error: malformed lattice header (expected 'name Nx Ny Nz Norb'): %s",
+                          ctmp2);
+                  info = ReadDefFileError(defname);
+                } else if (bufInt[IdxNx] <= 0 || bufInt[IdxNy] <= 0 ||
+                           bufInt[IdxNz] <= 0 || bufInt[IdxNorb] <= 0) {
+                  fprintf(stderr,
+                          "Error: lattice dimensions must be positive (got Nx=%d Ny=%d Nz=%d Norb=%d).\n",
+                          bufInt[IdxNx], bufInt[IdxNy],
+                          bufInt[IdxNz], bufInt[IdxNorb]);
+                  info = ReadDefFileError(defname);
+                }
+              }
             }
-            //cerr = ReadBuffInt(fp, &bufInt[IdxNx], &bufInt[IdxNy], &bufInt[IdxNz], &bufInt[IdxNorb]);
-            
             break;
           
           case KWTwist:
@@ -750,6 +765,27 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   Nz = bufInt[IdxNz];
   Norb = bufInt[IdxNorb];
   NTwist  = bufInt[IdxNTwist];
+
+  if (NTwist > 0) {
+    long long lattice_prod = (long long)Nx * (long long)Ny *
+                             (long long)Nz * (long long)Norb;
+    if (strcmp(cFileNameListFile[KWLattice], "") == 0) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: NTwist=%d requires a Lattice definition file in namelist.\n",
+                NTwist);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    if (lattice_prod != (long long)Nsite) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: lattice dimensions Nx*Ny*Nz*Norb = %lld do not match Nsite = %d.\n",
+                lattice_prod, Nsite);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+  }
 
   Nneuron = bufInt[IdxNneuron];
   NneuronGeneral = bufInt[IdxNneuronGeneral];
