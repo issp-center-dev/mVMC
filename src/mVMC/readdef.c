@@ -1339,7 +1339,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           fprintf(stdout, "Read InSpinJastrow File. \n");
           if (idx != NSpinJastrowIdx) {
             info = 1;
-            continue;
+            break;
           }
           count = NGutzwillerIdx + NJastrowIdx;
           if (NSpinJastrowIdx > 0) {
@@ -1347,7 +1347,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
             if (seen == NULL) {
               fprintf(stderr, "Error: memory allocation failed in InSpinJastrow parser.\n");
               info = 1;
-              continue;
+              break;
             }
             for (i = 0; i < NSpinJastrowIdx; i++) {
               if (fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp) != 3) {
@@ -1379,7 +1379,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
               }
             }
             free(seen);
-            if (info != 0) continue;
+            if (info != 0) break;
           }
           break;
 
