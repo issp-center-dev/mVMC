@@ -709,6 +709,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&FlagRBM, 1, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
   MPI_Bcast(&NSRCG, 1, MPI_INT, 0, comm); // for NCG
+  MPI_Bcast(&NSRCGFallback, 1, MPI_INT, 0, comm); // for SR-CG fallback
+  MPI_Bcast(&NSRCGAbortOnFail, 1, MPI_INT, 0, comm); // for SR-CG failure
   MPI_Bcast(&RescaleSmat, 1, MPI_INT, 0, comm); // for Rescale S matrix
   MPI_Bcast(&useDiagScale, 1, MPI_INT, 0, comm); // for Jacobi preconditioned CG
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
@@ -806,6 +808,9 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   } //else {
   //  useDiagScale = 0;
   //}
+  NSRCGFallback = (NSRCGFallback != 0);
+  NSRCGAbortOnFail = (NSRCGAbortOnFail != 0);
+
   if (useDiagScale){
     if(NSRCG == 1){
       if (rank == 0) printf("remark: use preconditioned CG (Diag Scale)\n");
@@ -1927,6 +1932,8 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufDouble[IdxSROptCGTol] = 1.0e-10;
   NStoreO = 1;
   NSRCG = 0;
+  NSRCGFallback = 0;
+  NSRCGAbortOnFail = 1;
   RescaleSmat  = 0;
   useDiagScale = 0;
 
@@ -2048,6 +2055,10 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               NStoreO = (int) dtmp;
             } else if (CheckWords(ctmp, "NSRCG") == 0) {
               NSRCG = (int) dtmp;
+            } else if (CheckWords(ctmp, "NSRCGFallback") == 0) {
+              NSRCGFallback = (int) dtmp;
+            } else if (CheckWords(ctmp, "NSRCGAbortOnFail") == 0) {
+              NSRCGAbortOnFail = (int) dtmp;
             } else if (CheckWords(ctmp, "RescaleSmat") == 0) {
               RescaleSmat = (int) dtmp;
             } else if (CheckWords(ctmp, "useDiagScale") == 0) {

@@ -654,6 +654,23 @@ Keywords and parameters
    ``NSRCG=2`` is also accepted as a shortcut and is internally treated as
    ``NSRCG=1`` with ``useDiagScale=1``.
 
+-  ``NSRCGFallback``
+
+   **Type :** int-type (0 or 1, default value: 0)
+
+   **Description :** The option of retrying the other SR-CG solver when the
+   selected solver does not converge or becomes numerically unstable (0: off,
+   1: on). Standard CG falls back to DiagScale-CG, and DiagScale-CG falls back
+   to standard CG.
+
+-  ``NSRCGAbortOnFail``
+
+   **Type :** int-type (0 or 1, default value: 1)
+
+   **Description :** The option of aborting the calculation when SR-CG fails
+   after the optional fallback (0: warn and continue with the approximate
+   solution, 1: abort).
+
 -  ``RescaleSmat``
 
    **Type :** int-type (0 or 1, default value: 0)

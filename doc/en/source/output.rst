@@ -182,7 +182,7 @@ For ``NSRCG=0``:
 For SR-CG (``NSRCG!=0``), solver status ``info`` is appended as an
 additional column after ``imax``.
 ``info`` is the number of iterations for normal convergence.
-When DiagScale-CG falls back to standard CG due to numerical instability,
+When SR-CG falls back to the other CG solver,
 ``info`` is written as a negative value: ``info = -(iter + 1)``,
 where ``iter`` is the iteration at which fallback occurred.
 
