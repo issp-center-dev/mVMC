@@ -10,6 +10,8 @@ jobs:
   ctest:
     runs-on: ${{ matrix.os }}
 
+    name: "OS: ${{ matrix.os }}, mpitest: ${{ mpi }}, OMP: ${{ ompsize }}"
+
     strategy:
       matrix:
         os: ["ubuntu-latest"]
@@ -75,7 +77,12 @@ jobs:
         if: ${{ matrix.mpi == false }}
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: ctest --parallel 4 --output-on-failure -E '_mpi$'
+        run: |
+          if [ ${{ matrix.ompsize }} == 1 ]; then
+            ctest --parallel 4 --output-on-failure -E '_mpi$'
+          else
+            ctest --output-on-failure -E '_mpi$'
+          fi
 
       - name: ctest with MPI
         if: ${{ matrix.mpi == true }}
