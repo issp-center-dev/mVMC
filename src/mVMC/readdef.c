@@ -731,6 +731,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NGutzwillerIdx = bufInt[IdxNGutz];
   NJastrowIdx = bufInt[IdxNJast];
   NSpinJastrowIdx = bufInt[IdxNSpinJast];
+  if (NSpinJastrowIdx < 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "error: NSpinJastrowIdx (= %d) must be non-negative.\n",
+              NSpinJastrowIdx);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
   NDoublonHolon2siteIdx = bufInt[IdxNDH2];
   NDoublonHolon4siteIdx = bufInt[IdxNDH4];
   NOrbitalIdx = bufInt[IdxNOrbit];
