@@ -23,6 +23,8 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | \*\*\*\_jastrow\_opt.dat                 | Optimized jastrow factors.                                                                                             |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| \*\*\*\_spinjastrow\_opt.dat             | Optimized spin Jastrow factors.                                                                                        |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | \*\*\*\_doublonHolon2site\_opt.dat       | Optimized 2-site doublon-holon correlation factors.                                                                    |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | \*\*\*\_doublonHolon4site\_opt.dat       | Optimized 4-site doublon-holon correlation factors.                                                                    |
@@ -61,7 +63,8 @@ energy optimized by the SR method are outputted in the following order:
 .. math::
 
    \langle H \rangle, \langle H^2 \rangle, g_i, v_{ij},
-   \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij} \nonumber.
+   v^s_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij}
+   \nonumber.
 
 The type of average values is a complex number, while that of the
 deviation is a real number. Since the initial values of all variational
@@ -94,6 +97,13 @@ Output file for jastrow factors (\*\*\*\_jastrow\_opt.dat)
 
 The optimized Jastrow factors by SR method are outputted. The file
 format is same as the ``InJastrow`` file defined in Sec.
+:ref:`InputParam`.
+
+Output file for spin Jastrow factors (\*\*\*\_spinjastrow\_opt.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The optimized spin Jastrow factors by SR method are outputted. The file
+format is same as the ``InSpinJastrow`` file defined in Sec.
 :ref:`InputParam`.
 
 Output file for doublonHolon 2-site factors (\*\*\*\_doublonHolon2site\_opt.dat)
@@ -407,4 +417,3 @@ This file is the outputted files for the two-body Green’s function
 obtained by Power Lanczos method. The file format is same as the
 xxx\_cisajscktalt\_yyy.dat file. This file is outputted when
 ``NVMCCalMode`` = 1, ``NLanczosmode`` = 2 are set in ``ModPara`` file.
-
