@@ -62,46 +62,49 @@
 <tr class="row-even"><td><p>***_jastrow_opt.dat</p></td>
 <td><p>最適化されたJastrow因子.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_doublonHolon2site_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_spinjastrow_opt.dat</p></td>
+<td><p>最適化されたスピンJastrow因子.</p></td>
+</tr>
+<tr class="row-even"><td><p>***_doublonHolon2site_opt.dat</p></td>
 <td><p>最適化された2サイトダブロン-ホロン相関因子.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_doublonHolon4site_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_doublonHolon4site_opt.dat</p></td>
 <td><p>最適化された4サイトダブロン-ホロン相関因子.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_generalRBM_physlayer_opt.dat</p></td>
+<tr class="row-even"><td><p>***_generalRBM_physlayer_opt.dat</p></td>
 <td><p>最適化されたRBM相関因子のうち、物理層のみに関わる変分パラメータ.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_generalRBM_hiddenlayer_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_generalRBM_hiddenlayer_opt.dat</p></td>
 <td><p>最適化されたRBM相関因子のうち、隠れ層のみに関わる変分パラメータ.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_generalRBM_physhidden_opt.dat</p></td>
+<tr class="row-even"><td><p>***_generalRBM_physhidden_opt.dat</p></td>
 <td><p>最適化されたRBM相関因子のうち、物理層と隠れ層を繋ぐ変分パラメータ.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_orbital_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_orbital_opt.dat</p></td>
 <td><p>最適化されたペア軌道因子.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_out_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_out_yyy.dat</p></td>
 <td><p>エネルギーとその分散.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_SRinfo.dat</p></td>
+<tr class="row-odd"><td><p>xxx_SRinfo.dat</p></td>
 <td><p>SR法に関連した情報.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_var_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_var_yyy.dat</p></td>
 <td><p>パラメータ最適化過程の情報.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_CalcTimer.dat</p></td>
+<tr class="row-odd"><td><p>xxx_CalcTimer.dat</p></td>
 <td><p>各プロセスに対する計算時間に関する情報.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_time_zzz.dat</p></td>
+<tr class="row-even"><td><p>xxx_time_zzz.dat</p></td>
 <td><p>モンテカルロサンプリングの過程に関する情報.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_cisajs_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_cisajs_yyy.dat</p></td>
 <td><p>一体グリーン関数.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
 <td><p>二体グリーン関数.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_twist_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_twist_yyy.dat</p></td>
 <td><p>Twist演算子の期待値.</p></td>
 </tr>
 </tbody>
@@ -112,7 +115,7 @@
 変分パラメータが一斉に読み込めるため、変分パラメータ最適化後の物理量の計算を行う場合に使用します。
 出力されるデータは</p>
 <div class="math notranslate nohighlight">
-\[\langle H \rangle, \langle H^2 \rangle, g_i, v_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, a_{i\sigma}, b_{k}, W_{i\sigma k}, f_{ij} \nonumber\]</div>
+\[\langle H \rangle, \langle H^2 \rangle, g_i, v_{ij}, v^s_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, a_{i\sigma}, b_{k}, W_{i\sigma k}, f_{ij} \nonumber\]</div>
 <p>で、それぞれの平均値と標準偏差が出力されます(平均値は実数、虚数の順に、標準偏差は実数のみ出力)。
 なお、全データが1行で出力され、数値の間は半角空白で区切られます。
 ***には <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> で指定されるヘッダが記載されます。</p>
@@ -133,6 +136,11 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 <h2>Jastrow因子出力ファイル(***_jastrow_opt.dat)<a class="headerlink" href="#jastrow-jastrow-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>SR法で最適化されたJastrow因子が出力されます。
 出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInJastrow指定ファイルと同じです。</p>
+</section>
+<section id="spin-jastrow-spinjastrow-opt-dat">
+<h2>Spin Jastrow因子出力ファイル(***_spinjastrow_opt.dat)<a class="headerlink" href="#spin-jastrow-spinjastrow-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p>SR法で最適化されたSpin Jastrow因子が出力されます。
+出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInSpinJastrow指定ファイルと同じです。</p>
 </section>
 <section id="doublonholon2site-opt-dat">
 <h2>2サイトダブロンホロン相関因子出力ファイル(***_doublonHolon2site_opt.dat)<a class="headerlink" href="#doublonholon2site-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
@@ -432,6 +440,7 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#xxx-var-yyy-dat">ステップ別変分パラメータ出力ファイル(xxx_var_yyy.dat)</a></li>
 <li><a class="reference internal" href="#gutzwiller-gutzwiller-opt-dat">Gutzwiller因子出力ファイル(***_gutzwiller_opt.dat)</a></li>
 <li><a class="reference internal" href="#jastrow-jastrow-opt-dat">Jastrow因子出力ファイル(***_jastrow_opt.dat)</a></li>
+<li><a class="reference internal" href="#spin-jastrow-spinjastrow-opt-dat">Spin Jastrow因子出力ファイル(***_spinjastrow_opt.dat)</a></li>
 <li><a class="reference internal" href="#doublonholon2site-opt-dat">2サイトダブロンホロン相関因子出力ファイル(***_doublonHolon2site_opt.dat)</a></li>
 <li><a class="reference internal" href="#doublonholon4site-opt-dat">4サイトダブロンホロン相関因子出力ファイル(***_doublonHolon4site_opt.dat)</a></li>
 <li><a class="reference internal" href="#rbm-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat">RBM相関因子出力ファイル(***_generalRBM_physlayer_opt.dat, ***_generalRBM_hiddenlayer_opt.dat, ***_generalRBM_physhidden_opt.dat)</a></li>

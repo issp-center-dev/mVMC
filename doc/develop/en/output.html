@@ -67,46 +67,49 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 <tr class="row-even"><td><p>***_jastrow_opt.dat</p></td>
 <td><p>Optimized jastrow factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_doublonHolon2site_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_spinjastrow_opt.dat</p></td>
+<td><p>Optimized spin Jastrow factors.</p></td>
+</tr>
+<tr class="row-even"><td><p>***_doublonHolon2site_opt.dat</p></td>
 <td><p>Optimized 2-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_doublonHolon4site_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_doublonHolon4site_opt.dat</p></td>
 <td><p>Optimized 4-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_generalRBM_physlayer_opt.dat</p></td>
+<tr class="row-even"><td><p>***_generalRBM_physlayer_opt.dat</p></td>
 <td><p>Optimized variational parameters of the general RBM correlation factors only in a physical layer.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_generalRBM_hiddenlayer_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_generalRBM_hiddenlayer_opt.dat</p></td>
 <td><p>Optimized variational parameters of the general RBM correlation factors only in a hidden layer.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_orbital_opt.dat</p></td>
+<tr class="row-even"><td><p>***_orbital_opt.dat</p></td>
 <td><p>Optimized variational parameters of the general RBM correlation factors which connect physical and hidden layers.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_orbital_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_orbital_opt.dat</p></td>
 <td><p>Optimized pair orbital factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_out_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_out_yyy.dat</p></td>
 <td><p>Energy and deviation.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_SRinfo.dat</p></td>
+<tr class="row-odd"><td><p>xxx_SRinfo.dat</p></td>
 <td><p>Information related to SR optimization method.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_var_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_var_yyy.dat</p></td>
 <td><p>Progress information for optimizing variational parameters.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_CalcTimer.dat</p></td>
+<tr class="row-odd"><td><p>xxx_CalcTimer.dat</p></td>
 <td><p>Computation time for each processes.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_time_zzz.dat</p></td>
+<tr class="row-even"><td><p>xxx_time_zzz.dat</p></td>
 <td><p>Progress information for Monte Carlo samplings.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_cisajs_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_cisajs_yyy.dat</p></td>
 <td><p>One body Green’s functions.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
 <td><p>Correlation functions.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_twist_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_twist_yyy.dat</p></td>
 <td><p>Twist operators.</p></td>
 </tr>
 </tbody>
@@ -117,7 +120,8 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 energy optimized by the SR method are outputted in the following order:</p>
 <div class="math notranslate nohighlight">
 \[\langle H \rangle, \langle H^2 \rangle, g_i, v_{ij},
-\alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij} \nonumber.\]</div>
+v^s_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij}
+\nonumber.\]</div>
 <p>The type of average values is a complex number, while that of the
 deviation is a real number. Since the initial values of all variational
 parameters are specified at the beginning of the calculation, the
@@ -146,6 +150,12 @@ format is same as the <code class="docutils literal notranslate"><span class="pr
 <h2>Output file for jastrow factors (***_jastrow_opt.dat)<a class="headerlink" href="#output-file-for-jastrow-factors-jastrow-opt-dat" title="Permalink to this heading">¶</a></h2>
 <p>The optimized Jastrow factors by SR method are outputted. The file
 format is same as the <code class="docutils literal notranslate"><span class="pre">InJastrow</span></code> file defined in Sec.
+<a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">Files to set initial values of variational parameters</span></a>.</p>
+</section>
+<section id="output-file-for-spin-jastrow-factors-spinjastrow-opt-dat">
+<h2>Output file for spin Jastrow factors (***_spinjastrow_opt.dat)<a class="headerlink" href="#output-file-for-spin-jastrow-factors-spinjastrow-opt-dat" title="Permalink to this heading">¶</a></h2>
+<p>The optimized spin Jastrow factors by SR method are outputted. The file
+format is same as the <code class="docutils literal notranslate"><span class="pre">InSpinJastrow</span></code> file defined in Sec.
 <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">Files to set initial values of variational parameters</span></a>.</p>
 </section>
 <section id="output-file-for-doublonholon-2-site-factors-doublonholon2site-opt-dat">
@@ -450,6 +460,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 <li><a class="reference internal" href="#output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat">Output files for variational parameters at each steps (xxx_var_yyy.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-gutzwiller-factors-gutzwiller-opt-dat">Output file for gutzwiller factors (***_gutzwiller_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-jastrow-factors-jastrow-opt-dat">Output file for jastrow factors (***_jastrow_opt.dat)</a></li>
+<li><a class="reference internal" href="#output-file-for-spin-jastrow-factors-spinjastrow-opt-dat">Output file for spin Jastrow factors (***_spinjastrow_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-doublonholon-2-site-factors-doublonholon2site-opt-dat">Output file for doublonHolon 2-site factors (***_doublonHolon2site_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-doublonholon-4-site-factors-doublonholon4site-opt-dat">Output file for doublonHolon 4-site factors (***_doublonHolon4site_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-files-for-general-rbm-factors-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat">Output files for general RBM factors(***_generalRBM_physlayer_opt.dat, ***_generalRBM_hiddenlayer_opt.dat, ***_generalRBM_physhidden_opt.dat)</a></li>
