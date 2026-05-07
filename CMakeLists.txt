@@ -74,6 +74,11 @@ if(USE_SCALAPACK MATCHES OFF)
   endif(LAPACK_FOUND)
 endif()
 
+if(PFAFFIAN_BLOCKED AND NOT USE_GEMMT)
+  message(WARNING "PFAFFIAN_BLOCKED requires BLIS. Enabling USE_GEMMT automatically.")
+  set(USE_GEMMT ON CACHE BOOL "Use GEMMT. Recommended regardless blocked-Pfaffian-update." FORCE)
+endif()
+
 if(PFAFFIAN_BLOCKED
     OR USE_GEMMT)
   set(Require_BLIS ON)

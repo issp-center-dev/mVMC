@@ -3,8 +3,10 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mode1.py DESTINATION ${CMAKE_BINAR
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_invalid_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sr.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_UHF.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_UHF_InterAll.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert_phys.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -31,6 +33,18 @@ function(add_python_vmc_test_invalid_expert model expected_error)
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_vmc_test_invalid_expert)
 
+function(add_python_vmc_test_expert_phys model)
+    add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_expert_phys.py ${model})
+    set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_expert_phys)
+
+
+function(add_python_vmc_test_sr model)
+    add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_sr.py ${model})
+    set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_sr)
+
+
 function(add_python_uhf_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_UHF.py ${model})
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
@@ -38,7 +52,7 @@ endfunction(add_python_uhf_test)
 
 # Suppress warnings about PythonInterp package.
 # TODO: replace it with find_package(Python3 REQUIRED
-cmake_policy(SET CMP0148 OLD)
+#cmake_policy(SET CMP0148 OLD)
 find_package(PythonInterp 3.6 REQUIRED)
 
 set(python_test_vmc_model
@@ -84,6 +98,19 @@ set(python_test_vmc_model_expert
   HubbardChain_fsz_SpinJastrow
 )
 
+set(python_test_vmc_model_expert_phys
+  Twist_SSH_cmp
+  Twist_SSH_fsz
+)
+
+
+set(python_test_vmc_model_sr
+  HubbardChain_DiagCG
+  HubbardChain_cmp_DiagCG
+  HubbardChain_fsz_DiagCG
+)
+
+
 set(python_test_uhf_model
   UHF_HubbardSquare
   UHF_HubbardTriangular
@@ -105,6 +132,15 @@ endforeach(model)
 
 foreach(model ${python_test_vmc_model_expert})
     add_python_vmc_test_expert(${model})
+endforeach(model)
+
+foreach(model ${python_test_vmc_model_expert_phys})
+    add_python_vmc_test_expert_phys(${model})
+endforeach(model)
+
+
+foreach(model ${python_test_vmc_model_sr})
+    add_python_vmc_test_sr(${model})
 endforeach(model)
 
 add_python_vmc_test_invalid_expert(SpinJastrow_InvalidClassRange "class index")
