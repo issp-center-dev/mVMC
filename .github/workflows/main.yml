@@ -12,11 +12,17 @@ jobs:
 
     strategy:
       matrix:
-        os: ["ubuntu-latest", "macos-latest"]
+        os: ["ubuntu-latest"]
+        mpi: [true, false]
         ompsize: [1, 4]
-        exclude:
+        include:
           - os: "macos-latest"
-            ompsize: 4 # OMP on macOS is too slow
+            mpi: false
+            ompsize: 1
+        exclude:
+          - os: "ubuntu-latest"
+            mpi: true
+            ompsize: 4
       fail-fast: false
 
     env:
@@ -52,6 +58,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: |
+          cmake --version
           if [ ${{ runner.os }} = "macOS" ] ; then
             # CONFIG=apple requires gfortran but macOS runner has not, but gfortran-11, 12, ...
             cmake -DCONFIG=apple -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_Fortran_COMPILER=gfortran-14 $GITHUB_WORKSPACE
@@ -64,7 +71,14 @@ jobs:
         shell: bash
         run: cmake --build ./ -j4
 
-      - name: ctest
+      - name: ctest without MPI
+        if: ${{ matrix.mpi == false }}
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: ctest -V
+        run: ctest --parallel 4 --output-on-failure -E '_mpi$'
+
+      - name: ctest with MPI
+        if: ${{ matrix.mpi == true }}
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ctest --output-on-failure -R '_mpi$'
