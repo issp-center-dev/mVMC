@@ -10,7 +10,7 @@ jobs:
   ctest:
     runs-on: ${{ matrix.os }}
 
-    name: "OS: ${{ matrix.os }}, mpitest: ${{ mpi }}, OMP: ${{ ompsize }}"
+    name: "OS: ${{ matrix.os }}, mpitest: ${{ matrix.mpi }}, OMP: ${{ matrix.ompsize }}"
 
     strategy:
       matrix:
