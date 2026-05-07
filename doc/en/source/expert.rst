@@ -75,9 +75,10 @@ listed in parentheses correspond to the file made by vmcdry.out.
     .. math::
 
        \begin{aligned}
-       |\psi \rangle &= {\cal N}_{General RBM} {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
+       |\psi \rangle &= {\cal N}_{General RBM} {\cal P}_G{\cal P}_J{\cal P}_{SJ}{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
        {\cal P}_G&=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right],\\
        {\cal P}_J&=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1)(n_j-1)\right],\\
+       {\cal P}_{SJ}&=\exp\left[\sum_{i<j} v^s_{ij} m_i m_j\right],\\
        {\cal P}_{d-h}^{(2)}&= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right],\\
        {\cal P}_{d-h}^{(4)}&= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right],\\
        {\cal N}_{\rm General RBM}&= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_h} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right],\\
@@ -92,7 +93,9 @@ listed in parentheses correspond to the file made by vmcdry.out.
     translational operators corresponding to the translational vector
     :math:`{\boldsymbol R}`, :math:`\hat{G}_{\alpha}` is the point group
     operator, and :math:`p_\alpha` is the parity operator,
-    respectively. The details of :math:`{\cal P}_{d-h}^{(2)}` and
+    respectively. For the spin Jastrow factor,
+    :math:`m_i=n_{i\uparrow}-n_{i\downarrow}`. The details of
+    :math:`{\cal P}_{d-h}^{(2)}` and
     :math:`{\cal P}_{d-h}^{(4)}` are shown in
     [Tahara2008_ ]. The one body part of the
     wavefunction is represented as the pair function of the real
@@ -114,6 +117,9 @@ listed in parentheses correspond to the file made by vmcdry.out.
           
     **Jastrow (jastrowidx.def)**: Set the target parameters
     :math:`v_{ij}` in :math:`{\cal P}_J` to be optimized.
+
+    **SpinJastrow (spinjastrow.def)**: Set the target parameters
+    :math:`v^s_{ij}` in :math:`{\cal P}_{SJ}` to be optimized.
           
     **DH2**: Set the target 2-site doublon-holon correlation factor
     :math:`\alpha_{2nt}^{d(h)}` in :math:`{\cal P}_{d-h}^{(2)}` to be
@@ -156,6 +162,9 @@ listed in parentheses correspond to the file made by vmcdry.out.
           
     **InJastrow**: Set the initial values of :math:`v_{ij}` in
     :math:`{\cal P}_J`.
+
+    **InSpinJastrow**: Set the initial values of :math:`v^s_{ij}` in
+    :math:`{\cal P}_{SJ}`.
           
     **InDH2**: Set the initial values of :math:`\alpha_{2nt}^{d(h)}`
     in :math:`{\cal P}_{d-h}^{(2)}`.
@@ -278,6 +287,8 @@ User rules
      - Gutzwiller factors.
    * - Jastrow                  
      - Charge Jastrow factors.
+   * - SpinJastrow
+     - Spin Jastrow factors.
    * - DH2                      
      - 2-site doublon-holon correlation factors.
    * - DH4                      
@@ -302,6 +313,8 @@ User rules
      - Initial values of Gutzwiller factors.
    * - InJastrow                
      - Initial values of charge Jastrow factors.
+   * - InSpinJastrow
+     - Initial values of spin Jastrow factors.
    * - InDH2                    
      - Initial values of 2-site doublon-holon correlation factors.
    * - InDH4                    
@@ -1628,6 +1641,136 @@ User rules
 -  A program is terminated, when [ int02 ] -
    [ int07 ] are out of range from the defined values.
 
+Spin Jastrow file (spinjastrow.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file sets the calculation conditions of spin Jastrow factors
+
+.. math::
+
+   {\cal P}_{SJ}=\exp\left[\sum_{i<j} v^s_{ij} m_i m_j\right],
+   \quad m_i=n_{i\uparrow}-n_{i\downarrow}.
+
+Site numbers :math:`i` and :math:`j`, and the variational parameters
+:math:`v^s_{ij}` are specified. An example of the file format is shown
+as follows.
+
+::
+
+    ======================
+    NSpinJastrowIdx 4
+    ComplexType 0
+    =====================
+    =====================
+       0     1     0
+       0     2     1
+       0     3     2
+       1     0     0
+     (continue...)
+       0     1
+       1     1
+       2     1
+       3     1
+
+File format
+^^^^^^^^^^^
+
+In the following, we define the total number of sites as :math:`N_s` and
+variational parameters as :math:`N_{sj}`, respectively.
+
+-  Line 1: Header
+
+-  Line 2: [string01] [int01]
+
+-  Line 3: [string02] [int02]
+
+-  Lines 4 - 5: Header
+
+-  Lines 6 - (5+ :math:`N_s\times (N_s-1)`): [int03] [int04] [int05]
+
+-  Lines (6+ :math:`N_s\times (N_s-1)`) -
+   (5+ :math:`N_s\times (N_s-1)` + :math:`N_{sj}`): [int06] [int07]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for total number of variational
+   parameters :math:`v^s_{ij}`. You can freely give a name of the
+   keyword.
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving total number of variational
+   parameters :math:`v^s_{ij}`.
+
+-  [ string02 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for indicating the double or complex type
+   of variational parameters :math:`v^s_{ij}`. You can freely give a
+   name of the keyword.
+
+-  [ int02 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer indicates the double or complex type of
+   variational parameters :math:`v^s_{ij}` (0: double, 1: complex).
+
+-  [ int03 ], [ int04 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving a site index
+   (0 :math:`\leq` [ int03 ], [ int04 ] :math:`<` ``Nsite``).
+
+-  [ int05 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer setting kinds of variational parameters
+   :math:`v^s_{ij}` (0 :math:`\leq` [ int05 ] :math:`<` [ int01]).
+
+-  [ int06 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving kinds of variational parameters
+   (0 :math:`\leq` [ int06 ] :math:`<` [ int01]).
+
+-  [ int07 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer to select the target of variational
+   parameters indicated at [int06] to be optimized or not (0: not
+   optimize, 1: optimize).
+
+User rules
+^^^^^^^^^^
+
+-  Headers cannot be omitted.
+
+-  A program is terminated, when [ int01 ] is
+   different from the total number of variational parameters defined in
+   this file.
+
+-  A program is terminated, when [ int02 ] -
+   [ int07 ] are out of range from the defined values.
+
+-  A program is terminated, when [ int03 ] and [ int04 ] indicate the
+   same site.
+
+-  Both directed pairs :math:`(i,j)` and :math:`(j,i)` must be specified
+   for each pair of sites, and they must have the same parameter index.
+
 DH2 file
 ~~~~~~~~
 
@@ -2862,11 +3005,13 @@ Files to set initial values of variational parameters
 This file sets the initial values of variational parameters. The kinds
 of variational parameters are specified by setting the following
 keywords in ``List`` file (namelist.def):
-``InGutzwiller``, ``InJastrow``, ``InDH2``, ``InDH4``, ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer``, ``InGeneralRBM_PhysHidden``, ``InOrbital``,
+``InGutzwiller``, ``InJastrow``, ``InSpinJastrow``, ``InDH2``, ``InDH4``, ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer``, ``InGeneralRBM_PhysHidden``, ``InOrbital``,
 ``InOrbitalAntiParallel``, ``InOrbitalParallel``,
 ``InOrbitalGeneral``.
 The file format is common and an example of the ``InJastrow`` file is
 shown as follows.
+For ``InSpinJastrow``, set the second line to the number of spin
+Jastrow parameters, for example ``NSpinJastrowIdx``.
 
 ::
 
