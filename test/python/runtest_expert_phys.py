@@ -52,18 +52,19 @@ ref_std = read_out("%s/ref/ref_std.dat" % refdir)
 
 result = 0
 if "Twist" in sys.argv[1]:
-    # Columns 0-2: physical values, compare with absolute diff
+    # Columns 0-2 (Re, Im, |z|): per-component 3-sigma check.
     diff_phys = np.abs(array_calc[:, 0:3] - ref_ave[:, 0:3])
     if np.any(diff_phys >= 3 * ref_std[:, 0:3]):
         result = -1
-    # Column 3: phase from carg(...). Compare via wrap diff so a phase
-    # near +/-pi does not appear far from a phase near -/+pi.
-    phase_diff = np.angle(np.exp(1j * (array_calc[:, 3] - ref_ave[:, 3])))
-    phase_tol = np.maximum(3 * ref_std[:, 3], 1.0e-2)
-    if np.any(np.abs(phase_diff) >= phase_tol):
-        result = -1
-    phase_self_diff = np.angle(np.exp(1j * (array_calc[:, 3] - np.arctan2(array_calc[:, 1], array_calc[:, 0]))))
-    if np.any(np.abs(phase_self_diff) >= 1.0e-10):
+    # Column 3 (arg) vs reference is intentionally not checked: the
+    # complex value is already pinned by columns 0 and 1, and a direct
+    # phase difference carries a 2*pi ambiguity near the +/-pi branch.
+    # Self-consistency: polar form (|z| * exp(i * arg)) must equal the
+    # rectangular form (Re + i * Im). Differenced in the complex plane
+    # so the test is wrap-free regardless of the carg branch.
+    self_polar = array_calc[:, 2] * np.exp(1j * array_calc[:, 3])
+    self_rect  = array_calc[:, 0] + 1j * array_calc[:, 1]
+    if np.any(np.abs(self_polar - self_rect) >= 1.0e-10):
         result = -1
 else:
     for diff, s in zip(array_calc - ref_ave, ref_std):
