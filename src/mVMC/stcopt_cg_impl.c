@@ -259,7 +259,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
       if (NSRCGAbortOnFail) {
         MPI_Abort(comm, EXIT_FAILURE);
       }
-      info = fallback_iter;
+      info = -(fallback_iter + 1);
     }
   }
 #ifdef _DEBUG_STCOPT_CG
@@ -569,7 +569,7 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
     if (!isfinite(beta)) return -(iter+1);
 
     //update the norm of residual vector r
-    delta = delta_new;
+    delta = beta*delta;
     // update direction vector d
     #pragma omp parallel for default(shared) private(si)
     #pragma loop noalias
