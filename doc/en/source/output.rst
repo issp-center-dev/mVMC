@@ -182,9 +182,13 @@ For ``NSRCG=0``:
 For SR-CG (``NSRCG!=0``), solver status ``info`` is appended as an
 additional column after ``imax``.
 ``info`` is the number of iterations for normal convergence.
-When SR-CG falls back to the other CG solver,
-``info`` is written as a negative value: ``info = -(iter + 1)``,
-where ``iter`` is the iteration at which fallback occurred.
+``info`` is written as a negative value ``info = -(iter + 1)`` when SR-CG
+fails (does not converge or becomes numerically unstable), regardless of
+whether the fallback solver was invoked; ``iter`` is the iteration at
+which the failure was detected.  With the strict default
+(``NSRCGFallback=0``, ``NSRCGAbortOnFail=1``) such a row is not written
+because the calculation aborts; a negative ``info`` therefore appears only
+when fallback or warn-and-continue is enabled.
 
 ::
 

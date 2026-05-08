@@ -228,9 +228,9 @@ int fn_StochasticOptCG(MPI_Comm comm) {
       alt_info = useDiagScale ?
         fn_StochasticOptCG_Main(nSmat, VecCG, comm) :
         fn_StochasticOptPreconCG_DiagScale_Main(nSmat, VecCG, comm);
-      if (rank == 0) {
+      if (rank == 0 && alt_info >= 0) {
         fprintf(stderr,
-                "remark: SR-%s after fallback finished with iter=%d.\n",
+                "remark: SR-%s after fallback converged at iter=%d.\n",
                 alt_solver_name, alt_info);
       }
       info = -(fallback_iter + 1);
@@ -569,6 +569,9 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
     if (!isfinite(beta)) return -(iter+1);
 
     //update the norm of residual vector r
+    /* Use delta=beta*delta (mathematically delta_new) to preserve the legacy
+       FP order for SR-CG reference data; the DiagScale branch uses
+       delta=delta_new directly. */
     delta = beta*delta;
     // update direction vector d
     #pragma omp parallel for default(shared) private(si)
