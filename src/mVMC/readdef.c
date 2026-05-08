@@ -786,6 +786,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
       MPI_Abort(comm, EXIT_FAILURE);
     }
+    /* Lattice values are bcast via bufInt, so this is rank-safe. */
+    long long lattice_prod = (long long)Nx * (long long)Ny *
+                             (long long)Nz * (long long)Norb;
+    if (lattice_prod != (long long)Nsite) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: lattice dimensions Nx*Ny*Nz*Norb = %lld do not match Nsite = %d.\n",
+                lattice_prod, Nsite);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
   }
 
   Nneuron = bufInt[IdxNneuron];
