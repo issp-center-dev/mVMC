@@ -671,6 +671,15 @@ Keywords and parameters
    after the optional fallback (0: warn and continue with the approximate
    solution, 1: abort).
 
+   By default, ``NSRCGFallback=0`` and ``NSRCGAbortOnFail=1``.  With these
+   settings, a non-converged or numerically unstable SR-CG solve is treated as
+   an input or numerical failure instead of being hidden by an automatic retry.
+   Increase ``NVMCSample``, adjust the SR-CG tolerance/iteration limit, or
+   enable ``useDiagScale`` when the overlap matrix is too noisy or
+   ill-conditioned.  ``useDiagScale=1`` selects the point-Jacobi
+   preconditioned CG solver; it can improve convergence, but it is still
+   expected to converge under the chosen test or production settings.
+
 -  ``RescaleSmat``
 
    **Type :** int-type (0 or 1, default value: 0)
