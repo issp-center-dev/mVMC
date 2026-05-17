@@ -53,7 +53,7 @@ int Ne;    /* the number of electrons with up spin */
 int Nup;   /* the number of electrons with up spin */
 int Nsize; /* the number of electrons = 2*Ne */
 int Nsite2; /* 2*Nsite */
-int Nz; /* connecivity */
+int NzBF; /* BF connectivity */
 int TwoSz;
 
 int NSPGaussLeg; /* the number of points for the Gauss-Legendre quadrature */
@@ -122,6 +122,7 @@ double complex*ParaInterAll;
 /* for variational parameters */
 int NGutzwillerIdx, *GutzwillerIdx; /* [Nsite] */
 int NJastrowIdx, **JastrowIdx; /* [Nsite][Nsite] */
+int NSpinJastrowIdx, **SpinJastrowIdx; /* [Nsite][Nsite] */
 int NDoublonHolon2siteIdx, **DoublonHolon2siteIdx; /* DoublonHolon2siteIdx[idx][2*Nsite] */
 int NDoublonHolon4siteIdx, **DoublonHolon4siteIdx; /* DoublonHolon4siteIdx[idx][4*Nsite] */
 int NOrbitalIdx, **OrbitalIdx; /* [Nsite][Nsite] */
@@ -300,6 +301,17 @@ double complex *PhysCisAjsCktAlt; /* [NCisAjsCktAlt] */
 double complex *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
 double complex *LocalCisAjs; /* [NCisAjs] */
 
+/* for Lattice index */
+int Nx, Ny, Nz, Norb;
+int **LatticeIdx;         /* [Nsite][4] */
+
+/* for Twist operator */
+int NTwist, **TwistIdx;         /* TwistIdx -> SiteIdx, SpinIdx */
+double **ParaTwist;         /* [NTwist][3*Nsite*2] */
+double complex *PhysTwist; /* [NTwist] */
+
+
+
 const int NLSHam = 2; /* 0: I, 1: H */
 double complex *QQQQ; /* QQQQ[NLSHam][NLSHam][NLSHam][NLSHam]*/  //TBC
 double complex *LSLQ; /* [NLSHam][NLSHam]*/                      //TBC
@@ -326,6 +338,7 @@ FILE *FileSRinfo; /* zvo_SRinfo.dat */
 FILE *FileCisAjs;
 FILE *FileCisAjsCktAlt;
 FILE *FileCisAjsCktAltDC;
+FILE *FileTwist;
 FILE *FileLS;
 FILE *FileLSQQQQ;
 FILE *FileLSQCisAjsQ;
@@ -358,5 +371,8 @@ int Counter[6] = {0,0,0,0,0,0};
 int Counter_max = 6;
 /* 0: hopping, 1: hopping accept, 2: exchange try, 3: exchange accept */
 /* 4: local spin flip try, 5 local spin flip accept*/
+
+int useDiagScale=0;
+int RescaleSmat=0;
 
 #endif /*  _INCLUDE_GLOBAL */

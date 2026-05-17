@@ -111,6 +111,10 @@ int GetInfoGeneralRBM_PhysHidden(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iC
                       char *defname);
 //RBM
 
+int GetInfoLattice(FILE *fp, int **ArrayIdx, int NArray, int nx, int ny, int nz, int norb, char *defname);
+//int GetInfoTwist(FILE *fp, int **ArrayIdx, int NArray, char *defname);
+int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int NTwist, char *defname);
+
 char *ReadBuffInt(FILE *fp, int *iNbuf) {
   char *cerr;
   char ctmp[D_FileNameMax];
@@ -200,6 +204,7 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
   int i, info = 0;
 
   cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
+  // free at vmcmain.c
   fprintf(stdout, "  Read File %s .\n", xNameListFile);
   if (GetFileName(xNameListFile, cFileNameListFile) != 0) {
     fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
@@ -319,6 +324,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   FILE *fp;
   char defname[D_FileNameMax];
   char *cerr;
+  char ctmp[D_FileNameMax];
+  char ctmp2[D_FileNameMax];
 
   int rank, info = 0;
   const int nBufInt = ParamIdxInt_End;
@@ -328,6 +335,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   double bufDouble[nBufDouble];
   int iKWidx = 0;
   int iret = 0;
+  int hasLattice = 0;
   int iFlgOrbitalAntiParallel = 0;
   int iFlgOrbitalParallel = 0;
   int itmp = 0;
@@ -358,6 +366,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         }
       }
     }
+    hasLattice = (strcmp(cFileNameListFile[KWLattice], "") != 0);
 
     SetDefaultValuesModPara(bufInt, bufDouble);
     iret = GetInfoFromModPara(bufInt, bufDouble);
@@ -430,6 +439,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
           case KWJastrow:
             cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNJast], &iComplexFlgJastrow);
+            break;
+
+          case KWSpinJastrow:
+            cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNSpinJast], &iComplexFlgSpinJastrow);
             break;
 
 //RBM
@@ -520,6 +533,42 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           case KWTwoBodyGEx:
             cerr = ReadBuffInt(fp, &bufInt[IdxNTwoBodyGEx]);
             break;
+
+          case KWLattice:
+            cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+            if (cerr != NULL) {
+              cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
+              if (cerr != NULL) {
+                int scanned_lat = sscanf(ctmp2, "%s %d %d %d %d\n",
+                                         ctmp,
+                                         &bufInt[IdxNx], &bufInt[IdxNy],
+                                         &bufInt[IdxNz], &bufInt[IdxNorb]);
+                if (scanned_lat != 5) {
+                  fprintf(stderr,
+                          "Error: malformed lattice header (expected 'name Nx Ny Nz Norb'): %s",
+                          ctmp2);
+                  info = ReadDefFileError(defname);
+                } else if (bufInt[IdxNx] <= 0 || bufInt[IdxNy] <= 0 ||
+                           bufInt[IdxNz] <= 0 || bufInt[IdxNorb] <= 0) {
+                  fprintf(stderr,
+                          "Error: lattice dimensions must be positive (got Nx=%d Ny=%d Nz=%d Norb=%d).\n",
+                          bufInt[IdxNx], bufInt[IdxNy],
+                          bufInt[IdxNz], bufInt[IdxNorb]);
+                  info = ReadDefFileError(defname);
+                }
+              }
+            }
+            break;
+          
+          case KWTwist:
+            cerr = ReadBuffInt(fp, &bufInt[IdxNTwist]);
+            if (cerr != NULL && bufInt[IdxNTwist] < 0) {
+              fprintf(stderr, "Error: NTwist must be non-negative (got %d).\n",
+                      bufInt[IdxNTwist]);
+              info = ReadDefFileError(defname);
+            }
+            break;
+
 
           case KWInterAll:
             cerr = ReadBuffInt(fp, &bufInt[IdxNInterAll]);
@@ -638,7 +687,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   }//rank 0
 
   if (rank == 0) {
-    AllComplexFlag = iComplexFlgGutzwiller + iComplexFlgJastrow + iComplexFlgDH2; //TBC
+    AllComplexFlag = iComplexFlgGutzwiller + iComplexFlgJastrow + iComplexFlgSpinJastrow + iComplexFlgDH2; //TBC
     AllComplexFlag += iComplexFlgDH4 + iComplexFlgOrbital;//TBC
     //AllComplexFlag  = 1;//DEBUG
     // AllComplexFlag= 0 -> All real, !=0 -> complex
@@ -664,8 +713,11 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&FlagRBM, 1, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
   MPI_Bcast(&NSRCG, 1, MPI_INT, 0, comm); // for NCG
+  MPI_Bcast(&RescaleSmat, 1, MPI_INT, 0, comm); // for Rescale S matrix
+  MPI_Bcast(&useDiagScale, 1, MPI_INT, 0, comm); // for Jacobi preconditioned CG
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
+  MPI_Bcast(&hasLattice, 1, MPI_INT, 0, comm);
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
   MPI_Bcast(CDataFileHead, nBufChar, MPI_CHAR, 0, comm);
   MPI_Bcast(CParaFileHead, nBufChar, MPI_CHAR, 0, comm);
@@ -698,6 +750,15 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NExchangeCoupling = bufInt[IdxNExchange];
   NGutzwillerIdx = bufInt[IdxNGutz];
   NJastrowIdx = bufInt[IdxNJast];
+  NSpinJastrowIdx = bufInt[IdxNSpinJast];
+  if (NSpinJastrowIdx < 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "error: NSpinJastrowIdx (= %d) must be non-negative.\n",
+              NSpinJastrowIdx);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
   NDoublonHolon2siteIdx = bufInt[IdxNDH2];
   NDoublonHolon4siteIdx = bufInt[IdxNDH4];
   NOrbitalIdx = bufInt[IdxNOrbit];
@@ -709,13 +770,47 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NQPOptTrans = bufInt[IdxNQPOptTrans];
   Nrange = bufInt[IdxNrange];
   NBackFlowIdx = bufInt[IdxNBF];
-  Nz = bufInt[IdxNNz];
+  NzBF = bufInt[IdxNNz];
   NSROptCGMaxIter = bufInt[IdxSROptCGMaxIter];
   DSROptRedCut = bufDouble[IdxSROptRedCut];
   DSROptStaDel = bufDouble[IdxSROptStaDel];
   DSROptStepDt = bufDouble[IdxSROptStepDt];
   DSROptCGTol = bufDouble[IdxSROptCGTol];
   TwoSz = bufInt[Idx2Sz];
+  
+  Nx = bufInt[IdxNx];
+  Ny = bufInt[IdxNy];
+  Nz = bufInt[IdxNz];
+  Norb = bufInt[IdxNorb];
+  NTwist  = bufInt[IdxNTwist];
+
+  if (NTwist < 0) {
+    if (rank == 0) {
+      fprintf(stderr, "Error: NTwist must be non-negative (got %d).\n", NTwist);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NTwist > 0) {
+    if (!hasLattice) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: NTwist=%d requires a Lattice definition file in namelist.\n",
+                NTwist);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    /* Lattice values are bcast via bufInt, so this is rank-safe. */
+    long long lattice_prod = (long long)Nx * (long long)Ny *
+                             (long long)Nz * (long long)Norb;
+    if (lattice_prod != (long long)Nsite) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: lattice dimensions Nx*Ny*Nz*Norb = %lld do not match Nsite = %d.\n",
+                lattice_prod, Nsite);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+  }
 
   Nneuron = bufInt[IdxNneuron];
   NneuronGeneral = bufInt[IdxNneuronGeneral];
@@ -746,6 +841,35 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     APFlag = 0;
   }
 
+  if (NSRCG == 2){
+    useDiagScale = 1;
+    NSRCG = 1;
+  //  if (rank == 0) printf("remark: use preconditioned CG (Diag Scale)\n");
+  } //else {
+  //  useDiagScale = 0;
+  //}
+  if (useDiagScale){
+    if(NSRCG == 1){
+      if (rank == 0) printf("remark: use preconditioned CG (Diag Scale)\n");
+    }else{
+      if (rank == 0) printf("remark: not use preconditioned CG (Diag Scale) because NSRCG=%d != 1. Use direct method instead.\n",NSRCG);
+    }
+  }
+
+  if (RescaleSmat){
+    if (!(NSRCG == 1 || NStoreO != 0)) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "error: invalid RescaleSmat configuration. "
+                "RescaleSmat=1 requires NSRCG==1 or NStoreO!=0, "
+                "but got NSRCG=%d, NStoreO=%d.\n",
+                NSRCG, NStoreO);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    if (rank == 0) printf("remark: rescale S matrix \n");
+  }
+
   if (DSROptStepDt < 0) {
     SRFlag = 1; /* diagonalization */
     if (rank == 0) fprintf(stderr, "remark: Diagonalization Mode\n");
@@ -757,14 +881,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   Nsize = 2 * Ne;
   Nsite2 = 2 * Nsite;
   NSlater = NOrbitalIdx;
-  NProj = NGutzwillerIdx + NJastrowIdx
+  NProj = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx
           + 2 * 3 * NDoublonHolon2siteIdx
           + 2 * 5 * NDoublonHolon4siteIdx;
   NOptTrans = (FlagOptTrans > 0) ? NQPOptTrans : 0;
 
   /* [s] For BackFlow */
   if (NBackFlowIdx > 0) {
-    NrangeIdx = 3 * (Nrange - 1) / Nz + 1; //For Nz-conectivity
+    NrangeIdx = 3 * (Nrange - 1) / NzBF + 1; //For BF connectivity
     NBFIdxTotal = (NrangeIdx - 1) * (NrangeIdx) / 2 + (NrangeIdx);
     NProjBF = NBFIdxTotal * NBackFlowIdx;
   } else {
@@ -788,6 +912,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                  + 2 * NExchangeCoupling /* ExchangeCoupling */
                  + Nsite /* GutzwillerIdx */
                  + Nsite * Nsite /* JastrowIdx */
+                 + Nsite * Nsite /* SpinJastrowIdx */
                  + 2 * Nsite * NDoublonHolon2siteIdx /* DoublonHolon2siteIdx */
                  + 4 * Nsite * NDoublonHolon4siteIdx /* DoublonHolon4siteIdx */
                  //+ (2*Nsite)*(2*Nsite) /* OrbitalIdx */ //fsz
@@ -801,6 +926,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                  + 8 * NInterAll /* InterAll */
                  + Nsite * NQPOptTrans /* QPOptTrans */
                  + Nsite * NQPOptTrans /* QPOptTransSgn */
+                 + 4*Nsite /* LatticeIdx */
+                 + NTwist*2*Nsite*2 /* TwistIdx */
                  //RBM
                  + FlagRBM * (
                    NneuronCharge /* ChargeRMB_HiddenLayerIdx */ 
@@ -839,6 +966,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       + NExchangeCoupling /* ParaExchangeCoupling */
       //    + NQPTrans /* ParaQPTrans */
       //+ NInterAll /* ParaInterAll */
+      + NTwist*3*Nsite*2 /* ParaTwist */
       + NQPOptTrans; /* ParaQPTransOpt */
 
   return 0;
@@ -916,9 +1044,16 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
             info = 1;
           break;
 
+        case KWSpinJastrow:
+          fidx = NGutzwillerIdx + NJastrowIdx;
+          if (GetInfoJastrow(fp, SpinJastrowIdx, OptFlag, iComplexFlgSpinJastrow, &count_idx, fidx, Nsite, NSpinJastrowIdx,
+                             defname) != 0)
+            info = 1;
+          break;
+
         case KWDH2:
           /*doublonholon2siteidx.def--------------------------*/
-          fidx = NGutzwillerIdx + NJastrowIdx;
+          fidx = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx;
           if (GetInfoDH2(fp, DoublonHolon2siteIdx, OptFlag, iComplexFlgDH2, &count_idx, fidx, Nsite,
                          NDoublonHolon2siteIdx, defname) != 0)
             info = 1;
@@ -926,7 +1061,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWDH4:
           /*doublonholon4siteidx.def--------------------------*/
-          fidx = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          fidx = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
           if (GetInfoDH4(fp, DoublonHolon4siteIdx, OptFlag, iComplexFlgDH4, &count_idx, fidx, Nsite,
                          NDoublonHolon4siteIdx, defname) != 0)
             info = 1;
@@ -1056,6 +1191,17 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           if (GetInfoTwoBodyG(fp, CisAjsCktAltDCIdx, Nsite, NCisAjsCktAltDC, defname) != 0)
             info = 1;
           break;
+
+        case KWLattice:
+          /*lattice.def---------------------------------------*/
+          if (GetInfoLattice(fp, LatticeIdx, Nsite, Nx, Ny, Nz, Norb, defname) != 0) info = 1;
+          break;
+
+        case KWTwist:
+          /*twist.def---------------------------------------*/
+          if (GetInfoTwist(fp, TwistIdx, ParaTwist, Nsite, NTwist, defname) != 0) info = 1;
+          break;
+
 
         case KWInterAll:
           /*interall.def---------------------------------------*/
@@ -1245,13 +1391,61 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
           }
           break;
 
+        case KWInSpinJastrow:
+          fprintf(stdout, "Read InSpinJastrow File. \n");
+          if (idx != NSpinJastrowIdx) {
+            info = 1;
+            break;
+          }
+          count = NGutzwillerIdx + NJastrowIdx;
+          if (NSpinJastrowIdx > 0) {
+            int *seen = (int *)calloc(NSpinJastrowIdx, sizeof(int));
+            if (seen == NULL) {
+              fprintf(stderr, "Error: memory allocation failed in InSpinJastrow parser.\n");
+              info = 1;
+              break;
+            }
+            for (i = 0; i < NSpinJastrowIdx; i++) {
+              if (fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp) != 3) {
+                fprintf(stderr, "Error in %s: invalid parameter row %d in InSpinJastrow.\n", defname, i + 1);
+                info = 1;
+                break;
+              }
+              if (idx < 0 || idx >= NSpinJastrowIdx) {
+                fprintf(stderr, "Error in %s: index %d out of range [0, %d) in InSpinJastrow.\n",
+                        defname, idx, NSpinJastrowIdx);
+                info = 1;
+                break;
+              }
+              if (seen[idx] != 0) {
+                fprintf(stderr, "Error in %s: duplicated index %d in InSpinJastrow.\n", defname, idx);
+                info = 1;
+                break;
+              }
+              seen[idx] = 1;
+              Proj[idx+count] = tmp_real + I * tmp_comp;
+            }
+            if (info == 0) {
+              for (i = 0; i < NSpinJastrowIdx; i++) {
+                if (seen[i] == 0) {
+                  fprintf(stderr, "Error in %s: missing index %d in InSpinJastrow.\n", defname, i);
+                  info = 1;
+                  break;
+                }
+              }
+            }
+            free(seen);
+            if (info != 0) break;
+          }
+          break;
+
         case KWInDH2:
           fprintf(stdout, "Read InDH2 File. \n");
           if (idx != NDoublonHolon2siteIdx) {
             info = 1;
             continue;
           }
-          count = NGutzwillerIdx + NJastrowIdx;
+          count = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx;
           for (i = count; i < count + 2 * 3 * NDoublonHolon2siteIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Proj[idx+count] = tmp_real + I * tmp_comp;
@@ -1264,7 +1458,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
             info = 1;
             continue;
           }
-          count = NGutzwillerIdx + NJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
+          count = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx + 2 * 3 * NDoublonHolon2siteIdx;
           for (i = count; i < count + 2 * 5 * NDoublonHolon4siteIdx; i++) {
             fscanf(fp, "%d %lf %lf ", &idx, &tmp_real, &tmp_comp);
             Proj[idx+count] = tmp_real + I * tmp_comp;
@@ -1781,6 +1975,7 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[IdxNExchange] = 0;
   bufInt[IdxNGutz] = 0;
   bufInt[IdxNJast] = 0;
+  bufInt[IdxNSpinJast] = 0;
   bufInt[IdxNDH2] = 0;
   bufInt[IdxNDH4] = 0;
   bufInt[IdxNOrbit] = 0;
@@ -1820,6 +2015,14 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufDouble[IdxSROptCGTol] = 1.0e-10;
   NStoreO = 1;
   NSRCG = 0;
+  RescaleSmat  = 0;
+  useDiagScale = 0;
+
+  bufInt[IdxNx] = 1;
+  bufInt[IdxNy] = 1;
+  bufInt[IdxNz] = 1;
+  bufInt[IdxNorb] = 1;
+  bufInt[IdxNTwist] = 0;
 }
 
 int GetInfoFromModPara(int *bufInt, double *bufDouble) {
@@ -1933,6 +2136,10 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               NStoreO = (int) dtmp;
             } else if (CheckWords(ctmp, "NSRCG") == 0) {
               NSRCG = (int) dtmp;
+            } else if (CheckWords(ctmp, "RescaleSmat") == 0) {
+              RescaleSmat = (int) dtmp;
+            } else if (CheckWords(ctmp, "useDiagScale") == 0) {
+              useDiagScale = (int) dtmp;
 //RBM
             } else if (CheckWords(ctmp, "Nneuron") == 0) {
               bufInt[IdxNneuron] = (int) dtmp;
@@ -1959,9 +2166,10 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
         default:
           break;
       }
+      fclose(fp);
     }
   }
-  fclose(fp);
+  //fclose(fp);
   fprintf(stdout, "End: Read ModPara File .\n");
   return iret;
 }
@@ -2105,6 +2313,8 @@ int GetInfoOpt(FILE *fp, int *ArrayOpt, int iComplxFlag, int *iTotalOptCount, in
     fscanf(fp, "%d\n", &(ArrayOpt[2 * fidx])); // TBC real
     if(iComplxFlag>0){
       ArrayOpt[2 * fidx + 1] = ArrayOpt[2 * fidx]; //  TBC imaginary
+    }else{
+      ArrayOpt[2 * fidx + 1] = 0;
     }
     fidx++;
     (iLocalOptCount)++;
@@ -2144,30 +2354,111 @@ int GetInfoGutzwiller(FILE *fp, int *ArrayIdx, int *ArrayOpt, int iComplxFlag, i
 int GetInfoJastrow(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCount, int _fidx, int Nsite,
                    int NArray, char *defname) {
   int idx0 = 0, idx1 = 0, info = 0;
-  int i = 0, j = 0;
+  int i = 0, j = 0, n = 0;
+  int a = 0, b = 0;
+  int line = 0;
+  int idxExpected = Nsite * (Nsite - 1);
+  int *pairClass = NULL;
   int fidx = _fidx;
   if (NArray > 0) {
-    while (fscanf(fp, "%d %d ", &i, &j) != EOF) {
+    pairClass = (int *)malloc(sizeof(int) * Nsite * Nsite);
+    if (pairClass == NULL) {
+      fprintf(stderr, "Error: memory allocation failed in GetInfoJastrow.\n");
+      return 1;
+    }
+    for (i = 0; i < Nsite; i++) {
+      for (j = 0; j < Nsite; j++) {
+        if (i == j) {
+          ArrayIdx[i][j] = -1;
+          pairClass[i * Nsite + j] = -1;
+        } else {
+          ArrayIdx[i][j] = -2;
+          pairClass[i * Nsite + j] = -2;
+        }
+      }
+    }
+
+    while (idx0 < idxExpected) {
+      if (fscanf(fp, "%d %d %d", &i, &j, &n) != 3) {
+        fprintf(stderr, "Error in %s: failed to read Jastrow row %d.\n", defname, line + 1);
+        info = 1;
+        break;
+      }
+      line++;
       if (i == j) {
-        fprintf(stderr, "Error in %s: [Condition] i neq j\n", defname);
+        fprintf(stderr, "Error in %s: [Condition] i neq j at row %d.\n", defname, line);
         info = 1;
         break;
       }
       if (CheckPairSite(i, j, Nsite) != 0) {
-        fprintf(stderr, "Error: Site index is incorrect. \n");
+        fprintf(stderr, "Error in %s: Site index is incorrect at row %d.\n", defname, line);
         info = 1;
         break;
       }
+      if (n < 0 || n >= NArray) {
+        fprintf(stderr, "Error in %s: class index %d out of range [0, %d) at row %d.\n",
+                defname, n, NArray, line);
+        info = 1;
+        break;
+      }
+      if (ArrayIdx[i][j] != -2) {
+        fprintf(stderr, "Error in %s: duplicated pair (%d,%d) at row %d.\n", defname, i, j, line);
+        info = 1;
+        break;
+      }
+      ArrayIdx[i][j] = n;
 
-      fscanf(fp, "%d\n", &(ArrayIdx[i][j]));
-      ArrayIdx[i][i] = -1; // This case is Gutzwiller.
+      if (i < j) {
+        a = i;
+        b = j;
+      } else {
+        a = j;
+        b = i;
+      }
+      if (pairClass[a * Nsite + b] == -2) {
+        pairClass[a * Nsite + b] = n;
+      } else if (pairClass[a * Nsite + b] != n) {
+        fprintf(stderr, "Error in %s: inconsistent class for pair (%d,%d) at row %d.\n",
+                defname, a, b, line);
+        info = 1;
+        break;
+      }
       idx0++;
-      if (idx0 == Nsite * (Nsite - 1)) break;
     }
-    idx1 = GetInfoOpt(fp, ArrayOpt, iComplxFlag, iOptCount, fidx);
-    if (idx0 != Nsite * (Nsite - 1) || idx1 != NArray) {
+    if (info == 0) {
+      for (i = 0; i < Nsite; i++) {
+        for (j = 0; j < Nsite; j++) {
+          if (i == j) continue;
+          if (ArrayIdx[i][j] == -2) {
+            fprintf(stderr, "Error in %s: missing pair (%d,%d).\n", defname, i, j);
+            info = 1;
+            break;
+          }
+        }
+        if (info != 0) break;
+      }
+    }
+    if (info == 0) {
+      for (i = 0; i < Nsite; i++) {
+        for (j = i + 1; j < Nsite; j++) {
+          if (pairClass[i * Nsite + j] == -2) {
+            fprintf(stderr, "Error in %s: missing undirected pair (%d,%d).\n", defname, i, j);
+            info = 1;
+            break;
+          }
+          ArrayIdx[i][j] = pairClass[i * Nsite + j];
+          ArrayIdx[j][i] = pairClass[i * Nsite + j];
+        }
+        if (info != 0) break;
+      }
+    }
+    if (info == 0) {
+      idx1 = GetInfoOpt(fp, ArrayOpt, iComplxFlag, iOptCount, fidx);
+    }
+    if (info != 0 || idx0 != idxExpected || idx1 != NArray) {
       info = ReadDefFileError(defname);
     }
+    free(pairClass);
   }
   return info;
 }
@@ -2745,6 +3036,152 @@ int GetInfoGeneralRBM_PhysHidden(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iC
   return info;
 
 }
+
+int GetInfoLattice(FILE *fp, int **ArrayIdx, int NArray, int nx, int ny, int nz, int norb, char *defname) {
+  char ctmp2[256];
+  int idx = 0, info = 0, scanned;
+  int x1 = 0, x2 = 0, x3 = 0, x4 = 0;
+  int *seen = NULL;
+  int i;
+  if (NArray == 0) return 0;
+  seen = (int *)calloc((size_t)NArray, sizeof(int));
+  if (seen == NULL) {
+    fprintf(stderr, "Error: GetInfoLattice failed to allocate seen[].\n");
+    return 1;
+  }
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    scanned = sscanf(ctmp2, "%d %d %d %d %d\n",
+                     &idx, &x1, &x2, &x3, &x4);
+    if (scanned != 5) {
+      fprintf(stderr, "Error: malformed lattice.def line (expected 5 ints): %s",
+              ctmp2);
+      info = 1;
+      break;
+    }
+    if (idx < 0 || idx >= NArray) {
+      fprintf(stderr, "Error: lattice idx=%d out of range [0,%d).\n", idx, NArray);
+      info = 1;
+      break;
+    }
+    if (CheckSite(x1, nx) != 0 || CheckSite(x2, ny) != 0 ||
+        CheckSite(x3, nz) != 0 || CheckSite(x4, norb) != 0) {
+      fprintf(stderr, "Error: Site index for Lattice is incorrect (idx=%d, %d %d %d %d).\n",
+              idx, x1, x2, x3, x4);
+      info = 1;
+      break;
+    }
+    if (seen[idx] != 0) {
+      fprintf(stderr, "Error: lattice idx=%d appears more than once.\n", idx);
+      info = 1;
+      break;
+    }
+    seen[idx] = 1;
+    ArrayIdx[idx][0] = x1;
+    ArrayIdx[idx][1] = x2;
+    ArrayIdx[idx][2] = x3;
+    ArrayIdx[idx][3] = x4;
+  }
+  if (info == 0) {
+    for (i = 0; i < NArray; i++) {
+      if (seen[i] == 0) {
+        fprintf(stderr, "Error: lattice idx=%d is missing.\n", i);
+        info = ReadDefFileError(defname);
+        break;
+      }
+    }
+  }
+  free(seen);
+  return info;
+}
+
+int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int NTwist, char *defname) {
+  char ctmp2[256];
+  int info = 0, scanned;
+  int twist_idx = 0, i = 0, s = 0;
+  int row, key, t, k;
+  double dReValueX = 0;
+  double dReValueY = 0;
+  double dReValueZ = 0;
+  int *count = NULL;       /* per-twist row count */
+  char *seen = NULL;       /* flat 2D: seen[t * (2*Nsite) + key] */
+  size_t seen_size;
+  if (NTwist == 0 || Nsite == 0) return 0;
+  count = (int *)calloc((size_t)NTwist, sizeof(int));
+  seen_size = (size_t)NTwist * (size_t)(2 * Nsite);
+  seen = (char *)calloc(seen_size, sizeof(char));
+  if (count == NULL || seen == NULL) {
+    fprintf(stderr, "Error: GetInfoTwist failed to allocate validation buffers.\n");
+    free(count);
+    free(seen);
+    return 1;
+  }
+  while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+    scanned = sscanf(ctmp2, "%d %d %d %lf %lf %lf \n",
+                     &twist_idx, &i, &s, &dReValueX, &dReValueY, &dReValueZ);
+    if (scanned != 6) {
+      fprintf(stderr, "Error: malformed twist.def line (expected 6 fields): %s",
+              ctmp2);
+      info = 1;
+      break;
+    }
+    if (twist_idx < 0 || twist_idx >= NTwist) {
+      fprintf(stderr, "Error: twist_idx=%d out of range [0,%d).\n",
+              twist_idx, NTwist);
+      info = 1;
+      break;
+    }
+    if (s != 0 && s != 1) {
+      fprintf(stderr, "Error: twist spin index s=%d must be 0 or 1.\n", s);
+      info = 1;
+      break;
+    }
+    if (CheckSite(i, Nsite) != 0) {
+      fprintf(stderr, "Error: twist site index i=%d is out of [0,%d).\n",
+              i, Nsite);
+      info = 1;
+      break;
+    }
+    key = i + s * Nsite;     /* unique site-spin slot in [0, 2*Nsite) */
+    if (seen[(size_t)twist_idx * (size_t)(2 * Nsite) + (size_t)key] != 0) {
+      fprintf(stderr, "Error: twist=%d (site=%d, spin=%d) appears more than once.\n",
+              twist_idx, i, s);
+      info = 1;
+      break;
+    }
+    seen[(size_t)twist_idx * (size_t)(2 * Nsite) + (size_t)key] = 1;
+    row = count[twist_idx];  /* row index within this twist (0..2*Nsite-1) */
+    ArrayIdx[twist_idx][2*row]   = i;
+    ArrayIdx[twist_idx][2*row+1] = s;
+    ArrayValue[twist_idx][3*row]   = dReValueX;
+    ArrayValue[twist_idx][3*row+1] = dReValueY;
+    ArrayValue[twist_idx][3*row+2] = dReValueZ;
+    count[twist_idx]++;
+  }
+  if (info == 0) {
+    for (t = 0; t < NTwist; t++) {
+      if (count[t] != 2 * Nsite) {
+        fprintf(stderr, "Error: twist=%d has %d rows, expected %d.\n",
+                t, count[t], 2 * Nsite);
+        info = ReadDefFileError(defname);
+        break;
+      }
+      for (k = 0; k < 2 * Nsite; k++) {
+        if (seen[(size_t)t * (size_t)(2 * Nsite) + (size_t)k] != 1) {
+          fprintf(stderr, "Error: twist=%d missing entry for slot %d (site=%d, spin=%d).\n",
+                  t, k, k % Nsite, k / Nsite);
+          info = ReadDefFileError(defname);
+          break;
+        }
+      }
+      if (info != 0) break;
+    }
+  }
+  free(count);
+  free(seen);
+  return info;
+}
+
+
 
 /**********************************/
 /* [e] Read Parameters from file  */

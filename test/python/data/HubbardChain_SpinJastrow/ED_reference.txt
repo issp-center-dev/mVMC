@@ -1,0 +1,5 @@
+# Exact Diagonalization Reference
+Model: HubbardChain (L=6, U=4.0, t=1.0, Ncond=6, 2Sz=0)
+Energy: -3.6687061788729389
+Doublon: 0.6663954932669247
+Note: User-provided reference value.

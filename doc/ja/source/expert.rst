@@ -74,9 +74,10 @@
     .. math::
 
        \begin{aligned}
-       |\psi \rangle &= {\cal N}_{General RBM} {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
+       |\psi \rangle &= {\cal N}_{General RBM} {\cal P}_G{\cal P}_J{\cal P}_{SJ}{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
        {\cal P}_G&=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right],\\
        {\cal P}_J&=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1)(n_j-1)\right],\\
+       {\cal P}_{SJ}&=\exp\left[\sum_{i<j} v^s_{ij} m_i m_j\right],\\
        {\cal P}_{d-h}^{(2)}&= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right],\\
        {\cal P}_{d-h}^{(4)}&= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right],\\
        {\cal N}_{\rm General RBM}&= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_h} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right],\\
@@ -94,6 +95,7 @@
     :math:`{\boldsymbol R}` に対応する並進演算子、
     :math:`\hat{G}_{\alpha}` は格子の点群演算子、
     :math:`p_\alpha` はパリティをそれぞれ表します。
+    Spin Jastrow因子では :math:`m_i=n_{i\uparrow}-n_{i\downarrow}` とします。
     ダブロン・ホロン相関因子に関する詳細は文献 [Tahara2008_ ]の説明を参照してください。
     また、一体部分は実空間のペア関数
 
@@ -113,6 +115,9 @@
        
     **Jastrow (jastrowidx.def)**:
     :math:`{\cal P}_J` のうち、最適化の対象とする変分パラメータ :math:`v_{ij}` を指定します。
+
+    **SpinJastrow (spinjastrow.def)**:
+    :math:`{\cal P}_{SJ}` のうち、最適化の対象とする変分パラメータ :math:`v^s_{ij}` を指定します。
        
     **DH2**:
     :math:`{\cal P}_{d-h}^{(2)}` で表される2サイトのダブロン・ホロン相関因子を指定します。
@@ -151,6 +156,9 @@
        
     **InJastrow**:
     :math:`{\cal P}_J` 内の変分パラメータ :math:`v_{ij}` の初期値を設定します。
+
+    **InSpinJastrow**:
+    :math:`{\cal P}_{SJ}` 内の変分パラメータ :math:`v^s_{ij}` の初期値を設定します。
        
     **InDH2**:
     :math:`{\cal P}_{d-h}^{(2)}` 内の2サイトのダブロン・ホロン相関因子
@@ -186,6 +194,12 @@
     **OneBodyG (greenone.def)**:出力する一体Green関数を指定します。
 
     **TwoBodyG (greentwo.def)**:出力する二体Green関数を指定します。
+
+    **Twist (twist.def)**:出力するTwist演算子を指定します。
+
+(7) その他:
+
+    **Lattice (lattice.def)**:サイト番号に対するユニットセル内部座標を含めた格子ベクトルを指定します。Twist演算子計算時に使用されます。
 
 .. _InputFileList:
     
@@ -272,6 +286,8 @@
      - 最適化するGutzwiller因子を設定します。                                    
    * - Jastrow                   
      - 最適化する電荷Jastrow因子を指定します。                                   
+   * - SpinJastrow
+     - 最適化するスピンJastrow因子を指定します。
    * - DH2                       
      - 最適化する2サイトダブロン・ホロン相関因子を指定します。                   
    * - DH4                       
@@ -296,6 +312,8 @@
      - Gutzwiller因子の初期値を設定します。                                      
    * - InJastrow                 
      - 電荷Jastrow因子の初期値を設定します。                                     
+   * - InSpinJastrow
+     - スピンJastrow因子の初期値を設定します。
    * - InDH2                     
      - 2サイトダブロン・ホロン相関因子の初期値を設定します。                     
    * - InDH4                     
@@ -317,7 +335,11 @@
    * - OneBodyG                  
      - 出力する一体グリーン関数を指定します。                                    
    * - TwoBodyG                  
-     - 出力する二体グリーン関数を指定します。                                    
+     - 出力する二体グリーン関数を指定します。
+   * - Twist                    
+     - 出力するTwist演算子を指定します。
+   * - Lattice                  
+     - サイト番号に対するユニットセル内部座標を含めた格子ベクトルを指定します。Twist演算子計算時に使用されます。
 
 ModParaファイル (modpara.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -616,6 +638,12 @@ ModParaファイル (modpara.def)
    を解くときに、 :math:`S`
    を陽に構築せずに解くことでメモリを削減する [4]_ オプション[NeuscammanUmrigarChan_ ](1で機能On,
    ``NStore`` は1に固定されます)。
+
+-  ``useDiagScale``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=0)
+
+   **説明 :** SR法での連立一次方程式 :math:`Sx=g` をCG法により解く際に、 Point Jacobi法 (:math:`S` 行列の対角スケーリング)による前処理付きCG法を使用するオプション(1で機能ON, ``NSRCG=1`` である必要がある)。
 
 -  ``NneuronGeneral``
 
@@ -1556,6 +1584,127 @@ Jastrow因子
 
 -  [ int02 ]-[ int07 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
 
+Spin Jastrow指定ファイル(spinjastrow.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Spin Jastrow因子
+
+.. math::
+
+   {\cal P}_{SJ}=\exp\left[\sum_{i<j} v^s_{ij} m_i m_j\right],
+   \quad m_i=n_{i\uparrow}-n_{i\downarrow}
+
+の設定を行います。指定するパラメータはサイト番号 :math:`i, j` と
+:math:`v^s_{ij}` の変分パラメータの番号です。以下にファイル例を記載します。
+
+::
+
+    ======================
+    NSpinJastrowIdx 4
+    ComplexType 0
+    =====================
+    =====================
+       0     1     0
+       0     2     1
+       0     3     2
+       1     0     0
+     (continue...)
+       0     1
+       1     1
+       2     1
+       3     1
+
+ファイル形式
+^^^^^^^^^^^^
+
+以下のように行数に応じ異なる形式をとります( :math:`N_s` はサイト数、 :math:`N_{sj}` は変分パラメータの種類の数)。
+
+-  1行: ヘッダ(何が書かれても問題ありません)。
+
+-  2行: [string01] [int01]
+
+-  3行: [string02] [int02]
+
+-  4-5行: ヘッダ(何が書かれても問題ありません)。
+
+-  6 - (5+ :math:`N_s\times (N_s-1)`) 行: [int03] [int04] [int05]
+
+-  (6+ :math:`N_s\times (N_s-1)` ) -
+   (5+ :math:`N_s\times (N_s-1)` + :math:`N_{sj}`)行：[int06] [int07]
+
+パラメータ
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :**
+   :math:`v^s_{ij}` の変分パラメータの種類の総数のキーワード名を指定します(任意)。
+
+-  [ int01 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** :math:`v^s_{ij}` の変分パラメータの種類の総数を指定します。
+
+-  [ string02 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :**
+   :math:`v^s_{ij}` の変分パラメータの型を指定するためのキーワード名を指定します(任意)。
+
+-  [ int02 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`v^s_{ij}` の変分パラメータの型を指定します。0が実数、1が複素数に対応します。
+
+-  [ int03 ], [ int04 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   サイト番号を指定する整数。0以上 ``Nsite`` 未満で指定します。
+
+-  [ int05 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`v^s_{ij}` の変分パラメータの種類を表します。0以上[int01]未満で指定します。
+
+-  [ int06 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`v^s_{ij}` の変分パラメータの種類を表します(最適化有無の設定用)。0以上[int01]未満で指定します。
+
+-  [ int07 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   [int06]で指定した :math:`v^s_{ij}` の変分パラメータの最適化有無を設定します。最適化する場合は1、最適化しない場合は0とします。
+
+使用ルール
+^^^^^^^^^^
+
+本ファイルを使用するにあたってのルールは以下の通りです。
+
+-  行数固定で読み込みを行う為、ヘッダの省略はできません。
+
+-  [ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
+
+-  [ int02 ]-[ int07 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
+
+-  [ int03 ] と [ int04 ] が同じサイトを指す場合はエラー終了します。
+
+-  各サイトペアについて :math:`(i,j)` と :math:`(j,i)` の両方を指定する必要があります。また、両者の変分パラメータ番号は同一でなければなりません。
+
 DH2指定ファイル
 ~~~~~~~~~~~~~~~
 
@@ -1956,7 +2105,7 @@ RBM因子
    {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
 
 
-のうち、 :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] ` の隠れ層のみが関わる箇所の設定を行います。指定するパラメータは隠れニューロンの番号 :math:`k` と :math:`h_{k}` の変分パラメータの番号です。以下にファイル例を記載します。
+のうち、 :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]` の隠れ層のみが関わる箇所の設定を行います。指定するパラメータは隠れニューロンの番号 :math:`k` と :math:`h_{k}` の変分パラメータの番号です。以下にファイル例を記載します。
 
 ::
 
@@ -2074,7 +2223,7 @@ RBM因子
    {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
 
 
-のうち、 :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] ` の隠れ層と物理層どちらも関わる箇所の設定を行います。指定するパラメータはサイト番号、スピン番号、および隠れニューロンの番号 :math:`i \sigma k` と :math:`W_{i \sigma k}` の変分パラメータの番号です。以下にファイル例を記載します。
+のうち、 :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]` の隠れ層と物理層どちらも関わる箇所の設定を行います。 指定するパラメータはサイト番号、スピン番号、および隠れニューロンの番号 :math:`i \sigma k` と :math:`W_{i \sigma k}` の変分パラメータの番号です。以下にファイル例を記載します。
 
 ::
 
@@ -2683,10 +2832,12 @@ TransSym指定ファイル(qptransidx.def)
 
 各変分パラメータの初期値を設定することが可能です。
 変分パラメータの種類は :ref:`InputFileList` において
-``InGutzwiller``, ``InJastrow``, ``InDH2``, ``InDH4``,  ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer``, ``InGeneralRBM_PhysHidden``, ``InOrbital``,
+``InGutzwiller``, ``InJastrow``, ``InSpinJastrow``, ``InDH2``, ``InDH4``,  ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer``, ``InGeneralRBM_PhysHidden``, ``InOrbital``,
 ``InOrbitalAntiParallel``, ``InOrbitalParallel``, ``InOrbitalGeneral``
 をキーワードとして指定することで区別します。なお、ファイルフォーマットは全て共通です。
 以下、 ``InJastrow`` ファイルの例を記載します。
+``InSpinJastrow`` では2行目にスピンJastrow変分パラメータ数を指定します
+(例: ``NSpinJastrowIdx``)。
 
 ::
 
@@ -2953,3 +3104,204 @@ TwoBodyG指定ファイル(greentwo.def)
 .. [4]
    使用メモリ量は、 :math:`O(N_\text{p}) + O(N_\text{p}N_\text{MCS})`
    です。
+
+Twist指定ファイル(twist.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+計算・出力するTwist演算子 :math:`P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle` を指定します。位置演算子 :math:`\mu_i` はLattice指定ファイル(lattice.def)で定義します。
+以下にファイル例を記載します。
+
+::
+
+    --------------------
+    NTwist	2
+    --------------------
+    idx_site_s_x_y_z
+    --------------------
+    0	0	0	0.0	0.0	0.0
+    0	1	0	0.0	0.0	0.0
+    0	2	0	0.0	0.0	0.0
+    0	3	0	0.0	0.0	0.0
+    0	4	0	0.0	0.0	0.0
+    0	5	0	0.0	0.0	0.0
+    0	0	1	0.3333333333	0.0	0.0
+    0	1	1	0.3333333333	0.0	0.0
+    0	2	1	0.3333333333	0.0	0.0
+    0	3	1	0.3333333333	0.0	0.0
+    0	4	1	0.3333333333	0.0	0.0
+    0	5	1	0.3333333333	0.0	0.0
+    1	0	0	0.3333333333	0.0	0.0
+    1	1	0	0.3333333333	0.0	0.0
+        …
+
+ファイル形式
+^^^^^^^^^^^^
+
+以下のように行数に応じ異なる形式をとります。
+
+-  1行: ヘッダ(何が書かれても問題ありません)。
+
+-  2行: [string01] [int01]
+
+-  3-5行: ヘッダ(何が書かれても問題ありません)。
+
+-  6行以降:
+   [int02]  [int03]  [int04]  [double01]  [double02]  [double03]
+
+パラメータ
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :** Twist演算子の総数のキーワード名を指定します(任意)。
+
+-  [ int01 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** Twist演算子の総数を指定します。
+
+-  [ int02 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   Twist演算子の番号 :math:`\alpha` を指定する整数。0以上 [ int01 ] 未満で指定します。
+
+-  [ int03 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   サイト番号を指定する整数。0以上 ``Nsite`` 未満で指定します。
+
+-  [ int04 ]
+
+   **形式 :** int型 (空白不可)
+
+   | **説明 :** スピンを指定する整数。
+   | 0: アップスピン
+   | 1: ダウンスピン
+   | を選択することが出来ます。
+
+-  [ double01 ], [ double02 ],
+   [ double03 ]
+
+   **形式 :** double型 (空白不可)
+
+   **説明 :** 各座標方向 :math:`\mu = x, y, z` に対応するTwist成分
+   :math:`c^{(\alpha)\mu}_{i\sigma}` を指定します。 :math:`x` 方向成分を [ double01 ]、 :math:`y` 方向成分を [ double02 ]、 :math:`z` 方向成分を [ double03 ] に指定します。
+
+使用ルール
+^^^^^^^^^^
+
+本ファイルを使用するにあたってのルールは以下の通りです。
+
+-  行数固定で読み込みを行う為、ヘッダの省略はできません。
+
+-  各Twist演算子を指定するにあたり、全てのサイト・スピンの組み合わせを指定する必要があります。
+
+Lattice指定ファイル(lattice.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+サイト番号 :math:`i` に対応する位置演算子 :math:`\mu_i` とユニットセル内の軌道番号を定義します。
+以下にファイル例を記載します。
+
+::
+
+    --------------------
+    NLattice  4 4 4 2
+    --------------------
+    i_x_y_z_orb
+    --------------------
+    0 0 0 0 0
+    1 0 0 0 1
+    2 1 0 0 0
+    3 1 0 0 1
+    4 2 0 0 0
+    5 2 0 0 1
+        …
+
+ファイル形式
+^^^^^^^^^^^^
+
+以下のように行数に応じ異なる形式をとります。
+
+-  1行: ヘッダ(何が書かれても問題ありません)。
+
+-  2行: [string01] [int01] [int02]  [int03]  [int04]
+
+-  3-5行: ヘッダ(何が書かれても問題ありません)。
+
+-  6行以降:
+   [int05]  [int06]  [int07]  [int08]  [int09]
+
+パラメータ
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :** キーワード名を指定します(任意)。
+
+-  [ int01 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** 位置演算子 :math:`\mu` の :math:`x` 方向の最大値を指定します。
+
+-  [ int02 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** 位置演算子 :math:`\mu` の :math:`y` 方向の最大値を指定します。
+
+-  [ int03 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** 位置演算子 :math:`\mu` の :math:`z` 方向の最大値を指定します。
+
+-  [ int04 ]
+
+   **形式 :** int型 (空白不可)
+
+   | **説明 :** ユニットセル内の軌道数を指定します。
+
+-  [ int05 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   サイト番号を指定する整数。0以上 ``Nsite`` 未満で指定します。
+
+-  [ int06 ], [ int07 ],
+   [ int08 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** サイト番号 [ int05 ] に対応するユニットセル位置演算子 :math:`\mu_i` の各座標方向 :math:`\mu = x, y, z` の値を指定します。 :math:`x, y, z` 方向成分をそれぞれ 0以上かつ [ int01 ], [ int02 ], [ int03 ] 未満で指定します。
+
+-  [ int09 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** サイト番号 [ int05 ] に対応するユニットセル内の軌道番号を指定します。0以上 [ int04 ] 未満で指定します。
+
+使用ルール
+^^^^^^^^^^
+
+本ファイルを使用するにあたってのルールは以下の通りです。
+
+-  行数固定で読み込みを行う為、ヘッダの省略はできません。
+
+-  全てのサイト番号を指定する必要があります。
+
+-  ``[int01] * [int02] * [int03] * [int04]`` (すなわち ``Nx * Ny * Nz * Norb``)
+   は ``Nsite`` と一致する必要があります。
+
+-  各サイト番号は一度だけ指定する必要があります。
+   重複や欠番は入力エラーとして拒否されます。
