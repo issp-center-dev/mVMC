@@ -592,9 +592,10 @@ Keywords and parameters
 
    **Type :** int-type (Positive integer)
 
-   **Description :** The option for local update about exchange terms.
-   0: not update, 1: update for electron system. For Spin system, the
-   value must be 2.
+   **Description :** The option for local updates. The choices are
+   0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
+   (hopping or exchange/local-spin-flip), 4: t-J spin hopping, and
+   5: t-J update (exchange or spin hopping).
 
 -  ``RndSeed``
 

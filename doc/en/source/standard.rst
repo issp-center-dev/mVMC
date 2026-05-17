@@ -113,6 +113,10 @@ Parameters about the kind of a calculation
    these flags has a word "GC"(=grandcanonical), the number of electrons
    are conserved in these system.
 
+   The t-J mode is controlled by ``NExUpdatePath`` in ``modpara.def``
+   (``4``: spin hopping, ``5``: exchange/spin-hopping mix). At present,
+   Standard mode does not provide a dedicated ``model`` keyword for t-J.
+
 -  ``lattice``
 
    **Type :** String (Choose from ``"Chain Lattice"``,
@@ -714,9 +718,12 @@ Parameters for the numerical condition
 
    **Type :** int-type (Positive integer)
 
-   **Description :** The option for local update about exchange terms.
-   0: not update, 1: update. The default value is set as 1 when the
-   local spin exists, otherwise 0.
+   **Description :** The option for local updates. The choices are
+   0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
+   (hopping or exchange/local-spin-flip), 4: t-J spin hopping, and
+   5: t-J update (exchange or spin hopping). In Standard mode, this
+   value is assigned automatically from ``model``. To use t-J mode,
+   set ``NExUpdatePath=4`` or ``5`` in ``modpara.def``.
 
 -  ``RndSeed``
 

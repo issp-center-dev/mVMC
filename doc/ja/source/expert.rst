@@ -582,8 +582,10 @@ ModParaファイル (modpara.def)
 
    **形式 :** int型 (0以上)
 
-   **説明 :** 電子系でローカル更新で2電子交換を[0] 認めない、[1]
-   認めるの設定をします。スピン系の場合には2に設定する必要があります。
+   **説明 :** ローカル更新の種類を指定します。
+   0: HOPPING、1: EXCHANGE または HOPPING、2: EXCHANGE、
+   3: KondoGC用（HOPPING または EXCHANGE/LOCALSPINFLIP）、
+   4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）。
 
 -  ``RndSeed``
 
