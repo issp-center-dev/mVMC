@@ -3478,3 +3478,9 @@ The rules for using this file are as follows:
 -  Headers cannot be omitted.
 
 -  All the site indices must be specified.
+
+-  ``[int01] * [int02] * [int03] * [int04]``
+   (i.e. ``Nx * Ny * Nz * Norb``) must equal ``Nsite``.
+
+-  Each site index must appear exactly once. Duplicate or missing
+   indices are rejected as input errors.

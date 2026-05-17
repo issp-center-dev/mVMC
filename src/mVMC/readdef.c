@@ -113,7 +113,7 @@ int GetInfoGeneralRBM_PhysHidden(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iC
 
 int GetInfoLattice(FILE *fp, int **ArrayIdx, int NArray, int nx, int ny, int nz, int norb, char *defname);
 //int GetInfoTwist(FILE *fp, int **ArrayIdx, int NArray, char *defname);
-int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int NArray, char *defname);
+int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int NTwist, char *defname);
 
 char *ReadBuffInt(FILE *fp, int *iNbuf) {
   char *cerr;
@@ -335,6 +335,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   double bufDouble[nBufDouble];
   int iKWidx = 0;
   int iret = 0;
+  int hasLattice = 0;
   int iFlgOrbitalAntiParallel = 0;
   int iFlgOrbitalParallel = 0;
   int itmp = 0;
@@ -365,6 +366,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         }
       }
     }
+    hasLattice = (strcmp(cFileNameListFile[KWLattice], "") != 0);
 
     SetDefaultValuesModPara(bufInt, bufDouble);
     iret = GetInfoFromModPara(bufInt, bufDouble);
@@ -536,18 +538,35 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
             if (cerr != NULL) {
               cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-              sscanf(ctmp2,"%s %d %d %d %d\n", ctmp, &bufInt[IdxNx], &bufInt[IdxNy], &bufInt[IdxNz], &bufInt[IdxNorb]);
-              //printf("Nx=%d Ny=%d Nz=%d Norb=%d\n",bufInt[IdxNx], bufInt[IdxNy], bufInt[IdxNz], bufInt[IdxNorb]);
+              if (cerr != NULL) {
+                int scanned_lat = sscanf(ctmp2, "%s %d %d %d %d\n",
+                                         ctmp,
+                                         &bufInt[IdxNx], &bufInt[IdxNy],
+                                         &bufInt[IdxNz], &bufInt[IdxNorb]);
+                if (scanned_lat != 5) {
+                  fprintf(stderr,
+                          "Error: malformed lattice header (expected 'name Nx Ny Nz Norb'): %s",
+                          ctmp2);
+                  info = ReadDefFileError(defname);
+                } else if (bufInt[IdxNx] <= 0 || bufInt[IdxNy] <= 0 ||
+                           bufInt[IdxNz] <= 0 || bufInt[IdxNorb] <= 0) {
+                  fprintf(stderr,
+                          "Error: lattice dimensions must be positive (got Nx=%d Ny=%d Nz=%d Norb=%d).\n",
+                          bufInt[IdxNx], bufInt[IdxNy],
+                          bufInt[IdxNz], bufInt[IdxNorb]);
+                  info = ReadDefFileError(defname);
+                }
+              }
             }
-            //cerr = ReadBuffInt(fp, &bufInt[IdxNx], &bufInt[IdxNy], &bufInt[IdxNz], &bufInt[IdxNorb]);
-            
             break;
           
           case KWTwist:
             cerr = ReadBuffInt(fp, &bufInt[IdxNTwist]);
-            //cerr = ReadBuffIntCmpFlg(fp, &bufInt[IdxNTwist], &bufInt[IdxNdivideTwist]);
-            //printf("NTwist=%d \n",bufInt[IdxNTwist]);
-            //printf("NTwist=%d %d\n",bufInt[IdxNTwist], bufInt[IdxNdivideTwist]);
+            if (cerr != NULL && bufInt[IdxNTwist] < 0) {
+              fprintf(stderr, "Error: NTwist must be non-negative (got %d).\n",
+                      bufInt[IdxNTwist]);
+              info = ReadDefFileError(defname);
+            }
             break;
 
 
@@ -698,6 +717,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&useDiagScale, 1, MPI_INT, 0, comm); // for Jacobi preconditioned CG
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
+  MPI_Bcast(&hasLattice, 1, MPI_INT, 0, comm);
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
   MPI_Bcast(CDataFileHead, nBufChar, MPI_CHAR, 0, comm);
   MPI_Bcast(CParaFileHead, nBufChar, MPI_CHAR, 0, comm);
@@ -750,7 +770,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NQPOptTrans = bufInt[IdxNQPOptTrans];
   Nrange = bufInt[IdxNrange];
   NBackFlowIdx = bufInt[IdxNBF];
-  Nz = bufInt[IdxNNz];
+  NzBF = bufInt[IdxNNz];
   NSROptCGMaxIter = bufInt[IdxSROptCGMaxIter];
   DSROptRedCut = bufDouble[IdxSROptRedCut];
   DSROptStaDel = bufDouble[IdxSROptStaDel];
@@ -763,6 +783,34 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   Nz = bufInt[IdxNz];
   Norb = bufInt[IdxNorb];
   NTwist  = bufInt[IdxNTwist];
+
+  if (NTwist < 0) {
+    if (rank == 0) {
+      fprintf(stderr, "Error: NTwist must be non-negative (got %d).\n", NTwist);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NTwist > 0) {
+    if (!hasLattice) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: NTwist=%d requires a Lattice definition file in namelist.\n",
+                NTwist);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    /* Lattice values are bcast via bufInt, so this is rank-safe. */
+    long long lattice_prod = (long long)Nx * (long long)Ny *
+                             (long long)Nz * (long long)Norb;
+    if (lattice_prod != (long long)Nsite) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: lattice dimensions Nx*Ny*Nz*Norb = %lld do not match Nsite = %d.\n",
+                lattice_prod, Nsite);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+  }
 
   Nneuron = bufInt[IdxNneuron];
   NneuronGeneral = bufInt[IdxNneuronGeneral];
@@ -840,7 +888,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
   /* [s] For BackFlow */
   if (NBackFlowIdx > 0) {
-    NrangeIdx = 3 * (Nrange - 1) / Nz + 1; //For Nz-conectivity
+    NrangeIdx = 3 * (Nrange - 1) / NzBF + 1; //For BF connectivity
     NBFIdxTotal = (NrangeIdx - 1) * (NrangeIdx) / 2 + (NrangeIdx);
     NProjBF = NBFIdxTotal * NBackFlowIdx;
   } else {
@@ -1151,7 +1199,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWTwist:
           /*twist.def---------------------------------------*/
-          if (GetInfoTwist(fp, TwistIdx, ParaTwist, Nsite, NTwist*Nsite*2, defname) != 0) info = 1;
+          if (GetInfoTwist(fp, TwistIdx, ParaTwist, Nsite, NTwist, defname) != 0) info = 1;
           break;
 
 
@@ -2991,62 +3039,145 @@ int GetInfoGeneralRBM_PhysHidden(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iC
 
 int GetInfoLattice(FILE *fp, int **ArrayIdx, int NArray, int nx, int ny, int nz, int norb, char *defname) {
   char ctmp2[256];
-  int idx = 0, info = 0;
+  int idx = 0, info = 0, scanned;
   int x1 = 0, x2 = 0, x3 = 0, x4 = 0;
+  int *seen = NULL;
+  int i;
   if (NArray == 0) return 0;
+  seen = (int *)calloc((size_t)NArray, sizeof(int));
+  if (seen == NULL) {
+    fprintf(stderr, "Error: GetInfoLattice failed to allocate seen[].\n");
+    return 1;
+  }
   while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-    sscanf(ctmp2, "%d %d %d %d %d\n",
-           &idx, &x1, &x2, &x3, &x4);
+    scanned = sscanf(ctmp2, "%d %d %d %d %d\n",
+                     &idx, &x1, &x2, &x3, &x4);
+    if (scanned != 5) {
+      fprintf(stderr, "Error: malformed lattice.def line (expected 5 ints): %s",
+              ctmp2);
+      info = 1;
+      break;
+    }
+    if (idx < 0 || idx >= NArray) {
+      fprintf(stderr, "Error: lattice idx=%d out of range [0,%d).\n", idx, NArray);
+      info = 1;
+      break;
+    }
+    if (CheckSite(x1, nx) != 0 || CheckSite(x2, ny) != 0 ||
+        CheckSite(x3, nz) != 0 || CheckSite(x4, norb) != 0) {
+      fprintf(stderr, "Error: Site index for Lattice is incorrect (idx=%d, %d %d %d %d).\n",
+              idx, x1, x2, x3, x4);
+      info = 1;
+      break;
+    }
+    if (seen[idx] != 0) {
+      fprintf(stderr, "Error: lattice idx=%d appears more than once.\n", idx);
+      info = 1;
+      break;
+    }
+    seen[idx] = 1;
     ArrayIdx[idx][0] = x1;
     ArrayIdx[idx][1] = x2;
     ArrayIdx[idx][2] = x3;
     ArrayIdx[idx][3] = x4;
-
-    if (CheckSite(x1, nx) != 0 || CheckSite(x2, ny) != 0 || CheckSite(x3, nz) != 0 || CheckSite(x4, norb) != 0) {
-      fprintf(stderr, "Error: Site index for Lattice is incorrect. \n");
-      info = 1;
-      break;
-    }
-
-    //printf("GetInfoLattice, idx=%d: %d %d %d %d\n",idx,x1,x2,x3,x4);
   }
-  if (idx+1 != NArray) info = ReadDefFileError(defname);
+  if (info == 0) {
+    for (i = 0; i < NArray; i++) {
+      if (seen[i] == 0) {
+        fprintf(stderr, "Error: lattice idx=%d is missing.\n", i);
+        info = ReadDefFileError(defname);
+        break;
+      }
+    }
+  }
+  free(seen);
   return info;
 }
 
-int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int NArray, char *defname) {
+int GetInfoTwist(FILE *fp, int **ArrayIdx, double **ArrayValue, int Nsite, int NTwist, char *defname) {
   char ctmp2[256];
-  int idx = 0, idx0=0, info = 0;
+  int info = 0, scanned;
   int twist_idx = 0, i = 0, s = 0;
-  double dReValueX = 0, dImValueX = 0;
-  double dReValueY = 0, dImValueY = 0;
-  double dReValueZ = 0, dImValueZ = 0;
-  if (NArray == 0) return 0;
+  int row, key, t, k;
+  double dReValueX = 0;
+  double dReValueY = 0;
+  double dReValueZ = 0;
+  int *count = NULL;       /* per-twist row count */
+  char *seen = NULL;       /* flat 2D: seen[t * (2*Nsite) + key] */
+  size_t seen_size;
+  if (NTwist == 0 || Nsite == 0) return 0;
+  count = (int *)calloc((size_t)NTwist, sizeof(int));
+  seen_size = (size_t)NTwist * (size_t)(2 * Nsite);
+  seen = (char *)calloc(seen_size, sizeof(char));
+  if (count == NULL || seen == NULL) {
+    fprintf(stderr, "Error: GetInfoTwist failed to allocate validation buffers.\n");
+    free(count);
+    free(seen);
+    return 1;
+  }
   while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-    sscanf(ctmp2, "%d %d %d %lf %lf %lf \n",
-           &twist_idx, &i, &s, &dReValueX, &dReValueY, &dReValueZ);
-    //sscanf(ctmp2, "%d %d %d %lf %lf %lf %lf %lf %lf\n",
-           //&twist_idx, &i, &s, &dReValueX, &dImValueX, &dReValueY, &dImValueY, &dReValueZ, &dImValueZ);
-    ArrayIdx[twist_idx][2*idx]   = i;
-    ArrayIdx[twist_idx][2*idx+1] = s;
-      if (CheckSite(i, Nsite) != 0) {
-        fprintf(stderr, "Error: Site index is incorrect. \n");
-        info = 1;
+    scanned = sscanf(ctmp2, "%d %d %d %lf %lf %lf \n",
+                     &twist_idx, &i, &s, &dReValueX, &dReValueY, &dReValueZ);
+    if (scanned != 6) {
+      fprintf(stderr, "Error: malformed twist.def line (expected 6 fields): %s",
+              ctmp2);
+      info = 1;
+      break;
+    }
+    if (twist_idx < 0 || twist_idx >= NTwist) {
+      fprintf(stderr, "Error: twist_idx=%d out of range [0,%d).\n",
+              twist_idx, NTwist);
+      info = 1;
+      break;
+    }
+    if (s != 0 && s != 1) {
+      fprintf(stderr, "Error: twist spin index s=%d must be 0 or 1.\n", s);
+      info = 1;
+      break;
+    }
+    if (CheckSite(i, Nsite) != 0) {
+      fprintf(stderr, "Error: twist site index i=%d is out of [0,%d).\n",
+              i, Nsite);
+      info = 1;
+      break;
+    }
+    key = i + s * Nsite;     /* unique site-spin slot in [0, 2*Nsite) */
+    if (seen[(size_t)twist_idx * (size_t)(2 * Nsite) + (size_t)key] != 0) {
+      fprintf(stderr, "Error: twist=%d (site=%d, spin=%d) appears more than once.\n",
+              twist_idx, i, s);
+      info = 1;
+      break;
+    }
+    seen[(size_t)twist_idx * (size_t)(2 * Nsite) + (size_t)key] = 1;
+    row = count[twist_idx];  /* row index within this twist (0..2*Nsite-1) */
+    ArrayIdx[twist_idx][2*row]   = i;
+    ArrayIdx[twist_idx][2*row+1] = s;
+    ArrayValue[twist_idx][3*row]   = dReValueX;
+    ArrayValue[twist_idx][3*row+1] = dReValueY;
+    ArrayValue[twist_idx][3*row+2] = dReValueZ;
+    count[twist_idx]++;
+  }
+  if (info == 0) {
+    for (t = 0; t < NTwist; t++) {
+      if (count[t] != 2 * Nsite) {
+        fprintf(stderr, "Error: twist=%d has %d rows, expected %d.\n",
+                t, count[t], 2 * Nsite);
+        info = ReadDefFileError(defname);
         break;
       }
-    ArrayValue[twist_idx][3*idx]   = dReValueX;
-    ArrayValue[twist_idx][3*idx+1] = dReValueY;
-    ArrayValue[twist_idx][3*idx+2] = dReValueZ;
-    //ArrayValue[idx][0] = dReValueX + I * dImValueX;
-    //ArrayValue[idx][1] = dReValueY + I * dImValueY;
-    //ArrayValue[idx][2] = dReValueZ + I * dImValueZ;
-    idx++;
-    idx0++;
-    if (idx == 2*Nsite){
-      idx=0;
+      for (k = 0; k < 2 * Nsite; k++) {
+        if (seen[(size_t)t * (size_t)(2 * Nsite) + (size_t)k] != 1) {
+          fprintf(stderr, "Error: twist=%d missing entry for slot %d (site=%d, spin=%d).\n",
+                  t, k, k % Nsite, k / Nsite);
+          info = ReadDefFileError(defname);
+          break;
+        }
+      }
+      if (info != 0) break;
     }
   }
-  if (idx0 != NArray) info = ReadDefFileError(defname);
+  free(count);
+  free(seen);
   return info;
 }
 

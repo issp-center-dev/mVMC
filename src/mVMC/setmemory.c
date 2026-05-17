@@ -313,6 +313,10 @@ void FreeMemoryDef() {
   free(PosBF);
   free(RangeIdx);
   free(BackFlowIdx);
+  /* outer pointer arrays for lattice / twist; row storage is pool-allocated */
+  free(LatticeIdx);
+  free(TwistIdx);
+  free(ParaTwist);
   return;
 }
 
