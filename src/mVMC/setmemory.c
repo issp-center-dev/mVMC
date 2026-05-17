@@ -85,6 +85,12 @@ void SetMemoryDef() {
     pInt += Nsite;
   }
 
+  SpinJastrowIdx = (int**)malloc(sizeof(int*)*Nsite);
+  for(i=0;i<Nsite;i++) {
+    SpinJastrowIdx[i] = pInt;
+    pInt += Nsite;
+  }
+
   DoublonHolon2siteIdx = (int**)malloc(sizeof(int*)*NDoublonHolon2siteIdx);
   for(i=0;i<NDoublonHolon2siteIdx;i++) {
     DoublonHolon2siteIdx[i] = pInt;
@@ -293,6 +299,7 @@ void FreeMemoryDef() {
   free(OrbitalSgn);
   free(DoublonHolon4siteIdx);
   free(DoublonHolon2siteIdx);
+  free(SpinJastrowIdx);
   free(JastrowIdx);
   free(ParaTransfer);
   free(ParaCoulombIntra);

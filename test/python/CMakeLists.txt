@@ -2,10 +2,12 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest.py DESTINATION ${CMAKE_BINARY_DIR}
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mode1.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_invalid_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sr.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_UHF.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_UHF_InterAll.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert_phys.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -27,6 +29,11 @@ function(add_python_vmc_test_expert model)
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_vmc_test_expert)
 
+function(add_python_vmc_test_invalid_expert model expected_error)
+    add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py ${model} "${expected_error}")
+    set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_invalid_expert)
+
 function(add_python_vmc_test_expert_phys model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_expert_phys.py ${model})
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
@@ -36,6 +43,11 @@ function(add_python_vmc_test_expert_phys_mpi test_name model)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_expert_phys.py ${model})
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2")
 endfunction(add_python_vmc_test_expert_phys_mpi)
+
+function(add_python_vmc_test_expert_mpi model)
+    add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_expert_mpi.py ${model})
+    set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_expert_mpi)
 
 
 function(add_python_vmc_test_sr model)
@@ -84,6 +96,10 @@ set(python_test_vmc_model_mpi
   KondoChain_Stot1_cmp_mpi
 )
 
+set(python_test_vmc_model_expert_mpi
+  HubbardChain_SpinJastrow_mpi
+)
+
 set(python_test_vmc_model_mode1
   SpinChainLanczos
   HubbardChainLanczos
@@ -91,6 +107,10 @@ set(python_test_vmc_model_mode1
 
 set(python_test_vmc_model_expert
   GeneralRBM_cmp
+  HeisenbergChain_SpinJastrow
+  HeisenbergChain_fsz_SpinJastrow
+  HubbardChain_SpinJastrow
+  HubbardChain_fsz_SpinJastrow
 )
 
 set(python_test_vmc_model_expert_phys
@@ -136,10 +156,21 @@ endforeach(model)
 add_python_vmc_test_expert_phys_mpi(Twist_SSH_cmp_mpi Twist_SSH_cmp)
 add_python_vmc_test_expert_phys_mpi(Twist_SSH_fsz_mpi Twist_SSH_fsz)
 
+foreach(model ${python_test_vmc_model_expert_mpi})
+    add_python_vmc_test_expert_mpi(${model})
+endforeach(model)
+
 
 foreach(model ${python_test_vmc_model_sr})
     add_python_vmc_test_sr(${model})
 endforeach(model)
+
+add_python_vmc_test_invalid_expert(SpinJastrow_InvalidClassRange "class index")
+add_python_vmc_test_invalid_expert(SpinJastrow_InvalidSymmetry "inconsistent class for pair")
+add_python_vmc_test_invalid_expert(SpinJastrow_NegativeNIdx "non-negative")
+add_test(NAME SpinJastrow_InvalidInIndex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py SpinJastrow_InvalidInIndex "duplicated index")
+set_tests_properties(SpinJastrow_InvalidInIndex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 
 foreach(model ${python_test_uhf_model})
     add_python_uhf_test(${model})
