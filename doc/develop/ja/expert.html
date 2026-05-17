@@ -2729,6 +2729,10 @@ i_x_y_z_orb
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
 <li><p>全てのサイト番号を指定する必要があります。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[int01]</span> <span class="pre">*</span> <span class="pre">[int02]</span> <span class="pre">*</span> <span class="pre">[int03]</span> <span class="pre">*</span> <span class="pre">[int04]</span></code> (すなわち <code class="docutils literal notranslate"><span class="pre">Nx</span> <span class="pre">*</span> <span class="pre">Ny</span> <span class="pre">*</span> <span class="pre">Nz</span> <span class="pre">*</span> <span class="pre">Norb</span></code>)
+は <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> と一致する必要があります。</p></li>
+<li><p>各サイト番号は一度だけ指定する必要があります。
+重複や欠番は入力エラーとして拒否されます。</p></li>
 </ul>
 </section>
 </section>

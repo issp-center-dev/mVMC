@@ -2906,6 +2906,10 @@ An integer giving a site index (0 <span class="math notranslate nohighlight">\(\
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>All the site indices must be specified.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[int01]</span> <span class="pre">*</span> <span class="pre">[int02]</span> <span class="pre">*</span> <span class="pre">[int03]</span> <span class="pre">*</span> <span class="pre">[int04]</span></code>
+(i.e. <code class="docutils literal notranslate"><span class="pre">Nx</span> <span class="pre">*</span> <span class="pre">Ny</span> <span class="pre">*</span> <span class="pre">Nz</span> <span class="pre">*</span> <span class="pre">Norb</span></code>) must equal <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>.</p></li>
+<li><p>Each site index must appear exactly once. Duplicate or missing
+indices are rejected as input errors.</p></li>
 </ul>
 </section>
 </section>
