@@ -107,6 +107,8 @@ set(python_test_vmc_model_mode1
 
 set(python_test_vmc_model_expert
   GeneralRBM_cmp
+  TJChainL4_Ncond2_J_path4
+  TJChainL4_Ncond2_J_path5
   TJChainL4_Ncond4_J_path5
   HeisenbergChain_SpinJastrow
   HeisenbergChain_fsz_SpinJastrow
