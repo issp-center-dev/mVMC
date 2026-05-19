@@ -66,6 +66,8 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **InterAll**: :math:`I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}` in
     :math:`{\cal H}_I`.
 
+    .. rubric:: t-J model input convention
+
     For a t-J model with the physical convention
 
     .. math::
@@ -76,7 +78,8 @@ listed in parentheses correspond to the file made by vmcdry.out.
        - \frac{1}{4}n_i n_j\right),
 
     where the tilde denotes the no-double-occupancy Hilbert space, use
-    the ``Trans``, ``CoulombInter``, ``Hund``, and ``Exchange`` files.
+    the ``Trans``, ``CoulombInter``, ``Hund``, and ``Exchange`` files;
+    this is not an ``InterAll`` input.
     With the sign convention of the Hamiltonian above, a positive
     physical coupling :math:`J_{ij}` is represented by
 
@@ -87,7 +90,12 @@ listed in parentheses correspond to the file made by vmcdry.out.
        J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}.
 
     The t-J update path must also be selected by ``NExUpdatePath`` in
-    ``modpara.def``.
+    ``modpara.def``. The current t-J update paths do not support
+    ``BackFlow`` or ``LocSpin`` inputs. Since double occupancy is
+    excluded, the electron number must not exceed the number of sites.
+    When the electron number is specified by ``Ncond``, this means
+    ``Ncond <= Nsite``. When it is specified by the electron-pair count
+    ``Nelectron``, this means ``2*Nelectron <= Nsite``.
 
 (4) Variational parameters to be optimized:
       
@@ -646,6 +654,11 @@ Keywords and parameters
    5 selects the local-update path for the t-J Hilbert space; it is not
    the switch for :math:`S_z` conservation. The spin sector is specified
    separately, for example by ``2Sz`` in fixed-:math:`S_z` calculations.
+   For the t-J choices 4 and 5, ``BackFlow`` and ``LocSpin`` are not
+   supported. Since double occupancy is excluded, ``Ncond <= Nsite`` is
+   required when the electron number is specified by ``Ncond``, and
+   ``2*Nelectron <= Nsite`` is required when it is specified by the
+   electron-pair count ``Nelectron``.
 
 -  ``RndSeed``
 

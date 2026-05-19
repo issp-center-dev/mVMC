@@ -109,6 +109,8 @@
    ``NExUpdatePath`` で指定します（``4``: SPINHOPPING、
    ``5``: EXCHANGE/SPINHOPPING）。現状のStandard modeでは、
    ``model`` キーワードでtJを直接指定することはできません。
+   現状のt-J更新経路では ``BackFlow`` と ``LocSpin`` は非対応であり、
+   二重占有を許さないため ``ncond <= Nsite`` を満たす必要があります。
 
 -  ``lattice``
 
@@ -656,6 +658,8 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
    Standard modeではこの値は ``model`` から自動設定されます。
    tJモードを使う場合は、 ``modpara.def`` で
    ``NExUpdatePath=4`` または ``5`` を指定してください。
+   t-J用の4と5では ``BackFlow`` と ``LocSpin`` は非対応です。また、
+   二重占有を許さないため ``ncond <= Nsite`` を満たす必要があります。
 
 -  ``RndSeed``
 
