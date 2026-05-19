@@ -67,6 +67,29 @@
     **InterAll**:
     :math:`{\cal H}_I` 内の :math:`I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}` を指定します。
 
+    物理的なt-J模型を
+
+    .. math::
+
+       {\cal H}_{tJ} = -\sum_{i,j,\sigma} t_{ij}
+       {\tilde c}_{i\sigma}^{\dagger}{\tilde c}_{j\sigma}
+       + \sum_{i,j} J_{ij}\left({\boldsymbol S}_i\cdot{\boldsymbol S}_j
+       - \frac{1}{4}n_i n_j\right)
+
+    と書く場合、ここで :math:`{\tilde c}` は二重占有を除いた空間での
+    演算子を表します。このt-J模型は ``Trans``、 ``CoulombInter``、
+    ``Hund``、 ``Exchange`` で指定します。上記ハミルトニアンの符号規約では、
+    正の物理的な結合 :math:`J_{ij}` に対して
+
+    .. math::
+
+       V_{ij}=-\frac{J_{ij}}{4}, \qquad
+       J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
+       J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}
+
+    を指定します。また、t-J用の更新経路は ``modpara.def`` の
+    ``NExUpdatePath`` で指定します。
+
 (4) 最適化対象変分パラメータ:
       
     最適化する変分パラメータを指定します。変分波動関数は
@@ -608,6 +631,9 @@ ModParaファイル (modpara.def)
    0: HOPPING、1: EXCHANGE または HOPPING、2: EXCHANGE、
    3: KondoGC用（HOPPING または EXCHANGE/LOCALSPINFLIP）、
    4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）。
+   4と5の違いはt-J空間でのローカル更新経路の違いであり、
+   :math:`S_z` 保存・非保存の切り替えではありません。スピン量子数の指定は、
+   固定 :math:`S_z` 計算では ``2Sz`` などで別途行います。
 
 -  ``RndSeed``
 

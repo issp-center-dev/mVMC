@@ -66,6 +66,29 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **InterAll**: :math:`I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}` in
     :math:`{\cal H}_I`.
 
+    For a t-J model with the physical convention
+
+    .. math::
+
+       {\cal H}_{tJ} = -\sum_{i,j,\sigma} t_{ij}
+       {\tilde c}_{i\sigma}^{\dagger}{\tilde c}_{j\sigma}
+       + \sum_{i,j} J_{ij}\left({\boldsymbol S}_i\cdot{\boldsymbol S}_j
+       - \frac{1}{4}n_i n_j\right),
+
+    where the tilde denotes the no-double-occupancy Hilbert space, use
+    the ``Trans``, ``CoulombInter``, ``Hund``, and ``Exchange`` files.
+    With the sign convention of the Hamiltonian above, a positive
+    physical coupling :math:`J_{ij}` is represented by
+
+    .. math::
+
+       V_{ij}=-\frac{J_{ij}}{4}, \qquad
+       J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
+       J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}.
+
+    The t-J update path must also be selected by ``NExUpdatePath`` in
+    ``modpara.def``.
+
 (4) Variational parameters to be optimized:
       
     The variational parameters to be optimized are specified by using
@@ -619,7 +642,10 @@ Keywords and parameters
    **Description :** The option for local updates. The choices are
    0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
    (hopping or exchange/local-spin-flip), 4: t-J spin hopping, and
-   5: t-J update (exchange or spin hopping).
+   5: t-J update (exchange or spin hopping). The choice between 4 and
+   5 selects the local-update path for the t-J Hilbert space; it is not
+   the switch for :math:`S_z` conservation. The spin sector is specified
+   separately, for example by ``2Sz`` in fixed-:math:`S_z` calculations.
 
 -  ``RndSeed``
 
