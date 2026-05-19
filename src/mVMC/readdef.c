@@ -642,6 +642,22 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       } else bufInt[IdxNe] = (bufInt[IdxNLocSpin] + bufInt[IdxNCond]) / 2;
     }
 
+    if (bufInt[IdxExUpdatePath] == 4 || bufInt[IdxExUpdatePath] == 5) {
+      if (bufInt[IdxNBF] > 0) {
+        fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support BackFlow.\n");
+        info = 1;
+      }
+      if (bufInt[IdxNLocSpin] > 0) {
+        fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support LocSpin.\n");
+        info = 1;
+      }
+      if (2LL * bufInt[IdxNe] > bufInt[IdxNsite]) {
+        fprintf(stderr,
+                "Error: NExUpdatePath=4 or 5 (t-J update) requires 2*Ne <= Nsite to avoid double occupancy.\n");
+        info = 1;
+      }
+    }
+
     //CheckGeneral Orbital
     //printf("bufInt[Idx2Sz]=%d \n",bufInt[Idx2Sz]);
     if (bufInt[Idx2Sz] != 0) {
