@@ -88,4 +88,6 @@ jobs:
         if: ${{ matrix.mpi == true }}
         working-directory: ${{runner.workspace}}/build
         shell: bash
+        env:
+          OMPI_MCA_rmaps_base_oversubscribe: "1"
         run: ctest --output-on-failure -R '_mpi$'
