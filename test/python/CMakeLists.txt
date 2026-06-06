@@ -171,6 +171,8 @@ endforeach(model)
 add_python_vmc_test_invalid_expert(SpinJastrow_InvalidClassRange "class index")
 add_python_vmc_test_invalid_expert(SpinJastrow_InvalidSymmetry "inconsistent class for pair")
 add_python_vmc_test_invalid_expert(SpinJastrow_NegativeNIdx "non-negative")
+add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path4_InvalidLanczos "NLanczosMode > 0")
+add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path5_InvalidLanczos "NLanczosMode > 0")
 add_test(NAME SpinJastrow_InvalidInIndex
          COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py SpinJastrow_InvalidInIndex "duplicated index")
 set_tests_properties(SpinJastrow_InvalidInIndex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
