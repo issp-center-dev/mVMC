@@ -712,11 +712,19 @@ Parameters for the numerical condition
 
 -  ``NExUpdatePath``
 
-   **Type :** int-type (Positive integer)
+   **Type :** int-type (Non-negative integer)
 
-   **Description :** The option for local update about exchange terms.
-   0: not update, 1: update. The default value is set as 1 when the
-   local spin exists, otherwise 0.
+   **Description :** The option for the local update path.
+   0: hopping, 1: exchange or hopping, 2: exchange for spin systems,
+   3: KondoGC update (hopping or exchange/local-spin-flip), and
+   6: doublon-only sampling by pair hopping. The default value is set
+   as 1 when the local spin exists, otherwise 0. To use
+   ``NExUpdatePath=6``, set it in ``modpara.def`` after generating the
+   expert-mode files. This mode restricts each site to empty or doublon
+   states, :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` or
+   :math:`(1,1)`, requires ``0 < Ne < Nsite`` and an anti-parallel-spin
+   ``Orbital`` input, and currently does not support ``LocSpin``,
+   ``BackFlow``, RBM, or ``OrbitalGeneral``/FSZ inputs.
 
 -  ``RndSeed``
 

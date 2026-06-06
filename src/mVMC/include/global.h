@@ -76,7 +76,7 @@ double DSROptCGTol; /* the tolerance for SR-CG method */
 int NVMCWarmUp; /* Monte Carlo steps for warming up */
 int NVMCInterval; /* sampling interval [MCS] */ 
 int NVMCSample; /* the number of samples */
-int NExUpdatePath; /* update by exchange hopping  0: off, 1: on */
+int NExUpdatePath; /* update path  0: hopping, 1: hopping+exchange, 2: exchange(spin), 3: KondoGC, 6: pair hopping(doublon-only) */
 int NBlockUpdateSize; /* {DEFINED: _pf_block_update} size of block Pfaffian update */
 
 int RndSeed; /* seed for pseudorandom number generator */

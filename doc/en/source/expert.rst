@@ -614,11 +614,17 @@ Keywords and parameters
 
 -  ``NExUpdatePath``
 
-   **Type :** int-type (Positive integer)
+   **Type :** int-type (Non-negative integer)
 
-   **Description :** The option for local update about exchange terms.
-   0: not update, 1: update for electron system. For Spin system, the
-   value must be 2.
+   **Description :** The option for the local update path.
+   0: hopping, 1: exchange or hopping, 2: exchange for spin systems,
+   3: KondoGC update (hopping or exchange/local-spin-flip), and
+   6: doublon-only sampling by pair hopping. For ``NExUpdatePath=6``,
+   the sampled local states are restricted to empty and doublon states,
+   :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` or :math:`(1,1)`.
+   This mode requires ``0 < Ne < Nsite`` and an anti-parallel-spin
+   ``Orbital`` input. It currently does not support ``LocSpin``,
+   ``BackFlow``, RBM, or ``OrbitalGeneral``/FSZ inputs.
 
 -  ``RndSeed``
 

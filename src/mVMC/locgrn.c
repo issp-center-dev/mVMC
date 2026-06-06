@@ -47,6 +47,9 @@ double complex GreenFunc1(const int ri, const int rj, const int s, const double 
 
   if(ri==rj) return eleNum[ri+s*Nsite];
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
+  if(NExUpdatePath==6) { /* doublon-only: hopping would break doublon at source site */
+    if(eleNum[rj+(1-s)*Nsite]==1) return 0.0;
+  }
 
   mj = eleCfg[rj+s*Nsite];
   msj = mj + s*Ne;
@@ -156,6 +159,22 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
   UpdateProjCnt(rj, ri, s, projCntNew, projCntNew, eleNum);
   if (FlagRBM) {
     UpdateRBMCnt(rj, ri, s, rbmCntNew, rbmCntNew, eleNum);
+  }
+
+  if(NExUpdatePath==6){ /* For doublon-only: final state must remain empty/doublon-only */
+    if(eleNum[ri] != eleNum[ri+Nsite] ||
+       eleNum[rj] != eleNum[rj+Nsite] ||
+       eleNum[rk] != eleNum[rk+Nsite] ||
+       eleNum[rl] != eleNum[rl+Nsite]) {
+      /* revert hopping */
+      eleIdx[mtl] = rl;
+      eleNum[rtl] = 1;
+      eleNum[rtk] = 0;
+      eleIdx[msj] = rj;
+      eleNum[rsj] = 1;
+      eleNum[rsi] = 0;
+      return 0.0;
+    }
   }
 
   z = ProjRatio(projCntNew,eleProjCnt);

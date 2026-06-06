@@ -604,8 +604,15 @@ ModParaファイル (modpara.def)
 
    **形式 :** int型 (0以上)
 
-   **説明 :** 電子系でローカル更新で2電子交換を[0] 認めない、[1]
-   認めるの設定をします。スピン系の場合には2に設定する必要があります。
+   **説明 :** ローカル更新経路を指定します。
+   0はhopping、1はexchangeまたはhopping、2はスピン系のexchange、
+   3はKondoGC更新(hoppingまたはexchange/local-spin-flip)、
+   6はpair hoppingによるdoublon-onlyサンプリングです。
+   ``NExUpdatePath=6`` では各サイトの状態を空状態またはdoublon状態、
+   すなわち :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` または
+   :math:`(1,1)` に制限します。このモードでは ``0 < Ne < Nsite`` と
+   反平行スピンの ``Orbital`` 入力が必要です。現状では ``LocSpin``、
+   ``BackFlow``、RBM、``OrbitalGeneral``/FSZ入力には対応していません。
 
 -  ``RndSeed``
 

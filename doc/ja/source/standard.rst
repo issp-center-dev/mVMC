@@ -640,6 +640,23 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 
    **説明 :** 期待値計算に使用するサンプル数。
 
+-  ``NExUpdatePath``
+
+   **形式 :** int型 (0以上)
+
+   **説明 :** ローカル更新経路を指定します。
+   0はhopping、1はexchangeまたはhopping、2はスピン系のexchange、
+   3はKondoGC更新(hoppingまたはexchange/local-spin-flip)、
+   6はpair hoppingによるdoublon-onlyサンプリングです。
+   局在スピンが存在する場合のデフォルト値は1、それ以外は0です。
+   ``NExUpdatePath=6`` を使う場合は、スタンダードモードから
+   エキスパートモード入力ファイルを生成した後に ``modpara.def`` で指定します。
+   このモードでは各サイトの状態を空状態またはdoublon状態、すなわち
+   :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` または :math:`(1,1)` に
+   制限します。また、``0 < Ne < Nsite`` と反平行スピンの ``Orbital`` 入力が
+   必要です。現状では ``LocSpin``、``BackFlow``、RBM、
+   ``OrbitalGeneral``/FSZ入力には対応していません。
+
 -  ``RndSeed``
 
    **形式 :** int型 (デフォルト値 = 123456789)
@@ -718,4 +735,3 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 .. [2]
    使用メモリ量は、 :math:`O(N_\text{p}) + O(N_\text{p}N_\text{MCS})`
    です。
-

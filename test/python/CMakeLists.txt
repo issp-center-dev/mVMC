@@ -8,6 +8,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_UHF.py DESTINATION ${CMAKE_BINARY_
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_UHF_InterAll.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert_phys.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_doublon_only.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -48,6 +49,16 @@ function(add_python_vmc_test_expert_mpi model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_expert_mpi.py ${model})
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_vmc_test_expert_mpi)
+
+function(add_python_vmc_test_doublon_only model)
+    add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_doublon_only.py ${model})
+    set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_doublon_only)
+
+function(add_python_vmc_test_doublon_only_mpi test_name model)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_doublon_only.py ${model})
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2")
+endfunction(add_python_vmc_test_doublon_only_mpi)
 
 
 function(add_python_vmc_test_sr model)
@@ -160,6 +171,11 @@ foreach(model ${python_test_vmc_model_expert_mpi})
     add_python_vmc_test_expert_mpi(${model})
 endforeach(model)
 
+add_python_vmc_test_doublon_only(DoublonOnly_GreenFunc2)
+add_test(NAME DoublonOnly_GreenFunc2_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_doublon_only.py DoublonOnly_GreenFunc2 --complex-orbital)
+set_tests_properties(DoublonOnly_GreenFunc2_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_python_vmc_test_doublon_only_mpi(DoublonOnly_GreenFunc2_mpi DoublonOnly_GreenFunc2)
 
 foreach(model ${python_test_vmc_model_sr})
     add_python_vmc_test_sr(${model})
@@ -168,6 +184,12 @@ endforeach(model)
 add_python_vmc_test_invalid_expert(SpinJastrow_InvalidClassRange "class index")
 add_python_vmc_test_invalid_expert(SpinJastrow_InvalidSymmetry "inconsistent class for pair")
 add_python_vmc_test_invalid_expert(SpinJastrow_NegativeNIdx "non-negative")
+add_python_vmc_test_invalid_expert(DoublonOnly_InvalidNeZero "requires Ne > 0")
+add_python_vmc_test_invalid_expert(DoublonOnly_InvalidNeFull "requires Ne < Nsite")
+add_python_vmc_test_invalid_expert(DoublonOnly_InvalidLocSpin "NLocalSpin > 0")
+add_python_vmc_test_invalid_expert(DoublonOnly_InvalidOrbitalGeneral "OrbitalGeneral=1")
+add_python_vmc_test_invalid_expert(DoublonOnly_InvalidLanczos "NLanczosMode > 0")
+add_python_vmc_test_invalid_expert(DoublonOnly_InvalidRBM "not compatible with RBM")
 add_test(NAME SpinJastrow_InvalidInIndex
          COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py SpinJastrow_InvalidInIndex "duplicated index")
 set_tests_properties(SpinJastrow_InvalidInIndex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
