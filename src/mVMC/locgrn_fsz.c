@@ -56,6 +56,9 @@ double complex GreenFunc1_fsz(const int ri, const int rj, const int s, const dou
 
   if(ri==rj) return eleNum[ri+s*Nsite];
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
+  if(NExUpdatePath==4 || NExUpdatePath==5){ //For t-J
+    if(eleNum[ri+(1-s)*Nsite]==1) return 0.0;
+  }
 
   mj  = eleCfg[rj+s*Nsite];
   msj = mj;// + s*Ne;
@@ -94,6 +97,9 @@ double complex GreenFunc1_fsz2(const int ri, const int rj, const int s,const int
 
   //if(ri==rj) return eleNum[ri+s*Nsite]; //fsz
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+t*Nsite]==0) return 0.0;
+  if(NExUpdatePath==4 || NExUpdatePath==5){ //For t-J
+    if(ri!=rj && eleNum[ri+(1-s)*Nsite]==1) return 0.0;
+  }
 
   mj  = eleCfg[rj+t*Nsite];
   //mtj = mj;// + s*Ne;
@@ -195,6 +201,23 @@ double complex GreenFunc2_fsz(const int ri, const int rj, const int rk, const in
   eleNum[rsj] = 0;
   eleNum[rsi] = 1;
   UpdateProjCnt(rj, ri, s, projCntNew, projCntNew, eleNum);
+
+  if(NExUpdatePath==4 || NExUpdatePath==5){ //For t-J
+    int doublon_i = eleNum[ri + s*Nsite] *eleNum[ri + (1-s)*Nsite];
+    int doublon_k = eleNum[rk + t*Nsite] *eleNum[rk + (1-t)*Nsite];
+    if(doublon_i == 1 || doublon_k ==1 ){
+      /* revert hopping */
+      eleIdx[mtl] = rl;
+      eleSpn[mtl] = t;
+      eleNum[rtl] = 1;
+      eleNum[rtk] = 0;
+      eleIdx[msj] = rj;
+      eleSpn[msj] = s;
+      eleNum[rsj] = 1;
+      eleNum[rsi] = 0;
+      return 0.0;
+    }
+  }
 
   z = ProjRatio(projCntNew,eleProjCnt);
 
@@ -321,6 +344,23 @@ double complex GreenFunc2_fsz2(const int ri, const int rj, const int rk, const i
   eleNum[XJ] = 0;
   eleNum[XI] = 1;
   UpdateProjCnt_fsz(rj,ri, t,s, projCntNew, projCntNew, eleNum); // (rj,t) -> (ri,s) t!=s
+
+  if(NExUpdatePath==4 || NExUpdatePath==5){
+    int doublon_i = eleNum[ri + s*Nsite] *eleNum[ri + (1-s)*Nsite];
+    int doublon_k = eleNum[rk + u*Nsite] *eleNum[rk + (1-u)*Nsite];
+    if(doublon_i == 1 || doublon_k ==1 ){
+      /* revert hopping */
+      eleIdx[ml]  = rl;  // ml : (rl,v)
+      eleSpn[ml]  = v;
+      eleNum[XL] = 1;
+      eleNum[XK] = 0;
+      eleIdx[mj]  = rj;  // mj : (rj,t)
+      eleSpn[mj]  = t;
+      eleNum[XJ] = 1;
+      eleNum[XI] = 0;
+      return 0.0;
+    }
+  }
 
   z = ProjRatio(projCntNew,eleProjCnt);
 

@@ -104,10 +104,10 @@ void VMCMainCal_fsz(MPI_Comm comm) {
     /* calculate reweight */
     x = LogProjVal(eleProjCnt);
     if (reweight==1){
-       w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
+       w = exp(2.0*(log(cabs(ip))+x) - logSqPfFullSlater[sample]);
     }else{
        w =1.0;
-    }	    
+    }
     //LogProjVal(eleProjCnt);
     //w =1.0;
 #ifdef _DEBUG_DETAIL

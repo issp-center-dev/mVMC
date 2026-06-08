@@ -91,9 +91,23 @@ void MakeProjCnt(int *projCnt, const int *eleNum) {
     }
   }
 
+  /* Spin Jastrow factor exp(sum {v^s_ij * mi * mj}) */
+  if(NSpinJastrowIdx>0) {
+    offset = NGutzwillerIdx + NJastrowIdx;
+    for(ri=0;ri<nSite;ri++) {
+      xi = n0[ri]-n1[ri];
+      if(xi==0) continue;
+      for(rj=ri+1;rj<nSite;rj++) {
+        xj = n0[rj]-n1[rj];
+        idx = offset + SpinJastrowIdx[ri][rj];
+        projCnt[idx] += xi*xj;
+      }
+    }
+  }
+
   /* 2-site doublon-holon correlation factor */
   if(NDoublonHolon2siteIdx>0) {
-    offset = NGutzwillerIdx + NJastrowIdx;
+    offset = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx;
     #pragma omp parallel for default(shared) private(xn,dh,ri,xi,r0,r1,xm,idx)
     for(xn=0;xn<NDoublonHolon2siteIdx;xn++) {
       dh=DoublonHolon2siteIdx[xn];
@@ -119,7 +133,7 @@ void MakeProjCnt(int *projCnt, const int *eleNum) {
 
   /* 4-site doublon-holon correlation factor */
   if(NDoublonHolon4siteIdx>0) {
-    offset = NGutzwillerIdx + NJastrowIdx + 6*NDoublonHolon2siteIdx;
+    offset = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx + 6*NDoublonHolon2siteIdx;
     #pragma omp parallel for default(shared) private(xn,dh,ri,xi,r0,r1,r2,r3,xm,idx)
     for(xn=0;xn<NDoublonHolon4siteIdx;xn++) {
       dh=DoublonHolon4siteIdx[xn];
@@ -202,13 +216,37 @@ void UpdateProjCnt(const int ri, const int rj, const int s,
     }
   }
 
+  /* Spin Jastrow: eleNum is already updated (ri emptied, rj filled) */
+  if(NSpinJastrowIdx>0){
+    offset = NGutzwillerIdx + NJastrowIdx;
+    int ds = 2*s - 1; /* magnetization change at departure: s=0->-1, s=1->+1 */
+    /* update [ri][rj] */
+    if(ri<rj) idx = offset + SpinJastrowIdx[ri][rj];
+    else  idx = offset + SpinJastrowIdx[rj][ri];
+    projCntNew[idx] += ds*((n0[rj]-n1[rj])-(n0[ri]-n1[ri])) + 1;
+    /* update [ri][rk] (rk != ri, rj) */
+    for(rk=0;rk<nSite;rk++) {
+      if(rk==rj || rk==ri) continue;
+      if(rk>ri) idx = offset + SpinJastrowIdx[ri][rk];
+      else idx = offset + SpinJastrowIdx[rk][ri];
+      projCntNew[idx] += ds*(n0[rk]-n1[rk]);
+    }
+    /* update [rj][rk] (rk != ri, rj) */
+    for(rk=0;rk<nSite;rk++) {
+      if(rk==ri || rk==rj) continue;
+      if(rk>rj) idx = offset + SpinJastrowIdx[rj][rk];
+      else idx = offset + SpinJastrowIdx[rk][rj];
+      projCntNew[idx] -= ds*(n0[rk]-n1[rk]);
+    }
+  }
+
   if(NDoublonHolon2siteIdx==0 && NDoublonHolon4siteIdx==0) return;
 
-  offset = NGutzwillerIdx + NJastrowIdx;
+  offset = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx;
   for(idx=offset;idx<nProj;idx++) projCntNew[idx] = 0;
 
   /* 2-site doublon-holon correlation factor */
-  offset = NGutzwillerIdx + NJastrowIdx;
+  offset = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx;
   #pragma omp parallel for default(shared) private(xn,dh,rk,xi,r0,r1,xm,idx)
   for(xn=0;xn<NDoublonHolon2siteIdx;xn++) {
     dh=DoublonHolon2siteIdx[xn];
@@ -233,7 +271,7 @@ void UpdateProjCnt(const int ri, const int rj, const int s,
   }
 
   /* 4-site doublon-holon correlation factor */
-  offset = NGutzwillerIdx + NJastrowIdx + 6*NDoublonHolon2siteIdx;
+  offset = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx + 6*NDoublonHolon2siteIdx;
   #pragma omp parallel for default(shared) private(xn,dh,rk,xi,r0,r1,r2,r3,xm,idx)
   for(xn=0;xn<NDoublonHolon4siteIdx;xn++) {
     dh=DoublonHolon4siteIdx[xn];
@@ -264,7 +302,6 @@ void UpdateProjCnt(const int ri, const int rj, const int s,
   return;
 
 }
-
 //[s] MERGE BY TM
 /* An electron with spin s hops from ri to rj with t. */
 // (ri,s) -> (rj,t) assuming s!=t
@@ -286,7 +323,42 @@ void UpdateProjCnt_fsz(const int ri, const int rj, const int s,const int t,
     for(idx=0;idx<nProj;idx++) projCntNew[idx] = projCntOld[idx];
   }
 
-  if(ri==rj) return; // this part will be changed if we consider spin jastrow
+  /* Spin Jastrow for fsz: handle ri==rj case (on-site spin flip changes magnetization) */
+  if(NSpinJastrowIdx>0){
+    offset = NGutzwillerIdx + NJastrowIdx;
+    int dm_i = 2*s - 1;  /* magnetization change at ri */
+    int dm_j = 1 - 2*t;  /* magnetization change at rj */
+    if(ri==rj) {
+      int dm = dm_i + dm_j; /* total magnetization change at this site */
+      for(rk=0;rk<nSite;rk++) {
+        if(rk==ri) continue;
+        if(rk>ri) idx = offset + SpinJastrowIdx[ri][rk];
+        else idx = offset + SpinJastrowIdx[rk][ri];
+        projCntNew[idx] += dm*(n0[rk]-n1[rk]);
+      }
+    } else {
+      /* pair (ri,rj): delta(m_ri*m_rj) = dm_i*m_rj_new + dm_j*m_ri_new - dm_i*dm_j */
+      if(ri<rj) idx = offset + SpinJastrowIdx[ri][rj];
+      else idx = offset + SpinJastrowIdx[rj][ri];
+      projCntNew[idx] += dm_i*(n0[rj]-n1[rj]) + dm_j*(n0[ri]-n1[ri]) - dm_i*dm_j;
+      /* pair (ri,rk) */
+      for(rk=0;rk<nSite;rk++) {
+        if(rk==rj || rk==ri) continue;
+        if(rk>ri) idx = offset + SpinJastrowIdx[ri][rk];
+        else idx = offset + SpinJastrowIdx[rk][ri];
+        projCntNew[idx] += dm_i*(n0[rk]-n1[rk]);
+      }
+      /* pair (rj,rk) */
+      for(rk=0;rk<nSite;rk++) {
+        if(rk==ri || rk==rj) continue;
+        if(rk>rj) idx = offset + SpinJastrowIdx[rj][rk];
+        else idx = offset + SpinJastrowIdx[rk][rj];
+        projCntNew[idx] += dm_j*(n0[rk]-n1[rk]);
+      }
+    }
+  }
+
+  if(ri==rj) return; /* Gutzwiller, charge Jastrow, DH unchanged for on-site spin flip */
 
   if(NGutzwillerIdx>0){
     idx = GutzwillerIdx[ri];
@@ -321,11 +393,11 @@ void UpdateProjCnt_fsz(const int ri, const int rj, const int s,const int t,
 
   if(NDoublonHolon2siteIdx==0 && NDoublonHolon4siteIdx==0) return;
 
-  offset = NGutzwillerIdx + NJastrowIdx;
+  offset = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx;
   for(idx=offset;idx<nProj;idx++) projCntNew[idx] = 0;
 
   /* 2-site doublon-holon correlation factor */
-  offset = NGutzwillerIdx + NJastrowIdx;
+  offset = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx;
   #pragma omp parallel for default(shared) private(xn,dh,rk,xi,r0,r1,xm,idx)
   for(xn=0;xn<NDoublonHolon2siteIdx;xn++) {
     dh=DoublonHolon2siteIdx[xn];
@@ -350,7 +422,7 @@ void UpdateProjCnt_fsz(const int ri, const int rj, const int s,const int t,
   }
 
   /* 4-site doublon-holon correlation factor */
-  offset = NGutzwillerIdx + NJastrowIdx + 6*NDoublonHolon2siteIdx;
+  offset = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx + 6*NDoublonHolon2siteIdx;
   #pragma omp parallel for default(shared) private(xn,dh,rk,xi,r0,r1,r2,r3,xm,idx)
   for(xn=0;xn<NDoublonHolon4siteIdx;xn++) {
     dh=DoublonHolon4siteIdx[xn];

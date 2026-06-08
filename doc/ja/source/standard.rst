@@ -105,6 +105,13 @@
    :math:`{\mathcal H}\Phi` との互換性からGC(=グランドカノニカル)と付いていますが、
    粒子数は保存していますのでご注意ください。
 
+   tJモードは ``model`` の専用文字列ではなく、 ``modpara.def`` の
+   ``NExUpdatePath`` で指定します（``4``: SPINHOPPING、
+   ``5``: EXCHANGE/SPINHOPPING）。現状のStandard modeでは、
+   ``model`` キーワードでtJを直接指定することはできません。
+   現状のt-J更新経路では ``BackFlow`` と ``LocSpin`` は非対応であり、
+   二重占有を許さないため ``ncond <= Nsite`` を満たす必要があります。
+
 -  ``lattice``
 
    **形式 :** 文字列( ``"Chain Lattice"``, ``"Square Lattice"``,
@@ -640,6 +647,28 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 
    **説明 :** 期待値計算に使用するサンプル数。
 
+-  ``NExUpdatePath``
+
+   **形式 :** int型 (0以上)
+
+   **説明 :** ローカル更新の種類を指定します。
+   0: HOPPING、1: EXCHANGE または HOPPING、2: EXCHANGE、
+   3: KondoGC用（HOPPING または EXCHANGE/LOCALSPINFLIP）、
+   4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）、
+   6: pair hoppingによるdoublon-onlyサンプリング。
+   Standard modeではこの値は ``model`` から自動設定されます。
+   tJモードを使う場合は、 ``modpara.def`` で
+   ``NExUpdatePath=4`` または ``5`` を指定してください。
+   t-J用の4と5では ``BackFlow`` と ``LocSpin`` は非対応です。また、
+   二重占有を許さないため ``ncond <= Nsite`` を満たす必要があります。
+   ``NExUpdatePath=6`` を使う場合は、スタンダードモードから
+   エキスパートモード入力ファイルを生成した後に ``modpara.def`` で指定します。
+   このモードでは各サイトの状態を空状態またはdoublon状態、すなわち
+   :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` または :math:`(1,1)` に
+   制限します。また、``0 < Ne < Nsite`` と反平行スピンの ``Orbital`` 入力が
+   必要です。現状では ``LocSpin``、``BackFlow``、RBM、
+   ``OrbitalGeneral``/FSZ入力には対応していません。
+
 -  ``RndSeed``
 
    **形式 :** int型 (デフォルト値 = 123456789)
@@ -718,4 +747,3 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 .. [2]
    使用メモリ量は、 :math:`O(N_\text{p}) + O(N_\text{p}N_\text{MCS})`
    です。
-

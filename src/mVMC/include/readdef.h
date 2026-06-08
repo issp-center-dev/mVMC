@@ -34,7 +34,7 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
   "ModPara", "LocSpin",
   "Trans", "CoulombIntra", "CoulombInter",
   "Hund", "PairHop", "Exchange",
-  "Gutzwiller", "Jastrow",
+  "Gutzwiller", "Jastrow", "SpinJastrow",
   "DH2", "DH4", 
   //RBM
   "ChargeRBM_HiddenLayer","ChargeRBM_PhysLayer", "ChargeRBM_PhysHidden",
@@ -43,7 +43,7 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
   //RBM
   "Orbital", "OrbitalAntiParallel",
   "OrbitalParallel", "OrbitalGeneral",
-  "TransSym", "InGutzwiller", "InJastrow",
+  "TransSym", "InGutzwiller", "InJastrow", "InSpinJastrow",
   "InDH2", "InDH4", 
   //RBM
   "InChargeRBM_HiddenLayer","InChargeRBM_PhysLayer", "InChargeRBM_PhysHidden",
@@ -65,7 +65,7 @@ enum KWIdxInt{
   KWModPara, KWLocSpin,
   KWTrans, KWCoulombIntra,KWCoulombInter,
   KWHund, KWPairHop, KWExchange,
-  KWGutzwiller, KWJastrow,
+  KWGutzwiller, KWJastrow, KWSpinJastrow,
   KWDH2, KWDH4, 
   //RBM
   KWChargeRBM_HiddenLayer,KWChargeRBM_PhysLayer,KWChargeRBM_PhysHidden,
@@ -74,7 +74,7 @@ enum KWIdxInt{
   //RBM
   KWOrbital, KWOrbitalAntiParallel,
 	KWOrbitalParallel, KWOrbitalGeneral,
-  KWTransSym, KWInGutzwiller, KWInJastrow,
+  KWTransSym, KWInGutzwiller, KWInJastrow, KWInSpinJastrow,
   KWInDH2, KWInDH4, 
   //RBM
   KWInChargeRBM_HiddenLayer,KWInChargeRBM_PhysLayer,KWInChargeRBM_PhysHidden,
@@ -93,7 +93,7 @@ enum KWIdxInt{
 /**
  * File Name List in NameListFile.
  **/
-static char (*cFileNameListFile)[D_CharTmpReadDef];
+extern char (*cFileNameListFile)[D_CharTmpReadDef];
 
 
 enum ParamIdxInt{
@@ -108,7 +108,7 @@ enum ParamIdxInt{
   IdxExUpdatePath, IdxRndSeed, IdxSplitSize,
   IdxNLocSpin,IdxNTrans,IdxNCoulombIntra,
   IdxNCoulombInter, IdxNHund, IdxNPairHop, 
-  IdxNExchange, IdxNGutz, IdxNJast,
+  IdxNExchange, IdxNGutz, IdxNJast, IdxNSpinJast,
   IdxNDH2, IdxNDH4, 
   //RBM
   IdxNChargeRBM_HiddenLayer,IdxNChargeRBM_PhysLayer, IdxNChargeRBM_PhysHidden,
@@ -144,6 +144,7 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm);
 // 0: real, 1: complex
 int iComplexFlgGutzwiller=0;
 int iComplexFlgJastrow=0;
+int iComplexFlgSpinJastrow=0;
 int iComplexFlgDH2=0;
 int iComplexFlgDH4=0;
 int iComplexFlgOrbital=0;

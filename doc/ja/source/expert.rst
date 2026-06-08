@@ -67,6 +67,35 @@
     **InterAll**:
     :math:`{\cal H}_I` 内の :math:`I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}` を指定します。
 
+    .. rubric:: t-J模型の指定
+
+    物理的なt-J模型を
+
+    .. math::
+
+       {\cal H}_{tJ} = -\sum_{i,j,\sigma} t_{ij}
+       {\tilde c}_{i\sigma}^{\dagger}{\tilde c}_{j\sigma}
+       + \sum_{i,j} J_{ij}\left({\boldsymbol S}_i\cdot{\boldsymbol S}_j
+       - \frac{1}{4}n_i n_j\right)
+
+    と書く場合、ここで :math:`{\tilde c}` は二重占有を除いた空間での
+    演算子を表します。このt-J模型は ``InterAll`` ではなく、 ``Trans``、
+    ``CoulombInter``、 ``Hund``、 ``Exchange`` の組み合わせで指定します。
+    上記ハミルトニアンの符号規約では、正の物理的な結合 :math:`J_{ij}` に対して
+
+    .. math::
+
+       V_{ij}=-\frac{J_{ij}}{4}, \qquad
+       J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
+       J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}
+
+    を指定します。また、t-J用の更新経路は ``modpara.def`` の
+    ``NExUpdatePath`` で指定します。現状のt-J更新経路では
+    ``BackFlow`` と ``LocSpin`` は非対応です。また、二重占有を許さないため、
+    電子数がサイト数を超える入力は使用できません。 ``Ncond`` で電子数を指定する場合は
+    ``Ncond <= Nsite`` が必要です。 ``Nelectron`` で電子ペア数を指定する場合は、
+    全電子数が ``2*Nelectron`` なので ``2*Nelectron <= Nsite`` が必要です。
+
 (4) 最適化対象変分パラメータ:
       
     最適化する変分パラメータを指定します。変分波動関数は
@@ -74,9 +103,10 @@
     .. math::
 
        \begin{aligned}
-       |\psi \rangle &= {\cal N}_{General RBM} {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
+       |\psi \rangle &= {\cal N}_{General RBM} {\cal P}_G{\cal P}_J{\cal P}_{SJ}{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
        {\cal P}_G&=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right],\\
        {\cal P}_J&=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1)(n_j-1)\right],\\
+       {\cal P}_{SJ}&=\exp\left[\sum_{i<j} v^s_{ij} m_i m_j\right],\\
        {\cal P}_{d-h}^{(2)}&= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right],\\
        {\cal P}_{d-h}^{(4)}&= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right],\\
        {\cal N}_{\rm General RBM}&= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_h} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right],\\
@@ -94,6 +124,7 @@
     :math:`{\boldsymbol R}` に対応する並進演算子、
     :math:`\hat{G}_{\alpha}` は格子の点群演算子、
     :math:`p_\alpha` はパリティをそれぞれ表します。
+    Spin Jastrow因子では :math:`m_i=n_{i\uparrow}-n_{i\downarrow}` とします。
     ダブロン・ホロン相関因子に関する詳細は文献 [Tahara2008_ ]の説明を参照してください。
     また、一体部分は実空間のペア関数
 
@@ -113,6 +144,9 @@
        
     **Jastrow (jastrowidx.def)**:
     :math:`{\cal P}_J` のうち、最適化の対象とする変分パラメータ :math:`v_{ij}` を指定します。
+
+    **SpinJastrow (spinjastrow.def)**:
+    :math:`{\cal P}_{SJ}` のうち、最適化の対象とする変分パラメータ :math:`v^s_{ij}` を指定します。
        
     **DH2**:
     :math:`{\cal P}_{d-h}^{(2)}` で表される2サイトのダブロン・ホロン相関因子を指定します。
@@ -151,6 +185,9 @@
        
     **InJastrow**:
     :math:`{\cal P}_J` 内の変分パラメータ :math:`v_{ij}` の初期値を設定します。
+
+    **InSpinJastrow**:
+    :math:`{\cal P}_{SJ}` 内の変分パラメータ :math:`v^s_{ij}` の初期値を設定します。
        
     **InDH2**:
     :math:`{\cal P}_{d-h}^{(2)}` 内の2サイトのダブロン・ホロン相関因子
@@ -278,6 +315,8 @@
      - 最適化するGutzwiller因子を設定します。                                    
    * - Jastrow                   
      - 最適化する電荷Jastrow因子を指定します。                                   
+   * - SpinJastrow
+     - 最適化するスピンJastrow因子を指定します。
    * - DH2                       
      - 最適化する2サイトダブロン・ホロン相関因子を指定します。                   
    * - DH4                       
@@ -302,6 +341,8 @@
      - Gutzwiller因子の初期値を設定します。                                      
    * - InJastrow                 
      - 電荷Jastrow因子の初期値を設定します。                                     
+   * - InSpinJastrow
+     - スピンJastrow因子の初期値を設定します。
    * - InDH2                     
      - 2サイトダブロン・ホロン相関因子の初期値を設定します。                     
    * - InDH4                     
@@ -592,8 +633,23 @@ ModParaファイル (modpara.def)
 
    **形式 :** int型 (0以上)
 
-   **説明 :** 電子系でローカル更新で2電子交換を[0] 認めない、[1]
-   認めるの設定をします。スピン系の場合には2に設定する必要があります。
+   **説明 :** ローカル更新の種類を指定します。
+   0: HOPPING、1: EXCHANGE または HOPPING、2: EXCHANGE、
+   3: KondoGC用（HOPPING または EXCHANGE/LOCALSPINFLIP）、
+   4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）、
+   6: pair hoppingによるdoublon-onlyサンプリング。
+   4と5の違いはt-J空間でのローカル更新経路の違いであり、
+   :math:`S_z` 保存・非保存の切り替えではありません。スピン量子数の指定は、
+   固定 :math:`S_z` 計算では ``2Sz`` などで別途行います。
+   t-J用の4と5では ``BackFlow`` と ``LocSpin`` は非対応です。また、
+   二重占有を許さないため、 ``Ncond`` で電子数を指定する場合は
+   ``Ncond <= Nsite``、 ``Nelectron`` で電子ペア数を指定する場合は
+   ``2*Nelectron <= Nsite`` が必要です。
+   ``NExUpdatePath=6`` では各サイトの状態を空状態またはdoublon状態、
+   すなわち :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` または
+   :math:`(1,1)` に制限します。このモードでは ``0 < Ne < Nsite`` と
+   反平行スピンの ``Orbital`` 入力が必要です。現状では ``LocSpin``、
+   ``BackFlow``、RBM、``OrbitalGeneral``/FSZ入力には対応していません。
 
 -  ``RndSeed``
 
@@ -630,6 +686,49 @@ ModParaファイル (modpara.def)
    **形式 :** int型 (0もしくは1、デフォルト値=0)
 
    **説明 :** SR法での連立一次方程式 :math:`Sx=g` をCG法により解く際に、 Point Jacobi法 (:math:`S` 行列の対角スケーリング)による前処理付きCG法を使用するオプション(1で機能ON, ``NSRCG=1`` である必要がある)。
+
+   ``NSRCG=2`` を指定した場合も受理され、内部では
+   ``NSRCG=1`` かつ ``useDiagScale=1`` として扱われます。
+
+-  ``NSRCGFallback``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=0)
+
+   **説明 :** 選択されたSR-CGソルバが収束しない、または数値不安定になった場合に、
+   もう一方のSR-CGソルバで再試行するオプション(0で無効、1で有効)。
+   通常CGはDiagScale-CGへ、DiagScale-CGは通常CGへフォールバックします。
+
+-  ``NSRCGAbortOnFail``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=1)
+
+   **説明 :** SR-CGが、必要ならフォールバックも試した後で失敗した場合に
+   計算を終了するオプション(0で警告を出して近似解で継続、1で終了)。
+
+   デフォルトは ``NSRCGFallback=0`` かつ ``NSRCGAbortOnFail=1`` です。
+   この設定では、SR-CGが収束しない、または数値不安定になった場合に、
+   入力または数値条件の失敗として計算を終了します。
+   overlap行列の統計ノイズが大きい、または条件が悪い場合は、
+   ``NVMCSample`` を増やす、SR-CGの収束判定値や反復回数上限を調整する、
+   あるいは ``useDiagScale`` を有効にすることを検討してください。
+   ``useDiagScale=1`` はPoint Jacobi前処理付きCGを選択します。
+   収束性の改善に有効な場合があります。
+
+-  ``RescaleSmat``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=0)
+
+   **説明 :** SR-CGで :math:`Sx=g` を解く前に、Slater関連ブロックを
+   リスケーリングするオプション(1で機能ON)。
+   ``RescaleSmat=1`` を使う場合は ``NSRCG=1`` が必要です
+   (リスケーリングはSR-CG経路でのみ適用されます)。
+   ``ModPara`` でのSR-CGの典型設定は次の通りです。
+
+   ::
+
+       NSRCG = 1
+       useDiagScale = 1
+       RescaleSmat = 1
 
 -  ``NneuronGeneral``
 
@@ -1569,6 +1668,127 @@ Jastrow因子
 -  [ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
 
 -  [ int02 ]-[ int07 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
+
+Spin Jastrow指定ファイル(spinjastrow.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Spin Jastrow因子
+
+.. math::
+
+   {\cal P}_{SJ}=\exp\left[\sum_{i<j} v^s_{ij} m_i m_j\right],
+   \quad m_i=n_{i\uparrow}-n_{i\downarrow}
+
+の設定を行います。指定するパラメータはサイト番号 :math:`i, j` と
+:math:`v^s_{ij}` の変分パラメータの番号です。以下にファイル例を記載します。
+
+::
+
+    ======================
+    NSpinJastrowIdx 4
+    ComplexType 0
+    =====================
+    =====================
+       0     1     0
+       0     2     1
+       0     3     2
+       1     0     0
+     (continue...)
+       0     1
+       1     1
+       2     1
+       3     1
+
+ファイル形式
+^^^^^^^^^^^^
+
+以下のように行数に応じ異なる形式をとります( :math:`N_s` はサイト数、 :math:`N_{sj}` は変分パラメータの種類の数)。
+
+-  1行: ヘッダ(何が書かれても問題ありません)。
+
+-  2行: [string01] [int01]
+
+-  3行: [string02] [int02]
+
+-  4-5行: ヘッダ(何が書かれても問題ありません)。
+
+-  6 - (5+ :math:`N_s\times (N_s-1)`) 行: [int03] [int04] [int05]
+
+-  (6+ :math:`N_s\times (N_s-1)` ) -
+   (5+ :math:`N_s\times (N_s-1)` + :math:`N_{sj}`)行：[int06] [int07]
+
+パラメータ
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :**
+   :math:`v^s_{ij}` の変分パラメータの種類の総数のキーワード名を指定します(任意)。
+
+-  [ int01 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** :math:`v^s_{ij}` の変分パラメータの種類の総数を指定します。
+
+-  [ string02 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :**
+   :math:`v^s_{ij}` の変分パラメータの型を指定するためのキーワード名を指定します(任意)。
+
+-  [ int02 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`v^s_{ij}` の変分パラメータの型を指定します。0が実数、1が複素数に対応します。
+
+-  [ int03 ], [ int04 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   サイト番号を指定する整数。0以上 ``Nsite`` 未満で指定します。
+
+-  [ int05 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`v^s_{ij}` の変分パラメータの種類を表します。0以上[int01]未満で指定します。
+
+-  [ int06 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   :math:`v^s_{ij}` の変分パラメータの種類を表します(最適化有無の設定用)。0以上[int01]未満で指定します。
+
+-  [ int07 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :**
+   [int06]で指定した :math:`v^s_{ij}` の変分パラメータの最適化有無を設定します。最適化する場合は1、最適化しない場合は0とします。
+
+使用ルール
+^^^^^^^^^^
+
+本ファイルを使用するにあたってのルールは以下の通りです。
+
+-  行数固定で読み込みを行う為、ヘッダの省略はできません。
+
+-  [ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
+
+-  [ int02 ]-[ int07 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
+
+-  [ int03 ] と [ int04 ] が同じサイトを指す場合はエラー終了します。
+
+-  各サイトペアについて :math:`(i,j)` と :math:`(j,i)` の両方を指定する必要があります。また、両者の変分パラメータ番号は同一でなければなりません。
 
 DH2指定ファイル
 ~~~~~~~~~~~~~~~
@@ -2697,10 +2917,12 @@ TransSym指定ファイル(qptransidx.def)
 
 各変分パラメータの初期値を設定することが可能です。
 変分パラメータの種類は :ref:`InputFileList` において
-``InGutzwiller``, ``InJastrow``, ``InDH2``, ``InDH4``,  ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer``, ``InGeneralRBM_PhysHidden``, ``InOrbital``,
+``InGutzwiller``, ``InJastrow``, ``InSpinJastrow``, ``InDH2``, ``InDH4``,  ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer``, ``InGeneralRBM_PhysHidden``, ``InOrbital``,
 ``InOrbitalAntiParallel``, ``InOrbitalParallel``, ``InOrbitalGeneral``
 をキーワードとして指定することで区別します。なお、ファイルフォーマットは全て共通です。
 以下、 ``InJastrow`` ファイルの例を記載します。
+``InSpinJastrow`` では2行目にスピンJastrow変分パラメータ数を指定します
+(例: ``NSpinJastrowIdx``)。
 
 ::
 
@@ -3162,3 +3384,9 @@ Lattice指定ファイル(lattice.def)
 -  行数固定で読み込みを行う為、ヘッダの省略はできません。
 
 -  全てのサイト番号を指定する必要があります。
+
+-  ``[int01] * [int02] * [int03] * [int04]`` (すなわち ``Nx * Ny * Nz * Norb``)
+   は ``Nsite`` と一致する必要があります。
+
+-  各サイト番号は一度だけ指定する必要があります。
+   重複や欠番は入力エラーとして拒否されます。

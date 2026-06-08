@@ -44,6 +44,8 @@ int NLanczosMode; /* mode of the single Lanczos step
 
 int NStoreO; /* choice of store O: 0-> normal other-> store  */
 int NSRCG; /* choice of solver for Sx=g: 0-> (Sca)LAPACK other-> CG  */
+int NSRCGFallback; /* choice of fallback for SR-CG failure: 0-> off, 1-> on */
+int NSRCGAbortOnFail; /* abort when SR-CG fails: 0-> warn and continue, 1-> abort */
 int reweight; /* 1: reweight in vmccal.c, vmccal_fsz.c, other: no reweight, default 0   */
 
 int NDataIdxStart; /* starting value of the file index */
@@ -54,7 +56,7 @@ int Ne;    /* the number of electrons with up spin */
 int Nup;   /* the number of electrons with up spin */
 int Nsize; /* the number of electrons = 2*Ne */
 int Nsite2; /* 2*Nsite */
-int Nz; /* connecivity */
+int NzBF; /* BF connectivity */
 int TwoSz;
 
 int NSPGaussLeg; /* the number of points for the Gauss-Legendre quadrature */
@@ -77,7 +79,7 @@ double DSROptCGTol; /* the tolerance for SR-CG method */
 int NVMCWarmUp; /* Monte Carlo steps for warming up */
 int NVMCInterval; /* sampling interval [MCS] */ 
 int NVMCSample; /* the number of samples */
-int NExUpdatePath; /* update by exchange hopping  0: off, 1: on */
+int NExUpdatePath; /* update path  0: hopping, 1: hopping+exchange, 2: exchange(spin), 3: KondoGC, 6: pair hopping(doublon-only) */
 int NBlockUpdateSize; /* {DEFINED: _pf_block_update} size of block Pfaffian update */
 
 int RndSeed; /* seed for pseudorandom number generator */
@@ -123,6 +125,7 @@ double complex*ParaInterAll;
 /* for variational parameters */
 int NGutzwillerIdx, *GutzwillerIdx; /* [Nsite] */
 int NJastrowIdx, **JastrowIdx; /* [Nsite][Nsite] */
+int NSpinJastrowIdx, **SpinJastrowIdx; /* [Nsite][Nsite] */
 int NDoublonHolon2siteIdx, **DoublonHolon2siteIdx; /* DoublonHolon2siteIdx[idx][2*Nsite] */
 int NDoublonHolon4siteIdx, **DoublonHolon4siteIdx; /* DoublonHolon4siteIdx[idx][4*Nsite] */
 int NOrbitalIdx, **OrbitalIdx; /* [Nsite][Nsite] */
@@ -302,12 +305,11 @@ double complex *PhysCisAjsCktAltDC; /* [NCisAjsCktAltDC] */
 double complex *LocalCisAjs; /* [NCisAjs] */
 
 /* for Lattice index */
-int NLattice, Nx, Ny, Nz, Norb;
+int Nx, Ny, Nz, Norb;
 int **LatticeIdx;         /* [Nsite][4] */
 
 /* for Twist operator */
-int NTwist, NdivideTwist, **TwistIdx;         /* TwistIdx -> SiteIdx, SpinIdx */
-//int NTwist;         /* NTwist */
+int NTwist, **TwistIdx;         /* TwistIdx -> SiteIdx, SpinIdx */
 double **ParaTwist;         /* [NTwist][3*Nsite*2] */
 double complex *PhysTwist; /* [NTwist] */
 

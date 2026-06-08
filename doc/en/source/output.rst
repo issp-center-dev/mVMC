@@ -23,6 +23,8 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | \*\*\*\_jastrow\_opt.dat                 | Optimized jastrow factors.                                                                                             |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| \*\*\*\_spinjastrow\_opt.dat             | Optimized spin Jastrow factors.                                                                                        |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | \*\*\*\_doublonHolon2site\_opt.dat       | Optimized 2-site doublon-holon correlation factors.                                                                    |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | \*\*\*\_doublonHolon4site\_opt.dat       | Optimized 4-site doublon-holon correlation factors.                                                                    |
@@ -61,7 +63,8 @@ energy optimized by the SR method are outputted in the following order:
 .. math::
 
    \langle H \rangle, \langle H^2 \rangle, g_i, v_{ij},
-   \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij} \nonumber.
+   v^s_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij}
+   \nonumber.
 
 The type of average values is a complex number, while that of the
 deviation is a real number. Since the initial values of all variational
@@ -94,6 +97,13 @@ Output file for jastrow factors (\*\*\*\_jastrow\_opt.dat)
 
 The optimized Jastrow factors by SR method are outputted. The file
 format is same as the ``InJastrow`` file defined in Sec.
+:ref:`InputParam`.
+
+Output file for spin Jastrow factors (\*\*\*\_spinjastrow\_opt.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The optimized spin Jastrow factors by SR method are outputted. The file
+format is same as the ``InSpinJastrow`` file defined in Sec.
 :ref:`InputParam`.
 
 Output file for doublonHolon 2-site factors (\*\*\*\_doublonHolon2site\_opt.dat)
@@ -152,14 +162,23 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
     2.072610167083121837e+02  2.029162857569105916e-01
     ...
 
-xxx\_SRinfo.dat.dat
+xxx\_SRinfo.dat
 ~~~~~~~~~~~~~~~~~~~~~
 
-This file provides the optimization information by the SR method at each step. 
-From the left column, the number of variational parameters as complex numbers ``Npara``, the dimension of the S metric matrix ``Msize``, the number of variational parameters that are not optimized in the input files for trial wavefunctions such as ``Orbital``, the number of variational parameters cut by the value of ``DSROptRedCut`` in the ``ModPara`` file ``diagCut``, the maximum and minimum values of the diagonal components of the S matrix ``sDiagMax`` and ``sDiagMin``, the maximum value of the change in the variational parameters ``absRmax`` and its parameter index ``imax`` are outputted. 
+This file provides the optimization information by the SR method at each step.
+From the left column, the number of variational parameters as complex numbers
+``Npara``, the dimension of the S metric matrix ``Msize``, the number of
+variational parameters that are not optimized in the input files for trial
+wavefunctions such as ``Orbital``, the number of variational parameters cut by
+the value of ``DSROptRedCut`` in the ``ModPara`` file ``diagCut``, the maximum
+and minimum values of the diagonal components of the S matrix ``sDiagMax`` and
+``sDiagMin``, the maximum value of the change in the variational parameters
+``absRmax`` and its parameter index ``imax`` are outputted.
 The header specified by ``CDataFileHead`` in the ``ModPara`` file is described in xxx.
 An example of the file format is as follows.
 Note that the number of imaginary parameters is counted in ``optCut`` when the variational parameters are treated as real variables (``ComplexType=0``).
+
+For ``NSRCG=0``:
 
 ::
 
@@ -168,6 +187,26 @@ Note that the number of imaginary parameters is counted in ``optCut`` when the v
     4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0
     4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0
     4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0
+    …
+
+For SR-CG (``NSRCG!=0``), solver status ``info`` is appended as an
+additional column after ``imax``.
+``info`` is the number of iterations for normal convergence.
+``info`` is written as a negative value ``info = -(iter + 1)`` when SR-CG
+fails (does not converge or becomes numerically unstable), regardless of
+whether the fallback solver was invoked; ``iter`` is the iteration at
+which the failure was detected.  With the strict default
+(``NSRCGFallback=0``, ``NSRCGAbortOnFail=1``) such a row is not written
+because the calculation aborts; a negative ``info`` therefore appears only
+when fallback or warn-and-continue is enabled.
+
+::
+
+    #Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax info
+    4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4    5
+    4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0    6
+    4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0   -3
+    4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0    4
     …
 
 
@@ -407,4 +446,3 @@ This file is the outputted files for the two-body Green’s function
 obtained by Power Lanczos method. The file format is same as the
 xxx\_cisajscktalt\_yyy.dat file. This file is outputted when
 ``NVMCCalMode`` = 1, ``NLanczosmode`` = 2 are set in ``ModPara`` file.
-

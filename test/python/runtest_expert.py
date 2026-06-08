@@ -33,7 +33,10 @@ bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
 
 #result = subprocess.call([bin_to_test, "-s", "%s/StdFace.def" % refdir])
 #result = subprocess.call([bin_to_test, "-e", "%s/namelist.def" % refdir, "%s/initial.def" % refdir])
-result = subprocess.call([bin_to_test, "-e", "namelist.def", "initial.def"])
+cmd = [bin_to_test, "-e", "namelist.def"]
+if os.path.exists("initial.def"):
+    cmd.append("initial.def")
+result = subprocess.call(cmd)
 if result != 0:
     sys.exit(result)
 
