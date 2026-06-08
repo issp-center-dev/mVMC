@@ -9,6 +9,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_UHF_InterAll.py DESTINATION ${CMAKE_B
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert_phys.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_doublon_only.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_reweight.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -59,6 +60,11 @@ function(add_python_vmc_test_doublon_only_mpi test_name model)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_doublon_only.py ${model})
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2")
 endfunction(add_python_vmc_test_doublon_only_mpi)
+
+function(add_python_vmc_test_reweight test_name model)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_reweight.py ${model})
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_reweight)
 
 
 function(add_python_vmc_test_sr model)
@@ -162,6 +168,9 @@ endforeach(model)
 foreach(model ${python_test_vmc_model_expert})
     add_python_vmc_test_expert(${model})
 endforeach(model)
+
+add_python_vmc_test_reweight(GeneralRBM_cmp_reweight GeneralRBM_cmp)
+add_python_vmc_test_reweight(HubbardChain_fsz_SpinJastrow_reweight HubbardChain_fsz_SpinJastrow)
 
 foreach(model ${python_test_vmc_model_expert_phys})
     add_python_vmc_test_expert_phys(${model})

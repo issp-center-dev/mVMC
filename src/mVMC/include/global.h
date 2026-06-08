@@ -46,6 +46,7 @@ int NStoreO; /* choice of store O: 0-> normal other-> store  */
 int NSRCG; /* choice of solver for Sx=g: 0-> (Sca)LAPACK other-> CG  */
 int NSRCGFallback; /* choice of fallback for SR-CG failure: 0-> off, 1-> on */
 int NSRCGAbortOnFail; /* abort when SR-CG fails: 0-> warn and continue, 1-> abort */
+int reweight; /* 1: reweight in vmccal.c, vmccal_fsz.c, other: no reweight, default 0   */
 
 int NDataIdxStart; /* starting value of the file index */
 int NDataQtySmp; /* the number of output files */

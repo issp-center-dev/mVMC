@@ -770,6 +770,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       iComplexFlgOrbital = 1;
       fprintf(stderr, "Warning: All the pairings are treated as complex variational parameters.\n");
     }
+    if(FlagRBM == 1 && AllComplexFlag == 0){
+      fprintf(stderr, "Error: RBM requires complex variational parameters (AllComplexFlag != 0).\n");
+      info = 1;
+    }
   }
 
   if (info != 0) {
@@ -788,6 +792,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&NSRCGAbortOnFail, 1, MPI_INT, 0, comm); // for SR-CG failure
   MPI_Bcast(&RescaleSmat, 1, MPI_INT, 0, comm); // for Rescale S matrix
   MPI_Bcast(&useDiagScale, 1, MPI_INT, 0, comm); // for Jacobi preconditioned CG
+  MPI_Bcast(&reweight, 1, MPI_INT, 0, comm); // for reweight
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
   MPI_Bcast(&hasLattice, 1, MPI_INT, 0, comm);
@@ -2106,6 +2111,7 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   NSRCGAbortOnFail = 1;
   RescaleSmat  = 0;
   useDiagScale = 0;
+  reweight = 0;
 
   bufInt[IdxNx] = 1;
   bufInt[IdxNy] = 1;
@@ -2233,6 +2239,8 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               RescaleSmat = (int) dtmp;
             } else if (CheckWords(ctmp, "useDiagScale") == 0) {
               useDiagScale = (int) dtmp;
+            } else if (CheckWords(ctmp, "reweight") == 0) {
+              reweight = (int) dtmp;
 //RBM
             } else if (CheckWords(ctmp, "Nneuron") == 0) {
               bufInt[IdxNneuron] = (int) dtmp;
