@@ -313,6 +313,77 @@ void VMCMakeSample(MPI_Comm comm) {
           revertEleConfig(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum);
         }
         StopTimer(33);
+
+      } else if(updateType==PAIRHOPPING) { /* pair hopping (doublon-only) */
+        Counter[2]++;
+
+        StartTimer(31);
+        makeCandidate_pairhopping(&mi, &mj, &ri, &rj, &rejectFlag,
+                                  TmpEleIdx, TmpEleCfg);
+        StopTimer(31);
+
+        if(rejectFlag) continue;
+
+        StartTimer(33);
+        StartTimer(65);
+
+        /* Up electron mi hops from ri to rj */
+        updateEleConfig(mi, ri, rj, 0, TmpEleIdx, TmpEleCfg, TmpEleNum);
+        UpdateProjCnt(ri, rj, 0, projCntNew, TmpEleProjCnt, TmpEleNum);
+        if(FlagRBM) UpdateRBMCnt(ri, rj, 0, rbmCntNew, TmpRBMCnt, TmpEleNum);
+        /* Down electron mj hops from ri to rj */
+        updateEleConfig(mj, ri, rj, 1, TmpEleIdx, TmpEleCfg, TmpEleNum);
+        UpdateProjCnt(ri, rj, 1, projCntNew, projCntNew, TmpEleNum);
+        if(FlagRBM) UpdateRBMCnt(ri, rj, 1, rbmCntNew, rbmCntNew, TmpEleNum);
+
+        StopTimer(65);
+        StartTimer(66);
+
+#ifdef _pf_block_update
+        updated_tdi_v_push_pair_z(NQPFull,
+                                  rj+0*Nsite, mi+0*Ne,
+                                  rj+1*Nsite, mj+1*Ne,
+                                  1, pfUpdator);
+        updated_tdi_v_get_pfa_z(NQPFull, pfMNew, pfUpdator);
+#else
+        CalculateNewPfMTwo2_fcmp(mi, 0, mj, 1, pfMNew, TmpEleIdx, qpStart, qpEnd);
+#endif
+        StopTimer(66);
+        StartTimer(67);
+
+        /* calculate inner product <phi|L|x> */
+        logIpNew = CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm);
+        StopTimer(67);
+
+        /* Metropolis */
+        x = LogProjRatio(projCntNew, TmpEleProjCnt);
+        if(FlagRBM) x += LogRBMRatio(rbmCntNew, TmpRBMCnt);
+        w = exp(2.0*(creal(x+logIpNew-logIpOld)));
+        if(!isfinite(w)) w = -1.0; /* should be rejected */
+
+        if(w > genrand_real2()) { /* accept */
+          StartTimer(68);
+#ifdef _pf_block_update
+          updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+#else
+          UpdateMAllTwo_fcmp(mi, 0, mj, 1, ri, ri, TmpEleIdx, qpStart, qpEnd);
+#endif
+          StopTimer(68);
+
+          for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
+          if(FlagRBM) for(i=0;i<NRBM_PhysLayerIdx+Nneuron;i++) TmpRBMCnt[i] = rbmCntNew[i];
+          logIpOld = logIpNew;
+          nAccept++;
+          Counter[3]++;
+        } else { /* reject */
+#ifdef _pf_block_update
+          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
+#endif
+          revertEleConfig(mj, ri, rj, 1, TmpEleIdx, TmpEleCfg, TmpEleNum);
+          revertEleConfig(mi, ri, rj, 0, TmpEleIdx, TmpEleCfg, TmpEleNum);
+        }
+        StopTimer(33);
       }
 
       if(nAccept>Nsite) {
@@ -395,7 +466,18 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
     }
     
     /* itinerant electron */
-    if (NExUpdatePath == 4 || NExUpdatePath == 5){
+    if(NExUpdatePath==6) {
+      /* doublon-only: place up and down electron at same site */
+      for(mi=0;mi<Ne;mi++) {
+        do {
+          ri = gen_rand32()%Nsite;
+        } while (eleCfg[ri] != -1 || LocSpn[ri]==1);
+        eleCfg[ri]        = mi;  /* up */
+        eleIdx[mi]        = ri;
+        eleCfg[ri+Nsite]  = mi;  /* down */
+        eleIdx[mi+Ne]     = ri;
+      }
+    } else if (NExUpdatePath == 4 || NExUpdatePath == 5){
       for(si=0;si<2;si++) {
         for(mi=0;mi<Ne;mi++) {
           if(eleIdx[mi+si*Ne]== -1) {
@@ -420,14 +502,14 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
         }
       }
     }
-    
+
     /* EleNum */
     #pragma omp parallel for default(shared) private(rsi)
     #pragma loop noalias
     for(rsi=0;rsi<nsite2;rsi++) {
       eleNum[rsi] = (eleCfg[rsi] < 0) ? 0 : 1;
     }
-    
+
     MakeProjCnt(eleProjCnt,eleNum);
 
     flag = CalculateMAll_fcmp(eleIdx,qpStart,qpEnd);
@@ -635,6 +717,62 @@ void makeCandidate_exchange(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFl
   return;
 }
 
+/* Both the up-spin electron mi and down-spin electron mj hop from ri to rj (doublon-only) */
+void makeCandidate_pairhopping(int *mi_, int *mj_, int *ri_, int *rj_, int *rejectFlag_,
+                               const int *eleIdx, const int *eleCfg) {
+  const int icnt_max = Nsite*Nsite;
+  int icnt;
+  int mi, mj, ri, rj, flag;
+
+  flag = 0;
+  mi = -1;
+  mj = -1;
+  ri = -1;
+  rj = -1;
+
+  if(Ne <= 0) {
+    *mi_ = mi;
+    *mj_ = mj;
+    *ri_ = ri;
+    *rj_ = rj;
+    *rejectFlag_ = 1;
+    return;
+  }
+
+  mi = gen_rand32()%Ne;          /* random up electron */
+  ri = eleIdx[mi];               /* its site (always a doublon in doublon-only) */
+  if(ri < 0 || ri >= Nsite) {
+    *mi_ = mi;
+    *mj_ = mj;
+    *ri_ = ri;
+    *rj_ = rj;
+    *rejectFlag_ = 1;
+    return;
+  }
+
+  mj = eleCfg[ri+Nsite];         /* down electron at the same site */
+  if(mj < 0 || mj >= Ne) {
+    *mi_ = mi;
+    *mj_ = mj;
+    *ri_ = ri;
+    *rj_ = rj;
+    *rejectFlag_ = 1;
+    return;
+  }
+
+  icnt = 0;
+  do {
+    rj = gen_rand32()%Nsite;
+    if(icnt > icnt_max) { flag = 1; break; }
+    icnt++;
+  } while (eleCfg[rj] != -1 || eleCfg[rj+Nsite] != -1 || LocSpn[rj]==1);
+  /* find an empty site on both spins */
+
+  *mi_ = mi; *mj_ = mj; *ri_ = ri; *rj_ = rj; *rejectFlag_ = flag;
+
+  return;
+}
+
 /* The mi-th electron with spin s hops to site rj */
 void updateEleConfig(int mi, int ri, int rj, int s,
                      int *eleIdx, int *eleCfg, int *eleNum) {
@@ -655,7 +793,6 @@ void revertEleConfig(int mi, int ri, int rj, int s,
   eleNum[rj+s*Nsite] = 0;
   return;
 }
-
 
 UpdateType getUpdateType(int path) {
   if(path==0) {
@@ -682,6 +819,8 @@ UpdateType getUpdateType(int path) {
       return SPINHOPPING; /* spin hopping */
   }else if(path==5) { //for t-J
       return (genrand_real2()<0.5) ? EXCHANGE : SPINHOPPING; /* exchange or spin hopping */
+  }else if(path==6){ //for doublon-only
+    return PAIRHOPPING; /* pair hopping */
   }
   return NONE;
 }

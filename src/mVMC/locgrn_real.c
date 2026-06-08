@@ -51,7 +51,10 @@ double  GreenFunc1_real(const int ri, const int rj, const int s, const double ip
   if(ri==rj) return eleNum[ri+s*Nsite];
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
   if(NExUpdatePath==4 || NExUpdatePath==5){ //For t-J
-    if(eleNum[ri+s*Nsite]==1 || eleNum[ri+(1-s)*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
+    if(eleNum[ri+(1-s)*Nsite]==1) return 0.0;
+  }
+  if(NExUpdatePath==6) { /* doublon-only: hopping would break doublon at source site */
+    if(eleNum[rj+(1-s)*Nsite]==1) return 0.0;
   }
 
   mj = eleCfg[rj+s*Nsite];
@@ -149,19 +152,26 @@ double GreenFunc2_real(const int ri, const int rj, const int rk, const int rl,
   eleNum[rsi] = 1;
   UpdateProjCnt(rj, ri, s, projCntNew, projCntNew, eleNum);
 
+  int invalidUpdate = 0;
   if(NExUpdatePath==4 || NExUpdatePath==5){ //For t-J
     int doublon_i = eleNum[ri + s*Nsite] * eleNum[ri + (1-s)*Nsite];
     int doublon_k = eleNum[rk + t*Nsite] * eleNum[rk + (1-t)*Nsite];
-    if(doublon_i==1 || doublon_k==1) {
-      /* revert hopping */
-      eleIdx[mtl] = rl;
-      eleNum[rtl] = 1;
-      eleNum[rtk] = 0;
-      eleIdx[msj] = rj;
-      eleNum[rsj] = 1;
-      eleNum[rsi] = 0;
-      return 0.0;
-    }
+    invalidUpdate = (doublon_i==1 || doublon_k==1);
+  }else if(NExUpdatePath==6){ /* For doublon-only: final state must remain empty/doublon-only */
+    invalidUpdate = (eleNum[ri] != eleNum[ri+Nsite] ||
+                     eleNum[rj] != eleNum[rj+Nsite] ||
+                     eleNum[rk] != eleNum[rk+Nsite] ||
+                     eleNum[rl] != eleNum[rl+Nsite]);
+  }
+  if(invalidUpdate) {
+    /* revert hopping */
+    eleIdx[mtl] = rl;
+    eleNum[rtl] = 1;
+    eleNum[rtk] = 0;
+    eleIdx[msj] = rj;
+    eleNum[rsj] = 1;
+    eleNum[rsi] = 0;
+    return 0.0;
   }
 
   z = ProjRatio(projCntNew,eleProjCnt);
