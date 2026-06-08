@@ -156,27 +156,53 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
 //DEBUG
       updateType = getUpdateType(NExUpdatePath);
 
-      if(updateType==HOPPING) { /* hopping */
-        
+      if (updateType == HOPPING || updateType == SPINHOPPING) { /* hopping or localized spin hopping */
+
         StartTimer(31);
         flag_hop = 0;
-        if(TwoSz==-1){//total spin is not conserved
-          if(genrand_real2()<0.5){ // this ratio can be changed
-            flag_hop = 1;
-            Counter[0]++;
-            makeCandidate_hopping_fsz(&mi, &ri, &rj, &s,&t, &rejectFlag,
+	switch(updateType){
+	  case HOPPING:
+            if(TwoSz==-1){//total spin is not conserved
+              if(genrand_real2()<0.5){ // this ratio can be changed
+                flag_hop = 1;
+                Counter[0]++;
+                makeCandidate_hopping_fsz(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
-          }else{
-            Counter[4]++;
-            makeCandidate_LocalSpinFlip_conduction(&mi, &ri, &rj, &s,&t, &rejectFlag,
+              }else{
+                Counter[4]++;
+                makeCandidate_LocalSpinFlip_conduction(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
-          } 
-        }else{ //csz : t=s
-          flag_hop = 1;
-          Counter[0]++;
-          makeCandidate_hopping_csz(&mi, &ri, &rj, &s,&t, &rejectFlag,
+              }
+            }else{ //csz : t=s
+              flag_hop = 1;
+              Counter[0]++;
+              makeCandidate_hopping_csz(&mi, &ri, &rj, &s,&t, &rejectFlag,
                               TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
-        } 
+            }
+	    break;
+	  case SPINHOPPING:
+            if(TwoSz==-1){//total spin is not conserved
+              if(genrand_real2()<0.5){ // this ratio can be changed
+                flag_hop = 1;
+                Counter[0]++;
+                makeCandidate_spin_hopping_fsz(&mi, &ri, &rj, &s,&t, &rejectFlag,
+                              TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+              }else{
+                Counter[4]++;
+                makeCandidate_LocalSpinFlip_conduction(&mi, &ri, &rj, &s,&t, &rejectFlag,
+                              TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+              }
+            }else{ //csz : t=s
+              flag_hop = 1;
+              Counter[0]++;
+              makeCandidate_spin_hopping_csz(&mi, &ri, &rj, &s,&t, &rejectFlag,
+                              TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+            }
+	    break;
+	  default:
+	    if (rank == 0) fprintf(stderr, "error: strange updateType \n");
+	    exit(1);
+	}
         StopTimer(31);
 
         if(rejectFlag) continue; 
@@ -479,15 +505,28 @@ int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt
       }
     }
     /* itinerant electron */
-    for(X_mi=0;X_mi<Nsize;X_mi++) { 
-      si = eleSpn[X_mi];
-      if(eleIdx[X_mi]== -1) {
-        do {
-          ri = gen_rand32()%Nsite;
-        } while (eleCfg[ri+si*Nsite]!= -1 || LocSpn[ri]==1); // seeking empty and itinerant site
-        eleCfg[ri+si*Nsite]     = X_mi; // buggged 4/26
-        eleIdx[X_mi]            = ri;
-        //eleSpn[mi+si*Ne]        = si;
+    if (NExUpdatePath == 4 || NExUpdatePath == 5){ //for t-J
+      for(X_mi=0;X_mi<Nsize;X_mi++) {
+        si = eleSpn[X_mi];
+        if(eleIdx[X_mi]== -1) {
+          do {
+            ri = gen_rand32()%Nsite;
+          } while (eleCfg[ri+si*Nsite]!= -1 || eleCfg[ri+(1-si)*Nsite]!= -1 || LocSpn[ri]==1); // seeking empty and itinerant site
+          eleCfg[ri+si*Nsite]     = X_mi;
+          eleIdx[X_mi]            = ri;
+        }
+      }
+    }else{
+      for(X_mi=0;X_mi<Nsize;X_mi++) {
+        si = eleSpn[X_mi];
+        if(eleIdx[X_mi]== -1) {
+          do {
+            ri = gen_rand32()%Nsite;
+          } while (eleCfg[ri+si*Nsite]!= -1 || LocSpn[ri]==1); // seeking empty and itinerant site
+          eleCfg[ri+si*Nsite]     = X_mi; // buggged 4/26
+          eleIdx[X_mi]            = ri;
+          //eleSpn[mi+si*Ne]        = si;
+        }
       }
     }
     /* EleNum */
@@ -663,7 +702,78 @@ void makeCandidate_hopping_csz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, in
   return;
 }
 
+// mi (ri,s) -> mi (rj,t)
+void makeCandidate_spin_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn) {
+  const int icnt_max = Nsite*Nsite;
+  int icnt;
+  int mi, ri, rj, s, flag;
+  int t; //fsz
 
+  flag = 0; // FALSE
+  //do {
+    mi = gen_rand32()%Nsize;
+    s  = eleSpn[mi] ; //fsz
+    //t  = (genrand_real2()<0.5) ? s : 1-s; //fsz
+    ri = eleIdx[mi];  //fsz
+  //} while (LocSpn[ri] == 1);
+
+  icnt = 0;
+  do {
+    rj = gen_rand32()%Nsite;
+    t  = (genrand_real2()<0.5) ? 0 : 1; //fsz
+    if(icnt> icnt_max){
+      flag = 1; // TRUE
+      break;
+    }
+    icnt+=1;
+  } while (eleCfg[rj+t*Nsite] != -1 || eleCfg[rj+(1-t)*Nsite] != -1 || LocSpn[rj]==1);
+
+  *mi_ = mi;
+  *ri_ = ri;
+  *rj_ = rj;
+  *s_  = s;
+  *t_  = t;
+  *rejectFlag_ = flag;
+
+  return;
+}
+// mi (ri,s) -> mi (rj,s)
+void makeCandidate_spin_hopping_csz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn) {
+  const int icnt_max = Nsite*Nsite;
+  int icnt;
+  int mi, ri, rj, s, flag;
+  int t; //fsz
+
+  flag = 0; // FALSE
+  //do {
+    mi = gen_rand32()%Nsize;
+    s  = eleSpn[mi] ; //fsz
+    //t  = (genrand_real2()<0.5) ? s : 1-s; //fsz
+    t  = s;//csz
+    ri = eleIdx[mi];  //fsz
+  //} while (LocSpn[ri] == 1);
+
+  icnt = 0;
+  do {
+    rj = gen_rand32()%Nsite;
+    if(icnt> icnt_max){
+      flag = 1; // TRUE
+      break;
+    }
+    icnt+=1;
+  } while (eleCfg[rj+t*Nsite] != -1 || eleCfg[rj+(1-s)*Nsite] != -1 || LocSpn[rj]==1);
+
+  *mi_ = mi;
+  *ri_ = ri;
+  *rj_ = rj;
+  *s_  = s;
+  *t_  = t;
+  *rejectFlag_ = flag;
+
+  return;
+}
 
 
 /* The mi-th electron with spin s exchanges with the electron on site rj with spin 1-s */

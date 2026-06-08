@@ -47,6 +47,9 @@ double complex GreenFunc1(const int ri, const int rj, const int s, const double 
 
   if(ri==rj) return eleNum[ri+s*Nsite];
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
+  if(NExUpdatePath==4 || NExUpdatePath==5){ //For t-J
+    if(eleNum[ri+s*Nsite]==1 || eleNum[ri+(1-s)*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
+  }
 
   mj = eleCfg[rj+s*Nsite];
   msj = mj + s*Ne;
@@ -156,6 +159,21 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
   UpdateProjCnt(rj, ri, s, projCntNew, projCntNew, eleNum);
   if (FlagRBM) {
     UpdateRBMCnt(rj, ri, s, rbmCntNew, rbmCntNew, eleNum);
+  }
+
+  if(NExUpdatePath==4 || NExUpdatePath==5){ //For t-J
+    int doublon_i = eleNum[ri + s*Nsite] * eleNum[ri + (1-s)*Nsite];
+    int doublon_k = eleNum[rk + t*Nsite] * eleNum[rk + (1-t)*Nsite];
+    if(doublon_i==1 || doublon_k==1) {
+      /* revert hopping */
+      eleIdx[mtl] = rl;
+      eleNum[rtl] = 1;
+      eleNum[rtk] = 0;
+      eleIdx[msj] = rj;
+      eleNum[rsj] = 1;
+      eleNum[rsi] = 0;
+      return 0.0;
+    }
   }
 
   z = ProjRatio(projCntNew,eleProjCnt);

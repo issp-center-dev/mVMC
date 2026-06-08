@@ -67,6 +67,35 @@
     **InterAll**:
     :math:`{\cal H}_I` 内の :math:`I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}` を指定します。
 
+    .. rubric:: t-J模型の指定
+
+    物理的なt-J模型を
+
+    .. math::
+
+       {\cal H}_{tJ} = -\sum_{i,j,\sigma} t_{ij}
+       {\tilde c}_{i\sigma}^{\dagger}{\tilde c}_{j\sigma}
+       + \sum_{i,j} J_{ij}\left({\boldsymbol S}_i\cdot{\boldsymbol S}_j
+       - \frac{1}{4}n_i n_j\right)
+
+    と書く場合、ここで :math:`{\tilde c}` は二重占有を除いた空間での
+    演算子を表します。このt-J模型は ``InterAll`` ではなく、 ``Trans``、
+    ``CoulombInter``、 ``Hund``、 ``Exchange`` の組み合わせで指定します。
+    上記ハミルトニアンの符号規約では、正の物理的な結合 :math:`J_{ij}` に対して
+
+    .. math::
+
+       V_{ij}=-\frac{J_{ij}}{4}, \qquad
+       J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
+       J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}
+
+    を指定します。また、t-J用の更新経路は ``modpara.def`` の
+    ``NExUpdatePath`` で指定します。現状のt-J更新経路では
+    ``BackFlow`` と ``LocSpin`` は非対応です。また、二重占有を許さないため、
+    電子数がサイト数を超える入力は使用できません。 ``Ncond`` で電子数を指定する場合は
+    ``Ncond <= Nsite`` が必要です。 ``Nelectron`` で電子ペア数を指定する場合は、
+    全電子数が ``2*Nelectron`` なので ``2*Nelectron <= Nsite`` が必要です。
+
 (4) 最適化対象変分パラメータ:
       
     最適化する変分パラメータを指定します。変分波動関数は
@@ -604,8 +633,17 @@ ModParaファイル (modpara.def)
 
    **形式 :** int型 (0以上)
 
-   **説明 :** 電子系でローカル更新で2電子交換を[0] 認めない、[1]
-   認めるの設定をします。スピン系の場合には2に設定する必要があります。
+   **説明 :** ローカル更新の種類を指定します。
+   0: HOPPING、1: EXCHANGE または HOPPING、2: EXCHANGE、
+   3: KondoGC用（HOPPING または EXCHANGE/LOCALSPINFLIP）、
+   4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）。
+   4と5の違いはt-J空間でのローカル更新経路の違いであり、
+   :math:`S_z` 保存・非保存の切り替えではありません。スピン量子数の指定は、
+   固定 :math:`S_z` 計算では ``2Sz`` などで別途行います。
+   t-J用の4と5では ``BackFlow`` と ``LocSpin`` は非対応です。また、
+   二重占有を許さないため、 ``Ncond`` で電子数を指定する場合は
+   ``Ncond <= Nsite``、 ``Nelectron`` で電子ペア数を指定する場合は
+   ``2*Nelectron <= Nsite`` が必要です。
 
 -  ``RndSeed``
 
