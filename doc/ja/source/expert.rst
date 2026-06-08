@@ -92,9 +92,11 @@
     を指定します。また、t-J用の更新経路は ``modpara.def`` の
     ``NExUpdatePath`` で指定します。現状のt-J更新経路では
     ``BackFlow`` と ``LocSpin`` は非対応です。また、二重占有を許さないため、
-    電子数がサイト数を超える入力は使用できません。 ``Ncond`` で電子数を指定する場合は
-    ``Ncond <= Nsite`` が必要です。 ``Nelectron`` で電子ペア数を指定する場合は、
-    全電子数が ``2*Nelectron`` なので ``2*Nelectron <= Nsite`` が必要です。
+    電子数がサイト数を超える入力は使用できません。 ``NExUpdatePath=4`` では
+    spin hopping の行き先として少なくとも1つの空サイトが必要なため、
+    ``Ncond < Nsite``、または ``2*Nelectron < Nsite`` が必要です。
+    ``NExUpdatePath=5`` では ``Ncond <= Nsite``、または
+    ``2*Nelectron <= Nsite`` が許されます。
 
 (4) 最適化対象変分パラメータ:
       
@@ -642,9 +644,11 @@ ModParaファイル (modpara.def)
    :math:`S_z` 保存・非保存の切り替えではありません。スピン量子数の指定は、
    固定 :math:`S_z` 計算では ``2Sz`` などで別途行います。
    t-J用の4と5では ``BackFlow`` と ``LocSpin`` は非対応です。また、
-   二重占有を許さないため、 ``Ncond`` で電子数を指定する場合は
-   ``Ncond <= Nsite``、 ``Nelectron`` で電子ペア数を指定する場合は
-   ``2*Nelectron <= Nsite`` が必要です。
+   二重占有を許さないため、電子数が ``Nsite`` を超える入力は使用できません。
+   さらに、 ``NExUpdatePath=4`` では spin hopping の行き先として
+   少なくとも1つの空サイトが必要なため、 ``Ncond < Nsite``、または
+   ``2*Nelectron < Nsite`` が必要です。 ``NExUpdatePath=5`` では
+   ``Ncond <= Nsite``、または ``2*Nelectron <= Nsite`` が許されます。
    ``NExUpdatePath=6`` では各サイトの状態を空状態またはdoublon状態、
    すなわち :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` または
    :math:`(1,1)` に制限します。このモードでは ``0 < Ne < Nsite`` と
