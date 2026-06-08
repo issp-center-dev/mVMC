@@ -636,7 +636,8 @@ ModParaファイル (modpara.def)
    **説明 :** ローカル更新の種類を指定します。
    0: HOPPING、1: EXCHANGE または HOPPING、2: EXCHANGE、
    3: KondoGC用（HOPPING または EXCHANGE/LOCALSPINFLIP）、
-   4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）。
+   4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）、
+   6: pair hoppingによるdoublon-onlyサンプリング。
    4と5の違いはt-J空間でのローカル更新経路の違いであり、
    :math:`S_z` 保存・非保存の切り替えではありません。スピン量子数の指定は、
    固定 :math:`S_z` 計算では ``2Sz`` などで別途行います。
@@ -644,6 +645,11 @@ ModParaファイル (modpara.def)
    二重占有を許さないため、 ``Ncond`` で電子数を指定する場合は
    ``Ncond <= Nsite``、 ``Nelectron`` で電子ペア数を指定する場合は
    ``2*Nelectron <= Nsite`` が必要です。
+   ``NExUpdatePath=6`` では各サイトの状態を空状態またはdoublon状態、
+   すなわち :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` または
+   :math:`(1,1)` に制限します。このモードでは ``0 < Ne < Nsite`` と
+   反平行スピンの ``Orbital`` 入力が必要です。現状では ``LocSpin``、
+   ``BackFlow``、RBM、``OrbitalGeneral``/FSZ入力には対応していません。
 
 -  ``RndSeed``
 

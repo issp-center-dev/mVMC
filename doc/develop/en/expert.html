@@ -602,19 +602,25 @@ will be performed <code class="docutils literal notranslate"><span class="pre">N
 values.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code></p>
-<p><strong>Type :</strong> int-type (Positive integer)</p>
+<p><strong>Type :</strong> int-type (Non-negative integer)</p>
 <p><strong>Description :</strong> The option for local updates. The choices are
 0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
-(hopping or exchange/local-spin-flip), 4: t-J spin hopping, and
-5: t-J update (exchange or spin hopping). The choice between 4 and
-5 selects the local-update path for the t-J Hilbert space; it is not
-the switch for <span class="math notranslate nohighlight">\(S_z\)</span> conservation. The spin sector is specified
-separately, for example by <code class="docutils literal notranslate"><span class="pre">2Sz</span></code> in fixed-<span class="math notranslate nohighlight">\(S_z\)</span> calculations.
-For the t-J choices 4 and 5, <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> and <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> are not
-supported. Since double occupancy is excluded, <code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> is
-required when the electron number is specified by <code class="docutils literal notranslate"><span class="pre">Ncond</span></code>, and
+(hopping or exchange/local-spin-flip), 4: t-J spin hopping,
+5: t-J update (exchange or spin hopping), and 6: doublon-only
+sampling by pair hopping. The choice between 4 and 5 selects the
+local-update path for the t-J Hilbert space; it is not the switch for
+<span class="math notranslate nohighlight">\(S_z\)</span> conservation. The spin sector is specified separately,
+for example by <code class="docutils literal notranslate"><span class="pre">2Sz</span></code> in fixed-<span class="math notranslate nohighlight">\(S_z\)</span> calculations. For the
+t-J choices 4 and 5, <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> and <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> are not supported.
+Since double occupancy is excluded, <code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> is required
+when the electron number is specified by <code class="docutils literal notranslate"><span class="pre">Ncond</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> is required when it is specified by the
-electron-pair count <code class="docutils literal notranslate"><span class="pre">Nelectron</span></code>.</p>
+electron-pair count <code class="docutils literal notranslate"><span class="pre">Nelectron</span></code>. For <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=6</span></code>, the
+sampled local states are restricted to empty and doublon states,
+<span class="math notranslate nohighlight">\((n_{\uparrow}, n_{\downarrow})=(0,0)\)</span> or <span class="math notranslate nohighlight">\((1,1)\)</span>.
+This mode requires <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">Ne</span> <span class="pre">&lt;</span> <span class="pre">Nsite</span></code> and an anti-parallel-spin
+<code class="docutils literal notranslate"><span class="pre">Orbital</span></code> input. It currently does not support <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>,
+<code class="docutils literal notranslate"><span class="pre">BackFlow</span></code>, RBM, or <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>/FSZ inputs.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">RndSeed</span></code></p>
 <p><strong>Type :</strong> int-type</p>

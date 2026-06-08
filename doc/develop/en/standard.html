@@ -731,15 +731,22 @@ will be performed <code class="docutils literal notranslate"><span class="pre">N
 values.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code></p>
-<p><strong>Type :</strong> int-type (Positive integer)</p>
+<p><strong>Type :</strong> int-type (Non-negative integer)</p>
 <p><strong>Description :</strong> The option for local updates. The choices are
 0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
-(hopping or exchange/local-spin-flip), 4: t-J spin hopping, and
-5: t-J update (exchange or spin hopping). In Standard mode, this
-value is assigned automatically from <code class="docutils literal notranslate"><span class="pre">model</span></code>. To use t-J mode,
-set <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=4</span></code> or <code class="docutils literal notranslate"><span class="pre">5</span></code> in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code>. The t-J choices
-do not support <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> or <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>. Since double occupancy is
-excluded, the input must satisfy <code class="docutils literal notranslate"><span class="pre">ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>.</p>
+(hopping or exchange/local-spin-flip), 4: t-J spin hopping,
+5: t-J update (exchange or spin hopping), and 6: doublon-only
+sampling by pair hopping. In Standard mode, this value is assigned
+automatically from <code class="docutils literal notranslate"><span class="pre">model</span></code>. To use t-J mode, set
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=4</span></code> or <code class="docutils literal notranslate"><span class="pre">5</span></code> in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code>. The t-J choices do
+not support <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> or <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>. Since double occupancy is
+excluded, the input must satisfy <code class="docutils literal notranslate"><span class="pre">ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>. To use
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=6</span></code>, set it in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> after generating the
+expert-mode files. This mode restricts each site to empty or doublon
+states, <span class="math notranslate nohighlight">\((n_{\uparrow}, n_{\downarrow})=(0,0)\)</span> or
+<span class="math notranslate nohighlight">\((1,1)\)</span>, requires <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">Ne</span> <span class="pre">&lt;</span> <span class="pre">Nsite</span></code> and an anti-parallel-spin
+<code class="docutils literal notranslate"><span class="pre">Orbital</span></code> input, and currently does not support <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>,
+<code class="docutils literal notranslate"><span class="pre">BackFlow</span></code>, RBM, or <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>/FSZ inputs.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">RndSeed</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 123456789)</p>

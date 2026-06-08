@@ -586,14 +586,20 @@ SR-CG法での、CG法の収束判定条件。残差ベクトルの要素の自�
 <p><strong>説明 :</strong> ローカル更新の種類を指定します。
 0: HOPPING、1: EXCHANGE または HOPPING、2: EXCHANGE、
 3: KondoGC用（HOPPING または EXCHANGE/LOCALSPINFLIP）、
-4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）。
+4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）、
+6: pair hoppingによるdoublon-onlyサンプリング。
 4と5の違いはt-J空間でのローカル更新経路の違いであり、
 <span class="math notranslate nohighlight">\(S_z\)</span> 保存・非保存の切り替えではありません。スピン量子数の指定は、
 固定 <span class="math notranslate nohighlight">\(S_z\)</span> 計算では <code class="docutils literal notranslate"><span class="pre">2Sz</span></code> などで別途行います。
 t-J用の4と5では <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> と <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> は非対応です。また、
 二重占有を許さないため、 <code class="docutils literal notranslate"><span class="pre">Ncond</span></code> で電子数を指定する場合は
 <code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>、 <code class="docutils literal notranslate"><span class="pre">Nelectron</span></code> で電子ペア数を指定する場合は
-<code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> が必要です。</p>
+<code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> が必要です。
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=6</span></code> では各サイトの状態を空状態またはdoublon状態、
+すなわち <span class="math notranslate nohighlight">\((n_{\uparrow}, n_{\downarrow})=(0,0)\)</span> または
+<span class="math notranslate nohighlight">\((1,1)\)</span> に制限します。このモードでは <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">Ne</span> <span class="pre">&lt;</span> <span class="pre">Nsite</span></code> と
+反平行スピンの <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> 入力が必要です。現状では <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>、
+<code class="docutils literal notranslate"><span class="pre">BackFlow</span></code>、RBM、<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>/FSZ入力には対応していません。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">RndSeed</span></code></p>
 <p><strong>形式 :</strong> int型</p>

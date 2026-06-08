@@ -645,20 +645,26 @@ Keywords and parameters
 
 -  ``NExUpdatePath``
 
-   **Type :** int-type (Positive integer)
+   **Type :** int-type (Non-negative integer)
 
    **Description :** The option for local updates. The choices are
    0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
-   (hopping or exchange/local-spin-flip), 4: t-J spin hopping, and
-   5: t-J update (exchange or spin hopping). The choice between 4 and
-   5 selects the local-update path for the t-J Hilbert space; it is not
-   the switch for :math:`S_z` conservation. The spin sector is specified
-   separately, for example by ``2Sz`` in fixed-:math:`S_z` calculations.
-   For the t-J choices 4 and 5, ``BackFlow`` and ``LocSpin`` are not
-   supported. Since double occupancy is excluded, ``Ncond <= Nsite`` is
-   required when the electron number is specified by ``Ncond``, and
+   (hopping or exchange/local-spin-flip), 4: t-J spin hopping,
+   5: t-J update (exchange or spin hopping), and 6: doublon-only
+   sampling by pair hopping. The choice between 4 and 5 selects the
+   local-update path for the t-J Hilbert space; it is not the switch for
+   :math:`S_z` conservation. The spin sector is specified separately,
+   for example by ``2Sz`` in fixed-:math:`S_z` calculations. For the
+   t-J choices 4 and 5, ``BackFlow`` and ``LocSpin`` are not supported.
+   Since double occupancy is excluded, ``Ncond <= Nsite`` is required
+   when the electron number is specified by ``Ncond``, and
    ``2*Nelectron <= Nsite`` is required when it is specified by the
-   electron-pair count ``Nelectron``.
+   electron-pair count ``Nelectron``. For ``NExUpdatePath=6``, the
+   sampled local states are restricted to empty and doublon states,
+   :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` or :math:`(1,1)`.
+   This mode requires ``0 < Ne < Nsite`` and an anti-parallel-spin
+   ``Orbital`` input. It currently does not support ``LocSpin``,
+   ``BackFlow``, RBM, or ``OrbitalGeneral``/FSZ inputs.
 
 -  ``RndSeed``
 

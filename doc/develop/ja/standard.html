@@ -670,12 +670,20 @@ SR法で使用する刻み幅。手法論文[<a class="reference external" href=
 <p><strong>説明 :</strong> ローカル更新の種類を指定します。
 0: HOPPING、1: EXCHANGE または HOPPING、2: EXCHANGE、
 3: KondoGC用（HOPPING または EXCHANGE/LOCALSPINFLIP）、
-4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）。
+4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）、
+6: pair hoppingによるdoublon-onlyサンプリング。
 Standard modeではこの値は <code class="docutils literal notranslate"><span class="pre">model</span></code> から自動設定されます。
 tJモードを使う場合は、 <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> で
 <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=4</span></code> または <code class="docutils literal notranslate"><span class="pre">5</span></code> を指定してください。
 t-J用の4と5では <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> と <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> は非対応です。また、
-二重占有を許さないため <code class="docutils literal notranslate"><span class="pre">ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> を満たす必要があります。</p>
+二重占有を許さないため <code class="docutils literal notranslate"><span class="pre">ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> を満たす必要があります。
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=6</span></code> を使う場合は、スタンダードモードから
+エキスパートモード入力ファイルを生成した後に <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> で指定します。
+このモードでは各サイトの状態を空状態またはdoublon状態、すなわち
+<span class="math notranslate nohighlight">\((n_{\uparrow}, n_{\downarrow})=(0,0)\)</span> または <span class="math notranslate nohighlight">\((1,1)\)</span> に
+制限します。また、<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">Ne</span> <span class="pre">&lt;</span> <span class="pre">Nsite</span></code> と反平行スピンの <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> 入力が
+必要です。現状では <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>、<code class="docutils literal notranslate"><span class="pre">BackFlow</span></code>、RBM、
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>/FSZ入力には対応していません。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">RndSeed</span></code></p>
 <p><strong>形式 :</strong> int型 (デフォルト値 = 123456789)</p>

@@ -719,16 +719,23 @@ Parameters for the numerical condition
 
 -  ``NExUpdatePath``
 
-   **Type :** int-type (Positive integer)
+   **Type :** int-type (Non-negative integer)
 
    **Description :** The option for local updates. The choices are
    0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
-   (hopping or exchange/local-spin-flip), 4: t-J spin hopping, and
-   5: t-J update (exchange or spin hopping). In Standard mode, this
-   value is assigned automatically from ``model``. To use t-J mode,
-   set ``NExUpdatePath=4`` or ``5`` in ``modpara.def``. The t-J choices
-   do not support ``BackFlow`` or ``LocSpin``. Since double occupancy is
-   excluded, the input must satisfy ``ncond <= Nsite``.
+   (hopping or exchange/local-spin-flip), 4: t-J spin hopping,
+   5: t-J update (exchange or spin hopping), and 6: doublon-only
+   sampling by pair hopping. In Standard mode, this value is assigned
+   automatically from ``model``. To use t-J mode, set
+   ``NExUpdatePath=4`` or ``5`` in ``modpara.def``. The t-J choices do
+   not support ``BackFlow`` or ``LocSpin``. Since double occupancy is
+   excluded, the input must satisfy ``ncond <= Nsite``. To use
+   ``NExUpdatePath=6``, set it in ``modpara.def`` after generating the
+   expert-mode files. This mode restricts each site to empty or doublon
+   states, :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` or
+   :math:`(1,1)`, requires ``0 < Ne < Nsite`` and an anti-parallel-spin
+   ``Orbital`` input, and currently does not support ``LocSpin``,
+   ``BackFlow``, RBM, or ``OrbitalGeneral``/FSZ inputs.
 
 -  ``RndSeed``
 
