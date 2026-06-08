@@ -30,4 +30,4 @@ NExUpdatePath  5
 RndSeed        12345
 NSplitSize     1
 NStore         1
-NSRCG          1
+NSRCG          0
