@@ -66,6 +66,37 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **InterAll**: :math:`I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}` in
     :math:`{\cal H}_I`.
 
+    .. rubric:: t-J model input convention
+
+    For a t-J model with the physical convention
+
+    .. math::
+
+       {\cal H}_{tJ} = -\sum_{i,j,\sigma} t_{ij}
+       {\tilde c}_{i\sigma}^{\dagger}{\tilde c}_{j\sigma}
+       + \sum_{i,j} J_{ij}\left({\boldsymbol S}_i\cdot{\boldsymbol S}_j
+       - \frac{1}{4}n_i n_j\right),
+
+    where the tilde denotes the no-double-occupancy Hilbert space, use
+    the ``Trans``, ``CoulombInter``, ``Hund``, and ``Exchange`` files;
+    this is not an ``InterAll`` input.
+    With the sign convention of the Hamiltonian above, a positive
+    physical coupling :math:`J_{ij}` is represented by
+
+    .. math::
+
+       V_{ij}=-\frac{J_{ij}}{4}, \qquad
+       J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
+       J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}.
+
+    The t-J update path must also be selected by ``NExUpdatePath`` in
+    ``modpara.def``. The current t-J update paths do not support
+    ``BackFlow`` or ``LocSpin`` inputs. Since double occupancy is
+    excluded, the electron number must not exceed the number of sites.
+    When the electron number is specified by ``Ncond``, this means
+    ``Ncond <= Nsite``. When it is specified by the electron-pair count
+    ``Nelectron``, this means ``2*Nelectron <= Nsite``.
+
 (4) Variational parameters to be optimized:
       
     The variational parameters to be optimized are specified by using
@@ -616,11 +647,20 @@ Keywords and parameters
 
    **Type :** int-type (Non-negative integer)
 
-   **Description :** The option for the local update path.
-   0: hopping, 1: exchange or hopping, 2: exchange for spin systems,
-   3: KondoGC update (hopping or exchange/local-spin-flip), and
-   6: doublon-only sampling by pair hopping. For ``NExUpdatePath=6``,
-   the sampled local states are restricted to empty and doublon states,
+   **Description :** The option for local updates. The choices are
+   0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
+   (hopping or exchange/local-spin-flip), 4: t-J spin hopping,
+   5: t-J update (exchange or spin hopping), and 6: doublon-only
+   sampling by pair hopping. The choice between 4 and 5 selects the
+   local-update path for the t-J Hilbert space; it is not the switch for
+   :math:`S_z` conservation. The spin sector is specified separately,
+   for example by ``2Sz`` in fixed-:math:`S_z` calculations. For the
+   t-J choices 4 and 5, ``BackFlow`` and ``LocSpin`` are not supported.
+   Since double occupancy is excluded, ``Ncond <= Nsite`` is required
+   when the electron number is specified by ``Ncond``, and
+   ``2*Nelectron <= Nsite`` is required when it is specified by the
+   electron-pair count ``Nelectron``. For ``NExUpdatePath=6``, the
+   sampled local states are restricted to empty and doublon states,
    :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` or :math:`(1,1)`.
    This mode requires ``0 < Ne < Nsite`` and an anti-parallel-spin
    ``Orbital`` input. It currently does not support ``LocSpin``,
@@ -669,6 +709,48 @@ Keywords and parameters
    **Type :** int-type (0 or 1, default value: 0)
 
    **Description :** The option of using the point Jacobi method (scaling by diagonal elements of :math:`S` matrix) when solving the linear equation :math:`Sx=g` in the SR method by CG method (0: off, 1: on, ``NSRCG`` must be 1).
+
+   ``NSRCG=2`` is also accepted as a shortcut and is internally treated as
+   ``NSRCG=1`` with ``useDiagScale=1``.
+
+-  ``NSRCGFallback``
+
+   **Type :** int-type (0 or 1, default value: 0)
+
+   **Description :** The option of retrying the other SR-CG solver when the
+   selected solver does not converge or becomes numerically unstable (0: off,
+   1: on). Standard CG falls back to DiagScale-CG, and DiagScale-CG falls back
+   to standard CG.
+
+-  ``NSRCGAbortOnFail``
+
+   **Type :** int-type (0 or 1, default value: 1)
+
+   **Description :** The option of aborting the calculation when SR-CG fails
+   after the optional fallback (0: warn and continue with the approximate
+   solution, 1: abort).
+
+   By default, ``NSRCGFallback=0`` and ``NSRCGAbortOnFail=1``.  With these
+   settings, a non-converged or numerically unstable SR-CG solve is treated as
+   an input or numerical failure.  Increase ``NVMCSample``, adjust the SR-CG
+   tolerance/iteration limit, or enable ``useDiagScale`` when the overlap
+   matrix is too noisy or ill-conditioned.  ``useDiagScale=1`` selects the
+   point-Jacobi preconditioned CG solver, which can improve convergence.
+
+-  ``RescaleSmat``
+
+   **Type :** int-type (0 or 1, default value: 0)
+
+   **Description :** The option of rescaling Slater-related blocks in SR-CG
+   before solving :math:`Sx=g` (0: off, 1: on). ``RescaleSmat=1`` requires
+   ``NSRCG=1`` (the rescaling is only applied along the SR-CG path).
+   Typical settings for SR-CG in ``ModPara`` are:
+
+   ::
+
+       NSRCG = 1
+       useDiagScale = 1
+       RescaleSmat = 1
 
 -  ``NneuronGeneral``
 

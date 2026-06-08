@@ -46,6 +46,7 @@ inline double get_absmax(int idx_start, int idx_end, const double * const p) {
 }
 
 extern inline double xdot(const int n, const double * const p, const double * const q);
+extern inline double get_absmax(int idx_start, int idx_end, const double * const p);
 
 #define MVMC_SRCG_REAL
 #include "stcopt_cg_impl.c"

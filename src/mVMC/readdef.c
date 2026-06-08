@@ -34,6 +34,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #define _NOTBACKFLOW
 
+char (*cFileNameListFile)[D_CharTmpReadDef] = NULL;
+
 int ReadDefFileError(const char *defname);
 
 int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm);
@@ -203,8 +205,16 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
   char *cerr;
   int i, info = 0;
 
+  if (cFileNameListFile != NULL) {
+    free(cFileNameListFile);
+    cFileNameListFile = NULL;
+  }
   cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
-  // free at vmcmain.c
+  if (cFileNameListFile == NULL) {
+    fprintf(stderr, "  error: Memory allocation failed for filename list.\n");
+    return -1;
+  }
+  // freed at vmcmain.c
   fprintf(stdout, "  Read File %s .\n", xNameListFile);
   if (GetFileName(xNameListFile, cFileNameListFile) != 0) {
     fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
@@ -219,23 +229,32 @@ int ReadGreen(char *xNameListFile, int Nca, int **caIdx, int Ncacadc, int **caca
     fp = fopen(defname, "r");
     if (fp == NULL) {
       info = ReadDefFileError(defname);
-      fclose(fp);
       continue;
     }
 
     /*=======================================================================*/
-    for (i = 0; i < IgnoreLinesInDef; i++)
+    for (i = 0; i < IgnoreLinesInDef; i++) {
       cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-      if(cerr == NULL) return(-1);
+      if (cerr == NULL) {
+        fclose(fp);
+        return (-1);
+      }
+    }
     switch (iKWidx) {
       case KWOneBodyG:
         /*cisajs.def----------------------------------------*/
-        if (GetInfoOneBodyG(fp, caIdx, iOneBodyGIdx, 0, Ns, Nca, defname) != 0) return (-1);
+        if (GetInfoOneBodyG(fp, caIdx, iOneBodyGIdx, 0, Ns, Nca, defname) != 0) {
+          fclose(fp);
+          return (-1);
+        }
         break;
       case KWTwoBodyGEx:
         /*cisajscktalt.def----------------------------------*/
         /*load as if it's DC for index rearranging----------*/
-        if (GetInfoTwoBodyG(fp, cacaIdx, Ns, Ncacadc, defname) != 0) return (-1);
+        if (GetInfoTwoBodyG(fp, cacaIdx, Ns, Ncacadc, defname) != 0) {
+          fclose(fp);
+          return (-1);
+        }
         break;
       default:
         break;
@@ -642,6 +661,26 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       } else bufInt[IdxNe] = (bufInt[IdxNLocSpin] + bufInt[IdxNCond]) / 2;
     }
 
+    if (bufInt[IdxExUpdatePath] == 4 || bufInt[IdxExUpdatePath] == 5) {
+      if (bufInt[IdxNBF] > 0) {
+        fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support BackFlow.\n");
+        info = 1;
+      }
+      if (bufInt[IdxNLocSpin] > 0) {
+        fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support LocSpin.\n");
+        info = 1;
+      }
+      if (2LL * bufInt[IdxNe] > bufInt[IdxNsite]) {
+        fprintf(stderr,
+                "Error: NExUpdatePath=4 or 5 (t-J update) requires 2*Ne <= Nsite to avoid double occupancy.\n");
+        info = 1;
+      }
+      if (bufInt[IdxLanczosMode] != 0) {
+        fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support NLanczosMode > 0.\n");
+        info = 1;
+      }
+    }
+
     //CheckGeneral Orbital
     //printf("bufInt[Idx2Sz]=%d \n",bufInt[Idx2Sz]);
     if (bufInt[Idx2Sz] != 0) {
@@ -745,6 +784,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&FlagRBM, 1, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
   MPI_Bcast(&NSRCG, 1, MPI_INT, 0, comm); // for NCG
+  MPI_Bcast(&NSRCGFallback, 1, MPI_INT, 0, comm); // for SR-CG fallback
+  MPI_Bcast(&NSRCGAbortOnFail, 1, MPI_INT, 0, comm); // for SR-CG failure
   MPI_Bcast(&RescaleSmat, 1, MPI_INT, 0, comm); // for Rescale S matrix
   MPI_Bcast(&useDiagScale, 1, MPI_INT, 0, comm); // for Jacobi preconditioned CG
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
@@ -880,22 +921,25 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   } //else {
   //  useDiagScale = 0;
   //}
+  NSRCGFallback = (NSRCGFallback != 0);
+  NSRCGAbortOnFail = (NSRCGAbortOnFail != 0);
+
   if (useDiagScale){
     if(NSRCG == 1){
       if (rank == 0) printf("remark: use preconditioned CG (Diag Scale)\n");
     }else{
       if (rank == 0) printf("remark: not use preconditioned CG (Diag Scale) because NSRCG=%d != 1. Use direct method instead.\n",NSRCG);
+      useDiagScale = 0;
     }
   }
 
   if (RescaleSmat){
-    if (!(NSRCG == 1 || NStoreO != 0)) {
+    if (NSRCG != 1) {
       if (rank == 0) {
         fprintf(stderr,
                 "error: invalid RescaleSmat configuration. "
-                "RescaleSmat=1 requires NSRCG==1 or NStoreO!=0, "
-                "but got NSRCG=%d, NStoreO=%d.\n",
-                NSRCG, NStoreO);
+                "RescaleSmat=1 requires NSRCG==1, but got NSRCG=%d.\n",
+                NSRCG);
       }
       MPI_Abort(comm, EXIT_FAILURE);
     }
@@ -908,6 +952,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     DSROptStepDt *= -1;
   } else {
     SRFlag = 0;
+  }
+
+  if (SRFlag != 0 && NSRCG != 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "error: SR-CG (NSRCG=%d) cannot be combined with diagonalization mode "
+              "(DSROptStepDt < 0). Use either DSROptStepDt > 0 with SR-CG, "
+              "or DSROptStepDt < 0 with NSRCG=0.\n",
+              NSRCG);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
   }
 
   Nsize = 2 * Ne;
@@ -2047,6 +2102,8 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufDouble[IdxSROptCGTol] = 1.0e-10;
   NStoreO = 1;
   NSRCG = 0;
+  NSRCGFallback = 0;
+  NSRCGAbortOnFail = 1;
   RescaleSmat  = 0;
   useDiagScale = 0;
 
@@ -2168,6 +2225,10 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               NStoreO = (int) dtmp;
             } else if (CheckWords(ctmp, "NSRCG") == 0) {
               NSRCG = (int) dtmp;
+            } else if (CheckWords(ctmp, "NSRCGFallback") == 0) {
+              NSRCGFallback = (int) dtmp;
+            } else if (CheckWords(ctmp, "NSRCGAbortOnFail") == 0) {
+              NSRCGAbortOnFail = (int) dtmp;
             } else if (CheckWords(ctmp, "RescaleSmat") == 0) {
               RescaleSmat = (int) dtmp;
             } else if (CheckWords(ctmp, "useDiagScale") == 0) {

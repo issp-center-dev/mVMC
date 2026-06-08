@@ -67,6 +67,35 @@
     **InterAll**:
     :math:`{\cal H}_I` 内の :math:`I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}` を指定します。
 
+    .. rubric:: t-J模型の指定
+
+    物理的なt-J模型を
+
+    .. math::
+
+       {\cal H}_{tJ} = -\sum_{i,j,\sigma} t_{ij}
+       {\tilde c}_{i\sigma}^{\dagger}{\tilde c}_{j\sigma}
+       + \sum_{i,j} J_{ij}\left({\boldsymbol S}_i\cdot{\boldsymbol S}_j
+       - \frac{1}{4}n_i n_j\right)
+
+    と書く場合、ここで :math:`{\tilde c}` は二重占有を除いた空間での
+    演算子を表します。このt-J模型は ``InterAll`` ではなく、 ``Trans``、
+    ``CoulombInter``、 ``Hund``、 ``Exchange`` の組み合わせで指定します。
+    上記ハミルトニアンの符号規約では、正の物理的な結合 :math:`J_{ij}` に対して
+
+    .. math::
+
+       V_{ij}=-\frac{J_{ij}}{4}, \qquad
+       J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
+       J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}
+
+    を指定します。また、t-J用の更新経路は ``modpara.def`` の
+    ``NExUpdatePath`` で指定します。現状のt-J更新経路では
+    ``BackFlow`` と ``LocSpin`` は非対応です。また、二重占有を許さないため、
+    電子数がサイト数を超える入力は使用できません。 ``Ncond`` で電子数を指定する場合は
+    ``Ncond <= Nsite`` が必要です。 ``Nelectron`` で電子ペア数を指定する場合は、
+    全電子数が ``2*Nelectron`` なので ``2*Nelectron <= Nsite`` が必要です。
+
 (4) 最適化対象変分パラメータ:
       
     最適化する変分パラメータを指定します。変分波動関数は
@@ -604,10 +633,18 @@ ModParaファイル (modpara.def)
 
    **形式 :** int型 (0以上)
 
-   **説明 :** ローカル更新経路を指定します。
-   0はhopping、1はexchangeまたはhopping、2はスピン系のexchange、
-   3はKondoGC更新(hoppingまたはexchange/local-spin-flip)、
-   6はpair hoppingによるdoublon-onlyサンプリングです。
+   **説明 :** ローカル更新の種類を指定します。
+   0: HOPPING、1: EXCHANGE または HOPPING、2: EXCHANGE、
+   3: KondoGC用（HOPPING または EXCHANGE/LOCALSPINFLIP）、
+   4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）、
+   6: pair hoppingによるdoublon-onlyサンプリング。
+   4と5の違いはt-J空間でのローカル更新経路の違いであり、
+   :math:`S_z` 保存・非保存の切り替えではありません。スピン量子数の指定は、
+   固定 :math:`S_z` 計算では ``2Sz`` などで別途行います。
+   t-J用の4と5では ``BackFlow`` と ``LocSpin`` は非対応です。また、
+   二重占有を許さないため、 ``Ncond`` で電子数を指定する場合は
+   ``Ncond <= Nsite``、 ``Nelectron`` で電子ペア数を指定する場合は
+   ``2*Nelectron <= Nsite`` が必要です。
    ``NExUpdatePath=6`` では各サイトの状態を空状態またはdoublon状態、
    すなわち :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` または
    :math:`(1,1)` に制限します。このモードでは ``0 < Ne < Nsite`` と
@@ -649,6 +686,49 @@ ModParaファイル (modpara.def)
    **形式 :** int型 (0もしくは1、デフォルト値=0)
 
    **説明 :** SR法での連立一次方程式 :math:`Sx=g` をCG法により解く際に、 Point Jacobi法 (:math:`S` 行列の対角スケーリング)による前処理付きCG法を使用するオプション(1で機能ON, ``NSRCG=1`` である必要がある)。
+
+   ``NSRCG=2`` を指定した場合も受理され、内部では
+   ``NSRCG=1`` かつ ``useDiagScale=1`` として扱われます。
+
+-  ``NSRCGFallback``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=0)
+
+   **説明 :** 選択されたSR-CGソルバが収束しない、または数値不安定になった場合に、
+   もう一方のSR-CGソルバで再試行するオプション(0で無効、1で有効)。
+   通常CGはDiagScale-CGへ、DiagScale-CGは通常CGへフォールバックします。
+
+-  ``NSRCGAbortOnFail``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=1)
+
+   **説明 :** SR-CGが、必要ならフォールバックも試した後で失敗した場合に
+   計算を終了するオプション(0で警告を出して近似解で継続、1で終了)。
+
+   デフォルトは ``NSRCGFallback=0`` かつ ``NSRCGAbortOnFail=1`` です。
+   この設定では、SR-CGが収束しない、または数値不安定になった場合に、
+   入力または数値条件の失敗として計算を終了します。
+   overlap行列の統計ノイズが大きい、または条件が悪い場合は、
+   ``NVMCSample`` を増やす、SR-CGの収束判定値や反復回数上限を調整する、
+   あるいは ``useDiagScale`` を有効にすることを検討してください。
+   ``useDiagScale=1`` はPoint Jacobi前処理付きCGを選択します。
+   収束性の改善に有効な場合があります。
+
+-  ``RescaleSmat``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=0)
+
+   **説明 :** SR-CGで :math:`Sx=g` を解く前に、Slater関連ブロックを
+   リスケーリングするオプション(1で機能ON)。
+   ``RescaleSmat=1`` を使う場合は ``NSRCG=1`` が必要です
+   (リスケーリングはSR-CG経路でのみ適用されます)。
+   ``ModPara`` でのSR-CGの典型設定は次の通りです。
+
+   ::
+
+       NSRCG = 1
+       useDiagScale = 1
+       RescaleSmat = 1
 
 -  ``NneuronGeneral``
 

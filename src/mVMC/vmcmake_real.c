@@ -137,12 +137,21 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
       updateType = getUpdateType(NExUpdatePath);
 
-      if (updateType == HOPPING) { /* hopping */
+      if (updateType == HOPPING || updateType == SPINHOPPING) { /* hopping or spin hopping */
         Counter[0]++;
 
         StartTimer(31);
-        makeCandidate_hopping(&mi, &ri, &rj, &s, &rejectFlag,
-                              TmpEleIdx, TmpEleCfg);
+        switch(updateType){
+          case HOPPING:
+            makeCandidate_hopping(&mi, &ri, &rj, &s, &rejectFlag, TmpEleIdx, TmpEleCfg);
+            break;
+          case SPINHOPPING:
+            makeCandidate_spin_hopping(&mi, &ri, &rj, &s, &rejectFlag, TmpEleIdx, TmpEleCfg);
+            break;
+          default:
+            if (rank == 0) fprintf(stderr, "error: strange updateType \n");
+            exit(1);
+        }
         StopTimer(31);
 
         if (rejectFlag) continue;

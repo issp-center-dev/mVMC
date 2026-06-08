@@ -118,6 +118,9 @@ set(python_test_vmc_model_mode1
 
 set(python_test_vmc_model_expert
   GeneralRBM_cmp
+  TJChainL4_Ncond2_J_path4
+  TJChainL4_Ncond2_J_path5
+  TJChainL4_Ncond4_J_path5
   HeisenbergChain_SpinJastrow
   HeisenbergChain_fsz_SpinJastrow
   HubbardChain_SpinJastrow
@@ -190,6 +193,8 @@ add_python_vmc_test_invalid_expert(DoublonOnly_InvalidLocSpin "NLocalSpin > 0")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidOrbitalGeneral "OrbitalGeneral=1")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidLanczos "NLanczosMode > 0")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidRBM "not compatible with RBM")
+add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path4_InvalidLanczos "NLanczosMode > 0")
+add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path5_InvalidLanczos "NLanczosMode > 0")
 add_test(NAME SpinJastrow_InvalidInIndex
          COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py SpinJastrow_InvalidInIndex "duplicated index")
 set_tests_properties(SpinJastrow_InvalidInIndex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")

@@ -14,6 +14,8 @@ void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum);
 void ReduceCounter(MPI_Comm comm);
 void makeCandidate_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg);
+void makeCandidate_spin_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg);
 void makeCandidate_exchange(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
                             const int *eleIdx, const int *eleCfg, const int *eleNum);
 void makeCandidate_pairhopping(int *mi_, int *mj_, int *ri_, int *rj_, int *rejectFlag_,
@@ -34,9 +36,8 @@ void saveEleConfigBF(const int sample, const double logIp,
                      const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt, const int *eleProjBFCnt);
 /*[e] BackFlow */
 
-typedef enum {HOPPING,HOPPING_FSZ,EXCHANGE,LOCALSPINFLIP,PAIRHOPPING, NONE} UpdateType;
+typedef enum {HOPPING,HOPPING_FSZ,EXCHANGE,LOCALSPINFLIP,SPINHOPPING,PAIRHOPPING,NONE} UpdateType;
 UpdateType getUpdateType(int path);
 
 #endif
-
 

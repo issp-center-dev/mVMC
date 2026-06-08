@@ -148,12 +148,21 @@ void VMCMakeSample(MPI_Comm comm) {
 
       updateType = getUpdateType(NExUpdatePath);
 
-      if(updateType==HOPPING) { /* hopping */
+      if(updateType==HOPPING || updateType==SPINHOPPING) { /* hopping or spin hopping */
         Counter[0]++;
 
         StartTimer(31);
-        makeCandidate_hopping(&mi, &ri, &rj, &s, &rejectFlag,
-                              TmpEleIdx, TmpEleCfg);
+        switch(updateType){
+          case HOPPING:
+            makeCandidate_hopping(&mi, &ri, &rj, &s, &rejectFlag, TmpEleIdx, TmpEleCfg);
+            break;
+          case SPINHOPPING:
+            makeCandidate_spin_hopping(&mi, &ri, &rj, &s, &rejectFlag, TmpEleIdx, TmpEleCfg);
+            break;
+          default:
+            if (rank == 0) fprintf(stderr, "error: strange updateType \n");
+            exit(1);
+        }
         StopTimer(31);
 
         if(rejectFlag) continue;
@@ -468,7 +477,19 @@ int makeInitialSample(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
         eleCfg[ri+Nsite]  = mi;  /* down */
         eleIdx[mi+Ne]     = ri;
       }
-    } else {
+    } else if (NExUpdatePath == 4 || NExUpdatePath == 5){
+      for(si=0;si<2;si++) {
+        for(mi=0;mi<Ne;mi++) {
+          if(eleIdx[mi+si*Ne]== -1) {
+            do {
+              ri = gen_rand32()%Nsite;
+            } while (eleCfg[ri+si*Nsite]!= -1 || eleCfg[ri+(1-si)*Nsite]!= -1 || LocSpn[ri]==1);
+            eleCfg[ri+si*Nsite] = mi;
+            eleIdx[mi+si*Ne] = ri;
+          }
+        }
+      }
+    }else{
       for(si=0;si<2;si++) {
         for(mi=0;mi<Ne;mi++) {
           if(eleIdx[mi+si*Ne]== -1) {
@@ -628,6 +649,37 @@ void makeCandidate_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFla
   return;
 }
 
+/* The mi-th localized spin with spin s hops to hole at site rj */
+void makeCandidate_spin_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg) {
+  const int icnt_max = Nsite*Nsite;
+  int icnt;
+  int mi, ri, rj, s, flag;
+
+  flag = 0; // FALSE
+  mi = gen_rand32()%Ne;
+  s = (genrand_real2()<0.5) ? 0 : 1;
+  ri = eleIdx[mi+s*Ne];
+
+  icnt = 0;
+  do {
+    rj = gen_rand32()%Nsite;
+    if(icnt> icnt_max){
+      flag = 1; // TRUE
+      break;
+    }
+    icnt+=1;
+  } while (eleCfg[rj+s*Nsite] != -1 || eleCfg[rj+(1-s)*Nsite] != -1 || LocSpn[rj]==1);
+
+  *mi_ = mi;
+  *ri_ = ri;
+  *rj_ = rj;
+  *s_ = s;
+  *rejectFlag_ = flag;
+
+  return;
+}
+
 /* The mi-th electron with spin s exchanges with the electron on site rj with spin 1-s */
 void makeCandidate_exchange(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg, const int *eleNum) {
@@ -763,6 +815,10 @@ UpdateType getUpdateType(int path) {
     }else{/* Exchange for conductions and local spins, localspinflip for local spins　*/
       return (genrand_real2()<0.5) ? EXCHANGE : LOCALSPINFLIP; /* exchange or localspinflip */
     }
+  }else if(path==4) { //for t-J
+      return SPINHOPPING; /* spin hopping */
+  }else if(path==5) { //for t-J
+      return (genrand_real2()<0.5) ? EXCHANGE : SPINHOPPING; /* exchange or spin hopping */
   }else if(path==6){ //for doublon-only
     return PAIRHOPPING; /* pair hopping */
   }
