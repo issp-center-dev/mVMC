@@ -200,7 +200,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
             }
 	    break;
 	  default:
-    	    if (rank == 0) fprintf(stderr, "error: strange updateType \n");
+	    if (rank == 0) fprintf(stderr, "error: strange updateType \n");
 	    exit(1);
 	}
         StopTimer(31);
