@@ -128,6 +128,12 @@ indicate the <span class="math notranslate nohighlight">\(S_z\)</span>-unconserv
 lattice model [Eqn. <a class="reference internal" href="#equation-kondo">(3)</a> ], respectively. Note: Although
 these flags has a word “GC”(=grandcanonical), the number of electrons
 are conserved in these system.</p>
+<p>The t-J mode is controlled by <code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code> in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code>
+(<code class="docutils literal notranslate"><span class="pre">4</span></code>: spin hopping, <code class="docutils literal notranslate"><span class="pre">5</span></code>: exchange/spin-hopping mix). At present,
+Standard mode does not provide a dedicated <code class="docutils literal notranslate"><span class="pre">model</span></code> keyword for t-J.
+The current t-J update paths do not support <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> or
+<code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>. Since double occupancy is excluded, the input must
+satisfy <code class="docutils literal notranslate"><span class="pre">ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">lattice</span></code></p>
 <p><strong>Type :</strong> String (Choose from <code class="docutils literal notranslate"><span class="pre">&quot;Chain</span> <span class="pre">Lattice&quot;</span></code>,
@@ -726,9 +732,14 @@ values.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code></p>
 <p><strong>Type :</strong> int-type (Positive integer)</p>
-<p><strong>Description :</strong> The option for local update about exchange terms.
-0: not update, 1: update. The default value is set as 1 when the
-local spin exists, otherwise 0.</p>
+<p><strong>Description :</strong> The option for local updates. The choices are
+0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
+(hopping or exchange/local-spin-flip), 4: t-J spin hopping, and
+5: t-J update (exchange or spin hopping). In Standard mode, this
+value is assigned automatically from <code class="docutils literal notranslate"><span class="pre">model</span></code>. To use t-J mode,
+set <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=4</span></code> or <code class="docutils literal notranslate"><span class="pre">5</span></code> in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code>. The t-J choices
+do not support <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> or <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>. Since double occupancy is
+excluded, the input must satisfy <code class="docutils literal notranslate"><span class="pre">ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">RndSeed</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 123456789)</p>

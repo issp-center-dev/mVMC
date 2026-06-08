@@ -122,6 +122,12 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 近藤格子模型[式 <a class="reference internal" href="#equation-kondo">(3)</a> ]に対応します。
 <span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span> との互換性からGC(=グランドカノニカル)と付いていますが、
 粒子数は保存していますのでご注意ください。</p>
+<p>tJモードは <code class="docutils literal notranslate"><span class="pre">model</span></code> の専用文字列ではなく、 <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> の
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code> で指定します（<code class="docutils literal notranslate"><span class="pre">4</span></code>: SPINHOPPING、
+<code class="docutils literal notranslate"><span class="pre">5</span></code>: EXCHANGE/SPINHOPPING）。現状のStandard modeでは、
+<code class="docutils literal notranslate"><span class="pre">model</span></code> キーワードでtJを直接指定することはできません。
+現状のt-J更新経路では <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> と <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> は非対応であり、
+二重占有を許さないため <code class="docutils literal notranslate"><span class="pre">ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> を満たす必要があります。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">lattice</span></code></p>
 <p><strong>形式 :</strong> 文字列( <code class="docutils literal notranslate"><span class="pre">&quot;Chain</span> <span class="pre">Lattice&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Square</span> <span class="pre">Lattice&quot;</span></code>,
@@ -658,6 +664,18 @@ SR法で使用する刻み幅。手法論文[<a class="reference external" href=
 <li><p><code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code></p>
 <p><strong>形式 :</strong> int型 (1以上、デフォルト値=1000)</p>
 <p><strong>説明 :</strong> 期待値計算に使用するサンプル数。</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code></p>
+<p><strong>形式 :</strong> int型 (0以上)</p>
+<p><strong>説明 :</strong> ローカル更新の種類を指定します。
+0: HOPPING、1: EXCHANGE または HOPPING、2: EXCHANGE、
+3: KondoGC用（HOPPING または EXCHANGE/LOCALSPINFLIP）、
+4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）。
+Standard modeではこの値は <code class="docutils literal notranslate"><span class="pre">model</span></code> から自動設定されます。
+tJモードを使う場合は、 <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> で
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=4</span></code> または <code class="docutils literal notranslate"><span class="pre">5</span></code> を指定してください。
+t-J用の4と5では <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> と <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> は非対応です。また、
+二重占有を許さないため <code class="docutils literal notranslate"><span class="pre">ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> を満たす必要があります。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">RndSeed</span></code></p>
 <p><strong>形式 :</strong> int型 (デフォルト値 = 123456789)</p>

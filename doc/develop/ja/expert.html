@@ -90,6 +90,27 @@ I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k
 <span class="math notranslate nohighlight">\({\cal H}_P\)</span> 内の <span class="math notranslate nohighlight">\(J_{ij}^{\rm Pair}\)</span> を指定します。</p>
 <p><strong>InterAll</strong>:
 <span class="math notranslate nohighlight">\({\cal H}_I\)</span> 内の <span class="math notranslate nohighlight">\(I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}\)</span> を指定します。</p>
+<p class="rubric">t-J模型の指定</p>
+<p>物理的なt-J模型を</p>
+<div class="math notranslate nohighlight">
+\[{\cal H}_{tJ} = -\sum_{i,j,\sigma} t_{ij}
+{\tilde c}_{i\sigma}^{\dagger}{\tilde c}_{j\sigma}
++ \sum_{i,j} J_{ij}\left({\boldsymbol S}_i\cdot{\boldsymbol S}_j
+- \frac{1}{4}n_i n_j\right)\]</div>
+<p>と書く場合、ここで <span class="math notranslate nohighlight">\({\tilde c}\)</span> は二重占有を除いた空間での
+演算子を表します。このt-J模型は <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> ではなく、 <code class="docutils literal notranslate"><span class="pre">Trans</span></code>、
+<code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>、 <code class="docutils literal notranslate"><span class="pre">Hund</span></code>、 <code class="docutils literal notranslate"><span class="pre">Exchange</span></code> の組み合わせで指定します。
+上記ハミルトニアンの符号規約では、正の物理的な結合 <span class="math notranslate nohighlight">\(J_{ij}\)</span> に対して</p>
+<div class="math notranslate nohighlight">
+\[V_{ij}=-\frac{J_{ij}}{4}, \qquad
+J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
+J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}\]</div>
+<p>を指定します。また、t-J用の更新経路は <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> の
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code> で指定します。現状のt-J更新経路では
+<code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> と <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> は非対応です。また、二重占有を許さないため、
+電子数がサイト数を超える入力は使用できません。 <code class="docutils literal notranslate"><span class="pre">Ncond</span></code> で電子数を指定する場合は
+<code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> が必要です。 <code class="docutils literal notranslate"><span class="pre">Nelectron</span></code> で電子ペア数を指定する場合は、
+全電子数が <code class="docutils literal notranslate"><span class="pre">2*Nelectron</span></code> なので <code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> が必要です。</p>
 </li>
 <li><p>最適化対象変分パラメータ:</p>
 <p>最適化する変分パラメータを指定します。変分波動関数は</p>
@@ -562,8 +583,17 @@ SR-CG法での、CG法の収束判定条件。残差ベクトルの要素の自�
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code></p>
 <p><strong>形式 :</strong> int型 (0以上)</p>
-<p><strong>説明 :</strong> 電子系でローカル更新で2電子交換を[0] 認めない、[1]
-認めるの設定をします。スピン系の場合には2に設定する必要があります。</p>
+<p><strong>説明 :</strong> ローカル更新の種類を指定します。
+0: HOPPING、1: EXCHANGE または HOPPING、2: EXCHANGE、
+3: KondoGC用（HOPPING または EXCHANGE/LOCALSPINFLIP）、
+4: tJ用 SPINHOPPING、5: tJ用（EXCHANGE または SPINHOPPING）。
+4と5の違いはt-J空間でのローカル更新経路の違いであり、
+<span class="math notranslate nohighlight">\(S_z\)</span> 保存・非保存の切り替えではありません。スピン量子数の指定は、
+固定 <span class="math notranslate nohighlight">\(S_z\)</span> 計算では <code class="docutils literal notranslate"><span class="pre">2Sz</span></code> などで別途行います。
+t-J用の4と5では <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> と <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> は非対応です。また、
+二重占有を許さないため、 <code class="docutils literal notranslate"><span class="pre">Ncond</span></code> で電子数を指定する場合は
+<code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>、 <code class="docutils literal notranslate"><span class="pre">Nelectron</span></code> で電子ペア数を指定する場合は
+<code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> が必要です。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">RndSeed</span></code></p>
 <p><strong>形式 :</strong> int型</p>

@@ -90,6 +90,29 @@ specified by the following files, respectively;</p>
 <p><strong>PairHop</strong>: <span class="math notranslate nohighlight">\(J_{ij}^{\rm Pair}\)</span> in <span class="math notranslate nohighlight">\({\cal H}_P\)</span>,</p>
 <p><strong>InterAll</strong>: <span class="math notranslate nohighlight">\(I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}\)</span> in
 <span class="math notranslate nohighlight">\({\cal H}_I\)</span>.</p>
+<p class="rubric">t-J model input convention</p>
+<p>For a t-J model with the physical convention</p>
+<div class="math notranslate nohighlight">
+\[{\cal H}_{tJ} = -\sum_{i,j,\sigma} t_{ij}
+{\tilde c}_{i\sigma}^{\dagger}{\tilde c}_{j\sigma}
++ \sum_{i,j} J_{ij}\left({\boldsymbol S}_i\cdot{\boldsymbol S}_j
+- \frac{1}{4}n_i n_j\right),\]</div>
+<p>where the tilde denotes the no-double-occupancy Hilbert space, use
+the <code class="docutils literal notranslate"><span class="pre">Trans</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>, and <code class="docutils literal notranslate"><span class="pre">Exchange</span></code> files;
+this is not an <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> input.
+With the sign convention of the Hamiltonian above, a positive
+physical coupling <span class="math notranslate nohighlight">\(J_{ij}\)</span> is represented by</p>
+<div class="math notranslate nohighlight">
+\[V_{ij}=-\frac{J_{ij}}{4}, \qquad
+J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
+J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}.\]</div>
+<p>The t-J update path must also be selected by <code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code> in
+<code class="docutils literal notranslate"><span class="pre">modpara.def</span></code>. The current t-J update paths do not support
+<code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> or <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> inputs. Since double occupancy is
+excluded, the electron number must not exceed the number of sites.
+When the electron number is specified by <code class="docutils literal notranslate"><span class="pre">Ncond</span></code>, this means
+<code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>. When it is specified by the electron-pair count
+<code class="docutils literal notranslate"><span class="pre">Nelectron</span></code>, this means <code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>.</p>
 </li>
 <li><p>Variational parameters to be optimized:</p>
 <p>The variational parameters to be optimized are specified by using
@@ -580,9 +603,18 @@ values.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code></p>
 <p><strong>Type :</strong> int-type (Positive integer)</p>
-<p><strong>Description :</strong> The option for local update about exchange terms.
-0: not update, 1: update for electron system. For Spin system, the
-value must be 2.</p>
+<p><strong>Description :</strong> The option for local updates. The choices are
+0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
+(hopping or exchange/local-spin-flip), 4: t-J spin hopping, and
+5: t-J update (exchange or spin hopping). The choice between 4 and
+5 selects the local-update path for the t-J Hilbert space; it is not
+the switch for <span class="math notranslate nohighlight">\(S_z\)</span> conservation. The spin sector is specified
+separately, for example by <code class="docutils literal notranslate"><span class="pre">2Sz</span></code> in fixed-<span class="math notranslate nohighlight">\(S_z\)</span> calculations.
+For the t-J choices 4 and 5, <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> and <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> are not
+supported. Since double occupancy is excluded, <code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> is
+required when the electron number is specified by <code class="docutils literal notranslate"><span class="pre">Ncond</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> is required when it is specified by the
+electron-pair count <code class="docutils literal notranslate"><span class="pre">Nelectron</span></code>.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">RndSeed</span></code></p>
 <p><strong>Type :</strong> int-type</p>
