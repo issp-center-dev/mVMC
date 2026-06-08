@@ -643,6 +643,49 @@ ModParaファイル (modpara.def)
 
    **説明 :** SR法での連立一次方程式 :math:`Sx=g` をCG法により解く際に、 Point Jacobi法 (:math:`S` 行列の対角スケーリング)による前処理付きCG法を使用するオプション(1で機能ON, ``NSRCG=1`` である必要がある)。
 
+   ``NSRCG=2`` を指定した場合も受理され、内部では
+   ``NSRCG=1`` かつ ``useDiagScale=1`` として扱われます。
+
+-  ``NSRCGFallback``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=0)
+
+   **説明 :** 選択されたSR-CGソルバが収束しない、または数値不安定になった場合に、
+   もう一方のSR-CGソルバで再試行するオプション(0で無効、1で有効)。
+   通常CGはDiagScale-CGへ、DiagScale-CGは通常CGへフォールバックします。
+
+-  ``NSRCGAbortOnFail``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=1)
+
+   **説明 :** SR-CGが、必要ならフォールバックも試した後で失敗した場合に
+   計算を終了するオプション(0で警告を出して近似解で継続、1で終了)。
+
+   デフォルトは ``NSRCGFallback=0`` かつ ``NSRCGAbortOnFail=1`` です。
+   この設定では、SR-CGが収束しない、または数値不安定になった場合に、
+   入力または数値条件の失敗として計算を終了します。
+   overlap行列の統計ノイズが大きい、または条件が悪い場合は、
+   ``NVMCSample`` を増やす、SR-CGの収束判定値や反復回数上限を調整する、
+   あるいは ``useDiagScale`` を有効にすることを検討してください。
+   ``useDiagScale=1`` はPoint Jacobi前処理付きCGを選択します。
+   収束性の改善に有効な場合があります。
+
+-  ``RescaleSmat``
+
+   **形式 :** int型 (0もしくは1、デフォルト値=0)
+
+   **説明 :** SR-CGで :math:`Sx=g` を解く前に、Slater関連ブロックを
+   リスケーリングするオプション(1で機能ON)。
+   ``RescaleSmat=1`` を使う場合は ``NSRCG=1`` が必要です
+   (リスケーリングはSR-CG経路でのみ適用されます)。
+   ``ModPara`` でのSR-CGの典型設定は次の通りです。
+
+   ::
+
+       NSRCG = 1
+       useDiagScale = 1
+       RescaleSmat = 1
+
 -  ``NneuronGeneral``
 
    **形式 :** int型 (デフォルト値=0)

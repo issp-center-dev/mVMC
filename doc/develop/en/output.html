@@ -205,18 +205,44 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 </pre></div>
 </div>
 </section>
-<section id="xxx-srinfo-dat-dat">
-<h2>xxx_SRinfo.dat.dat<a class="headerlink" href="#xxx-srinfo-dat-dat" title="Permalink to this heading">¶</a></h2>
+<section id="xxx-srinfo-dat">
+<h2>xxx_SRinfo.dat<a class="headerlink" href="#xxx-srinfo-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file provides the optimization information by the SR method at each step.
-From the left column, the number of variational parameters as complex numbers <code class="docutils literal notranslate"><span class="pre">Npara</span></code>, the dimension of the S metric matrix <code class="docutils literal notranslate"><span class="pre">Msize</span></code>, the number of variational parameters that are not optimized in the input files for trial wavefunctions such as <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>, the number of variational parameters cut by the value of <code class="docutils literal notranslate"><span class="pre">DSROptRedCut</span></code> in the <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file <code class="docutils literal notranslate"><span class="pre">diagCut</span></code>, the maximum and minimum values of the diagonal components of the S matrix <code class="docutils literal notranslate"><span class="pre">sDiagMax</span></code> and <code class="docutils literal notranslate"><span class="pre">sDiagMin</span></code>, the maximum value of the change in the variational parameters <code class="docutils literal notranslate"><span class="pre">absRmax</span></code> and its parameter index <code class="docutils literal notranslate"><span class="pre">imax</span></code> are outputted.
+From the left column, the number of variational parameters as complex numbers
+<code class="docutils literal notranslate"><span class="pre">Npara</span></code>, the dimension of the S metric matrix <code class="docutils literal notranslate"><span class="pre">Msize</span></code>, the number of
+variational parameters that are not optimized in the input files for trial
+wavefunctions such as <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>, the number of variational parameters cut by
+the value of <code class="docutils literal notranslate"><span class="pre">DSROptRedCut</span></code> in the <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file <code class="docutils literal notranslate"><span class="pre">diagCut</span></code>, the maximum
+and minimum values of the diagonal components of the S matrix <code class="docutils literal notranslate"><span class="pre">sDiagMax</span></code> and
+<code class="docutils literal notranslate"><span class="pre">sDiagMin</span></code>, the maximum value of the change in the variational parameters
+<code class="docutils literal notranslate"><span class="pre">absRmax</span></code> and its parameter index <code class="docutils literal notranslate"><span class="pre">imax</span></code> are outputted.
 The header specified by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in the <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file is described in xxx.
 An example of the file format is as follows.
 Note that the number of imaginary parameters is counted in <code class="docutils literal notranslate"><span class="pre">optCut</span></code> when the variational parameters are treated as real variables (<code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code>).</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">NSRCG=0</span></code>:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax
 4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4
 4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0
 4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0
 4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0
+…
+</pre></div>
+</div>
+<p>For SR-CG (<code class="docutils literal notranslate"><span class="pre">NSRCG!=0</span></code>), solver status <code class="docutils literal notranslate"><span class="pre">info</span></code> is appended as an
+additional column after <code class="docutils literal notranslate"><span class="pre">imax</span></code>.
+<code class="docutils literal notranslate"><span class="pre">info</span></code> is the number of iterations for normal convergence.
+<code class="docutils literal notranslate"><span class="pre">info</span></code> is written as a negative value <code class="docutils literal notranslate"><span class="pre">info</span> <span class="pre">=</span> <span class="pre">-(iter</span> <span class="pre">+</span> <span class="pre">1)</span></code> when SR-CG
+fails (does not converge or becomes numerically unstable), regardless of
+whether the fallback solver was invoked; <code class="docutils literal notranslate"><span class="pre">iter</span></code> is the iteration at
+which the failure was detected.  With the strict default
+(<code class="docutils literal notranslate"><span class="pre">NSRCGFallback=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSRCGAbortOnFail=1</span></code>) such a row is not written
+because the calculation aborts; a negative <code class="docutils literal notranslate"><span class="pre">info</span></code> therefore appears only
+when fallback or warn-and-continue is enabled.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax info
+4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4    5
+4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0    6
+4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0   -3
+4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0    4
 …
 </pre></div>
 </div>
@@ -466,7 +492,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 <li><a class="reference internal" href="#output-files-for-general-rbm-factors-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat">Output files for general RBM factors(***_generalRBM_physlayer_opt.dat, ***_generalRBM_hiddenlayer_opt.dat, ***_generalRBM_physhidden_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-pair-orbitals-orbital-opt-dat">Output file for pair orbitals (***_orbital_opt.dat)</a></li>
 <li><a class="reference internal" href="#xxx-out-yyy-dat">xxx_out_yyy.dat</a></li>
-<li><a class="reference internal" href="#xxx-srinfo-dat-dat">xxx_SRinfo.dat.dat</a></li>
+<li><a class="reference internal" href="#xxx-srinfo-dat">xxx_SRinfo.dat</a></li>
 <li><a class="reference internal" href="#xxx-calctimer-dat">xxx_CalcTimer.dat</a></li>
 <li><a class="reference internal" href="#xxx-time-zzz-dat">xxx_time_zzz.dat</a></li>
 <li><a class="reference internal" href="#xxx-cisajs-yyy-dat">xxx_cisajs_yyy.dat</a><ul>

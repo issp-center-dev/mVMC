@@ -617,6 +617,39 @@ This reduces the amount of memory usage from
 <li><p><code class="docutils literal notranslate"><span class="pre">useDiagScale</span></code></p>
 <p><strong>Type :</strong> int-type (0 or 1, default value: 0)</p>
 <p><strong>Description :</strong> The option of using the point Jacobi method (scaling by diagonal elements of <span class="math notranslate nohighlight">\(S\)</span> matrix) when solving the linear equation <span class="math notranslate nohighlight">\(Sx=g\)</span> in the SR method by CG method (0: off, 1: on, <code class="docutils literal notranslate"><span class="pre">NSRCG</span></code> must be 1).</p>
+<p><code class="docutils literal notranslate"><span class="pre">NSRCG=2</span></code> is also accepted as a shortcut and is internally treated as
+<code class="docutils literal notranslate"><span class="pre">NSRCG=1</span></code> with <code class="docutils literal notranslate"><span class="pre">useDiagScale=1</span></code>.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NSRCGFallback</span></code></p>
+<p><strong>Type :</strong> int-type (0 or 1, default value: 0)</p>
+<p><strong>Description :</strong> The option of retrying the other SR-CG solver when the
+selected solver does not converge or becomes numerically unstable (0: off,
+1: on). Standard CG falls back to DiagScale-CG, and DiagScale-CG falls back
+to standard CG.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NSRCGAbortOnFail</span></code></p>
+<p><strong>Type :</strong> int-type (0 or 1, default value: 1)</p>
+<p><strong>Description :</strong> The option of aborting the calculation when SR-CG fails
+after the optional fallback (0: warn and continue with the approximate
+solution, 1: abort).</p>
+<p>By default, <code class="docutils literal notranslate"><span class="pre">NSRCGFallback=0</span></code> and <code class="docutils literal notranslate"><span class="pre">NSRCGAbortOnFail=1</span></code>.  With these
+settings, a non-converged or numerically unstable SR-CG solve is treated as
+an input or numerical failure.  Increase <code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code>, adjust the SR-CG
+tolerance/iteration limit, or enable <code class="docutils literal notranslate"><span class="pre">useDiagScale</span></code> when the overlap
+matrix is too noisy or ill-conditioned.  <code class="docutils literal notranslate"><span class="pre">useDiagScale=1</span></code> selects the
+point-Jacobi preconditioned CG solver, which can improve convergence.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RescaleSmat</span></code></p>
+<p><strong>Type :</strong> int-type (0 or 1, default value: 0)</p>
+<p><strong>Description :</strong> The option of rescaling Slater-related blocks in SR-CG
+before solving <span class="math notranslate nohighlight">\(Sx=g\)</span> (0: off, 1: on). <code class="docutils literal notranslate"><span class="pre">RescaleSmat=1</span></code> requires
+<code class="docutils literal notranslate"><span class="pre">NSRCG=1</span></code> (the rescaling is only applied along the SR-CG path).
+Typical settings for SR-CG in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> are:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">NSRCG</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">useDiagScale</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">RescaleSmat</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+</div>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NneuronGeneral</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 0)</p>

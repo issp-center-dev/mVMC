@@ -664,6 +664,48 @@ Keywords and parameters
 
    **Description :** The option of using the point Jacobi method (scaling by diagonal elements of :math:`S` matrix) when solving the linear equation :math:`Sx=g` in the SR method by CG method (0: off, 1: on, ``NSRCG`` must be 1).
 
+   ``NSRCG=2`` is also accepted as a shortcut and is internally treated as
+   ``NSRCG=1`` with ``useDiagScale=1``.
+
+-  ``NSRCGFallback``
+
+   **Type :** int-type (0 or 1, default value: 0)
+
+   **Description :** The option of retrying the other SR-CG solver when the
+   selected solver does not converge or becomes numerically unstable (0: off,
+   1: on). Standard CG falls back to DiagScale-CG, and DiagScale-CG falls back
+   to standard CG.
+
+-  ``NSRCGAbortOnFail``
+
+   **Type :** int-type (0 or 1, default value: 1)
+
+   **Description :** The option of aborting the calculation when SR-CG fails
+   after the optional fallback (0: warn and continue with the approximate
+   solution, 1: abort).
+
+   By default, ``NSRCGFallback=0`` and ``NSRCGAbortOnFail=1``.  With these
+   settings, a non-converged or numerically unstable SR-CG solve is treated as
+   an input or numerical failure.  Increase ``NVMCSample``, adjust the SR-CG
+   tolerance/iteration limit, or enable ``useDiagScale`` when the overlap
+   matrix is too noisy or ill-conditioned.  ``useDiagScale=1`` selects the
+   point-Jacobi preconditioned CG solver, which can improve convergence.
+
+-  ``RescaleSmat``
+
+   **Type :** int-type (0 or 1, default value: 0)
+
+   **Description :** The option of rescaling Slater-related blocks in SR-CG
+   before solving :math:`Sx=g` (0: off, 1: on). ``RescaleSmat=1`` requires
+   ``NSRCG=1`` (the rescaling is only applied along the SR-CG path).
+   Typical settings for SR-CG in ``ModPara`` are:
+
+   ::
+
+       NSRCG = 1
+       useDiagScale = 1
+       RescaleSmat = 1
+
 -  ``NneuronGeneral``
 
    **Type :** int-type (default value: 0)
