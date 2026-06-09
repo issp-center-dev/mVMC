@@ -670,9 +670,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support LocSpin.\n");
         info = 1;
       }
-      if (2LL * bufInt[IdxNe] > bufInt[IdxNsite]) {
+      if (bufInt[IdxExUpdatePath] == 4 && 2LL * bufInt[IdxNe] >= bufInt[IdxNsite]) {
         fprintf(stderr,
-                "Error: NExUpdatePath=4 or 5 (t-J update) requires 2*Ne <= Nsite to avoid double occupancy.\n");
+                "Error: NExUpdatePath=4 (t-J spin hopping) requires 2*Ne < Nsite to keep at least one empty site.\n");
+        info = 1;
+      }
+      if (bufInt[IdxExUpdatePath] == 5 && 2LL * bufInt[IdxNe] > bufInt[IdxNsite]) {
+        fprintf(stderr,
+                "Error: NExUpdatePath=5 (t-J update) requires 2*Ne <= Nsite to avoid double occupancy.\n");
         info = 1;
       }
       if (bufInt[IdxLanczosMode] != 0) {
