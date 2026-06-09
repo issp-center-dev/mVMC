@@ -110,9 +110,10 @@ J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}.\]</div>
 <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code>. The current t-J update paths do not support
 <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> or <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> inputs. Since double occupancy is
 excluded, the electron number must not exceed the number of sites.
-When the electron number is specified by <code class="docutils literal notranslate"><span class="pre">Ncond</span></code>, this means
-<code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>. When it is specified by the electron-pair count
-<code class="docutils literal notranslate"><span class="pre">Nelectron</span></code>, this means <code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>.</p>
+For <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=4</span></code>, spin hopping needs at least one empty site,
+so <code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;</span> <span class="pre">Nsite</span></code> (or <code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;</span> <span class="pre">Nsite</span></code>) is required.
+For <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=5</span></code>, <code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> (or
+<code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>) is allowed.</p>
 </li>
 <li><p>Variational parameters to be optimized:</p>
 <p>The variational parameters to be optimized are specified by using
@@ -612,10 +613,12 @@ local-update path for the t-J Hilbert space; it is not the switch for
 <span class="math notranslate nohighlight">\(S_z\)</span> conservation. The spin sector is specified separately,
 for example by <code class="docutils literal notranslate"><span class="pre">2Sz</span></code> in fixed-<span class="math notranslate nohighlight">\(S_z\)</span> calculations. For the
 t-J choices 4 and 5, <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> and <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> are not supported.
-Since double occupancy is excluded, <code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> is required
-when the electron number is specified by <code class="docutils literal notranslate"><span class="pre">Ncond</span></code>, and
-<code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> is required when it is specified by the
-electron-pair count <code class="docutils literal notranslate"><span class="pre">Nelectron</span></code>. For <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=6</span></code>, the
+Since double occupancy is excluded, the electron number must not
+exceed <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>. In addition, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=4</span></code> requires at least
+one empty site for spin hopping, so <code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;</span> <span class="pre">Nsite</span></code> (or
+<code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;</span> <span class="pre">Nsite</span></code>) is required. <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=5</span></code> allows
+<code class="docutils literal notranslate"><span class="pre">Ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code> (or <code class="docutils literal notranslate"><span class="pre">2*Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>). For
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=6</span></code>, the
 sampled local states are restricted to empty and doublon states,
 <span class="math notranslate nohighlight">\((n_{\uparrow}, n_{\downarrow})=(0,0)\)</span> or <span class="math notranslate nohighlight">\((1,1)\)</span>.
 This mode requires <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">Ne</span> <span class="pre">&lt;</span> <span class="pre">Nsite</span></code> and an anti-parallel-spin

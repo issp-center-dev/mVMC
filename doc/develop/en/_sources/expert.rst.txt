@@ -93,9 +93,10 @@ listed in parentheses correspond to the file made by vmcdry.out.
     ``modpara.def``. The current t-J update paths do not support
     ``BackFlow`` or ``LocSpin`` inputs. Since double occupancy is
     excluded, the electron number must not exceed the number of sites.
-    When the electron number is specified by ``Ncond``, this means
-    ``Ncond <= Nsite``. When it is specified by the electron-pair count
-    ``Nelectron``, this means ``2*Nelectron <= Nsite``.
+    For ``NExUpdatePath=4``, spin hopping needs at least one empty site,
+    so ``Ncond < Nsite`` (or ``2*Nelectron < Nsite``) is required.
+    For ``NExUpdatePath=5``, ``Ncond <= Nsite`` (or
+    ``2*Nelectron <= Nsite``) is allowed.
 
 (4) Variational parameters to be optimized:
       
@@ -656,10 +657,12 @@ Keywords and parameters
    :math:`S_z` conservation. The spin sector is specified separately,
    for example by ``2Sz`` in fixed-:math:`S_z` calculations. For the
    t-J choices 4 and 5, ``BackFlow`` and ``LocSpin`` are not supported.
-   Since double occupancy is excluded, ``Ncond <= Nsite`` is required
-   when the electron number is specified by ``Ncond``, and
-   ``2*Nelectron <= Nsite`` is required when it is specified by the
-   electron-pair count ``Nelectron``. For ``NExUpdatePath=6``, the
+   Since double occupancy is excluded, the electron number must not
+   exceed ``Nsite``. In addition, ``NExUpdatePath=4`` requires at least
+   one empty site for spin hopping, so ``Ncond < Nsite`` (or
+   ``2*Nelectron < Nsite``) is required. ``NExUpdatePath=5`` allows
+   ``Ncond <= Nsite`` (or ``2*Nelectron <= Nsite``). For
+   ``NExUpdatePath=6``, the
    sampled local states are restricted to empty and doublon states,
    :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` or :math:`(1,1)`.
    This mode requires ``0 < Ne < Nsite`` and an anti-parallel-spin
