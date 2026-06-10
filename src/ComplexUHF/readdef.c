@@ -962,6 +962,8 @@ int GetFileName(
 			fclose(fplist);
 			return(-1);
 			*/
+			/* itmpKWidx is -1 here; skip to avoid writing cFileNameList[-1] */
+			continue;
         }
         else {
             /*!< Check cFileNameList to prevent from double registering the file name */
