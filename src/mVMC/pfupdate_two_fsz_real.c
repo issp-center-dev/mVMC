@@ -218,7 +218,7 @@ void updateMAllTwo_child_fsz_real(const int ma, const int s, const int mb, const
   const int rsa = eleIdx[msa] + s*Nsite;
   const int rsb = eleIdx[msb] + t*Nsite;
   const int rsaOld = raOld + s*Nsite;
-  const int rsbOld = raOld + t*Nsite;
+  const int rsbOld = rbOld + t*Nsite;
   const int nsize = Nsize;
 
   const double *sltE = SlaterElm_real + (qpidx+qpStart)*Nsite2*Nsite2;;

@@ -227,7 +227,7 @@ void updateMAllTwo_child_fcmp(const int ma, const int s, const int mb, const int
   const int rsa = eleIdx[msa] + s*Nsite;
   const int rsb = eleIdx[msb] + t*Nsite;
   const int rsaOld = raOld + s*Nsite;
-  const int rsbOld = raOld + t*Nsite;
+  const int rsbOld = rbOld + t*Nsite;
   const int nsize = Nsize;
 
   const double complex *sltE = SlaterElm + (qpidx+qpStart)*Nsite2*Nsite2;;
