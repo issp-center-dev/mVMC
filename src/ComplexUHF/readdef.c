@@ -939,8 +939,10 @@ int GetFileName(
 	if(fplist==NULL) return ReadDefFileError(cFileListNameFile);
 
 	while(fgets(ctmp2, 256, fplist) != NULL){
-        memset(ctmpKW, '\0', strlen(ctmpKW));
-        memset(ctmpFileName, '\0', strlen(ctmpFileName));
+        /* strlen on the uninitialized buffers was undefined behavior;
+           clearing the first byte is enough for the empty-string checks. */
+        ctmpKW[0] = '\0';
+        ctmpFileName[0] = '\0';
         sscanf(ctmp2,"%s %s\n", ctmpKW, ctmpFileName);
 		if(strncmp(ctmpKW, "#", 1)==0 || *ctmp2=='\n' || (strcmp(ctmpKW, "")&&strcmp(ctmpFileName,""))==0)
         {
