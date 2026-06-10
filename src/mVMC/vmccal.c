@@ -687,6 +687,21 @@ void calculateOO_Store_real(double *srOptOO_real, double *srOptHO_real, double *
       srOptOO_real[i] = 0.0;
       srOptOO_real[i+srOptSize] = 0.0;
     }
+    if(reweight==1){
+    for(j=0; j<sampleSize; ++j){
+      /* Store holds sqrt(w_j)*O; row 0 (O_0 = 1) gives sqrt(w_j),
+         so multiplying once more by it makes <O> w-weighted,
+         consistent with the dposv/GEMM paths. With reweight off
+         (w_j = 1) the original loop below is kept bit-identical. */
+      const double sqrtw = srOptO_Store_real[j*srOptSize];
+#pragma omp parallel for default(shared) private(i,o)
+#pragma loop noalias
+    for(i=0; i<srOptSize; ++i){
+      o = srOptO_Store_real[i+j*srOptSize];
+      srOptOO_real[i] += sqrtw*o;
+      srOptOO_real[i+srOptSize] += o*o;
+    }}
+    }else{
     for(j=0; j<sampleSize; ++j){
 #pragma omp parallel for default(shared) private(i,o)
 #pragma loop noalias
@@ -695,6 +710,7 @@ void calculateOO_Store_real(double *srOptOO_real, double *srOptHO_real, double *
       srOptOO_real[i] += o;
       srOptOO_real[i+srOptSize] += o*o;
     }}
+    }
   }
 
   return;
@@ -723,6 +739,21 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
       srOptOO[i] = 0.0;
       srOptOO[i+srOptSize] = 0.0;
     }
+    if(reweight==1){
+    for(j=0; j<sampleSize; ++j){
+      /* Store holds sqrt(w_j)*O; row 0 (O_0 = 1) gives sqrt(w_j),
+         so multiplying once more by it makes <O> w-weighted,
+         consistent with the dposv/GEMM paths. With reweight off
+         (w_j = 1) the original loop below is kept bit-identical. */
+      const double sqrtw = creal(srOptO_Store[j*srOptSize]);
+#pragma omp parallel for default(shared) private(i,o)
+#pragma loop noalias
+    for(i=0; i<srOptSize; ++i){
+      o = srOptO_Store[i+j*srOptSize];
+      srOptOO[i] += sqrtw*o;
+      srOptOO[i+srOptSize] += creal(o)*creal(o)+cimag(o)*cimag(o);
+    } }
+    }else{
     for(j=0; j<sampleSize; ++j){
 #pragma omp parallel for default(shared) private(i,o)
 #pragma loop noalias
@@ -731,6 +762,7 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
       srOptOO[i] += o;
       srOptOO[i+srOptSize] += creal(o)*creal(o)+cimag(o)*cimag(o);
     } }
+    }
   }
 
   return;
