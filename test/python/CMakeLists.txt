@@ -202,6 +202,15 @@ endforeach(model)
 add_python_vmc_test_rescale(RescaleSmat_DiagCG HubbardChain_DiagCG)
 add_python_vmc_test_rescale(RescaleSmat_GeneralRBM_smoke GeneralRBM_cmp)
 
+# reweight=1 must give consistent results between the direct (dposv) SR
+# solver and the SR-CG Store path (w-weighted <O> accumulation).
+add_test(NAME HubbardChain_DiagCG_reweight
+         COMMAND ${PYTHON_EXECUTABLE} runtest_sr.py HubbardChain_DiagCG --reweight)
+set_tests_properties(HubbardChain_DiagCG_reweight PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME HubbardChain_cmp_DiagCG_reweight
+         COMMAND ${PYTHON_EXECUTABLE} runtest_sr.py HubbardChain_cmp_DiagCG --reweight)
+set_tests_properties(HubbardChain_cmp_DiagCG_reweight PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+
 add_python_vmc_test_invalid_expert(SpinJastrow_InvalidClassRange "class index")
 add_python_vmc_test_invalid_expert(SpinJastrow_InvalidSymmetry "inconsistent class for pair")
 add_python_vmc_test_invalid_expert(SpinJastrow_NegativeNIdx "non-negative")
