@@ -776,8 +776,14 @@ void fn_Rescale4SRCG(MPI_Comm comm) {
   
   const int nPara=NPara;
   const int srOptSize=SROptSize;
+  /* The rescale reparametrizes only the Slater block: Para is laid out as
+     Proj | RBM | ProjBF | Slater | OptTrans (see SetMemory in setmemory.c).
+     RBM/ProjBF/OptTrans parameters enter lnPsi non-linearly or are not
+     divided below, so their O columns must not be scaled. */
+  const int sltStart = NProj + FlagRBM*NRBM + NProjBF;
+  const int sltEnd   = sltStart + NSlater;
   MPI_Comm_rank(comm, &rank);
-  if (NProj <= 0 || NProj >= nPara) {
+  if (NProj <= 0 || NProj >= nPara || NSlater <= 0) {
     return;
   }
   #ifdef MVMC_SRCG_REAL
@@ -829,8 +835,8 @@ void fn_Rescale4SRCG(MPI_Comm comm) {
 #endif
   }	
   
-  srOptOO_ProjMax   = get_absmax(0,            OFFSET*NProj, r);
-  srOptOO_SlaterMax = get_absmax(OFFSET*NProj, OFFSET*nPara, r);
+  srOptOO_ProjMax   = get_absmax(0,                OFFSET*NProj, r);
+  srOptOO_SlaterMax = get_absmax(OFFSET*sltStart, OFFSET*sltEnd, r);
   if(srOptOO_ProjMax < 1e-10 ) {
      ReleaseWorkSpaceDouble();
      return;
@@ -843,16 +849,16 @@ void fn_Rescale4SRCG(MPI_Comm comm) {
   
   #pragma omp parallel for default(shared) private(i)
   #pragma loop noalias
-  for(i = OFFSET*NProj; i < OFFSET*nPara; i ++ ) {
+  for(i = OFFSET*sltStart; i < OFFSET*sltEnd; i ++ ) {
      srOptOO[i+OFFSET] *= rescaleOO_SlaterRatio;
      srOptO[i+OFFSET]  *= rescaleO_SlaterRatio;
      srOptHO[i+OFFSET] *= rescaleO_SlaterRatio;
-  } 
+  }
 
   #pragma omp parallel for default(shared) private(ismp, i)
   #pragma loop noalias
   for(ismp = 0; ismp < NVMCSample; ismp ++ ) {
-    for(i = OFFSET*NProj; i < OFFSET*nPara; i ++ ) {
+    for(i = OFFSET*sltStart; i < OFFSET*sltEnd; i ++ ) {
      srOptO_Store[i+OFFSET + ismp*OFFSET*srOptSize] *= rescaleO_SlaterRatio;
     }
   }

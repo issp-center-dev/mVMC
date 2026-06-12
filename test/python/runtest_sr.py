@@ -56,12 +56,19 @@ def run_vmc(bin_to_test, dry_bin_to_test, stdef, modpara_updates=None):
 
 
 if len(sys.argv) == 1:
-    print("usage: {} <model name>".format(sys.argv[0]))
+    print("usage: {} <model name> [--reweight]".format(sys.argv[0]))
     sys.exit(-1)
+
+# with --reweight, run both the direct-SR and the SR-CG side with
+# reweight=1 so the w-weighted <O> accumulation of the CG Store path
+# is compared against the dposv path
+with_reweight = "--reweight" in sys.argv[2:]
+common_modpara_updates = {"reweight": 1} if with_reweight else {}
 
 rootdir = os.getcwd()
 refdir = os.path.join(rootdir, "data", sys.argv[1])
-workdir = os.path.join(rootdir, "work", sys.argv[1])
+workname = sys.argv[1] + ("_reweight" if with_reweight else "")
+workdir = os.path.join(rootdir, "work", workname)
 if os.path.exists(workdir):
     shutil.rmtree(workdir)
 os.makedirs(workdir)
@@ -70,7 +77,8 @@ os.chdir(workdir)
 bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
 dry_bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmcdry.out")
 
-result = run_vmc(bin_to_test, dry_bin_to_test, "%s/StdFace.def" % refdir)
+result = run_vmc(bin_to_test, dry_bin_to_test, "%s/StdFace.def" % refdir,
+                 dict(common_modpara_updates))
 if result != 0:
     sys.exit(result)
 
@@ -78,7 +86,7 @@ array_calc_sr = read_out("./output/zqp_opt.dat")[4:]
 subprocess.call(["mv", "output", "output_sr"])
 
 
-cg_modpara_updates = {}
+cg_modpara_updates = dict(common_modpara_updates)
 if sys.argv[1] in CG_MAX_ITER_OVERRIDES:
     cg_modpara_updates["NSROptCGMaxIter"] = CG_MAX_ITER_OVERRIDES[sys.argv[1]]
 
