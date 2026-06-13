@@ -44,6 +44,13 @@ array_calc = read_out("./output/zvo_ls_out_001.dat")[0:2]
 ref_ave = read_out("%s/ref/ref_mean_Els.dat" % refdir)[0:2]
 ref_std = read_out("%s/ref/ref_std_Els.dat" % refdir)[0:2]
 
+if not np.all(np.isfinite(array_calc)):
+    print("ERROR: non-finite Lanczos output: {}".format(array_calc))
+    sys.exit(-1)
+if not np.all(np.isfinite(ref_ave)) or not np.all(np.isfinite(ref_std)):
+    print("ERROR: non-finite Lanczos reference")
+    sys.exit(-1)
+
 result = 0
 for diff, s in zip(array_calc - ref_ave, ref_std):
     diff = abs(diff)
