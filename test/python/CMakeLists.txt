@@ -222,6 +222,8 @@ add_python_vmc_test_invalid_expert(DoublonOnly_InvalidLanczos "NLanczosMode > 0"
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidRBM "not compatible with RBM")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path4_InvalidLanczos "NLanczosMode > 0")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path5_InvalidLanczos "NLanczosMode > 0")
+add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path4_InvalidRBM "does not support RBM")
+add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path5_InvalidRBM "does not support RBM")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond4_J_path4_InvalidFullFilling "requires 2*Ne < Nsite")
 add_test(NAME SpinJastrow_InvalidInIndex
          COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py SpinJastrow_InvalidInIndex "duplicated index")
