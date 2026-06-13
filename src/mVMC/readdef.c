@@ -680,10 +680,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                 "Error: NExUpdatePath=5 (t-J update) requires 2*Ne <= Nsite to avoid double occupancy.\n");
         info = 1;
       }
-      if (bufInt[IdxLanczosMode] != 0) {
-        fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support NLanczosMode > 0.\n");
-        info = 1;
-      }
       if (FlagRBM > 0) {
         fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support RBM.\n");
         info = 1;
@@ -748,10 +744,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
       if (iFlgOrbitalGeneral == 1) {
         fprintf(stderr, "Error: NExUpdatePath=6 (doublon-only) is not compatible with iFlgOrbitalGeneral=1 (FSZ).\n");
-        info = 1;
-      }
-      if (bufInt[IdxLanczosMode] != 0) {
-        fprintf(stderr, "Error: NExUpdatePath=6 (doublon-only) is not compatible with NLanczosMode > 0.\n");
         info = 1;
       }
       if (bufInt[IdxNe] <= 0) {
