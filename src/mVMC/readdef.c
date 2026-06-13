@@ -684,6 +684,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support NLanczosMode > 0.\n");
         info = 1;
       }
+      if (FlagRBM > 0) {
+        fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support RBM.\n");
+        info = 1;
+      }
     }
 
     //CheckGeneral Orbital

@@ -32,6 +32,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "pfupdate.h"
 #include "pfupdate_two_fcmp.h"
 #include "qp.h"
+#include "sector_projection.c"
 
 double complex calculateNewPfMN_child(const int qpidx, const int n, const int *msa, const int *rsa,
                               const int *eleIdx, double complex *buffer);
@@ -47,12 +48,7 @@ double complex GreenFunc1(const int ri, const int rj, const int s, const double 
 
   if(ri==rj) return eleNum[ri+s*Nsite];
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
-  if(NExUpdatePath==4 || NExUpdatePath==5){ //For t-J
-    if(eleNum[ri+(1-s)*Nsite]==1) return 0.0;
-  }
-  if(NExUpdatePath==6) { /* doublon-only: hopping would break doublon at source site */
-    if(eleNum[rj+(1-s)*Nsite]==1) return 0.0;
-  }
+  if(!IsSectorPreserved_1hopPre(ri,rj,s,eleNum)) return 0.0;
 
   mj = eleCfg[rj+s*Nsite];
   msj = mj + s*Ne;
@@ -164,18 +160,7 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
     UpdateRBMCnt(rj, ri, s, rbmCntNew, rbmCntNew, eleNum);
   }
 
-  int invalidUpdate = 0;
-  if(NExUpdatePath==4 || NExUpdatePath==5){ //For t-J
-    int doublon_i = eleNum[ri + s*Nsite] * eleNum[ri + (1-s)*Nsite];
-    int doublon_k = eleNum[rk + t*Nsite] * eleNum[rk + (1-t)*Nsite];
-    invalidUpdate = (doublon_i==1 || doublon_k==1);
-  }else if(NExUpdatePath==6){ /* For doublon-only: final state must remain empty/doublon-only */
-    invalidUpdate = (eleNum[ri] != eleNum[ri+Nsite] ||
-                     eleNum[rj] != eleNum[rj+Nsite] ||
-                     eleNum[rk] != eleNum[rk+Nsite] ||
-                     eleNum[rl] != eleNum[rl+Nsite]);
-  }
-  if(invalidUpdate) {
+  if(!IsSectorStateAllowed(eleNum)) {
     /* revert hopping */
     eleIdx[mtl] = rl;
     eleNum[rtl] = 1;
@@ -312,6 +297,18 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
     eleIdx[msj[k]] = ri;
     eleNum[rsj[k]] = 0;
     eleNum[rsi[k]] = 1;
+  }
+
+  /* sector check for doublon-only / t-J: bra-side P in P H P H P */
+  if(!IsSectorStateAllowed(eleNum)) {
+    #pragma loop noalias
+    for(k=0;k<n;k++) {
+      rj = rsj[k]%Nsite;
+      eleIdx[msj[k]] = rj;
+      eleNum[rsj[k]] = 1;
+      eleNum[rsi[k]] = 0;
+    }
+    return 0.0;
   }
 
   MakeProjCnt(projCntNew,eleNum);

@@ -32,6 +32,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "global.h"
 #include "projection.h"
 #include "qp_real.c"
+#include "sector_projection.c"
 
 #ifndef _SRC_LOCGRN_REAL
 #define _SRC_LOCGRN_REAL
@@ -50,12 +51,7 @@ double  GreenFunc1_real(const int ri, const int rj, const int s, const double ip
 
   if(ri==rj) return eleNum[ri+s*Nsite];
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
-  if(NExUpdatePath==4 || NExUpdatePath==5){ //For t-J
-    if(eleNum[ri+(1-s)*Nsite]==1) return 0.0;
-  }
-  if(NExUpdatePath==6) { /* doublon-only: hopping would break doublon at source site */
-    if(eleNum[rj+(1-s)*Nsite]==1) return 0.0;
-  }
+  if(!IsSectorPreserved_1hopPre(ri,rj,s,eleNum)) return 0.0;
 
   mj = eleCfg[rj+s*Nsite];
   msj = mj + s*Ne;
@@ -152,18 +148,7 @@ double GreenFunc2_real(const int ri, const int rj, const int rk, const int rl,
   eleNum[rsi] = 1;
   UpdateProjCnt(rj, ri, s, projCntNew, projCntNew, eleNum);
 
-  int invalidUpdate = 0;
-  if(NExUpdatePath==4 || NExUpdatePath==5){ //For t-J
-    int doublon_i = eleNum[ri + s*Nsite] * eleNum[ri + (1-s)*Nsite];
-    int doublon_k = eleNum[rk + t*Nsite] * eleNum[rk + (1-t)*Nsite];
-    invalidUpdate = (doublon_i==1 || doublon_k==1);
-  }else if(NExUpdatePath==6){ /* For doublon-only: final state must remain empty/doublon-only */
-    invalidUpdate = (eleNum[ri] != eleNum[ri+Nsite] ||
-                     eleNum[rj] != eleNum[rj+Nsite] ||
-                     eleNum[rk] != eleNum[rk+Nsite] ||
-                     eleNum[rl] != eleNum[rl+Nsite]);
-  }
-  if(invalidUpdate) {
+  if(!IsSectorStateAllowed(eleNum)) {
     /* revert hopping */
     eleIdx[mtl] = rl;
     eleNum[rtl] = 1;
@@ -304,6 +289,18 @@ double GreenFuncN_real(const int n, int *rsi, int *rsj, const double  ip,
     eleIdx[msj[k]] = ri;
     eleNum[rsj[k]] = 0;
     eleNum[rsi[k]] = 1;
+  }
+
+  /* sector check for doublon-only / t-J: bra-side P in P H P H P */
+  if(!IsSectorStateAllowed(eleNum)) {
+    #pragma loop noalias
+    for(k=0;k<n;k++) {
+      rj = rsj[k]%Nsite;
+      eleIdx[msj[k]] = rj;
+      eleNum[rsj[k]] = 1;
+      eleNum[rsi[k]] = 0;
+    }
+    return 0.0;
   }
 
   MakeProjCnt(projCntNew,eleNum);
