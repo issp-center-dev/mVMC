@@ -192,8 +192,6 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
 }
 
 
-// ignore GreenFuncN: to be added
-
 /* Calculate n-body Green function */
 /* <phi| c1 a1 c2 a2 ... cn an |x> */
 /* c_k = c_rsi[k], a_k = a_rsj[k] */
