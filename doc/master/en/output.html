@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Output files &#8212; mVMC 1.3.0 documentation</title>
+    <title>Output files &#8212; mVMC 1.4.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3d533f9b"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b308ce55"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -31,7 +31,7 @@
         <li class="right" >
           <a href="expert.html" title="Input files for Expert mode"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.3.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.4.0 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Output files</a></li> 
       </ul>
     </div>  
@@ -67,44 +67,50 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 <tr class="row-even"><td><p>***_jastrow_opt.dat</p></td>
 <td><p>Optimized jastrow factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_doublonHolon2site_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_spinjastrow_opt.dat</p></td>
+<td><p>Optimized spin Jastrow factors.</p></td>
+</tr>
+<tr class="row-even"><td><p>***_doublonHolon2site_opt.dat</p></td>
 <td><p>Optimized 2-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_doublonHolon4site_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_doublonHolon4site_opt.dat</p></td>
 <td><p>Optimized 4-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_generalRBM_physlayer_opt.dat</p></td>
+<tr class="row-even"><td><p>***_generalRBM_physlayer_opt.dat</p></td>
 <td><p>Optimized variational parameters of the general RBM correlation factors only in a physical layer.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_generalRBM_hiddenlayer_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_generalRBM_hiddenlayer_opt.dat</p></td>
 <td><p>Optimized variational parameters of the general RBM correlation factors only in a hidden layer.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_orbital_opt.dat</p></td>
+<tr class="row-even"><td><p>***_orbital_opt.dat</p></td>
 <td><p>Optimized variational parameters of the general RBM correlation factors which connect physical and hidden layers.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_orbital_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_orbital_opt.dat</p></td>
 <td><p>Optimized pair orbital factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_out_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_out_yyy.dat</p></td>
 <td><p>Energy and deviation.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_SRinfo.dat</p></td>
+<tr class="row-odd"><td><p>xxx_SRinfo.dat</p></td>
 <td><p>Information related to SR optimization method.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_var_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_var_yyy.dat</p></td>
 <td><p>Progress information for optimizing variational parameters.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_CalcTimer.dat</p></td>
+<tr class="row-odd"><td><p>xxx_CalcTimer.dat</p></td>
 <td><p>Computation time for each processes.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_time_zzz.dat</p></td>
+<tr class="row-even"><td><p>xxx_time_zzz.dat</p></td>
 <td><p>Progress information for Monte Carlo samplings.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_cisajs_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_cisajs_yyy.dat</p></td>
 <td><p>One body Green’s functions.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
 <td><p>Correlation functions.</p></td>
+</tr>
+<tr class="row-odd"><td><p>xxx_twist_yyy.dat</p></td>
+<td><p>Twist operators.</p></td>
 </tr>
 </tbody>
 </table>
@@ -114,7 +120,8 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 energy optimized by the SR method are outputted in the following order:</p>
 <div class="math notranslate nohighlight">
 \[\langle H \rangle, \langle H^2 \rangle, g_i, v_{ij},
-\alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij} \nonumber.\]</div>
+v^s_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, f_{ij}
+\nonumber.\]</div>
 <p>The type of average values is a complex number, while that of the
 deviation is a real number. Since the initial values of all variational
 parameters are specified at the beginning of the calculation, the
@@ -143,6 +150,12 @@ format is same as the <code class="docutils literal notranslate"><span class="pr
 <h2>Output file for jastrow factors (***_jastrow_opt.dat)<a class="headerlink" href="#output-file-for-jastrow-factors-jastrow-opt-dat" title="Permalink to this heading">¶</a></h2>
 <p>The optimized Jastrow factors by SR method are outputted. The file
 format is same as the <code class="docutils literal notranslate"><span class="pre">InJastrow</span></code> file defined in Sec.
+<a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">Files to set initial values of variational parameters</span></a>.</p>
+</section>
+<section id="output-file-for-spin-jastrow-factors-spinjastrow-opt-dat">
+<h2>Output file for spin Jastrow factors (***_spinjastrow_opt.dat)<a class="headerlink" href="#output-file-for-spin-jastrow-factors-spinjastrow-opt-dat" title="Permalink to this heading">¶</a></h2>
+<p>The optimized spin Jastrow factors by SR method are outputted. The file
+format is same as the <code class="docutils literal notranslate"><span class="pre">InSpinJastrow</span></code> file defined in Sec.
 <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">Files to set initial values of variational parameters</span></a>.</p>
 </section>
 <section id="output-file-for-doublonholon-2-site-factors-doublonholon2site-opt-dat">
@@ -192,18 +205,44 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 </pre></div>
 </div>
 </section>
-<section id="xxx-srinfo-dat-dat">
-<h2>xxx_SRinfo.dat.dat<a class="headerlink" href="#xxx-srinfo-dat-dat" title="Permalink to this heading">¶</a></h2>
+<section id="xxx-srinfo-dat">
+<h2>xxx_SRinfo.dat<a class="headerlink" href="#xxx-srinfo-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file provides the optimization information by the SR method at each step.
-From the left column, the number of variational parameters as complex numbers <code class="docutils literal notranslate"><span class="pre">Npara</span></code>, the dimension of the S metric matrix <code class="docutils literal notranslate"><span class="pre">Msize</span></code>, the number of variational parameters that are not optimized in the input files for trial wavefunctions such as <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>, the number of variational parameters cut by the value of <code class="docutils literal notranslate"><span class="pre">DSROptRedCut</span></code> in the <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file <code class="docutils literal notranslate"><span class="pre">diagCut</span></code>, the maximum and minimum values of the diagonal components of the S matrix <code class="docutils literal notranslate"><span class="pre">sDiagMax</span></code> and <code class="docutils literal notranslate"><span class="pre">sDiagMin</span></code>, the maximum value of the change in the variational parameters <code class="docutils literal notranslate"><span class="pre">absRmax</span></code> and its parameter index <code class="docutils literal notranslate"><span class="pre">imax</span></code> are outputted.
+From the left column, the number of variational parameters as complex numbers
+<code class="docutils literal notranslate"><span class="pre">Npara</span></code>, the dimension of the S metric matrix <code class="docutils literal notranslate"><span class="pre">Msize</span></code>, the number of
+variational parameters that are not optimized in the input files for trial
+wavefunctions such as <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>, the number of variational parameters cut by
+the value of <code class="docutils literal notranslate"><span class="pre">DSROptRedCut</span></code> in the <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file <code class="docutils literal notranslate"><span class="pre">diagCut</span></code>, the maximum
+and minimum values of the diagonal components of the S matrix <code class="docutils literal notranslate"><span class="pre">sDiagMax</span></code> and
+<code class="docutils literal notranslate"><span class="pre">sDiagMin</span></code>, the maximum value of the change in the variational parameters
+<code class="docutils literal notranslate"><span class="pre">absRmax</span></code> and its parameter index <code class="docutils literal notranslate"><span class="pre">imax</span></code> are outputted.
 The header specified by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in the <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file is described in xxx.
 An example of the file format is as follows.
 Note that the number of imaginary parameters is counted in <code class="docutils literal notranslate"><span class="pre">optCut</span></code> when the variational parameters are treated as real variables (<code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code>).</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">NSRCG=0</span></code>:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax
 4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4
 4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0
 4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0
 4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0
+…
+</pre></div>
+</div>
+<p>For SR-CG (<code class="docutils literal notranslate"><span class="pre">NSRCG!=0</span></code>), solver status <code class="docutils literal notranslate"><span class="pre">info</span></code> is appended as an
+additional column after <code class="docutils literal notranslate"><span class="pre">imax</span></code>.
+<code class="docutils literal notranslate"><span class="pre">info</span></code> is the number of iterations for normal convergence.
+<code class="docutils literal notranslate"><span class="pre">info</span></code> is written as a negative value <code class="docutils literal notranslate"><span class="pre">info</span> <span class="pre">=</span> <span class="pre">-(iter</span> <span class="pre">+</span> <span class="pre">1)</span></code> when SR-CG
+fails (does not converge or becomes numerically unstable), regardless of
+whether the fallback solver was invoked; <code class="docutils literal notranslate"><span class="pre">iter</span></code> is the iteration at
+which the failure was detected.  With the strict default
+(<code class="docutils literal notranslate"><span class="pre">NSRCGFallback=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSRCGAbortOnFail=1</span></code>) such a row is not written
+because the calculation aborts; a negative <code class="docutils literal notranslate"><span class="pre">info</span></code> therefore appears only
+when fallback or warn-and-continue is enabled.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax info
+4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4    5
+4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0    6
+4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0   -3
+4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0    4
 …
 </pre></div>
 </div>
@@ -370,6 +409,35 @@ respectively.</p>
 </ul>
 </section>
 </section>
+<section id="xxx-twist-yyy-dat">
+<h2>xxx_twist_yyy.dat<a class="headerlink" href="#xxx-twist-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<p>This file is the outputted files for the Twist operator  <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span>. The target components are set in the input file with the keyword “Twist”. Here, xxx is the header indicated by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file and yyy is a number given by <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code>, where both <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> and <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> are defined in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file. An example of the file format is as follows.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>-8.450000000179783144e-02  -5.022947287359245602e-03  8.464915829324838603e-02  -3.082219356298420809e+00
+9.193000000026863017e-01  2.424870552459427574e-03  9.193031980810983939e-01  2.637729716822964383e-03
+…
+</pre></div>
+</div>
+<section id="id3">
+<h3>File format<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>Parameters<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p>
+<p><strong>Type :</strong> double</p>
+<div class="line-block">
+<div class="line"><strong>Description :</strong></div>
+<div class="line">These represent the value of the Twist operator
+<span class="math notranslate nohighlight">\(P^{(\alpha)}\)</span>.</div>
+<div class="line"><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span> is the real part, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span> is the imaginary part, <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span> is the absolute value, and <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span> is the phase (<span class="math notranslate nohighlight">\(\arg P^{(\alpha)}\)</span>).</div>
+</div>
+</li>
+</ul>
+</section>
+</section>
 <section id="xxx-ls-out-yyy-dat">
 <h2>xxx_ls_out_yyy.dat<a class="headerlink" href="#xxx-ls-out-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file is the outputted files for <span class="math notranslate nohighlight">\(\langle H \rangle\)</span>,
@@ -418,12 +486,13 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 <li><a class="reference internal" href="#output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat">Output files for variational parameters at each steps (xxx_var_yyy.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-gutzwiller-factors-gutzwiller-opt-dat">Output file for gutzwiller factors (***_gutzwiller_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-jastrow-factors-jastrow-opt-dat">Output file for jastrow factors (***_jastrow_opt.dat)</a></li>
+<li><a class="reference internal" href="#output-file-for-spin-jastrow-factors-spinjastrow-opt-dat">Output file for spin Jastrow factors (***_spinjastrow_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-doublonholon-2-site-factors-doublonholon2site-opt-dat">Output file for doublonHolon 2-site factors (***_doublonHolon2site_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-doublonholon-4-site-factors-doublonholon4site-opt-dat">Output file for doublonHolon 4-site factors (***_doublonHolon4site_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-files-for-general-rbm-factors-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat">Output files for general RBM factors(***_generalRBM_physlayer_opt.dat, ***_generalRBM_hiddenlayer_opt.dat, ***_generalRBM_physhidden_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-pair-orbitals-orbital-opt-dat">Output file for pair orbitals (***_orbital_opt.dat)</a></li>
 <li><a class="reference internal" href="#xxx-out-yyy-dat">xxx_out_yyy.dat</a></li>
-<li><a class="reference internal" href="#xxx-srinfo-dat-dat">xxx_SRinfo.dat.dat</a></li>
+<li><a class="reference internal" href="#xxx-srinfo-dat">xxx_SRinfo.dat</a></li>
 <li><a class="reference internal" href="#xxx-calctimer-dat">xxx_CalcTimer.dat</a></li>
 <li><a class="reference internal" href="#xxx-time-zzz-dat">xxx_time_zzz.dat</a></li>
 <li><a class="reference internal" href="#xxx-cisajs-yyy-dat">xxx_cisajs_yyy.dat</a><ul>
@@ -434,6 +503,11 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 <li><a class="reference internal" href="#xxx-cisajscktalt-yyy-dat">xxx_cisajscktalt_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id1">File format</a></li>
 <li><a class="reference internal" href="#id2">Parameters</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
+<li><a class="reference internal" href="#id3">File format</a></li>
+<li><a class="reference internal" href="#id4">Parameters</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
@@ -487,7 +561,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
         <li class="right" >
           <a href="expert.html" title="Input files for Expert mode"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.3.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.4.0 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Output files</a></li> 
       </ul>
     </div>

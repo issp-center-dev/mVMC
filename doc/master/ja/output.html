@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>出力ファイル &#8212; mVMC 1.3.0 ドキュメント</title>
+    <title>出力ファイル &#8212; mVMC 1.4.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=a4498435"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=2a1275fb"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/translations.js?v=4dbe4bdc"></script>
@@ -32,7 +32,7 @@
         <li class="right" >
           <a href="expert.html" title="エキスパートモード入力ファイル書式"
              accesskey="P">前へ</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.3.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.4.0 ドキュメント</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">出力ファイル</a></li> 
       </ul>
     </div>  
@@ -62,44 +62,50 @@
 <tr class="row-even"><td><p>***_jastrow_opt.dat</p></td>
 <td><p>最適化されたJastrow因子.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_doublonHolon2site_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_spinjastrow_opt.dat</p></td>
+<td><p>最適化されたスピンJastrow因子.</p></td>
+</tr>
+<tr class="row-even"><td><p>***_doublonHolon2site_opt.dat</p></td>
 <td><p>最適化された2サイトダブロン-ホロン相関因子.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_doublonHolon4site_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_doublonHolon4site_opt.dat</p></td>
 <td><p>最適化された4サイトダブロン-ホロン相関因子.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_generalRBM_physlayer_opt.dat</p></td>
+<tr class="row-even"><td><p>***_generalRBM_physlayer_opt.dat</p></td>
 <td><p>最適化されたRBM相関因子のうち、物理層のみに関わる変分パラメータ.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_generalRBM_hiddenlayer_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_generalRBM_hiddenlayer_opt.dat</p></td>
 <td><p>最適化されたRBM相関因子のうち、隠れ層のみに関わる変分パラメータ.</p></td>
 </tr>
-<tr class="row-odd"><td><p>***_generalRBM_physhidden_opt.dat</p></td>
+<tr class="row-even"><td><p>***_generalRBM_physhidden_opt.dat</p></td>
 <td><p>最適化されたRBM相関因子のうち、物理層と隠れ層を繋ぐ変分パラメータ.</p></td>
 </tr>
-<tr class="row-even"><td><p>***_orbital_opt.dat</p></td>
+<tr class="row-odd"><td><p>***_orbital_opt.dat</p></td>
 <td><p>最適化されたペア軌道因子.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_out_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_out_yyy.dat</p></td>
 <td><p>エネルギーとその分散.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_SRinfo.dat</p></td>
+<tr class="row-odd"><td><p>xxx_SRinfo.dat</p></td>
 <td><p>SR法に関連した情報.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_var_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_var_yyy.dat</p></td>
 <td><p>パラメータ最適化過程の情報.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_CalcTimer.dat</p></td>
+<tr class="row-odd"><td><p>xxx_CalcTimer.dat</p></td>
 <td><p>各プロセスに対する計算時間に関する情報.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_time_zzz.dat</p></td>
+<tr class="row-even"><td><p>xxx_time_zzz.dat</p></td>
 <td><p>モンテカルロサンプリングの過程に関する情報.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_cisajs_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_cisajs_yyy.dat</p></td>
 <td><p>一体グリーン関数.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
 <td><p>二体グリーン関数.</p></td>
+</tr>
+<tr class="row-odd"><td><p>xxx_twist_yyy.dat</p></td>
+<td><p>Twist演算子の期待値.</p></td>
 </tr>
 </tbody>
 </table>
@@ -109,7 +115,7 @@
 変分パラメータが一斉に読み込めるため、変分パラメータ最適化後の物理量の計算を行う場合に使用します。
 出力されるデータは</p>
 <div class="math notranslate nohighlight">
-\[\langle H \rangle, \langle H^2 \rangle, g_i, v_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, a_{i\sigma}, b_{k}, W_{i\sigma k}, f_{ij} \nonumber\]</div>
+\[\langle H \rangle, \langle H^2 \rangle, g_i, v_{ij}, v^s_{ij}, \alpha_{2nt}^{d(h)}, \alpha_{4nt}^{d(h)}, a_{i\sigma}, b_{k}, W_{i\sigma k}, f_{ij} \nonumber\]</div>
 <p>で、それぞれの平均値と標準偏差が出力されます(平均値は実数、虚数の順に、標準偏差は実数のみ出力)。
 なお、全データが1行で出力され、数値の間は半角空白で区切られます。
 ***には <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> で指定されるヘッダが記載されます。</p>
@@ -130,6 +136,11 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 <h2>Jastrow因子出力ファイル(***_jastrow_opt.dat)<a class="headerlink" href="#jastrow-jastrow-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>SR法で最適化されたJastrow因子が出力されます。
 出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInJastrow指定ファイルと同じです。</p>
+</section>
+<section id="spin-jastrow-spinjastrow-opt-dat">
+<h2>Spin Jastrow因子出力ファイル(***_spinjastrow_opt.dat)<a class="headerlink" href="#spin-jastrow-spinjastrow-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p>SR法で最適化されたSpin Jastrow因子が出力されます。
+出力形式は <a class="reference internal" href="expert.html#inputparam"><span class="std std-ref">変分パラメータ初期値指定ファイル</span></a> のInSpinJastrow指定ファイルと同じです。</p>
 </section>
 <section id="doublonholon2site-opt-dat">
 <h2>2サイトダブロンホロン相関因子出力ファイル(***_doublonHolon2site_opt.dat)<a class="headerlink" href="#doublonholon2site-opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
@@ -171,16 +182,34 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 </pre></div>
 </div>
 </section>
-<section id="xxx-srinfo-dat-dat">
-<h2>xxx_SRinfo.dat.dat<a class="headerlink" href="#xxx-srinfo-dat-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<section id="xxx-srinfo-dat">
+<h2>xxx_SRinfo.dat<a class="headerlink" href="#xxx-srinfo-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>各最適化ステップごとに、
-変分パラメータ数 <code class="docutils literal notranslate"><span class="pre">Npara</span></code> 、S行列の次元数 <code class="docutils literal notranslate"><span class="pre">Msize</span></code> 、 <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> などの入力ファイルで最適化しないと指定した実パラメータ数 <code class="docutils literal notranslate"><span class="pre">optCut</span></code> 、 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">DSROptRedCut</span></code> の値により削減された実パラメータ数 <code class="docutils literal notranslate"><span class="pre">diagCut</span></code> 、S行列の対角成分の最大値 <code class="docutils literal notranslate"><span class="pre">sDiagMax</span></code> と最小値 <code class="docutils literal notranslate"><span class="pre">sDiagMin</span></code> 、変分パラメータの変化量の最大値 <code class="docutils literal notranslate"><span class="pre">absRmax</span></code> とそのパラメータインデックス <code class="docutils literal notranslate"><span class="pre">imax</span></code> といったSR法による最適化情報が順に出力されます。
+変分パラメータ数 <code class="docutils literal notranslate"><span class="pre">Npara</span></code> 、S行列の次元数 <code class="docutils literal notranslate"><span class="pre">Msize</span></code> 、 <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> などの入力ファイルで最適化しないと指定した実パラメータ数 <code class="docutils literal notranslate"><span class="pre">optCut</span></code> 、 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">DSROptRedCut</span></code> の値により削減された実パラメータ数 <code class="docutils literal notranslate"><span class="pre">diagCut</span></code> 、S行列の対角成分の最大値 <code class="docutils literal notranslate"><span class="pre">sDiagMax</span></code> と最小値 <code class="docutils literal notranslate"><span class="pre">sDiagMin</span></code> 、変分パラメータの変化量の最大値 <code class="docutils literal notranslate"><span class="pre">absRmax</span></code> とそのパラメータインデックス <code class="docutils literal notranslate"><span class="pre">imax</span></code> が順に出力されます。
 xxxには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが記載されます。以下に出力例を記載します。なお、変分パラメータが実変数( <code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> )として扱われた場合、虚部のパラメータ数は <code class="docutils literal notranslate"><span class="pre">optCut</span></code> にカウントされます。</p>
+<p><code class="docutils literal notranslate"><span class="pre">NSRCG=0</span></code> の場合:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax
 4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4
 4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0
 4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0
 4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0
+…
+</pre></div>
+</div>
+<p>SR-CG (<code class="docutils literal notranslate"><span class="pre">NSRCG!=0</span></code>) の場合、ソルバ状態 <code class="docutils literal notranslate"><span class="pre">info</span></code> が
+<code class="docutils literal notranslate"><span class="pre">imax</span></code> の次の列として追加出力されます。
+SR-CGの通常収束時、 <code class="docutils literal notranslate"><span class="pre">info</span></code> は反復回数です。
+SR-CGが収束しない、または数値不安定になった場合、フォールバックの
+有無に関わらず <code class="docutils literal notranslate"><span class="pre">info</span> <span class="pre">=</span> <span class="pre">-(iter</span> <span class="pre">+</span> <span class="pre">1)</span></code> の負値が記録されます
+(<code class="docutils literal notranslate"><span class="pre">iter</span></code> は失敗を検出した反復回数)。
+ただし、デフォルト (<code class="docutils literal notranslate"><span class="pre">NSRCGFallback=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSRCGAbortOnFail=1</span></code>) では
+失敗時に計算が終了するため、この行は出力されません。
+<code class="docutils literal notranslate"><span class="pre">info</span></code> が負値になるのはフォールバックや警告継続を有効にした場合のみです。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#Npara Msize optCut diagCut sDiagMax  sDiagMin    absRmax      imax info
+4     4     4     0  4.17626e-02  0.00000e+00 -1.60883e-01     4    5
+4     4     4     0  3.53941e-02  0.00000e+00  1.63056e-01     0    6
+4     4     4     0  3.28032e-02  0.00000e+00  1.69939e-01     0   -3
+4     4     4     0  3.31451e-02  0.00000e+00  1.92363e-01     0    4
 …
 </pre></div>
 </div>
@@ -358,6 +387,35 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 </ul>
 </section>
 </section>
+<section id="xxx-twist-yyy-dat">
+<h2>xxx_twist_yyy.dat<a class="headerlink" href="#xxx-twist-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p>Twist指定ファイルで指定されたTwist演算子 <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span> の計算結果を出力します。xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。以下にファイル例を記載します。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>-8.450000000179783144e-02  -5.022947287359245602e-03  8.464915829324838603e-02  -3.082219356298420809e+00
+9.193000000026863017e-01  2.424870552459427574e-03  9.193031980810983939e-01  2.637729716822964383e-03
+…
+</pre></div>
+</div>
+<section id="id6">
+<h3>ファイル形式<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p></li>
+</ul>
+</section>
+<section id="id7">
+<h3>パラメータ<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h3>
+<ul>
+<li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p>
+<p><strong>形式 :</strong> double型</p>
+<div class="line-block">
+<div class="line"><strong>説明 :</strong>
+<span class="math notranslate nohighlight">\(P^{(\alpha)}\)</span> の値を表します。</div>
+<div class="line"><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span> が実部、 <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span> が虚部、<span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span> が絶対値、 <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span> が位相(<span class="math notranslate nohighlight">\(\arg P^{(\alpha)}\)</span>)を表します。</div>
+</div>
+</li>
+</ul>
+</section>
+</section>
 <section id="xxx-ls-out-yyy-dat">
 <h2>xxx_ls_out_yyy.dat<a class="headerlink" href="#xxx-ls-out-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>Power Lanczos法により求めた <span class="math notranslate nohighlight">\(\langle H \rangle\)</span>,
@@ -400,12 +458,13 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#xxx-var-yyy-dat">ステップ別変分パラメータ出力ファイル(xxx_var_yyy.dat)</a></li>
 <li><a class="reference internal" href="#gutzwiller-gutzwiller-opt-dat">Gutzwiller因子出力ファイル(***_gutzwiller_opt.dat)</a></li>
 <li><a class="reference internal" href="#jastrow-jastrow-opt-dat">Jastrow因子出力ファイル(***_jastrow_opt.dat)</a></li>
+<li><a class="reference internal" href="#spin-jastrow-spinjastrow-opt-dat">Spin Jastrow因子出力ファイル(***_spinjastrow_opt.dat)</a></li>
 <li><a class="reference internal" href="#doublonholon2site-opt-dat">2サイトダブロンホロン相関因子出力ファイル(***_doublonHolon2site_opt.dat)</a></li>
 <li><a class="reference internal" href="#doublonholon4site-opt-dat">4サイトダブロンホロン相関因子出力ファイル(***_doublonHolon4site_opt.dat)</a></li>
 <li><a class="reference internal" href="#rbm-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat">RBM相関因子出力ファイル(***_generalRBM_physlayer_opt.dat, ***_generalRBM_hiddenlayer_opt.dat, ***_generalRBM_physhidden_opt.dat)</a></li>
 <li><a class="reference internal" href="#orbital-opt-dat">ペア軌道出力ファイル(***_orbital_opt.dat)</a></li>
 <li><a class="reference internal" href="#xxx-out-yyy-dat">xxx_out_yyy.dat</a></li>
-<li><a class="reference internal" href="#xxx-srinfo-dat-dat">xxx_SRinfo.dat.dat</a></li>
+<li><a class="reference internal" href="#xxx-srinfo-dat">xxx_SRinfo.dat</a></li>
 <li><a class="reference internal" href="#xxx-calctimer-dat">xxx_CalcTimer.dat</a></li>
 <li><a class="reference internal" href="#xxx-time-zzz-dat">xxx_time_zzz.dat</a></li>
 <li><a class="reference internal" href="#xxx-cisajs-yyy-dat">xxx_cisajs_yyy.dat</a><ul>
@@ -416,6 +475,11 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#xxx-cisajscktalt-yyy-dat">xxx_cisajscktalt_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id4">ファイル形式</a></li>
 <li><a class="reference internal" href="#id5">パラメータ</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
+<li><a class="reference internal" href="#id6">ファイル形式</a></li>
+<li><a class="reference internal" href="#id7">パラメータ</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
@@ -469,7 +533,7 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
         <li class="right" >
           <a href="expert.html" title="エキスパートモード入力ファイル書式"
              >前へ</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.3.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.4.0 ドキュメント</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">出力ファイル</a></li> 
       </ul>
     </div>

@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>汎用多変数変分モンテカルロ法パッケージ mVMC マニュアル &#8212; mVMC 1.3.0 ドキュメント</title>
+    <title>汎用多変数変分モンテカルロ法パッケージ mVMC マニュアル &#8212; mVMC 1.4.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=a4498435"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=2a1275fb"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/translations.js?v=4dbe4bdc"></script>
@@ -27,7 +27,7 @@
         <li class="right" >
           <a href="intro.html" title="What is mVMC?"
              accesskey="N">次へ</a> |</li>
-        <li class="nav-item nav-item-0"><a href="#">mVMC 1.3.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="#">mVMC 1.4.0 ドキュメント</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">汎用多変数変分モンテカルロ法パッケージ mVMC マニュアル</a></li> 
       </ul>
     </div>  
@@ -81,6 +81,7 @@
 <li class="toctree-l2"><a class="reference internal" href="expert.html#exchange-exchange-def">Exchange指定ファイル (exchange.def)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="expert.html#gutzwiller-gutzwiller-def">Gutzwiller指定ファイル(gutzwiller.def)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="expert.html#jastrow-jastrow-def">Jastrow指定ファイル(jastrow.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#spin-jastrow-spinjastrow-def">Spin Jastrow指定ファイル(spinjastrow.def)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="expert.html#dh2">DH2指定ファイル</a></li>
 <li class="toctree-l2"><a class="reference internal" href="expert.html#dh4">DH4指定ファイル</a></li>
 <li class="toctree-l2"><a class="reference internal" href="expert.html#generalrbm-physlayer">GeneralRBM_PhysLayer指定ファイル</a></li>
@@ -93,6 +94,8 @@
 <li class="toctree-l2"><a class="reference internal" href="expert.html#inputparam">変分パラメータ初期値指定ファイル</a></li>
 <li class="toctree-l2"><a class="reference internal" href="expert.html#onebodyg-greenone-def">OneBodyG指定ファイル(greenone.def)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="expert.html#twobodyg-greentwo-def">TwoBodyG指定ファイル(greentwo.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#twist-twist-def">Twist指定ファイル(twist.def)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="expert.html#lattice-lattice-def">Lattice指定ファイル(lattice.def)</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="output.html">出力ファイル</a><ul>
@@ -100,16 +103,18 @@
 <li class="toctree-l2"><a class="reference internal" href="output.html#xxx-var-yyy-dat">ステップ別変分パラメータ出力ファイル(xxx_var_yyy.dat)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#gutzwiller-gutzwiller-opt-dat">Gutzwiller因子出力ファイル(***_gutzwiller_opt.dat)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#jastrow-jastrow-opt-dat">Jastrow因子出力ファイル(***_jastrow_opt.dat)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#spin-jastrow-spinjastrow-opt-dat">Spin Jastrow因子出力ファイル(***_spinjastrow_opt.dat)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#doublonholon2site-opt-dat">2サイトダブロンホロン相関因子出力ファイル(***_doublonHolon2site_opt.dat)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#doublonholon4site-opt-dat">4サイトダブロンホロン相関因子出力ファイル(***_doublonHolon4site_opt.dat)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#rbm-generalrbm-physlayer-opt-dat-generalrbm-hiddenlayer-opt-dat-generalrbm-physhidden-opt-dat">RBM相関因子出力ファイル(***_generalRBM_physlayer_opt.dat, ***_generalRBM_hiddenlayer_opt.dat, ***_generalRBM_physhidden_opt.dat)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#orbital-opt-dat">ペア軌道出力ファイル(***_orbital_opt.dat)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#xxx-out-yyy-dat">xxx_out_yyy.dat</a></li>
-<li class="toctree-l2"><a class="reference internal" href="output.html#xxx-srinfo-dat-dat">xxx_SRinfo.dat.dat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#xxx-srinfo-dat">xxx_SRinfo.dat</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#xxx-calctimer-dat">xxx_CalcTimer.dat</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#xxx-time-zzz-dat">xxx_time_zzz.dat</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#xxx-cisajs-yyy-dat">xxx_cisajs_yyy.dat</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#xxx-cisajscktalt-yyy-dat">xxx_cisajscktalt_yyy.dat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#xxx-ls-cisajs-yyy-dat">xxx_ls_cisajs_yyy.dat</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html#xxx-ls-cisajscktalt-yyy-dat">xxx_ls_cisajscktalt_yyy.dat</a></li>
@@ -193,7 +198,7 @@
         <li class="right" >
           <a href="intro.html" title="What is mVMC?"
              >次へ</a> |</li>
-        <li class="nav-item nav-item-0"><a href="#">mVMC 1.3.0 ドキュメント</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="#">mVMC 1.4.0 ドキュメント</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">汎用多変数変分モンテカルロ法パッケージ mVMC マニュアル</a></li> 
       </ul>
     </div>

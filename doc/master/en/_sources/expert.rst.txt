@@ -66,6 +66,38 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **InterAll**: :math:`I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}` in
     :math:`{\cal H}_I`.
 
+    .. rubric:: t-J model input convention
+
+    For a t-J model with the physical convention
+
+    .. math::
+
+       {\cal H}_{tJ} = -\sum_{i,j,\sigma} t_{ij}
+       {\tilde c}_{i\sigma}^{\dagger}{\tilde c}_{j\sigma}
+       + \sum_{i,j} J_{ij}\left({\boldsymbol S}_i\cdot{\boldsymbol S}_j
+       - \frac{1}{4}n_i n_j\right),
+
+    where the tilde denotes the no-double-occupancy Hilbert space, use
+    the ``Trans``, ``CoulombInter``, ``Hund``, and ``Exchange`` files;
+    this is not an ``InterAll`` input.
+    With the sign convention of the Hamiltonian above, a positive
+    physical coupling :math:`J_{ij}` is represented by
+
+    .. math::
+
+       V_{ij}=-\frac{J_{ij}}{4}, \qquad
+       J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
+       J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}.
+
+    The t-J update path must also be selected by ``NExUpdatePath`` in
+    ``modpara.def``. The current t-J update paths do not support
+    ``BackFlow`` or ``LocSpin`` inputs. Since double occupancy is
+    excluded, the electron number must not exceed the number of sites.
+    For ``NExUpdatePath=4``, spin hopping needs at least one empty site,
+    so ``Ncond < Nsite`` (or ``2*Nelectron < Nsite``) is required.
+    For ``NExUpdatePath=5``, ``Ncond <= Nsite`` (or
+    ``2*Nelectron <= Nsite``) is allowed.
+
 (4) Variational parameters to be optimized:
       
     The variational parameters to be optimized are specified by using
@@ -75,9 +107,10 @@ listed in parentheses correspond to the file made by vmcdry.out.
     .. math::
 
        \begin{aligned}
-       |\psi \rangle &= {\cal N}_{General RBM} {\cal P}_G{\cal P}_J{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
+       |\psi \rangle &= {\cal N}_{General RBM} {\cal P}_G{\cal P}_J{\cal P}_{SJ}{\cal P}_{d-h}^{(2)}{\cal P}_{d-h}^{(4)}{\cal L}^S{\cal L}^K{\cal L}^P |\phi_{\rm pair} \rangle,\\
        {\cal P}_G&=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right],\\
        {\cal P}_J&=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1)(n_j-1)\right],\\
+       {\cal P}_{SJ}&=\exp\left[\sum_{i<j} v^s_{ij} m_i m_j\right],\\
        {\cal P}_{d-h}^{(2)}&= \exp \left[ \sum_t \sum_{n=0}^2 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right],\\
        {\cal P}_{d-h}^{(4)}&= \exp \left[ \sum_t \sum_{n=0}^4 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right],\\
        {\cal N}_{\rm General RBM}&= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_h} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right],\\
@@ -92,7 +125,9 @@ listed in parentheses correspond to the file made by vmcdry.out.
     translational operators corresponding to the translational vector
     :math:`{\boldsymbol R}`, :math:`\hat{G}_{\alpha}` is the point group
     operator, and :math:`p_\alpha` is the parity operator,
-    respectively. The details of :math:`{\cal P}_{d-h}^{(2)}` and
+    respectively. For the spin Jastrow factor,
+    :math:`m_i=n_{i\uparrow}-n_{i\downarrow}`. The details of
+    :math:`{\cal P}_{d-h}^{(2)}` and
     :math:`{\cal P}_{d-h}^{(4)}` are shown in
     [Tahara2008_ ]. The one body part of the
     wavefunction is represented as the pair function of the real
@@ -114,6 +149,9 @@ listed in parentheses correspond to the file made by vmcdry.out.
           
     **Jastrow (jastrowidx.def)**: Set the target parameters
     :math:`v_{ij}` in :math:`{\cal P}_J` to be optimized.
+
+    **SpinJastrow (spinjastrow.def)**: Set the target parameters
+    :math:`v^s_{ij}` in :math:`{\cal P}_{SJ}` to be optimized.
           
     **DH2**: Set the target 2-site doublon-holon correlation factor
     :math:`\alpha_{2nt}^{d(h)}` in :math:`{\cal P}_{d-h}^{(2)}` to be
@@ -156,6 +194,9 @@ listed in parentheses correspond to the file made by vmcdry.out.
           
     **InJastrow**: Set the initial values of :math:`v_{ij}` in
     :math:`{\cal P}_J`.
+
+    **InSpinJastrow**: Set the initial values of :math:`v^s_{ij}` in
+    :math:`{\cal P}_{SJ}`.
           
     **InDH2**: Set the initial values of :math:`\alpha_{2nt}^{d(h)}`
     in :math:`{\cal P}_{d-h}^{(2)}`.
@@ -186,6 +227,13 @@ listed in parentheses correspond to the file made by vmcdry.out.
 
     **TwoBodyG (greentwo.def)**: Set the components of two-body green
     functions to output.
+
+    **Twist (twist.def)**: Set the components of twist operators to
+    output.
+
+(7) Others:
+
+    **Lattice (lattice.def)**: Set the position of each site.
 
 .. _InputFileList:
     
@@ -271,6 +319,8 @@ User rules
      - Gutzwiller factors.
    * - Jastrow                  
      - Charge Jastrow factors.
+   * - SpinJastrow
+     - Spin Jastrow factors.
    * - DH2                      
      - 2-site doublon-holon correlation factors.
    * - DH4                      
@@ -295,6 +345,8 @@ User rules
      - Initial values of Gutzwiller factors.
    * - InJastrow                
      - Initial values of charge Jastrow factors.
+   * - InSpinJastrow
+     - Initial values of spin Jastrow factors.
    * - InDH2                    
      - Initial values of 2-site doublon-holon correlation factors.
    * - InDH4                    
@@ -317,6 +369,10 @@ User rules
      - Output components for Green functions :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle`
    * - TwoBodyG                 
      - Output components for Correlation functions :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle`
+   * - Twist                    
+     - Output components for Twist operators :math:`\langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle`
+   * - Lattice                  
+     - Position of each site.
 
 ModPara file (modpara.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -590,11 +646,28 @@ Keywords and parameters
 
 -  ``NExUpdatePath``
 
-   **Type :** int-type (Positive integer)
+   **Type :** int-type (Non-negative integer)
 
-   **Description :** The option for local update about exchange terms.
-   0: not update, 1: update for electron system. For Spin system, the
-   value must be 2.
+   **Description :** The option for local updates. The choices are
+   0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
+   (hopping or exchange/local-spin-flip), 4: t-J spin hopping,
+   5: t-J update (exchange or spin hopping), and 6: doublon-only
+   sampling by pair hopping. The choice between 4 and 5 selects the
+   local-update path for the t-J Hilbert space; it is not the switch for
+   :math:`S_z` conservation. The spin sector is specified separately,
+   for example by ``2Sz`` in fixed-:math:`S_z` calculations. For the
+   t-J choices 4 and 5, ``BackFlow`` and ``LocSpin`` are not supported.
+   Since double occupancy is excluded, the electron number must not
+   exceed ``Nsite``. In addition, ``NExUpdatePath=4`` requires at least
+   one empty site for spin hopping, so ``Ncond < Nsite`` (or
+   ``2*Nelectron < Nsite``) is required. ``NExUpdatePath=5`` allows
+   ``Ncond <= Nsite`` (or ``2*Nelectron <= Nsite``). For
+   ``NExUpdatePath=6``, the
+   sampled local states are restricted to empty and doublon states,
+   :math:`(n_{\uparrow}, n_{\downarrow})=(0,0)` or :math:`(1,1)`.
+   This mode requires ``0 < Ne < Nsite`` and an anti-parallel-spin
+   ``Orbital`` input. It currently does not support ``LocSpin``,
+   ``BackFlow``, RBM, or ``OrbitalGeneral``/FSZ inputs.
 
 -  ``RndSeed``
 
@@ -633,6 +706,60 @@ Keywords and parameters
    :math:`O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})` to
    :math:`O(N_\text{p}) + O(N_\text{p}N_\text{MCS})` when
    :math:`N_\text{p} > N_\text{MCS}`.
+
+-  ``useDiagScale``
+
+   **Type :** int-type (0 or 1, default value: 0)
+
+   **Description :** The option of using the point Jacobi method (scaling by diagonal elements of :math:`S` matrix) when solving the linear equation :math:`Sx=g` in the SR method by CG method (0: off, 1: on, ``NSRCG`` must be 1).
+
+   ``NSRCG=2`` is also accepted as a shortcut and is internally treated as
+   ``NSRCG=1`` with ``useDiagScale=1``.
+
+-  ``NSRCGFallback``
+
+   **Type :** int-type (0 or 1, default value: 0)
+
+   **Description :** The option of retrying the other SR-CG solver when the
+   selected solver does not converge or becomes numerically unstable (0: off,
+   1: on). Standard CG falls back to DiagScale-CG, and DiagScale-CG falls back
+   to standard CG.
+
+-  ``NSRCGAbortOnFail``
+
+   **Type :** int-type (0 or 1, default value: 1)
+
+   **Description :** The option of aborting the calculation when SR-CG fails
+   after the optional fallback (0: warn and continue with the approximate
+   solution, 1: abort).
+
+   By default, ``NSRCGFallback=0`` and ``NSRCGAbortOnFail=1``.  With these
+   settings, a non-converged or numerically unstable SR-CG solve is treated as
+   an input or numerical failure.  Increase ``NVMCSample``, adjust the SR-CG
+   tolerance/iteration limit, or enable ``useDiagScale`` when the overlap
+   matrix is too noisy or ill-conditioned.  ``useDiagScale=1`` selects the
+   point-Jacobi preconditioned CG solver, which can improve convergence.
+
+-  ``RescaleSmat``
+
+   **Type :** int-type (0 or 1, default value: 0)
+
+   **Description :** The option of rescaling Slater-related blocks in SR-CG
+   before solving :math:`Sx=g` (0: off, 1: on). ``RescaleSmat=1`` requires
+   ``NSRCG=1`` (the rescaling is only applied along the SR-CG path).
+   Typical settings for SR-CG in ``ModPara`` are:
+
+   ::
+
+       NSRCG = 1
+       useDiagScale = 1
+       RescaleSmat = 1
+
+-  ``NneuronGeneral``
+
+   **Type :** int-type (default value: 0)
+
+   **Description :** The number of neurons :math:`N_{\rm General RBM}` in the hidden layer of RBM.
 
 LocSpin file (locspn.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1604,6 +1731,136 @@ User rules
 
 -  A program is terminated, when [ int02 ] -
    [ int07 ] are out of range from the defined values.
+
+Spin Jastrow file (spinjastrow.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file sets the calculation conditions of spin Jastrow factors
+
+.. math::
+
+   {\cal P}_{SJ}=\exp\left[\sum_{i<j} v^s_{ij} m_i m_j\right],
+   \quad m_i=n_{i\uparrow}-n_{i\downarrow}.
+
+Site numbers :math:`i` and :math:`j`, and the variational parameters
+:math:`v^s_{ij}` are specified. An example of the file format is shown
+as follows.
+
+::
+
+    ======================
+    NSpinJastrowIdx 4
+    ComplexType 0
+    =====================
+    =====================
+       0     1     0
+       0     2     1
+       0     3     2
+       1     0     0
+     (continue...)
+       0     1
+       1     1
+       2     1
+       3     1
+
+File format
+^^^^^^^^^^^
+
+In the following, we define the total number of sites as :math:`N_s` and
+variational parameters as :math:`N_{sj}`, respectively.
+
+-  Line 1: Header
+
+-  Line 2: [string01] [int01]
+
+-  Line 3: [string02] [int02]
+
+-  Lines 4 - 5: Header
+
+-  Lines 6 - (5+ :math:`N_s\times (N_s-1)`): [int03] [int04] [int05]
+
+-  Lines (6+ :math:`N_s\times (N_s-1)`) -
+   (5+ :math:`N_s\times (N_s-1)` + :math:`N_{sj}`): [int06] [int07]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for total number of variational
+   parameters :math:`v^s_{ij}`. You can freely give a name of the
+   keyword.
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving total number of variational
+   parameters :math:`v^s_{ij}`.
+
+-  [ string02 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for indicating the double or complex type
+   of variational parameters :math:`v^s_{ij}`. You can freely give a
+   name of the keyword.
+
+-  [ int02 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer indicates the double or complex type of
+   variational parameters :math:`v^s_{ij}` (0: double, 1: complex).
+
+-  [ int03 ], [ int04 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving a site index
+   (0 :math:`\leq` [ int03 ], [ int04 ] :math:`<` ``Nsite``).
+
+-  [ int05 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer setting kinds of variational parameters
+   :math:`v^s_{ij}` (0 :math:`\leq` [ int05 ] :math:`<` [ int01]).
+
+-  [ int06 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving kinds of variational parameters
+   (0 :math:`\leq` [ int06 ] :math:`<` [ int01]).
+
+-  [ int07 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer to select the target of variational
+   parameters indicated at [int06] to be optimized or not (0: not
+   optimize, 1: optimize).
+
+User rules
+^^^^^^^^^^
+
+-  Headers cannot be omitted.
+
+-  A program is terminated, when [ int01 ] is
+   different from the total number of variational parameters defined in
+   this file.
+
+-  A program is terminated, when [ int02 ] -
+   [ int07 ] are out of range from the defined values.
+
+-  A program is terminated, when [ int03 ] and [ int04 ] indicate the
+   same site.
+
+-  Both directed pairs :math:`(i,j)` and :math:`(j,i)` must be specified
+   for each pair of sites, and they must have the same parameter index.
 
 DH2 file
 ~~~~~~~~
@@ -2839,11 +3096,13 @@ Files to set initial values of variational parameters
 This file sets the initial values of variational parameters. The kinds
 of variational parameters are specified by setting the following
 keywords in ``List`` file (namelist.def):
-``InGutzwiller``, ``InJastrow``, ``InDH2``, ``InDH4``, ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer``, ``InGeneralRBM_PhysHidden``, ``InOrbital``,
+``InGutzwiller``, ``InJastrow``, ``InSpinJastrow``, ``InDH2``, ``InDH4``, ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer``, ``InGeneralRBM_PhysHidden``, ``InOrbital``,
 ``InOrbitalAntiParallel``, ``InOrbitalParallel``,
 ``InOrbitalGeneral``.
 The file format is common and an example of the ``InJastrow`` file is
 shown as follows.
+For ``InSpinJastrow``, set the second line to the number of spin
+Jastrow parameters, for example ``NSpinJastrowIdx``.
 
 ::
 
@@ -3119,3 +3378,200 @@ Use rules
 -  A program is terminated, when
    [ int02 ]-[ int09 ] are out of
    range from the defined values.
+
+
+Twist file (twist.def)
+~~~~~~~~~~~~~~~~~~~~~~
+
+This file sets the target components to calculate and output the
+Twist operator
+:math:`P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle`.
+Position operator :math:`\mu_i` is defined in Lattice definition file (lattice.def).
+An example of file format is shown as follows. 
+
+::
+
+    --------------------
+    NTwist	2
+    --------------------
+    idx_site_s_x_y_z
+    --------------------
+    0	0	0	0.0	0.0	0.0
+    0	1	0	0.0	0.0	0.0
+    0	2	0	0.0	0.0	0.0
+    0	3	0	0.0	0.0	0.0
+    0	4	0	0.0	0.0	0.0
+    0	5	0	0.0	0.0	0.0
+    0	0	1	0.3333333333	0.0	0.0
+    0	1	1	0.3333333333	0.0	0.0
+    0	2	1	0.3333333333	0.0	0.0
+    0	3	1	0.3333333333	0.0	0.0
+    0	4	1	0.3333333333	0.0	0.0
+    0	5	1	0.3333333333	0.0	0.0
+    1	0	0	0.3333333333	0.0	0.0
+    1	1	0	0.3333333333	0.0	0.0
+        …
+
+File format
+^^^^^^^^^^^
+
+-  Line 1: Header
+
+-  Line 2: [string01] [int01]
+
+-  Lines 3 - 5: Header
+
+-  Lines 6 -:
+   [int02]  [int03]  [int04]  [double01]  [double02]  [double03]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for total number of Twist operators. You can freely give a name of the keyword.
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the total number of Twist operators.
+
+-  [ int02 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :**
+   An integer giving a Twist operator index :math:`\alpha`. You can specify it as an integer from 0 to [ int01 ]-1.
+
+-  [ int03 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :**
+   An integer giving a site index (0 :math:`\leq` [ int03 ] :math:`<` ``Nsite``).
+
+-  [ int04 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :**
+   An integer giving a spin index,
+   0: up-spin,
+   1: down-spin.
+
+-  [ double01 ], [ double02 ],
+   [ double03 ]
+
+   **Type :** double-type (blank parameter not allowed)
+
+   **Description :** :math:`c^{(\alpha)\mu}_{i\sigma}` for :math:`\mu = x, y, z`, :math:`c^{(\alpha)\mu}_{i\sigma}`. You need to specify the :math:`x` direction component as [ double01 ], the :math:`y` direction component as [ double02 ], and the :math:`z` direction component as [ double03 ].
+
+Use rules
+^^^^^^^^^^
+
+-  Headers cannot be omitted.
+
+-  All the combinations of sites and spins must be specified to designate each Twist operator.
+
+Lattice file (lattice.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file defines the position operator :math:`\mu_i` corresponding to site number :math:`i` and the orbital number in the unit cell.
+An example of file format is shown as follows.
+
+::
+
+    --------------------
+    NLattice  4 4 4 2
+    --------------------
+    i_x_y_z_orb
+    --------------------
+    0 0 0 0 0
+    1 0 0 0 1
+    2 1 0 0 0
+    3 1 0 0 1
+    4 2 0 0 0
+    5 2 0 0 1
+        …
+
+File format
+^^^^^^^^^^^^
+
+- Line 1: Header
+
+- Line 2: [string01] [int01] [int02]  [int03]  [int04]
+
+- Lines 3 - 5: Header
+
+- Lines 6 -: [int05]  [int06]  [int07]  [int08]  [int09]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword name (optional).
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the maximum value in the :math:`x` direction for the position operator :math:`\mu`.
+
+-  [ int02 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the maximum value in the :math:`y` direction for the position operator :math:`\mu`.
+
+-  [ int03 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the maximum value in the :math:`z` direction for the position operator :math:`\mu`.
+
+-  [ int04 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the number of orbitals in the unit cell.
+
+-  [ int05 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :**
+   An integer giving a site index (0 :math:`\leq` [ int05 ] :math:`<` ``Nsite``).
+
+-  [ int06 ], [ int07 ],
+   [ int08 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the position operator :math:`\mu_i` for site number [ int05 ] in each coordinate direction :math:`\mu = x, y, z`. You can specify the :math:`x, y, z` direction components as 0 or greater and less than [ int01 ], [ int02 ], [ int03 ].
+
+-  [ int09 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the orbital index in the unit cell corresponding to site number [ int05 ]. You can specify it as an integer from 0 to [ int04 ]-1.
+
+Usage rules
+^^^^^^^^^^^
+
+The rules for using this file are as follows:
+
+-  Headers cannot be omitted.
+
+-  All the site indices must be specified.
+
+-  ``[int01] * [int02] * [int03] * [int04]``
+   (i.e. ``Nx * Ny * Nz * Norb``) must equal ``Nsite``.
+
+-  Each site index must appear exactly once. Duplicate or missing
+   indices are rejected as input errors.

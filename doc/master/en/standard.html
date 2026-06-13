@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Input files for Standard mode &#8212; mVMC 1.3.0 documentation</title>
+    <title>Input files for Standard mode &#8212; mVMC 1.4.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3d533f9b"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b308ce55"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -31,7 +31,7 @@
         <li class="right" >
           <a href="tutorial.html" title="Tutorial"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.3.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.4.0 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Input files for Standard mode</a></li> 
       </ul>
     </div>  
@@ -128,6 +128,12 @@ indicate the <span class="math notranslate nohighlight">\(S_z\)</span>-unconserv
 lattice model [Eqn. <a class="reference internal" href="#equation-kondo">(3)</a> ], respectively. Note: Although
 these flags has a word “GC”(=grandcanonical), the number of electrons
 are conserved in these system.</p>
+<p>The t-J mode is controlled by <code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code> in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code>
+(<code class="docutils literal notranslate"><span class="pre">4</span></code>: spin hopping, <code class="docutils literal notranslate"><span class="pre">5</span></code>: exchange/spin-hopping mix). At present,
+Standard mode does not provide a dedicated <code class="docutils literal notranslate"><span class="pre">model</span></code> keyword for t-J.
+The current t-J update paths do not support <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> or
+<code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>. Since double occupancy is excluded, the input must
+satisfy <code class="docutils literal notranslate"><span class="pre">ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">lattice</span></code></p>
 <p><strong>Type :</strong> String (Choose from <code class="docutils literal notranslate"><span class="pre">&quot;Chain</span> <span class="pre">Lattice&quot;</span></code>,
@@ -725,10 +731,22 @@ will be performed <code class="docutils literal notranslate"><span class="pre">N
 values.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code></p>
-<p><strong>Type :</strong> int-type (Positive integer)</p>
-<p><strong>Description :</strong> The option for local update about exchange terms.
-0: not update, 1: update. The default value is set as 1 when the
-local spin exists, otherwise 0.</p>
+<p><strong>Type :</strong> int-type (Non-negative integer)</p>
+<p><strong>Description :</strong> The option for local updates. The choices are
+0: hopping, 1: exchange or hopping, 2: exchange, 3: KondoGC update
+(hopping or exchange/local-spin-flip), 4: t-J spin hopping,
+5: t-J update (exchange or spin hopping), and 6: doublon-only
+sampling by pair hopping. In Standard mode, this value is assigned
+automatically from <code class="docutils literal notranslate"><span class="pre">model</span></code>. To use t-J mode, set
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=4</span></code> or <code class="docutils literal notranslate"><span class="pre">5</span></code> in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code>. The t-J choices do
+not support <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> or <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>. Since double occupancy is
+excluded, the input must satisfy <code class="docutils literal notranslate"><span class="pre">ncond</span> <span class="pre">&lt;=</span> <span class="pre">Nsite</span></code>. To use
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=6</span></code>, set it in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> after generating the
+expert-mode files. This mode restricts each site to empty or doublon
+states, <span class="math notranslate nohighlight">\((n_{\uparrow}, n_{\downarrow})=(0,0)\)</span> or
+<span class="math notranslate nohighlight">\((1,1)\)</span>, requires <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">Ne</span> <span class="pre">&lt;</span> <span class="pre">Nsite</span></code> and an anti-parallel-spin
+<code class="docutils literal notranslate"><span class="pre">Orbital</span></code> input, and currently does not support <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>,
+<code class="docutils literal notranslate"><span class="pre">BackFlow</span></code>, RBM, or <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>/FSZ inputs.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">RndSeed</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 123456789)</p>
@@ -886,7 +904,7 @@ set by <code class="docutils literal notranslate"><span class="pre">CParaFileHea
         <li class="right" >
           <a href="tutorial.html" title="Tutorial"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.3.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">mVMC 1.4.0 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Input files for Standard mode</a></li> 
       </ul>
     </div>
