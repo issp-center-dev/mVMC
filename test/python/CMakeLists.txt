@@ -203,6 +203,8 @@ add_python_vmc_test_doublon_only_mpi(DoublonOnly_GreenFunc2_mpi DoublonOnly_Gree
 
 add_python_vmc_test_lanczos_expert(TJChainL4_Ncond2_J_path4_Lanczos)
 add_python_vmc_test_lanczos_expert(TJChainL4_Ncond2_J_path5_Lanczos)
+add_python_vmc_test_lanczos_expert(TJChainL4_Ncond2_J_path4_Lanczos2)
+add_python_vmc_test_lanczos_expert(DoublonOnly_Lanczos)
 
 foreach(model ${python_test_vmc_model_sr})
     add_python_vmc_test_sr(${model})

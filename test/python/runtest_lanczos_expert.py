@@ -57,4 +57,12 @@ for diff, s in zip(array_calc - ref_ave, ref_std):
     if diff >= 3 * s and diff >= 1e-8:
         result = -1
 
+# NLanczosMode=2 produces zvo_ls_cisajs_001.dat; check all values are finite.
+ls_cisajs = "./output/zvo_ls_cisajs_001.dat"
+if os.path.exists(ls_cisajs):
+    gf = read_out(ls_cisajs)
+    if not np.all(np.isfinite(gf)):
+        print("ERROR: non-finite values in {}".format(ls_cisajs))
+        result = -1
+
 sys.exit(result)
