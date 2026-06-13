@@ -21,9 +21,12 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 
 #ifdef MVMC_SRCG_REAL
+  #define fn_Rescale4SRCG Rescale4SRCG_real
+  
   #define fn_StochasticOptCG StochasticOptCG_real
   #define fn_StochasticOptCG_Init StochasticOptCG_Init_real
   #define fn_StochasticOptCG_Main StochasticOptCG_Main_real
+  #define fn_StochasticOptPreconCG_DiagScale_Main StochasticOptPreconCG_DiagScale_Main_real
   #define fn_operate_by_S operate_by_S_real
   #define fn_print_Smat_stderr print_Smat_stderr_real
 
@@ -34,9 +37,12 @@ along with this program. If not, see http://www.gnu.org/licenses/.
   #define USE_IMAG (0)
   #define SIZE_VecCG (nSmat*8 + NVMCSample*(nSmat+1))
 #else // MVMC_SRCG_REAL
+  #define fn_Rescale4SRCG Rescale4SRCG_fcmp
+  
   #define fn_StochasticOptCG StochasticOptCG_fcmp
   #define fn_StochasticOptCG_Init StochasticOptCG_Init_fcmp
   #define fn_StochasticOptCG_Main StochasticOptCG_Main_fcmp
+  #define fn_StochasticOptPreconCG_DiagScale_Main StochasticOptPreconCG_DiagScale_Main_fcmp
   #define fn_operate_by_S operate_by_S_fcmp
   #define fn_print_Smat_stderr print_Smat_stderr_fcmp
 
@@ -67,8 +73,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 int fn_StochasticOptCG(MPI_Comm comm);
 void fn_StochasticOptCG_Init(const int nSmat, int *const smatToParaIdx, double *VecCG); 
 int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm);
+int fn_StochasticOptPreconCG_DiagScale_Main(const int nSmat, double *VecCG, MPI_Comm comm);
 int fn_operate_by_S(const int nSmat, double *x, double *z, double *VecCG, MPI_Comm comm);
 void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm);
+void fn_Rescale4SRCG(MPI_Comm comm);
 
 int fn_StochasticOptCG(MPI_Comm comm) {
   const int nPara=OFFSET*NPara;
@@ -99,6 +107,14 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   double complex *para=Para;
   double *VecCG;
   double *r;
+  int alt_info;
+  int fallback_iter;
+  int alt_iter;
+  int max_iter;
+  const char *solver_name;
+  const char *alt_solver_name;
+  const char *failure_reason;
+  static int fallback_info_printed = 0;
 
 
   int rank,size;
@@ -172,13 +188,80 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   RequestWorkSpaceDouble(SIZE_VecCG);
   VecCG = GetWorkSpaceDouble(SIZE_VecCG);
   fn_StochasticOptCG_Init(nSmat, smatToParaIdx, VecCG);
+  max_iter = (NSROptCGMaxIter > 0 ? NSROptCGMaxIter : nSmat);
+  solver_name = useDiagScale ? "CG-diag" : "CG";
+  alt_solver_name = useDiagScale ? "CG" : "CG-diag";
 
 #ifdef _DEBUG_STCOPT_CG_PRINT_SMAT
   fn_print_Smat_stderr(nSmat, VecCG, comm);
   abort();
 #endif
 
-  info = fn_StochasticOptCG_Main(nSmat, VecCG, comm);
+  if (useDiagScale){
+    info = fn_StochasticOptPreconCG_DiagScale_Main(nSmat, VecCG, comm);
+  }else{
+    info = fn_StochasticOptCG_Main(nSmat, VecCG, comm);
+  }
+  if (info < 0) {
+    fallback_iter = -info - 1;
+    if (fallback_iter < 0) fallback_iter = 0;
+    failure_reason = (fallback_iter >= max_iter) ? "did not converge" : "became numerically unstable";
+    if (rank == 0) {
+      fprintf(stderr,
+              "warning: SR-%s %s at iter=%d (max_iter=%d).\n",
+              solver_name, failure_reason, fallback_iter, max_iter);
+    }
+
+    if (NSRCGFallback) {
+      if (rank == 0) {
+        if (!fallback_info_printed) {
+          fprintf(stderr,
+                  "remark: in zqp_SRinfo.dat, negative info means "
+                  "SR-CG fallback at iteration (info=-(iter+1)).\n");
+          fallback_info_printed = 1;
+        }
+        fprintf(stderr,
+                "warning: fallback from SR-%s to SR-%s.\n",
+                solver_name, alt_solver_name);
+      }
+      fn_StochasticOptCG_Init(nSmat, smatToParaIdx, VecCG);
+      alt_info = useDiagScale ?
+        fn_StochasticOptCG_Main(nSmat, VecCG, comm) :
+        fn_StochasticOptPreconCG_DiagScale_Main(nSmat, VecCG, comm);
+      if (rank == 0 && alt_info >= 0) {
+        fprintf(stderr,
+                "remark: SR-%s after fallback converged at iter=%d.\n",
+                alt_solver_name, alt_info);
+      }
+      info = -(fallback_iter + 1);
+      if (alt_info < 0) {
+        alt_iter = -alt_info - 1;
+        if (alt_iter < 0) alt_iter = 0;
+        failure_reason = (alt_iter >= max_iter) ? "did not converge" : "became numerically unstable";
+        if (rank == 0) {
+          fprintf(stderr,
+                  "%s: fallback SR-%s %s at iter=%d (max_iter=%d). %s.\n",
+                  NSRCGAbortOnFail ? "error" : "warning",
+                  alt_solver_name, failure_reason, alt_iter, max_iter,
+                  NSRCGAbortOnFail ? "Abort" : "Continue with the approximate solution");
+        }
+        if (NSRCGAbortOnFail) {
+          MPI_Abort(comm, EXIT_FAILURE);
+        }
+      }
+    } else {
+      if (rank == 0) {
+        fprintf(stderr,
+                "%s: SR-CG fallback is disabled. %s.\n",
+                NSRCGAbortOnFail ? "error" : "warning",
+                NSRCGAbortOnFail ? "Abort" : "Continue with the approximate solution");
+      }
+      if (NSRCGAbortOnFail) {
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
+      info = -(fallback_iter + 1);
+    }
+  }
 #ifdef _DEBUG_STCOPT_CG
   for(si=0; si<nSmat; ++si){
     fprintf(stderr, "%lg\n", VecCG[si]);
@@ -199,9 +282,9 @@ int fn_StochasticOptCG(MPI_Comm comm) {
       }
     }
 
-    fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e % .5e % .5e %5d, %d\n",NPara,nSmat,optNum,cutNum,
+    fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e % .5e % .5e %5d %d\n",NPara,nSmat,optNum,cutNum,
             sDiagMax,sDiagMin,rmax,smatToParaIdx[simax], info);
-    //fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e %5d, %d\n",NPara,nSmat,optNum,cutNum,
+    //fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e %5d %d\n",NPara,nSmat,optNum,cutNum,
     //        rmax,smatToParaIdx[simax], info);
   }
   info=0;
@@ -217,6 +300,17 @@ int fn_StochasticOptCG(MPI_Comm comm) {
     }
   }
   MPI_Bcast(&info, 1, MPI_INT, 0, comm);
+  if(info != 0) {
+    if(rank==0) {
+      fprintf(stderr,
+              "%s: SR-CG produced non-finite parameter updates. %s.\n",
+              NSRCGAbortOnFail ? "error" : "warning",
+              NSRCGAbortOnFail ? "Abort" : "Skip this parameter update");
+    }
+    if(NSRCGAbortOnFail) {
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+  }
 
   /* update variational parameters */
   if(info==0 && rank==0) {
@@ -255,6 +349,138 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 
 /* calculate the parameter change r[nSmat] from SOpt.
    Solve S*x = g */
+int fn_StochasticOptPreconCG_DiagScale_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
+  int si;
+  int rank, size;
+  int iter;
+  int max_iter = (NSROptCGMaxIter > 0 ? NSROptCGMaxIter : nSmat);
+  double delta, beta;
+  double alpha;
+  double delta_new, dq;
+  double cg_thresh = DSROptCGTol*DSROptCGTol * (double)nSmat * (double)nSmat;
+  const double precon_factor = 1.0 + DSROptStaDel;
+  const double precon_diag_eps = 1.0e-12;
+  //double cg_thresh = DSROptRedCut;
+
+  double *x, *g, *sdiag, *stcO, *stcOs_real;
+  double *stcOs_imag, *y_real, *y_imag, *z_local;
+  double *q, *d, *r;
+
+#ifdef _DEBUG_STCOPT_CG
+  fprintf(stderr, "DEBUG in %s (%d): Start stcOptCG_Main\n", __FILE__, __LINE__);
+#endif
+  
+  x = VecCG;
+  g = x + nSmat;
+  sdiag = g + nSmat;
+  stcO = sdiag + nSmat;
+  stcOs_real = stcO + nSmat;
+  stcOs_imag = stcOs_real + NVMCSample*nSmat;
+  y_real = stcOs_imag + USE_IMAG*NVMCSample*nSmat;
+  y_imag = y_real + NVMCSample;
+  z_local = y_imag + USE_IMAG*NVMCSample;
+  q = z_local + nSmat;
+  d = q + nSmat;
+  r = d + nSmat;
+  
+  MPI_Comm_rank(comm,&rank);
+  MPI_Comm_size(comm,&size);
+
+  fn_operate_by_S(nSmat, x, r, VecCG, comm);
+  #pragma omp parallel for default(shared) private(si)
+  #pragma loop noalias
+  for(si=0;si<nSmat;++si) {
+    r[si] = g[si]-r[si];
+  }
+
+  #pragma omp parallel for default(shared) private(si,dq)
+  #pragma loop noalias
+  for(si=0;si<nSmat;++si) {
+    dq = precon_factor * sdiag[si];
+    if (!isfinite(dq) || fabs(dq) < precon_diag_eps) {
+      dq = (dq < 0.0 ? -precon_diag_eps : precon_diag_eps);
+    }
+    d[si] = r[si]/dq;
+  }
+
+  delta = xdot(nSmat, r, d);
+  if (!isfinite(delta)) return -(0+1);
+
+  for(iter=0; iter < max_iter; iter++){
+    //check convergence 
+    //if(rank==0) printf("%d: %d %.3e\n",rank, iter,delta);
+#ifdef _DEBUG_STCOPT_CG
+    fprintf(stderr, "delta = %lg, cg_thresh = %lg\n", delta, cg_thresh);
+#endif
+    if (!isfinite(delta)) return -(iter+1);
+    if (fabs(delta) < cg_thresh) break;
+
+    // compute vector q=S*d
+    fn_operate_by_S(nSmat, d, q, VecCG, comm);
+    dq = xdot(nSmat,d,q);
+    if (!isfinite(dq) || fabs(dq) < 1.0e-20) return -(iter+1);
+    alpha = delta/dq;
+    if (!isfinite(alpha)) return -(iter+1);
+  
+    // update solution vector x=x+alpha*d
+    #pragma omp parallel for default(shared) private(si)
+    #pragma loop noalias
+    for(si=0;si<nSmat;++si) {
+      x[si] = x[si] + alpha*d[si];
+    }
+    // update residual vector r=r-alpha*q, q=S*d
+    if((iter+1) % 20 == 0){
+      fn_operate_by_S(nSmat, x, r, VecCG, comm);
+      #pragma omp parallel for default(shared) private(si)
+      #pragma loop noalias
+      for(si=0;si<nSmat;++si) {
+        r[si] = g[si] - r[si];
+      }
+    }else{
+      #pragma omp parallel for default(shared) private(si)
+      #pragma loop noalias
+      for(si=0;si<nSmat;++si) {
+        r[si] = r[si] - alpha*q[si];
+      }
+    }
+
+    #pragma omp parallel for default(shared) private(si,dq)
+    #pragma loop noalias
+    for(si=0;si<nSmat;++si) {
+      dq = precon_factor * sdiag[si];
+      if (!isfinite(dq) || fabs(dq) < precon_diag_eps) {
+        dq = (dq < 0.0 ? -precon_diag_eps : precon_diag_eps);
+      }
+      q[si] = r[si]/dq;
+    }
+    delta_new = xdot(nSmat,r,q);
+    if (!isfinite(delta_new)) return -(iter+1);
+    if (fabs(delta) < 1.0e-20) return -(iter+1);
+    beta = delta_new/delta;
+    if (!isfinite(beta)) return -(iter+1);
+
+    //update the norm of residual vector r
+    delta = delta_new;
+    // update direction vector d
+    #pragma omp parallel for default(shared) private(si)
+    #pragma loop noalias
+    for(si=0;si<nSmat;++si) {
+      //d[si] = r[si] + beta*d[si];
+      d[si] = q[si] + beta*d[si];
+    }
+  }
+  if (iter == max_iter && fabs(delta) >= cg_thresh) return -(max_iter+1);
+
+#ifdef _DEBUG_STCOPT_CG
+  fprintf(stderr, "DEBUG in %s (%d): iter = %d\n", __FILE__, __LINE__, iter);
+  fprintf(stderr, "DEBUG in %s (%d): End stcOptCG_Main\n", __FILE__, __LINE__);
+#endif
+
+  return iter;
+}
+
+/* calculate the parameter change r[nSmat] from SOpt.
+   Solve S*x = g */
 int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
   int si;
   int rank, size;
@@ -262,6 +488,7 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
   int max_iter = (NSROptCGMaxIter > 0 ? NSROptCGMaxIter : nSmat);
   double delta, beta;
   double alpha;
+  double delta_new, dq;
   double cg_thresh = DSROptCGTol*DSROptCGTol * (double)nSmat * (double)nSmat;
   //double cg_thresh = DSROptRedCut;
 
@@ -296,6 +523,7 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
   }
 
   delta = xdot(nSmat, r, r);
+  if (!isfinite(delta)) return -(0+1);
 
   for(iter=0; iter < max_iter; iter++){
     //check convergence 
@@ -303,11 +531,15 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
 #ifdef _DEBUG_STCOPT_CG
     fprintf(stderr, "delta = %lg, cg_thresh = %lg\n", delta, cg_thresh);
 #endif
-    if (delta < cg_thresh) break;
+    if (!isfinite(delta)) return -(iter+1);
+    if (fabs(delta) < cg_thresh) break;
 
     // compute vector q=S*d
     fn_operate_by_S(nSmat, d, q, VecCG, comm);
-    alpha = delta/xdot(nSmat,d,q);
+    dq = xdot(nSmat,d,q);
+    if (!isfinite(dq) || fabs(dq) < 1.0e-20) return -(iter+1);
+    alpha = delta/dq;
+    if (!isfinite(alpha)) return -(iter+1);
   
     // update solution vector x=x+alpha*d
     #pragma omp parallel for default(shared) private(si)
@@ -330,9 +562,16 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
         r[si] = r[si] - alpha*q[si];
       }
     }
-    beta = xdot(nSmat,r,r)/delta;
+    delta_new = xdot(nSmat,r,r);
+    if (!isfinite(delta_new)) return -(iter+1);
+    if (fabs(delta) < 1.0e-20) return -(iter+1);
+    beta = delta_new/delta;
+    if (!isfinite(beta)) return -(iter+1);
 
     //update the norm of residual vector r
+    /* Use delta=beta*delta (mathematically delta_new) to preserve the legacy
+       FP order for SR-CG reference data; the DiagScale branch uses
+       delta=delta_new directly. */
     delta = beta*delta;
     // update direction vector d
     #pragma omp parallel for default(shared) private(si)
@@ -341,6 +580,7 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
       d[si] = r[si] + beta*d[si];
     }
   }
+  if (iter == max_iter && fabs(delta) >= cg_thresh) return -(max_iter+1);
 
 #ifdef _DEBUG_STCOPT_CG
   fprintf(stderr, "DEBUG in %s (%d): iter = %d\n", __FILE__, __LINE__, iter);
@@ -349,6 +589,8 @@ int fn_StochasticOptCG_Main(const int nSmat, double *VecCG, MPI_Comm comm) {
 
   return iter;
 }
+
+
 
 /* calculate  z = S*x */
 /* S is the overlap matrix*/
@@ -527,9 +769,119 @@ void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm){
   free(S);
 }
 
+void fn_Rescale4SRCG(MPI_Comm comm) {
+  int i, ismp;
+  int pi; /* index for variational parameters */
+  int rank;
+  
+  const int nPara=NPara;
+  const int srOptSize=SROptSize;
+  /* The rescale reparametrizes only the Slater block: Para is laid out as
+     Proj | RBM | ProjBF | Slater | OptTrans (see SetMemory in setmemory.c).
+     RBM/ProjBF/OptTrans parameters enter lnPsi non-linearly or are not
+     divided below, so their O columns must not be scaled. */
+  const int sltStart = NProj + FlagRBM*NRBM + NProjBF;
+  const int sltEnd   = sltStart + NSlater;
+  MPI_Comm_rank(comm, &rank);
+  if (NProj <= 0 || NProj >= nPara || NSlater <= 0) {
+    return;
+  }
+  #ifdef MVMC_SRCG_REAL
+    double *srOptO=SROptOO_real;
+    double *srOptHO=SROptHO_real;
+    double *srOptOO=SROptOO_real + OFFSET*srOptSize;
+    double *srOptO_Store=SROptO_Store_real;
+  #else
+    double complex *srOptO=SROptOO;
+    double complex *srOptHO=SROptHO;
+    double complex *srOptOO=SROptOO + OFFSET*srOptSize;
+    double complex *srOptO_Store=SROptO_Store;
+  #endif
+
+  if (srOptO_Store == NULL) {
+    if (rank == 0) {
+      #ifdef MVMC_SRCG_REAL
+      fprintf(stderr,
+              "error: RescaleSmat requested but SROptO_Store_real is not allocated "
+              "(NSRCG=%d, NStoreO=%d, AllComplexFlag=%d). "
+              "Set NSRCG=1 or NStoreO!=0.\n",
+              NSRCG, NStoreO, AllComplexFlag);
+      #else
+      fprintf(stderr,
+              "error: RescaleSmat requested but SROptO_Store is not allocated "
+              "(NSRCG=%d, NStoreO=%d, AllComplexFlag=%d). "
+              "Set NSRCG=1 or NStoreO!=0.\n",
+              NSRCG, NStoreO, AllComplexFlag);
+      #endif
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+
+  double srOptOO_ProjMax,srOptOO_SlaterMax;
+  double rescaleOO_SlaterRatio, rescaleO_SlaterRatio;
+  double *r; /* the parameter change */
+  
+  RequestWorkSpaceDouble(OFFSET*nPara);
+  r = GetWorkSpaceDouble(OFFSET*nPara);
+
+  #pragma omp parallel for default(shared) private(pi)
+  #pragma loop noalias
+  for(pi=0;pi<OFFSET*nPara;pi++) {
+    /* r[i] is temporarily used for diagonal elements of S */
+    /* S[i][i] = OO[pi+1][pi+1] - OO[0][pi+1] * OO[0][pi+1]; */
+    r[pi]   = CREAL(srOptOO[pi+OFFSET]) - CREAL(srOptO[pi+OFFSET]) * CREAL(srOptO[pi+OFFSET]);
+#ifdef _DEBUG_STCOPT
+  fprintf(stderr, "DEBUG in %s (%d): r[%d] = %lf\n", __FILE__, __LINE__, pi, r[pi]);
+#endif
+  }	
+  
+  srOptOO_ProjMax   = get_absmax(0,                OFFSET*NProj, r);
+  srOptOO_SlaterMax = get_absmax(OFFSET*sltStart, OFFSET*sltEnd, r);
+  if(srOptOO_ProjMax < 1e-10 ) {
+     ReleaseWorkSpaceDouble();
+     return;
+  }
+  if(srOptOO_SlaterMax < 1e-10 ) {
+     srOptOO_SlaterMax = 1e-10 ; 
+  }
+  rescaleOO_SlaterRatio = srOptOO_ProjMax / srOptOO_SlaterMax ;
+  rescaleO_SlaterRatio = sqrt(rescaleOO_SlaterRatio);
+  
+  #pragma omp parallel for default(shared) private(i)
+  #pragma loop noalias
+  for(i = OFFSET*sltStart; i < OFFSET*sltEnd; i ++ ) {
+     srOptOO[i+OFFSET] *= rescaleOO_SlaterRatio;
+     srOptO[i+OFFSET]  *= rescaleO_SlaterRatio;
+     srOptHO[i+OFFSET] *= rescaleO_SlaterRatio;
+  }
+
+  #pragma omp parallel for default(shared) private(ismp, i)
+  #pragma loop noalias
+  for(ismp = 0; ismp < NVMCSample; ismp ++ ) {
+    for(i = OFFSET*sltStart; i < OFFSET*sltEnd; i ++ ) {
+     srOptO_Store[i+OFFSET + ismp*OFFSET*srOptSize] *= rescaleO_SlaterRatio;
+    }
+  }
+
+  #pragma omp parallel for default(shared) private(i)
+  #pragma loop noalias
+  for(i = 0; i < NSlater; i ++ ) {
+    Slater[i] /= rescaleO_SlaterRatio ; 
+  } 
+
+  ReleaseWorkSpaceDouble();
+
+  return;
+}
+
+
+
+#undef fn_Rescale4SRCG
+
 #undef fn_StochasticOptCG
 #undef fn_StochasticOptCG_Init
 #undef fn_StochasticOptCG_Main
+#undef fn_StochasticOptPreconCG_DiagScale_Main
 #undef fn_operate_by_S
 #undef fn_print_Smat_stderr
 
@@ -538,4 +890,3 @@ void fn_print_Smat_stderr(const int nSmat, double *VecCG, MPI_Comm comm){
 #undef OFFSET
 #undef USE_IMAG
 #undef SIZE_VecCG
-

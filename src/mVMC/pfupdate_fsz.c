@@ -55,6 +55,7 @@ void CalculateNewPfM_fsz(const int ma, const int s, double complex *pfMNew, cons
     invM_a = InvM + qpidx*Nsize*Nsize + msa*Nsize;
 
     ratio = 0.0;
+    #pragma omp simd private(rsj) reduction(+:ratio)
     for(msj=0;msj<nsize;msj++) { //fsz
       rsj = eleIdx[msj]+eleSpn[msj]*Nsite;//fsz
       ratio += invM_a[msj] * sltE_a[rsj];
@@ -95,6 +96,7 @@ void CalculateNewPfM2_fsz(const int ma, const int s, double complex *pfMNew, con
     invM_a = InvM + qpidx*Nsize*Nsize + msa*Nsize;
 
     ratio = 0.0;
+    #pragma omp simd private(rsj) reduction(+:ratio)
     for(msj=0;msj<nsize;msj++) {
       rsj = eleIdx[msj]+eleSpn[msj]*Nsite;//fsz
       ratio += invM_a[msj] * sltE_a[rsj];
@@ -161,6 +163,7 @@ void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int
   invM = InvM + qpidx*Nsize*Nsize;
   invM_a = invM + msa*Nsize;
 
+  #pragma omp simd
   for(msi=0;msi<nsize;msi++) vec1[msi] = 0.0+0.0*I; //TBC
 
   /* Calculate vec1[i] = sum_j invM[i][j] sltE[a][j] */
@@ -172,6 +175,7 @@ void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int
     sltE_aj = sltE_a[rsj];
     invM_j = invM + msj*Nsize;
 
+    #pragma omp simd
     for(msi=0;msi<nsize;msi++) {
       vec1[msi] += -invM_j[msi] * sltE_aj;
     }
@@ -185,6 +189,7 @@ void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int
 
   /* Calculate vec2[i] = -InvM[a][i]/vec1[a] */
   #pragma loop noalias
+  #pragma omp simd
   for(msi=0;msi<nsize;msi++) {
     vec2[msi] = invM_a[msi] * invVec1_a;
   }
@@ -196,6 +201,7 @@ void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int
     vec1_i = vec1[msi];
     vec2_i = vec2[msi];
 
+    #pragma omp simd
     for(msj=0;msj<nsize;msj++) {
       invM_i[msj] += vec1_i * vec2[msj] - vec1[msj] * vec2_i;
     }
@@ -204,6 +210,7 @@ void updateMAll_child_fsz(const int ma, const int s, const int *eleIdx,const int
   }
 
   #pragma loop noalias
+  #pragma omp simd
   for(msj=0;msj<nsize;msj++) {
     invM_a[msj] += vec2[msj];
   }

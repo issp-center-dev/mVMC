@@ -142,6 +142,7 @@ void calculateNewPfMTwo_child_fsz(const int ma, const int s, const int mb, const
   sltE_b = sltE + rsb*Nsite2;
 
   #pragma loop noalias
+  #pragma omp simd private(rsi)
   for(msi=0;msi<nsize;msi++) {
     rsi = eleIdx[msi] + eleSpn[msi]*Nsite;// fsz(msi/Ne)*Nsite;
     vec_a[msi] = sltE_a[rsi];
@@ -157,6 +158,7 @@ void calculateNewPfMTwo_child_fsz(const int ma, const int s, const int mb, const
   p_a = p_b = q_a = q_b = bMa = 0.0;
 
   #pragma loop noalias
+  #pragma omp simd private(vec_ai,vec_bi,invM_ai,invM_bi) reduction(+:p_a,p_b,q_a,q_b)
   for(msi=0;msi<nsize;msi++) {
     vec_ai = vec_a[msi];
     vec_bi = vec_b[msi];
@@ -173,6 +175,7 @@ void calculateNewPfMTwo_child_fsz(const int ma, const int s, const int mb, const
   for(msi=0;msi<nsize;msi++) {
     invM_i = invM + msi*Nsize;
     tmp = 0.0;
+    #pragma omp simd reduction(+:tmp)
     for(msj=0;msj<nsize;msj++) {
       tmp += invM_i[msj] * vec_a[msj];
     }
@@ -229,7 +232,7 @@ void updateMAllTwo_child_fsz(const int ma, const int s, const int mb, const int 
   const int rsa = eleIdx[msa] + s*Nsite;
   const int rsb = eleIdx[msb] + t*Nsite;
   const int rsaOld = raOld + s*Nsite;
-  const int rsbOld = raOld + t*Nsite;
+  const int rsbOld = rbOld + t*Nsite;
   const int nsize = Nsize;
 
   const double complex *sltE = SlaterElm + (qpidx+qpStart)*Nsite2*Nsite2;;
@@ -246,6 +249,7 @@ void updateMAllTwo_child_fsz(const int ma, const int s, const int mb, const int 
   double complex ratio,det,invDet,bMa;
   double complex a,b,c,d,e,f;
   double complex p_i,p_j,q_i,q_j,s_i,s_j,t_i,t_j;
+  double complex p_sum,q_sum;
 
   int msi,msj;
   int rsi;
@@ -254,6 +258,7 @@ void updateMAllTwo_child_fsz(const int ma, const int s, const int mb, const int 
   /* vecS[i], vecT[i] are temporally used as
      vecS[i] = sltE[a][j], vecT[i] = sltE[b][j]. */
   #pragma loop noalias
+  #pragma omp simd private(rsi)
   for(msi=0;msi<nsize;msi++) {
     vecP[msi]=0.0;
     vecQ[msi]=0.0;
@@ -267,18 +272,25 @@ void updateMAllTwo_child_fsz(const int ma, const int s, const int mb, const int 
   /* Calculate vecP[i], vecQ[i] */
   /* vecP[i]= sum_j invM[i][j]*sltE[a][j] */
   /* vecQ[i]= sum_j invM[i][j]*sltE[b][j] */
+  /* vecP/vecQ are pre-zeroed above; assign the scalar reductions directly. */
   #pragma loop noalias
   for(msi=0;msi<nsize;msi++) {
     invM_i = invM + msi*Nsize;
+    p_sum = 0.0;
+    q_sum = 0.0;
+    #pragma omp simd reduction(+:p_sum,q_sum)
     for(msj=0;msj<nsize;msj++) {
-      vecP[msi] += invM_i[msj]*vecS[msj];
-      vecQ[msi] += invM_i[msj]*vecT[msj];
+      p_sum += invM_i[msj]*vecS[msj];
+      q_sum += invM_i[msj]*vecT[msj];
     }
+    vecP[msi] = p_sum;
+    vecQ[msi] = q_sum;
   }
 
   /* Update Paffian */
   bMa = 0.0;
   #pragma loop noalias
+  #pragma omp simd reduction(+:bMa)
   for(msi=0;msi<nsize;msi++) {
     bMa += vecT[msi] * vecP[msi];
   }
@@ -300,6 +312,7 @@ void updateMAllTwo_child_fsz(const int ma, const int s, const int mb, const int 
   /* Calculate vecS[i], vecT[i] */
   /* vecS[i]= invM[a][i]/D, vecT[i]= invM[b][i]/D */
   #pragma loop noalias
+  #pragma omp simd
   for(msi=0;msi<nsize;msi++) {
     vecS[msi] = invDet * invM_a[msi];
     vecT[msi] = invDet * invM_b[msi];
@@ -314,6 +327,7 @@ void updateMAllTwo_child_fsz(const int ma, const int s, const int mb, const int 
     s_i = vecS[msi];
     t_i = vecT[msi];
 
+    #pragma omp simd private(p_j,q_j,s_j,t_j)
     for(msj=0;msj<nsize;msj++) {
       p_j = vecP[msj];
       q_j = vecQ[msj];
@@ -332,6 +346,7 @@ void updateMAllTwo_child_fsz(const int ma, const int s, const int mb, const int 
   }
 
   #pragma loop noalias
+  #pragma omp simd private(p_j,q_j,s_j,t_j)
   for(msj=0;msj<nsize;msj++) {
     p_j = vecP[msj];
     q_j = vecQ[msj];

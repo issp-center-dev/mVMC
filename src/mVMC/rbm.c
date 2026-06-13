@@ -315,7 +315,7 @@ void saveRBMCnt(const int sample, const double complex *rbmCnt) {
   for(i=0;i<n;i++) RBMCnt[offset+i] = rbmCnt[i];
   
   x = LogWeightRBM(rbmCnt);
-  logSqPfFullSlater[sample] += 2.0*cabs(x);//TBC
+  logSqPfFullSlater[sample] += 2.0*creal(x);
   
   return;
 }

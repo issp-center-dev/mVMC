@@ -130,6 +130,13 @@ void OutputOptData() {
       count_i += NJastrowIdx;
     }
 
+    if(NSpinJastrowIdx !=0){
+      sprintf(fileName, "%s_spinjastrow_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NSpinJastrowIdx",
+			  NSpinJastrowIdx, NSpinJastrowIdx, count_i, n);
+      count_i += NSpinJastrowIdx;
+    }
+
     if(NDoublonHolon2siteIdx != 0){
       sprintf(fileName, "%s_doublonHolon2site_opt.dat", CParaFileHead);
       Child_OutputOptData(fp, fileName, "NDoublonHolon2siteIdx",

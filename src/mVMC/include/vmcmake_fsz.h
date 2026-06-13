@@ -15,6 +15,10 @@ void makeCandidate_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, in
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn);
 void makeCandidate_hopping_csz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn);
+void makeCandidate_spin_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn);
+void makeCandidate_spin_hopping_csz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn);
 
 void makeCandidate_exchange_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
                             const int *eleIdx, const int *eleCfg, const int *eleNum,const int *eleSpn);

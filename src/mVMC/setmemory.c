@@ -85,6 +85,12 @@ void SetMemoryDef() {
     pInt += Nsite;
   }
 
+  SpinJastrowIdx = (int**)malloc(sizeof(int*)*Nsite);
+  for(i=0;i<Nsite;i++) {
+    SpinJastrowIdx[i] = pInt;
+    pInt += Nsite;
+  }
+
   DoublonHolon2siteIdx = (int**)malloc(sizeof(int*)*NDoublonHolon2siteIdx);
   for(i=0;i<NDoublonHolon2siteIdx;i++) {
     DoublonHolon2siteIdx[i] = pInt;
@@ -206,6 +212,18 @@ void SetMemoryDef() {
     pInt += 8;
   }
 
+  LatticeIdx = (int**)malloc(sizeof(int*)*Nsite);
+  for(i=0;i<Nsite;i++) {
+    LatticeIdx[i] = pInt;
+    pInt += 4;
+  }
+
+  TwistIdx = (int**)malloc(sizeof(int*)*NTwist);
+  for(i=0;i<NTwist;i++) {
+    TwistIdx[i] = pInt;
+    pInt += 2*Nsite*2;
+  }
+  
   InterAll = (int**)malloc(sizeof(int*)*NInterAll);
   for(i=0;i<NInterAll;i++) {
     InterAll[i] = pInt;
@@ -247,7 +265,12 @@ void SetMemoryDef() {
 //  ParaQPTrans = pDouble;
 //  pDouble +=  NQPTrans;
 
-  
+  ParaTwist = (double**)malloc(sizeof(double*)*NTwist);
+  for(i=0;i<NTwist;i++) {
+    ParaTwist[i] = pDouble;
+    pDouble += 3*Nsite*2;
+  }
+
   ParaQPOptTrans = pDouble;
   ParaQPTrans = (double complex*)malloc(sizeof(double complex)*(NQPTrans));
 
@@ -271,11 +294,16 @@ void FreeMemoryDef() {
   free(CisAjsIdx);
   free(QPTransSgn);
   free(QPTrans);
+  free(QPTransInv);
   free(OrbitalIdx);
+  free(OrbitalSgn);
   free(DoublonHolon4siteIdx);
   free(DoublonHolon2siteIdx);
+  free(SpinJastrowIdx);
   free(JastrowIdx);
   free(ParaTransfer);
+  free(ParaCoulombIntra);
+  free(ParaQPTrans);
   free(ExchangeCoupling);
   free(PairHopping);
   free(HundCoupling);
@@ -285,6 +313,10 @@ void FreeMemoryDef() {
   free(PosBF);
   free(RangeIdx);
   free(BackFlowIdx);
+  /* outer pointer arrays for lattice / twist; row storage is pool-allocated */
+  free(LatticeIdx);
+  free(TwistIdx);
+  free(ParaTwist);
   return;
 }
 
@@ -359,7 +391,11 @@ void SetMemory() {
   InvM = (double complex*)malloc( sizeof(double complex)*(NQPFull*(Nsize*Nsize+1)) );
   PfM = InvM + NQPFull*Nsize*Nsize;
 // for real TBC
-  SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+  if (AllComplexFlag == 0){
+    SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
+    InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
+    PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
+  }
 
   if (FlagRBM) {
     SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
@@ -376,8 +412,6 @@ void SetMemory() {
       BFSubIdx[i] = (int*)malloc(sizeof(int)*NrangeIdx);
     }
   }
-  InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
-  PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
 
   /***** Quantum Projection *****/
   QPFullWeight = (double complex*)malloc(sizeof(double complex)*(NQPFull+NQPFix+5*NSPGaussLeg));
@@ -402,15 +436,17 @@ void SetMemory() {
       SROptO  = SROptHO + 2*SROptSize;  //TBC
     }
 //for real
-    if(NSRCG==0){
-      SROptOO_real = (double*)malloc( sizeof(double )*SROptSize*(SROptSize+2)) ; //TBC
-      SROptHO_real = SROptOO_real + (SROptSize)*(SROptSize); //TBC
-      SROptO_real  = SROptHO_real + (SROptSize);  //TBC
-    }else{
-      // OO contains only <O_i> and <O_i O_i> in SR-CG
-      SROptOO_real = (double*)malloc( sizeof(double )*SROptSize*4) ; //TBC
-      SROptHO_real = SROptOO_real + SROptSize*2; //TBC
-      SROptO_real  = SROptHO_real + SROptSize;  //TBC
+    if (AllComplexFlag == 0){
+      if(NSRCG==0){
+        SROptOO_real = (double*)malloc( sizeof(double )*SROptSize*(SROptSize+2)) ; //TBC
+        SROptHO_real = SROptOO_real + (SROptSize)*(SROptSize); //TBC
+        SROptO_real  = SROptHO_real + (SROptSize);  //TBC
+      }else{
+        // OO contains only <O_i> and <O_i O_i> in SR-CG
+        SROptOO_real = (double*)malloc( sizeof(double )*SROptSize*4) ; //TBC
+        SROptHO_real = SROptOO_real + SROptSize*2; //TBC
+        SROptO_real  = SROptHO_real + SROptSize;  //TBC
+      }
     }
 
     if(NSRCG==1 || NStoreO!=0){
@@ -427,10 +463,12 @@ void SetMemory() {
   /***** Physical Quantity *****/
   if(NVMCCalMode==1){
     PhysCisAjs  = (double complex*)malloc(sizeof(double complex)
-                    *(NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NCisAjs+NCisAjsCktAltDC));
+                    *(NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NCisAjs+NCisAjsCktAltDC + NTwist));
     PhysCisAjsCktAlt   = PhysCisAjs       + NCisAjs;
     PhysCisAjsCktAltDC = PhysCisAjsCktAlt + NCisAjsCktAlt;
-    LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
+    PhysTwist = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
+    LocalCisAjs = PhysTwist + NTwist;
+    //LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
     LocalCisAjsCktAltDC = LocalCisAjs + NCisAjs;
 
     if(NLanczosMode>0){
@@ -481,6 +519,17 @@ void FreeMemory() {
   if(NVMCCalMode==0){
     free(SROptData);
     free(SROptOO);
+    //for real
+    if (AllComplexFlag == 0){
+        free(SROptOO_real);
+    }
+    if(NSRCG==1 || NStoreO!=0){
+      if(AllComplexFlag==0){ //real & sz=0
+        free(SROptO_Store_real);
+      }else{
+        free(SROptO_Store);
+      }
+    }
   }
 
   free(QPFullWeight);
@@ -488,11 +537,18 @@ void FreeMemory() {
   free(InvM);
   free(SlaterElm);
 
+  if (AllComplexFlag == 0){
+    free(InvM_real);
+    free(SlaterElm_real);
+  }
+
   free(BurnEleIdx);
   free(TmpEleIdx);
   free(logSqPfFullSlater);
   free(EleProjCnt);
   free(EleIdx);
+  free(EleNum);
+  free(EleSpn);
   free(EleCfg);
 
   free(Para);

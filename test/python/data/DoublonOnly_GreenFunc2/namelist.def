@@ -1,0 +1,5 @@
+         ModPara  modpara.def
+         LocSpin  locspn.def
+        TwoBodyG  greentwo.def
+         Orbital  orbitalidx.def
+        TransSym  qptransidx.def

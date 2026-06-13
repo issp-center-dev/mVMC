@@ -82,7 +82,7 @@ void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
   double complex e,ip;
-  double w;
+  double x,w;
   double sqrtw;
   double complex we;
 
@@ -148,9 +148,18 @@ void VMCMainCal(MPI_Comm comm) {
 #ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: LogProjVal \n",sample);
 #endif
+    x = LogProjVal(eleProjCnt);
     /* calculate reweight */
-    //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
-    w =1.0;
+    if (reweight==1){
+       w = 2.0*(log(cabs(ip))+x);
+       if (FlagRBM) {
+         w += 2.0*creal(LogWeightRBM(rbmCnt));
+       }
+       w = exp(w - logSqPfFullSlater[sample]);
+    }else{
+       w =1.0;
+    }
+
 #ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: isfinite \n",sample);
 #endif
@@ -587,18 +596,22 @@ void clearPhysQuantity(){
     vec = SROptOO;
     #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
-// only for real variables
-    if(NSRCG!=0){
-      n = (SROptSize)*4; // TBC
-    }else{
-      n = (SROptSize)*(SROptSize+2); // TBC
+    
+    if (AllComplexFlag == 0){
+    // only for real variables
+      if(NSRCG!=0){
+        n = (SROptSize)*4; // TBC
+      }else{
+        n = (SROptSize)*(SROptSize+2); // TBC
+      }
+      vec_real = SROptOO_real;
+      #pragma omp parallel for default(shared) private(i)
+      for(i=0;i<n;i++) vec_real[i] = 0.0;
     }
-    vec_real = SROptOO_real;
-    #pragma omp parallel for default(shared) private(i)
-    for(i=0;i<n;i++) vec_real[i] = 0.0;
   } else if(NVMCCalMode==1) {
     /* CisAjs, CisAjsCktAlt, CisAjsCktAltDC */
-    n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
+    //n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC;
+    n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC + NTwist;
     vec = PhysCisAjs;
 #pragma omp parallel for default(shared) private(i)
     for(i=0;i<n;i++) vec[i] = 0.0+0.0*I;
@@ -674,6 +687,21 @@ void calculateOO_Store_real(double *srOptOO_real, double *srOptHO_real, double *
       srOptOO_real[i] = 0.0;
       srOptOO_real[i+srOptSize] = 0.0;
     }
+    if(reweight==1){
+    for(j=0; j<sampleSize; ++j){
+      /* Store holds sqrt(w_j)*O; row 0 (O_0 = 1) gives sqrt(w_j),
+         so multiplying once more by it makes <O> w-weighted,
+         consistent with the dposv/GEMM paths. With reweight off
+         (w_j = 1) the original loop below is kept bit-identical. */
+      const double sqrtw = srOptO_Store_real[j*srOptSize];
+#pragma omp parallel for default(shared) private(i,o)
+#pragma loop noalias
+    for(i=0; i<srOptSize; ++i){
+      o = srOptO_Store_real[i+j*srOptSize];
+      srOptOO_real[i] += sqrtw*o;
+      srOptOO_real[i+srOptSize] += o*o;
+    }}
+    }else{
     for(j=0; j<sampleSize; ++j){
 #pragma omp parallel for default(shared) private(i,o)
 #pragma loop noalias
@@ -682,6 +710,7 @@ void calculateOO_Store_real(double *srOptOO_real, double *srOptHO_real, double *
       srOptOO_real[i] += o;
       srOptOO_real[i+srOptSize] += o*o;
     }}
+    }
   }
 
   return;
@@ -710,6 +739,21 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
       srOptOO[i] = 0.0;
       srOptOO[i+srOptSize] = 0.0;
     }
+    if(reweight==1){
+    for(j=0; j<sampleSize; ++j){
+      /* Store holds sqrt(w_j)*O; row 0 (O_0 = 1) gives sqrt(w_j),
+         so multiplying once more by it makes <O> w-weighted,
+         consistent with the dposv/GEMM paths. With reweight off
+         (w_j = 1) the original loop below is kept bit-identical. */
+      const double sqrtw = creal(srOptO_Store[j*srOptSize]);
+#pragma omp parallel for default(shared) private(i,o)
+#pragma loop noalias
+    for(i=0; i<srOptSize; ++i){
+      o = srOptO_Store[i+j*srOptSize];
+      srOptOO[i] += sqrtw*o;
+      srOptOO[i+srOptSize] += creal(o)*creal(o)+cimag(o)*cimag(o);
+    } }
+    }else{
     for(j=0; j<sampleSize; ++j){
 #pragma omp parallel for default(shared) private(i,o)
 #pragma loop noalias
@@ -718,6 +762,7 @@ void calculateOO_Store(double complex *srOptOO, double complex *srOptHO, double 
       srOptOO[i] += o;
       srOptOO[i+srOptSize] += creal(o)*creal(o)+cimag(o)*cimag(o);
     } }
+    }
   }
 
   return;
