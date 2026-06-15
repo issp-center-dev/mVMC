@@ -493,5 +493,5 @@ double complex GreenFunc1BF(const int ri, const int rj, const int s, const doubl
 
   StoreSlaterElmBF_fcmp(bufM);
 
-  return z/ip;
+  return conj(z/ip);
 }
