@@ -22,6 +22,7 @@ OBJS = \
 	$(PFUPDATES) $(LTL2INV)
 
 SOURCES = \
+backflow.c \
 average.c \
 avevar.c \
 calgrn.c \
@@ -69,6 +70,7 @@ vmcmake_real.c \
 workspace.c
 
 HEADERS = \
+./include/backflow.h \
 ./include/average.h \
 ./include/avevar.h \
 ./include/calgrn.h \
