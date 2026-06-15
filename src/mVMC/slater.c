@@ -281,7 +281,6 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
   double complex pTrans[Nsite2*Nsite2];
   double complex *pTrans_i;
 
-  double complex **etaTmp;
   int rki,rlj;
   const int nSite=Nsite;
   const int nRange=Nrange;
@@ -340,8 +339,13 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
   #pragma omp parallel for default(shared)        \
     private(qpidx,mpidx,spidx,cs,cc,ss,           \
             tOrbIdx,invM,buf,msi,msj,             \
-            ri,rj,rk,tri,trj,idx, \
-            tOrbIdx_i,invM_i,orbidx)
+            ri,rj,rk,rl,tri,trj,idx,              \
+            mi,mj,msk,msl,xn,xm,xk,xl,            \
+            rki,rlj,idx_ik,idx_jl,                \
+            bfCnt2_n,bfCnt3_m,bfidx,              \
+            dki,dlj,nidx,midx,xtmp,               \
+            xqp,xqpInv,orbitalIdx_i,orbitalSgn_i, \
+            orbsgn,tOrbIdx_i,invM_i,invM_k,orbidx)
   #pragma loop noalias
   for(qpidx=0;qpidx<nQPFull;qpidx++) {
     mpidx = qpidx / NSPGaussLeg;
@@ -357,8 +361,6 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
 //    tOrbSgn = transOrbSgn + mpidx*nsize*nsize;
     invM = InvM + qpidx*Nsize*Nsize;
     buf = buffer + qpidx*NSlater;
-    etaTmp = eta + qpidx*Nsite*Nsite;
-    //flagTmp = EtaFlag + qpidx*Nsite*Nsite;
 
        // if(slt_ij == 0.0){eta = 1.0;}
        // else{eta = ProjBF[0];}
@@ -386,9 +388,9 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
             invM_i = invM + msi*nsize;
             //buf[orbidx] -= tEta[tri][trj]*invM_i[msj]*cc;
             //printf("eta[%d][%d]",tri,trj);
-            //printf("=%.2e\n",etaTmp[tri][trj]);
-            buf[orbidx] -= etaTmp[tri][trj]*invM_i[msj]*cc*orbsgn;
-            //buf[orbidx] -= etaTmp[tri][trj]*invM_i[msj]*cc*tOrbSgn_i[msj];
+            //printf("=%.2e\n",eta[tri][trj]);
+            buf[orbidx] -= eta[tri][trj]*invM_i[msj]*cc*orbsgn;
+            //buf[orbidx] -= eta[tri][trj]*invM_i[msj]*cc*tOrbSgn_i[msj];
           }
 
           for(xn=0;xn<4;xn++){
@@ -540,14 +542,17 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
   int bfidx;
   //double bufM[NQPFull*16*Nsize*Nsize];
   double complex *bufM;
+  double complex *bufM_qp;
   double complex *bufM_i;
+  double complex *bfBuffer;
+  double complex *bfBuffer_i;
   //double complex trM0=0.0,trM1=0.0,trM2=0.0,trM3=0.0,trM4=0.0,trM5=0.0,trM6=0.0;
-  double complex trM[NProjBF];
   double complex pfM;
   int rki,rkj,rli,rlj;
   const int nSite=Nsite;
   const int nRange=Nrange;
   const int nSiteRange = nRange*nSite;
+  const int bufMStride = 16*nsize*nsize;
   int idx_ik,idx_jk,idx_il,idx_jl;
   const int *bfCnt0=eleProjBFCnt;
   const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
@@ -555,20 +560,23 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
   int **posBF = PosBF;
   int xk,xl,xn,xm;
   int dki,dlj,nidx,midx,itmp;
+  int i;
 
   RequestWorkSpaceInt(2*nTrans*Nsize*Nsize);
   //RequestWorkSpaceDouble(NQPFull*NSlater);
-  RequestWorkSpaceComplex(16*NQPFull*Nsize*Nsize);
+  RequestWorkSpaceComplex(NQPFull*NProjBF + 16*NQPFull*Nsize*Nsize);
 
   transOrbIdx = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbIdx[mpidx][msi][msj] */
   //transOrbSgn = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbSgn[mpidx][msi][msj] */
   //buffer = GetWorkSpaceDouble(NQPFull*NSlater);
+  bfBuffer = GetWorkSpaceComplex(NQPFull*NProjBF);
   bufM = GetWorkSpaceComplex(16*NQPFull*Nsize*Nsize);
 
-    for(bfidx=0;bfidx<NProjBF;bfidx++) {
-      srOptO[2*bfidx] = 0.0 + 0.0*I;
-      srOptO[2*bfidx+1] = 0.0 + 0.0*I;
-    }
+  for(i=0;i<NQPFull*NProjBF;i++) bfBuffer[i] = 0.0+0.0*I;
+  for(bfidx=0;bfidx<NProjBF;bfidx++) {
+    srOptO[2*bfidx] = 0.0 + 0.0*I;
+    srOptO[2*bfidx+1] = 0.0 + 0.0*I;
+  }
 
   #pragma omp parallel for default(shared)        \
     private(mpidx,msi,msj,xqp,ri,tri,rj,trj,      \
@@ -591,12 +599,18 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
   }
 
   #pragma omp parallel for default(shared)        \
-    private(qpidx,mpidx,           \
+    private(qpidx,mpidx,xqp,                  \
             tOrbIdx,invM,msi,msj,             \
-            tOrbIdx_i,invM_i)
+            ri,rj,tri,trj,invM_i,             \
+            bufM_qp,bufM_i,bfBuffer_i,pfM,    \
+            rki,rkj,rli,rlj,                  \
+            idx_ik,idx_jk,idx_il,idx_jl,      \
+            bfCnt0_n,bfCnt0_m,bfCnt1_n,bfCnt1_m, \
+            xk,xl,xn,xm,dki,dlj,nidx,midx,itmp,bfidx,tmp)
     //reduction(-:trM0,trM1,trM2)
   #pragma loop noalias
   for(qpidx=0;qpidx<nQPFull;qpidx++) {
+    double complex trM[NProjBF];
     mpidx = qpidx / NSPGaussLeg;
     xqp = QPTrans[mpidx];
 
@@ -605,6 +619,8 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
     invM = InvM + qpidx*Nsize*Nsize;
     //buf = buffer + qpidx*Nsize*Nsize;
     //buf = bufM + qpidx*Nsize*Nsize;
+    bufM_qp = bufM + qpidx*bufMStride;
+    bfBuffer_i = bfBuffer + qpidx*NProjBF;
     pfM = PfM[qpidx];
     //flagTmp = etaFlag + qpidx*Nsite*Nsite;
 
@@ -619,7 +635,7 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
       ri = eleIdx[msi];
       tri = xqp[ri];
       //rsi = ri + (msi/Ne)*Nsite;
-      bufM_i = bufM + msi*Nsize;
+      bufM_i = bufM_qp + msi*Nsize;
       invM_i = invM + msi*Nsize;
       #pragma loop norecurrence
       for(msj=ne;msj<nsize;msj++) {
@@ -635,10 +651,10 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
       }
     }
 
-     //printf("eta1\n");
+    //printf("eta1\n");
     /* Clear bufM */
-    for(msi=0;msi<16*nsize*nsize;msi++) {
-      bufM[msi]=0.0+0.0*I;
+    for(msi=0;msi<bufMStride;msi++) {
+      bufM_qp[msi]=0.0+0.0*I;
     }
     /* store bufM */
     /* Note that bufM is row-major and skew-symmetric. */
@@ -648,7 +664,7 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
       ri = eleIdx[msi];
       tri = xqp[ri];
       //rsi = eleIdx[msi] + (msi/Ne)*Nsite;
-      bufM_i = bufM + msi*Nsize;
+      bufM_i = bufM_qp + msi*Nsize;
       invM_i = invM + msi*Nsize;
       //xid = n0[tri]*n1[tri];
       #pragma loop norecurrence
@@ -707,10 +723,17 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
     }
     //TODO: Check
     for(bfidx=0;bfidx<NProjBF;bfidx++) {
-      srOptO[2*bfidx]+=0.5*trM[bfidx]*pfM*invIP;
-      srOptO[2*bfidx+1]+=0.5*trM[bfidx]*pfM*invIP*I;
+      bfBuffer_i[bfidx] = 0.5*QPFullWeight[qpidx]*trM[bfidx]*pfM*invIP;
     }
   }//QP
+
+  for(qpidx=0;qpidx<nQPFull;qpidx++) {
+    bfBuffer_i = bfBuffer + qpidx*NProjBF;
+    for(bfidx=0;bfidx<NProjBF;bfidx++) {
+      srOptO[2*bfidx] += bfBuffer_i[bfidx];
+      srOptO[2*bfidx+1] += bfBuffer_i[bfidx]*I;
+    }
+  }
 
   ReleaseWorkSpaceInt();
   ReleaseWorkSpaceComplex();
@@ -763,11 +786,13 @@ void MakeSlaterElmBF_fcmp(const int *eleNum, const int *eleProjBFCnt) {
         SubSlaterElmBF_fcmp(tri,trj,&slt_ij,&icount,&slt_ji,&jcount,eleProjBFCnt);
         //printf("icount=%d, slt_ij=%.2e\n",icount,slt_ij);
 
-        if(icount == 0){eta[tri][trj] = 1.0;  etaFlag[tri][trj]=0;}
-        else{eta[tri][trj] = creal(ProjBF[0]); etaFlag[tri][trj]=1;}
+        if(qpidx == 0) {
+          if(icount == 0){eta[tri][trj] = 1.0;  etaFlag[tri][trj]=0;}
+          else{eta[tri][trj] = creal(ProjBF[0]); etaFlag[tri][trj]=1;}
 
-        if(jcount == 0){eta[trj][tri] = 1.0; etaFlag[trj][tri]=0;}
-        else{eta[trj][tri] = creal(ProjBF[0]); etaFlag[trj][tri]=1;}
+          if(jcount == 0){eta[trj][tri] = 1.0; etaFlag[trj][tri]=0;}
+          else{eta[trj][tri] = creal(ProjBF[0]); etaFlag[trj][tri]=1;}
+        }
 
         sltE_i0[rsj0] = -(slt_ij - slt_ji)*cs;
         sltE_i0[rsj1] = slt_ij*cc + slt_ji*ss;
