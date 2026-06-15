@@ -12,6 +12,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_doublon_only.py DESTINATION ${CMAK
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_reweight.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_rescale.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_sector_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -62,6 +63,11 @@ function(add_python_vmc_test_lanczos_expert model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos_expert.py ${model})
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_vmc_test_lanczos_expert)
+
+function(add_python_vmc_test_lanczos_sector_ed test_name)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos_sector_ed.py)
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_lanczos_sector_ed)
 
 function(add_python_vmc_test_doublon_only_mpi test_name model)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_doublon_only.py ${model})
@@ -205,6 +211,7 @@ add_python_vmc_test_lanczos_expert(TJChainL4_Ncond2_J_path4_Lanczos)
 add_python_vmc_test_lanczos_expert(TJChainL4_Ncond2_J_path5_Lanczos)
 add_python_vmc_test_lanczos_expert(TJChainL4_Ncond2_J_path4_Lanczos2)
 add_python_vmc_test_lanczos_expert(DoublonOnly_Lanczos)
+add_python_vmc_test_lanczos_sector_ed(LanczosSectorED)
 
 foreach(model ${python_test_vmc_model_sr})
     add_python_vmc_test_sr(${model})
