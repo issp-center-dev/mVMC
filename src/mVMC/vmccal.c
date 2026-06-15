@@ -28,6 +28,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_VMCCAL
 #define _SRC_VMCCAL
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "vmccal.h"
 #include "matrix.h"
 #include "calham_real.h"
@@ -78,6 +81,72 @@ void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const
                        const int nLSHam, const int nCA, const int nCACA,
                        int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
                        const double complex h1, const double complex ip,double complex *rbmCnt);
+
+static void dumpBFIdentityCheck(const char *path, const int *eleIdx,
+                                const int qpStart, const int qpEnd) {
+  FILE *fp;
+  double complex *pfNoBF;
+  double complex *pfBF;
+  double maxSlaterDiff = 0.0;
+  double maxPfDiff = 0.0;
+  int nanCount = 0;
+  int infoNoBF;
+  int infoBF;
+  int i;
+  int totalSlater = NQPFull * Nsite2 * Nsite2;
+
+  if (path == NULL || path[0] == '\0') return;
+
+  pfNoBF = (double complex *)malloc(sizeof(double complex) * (size_t)NQPFull);
+  pfBF = (double complex *)malloc(sizeof(double complex) * (size_t)NQPFull);
+  if (pfNoBF == NULL || pfBF == NULL) {
+    fprintf(stderr, "Error: memory allocation failed for BackFlow identity dump.\n");
+    free(pfNoBF);
+    free(pfBF);
+    return;
+  }
+
+  for (i = 0; i < totalSlater; i++) {
+    double diff = cabs(SlaterElm[i] - SlaterElmBF[i]);
+    if (!isfinite(diff)) {
+      nanCount++;
+    } else if (diff > maxSlaterDiff) {
+      maxSlaterDiff = diff;
+    }
+  }
+
+  infoNoBF = CalculateMAll_fcmp(eleIdx, qpStart, qpEnd);
+  for (i = 0; i < NQPFull; i++) pfNoBF[i] = PfM[i];
+
+  infoBF = CalculateMAll_BF_fcmp(eleIdx, qpStart, qpEnd);
+  for (i = 0; i < NQPFull; i++) pfBF[i] = PfM[i];
+
+  for (i = 0; i < NQPFull; i++) {
+    double diff = cabs(pfNoBF[i] - pfBF[i]);
+    if (!isfinite(diff)) {
+      nanCount++;
+    } else if (diff > maxPfDiff) {
+      maxPfDiff = diff;
+    }
+  }
+
+  fp = fopen(path, "w");
+  if (fp == NULL) {
+    fprintf(stderr, "Error: failed to open BackFlow identity dump file: %s\n", path);
+  } else {
+    fprintf(fp, "info_no_bf %d\n", infoNoBF);
+    fprintf(fp, "info_bf %d\n", infoBF);
+    fprintf(fp, "nqp_full %d\n", NQPFull);
+    fprintf(fp, "nsite2 %d\n", Nsite2);
+    fprintf(fp, "max_abs_slater_diff %.17e\n", maxSlaterDiff);
+    fprintf(fp, "max_abs_pf_diff %.17e\n", maxPfDiff);
+    fprintf(fp, "nan_count %d\n", nanCount);
+    fclose(fp);
+  }
+
+  free(pfNoBF);
+  free(pfBF);
+}
 
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
@@ -339,6 +408,8 @@ void VMC_BF_MainCal(MPI_Comm comm) {
   double w, db;
   double we, sqrtw;
   int int_i, sampleSize, tmp_i;
+  int bfIdentityDumped = 0;
+  const char *bfIdentityDumpPath = getenv("MVMC_BF_IDENTITY_DUMP");
   const int qpStart = 0;
   const int qpEnd = NQPFull;
   int sample, sampleStart, sampleEnd;
@@ -381,6 +452,12 @@ void VMC_BF_MainCal(MPI_Comm comm) {
     StartTimer(45);
     MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
     StopTimer(45);
+
+    if (rank == 0 && !bfIdentityDumped &&
+        bfIdentityDumpPath != NULL && bfIdentityDumpPath[0] != '\0') {
+      dumpBFIdentityCheck(bfIdentityDumpPath, eleIdx, qpStart, qpEnd);
+      bfIdentityDumped = 1;
+    }
 
     StartTimer(40);
     if (AllComplexFlag == 0) {

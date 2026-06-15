@@ -12,6 +12,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_doublon_only.py DESTINATION ${CMAK
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_reweight.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_rescale.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/backflow_def_helper.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -83,6 +84,21 @@ function(add_python_backflow_helper_test test_name)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} backflow_def_helper.py --self-test)
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_backflow_helper_test)
+
+function(add_python_vmc_test_bf test_name model)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model})
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_bf)
+
+function(add_python_vmc_test_bf_mpi test_name model)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model})
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2")
+endfunction(add_python_vmc_test_bf_mpi)
+
+function(add_python_vmc_test_invalid_bf model expected_error)
+    add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --expect-error "${expected_error}")
+    set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_invalid_bf)
 
 
 function(add_python_uhf_test model)
@@ -226,9 +242,12 @@ add_python_vmc_test_invalid_expert(DoublonOnly_InvalidLocSpin "NLocalSpin > 0")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidOrbitalGeneral "OrbitalGeneral=1")
 
 add_python_backflow_helper_test(BackFlow_Helper_ChainNN)
+add_python_vmc_test_bf(BackFlow_Identity_Complex BackFlow_Identity_Complex)
+add_python_vmc_test_bf_mpi(BackFlow_Identity_Complex_mpi BackFlow_Identity_Complex)
+add_python_vmc_test_invalid_bf(BackFlow_InvalidReal "AllComplexFlag != 0")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidLanczos "NLanczosMode > 0")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidRBM "not compatible with RBM")
-add_python_vmc_test_invalid_expert(BackFlow_Disabled "Back Flow is not supported")
+add_python_vmc_test_invalid_expert(BackFlow_InvalidSpinProjection "NSPGaussLeg==1")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path4_InvalidLanczos "NLanczosMode > 0")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path5_InvalidLanczos "NLanczosMode > 0")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond4_J_path4_InvalidFullFilling "requires 2*Ne < Nsite")
