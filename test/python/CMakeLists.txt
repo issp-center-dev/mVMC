@@ -162,6 +162,11 @@ function(add_python_vmc_test_bf_energy_omp_nqp test_name model omp_threads nqp_f
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads}")
 endfunction(add_python_vmc_test_bf_energy_omp_nqp)
 
+function(add_python_vmc_test_bf_energy_clean_omp_nqp test_name model omp_threads nqp_full)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --expect-nqp-full ${nqp_full} --compare-no-bf-energy --reject-output "StcOpt:" --reject-output "Error:" --reject-output "error:" --reject-output "warning:" --reject-output "waring:")
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads}")
+endfunction(add_python_vmc_test_bf_energy_clean_omp_nqp)
+
 function(add_python_vmc_test_bf_gradient_omp_nqp test_name model omp_threads nqp_full)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --expect-nqp-full ${nqp_full} --compare-no-bf-gradient)
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads}")
@@ -335,6 +340,7 @@ add_python_vmc_test_bf_nqp(BackFlow_Identity_Complex_MultiQP BackFlow_Identity_C
 add_python_vmc_test_bf_mpi(BackFlow_Identity_Complex_mpi BackFlow_Identity_Complex)
 add_python_vmc_test_bf_energy_omp_nqp(BackFlow_IdentityEnergy_Real BackFlow_Identity_Real 1 1)
 add_python_vmc_test_bf(BackFlow_Optimization_Complex BackFlow_Optimization_Complex)
+add_python_vmc_test_bf_energy_clean_omp_nqp(BackFlow_Optimization_Real BackFlow_Optimization_Real 1 1)
 add_python_vmc_test_bf_omp_nqp(BackFlow_Optimization_Complex_MultiQP_omp4 BackFlow_Optimization_Complex_MultiQP 4 2)
 add_python_vmc_test_bf_energy_omp_nqp(BackFlow_Optimization_IdentityEnergy_MultiQP_omp4 BackFlow_Optimization_Complex_MultiQP 4 2)
 add_python_vmc_test_bf_gradient_omp_nqp(BackFlow_Optimization_IdentityGradient_MultiQP_omp4 BackFlow_Optimization_Complex_MultiQP 4 2)
