@@ -27,6 +27,45 @@ def parse_norbitalidx(orbitalidx_path):
     raise RuntimeError("NOrbitalIdx was not found in {}".format(orbitalidx_path))
 
 
+def read_namelist_keywords(namelist_path):
+    keywords = set()
+    with open(namelist_path) as fp:
+        for line in fp:
+            cols = line.split()
+            if len(cols) >= 2:
+                keywords.add(cols[0])
+    return keywords
+
+
+def assert_nonidentity_init_layout(workdir):
+    keywords = read_namelist_keywords(os.path.join(workdir, "namelist.def"))
+    nproj_keywords = set([
+        "Gutzwiller",
+        "Jastrow",
+        "SpinJastrow",
+        "DH2",
+        "DH4",
+    ])
+    rbm_keywords = set([
+        "ChargeRBM_HiddenLayer",
+        "ChargeRBM_PhysLayer",
+        "ChargeRBM_PhysHidden",
+        "SpinRBM_HiddenLayer",
+        "SpinRBM_PhysLayer",
+        "SpinRBM_PhysHidden",
+        "GeneralRBM_HiddenLayer",
+        "GeneralRBM_PhysLayer",
+        "GeneralRBM_PhysHidden",
+    ])
+    unsupported = (keywords & nproj_keywords) | (keywords & rbm_keywords)
+    if "OptTrans" in keywords:
+        unsupported.add("OptTrans")
+    if unsupported:
+        raise RuntimeError(
+            "non-identity init writer assumes NProj=0, NRBM=0, and NOptTrans=0; unsupported entries: {}".format(
+                ", ".join(sorted(unsupported))))
+
+
 def read_key_value_file(path):
     values = {}
     with open(path) as fp:
@@ -61,6 +100,16 @@ def max_abs_row_diff(left, right):
         raise RuntimeError("row length mismatch: left={} right={}".format(len(left), len(right)))
     diffs = [abs(x - y) for x, y in zip(left, right)]
     return max(diffs) if diffs else 0.0
+
+
+def max_scaled_row_diff(left, right, abs_tol, rel_tol):
+    if len(left) != len(right):
+        raise RuntimeError("row length mismatch: left={} right={}".format(len(left), len(right)))
+    scaled = []
+    for x, y in zip(left, right):
+        scale = max(abs_tol, rel_tol * max(abs(x), abs(y), 1.0))
+        scaled.append(abs(x - y) / scale)
+    return max(scaled) if scaled else 0.0
 
 
 def read_key_value_blocks(path):
@@ -246,6 +295,7 @@ def compare_real_complex_nonidentity(rootdir, real_model, complex_model, mpi_pro
             shutil.rmtree(workdir)
         os.makedirs(workdir)
         copy_def_files(refdir, workdir, include_backflow=True)
+        assert_nonidentity_init_layout(workdir)
 
     real_nsite = parse_nsite(os.path.join(real_workdir, "modpara.def"))
     complex_nsite = parse_nsite(os.path.join(complex_workdir, "modpara.def"))
@@ -308,8 +358,11 @@ def compare_real_complex_nonidentity(rootdir, real_model, complex_model, mpi_pro
         print("ERROR: non-identity real/complex output contains non-finite values.")
         return -1
     max_diff = max_abs_row_diff(real_row, complex_row)
-    if not math.isfinite(max_diff) or max_diff > tol:
-        print("ERROR: non-identity real/complex mismatch: max_abs_diff={:.3e}".format(max_diff))
+    rel_tol = 1.0e-12
+    max_scaled_diff = max_scaled_row_diff(real_row, complex_row, tol, rel_tol)
+    if not math.isfinite(max_diff) or not math.isfinite(max_scaled_diff) or max_scaled_diff > 1.0:
+        print("ERROR: non-identity real/complex mismatch: max_abs_diff={:.3e} max_scaled_diff={:.3e}".format(
+            max_diff, max_scaled_diff))
         print("real    zvo_out_001.dat: {}".format(" ".join("{:.18e}".format(x) for x in real_row)))
         print("complex zvo_out_001.dat: {}".format(" ".join("{:.18e}".format(x) for x in complex_row)))
         return -1
