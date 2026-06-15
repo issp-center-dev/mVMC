@@ -40,13 +40,23 @@ def first_row_is_finite(path):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
     expected_error = None
-    if len(sys.argv) >= 4 and sys.argv[2] == "--expect-error":
-        expected_error = sys.argv[3]
+    expected_nqp_full = None
+    argi = 2
+    while argi < len(sys.argv):
+        if sys.argv[argi] == "--expect-error" and argi + 1 < len(sys.argv):
+            expected_error = sys.argv[argi + 1]
+            argi += 2
+        elif sys.argv[argi] == "--expect-nqp-full" and argi + 1 < len(sys.argv):
+            expected_nqp_full = int(sys.argv[argi + 1])
+            argi += 2
+        else:
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>]".format(sys.argv[0]))
+            return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
     mpi_procs = os.environ.get("MVMC_MPI_PROCS")
@@ -106,11 +116,15 @@ def main():
     values = read_key_value_file(dump_path)
     info_no_bf = int(values.get("info_no_bf", "-1"))
     info_bf = int(values.get("info_bf", "-1"))
+    nqp_full = int(values.get("nqp_full", "-1"))
     nan_count = int(values.get("nan_count", "-1"))
     max_slater = float(values.get("max_abs_slater_diff", "nan"))
     max_pf = float(values.get("max_abs_pf_diff", "nan"))
     tol = 1.0e-10
 
+    if expected_nqp_full is not None and nqp_full != expected_nqp_full:
+        print("ERROR: unexpected nqp_full: got {} expected {}".format(nqp_full, expected_nqp_full))
+        return -1
     if info_no_bf != 0 or info_bf != 0:
         print("ERROR: identity dump matrix calculation failed: no_bf={} bf={}".format(info_no_bf, info_bf))
         return -1
