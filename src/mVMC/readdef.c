@@ -36,8 +36,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "./include/global.h"
 #include "safempi_fcmp.c"
 
-#define _NOTBACKFLOW
-
 char (*cFileNameListFile)[D_CharTmpReadDef] = NULL;
 
 int ReadDefFileError(const char *defname);
@@ -1115,11 +1113,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   }
 
   {
-#ifdef _NOTBACKFLOW
-    const int backflowSupported = 0;
-#else
     const int backflowSupported = 1;
-#endif
     int bfInfo = 0;
     if (rank == 0) {
       bfInfo = BFValidateSettings(hasBF, hasBFRange, backflowSupported);
