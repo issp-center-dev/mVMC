@@ -31,6 +31,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+#include "./include/backflow.h"
 #include "./include/readdef.h"
 #include "./include/global.h"
 #include "safempi_fcmp.c"
@@ -373,6 +374,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   int iKWidx = 0;
   int iret = 0;
   int hasLattice = 0;
+  int hasBF = 0;
+  int hasBFRange = 0;
   int iFlgOrbitalAntiParallel = 0;
   int iFlgOrbitalParallel = 0;
   int itmp = 0;
@@ -404,6 +407,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
     }
     hasLattice = (strcmp(cFileNameListFile[KWLattice], "") != 0);
+    hasBF = (strcmp(cFileNameListFile[KWBF], "") != 0);
+    hasBFRange = (strcmp(cFileNameListFile[KWBFRange], "") != 0);
 
     SetDefaultValuesModPara(bufInt, bufDouble);
     iret = GetInfoFromModPara(bufInt, bufDouble);
@@ -647,35 +652,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             break;
 
           case KWBFRange:
-#ifdef _NOTBACKFLOW
-            if (bufInt[IdxNNBodyInterAll] > 0) {
-              fprintf(stderr,
-                      "Error: NBodyInterAll is not implemented for BackFlow local energy "
-                      "(NNBodyInterAll=%d).\n",
-                      bufInt[IdxNNBodyInterAll]);
+            cerr = fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
+            if (cerr != NULL) {
+              cerr = fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
+              if (cerr != NULL) {
+                sscanf(ctmp2,"%s %d %d\n", ctmp, &bufInt[IdxNrange], &bufInt[IdxNNz]);
+              }
             }
-            fprintf(stderr, "Error: Back Flow is not supported.\n");
-            info = ReadDefFileError(defname);
-#else
-          fgets(ctmp, sizeof(ctmp)/sizeof(char), fp);
-          fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp);
-          sscanf(ctmp2,"%s %d %d\n", ctmp, &bufInt[IdxNrange], &bufInt[IdxNNz]);
-#endif
             break;
 
           case KWBF:
-#ifdef _NOTBACKFLOW
-            if (bufInt[IdxNNBodyInterAll] > 0) {
-              fprintf(stderr,
-                      "Error: NBodyInterAll is not implemented for BackFlow local energy "
-                      "(NNBodyInterAll=%d).\n",
-                      bufInt[IdxNNBodyInterAll]);
-            }
-            fprintf(stderr, "Error: Back Flow is not supported.\n");
-            info = ReadDefFileError(defname);
-#else
             cerr = ReadBuffInt(fp, &bufInt[IdxNBF]);
-#endif
             break;
 
           default:
@@ -879,6 +866,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
   MPI_Bcast(&hasLattice, 1, MPI_INT, 0, comm);
+  MPI_Bcast(&hasBF, 1, MPI_INT, 0, comm);
+  MPI_Bcast(&hasBFRange, 1, MPI_INT, 0, comm);
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
   MPI_Bcast(CDataFileHead, nBufChar, MPI_CHAR, 0, comm);
   MPI_Bcast(CParaFileHead, nBufChar, MPI_CHAR, 0, comm);
@@ -1104,6 +1093,24 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     APFlag = 0;
   }
 
+  {
+#ifdef _NOTBACKFLOW
+    const int backflowSupported = 0;
+#else
+    const int backflowSupported = 1;
+#endif
+    int bfInfo = 0;
+    if (rank == 0) {
+      bfInfo = BFValidateSettings(hasBF, hasBFRange, backflowSupported);
+    }
+#ifdef _mpi_use
+    MPI_Bcast(&bfInfo, 1, MPI_INT, 0, comm);
+#endif
+    if (bfInfo != 0) {
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+  }
+
   if (NSRCG == 2){
     useDiagScale = 1;
     NSRCG = 1;
@@ -1184,17 +1191,9 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           + 2 * 5 * NDoublonHolon4siteIdx;
   NOptTrans = (FlagOptTrans > 0) ? NQPOptTrans : 0;
 
-  /* [s] For BackFlow */
-  if (NBackFlowIdx > 0) {
-    NrangeIdx = 3 * (Nrange - 1) / NzBF + 1; //For BF connectivity
-    NBFIdxTotal = (NrangeIdx - 1) * (NrangeIdx) / 2 + (NrangeIdx);
-    NProjBF = NBFIdxTotal * NBackFlowIdx;
-  } else {
-    NrangeIdx = 0;
-    NBFIdxTotal = 0;
-    NProjBF = 0;
+  if (BFComputeSizes(NBackFlowIdx, Nrange, NzBF, &NrangeIdx, &NBFIdxTotal, &NProjBF) != 0) {
+    MPI_Abort(comm, EXIT_FAILURE);
   }
-  /* [e] For BackFlow */
 
   /* BackFlow is experimental: VMC_BF_MainCal/CalculateGreenFuncBF do not
      implement reweight or Twist yet, so warn instead of silently ignoring. */
@@ -1273,9 +1272,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     NTotalDefInt += (2 * Nsite) * (2 * Nsite); //OrbitalSgn
   }
 
-  if (NBackFlowIdx > 0) {
-    NTotalDefInt += Nsite * Nsite * Nsite * Nsite; /* BackflowIdx */
-  }
+  NTotalDefInt += BFDefIntCount();
 
   NTotalDefDouble =
       NCoulombIntra /* ParaCoulombIntra */

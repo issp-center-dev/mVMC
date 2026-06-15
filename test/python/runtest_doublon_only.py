@@ -58,10 +58,13 @@ def main():
     rootdir = os.getcwd()
     model = sys.argv[1]
     force_complex = "--complex-orbital" in sys.argv[2:]
+    mpi_procs = os.environ.get("MVMC_MPI_PROCS")
     refdir = os.path.join(rootdir, "data", model)
     workdir = os.path.join(rootdir, "work", model)
     if force_complex:
         workdir += "_complex"
+    if mpi_procs:
+        workdir += "_mpi{}".format(mpi_procs)
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
@@ -75,7 +78,6 @@ def main():
     cmd = [bin_to_test, "-e", "namelist.def"]
     if os.path.exists("initial.def"):
         cmd.append("initial.def")
-    mpi_procs = os.environ.get("MVMC_MPI_PROCS")
     if mpi_procs:
         cmd = ["mpirun", "-np", mpi_procs] + cmd
     proc = subprocess.run(
