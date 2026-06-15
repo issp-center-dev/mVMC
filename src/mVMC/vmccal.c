@@ -148,6 +148,266 @@ static void dumpBFIdentityCheck(const char *path, const int *eleIdx,
   free(pfBF);
 }
 
+static void dumpBFSlaterDiffCheck(const char *path, int *eleIdx, int *eleNum,
+                                  int *eleCfg, int *eleProjCnt,
+                                  const int *eleProjBFCnt,
+                                  const int qpStart, const int qpEnd,
+                                  const int sample, const int append) {
+  FILE *fp;
+  double complex *diffNoBF;
+  double complex *diffBF;
+  double complex *diffBFMainOrder;
+  double complex ipNoBF;
+  double complex ipBF;
+  double complex eNoBF = 0.0 + 0.0*I;
+  double complex eBF = 0.0 + 0.0*I;
+  double maxDiff = 0.0;
+  double maxMainOrderDiff = 0.0;
+  int nanCount = 0;
+  int maxIdx = -1;
+  int maxMainOrderIdx = -1;
+  int infoNoBF;
+  int infoBF;
+  int i;
+
+  if (path == NULL || path[0] == '\0') return;
+
+  diffNoBF = (double complex *)calloc((size_t)2 * (size_t)NSlater, sizeof(double complex));
+  diffBF = (double complex *)calloc((size_t)2 * (size_t)NSlater, sizeof(double complex));
+  diffBFMainOrder = (double complex *)calloc((size_t)2 * (size_t)(NProjBF + NSlater), sizeof(double complex));
+  if (diffNoBF == NULL || diffBF == NULL || diffBFMainOrder == NULL) {
+    fprintf(stderr, "Error: memory allocation failed for BackFlow diff dump.\n");
+    free(diffNoBF);
+    free(diffBF);
+    free(diffBFMainOrder);
+    return;
+  }
+
+  infoNoBF = CalculateMAll_fcmp(eleIdx, qpStart, qpEnd);
+  ipNoBF = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+  if (infoNoBF == 0) {
+    SlaterElmDiff_fcmp(diffNoBF, ipNoBF, eleIdx);
+    eNoBF = CalculateHamiltonian(ipNoBF, eleIdx, eleCfg, eleNum, eleProjCnt, NULL);
+  }
+
+  infoBF = CalculateMAll_BF_fcmp(eleIdx, qpStart, qpEnd);
+  ipBF = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+  if (infoBF == 0) {
+    SlaterElmBFDiff_fcmp(diffBF, ipBF, eleIdx, eleNum, eleCfg, eleProjCnt, eleProjBFCnt);
+    BackFlowDiff_fcmp(diffBFMainOrder, ipBF, eleIdx, eleNum, eleProjCnt, eleProjBFCnt);
+    SlaterElmBFDiff_fcmp(diffBFMainOrder + 2 * NProjBF, ipBF, eleIdx, eleNum, eleCfg, eleProjCnt, eleProjBFCnt);
+    eBF = CalculateHamiltonianBF_fcmp(ipBF, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt);
+  }
+
+  for (i = 0; i < 2 * NSlater; i++) {
+    double diff = cabs(diffBF[i] - diffNoBF[i]);
+    if (!isfinite(diff)) {
+      nanCount++;
+    } else if (diff > maxDiff) {
+      maxDiff = diff;
+      maxIdx = i;
+    }
+    diff = cabs(diffBFMainOrder[2 * NProjBF + i] - diffNoBF[i]);
+    if (!isfinite(diff)) {
+      nanCount++;
+    } else if (diff > maxMainOrderDiff) {
+      maxMainOrderDiff = diff;
+      maxMainOrderIdx = i;
+    }
+  }
+
+  fp = fopen(path, append ? "a" : "w");
+  if (fp == NULL) {
+    fprintf(stderr, "Error: failed to open BackFlow diff dump file: %s\n", path);
+  } else {
+    fprintf(fp, "sample %d\n", sample);
+    fprintf(fp, "info_no_bf %d\n", infoNoBF);
+    fprintf(fp, "info_bf %d\n", infoBF);
+    fprintf(fp, "nslater %d\n", NSlater);
+    fprintf(fp, "max_abs_slater_diff_o %.17e\n", maxDiff);
+    fprintf(fp, "max_idx %d\n", maxIdx);
+    fprintf(fp, "max_abs_main_order_slater_diff_o %.17e\n", maxMainOrderDiff);
+    fprintf(fp, "max_main_order_idx %d\n", maxMainOrderIdx);
+    fprintf(fp, "nan_count %d\n", nanCount);
+    fprintf(fp, "e_no_bf %.17e %.17e\n", creal(eNoBF), cimag(eNoBF));
+    fprintf(fp, "e_bf %.17e %.17e\n", creal(eBF), cimag(eBF));
+    fprintf(fp, "abs_energy_diff %.17e\n", cabs(eBF - eNoBF));
+    if (maxIdx >= 0) {
+      fprintf(fp, "no_bf_at_max %.17e %.17e\n",
+              creal(diffNoBF[maxIdx]), cimag(diffNoBF[maxIdx]));
+      fprintf(fp, "bf_at_max %.17e %.17e\n",
+              creal(diffBF[maxIdx]), cimag(diffBF[maxIdx]));
+    }
+    fprintf(fp, "\n");
+    fclose(fp);
+  }
+
+  free(diffNoBF);
+  free(diffBF);
+  free(diffBFMainOrder);
+}
+
+static int calculateBFIPForFD(int *eleIdx, int *eleNum, const int *eleProjBFCnt,
+                              const int qpStart, const int qpEnd,
+                              double complex *ip) {
+  int info;
+
+  MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
+  info = CalculateMAll_BF_fcmp(eleIdx, qpStart, qpEnd);
+  *ip = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+  return info;
+}
+
+static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
+                                        int *eleNum, int *eleProjCnt,
+                                        const int *eleProjBFCnt,
+                                        const int qpStart, const int qpEnd,
+                                        const int sample, const int append) {
+  FILE *fp;
+  double complex *analytic;
+  double complex *projBFStore;
+  double complex ip0 = 0.0 + 0.0*I;
+  double complex ipPlus = 0.0 + 0.0*I;
+  double complex ipMinus = 0.0 + 0.0*I;
+  double complex fd;
+  double complex analyticAtMax = 0.0 + 0.0*I;
+  double complex fdAtMax = 0.0 + 0.0*I;
+  const double h = 1.0e-6;
+  double maxRealDiff = 0.0;
+  double maxImagDiff = 0.0;
+  double maxDiff = 0.0;
+  double maxFDAbs = 0.0;
+  int maxRealIdx = -1;
+  int maxImagIdx = -1;
+  int maxIdx = -1;
+  int maxIsImag = 0;
+  int nonzeroFDCount = 0;
+  int nanCount = 0;
+  int fdFailCount = 0;
+  int infoBase;
+  int infoPlus;
+  int infoMinus;
+  int idx;
+
+  if (path == NULL || path[0] == '\0') return;
+  if (NProjBF <= 0 || ProjBF == NULL) return;
+
+  analytic = (double complex *)calloc((size_t)2 * (size_t)NProjBF, sizeof(double complex));
+  projBFStore = (double complex *)calloc((size_t)NProjBF, sizeof(double complex));
+  if (analytic == NULL || projBFStore == NULL) {
+    fprintf(stderr, "Error: memory allocation failed for BackFlow finite-difference dump.\n");
+    free(analytic);
+    free(projBFStore);
+    return;
+  }
+
+  for (idx = 0; idx < NProjBF; idx++) projBFStore[idx] = ProjBF[idx];
+
+  infoBase = calculateBFIPForFD(eleIdx, eleNum, eleProjBFCnt, qpStart, qpEnd, &ip0);
+  if (infoBase == 0 && isfinite(creal(ip0)) && isfinite(cimag(ip0)) && cabs(ip0) > 0.0) {
+    BackFlowDiff_fcmp(analytic, ip0, eleIdx, eleNum, eleProjCnt, eleProjBFCnt);
+    for (idx = 0; idx < NProjBF; idx++) {
+      double diff;
+
+      ProjBF[idx] = projBFStore[idx] + h;
+      infoPlus = calculateBFIPForFD(eleIdx, eleNum, eleProjBFCnt, qpStart, qpEnd, &ipPlus);
+      ProjBF[idx] = projBFStore[idx] - h;
+      infoMinus = calculateBFIPForFD(eleIdx, eleNum, eleProjBFCnt, qpStart, qpEnd, &ipMinus);
+      ProjBF[idx] = projBFStore[idx];
+      if (infoPlus != 0 || infoMinus != 0 ||
+          !isfinite(creal(ipPlus)) || !isfinite(cimag(ipPlus)) ||
+          !isfinite(creal(ipMinus)) || !isfinite(cimag(ipMinus))) {
+        fdFailCount++;
+      } else {
+        fd = ((ipPlus - ipMinus) / (2.0 * h)) / ip0;
+        diff = cabs(fd - analytic[2 * idx]);
+        if (!isfinite(diff) || !isfinite(cabs(fd))) {
+          nanCount++;
+        } else {
+          if (cabs(fd) > 1.0e-12) nonzeroFDCount++;
+          if (cabs(fd) > maxFDAbs) maxFDAbs = cabs(fd);
+          if (diff > maxRealDiff) {
+            maxRealDiff = diff;
+            maxRealIdx = idx;
+          }
+          if (diff > maxDiff) {
+            maxDiff = diff;
+            maxIdx = idx;
+            maxIsImag = 0;
+            analyticAtMax = analytic[2 * idx];
+            fdAtMax = fd;
+          }
+        }
+      }
+
+      if (idx == 0) continue; /* ProjBF[0] imaginary part is fixed by the input contract. */
+      ProjBF[idx] = projBFStore[idx] + I * h;
+      infoPlus = calculateBFIPForFD(eleIdx, eleNum, eleProjBFCnt, qpStart, qpEnd, &ipPlus);
+      ProjBF[idx] = projBFStore[idx] - I * h;
+      infoMinus = calculateBFIPForFD(eleIdx, eleNum, eleProjBFCnt, qpStart, qpEnd, &ipMinus);
+      ProjBF[idx] = projBFStore[idx];
+      if (infoPlus != 0 || infoMinus != 0 ||
+          !isfinite(creal(ipPlus)) || !isfinite(cimag(ipPlus)) ||
+          !isfinite(creal(ipMinus)) || !isfinite(cimag(ipMinus))) {
+        fdFailCount++;
+      } else {
+        fd = ((ipPlus - ipMinus) / (2.0 * h)) / ip0;
+        diff = cabs(fd - analytic[2 * idx + 1]);
+        if (!isfinite(diff) || !isfinite(cabs(fd))) {
+          nanCount++;
+        } else {
+          if (cabs(fd) > 1.0e-12) nonzeroFDCount++;
+          if (cabs(fd) > maxFDAbs) maxFDAbs = cabs(fd);
+          if (diff > maxImagDiff) {
+            maxImagDiff = diff;
+            maxImagIdx = idx;
+          }
+          if (diff > maxDiff) {
+            maxDiff = diff;
+            maxIdx = idx;
+            maxIsImag = 1;
+            analyticAtMax = analytic[2 * idx + 1];
+            fdAtMax = fd;
+          }
+        }
+      }
+    }
+  } else {
+    fdFailCount++;
+  }
+
+  for (idx = 0; idx < NProjBF; idx++) ProjBF[idx] = projBFStore[idx];
+  MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
+
+  fp = fopen(path, append ? "a" : "w");
+  if (fp == NULL) {
+    fprintf(stderr, "Error: failed to open BackFlow finite-difference dump file: %s\n", path);
+  } else {
+    fprintf(fp, "sample %d\n", sample);
+    fprintf(fp, "info_base %d\n", infoBase);
+    fprintf(fp, "nprojbf %d\n", NProjBF);
+    fprintf(fp, "step %.17e\n", h);
+    fprintf(fp, "fd_fail_count %d\n", fdFailCount);
+    fprintf(fp, "nan_count %d\n", nanCount);
+    fprintf(fp, "nonzero_fd_count %d\n", nonzeroFDCount);
+    fprintf(fp, "max_abs_fd_value %.17e\n", maxFDAbs);
+    fprintf(fp, "max_abs_projbf_fd_real %.17e\n", maxRealDiff);
+    fprintf(fp, "max_real_idx %d\n", maxRealIdx);
+    fprintf(fp, "max_abs_projbf_fd_imag %.17e\n", maxImagDiff);
+    fprintf(fp, "max_imag_idx %d\n", maxImagIdx);
+    fprintf(fp, "max_abs_projbf_fd_diff %.17e\n", maxDiff);
+    fprintf(fp, "max_idx %d\n", maxIdx);
+    fprintf(fp, "max_is_imag %d\n", maxIsImag);
+    fprintf(fp, "analytic_at_max %.17e %.17e\n", creal(analyticAtMax), cimag(analyticAtMax));
+    fprintf(fp, "fd_at_max %.17e %.17e\n", creal(fdAtMax), cimag(fdAtMax));
+    fprintf(fp, "\n");
+    fclose(fp);
+  }
+
+  free(analytic);
+  free(projBFStore);
+}
+
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
   double complex e,ip;
@@ -410,6 +670,8 @@ void VMC_BF_MainCal(MPI_Comm comm) {
   int int_i, sampleSize, tmp_i;
   int bfIdentityDumped = 0;
   const char *bfIdentityDumpPath = getenv("MVMC_BF_IDENTITY_DUMP");
+  const char *bfDiffDumpPath = getenv("MVMC_BF_DIFF_DUMP");
+  const char *bfFDDumpPath = getenv("MVMC_BF_FD_DUMP");
   const int qpStart = 0;
   const int qpEnd = NQPFull;
   int sample, sampleStart, sampleEnd;
@@ -457,6 +719,16 @@ void VMC_BF_MainCal(MPI_Comm comm) {
         bfIdentityDumpPath != NULL && bfIdentityDumpPath[0] != '\0') {
       dumpBFIdentityCheck(bfIdentityDumpPath, eleIdx, qpStart, qpEnd);
       bfIdentityDumped = 1;
+    }
+    if (rank == 0 && bfDiffDumpPath != NULL && bfDiffDumpPath[0] != '\0') {
+      dumpBFSlaterDiffCheck(bfDiffDumpPath, eleIdx, eleNum, eleCfg, eleProjCnt,
+                            eleProjBFCnt, qpStart, qpEnd,
+                            sample, sample != sampleStart);
+    }
+    if (rank == 0 && bfFDDumpPath != NULL && bfFDDumpPath[0] != '\0') {
+      dumpBFProjBFFiniteDiffCheck(bfFDDumpPath, eleIdx, eleNum, eleProjCnt,
+                                  eleProjBFCnt, qpStart, qpEnd,
+                                  sample, sample != sampleStart);
     }
 
     StartTimer(40);
@@ -517,7 +789,7 @@ void VMC_BF_MainCal(MPI_Comm comm) {
 
     Wc += w;
     Etot += w * e;
-    Etot2 += w * e * e;
+    Etot2 += w * conj(e) * e;
     Dbtot += w * db;
     Dbtot2 += w * db * db;
 
