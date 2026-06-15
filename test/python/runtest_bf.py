@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 
-from backflow_def_helper import write_chain_nn_backflow
+from backflow_def_helper import build_chain_nn_backflow, write_chain_nn_backflow
 
 
 def parse_nsite(modpara_path):
@@ -16,6 +16,15 @@ def parse_nsite(modpara_path):
             if len(cols) >= 2 and cols[0] == "Nsite":
                 return int(cols[1])
     raise RuntimeError("Nsite was not found in {}".format(modpara_path))
+
+
+def parse_norbitalidx(orbitalidx_path):
+    with open(orbitalidx_path) as fp:
+        for line in fp:
+            cols = line.split()
+            if len(cols) >= 2 and cols[0] == "NOrbitalIdx":
+                return int(cols[1])
+    raise RuntimeError("NOrbitalIdx was not found in {}".format(orbitalidx_path))
 
 
 def read_key_value_file(path):
@@ -45,6 +54,13 @@ def read_first_float_row(path):
             if cols:
                 return [float(x) for x in cols]
     raise RuntimeError("no numeric rows in {}".format(path))
+
+
+def max_abs_row_diff(left, right):
+    if len(left) != len(right):
+        raise RuntimeError("row length mismatch: left={} right={}".format(len(left), len(right)))
+    diffs = [abs(x - y) for x, y in zip(left, right)]
+    return max(diffs) if diffs else 0.0
 
 
 def read_key_value_blocks(path):
@@ -84,8 +100,65 @@ def copy_def_files(refdir, workdir, include_backflow):
             shutil.copy(src_path, dst_path)
 
 
+def write_nonidentity_init_parameter(path, nprojbf, nslater):
+    projbf_values = [
+        0.93, 0.08, -0.05, 0.035, -0.025,
+        0.015, -0.012, 0.010, -0.007, 0.005,
+    ]
+    if nprojbf < 2:
+        raise RuntimeError("non-identity BackFlow test requires at least two ProjBF parameters")
+
+    values = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    for idx in range(nprojbf):
+        real = projbf_values[idx] if idx < len(projbf_values) else 0.001 / float(idx + 1)
+        values.extend([real, 0.0, 0.0])
+    matrix_width = int(round(math.sqrt(nslater)))
+    for idx in range(nslater):
+        if matrix_width * matrix_width == nslater:
+            row = idx // matrix_width
+            col = idx % matrix_width
+            if row == col:
+                real = 1.0 + 0.1 * row
+            else:
+                real = 0.03 * float(row - col)
+        else:
+            real = math.sin(0.37 * (idx + 1))
+        values.extend([real, 0.0, 0.0])
+
+    with open(path, "w") as fp:
+        fp.write(" ".join("{:.18e}".format(value) for value in values))
+        fp.write("\n")
+    return projbf_values[:nprojbf]
+
+
+def write_orbital_opt_flags(path, nsite, nslater, opt_flag):
+    with open(path) as fp:
+        lines = fp.readlines()
+
+    mapping_left = nsite * nsite
+    opt_left = nslater
+    updated = []
+    for line in lines:
+        cols = line.split()
+        if mapping_left > 0 and len(cols) >= 4:
+            mapping_left -= 1
+            updated.append(line)
+        elif mapping_left == 0 and opt_left > 0 and len(cols) >= 2 and cols[0].lstrip("-").isdigit():
+            idx = int(cols[0])
+            updated.append("{:5d} {:6d}\n".format(idx, opt_flag))
+            opt_left -= 1
+        else:
+            updated.append(line)
+
+    if mapping_left != 0 or opt_left != 0:
+        raise RuntimeError("failed to rewrite orbital OptFlag rows in {}".format(path))
+
+    with open(path, "w") as fp:
+        fp.writelines(updated)
+
+
 def run_vmc(rootdir, workdir, mpi_procs, dump_path=None, diff_dump_path=None, fd_dump_path=None,
-            log_name="bf_test.log"):
+            init_path=None, log_name="bf_test.log"):
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
     env = os.environ.copy()
     if dump_path is not None:
@@ -96,6 +169,8 @@ def run_vmc(rootdir, workdir, mpi_procs, dump_path=None, diff_dump_path=None, fd
         env["MVMC_BF_FD_DUMP"] = fd_dump_path
 
     cmd = [bin_to_test, "-e", "namelist.def"]
+    if init_path is not None:
+        cmd.append(init_path)
     if mpi_procs:
         cmd = ["mpirun", "-np", mpi_procs] + cmd
     proc = subprocess.run(
@@ -152,6 +227,91 @@ def compare_no_bf_energy(rootdir, refdir, bf_workdir, mpi_procs, tol, rejected_o
         print("ERROR: identity BackFlow energy mismatch: max_abs_diff={:.3e}".format(max_diff))
         print("BF    zvo_out_001.dat: {}".format(" ".join("{:.18e}".format(x) for x in bf_row)))
         print("no-BF zvo_out_001.dat: {}".format(" ".join("{:.18e}".format(x) for x in no_bf_row)))
+        return -1
+    return 0
+
+
+def compare_real_complex_nonidentity(rootdir, real_model, complex_model, mpi_procs, tol, rejected_outputs):
+    if mpi_procs:
+        print("ERROR: non-identity real/complex comparison is a single-rank smoke test.")
+        return -1
+
+    real_refdir = os.path.join(rootdir, "data", real_model)
+    complex_refdir = os.path.join(rootdir, "data", complex_model)
+    real_workdir = os.path.join(rootdir, "work", real_model + "_nonidentity_real")
+    complex_workdir = os.path.join(rootdir, "work", complex_model + "_nonidentity_complex")
+
+    for refdir, workdir in ((real_refdir, real_workdir), (complex_refdir, complex_workdir)):
+        if os.path.exists(workdir):
+            shutil.rmtree(workdir)
+        os.makedirs(workdir)
+        copy_def_files(refdir, workdir, include_backflow=True)
+
+    real_nsite = parse_nsite(os.path.join(real_workdir, "modpara.def"))
+    complex_nsite = parse_nsite(os.path.join(complex_workdir, "modpara.def"))
+    if real_nsite != complex_nsite:
+        print("ERROR: Nsite mismatch: real={} complex={}".format(real_nsite, complex_nsite))
+        return -1
+
+    real_definition = build_chain_nn_backflow(length=real_nsite, optimize=False)
+    complex_definition = build_chain_nn_backflow(length=complex_nsite, optimize=False)
+    if real_definition.n_proj_bf != complex_definition.n_proj_bf:
+        print("ERROR: NProjBF mismatch: real={} complex={}".format(
+            real_definition.n_proj_bf, complex_definition.n_proj_bf))
+        return -1
+    write_chain_nn_backflow(real_workdir, length=real_nsite, optimize=False)
+    write_chain_nn_backflow(complex_workdir, length=complex_nsite, optimize=False)
+
+    real_nslater = parse_norbitalidx(os.path.join(real_workdir, "orbitalidx.def"))
+    complex_nslater = parse_norbitalidx(os.path.join(complex_workdir, "orbitalidx.def"))
+    if real_nslater != complex_nslater:
+        print("ERROR: NSlater mismatch: real={} complex={}".format(real_nslater, complex_nslater))
+        return -1
+    write_orbital_opt_flags(os.path.join(real_workdir, "orbitalidx.def"), real_nsite, real_nslater, 0)
+    write_orbital_opt_flags(os.path.join(complex_workdir, "orbitalidx.def"), complex_nsite, complex_nslater, 0)
+
+    init_name = "nonidentity_init.dat"
+    real_projbf = write_nonidentity_init_parameter(
+        os.path.join(real_workdir, init_name),
+        real_definition.n_proj_bf,
+        real_nslater,
+    )
+    complex_projbf = write_nonidentity_init_parameter(
+        os.path.join(complex_workdir, init_name),
+        complex_definition.n_proj_bf,
+        complex_nslater,
+    )
+    if real_projbf != complex_projbf or real_projbf[0] == 1.0 or all(value == 0.0 for value in real_projbf[1:]):
+        print("ERROR: non-identity ProjBF initialization is invalid.")
+        return -1
+
+    real_proc = run_vmc(rootdir, real_workdir, mpi_procs, init_path=init_name,
+                        log_name="bf_test_nonidentity_real.log")
+    complex_proc = run_vmc(rootdir, complex_workdir, mpi_procs, init_path=init_name,
+                           log_name="bf_test_nonidentity_complex.log")
+    for label, proc in (("real", real_proc), ("complex", complex_proc)):
+        if proc.returncode != 0:
+            print("ERROR: {} BackFlow run failed.".format(label))
+            print(proc.stdout)
+            return proc.returncode
+        rejected = contains_rejected_output(proc.stdout, rejected_outputs)
+        if rejected is not None:
+            print("ERROR: rejected {} BackFlow output substring found: {}".format(label, rejected))
+            print("---- output begin ----")
+            print(proc.stdout)
+            print("---- output end ----")
+            return -1
+
+    real_row = read_first_float_row(os.path.join(real_workdir, "output", "zvo_out_001.dat"))
+    complex_row = read_first_float_row(os.path.join(complex_workdir, "output", "zvo_out_001.dat"))
+    if not all(math.isfinite(value) for value in real_row + complex_row):
+        print("ERROR: non-identity real/complex output contains non-finite values.")
+        return -1
+    max_diff = max_abs_row_diff(real_row, complex_row)
+    if not math.isfinite(max_diff) or max_diff > tol:
+        print("ERROR: non-identity real/complex mismatch: max_abs_diff={:.3e}".format(max_diff))
+        print("real    zvo_out_001.dat: {}".format(" ".join("{:.18e}".format(x) for x in real_row)))
+        print("complex zvo_out_001.dat: {}".format(" ".join("{:.18e}".format(x) for x in complex_row)))
         return -1
     return 0
 
@@ -251,7 +411,7 @@ def check_proj_bf_finite_diff_dump(path, tol):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -260,6 +420,7 @@ def main():
     compare_energy = False
     compare_gradient = False
     compare_proj_bf_fd = False
+    compare_real_complex_model = None
     rejected_outputs = []
     argi = 2
     while argi < len(sys.argv):
@@ -278,15 +439,28 @@ def main():
         elif sys.argv[argi] == "--compare-proj-bf-finite-diff":
             compare_proj_bf_fd = True
             argi += 1
+        elif sys.argv[argi] == "--compare-real-complex-nonidentity" and argi + 1 < len(sys.argv):
+            compare_real_complex_model = sys.argv[argi + 1]
+            argi += 2
         elif sys.argv[argi] == "--reject-output" and argi + 1 < len(sys.argv):
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
     mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+    if compare_real_complex_model is not None:
+        return compare_real_complex_nonidentity(
+            rootdir,
+            model,
+            compare_real_complex_model,
+            mpi_procs,
+            1.0e-10,
+            rejected_outputs,
+        )
+
     work_suffix = ""
     if compare_energy:
         work_suffix += "_energy"
