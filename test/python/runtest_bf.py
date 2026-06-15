@@ -111,7 +111,14 @@ def run_vmc(rootdir, workdir, mpi_procs, dump_path=None, diff_dump_path=None, fd
     return proc
 
 
-def compare_no_bf_energy(rootdir, refdir, bf_workdir, mpi_procs, tol):
+def contains_rejected_output(output, rejected_outputs):
+    for substring in rejected_outputs:
+        if substring in output:
+            return substring
+    return None
+
+
+def compare_no_bf_energy(rootdir, refdir, bf_workdir, mpi_procs, tol, rejected_outputs):
     no_bf_workdir = bf_workdir + "_nobf_energy"
 
     if os.path.exists(no_bf_workdir):
@@ -123,6 +130,13 @@ def compare_no_bf_energy(rootdir, refdir, bf_workdir, mpi_procs, tol):
     if proc.returncode != 0:
         print(proc.stdout)
         return proc.returncode
+    rejected = contains_rejected_output(proc.stdout, rejected_outputs)
+    if rejected is not None:
+        print("ERROR: rejected no-BF output substring found: {}".format(rejected))
+        print("---- output begin ----")
+        print(proc.stdout)
+        print("---- output end ----")
+        return -1
 
     bf_out_path = os.path.join(bf_workdir, "output", "zvo_out_001.dat")
     no_bf_out_path = os.path.join(no_bf_workdir, "output", "zvo_out_001.dat")
@@ -237,7 +251,7 @@ def check_proj_bf_finite_diff_dump(path, tol):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -246,6 +260,7 @@ def main():
     compare_energy = False
     compare_gradient = False
     compare_proj_bf_fd = False
+    rejected_outputs = []
     argi = 2
     while argi < len(sys.argv):
         if sys.argv[argi] == "--expect-error" and argi + 1 < len(sys.argv):
@@ -263,8 +278,11 @@ def main():
         elif sys.argv[argi] == "--compare-proj-bf-finite-diff":
             compare_proj_bf_fd = True
             argi += 1
+        elif sys.argv[argi] == "--reject-output" and argi + 1 < len(sys.argv):
+            rejected_outputs.append(sys.argv[argi + 1])
+            argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -310,6 +328,13 @@ def main():
     if proc.returncode != 0:
         print(proc.stdout)
         return proc.returncode
+    rejected = contains_rejected_output(proc.stdout, rejected_outputs)
+    if rejected is not None:
+        print("ERROR: rejected BackFlow output substring found: {}".format(rejected))
+        print("---- output begin ----")
+        print(proc.stdout)
+        print("---- output end ----")
+        return -1
     if not os.path.exists(dump_path):
         print("ERROR: BackFlow identity dump was not written.")
         return -1
@@ -342,7 +367,7 @@ def main():
         print("ERROR: zvo_out_001.dat is missing or non-finite.")
         return -1
     if compare_energy:
-        result = compare_no_bf_energy(rootdir, refdir, workdir, mpi_procs, tol)
+        result = compare_no_bf_energy(rootdir, refdir, workdir, mpi_procs, tol, rejected_outputs)
         if result != 0:
             return result
     if compare_gradient:
