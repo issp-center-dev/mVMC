@@ -26,6 +26,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #include "parameter.h"
+#include "backflow.h"
 #ifndef _SRC_PARAMETER
 #define _SRC_PARAMETER
 
@@ -59,9 +60,11 @@ void InitParameter() {
     }
   }
 
+  BFInitParameters();
+
   if(AllComplexFlag==0){
     for(i=0;i<NSlater;i++){
-      if(OptFlag[2*i+2*NProj + 2*FlagRBM*NRBM] > 0){ //TBC
+      if(OptFlag[2*i+2*NProj + 2*FlagRBM*NRBM + 2*NProjBF] > 0){ //TBC
         Slater[i] =  2*(genrand_real2()-0.5); /* uniform distribution [-1,1) */
         //Slater[i] =  1*genrand_real2(); /* uniform distribution [0,1) */
         //Slater[i] += 1*I*genrand_real2(); /* uniform distribution [0,1) */
@@ -73,7 +76,7 @@ void InitParameter() {
   }
   else{
     for(i=0;i<NSlater;i++){
-      if(OptFlag[2*i+2*NProj + 2*FlagRBM*NRBM] > 0){ //TBC
+      if(OptFlag[2*i+2*NProj + 2*FlagRBM*NRBM + 2*NProjBF] > 0){ //TBC
         Slater[i] =  2*(genrand_real2()-0.5); /* uniform distribution [-1,1) */
         Slater[i] += 2*I*(genrand_real2()-0.5); /* uniform distribution [-1,1) */
         Slater[i] /=sqrt(2.0);
@@ -114,6 +117,10 @@ int ReadInitParameter(char *initFile) {
 //        printf("RBM[%d] = %.3e %.3e\n",xi,tmp_real, tmp_comp);
           RBM[xi] = tmp_real+tmp_comp*I; 
         }
+      }
+      for(xi=0;xi<NProjBF;xi++) {
+        fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
+        ProjBF[xi] = tmp_real+tmp_comp*I;
       }
       for(xi=0;xi<NSlater;xi++) {
         fscanf(fp, "%lf %lf %lf ", &tmp_real,&tmp_comp, &xtmp);
