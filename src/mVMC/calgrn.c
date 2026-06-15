@@ -154,7 +154,7 @@ void CalculateGreenFunc(const double w, const double complex ip, int *eleIdx, in
 }
 
 
-void CalculateGreenFuncBF(const double w, const double ip, int *eleIdx, int *eleCfg,
+void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, int *eleCfg,
                           int *eleNum, int *eleProjCnt, const int *eleProjBFCnt) {
 
   int idx,idx0,idx1;
