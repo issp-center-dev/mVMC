@@ -177,6 +177,11 @@ function(add_python_vmc_test_bf_projbf_fd_omp_nqp test_name model omp_threads nq
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads}")
 endfunction(add_python_vmc_test_bf_projbf_fd_omp_nqp)
 
+function(add_python_vmc_test_bf_real_complex_nonidentity test_name real_model complex_model omp_threads)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${real_model} --compare-real-complex-nonidentity ${complex_model} --reject-output "Error:" --reject-output "error:")
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads}")
+endfunction(add_python_vmc_test_bf_real_complex_nonidentity)
+
 function(add_python_vmc_test_bf_mpi test_name model)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model})
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2")
@@ -345,6 +350,7 @@ add_python_vmc_test_bf_omp_nqp(BackFlow_Optimization_Complex_MultiQP_omp4 BackFl
 add_python_vmc_test_bf_energy_omp_nqp(BackFlow_Optimization_IdentityEnergy_MultiQP_omp4 BackFlow_Optimization_Complex_MultiQP 4 2)
 add_python_vmc_test_bf_gradient_omp_nqp(BackFlow_Optimization_IdentityGradient_MultiQP_omp4 BackFlow_Optimization_Complex_MultiQP 4 2)
 add_python_vmc_test_bf_projbf_fd_omp_nqp(BackFlow_Optimization_ProjBFFiniteDiff_MultiQP_omp4 BackFlow_Optimization_Complex_MultiQP 4 2)
+add_python_vmc_test_bf_real_complex_nonidentity(BackFlow_NonIdentity_RealVsComplex BackFlow_Identity_Real BackFlow_Identity_Complex 1)
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidRBM "not compatible with RBM")
 add_python_vmc_test_invalid_expert(BackFlow_InvalidSpinProjection "NSPGaussLeg==1")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path4_InvalidRBM "does not support RBM")
