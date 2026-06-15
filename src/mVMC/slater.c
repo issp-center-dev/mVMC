@@ -949,8 +949,8 @@ void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijco
           //printf("OrbitalSgn[%d][%d]=%d\n",rki,rlj,OrbitalSgn[rki][rlj]);
           //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
           //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
-          *slt_ij += -ProjBF[bfidx]*bfCnt0_n[idx_ik]*bfCnt1_m[idx_jl]*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
-          *slt_ji += -ProjBF[bfidx]*bfCnt1_n[idx_ik]*bfCnt0_m[idx_jl]*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
+          *slt_ij += -creal(ProjBF[bfidx])*bfCnt0_n[idx_ik]*bfCnt1_m[idx_jl]*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
+          *slt_ji += -creal(ProjBF[bfidx])*bfCnt1_n[idx_ik]*bfCnt0_m[idx_jl]*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
         }
       }
     }

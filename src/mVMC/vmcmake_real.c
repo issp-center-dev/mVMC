@@ -507,8 +507,8 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
 
   StartTimer(30);
   if (BurnFlag == 0) {
-    makeInitialSampleBF(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt, TmpEleProjBFCnt,
-                        qpStart, qpEnd, comm);
+    makeInitialSampleBF_real(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt, TmpEleProjBFCnt,
+                             qpStart, qpEnd, comm);
     //makeInitialSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,
     //                  qpStart,qpEnd,comm);
   } else {
@@ -516,7 +516,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
     copyFromBurnSampleBF(TmpEleIdx);
     MakeSlaterElmBF_fcmp(TmpEleNum, TmpEleProjBFCnt);
 #pragma omp parallel for default(shared) private(tmp_i)
-    for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+    for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElmBF_real[tmp_i]= creal(SlaterElmBF[tmp_i]);
   }
 
   CalculateMAll_BF_real(TmpEleIdx, qpStart, qpEnd);
@@ -526,8 +526,8 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
     if (rank == 0) fprintf(stderr, "waring: VMCMakeSample remakeSample logIpOld=%e\n", creal(logIpOld)); //TBC
     //    makeInitialSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,
     //                    qpStart,qpEnd,comm);
-    makeInitialSampleBF(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt, TmpEleProjBFCnt,
-                        qpStart, qpEnd, comm);
+    makeInitialSampleBF_real(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt, TmpEleProjBFCnt,
+                             qpStart, qpEnd, comm);
 
     CalculateMAll_BF_real(TmpEleIdx, qpStart, qpEnd);
     //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
@@ -566,7 +566,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         UpdateSlaterElmBF_fcmp(mi, ri, rj, s, TmpEleCfg, TmpEleNum, projBFCntNew, msaTmp, icount,
                                SlaterElmBF);
 #pragma omp parallel for default(shared) private(tmp_i)
-        for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+        for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElmBF_real[tmp_i]= creal(SlaterElmBF[tmp_i]);
 
         StartTimer(61);
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
@@ -606,7 +606,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
           UpdateSlaterElmBF_fcmp(mi, rj, ri, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, msaTmp, icount,
                                  SlaterElmBF);
 #pragma omp parallel for default(shared) private(tmp_i)
-          for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+          for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElmBF_real[tmp_i]= creal(SlaterElmBF[tmp_i]);
         }
         StopTimer(32);
 
@@ -752,7 +752,7 @@ int makeInitialSampleBF_real(int *eleIdx, int *eleCfg, int *eleNum, int *eleProj
 
     MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
 #pragma omp parallel for default(shared) private(tmp_i)
-    for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
+    for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElmBF_real[tmp_i]= creal(SlaterElmBF[tmp_i]);
 
     flag = CalculateMAll_BF_real(eleIdx, qpStart, qpEnd);
     //printf("DEBUG: maker4: PfM=%lf\n",creal(PfM[0]));

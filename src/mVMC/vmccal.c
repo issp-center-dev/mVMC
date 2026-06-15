@@ -730,12 +730,11 @@ void VMC_BF_MainCal(MPI_Comm comm) {
                                   eleProjBFCnt, qpStart, qpEnd,
                                   sample, sample != sampleStart);
     }
-
     StartTimer(40);
     if (AllComplexFlag == 0) {
 #pragma omp parallel for default(shared) private(tmp_i)
       for (tmp_i = 0; tmp_i < NQPFull * (2 * Nsite) * (2 * Nsite); tmp_i++)
-        SlaterElm_real[tmp_i] = creal(SlaterElm[tmp_i]);
+        SlaterElmBF_real[tmp_i] = creal(SlaterElmBF[tmp_i]);
 
       info = CalculateMAll_BF_real(eleIdx, qpStart, qpEnd);  // InvM_real,PfM_real will change
 #pragma omp parallel for default(shared) private(tmp_i)

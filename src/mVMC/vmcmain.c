@@ -582,13 +582,6 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       }
     }else{ // NProjBF != 0
       if(AllComplexFlag==0){
-        // only for real TBC
-        StartTimer(69);
-        for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElm_real[tmp_i]= creal(SlaterElm[tmp_i]);
-#pragma omp parallel for default(shared) private(tmp_i)
-        for(tmp_i=0;tmp_i<NQPFull*(Nsize*Nsize+1);tmp_i++)     InvM_real[tmp_i]= creal(InvM[tmp_i]);
-        StopTimer(69);
-        // SlaterElm_real will be used in CalculateMAll, note that SlaterElm will not change before SR
         VMC_BF_MakeSample_real(comm_child1);
         // only for real TBC
         StartTimer(69);
