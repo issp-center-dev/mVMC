@@ -160,6 +160,27 @@ int ReadDefFileError(const char *defname) {
   return 1;
 }
 
+static int ReadBackFlowRangeDefinition(const char *defname) {
+  FILE *fp;
+  char ctmp[D_FileNameMax];
+  int i;
+  int info = 0;
+
+  if (defname == NULL || strcmp(defname, "") == 0) return ReadDefFileError("BFRange");
+  fp = fopen(defname, "r");
+  if (fp == NULL) return ReadDefFileError(defname);
+  for (i = 0; i < IgnoreLinesInDef; i++) {
+    if (fgets(ctmp, sizeof(ctmp) / sizeof(char), fp) == NULL) {
+      info = ReadDefFileError(defname);
+      fclose(fp);
+      return info;
+    }
+  }
+  info = BFReadRange(fp, defname);
+  fclose(fp);
+  return info;
+}
+
 ///
 /// \param _iFlgOrbitalGeneral Flag of Orbital General
 /// \param _iFlgOrbitalAP Flag of Orbital General
@@ -1100,11 +1121,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   char defname[D_FileNameMax];
   char ctmp[D_FileNameMax];
   int iKWidx = 0;
-  char *cerr;
-  int i, j, n, idx0, idx1, info = 0;
+  int i, info = 0;
   int fidx = 0; /* index for OptFlag */
   int count_idx = 0;
-  int x0, x1;
+  int bfRangeLoaded = 0;
   int rank;
 
   MPI_Comm_rank(comm, &rank);
@@ -1123,7 +1143,6 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
       /*=======================================================================*/
       for (i = 0; i < IgnoreLinesInDef; i++) fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-      idx0 = 0;
       switch (iKWidx) {
         case KWLocSpin: /* Read locspn.def----------------------------------------*/
           if (GetLocSpinInfo(fp, LocSpn, Nsite, defname) != 0) info = 1;
@@ -1268,7 +1287,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWOrbital:
         case KWOrbitalAntiParallel:
           /*orbitalidxs.def------------------------------------*/
-          fidx = NProj + FlagRBM * NRBM;
+          fidx = NProj + FlagRBM * NRBM + NProjBF;
           if (GetInfoOrbitalAntiParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
                                          fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalAntiParallel,
                                          defname) != 0)
@@ -1276,7 +1295,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           break;
 
         case KWOrbitalGeneral:
-          fidx = NProj + FlagRBM * NRBM;
+          fidx = NProj + FlagRBM * NRBM + NProjBF;
           if (GetInfoOrbitalGeneral(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
                                     fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, NOrbitalIdx,
                                     defname) != 0)
@@ -1285,7 +1304,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWOrbitalParallel:
           /*orbitalidxt.def------------------------------------*/
-          fidx = NProj+ FlagRBM * NRBM + iNOrbitalAntiParallel;
+          fidx = NProj + FlagRBM * NRBM + NProjBF + iNOrbitalAntiParallel;
           if (GetInfoOrbitalParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
                                      fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalParallel,
                                      iNOrbitalAntiParallel, defname) != 0)
@@ -1333,7 +1352,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWOptTrans:
           /*qpopttrans.def------------------------------------*/
-          fidx = NProj + NOrbitalIdx;
+          fidx = NProj + FlagRBM * NRBM + NProjBF + NSlater;
           if (GetInfoOptTrans(fp, QPOptTrans, ParaQPOptTrans, OptFlag, QPOptTransSgn, FlagOptTrans, &count_idx, fidx,
                               APFlag, Nsite, NQPOptTrans, defname) != 0)
             info = 1;
@@ -1341,52 +1360,21 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 
         case KWBFRange:
           /*rangebf.def--------------------------*/
-          if (Nrange > 0) {
-            for (i = 0; i < 5; i++){
-              cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-              if(cerr == NULL) info=1;
-            }
-            idx0 = idx1 = 0;
-            while (fscanf(fp, "%d %d %d\n", &i, &j, &n) != EOF) {
-              PosBF[i][idx0 % Nrange] = j;
-              RangeIdx[i][j] = n;
-              idx0++;
-              if (idx0 == Nsite * Nrange) break;
-            }
-            if (idx0 != Nsite * Nrange) {
-              info = ReadDefFileError(defname);
-            }
+          if (Nrange > 0 && !bfRangeLoaded) {
+            if (BFReadRange(fp, defname) != 0) info = 1;
+            else bfRangeLoaded = 1;
           }
           break;
 
         case KWBF:
           if (NBackFlowIdx > 0) {
-            for (i = 0; i < 5; i++){
-              cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-              if(cerr == NULL) info=1;
+            int bfInfo = 0;
+            if (!bfRangeLoaded && Nrange > 0) {
+              bfInfo = ReadBackFlowRangeDefinition(cFileNameListFile[KWBFRange]);
+              if (bfInfo == 0) bfRangeLoaded = 1;
             }
-            idx0 = idx1 = 0;
-            for (i = 0; i < Nsite * Nsite; i++) {
-              for (j = 0; j < Nsite * Nsite; j++) {
-                BackFlowIdx[i][j] = -1;
-              }
-            }
-            while (fscanf(fp, "%d %d %d %d %d\n", &i, &j, &(x0), &(x1), &n) != EOF) {
-              BackFlowIdx[i * Nsite + j][x0 * Nsite + x1] = n;
-              idx0++;
-              //printf("idx0=%d, idx=%d\n",idx0,BackFlowIdx[i]);
-              if (idx0 == Nsite * Nsite * Nrange * Nrange) break;
-            }
-            while (fscanf(fp, "%d ", &i) != EOF) {
-              fscanf(fp, "%d\n", &(OptFlag[fidx]));
-              //printf("idx1=%d, OptFlag=%d\n",idx1,OptFlag[fidx]);
-              fidx++;
-              idx1++;
-            }
-            if (idx0 != Nsite * Nsite * Nrange * Nrange
-                || idx1 != NBFIdxTotal * NBackFlowIdx) {
-              info = ReadDefFileError(defname);
-            }
+            if (bfInfo == 0 && BFReadDefinition(fp, OptFlag, &count_idx, defname) != 0) bfInfo = 1;
+            if (bfInfo != 0) info = 1;
           }
           break;
 
