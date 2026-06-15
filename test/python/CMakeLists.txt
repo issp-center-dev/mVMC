@@ -90,6 +90,11 @@ function(add_python_vmc_test_bf test_name model)
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_vmc_test_bf)
 
+function(add_python_vmc_test_bf_nqp test_name model nqp_full)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --expect-nqp-full ${nqp_full})
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_bf_nqp)
+
 function(add_python_vmc_test_bf_mpi test_name model)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model})
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2")
@@ -243,6 +248,7 @@ add_python_vmc_test_invalid_expert(DoublonOnly_InvalidOrbitalGeneral "OrbitalGen
 
 add_python_backflow_helper_test(BackFlow_Helper_ChainNN)
 add_python_vmc_test_bf(BackFlow_Identity_Complex BackFlow_Identity_Complex)
+add_python_vmc_test_bf_nqp(BackFlow_Identity_Complex_MultiQP BackFlow_Identity_Complex_MultiQP 2)
 add_python_vmc_test_bf_mpi(BackFlow_Identity_Complex_mpi BackFlow_Identity_Complex)
 add_python_vmc_test_invalid_bf(BackFlow_InvalidReal "AllComplexFlag != 0")
 add_python_vmc_test_invalid_bf(BackFlow_InvalidOptimization "NVMCCalMode=1")
