@@ -104,6 +104,7 @@ extern int omp_get_thread_num(void);
 #include "../calham_fsz_real.c"
 #include "../calgrn.c"
 #include "../calgrn_fsz.c"
+#include "../backflow.c"
 #include "../setmemory.c"
 #include "../readdef.c"
 #include "../initfile.c"

@@ -21,6 +21,9 @@ if len(sys.argv) == 1:
 rootdir = os.getcwd()
 refdir = os.path.join(rootdir, "data", sys.argv[1])
 workdir = os.path.join(rootdir, "work", sys.argv[1])
+mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+if mpi_procs:
+    workdir += "_mpi{}".format(mpi_procs)
 if os.path.exists(workdir):
     shutil.rmtree(workdir)
 os.makedirs(workdir)
@@ -30,7 +33,6 @@ os.chdir(workdir)
 os.system("cp %s/*.def ." % refdir)
 
 bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
-mpi_procs = os.environ.get("MVMC_MPI_PROCS")
 
 #result = subprocess.call([bin_to_test, "-s", "%s/StdFace.def" % refdir])
 #result = subprocess.call([bin_to_test, "-e", "%s/namelist.def" % refdir, "%s/initial.def" % refdir])

@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 
 #include <complex.h>
+#include "backflow.h"
 #include "global.h"
 #include "setmemory.h"
 
@@ -137,25 +138,7 @@ void SetMemoryDef() {
   }
 //RBM
 
- /*[s] For BackFlow */
-  if(NBackFlowIdx>0) {
-    PosBF = (int**)malloc(sizeof(int*)*Nsite);
-    for(i=0;i<Nsite;i++) {
-      PosBF[i] = pInt;
-      pInt += Nrange;
-    }
-    RangeIdx = (int**)malloc(sizeof(int*)*Nsite);
-    for(i=0;i<Nsite;i++) {
-      RangeIdx[i] = pInt;
-      pInt += Nsite;
-    }
-    BackFlowIdx = (int**)malloc(sizeof(int*)*Nsite*Nsite);
-    for(i=0;i<Nsite*Nsite;i++) {
-      BackFlowIdx[i] = pInt;
-      pInt += Nsite*Nsite;
-    }
-  }
-  /*[e] For BackFlow */
+  BFBindDefTables(&pInt);
 
   int NOrbit;
   iFlgOrbitalGeneral==0 ? (NOrbit=Nsite): (NOrbit=2*Nsite);
@@ -310,9 +293,7 @@ void FreeMemoryDef() {
   free(CoulombInter);
   free(Transfer);
   free(LocSpn);
-  free(PosBF);
-  free(RangeIdx);
-  free(BackFlowIdx);
+  BFFreeDefTables();
   /* outer pointer arrays for lattice / twist; row storage is pool-allocated */
   free(LatticeIdx);
   free(TwistIdx);
@@ -322,6 +303,7 @@ void FreeMemoryDef() {
 
 void SetMemory() {
   int i;
+  int bfWorkIntCount;
 
   /***** Variational Parameters *****/
   //printf("DEBUG:opt=%d %d %d %d %d Ne=%d\n", AllComplexFlag,NPara,NProj,NSlater,NOrbitalIdx,Ne);
@@ -342,41 +324,23 @@ void SetMemory() {
   EleSpn            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));//fsz
 //[e] MERGE BY TM
     logSqPfFullSlater = (double*)malloc(sizeof(double)*(NVMCSample));
-  //EleProjBFCnt = (int*)malloc(sizeof(int)*( NVMCSample*4*4*Nsite*Nrange));
-  if (NBackFlowIdx > 0) {
-    EleProjBFCnt = (int*)malloc(sizeof(int)*( NVMCSample*4*4*Nsite*Nrange));
-    SmpSltElmBF_real = (double *)malloc(sizeof(double)*(NVMCSample*NQPFull*(2*Nsite)*(2*Nsite)));
-    SmpEta = (double*)malloc(sizeof(double*)*NVMCSample*NQPFull*Nsite*Nsite);
-    SmpEtaFlag = (int*)malloc(sizeof(int*)*NVMCSample*NQPFull*Nsite*Nsite);
-        SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
-    eta = (double complex**)malloc(sizeof(double complex*)*Nsite);
-      for(i=0;i<Nsite;i++) {
-          eta[i] = (double complex*)malloc(sizeof(double complex)*Nsite);
-      }
-      etaFlag = (int**)malloc(sizeof(int*)*Nsite);
-      for(i=0;i<Nsite;i++) {
-          etaFlag[i] = (int*)malloc(sizeof(int)*Nsite);
-      }
-      BFSubIdx = (int**)malloc(sizeof(int*)*NrangeIdx);
-      for(i=0;i<NrangeIdx;i++) {
-          BFSubIdx[i] = (int*)malloc(sizeof(int)*NrangeIdx);
-      }
-  }
+  BFAllocRuntime();
+  bfWorkIntCount = BFWorkIntCount();
 
-  TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne));//fsz
+  TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne+bfWorkIntCount));//fsz
   TmpEleCfg         = TmpEleIdx + 2*Ne;
   TmpEleNum         = TmpEleCfg + 2*Nsite;
   TmpEleProjCnt     = TmpEleNum + 2*Nsite;
 //[s] MERGE BY TM
-  TmpEleSpn         = TmpEleProjCnt + NProj; //fsz
-  TmpEleProjBFCnt = TmpEleProjCnt + NProj;
+  TmpEleProjBFCnt   = (bfWorkIntCount > 0) ? TmpEleProjCnt + NProj : NULL;
+  TmpEleSpn         = TmpEleProjCnt + NProj + bfWorkIntCount; //fsz
 //[e] MERGE BY TM
 
-  BurnEleIdx        = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne)); //fsz
+  BurnEleIdx        = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+bfWorkIntCount+2*Ne)); //fsz
   BurnEleCfg        = BurnEleIdx + 2*Ne;
   BurnEleNum        = BurnEleCfg + 2*Nsite;
   BurnEleProjCnt    = BurnEleNum + 2*Nsite;
-  BurnEleSpn        = BurnEleProjCnt + NProj; //fsz
+  BurnEleSpn        = BurnEleProjCnt + NProj + bfWorkIntCount; //fsz
 
 //RBM
   if (FlagRBM) {
@@ -395,22 +359,6 @@ void SetMemory() {
     SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
     InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
     PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
-  }
-
-  if (FlagRBM) {
-    SlaterElmBF_real = (double*)malloc( sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
-    eta = (double complex**)malloc(sizeof(double complex*)*Nsite);
-    for(i=0;i<Nsite;i++) {
-      eta[i] = (double complex*)malloc(sizeof(double complex)*Nsite);
-    }
-    etaFlag = (int**)malloc(sizeof(int*)*Nsite);
-    for(i=0;i<Nsite;i++) {
-      etaFlag[i] = (int*)malloc(sizeof(int)*Nsite);
-    }
-    BFSubIdx = (int**)malloc(sizeof(int*)*NrangeIdx);
-    for(i=0;i<NrangeIdx;i++) {
-      BFSubIdx[i] = (int*)malloc(sizeof(int)*NrangeIdx);
-    }
   }
 
   /***** Quantum Projection *****/
@@ -541,6 +489,7 @@ void FreeMemory() {
     free(InvM_real);
     free(SlaterElm_real);
   }
+  BFFreeRuntime();
 
   free(BurnEleIdx);
   free(TmpEleIdx);
