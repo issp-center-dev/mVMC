@@ -204,6 +204,10 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
     fprintf(stderr, "Error: BackFlow MVP supports only NSPGaussLeg==1 (got %d).\n", NSPGaussLeg);
     return 1;
   }
+  if (AllComplexFlag == 0) {
+    fprintf(stderr, "Error: BackFlow Phase 2a supports only complex variational parameters (AllComplexFlag != 0).\n");
+    return 1;
+  }
   if (FlagRBM != 0) {
     fprintf(stderr, "Error: BackFlow MVP does not support RBM.\n");
     return 1;
