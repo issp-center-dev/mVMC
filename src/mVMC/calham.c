@@ -484,7 +484,7 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
       rj = Transfer[idx][2];
       s  = Transfer[idx][3];
 
-      myEnergy -= creal(ParaTransfer[idx])
+      myEnergy -= ParaTransfer[idx]
                   //* GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
                   *GreenFunc1BF(ri,rj,s,ip,mySltBFTmp,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer);
       /* Caution: negative sign */
