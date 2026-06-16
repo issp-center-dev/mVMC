@@ -883,23 +883,21 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       MPI_Abort(comm, EXIT_FAILURE);
     }
     /* Lattice values are bcast via bufInt, so this is rank-safe.
-       Nx,Ny,Nz,Norb act only as the upper bounds (bounding box) for the
-       lattice.def coordinates; they need not tile Nsite exactly. A box
-       larger than Nsite is a legitimate usage (e.g. coordinate-scaling
-       tricks for non-Bravais lattices), so it is not flagged. A box smaller
-       than Nsite forces some sites to share coordinates, which is unusual,
-       so warn rather than abort. */
+       The usual lattice.def form has one coordinate per site, so
+       Nx*Ny*Nz*Norb should normally match Nsite. Non-matching values are
+       accepted for compatibility with inputs that use the header as a
+       coordinate bounding box, but warn in all cases. */
     long long lattice_prod = (long long)Nx * (long long)Ny *
                              (long long)Nz * (long long)Norb;
-    if (lattice_prod < (long long)Nsite) {
+    if (lattice_prod != (long long)Nsite) {
       if (rank == 0) {
         fprintf(stderr,
-                "warning: lattice dimensions Nx*Ny*Nz*Norb = %lld are smaller "
-                "than Nsite = %d. The lattice header defines the coordinate "
-                "bounding box, so a box smaller than Nsite forces some sites "
-                "to share identical coordinates. Make sure the lattice.def "
-                "coordinates and twist.def phases encode the intended "
-                "geometry.\n",
+                "warning: lattice dimensions Nx*Ny*Nz*Norb = %lld do not "
+                "match Nsite = %d. The usual lattice.def form has one "
+                "coordinate per site, so these values should normally match. "
+                "This run will continue for compatibility; make sure the "
+                "lattice.def coordinates and twist.def phases encode the "
+                "intended geometry.\n",
                 lattice_prod, Nsite);
       }
     }
@@ -3204,7 +3202,11 @@ int GetInfoLattice(FILE *fp, int **ArrayIdx, int NArray, int nx, int ny, int nz,
       break;
     }
     if (seen[idx] != 0) {
-      fprintf(stderr, "Error: lattice idx=%d appears more than once.\n", idx);
+      fprintf(stderr,
+              "Error: lattice idx=%d appears more than once. lattice.def "
+              "uses one row per site; the last column is an orbital index, "
+              "not a spin index.\n",
+              idx);
       info = 1;
       break;
     }

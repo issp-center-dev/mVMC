@@ -3559,7 +3559,7 @@ Parameters
 
    **Type :** int-type (blank parameter not allowed)
 
-   **Description :** An integer giving the orbital index in the unit cell corresponding to site number [ int05 ]. You can specify it as an integer from 0 to [ int04 ]-1.
+   **Description :** An integer giving the orbital index in the unit cell corresponding to site number [ int05 ]. You can specify it as an integer from 0 to [ int04 ]-1. This is not a spin index.
 
 Usage rules
 ^^^^^^^^^^^
@@ -3570,16 +3570,16 @@ The rules for using this file are as follows:
 
 -  All the site indices must be specified.
 
--  ``Nx``, ``Ny``, ``Nz``, ``Norb`` only define the upper bounds
-   (the bounding box) of the coordinates, so
-   ``[int01] * [int02] * [int03] * [int04]`` (i.e.
-   ``Nx * Ny * Nz * Norb``) need not equal ``Nsite``. They normally
-   coincide for a Bravais lattice. A box larger than ``Nsite`` is
-   allowed without warning (for example, when coordinates are scaled to
-   keep them integer for a non-Bravais lattice). A box smaller than
-   ``Nsite`` forces some sites to share identical coordinates, so a
-   warning is printed in that case; make sure the coordinates and the
-   twist.def phases encode the intended geometry.
+-  Each row specifies the lattice position of one site. Do not repeat
+   lattice rows for up and down spins. Spin-dependent twist components
+   are specified in twist.def.
+
+-  ``[int01] * [int02] * [int03] * [int04]`` (i.e.
+   ``Nx * Ny * Nz * Norb``) should normally equal ``Nsite`` because the
+   usual lattice.def form gives one coordinate for each site. If these
+   values do not match, the run continues for compatibility but prints a
+   warning. In that case, make sure the coordinates and the twist.def
+   phases encode the intended geometry.
 
 -  Each site index must appear exactly once. Duplicate or missing
    indices are rejected as input errors.
