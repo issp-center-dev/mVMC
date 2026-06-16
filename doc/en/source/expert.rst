@@ -3570,8 +3570,16 @@ The rules for using this file are as follows:
 
 -  All the site indices must be specified.
 
--  ``[int01] * [int02] * [int03] * [int04]``
-   (i.e. ``Nx * Ny * Nz * Norb``) must equal ``Nsite``.
+-  ``Nx``, ``Ny``, ``Nz``, ``Norb`` only define the upper bounds
+   (the bounding box) of the coordinates, so
+   ``[int01] * [int02] * [int03] * [int04]`` (i.e.
+   ``Nx * Ny * Nz * Norb``) need not equal ``Nsite``. They normally
+   coincide for a Bravais lattice. A box larger than ``Nsite`` is
+   allowed without warning (for example, when coordinates are scaled to
+   keep them integer for a non-Bravais lattice). A box smaller than
+   ``Nsite`` forces some sites to share identical coordinates, so a
+   warning is printed in that case; make sure the coordinates and the
+   twist.def phases encode the intended geometry.
 
 -  Each site index must appear exactly once. Duplicate or missing
    indices are rejected as input errors.
