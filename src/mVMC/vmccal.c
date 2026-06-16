@@ -666,7 +666,8 @@ void VMC_BF_MainCal(MPI_Comm comm) {
   int *eleIdx, *eleCfg, *eleNum, *eleProjCnt, *eleProjBFCnt;
   double complex e, ip; //db is double?
   double w, db;
-  double we, sqrtw;
+  double sqrtw;
+  double complex we;
   int int_i, sampleSize, tmp_i;
   int bfIdentityDumped = 0;
   const char *bfIdentityDumpPath = getenv("MVMC_BF_IDENTITY_DUMP");
