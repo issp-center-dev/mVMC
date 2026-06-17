@@ -442,6 +442,34 @@ double complex calculateNewPfMN_child(const int qpidx, const int n, const int *m
   return sgn * pfaff * PfM[qpidx];
 }
 
+static int AppendBFHopIndex(int *dst, int *count, const int stride, const int value) {
+  int i;
+  for (i = 0; i < *count; i++) {
+    if (dst[i] == value) return 0;
+  }
+  if (*count >= stride) return 1;
+  dst[*count] = value;
+  (*count)++;
+  return 0;
+}
+
+static int MergeBFHopLists(const int *left, const int *leftCount,
+                           const int *right, const int *rightCount,
+                           int *merged, int *mergedCount) {
+  int qpidx, i;
+  for (qpidx = 0; qpidx < NQPFull; qpidx++) {
+    int *dst = merged + qpidx * Nsize;
+    mergedCount[qpidx] = 0;
+    for (i = 0; i < leftCount[qpidx]; i++) {
+      if (AppendBFHopIndex(dst, &mergedCount[qpidx], Nsize, left[qpidx * Nsite + i]) != 0) return 1;
+    }
+    for (i = 0; i < rightCount[qpidx]; i++) {
+      if (AppendBFHopIndex(dst, &mergedCount[qpidx], Nsize, right[qpidx * Nsite + i]) != 0) return 1;
+    }
+  }
+  return 0;
+}
+
 /* Calculate 1-body Green function <CisAjs> */
 /* buffer size = NQPFull */
 double complex GreenFunc1BF(const int ri, const int rj, const int s, const double complex ip, double complex *bufM,
@@ -485,6 +513,141 @@ double complex GreenFunc1BF(const int ri, const int rj, const int s, const doubl
   z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
   /* revert hopping */
+  eleCfg[rsj] = mj;
+  eleCfg[rsi] = -1;
+  eleIdx[msj] = rj;
+  eleNum[rsj] = 1;
+  eleNum[rsi] = 0;
+
+  StoreSlaterElmBF_fcmp(bufM);
+
+  return conj(z/ip);
+}
+
+/* Calculate 2-body Green function with BackFlow. */
+double complex GreenFunc2BF(const int ri, const int rj, const int rk, const int rl,
+                    const int s, const int t, const double complex ip, double complex *bufM,
+                    int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
+                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double complex *buffer) {
+  double complex z;
+  int mj,msj,ml,mtl;
+  int rsi,rsj,rtk,rtl;
+  double complex *pfMNew = buffer; /* [NQPFull] */
+  int msaTmp0[NQPFull*Nsite], msaTmp1[NQPFull*Nsite], msaTmp[NQPFull*Nsize];
+  int icount0[NQPFull], icount1[NQPFull], icount[NQPFull];
+
+  rsi = ri + s*Nsite;
+  rsj = rj + s*Nsite;
+  rtk = rk + t*Nsite;
+  rtl = rl + t*Nsite;
+
+  if(s==t) {
+    if(rk==rl) {
+      if(eleNum[rtk]==0) return 0.0;
+      else return GreenFunc1BF(ri,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
+                               eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }else if(rj==rl) {
+      return 0.0;
+    }else if(ri==rl) {
+      if(eleNum[rsi]==0) return 0.0;
+      else if(rj==rk) return 1.0-eleNum[rsj];
+      else return -GreenFunc1BF(rk,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
+                                eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }else if(rj==rk) {
+      if(eleNum[rsj]==1) return 0.0;
+      else if(ri==rl) return eleNum[rsi];
+      else return GreenFunc1BF(ri,rl,s,ip,bufM,eleIdx,eleCfg,eleNum,
+                               eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }else if(ri==rk) {
+      return 0.0;
+    }else if(ri==rj) {
+      if(eleNum[rsi]==0) return 0.0;
+      else return GreenFunc1BF(rk,rl,s,ip,bufM,eleIdx,eleCfg,eleNum,
+                               eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }
+  }else{
+    if(rk==rl) {
+      if(eleNum[rtk]==0) return 0.0;
+      else if(ri==rj) return eleNum[rsi];
+      else return GreenFunc1BF(ri,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
+                               eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }else if(ri==rj) {
+      if(eleNum[rsi]==0) return 0.0;
+      else return GreenFunc1BF(rk,rl,t,ip,bufM,eleIdx,eleCfg,eleNum,
+                               eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }
+  }
+
+  if(eleNum[rsi]==1 || eleNum[rsj]==0 || eleNum[rtk]==1 || eleNum[rtl]==0) return 0.0;
+
+  mj = eleCfg[rsj];
+  ml = eleCfg[rtl];
+  msj = mj + s*Ne;
+  mtl = ml + t*Ne;
+
+  eleCfg[rtl] = -1;
+  eleCfg[rtk] = ml;
+  eleIdx[mtl] = rk;
+  eleNum[rtl] = 0;
+  eleNum[rtk] = 1;
+  UpdateProjCnt(rl, rk, t, projCntNew, eleProjCnt, eleNum);
+
+  eleCfg[rsj] = -1;
+  eleCfg[rsi] = mj;
+  eleIdx[msj] = ri;
+  eleNum[rsj] = 0;
+  eleNum[rsi] = 1;
+  UpdateProjCnt(rj, ri, s, projCntNew, projCntNew, eleNum);
+
+  if(!IsSectorStateAllowed(eleNum)) {
+    eleCfg[rtl] = ml;
+    eleCfg[rtk] = -1;
+    eleIdx[mtl] = rl;
+    eleNum[rtl] = 1;
+    eleNum[rtk] = 0;
+    eleCfg[rsj] = mj;
+    eleCfg[rsi] = -1;
+    eleIdx[msj] = rj;
+    eleNum[rsj] = 1;
+    eleNum[rsi] = 0;
+    return 0.0;
+  }
+
+  z = ProjRatio(projCntNew,eleProjCnt);
+
+  StartTimer(81);
+  MakeProjBFCnt(projBFCntNew, eleNum);
+  StopTimer(81);
+  StartTimer(82);
+  UpdateSlaterElmBFGrn(ml, rl, rk, t, eleCfg, eleNum, projBFCntNew, msaTmp0, icount0, bufM);
+  UpdateSlaterElmBFGrn(mj, rj, ri, s, eleCfg, eleNum, projBFCntNew, msaTmp1, icount1, bufM);
+  StopTimer(82);
+
+  if (MergeBFHopLists(msaTmp0, icount0, msaTmp1, icount1, msaTmp, icount) != 0) {
+    eleCfg[rtl] = ml;
+    eleCfg[rtk] = -1;
+    eleIdx[mtl] = rl;
+    eleNum[rtl] = 1;
+    eleNum[rtk] = 0;
+    eleCfg[rsj] = mj;
+    eleCfg[rsi] = -1;
+    eleIdx[msj] = rj;
+    eleNum[rsj] = 1;
+    eleNum[rsi] = 0;
+    StoreSlaterElmBF_fcmp(bufM);
+    return 0.0;
+  }
+
+  StartTimer(83);
+  CalculateNewPfMBFWithStride(icount, msaTmp, Nsize, pfMNew, eleIdx, 0, NQPFull, bufM);
+  StopTimer(83);
+  z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+
+  eleCfg[rtl] = ml;
+  eleCfg[rtk] = -1;
+  eleIdx[mtl] = rl;
+  eleNum[rtl] = 1;
+  eleNum[rtk] = 0;
   eleCfg[rsj] = mj;
   eleCfg[rsi] = -1;
   eleIdx[msj] = rj;
