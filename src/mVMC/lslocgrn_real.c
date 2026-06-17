@@ -118,6 +118,8 @@ double calHCA_real(const int ri, const int rj, const int s,
     if(eleNum[rsi]==1) return 0.0;
   }
 
+  if(!IsSectorPreserved_1hopPre(ri,rj,s,eleNum)) return 0.0;
+
   g = checkGF1_real(ri,rj,s,ip,eleIdx,eleCfg,eleNum);
   if(fabs(g)>1.0e-12) {
     val = calHCA1_real(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
@@ -474,6 +476,8 @@ double calHCACA_real(const int ri, const int rj, const int rk, const int rl,
     if(eleNum[rsj]==0) return 0.0;
     if(eleNum[rsi]==1) return 0.0;
   }
+
+  if(!WouldPreserve_2hopPre(rsi,rsj,rsk,rsl,eleNum)) return 0.0;
 
   g = checkGF2_real(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum);
   if(fabs(g)>1.0e-12) {

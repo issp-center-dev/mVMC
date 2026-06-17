@@ -194,6 +194,8 @@ double complex calHCA(const int ri, const int rj, const int s,
     if(eleNum[rsi]==1) return 0.0;
   }
 
+  if(!IsSectorPreserved_1hopPre(ri,rj,s,eleNum)) return 0.0;
+
   g = checkGF1(ri,rj,s,ip,eleIdx,eleCfg,eleNum);
   if(cabs(g)>1.0e-12) {
     val = calHCA1(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
@@ -487,6 +489,8 @@ double complex calHCACA(const int ri, const int rj, const int rk, const int rl,
     if(eleNum[rsi]==1) return 0.0;
   }
 
+  if(!WouldPreserve_2hopPre(rsi,rsj,rsk,rsl,eleNum)) return 0.0;
+
   g = checkGF2(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum);
   if(cabs(g)>1.0e-12) {
     val = calHCACA1(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
@@ -672,7 +676,7 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
   /* H0 term */
   /* <psi|H0 CACA|x>/<psi|x> = H0(x') <psi|CACA|x>/<psi|x> */
   g = GreenFunc2(ri,rj,rk,rl,si,sk,ip,
-                 eleIdx,eleCfg,eleNum,eleProjCnt,bufferInt,rbmCnt,myRBMCntNew,buffer);
+                 eleIdx,eleCfg,eleNum,eleProjCnt,bufferInt,rbmCnt,rbmCntNew,buffer);
 
   /* hopping */
   eleNum[rsi] = 1;
