@@ -563,10 +563,12 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         UpdateProjCnt(ri, rj, s, projCntNew, TmpEleProjCnt, TmpEleNum);
         MakeProjBFCnt(projBFCntNew, TmpEleNum);
         StopTimer(60);
+        StartTimer(64);
         UpdateSlaterElmBF_fcmp(mi, ri, rj, s, TmpEleCfg, TmpEleNum, projBFCntNew, msaTmp, icount,
                                SlaterElmBF);
 #pragma omp parallel for default(shared) private(tmp_i)
         for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElmBF_real[tmp_i]= creal(SlaterElmBF[tmp_i]);
+        StopTimer(64);
 
         StartTimer(61);
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
@@ -602,11 +604,12 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
           Counter[1]++;
         } else { /* reject */
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
-          //TODO: Add Timer
+          StartTimer(64);
           UpdateSlaterElmBF_fcmp(mi, rj, ri, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, msaTmp, icount,
                                  SlaterElmBF);
 #pragma omp parallel for default(shared) private(tmp_i)
           for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElmBF_real[tmp_i]= creal(SlaterElmBF[tmp_i]);
+          StopTimer(64);
         }
         StopTimer(32);
 

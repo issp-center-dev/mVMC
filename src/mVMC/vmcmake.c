@@ -897,8 +897,10 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         UpdateProjCnt(ri, rj, s, projCntNew, TmpEleProjCnt, TmpEleNum);
         MakeProjBFCnt(projBFCntNew, TmpEleNum);
         StopTimer(60);
+        StartTimer(64);
         UpdateSlaterElmBF_fcmp(mi, ri, rj, s, TmpEleCfg, TmpEleNum, projBFCntNew, msaTmp, icount,
                                SlaterElmBF);
+        StopTimer(64);
         StartTimer(61);
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         //CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
@@ -933,9 +935,10 @@ void VMC_BF_MakeSample(MPI_Comm comm)
           Counter[1]++;
         } else { /* reject */
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
-          //TODO: Add Timer
+          StartTimer(64);
           UpdateSlaterElmBF_fcmp(mi, rj, ri, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, msaTmp, icount,
                                  SlaterElmBF);
+          StopTimer(64);
         }
         StopTimer(32);
 

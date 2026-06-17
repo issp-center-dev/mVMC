@@ -811,6 +811,7 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, i
   int idx_ik,idx_jk,idx_jl;
   int bfidx;
   int dki,dlj,nidx,midx,xtmp;
+  int cnt_ij_i,cnt_ji_i,cnt_ij_j,cnt_ji_j;
   const int nSite=Nsite;
   const int nRange=Nrange;
   const int nSiteRange = nRange*nSite;
@@ -849,11 +850,19 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, i
         *ijcount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
         *jicount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
 
+        cnt_ij_i = bfCnt0_n[idx_ik];
+        cnt_ji_i = bfCnt1_n[idx_ik];
+        if(cnt_ij_i == 0 && cnt_ji_i == 0) continue;
+
         for(xl=0;xl<nRange;xl++){
           //rli=posBF[tri][xl];
           rlj=posBF[trj][xl];
           //idx_il=tri*nRange+xl;
           idx_jl=trj*nRange+xl;
+
+          cnt_ij_j = bfCnt1_m[idx_jl];
+          cnt_ji_j = bfCnt0_m[idx_jl];
+          if((cnt_ij_i == 0 || cnt_ij_j == 0) && (cnt_ji_i == 0 || cnt_ji_j == 0)) continue;
 
           dlj = RangeIdx[trj][rlj];
           xtmp = 4*dlj+xm;
@@ -867,8 +876,12 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, i
           //printf("OrbitalSgn[%d][%d]=%d\n",rki,rlj,OrbitalSgn[rki][rlj]);
           //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
           //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
-          *slt_ij += -ProjBF[bfidx]*bfCnt0_n[idx_ik]*bfCnt1_m[idx_jl]*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj];
-          *slt_ji += -ProjBF[bfidx]*bfCnt1_n[idx_ik]*bfCnt0_m[idx_jl]*Slater[ OrbitalIdx[rlj][rki]]*OrbitalSgn[rlj][rki];
+          if(cnt_ij_i != 0 && cnt_ij_j != 0) {
+            *slt_ij += -ProjBF[bfidx]*cnt_ij_i*cnt_ij_j*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj];
+          }
+          if(cnt_ji_i != 0 && cnt_ji_j != 0) {
+            *slt_ji += -ProjBF[bfidx]*cnt_ji_i*cnt_ji_j*Slater[ OrbitalIdx[rlj][rki]]*OrbitalSgn[rlj][rki];
+          }
         }
       }
     }
@@ -893,6 +906,7 @@ void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijco
   int idx_ik,idx_jk,idx_jl;
   int bfidx;
   int dki,dlj,nidx,midx,xtmp;
+  int cnt_ij_i,cnt_ji_i,cnt_ij_j,cnt_ji_j;
   const int nSite=Nsite;
   const int nRange=Nrange;
   const int nSiteRange = nRange*nSite;
@@ -931,11 +945,19 @@ void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijco
         *ijcount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
         *jicount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
 
+        cnt_ij_i = bfCnt0_n[idx_ik];
+        cnt_ji_i = bfCnt1_n[idx_ik];
+        if(cnt_ij_i == 0 && cnt_ji_i == 0) continue;
+
         for(xl=0;xl<nRange;xl++){
           //rli=posBF[tri][xl];
           rlj=posBF[trj][xl];
           //idx_il=tri*nRange+xl;
           idx_jl=trj*nRange+xl;
+
+          cnt_ij_j = bfCnt1_m[idx_jl];
+          cnt_ji_j = bfCnt0_m[idx_jl];
+          if((cnt_ij_i == 0 || cnt_ij_j == 0) && (cnt_ji_i == 0 || cnt_ji_j == 0)) continue;
 
           dlj = RangeIdx[trj][rlj];
           xtmp = 4*dlj+xm;
@@ -949,8 +971,12 @@ void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijco
           //printf("OrbitalSgn[%d][%d]=%d\n",rki,rlj,OrbitalSgn[rki][rlj]);
           //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
           //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
-          *slt_ij += -creal(ProjBF[bfidx])*bfCnt0_n[idx_ik]*bfCnt1_m[idx_jl]*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
-          *slt_ji += -creal(ProjBF[bfidx])*bfCnt1_n[idx_ik]*bfCnt0_m[idx_jl]*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
+          if(cnt_ij_i != 0 && cnt_ij_j != 0) {
+            *slt_ij += -creal(ProjBF[bfidx])*cnt_ij_i*cnt_ij_j*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
+          }
+          if(cnt_ji_i != 0 && cnt_ji_j != 0) {
+            *slt_ji += -creal(ProjBF[bfidx])*cnt_ji_i*cnt_ji_j*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
+          }
         }
       }
     }
