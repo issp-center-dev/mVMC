@@ -297,9 +297,7 @@ int StochasticOptDiag(MPI_Comm comm) {
 
   /* update variatonal parameters */
   if(info==0 && rank==0) {
-    #pragma omp parallel for default(shared) private(si,pi)
-    #pragma loop noalias
-    #pragma loop norecurrence para
+    /* Complex real/imag entries may map to the same Para element. */
     for(si=0;si<nSmat;si++) {
       pi = smatToParaIdx[si];
 //      para[pi] += r[si];

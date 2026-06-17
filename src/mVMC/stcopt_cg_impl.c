@@ -314,21 +314,25 @@ int fn_StochasticOptCG(MPI_Comm comm) {
 
   /* update variational parameters */
   if(info==0 && rank==0) {
+#ifdef MVMC_SRCG_REAL
     #pragma omp parallel for default(shared) private(si,pi)
     #pragma loop noalias
     #pragma loop norecurrence para
     for(si=0;si<nSmat;si++) {
       pi = smatToParaIdx[si];
-#ifdef MVMC_SRCG_REAL
       para[pi]     += r[si];
+    }
 #else
+    /* Complex real/imag entries may map to the same Para element. */
+    for(si=0;si<nSmat;si++) {
+      pi = smatToParaIdx[si];
       if(pi%2==0){
         para[pi/2]     += creal(r[si]);  // real
       }else{
         para[(pi-1)/2] += creal(r[si])*I; // imag
       }
-#endif
     }
+#endif
   }
 
 #ifdef _DEBUG_STCOPT_CG
