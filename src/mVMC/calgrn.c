@@ -210,13 +210,9 @@ void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, 
       rk = CisAjsCktAltDCIdx[idx][4];
       rl = CisAjsCktAltDCIdx[idx][6];
       t  = CisAjsCktAltDCIdx[idx][5];
-      if (!FlagRBM) {
-        const double complex *rbmCnt;
-        double complex *rbmCntNew;
-        tmp = GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,
-                         myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
-      }
-      PhysCisAjsCktAltDC[idx] += w*tmp;
+      tmp = GreenFunc2BF(ri,rj,rk,rl,s,t,ip,mySltBFTmp,myEleIdx,myEleCfg,myEleNum,eleProjCnt,
+                         myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer);
+      LocalCisAjsCktAltDC[idx] = tmp;
     }
 
 #pragma omp master
@@ -225,6 +221,11 @@ void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, 
 #pragma omp for private(idx) nowait
     for(idx=0;idx<NCisAjs;idx++) {
       PhysCisAjs[idx] += w*LocalCisAjs[idx];
+    }
+
+#pragma omp for private(idx) nowait
+    for (idx=0;idx<NCisAjsCktAltDC;idx++) {
+      PhysCisAjsCktAltDC[idx] += w*LocalCisAjsCktAltDC[idx];
     }
 
 #pragma omp master

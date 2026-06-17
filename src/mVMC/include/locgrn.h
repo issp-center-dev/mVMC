@@ -19,4 +19,8 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
 double complex GreenFunc1BF(const int ri, const int rj, const int s, const double complex ip, double complex* bufM,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
                     int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double complex* buffer);
+double complex GreenFunc2BF(const int ri, const int rj, const int rk, const int rl,
+                    const int s, const int t, const double complex ip, double complex* bufM,
+                    int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
+                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double complex* buffer);
 #endif

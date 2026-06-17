@@ -228,8 +228,8 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
     fprintf(stderr, "Error: BackFlow MVP does not support NLanczosMode > 0.\n");
     return 1;
   }
-  if (NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0 || NCisAjsCktAltDC > 0) {
-    fprintf(stderr, "Error: BackFlow MVP does not support two-body terms or GreenFunc2 definitions.\n");
+  if (NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0) {
+    fprintf(stderr, "Error: BackFlow MVP does not support two-body Hamiltonian terms.\n");
     return 1;
   }
   return 0;

@@ -227,7 +227,7 @@ void updateMAll_child(const int ma, const int s, const int *eleIdx,
 
 /* Calculate new pfaffian with Backflow effects.
    The ma-th electron with spin s hops from ra to rb */
-void CalculateNewPfMBF(const int *icount, const int *msaTmp,
+void CalculateNewPfMBFWithStride(const int *icount, const int *msaTmp, const int msaStride,
                        double complex* pfMNew, const int *eleIdx,
                        const int qpStart, const int qpEnd, const double complex* bufM) {
   //#pragma procedure serial
@@ -241,7 +241,7 @@ void CalculateNewPfMBF(const int *icount, const int *msaTmp,
     msa=(int *)malloc(sizeof(int)*icount[qpidx]);
     //printf("Total=%d\n",icount[qpidx]);
     for(i=0;i<icount[qpidx];i++){
-      msa[i] = msaTmp[i+qpidx*Nsite];
+      msa[i] = msaTmp[i+qpidx*msaStride];
       //printf("hop[%d]=%d\n",i,msa[i]);
     }
 
@@ -252,6 +252,12 @@ void CalculateNewPfMBF(const int *icount, const int *msaTmp,
   }
 
   return;
+}
+
+void CalculateNewPfMBF(const int *icount, const int *msaTmp,
+                       double complex* pfMNew, const int *eleIdx,
+                       const int qpStart, const int qpEnd, const double complex* bufM) {
+  CalculateNewPfMBFWithStride(icount, msaTmp, Nsite, pfMNew, eleIdx, qpStart, qpEnd, bufM);
 }
 
 double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int *msa,

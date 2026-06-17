@@ -16,5 +16,9 @@ double GreenFuncN_real(const int n, int *rsi, int *rsj, const double ip,
 double GreenFunc1BF_real(const int ri, const int rj, const int s, const double ip, double *bufM,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
                     int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer);
+double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
+                    const int s, const int t, const double ip, double *bufM,
+                    int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
+                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer);
 
 #endif
