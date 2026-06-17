@@ -226,6 +226,34 @@ def write_minimal_twobodyg(workdir, nsite):
             fp.writelines(lines)
 
 
+def write_minimal_twobodygex(workdir, nsite):
+    if nsite < 4:
+        raise RuntimeError("minimal TwoBodyGEx BackFlow smoke requires Nsite >= 4")
+    rows = [
+        (0, 0, 1, 0, 2, 1, 3, 1),
+        (0, 0, 1, 0, 2, 0, 3, 0),
+        (1, 1, 0, 1, 3, 0, 2, 0),
+        (2, 0, 3, 0, 1, 1, 0, 1),
+    ]
+    with open(os.path.join(workdir, "greentwoex.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NCisAjsCktAlt         {}\n".format(len(rows)))
+        fp.write("=============================================\n")
+        fp.write("======== Green functions for BF smoke =======\n")
+        fp.write("=============================================\n")
+        for row in rows:
+            fp.write(" ".join("{:5d}".format(value) for value in row))
+            fp.write("\n")
+
+    namelist_path = os.path.join(workdir, "namelist.def")
+    with open(namelist_path) as fp:
+        lines = fp.readlines()
+    if not any(line.split() and line.split()[0] == "TwoBodyGEx" for line in lines):
+        lines.append("      TwoBodyGEx  greentwoex.def\n")
+        with open(namelist_path, "w") as fp:
+            fp.writelines(lines)
+
+
 def write_nonidentity_init_parameter(path, nprojbf, nslater):
     projbf_values = [
         0.93, 0.08, -0.05, 0.035, -0.025,
@@ -405,6 +433,45 @@ def compare_no_bf_twobodyg(rootdir, refdir, bf_workdir, mpi_procs, tol, rejected
         return -1
     if not math.isfinite(max_diff) or max_diff > tol:
         print("ERROR: identity BackFlow TwoBodyG mismatch: max_abs_diff={:.3e}".format(max_diff))
+        return -1
+    return 0
+
+
+def compare_no_bf_twobodygex(rootdir, refdir, bf_workdir, mpi_procs, tol, rejected_outputs):
+    no_bf_workdir = bf_workdir + "_nobf_twobodygex"
+
+    if os.path.exists(no_bf_workdir):
+        shutil.rmtree(no_bf_workdir)
+    os.makedirs(no_bf_workdir)
+    copy_def_files(refdir, no_bf_workdir, include_backflow=False)
+    nsite = parse_nsite(os.path.join(no_bf_workdir, "modpara.def"))
+    write_minimal_twobodygex(no_bf_workdir, nsite)
+
+    proc = run_vmc(rootdir, no_bf_workdir, mpi_procs, log_name="bf_test_nobf_twobodygex.log")
+    if proc.returncode != 0:
+        print(proc.stdout)
+        return proc.returncode
+    rejected = contains_rejected_output(proc.stdout, rejected_outputs)
+    if rejected is not None:
+        print("ERROR: rejected no-BF TwoBodyGEx output substring found: {}".format(rejected))
+        print("---- output begin ----")
+        print(proc.stdout)
+        print("---- output end ----")
+        return -1
+
+    bf_path = os.path.join(bf_workdir, "output", "zvo_cisajscktaltex_001.dat")
+    no_bf_path = os.path.join(no_bf_workdir, "output", "zvo_cisajscktaltex_001.dat")
+    bf_row = read_first_float_row(bf_path)
+    no_bf_row = read_first_float_row(no_bf_path)
+    max_observable = max(abs(value) for value in no_bf_row) if no_bf_row else 0.0
+    if max_observable <= 1.0e-12:
+        print("ERROR: TwoBodyGEx comparison is vacuous: no-BF observables are all zero.")
+        return -1
+    max_diff = max_abs_row_diff(bf_row, no_bf_row)
+    if not math.isfinite(max_diff) or max_diff > tol:
+        print("ERROR: identity BackFlow TwoBodyGEx mismatch: max_abs_diff={:.3e}".format(max_diff))
+        print("BF    zvo_cisajscktaltex_001.dat: {}".format(" ".join("{:.18e}".format(x) for x in bf_row)))
+        print("no-BF zvo_cisajscktaltex_001.dat: {}".format(" ".join("{:.18e}".format(x) for x in no_bf_row)))
         return -1
     return 0
 
@@ -719,7 +786,7 @@ def check_proj_bf_finite_diff_dump(path, tol):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -727,6 +794,7 @@ def main():
     expected_nqp_full = None
     compare_energy = False
     compare_twobodyg = False
+    compare_twobodygex = False
     compare_gradient = False
     compare_proj_bf_fd = False
     compare_real_complex_model = None
@@ -746,6 +814,9 @@ def main():
         elif sys.argv[argi] == "--compare-no-bf-twobodyg":
             compare_twobodyg = True
             argi += 1
+        elif sys.argv[argi] == "--compare-no-bf-twobodygex":
+            compare_twobodygex = True
+            argi += 1
         elif sys.argv[argi] == "--compare-no-bf-gradient":
             compare_gradient = True
             argi += 1
@@ -762,7 +833,7 @@ def main():
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -784,6 +855,8 @@ def main():
         work_suffix += "_energy"
     if compare_twobodyg:
         work_suffix += "_twobodyg"
+    if compare_twobodygex:
+        work_suffix += "_twobodygex"
     if compare_gradient:
         work_suffix += "_gradient"
     if compare_proj_bf_fd:
@@ -802,6 +875,8 @@ def main():
     write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd)
     if compare_twobodyg:
         write_minimal_twobodyg(workdir, nsite)
+    if compare_twobodygex:
+        write_minimal_twobodygex(workdir, nsite)
 
     dump_path = os.path.join(workdir, "bf_identity_dump.dat")
     diff_dump_path = os.path.join(workdir, "bf_diff_dump.dat") if compare_gradient else None
@@ -868,6 +943,10 @@ def main():
             return result
     if compare_twobodyg:
         result = compare_no_bf_twobodyg(rootdir, refdir, workdir, mpi_procs, tol, rejected_outputs)
+        if result != 0:
+            return result
+    if compare_twobodygex:
+        result = compare_no_bf_twobodygex(rootdir, refdir, workdir, mpi_procs, tol, rejected_outputs)
         if result != 0:
             return result
     if compare_gradient:

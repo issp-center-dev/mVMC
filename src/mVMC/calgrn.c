@@ -235,7 +235,7 @@ void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, 
     for(idx=0;idx<NCisAjsCktAlt;idx++) {
       idx0 = CisAjsCktAltIdx[idx][0];
       idx1 = CisAjsCktAltIdx[idx][1];
-      PhysCisAjsCktAlt[idx] += w*LocalCisAjs[idx0]*LocalCisAjs[idx1];
+      PhysCisAjsCktAlt[idx] += w*LocalCisAjs[idx0]*conj(LocalCisAjs[idx1]);
     }
 
 #pragma omp master
