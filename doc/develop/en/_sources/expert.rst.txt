@@ -3559,7 +3559,7 @@ Parameters
 
    **Type :** int-type (blank parameter not allowed)
 
-   **Description :** An integer giving the orbital index in the unit cell corresponding to site number [ int05 ]. You can specify it as an integer from 0 to [ int04 ]-1.
+   **Description :** An integer giving the orbital index in the unit cell corresponding to site number [ int05 ]. You can specify it as an integer from 0 to [ int04 ]-1. This is not a spin index.
 
 Usage rules
 ^^^^^^^^^^^
@@ -3570,8 +3570,16 @@ The rules for using this file are as follows:
 
 -  All the site indices must be specified.
 
--  ``[int01] * [int02] * [int03] * [int04]``
-   (i.e. ``Nx * Ny * Nz * Norb``) must equal ``Nsite``.
+-  Each row specifies the lattice position of one site. Do not repeat
+   lattice rows for up and down spins. Spin-dependent twist components
+   are specified in twist.def.
+
+-  ``[int01] * [int02] * [int03] * [int04]`` (i.e.
+   ``Nx * Ny * Nz * Norb``) should normally equal ``Nsite`` because the
+   usual lattice.def form gives one coordinate for each site. If these
+   values do not match, the run continues for compatibility but prints a
+   warning. In that case, make sure the coordinates and the twist.def
+   phases encode the intended geometry.
 
 -  Each site index must appear exactly once. Duplicate or missing
    indices are rejected as input errors.

@@ -2970,7 +2970,7 @@ An integer giving a site index (0 <span class="math notranslate nohighlight">\(\
 </li>
 <li><p>[ int09 ]</p>
 <p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
-<p><strong>Description :</strong> An integer giving the orbital index in the unit cell corresponding to site number [ int05 ]. You can specify it as an integer from 0 to [ int04 ]-1.</p>
+<p><strong>Description :</strong> An integer giving the orbital index in the unit cell corresponding to site number [ int05 ]. You can specify it as an integer from 0 to [ int04 ]-1. This is not a spin index.</p>
 </li>
 </ul>
 </section>
@@ -2980,8 +2980,15 @@ An integer giving a site index (0 <span class="math notranslate nohighlight">\(\
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>All the site indices must be specified.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">[int01]</span> <span class="pre">*</span> <span class="pre">[int02]</span> <span class="pre">*</span> <span class="pre">[int03]</span> <span class="pre">*</span> <span class="pre">[int04]</span></code>
-(i.e. <code class="docutils literal notranslate"><span class="pre">Nx</span> <span class="pre">*</span> <span class="pre">Ny</span> <span class="pre">*</span> <span class="pre">Nz</span> <span class="pre">*</span> <span class="pre">Norb</span></code>) must equal <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>.</p></li>
+<li><p>Each row specifies the lattice position of one site. Do not repeat
+lattice rows for up and down spins. Spin-dependent twist components
+are specified in twist.def.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[int01]</span> <span class="pre">*</span> <span class="pre">[int02]</span> <span class="pre">*</span> <span class="pre">[int03]</span> <span class="pre">*</span> <span class="pre">[int04]</span></code> (i.e.
+<code class="docutils literal notranslate"><span class="pre">Nx</span> <span class="pre">*</span> <span class="pre">Ny</span> <span class="pre">*</span> <span class="pre">Nz</span> <span class="pre">*</span> <span class="pre">Norb</span></code>) should normally equal <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> because the
+usual lattice.def form gives one coordinate for each site. If these
+values do not match, the run continues for compatibility but prints a
+warning. In that case, make sure the coordinates and the twist.def
+phases encode the intended geometry.</p></li>
 <li><p>Each site index must appear exactly once. Duplicate or missing
 indices are rejected as input errors.</p></li>
 </ul>

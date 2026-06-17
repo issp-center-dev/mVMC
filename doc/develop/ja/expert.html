@@ -2793,7 +2793,7 @@ i_x_y_z_orb
 </li>
 <li><p>[ int09 ]</p>
 <p><strong>形式 :</strong> int型 (空白不可)</p>
-<p><strong>説明 :</strong> サイト番号 [ int05 ] に対応するユニットセル内の軌道番号を指定します。0以上 [ int04 ] 未満で指定します。</p>
+<p><strong>説明 :</strong> サイト番号 [ int05 ] に対応するユニットセル内の軌道番号を指定します。0以上 [ int04 ] 未満で指定します。この値はスピン自由度ではありません。</p>
 </li>
 </ul>
 </section>
@@ -2803,8 +2803,14 @@ i_x_y_z_orb
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
 <li><p>全てのサイト番号を指定する必要があります。</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">[int01]</span> <span class="pre">*</span> <span class="pre">[int02]</span> <span class="pre">*</span> <span class="pre">[int03]</span> <span class="pre">*</span> <span class="pre">[int04]</span></code> (すなわち <code class="docutils literal notranslate"><span class="pre">Nx</span> <span class="pre">*</span> <span class="pre">Ny</span> <span class="pre">*</span> <span class="pre">Nz</span> <span class="pre">*</span> <span class="pre">Norb</span></code>)
-は <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> と一致する必要があります。</p></li>
+<li><p>各行は 1 つのサイトの格子座標を指定します。アップスピン・ダウンスピンに
+対して lattice.def の行を重複して指定しないでください。スピンに依存する
+twist 成分は twist.def で指定します。</p></li>
+<li><p>通常の lattice.def は各サイトに対して 1 つの座標を指定する形式なので、
+<code class="docutils literal notranslate"><span class="pre">[int01]</span> <span class="pre">*</span> <span class="pre">[int02]</span> <span class="pre">*</span> <span class="pre">[int03]</span> <span class="pre">*</span> <span class="pre">[int04]</span></code> (すなわち
+<code class="docutils literal notranslate"><span class="pre">Nx</span> <span class="pre">*</span> <span class="pre">Ny</span> <span class="pre">*</span> <span class="pre">Nz</span> <span class="pre">*</span> <span class="pre">Norb</span></code>) は通常 <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> と一致します。一致しない場合も
+互換性のため計算は継続しますが、 warning が出力されます。その場合は
+lattice.def の座標と twist.def の位相が意図した幾何を表すように設定してください。</p></li>
 <li><p>各サイト番号は一度だけ指定する必要があります。
 重複や欠番は入力エラーとして拒否されます。</p></li>
 </ul>
