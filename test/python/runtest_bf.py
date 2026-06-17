@@ -312,7 +312,7 @@ def write_orbital_opt_flags(path, nsite, nslater, opt_flag):
 
 
 def run_vmc(rootdir, workdir, mpi_procs, dump_path=None, diff_dump_path=None, fd_dump_path=None,
-            init_path=None, log_name="bf_test.log"):
+            green2_dump_path=None, init_path=None, log_name="bf_test.log"):
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
     env = os.environ.copy()
     if dump_path is not None:
@@ -321,6 +321,8 @@ def run_vmc(rootdir, workdir, mpi_procs, dump_path=None, diff_dump_path=None, fd
         env["MVMC_BF_DIFF_DUMP"] = diff_dump_path
     if fd_dump_path is not None:
         env["MVMC_BF_FD_DUMP"] = fd_dump_path
+    if green2_dump_path is not None:
+        env["MVMC_BF_GREEN2_DUMP"] = green2_dump_path
 
     cmd = [bin_to_test, "-e", "namelist.def"]
     if init_path is not None:
@@ -784,9 +786,63 @@ def check_proj_bf_finite_diff_dump(path, tol):
     return 0
 
 
+def check_bf_green2_bruteforce_dump(path, tol, expected_all_complex_flag):
+    if not os.path.exists(path):
+        print("ERROR: BackFlow GreenFunc2 brute-force dump was not written.")
+        return -1
+
+    blocks = read_key_value_blocks(path)
+    if not blocks:
+        print("ERROR: BackFlow GreenFunc2 brute-force dump is empty.")
+        return -1
+
+    total_compared = 0
+    total_nonzero = 0
+    max_diff = 0.0
+    max_bruteforce = 0.0
+    for block in blocks:
+        if expected_all_complex_flag is not None:
+            all_complex_flag = int(block.get("all_complex_flag", ["-1"])[0])
+            if all_complex_flag != expected_all_complex_flag:
+                print("ERROR: unexpected all_complex_flag in GreenFunc2 dump: got {} expected {}".format(
+                    all_complex_flag, expected_all_complex_flag))
+                return -1
+        info_fail_count = int(block.get("info_fail_count", ["-1"])[0])
+        nan_count = int(block.get("nan_count", ["-1"])[0])
+        if info_fail_count != 0:
+            print("ERROR: GreenFunc2 brute-force dump has info_fail_count={}".format(info_fail_count))
+            return -1
+        if nan_count != 0:
+            print("ERROR: GreenFunc2 brute-force dump has nan_count={}".format(nan_count))
+            return -1
+        compared = int(block.get("compared_count", ["0"])[0])
+        nonzero = int(block.get("nonzero_bruteforce_count", ["0"])[0])
+        block_diff = float(block.get("max_abs_green2_diff", ["nan"])[0])
+        block_bruteforce = float(block.get("max_abs_bruteforce", ["nan"])[0])
+        if not math.isfinite(block_diff) or not math.isfinite(block_bruteforce):
+            print("ERROR: GreenFunc2 brute-force dump contains non-finite maxima.")
+            return -1
+        total_compared += compared
+        total_nonzero += nonzero
+        max_diff = max(max_diff, block_diff)
+        max_bruteforce = max(max_bruteforce, block_bruteforce)
+
+    if total_compared == 0:
+        print("ERROR: GreenFunc2 brute-force check was vacuous: compared_count=0.")
+        return -1
+    if total_nonzero == 0 or max_bruteforce <= 1.0e-12:
+        print("ERROR: GreenFunc2 brute-force check was vacuous: nonzero_bruteforce_count={}".format(
+            total_nonzero))
+        return -1
+    if max_diff > tol:
+        print("ERROR: BackFlow GreenFunc2 brute-force mismatch: max_abs_diff={:.3e}".format(max_diff))
+        return -1
+    return 0
+
+
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -797,6 +853,9 @@ def main():
     compare_twobodygex = False
     compare_gradient = False
     compare_proj_bf_fd = False
+    check_bf_green2_bruteforce = False
+    use_nonidentity_init = False
+    expected_all_complex_flag = None
     compare_real_complex_model = None
     check_opt_restart = False
     rejected_outputs = []
@@ -823,6 +882,15 @@ def main():
         elif sys.argv[argi] == "--compare-proj-bf-finite-diff":
             compare_proj_bf_fd = True
             argi += 1
+        elif sys.argv[argi] == "--check-bf-green2-bruteforce":
+            check_bf_green2_bruteforce = True
+            argi += 1
+        elif sys.argv[argi] == "--use-nonidentity-init":
+            use_nonidentity_init = True
+            argi += 1
+        elif sys.argv[argi] == "--expect-all-complex-flag" and argi + 1 < len(sys.argv):
+            expected_all_complex_flag = int(sys.argv[argi + 1])
+            argi += 2
         elif sys.argv[argi] == "--compare-real-complex-nonidentity" and argi + 1 < len(sys.argv):
             compare_real_complex_model = sys.argv[argi + 1]
             argi += 2
@@ -833,7 +901,7 @@ def main():
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -861,6 +929,10 @@ def main():
         work_suffix += "_gradient"
     if compare_proj_bf_fd:
         work_suffix += "_projbf_fd"
+    if check_bf_green2_bruteforce:
+        work_suffix += "_green2_bruteforce"
+    if use_nonidentity_init:
+        work_suffix += "_nonidentity"
     workdir = os.path.join(rootdir, "work", model + work_suffix)
     if mpi_procs:
         workdir += "_mpi{}".format(mpi_procs)
@@ -872,17 +944,35 @@ def main():
     copy_def_files(refdir, workdir, include_backflow=True)
 
     nsite = parse_nsite(os.path.join(workdir, "modpara.def"))
+    definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd)
     write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd)
-    if compare_twobodyg:
+    if compare_twobodyg or check_bf_green2_bruteforce:
         write_minimal_twobodyg(workdir, nsite)
     if compare_twobodygex:
         write_minimal_twobodygex(workdir, nsite)
 
-    dump_path = os.path.join(workdir, "bf_identity_dump.dat")
+    init_path = None
+    if use_nonidentity_init:
+        assert_nonidentity_init_layout(workdir)
+        nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidx.def"))
+        write_orbital_opt_flags(os.path.join(workdir, "orbitalidx.def"), nsite, nslater, 0)
+        init_name = "nonidentity_init.dat"
+        projbf = write_nonidentity_init_parameter(
+            os.path.join(workdir, init_name),
+            definition.n_proj_bf,
+            nslater,
+        )
+        if projbf[0] == 1.0 or all(value == 0.0 for value in projbf[1:]):
+            print("ERROR: non-identity ProjBF initialization is invalid.")
+            return -1
+        init_path = init_name
+
+    dump_path = None if use_nonidentity_init else os.path.join(workdir, "bf_identity_dump.dat")
     diff_dump_path = os.path.join(workdir, "bf_diff_dump.dat") if compare_gradient else None
     fd_dump_path = os.path.join(workdir, "bf_projbf_fd_dump.dat") if compare_proj_bf_fd else None
+    green2_dump_path = os.path.join(workdir, "bf_green2_bruteforce_dump.dat") if check_bf_green2_bruteforce else None
     proc = run_vmc(rootdir, workdir, mpi_procs, dump_path=dump_path, diff_dump_path=diff_dump_path,
-                   fd_dump_path=fd_dump_path)
+                   fd_dump_path=fd_dump_path, green2_dump_path=green2_dump_path, init_path=init_path)
 
     if expected_error is not None:
         if expected_error not in proc.stdout:
@@ -906,33 +996,37 @@ def main():
         print(proc.stdout)
         print("---- output end ----")
         return -1
-    if not os.path.exists(dump_path):
-        print("ERROR: BackFlow identity dump was not written.")
-        return -1
-
-    values = read_key_value_file(dump_path)
-    info_no_bf = int(values.get("info_no_bf", "-1"))
-    info_bf = int(values.get("info_bf", "-1"))
-    nqp_full = int(values.get("nqp_full", "-1"))
-    nan_count = int(values.get("nan_count", "-1"))
-    max_slater = float(values.get("max_abs_slater_diff", "nan"))
-    max_pf = float(values.get("max_abs_pf_diff", "nan"))
     tol = 1.0e-10
+    if dump_path is not None:
+        if not os.path.exists(dump_path):
+            print("ERROR: BackFlow identity dump was not written.")
+            return -1
 
-    if expected_nqp_full is not None and nqp_full != expected_nqp_full:
-        print("ERROR: unexpected nqp_full: got {} expected {}".format(nqp_full, expected_nqp_full))
-        return -1
-    if info_no_bf != 0 or info_bf != 0:
-        print("ERROR: identity dump matrix calculation failed: no_bf={} bf={}".format(info_no_bf, info_bf))
-        return -1
-    if nan_count != 0:
-        print("ERROR: identity dump contains non-finite values: nan_count={}".format(nan_count))
-        return -1
-    if not math.isfinite(max_slater) or max_slater > tol:
-        print("ERROR: SlaterElm identity mismatch: max_abs_slater_diff={}".format(max_slater))
-        return -1
-    if not math.isfinite(max_pf) or max_pf > tol:
-        print("ERROR: PfM identity mismatch: max_abs_pf_diff={}".format(max_pf))
+        values = read_key_value_file(dump_path)
+        info_no_bf = int(values.get("info_no_bf", "-1"))
+        info_bf = int(values.get("info_bf", "-1"))
+        nqp_full = int(values.get("nqp_full", "-1"))
+        nan_count = int(values.get("nan_count", "-1"))
+        max_slater = float(values.get("max_abs_slater_diff", "nan"))
+        max_pf = float(values.get("max_abs_pf_diff", "nan"))
+
+        if expected_nqp_full is not None and nqp_full != expected_nqp_full:
+            print("ERROR: unexpected nqp_full: got {} expected {}".format(nqp_full, expected_nqp_full))
+            return -1
+        if info_no_bf != 0 or info_bf != 0:
+            print("ERROR: identity dump matrix calculation failed: no_bf={} bf={}".format(info_no_bf, info_bf))
+            return -1
+        if nan_count != 0:
+            print("ERROR: identity dump contains non-finite values: nan_count={}".format(nan_count))
+            return -1
+        if not math.isfinite(max_slater) or max_slater > tol:
+            print("ERROR: SlaterElm identity mismatch: max_abs_slater_diff={}".format(max_slater))
+            return -1
+        if not math.isfinite(max_pf) or max_pf > tol:
+            print("ERROR: PfM identity mismatch: max_abs_pf_diff={}".format(max_pf))
+            return -1
+    elif expected_nqp_full is not None:
+        print("ERROR: --expect-nqp-full requires an identity BackFlow dump.")
         return -1
     if not first_row_is_finite(os.path.join(workdir, "output", "zvo_out_001.dat")):
         print("ERROR: zvo_out_001.dat is missing or non-finite.")
@@ -955,6 +1049,10 @@ def main():
             return result
     if compare_proj_bf_fd:
         result = check_proj_bf_finite_diff_dump(fd_dump_path, 1.0e-6)
+        if result != 0:
+            return result
+    if check_bf_green2_bruteforce:
+        result = check_bf_green2_bruteforce_dump(green2_dump_path, 1.0e-10, expected_all_complex_flag)
         if result != 0:
             return result
 
