@@ -97,6 +97,7 @@ void OutputTimerParaOpt() {
   fprintf(fp,"      CalculateNewPfM2     [61] %12.5lf\n",Timer[61]);
   fprintf(fp,"      CalculateLogIP       [62] %12.5lf\n",Timer[62]);
   fprintf(fp,"      UpdateMAll           [63] %12.5lf\n",Timer[63]);
+  fprintf(fp,"      UpdateSlaterElmBF    [64] %12.5lf\n",Timer[64]);
   fprintf(fp,"    exchange update        [33] %12.5lf\n",Timer[33]);
   fprintf(fp,"      UpdateProjCnt        [65] %12.5lf\n",Timer[65]);
   fprintf(fp,"      CalculateNewPfMTwo2  [66] %12.5lf\n",Timer[66]);
@@ -118,6 +119,13 @@ void OutputTimerParaOpt() {
   fprintf(fp,"    ReturnSlaterElmDiff    [42] %12.5lf\n",Timer[42]);
   fprintf(fp,"    calculate OO and HO    [43] %12.5lf\n",Timer[43]);
   fprintf(fp,"    multiply store OO      [45] %12.5lf\n",Timer[45]);
+  fprintf(fp,"  BF detail timers\n");
+  fprintf(fp,"    BF Green MakeProjBFCnt [81] %12.5lf\n",Timer[81]);
+  fprintf(fp,"    BF Green UpdateSlt     [82] %12.5lf\n",Timer[82]);
+  fprintf(fp,"    BF Green CalcNewPfM    [83] %12.5lf\n",Timer[83]);
+  fprintf(fp,"    BF Update collect rows [91] %12.5lf\n",Timer[91]);
+  fprintf(fp,"    BF Update recompute    [92] %12.5lf\n",Timer[92]);
+  fprintf(fp,"    BF Update copy rows    [93] %12.5lf\n",Timer[93]);
   fprintf(fp,"  StochasticOpt             [5] %12.5lf\n",Timer[5]);
   fprintf(fp,"    preprocess             [50] %12.5lf\n",Timer[50]);
   fprintf(fp,"    stcOptMain             [51] %12.5lf\n",Timer[51]);
@@ -158,6 +166,7 @@ void OutputTimerPhysCal() {
   fprintf(fp,"      CalculateNewPfM2     [61] %12.5lf\n",Timer[61]);
   fprintf(fp,"      CalculateLogIP       [62] %12.5lf\n",Timer[62]);
   fprintf(fp,"      UpdateMAll           [63] %12.5lf\n",Timer[63]);
+  fprintf(fp,"      UpdateSlaterElmBF    [64] %12.5lf\n",Timer[64]);
   fprintf(fp,"    exchange update        [33] %12.5lf\n",Timer[33]);
   fprintf(fp,"      UpdateProjCnt        [65] %12.5lf\n",Timer[65]);
   fprintf(fp,"      CalculateNewPfMTwo2  [66] %12.5lf\n",Timer[66]);
@@ -182,6 +191,13 @@ void OutputTimerPhysCal() {
   fprintf(fp,"      addPhysCA            [52] %12.5lf\n",Timer[52]);
   fprintf(fp,"      addPhysCACA          [53] %12.5lf\n",Timer[53]);
   fprintf(fp,"      addPhysTwist         [54] %12.5lf\n",Timer[54]);
+  fprintf(fp,"  BF detail timers\n");
+  fprintf(fp,"    BF Green MakeProjBFCnt [81] %12.5lf\n",Timer[81]);
+  fprintf(fp,"    BF Green UpdateSlt     [82] %12.5lf\n",Timer[82]);
+  fprintf(fp,"    BF Green CalcNewPfM    [83] %12.5lf\n",Timer[83]);
+  fprintf(fp,"    BF Update collect rows [91] %12.5lf\n",Timer[91]);
+  fprintf(fp,"    BF Update recompute    [92] %12.5lf\n",Timer[92]);
+  fprintf(fp,"    BF Update copy rows    [93] %12.5lf\n",Timer[93]);
   fprintf(fp,"    Lanczos1               [43] %12.5lf\n",Timer[43]);
   fprintf(fp,"    Lanczos2               [44] %12.5lf\n",Timer[44]);
   fprintf(fp,"  UpdateSlaterElm          [20] %12.5lf\n",Timer[20]);
