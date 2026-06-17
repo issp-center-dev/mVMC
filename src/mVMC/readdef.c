@@ -698,8 +698,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                 "Error: NExUpdatePath=5 (t-J update) requires 2*Ne <= Nsite to avoid double occupancy.\n");
         info = 1;
       }
-      if (bufInt[IdxLanczosMode] != 0) {
-        fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support NLanczosMode > 0.\n");
+      if (FlagRBM > 0) {
+        fprintf(stderr, "Error: NExUpdatePath=4 or 5 (t-J update) does not support RBM.\n");
         info = 1;
       }
     }
@@ -762,10 +762,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
       if (iFlgOrbitalGeneral == 1) {
         fprintf(stderr, "Error: NExUpdatePath=6 (doublon-only) is not compatible with iFlgOrbitalGeneral=1 (FSZ).\n");
-        info = 1;
-      }
-      if (bufInt[IdxLanczosMode] != 0) {
-        fprintf(stderr, "Error: NExUpdatePath=6 (doublon-only) is not compatible with NLanczosMode > 0.\n");
         info = 1;
       }
       if (bufInt[IdxNe] <= 0) {
@@ -902,16 +898,24 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
       MPI_Abort(comm, EXIT_FAILURE);
     }
-    /* Lattice values are bcast via bufInt, so this is rank-safe. */
+    /* Lattice values are bcast via bufInt, so this is rank-safe.
+       The usual lattice.def form has one coordinate per site, so
+       Nx*Ny*Nz*Norb should normally match Nsite. Non-matching values are
+       accepted for compatibility with inputs that use the header as a
+       coordinate bounding box, but warn in all cases. */
     long long lattice_prod = (long long)Nx * (long long)Ny *
                              (long long)Nz * (long long)Norb;
     if (lattice_prod != (long long)Nsite) {
       if (rank == 0) {
         fprintf(stderr,
-                "Error: lattice dimensions Nx*Ny*Nz*Norb = %lld do not match Nsite = %d.\n",
+                "warning: lattice dimensions Nx*Ny*Nz*Norb = %lld do not "
+                "match Nsite = %d. The usual lattice.def form has one "
+                "coordinate per site, so these values should normally match. "
+                "This run will continue for compatibility; make sure the "
+                "lattice.def coordinates and twist.def phases encode the "
+                "intended geometry.\n",
                 lattice_prod, Nsite);
       }
-      MPI_Abort(comm, EXIT_FAILURE);
     }
   }
 
@@ -3185,7 +3189,11 @@ int GetInfoLattice(FILE *fp, int **ArrayIdx, int NArray, int nx, int ny, int nz,
       break;
     }
     if (seen[idx] != 0) {
-      fprintf(stderr, "Error: lattice idx=%d appears more than once.\n", idx);
+      fprintf(stderr,
+              "Error: lattice idx=%d appears more than once. lattice.def "
+              "uses one row per site; the last column is an orbital index, "
+              "not a spin index.\n",
+              idx);
       info = 1;
       break;
     }
