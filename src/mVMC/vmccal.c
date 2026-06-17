@@ -409,6 +409,264 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
   free(projBFStore);
 }
 
+static void copySlaterElmBFToReal(void) {
+  int idx;
+  const int n = NQPFull * Nsite2 * Nsite2;
+  for (idx = 0; idx < n; idx++) SlaterElmBF_real[idx] = creal(SlaterElmBF[idx]);
+}
+
+static void copyIntArray(int *dst, const int *src, const int n) {
+  int idx;
+  for (idx = 0; idx < n; idx++) dst[idx] = src[idx];
+}
+
+static int isGreen2BFGeneralCase(const int ri, const int rj, const int rk,
+                                 const int rl, const int s, const int t) {
+  if (s == t) {
+    return !(rk == rl || rj == rl || ri == rl ||
+             rj == rk || ri == rk || ri == rj);
+  }
+  return !(rk == rl || ri == rj);
+}
+
+static int setupGreen2BFGeneralHop(const int ri, const int rj, const int rk,
+                                   const int rl, const int s, const int t,
+                                   int *eleIdx, int *eleCfg, int *eleNum,
+                                   const int *eleProjCnt, int *projCntNew,
+                                   int *projBFCntNew, double *projRatio) {
+  int mj, msj, ml, mtl;
+  int rsi, rsj, rtk, rtl;
+
+  if (!isGreen2BFGeneralCase(ri, rj, rk, rl, s, t)) return 0;
+
+  rsi = ri + s * Nsite;
+  rsj = rj + s * Nsite;
+  rtk = rk + t * Nsite;
+  rtl = rl + t * Nsite;
+
+  if (eleNum[rsi] == 1 || eleNum[rsj] == 0 ||
+      eleNum[rtk] == 1 || eleNum[rtl] == 0) {
+    return 0;
+  }
+
+  mj = eleCfg[rsj];
+  ml = eleCfg[rtl];
+  if (mj < 0 || ml < 0) return 0;
+  msj = mj + s * Ne;
+  mtl = ml + t * Ne;
+
+  eleCfg[rtl] = -1;
+  eleCfg[rtk] = ml;
+  eleIdx[mtl] = rk;
+  eleNum[rtl] = 0;
+  eleNum[rtk] = 1;
+  UpdateProjCnt(rl, rk, t, projCntNew, eleProjCnt, eleNum);
+
+  eleCfg[rsj] = -1;
+  eleCfg[rsi] = mj;
+  eleIdx[msj] = ri;
+  eleNum[rsj] = 0;
+  eleNum[rsi] = 1;
+  UpdateProjCnt(rj, ri, s, projCntNew, projCntNew, eleNum);
+
+  if (!IsSectorStateAllowed(eleNum)) return 0;
+
+  *projRatio = ProjRatio(projCntNew, eleProjCnt);
+  MakeProjBFCnt(projBFCntNew, eleNum);
+  return 1;
+}
+
+static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
+                                        int *eleCfg, int *eleNum,
+                                        const int *eleProjCnt,
+                                        const int *eleProjBFCnt,
+                                        const int qpStart, const int qpEnd,
+                                        const int sample,
+                                        const int append) {
+  FILE *fp;
+  int *idxCopy;
+  int *cfgCopy;
+  int *numCopy;
+  int *projCntNew;
+  int *projBFCntNew;
+  double complex *buffer;
+  double complex *sltBFTmp;
+  double *bufferReal;
+  double *sltBFTmpReal;
+  double maxDiff = 0.0;
+  double maxBrute = 0.0;
+  double complex fastAtMax = 0.0 + 0.0 * I;
+  double complex bruteAtMax = 0.0 + 0.0 * I;
+  int maxIdx = -1;
+  int compared = 0;
+  int nonzeroBrute = 0;
+  int skipped = 0;
+  int infoFail = 0;
+  int nanCount = 0;
+  int idx;
+  const int projSize = (NProj > 0) ? NProj : 1;
+  const int bfCntSize = 16 * Nsite * Nrange;
+  const int slaterSize = NQPFull * Nsite2 * Nsite2;
+
+  if (path == NULL || path[0] == '\0') return;
+  if (NCisAjsCktAltDC <= 0) return;
+
+  idxCopy = (int *)malloc(sizeof(int) * (size_t)Nsize);
+  cfgCopy = (int *)malloc(sizeof(int) * (size_t)Nsite2);
+  numCopy = (int *)malloc(sizeof(int) * (size_t)Nsite2);
+  projCntNew = (int *)malloc(sizeof(int) * (size_t)projSize);
+  projBFCntNew = (int *)malloc(sizeof(int) * (size_t)bfCntSize);
+  buffer = (double complex *)malloc(sizeof(double complex) * (size_t)(NQPFull + 2 * Nsize));
+  sltBFTmp = (double complex *)malloc(sizeof(double complex) * (size_t)slaterSize);
+  bufferReal = (double *)malloc(sizeof(double) * (size_t)(NQPFull + 2 * Nsize));
+  sltBFTmpReal = (double *)malloc(sizeof(double) * (size_t)slaterSize);
+  if (idxCopy == NULL || cfgCopy == NULL || numCopy == NULL ||
+      projCntNew == NULL || projBFCntNew == NULL || buffer == NULL ||
+      sltBFTmp == NULL || bufferReal == NULL || sltBFTmpReal == NULL) {
+    fprintf(stderr, "Error: memory allocation failed for BackFlow GreenFunc2 dump.\n");
+    free(idxCopy);
+    free(cfgCopy);
+    free(numCopy);
+    free(projCntNew);
+    free(projBFCntNew);
+    free(buffer);
+    free(sltBFTmp);
+    free(bufferReal);
+    free(sltBFTmpReal);
+    return;
+  }
+
+  for (idx = 0; idx < NCisAjsCktAltDC; idx++) {
+    const int ri = CisAjsCktAltDCIdx[idx][0];
+    const int rj = CisAjsCktAltDCIdx[idx][2];
+    const int s  = CisAjsCktAltDCIdx[idx][1];
+    const int rk = CisAjsCktAltDCIdx[idx][4];
+    const int rl = CisAjsCktAltDCIdx[idx][6];
+    const int t  = CisAjsCktAltDCIdx[idx][5];
+    double projRatio;
+    double diff;
+    double bruteAbs;
+    int info;
+    double complex ip;
+    double complex fast;
+    double complex brute;
+
+    if (!isGreen2BFGeneralCase(ri, rj, rk, rl, s, t)) {
+      skipped++;
+      continue;
+    }
+
+    copyIntArray(idxCopy, eleIdx, Nsize);
+    copyIntArray(cfgCopy, eleCfg, Nsite2);
+    copyIntArray(numCopy, eleNum, Nsite2);
+    MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
+    if (AllComplexFlag == 0) {
+      double ipReal;
+      copySlaterElmBFToReal();
+      info = CalculateMAll_BF_real(idxCopy, qpStart, qpEnd);
+      ipReal = CalculateIP_real(PfM_real, qpStart, qpEnd, MPI_COMM_SELF);
+      ip = ipReal + 0.0 * I;
+    } else {
+      info = CalculateMAll_BF_fcmp(idxCopy, qpStart, qpEnd);
+      ip = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+    }
+    if (info != 0 || !isfinite(creal(ip)) || !isfinite(cimag(ip)) || cabs(ip) <= 0.0) {
+      infoFail++;
+      continue;
+    }
+    if (AllComplexFlag == 0) {
+      StoreSlaterElmBF_real(sltBFTmpReal);
+      fast = GreenFunc2BF_real(ri, rj, rk, rl, s, t, creal(ip), sltBFTmpReal,
+                               idxCopy, cfgCopy, numCopy, eleProjCnt,
+                               projCntNew, eleProjBFCnt, projBFCntNew,
+                               bufferReal) + 0.0 * I;
+    } else {
+      StoreSlaterElmBF_fcmp(sltBFTmp);
+      fast = GreenFunc2BF(ri, rj, rk, rl, s, t, ip, sltBFTmp,
+                          idxCopy, cfgCopy, numCopy, eleProjCnt,
+                          projCntNew, eleProjBFCnt, projBFCntNew, buffer);
+    }
+
+    copyIntArray(idxCopy, eleIdx, Nsize);
+    copyIntArray(cfgCopy, eleCfg, Nsite2);
+    copyIntArray(numCopy, eleNum, Nsite2);
+    if (!setupGreen2BFGeneralHop(ri, rj, rk, rl, s, t, idxCopy, cfgCopy,
+                                 numCopy, eleProjCnt, projCntNew,
+                                 projBFCntNew, &projRatio)) {
+      skipped++;
+      continue;
+    }
+
+    MakeSlaterElmBF_fcmp(numCopy, projBFCntNew);
+    if (AllComplexFlag == 0) {
+      double ipNewReal;
+      copySlaterElmBFToReal();
+      info = CalculateMAll_BF_real(idxCopy, qpStart, qpEnd);
+      ipNewReal = CalculateIP_real(PfM_real, qpStart, qpEnd, MPI_COMM_SELF);
+      brute = (projRatio * ipNewReal / creal(ip)) + 0.0 * I;
+    } else {
+      double complex ipNew;
+      info = CalculateMAll_BF_fcmp(idxCopy, qpStart, qpEnd);
+      ipNew = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+      brute = conj((projRatio * ipNew) / ip);
+    }
+    if (info != 0) {
+      infoFail++;
+      continue;
+    }
+
+    diff = cabs(fast - brute);
+    bruteAbs = cabs(brute);
+    if (!isfinite(diff) || !isfinite(bruteAbs)) {
+      nanCount++;
+      continue;
+    }
+    compared++;
+    if (bruteAbs > 1.0e-12) nonzeroBrute++;
+    if (bruteAbs > maxBrute) maxBrute = bruteAbs;
+    if (diff > maxDiff) {
+      maxDiff = diff;
+      maxIdx = idx;
+      fastAtMax = fast;
+      bruteAtMax = brute;
+    }
+  }
+
+  MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
+  if (AllComplexFlag == 0) copySlaterElmBFToReal();
+
+  fp = fopen(path, append ? "a" : "w");
+  if (fp == NULL) {
+    fprintf(stderr, "Error: failed to open BackFlow GreenFunc2 dump file: %s\n", path);
+  } else {
+    fprintf(fp, "sample %d\n", sample);
+    fprintf(fp, "all_complex_flag %d\n", AllComplexFlag);
+    fprintf(fp, "n_twobodyg %d\n", NCisAjsCktAltDC);
+    fprintf(fp, "compared_count %d\n", compared);
+    fprintf(fp, "nonzero_bruteforce_count %d\n", nonzeroBrute);
+    fprintf(fp, "skipped_count %d\n", skipped);
+    fprintf(fp, "info_fail_count %d\n", infoFail);
+    fprintf(fp, "nan_count %d\n", nanCount);
+    fprintf(fp, "max_abs_bruteforce %.17e\n", maxBrute);
+    fprintf(fp, "max_abs_green2_diff %.17e\n", maxDiff);
+    fprintf(fp, "max_idx %d\n", maxIdx);
+    fprintf(fp, "fast_at_max %.17e %.17e\n", creal(fastAtMax), cimag(fastAtMax));
+    fprintf(fp, "bruteforce_at_max %.17e %.17e\n", creal(bruteAtMax), cimag(bruteAtMax));
+    fprintf(fp, "\n");
+    fclose(fp);
+  }
+
+  free(idxCopy);
+  free(cfgCopy);
+  free(numCopy);
+  free(projCntNew);
+  free(projBFCntNew);
+  free(buffer);
+  free(sltBFTmp);
+  free(bufferReal);
+  free(sltBFTmpReal);
+}
+
 static void clearStoredOSampleRange(const int sampleStart, const int sampleEnd) {
   const int sampleSize = sampleEnd - sampleStart;
 
@@ -708,6 +966,7 @@ void VMC_BF_MainCal(MPI_Comm comm) {
   const char *bfIdentityDumpPath = getenv("MVMC_BF_IDENTITY_DUMP");
   const char *bfDiffDumpPath = getenv("MVMC_BF_DIFF_DUMP");
   const char *bfFDDumpPath = getenv("MVMC_BF_FD_DUMP");
+  const char *bfGreen2DumpPath = getenv("MVMC_BF_GREEN2_DUMP");
   const int qpStart = 0;
   const int qpEnd = NQPFull;
   int sample, sampleStart, sampleEnd;
@@ -768,6 +1027,11 @@ void VMC_BF_MainCal(MPI_Comm comm) {
     if (rank == 0 && bfFDDumpPath != NULL && bfFDDumpPath[0] != '\0') {
       dumpBFProjBFFiniteDiffCheck(bfFDDumpPath, eleIdx, eleNum, eleProjCnt,
                                   eleProjBFCnt, qpStart, qpEnd,
+                                  sample, sample != sampleStart);
+    }
+    if (rank == 0 && bfGreen2DumpPath != NULL && bfGreen2DumpPath[0] != '\0') {
+      dumpBFGreen2BruteForceCheck(bfGreen2DumpPath, eleIdx, eleCfg, eleNum,
+                                  eleProjCnt, eleProjBFCnt, qpStart, qpEnd,
                                   sample, sample != sampleStart);
     }
     StartTimer(40);
