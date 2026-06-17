@@ -230,7 +230,7 @@ void updateMAll_child_real(const int ma, const int s, const int *eleIdx,
 
 /* Calculate new pfaffian with Backflow effects.
    The ma-th electron with spin s hops from ra to rb */
-void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
+void CalculateNewPfMBFWithStride_real(const int *icount, const int *msaTmp, const int msaStride,
                        double *pfMNew, const int *eleIdx,
                        const int qpStart, const int qpEnd, const double *bufM) {
   //#pragma procedure serial
@@ -249,7 +249,7 @@ void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
     msa=(int *)malloc(sizeof(int)*icount[qpidx]);
     //printf("Total=%d\n",icount[qpidx]);
     for(i=0;i<icount[qpidx];i++){
-      msa[i] = msaTmp[i+qpidx*Nsite];
+      msa[i] = msaTmp[i+qpidx*msaStride];
       //printf("hop[%d]=%d\n",i,msa[i]);
     }
 
@@ -261,6 +261,12 @@ void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
   //icount = UpdateSlaterElmBFTmp3(ma, rb, ra, s, eleCfg, eleNum, msaTmp);
 
   return;
+}
+
+void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
+                       double *pfMNew, const int *eleIdx,
+                       const int qpStart, const int qpEnd, const double *bufM) {
+  CalculateNewPfMBFWithStride_real(icount, msaTmp, Nsite, pfMNew, eleIdx, qpStart, qpEnd, bufM);
 }
 
 /* msa[k]-th electron hops from rsa[k] to eleIdx[msa[k]] */
