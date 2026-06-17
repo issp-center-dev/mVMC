@@ -228,6 +228,13 @@ void OutputOptData() {
     }
 //RBM
 
+    if(NProjBF != 0){
+      sprintf(fileName, "%s_bf_opt.dat", CParaFileHead);
+      Child_OutputOptData(fp, fileName, "NProjBF",
+                          NProjBF, NProjBF, count_i, n);
+      count_i += NProjBF;
+    }
+
     if(NSlater != 0){
       if(iFlgOrbitalGeneral==0) {
         sprintf(fileName, "%s_orbital_opt.dat", CParaFileHead);

@@ -76,6 +76,26 @@ def read_key_value_file(path):
     return values
 
 
+def update_modpara(path, values):
+    found = set()
+    lines = []
+    with open(path) as fp:
+        for line in fp:
+            cols = line.split()
+            if cols and cols[0] in values:
+                lines.append("{:<15} {}\n".format(cols[0], values[cols[0]]))
+                found.add(cols[0])
+            else:
+                lines.append(line)
+
+    for key, value in values.items():
+        if key not in found:
+            lines.append("{:<15} {}\n".format(key, value))
+
+    with open(path, "w") as fp:
+        fp.writelines(lines)
+
+
 def first_row_is_finite(path):
     with open(path) as fp:
         for line in fp:
@@ -93,6 +113,23 @@ def read_first_float_row(path):
             if cols:
                 return [float(x) for x in cols]
     raise RuntimeError("no numeric rows in {}".format(path))
+
+
+def read_child_opt_values(path):
+    values = []
+    with open(path) as fp:
+        for line in fp:
+            cols = line.split()
+            if len(cols) != 3:
+                continue
+            try:
+                idx = int(cols[0])
+                real = float(cols[1])
+                imag = float(cols[2])
+            except ValueError:
+                continue
+            values.append((idx, real, imag))
+    return values
 
 
 def max_abs_row_diff(left, right):
@@ -369,6 +406,132 @@ def compare_real_complex_nonidentity(rootdir, real_model, complex_model, mpi_pro
     return 0
 
 
+def check_child_opt_block(all_values, child_values, start, label, tol):
+    if len(child_values) == 0:
+        print("ERROR: {} opt file contains no parameter rows.".format(label))
+        return -1
+    if start + 3 * len(child_values) > len(all_values):
+        print("ERROR: {} block overruns zqp_opt.dat: start={} rows={} len={}".format(
+            label, start, len(child_values), len(all_values)))
+        return -1
+
+    max_diff = 0.0
+    for row, (idx, real, imag) in enumerate(child_values):
+        if idx != row:
+            print("ERROR: {} opt row index mismatch: row={} idx={}".format(label, row, idx))
+            return -1
+        all_real = all_values[start + 3 * row]
+        all_imag = all_values[start + 3 * row + 1]
+        max_diff = max(max_diff, abs(all_real - real), abs(all_imag - imag))
+    if not math.isfinite(max_diff) or max_diff > tol:
+        print("ERROR: {} opt block mismatch: max_abs_diff={:.3e}".format(label, max_diff))
+        return -1
+    return 0
+
+
+def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs):
+    if mpi_procs:
+        print("ERROR: BackFlow opt-output restart smoke is a single-rank test.")
+        return -1
+
+    refdir = os.path.join(rootdir, "data", model)
+    workdir = os.path.join(rootdir, "work", model + "_opt_output_restart")
+    if os.path.exists(workdir):
+        shutil.rmtree(workdir)
+    os.makedirs(workdir)
+    copy_def_files(refdir, workdir, include_backflow=True)
+    assert_nonidentity_init_layout(workdir)
+
+    update_modpara(
+        os.path.join(workdir, "modpara.def"),
+        {
+            "NSROptItrStep": 2,
+            "NSROptItrSmp": 2,
+            "NVMCSample": 16,
+            "NVMCWarmUp": 4,
+            "NStore": 1,
+        },
+    )
+
+    nsite = parse_nsite(os.path.join(workdir, "modpara.def"))
+    definition = build_chain_nn_backflow(length=nsite, optimize=True)
+    write_chain_nn_backflow(workdir, length=nsite, optimize=True)
+    nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidx.def"))
+
+    proc = run_vmc(rootdir, workdir, mpi_procs, log_name="bf_test_opt_output.log")
+    if proc.returncode != 0:
+        print(proc.stdout)
+        return proc.returncode
+    rejected = contains_rejected_output(proc.stdout, rejected_outputs)
+    if rejected is not None:
+        print("ERROR: rejected BackFlow output substring found: {}".format(rejected))
+        print("---- output begin ----")
+        print(proc.stdout)
+        print("---- output end ----")
+        return -1
+
+    zqp_opt = os.path.join(workdir, "output", "zqp_opt.dat")
+    zqp_bf_opt = os.path.join(workdir, "output", "zqp_bf_opt.dat")
+    zqp_orbital_opt = os.path.join(workdir, "output", "zqp_orbital_opt.dat")
+    for path in (zqp_opt, zqp_bf_opt, zqp_orbital_opt):
+        if not os.path.exists(path):
+            print("ERROR: expected opt output was not written: {}".format(path))
+            return -1
+
+    all_values = read_first_float_row(zqp_opt)
+    expected_len = 6 + 3 * (definition.n_proj_bf + nslater)
+    if len(all_values) != expected_len:
+        print("ERROR: zqp_opt.dat length mismatch: got {} expected {}".format(
+            len(all_values), expected_len))
+        return -1
+    if not all(math.isfinite(value) for value in all_values):
+        print("ERROR: zqp_opt.dat contains non-finite values.")
+        return -1
+
+    bf_values = read_child_opt_values(zqp_bf_opt)
+    if len(bf_values) != definition.n_proj_bf:
+        print("ERROR: zqp_bf_opt.dat row count mismatch: got {} expected {}".format(
+            len(bf_values), definition.n_proj_bf))
+        return -1
+    result = check_child_opt_block(all_values, bf_values, 6, "BackFlow", 1.0e-15)
+    if result != 0:
+        return result
+
+    orbital_values = read_child_opt_values(zqp_orbital_opt)
+    if len(orbital_values) != nslater:
+        print("ERROR: zqp_orbital_opt.dat row count mismatch: got {} expected {}".format(
+            len(orbital_values), nslater))
+        return -1
+    result = check_child_opt_block(
+        all_values,
+        orbital_values,
+        6 + 3 * definition.n_proj_bf,
+        "Slater",
+        1.0e-15,
+    )
+    if result != 0:
+        return result
+
+    restart_proc = run_vmc(
+        rootdir,
+        workdir,
+        mpi_procs,
+        init_path=os.path.join("output", "zqp_opt.dat"),
+        log_name="bf_test_opt_output_restart.log",
+    )
+    if restart_proc.returncode != 0:
+        print(restart_proc.stdout)
+        return restart_proc.returncode
+    rejected = contains_rejected_output(restart_proc.stdout, rejected_outputs)
+    if rejected is not None:
+        print("ERROR: rejected BackFlow restart output substring found: {}".format(rejected))
+        print("---- output begin ----")
+        print(restart_proc.stdout)
+        print("---- output end ----")
+        return -1
+    return 0
+
+
 def check_no_bf_gradient_dump(path, tol):
     if not os.path.exists(path):
         print("ERROR: BackFlow diff dump was not written.")
@@ -464,7 +627,7 @@ def check_proj_bf_finite_diff_dump(path, tol):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -474,6 +637,7 @@ def main():
     compare_gradient = False
     compare_proj_bf_fd = False
     compare_real_complex_model = None
+    check_opt_restart = False
     rejected_outputs = []
     argi = 2
     while argi < len(sys.argv):
@@ -495,11 +659,14 @@ def main():
         elif sys.argv[argi] == "--compare-real-complex-nonidentity" and argi + 1 < len(sys.argv):
             compare_real_complex_model = sys.argv[argi + 1]
             argi += 2
+        elif sys.argv[argi] == "--check-opt-output-restart":
+            check_opt_restart = True
+            argi += 1
         elif sys.argv[argi] == "--reject-output" and argi + 1 < len(sys.argv):
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -513,6 +680,8 @@ def main():
             1.0e-10,
             rejected_outputs,
         )
+    if check_opt_restart:
+        return check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs)
 
     work_suffix = ""
     if compare_energy:
