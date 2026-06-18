@@ -149,6 +149,12 @@
 
     **SpinJastrow (spinjastrow.def)**:
     :math:`{\cal P}_{SJ}` のうち、最適化の対象とする変分パラメータ :math:`v^s_{ij}` を指定します。
+
+    **BFRange (rangebf.def)**:
+    BackFlow 相関で参照する各サイトの近傍リストと距離シェルを指定します。
+
+    **BF (bf.def)**:
+    BackFlow 相関のパラメータ group と最適化フラグを指定します。
        
     **DH2**:
     :math:`{\cal P}_{d-h}^{(2)}` で表される2サイトのダブロン・ホロン相関因子を指定します。
@@ -319,6 +325,10 @@
      - 最適化する電荷Jastrow因子を指定します。                                   
    * - SpinJastrow
      - 最適化するスピンJastrow因子を指定します。
+   * - BFRange
+     - BackFlow相関で参照する近傍リストと距離シェルを指定します。
+   * - BF
+     - BackFlow相関のパラメータgroupと最適化フラグを指定します。
    * - DH2                       
      - 最適化する2サイトダブロン・ホロン相関因子を指定します。                   
    * - DH4                       
@@ -1793,6 +1803,371 @@ Spin Jastrow因子
 -  [ int03 ] と [ int04 ] が同じサイトを指す場合はエラー終了します。
 
 -  各サイトペアについて :math:`(i,j)` と :math:`(j,i)` の両方を指定する必要があります。また、両者の変分パラメータ番号は同一でなければなりません。
+
+BackFlow 指定ファイル (rangebf.def, bf.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+BackFlow 相関は、電子配置に依存してペア軌道
+:math:`f_{ij}` を有効なペア軌道 :math:`f^b_{ij}` に置き換える相関因子です。
+エキスパートモードでは ``namelist.def`` に ``BFRange`` と ``BF`` の
+2 つのキーワードを両方指定して有効化します。片方だけを指定した場合は
+エラー終了します。
+
+::
+
+    BFRange  rangebf.def
+    BF       bf.def
+
+``BFRange`` は各中心サイトから BackFlow が参照する近傍サイトと距離シェルを
+指定し、``BF`` はそれらの近傍ペアに対する BackFlow group と最適化フラグを
+指定します。現時点の実装はエキスパートモード入力のみを対象としており、
+StdFace/Standard mode はこれらのファイルを生成しません。
+
+波動関数の形
+^^^^^^^^^^^^
+
+BackFlow 付きペア積波動関数の定義は、Ido ら [Ido2015_] の格子 BackFlow
+拡張に従っています。Slater 行列式に対する格子 BackFlow については
+Tocchio ら [Tocchio2008_], [Tocchio2011_] も参照してください。
+現行実装では BackFlow とスピン射影は併用できないため、BackFlow を使う場合の
+波動関数は、BackFlow と併用可能な対角相関因子をまとめて
+:math:`{\cal P}_{\rm corr}` と書くと、概念的には
+
+.. math::
+
+   |\Psi^b\rangle
+     = {\cal P}_{\rm corr} {\cal L}_{K} |\phi^b\rangle
+
+です。:math:`{\cal L}_{K}` は運動量射影です。運動量射影を用いない場合は
+恒等演算子とみなします。実空間配置 :math:`x` で展開すると、
+
+.. math::
+
+   {\cal L}_{K}|\phi^b\rangle
+     = \sum_x \left(\frac{N}{2}\right)!
+       \sum_{\boldsymbol R} e^{i{\boldsymbol K}\cdot{\boldsymbol R}}
+       {\rm Pf}\left[X^b(x_{-{\boldsymbol R}})\right] |x\rangle .
+
+ここで :math:`N` は電子数、:math:`{\boldsymbol R}` は並進ベクトル、
+:math:`{\rm Pf}` は Pfaffian です。配置 :math:`x_{\boldsymbol R}` 中の
+:math:`n` 番目・ :math:`m` 番目の電子サイトを :math:`i_n, i_m` とすると、
+歪対称行列 :math:`X^b` の成分は
+
+.. math::
+
+   X^b_{nm}(x_{\boldsymbol R})
+     =
+     f^b_{T_{\boldsymbol R}(i_n),T_{\boldsymbol R}(i_m)}
+       (x_{\boldsymbol R})
+     -
+     f^b_{T_{\boldsymbol R}(i_m),T_{\boldsymbol R}(i_n)}
+       (x_{\boldsymbol R})
+
+で与えられます。BackFlow は、元のペア軌道 :math:`f_{ij}` を次の
+配置依存ペア軌道 :math:`f^b_{ij}(x)` に置き換えます。
+
+.. math::
+
+   f^b_{i_n i_m}(x)
+     =
+     \sum_{\mu,\nu=0}^{3}\sum_{\tau,\tau'}
+     \eta^{\mu\nu}_{\tau\tau'}
+     \Theta^{\mu\uparrow}_{i_n,i_n+\tau}(x)
+     \Theta^{\nu\downarrow}_{i_m,i_m+\tau'}(x)
+     f_{i_n+\tau,i_m+\tau'} .
+
+:math:`\tau,\tau'` は ``BFRange`` で列挙した近傍サイトを表し、
+:math:`\eta^{\mu\nu}_{\tau\tau'}` が BackFlow 変分パラメータです。
+mVMC の ``ProjBF`` はこの :math:`\eta` を平坦化して格納したものです。
+``BF`` ファイルは、各 :math:`(i,j,\tau,\tau')` に対する BackFlow group と
+最適化フラグを指定します。現在の実装では group は 0 のみ指定できます。
+
+:math:`\Theta` は配置 :math:`x` 上の局所的な doublon/holon パターンを
+表す対角量です。:math:`h_{i\sigma}=1-n_{i\sigma}`,
+:math:`D_i=n_{i\uparrow}n_{i\downarrow}`,
+:math:`H_i=(1-n_{i\uparrow})(1-n_{i\downarrow})` とすると、
+
+.. math::
+
+   \begin{aligned}
+   \Theta^{0\sigma}_{i,i+\tau}(x)
+     &= \delta_{i,i+\tau},\\
+   \Theta^{1\sigma}_{i,i+\tau}(x)
+     &= \langle D_i H_{i+\tau}\rangle_x,\\
+   \Theta^{2\sigma}_{i,i+\tau}(x)
+     &=
+     \langle
+       n_{i\sigma}h_{i,-\sigma}
+       n_{i+\tau,-\sigma}h_{i+\tau,\sigma}
+     \rangle_x,\\
+   \Theta^{3\sigma}_{i,i+\tau}(x)
+     &=
+     \langle
+       D_i n_{i+\tau,-\sigma}h_{i+\tau,\sigma}
+       + n_{i\sigma}h_{i,-\sigma}H_{i+\tau}
+     \rangle_x .
+   \end{aligned}
+
+BackFlow 無しの極限は
+:math:`\eta^{00}_{0,0}=1` かつその他の :math:`\eta=0` です。
+mVMC の入力ではこれが ``ProjBF[0]=1``、``ProjBF[k>0]=0`` に対応します。
+
+パラメータ数
+^^^^^^^^^^^^
+
+``rangebf.def`` の ``Nrange`` と ``NzBF``、``bf.def`` の
+``NBackFlowIdx`` から、BackFlow の変分パラメータ数は以下のように決まります。
+
+.. math::
+
+   \begin{aligned}
+   N_{\rm rangeIdx}
+     &= 3\frac{N_{\rm range}-1}{N_z^{\rm BF}} + 1,\\
+   N_{\rm BFIdxTotal}
+     &= \frac{N_{\rm rangeIdx}(N_{\rm rangeIdx}+1)}{2},\\
+   N_{\rm ProjBF}
+     &= N_{\rm BFIdxTotal} N_{\rm BackFlowIdx}.
+   \end{aligned}
+
+``Nrange`` は各中心サイトに対して列挙するサイト数で、自サイトを含みます。
+``NzBF`` は 1 つの非ゼロ距離シェルに含まれるサイト数です。
+``Nrange-1`` は ``NzBF`` で割り切れる必要があります。
+BackFlow が無い極限は ``ProjBF[0]=1``、``ProjBF[k>0]=0`` です。
+すべての ``ProjBF`` を 0 にすることは BackFlow 無しの極限ではありません。
+初期値ファイルを使わない場合、mVMC はこの identity 初期値を設定します。
+
+BFRange ファイル (rangebf.def)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+以下に 1 次元 4 サイト周期鎖で、自サイトと左右最近接を BackFlow 範囲にする例を示します。
+この例では ``Nrange=3``、``NzBF=2`` です。
+``rangebf.def`` は 10 行のヘッダを持ち、本文は 11 行目から始まります。
+1-5 行目は mVMC の ``*.def`` ファイル共通ヘッダ、6-10 行目は
+BackFlow 用の追加ヘッダです。7 行目の ``Nrange`` 行は読み飛ばされますが、
+可読性と既存入力との整合のため、2 行目と同じ内容を書きます。
+
+::
+
+    ====================
+    Nrange 3 2
+    ====================
+    ====================
+    ====================
+    ====================
+    Nrange 3 2
+    ====================
+    ====================
+    ====================
+    0 0 0
+    0 3 1
+    0 1 1
+    1 1 0
+    1 0 1
+    1 2 1
+    2 2 0
+    2 1 1
+    2 3 1
+    3 3 0
+    3 2 1
+    3 0 1
+
+ファイル形式
+^^^^^^^^^^^^
+
+-  1-5行: 共通ヘッダ。2行目は ``Nrange`` [int01] [int02] とします。
+
+-  6-10行: BackFlow 用の追加ヘッダ。読み込み時には読み飛ばされますが省略できません。
+   7 行目にも ``Nrange`` [int01] [int02] を書くことを推奨します。
+
+-  11 - (10 + :math:`N_s \times` [int01]) 行:
+   [int03] [int04] [int05]
+
+パラメータ
+^^^^^^^^^^
+
+-  [ int01 ]
+
+   **形式 :** int型 (1以上)
+
+   **説明 :** 各中心サイトから列挙する BackFlow 範囲のサイト数。
+   自サイトを必ず含めます。
+
+-  [ int02 ]
+
+   **形式 :** int型 (1以上)
+
+   **説明 :** 1 つの非ゼロ距離シェルに含まれるサイト数。
+   [int01] - 1 は [int02] で割り切れる必要があります。
+
+-  [ int03 ]
+
+   **形式 :** int型
+
+   **説明 :** 中心サイト番号。0以上 ``Nsite`` 未満で指定します。
+
+-  [ int04 ]
+
+   **形式 :** int型
+
+   **説明 :** [int03] から見た BackFlow 範囲内のサイト番号。
+   0以上 ``Nsite`` 未満で指定します。
+
+-  [ int05 ]
+
+   **形式 :** int型
+
+   **説明 :** 距離シェル番号。自サイトは必ず 0 とし、非ゼロ距離シェルは
+   1 以上 :math:`(N_{\rm range}-1)/N_z^{\rm BF}` 以下で指定します。
+
+使用ルール
+^^^^^^^^^^
+
+-  各中心サイト [int03] について、ちょうど ``Nrange`` 行を指定する必要があります。
+
+-  各中心サイトには自サイト行 ``i i 0`` が必須です。
+   ``i==j`` でシェル番号が 0 以外、または ``i!=j`` でシェル番号が 0 の行は
+   エラーになります。
+
+-  同じ中心サイトと範囲サイトの組 ``(i,j)`` を重複して指定することはできません。
+
+BF ファイル (bf.def)
+^^^^^^^^^^^^^^^^^^^^
+
+``BF`` ファイルでは、``BFRange`` で定義した近傍の組に BackFlow group を
+割り当てます。現在の実装では ``NBackFlowIdx==1`` のみをサポートするため、
+group 番号 [int06] は常に 0 です。
+``bf.def`` も 10 行のヘッダを持ち、本文は 11 行目から始まります。
+1-5 行目は mVMC の ``*.def`` ファイル共通ヘッダ、6-10 行目は
+BackFlow 用の追加ヘッダです。7 行目の ``NBackFlowIdx`` 行は読み飛ばされますが、
+可読性と既存入力との整合のため、2 行目と同じ内容を書きます。
+
+例:
+
+::
+
+    ====================
+    NBackFlowIdx 1
+    ====================
+    ====================
+    ====================
+    ====================
+    NBackFlowIdx 1
+    ====================
+    ====================
+    ====================
+    0 0 0 0 0
+    0 0 0 3 0
+    0 0 0 1 0
+    0 0 3 0 0
+    0 0 3 3 0
+    0 0 3 1 0
+    (continue...)
+    0 0
+    1 0
+    2 0
+    (continue...)
+    9 0
+
+ファイル形式
+^^^^^^^^^^^^
+
+-  1-5行: 共通ヘッダ。2行目は ``NBackFlowIdx`` [int01] とします。
+
+-  6-10行: BackFlow 用の追加ヘッダ。読み込み時には読み飛ばされますが省略できません。
+   7 行目にも ``NBackFlowIdx`` [int01] を書くことを推奨します。
+
+-  11 - (10 + :math:`N_s^2 N_{\rm range}^2`) 行:
+   [int02] [int03] [int04] [int05] [int06]
+
+-  続く :math:`N_{\rm ProjBF}` 行:
+   [int07] [int08]
+
+パラメータ
+^^^^^^^^^^
+
+-  [ int01 ]
+
+   **形式 :** int型
+
+   **説明 :** BackFlow group 数。現在の実装では 1 のみ指定できます。
+
+-  [ int02 ], [ int03 ]
+
+   **形式 :** int型
+
+   **説明 :** BackFlow で補正する元のサイト対 :math:`(i,j)`。
+   どちらも 0 以上 ``Nsite`` 未満で指定します。
+
+-  [ int04 ], [ int05 ]
+
+   **形式 :** int型
+
+   **説明 :** ``BFRange`` で指定した近傍サイト。
+   [int04] は [int02] の BackFlow 範囲に、[int05] は [int03] の
+   BackFlow 範囲に含まれている必要があります。
+
+-  [ int06 ]
+
+   **形式 :** int型
+
+   **説明 :** BackFlow group 番号。現在の実装では 0 のみ指定できます。
+
+-  [ int07 ]
+
+   **形式 :** int型
+
+   **説明 :** BackFlow 変分パラメータ ``ProjBF`` の番号。
+   0 以上 ``NProjBF`` 未満を重複なくすべて指定します。
+
+-  [ int08 ]
+
+   **形式 :** int型
+
+   **説明 :** [int07] で指定した ``ProjBF`` を最適化する場合は 1、
+   固定する場合は 0 とします。``ProjBF[0]`` の虚部は常に固定されます。
+
+使用ルール
+^^^^^^^^^^
+
+-  ``BFRange`` と ``BF`` は必ず両方を ``namelist.def`` に指定してください。
+
+-  ``BF`` のサイト行は、全ての :math:`i,j` と
+   :math:`x_0 \in {\rm BFRange}(i)`、:math:`x_1 \in {\rm BFRange}(j)`
+   の組を 1 回ずつ指定する必要があります。行数は
+   :math:`N_s^2 N_{\rm range}^2` です。
+
+-  ``ProjBF[0]`` は BackFlow の base 項にも使われるため、identity 初期点では
+   ``ProjBF[0]=1`` とします。初期値ファイルや再開ファイルを使う場合、
+   ``ProjBF[0]`` の虚部は 0 にしてください。
+
+制限事項
+^^^^^^^^
+
+BackFlow は現時点では以下の範囲でのみ使用できます。範囲外の入力は
+エラー終了します。
+
+-  ``NBackFlowIdx==1`` のみ。複数 BackFlow group は未対応です。
+
+-  ローカル更新は ``NExUpdatePath==0`` の hopping update のみ。
+   t-J 用更新経路、exchange update、Kondo update、doublon-only update との併用は未対応です。
+
+-  ペア軌道は ``Orbital`` / ``OrbitalAntiParallel`` の通常形式のみ。
+   ``OrbitalGeneral`` / FSZ には未対応です。
+
+-  スピン射影は未対応です。``NSPGaussLeg==1`` を指定してください。
+
+-  RBM、Lanczos、Twist、reweight、``APFlag=1``、``NQPOptTrans>1`` は未対応です。
+   ``NMPTrans>1`` による通常の運動量射影は、``APFlag=0`` かつ
+   ``NQPOptTrans==1`` の範囲で使用できます。
+
+-  Hamiltonian は ``Trans`` と number-operator 型の相互作用
+   (``CoulombIntra``, ``CoulombInter``, ``Hund``) の範囲で使用できます。
+   ``PairHop``、``Exchange``、``InterAll`` のような二体ハミルトニアン項は未対応です。
+   ただし、測定用の ``TwoBodyG`` / ``TwoBodyGEx`` 出力は使用できます。
+
+-  Standard mode / StdFace から BackFlow 入力は生成されません。
+   BackFlow を使う場合は、エキスパートモード入力として ``BFRange`` と ``BF`` を
+   手動で用意してください。
 
 DH2指定ファイル
 ~~~~~~~~~~~~~~~
