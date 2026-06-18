@@ -257,7 +257,7 @@ void CalculateNewPfMBFWithStride(const int *icount, const int *msaTmp, const int
 void CalculateNewPfMBF(const int *icount, const int *msaTmp,
                        double complex* pfMNew, const int *eleIdx,
                        const int qpStart, const int qpEnd, const double complex* bufM) {
-  CalculateNewPfMBFWithStride(icount, msaTmp, Nsite, pfMNew, eleIdx, qpStart, qpEnd, bufM);
+  CalculateNewPfMBFWithStride(icount, msaTmp, Nsize, pfMNew, eleIdx, qpStart, qpEnd, bufM);
 }
 
 double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int *msa,
@@ -398,7 +398,7 @@ void UpdateMAll_BF_fcmp(const int *icount, const int *msaTmp,
     //Store msa//
     msa=(int *)malloc(sizeof(int)*icount[qpidx]);
     for(i=0;i<icount[qpidx];i++){
-      msa[i] = msaTmp[i+qpidx*Nsite];
+      msa[i] = msaTmp[i+qpidx*Nsize];
     }
 
     /* calculateNewPfM */

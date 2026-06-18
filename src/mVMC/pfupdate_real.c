@@ -266,7 +266,7 @@ void CalculateNewPfMBFWithStride_real(const int *icount, const int *msaTmp, cons
 void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
                        double *pfMNew, const int *eleIdx,
                        const int qpStart, const int qpEnd, const double *bufM) {
-  CalculateNewPfMBFWithStride_real(icount, msaTmp, Nsite, pfMNew, eleIdx, qpStart, qpEnd, bufM);
+  CalculateNewPfMBFWithStride_real(icount, msaTmp, Nsize, pfMNew, eleIdx, qpStart, qpEnd, bufM);
 }
 
 /* msa[k]-th electron hops from rsa[k] to eleIdx[msa[k]] */
@@ -407,7 +407,7 @@ void UpdateMAll_BF_real(const int *icount, const int *msaTmp,
     //Store msa//
     msa=(int *)malloc(sizeof(int)*icount[qpidx]);
     for(i=0;i<icount[qpidx];i++){
-      msa[i] = msaTmp[i+qpidx*Nsite];
+      msa[i] = msaTmp[i+qpidx*Nsize];
     }
 
     /* calculateNewPfM */

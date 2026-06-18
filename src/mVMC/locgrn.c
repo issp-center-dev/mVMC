@@ -463,10 +463,10 @@ static int MergeBFHopLists(const int *left, const int *leftCount,
     int *dst = merged + qpidx * Nsize;
     mergedCount[qpidx] = 0;
     for (i = 0; i < leftCount[qpidx]; i++) {
-      if (AppendBFHopIndex(dst, &mergedCount[qpidx], Nsize, left[qpidx * Nsite + i]) != 0) return 1;
+      if (AppendBFHopIndex(dst, &mergedCount[qpidx], Nsize, left[qpidx * Nsize + i]) != 0) return 1;
     }
     for (i = 0; i < rightCount[qpidx]; i++) {
-      if (AppendBFHopIndex(dst, &mergedCount[qpidx], Nsize, right[qpidx * Nsite + i]) != 0) return 1;
+      if (AppendBFHopIndex(dst, &mergedCount[qpidx], Nsize, right[qpidx * Nsize + i]) != 0) return 1;
     }
   }
   return 0;
@@ -481,7 +481,7 @@ double complex GreenFunc1BF(const int ri, const int rj, const int s, const doubl
   int mj,msj,rsi,rsj;
   //double complex bufM[NQPFull*Nsize*Nsize];
   double complex* pfMNew = buffer; /* NQPFull */
-  int msaTmp[NQPFull*Nsite],icount[NQPFull];
+  int msaTmp[NQPFull*Nsize],icount[NQPFull];
 
   if(ri==rj) return eleNum[ri+s*Nsite];
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
@@ -535,7 +535,7 @@ double complex GreenFunc2BF(const int ri, const int rj, const int rk, const int 
   int mj,msj,ml,mtl;
   int rsi,rsj,rtk,rtl;
   double complex *pfMNew = buffer; /* [NQPFull] */
-  int msaTmp0[NQPFull*Nsite], msaTmp1[NQPFull*Nsite], msaTmp[NQPFull*Nsize];
+  int msaTmp0[NQPFull*Nsize], msaTmp1[NQPFull*Nsize], msaTmp[NQPFull*Nsize];
   int icount0[NQPFull], icount1[NQPFull], icount[NQPFull];
 
   rsi = ri + s*Nsite;

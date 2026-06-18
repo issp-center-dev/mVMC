@@ -837,7 +837,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
   double complex logIpOld, logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
   int projCntNew[NProj];
   int projBFCntNew[16 * Nsite * Nrange]; // For BackFlow
-  int msaTmp[NQPFull * Nsite], icount[NQPFull]; // For BackFlow
+  int msaTmp[NQPFull * Nsize], icount[NQPFull]; // For BackFlow
   double complex pfMNew[NQPFull];
   double x, w; // TBC x will be complex number
 
