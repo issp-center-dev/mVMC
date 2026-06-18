@@ -217,6 +217,11 @@ function(add_python_vmc_test_bf_nonidentity_ncond test_name model ncond omp_thre
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads}")
 endfunction(add_python_vmc_test_bf_nonidentity_ncond)
 
+function(add_python_vmc_test_bf_nonidentity_ncond_mpi test_name model ncond)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --use-nonidentity-init --set-ncond ${ncond} --reject-output "Error:" --reject-output "error:")
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2;OMP_NUM_THREADS=1")
+endfunction(add_python_vmc_test_bf_nonidentity_ncond_mpi)
+
 function(add_python_vmc_test_bf_mpi test_name model)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model})
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2")
@@ -395,6 +400,8 @@ add_python_vmc_test_bf_real_complex_nonidentity(BackFlow_NonIdentity_RealVsCompl
 add_python_vmc_test_bf_opt_output_restart(BackFlow_Optimization_OptOutputRestart BackFlow_Optimization_Complex 1)
 add_python_vmc_test_bf_nonidentity_ncond(BackFlow_NonIdentity_HighFilling_Complex BackFlow_Identity_Complex 6 1)
 add_python_vmc_test_bf_nonidentity_ncond(BackFlow_NonIdentity_HighFilling_Real BackFlow_Identity_Real 6 1)
+add_python_vmc_test_bf_nonidentity_ncond_mpi(BackFlow_NonIdentity_HighFilling_Complex_mpi BackFlow_Identity_Complex 6)
+add_python_vmc_test_bf_nonidentity_ncond_mpi(BackFlow_NonIdentity_HighFilling_Real_mpi BackFlow_Identity_Real 6)
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidRBM "not compatible with RBM")
 add_python_vmc_test_invalid_expert(BackFlow_InvalidSpinProjection "NSPGaussLeg==1")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path4_InvalidRBM "does not support RBM")
