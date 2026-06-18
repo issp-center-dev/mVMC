@@ -842,7 +842,7 @@ def check_bf_green2_bruteforce_dump(path, tol, expected_all_complex_flag):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--set-ncond <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -858,6 +858,7 @@ def main():
     expected_all_complex_flag = None
     compare_real_complex_model = None
     check_opt_restart = False
+    ncond_override = None
     rejected_outputs = []
     argi = 2
     while argi < len(sys.argv):
@@ -888,6 +889,9 @@ def main():
         elif sys.argv[argi] == "--use-nonidentity-init":
             use_nonidentity_init = True
             argi += 1
+        elif sys.argv[argi] == "--set-ncond" and argi + 1 < len(sys.argv):
+            ncond_override = str(int(sys.argv[argi + 1]))
+            argi += 2
         elif sys.argv[argi] == "--expect-all-complex-flag" and argi + 1 < len(sys.argv):
             expected_all_complex_flag = int(sys.argv[argi + 1])
             argi += 2
@@ -901,7 +905,7 @@ def main():
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--set-ncond <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -933,6 +937,8 @@ def main():
         work_suffix += "_green2_bruteforce"
     if use_nonidentity_init:
         work_suffix += "_nonidentity"
+    if ncond_override is not None:
+        work_suffix += "_ncond{}".format(ncond_override)
     workdir = os.path.join(rootdir, "work", model + work_suffix)
     if mpi_procs:
         workdir += "_mpi{}".format(mpi_procs)
@@ -942,6 +948,8 @@ def main():
     os.makedirs(workdir)
 
     copy_def_files(refdir, workdir, include_backflow=True)
+    if ncond_override is not None:
+        update_modpara(os.path.join(workdir, "modpara.def"), {"Ncond": ncond_override})
 
     nsite = parse_nsite(os.path.join(workdir, "modpara.def"))
     definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd)

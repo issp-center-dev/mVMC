@@ -1055,7 +1055,7 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
       icount++;
     }
     hop=0;
-    msa[qpidx*Nsite+hop]= ma + Ne*u;
+    msa[qpidx*Nsize+hop]= ma + Ne*u;
     hop++;
 
     for(zidx=0;zidx<icount;zidx++){
@@ -1146,7 +1146,7 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
       }
       //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
       if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
-        msa[qpidx*Nsite+hop]=mi0;
+        msa[qpidx*Nsize+hop]=mi0;
         hop++;
       }
       //if((jcount1 == Nsite) ){
@@ -1156,7 +1156,7 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
       }
       //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
       if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
-        msa[qpidx*Nsite+hop]=mi1+Ne;
+        msa[qpidx*Nsize+hop]=mi1+Ne;
         hop++;
       }
     }
@@ -1245,7 +1245,7 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
       icount++;
     }
     hop=0;
-    msa[qpidx*Nsite+hop]= ma + Ne*u;
+    msa[qpidx*Nsize+hop]= ma + Ne*u;
     hop++;
 
     itmp=0;
@@ -1309,7 +1309,7 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
       }
       //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
       if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
-        msa[qpidx*Nsite+hop]=mi0;
+        msa[qpidx*Nsize+hop]=mi0;
         hop++;
       }
       //if((jcount1 == Nsite) ){
@@ -1319,7 +1319,7 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
       }
       //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
       if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
-        msa[qpidx*Nsite+hop]=mi1+Ne;
+        msa[qpidx*Nsize+hop]=mi1+Ne;
         hop++;
       }
     }
@@ -1408,7 +1408,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
       icount++;
     }
     hop=0;
-    msa[qpidx*Nsite+hop]= ma + Ne*u;
+    msa[qpidx*Nsize+hop]= ma + Ne*u;
     hop++;
 
     itmp=0;
@@ -1472,7 +1472,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
       }
       //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
       if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
-        msa[qpidx*Nsite+hop]=mi0;
+        msa[qpidx*Nsize+hop]=mi0;
         hop++;
       }
       //if((jcount1 == Nsite) ){
@@ -1482,7 +1482,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
       }
       //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
       if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
-        msa[qpidx*Nsite+hop]=mi1+Ne;
+        msa[qpidx*Nsize+hop]=mi1+Ne;
         hop++;
       }
     }
