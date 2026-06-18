@@ -1,7 +1,7 @@
 .. include:: ../../bib/ref.txt
 
 .. _HowToExpert:
-             
+
 エキスパートモード入力ファイル書式
 ==================================
 
@@ -10,19 +10,19 @@
 なお、キーワードの後にある括弧内に記載されているファイル名はvmcdry.outにより作成されるファイル名を表します。
 
 (1) リスト:
-      
+
     **キーワード指定なし (namelist.def)**: 使用するinput
     fileの名前のリストを書きます。なお、ファイル名は任意に指定することができます。
 
 (2) 基本パラメータ:
-      
+
     **ModPara (modpara.def)**:
     計算時に必要な基本的なパラメーター(サイトの数、電子数など)を設定します。
-       
+
     **LocSpin (locspn.def)**: 局在スピンの位置を設定します。
 
 (3) ハミルトニアン:
-      
+
     電子系の表式で記載されるハミルトニアン
 
     .. math::
@@ -45,25 +45,25 @@
     :math:`n_i=n_{i\uparrow}+n_{i\downarrow}` はサイト :math:`i` の電子密度演算子を
     それぞれ表します。
     各ハミルトニアンのパラメータは以下のファイルで指定します。
-          
+
     **Trans (trans.def)**:
     :math:`{\cal H}_T` 内の :math:`t_{ij\sigma_1\sigma_2}` を指定します。
-       
+
     **CoulombIntra (coulombintra.def)**:
-    :math:`{\cal H}_U` 内の :math:`U_i` を指定します。  
+    :math:`{\cal H}_U` 内の :math:`U_i` を指定します。
 
     **CoulombInter (coulombinter.def)**:
-    :math:`{\cal H}_V` 内の :math:`V_{ij}` を指定します。  
+    :math:`{\cal H}_V` 内の :math:`V_{ij}` を指定します。
 
     **Hund (hund.def)**:
     :math:`{\cal H}_H` 内の :math:`J_{ij}^{\rm Hund}` を指定します。
-     
+
     **Exchange (exchange.def)**:
     :math:`{\cal H}_E` 内の :math:`J_{ij}^{\rm Ex}` を指定します。
-       
+
     **PairHop**:
     :math:`{\cal H}_P` 内の :math:`J_{ij}^{\rm Pair}` を指定します。
-       
+
     **InterAll**:
     :math:`{\cal H}_I` 内の :math:`I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}` を指定します。
 
@@ -99,7 +99,7 @@
     ``2*Nelectron <= Nsite`` が許されます。
 
 (4) 最適化対象変分パラメータ:
-      
+
     最適化する変分パラメータを指定します。変分波動関数は
 
     .. math::
@@ -140,19 +140,19 @@
     :math:`N_s` は全サイト数です。
     最適化する変分パラメータは以下のファイルを用いて指定します
     ( :math:`{\cal L}_S` は **ModPara** ファイルでパラメータの指定をします)。
-       
+
     **Gutzwiller (gutzwilleridx.def)**:
     :math:`{\cal P}_G` のうち、最適化の対象とする変分パラメータ :math:`g_i` を指定します。
-       
+
     **Jastrow (jastrowidx.def)**:
     :math:`{\cal P}_J` のうち、最適化の対象とする変分パラメータ :math:`v_{ij}` を指定します。
 
     **SpinJastrow (spinjastrow.def)**:
     :math:`{\cal P}_{SJ}` のうち、最適化の対象とする変分パラメータ :math:`v^s_{ij}` を指定します。
-       
+
     **DH2**:
     :math:`{\cal P}_{d-h}^{(2)}` で表される2サイトのダブロン・ホロン相関因子を指定します。
-      
+
     **DH4**:
     :math:`{\cal P}_{d-h}^{(4)}` で表される4サイトのダブロン・ホロン相関因子を指定します。
 
@@ -164,37 +164,37 @@
 
     **GeneralRBM_PhysHidden**:
     :math:`{\cal N}_{\rm General RBM}` で表されるRBM相関因子のうち、最適化の対象とする変分パラメータ :math:`W_{i\sigma k}` を指定します。
-       
+
     **Orbital/OrbitalAntiParallel (orbitalidx.def)**:
     スピンが反平行のペア軌道 :math:`|\phi_{\rm pair} \rangle` を設定します。
-       
+
     **OrbitalParallel**:
     スピンが平行のペア軌道 :math:`|\phi_{\rm pair} \rangle` を設定します。
-       
+
     **OrbitalGeneral**:
     ペア軌道 :math:`|\phi_{\rm pair} \rangle` を設定します。
-          
+
     **TransSym (qptransidx.def)**:
     運動量射影 :math:`{\cal L}_K` と格子対称性射影 :math:`{\cal L}_P` に関する指定を行います。
 
 (5) 変分パラメータ初期値:
-      
+
     変分パラメータに関する初期値を与えます。
     キーワード指定されない場合には :math:`0` が初期値として設定されます。
-       
+
     **InGutzwiller**:
     :math:`{\cal P}_G` 内の変分パラメータ :math:`g_i` の初期値を設定します。
-       
+
     **InJastrow**:
     :math:`{\cal P}_J` 内の変分パラメータ :math:`v_{ij}` の初期値を設定します。
 
     **InSpinJastrow**:
     :math:`{\cal P}_{SJ}` 内の変分パラメータ :math:`v^s_{ij}` の初期値を設定します。
-       
+
     **InDH2**:
     :math:`{\cal P}_{d-h}^{(2)}` 内の2サイトのダブロン・ホロン相関因子
     :math:`\alpha_{2nt}^{d(h)}` の初期値を設定します。
-       
+
     **InDH4**:
     :math:`{\cal P}_{d-h}^{(4)}` 内の4サイトのダブロン・ホロン相関因子
     :math:`\alpha_{4nt}^{d(h)}` の初期値を設定します。
@@ -207,24 +207,26 @@
 
     **InGeneralRBM_PhysHidden**:
     :math:`{\cal N}_{\rm General RBM}` で表されるRBM相関因子のうち、最適化の対象とする変分パラメータ :math:`W_{i\sigma k}` の初期値を設定します。
-       
+
     **InOrbital/InOrbitalAntiParallel**:
     ペア軌道 :math:`|\phi_{\rm pair} \rangle` の :math:`f_{i\uparrow j\downarrow}`
     に関する初期値を設定します。
-       
+
     **InOrbitalParallel**:
     ペア軌道 :math:`|\phi_{\rm pair} \rangle` の :math:`f_{i\sigma j\sigma}`
     に関する初期値を設定します。
-       
+
     **InOrbitalGeneral**:
     ペア軌道 :math:`|\phi_{\rm pair} \rangle` の
     :math:`f_{i\sigma j\sigma_1}` に関する初期値を設定します。
 
 (6) 出力:
-      
+
     **OneBodyG (greenone.def)**:出力する一体Green関数を指定します。
 
     **TwoBodyG (greentwo.def)**:出力する二体Green関数を指定します。
+
+    **NBodyG (nbodyg.def)**:出力する :math:`N` 体相関関数を指定します。
 
     **Twist (twist.def)**:出力するTwist演算子を指定します。
 
@@ -233,7 +235,7 @@
     **Lattice (lattice.def)**:サイト番号に対するユニットセル内部座標を含めた格子ベクトルを指定します。Twist演算子計算時に使用されます。
 
 .. _InputFileList:
-    
+
 入力ファイル指定用ファイル(namelist.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -249,6 +251,7 @@
     Orbital orbitalidx.def
     OneBodyG zcisajs.def
     TwoBodyG	zcisajscktaltdc.def
+    NBodyG nbodyg.def
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -293,83 +296,85 @@
    :widths: 30 70
    :header-rows: 1
 
-   * - Keywords                  
-     - 対応するファイルの概要                                                    
-   * - ModPara :math:`^*`        
-     - 計算用のパラメータを指定します。                                          
-   * - LocSpin :math:`^*`        
-     - 局在・遍歴スピンを指定します。                                            
-   * - Trans                     
-     - 一般的な一体相互作用を指定します。                                        
-   * - InterAll                  
-     - 一般的な二体相互作用を指定します。                                        
-   * - CoulombIntra              
-     - 内部クーロン相互作用を指定します。                                        
-   * - CoulombInter              
-     - サイト間クーロン相互作用を指定します。                                    
-   * - Hund                      
-     - フント結合を指定します。                                                  
-   * - PairHop                   
-     - ペアホッピング相互作用を指定します。                                      
-   * - Exchange                  
-     - 交換相互作用を指定します。                                                
-   * - Gutzwiller                
-     - 最適化するGutzwiller因子を設定します。                                    
-   * - Jastrow                   
-     - 最適化する電荷Jastrow因子を指定します。                                   
+   * - Keywords
+     - 対応するファイルの概要
+   * - ModPara :math:`^*`
+     - 計算用のパラメータを指定します。
+   * - LocSpin :math:`^*`
+     - 局在・遍歴スピンを指定します。
+   * - Trans
+     - 一般的な一体相互作用を指定します。
+   * - InterAll
+     - 一般的な二体相互作用を指定します。
+   * - CoulombIntra
+     - 内部クーロン相互作用を指定します。
+   * - CoulombInter
+     - サイト間クーロン相互作用を指定します。
+   * - Hund
+     - フント結合を指定します。
+   * - PairHop
+     - ペアホッピング相互作用を指定します。
+   * - Exchange
+     - 交換相互作用を指定します。
+   * - Gutzwiller
+     - 最適化するGutzwiller因子を設定します。
+   * - Jastrow
+     - 最適化する電荷Jastrow因子を指定します。
    * - SpinJastrow
      - 最適化するスピンJastrow因子を指定します。
-   * - DH2                       
-     - 最適化する2サイトダブロン・ホロン相関因子を指定します。                   
-   * - DH4                       
-     - 最適化する4サイトダブロン・ホロン相関因子を指定します。 
-   * - GeneralRBM_PhysLayer      
+   * - DH2
+     - 最適化する2サイトダブロン・ホロン相関因子を指定します。
+   * - DH4
+     - 最適化する4サイトダブロン・ホロン相関因子を指定します。
+   * - GeneralRBM_PhysLayer
      - 一般的なRBM相関因子のうち、最適化する物理層での変分パラメータを指定します。
-   * - GeneralRBM_HiddenLayer    
+   * - GeneralRBM_HiddenLayer
      - 一般的なRBM相関因子のうち、最適化する隠れ層での変分パラメータを指定します。
-   * - GeneralRBM_PhysHidden     
-     - 一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータを指定します。                  
-   * - Orbital :math:`^*`        
-     - 反平行のスピンを持つペア軌道因子を指定します。                            
-   * - OrbitalAntiParallel       
-     - 反平行のスピンを持つペア軌道因子を指定します。                            
-   * - OrbitalParallel           
-     - 平行のスピンを持つペア軌道因子を指定します。                              
-   * - OrbitalGeneral            
-     - ペア軌道因子を指定します。                                                
-   * - TransSym :math:`^*`       
-     - 並進・格子対称演算子を設定します。                                        
-   * - InGutzwiller              
-     - Gutzwiller因子の初期値を設定します。                                      
-   * - InJastrow                 
-     - 電荷Jastrow因子の初期値を設定します。                                     
+   * - GeneralRBM_PhysHidden
+     - 一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータを指定します。
+   * - Orbital :math:`^*`
+     - 反平行のスピンを持つペア軌道因子を指定します。
+   * - OrbitalAntiParallel
+     - 反平行のスピンを持つペア軌道因子を指定します。
+   * - OrbitalParallel
+     - 平行のスピンを持つペア軌道因子を指定します。
+   * - OrbitalGeneral
+     - ペア軌道因子を指定します。
+   * - TransSym :math:`^*`
+     - 並進・格子対称演算子を設定します。
+   * - InGutzwiller
+     - Gutzwiller因子の初期値を設定します。
+   * - InJastrow
+     - 電荷Jastrow因子の初期値を設定します。
    * - InSpinJastrow
      - スピンJastrow因子の初期値を設定します。
-   * - InDH2                     
-     - 2サイトダブロン・ホロン相関因子の初期値を設定します。                     
-   * - InDH4                     
+   * - InDH2
+     - 2サイトダブロン・ホロン相関因子の初期値を設定します。
+   * - InDH4
      - 4サイトダブロン・ホロン相関因子の初期値を設定します。
-   * - InGeneralRBM_PhysLayer    
+   * - InGeneralRBM_PhysLayer
      - 一般的なRBM相関因子のうち、最適化する物理層での変分パラメータの初期値を設定します。
-   * - InGeneralRBM_HiddenLayer  
+   * - InGeneralRBM_HiddenLayer
      - 一般的なRBM相関因子のうち、最適化する隠れ層での変分パラメータの初期値を設定します。
-   * - InGeneralRBM_PhysHidden   
-     - 一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータの初期値を設定します。               
-   * - InOrbital                 
-     - ペア軌道因子 :math:`f_{i\uparrow j\downarrow}` の初期値を設定します。   
-   * - InOrbitalAntiParallel     
-     - ペア軌道因子 :math:`f_{i\uparrow j\downarrow}` の初期値を設定します。   
-   * - InOrbitalParallel         
-     - ペア軌道因子 :math:`f_{i\sigma j\sigma}` の初期値を設定します。         
-   * - InOrbitalGeneral          
-     - ペア軌道因子 :math:`f_{i\sigma j\sigma'}` の初期値を設定します。        
-   * - OneBodyG                  
-     - 出力する一体グリーン関数を指定します。                                    
-   * - TwoBodyG                  
+   * - InGeneralRBM_PhysHidden
+     - 一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータの初期値を設定します。
+   * - InOrbital
+     - ペア軌道因子 :math:`f_{i\uparrow j\downarrow}` の初期値を設定します。
+   * - InOrbitalAntiParallel
+     - ペア軌道因子 :math:`f_{i\uparrow j\downarrow}` の初期値を設定します。
+   * - InOrbitalParallel
+     - ペア軌道因子 :math:`f_{i\sigma j\sigma}` の初期値を設定します。
+   * - InOrbitalGeneral
+     - ペア軌道因子 :math:`f_{i\sigma j\sigma'}` の初期値を設定します。
+   * - OneBodyG
+     - 出力する一体グリーン関数を指定します。
+   * - TwoBodyG
      - 出力する二体グリーン関数を指定します。
-   * - Twist                    
+   * - NBodyG
+     - 出力する :math:`N` 体相関関数 :math:`\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle` を指定します。
+   * - Twist
      - 出力するTwist演算子を指定します。
-   * - Lattice                  
+   * - Lattice
      - サイト番号に対するユニットセル内部座標を含めた格子ベクトルを指定します。Twist演算子計算時に使用されます。
 
 ModParaファイル (modpara.def)
@@ -380,7 +385,7 @@ ModParaファイル (modpara.def)
 ::
 
     --------------------
-    Model_Parameters 
+    Model_Parameters
     --------------------
     VMC_Cal_Parameters
     --------------------
@@ -410,7 +415,7 @@ ModParaファイル (modpara.def)
     RndSeed        11272
     NSplitSize     1
     NStore         1
-    NneuronGeneral 32  
+    NneuronGeneral 32
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -478,7 +483,7 @@ ModParaファイル (modpara.def)
 
 -  9行目以降では“-”で始まる行は読み込まれません。
 
- 
+
 
 キーワード
 ^^^^^^^^^^
@@ -747,11 +752,11 @@ LocSpin指定ファイル(locspn.def)
 
 ::
 
-    ================================ 
-    NlocalSpin     6  
-    ================================ 
-    ========i_0LocSpn_1IteElc ====== 
-    ================================ 
+    ================================
+    NlocalSpin     6
+    ================================
+    ========i_0LocSpn_1IteElc ======
+    ================================
         0      1
         1      0
         2      1
@@ -834,11 +839,11 @@ Trans指定ファイル(trans.def)
 
 ::
 
-    ======================== 
-    NTransfer      24  
-    ======================== 
-    ========i_j_s_tijs====== 
-    ======================== 
+    ========================
+    NTransfer      24
+    ========================
+    ========i_j_s_tijs======
+    ========================
         0     0     2     0   1.000000  0.000000
         2     0     0     0   1.000000  0.000000
         0     1     2     1   1.000000  0.000000
@@ -933,7 +938,7 @@ InterAll指定ファイル
 付け加える項は以下で与えられます。
 
 .. math::
-   
+
    {\cal H}_{I}=\sum_{i,j,k,l}\sum_{\sigma_1,\sigma_2, \sigma_3, \sigma_4}
    I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}
 
@@ -941,11 +946,11 @@ InterAll指定ファイル
 
 ::
 
-    ====================== 
-    NInterAll      36  
-    ====================== 
-    ========zInterAll===== 
-    ====================== 
+    ======================
+    NInterAll      36
+    ======================
+    ========zInterAll=====
+    ======================
     0    0    0    1    1    1    1    0   0.50  0.0
     0    1    0    0    1    0    1    1   0.50  0.0
     0    0    0    0    1    0    1    0   0.25  0.0
@@ -1056,11 +1061,11 @@ CoulombIntra指定ファイル(coulombintra.def)
 
 ::
 
-    ====================== 
-    NCoulombIntra 6  
-    ====================== 
-    ========i_0LocSpn_1IteElc ====== 
-    ====================== 
+    ======================
+    NCoulombIntra 6
+    ======================
+    ========i_0LocSpn_1IteElc ======
+    ======================
        0  4.000000
        1  4.000000
        2  4.000000
@@ -1134,11 +1139,11 @@ CoulombInter指定ファイル(coulombiter.def)
 
 ::
 
-    ====================== 
-    NCoulombInter 12  
-    ====================== 
-    ========CoulombInter ====== 
-    ====================== 
+    ======================
+    NCoulombInter 12
+    ======================
+    ========CoulombInter ======
+    ======================
         0     1         1.500000000000000
         0     3         1.500000000000000
         1     2         1.500000000000000
@@ -1218,11 +1223,11 @@ Hundカップリングをハミルトニアンに付け加えます。付け加�
 
 ::
 
-    ====================== 
-    NHund 6  
-    ====================== 
-    ========Hund ====== 
-    ====================== 
+    ======================
+    NHund 6
+    ======================
+    ========Hund ======
+    ======================
        0     1 -0.250000
        1     2 -0.250000
        2     3 -0.250000
@@ -1297,11 +1302,11 @@ PairHopカップリングをハミルトニアンに付け加えます。付け�
 
 ::
 
-    ====================== 
-    NPairhop 6 
-    ====================== 
-    ========Pairhop ====== 
-    ====================== 
+    ======================
+    NPairhop 6
+    ======================
+    ========Pairhop ======
+    ======================
        0     1  0.50000
        1     2  0.50000
        2     3  0.50000
@@ -1377,11 +1382,11 @@ Exchangeカップリングをハミルトニアンに付け加えます。 電�
 
 ::
 
-    ====================== 
-    NExchange 6  
-    ====================== 
-    ========Exchange ====== 
-    ====================== 
+    ======================
+    NExchange 6
+    ======================
+    ========Exchange ======
+    ======================
        0     1  0.50000
        1     2  0.50000
        2     3  0.50000
@@ -1457,10 +1462,10 @@ Gutzwiller因子
 ::
 
     ======================
-    NGutzwillerIdx 2  
+    NGutzwillerIdx 2
     ComplexType 0
-    ====================== 
-    ====================== 
+    ======================
+    ======================
        0     0
        1     0
        2     0
@@ -1572,19 +1577,19 @@ Jastrow因子
 ::
 
     ======================
-    NJastrowIdx 5  
+    NJastrowIdx 5
     ComplexType 0
-    ====================== 
     ======================
-       0     1     0 
-       0     2     1 
-       0     3     0 
+    ======================
+       0     1     0
+       0     2     1
+       0     3     0
      (continue...)
-       0    1 
-       1    1 
-       2    1 
-       3    1 
-       4    1 
+       0    1
+       1    1
+       2    1
+       3    1
+       4    1
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -1812,7 +1817,7 @@ DH2指定ファイル
 ::
 
     ====================================
-    NDoublonHolon2siteIdx 2  
+    NDoublonHolon2siteIdx 2
     ComplexType 0
     ====================================
     ====================================
@@ -1823,12 +1828,12 @@ DH2指定ファイル
      (continue...)
       15     0   10    0
       15     8    2    1
-       0     1 
-       1     1 
-       2     1 
+       0     1
+       1     1
+       2     1
     (continue...)
-      10     1 
-      11     1 
+      10     1
+      11     1
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -1945,7 +1950,7 @@ DH4指定ファイル
 ::
 
     ====================================
-    NDoublonHolon4siteIdx 1  
+    NDoublonHolon4siteIdx 1
     ComplexType 0
     ====================================
     ====================================
@@ -1956,11 +1961,11 @@ DH4指定ファイル
      (continue...)
       14    15   13    2   10    0
       15    12   14    3   11    0
-       0     1 
-       1     1 
+       0     1
+       1     1
     (continue...)
-       8     1 
-       9     1 
+       8     1
+       9     1
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -2065,8 +2070,8 @@ GeneralRBM_PhysLayer指定ファイル
 
 RBM因子
 
-.. math:: 
-   
+.. math::
+
    {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
 
 のうち、 :math:`\exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] ` の設定を行います。指定するパラメータはサイト番号 :math:`i`、スピン番号 :math:`\sigma`、および :math:`a_{i \sigma}` の変分パラメータの番号です。以下にファイル例を記載します。
@@ -2083,7 +2088,7 @@ RBM因子
      1	0	 0
      1	1	 0
      (continue...)
-     0    1 
+     0    1
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -2098,7 +2103,7 @@ RBM因子
 
 -  4-5行: ヘッダ(何が書かれても問題ありません)。
 
--  6 - (5+ :math:`2N_s`) 行: [int03] [int04] [int05] 
+-  6 - (5+ :math:`2N_s`) 行: [int03] [int04] [int05]
 
 -  (6+ :math:`2N_s` ) -
    (5+ :math:`2N_s` + :math:`N_v`)行：[int06] [int07]
@@ -2174,7 +2179,7 @@ RBM因子
 本ファイルを使用するにあたってのルールは以下の通りです。
 
 -  本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。
-  
+
 -  本機能は ``ComplexType=1`` かつ ペア軌道のうち ``Orbital`` のみを指定したVMC計算のみ使用可能です。Power Lanczosの計算には対応していません。
 
 -  行数固定で読み込みを行う為、ヘッダの省略はできません。
@@ -2189,8 +2194,8 @@ GeneralRBM_HiddenLayer指定ファイル
 
 RBM因子
 
-.. math:: 
-   
+.. math::
+
    {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
 
 
@@ -2208,8 +2213,8 @@ RBM因子
      2	0
      3	0
      (continue...)
-     0    1 
-     1    1 
+     0    1
+     1    1
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -2224,7 +2229,7 @@ RBM因子
 
 -  4-5行: ヘッダ(何が書かれても問題ありません)。
 
--  6 - (5+ :math:`N_{\rm neuronGeneral}`) 行: [int03] [int04] 
+-  6 - (5+ :math:`N_{\rm neuronGeneral}`) 行: [int03] [int04]
 
 -  (6+ :math:`N_{\rm neuronGeneral}` ) -
    (5+ :math:`N_{\rm neuronGeneral}` + :math:`N_v`)行：[int05] [int06]
@@ -2293,7 +2298,7 @@ RBM因子
 本ファイルを使用するにあたってのルールは以下の通りです。
 
 -  本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。
-  
+
 -  本機能は ``ComplexType=1`` かつ ペア軌道のうち ``Orbital`` のみを指定したVMC計算のみ使用可能です。Power Lanczosの計算には対応していません。
 
 -  行数固定で読み込みを行う為、ヘッダの省略はできません。
@@ -2307,8 +2312,8 @@ GeneralRBM_PhysHidden指定ファイル
 
 RBM因子
 
-.. math:: 
-   
+.. math::
+
    {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
 
 
@@ -2328,9 +2333,9 @@ RBM因子
      2	0   0   4
      2	1   0   5
      (continue...)
-     0    1 
+     0    1
      1    1
-     (continue...) 
+     (continue...)
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -2428,7 +2433,7 @@ RBM因子
 本ファイルを使用するにあたってのルールは以下の通りです。
 
 -  本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。
-  
+
 -  本機能は ``ComplexType=1`` かつ ペア軌道のうち ``Orbital`` のみを指定したVMC計算のみ使用可能です。Power Lanczosの計算には対応していません。
 
 -  行数固定で読み込みを行う為、ヘッダの省略はできません。
@@ -2447,22 +2452,22 @@ Orbital/OrbitalAntiParallel指定ファイル(orbitalidx.def)
 ::
 
     ====================================
-    NOrbitalIdx 64   
+    NOrbitalIdx 64
     ComplexType 0
     ====================================
     ====================================
-       0     0     0 
-       0     1     1 
-       0     2     2 
-       0     3     3 
+       0     0     0
+       0     1     1
+       0     2     2
+       0     3     3
      (continue...)
-      15     9    62 
-      15    10    63 
-       0    1 
-       1    1 
+      15     9    62
+      15    10    63
+       0    1
+       1    1
     (continue...)
-      62    1 
-      63    1 
+      62    1
+      63    1
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -2567,21 +2572,21 @@ OrbitalParallel指定ファイル
 ::
 
     ====================================
-    NOrbitalIdx 120  
+    NOrbitalIdx 120
     ComplexType 0
     ====================================
     ====================================
        0     1     0
-       0     2     1 
-       0     3     2 
+       0     2     1
+       0     3     2
      (continue...)
       15    13    118
       15    14    119
-       0    1 
-       1    1 
+       0    1
+       1    1
     (continue...)
-      118    1 
-      119    1 
+      118    1
+      119    1
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -2693,15 +2698,15 @@ OrbitalGeneral指定ファイル
     ====================================
     ====================================
        0  0  0  1  0
-       0  0  1  1  1 
+       0  0  1  1  1
      (continue...)
       14  0  15 1 253
       15  0  15  1  254
-       0    1 
-       1    1 
+       0    1
+       1    1
     (continue...)
-      253   1 
-      254    1 
+      253   1
+      254    1
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -2815,7 +2820,7 @@ TransSym指定ファイル(qptransidx.def)
 ::
 
     ====================================
-    NQPTrans 4  
+    NQPTrans 4
     ====================================
     == TrIdx_TrWeight_and_TrIdx_i_xi  ==
     ====================================
@@ -2826,7 +2831,7 @@ TransSym指定ファイル(qptransidx.def)
        0     0    0
      (continue...)
        3    12    1
-       3    13    2 
+       3    13    2
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -2915,7 +2920,7 @@ TransSym指定ファイル(qptransidx.def)
 -  [ int02 ]-[ int06 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
 
 .. _InputParam:
-   
+
 変分パラメータ初期値指定ファイル
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2932,9 +2937,9 @@ TransSym指定ファイル(qptransidx.def)
 
     ======================
     NJastrowIdx  28
-    ====================== 
+    ======================
     == i_j_JastrowIdx  ===
-    ====================== 
+    ======================
     0 -8.909963465082626488e-02  0.000000000000000000e+00
     1  5.521681211878626955e-02  0.000000000000000000e+00
     (continue...)
@@ -3193,6 +3198,92 @@ TwoBodyG指定ファイル(greentwo.def)
 .. [4]
    使用メモリ量は、 :math:`O(N_\text{p}) + O(N_\text{p}N_\text{MCS})`
    です。
+
+NBodyG指定ファイル(nbodyg.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+計算・出力する :math:`N` 体相関関数
+:math:`\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle`
+を指定します。以下にファイル例を記載します。
+
+::
+
+    =============================================
+    NNBodyG        3
+    =============================================
+    ======== NBodyG correlation functions =======
+    =============================================
+        1     0     0     0     0
+        2     0     0     0     0     1     1     1     1
+        3     0     0     0     0     1     0     1     0     2     1     2     1
+
+ファイル形式
+^^^^^^^^^^^^
+
+以下のように行数に応じ異なる形式をとります。
+
+-  1行: ヘッダ(何が書かれても問題ありません)。
+
+-  2行: [string01] [int01]
+
+-  3-5行: ヘッダ(何が書かれても問題ありません)。
+
+-  6行以降:
+   [N] [i_1] [sigma_1] [j_1] [tau_1] ... [i_N] [sigma_N] [j_N] [tau_N]
+
+パラメータ
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **形式 :** string型 (空白不可)
+
+   **説明 :** :math:`N` 体相関関数成分総数のキーワード名を指定します(任意)。
+
+-  [ int01 ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** :math:`N` 体相関関数成分の総数を指定します。
+
+-  [ N ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** 相関関数の次数を指定します。正の整数である必要があります。
+
+-  [ i_a ], [ j_a ]
+
+   **形式 :** int型 (空白不可)
+
+   **説明 :** サイト番号を指定する整数。0以上 ``Nsite`` 未満で指定します。
+
+-  [ sigma_a ], [ tau_a ]
+
+   **形式 :** int型 (空白不可)
+
+   | **説明 :** スピンを指定する整数。
+   | 0: アップスピン
+   | 1: ダウンスピン。
+
+使用ルール
+^^^^^^^^^^
+
+本ファイルを使用するにあたってのルールは以下の通りです。
+
+-  行数固定で読み込みを行う為、ヘッダの省略はできません。
+
+-  [ int01 ] と定義されている :math:`N` 体相関関数成分の総数が異なる場合はエラー終了します。
+
+-  各成分行は :math:`1 + 4N` 個の整数を持つ必要があります。
+
+-  サイト番号またはスピン番号に範囲外の整数を指定した場合はエラー終了します。
+
+-  スピンを変える因子 :math:`\sigma_a \neq \tau_a` は orbital-general モードでのみ指定できます。
+   それ以外のモードでは各因子が :math:`\sigma_a = \tau_a` を満たす必要があります。
+
+-  本出力は物理量計算で使用できます。BackFlow 測定には未対応です。また、Lanczos 補正付きの
+   ``ls_NBodyG`` 出力ファイルは生成されません。
 
 Twist指定ファイル(twist.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

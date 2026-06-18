@@ -1,0 +1,6 @@
+# Exact Diagonalization Reference
+Model: HubbardChain_fsz_SpinJastrow
+Energy: -4.0164154627865187
+Doublon: 0.4640867855278190
+Sz: -0.8944271906668432
+Note: User-provided reference value.

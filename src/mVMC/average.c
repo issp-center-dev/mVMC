@@ -14,10 +14,10 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 /*-------------------------------------------------------------
  * Variational Monte Carlo
@@ -83,7 +83,7 @@ void WeightAverageSROpt(MPI_Comm comm) {
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
-  /* SROptOO and SROptHO */ // except for SROptO 
+  /* SROptOO and SROptHO */ // except for SROptO
   if(NSRCG == 0){
     n = 2*SROptSize*(2*SROptSize+1);
   }else{
@@ -120,7 +120,7 @@ void WeightAverageSROpt_real(MPI_Comm comm) {
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
-  /* SROptOO and SROptHO */ // except for SROptO 
+  /* SROptOO and SROptHO */ // except for SROptO
   if(NSRCG == 0){
     n = SROptSize*(SROptSize+1);
   }else{
@@ -216,7 +216,12 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
   n = NCisAjs+NCisAjsCktAlt+NCisAjsCktAltDC+NTwist;
   vec = PhysCisAjs;
   weightAverageReduce_fcmp(n,vec,comm);
-  
+
+  if (NNBodyG > 0) {
+    vec = PhysNBodyG;
+    weightAverageReduce_fcmp(NNBodyG,vec,comm);
+  }
+
   if(NLanczosMode>0){
     /* QQQQ */
     n = NLSHam*NLSHam*NLSHam*NLSHam;

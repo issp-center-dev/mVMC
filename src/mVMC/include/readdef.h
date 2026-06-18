@@ -14,10 +14,10 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 #pragma once
 #define D_FileNameMaxReadDef 256 /*!<  Max length of words for file name*/
@@ -35,7 +35,7 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
   "Trans", "CoulombIntra", "CoulombInter",
   "Hund", "PairHop", "Exchange",
   "Gutzwiller", "Jastrow", "SpinJastrow",
-  "DH2", "DH4", 
+  "DH2", "DH4",
   //RBM
   "ChargeRBM_HiddenLayer","ChargeRBM_PhysLayer", "ChargeRBM_PhysHidden",
   "SpinRBM_HiddenLayer","SpinRBM_PhysLayer", "SpinRBM_PhysHidden",
@@ -44,7 +44,7 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
   "Orbital", "OrbitalAntiParallel",
   "OrbitalParallel", "OrbitalGeneral",
   "TransSym", "InGutzwiller", "InJastrow", "InSpinJastrow",
-  "InDH2", "InDH4", 
+  "InDH2", "InDH4",
   //RBM
   "InChargeRBM_HiddenLayer","InChargeRBM_PhysLayer", "InChargeRBM_PhysHidden",
   "InSpinRBM_HiddenLayer","InSpinRBM_PhysLayer", "InSpinRBM_PhysHidden",
@@ -52,21 +52,21 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
   //RBM
   "InOrbital", "InOrbitalAntiParallel",
 	"InOrbitalParallel", "InOrbitalGeneral",
-  "OneBodyG", "TwoBodyG", "TwoBodyGEx",
+  "OneBodyG", "TwoBodyG", "TwoBodyGEx", "NBodyG",
   "Lattice", "Twist",
   "InterAll", "OptTrans", "InOptTrans",
   "BF", "BFRange"
 };
 
 /**
- * Number of Keyword List in NameListFile for this program.  
+ * Number of Keyword List in NameListFile for this program.
  **/
 enum KWIdxInt{
   KWModPara, KWLocSpin,
   KWTrans, KWCoulombIntra,KWCoulombInter,
   KWHund, KWPairHop, KWExchange,
   KWGutzwiller, KWJastrow, KWSpinJastrow,
-  KWDH2, KWDH4, 
+  KWDH2, KWDH4,
   //RBM
   KWChargeRBM_HiddenLayer,KWChargeRBM_PhysLayer,KWChargeRBM_PhysHidden,
   KWSpinRBM_HiddenLayer,KWSpinRBM_PhysLayer,KWSpinRBM_PhysHidden,
@@ -75,7 +75,7 @@ enum KWIdxInt{
   KWOrbital, KWOrbitalAntiParallel,
 	KWOrbitalParallel, KWOrbitalGeneral,
   KWTransSym, KWInGutzwiller, KWInJastrow, KWInSpinJastrow,
-  KWInDH2, KWInDH4, 
+  KWInDH2, KWInDH4,
   //RBM
   KWInChargeRBM_HiddenLayer,KWInChargeRBM_PhysLayer,KWInChargeRBM_PhysHidden,
   KWInSpinRBM_HiddenLayer,KWInSpinRBM_PhysLayer,KWInSpinRBM_PhysHidden,
@@ -83,7 +83,7 @@ enum KWIdxInt{
   //RBM
   KWInOrbital,KWInOrbitalAntiParallel,
 	KWInOrbitalParallel, KWInorbitalGeneral,
-  KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx,
+  KWOneBodyG, KWTwoBodyG, KWTwoBodyGEx, KWNBodyG,
   KWLattice, KWTwist,
   KWInterAll, KWOptTrans, KWInOptTrans,
   KWBF, KWBFRange,
@@ -97,8 +97,8 @@ extern char (*cFileNameListFile)[D_CharTmpReadDef];
 
 
 enum ParamIdxInt{
-  IdxVMCCalcMode, IdxLanczosMode, IdxDataIdxStart, 
-  IdxDataQtySmp, IdxNsite, IdxNe, 
+  IdxVMCCalcMode, IdxLanczosMode, IdxDataIdxStart,
+  IdxDataQtySmp, IdxNsite, IdxNe,
   //RBM
   IdxNneuron, IdxNneuronCharge, IdxNneuronSpin,IdxNneuronGeneral,
   //RBM
@@ -107,9 +107,9 @@ enum ParamIdxInt{
   IdxVMCWarmUp, IdxVMCInterval, IdxVMCSample,
   IdxExUpdatePath, IdxRndSeed, IdxSplitSize,
   IdxNLocSpin,IdxNTrans,IdxNCoulombIntra,
-  IdxNCoulombInter, IdxNHund, IdxNPairHop, 
+  IdxNCoulombInter, IdxNHund, IdxNPairHop,
   IdxNExchange, IdxNGutz, IdxNJast, IdxNSpinJast,
-  IdxNDH2, IdxNDH4, 
+  IdxNDH2, IdxNDH4,
   //RBM
   IdxNChargeRBM_HiddenLayer,IdxNChargeRBM_PhysLayer, IdxNChargeRBM_PhysHidden,
   IdxNSpinRBM_HiddenLayer,IdxNSpinRBM_PhysLayer, IdxNSpinRBM_PhysHidden,
@@ -118,7 +118,8 @@ enum ParamIdxInt{
   //RBM
   IdxNOrbit, IdxNOrbitGeneral,
 	IdxNQPTrans, IdxNOneBodyG, IdxNTwoBodyG,
-  IdxNTwoBodyGEx, IdxNInterAll, IdxNQPOptTrans,
+  IdxNTwoBodyGEx, IdxNNBodyG, IdxNBodyGTotalFactors, IdxNBodyGMaxN,
+  IdxNInterAll, IdxNQPOptTrans,
   IdxSROptCGMaxIter,
   IdxNx,IdxNy,IdxNz,IdxNorb,IdxNTwist,
   IdxNBF,IdxNrange, IdxNNz, Idx2Sz, IdxNCond,

@@ -14,10 +14,10 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 /*-------------------------------------------------------------
  * Variational Monte Carlo
@@ -637,7 +637,7 @@ double calHCACA2_real(const int ri, const int rj, const int rk, const int rl,
   RequestWorkSpaceInt(NProj);      /* for GreenFunc2 */
   RequestWorkSpaceDouble(NQPFull+2*Nsize); /* for GreenFunc2 */
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj+8);
-  RequestWorkSpaceThreadDouble(NQPFull+3*Nsize);
+  RequestWorkSpaceThreadDouble(NQPFull+4*Nsize);
 
   bufferInt = GetWorkSpaceInt(NProj);
   buffer = GetWorkSpaceDouble(NQPFull+2*Nsize);
