@@ -156,6 +156,12 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **SpinJastrow (spinjastrow.def)**: Set the target parameters
     :math:`v^s_{ij}` in :math:`{\cal P}_{SJ}` to be optimized.
 
+    **BFRange (rangebf.def)**: Set the neighbor list and distance
+    shells used by the BackFlow correlation.
+
+    **BF (bf.def)**: Set BackFlow parameter groups and optimization
+    flags.
+
     **DH2**: Set the target 2-site doublon-holon correlation factor
     :math:`\alpha_{2nt}^{d(h)}` in :math:`{\cal P}_{d-h}^{(2)}` to be
     optimized.
@@ -331,6 +337,10 @@ User rules
      - Charge Jastrow factors.
    * - SpinJastrow
      - Spin Jastrow factors.
+   * - BFRange
+     - Neighbor list and distance shells for BackFlow.
+   * - BF
+     - BackFlow parameter groups and optimization flags.
    * - DH2
      - 2-site doublon-holon correlation factors.
    * - DH4
@@ -2009,6 +2019,398 @@ User rules
 
 -  Both directed pairs :math:`(i,j)` and :math:`(j,i)` must be specified
    for each pair of sites, and they must have the same parameter index.
+
+BackFlow files (rangebf.def, bf.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The BackFlow correlation replaces the pair orbital :math:`f_{ij}` by a
+configuration-dependent effective pair orbital :math:`f^b_{ij}`.
+In Expert mode, BackFlow is enabled by specifying both ``BFRange`` and
+``BF`` in ``namelist.def``. A calculation is terminated if only one of
+them is specified.
+
+::
+
+    BFRange  rangebf.def
+    BF       bf.def
+
+``BFRange`` defines the neighbor list and distance shell used from each
+center site. ``BF`` defines the BackFlow group and optimization flags
+for the neighbor pairs. This is an Expert-mode input. Standard mode and
+StdFace do not generate these files.
+
+Wave function form
+^^^^^^^^^^^^^^^^^^
+
+The BackFlow pair-product wave function follows the lattice BackFlow
+extension by Ido et al. [Ido2015_]. For lattice BackFlow correlations
+in Slater determinants, see also Tocchio et al. [Tocchio2008_],
+[Tocchio2011_]. Because the current implementation does not allow
+BackFlow together with spin projection, the BackFlow trial wave function
+can be written schematically as
+
+.. math::
+
+   |\Psi^b\rangle
+     = {\cal P}_{\rm corr} {\cal L}_{K} |\phi^b\rangle ,
+
+where :math:`{\cal P}_{\rm corr}` denotes the diagonal correlation
+factors that are used together with BackFlow, and
+:math:`{\cal L}_{K}` is the momentum projection. If no momentum
+projection is used, :math:`{\cal L}_{K}` is the identity operator.
+Expanded in real-space configurations :math:`x`,
+
+.. math::
+
+   {\cal L}_{K}|\phi^b\rangle
+     = \sum_x \left(\frac{N}{2}\right)!
+       \sum_{\boldsymbol R} e^{i{\boldsymbol K}\cdot{\boldsymbol R}}
+       {\rm Pf}\left[X^b(x_{-{\boldsymbol R}})\right] |x\rangle .
+
+Here :math:`N` is the number of electrons, :math:`{\boldsymbol R}` is a
+translation vector, and :math:`{\rm Pf}` is the Pfaffian. If
+:math:`i_n` and :math:`i_m` are the sites of the :math:`n`-th and
+:math:`m`-th electrons in the translated configuration
+:math:`x_{\boldsymbol R}`, the antisymmetric matrix :math:`X^b` is
+defined by
+
+.. math::
+
+   X^b_{nm}(x_{\boldsymbol R})
+     =
+     f^b_{T_{\boldsymbol R}(i_n),T_{\boldsymbol R}(i_m)}
+       (x_{\boldsymbol R})
+     -
+     f^b_{T_{\boldsymbol R}(i_m),T_{\boldsymbol R}(i_n)}
+       (x_{\boldsymbol R}) .
+
+BackFlow replaces the original pair orbital :math:`f_{ij}` with the
+following configuration-dependent pair orbital :math:`f^b_{ij}(x)`:
+
+.. math::
+
+   f^b_{i_n i_m}(x)
+     =
+     \sum_{\mu,\nu=0}^{3}\sum_{\tau,\tau'}
+     \eta^{\mu\nu}_{\tau\tau'}
+     \Theta^{\mu\uparrow}_{i_n,i_n+\tau}(x)
+     \Theta^{\nu\downarrow}_{i_m,i_m+\tau'}(x)
+     f_{i_n+\tau,i_m+\tau'} .
+
+:math:`\tau` and :math:`\tau'` run over the neighbor sites listed in
+``BFRange``. :math:`\eta^{\mu\nu}_{\tau\tau'}` are the BackFlow
+variational parameters, and mVMC stores their flattened representation
+in ``ProjBF``. The ``BF`` file specifies the BackFlow group and
+optimization flag for each :math:`(i,j,\tau,\tau')`. The current
+implementation accepts only group 0.
+
+:math:`\Theta` is a diagonal quantity that detects local doublon/holon
+patterns in the configuration :math:`x`. With
+:math:`h_{i\sigma}=1-n_{i\sigma}`,
+:math:`D_i=n_{i\uparrow}n_{i\downarrow}`, and
+:math:`H_i=(1-n_{i\uparrow})(1-n_{i\downarrow})`,
+
+.. math::
+
+   \begin{aligned}
+   \Theta^{0\sigma}_{i,i+\tau}(x)
+     &= \delta_{i,i+\tau},\\
+   \Theta^{1\sigma}_{i,i+\tau}(x)
+     &= \langle D_i H_{i+\tau}\rangle_x,\\
+   \Theta^{2\sigma}_{i,i+\tau}(x)
+     &=
+     \langle
+       n_{i\sigma}h_{i,-\sigma}
+       n_{i+\tau,-\sigma}h_{i+\tau,\sigma}
+     \rangle_x,\\
+   \Theta^{3\sigma}_{i,i+\tau}(x)
+     &=
+     \langle
+       D_i n_{i+\tau,-\sigma}h_{i+\tau,\sigma}
+       + n_{i\sigma}h_{i,-\sigma}H_{i+\tau}
+     \rangle_x .
+   \end{aligned}
+
+The no-BackFlow limit is :math:`\eta^{00}_{0,0}=1` and zero for the
+other :math:`\eta` values. In mVMC input, this corresponds to
+``ProjBF[0]=1`` and ``ProjBF[k>0]=0``.
+
+Number of parameters
+^^^^^^^^^^^^^^^^^^^^
+
+The number of BackFlow variational parameters is determined from
+``Nrange`` and ``NzBF`` in ``rangebf.def`` and ``NBackFlowIdx`` in
+``bf.def`` as
+
+.. math::
+
+   \begin{aligned}
+   N_{\rm rangeIdx}
+     &= 3\frac{N_{\rm range}-1}{N_z^{\rm BF}} + 1,\\
+   N_{\rm BFIdxTotal}
+     &= \frac{N_{\rm rangeIdx}(N_{\rm rangeIdx}+1)}{2},\\
+   N_{\rm ProjBF}
+     &= N_{\rm BFIdxTotal} N_{\rm BackFlowIdx}.
+   \end{aligned}
+
+``Nrange`` is the number of listed sites for each center site, including
+the center site itself. ``NzBF`` is the number of nonzero-distance sites
+per shell. ``Nrange-1`` must be divisible by ``NzBF``.
+The no-BackFlow identity point is ``ProjBF[0]=1`` and
+``ProjBF[k>0]=0``. Setting all ``ProjBF`` values to zero is not the
+no-BackFlow limit. If no initial-parameter file is supplied, mVMC uses
+this identity initialization.
+
+BFRange file (rangebf.def)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following example is a four-site periodic chain where each site uses
+itself and its two nearest neighbors as the BackFlow range. In this
+example, ``Nrange=3`` and ``NzBF=2``.
+``rangebf.def`` has a 10-line header, and the body starts at line 11.
+Lines 1-5 are the common mVMC ``*.def`` header. Lines 6-10 are an
+additional BackFlow header. The ``Nrange`` line at line 7 is skipped by
+the reader, but it should repeat line 2 for readability and consistency
+with existing inputs.
+
+::
+
+    ====================
+    Nrange 3 2
+    ====================
+    ====================
+    ====================
+    ====================
+    Nrange 3 2
+    ====================
+    ====================
+    ====================
+    0 0 0
+    0 3 1
+    0 1 1
+    1 1 0
+    1 0 1
+    1 2 1
+    2 2 0
+    2 1 1
+    2 3 1
+    3 3 0
+    3 2 1
+    3 0 1
+
+File format
+^^^^^^^^^^^
+
+-  Lines 1-5: Common header. Line 2 must be ``Nrange`` [int01] [int02].
+
+-  Lines 6-10: Additional BackFlow header. These lines are skipped when
+   the body is read, but they cannot be omitted. It is recommended that
+   line 7 also contains ``Nrange`` [int01] [int02].
+
+-  Lines 11 - (10 + :math:`N_s \times` [int01]):
+   [int03] [int04] [int05]
+
+Parameters
+^^^^^^^^^^
+
+-  [ int01 ]
+
+   **Type :** int-type (1 or larger)
+
+   **Description :** Number of sites listed in the BackFlow range for
+   each center site. The center site itself must be included.
+
+-  [ int02 ]
+
+   **Type :** int-type (1 or larger)
+
+   **Description :** Number of nonzero-distance sites in one shell.
+   [int01] - 1 must be divisible by [int02].
+
+-  [ int03 ]
+
+   **Type :** int-type
+
+   **Description :** Center site index
+   (0 :math:`\leq` [ int03 ] :math:`<` ``Nsite``).
+
+-  [ int04 ]
+
+   **Type :** int-type
+
+   **Description :** Site index in the BackFlow range of [int03]
+   (0 :math:`\leq` [ int04 ] :math:`<` ``Nsite``).
+
+-  [ int05 ]
+
+   **Type :** int-type
+
+   **Description :** Distance-shell index. The center-site row must use
+   0. Nonzero-distance shells must be between 1 and
+   :math:`(N_{\rm range}-1)/N_z^{\rm BF}`.
+
+User rules
+^^^^^^^^^^
+
+-  Exactly ``Nrange`` rows must be specified for each center site
+   [int03].
+
+-  Each center site must have the self row ``i i 0``. A row with
+   ``i==j`` and a nonzero shell index, or a row with ``i!=j`` and shell
+   index 0, is an error.
+
+-  The same center/range pair ``(i,j)`` cannot be specified more than
+   once.
+
+BF file (bf.def)
+^^^^^^^^^^^^^^^^
+
+The ``BF`` file assigns BackFlow groups to the neighbor-pair
+combinations defined by ``BFRange``. The current implementation supports
+only ``NBackFlowIdx==1``, so the group index [int06] must always be 0.
+``bf.def`` also has a 10-line header, and the body starts at line 11.
+Lines 1-5 are the common mVMC ``*.def`` header. Lines 6-10 are an
+additional BackFlow header. The ``NBackFlowIdx`` line at line 7 is
+skipped by the reader, but it should repeat line 2 for readability and
+consistency with existing inputs.
+
+Example:
+
+::
+
+    ====================
+    NBackFlowIdx 1
+    ====================
+    ====================
+    ====================
+    ====================
+    NBackFlowIdx 1
+    ====================
+    ====================
+    ====================
+    0 0 0 0 0
+    0 0 0 3 0
+    0 0 0 1 0
+    0 0 3 0 0
+    0 0 3 3 0
+    0 0 3 1 0
+    (continue...)
+    0 0
+    1 0
+    2 0
+    (continue...)
+    9 0
+
+File format
+^^^^^^^^^^^
+
+-  Lines 1-5: Common header. Line 2 must be ``NBackFlowIdx`` [int01].
+
+-  Lines 6-10: Additional BackFlow header. These lines are skipped when
+   the body is read, but they cannot be omitted. It is recommended that
+   line 7 also contains ``NBackFlowIdx`` [int01].
+
+-  Lines 11 - (10 + :math:`N_s^2 N_{\rm range}^2`):
+   [int02] [int03] [int04] [int05] [int06]
+
+-  The following :math:`N_{\rm ProjBF}` lines:
+   [int07] [int08]
+
+Parameters
+^^^^^^^^^^
+
+-  [ int01 ]
+
+   **Type :** int-type
+
+   **Description :** Number of BackFlow groups. The current
+   implementation accepts only 1.
+
+-  [ int02 ], [ int03 ]
+
+   **Type :** int-type
+
+   **Description :** Original site pair :math:`(i,j)` corrected by
+   BackFlow. Both indices must satisfy
+   0 :math:`\leq` index :math:`<` ``Nsite``.
+
+-  [ int04 ], [ int05 ]
+
+   **Type :** int-type
+
+   **Description :** Neighbor sites defined by ``BFRange``. [int04]
+   must belong to the BackFlow range of [int02], and [int05] must belong
+   to the BackFlow range of [int03].
+
+-  [ int06 ]
+
+   **Type :** int-type
+
+   **Description :** BackFlow group index. The current implementation
+   accepts only 0.
+
+-  [ int07 ]
+
+   **Type :** int-type
+
+   **Description :** Index of the BackFlow variational parameter
+   ``ProjBF``. All indices from 0 to ``NProjBF`` - 1 must be specified
+   exactly once.
+
+-  [ int08 ]
+
+   **Type :** int-type
+
+   **Description :** Optimization flag for the ``ProjBF`` parameter
+   specified by [int07] (0: fixed, 1: optimized). The imaginary part of
+   ``ProjBF[0]`` is always fixed.
+
+User rules
+^^^^^^^^^^
+
+-  Both ``BFRange`` and ``BF`` must be specified in ``namelist.def``.
+
+-  The site rows in ``BF`` must contain every combination of
+   :math:`i,j`, :math:`x_0 \in {\rm BFRange}(i)`, and
+   :math:`x_1 \in {\rm BFRange}(j)` exactly once. The number of rows is
+   :math:`N_s^2 N_{\rm range}^2`.
+
+-  ``ProjBF[0]`` also controls the BackFlow base term. For the identity
+   initial point, set ``ProjBF[0]=1``. If an initial-parameter or restart
+   file is used, the imaginary part of ``ProjBF[0]`` should be zero.
+
+Limitations
+^^^^^^^^^^^
+
+BackFlow is currently available only under the following conditions.
+Inputs outside this range are rejected.
+
+-  Only ``NBackFlowIdx==1`` is supported. Multiple BackFlow groups are
+   not supported.
+
+-  The local update path must be the hopping update
+   ``NExUpdatePath==0``. t-J update paths, exchange updates, Kondo
+   updates, and doublon-only updates are not supported.
+
+-  Pair orbitals must use the normal ``Orbital`` /
+   ``OrbitalAntiParallel`` format. ``OrbitalGeneral`` / FSZ is not
+   supported.
+
+-  Spin projection is not supported. Use ``NSPGaussLeg==1``.
+
+-  RBM, Lanczos, Twist, reweight, ``APFlag=1``, and ``NQPOptTrans>1``
+   are not supported. The usual momentum projection with ``NMPTrans>1``
+   can be used only with ``APFlag=0`` and ``NQPOptTrans==1``.
+
+-  The Hamiltonian may contain ``Trans`` and number-operator
+   interactions (``CoulombIntra``, ``CoulombInter``, ``Hund``).
+   Two-body Hamiltonian terms such as ``PairHop``, ``Exchange``, and
+   ``InterAll`` are not supported. Measurement outputs ``TwoBodyG`` and
+   ``TwoBodyGEx`` are supported.
+
+-  Standard mode and StdFace do not generate BackFlow inputs. To use
+   BackFlow, prepare ``BFRange`` and ``BF`` manually as Expert-mode
+   input files.
 
 DH2 file
 ~~~~~~~~

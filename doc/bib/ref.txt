@@ -7,3 +7,6 @@
 .. _ImadaMiyake: http://journals.jps.jp/doi/abs/10.1143/JPSJ.79.112001
 .. _Gros: https://www.sciencedirect.com/science/article/pii/0003491689900778
 .. _NeuscammanUmrigarChan: https://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045103
+.. _Ido2015: https://doi.org/10.1103/PhysRevB.92.245106
+.. _Tocchio2008: https://doi.org/10.1103/PhysRevB.78.041101
+.. _Tocchio2011: https://doi.org/10.1103/PhysRevB.83.195138
