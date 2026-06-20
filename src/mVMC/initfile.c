@@ -14,16 +14,16 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 /*-------------------------------------------------------------
  * Variational Monte Carlo
  * initialization of files
  *-------------------------------------------------------------
- * by Satoshi Morita 
+ * by Satoshi Morita
  *-------------------------------------------------------------*/
 #include "initfile.h"
 
@@ -83,7 +83,7 @@ void InitFilePhysCal(int i, int rank) {
 
   sprintf(fileName, "%s_out_%03d.dat", CDataFileHead, idx);
   FileOut = fopen(fileName, "w");
- 
+
   if(FlagBinary==0) {
     sprintf(fileName, "%s_var_%03d.dat", CDataFileHead, idx);
     FileVar = fopen(fileName, "w");
@@ -109,19 +109,24 @@ void InitFilePhysCal(int i, int rank) {
     sprintf(fileName, "%s_cisajscktalt_%03d.dat", CDataFileHead, idx);
     FileCisAjsCktAltDC = fopen(fileName, "w");
   }
- 
+
   if(NTwist>0){
     sprintf(fileName, "%s_twist_%03d.dat", CDataFileHead, idx);
     FileTwist = fopen(fileName, "w");
   }
- 
+
+  if(NNBodyG>0){
+    sprintf(fileName, "%s_NBodyG_%03d.dat", CDataFileHead, idx);
+    FileNBodyG = fopen(fileName, "w");
+  }
+
   if(NLanczosMode>0){
     sprintf(fileName, "%s_ls_out_%03d.dat", CDataFileHead, idx);
     FileLS = fopen(fileName, "w");
 
     sprintf(fileName, "%s_ls_qqqq_%03d.dat", CDataFileHead, idx);
     FileLSQQQQ = fopen(fileName, "w");
-    
+
     if(NLanczosMode>1){
 #ifdef _DEBUG
       sprintf(fileName, "%s_ls_qcisajsq_%03d.dat",
@@ -170,7 +175,7 @@ void CloseFilePhysCal(int rank) {
 
   fclose(FileOut);
   fclose(FileVar);
-  
+
   if(NCisAjs>0){
     fclose(FileCisAjs);
   }
@@ -183,11 +188,14 @@ void CloseFilePhysCal(int rank) {
   if(NTwist>0){
     fclose(FileTwist);
   }
+  if(NNBodyG>0){
+    fclose(FileNBodyG);
+  }
 
   if(NLanczosMode>0){
     fclose(FileLS);
     fclose(FileLSQQQQ);
-    
+
     if(NLanczosMode>1){
 #ifdef _DEBUG
       fclose(FileLSQCisAjsQ);

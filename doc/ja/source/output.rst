@@ -1,7 +1,7 @@
 .. include:: ../../bib/ref.txt
 
 .. _outputfile:
-             
+
 出力ファイル
 ------------
 
@@ -44,6 +44,8 @@
 | xxx\_cisajs\_yyy.dat                     | 一体グリーン関数.                                                  |
 +------------------------------------------+--------------------------------------------------------------------+
 | xxx\_cisajscktalt\_yyy.dat               | 二体グリーン関数.                                                  |
++------------------------------------------+--------------------------------------------------------------------+
+| xxx\_NBodyG\_yyy.dat                     | :math:`N` 体相関関数.                                              |
 +------------------------------------------+--------------------------------------------------------------------+
 | xxx\_twist\_yyy.dat                      | Twist演算子の期待値.                                               |
 +------------------------------------------+--------------------------------------------------------------------+
@@ -131,8 +133,8 @@ xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara
 ::
 
     1.151983765704212992e+01  8.124622418360909482e-01  \
-    1.619082955438887268e+02  2.019905203939084959e-01 
-    1.288482613817423150e+01  5.006903733262847433e-01   
+    1.619082955438887268e+02  2.019905203939084959e-01
+    1.288482613817423150e+01  5.006903733262847433e-01
     1.972000325276957824e+02  1.824505193695792893e-01
     1.308897206011880421e+01  5.701244886956570168e-01  \
     2.072610167083121837e+02  2.029162857569105916e-01
@@ -176,7 +178,7 @@ SR-CGが収束しない、または数値不安定になった場合、フォー
     …
 
 
-xxx\_CalcTimer.dat 
+xxx\_CalcTimer.dat
 ~~~~~~~~~~~~~~~~~~~
 
 計算終了後に、処理毎の計算処理時間が処理名、処理に割り当てられた識別番号、実行秒数の順に出力されます。出力例は以下の通りです。
@@ -226,7 +228,7 @@ xxx\_CalcTimer.dat
       outputData               [22]      0.10554
       SyncModifiedParameter    [23]      0.02151
 
-xxx\_time\_zzz.dat 
+xxx\_time\_zzz.dat
 ~~~~~~~~~~~~~~~~~~~
 
 | 計算情報としてビン毎にサンプリング数、hoppingおよびexchangeのアップデートに対するacceptance
@@ -242,10 +244,10 @@ xxx\_time\_zzz.dat
     00003  0.50000 0.00000 176      0        : Mon Jul 25 14:03:30 2016
     00004  0.49432 0.00000 176      0        : Mon Jul 25 14:03:30 2016
     00005  0.57386 0.00000 176      0        : Mon Jul 25 14:03:30 2016
-    00006  0.55114 0.00000 176      0        : Mon Jul 25 14:03:30 2016    
+    00006  0.55114 0.00000 176      0        : Mon Jul 25 14:03:30 2016
     …
 
-xxx\_cisajs\_yyy.dat 
+xxx\_cisajs\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~
 
 OneBodyG指定ファイルで指定された一体グリーン関数 :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle` の計算結果を出力します。
@@ -297,7 +299,7 @@ xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara
      :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle` の値を表します。
    | :math:`[` double01 :math:`]` が実部、 :math:`[` double02 :math:`]` が虚部を表します。
 
-xxx\_cisajscktalt\_yyy.dat 
+xxx\_cisajscktalt\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 TwoBodyG指定ファイルで指定された二体グリーン関数 :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle` の計算結果を出力します。xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
@@ -354,7 +356,58 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 :math:`\lan
      :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle` の値を表します。
    | :math:`[` double01 :math:`]` が実部、 :math:`[` double02 :math:`]` が虚部を表します。
 
-xxx\_twist\_yyy.dat 
+xxx\_NBodyG\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~
+
+NBodyG指定ファイルで指定された :math:`N` 体相関関数
+:math:`\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle`
+の計算結果を出力します。xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
+``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。以下にファイル例を記載します。
+
+::
+
+        1    0    0    0    0 0.4452776740 0.0000000000
+        2    0    0    0    0    1    1    1    1 0.1175764436 0.0000000000
+        3    0    0    0    0    1    0    1    0    2    1    2    1 0.0523019284 0.0000000000
+        …
+
+ファイル形式
+^^^^^^^^^^^^
+
+-  [N] [i_1] [sigma_1] [j_1] [tau_1] ... [i_N] [sigma_N] [j_N] [tau_N] [double01] [double02]
+
+パラメータ
+^^^^^^^^^^
+
+-  [N]
+
+   **形式 :** Int
+
+   **説明 :** 相関関数の次数を表します。
+
+-  [i_a], [j_a]
+
+   **形式 :** Int
+
+   **説明 :** サイト番号を表します。
+
+-  [sigma_a], [tau_a]
+
+   **形式 :** Int
+
+   | **説明 :** スピンを表します。
+   | 0: アップスピン
+   | 1: ダウンスピン。
+
+-  [double01], [double02]
+
+   **形式 :** Double
+
+   | **説明 :**
+     :math:`\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle` の値を表します。
+   | :math:`[` double01 :math:`]` が実部、 :math:`[` double02 :math:`]` が虚部を表します。
+
+xxx\_twist\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Twist指定ファイルで指定されたTwist演算子 :math:`P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle` の計算結果を出力します。xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
@@ -362,7 +415,7 @@ Twist指定ファイルで指定されたTwist演算子 :math:`P^{(\alpha)} = \l
 
 ::
 
-        -8.450000000179783144e-02  -5.022947287359245602e-03  8.464915829324838603e-02  -3.082219356298420809e+00 
+        -8.450000000179783144e-02  -5.022947287359245602e-03  8.464915829324838603e-02  -3.082219356298420809e+00
         9.193000000026863017e-01  2.424870552459427574e-03  9.193031980810983939e-01  2.637729716822964383e-03
         …
 
@@ -382,7 +435,7 @@ Twist指定ファイルで指定されたTwist演算子 :math:`P^{(\alpha)} = \l
      :math:`P^{(\alpha)}` の値を表します。
    | :math:`[` double01 :math:`]` が実部、 :math:`[` double02 :math:`]` が虚部、:math:`[` double03 :math:`]` が絶対値、 :math:`[` double04 :math:`]` が位相(:math:`\arg P^{(\alpha)}`)を表します。
 
-xxx\_ls\_out\_yyy.dat 
+xxx\_ls\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Power Lanczos法により求めた :math:`\langle H \rangle`,
@@ -392,7 +445,7 @@ Power Lanczos法により求めた :math:`\langle H \rangle`,
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
 ``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。
 
-xxx\_ls\_cisajs\_yyy.dat 
+xxx\_ls\_cisajs\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Power Lanczos法により求めた,
@@ -400,7 +453,7 @@ OneBodyG指定ファイルで指定された一体グリーン関数 :math:`\lan
 ファイル形式はxxx\_cisajs\_yyy.datファイルと同じです。 ``ModPara`` 指定ファイルで ``NVMCCalMode`` =1,
 ``NLanczosmode`` =2に設定することで計算されます。
 
-xxx\_ls\_cisajscktalt\_yyy.dat 
+xxx\_ls\_cisajscktalt\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Power Lanczos法により求めた,

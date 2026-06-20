@@ -14,10 +14,10 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 /*-------------------------------------------------------------
  * Variational Monte Carlo
@@ -128,7 +128,7 @@ double complex calculateHK(const double complex h1, const double complex ip, int
     ri = Transfer[idx][0];
     rj = Transfer[idx][2];
     s  = Transfer[idx][3];
-  
+
     val -= ParaTransfer[idx] * calHCA(ri,rj,s,h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
     /* Caution: negative sign */
   }
@@ -145,7 +145,7 @@ double complex calculateHW(const double complex h1, const double complex ip, int
   for(idx=0;idx<NPairHopping;idx++) {
     ri = PairHopping[idx][0];
     rj = PairHopping[idx][1];
-    
+
     val += ParaPairHopping[idx]
       * calHCACA(ri,rj,ri,rj,0,1,h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
   }
@@ -154,7 +154,7 @@ double complex calculateHW(const double complex h1, const double complex ip, int
   for(idx=0;idx<NExchangeCoupling;idx++) {
     ri = ExchangeCoupling[idx][0];
     rj = ExchangeCoupling[idx][1];
-   
+
     tmp =  calHCACA(ri,rj,rj,ri,0,1,h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
     tmp += calHCACA(ri,rj,rj,ri,1,0,h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
     val += ParaExchangeCoupling[idx] * tmp;
@@ -168,7 +168,7 @@ double complex calculateHW(const double complex h1, const double complex ip, int
     rk = InterAll[idx][4];
     rl = InterAll[idx][6];
     t  = InterAll[idx][7];
-      
+
     val += ParaInterAll[idx]
       * calHCACA(ri,rj,rk,rl,s,t,h1,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
   }
@@ -318,6 +318,7 @@ double complex calHCA2(const int ri, const int rj, const int s,
   int *bufferInt;
 
   int *myEleIdx, *myEleNum, *myBufferInt, *myRsi, *myRsj;
+  double *myRWork;
   double complex *myBuffer;
   double complex myValue=0;
   double complex v=0.0;
@@ -327,6 +328,7 @@ double complex calHCA2(const int ri, const int rj, const int s,
   RequestWorkSpaceComplex(NQPFull + FlagRBM*(NRBM_PhysLayerIdx+Nneuron)); /* for GreenFunc1 */
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj+6);
   RequestWorkSpaceThreadComplex(NQPFull+3*Nsize + FlagRBM*(NRBM_PhysLayerIdx+Nneuron));
+  RequestWorkSpaceThreadDouble(LapackLWork);
 
   bufferInt = GetWorkSpaceInt(NProj);
   buffer = GetWorkSpaceComplex(NQPFull);
@@ -351,7 +353,7 @@ double complex calHCA2(const int ri, const int rj, const int s,
   /* end of H0 term */
 
 #pragma omp parallel default(shared)\
-  private(myRBMCntNew,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj)  \
+  private(myRBMCntNew,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj,myRWork)  \
   reduction(+:v)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
@@ -360,6 +362,7 @@ double complex calHCA2(const int ri, const int rj, const int s,
     myRsi = GetWorkSpaceThreadInt(3);
     myRsj = GetWorkSpaceThreadInt(3);
     myBuffer = GetWorkSpaceThreadComplex(NQPFull+3*Nsize);
+    myRWork = GetWorkSpaceThreadDouble(LapackLWork);
     if (FlagRBM) {
       myRBMCntNew  = GetWorkSpaceThreadComplex(NRBM_PhysLayerIdx+Nneuron);
     }
@@ -368,7 +371,7 @@ double complex calHCA2(const int ri, const int rj, const int s,
     for(idx=0;idx<nsize;idx++) myEleIdx[idx] = eleIdx[idx];
     #pragma loop noalias
     for(idx=0;idx<nsite2;idx++) myEleNum[idx] = eleNum[idx];
-    
+
     myValue = 0.0;
 
     /* Transfer */
@@ -377,7 +380,7 @@ double complex calHCA2(const int ri, const int rj, const int s,
       rk = Transfer[idx][0];
       rl = Transfer[idx][2];
       sk = Transfer[idx][3];
-      
+
       myValue -= ParaTransfer[idx]
         * GreenFunc2(rk,rl,ri,rj,sk,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myBufferInt,rbmCnt,myRBMCntNew,myBuffer);
       /* Caution: negative sign */
@@ -394,9 +397,9 @@ double complex calHCA2(const int ri, const int rj, const int s,
       myRsj[1] = rl+Nsite; /* s=1 */
       myRsi[2] = rsi;
       myRsj[2] = rsj;
-      
+
       myValue += ParaPairHopping[idx]
-        * GreenFuncN(3,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt);
+        * GreenFuncN(3,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt,myRWork);
     }
 
     /* Exchange Coupling */
@@ -411,7 +414,7 @@ double complex calHCA2(const int ri, const int rj, const int s,
       myRsi[2] = rsi;
       myRsj[2] = rsj;
       myValue += ParaExchangeCoupling[idx]
-        * GreenFuncN(3,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt);
+        * GreenFuncN(3,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt,myRWork);
 
       myRsi[0] = rk+Nsite; /* s=1 */
       myRsj[0] = rl+Nsite; /* s=1 */
@@ -420,9 +423,9 @@ double complex calHCA2(const int ri, const int rj, const int s,
       myRsi[2] = rsi;
       myRsj[2] = rsj;
       myValue += ParaExchangeCoupling[idx]
-        * GreenFuncN(3,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt);
+        * GreenFuncN(3,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt,myRWork);
     }
-    
+
     /* Inter All */
     #pragma omp for private(idx) schedule(dynamic) nowait
     for(idx=0;idx<NInterAll;idx++) {
@@ -433,9 +436,9 @@ double complex calHCA2(const int ri, const int rj, const int s,
       myRsi[2] = rsi;
       myRsj[2] = rsj;
       myValue += ParaInterAll[idx]
-        * GreenFuncN(3,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt);
+        * GreenFuncN(3,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt,myRWork);
     }
-    
+
     v += myValue;
   }
   val += v;
@@ -444,6 +447,7 @@ double complex calHCA2(const int ri, const int rj, const int s,
   ReleaseWorkSpaceComplex();
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();
+  ReleaseWorkSpaceThreadDouble();
 
   return val;
 }
@@ -657,6 +661,7 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
   int *bufferInt;
 
   int *myEleIdx, *myEleNum, *myBufferInt, *myRsi, *myRsj;
+  double *myRWork;
   double complex *myBuffer;
   double complex myValue=0.0;
   double complex v=0.0;
@@ -665,7 +670,8 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
   RequestWorkSpaceInt(NProj);      /* for GreenFunc2 */
   RequestWorkSpaceComplex(NQPFull+2*Nsize + FlagRBM * (NRBM_PhysLayerIdx+Nneuron)); /* for GreenFunc1 */
   RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj+8);
-  RequestWorkSpaceThreadComplex(NQPFull+3*Nsize + FlagRBM * (NRBM_PhysLayerIdx+Nneuron));
+  RequestWorkSpaceThreadComplex(NQPFull+4*Nsize + FlagRBM * (NRBM_PhysLayerIdx+Nneuron));
+  RequestWorkSpaceThreadDouble(LapackLWork);
 
   bufferInt = GetWorkSpaceInt(NProj);
   buffer = GetWorkSpaceComplex(NQPFull+2*Nsize);
@@ -695,7 +701,7 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
   /* end of H0 term */
 
 #pragma omp parallel default(shared)\
-  private(myRBMCntNew,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj)  \
+  private(myRBMCntNew,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj,myRWork)  \
   reduction(+:v)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
@@ -704,6 +710,7 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
     myRsi = GetWorkSpaceThreadInt(4);
     myRsj = GetWorkSpaceThreadInt(4);
     myBuffer = GetWorkSpaceThreadComplex(NQPFull+4*Nsize);
+    myRWork = GetWorkSpaceThreadDouble(LapackLWork);
     if (FlagRBM) {
       myRBMCntNew  = GetWorkSpaceThreadComplex(NRBM_PhysLayerIdx+Nneuron);
     }
@@ -712,7 +719,7 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
     for(idx=0;idx<nsize;idx++) myEleIdx[idx] = eleIdx[idx];
     #pragma loop noalias
     for(idx=0;idx<nsite2;idx++) myEleNum[idx] = eleNum[idx];
-    
+
     myValue = 0.0;
 
     /* Transfer */
@@ -724,9 +731,9 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
       myRsj[1] = rsj;
       myRsi[2] = rsk;
       myRsj[2] = rsl;
-      
+
       myValue -= ParaTransfer[idx]
-        * GreenFuncN(3,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt);
+        * GreenFuncN(3,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt,myRWork);
       /* Caution: negative sign */
     }
 
@@ -743,9 +750,9 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
       myRsj[2] = rsj;
       myRsi[3] = rsk;
       myRsj[3] = rsl;
-      
+
       myValue += ParaPairHopping[idx]
-        * GreenFuncN(4,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt);
+        * GreenFuncN(4,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt,myRWork);
     }
 
     /* Exchange Coupling */
@@ -762,7 +769,7 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
       myRsi[3] = rsk;
       myRsj[3] = rsl;
       myValue += ParaExchangeCoupling[idx]
-        * GreenFuncN(4,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt);
+        * GreenFuncN(4,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt,myRWork);
 
       myRsi[0] = r0+Nsite; /* s=1 */
       myRsj[0] = r1+Nsite; /* s=1 */
@@ -773,9 +780,9 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
       myRsi[3] = rsk;
       myRsj[3] = rsl;
       myValue += ParaExchangeCoupling[idx]
-        * GreenFuncN(4,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt);
+        * GreenFuncN(4,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt,myRWork);
     }
-    
+
     /* Inter All */
     #pragma omp for private(idx) schedule(dynamic) nowait
     for(idx=0;idx<NInterAll;idx++) {
@@ -788,9 +795,9 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
       myRsi[3] = rsk;
       myRsj[3] = rsl;
       myValue += ParaInterAll[idx]
-        * GreenFuncN(4,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt);
+        * GreenFuncN(4,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,myBufferInt,myRWork);
     }
-    
+
     v += myValue;
   }
   val += v;
@@ -799,6 +806,7 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
   ReleaseWorkSpaceComplex();
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();
+  ReleaseWorkSpaceThreadDouble();
 
   return val;
 }

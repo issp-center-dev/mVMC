@@ -14,10 +14,10 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 /*-------------------------------------------------------------
  * Variational Monte Carlo
@@ -34,28 +34,36 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
                          int *eleNum, int *eleSpn,int *eleProjCnt) {
 
   int idx,idx0,idx1;
+  int k, offset, nbody;
   int ri,rj,s,rk,rl,t,u,v;
   double complex tmp;
-  int *myEleIdx, *myEleNum, *myProjCntNew,*myEleSpn;
+  int *myEleIdx, *myEleNum, *myProjCntNew,*myEleSpn, *myRsi, *myRsj;
   double complex *myBuffer;
+  double *myRWork;
   double two_pi = 2.0*acos(-1.0);
   int site_idx, spin_idx, rsi_idx, rsi;
   int x, y, z;
-  double Wx, Wy, Wz; 
+  double Wx, Wy, Wz;
   double weight;
+  int maxNBodyG = (NBodyGMaxN > 2) ? NBodyGMaxN : 2;
+  int needNBodyRWork = (NNBodyG > 0 && NBodyGMaxN > 2);
 
-  RequestWorkSpaceThreadInt(Nsize+Nsize+Nsite2+NProj);
-  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
-  /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
+  RequestWorkSpaceThreadInt(Nsize+Nsize+Nsite2+NProj+2*maxNBodyG);
+  RequestWorkSpaceThreadComplex(NQPFull+maxNBodyG*Nsize);
+  if (needNBodyRWork) RequestWorkSpaceThreadDouble(LapackLWork);
+  /* GreenFunc1: NQPFull, GreenFunc2/NBodyG: NQPFull+maxNBodyG*Nsize */
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myEleSpn,myProjCntNew,myBuffer,idx)
+  private(myEleIdx,myEleNum,myEleSpn,myProjCntNew,myRsi,myRsj,myBuffer,myRWork,idx)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleSpn = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
-    myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
+    myRsi = GetWorkSpaceThreadInt(maxNBodyG);
+    myRsj = GetWorkSpaceThreadInt(maxNBodyG);
+    myBuffer = GetWorkSpaceThreadComplex(NQPFull+maxNBodyG*Nsize);
+    myRWork = needNBodyRWork ? GetWorkSpaceThreadDouble(LapackLWork) : NULL;
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -79,13 +87,13 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
       }else{
         tmp = GreenFunc1_fsz2(ri,rj,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myEleSpn,
                        myProjCntNew,myBuffer);
-      }     
+      }
       LocalCisAjs[idx] = tmp;
     }
 
     #pragma omp master
     {StopTimer(50);StartTimer(51);}
-    
+
     #pragma omp for private(idx,ri,rj,s,rk,rl,t,tmp) schedule(dynamic)
     for(idx=0;idx<NCisAjsCktAltDC;idx++) {
       /*
@@ -115,7 +123,7 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
       }
       PhysCisAjsCktAltDC[idx] += w*tmp;
     }
-    
+
     #pragma omp master
     {StopTimer(51);StartTimer(52);}
 
@@ -123,7 +131,7 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
     for(idx=0;idx<NCisAjs;idx++) {
       PhysCisAjs[idx] += w*LocalCisAjs[idx];
     }
-    
+
     #pragma omp master
     {StopTimer(52);StartTimer(53);}
 
@@ -136,7 +144,7 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
 
     #pragma omp master
     {StopTimer(53);StartTimer(54);}
-    
+
     for(idx=0;idx<NTwist;idx++) {
       #pragma omp single
       weight = 0.0;
@@ -145,22 +153,34 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
         ri  = TwistIdx[idx][2*site_idx];
         s   = TwistIdx[idx][2*site_idx+1];
         rsi = ri + s*Nsite;
-      
+
         x = LatticeIdx[ri][0];
         y = LatticeIdx[ri][1];
         z = LatticeIdx[ri][2];
-      
+
         Wx = ParaTwist[idx][3*site_idx + 0];
         Wy = ParaTwist[idx][3*site_idx + 1];
         Wz = ParaTwist[idx][3*site_idx + 2];
-        tmp = x*Wx + y*Wy + z*Wz; 
-      
+        tmp = x*Wx + y*Wy + z*Wz;
+
         weight += tmp*(double)myEleNum[rsi];
       }
       #pragma omp single
       PhysTwist[idx] += w*cexp(I*two_pi*weight);
     }
 
+    #pragma omp for private(idx,k,offset,nbody,tmp) schedule(dynamic)
+    for(idx=0;idx<NNBodyG;idx++) {
+      nbody = NBodyGN[idx];
+      offset = NBodyGOffset[idx];
+      for(k=0;k<nbody;k++) {
+        myRsi[k] = NBodyGIdx[offset+k][0] + NBodyGIdx[offset+k][1]*Nsite;
+        myRsj[k] = NBodyGIdx[offset+k][2] + NBodyGIdx[offset+k][3]*Nsite;
+      }
+      tmp = GreenFuncN_fsz(nbody,myRsi,myRsj,ip,myEleIdx,eleCfg,myEleNum,
+                           eleProjCnt,myEleSpn,myBuffer,myProjCntNew,myRWork);
+      PhysNBodyG[idx] += w*tmp;
+    }
 
     #pragma omp master
     {StopTimer(54);}
@@ -168,6 +188,7 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
 
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();
+  if (needNBodyRWork) ReleaseWorkSpaceThreadDouble();
   return;
 }
 #endif
