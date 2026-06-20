@@ -262,6 +262,14 @@ add_python_vmc_test_invalid_expert(DoublonOnly_InvalidRBM "not compatible with R
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path4_InvalidRBM "does not support RBM")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path5_InvalidRBM "does not support RBM")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond4_J_path4_InvalidFullFilling "requires 2*Ne < Nsite")
+add_test(NAME NSplitSize_Store_Invalid
+         COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py HubbardChain_SpinJastrow
+                 "NSplitSize > 1 cannot be combined" NSplitSize=2)
+set_tests_properties(NSplitSize_Store_Invalid PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME NSplitSize_SRCG_Invalid
+         COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py HubbardChain_SpinJastrow
+                 "NSplitSize > 1 cannot be combined" NSplitSize=2 NStore=0 NSRCG=1)
+set_tests_properties(NSplitSize_SRCG_Invalid PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 add_python_vmc_test_nbodyg(NBodyG_Compare)
 add_python_vmc_test_nbodyg_mpi(NBodyG_Compare_mpi NBodyG_Compare)
 add_python_vmc_test_nbodyg(NBodyG_fsz_Compare)
