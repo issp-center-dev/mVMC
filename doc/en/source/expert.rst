@@ -64,7 +64,10 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **PairHop**: :math:`J_{ij}^{\rm Pair}` in :math:`{\cal H}_P`,
 
     **InterAll**: :math:`I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}` in
-    :math:`{\cal H}_I`.
+    :math:`{\cal H}_I`,
+
+    **NBodyInterAll (nbodyinterall.def)**: variable-order
+    :math:`N`-body interaction terms for the Hamiltonian.
 
     .. rubric:: t-J model input convention
 
@@ -252,6 +255,7 @@ example of the file format is shown as follows.
     LocSpin  zlocspn.def
     Trans    ztransfer.def
     InterAll zinterall.def
+    NBodyInterAll nbodyinterall.def
     Orbital orbitalidx.def
     OneBodyG zcisajs.def
     TwoBodyG	zcisajscktaltdc.def
@@ -309,6 +313,8 @@ User rules
      - Transfer and chemical potential for Hamiltonian.
    * - InterAll
      - Two-body interactions for Hamiltonian.
+   * - NBodyInterAll
+     - Variable-order :math:`N`-body interactions for Hamiltonian.
    * - CoulombIntra
      - CoulombIntra interactions.
    * - CoulombInter
@@ -1089,6 +1095,115 @@ Use rules
 -  A program is terminated, when
    [ int02 ]-[ int09 ] are out of
    range from the defined values.
+
+NBodyInterAll file (nbodyinterall.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file adds variable-order :math:`N`-body interaction terms to the
+Hamiltonian:
+
+.. math::
+
+   {\cal H}_{N} =
+   \sum_{\alpha} V_{\alpha}
+   \prod_{a=1}^{N_{\alpha}}
+   c_{i_{\alpha a}\sigma_{\alpha a}}^{\dagger}
+   c_{j_{\alpha a}\tau_{\alpha a}}.
+
+The factors are applied in the order written on each data line. The
+program does not add Hermitian conjugates automatically; provide every
+term required by the intended Hamiltonian.
+
+::
+
+    =============================================
+    NNBodyInterAll   3
+    =============================================
+    ======== NBodyInterAll interactions =========
+    =============================================
+        1     0     0     2     0    0.37    0.21
+        2     0     0     2     0     5     1     1     1   -0.28    0.16
+        3     0     0     2     0     1     0     3     0     5     1     1     1    0.22   -0.17
+
+File format
+^^^^^^^^^^^
+
+-  Line 1: Header
+
+-  Line 2: [string01] [int01]
+
+-  Lines 3 - 5: Header
+
+-  Lines 6 -:
+   [N] [i_1] [sigma_1] [j_1] [tau_1] ... [i_N] [sigma_N] [j_N] [tau_N] [double01] [double02]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for total number of :math:`N`-body
+   Hamiltonian terms. You can freely give a name of the keyword.
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving total number of :math:`N`-body
+   Hamiltonian terms.
+
+-  [ N ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** The order of the interaction term. It must be
+   positive.
+
+-  [ i_a ], [ j_a ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** Integers giving site indices
+   (0 :math:`\leq` [ i_a ], [ j_a ] :math:`<` ``Nsite``).
+
+-  [ sigma_a ], [ tau_a ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   | **Description :** Integers giving spin indices,
+   | 0: up-spin,
+   | 1: down-spin.
+
+-  [ double01 ], [ double02 ]
+
+   **Type :** double-type (blank parameter not allowed)
+
+   **Description :** Real and imaginary parts of the interaction
+   coefficient.
+
+Use rules
+^^^^^^^^^
+
+-  Headers cannot be omitted.
+
+-  Each term line must contain exactly :math:`1 + 4N + 2` fields.
+
+-  A program is terminated, when [ int01 ] is different from the total
+   number of :math:`N`-body Hamiltonian terms defined in this file.
+
+-  A program is terminated, when site or spin indices are out of range,
+   or when coefficients are non-finite.
+
+-  In orbital modes that do not allow spin-changing contractions, each
+   factor must satisfy :math:`\sigma_a = \tau_a`. Spin-changing factors
+   require orbital-general mode.
+
+-  The first implementation supports normal VMC local energy only.
+   BackFlow and Lanczos modes are not implemented. Real local-energy
+   kernels are not implemented, so complex variational parameters are
+   required when ``NBodyInterAll`` terms are present.
 
 CoulombIntra file (coulombintra.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

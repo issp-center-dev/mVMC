@@ -29,6 +29,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 #include "./include/readdef.h"
 #include "./include/global.h"
@@ -100,6 +101,14 @@ int ReadBuffNBodyG(FILE *fp, int *nbody, int *totalFactors,
 int GetInfoNBodyG(FILE *fp, int *termN, int *termOffset, int **termIdx,
                   int nsite, int nbody, int totalFactors,
                   int maxN, int allowSpinChange, char *defname);
+
+int ReadBuffNBodyInterAll(FILE *fp, int *nbody, int *totalFactors,
+                          int *maxN, int nsite, char *defname);
+
+int GetInfoNBodyInterAll(FILE *fp, int *termN, int *termOffset,
+                         int **termIdx, double complex *termCoef,
+                         int nsite, int nbody, int totalFactors,
+                         int maxN, int allowSpinChange, char *defname);
 
 int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int **ArrayIdxOneBodyG,
                       int Nsite, int NArray, char *defname);
@@ -614,6 +623,18 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffInt(fp, &bufInt[IdxNInterAll]);
             break;
 
+          case KWNBodyInterAll:
+            cerr = "";
+            if (ReadBuffNBodyInterAll(fp,
+                                      &bufInt[IdxNNBodyInterAll],
+                                      &bufInt[IdxNBodyInterAllTotalFactors],
+                                      &bufInt[IdxNBodyInterAllMaxN],
+                                      bufInt[IdxNsite],
+                                      defname) != 0) {
+              info = ReadDefFileError(defname);
+            }
+            break;
+
           case KWOptTrans:
             bufInt[IdxNQPOptTrans] = 1;
             if (FlagOptTrans > 0) {
@@ -627,6 +648,12 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
           case KWBFRange:
 #ifdef _NOTBACKFLOW
+            if (bufInt[IdxNNBodyInterAll] > 0) {
+              fprintf(stderr,
+                      "Error: NBodyInterAll is not implemented for BackFlow local energy "
+                      "(NNBodyInterAll=%d).\n",
+                      bufInt[IdxNNBodyInterAll]);
+            }
             fprintf(stderr, "Error: Back Flow is not supported.\n");
             info = ReadDefFileError(defname);
 #else
@@ -638,6 +665,12 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
           case KWBF:
 #ifdef _NOTBACKFLOW
+            if (bufInt[IdxNNBodyInterAll] > 0) {
+              fprintf(stderr,
+                      "Error: NBodyInterAll is not implemented for BackFlow local energy "
+                      "(NNBodyInterAll=%d).\n",
+                      bufInt[IdxNNBodyInterAll]);
+            }
             fprintf(stderr, "Error: Back Flow is not supported.\n");
             info = ReadDefFileError(defname);
 #else
@@ -784,6 +817,18 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
               bufInt[IdxNNBodyG], bufInt[IdxNBF]);
       info = 1;
     }
+    if (bufInt[IdxNNBodyInterAll] > 0 && bufInt[IdxNBF] > 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll is not implemented for BackFlow local energy "
+              "(NNBodyInterAll=%d, NBackFlowIdx=%d).\n",
+              bufInt[IdxNNBodyInterAll], bufInt[IdxNBF]);
+      info = 1;
+    }
+    if (bufInt[IdxNNBodyInterAll] > 0 && bufInt[IdxLanczosMode] > 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll is not implemented for Lanczos mode.\n");
+      info = 1;
+    }
 
   }//rank 0
 
@@ -802,6 +847,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     }
     if(FlagRBM == 1 && AllComplexFlag == 0){
       fprintf(stderr, "Error: RBM requires complex variational parameters (AllComplexFlag != 0).\n");
+      info = 1;
+    }
+    if (bufInt[IdxNNBodyInterAll] > 0 && AllComplexFlag == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll requires complex variational parameters "
+              "because the real local-energy kernels are not implemented "
+              "(NNBodyInterAll=%d).\n",
+              bufInt[IdxNNBodyInterAll]);
       info = 1;
     }
   }
@@ -878,6 +931,9 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NBodyGTotalFactors = bufInt[IdxNBodyGTotalFactors];
   NBodyGMaxN = bufInt[IdxNBodyGMaxN];
   NInterAll = bufInt[IdxNInterAll];
+  NNBodyInterAll = bufInt[IdxNNBodyInterAll];
+  NBodyInterAllTotalFactors = bufInt[IdxNBodyInterAllTotalFactors];
+  NBodyInterAllMaxN = bufInt[IdxNBodyInterAllMaxN];
   NQPOptTrans = bufInt[IdxNQPOptTrans];
   Nrange = bufInt[IdxNrange];
   NBackFlowIdx = bufInt[IdxNBF];
@@ -916,6 +972,55 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
               "Error: NBodyG is not implemented for BackFlow measurement "
               "(NNBodyG=%d, NBackFlowIdx=%d).\n",
               NNBodyG, NBackFlowIdx);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyInterAll < 0 ||
+      NBodyInterAllTotalFactors < 0 ||
+      NBodyInterAllMaxN < 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll sizes must be non-negative "
+              "(NNBodyInterAll=%d, NBodyInterAllTotalFactors=%d, "
+              "NBodyInterAllMaxN=%d).\n",
+              NNBodyInterAll, NBodyInterAllTotalFactors,
+              NBodyInterAllMaxN);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyInterAll > INT_MAX / 2 ||
+      NBodyInterAllTotalFactors > INT_MAX / 4) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll sizes are too large "
+              "(NNBodyInterAll=%d, NBodyInterAllTotalFactors=%d).\n",
+              NNBodyInterAll, NBodyInterAllTotalFactors);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyInterAll > 0 && NBackFlowIdx > 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll is not implemented for BackFlow local energy "
+              "(NNBodyInterAll=%d, NBackFlowIdx=%d).\n",
+              NNBodyInterAll, NBackFlowIdx);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyInterAll > 0 && NLanczosMode > 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll is not implemented for Lanczos mode.\n");
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyInterAll > 0 && AllComplexFlag == 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll requires complex variational parameters "
+              "because the real local-energy kernels are not implemented "
+              "(NNBodyInterAll=%d).\n",
+              NNBodyInterAll);
     }
     MPI_Abort(comm, EXIT_FAILURE);
   }
@@ -1094,6 +1199,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                  + 2 * NNBodyG /* NBodyGN + NBodyGOffset */
                  + 4 * NBodyGTotalFactors /* NBodyGIdx */
                  + 8 * NInterAll /* InterAll */
+                 + 2 * NNBodyInterAll /* NBodyInterAllN + NBodyInterAllOffset */
+                 + 4 * NBodyInterAllTotalFactors /* NBodyInterAllIdx */
                  + Nsite * NQPOptTrans /* QPOptTrans */
                  + Nsite * NQPOptTrans /* QPOptTransSgn */
                  + 4*Nsite /* LatticeIdx */
@@ -1387,6 +1494,20 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           if (GetInfoInterAll(fp, InterAll, ParaInterAll, Nsite, NInterAll, defname) != 0) info = 1;
           break;
 
+        case KWNBodyInterAll:
+          /*nbodyinterall.def----------------------------------*/
+          if (GetInfoNBodyInterAll(fp, NBodyInterAllN,
+                                   NBodyInterAllOffset,
+                                   NBodyInterAllIdx,
+                                   ParaNBodyInterAll,
+                                   Nsite, NNBodyInterAll,
+                                   NBodyInterAllTotalFactors,
+                                   NBodyInterAllMaxN,
+                                   iFlgOrbitalGeneral,
+                                   defname) != 0)
+            info = 1;
+          break;
+
         case KWOptTrans:
           /*qpopttrans.def------------------------------------*/
           fidx = NProj + NOrbitalIdx;
@@ -1486,6 +1607,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 #ifdef _mpi_use
   SafeMpiBcastInt(LocSpn, NTotalDefInt, comm);
   SafeMpiBcast_fcmp(ParaTransfer, NTransfer + NInterAll, comm);
+  SafeMpiBcast_fcmp(ParaNBodyInterAll, NNBodyInterAll, comm);
   SafeMpiBcast(ParaCoulombIntra, NTotalDefDouble, comm);
   SafeMpiBcast_fcmp(ParaQPTrans, NQPTrans, comm);
 #endif /* _mpi_use */
@@ -2166,6 +2288,9 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[IdxNBodyGTotalFactors] = 0;
   bufInt[IdxNBodyGMaxN] = 0;
   bufInt[IdxNInterAll] = 0;
+  bufInt[IdxNNBodyInterAll] = 0;
+  bufInt[IdxNBodyInterAllTotalFactors] = 0;
+  bufInt[IdxNBodyInterAllMaxN] = 0;
   bufInt[IdxNQPOptTrans] = 1;
   bufInt[IdxSROptCGMaxIter] = 0;
   bufInt[IdxNBF] = 0;
@@ -3177,6 +3302,342 @@ int GetInfoNBodyG(FILE *fp, int *termN, int *termOffset, int **termIdx,
       (count != nbody || offset != totalFactors || maxSeen != maxN)) {
     fprintf(stderr,
             "Error: NBodyG size mismatch in %s "
+            "(terms=%d/%d, factors=%d/%d, maxN=%d/%d).\n",
+            defname, count, nbody, offset, totalFactors, maxSeen, maxN);
+    info = 1;
+  }
+
+  return info;
+}
+
+static int ParseNBodyInterAllHeaderCount(const char *line, int *nbody,
+                                         char *defname) {
+  const unsigned char *p = (const unsigned char *)line;
+  char *endptr;
+  long nLong;
+
+  while (isspace(*p)) p++;
+  if (*p == '\0') {
+    fprintf(stderr, "Error: missing NBodyInterAll header count in %s.\n", defname);
+    return 1;
+  }
+  while (*p != '\0' && !isspace(*p)) p++;
+  while (isspace(*p)) p++;
+
+  errno = 0;
+  nLong = strtol((const char *)p, &endptr, 10);
+  if ((const char *)p == endptr || errno != 0 ||
+      nLong < 0 || nLong > INT_MAX) {
+    fprintf(stderr, "Error: NNBodyInterAll must be non-negative in %s: %s",
+            defname, line);
+    return 1;
+  }
+  while (isspace((unsigned char)*endptr)) endptr++;
+  if (*endptr != '\0') {
+    fprintf(stderr, "Error: extra token in NBodyInterAll header in %s: %s",
+            defname, line);
+    return 1;
+  }
+
+  *nbody = (int)nLong;
+  return 0;
+}
+
+static int ReadNBodyInterAllHeader(FILE *fp, int *nbody, char *defname) {
+  char *line = NULL;
+  size_t cap = 0;
+  int i;
+
+  *nbody = 0;
+  for (i = 0; i < IgnoreLinesInDef; i++) {
+    int status = ReadNBodyGLine(fp, &line, &cap);
+    if (status < 0) {
+      fprintf(stderr, "Error: failed to read NBodyInterAll header in %s.\n",
+              defname);
+      free(line);
+      return 1;
+    }
+    if (status == 0) {
+      fprintf(stderr, "Error: incomplete NBodyInterAll header in %s.\n",
+              defname);
+      free(line);
+      return 1;
+    }
+    if (i == 1 &&
+        ParseNBodyInterAllHeaderCount(line, nbody, defname) != 0) {
+      free(line);
+      return 1;
+    }
+  }
+
+  free(line);
+  return 0;
+}
+
+static int ValidateNBodyInterAllFactors(int n, int *values, int nsite,
+                                        int checkSpinChange,
+                                        int allowSpinChange,
+                                        char *defname) {
+  int k;
+  for (k = 0; k < n; k++) {
+    const int siteOut = values[4*k + 0];
+    const int spinOut = values[4*k + 1];
+    const int siteIn  = values[4*k + 2];
+    const int spinIn  = values[4*k + 3];
+
+    if (CheckPairSite(siteOut, siteIn, nsite) != 0) {
+      fprintf(stderr,
+              "Error: site index of NBodyInterAll is incorrect in %s "
+              "(site_out=%d, site_in=%d, Nsite=%d).\n",
+              defname, siteOut, siteIn, nsite);
+      return 1;
+    }
+    if (spinOut < 0 || spinOut > 1 || spinIn < 0 || spinIn > 1) {
+      fprintf(stderr,
+              "Error: spin index of NBodyInterAll is incorrect in %s "
+              "(spin_out=%d, spin_in=%d).\n",
+              defname, spinOut, spinIn);
+      return 1;
+    }
+    if (checkSpinChange && !allowSpinChange && spinOut != spinIn) {
+      fprintf(stderr,
+              "Error: spin-changing NBodyInterAll factor requires "
+              "orbital-general mode in %s (spin_out=%d, spin_in=%d).\n",
+              defname, spinOut, spinIn);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static int ParseNBodyInterAllTermLine(const char *line, int nsite,
+                                      int checkSpinChange,
+                                      int allowSpinChange, int *nOut,
+                                      int **valuesOut,
+                                      double complex *coefOut,
+                                      char *defname) {
+  char *endptr;
+  const char *p = line;
+  long nLong;
+  int n;
+  int k;
+  int *values = NULL;
+  double dReValue;
+  double dImValue;
+
+  while (isspace((unsigned char)*p)) p++;
+  errno = 0;
+  nLong = strtol(p, &endptr, 10);
+  if (p == endptr || errno != 0 || nLong < 1 ||
+      nLong > INT_MAX / 4) {
+    fprintf(stderr, "Error: invalid NBodyInterAll term order in %s: %s",
+            defname, line);
+    return 1;
+  }
+  n = (int)nLong;
+  p = endptr;
+
+  values = (int *)malloc(sizeof(int) * 4 * (size_t)n);
+  if (values == NULL) {
+    fprintf(stderr, "Error: memory allocation failed in NBodyInterAll parser.\n");
+    return 1;
+  }
+
+  for (k = 0; k < 4*n; k++) {
+    long v;
+    while (isspace((unsigned char)*p)) p++;
+    errno = 0;
+    v = strtol(p, &endptr, 10);
+    if (p == endptr || errno != 0 || v < INT_MIN || v > INT_MAX) {
+      fprintf(stderr, "Error: malformed NBodyInterAll term in %s: %s",
+              defname, line);
+      free(values);
+      return 1;
+    }
+    values[k] = (int)v;
+    p = endptr;
+  }
+
+  while (isspace((unsigned char)*p)) p++;
+  errno = 0;
+  dReValue = strtod(p, &endptr);
+  if (p == endptr || errno != 0 || !isfinite(dReValue)) {
+    fprintf(stderr, "Error: invalid NBodyInterAll coefficient in %s: %s",
+            defname, line);
+    free(values);
+    return 1;
+  }
+  p = endptr;
+
+  while (isspace((unsigned char)*p)) p++;
+  errno = 0;
+  dImValue = strtod(p, &endptr);
+  if (p == endptr || errno != 0 || !isfinite(dImValue)) {
+    fprintf(stderr, "Error: invalid NBodyInterAll coefficient in %s: %s",
+            defname, line);
+    free(values);
+    return 1;
+  }
+  p = endptr;
+
+  while (isspace((unsigned char)*p)) p++;
+  if (*p != '\0') {
+    fprintf(stderr, "Error: extra token in NBodyInterAll term in %s: %s",
+            defname, line);
+    free(values);
+    return 1;
+  }
+
+  if (ValidateNBodyInterAllFactors(n, values, nsite,
+                                   checkSpinChange, allowSpinChange,
+                                   defname) != 0) {
+    free(values);
+    return 1;
+  }
+
+  *nOut = n;
+  *valuesOut = values;
+  *coefOut = dReValue + I * dImValue;
+  return 0;
+}
+
+int ReadBuffNBodyInterAll(FILE *fp, int *nbody, int *totalFactors,
+                          int *maxN, int nsite, char *defname) {
+  char *line = NULL;
+  size_t cap = 0;
+  int headerN = 0;
+  int count = 0;
+  int total = 0;
+  int maxSeen = 0;
+  int status;
+  int info = 0;
+
+  *nbody = 0;
+  *totalFactors = 0;
+  *maxN = 0;
+
+  if (ReadNBodyInterAllHeader(fp, &headerN, defname) != 0) return 1;
+  if (headerN > INT_MAX / 2) {
+    fprintf(stderr, "Error: NNBodyInterAll is too large in %s.\n", defname);
+    return 1;
+  }
+
+  while ((status = ReadNBodyGLine(fp, &line, &cap)) > 0) {
+    int n = 0;
+    int *values = NULL;
+    double complex coef;
+
+    if (IsIgnorableNBodyGLine(line)) continue;
+    if (count >= headerN) {
+      fprintf(stderr, "Error: too many NBodyInterAll terms in %s.\n", defname);
+      info = 1;
+      break;
+    }
+    if (ParseNBodyInterAllTermLine(line, nsite, 0, 1,
+                                   &n, &values, &coef, defname) != 0) {
+      info = 1;
+      break;
+    }
+    if (total > INT_MAX - n || total + n > INT_MAX / 4) {
+      fprintf(stderr,
+              "Error: NBodyInterAll factor count is too large in %s.\n",
+              defname);
+      free(values);
+      info = 1;
+      break;
+    }
+    total += n;
+    if (n > maxSeen) maxSeen = n;
+    count++;
+    free(values);
+  }
+
+  if (status < 0) {
+    fprintf(stderr, "Error: failed to read NBodyInterAll terms in %s.\n",
+            defname);
+    info = 1;
+  }
+  free(line);
+
+  if (info == 0 && count != headerN) {
+    fprintf(stderr,
+            "Error: NBodyInterAll term count mismatch in %s "
+            "(header=%d, data=%d).\n",
+            defname, headerN, count);
+    info = 1;
+  }
+  if (info != 0) return 1;
+
+  *nbody = headerN;
+  *totalFactors = total;
+  *maxN = maxSeen;
+  return 0;
+}
+
+int GetInfoNBodyInterAll(FILE *fp, int *termN, int *termOffset,
+                         int **termIdx, double complex *termCoef,
+                         int nsite, int nbody, int totalFactors,
+                         int maxN, int allowSpinChange, char *defname) {
+  char *line = NULL;
+  size_t cap = 0;
+  int count = 0;
+  int offset = 0;
+  int maxSeen = 0;
+  int status;
+  int info = 0;
+
+  while ((status = ReadNBodyGLine(fp, &line, &cap)) > 0) {
+    int n = 0;
+    int *values = NULL;
+    double complex coef;
+    int k;
+
+    if (IsIgnorableNBodyGLine(line)) continue;
+    if (count >= nbody) {
+      fprintf(stderr, "Error: too many NBodyInterAll terms in %s.\n", defname);
+      info = 1;
+      break;
+    }
+    if (ParseNBodyInterAllTermLine(line, nsite, 1, allowSpinChange,
+                                   &n, &values, &coef, defname) != 0) {
+      info = 1;
+      break;
+    }
+    if (offset > totalFactors - n) {
+      fprintf(stderr,
+              "Error: NBodyInterAll factor count changed in %s.\n",
+              defname);
+      free(values);
+      info = 1;
+      break;
+    }
+
+    termN[count] = n;
+    termOffset[count] = offset;
+    termCoef[count] = coef;
+    for (k = 0; k < n; k++) {
+      termIdx[offset + k][0] = values[4*k + 0];
+      termIdx[offset + k][1] = values[4*k + 1];
+      termIdx[offset + k][2] = values[4*k + 2];
+      termIdx[offset + k][3] = values[4*k + 3];
+    }
+    offset += n;
+    if (n > maxSeen) maxSeen = n;
+    count++;
+    free(values);
+  }
+
+  if (status < 0) {
+    fprintf(stderr, "Error: failed to read NBodyInterAll terms in %s.\n",
+            defname);
+    info = 1;
+  }
+  free(line);
+
+  if (info == 0 &&
+      (count != nbody || offset != totalFactors || maxSeen != maxN)) {
+    fprintf(stderr,
+            "Error: NBodyInterAll size mismatch in %s "
             "(terms=%d/%d, factors=%d/%d, maxN=%d/%d).\n",
             defname, count, nbody, offset, totalFactors, maxSeen, maxN);
     info = 1;
