@@ -104,7 +104,10 @@
 <tr class="row-even"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
 <td><p>二体グリーン関数.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_twist_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_NBodyG_yyy.dat</p></td>
+<td><p><span class="math notranslate nohighlight">\(N\)</span> 体相関関数.</p></td>
+</tr>
+<tr class="row-even"><td><p>xxx_twist_yyy.dat</p></td>
 <td><p>Twist演算子の期待値.</p></td>
 </tr>
 </tbody>
@@ -387,6 +390,54 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 </ul>
 </section>
 </section>
+<section id="xxx-nbodyg-yyy-dat">
+<h2>xxx_NBodyG_yyy.dat<a class="headerlink" href="#xxx-nbodyg-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p>NBodyG指定ファイルで指定された <span class="math notranslate nohighlight">\(N\)</span> 体相関関数
+<span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span>
+の計算結果を出力します。xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。以下にファイル例を記載します。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>1    0    0    0    0 0.4452776740 0.0000000000
+2    0    0    0    0    1    1    1    1 0.1175764436 0.0000000000
+3    0    0    0    0    1    0    1    0    2    1    2    1 0.0523019284 0.0000000000
+…
+</pre></div>
+</div>
+<section id="id6">
+<h3>ファイル形式<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p>[N] [i_1] [sigma_1] [j_1] [tau_1] ... [i_N] [sigma_N] [j_N] [tau_N] [double01] [double02]</p></li>
+</ul>
+</section>
+<section id="id7">
+<h3>パラメータ<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h3>
+<ul>
+<li><p>[N]</p>
+<p><strong>形式 :</strong> Int</p>
+<p><strong>説明 :</strong> 相関関数の次数を表します。</p>
+</li>
+<li><p>[i_a], [j_a]</p>
+<p><strong>形式 :</strong> Int</p>
+<p><strong>説明 :</strong> サイト番号を表します。</p>
+</li>
+<li><p>[sigma_a], [tau_a]</p>
+<p><strong>形式 :</strong> Int</p>
+<div class="line-block">
+<div class="line"><strong>説明 :</strong> スピンを表します。</div>
+<div class="line">0: アップスピン</div>
+<div class="line">1: ダウンスピン。</div>
+</div>
+</li>
+<li><p>[double01], [double02]</p>
+<p><strong>形式 :</strong> Double</p>
+<div class="line-block">
+<div class="line"><strong>説明 :</strong>
+<span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span> の値を表します。</div>
+<div class="line"><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span> が実部、 <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span> が虚部を表します。</div>
+</div>
+</li>
+</ul>
+</section>
+</section>
 <section id="xxx-twist-yyy-dat">
 <h2>xxx_twist_yyy.dat<a class="headerlink" href="#xxx-twist-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>Twist指定ファイルで指定されたTwist演算子 <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span> の計算結果を出力します。xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
@@ -396,14 +447,14 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 …
 </pre></div>
 </div>
-<section id="id6">
-<h3>ファイル形式<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id8">
+<h3>ファイル形式<a class="headerlink" href="#id8" title="この見出しへのパーマリンク">¶</a></h3>
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p></li>
 </ul>
 </section>
-<section id="id7">
-<h3>パラメータ<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id9">
+<h3>パラメータ<a class="headerlink" href="#id9" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p>
 <p><strong>形式 :</strong> double型</p>
@@ -477,9 +528,14 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#id5">パラメータ</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
+<li><a class="reference internal" href="#xxx-nbodyg-yyy-dat">xxx_NBodyG_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id6">ファイル形式</a></li>
 <li><a class="reference internal" href="#id7">パラメータ</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
+<li><a class="reference internal" href="#id8">ファイル形式</a></li>
+<li><a class="reference internal" href="#id9">パラメータ</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>

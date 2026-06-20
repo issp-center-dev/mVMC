@@ -1,7 +1,7 @@
 .. include:: ../../bib/ref.txt
 
 .. _OutputFile:
-             
+
 Output files
 ============
 
@@ -50,6 +50,8 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 | xxx\_cisajs\_yyy.dat                     | One body Green’s functions.                                                                                            |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_cisajscktalt\_yyy.dat               | Correlation functions.                                                                                                 |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| xxx\_NBodyG\_yyy.dat                     | :math:`N`-body correlation functions.                                                                                  |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_twist\_yyy.dat                      | Twist operators.                                                                                                       |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
@@ -123,7 +125,7 @@ outputted. The file format is same as the ``InDH4`` file defined in Sec.
 Output files for general RBM factors(\*\*\*\_generalRBM\_physlayer\_opt.dat, \*\*\*\_generalRBM\_hiddenlayer\_opt.dat, \*\*\*\_generalRBM\_physhidden\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The optimized general RBM correlation factors by SR method are outputted. 
+The optimized general RBM correlation factors by SR method are outputted.
 The file format is same as the ``InGeneralRBM_PhysLayer``, ``InGeneralRBM_HiddenLayer`` and ``InGeneralRBM_PhysHidden`` files defined in Sec.
 :ref:`InputParam`.
 
@@ -155,8 +157,8 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 ::
 
     1.151983765704212992e+01  8.124622418360909482e-01  \
-    1.619082955438887268e+02  2.019905203939084959e-01 
-    1.288482613817423150e+01  5.006903733262847433e-01  
+    1.619082955438887268e+02  2.019905203939084959e-01
+    1.288482613817423150e+01  5.006903733262847433e-01
     1.972000325276957824e+02  1.824505193695792893e-01
     1.308897206011880421e+01  5.701244886956570168e-01  \
     2.072610167083121837e+02  2.029162857569105916e-01
@@ -211,7 +213,7 @@ when fallback or warn-and-continue is enabled.
 
 
 
-xxx\_CalcTimer.dat 
+xxx\_CalcTimer.dat
 ~~~~~~~~~~~~~~~~~~~
 
 After finishing calculation, the processing time is outputted in the
@@ -230,7 +232,7 @@ each processes. An example of outputted file is shown as follows.
       VMCMakeSample             [3]     12.85650
     ...
 
-xxx\_time\_zzz.dat 
+xxx\_time\_zzz.dat
 ~~~~~~~~~~~~~~~~~~~
 
 The calculation information at each bins are outputted in the order of
@@ -249,10 +251,10 @@ is shown as follows.
     00003  0.50000 0.00000 176      0        : Mon Jul 25 14:03:30 2016
     00004  0.49432 0.00000 176      0        : Mon Jul 25 14:03:30 2016
     00005  0.57386 0.00000 176      0        : Mon Jul 25 14:03:30 2016
-    00006  0.55114 0.00000 176      0        : Mon Jul 25 14:03:30 2016    
+    00006  0.55114 0.00000 176      0        : Mon Jul 25 14:03:30 2016
     …
 
-xxx\_cisajs\_yyy.dat 
+xxx\_cisajs\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~
 
 This file is the outputted files for one-body Green’s function
@@ -315,7 +317,7 @@ Parameters
      :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle`,
      respectively.
 
-xxx\_cisajscktalt\_yyy.dat 
+xxx\_cisajscktalt\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This file is the outputted files for the two-body Green’s function
@@ -387,6 +389,65 @@ Parameters
    :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle`,
    respectively.
 
+xxx\_NBodyG\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~
+
+This file is the outputted files for the :math:`N`-body correlation
+function
+:math:`\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle`.
+The target components are set in the input file with the keyword
+"NBodyG". Here, xxx is the header indicated by ``CDataFileHead`` in
+``ModPara`` file and yyy is a number given by
+``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp``,
+where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
+``ModPara`` file. An example of the file format is as follows.
+
+::
+
+        1    0    0    0    0 0.4452776740 0.0000000000
+        2    0    0    0    0    1    1    1    1 0.1175764436 0.0000000000
+        3    0    0    0    0    1    0    1    0    2    1    2    1 0.0523019284 0.0000000000
+        ...
+
+File format
+^^^^^^^^^^^
+
+-  [N] [i_1] [sigma_1] [j_1] [tau_1] ... [i_N] [sigma_N] [j_N] [tau_N] [double01] [double02].
+
+Parameters
+^^^^^^^^^^
+
+-  [N]
+
+   **Type :** Int
+
+   **Description :** The order of the correlation function.
+
+-  [i_a], [j_a]
+
+   **Type :** Int
+
+   **Description :** The integer of the site number.
+
+-  [sigma_a], [tau_a]
+
+   **Type :** Int
+
+   **Description :** The integer of the spin index:
+
+   0: Up-spin
+
+   1: Down-spin.
+
+-  [double01], [double02]
+
+   **Type :** Double
+
+   **Description :** The value of
+   :math:`\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle`.
+   [double01] and [double02] show the real and imaginary part,
+   respectively.
+
 xxx\_twist\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -394,7 +455,7 @@ This file is the outputted files for the Twist operator  :math:`P^{(\alpha)} = \
 
 ::
 
-        -8.450000000179783144e-02  -5.022947287359245602e-03  8.464915829324838603e-02  -3.082219356298420809e+00 
+        -8.450000000179783144e-02  -5.022947287359245602e-03  8.464915829324838603e-02  -3.082219356298420809e+00
         9.193000000026863017e-01  2.424870552459427574e-03  9.193031980810983939e-01  2.637729716822964383e-03
         …
 
@@ -416,7 +477,7 @@ Parameters
    | :math:`[` double01 :math:`]` is the real part, :math:`[` double02 :math:`]` is the imaginary part, :math:`[` double03 :math:`]` is the absolute value, and :math:`[` double04 :math:`]` is the phase (:math:`\arg P^{(\alpha)}`).
 
 
-xxx\_ls\_out\_yyy.dat 
+xxx\_ls\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~
 
 This file is the outputted files for :math:`\langle H \rangle`,
@@ -429,7 +490,7 @@ file. Here, xxx is the header indicated by ``CDataFileHead`` in
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 ``ModPara`` file.
 
-xxx\_ls\_cisajs\_yyy.dat 
+xxx\_ls\_cisajs\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This file is the outputted files for one-body Green’s function
@@ -438,7 +499,7 @@ Power Lanczos method. The file format is same as the
 xxx\_cisajs\_yyy.dat file. This file is outputted when ``NVMCCalMode`` =
 1, ``NLanczosmode`` = 2 are set in ``ModPara`` file.
 
-xxx\_ls\_cisajscktalt\_yyy.dat 
+xxx\_ls\_cisajscktalt\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This file is the outputted files for the two-body Green’s function

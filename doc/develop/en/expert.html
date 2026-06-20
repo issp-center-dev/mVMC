@@ -211,6 +211,8 @@ in <span class="math notranslate nohighlight">\({\cal P}_{d-h}^{(4)}\)</span>.</
 functions to output.</p>
 <p><strong>TwoBodyG (greentwo.def)</strong>: Set the components of two-body green
 functions to output.</p>
+<p><strong>NBodyG (nbodyg.def)</strong>: Set the components of <span class="math notranslate nohighlight">\(N\)</span>-body
+correlation functions to output.</p>
 <p><strong>Twist (twist.def)</strong>: Set the components of twist operators to
 output.</p>
 </li>
@@ -229,6 +231,7 @@ example of the file format is shown as follows.</p>
 <span class="nf">Orbital</span> <span class="n">orbitalidx</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">OneBodyG</span> <span class="n">zcisajs</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">TwoBodyG</span>    <span class="n">zcisajscktaltdc</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">NBodyG</span> <span class="n">nbodyg</span><span class="o">.</span><span class="k">def</span>
 </pre></div>
 </div>
 <section id="file-format">
@@ -380,10 +383,13 @@ and “TransSym”.</p></li>
 <tr class="row-odd"><td><p>TwoBodyG</p></td>
 <td><p>Output components for Correlation functions <span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p>Twist</p></td>
+<tr class="row-even"><td><p>NBodyG</p></td>
+<td><p>Output components for <span class="math notranslate nohighlight">\(N\)</span>-body correlation functions <span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>Twist</p></td>
 <td><p>Output components for Twist operators <span class="math notranslate nohighlight">\(\langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p>Lattice</p></td>
+<tr class="row-even"><td><p>Lattice</p></td>
 <td><p>Position of each site.</p></td>
 </tr>
 </tbody>
@@ -2826,6 +2832,82 @@ range from the defined values.</p></li>
 </ul>
 </section>
 </section>
+<section id="nbodyg-file-nbodyg-def">
+<h2>NBodyG file (nbodyg.def)<a class="headerlink" href="#nbodyg-file-nbodyg-def" title="Permalink to this heading">¶</a></h2>
+<p>This file determines the target components to calculate and output
+<span class="math notranslate nohighlight">\(N\)</span>-body correlation functions
+<span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span>.
+An example of file format is shown as follows.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">=============================================</span>
+<span class="n">NNBodyG</span>        <span class="mi">3</span>
+<span class="o">=============================================</span>
+<span class="o">========</span> <span class="n">NBodyG</span> <span class="n">correlation</span> <span class="n">functions</span> <span class="o">=======</span>
+<span class="o">=============================================</span>
+    <span class="mi">1</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>
+    <span class="mi">2</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">1</span>     <span class="mi">1</span>     <span class="mi">1</span>     <span class="mi">1</span>
+    <span class="mi">3</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">1</span>     <span class="mi">0</span>     <span class="mi">1</span>     <span class="mi">0</span>     <span class="mi">2</span>     <span class="mi">1</span>     <span class="mi">2</span>     <span class="mi">1</span>
+</pre></div>
+</div>
+<section id="id72">
+<h3>File format<a class="headerlink" href="#id72" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Line 1: Header</p></li>
+<li><p>Line 2: [string01] [int01]</p></li>
+<li><p>Lines 3 - 5: Header</p></li>
+<li><p>Lines 6 -:
+[N] [i_1] [sigma_1] [j_1] [tau_1] … [i_N] [sigma_N] [j_N] [tau_N]</p></li>
+</ul>
+</section>
+<section id="id73">
+<h3>Parameters<a class="headerlink" href="#id73" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>[ string01 ]</p>
+<p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> A keyword for total number of <span class="math notranslate nohighlight">\(N\)</span>-body
+correlation functions. You can freely give a name of the keyword.</p>
+</li>
+<li><p>[ int01 ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving total number of <span class="math notranslate nohighlight">\(N\)</span>-body
+correlation functions.</p>
+</li>
+<li><p>[ N ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> An integer giving the order of the correlation
+function. It must be positive.</p>
+</li>
+<li><p>[ i_a ], [ j_a ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<p><strong>Description :</strong> Integers giving site indices
+(0 <span class="math notranslate nohighlight">\(\leq\)</span> [ i_a ], [ j_a ] <span class="math notranslate nohighlight">\(&lt;\)</span> <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>).</p>
+</li>
+<li><p>[ sigma_a ], [ tau_a ]</p>
+<p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
+<div class="line-block">
+<div class="line"><strong>Description :</strong> Integers giving spin indices,</div>
+<div class="line">0: up-spin,</div>
+<div class="line">1: down-spin.</div>
+</div>
+</li>
+</ul>
+</section>
+<section id="id74">
+<h3>Use rules<a class="headerlink" href="#id74" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Headers cannot be omitted.</p></li>
+<li><p>A program is terminated, when [ int01 ] is different from the total
+number of <span class="math notranslate nohighlight">\(N\)</span>-body correlation functions defined in this file.</p></li>
+<li><p>Each term line must contain exactly <span class="math notranslate nohighlight">\(1 + 4N\)</span> integers.</p></li>
+<li><p>A program is terminated, when site or spin indices are out of range.</p></li>
+<li><p>In orbital modes that do not allow spin-changing contractions, each
+factor must satisfy <span class="math notranslate nohighlight">\(\sigma_a = \tau_a\)</span>. Spin-changing factors
+require orbital-general mode.</p></li>
+<li><p>This output is supported for physical-quantity calculations. It is
+not implemented for BackFlow measurement, and no Lanczos-corrected
+<code class="docutils literal notranslate"><span class="pre">ls_NBodyG</span></code> output file is produced.</p></li>
+</ul>
+</section>
+</section>
 <section id="twist-file-twist-def">
 <h2>Twist file (twist.def)<a class="headerlink" href="#twist-file-twist-def" title="Permalink to this heading">¶</a></h2>
 <p>This file sets the target components to calculate and output the
@@ -2855,8 +2937,8 @@ idx_site_s_x_y_z
     …
 </pre></div>
 </div>
-<section id="id72">
-<h3>File format<a class="headerlink" href="#id72" title="Permalink to this heading">¶</a></h3>
+<section id="id75">
+<h3>File format<a class="headerlink" href="#id75" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -2865,8 +2947,8 @@ idx_site_s_x_y_z
 [int02]  [int03]  [int04]  [double01]  [double02]  [double03]</p></li>
 </ul>
 </section>
-<section id="id73">
-<h3>Parameters<a class="headerlink" href="#id73" title="Permalink to this heading">¶</a></h3>
+<section id="id76">
+<h3>Parameters<a class="headerlink" href="#id76" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2900,8 +2982,8 @@ An integer giving a spin index,
 </li>
 </ul>
 </section>
-<section id="id74">
-<h3>Use rules<a class="headerlink" href="#id74" title="Permalink to this heading">¶</a></h3>
+<section id="id77">
+<h3>Use rules<a class="headerlink" href="#id77" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>All the combinations of sites and spins must be specified to designate each Twist operator.</p></li>
@@ -2926,8 +3008,8 @@ i_x_y_z_orb
     …
 </pre></div>
 </div>
-<section id="id75">
-<h3>File format<a class="headerlink" href="#id75" title="Permalink to this heading">¶</a></h3>
+<section id="id78">
+<h3>File format<a class="headerlink" href="#id78" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01] [int02]  [int03]  [int04]</p></li>
@@ -2935,8 +3017,8 @@ i_x_y_z_orb
 <li><p>Lines 6 -: [int05]  [int06]  [int07]  [int08]  [int09]</p></li>
 </ul>
 </section>
-<section id="id76">
-<h3>Parameters<a class="headerlink" href="#id76" title="Permalink to this heading">¶</a></h3>
+<section id="id79">
+<h3>Parameters<a class="headerlink" href="#id79" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3161,15 +3243,21 @@ indices are rejected as input errors.</p></li>
 <li><a class="reference internal" href="#id71">Use rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#twist-file-twist-def">Twist file (twist.def)</a><ul>
+<li><a class="reference internal" href="#nbodyg-file-nbodyg-def">NBodyG file (nbodyg.def)</a><ul>
 <li><a class="reference internal" href="#id72">File format</a></li>
 <li><a class="reference internal" href="#id73">Parameters</a></li>
 <li><a class="reference internal" href="#id74">Use rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#lattice-file-lattice-def">Lattice file (lattice.def)</a><ul>
+<li><a class="reference internal" href="#twist-file-twist-def">Twist file (twist.def)</a><ul>
 <li><a class="reference internal" href="#id75">File format</a></li>
 <li><a class="reference internal" href="#id76">Parameters</a></li>
+<li><a class="reference internal" href="#id77">Use rules</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#lattice-file-lattice-def">Lattice file (lattice.def)</a><ul>
+<li><a class="reference internal" href="#id78">File format</a></li>
+<li><a class="reference internal" href="#id79">Parameters</a></li>
 <li><a class="reference internal" href="#usage-rules">Usage rules</a></li>
 </ul>
 </li>

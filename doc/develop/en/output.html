@@ -109,7 +109,10 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 <tr class="row-even"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
 <td><p>Correlation functions.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_twist_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_NBodyG_yyy.dat</p></td>
+<td><p><span class="math notranslate nohighlight">\(N\)</span>-body correlation functions.</p></td>
+</tr>
+<tr class="row-even"><td><p>xxx_twist_yyy.dat</p></td>
 <td><p>Twist operators.</p></td>
 </tr>
 </tbody>
@@ -409,6 +412,56 @@ respectively.</p>
 </ul>
 </section>
 </section>
+<section id="xxx-nbodyg-yyy-dat">
+<h2>xxx_NBodyG_yyy.dat<a class="headerlink" href="#xxx-nbodyg-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<p>This file is the outputted files for the <span class="math notranslate nohighlight">\(N\)</span>-body correlation
+function
+<span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span>.
+The target components are set in the input file with the keyword
+“NBodyG”. Here, xxx is the header indicated by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in
+<code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file and yyy is a number given by
+<code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code>,
+where both <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> and <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> are defined in
+<code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file. An example of the file format is as follows.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span>    <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">0</span> <span class="mf">0.4452776740</span> <span class="mf">0.0000000000</span>
+<span class="mi">2</span>    <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span> <span class="mf">0.1175764436</span> <span class="mf">0.0000000000</span>
+<span class="mi">3</span>    <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">1</span>    <span class="mi">0</span>    <span class="mi">1</span>    <span class="mi">0</span>    <span class="mi">2</span>    <span class="mi">1</span>    <span class="mi">2</span>    <span class="mi">1</span> <span class="mf">0.0523019284</span> <span class="mf">0.0000000000</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<section id="id3">
+<h3>File format<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>[N] [i_1] [sigma_1] [j_1] [tau_1] … [i_N] [sigma_N] [j_N] [tau_N] [double01] [double02].</p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>Parameters<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>[N]</p>
+<p><strong>Type :</strong> Int</p>
+<p><strong>Description :</strong> The order of the correlation function.</p>
+</li>
+<li><p>[i_a], [j_a]</p>
+<p><strong>Type :</strong> Int</p>
+<p><strong>Description :</strong> The integer of the site number.</p>
+</li>
+<li><p>[sigma_a], [tau_a]</p>
+<p><strong>Type :</strong> Int</p>
+<p><strong>Description :</strong> The integer of the spin index:</p>
+<p>0: Up-spin</p>
+<p>1: Down-spin.</p>
+</li>
+<li><p>[double01], [double02]</p>
+<p><strong>Type :</strong> Double</p>
+<p><strong>Description :</strong> The value of
+<span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span>.
+[double01] and [double02] show the real and imaginary part,
+respectively.</p>
+</li>
+</ul>
+</section>
+</section>
 <section id="xxx-twist-yyy-dat">
 <h2>xxx_twist_yyy.dat<a class="headerlink" href="#xxx-twist-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file is the outputted files for the Twist operator  <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span>. The target components are set in the input file with the keyword “Twist”. Here, xxx is the header indicated by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file and yyy is a number given by <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code>, where both <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> and <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> are defined in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file. An example of the file format is as follows.</p>
@@ -417,14 +470,14 @@ respectively.</p>
 …
 </pre></div>
 </div>
-<section id="id3">
-<h3>File format<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<section id="id5">
+<h3>File format<a class="headerlink" href="#id5" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p></li>
 </ul>
 </section>
-<section id="id4">
-<h3>Parameters<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
+<section id="id6">
+<h3>Parameters<a class="headerlink" href="#id6" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p>
 <p><strong>Type :</strong> double</p>
@@ -505,9 +558,14 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 <li><a class="reference internal" href="#id2">Parameters</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
+<li><a class="reference internal" href="#xxx-nbodyg-yyy-dat">xxx_NBodyG_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id3">File format</a></li>
 <li><a class="reference internal" href="#id4">Parameters</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
+<li><a class="reference internal" href="#id5">File format</a></li>
+<li><a class="reference internal" href="#id6">Parameters</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>

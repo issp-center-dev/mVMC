@@ -208,6 +208,7 @@ c_{i\sigma_1}^{\dagger}c_{j\sigma_2}^{\dagger} \right]^{N/2}|0 \rangle,\]</div>
 <li><p>出力:</p>
 <p><strong>OneBodyG (greenone.def)</strong>:出力する一体Green関数を指定します。</p>
 <p><strong>TwoBodyG (greentwo.def)</strong>:出力する二体Green関数を指定します。</p>
+<p><strong>NBodyG (nbodyg.def)</strong>:出力する <span class="math notranslate nohighlight">\(N\)</span> 体相関関数を指定します。</p>
 <p><strong>Twist (twist.def)</strong>:出力するTwist演算子を指定します。</p>
 </li>
 <li><p>その他:</p>
@@ -225,6 +226,7 @@ c_{i\sigma_1}^{\dagger}c_{j\sigma_2}^{\dagger} \right]^{N/2}|0 \rangle,\]</div>
 <span class="nf">Orbital</span> <span class="n">orbitalidx</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">OneBodyG</span> <span class="n">zcisajs</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">TwoBodyG</span>    <span class="n">zcisajscktaltdc</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">NBodyG</span> <span class="n">nbodyg</span><span class="o">.</span><span class="k">def</span>
 </pre></div>
 </div>
 <section id="id2">
@@ -375,10 +377,13 @@ TransSymです。それ以外のキーワードについては、指定がない
 <tr class="row-odd"><td><p>TwoBodyG</p></td>
 <td><p>出力する二体グリーン関数を指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>Twist</p></td>
+<tr class="row-even"><td><p>NBodyG</p></td>
+<td><p>出力する <span class="math notranslate nohighlight">\(N\)</span> 体相関関数 <span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span> を指定します。</p></td>
+</tr>
+<tr class="row-odd"><td><p>Twist</p></td>
 <td><p>出力するTwist演算子を指定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>Lattice</p></td>
+<tr class="row-even"><td><p>Lattice</p></td>
 <td><p>サイト番号に対するユニットセル内部座標を含めた格子ベクトルを指定します。Twist演算子計算時に使用されます。</p></td>
 </tr>
 </tbody>
@@ -2643,6 +2648,76 @@ NCisAjsCktAltDC        576
 </aside>
 </section>
 </section>
+<section id="nbodyg-nbodyg-def">
+<h2>NBodyG指定ファイル(nbodyg.def)<a class="headerlink" href="#nbodyg-nbodyg-def" title="この見出しへのパーマリンク">¶</a></h2>
+<p>計算・出力する <span class="math notranslate nohighlight">\(N\)</span> 体相関関数
+<span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span>
+を指定します。以下にファイル例を記載します。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">=============================================</span>
+<span class="n">NNBodyG</span>        <span class="mi">3</span>
+<span class="o">=============================================</span>
+<span class="o">========</span> <span class="n">NBodyG</span> <span class="n">correlation</span> <span class="n">functions</span> <span class="o">=======</span>
+<span class="o">=============================================</span>
+    <span class="mi">1</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>
+    <span class="mi">2</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">1</span>     <span class="mi">1</span>     <span class="mi">1</span>     <span class="mi">1</span>
+    <span class="mi">3</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">1</span>     <span class="mi">0</span>     <span class="mi">1</span>     <span class="mi">0</span>     <span class="mi">2</span>     <span class="mi">1</span>     <span class="mi">2</span>     <span class="mi">1</span>
+</pre></div>
+</div>
+<section id="id82">
+<h3>ファイル形式<a class="headerlink" href="#id82" title="この見出しへのパーマリンク">¶</a></h3>
+<p>以下のように行数に応じ異なる形式をとります。</p>
+<ul class="simple">
+<li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
+<li><p>2行: [string01] [int01]</p></li>
+<li><p>3-5行: ヘッダ(何が書かれても問題ありません)。</p></li>
+<li><p>6行以降:
+[N] [i_1] [sigma_1] [j_1] [tau_1] ... [i_N] [sigma_N] [j_N] [tau_N]</p></li>
+</ul>
+</section>
+<section id="id83">
+<h3>パラメータ<a class="headerlink" href="#id83" title="この見出しへのパーマリンク">¶</a></h3>
+<ul>
+<li><p>[ string01 ]</p>
+<p><strong>形式 :</strong> string型 (空白不可)</p>
+<p><strong>説明 :</strong> <span class="math notranslate nohighlight">\(N\)</span> 体相関関数成分総数のキーワード名を指定します(任意)。</p>
+</li>
+<li><p>[ int01 ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong> <span class="math notranslate nohighlight">\(N\)</span> 体相関関数成分の総数を指定します。</p>
+</li>
+<li><p>[ N ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong> 相関関数の次数を指定します。正の整数である必要があります。</p>
+</li>
+<li><p>[ i_a ], [ j_a ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<p><strong>説明 :</strong> サイト番号を指定する整数。0以上 <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> 未満で指定します。</p>
+</li>
+<li><p>[ sigma_a ], [ tau_a ]</p>
+<p><strong>形式 :</strong> int型 (空白不可)</p>
+<div class="line-block">
+<div class="line"><strong>説明 :</strong> スピンを指定する整数。</div>
+<div class="line">0: アップスピン</div>
+<div class="line">1: ダウンスピン。</div>
+</div>
+</li>
+</ul>
+</section>
+<section id="id84">
+<h3>使用ルール<a class="headerlink" href="#id84" title="この見出しへのパーマリンク">¶</a></h3>
+<p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
+<ul class="simple">
+<li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
+<li><p>[ int01 ] と定義されている <span class="math notranslate nohighlight">\(N\)</span> 体相関関数成分の総数が異なる場合はエラー終了します。</p></li>
+<li><p>各成分行は <span class="math notranslate nohighlight">\(1 + 4N\)</span> 個の整数を持つ必要があります。</p></li>
+<li><p>サイト番号またはスピン番号に範囲外の整数を指定した場合はエラー終了します。</p></li>
+<li><p>スピンを変える因子 <span class="math notranslate nohighlight">\(\sigma_a \neq \tau_a\)</span> は orbital-general モードでのみ指定できます。
+それ以外のモードでは各因子が <span class="math notranslate nohighlight">\(\sigma_a = \tau_a\)</span> を満たす必要があります。</p></li>
+<li><p>本出力は物理量計算で使用できます。BackFlow 測定には未対応です。また、Lanczos 補正付きの
+<code class="docutils literal notranslate"><span class="pre">ls_NBodyG</span></code> 出力ファイルは生成されません。</p></li>
+</ul>
+</section>
+</section>
 <section id="twist-twist-def">
 <h2>Twist指定ファイル(twist.def)<a class="headerlink" href="#twist-twist-def" title="この見出しへのパーマリンク">¶</a></h2>
 <p>計算・出力するTwist演算子 <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span> を指定します。位置演算子 <span class="math notranslate nohighlight">\(\mu_i\)</span> はLattice指定ファイル(lattice.def)で定義します。
@@ -2669,8 +2744,8 @@ idx_site_s_x_y_z
     …
 </pre></div>
 </div>
-<section id="id82">
-<h3>ファイル形式<a class="headerlink" href="#id82" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id85">
+<h3>ファイル形式<a class="headerlink" href="#id85" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2680,8 +2755,8 @@ idx_site_s_x_y_z
 [int02]  [int03]  [int04]  [double01]  [double02]  [double03]</p></li>
 </ul>
 </section>
-<section id="id83">
-<h3>パラメータ<a class="headerlink" href="#id83" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id86">
+<h3>パラメータ<a class="headerlink" href="#id86" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2718,8 +2793,8 @@ Twist演算子の番号 <span class="math notranslate nohighlight">\(\alpha\)</s
 </li>
 </ul>
 </section>
-<section id="id84">
-<h3>使用ルール<a class="headerlink" href="#id84" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id87">
+<h3>使用ルール<a class="headerlink" href="#id87" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2745,8 +2820,8 @@ i_x_y_z_orb
     …
 </pre></div>
 </div>
-<section id="id85">
-<h3>ファイル形式<a class="headerlink" href="#id85" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id88">
+<h3>ファイル形式<a class="headerlink" href="#id88" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2756,8 +2831,8 @@ i_x_y_z_orb
 [int05]  [int06]  [int07]  [int08]  [int09]</p></li>
 </ul>
 </section>
-<section id="id86">
-<h3>パラメータ<a class="headerlink" href="#id86" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id89">
+<h3>パラメータ<a class="headerlink" href="#id89" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2797,8 +2872,8 @@ i_x_y_z_orb
 </li>
 </ul>
 </section>
-<section id="id87">
-<h3>使用ルール<a class="headerlink" href="#id87" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id90">
+<h3>使用ルール<a class="headerlink" href="#id90" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2982,16 +3057,22 @@ lattice.def の座標と twist.def の位相が意図した幾何を表すよう
 <li><a class="reference internal" href="#id79">使用ルール</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#twist-twist-def">Twist指定ファイル(twist.def)</a><ul>
+<li><a class="reference internal" href="#nbodyg-nbodyg-def">NBodyG指定ファイル(nbodyg.def)</a><ul>
 <li><a class="reference internal" href="#id82">ファイル形式</a></li>
 <li><a class="reference internal" href="#id83">パラメータ</a></li>
 <li><a class="reference internal" href="#id84">使用ルール</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#lattice-lattice-def">Lattice指定ファイル(lattice.def)</a><ul>
+<li><a class="reference internal" href="#twist-twist-def">Twist指定ファイル(twist.def)</a><ul>
 <li><a class="reference internal" href="#id85">ファイル形式</a></li>
 <li><a class="reference internal" href="#id86">パラメータ</a></li>
 <li><a class="reference internal" href="#id87">使用ルール</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#lattice-lattice-def">Lattice指定ファイル(lattice.def)</a><ul>
+<li><a class="reference internal" href="#id88">ファイル形式</a></li>
+<li><a class="reference internal" href="#id89">パラメータ</a></li>
+<li><a class="reference internal" href="#id90">使用ルール</a></li>
 </ul>
 </li>
 </ul>
