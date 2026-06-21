@@ -988,6 +988,15 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NSRCGFallback = (NSRCGFallback != 0);
   NSRCGAbortOnFail = (NSRCGAbortOnFail != 0);
 
+  if (NSplitSize < 1) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "error: NSplitSize (= %d) must be a positive integer.\n",
+              NSplitSize);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+
   if (NSplitSize > 1 && (NStoreO != 0 || NSRCG != 0)) {
     if (rank == 0) {
       fprintf(stderr,

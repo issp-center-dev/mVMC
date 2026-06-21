@@ -687,7 +687,29 @@ Keywords and parameters
 
    **Type :** int-type (Positive integer, default value: 1)
 
-   **Description :** The number of processes of MPI parallelization.
+   **Description :** The number of MPI processes in one inner MPI
+   parallel group. The parallelization target depends on the calculation
+   stage.
+
+   During sample generation (``VMCMakeSample*``), both parameter
+   optimization and physical-quantity calculations split the
+   quantum-number projection index over the ``NQPFull`` points in this
+   group. Here
+   ``NQPFull = NSPGaussLeg * NMPTrans * NQPOptTrans``, and
+   ``NQPOptTrans`` is 1 unless ``OptTrans`` mode is used.
+
+   After samples are generated, the main evaluation stage
+   (``VMCMainCal*``) splits Monte Carlo samples (``NVMCSample``), not
+   projection points. Each process evaluates all projection points for
+   its assigned samples. This stage accumulates SR quantities in
+   parameter optimization and observables in physical-quantity
+   calculations.
+
+   ``NSplitSize`` must be greater than or equal to 1. If the total number
+   of MPI processes is not divisible by ``NSplitSize``, the last group is
+   smaller and load imbalance can occur. For ``NSplitSize > 1``, set
+   ``NStore=0`` and ``NSRCG=0`` because the stored :math:`O` SR path does
+   not support the inner MPI split.
 
 -  ``NStore``
 
