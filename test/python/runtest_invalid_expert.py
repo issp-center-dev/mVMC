@@ -6,6 +6,23 @@ import subprocess
 import sys
 
 
+def safe_path_component(value):
+    chars = []
+    for ch in value:
+        if ch.isalnum() or ch in ("-", "_", "."):
+            chars.append(ch)
+        else:
+            chars.append("_")
+    return "".join(chars) or "case"
+
+
+def make_workdir_name(model, updates):
+    pieces = [model]
+    for key in sorted(updates):
+        pieces.append("{}_{}".format(key, updates[key]))
+    return safe_path_component("__".join(pieces))
+
+
 def update_modpara(filename, updates):
     found = set()
     lines = []
@@ -48,7 +65,11 @@ def main():
 
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
-    workdir = os.path.join(rootdir, "work", model)
+    workroot = os.path.join(rootdir, "work")
+    if not os.path.exists(workroot):
+        os.makedirs(workroot)
+    case_name = make_workdir_name(model, modpara_updates)
+    workdir = os.path.join(workroot, "{}_{}".format(case_name, os.getpid()))
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
