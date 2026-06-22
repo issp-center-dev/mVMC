@@ -97,6 +97,7 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
     myNBodyRsi = GetWorkSpaceThreadInt(maxNBodyInterAll);
     myNBodyRsj = GetWorkSpaceThreadInt(maxNBodyInterAll);
+    myRBMCntNew = NULL;
     if (FlagRBM) {
       myRBMCntNew  = GetWorkSpaceThreadComplex(NRBM_PhysLayerIdx+Nneuron);
     }
