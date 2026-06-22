@@ -710,6 +710,8 @@ ModParaファイル (modpara.def)
    を解くときに、 :math:`S`
    を陽に構築せずに解くことでメモリを削減する [4]_ オプション[NeuscammanUmrigarChan_ ](1で機能On,
    ``NStore`` は1に固定されます)。 ``NSRCG`` は ``NSplitSize > 1`` と併用できません。
+   この制限は内部MPI分割に固有のものです。 ``NSplitSize=1`` の場合、SR-CG は従来通り
+   stored :math:`O` 経路を内部で使用します。
 
 -  ``useDiagScale``
 

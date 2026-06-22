@@ -736,7 +736,9 @@ Keywords and parameters
    :math:`O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})` to
    :math:`O(N_\text{p}) + O(N_\text{p}N_\text{MCS})` when
    :math:`N_\text{p} > N_\text{MCS}`. ``NSRCG`` cannot be combined with
-   ``NSplitSize > 1``.
+   ``NSplitSize > 1``. This restriction is specific to the inner MPI
+   split; when ``NSplitSize=1``, SR-CG still uses the stored
+   :math:`O` path internally.
 
 -  ``useDiagScale``
 
