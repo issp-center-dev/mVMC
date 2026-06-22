@@ -707,8 +707,9 @@ Keywords and parameters
 
    ``NSplitSize`` must be greater than or equal to 1. If the total number
    of MPI processes is not divisible by ``NSplitSize``, the last group is
-   smaller and load imbalance can occur. For ``NSplitSize > 1``, set
-   ``NStore=0`` and ``NSRCG=0`` because the stored :math:`O` SR path does
+   smaller and load imbalance can occur. Direct SR with ``NStore=0`` or
+   ``NStore=1`` supports ``NSplitSize > 1``. Set ``NSRCG=0`` for
+   ``NSplitSize > 1`` because the SR-CG stored :math:`O` matvec path does
    not support the inner MPI split.
 
 -  ``NStore``
@@ -721,7 +722,8 @@ Keywords and parameters
    usage from :math:`O(N_\text{p}^2)` to
    :math:`O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})`, where
    :math:`N_\text{p}` is the number of the variational parameters and
-   :math:`N_\text{MCS}` is the number of Monte Carlo sampling.
+   :math:`N_\text{MCS}` is the number of Monte Carlo sampling. For direct
+   SR (``NSRCG=0``), this option can be used with ``NSplitSize > 1``.
 
 -  ``NSRCG``
 
@@ -733,7 +735,8 @@ Keywords and parameters
    This reduces the amount of memory usage from
    :math:`O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})` to
    :math:`O(N_\text{p}) + O(N_\text{p}N_\text{MCS})` when
-   :math:`N_\text{p} > N_\text{MCS}`.
+   :math:`N_\text{p} > N_\text{MCS}`. ``NSRCG`` cannot be combined with
+   ``NSplitSize > 1``.
 
 -  ``useDiagScale``
 

@@ -997,14 +997,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     MPI_Abort(comm, EXIT_FAILURE);
   }
 
-  if (NSplitSize > 1 && (NStoreO != 0 || NSRCG != 0)) {
+  if (NSplitSize > 1 && NSRCG != 0) {
     if (rank == 0) {
       fprintf(stderr,
-              "error: NSplitSize > 1 cannot be combined with NStore != 0 "
-              "or NSRCG != 0 because the stored-O SR path is not supported "
-              "for inner MPI splitting (NSplitSize=%d, NStore=%d, NSRCG=%d).\n",
+              "error: NSplitSize > 1 cannot be combined with NSRCG != 0 "
+              "because the SR-CG stored-O matvec path is not supported for "
+              "inner MPI splitting (NSplitSize=%d, NStore=%d, NSRCG=%d).\n",
               NSplitSize, NStoreO, NSRCG);
-      fprintf(stderr, "       Use NSplitSize=1, or set NStore=0 and NSRCG=0.\n");
+      fprintf(stderr, "       Use NSplitSize=1, or set NSRCG=0.\n");
     }
     MPI_Abort(comm, EXIT_FAILURE);
   }

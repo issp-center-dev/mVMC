@@ -697,9 +697,10 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 
    ``NSplitSize`` は1以上である必要があります。全MPIプロセス数が
    ``NSplitSize`` で割り切れない場合、最後のグループが小さくなり
-   load imbalance が起こり得ます。 ``NSplitSize > 1`` の場合、
-   stored :math:`O` を使うSR経路は内部MPI分割に対応していないため、
-   ``NStore=0`` かつ ``NSRCG=0`` を指定してください。
+   load imbalance が起こり得ます。直接SRでは ``NStore=0`` と
+   ``NStore=1`` のどちらも ``NSplitSize > 1`` に対応しています。
+   SR-CG の stored :math:`O` 行列ベクトル積は内部MPI分割に対応していないため、
+   ``NSplitSize > 1`` の場合は ``NSRCG=0`` を指定してください。
 
 -  ``NStore``
 
@@ -707,6 +708,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 
    **説明 :**
    期待値 :math:`\langle O_k O_l \rangle` を計算するとき行列-行列積にして高速化するオプション(1で機能On、モンテカルロサンプリング数に応じてメモリの消費が増大します [1]_)。
+   直接SR (``NSRCG=0``) では ``NSplitSize > 1`` と併用できます。
 
 -  ``NSRCG``
 
@@ -715,7 +717,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
    **説明 :** SR法で連立一次方程式 :math:`Sx=g`
    を解くときに、 :math:`S`
    を陽に構築せずに解くことでメモリを削減する [2]_ オプション[NeuscammanUmrigarChan_ ](1で機能On,
-   ``NStore`` は1に固定されます)。
+   ``NStore`` は1に固定されます)。 ``NSRCG`` は ``NSplitSize > 1`` と併用できません。
 
 -  ``ComplexType``
 

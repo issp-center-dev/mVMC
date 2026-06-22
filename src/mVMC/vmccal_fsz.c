@@ -27,11 +27,33 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #ifndef _SRC_VMCCAL_FSZ
 #define _SRC_VMCCAL_FSZ
+
+#include <stddef.h>
+
 #include "vmccal_fsz.h"
 #include "matrix.h"
 #include "calham_fsz_real.h"
 #include "calham_fsz.h"
 #include "calgrn_fsz.h"
+
+static void clearStoredOSampleRange_fsz(const int sampleStart, const int sampleEnd) {
+  const int sampleSize = sampleEnd - sampleStart;
+
+  if(sampleSize <= 0) return;
+
+  if(AllComplexFlag == 0) {
+    const size_t offset = (size_t)sampleStart * (size_t)SROptSize;
+    const size_t nStore = (size_t)sampleSize * (size_t)SROptSize;
+    size_t i;
+    for(i=0; i<nStore; i++) SROptO_Store_real[offset+i] = 0.0;
+  } else {
+    const size_t stride = (size_t)(2*SROptSize);
+    const size_t offset = (size_t)sampleStart * stride;
+    const size_t nStore = (size_t)sampleSize * stride;
+    size_t i;
+    for(i=0; i<nStore; i++) SROptO_Store[offset+i] = 0.0 + 0.0*I;
+  }
+}
 
 void VMCMainCal_fsz(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt,*eleSpn; //fsz
@@ -64,6 +86,11 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   StartTimer(24);
   clearPhysQuantity();
   StopTimer(24);
+
+  if(NVMCCalMode==0 && NStoreO!=0 && NSRCG==0) {
+    clearStoredOSampleRange_fsz(sampleStart, sampleEnd);
+  }
+
   for(sample=sampleStart;sample<sampleEnd;sample++) {
     eleIdx = EleIdx + sample*Nsize;
     eleCfg = EleCfg + sample*Nsite2;
@@ -233,17 +260,27 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   if(NVMCCalMode==0){
     if(NStoreO!=0 || NSRCG!=0){
       sampleSize=sampleEnd-sampleStart;
-      /*StartTimer(45);
-      calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
-      StopTimer(45);*/
-      if(AllComplexFlag==0){
-        StartTimer(45);
-        calculateOO_Store_real(SROptOO_real,SROptHO_real,SROptO_Store_real,creal(w),creal(e),SROptSize,sampleSize);
-        StopTimer(45);
-      }else{
-        StartTimer(45);
+      if(NSRCG!=0 || sampleSize>0){
+        /*StartTimer(45);
         calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
-        StopTimer(45);
+        StopTimer(45);*/
+        if(AllComplexFlag==0){
+          double *srOptO_Store_ptr = SROptO_Store_real;
+          if(NSRCG==0) {
+            srOptO_Store_ptr += (size_t)sampleStart * (size_t)SROptSize;
+          }
+          StartTimer(45);
+          calculateOO_Store_real(SROptOO_real,SROptHO_real,srOptO_Store_ptr,creal(w),creal(e),SROptSize,sampleSize);
+          StopTimer(45);
+        }else{
+          double complex *srOptO_Store_ptr = SROptO_Store;
+          if(NSRCG==0) {
+            srOptO_Store_ptr += (size_t)sampleStart * (size_t)(2*SROptSize);
+          }
+          StartTimer(45);
+          calculateOO_Store(SROptOO,SROptHO,srOptO_Store_ptr,w,e,2*SROptSize,sampleSize);
+          StopTimer(45);
+        }
       }
     }
   }
