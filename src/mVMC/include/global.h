@@ -121,6 +121,13 @@ double *ParaExchangeCoupling;
 int NInterAll;
 int **InterAll; /* [NInterAll][8] */
 double complex*ParaInterAll;
+int NNBodyInterAll;
+int NBodyInterAllTotalFactors;
+int NBodyInterAllMaxN;
+int *NBodyInterAllN;        /* [NNBodyInterAll] */
+int *NBodyInterAllOffset;   /* [NNBodyInterAll] */
+int **NBodyInterAllIdx;     /* [NBodyInterAllTotalFactors][4] */
+double complex *ParaNBodyInterAll;
 
 /* for variational parameters */
 int NGutzwillerIdx, *GutzwillerIdx; /* [Nsite] */

@@ -246,6 +246,22 @@ void SetMemoryDef() {
     pInt += 8;
   }
 
+  NBodyInterAllN = pInt;
+  pInt += NNBodyInterAll;
+
+  NBodyInterAllOffset = pInt;
+  pInt += NNBodyInterAll;
+
+  if (NBodyInterAllTotalFactors > 0) {
+    NBodyInterAllIdx = (int**)malloc(sizeof(int*)*NBodyInterAllTotalFactors);
+    for(i=0;i<NBodyInterAllTotalFactors;i++) {
+      NBodyInterAllIdx[i] = pInt;
+      pInt += 4;
+    }
+  } else {
+    NBodyInterAllIdx = NULL;
+  }
+
   QPOptTrans = (int**)malloc(sizeof(int*)*NQPOptTrans);
   for(i=0;i<NQPOptTrans;i++) {
     QPOptTrans[i] = pInt;
@@ -262,6 +278,11 @@ void SetMemoryDef() {
 
   ParaTransfer = (double complex*)malloc(sizeof(double complex)*(NTransfer+NInterAll));
   ParaInterAll = ParaTransfer+NTransfer;
+  if (NNBodyInterAll > 0) {
+    ParaNBodyInterAll = (double complex*)malloc(sizeof(double complex)*NNBodyInterAll);
+  } else {
+    ParaNBodyInterAll = NULL;
+  }
 
   ParaCoulombIntra = (double*)malloc(sizeof(double)*(NTotalDefDouble));
   pDouble = ParaCoulombIntra +NCoulombIntra;
@@ -304,6 +325,8 @@ void FreeMemoryDef() {
 
   free(QPOptTransSgn);
   free(QPOptTrans);
+  free(ParaNBodyInterAll);
+  free(NBodyInterAllIdx);
   free(InterAll);
   free(NBodyGIdx);
   free(CisAjsCktAltDCIdx);

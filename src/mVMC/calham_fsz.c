@@ -29,6 +29,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #pragma once
 
+double complex GreenFuncN_fsz(const int n, int *rsi, int *rsj,
+                  const double complex ip, int *eleIdx, const int *eleCfg,
+                  int *eleNum, const int *eleProjCnt, int *eleSpn,
+                  double complex *buffer, int *bufferInt, double *rwork);
+
 double CalculateSz_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt,int *eleSpn) {
   const int *n0 = eleNum;
@@ -53,13 +58,19 @@ double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, co
   double complex e=0.0, tmp;
   int idx;
   int ri,rj,s,rk,rl,t,u,v;
+  int k, offset, nbody;
   int *myEleIdx, *myEleNum, *myProjCntNew,*myEleSpn;
+  int *myNBodyRsi, *myNBodyRsj;
   double complex *myBuffer;
+  double *myRWork;
   double complex myEnergy;
+  int maxNBodyInterAll = (NBodyInterAllMaxN > 2) ? NBodyInterAllMaxN : 2;
+  int needNBodyInterAllRWork = (NNBodyInterAll > 0 && NBodyInterAllMaxN > 2);
 
-  RequestWorkSpaceThreadInt(Nsize+Nsize+Nsite2+NProj);
-  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize);
-  /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
+  RequestWorkSpaceThreadInt(Nsize+Nsize+Nsite2+NProj+2*maxNBodyInterAll);
+  RequestWorkSpaceThreadComplex(NQPFull+maxNBodyInterAll*Nsize);
+  if (needNBodyInterAllRWork) RequestWorkSpaceThreadDouble(LapackLWork);
+  /* GreenFunc1: NQPFull, GreenFunc2/NBodyInterAll: NQPFull+maxNBodyInterAll*Nsize */
 
   /*
 #pragma omp parallel default(shared)\
@@ -67,18 +78,23 @@ double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, co
   reduction(+:e)
   */
 #pragma omp parallel default(none)                                      \
-  private(myEleIdx,myEleSpn,myEleNum,myProjCntNew,myBuffer,myEnergy, idx, ri, rj, rk, rl, s, t,u,v) \
+  private(myEleIdx,myEleSpn,myEleNum,myProjCntNew,myNBodyRsi,myNBodyRsj,myBuffer,myRWork,myEnergy, idx, ri, rj, rk, rl, s, t,u,v) \
   firstprivate(ip, Nsize, Nsite2, NProj, NQPFull, NCoulombIntra, CoulombIntra, ParaCoulombIntra, \
                NCoulombInter, CoulombInter, ParaCoulombInter, NHundCoupling, HundCoupling, ParaHundCoupling, \
                NTransfer, Transfer, ParaTransfer, NPairHopping, PairHopping, ParaPairHopping, \
-               NExchangeCoupling, ExchangeCoupling, ParaExchangeCoupling, NInterAll, InterAll, ParaInterAll, n0, n1) \
+               NExchangeCoupling, ExchangeCoupling, ParaExchangeCoupling, NInterAll, InterAll, ParaInterAll, \
+               Nsite, maxNBodyInterAll, needNBodyInterAllRWork, LapackLWork, \
+               NNBodyInterAll, NBodyInterAllN, NBodyInterAllOffset, NBodyInterAllIdx, ParaNBodyInterAll, n0, n1) \
   shared(eleCfg, eleProjCnt, eleIdx, eleNum,eleSpn) reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleSpn = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
-    myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
+    myNBodyRsi = GetWorkSpaceThreadInt(maxNBodyInterAll);
+    myNBodyRsj = GetWorkSpaceThreadInt(maxNBodyInterAll);
+    myBuffer = GetWorkSpaceThreadComplex(NQPFull+maxNBodyInterAll*Nsize);
+    myRWork = needNBodyInterAllRWork ? GetWorkSpaceThreadDouble(LapackLWork) : NULL;
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -185,6 +201,23 @@ double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, co
       } 
     }
 
+    /* NBodyInterAll */
+    #pragma omp for private(idx,k,offset,nbody,tmp) schedule(dynamic) nowait
+    for(idx=0;idx<NNBodyInterAll;idx++) {
+      nbody = NBodyInterAllN[idx];
+      offset = NBodyInterAllOffset[idx];
+      for(k=0;k<nbody;k++) {
+        myNBodyRsi[k] = NBodyInterAllIdx[offset+k][0]
+                      + NBodyInterAllIdx[offset+k][1]*Nsite;
+        myNBodyRsj[k] = NBodyInterAllIdx[offset+k][2]
+                      + NBodyInterAllIdx[offset+k][3]*Nsite;
+      }
+      tmp = GreenFuncN_fsz(nbody,myNBodyRsi,myNBodyRsj,ip,myEleIdx,eleCfg,
+                           myEleNum,eleProjCnt,myEleSpn,myBuffer,
+                           myProjCntNew,myRWork);
+      myEnergy += ParaNBodyInterAll[idx] * tmp;
+    }
+
     #pragma omp master
     {StopTimer(72);}
 
@@ -193,6 +226,7 @@ double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, co
 
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();
+  if (needNBodyInterAllRWork) ReleaseWorkSpaceThreadDouble();
   return e;
 }
 
