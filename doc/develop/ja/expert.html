@@ -623,7 +623,23 @@ rank+1 で初期seed が与えられます。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code></p>
 <p><strong>形式 :</strong> int型 (1以上、デフォルト値=1)</p>
-<p><strong>説明 :</strong> MPI内部並列を行う場合の並列数。</p>
+<p><strong>説明 :</strong> 1つの内部MPI並列グループに含まれるMPIプロセス数。
+並列化の対象は計算段階で異なります。</p>
+<p>サンプル生成段階 (<code class="docutils literal notranslate"><span class="pre">VMCMakeSample*</span></code>) では、パラメータ最適化計算と
+物理量計算のどちらでも、量子数射影の添字を <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> 個の分点に
+わたってこのグループ内のプロセスで分割します。ここで
+<code class="docutils literal notranslate"><span class="pre">NQPFull</span> <span class="pre">=</span> <span class="pre">NSPGaussLeg</span> <span class="pre">*</span> <span class="pre">NMPTrans</span> <span class="pre">*</span> <span class="pre">NQPOptTrans</span></code> であり、
+<code class="docutils literal notranslate"><span class="pre">NQPOptTrans</span></code> は <code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> mode を使わない通常時は1です。</p>
+<p>サンプル生成後の主評価段階 (<code class="docutils literal notranslate"><span class="pre">VMCMainCal*</span></code>) では、射影分点ではなく
+モンテカルロサンプル (<code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code>) を同じグループ内のプロセスで
+分割します。各プロセスは担当サンプルについて全ての射影分点を評価
+します。この段階は、パラメータ最適化計算ではSR量の集計、物理量計算
+では物理量の集計に使われます。</p>
+<p><code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> は1以上である必要があります。全MPIプロセス数が
+<code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> で割り切れない場合、最後のグループが小さくなり
+load imbalance が起こり得ます。 <code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code> の場合、
+stored <span class="math notranslate nohighlight">\(O\)</span> を使うSR経路は内部MPI分割に対応していないため、
+<code class="docutils literal notranslate"><span class="pre">NStore=0</span></code> かつ <code class="docutils literal notranslate"><span class="pre">NSRCG=0</span></code> を指定してください。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NStore</span></code></p>
 <p><strong>形式 :</strong> int型 (0もしくは1、デフォルト値=1)</p>

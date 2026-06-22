@@ -645,7 +645,26 @@ rank+1 at each ranks.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code></p>
 <p><strong>Type :</strong> int-type (Positive integer, default value: 1)</p>
-<p><strong>Description :</strong> The number of processes of MPI parallelization.</p>
+<p><strong>Description :</strong> The number of MPI processes in one inner MPI
+parallel group. The parallelization target depends on the calculation
+stage.</p>
+<p>During sample generation (<code class="docutils literal notranslate"><span class="pre">VMCMakeSample*</span></code>), both parameter
+optimization and physical-quantity calculations split the
+quantum-number projection index over the <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> points in this
+group. Here
+<code class="docutils literal notranslate"><span class="pre">NQPFull</span> <span class="pre">=</span> <span class="pre">NSPGaussLeg</span> <span class="pre">*</span> <span class="pre">NMPTrans</span> <span class="pre">*</span> <span class="pre">NQPOptTrans</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">NQPOptTrans</span></code> is 1 unless <code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> mode is used.</p>
+<p>After samples are generated, the main evaluation stage
+(<code class="docutils literal notranslate"><span class="pre">VMCMainCal*</span></code>) splits Monte Carlo samples (<code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code>), not
+projection points. Each process evaluates all projection points for
+its assigned samples. This stage accumulates SR quantities in
+parameter optimization and observables in physical-quantity
+calculations.</p>
+<p><code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> must be greater than or equal to 1. If the total number
+of MPI processes is not divisible by <code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code>, the last group is
+smaller and load imbalance can occur. For <code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code>, set
+<code class="docutils literal notranslate"><span class="pre">NStore=0</span></code> and <code class="docutils literal notranslate"><span class="pre">NSRCG=0</span></code> because the stored <span class="math notranslate nohighlight">\(O\)</span> SR path does
+not support the inner MPI split.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NStore</span></code></p>
 <p><strong>Type :</strong> int-type (0 or 1, default value: 1)</p>

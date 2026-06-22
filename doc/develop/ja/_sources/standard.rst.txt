@@ -680,7 +680,26 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 
    **形式 :** int型 (1以上、デフォルト値=1)
 
-   **説明 :** MPI内部並列を行う場合の並列数。
+   **説明 :** 1つの内部MPI並列グループに含まれるMPIプロセス数。
+   並列化の対象は計算段階で異なります。
+
+   サンプル生成段階 (``VMCMakeSample*``) では、パラメータ最適化計算と
+   物理量計算のどちらでも、量子数射影の添字を ``NQPFull`` 個の分点に
+   わたってこのグループ内のプロセスで分割します。ここで
+   ``NQPFull = NSPGaussLeg * NMPTrans * NQPOptTrans`` であり、
+   ``NQPOptTrans`` は ``OptTrans`` mode を使わない通常時は1です。
+
+   サンプル生成後の主評価段階 (``VMCMainCal*``) では、射影分点ではなく
+   モンテカルロサンプル (``NVMCSample``) を同じグループ内のプロセスで
+   分割します。各プロセスは担当サンプルについて全ての射影分点を評価
+   します。この段階は、パラメータ最適化計算ではSR量の集計、物理量計算
+   では物理量の集計に使われます。
+
+   ``NSplitSize`` は1以上である必要があります。全MPIプロセス数が
+   ``NSplitSize`` で割り切れない場合、最後のグループが小さくなり
+   load imbalance が起こり得ます。 ``NSplitSize > 1`` の場合、
+   stored :math:`O` を使うSR経路は内部MPI分割に対応していないため、
+   ``NStore=0`` かつ ``NSRCG=0`` を指定してください。
 
 -  ``NStore``
 
