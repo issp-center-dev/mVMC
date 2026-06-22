@@ -271,12 +271,12 @@ add_test(NAME NSplitSize_Negative_Invalid
          COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py HubbardChain_SpinJastrow
                  "NSplitSize (= -1) must be a positive integer" NSplitSize=-1 NStore=0)
 set_tests_properties(NSplitSize_Negative_Invalid PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
-add_test(NAME NSplitSize_NStore_Compare
+add_test(NAME NSplitSize_NStore_Compare_mpi
          COMMAND ${PYTHON_EXECUTABLE} runtest_nstore_nsplit.py HubbardChain_SpinJastrow)
-set_tests_properties(NSplitSize_NStore_Compare PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS_REF=2;MVMC_MPI_PROCS_SPLIT=4;OMP_NUM_THREADS=1")
-add_test(NAME NSplitSize_NStore_fsz_Compare
+set_tests_properties(NSplitSize_NStore_Compare_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS_REF=2;MVMC_MPI_PROCS_SPLIT=4;OMP_NUM_THREADS=1")
+add_test(NAME NSplitSize_NStore_fsz_Compare_mpi
          COMMAND ${PYTHON_EXECUTABLE} runtest_nstore_nsplit.py HubbardChain_fsz_SpinJastrow)
-set_tests_properties(NSplitSize_NStore_fsz_Compare PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS_REF=2;MVMC_MPI_PROCS_SPLIT=4;OMP_NUM_THREADS=1")
+set_tests_properties(NSplitSize_NStore_fsz_Compare_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS_REF=2;MVMC_MPI_PROCS_SPLIT=4;OMP_NUM_THREADS=1")
 add_test(NAME NSplitSize_SRCG_Invalid
          COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py HubbardChain_SpinJastrow
                  "NSplitSize > 1 cannot be combined" NSplitSize=2 NStore=0 NSRCG=1)
