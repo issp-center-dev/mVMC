@@ -92,7 +92,7 @@ static void clearStoredOSampleRange(const int sampleStart, const int sampleEnd) 
     size_t i;
     for(i=0; i<nStore; i++) SROptO_Store_real[offset+i] = 0.0;
   } else {
-    const size_t stride = (size_t)(2*SROptSize);
+    const size_t stride = 2 * (size_t)SROptSize;
     const size_t offset = (size_t)sampleStart * stride;
     const size_t nStore = (size_t)sampleSize * stride;
     size_t i;
@@ -356,7 +356,7 @@ void VMCMainCal(MPI_Comm comm) {
         }else{
           double complex *srOptO_Store_ptr = SROptO_Store;
           if(NSRCG==0) {
-            srOptO_Store_ptr += (size_t)sampleStart * (size_t)(2*SROptSize);
+            srOptO_Store_ptr += (size_t)sampleStart * (2 * (size_t)SROptSize);
           }
           StartTimer(45);
           calculateOO_Store(SROptOO,SROptHO,srOptO_Store_ptr,w,e,2*SROptSize,sampleSize);
@@ -610,7 +610,7 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
         }else{
           double complex *srOptO_Store_ptr = SROptO_Store;
           if(NSRCG==0) {
-            srOptO_Store_ptr += (size_t)sampleStart * (size_t)(2*SROptSize);
+            srOptO_Store_ptr += (size_t)sampleStart * (2 * (size_t)SROptSize);
           }
           StartTimer(45);
           calculateOO_Store(SROptOO,SROptHO,srOptO_Store_ptr,w,e,2*SROptSize,sampleSize);

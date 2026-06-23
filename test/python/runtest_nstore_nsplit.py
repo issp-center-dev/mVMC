@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import math
 import os
 import shutil
 import subprocess
@@ -81,8 +82,16 @@ def compare(label, left, right, tol):
         return 1
 
     diffs = []
-    for left_row, right_row in zip(left, right):
-        diffs.extend(abs(a - b) for a, b in zip(left_row, right_row))
+    for row_idx, (left_row, right_row) in enumerate(zip(left, right)):
+        for col_idx, (a, b) in enumerate(zip(left_row, right_row)):
+            if math.isnan(a) or math.isinf(a) or math.isnan(b) or math.isinf(b):
+                print(
+                    "{} non-finite value at row {}, column {}: left={} right={}".format(
+                        label, row_idx, col_idx, a, b
+                    )
+                )
+                return 1
+            diffs.append(abs(a - b))
     if not diffs:
         print("{} has no comparable data".format(label))
         return 1
