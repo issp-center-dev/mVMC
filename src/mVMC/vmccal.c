@@ -28,6 +28,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_VMCCAL
 #define _SRC_VMCCAL
 
+#include <stddef.h>
+
 #include "vmccal.h"
 #include "matrix.h"
 #include "calham_real.h"
@@ -79,6 +81,25 @@ void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const
                        int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
                        const double complex h1, const double complex ip,double complex *rbmCnt);
 
+static void clearStoredOSampleRange(const int sampleStart, const int sampleEnd) {
+  const int sampleSize = sampleEnd - sampleStart;
+
+  if(sampleSize <= 0) return;
+
+  if(AllComplexFlag == 0) {
+    const size_t offset = (size_t)sampleStart * (size_t)SROptSize;
+    const size_t nStore = (size_t)sampleSize * (size_t)SROptSize;
+    size_t i;
+    for(i=0; i<nStore; i++) SROptO_Store_real[offset+i] = 0.0;
+  } else {
+    const size_t stride = 2 * (size_t)SROptSize;
+    const size_t offset = (size_t)sampleStart * stride;
+    const size_t nStore = (size_t)sampleSize * stride;
+    size_t i;
+    for(i=0; i<nStore; i++) SROptO_Store[offset+i] = 0.0 + 0.0*I;
+  }
+}
+
 void VMCMainCal(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
   double complex e,ip;
@@ -111,6 +132,11 @@ void VMCMainCal(MPI_Comm comm) {
   StartTimer(24);
   clearPhysQuantity();
   StopTimer(24);
+
+  if(NVMCCalMode==0 && NStoreO!=0 && NSRCG==0) {
+    clearStoredOSampleRange(sampleStart, sampleEnd);
+  }
+
   for(sample=sampleStart;sample<sampleEnd;sample++) {
 
     eleIdx = EleIdx + sample*Nsize;
@@ -318,14 +344,24 @@ void VMCMainCal(MPI_Comm comm) {
   if(NVMCCalMode==0){
     if(NSRCG!=0 || NStoreO!=0){
       sampleSize=sampleEnd-sampleStart;
-      if(AllComplexFlag==0){
-        StartTimer(45);
-        calculateOO_Store_real(SROptOO_real,SROptHO_real,SROptO_Store_real,creal(w),creal(e),SROptSize,sampleSize);
-        StopTimer(45);
-      }else{
-        StartTimer(45);
-        calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
-        StopTimer(45);
+      if(NSRCG!=0 || sampleSize>0){
+        if(AllComplexFlag==0){
+          double *srOptO_Store_ptr = SROptO_Store_real;
+          if(NSRCG==0) {
+            srOptO_Store_ptr += (size_t)sampleStart * (size_t)SROptSize;
+          }
+          StartTimer(45);
+          calculateOO_Store_real(SROptOO_real,SROptHO_real,srOptO_Store_ptr,creal(w),creal(e),SROptSize,sampleSize);
+          StopTimer(45);
+        }else{
+          double complex *srOptO_Store_ptr = SROptO_Store;
+          if(NSRCG==0) {
+            srOptO_Store_ptr += (size_t)sampleStart * (2 * (size_t)SROptSize);
+          }
+          StartTimer(45);
+          calculateOO_Store(SROptOO,SROptHO,srOptO_Store_ptr,w,e,2*SROptSize,sampleSize);
+          StopTimer(45);
+        }
       }
     }
   }
@@ -364,6 +400,10 @@ void VMC_BF_MainCal(MPI_Comm comm) {
   StartTimer(24);
   clearPhysQuantity();
   StopTimer(24);
+
+  if(NVMCCalMode==0 && NStoreO!=0 && NSRCG==0) {
+    clearStoredOSampleRange(sampleStart, sampleEnd);
+  }
 
   InvM_Moto = InvM;
   PfM_Moto = PfM;
@@ -558,14 +598,24 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
   if(NVMCCalMode==0){
     if(NStoreO!=0 || NSRCG!=0){
       sampleSize=sampleEnd-sampleStart;
-      if(AllComplexFlag==0){
-        StartTimer(45);
-        calculateOO_Store_real(SROptOO_real,SROptHO_real,SROptO_Store_real,creal(w),creal(e),SROptSize,sampleSize);
-        StopTimer(45);
-      }else{
-        StartTimer(45);
-        calculateOO_Store(SROptOO,SROptHO,SROptO_Store,w,e,2*SROptSize,sampleSize);
-        StopTimer(45);
+      if(NSRCG!=0 || sampleSize>0){
+        if(AllComplexFlag==0){
+          double *srOptO_Store_ptr = SROptO_Store_real;
+          if(NSRCG==0) {
+            srOptO_Store_ptr += (size_t)sampleStart * (size_t)SROptSize;
+          }
+          StartTimer(45);
+          calculateOO_Store_real(SROptOO_real,SROptHO_real,srOptO_Store_ptr,creal(w),creal(e),SROptSize,sampleSize);
+          StopTimer(45);
+        }else{
+          double complex *srOptO_Store_ptr = SROptO_Store;
+          if(NSRCG==0) {
+            srOptO_Store_ptr += (size_t)sampleStart * (2 * (size_t)SROptSize);
+          }
+          StartTimer(45);
+          calculateOO_Store(SROptOO,SROptHO,srOptO_Store_ptr,w,e,2*SROptSize,sampleSize);
+          StopTimer(45);
+        }
       }
     }
   }
