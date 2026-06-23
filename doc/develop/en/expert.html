@@ -662,8 +662,9 @@ parameter optimization and observables in physical-quantity
 calculations.</p>
 <p><code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> must be greater than or equal to 1. If the total number
 of MPI processes is not divisible by <code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code>, the last group is
-smaller and load imbalance can occur. For <code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code>, set
-<code class="docutils literal notranslate"><span class="pre">NStore=0</span></code> and <code class="docutils literal notranslate"><span class="pre">NSRCG=0</span></code> because the stored <span class="math notranslate nohighlight">\(O\)</span> SR path does
+smaller and load imbalance can occur. Direct SR with <code class="docutils literal notranslate"><span class="pre">NStore=0</span></code> or
+<code class="docutils literal notranslate"><span class="pre">NStore=1</span></code> supports <code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code>. Set <code class="docutils literal notranslate"><span class="pre">NSRCG=0</span></code> for
+<code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code> because the SR-CG stored <span class="math notranslate nohighlight">\(O\)</span> matvec path does
 not support the inner MPI split.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NStore</span></code></p>
@@ -674,7 +675,8 @@ on). This speeds up calculation but increases the amount of memory
 usage from <span class="math notranslate nohighlight">\(O(N_\text{p}^2)\)</span> to
 <span class="math notranslate nohighlight">\(O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})\)</span>, where
 <span class="math notranslate nohighlight">\(N_\text{p}\)</span> is the number of the variational parameters and
-<span class="math notranslate nohighlight">\(N_\text{MCS}\)</span> is the number of Monte Carlo sampling.</p>
+<span class="math notranslate nohighlight">\(N_\text{MCS}\)</span> is the number of Monte Carlo sampling. For direct
+SR (<code class="docutils literal notranslate"><span class="pre">NSRCG=0</span></code>), this option can be used with <code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code>.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NSRCG</span></code></p>
 <p><strong>Type :</strong> int-type (0 or 1, default value: 0)</p>
@@ -684,7 +686,10 @@ matrix [<a class="reference external" href="https://journals.aps.org/prb/abstrac
 This reduces the amount of memory usage from
 <span class="math notranslate nohighlight">\(O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})\)</span> to
 <span class="math notranslate nohighlight">\(O(N_\text{p}) + O(N_\text{p}N_\text{MCS})\)</span> when
-<span class="math notranslate nohighlight">\(N_\text{p} &gt; N_\text{MCS}\)</span>.</p>
+<span class="math notranslate nohighlight">\(N_\text{p} &gt; N_\text{MCS}\)</span>. <code class="docutils literal notranslate"><span class="pre">NSRCG</span></code> cannot be combined with
+<code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code>. This restriction is specific to the inner MPI
+split; when <code class="docutils literal notranslate"><span class="pre">NSplitSize=1</span></code>, SR-CG still uses the stored
+<span class="math notranslate nohighlight">\(O\)</span> path internally.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">useDiagScale</span></code></p>
 <p><strong>Type :</strong> int-type (0 or 1, default value: 0)</p>
