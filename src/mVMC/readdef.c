@@ -14,10 +14,10 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 /*-------------------------------------------------------------
  * Variational Monte Carlo
@@ -27,6 +27,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 #include "./include/backflow.h"
 #include "./include/readdef.h"
@@ -91,7 +94,22 @@ int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara, int *ArrayOpt, int
 
 int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *defname);
 
-int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int **ArrayIdxOneBodyG, 
+int ReadBuffNBodyG(FILE *fp, int *nbody, int *totalFactors,
+                   int *maxN, int nsite, char *defname);
+
+int GetInfoNBodyG(FILE *fp, int *termN, int *termOffset, int **termIdx,
+                  int nsite, int nbody, int totalFactors,
+                  int maxN, int allowSpinChange, char *defname);
+
+int ReadBuffNBodyInterAll(FILE *fp, int *nbody, int *totalFactors,
+                          int *maxN, int nsite, char *defname);
+
+int GetInfoNBodyInterAll(FILE *fp, int *termN, int *termOffset,
+                         int **termIdx, double complex *termCoef,
+                         int nsite, int nbody, int totalFactors,
+                         int maxN, int allowSpinChange, char *defname);
+
+int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int **ArrayIdxOneBodyG,
                       int Nsite, int NArray, char *defname);
 
 int GetInfoOrbitalGeneral(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, int *iOptCount,
@@ -348,7 +366,7 @@ int CountOneBodyGForLanczos(char *xNameListFile, int Nca, int Ncacadc, int Ns, i
       iFlgOneBodyG[isite1][isite2] = icount;
       icount++;
     }
-    
+
   }
   for (i = 0; i < Ncacadc; i++)
     free(cacaIdx[i]);
@@ -577,6 +595,18 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffInt(fp, &bufInt[IdxNTwoBodyGEx]);
             break;
 
+          case KWNBodyG:
+            cerr = "";
+            if (ReadBuffNBodyG(fp,
+                               &bufInt[IdxNNBodyG],
+                               &bufInt[IdxNBodyGTotalFactors],
+                               &bufInt[IdxNBodyGMaxN],
+                               bufInt[IdxNsite],
+                               defname) != 0) {
+              info = ReadDefFileError(defname);
+            }
+            break;
+
           case KWLattice:
             cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
             if (cerr != NULL) {
@@ -602,7 +632,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
               }
             }
             break;
-          
+
           case KWTwist:
             cerr = ReadBuffInt(fp, &bufInt[IdxNTwist]);
             if (cerr != NULL && bufInt[IdxNTwist] < 0) {
@@ -615,6 +645,18 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
           case KWInterAll:
             cerr = ReadBuffInt(fp, &bufInt[IdxNInterAll]);
+            break;
+
+          case KWNBodyInterAll:
+            cerr = "";
+            if (ReadBuffNBodyInterAll(fp,
+                                      &bufInt[IdxNNBodyInterAll],
+                                      &bufInt[IdxNBodyInterAllTotalFactors],
+                                      &bufInt[IdxNBodyInterAllMaxN],
+                                      bufInt[IdxNsite],
+                                      defname) != 0) {
+              info = ReadDefFileError(defname);
+            }
             break;
 
           case KWOptTrans:
@@ -666,7 +708,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       for (i = 0; i < 2 * bufInt[IdxNsite]; i++) {
         iOneBodyGIdx[i] = malloc(sizeof(int) * (2 * bufInt[IdxNsite]));
       }
-      bufInt[IdxNOneBodyG] = CountOneBodyGForLanczos(xNameListFile, 
+      bufInt[IdxNOneBodyG] = CountOneBodyGForLanczos(xNameListFile,
                                                      bufInt[IdxNOneBodyG], bufInt[IdxNTwoBodyGEx],
                                                      bufInt[IdxNsite], iOneBodyGIdx);
     }
@@ -774,6 +816,26 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
     }
 
+    if (bufInt[IdxNNBodyG] > 0 && bufInt[IdxNBF] > 0) {
+      fprintf(stderr,
+              "Error: NBodyG is not implemented for BackFlow measurement "
+              "(NNBodyG=%d, NBackFlowIdx=%d).\n",
+              bufInt[IdxNNBodyG], bufInt[IdxNBF]);
+      info = 1;
+    }
+    if (bufInt[IdxNNBodyInterAll] > 0 && bufInt[IdxNBF] > 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll is not implemented for BackFlow local energy "
+              "(NNBodyInterAll=%d, NBackFlowIdx=%d).\n",
+              bufInt[IdxNNBodyInterAll], bufInt[IdxNBF]);
+      info = 1;
+    }
+    if (bufInt[IdxNNBodyInterAll] > 0 && bufInt[IdxLanczosMode] > 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll is not implemented for Lanczos mode.\n");
+      info = 1;
+    }
+
   }//rank 0
 
   if (rank == 0) {
@@ -793,6 +855,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       fprintf(stderr, "Error: RBM requires complex variational parameters (AllComplexFlag != 0).\n");
       info = 1;
     }
+    if (bufInt[IdxNNBodyInterAll] > 0 && AllComplexFlag == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll requires complex variational parameters "
+              "because the real local-energy kernels are not implemented "
+              "(NNBodyInterAll=%d).\n",
+              bufInt[IdxNNBodyInterAll]);
+      info = 1;
+    }
   }
 
   if (info != 0) {
@@ -801,7 +871,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     }
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  
+
 #ifdef _mpi_use
   MPI_Bcast(bufInt, nBufInt, MPI_INT, 0, comm);
   MPI_Bcast(&FlagRBM, 1, MPI_INT, 0, comm);
@@ -865,7 +935,13 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NCisAjs = bufInt[IdxNOneBodyG];
   NCisAjsCktAlt = bufInt[IdxNTwoBodyGEx];
   NCisAjsCktAltDC = bufInt[IdxNTwoBodyG];
+  NNBodyG = bufInt[IdxNNBodyG];
+  NBodyGTotalFactors = bufInt[IdxNBodyGTotalFactors];
+  NBodyGMaxN = bufInt[IdxNBodyGMaxN];
   NInterAll = bufInt[IdxNInterAll];
+  NNBodyInterAll = bufInt[IdxNNBodyInterAll];
+  NBodyInterAllTotalFactors = bufInt[IdxNBodyInterAllTotalFactors];
+  NBodyInterAllMaxN = bufInt[IdxNBodyInterAllMaxN];
   NQPOptTrans = bufInt[IdxNQPOptTrans];
   Nrange = bufInt[IdxNrange];
   NBackFlowIdx = bufInt[IdxNBF];
@@ -876,7 +952,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   DSROptStepDt = bufDouble[IdxSROptStepDt];
   DSROptCGTol = bufDouble[IdxSROptCGTol];
   TwoSz = bufInt[Idx2Sz];
-  
+
   Nx = bufInt[IdxNx];
   Ny = bufInt[IdxNy];
   Nz = bufInt[IdxNz];
@@ -886,6 +962,73 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   if (NTwist < 0) {
     if (rank == 0) {
       fprintf(stderr, "Error: NTwist must be non-negative (got %d).\n", NTwist);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyG < 0 || NBodyGTotalFactors < 0 || NBodyGMaxN < 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyG sizes must be non-negative "
+              "(NNBodyG=%d, NBodyGTotalFactors=%d, NBodyGMaxN=%d).\n",
+              NNBodyG, NBodyGTotalFactors, NBodyGMaxN);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyG > 0 && NBackFlowIdx > 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyG is not implemented for BackFlow measurement "
+              "(NNBodyG=%d, NBackFlowIdx=%d).\n",
+              NNBodyG, NBackFlowIdx);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyInterAll < 0 ||
+      NBodyInterAllTotalFactors < 0 ||
+      NBodyInterAllMaxN < 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll sizes must be non-negative "
+              "(NNBodyInterAll=%d, NBodyInterAllTotalFactors=%d, "
+              "NBodyInterAllMaxN=%d).\n",
+              NNBodyInterAll, NBodyInterAllTotalFactors,
+              NBodyInterAllMaxN);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyInterAll > INT_MAX / 2 ||
+      NBodyInterAllTotalFactors > INT_MAX / 4) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll sizes are too large "
+              "(NNBodyInterAll=%d, NBodyInterAllTotalFactors=%d).\n",
+              NNBodyInterAll, NBodyInterAllTotalFactors);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyInterAll > 0 && NBackFlowIdx > 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll is not implemented for BackFlow local energy "
+              "(NNBodyInterAll=%d, NBackFlowIdx=%d).\n",
+              NNBodyInterAll, NBackFlowIdx);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyInterAll > 0 && NLanczosMode > 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll is not implemented for Lanczos mode.\n");
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (NNBodyInterAll > 0 && AllComplexFlag == 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NBodyInterAll requires complex variational parameters "
+              "because the real local-energy kernels are not implemented "
+              "(NNBodyInterAll=%d).\n",
+              NNBodyInterAll);
     }
     MPI_Abort(comm, EXIT_FAILURE);
   }
@@ -935,7 +1078,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NSpinRBM_PhysLayerIdx   = bufInt[IdxNSpinRBM_PhysLayer];
   NSpinRBM_PhysHiddenIdx  = bufInt[IdxNSpinRBM_PhysHidden];
   NBlockSize_RBMRatio  = bufInt[IdxNBlockSize_RBMRatio];
-  
+
   NRBM_PhysHiddenIdx  = NChargeRBM_PhysHiddenIdx + NSpinRBM_PhysHiddenIdx + NGeneralRBM_PhysHiddenIdx;
   NRBM_PhysLayerIdx   = NChargeRBM_PhysLayerIdx + NSpinRBM_PhysLayerIdx + NGeneralRBM_PhysLayerIdx;
   NRBM_HiddenLayerIdx = NChargeRBM_HiddenLayerIdx + NSpinRBM_HiddenLayerIdx + NGeneralRBM_HiddenLayerIdx;
@@ -971,6 +1114,27 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   //}
   NSRCGFallback = (NSRCGFallback != 0);
   NSRCGAbortOnFail = (NSRCGAbortOnFail != 0);
+
+  if (NSplitSize < 1) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "error: NSplitSize (= %d) must be a positive integer.\n",
+              NSplitSize);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+
+  if (NSplitSize > 1 && NSRCG != 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "error: NSplitSize > 1 cannot be combined with NSRCG != 0 "
+              "because the SR-CG stored-O matvec path is not supported for "
+              "inner MPI splitting (NSplitSize=%d, NStore=%d, NSRCG=%d).\n",
+              NSplitSize, NStoreO, NSRCG);
+      fprintf(stderr, "       Use NSplitSize=1, or set NSRCG=0.\n");
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
 
   if (useDiagScale){
     if(NSRCG == 1){
@@ -1067,21 +1231,25 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                  + 4 * NCisAjs /* CisAjs */
                  + 2 * NCisAjsCktAlt /* CisAjsCktAlt */
                  + 8 * NCisAjsCktAltDC /* CisAjsCktAltDC */
+                 + 2 * NNBodyG /* NBodyGN + NBodyGOffset */
+                 + 4 * NBodyGTotalFactors /* NBodyGIdx */
                  + 8 * NInterAll /* InterAll */
+                 + 2 * NNBodyInterAll /* NBodyInterAllN + NBodyInterAllOffset */
+                 + 4 * NBodyInterAllTotalFactors /* NBodyInterAllIdx */
                  + Nsite * NQPOptTrans /* QPOptTrans */
                  + Nsite * NQPOptTrans /* QPOptTransSgn */
                  + 4*Nsite /* LatticeIdx */
                  + NTwist*2*Nsite*2 /* TwistIdx */
                  //RBM
                  + FlagRBM * (
-                   NneuronCharge /* ChargeRMB_HiddenLayerIdx */ 
-                 + Nsite /* ChargeRMB_PhysLayerIdx */ 
-                 + Nsite*NneuronCharge /* ChargeRMB_PhysHiddenIdx */ 
-                 + NneuronSpin /* SpinRMB_HiddenLayerIdx */ 
-                 + Nsite /* SpinRMB_PhysLayerIdx */ 
-                 + Nsite*NneuronSpin /* SpinRMB_PhysHiddenIdx */ 
-                 + NneuronGeneral /* RMB_HiddenLayerIdx */ 
-                 + Nsite2 /* RMB_PhysLayerIdx */ 
+                   NneuronCharge /* ChargeRMB_HiddenLayerIdx */
+                 + Nsite /* ChargeRMB_PhysLayerIdx */
+                 + Nsite*NneuronCharge /* ChargeRMB_PhysHiddenIdx */
+                 + NneuronSpin /* SpinRMB_HiddenLayerIdx */
+                 + Nsite /* SpinRMB_PhysLayerIdx */
+                 + Nsite*NneuronSpin /* SpinRMB_PhysHiddenIdx */
+                 + NneuronGeneral /* RMB_HiddenLayerIdx */
+                 + Nsite2 /* RMB_PhysLayerIdx */
                  + Nsite2*NneuronGeneral /* RMB_PhysHiddenIdx */
                  )
                  //RBM
@@ -1211,7 +1379,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWChargeRBM_PhysLayer:
           /*doublonholon4siteidx.def--------------------------*/
           fidx = NProj;
-          if (GetInfoRBM_Layer(fp, ChargeRBM_PhysLayerIdx, OptFlag, iComplexFlgChargeRBM_PhysLayer, 
+          if (GetInfoRBM_Layer(fp, ChargeRBM_PhysLayerIdx, OptFlag, iComplexFlgChargeRBM_PhysLayer,
                          &count_idx, fidx, Nsite, NChargeRBM_PhysLayerIdx, defname) != 0)
             info = 1;
           break;
@@ -1219,7 +1387,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWSpinRBM_PhysLayer:
           /*doublonholon4siteidx.def--------------------------*/
           fidx = NProj+NChargeRBM_PhysLayerIdx;
-          if (GetInfoRBM_Layer(fp, SpinRBM_PhysLayerIdx, OptFlag, iComplexFlgSpinRBM_PhysLayer, 
+          if (GetInfoRBM_Layer(fp, SpinRBM_PhysLayerIdx, OptFlag, iComplexFlgSpinRBM_PhysLayer,
                          &count_idx, fidx, Nsite, NSpinRBM_PhysLayerIdx, defname) != 0)
             info = 1;
           break;
@@ -1227,7 +1395,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWGeneralRBM_PhysLayer:
           /*doublonholon4siteidx.def--------------------------*/
           fidx = NProj+NChargeRBM_PhysLayerIdx + NSpinRBM_PhysLayerIdx;
-          if (GetInfoGeneralRBM_Layer(fp, GeneralRBM_PhysLayerIdx, OptFlag, iComplexFlgGeneralRBM_PhysLayer, 
+          if (GetInfoGeneralRBM_Layer(fp, GeneralRBM_PhysLayerIdx, OptFlag, iComplexFlgGeneralRBM_PhysLayer,
                          &count_idx, fidx, Nsite, NGeneralRBM_PhysLayerIdx, defname) != 0)
             info = 1;
           break;
@@ -1236,7 +1404,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWChargeRBM_HiddenLayer:
           /*doublonholon4siteidx.def--------------------------*/
           fidx = NProj+NRBM_PhysLayerIdx;
-          if (GetInfoRBM_Layer(fp, ChargeRBM_HiddenLayerIdx, OptFlag, iComplexFlgChargeRBM_HiddenLayer, 
+          if (GetInfoRBM_Layer(fp, ChargeRBM_HiddenLayerIdx, OptFlag, iComplexFlgChargeRBM_HiddenLayer,
                          &count_idx, fidx, NneuronCharge, NChargeRBM_HiddenLayerIdx, defname) != 0)
             info = 1;
           break;
@@ -1244,15 +1412,15 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWSpinRBM_HiddenLayer:
           /*doublonholon4siteidx.def--------------------------*/
           fidx = NProj+NRBM_PhysLayerIdx+NChargeRBM_HiddenLayerIdx;
-          if (GetInfoRBM_Layer(fp, SpinRBM_HiddenLayerIdx, OptFlag, iComplexFlgSpinRBM_HiddenLayer, 
+          if (GetInfoRBM_Layer(fp, SpinRBM_HiddenLayerIdx, OptFlag, iComplexFlgSpinRBM_HiddenLayer,
                          &count_idx, fidx, NneuronSpin, NSpinRBM_HiddenLayerIdx, defname) != 0)
             info = 1;
           break;
-        
+
         case KWGeneralRBM_HiddenLayer:
           /*doublonholon4siteidx.def--------------------------*/
           fidx = NProj+NRBM_PhysLayerIdx+NChargeRBM_HiddenLayerIdx+NSpinRBM_HiddenLayerIdx;
-          if (GetInfoRBM_Layer(fp, GeneralRBM_HiddenLayerIdx, OptFlag, iComplexFlgGeneralRBM_HiddenLayer, 
+          if (GetInfoRBM_Layer(fp, GeneralRBM_HiddenLayerIdx, OptFlag, iComplexFlgGeneralRBM_HiddenLayer,
                          &count_idx, fidx, NneuronGeneral, NGeneralRBM_HiddenLayerIdx, defname) != 0)
             info = 1;
           break;
@@ -1261,7 +1429,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWChargeRBM_PhysHidden:
           /*doublonholon4siteidx.def--------------------------*/
           fidx = NProj+NRBM_PhysLayerIdx+NRBM_HiddenLayerIdx;
-          if (GetInfoRBM_PhysHidden(fp, ChargeRBM_PhysHiddenIdx, OptFlag, iComplexFlgChargeRBM_PhysHidden, 
+          if (GetInfoRBM_PhysHidden(fp, ChargeRBM_PhysHiddenIdx, OptFlag, iComplexFlgChargeRBM_PhysHidden,
                          &count_idx, fidx, Nsite, NneuronCharge, NChargeRBM_PhysHiddenIdx, defname) != 0)
             info = 1;
           break;
@@ -1269,7 +1437,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWSpinRBM_PhysHidden:
           /*doublonholon4siteidx.def--------------------------*/
           fidx = NProj+NRBM_PhysLayerIdx+NRBM_HiddenLayerIdx+NChargeRBM_PhysHiddenIdx;
-          if (GetInfoRBM_PhysHidden(fp, SpinRBM_PhysHiddenIdx, OptFlag, iComplexFlgSpinRBM_PhysHidden, 
+          if (GetInfoRBM_PhysHidden(fp, SpinRBM_PhysHiddenIdx, OptFlag, iComplexFlgSpinRBM_PhysHidden,
                          &count_idx, fidx, Nsite, NneuronSpin, NSpinRBM_PhysHiddenIdx, defname) != 0)
             info = 1;
           break;
@@ -1277,7 +1445,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWGeneralRBM_PhysHidden:
           /*doublonholon4siteidx.def--------------------------*/
           fidx = NProj+NRBM_PhysLayerIdx+NRBM_HiddenLayerIdx+NChargeRBM_PhysHiddenIdx+NSpinRBM_PhysHiddenIdx;
-          if (GetInfoGeneralRBM_PhysHidden(fp, GeneralRBM_PhysHiddenIdx, OptFlag, iComplexFlgGeneralRBM_PhysHidden, 
+          if (GetInfoGeneralRBM_PhysHidden(fp, GeneralRBM_PhysHiddenIdx, OptFlag, iComplexFlgGeneralRBM_PhysHidden,
                          &count_idx, fidx, Nsite, NneuronGeneral, NGeneralRBM_PhysHiddenIdx, defname) != 0)
             info = 1;
           break;
@@ -1332,6 +1500,15 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
             info = 1;
           break;
 
+        case KWNBodyG:
+          /*nbodyg.def----------------------------------------*/
+          if (GetInfoNBodyG(fp, NBodyGN, NBodyGOffset, NBodyGIdx,
+                            Nsite, NNBodyG, NBodyGTotalFactors,
+                            NBodyGMaxN, iFlgOrbitalGeneral,
+                            defname) != 0)
+            info = 1;
+          break;
+
         case KWLattice:
           /*lattice.def---------------------------------------*/
           if (GetInfoLattice(fp, LatticeIdx, Nsite, Nx, Ny, Nz, Norb, defname) != 0) info = 1;
@@ -1346,6 +1523,20 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWInterAll:
           /*interall.def---------------------------------------*/
           if (GetInfoInterAll(fp, InterAll, ParaInterAll, Nsite, NInterAll, defname) != 0) info = 1;
+          break;
+
+        case KWNBodyInterAll:
+          /*nbodyinterall.def----------------------------------*/
+          if (GetInfoNBodyInterAll(fp, NBodyInterAllN,
+                                   NBodyInterAllOffset,
+                                   NBodyInterAllIdx,
+                                   ParaNBodyInterAll,
+                                   Nsite, NNBodyInterAll,
+                                   NBodyInterAllTotalFactors,
+                                   NBodyInterAllMaxN,
+                                   iFlgOrbitalGeneral,
+                                   defname) != 0)
+            info = 1;
           break;
 
         case KWOptTrans:
@@ -1416,6 +1607,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 #ifdef _mpi_use
   SafeMpiBcastInt(LocSpn, NTotalDefInt, comm);
   SafeMpiBcast_fcmp(ParaTransfer, NTransfer + NInterAll, comm);
+  SafeMpiBcast_fcmp(ParaNBodyInterAll, NNBodyInterAll, comm);
   SafeMpiBcast(ParaCoulombIntra, NTotalDefDouble, comm);
   SafeMpiBcast_fcmp(ParaQPTrans, NQPTrans, comm);
 #endif /* _mpi_use */
@@ -1786,14 +1978,14 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
 /**********************************************************************/
 /* Function checking keywords*/
 /**********************************************************************/
-/** 
- * 
+/**
+ *
  * @brief function of checking whether ctmp is same as cKeyWord or not
- * 
- * @param[in] ctmp 
- * @param[in] cKeyWord 
+ *
+ * @param[in] ctmp
+ * @param[in] cKeyWord
  * @return 0 ctmp is same as cKeyWord
- * 
+ *
  * @author Kazuyoshi Yoshimi (The University of Tokyo)
  */
 int CheckWords(
@@ -1950,7 +2142,7 @@ int ValidateValue(
 
 /**
  * @brief Function of Getting keyword and it's variable from characters.
- * @param[in] _ctmpLine characters including keyword and it's variable 
+ * @param[in] _ctmpLine characters including keyword and it's variable
  * @param[out] _ctmp keyword
  * @param[out] _itmp variable for a keyword
  * @retval 0 keyword and it's variable are obtained.
@@ -2092,7 +2284,13 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[IdxNOneBodyG] = 0;
   bufInt[IdxNTwoBodyG] = 0;
   bufInt[IdxNTwoBodyGEx] = 0;
+  bufInt[IdxNNBodyG] = 0;
+  bufInt[IdxNBodyGTotalFactors] = 0;
+  bufInt[IdxNBodyGMaxN] = 0;
   bufInt[IdxNInterAll] = 0;
+  bufInt[IdxNNBodyInterAll] = 0;
+  bufInt[IdxNBodyInterAllTotalFactors] = 0;
+  bufInt[IdxNBodyInterAllMaxN] = 0;
   bufInt[IdxNQPOptTrans] = 1;
   bufInt[IdxSROptCGMaxIter] = 0;
   bufInt[IdxNBF] = 0;
@@ -2101,7 +2299,7 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[Idx2Sz] = -1;// -1: sz is not fixed :fsz
   bufInt[IdxNCond] = -1;
 
-//RBM 
+//RBM
   bufInt[IdxNneuron] = 0;
   bufInt[IdxNneuronGeneral] = 0;
   bufInt[IdxNneuronCharge] = 0;
@@ -2705,13 +2903,13 @@ GetInfoOneBodyG(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int IndirectGFOn, in
     idx++;
   }
 
-  if (!IndirectGFOn && idx != NArray) 
+  if (!IndirectGFOn && idx != NArray)
     info = ReadDefFileError(defname);
   return info;
 }
 
 // Formerly CisAjsCktAlt
-int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int **ArrayIdxOneBodyG, 
+int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int **ArrayIdxOneBodyG,
                       int Nsite, int NArray, char *defname) {
   char ctmp2[256];
   int idx = 0, info = 0;
@@ -2723,7 +2921,7 @@ int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int **ArrayIdx
   if (NArray == 0) return 0;
   while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
     sscanf(ctmp2, "%d %d %d %d %d %d %d %d\n", &x0, &x1, &x2, &x3, &x4, &x5, &x6, &x7);
-    
+
     isite1 = x0 + x1 * Nsite;
     isite2 = x2 + x3 * Nsite;
     idxLanczos = ArrayToIdx[isite1][isite2];
@@ -2732,7 +2930,7 @@ int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int **ArrayIdx
     ArrayIdxOneBodyG[idxLanczos][2] = x2;
     ArrayIdxOneBodyG[idxLanczos][3] = x3;
     ArrayIdx[idx][0] = idxLanczos;
-    
+
     isite1 = x6 + x7 * Nsite;
     isite2 = x4 + x5 * Nsite;
     idxLanczos = ArrayToIdx[isite1][isite2];
@@ -2747,7 +2945,7 @@ int GetInfoTwoBodyGEx(FILE *fp, int **ArrayIdx, int **ArrayToIdx, int **ArrayIdx
     ArrayIdxOneBodyG[idxLanczos][2] = x4;
     ArrayIdxOneBodyG[idxLanczos][3] = x5;
     ArrayIdx[idx][1] = idxLanczos;
-    
+
     if (CheckQuadSite(x0, x2, x4, x6, Nsite) != 0) {
       fprintf(stderr, "Error: Site index is incorrect. \n");
       info = 1;
@@ -2788,6 +2986,663 @@ int GetInfoTwoBodyG(FILE *fp, int **ArrayIdx, int Nsite, int NArray, char *defna
     idx++;
   }
   if (idx != NArray) info = ReadDefFileError(defname);
+  return info;
+}
+
+static int ReadNBodyGLine(FILE *fp, char **line, size_t *cap) {
+  int c;
+  size_t len = 0;
+
+  if (*line == NULL || *cap == 0) {
+    *cap = 256;
+    *line = (char *)malloc(*cap);
+    if (*line == NULL) return -1;
+  }
+
+  while ((c = fgetc(fp)) != EOF) {
+    if (len + 1 >= *cap) {
+      char *tmp;
+      size_t newCap;
+      if (*cap > ((size_t)-1) / 2) return -1;
+      newCap = (*cap) * 2;
+      tmp = (char *)realloc(*line, newCap);
+      if (tmp == NULL) return -1;
+      *line = tmp;
+      *cap = newCap;
+    }
+    (*line)[len++] = (char)c;
+    if (c == '\n') break;
+  }
+
+  if (len == 0 && c == EOF) return 0;
+
+  (*line)[len] = '\0';
+  return 1;
+}
+
+static int IsIgnorableNBodyGLine(const char *line) {
+  const unsigned char *p = (const unsigned char *)line;
+  while (isspace(*p)) p++;
+  return (*p == '\0' || *p == '#');
+}
+
+static int ParseNBodyGHeaderCount(const char *line, int *nbody, char *defname) {
+  const unsigned char *p = (const unsigned char *)line;
+  char *endptr;
+  long nLong;
+
+  while (isspace(*p)) p++;
+  if (*p == '\0') {
+    fprintf(stderr, "Error: missing NBodyG header count in %s.\n", defname);
+    return 1;
+  }
+  while (*p != '\0' && !isspace(*p)) p++;
+  while (isspace(*p)) p++;
+
+  errno = 0;
+  nLong = strtol((const char *)p, &endptr, 10);
+  if ((const char *)p == endptr || errno != 0 ||
+      nLong < 0 || nLong > INT_MAX) {
+    fprintf(stderr, "Error: NNBodyG must be non-negative in %s: %s", defname, line);
+    return 1;
+  }
+  while (isspace((unsigned char)*endptr)) endptr++;
+  if (*endptr != '\0') {
+    fprintf(stderr, "Error: extra token in NBodyG header in %s: %s", defname, line);
+    return 1;
+  }
+
+  *nbody = (int)nLong;
+  return 0;
+}
+
+static int ReadNBodyGHeader(FILE *fp, int *nbody, char *defname) {
+  char *line = NULL;
+  size_t cap = 0;
+  int i;
+
+  *nbody = 0;
+  for (i = 0; i < IgnoreLinesInDef; i++) {
+    int status = ReadNBodyGLine(fp, &line, &cap);
+    if (status < 0) {
+      fprintf(stderr, "Error: failed to read NBodyG header in %s.\n", defname);
+      free(line);
+      return 1;
+    }
+    if (status == 0) {
+      fprintf(stderr, "Error: incomplete NBodyG header in %s.\n", defname);
+      free(line);
+      return 1;
+    }
+    if (i == 1 && ParseNBodyGHeaderCount(line, nbody, defname) != 0) {
+      free(line);
+      return 1;
+    }
+  }
+
+  free(line);
+  return 0;
+}
+
+static int ValidateNBodyGFactors(int n, int *values, int nsite,
+                                 int checkSpinChange, int allowSpinChange,
+                                 char *defname) {
+  int k;
+  for (k = 0; k < n; k++) {
+    const int siteOut = values[4*k + 0];
+    const int spinOut = values[4*k + 1];
+    const int siteIn  = values[4*k + 2];
+    const int spinIn  = values[4*k + 3];
+
+    if (CheckPairSite(siteOut, siteIn, nsite) != 0) {
+      fprintf(stderr,
+              "Error: site index of NBodyG is incorrect in %s "
+              "(site_out=%d, site_in=%d, Nsite=%d).\n",
+              defname, siteOut, siteIn, nsite);
+      return 1;
+    }
+    if (spinOut < 0 || spinOut > 1 || spinIn < 0 || spinIn > 1) {
+      fprintf(stderr,
+              "Error: spin index of NBodyG is incorrect in %s "
+              "(spin_out=%d, spin_in=%d).\n",
+              defname, spinOut, spinIn);
+      return 1;
+    }
+    if (checkSpinChange && !allowSpinChange && spinOut != spinIn) {
+      fprintf(stderr,
+              "Error: spin-changing NBodyG factor requires orbital-general "
+              "mode in %s (spin_out=%d, spin_in=%d).\n",
+              defname, spinOut, spinIn);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static int ParseNBodyGTermLine(const char *line, int nsite,
+                               int checkSpinChange, int allowSpinChange,
+                               int *nOut, int **valuesOut,
+                               char *defname) {
+  char *endptr;
+  const char *p = line;
+  long nLong;
+  int n;
+  int k;
+  int *values = NULL;
+
+  while (isspace((unsigned char)*p)) p++;
+  errno = 0;
+  nLong = strtol(p, &endptr, 10);
+  if (p == endptr || errno != 0 || nLong < 1 ||
+      nLong > INT_MAX / 4) {
+    fprintf(stderr, "Error: invalid NBodyG term order in %s: %s", defname, line);
+    return 1;
+  }
+  n = (int)nLong;
+  p = endptr;
+
+  values = (int *)malloc(sizeof(int) * 4 * (size_t)n);
+  if (values == NULL) {
+    fprintf(stderr, "Error: memory allocation failed in NBodyG parser.\n");
+    return 1;
+  }
+
+  for (k = 0; k < 4*n; k++) {
+    long v;
+    while (isspace((unsigned char)*p)) p++;
+    errno = 0;
+    v = strtol(p, &endptr, 10);
+    if (p == endptr || errno != 0 || v < INT_MIN || v > INT_MAX) {
+      fprintf(stderr, "Error: malformed NBodyG term in %s: %s", defname, line);
+      free(values);
+      return 1;
+    }
+    values[k] = (int)v;
+    p = endptr;
+  }
+
+  while (isspace((unsigned char)*p)) p++;
+  if (*p != '\0') {
+    fprintf(stderr, "Error: extra token in NBodyG term in %s: %s", defname, line);
+    free(values);
+    return 1;
+  }
+
+  if (ValidateNBodyGFactors(n, values, nsite,
+                            checkSpinChange, allowSpinChange,
+                            defname) != 0) {
+    free(values);
+    return 1;
+  }
+
+  *nOut = n;
+  *valuesOut = values;
+  return 0;
+}
+
+int ReadBuffNBodyG(FILE *fp, int *nbody, int *totalFactors,
+                   int *maxN, int nsite, char *defname) {
+  char *line = NULL;
+  size_t cap = 0;
+  int headerN = 0;
+  int count = 0;
+  int total = 0;
+  int maxSeen = 0;
+  int status;
+  int info = 0;
+
+  *nbody = 0;
+  *totalFactors = 0;
+  *maxN = 0;
+
+  if (ReadNBodyGHeader(fp, &headerN, defname) != 0) return 1;
+
+  while ((status = ReadNBodyGLine(fp, &line, &cap)) > 0) {
+    int n = 0;
+    int *values = NULL;
+
+    if (IsIgnorableNBodyGLine(line)) continue;
+    if (count >= headerN) {
+      fprintf(stderr, "Error: too many NBodyG terms in %s.\n", defname);
+      info = 1;
+      break;
+    }
+    if (ParseNBodyGTermLine(line, nsite, 0, 1, &n, &values, defname) != 0) {
+      info = 1;
+      break;
+    }
+    if (total > INT_MAX - n) {
+      fprintf(stderr, "Error: NBodyG factor count is too large in %s.\n", defname);
+      free(values);
+      info = 1;
+      break;
+    }
+    total += n;
+    if (n > maxSeen) maxSeen = n;
+    count++;
+    free(values);
+  }
+
+  if (status < 0) {
+    fprintf(stderr, "Error: failed to read NBodyG terms in %s.\n", defname);
+    info = 1;
+  }
+  free(line);
+
+  if (info == 0 && count != headerN) {
+    fprintf(stderr,
+            "Error: NBodyG term count mismatch in %s "
+            "(header=%d, data=%d).\n",
+            defname, headerN, count);
+    info = 1;
+  }
+  if (info != 0) return 1;
+
+  *nbody = headerN;
+  *totalFactors = total;
+  *maxN = maxSeen;
+  return 0;
+}
+
+int GetInfoNBodyG(FILE *fp, int *termN, int *termOffset, int **termIdx,
+                  int nsite, int nbody, int totalFactors,
+                  int maxN, int allowSpinChange, char *defname) {
+  char *line = NULL;
+  size_t cap = 0;
+  int count = 0;
+  int offset = 0;
+  int maxSeen = 0;
+  int status;
+  int info = 0;
+
+  while ((status = ReadNBodyGLine(fp, &line, &cap)) > 0) {
+    int n = 0;
+    int *values = NULL;
+    int k;
+
+    if (IsIgnorableNBodyGLine(line)) continue;
+    if (count >= nbody) {
+      fprintf(stderr, "Error: too many NBodyG terms in %s.\n", defname);
+      info = 1;
+      break;
+    }
+    if (ParseNBodyGTermLine(line, nsite, 1, allowSpinChange,
+                            &n, &values, defname) != 0) {
+      info = 1;
+      break;
+    }
+    if (offset > totalFactors - n) {
+      fprintf(stderr, "Error: NBodyG factor count changed in %s.\n", defname);
+      free(values);
+      info = 1;
+      break;
+    }
+
+    termN[count] = n;
+    termOffset[count] = offset;
+    for (k = 0; k < n; k++) {
+      termIdx[offset + k][0] = values[4*k + 0];
+      termIdx[offset + k][1] = values[4*k + 1];
+      termIdx[offset + k][2] = values[4*k + 2];
+      termIdx[offset + k][3] = values[4*k + 3];
+    }
+    offset += n;
+    if (n > maxSeen) maxSeen = n;
+    count++;
+    free(values);
+  }
+
+  if (status < 0) {
+    fprintf(stderr, "Error: failed to read NBodyG terms in %s.\n", defname);
+    info = 1;
+  }
+  free(line);
+
+  if (info == 0 &&
+      (count != nbody || offset != totalFactors || maxSeen != maxN)) {
+    fprintf(stderr,
+            "Error: NBodyG size mismatch in %s "
+            "(terms=%d/%d, factors=%d/%d, maxN=%d/%d).\n",
+            defname, count, nbody, offset, totalFactors, maxSeen, maxN);
+    info = 1;
+  }
+
+  return info;
+}
+
+static int ParseNBodyInterAllHeaderCount(const char *line, int *nbody,
+                                         char *defname) {
+  const unsigned char *p = (const unsigned char *)line;
+  char *endptr;
+  long nLong;
+
+  while (isspace(*p)) p++;
+  if (*p == '\0') {
+    fprintf(stderr, "Error: missing NBodyInterAll header count in %s.\n", defname);
+    return 1;
+  }
+  while (*p != '\0' && !isspace(*p)) p++;
+  while (isspace(*p)) p++;
+
+  errno = 0;
+  nLong = strtol((const char *)p, &endptr, 10);
+  if ((const char *)p == endptr || errno != 0 ||
+      nLong < 0 || nLong > INT_MAX) {
+    fprintf(stderr, "Error: NNBodyInterAll must be non-negative in %s: %s",
+            defname, line);
+    return 1;
+  }
+  while (isspace((unsigned char)*endptr)) endptr++;
+  if (*endptr != '\0') {
+    fprintf(stderr, "Error: extra token in NBodyInterAll header in %s: %s",
+            defname, line);
+    return 1;
+  }
+
+  *nbody = (int)nLong;
+  return 0;
+}
+
+static int ReadNBodyInterAllHeader(FILE *fp, int *nbody, char *defname) {
+  char *line = NULL;
+  size_t cap = 0;
+  int i;
+
+  *nbody = 0;
+  for (i = 0; i < IgnoreLinesInDef; i++) {
+    int status = ReadNBodyGLine(fp, &line, &cap);
+    if (status < 0) {
+      fprintf(stderr, "Error: failed to read NBodyInterAll header in %s.\n",
+              defname);
+      free(line);
+      return 1;
+    }
+    if (status == 0) {
+      fprintf(stderr, "Error: incomplete NBodyInterAll header in %s.\n",
+              defname);
+      free(line);
+      return 1;
+    }
+    if (i == 1 &&
+        ParseNBodyInterAllHeaderCount(line, nbody, defname) != 0) {
+      free(line);
+      return 1;
+    }
+  }
+
+  free(line);
+  return 0;
+}
+
+static int ValidateNBodyInterAllFactors(int n, int *values, int nsite,
+                                        int checkSpinChange,
+                                        int allowSpinChange,
+                                        char *defname) {
+  int k;
+  for (k = 0; k < n; k++) {
+    const int siteOut = values[4*k + 0];
+    const int spinOut = values[4*k + 1];
+    const int siteIn  = values[4*k + 2];
+    const int spinIn  = values[4*k + 3];
+
+    if (CheckPairSite(siteOut, siteIn, nsite) != 0) {
+      fprintf(stderr,
+              "Error: site index of NBodyInterAll is incorrect in %s "
+              "(site_out=%d, site_in=%d, Nsite=%d).\n",
+              defname, siteOut, siteIn, nsite);
+      return 1;
+    }
+    if (spinOut < 0 || spinOut > 1 || spinIn < 0 || spinIn > 1) {
+      fprintf(stderr,
+              "Error: spin index of NBodyInterAll is incorrect in %s "
+              "(spin_out=%d, spin_in=%d).\n",
+              defname, spinOut, spinIn);
+      return 1;
+    }
+    if (checkSpinChange && !allowSpinChange && spinOut != spinIn) {
+      fprintf(stderr,
+              "Error: spin-changing NBodyInterAll factor requires "
+              "orbital-general mode in %s (spin_out=%d, spin_in=%d).\n",
+              defname, spinOut, spinIn);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static int ParseNBodyInterAllTermLine(const char *line, int nsite,
+                                      int checkSpinChange,
+                                      int allowSpinChange, int *nOut,
+                                      int **valuesOut,
+                                      double complex *coefOut,
+                                      char *defname) {
+  char *endptr;
+  const char *p = line;
+  long nLong;
+  int n;
+  int k;
+  int *values = NULL;
+  double dReValue;
+  double dImValue;
+
+  while (isspace((unsigned char)*p)) p++;
+  errno = 0;
+  nLong = strtol(p, &endptr, 10);
+  if (p == endptr || errno != 0 || nLong < 1 ||
+      nLong > INT_MAX / 4) {
+    fprintf(stderr, "Error: invalid NBodyInterAll term order in %s: %s",
+            defname, line);
+    return 1;
+  }
+  n = (int)nLong;
+  p = endptr;
+
+  values = (int *)malloc(sizeof(int) * 4 * (size_t)n);
+  if (values == NULL) {
+    fprintf(stderr, "Error: memory allocation failed in NBodyInterAll parser.\n");
+    return 1;
+  }
+
+  for (k = 0; k < 4*n; k++) {
+    long v;
+    while (isspace((unsigned char)*p)) p++;
+    errno = 0;
+    v = strtol(p, &endptr, 10);
+    if (p == endptr || errno != 0 || v < INT_MIN || v > INT_MAX) {
+      fprintf(stderr, "Error: malformed NBodyInterAll term in %s: %s",
+              defname, line);
+      free(values);
+      return 1;
+    }
+    values[k] = (int)v;
+    p = endptr;
+  }
+
+  while (isspace((unsigned char)*p)) p++;
+  errno = 0;
+  dReValue = strtod(p, &endptr);
+  if (p == endptr || errno != 0 || !isfinite(dReValue)) {
+    fprintf(stderr, "Error: invalid NBodyInterAll coefficient in %s: %s",
+            defname, line);
+    free(values);
+    return 1;
+  }
+  p = endptr;
+
+  while (isspace((unsigned char)*p)) p++;
+  errno = 0;
+  dImValue = strtod(p, &endptr);
+  if (p == endptr || errno != 0 || !isfinite(dImValue)) {
+    fprintf(stderr, "Error: invalid NBodyInterAll coefficient in %s: %s",
+            defname, line);
+    free(values);
+    return 1;
+  }
+  p = endptr;
+
+  while (isspace((unsigned char)*p)) p++;
+  if (*p != '\0') {
+    fprintf(stderr, "Error: extra token in NBodyInterAll term in %s: %s",
+            defname, line);
+    free(values);
+    return 1;
+  }
+
+  if (ValidateNBodyInterAllFactors(n, values, nsite,
+                                   checkSpinChange, allowSpinChange,
+                                   defname) != 0) {
+    free(values);
+    return 1;
+  }
+
+  *nOut = n;
+  *valuesOut = values;
+  *coefOut = dReValue + I * dImValue;
+  return 0;
+}
+
+int ReadBuffNBodyInterAll(FILE *fp, int *nbody, int *totalFactors,
+                          int *maxN, int nsite, char *defname) {
+  char *line = NULL;
+  size_t cap = 0;
+  int headerN = 0;
+  int count = 0;
+  int total = 0;
+  int maxSeen = 0;
+  int status;
+  int info = 0;
+
+  *nbody = 0;
+  *totalFactors = 0;
+  *maxN = 0;
+
+  if (ReadNBodyInterAllHeader(fp, &headerN, defname) != 0) return 1;
+  if (headerN > INT_MAX / 2) {
+    fprintf(stderr, "Error: NNBodyInterAll is too large in %s.\n", defname);
+    return 1;
+  }
+
+  while ((status = ReadNBodyGLine(fp, &line, &cap)) > 0) {
+    int n = 0;
+    int *values = NULL;
+    double complex coef;
+
+    if (IsIgnorableNBodyGLine(line)) continue;
+    if (count >= headerN) {
+      fprintf(stderr, "Error: too many NBodyInterAll terms in %s.\n", defname);
+      info = 1;
+      break;
+    }
+    if (ParseNBodyInterAllTermLine(line, nsite, 0, 1,
+                                   &n, &values, &coef, defname) != 0) {
+      info = 1;
+      break;
+    }
+    if (total > INT_MAX - n || total + n > INT_MAX / 4) {
+      fprintf(stderr,
+              "Error: NBodyInterAll factor count is too large in %s.\n",
+              defname);
+      free(values);
+      info = 1;
+      break;
+    }
+    total += n;
+    if (n > maxSeen) maxSeen = n;
+    count++;
+    free(values);
+  }
+
+  if (status < 0) {
+    fprintf(stderr, "Error: failed to read NBodyInterAll terms in %s.\n",
+            defname);
+    info = 1;
+  }
+  free(line);
+
+  if (info == 0 && count != headerN) {
+    fprintf(stderr,
+            "Error: NBodyInterAll term count mismatch in %s "
+            "(header=%d, data=%d).\n",
+            defname, headerN, count);
+    info = 1;
+  }
+  if (info != 0) return 1;
+
+  *nbody = headerN;
+  *totalFactors = total;
+  *maxN = maxSeen;
+  return 0;
+}
+
+int GetInfoNBodyInterAll(FILE *fp, int *termN, int *termOffset,
+                         int **termIdx, double complex *termCoef,
+                         int nsite, int nbody, int totalFactors,
+                         int maxN, int allowSpinChange, char *defname) {
+  char *line = NULL;
+  size_t cap = 0;
+  int count = 0;
+  int offset = 0;
+  int maxSeen = 0;
+  int status;
+  int info = 0;
+
+  while ((status = ReadNBodyGLine(fp, &line, &cap)) > 0) {
+    int n = 0;
+    int *values = NULL;
+    double complex coef;
+    int k;
+
+    if (IsIgnorableNBodyGLine(line)) continue;
+    if (count >= nbody) {
+      fprintf(stderr, "Error: too many NBodyInterAll terms in %s.\n", defname);
+      info = 1;
+      break;
+    }
+    if (ParseNBodyInterAllTermLine(line, nsite, 1, allowSpinChange,
+                                   &n, &values, &coef, defname) != 0) {
+      info = 1;
+      break;
+    }
+    if (offset > totalFactors - n) {
+      fprintf(stderr,
+              "Error: NBodyInterAll factor count changed in %s.\n",
+              defname);
+      free(values);
+      info = 1;
+      break;
+    }
+
+    termN[count] = n;
+    termOffset[count] = offset;
+    termCoef[count] = coef;
+    for (k = 0; k < n; k++) {
+      termIdx[offset + k][0] = values[4*k + 0];
+      termIdx[offset + k][1] = values[4*k + 1];
+      termIdx[offset + k][2] = values[4*k + 2];
+      termIdx[offset + k][3] = values[4*k + 3];
+    }
+    offset += n;
+    if (n > maxSeen) maxSeen = n;
+    count++;
+    free(values);
+  }
+
+  if (status < 0) {
+    fprintf(stderr, "Error: failed to read NBodyInterAll terms in %s.\n",
+            defname);
+    info = 1;
+  }
+  free(line);
+
+  if (info == 0 &&
+      (count != nbody || offset != totalFactors || maxSeen != maxN)) {
+    fprintf(stderr,
+            "Error: NBodyInterAll size mismatch in %s "
+            "(terms=%d/%d, factors=%d/%d, maxN=%d/%d).\n",
+            defname, count, nbody, offset, totalFactors, maxSeen, maxN);
+    info = 1;
+  }
+
   return info;
 }
 
@@ -3066,7 +3921,7 @@ int GetInfoRBM_Layer(FILE *fp, int *ArrayIdx, int *ArrayOpt, int iComplxFlag, in
       idx0++;
       if (idx0 == Nlayer) break;
     }
-    
+
     idx1 = GetInfoOpt(fp, ArrayOpt, iComplxFlag, iOptCount, fidx);
     if (idx0 != Nlayer || idx1 != NArray) {
       info = ReadDefFileError(defname);
@@ -3093,7 +3948,7 @@ int GetInfoGeneralRBM_Layer(FILE *fp, int *ArrayIdx, int *ArrayOpt, int iComplxF
       idx0++;
       if (idx0 == 2*Nlayer) break;
     }
-    
+
     idx1 = GetInfoOpt(fp, ArrayOpt, iComplxFlag, iOptCount, fidx);
     if (idx0 != 2*Nlayer || idx1 != NArray) {
       info = ReadDefFileError(defname);

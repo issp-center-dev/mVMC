@@ -1,7 +1,7 @@
 .. include:: ../../bib/ref.txt
 
 .. _HowToExpert:
-             
+
 Input files for Expert mode
 ===========================
 
@@ -16,13 +16,13 @@ listed in parentheses correspond to the file made by vmcdry.out.
     be determined.
 
 (2) Basic parameters:
-      
+
     **ModPara** (modpara.def): Set the parameters for basic parameters
-    such as site number, electron number, Lanczos step *etc*.  
+    such as site number, electron number, Lanczos step *etc*.
     **LocSpin (locspn.def)**: Set the location of local spin.
 
 (3) Hamiltonian:
-      
+
     Hamiltonian for mVMC is denoted by
 
     .. math::
@@ -48,23 +48,26 @@ listed in parentheses correspond to the file made by vmcdry.out.
 
     **Trans (trans.def)**: :math:`t_{ij\sigma_1\sigma_2}` in
     :math:`{\cal H}_T`,
-          
+
     **CoulombIntra (coulombintra.def)**: :math:`U_i` in
     :math:`{\cal H}_U`,
-          
+
     **CoulombInter (coulombinter.def)**: :math:`V_{ij}` in
     :math:`{\cal H}_V`,
-          
+
     **Hund (hund.def)**: :math:`J_{ij}^{\rm Hund}` in
     :math:`{\cal H}_H`,
-          
+
     **Exchange (exchange.def)**: :math:`J_{ij}^{\rm Ex}` in
     :math:`{\cal H}_E`,
-          
+
     **PairHop**: :math:`J_{ij}^{\rm Pair}` in :math:`{\cal H}_P`,
 
     **InterAll**: :math:`I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}` in
-    :math:`{\cal H}_I`.
+    :math:`{\cal H}_I`,
+
+    **NBodyInterAll (nbodyinterall.def)**: variable-order
+    :math:`N`-body interaction terms for the Hamiltonian.
 
     .. rubric:: t-J model input convention
 
@@ -99,7 +102,7 @@ listed in parentheses correspond to the file made by vmcdry.out.
     ``2*Nelectron <= Nsite``) is allowed.
 
 (4) Variational parameters to be optimized:
-      
+
     The variational parameters to be optimized are specified by using
     this categorized files. In mVMC, the variational wave function is
     given as
@@ -143,10 +146,10 @@ listed in parentheses correspond to the file made by vmcdry.out.
     number of sites. The setting for optimizing variational parameters
     or not is given by the following files (the parameters for
     :math:`{\cal L}_S` are specified in the **ModPara** file).
-             
+
     **Gutzwiller (gutzwilleridx.def)**: Set the target parameters
     :math:`g_i` in :math:`{\cal P}_G` to be optimized.
-          
+
     **Jastrow (jastrowidx.def)**: Set the target parameters
     :math:`v_{ij}` in :math:`{\cal P}_J` to be optimized.
 
@@ -162,7 +165,7 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **DH2**: Set the target 2-site doublon-holon correlation factor
     :math:`\alpha_{2nt}^{d(h)}` in :math:`{\cal P}_{d-h}^{(2)}` to be
     optimized.
-          
+
     **DH4**: Set the target 4-site doublon-holon correlation factor
     :math:`\alpha_{4nt}^{d(h)}` in :math:`{\cal P}_{d-h}^{(4)}` to be
     optimized.
@@ -176,10 +179,10 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **Orbital/OrbitalAntiParallel (orbitalidx.def)**: Set the pair
     orbital with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`
     in :math:`|\phi_{\rm pair} \rangle` to be optimized.
-    
+
     **OrbitalParallel**: Set the pair orbital with anti-parallel spins
     :math:`f_{i\sigma j\sigma}` in :math:`|\phi_{\rm pair} \rangle` to
-    be optimized.  
+    be optimized.
 
     **OrbitalGeneral**: Set the pair orbital with anti-parallel spins
     :math:`f_{i\sigma j\sigma'}` in :math:`|\phi_{\rm pair} \rangle`
@@ -190,23 +193,23 @@ listed in parentheses correspond to the file made by vmcdry.out.
     projection operators :math:`{\cal L}_P`.
 
 (5) Initial variational parameters:
-      
+
     Set the initial values of the variational parameters. When the
     keyword is not setting, the corresponding parameters are given by
     random values as default values.
 
     **InGutzwiller**: Set the initial values of :math:`g_i` in
     :math:`{\cal P}_G`.
-          
+
     **InJastrow**: Set the initial values of :math:`v_{ij}` in
     :math:`{\cal P}_J`.
 
     **InSpinJastrow**: Set the initial values of :math:`v^s_{ij}` in
     :math:`{\cal P}_{SJ}`.
-          
+
     **InDH2**: Set the initial values of :math:`\alpha_{2nt}^{d(h)}`
     in :math:`{\cal P}_{d-h}^{(2)}`.
-    
+
     **InDH4**: Set the initial values of :math:`\alpha_{4nt}^{d(h)}`
     in :math:`{\cal P}_{d-h}^{(4)}`.
 
@@ -215,24 +218,27 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **InGeneralRBM_HiddenLayer**: Set the initial values of :math:`h_{k}` in the RBM correlation factor :math:`{\cal N}_{\rm General RBM}`.
 
     **InGeneralRBM_PhysHidden**: Set the initial values of :math:`W_{i\sigma k}` in the RBM correlation factor :math:`{\cal N}_{\rm General RBM}`.
-    
+
     **InOrbital /InOrbitalAntiParallel**: Set the initial values of
     :math:`f_{i\uparrow j\downarrow}` in
     :math:`|\phi_{\rm pair} \rangle`.
-      
+
     **InOrbitalParallel**: Set the initial values of
     :math:`f_{i\sigma j\sigma}` in :math:`|\phi_{\rm pair} \rangle`.
-       
+
     **InOrbitalGeneral**: Set the initial values of
     :math:`f_{i\sigma j\sigma'}` in :math:`|\phi_{\rm pair} \rangle`.
 
 (6) Output:
-      
+
     **OneBodyG (greenone.def)**: Set the components of one-body green
     functions to output.
 
     **TwoBodyG (greentwo.def)**: Set the components of two-body green
     functions to output.
+
+    **NBodyG (nbodyg.def)**: Set the components of :math:`N`-body
+    correlation functions to output.
 
     **Twist (twist.def)**: Set the components of twist operators to
     output.
@@ -242,7 +248,7 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **Lattice (lattice.def)**: Set the position of each site.
 
 .. _InputFileList:
-    
+
 List file for Input files (namelist.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -255,9 +261,11 @@ example of the file format is shown as follows.
     LocSpin  zlocspn.def
     Trans    ztransfer.def
     InterAll zinterall.def
+    NBodyInterAll nbodyinterall.def
     Orbital orbitalidx.def
     OneBodyG zcisajs.def
     TwoBodyG	zcisajscktaltdc.def
+    NBodyG nbodyg.def
 
 File format
 ^^^^^^^^^^^
@@ -301,29 +309,31 @@ User rules
    :widths: 30 70
    :header-rows: 1
 
-   * - Keywords                 
+   * - Keywords
      - Details for corresponding files
-   * - ModPara :math:`^*`       
+   * - ModPara :math:`^*`
      - Parameters for calculation.
-   * - LocSpin :math:`^*`       
+   * - LocSpin :math:`^*`
      - Configurations of the local spins for Hamiltonian.
-   * - Trans                    
+   * - Trans
      - Transfer and chemical potential for Hamiltonian.
-   * - InterAll                 
+   * - InterAll
      - Two-body interactions for Hamiltonian.
-   * - CoulombIntra             
+   * - NBodyInterAll
+     - Variable-order :math:`N`-body interactions for Hamiltonian.
+   * - CoulombIntra
      - CoulombIntra interactions.
-   * - CoulombInter             
+   * - CoulombInter
      - CoulombInter interactions.
-   * - Hund                     
+   * - Hund
      - Hund couplings.
-   * - PairHop                  
+   * - PairHop
      - Pair hopping couplings.
-   * - Exchange                 
+   * - Exchange
      - Exchange couplings.
-   * - Gutzwiller               
+   * - Gutzwiller
      - Gutzwiller factors.
-   * - Jastrow                  
+   * - Jastrow
      - Charge Jastrow factors.
    * - SpinJastrow
      - Spin Jastrow factors.
@@ -331,57 +341,59 @@ User rules
      - Neighbor list and distance shells for BackFlow.
    * - BF
      - BackFlow parameter groups and optimization flags.
-   * - DH2                      
+   * - DH2
      - 2-site doublon-holon correlation factors.
-   * - DH4                      
+   * - DH4
      - 4-site doublon-holon correlation factors.
-   * - GeneralRBM_PhysLayer     
+   * - GeneralRBM_PhysLayer
      - A part of the general RBM correlation factor including variational parameters in a physical layer :math:`\alpha_{i\sigma}`.
-   * - GeneralRBM_HiddenLayer   
+   * - GeneralRBM_HiddenLayer
      - A part of the general RBM correlation factor including variational parameters in a hidden layer :math:`h_{k}`.
-   * - GeneralRBM_PhysHidden    
+   * - GeneralRBM_PhysHidden
      - A part of the general RBM correlation factor including variational parameters which connect physical and hidden layers :math:`W_{i\sigma k}`.
-   * - Orbital :math:`^*`       
+   * - Orbital :math:`^*`
      - Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
-   * - OrbitalAntiParallel      
+   * - OrbitalAntiParallel
      - Pair orbital factors with anti-parallel spins :math:`f_{i\uparrow j\downarrow}`.
-   * - OrbitalParallel          
+   * - OrbitalParallel
      - Pair orbital factors with parallel spins :math:`f_{i\sigma j\sigma}`.
-   * - OrbitalGeneral           
+   * - OrbitalGeneral
      - Pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
-   * - TransSym :math:`^*`      
+   * - TransSym :math:`^*`
      - Translational and lattice symmetry operation.
-   * - InGutzwiller             
+   * - InGutzwiller
      - Initial values of Gutzwiller factors.
-   * - InJastrow                
+   * - InJastrow
      - Initial values of charge Jastrow factors.
    * - InSpinJastrow
      - Initial values of spin Jastrow factors.
-   * - InDH2                    
+   * - InDH2
      - Initial values of 2-site doublon-holon correlation factors.
-   * - InDH4                    
+   * - InDH4
      - Initial values of 4-site doublon-holon correlation factors.
-   * - InGeneralRBM_PhysLayer   
+   * - InGeneralRBM_PhysLayer
      - Initial values of variational parameters of the general RBM correlation factors in a physical layer :math:`\alpha_{i\sigma}`.
-   * - InGeneralRBM_HiddenLayer 
+   * - InGeneralRBM_HiddenLayer
      - Initial values of variational parameters of the general RBM correlation factors in a hidden layer :math:`h_{k}`.
-   * - InGeneralRBM_PhysHidden  
+   * - InGeneralRBM_PhysHidden
      - Initial values of variational parameters of the general RBM correlation factors which connect physical and hidden layers :math:`W_{i\sigma k}`.
-   * - InOrbital                
+   * - InOrbital
      - Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
-   * - InOrbitalAntiParallel    
+   * - InOrbitalAntiParallel
      - Initial values of pair orbital factors :math:`f_{i\uparrow j\downarrow}`.
-   * - InOrbitalParallel        
+   * - InOrbitalParallel
      - Initial values of pair orbital factors :math:`f_{i\sigma j\sigma}`.
-   * - InOrbitalGeneral         
+   * - InOrbitalGeneral
      - Initial values of pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
-   * - OneBodyG                 
+   * - OneBodyG
      - Output components for Green functions :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle`
-   * - TwoBodyG                 
+   * - TwoBodyG
      - Output components for Correlation functions :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle`
-   * - Twist                    
+   * - NBodyG
+     - Output components for :math:`N`-body correlation functions :math:`\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle`
+   * - Twist
      - Output components for Twist operators :math:`\langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle`
-   * - Lattice                  
+   * - Lattice
      - Position of each site.
 
 ModPara file (modpara.def)
@@ -422,7 +434,7 @@ file format is shown as follows.
     NExUpdatePath  0
     RndSeed        11272
     NSplitSize     1
-    NStore         1  
+    NStore         1
 
 File format
 ^^^^^^^^^^^
@@ -489,7 +501,7 @@ User rules
    blank is needed for setting a parameter.
 
 -  From Line 9: When the first character of the line is "-", the line is
-   not read and skipped. 
+   not read and skipped.
 
 Keywords and parameters
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -691,7 +703,30 @@ Keywords and parameters
 
    **Type :** int-type (Positive integer, default value: 1)
 
-   **Description :** The number of processes of MPI parallelization.
+   **Description :** The number of MPI processes in one inner MPI
+   parallel group. The parallelization target depends on the calculation
+   stage.
+
+   During sample generation (``VMCMakeSample*``), both parameter
+   optimization and physical-quantity calculations split the
+   quantum-number projection index over the ``NQPFull`` points in this
+   group. Here
+   ``NQPFull = NSPGaussLeg * NMPTrans * NQPOptTrans``, and
+   ``NQPOptTrans`` is 1 unless ``OptTrans`` mode is used.
+
+   After samples are generated, the main evaluation stage
+   (``VMCMainCal*``) splits Monte Carlo samples (``NVMCSample``), not
+   projection points. Each process evaluates all projection points for
+   its assigned samples. This stage accumulates SR quantities in
+   parameter optimization and observables in physical-quantity
+   calculations.
+
+   ``NSplitSize`` must be greater than or equal to 1. If the total number
+   of MPI processes is not divisible by ``NSplitSize``, the last group is
+   smaller and load imbalance can occur. Direct SR with ``NStore=0`` or
+   ``NStore=1`` supports ``NSplitSize > 1``. Set ``NSRCG=0`` for
+   ``NSplitSize > 1`` because the SR-CG stored :math:`O` matvec path does
+   not support the inner MPI split.
 
 -  ``NStore``
 
@@ -703,7 +738,8 @@ Keywords and parameters
    usage from :math:`O(N_\text{p}^2)` to
    :math:`O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})`, where
    :math:`N_\text{p}` is the number of the variational parameters and
-   :math:`N_\text{MCS}` is the number of Monte Carlo sampling.
+   :math:`N_\text{MCS}` is the number of Monte Carlo sampling. For direct
+   SR (``NSRCG=0``), this option can be used with ``NSplitSize > 1``.
 
 -  ``NSRCG``
 
@@ -715,7 +751,10 @@ Keywords and parameters
    This reduces the amount of memory usage from
    :math:`O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})` to
    :math:`O(N_\text{p}) + O(N_\text{p}N_\text{MCS})` when
-   :math:`N_\text{p} > N_\text{MCS}`.
+   :math:`N_\text{p} > N_\text{MCS}`. ``NSRCG`` cannot be combined with
+   ``NSplitSize > 1``. This restriction is specific to the inner MPI
+   split; when ``NSplitSize=1``, SR-CG still uses the stored
+   :math:`O` path internally.
 
 -  ``useDiagScale``
 
@@ -779,11 +818,11 @@ file format is shown as follows.
 
 ::
 
-    ================================ 
-    NlocalSpin     6  
-    ================================ 
-    ========i_0LocSpn_1IteElc ====== 
-    ================================ 
+    ================================
+    NlocalSpin     6
+    ================================
+    ========i_0LocSpn_1IteElc ======
+    ================================
         0      1
         1      0
         2      1
@@ -872,11 +911,11 @@ as follows.
 
 ::
 
-    ======================== 
-    NTransfer      24  
-    ======================== 
-    ========i_j_s_tijs====== 
-    ======================== 
+    ========================
+    NTransfer      24
+    ========================
+    ========i_j_s_tijs======
+    ========================
         0     0     2     0   1.000000  0.000000
         2     0     0     0   1.000000  0.000000
         0     1     2     1   1.000000  0.000000
@@ -990,11 +1029,11 @@ format is shown as follows.
 
 ::
 
-    ====================== 
-    NInterAll      36  
-    ====================== 
-    ========zInterAll===== 
-    ====================== 
+    ======================
+    NInterAll      36
+    ======================
+    ========zInterAll=====
+    ======================
     0    0    0    1    1    1    1    0   0.50  0.0
     0    1    0    0    1    0    1    1   0.50  0.0
     0    0    0    0    1    0    1    0   0.25  0.0
@@ -1094,6 +1133,115 @@ Use rules
    [ int02 ]-[ int09 ] are out of
    range from the defined values.
 
+NBodyInterAll file (nbodyinterall.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file adds variable-order :math:`N`-body interaction terms to the
+Hamiltonian:
+
+.. math::
+
+   {\cal H}_{N} =
+   \sum_{\alpha} V_{\alpha}
+   \prod_{a=1}^{N_{\alpha}}
+   c_{i_{\alpha a}\sigma_{\alpha a}}^{\dagger}
+   c_{j_{\alpha a}\tau_{\alpha a}}.
+
+The factors are applied in the order written on each data line. The
+program does not add Hermitian conjugates automatically; provide every
+term required by the intended Hamiltonian.
+
+::
+
+    =============================================
+    NNBodyInterAll   3
+    =============================================
+    ======== NBodyInterAll interactions =========
+    =============================================
+        1     0     0     2     0    0.37    0.21
+        2     0     0     2     0     5     1     1     1   -0.28    0.16
+        3     0     0     2     0     1     0     3     0     5     1     1     1    0.22   -0.17
+
+File format
+^^^^^^^^^^^
+
+-  Line 1: Header
+
+-  Line 2: [string01] [int01]
+
+-  Lines 3 - 5: Header
+
+-  Lines 6 -:
+   [N] [i_1] [sigma_1] [j_1] [tau_1] ... [i_N] [sigma_N] [j_N] [tau_N] [double01] [double02]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for total number of :math:`N`-body
+   Hamiltonian terms. You can freely give a name of the keyword.
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving total number of :math:`N`-body
+   Hamiltonian terms.
+
+-  [ N ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** The order of the interaction term. It must be
+   positive.
+
+-  [ i_a ], [ j_a ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** Integers giving site indices
+   (0 :math:`\leq` [ i_a ], [ j_a ] :math:`<` ``Nsite``).
+
+-  [ sigma_a ], [ tau_a ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   | **Description :** Integers giving spin indices,
+   | 0: up-spin,
+   | 1: down-spin.
+
+-  [ double01 ], [ double02 ]
+
+   **Type :** double-type (blank parameter not allowed)
+
+   **Description :** Real and imaginary parts of the interaction
+   coefficient.
+
+Use rules
+^^^^^^^^^
+
+-  Headers cannot be omitted.
+
+-  Each term line must contain exactly :math:`1 + 4N + 2` fields.
+
+-  A program is terminated, when [ int01 ] is different from the total
+   number of :math:`N`-body Hamiltonian terms defined in this file.
+
+-  A program is terminated, when site or spin indices are out of range,
+   or when coefficients are non-finite.
+
+-  In orbital modes that do not allow spin-changing contractions, each
+   factor must satisfy :math:`\sigma_a = \tau_a`. Spin-changing factors
+   require orbital-general mode.
+
+-  The first implementation supports normal VMC local energy only.
+   BackFlow and Lanczos modes are not implemented. Real local-energy
+   kernels are not implemented, so complex variational parameters are
+   required when ``NBodyInterAll`` terms are present.
+
 CoulombIntra file (coulombintra.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1108,11 +1256,11 @@ the file format is shown as follows.
 
 ::
 
-    ====================== 
-    NCoulombIntra 6  
-    ====================== 
-    ========i_0LocSpn_1IteElc ====== 
-    ====================== 
+    ======================
+    NCoulombIntra 6
+    ======================
+    ========i_0LocSpn_1IteElc ======
+    ======================
        0  4.000000
        1  4.000000
        2  4.000000
@@ -1187,11 +1335,11 @@ of the file format is shown as follows.
 
 ::
 
-    ====================== 
-    NCoulombInter 6  
-    ====================== 
-    ========CoulombInter ====== 
-    ====================== 
+    ======================
+    NCoulombInter 6
+    ======================
+    ========CoulombInter ======
+    ======================
        0     1  1.0000
        1     2  1.0000
        2     3  1.0000
@@ -1267,11 +1415,11 @@ follows.
 
 ::
 
-    ====================== 
-    NHund 6  
-    ====================== 
-    ========Hund ====== 
-    ====================== 
+    ======================
+    NHund 6
+    ======================
+    ========Hund ======
+    ======================
        0     1 -0.250000
        1     2 -0.250000
        2     3 -0.250000
@@ -1347,11 +1495,11 @@ follows.
 
 ::
 
-    ====================== 
-    NPairhop 6  
-    ====================== 
-    ========Pairhop ====== 
-    ====================== 
+    ======================
+    NPairhop 6
+    ======================
+    ========Pairhop ======
+    ======================
        0     1  0.50000
        1     2  0.50000
        2     3  0.50000
@@ -1429,11 +1577,11 @@ An example of the file format is shown as follows.
 
 ::
 
-    ====================== 
-    NExchange 6  
-    ====================== 
-    ========Exchange ====== 
-    ====================== 
+    ======================
+    NExchange 6
+    ======================
+    ========Exchange ======
+    ======================
        0     1  0.50000
        1     2  0.50000
        2     3  0.50000
@@ -1509,10 +1657,10 @@ specified. An example of the file format is shown as follows.
 ::
 
     ======================
-    NGutzwillerIdx 2  
+    NGutzwillerIdx 2
     ComplexType 0
-    ====================== 
-    ====================== 
+    ======================
+    ======================
        0     0
        1     0
        2     0
@@ -1636,19 +1784,19 @@ follows.
 ::
 
     ======================
-    NJastrowIdx 5  
+    NJastrowIdx 5
     ComplexType 0
-    ====================== 
     ======================
-       0     1     0 
-       0     2     1 
-       0     3     0 
+    ======================
+       0     1     0
+       0     2     1
+       0     3     0
      (continue...)
-       0    1 
-       1    1 
-       2    1 
-       3    1 
-       4    1 
+       0    1
+       1    1
+       2    1
+       3    1
+       4    1
 
 File format
 ^^^^^^^^^^^
@@ -2285,7 +2433,7 @@ format is shown as follows.
 ::
 
     ====================================
-    NDoublonHolon2siteIdx 2  
+    NDoublonHolon2siteIdx 2
     ComplexType 0
     ====================================
     ====================================
@@ -2293,9 +2441,9 @@ format is shown as follows.
        0    13    7    1
      (continue...)
       15     8    2    1
-       0     1 
+       0     1
     (continue...)
-      11     1 
+      11     1
 
 File format
 ^^^^^^^^^^^
@@ -2421,7 +2569,7 @@ format is shown as follows.
 ::
 
     ====================================
-    NDoublonHolon4siteIdx 1  
+    NDoublonHolon4siteIdx 1
     ComplexType 0
     ====================================
     ====================================
@@ -2429,9 +2577,9 @@ format is shown as follows.
        1     2    0    5   13    0
      (continue...)
       15    12   14    3   11    0
-       0     1 
+       0     1
     (continue...)
-       9     1 
+       9     1
 
 File format
 ^^^^^^^^^^^
@@ -2543,7 +2691,7 @@ User rules
 
 GeneralRBM_PhysLayer file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-In the general RBM correlation factors, 
+In the general RBM correlation factors,
 
 .. math::
 
@@ -2567,7 +2715,7 @@ follows.
      1	0	 0
      1	1	 0
      (continue...)
-     0    1 
+     0    1
 
 File format
 ^^^^^^^^^^^
@@ -2583,7 +2731,7 @@ variational parameters as :math:`N_{v}`, respectively.
 
 -  Lines 4 - 5: Header
 
--  Lines 6 - (5+ :math:`2N_s`): [int03] [int04] [int05] 
+-  Lines 6 - (5+ :math:`2N_s`): [int03] [int04] [int05]
 
 -  Lines (6+ :math:`2N_s` ) -
    (5+  :math:`2N_s` + :math:`N_v`): [int06] [int07]
@@ -2660,7 +2808,7 @@ User rules
 ^^^^^^^^^^
 
 -  This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.
-  
+
 -  This function is available only for the VMC calculation with ``ComplexType=1`` and ``Orbital``. This function is not available for the Power Lanczos calculations.
 
 -  Headers cannot be omitted.
@@ -2675,7 +2823,7 @@ User rules
 
 GeneralRBM_HiddenLayer file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-In the general RBM correlation factors, 
+In the general RBM correlation factors,
 
 .. math::
 
@@ -2699,8 +2847,8 @@ follows.
      2	0
      3	0
      (continue...)
-     0    1 
-     1    1 
+     0    1
+     1    1
 
 File format
 ^^^^^^^^^^^
@@ -2716,7 +2864,7 @@ variational parameters as :math:`N_{v}`, respectively.
 
 -  Lines 4 - 5: Header
 
--  Lines 6 - (5+:math:`N_{\rm neuronGeneral}`): [int03] [int04] 
+-  Lines 6 - (5+:math:`N_{\rm neuronGeneral}`): [int03] [int04]
 
 -  Lines (6+ :math:`N_{\rm neuronGeneral}` ) -
    (5+ :math:`N_{\rm neuronGeneral}` + :math:`N_v`): [int05] [int06]
@@ -2786,7 +2934,7 @@ User rules
 ^^^^^^^^^^
 
 -  This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.
-  
+
 -  This function is available only for the VMC calculation with ``ComplexType=1`` and ``Orbital``. This function is not available for the Power Lanczos calculations.
 
 -  Headers cannot be omitted.
@@ -2801,7 +2949,7 @@ User rules
 
 GeneralRBM_PhysHidden file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-In the general RBM correlation factors, 
+In the general RBM correlation factors,
 
 .. math::
 
@@ -2827,9 +2975,9 @@ follows.
      2	0   0   4
      2	1   0   5
      (continue...)
-     0    1 
+     0    1
      1    1
-     (continue...) 
+     (continue...)
 
 File format
 ^^^^^^^^^^^
@@ -2929,7 +3077,7 @@ User rules
 ^^^^^^^^^^
 
 -  This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.
-  
+
 -  This function is available only for the VMC calculation with ``ComplexType=1`` and ``Orbital``. This function is not available for the Power Lanczos calculations.
 
 -  Headers cannot be omitted.
@@ -2958,22 +3106,22 @@ are indicated. An example of the file format is shown as follows.
 ::
 
     ====================================
-    NOrbitalIdx 64   
+    NOrbitalIdx 64
     ComplexType 0
     ====================================
     ====================================
-       0     0     0 
-       0     1     1 
-       0     2     2 
-       0     3     3 
+       0     0     0
+       0     1     1
+       0     2     2
+       0     3     3
      (continue...)
-      15     9    62 
-      15    10    63 
-       0    1 
-       1    1 
+      15     9    62
+      15    10    63
+       0    1
+       1    1
     (continue...)
-      62    1 
-      63    1 
+      62    1
+      63    1
 
 File format
 ^^^^^^^^^^^
@@ -3096,21 +3244,21 @@ shown as follows.
 ::
 
     ====================================
-    NOrbitalIdx 120  
+    NOrbitalIdx 120
     ComplexType 0
     ====================================
     ====================================
        0     1     0
-       0     2     1 
-       0     3     2 
+       0     2     1
+       0     3     2
      (continue...)
       15    13    118
       15    14    119
-       0    1 
-       1    1 
+       0    1
+       1    1
     (continue...)
-      118    1 
-      119    1 
+      118    1
+      119    1
 
 File format
 ^^^^^^^^^^^
@@ -3240,15 +3388,15 @@ example of the file format is shown as follows.
     ====================================
     ====================================
        0  0  0  1  0
-       0  0  1  1  1 
+       0  0  1  1  1
      (continue...)
       14  0  15  1  253
       15  0  15  1  254
-       0    1 
-       1    1 
+       0    1
+       1    1
     (continue...)
-      253   1 
-      254   1 
+      253   1
+      254   1
 
 File format
 ^^^^^^^^^^^
@@ -3378,7 +3526,7 @@ not done. An example of the file format is shown as follows.
 ::
 
     ====================================
-    NQPTrans 4  
+    NQPTrans 4
     ====================================
     == TrIdx_TrWeight_and_TrIdx_i_xi  ==
     ====================================
@@ -3389,7 +3537,7 @@ not done. An example of the file format is shown as follows.
        0     0    0
      (continue...)
        3    12    1
-       3    13    2 
+       3    13    2
 
 File format
 ^^^^^^^^^^^
@@ -3491,7 +3639,7 @@ User rules
    [ int06 ] are out of range from the defined values.
 
 .. _InputParam:
-   
+
 Files to set initial values of variational parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -3510,9 +3658,9 @@ Jastrow parameters, for example ``NSpinJastrowIdx``.
 
     ======================
     NJastrowIdx  28
-    ====================== 
+    ======================
     == i_j_JastrowIdx  ===
-    ====================== 
+    ======================
     0 -8.909963465082626488e-02  0.000000000000000000e+00
     1  5.521681211878626955e-02  0.000000000000000000e+00
     (continue...)
@@ -3782,6 +3930,97 @@ Use rules
    range from the defined values.
 
 
+NBodyG file (nbodyg.def)
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file determines the target components to calculate and output
+:math:`N`-body correlation functions
+:math:`\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle`.
+An example of file format is shown as follows.
+
+::
+
+    =============================================
+    NNBodyG        3
+    =============================================
+    ======== NBodyG correlation functions =======
+    =============================================
+        1     0     0     0     0
+        2     0     0     0     0     1     1     1     1
+        3     0     0     0     0     1     0     1     0     2     1     2     1
+
+File format
+^^^^^^^^^^^
+
+-  Line 1: Header
+
+-  Line 2: [string01] [int01]
+
+-  Lines 3 - 5: Header
+
+-  Lines 6 -:
+   [N] [i_1] [sigma_1] [j_1] [tau_1] ... [i_N] [sigma_N] [j_N] [tau_N]
+
+Parameters
+^^^^^^^^^^
+
+-  [ string01 ]
+
+   **Type :** string-type (blank parameter not allowed)
+
+   **Description :** A keyword for total number of :math:`N`-body
+   correlation functions. You can freely give a name of the keyword.
+
+-  [ int01 ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving total number of :math:`N`-body
+   correlation functions.
+
+-  [ N ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** An integer giving the order of the correlation
+   function. It must be positive.
+
+-  [ i_a ], [ j_a ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   **Description :** Integers giving site indices
+   (0 :math:`\leq` [ i_a ], [ j_a ] :math:`<` ``Nsite``).
+
+-  [ sigma_a ], [ tau_a ]
+
+   **Type :** int-type (blank parameter not allowed)
+
+   | **Description :** Integers giving spin indices,
+   | 0: up-spin,
+   | 1: down-spin.
+
+Use rules
+^^^^^^^^^
+
+-  Headers cannot be omitted.
+
+-  A program is terminated, when [ int01 ] is different from the total
+   number of :math:`N`-body correlation functions defined in this file.
+
+-  Each term line must contain exactly :math:`1 + 4N` integers.
+
+-  A program is terminated, when site or spin indices are out of range.
+
+-  In orbital modes that do not allow spin-changing contractions, each
+   factor must satisfy :math:`\sigma_a = \tau_a`. Spin-changing factors
+   require orbital-general mode.
+
+-  This output is supported for physical-quantity calculations. It is
+   not implemented for BackFlow measurement, and no Lanczos-corrected
+   ``ls_NBodyG`` output file is produced.
+
+
 Twist file (twist.def)
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -3789,7 +4028,7 @@ This file sets the target components to calculate and output the
 Twist operator
 :math:`P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle`.
 Position operator :math:`\mu_i` is defined in Lattice definition file (lattice.def).
-An example of file format is shown as follows. 
+An example of file format is shown as follows.
 
 ::
 

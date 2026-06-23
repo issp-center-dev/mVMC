@@ -14,10 +14,10 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 /*-------------------------------------------------------------
  * Variational Monte Carlo
@@ -77,14 +77,14 @@ int NSROptCGMaxIter; /* the number of maximum iterations in SR-CG method */
 double DSROptCGTol; /* the tolerance for SR-CG method */
 
 int NVMCWarmUp; /* Monte Carlo steps for warming up */
-int NVMCInterval; /* sampling interval [MCS] */ 
+int NVMCInterval; /* sampling interval [MCS] */
 int NVMCSample; /* the number of samples */
 int NExUpdatePath; /* update path  0: hopping, 1: hopping+exchange, 2: exchange(spin), 3: KondoGC, 6: pair hopping(doublon-only) */
 int NBlockUpdateSize; /* {DEFINED: _pf_block_update} size of block Pfaffian update */
 
 int RndSeed; /* seed for pseudorandom number generator */
 int NSplitSize; /* the number of inner MPI processes */
- 
+
 /* total length of def array */
 int NTotalDefInt, NTotalDefDouble;
 
@@ -121,6 +121,13 @@ double *ParaExchangeCoupling;
 int NInterAll;
 int **InterAll; /* [NInterAll][8] */
 double complex*ParaInterAll;
+int NNBodyInterAll;
+int NBodyInterAllTotalFactors;
+int NBodyInterAllMaxN;
+int *NBodyInterAllN;        /* [NNBodyInterAll] */
+int *NBodyInterAllOffset;   /* [NNBodyInterAll] */
+int **NBodyInterAllIdx;     /* [NBodyInterAllTotalFactors][4] */
+double complex *ParaNBodyInterAll;
 
 /* for variational parameters */
 int NGutzwillerIdx, *GutzwillerIdx; /* [Nsite] */
@@ -162,6 +169,12 @@ double *ParaQPOptTrans;
 int NCisAjs,         **CisAjsIdx;         /* [NCisAjs][3] */
 int NCisAjsCktAlt,   **CisAjsCktAltIdx;   /* [NCisAjsCktAlt][2] */
 int NCisAjsCktAltDC, **CisAjsCktAltDCIdx; /* [NCisAjsCktAltDC][6] */
+int NNBodyG;
+int NBodyGTotalFactors;
+int NBodyGMaxN;
+int *NBodyGN;        /* [NNBodyG] */
+int *NBodyGOffset;   /* [NNBodyG] */
+int **NBodyGIdx;     /* [NBodyGTotalFactors][4] */
 int **iOneBodyGIdx; /* For GF2 indirect measurement */
 
 /* Optimization flag */
@@ -190,7 +203,7 @@ int FlagBinary=0;
 int NFileFlushInterval=1;
 
 /***** Variational Parameters *****/
-int NPara; /* the total number of variational prameters NPara= NProj + NSlater+ NOptTrans */ 
+int NPara; /* the total number of variational prameters NPara= NProj + NSlater+ NOptTrans */
 int NProj;    /* the number of correlation factor */
 int NRBM, NRBM_PhysLayerIdx, NRBM_HiddenLayerIdx;
 int NProjBF;    /* the number of correlation factor */
@@ -312,6 +325,7 @@ int **LatticeIdx;         /* [Nsite][4] */
 int NTwist, **TwistIdx;         /* TwistIdx -> SiteIdx, SpinIdx */
 double **ParaTwist;         /* [NTwist][3*Nsite*2] */
 double complex *PhysTwist; /* [NTwist] */
+double complex *PhysNBodyG; /* [NNBodyG] */
 
 
 
@@ -323,7 +337,7 @@ double *LSLQ_real; /* [NLSHam][NLSHam]*/                      //TBC
 
 double complex *QCisAjsQ; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/ //TBC
 double complex *QCisAjsCktAltQ; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/ //TBC
-double complex *QCisAjsCktAltQDC; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt] 
+double complex *QCisAjsCktAltQDC; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]
                                      DC Lanczos Calculation */
 double complex *LSLCisAjs; /* [NLSHam][NCisAjs]*/                //TBC
 
@@ -342,6 +356,7 @@ FILE *FileCisAjs;
 FILE *FileCisAjsCktAlt;
 FILE *FileCisAjsCktAltDC;
 FILE *FileTwist;
+FILE *FileNBodyG;
 FILE *FileLS;
 FILE *FileLSQQQQ;
 FILE *FileLSQCisAjsQ;

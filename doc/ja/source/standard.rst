@@ -680,7 +680,27 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 
    **形式 :** int型 (1以上、デフォルト値=1)
 
-   **説明 :** MPI内部並列を行う場合の並列数。
+   **説明 :** 1つの内部MPI並列グループに含まれるMPIプロセス数。
+   並列化の対象は計算段階で異なります。
+
+   サンプル生成段階 (``VMCMakeSample*``) では、パラメータ最適化計算と
+   物理量計算のどちらでも、量子数射影の添字を ``NQPFull`` 個の分点に
+   わたってこのグループ内のプロセスで分割します。ここで
+   ``NQPFull = NSPGaussLeg * NMPTrans * NQPOptTrans`` であり、
+   ``NQPOptTrans`` は ``OptTrans`` mode を使わない通常時は1です。
+
+   サンプル生成後の主評価段階 (``VMCMainCal*``) では、射影分点ではなく
+   モンテカルロサンプル (``NVMCSample``) を同じグループ内のプロセスで
+   分割します。各プロセスは担当サンプルについて全ての射影分点を評価
+   します。この段階は、パラメータ最適化計算ではSR量の集計、物理量計算
+   では物理量の集計に使われます。
+
+   ``NSplitSize`` は1以上である必要があります。全MPIプロセス数が
+   ``NSplitSize`` で割り切れない場合、最後のグループが小さくなり
+   load imbalance が起こり得ます。直接SRでは ``NStore=0`` と
+   ``NStore=1`` のどちらも ``NSplitSize > 1`` に対応しています。
+   SR-CG の stored :math:`O` 行列ベクトル積は内部MPI分割に対応していないため、
+   ``NSplitSize > 1`` の場合は ``NSRCG=0`` を指定してください。
 
 -  ``NStore``
 
@@ -688,6 +708,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 
    **説明 :**
    期待値 :math:`\langle O_k O_l \rangle` を計算するとき行列-行列積にして高速化するオプション(1で機能On、モンテカルロサンプリング数に応じてメモリの消費が増大します [1]_)。
+   直接SR (``NSRCG=0``) では ``NSplitSize > 1`` と併用できます。
 
 -  ``NSRCG``
 
@@ -696,7 +717,9 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
    **説明 :** SR法で連立一次方程式 :math:`Sx=g`
    を解くときに、 :math:`S`
    を陽に構築せずに解くことでメモリを削減する [2]_ オプション[NeuscammanUmrigarChan_ ](1で機能On,
-   ``NStore`` は1に固定されます)。
+   ``NStore`` は1に固定されます)。 ``NSRCG`` は ``NSplitSize > 1`` と併用できません。
+   この制限は内部MPI分割に固有のものです。 ``NSplitSize=1`` の場合、SR-CG は従来通り
+   stored :math:`O` 経路を内部で使用します。
 
 -  ``ComplexType``
 

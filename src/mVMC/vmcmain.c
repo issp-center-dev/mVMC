@@ -14,10 +14,10 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 /*-------------------------------------------------------------
  * Variational Monte Carlo
@@ -216,23 +216,23 @@ int main(int argc, char* argv[])
   ReadDefFileNInt(fileDefList, comm0);
   if(rank0==0) fprintf(stdout,"End  : Read *def files.\n");
   StopTimer(11);
-  
+
   StartTimer(12);
   SetMemoryDef();
   StopTimer(12);
-  
+
   StartTimer(11);
   if(rank0==0) fprintf(stdout,"Start: Read parameters from *def files.\n");
   ReadDefFileIdxPara(fileDefList, comm0);
   if(rank0==0) fprintf(stdout,"End  : Read parameters from *def files.\n");
   StopTimer(11);
-  
+
   StartTimer(12);
   if(rank0==0) fprintf(stdout,"Start: Set memories.\n");
   SetMemory();
   if(rank0==0) fprintf(stdout,"End  : Set memories.\n");
   StopTimer(12);
-  
+
   /* split MPI coummunicator */
 #ifdef _mpi_use
   StartTimer(10);
@@ -274,7 +274,7 @@ int main(int argc, char* argv[])
   if(rank0==0) free(cFileNameListFile);
   if(rank0==0) fprintf(stdout,"End  : Initialize parameters.\n");
   //[e] add read parameters respectively
-  
+
   SyncModifiedParameter(comm0);
   StopTimer(13);
 
@@ -312,7 +312,7 @@ int main(int argc, char* argv[])
       OutputTimerParaOpt();
     } else if(NVMCCalMode==1) {
       OutputTimerPhysCal();
-    } 
+    }
   }
 
   /* close output files */
@@ -351,14 +351,14 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
         printf("Progress of Optimization: %d %%.\n", iprogress);
       }
     }
-    
+
     StartTimer(20);
     //printf("1 DUBUG make:step=%d \n",step);
     if(iFlgOrbitalGeneral==0){//sz is conserved
       UpdateSlaterElm_fcmp();
     }else{
       UpdateSlaterElm_fsz();
-    } 
+    }
     //printf("2 DUBUG make:step=%d \n",step);
     UpdateQPWeight();
     StopTimer(20);
@@ -397,12 +397,12 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
           VMCMakeSample(comm_child1);//VMCMakeSample(comm_child1);
         }else{
           VMCMakeSample_fsz(comm_child1);//VMCMakeSample(comm_child1);
-        } 
+        }
       }
       else {
         VMC_BF_MakeSample(comm_child1);
       }
-    } 
+    }
     StopTimer(3);
     StartTimer(4);
 #ifdef _DEBUG_DETAIL
@@ -412,7 +412,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       if(iFlgOrbitalGeneral==0){//sz is conserved
         VMCMainCal(comm_child1);
       }else{//fsz
-        VMCMainCal_fsz(comm_child1); 
+        VMCMainCal_fsz(comm_child1);
       }
     }else{
       VMC_BF_MainCal(comm_child1);
@@ -428,7 +428,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     printf("Debug: step %d, SROpt.\n", step);
 #endif
     //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz =0
-    if(AllComplexFlag==0){ //real 
+    if(AllComplexFlag==0){ //real
       WeightAverageSROpt_real(comm_parent);
     }else{
       WeightAverageSROpt(comm_parent);
@@ -447,11 +447,11 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
         for(i=0;i<SROptSize*NVMCSample;i++){
           fprintf(stderr, "DEBUG: SROptO_Store_real[%d]=%lf +I*%lf\n",i,creal(SROptO_Store_real[i]),cimag(SROptO_Store_real[i]));
-        } 
+        }
       }else{
         for(i=0;i<2*SROptSize*NVMCSample;i++){
           fprintf(stderr, "DEBUG: SROptO_Store[%d]=%lf +I*%lf\n",i,creal(SROptO_Store[i]),cimag(SROptO_Store[i]));
-        } 
+        }
       }
     }
 #endif
@@ -462,23 +462,23 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
         for(i=0;i<(NSRCG==0 ? SROptSize*SROptSize: SROptSize*2);i++){
           fprintf(stderr, "DEBUG: SROptOO_real[%d]=%lf +I*%lf\n",i,creal(SROptOO_real[i]),cimag(SROptOO_real[i]));
-        } 
+        }
         for(i=0;i<SROptSize;i++){
           fprintf(stderr, "DEBUG: SROptHO_real[%d]=%lf +I*%lf\n",i,creal(SROptHO_real[i]),cimag(SROptHO_real[i]));
-        } 
+        }
         for(i=0;i<SROptSize;i++){
           fprintf(stderr, "DEBUG: SROptO_real[%d]=%lf +I*%lf\n",i,creal(SROptO_real[i]),cimag(SROptO_real[i]));
-        } 
+        }
       }else{
         for(i=0;i<(NSRCG==0 ? 2*SROptSize*(2*SROptSize): 2*SROptSize*2);i++){
           fprintf(stderr, "DEBUG: SROptOO[%d]=%lf +I*%lf\n",i,creal(SROptOO[i]),cimag(SROptOO[i]));
-        } 
+        }
         for(i=0;i<2*SROptSize;i++){
           fprintf(stderr, "DEBUG: SROptHO[%d]=%lf +I*%lf\n",i,creal(SROptHO[i]),cimag(SROptHO[i]));
-        } 
+        }
         for(i=0;i<2*SROptSize;i++){
           fprintf(stderr, "DEBUG: SROptO[%d]=%lf +I*%lf\n",i,creal(SROptO[i]),cimag(SROptO[i]));
-        } 
+        }
       }
     }
 #endif
@@ -541,7 +541,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     UpdateSlaterElm_fcmp();
   }else{
     UpdateSlaterElm_fsz();
-  } 
+  }
   StopTimer(20);
   if(rank==0) fprintf(stdout, "End  : UpdateSlaterElm.\n");
 
@@ -549,7 +549,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
     if(rank==0) OutputTime(ismp);
     FlushFile(0,rank);
-    InitFilePhysCal(ismp, rank);    
+    InitFilePhysCal(ismp, rank);
     StartTimer(3);
     if(NProjBF ==0) {
       //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){//real & sz=0
@@ -633,7 +633,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
 
 void outputData() {
-  int i;
+  int i, k, offset;
 
   /* zvo_out.dat */
 //[s] MERGE BY TM
@@ -689,17 +689,33 @@ void outputData() {
       }
     }
 
+    /* zvo_NBodyG.dat */
+    if (NNBodyG > 0) {
+      for (i = 0; i < NNBodyG; i++) {
+        fprintf(FileNBodyG, "%d", NBodyGN[i]);
+        offset = NBodyGOffset[i];
+        for (k = 0; k < NBodyGN[i]; k++) {
+          fprintf(FileNBodyG, " %d %d %d %d",
+                  NBodyGIdx[offset+k][0], NBodyGIdx[offset+k][1],
+                  NBodyGIdx[offset+k][2], NBodyGIdx[offset+k][3]);
+        }
+        fprintf(FileNBodyG, " % .18e  % .18e\n",
+                creal(PhysNBodyG[i]), cimag(PhysNBodyG[i]));
+      }
+      fprintf(FileNBodyG, "\n");
+    }
+
     if (NLanczosMode > 0) {
       if (AllComplexFlag == 0) { //real
         PhysCalLanczos_real(
           QQQQ_real, QCisAjsQ_real, QCisAjsCktAltQ_real, QCisAjsCktAltQDC_real,
-          NLSHam, Nsite, NCisAjs, NCisAjs, iOneBodyGIdx, CisAjsIdx, NCisAjsCktAlt, NCisAjsCktAltDC, CisAjsCktAltDCIdx, 
+          NLSHam, Nsite, NCisAjs, NCisAjs, iOneBodyGIdx, CisAjsIdx, NCisAjsCktAlt, NCisAjsCktAltDC, CisAjsCktAltDCIdx,
           NLanczosMode, FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
           FileLSCisAjs, FileLSCisAjsCktAlt, FileLSCisAjsCktAltDC);
       }else { //complex
         PhysCalLanczos_fcmp(
           QQQQ, QCisAjsQ, QCisAjsCktAltQ, QCisAjsCktAltQDC,
-          NLSHam, Nsite, NCisAjs, NCisAjs, iOneBodyGIdx, CisAjsIdx, NCisAjsCktAlt, NCisAjsCktAltDC, CisAjsCktAltDCIdx, 
+          NLSHam, Nsite, NCisAjs, NCisAjs, iOneBodyGIdx, CisAjsIdx, NCisAjsCktAlt, NCisAjsCktAltDC, CisAjsCktAltDCIdx,
           NLanczosMode, FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
           FileLSCisAjs, FileLSCisAjsCktAlt, FileLSCisAjsCktAltDC);
       }

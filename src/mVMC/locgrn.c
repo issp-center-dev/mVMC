@@ -14,10 +14,10 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 /*-------------------------------------------------------------
  * Variational Monte Carlo
@@ -35,7 +35,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "sector_projection.c"
 
 double complex calculateNewPfMN_child(const int qpidx, const int n, const int *msa, const int *rsa,
-                              const int *eleIdx, double complex *buffer);
+                              const int *eleIdx, double complex *buffer, double *rwork);
 
 /* Calculate 1-body Green function <CisAjs> */
 /* buffer size = NQPFull */
@@ -202,7 +202,8 @@ double complex GreenFunc2(const int ri, const int rj, const int rk, const int rl
 
 double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
-                  const double complex *rbmCnt, double complex *rbmCntNew, double complex *buffer, int *bufferInt){
+                  const double complex *rbmCnt, double complex *rbmCntNew,
+                  double complex *buffer, int *bufferInt, double *rwork){
   int ri,rj,rk,rl,si,sj,sk,mj;
   int k,l,m,rsk;
   double complex z,x;
@@ -248,7 +249,7 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
           rsi[m] = rsi[m+1];
           rsj[m] = rsj[m+1];
         }
-        return GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,rbmCntNew,buffer,bufferInt);
+        return GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,rbmCntNew,buffer,bufferInt,rwork);
       }
       /* rsj[k] == rsj[l] */
       if(rsk==rsj[l]) return 0;
@@ -264,7 +265,7 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
         rsi[m] = rsi[m+1];
         rsj[m] = rsj[m+1];
       }
-      return GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,rbmCntNew,buffer,bufferInt);
+      return GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,rbmCntNew,buffer,bufferInt,rwork);
     }
     for(l=k+1;l<n;l++) {
       /* rsi[k] == rsi[l] */
@@ -276,7 +277,7 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
           rsi[m] = rsi[m+1];
           rsj[m] = rsj[m+1];
         }
-        return (-1.0)*GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,rbmCntNew,buffer,bufferInt);
+        return (-1.0)*GreenFuncN(n-1,rsi,rsj,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,rbmCntNew,buffer,bufferInt,rwork);
       }
     }
     /* check electron number */
@@ -318,7 +319,7 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
 
   /* calculateNewPfM */
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
-    pfMNew[qpidx] = calculateNewPfMN_child(qpidx,n,msj,rsj,eleIdx,bufV);
+    pfMNew[qpidx] = calculateNewPfMN_child(qpidx,n,msj,rsj,eleIdx,bufV,rwork);
   }
   z = CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
@@ -338,7 +339,7 @@ double complex GreenFuncN(const int n, int *rsi, int *rsj, const double complex 
 ///* msa[k]-th electron hops from rsa[k] to eleIdx[msa[k]] */
 ///* buffer size = n*Nsize */
 double complex calculateNewPfMN_child(const int qpidx, const int n, const int *msa, const int *rsa,
-                              const int *eleIdx, double complex *buffer) {
+                              const int *eleIdx, double complex *buffer, double *rwork) {
   const int nsize = Nsize;
   const int n2 = 2*n;
   const double complex *sltE;
@@ -358,14 +359,13 @@ double complex calculateNewPfMN_child(const int qpidx, const int n, const int *m
   /* for DSKPFA */
   char uplo='U', mthd='P';
   int lda,info=0;
+  int nn;
   double complex pfaff;
   int iwork[n2];
   double complex work[n2*n2]; /* [n2][n2] */
   int lwork = n2*n2;
-  double *rwork = GetWorkSpaceThreadDouble(LapackLWork); //TBC for rwork
 
-  //int nn;
-  //nn=lda=n2;
+  nn=lda=n2;
 
   sltE = SlaterElm + qpidx*Nsite2*Nsite2;
   invM = InvM + qpidx*Nsize*Nsize;
@@ -436,9 +436,7 @@ double complex calculateNewPfMN_child(const int qpidx, const int n, const int *m
   }
 
   /* calculate Pf M */
-  //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
-  //M_ZSKPFA(&uplo, &mthd, &n, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info); //TBC
-  M_ZSKPFA(&uplo, &mthd, &n, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+  M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
 
   return sgn * pfaff * PfM[qpidx];

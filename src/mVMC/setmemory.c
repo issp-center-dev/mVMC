@@ -14,10 +14,10 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 /*-------------------------------------------------------------
  * Variational Monte Carlo
@@ -35,7 +35,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_SETMEMORY
 #define _SRC_SETMEMORY
 
-void SetMemoryDef() {  
+void SetMemoryDef() {
   int i, j;
   int *pInt;
   double *pDouble;
@@ -112,14 +112,14 @@ void SetMemoryDef() {
     pInt += Nsite;
     GeneralRBM_PhysLayerIdx = pInt;
     pInt += Nsite2;
-  
+
     ChargeRBM_HiddenLayerIdx = pInt;
     pInt += NneuronCharge;
     SpinRBM_HiddenLayerIdx = pInt;
     pInt += NneuronSpin;
     GeneralRBM_HiddenLayerIdx = pInt;
     pInt += NneuronGeneral;
-  
+
     ChargeRBM_PhysHiddenIdx = (int**)malloc(sizeof(int*)*Nsite);
     for(i=0;i<Nsite;i++) {
       ChargeRBM_PhysHiddenIdx[i] = pInt;
@@ -195,6 +195,22 @@ void SetMemoryDef() {
     pInt += 8;
   }
 
+  NBodyGN = pInt;
+  pInt += NNBodyG;
+
+  NBodyGOffset = pInt;
+  pInt += NNBodyG;
+
+  if (NBodyGTotalFactors > 0) {
+    NBodyGIdx = (int**)malloc(sizeof(int*)*NBodyGTotalFactors);
+    for(i=0;i<NBodyGTotalFactors;i++) {
+      NBodyGIdx[i] = pInt;
+      pInt += 4;
+    }
+  } else {
+    NBodyGIdx = NULL;
+  }
+
   LatticeIdx = (int**)malloc(sizeof(int*)*Nsite);
   for(i=0;i<Nsite;i++) {
     LatticeIdx[i] = pInt;
@@ -206,11 +222,27 @@ void SetMemoryDef() {
     TwistIdx[i] = pInt;
     pInt += 2*Nsite*2;
   }
-  
+
   InterAll = (int**)malloc(sizeof(int*)*NInterAll);
   for(i=0;i<NInterAll;i++) {
     InterAll[i] = pInt;
     pInt += 8;
+  }
+
+  NBodyInterAllN = pInt;
+  pInt += NNBodyInterAll;
+
+  NBodyInterAllOffset = pInt;
+  pInt += NNBodyInterAll;
+
+  if (NBodyInterAllTotalFactors > 0) {
+    NBodyInterAllIdx = (int**)malloc(sizeof(int*)*NBodyInterAllTotalFactors);
+    for(i=0;i<NBodyInterAllTotalFactors;i++) {
+      NBodyInterAllIdx[i] = pInt;
+      pInt += 4;
+    }
+  } else {
+    NBodyInterAllIdx = NULL;
   }
 
   QPOptTrans = (int**)malloc(sizeof(int*)*NQPOptTrans);
@@ -227,11 +259,16 @@ void SetMemoryDef() {
 
   OptFlag = pInt;
 
-  ParaTransfer = (double complex*)malloc(sizeof(double complex)*(NTransfer+NInterAll));  
+  ParaTransfer = (double complex*)malloc(sizeof(double complex)*(NTransfer+NInterAll));
   ParaInterAll = ParaTransfer+NTransfer;
+  if (NNBodyInterAll > 0) {
+    ParaNBodyInterAll = (double complex*)malloc(sizeof(double complex)*NNBodyInterAll);
+  } else {
+    ParaNBodyInterAll = NULL;
+  }
 
   ParaCoulombIntra = (double*)malloc(sizeof(double)*(NTotalDefDouble));
-  pDouble = ParaCoulombIntra +NCoulombIntra; 
+  pDouble = ParaCoulombIntra +NCoulombIntra;
 
   ParaCoulombInter = pDouble;
   pDouble += NCoulombInter;
@@ -244,7 +281,7 @@ void SetMemoryDef() {
 
   ParaExchangeCoupling = pDouble;
   pDouble +=  NExchangeCoupling;
-  
+
 //  ParaQPTrans = pDouble;
 //  pDouble +=  NQPTrans;
 
@@ -267,11 +304,14 @@ void FreeMemoryDef() {
     for(i=0;i<2*Nsite;i++)
       free(iOneBodyGIdx[i]);
     free(iOneBodyGIdx);
-  } 
+  }
 
   free(QPOptTransSgn);
   free(QPOptTrans);
+  free(ParaNBodyInterAll);
+  free(NBodyInterAllIdx);
   free(InterAll);
+  free(NBodyGIdx);
   free(CisAjsCktAltDCIdx);
   free(CisAjsCktAltIdx);
   free(CisAjsIdx);
@@ -418,6 +458,11 @@ void SetMemory() {
     LocalCisAjs = PhysTwist + NTwist;
     //LocalCisAjs = PhysCisAjsCktAltDC + NCisAjsCktAltDC;
     LocalCisAjsCktAltDC = LocalCisAjs + NCisAjs;
+    if (NNBodyG > 0) {
+      PhysNBodyG = (double complex*)malloc(sizeof(double complex)*NNBodyG);
+    } else {
+      PhysNBodyG = NULL;
+    }
 
     if(NLanczosMode>0){
       QQQQ = (double complex*)malloc(sizeof(double complex)
@@ -454,6 +499,7 @@ void FreeMemory() {
 
   if(NVMCCalMode==1){
     free(PhysCisAjs);
+    free(PhysNBodyG);
     if(NLanczosMode>0){
       free(QQQQ);
       free(QQQQ_real);

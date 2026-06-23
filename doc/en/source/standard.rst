@@ -749,7 +749,30 @@ Parameters for the numerical condition
 
    **Type :** int-type (Positive integer, default value: 1)
 
-   **Description :** The number of processes of MPI parallelization.
+   **Description :** The number of MPI processes in one inner MPI
+   parallel group. The parallelization target depends on the calculation
+   stage.
+
+   During sample generation (``VMCMakeSample*``), both parameter
+   optimization and physical-quantity calculations split the
+   quantum-number projection index over the ``NQPFull`` points in this
+   group. Here
+   ``NQPFull = NSPGaussLeg * NMPTrans * NQPOptTrans``, and
+   ``NQPOptTrans`` is 1 unless ``OptTrans`` mode is used.
+
+   After samples are generated, the main evaluation stage
+   (``VMCMainCal*``) splits Monte Carlo samples (``NVMCSample``), not
+   projection points. Each process evaluates all projection points for
+   its assigned samples. This stage accumulates SR quantities in
+   parameter optimization and observables in physical-quantity
+   calculations.
+
+   ``NSplitSize`` must be greater than or equal to 1. If the total number
+   of MPI processes is not divisible by ``NSplitSize``, the last group is
+   smaller and load imbalance can occur. Direct SR with ``NStore=0`` or
+   ``NStore=1`` supports ``NSplitSize > 1``. Set ``NSRCG=0`` for
+   ``NSplitSize > 1`` because the SR-CG stored :math:`O` matvec path does
+   not support the inner MPI split.
 
 -  ``NStore``
 
@@ -761,7 +784,8 @@ Parameters for the numerical condition
    usage from :math:`O(N_\text{p}^2)` to
    :math:`O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})`, where
    :math:`N_\text{p}` is the number of the variational parameters and
-   :math:`N_\text{MCS}` is the number of Monte Carlo sampling.
+   :math:`N_\text{MCS}` is the number of Monte Carlo sampling. For direct
+   SR (``NSRCG=0``), this option can be used with ``NSplitSize > 1``.
 
 -  ``NSRCG``
 
@@ -773,7 +797,10 @@ Parameters for the numerical condition
    This reduces the amount of memory usage from
    :math:`O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})` to
    :math:`O(N_\text{p}) + O(N_\text{p}N_\text{MCS})` when
-   :math:`N_\text{p} > N_\text{MCS}`.
+   :math:`N_\text{p} > N_\text{MCS}`. ``NSRCG`` cannot be combined with
+   ``NSplitSize > 1``. This restriction is specific to the inner MPI
+   split; when ``NSplitSize=1``, SR-CG still uses the stored
+   :math:`O` path internally.
 
 -  ``ComplexType``
 

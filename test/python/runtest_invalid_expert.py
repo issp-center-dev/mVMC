@@ -6,18 +6,70 @@ import subprocess
 import sys
 
 
+def safe_path_component(value):
+    chars = []
+    for ch in value:
+        if ch.isalnum() or ch in ("-", "_", "."):
+            chars.append(ch)
+        else:
+            chars.append("_")
+    return "".join(chars) or "case"
+
+
+def make_workdir_name(model, updates):
+    pieces = [model]
+    for key in sorted(updates):
+        pieces.append("{}_{}".format(key, updates[key]))
+    return safe_path_component("__".join(pieces))
+
+
+def update_modpara(filename, updates):
+    found = set()
+    lines = []
+    with open(filename) as f:
+        for line in f:
+            words = line.split()
+            if words and words[0] in updates:
+                lines.append("{:<15} {}\n".format(words[0], updates[words[0]]))
+                found.add(words[0])
+            else:
+                lines.append(line)
+    for key, value in updates.items():
+        if key not in found:
+            lines.append("{:<15} {}\n".format(key, value))
+    with open(filename, "w") as f:
+        f.writelines(lines)
+
+
 def main():
     if len(sys.argv) < 3:
-        print("usage: {} <model name> <expected_error_substring> [allow_success]".format(sys.argv[0]))
+        print(
+            "usage: {} <model name> <expected_error_substring> "
+            "[allow_success] [KEY=VALUE ...]".format(sys.argv[0])
+        )
         return -1
 
     model = sys.argv[1]
     expected = sys.argv[2]
-    allow_success = (len(sys.argv) >= 4 and sys.argv[3] == "allow_success")
+    allow_success = False
+    modpara_updates = {}
+    for arg in sys.argv[3:]:
+        if arg == "allow_success":
+            allow_success = True
+        elif "=" in arg:
+            key, value = arg.split("=", 1)
+            modpara_updates[key] = value
+        else:
+            print("ERROR: unknown extra argument: {}".format(arg))
+            return -1
 
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
-    workdir = os.path.join(rootdir, "work", model)
+    workroot = os.path.join(rootdir, "work")
+    if not os.path.exists(workroot):
+        os.makedirs(workroot)
+    case_name = make_workdir_name(model, modpara_updates)
+    workdir = os.path.join(workroot, "{}_{}".format(case_name, os.getpid()))
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
@@ -27,6 +79,9 @@ def main():
     for fn in os.listdir(refdir):
         if fn.endswith(".def"):
             shutil.copy(os.path.join(refdir, fn), os.path.join(workdir, fn))
+
+    if modpara_updates:
+        update_modpara("modpara.def", modpara_updates)
 
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
     proc = subprocess.run(

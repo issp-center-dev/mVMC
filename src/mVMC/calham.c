@@ -63,14 +63,19 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
   double complex e=0.0, tmp;
   int idx;
   int ri,rj,s,rk,rl,t;
-  int *myEleIdx, *myEleNum, *myProjCntNew;
+  int k, offset, nbody;
+  int *myEleIdx, *myEleNum, *myProjCntNew, *myNBodyRsi, *myNBodyRsj;
   double complex *myRBMCntNew;
   double complex *myBuffer;
+  double *myRWork;
   double complex myEnergy;
+  int maxNBodyInterAll = (NBodyInterAllMaxN > 2) ? NBodyInterAllMaxN : 2;
+  int needNBodyInterAllRWork = (NNBodyInterAll > 0 && NBodyInterAllMaxN > 2);
 
-  RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj);
-  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize + FlagRBM * (NRBM_PhysLayerIdx + Nneuron));
-  /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
+  RequestWorkSpaceThreadInt(Nsize+Nsite2+NProj+2*maxNBodyInterAll);
+  RequestWorkSpaceThreadComplex(NQPFull+maxNBodyInterAll*Nsize + FlagRBM * (NRBM_PhysLayerIdx + Nneuron));
+  if (needNBodyInterAllRWork) RequestWorkSpaceThreadDouble(LapackLWork);
+  /* GreenFunc1: NQPFull, GreenFunc2/NBodyInterAll: NQPFull+maxNBodyInterAll*Nsize */
 
   // shared variables: eleCfg, eleProjCnt, eleIdx, eleNum
   // implicitly shared variables: [ip].
@@ -78,20 +83,26 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
   // as shared(), while in OpenMP >4.0 [ip] MUST be specified.
   // Hence we have to fall back to default(shared) here.
 #pragma omp parallel default(shared)                                      \
-  private(myRBMCntNew, myEleIdx,myEleNum,myProjCntNew,myBuffer,myEnergy, idx, ri, rj, rk, rl, s, t) \
+  private(myRBMCntNew, myEleIdx,myEleNum,myProjCntNew,myNBodyRsi,myNBodyRsj,myBuffer,myRWork,myEnergy, idx, ri, rj, rk, rl, s, t) \
   firstprivate(NRBM_PhysLayerIdx, Nneuron, Nsize, Nsite2, NProj, NQPFull, NCoulombIntra, CoulombIntra, ParaCoulombIntra, \
                NCoulombInter, CoulombInter, ParaCoulombInter, NHundCoupling, HundCoupling, ParaHundCoupling, \
                NTransfer, Transfer, ParaTransfer, NPairHopping, PairHopping, ParaPairHopping, \
-               NExchangeCoupling, ExchangeCoupling, ParaExchangeCoupling, NInterAll, InterAll, ParaInterAll, n0, n1) \
+               NExchangeCoupling, ExchangeCoupling, ParaExchangeCoupling, NInterAll, InterAll, ParaInterAll, \
+               maxNBodyInterAll, needNBodyInterAllRWork, LapackLWork, \
+               NNBodyInterAll, NBodyInterAllN, NBodyInterAllOffset, NBodyInterAllIdx, ParaNBodyInterAll, n0, n1) \
   shared(eleCfg, eleProjCnt, eleIdx, eleNum, rbmCnt, FlagRBM) reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
     myEleNum = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew = GetWorkSpaceThreadInt(NProj);
+    myNBodyRsi = GetWorkSpaceThreadInt(maxNBodyInterAll);
+    myNBodyRsj = GetWorkSpaceThreadInt(maxNBodyInterAll);
+    myRBMCntNew = NULL;
     if (FlagRBM) {
       myRBMCntNew  = GetWorkSpaceThreadComplex(NRBM_PhysLayerIdx+Nneuron);
     }
-    myBuffer = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
+    myBuffer = GetWorkSpaceThreadComplex(NQPFull+maxNBodyInterAll*Nsize);
+    myRWork = needNBodyInterAllRWork ? GetWorkSpaceThreadDouble(LapackLWork) : NULL;
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -181,6 +192,23 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
         * GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,myRBMCntNew,myBuffer);
     }
 
+    /* NBodyInterAll */
+    #pragma omp for private(idx,k,offset,nbody,tmp) schedule(dynamic) nowait
+    for(idx=0;idx<NNBodyInterAll;idx++) {
+      nbody = NBodyInterAllN[idx];
+      offset = NBodyInterAllOffset[idx];
+      for(k=0;k<nbody;k++) {
+        myNBodyRsi[k] = NBodyInterAllIdx[offset+k][0]
+                      + NBodyInterAllIdx[offset+k][1]*Nsite;
+        myNBodyRsj[k] = NBodyInterAllIdx[offset+k][2]
+                      + NBodyInterAllIdx[offset+k][3]*Nsite;
+      }
+      tmp = GreenFuncN(nbody,myNBodyRsi,myNBodyRsj,ip,myEleIdx,eleCfg,myEleNum,
+                       eleProjCnt,rbmCnt,myRBMCntNew,myBuffer,
+                       myProjCntNew,myRWork);
+      myEnergy += ParaNBodyInterAll[idx] * tmp;
+    }
+
     #pragma omp master
     {StopTimer(72);}
 
@@ -189,6 +217,7 @@ double complex CalculateHamiltonian(const double complex ip, int *eleIdx, const 
 
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();
+  if (needNBodyInterAllRWork) ReleaseWorkSpaceThreadDouble();
   return e;
 }
 
