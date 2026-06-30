@@ -912,6 +912,27 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NGutzwillerIdx = bufInt[IdxNGutz];
   NJastrowIdx = bufInt[IdxNJast];
   NSpinJastrowIdx = bufInt[IdxNSpinJast];
+  if (NVMCCalMode == 0) {
+    if (NSROptItrStep < 1) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "error: NSROptItrStep (= %d) must be a positive integer "
+                "when NVMCCalMode=0.\n",
+                NSROptItrStep);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    if (NSROptItrSmp < 1 || NSROptItrSmp > NSROptItrStep) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "error: NSROptItrSmp (= %d) must satisfy "
+                "1 <= NSROptItrSmp <= NSROptItrStep (= %d) "
+                "when NVMCCalMode=0.\n",
+                NSROptItrSmp, NSROptItrStep);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+  }
   if (NSpinJastrowIdx < 0) {
     if (rank == 0) {
       fprintf(stderr,

@@ -303,6 +303,18 @@ add_test(NAME NSplitSize_SRCG_Invalid
          COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py HubbardChain_SpinJastrow
                  "NSplitSize > 1 cannot be combined" NSplitSize=2 NStore=0 NSRCG=1)
 set_tests_properties(NSplitSize_SRCG_Invalid PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME NSROptItrStep_Zero_Invalid
+         COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py HubbardChain_SpinJastrow
+                 "NSROptItrStep (= 0) must be a positive integer" NSROptItrStep=0 NSROptItrSmp=1)
+set_tests_properties(NSROptItrStep_Zero_Invalid PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME NSROptItrSmp_Zero_Invalid
+         COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py HubbardChain_SpinJastrow
+                 "NSROptItrSmp (= 0) must satisfy" NSROptItrStep=2 NSROptItrSmp=0)
+set_tests_properties(NSROptItrSmp_Zero_Invalid PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME NSROptItrSmp_TooLarge_Invalid
+         COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py HubbardChain_SpinJastrow
+                 "NSROptItrSmp (= 3) must satisfy" NSROptItrStep=2 NSROptItrSmp=3)
+set_tests_properties(NSROptItrSmp_TooLarge_Invalid PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 add_python_vmc_test_nbodyg(NBodyG_Compare)
 add_python_vmc_test_nbodyg_mpi(NBodyG_Compare_mpi NBodyG_Compare)
 add_python_vmc_test_nbodyg(NBodyG_fsz_Compare)
