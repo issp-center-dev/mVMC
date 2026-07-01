@@ -42,6 +42,53 @@ which follows "The BSD 3-Clause License".
 #include "../pfupdates/pf_interface.h"
 #endif
 
+#ifdef MVMC_DEBUG_BF_REAL_UPDATE
+static void CheckBFRealUpdate(const char *label, const int *msa, const int *hopNum,
+                              const int *msaRef, const int *hopNumRef, const int rank) {
+  int qpidx, hop, idx;
+
+  for (qpidx = 0; qpidx < NQPFull; qpidx++) {
+    if (hopNum[qpidx] != hopNumRef[qpidx]) {
+      fprintf(stderr,
+              "error: BF real update mismatch (%s): rank=%d qp=%d hopNum=%d ref=%d\n",
+              label, rank, qpidx, hopNum[qpidx], hopNumRef[qpidx]);
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+    for (hop = 0; hop < hopNum[qpidx]; hop++) {
+      idx = qpidx*Nsize + hop;
+      if (msa[idx] != msaRef[idx]) {
+        fprintf(stderr,
+                "error: BF real update mismatch (%s): rank=%d qp=%d hop=%d msa=%d ref=%d\n",
+                label, rank, qpidx, hop, msa[idx], msaRef[idx]);
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+      }
+    }
+  }
+
+  for (idx = 0; idx < NQPFull*Nsite2*Nsite2; idx++) {
+    const double ref = creal(SlaterElmBF[idx]);
+    if (SlaterElmBF_real[idx] != ref) {
+      fprintf(stderr,
+              "error: BF real update mismatch (%s): rank=%d idx=%d slt=%.17e ref=%.17e\n",
+              label, rank, idx, SlaterElmBF_real[idx], ref);
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+  }
+}
+
+static void UpdateSlaterElmBF_real_checked(const char *label,
+                                           const int ma, const int ra, const int rb, const int u,
+                                           const int *eleCfg, const int *eleNum,
+                                           const int *eleProjBFCnt, int *msa, int *hopNum,
+                                           int *msaRef, int *hopNumRef, const int rank) {
+  UpdateSlaterElmBF_fcmp(ma, ra, rb, u, eleCfg, eleNum, eleProjBFCnt, msaRef, hopNumRef,
+                         SlaterElmBF);
+  UpdateSlaterElmBF_real(ma, ra, rb, u, eleCfg, eleNum, eleProjBFCnt, msa, hopNum,
+                         SlaterElmBF_real);
+  CheckBFRealUpdate(label, msa, hopNum, msaRef, hopNumRef, rank);
+}
+#endif
+
 void VMCMakeSample_real(MPI_Comm comm) {
   int outStep, nOutStep;
   int inStep, nInStep;
@@ -494,6 +541,9 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   int projCntNew[NProj];
   int projBFCntNew[16 * Nsite * Nrange]; // For BackFlow
   int msaTmp[NQPFull * Nsize], icount[NQPFull]; // For BackFlow
+#ifdef MVMC_DEBUG_BF_REAL_UPDATE
+  int msaRef[NQPFull * Nsize], icountRef[NQPFull];
+#endif
   double pfMNew_real[NQPFull];
   double x, w; // TBC x will be complex number
 
@@ -564,10 +614,14 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         MakeProjBFCnt(projBFCntNew, TmpEleNum);
         StopTimer(60);
         StartTimer(64);
-        UpdateSlaterElmBF_fcmp(mi, ri, rj, s, TmpEleCfg, TmpEleNum, projBFCntNew, msaTmp, icount,
-                               SlaterElmBF);
-#pragma omp parallel for default(shared) private(tmp_i)
-        for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElmBF_real[tmp_i]= creal(SlaterElmBF[tmp_i]);
+#ifdef MVMC_DEBUG_BF_REAL_UPDATE
+        UpdateSlaterElmBF_real_checked("hopping proposal", mi, ri, rj, s, TmpEleCfg, TmpEleNum,
+                                       projBFCntNew, msaTmp, icount, msaRef, icountRef, rank);
+#else
+        /* Real BF sampling updates SlaterElmBF_real directly; SlaterElmBF is not kept current on this hot path. */
+        UpdateSlaterElmBF_real(mi, ri, rj, s, TmpEleCfg, TmpEleNum, projBFCntNew, msaTmp, icount,
+                               SlaterElmBF_real);
+#endif
         StopTimer(64);
 
         StartTimer(61);
@@ -605,10 +659,13 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         } else { /* reject */
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
           StartTimer(64);
-          UpdateSlaterElmBF_fcmp(mi, rj, ri, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, msaTmp, icount,
-                                 SlaterElmBF);
-#pragma omp parallel for default(shared) private(tmp_i)
-          for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElmBF_real[tmp_i]= creal(SlaterElmBF[tmp_i]);
+#ifdef MVMC_DEBUG_BF_REAL_UPDATE
+          UpdateSlaterElmBF_real_checked("hopping reject", mi, rj, ri, s, TmpEleCfg, TmpEleNum,
+                                         TmpEleProjBFCnt, msaTmp, icount, msaRef, icountRef, rank);
+#else
+          UpdateSlaterElmBF_real(mi, rj, ri, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, msaTmp, icount,
+                                 SlaterElmBF_real);
+#endif
           StopTimer(64);
         }
         StopTimer(32);
