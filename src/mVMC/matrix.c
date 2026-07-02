@@ -627,7 +627,9 @@ int CalculateMAll_BF_real(const int *eleIdx, const int qpStart, const int qpEnd)
   RequestWorkSpaceThreadInt(Nsize);
   RequestWorkSpaceThreadDouble(Nsize*Nsize+LapackLWork);
 
-#pragma omp parallel default(shared)              \
+  /* Keep real BackFlow MultiQP rebuilds serialized; Linux CI shows the
+     concurrent QP rebuild path can corrupt the identity-energy run. */
+#pragma omp parallel if(qpNum == 1) default(shared)              \
   private(myIWork,myWork,myInfo,myBufM)
   {
     myIWork = GetWorkSpaceThreadInt(Nsize);
