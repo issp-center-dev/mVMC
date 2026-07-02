@@ -12,6 +12,7 @@ void saveEleConfig(const int sample, const double complex logIp,
                    const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt);
 void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum);
 void ReduceCounter(MPI_Comm comm);
+void ReduceBFProfileCounter(MPI_Comm comm);
 void makeCandidate_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg);
 void makeCandidate_spin_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,
@@ -40,4 +41,3 @@ typedef enum {HOPPING,HOPPING_FSZ,EXCHANGE,LOCALSPINFLIP,SPINHOPPING,PAIRHOPPING
 UpdateType getUpdateType(int path);
 
 #endif
-

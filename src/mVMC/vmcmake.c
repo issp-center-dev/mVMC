@@ -615,6 +615,24 @@ void ReduceCounter(MPI_Comm comm) {
   return;
 }
 
+void ReduceBFProfileCounter(MPI_Comm comm) {
+#ifdef _mpi_use
+  int n=NBFProfileCounter;
+  long long recv[NBFProfileCounter];
+  int i;
+  int rank,size;
+  if(!BFProfileEnabled) return;
+  MPI_Comm_size(comm,&size);
+  MPI_Comm_rank(comm,&rank);
+
+  MPI_Allreduce(BFProfileCounter,recv,n,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) {
+    for(i=0;i<n;i++) BFProfileCounter[i] = recv[i];
+  }
+#endif
+  return;
+}
+
 
 /* The mi-th electron with spin s hops to site rj */
 void makeCandidate_hopping(int *mi_, int *ri_, int *rj_, int *s_, int *rejectFlag_,

@@ -307,6 +307,7 @@ int main(int argc, char* argv[])
   }
 
   StopTimer(0);
+  ReduceBFProfileCounter(comm0);
   if(rank0==0) {
     if(NVMCCalMode==0) {
       OutputTimerParaOpt();

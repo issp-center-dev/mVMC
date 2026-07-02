@@ -598,13 +598,18 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
 
       if (updateType == HOPPING) { /* hopping */
         Counter[0]++;
+        AddBFProfileCounter(BFPROF_HOP_TRY, 1);
 
         StartTimer(31);
         makeCandidate_hopping(&mi, &ri, &rj, &s, &rejectFlag,
                               TmpEleIdx, TmpEleCfg);
         StopTimer(31);
 
-        if (rejectFlag) continue;
+        if (rejectFlag) {
+          AddBFProfileCounter(BFPROF_HOP_CANDIDATE_REJECT, 1);
+          continue;
+        }
+        AddBFProfileCounter(BFPROF_HOP_VALID, 1);
 
         StartTimer(32);
         StartTimer(60);
@@ -656,7 +661,9 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
           logIpOld = logIpNew;
           nAccept++;
           Counter[1]++;
+          AddBFProfileCounter(BFPROF_HOP_ACCEPT, 1);
         } else { /* reject */
+          AddBFProfileCounter(BFPROF_HOP_METROPOLIS_REJECT, 1);
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
           StartTimer(64);
 #ifdef MVMC_DEBUG_BF_REAL_UPDATE
@@ -672,13 +679,18 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
 
       } else if (updateType == EXCHANGE) { /* exchange */
         Counter[2]++;
+        AddBFProfileCounter(BFPROF_EXCHANGE_TRY, 1);
 
         StartTimer(31);
         makeCandidate_exchange(&mi, &ri, &rj, &s, &rejectFlag,
                                TmpEleIdx, TmpEleCfg, TmpEleNum);
         StopTimer(31);
 
-        if (rejectFlag) continue;
+        if (rejectFlag) {
+          AddBFProfileCounter(BFPROF_EXCHANGE_CANDIDATE_REJECT, 1);
+          continue;
+        }
+        AddBFProfileCounter(BFPROF_EXCHANGE_VALID, 1);
 
         StartTimer(33);
         StartTimer(65);
@@ -720,7 +732,9 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
           logIpOld = logIpNew;
           nAccept++;
           Counter[3]++;
+          AddBFProfileCounter(BFPROF_EXCHANGE_ACCEPT, 1);
         } else { /* reject */
+          AddBFProfileCounter(BFPROF_EXCHANGE_METROPOLIS_REJECT, 1);
           revertEleConfig(mj, rj, ri, t, TmpEleIdx, TmpEleCfg, TmpEleNum);
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
         }

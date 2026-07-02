@@ -462,6 +462,9 @@ void MakeProjBFCnt(int *projCnt, const int *eleNum) {
   int xid, xih, xkd, xkh;
   int xidh, xihd, xkdh, xkhd;
   int *nBF0, *nBF1, *nBF2, *nBF3;
+  long long groupNnz[4] = {0,0,0,0};
+  long long stateNnz[4] = {0,0,0,0};
+  int group,state,base;
   /* optimization for Kei */
   const int nSite = Nsite;
   const int nRange = Nrange;
@@ -517,6 +520,30 @@ void MakeProjBFCnt(int *projCnt, const int *eleNum) {
         nBF3[3 * nSite * nRange + ri * nRange + k] = xkd * xidh + xkhd * xih;
       }
     }
+  }
+
+  if(BFProfileEnabled) {
+    for(group=0;group<4;group++) {
+      base = group * 4 * nSite * nRange;
+      for(state=0;state<4;state++) {
+        for(idx=0;idx<nSite*nRange;idx++) {
+          if(projCnt[base + state*nSite*nRange + idx] != 0) {
+            groupNnz[group]++;
+            stateNnz[state]++;
+          }
+        }
+      }
+    }
+    AddBFProfileCounter(BFPROF_BFCNT_SNAPSHOT, 1);
+    AddBFProfileCounter(BFPROF_BFCNT_TOTAL_ENTRY, 16LL*nSite*nRange);
+    AddBFProfileCounter(BFPROF_BFCNT_GROUP0_NNZ, groupNnz[0]);
+    AddBFProfileCounter(BFPROF_BFCNT_GROUP1_NNZ, groupNnz[1]);
+    AddBFProfileCounter(BFPROF_BFCNT_GROUP2_NNZ, groupNnz[2]);
+    AddBFProfileCounter(BFPROF_BFCNT_GROUP3_NNZ, groupNnz[3]);
+    AddBFProfileCounter(BFPROF_BFCNT_STATE0_NNZ, stateNnz[0]);
+    AddBFProfileCounter(BFPROF_BFCNT_STATE1_NNZ, stateNnz[1]);
+    AddBFProfileCounter(BFPROF_BFCNT_STATE2_NNZ, stateNnz[2]);
+    AddBFProfileCounter(BFPROF_BFCNT_STATE3_NNZ, stateNnz[3]);
   }
 
   return;
