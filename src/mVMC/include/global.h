@@ -390,6 +390,47 @@ int Counter_max = 6;
 /* 0: hopping, 1: hopping accept, 2: exchange try, 3: exchange accept */
 /* 4: local spin flip try, 5 local spin flip accept*/
 
+/***** optional BackFlow profiling counters *****/
+#define NBFProfileCounter 30
+#define BFPROF_SAMPLE_ROW_REQUEST        0
+#define BFPROF_SAMPLE_ROW_RECOMPUTE      1
+#define BFPROF_SAMPLE_ROW_REUSE          2
+#define BFPROF_SAMPLE_PAIR_REQUEST       3
+#define BFPROF_SAMPLE_PAIR_RECOMPUTE     4
+#define BFPROF_GREEN_ROW_REQUEST         5
+#define BFPROF_GREEN_ROW_RECOMPUTE       6
+#define BFPROF_GREEN_ROW_REUSE           7
+#define BFPROF_GREEN_PAIR_REQUEST        8
+#define BFPROF_GREEN_PAIR_RECOMPUTE      9
+#define BFPROF_BFCNT_SNAPSHOT           10
+#define BFPROF_BFCNT_TOTAL_ENTRY        11
+#define BFPROF_BFCNT_GROUP0_NNZ         12
+#define BFPROF_BFCNT_GROUP1_NNZ         13
+#define BFPROF_BFCNT_GROUP2_NNZ         14
+#define BFPROF_BFCNT_GROUP3_NNZ         15
+#define BFPROF_BFCNT_STATE0_NNZ         16
+#define BFPROF_BFCNT_STATE1_NNZ         17
+#define BFPROF_BFCNT_STATE2_NNZ         18
+#define BFPROF_BFCNT_STATE3_NNZ         19
+#define BFPROF_HOP_TRY                  20
+#define BFPROF_HOP_CANDIDATE_REJECT     21
+#define BFPROF_HOP_VALID                22
+#define BFPROF_HOP_ACCEPT               23
+#define BFPROF_HOP_METROPOLIS_REJECT    24
+#define BFPROF_EXCHANGE_TRY             25
+#define BFPROF_EXCHANGE_CANDIDATE_REJECT 26
+#define BFPROF_EXCHANGE_VALID           27
+#define BFPROF_EXCHANGE_ACCEPT          28
+#define BFPROF_EXCHANGE_METROPOLIS_REJECT 29
+int BFProfileEnabled = 0;
+long long BFProfileCounter[NBFProfileCounter];
+
+static inline void AddBFProfileCounter(int idx, long long value) {
+  if(!BFProfileEnabled || value == 0) return;
+#pragma omp atomic
+  BFProfileCounter[idx] += value;
+}
+
 int useDiagScale=0;
 int RescaleSmat=0;
 

@@ -27,6 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #include <time.h>
+#include <stdlib.h>
 #include "setmemory.h"
 #ifndef _SRC_TIME
 #define _SRC_TIME
@@ -49,8 +50,12 @@ void OutputTime(int step) {
 
 void InitTimer() {
   int i;
+  const char *bfProfileEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
   for(i=0;i<NTimer;i++) TimerStart[i]=0.0;
+  for(i=0;i<NBFProfileCounter;i++) BFProfileCounter[i]=0;
+  bfProfileEnv = getenv("MVMC_BF_PROFILE");
+  BFProfileEnabled = (bfProfileEnv != NULL && atoi(bfProfileEnv) != 0);
   return;
 }
 
@@ -74,6 +79,50 @@ void StopTimer(int n) {
   Timer[n] += ts.tv_sec + ts.tv_nsec*1.0e-9 - TimerStart[n];
 #endif
   return;
+}
+
+static void OutputBFProfileCounters(FILE *fp) {
+  int i, hasData = 0;
+  if(!BFProfileEnabled) return;
+  for(i=0;i<NBFProfileCounter;i++) {
+    if(BFProfileCounter[i] != 0) {
+      hasData = 1;
+      break;
+    }
+  }
+  if(!hasData) return;
+
+  fprintf(fp,"  BF profile counters (MVMC_BF_PROFILE=1)\n");
+  fprintf(fp,"    BF sample row requests          [910] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_ROW_REQUEST]);
+  fprintf(fp,"    BF sample row recompute         [911] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_ROW_RECOMPUTE]);
+  fprintf(fp,"    BF sample row reuse             [912] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_ROW_REUSE]);
+  fprintf(fp,"    BF sample pair requests         [913] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_PAIR_REQUEST]);
+  fprintf(fp,"    BF sample pair recompute        [914] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_PAIR_RECOMPUTE]);
+  fprintf(fp,"    BF green row requests           [920] %12lld\n",BFProfileCounter[BFPROF_GREEN_ROW_REQUEST]);
+  fprintf(fp,"    BF green row recompute          [921] %12lld\n",BFProfileCounter[BFPROF_GREEN_ROW_RECOMPUTE]);
+  fprintf(fp,"    BF green row reuse              [922] %12lld\n",BFProfileCounter[BFPROF_GREEN_ROW_REUSE]);
+  fprintf(fp,"    BF green pair requests          [923] %12lld\n",BFProfileCounter[BFPROF_GREEN_PAIR_REQUEST]);
+  fprintf(fp,"    BF green pair recompute         [924] %12lld\n",BFProfileCounter[BFPROF_GREEN_PAIR_RECOMPUTE]);
+  fprintf(fp,"    BF cnt snapshots                [930] %12lld\n",BFProfileCounter[BFPROF_BFCNT_SNAPSHOT]);
+  fprintf(fp,"    BF cnt total entries            [931] %12lld\n",BFProfileCounter[BFPROF_BFCNT_TOTAL_ENTRY]);
+  fprintf(fp,"    BF cnt group0 nnz               [932] %12lld\n",BFProfileCounter[BFPROF_BFCNT_GROUP0_NNZ]);
+  fprintf(fp,"    BF cnt group1 nnz               [933] %12lld\n",BFProfileCounter[BFPROF_BFCNT_GROUP1_NNZ]);
+  fprintf(fp,"    BF cnt group2 nnz               [934] %12lld\n",BFProfileCounter[BFPROF_BFCNT_GROUP2_NNZ]);
+  fprintf(fp,"    BF cnt group3 nnz               [935] %12lld\n",BFProfileCounter[BFPROF_BFCNT_GROUP3_NNZ]);
+  fprintf(fp,"    BF cnt state0 nnz               [936] %12lld\n",BFProfileCounter[BFPROF_BFCNT_STATE0_NNZ]);
+  fprintf(fp,"    BF cnt state1 nnz               [937] %12lld\n",BFProfileCounter[BFPROF_BFCNT_STATE1_NNZ]);
+  fprintf(fp,"    BF cnt state2 nnz               [938] %12lld\n",BFProfileCounter[BFPROF_BFCNT_STATE2_NNZ]);
+  fprintf(fp,"    BF cnt state3 nnz               [939] %12lld\n",BFProfileCounter[BFPROF_BFCNT_STATE3_NNZ]);
+  fprintf(fp,"    BF hop try                      [940] %12lld\n",BFProfileCounter[BFPROF_HOP_TRY]);
+  fprintf(fp,"    BF hop candidate reject         [941] %12lld\n",BFProfileCounter[BFPROF_HOP_CANDIDATE_REJECT]);
+  fprintf(fp,"    BF hop valid                    [942] %12lld\n",BFProfileCounter[BFPROF_HOP_VALID]);
+  fprintf(fp,"    BF hop accept                   [943] %12lld\n",BFProfileCounter[BFPROF_HOP_ACCEPT]);
+  fprintf(fp,"    BF hop metropolis reject        [944] %12lld\n",BFProfileCounter[BFPROF_HOP_METROPOLIS_REJECT]);
+  fprintf(fp,"    BF exchange try                 [945] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_TRY]);
+  fprintf(fp,"    BF exchange candidate reject    [946] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_CANDIDATE_REJECT]);
+  fprintf(fp,"    BF exchange valid               [947] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_VALID]);
+  fprintf(fp,"    BF exchange accept              [948] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_ACCEPT]);
+  fprintf(fp,"    BF exchange metropolis reject   [949] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_METROPOLIS_REJECT]);
 }
 
 void OutputTimerParaOpt() {
@@ -126,6 +175,7 @@ void OutputTimerParaOpt() {
   fprintf(fp,"    BF Update collect rows [91] %12.5lf\n",Timer[91]);
   fprintf(fp,"    BF Update recompute    [92] %12.5lf\n",Timer[92]);
   fprintf(fp,"    BF Update copy rows    [93] %12.5lf\n",Timer[93]);
+  OutputBFProfileCounters(fp);
   fprintf(fp,"  StochasticOpt             [5] %12.5lf\n",Timer[5]);
   fprintf(fp,"    preprocess             [50] %12.5lf\n",Timer[50]);
   fprintf(fp,"    stcOptMain             [51] %12.5lf\n",Timer[51]);
@@ -198,6 +248,7 @@ void OutputTimerPhysCal() {
   fprintf(fp,"    BF Update collect rows [91] %12.5lf\n",Timer[91]);
   fprintf(fp,"    BF Update recompute    [92] %12.5lf\n",Timer[92]);
   fprintf(fp,"    BF Update copy rows    [93] %12.5lf\n",Timer[93]);
+  OutputBFProfileCounters(fp);
   fprintf(fp,"    Lanczos1               [43] %12.5lf\n",Timer[43]);
   fprintf(fp,"    Lanczos2               [44] %12.5lf\n",Timer[44]);
   fprintf(fp,"  UpdateSlaterElm          [20] %12.5lf\n",Timer[20]);

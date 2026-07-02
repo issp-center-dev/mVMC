@@ -1320,6 +1320,7 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
   int row;
   unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
   double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
+  long long profileRowRequests=0,profileRowRecompute=0,profileRowReuse=0;
 
   MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
   for(row=0;row<Nsite;row++){
@@ -1381,6 +1382,18 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
 
     StopTimer(91);
     StartTimer(92);
+    if(BFProfileEnabled) {
+      profileRowRequests += icount;
+      for(zidx=0;zidx<icount;zidx++){
+        tri = xqp[rsz[zidx]];
+        if(rowDone[tri]) {
+          profileRowReuse++;
+        } else {
+          profileRowRecompute++;
+        }
+      }
+    }
+
 #pragma omp parallel for default(shared) \
     private(zidx,  \
         ri,tri,rj,trj, \
@@ -1483,6 +1496,14 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
     hopNum[qpidx] = hop;
 
     StopTimer(93);
+  }
+
+  if(BFProfileEnabled) {
+    AddBFProfileCounter(BFPROF_SAMPLE_ROW_REQUEST, profileRowRequests);
+    AddBFProfileCounter(BFPROF_SAMPLE_ROW_RECOMPUTE, profileRowRecompute);
+    AddBFProfileCounter(BFPROF_SAMPLE_ROW_REUSE, profileRowReuse);
+    AddBFProfileCounter(BFPROF_SAMPLE_PAIR_REQUEST, profileRowRequests*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_SAMPLE_PAIR_RECOMPUTE, profileRowRecompute*(long long)Nsite);
   }
 
   return ;
@@ -1680,6 +1701,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
   int row;
   unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
   double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
+  long long profileRowRequests=0,profileRowRecompute=0,profileRowReuse=0;
 
   MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
   for(row=0;row<Nsite;row++){
@@ -1750,6 +1772,18 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
     //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
     //reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
     //#pragma loop noalias
+    if(BFProfileEnabled) {
+      profileRowRequests += icount;
+      for(zidx=0;zidx<icount;zidx++) {
+        tri = xqp[rsz[zidx]];
+        if(rowDone[tri]) {
+          profileRowReuse++;
+        } else {
+          profileRowRecompute++;
+        }
+      }
+    }
+
     for(zidx=0;zidx<icount;zidx++) {
       ri  = rsz[zidx];
       tri = xqp[ri];
@@ -1841,6 +1875,14 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
 
     hopNum[qpidx] = hop;
 
+  }
+
+  if(BFProfileEnabled) {
+    AddBFProfileCounter(BFPROF_GREEN_ROW_REQUEST, profileRowRequests);
+    AddBFProfileCounter(BFPROF_GREEN_ROW_RECOMPUTE, profileRowRecompute);
+    AddBFProfileCounter(BFPROF_GREEN_ROW_REUSE, profileRowReuse);
+    AddBFProfileCounter(BFPROF_GREEN_PAIR_REQUEST, profileRowRequests*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_GREEN_PAIR_RECOMPUTE, profileRowRecompute*(long long)Nsite);
   }
 
   return ;
