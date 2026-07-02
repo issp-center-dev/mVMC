@@ -948,6 +948,12 @@ def main():
         work_suffix += "_ncond{}".format(ncond_override)
     if nsplit_size_override is not None:
         work_suffix += "_nsplit{}".format(nsplit_size_override)
+    env_work_suffix = os.environ.get("MVMC_BF_TEST_WORK_SUFFIX", "")
+    if env_work_suffix:
+        safe_work_suffix = "".join(
+            ch if ch.isalnum() or ch in "._-" else "_" for ch in env_work_suffix
+        )
+        work_suffix += safe_work_suffix
     workdir = os.path.join(rootdir, "work", model + work_suffix)
     if mpi_procs:
         workdir += "_mpi{}".format(mpi_procs)
