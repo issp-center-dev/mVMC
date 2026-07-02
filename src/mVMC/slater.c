@@ -34,9 +34,27 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex*slt_ij, in
 
 void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijcount, double *slt_ji, int *jicount, const int *eleProjBFCnt);
 
+typedef struct {
+  int r;
+  int coord;
+  int cnt0;
+  int cnt1;
+} BFRealSparseEntry;
+
+typedef struct {
+  long long denseCandidate;
+  long long geometryValid;
+  long long sparsePair;
+  long long actualAdd;
+} BFRealSparseStats;
+
 static void MakeBFEtaFlag_real(unsigned char *bfEtaFlag, const int *eleProjBFCnt);
-static void SubSlaterElmBF_real_eta(const int tri, const int trj, double *slt_ij, double *slt_ji,
-                                    const int *eleProjBFCnt, const unsigned char *bfEtaFlag);
+static void MakeBFRealSparseCountList(BFRealSparseEntry *entry, int *offset, int *count, int *geomCount,
+                                      const int *eleProjBFCnt);
+static void SubSlaterElmBF_real_eta_sparse(const int tri, const int trj, double *slt_ij, double *slt_ji,
+                                           const BFRealSparseEntry *entry, const int *offset,
+                                           const int *count, const int *geomCount,
+                                           const unsigned char *bfEtaFlag, BFRealSparseStats *stats);
 
 void UpdateSlaterElm_fcmp() {
   int ri,ori,tri,sgni,rsi0,rsi1;
@@ -1018,77 +1036,116 @@ static void MakeBFEtaFlag_real(unsigned char *bfEtaFlag, const int *eleProjBFCnt
   return;
 }
 
-static void SubSlaterElmBF_real_eta(const int tri, const int trj, double *slt_ij, double* slt_ji,
-                                    const int *eleProjBFCnt, const unsigned char *bfEtaFlag){
-  int xn,xm,xk,xl;
-  int rki,rlj;
-  int idx_ik,idx_jl;
-  int bfidx;
-  int dki,dlj,nidx,midx,xtmp;
-  int cnt_ij_i,cnt_ji_i,cnt_ij_j,cnt_ji_j;
+static int BFRealCoord(const int center, const int site, const int state){
+  int d,xtmp,coord;
+
+  d = RangeIdx[center][site];
+  xtmp = 4*d+state;
+  coord = xtmp-3-d;
+  if(xtmp%4==0){coord=-1;}
+  if(xtmp==0){coord=0;}
+
+  return coord;
+}
+
+static void MakeBFRealSparseCountList(BFRealSparseEntry *entry, int *offset, int *count, int *geomCount,
+                                      const int *eleProjBFCnt){
+  int state,ri,xk,key,idx,r,coord,cursor;
   const int nSite=Nsite;
   const int nRange=Nrange;
   const int nSiteRange = nRange*nSite;
   const int *bfCnt0=eleProjBFCnt;
   const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
-  const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
+  const int *bfCnt0_state,*bfCnt1_state;
+
+  cursor = 0;
+  for(state=0;state<4;state++){
+    bfCnt0_state=bfCnt0+state*nSiteRange;
+    bfCnt1_state=bfCnt1+state*nSiteRange;
+    for(ri=0;ri<nSite;ri++){
+      key = state*nSite+ri;
+      offset[key] = cursor;
+      count[key] = 0;
+      geomCount[key] = 0;
+      for(xk=0;xk<nRange;xk++){
+        idx=ri*nRange+xk;
+        r=PosBF[ri][xk];
+        coord=BFRealCoord(ri,r,state);
+        if(coord<0) continue;
+        geomCount[key]++;
+        if(bfCnt0_state[idx] == 0 && bfCnt1_state[idx] == 0) continue;
+        entry[cursor].r = r;
+        entry[cursor].coord = coord;
+        entry[cursor].cnt0 = bfCnt0_state[idx];
+        entry[cursor].cnt1 = bfCnt1_state[idx];
+        cursor++;
+        count[key]++;
+      }
+    }
+  }
+
+  return;
+}
+
+static void SubSlaterElmBF_real_eta_sparse(const int tri, const int trj, double *slt_ij, double* slt_ji,
+                                           const BFRealSparseEntry *entry, const int *offset,
+                                           const int *count, const int *geomCount,
+                                           const unsigned char *bfEtaFlag, BFRealSparseStats *stats){
+  int xn,xm,li,ri;
+  int leftKey,rightKey;
+  int leftCount,rightCount;
+  int rki,rlj;
+  int bfidx;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const BFRealSparseEntry *leftEntry,*rightEntry;
+  const BFRealSparseEntry *left,*right;
   double eta;
-  int **posBF = PosBF;
+
+  if(stats != NULL) {
+    stats->denseCandidate += 15LL*nRange*nRange;
+    for(xn=0;xn<4;xn++){
+      leftKey = xn*nSite+tri;
+      for(xm=0;xm<4;xm++){
+        if(xm==0 && xn == 0) continue;
+        rightKey = xm*nSite+trj;
+        stats->geometryValid += (long long)geomCount[leftKey]*(long long)geomCount[rightKey];
+      }
+    }
+  }
 
   *slt_ij = 0.0;
   *slt_ji = 0.0;
   //#pragma omp parallel for reduction(+:slt_ij,slt_ji)
   for(xn=0;xn<4;xn++){
-    bfCnt0_n=bfCnt0+xn*nSiteRange;
-    bfCnt1_n=bfCnt1+xn*nSiteRange;
+    leftKey = xn*nSite+tri;
+    leftCount = count[leftKey];
+    if(leftCount == 0) continue;
+    leftEntry = entry + offset[leftKey];
     for(xm=0;xm<4;xm++){
       if(xm==0 && xn == 0) continue;
-      bfCnt0_m=bfCnt0+xm*nSiteRange;
-      bfCnt1_m=bfCnt1+xm*nSiteRange;
+      rightKey = xm*nSite+trj;
+      rightCount = count[rightKey];
+      if(rightCount == 0) continue;
+      rightEntry = entry + offset[rightKey];
 
-      for(xk=0;xk<nRange;xk++) {
-        rki=posBF[tri][xk];
-        //rkj=posBF[trj][xk];
-        idx_ik=tri*nRange+xk;
+      for(li=0;li<leftCount;li++) {
+        left = leftEntry + li;
+        rki = left->r;
+        for(ri=0;ri<rightCount;ri++){
+          right = rightEntry + ri;
+          rlj = right->r;
+          if(stats != NULL) stats->sparsePair++;
 
-        dki = RangeIdx[tri][rki];
-        xtmp = 4*dki+xn;
-        nidx = xtmp-3-dki;
-        if(xtmp%4==0){nidx=-1;}
-        if(xtmp==0){nidx=0;}
-        if(nidx<0){continue;}
+          bfidx=BFSubIdx[left->coord][right->coord];
 
-        cnt_ij_i = bfCnt0_n[idx_ik];
-        cnt_ji_i = bfCnt1_n[idx_ik];
-        if(cnt_ij_i == 0 && cnt_ji_i == 0) continue;
-
-        for(xl=0;xl<nRange;xl++){
-          //rli=posBF[tri][xl];
-          rlj=posBF[trj][xl];
-          //idx_il=tri*nRange+xl;
-          idx_jl=trj*nRange+xl;
-
-          cnt_ij_j = bfCnt1_m[idx_jl];
-          cnt_ji_j = bfCnt0_m[idx_jl];
-          if((cnt_ij_i == 0 || cnt_ij_j == 0) && (cnt_ji_i == 0 || cnt_ji_j == 0)) continue;
-
-          dlj = RangeIdx[trj][rlj];
-          xtmp = 4*dlj+xm;
-          midx = xtmp-3-dlj;
-          if(xtmp%4==0){midx=-1;}
-          if(xtmp==0){midx=0;}
-          if(midx<0){continue;}
-          bfidx=BFSubIdx[nidx][midx];
-
-          //printf("ProjBF[%d]=%.2e\n",bfidx,ProjBF[bfidx]);
-          //printf("OrbitalSgn[%d][%d]=%d\n",rki,rlj,OrbitalSgn[rki][rlj]);
-          //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
-          //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
-          if(cnt_ij_i != 0 && cnt_ij_j != 0) {
-            *slt_ij += -creal(ProjBF[bfidx])*cnt_ij_i*cnt_ij_j*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
+          if(left->cnt0 != 0 && right->cnt1 != 0) {
+            *slt_ij += -creal(ProjBF[bfidx])*left->cnt0*right->cnt1*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
+            if(stats != NULL) stats->actualAdd++;
           }
-          if(cnt_ji_i != 0 && cnt_ji_j != 0) {
-            *slt_ji += -creal(ProjBF[bfidx])*cnt_ji_i*cnt_ji_j*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
+          if(left->cnt1 != 0 && right->cnt0 != 0) {
+            *slt_ji += -creal(ProjBF[bfidx])*left->cnt1*right->cnt0*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
+            if(stats != NULL) stats->actualAdd++;
           }
         }
       }
@@ -1319,10 +1376,15 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
   int mi0,mi1,flag,hidx,itmp0=0,itmp1=0;
   int row;
   unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
+  BFRealSparseEntry bfSparseEntry[4*Nsite*Nrange];
+  int bfSparseOffset[4*Nsite],bfSparseCount[4*Nsite],bfSparseGeomCount[4*Nsite];
   double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
   long long profileRowRequests=0,profileRowRecompute=0,profileRowReuse=0;
+  long long profileTermDenseCandidate=0,profileTermGeometryValid=0;
+  long long profileTermSparsePair=0,profileTermActualAdd=0;
 
   MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
+  MakeBFRealSparseCountList(bfSparseEntry, bfSparseOffset, bfSparseCount, bfSparseGeomCount, eleProjBFCnt);
   for(row=0;row<Nsite;row++){
     rowDone[row] = 0;
   }
@@ -1394,26 +1456,65 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
       }
     }
 
+    if(BFProfileEnabled) {
 #pragma omp parallel for default(shared) \
-    private(zidx,  \
-        ri,tri,rj,trj, \
-        slt_ij,slt_ji)
-    for(zidx=0;zidx<icount;zidx++){
-      ri  = rsz[zidx];
-      tri = xqp[ri];
+      private(zidx,  \
+          ri,tri,rj,trj, \
+          slt_ij,slt_ji) \
+      reduction(+:profileTermDenseCandidate,profileTermGeometryValid, \
+          profileTermSparsePair,profileTermActualAdd)
+      for(zidx=0;zidx<icount;zidx++){
+        BFRealSparseStats profilePairStats;
+        ri  = rsz[zidx];
+        tri = xqp[ri];
 
-      if(rowDone[tri]) continue;
+        if(rowDone[tri]) continue;
 
-      for(rj=0;rj<Nsite;rj++){
-        trj = xqp[rj];
+        for(rj=0;rj<Nsite;rj++){
+          trj = xqp[rj];
 
-        SubSlaterElmBF_real_eta(tri,trj,&slt_ij,&slt_ji,eleProjBFCnt,bfEtaFlag);
+          profilePairStats.denseCandidate = 0;
+          profilePairStats.geometryValid = 0;
+          profilePairStats.sparsePair = 0;
+          profilePairStats.actualAdd = 0;
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,&profilePairStats);
+          profileTermDenseCandidate += profilePairStats.denseCandidate;
+          profileTermGeometryValid += profilePairStats.geometryValid;
+          profileTermSparsePair += profilePairStats.sparsePair;
+          profileTermActualAdd += profilePairStats.actualAdd;
 
-        sltElm[tri*Nsite+trj] = slt_ij;
-        sltElm2[tri*Nsite+trj] = slt_ji;
+          sltElm[tri*Nsite+trj] = slt_ij;
+          sltElm2[tri*Nsite+trj] = slt_ji;
+        }
+
+        rowDone[tri] = 1;
       }
+    } else {
+#pragma omp parallel for default(shared) \
+      private(zidx,  \
+          ri,tri,rj,trj, \
+          slt_ij,slt_ji)
+      for(zidx=0;zidx<icount;zidx++){
+        ri  = rsz[zidx];
+        tri = xqp[ri];
 
-      rowDone[tri] = 1;
+        if(rowDone[tri]) continue;
+
+        for(rj=0;rj<Nsite;rj++){
+          trj = xqp[rj];
+
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,NULL);
+
+          sltElm[tri*Nsite+trj] = slt_ij;
+          sltElm2[tri*Nsite+trj] = slt_ji;
+        }
+
+        rowDone[tri] = 1;
+      }
     }
 
     StopTimer(92);
@@ -1504,6 +1605,10 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
     AddBFProfileCounter(BFPROF_SAMPLE_ROW_REUSE, profileRowReuse);
     AddBFProfileCounter(BFPROF_SAMPLE_PAIR_REQUEST, profileRowRequests*(long long)Nsite);
     AddBFProfileCounter(BFPROF_SAMPLE_PAIR_RECOMPUTE, profileRowRecompute*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_SAMPLE_TERM_DENSE_CANDIDATE, profileTermDenseCandidate);
+    AddBFProfileCounter(BFPROF_SAMPLE_TERM_GEOMETRY_VALID, profileTermGeometryValid);
+    AddBFProfileCounter(BFPROF_SAMPLE_TERM_SPARSE_PAIR, profileTermSparsePair);
+    AddBFProfileCounter(BFPROF_SAMPLE_TERM_ACTUAL_ADD, profileTermActualAdd);
   }
 
   return ;
@@ -1700,10 +1805,15 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
   int mi0,mi1,flag,hidx,itmp0=0,itmp1=0;
   int row;
   unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
+  BFRealSparseEntry bfSparseEntry[4*Nsite*Nrange];
+  int bfSparseOffset[4*Nsite],bfSparseCount[4*Nsite],bfSparseGeomCount[4*Nsite];
   double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
   long long profileRowRequests=0,profileRowRecompute=0,profileRowReuse=0;
+  long long profileTermDenseCandidate=0,profileTermGeometryValid=0;
+  long long profileTermSparsePair=0,profileTermActualAdd=0;
 
   MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
+  MakeBFRealSparseCountList(bfSparseEntry, bfSparseOffset, bfSparseCount, bfSparseGeomCount, eleProjBFCnt);
   for(row=0;row<Nsite;row++){
     rowDone[row] = 0;
   }
@@ -1790,9 +1900,26 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
       if(rowDone[tri]) continue;
 
       for(rj=0;rj<Nsite;rj++){
+        BFRealSparseStats profilePairStats;
         trj = xqp[rj];
 
-        SubSlaterElmBF_real_eta(tri,trj,&slt_ij,&slt_ji,eleProjBFCnt,bfEtaFlag);
+        if(BFProfileEnabled) {
+          profilePairStats.denseCandidate = 0;
+          profilePairStats.geometryValid = 0;
+          profilePairStats.sparsePair = 0;
+          profilePairStats.actualAdd = 0;
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,&profilePairStats);
+          profileTermDenseCandidate += profilePairStats.denseCandidate;
+          profileTermGeometryValid += profilePairStats.geometryValid;
+          profileTermSparsePair += profilePairStats.sparsePair;
+          profileTermActualAdd += profilePairStats.actualAdd;
+        } else {
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,NULL);
+        }
 
         sltElm[tri*Nsite+trj] = slt_ij;
         sltElm2[tri*Nsite+trj] = slt_ji;
@@ -1883,6 +2010,10 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
     AddBFProfileCounter(BFPROF_GREEN_ROW_REUSE, profileRowReuse);
     AddBFProfileCounter(BFPROF_GREEN_PAIR_REQUEST, profileRowRequests*(long long)Nsite);
     AddBFProfileCounter(BFPROF_GREEN_PAIR_RECOMPUTE, profileRowRecompute*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_DENSE_CANDIDATE, profileTermDenseCandidate);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_GEOMETRY_VALID, profileTermGeometryValid);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_SPARSE_PAIR, profileTermSparsePair);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_ACTUAL_ADD, profileTermActualAdd);
   }
 
   return ;
