@@ -34,6 +34,10 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex*slt_ij, in
 
 void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijcount, double *slt_ji, int *jicount, const int *eleProjBFCnt);
 
+static void MakeBFEtaFlag_real(unsigned char *bfEtaFlag, const int *eleProjBFCnt);
+static void SubSlaterElmBF_real_eta(const int tri, const int trj, double *slt_ij, double *slt_ji,
+                                    const int *eleProjBFCnt, const unsigned char *bfEtaFlag);
+
 void UpdateSlaterElm_fcmp() {
   int ri,ori,tri,sgni,rsi0,rsi1;
   int rj,orj,trj,sgnj,rsj0,rsj1;
@@ -994,6 +998,111 @@ void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijco
 
 }
 
+static void MakeBFEtaFlag_real(unsigned char *bfEtaFlag, const int *eleProjBFCnt){
+  int ri,xk;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nSiteRange = nRange*nSite;
+  const int *bfCnt0=eleProjBFCnt;
+
+  for(ri=0;ri<nSite;ri++){
+    bfEtaFlag[ri] = 0;
+    for(xk=0;xk<nRange;xk++){
+      if(bfCnt0[nSiteRange+ri*nRange+xk] != 0){
+        bfEtaFlag[ri] = 1;
+        break;
+      }
+    }
+  }
+
+  return;
+}
+
+static void SubSlaterElmBF_real_eta(const int tri, const int trj, double *slt_ij, double* slt_ji,
+                                    const int *eleProjBFCnt, const unsigned char *bfEtaFlag){
+  int xn,xm,xk,xl;
+  int rki,rlj;
+  int idx_ik,idx_jl;
+  int bfidx;
+  int dki,dlj,nidx,midx,xtmp;
+  int cnt_ij_i,cnt_ji_i,cnt_ij_j,cnt_ji_j;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nSiteRange = nRange*nSite;
+  const int *bfCnt0=eleProjBFCnt;
+  const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
+  const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
+  double eta;
+  int **posBF = PosBF;
+
+  *slt_ij = 0.0;
+  *slt_ji = 0.0;
+  //#pragma omp parallel for reduction(+:slt_ij,slt_ji)
+  for(xn=0;xn<4;xn++){
+    bfCnt0_n=bfCnt0+xn*nSiteRange;
+    bfCnt1_n=bfCnt1+xn*nSiteRange;
+    for(xm=0;xm<4;xm++){
+      if(xm==0 && xn == 0) continue;
+      bfCnt0_m=bfCnt0+xm*nSiteRange;
+      bfCnt1_m=bfCnt1+xm*nSiteRange;
+
+      for(xk=0;xk<nRange;xk++) {
+        rki=posBF[tri][xk];
+        //rkj=posBF[trj][xk];
+        idx_ik=tri*nRange+xk;
+
+        dki = RangeIdx[tri][rki];
+        xtmp = 4*dki+xn;
+        nidx = xtmp-3-dki;
+        if(xtmp%4==0){nidx=-1;}
+        if(xtmp==0){nidx=0;}
+        if(nidx<0){continue;}
+
+        cnt_ij_i = bfCnt0_n[idx_ik];
+        cnt_ji_i = bfCnt1_n[idx_ik];
+        if(cnt_ij_i == 0 && cnt_ji_i == 0) continue;
+
+        for(xl=0;xl<nRange;xl++){
+          //rli=posBF[tri][xl];
+          rlj=posBF[trj][xl];
+          //idx_il=tri*nRange+xl;
+          idx_jl=trj*nRange+xl;
+
+          cnt_ij_j = bfCnt1_m[idx_jl];
+          cnt_ji_j = bfCnt0_m[idx_jl];
+          if((cnt_ij_i == 0 || cnt_ij_j == 0) && (cnt_ji_i == 0 || cnt_ji_j == 0)) continue;
+
+          dlj = RangeIdx[trj][rlj];
+          xtmp = 4*dlj+xm;
+          midx = xtmp-3-dlj;
+          if(xtmp%4==0){midx=-1;}
+          if(xtmp==0){midx=0;}
+          if(midx<0){continue;}
+          bfidx=BFSubIdx[nidx][midx];
+
+          //printf("ProjBF[%d]=%.2e\n",bfidx,ProjBF[bfidx]);
+          //printf("OrbitalSgn[%d][%d]=%d\n",rki,rlj,OrbitalSgn[rki][rlj]);
+          //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
+          //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
+          if(cnt_ij_i != 0 && cnt_ij_j != 0) {
+            *slt_ij += -creal(ProjBF[bfidx])*cnt_ij_i*cnt_ij_j*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
+          }
+          if(cnt_ji_i != 0 && cnt_ji_j != 0) {
+            *slt_ji += -creal(ProjBF[bfidx])*cnt_ji_i*cnt_ji_j*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
+          }
+        }
+      }
+    }
+  }
+
+  if(bfEtaFlag[tri] == 0 && bfEtaFlag[trj] == 0){eta = 1.0;}
+  else{eta = creal(ProjBF[0]);} //TODO: Check
+  *slt_ij += eta*Slater[ OrbitalIdx[tri][trj] ]*OrbitalSgn[tri][trj];
+  *slt_ji += eta*Slater[ OrbitalIdx[trj][tri] ]*OrbitalSgn[trj][tri];
+
+  return;
+}
+
 
 void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int u,
                        const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex*sltElmTmp){
@@ -1208,8 +1317,14 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
   int zidx,hop,icount;
   int jcount[Nsite],jcount1[Nsite];
   int mi0,mi1,flag,hidx,itmp0=0,itmp1=0;
-  int ijcount,jicount;
+  int row;
+  unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
   double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
+
+  MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
+  for(row=0;row<Nsite;row++){
+    rowDone[row] = 0;
+  }
 
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
     StartTimer(91);
@@ -1237,8 +1352,14 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
       icount++;
     }
     trub = xqpInv[rb];
-    rsz[icount] = trub;
-    icount++;
+    flag=0;
+    for(zidx=0;zidx<icount;zidx++){
+      if(rsz[zidx] == trub) flag=1;
+    }
+    if(flag==0){
+      rsz[icount] = trub;
+      icount++;
+    }
     for(idx=0;idx<Nrange;idx++) {
       rtmp=posBF[trub][idx];
       flag=0;
@@ -1258,30 +1379,28 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
       jcount1[zidx]=0;
     }
 
-#pragma omp parallel for default(shared)
-    for(zidx=0;zidx<Nsite*Nsite;zidx++){
-      sltElm[zidx] = 0.0;
-      sltElm2[zidx] = 0.0;
-    }
-
     StopTimer(91);
     StartTimer(92);
 #pragma omp parallel for default(shared) \
     private(zidx,  \
         ri,tri,rj,trj, \
-        ijcount,jicount,slt_ij,slt_ji)
+        slt_ij,slt_ji)
     for(zidx=0;zidx<icount;zidx++){
       ri  = rsz[zidx];
       tri = xqp[ri];
 
+      if(rowDone[tri]) continue;
+
       for(rj=0;rj<Nsite;rj++){
         trj = xqp[rj];
 
-        SubSlaterElmBF_real(tri,trj,&slt_ij,&ijcount,&slt_ji,&jicount,eleProjBFCnt);
+        SubSlaterElmBF_real_eta(tri,trj,&slt_ij,&slt_ji,eleProjBFCnt,bfEtaFlag);
 
         sltElm[tri*Nsite+trj] = slt_ij;
         sltElm2[tri*Nsite+trj] = slt_ji;
       }
+
+      rowDone[tri] = 1;
     }
 
     StopTimer(92);
@@ -1555,10 +1674,17 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
   //double complex *pTrans_i;
   int rsz[Nsite2];
   int rhop0[Nsite2],rhop1[Nsite2];
-  int zidx,itmp,hop,icount;
+  int zidx,hop,icount;
   int jcount[Nsite],jcount1[Nsite];
   int mi0,mi1,flag,hidx,itmp0=0,itmp1=0;
-  int ijcount,jicount;
+  int row;
+  unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
+  double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
+
+  MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
+  for(row=0;row<Nsite;row++){
+    rowDone[row] = 0;
+  }
 
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
     itmp0=0;
@@ -1607,7 +1733,6 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
     msa[qpidx*Nsize+hop]= ma + Ne*u;
     hop++;
 
-    itmp=0;
     for(zidx=0;zidx<icount;zidx++){
       jcount[zidx]=0;
       jcount1[zidx]=0;
@@ -1625,33 +1750,48 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
     //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
     //reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
     //#pragma loop noalias
-    for(zidx=0;zidx<icount*Nsite;zidx++) {
-      ri  = rsz[zidx/Nsite];
+    for(zidx=0;zidx<icount;zidx++) {
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      if(rowDone[tri]) continue;
+
+      for(rj=0;rj<Nsite;rj++){
+        trj = xqp[rj];
+
+        SubSlaterElmBF_real_eta(tri,trj,&slt_ij,&slt_ji,eleProjBFCnt,bfEtaFlag);
+
+        sltElm[tri*Nsite+trj] = slt_ij;
+        sltElm2[tri*Nsite+trj] = slt_ji;
+      }
+
+      rowDone[tri] = 1;
+    }
+
+    for(zidx=0;zidx<icount;zidx++) {
+      ri  = rsz[zidx];
       tri = xqp[ri];
       rsi0 = ri;
       rsi1 = ri+Nsite;
       sltE_i0 = sltE + rsi0*Nsite2;
       sltE_i1 = sltE + rsi1*Nsite2;
-      
-      mi0 = eleCfg[rsi0];
-      mi1 = eleCfg[rsi1];
-      
-      rj = zidx%Nsite;
-      trj = xqp[rj];
-      rsj0 = rj;
-      rsj1 = rj+Nsite;
-        
-      SubSlaterElmBF_real(tri,trj,&slt_ij,&ijcount,&slt_ji,&jicount,eleProjBFCnt);
 
-      if(sltE_i0[rsj1] != slt_ij){
-        sltE_i0[rsj1] = slt_ij;
-        jcount[zidx/Nsite]++;
+      for(rj=0;rj<Nsite;rj++){
+        trj = xqp[rj];
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+
+        slt_ij = sltElm[tri*Nsite+trj];
+        slt_ji = sltElm2[tri*Nsite+trj];
+
+        if(sltE_i0[rsj1] != slt_ij){
+          sltE_i0[rsj1] = slt_ij;
+          jcount[zidx]++;
+        }
+        if(sltE_i1[rsj0] != -slt_ji){
+          sltE_i1[rsj0] = -slt_ji;
+          jcount1[zidx]++;
+        }
       }
-      if(sltE_i1[rsj0] != -slt_ji){
-        sltE_i1[rsj0] = -slt_ji;
-        jcount1[zidx/Nsite]++;
-      }
-      itmp++;
     } 
     for(zidx=0;zidx<icount;zidx++){
       ri  = rsz[zidx];
