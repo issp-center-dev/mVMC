@@ -227,6 +227,12 @@ int main(int argc, char* argv[])
   if(rank0==0) fprintf(stdout,"End  : Read parameters from *def files.\n");
   StopTimer(11);
 
+  if(NProjBF > 0 && AllComplexFlag == 0 && NQPFull > 1) {
+    /* The real BackFlow MultiQP path is kept serial for OpenMP stability. */
+    omp_set_num_threads(1);
+    NThread = 1;
+  }
+
   StartTimer(12);
   if(rank0==0) fprintf(stdout,"Start: Set memories.\n");
   SetMemory();
