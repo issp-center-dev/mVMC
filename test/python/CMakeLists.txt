@@ -179,7 +179,7 @@ endfunction(add_python_vmc_test_bf_energy_mpi_nqp_nsplit)
 
 function(add_python_vmc_test_bf_energy_clean_omp_nqp test_name model omp_threads nqp_full)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --expect-nqp-full ${nqp_full} --compare-no-bf-energy --reject-output "StcOpt:" --reject-output "Error:" --reject-output "error:" --reject-output "warning:" --reject-output "waring:")
-    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads}")
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads};MVMC_BF_TEST_WORK_SUFFIX=_${test_name}")
 endfunction(add_python_vmc_test_bf_energy_clean_omp_nqp)
 
 function(add_python_vmc_test_bf_gradient_omp_nqp test_name model omp_threads nqp_full)

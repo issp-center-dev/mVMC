@@ -1457,7 +1457,7 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
     }
 
     if(BFProfileEnabled) {
-#pragma omp parallel for default(shared) \
+#pragma omp parallel for if(NQPFull == 1) default(shared) \
       private(zidx,  \
           ri,tri,rj,trj, \
           slt_ij,slt_ji) \
@@ -1492,7 +1492,7 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
         rowDone[tri] = 1;
       }
     } else {
-#pragma omp parallel for default(shared) \
+#pragma omp parallel for if(NQPFull == 1) default(shared) \
       private(zidx,  \
           ri,tri,rj,trj, \
           slt_ij,slt_ji)
