@@ -31,6 +31,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 double complex updateMAll_BF_fcmp_child(
         const int qpidx,
+        const int globalQpidx,
         const int n, const int *msa,
         const int *eleIdx);
 
@@ -234,19 +235,21 @@ void CalculateNewPfMBFWithStride(const int *icount, const int *msaTmp, const int
   int i;
   const int qpNum = qpEnd-qpStart;
   int qpidx;
+  int globalQpidx;
   int *msa;
 
   for(qpidx=0;qpidx<qpNum;qpidx++) {
+    globalQpidx = qpidx + qpStart;
     //Store msa//
-    msa=(int *)malloc(sizeof(int)*icount[qpidx]);
+    msa=(int *)malloc(sizeof(int)*icount[globalQpidx]);
     //printf("Total=%d\n",icount[qpidx]);
-    for(i=0;i<icount[qpidx];i++){
-      msa[i] = msaTmp[i+qpidx*msaStride];
+    for(i=0;i<icount[globalQpidx];i++){
+      msa[i] = msaTmp[i+globalQpidx*msaStride];
       //printf("hop[%d]=%d\n",i,msa[i]);
     }
 
     /* calculateNewPfM */
-    pfMNew[qpidx] = calculateNewPfMBFN4_child(qpidx,icount[qpidx],msa,eleIdx,bufM);
+    pfMNew[qpidx] = calculateNewPfMBFN4_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx,bufM);
 
     free(msa);
   }
@@ -260,7 +263,7 @@ void CalculateNewPfMBF(const int *icount, const int *msaTmp,
   CalculateNewPfMBFWithStride(icount, msaTmp, Nsize, pfMNew, eleIdx, qpStart, qpEnd, bufM);
 }
 
-double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int *msa,
+double complex calculateNewPfMBFN4_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
                                          const int *eleIdx, const double complex* bufM)
 {
   const int nsize = Nsize;
@@ -293,7 +296,7 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int
   int lwork = n2*n2;
   nn=lda=n2;
 
-  sltE = bufM + qpidx*Nsite2*Nsite2;
+  sltE = bufM + globalQpidx*Nsite2*Nsite2;
   invM = InvM + qpidx*Nsize*Nsize;
 
   vec = (double complex*)malloc(sizeof(double complex)*n*nsize);
@@ -387,6 +390,7 @@ void UpdateMAll_BF_fcmp(const int *icount, const int *msaTmp,
 #pragma procedure serial
   const int qpNum = qpEnd-qpStart;
   int qpidx;
+  int globalQpidx;
   //double complex *sltE;
   //double complex *sltE_i;
   int *msa;
@@ -395,14 +399,15 @@ void UpdateMAll_BF_fcmp(const int *icount, const int *msaTmp,
   //double complex diff;
 
   for(qpidx=0;qpidx<qpNum;qpidx++) {
+    globalQpidx = qpidx + qpStart;
     //Store msa//
-    msa=(int *)malloc(sizeof(int)*icount[qpidx]);
-    for(i=0;i<icount[qpidx];i++){
-      msa[i] = msaTmp[i+qpidx*Nsize];
+    msa=(int *)malloc(sizeof(int)*icount[globalQpidx]);
+    for(i=0;i<icount[globalQpidx];i++){
+      msa[i] = msaTmp[i+globalQpidx*Nsize];
     }
 
     /* calculateNewPfM */
-    pfMNew[qpidx] = updateMAll_BF_fcmp_child(qpidx,icount[qpidx],msa,eleIdx);
+    pfMNew[qpidx] = updateMAll_BF_fcmp_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx);
 
     free(msa);
   }
@@ -415,6 +420,7 @@ void UpdateMAll_BF_fcmp(const int *icount, const int *msaTmp,
 //void updateMAllBF3_child(const int qpidx, const int n, const int *msa,
 double complex updateMAll_BF_fcmp_child(
         const int qpidx,
+        const int globalQpidx,
         const int n, const int *msa,
         const int *eleIdx)
 {
@@ -454,7 +460,7 @@ double complex updateMAll_BF_fcmp_child(
   int lwork2 = n2;
   m=nn=lda=n2;
 
-  sltE = SlaterElmBF + qpidx*Nsite2*Nsite2;
+  sltE = SlaterElmBF + globalQpidx*Nsite2*Nsite2;
   invM = InvM + qpidx*Nsize*Nsize;
 
   //vec = bufferc; /* n*nsize */
@@ -588,17 +594,17 @@ double complex updateMAll_BF_fcmp_child(
   for(msi=0;msi<Ne;msi++) {
     //invM_i = invM + msi*nsize;
     for(msj=Ne;msj<Nsize;msj++) {
-      InvM[msj*nsize+msi] = -InvM[msi*nsize+msj];
+      invM[msj*nsize+msi] = -invM[msi*nsize+msj];
     }
   }
   for(msi=Ne;msi<Nsize;msi++) {
     for(msj=Ne;msj<Nsize;msj++) {
-      InvM[msi*nsize+msj] = 0.0;
+      invM[msi*nsize+msj] = 0.0;
     }
   }
   for(msi=0;msi<Ne;msi++) {
     for(msj=0;msj<Ne;msj++) {
-      InvM[msi*nsize+msj] = 0.0;
+      invM[msi*nsize+msj] = 0.0;
     }
   }
 

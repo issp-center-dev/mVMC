@@ -34,11 +34,11 @@ void updateMAll_child_real(const int ma, const int s, const int *eleIdx,
                       const int qpStart, const int qpEnd, const int qpidx,
                       double *vec1, double *vec2);
 
-double calculateNewPfMBFN4_real_child(const int qpidx, const int n, const int *msa,
-                                 const int *eleIdx, const double *bufM);
+double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
+                                      const int *eleIdx, const double *bufM);
 
-double updateMAll_BF_real_child(const int qpidx, const int n, const int *msa,
-                          const int *eleIdx);
+double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
+                                const int *eleIdx);
 
 /* Calculate new pfaffian. The ma-th electron with spin s hops. */
 void CalculateNewPfM_real(const int ma, const int s, double *pfMNew_real, const int *eleIdx,
@@ -237,6 +237,7 @@ void CalculateNewPfMBFWithStride_real(const int *icount, const int *msaTmp, cons
   int i;
   const int qpNum = qpEnd-qpStart;
   int qpidx;
+  int globalQpidx;
   //double *sltE;
   //double *sltE_i;
   int *msa;
@@ -245,16 +246,17 @@ void CalculateNewPfMBFWithStride_real(const int *icount, const int *msaTmp, cons
   //double complex diff;
 
   for(qpidx=0;qpidx<qpNum;qpidx++) {
+    globalQpidx = qpidx + qpStart;
     //Store msa//
-    msa=(int *)malloc(sizeof(int)*icount[qpidx]);
+    msa=(int *)malloc(sizeof(int)*icount[globalQpidx]);
     //printf("Total=%d\n",icount[qpidx]);
-    for(i=0;i<icount[qpidx];i++){
-      msa[i] = msaTmp[i+qpidx*msaStride];
+    for(i=0;i<icount[globalQpidx];i++){
+      msa[i] = msaTmp[i+globalQpidx*msaStride];
       //printf("hop[%d]=%d\n",i,msa[i]);
     }
 
     /* calculateNewPfM */
-    pfMNew[qpidx] = calculateNewPfMBFN4_real_child(qpidx,icount[qpidx],msa,eleIdx,bufM);
+    pfMNew[qpidx] = calculateNewPfMBFN4_real_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx,bufM);
 
     free(msa);
   }
@@ -273,8 +275,8 @@ void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
 /* buffer size = n*Nsize */
 //double complex calculateNewPfMBFN_child(const int qpidx, const int n, const int *msa,
 //                              const int *eleIdx, double *rwork, double complex *bufferc) {
-double calculateNewPfMBFN4_real_child(const int qpidx, const int n, const int *msa,
-                                 const int *eleIdx, const double *bufM) {
+double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
+                                      const int *eleIdx, const double *bufM) {
   const int nsize = Nsize;
   const int n2 = 2*n;
   const double *sltE;
@@ -303,7 +305,7 @@ double calculateNewPfMBFN4_real_child(const int qpidx, const int n, const int *m
   int lwork = n2*n2;
   nn=lda=n2;
 
-  sltE = bufM + qpidx*Nsite2*Nsite2;
+  sltE = bufM + globalQpidx*Nsite2*Nsite2;
   invM = InvM_real + qpidx*Nsize*Nsize;
 
   vec = (double *)malloc(sizeof(double)*n*nsize);
@@ -396,6 +398,7 @@ void UpdateMAll_BF_real(const int *icount, const int *msaTmp,
 #pragma procedure serial
   const int qpNum = qpEnd-qpStart;
   int qpidx;
+  int globalQpidx;
   //double complex *sltE;
   //double complex *sltE_i;
   int *msa;
@@ -404,14 +407,15 @@ void UpdateMAll_BF_real(const int *icount, const int *msaTmp,
   //double complex diff;
 
   for(qpidx=0;qpidx<qpNum;qpidx++) {
+    globalQpidx = qpidx + qpStart;
     //Store msa//
-    msa=(int *)malloc(sizeof(int)*icount[qpidx]);
-    for(i=0;i<icount[qpidx];i++){
-      msa[i] = msaTmp[i+qpidx*Nsize];
+    msa=(int *)malloc(sizeof(int)*icount[globalQpidx]);
+    for(i=0;i<icount[globalQpidx];i++){
+      msa[i] = msaTmp[i+globalQpidx*Nsize];
     }
 
     /* calculateNewPfM */
-    pfMNew[qpidx] = updateMAll_BF_real_child(qpidx,icount[qpidx],msa,eleIdx);
+    pfMNew[qpidx] = updateMAll_BF_real_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx);
 
     free(msa);
   }
@@ -422,7 +426,7 @@ void UpdateMAll_BF_real(const int *icount, const int *msaTmp,
 /* msa[k]-th electron hops from rsa[k] to eleIdx[msa[k]] */
 /* buffer size = n*Nsize */
 //void updateMAllBF3_child(const int qpidx, const int n, const int *msa,
-double updateMAll_BF_real_child(const int qpidx, const int n, const int *msa,
+double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
                           const int *eleIdx) {
   const int nsize = Nsize;
   const int n2 = 2*n;
@@ -459,7 +463,7 @@ double updateMAll_BF_real_child(const int qpidx, const int n, const int *msa,
   int lwork2 = n2;
   m=nn=lda=n2;
 
-  sltE = SlaterElmBF_real + qpidx*Nsite2*Nsite2;
+  sltE = SlaterElmBF_real + globalQpidx*Nsite2*Nsite2;
   invM = InvM_real + qpidx*Nsize*Nsize;
 
   //vec = bufferc; /* n*nsize */
@@ -597,17 +601,17 @@ double updateMAll_BF_real_child(const int qpidx, const int n, const int *msa,
   for(msi=0;msi<Ne;msi++) {
     //invM_i = invM + msi*nsize;
     for(msj=Ne;msj<Nsize;msj++) {
-      InvM[msj*nsize+msi] = -InvM[msi*nsize+msj];
+      invM[msj*nsize+msi] = -invM[msi*nsize+msj];
     }
   }
   for(msi=Ne;msi<Nsize;msi++) {
     for(msj=Ne;msj<Nsize;msj++) {
-      InvM[msi*nsize+msj] = 0.0;
+      invM[msi*nsize+msj] = 0.0;
     }
   }
   for(msi=0;msi<Ne;msi++) {
     for(msj=0;msj<Ne;msj++) {
-      InvM[msi*nsize+msj] = 0.0;
+      invM[msi*nsize+msj] = 0.0;
     }
   }
 

@@ -349,13 +349,16 @@ def contains_rejected_output(output, rejected_outputs):
     return None
 
 
-def compare_no_bf_energy(rootdir, refdir, bf_workdir, mpi_procs, tol, rejected_outputs):
+def compare_no_bf_energy(rootdir, refdir, bf_workdir, mpi_procs, tol, rejected_outputs,
+                         modpara_updates=None):
     no_bf_workdir = bf_workdir + "_nobf_energy"
 
     if os.path.exists(no_bf_workdir):
         shutil.rmtree(no_bf_workdir)
     os.makedirs(no_bf_workdir)
     copy_def_files(refdir, no_bf_workdir, include_backflow=False)
+    if modpara_updates:
+        update_modpara(os.path.join(no_bf_workdir, "modpara.def"), modpara_updates)
 
     proc = run_vmc(rootdir, no_bf_workdir, mpi_procs, log_name="bf_test_nobf.log")
     if proc.returncode != 0:
@@ -842,7 +845,7 @@ def check_bf_green2_bruteforce_dump(path, tol, expected_all_complex_flag):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--set-ncond <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -859,6 +862,7 @@ def main():
     compare_real_complex_model = None
     check_opt_restart = False
     ncond_override = None
+    nsplit_size_override = None
     rejected_outputs = []
     argi = 2
     while argi < len(sys.argv):
@@ -892,6 +896,9 @@ def main():
         elif sys.argv[argi] == "--set-ncond" and argi + 1 < len(sys.argv):
             ncond_override = str(int(sys.argv[argi + 1]))
             argi += 2
+        elif sys.argv[argi] == "--set-nsplit-size" and argi + 1 < len(sys.argv):
+            nsplit_size_override = str(int(sys.argv[argi + 1]))
+            argi += 2
         elif sys.argv[argi] == "--expect-all-complex-flag" and argi + 1 < len(sys.argv):
             expected_all_complex_flag = int(sys.argv[argi + 1])
             argi += 2
@@ -905,7 +912,7 @@ def main():
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--set-ncond <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -939,6 +946,8 @@ def main():
         work_suffix += "_nonidentity"
     if ncond_override is not None:
         work_suffix += "_ncond{}".format(ncond_override)
+    if nsplit_size_override is not None:
+        work_suffix += "_nsplit{}".format(nsplit_size_override)
     workdir = os.path.join(rootdir, "work", model + work_suffix)
     if mpi_procs:
         workdir += "_mpi{}".format(mpi_procs)
@@ -948,8 +957,13 @@ def main():
     os.makedirs(workdir)
 
     copy_def_files(refdir, workdir, include_backflow=True)
+    modpara_updates = {}
     if ncond_override is not None:
-        update_modpara(os.path.join(workdir, "modpara.def"), {"Ncond": ncond_override})
+        modpara_updates["Ncond"] = ncond_override
+    if nsplit_size_override is not None:
+        modpara_updates["NSplitSize"] = nsplit_size_override
+    if modpara_updates:
+        update_modpara(os.path.join(workdir, "modpara.def"), modpara_updates)
 
     nsite = parse_nsite(os.path.join(workdir, "modpara.def"))
     definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd)
@@ -1040,7 +1054,8 @@ def main():
         print("ERROR: zvo_out_001.dat is missing or non-finite.")
         return -1
     if compare_energy:
-        result = compare_no_bf_energy(rootdir, refdir, workdir, mpi_procs, tol, rejected_outputs)
+        result = compare_no_bf_energy(rootdir, refdir, workdir, mpi_procs, tol, rejected_outputs,
+                                      modpara_updates)
         if result != 0:
             return result
     if compare_twobodyg:
