@@ -17,7 +17,7 @@ void CalculateNewPfMBFWithStride(const int *icount, const int *msaTmp, const int
                        double complex*pfMNew, const int *eleIdx,
                        const int qpStart, const int qpEnd, const double complex*bufM) ;
 
-double complex calculateNewPfMBFN4_child(const int qpidx, const int n, const int *msa,
+double complex calculateNewPfMBFN4_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
                                  const int *eleIdx, const double complex* bufM);
 
 void UpdateMAll_BF_fcmp(const int *icount, const int *msaTmp,
@@ -25,4 +25,3 @@ void UpdateMAll_BF_fcmp(const int *icount, const int *msaTmp,
                         const int qpStart, const int qpEnd) ;
 
 #endif
-

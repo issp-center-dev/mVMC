@@ -1042,8 +1042,14 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
       icount++;
     }
     trub = xqpInv[rb];
-    rsz[icount] = trub;
-    icount++;
+    flag=0;
+    for(zidx=0;zidx<icount;zidx++){
+      if(rsz[zidx] == trub) flag=1;
+    }
+    if(flag==0){
+      rsz[icount] = trub;
+      icount++;
+    }
     for(idx=0;idx<Nrange;idx++) {
       rtmp=posBF[trub][idx];
       flag=0;
@@ -1232,8 +1238,14 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
       icount++;
     }
     trub = xqpInv[rb];
-    rsz[icount] = trub;
-    icount++;
+    flag=0;
+    for(zidx=0;zidx<icount;zidx++){
+      if(rsz[zidx] == trub) flag=1;
+    }
+    if(flag==0){
+      rsz[icount] = trub;
+      icount++;
+    }
     for(idx=0;idx<Nrange;idx++) {
       rtmp=posBF[trub][idx];
       flag=0;
@@ -1395,8 +1407,14 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
       icount++;
     }
     trub = xqpInv[rb];
-    rsz[icount] = trub;
-    icount++;
+    flag=0;
+    for(zidx=0;zidx<icount;zidx++){
+      if(rsz[zidx] == trub) flag=1;
+    }
+    if(flag==0){
+      rsz[icount] = trub;
+      icount++;
+    }
     for(idx=0;idx<Nrange;idx++) {
       rtmp=posBF[trub][idx];
       flag=0;
