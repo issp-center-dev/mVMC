@@ -161,6 +161,10 @@ or not is given by the following files (the parameters for
 <span class="math notranslate nohighlight">\(v_{ij}\)</span> in <span class="math notranslate nohighlight">\({\cal P}_J\)</span> to be optimized.</p>
 <p><strong>SpinJastrow (spinjastrow.def)</strong>: Set the target parameters
 <span class="math notranslate nohighlight">\(v^s_{ij}\)</span> in <span class="math notranslate nohighlight">\({\cal P}_{SJ}\)</span> to be optimized.</p>
+<p><strong>BFRange (rangebf.def)</strong>: Set the neighbor list and distance
+shells used by the BackFlow correlation.</p>
+<p><strong>BF (bf.def)</strong>: Set BackFlow parameter groups and optimization
+flags.</p>
 <p><strong>DH2</strong>: Set the target 2-site doublon-holon correlation factor
 <span class="math notranslate nohighlight">\(\alpha_{2nt}^{d(h)}\)</span> in <span class="math notranslate nohighlight">\({\cal P}_{d-h}^{(2)}\)</span> to be
 optimized.</p>
@@ -316,6 +320,12 @@ and “TransSym”.</p></li>
 </tr>
 <tr class="row-even"><td><p>SpinJastrow</p></td>
 <td><p>Spin Jastrow factors.</p></td>
+</tr>
+<tr class="row-odd"><td><p>BFRange</p></td>
+<td><p>Neighbor list and distance shells for BackFlow.</p></td>
+</tr>
+<tr class="row-even"><td><p>BF</p></td>
+<td><p>BackFlow parameter groups and optimization flags.</p></td>
 </tr>
 <tr class="row-odd"><td><p>DH2</p></td>
 <td><p>2-site doublon-holon correlation factors.</p></td>
@@ -1723,6 +1733,340 @@ for each pair of sites, and they must have the same parameter index.</p></li>
 </ul>
 </section>
 </section>
+<section id="backflow-files-rangebf-def-bf-def">
+<h2>BackFlow files (rangebf.def, bf.def)<a class="headerlink" href="#backflow-files-rangebf-def-bf-def" title="Permalink to this heading">¶</a></h2>
+<p>The BackFlow correlation replaces the pair orbital <span class="math notranslate nohighlight">\(f_{ij}\)</span> by a
+configuration-dependent effective pair orbital <span class="math notranslate nohighlight">\(f^b_{ij}\)</span>.
+In Expert mode, BackFlow is enabled by specifying both <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> and
+<code class="docutils literal notranslate"><span class="pre">BF</span></code> in <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code>. A calculation is terminated if only one of
+them is specified.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BFRange</span>  <span class="n">rangebf</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">BF</span>       <span class="n">bf</span><span class="o">.</span><span class="k">def</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">BFRange</span></code> defines the neighbor list and distance shell used from each
+center site. <code class="docutils literal notranslate"><span class="pre">BF</span></code> defines the BackFlow group and optimization flags
+for the neighbor pairs. This is an Expert-mode input. Standard mode and
+StdFace do not generate these files.</p>
+<section id="wave-function-form">
+<h3>Wave function form<a class="headerlink" href="#wave-function-form" title="Permalink to this heading">¶</a></h3>
+<p>The BackFlow pair-product wave function follows the lattice BackFlow
+extension by Ido et al. [<a class="reference external" href="https://doi.org/10.1103/PhysRevB.92.245106">Ido2015</a>]. For lattice BackFlow correlations
+in Slater determinants, see also Tocchio et al. [<a class="reference external" href="https://doi.org/10.1103/PhysRevB.78.041101">Tocchio2008</a>],
+[<a class="reference external" href="https://doi.org/10.1103/PhysRevB.83.195138">Tocchio2011</a>]. Because the current implementation does not allow
+BackFlow together with spin projection, the BackFlow trial wave function
+can be written schematically as</p>
+<div class="math notranslate nohighlight">
+\[|\Psi^b\rangle
+  = {\cal P}_{\rm corr} {\cal L}_{K} |\phi^b\rangle ,\]</div>
+<p>where <span class="math notranslate nohighlight">\({\cal P}_{\rm corr}\)</span> denotes the diagonal correlation
+factors that are used together with BackFlow, and
+<span class="math notranslate nohighlight">\({\cal L}_{K}\)</span> is the momentum projection. If no momentum
+projection is used, <span class="math notranslate nohighlight">\({\cal L}_{K}\)</span> is the identity operator.
+Expanded in real-space configurations <span class="math notranslate nohighlight">\(x\)</span>,</p>
+<div class="math notranslate nohighlight">
+\[{\cal L}_{K}|\phi^b\rangle
+  = \sum_x \left(\frac{N}{2}\right)!
+    \sum_{\boldsymbol R} e^{i{\boldsymbol K}\cdot{\boldsymbol R}}
+    {\rm Pf}\left[X^b(x_{-{\boldsymbol R}})\right] |x\rangle .\]</div>
+<p>Here <span class="math notranslate nohighlight">\(N\)</span> is the number of electrons, <span class="math notranslate nohighlight">\({\boldsymbol R}\)</span> is a
+translation vector, and <span class="math notranslate nohighlight">\({\rm Pf}\)</span> is the Pfaffian. If
+<span class="math notranslate nohighlight">\(i_n\)</span> and <span class="math notranslate nohighlight">\(i_m\)</span> are the sites of the <span class="math notranslate nohighlight">\(n\)</span>-th and
+<span class="math notranslate nohighlight">\(m\)</span>-th electrons in the translated configuration
+<span class="math notranslate nohighlight">\(x_{\boldsymbol R}\)</span>, the antisymmetric matrix <span class="math notranslate nohighlight">\(X^b\)</span> is
+defined by</p>
+<div class="math notranslate nohighlight">
+\[X^b_{nm}(x_{\boldsymbol R})
+  =
+  f^b_{T_{\boldsymbol R}(i_n),T_{\boldsymbol R}(i_m)}
+    (x_{\boldsymbol R})
+  -
+  f^b_{T_{\boldsymbol R}(i_m),T_{\boldsymbol R}(i_n)}
+    (x_{\boldsymbol R}) .\]</div>
+<p>BackFlow replaces the original pair orbital <span class="math notranslate nohighlight">\(f_{ij}\)</span> with the
+following configuration-dependent pair orbital <span class="math notranslate nohighlight">\(f^b_{ij}(x)\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[f^b_{i_n i_m}(x)
+  =
+  \sum_{\mu,\nu=0}^{3}\sum_{\tau,\tau'}
+  \eta^{\mu\nu}_{\tau\tau'}
+  \Theta^{\mu\uparrow}_{i_n,i_n+\tau}(x)
+  \Theta^{\nu\downarrow}_{i_m,i_m+\tau'}(x)
+  f_{i_n+\tau,i_m+\tau'} .\]</div>
+<p><span class="math notranslate nohighlight">\(\tau\)</span> and <span class="math notranslate nohighlight">\(\tau'\)</span> run over the neighbor sites listed in
+<code class="docutils literal notranslate"><span class="pre">BFRange</span></code>. <span class="math notranslate nohighlight">\(\eta^{\mu\nu}_{\tau\tau'}\)</span> are the BackFlow
+variational parameters, and mVMC stores their flattened representation
+in <code class="docutils literal notranslate"><span class="pre">ProjBF</span></code>. The <code class="docutils literal notranslate"><span class="pre">BF</span></code> file specifies the BackFlow group and
+optimization flag for each <span class="math notranslate nohighlight">\((i,j,\tau,\tau')\)</span>. The current
+implementation accepts only group 0.</p>
+<p><span class="math notranslate nohighlight">\(\Theta\)</span> is a diagonal quantity that detects local doublon/holon
+patterns in the configuration <span class="math notranslate nohighlight">\(x\)</span>. With
+<span class="math notranslate nohighlight">\(h_{i\sigma}=1-n_{i\sigma}\)</span>,
+<span class="math notranslate nohighlight">\(D_i=n_{i\uparrow}n_{i\downarrow}\)</span>, and
+<span class="math notranslate nohighlight">\(H_i=(1-n_{i\uparrow})(1-n_{i\downarrow})\)</span>,</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+\Theta^{0\sigma}_{i,i+\tau}(x)
+  &amp;= \delta_{i,i+\tau},\\
+\Theta^{1\sigma}_{i,i+\tau}(x)
+  &amp;= \langle D_i H_{i+\tau}\rangle_x,\\
+\Theta^{2\sigma}_{i,i+\tau}(x)
+  &amp;=
+  \langle
+    n_{i\sigma}h_{i,-\sigma}
+    n_{i+\tau,-\sigma}h_{i+\tau,\sigma}
+  \rangle_x,\\
+\Theta^{3\sigma}_{i,i+\tau}(x)
+  &amp;=
+  \langle
+    D_i n_{i+\tau,-\sigma}h_{i+\tau,\sigma}
+    + n_{i\sigma}h_{i,-\sigma}H_{i+\tau}
+  \rangle_x .
+\end{aligned}\end{split}\]</div>
+<p>The no-BackFlow limit is <span class="math notranslate nohighlight">\(\eta^{00}_{0,0}=1\)</span> and zero for the
+other <span class="math notranslate nohighlight">\(\eta\)</span> values. In mVMC input, this corresponds to
+<code class="docutils literal notranslate"><span class="pre">ProjBF[0]=1</span></code> and <code class="docutils literal notranslate"><span class="pre">ProjBF[k&gt;0]=0</span></code>.</p>
+</section>
+<section id="number-of-parameters">
+<h3>Number of parameters<a class="headerlink" href="#number-of-parameters" title="Permalink to this heading">¶</a></h3>
+<p>The number of BackFlow variational parameters is determined from
+<code class="docutils literal notranslate"><span class="pre">Nrange</span></code> and <code class="docutils literal notranslate"><span class="pre">NzBF</span></code> in <code class="docutils literal notranslate"><span class="pre">rangebf.def</span></code> and <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> in
+<code class="docutils literal notranslate"><span class="pre">bf.def</span></code> as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+N_{\rm rangeIdx}
+  &amp;= 3\frac{N_{\rm range}-1}{N_z^{\rm BF}} + 1,\\
+N_{\rm BFIdxTotal}
+  &amp;= \frac{N_{\rm rangeIdx}(N_{\rm rangeIdx}+1)}{2},\\
+N_{\rm ProjBF}
+  &amp;= N_{\rm BFIdxTotal} N_{\rm BackFlowIdx}.
+\end{aligned}\end{split}\]</div>
+<p><code class="docutils literal notranslate"><span class="pre">Nrange</span></code> is the number of listed sites for each center site, including
+the center site itself. <code class="docutils literal notranslate"><span class="pre">NzBF</span></code> is the number of nonzero-distance sites
+per shell. <code class="docutils literal notranslate"><span class="pre">Nrange-1</span></code> must be divisible by <code class="docutils literal notranslate"><span class="pre">NzBF</span></code>.
+The no-BackFlow identity point is <code class="docutils literal notranslate"><span class="pre">ProjBF[0]=1</span></code> and
+<code class="docutils literal notranslate"><span class="pre">ProjBF[k&gt;0]=0</span></code>. Setting all <code class="docutils literal notranslate"><span class="pre">ProjBF</span></code> values to zero is not the
+no-BackFlow limit. If no initial-parameter file is supplied, mVMC uses
+this identity initialization.</p>
+</section>
+<section id="bfrange-file-rangebf-def">
+<h3>BFRange file (rangebf.def)<a class="headerlink" href="#bfrange-file-rangebf-def" title="Permalink to this heading">¶</a></h3>
+<p>The following example is a four-site periodic chain where each site uses
+itself and its two nearest neighbors as the BackFlow range. In this
+example, <code class="docutils literal notranslate"><span class="pre">Nrange=3</span></code> and <code class="docutils literal notranslate"><span class="pre">NzBF=2</span></code>.
+<code class="docutils literal notranslate"><span class="pre">rangebf.def</span></code> has a 10-line header, and the body starts at line 11.
+Lines 1-5 are the common mVMC <code class="docutils literal notranslate"><span class="pre">*.def</span></code> header. Lines 6-10 are an
+additional BackFlow header. The <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> line at line 7 is skipped by
+the reader, but it should repeat line 2 for readability and consistency
+with existing inputs.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">====================</span>
+<span class="n">Nrange</span> <span class="mi">3</span> <span class="mi">2</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="n">Nrange</span> <span class="mi">3</span> <span class="mi">2</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">3</span> <span class="mi">1</span>
+<span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span>
+<span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span>
+<span class="mi">1</span> <span class="mi">0</span> <span class="mi">1</span>
+<span class="mi">1</span> <span class="mi">2</span> <span class="mi">1</span>
+<span class="mi">2</span> <span class="mi">2</span> <span class="mi">0</span>
+<span class="mi">2</span> <span class="mi">1</span> <span class="mi">1</span>
+<span class="mi">2</span> <span class="mi">3</span> <span class="mi">1</span>
+<span class="mi">3</span> <span class="mi">3</span> <span class="mi">0</span>
+<span class="mi">3</span> <span class="mi">2</span> <span class="mi">1</span>
+<span class="mi">3</span> <span class="mi">0</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="id39">
+<h3>File format<a class="headerlink" href="#id39" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Lines 1-5: Common header. Line 2 must be <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> [int01] [int02].</p></li>
+<li><p>Lines 6-10: Additional BackFlow header. These lines are skipped when
+the body is read, but they cannot be omitted. It is recommended that
+line 7 also contains <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> [int01] [int02].</p></li>
+<li><p>Lines 11 - (10 + <span class="math notranslate nohighlight">\(N_s \times\)</span> [int01]):
+[int03] [int04] [int05]</p></li>
+</ul>
+</section>
+<section id="id40">
+<h3>Parameters<a class="headerlink" href="#id40" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>[ int01 ]</p>
+<p><strong>Type :</strong> int-type (1 or larger)</p>
+<p><strong>Description :</strong> Number of sites listed in the BackFlow range for
+each center site. The center site itself must be included.</p>
+</li>
+<li><p>[ int02 ]</p>
+<p><strong>Type :</strong> int-type (1 or larger)</p>
+<p><strong>Description :</strong> Number of nonzero-distance sites in one shell.
+[int01] - 1 must be divisible by [int02].</p>
+</li>
+<li><p>[ int03 ]</p>
+<p><strong>Type :</strong> int-type</p>
+<p><strong>Description :</strong> Center site index
+(0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int03 ] <span class="math notranslate nohighlight">\(&lt;\)</span> <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>).</p>
+</li>
+<li><p>[ int04 ]</p>
+<p><strong>Type :</strong> int-type</p>
+<p><strong>Description :</strong> Site index in the BackFlow range of [int03]
+(0 <span class="math notranslate nohighlight">\(\leq\)</span> [ int04 ] <span class="math notranslate nohighlight">\(&lt;\)</span> <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>).</p>
+</li>
+<li><p>[ int05 ]</p>
+<p><strong>Type :</strong> int-type</p>
+<p><strong>Description :</strong> Distance-shell index. The center-site row must use
+0. Nonzero-distance shells must be between 1 and
+<span class="math notranslate nohighlight">\((N_{\rm range}-1)/N_z^{\rm BF}\)</span>.</p>
+</li>
+</ul>
+</section>
+<section id="id41">
+<h3>User rules<a class="headerlink" href="#id41" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Exactly <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> rows must be specified for each center site
+[int03].</p></li>
+<li><p>Each center site must have the self row <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">i</span> <span class="pre">0</span></code>. A row with
+<code class="docutils literal notranslate"><span class="pre">i==j</span></code> and a nonzero shell index, or a row with <code class="docutils literal notranslate"><span class="pre">i!=j</span></code> and shell
+index 0, is an error.</p></li>
+<li><p>The same center/range pair <code class="docutils literal notranslate"><span class="pre">(i,j)</span></code> cannot be specified more than
+once.</p></li>
+</ul>
+</section>
+<section id="bf-file-bf-def">
+<h3>BF file (bf.def)<a class="headerlink" href="#bf-file-bf-def" title="Permalink to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">BF</span></code> file assigns BackFlow groups to the neighbor-pair
+combinations defined by <code class="docutils literal notranslate"><span class="pre">BFRange</span></code>. The current implementation supports
+only <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code>, so the group index [int06] must always be 0.
+<code class="docutils literal notranslate"><span class="pre">bf.def</span></code> also has a 10-line header, and the body starts at line 11.
+Lines 1-5 are the common mVMC <code class="docutils literal notranslate"><span class="pre">*.def</span></code> header. Lines 6-10 are an
+additional BackFlow header. The <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> line at line 7 is
+skipped by the reader, but it should repeat line 2 for readability and
+consistency with existing inputs.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">====================</span>
+<span class="n">NBackFlowIdx</span> <span class="mi">1</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="n">NBackFlowIdx</span> <span class="mi">1</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">3</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">3</span> <span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">3</span> <span class="mi">3</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">3</span> <span class="mi">1</span> <span class="mi">0</span>
+<span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
+<span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">1</span> <span class="mi">0</span>
+<span class="mi">2</span> <span class="mi">0</span>
+<span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
+<span class="mi">9</span> <span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+<section id="id42">
+<h3>File format<a class="headerlink" href="#id42" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Lines 1-5: Common header. Line 2 must be <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> [int01].</p></li>
+<li><p>Lines 6-10: Additional BackFlow header. These lines are skipped when
+the body is read, but they cannot be omitted. It is recommended that
+line 7 also contains <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> [int01].</p></li>
+<li><p>Lines 11 - (10 + <span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span>):
+[int02] [int03] [int04] [int05] [int06]</p></li>
+<li><p>The following <span class="math notranslate nohighlight">\(N_{\rm ProjBF}\)</span> lines:
+[int07] [int08]</p></li>
+</ul>
+</section>
+<section id="id43">
+<h3>Parameters<a class="headerlink" href="#id43" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>[ int01 ]</p>
+<p><strong>Type :</strong> int-type</p>
+<p><strong>Description :</strong> Number of BackFlow groups. The current
+implementation accepts only 1.</p>
+</li>
+<li><p>[ int02 ], [ int03 ]</p>
+<p><strong>Type :</strong> int-type</p>
+<p><strong>Description :</strong> Original site pair <span class="math notranslate nohighlight">\((i,j)\)</span> corrected by
+BackFlow. Both indices must satisfy
+0 <span class="math notranslate nohighlight">\(\leq\)</span> index <span class="math notranslate nohighlight">\(&lt;\)</span> <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>.</p>
+</li>
+<li><p>[ int04 ], [ int05 ]</p>
+<p><strong>Type :</strong> int-type</p>
+<p><strong>Description :</strong> Neighbor sites defined by <code class="docutils literal notranslate"><span class="pre">BFRange</span></code>. [int04]
+must belong to the BackFlow range of [int02], and [int05] must belong
+to the BackFlow range of [int03].</p>
+</li>
+<li><p>[ int06 ]</p>
+<p><strong>Type :</strong> int-type</p>
+<p><strong>Description :</strong> BackFlow group index. The current implementation
+accepts only 0.</p>
+</li>
+<li><p>[ int07 ]</p>
+<p><strong>Type :</strong> int-type</p>
+<p><strong>Description :</strong> Index of the BackFlow variational parameter
+<code class="docutils literal notranslate"><span class="pre">ProjBF</span></code>. All indices from 0 to <code class="docutils literal notranslate"><span class="pre">NProjBF</span></code> - 1 must be specified
+exactly once.</p>
+</li>
+<li><p>[ int08 ]</p>
+<p><strong>Type :</strong> int-type</p>
+<p><strong>Description :</strong> Optimization flag for the <code class="docutils literal notranslate"><span class="pre">ProjBF</span></code> parameter
+specified by [int07] (0: fixed, 1: optimized). The imaginary part of
+<code class="docutils literal notranslate"><span class="pre">ProjBF[0]</span></code> is always fixed.</p>
+</li>
+</ul>
+</section>
+<section id="id44">
+<h3>User rules<a class="headerlink" href="#id44" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Both <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> and <code class="docutils literal notranslate"><span class="pre">BF</span></code> must be specified in <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code>.</p></li>
+<li><p>The site rows in <code class="docutils literal notranslate"><span class="pre">BF</span></code> must contain every combination of
+<span class="math notranslate nohighlight">\(i,j\)</span>, <span class="math notranslate nohighlight">\(x_0 \in {\rm BFRange}(i)\)</span>, and
+<span class="math notranslate nohighlight">\(x_1 \in {\rm BFRange}(j)\)</span> exactly once. The number of rows is
+<span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ProjBF[0]</span></code> also controls the BackFlow base term. For the identity
+initial point, set <code class="docutils literal notranslate"><span class="pre">ProjBF[0]=1</span></code>. If an initial-parameter or restart
+file is used, the imaginary part of <code class="docutils literal notranslate"><span class="pre">ProjBF[0]</span></code> should be zero.</p></li>
+</ul>
+</section>
+<section id="limitations">
+<h3>Limitations<a class="headerlink" href="#limitations" title="Permalink to this heading">¶</a></h3>
+<p>BackFlow is currently available only under the following conditions.
+Inputs outside this range are rejected.</p>
+<ul class="simple">
+<li><p>Only <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code> is supported. Multiple BackFlow groups are
+not supported.</p></li>
+<li><p>The local update path must be the hopping update
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath==0</span></code>. t-J update paths, exchange updates, Kondo
+updates, and doublon-only updates are not supported.</p></li>
+<li><p>Pair orbitals must use the normal <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> /
+<code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format. <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ is not
+supported.</p></li>
+<li><p>Spin projection is not supported. Use <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg==1</span></code>.</p></li>
+<li><p>RBM, Lanczos, Twist, reweight, <code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code>
+are not supported. The usual momentum projection with <code class="docutils literal notranslate"><span class="pre">NMPTrans&gt;1</span></code>
+can be used only with <code class="docutils literal notranslate"><span class="pre">APFlag=0</span></code> and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans==1</span></code>.</p></li>
+<li><p>The Hamiltonian may contain <code class="docutils literal notranslate"><span class="pre">Trans</span></code> and number-operator
+interactions (<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>).
+Two-body Hamiltonian terms such as <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> are not supported. Measurement outputs <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> and
+<code class="docutils literal notranslate"><span class="pre">TwoBodyGEx</span></code> are supported.</p></li>
+<li><p>Standard mode and StdFace do not generate BackFlow inputs. To use
+BackFlow, prepare <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> and <code class="docutils literal notranslate"><span class="pre">BF</span></code> manually as Expert-mode
+input files.</p></li>
+</ul>
+</section>
+</section>
 <section id="dh2-file">
 <h2>DH2 file<a class="headerlink" href="#dh2-file" title="Permalink to this heading">¶</a></h2>
 <p>This file sets the calculation conditions of 2-site doublon-holon
@@ -1750,8 +2094,8 @@ format is shown as follows.</p>
   <span class="mi">11</span>     <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id39">
-<h3>File format<a class="headerlink" href="#id39" title="Permalink to this heading">¶</a></h3>
+<section id="id45">
+<h3>File format<a class="headerlink" href="#id45" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm dh2}\)</span>, respectively.</p>
 <ul class="simple">
@@ -1765,8 +2109,8 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{\rm dh
 (5+ <span class="math notranslate nohighlight">\((N_s+6) \times N_{\rm dh2})\)</span>: [int07] [int08]</p></li>
 </ul>
 </section>
-<section id="id40">
-<h3>Parameters<a class="headerlink" href="#id40" title="Permalink to this heading">¶</a></h3>
+<section id="id46">
+<h3>Parameters<a class="headerlink" href="#id46" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1821,8 +2165,8 @@ optimize, 1: optimize).</p>
 </li>
 </ul>
 </section>
-<section id="id41">
-<h3>User rules<a class="headerlink" href="#id41" title="Permalink to this heading">¶</a></h3>
+<section id="id47">
+<h3>User rules<a class="headerlink" href="#id47" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -1860,8 +2204,8 @@ format is shown as follows.</p>
    <span class="mi">9</span>     <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id42">
-<h3>File format<a class="headerlink" href="#id42" title="Permalink to this heading">¶</a></h3>
+<section id="id48">
+<h3>File format<a class="headerlink" href="#id48" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm dh4}\)</span>, respectively.</p>
 <ul class="simple">
@@ -1875,8 +2219,8 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{\rm dh
 (5+ <span class="math notranslate nohighlight">\((N_s+10) \times N_{\rm dh4}\)</span>): [int09] [int10]</p></li>
 </ul>
 </section>
-<section id="id43">
-<h3>Parameters<a class="headerlink" href="#id43" title="Permalink to this heading">¶</a></h3>
+<section id="id49">
+<h3>Parameters<a class="headerlink" href="#id49" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1932,8 +2276,8 @@ optimize, 1: optimize).</p>
 </li>
 </ul>
 </section>
-<section id="id44">
-<h3>User rules<a class="headerlink" href="#id44" title="Permalink to this heading">¶</a></h3>
+<section id="id50">
+<h3>User rules<a class="headerlink" href="#id50" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when components of variational parameters
@@ -1968,8 +2312,8 @@ follows.</p>
  <span class="mi">0</span>    <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id45">
-<h3>File format<a class="headerlink" href="#id45" title="Permalink to this heading">¶</a></h3>
+<section id="id51">
+<h3>File format<a class="headerlink" href="#id51" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</span>, respectively.</p>
 <ul class="simple">
@@ -1982,8 +2326,8 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</
 (5+  <span class="math notranslate nohighlight">\(2N_s\)</span> + <span class="math notranslate nohighlight">\(N_v\)</span>): [int06] [int07]</p></li>
 </ul>
 </section>
-<section id="id46">
-<h3>Parameters<a class="headerlink" href="#id46" title="Permalink to this heading">¶</a></h3>
+<section id="id52">
+<h3>Parameters<a class="headerlink" href="#id52" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2034,8 +2378,8 @@ optimize, 1: optimize).</p>
 </li>
 </ul>
 </section>
-<section id="id47">
-<h3>User rules<a class="headerlink" href="#id47" title="Permalink to this heading">¶</a></h3>
+<section id="id53">
+<h3>User rules<a class="headerlink" href="#id53" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
 <li><p>This function is available only for the VMC calculation with <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> and <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>. This function is not available for the Power Lanczos calculations.</p></li>
@@ -2071,8 +2415,8 @@ follows.</p>
  <span class="mi">1</span>    <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id48">
-<h3>File format<a class="headerlink" href="#id48" title="Permalink to this heading">¶</a></h3>
+<section id="id54">
+<h3>File format<a class="headerlink" href="#id54" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of neurons as <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</span>, respectively.</p>
 <ul class="simple">
@@ -2085,8 +2429,8 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</
 (5+ <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> + <span class="math notranslate nohighlight">\(N_v\)</span>): [int05] [int06]</p></li>
 </ul>
 </section>
-<section id="id49">
-<h3>Parameters<a class="headerlink" href="#id49" title="Permalink to this heading">¶</a></h3>
+<section id="id55">
+<h3>Parameters<a class="headerlink" href="#id55" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2132,8 +2476,8 @@ optimize, 1: optimize).</p>
 </li>
 </ul>
 </section>
-<section id="id50">
-<h3>User rules<a class="headerlink" href="#id50" title="Permalink to this heading">¶</a></h3>
+<section id="id56">
+<h3>User rules<a class="headerlink" href="#id56" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
 <li><p>This function is available only for the VMC calculation with <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> and <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>. This function is not available for the Power Lanczos calculations.</p></li>
@@ -2172,8 +2516,8 @@ follows.</p>
  <span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
 </pre></div>
 </div>
-<section id="id51">
-<h3>File format<a class="headerlink" href="#id51" title="Permalink to this heading">¶</a></h3>
+<section id="id57">
+<h3>File format<a class="headerlink" href="#id57" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span>, the total number of neurons as <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</span>.</p>
 <ul class="simple">
@@ -2186,8 +2530,8 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</
 (5+ <span class="math notranslate nohighlight">\(2 N_s N_{\rm neuronGeneral}\)</span> + <span class="math notranslate nohighlight">\(N_v\)</span>): [int07] [int08]</p></li>
 </ul>
 </section>
-<section id="id52">
-<h3>Parameters<a class="headerlink" href="#id52" title="Permalink to this heading">¶</a></h3>
+<section id="id58">
+<h3>Parameters<a class="headerlink" href="#id58" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2243,8 +2587,8 @@ optimize, 1: optimize).</p>
 </li>
 </ul>
 </section>
-<section id="id53">
-<h3>User rules<a class="headerlink" href="#id53" title="Permalink to this heading">¶</a></h3>
+<section id="id59">
+<h3>User rules<a class="headerlink" href="#id59" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
 <li><p>This function is available only for the VMC calculation with <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> and <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>. This function is not available for the Power Lanczos calculations.</p></li>
@@ -2284,8 +2628,8 @@ are indicated. An example of the file format is shown as follows.</p>
   <span class="mi">63</span>    <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id54">
-<h3>File format<a class="headerlink" href="#id54" title="Permalink to this heading">¶</a></h3>
+<section id="id60">
+<h3>File format<a class="headerlink" href="#id60" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}\)</span>, respectively.</p>
 <ul class="simple">
@@ -2298,8 +2642,8 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}
 [int06] [int07]</p></li>
 </ul>
 </section>
-<section id="id55">
-<h3>Parameters<a class="headerlink" href="#id55" title="Permalink to this heading">¶</a></h3>
+<section id="id61">
+<h3>Parameters<a class="headerlink" href="#id61" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2352,8 +2696,8 @@ optimize, 1: optimize).</p>
 </li>
 </ul>
 </section>
-<section id="id56">
-<h3>User rules<a class="headerlink" href="#id56" title="Permalink to this heading">¶</a></h3>
+<section id="id62">
+<h3>User rules<a class="headerlink" href="#id62" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2394,8 +2738,8 @@ shown as follows.</p>
   <span class="mi">119</span>    <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id57">
-<h3>File format<a class="headerlink" href="#id57" title="Permalink to this heading">¶</a></h3>
+<section id="id63">
+<h3>File format<a class="headerlink" href="#id63" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}\)</span>, respectively.</p>
 <ul class="simple">
@@ -2408,8 +2752,8 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}
 (5+ <span class="math notranslate nohighlight">\(N_s*(N_s-1)/2+N_{\rm o}\)</span>): [int06] [int07]</p></li>
 </ul>
 </section>
-<section id="id58">
-<h3>Parameters<a class="headerlink" href="#id58" title="Permalink to this heading">¶</a></h3>
+<section id="id64">
+<h3>Parameters<a class="headerlink" href="#id64" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2462,8 +2806,8 @@ optimize, 1: optimize).</p>
 </li>
 </ul>
 </section>
-<section id="id59">
-<h3>User rules<a class="headerlink" href="#id59" title="Permalink to this heading">¶</a></h3>
+<section id="id65">
+<h3>User rules<a class="headerlink" href="#id65" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2504,8 +2848,8 @@ example of the file format is shown as follows.</p>
   <span class="mi">254</span>   <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id60">
-<h3>File format<a class="headerlink" href="#id60" title="Permalink to this heading">¶</a></h3>
+<section id="id66">
+<h3>File format<a class="headerlink" href="#id66" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}\)</span>, respectively. A total
 number of variational parameters <span class="math notranslate nohighlight">\(N_p\)</span> is given by <span class="math notranslate nohighlight">\(N_s^2\)</span>,
@@ -2521,8 +2865,8 @@ unconserved system, respectively.</p>
 <li><p>Lines (6+ <span class="math notranslate nohighlight">\(N_p\)</span>) - (5+ <span class="math notranslate nohighlight">\(N_p+N_{\rm o}\)</span>): [int09] [int10]</p></li>
 </ul>
 </section>
-<section id="id61">
-<h3>Parameters<a class="headerlink" href="#id61" title="Permalink to this heading">¶</a></h3>
+<section id="id67">
+<h3>Parameters<a class="headerlink" href="#id67" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2580,8 +2924,8 @@ optimize, 1: optimize).</p>
 </li>
 </ul>
 </section>
-<section id="id62">
-<h3>User rules<a class="headerlink" href="#id62" title="Permalink to this heading">¶</a></h3>
+<section id="id68">
+<h3>User rules<a class="headerlink" href="#id68" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2618,8 +2962,8 @@ not done. An example of the file format is shown as follows.</p>
    <span class="mi">3</span>    <span class="mi">13</span>    <span class="mi">2</span>
 </pre></div>
 </div>
-<section id="id63">
-<h3>File format<a class="headerlink" href="#id63" title="Permalink to this heading">¶</a></h3>
+<section id="id69">
+<h3>File format<a class="headerlink" href="#id69" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 projection patterns as <span class="math notranslate nohighlight">\(N_{\rm TS}\)</span>, respectively.</p>
 <ul class="simple">
@@ -2631,8 +2975,8 @@ projection patterns as <span class="math notranslate nohighlight">\(N_{\rm TS}\)
 [int03] [int04] [int05] [int06]</p></li>
 </ul>
 </section>
-<section id="id64">
-<h3>Parameters<a class="headerlink" href="#id64" title="Permalink to this heading">¶</a></h3>
+<section id="id70">
+<h3>Parameters<a class="headerlink" href="#id70" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2686,8 +3030,8 @@ be omitted when the mode of the anti-periodic condition is off.</p>
 </li>
 </ul>
 </section>
-<section id="id65">
-<h3>User rules<a class="headerlink" href="#id65" title="Permalink to this heading">¶</a></h3>
+<section id="id71">
+<h3>User rules<a class="headerlink" href="#id71" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2721,8 +3065,8 @@ Jastrow parameters, for example <code class="docutils literal notranslate"><span
 <span class="mi">27</span> <span class="o">-</span><span class="mf">9.017586139930480749e-02</span>  <span class="mf">0.000000000000000000e+00</span>
 </pre></div>
 </div>
-<section id="id66">
-<h3>File format<a class="headerlink" href="#id66" title="Permalink to this heading">¶</a></h3>
+<section id="id72">
+<h3>File format<a class="headerlink" href="#id72" title="Permalink to this heading">¶</a></h3>
 <p>In the following, we define the total number of variational parameters
 as <span class="math notranslate nohighlight">\(N_v\)</span>.</p>
 <ul class="simple">
@@ -2732,8 +3076,8 @@ as <span class="math notranslate nohighlight">\(N_v\)</span>.</p>
 <li><p>Lines 6 - (5+ <span class="math notranslate nohighlight">\(N_v\)</span>): [int03] [double01] [double02]</p></li>
 </ul>
 </section>
-<section id="id67">
-<h3>Parameters<a class="headerlink" href="#id67" title="Permalink to this heading">¶</a></h3>
+<section id="id73">
+<h3>Parameters<a class="headerlink" href="#id73" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2762,8 +3106,8 @@ indicated by [int01].</p>
 </li>
 </ul>
 </section>
-<section id="id68">
-<h3>User rules<a class="headerlink" href="#id68" title="Permalink to this heading">¶</a></h3>
+<section id="id74">
+<h3>User rules<a class="headerlink" href="#id74" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2809,8 +3153,8 @@ of file format is shown as follows.</p>
    <span class="mi">11</span>     <span class="mi">1</span>    <span class="mi">11</span>     <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id69">
-<h3>File format<a class="headerlink" href="#id69" title="Permalink to this heading">¶</a></h3>
+<section id="id75">
+<h3>File format<a class="headerlink" href="#id75" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -2818,8 +3162,8 @@ of file format is shown as follows.</p>
 <li><p>Lines 6 -: [int02]  [int03]  [int04]  [int05]</p></li>
 </ul>
 </section>
-<section id="id70">
-<h3>Parameters<a class="headerlink" href="#id70" title="Permalink to this heading">¶</a></h3>
+<section id="id76">
+<h3>Parameters<a class="headerlink" href="#id76" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2844,8 +3188,8 @@ functions.</p>
 </li>
 </ul>
 </section>
-<section id="id71">
-<h3>Use rules<a class="headerlink" href="#id71" title="Permalink to this heading">¶</a></h3>
+<section id="id77">
+<h3>Use rules<a class="headerlink" href="#id77" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2897,8 +3241,8 @@ An example of file format is shown as follows.</p>
     <span class="o">...</span>
 </pre></div>
 </div>
-<section id="id72">
-<h3>File format<a class="headerlink" href="#id72" title="Permalink to this heading">¶</a></h3>
+<section id="id78">
+<h3>File format<a class="headerlink" href="#id78" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -2907,8 +3251,8 @@ An example of file format is shown as follows.</p>
 [int02]  [int03]  [int04]  [int05]  [int06]  [int07]  [int08]  [int09]</p></li>
 </ul>
 </section>
-<section id="id73">
-<h3>Parameters<a class="headerlink" href="#id73" title="Permalink to this heading">¶</a></h3>
+<section id="id79">
+<h3>Parameters<a class="headerlink" href="#id79" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2939,8 +3283,8 @@ functions.</p>
 </li>
 </ul>
 </section>
-<section id="id74">
-<h3>Use rules<a class="headerlink" href="#id74" title="Permalink to this heading">¶</a></h3>
+<section id="id80">
+<h3>Use rules<a class="headerlink" href="#id80" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2968,8 +3312,8 @@ An example of file format is shown as follows.</p>
     <span class="mi">3</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">1</span>     <span class="mi">0</span>     <span class="mi">1</span>     <span class="mi">0</span>     <span class="mi">2</span>     <span class="mi">1</span>     <span class="mi">2</span>     <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id75">
-<h3>File format<a class="headerlink" href="#id75" title="Permalink to this heading">¶</a></h3>
+<section id="id81">
+<h3>File format<a class="headerlink" href="#id81" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -2978,8 +3322,8 @@ An example of file format is shown as follows.</p>
 [N] [i_1] [sigma_1] [j_1] [tau_1] … [i_N] [sigma_N] [j_N] [tau_N]</p></li>
 </ul>
 </section>
-<section id="id76">
-<h3>Parameters<a class="headerlink" href="#id76" title="Permalink to this heading">¶</a></h3>
+<section id="id82">
+<h3>Parameters<a class="headerlink" href="#id82" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3011,8 +3355,8 @@ function. It must be positive.</p>
 </li>
 </ul>
 </section>
-<section id="id77">
-<h3>Use rules<a class="headerlink" href="#id77" title="Permalink to this heading">¶</a></h3>
+<section id="id83">
+<h3>Use rules<a class="headerlink" href="#id83" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is different from the total
@@ -3057,8 +3401,8 @@ idx_site_s_x_y_z
     …
 </pre></div>
 </div>
-<section id="id78">
-<h3>File format<a class="headerlink" href="#id78" title="Permalink to this heading">¶</a></h3>
+<section id="id84">
+<h3>File format<a class="headerlink" href="#id84" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -3067,8 +3411,8 @@ idx_site_s_x_y_z
 [int02]  [int03]  [int04]  [double01]  [double02]  [double03]</p></li>
 </ul>
 </section>
-<section id="id79">
-<h3>Parameters<a class="headerlink" href="#id79" title="Permalink to this heading">¶</a></h3>
+<section id="id85">
+<h3>Parameters<a class="headerlink" href="#id85" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3102,8 +3446,8 @@ An integer giving a spin index,
 </li>
 </ul>
 </section>
-<section id="id80">
-<h3>Use rules<a class="headerlink" href="#id80" title="Permalink to this heading">¶</a></h3>
+<section id="id86">
+<h3>Use rules<a class="headerlink" href="#id86" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>All the combinations of sites and spins must be specified to designate each Twist operator.</p></li>
@@ -3128,8 +3472,8 @@ i_x_y_z_orb
     …
 </pre></div>
 </div>
-<section id="id81">
-<h3>File format<a class="headerlink" href="#id81" title="Permalink to this heading">¶</a></h3>
+<section id="id87">
+<h3>File format<a class="headerlink" href="#id87" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01] [int02]  [int03]  [int04]</p></li>
@@ -3137,8 +3481,8 @@ i_x_y_z_orb
 <li><p>Lines 6 -: [int05]  [int06]  [int07]  [int08]  [int09]</p></li>
 </ul>
 </section>
-<section id="id82">
-<h3>Parameters<a class="headerlink" href="#id82" title="Permalink to this heading">¶</a></h3>
+<section id="id88">
+<h3>Parameters<a class="headerlink" href="#id88" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3297,93 +3641,107 @@ indices are rejected as input errors.</p></li>
 <li><a class="reference internal" href="#id38">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#dh2-file">DH2 file</a><ul>
+<li><a class="reference internal" href="#backflow-files-rangebf-def-bf-def">BackFlow files (rangebf.def, bf.def)</a><ul>
+<li><a class="reference internal" href="#wave-function-form">Wave function form</a></li>
+<li><a class="reference internal" href="#number-of-parameters">Number of parameters</a></li>
+<li><a class="reference internal" href="#bfrange-file-rangebf-def">BFRange file (rangebf.def)</a></li>
 <li><a class="reference internal" href="#id39">File format</a></li>
 <li><a class="reference internal" href="#id40">Parameters</a></li>
 <li><a class="reference internal" href="#id41">User rules</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#dh4-file">DH4 file</a><ul>
+<li><a class="reference internal" href="#bf-file-bf-def">BF file (bf.def)</a></li>
 <li><a class="reference internal" href="#id42">File format</a></li>
 <li><a class="reference internal" href="#id43">Parameters</a></li>
 <li><a class="reference internal" href="#id44">User rules</a></li>
+<li><a class="reference internal" href="#limitations">Limitations</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#generalrbm-physlayer-file">GeneralRBM_PhysLayer file</a><ul>
+<li><a class="reference internal" href="#dh2-file">DH2 file</a><ul>
 <li><a class="reference internal" href="#id45">File format</a></li>
 <li><a class="reference internal" href="#id46">Parameters</a></li>
 <li><a class="reference internal" href="#id47">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#generalrbm-hiddenlayer-file">GeneralRBM_HiddenLayer file</a><ul>
+<li><a class="reference internal" href="#dh4-file">DH4 file</a><ul>
 <li><a class="reference internal" href="#id48">File format</a></li>
 <li><a class="reference internal" href="#id49">Parameters</a></li>
 <li><a class="reference internal" href="#id50">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#generalrbm-physhidden-file">GeneralRBM_PhysHidden file</a><ul>
+<li><a class="reference internal" href="#generalrbm-physlayer-file">GeneralRBM_PhysLayer file</a><ul>
 <li><a class="reference internal" href="#id51">File format</a></li>
 <li><a class="reference internal" href="#id52">Parameters</a></li>
 <li><a class="reference internal" href="#id53">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#orbital-orbitalantiparallel-file-orbitalidx-def">Orbital/OrbitalAntiParallel file (orbitalidx.def)</a><ul>
+<li><a class="reference internal" href="#generalrbm-hiddenlayer-file">GeneralRBM_HiddenLayer file</a><ul>
 <li><a class="reference internal" href="#id54">File format</a></li>
 <li><a class="reference internal" href="#id55">Parameters</a></li>
 <li><a class="reference internal" href="#id56">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#orbitalparallel-file">OrbitalParallel file</a><ul>
+<li><a class="reference internal" href="#generalrbm-physhidden-file">GeneralRBM_PhysHidden file</a><ul>
 <li><a class="reference internal" href="#id57">File format</a></li>
 <li><a class="reference internal" href="#id58">Parameters</a></li>
 <li><a class="reference internal" href="#id59">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#orbitalgeneral-file">OrbitalGeneral file</a><ul>
+<li><a class="reference internal" href="#orbital-orbitalantiparallel-file-orbitalidx-def">Orbital/OrbitalAntiParallel file (orbitalidx.def)</a><ul>
 <li><a class="reference internal" href="#id60">File format</a></li>
 <li><a class="reference internal" href="#id61">Parameters</a></li>
 <li><a class="reference internal" href="#id62">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#transsym-file-qptransidx-def">TransSym file (qptransidx.def)</a><ul>
+<li><a class="reference internal" href="#orbitalparallel-file">OrbitalParallel file</a><ul>
 <li><a class="reference internal" href="#id63">File format</a></li>
 <li><a class="reference internal" href="#id64">Parameters</a></li>
 <li><a class="reference internal" href="#id65">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#files-to-set-initial-values-of-variational-parameters">Files to set initial values of variational parameters</a><ul>
+<li><a class="reference internal" href="#orbitalgeneral-file">OrbitalGeneral file</a><ul>
 <li><a class="reference internal" href="#id66">File format</a></li>
 <li><a class="reference internal" href="#id67">Parameters</a></li>
 <li><a class="reference internal" href="#id68">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#onebodyg-file-greenone-def">OneBodyG file (greenone.def)</a><ul>
+<li><a class="reference internal" href="#transsym-file-qptransidx-def">TransSym file (qptransidx.def)</a><ul>
 <li><a class="reference internal" href="#id69">File format</a></li>
 <li><a class="reference internal" href="#id70">Parameters</a></li>
-<li><a class="reference internal" href="#id71">Use rules</a></li>
+<li><a class="reference internal" href="#id71">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#twobodyg-file-greentwo-def">TwoBodyG file (greentwo.def)</a><ul>
+<li><a class="reference internal" href="#files-to-set-initial-values-of-variational-parameters">Files to set initial values of variational parameters</a><ul>
 <li><a class="reference internal" href="#id72">File format</a></li>
 <li><a class="reference internal" href="#id73">Parameters</a></li>
-<li><a class="reference internal" href="#id74">Use rules</a></li>
+<li><a class="reference internal" href="#id74">User rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#nbodyg-file-nbodyg-def">NBodyG file (nbodyg.def)</a><ul>
+<li><a class="reference internal" href="#onebodyg-file-greenone-def">OneBodyG file (greenone.def)</a><ul>
 <li><a class="reference internal" href="#id75">File format</a></li>
 <li><a class="reference internal" href="#id76">Parameters</a></li>
 <li><a class="reference internal" href="#id77">Use rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#twist-file-twist-def">Twist file (twist.def)</a><ul>
+<li><a class="reference internal" href="#twobodyg-file-greentwo-def">TwoBodyG file (greentwo.def)</a><ul>
 <li><a class="reference internal" href="#id78">File format</a></li>
 <li><a class="reference internal" href="#id79">Parameters</a></li>
 <li><a class="reference internal" href="#id80">Use rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#lattice-file-lattice-def">Lattice file (lattice.def)</a><ul>
+<li><a class="reference internal" href="#nbodyg-file-nbodyg-def">NBodyG file (nbodyg.def)</a><ul>
 <li><a class="reference internal" href="#id81">File format</a></li>
 <li><a class="reference internal" href="#id82">Parameters</a></li>
+<li><a class="reference internal" href="#id83">Use rules</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#twist-file-twist-def">Twist file (twist.def)</a><ul>
+<li><a class="reference internal" href="#id84">File format</a></li>
+<li><a class="reference internal" href="#id85">Parameters</a></li>
+<li><a class="reference internal" href="#id86">Use rules</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#lattice-file-lattice-def">Lattice file (lattice.def)</a><ul>
+<li><a class="reference internal" href="#id87">File format</a></li>
+<li><a class="reference internal" href="#id88">Parameters</a></li>
 <li><a class="reference internal" href="#usage-rules">Usage rules</a></li>
 </ul>
 </li>

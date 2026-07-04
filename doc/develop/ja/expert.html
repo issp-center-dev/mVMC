@@ -157,6 +157,10 @@ c_{i\sigma_1}^{\dagger}c_{j\sigma_2}^{\dagger} \right]^{N/2}|0 \rangle,\]</div>
 <span class="math notranslate nohighlight">\({\cal P}_J\)</span> のうち、最適化の対象とする変分パラメータ <span class="math notranslate nohighlight">\(v_{ij}\)</span> を指定します。</p>
 <p><strong>SpinJastrow (spinjastrow.def)</strong>:
 <span class="math notranslate nohighlight">\({\cal P}_{SJ}\)</span> のうち、最適化の対象とする変分パラメータ <span class="math notranslate nohighlight">\(v^s_{ij}\)</span> を指定します。</p>
+<p><strong>BFRange (rangebf.def)</strong>:
+BackFlow 相関で参照する各サイトの近傍リストと距離シェルを指定します。</p>
+<p><strong>BF (bf.def)</strong>:
+BackFlow 相関のパラメータ group と最適化フラグを指定します。</p>
 <p><strong>DH2</strong>:
 <span class="math notranslate nohighlight">\({\cal P}_{d-h}^{(2)}\)</span> で表される2サイトのダブロン・ホロン相関因子を指定します。</p>
 <p><strong>DH4</strong>:
@@ -310,6 +314,12 @@ TransSymです。それ以外のキーワードについては、指定がない
 </tr>
 <tr class="row-even"><td><p>SpinJastrow</p></td>
 <td><p>最適化するスピンJastrow因子を指定します。</p></td>
+</tr>
+<tr class="row-odd"><td><p>BFRange</p></td>
+<td><p>BackFlow相関で参照する近傍リストと距離シェルを指定します。</p></td>
+</tr>
+<tr class="row-even"><td><p>BF</p></td>
+<td><p>BackFlow相関のパラメータgroupと最適化フラグを指定します。</p></td>
 </tr>
 <tr class="row-odd"><td><p>DH2</p></td>
 <td><p>最適化する2サイトダブロン・ホロン相関因子を指定します。</p></td>
@@ -646,14 +656,14 @@ SR-CG の stored <span class="math notranslate nohighlight">\(O\)</span> 行列�
 <p><strong>形式 :</strong> int型 (0もしくは1、デフォルト値=1)</p>
 <p><strong>説明 :</strong>
 期待値 <span class="math notranslate nohighlight">\(\langle O_k O_l \rangle\)</span> を計算するとき行列-行列積にして高速化するオプション
-(1で機能On、モンテカルロサンプリング数に応じてメモリの消費が増大します <a class="footnote-reference brackets" href="#id83" id="id8" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>)。
+(1で機能On、モンテカルロサンプリング数に応じてメモリの消費が増大します <a class="footnote-reference brackets" href="#id92" id="id8" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>)。
 直接SR (<code class="docutils literal notranslate"><span class="pre">NSRCG=0</span></code>) では <code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code> と併用できます。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NSRCG</span></code></p>
 <p><strong>形式 :</strong> int型 (0もしくは1、デフォルト値=0)</p>
 <p><strong>説明 :</strong> SR法で連立一次方程式 <span class="math notranslate nohighlight">\(Sx=g\)</span>
 を解くときに、 <span class="math notranslate nohighlight">\(S\)</span>
-を陽に構築せずに解くことでメモリを削減する <a class="footnote-reference brackets" href="#id84" id="id9" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a> オプション[<a class="reference external" href="https://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045103">NeuscammanUmrigarChan</a> ](1で機能On,
+を陽に構築せずに解くことでメモリを削減する <a class="footnote-reference brackets" href="#id93" id="id9" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a> オプション[<a class="reference external" href="https://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045103">NeuscammanUmrigarChan</a> ](1で機能On,
 <code class="docutils literal notranslate"><span class="pre">NStore</span></code> は1に固定されます)。 <code class="docutils literal notranslate"><span class="pre">NSRCG</span></code> は <code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code> と併用できません。
 この制限は内部MPI分割に固有のものです。 <code class="docutils literal notranslate"><span class="pre">NSplitSize=1</span></code> の場合、SR-CG は従来通り
 stored <span class="math notranslate nohighlight">\(O\)</span> 経路を内部で使用します。</p>
@@ -1622,6 +1632,313 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </ul>
 </section>
 </section>
+<section id="backflow-rangebf-def-bf-def">
+<h2>BackFlow 指定ファイル (rangebf.def, bf.def)<a class="headerlink" href="#backflow-rangebf-def-bf-def" title="この見出しへのパーマリンク">¶</a></h2>
+<p>BackFlow 相関は、電子配置に依存してペア軌道
+<span class="math notranslate nohighlight">\(f_{ij}\)</span> を有効なペア軌道 <span class="math notranslate nohighlight">\(f^b_{ij}\)</span> に置き換える相関因子です。
+エキスパートモードでは <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> に <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> と <code class="docutils literal notranslate"><span class="pre">BF</span></code> の
+2 つのキーワードを両方指定して有効化します。片方だけを指定した場合は
+エラー終了します。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BFRange</span>  <span class="n">rangebf</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">BF</span>       <span class="n">bf</span><span class="o">.</span><span class="k">def</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">BFRange</span></code> は各中心サイトから BackFlow が参照する近傍サイトと距離シェルを
+指定し、<code class="docutils literal notranslate"><span class="pre">BF</span></code> はそれらの近傍ペアに対する BackFlow group と最適化フラグを
+指定します。現時点の実装はエキスパートモード入力のみを対象としており、
+StdFace/Standard mode はこれらのファイルを生成しません。</p>
+<section id="id46">
+<h3>波動関数の形<a class="headerlink" href="#id46" title="この見出しへのパーマリンク">¶</a></h3>
+<p>BackFlow 付きペア積波動関数の定義は、Ido ら [<a class="reference external" href="https://doi.org/10.1103/PhysRevB.92.245106">Ido2015</a>] の格子 BackFlow
+拡張に従っています。Slater 行列式に対する格子 BackFlow については
+Tocchio ら [<a class="reference external" href="https://doi.org/10.1103/PhysRevB.78.041101">Tocchio2008</a>], [<a class="reference external" href="https://doi.org/10.1103/PhysRevB.83.195138">Tocchio2011</a>] も参照してください。
+現行実装では BackFlow とスピン射影は併用できないため、BackFlow を使う場合の
+波動関数は、BackFlow と併用可能な対角相関因子をまとめて
+<span class="math notranslate nohighlight">\({\cal P}_{\rm corr}\)</span> と書くと、概念的には</p>
+<div class="math notranslate nohighlight">
+\[|\Psi^b\rangle
+  = {\cal P}_{\rm corr} {\cal L}_{K} |\phi^b\rangle\]</div>
+<p>です。<span class="math notranslate nohighlight">\({\cal L}_{K}\)</span> は運動量射影です。運動量射影を用いない場合は
+恒等演算子とみなします。実空間配置 <span class="math notranslate nohighlight">\(x\)</span> で展開すると、</p>
+<div class="math notranslate nohighlight">
+\[{\cal L}_{K}|\phi^b\rangle
+  = \sum_x \left(\frac{N}{2}\right)!
+    \sum_{\boldsymbol R} e^{i{\boldsymbol K}\cdot{\boldsymbol R}}
+    {\rm Pf}\left[X^b(x_{-{\boldsymbol R}})\right] |x\rangle .\]</div>
+<p>ここで <span class="math notranslate nohighlight">\(N\)</span> は電子数、<span class="math notranslate nohighlight">\({\boldsymbol R}\)</span> は並進ベクトル、
+<span class="math notranslate nohighlight">\({\rm Pf}\)</span> は Pfaffian です。配置 <span class="math notranslate nohighlight">\(x_{\boldsymbol R}\)</span> 中の
+<span class="math notranslate nohighlight">\(n\)</span> 番目・ <span class="math notranslate nohighlight">\(m\)</span> 番目の電子サイトを <span class="math notranslate nohighlight">\(i_n, i_m\)</span> とすると、
+歪対称行列 <span class="math notranslate nohighlight">\(X^b\)</span> の成分は</p>
+<div class="math notranslate nohighlight">
+\[X^b_{nm}(x_{\boldsymbol R})
+  =
+  f^b_{T_{\boldsymbol R}(i_n),T_{\boldsymbol R}(i_m)}
+    (x_{\boldsymbol R})
+  -
+  f^b_{T_{\boldsymbol R}(i_m),T_{\boldsymbol R}(i_n)}
+    (x_{\boldsymbol R})\]</div>
+<p>で与えられます。BackFlow は、元のペア軌道 <span class="math notranslate nohighlight">\(f_{ij}\)</span> を次の
+配置依存ペア軌道 <span class="math notranslate nohighlight">\(f^b_{ij}(x)\)</span> に置き換えます。</p>
+<div class="math notranslate nohighlight">
+\[f^b_{i_n i_m}(x)
+  =
+  \sum_{\mu,\nu=0}^{3}\sum_{\tau,\tau'}
+  \eta^{\mu\nu}_{\tau\tau'}
+  \Theta^{\mu\uparrow}_{i_n,i_n+\tau}(x)
+  \Theta^{\nu\downarrow}_{i_m,i_m+\tau'}(x)
+  f_{i_n+\tau,i_m+\tau'} .\]</div>
+<p><span class="math notranslate nohighlight">\(\tau,\tau'\)</span> は <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> で列挙した近傍サイトを表し、
+<span class="math notranslate nohighlight">\(\eta^{\mu\nu}_{\tau\tau'}\)</span> が BackFlow 変分パラメータです。
+mVMC の <code class="docutils literal notranslate"><span class="pre">ProjBF</span></code> はこの <span class="math notranslate nohighlight">\(\eta\)</span> を平坦化して格納したものです。
+<code class="docutils literal notranslate"><span class="pre">BF</span></code> ファイルは、各 <span class="math notranslate nohighlight">\((i,j,\tau,\tau')\)</span> に対する BackFlow group と
+最適化フラグを指定します。現在の実装では group は 0 のみ指定できます。</p>
+<p><span class="math notranslate nohighlight">\(\Theta\)</span> は配置 <span class="math notranslate nohighlight">\(x\)</span> 上の局所的な doublon/holon パターンを
+表す対角量です。<span class="math notranslate nohighlight">\(h_{i\sigma}=1-n_{i\sigma}\)</span>,
+<span class="math notranslate nohighlight">\(D_i=n_{i\uparrow}n_{i\downarrow}\)</span>,
+<span class="math notranslate nohighlight">\(H_i=(1-n_{i\uparrow})(1-n_{i\downarrow})\)</span> とすると、</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+\Theta^{0\sigma}_{i,i+\tau}(x)
+  &amp;= \delta_{i,i+\tau},\\
+\Theta^{1\sigma}_{i,i+\tau}(x)
+  &amp;= \langle D_i H_{i+\tau}\rangle_x,\\
+\Theta^{2\sigma}_{i,i+\tau}(x)
+  &amp;=
+  \langle
+    n_{i\sigma}h_{i,-\sigma}
+    n_{i+\tau,-\sigma}h_{i+\tau,\sigma}
+  \rangle_x,\\
+\Theta^{3\sigma}_{i,i+\tau}(x)
+  &amp;=
+  \langle
+    D_i n_{i+\tau,-\sigma}h_{i+\tau,\sigma}
+    + n_{i\sigma}h_{i,-\sigma}H_{i+\tau}
+  \rangle_x .
+\end{aligned}\end{split}\]</div>
+<p>BackFlow 無しの極限は
+<span class="math notranslate nohighlight">\(\eta^{00}_{0,0}=1\)</span> かつその他の <span class="math notranslate nohighlight">\(\eta=0\)</span> です。
+mVMC の入力ではこれが <code class="docutils literal notranslate"><span class="pre">ProjBF[0]=1</span></code>、<code class="docutils literal notranslate"><span class="pre">ProjBF[k&gt;0]=0</span></code> に対応します。</p>
+</section>
+<section id="id47">
+<h3>パラメータ数<a class="headerlink" href="#id47" title="この見出しへのパーマリンク">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">rangebf.def</span></code> の <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> と <code class="docutils literal notranslate"><span class="pre">NzBF</span></code>、<code class="docutils literal notranslate"><span class="pre">bf.def</span></code> の
+<code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> から、BackFlow の変分パラメータ数は以下のように決まります。</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+N_{\rm rangeIdx}
+  &amp;= 3\frac{N_{\rm range}-1}{N_z^{\rm BF}} + 1,\\
+N_{\rm BFIdxTotal}
+  &amp;= \frac{N_{\rm rangeIdx}(N_{\rm rangeIdx}+1)}{2},\\
+N_{\rm ProjBF}
+  &amp;= N_{\rm BFIdxTotal} N_{\rm BackFlowIdx}.
+\end{aligned}\end{split}\]</div>
+<p><code class="docutils literal notranslate"><span class="pre">Nrange</span></code> は各中心サイトに対して列挙するサイト数で、自サイトを含みます。
+<code class="docutils literal notranslate"><span class="pre">NzBF</span></code> は 1 つの非ゼロ距離シェルに含まれるサイト数です。
+<code class="docutils literal notranslate"><span class="pre">Nrange-1</span></code> は <code class="docutils literal notranslate"><span class="pre">NzBF</span></code> で割り切れる必要があります。
+BackFlow が無い極限は <code class="docutils literal notranslate"><span class="pre">ProjBF[0]=1</span></code>、<code class="docutils literal notranslate"><span class="pre">ProjBF[k&gt;0]=0</span></code> です。
+すべての <code class="docutils literal notranslate"><span class="pre">ProjBF</span></code> を 0 にすることは BackFlow 無しの極限ではありません。
+初期値ファイルを使わない場合、mVMC はこの identity 初期値を設定します。</p>
+</section>
+<section id="bfrange-rangebf-def">
+<h3>BFRange ファイル (rangebf.def)<a class="headerlink" href="#bfrange-rangebf-def" title="この見出しへのパーマリンク">¶</a></h3>
+<p>以下に 1 次元 4 サイト周期鎖で、自サイトと左右最近接を BackFlow 範囲にする例を示します。
+この例では <code class="docutils literal notranslate"><span class="pre">Nrange=3</span></code>、<code class="docutils literal notranslate"><span class="pre">NzBF=2</span></code> です。
+<code class="docutils literal notranslate"><span class="pre">rangebf.def</span></code> は 10 行のヘッダを持ち、本文は 11 行目から始まります。
+1-5 行目は mVMC の <code class="docutils literal notranslate"><span class="pre">*.def</span></code> ファイル共通ヘッダ、6-10 行目は
+BackFlow 用の追加ヘッダです。7 行目の <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> 行は読み飛ばされますが、
+可読性と既存入力との整合のため、2 行目と同じ内容を書きます。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">====================</span>
+<span class="n">Nrange</span> <span class="mi">3</span> <span class="mi">2</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="n">Nrange</span> <span class="mi">3</span> <span class="mi">2</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">3</span> <span class="mi">1</span>
+<span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span>
+<span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span>
+<span class="mi">1</span> <span class="mi">0</span> <span class="mi">1</span>
+<span class="mi">1</span> <span class="mi">2</span> <span class="mi">1</span>
+<span class="mi">2</span> <span class="mi">2</span> <span class="mi">0</span>
+<span class="mi">2</span> <span class="mi">1</span> <span class="mi">1</span>
+<span class="mi">2</span> <span class="mi">3</span> <span class="mi">1</span>
+<span class="mi">3</span> <span class="mi">3</span> <span class="mi">0</span>
+<span class="mi">3</span> <span class="mi">2</span> <span class="mi">1</span>
+<span class="mi">3</span> <span class="mi">0</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="id48">
+<h3>ファイル形式<a class="headerlink" href="#id48" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p>1-5行: 共通ヘッダ。2行目は <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> [int01] [int02] とします。</p></li>
+<li><p>6-10行: BackFlow 用の追加ヘッダ。読み込み時には読み飛ばされますが省略できません。
+7 行目にも <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> [int01] [int02] を書くことを推奨します。</p></li>
+<li><p>11 - (10 + <span class="math notranslate nohighlight">\(N_s \times\)</span> [int01]) 行:
+[int03] [int04] [int05]</p></li>
+</ul>
+</section>
+<section id="id49">
+<h3>パラメータ<a class="headerlink" href="#id49" title="この見出しへのパーマリンク">¶</a></h3>
+<ul>
+<li><p>[ int01 ]</p>
+<p><strong>形式 :</strong> int型 (1以上)</p>
+<p><strong>説明 :</strong> 各中心サイトから列挙する BackFlow 範囲のサイト数。
+自サイトを必ず含めます。</p>
+</li>
+<li><p>[ int02 ]</p>
+<p><strong>形式 :</strong> int型 (1以上)</p>
+<p><strong>説明 :</strong> 1 つの非ゼロ距離シェルに含まれるサイト数。
+[int01] - 1 は [int02] で割り切れる必要があります。</p>
+</li>
+<li><p>[ int03 ]</p>
+<p><strong>形式 :</strong> int型</p>
+<p><strong>説明 :</strong> 中心サイト番号。0以上 <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> 未満で指定します。</p>
+</li>
+<li><p>[ int04 ]</p>
+<p><strong>形式 :</strong> int型</p>
+<p><strong>説明 :</strong> [int03] から見た BackFlow 範囲内のサイト番号。
+0以上 <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> 未満で指定します。</p>
+</li>
+<li><p>[ int05 ]</p>
+<p><strong>形式 :</strong> int型</p>
+<p><strong>説明 :</strong> 距離シェル番号。自サイトは必ず 0 とし、非ゼロ距離シェルは
+1 以上 <span class="math notranslate nohighlight">\((N_{\rm range}-1)/N_z^{\rm BF}\)</span> 以下で指定します。</p>
+</li>
+</ul>
+</section>
+<section id="id50">
+<h3>使用ルール<a class="headerlink" href="#id50" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p>各中心サイト [int03] について、ちょうど <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> 行を指定する必要があります。</p></li>
+<li><p>各中心サイトには自サイト行 <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">i</span> <span class="pre">0</span></code> が必須です。
+<code class="docutils literal notranslate"><span class="pre">i==j</span></code> でシェル番号が 0 以外、または <code class="docutils literal notranslate"><span class="pre">i!=j</span></code> でシェル番号が 0 の行は
+エラーになります。</p></li>
+<li><p>同じ中心サイトと範囲サイトの組 <code class="docutils literal notranslate"><span class="pre">(i,j)</span></code> を重複して指定することはできません。</p></li>
+</ul>
+</section>
+<section id="bf-bf-def">
+<h3>BF ファイル (bf.def)<a class="headerlink" href="#bf-bf-def" title="この見出しへのパーマリンク">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">BF</span></code> ファイルでは、<code class="docutils literal notranslate"><span class="pre">BFRange</span></code> で定義した近傍の組に BackFlow group を
+割り当てます。現在の実装では <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code> のみをサポートするため、
+group 番号 [int06] は常に 0 です。
+<code class="docutils literal notranslate"><span class="pre">bf.def</span></code> も 10 行のヘッダを持ち、本文は 11 行目から始まります。
+1-5 行目は mVMC の <code class="docutils literal notranslate"><span class="pre">*.def</span></code> ファイル共通ヘッダ、6-10 行目は
+BackFlow 用の追加ヘッダです。7 行目の <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> 行は読み飛ばされますが、
+可読性と既存入力との整合のため、2 行目と同じ内容を書きます。</p>
+<p>例:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">====================</span>
+<span class="n">NBackFlowIdx</span> <span class="mi">1</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="n">NBackFlowIdx</span> <span class="mi">1</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">3</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">3</span> <span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">3</span> <span class="mi">3</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">3</span> <span class="mi">1</span> <span class="mi">0</span>
+<span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
+<span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">1</span> <span class="mi">0</span>
+<span class="mi">2</span> <span class="mi">0</span>
+<span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
+<span class="mi">9</span> <span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+<section id="id51">
+<h3>ファイル形式<a class="headerlink" href="#id51" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p>1-5行: 共通ヘッダ。2行目は <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> [int01] とします。</p></li>
+<li><p>6-10行: BackFlow 用の追加ヘッダ。読み込み時には読み飛ばされますが省略できません。
+7 行目にも <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> [int01] を書くことを推奨します。</p></li>
+<li><p>11 - (10 + <span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span>) 行:
+[int02] [int03] [int04] [int05] [int06]</p></li>
+<li><p>続く <span class="math notranslate nohighlight">\(N_{\rm ProjBF}\)</span> 行:
+[int07] [int08]</p></li>
+</ul>
+</section>
+<section id="id52">
+<h3>パラメータ<a class="headerlink" href="#id52" title="この見出しへのパーマリンク">¶</a></h3>
+<ul>
+<li><p>[ int01 ]</p>
+<p><strong>形式 :</strong> int型</p>
+<p><strong>説明 :</strong> BackFlow group 数。現在の実装では 1 のみ指定できます。</p>
+</li>
+<li><p>[ int02 ], [ int03 ]</p>
+<p><strong>形式 :</strong> int型</p>
+<p><strong>説明 :</strong> BackFlow で補正する元のサイト対 <span class="math notranslate nohighlight">\((i,j)\)</span>。
+どちらも 0 以上 <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> 未満で指定します。</p>
+</li>
+<li><p>[ int04 ], [ int05 ]</p>
+<p><strong>形式 :</strong> int型</p>
+<p><strong>説明 :</strong> <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> で指定した近傍サイト。
+[int04] は [int02] の BackFlow 範囲に、[int05] は [int03] の
+BackFlow 範囲に含まれている必要があります。</p>
+</li>
+<li><p>[ int06 ]</p>
+<p><strong>形式 :</strong> int型</p>
+<p><strong>説明 :</strong> BackFlow group 番号。現在の実装では 0 のみ指定できます。</p>
+</li>
+<li><p>[ int07 ]</p>
+<p><strong>形式 :</strong> int型</p>
+<p><strong>説明 :</strong> BackFlow 変分パラメータ <code class="docutils literal notranslate"><span class="pre">ProjBF</span></code> の番号。
+0 以上 <code class="docutils literal notranslate"><span class="pre">NProjBF</span></code> 未満を重複なくすべて指定します。</p>
+</li>
+<li><p>[ int08 ]</p>
+<p><strong>形式 :</strong> int型</p>
+<p><strong>説明 :</strong> [int07] で指定した <code class="docutils literal notranslate"><span class="pre">ProjBF</span></code> を最適化する場合は 1、
+固定する場合は 0 とします。<code class="docutils literal notranslate"><span class="pre">ProjBF[0]</span></code> の虚部は常に固定されます。</p>
+</li>
+</ul>
+</section>
+<section id="id53">
+<h3>使用ルール<a class="headerlink" href="#id53" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">BFRange</span></code> と <code class="docutils literal notranslate"><span class="pre">BF</span></code> は必ず両方を <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> に指定してください。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BF</span></code> のサイト行は、全ての <span class="math notranslate nohighlight">\(i,j\)</span> と
+<span class="math notranslate nohighlight">\(x_0 \in {\rm BFRange}(i)\)</span>、<span class="math notranslate nohighlight">\(x_1 \in {\rm BFRange}(j)\)</span>
+の組を 1 回ずつ指定する必要があります。行数は
+<span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span> です。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ProjBF[0]</span></code> は BackFlow の base 項にも使われるため、identity 初期点では
+<code class="docutils literal notranslate"><span class="pre">ProjBF[0]=1</span></code> とします。初期値ファイルや再開ファイルを使う場合、
+<code class="docutils literal notranslate"><span class="pre">ProjBF[0]</span></code> の虚部は 0 にしてください。</p></li>
+</ul>
+</section>
+<section id="id54">
+<h3>制限事項<a class="headerlink" href="#id54" title="この見出しへのパーマリンク">¶</a></h3>
+<p>BackFlow は現時点では以下の範囲でのみ使用できます。範囲外の入力は
+エラー終了します。</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code> のみ。複数 BackFlow group は未対応です。</p></li>
+<li><p>ローカル更新は <code class="docutils literal notranslate"><span class="pre">NExUpdatePath==0</span></code> の hopping update のみ。
+t-J 用更新経路、exchange update、Kondo update、doublon-only update との併用は未対応です。</p></li>
+<li><p>ペア軌道は <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> の通常形式のみ。
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ には未対応です。</p></li>
+<li><p>スピン射影は未対応です。<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg==1</span></code> を指定してください。</p></li>
+<li><p>RBM、Lanczos、Twist、reweight、<code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code> は未対応です。
+<code class="docutils literal notranslate"><span class="pre">NMPTrans&gt;1</span></code> による通常の運動量射影は、<code class="docutils literal notranslate"><span class="pre">APFlag=0</span></code> かつ
+<code class="docutils literal notranslate"><span class="pre">NQPOptTrans==1</span></code> の範囲で使用できます。</p></li>
+<li><p>Hamiltonian は <code class="docutils literal notranslate"><span class="pre">Trans</span></code> と number-operator 型の相互作用
+(<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>) の範囲で使用できます。
+<code class="docutils literal notranslate"><span class="pre">PairHop</span></code>、<code class="docutils literal notranslate"><span class="pre">Exchange</span></code>、<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> のような二体ハミルトニアン項は未対応です。
+ただし、測定用の <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> / <code class="docutils literal notranslate"><span class="pre">TwoBodyGEx</span></code> 出力は使用できます。</p></li>
+<li><p>Standard mode / StdFace から BackFlow 入力は生成されません。
+BackFlow を使う場合は、エキスパートモード入力として <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> と <code class="docutils literal notranslate"><span class="pre">BF</span></code> を
+手動で用意してください。</p></li>
+</ul>
+</section>
+</section>
 <section id="dh2">
 <h2>DH2指定ファイル<a class="headerlink" href="#dh2" title="この見出しへのパーマリンク">¶</a></h2>
 <div class="math notranslate nohighlight">
@@ -1653,8 +1970,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
   <span class="mi">11</span>     <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id46">
-<h3>ファイル形式<a class="headerlink" href="#id46" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id55">
+<h3>ファイル形式<a class="headerlink" href="#id55" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm dh2}\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1667,8 +1984,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 (5+ <span class="math notranslate nohighlight">\((N_s+6) \times N_{\rm dh2}\)</span>)行：[int07] [int08]</p></li>
 </ul>
 </section>
-<section id="id47">
-<h3>パラメータ<a class="headerlink" href="#id47" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id56">
+<h3>パラメータ<a class="headerlink" href="#id56" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1724,8 +2041,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </li>
 </ul>
 </section>
-<section id="id48">
-<h3>使用ルール<a class="headerlink" href="#id48" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id57">
+<h3>使用ルール<a class="headerlink" href="#id57" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -1764,8 +2081,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
    <span class="mi">9</span>     <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id49">
-<h3>ファイル形式<a class="headerlink" href="#id49" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id58">
+<h3>ファイル形式<a class="headerlink" href="#id58" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm dh4}\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1778,8 +2095,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 (5+ <span class="math notranslate nohighlight">\((N_s+10) \times N_{\rm dh4}\)</span>)行：[int09] [int10]</p></li>
 </ul>
 </section>
-<section id="id50">
-<h3>パラメータ<a class="headerlink" href="#id50" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id59">
+<h3>パラメータ<a class="headerlink" href="#id59" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1836,8 +2153,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </li>
 </ul>
 </section>
-<section id="id51">
-<h3>使用ルール<a class="headerlink" href="#id51" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id60">
+<h3>使用ルール<a class="headerlink" href="#id60" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -1865,8 +2182,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
  <span class="mi">0</span>    <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id52">
-<h3>ファイル形式<a class="headerlink" href="#id52" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id61">
+<h3>ファイル形式<a class="headerlink" href="#id61" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_v\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1878,8 +2195,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 (5+ <span class="math notranslate nohighlight">\(2N_s\)</span> + <span class="math notranslate nohighlight">\(N_v\)</span>)行：[int06] [int07]</p></li>
 </ul>
 </section>
-<section id="id53">
-<h3>パラメータ<a class="headerlink" href="#id53" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id62">
+<h3>パラメータ<a class="headerlink" href="#id62" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1927,8 +2244,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </li>
 </ul>
 </section>
-<section id="id54">
-<h3>使用ルール<a class="headerlink" href="#id54" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id63">
+<h3>使用ルール<a class="headerlink" href="#id63" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。</p></li>
@@ -1959,8 +2276,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
  <span class="mi">1</span>    <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id55">
-<h3>ファイル形式<a class="headerlink" href="#id55" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id64">
+<h3>ファイル形式<a class="headerlink" href="#id64" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> は隠れニューロンの数、 <span class="math notranslate nohighlight">\(N_v\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1972,8 +2289,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 (5+ <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> + <span class="math notranslate nohighlight">\(N_v\)</span>)行：[int05] [int06]</p></li>
 </ul>
 </section>
-<section id="id56">
-<h3>パラメータ<a class="headerlink" href="#id56" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id65">
+<h3>パラメータ<a class="headerlink" href="#id65" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2016,8 +2333,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </li>
 </ul>
 </section>
-<section id="id57">
-<h3>使用ルール<a class="headerlink" href="#id57" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id66">
+<h3>使用ルール<a class="headerlink" href="#id66" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。</p></li>
@@ -2051,8 +2368,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
  <span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
 </pre></div>
 </div>
-<section id="id58">
-<h3>ファイル形式<a class="headerlink" href="#id58" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id67">
+<h3>ファイル形式<a class="headerlink" href="#id67" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、<span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> は隠れニューロンの数、 <span class="math notranslate nohighlight">\(N_v\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2064,8 +2381,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 (5+ <span class="math notranslate nohighlight">\(2 N_s N_{\rm neuronGeneral}\)</span> + <span class="math notranslate nohighlight">\(N_v\)</span>)行：[int07] [int08]</p></li>
 </ul>
 </section>
-<section id="id59">
-<h3>パラメータ<a class="headerlink" href="#id59" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id68">
+<h3>パラメータ<a class="headerlink" href="#id68" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2118,8 +2435,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </li>
 </ul>
 </section>
-<section id="id60">
-<h3>使用ルール<a class="headerlink" href="#id60" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id69">
+<h3>使用ルール<a class="headerlink" href="#id69" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。</p></li>
@@ -2154,8 +2471,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
   <span class="mi">63</span>    <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id61">
-<h3>ファイル形式<a class="headerlink" href="#id61" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id70">
+<h3>ファイル形式<a class="headerlink" href="#id70" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm o}\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2166,8 +2483,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 <li><p>(6+ <span class="math notranslate nohighlight">\(N_s^2\)</span>) - (5+ <span class="math notranslate nohighlight">\(N_s^2+N_{\rm o}\)</span>)行：[int07] [int08]</p></li>
 </ul>
 </section>
-<section id="id62">
-<h3>パラメータ<a class="headerlink" href="#id62" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id71">
+<h3>パラメータ<a class="headerlink" href="#id71" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2215,8 +2532,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </li>
 </ul>
 </section>
-<section id="id63">
-<h3>使用ルール<a class="headerlink" href="#id63" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id72">
+<h3>使用ルール<a class="headerlink" href="#id72" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2248,8 +2565,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
   <span class="mi">119</span>    <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id64">
-<h3>ファイル形式<a class="headerlink" href="#id64" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id73">
+<h3>ファイル形式<a class="headerlink" href="#id73" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm o}\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2261,8 +2578,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 (5+ <span class="math notranslate nohighlight">\(N_s*(N_s-1)/2+N_{\rm o}\)</span>)行：[int07] [int08]</p></li>
 </ul>
 </section>
-<section id="id65">
-<h3>パラメータ<a class="headerlink" href="#id65" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id74">
+<h3>パラメータ<a class="headerlink" href="#id74" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2310,8 +2627,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </li>
 </ul>
 </section>
-<section id="id66">
-<h3>使用ルール<a class="headerlink" href="#id66" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id75">
+<h3>使用ルール<a class="headerlink" href="#id75" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2343,8 +2660,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
   <span class="mi">254</span>    <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id67">
-<h3>ファイル形式<a class="headerlink" href="#id67" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id76">
+<h3>ファイル形式<a class="headerlink" href="#id76" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm o}\)</span> は変分パラメータの種類の数)。
 変分パラメータの総数 <span class="math notranslate nohighlight">\(N_p\)</span> は <span class="math notranslate nohighlight">\(i+\sigma_1 N_s &lt; j+\sigma_2 N_s\)</span> (<span class="math notranslate nohighlight">\(\sigma=0 ,1\)</span>)を満たすペアの総数に対応し、
 <span class="math notranslate nohighlight">\(S_z=0\)</span> の場合は <span class="math notranslate nohighlight">\(N_p=N_s^2\)</span> 、 <span class="math notranslate nohighlight">\(S_z\)</span> 非保存の場合は <span class="math notranslate nohighlight">\(N_p=2N_s^2-N_s\)</span> 個となります。</p>
@@ -2358,8 +2675,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 <li><p>(6+ <span class="math notranslate nohighlight">\(N_p\)</span>) - (5+ <span class="math notranslate nohighlight">\(N_p+N_{\rm o}\)</span>)行：[int09] [int10]</p></li>
 </ul>
 </section>
-<section id="id68">
-<h3>パラメータ<a class="headerlink" href="#id68" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id77">
+<h3>パラメータ<a class="headerlink" href="#id77" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2412,8 +2729,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </li>
 </ul>
 </section>
-<section id="id69">
-<h3>使用ルール<a class="headerlink" href="#id69" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id78">
+<h3>使用ルール<a class="headerlink" href="#id78" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2441,8 +2758,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
    <span class="mi">3</span>    <span class="mi">13</span>    <span class="mi">2</span>
 </pre></div>
 </div>
-<section id="id70">
-<h3>ファイル形式<a class="headerlink" href="#id70" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id79">
+<h3>ファイル形式<a class="headerlink" href="#id79" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm TS}\)</span> は射影演算子の種類の総数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2453,8 +2770,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 (5+ <span class="math notranslate nohighlight">\((N_s+1) \times N_{\rm TS}\)</span>)行：[int03] [int04] [int05] [int06]</p></li>
 </ul>
 </section>
-<section id="id71">
-<h3>パラメータ<a class="headerlink" href="#id71" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id80">
+<h3>パラメータ<a class="headerlink" href="#id80" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2498,8 +2815,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </li>
 </ul>
 </section>
-<section id="id72">
-<h3>使用ルール<a class="headerlink" href="#id72" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id81">
+<h3>使用ルール<a class="headerlink" href="#id81" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2509,7 +2826,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </section>
 </section>
 <section id="inputparam">
-<span id="id73"></span><h2>変分パラメータ初期値指定ファイル<a class="headerlink" href="#inputparam" title="この見出しへのパーマリンク">¶</a></h2>
+<span id="id82"></span><h2>変分パラメータ初期値指定ファイル<a class="headerlink" href="#inputparam" title="この見出しへのパーマリンク">¶</a></h2>
 <p>各変分パラメータの初期値を設定することが可能です。
 変分パラメータの種類は <a class="reference internal" href="#inputfilelist"><span class="std std-ref">入力ファイル指定用ファイル(namelist.def)</span></a> において
 <code class="docutils literal notranslate"><span class="pre">InGutzwiller</span></code>, <code class="docutils literal notranslate"><span class="pre">InJastrow</span></code>, <code class="docutils literal notranslate"><span class="pre">InSpinJastrow</span></code>, <code class="docutils literal notranslate"><span class="pre">InDH2</span></code>, <code class="docutils literal notranslate"><span class="pre">InDH4</span></code>,  <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_PhysLayer</span></code>, <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_HiddenLayer</span></code>, <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_PhysHidden</span></code>, <code class="docutils literal notranslate"><span class="pre">InOrbital</span></code>,
@@ -2529,8 +2846,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 <span class="mi">27</span> <span class="o">-</span><span class="mf">9.017586139930480749e-02</span>  <span class="mf">0.000000000000000000e+00</span>
 </pre></div>
 </div>
-<section id="id74">
-<h3>ファイル形式<a class="headerlink" href="#id74" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id83">
+<h3>ファイル形式<a class="headerlink" href="#id83" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_v\)</span> は変分パラメータの種類の総数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2539,8 +2856,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 <li><p>6 - (5+ <span class="math notranslate nohighlight">\(N_v\)</span>)行: [int02] [double01] [double02]</p></li>
 </ul>
 </section>
-<section id="id75">
-<h3>パラメータ<a class="headerlink" href="#id75" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id84">
+<h3>パラメータ<a class="headerlink" href="#id84" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2564,8 +2881,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </li>
 </ul>
 </section>
-<section id="id76">
-<h3>使用ルール<a class="headerlink" href="#id76" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id85">
+<h3>使用ルール<a class="headerlink" href="#id85" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>RBM相関因子のインプット機能は、現バージョンではベータ版です。今後のバージョンアップにより、ファイル形式や実装が変更される可能性があります。本機能を使用する際は、十分な検証を行ってください。</p></li>
@@ -2608,8 +2925,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
    <span class="mi">11</span>     <span class="mi">1</span>    <span class="mi">11</span>     <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id77">
-<h3>ファイル形式<a class="headerlink" href="#id77" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id86">
+<h3>ファイル形式<a class="headerlink" href="#id86" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2618,8 +2935,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 <li><p>6行以降: [int02]  [int03]  [int04]  [int05]</p></li>
 </ul>
 </section>
-<section id="id78">
-<h3>パラメータ<a class="headerlink" href="#id78" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id87">
+<h3>パラメータ<a class="headerlink" href="#id87" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2645,8 +2962,8 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </li>
 </ul>
 </section>
-<section id="id79">
-<h3>使用ルール<a class="headerlink" href="#id79" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id88">
+<h3>使用ルール<a class="headerlink" href="#id88" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2692,8 +3009,8 @@ NCisAjsCktAltDC        576
     …
 </pre></div>
 </div>
-<section id="id80">
-<h3>ファイル形式<a class="headerlink" href="#id80" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id89">
+<h3>ファイル形式<a class="headerlink" href="#id89" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2703,8 +3020,8 @@ NCisAjsCktAltDC        576
 [int02]  [int03]  [int04]  [int05]  [int06]  [int07]  [int08]  [int09]</p></li>
 </ul>
 </section>
-<section id="id81">
-<h3>パラメータ<a class="headerlink" href="#id81" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id90">
+<h3>パラメータ<a class="headerlink" href="#id90" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2732,8 +3049,8 @@ NCisAjsCktAltDC        576
 </li>
 </ul>
 </section>
-<section id="id82">
-<h3>使用ルール<a class="headerlink" href="#id82" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id91">
+<h3>使用ルール<a class="headerlink" href="#id91" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2741,12 +3058,12 @@ NCisAjsCktAltDC        576
 <li><p>[ int02 ]-[ int09 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。</p></li>
 </ul>
 <aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id83" role="doc-footnote">
+<aside class="footnote brackets" id="id92" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id8">3</a><span class="fn-bracket">]</span></span>
 <p>使用メモリ量が、 <span class="math notranslate nohighlight">\(O(N_\text{p}^2)\)</span> から
 <span class="math notranslate nohighlight">\(O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})\)</span> になります。</p>
 </aside>
-<aside class="footnote brackets" id="id84" role="doc-footnote">
+<aside class="footnote brackets" id="id93" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id9">4</a><span class="fn-bracket">]</span></span>
 <p>使用メモリ量は、 <span class="math notranslate nohighlight">\(O(N_\text{p}) + O(N_\text{p}N_\text{MCS})\)</span>
 です。</p>
@@ -2769,8 +3086,8 @@ NCisAjsCktAltDC        576
     <span class="mi">3</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">0</span>     <span class="mi">1</span>     <span class="mi">0</span>     <span class="mi">1</span>     <span class="mi">0</span>     <span class="mi">2</span>     <span class="mi">1</span>     <span class="mi">2</span>     <span class="mi">1</span>
 </pre></div>
 </div>
-<section id="id85">
-<h3>ファイル形式<a class="headerlink" href="#id85" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id94">
+<h3>ファイル形式<a class="headerlink" href="#id94" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2780,8 +3097,8 @@ NCisAjsCktAltDC        576
 [N] [i_1] [sigma_1] [j_1] [tau_1] ... [i_N] [sigma_N] [j_N] [tau_N]</p></li>
 </ul>
 </section>
-<section id="id86">
-<h3>パラメータ<a class="headerlink" href="#id86" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id95">
+<h3>パラメータ<a class="headerlink" href="#id95" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2809,8 +3126,8 @@ NCisAjsCktAltDC        576
 </li>
 </ul>
 </section>
-<section id="id87">
-<h3>使用ルール<a class="headerlink" href="#id87" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id96">
+<h3>使用ルール<a class="headerlink" href="#id96" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2850,8 +3167,8 @@ idx_site_s_x_y_z
     …
 </pre></div>
 </div>
-<section id="id88">
-<h3>ファイル形式<a class="headerlink" href="#id88" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id97">
+<h3>ファイル形式<a class="headerlink" href="#id97" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2861,8 +3178,8 @@ idx_site_s_x_y_z
 [int02]  [int03]  [int04]  [double01]  [double02]  [double03]</p></li>
 </ul>
 </section>
-<section id="id89">
-<h3>パラメータ<a class="headerlink" href="#id89" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id98">
+<h3>パラメータ<a class="headerlink" href="#id98" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2899,8 +3216,8 @@ Twist演算子の番号 <span class="math notranslate nohighlight">\(\alpha\)</s
 </li>
 </ul>
 </section>
-<section id="id90">
-<h3>使用ルール<a class="headerlink" href="#id90" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id99">
+<h3>使用ルール<a class="headerlink" href="#id99" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2926,8 +3243,8 @@ i_x_y_z_orb
     …
 </pre></div>
 </div>
-<section id="id91">
-<h3>ファイル形式<a class="headerlink" href="#id91" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id100">
+<h3>ファイル形式<a class="headerlink" href="#id100" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2937,8 +3254,8 @@ i_x_y_z_orb
 [int05]  [int06]  [int07]  [int08]  [int09]</p></li>
 </ul>
 </section>
-<section id="id92">
-<h3>パラメータ<a class="headerlink" href="#id92" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id101">
+<h3>パラメータ<a class="headerlink" href="#id101" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2978,8 +3295,8 @@ i_x_y_z_orb
 </li>
 </ul>
 </section>
-<section id="id93">
-<h3>使用ルール<a class="headerlink" href="#id93" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id102">
+<h3>使用ルール<a class="headerlink" href="#id102" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -3097,94 +3414,108 @@ lattice.def の座標と twist.def の位相が意図した幾何を表すよう
 <li><a class="reference internal" href="#id45">使用ルール</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#backflow-rangebf-def-bf-def">BackFlow 指定ファイル (rangebf.def, bf.def)</a><ul>
+<li><a class="reference internal" href="#id46">波動関数の形</a></li>
+<li><a class="reference internal" href="#id47">パラメータ数</a></li>
+<li><a class="reference internal" href="#bfrange-rangebf-def">BFRange ファイル (rangebf.def)</a></li>
+<li><a class="reference internal" href="#id48">ファイル形式</a></li>
+<li><a class="reference internal" href="#id49">パラメータ</a></li>
+<li><a class="reference internal" href="#id50">使用ルール</a></li>
+<li><a class="reference internal" href="#bf-bf-def">BF ファイル (bf.def)</a></li>
+<li><a class="reference internal" href="#id51">ファイル形式</a></li>
+<li><a class="reference internal" href="#id52">パラメータ</a></li>
+<li><a class="reference internal" href="#id53">使用ルール</a></li>
+<li><a class="reference internal" href="#id54">制限事項</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#dh2">DH2指定ファイル</a><ul>
-<li><a class="reference internal" href="#id46">ファイル形式</a></li>
-<li><a class="reference internal" href="#id47">パラメータ</a></li>
-<li><a class="reference internal" href="#id48">使用ルール</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#dh4">DH4指定ファイル</a><ul>
-<li><a class="reference internal" href="#id49">ファイル形式</a></li>
-<li><a class="reference internal" href="#id50">パラメータ</a></li>
-<li><a class="reference internal" href="#id51">使用ルール</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#generalrbm-physlayer">GeneralRBM_PhysLayer指定ファイル</a><ul>
-<li><a class="reference internal" href="#id52">ファイル形式</a></li>
-<li><a class="reference internal" href="#id53">パラメータ</a></li>
-<li><a class="reference internal" href="#id54">使用ルール</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#generalrbm-hiddenlayer">GeneralRBM_HiddenLayer指定ファイル</a><ul>
 <li><a class="reference internal" href="#id55">ファイル形式</a></li>
 <li><a class="reference internal" href="#id56">パラメータ</a></li>
 <li><a class="reference internal" href="#id57">使用ルール</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#generalrbm-physhidden">GeneralRBM_PhysHidden指定ファイル</a><ul>
+<li><a class="reference internal" href="#dh4">DH4指定ファイル</a><ul>
 <li><a class="reference internal" href="#id58">ファイル形式</a></li>
 <li><a class="reference internal" href="#id59">パラメータ</a></li>
 <li><a class="reference internal" href="#id60">使用ルール</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#orbital-orbitalantiparallel-orbitalidx-def">Orbital/OrbitalAntiParallel指定ファイル(orbitalidx.def)</a><ul>
+<li><a class="reference internal" href="#generalrbm-physlayer">GeneralRBM_PhysLayer指定ファイル</a><ul>
 <li><a class="reference internal" href="#id61">ファイル形式</a></li>
 <li><a class="reference internal" href="#id62">パラメータ</a></li>
 <li><a class="reference internal" href="#id63">使用ルール</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#orbitalparallel">OrbitalParallel指定ファイル</a><ul>
+<li><a class="reference internal" href="#generalrbm-hiddenlayer">GeneralRBM_HiddenLayer指定ファイル</a><ul>
 <li><a class="reference internal" href="#id64">ファイル形式</a></li>
 <li><a class="reference internal" href="#id65">パラメータ</a></li>
 <li><a class="reference internal" href="#id66">使用ルール</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#orbitalgeneral">OrbitalGeneral指定ファイル</a><ul>
+<li><a class="reference internal" href="#generalrbm-physhidden">GeneralRBM_PhysHidden指定ファイル</a><ul>
 <li><a class="reference internal" href="#id67">ファイル形式</a></li>
 <li><a class="reference internal" href="#id68">パラメータ</a></li>
 <li><a class="reference internal" href="#id69">使用ルール</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#transsym-qptransidx-def">TransSym指定ファイル(qptransidx.def)</a><ul>
+<li><a class="reference internal" href="#orbital-orbitalantiparallel-orbitalidx-def">Orbital/OrbitalAntiParallel指定ファイル(orbitalidx.def)</a><ul>
 <li><a class="reference internal" href="#id70">ファイル形式</a></li>
 <li><a class="reference internal" href="#id71">パラメータ</a></li>
 <li><a class="reference internal" href="#id72">使用ルール</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#orbitalparallel">OrbitalParallel指定ファイル</a><ul>
+<li><a class="reference internal" href="#id73">ファイル形式</a></li>
+<li><a class="reference internal" href="#id74">パラメータ</a></li>
+<li><a class="reference internal" href="#id75">使用ルール</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#orbitalgeneral">OrbitalGeneral指定ファイル</a><ul>
+<li><a class="reference internal" href="#id76">ファイル形式</a></li>
+<li><a class="reference internal" href="#id77">パラメータ</a></li>
+<li><a class="reference internal" href="#id78">使用ルール</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#transsym-qptransidx-def">TransSym指定ファイル(qptransidx.def)</a><ul>
+<li><a class="reference internal" href="#id79">ファイル形式</a></li>
+<li><a class="reference internal" href="#id80">パラメータ</a></li>
+<li><a class="reference internal" href="#id81">使用ルール</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#inputparam">変分パラメータ初期値指定ファイル</a><ul>
-<li><a class="reference internal" href="#id74">ファイル形式</a></li>
-<li><a class="reference internal" href="#id75">パラメータ</a></li>
-<li><a class="reference internal" href="#id76">使用ルール</a></li>
+<li><a class="reference internal" href="#id83">ファイル形式</a></li>
+<li><a class="reference internal" href="#id84">パラメータ</a></li>
+<li><a class="reference internal" href="#id85">使用ルール</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#onebodyg-greenone-def">OneBodyG指定ファイル(greenone.def)</a><ul>
-<li><a class="reference internal" href="#id77">ファイル形式</a></li>
-<li><a class="reference internal" href="#id78">パラメータ</a></li>
-<li><a class="reference internal" href="#id79">使用ルール</a></li>
+<li><a class="reference internal" href="#id86">ファイル形式</a></li>
+<li><a class="reference internal" href="#id87">パラメータ</a></li>
+<li><a class="reference internal" href="#id88">使用ルール</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#twobodyg-greentwo-def">TwoBodyG指定ファイル(greentwo.def)</a><ul>
-<li><a class="reference internal" href="#id80">ファイル形式</a></li>
-<li><a class="reference internal" href="#id81">パラメータ</a></li>
-<li><a class="reference internal" href="#id82">使用ルール</a></li>
+<li><a class="reference internal" href="#id89">ファイル形式</a></li>
+<li><a class="reference internal" href="#id90">パラメータ</a></li>
+<li><a class="reference internal" href="#id91">使用ルール</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#nbodyg-nbodyg-def">NBodyG指定ファイル(nbodyg.def)</a><ul>
-<li><a class="reference internal" href="#id85">ファイル形式</a></li>
-<li><a class="reference internal" href="#id86">パラメータ</a></li>
-<li><a class="reference internal" href="#id87">使用ルール</a></li>
+<li><a class="reference internal" href="#id94">ファイル形式</a></li>
+<li><a class="reference internal" href="#id95">パラメータ</a></li>
+<li><a class="reference internal" href="#id96">使用ルール</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#twist-twist-def">Twist指定ファイル(twist.def)</a><ul>
-<li><a class="reference internal" href="#id88">ファイル形式</a></li>
-<li><a class="reference internal" href="#id89">パラメータ</a></li>
-<li><a class="reference internal" href="#id90">使用ルール</a></li>
+<li><a class="reference internal" href="#id97">ファイル形式</a></li>
+<li><a class="reference internal" href="#id98">パラメータ</a></li>
+<li><a class="reference internal" href="#id99">使用ルール</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#lattice-lattice-def">Lattice指定ファイル(lattice.def)</a><ul>
-<li><a class="reference internal" href="#id91">ファイル形式</a></li>
-<li><a class="reference internal" href="#id92">パラメータ</a></li>
-<li><a class="reference internal" href="#id93">使用ルール</a></li>
+<li><a class="reference internal" href="#id100">ファイル形式</a></li>
+<li><a class="reference internal" href="#id101">パラメータ</a></li>
+<li><a class="reference internal" href="#id102">使用ルール</a></li>
 </ul>
 </li>
 </ul>
