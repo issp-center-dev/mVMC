@@ -181,6 +181,8 @@ void SyncModifiedParameter(MPI_Comm comm) {
     }
   }
 
+  BFRefreshRealLookupTables();
+
   return;
 }
 

@@ -16,5 +16,6 @@ void BFAllocRuntime(void);
 void BFFreeRuntime(void);
 void BFInitParameters(void);
 void BFSetupIndex(void);
+void BFRefreshRealLookupTables(void);
 
 #endif
