@@ -1095,9 +1095,12 @@ static void SubSlaterElmBF_real_eta_sparse(const int tri, const int trj, double 
   int leftKey,rightKey;
   int leftCount,rightCount;
   int rki,rlj;
-  int bfidx;
   const int nSite=Nsite;
   const int nRange=Nrange;
+  const int nRangeIdx=NrangeIdx;
+  const double *bfRealProj=BFRealProj;
+  const double *bfRealSlater=BFRealSlater;
+  const double *bfRealSlaterSign=BFRealSlaterSign;
   const BFRealSparseEntry *leftEntry,*rightEntry;
   const BFRealSparseEntry *left,*right;
   double eta;
@@ -1137,14 +1140,12 @@ static void SubSlaterElmBF_real_eta_sparse(const int tri, const int trj, double 
           rlj = right->r;
           if(stats != NULL) stats->sparsePair++;
 
-          bfidx=BFSubIdx[left->coord][right->coord];
-
           if(left->cnt0 != 0 && right->cnt1 != 0) {
-            *slt_ij += -creal(ProjBF[bfidx])*left->cnt0*right->cnt1*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
+            *slt_ij += bfRealProj[left->coord*nRangeIdx+right->coord]*left->cnt0*right->cnt1*bfRealSlater[rki*nSite+rlj]*bfRealSlaterSign[rki*nSite+rlj];
             if(stats != NULL) stats->actualAdd++;
           }
           if(left->cnt1 != 0 && right->cnt0 != 0) {
-            *slt_ji += -creal(ProjBF[bfidx])*left->cnt1*right->cnt0*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
+            *slt_ji += bfRealProj[left->coord*nRangeIdx+right->coord]*left->cnt1*right->cnt0*bfRealSlater[rlj*nSite+rki]*bfRealSlaterSign[rlj*nSite+rki];
             if(stats != NULL) stats->actualAdd++;
           }
         }
@@ -1153,9 +1154,9 @@ static void SubSlaterElmBF_real_eta_sparse(const int tri, const int trj, double 
   }
 
   if(bfEtaFlag[tri] == 0 && bfEtaFlag[trj] == 0){eta = 1.0;}
-  else{eta = creal(ProjBF[0]);} //TODO: Check
-  *slt_ij += eta*Slater[ OrbitalIdx[tri][trj] ]*OrbitalSgn[tri][trj];
-  *slt_ji += eta*Slater[ OrbitalIdx[trj][tri] ]*OrbitalSgn[trj][tri];
+  else{eta = BFRealEta;} //TODO: Check
+  *slt_ij += eta*bfRealSlater[tri*nSite+trj]*bfRealSlaterSign[tri*nSite+trj];
+  *slt_ji += eta*bfRealSlater[trj*nSite+tri]*bfRealSlaterSign[trj*nSite+tri];
 
   return;
 }

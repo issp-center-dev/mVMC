@@ -224,6 +224,10 @@ int NBackFlowIdx, **BackFlowIdx; /* [Nsite] */
 int Nrange, **PosBF, **RangeIdx; /* [Nsite] */
 int NBFIdxTotal,NrangeIdx;
 int **BFSubIdx; /* [Nsite] */
+double *BFRealProj;   /* BFRealProj[NrangeIdx][NrangeIdx] = -creal(ProjBF[BFSubIdx]) */
+double *BFRealSlater; /* BFRealSlater[Nsite][Nsite] = creal(Slater[OrbitalIdx]) */
+double *BFRealSlaterSign; /* BFRealSlaterSign[Nsite][Nsite] = OrbitalSgn */
+double BFRealEta;
 
 /***** Electron Configuration ******/
 int *EleIdx;     /* EleIdx[sample][mi+si*Ne] */

@@ -547,6 +547,36 @@ void BFSetupIndex(void) {
   }
 }
 
+void BFRefreshRealLookupTables(void) {
+  int a, b, ri, rj, sgn;
+  if (NBackFlowIdx <= 0 || BFRealProj == NULL || BFRealSlater == NULL ||
+      BFRealSlaterSign == NULL ||
+      BFSubIdx == NULL || ProjBF == NULL || Slater == NULL) {
+    return;
+  }
+
+  BFRealEta = creal(ProjBF[0]);
+
+  for (a = 0; a < NrangeIdx; a++) {
+    for (b = 0; b < NrangeIdx; b++) {
+      BFRealProj[a * NrangeIdx + b] = -creal(ProjBF[BFSubIdx[a][b]]);
+    }
+  }
+
+  for (ri = 0; ri < Nsite; ri++) {
+    for (rj = 0; rj < Nsite; rj++) {
+      sgn = OrbitalSgn[ri][rj];
+      if (sgn != 1 && sgn != -1) {
+        fprintf(stderr, "Error: OrbitalSgn[%d][%d]=%d is invalid for real BackFlow table.\n",
+                ri, rj, sgn);
+        exit(EXIT_FAILURE);
+      }
+      BFRealSlater[ri * Nsite + rj] = creal(Slater[OrbitalIdx[ri][rj]]);
+      BFRealSlaterSign[ri * Nsite + rj] = (double)sgn;
+    }
+  }
+}
+
 void BFAllocRuntime(void) {
   int i;
   size_t slaterCount;
@@ -560,6 +590,10 @@ void BFAllocRuntime(void) {
     eta = NULL;
     etaFlag = NULL;
     BFSubIdx = NULL;
+    BFRealProj = NULL;
+    BFRealSlater = NULL;
+    BFRealSlaterSign = NULL;
+    BFRealEta = 1.0;
     return;
   }
 
@@ -576,6 +610,13 @@ void BFAllocRuntime(void) {
   SmpEtaFlag = (int *)BFMallocArray((size_t)NVMCSample * (size_t)NQPFull *
                                     (size_t)Nsite * (size_t)Nsite,
                                     sizeof(int), "SmpEtaFlag");
+  BFRealProj = (double *)BFMallocArray((size_t)NrangeIdx * (size_t)NrangeIdx,
+                                       sizeof(double), "BFRealProj");
+  BFRealSlater = (double *)BFMallocArray((size_t)Nsite * (size_t)Nsite,
+                                         sizeof(double), "BFRealSlater");
+  BFRealSlaterSign = (double *)BFMallocArray((size_t)Nsite * (size_t)Nsite,
+                                             sizeof(double), "BFRealSlaterSign");
+  BFRealEta = 1.0;
 
   eta = (double complex **)BFMallocArray((size_t)Nsite, sizeof(double complex *), "eta");
   for (i = 0; i < Nsite; i++) {
@@ -600,6 +641,9 @@ void BFFreeRuntime(void) {
   free(SmpEtaFlag);
   free(SlaterElmBF);
   free(SlaterElmBF_real);
+  free(BFRealProj);
+  free(BFRealSlater);
+  free(BFRealSlaterSign);
   if (eta != NULL) {
     for (i = 0; i < Nsite; i++) free(eta[i]);
   }
@@ -622,4 +666,8 @@ void BFFreeRuntime(void) {
   eta = NULL;
   etaFlag = NULL;
   BFSubIdx = NULL;
+  BFRealProj = NULL;
+  BFRealSlater = NULL;
+  BFRealSlaterSign = NULL;
+  BFRealEta = 1.0;
 }
