@@ -2203,6 +2203,32 @@ BackFlow 用の追加ヘッダです。7 行目の ``NBackFlowIdx`` 行は読み
     (continue...)
     9 0
 
+compact 形式:
+
+::
+
+    ====================
+    NBackFlowIdx 1
+    ====================
+    ====================
+    ====================
+    ====================
+    NBackFlowIdx 1
+    ====================
+    ====================
+    ====================
+    BFCompact 1
+    0 0
+    1 0
+    2 0
+    (continue...)
+    9 0
+
+``NBackFlowIdx==1`` の場合は compact 形式を使い、
+:math:`N_s^2 N_{\rm range}^2` 行の BackFlow group 行を省略できます。
+この形式では、全ての近傍ペアの BackFlow group 番号は暗黙に 0 として扱われます。
+上に示した従来の full 形式も引き続き使用できます。
+
 ファイル形式
 ^^^^^^^^^^^^
 
@@ -2211,10 +2237,12 @@ BackFlow 用の追加ヘッダです。7 行目の ``NBackFlowIdx`` 行は読み
 -  6-10行: BackFlow 用の追加ヘッダ。読み込み時には読み飛ばされますが省略できません。
    7 行目にも ``NBackFlowIdx`` [int01] を書くことを推奨します。
 
--  11 - (10 + :math:`N_s^2 N_{\rm range}^2`) 行:
+-  従来の full 形式では、11 - (10 + :math:`N_s^2 N_{\rm range}^2`) 行:
    [int02] [int03] [int04] [int05] [int06]
 
--  続く :math:`N_{\rm ProjBF}` 行:
+-  compact 形式では、11 行目に ``BFCompact 1`` を書きます。
+
+-  どちらの形式でも、続く :math:`N_{\rm ProjBF}` 行:
    [int07] [int08]
 
 パラメータ
@@ -2266,10 +2294,14 @@ BackFlow 用の追加ヘッダです。7 行目の ``NBackFlowIdx`` 行は読み
 
 -  ``BFRange`` と ``BF`` は必ず両方を ``namelist.def`` に指定してください。
 
--  ``BF`` のサイト行は、全ての :math:`i,j` と
+-  従来の full 形式では、``BF`` のサイト行は、全ての :math:`i,j` と
    :math:`x_0 \in {\rm BFRange}(i)`、:math:`x_1 \in {\rm BFRange}(j)`
    の組を 1 回ずつ指定する必要があります。行数は
    :math:`N_s^2 N_{\rm range}^2` です。
+
+-  compact 形式では、11 行目に ``BFCompact 1`` を書き、サイト行を省略します。
+   この形式は ``NBackFlowIdx==1`` の場合のみ使用できます。省略された
+   BackFlow group 番号は 0 として扱われます。
 
 -  ``ProjBF[0]`` は BackFlow の base 項にも使われるため、identity 初期点では
    ``ProjBF[0]=1`` とします。初期値ファイルや再開ファイルを使う場合、

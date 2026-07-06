@@ -845,7 +845,7 @@ def check_bf_green2_bruteforce_dump(path, tol, expected_all_complex_flag):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -857,6 +857,7 @@ def main():
     compare_gradient = False
     compare_proj_bf_fd = False
     check_bf_green2_bruteforce = False
+    compact_backflow = False
     use_nonidentity_init = False
     expected_all_complex_flag = None
     compare_real_complex_model = None
@@ -890,6 +891,9 @@ def main():
         elif sys.argv[argi] == "--check-bf-green2-bruteforce":
             check_bf_green2_bruteforce = True
             argi += 1
+        elif sys.argv[argi] == "--compact-backflow":
+            compact_backflow = True
+            argi += 1
         elif sys.argv[argi] == "--use-nonidentity-init":
             use_nonidentity_init = True
             argi += 1
@@ -912,7 +916,7 @@ def main():
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -942,6 +946,8 @@ def main():
         work_suffix += "_projbf_fd"
     if check_bf_green2_bruteforce:
         work_suffix += "_green2_bruteforce"
+    if compact_backflow:
+        work_suffix += "_compact"
     if use_nonidentity_init:
         work_suffix += "_nonidentity"
     if ncond_override is not None:
@@ -973,7 +979,7 @@ def main():
 
     nsite = parse_nsite(os.path.join(workdir, "modpara.def"))
     definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd)
-    write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd)
+    write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd, compact=compact_backflow)
     if compare_twobodyg or check_bf_green2_bruteforce:
         write_minimal_twobodyg(workdir, nsite)
     if compare_twobodygex:

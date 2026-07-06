@@ -147,6 +147,11 @@ function(add_python_vmc_test_bf test_name model)
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_vmc_test_bf)
 
+function(add_python_vmc_test_bf_compact test_name model)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --compact-backflow)
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+endfunction(add_python_vmc_test_bf_compact)
+
 function(add_python_vmc_test_bf_nqp test_name model nqp_full)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --expect-nqp-full ${nqp_full})
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
@@ -401,6 +406,7 @@ add_python_vmc_test_invalid_expert(DoublonOnly_InvalidOrbitalGeneral "OrbitalGen
 
 add_python_backflow_helper_test(BackFlow_Helper_ChainNN)
 add_python_vmc_test_bf(BackFlow_Identity_Complex BackFlow_Identity_Complex)
+add_python_vmc_test_bf_compact(BackFlow_Compact_Identity_Complex BackFlow_Identity_Complex)
 add_python_vmc_test_bf_nqp(BackFlow_Identity_Complex_MultiQP BackFlow_Identity_Complex_MultiQP 2)
 add_python_vmc_test_bf_mpi_nqp(BackFlow_Identity_Complex_MultiQP_mpi BackFlow_Identity_Complex_MultiQP 2)
 add_python_vmc_test_bf_mpi_nqp(BackFlow_Identity_Real_MultiQP_mpi BackFlow_Identity_Real_MultiQP 2)
@@ -411,6 +417,8 @@ add_python_vmc_test_bf_energy_mpi_nqp(BackFlow_IdentityEnergy_Real_MultiQP_mpi B
 add_python_vmc_test_bf_energy_mpi_nqp_nsplit(BackFlow_IdentityEnergy_Complex_MultiQP_Split2_mpi BackFlow_Identity_Complex_MultiQP 2 2)
 add_python_vmc_test_bf_energy_mpi_nqp_nsplit(BackFlow_IdentityEnergy_Real_MultiQP_Split2_mpi BackFlow_Identity_Real_MultiQP 2 2)
 add_python_vmc_test_bf(BackFlow_Optimization_Complex BackFlow_Optimization_Complex)
+add_python_vmc_test_bf_compact(BackFlow_Compact_Optimization_Complex BackFlow_Optimization_Complex)
+add_python_vmc_test_bf_compact(BackFlow_Compact_Optimization_Real BackFlow_Optimization_Real)
 add_python_vmc_test_bf_energy_clean_omp_nqp(BackFlow_Optimization_Real BackFlow_Optimization_Real 1 1)
 add_python_vmc_test_bf_energy_clean_omp_nqp(BackFlow_Optimization_Real_MultiQP BackFlow_Optimization_Real_MultiQP 1 2)
 add_python_vmc_test_bf_energy_clean_omp_nqp(BackFlow_Optimization_Real_MultiQP_omp4 BackFlow_Optimization_Real_MultiQP 4 2)
