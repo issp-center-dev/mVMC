@@ -26,6 +26,7 @@ BackflowDefinition = namedtuple(
         "opt_rows",
         "rangebf_text",
         "bf_text",
+        "bf_compact_text",
     ],
 )
 
@@ -60,6 +61,13 @@ def _render_rangebf(nrange, nzbf, rows):
 def _render_bf(n_backflow_idx, bf_rows, opt_rows):
     lines = _body_header("NBackFlowIdx", [n_backflow_idx])
     lines.extend("{} {} {} {} {}".format(i, j, x0, x1, group) for i, j, x0, x1, group in bf_rows)
+    lines.extend("{} {}".format(idx, flag) for idx, flag in opt_rows)
+    return "\n".join(lines) + "\n"
+
+
+def _render_bf_compact(n_backflow_idx, opt_rows):
+    lines = _body_header("NBackFlowIdx", [n_backflow_idx])
+    lines.append("BFCompact 1")
     lines.extend("{} {}".format(idx, flag) for idx, flag in opt_rows)
     return "\n".join(lines) + "\n"
 
@@ -108,12 +116,13 @@ def build_chain_nn_backflow(length=4, optimize=False):
         opt_rows=opt_rows,
         rangebf_text=_render_rangebf(nrange, nzbf, range_rows),
         bf_text=_render_bf(n_backflow_idx, bf_rows, opt_rows),
+        bf_compact_text=_render_bf_compact(n_backflow_idx, opt_rows),
     )
     verify_definition(definition, expected_opt_flag=flag)
     return definition
 
 
-def write_chain_nn_backflow(output_dir, length=4, optimize=False):
+def write_chain_nn_backflow(output_dir, length=4, optimize=False, compact=False):
     definition = build_chain_nn_backflow(length=length, optimize=optimize)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
@@ -123,7 +132,7 @@ def write_chain_nn_backflow(output_dir, length=4, optimize=False):
     with open(range_path, "w") as fp:
         fp.write(definition.rangebf_text)
     with open(bf_path, "w") as fp:
-        fp.write(definition.bf_text)
+        fp.write(definition.bf_compact_text if compact else definition.bf_text)
     return range_path, bf_path
 
 
@@ -150,11 +159,15 @@ def verify_definition(definition, expected_opt_flag=0):
 
     range_lines = definition.rangebf_text.splitlines()
     bf_lines = definition.bf_text.splitlines()
+    compact_lines = definition.bf_compact_text.splitlines()
     _verify_header(range_lines, "Nrange", [definition.nrange, definition.nzbf])
     _verify_header(bf_lines, "NBackFlowIdx", [definition.n_backflow_idx])
+    _verify_header(compact_lines, "NBackFlowIdx", [definition.n_backflow_idx])
     _require(len(range_lines) == 10 + length * nrange, "rangebf row count mismatch")
     _require(len(bf_lines) == 10 + length * length * nrange * nrange + definition.n_proj_bf,
              "bf row count mismatch")
+    _require(compact_lines[10] == "BFCompact 1", "compact bf.def marker mismatch")
+    _require(len(compact_lines) == 11 + definition.n_proj_bf, "compact bf.def row count mismatch")
 
     range_seen = set()
     per_center = dict((site, 0) for site in range(length))
@@ -201,6 +214,11 @@ def self_test():
             _require(fp.read() == definition.rangebf_text, "written rangebf.def mismatch")
         with open(bf_path) as fp:
             _require(fp.read() == definition.bf_text, "written bf.def mismatch")
+        range_path, bf_path = write_chain_nn_backflow(tmpdir, length=4, optimize=True, compact=True)
+        with open(range_path) as fp:
+            _require(fp.read() == optimized.rangebf_text, "written compact rangebf.def mismatch")
+        with open(bf_path) as fp:
+            _require(fp.read() == optimized.bf_compact_text, "written compact bf.def mismatch")
     finally:
         shutil.rmtree(tmpdir)
 
@@ -212,6 +230,8 @@ def main(argv=None):
     parser.add_argument("--output", help="directory where rangebf.def and bf.def are written")
     parser.add_argument("--optimize", action="store_true",
                         help="write BF OptFlag=1 instead of the identity-test default OptFlag=0")
+    parser.add_argument("--compact", action="store_true",
+                        help="write compact bf.def with BFCompact marker and OptFlag rows only")
     parser.add_argument("--self-test", action="store_true",
                         help="run helper contract checks")
     args = parser.parse_args(argv)
@@ -225,6 +245,7 @@ def main(argv=None):
             args.output,
             length=args.length,
             optimize=args.optimize,
+            compact=args.compact,
         )
         print("wrote {}".format(range_path))
         print("wrote {}".format(bf_path))

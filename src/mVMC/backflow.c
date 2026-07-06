@@ -14,6 +14,7 @@ the Free Software Foundation, either version 3 of the License, or
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "./include/backflow.h"
 #include "./include/global.h"
 
@@ -100,13 +101,13 @@ static int BFDefinitionExpectedRows(long long *expectedRows) {
   return BFCheckedMulLL(nsite2, nrange2, "BF row count", expectedRows);
 }
 
-static int BFContainsRangeSite(int center, int site) {
+static int BFRangePosition(int center, int site) {
   int r;
-  if (BFCheckSiteIndex(center) != 0 || BFCheckSiteIndex(site) != 0 || PosBF == NULL) return 0;
+  if (BFCheckSiteIndex(center) != 0 || BFCheckSiteIndex(site) != 0 || PosBF == NULL) return -1;
   for (r = 0; r < Nrange; r++) {
-    if (PosBF[center][r] == site) return 1;
+    if (PosBF[center][r] == site) return r;
   }
-  return 0;
+  return -1;
 }
 
 static int BFValidOptFlagValue(int flag) {
@@ -338,84 +339,13 @@ cleanup:
   return info;
 }
 
-int BFReadDefinition(FILE *fp, int *optFlag, int *countIdx, const char *defname) {
-  int i;
-  int j;
-  int x0;
-  int x1;
-  int n;
+static int BFReadOptFlags(FILE *fp, int *optFlag, int *countIdx, const char *defname) {
   int idx;
   int flag;
   int offset;
-  int rowIndex;
-  int colIndex;
   int info = 0;
   int *seenOpt = NULL;
   long long row;
-  long long expectedRows;
-
-  if (NBackFlowIdx <= 0) return 0;
-  if (BFSkipBodyHeader(fp, defname) != 0) return 1;
-  if (BackFlowIdx == NULL) {
-    fprintf(stderr, "Error in %s: BackFlow index table is not allocated.\n", defname);
-    return 1;
-  }
-  if (PosBF == NULL || RangeIdx == NULL) {
-    fprintf(stderr, "Error in %s: BFRange must be loaded before BF.\n", defname);
-    return 1;
-  }
-  if (BFDefinitionExpectedRows(&expectedRows) != 0) return 1;
-
-  for (i = 0; i < Nsite * Nsite; i++) {
-    for (j = 0; j < Nsite * Nsite; j++) BackFlowIdx[i][j] = -1;
-  }
-
-  for (row = 0; row < expectedRows; row++) {
-    if (fscanf(fp, "%d %d %d %d %d", &i, &j, &x0, &x1, &n) != 5) {
-      fprintf(stderr, "Error in %s: failed to read BF row %lld of %lld.\n",
-              defname, row + 1, expectedRows);
-      info = 1;
-      goto cleanup;
-    }
-    if (BFCheckSiteIndex(i) != 0 || BFCheckSiteIndex(j) != 0 ||
-        BFCheckSiteIndex(x0) != 0 || BFCheckSiteIndex(x1) != 0) {
-      fprintf(stderr,
-              "Error in %s: BF site index out of range at row %lld (i=%d, j=%d, x0=%d, x1=%d).\n",
-              defname, row + 1, i, j, x0, x1);
-      info = 1;
-      goto cleanup;
-    }
-    if (n < 0 || n >= NBackFlowIdx) {
-      fprintf(stderr, "Error in %s: BF group index %d out of range [0,%d) at row %lld.\n",
-              defname, n, NBackFlowIdx, row + 1);
-      info = 1;
-      goto cleanup;
-    }
-    if (NBackFlowIdx == 1 && n != 0) {
-      fprintf(stderr, "Error in %s: BackFlow MVP supports only group n==0 at row %lld.\n",
-              defname, row + 1);
-      info = 1;
-      goto cleanup;
-    }
-    if (BFContainsRangeSite(i, x0) == 0 || BFContainsRangeSite(j, x1) == 0) {
-      fprintf(stderr,
-              "Error in %s: BF row %lld uses x0/x1 outside the corresponding BFRange set.\n",
-              defname, row + 1);
-      info = 1;
-      goto cleanup;
-    }
-
-    rowIndex = i * Nsite + j;
-    colIndex = x0 * Nsite + x1;
-    if (BackFlowIdx[rowIndex][colIndex] != -1) {
-      fprintf(stderr,
-              "Error in %s: duplicated BF entry for (i=%d, j=%d, x0=%d, x1=%d) at row %lld.\n",
-              defname, i, j, x0, x1, row + 1);
-      info = 1;
-      goto cleanup;
-    }
-    BackFlowIdx[rowIndex][colIndex] = n;
-  }
 
   offset = BFParameterOffset();
   seenOpt = (int *)calloc((size_t)NProjBF, sizeof(int));
@@ -470,16 +400,145 @@ cleanup:
   return info;
 }
 
+static int BFReadDefinitionLegacyRows(FILE *fp, int *optFlag, int *countIdx, const char *defname) {
+  int i;
+  int j;
+  int x0;
+  int x1;
+  int n;
+  int range0;
+  int range1;
+  int info = 0;
+  unsigned char *seenEntry = NULL;
+  long long row;
+  long long expectedRows;
+  long long entryIndex;
+
+  if (BFDefinitionExpectedRows(&expectedRows) != 0) return 1;
+  if ((unsigned long long)expectedRows > (unsigned long long)((size_t)-1)) {
+    fprintf(stderr, "Error in %s: BF row validation table is too large (%lld).\n",
+            defname, expectedRows);
+    return 1;
+  }
+  seenEntry = (unsigned char *)calloc((size_t)expectedRows, sizeof(unsigned char));
+  if (seenEntry == NULL) {
+    fprintf(stderr, "Error in %s: memory allocation failed during BF row validation.\n", defname);
+    return 1;
+  }
+
+  for (row = 0; row < expectedRows; row++) {
+    if (fscanf(fp, "%d %d %d %d %d", &i, &j, &x0, &x1, &n) != 5) {
+      fprintf(stderr, "Error in %s: failed to read BF row %lld of %lld.\n",
+              defname, row + 1, expectedRows);
+      info = 1;
+      goto cleanup;
+    }
+    if (BFCheckSiteIndex(i) != 0 || BFCheckSiteIndex(j) != 0 ||
+        BFCheckSiteIndex(x0) != 0 || BFCheckSiteIndex(x1) != 0) {
+      fprintf(stderr,
+              "Error in %s: BF site index out of range at row %lld (i=%d, j=%d, x0=%d, x1=%d).\n",
+              defname, row + 1, i, j, x0, x1);
+      info = 1;
+      goto cleanup;
+    }
+    if (n < 0 || n >= NBackFlowIdx) {
+      fprintf(stderr, "Error in %s: BF group index %d out of range [0,%d) at row %lld.\n",
+              defname, n, NBackFlowIdx, row + 1);
+      info = 1;
+      goto cleanup;
+    }
+    if (NBackFlowIdx == 1 && n != 0) {
+      fprintf(stderr, "Error in %s: BackFlow MVP supports only group n==0 at row %lld.\n",
+              defname, row + 1);
+      info = 1;
+      goto cleanup;
+    }
+    range0 = BFRangePosition(i, x0);
+    range1 = BFRangePosition(j, x1);
+    if (range0 < 0 || range1 < 0) {
+      fprintf(stderr,
+              "Error in %s: BF row %lld uses x0/x1 outside the corresponding BFRange set.\n",
+              defname, row + 1);
+      info = 1;
+      goto cleanup;
+    }
+
+    entryIndex = (((long long)i * Nsite + j) * Nrange + range0) * Nrange + range1;
+    if (entryIndex < 0 || entryIndex >= expectedRows) {
+      fprintf(stderr, "Error in %s: internal BF row index out of range at row %lld.\n",
+              defname, row + 1);
+      info = 1;
+      goto cleanup;
+    }
+    if (seenEntry[entryIndex] != 0) {
+      fprintf(stderr,
+              "Error in %s: duplicated BF entry for (i=%d, j=%d, x0=%d, x1=%d) at row %lld.\n",
+              defname, i, j, x0, x1, row + 1);
+      info = 1;
+      goto cleanup;
+    }
+    seenEntry[entryIndex] = 1;
+  }
+
+  if (BFReadOptFlags(fp, optFlag, countIdx, defname) != 0) info = 1;
+
+cleanup:
+  free(seenEntry);
+  return info;
+}
+
+static int BFReadDefinitionCompact(FILE *fp, int *optFlag, int *countIdx, const char *defname, int version) {
+  if (version != 1) {
+    fprintf(stderr, "Error in %s: unsupported BFCompact version %d.\n", defname, version);
+    return 1;
+  }
+  if (NBackFlowIdx != 1) {
+    fprintf(stderr, "Error in %s: BFCompact requires NBackFlowIdx==1 (got %d).\n",
+            defname, NBackFlowIdx);
+    return 1;
+  }
+  return BFReadOptFlags(fp, optFlag, countIdx, defname);
+}
+
+int BFReadDefinition(FILE *fp, int *optFlag, int *countIdx, const char *defname) {
+  char line[256];
+  char key[64];
+  int version;
+  long pos;
+
+  if (NBackFlowIdx <= 0) return 0;
+  if (BFSkipBodyHeader(fp, defname) != 0) return 1;
+  if (PosBF == NULL || RangeIdx == NULL) {
+    fprintf(stderr, "Error in %s: BFRange must be loaded before BF.\n", defname);
+    return 1;
+  }
+
+  pos = ftell(fp);
+  if (pos < 0) {
+    fprintf(stderr, "Error in %s: failed to inspect BF definition format.\n", defname);
+    return 1;
+  }
+  if (fgets(line, sizeof(line), fp) == NULL) {
+    fprintf(stderr, "Error in %s: missing BF definition body.\n", defname);
+    return 1;
+  }
+  if (sscanf(line, "%63s %d", key, &version) == 2 && strcmp(key, "BFCompact") == 0) {
+    return BFReadDefinitionCompact(fp, optFlag, countIdx, defname, version);
+  }
+  if (fseek(fp, pos, SEEK_SET) != 0) {
+    fprintf(stderr, "Error in %s: failed to rewind BF definition body.\n", defname);
+    return 1;
+  }
+  return BFReadDefinitionLegacyRows(fp, optFlag, countIdx, defname);
+}
+
 int BFDefIntCount(void) {
-  long long posCount, rangeCount, nsite2, backflowCount, total;
+  long long posCount, rangeCount, total;
   int count;
   if (NBackFlowIdx <= 0) return 0;
   if (BFCheckedMulLL(Nsite, Nrange, "PosBF", &posCount) != 0) exit(EXIT_FAILURE);
   if (BFCheckedMulLL(Nsite, Nsite, "RangeIdx", &rangeCount) != 0) exit(EXIT_FAILURE);
-  if (BFCheckedMulLL(Nsite, Nsite, "BackFlowIdx rows", &nsite2) != 0) exit(EXIT_FAILURE);
-  if (BFCheckedMulLL(nsite2, nsite2, "BackFlowIdx", &backflowCount) != 0) exit(EXIT_FAILURE);
   if (BFCheckedAddLL(posCount, rangeCount, "BackFlow definition table size", &total) != 0) exit(EXIT_FAILURE);
-  if (BFCheckedAddLL(total, backflowCount, "BackFlow definition table size", &total) != 0) exit(EXIT_FAILURE);
   if (BFIntFromLL(total, "BackFlow definition table size", &count) != 0) exit(EXIT_FAILURE);
   return count;
 }
@@ -499,6 +558,7 @@ void BFBindDefTables(int **pInt) {
   int i;
   int *cursor = *pInt;
   if (NBackFlowIdx <= 0) return;
+  BackFlowIdx = NULL;
 
   PosBF = (int **)BFMallocArray((size_t)Nsite, sizeof(int *), "PosBF");
   for (i = 0; i < Nsite; i++) {
@@ -509,11 +569,6 @@ void BFBindDefTables(int **pInt) {
   for (i = 0; i < Nsite; i++) {
     RangeIdx[i] = cursor;
     cursor += Nsite;
-  }
-  BackFlowIdx = (int **)BFMallocArray((size_t)Nsite * (size_t)Nsite, sizeof(int *), "BackFlowIdx");
-  for (i = 0; i < Nsite * Nsite; i++) {
-    BackFlowIdx[i] = cursor;
-    cursor += Nsite * Nsite;
   }
   *pInt = cursor;
 }

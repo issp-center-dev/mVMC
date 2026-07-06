@@ -2301,6 +2301,32 @@ Example:
     (continue...)
     9 0
 
+Compact form:
+
+::
+
+    ====================
+    NBackFlowIdx 1
+    ====================
+    ====================
+    ====================
+    ====================
+    NBackFlowIdx 1
+    ====================
+    ====================
+    ====================
+    BFCompact 1
+    0 0
+    1 0
+    2 0
+    (continue...)
+    9 0
+
+For ``NBackFlowIdx==1``, the compact form can be used to omit the
+:math:`N_s^2 N_{\rm range}^2` BackFlow group rows. In this form all
+BackFlow group indices for the neighbor-pair combinations are implicitly
+0. The legacy full form shown above remains accepted.
+
 File format
 ^^^^^^^^^^^
 
@@ -2310,10 +2336,13 @@ File format
    the body is read, but they cannot be omitted. It is recommended that
    line 7 also contains ``NBackFlowIdx`` [int01].
 
--  Lines 11 - (10 + :math:`N_s^2 N_{\rm range}^2`):
+-  Legacy full form, lines 11 -
+   (10 + :math:`N_s^2 N_{\rm range}^2`):
    [int02] [int03] [int04] [int05] [int06]
 
--  The following :math:`N_{\rm ProjBF}` lines:
+-  Compact form: line 11 is ``BFCompact 1``.
+
+-  The following :math:`N_{\rm ProjBF}` lines in either form:
    [int07] [int08]
 
 Parameters
@@ -2370,10 +2399,16 @@ User rules
 
 -  Both ``BFRange`` and ``BF`` must be specified in ``namelist.def``.
 
--  The site rows in ``BF`` must contain every combination of
+-  In the legacy full form, the site rows in ``BF`` must contain every
+   combination of
    :math:`i,j`, :math:`x_0 \in {\rm BFRange}(i)`, and
    :math:`x_1 \in {\rm BFRange}(j)` exactly once. The number of rows is
    :math:`N_s^2 N_{\rm range}^2`.
+
+-  In the compact form, line 11 must be ``BFCompact 1`` and the site rows
+   are omitted. This compact form is accepted only when
+   ``NBackFlowIdx==1``; the omitted BackFlow group indices are treated as
+   0.
 
 -  ``ProjBF[0]`` also controls the BackFlow base term. For the identity
    initial point, set ``ProjBF[0]=1``. If an initial-parameter or restart
