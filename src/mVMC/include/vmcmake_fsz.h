@@ -4,12 +4,26 @@
 #include <mpi.h>
 
 void VMCMakeSample_fsz(MPI_Comm comm);
+void VMC_BF_MakeSample_fsz(MPI_Comm comm);
 int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,int *eleSpn,
                       const int qpStart, const int qpEnd, MPI_Comm comm);
+int makeInitialSampleBF_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                            int *eleProjBFCnt, int *eleSpn,
+                            const int qpStart, const int qpEnd, MPI_Comm comm);
 void copyFromBurnSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,int *eleSpn);
 void copyToBurnSample_fsz(const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,const int *eleSpn);
 void saveEleConfig_fsz(const int sample, const double complex logIp,
                    const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,const int *eleSpn);
+void copyFromBurnSampleBF_fsz(int *eleIdx, int *eleCfg, int *eleNum,
+                              int *eleProjCnt, int *eleProjBFCnt,
+                              int *eleSpn);
+void copyToBurnSampleBF_fsz(const int *eleIdx, const int *eleCfg,
+                            const int *eleNum, const int *eleProjCnt,
+                            const int *eleProjBFCnt, const int *eleSpn);
+void saveEleConfigBF_fsz(const int sample, const double complex logIp,
+                         const int *eleIdx, const int *eleCfg,
+                         const int *eleNum, const int *eleProjCnt,
+                         const int *eleProjBFCnt, const int *eleSpn);
 //void sortEleConfig(int *eleIdx, int *eleCfg, const int *eleNum);
 void makeCandidate_hopping_fsz(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn);
@@ -35,5 +49,4 @@ void makeCandidate_LocalSpinFlip_conduction(int *mi_, int *ri_, int *rj_, int *s
 
 
 #endif
-
 

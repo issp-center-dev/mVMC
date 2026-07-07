@@ -287,4 +287,86 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   return;
 }
 
+void VMC_BF_MainCal_fsz(MPI_Comm comm) {
+  int *eleIdx,*eleCfg,*eleNum,*eleProjCnt,*eleSpn,*eleProjBFCnt;
+  double complex e,ip;
+  double w,x;
+  double Sz;
+
+  const int qpStart=0;
+  const int qpEnd=NQPFull;
+  int sample,sampleStart,sampleEnd;
+  int info;
+
+  int rank,size;
+  MPI_Comm_size(comm,&size);
+  MPI_Comm_rank(comm,&rank);
+  SplitLoop(&sampleStart,&sampleEnd,NVMCSample,rank,size);
+
+  if(NVMCCalMode==0) {
+    if(rank==0) {
+      fprintf(stderr, "Error: BackFlow FSZ optimization is not implemented yet.\n");
+    }
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+
+  StartTimer(24);
+  clearPhysQuantity();
+  StopTimer(24);
+
+  for(sample=sampleStart;sample<sampleEnd;sample++) {
+    eleIdx = EleIdx + sample*Nsize;
+    eleCfg = EleCfg + sample*Nsite2;
+    eleNum = EleNum + sample*Nsite2;
+    eleProjCnt = EleProjCnt + sample*NProj;
+    eleProjBFCnt = EleProjBFCnt + sample*16*Nsite*Nrange;
+    eleSpn = EleSpn + sample*Nsize;
+
+    StartTimer(40);
+    MakeSlaterElmBF_fsz(eleNum,eleProjBFCnt);
+    info = CalculateMAll_BF_fsz(eleIdx,eleSpn,qpStart,qpEnd);
+    StopTimer(40);
+
+    if(info!=0) {
+      fprintf(stderr,"warning: VMC_BF_MainCal_fsz rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
+      continue;
+    }
+
+    ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+
+    x = LogProjVal(eleProjCnt);
+    if(reweight==1){
+      w = exp(2.0*(log(cabs(ip))+x) - logSqPfFullSlater[sample]);
+    }else{
+      w = 1.0;
+    }
+
+    if(!isfinite(w)) {
+      fprintf(stderr,"warning: VMC_BF_MainCal_fsz rank:%d sample:%d w=%e\n",rank,sample,w);
+      continue;
+    }
+
+    StartTimer(41);
+    e = CalculateHamiltonianBF_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn,eleProjBFCnt);
+    Sz = CalculateSz_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);
+    StopTimer(41);
+
+    if(!isfinite(creal(e) + cimag(e))) {
+      fprintf(stderr,"warning: VMC_BF_MainCal_fsz rank:%d sample:%d e=%e\n",rank,sample,creal(e));
+      continue;
+    }
+
+    Wc    += w;
+    Etot  += w * e;
+    Sztot += w * Sz;
+    Sztot2 += w * Sz*Sz;
+    Etot2 += w * conj(e) * e;
+
+    StartTimer(42);
+    CalculateGreenFuncBF_fsz(w,ip,eleIdx,eleCfg,eleNum,eleSpn,eleProjCnt,eleProjBFCnt);
+    StopTimer(42);
+  }
+  return;
+}
+
 #endif

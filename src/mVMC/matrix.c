@@ -509,6 +509,117 @@ int calculateMAll_BF_fcmp_child(
   return info;
 }
 
+int CalculateMAll_BF_fsz(const int *eleIdx, const int *eleSpn, const int qpStart, const int qpEnd) {
+  const int qpNum = qpEnd-qpStart;
+  int qpidx;
+
+  int info = 0;
+
+  double complex *myBufM;
+  double complex *myWork;
+  int *myIWork;
+  int myInfo;
+  double *myRWork;
+
+  RequestWorkSpaceThreadInt(Nsize);
+  RequestWorkSpaceThreadComplex(Nsize*Nsize+LapackLWork);
+  RequestWorkSpaceThreadDouble(LapackLWork);
+
+#pragma omp parallel default(shared)              \
+  private(myIWork,myWork,myRWork,myInfo,myBufM)
+  {
+    myIWork = GetWorkSpaceThreadInt(Nsize);
+    myBufM  = GetWorkSpaceThreadComplex(Nsize*Nsize);
+    myWork  = GetWorkSpaceThreadComplex(LapackLWork);
+    myRWork = GetWorkSpaceThreadDouble(LapackLWork);
+
+#pragma omp for private(qpidx)
+    for(qpidx=0;qpidx<qpNum;qpidx++) {
+      if(info!=0) continue;
+
+      myInfo = calculateMAll_BF_fsz_child(eleIdx, eleSpn, qpStart, qpEnd, qpidx,
+          myBufM, myIWork, myWork, LapackLWork, myRWork, PfM, InvM);
+      if(myInfo!=0) {
+#pragma omp critical
+        info=myInfo;
+      }
+    }
+  }
+
+  ReleaseWorkSpaceThreadInt();
+  ReleaseWorkSpaceThreadComplex();
+  ReleaseWorkSpaceThreadDouble();
+  return info;
+}
+
+int calculateMAll_BF_fsz_child(
+       const int *eleIdx,
+       const int *eleSpn,
+       const int qpStart,
+       const int qpEnd,
+       const int qpidx,
+       double complex *bufM,
+       int *iwork,
+       double complex *work,
+       int lwork,
+       double *rwork,
+       double complex *pfM,
+       double complex *invMAll
+       )
+{
+#pragma procedure serial
+  int msi,msj;
+  int rsi,rsj;
+
+  char uplo='U', mthd='P';
+  int m,n,lda,nsq,one,info=0;
+  double complex pfaff,minus_one;
+
+  const int nsize = Nsize;
+
+  const double complex *sltE = SlaterElmBF + (qpidx+qpStart)*Nsite2*Nsite2;
+  const double complex *sltE_i;
+
+  double complex *invM = invMAll + qpidx*Nsize*Nsize;
+  double complex *bufM_i;
+
+  (void)qpEnd;
+
+  m=n=lda=Nsize;
+  nsq=n*n;
+  one=1;
+  minus_one=-1.0;
+
+#pragma loop noalias
+  for(msi=0;msi<nsize;msi++) {
+    rsi = eleIdx[msi] + eleSpn[msi]*Nsite;
+    bufM_i = bufM + msi*Nsize;
+    sltE_i = sltE + rsi*Nsite2;
+#pragma loop norecurrence
+    for(msj=0;msj<nsize;msj++) {
+      rsj = eleIdx[msj] + eleSpn[msj]*Nsite;
+      bufM_i[msj] = -sltE_i[rsj];
+    }
+  }
+
+  for(msi=0;msi<nsize*nsize;msi++) invM[msi] = bufM[msi];
+
+  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+
+  if(info!=0) return info;
+  if(!(isfinite(creal(pfaff)) && isfinite(cimag(pfaff)))) return qpidx+1;
+  pfM[qpidx] = pfaff;
+
+  M_ZGETRF(&m, &n, invM, &lda, iwork, &info);
+  if(info!=0) return info;
+  M_ZGETRI(&n, invM, &lda, iwork, work, &lwork, &info);
+  if(info!=0) return info;
+
+  M_ZSCAL(&nsq, &minus_one, invM, &one);
+
+  return info;
+}
+
 //==============e fcmp =============//
 
 //==============s real =============//

@@ -6,6 +6,9 @@ double CalculateSz_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum,const int *eleProjCnt,int *eleSpn);
 double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum,const int *eleProjCnt,int *eleSpn);
+double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, int *eleCfg,
+                             int *eleNum, const int *eleProjCnt, int *eleSpn,
+                             const int *eleProjBFCnt);
 double complex CalculateHamiltonian0_fsz(const int *eleNum);
 double complex CalculateHamiltonian1_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum,const int *eleProjCnt,int *eleSpn);

@@ -29,6 +29,17 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _CALGRN_FSZ_SRC
 #define _CALGRN_FSZ_SRC
 
+double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer);
+
+double complex GreenFunc2BF_fsz(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer);
+
 
 void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx, int *eleCfg,
                          int *eleNum, int *eleSpn,int *eleProjCnt) {
@@ -189,6 +200,93 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();
   if (needNBodyRWork) ReleaseWorkSpaceThreadDouble();
+  return;
+}
+
+void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleIdx, int *eleCfg,
+                         int *eleNum, int *eleSpn, int *eleProjCnt,
+                         const int *eleProjBFCnt) {
+  int idx,idx0,idx1;
+  int ri,rj,s,t,rk,rl,u,v;
+  double complex tmp;
+  int *myEleIdx, *myEleCfg, *myEleNum, *myEleSpn;
+  int *myProjCntNew, *myProjBFCntNew;
+  double complex *myBuffer;
+
+  if(NTwist > 0 || NNBodyG > 0) {
+    fprintf(stderr, "Error: CalculateGreenFuncBF_fsz does not support Twist or NBodyG yet.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+
+  RequestWorkSpaceInt(Nsize+Nsite2+Nsite2+Nsize+NProj+16*Nsite*Nrange);
+  RequestWorkSpaceComplex(NQPFull);
+
+  myEleIdx = GetWorkSpaceInt(Nsize);
+  myEleCfg = GetWorkSpaceInt(Nsite2);
+  myEleNum = GetWorkSpaceInt(Nsite2);
+  myEleSpn = GetWorkSpaceInt(Nsize);
+  myProjCntNew = GetWorkSpaceInt(NProj);
+  myProjBFCntNew = GetWorkSpaceInt(16*Nsite*Nrange);
+  myBuffer = GetWorkSpaceComplex(NQPFull);
+
+  for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
+  for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
+  for(idx=0;idx<Nsite2;idx++) myEleNum[idx] = eleNum[idx];
+  for(idx=0;idx<Nsize;idx++) myEleSpn[idx] = eleSpn[idx];
+
+  StartTimer(50);
+  for(idx=0;idx<NCisAjs;idx++) {
+    ri = CisAjsIdx[idx][0];
+    s  = CisAjsIdx[idx][1];
+    rj = CisAjsIdx[idx][2];
+    t  = CisAjsIdx[idx][3];
+    if(s != t) {
+      fprintf(stderr, "Error: BackFlow FSZ does not support spin-changing OneBodyG yet.\n");
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+    tmp = GreenFunc1BF_fsz(ri,rj,s,ip,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
+                           myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer);
+    LocalCisAjs[idx] = tmp;
+  }
+  StopTimer(50);
+
+  StartTimer(51);
+  for(idx=0;idx<NCisAjsCktAltDC;idx++) {
+    ri = CisAjsCktAltDCIdx[idx][0];
+    s  = CisAjsCktAltDCIdx[idx][1];
+    rj = CisAjsCktAltDCIdx[idx][2];
+    t  = CisAjsCktAltDCIdx[idx][3];
+    rk = CisAjsCktAltDCIdx[idx][4];
+    u  = CisAjsCktAltDCIdx[idx][5];
+    rl = CisAjsCktAltDCIdx[idx][6];
+    v  = CisAjsCktAltDCIdx[idx][7];
+
+    if(s != t || u != v) {
+      fprintf(stderr, "Error: BackFlow FSZ does not support spin-changing TwoBodyG yet.\n");
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+    tmp = GreenFunc2BF_fsz(ri,rj,rk,rl,s,u,ip,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
+                           myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer);
+    PhysCisAjsCktAltDC[idx] += w*tmp;
+  }
+  StopTimer(51);
+
+  StartTimer(52);
+  for(idx=0;idx<NCisAjs;idx++) {
+    PhysCisAjs[idx] += w*LocalCisAjs[idx];
+  }
+  StopTimer(52);
+
+  StartTimer(53);
+  for(idx=0;idx<NCisAjsCktAlt;idx++) {
+    idx0 = CisAjsCktAltIdx[idx][0];
+    idx1 = CisAjsCktAltIdx[idx][1];
+    PhysCisAjsCktAlt[idx] += w*LocalCisAjs[idx0]*conj(LocalCisAjs[idx1]);
+  }
+  StopTimer(53);
+
+  ReleaseWorkSpaceInt();
+  ReleaseWorkSpaceComplex();
   return;
 }
 #endif

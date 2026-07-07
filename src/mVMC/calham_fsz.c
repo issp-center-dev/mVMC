@@ -34,6 +34,11 @@ double complex GreenFuncN_fsz(const int n, int *rsi, int *rsj,
                   int *eleNum, const int *eleProjCnt, int *eleSpn,
                   double complex *buffer, int *bufferInt, double *rwork);
 
+double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer);
+
 double CalculateSz_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt,int *eleSpn) {
   const int *n0 = eleNum;
@@ -227,6 +232,75 @@ double complex CalculateHamiltonian_fsz(const double complex ip, int *eleIdx, co
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();
   if (needNBodyInterAllRWork) ReleaseWorkSpaceThreadDouble();
+  return e;
+}
+
+double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, int *eleCfg,
+                             int *eleNum, const int *eleProjCnt, int *eleSpn,
+                             const int *eleProjBFCnt) {
+  const int *n0 = eleNum;
+  const int *n1 = eleNum + Nsite;
+  double complex e=0.0;
+  int idx;
+  int ri,rj,s,t;
+  int *myEleIdx, *myEleCfg, *myEleNum, *myEleSpn;
+  int *myProjCntNew, *myProjBFCntNew;
+  double complex *myBuffer;
+
+  if(NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0 || NNBodyInterAll > 0) {
+    fprintf(stderr, "Error: CalculateHamiltonianBF_fsz supports only density and one-body transfer terms.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+
+  RequestWorkSpaceInt(Nsize+Nsite2+Nsite2+Nsize+NProj+16*Nsite*Nrange);
+  RequestWorkSpaceComplex(NQPFull);
+
+  myEleIdx = GetWorkSpaceInt(Nsize);
+  myEleCfg = GetWorkSpaceInt(Nsite2);
+  myEleNum = GetWorkSpaceInt(Nsite2);
+  myEleSpn = GetWorkSpaceInt(Nsize);
+  myProjCntNew = GetWorkSpaceInt(NProj);
+  myProjBFCntNew = GetWorkSpaceInt(16*Nsite*Nrange);
+  myBuffer = GetWorkSpaceComplex(NQPFull);
+
+  for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
+  for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
+  for(idx=0;idx<Nsite2;idx++) myEleNum[idx] = eleNum[idx];
+  for(idx=0;idx<Nsize;idx++) myEleSpn[idx] = eleSpn[idx];
+
+  for(idx=0;idx<NCoulombIntra;idx++) {
+    ri = CoulombIntra[idx];
+    e += ParaCoulombIntra[idx] * n0[ri] * n1[ri];
+  }
+
+  for(idx=0;idx<NCoulombInter;idx++) {
+    ri = CoulombInter[idx][0];
+    rj = CoulombInter[idx][1];
+    e += ParaCoulombInter[idx] * (n0[ri]+n1[ri]) * (n0[rj]+n1[rj]);
+  }
+
+  for(idx=0;idx<NHundCoupling;idx++) {
+    ri = HundCoupling[idx][0];
+    rj = HundCoupling[idx][1];
+    e -= ParaHundCoupling[idx] * (n0[ri]*n0[rj] + n1[ri]*n1[rj]);
+  }
+
+  for(idx=0;idx<NTransfer;idx++) {
+    ri = Transfer[idx][0];
+    s  = Transfer[idx][1];
+    rj = Transfer[idx][2];
+    t  = Transfer[idx][3];
+    if(s != t) {
+      fprintf(stderr, "Error: BackFlow FSZ does not support spin-changing transfer terms yet.\n");
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+    e -= ParaTransfer[idx]
+      * GreenFunc1BF_fsz(ri,rj,s,ip,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
+                         myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer);
+  }
+
+  ReleaseWorkSpaceInt();
+  ReleaseWorkSpaceComplex();
   return e;
 }
 

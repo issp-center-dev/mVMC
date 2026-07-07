@@ -41,6 +41,17 @@ double complex GreenFunc2_fsz(const int ri, const int rj, const int rk, const in
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
                   int *projCntNew, double complex *buffer);
 
+double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer);
+
+double complex GreenFunc2BF_fsz(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer);
+
 double complex GreenFuncN_fsz(const int n, int *rsi, int *rsj, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
                   int *eleSpn, double complex *buffer, int *bufferInt, double *rwork);
@@ -389,6 +400,174 @@ double complex GreenFunc2_fsz2(const int ri, const int rj, const int rk, const i
   eleNum[XI] = 0;
 
   return conj(z/ip);//TBC
+}
+
+double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer) {
+  double complex z;
+  int mj,rsi,rsj;
+  int qpidx;
+  double complex *pfMNew = buffer;
+
+  (void)eleProjBFCnt;
+
+  if(ri==rj) return eleNum[ri+s*Nsite];
+  if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
+  if(NExUpdatePath==4 || NExUpdatePath==5){
+    if(eleNum[ri+(1-s)*Nsite]==1) return 0.0;
+  }
+
+  mj  = eleCfg[rj+s*Nsite];
+  rsi = ri + s*Nsite;
+  rsj = rj + s*Nsite;
+
+  eleCfg[rsj] = -1;
+  eleCfg[rsi] = mj;
+  eleIdx[mj] = ri;
+  eleSpn[mj] = s;
+  eleNum[rsj] = 0;
+  eleNum[rsi] = 1;
+  UpdateProjCnt(rj, ri, s, projCntNew, eleProjCnt, eleNum);
+  z = ProjRatio(projCntNew,eleProjCnt);
+
+  MakeProjBFCnt(projBFCntNew, eleNum);
+  MakeSlaterElmBF_fsz(eleNum, projBFCntNew);
+  if(CalculateMAll_BF_fsz(eleIdx,eleSpn,0,NQPFull) != 0) {
+    z = 0.0;
+  } else {
+    for(qpidx=0;qpidx<NQPFull;qpidx++) pfMNew[qpidx] = PfM[qpidx];
+    z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  }
+
+  eleCfg[rsj] = mj;
+  eleCfg[rsi] = -1;
+  eleIdx[mj] = rj;
+  eleSpn[mj] = s;
+  eleNum[rsj] = 1;
+  eleNum[rsi] = 0;
+
+  return conj(z/ip);
+}
+
+double complex GreenFunc2BF_fsz(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer) {
+  double complex z;
+  int mj,ml;
+  int rsi,rsj,rtk,rtl;
+  int qpidx;
+  double complex *pfMNew = buffer;
+
+  (void)eleProjBFCnt;
+
+  rsi = ri + s*Nsite;
+  rsj = rj + s*Nsite;
+  rtk = rk + t*Nsite;
+  rtl = rl + t*Nsite;
+
+  if(s==t) {
+    if(rk==rl) {
+      if(eleNum[rtk]==0) return 0.0;
+      else return GreenFunc1BF_fsz(ri,rj,s,ip,eleIdx,eleCfg,eleNum,
+                             eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }else if(rj==rl) {
+      return 0.0;
+    }else if(ri==rl) {
+      if(eleNum[rsi]==0) return 0.0;
+      else if(rj==rk) return 1.0-eleNum[rsj];
+      else return -GreenFunc1BF_fsz(rk,rj,s,ip,eleIdx,eleCfg,eleNum,
+                              eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }else if(rj==rk) {
+      if(eleNum[rsj]==1) return 0.0;
+      else if(ri==rl) return eleNum[rsi];
+      else return GreenFunc1BF_fsz(ri,rl,s,ip,eleIdx,eleCfg,eleNum,
+                             eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }else if(ri==rk) {
+      return 0.0;
+    }else if(ri==rj) {
+      if(eleNum[rsi]==0) return 0.0;
+      else return GreenFunc1BF_fsz(rk,rl,s,ip,eleIdx,eleCfg,eleNum,
+                             eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }
+  }else{
+    if(rk==rl) {
+      if(eleNum[rtk]==0) return 0.0;
+      else if(ri==rj) return eleNum[rsi];
+      else return GreenFunc1BF_fsz(ri,rj,s,ip,eleIdx,eleCfg,eleNum,
+                             eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }else if(ri==rj) {
+      if(eleNum[rsi]==0) return 0.0;
+      else return GreenFunc1BF_fsz(rk,rl,t,ip,eleIdx,eleCfg,eleNum,
+                             eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,buffer);
+    }
+  }
+
+  if(eleNum[rsi]==1 || eleNum[rsj]==0 || eleNum[rtk]==1 || eleNum[rtl]==0) return 0.0;
+
+  mj = eleCfg[rsj];
+  ml = eleCfg[rtl];
+
+  eleCfg[rtl] = -1;
+  eleCfg[rtk] = ml;
+  eleIdx[ml] = rk;
+  eleSpn[ml] = t;
+  eleNum[rtl] = 0;
+  eleNum[rtk] = 1;
+  UpdateProjCnt(rl, rk, t, projCntNew, eleProjCnt, eleNum);
+
+  eleCfg[rsj] = -1;
+  eleCfg[rsi] = mj;
+  eleIdx[mj] = ri;
+  eleSpn[mj] = s;
+  eleNum[rsj] = 0;
+  eleNum[rsi] = 1;
+  UpdateProjCnt(rj, ri, s, projCntNew, projCntNew, eleNum);
+
+  if(!IsSectorStateAllowed(eleNum)) {
+    eleCfg[rtl] = ml;
+    eleCfg[rtk] = -1;
+    eleIdx[ml] = rl;
+    eleSpn[ml] = t;
+    eleNum[rtl] = 1;
+    eleNum[rtk] = 0;
+    eleCfg[rsj] = mj;
+    eleCfg[rsi] = -1;
+    eleIdx[mj] = rj;
+    eleSpn[mj] = s;
+    eleNum[rsj] = 1;
+    eleNum[rsi] = 0;
+    return 0.0;
+  }
+
+  z = ProjRatio(projCntNew,eleProjCnt);
+
+  MakeProjBFCnt(projBFCntNew, eleNum);
+  MakeSlaterElmBF_fsz(eleNum, projBFCntNew);
+  if(CalculateMAll_BF_fsz(eleIdx,eleSpn,0,NQPFull) != 0) {
+    z = 0.0;
+  } else {
+    for(qpidx=0;qpidx<NQPFull;qpidx++) pfMNew[qpidx] = PfM[qpidx];
+    z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  }
+
+  eleCfg[rtl] = ml;
+  eleCfg[rtk] = -1;
+  eleIdx[ml] = rl;
+  eleSpn[ml] = t;
+  eleNum[rtl] = 1;
+  eleNum[rtk] = 0;
+  eleCfg[rsj] = mj;
+  eleCfg[rsi] = -1;
+  eleIdx[mj] = rj;
+  eleSpn[mj] = s;
+  eleNum[rsj] = 1;
+  eleNum[rsi] = 0;
+
+  return conj(z/ip);
 }
 
 /* Calculate n-body Green function in orbital-general (fsz) mode. */

@@ -193,12 +193,20 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
                      &dummyRangeIdx, &dummyBFIdxTotal, &dummyProjBF) != 0) {
     return 1;
   }
+  if (NLocSpn > 0) {
+    fprintf(stderr, "Error: BackFlow MVP does not support NLocalSpin > 0 (got %d).\n", NLocSpn);
+    return 1;
+  }
   if (NExUpdatePath != 0) {
     fprintf(stderr, "Error: BackFlow MVP supports only NExUpdatePath==0 (got %d).\n", NExUpdatePath);
     return 1;
   }
-  if (iFlgOrbitalGeneral != 0) {
-    fprintf(stderr, "Error: BackFlow MVP does not support iFlgOrbitalGeneral=1 (FSZ).\n");
+  if (iFlgOrbitalGeneral != 0 && NVMCCalMode == 0) {
+    fprintf(stderr, "Error: BackFlow FSZ optimization is not implemented yet (NVMCCalMode=0).\n");
+    return 1;
+  }
+  if (iFlgOrbitalGeneral != 0 && TwoSz == -1) {
+    fprintf(stderr, "Error: BackFlow FSZ does not support TwoSz==-1 spin-changing updates yet.\n");
     return 1;
   }
   if (NSPGaussLeg != 1) {
@@ -604,6 +612,7 @@ void BFSetupIndex(void) {
 
 void BFRefreshRealLookupTables(void) {
   int a, b, ri, rj, sgn;
+  if (iFlgOrbitalGeneral != 0) return;
   if (NBackFlowIdx <= 0 || BFRealProj == NULL || BFRealSlater == NULL ||
       BFRealSlaterSign == NULL ||
       BFSubIdx == NULL || ProjBF == NULL || Slater == NULL) {

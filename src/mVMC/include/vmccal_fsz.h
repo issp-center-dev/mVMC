@@ -3,7 +3,7 @@
 #include <complex.h>
 
 void VMCMainCal_fsz(MPI_Comm comm);
+void VMC_BF_MainCal_fsz(MPI_Comm comm);
 
 #endif
-
 
