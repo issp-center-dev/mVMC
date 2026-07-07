@@ -180,6 +180,13 @@ void OutputTimerParaOpt() {
   fprintf(fp,"    BF Green MakeProjBFCnt [81] %12.5lf\n",Timer[81]);
   fprintf(fp,"    BF Green UpdateSlt     [82] %12.5lf\n",Timer[82]);
   fprintf(fp,"    BF Green CalcNewPfM    [83] %12.5lf\n",Timer[83]);
+  fprintf(fp,"    BF GreenFunc1 real     [84] %12.5lf\n",Timer[84]);
+  fprintf(fp,"    BF GreenFunc2 real     [85] %12.5lf\n",Timer[85]);
+  fprintf(fp,"    BF Green setup/proj    [86] %12.5lf\n",Timer[86]);
+  fprintf(fp,"    BF Green CalculateIP   [87] %12.5lf\n",Timer[87]);
+  fprintf(fp,"    BF Green restore cfg   [88] %12.5lf\n",Timer[88]);
+  fprintf(fp,"    BF Green StoreSlater   [89] %12.5lf\n",Timer[89]);
+  fprintf(fp,"    BF Green merge lists   [90] %12.5lf\n",Timer[90]);
   fprintf(fp,"    BF Update collect rows [91] %12.5lf\n",Timer[91]);
   fprintf(fp,"    BF Update recompute    [92] %12.5lf\n",Timer[92]);
   fprintf(fp,"    BF Update copy rows    [93] %12.5lf\n",Timer[93]);
@@ -253,6 +260,13 @@ void OutputTimerPhysCal() {
   fprintf(fp,"    BF Green MakeProjBFCnt [81] %12.5lf\n",Timer[81]);
   fprintf(fp,"    BF Green UpdateSlt     [82] %12.5lf\n",Timer[82]);
   fprintf(fp,"    BF Green CalcNewPfM    [83] %12.5lf\n",Timer[83]);
+  fprintf(fp,"    BF GreenFunc1 real     [84] %12.5lf\n",Timer[84]);
+  fprintf(fp,"    BF GreenFunc2 real     [85] %12.5lf\n",Timer[85]);
+  fprintf(fp,"    BF Green setup/proj    [86] %12.5lf\n",Timer[86]);
+  fprintf(fp,"    BF Green CalculateIP   [87] %12.5lf\n",Timer[87]);
+  fprintf(fp,"    BF Green restore cfg   [88] %12.5lf\n",Timer[88]);
+  fprintf(fp,"    BF Green StoreSlater   [89] %12.5lf\n",Timer[89]);
+  fprintf(fp,"    BF Green merge lists   [90] %12.5lf\n",Timer[90]);
   fprintf(fp,"    BF Update collect rows [91] %12.5lf\n",Timer[91]);
   fprintf(fp,"    BF Update recompute    [92] %12.5lf\n",Timer[92]);
   fprintf(fp,"    BF Update copy rows    [93] %12.5lf\n",Timer[93]);

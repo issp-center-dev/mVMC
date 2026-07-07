@@ -36,9 +36,28 @@ void updateMAll_child_real(const int ma, const int s, const int *eleIdx,
 
 double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
                                       const int *eleIdx, const double *bufM);
+double calculateNewPfMBFN4_real_child_vec(const int qpidx, const int n, const int *msa, const double *vec);
 
 double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
                                 const int *eleIdx);
+
+static void DgemmRowMajorNN(const int m, const int n, const int k,
+                            const double *a, const double *b,
+                            const double alpha, const double beta, double *c) {
+  char trans = 'N';
+  int fm = n, fn = m, fk = k;
+  int lda = n, ldb = k, ldc = n;
+  M_DGEMM(&trans, &trans, &fm, &fn, &fk, &alpha, b, &lda, a, &ldb, &beta, c, &ldc);
+}
+
+static void DgemmRowMajorNT(const int m, const int n, const int k,
+                            const double *a, const double *b,
+                            const double alpha, const double beta, double *c) {
+  char transa = 'T', transb = 'N';
+  int fm = n, fn = m, fk = k;
+  int lda = k, ldb = k, ldc = n;
+  M_DGEMM(&transa, &transb, &fm, &fn, &fk, &alpha, b, &lda, a, &ldb, &beta, c, &ldc);
+}
 
 /* Calculate new pfaffian. The ma-th electron with spin s hops. */
 void CalculateNewPfM_real(const int ma, const int s, double *pfMNew_real, const int *eleIdx,
@@ -271,6 +290,38 @@ void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
   CalculateNewPfMBFWithStride_real(icount, msaTmp, Nsize, pfMNew, eleIdx, qpStart, qpEnd, bufM);
 }
 
+void CalculateNewPfMBFVecWithStride_real(const int *icount, const int *msaTmp, const int msaStride,
+                       double *pfMNew, const int qpStart, const int qpEnd,
+                       const double *vecM, const int vecStride) {
+  int i;
+  const int qpNum = qpEnd-qpStart;
+  int qpidx;
+  int globalQpidx;
+  int *msa;
+  const double *vec;
+
+  for(qpidx=0;qpidx<qpNum;qpidx++) {
+    globalQpidx = qpidx + qpStart;
+    msa=(int *)malloc(sizeof(int)*icount[globalQpidx]);
+    for(i=0;i<icount[globalQpidx];i++){
+      msa[i] = msaTmp[i+globalQpidx*msaStride];
+    }
+
+    vec = vecM + globalQpidx*vecStride*Nsize;
+    pfMNew[qpidx] = calculateNewPfMBFN4_real_child_vec(qpidx,icount[globalQpidx],msa,vec);
+
+    free(msa);
+  }
+
+  return;
+}
+
+void CalculateNewPfMBFVec_real(const int *icount, const int *msaTmp,
+                       double *pfMNew, const int qpStart, const int qpEnd,
+                       const double *vecM) {
+  CalculateNewPfMBFVecWithStride_real(icount, msaTmp, Nsize, pfMNew, qpStart, qpEnd, vecM, Nsize);
+}
+
 /* msa[k]-th electron hops from rsa[k] to eleIdx[msa[k]] */
 /* buffer size = n*Nsize */
 //double complex calculateNewPfMBFN_child(const int qpidx, const int n, const int *msa,
@@ -278,41 +329,18 @@ void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
 double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
                                       const int *eleIdx, const double *bufM) {
   const int nsize = Nsize;
-  const int n2 = 2*n;
   const double *sltE;
   const double *sltE_k;
-  double *invM;
-  double *invM_i, *invM_k, *invM_l;
 
   double *vec; /* vec[n][nsize] */
-  //double complex vec[n*nsize]; /* vec[n][nsize] */
-  double *vec_k, *vec_l;
-  //double complex mat[n2*n2]; /* mat[n2][n2] */
-  double *mat; /* mat[n2][n2] */
-  double *mat_k;
-  double sgn;
+  double *vec_k;
 
-  int rsi,rsk,msi,msj,k,l;
-  double val,tmp;
-
-  /* for ZSKPFA */
-  char uplo='U', mthd='P';
-  int nn,lda,info=0;
-  double pfaff;
-  int iwork[n2];
-  //double complex work[n2*n2]; /* [n2][n2] */
-  double *work; /* [n2][n2] */
-  int lwork = n2*n2;
-  nn=lda=n2;
+  int rsi,rsk,msi,k;
+  double pfnew;
 
   sltE = bufM + globalQpidx*Nsite2*Nsite2;
-  invM = InvM_real + qpidx*Nsize*Nsize;
 
   vec = (double *)malloc(sizeof(double)*n*nsize);
-  //invMat = (double *)malloc(sizeof(double)*n2*n2);
-  mat = (double *)malloc(sizeof(double)*n2*n2);
-  //matUV = (double *)malloc(sizeof(double)*n2*nsize);
-  work = (double *)malloc(sizeof(double)*n2*n2);
 
   //#pragma loop noalias
   for(k=0;k<n;k++) {
@@ -326,20 +354,52 @@ double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, co
     }
   }
 
+  pfnew = calculateNewPfMBFN4_real_child_vec(qpidx,n,msa,vec);
+
+  free(vec);
+  return pfnew;
+}
+
+double calculateNewPfMBFN4_real_child_vec(const int qpidx, const int n, const int *msa, const double *vec) {
+  const int nsize = Nsize;
+  const int n2 = 2*n;
+  double *invM;
+  double *invM_k;
+
+  const double *vec_k;
+  double *w; /* w[n][nsize] = vec * invM^T */
+  double *mat; /* mat[n2][n2] */
+  double *mat_k;
+  double sgn;
+
+  int msi,k,l;
+  double val;
+
+  /* for ZSKPFA */
+  char uplo='U', mthd='P';
+  int nn,lda,info=0;
+  double pfaff;
+  int iwork[n2];
+  double *work; /* [n2][n2] */
+  int lwork = n2*n2;
+  nn=lda=n2;
+
+  invM = InvM_real + qpidx*Nsize*Nsize;
+
+  w = (double *)malloc(sizeof(double)*n*nsize);
+  mat = (double *)malloc(sizeof(double)*n2*n2);
+  work = (double *)malloc(sizeof(double)*n2*n2);
+
+  DgemmRowMajorNT(n, nsize, nsize, vec, invM, 1.0, 0.0, w);
+
   /* X_kl */
   for(k=0;k<n;k++) {
     mat_k = mat + n2*k;
     vec_k = vec + k*nsize;
     for(l=k+1;l<n;l++) {
-      vec_l = vec + l*nsize;
       val = 0.0;
       for(msi=0;msi<nsize;msi++) {
-        invM_i = invM + msi*nsize;
-        tmp = 0.0;
-        for(msj=0;msj<nsize;msj++) {
-          tmp += invM_i[msj] * vec_l[msj];
-        }
-        val += tmp * vec_k[msi];
+        val += w[l*nsize + msi] * vec_k[msi];
       }
       mat_k[l] = val + vec_k[msa[l]];
     }
@@ -348,14 +408,8 @@ double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, co
   /* Y_kl */
   for(k=0;k<n;k++) {
     mat_k = mat + n2*k + n;
-    vec_k = vec + k*nsize;
     for(l=0;l<n;l++) {
-      invM_l = invM + msa[l]*nsize;
-      val = 0.0;
-      for(msi=0;msi<nsize;msi++) {
-        val += vec_k[msi] * invM_l[msi];
-      }
-      mat_k[l] = val;
+      mat_k[l] = w[k*nsize + msa[l]];
     }
   }
 
@@ -384,7 +438,7 @@ double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, co
 
   //free(matUV);
   free(mat);
-  free(vec);
+  free(w);
   //free(invMat);
   free(work);
   return sgn * pfaff * PfM_real[qpidx];
@@ -433,10 +487,11 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
   const double *sltE;
   const double *sltE_k;
   double *invM;
-  double *invM_i, *invM_k, *invM_l;
+  double *invM_i, *invM_k;
 
   double *vec; /* vec[n][nsize] */
-  double *vec_k, *vec_l;
+  double *vec_k;
+  double *w; /* w[n][nsize] = vec * invM^T */
   //double complex mat[n2*n2]; /* mat[n2][n2] */
   double *mat; /* mat[n2][n2] */
   double *mat_k;
@@ -444,11 +499,12 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
   double *invMat; /* mat[n2][n2] */
   //double complex matUV[n2*nsize]; /* mat[n2][nsize] */
   double *matUV; /* mat[n2][nsize] */
-  double *invMat_k, *matUV_i, *matUV_j;
+  double *woodburyTmp; /* [nsize][n2] */
+  double *matUV_i;
   double sgn;
 
   int rsi,rsk,msi,msj,k,l;
-  double val,tmp;
+  double val;
 
   /* for DSKPFA */
   char uplo='U', mthd='P';
@@ -468,9 +524,11 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
 
   //vec = bufferc; /* n*nsize */
   vec = (double *)malloc(sizeof(double)*n*nsize);
+  w = (double *)malloc(sizeof(double)*n*nsize);
   invMat = (double *)malloc(sizeof(double)*n2*n2);
   mat = (double *)malloc(sizeof(double)*n2*n2);
   matUV = (double *)malloc(sizeof(double)*n2*nsize);
+  woodburyTmp = (double *)malloc(sizeof(double)*nsize*n2);
   work = (double *)malloc(sizeof(double)*n2*n2);
   work2 = (double *)malloc(sizeof(double)*n2);
 
@@ -486,20 +544,16 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
     }
   }
 
+  DgemmRowMajorNT(n, nsize, nsize, vec, invM, 1.0, 0.0, w);
+
   /* X_kl */
   for(k=0;k<n;k++) {
     mat_k = mat + n2*k;
     vec_k = vec + k*nsize;
     for(l=k+1;l<n;l++) {
-      vec_l = vec + l*nsize;
       val = 0.0;
       for(msi=0;msi<nsize;msi++) {
-        invM_i = invM + msi*nsize;
-        tmp = 0.0;
-        for(msj=0;msj<nsize;msj++) {
-          tmp += invM_i[msj] * vec_l[msj];
-        }
-        val += tmp * vec_k[msi];
+        val += w[l*nsize + msi] * vec_k[msi];
       }
       mat_k[l] = val + vec_k[msa[l]];
     }
@@ -508,14 +562,8 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
   /* Y_kl */
   for(k=0;k<n;k++) {
     mat_k = mat + n2*k + n;
-    vec_k = vec + k*nsize;
     for(l=0;l<n;l++) {
-      invM_l = invM + msa[l]*nsize;
-      val = 0.0;
-      for(msi=0;msi<nsize;msi++) {
-        val += vec_k[msi] * invM_l[msi];
-      }
-      mat_k[l] = val;
+      mat_k[l] = w[k*nsize + msa[l]];
     }
   }
 
@@ -550,11 +598,7 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
     matUV_i = matUV + n2*msi;
     invM_i = invM + msi*nsize;
     for(k=0;k<n;k++) {
-      vec_k = vec + k*nsize;
-      val = 0.0;
-      for(msj=0;msj<nsize;msj++) {
-        val -= invM_i[msj] * vec_k[msj];
-      }
+      val = -w[k*nsize + msi];
       if(msa[k]==msi){val -= 1.0;}
       matUV_i[k] = val;
       matUV_i[k+n] = invM_i[msa[k]];
@@ -580,23 +624,8 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
     //return;
   }
 
-  for(msi=0;msi<nsize;msi++) {
-    matUV_i = matUV + n2*msi;
-    invM_i = invM + msi*nsize;
-    for(msj=0;msj<nsize;msj++) {
-      matUV_j = matUV + n2*msj;
-      val = 0.0;
-      for(k=0;k<n2;k++) {
-        invMat_k = invMat + k*n2;
-        tmp=0.0;
-        for(l=0;l<n2;l++) {
-          tmp += invMat_k[l]*matUV_j[l];
-        }
-        val += matUV_i[k]*tmp;
-      }
-      invM_i[msj] -= val;
-    }
-  }
+  DgemmRowMajorNN(nsize, n2, n2, matUV, invMat, 1.0, 0.0, woodburyTmp);
+  DgemmRowMajorNT(nsize, nsize, n2, woodburyTmp, matUV, -1.0, 1.0, invM);
 
   for(msi=0;msi<Ne;msi++) {
     //invM_i = invM + msi*nsize;
@@ -624,8 +653,10 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
 
   free(matUV);
   free(mat);
+  free(w);
   free(vec);
   free(invMat);
+  free(woodburyTmp);
   free(work);
   free(work2);
 

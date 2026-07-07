@@ -1784,8 +1784,230 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
     }
 
 
-void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const int u, 
-                     const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp){
+static void SetSlaterElmBFGrnVecRow_real(double *vecRow, const int msa,
+                                         const int *eleIdx, const int *xqp,
+                                         const double *baseSltE,
+                                         const double *sltElm, const double *sltElm2) {
+  int msi, spin, colSpin;
+  int ri, tri, rsi, rj, trj;
+  const double *baseRow;
+
+  spin = msa/Ne;
+  ri = eleIdx[msa];
+  tri = xqp[ri];
+  rsi = ri + spin*Nsite;
+  baseRow = baseSltE + rsi*Nsite2;
+
+  for(msi=0;msi<Nsize;msi++) {
+    colSpin = msi/Ne;
+    rj = eleIdx[msi];
+    trj = xqp[rj];
+    if(spin == 0 && colSpin == 1) {
+      vecRow[msi] = sltElm[tri*Nsite+trj];
+    } else if(spin == 1 && colSpin == 0) {
+      vecRow[msi] = -sltElm2[tri*Nsite+trj];
+    } else {
+      vecRow[msi] = baseRow[rj + colSpin*Nsite];
+    }
+  }
+}
+
+void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, const int u,
+                     const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjBFCnt,
+                     int *msa, int *hopNum, double *vecTmp){
+  int **posBF = PosBF;
+  const int mua = ma + Ne*u;
+  int trua, trub;
+  int idx, rtmp;
+  int ri,tri,rsi0,rsi1;
+  int rj,trj,rsj0,rsj1;
+  int qpidx,mpidx;
+  double slt_ij,slt_ji;
+  int *xqp, *xqpInv;
+  const double *baseSltE,*baseSltE_i0,*baseSltE_i1;
+  double *vecQp;
+  int rsz[Nsite2];
+  int zidx,hop,icount;
+  int jcount[Nsite],jcount1[Nsite];
+  int mi0,mi1,flag;
+  int row;
+  unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
+  BFRealSparseEntry bfSparseEntry[4*Nsite*Nrange];
+  int bfSparseOffset[4*Nsite],bfSparseCount[4*Nsite],bfSparseGeomCount[4*Nsite];
+  double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
+  long long profileRowRequests=0,profileRowRecompute=0,profileRowReuse=0;
+  long long profileTermDenseCandidate=0,profileTermGeometryValid=0;
+  long long profileTermSparsePair=0,profileTermActualAdd=0;
+
+  MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
+  MakeBFRealSparseCountList(bfSparseEntry, bfSparseOffset, bfSparseCount, bfSparseGeomCount, eleProjBFCnt);
+  for(row=0;row<Nsite;row++){
+    rowDone[row] = 0;
+  }
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    mpidx = qpidx / NSPGaussLeg;
+
+    xqp = QPTrans[mpidx];
+    xqpInv = QPTransInv[mpidx];
+
+    baseSltE = SlaterElmBF_real + qpidx*Nsite2*Nsite2;
+    vecQp = vecTmp + qpidx*Nsize*Nsize;
+
+    icount=0;
+    trua = xqpInv[ra];
+    rsz[icount] = trua;
+    icount++;
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trua][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    trub = xqpInv[rb];
+    flag=0;
+    for(zidx=0;zidx<icount;zidx++){
+      if(rsz[zidx] == trub) flag=1;
+    }
+    if(flag==0){
+      rsz[icount] = trub;
+      icount++;
+    }
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trub][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    hop=0;
+    msa[qpidx*Nsize+hop]= ma + Ne*u;
+    hop++;
+
+    for(zidx=0;zidx<icount;zidx++){
+      jcount[zidx]=0;
+      jcount1[zidx]=0;
+    }
+
+    if(BFProfileEnabled) {
+      profileRowRequests += icount;
+      for(zidx=0;zidx<icount;zidx++) {
+        tri = xqp[rsz[zidx]];
+        if(rowDone[tri]) {
+          profileRowReuse++;
+        } else {
+          profileRowRecompute++;
+        }
+      }
+    }
+
+    for(zidx=0;zidx<icount;zidx++) {
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      if(rowDone[tri]) continue;
+
+      for(rj=0;rj<Nsite;rj++){
+        BFRealSparseStats profilePairStats;
+        trj = xqp[rj];
+
+        if(BFProfileEnabled) {
+          profilePairStats.denseCandidate = 0;
+          profilePairStats.geometryValid = 0;
+          profilePairStats.sparsePair = 0;
+          profilePairStats.actualAdd = 0;
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,&profilePairStats);
+          profileTermDenseCandidate += profilePairStats.denseCandidate;
+          profileTermGeometryValid += profilePairStats.geometryValid;
+          profileTermSparsePair += profilePairStats.sparsePair;
+          profileTermActualAdd += profilePairStats.actualAdd;
+        } else {
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,NULL);
+        }
+
+        sltElm[tri*Nsite+trj] = slt_ij;
+        sltElm2[tri*Nsite+trj] = slt_ji;
+      }
+
+      rowDone[tri] = 1;
+    }
+
+    for(zidx=0;zidx<icount;zidx++) {
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      baseSltE_i0 = baseSltE + rsi0*Nsite2;
+      baseSltE_i1 = baseSltE + rsi1*Nsite2;
+
+      for(rj=0;rj<Nsite;rj++){
+        trj = xqp[rj];
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+
+        slt_ij = sltElm[tri*Nsite+trj];
+        slt_ji = sltElm2[tri*Nsite+trj];
+
+        if(baseSltE_i0[rsj1] != slt_ij){
+          jcount[zidx]++;
+        }
+        if(baseSltE_i1[rsj0] != -slt_ji){
+          jcount1[zidx]++;
+        }
+      }
+    }
+    for(zidx=0;zidx<icount;zidx++){
+      ri  = rsz[zidx];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      mi0 = eleCfg[rsi0];
+      mi1 = eleCfg[rsi1];
+
+      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+        msa[qpidx*Nsize+hop]=mi0;
+        hop++;
+      }
+      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+        msa[qpidx*Nsize+hop]=mi1+Ne;
+        hop++;
+      }
+    }
+
+    hopNum[qpidx] = hop;
+    for(idx=0;idx<hop;idx++) {
+      SetSlaterElmBFGrnVecRow_real(vecQp + idx*Nsize, msa[qpidx*Nsize+idx],
+                                   eleIdx, xqp, baseSltE, sltElm, sltElm2);
+    }
+  }
+
+  if(BFProfileEnabled) {
+    AddBFProfileCounter(BFPROF_GREEN_ROW_REQUEST, profileRowRequests);
+    AddBFProfileCounter(BFPROF_GREEN_ROW_RECOMPUTE, profileRowRecompute);
+    AddBFProfileCounter(BFPROF_GREEN_ROW_REUSE, profileRowReuse);
+    AddBFProfileCounter(BFPROF_GREEN_PAIR_REQUEST, profileRowRequests*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_GREEN_PAIR_RECOMPUTE, profileRowRecompute*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_DENSE_CANDIDATE, profileTermDenseCandidate);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_GEOMETRY_VALID, profileTermGeometryValid);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_SPARSE_PAIR, profileTermSparsePair);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_ACTUAL_ADD, profileTermActualAdd);
+  }
+
+  return ;
+}
+
+void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const int u,
+                     const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp,
+                     int *restoreRows, int *restoreRowCount){
   int **posBF = PosBF;
   //int rua=ra+Nsite*u, rub=rb+Nsite*u;
   const int mua = ma + Ne*u;
@@ -1822,6 +2044,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
     itmp0=0;
     itmp1=0;
+    if(restoreRowCount != NULL) restoreRowCount[qpidx] = 0;
     mpidx = qpidx / NSPGaussLeg;
 
     xqp = QPTrans[mpidx];
@@ -1984,6 +2207,18 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
         hop++;
       }
     }
+    if(restoreRows != NULL && restoreRowCount != NULL) {
+      int restoreCount = 0;
+      for(hidx=0;hidx<itmp0;hidx++) {
+        restoreRows[qpidx*Nsite2 + restoreCount] = rhop0[hidx];
+        restoreCount++;
+      }
+      for(hidx=0;hidx<itmp1;hidx++) {
+        restoreRows[qpidx*Nsite2 + restoreCount] = rhop1[hidx];
+        restoreCount++;
+      }
+      restoreRowCount[qpidx] = restoreCount;
+    }
     for(hidx=0;hidx<itmp0;hidx++){
       rsi0= rhop0[hidx];
       for(rj=0;rj<Nsite;rj++) {
@@ -2060,6 +2295,30 @@ void StoreSlaterElmBF_real(double *bufM){
       for(rsj=0;rsj<Nsite2;rsj++) {
         bufM_i[rsj] = sltE_i[rsj];
         //printf("bufM[%d]=%.5e\n",msi*Nsize+msj,cabs(bufM[msi*Nsize+msj]));
+      }
+    }
+  }
+  return;
+}
+
+void StoreSlaterElmBF_real_rows(double *bufM, const int *restoreRows, const int *restoreRowCount){
+  int qpidx, idx, row, col;
+  const double *sltE;
+  double *bufM_qp;
+
+  if(restoreRows == NULL || restoreRowCount == NULL) {
+    StoreSlaterElmBF_real(bufM);
+    return;
+  }
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    sltE = SlaterElmBF_real + qpidx*Nsite2*Nsite2;
+    bufM_qp = bufM + qpidx*Nsite2*Nsite2;
+    for(idx=0;idx<restoreRowCount[qpidx];idx++) {
+      row = restoreRows[qpidx*Nsite2 + idx];
+      for(col=0;col<Nsite2;col++) {
+        bufM_qp[row*Nsite2 + col] = sltE[row*Nsite2 + col];
+        bufM_qp[col*Nsite2 + row] = sltE[col*Nsite2 + row];
       }
     }
   }

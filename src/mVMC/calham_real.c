@@ -224,7 +224,7 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
 
   RequestWorkSpaceThreadInt(Nsize+2*Nsite2+NProj+16*Nsite*Nrange);
   RequestWorkSpaceThreadDouble(NQPFull+2*Nsize+NQPFull*Nsite2*Nsite2);
-  /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
+  /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize, BF Green vec scratch */
 
 #pragma omp parallel default(shared)\
   private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myBuffer,mySltBFTmp,myEnergy)\
@@ -245,7 +245,6 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
 #pragma loop noalias
     for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
 
-    StoreSlaterElmBF_real(mySltBFTmp);
 #pragma omp barrier
 
 
