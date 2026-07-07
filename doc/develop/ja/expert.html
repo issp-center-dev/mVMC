@@ -1855,6 +1855,29 @@ BackFlow 用の追加ヘッダです。7 行目の <code class="docutils literal
 <span class="mi">9</span> <span class="mi">0</span>
 </pre></div>
 </div>
+<p>compact 形式:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">====================</span>
+<span class="n">NBackFlowIdx</span> <span class="mi">1</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="n">NBackFlowIdx</span> <span class="mi">1</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="n">BFCompact</span> <span class="mi">1</span>
+<span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">1</span> <span class="mi">0</span>
+<span class="mi">2</span> <span class="mi">0</span>
+<span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
+<span class="mi">9</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code> の場合は compact 形式を使い、
+<span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span> 行の BackFlow group 行を省略できます。
+この形式では、全ての近傍ペアの BackFlow group 番号は暗黙に 0 として扱われます。
+上に示した従来の full 形式も引き続き使用できます。</p>
 </section>
 <section id="id51">
 <h3>ファイル形式<a class="headerlink" href="#id51" title="この見出しへのパーマリンク">¶</a></h3>
@@ -1862,9 +1885,10 @@ BackFlow 用の追加ヘッダです。7 行目の <code class="docutils literal
 <li><p>1-5行: 共通ヘッダ。2行目は <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> [int01] とします。</p></li>
 <li><p>6-10行: BackFlow 用の追加ヘッダ。読み込み時には読み飛ばされますが省略できません。
 7 行目にも <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> [int01] を書くことを推奨します。</p></li>
-<li><p>11 - (10 + <span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span>) 行:
+<li><p>従来の full 形式では、11 - (10 + <span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span>) 行:
 [int02] [int03] [int04] [int05] [int06]</p></li>
-<li><p>続く <span class="math notranslate nohighlight">\(N_{\rm ProjBF}\)</span> 行:
+<li><p>compact 形式では、11 行目に <code class="docutils literal notranslate"><span class="pre">BFCompact</span> <span class="pre">1</span></code> を書きます。</p></li>
+<li><p>どちらの形式でも、続く <span class="math notranslate nohighlight">\(N_{\rm ProjBF}\)</span> 行:
 [int07] [int08]</p></li>
 </ul>
 </section>
@@ -1906,10 +1930,13 @@ BackFlow 範囲に含まれている必要があります。</p>
 <h3>使用ルール<a class="headerlink" href="#id53" title="この見出しへのパーマリンク">¶</a></h3>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">BFRange</span></code> と <code class="docutils literal notranslate"><span class="pre">BF</span></code> は必ず両方を <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> に指定してください。</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">BF</span></code> のサイト行は、全ての <span class="math notranslate nohighlight">\(i,j\)</span> と
+<li><p>従来の full 形式では、<code class="docutils literal notranslate"><span class="pre">BF</span></code> のサイト行は、全ての <span class="math notranslate nohighlight">\(i,j\)</span> と
 <span class="math notranslate nohighlight">\(x_0 \in {\rm BFRange}(i)\)</span>、<span class="math notranslate nohighlight">\(x_1 \in {\rm BFRange}(j)\)</span>
 の組を 1 回ずつ指定する必要があります。行数は
 <span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span> です。</p></li>
+<li><p>compact 形式では、11 行目に <code class="docutils literal notranslate"><span class="pre">BFCompact</span> <span class="pre">1</span></code> を書き、サイト行を省略します。
+この形式は <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code> の場合のみ使用できます。省略された
+BackFlow group 番号は 0 として扱われます。</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ProjBF[0]</span></code> は BackFlow の base 項にも使われるため、identity 初期点では
 <code class="docutils literal notranslate"><span class="pre">ProjBF[0]=1</span></code> とします。初期値ファイルや再開ファイルを使う場合、
 <code class="docutils literal notranslate"><span class="pre">ProjBF[0]</span></code> の虚部は 0 にしてください。</p></li>

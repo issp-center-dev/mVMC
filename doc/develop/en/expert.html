@@ -1973,6 +1973,29 @@ consistency with existing inputs.</p>
 <span class="mi">9</span> <span class="mi">0</span>
 </pre></div>
 </div>
+<p>Compact form:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">====================</span>
+<span class="n">NBackFlowIdx</span> <span class="mi">1</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="n">NBackFlowIdx</span> <span class="mi">1</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="o">====================</span>
+<span class="n">BFCompact</span> <span class="mi">1</span>
+<span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">1</span> <span class="mi">0</span>
+<span class="mi">2</span> <span class="mi">0</span>
+<span class="p">(</span><span class="k">continue</span><span class="o">...</span><span class="p">)</span>
+<span class="mi">9</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>For <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code>, the compact form can be used to omit the
+<span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span> BackFlow group rows. In this form all
+BackFlow group indices for the neighbor-pair combinations are implicitly
+0. The legacy full form shown above remains accepted.</p>
 </section>
 <section id="id42">
 <h3>File format<a class="headerlink" href="#id42" title="Permalink to this heading">¶</a></h3>
@@ -1981,9 +2004,11 @@ consistency with existing inputs.</p>
 <li><p>Lines 6-10: Additional BackFlow header. These lines are skipped when
 the body is read, but they cannot be omitted. It is recommended that
 line 7 also contains <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> [int01].</p></li>
-<li><p>Lines 11 - (10 + <span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span>):
+<li><p>Legacy full form, lines 11 -
+(10 + <span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span>):
 [int02] [int03] [int04] [int05] [int06]</p></li>
-<li><p>The following <span class="math notranslate nohighlight">\(N_{\rm ProjBF}\)</span> lines:
+<li><p>Compact form: line 11 is <code class="docutils literal notranslate"><span class="pre">BFCompact</span> <span class="pre">1</span></code>.</p></li>
+<li><p>The following <span class="math notranslate nohighlight">\(N_{\rm ProjBF}\)</span> lines in either form:
 [int07] [int08]</p></li>
 </ul>
 </section>
@@ -2030,10 +2055,15 @@ specified by [int07] (0: fixed, 1: optimized). The imaginary part of
 <h3>User rules<a class="headerlink" href="#id44" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Both <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> and <code class="docutils literal notranslate"><span class="pre">BF</span></code> must be specified in <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code>.</p></li>
-<li><p>The site rows in <code class="docutils literal notranslate"><span class="pre">BF</span></code> must contain every combination of
+<li><p>In the legacy full form, the site rows in <code class="docutils literal notranslate"><span class="pre">BF</span></code> must contain every
+combination of
 <span class="math notranslate nohighlight">\(i,j\)</span>, <span class="math notranslate nohighlight">\(x_0 \in {\rm BFRange}(i)\)</span>, and
 <span class="math notranslate nohighlight">\(x_1 \in {\rm BFRange}(j)\)</span> exactly once. The number of rows is
 <span class="math notranslate nohighlight">\(N_s^2 N_{\rm range}^2\)</span>.</p></li>
+<li><p>In the compact form, line 11 must be <code class="docutils literal notranslate"><span class="pre">BFCompact</span> <span class="pre">1</span></code> and the site rows
+are omitted. This compact form is accepted only when
+<code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code>; the omitted BackFlow group indices are treated as
+0.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ProjBF[0]</span></code> also controls the BackFlow base term. For the identity
 initial point, set <code class="docutils literal notranslate"><span class="pre">ProjBF[0]=1</span></code>. If an initial-parameter or restart
 file is used, the imaginary part of <code class="docutils literal notranslate"><span class="pre">ProjBF[0]</span></code> should be zero.</p></li>
