@@ -244,6 +244,34 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
   return 0;
 }
 
+int BFValidateFszDefinitionDetails(void) {
+  int idx;
+
+  if (NProjBF <= 0 || iFlgOrbitalGeneral == 0) return 0;
+
+  for (idx = 0; idx < NTransfer; idx++) {
+    if (Transfer[idx][1] != Transfer[idx][3]) {
+      fprintf(stderr, "Error: BackFlow FSZ supports only spin-conserving Transfer terms.\n");
+      return 1;
+    }
+  }
+  for (idx = 0; idx < NCisAjs; idx++) {
+    if (CisAjsIdx[idx][1] != CisAjsIdx[idx][3]) {
+      fprintf(stderr, "Error: BackFlow FSZ supports only spin-conserving OneBodyG terms "
+                      "(including entries derived from TwoBodyGEx).\n");
+      return 1;
+    }
+  }
+  for (idx = 0; idx < NCisAjsCktAltDC; idx++) {
+    if (CisAjsCktAltDCIdx[idx][1] != CisAjsCktAltDCIdx[idx][3] ||
+        CisAjsCktAltDCIdx[idx][5] != CisAjsCktAltDCIdx[idx][7]) {
+      fprintf(stderr, "Error: BackFlow FSZ supports only spin-conserving TwoBodyG terms.\n");
+      return 1;
+    }
+  }
+  return 0;
+}
+
 int BFReadRange(FILE *fp, const char *defname) {
   int i;
   int j;
