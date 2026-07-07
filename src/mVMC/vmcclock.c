@@ -111,6 +111,16 @@ static void OutputBFProfileCounters(FILE *fp) {
   fprintf(fp,"    BF green term geometry valid    [961] %12lld\n",BFProfileCounter[BFPROF_GREEN_TERM_GEOMETRY_VALID]);
   fprintf(fp,"    BF green term sparse pairs      [962] %12lld\n",BFProfileCounter[BFPROF_GREEN_TERM_SPARSE_PAIR]);
   fprintf(fp,"    BF green term actual adds       [963] %12lld\n",BFProfileCounter[BFPROF_GREEN_TERM_ACTUAL_ADD]);
+  fprintf(fp,"    BF sample delta cnt total       [970] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_DELTA_CNT_TOTAL]);
+  fprintf(fp,"    BF sample delta cnt changed     [971] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_DELTA_CNT_CHANGED]);
+  fprintf(fp,"    BF sample delta pair new        [972] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_DELTA_PAIR_NEW]);
+  fprintf(fp,"    BF sample delta pair old        [973] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_DELTA_PAIR_OLD]);
+  fprintf(fp,"    BF sample delta pair total      [974] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_DELTA_PAIR_TOTAL]);
+  fprintf(fp,"    BF green delta cnt total        [980] %12lld\n",BFProfileCounter[BFPROF_GREEN_DELTA_CNT_TOTAL]);
+  fprintf(fp,"    BF green delta cnt changed      [981] %12lld\n",BFProfileCounter[BFPROF_GREEN_DELTA_CNT_CHANGED]);
+  fprintf(fp,"    BF green delta pair new         [982] %12lld\n",BFProfileCounter[BFPROF_GREEN_DELTA_PAIR_NEW]);
+  fprintf(fp,"    BF green delta pair old         [983] %12lld\n",BFProfileCounter[BFPROF_GREEN_DELTA_PAIR_OLD]);
+  fprintf(fp,"    BF green delta pair total       [984] %12lld\n",BFProfileCounter[BFPROF_GREEN_DELTA_PAIR_TOTAL]);
   fprintf(fp,"    BF cnt snapshots                [930] %12lld\n",BFProfileCounter[BFPROF_BFCNT_SNAPSHOT]);
   fprintf(fp,"    BF cnt total entries            [931] %12lld\n",BFProfileCounter[BFPROF_BFCNT_TOTAL_ENTRY]);
   fprintf(fp,"    BF cnt group0 nnz               [932] %12lld\n",BFProfileCounter[BFPROF_BFCNT_GROUP0_NNZ]);

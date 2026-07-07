@@ -26,6 +26,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #pragma once
+#include <string.h>
+
 #include "workspace.c"
 #include "pfupdate_real.h"
 
@@ -37,6 +39,8 @@ void updateMAll_child_real(const int ma, const int s, const int *eleIdx,
 double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
                                       const int *eleIdx, const double *bufM);
 double calculateNewPfMBFN4_real_child_vec(const int qpidx, const int n, const int *msa, const double *vec);
+static double calculateNewPfMBFN4_real_child_vec_w(const int qpidx, const int n, const int *msa,
+                                                   const double *vec, const double *w);
 
 double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
                                 const int *eleIdx);
@@ -322,6 +326,50 @@ void CalculateNewPfMBFVec_real(const int *icount, const int *msaTmp,
   CalculateNewPfMBFVecWithStride_real(icount, msaTmp, Nsize, pfMNew, qpStart, qpEnd, vecM, Nsize);
 }
 
+void CalculateNewPfMBFVecBatched_real(const int batchSize, const int *icount, const int *msaTmp,
+                       double *pfMNew, const int qpStart, const int qpEnd,
+                       const double *vecM, double *vecStack, double *wStack) {
+  const int nsize = Nsize;
+  const int qpNum = qpEnd-qpStart;
+  int qpidx, globalQpidx, batchIdx, row, totalRows, offset;
+  int rowOffset[batchSize];
+  int n;
+  const int *msa;
+  const double *termVec;
+  const double *invM;
+
+  for(qpidx=0;qpidx<qpNum;qpidx++) {
+    globalQpidx = qpidx + qpStart;
+    totalRows = 0;
+    for(batchIdx=0;batchIdx<batchSize;batchIdx++) {
+      n = icount[batchIdx*NQPFull + globalQpidx];
+      rowOffset[batchIdx] = totalRows;
+      termVec = vecM + ((size_t)batchIdx*NQPFull + globalQpidx)*nsize*nsize;
+      for(row=0;row<n;row++) {
+        memcpy(vecStack + (totalRows+row)*nsize, termVec + row*nsize, sizeof(double)*nsize);
+      }
+      totalRows += n;
+    }
+
+    if(totalRows > 0) {
+      invM = InvM_real + qpidx*nsize*nsize;
+      DgemmRowMajorNT(totalRows, nsize, nsize, vecStack, invM, 1.0, 0.0, wStack);
+    }
+
+    for(batchIdx=0;batchIdx<batchSize;batchIdx++) {
+      n = icount[batchIdx*NQPFull + globalQpidx];
+      offset = rowOffset[batchIdx];
+      msa = msaTmp + ((size_t)batchIdx*NQPFull + globalQpidx)*nsize;
+      pfMNew[batchIdx*NQPFull + globalQpidx] =
+        calculateNewPfMBFN4_real_child_vec_w(qpidx, n, msa,
+                                             vecStack + offset*nsize,
+                                             wStack + offset*nsize);
+    }
+  }
+
+  return;
+}
+
 /* msa[k]-th electron hops from rsa[k] to eleIdx[msa[k]] */
 /* buffer size = n*Nsize */
 //double complex calculateNewPfMBFN_child(const int qpidx, const int n, const int *msa,
@@ -362,12 +410,30 @@ double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, co
 
 double calculateNewPfMBFN4_real_child_vec(const int qpidx, const int n, const int *msa, const double *vec) {
   const int nsize = Nsize;
+  double *invM;
+  double *w; /* w[n][nsize] = vec * invM^T */
+  double pfnew;
+
+  invM = InvM_real + qpidx*Nsize*Nsize;
+
+  w = (double *)malloc(sizeof(double)*n*nsize);
+
+  DgemmRowMajorNT(n, nsize, nsize, vec, invM, 1.0, 0.0, w);
+
+  pfnew = calculateNewPfMBFN4_real_child_vec_w(qpidx,n,msa,vec,w);
+
+  free(w);
+  return pfnew;
+}
+
+static double calculateNewPfMBFN4_real_child_vec_w(const int qpidx, const int n, const int *msa,
+                                                   const double *vec, const double *w) {
+  const int nsize = Nsize;
   const int n2 = 2*n;
   double *invM;
   double *invM_k;
 
   const double *vec_k;
-  double *w; /* w[n][nsize] = vec * invM^T */
   double *mat; /* mat[n2][n2] */
   double *mat_k;
   double sgn;
@@ -386,11 +452,8 @@ double calculateNewPfMBFN4_real_child_vec(const int qpidx, const int n, const in
 
   invM = InvM_real + qpidx*Nsize*Nsize;
 
-  w = (double *)malloc(sizeof(double)*n*nsize);
   mat = (double *)malloc(sizeof(double)*n2*n2);
   work = (double *)malloc(sizeof(double)*n2*n2);
-
-  DgemmRowMajorNT(n, nsize, nsize, vec, invM, 1.0, 0.0, w);
 
   /* X_kl */
   for(k=0;k<n;k++) {
@@ -438,7 +501,6 @@ double calculateNewPfMBFN4_real_child_vec(const int qpidx, const int n, const in
 
   //free(matUV);
   free(mat);
-  free(w);
   //free(invMat);
   free(work);
   return sgn * pfaff * PfM_real[qpidx];

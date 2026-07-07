@@ -19,6 +19,9 @@ void CalculateNewPfMBFVecWithStride_real(const int *icount, const int *msaTmp, c
 void CalculateNewPfMBFVec_real(const int *icount, const int *msaTmp,
                             double *pfMNew, const int qpStart, const int qpEnd,
                             const double *vecM);
+void CalculateNewPfMBFVecBatched_real(const int batchSize, const int *icount, const int *msaTmp,
+                            double *pfMNew, const int qpStart, const int qpEnd,
+                            const double *vecM, double *vecStack, double *wStack);
 
 void UpdateMAll_BF_real(const int *icount, const int *msaTmp,
                   double *pfMNew, const int *eleIdx,

@@ -486,6 +486,81 @@ static int MergeBFHopListsVec_real(const int *left, const int *leftCount, const 
 
 /* Calculate 1-body Green function <CisAjs> */
 /* buffer size = NQPFull */
+int GreenFunc1BF_real_prepare(const int ri, const int rj, const int s, double *greenValue,
+                    double *projRatio, double *vecM, int *msaTmp, int *icount,
+                    int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
+                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew) {
+  int mj,msj,rsi,rsj;
+
+  StartTimer(84);
+  if(ri==rj) {
+    *greenValue = eleNum[ri+s*Nsite];
+    StopTimer(84);
+    return 0;
+  }
+  if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) {
+    *greenValue = 0.0;
+    StopTimer(84);
+    return 0;
+  }
+
+  mj = eleCfg[rj+s*Nsite];
+  msj = mj + s*Ne;
+  rsi = ri + s*Nsite;
+  rsj = rj + s*Nsite;
+
+  StartTimer(86);
+  eleCfg[rsj] = -1;
+  eleCfg[rsi] = mj;
+  eleIdx[msj] = ri;
+  eleNum[rsj] = 0;
+  eleNum[rsi] = 1;
+  UpdateProjCnt(rj, ri, s, projCntNew, eleProjCnt, eleNum);
+  *projRatio = ProjRatio(projCntNew,eleProjCnt);
+  StopTimer(86);
+
+  StartTimer(81);
+  MakeProjBFCnt(projBFCntNew, eleNum);
+  StopTimer(81);
+  StartTimer(82);
+  UpdateSlaterElmBFGrnVec_real(mj, rj, ri, s, eleIdx, eleCfg, eleNum,
+                               eleProjBFCnt, projBFCntNew, msaTmp, icount, vecM);
+  StopTimer(82);
+
+  StartTimer(88);
+  eleCfg[rsj] = mj;
+  eleCfg[rsi] = -1;
+  eleIdx[msj] = rj;
+  eleNum[rsj] = 1;
+  eleNum[rsi] = 0;
+  StopTimer(88);
+
+  StopTimer(84);
+  return 1;
+}
+
+void GreenFunc1BF_real_finish_batch(const int batchSize, const double ip,
+                    const double *projRatio, const int *icount, const int *msaTmp,
+                    const double *vecM, double *greenValue, double *pfMNew,
+                    double *vecStack, double *wStack) {
+  int batchIdx;
+
+  StartTimer(84);
+  StartTimer(83);
+  CalculateNewPfMBFVecBatched_real(batchSize, icount, msaTmp, pfMNew, 0, NQPFull,
+                                   vecM, vecStack, wStack);
+  StopTimer(83);
+  StartTimer(87);
+  for(batchIdx=0;batchIdx<batchSize;batchIdx++) {
+    greenValue[batchIdx] = projRatio[batchIdx]
+      * CalculateIP_real(pfMNew + batchIdx*NQPFull, 0, NQPFull, MPI_COMM_SELF) / ip;
+  }
+  StopTimer(87);
+  StopTimer(84);
+
+  return;
+}
+
 double GreenFunc1BF_real(const int ri, const int rj, const int s, const double ip, double *bufM,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
                     int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer) {
@@ -524,7 +599,8 @@ double GreenFunc1BF_real(const int ri, const int rj, const int s, const double i
   MakeProjBFCnt(projBFCntNew, eleNum);
   StopTimer(81);
   StartTimer(82);
-  UpdateSlaterElmBFGrnVec_real(mj, rj, ri, s, eleIdx, eleCfg, eleNum, projBFCntNew, msaTmp, icount, bufM);
+  UpdateSlaterElmBFGrnVec_real(mj, rj, ri, s, eleIdx, eleCfg, eleNum,
+                               eleProjBFCnt, projBFCntNew, msaTmp, icount, bufM);
   StopTimer(82);
   StartTimer(83);
   CalculateNewPfMBFVec_real(icount, msaTmp, pfMNew_real, 0, NQPFull, bufM);
@@ -670,8 +746,10 @@ double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
   MakeProjBFCnt(projBFCntNew, eleNum);
   StopTimer(81);
   StartTimer(82);
-  UpdateSlaterElmBFGrnVec_real(ml, rl, rk, t, eleIdx, eleCfg, eleNum, projBFCntNew, msaTmp0, icount0, vecTmp0);
-  UpdateSlaterElmBFGrnVec_real(mj, rj, ri, s, eleIdx, eleCfg, eleNum, projBFCntNew, msaTmp1, icount1, bufM);
+  UpdateSlaterElmBFGrnVec_real(ml, rl, rk, t, eleIdx, eleCfg, eleNum,
+                               eleProjBFCnt, projBFCntNew, msaTmp0, icount0, vecTmp0);
+  UpdateSlaterElmBFGrnVec_real(mj, rj, ri, s, eleIdx, eleCfg, eleNum,
+                               eleProjBFCnt, projBFCntNew, msaTmp1, icount1, bufM);
   StopTimer(82);
 
   StartTimer(90);
