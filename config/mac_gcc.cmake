@@ -1,6 +1,9 @@
 # for GCC Compiler (Homebrew)
 # Disable USE_GEMMT to build without BLIS (uses reference dskr2k/zskr2k instead)
 set(USE_GEMMT OFF CACHE BOOL "Use GEMMT (requires BLIS)" FORCE)
+# Prefer Accelerate for the mac_gcc verification build. Homebrew BLIS 2.0 has
+# shown incorrect dgemm_ results for TN/N=4,16 shapes used by BackFlow batching.
+set(BLA_VENDOR Apple CACHE STRING "BLAS/LAPACK vendor" FORCE)
 
 # Auto-detect Homebrew GCC (avoid Apple Clang's /usr/bin/gcc)
 execute_process(

@@ -1909,9 +1909,16 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
 static void SetSlaterElmBFGrnVecRow_real(double *vecRow, const int msa,
                                          const int *eleIdx, const int *xqp,
                                          const double *baseSltE,
-                                         const double *sltElm, const double *sltElm2) {
+                                         const double *sltElm, const double *sltElm2,
+                                         const unsigned char *rowDone,
+                                         const BFRealSparseEntry *bfSparseEntry,
+                                         const int *bfSparseOffset,
+                                         const int *bfSparseCount,
+                                         const int *bfSparseGeomCount,
+                                         const unsigned char *bfEtaFlag) {
   int msi, spin, colSpin;
   int ri, tri, rsi, rj, trj;
+  double slt_ij, slt_ji;
   const double *baseRow;
 
   spin = msa/Ne;
@@ -1925,9 +1932,23 @@ static void SetSlaterElmBFGrnVecRow_real(double *vecRow, const int msa,
     rj = eleIdx[msi];
     trj = xqp[rj];
     if(spin == 0 && colSpin == 1) {
-      vecRow[msi] = sltElm[tri*Nsite+trj];
+      if(rowDone[tri]) {
+        vecRow[msi] = sltElm[tri*Nsite+trj];
+      } else {
+        SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                       bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                       bfEtaFlag,NULL);
+        vecRow[msi] = slt_ij;
+      }
     } else if(spin == 1 && colSpin == 0) {
-      vecRow[msi] = -sltElm2[tri*Nsite+trj];
+      if(rowDone[tri]) {
+        vecRow[msi] = -sltElm2[tri*Nsite+trj];
+      } else {
+        SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                       bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                       bfEtaFlag,NULL);
+        vecRow[msi] = -slt_ji;
+      }
     } else {
       vecRow[msi] = baseRow[rj + colSpin*Nsite];
     }
@@ -2131,7 +2152,9 @@ void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, cons
     hopNum[qpidx] = hop;
     for(idx=0;idx<hop;idx++) {
       SetSlaterElmBFGrnVecRow_real(vecQp + idx*Nsize, msa[qpidx*Nsize+idx],
-                                   eleIdx, xqp, baseSltE, sltElm, sltElm2);
+                                   eleIdx, xqp, baseSltE, sltElm, sltElm2,
+                                   rowDone, bfSparseEntry, bfSparseOffset, bfSparseCount,
+                                   bfSparseGeomCount, bfEtaFlag);
     }
   }
 
