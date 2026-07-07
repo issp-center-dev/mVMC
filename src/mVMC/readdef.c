@@ -1599,6 +1599,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
       fprintf(stderr, "error: OptFlag is incomplete.\n");
       info = 1;
     }
+    if (info == 0 && BFValidateFszDefinitionDetails() != 0) info = 1;
     fprintf(stdout, "finish reading parameters.\n");
   } /* if(rank==0) */
 

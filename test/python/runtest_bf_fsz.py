@@ -90,6 +90,63 @@ def write_green_defs(workdir):
             fp.write(" ".join("{:5d}".format(value) for value in row) + "\n")
 
 
+def replace_data_line(workdir, filename, row):
+    path = os.path.join(workdir, filename)
+    with open(path) as fp:
+        lines = fp.readlines()
+    if len(lines) < 6:
+        raise RuntimeError("{} has no data row".format(filename))
+    lines[5] = row
+    with open(path, "w") as fp:
+        fp.writelines(lines)
+
+
+def make_spin_changing_transfer(workdir):
+    replace_data_line(
+        workdir,
+        "trans.def",
+        "    1     0     0     1         1.000000000000000         0.000000000000000\n",
+    )
+
+
+def make_spin_changing_one_body_g(workdir):
+    replace_data_line(
+        workdir,
+        "greenone.def",
+        "    0     0     1     1\n",
+    )
+
+
+def make_spin_changing_two_body_g(workdir):
+    replace_data_line(
+        workdir,
+        "greentwo.def",
+        "    0     0     0     1     0     1     0     1\n",
+    )
+
+
+def make_spin_changing_two_body_g_ex(workdir):
+    rows = [
+        (0, 0, 1, 1, 2, 0, 3, 0),
+    ]
+    with open(os.path.join(workdir, "greentwoex.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NCisAjsCktAlt         {}\n".format(len(rows)))
+        fp.write("=============================================\n")
+        fp.write("======== Green functions for BF-FSZ ========\n")
+        fp.write("=============================================\n")
+        for row in rows:
+            fp.write(" ".join("{:5d}".format(value) for value in row) + "\n")
+
+    namelist_path = os.path.join(workdir, "namelist.def")
+    with open(namelist_path) as fp:
+        lines = fp.readlines()
+    if not any(line.split() and line.split()[0] == "TwoBodyGEx" for line in lines):
+        lines.append("      TwoBodyGEx  greentwoex.def\n")
+    with open(namelist_path, "w") as fp:
+        fp.writelines(lines)
+
+
 def write_locspn(workdir, local_sites, nsite=4):
     local_sites = set(local_sites)
     with open(os.path.join(workdir, "locspn.def"), "w") as fp:
@@ -185,11 +242,13 @@ def prepare_case(rootdir, name, include_backflow):
     return workdir
 
 
-def expect_invalid(rootdir, name, updates, expected, mpi_procs=None, local_sites=None):
+def expect_invalid(rootdir, name, updates, expected, mpi_procs=None, local_sites=None, mutate_defs=None):
     workdir = prepare_case(rootdir, name, True)
     update_modpara(workdir, updates)
     if local_sites is not None:
         write_locspn(workdir, local_sites)
+    if mutate_defs is not None:
+        mutate_defs(workdir)
     proc = run_vmc(rootdir, workdir, mpi_procs)
     if proc.returncode == 0:
         print("ERROR: {} unexpectedly succeeded".format(name))
@@ -198,13 +257,58 @@ def expect_invalid(rootdir, name, updates, expected, mpi_procs=None, local_sites
         print("ERROR: {} did not report expected error: {}".format(name, expected))
         print(proc.stdout)
         return -1
+    if "Start: Sampling." in proc.stdout:
+        print("ERROR: {} reached sampling before failing".format(name))
+        print(proc.stdout)
+        return -1
     return 0
+
+
+def get_named_invalid_case(case_name):
+    invalid_cases = {
+        "BackFlow_FSZ_InvalidSpinChangingTransfer": (
+            {},
+            "BackFlow FSZ supports only spin-conserving Transfer terms",
+            None,
+            make_spin_changing_transfer,
+        ),
+        "BackFlow_FSZ_InvalidSpinChangingOneBodyG": (
+            {},
+            "BackFlow FSZ supports only spin-conserving OneBodyG terms",
+            None,
+            make_spin_changing_one_body_g,
+        ),
+        "BackFlow_FSZ_InvalidSpinChangingOneBodyG_mpi": (
+            {},
+            "BackFlow FSZ supports only spin-conserving OneBodyG terms",
+            None,
+            make_spin_changing_one_body_g,
+        ),
+        "BackFlow_FSZ_InvalidSpinChangingTwoBodyG": (
+            {},
+            "BackFlow FSZ supports only spin-conserving TwoBodyG terms",
+            None,
+            make_spin_changing_two_body_g,
+        ),
+        "BackFlow_FSZ_InvalidSpinChangingTwoBodyGEx": (
+            {},
+            "including entries derived from TwoBodyGEx",
+            None,
+            make_spin_changing_two_body_g_ex,
+        ),
+    }
+    return invalid_cases.get(case_name)
 
 
 def main():
     case_name = sys.argv[1] if len(sys.argv) > 1 else "BackFlow_FSZ_IdentityEnergy_Complex"
     rootdir = os.getcwd()
     mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+    named_invalid = get_named_invalid_case(case_name)
+    if named_invalid is not None:
+        updates, expected, local_sites, mutate_defs = named_invalid
+        return expect_invalid(rootdir, case_name, updates, expected, mpi_procs, local_sites, mutate_defs)
+
     bf_workdir = prepare_case(rootdir, case_name, True)
     no_bf_workdir = prepare_case(rootdir, case_name + "_nobf", False)
 
