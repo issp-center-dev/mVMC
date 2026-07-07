@@ -33,6 +33,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "locgrn_real.h"
 #include "calham_real.h"
 
+#ifndef BF_TRANSFER_BATCH_SIZE
+#define BF_TRANSFER_BATCH_SIZE 8
+#endif
+
 ///
 /// \param ip
 /// \param eleIdx
@@ -216,18 +220,30 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
   double e=0.0, tmp;
   int idx;
   int ri,rj,s,rk,rl,t;
+  int batchNo,batchStart,batchEnd,batchIdx,batchCount,nTransferBatch;
   int *myEleIdx, *myEleNum, *myEleCfg, *myProjCntNew, *myProjBFCntNew;
+  int *myBatchIdx, *myBatchMsa, *myBatchIcount;
   //double sltTmp[NThread*NQPFull*Nsite2*Nsite2];
-  double *mySltBFTmp;
+  double *myBatchVec, *myBatchPfM, *myBatchProj, *myBatchGreen, *myBatchVecStack, *myBatchWStack;
   double *myBuffer;
   double myEnergy;
 
-  RequestWorkSpaceThreadInt(Nsize+2*Nsite2+NProj+16*Nsite*Nrange);
-  RequestWorkSpaceThreadDouble(NQPFull+2*Nsize+NQPFull*Nsite2*Nsite2);
-  /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize, BF Green vec scratch */
+  RequestWorkSpaceThreadInt(Nsize+2*Nsite2+NProj+16*Nsite*Nrange
+                            + BF_TRANSFER_BATCH_SIZE
+                            + BF_TRANSFER_BATCH_SIZE*NQPFull
+                            + BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize);
+  RequestWorkSpaceThreadDouble(NQPFull+2*Nsize
+                               + BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize*Nsize
+                               + BF_TRANSFER_BATCH_SIZE*NQPFull
+                               + 2*BF_TRANSFER_BATCH_SIZE
+                               + 2*BF_TRANSFER_BATCH_SIZE*Nsize*Nsize);
+  nTransferBatch = (NTransfer + BF_TRANSFER_BATCH_SIZE - 1) / BF_TRANSFER_BATCH_SIZE;
+  /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize, BF transfer batch scratch */
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myBuffer,mySltBFTmp,myEnergy)\
+  private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myBuffer,\
+          myBatchIdx,myBatchMsa,myBatchIcount,myBatchVec,myBatchPfM,myBatchProj,myBatchGreen,\
+          myBatchVecStack,myBatchWStack,myEnergy,batchNo,batchStart,batchEnd,batchIdx,batchCount)\
   reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
@@ -235,8 +251,16 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
     myEleCfg = GetWorkSpaceThreadInt(Nsite2);
     myProjCntNew   = GetWorkSpaceThreadInt(NProj);
     myProjBFCntNew = GetWorkSpaceThreadInt(16*Nsite*Nrange);
+    myBatchIdx     = GetWorkSpaceThreadInt(BF_TRANSFER_BATCH_SIZE);
+    myBatchIcount  = GetWorkSpaceThreadInt(BF_TRANSFER_BATCH_SIZE*NQPFull);
+    myBatchMsa     = GetWorkSpaceThreadInt(BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize);
     myBuffer   = GetWorkSpaceThreadDouble(NQPFull+2*Nsize);
-    mySltBFTmp = GetWorkSpaceThreadDouble(NQPFull*Nsite2*Nsite2);
+    myBatchVec = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize*Nsize);
+    myBatchPfM = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE*NQPFull);
+    myBatchProj = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE);
+    myBatchGreen = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE);
+    myBatchVecStack = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE*Nsize*Nsize);
+    myBatchWStack = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE*Nsize*Nsize);
 
 #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -282,15 +306,41 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
 
     /* Transfer */
 #pragma omp for private(idx,ri,rj,s) schedule(dynamic) nowait
-    for(idx=0;idx<NTransfer;idx++) {
-      ri = Transfer[idx][0];
-      rj = Transfer[idx][2];
-      s  = Transfer[idx][3];
+    for(batchNo=0;batchNo<nTransferBatch;batchNo++) {
+      batchStart = batchNo * BF_TRANSFER_BATCH_SIZE;
+      batchEnd = batchStart + BF_TRANSFER_BATCH_SIZE;
+      if(batchEnd > NTransfer) batchEnd = NTransfer;
+      batchCount = 0;
 
-      myEnergy -= creal(ParaTransfer[idx])
-        // * GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
-        * GreenFunc1BF_real(ri,rj,s,ip,mySltBFTmp,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer);
-      /* Caution: negative sign */
+      for(idx=batchStart;idx<batchEnd;idx++) {
+        ri = Transfer[idx][0];
+        rj = Transfer[idx][2];
+        s  = Transfer[idx][3];
+
+        if(GreenFunc1BF_real_prepare(ri,rj,s,myBatchGreen+batchCount,myBatchProj+batchCount,
+                                     myBatchVec + batchCount*NQPFull*Nsize*Nsize,
+                                     myBatchMsa + batchCount*NQPFull*Nsize,
+                                     myBatchIcount + batchCount*NQPFull,
+                                     myEleIdx,myEleCfg,myEleNum,eleProjCnt,myProjCntNew,
+                                     eleProjBFCnt,myProjBFCntNew)) {
+          myBatchIdx[batchCount] = idx;
+          batchCount++;
+        } else {
+          myEnergy -= creal(ParaTransfer[idx]) * myBatchGreen[batchCount];
+        }
+        /* Caution: negative sign */
+      }
+
+      if(batchCount > 0) {
+        GreenFunc1BF_real_finish_batch(batchCount, ip, myBatchProj, myBatchIcount, myBatchMsa,
+                                       myBatchVec, myBatchGreen, myBatchPfM,
+                                       myBatchVecStack, myBatchWStack);
+        for(batchIdx=0;batchIdx<batchCount;batchIdx++) {
+          idx = myBatchIdx[batchIdx];
+          myEnergy -= creal(ParaTransfer[idx]) * myBatchGreen[batchIdx];
+        }
+        /* Caution: negative sign */
+      }
     }
 
 #pragma omp master

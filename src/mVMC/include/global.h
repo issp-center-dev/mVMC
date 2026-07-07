@@ -395,7 +395,7 @@ int Counter_max = 6;
 /* 4: local spin flip try, 5 local spin flip accept*/
 
 /***** optional BackFlow profiling counters *****/
-#define NBFProfileCounter 38
+#define NBFProfileCounter 48
 #define BFPROF_SAMPLE_ROW_REQUEST        0
 #define BFPROF_SAMPLE_ROW_RECOMPUTE      1
 #define BFPROF_SAMPLE_ROW_REUSE          2
@@ -434,6 +434,16 @@ int Counter_max = 6;
 #define BFPROF_GREEN_TERM_GEOMETRY_VALID   35
 #define BFPROF_GREEN_TERM_SPARSE_PAIR      36
 #define BFPROF_GREEN_TERM_ACTUAL_ADD       37
+#define BFPROF_SAMPLE_DELTA_CNT_TOTAL      38
+#define BFPROF_SAMPLE_DELTA_CNT_CHANGED    39
+#define BFPROF_SAMPLE_DELTA_PAIR_NEW       40
+#define BFPROF_SAMPLE_DELTA_PAIR_OLD       41
+#define BFPROF_SAMPLE_DELTA_PAIR_TOTAL     42
+#define BFPROF_GREEN_DELTA_CNT_TOTAL       43
+#define BFPROF_GREEN_DELTA_CNT_CHANGED     44
+#define BFPROF_GREEN_DELTA_PAIR_NEW        45
+#define BFPROF_GREEN_DELTA_PAIR_OLD        46
+#define BFPROF_GREEN_DELTA_PAIR_TOTAL      47
 int BFProfileEnabled = 0;
 long long BFProfileCounter[NBFProfileCounter];
 

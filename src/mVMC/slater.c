@@ -55,6 +55,13 @@ static void SubSlaterElmBF_real_eta_sparse(const int tri, const int trj, double 
                                            const BFRealSparseEntry *entry, const int *offset,
                                            const int *count, const int *geomCount,
                                            const unsigned char *bfEtaFlag, BFRealSparseStats *stats);
+static long long CountBFRealBFCntChangedEntries(const int *oldCnt, const int *newCnt);
+static void MakeBFRealSparseChangedCount(const BFRealSparseEntry *oldEntry, const int *oldOffset,
+                                         const int *oldCount, const BFRealSparseEntry *newEntry,
+                                         const int *newOffset, const int *newCount,
+                                         int *oldChangedCount, int *newChangedCount);
+static long long CountBFRealDeltaSparsePairsForRow(const int tri, const int *count,
+                                                   const int *changedCount);
 
 void UpdateSlaterElm_fcmp() {
   int ri,ori,tri,sgni,rsi0,rsi1;
@@ -1161,6 +1168,93 @@ static void SubSlaterElmBF_real_eta_sparse(const int tri, const int trj, double 
   return;
 }
 
+static long long CountBFRealBFCntChangedEntries(const int *oldCnt, const int *newCnt) {
+  const int nEntry = 16*Nsite*Nrange;
+  int idx;
+  long long changed = 0;
+
+  for(idx=0;idx<nEntry;idx++) {
+    if(oldCnt[idx] != newCnt[idx]) changed++;
+  }
+
+  return changed;
+}
+
+static int FindBFRealSparseEntryByCoord(const BFRealSparseEntry *entry, const int nEntry,
+                                        const int coord) {
+  int idx;
+
+  for(idx=0;idx<nEntry;idx++) {
+    if(entry[idx].coord == coord) return idx;
+  }
+
+  return -1;
+}
+
+static void MakeBFRealSparseChangedCount(const BFRealSparseEntry *oldEntry, const int *oldOffset,
+                                         const int *oldCount, const BFRealSparseEntry *newEntry,
+                                         const int *newOffset, const int *newCount,
+                                         int *oldChangedCount, int *newChangedCount) {
+  const int nKey = 4*Nsite;
+  int key, idx, found;
+  const BFRealSparseEntry *oldKeyEntry;
+  const BFRealSparseEntry *newKeyEntry;
+
+  for(key=0;key<nKey;key++) {
+    oldChangedCount[key] = 0;
+    newChangedCount[key] = 0;
+    oldKeyEntry = oldEntry + oldOffset[key];
+    newKeyEntry = newEntry + newOffset[key];
+
+    for(idx=0;idx<newCount[key];idx++) {
+      found = FindBFRealSparseEntryByCoord(oldKeyEntry, oldCount[key], newKeyEntry[idx].coord);
+      if(found < 0 ||
+         oldKeyEntry[found].cnt0 != newKeyEntry[idx].cnt0 ||
+         oldKeyEntry[found].cnt1 != newKeyEntry[idx].cnt1) {
+        newChangedCount[key]++;
+      }
+    }
+
+    for(idx=0;idx<oldCount[key];idx++) {
+      found = FindBFRealSparseEntryByCoord(newKeyEntry, newCount[key], oldKeyEntry[idx].coord);
+      if(found < 0 ||
+         newKeyEntry[found].cnt0 != oldKeyEntry[idx].cnt0 ||
+         newKeyEntry[found].cnt1 != oldKeyEntry[idx].cnt1) {
+        oldChangedCount[key]++;
+      }
+    }
+  }
+
+  return;
+}
+
+static long long CountBFRealDeltaSparsePairsForRow(const int tri, const int *count,
+                                                   const int *changedCount) {
+  int xn, xm, trj;
+  int leftKey, rightKey;
+  long long total = 0;
+  long long leftCount, rightCount, leftChanged, rightChanged;
+
+  for(xn=0;xn<4;xn++) {
+    leftKey = xn*Nsite + tri;
+    leftCount = count[leftKey];
+    leftChanged = changedCount[leftKey];
+    if(leftCount == 0 || leftChanged > leftCount) continue;
+    for(xm=0;xm<4;xm++) {
+      if(xm==0 && xn==0) continue;
+      for(trj=0;trj<Nsite;trj++) {
+        rightKey = xm*Nsite + trj;
+        rightCount = count[rightKey];
+        rightChanged = changedCount[rightKey];
+        if(rightCount == 0 || rightChanged > rightCount) continue;
+        total += leftChanged*rightCount + (leftCount-leftChanged)*rightChanged;
+      }
+    }
+  }
+
+  return total;
+}
+
 
 void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int u,
                        const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex*sltElmTmp){
@@ -1359,7 +1453,8 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
 }
 
 void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int u,
-                       const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp){
+                       const int *eleCfg, const int *eleNum, const int *eleProjBFCntOld,
+                       const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp){
   int **posBF = PosBF;
   const int mua = ma + Ne*u;
   int trua, trub;
@@ -1379,13 +1474,29 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
   unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
   BFRealSparseEntry bfSparseEntry[4*Nsite*Nrange];
   int bfSparseOffset[4*Nsite],bfSparseCount[4*Nsite],bfSparseGeomCount[4*Nsite];
+  BFRealSparseEntry bfOldSparseEntry[4*Nsite*Nrange];
+  int bfOldSparseOffset[4*Nsite],bfOldSparseCount[4*Nsite],bfOldSparseGeomCount[4*Nsite];
+  int bfDeltaNewChangedCount[4*Nsite],bfDeltaOldChangedCount[4*Nsite];
   double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
   long long profileRowRequests=0,profileRowRecompute=0,profileRowReuse=0;
   long long profileTermDenseCandidate=0,profileTermGeometryValid=0;
   long long profileTermSparsePair=0,profileTermActualAdd=0;
+  long long profileDeltaCntTotal=0,profileDeltaCntChanged=0;
+  long long profileDeltaPairNew=0,profileDeltaPairOld=0;
+  int profileDeltaEnabled=0;
 
   MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
   MakeBFRealSparseCountList(bfSparseEntry, bfSparseOffset, bfSparseCount, bfSparseGeomCount, eleProjBFCnt);
+  if(BFProfileEnabled && eleProjBFCntOld != NULL) {
+    MakeBFRealSparseCountList(bfOldSparseEntry, bfOldSparseOffset, bfOldSparseCount,
+                              bfOldSparseGeomCount, eleProjBFCntOld);
+    MakeBFRealSparseChangedCount(bfOldSparseEntry, bfOldSparseOffset, bfOldSparseCount,
+                                 bfSparseEntry, bfSparseOffset, bfSparseCount,
+                                 bfDeltaOldChangedCount, bfDeltaNewChangedCount);
+    profileDeltaCntTotal = 16LL*Nsite*Nrange;
+    profileDeltaCntChanged = CountBFRealBFCntChangedEntries(eleProjBFCntOld, eleProjBFCnt);
+    profileDeltaEnabled = 1;
+  }
   for(row=0;row<Nsite;row++){
     rowDone[row] = 0;
   }
@@ -1470,6 +1581,12 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
         tri = xqp[ri];
 
         if(rowDone[tri]) continue;
+        if(profileDeltaEnabled) {
+          profileDeltaPairNew += CountBFRealDeltaSparsePairsForRow(tri, bfSparseCount,
+                                                                   bfDeltaNewChangedCount);
+          profileDeltaPairOld += CountBFRealDeltaSparsePairsForRow(tri, bfOldSparseCount,
+                                                                   bfDeltaOldChangedCount);
+        }
 
         for(rj=0;rj<Nsite;rj++){
           trj = xqp[rj];
@@ -1610,6 +1727,11 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
     AddBFProfileCounter(BFPROF_SAMPLE_TERM_GEOMETRY_VALID, profileTermGeometryValid);
     AddBFProfileCounter(BFPROF_SAMPLE_TERM_SPARSE_PAIR, profileTermSparsePair);
     AddBFProfileCounter(BFPROF_SAMPLE_TERM_ACTUAL_ADD, profileTermActualAdd);
+    AddBFProfileCounter(BFPROF_SAMPLE_DELTA_CNT_TOTAL, profileDeltaCntTotal);
+    AddBFProfileCounter(BFPROF_SAMPLE_DELTA_CNT_CHANGED, profileDeltaCntChanged);
+    AddBFProfileCounter(BFPROF_SAMPLE_DELTA_PAIR_NEW, profileDeltaPairNew);
+    AddBFProfileCounter(BFPROF_SAMPLE_DELTA_PAIR_OLD, profileDeltaPairOld);
+    AddBFProfileCounter(BFPROF_SAMPLE_DELTA_PAIR_TOTAL, profileDeltaPairNew+profileDeltaPairOld);
   }
 
   return ;
@@ -1813,7 +1935,8 @@ static void SetSlaterElmBFGrnVecRow_real(double *vecRow, const int msa,
 }
 
 void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, const int u,
-                     const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjBFCnt,
+                     const int *eleIdx, const int *eleCfg, const int *eleNum,
+                     const int *eleProjBFCntOld, const int *eleProjBFCnt,
                      int *msa, int *hopNum, double *vecTmp){
   int **posBF = PosBF;
   const int mua = ma + Ne*u;
@@ -1834,13 +1957,29 @@ void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, cons
   unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
   BFRealSparseEntry bfSparseEntry[4*Nsite*Nrange];
   int bfSparseOffset[4*Nsite],bfSparseCount[4*Nsite],bfSparseGeomCount[4*Nsite];
+  BFRealSparseEntry bfOldSparseEntry[4*Nsite*Nrange];
+  int bfOldSparseOffset[4*Nsite],bfOldSparseCount[4*Nsite],bfOldSparseGeomCount[4*Nsite];
+  int bfDeltaNewChangedCount[4*Nsite],bfDeltaOldChangedCount[4*Nsite];
   double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
   long long profileRowRequests=0,profileRowRecompute=0,profileRowReuse=0;
   long long profileTermDenseCandidate=0,profileTermGeometryValid=0;
   long long profileTermSparsePair=0,profileTermActualAdd=0;
+  long long profileDeltaCntTotal=0,profileDeltaCntChanged=0;
+  long long profileDeltaPairNew=0,profileDeltaPairOld=0;
+  int profileDeltaEnabled=0;
 
   MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
   MakeBFRealSparseCountList(bfSparseEntry, bfSparseOffset, bfSparseCount, bfSparseGeomCount, eleProjBFCnt);
+  if(BFProfileEnabled && eleProjBFCntOld != NULL) {
+    MakeBFRealSparseCountList(bfOldSparseEntry, bfOldSparseOffset, bfOldSparseCount,
+                              bfOldSparseGeomCount, eleProjBFCntOld);
+    MakeBFRealSparseChangedCount(bfOldSparseEntry, bfOldSparseOffset, bfOldSparseCount,
+                                 bfSparseEntry, bfSparseOffset, bfSparseCount,
+                                 bfDeltaOldChangedCount, bfDeltaNewChangedCount);
+    profileDeltaCntTotal = 16LL*Nsite*Nrange;
+    profileDeltaCntChanged = CountBFRealBFCntChangedEntries(eleProjBFCntOld, eleProjBFCnt);
+    profileDeltaEnabled = 1;
+  }
   for(row=0;row<Nsite;row++){
     rowDone[row] = 0;
   }
@@ -1912,6 +2051,12 @@ void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, cons
       ri  = rsz[zidx];
       tri = xqp[ri];
       if(rowDone[tri]) continue;
+      if(profileDeltaEnabled) {
+        profileDeltaPairNew += CountBFRealDeltaSparsePairsForRow(tri, bfSparseCount,
+                                                                 bfDeltaNewChangedCount);
+        profileDeltaPairOld += CountBFRealDeltaSparsePairsForRow(tri, bfOldSparseCount,
+                                                                 bfDeltaOldChangedCount);
+      }
 
       for(rj=0;rj<Nsite;rj++){
         BFRealSparseStats profilePairStats;
@@ -2000,6 +2145,11 @@ void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, cons
     AddBFProfileCounter(BFPROF_GREEN_TERM_GEOMETRY_VALID, profileTermGeometryValid);
     AddBFProfileCounter(BFPROF_GREEN_TERM_SPARSE_PAIR, profileTermSparsePair);
     AddBFProfileCounter(BFPROF_GREEN_TERM_ACTUAL_ADD, profileTermActualAdd);
+    AddBFProfileCounter(BFPROF_GREEN_DELTA_CNT_TOTAL, profileDeltaCntTotal);
+    AddBFProfileCounter(BFPROF_GREEN_DELTA_CNT_CHANGED, profileDeltaCntChanged);
+    AddBFProfileCounter(BFPROF_GREEN_DELTA_PAIR_NEW, profileDeltaPairNew);
+    AddBFProfileCounter(BFPROF_GREEN_DELTA_PAIR_OLD, profileDeltaPairOld);
+    AddBFProfileCounter(BFPROF_GREEN_DELTA_PAIR_TOTAL, profileDeltaPairNew+profileDeltaPairOld);
   }
 
   return ;

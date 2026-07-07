@@ -79,11 +79,12 @@ static void CheckBFRealUpdate(const char *label, const int *msa, const int *hopN
 static void UpdateSlaterElmBF_real_checked(const char *label,
                                            const int ma, const int ra, const int rb, const int u,
                                            const int *eleCfg, const int *eleNum,
-                                           const int *eleProjBFCnt, int *msa, int *hopNum,
+                                           const int *eleProjBFCntOld, const int *eleProjBFCnt,
+                                           int *msa, int *hopNum,
                                            int *msaRef, int *hopNumRef, const int rank) {
   UpdateSlaterElmBF_fcmp(ma, ra, rb, u, eleCfg, eleNum, eleProjBFCnt, msaRef, hopNumRef,
                          SlaterElmBF);
-  UpdateSlaterElmBF_real(ma, ra, rb, u, eleCfg, eleNum, eleProjBFCnt, msa, hopNum,
+  UpdateSlaterElmBF_real(ma, ra, rb, u, eleCfg, eleNum, eleProjBFCntOld, eleProjBFCnt, msa, hopNum,
                          SlaterElmBF_real);
   CheckBFRealUpdate(label, msa, hopNum, msaRef, hopNumRef, rank);
 }
@@ -621,10 +622,10 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         StartTimer(64);
 #ifdef MVMC_DEBUG_BF_REAL_UPDATE
         UpdateSlaterElmBF_real_checked("hopping proposal", mi, ri, rj, s, TmpEleCfg, TmpEleNum,
-                                       projBFCntNew, msaTmp, icount, msaRef, icountRef, rank);
+                                       TmpEleProjBFCnt, projBFCntNew, msaTmp, icount, msaRef, icountRef, rank);
 #else
         /* Real BF sampling updates SlaterElmBF_real directly; SlaterElmBF is not kept current on this hot path. */
-        UpdateSlaterElmBF_real(mi, ri, rj, s, TmpEleCfg, TmpEleNum, projBFCntNew, msaTmp, icount,
+        UpdateSlaterElmBF_real(mi, ri, rj, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, projBFCntNew, msaTmp, icount,
                                SlaterElmBF_real);
 #endif
         StopTimer(64);
@@ -668,9 +669,9 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
           StartTimer(64);
 #ifdef MVMC_DEBUG_BF_REAL_UPDATE
           UpdateSlaterElmBF_real_checked("hopping reject", mi, rj, ri, s, TmpEleCfg, TmpEleNum,
-                                         TmpEleProjBFCnt, msaTmp, icount, msaRef, icountRef, rank);
+                                         projBFCntNew, TmpEleProjBFCnt, msaTmp, icount, msaRef, icountRef, rank);
 #else
-          UpdateSlaterElmBF_real(mi, rj, ri, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, msaTmp, icount,
+          UpdateSlaterElmBF_real(mi, rj, ri, s, TmpEleCfg, TmpEleNum, projBFCntNew, TmpEleProjBFCnt, msaTmp, icount,
                                  SlaterElmBF_real);
 #endif
           StopTimer(64);

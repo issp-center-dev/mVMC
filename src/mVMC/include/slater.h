@@ -12,7 +12,8 @@ void MakeSlaterElmBF_fcmp(const int *eleNum, const int *eleProjBFCnt);
 void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int u,
                        const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex*sltElmTmp);
 void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int u,
-                       const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp);
+                       const int *eleCfg, const int *eleNum, const int *eleProjBFCntOld,
+                       const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp);
 void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
                           const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex*sltElmTmp);
 
@@ -20,7 +21,8 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
                           const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp,
                           int *restoreRows, int *restoreRowCount);
 void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, const int u,
-                          const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjBFCnt,
+                          const int *eleIdx, const int *eleCfg, const int *eleNum,
+                          const int *eleProjBFCntOld, const int *eleProjBFCnt,
                           int *msa, int *hopNum, double *vecTmp);
 
 void StoreSlaterElmBF_fcmp(complex double *bufM);
