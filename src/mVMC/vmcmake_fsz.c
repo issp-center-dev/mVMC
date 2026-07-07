@@ -458,6 +458,175 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
   return;
 }
 
+static int reduceBFInfo_fsz(const int info, MPI_Comm comm) {
+  int size, infoSend, infoRdc;
+  MPI_Comm_size(comm,&size);
+  if(size <= 1) return info;
+  infoSend = info;
+  MPI_Allreduce(&infoSend,&infoRdc,1,MPI_INT,MPI_MAX,comm);
+  return infoRdc;
+}
+
+void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
+  int outStep,nOutStep;
+  int inStep,nInStep;
+  int mi,ri,rj,s,t,i;
+  int nAccept=0;
+  int sample;
+
+  double complex logIpOld,logIpNew;
+  int projCntNew[NProj];
+  int projBFCntNew[16*Nsite*Nrange];
+  double x,w;
+
+  int qpStart,qpEnd;
+  int rejectFlag;
+  int info,infoGlobal;
+  int rank,size;
+
+  MPI_Comm_size(comm,&size);
+  MPI_Comm_rank(comm,&rank);
+
+  SplitLoop(&qpStart,&qpEnd,NQPFull,rank,size);
+
+  StartTimer(30);
+  if(BurnFlag==0) {
+    makeInitialSampleBF_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleProjBFCnt,TmpEleSpn,
+                            qpStart,qpEnd,comm);
+  } else {
+    copyFromBurnSampleBF_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleProjBFCnt,TmpEleSpn);
+    MakeSlaterElmBF_fsz(TmpEleNum,TmpEleProjBFCnt);
+  }
+
+  info = CalculateMAll_BF_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+  infoGlobal = reduceBFInfo_fsz(info,comm);
+  logIpOld = (infoGlobal == 0) ? CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm) : 0.0 + 0.0*I;
+  if(infoGlobal != 0 || !isfinite(creal(logIpOld) + cimag(logIpOld))) {
+    if(rank==0) fprintf(stderr,"warning: VMC_BF_MakeSample_fsz remakeSample logIpOld=%e\n",creal(logIpOld));
+    makeInitialSampleBF_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleProjBFCnt,TmpEleSpn,
+                            qpStart,qpEnd,comm);
+    info = CalculateMAll_BF_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+    infoGlobal = reduceBFInfo_fsz(info,comm);
+    if(infoGlobal != 0) {
+      if(rank==0) fprintf(stderr, "error: VMC_BF_MakeSample_fsz failed to rebuild initial sample\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+    logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
+    BurnFlag = 0;
+  }
+  StopTimer(30);
+
+  nOutStep = (BurnFlag==0) ? NVMCWarmUp+NVMCSample : NVMCSample+1;
+  nInStep = NVMCInterval * Nsite;
+
+  for(i=0;i<Counter_max;i++) Counter[i]=0;
+
+  for(outStep=0;outStep<nOutStep;outStep++) {
+    for(inStep=0;inStep<nInStep;inStep++) {
+      StartTimer(31);
+      Counter[0]++;
+      makeCandidate_hopping_csz(&mi, &ri, &rj, &s, &t, &rejectFlag,
+                                TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+      StopTimer(31);
+
+      if(rejectFlag) continue;
+
+      StartTimer(32);
+      StartTimer(60);
+      updateEleConfig_fsz(mi,ri,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
+      UpdateProjCnt(ri,rj,s,projCntNew,TmpEleProjCnt,TmpEleNum);
+      MakeProjBFCnt(projBFCntNew,TmpEleNum);
+      StopTimer(60);
+
+      StartTimer(64);
+      MakeSlaterElmBF_fsz(TmpEleNum,projBFCntNew);
+      StopTimer(64);
+
+      StartTimer(61);
+      info = CalculateMAll_BF_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+      StopTimer(61);
+
+      StartTimer(62);
+      infoGlobal = reduceBFInfo_fsz(info,comm);
+      logIpNew = (infoGlobal == 0) ? CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm) : 0.0 + 0.0*I;
+      StopTimer(62);
+
+      x = LogProjRatio(projCntNew,TmpEleProjCnt);
+      w = (infoGlobal == 0) ? exp(2.0*(x+creal(logIpNew-logIpOld))) : -1.0;
+      if(!isfinite(w)) w = -1.0;
+
+      if(w > genrand_real2()) {
+        for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
+        for(i=0;i<16*Nsite*Nrange;i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
+        logIpOld = logIpNew;
+        nAccept++;
+        Counter[1]++;
+      } else {
+        revertEleConfig_fsz(mi,ri,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
+        MakeSlaterElmBF_fsz(TmpEleNum,TmpEleProjBFCnt);
+        CalculateMAll_BF_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+      }
+      StopTimer(32);
+
+      if(nAccept>Nsite) {
+        StartTimer(34);
+        MakeSlaterElmBF_fsz(TmpEleNum,TmpEleProjBFCnt);
+        info = CalculateMAll_BF_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+        infoGlobal = reduceBFInfo_fsz(info,comm);
+        if(infoGlobal != 0) {
+          if(rank==0) fprintf(stderr, "error: VMC_BF_MakeSample_fsz failed to refresh accepted sample\n");
+          MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+        }
+        logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
+        StopTimer(34);
+        nAccept=0;
+      }
+    }
+
+    StartTimer(35);
+    if(outStep >= nOutStep-NVMCSample) {
+      sample = outStep-(nOutStep-NVMCSample);
+      saveEleConfigBF_fsz(sample,logIpOld,TmpEleIdx,TmpEleCfg,TmpEleNum,
+                          TmpEleProjCnt,TmpEleProjBFCnt,TmpEleSpn);
+    }
+    StopTimer(35);
+  }
+
+  copyToBurnSampleBF_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleProjBFCnt,TmpEleSpn);
+  BurnFlag=1;
+
+  return;
+}
+
+int makeInitialSampleBF_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
+                            int *eleProjBFCnt, int *eleSpn,
+                            const int qpStart, const int qpEnd, MPI_Comm comm) {
+  int flag=1,flagRdc,loop=0;
+  int rank,size;
+  MPI_Comm_size(comm,&size);
+  MPI_Comm_rank(comm,&rank);
+
+  do {
+    makeInitialSample_fsz(eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn,qpStart,qpEnd,comm);
+    MakeProjBFCnt(eleProjBFCnt,eleNum);
+    MakeSlaterElmBF_fsz(eleNum,eleProjBFCnt);
+
+    flag = CalculateMAll_BF_fsz(eleIdx,eleSpn,qpStart,qpEnd);
+    if(size>1) {
+      MPI_Allreduce(&flag,&flagRdc,1,MPI_INT,MPI_MAX,comm);
+      flag = flagRdc;
+    }
+
+    loop++;
+    if(loop>100) {
+      if(rank==0) fprintf(stderr, "error: makeInitialSampleBF_fsz: Too many loops\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+  } while (flag>0);
+
+  return 0;
+}
+
 int makeInitialSample_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,int *eleSpn,
                       const int qpStart, const int qpEnd, MPI_Comm comm) {
   const int nsize = Nsize;
@@ -601,6 +770,59 @@ void saveEleConfig_fsz(const int sample, const double complex logIp,
   x = LogProjVal(eleProjCnt);
   logSqPfFullSlater[sample] = 2.0*(x+creal(logIp));//TBC
   
+  return;
+}
+
+void copyFromBurnSampleBF_fsz(int *eleIdx, int *eleCfg, int *eleNum,
+                              int *eleProjCnt, int *eleProjBFCnt,
+                              int *eleSpn) {
+  int i;
+  for(i=0;i<Nsize;i++) eleIdx[i] = BurnEleIdx[i];
+  for(i=0;i<Nsite2;i++) eleCfg[i] = BurnEleCfg[i];
+  for(i=0;i<Nsite2;i++) eleNum[i] = BurnEleNum[i];
+  for(i=0;i<NProj;i++) eleProjCnt[i] = BurnEleProjCnt[i];
+  for(i=0;i<16*Nsite*Nrange;i++) eleProjBFCnt[i] = BurnEleProjCnt[NProj+i];
+  for(i=0;i<Nsize;i++) eleSpn[i] = BurnEleSpn[i];
+  return;
+}
+
+void copyToBurnSampleBF_fsz(const int *eleIdx, const int *eleCfg,
+                            const int *eleNum, const int *eleProjCnt,
+                            const int *eleProjBFCnt, const int *eleSpn) {
+  int i;
+  for(i=0;i<Nsize;i++) BurnEleIdx[i] = eleIdx[i];
+  for(i=0;i<Nsite2;i++) BurnEleCfg[i] = eleCfg[i];
+  for(i=0;i<Nsite2;i++) BurnEleNum[i] = eleNum[i];
+  for(i=0;i<NProj;i++) BurnEleProjCnt[i] = eleProjCnt[i];
+  for(i=0;i<16*Nsite*Nrange;i++) BurnEleProjCnt[NProj+i] = eleProjBFCnt[i];
+  for(i=0;i<Nsize;i++) BurnEleSpn[i] = eleSpn[i];
+  return;
+}
+
+void saveEleConfigBF_fsz(const int sample, const double complex logIp,
+                         const int *eleIdx, const int *eleCfg,
+                         const int *eleNum, const int *eleProjCnt,
+                         const int *eleProjBFCnt, const int *eleSpn) {
+  int i,offset;
+  double x;
+
+  offset = sample*Nsize;
+  for(i=0;i<Nsize;i++) EleIdx[offset+i] = eleIdx[i];
+  for(i=0;i<Nsize;i++) EleSpn[offset+i] = eleSpn[i];
+
+  offset = sample*Nsite2;
+  for(i=0;i<Nsite2;i++) EleCfg[offset+i] = eleCfg[i];
+  for(i=0;i<Nsite2;i++) EleNum[offset+i] = eleNum[i];
+
+  offset = sample*NProj;
+  for(i=0;i<NProj;i++) EleProjCnt[offset+i] = eleProjCnt[i];
+
+  offset = sample*16*Nsite*Nrange;
+  for(i=0;i<16*Nsite*Nrange;i++) EleProjBFCnt[offset+i] = eleProjBFCnt[i];
+
+  x = LogProjVal(eleProjCnt);
+  logSqPfFullSlater[sample] = 2.0*(x+creal(logIp));
+
   return;
 }
 

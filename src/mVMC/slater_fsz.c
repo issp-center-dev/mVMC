@@ -27,7 +27,91 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 
 void UpdateSlaterElm_fsz();
+void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt);
 void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *eleIdx,int *eleSpn);
+
+static inline int BFThetaCount_fsz(const int mu, const int centerSite,
+                                   const int spin, const int rangeSlot,
+                                   const int *eleProjBFCnt) {
+  const int nSiteRange = Nsite*Nrange;
+  const int channelOffset = (spin == 0) ? 0 : 4*nSiteRange;
+  if(mu < 0 || mu >= 4) return 0;
+  return eleProjBFCnt[channelOffset + mu*nSiteRange + centerSite*Nrange + rangeSlot];
+}
+
+static int BFHasActiveTheta_fsz(const int centerSite, const int spin,
+                                const int *eleProjBFCnt) {
+  int rangeSlot;
+  /* Match the fcmp BackFlow eta gate: only the doublon-holon theta channel activates eta. */
+  for(rangeSlot=0;rangeSlot<Nrange;rangeSlot++) {
+    if(BFThetaCount_fsz(1, centerSite, spin, rangeSlot, eleProjBFCnt) != 0) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static inline double complex SlaterOrbital_fsz(const int ri, const int si,
+                                               const int rj, const int sj) {
+  const int rsi = ri + si*Nsite;
+  const int rsj = rj + sj*Nsite;
+  return Slater[OrbitalIdx[rsi][rsj]] * (double)OrbitalSgn[rsi][rsj];
+}
+
+static int BFSubIndexFromMuRange_fsz(const int mu, const int centerSite,
+                                     const int rangeSite) {
+  int d, xtmp, idx;
+  d = RangeIdx[centerSite][rangeSite];
+  xtmp = 4*d + mu;
+  idx = xtmp - 3 - d;
+  if(xtmp%4 == 0) idx = -1;
+  if(xtmp == 0) idx = 0;
+  return idx;
+}
+
+static double complex SubSlaterElmBF_fsz(const int ri, const int si,
+                                         const int rj, const int sj,
+                                         const int *eleProjBFCnt) {
+  int mu, nu;
+  int k, l;
+  int rk, rl;
+  int nidx, midx, bfidx;
+  int cntI, cntJ;
+  double complex slt = 0.0 + 0.0*I;
+  double eta;
+
+  for(mu=0;mu<4;mu++) {
+    for(nu=0;nu<4;nu++) {
+      if(mu == 0 && nu == 0) continue;
+      for(k=0;k<Nrange;k++) {
+        rk = PosBF[ri][k];
+        nidx = BFSubIndexFromMuRange_fsz(mu, ri, rk);
+        if(nidx < 0) continue;
+        cntI = BFThetaCount_fsz(mu, ri, si, k, eleProjBFCnt);
+        if(cntI == 0) continue;
+
+        for(l=0;l<Nrange;l++) {
+          rl = PosBF[rj][l];
+          midx = BFSubIndexFromMuRange_fsz(nu, rj, rl);
+          if(midx < 0) continue;
+          cntJ = BFThetaCount_fsz(nu, rj, sj, l, eleProjBFCnt);
+          if(cntJ == 0) continue;
+
+          bfidx = BFSubIdx[nidx][midx];
+          slt += -ProjBF[bfidx] * (double)(cntI*cntJ)
+                 * SlaterOrbital_fsz(rk, si, rl, sj);
+        }
+      }
+    }
+  }
+
+  eta = (BFHasActiveTheta_fsz(ri, si, eleProjBFCnt) ||
+         BFHasActiveTheta_fsz(rj, sj, eleProjBFCnt))
+      ? creal(ProjBF[0]) : 1.0;
+  slt += eta * SlaterOrbital_fsz(ri, si, rj, sj);
+
+  return slt;
+}
 
 void UpdateSlaterElm_fsz() {
   int ri,ori,tri,sgni,rsi0,rsi1;
@@ -112,6 +196,63 @@ void UpdateSlaterElm_fsz() {
       }// for rj 
     }// for ri
   }//for qpidx
+  return;
+}
+
+void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt) {
+  int ri,ori,tri,sgni,rsi;
+  int rj,orj,trj,sgnj,rsj;
+  int si,sj;
+  int qpidx,mpidx,optidx;
+  int *xqp, *xqpSgn, *xqpOpt, *xqpOptSgn;
+  double complex slt_ij, slt_ji;
+  double complex *sltE, *sltE_i;
+
+  (void)eleNum;
+
+  #pragma omp parallel for default(shared)        \
+    private(qpidx,optidx,mpidx,                   \
+            xqpOpt,xqpOptSgn,xqp,xqpSgn,sltE,     \
+            ri,ori,tri,sgni,rsi,sltE_i,           \
+            rj,orj,trj,sgnj,rsj,si,sj,slt_ij,slt_ji)
+  #pragma loop noalias
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    optidx    = qpidx / NQPFix;
+    mpidx     = (qpidx%NQPFix) / NSPGaussLeg;
+
+    xqpOpt    = QPOptTrans[optidx];
+    xqpOptSgn = QPOptTransSgn[optidx];
+    xqp       = QPTrans[mpidx];
+    xqpSgn    = QPTransSgn[mpidx];
+
+    sltE      = SlaterElmBF + qpidx*Nsite2*Nsite2;
+
+    for(ri=0;ri<Nsite;ri++) {
+      ori  = xqpOpt[ri];
+      tri  = xqp[ori];
+      sgni = xqpSgn[ori]*xqpOptSgn[ri];
+
+      for(si=0;si<2;si++) {
+        rsi = ri + si*Nsite;
+        sltE_i = sltE + rsi*Nsite2;
+
+        for(rj=0;rj<Nsite;rj++) {
+          orj  = xqpOpt[rj];
+          trj  = xqp[orj];
+          sgnj = xqpSgn[orj]*xqpOptSgn[rj];
+
+          for(sj=0;sj<2;sj++) {
+            rsj = rj + sj*Nsite;
+            slt_ij = SubSlaterElmBF_fsz(tri, si, trj, sj, eleProjBFCnt)
+                     * (double)(sgni*sgnj);
+            slt_ji = SubSlaterElmBF_fsz(trj, sj, tri, si, eleProjBFCnt)
+                     * (double)(sgni*sgnj);
+            sltE_i[rsj] = slt_ij - slt_ji;
+          }
+        }
+      }
+    }
+  }
   return;
 }
 
