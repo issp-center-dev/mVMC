@@ -51,6 +51,11 @@ static int BFHasActiveTheta_fsz(const int centerSite, const int spin,
   return 0;
 }
 
+static inline int BFThetaKey_fsz(const int spin, const int mu,
+                                 const int centerSite) {
+  return (spin*4 + mu)*Nsite + centerSite;
+}
+
 static inline double complex SlaterOrbital_fsz(const int ri, const int si,
                                                const int rj, const int sj) {
   const int rsi = ri + si*Nsite;
@@ -69,11 +74,57 @@ static int BFSubIndexFromMuRange_fsz(const int mu, const int centerSite,
   return idx;
 }
 
-static double complex SubSlaterElmBF_fsz(const int ri, const int si,
-                                         const int rj, const int sj,
-                                         const int *eleProjBFCnt) {
+static void MakeBFEtaFlag_fsz(int *etaFlag, const int *eleProjBFCnt) {
+  int spin, site;
+
+  for(spin=0;spin<2;spin++) {
+    for(site=0;site<Nsite;site++) {
+      etaFlag[spin*Nsite + site] = BFHasActiveTheta_fsz(site, spin, eleProjBFCnt);
+    }
+  }
+}
+
+static void MakeBFSparseThetaList_fsz(int *sparseOffset, int *sparseCount,
+                                      int *sparseSite, int *sparseSubIdx,
+                                      int *sparseThetaCnt,
+                                      const int *eleProjBFCnt) {
+  int spin, mu, site, rangeSlot;
+  int key, cursor = 0;
+  int rangeSite, subIdx, thetaCnt;
+
+  for(spin=0;spin<2;spin++) {
+    for(mu=0;mu<4;mu++) {
+      for(site=0;site<Nsite;site++) {
+        key = BFThetaKey_fsz(spin, mu, site);
+        sparseOffset[key] = cursor;
+        sparseCount[key] = 0;
+
+        for(rangeSlot=0;rangeSlot<Nrange;rangeSlot++) {
+          thetaCnt = BFThetaCount_fsz(mu, site, spin, rangeSlot, eleProjBFCnt);
+          if(thetaCnt == 0) continue;
+
+          rangeSite = PosBF[site][rangeSlot];
+          subIdx = BFSubIndexFromMuRange_fsz(mu, site, rangeSite);
+          if(subIdx < 0) continue;
+
+          sparseSite[cursor] = rangeSite;
+          sparseSubIdx[cursor] = subIdx;
+          sparseThetaCnt[cursor] = thetaCnt;
+          cursor++;
+          sparseCount[key]++;
+        }
+      }
+    }
+  }
+}
+
+static double complex SubSlaterElmBF_fsz_sparse(
+    const int ri, const int si, const int rj, const int sj,
+    const int *etaFlag, const int *sparseOffset, const int *sparseCount,
+    const int *sparseSite, const int *sparseSubIdx,
+    const int *sparseThetaCnt) {
   int mu, nu;
-  int k, l;
+  int k, l, kStart, lStart, kCount, lCount;
   int rk, rl;
   int nidx, midx, bfidx;
   int cntI, cntJ;
@@ -81,22 +132,25 @@ static double complex SubSlaterElmBF_fsz(const int ri, const int si,
   double eta;
 
   for(mu=0;mu<4;mu++) {
+    kCount = sparseCount[BFThetaKey_fsz(si, mu, ri)];
+    if(kCount == 0) continue;
+    kStart = sparseOffset[BFThetaKey_fsz(si, mu, ri)];
+
     for(nu=0;nu<4;nu++) {
       if(mu == 0 && nu == 0) continue;
-      for(k=0;k<Nrange;k++) {
-        rk = PosBF[ri][k];
-        nidx = BFSubIndexFromMuRange_fsz(mu, ri, rk);
-        if(nidx < 0) continue;
-        cntI = BFThetaCount_fsz(mu, ri, si, k, eleProjBFCnt);
-        if(cntI == 0) continue;
+      lCount = sparseCount[BFThetaKey_fsz(sj, nu, rj)];
+      if(lCount == 0) continue;
+      lStart = sparseOffset[BFThetaKey_fsz(sj, nu, rj)];
 
-        for(l=0;l<Nrange;l++) {
-          rl = PosBF[rj][l];
-          midx = BFSubIndexFromMuRange_fsz(nu, rj, rl);
-          if(midx < 0) continue;
-          cntJ = BFThetaCount_fsz(nu, rj, sj, l, eleProjBFCnt);
-          if(cntJ == 0) continue;
+      for(k=0;k<kCount;k++) {
+        rk = sparseSite[kStart + k];
+        nidx = sparseSubIdx[kStart + k];
+        cntI = sparseThetaCnt[kStart + k];
 
+        for(l=0;l<lCount;l++) {
+          rl = sparseSite[lStart + l];
+          midx = sparseSubIdx[lStart + l];
+          cntJ = sparseThetaCnt[lStart + l];
           bfidx = BFSubIdx[nidx][midx];
           slt += -ProjBF[bfidx] * (double)(cntI*cntJ)
                  * SlaterOrbital_fsz(rk, si, rl, sj);
@@ -105,8 +159,7 @@ static double complex SubSlaterElmBF_fsz(const int ri, const int si,
     }
   }
 
-  eta = (BFHasActiveTheta_fsz(ri, si, eleProjBFCnt) ||
-         BFHasActiveTheta_fsz(rj, sj, eleProjBFCnt))
+  eta = (etaFlag[si*Nsite + ri] || etaFlag[sj*Nsite + rj])
       ? creal(ProjBF[0]) : 1.0;
   slt += eta * SlaterOrbital_fsz(ri, si, rj, sj);
 
@@ -204,17 +257,40 @@ void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt) {
   int rj,orj,trj,sgnj,rsj;
   int si,sj;
   int qpidx,mpidx,optidx;
+  int sparseKeyCount, sparseEntryCapacity, sparseWorkSize;
+  int *sparseWork;
+  int *etaFlag, *sparseOffset, *sparseCount;
+  int *sparseSite, *sparseSubIdx, *sparseThetaCnt;
   int *xqp, *xqpSgn, *xqpOpt, *xqpOptSgn;
-  double complex slt_ij, slt_ji;
+  double complex slt;
   double complex *sltE, *sltE_i;
 
   (void)eleNum;
+
+  sparseKeyCount = 8*Nsite;
+  sparseEntryCapacity = sparseKeyCount*Nrange;
+  sparseWorkSize = 2*Nsite + 2*sparseKeyCount + 3*sparseEntryCapacity;
+  sparseWork = (int *)malloc(sizeof(int)*(size_t)sparseWorkSize);
+  if(sparseWork == NULL) {
+    fprintf(stderr, "error: failed to allocate BF-FSZ sparse workspace\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  etaFlag = sparseWork;
+  sparseOffset = etaFlag + 2*Nsite;
+  sparseCount = sparseOffset + sparseKeyCount;
+  sparseSite = sparseCount + sparseKeyCount;
+  sparseSubIdx = sparseSite + sparseEntryCapacity;
+  sparseThetaCnt = sparseSubIdx + sparseEntryCapacity;
+
+  MakeBFEtaFlag_fsz(etaFlag, eleProjBFCnt);
+  MakeBFSparseThetaList_fsz(sparseOffset, sparseCount, sparseSite,
+                            sparseSubIdx, sparseThetaCnt, eleProjBFCnt);
 
   #pragma omp parallel for default(shared)        \
     private(qpidx,optidx,mpidx,                   \
             xqpOpt,xqpOptSgn,xqp,xqpSgn,sltE,     \
             ri,ori,tri,sgni,rsi,sltE_i,           \
-            rj,orj,trj,sgnj,rsj,si,sj,slt_ij,slt_ji)
+            rj,orj,trj,sgnj,rsj,si,sj,slt)
   #pragma loop noalias
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
     optidx    = qpidx / NQPFix;
@@ -227,32 +303,37 @@ void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt) {
 
     sltE      = SlaterElmBF + qpidx*Nsite2*Nsite2;
 
-    for(ri=0;ri<Nsite;ri++) {
+    for(rsi=0;rsi<Nsite2;rsi++) {
+      ri = rsi % Nsite;
+      si = rsi / Nsite;
       ori  = xqpOpt[ri];
       tri  = xqp[ori];
       sgni = xqpSgn[ori]*xqpOptSgn[ri];
+      sltE_i = sltE + rsi*Nsite2;
+      sltE_i[rsi] = 0.0 + 0.0*I;
 
-      for(si=0;si<2;si++) {
-        rsi = ri + si*Nsite;
-        sltE_i = sltE + rsi*Nsite2;
+      for(rsj=rsi+1;rsj<Nsite2;rsj++) {
+        rj = rsj % Nsite;
+        sj = rsj / Nsite;
+        orj  = xqpOpt[rj];
+        trj  = xqp[orj];
+        sgnj = xqpSgn[orj]*xqpOptSgn[rj];
 
-        for(rj=0;rj<Nsite;rj++) {
-          orj  = xqpOpt[rj];
-          trj  = xqp[orj];
-          sgnj = xqpSgn[orj]*xqpOptSgn[rj];
-
-          for(sj=0;sj<2;sj++) {
-            rsj = rj + sj*Nsite;
-            slt_ij = SubSlaterElmBF_fsz(tri, si, trj, sj, eleProjBFCnt)
-                     * (double)(sgni*sgnj);
-            slt_ji = SubSlaterElmBF_fsz(trj, sj, tri, si, eleProjBFCnt)
-                     * (double)(sgni*sgnj);
-            sltE_i[rsj] = slt_ij - slt_ji;
-          }
-        }
+        slt = (SubSlaterElmBF_fsz_sparse(tri, si, trj, sj, etaFlag,
+                                         sparseOffset, sparseCount,
+                                         sparseSite, sparseSubIdx,
+                                         sparseThetaCnt)
+               - SubSlaterElmBF_fsz_sparse(trj, sj, tri, si, etaFlag,
+                                           sparseOffset, sparseCount,
+                                           sparseSite, sparseSubIdx,
+                                           sparseThetaCnt))
+              * (double)(sgni*sgnj);
+        sltE_i[rsj] = slt;
+        sltE[rsj*Nsite2 + rsi] = -slt;
       }
     }
   }
+  free(sparseWork);
   return;
 }
 
