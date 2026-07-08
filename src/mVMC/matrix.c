@@ -552,6 +552,113 @@ int CalculateMAll_BF_fsz(const int *eleIdx, const int *eleSpn, const int qpStart
   return info;
 }
 
+int CalculatePfM_BF_fsz(const int *eleIdx, const int *eleSpn, const int qpStart, const int qpEnd,
+    double complex *pfMOut, int *failureDetail) {
+  const int qpNum = qpEnd-qpStart;
+  int qpidx;
+
+  int status = BF_FSZ_PF_OK;
+  int detail = 0;
+
+  double complex *myBufM;
+  double complex *myWork;
+  int *myIWork;
+  int myStatus;
+  int myDetail;
+  double *myRWork;
+
+  RequestWorkSpaceThreadInt(Nsize);
+  RequestWorkSpaceThreadComplex(Nsize*Nsize+LapackLWork);
+  RequestWorkSpaceThreadDouble(LapackLWork);
+
+#pragma omp parallel default(shared)              \
+  private(myIWork,myWork,myRWork,myStatus,myDetail,myBufM)
+  {
+    myIWork = GetWorkSpaceThreadInt(Nsize);
+    myBufM  = GetWorkSpaceThreadComplex(Nsize*Nsize);
+    myWork  = GetWorkSpaceThreadComplex(LapackLWork);
+    myRWork = GetWorkSpaceThreadDouble(LapackLWork);
+
+#pragma omp for private(qpidx)
+    for(qpidx=0;qpidx<qpNum;qpidx++) {
+      myDetail = 0;
+      myStatus = calculatePfM_BF_fsz_child(eleIdx, eleSpn, qpStart, qpidx,
+          myBufM, myIWork, myWork, LapackLWork, myRWork, pfMOut, &myDetail);
+      if(myStatus!=BF_FSZ_PF_OK) {
+#pragma omp critical
+        {
+          if(status==BF_FSZ_PF_OK) {
+            status = myStatus;
+            detail = myDetail;
+          }
+        }
+      }
+    }
+  }
+
+  ReleaseWorkSpaceThreadInt();
+  ReleaseWorkSpaceThreadComplex();
+  ReleaseWorkSpaceThreadDouble();
+  if(failureDetail != NULL) *failureDetail = detail;
+  return status;
+}
+
+int calculatePfM_BF_fsz_child(
+       const int *eleIdx,
+       const int *eleSpn,
+       const int qpStart,
+       const int qpidx,
+       double complex *bufM,
+       int *iwork,
+       double complex *work,
+       int lwork,
+       double *rwork,
+       double complex *pfMOut,
+       int *failureDetail
+       )
+{
+#pragma procedure serial
+  int msi,msj;
+  int rsi,rsj;
+
+  char uplo='U', mthd='P';
+  int n,lda,info=0;
+  double complex pfaff;
+
+  const int nsize = Nsize;
+
+  const double complex *sltE = SlaterElmBF + (qpidx+qpStart)*Nsite2*Nsite2;
+  const double complex *sltE_i;
+
+  double complex *bufM_i;
+
+  n=lda=Nsize;
+
+#pragma loop noalias
+  for(msi=0;msi<nsize;msi++) {
+    rsi = eleIdx[msi] + eleSpn[msi]*Nsite;
+    bufM_i = bufM + msi*Nsize;
+    sltE_i = sltE + rsi*Nsite2;
+#pragma loop norecurrence
+    for(msj=0;msj<nsize;msj++) {
+      rsj = eleIdx[msj] + eleSpn[msj]*Nsite;
+      bufM_i[msj] = -sltE_i[rsj];
+    }
+  }
+
+  M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+  if(info!=0) {
+    if(failureDetail != NULL) *failureDetail = info;
+    return BF_FSZ_PF_LAPACK_FAILURE;
+  }
+  if(!(isfinite(creal(pfaff)) && isfinite(cimag(pfaff)))) {
+    if(failureDetail != NULL) *failureDetail = qpidx+qpStart;
+    return BF_FSZ_PF_NONFINITE;
+  }
+  pfMOut[qpidx] = pfaff;
+  return BF_FSZ_PF_OK;
+}
+
 int calculateMAll_BF_fsz_child(
        const int *eleIdx,
        const int *eleSpn,
