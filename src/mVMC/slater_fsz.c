@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 void UpdateSlaterElm_fsz();
 void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt);
+void MakeSlaterElmBF_fsz_to(double complex *sltElmBF, const int *eleNum, const int *eleProjBFCnt);
 void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *eleIdx,int *eleSpn);
 
 static inline int BFThetaCount_fsz(const int mu, const int centerSite,
@@ -252,7 +253,7 @@ void UpdateSlaterElm_fsz() {
   return;
 }
 
-void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt) {
+void MakeSlaterElmBF_fsz_to(double complex *sltElmBF, const int *eleNum, const int *eleProjBFCnt) {
   int ri,ori,tri,sgni,rsi;
   int rj,orj,trj,sgnj,rsj;
   int si,sj;
@@ -301,7 +302,7 @@ void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt) {
     xqp       = QPTrans[mpidx];
     xqpSgn    = QPTransSgn[mpidx];
 
-    sltE      = SlaterElmBF + qpidx*Nsite2*Nsite2;
+    sltE      = sltElmBF + qpidx*Nsite2*Nsite2;
 
     for(rsi=0;rsi<Nsite2;rsi++) {
       ri = rsi % Nsite;
@@ -334,6 +335,11 @@ void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt) {
     }
   }
   free(sparseWork);
+  return;
+}
+
+void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt) {
+  MakeSlaterElmBF_fsz_to(SlaterElmBF, eleNum, eleProjBFCnt);
   return;
 }
 
