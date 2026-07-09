@@ -212,6 +212,7 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   int *myEleIdx, *myEleCfg, *myEleNum, *myEleSpn;
   int *myProjCntNew, *myProjBFCntNew;
   double complex *myBuffer;
+  const int bfSlaterSize = NQPFull*Nsite2*Nsite2;
 
   if(NTwist > 0 || NNBodyG > 0) {
     fprintf(stderr, "Error: CalculateGreenFuncBF_fsz does not support Twist or NBodyG yet.\n");
@@ -219,7 +220,7 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   }
 
   RequestWorkSpaceInt(Nsize+Nsite2+Nsite2+Nsize+NProj+16*Nsite*Nrange);
-  RequestWorkSpaceComplex(NQPFull);
+  RequestWorkSpaceComplex(NQPFull + bfSlaterSize);
 
   myEleIdx = GetWorkSpaceInt(Nsize);
   myEleCfg = GetWorkSpaceInt(Nsite2);
@@ -227,7 +228,7 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   myEleSpn = GetWorkSpaceInt(Nsize);
   myProjCntNew = GetWorkSpaceInt(NProj);
   myProjBFCntNew = GetWorkSpaceInt(16*Nsite*Nrange);
-  myBuffer = GetWorkSpaceComplex(NQPFull);
+  myBuffer = GetWorkSpaceComplex(NQPFull + bfSlaterSize);
 
   for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
   for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];

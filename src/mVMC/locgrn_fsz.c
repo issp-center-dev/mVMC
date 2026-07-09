@@ -65,13 +65,15 @@ static double complex BF_FSZ_NaNValue(void) {
   return nanValue + I*nanValue;
 }
 
-static double complex CalculateBF_FSZ_CandidateIP(const char *caller, const int *eleIdx,
-    const int *eleSpn, double complex *pfMNew) {
+static double complex CalculateBF_FSZ_CandidateIP(const char *caller,
+    const double complex *sltElmBF, const int *eleIdx, const int *eleSpn,
+    double complex *pfMNew) {
   int status;
   int detail = 0;
   double complex ipNew;
 
-  status = CalculatePfM_BF_fsz(eleIdx, eleSpn, 0, NQPFull, pfMNew, &detail);
+  status = CalculatePfM_BF_fsz_from(sltElmBF, eleIdx, eleSpn, 0, NQPFull,
+      pfMNew, &detail);
   if(status == BF_FSZ_PF_LAPACK_FAILURE) {
     fprintf(stderr, "warning: %s: BF-FSZ candidate Pfaffian failed in M_ZSKPFA (info=%d); propagating NaN.\n",
         caller, detail);
@@ -445,7 +447,9 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
                   double complex *buffer) {
   double complex z;
   int mj,rsi,rsj;
+  /* buffer: NQPFull Pfaffians followed by a candidate BF-FSZ Slater matrix. */
   double complex *pfMNew = buffer;
+  double complex *sltElmBFNew = buffer + NQPFull;
 
   (void)eleProjBFCnt;
 
@@ -469,8 +473,9 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
   z = ProjRatio(projCntNew,eleProjCnt);
 
   MakeProjBFCnt(projBFCntNew, eleNum);
-  MakeSlaterElmBF_fsz(eleNum, projBFCntNew);
-  z *= CalculateBF_FSZ_CandidateIP("GreenFunc1BF_fsz", eleIdx, eleSpn, pfMNew);
+  MakeSlaterElmBF_fsz_to(sltElmBFNew, eleNum, projBFCntNew);
+  z *= CalculateBF_FSZ_CandidateIP("GreenFunc1BF_fsz", sltElmBFNew, eleIdx,
+      eleSpn, pfMNew);
 
   eleCfg[rsj] = mj;
   eleCfg[rsi] = -1;
@@ -577,7 +582,8 @@ double complex GreenFunc2BF_fsz(const int ri, const int rj, const int rk, const 
 
   MakeProjBFCnt(projBFCntNew, eleNum);
   MakeSlaterElmBF_fsz(eleNum, projBFCntNew);
-  z *= CalculateBF_FSZ_CandidateIP("GreenFunc2BF_fsz", eleIdx, eleSpn, pfMNew);
+  z *= CalculateBF_FSZ_CandidateIP("GreenFunc2BF_fsz", SlaterElmBF, eleIdx,
+      eleSpn, pfMNew);
 
   eleCfg[rtl] = ml;
   eleCfg[rtk] = -1;

@@ -246,6 +246,7 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   int *myEleIdx, *myEleCfg, *myEleNum, *myEleSpn;
   int *myProjCntNew, *myProjBFCntNew;
   double complex *myBuffer;
+  const int bfSlaterSize = NQPFull*Nsite2*Nsite2;
 
   if(NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0 || NNBodyInterAll > 0) {
     fprintf(stderr, "Error: CalculateHamiltonianBF_fsz supports only density and one-body transfer terms.\n");
@@ -253,7 +254,7 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   }
 
   RequestWorkSpaceInt(Nsize+Nsite2+Nsite2+Nsize+NProj+16*Nsite*Nrange);
-  RequestWorkSpaceComplex(NQPFull);
+  RequestWorkSpaceComplex(NQPFull + bfSlaterSize);
 
   myEleIdx = GetWorkSpaceInt(Nsize);
   myEleCfg = GetWorkSpaceInt(Nsite2);
@@ -261,7 +262,7 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   myEleSpn = GetWorkSpaceInt(Nsize);
   myProjCntNew = GetWorkSpaceInt(NProj);
   myProjBFCntNew = GetWorkSpaceInt(16*Nsite*Nrange);
-  myBuffer = GetWorkSpaceComplex(NQPFull);
+  myBuffer = GetWorkSpaceComplex(NQPFull + bfSlaterSize);
 
   for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
   for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];

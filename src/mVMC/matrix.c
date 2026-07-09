@@ -554,6 +554,13 @@ int CalculateMAll_BF_fsz(const int *eleIdx, const int *eleSpn, const int qpStart
 
 int CalculatePfM_BF_fsz(const int *eleIdx, const int *eleSpn, const int qpStart, const int qpEnd,
     double complex *pfMOut, int *failureDetail) {
+  return CalculatePfM_BF_fsz_from(SlaterElmBF, eleIdx, eleSpn, qpStart, qpEnd,
+      pfMOut, failureDetail);
+}
+
+int CalculatePfM_BF_fsz_from(const double complex *sltElmBF, const int *eleIdx,
+    const int *eleSpn, const int qpStart, const int qpEnd,
+    double complex *pfMOut, int *failureDetail) {
   const int qpNum = qpEnd-qpStart;
   int qpidx;
 
@@ -582,8 +589,9 @@ int CalculatePfM_BF_fsz(const int *eleIdx, const int *eleSpn, const int qpStart,
 #pragma omp for private(qpidx)
     for(qpidx=0;qpidx<qpNum;qpidx++) {
       myDetail = 0;
-      myStatus = calculatePfM_BF_fsz_child(eleIdx, eleSpn, qpStart, qpidx,
-          myBufM, myIWork, myWork, LapackLWork, myRWork, pfMOut, &myDetail);
+      myStatus = calculatePfM_BF_fsz_child_from(sltElmBF, eleIdx, eleSpn,
+          qpStart, qpidx, myBufM, myIWork, myWork, LapackLWork, myRWork,
+          pfMOut, &myDetail);
       if(myStatus!=BF_FSZ_PF_OK) {
 #pragma omp critical
         {
@@ -603,7 +611,8 @@ int CalculatePfM_BF_fsz(const int *eleIdx, const int *eleSpn, const int qpStart,
   return status;
 }
 
-int calculatePfM_BF_fsz_child(
+int calculatePfM_BF_fsz_child_from(
+       const double complex *sltElmBF,
        const int *eleIdx,
        const int *eleSpn,
        const int qpStart,
@@ -627,7 +636,7 @@ int calculatePfM_BF_fsz_child(
 
   const int nsize = Nsize;
 
-  const double complex *sltE = SlaterElmBF + (qpidx+qpStart)*Nsite2*Nsite2;
+  const double complex *sltE = sltElmBF + (qpidx+qpStart)*Nsite2*Nsite2;
   const double complex *sltE_i;
 
   double complex *bufM_i;
