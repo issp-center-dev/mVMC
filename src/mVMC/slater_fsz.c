@@ -121,12 +121,13 @@ static void MakeBFSparseThetaList_fsz(int *sparseOffset, int *sparseCount,
 
 static double complex SubSlaterElmBF_fsz_sparse(
     const int ri, const int si, const int rj, const int sj,
+    const int *xqp, const int *xqpOpt,
     const int *etaFlag, const int *sparseOffset, const int *sparseCount,
     const int *sparseSite, const int *sparseSubIdx,
     const int *sparseThetaCnt) {
   int mu, nu;
   int k, l, kStart, lStart, kCount, lCount;
-  int rk, rl;
+  int rk, rki, rl, rlj, tri, trj;
   int nidx, midx, bfidx;
   int cntI, cntJ;
   double complex slt = 0.0 + 0.0*I;
@@ -145,16 +146,18 @@ static double complex SubSlaterElmBF_fsz_sparse(
 
       for(k=0;k<kCount;k++) {
         rk = sparseSite[kStart + k];
+        rki = xqp[xqpOpt[rk]];
         nidx = sparseSubIdx[kStart + k];
         cntI = sparseThetaCnt[kStart + k];
 
         for(l=0;l<lCount;l++) {
           rl = sparseSite[lStart + l];
+          rlj = xqp[xqpOpt[rl]];
           midx = sparseSubIdx[lStart + l];
           cntJ = sparseThetaCnt[lStart + l];
           bfidx = BFSubIdx[nidx][midx];
           slt += -ProjBF[bfidx] * (double)(cntI*cntJ)
-                 * SlaterOrbital_fsz(rk, si, rl, sj);
+                 * SlaterOrbital_fsz(rki, si, rlj, sj);
         }
       }
     }
@@ -162,7 +165,9 @@ static double complex SubSlaterElmBF_fsz_sparse(
 
   eta = (etaFlag[si*Nsite + ri] || etaFlag[sj*Nsite + rj])
       ? creal(ProjBF[0]) : 1.0;
-  slt += eta * SlaterOrbital_fsz(ri, si, rj, sj);
+  tri = xqp[xqpOpt[ri]];
+  trj = xqp[xqpOpt[rj]];
+  slt += eta * SlaterOrbital_fsz(tri, si, trj, sj);
 
   return slt;
 }
@@ -254,8 +259,8 @@ void UpdateSlaterElm_fsz() {
 }
 
 void MakeSlaterElmBF_fsz_to(double complex *sltElmBF, const int *eleNum, const int *eleProjBFCnt) {
-  int ri,ori,tri,sgni,rsi;
-  int rj,orj,trj,sgnj,rsj;
+  int ri,ori,sgni,rsi;
+  int rj,orj,sgnj,rsj;
   int si,sj;
   int qpidx,mpidx,optidx;
   int sparseKeyCount, sparseEntryCapacity, sparseWorkSize;
@@ -290,8 +295,8 @@ void MakeSlaterElmBF_fsz_to(double complex *sltElmBF, const int *eleNum, const i
   #pragma omp parallel for default(shared)        \
     private(qpidx,optidx,mpidx,                   \
             xqpOpt,xqpOptSgn,xqp,xqpSgn,sltE,     \
-            ri,ori,tri,sgni,rsi,sltE_i,           \
-            rj,orj,trj,sgnj,rsj,si,sj,slt)
+            ri,ori,sgni,rsi,sltE_i,               \
+            rj,orj,sgnj,rsj,si,sj,slt)
   #pragma loop noalias
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
     optidx    = qpidx / NQPFix;
@@ -308,7 +313,6 @@ void MakeSlaterElmBF_fsz_to(double complex *sltElmBF, const int *eleNum, const i
       ri = rsi % Nsite;
       si = rsi / Nsite;
       ori  = xqpOpt[ri];
-      tri  = xqp[ori];
       sgni = xqpSgn[ori]*xqpOptSgn[ri];
       sltE_i = sltE + rsi*Nsite2;
       sltE_i[rsi] = 0.0 + 0.0*I;
@@ -317,14 +321,13 @@ void MakeSlaterElmBF_fsz_to(double complex *sltElmBF, const int *eleNum, const i
         rj = rsj % Nsite;
         sj = rsj / Nsite;
         orj  = xqpOpt[rj];
-        trj  = xqp[orj];
         sgnj = xqpSgn[orj]*xqpOptSgn[rj];
 
-        slt = (SubSlaterElmBF_fsz_sparse(tri, si, trj, sj, etaFlag,
+        slt = (SubSlaterElmBF_fsz_sparse(ri, si, rj, sj, xqp, xqpOpt, etaFlag,
                                          sparseOffset, sparseCount,
                                          sparseSite, sparseSubIdx,
                                          sparseThetaCnt)
-               - SubSlaterElmBF_fsz_sparse(trj, sj, tri, si, etaFlag,
+               - SubSlaterElmBF_fsz_sparse(rj, sj, ri, si, xqp, xqpOpt, etaFlag,
                                            sparseOffset, sparseCount,
                                            sparseSite, sparseSubIdx,
                                            sparseThetaCnt))
