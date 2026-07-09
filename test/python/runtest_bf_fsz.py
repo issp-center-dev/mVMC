@@ -1,11 +1,12 @@
 from __future__ import print_function
 
+import math
 import os
 import shutil
 import subprocess
 import sys
 
-from backflow_def_helper import write_chain_nn_backflow
+from backflow_def_helper import build_chain_nn_backflow, write_chain_nn_backflow
 
 
 def copy_base_defs(refdir, workdir):
@@ -147,6 +148,25 @@ def make_spin_changing_two_body_g_ex(workdir):
         fp.writelines(lines)
 
 
+def make_momentum_projection(workdir):
+    with open(os.path.join(workdir, "qptransidx.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NQPTrans          2\n")
+        fp.write("=============================================\n")
+        fp.write("======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n")
+        fp.write("=============================================\n")
+        fp.write("0    1.00000    0.00000\n")
+        fp.write("1    1.00000    0.00000\n")
+        fp.write("    0      0      0      1\n")
+        fp.write("    0      1      1      1\n")
+        fp.write("    0      2      2      1\n")
+        fp.write("    0      3      3      1\n")
+        fp.write("    1      0      1      1\n")
+        fp.write("    1      1      2      1\n")
+        fp.write("    1      2      3      1\n")
+        fp.write("    1      3      0      1\n")
+
+
 def write_locspn(workdir, local_sites, nsite=4):
     local_sites = set(local_sites)
     with open(os.path.join(workdir, "locspn.def"), "w") as fp:
@@ -178,9 +198,59 @@ def update_modpara(workdir, updates):
         fp.writelines(lines)
 
 
-def run_vmc(rootdir, workdir, mpi_procs=None):
+def parse_norbitalidx(path):
+    with open(path) as fp:
+        for line in fp:
+            cols = line.split()
+            if len(cols) >= 2 and cols[0] == "NOrbitalIdx":
+                return int(cols[1])
+    raise RuntimeError("NOrbitalIdx was not found in {}".format(path))
+
+
+def write_nonidentity_init_parameter(path, nprojbf, nslater):
+    projbf_values = [
+        0.93, 0.08, -0.05, 0.035, -0.025,
+        0.015, -0.012, 0.010, -0.007, 0.005,
+    ]
+    if nprojbf < 2:
+        raise RuntimeError("non-identity BackFlow test requires at least two ProjBF parameters")
+
+    values = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    for idx in range(nprojbf):
+        real = projbf_values[idx] if idx < len(projbf_values) else 0.001 / float(idx + 1)
+        values.extend([real, 0.0, 0.0])
+    matrix_width = int(round(math.sqrt(nslater)))
+    for idx in range(nslater):
+        if matrix_width * matrix_width == nslater:
+            row = idx // matrix_width
+            col = idx % matrix_width
+            real = 1.0 + 0.1 * row if row == col else 0.03 * float(row - col)
+        else:
+            real = math.sin(0.37 * (idx + 1))
+        values.extend([real, 0.0, 0.0])
+
+    with open(path, "w") as fp:
+        fp.write(" ".join("{:.18e}".format(value) for value in values))
+        fp.write("\n")
+
+
+def write_nonidentity_init(workdir, nsite=4):
+    definition = build_chain_nn_backflow(length=nsite, optimize=False)
+    nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidxgen.def"))
+    init_name = "nonidentity_init.dat"
+    write_nonidentity_init_parameter(
+        os.path.join(workdir, init_name),
+        definition.n_proj_bf,
+        nslater,
+    )
+    return init_name
+
+
+def run_vmc(rootdir, workdir, mpi_procs=None, init_path=None):
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
     cmd = [bin_to_test, "-e", "namelist.def"]
+    if init_path is not None:
+        cmd.append(init_path)
     if mpi_procs:
         cmd = ["mpirun", "-np", mpi_procs] + cmd
     proc = subprocess.run(
@@ -212,6 +282,24 @@ def read_float_rows(path):
             if cols:
                 rows.append([float(x) for x in cols])
     return rows
+
+
+def assert_finite_nonzero_rows(path, label):
+    rows = read_float_rows(path)
+    if not rows:
+        print("ERROR: {} output is empty.".format(label))
+        return -1
+    max_abs = 0.0
+    for row in rows:
+        for value in row:
+            if not math.isfinite(value):
+                print("ERROR: {} output contains non-finite values.".format(label))
+                return -1
+            max_abs = max(max_abs, abs(value))
+    if max_abs <= 1.0e-12:
+        print("ERROR: {} output is vacuous: all values are zero.".format(label))
+        return -1
+    return 0
 
 
 def max_abs_diff(left_rows, right_rows):
@@ -304,6 +392,12 @@ def main():
     case_name = sys.argv[1] if len(sys.argv) > 1 else "BackFlow_FSZ_IdentityEnergy_Complex"
     rootdir = os.getcwd()
     mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+    momentum_projection_cases = (
+        "BackFlow_FSZ_MomentumProjection_Complex",
+        "BackFlow_FSZ_MomentumProjection_Complex_mpi",
+        "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex",
+    )
+    nonidentity_momentum_case = case_name == "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex"
     named_invalid = get_named_invalid_case(case_name)
     if named_invalid is not None:
         updates, expected, local_sites, mutate_defs = named_invalid
@@ -311,11 +405,27 @@ def main():
 
     bf_workdir = prepare_case(rootdir, case_name, True)
     no_bf_workdir = prepare_case(rootdir, case_name + "_nobf", False)
+    if case_name in momentum_projection_cases:
+        for workdir in (bf_workdir, no_bf_workdir):
+            update_modpara(workdir, {"NMPTrans": "2"})
+            make_momentum_projection(workdir)
+    init_path = write_nonidentity_init(bf_workdir) if nonidentity_momentum_case else None
 
-    bf_proc = run_vmc(rootdir, bf_workdir, mpi_procs)
+    bf_proc = run_vmc(rootdir, bf_workdir, mpi_procs, init_path)
     if bf_proc.returncode != 0:
         print(bf_proc.stdout)
         return bf_proc.returncode
+    if nonidentity_momentum_case:
+        for filename, label in (
+            ("zvo_out_001.dat", "zvo_out"),
+            ("zvo_cisajs_001.dat", "OneBodyG"),
+            ("zvo_cisajscktalt_001.dat", "TwoBodyG"),
+        ):
+            status = assert_finite_nonzero_rows(os.path.join(bf_workdir, "output", filename), label)
+            if status != 0:
+                return status
+        return 0
+
     no_bf_proc = run_vmc(rootdir, no_bf_workdir, mpi_procs)
     if no_bf_proc.returncode != 0:
         print(no_bf_proc.stdout)

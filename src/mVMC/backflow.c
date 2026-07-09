@@ -213,6 +213,12 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
     fprintf(stderr, "Error: BackFlow MVP supports only NSPGaussLeg==1 (got %d).\n", NSPGaussLeg);
     return 1;
   }
+  if (iFlgOrbitalGeneral == 0 && NMPTrans > 1) {
+    fprintf(stderr,
+            "Error: BackFlow MVP does not support momentum projection in non-FSZ mode yet (NMPTrans=%d).\n",
+            NMPTrans);
+    return 1;
+  }
   if (FlagRBM != 0) {
     fprintf(stderr, "Error: BackFlow MVP does not support RBM.\n");
     return 1;
