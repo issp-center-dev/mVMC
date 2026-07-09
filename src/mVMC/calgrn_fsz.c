@@ -34,6 +34,13 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
                   int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
                   double complex *buffer);
 
+double complex GreenFunc1BF_fsz_workspace(const int ri, const int rj, const int s,
+                  const double complex ip, int *eleIdx, int *eleCfg, int *eleNum,
+                  const int *eleProjCnt, int *eleSpn, int *projCntNew,
+                  const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, double complex *pfBufM, int *pfIWork,
+                  double complex *pfWork, double *pfRWork);
+
 double complex GreenFunc2BF_fsz(const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t, const double complex ip,
                   int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
@@ -213,6 +220,14 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   int *myProjCntNew, *myProjBFCntNew;
   double complex *myBuffer;
   const int bfSlaterSize = NQPFull*Nsite2*Nsite2;
+  const int bfGreen1BufferSize = NQPFull + bfSlaterSize;
+  const int bfGreen1ComplexSize = bfGreen1BufferSize + Nsize*Nsize + LapackLWork;
+  const int bfGreen1IntSize = Nsize + Nsite2 + Nsite2 + Nsize
+      + NProj + 16*Nsite*Nrange + Nsize;
+  int *thEleIdx, *thEleCfg, *thEleNum, *thEleSpn;
+  int *thProjCntNew, *thProjBFCntNew, *thPfIWork;
+  double complex *thBuffer, *thPfBufM, *thPfWork;
+  double *thPfRWork;
 
   if(NTwist > 0 || NNBodyG > 0) {
     fprintf(stderr, "Error: CalculateGreenFuncBF_fsz does not support Twist or NBodyG yet.\n");
@@ -221,6 +236,9 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
 
   RequestWorkSpaceInt(Nsize+Nsite2+Nsite2+Nsize+NProj+16*Nsite*Nrange);
   RequestWorkSpaceComplex(NQPFull + bfSlaterSize);
+  RequestWorkSpaceThreadInt(bfGreen1IntSize);
+  RequestWorkSpaceThreadComplex(bfGreen1ComplexSize);
+  RequestWorkSpaceThreadDouble(LapackLWork);
 
   myEleIdx = GetWorkSpaceInt(Nsize);
   myEleCfg = GetWorkSpaceInt(Nsite2);
@@ -235,21 +253,61 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   for(idx=0;idx<Nsite2;idx++) myEleNum[idx] = eleNum[idx];
   for(idx=0;idx<Nsize;idx++) myEleSpn[idx] = eleSpn[idx];
 
-  StartTimer(50);
-  for(idx=0;idx<NCisAjs;idx++) {
-    ri = CisAjsIdx[idx][0];
-    s  = CisAjsIdx[idx][1];
-    rj = CisAjsIdx[idx][2];
-    t  = CisAjsIdx[idx][3];
-    if(s != t) {
-      fprintf(stderr, "Error: BackFlow FSZ does not support spin-changing OneBodyG yet.\n");
-      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  #pragma omp parallel default(shared)                                      \
+    private(thEleIdx,thEleCfg,thEleNum,thEleSpn,thProjCntNew,thProjBFCntNew, \
+            thPfIWork,thBuffer,thPfBufM,thPfWork,thPfRWork,idx,ri,rj,s,t,tmp)
+  {
+    thEleIdx = GetWorkSpaceThreadInt(Nsize);
+    thEleCfg = GetWorkSpaceThreadInt(Nsite2);
+    thEleNum = GetWorkSpaceThreadInt(Nsite2);
+    thEleSpn = GetWorkSpaceThreadInt(Nsize);
+    thProjCntNew = GetWorkSpaceThreadInt(NProj);
+    thProjBFCntNew = GetWorkSpaceThreadInt(16*Nsite*Nrange);
+    thPfIWork = GetWorkSpaceThreadInt(Nsize);
+    thBuffer = GetWorkSpaceThreadComplex(bfGreen1BufferSize);
+    thPfBufM = GetWorkSpaceThreadComplex(Nsize*Nsize);
+    thPfWork = GetWorkSpaceThreadComplex(LapackLWork);
+    thPfRWork = GetWorkSpaceThreadDouble(LapackLWork);
+
+    #pragma loop noalias
+    for(idx=0;idx<Nsize;idx++) thEleIdx[idx] = eleIdx[idx];
+    #pragma loop noalias
+    for(idx=0;idx<Nsite2;idx++) thEleCfg[idx] = eleCfg[idx];
+    #pragma loop noalias
+    for(idx=0;idx<Nsite2;idx++) thEleNum[idx] = eleNum[idx];
+    #pragma loop noalias
+    for(idx=0;idx<Nsize;idx++) thEleSpn[idx] = eleSpn[idx];
+
+    #pragma omp barrier
+    #pragma omp master
+    { StartTimer(50); }
+    #pragma omp barrier
+
+    #pragma omp for schedule(dynamic)
+    for(idx=0;idx<NCisAjs;idx++) {
+      ri = CisAjsIdx[idx][0];
+      s  = CisAjsIdx[idx][1];
+      rj = CisAjsIdx[idx][2];
+      t  = CisAjsIdx[idx][3];
+      if(s != t) {
+        fprintf(stderr, "Error: BackFlow FSZ does not support spin-changing OneBodyG yet.\n");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+      }
+      tmp = GreenFunc1BF_fsz_workspace(ri,rj,s,ip,thEleIdx,thEleCfg,thEleNum,
+                              eleProjCnt,thEleSpn,thProjCntNew,eleProjBFCnt,
+                              thProjBFCntNew,thBuffer,thPfBufM,thPfIWork,
+                              thPfWork,thPfRWork);
+      LocalCisAjs[idx] = tmp;
     }
-    tmp = GreenFunc1BF_fsz(ri,rj,s,ip,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
-                           myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer);
-    LocalCisAjs[idx] = tmp;
+
+    #pragma omp barrier
+    #pragma omp master
+    { StopTimer(50); }
   }
-  StopTimer(50);
+
+  ReleaseWorkSpaceThreadInt();
+  ReleaseWorkSpaceThreadComplex();
+  ReleaseWorkSpaceThreadDouble();
 
   StartTimer(51);
   for(idx=0;idx<NCisAjsCktAltDC;idx++) {

@@ -16,6 +16,10 @@ int CalculatePfM_BF_fsz(const int *eleIdx, const int *eleSpn, const int qpStart,
 int CalculatePfM_BF_fsz_from(const double complex *sltElmBF, const int *eleIdx,
     const int *eleSpn, const int qpStart, const int qpEnd,
     double complex *pfMOut, int *failureDetail);
+int CalculatePfM_BF_fsz_from_workspace(const double complex *sltElmBF,
+    const int *eleIdx, const int *eleSpn, const int qpStart, const int qpEnd,
+    double complex *pfMOut, int *failureDetail, double complex *bufM,
+    int *iwork, double complex *work, int lwork, double *rwork);
 
 int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd);
 int CalculateMAll_fsz_real(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd);

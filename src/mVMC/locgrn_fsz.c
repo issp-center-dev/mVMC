@@ -46,6 +46,13 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
                   int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
                   double complex *buffer);
 
+double complex GreenFunc1BF_fsz_workspace(const int ri, const int rj, const int s,
+                  const double complex ip, int *eleIdx, int *eleCfg, int *eleNum,
+                  const int *eleProjCnt, int *eleSpn, int *projCntNew,
+                  const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, double complex *pfBufM, int *pfIWork,
+                  double complex *pfWork, double *pfRWork);
+
 double complex GreenFunc2BF_fsz(const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t, const double complex ip,
                   int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
@@ -74,6 +81,41 @@ static double complex CalculateBF_FSZ_CandidateIP(const char *caller,
 
   status = CalculatePfM_BF_fsz_from(sltElmBF, eleIdx, eleSpn, 0, NQPFull,
       pfMNew, &detail);
+  if(status == BF_FSZ_PF_LAPACK_FAILURE) {
+    fprintf(stderr, "warning: %s: BF-FSZ candidate Pfaffian failed in M_ZSKPFA (info=%d); propagating NaN.\n",
+        caller, detail);
+    return BF_FSZ_NaNValue();
+  }
+  if(status == BF_FSZ_PF_NONFINITE) {
+    fprintf(stderr, "warning: %s: BF-FSZ candidate Pfaffian is non-finite (qpidx=%d); propagating NaN.\n",
+        caller, detail);
+    return BF_FSZ_NaNValue();
+  }
+  if(status != BF_FSZ_PF_OK) {
+    fprintf(stderr, "warning: %s: BF-FSZ candidate Pfaffian returned unknown status %d; propagating NaN.\n",
+        caller, status);
+    return BF_FSZ_NaNValue();
+  }
+
+  ipNew = CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  if(!(isfinite(creal(ipNew)) && isfinite(cimag(ipNew)))) {
+    fprintf(stderr, "warning: %s: BF-FSZ candidate projected overlap is non-finite; propagating NaN.\n",
+        caller);
+    return BF_FSZ_NaNValue();
+  }
+  return ipNew;
+}
+
+static double complex CalculateBF_FSZ_CandidateIP_workspace(const char *caller,
+    const double complex *sltElmBF, const int *eleIdx, const int *eleSpn,
+    double complex *pfMNew, double complex *pfBufM, int *pfIWork,
+    double complex *pfWork, double *pfRWork) {
+  int status;
+  int detail = 0;
+  double complex ipNew;
+
+  status = CalculatePfM_BF_fsz_from_workspace(sltElmBF, eleIdx, eleSpn, 0,
+      NQPFull, pfMNew, &detail, pfBufM, pfIWork, pfWork, LapackLWork, pfRWork);
   if(status == BF_FSZ_PF_LAPACK_FAILURE) {
     fprintf(stderr, "warning: %s: BF-FSZ candidate Pfaffian failed in M_ZSKPFA (info=%d); propagating NaN.\n",
         caller, detail);
@@ -476,6 +518,54 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
   MakeSlaterElmBF_fsz_to(sltElmBFNew, eleNum, projBFCntNew);
   z *= CalculateBF_FSZ_CandidateIP("GreenFunc1BF_fsz", sltElmBFNew, eleIdx,
       eleSpn, pfMNew);
+
+  eleCfg[rsj] = mj;
+  eleCfg[rsi] = -1;
+  eleIdx[mj] = rj;
+  eleSpn[mj] = s;
+  eleNum[rsj] = 1;
+  eleNum[rsi] = 0;
+
+  return conj(z/ip);
+}
+
+double complex GreenFunc1BF_fsz_workspace(const int ri, const int rj, const int s,
+                  const double complex ip, int *eleIdx, int *eleCfg, int *eleNum,
+                  const int *eleProjCnt, int *eleSpn, int *projCntNew,
+                  const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, double complex *pfBufM, int *pfIWork,
+                  double complex *pfWork, double *pfRWork) {
+  double complex z;
+  int mj,rsi,rsj;
+  /* buffer: NQPFull Pfaffians followed by a candidate BF-FSZ Slater matrix. */
+  double complex *pfMNew = buffer;
+  double complex *sltElmBFNew = buffer + NQPFull;
+
+  (void)eleProjBFCnt;
+
+  if(ri==rj) return eleNum[ri+s*Nsite];
+  if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
+  if(NExUpdatePath==4 || NExUpdatePath==5){
+    if(eleNum[ri+(1-s)*Nsite]==1) return 0.0;
+  }
+
+  mj  = eleCfg[rj+s*Nsite];
+  rsi = ri + s*Nsite;
+  rsj = rj + s*Nsite;
+
+  eleCfg[rsj] = -1;
+  eleCfg[rsi] = mj;
+  eleIdx[mj] = ri;
+  eleSpn[mj] = s;
+  eleNum[rsj] = 0;
+  eleNum[rsi] = 1;
+  UpdateProjCnt(rj, ri, s, projCntNew, eleProjCnt, eleNum);
+  z = ProjRatio(projCntNew,eleProjCnt);
+
+  MakeProjBFCnt(projBFCntNew, eleNum);
+  MakeSlaterElmBF_fsz_to_serial(sltElmBFNew, eleNum, projBFCntNew);
+  z *= CalculateBF_FSZ_CandidateIP_workspace("GreenFunc1BF_fsz", sltElmBFNew,
+      eleIdx, eleSpn, pfMNew, pfBufM, pfIWork, pfWork, pfRWork);
 
   eleCfg[rsj] = mj;
   eleCfg[rsi] = -1;
