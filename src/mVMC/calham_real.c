@@ -243,7 +243,8 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
 #pragma omp parallel default(shared)\
   private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myBuffer,\
           myBatchIdx,myBatchMsa,myBatchIcount,myBatchVec,myBatchPfM,myBatchProj,myBatchGreen,\
-          myBatchVecStack,myBatchWStack,myEnergy,batchNo,batchStart,batchEnd,batchIdx,batchCount)\
+          myBatchVecStack,myBatchWStack,myEnergy,idx,ri,rj,s,rk,rl,t,tmp,\
+          batchNo,batchStart,batchEnd,batchIdx,batchCount)\
   reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
