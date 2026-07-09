@@ -611,6 +611,29 @@ int CalculatePfM_BF_fsz_from(const double complex *sltElmBF, const int *eleIdx,
   return status;
 }
 
+int CalculatePfM_BF_fsz_from_workspace(const double complex *sltElmBF,
+    const int *eleIdx, const int *eleSpn, const int qpStart, const int qpEnd,
+    double complex *pfMOut, int *failureDetail, double complex *bufM,
+    int *iwork, double complex *work, int lwork, double *rwork) {
+  const int qpNum = qpEnd-qpStart;
+  int qpidx;
+  int status = BF_FSZ_PF_OK;
+  int detail = 0;
+
+  for(qpidx=0;qpidx<qpNum;qpidx++) {
+    int myDetail = 0;
+    int myStatus = calculatePfM_BF_fsz_child_from(sltElmBF, eleIdx, eleSpn,
+        qpStart, qpidx, bufM, iwork, work, lwork, rwork, pfMOut, &myDetail);
+    if(status==BF_FSZ_PF_OK && myStatus!=BF_FSZ_PF_OK) {
+      status = myStatus;
+      detail = myDetail;
+    }
+  }
+
+  if(failureDetail != NULL) *failureDetail = detail;
+  return status;
+}
+
 int calculatePfM_BF_fsz_child_from(
        const double complex *sltElmBF,
        const int *eleIdx,
