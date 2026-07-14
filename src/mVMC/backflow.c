@@ -201,10 +201,6 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
     fprintf(stderr, "Error: BackFlow MVP supports only NExUpdatePath==0 (got %d).\n", NExUpdatePath);
     return 1;
   }
-  if (iFlgOrbitalGeneral != 0 && NVMCCalMode == 0) {
-    fprintf(stderr, "Error: BackFlow FSZ optimization is not implemented yet (NVMCCalMode=0).\n");
-    return 1;
-  }
   if (iFlgOrbitalGeneral != 0 && TwoSz == -1) {
     fprintf(stderr, "Error: BackFlow FSZ does not support TwoSz==-1 spin-changing updates yet.\n");
     return 1;
