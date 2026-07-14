@@ -601,29 +601,32 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt,*eleSpn,*eleProjBFCnt;
   double complex e,ip;
   double w,x;
+  double sqrtw;
+  double complex we;
   double Sz;
   const char *bfFSZSRDiffDumpPath = getenv("MVMC_BF_FSZ_SR_DIFF_DUMP");
 
   const int qpStart=0;
   const int qpEnd=NQPFull;
-  int sample,sampleStart,sampleEnd;
-  int info;
+  int sample,sampleStart,sampleEnd,sampleSize;
+  int i,info;
+  int int_i;
+  const int nProj=NProj;
+  double complex *srOptO = SROptO;
+  double         *srOptO_real = SROptO_real;
 
   int rank,size;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
   SplitLoop(&sampleStart,&sampleEnd,NVMCSample,rank,size);
 
-  if(NVMCCalMode==0) {
-    if(rank==0) {
-      fprintf(stderr, "Error: BackFlow FSZ optimization is not implemented yet.\n");
-    }
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-  }
-
   StartTimer(24);
   clearPhysQuantity();
   StopTimer(24);
+
+  if(NVMCCalMode==0 && NStoreO!=0 && NSRCG==0) {
+    clearStoredOSampleRange_fsz(sampleStart, sampleEnd);
+  }
 
   for(sample=sampleStart;sample<sampleEnd;sample++) {
     eleIdx = EleIdx + sample*Nsize;
@@ -635,7 +638,7 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm) {
 
     StartTimer(40);
     MakeSlaterElmBF_fsz(eleNum,eleProjBFCnt);
-    if(rank == 0 && sample == sampleStart &&
+    if(NVMCCalMode == 1 && rank == 0 && sample == sampleStart &&
         bfFSZSRDiffDumpPath != NULL && bfFSZSRDiffDumpPath[0] != '\0') {
       dumpBFFSZSRDiffCheck(bfFSZSRDiffDumpPath, eleIdx, eleSpn, eleNum,
                            eleProjBFCnt, qpStart, qpEnd, sample);
@@ -649,6 +652,11 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm) {
     }
 
     ip = CalculateIP_fcmp(PfM,qpStart,qpEnd,MPI_COMM_SELF);
+    if(!isfinite(creal(ip)) || !isfinite(cimag(ip))) {
+      fprintf(stderr,"warning: VMC_BF_MainCal_fsz rank:%d sample:%d ip=%e %e\n",
+              rank,sample,creal(ip),cimag(ip));
+      continue;
+    }
 
     x = LogProjVal(eleProjCnt);
     if(reweight==1){
@@ -678,9 +686,87 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm) {
     Sztot2 += w * Sz*Sz;
     Etot2 += w * conj(e) * e;
 
-    StartTimer(42);
-    CalculateGreenFuncBF_fsz(w,ip,eleIdx,eleCfg,eleNum,eleSpn,eleProjCnt,eleProjBFCnt);
-    StopTimer(42);
+    if(NVMCCalMode==0) {
+      srOptO[0] = 1.0+0.0*I;
+      srOptO[1] = 0.0+0.0*I;
+#pragma loop noalias
+      for(i=0;i<nProj;i++){
+        srOptO[(i+1)*2]   = (double)(eleProjCnt[i]);
+        srOptO[(i+1)*2+1] = 0.0+0.0*I;
+      }
+
+      BackFlowDiff_fsz(SROptO+2*NProj+2,ip,eleIdx,eleSpn,eleNum,eleProjBFCnt);
+
+      StartTimer(42);
+      SlaterElmBFDiff_fsz(SROptO+2*NProj+2*NProjBF+2,ip,eleIdx,eleSpn,eleNum,eleProjBFCnt);
+      StopTimer(42);
+
+      if(FlagOptTrans>0) {
+        calculateOptTransDiff(SROptO+2*NProj+2*NProjBF+2*NSlater+2, ip);
+      }
+
+      if(AllComplexFlag==0){
+#pragma loop noalias
+        for(i=0;i<SROptSize;i++){
+          srOptO_real[i] = creal(srOptO[2*i]);
+        }
+      }
+
+      StartTimer(43);
+      if(NSRCG==0 && NStoreO==0){
+        if(AllComplexFlag==0){
+          calculateOO_real(SROptOO_real,SROptHO_real,SROptO_real,w,creal(e),SROptSize);
+        }else{
+          calculateOO(SROptOO,SROptHO,SROptO,w,e,SROptSize);
+        }
+      }else{
+        we    = w*e;
+        sqrtw = sqrt(w);
+        if(AllComplexFlag==0){
+#pragma omp parallel for default(shared) private(int_i)
+          for(int_i=0;int_i<SROptSize;int_i++){
+            SROptO_Store_real[int_i+sample*SROptSize] = sqrtw*SROptO_real[int_i];
+            SROptHO_real[int_i]                      += creal(we)*SROptO_real[int_i];
+          }
+        }else{
+#pragma omp parallel for default(shared) private(int_i)
+          for(int_i=0;int_i<SROptSize*2;int_i++){
+            SROptO_Store[int_i+sample*(2*SROptSize)] = sqrtw*SROptO[int_i];
+            SROptHO[int_i]                          += we*SROptO[int_i];
+          }
+        }
+      }
+      StopTimer(43);
+    } else if(NVMCCalMode==1) {
+      StartTimer(42);
+      CalculateGreenFuncBF_fsz(w,ip,eleIdx,eleCfg,eleNum,eleSpn,eleProjCnt,eleProjBFCnt);
+      StopTimer(42);
+    }
+  }
+
+  if(NVMCCalMode==0){
+    if(NStoreO!=0 || NSRCG!=0){
+      sampleSize=sampleEnd-sampleStart;
+      if(NSRCG!=0 || sampleSize>0){
+        if(AllComplexFlag==0){
+          double *srOptO_Store_ptr = SROptO_Store_real;
+          if(NSRCG==0) {
+            srOptO_Store_ptr += (size_t)sampleStart * (size_t)SROptSize;
+          }
+          StartTimer(45);
+          calculateOO_Store_real(SROptOO_real,SROptHO_real,srOptO_Store_ptr,creal(w),creal(e),SROptSize,sampleSize);
+          StopTimer(45);
+        }else{
+          double complex *srOptO_Store_ptr = SROptO_Store;
+          if(NSRCG==0) {
+            srOptO_Store_ptr += (size_t)sampleStart * (2 * (size_t)SROptSize);
+          }
+          StartTimer(45);
+          calculateOO_Store(SROptOO,SROptHO,srOptO_Store_ptr,w,e,2*SROptSize,sampleSize);
+          StopTimer(45);
+        }
+      }
+    }
   }
   return;
 }

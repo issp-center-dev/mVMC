@@ -33,13 +33,14 @@ def write_namelist(workdir, include_backflow):
         fp.write("\n".join(lines) + "\n")
 
 
-def write_orbital_general(workdir, nsite):
+def write_orbital_general(workdir, nsite, complex_type=1, optimize=True):
     nsite2 = 2 * nsite
     norbital = nsite2 * (nsite2 - 1) // 2
+    opt_flag = 1 if optimize else 0
     lines = [
         "=============================================",
         "NOrbitalIdx         {}".format(norbital),
-        "ComplexType          1",
+        "ComplexType          {}".format(complex_type),
         "=============================================",
         "=============================================",
     ]
@@ -55,7 +56,7 @@ def write_orbital_general(workdir, nsite):
             )
             idx += 1
     for idx in range(norbital):
-        lines.append("{:5d}      1".format(idx))
+        lines.append("{:5d}      {}".format(idx, opt_flag))
     with open(os.path.join(workdir, "orbitalidxgen.def"), "w") as fp:
         fp.write("\n".join(lines) + "\n")
 
@@ -252,7 +253,8 @@ def run_vmc(rootdir, workdir, mpi_procs=None, init_path=None, extra_env=None):
     if init_path is not None:
         cmd.append(init_path)
     if mpi_procs:
-        cmd = ["mpirun", "-np", mpi_procs] + cmd
+        mpi_args = os.environ.get("MVMC_MPI_ARGS", "").split()
+        cmd = ["mpirun"] + mpi_args + ["-np", mpi_procs] + cmd
     env = os.environ.copy()
     if extra_env is not None:
         env.update(extra_env)
@@ -285,6 +287,31 @@ def read_float_rows(path):
             cols = line.split()
             if cols:
                 rows.append([float(x) for x in cols])
+    return rows
+
+
+def read_flat_floats(path):
+    values = []
+    with open(path) as fp:
+        for line in fp:
+            values.extend(float(x) for x in line.split())
+    return values
+
+
+def read_child_opt_rows(path):
+    rows = []
+    with open(path) as fp:
+        for line in fp:
+            cols = line.split()
+            if len(cols) < 3:
+                continue
+            try:
+                idx = int(cols[0])
+                real = float(cols[1])
+                imag = float(cols[2])
+            except ValueError:
+                continue
+            rows.append((idx, real, imag))
     return rows
 
 
@@ -328,6 +355,67 @@ def assert_finite_nonzero_rows(path, label):
     return 0
 
 
+def assert_finite_values(values, label):
+    if not values:
+        print("ERROR: {} is empty.".format(label))
+        return -1
+    for value in values:
+        if not math.isfinite(value):
+            print("ERROR: {} contains non-finite values.".format(label))
+            return -1
+    return 0
+
+
+def assert_child_opt_file(workdir, filename, expected_rows, zqp_group_offset, label):
+    child_path = os.path.join(workdir, "output", filename)
+    if not os.path.exists(child_path):
+        print("ERROR: {} was not created.".format(filename))
+        return -1
+    rows = read_child_opt_rows(child_path)
+    if len(rows) != expected_rows:
+        print("ERROR: {} row count mismatch: got {}, expected {}".format(
+            filename, len(rows), expected_rows))
+        return -1
+    zqp_path = os.path.join(workdir, "output", "zqp_opt.dat")
+    zqp_values = read_flat_floats(zqp_path)
+    for local_idx, real, imag in rows:
+        if local_idx < 0 or local_idx >= expected_rows:
+            print("ERROR: {} has invalid local index {}".format(filename, local_idx))
+            return -1
+        if not (math.isfinite(real) and math.isfinite(imag)):
+            print("ERROR: {} contains non-finite values.".format(filename))
+            return -1
+        group = zqp_group_offset + local_idx
+        zqp_pos = 3 * group
+        if zqp_pos + 1 >= len(zqp_values):
+            print("ERROR: zqp_opt.dat is too short for {} group {}".format(label, group))
+            return -1
+        if max(abs(real - zqp_values[zqp_pos]), abs(imag - zqp_values[zqp_pos + 1])) > 1.0e-12:
+            print("ERROR: {} does not match zqp_opt.dat at row {}".format(filename, local_idx))
+            return -1
+    return 0
+
+
+def read_orbital_opt_rows(workdir):
+    return read_child_opt_rows(os.path.join(workdir, "output", "zqp_orbital_general_opt.dat"))
+
+
+def compare_child_rows(left, right, tolerance, label):
+    if len(left) != len(right):
+        print("ERROR: {} row count mismatch: left={} right={}".format(label, len(left), len(right)))
+        return -1
+    max_diff = 0.0
+    for (li, lr, lii), (ri, rr, rii) in zip(left, right):
+        if li != ri:
+            print("ERROR: {} local index mismatch: left={} right={}".format(label, li, ri))
+            return -1
+        max_diff = max(max_diff, abs(lr - rr), abs(lii - rii))
+    if max_diff > tolerance:
+        print("ERROR: {} mismatch: max_abs_diff={:.3e}".format(label, max_diff))
+        return -1
+    return 0
+
+
 def max_abs_diff(left_rows, right_rows):
     if len(left_rows) != len(right_rows):
         raise RuntimeError("row count mismatch: left={} right={}".format(len(left_rows), len(right_rows)))
@@ -340,7 +428,8 @@ def max_abs_diff(left_rows, right_rows):
     return max_diff
 
 
-def prepare_case(rootdir, name, include_backflow):
+def prepare_case(rootdir, name, include_backflow, orbital_complex_type=1,
+                 orbital_optimize=True, backflow_optimize=False):
     refdir = os.path.join(rootdir, "data", "BackFlow_Identity_Complex")
     workdir = os.path.join(rootdir, "work", name)
     if os.path.exists(workdir):
@@ -349,10 +438,15 @@ def prepare_case(rootdir, name, include_backflow):
 
     copy_base_defs(refdir, workdir)
     write_namelist(workdir, include_backflow)
-    write_orbital_general(workdir, nsite=4)
+    write_orbital_general(
+        workdir,
+        nsite=4,
+        complex_type=orbital_complex_type,
+        optimize=orbital_optimize,
+    )
     write_green_defs(workdir)
     if include_backflow:
-        write_chain_nn_backflow(workdir, length=4, optimize=False)
+        write_chain_nn_backflow(workdir, length=4, optimize=backflow_optimize)
     return workdir
 
 
@@ -433,6 +527,283 @@ def run_sr_diff_case(rootdir, case_name, mpi_procs=None):
     return 0
 
 
+def optimization_modpara_updates(nstore=0, nsrcg=0, nsplit=1, samples=16):
+    updates = {
+        "NVMCCalMode": "0",
+        "NSROptItrStep": "2",
+        "NSROptItrSmp": "2",
+        "NVMCSample": str(samples),
+        "NVMCWarmUp": "4",
+        "DSROptRedCut": "1.0e-10",
+        "DSROptStaDel": "1.0e-2",
+        "DSROptStepDt": "1.0e-2",
+        "NStore": str(nstore),
+        "NSRCG": str(nsrcg),
+        "NSplitSize": str(nsplit),
+    }
+    if nsrcg != 0:
+        updates["NSRCGFallback"] = "1"
+        updates["NSRCGAbortOnFail"] = "0"
+    return updates
+
+
+def prepare_optimization_case(rootdir, name, include_backflow=True, orbital_complex_type=1,
+                              orbital_optimize=True, backflow_optimize=False,
+                              momentum_projection=False, nstore=0, nsrcg=0,
+                              nsplit=1, samples=16):
+    workdir = prepare_case(
+        rootdir,
+        name,
+        include_backflow,
+        orbital_complex_type=orbital_complex_type,
+        orbital_optimize=orbital_optimize,
+        backflow_optimize=backflow_optimize,
+    )
+    update_modpara(workdir, optimization_modpara_updates(nstore, nsrcg, nsplit, samples))
+    if momentum_projection:
+        update_modpara(workdir, {"NMPTrans": "2"})
+        make_momentum_projection(workdir)
+    return workdir
+
+
+def assert_optimization_outputs(workdir, include_backflow):
+    zqp_path = os.path.join(workdir, "output", "zqp_opt.dat")
+    if not os.path.exists(zqp_path):
+        print("ERROR: zqp_opt.dat was not created.")
+        return -1
+    status = assert_finite_values(read_flat_floats(zqp_path), "zqp_opt.dat")
+    if status != 0:
+        return status
+
+    nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidxgen.def"))
+    nprojbf = build_chain_nn_backflow(length=4, optimize=False).n_proj_bf if include_backflow else 0
+    expected_zqp_groups = 2 + nprojbf + nslater
+    zqp_values = read_flat_floats(zqp_path)
+    if len(zqp_values) != 3 * expected_zqp_groups:
+        print("ERROR: zqp_opt.dat length mismatch: got {} values, expected {}".format(
+            len(zqp_values), 3 * expected_zqp_groups))
+        return -1
+    if include_backflow:
+        status = assert_child_opt_file(
+            workdir,
+            "zqp_bf_opt.dat",
+            nprojbf,
+            2,
+            "ProjBF opt block",
+        )
+        if status != 0:
+            return status
+    return assert_child_opt_file(
+        workdir,
+        "zqp_orbital_general_opt.dat",
+        nslater,
+        2 + nprojbf,
+        "OrbitalGeneral opt block",
+    )
+
+
+def run_positive_optimization_case(rootdir, case_name, mpi_procs, options):
+    prep_options = dict(options)
+    prep_options.pop("compare_no_bf", None)
+    prep_options.pop("compare_direct_bf", None)
+    workdir = prepare_optimization_case(rootdir, case_name, **prep_options)
+    proc = run_vmc(rootdir, workdir, mpi_procs)
+    if proc.returncode != 0:
+        print(proc.stdout)
+        return proc.returncode
+    status = assert_optimization_outputs(workdir, include_backflow=True)
+    if status != 0:
+        return status
+
+    if options.get("compare_no_bf", False):
+        no_bf_options = dict(options)
+        no_bf_options.pop("compare_no_bf", None)
+        no_bf_options.pop("compare_direct_bf", None)
+        no_bf_options["include_backflow"] = False
+        no_bf_options["backflow_optimize"] = False
+        no_bf_workdir = prepare_optimization_case(
+            rootdir,
+            case_name + "_nobf_opt_ref",
+            **no_bf_options
+        )
+        no_bf_proc = run_vmc(rootdir, no_bf_workdir, mpi_procs)
+        if no_bf_proc.returncode != 0:
+            print(no_bf_proc.stdout)
+            return no_bf_proc.returncode
+        status = assert_optimization_outputs(no_bf_workdir, include_backflow=False)
+        if status != 0:
+            return status
+        status = compare_child_rows(
+            read_orbital_opt_rows(workdir),
+            read_orbital_opt_rows(no_bf_workdir),
+            1.0e-8,
+            "BF-FSZ identity orbital optimization",
+        )
+        if status != 0:
+            return status
+
+    if options.get("compare_direct_bf", False):
+        ref_options = dict(options)
+        ref_options.pop("compare_no_bf", None)
+        ref_options.pop("compare_direct_bf", None)
+        ref_options["nstore"] = 0
+        ref_options["nsrcg"] = 0
+        ref_workdir = prepare_optimization_case(
+            rootdir,
+            case_name + "_direct_ref",
+            **ref_options
+        )
+        ref_proc = run_vmc(rootdir, ref_workdir, mpi_procs)
+        if ref_proc.returncode != 0:
+            print(ref_proc.stdout)
+            return ref_proc.returncode
+        status = assert_optimization_outputs(ref_workdir, include_backflow=True)
+        if status != 0:
+            return status
+        status = compare_child_rows(
+            read_orbital_opt_rows(workdir),
+            read_orbital_opt_rows(ref_workdir),
+            1.0e-8,
+            "stored-O BF-FSZ orbital optimization",
+        )
+        if status != 0:
+            return status
+
+    return 0
+
+
+def run_all_fixed_invalid_case(rootdir, case_name, mpi_procs):
+    workdir = prepare_optimization_case(
+        rootdir,
+        case_name,
+        include_backflow=True,
+        orbital_complex_type=1,
+        orbital_optimize=False,
+        backflow_optimize=False,
+        nstore=0,
+        nsrcg=0,
+    )
+    proc = run_vmc(rootdir, workdir, mpi_procs)
+    expected = "BackFlow FSZ optimization requires at least one optimized variational parameter"
+    if proc.returncode == 0:
+        print("ERROR: {} unexpectedly succeeded".format(case_name))
+        return -1
+    if expected not in proc.stdout:
+        print("ERROR: {} did not report expected error: {}".format(case_name, expected))
+        print(proc.stdout)
+        return -1
+    if "Start: Optimize VMC parameters." in proc.stdout:
+        print("ERROR: {} reached optimization loop before failing".format(case_name))
+        print(proc.stdout)
+        return -1
+    return 0
+
+
+def run_nsplit_optimization_case(rootdir, case_name, mpi_procs):
+    split_ranks = int(mpi_procs) if mpi_procs else 4
+    if split_ranks < 4:
+        split_ranks = 4
+    ref_ranks = max(1, split_ranks // 2)
+    split_workdir = prepare_optimization_case(
+        rootdir,
+        case_name,
+        include_backflow=True,
+        nstore=1,
+        nsrcg=0,
+        nsplit=2,
+    )
+    split_proc = run_vmc(rootdir, split_workdir, str(split_ranks))
+    if split_proc.returncode != 0:
+        print(split_proc.stdout)
+        return split_proc.returncode
+    status = assert_optimization_outputs(split_workdir, include_backflow=True)
+    if status != 0:
+        return status
+
+    ref_workdir = prepare_optimization_case(
+        rootdir,
+        case_name + "_ref",
+        include_backflow=True,
+        nstore=1,
+        nsrcg=0,
+        nsplit=1,
+    )
+    ref_proc = run_vmc(rootdir, ref_workdir, str(ref_ranks))
+    if ref_proc.returncode != 0:
+        print(ref_proc.stdout)
+        return ref_proc.returncode
+    status = assert_optimization_outputs(ref_workdir, include_backflow=True)
+    if status != 0:
+        return status
+    return compare_child_rows(
+        read_orbital_opt_rows(split_workdir),
+        read_orbital_opt_rows(ref_workdir),
+        1.0e-8,
+        "NSplitSize BF-FSZ orbital optimization",
+    )
+
+
+def run_optimization_case(rootdir, case_name, mpi_procs=None):
+    optimization_cases = {
+        "BackFlow_FSZ_Optimization_Identity_Complex": {
+            "orbital_complex_type": 1,
+            "compare_no_bf": True,
+        },
+        "BackFlow_FSZ_Optimization_Identity_Complex_mpi": {
+            "orbital_complex_type": 1,
+            "compare_no_bf": True,
+        },
+        "BackFlow_FSZ_Optimization_Identity_Real": {
+            "orbital_complex_type": 0,
+            "compare_no_bf": True,
+        },
+        "BackFlow_FSZ_Optimization_MomentumProjection_Complex": {
+            "orbital_complex_type": 1,
+            "momentum_projection": True,
+            "compare_no_bf": True,
+        },
+        "BackFlow_FSZ_Optimization_MomentumProjection_Complex_mpi": {
+            "orbital_complex_type": 1,
+            "momentum_projection": True,
+            "compare_no_bf": True,
+        },
+        "BackFlow_FSZ_Optimization_BackFlowParams_Complex": {
+            "orbital_complex_type": 1,
+            "backflow_optimize": True,
+        },
+        "BackFlow_FSZ_Optimization_StoredO_Complex": {
+            "orbital_complex_type": 1,
+            "nstore": 1,
+            "compare_direct_bf": True,
+        },
+        "BackFlow_FSZ_Optimization_SRCG_Complex": {
+            "orbital_complex_type": 1,
+            "nstore": 1,
+            "nsrcg": 1,
+        },
+    }
+    if case_name == "BackFlow_FSZ_Optimization_AllFixed_Invalid":
+        return run_all_fixed_invalid_case(rootdir, case_name, mpi_procs)
+    if case_name == "BackFlow_FSZ_Optimization_NSplitSize_mpi":
+        return run_nsplit_optimization_case(rootdir, case_name, mpi_procs)
+    if case_name not in optimization_cases:
+        return None
+
+    options = {
+        "include_backflow": True,
+        "orbital_complex_type": 1,
+        "orbital_optimize": True,
+        "backflow_optimize": False,
+        "momentum_projection": False,
+        "nstore": 0,
+        "nsrcg": 0,
+        "nsplit": 1,
+        "samples": 16,
+    }
+    options.update(optimization_cases[case_name])
+    return run_positive_optimization_case(rootdir, case_name, mpi_procs, options)
+
+
 def expect_invalid(rootdir, name, updates, expected, mpi_procs=None, local_sites=None, mutate_defs=None):
     workdir = prepare_case(rootdir, name, True)
     update_modpara(workdir, updates)
@@ -505,6 +876,9 @@ def main():
     sr_diff_status = run_sr_diff_case(rootdir, case_name, mpi_procs)
     if sr_diff_status is not None:
         return sr_diff_status
+    optimization_status = run_optimization_case(rootdir, case_name, mpi_procs)
+    if optimization_status is not None:
+        return optimization_status
     if named_invalid is not None:
         updates, expected, local_sites, mutate_defs = named_invalid
         return expect_invalid(rootdir, case_name, updates, expected, mpi_procs, local_sites, mutate_defs)
@@ -563,12 +937,6 @@ def main():
             return -1
 
     invalid_cases = [
-        (
-            case_name + "_InvalidOptimization",
-            {"NVMCCalMode": "0"},
-            "BackFlow FSZ optimization is not implemented yet",
-            None,
-        ),
         (
             case_name + "_InvalidLocSpin",
             {"NExUpdatePath": "1"},

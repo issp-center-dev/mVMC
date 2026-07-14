@@ -1599,6 +1599,20 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
       fprintf(stderr, "error: OptFlag is incomplete.\n");
       info = 1;
     }
+    if (info == 0 && NProjBF > 0 && iFlgOrbitalGeneral != 0 && NVMCCalMode == 0) {
+      int hasOptimizedParameter = 0;
+      for (i = 0; i < 2 * NPara; i++) {
+        if (OptFlag[i] == 1) {
+          hasOptimizedParameter = 1;
+          break;
+        }
+      }
+      if (!hasOptimizedParameter) {
+        fprintf(stderr,
+                "Error: BackFlow FSZ optimization requires at least one optimized variational parameter.\n");
+        info = 1;
+      }
+    }
     if (info == 0 && BFValidateFszDefinitionDetails() != 0) info = 1;
     fprintf(stdout, "finish reading parameters.\n");
   } /* if(rank==0) */
