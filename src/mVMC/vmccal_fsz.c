@@ -55,6 +55,316 @@ static void clearStoredOSampleRange_fsz(const int sampleStart, const int sampleE
   }
 }
 
+static int calculateBFFSZIPForFD(int *eleIdx, int *eleSpn, int *eleNum,
+                                 const int *eleProjBFCnt,
+                                 const int qpStart, const int qpEnd,
+                                 double complex *ip) {
+  int info;
+
+  MakeSlaterElmBF_fsz(eleNum, eleProjBFCnt);
+  info = CalculateMAll_BF_fsz(eleIdx, eleSpn, qpStart, qpEnd);
+  *ip = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+  return info;
+}
+
+static void dumpBFFSZSRDiffCheck(const char *path, int *eleIdx, int *eleSpn,
+                                 int *eleNum, const int *eleProjBFCnt,
+                                 const int qpStart, const int qpEnd,
+                                 const int sample) {
+  FILE *fp;
+  double complex *diffNoBF;
+  double complex *analyticPacked;
+  double complex *analyticProjBF;
+  double complex *analyticSlater;
+  double complex *projBFStore;
+  double complex *slaterStore;
+  double complex ipNoBF = 0.0 + 0.0*I;
+  double complex ipBF = 0.0 + 0.0*I;
+  double complex ipPlus = 0.0 + 0.0*I;
+  double complex ipMinus = 0.0 + 0.0*I;
+  double complex fd;
+  double complex projBFAnalyticAtMax = 0.0 + 0.0*I;
+  double complex projBFFDAtMax = 0.0 + 0.0*I;
+  double complex orbitalAnalyticAtMax = 0.0 + 0.0*I;
+  double complex orbitalFDAtMax = 0.0 + 0.0*I;
+  const double h = 1.0e-6;
+  double maxIdentityOrbitalDiff = 0.0;
+  double maxProjBFRealDiff = 0.0;
+  double maxProjBFImagDiff = 0.0;
+  double maxProjBFDiff = 0.0;
+  double maxOrbitalRealDiff = 0.0;
+  double maxOrbitalImagDiff = 0.0;
+  double maxOrbitalDiff = 0.0;
+  int maxIdentityOrbitalIdx = -1;
+  int maxProjBFRealIdx = -1;
+  int maxProjBFImagIdx = -1;
+  int maxProjBFIdx = -1;
+  int maxProjBFIsImag = 0;
+  int maxOrbitalRealIdx = -1;
+  int maxOrbitalImagIdx = -1;
+  int maxOrbitalIdx = -1;
+  int maxOrbitalIsImag = 0;
+  int nonzeroProjBFFDCount = 0;
+  int nonzeroOrbitalFDCount = 0;
+  int nanCount = 0;
+  int fdFailCount = 0;
+  int infoNoBF;
+  int infoBF;
+  int infoPlus;
+  int infoMinus;
+  int noBFReady;
+  int bfReady;
+  int idx;
+
+  if(path == NULL || path[0] == '\0') return;
+  if(NProjBF <= 0 || ProjBF == NULL || NSlater <= 0) return;
+
+  diffNoBF = (double complex *)calloc((size_t)2 * (size_t)NSlater, sizeof(double complex));
+  analyticPacked = (double complex *)calloc((size_t)2 * (size_t)(NProjBF + NSlater),
+                                            sizeof(double complex));
+  projBFStore = (double complex *)calloc((size_t)NProjBF, sizeof(double complex));
+  slaterStore = (double complex *)calloc((size_t)NSlater, sizeof(double complex));
+  if(diffNoBF == NULL || analyticPacked == NULL ||
+      projBFStore == NULL || slaterStore == NULL) {
+    fprintf(stderr, "Error: memory allocation failed for BF-FSZ SR diff dump.\n");
+    free(diffNoBF);
+    free(analyticPacked);
+    free(projBFStore);
+    free(slaterStore);
+    return;
+  }
+  analyticProjBF = analyticPacked;
+  analyticSlater = analyticPacked + 2*NProjBF;
+
+  for(idx=0;idx<NProjBF;idx++) projBFStore[idx] = ProjBF[idx];
+  for(idx=0;idx<NSlater;idx++) slaterStore[idx] = Slater[idx];
+
+  infoNoBF = CalculateMAll_fsz(eleIdx, eleSpn, qpStart, qpEnd);
+  ipNoBF = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+  noBFReady = (infoNoBF == 0 && isfinite(creal(ipNoBF)) &&
+               isfinite(cimag(ipNoBF)) && cabs(ipNoBF) > 0.0);
+  if(noBFReady) {
+    SlaterElmDiff_fsz(diffNoBF, ipNoBF, eleIdx, eleSpn);
+  } else {
+    fdFailCount++;
+  }
+
+  infoBF = calculateBFFSZIPForFD(eleIdx, eleSpn, eleNum, eleProjBFCnt,
+                                 qpStart, qpEnd, &ipBF);
+  bfReady = (infoBF == 0 && isfinite(creal(ipBF)) &&
+             isfinite(cimag(ipBF)) && cabs(ipBF) > 0.0);
+  if(bfReady) {
+    BackFlowDiff_fsz(analyticProjBF, ipBF, eleIdx, eleSpn, eleNum, eleProjBFCnt);
+    SlaterElmBFDiff_fsz(analyticSlater, ipBF, eleIdx, eleSpn, eleNum, eleProjBFCnt);
+  } else {
+    fdFailCount++;
+  }
+
+  if(noBFReady && bfReady) {
+    for(idx=0;idx<2*NSlater;idx++) {
+      const double diff = cabs(analyticSlater[idx] - diffNoBF[idx]);
+      if(!isfinite(diff)) {
+        nanCount++;
+      } else if(diff > maxIdentityOrbitalDiff) {
+        maxIdentityOrbitalDiff = diff;
+        maxIdentityOrbitalIdx = idx;
+      }
+    }
+  }
+
+  if(bfReady) {
+    for(idx=0;idx<NProjBF;idx++) {
+      double diff;
+
+      ProjBF[idx] = projBFStore[idx] + h;
+      infoPlus = calculateBFFSZIPForFD(eleIdx, eleSpn, eleNum, eleProjBFCnt,
+                                       qpStart, qpEnd, &ipPlus);
+      ProjBF[idx] = projBFStore[idx] - h;
+      infoMinus = calculateBFFSZIPForFD(eleIdx, eleSpn, eleNum, eleProjBFCnt,
+                                        qpStart, qpEnd, &ipMinus);
+      ProjBF[idx] = projBFStore[idx];
+
+      if(infoPlus != 0 || infoMinus != 0 ||
+          !isfinite(creal(ipPlus)) || !isfinite(cimag(ipPlus)) ||
+          !isfinite(creal(ipMinus)) || !isfinite(cimag(ipMinus))) {
+        fdFailCount++;
+      } else {
+        fd = ((ipPlus - ipMinus) / (2.0*h)) / ipBF;
+        diff = cabs(fd - analyticProjBF[2*idx]);
+        if(!isfinite(diff) || !isfinite(cabs(fd))) {
+          nanCount++;
+        } else {
+          if(cabs(fd) > 1.0e-12) nonzeroProjBFFDCount++;
+          if(diff > maxProjBFRealDiff) {
+            maxProjBFRealDiff = diff;
+            maxProjBFRealIdx = idx;
+          }
+          if(diff > maxProjBFDiff) {
+            maxProjBFDiff = diff;
+            maxProjBFIdx = idx;
+            maxProjBFIsImag = 0;
+            projBFAnalyticAtMax = analyticProjBF[2*idx];
+            projBFFDAtMax = fd;
+          }
+        }
+      }
+
+      ProjBF[idx] = projBFStore[idx] + I*h;
+      infoPlus = calculateBFFSZIPForFD(eleIdx, eleSpn, eleNum, eleProjBFCnt,
+                                       qpStart, qpEnd, &ipPlus);
+      ProjBF[idx] = projBFStore[idx] - I*h;
+      infoMinus = calculateBFFSZIPForFD(eleIdx, eleSpn, eleNum, eleProjBFCnt,
+                                        qpStart, qpEnd, &ipMinus);
+      ProjBF[idx] = projBFStore[idx];
+
+      if(infoPlus != 0 || infoMinus != 0 ||
+          !isfinite(creal(ipPlus)) || !isfinite(cimag(ipPlus)) ||
+          !isfinite(creal(ipMinus)) || !isfinite(cimag(ipMinus))) {
+        fdFailCount++;
+      } else {
+        fd = ((ipPlus - ipMinus) / (2.0*h)) / ipBF;
+        diff = cabs(fd - analyticProjBF[2*idx+1]);
+        if(!isfinite(diff) || !isfinite(cabs(fd))) {
+          nanCount++;
+        } else {
+          if(cabs(fd) > 1.0e-12) nonzeroProjBFFDCount++;
+          if(diff > maxProjBFImagDiff) {
+            maxProjBFImagDiff = diff;
+            maxProjBFImagIdx = idx;
+          }
+          if(diff > maxProjBFDiff) {
+            maxProjBFDiff = diff;
+            maxProjBFIdx = idx;
+            maxProjBFIsImag = 1;
+            projBFAnalyticAtMax = analyticProjBF[2*idx+1];
+            projBFFDAtMax = fd;
+          }
+        }
+      }
+    }
+
+    for(idx=0;idx<NSlater;idx++) {
+      double diff;
+
+      Slater[idx] = slaterStore[idx] + h;
+      infoPlus = calculateBFFSZIPForFD(eleIdx, eleSpn, eleNum, eleProjBFCnt,
+                                       qpStart, qpEnd, &ipPlus);
+      Slater[idx] = slaterStore[idx] - h;
+      infoMinus = calculateBFFSZIPForFD(eleIdx, eleSpn, eleNum, eleProjBFCnt,
+                                        qpStart, qpEnd, &ipMinus);
+      Slater[idx] = slaterStore[idx];
+
+      if(infoPlus != 0 || infoMinus != 0 ||
+          !isfinite(creal(ipPlus)) || !isfinite(cimag(ipPlus)) ||
+          !isfinite(creal(ipMinus)) || !isfinite(cimag(ipMinus))) {
+        fdFailCount++;
+      } else {
+        fd = ((ipPlus - ipMinus) / (2.0*h)) / ipBF;
+        diff = cabs(fd - analyticSlater[2*idx]);
+        if(!isfinite(diff) || !isfinite(cabs(fd))) {
+          nanCount++;
+        } else {
+          if(cabs(fd) > 1.0e-12) nonzeroOrbitalFDCount++;
+          if(diff > maxOrbitalRealDiff) {
+            maxOrbitalRealDiff = diff;
+            maxOrbitalRealIdx = idx;
+          }
+          if(diff > maxOrbitalDiff) {
+            maxOrbitalDiff = diff;
+            maxOrbitalIdx = idx;
+            maxOrbitalIsImag = 0;
+            orbitalAnalyticAtMax = analyticSlater[2*idx];
+            orbitalFDAtMax = fd;
+          }
+        }
+      }
+
+      Slater[idx] = slaterStore[idx] + I*h;
+      infoPlus = calculateBFFSZIPForFD(eleIdx, eleSpn, eleNum, eleProjBFCnt,
+                                       qpStart, qpEnd, &ipPlus);
+      Slater[idx] = slaterStore[idx] - I*h;
+      infoMinus = calculateBFFSZIPForFD(eleIdx, eleSpn, eleNum, eleProjBFCnt,
+                                        qpStart, qpEnd, &ipMinus);
+      Slater[idx] = slaterStore[idx];
+
+      if(infoPlus != 0 || infoMinus != 0 ||
+          !isfinite(creal(ipPlus)) || !isfinite(cimag(ipPlus)) ||
+          !isfinite(creal(ipMinus)) || !isfinite(cimag(ipMinus))) {
+        fdFailCount++;
+      } else {
+        fd = ((ipPlus - ipMinus) / (2.0*h)) / ipBF;
+        diff = cabs(fd - analyticSlater[2*idx+1]);
+        if(!isfinite(diff) || !isfinite(cabs(fd))) {
+          nanCount++;
+        } else {
+          if(cabs(fd) > 1.0e-12) nonzeroOrbitalFDCount++;
+          if(diff > maxOrbitalImagDiff) {
+            maxOrbitalImagDiff = diff;
+            maxOrbitalImagIdx = idx;
+          }
+          if(diff > maxOrbitalDiff) {
+            maxOrbitalDiff = diff;
+            maxOrbitalIdx = idx;
+            maxOrbitalIsImag = 1;
+            orbitalAnalyticAtMax = analyticSlater[2*idx+1];
+            orbitalFDAtMax = fd;
+          }
+        }
+      }
+    }
+  }
+
+  for(idx=0;idx<NProjBF;idx++) ProjBF[idx] = projBFStore[idx];
+  for(idx=0;idx<NSlater;idx++) Slater[idx] = slaterStore[idx];
+  MakeSlaterElmBF_fsz(eleNum, eleProjBFCnt);
+
+  fp = fopen(path, "w");
+  if(fp == NULL) {
+    fprintf(stderr, "Error: failed to open BF-FSZ SR diff dump file: %s\n", path);
+  } else {
+    fprintf(fp, "sample %d\n", sample);
+    fprintf(fp, "info_no_bf %d\n", infoNoBF);
+    fprintf(fp, "info_bf %d\n", infoBF);
+    fprintf(fp, "nprojbf %d\n", NProjBF);
+    fprintf(fp, "nslater %d\n", NSlater);
+    fprintf(fp, "step %.17e\n", h);
+    fprintf(fp, "fd_fail_count %d\n", fdFailCount);
+    fprintf(fp, "nan_count %d\n", nanCount);
+    fprintf(fp, "nonzero_projbf_fd_count %d\n", nonzeroProjBFFDCount);
+    fprintf(fp, "nonzero_orbital_fd_count %d\n", nonzeroOrbitalFDCount);
+    fprintf(fp, "max_abs_identity_orbital_diff %.17e\n", maxIdentityOrbitalDiff);
+    fprintf(fp, "max_identity_orbital_idx %d\n", maxIdentityOrbitalIdx);
+    fprintf(fp, "max_abs_projbf_fd_real %.17e\n", maxProjBFRealDiff);
+    fprintf(fp, "max_projbf_real_idx %d\n", maxProjBFRealIdx);
+    fprintf(fp, "max_abs_projbf_fd_imag %.17e\n", maxProjBFImagDiff);
+    fprintf(fp, "max_projbf_imag_idx %d\n", maxProjBFImagIdx);
+    fprintf(fp, "max_abs_projbf_fd_diff %.17e\n", maxProjBFDiff);
+    fprintf(fp, "max_projbf_idx %d\n", maxProjBFIdx);
+    fprintf(fp, "max_projbf_is_imag %d\n", maxProjBFIsImag);
+    fprintf(fp, "max_abs_orbital_fd_real %.17e\n", maxOrbitalRealDiff);
+    fprintf(fp, "max_orbital_real_idx %d\n", maxOrbitalRealIdx);
+    fprintf(fp, "max_abs_orbital_fd_imag %.17e\n", maxOrbitalImagDiff);
+    fprintf(fp, "max_orbital_imag_idx %d\n", maxOrbitalImagIdx);
+    fprintf(fp, "max_abs_orbital_fd_diff %.17e\n", maxOrbitalDiff);
+    fprintf(fp, "max_orbital_idx %d\n", maxOrbitalIdx);
+    fprintf(fp, "max_orbital_is_imag %d\n", maxOrbitalIsImag);
+    fprintf(fp, "projbf_analytic_at_max %.17e %.17e\n",
+            creal(projBFAnalyticAtMax), cimag(projBFAnalyticAtMax));
+    fprintf(fp, "projbf_fd_at_max %.17e %.17e\n",
+            creal(projBFFDAtMax), cimag(projBFFDAtMax));
+    fprintf(fp, "orbital_analytic_at_max %.17e %.17e\n",
+            creal(orbitalAnalyticAtMax), cimag(orbitalAnalyticAtMax));
+    fprintf(fp, "orbital_fd_at_max %.17e %.17e\n",
+            creal(orbitalFDAtMax), cimag(orbitalFDAtMax));
+    fclose(fp);
+  }
+
+  free(diffNoBF);
+  free(analyticPacked);
+  free(projBFStore);
+  free(slaterStore);
+}
+
 void VMCMainCal_fsz(MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt,*eleSpn; //fsz
   double complex e,ip;
@@ -292,6 +602,7 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm) {
   double complex e,ip;
   double w,x;
   double Sz;
+  const char *bfFSZSRDiffDumpPath = getenv("MVMC_BF_FSZ_SR_DIFF_DUMP");
 
   const int qpStart=0;
   const int qpEnd=NQPFull;
@@ -324,6 +635,11 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm) {
 
     StartTimer(40);
     MakeSlaterElmBF_fsz(eleNum,eleProjBFCnt);
+    if(rank == 0 && sample == sampleStart &&
+        bfFSZSRDiffDumpPath != NULL && bfFSZSRDiffDumpPath[0] != '\0') {
+      dumpBFFSZSRDiffCheck(bfFSZSRDiffDumpPath, eleIdx, eleSpn, eleNum,
+                           eleProjBFCnt, qpStart, qpEnd, sample);
+    }
     info = CalculateMAll_BF_fsz(eleIdx,eleSpn,qpStart,qpEnd);
     StopTimer(40);
 
