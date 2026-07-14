@@ -468,6 +468,7 @@ static int reduceBFInfo_fsz(const int info, MPI_Comm comm) {
 }
 
 void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
+  const size_t bfSlaterSize = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
   int outStep,nOutStep;
   int inStep,nInStep;
   int mi,ri,rj,s,t,i;
@@ -475,6 +476,8 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   int sample;
 
   double complex logIpOld,logIpNew;
+  double complex *candidateSlater;
+  double complex *pfMNew;
   int projCntNew[NProj];
   int projBFCntNew[16*Nsite*Nrange];
   double x,w;
@@ -486,6 +489,15 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
 
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
+
+  candidateSlater = (double complex *)malloc(sizeof(double complex)*bfSlaterSize);
+  pfMNew = (double complex *)malloc(sizeof(double complex)*(size_t)NQPFull);
+  if(candidateSlater == NULL || pfMNew == NULL) {
+    fprintf(stderr, "error: failed to allocate BF-FSZ sampling candidate workspace\n");
+    free(candidateSlater);
+    free(pfMNew);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
 
   SplitLoop(&qpStart,&qpEnd,NQPFull,rank,size);
 
@@ -539,16 +551,18 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
       StopTimer(60);
 
       StartTimer(64);
-      MakeSlaterElmBF_fsz(TmpEleNum,projBFCntNew);
+      MakeSlaterElmBF_fsz_hop_to(candidateSlater, SlaterElmBF,
+                                  TmpEleProjBFCnt, projBFCntNew);
       StopTimer(64);
 
       StartTimer(61);
-      info = CalculateMAll_BF_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+      info = CalculatePfM_BF_fsz_from(candidateSlater, TmpEleIdx, TmpEleSpn,
+                                      qpStart, qpEnd, pfMNew, NULL);
       StopTimer(61);
 
       StartTimer(62);
       infoGlobal = reduceBFInfo_fsz(info,comm);
-      logIpNew = (infoGlobal == 0) ? CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm) : 0.0 + 0.0*I;
+      logIpNew = (infoGlobal == 0) ? CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm) : 0.0 + 0.0*I;
       StopTimer(62);
 
       x = LogProjRatio(projCntNew,TmpEleProjCnt);
@@ -556,6 +570,15 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
       if(!isfinite(w)) w = -1.0;
 
       if(w > genrand_real2()) {
+        StartTimer(63);
+        memcpy(SlaterElmBF, candidateSlater, sizeof(double complex)*bfSlaterSize);
+        info = CalculateMAll_BF_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+        infoGlobal = reduceBFInfo_fsz(info,comm);
+        if(infoGlobal != 0) {
+          if(rank==0) fprintf(stderr, "error: BF-FSZ accepted candidate inverse rebuild failed\n");
+          MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+        StopTimer(63);
         for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
         for(i=0;i<16*Nsite*Nrange;i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
         logIpOld = logIpNew;
@@ -563,8 +586,6 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
         Counter[1]++;
       } else {
         revertEleConfig_fsz(mi,ri,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
-        MakeSlaterElmBF_fsz(TmpEleNum,TmpEleProjBFCnt);
-        CalculateMAll_BF_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
       }
       StopTimer(32);
 
@@ -594,6 +615,9 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
 
   copyToBurnSampleBF_fsz(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,TmpEleProjBFCnt,TmpEleSpn);
   BurnFlag=1;
+
+  free(candidateSlater);
+  free(pfMNew);
 
   return;
 }

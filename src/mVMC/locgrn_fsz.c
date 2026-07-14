@@ -493,8 +493,6 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
   double complex *pfMNew = buffer;
   double complex *sltElmBFNew = buffer + NQPFull;
 
-  (void)eleProjBFCnt;
-
   if(ri==rj) return eleNum[ri+s*Nsite];
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
   if(NExUpdatePath==4 || NExUpdatePath==5){
@@ -514,10 +512,17 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
   UpdateProjCnt(rj, ri, s, projCntNew, eleProjCnt, eleNum);
   z = ProjRatio(projCntNew,eleProjCnt);
 
+  StartTimer(81);
   MakeProjBFCnt(projBFCntNew, eleNum);
-  MakeSlaterElmBF_fsz_to(sltElmBFNew, eleNum, projBFCntNew);
+  StopTimer(81);
+  StartTimer(82);
+  MakeSlaterElmBF_fsz_hop_to(sltElmBFNew, SlaterElmBF,
+                              eleProjBFCnt, projBFCntNew);
+  StopTimer(82);
+  StartTimer(83);
   z *= CalculateBF_FSZ_CandidateIP("GreenFunc1BF_fsz", sltElmBFNew, eleIdx,
       eleSpn, pfMNew);
+  StopTimer(83);
 
   eleCfg[rsj] = mj;
   eleCfg[rsi] = -1;
@@ -541,8 +546,6 @@ double complex GreenFunc1BF_fsz_workspace(const int ri, const int rj, const int 
   double complex *pfMNew = buffer;
   double complex *sltElmBFNew = buffer + NQPFull;
 
-  (void)eleProjBFCnt;
-
   if(ri==rj) return eleNum[ri+s*Nsite];
   if(eleNum[ri+s*Nsite]==1 || eleNum[rj+s*Nsite]==0) return 0.0;
   if(NExUpdatePath==4 || NExUpdatePath==5){
@@ -563,7 +566,8 @@ double complex GreenFunc1BF_fsz_workspace(const int ri, const int rj, const int 
   z = ProjRatio(projCntNew,eleProjCnt);
 
   MakeProjBFCnt(projBFCntNew, eleNum);
-  MakeSlaterElmBF_fsz_to_serial(sltElmBFNew, eleNum, projBFCntNew);
+  MakeSlaterElmBF_fsz_hop_to_serial(sltElmBFNew, SlaterElmBF,
+                                     eleProjBFCnt, projBFCntNew);
   z *= CalculateBF_FSZ_CandidateIP_workspace("GreenFunc1BF_fsz", sltElmBFNew,
       eleIdx, eleSpn, pfMNew, pfBufM, pfIWork, pfWork, pfRWork);
 

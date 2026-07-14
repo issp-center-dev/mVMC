@@ -30,6 +30,12 @@ void UpdateSlaterElm_fsz();
 void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz_to(double complex *sltElmBF, const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz_to_serial(double complex *sltElmBF, const int *eleNum, const int *eleProjBFCnt);
+void MakeSlaterElmBF_fsz_hop_to(double complex *sltElmBF, const double complex *baseSltElmBF,
+                                const int *oldEleProjBFCnt, const int *newEleProjBFCnt);
+void MakeSlaterElmBF_fsz_hop_to_serial(double complex *sltElmBF,
+                                       const double complex *baseSltElmBF,
+                                       const int *oldEleProjBFCnt,
+                                       const int *newEleProjBFCnt);
 void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *eleIdx,int *eleSpn);
 void SlaterElmBFDiff_fsz(double complex *srOptO, const double complex ip,
                          const int *eleIdx, const int *eleSpn,
@@ -403,6 +409,145 @@ void MakeSlaterElmBF_fsz_to_serial(double complex *sltElmBF, const int *eleNum, 
 void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt) {
   MakeSlaterElmBF_fsz_to(SlaterElmBF, eleNum, eleProjBFCnt);
   return;
+}
+
+static void MakeBFChangedEndpointMask_fsz(unsigned char *changed,
+                                          const int *oldEleProjBFCnt,
+                                          const int *newEleProjBFCnt) {
+  int spin, site, mu, rangeSlot;
+
+  for(spin=0;spin<2;spin++) {
+    for(site=0;site<Nsite;site++) {
+      const int rsi = spin*Nsite + site;
+      changed[rsi] = 0;
+      for(mu=0;mu<4 && changed[rsi] == 0;mu++) {
+        for(rangeSlot=0;rangeSlot<Nrange;rangeSlot++) {
+          if(BFThetaCount_fsz(mu, site, spin, rangeSlot, oldEleProjBFCnt)
+              != BFThetaCount_fsz(mu, site, spin, rangeSlot, newEleProjBFCnt)) {
+            changed[rsi] = 1;
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+static void MakeSlaterElmBF_fsz_hop_qp(double complex *sltElmBF,
+                                       const double complex *baseSltElmBF,
+                                       const int qpidx, const unsigned char *changed,
+                                       const BFSparseWorkspace_fsz *sparseWork) {
+  int rsi, rsj, ri, rj, si, sj, ori, orj, sgni, sgnj;
+  int mpidx, optidx;
+  int *xqp, *xqpSgn, *xqpOpt, *xqpOptSgn;
+  double complex slt;
+  double complex *sltE = sltElmBF + qpidx*Nsite2*Nsite2;
+  const double complex *baseSltE = baseSltElmBF + qpidx*Nsite2*Nsite2;
+
+  memcpy(sltE, baseSltE, sizeof(double complex)*(size_t)Nsite2*(size_t)Nsite2);
+  optidx = qpidx / NQPFix;
+  mpidx = (qpidx%NQPFix) / NSPGaussLeg;
+  xqpOpt = QPOptTrans[optidx];
+  xqpOptSgn = QPOptTransSgn[optidx];
+  xqp = QPTrans[mpidx];
+  xqpSgn = QPTransSgn[mpidx];
+
+  for(rsi=0;rsi<Nsite2;rsi++) {
+    ri = rsi % Nsite;
+    si = rsi / Nsite;
+    ori = xqpOpt[ri];
+    sgni = xqpSgn[ori]*xqpOptSgn[ri];
+    for(rsj=rsi+1;rsj<Nsite2;rsj++) {
+      if(changed[rsi] == 0 && changed[rsj] == 0) continue;
+      rj = rsj % Nsite;
+      sj = rsj / Nsite;
+      orj = xqpOpt[rj];
+      sgnj = xqpSgn[orj]*xqpOptSgn[rj];
+      slt = (SubSlaterElmBF_fsz_sparse(ri, si, rj, sj, xqp, xqpOpt,
+                                       sparseWork->etaFlag, sparseWork->sparseOffset,
+                                       sparseWork->sparseCount, sparseWork->sparseSite,
+                                       sparseWork->sparseSubIdx, sparseWork->sparseThetaCnt)
+             - SubSlaterElmBF_fsz_sparse(rj, sj, ri, si, xqp, xqpOpt,
+                                         sparseWork->etaFlag, sparseWork->sparseOffset,
+                                         sparseWork->sparseCount, sparseWork->sparseSite,
+                                         sparseWork->sparseSubIdx, sparseWork->sparseThetaCnt))
+            * (double)(sgni*sgnj);
+      sltE[rsi*Nsite2 + rsj] = slt;
+      sltE[rsj*Nsite2 + rsi] = -slt;
+    }
+  }
+}
+
+static void MakeSlaterElmBF_fsz_hop_to_core(double complex *sltElmBF,
+                                            const double complex *baseSltElmBF,
+                                            const int *oldEleProjBFCnt,
+                                            const int *newEleProjBFCnt,
+                                            const int useOMP) {
+  const char *checkEnv = getenv("MVMC_BF_FSZ_GREEN_REBUILD_CHECK");
+  const size_t matrixSize = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+  int qpidx;
+  size_t idx;
+  unsigned char *changed;
+  double complex *fullSltElmBF;
+  BFSparseWorkspace_fsz sparseWork;
+
+  changed = (unsigned char *)malloc(sizeof(unsigned char)*(size_t)Nsite2);
+  if(changed == NULL) {
+    fprintf(stderr, "error: failed to allocate BF-FSZ changed endpoint mask\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  MakeBFChangedEndpointMask_fsz(changed, oldEleProjBFCnt, newEleProjBFCnt);
+  InitBFSparseWorkspace_fsz(&sparseWork, newEleProjBFCnt);
+
+  if(useOMP) {
+    #pragma omp parallel for default(shared) private(qpidx)
+    for(qpidx=0;qpidx<NQPFull;qpidx++) {
+      MakeSlaterElmBF_fsz_hop_qp(sltElmBF, baseSltElmBF, qpidx, changed, &sparseWork);
+    }
+  } else {
+    for(qpidx=0;qpidx<NQPFull;qpidx++) {
+      MakeSlaterElmBF_fsz_hop_qp(sltElmBF, baseSltElmBF, qpidx, changed, &sparseWork);
+    }
+  }
+
+  if(checkEnv != NULL && atoi(checkEnv) != 0) {
+    fullSltElmBF = (double complex *)malloc(sizeof(double complex)*matrixSize);
+    if(fullSltElmBF == NULL) {
+      fprintf(stderr, "error: failed to allocate BF-FSZ full-rebuild oracle\n");
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+    MakeSlaterElmBF_fsz_to_core(fullSltElmBF, NULL, newEleProjBFCnt, useOMP);
+    for(idx=0;idx<matrixSize;idx++) {
+      if(sltElmBF[idx] != fullSltElmBF[idx]) {
+        fprintf(stderr,
+                "error: BF-FSZ incremental Green rebuild mismatch at index %zu: "
+                "incremental=(%.17e,%.17e) full=(%.17e,%.17e)\n",
+                idx, creal(sltElmBF[idx]), cimag(sltElmBF[idx]),
+                creal(fullSltElmBF[idx]), cimag(fullSltElmBF[idx]));
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+      }
+    }
+    free(fullSltElmBF);
+  }
+
+  FreeBFSparseWorkspace_fsz(&sparseWork);
+  free(changed);
+}
+
+void MakeSlaterElmBF_fsz_hop_to(double complex *sltElmBF,
+                                const double complex *baseSltElmBF,
+                                const int *oldEleProjBFCnt,
+                                const int *newEleProjBFCnt) {
+  MakeSlaterElmBF_fsz_hop_to_core(sltElmBF, baseSltElmBF, oldEleProjBFCnt,
+                                   newEleProjBFCnt, 1);
+}
+
+void MakeSlaterElmBF_fsz_hop_to_serial(double complex *sltElmBF,
+                                       const double complex *baseSltElmBF,
+                                       const int *oldEleProjBFCnt,
+                                       const int *newEleProjBFCnt) {
+  MakeSlaterElmBF_fsz_hop_to_core(sltElmBF, baseSltElmBF, oldEleProjBFCnt,
+                                   newEleProjBFCnt, 0);
 }
 
 static inline void AddSlaterDiff_fsz(double complex *buf,

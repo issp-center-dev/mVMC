@@ -19,6 +19,12 @@ void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz_to(double complex *sltElmBF, const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz_to_serial(double complex *sltElmBF, const int *eleNum,
                        const int *eleProjBFCnt);
+void MakeSlaterElmBF_fsz_hop_to(double complex *sltElmBF, const double complex *baseSltElmBF,
+                                const int *oldEleProjBFCnt, const int *newEleProjBFCnt);
+void MakeSlaterElmBF_fsz_hop_to_serial(double complex *sltElmBF,
+                                       const double complex *baseSltElmBF,
+                                       const int *oldEleProjBFCnt,
+                                       const int *newEleProjBFCnt);
 void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int u,
                        const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex*sltElmTmp);
 void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int u,
