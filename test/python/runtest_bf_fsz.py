@@ -246,16 +246,20 @@ def write_nonidentity_init(workdir, nsite=4):
     return init_name
 
 
-def run_vmc(rootdir, workdir, mpi_procs=None, init_path=None):
+def run_vmc(rootdir, workdir, mpi_procs=None, init_path=None, extra_env=None):
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
     cmd = [bin_to_test, "-e", "namelist.def"]
     if init_path is not None:
         cmd.append(init_path)
     if mpi_procs:
         cmd = ["mpirun", "-np", mpi_procs] + cmd
+    env = os.environ.copy()
+    if extra_env is not None:
+        env.update(extra_env)
     proc = subprocess.run(
         cmd,
         cwd=workdir,
+        env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -282,6 +286,28 @@ def read_float_rows(path):
             if cols:
                 rows.append([float(x) for x in cols])
     return rows
+
+
+def read_key_values(path):
+    values = {}
+    with open(path) as fp:
+        for line in fp:
+            cols = line.split()
+            if len(cols) >= 2:
+                values[cols[0]] = cols[1:]
+    return values
+
+
+def get_float(values, key):
+    if key not in values:
+        raise RuntimeError("{} was not found in dump".format(key))
+    return float(values[key][0])
+
+
+def get_int(values, key):
+    if key not in values:
+        raise RuntimeError("{} was not found in dump".format(key))
+    return int(values[key][0])
 
 
 def assert_finite_nonzero_rows(path, label):
@@ -328,6 +354,83 @@ def prepare_case(rootdir, name, include_backflow):
     if include_backflow:
         write_chain_nn_backflow(workdir, length=4, optimize=False)
     return workdir
+
+
+def run_sr_diff_case(rootdir, case_name, mpi_procs=None):
+    sr_diff_cases = {
+        "BackFlow_FSZ_SRDiff_Identity_Complex": (False, False, True),
+        "BackFlow_FSZ_SRDiff_Identity_Complex_mpi": (False, False, True),
+        "BackFlow_FSZ_SRDiff_MomentumProjection_Complex": (True, False, True),
+        "BackFlow_FSZ_SRDiff_NonIdentity_Complex": (False, True, False),
+        "BackFlow_FSZ_SRDiff_MomentumProjection_NonIdentity_Complex": (True, True, False),
+    }
+    if case_name not in sr_diff_cases:
+        return None
+
+    use_momentum, use_nonidentity, check_identity = sr_diff_cases[case_name]
+    workdir = prepare_case(rootdir, case_name, True)
+    update_modpara(workdir, {"NVMCSample": "1"})
+    if use_momentum:
+        update_modpara(workdir, {"NMPTrans": "2"})
+        make_momentum_projection(workdir)
+    init_path = write_nonidentity_init(workdir) if use_nonidentity else None
+    dump_path = os.path.join(workdir, "bf_fsz_sr_diff.dat")
+    proc = run_vmc(
+        rootdir,
+        workdir,
+        mpi_procs=mpi_procs,
+        init_path=init_path,
+        extra_env={"MVMC_BF_FSZ_SR_DIFF_DUMP": dump_path},
+    )
+    if proc.returncode != 0:
+        print(proc.stdout)
+        return proc.returncode
+    if not os.path.exists(dump_path):
+        print("ERROR: BF-FSZ SR diff dump was not created")
+        return -1
+
+    values = read_key_values(dump_path)
+    if get_int(values, "info_bf") != 0:
+        print("ERROR: BF-FSZ SR diff base calculation failed")
+        return -1
+    if get_int(values, "fd_fail_count") != 0:
+        print("ERROR: BF-FSZ SR diff finite differences failed")
+        print(open(dump_path).read())
+        return -1
+    if get_int(values, "nan_count") != 0:
+        print("ERROR: BF-FSZ SR diff dump contains non-finite values")
+        print(open(dump_path).read())
+        return -1
+    if get_int(values, "nonzero_projbf_fd_count") <= 0:
+        print("ERROR: BF-FSZ ProjBF finite difference was vacuous")
+        print(open(dump_path).read())
+        return -1
+    if get_int(values, "nonzero_orbital_fd_count") <= 0:
+        print("ERROR: BF-FSZ orbital finite difference was vacuous")
+        print(open(dump_path).read())
+        return -1
+
+    projbf_diff = get_float(values, "max_abs_projbf_fd_diff")
+    orbital_diff = get_float(values, "max_abs_orbital_fd_diff")
+    if projbf_diff > 1.0e-8:
+        print("ERROR: BF-FSZ ProjBF finite-difference mismatch: {:.3e}".format(projbf_diff))
+        print(open(dump_path).read())
+        return -1
+    if orbital_diff > 1.0e-8:
+        print("ERROR: BF-FSZ orbital finite-difference mismatch: {:.3e}".format(orbital_diff))
+        print(open(dump_path).read())
+        return -1
+    if check_identity:
+        if get_int(values, "info_no_bf") != 0:
+            print("ERROR: BF-FSZ SR diff NoBF reference calculation failed")
+            print(open(dump_path).read())
+            return -1
+        identity_diff = get_float(values, "max_abs_identity_orbital_diff")
+        if identity_diff > 1.0e-10:
+            print("ERROR: BF-FSZ identity orbital O mismatch: {:.3e}".format(identity_diff))
+            print(open(dump_path).read())
+            return -1
+    return 0
 
 
 def expect_invalid(rootdir, name, updates, expected, mpi_procs=None, local_sites=None, mutate_defs=None):
@@ -399,6 +502,9 @@ def main():
     )
     nonidentity_momentum_case = case_name == "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex"
     named_invalid = get_named_invalid_case(case_name)
+    sr_diff_status = run_sr_diff_case(rootdir, case_name, mpi_procs)
+    if sr_diff_status is not None:
+        return sr_diff_status
     if named_invalid is not None:
         updates, expected, local_sites, mutate_defs = named_invalid
         return expect_invalid(rootdir, case_name, updates, expected, mpi_procs, local_sites, mutate_defs)

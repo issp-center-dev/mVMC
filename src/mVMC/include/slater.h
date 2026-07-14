@@ -7,6 +7,12 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
 
 void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *eleIdx, const int *eleNum, int *eleProjConst,
                        const int *eleProjBFCnt);
+void SlaterElmBFDiff_fsz(double complex *srOptO, const double complex ip,
+                         const int *eleIdx, const int *eleSpn,
+                         const int *eleNum, const int *eleProjBFCnt);
+void BackFlowDiff_fsz(double complex *srOptO, const double complex ip,
+                      const int *eleIdx, const int *eleSpn,
+                      const int *eleNum, const int *eleProjBFCnt);
 
 void MakeSlaterElmBF_fcmp(const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt);

@@ -31,6 +31,25 @@ void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz_to(double complex *sltElmBF, const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz_to_serial(double complex *sltElmBF, const int *eleNum, const int *eleProjBFCnt);
 void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *eleIdx,int *eleSpn);
+void SlaterElmBFDiff_fsz(double complex *srOptO, const double complex ip,
+                         const int *eleIdx, const int *eleSpn,
+                         const int *eleNum, const int *eleProjBFCnt);
+void BackFlowDiff_fsz(double complex *srOptO, const double complex ip,
+                      const int *eleIdx, const int *eleSpn,
+                      const int *eleNum, const int *eleProjBFCnt);
+
+typedef struct {
+  int sparseKeyCount;
+  int sparseEntryCapacity;
+  int sparseWorkSize;
+  int *sparseWork;
+  int *etaFlag;
+  int *sparseOffset;
+  int *sparseCount;
+  int *sparseSite;
+  int *sparseSubIdx;
+  int *sparseThetaCnt;
+} BFSparseWorkspace_fsz;
 
 static inline int BFThetaCount_fsz(const int mu, const int centerSite,
                                    const int spin, const int rangeSlot,
@@ -118,6 +137,36 @@ static void MakeBFSparseThetaList_fsz(int *sparseOffset, int *sparseCount,
       }
     }
   }
+}
+
+static void InitBFSparseWorkspace_fsz(BFSparseWorkspace_fsz *work,
+                                      const int *eleProjBFCnt) {
+  work->sparseKeyCount = 8*Nsite;
+  work->sparseEntryCapacity = work->sparseKeyCount*Nrange;
+  work->sparseWorkSize = 2*Nsite + 2*work->sparseKeyCount
+                       + 3*work->sparseEntryCapacity;
+  work->sparseWork = (int *)malloc(sizeof(int)*(size_t)work->sparseWorkSize);
+  if(work->sparseWork == NULL) {
+    fprintf(stderr, "error: failed to allocate BF-FSZ sparse workspace\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+
+  work->etaFlag = work->sparseWork;
+  work->sparseOffset = work->etaFlag + 2*Nsite;
+  work->sparseCount = work->sparseOffset + work->sparseKeyCount;
+  work->sparseSite = work->sparseCount + work->sparseKeyCount;
+  work->sparseSubIdx = work->sparseSite + work->sparseEntryCapacity;
+  work->sparseThetaCnt = work->sparseSubIdx + work->sparseEntryCapacity;
+
+  MakeBFEtaFlag_fsz(work->etaFlag, eleProjBFCnt);
+  MakeBFSparseThetaList_fsz(work->sparseOffset, work->sparseCount,
+                            work->sparseSite, work->sparseSubIdx,
+                            work->sparseThetaCnt, eleProjBFCnt);
+}
+
+static void FreeBFSparseWorkspace_fsz(BFSparseWorkspace_fsz *work) {
+  free(work->sparseWork);
+  work->sparseWork = NULL;
 }
 
 static double complex SubSlaterElmBF_fsz_sparse(
@@ -315,47 +364,29 @@ static void MakeSlaterElmBF_fsz_qp(double complex *sltElmBF, const int qpidx,
 static void MakeSlaterElmBF_fsz_to_core(double complex *sltElmBF, const int *eleNum,
                                         const int *eleProjBFCnt, const int useOMP) {
   int qpidx;
-  int sparseKeyCount, sparseEntryCapacity, sparseWorkSize;
-  int *sparseWork;
-  int *etaFlag, *sparseOffset, *sparseCount;
-  int *sparseSite, *sparseSubIdx, *sparseThetaCnt;
+  BFSparseWorkspace_fsz sparseWork;
 
   (void)eleNum;
 
-  sparseKeyCount = 8*Nsite;
-  sparseEntryCapacity = sparseKeyCount*Nrange;
-  sparseWorkSize = 2*Nsite + 2*sparseKeyCount + 3*sparseEntryCapacity;
-  sparseWork = (int *)malloc(sizeof(int)*(size_t)sparseWorkSize);
-  if(sparseWork == NULL) {
-    fprintf(stderr, "error: failed to allocate BF-FSZ sparse workspace\n");
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-  }
-  etaFlag = sparseWork;
-  sparseOffset = etaFlag + 2*Nsite;
-  sparseCount = sparseOffset + sparseKeyCount;
-  sparseSite = sparseCount + sparseKeyCount;
-  sparseSubIdx = sparseSite + sparseEntryCapacity;
-  sparseThetaCnt = sparseSubIdx + sparseEntryCapacity;
-
-  MakeBFEtaFlag_fsz(etaFlag, eleProjBFCnt);
-  MakeBFSparseThetaList_fsz(sparseOffset, sparseCount, sparseSite,
-                            sparseSubIdx, sparseThetaCnt, eleProjBFCnt);
+  InitBFSparseWorkspace_fsz(&sparseWork, eleProjBFCnt);
 
   if(useOMP) {
     #pragma omp parallel for default(shared) private(qpidx)
     for(qpidx=0;qpidx<NQPFull;qpidx++) {
-      MakeSlaterElmBF_fsz_qp(sltElmBF, qpidx, etaFlag, sparseOffset,
-                             sparseCount, sparseSite, sparseSubIdx,
-                             sparseThetaCnt);
+      MakeSlaterElmBF_fsz_qp(sltElmBF, qpidx, sparseWork.etaFlag,
+                             sparseWork.sparseOffset, sparseWork.sparseCount,
+                             sparseWork.sparseSite, sparseWork.sparseSubIdx,
+                             sparseWork.sparseThetaCnt);
     }
   } else {
     for(qpidx=0;qpidx<NQPFull;qpidx++) {
-      MakeSlaterElmBF_fsz_qp(sltElmBF, qpidx, etaFlag, sparseOffset,
-                             sparseCount, sparseSite, sparseSubIdx,
-                             sparseThetaCnt);
+      MakeSlaterElmBF_fsz_qp(sltElmBF, qpidx, sparseWork.etaFlag,
+                             sparseWork.sparseOffset, sparseWork.sparseCount,
+                             sparseWork.sparseSite, sparseWork.sparseSubIdx,
+                             sparseWork.sparseThetaCnt);
     }
   }
-  free(sparseWork);
+  FreeBFSparseWorkspace_fsz(&sparseWork);
   return;
 }
 
@@ -371,6 +402,273 @@ void MakeSlaterElmBF_fsz_to_serial(double complex *sltElmBF, const int *eleNum, 
 
 void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt) {
   MakeSlaterElmBF_fsz_to(SlaterElmBF, eleNum, eleProjBFCnt);
+  return;
+}
+
+static inline void AddSlaterDiff_fsz(double complex *buf,
+                                     const double complex pref,
+                                     const int ri, const int si,
+                                     const int rj, const int sj,
+                                     const double complex scale) {
+  const int rsi = ri + si*Nsite;
+  const int rsj = rj + sj*Nsite;
+  const int orbidx = OrbitalIdx[rsi][rsj];
+  buf[orbidx] += pref * scale * (double)OrbitalSgn[rsi][rsj];
+}
+
+static void AccumulateSlaterBFDiffOriented_fsz(
+    double complex *buf, const double complex pref,
+    const int ri, const int si, const int rj, const int sj,
+    const int *xqp, const int *xqpOpt,
+    const BFSparseWorkspace_fsz *sparseWork) {
+  int mu, nu;
+  int k, l, kStart, lStart, kCount, lCount;
+  int rk, rl, rki, rlj, nidx, midx, bfidx;
+  int cntI, cntJ;
+  int tri, trj;
+  double eta;
+
+  for(mu=0;mu<4;mu++) {
+    kCount = sparseWork->sparseCount[BFThetaKey_fsz(si, mu, ri)];
+    if(kCount == 0) continue;
+    kStart = sparseWork->sparseOffset[BFThetaKey_fsz(si, mu, ri)];
+
+    for(nu=0;nu<4;nu++) {
+      if(mu == 0 && nu == 0) continue;
+      lCount = sparseWork->sparseCount[BFThetaKey_fsz(sj, nu, rj)];
+      if(lCount == 0) continue;
+      lStart = sparseWork->sparseOffset[BFThetaKey_fsz(sj, nu, rj)];
+
+      for(k=0;k<kCount;k++) {
+        rk = sparseWork->sparseSite[kStart + k];
+        rki = xqp[xqpOpt[rk]];
+        nidx = sparseWork->sparseSubIdx[kStart + k];
+        cntI = sparseWork->sparseThetaCnt[kStart + k];
+
+        for(l=0;l<lCount;l++) {
+          rl = sparseWork->sparseSite[lStart + l];
+          rlj = xqp[xqpOpt[rl]];
+          midx = sparseWork->sparseSubIdx[lStart + l];
+          cntJ = sparseWork->sparseThetaCnt[lStart + l];
+          bfidx = BFSubIdx[nidx][midx];
+          AddSlaterDiff_fsz(buf, pref, rki, si, rlj, sj,
+                            -ProjBF[bfidx] * (double)(cntI*cntJ));
+        }
+      }
+    }
+  }
+
+  eta = (sparseWork->etaFlag[si*Nsite + ri]
+      || sparseWork->etaFlag[sj*Nsite + rj]) ? creal(ProjBF[0]) : 1.0;
+  tri = xqp[xqpOpt[ri]];
+  trj = xqp[xqpOpt[rj]];
+  AddSlaterDiff_fsz(buf, pref, tri, si, trj, sj, eta);
+}
+
+static void AccumulateBackFlowDiffOriented_fsz(
+    double complex *bfReal, double complex *bfImag, const double complex pref,
+    const int ri, const int si, const int rj, const int sj,
+    const int *xqp, const int *xqpOpt,
+    const BFSparseWorkspace_fsz *sparseWork) {
+  int mu, nu;
+  int k, l, kStart, lStart, kCount, lCount;
+  int rk, rl, rki, rlj, nidx, midx, bfidx;
+  int cntI, cntJ;
+  int tri, trj;
+  double complex term;
+
+  for(mu=0;mu<4;mu++) {
+    kCount = sparseWork->sparseCount[BFThetaKey_fsz(si, mu, ri)];
+    if(kCount == 0) continue;
+    kStart = sparseWork->sparseOffset[BFThetaKey_fsz(si, mu, ri)];
+
+    for(nu=0;nu<4;nu++) {
+      if(mu == 0 && nu == 0) continue;
+      lCount = sparseWork->sparseCount[BFThetaKey_fsz(sj, nu, rj)];
+      if(lCount == 0) continue;
+      lStart = sparseWork->sparseOffset[BFThetaKey_fsz(sj, nu, rj)];
+
+      for(k=0;k<kCount;k++) {
+        rk = sparseWork->sparseSite[kStart + k];
+        rki = xqp[xqpOpt[rk]];
+        nidx = sparseWork->sparseSubIdx[kStart + k];
+        cntI = sparseWork->sparseThetaCnt[kStart + k];
+
+        for(l=0;l<lCount;l++) {
+          rl = sparseWork->sparseSite[lStart + l];
+          rlj = xqp[xqpOpt[rl]];
+          midx = sparseWork->sparseSubIdx[lStart + l];
+          cntJ = sparseWork->sparseThetaCnt[lStart + l];
+          bfidx = BFSubIdx[nidx][midx];
+          term = -(double)(cntI*cntJ) * SlaterOrbital_fsz(rki, si, rlj, sj);
+          bfReal[bfidx] += pref * term;
+          bfImag[bfidx] += pref * term * I;
+        }
+      }
+    }
+  }
+
+  if(sparseWork->etaFlag[si*Nsite + ri]
+      || sparseWork->etaFlag[sj*Nsite + rj]) {
+    tri = xqp[xqpOpt[ri]];
+    trj = xqp[xqpOpt[rj]];
+    /* The BF-FSZ builder uses creal(ProjBF[0]) for eta, so eta has no
+       derivative with respect to Im(ProjBF[0]); theta terms above still do. */
+    bfReal[0] += pref * SlaterOrbital_fsz(tri, si, trj, sj);
+  }
+}
+
+void SlaterElmBFDiff_fsz(double complex *srOptO, const double complex ip,
+                         const int *eleIdx, const int *eleSpn,
+                         const int *eleNum, const int *eleProjBFCnt) {
+  const int nBuf = NSlater*NQPFull;
+  const double complex invIP = 1.0/ip;
+  BFSparseWorkspace_fsz sparseWork;
+  double complex *buffer;
+  int i, qpidx, optidx, mpidx, msi, msj;
+  int ri, rj, si, sj, ori, orj, sgni, sgnj;
+  int *xqp, *xqpSgn, *xqpOpt, *xqpOptSgn;
+  double complex *buf, *invM, *invM_i;
+  double complex pref, tmp;
+  int orbidx;
+
+  (void)eleNum;
+
+  for(orbidx=0;orbidx<NSlater;orbidx++) {
+    srOptO[2*orbidx] = 0.0 + 0.0*I;
+    srOptO[2*orbidx+1] = 0.0 + 0.0*I;
+  }
+  if(NSlater <= 0) return;
+
+  InitBFSparseWorkspace_fsz(&sparseWork, eleProjBFCnt);
+  RequestWorkSpaceComplex(NQPFull*NSlater);
+  buffer = GetWorkSpaceComplex(NQPFull*NSlater);
+  for(i=0;i<nBuf;i++) buffer[i] = 0.0 + 0.0*I;
+
+  #pragma omp parallel for default(shared)                         \
+    private(qpidx,optidx,mpidx,xqp,xqpSgn,xqpOpt,xqpOptSgn,        \
+            invM,buf,msi,msj,invM_i,ri,rj,si,sj,ori,orj,sgni,sgnj, \
+            pref)
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    optidx = qpidx / NQPFix;
+    mpidx = (qpidx%NQPFix) / NSPGaussLeg;
+    xqpOpt = QPOptTrans[optidx];
+    xqpOptSgn = QPOptTransSgn[optidx];
+    xqp = QPTrans[mpidx];
+    xqpSgn = QPTransSgn[mpidx];
+    invM = InvM + qpidx*Nsize*Nsize;
+    buf = buffer + qpidx*NSlater;
+
+    for(msi=0;msi<Nsize;msi++) {
+      ri = eleIdx[msi];
+      si = eleSpn[msi];
+      ori = xqpOpt[ri];
+      sgni = xqpSgn[ori]*xqpOptSgn[ri];
+      invM_i = invM + msi*Nsize;
+
+      for(msj=0;msj<Nsize;msj++) {
+        rj = eleIdx[msj];
+        sj = eleSpn[msj];
+        orj = xqpOpt[rj];
+        sgnj = xqpSgn[orj]*xqpOptSgn[rj];
+        pref = -invM_i[msj] * PfM[qpidx] * (double)(sgni*sgnj);
+        AccumulateSlaterBFDiffOriented_fsz(buf, pref, ri, si, rj, sj,
+                                           xqp, xqpOpt, &sparseWork);
+      }
+    }
+  }
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    tmp = QPFullWeight[qpidx];
+    buf = buffer + qpidx*NSlater;
+    for(orbidx=0;orbidx<NSlater;orbidx++) {
+      srOptO[2*orbidx] += tmp * buf[orbidx];
+      srOptO[2*orbidx+1] += tmp * buf[orbidx] * I;
+    }
+  }
+  for(orbidx=0;orbidx<NSlater;orbidx++) {
+    srOptO[2*orbidx] *= invIP;
+    srOptO[2*orbidx+1] *= invIP;
+  }
+
+  ReleaseWorkSpaceComplex();
+  FreeBFSparseWorkspace_fsz(&sparseWork);
+  return;
+}
+
+void BackFlowDiff_fsz(double complex *srOptO, const double complex ip,
+                      const int *eleIdx, const int *eleSpn,
+                      const int *eleNum, const int *eleProjBFCnt) {
+  const double complex invIP = 1.0/ip;
+  BFSparseWorkspace_fsz sparseWork;
+  double complex *buffer;
+  double complex *bfReal, *bfImag;
+  int i, qpidx, optidx, mpidx, msi, msj;
+  int ri, rj, si, sj, ori, orj, sgni, sgnj;
+  int *xqp, *xqpSgn, *xqpOpt, *xqpOptSgn;
+  double complex *invM, *invM_i;
+  double complex pref, tmp;
+  int bfidx;
+
+  (void)eleNum;
+
+  for(bfidx=0;bfidx<NProjBF;bfidx++) {
+    srOptO[2*bfidx] = 0.0 + 0.0*I;
+    srOptO[2*bfidx+1] = 0.0 + 0.0*I;
+  }
+  if(NProjBF <= 0) return;
+
+  InitBFSparseWorkspace_fsz(&sparseWork, eleProjBFCnt);
+  RequestWorkSpaceComplex(2*NQPFull*NProjBF);
+  buffer = GetWorkSpaceComplex(2*NQPFull*NProjBF);
+  for(i=0;i<2*NQPFull*NProjBF;i++) buffer[i] = 0.0 + 0.0*I;
+
+  #pragma omp parallel for default(shared)                         \
+    private(qpidx,optidx,mpidx,xqp,xqpSgn,xqpOpt,xqpOptSgn,        \
+            invM,bfReal,bfImag,msi,msj,invM_i,ri,rj,si,sj,ori,orj, \
+            sgni,sgnj,pref)
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    optidx = qpidx / NQPFix;
+    mpidx = (qpidx%NQPFix) / NSPGaussLeg;
+    xqpOpt = QPOptTrans[optidx];
+    xqpOptSgn = QPOptTransSgn[optidx];
+    xqp = QPTrans[mpidx];
+    xqpSgn = QPTransSgn[mpidx];
+    invM = InvM + qpidx*Nsize*Nsize;
+    bfReal = buffer + qpidx*2*NProjBF;
+    bfImag = bfReal + NProjBF;
+
+    for(msi=0;msi<Nsize;msi++) {
+      ri = eleIdx[msi];
+      si = eleSpn[msi];
+      ori = xqpOpt[ri];
+      sgni = xqpSgn[ori]*xqpOptSgn[ri];
+      invM_i = invM + msi*Nsize;
+
+      for(msj=0;msj<Nsize;msj++) {
+        rj = eleIdx[msj];
+        sj = eleSpn[msj];
+        orj = xqpOpt[rj];
+        sgnj = xqpSgn[orj]*xqpOptSgn[rj];
+        pref = -invM_i[msj] * PfM[qpidx] * (double)(sgni*sgnj);
+        AccumulateBackFlowDiffOriented_fsz(bfReal, bfImag, pref, ri, si,
+                                           rj, sj, xqp, xqpOpt, &sparseWork);
+      }
+    }
+  }
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    tmp = QPFullWeight[qpidx] * invIP;
+    bfReal = buffer + qpidx*2*NProjBF;
+    bfImag = bfReal + NProjBF;
+    for(bfidx=0;bfidx<NProjBF;bfidx++) {
+      srOptO[2*bfidx] += tmp * bfReal[bfidx];
+      srOptO[2*bfidx+1] += tmp * bfImag[bfidx];
+    }
+  }
+
+  ReleaseWorkSpaceComplex();
+  FreeBFSparseWorkspace_fsz(&sparseWork);
   return;
 }
 
