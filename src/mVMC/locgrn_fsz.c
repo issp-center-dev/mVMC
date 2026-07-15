@@ -591,8 +591,6 @@ double complex GreenFunc2BF_fsz(const int ri, const int rj, const int rk, const 
   int rsi,rsj,rtk,rtl;
   double complex *pfMNew = buffer;
 
-  (void)eleProjBFCnt;
-
   rsi = ri + s*Nsite;
   rsj = rj + s*Nsite;
   rtk = rk + t*Nsite;
@@ -691,6 +689,7 @@ double complex GreenFunc2BF_fsz(const int ri, const int rj, const int rk, const 
   eleSpn[mj] = s;
   eleNum[rsj] = 1;
   eleNum[rsi] = 0;
+  MakeSlaterElmBF_fsz(eleNum, eleProjBFCnt);
 
   return conj(z/ip);
 }
