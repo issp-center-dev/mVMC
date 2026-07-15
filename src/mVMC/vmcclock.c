@@ -49,13 +49,31 @@ void OutputTime(int step) {
 }
 
 void InitTimer() {
-  int i;
-  const char *bfProfileEnv;
+  int i, j;
+  const char *bfProfileEnv, *greenCheckEnv, *affectedCheckEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
   for(i=0;i<NTimer;i++) TimerStart[i]=0.0;
   for(i=0;i<NBFProfileCounter;i++) BFProfileCounter[i]=0;
+  for(i=0;i<NBFFSZProfileSource;i++) {
+    BFFSZProfileCall[i] = 0;
+    BFFSZProfileChangedSum[i] = 0;
+    BFFSZProfileChangedMax[i] = 0;
+    BFFSZProfileAffectedSum[i] = 0;
+    BFFSZProfileAffectedMax[i] = 0;
+    for(j=0;j<NBFFSZProfileHist;j++) {
+      BFFSZProfileChangedHist[i][j] = 0;
+      BFFSZProfileAffectedHist[i][j] = 0;
+    }
+    for(j=0;j<NBFFSZProfileRatioHist;j++) {
+      BFFSZProfileAffectedRatioHist[i][j] = 0;
+    }
+  }
   bfProfileEnv = getenv("MVMC_BF_PROFILE");
   BFProfileEnabled = (bfProfileEnv != NULL && atoi(bfProfileEnv) != 0);
+  greenCheckEnv = getenv("MVMC_BF_FSZ_GREEN_REBUILD_CHECK");
+  BFFSZGreenRebuildCheckEnabled = (greenCheckEnv != NULL && atoi(greenCheckEnv) != 0);
+  affectedCheckEnv = getenv("MVMC_BF_FSZ_AFFECTED_CHECK");
+  BFFSZAffectedCheckEnabled = (affectedCheckEnv != NULL && atoi(affectedCheckEnv) != 0);
   return;
 }
 
@@ -90,7 +108,8 @@ static void OutputBFProfileCounters(FILE *fp) {
       break;
     }
   }
-  if(!hasData) return;
+  if(!hasData && BFFSZProfileCall[BFFSZ_PROFILE_SAMPLE] == 0
+      && BFFSZProfileCall[BFFSZ_PROFILE_GREEN] == 0) return;
 
   fprintf(fp,"  BF profile counters (MVMC_BF_PROFILE=1)\n");
   fprintf(fp,"    BF sample row requests          [910] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_ROW_REQUEST]);
@@ -141,6 +160,36 @@ static void OutputBFProfileCounters(FILE *fp) {
   fprintf(fp,"    BF exchange valid               [947] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_VALID]);
   fprintf(fp,"    BF exchange accept              [948] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_ACCEPT]);
   fprintf(fp,"    BF exchange metropolis reject   [949] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_METROPOLIS_REJECT]);
+
+  for(i=0;i<NBFFSZProfileSource;i++) {
+    const char *label = (i == BFFSZ_PROFILE_SAMPLE) ? "sample" : "green";
+    int k;
+    double changedMean, affectedMean;
+    if(BFFSZProfileCall[i] == 0) continue;
+    changedMean = (double)BFFSZProfileChangedSum[i] / (double)BFFSZProfileCall[i];
+    affectedMean = (double)BFFSZProfileAffectedSum[i] / (double)BFFSZProfileCall[i];
+    fprintf(fp,"    BF-FSZ %s changed stats         calls=%lld mean=%.6f max=%lld\n",
+            label, BFFSZProfileCall[i], changedMean, BFFSZProfileChangedMax[i]);
+    fprintf(fp,"    BF-FSZ %s affected stats        calls=%lld mean=%.6f max=%lld\n",
+            label, BFFSZProfileCall[i], affectedMean, BFFSZProfileAffectedMax[i]);
+    fprintf(fp,"    BF-FSZ %s changed hist          ",label);
+    for(k=0;k<=16;k++) fprintf(fp," %d:%lld",k,BFFSZProfileChangedHist[i][k]);
+    fprintf(fp," 17-32:%lld 33-64:%lld 65-128:%lld 129-256:%lld 257+:%lld\n",
+            BFFSZProfileChangedHist[i][17],BFFSZProfileChangedHist[i][18],
+            BFFSZProfileChangedHist[i][19],BFFSZProfileChangedHist[i][20],
+            BFFSZProfileChangedHist[i][21]);
+    fprintf(fp,"    BF-FSZ %s affected hist         ",label);
+    for(k=0;k<=16;k++) fprintf(fp," %d:%lld",k,BFFSZProfileAffectedHist[i][k]);
+    fprintf(fp," 17-32:%lld 33-64:%lld 65-128:%lld 129-256:%lld 257+:%lld\n",
+            BFFSZProfileAffectedHist[i][17],BFFSZProfileAffectedHist[i][18],
+            BFFSZProfileAffectedHist[i][19],BFFSZProfileAffectedHist[i][20],
+            BFFSZProfileAffectedHist[i][21]);
+    fprintf(fp,"    BF-FSZ %s affected ratio hist   0:%lld <=1/16:%lld <=1/8:%lld <=1/4:%lld <=1/2:%lld <=3/4:%lld <1:%lld =1:%lld\n",
+            label,BFFSZProfileAffectedRatioHist[i][0],BFFSZProfileAffectedRatioHist[i][1],
+            BFFSZProfileAffectedRatioHist[i][2],BFFSZProfileAffectedRatioHist[i][3],
+            BFFSZProfileAffectedRatioHist[i][4],BFFSZProfileAffectedRatioHist[i][5],
+            BFFSZProfileAffectedRatioHist[i][6],BFFSZProfileAffectedRatioHist[i][7]);
+  }
 }
 
 void OutputTimerParaOpt() {

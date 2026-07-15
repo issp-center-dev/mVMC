@@ -619,7 +619,10 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
 #ifdef _mpi_use
   int n=NBFProfileCounter;
   long long recv[NBFProfileCounter];
-  int i;
+  long long recvSource[NBFFSZProfileSource];
+  long long recvHist[NBFFSZProfileSource][NBFFSZProfileHist];
+  long long recvRatioHist[NBFFSZProfileSource][NBFFSZProfileRatioHist];
+  int i,j;
   int rank,size;
   if(!BFProfileEnabled) return;
   MPI_Comm_size(comm,&size);
@@ -628,6 +631,31 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
   MPI_Allreduce(BFProfileCounter,recv,n,MPI_LONG_LONG,MPI_SUM,comm);
   if(rank==0) {
     for(i=0;i<n;i++) BFProfileCounter[i] = recv[i];
+  }
+  MPI_Allreduce(BFFSZProfileCall,recvSource,NBFFSZProfileSource,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) BFFSZProfileCall[i] = recvSource[i];
+  MPI_Allreduce(BFFSZProfileChangedSum,recvSource,NBFFSZProfileSource,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) BFFSZProfileChangedSum[i] = recvSource[i];
+  MPI_Allreduce(BFFSZProfileAffectedSum,recvSource,NBFFSZProfileSource,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) BFFSZProfileAffectedSum[i] = recvSource[i];
+  MPI_Allreduce(BFFSZProfileChangedMax,recvSource,NBFFSZProfileSource,MPI_LONG_LONG,MPI_MAX,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) BFFSZProfileChangedMax[i] = recvSource[i];
+  MPI_Allreduce(BFFSZProfileAffectedMax,recvSource,NBFFSZProfileSource,MPI_LONG_LONG,MPI_MAX,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) BFFSZProfileAffectedMax[i] = recvSource[i];
+  MPI_Allreduce(BFFSZProfileChangedHist,recvHist,NBFFSZProfileSource*NBFFSZProfileHist,
+                MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) for(j=0;j<NBFFSZProfileHist;j++) {
+    BFFSZProfileChangedHist[i][j] = recvHist[i][j];
+  }
+  MPI_Allreduce(BFFSZProfileAffectedHist,recvHist,NBFFSZProfileSource*NBFFSZProfileHist,
+                MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) for(j=0;j<NBFFSZProfileHist;j++) {
+    BFFSZProfileAffectedHist[i][j] = recvHist[i][j];
+  }
+  MPI_Allreduce(BFFSZProfileAffectedRatioHist,recvRatioHist,
+                NBFFSZProfileSource*NBFFSZProfileRatioHist,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) for(j=0;j<NBFFSZProfileRatioHist;j++) {
+    BFFSZProfileAffectedRatioHist[i][j] = recvRatioHist[i][j];
   }
 #endif
   return;

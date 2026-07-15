@@ -36,6 +36,16 @@ void MakeSlaterElmBF_fsz_hop_to_serial(double complex *sltElmBF,
                                        const double complex *baseSltElmBF,
                                        const int *oldEleProjBFCnt,
                                        const int *newEleProjBFCnt);
+int MakeSlaterElmBF_fsz_hop_to_with_rows(
+    double complex *sltElmBF, const double complex *baseSltElmBF,
+    int movedParticle, const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int *affected, int *nChanged, int *nAffected);
+int MakeSlaterElmBF_fsz_hop_to_with_rows_serial(
+    double complex *sltElmBF, const double complex *baseSltElmBF,
+    int movedParticle, const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int *affected, int *nChanged, int *nAffected);
 void SlaterElmDiff_fsz(double complex *srOptO, const double complex ip, int *eleIdx,int *eleSpn);
 void SlaterElmBFDiff_fsz(double complex *srOptO, const double complex ip,
                          const int *eleIdx, const int *eleSpn,
@@ -411,10 +421,11 @@ void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt) {
   return;
 }
 
-static void MakeBFChangedEndpointMask_fsz(unsigned char *changed,
-                                          const int *oldEleProjBFCnt,
-                                          const int *newEleProjBFCnt) {
+static int MakeBFChangedEndpointMask_fsz(unsigned char *changed,
+                                         const int *oldEleProjBFCnt,
+                                         const int *newEleProjBFCnt) {
   int spin, site, mu, rangeSlot;
+  int nChanged = 0;
 
   for(spin=0;spin<2;spin++) {
     for(site=0;site<Nsite;site++) {
@@ -429,8 +440,38 @@ static void MakeBFChangedEndpointMask_fsz(unsigned char *changed,
           }
         }
       }
+      if(changed[rsi] != 0) nChanged++;
     }
   }
+  return nChanged;
+}
+
+static int MakeBFAffectedParticleList_fsz(
+    const unsigned char *changed, int movedParticle,
+    const int *eleIdx, const int *eleSpn,
+    unsigned char *affectedMark, int *affected) {
+  int m, rsm, nAffected = 0;
+
+  memset(affectedMark, 0, sizeof(unsigned char)*(size_t)Nsize);
+  affectedMark[movedParticle] = 1;
+  for(m=0;m<Nsize;m++) {
+    if(eleIdx[m] < 0 || eleIdx[m] >= Nsite || eleSpn[m] < 0 || eleSpn[m] >= 2) {
+      fprintf(stderr,
+              "error: invalid BF-FSZ candidate particle %d: site=%d spin=%d\n",
+              m, eleIdx[m], eleSpn[m]);
+      return -1;
+    }
+    rsm = eleIdx[m] + eleSpn[m]*Nsite;
+    if(changed[rsm] != 0) affectedMark[m] = 1;
+  }
+  for(m=0;m<Nsize;m++) {
+    if(affectedMark[m] != 0) affected[nAffected++] = m;
+  }
+  if(nAffected < 1 || nAffected > Nsize) {
+    fprintf(stderr, "error: invalid BF-FSZ affected particle count %d\n", nAffected);
+    return -1;
+  }
+  return nAffected;
 }
 
 static void MakeSlaterElmBF_fsz_hop_qp(double complex *sltElmBF,
@@ -478,25 +519,62 @@ static void MakeSlaterElmBF_fsz_hop_qp(double complex *sltElmBF,
   }
 }
 
-static void MakeSlaterElmBF_fsz_hop_to_core(double complex *sltElmBF,
-                                            const double complex *baseSltElmBF,
-                                            const int *oldEleProjBFCnt,
-                                            const int *newEleProjBFCnt,
-                                            const int useOMP) {
-  const char *checkEnv = getenv("MVMC_BF_FSZ_GREEN_REBUILD_CHECK");
+static int MakeSlaterElmBF_fsz_hop_to_core(double complex *sltElmBF,
+                                           const double complex *baseSltElmBF,
+                                           const int movedParticle,
+                                           const int *eleIdx, const int *eleSpn,
+                                           const int *oldEleProjBFCnt,
+                                           const int *newEleProjBFCnt,
+                                           int *affected, int *nChangedOut,
+                                           int *nAffectedOut,
+                                           const int useOMP) {
   const size_t matrixSize = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
-  int qpidx;
+  const int collectRows = (affected != NULL || nChangedOut != NULL || nAffectedOut != NULL);
+  int qpidx, m, n, rsm, rsn, nChanged, nAffected = 0;
   size_t idx;
   unsigned char *changed;
+  unsigned char *affectedMark = NULL;
   double complex *fullSltElmBF;
   BFSparseWorkspace_fsz sparseWork;
+
+  if(sltElmBF == NULL || baseSltElmBF == NULL || oldEleProjBFCnt == NULL
+      || newEleProjBFCnt == NULL || sltElmBF == baseSltElmBF) {
+    fprintf(stderr, "error: invalid BF-FSZ incremental Slater arguments\n");
+    return -1;
+  }
+  if(collectRows && (affected == NULL || nChangedOut == NULL || nAffectedOut == NULL
+      || eleIdx == NULL || eleSpn == NULL || movedParticle < 0 || movedParticle >= Nsize)) {
+    fprintf(stderr, "error: invalid BF-FSZ affected-row arguments\n");
+    return -1;
+  }
+  if(BFFSZAffectedCheckEnabled && !collectRows) {
+    fprintf(stderr, "error: BF-FSZ affected oracle requires affected-row arguments\n");
+    return -1;
+  }
 
   changed = (unsigned char *)malloc(sizeof(unsigned char)*(size_t)Nsite2);
   if(changed == NULL) {
     fprintf(stderr, "error: failed to allocate BF-FSZ changed endpoint mask\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  MakeBFChangedEndpointMask_fsz(changed, oldEleProjBFCnt, newEleProjBFCnt);
+  nChanged = MakeBFChangedEndpointMask_fsz(changed, oldEleProjBFCnt, newEleProjBFCnt);
+  if(collectRows) {
+    affectedMark = (unsigned char *)malloc(sizeof(unsigned char)*(size_t)Nsize);
+    if(affectedMark == NULL) {
+      fprintf(stderr, "error: failed to allocate BF-FSZ affected particle mask\n");
+      free(changed);
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+    nAffected = MakeBFAffectedParticleList_fsz(changed, movedParticle, eleIdx, eleSpn,
+                                                affectedMark, affected);
+    if(nAffected < 0) {
+      free(affectedMark);
+      free(changed);
+      return -1;
+    }
+    *nChangedOut = nChanged;
+    *nAffectedOut = nAffected;
+  }
   InitBFSparseWorkspace_fsz(&sparseWork, newEleProjBFCnt);
 
   if(useOMP) {
@@ -510,44 +588,94 @@ static void MakeSlaterElmBF_fsz_hop_to_core(double complex *sltElmBF,
     }
   }
 
-  if(checkEnv != NULL && atoi(checkEnv) != 0) {
+  if(BFFSZGreenRebuildCheckEnabled || BFFSZAffectedCheckEnabled) {
     fullSltElmBF = (double complex *)malloc(sizeof(double complex)*matrixSize);
     if(fullSltElmBF == NULL) {
       fprintf(stderr, "error: failed to allocate BF-FSZ full-rebuild oracle\n");
       MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
     MakeSlaterElmBF_fsz_to_core(fullSltElmBF, NULL, newEleProjBFCnt, useOMP);
-    for(idx=0;idx<matrixSize;idx++) {
-      if(sltElmBF[idx] != fullSltElmBF[idx]) {
-        fprintf(stderr,
-                "error: BF-FSZ incremental Green rebuild mismatch at index %zu: "
-                "incremental=(%.17e,%.17e) full=(%.17e,%.17e)\n",
-                idx, creal(sltElmBF[idx]), cimag(sltElmBF[idx]),
-                creal(fullSltElmBF[idx]), cimag(fullSltElmBF[idx]));
-        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    if(BFFSZGreenRebuildCheckEnabled) {
+      for(idx=0;idx<matrixSize;idx++) {
+        if(sltElmBF[idx] != fullSltElmBF[idx]) {
+          fprintf(stderr,
+                  "error: BF-FSZ incremental Green rebuild mismatch at index %zu: "
+                  "incremental=(%.17e,%.17e) full=(%.17e,%.17e)\n",
+                  idx, creal(sltElmBF[idx]), cimag(sltElmBF[idx]),
+                  creal(fullSltElmBF[idx]), cimag(fullSltElmBF[idx]));
+          MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+      }
+    }
+    if(BFFSZAffectedCheckEnabled) {
+      for(qpidx=0;qpidx<NQPFull;qpidx++) {
+        const double complex *baseSltE = baseSltElmBF + qpidx*Nsite2*Nsite2;
+        const double complex *fullSltE = fullSltElmBF + qpidx*Nsite2*Nsite2;
+        for(m=0;m<Nsize;m++) {
+          rsm = eleIdx[m] + eleSpn[m]*Nsite;
+          for(n=m+1;n<Nsize;n++) {
+            rsn = eleIdx[n] + eleSpn[n]*Nsite;
+            if(baseSltE[rsm*Nsite2 + rsn] != fullSltE[rsm*Nsite2 + rsn]
+                && affectedMark[m] == 0 && affectedMark[n] == 0) {
+              fprintf(stderr,
+                      "error: BF-FSZ affected coverage mismatch at qp=%d particles=(%d,%d) "
+                      "endpoints=(%d,%d) nChanged=%d nAffected=%d\n",
+                      qpidx, m, n, rsm, rsn, nChanged, nAffected);
+              MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+            }
+          }
+        }
       }
     }
     free(fullSltElmBF);
   }
 
   FreeBFSparseWorkspace_fsz(&sparseWork);
+  free(affectedMark);
   free(changed);
+  return 0;
 }
 
 void MakeSlaterElmBF_fsz_hop_to(double complex *sltElmBF,
                                 const double complex *baseSltElmBF,
                                 const int *oldEleProjBFCnt,
                                 const int *newEleProjBFCnt) {
-  MakeSlaterElmBF_fsz_hop_to_core(sltElmBF, baseSltElmBF, oldEleProjBFCnt,
-                                   newEleProjBFCnt, 1);
+  if(MakeSlaterElmBF_fsz_hop_to_core(sltElmBF, baseSltElmBF, -1, NULL, NULL,
+                                     oldEleProjBFCnt, newEleProjBFCnt,
+                                     NULL, NULL, NULL, 1) != 0) {
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
 }
 
 void MakeSlaterElmBF_fsz_hop_to_serial(double complex *sltElmBF,
                                        const double complex *baseSltElmBF,
                                        const int *oldEleProjBFCnt,
                                        const int *newEleProjBFCnt) {
-  MakeSlaterElmBF_fsz_hop_to_core(sltElmBF, baseSltElmBF, oldEleProjBFCnt,
-                                   newEleProjBFCnt, 0);
+  if(MakeSlaterElmBF_fsz_hop_to_core(sltElmBF, baseSltElmBF, -1, NULL, NULL,
+                                     oldEleProjBFCnt, newEleProjBFCnt,
+                                     NULL, NULL, NULL, 0) != 0) {
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+}
+
+int MakeSlaterElmBF_fsz_hop_to_with_rows(
+    double complex *sltElmBF, const double complex *baseSltElmBF,
+    int movedParticle, const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int *affected, int *nChanged, int *nAffected) {
+  return MakeSlaterElmBF_fsz_hop_to_core(
+      sltElmBF, baseSltElmBF, movedParticle, eleIdx, eleSpn,
+      oldEleProjBFCnt, newEleProjBFCnt, affected, nChanged, nAffected, 1);
+}
+
+int MakeSlaterElmBF_fsz_hop_to_with_rows_serial(
+    double complex *sltElmBF, const double complex *baseSltElmBF,
+    int movedParticle, const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int *affected, int *nChanged, int *nAffected) {
+  return MakeSlaterElmBF_fsz_hop_to_core(
+      sltElmBF, baseSltElmBF, movedParticle, eleIdx, eleSpn,
+      oldEleProjBFCnt, newEleProjBFCnt, affected, nChanged, nAffected, 0);
 }
 
 static inline void AddSlaterDiff_fsz(double complex *buf,

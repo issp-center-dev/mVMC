@@ -447,10 +447,77 @@ int Counter_max = 6;
 int BFProfileEnabled = 0;
 long long BFProfileCounter[NBFProfileCounter];
 
+#define BFFSZ_PROFILE_SAMPLE 0
+#define BFFSZ_PROFILE_GREEN  1
+#define NBFFSZProfileSource  2
+#define NBFFSZProfileHist    22
+#define NBFFSZProfileRatioHist 8
+int BFFSZGreenRebuildCheckEnabled = 0;
+int BFFSZAffectedCheckEnabled = 0;
+long long BFFSZProfileCall[NBFFSZProfileSource];
+long long BFFSZProfileChangedSum[NBFFSZProfileSource];
+long long BFFSZProfileChangedMax[NBFFSZProfileSource];
+long long BFFSZProfileAffectedSum[NBFFSZProfileSource];
+long long BFFSZProfileAffectedMax[NBFFSZProfileSource];
+long long BFFSZProfileChangedHist[NBFFSZProfileSource][NBFFSZProfileHist];
+long long BFFSZProfileAffectedHist[NBFFSZProfileSource][NBFFSZProfileHist];
+long long BFFSZProfileAffectedRatioHist[NBFFSZProfileSource][NBFFSZProfileRatioHist];
+
 static inline void AddBFProfileCounter(int idx, long long value) {
   if(!BFProfileEnabled || value == 0) return;
 #pragma omp atomic
   BFProfileCounter[idx] += value;
+}
+
+static inline int BFFSZProfileHistBin(int value) {
+  if(value <= 0) return 0;
+  if(value <= 16) return value;
+  if(value <= 32) return 17;
+  if(value <= 64) return 18;
+  if(value <= 128) return 19;
+  if(value <= 256) return 20;
+  return 21;
+}
+
+static inline int BFFSZProfileRatioHistBin(int value, int total) {
+  if(value <= 0 || total <= 0) return 0;
+  if(16LL*value <= total) return 1;
+  if(8LL*value <= total) return 2;
+  if(4LL*value <= total) return 3;
+  if(2LL*value <= total) return 4;
+  if(4LL*value <= 3LL*total) return 5;
+  if(value < total) return 6;
+  return 7;
+}
+
+static inline void RecordBFFSZProfile(int source, int nChanged, int nAffected) {
+  int changedBin, affectedBin, ratioBin;
+  if(!BFProfileEnabled) return;
+  if(source < 0 || source >= NBFFSZProfileSource) return;
+  changedBin = BFFSZProfileHistBin(nChanged);
+  affectedBin = BFFSZProfileHistBin(nAffected);
+  ratioBin = BFFSZProfileRatioHistBin(nAffected, Nsize);
+#pragma omp atomic
+  BFFSZProfileCall[source]++;
+#pragma omp atomic
+  BFFSZProfileChangedSum[source] += nChanged;
+#pragma omp atomic
+  BFFSZProfileAffectedSum[source] += nAffected;
+#pragma omp atomic
+  BFFSZProfileChangedHist[source][changedBin]++;
+#pragma omp atomic
+  BFFSZProfileAffectedHist[source][affectedBin]++;
+#pragma omp atomic
+  BFFSZProfileAffectedRatioHist[source][ratioBin]++;
+#pragma omp critical(BFFSZProfileMax)
+  {
+    if(nChanged > BFFSZProfileChangedMax[source]) {
+      BFFSZProfileChangedMax[source] = nChanged;
+    }
+    if(nAffected > BFFSZProfileAffectedMax[source]) {
+      BFFSZProfileAffectedMax[source] = nAffected;
+    }
+  }
 }
 
 int useDiagScale=0;

@@ -478,6 +478,8 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   double complex logIpOld,logIpNew;
   double complex *candidateSlater;
   double complex *pfMNew;
+  int *affected;
+  int nChanged,nAffected;
   int projCntNew[NProj];
   int projBFCntNew[16*Nsite*Nrange];
   double x,w;
@@ -492,10 +494,12 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
 
   candidateSlater = (double complex *)malloc(sizeof(double complex)*bfSlaterSize);
   pfMNew = (double complex *)malloc(sizeof(double complex)*(size_t)NQPFull);
-  if(candidateSlater == NULL || pfMNew == NULL) {
+  affected = (int *)malloc(sizeof(int)*(size_t)Nsize);
+  if(candidateSlater == NULL || pfMNew == NULL || affected == NULL) {
     fprintf(stderr, "error: failed to allocate BF-FSZ sampling candidate workspace\n");
     free(candidateSlater);
     free(pfMNew);
+    free(affected);
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
 
@@ -551,8 +555,14 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
       StopTimer(60);
 
       StartTimer(64);
-      MakeSlaterElmBF_fsz_hop_to(candidateSlater, SlaterElmBF,
-                                  TmpEleProjBFCnt, projBFCntNew);
+      info = MakeSlaterElmBF_fsz_hop_to_with_rows(
+          candidateSlater, SlaterElmBF, mi, TmpEleIdx, TmpEleSpn,
+          TmpEleProjBFCnt, projBFCntNew, affected, &nChanged, &nAffected);
+      if(info != 0) {
+        if(rank==0) fprintf(stderr, "error: BF-FSZ sampling affected-row collection failed\n");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+      }
+      RecordBFFSZProfile(BFFSZ_PROFILE_SAMPLE,nChanged,nAffected);
       StopTimer(64);
 
       StartTimer(61);
@@ -618,6 +628,7 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
 
   free(candidateSlater);
   free(pfMNew);
+  free(affected);
 
   return;
 }

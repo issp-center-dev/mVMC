@@ -488,7 +488,8 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
                   int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
                   double complex *buffer) {
   double complex z;
-  int mj,rsi,rsj;
+  int mj,rsi,rsj,nChanged,nAffected;
+  int affected[Nsize];
   /* buffer: NQPFull Pfaffians followed by a candidate BF-FSZ Slater matrix. */
   double complex *pfMNew = buffer;
   double complex *sltElmBFNew = buffer + NQPFull;
@@ -516,8 +517,13 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
   MakeProjBFCnt(projBFCntNew, eleNum);
   StopTimer(81);
   StartTimer(82);
-  MakeSlaterElmBF_fsz_hop_to(sltElmBFNew, SlaterElmBF,
-                              eleProjBFCnt, projBFCntNew);
+  if(MakeSlaterElmBF_fsz_hop_to_with_rows(
+      sltElmBFNew, SlaterElmBF, mj, eleIdx, eleSpn,
+      eleProjBFCnt, projBFCntNew, affected, &nChanged, &nAffected) != 0) {
+    fprintf(stderr, "error: GreenFunc1BF_fsz affected-row collection failed\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  RecordBFFSZProfile(BFFSZ_PROFILE_GREEN,nChanged,nAffected);
   StopTimer(82);
   StartTimer(83);
   z *= CalculateBF_FSZ_CandidateIP("GreenFunc1BF_fsz", sltElmBFNew, eleIdx,
@@ -541,7 +547,7 @@ double complex GreenFunc1BF_fsz_workspace(const int ri, const int rj, const int 
                   double complex *buffer, double complex *pfBufM, int *pfIWork,
                   double complex *pfWork, double *pfRWork) {
   double complex z;
-  int mj,rsi,rsj;
+  int mj,rsi,rsj,nChanged,nAffected;
   /* buffer: NQPFull Pfaffians followed by a candidate BF-FSZ Slater matrix. */
   double complex *pfMNew = buffer;
   double complex *sltElmBFNew = buffer + NQPFull;
@@ -566,8 +572,13 @@ double complex GreenFunc1BF_fsz_workspace(const int ri, const int rj, const int 
   z = ProjRatio(projCntNew,eleProjCnt);
 
   MakeProjBFCnt(projBFCntNew, eleNum);
-  MakeSlaterElmBF_fsz_hop_to_serial(sltElmBFNew, SlaterElmBF,
-                                     eleProjBFCnt, projBFCntNew);
+  if(MakeSlaterElmBF_fsz_hop_to_with_rows_serial(
+      sltElmBFNew, SlaterElmBF, mj, eleIdx, eleSpn,
+      eleProjBFCnt, projBFCntNew, pfIWork, &nChanged, &nAffected) != 0) {
+    fprintf(stderr, "error: GreenFunc1BF_fsz_workspace affected-row collection failed\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  RecordBFFSZProfile(BFFSZ_PROFILE_GREEN,nChanged,nAffected);
   z *= CalculateBF_FSZ_CandidateIP_workspace("GreenFunc1BF_fsz", sltElmBFNew,
       eleIdx, eleSpn, pfMNew, pfBufM, pfIWork, pfWork, pfRWork);
 

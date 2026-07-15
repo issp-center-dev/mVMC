@@ -365,6 +365,42 @@ def read_key_values(path):
     return values
 
 
+def read_bffsz_profile_stats(path, source, kind):
+    marker = "BF-FSZ {} {} stats".format(source, kind)
+    with open(path) as fp:
+        for line in fp:
+            if marker not in line:
+                continue
+            fields = {}
+            for token in line.split():
+                if "=" in token:
+                    key, value = token.split("=", 1)
+                    fields[key] = value
+            if not all(key in fields for key in ("calls", "mean", "max")):
+                break
+            return int(fields["calls"]), float(fields["mean"]), int(fields["max"])
+    raise RuntimeError("{} was not found in {}".format(marker, path))
+
+
+def read_bffsz_profile_hist_sum(path, source, kind):
+    marker = "BF-FSZ {} {}".format(source, kind)
+    with open(path) as fp:
+        for line in fp:
+            if marker not in line:
+                continue
+            values = []
+            for token in line.split():
+                if ":" not in token:
+                    continue
+                try:
+                    values.append(int(token.rsplit(":", 1)[1]))
+                except ValueError:
+                    pass
+            if values:
+                return sum(values)
+    raise RuntimeError("{} was not found in {}".format(marker, path))
+
+
 def get_float(values, key):
     if key not in values:
         raise RuntimeError("{} was not found in dump".format(key))
@@ -491,7 +527,12 @@ def prepare_case(rootdir, name, include_backflow, orbital_complex_type=1,
 
 
 def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
-    if case_name != "BackFlow_FSZ_TwoBodyG_StaleBase_NonIdentity_Complex":
+    affected_cases = (
+        "BackFlow_FSZ_AffectedRows_NonIdentity_Complex",
+        "BackFlow_FSZ_AffectedRows_NonIdentity_Complex_mpi",
+    )
+    if case_name != "BackFlow_FSZ_TwoBodyG_StaleBase_NonIdentity_Complex" \
+            and case_name not in affected_cases:
         return None
 
     general_rows, contracted_rows = build_stale_base_two_body_rows()
@@ -505,6 +546,9 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         (reference_workdir, reference_rows),
     ):
         update_modpara(workdir, {"NVMCSample": "1"})
+        if case_name in affected_cases:
+            update_modpara(workdir, {"NMPTrans": "2"})
+            make_momentum_projection(workdir)
         write_two_body_rows(workdir, rows)
 
     ordered_init = write_nonidentity_init(ordered_workdir)
@@ -514,7 +558,11 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         ordered_workdir,
         mpi_procs=mpi_procs,
         init_path=ordered_init,
-        extra_env={"MVMC_BF_FSZ_GREEN_REBUILD_CHECK": "1"},
+        extra_env={
+            "MVMC_BF_FSZ_GREEN_REBUILD_CHECK": "1",
+            "MVMC_BF_FSZ_AFFECTED_CHECK": "1",
+            "MVMC_BF_PROFILE": "1",
+        },
     )
     if ordered_proc.returncode != 0:
         print(ordered_proc.stdout)
@@ -529,6 +577,26 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
     if reference_proc.returncode != 0:
         print(reference_proc.stdout)
         return reference_proc.returncode
+
+    timer_path = os.path.join(ordered_workdir, "output", "zvo_CalcTimer.dat")
+    for source in ("sample", "green"):
+        changed_calls, changed_mean, changed_max = read_bffsz_profile_stats(
+            timer_path, source, "changed")
+        affected_calls, affected_mean, affected_max = read_bffsz_profile_stats(
+            timer_path, source, "affected")
+        if changed_calls <= 0 or affected_calls != changed_calls:
+            print("ERROR: BF-FSZ {} affected profile call mismatch".format(source))
+            return -1
+        if changed_mean <= 0.0 or changed_max <= 0 or changed_max > 8:
+            print("ERROR: BF-FSZ {} changed profile is invalid".format(source))
+            return -1
+        if affected_mean < 1.0 or affected_max < 1 or affected_max > 4:
+            print("ERROR: BF-FSZ {} affected profile is invalid".format(source))
+            return -1
+        for hist_kind in ("changed hist", "affected hist", "affected ratio hist"):
+            if read_bffsz_profile_hist_sum(timer_path, source, hist_kind) != changed_calls:
+                print("ERROR: BF-FSZ {} {} count mismatch".format(source, hist_kind))
+                return -1
 
     ordered_path = os.path.join(ordered_workdir, "output", "zvo_cisajscktalt_001.dat")
     reference_path = os.path.join(reference_workdir, "output", "zvo_cisajscktalt_001.dat")
