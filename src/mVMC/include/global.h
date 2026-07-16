@@ -485,6 +485,7 @@ int BFFSZInvUpdateInjectedStage = 0;
 int BFFSZInvUpdateInjectedRank = -1;
 int BFFSZInvUpdateExplicitStateCheckEnabled = 0;
 int BFFSZInvUpdateArgumentCheckEnabled = 0;
+int BFFSZInvGemmCheckEnabled = 0;
 int BFFSZInvDetailProfileEnabled = 0;
 int BFFSZMatrixFreeCheckEnabled = 0;
 int BFFSZMatrixFreeArgumentCheckEnabled = 0;
@@ -505,6 +506,8 @@ long long BFFSZProfileSampleCommit[NBFFSZPfPath];
 double BFFSZProfileInvCheckSeconds = 0.0;
 double BFFSZProfileInvAntisymmetryMax = 0.0;
 double BFFSZProfileInvResidualMax = 0.0;
+long long BFFSZProfileInvGemmCheckCount = 0;
+double BFFSZProfileInvGemmDifferenceMax = 0.0;
 double BFFSZProfileInvDetailSeconds[NBFFSZInvDetail];
 double BFFSZProfileInvDetailMaxSeconds[NBFFSZInvDetail];
 
@@ -606,6 +609,14 @@ static inline void RecordBFFSZInvChecks(double seconds,
   }
   if(residual > BFFSZProfileInvResidualMax) {
     BFFSZProfileInvResidualMax = residual;
+  }
+}
+
+static inline void RecordBFFSZInvGemmCheck(double difference) {
+  if(!BFFSZInvGemmCheckEnabled) return;
+  BFFSZProfileInvGemmCheckCount++;
+  if(difference > BFFSZProfileInvGemmDifferenceMax) {
+    BFFSZProfileInvGemmDifferenceMax = difference;
   }
 }
 

@@ -627,11 +627,14 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
   long long recvGreenMaterialize[NBFFSZGreenMaterialize];
   long long recvSampleMaterialize[NBFFSZSampleMaterialize];
   long long recvSampleCommit[NBFFSZPfPath];
+  long long recvInvGemmCheckCount;
   double recvInvCheckSeconds,recvInvAntisymmetry,recvInvResidual;
+  double recvInvGemmDifference;
   double recvInvDetailSeconds[NBFFSZInvDetail];
   int i,j;
   int rank,size;
-  if(!BFProfileEnabled && !BFFSZInvDetailProfileEnabled) return;
+  if(!BFProfileEnabled && !BFFSZInvGemmCheckEnabled
+      && !BFFSZInvDetailProfileEnabled) return;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
 
@@ -697,6 +700,16 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
     BFFSZProfileInvCheckSeconds = recvInvCheckSeconds;
     BFFSZProfileInvAntisymmetryMax = recvInvAntisymmetry;
     BFFSZProfileInvResidualMax = recvInvResidual;
+  }
+  if(BFFSZInvGemmCheckEnabled) {
+    MPI_Allreduce(&BFFSZProfileInvGemmCheckCount,&recvInvGemmCheckCount,1,
+                  MPI_LONG_LONG,MPI_SUM,comm);
+    MPI_Allreduce(&BFFSZProfileInvGemmDifferenceMax,&recvInvGemmDifference,1,
+                  MPI_DOUBLE,MPI_MAX,comm);
+    if(rank==0) {
+      BFFSZProfileInvGemmCheckCount = recvInvGemmCheckCount;
+      BFFSZProfileInvGemmDifferenceMax = recvInvGemmDifference;
+    }
   }
   if(BFFSZInvDetailProfileEnabled) {
     MPI_Allreduce(BFFSZProfileInvDetailSeconds,recvInvDetailSeconds,

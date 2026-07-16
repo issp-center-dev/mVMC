@@ -13,6 +13,7 @@
 #define BF_FSZ_INV_UPDATE_ANTISYMMETRY 3
 #define BF_FSZ_INV_UPDATE_RESIDUAL 4
 #define BF_FSZ_INV_UPDATE_INVALID_ARGUMENT 5
+#define BF_FSZ_INV_UPDATE_GEMM_MISMATCH 6
 
 #define BF_FSZ_INV_STAGE_NONE 0
 #define BF_FSZ_INV_STAGE_GETRF 1
@@ -20,6 +21,7 @@
 #define BF_FSZ_INV_STAGE_FINITE 3
 #define BF_FSZ_INV_STAGE_ANTISYMMETRY 4
 #define BF_FSZ_INV_STAGE_RESIDUAL 5
+#define BF_FSZ_INV_STAGE_GEMM_CHECK 6
 
 #define BF_FSZ_INV_DETAIL_W 0
 #define BF_FSZ_INV_DETAIL_SMALL_TRANSPOSE 1
@@ -37,6 +39,7 @@ typedef struct {
   int lapackInfo;
   double antisymmetryResidual;
   double affectedResidual;
+  double gemmDifference;
   double checkSeconds;
   double detailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT];
 } BF_FSZ_InvUpdateResult;

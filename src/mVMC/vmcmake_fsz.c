@@ -1538,10 +1538,19 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
           }
           RecordBFFSZInvChecks(invResult.checkSeconds,
               invResult.antisymmetryResidual,invResult.affectedResidual);
+          if(BFFSZInvGemmCheckEnabled && qpNum > 0) {
+            RecordBFFSZInvGemmCheck(invResult.gemmDifference);
+          }
           invResult = BF_FSZ_InjectedInvResult(invResult,rank);
           if(invResult.status == BF_FSZ_INV_UPDATE_INVALID_ARGUMENT) {
             if(rank==0) fprintf(stderr,
                 "error: invalid BF-FSZ accepted inverse-update arguments\n");
+            MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+          }
+          if(invResult.status == BF_FSZ_INV_UPDATE_GEMM_MISMATCH) {
+            if(rank==0) fprintf(stderr,
+                "error: BF-FSZ inverse GEMM canary mismatch "
+                "scaled_difference=%.17e\n",invResult.gemmDifference);
             MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
           }
           if(BFFSZInvDetailProfileEnabled) {

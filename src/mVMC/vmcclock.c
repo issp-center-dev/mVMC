@@ -57,7 +57,7 @@ void InitTimer() {
   const char *permuteParticleLabelsEnv;
   const char *invUpdateCheckEnv, *invUpdateFallbackEnv, *invUpdateInjectEnv;
   const char *invUpdateInjectRankEnv, *invUpdateExplicitStateEnv;
-  const char *invUpdateArgumentEnv, *invDetailProfileEnv;
+  const char *invUpdateArgumentEnv, *invGemmCheckEnv, *invDetailProfileEnv;
   const char *matrixFreeCheckEnv, *matrixFreeArgumentEnv;
   const char *samplingRejectCheckEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
@@ -89,6 +89,8 @@ void InitTimer() {
   BFFSZProfileInvCheckSeconds = 0.0;
   BFFSZProfileInvAntisymmetryMax = 0.0;
   BFFSZProfileInvResidualMax = 0.0;
+  BFFSZProfileInvGemmCheckCount = 0;
+  BFFSZProfileInvGemmDifferenceMax = 0.0;
   for(j=0;j<NBFFSZInvDetail;j++) {
     BFFSZProfileInvDetailSeconds[j] = 0.0;
     BFFSZProfileInvDetailMaxSeconds[j] = 0.0;
@@ -165,6 +167,9 @@ void InitTimer() {
   invUpdateArgumentEnv = getenv("MVMC_BF_FSZ_INV_UPDATE_ARGUMENT_CHECK");
   BFFSZInvUpdateArgumentCheckEnabled = (invUpdateArgumentEnv != NULL
       && atoi(invUpdateArgumentEnv) != 0);
+  invGemmCheckEnv = getenv("MVMC_BF_FSZ_INV_GEMM_CHECK");
+  BFFSZInvGemmCheckEnabled = (invGemmCheckEnv != NULL
+      && atoi(invGemmCheckEnv) != 0);
   invDetailProfileEnv = getenv("MVMC_BF_FSZ_INV_DETAIL_PROFILE");
   BFFSZInvDetailProfileEnabled = (invDetailProfileEnv != NULL
       && atoi(invDetailProfileEnv) != 0);
@@ -207,7 +212,8 @@ void StopTimer(int n) {
 
 static void OutputBFProfileCounters(FILE *fp) {
   int i, hasData = 0;
-  if(!BFProfileEnabled && !BFFSZInvDetailProfileEnabled) return;
+  if(!BFProfileEnabled && !BFFSZInvGemmCheckEnabled
+      && !BFFSZInvDetailProfileEnabled) return;
   if(BFProfileEnabled) {
     for(i=0;i<NBFProfileCounter;i++) {
       if(BFProfileCounter[i] != 0) {
@@ -321,6 +327,12 @@ static void OutputBFProfileCounters(FILE *fp) {
               BFFSZProfileInvCheckSeconds,BFFSZProfileInvAntisymmetryMax,
               BFFSZProfileInvResidualMax);
     }
+  }
+  if(BFFSZInvGemmCheckEnabled) {
+    fprintf(fp,"  BF-FSZ inverse GEMM check (MVMC_BF_FSZ_INV_GEMM_CHECK=1)\n");
+    fprintf(fp,"    BF-FSZ inverse GEMM checks      calls=%lld scaled_max=%.17e\n",
+            BFFSZProfileInvGemmCheckCount,
+            BFFSZProfileInvGemmDifferenceMax);
   }
   if(BFFSZInvDetailProfileEnabled) {
     const char *labels[NBFFSZInvDetail] = {

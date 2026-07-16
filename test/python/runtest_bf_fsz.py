@@ -550,6 +550,21 @@ def has_bffsz_inv_detail(path):
         return any(marker in line for line in fp)
 
 
+def read_bffsz_inv_gemm_check(path):
+    marker = "BF-FSZ inverse GEMM checks"
+    with open(path) as fp:
+        for line in fp:
+            if marker in line:
+                fields = {}
+                for token in line.split():
+                    if "=" in token:
+                        key, value = token.split("=", 1)
+                        fields[key] = value
+                if "calls" in fields and "scaled_max" in fields:
+                    return int(fields["calls"]), float(fields["scaled_max"])
+    raise RuntimeError("{} was not found in {}".format(marker, path))
+
+
 def get_float(values, key):
     if key not in values:
         raise RuntimeError("{} was not found in dump".format(key))
@@ -694,6 +709,8 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         "BackFlow_FSZ_InvUpdate_NonIdentity_Complex_mpi": "optimized",
         "BackFlow_FSZ_InvDetailProfile_NonIdentity_Complex": "detail",
         "BackFlow_FSZ_InvDetailProfile_NonIdentity_Complex_mpi": "detail",
+        "BackFlow_FSZ_InvResidualGemm_NonIdentity_Complex": "gemm",
+        "BackFlow_FSZ_InvResidualGemm_NonIdentity_Complex_mpi": "gemm",
         "BackFlow_FSZ_InvUpdate_MoreRanks_NonIdentity_Complex_mpi": "optimized",
         "BackFlow_FSZ_InvUpdate_Fallback_NonIdentity_Complex": "fallback",
         "BackFlow_FSZ_InvUpdate_GetrfFallback_NonIdentity_Complex": "getrf",
@@ -808,6 +825,8 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
             ordered_env["MVMC_BF_FSZ_INV_UPDATE_ARGUMENT_CHECK"] = "1"
         elif mode == "detail":
             ordered_env["MVMC_BF_FSZ_INV_DETAIL_PROFILE"] = "1"
+        elif mode == "gemm":
+            ordered_env["MVMC_BF_FSZ_INV_GEMM_CHECK"] = "1"
     if case_name in matrix_free_cases \
             and matrix_free_cases[case_name] == "arguments":
         ordered_env["MVMC_BF_FSZ_MATRIX_FREE_ARGUMENT_CHECK"] = "1"
@@ -909,7 +928,7 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
     if case_name in inv_update_cases:
         paths = read_bffsz_inv_paths(timer_path)
         mode = inv_update_cases[case_name]
-        if mode in ("optimized", "detail", "explicit-state", "arguments"):
+        if mode in ("optimized", "detail", "gemm", "explicit-state", "arguments"):
             if paths["optimized"] <= 0 or paths["fallback"] != 0:
                 print("ERROR: BF-FSZ optimized inverse path was not isolated")
                 return -1
@@ -999,6 +1018,12 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
                     print("ERROR: BF-FSZ inverse detail profile changed {}".format(
                         filename))
                     return -1
+        elif mode == "gemm":
+            calls, scaled_max = read_bffsz_inv_gemm_check(timer_path)
+            if calls <= 0 or not math.isfinite(scaled_max) \
+                    or scaled_max > 1.0e-11:
+                print("ERROR: BF-FSZ inverse GEMM canary failed")
+                return -1
 
     if case_name in sampling_matrix_free_cases:
         mode = sampling_matrix_free_cases[case_name]
