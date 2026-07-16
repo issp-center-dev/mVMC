@@ -769,24 +769,89 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
   }
 
   clock_gettime(CLOCK_MONOTONIC,&checkStart);
-  for(i=0;i<nsize;i++) for(j=0;j<nsize;j++) {
-    const double valueAbs = cabs(newInv[(size_t)i*(size_t)nsize+j]);
-    const double skewAbs = cabs(newInv[(size_t)i*(size_t)nsize+j]
-        +newInv[(size_t)j*(size_t)nsize+i]);
-    if(!isfinite(valueAbs)) {
-      clock_gettime(CLOCK_MONOTONIC,&checkEnd);
-      if(BFFSZInvDetailProfileEnabled) {
-        detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
-            += BF_FSZ_TimeDifference(&checkStart,&checkEnd);
+  {
+    double scalarMaxAbs=0.0,scalarMaxSkew=0.0;
+    if(BFFSZInvGemmCheckEnabled) {
+      for(i=0;i<nsize;i++) for(j=0;j<nsize;j++) {
+        const double valueAbs
+            = cabs(newInv[(size_t)i*(size_t)nsize+j]);
+        const double skewAbs = cabs(newInv[(size_t)i*(size_t)nsize+j]
+            +newInv[(size_t)j*(size_t)nsize+i]);
+        if(valueAbs > scalarMaxAbs) scalarMaxAbs = valueAbs;
+        if(skewAbs > scalarMaxSkew) scalarMaxSkew = skewAbs;
       }
-      return BF_FSZ_InvResultValueWithDetail(
-          BF_FSZ_INV_UPDATE_NONFINITE,BF_FSZ_INV_STAGE_FINITE,
-          globalQpidx,0,maxSkew,maxResidual,
-          maxGemmDifference,
-          BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
     }
-    if(valueAbs > maxAbs) maxAbs = valueAbs;
-    if(skewAbs > maxSkew) maxSkew = skewAbs;
+    for(i=0;i<nsize;i++) {
+      double complex *upperRow = newInv+(size_t)i*(size_t)nsize;
+      const double diagonalAbs = cabs(upperRow[i]);
+      const double diagonalSkewAbs = cabs(upperRow[i]+upperRow[i]);
+      if(!isfinite(diagonalAbs)) {
+        clock_gettime(CLOCK_MONOTONIC,&checkEnd);
+        if(BFFSZInvDetailProfileEnabled) {
+          detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
+              += BF_FSZ_TimeDifference(&checkStart,&checkEnd);
+        }
+        return BF_FSZ_InvResultValueWithDetail(
+            BF_FSZ_INV_UPDATE_NONFINITE,BF_FSZ_INV_STAGE_FINITE,
+            globalQpidx,0,maxSkew,maxResidual,
+            maxGemmDifference,
+            BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
+      }
+      if(diagonalAbs > maxAbs) maxAbs = diagonalAbs;
+      if(diagonalSkewAbs > maxSkew) maxSkew = diagonalSkewAbs;
+      upperRow[i] = 0.0+0.0*I;
+      for(j=i+1;j<nsize;j++) {
+        double complex *lower
+            = newInv+(size_t)j*(size_t)nsize+i;
+        const double complex upperValue = upperRow[j];
+        const double complex lowerValue = *lower;
+        const double upperAbs = cabs(upperValue);
+        const double lowerAbs = cabs(lowerValue);
+        const double skewAbs = cabs(upperValue+lowerValue);
+        const double complex projectedValue
+            = 0.5*(upperValue-lowerValue);
+        if(!isfinite(upperAbs) || !isfinite(lowerAbs)) {
+          clock_gettime(CLOCK_MONOTONIC,&checkEnd);
+          if(BFFSZInvDetailProfileEnabled) {
+            detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
+                += BF_FSZ_TimeDifference(&checkStart,&checkEnd);
+          }
+          return BF_FSZ_InvResultValueWithDetail(
+              BF_FSZ_INV_UPDATE_NONFINITE,BF_FSZ_INV_STAGE_FINITE,
+              globalQpidx,0,maxSkew,maxResidual,
+              maxGemmDifference,
+              BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
+        }
+        if(upperAbs > maxAbs) maxAbs = upperAbs;
+        if(lowerAbs > maxAbs) maxAbs = lowerAbs;
+        if(skewAbs > maxSkew) maxSkew = skewAbs;
+        upperRow[j] = projectedValue;
+        *lower = -projectedValue;
+      }
+    }
+    if(BFFSZInvGemmCheckEnabled) {
+      const double absDifference
+          = BF_FSZ_ScaledComplexDifference(maxAbs,scalarMaxAbs);
+      const double skewDifference
+          = BF_FSZ_ScaledComplexDifference(maxSkew,scalarMaxSkew);
+      if(absDifference > maxGemmDifference) {
+        maxGemmDifference = absDifference;
+      }
+      if(skewDifference > maxGemmDifference) {
+        maxGemmDifference = skewDifference;
+      }
+    }
+  }
+  if(BFFSZInvGemmCheckEnabled && maxGemmDifference > 1.0e-11) {
+    clock_gettime(CLOCK_MONOTONIC,&checkEnd);
+    if(BFFSZInvDetailProfileEnabled) {
+      detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
+          += BF_FSZ_TimeDifference(&checkStart,&checkEnd);
+    }
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_GEMM_MISMATCH,BF_FSZ_INV_STAGE_GEMM_CHECK,
+        globalQpidx,0,maxSkew/fmax(1.0,maxAbs),0.0,maxGemmDifference,
+        BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
   }
   if(maxSkew/fmax(1.0,maxAbs) > 1.0e-9) {
     clock_gettime(CLOCK_MONOTONIC,&checkEnd);
@@ -800,16 +865,6 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
         maxSkew/fmax(1.0,maxAbs),0.0,
         maxGemmDifference,
         BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
-  }
-  for(i=0;i<nsize;i++) {
-    newInv[(size_t)i*(size_t)nsize+i] = 0.0+0.0*I;
-    for(j=i+1;j<nsize;j++) {
-      const double complex value = 0.5
-          *(newInv[(size_t)i*(size_t)nsize+j]
-            -newInv[(size_t)j*(size_t)nsize+i]);
-      newInv[(size_t)i*(size_t)nsize+j] = value;
-      newInv[(size_t)j*(size_t)nsize+i] = -value;
-    }
   }
   if(BFFSZInvDetailProfileEnabled) {
     clock_gettime(CLOCK_MONOTONIC,&detailStart);

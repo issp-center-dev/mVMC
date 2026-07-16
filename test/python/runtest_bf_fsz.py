@@ -713,6 +713,8 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         "BackFlow_FSZ_InvResidualGemm_NonIdentity_Complex_mpi": "gemm",
         "BackFlow_FSZ_InvWoodburyGemm_NonIdentity_Complex": "gemm",
         "BackFlow_FSZ_InvWoodburyGemm_NonIdentity_Complex_mpi": "gemm",
+        "BackFlow_FSZ_InvScanFusion_NonIdentity_Complex": "gemm",
+        "BackFlow_FSZ_InvScanFusion_NonIdentity_Complex_mpi": "gemm",
         "BackFlow_FSZ_InvUpdate_MoreRanks_NonIdentity_Complex_mpi": "optimized",
         "BackFlow_FSZ_InvUpdate_Fallback_NonIdentity_Complex": "fallback",
         "BackFlow_FSZ_InvUpdate_GetrfFallback_NonIdentity_Complex": "getrf",
