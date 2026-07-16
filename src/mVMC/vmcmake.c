@@ -625,6 +625,8 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
   long long recvPfPath[NBFFSZProfileSource][NBFFSZPfPath];
   long long recvInvPath[NBFFSZPfPath];
   long long recvGreenMaterialize[NBFFSZGreenMaterialize];
+  long long recvSampleMaterialize[NBFFSZSampleMaterialize];
+  long long recvSampleCommit[NBFFSZPfPath];
   double recvInvCheckSeconds,recvInvAntisymmetry,recvInvResidual;
   int i,j;
   int rank,size;
@@ -673,6 +675,16 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
                 NBFFSZGreenMaterialize,MPI_LONG_LONG,MPI_SUM,comm);
   if(rank==0) for(j=0;j<NBFFSZGreenMaterialize;j++) {
     BFFSZProfileGreenMaterialize[j] = recvGreenMaterialize[j];
+  }
+  MPI_Allreduce(BFFSZProfileSampleMaterialize,recvSampleMaterialize,
+                NBFFSZSampleMaterialize,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(j=0;j<NBFFSZSampleMaterialize;j++) {
+    BFFSZProfileSampleMaterialize[j] = recvSampleMaterialize[j];
+  }
+  MPI_Allreduce(BFFSZProfileSampleCommit,recvSampleCommit,
+                NBFFSZPfPath,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(j=0;j<NBFFSZPfPath;j++) {
+    BFFSZProfileSampleCommit[j] = recvSampleCommit[j];
   }
   MPI_Allreduce(&BFFSZProfileInvCheckSeconds,&recvInvCheckSeconds,1,
                 MPI_DOUBLE,MPI_MAX,comm);

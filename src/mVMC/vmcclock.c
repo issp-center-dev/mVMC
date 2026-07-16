@@ -59,6 +59,7 @@ void InitTimer() {
   const char *invUpdateInjectRankEnv, *invUpdateExplicitStateEnv;
   const char *invUpdateArgumentEnv;
   const char *matrixFreeCheckEnv, *matrixFreeArgumentEnv;
+  const char *samplingRejectCheckEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
   for(i=0;i<NTimer;i++) TimerStart[i]=0.0;
   for(i=0;i<NBFProfileCounter;i++) BFProfileCounter[i]=0;
@@ -81,6 +82,10 @@ void InitTimer() {
   for(j=0;j<NBFFSZGreenMaterialize;j++) {
     BFFSZProfileGreenMaterialize[j] = 0;
   }
+  for(j=0;j<NBFFSZSampleMaterialize;j++) {
+    BFFSZProfileSampleMaterialize[j] = 0;
+  }
+  for(j=0;j<NBFFSZPfPath;j++) BFFSZProfileSampleCommit[j] = 0;
   BFFSZProfileInvCheckSeconds = 0.0;
   BFFSZProfileInvAntisymmetryMax = 0.0;
   BFFSZProfileInvResidualMax = 0.0;
@@ -165,6 +170,9 @@ void InitTimer() {
   if(BFFSZMatrixFreeArgumentCheckEnabled) {
     BFFSZMatrixFreeCheckEnabled = 1;
   }
+  samplingRejectCheckEnv = getenv("MVMC_BF_FSZ_SAMPLING_REJECT_CHECK");
+  BFFSZSamplingRejectCheckEnabled = (samplingRejectCheckEnv != NULL
+      && atoi(samplingRejectCheckEnv) != 0);
   return;
 }
 
@@ -293,6 +301,15 @@ static void OutputBFProfileCounters(FILE *fp) {
           BFFSZProfileGreenMaterialize[BFFSZ_GREEN_MATERIALIZE_DIRECT_FULL],
           BFFSZProfileGreenMaterialize[BFFSZ_GREEN_MATERIALIZE_FALLBACK],
           BFFSZProfileGreenMaterialize[BFFSZ_GREEN_MATERIALIZE_ORACLE]);
+  fprintf(fp,"    BF-FSZ sample full materialize  direct-full:%lld pf-fallback:%lld inv-fallback:%lld oracle:%lld\n",
+          BFFSZProfileSampleMaterialize[BFFSZ_SAMPLE_MATERIALIZE_DIRECT_FULL],
+          BFFSZProfileSampleMaterialize[BFFSZ_SAMPLE_MATERIALIZE_PF_FALLBACK],
+          BFFSZProfileSampleMaterialize[BFFSZ_SAMPLE_MATERIALIZE_INV_FALLBACK],
+          BFFSZProfileSampleMaterialize[BFFSZ_SAMPLE_MATERIALIZE_ORACLE]);
+  fprintf(fp,"    BF-FSZ sample Slater commits    optimized:%lld direct-full:%lld fallback:%lld\n",
+          BFFSZProfileSampleCommit[BFFSZ_PF_PATH_OPTIMIZED],
+          BFFSZProfileSampleCommit[BFFSZ_PF_PATH_DIRECT_FULL],
+          BFFSZProfileSampleCommit[BFFSZ_PF_PATH_FALLBACK]);
   fprintf(fp,"    BF-FSZ inverse checks           seconds:%.9f antisymmetry_max:%.17e affected_residual_max:%.17e\n",
           BFFSZProfileInvCheckSeconds,BFFSZProfileInvAntisymmetryMax,
           BFFSZProfileInvResidualMax);
@@ -320,6 +337,7 @@ void OutputTimerParaOpt() {
   fprintf(fp,"      CalculateLogIP       [62] %12.5lf\n",Timer[62]);
   fprintf(fp,"      UpdateMAll           [63] %12.5lf\n",Timer[63]);
   fprintf(fp,"      UpdateSlaterElmBF    [64] %12.5lf\n",Timer[64]);
+  fprintf(fp,"      CommitSlaterElmBF    [94] %12.5lf\n",Timer[94]);
   fprintf(fp,"    exchange update        [33] %12.5lf\n",Timer[33]);
   fprintf(fp,"      UpdateProjCnt        [65] %12.5lf\n",Timer[65]);
   fprintf(fp,"      CalculateNewPfMTwo2  [66] %12.5lf\n",Timer[66]);
@@ -397,6 +415,7 @@ void OutputTimerPhysCal() {
   fprintf(fp,"      CalculateLogIP       [62] %12.5lf\n",Timer[62]);
   fprintf(fp,"      UpdateMAll           [63] %12.5lf\n",Timer[63]);
   fprintf(fp,"      UpdateSlaterElmBF    [64] %12.5lf\n",Timer[64]);
+  fprintf(fp,"      CommitSlaterElmBF    [94] %12.5lf\n",Timer[94]);
   fprintf(fp,"    exchange update        [33] %12.5lf\n",Timer[33]);
   fprintf(fp,"      UpdateProjCnt        [65] %12.5lf\n",Timer[65]);
   fprintf(fp,"      CalculateNewPfMTwo2  [66] %12.5lf\n",Timer[66]);

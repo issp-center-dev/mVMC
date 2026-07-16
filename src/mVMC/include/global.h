@@ -460,6 +460,11 @@ long long BFProfileCounter[NBFProfileCounter];
 #define BFFSZ_GREEN_MATERIALIZE_FALLBACK 1
 #define BFFSZ_GREEN_MATERIALIZE_ORACLE 2
 #define NBFFSZGreenMaterialize 3
+#define BFFSZ_SAMPLE_MATERIALIZE_DIRECT_FULL 0
+#define BFFSZ_SAMPLE_MATERIALIZE_PF_FALLBACK 1
+#define BFFSZ_SAMPLE_MATERIALIZE_INV_FALLBACK 2
+#define BFFSZ_SAMPLE_MATERIALIZE_ORACLE 3
+#define NBFFSZSampleMaterialize 4
 #define BF_FSZ_PF_UPDATE_KFULL_DEFAULT 32
 int BFFSZGreenRebuildCheckEnabled = 0;
 int BFFSZAffectedCheckEnabled = 0;
@@ -479,6 +484,7 @@ int BFFSZInvUpdateExplicitStateCheckEnabled = 0;
 int BFFSZInvUpdateArgumentCheckEnabled = 0;
 int BFFSZMatrixFreeCheckEnabled = 0;
 int BFFSZMatrixFreeArgumentCheckEnabled = 0;
+int BFFSZSamplingRejectCheckEnabled = 0;
 long long BFFSZProfileCall[NBFFSZProfileSource];
 long long BFFSZProfileChangedSum[NBFFSZProfileSource];
 long long BFFSZProfileChangedMax[NBFFSZProfileSource];
@@ -490,6 +496,8 @@ long long BFFSZProfileAffectedRatioHist[NBFFSZProfileSource][NBFFSZProfileRatioH
 long long BFFSZProfilePfPath[NBFFSZProfileSource][NBFFSZPfPath];
 long long BFFSZProfileInvPath[NBFFSZPfPath];
 long long BFFSZProfileGreenMaterialize[NBFFSZGreenMaterialize];
+long long BFFSZProfileSampleMaterialize[NBFFSZSampleMaterialize];
+long long BFFSZProfileSampleCommit[NBFFSZPfPath];
 double BFFSZProfileInvCheckSeconds = 0.0;
 double BFFSZProfileInvAntisymmetryMax = 0.0;
 double BFFSZProfileInvResidualMax = 0.0;
@@ -569,6 +577,17 @@ static inline void RecordBFFSZGreenMaterialize(int reason) {
       || reason < 0 || reason >= NBFFSZGreenMaterialize) return;
 #pragma omp atomic
   BFFSZProfileGreenMaterialize[reason]++;
+}
+
+static inline void RecordBFFSZSampleMaterialize(int reason) {
+  if(!BFProfileEnabled
+      || reason < 0 || reason >= NBFFSZSampleMaterialize) return;
+  BFFSZProfileSampleMaterialize[reason]++;
+}
+
+static inline void RecordBFFSZSampleCommit(int path) {
+  if(!BFProfileEnabled || path < 0 || path >= NBFFSZPfPath) return;
+  BFFSZProfileSampleCommit[path]++;
 }
 
 static inline void RecordBFFSZInvChecks(double seconds,
