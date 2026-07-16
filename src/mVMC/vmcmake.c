@@ -624,6 +624,7 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
   long long recvRatioHist[NBFFSZProfileSource][NBFFSZProfileRatioHist];
   long long recvPfPath[NBFFSZProfileSource][NBFFSZPfPath];
   long long recvInvPath[NBFFSZPfPath];
+  long long recvGreenMaterialize[NBFFSZGreenMaterialize];
   double recvInvCheckSeconds,recvInvAntisymmetry,recvInvResidual;
   int i,j;
   int rank,size;
@@ -668,6 +669,11 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
   MPI_Allreduce(BFFSZProfileInvPath,recvInvPath,NBFFSZPfPath,
                 MPI_LONG_LONG,MPI_SUM,comm);
   if(rank==0) for(j=0;j<NBFFSZPfPath;j++) BFFSZProfileInvPath[j] = recvInvPath[j];
+  MPI_Allreduce(BFFSZProfileGreenMaterialize,recvGreenMaterialize,
+                NBFFSZGreenMaterialize,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(j=0;j<NBFFSZGreenMaterialize;j++) {
+    BFFSZProfileGreenMaterialize[j] = recvGreenMaterialize[j];
+  }
   MPI_Allreduce(&BFFSZProfileInvCheckSeconds,&recvInvCheckSeconds,1,
                 MPI_DOUBLE,MPI_MAX,comm);
   MPI_Allreduce(&BFFSZProfileInvAntisymmetryMax,&recvInvAntisymmetry,1,

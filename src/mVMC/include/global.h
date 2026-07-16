@@ -456,6 +456,10 @@ long long BFProfileCounter[NBFProfileCounter];
 #define BFFSZ_PF_PATH_DIRECT_FULL 1
 #define BFFSZ_PF_PATH_FALLBACK 2
 #define NBFFSZPfPath 3
+#define BFFSZ_GREEN_MATERIALIZE_DIRECT_FULL 0
+#define BFFSZ_GREEN_MATERIALIZE_FALLBACK 1
+#define BFFSZ_GREEN_MATERIALIZE_ORACLE 2
+#define NBFFSZGreenMaterialize 3
 #define BF_FSZ_PF_UPDATE_KFULL_DEFAULT 32
 int BFFSZGreenRebuildCheckEnabled = 0;
 int BFFSZAffectedCheckEnabled = 0;
@@ -485,6 +489,7 @@ long long BFFSZProfileAffectedHist[NBFFSZProfileSource][NBFFSZProfileHist];
 long long BFFSZProfileAffectedRatioHist[NBFFSZProfileSource][NBFFSZProfileRatioHist];
 long long BFFSZProfilePfPath[NBFFSZProfileSource][NBFFSZPfPath];
 long long BFFSZProfileInvPath[NBFFSZPfPath];
+long long BFFSZProfileGreenMaterialize[NBFFSZGreenMaterialize];
 double BFFSZProfileInvCheckSeconds = 0.0;
 double BFFSZProfileInvAntisymmetryMax = 0.0;
 double BFFSZProfileInvResidualMax = 0.0;
@@ -557,6 +562,13 @@ static inline void RecordBFFSZPfPath(int source, int path) {
 static inline void RecordBFFSZInvPath(int path) {
   if(!BFProfileEnabled || path < 0 || path >= NBFFSZPfPath) return;
   BFFSZProfileInvPath[path]++;
+}
+
+static inline void RecordBFFSZGreenMaterialize(int reason) {
+  if(!BFProfileEnabled
+      || reason < 0 || reason >= NBFFSZGreenMaterialize) return;
+#pragma omp atomic
+  BFFSZProfileGreenMaterialize[reason]++;
 }
 
 static inline void RecordBFFSZInvChecks(double seconds,

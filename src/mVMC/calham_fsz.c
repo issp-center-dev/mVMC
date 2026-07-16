@@ -253,7 +253,9 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   double *myPfRWork;
   const size_t bfSlaterSize = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
   size_t pfUpdateComplexCount,pfUpdateIntCount,pfUpdateDoubleCount;
-  size_t bfBufferSize,bfComplexSize,nsizeSquared;
+  size_t bfBufferSize,bfComplexSize,nsizeSquared,rowCount;
+  const int rowCapacity = (BFFSZPfUpdateKFull-1 < Nsize-1)
+      ? BFFSZPfUpdateKFull-1 : Nsize-1;
   long long bfBaseIntSizeLL,bfIntSizeLL;
   int bfBaseIntSize, bfHopIntSize, bfIntSize, bfPfIntSize, bfPfDoubleSize;
 
@@ -265,16 +267,25 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
     fprintf(stderr, "Error: invalid BF-FSZ Hamiltonian hop integer workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  if(GetCalculateNewPfMBF_fsz_rows_work_size(&pfUpdateComplexCount,
+  if(GetCalculateNewPfMBF_fsz_row_values_work_size(&pfUpdateComplexCount,
       &pfUpdateIntCount,&pfUpdateDoubleCount) != 0
+      || GetSlaterElmBF_fsz_hop_row_work_size(
+          &rowCount,NQPFull,rowCapacity) != BF_FSZ_ROW_BUILD_OK
       || pfUpdateIntCount > INT_MAX || pfUpdateDoubleCount > INT_MAX
       || bfSlaterSize > SIZE_MAX-2*(size_t)NQPFull
-      || bfSlaterSize+2*(size_t)NQPFull > SIZE_MAX-pfUpdateComplexCount) {
+      || bfSlaterSize+2*(size_t)NQPFull > SIZE_MAX-rowCount
+      || bfSlaterSize+2*(size_t)NQPFull+rowCount
+          > SIZE_MAX-pfUpdateComplexCount
+      || (BFFSZGreenRebuildCheckEnabled
+          && bfSlaterSize+2*(size_t)NQPFull+rowCount+pfUpdateComplexCount
+              > SIZE_MAX-bfSlaterSize)) {
     fprintf(stderr,"Error: invalid BF-FSZ Hamiltonian Pfaffian workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
   }
   nsizeSquared = (size_t)Nsize*(size_t)Nsize;
-  bfBufferSize = 2*(size_t)NQPFull + bfSlaterSize + pfUpdateComplexCount;
+  bfBufferSize = 2*(size_t)NQPFull + bfSlaterSize + rowCount
+      + pfUpdateComplexCount
+      + (BFFSZGreenRebuildCheckEnabled ? bfSlaterSize : 0);
   if(nsizeSquared > SIZE_MAX-(size_t)LapackLWork
       || bfBufferSize > SIZE_MAX-nsizeSquared-(size_t)LapackLWork) {
     fprintf(stderr,"Error: BF-FSZ Hamiltonian complex workspace size overflow.\n");

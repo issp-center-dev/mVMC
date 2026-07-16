@@ -78,6 +78,9 @@ void InitTimer() {
     for(j=0;j<NBFFSZPfPath;j++) BFFSZProfilePfPath[i][j] = 0;
   }
   for(j=0;j<NBFFSZPfPath;j++) BFFSZProfileInvPath[j] = 0;
+  for(j=0;j<NBFFSZGreenMaterialize;j++) {
+    BFFSZProfileGreenMaterialize[j] = 0;
+  }
   BFFSZProfileInvCheckSeconds = 0.0;
   BFFSZProfileInvAntisymmetryMax = 0.0;
   BFFSZProfileInvResidualMax = 0.0;
@@ -286,6 +289,10 @@ static void OutputBFProfileCounters(FILE *fp) {
           BFFSZProfileInvPath[BFFSZ_PF_PATH_OPTIMIZED],
           BFFSZProfileInvPath[BFFSZ_PF_PATH_DIRECT_FULL],
           BFFSZProfileInvPath[BFFSZ_PF_PATH_FALLBACK],BFFSZPfUpdateKFull);
+  fprintf(fp,"    BF-FSZ green full materialize   direct-full:%lld fallback:%lld oracle:%lld\n",
+          BFFSZProfileGreenMaterialize[BFFSZ_GREEN_MATERIALIZE_DIRECT_FULL],
+          BFFSZProfileGreenMaterialize[BFFSZ_GREEN_MATERIALIZE_FALLBACK],
+          BFFSZProfileGreenMaterialize[BFFSZ_GREEN_MATERIALIZE_ORACLE]);
   fprintf(fp,"    BF-FSZ inverse checks           seconds:%.9f antisymmetry_max:%.17e affected_residual_max:%.17e\n",
           BFFSZProfileInvCheckSeconds,BFFSZProfileInvAntisymmetryMax,
           BFFSZProfileInvResidualMax);

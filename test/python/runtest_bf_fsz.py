@@ -440,6 +440,26 @@ def read_bffsz_inv_paths(path):
     raise RuntimeError("{} was not found in {}".format(marker, path))
 
 
+def read_bffsz_green_materialize(path):
+    marker = "BF-FSZ green full materialize"
+    with open(path) as fp:
+        for line in fp:
+            if marker not in line:
+                continue
+            values = {}
+            for token in line.split():
+                if ":" not in token:
+                    continue
+                key, value = token.rsplit(":", 1)
+                try:
+                    values[key] = int(value)
+                except ValueError:
+                    pass
+            if all(key in values for key in ("direct-full", "fallback", "oracle")):
+                return values
+    raise RuntimeError("{} was not found in {}".format(marker, path))
+
+
 def get_float(values, key):
     if key not in values:
         raise RuntimeError("{} was not found in dump".format(key))
@@ -597,11 +617,16 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         "BackFlow_FSZ_MatrixFreeRows_NonIdentity_Complex_omp": "optimized",
         "BackFlow_FSZ_MatrixFreeRows_InvalidArguments_NonIdentity_Complex": "arguments",
     }
+    green_matrix_free_cases = {
+        "BackFlow_FSZ_GreenMatrixFree_Lazy_NonIdentity_Complex": "lazy",
+        "BackFlow_FSZ_GreenMatrixFree_Lazy_NonIdentity_Complex_mpi": "lazy",
+        "BackFlow_FSZ_GreenMatrixFree_Lazy_NonIdentity_Complex_omp": "lazy",
+    }
     affected_cases = (
         "BackFlow_FSZ_AffectedRows_NonIdentity_Complex",
         "BackFlow_FSZ_AffectedRows_NonIdentity_Complex_mpi",
     ) + tuple(pf_update_cases) + tuple(inv_update_cases) \
-        + tuple(matrix_free_cases)
+        + tuple(matrix_free_cases) + tuple(green_matrix_free_cases)
     if case_name != "BackFlow_FSZ_TwoBodyG_StaleBase_NonIdentity_Complex" \
             and case_name not in affected_cases:
         return None
@@ -620,7 +645,8 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         (reference_workdir, reference_case_rows),
     ):
         update_modpara(workdir, {"NVMCSample": "1"})
-        if (case_name in inv_update_cases or case_name in matrix_free_cases) \
+        if (case_name in inv_update_cases or case_name in matrix_free_cases
+                or case_name in green_matrix_free_cases) \
                 and mpi_procs:
             update_modpara(workdir, {"NSplitSize": str(mpi_procs)})
         if case_name in affected_cases:
@@ -630,12 +656,15 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
 
     ordered_init = write_nonidentity_init(ordered_workdir)
     reference_init = write_nonidentity_init(reference_workdir)
-    ordered_env = {
-        "MVMC_BF_FSZ_GREEN_REBUILD_CHECK": "1",
-        "MVMC_BF_FSZ_AFFECTED_CHECK": "1",
-        "MVMC_BF_FSZ_MATRIX_FREE_CHECK": "1",
-        "MVMC_BF_PROFILE": "1",
-    }
+    if case_name in green_matrix_free_cases:
+        ordered_env = {"MVMC_BF_PROFILE": "1"}
+    else:
+        ordered_env = {
+            "MVMC_BF_FSZ_GREEN_REBUILD_CHECK": "1",
+            "MVMC_BF_FSZ_AFFECTED_CHECK": "1",
+            "MVMC_BF_FSZ_MATRIX_FREE_CHECK": "1",
+            "MVMC_BF_PROFILE": "1",
+        }
     if case_name in pf_update_cases:
         ordered_env["MVMC_BF_FSZ_PF_UPDATE_CHECK"] = "1"
         if pf_update_cases[case_name] == "fallback":
@@ -746,6 +775,22 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
                         or paths["fallback"] != 0:
                     print("ERROR: BF-FSZ {} direct-full Pfaffian path was not isolated".format(source))
                     return -1
+        if source == "green":
+            paths = read_bffsz_pf_paths(timer_path, source)
+            materialize = read_bffsz_green_materialize(timer_path)
+            expected_oracle = 0 if case_name in green_matrix_free_cases \
+                else paths["optimized"]
+            if materialize["direct-full"] != paths["direct-full"] \
+                    or materialize["fallback"] != paths["fallback"] \
+                    or materialize["oracle"] != expected_oracle:
+                print("ERROR: BF-FSZ Green lazy materialization counters "
+                      "do not match path decisions")
+                return -1
+            if case_name in green_matrix_free_cases \
+                    and (paths["optimized"] <= 0 or paths["fallback"] != 0):
+                print("ERROR: BF-FSZ Green matrix-free optimized path "
+                      "was not exercised cleanly")
+                return -1
 
     if case_name in inv_update_cases:
         paths = read_bffsz_inv_paths(timer_path)
