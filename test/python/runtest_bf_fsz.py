@@ -501,6 +501,55 @@ def read_bffsz_sample_commits(path):
     raise RuntimeError("{} was not found in {}".format(marker, path))
 
 
+def read_bffsz_inv_detail(path):
+    components = {}
+    total = None
+    component_marker = "BF-FSZ inverse detail component="
+    total_marker = "BF-FSZ inverse detail total "
+    with open(path) as fp:
+        for line in fp:
+            if component_marker in line:
+                fields = {}
+                for token in line.split():
+                    if "=" in token:
+                        key, value = token.split("=", 1)
+                        fields[key] = value
+                required = (
+                    "component",
+                    "seconds_rank0",
+                    "seconds_max_rank",
+                    "share_rank0",
+                )
+                if all(key in fields for key in required):
+                    components[fields["component"]] = {
+                        "seconds_rank0": float(fields["seconds_rank0"]),
+                        "seconds_max_rank": float(fields["seconds_max_rank"]),
+                        "share_rank0": float(fields["share_rank0"]),
+                    }
+            elif total_marker in line:
+                fields = {}
+                for token in line.split():
+                    if "=" in token:
+                        key, value = token.split("=", 1)
+                        fields[key] = value
+                required = (
+                    "timer63_seconds_rank0",
+                    "classified_seconds_rank0",
+                    "unclassified_seconds_rank0",
+                )
+                if all(key in fields for key in required):
+                    total = {key: float(fields[key]) for key in required}
+    if not components or total is None:
+        raise RuntimeError("BF-FSZ inverse detail profile was not found in {}".format(path))
+    return components, total
+
+
+def has_bffsz_inv_detail(path):
+    marker = "BF-FSZ inverse detail profile"
+    with open(path) as fp:
+        return any(marker in line for line in fp)
+
+
 def get_float(values, key):
     if key not in values:
         raise RuntimeError("{} was not found in dump".format(key))
@@ -643,6 +692,8 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
     inv_update_cases = {
         "BackFlow_FSZ_InvUpdate_NonIdentity_Complex": "optimized",
         "BackFlow_FSZ_InvUpdate_NonIdentity_Complex_mpi": "optimized",
+        "BackFlow_FSZ_InvDetailProfile_NonIdentity_Complex": "detail",
+        "BackFlow_FSZ_InvDetailProfile_NonIdentity_Complex_mpi": "detail",
         "BackFlow_FSZ_InvUpdate_MoreRanks_NonIdentity_Complex_mpi": "optimized",
         "BackFlow_FSZ_InvUpdate_Fallback_NonIdentity_Complex": "fallback",
         "BackFlow_FSZ_InvUpdate_GetrfFallback_NonIdentity_Complex": "getrf",
@@ -685,6 +736,8 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
     reference_rows = contracted_rows + general_rows
     reference_case_rows = reference_rows
     if case_name in pf_update_cases and pf_update_cases[case_name] == "permuted":
+        reference_case_rows = ordered_rows
+    if case_name in inv_update_cases and inv_update_cases[case_name] == "detail":
         reference_case_rows = ordered_rows
 
     ordered_workdir = prepare_case(rootdir, case_name, True)
@@ -753,6 +806,8 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
             ordered_env["MVMC_BF_FSZ_INV_UPDATE_EXPLICIT_STATE_CHECK"] = "1"
         elif mode == "arguments":
             ordered_env["MVMC_BF_FSZ_INV_UPDATE_ARGUMENT_CHECK"] = "1"
+        elif mode == "detail":
+            ordered_env["MVMC_BF_FSZ_INV_DETAIL_PROFILE"] = "1"
     if case_name in matrix_free_cases \
             and matrix_free_cases[case_name] == "arguments":
         ordered_env["MVMC_BF_FSZ_MATRIX_FREE_ARGUMENT_CHECK"] = "1"
@@ -854,7 +909,7 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
     if case_name in inv_update_cases:
         paths = read_bffsz_inv_paths(timer_path)
         mode = inv_update_cases[case_name]
-        if mode in ("optimized", "explicit-state", "arguments"):
+        if mode in ("optimized", "detail", "explicit-state", "arguments"):
             if paths["optimized"] <= 0 or paths["fallback"] != 0:
                 print("ERROR: BF-FSZ optimized inverse path was not isolated")
                 return -1
@@ -867,6 +922,83 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
                     or paths["fallback"] != 0:
                 print("ERROR: BF-FSZ direct-full inverse path was not isolated")
                 return -1
+        if mode == "detail":
+            components, total = read_bffsz_inv_detail(timer_path)
+            expected = {
+                "w",
+                "small-transpose",
+                "u",
+                "lapack",
+                "correction",
+                "scan-antisymmetrize",
+                "affected-residual",
+                "mpi-agreement",
+                "commit-copy",
+            }
+            if set(components) != expected:
+                print("ERROR: BF-FSZ inverse detail component set mismatch")
+                return -1
+            timer63 = total["timer63_seconds_rank0"]
+            classified = total["classified_seconds_rank0"]
+            unclassified = total["unclassified_seconds_rank0"]
+            if not all(math.isfinite(value) for value in (
+                    timer63, classified, unclassified)) \
+                    or timer63 <= 0.0 or classified <= 0.0:
+                print("ERROR: BF-FSZ inverse detail totals are invalid")
+                return -1
+            component_sum = 0.0
+            for name, values in components.items():
+                rank0 = values["seconds_rank0"]
+                max_rank = values["seconds_max_rank"]
+                share = values["share_rank0"]
+                if not all(math.isfinite(value) for value in (
+                        rank0, max_rank, share)) \
+                        or rank0 < 0.0 or max_rank < 0.0 \
+                        or max_rank + 1.0e-9 < rank0:
+                    print("ERROR: BF-FSZ inverse detail {} values are invalid".format(name))
+                    return -1
+                expected_share = rank0 / timer63
+                if abs(share - expected_share) > 2.0e-7:
+                    print("ERROR: BF-FSZ inverse detail {} share mismatch".format(name))
+                    return -1
+                component_sum += rank0
+            tolerance = max(2.0e-6, 2.0e-5 * timer63)
+            if abs(component_sum - classified) > tolerance \
+                    or abs(timer63 - classified - unclassified) > tolerance \
+                    or classified > timer63 + tolerance:
+                print("ERROR: BF-FSZ inverse detail accounting mismatch")
+                return -1
+            kernel_sum = sum(
+                components[name]["seconds_rank0"]
+                for name in expected
+                if name not in ("mpi-agreement", "commit-copy")
+            )
+            if kernel_sum <= 0.0:
+                print("ERROR: BF-FSZ inverse detail profile was vacuous")
+                return -1
+            reference_timer_path = os.path.join(
+                reference_workdir, "output", "zvo_CalcTimer.dat")
+            if has_bffsz_inv_detail(reference_timer_path):
+                print("ERROR: BF-FSZ inverse detail profile was enabled implicitly")
+                return -1
+            for filename in (
+                "zvo_out_001.dat",
+                "zvo_var_001.dat",
+                "zvo_cisajs_001.dat",
+                "zvo_cisajscktalt_001.dat",
+            ):
+                ordered_output = os.path.join(
+                    ordered_workdir, "output", filename)
+                reference_output = os.path.join(
+                    reference_workdir, "output", filename)
+                with open(ordered_output, "rb") as ordered_fp:
+                    ordered_bytes = ordered_fp.read()
+                with open(reference_output, "rb") as reference_fp:
+                    reference_bytes = reference_fp.read()
+                if ordered_bytes != reference_bytes:
+                    print("ERROR: BF-FSZ inverse detail profile changed {}".format(
+                        filename))
+                    return -1
 
     if case_name in sampling_matrix_free_cases:
         mode = sampling_matrix_free_cases[case_name]

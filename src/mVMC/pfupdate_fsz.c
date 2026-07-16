@@ -424,6 +424,7 @@ static BF_FSZ_InvUpdateResult BF_FSZ_InvResultValue(const int status,
     const double antisymmetryResidual, const double affectedResidual,
     const double checkSeconds) {
   BF_FSZ_InvUpdateResult result;
+  int i;
   result.status = status;
   result.stage = stage;
   result.qpidx = qpidx;
@@ -431,6 +432,26 @@ static BF_FSZ_InvUpdateResult BF_FSZ_InvResultValue(const int status,
   result.antisymmetryResidual = antisymmetryResidual;
   result.affectedResidual = affectedResidual;
   result.checkSeconds = checkSeconds;
+  for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+    result.detailSeconds[i] = 0.0;
+  }
+  return result;
+}
+
+static BF_FSZ_InvUpdateResult BF_FSZ_InvResultValueWithDetail(
+    const int status, const int stage, const int qpidx, const int lapackInfo,
+    const double antisymmetryResidual, const double affectedResidual,
+    const double checkSeconds,
+    const double detailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT]) {
+  BF_FSZ_InvUpdateResult result = BF_FSZ_InvResultValue(
+      status,stage,qpidx,lapackInfo,antisymmetryResidual,affectedResidual,
+      checkSeconds);
+  int i;
+  if(detailSeconds != NULL) {
+    for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+      result.detailSeconds[i] = detailSeconds[i];
+    }
+  }
   return result;
 }
 
@@ -438,6 +459,15 @@ static double BF_FSZ_TimeDifference(const struct timespec *start,
                                     const struct timespec *end) {
   return (double)(end->tv_sec-start->tv_sec)
       + 1.0e-9*(double)(end->tv_nsec-start->tv_nsec);
+}
+
+static void BF_FSZ_RecordInvDetailBoundary(
+    double detailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT],
+    const int component, struct timespec *start) {
+  struct timespec end;
+  clock_gettime(CLOCK_MONOTONIC,&end);
+  detailSeconds[component] += BF_FSZ_TimeDifference(start,&end);
+  *start = end;
 }
 
 static int BF_FSZ_InvUpdateTailWorkSizeForK(
@@ -509,7 +539,12 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
   double complex *newInv = invMNew+(size_t)qpidx*newInvMQpStride;
   int i,j,k,l,m=n2,n=n2,lda=n2,info=0,lwork=n2;
   double maxAbs=0.0,maxSkew=0.0,maxResidual=0.0;
-  struct timespec checkStart,checkEnd;
+  double detailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT] = {0.0};
+  struct timespec detailStart,checkStart,checkEnd;
+
+  if(BFFSZInvDetailProfileEnabled) {
+    clock_gettime(CLOCK_MONOTONIC,&detailStart);
+  }
 
   for(k=0;k<nAffected;k++) {
     const double complex *vec_k
@@ -521,6 +556,10 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
       for(j=0;j<nsize;j++) value += oldInv_i[j]*vec_k[j];
       w_k[i] = value;
     }
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    BF_FSZ_RecordInvDetailBoundary(
+        detailSeconds,BF_FSZ_INV_DETAIL_W,&detailStart);
   }
 
   for(k=0;k<nAffected;k++) {
@@ -555,6 +594,10 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
     smallInverse[(size_t)n2*(size_t)k+l]
         = smallMatrix[(size_t)n2*(size_t)l+k];
   }
+  if(BFFSZInvDetailProfileEnabled) {
+    BF_FSZ_RecordInvDetailBoundary(
+        detailSeconds,BF_FSZ_INV_DETAIL_SMALL_TRANSPOSE,&detailStart);
+  }
 
   for(i=0;i<nsize;i++) {
     double complex *matUV_i = matUV+(size_t)i*(size_t)n2;
@@ -565,16 +608,34 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
       matUV_i[k+nAffected] = oldInv_i[affected[k]];
     }
   }
+  if(BFFSZInvDetailProfileEnabled) {
+    BF_FSZ_RecordInvDetailBoundary(
+        detailSeconds,BF_FSZ_INV_DETAIL_U,&detailStart);
+  }
 
   M_ZGETRF(&m,&n,smallInverse,&lda,iwork,&info);
   if(info != 0) {
-    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_LAPACK_FAILURE,
-        BF_FSZ_INV_STAGE_GETRF,globalQpidx,info,0.0,0.0,0.0);
+    if(BFFSZInvDetailProfileEnabled) {
+      BF_FSZ_RecordInvDetailBoundary(
+          detailSeconds,BF_FSZ_INV_DETAIL_LAPACK,&detailStart);
+    }
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_LAPACK_FAILURE,BF_FSZ_INV_STAGE_GETRF,
+        globalQpidx,info,0.0,0.0,0.0,detailSeconds);
   }
   M_ZGETRI(&n,smallInverse,&lda,iwork,lapackWork,&lwork,&info);
   if(info != 0) {
-    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_LAPACK_FAILURE,
-        BF_FSZ_INV_STAGE_GETRI,globalQpidx,info,0.0,0.0,0.0);
+    if(BFFSZInvDetailProfileEnabled) {
+      BF_FSZ_RecordInvDetailBoundary(
+          detailSeconds,BF_FSZ_INV_DETAIL_LAPACK,&detailStart);
+    }
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_LAPACK_FAILURE,BF_FSZ_INV_STAGE_GETRI,
+        globalQpidx,info,0.0,0.0,0.0,detailSeconds);
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    BF_FSZ_RecordInvDetailBoundary(
+        detailSeconds,BF_FSZ_INV_DETAIL_LAPACK,&detailStart);
   }
 
   for(j=0;j<nsize;j++) {
@@ -599,6 +660,10 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
       newInv_i[j] = oldInv_i[j]-value;
     }
   }
+  if(BFFSZInvDetailProfileEnabled) {
+    BF_FSZ_RecordInvDetailBoundary(
+        detailSeconds,BF_FSZ_INV_DETAIL_CORRECTION,&detailStart);
+  }
 
   clock_gettime(CLOCK_MONOTONIC,&checkStart);
   for(i=0;i<nsize;i++) for(j=0;j<nsize;j++) {
@@ -607,19 +672,29 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
         +newInv[(size_t)j*(size_t)nsize+i]);
     if(!isfinite(valueAbs)) {
       clock_gettime(CLOCK_MONOTONIC,&checkEnd);
-      return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_NONFINITE,
-          BF_FSZ_INV_STAGE_FINITE,globalQpidx,0,maxSkew,maxResidual,
-          BF_FSZ_TimeDifference(&checkStart,&checkEnd));
+      if(BFFSZInvDetailProfileEnabled) {
+        detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
+            += BF_FSZ_TimeDifference(&checkStart,&checkEnd);
+      }
+      return BF_FSZ_InvResultValueWithDetail(
+          BF_FSZ_INV_UPDATE_NONFINITE,BF_FSZ_INV_STAGE_FINITE,
+          globalQpidx,0,maxSkew,maxResidual,
+          BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
     }
     if(valueAbs > maxAbs) maxAbs = valueAbs;
     if(skewAbs > maxSkew) maxSkew = skewAbs;
   }
   if(maxSkew/fmax(1.0,maxAbs) > 1.0e-9) {
     clock_gettime(CLOCK_MONOTONIC,&checkEnd);
-    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_ANTISYMMETRY,
-        BF_FSZ_INV_STAGE_ANTISYMMETRY,globalQpidx,0,
+    if(BFFSZInvDetailProfileEnabled) {
+      detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
+          += BF_FSZ_TimeDifference(&checkStart,&checkEnd);
+    }
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_ANTISYMMETRY,BF_FSZ_INV_STAGE_ANTISYMMETRY,
+        globalQpidx,0,
         maxSkew/fmax(1.0,maxAbs),0.0,
-        BF_FSZ_TimeDifference(&checkStart,&checkEnd));
+        BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
   }
   for(i=0;i<nsize;i++) {
     newInv[(size_t)i*(size_t)nsize+i] = 0.0+0.0*I;
@@ -630,6 +705,11 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
       newInv[(size_t)i*(size_t)nsize+j] = value;
       newInv[(size_t)j*(size_t)nsize+i] = -value;
     }
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    clock_gettime(CLOCK_MONOTONIC,&detailStart);
+    detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
+        += BF_FSZ_TimeDifference(&checkStart,&detailStart);
   }
   for(k=0;k<nAffected;k++) {
     const int row = affected[k];
@@ -652,15 +732,21 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
     }
   }
   clock_gettime(CLOCK_MONOTONIC,&checkEnd);
-  if(!(isfinite(maxResidual) && maxResidual <= 1.0e-9)) {
-    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_RESIDUAL,
-        BF_FSZ_INV_STAGE_RESIDUAL,globalQpidx,0,
-        maxSkew/fmax(1.0,maxAbs),maxResidual,
-        BF_FSZ_TimeDifference(&checkStart,&checkEnd));
+  if(BFFSZInvDetailProfileEnabled) {
+    detailSeconds[BF_FSZ_INV_DETAIL_AFFECTED_RESIDUAL]
+        += BF_FSZ_TimeDifference(&detailStart,&checkEnd);
   }
-  return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_OK,BF_FSZ_INV_STAGE_NONE,
+  if(!(isfinite(maxResidual) && maxResidual <= 1.0e-9)) {
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_RESIDUAL,BF_FSZ_INV_STAGE_RESIDUAL,
+        globalQpidx,0,
+        maxSkew/fmax(1.0,maxAbs),maxResidual,
+        BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
+  }
+  return BF_FSZ_InvResultValueWithDetail(
+      BF_FSZ_INV_UPDATE_OK,BF_FSZ_INV_STAGE_NONE,
       globalQpidx,0,maxSkew/fmax(1.0,maxAbs),maxResidual,
-      BF_FSZ_TimeDifference(&checkStart,&checkEnd));
+      BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
 }
 
 BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_rows_workspace(
@@ -678,6 +764,7 @@ BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_rows_workspace(
   double complex *vec,*w,*smallMatrix,*smallInverse,*matUV;
   double complex *correctionTmp,*lapackWork;
   double totalCheckSeconds=0.0,maxAntisymmetry=0.0,maxResidual=0.0;
+  double totalDetailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT] = {0.0};
   int i,j,qpidx;
 
   if(nAffected < 1 || nAffected > Nsize
@@ -756,6 +843,9 @@ BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_rows_workspace(
         qpStart,qpidx,vec,(size_t)Nsize,w,smallMatrix,
         smallInverse,matUV,correctionTmp,lapackWork,iwork);
     totalCheckSeconds += result.checkSeconds;
+    for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+      totalDetailSeconds[i] += result.detailSeconds[i];
+    }
     if(result.antisymmetryResidual > maxAntisymmetry) {
       maxAntisymmetry = result.antisymmetryResidual;
     }
@@ -766,11 +856,16 @@ BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_rows_workspace(
       result.checkSeconds = totalCheckSeconds;
       result.antisymmetryResidual = maxAntisymmetry;
       result.affectedResidual = maxResidual;
+      for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+        result.detailSeconds[i] = totalDetailSeconds[i];
+      }
       return result;
     }
   }
-  return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_OK,BF_FSZ_INV_STAGE_NONE,
-      qpStart,0,maxAntisymmetry,maxResidual,totalCheckSeconds);
+  return BF_FSZ_InvResultValueWithDetail(
+      BF_FSZ_INV_UPDATE_OK,BF_FSZ_INV_STAGE_NONE,
+      qpStart,0,maxAntisymmetry,maxResidual,totalCheckSeconds,
+      totalDetailSeconds);
 }
 
 BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_workspace(
@@ -789,6 +884,7 @@ BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_workspace(
   double complex *w,*smallMatrix,*smallInverse,*matUV;
   double complex *correctionTmp,*lapackWork;
   double totalCheckSeconds=0.0,maxAntisymmetry=0.0,maxResidual=0.0;
+  double totalDetailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT] = {0.0};
   int i,j,qpidx;
 
   if(nAffected < 1 || nAffected > Nsize
@@ -873,6 +969,9 @@ BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_workspace(
             candidateRows+(size_t)qpidx*rowQpStride,rowAffectedStride,
             w,smallMatrix,smallInverse,matUV,correctionTmp,lapackWork,iwork);
     totalCheckSeconds += result.checkSeconds;
+    for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+      totalDetailSeconds[i] += result.detailSeconds[i];
+    }
     if(result.antisymmetryResidual > maxAntisymmetry) {
       maxAntisymmetry = result.antisymmetryResidual;
     }
@@ -883,11 +982,16 @@ BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_workspace(
       result.checkSeconds = totalCheckSeconds;
       result.antisymmetryResidual = maxAntisymmetry;
       result.affectedResidual = maxResidual;
+      for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+        result.detailSeconds[i] = totalDetailSeconds[i];
+      }
       return result;
     }
   }
-  return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_OK,BF_FSZ_INV_STAGE_NONE,
-      qpStart,0,maxAntisymmetry,maxResidual,totalCheckSeconds);
+  return BF_FSZ_InvResultValueWithDetail(
+      BF_FSZ_INV_UPDATE_OK,BF_FSZ_INV_STAGE_NONE,
+      qpStart,0,maxAntisymmetry,maxResidual,totalCheckSeconds,
+      totalDetailSeconds);
 }
 
 

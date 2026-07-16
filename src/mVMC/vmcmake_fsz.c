@@ -36,6 +36,13 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "qp.h"
 #include "splitloop.h"
 
+#if BF_FSZ_INV_DETAIL_KERNEL_COUNT != BFFSZ_INV_DETAIL_MPI_AGREEMENT
+#error "BF-FSZ inverse detail component indices are inconsistent"
+#endif
+#if NBFFSZInvDetail != BFFSZ_INV_DETAIL_COMMIT_COPY+1
+#error "BF-FSZ inverse detail component count is inconsistent"
+#endif
+
 //typedef enum {HOPPING, EXCHANGE, NONE} UpdateType;
 //UpdateType getUpdateType(int path);
 
@@ -465,6 +472,10 @@ static int reduceBFInfo_fsz(const int info, MPI_Comm comm) {
   infoSend = info;
   MPI_Allreduce(&infoSend,&infoRdc,1,MPI_INT,MPI_MAX,comm);
   return infoRdc;
+}
+
+static double BF_FSZ_InvDetailWallTime(void) {
+  return MPI_Wtime();
 }
 
 static int BF_FSZ_PermuteParticleLabelsForCheck(int *eleIdx, int *eleCfg,
@@ -1438,12 +1449,20 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
         BF_FSZ_MAllResult fullResult;
         BF_FSZ_InvUpdateResult invResult;
         int invStatusGlobal;
+        double invDetailStart = 0.0;
         StartTimer(63);
         if(directFull) {
           fullResult = CalculateMAll_BF_fsz_from_workspace(candidateSlater,
               TmpEleIdx,TmpEleSpn,qpStart,qpEnd,pfMNew,invMNew,nsizeSquared,
               pfFullBufM,pfFullIWork,pfFullWork,LapackLWork,pfFullRWork);
+          if(BFFSZInvDetailProfileEnabled) {
+            invDetailStart = BF_FSZ_InvDetailWallTime();
+          }
           invStatusGlobal = reduceBFInfo_fsz(fullResult.status,comm);
+          if(BFFSZInvDetailProfileEnabled) {
+            RecordBFFSZInvDetail(BFFSZ_INV_DETAIL_MPI_AGREEMENT,
+                BF_FSZ_InvDetailWallTime()-invDetailStart);
+          }
           if(invStatusGlobal != BF_FSZ_MALL_OK) {
             if(rank==0) fprintf(stderr,
                 "error: BF-FSZ accepted direct full inverse prepare failed\n");
@@ -1489,6 +1508,11 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
               matrixFreeRowQpStride,matrixFreeRowAffectedStride,
               invUpdateWork,invUpdateComplexCount,
               invUpdateIWork,invUpdateIntCount);
+          if(BFFSZInvDetailProfileEnabled) {
+            for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+              RecordBFFSZInvDetail(i,invResult.detailSeconds[i]);
+            }
+          }
           if(BFFSZMatrixFreeCheckEnabled
               && invResult.status == BF_FSZ_INV_UPDATE_OK) {
             size_t badIndex=0;
@@ -1520,7 +1544,14 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
                 "error: invalid BF-FSZ accepted inverse-update arguments\n");
             MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
           }
+          if(BFFSZInvDetailProfileEnabled) {
+            invDetailStart = BF_FSZ_InvDetailWallTime();
+          }
           invStatusGlobal = reduceBFInfo_fsz(invResult.status,comm);
+          if(BFFSZInvDetailProfileEnabled) {
+            RecordBFFSZInvDetail(BFFSZ_INV_DETAIL_MPI_AGREEMENT,
+                BF_FSZ_InvDetailWallTime()-invDetailStart);
+          }
           if(invStatusGlobal == BF_FSZ_INV_UPDATE_OK) {
             if(BFFSZInvUpdateCheckEnabled) {
               size_t badIndex = 0;
@@ -1529,7 +1560,14 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
                   candidateSlater,TmpEleIdx,TmpEleSpn,qpStart,qpEnd,
                   pfMCheck,invMCheck,nsizeSquared,pfFullBufM,pfFullIWork,
                   pfFullWork,LapackLWork,pfFullRWork);
+              if(BFFSZInvDetailProfileEnabled) {
+                invDetailStart = BF_FSZ_InvDetailWallTime();
+              }
               infoGlobal = reduceBFInfo_fsz(fullResult.status,comm);
+              if(BFFSZInvDetailProfileEnabled) {
+                RecordBFFSZInvDetail(BFFSZ_INV_DETAIL_MPI_AGREEMENT,
+                    BF_FSZ_InvDetailWallTime()-invDetailStart);
+              }
               if(infoGlobal != BF_FSZ_MALL_OK
                   || !BF_FSZ_PfUpdateMatchesFull(pfMNew,pfMCheck,
                       qpEnd-qpStart,NULL,NULL)
@@ -1557,7 +1595,14 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
                 candidateSlater,TmpEleIdx,TmpEleSpn,qpStart,qpEnd,
                 pfMNew,invMNew,nsizeSquared,pfFullBufM,pfFullIWork,
                 pfFullWork,LapackLWork,pfFullRWork);
+            if(BFFSZInvDetailProfileEnabled) {
+              invDetailStart = BF_FSZ_InvDetailWallTime();
+            }
             infoGlobal = reduceBFInfo_fsz(fullResult.status,comm);
+            if(BFFSZInvDetailProfileEnabled) {
+              RecordBFFSZInvDetail(BFFSZ_INV_DETAIL_MPI_AGREEMENT,
+                  BF_FSZ_InvDetailWallTime()-invDetailStart);
+            }
             if(infoGlobal != BF_FSZ_MALL_OK) {
               if(rank==0) fprintf(stderr,
                   "error: BF-FSZ accepted full inverse fallback failed\n");
@@ -1574,9 +1619,16 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
               "error: BF-FSZ accepted Slater changed before collective commit\n");
           MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
         }
+        if(BFFSZInvDetailProfileEnabled && qpNum > 0) {
+          invDetailStart = BF_FSZ_InvDetailWallTime();
+        }
         if(qpNum > 0) {
           memcpy(PfM,pfMNew,sizeof(double complex)*qpNum);
           memcpy(InvM,invMNew,sizeof(double complex)*oldInvCount);
+        }
+        if(BFFSZInvDetailProfileEnabled && qpNum > 0) {
+          RecordBFFSZInvDetail(BFFSZ_INV_DETAIL_COMMIT_COPY,
+              BF_FSZ_InvDetailWallTime()-invDetailStart);
         }
         StopTimer(63);
         StartTimer(94);

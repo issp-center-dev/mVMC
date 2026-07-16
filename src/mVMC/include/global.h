@@ -465,6 +465,9 @@ long long BFProfileCounter[NBFProfileCounter];
 #define BFFSZ_SAMPLE_MATERIALIZE_INV_FALLBACK 2
 #define BFFSZ_SAMPLE_MATERIALIZE_ORACLE 3
 #define NBFFSZSampleMaterialize 4
+#define BFFSZ_INV_DETAIL_MPI_AGREEMENT 7
+#define BFFSZ_INV_DETAIL_COMMIT_COPY 8
+#define NBFFSZInvDetail 9
 #define BF_FSZ_PF_UPDATE_KFULL_DEFAULT 32
 int BFFSZGreenRebuildCheckEnabled = 0;
 int BFFSZAffectedCheckEnabled = 0;
@@ -482,6 +485,7 @@ int BFFSZInvUpdateInjectedStage = 0;
 int BFFSZInvUpdateInjectedRank = -1;
 int BFFSZInvUpdateExplicitStateCheckEnabled = 0;
 int BFFSZInvUpdateArgumentCheckEnabled = 0;
+int BFFSZInvDetailProfileEnabled = 0;
 int BFFSZMatrixFreeCheckEnabled = 0;
 int BFFSZMatrixFreeArgumentCheckEnabled = 0;
 int BFFSZSamplingRejectCheckEnabled = 0;
@@ -501,6 +505,8 @@ long long BFFSZProfileSampleCommit[NBFFSZPfPath];
 double BFFSZProfileInvCheckSeconds = 0.0;
 double BFFSZProfileInvAntisymmetryMax = 0.0;
 double BFFSZProfileInvResidualMax = 0.0;
+double BFFSZProfileInvDetailSeconds[NBFFSZInvDetail];
+double BFFSZProfileInvDetailMaxSeconds[NBFFSZInvDetail];
 
 static inline void AddBFProfileCounter(int idx, long long value) {
   if(!BFProfileEnabled || value == 0) return;
@@ -601,6 +607,13 @@ static inline void RecordBFFSZInvChecks(double seconds,
   if(residual > BFFSZProfileInvResidualMax) {
     BFFSZProfileInvResidualMax = residual;
   }
+}
+
+static inline void RecordBFFSZInvDetail(int component, double seconds) {
+  if(!BFFSZInvDetailProfileEnabled
+      || component < 0 || component >= NBFFSZInvDetail
+      || seconds <= 0.0) return;
+  BFFSZProfileInvDetailSeconds[component] += seconds;
 }
 
 int useDiagScale=0;

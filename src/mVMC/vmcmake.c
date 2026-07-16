@@ -628,9 +628,10 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
   long long recvSampleMaterialize[NBFFSZSampleMaterialize];
   long long recvSampleCommit[NBFFSZPfPath];
   double recvInvCheckSeconds,recvInvAntisymmetry,recvInvResidual;
+  double recvInvDetailSeconds[NBFFSZInvDetail];
   int i,j;
   int rank,size;
-  if(!BFProfileEnabled) return;
+  if(!BFProfileEnabled && !BFFSZInvDetailProfileEnabled) return;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
 
@@ -696,6 +697,20 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
     BFFSZProfileInvCheckSeconds = recvInvCheckSeconds;
     BFFSZProfileInvAntisymmetryMax = recvInvAntisymmetry;
     BFFSZProfileInvResidualMax = recvInvResidual;
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    MPI_Allreduce(BFFSZProfileInvDetailSeconds,recvInvDetailSeconds,
+                  NBFFSZInvDetail,MPI_DOUBLE,MPI_MAX,comm);
+    if(rank==0) for(i=0;i<NBFFSZInvDetail;i++) {
+      BFFSZProfileInvDetailMaxSeconds[i] = recvInvDetailSeconds[i];
+    }
+  }
+#else
+  int i;
+  if(BFFSZInvDetailProfileEnabled) {
+    for(i=0;i<NBFFSZInvDetail;i++) {
+      BFFSZProfileInvDetailMaxSeconds[i] = BFFSZProfileInvDetailSeconds[i];
+    }
   }
 #endif
   return;

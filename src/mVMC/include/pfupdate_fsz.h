@@ -21,6 +21,15 @@
 #define BF_FSZ_INV_STAGE_ANTISYMMETRY 4
 #define BF_FSZ_INV_STAGE_RESIDUAL 5
 
+#define BF_FSZ_INV_DETAIL_W 0
+#define BF_FSZ_INV_DETAIL_SMALL_TRANSPOSE 1
+#define BF_FSZ_INV_DETAIL_U 2
+#define BF_FSZ_INV_DETAIL_LAPACK 3
+#define BF_FSZ_INV_DETAIL_CORRECTION 4
+#define BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE 5
+#define BF_FSZ_INV_DETAIL_AFFECTED_RESIDUAL 6
+#define BF_FSZ_INV_DETAIL_KERNEL_COUNT 7
+
 typedef struct {
   int status;
   int stage;
@@ -29,6 +38,7 @@ typedef struct {
   double antisymmetryResidual;
   double affectedResidual;
   double checkSeconds;
+  double detailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT];
 } BF_FSZ_InvUpdateResult;
 void CalculateNewPfM_fsz(const int mi, const int s, double complex *pfMNew, const int *eleIdx,const int *eleSpn,
                      const int qpStart, const int qpEnd);

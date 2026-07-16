@@ -57,7 +57,7 @@ void InitTimer() {
   const char *permuteParticleLabelsEnv;
   const char *invUpdateCheckEnv, *invUpdateFallbackEnv, *invUpdateInjectEnv;
   const char *invUpdateInjectRankEnv, *invUpdateExplicitStateEnv;
-  const char *invUpdateArgumentEnv;
+  const char *invUpdateArgumentEnv, *invDetailProfileEnv;
   const char *matrixFreeCheckEnv, *matrixFreeArgumentEnv;
   const char *samplingRejectCheckEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
@@ -89,6 +89,10 @@ void InitTimer() {
   BFFSZProfileInvCheckSeconds = 0.0;
   BFFSZProfileInvAntisymmetryMax = 0.0;
   BFFSZProfileInvResidualMax = 0.0;
+  for(j=0;j<NBFFSZInvDetail;j++) {
+    BFFSZProfileInvDetailSeconds[j] = 0.0;
+    BFFSZProfileInvDetailMaxSeconds[j] = 0.0;
+  }
   bfProfileEnv = getenv("MVMC_BF_PROFILE");
   BFProfileEnabled = (bfProfileEnv != NULL && atoi(bfProfileEnv) != 0);
   greenCheckEnv = getenv("MVMC_BF_FSZ_GREEN_REBUILD_CHECK");
@@ -161,6 +165,9 @@ void InitTimer() {
   invUpdateArgumentEnv = getenv("MVMC_BF_FSZ_INV_UPDATE_ARGUMENT_CHECK");
   BFFSZInvUpdateArgumentCheckEnabled = (invUpdateArgumentEnv != NULL
       && atoi(invUpdateArgumentEnv) != 0);
+  invDetailProfileEnv = getenv("MVMC_BF_FSZ_INV_DETAIL_PROFILE");
+  BFFSZInvDetailProfileEnabled = (invDetailProfileEnv != NULL
+      && atoi(invDetailProfileEnv) != 0);
   matrixFreeCheckEnv = getenv("MVMC_BF_FSZ_MATRIX_FREE_CHECK");
   BFFSZMatrixFreeCheckEnabled = (matrixFreeCheckEnv != NULL
       && atoi(matrixFreeCheckEnv) != 0);
@@ -200,17 +207,17 @@ void StopTimer(int n) {
 
 static void OutputBFProfileCounters(FILE *fp) {
   int i, hasData = 0;
-  if(!BFProfileEnabled) return;
-  for(i=0;i<NBFProfileCounter;i++) {
-    if(BFProfileCounter[i] != 0) {
-      hasData = 1;
-      break;
+  if(!BFProfileEnabled && !BFFSZInvDetailProfileEnabled) return;
+  if(BFProfileEnabled) {
+    for(i=0;i<NBFProfileCounter;i++) {
+      if(BFProfileCounter[i] != 0) {
+        hasData = 1;
+        break;
+      }
     }
-  }
-  if(!hasData && BFFSZProfileCall[BFFSZ_PROFILE_SAMPLE] == 0
-      && BFFSZProfileCall[BFFSZ_PROFILE_GREEN] == 0) return;
-
-  fprintf(fp,"  BF profile counters (MVMC_BF_PROFILE=1)\n");
+    if(hasData || BFFSZProfileCall[BFFSZ_PROFILE_SAMPLE] != 0
+        || BFFSZProfileCall[BFFSZ_PROFILE_GREEN] != 0) {
+      fprintf(fp,"  BF profile counters (MVMC_BF_PROFILE=1)\n");
   fprintf(fp,"    BF sample row requests          [910] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_ROW_REQUEST]);
   fprintf(fp,"    BF sample row recompute         [911] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_ROW_RECOMPUTE]);
   fprintf(fp,"    BF sample row reuse             [912] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_ROW_REUSE]);
@@ -310,9 +317,38 @@ static void OutputBFProfileCounters(FILE *fp) {
           BFFSZProfileSampleCommit[BFFSZ_PF_PATH_OPTIMIZED],
           BFFSZProfileSampleCommit[BFFSZ_PF_PATH_DIRECT_FULL],
           BFFSZProfileSampleCommit[BFFSZ_PF_PATH_FALLBACK]);
-  fprintf(fp,"    BF-FSZ inverse checks           seconds:%.9f antisymmetry_max:%.17e affected_residual_max:%.17e\n",
-          BFFSZProfileInvCheckSeconds,BFFSZProfileInvAntisymmetryMax,
-          BFFSZProfileInvResidualMax);
+      fprintf(fp,"    BF-FSZ inverse checks           seconds_max_rank:%.9f antisymmetry_max:%.17e affected_residual_max:%.17e\n",
+              BFFSZProfileInvCheckSeconds,BFFSZProfileInvAntisymmetryMax,
+              BFFSZProfileInvResidualMax);
+    }
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    const char *labels[NBFFSZInvDetail] = {
+      "w",
+      "small-transpose",
+      "u",
+      "lapack",
+      "correction",
+      "scan-antisymmetrize",
+      "affected-residual",
+      "mpi-agreement",
+      "commit-copy"
+    };
+    double classifiedSeconds = 0.0;
+    double unclassifiedSeconds;
+    fprintf(fp,"  BF-FSZ inverse detail profile (MVMC_BF_FSZ_INV_DETAIL_PROFILE=1)\n");
+    for(i=0;i<NBFFSZInvDetail;i++) {
+      const double share = (Timer[63] > 0.0)
+          ? BFFSZProfileInvDetailSeconds[i]/Timer[63] : 0.0;
+      classifiedSeconds += BFFSZProfileInvDetailSeconds[i];
+      fprintf(fp,"    BF-FSZ inverse detail component=%s seconds_rank0=%.9f seconds_max_rank=%.9f share_rank0=%.9f\n",
+              labels[i],BFFSZProfileInvDetailSeconds[i],
+              BFFSZProfileInvDetailMaxSeconds[i],share);
+    }
+    unclassifiedSeconds = Timer[63]-classifiedSeconds;
+    fprintf(fp,"    BF-FSZ inverse detail total timer63_seconds_rank0=%.9f classified_seconds_rank0=%.9f unclassified_seconds_rank0=%.9f\n",
+            Timer[63],classifiedSeconds,unclassifiedSeconds);
+  }
 }
 
 void OutputTimerParaOpt() {
