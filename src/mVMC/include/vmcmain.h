@@ -59,6 +59,7 @@ extern void omp_set_num_threads(int);
 #include "../../sfmt/SFMT.h"
 #include "version.h"
 #include "global.h"
+#include "pfupdate_fsz.h"
 #include "blas_externs.h"
 
 #include "../safempi.c"

@@ -33,7 +33,9 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
                   int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
                   int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
                   double complex *buffer, int *affected,
-                  int *hopIntWork, int hopIntWorkSize);
+                  int *hopIntWork, int hopIntWorkSize,
+                  int *pfIWork, double *pfRWork,
+                  double complex *pfBufM, double complex *pfWork);
 
 double complex GreenFunc1BF_fsz_workspace(const int ri, const int rj, const int s,
                   const double complex ip, int *eleIdx, int *eleCfg, int *eleNum,
@@ -48,7 +50,9 @@ double complex GreenFunc2BF_fsz(const int ri, const int rj, const int rk, const 
                   int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
                   int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
                   double complex *buffer, int *affected,
-                  int *hopIntWork, int hopIntWorkSize);
+                  int *hopIntWork, int hopIntWorkSize,
+                  int *pfIWork, double *pfRWork,
+                  double complex *pfBufM, double complex *pfWork);
 
 
 void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx, int *eleCfg,
@@ -221,12 +225,16 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   double complex tmp;
   int *myEleIdx, *myEleCfg, *myEleNum, *myEleSpn;
   int *myProjCntNew, *myProjBFCntNew, *myAffected, *myHopIntWork;
+  int *myPfIWork;
   double complex *myBuffer;
-  const int bfSlaterSize = NQPFull*Nsite2*Nsite2;
-  const int bfGreen1BufferSize = NQPFull + bfSlaterSize;
-  const int bfGreen1ComplexSize = bfGreen1BufferSize + Nsize*Nsize + LapackLWork;
-  long long bfSerialBaseIntSizeLL;
-  int bfSerialBaseIntSize, bfGreen1BaseIntSize;
+  double complex *myPfBufM, *myPfWork;
+  double *myPfRWork;
+  const size_t bfSlaterSize = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+  size_t pfUpdateComplexCount,pfUpdateIntCount,pfUpdateDoubleCount;
+  size_t bfGreen1BufferSizeValue,bfGreen1ComplexSizeValue;
+  int bfGreen1BufferSize,bfGreen1ComplexSize,bfPfIntSize,bfPfDoubleSize;
+  long long bfSerialBaseIntSizeLL, bfGreen1IntSizeLL;
+  int bfSerialBaseIntSize;
   int bfHopIntSize, bfSerialIntSize, bfGreen1IntSize;
   int *thEleIdx, *thEleCfg, *thEleNum, *thEleSpn;
   int *thProjCntNew, *thProjBFCntNew, *thAffected, *thHopIntWork, *thPfIWork;
@@ -241,6 +249,32 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     fprintf(stderr, "Error: invalid BF-FSZ Green hop integer workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
+  if(GetCalculateNewPfMBF_fsz_rows_work_size(&pfUpdateComplexCount,
+      &pfUpdateIntCount,&pfUpdateDoubleCount) != 0
+      || pfUpdateIntCount > INT_MAX || pfUpdateDoubleCount > INT_MAX
+      || bfSlaterSize > SIZE_MAX-2*(size_t)NQPFull
+      || bfSlaterSize+2*(size_t)NQPFull > SIZE_MAX-pfUpdateComplexCount) {
+    fprintf(stderr,"Error: invalid BF-FSZ Green Pfaffian-update workspace size.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  bfGreen1BufferSizeValue = 2*(size_t)NQPFull + bfSlaterSize
+      + pfUpdateComplexCount;
+  if((size_t)Nsize*(size_t)Nsize > SIZE_MAX-(size_t)LapackLWork
+      || bfGreen1BufferSizeValue > SIZE_MAX-(size_t)Nsize*(size_t)Nsize-(size_t)LapackLWork) {
+    fprintf(stderr,"Error: BF-FSZ Green complex workspace size overflow.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  bfGreen1ComplexSizeValue = bfGreen1BufferSizeValue
+      + (size_t)Nsize*(size_t)Nsize + (size_t)LapackLWork;
+  if(bfGreen1BufferSizeValue > INT_MAX || bfGreen1ComplexSizeValue > INT_MAX) {
+    fprintf(stderr,"Error: BF-FSZ Green complex workspace is too large.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  bfGreen1BufferSize = (int)bfGreen1BufferSizeValue;
+  bfGreen1ComplexSize = (int)bfGreen1ComplexSizeValue;
+  bfPfIntSize = (Nsize > (int)pfUpdateIntCount) ? Nsize : (int)pfUpdateIntCount;
+  bfPfDoubleSize = (LapackLWork > (int)pfUpdateDoubleCount)
+      ? LapackLWork : (int)pfUpdateDoubleCount;
   bfSerialBaseIntSizeLL = 2LL*Nsize + 2LL*Nsite2 + (long long)NProj
       + 16LL*Nsite*Nrange;
   if(bfSerialBaseIntSizeLL < 0 || bfSerialBaseIntSizeLL > INT_MAX) {
@@ -252,20 +286,21 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     fprintf(stderr, "Error: invalid BF-FSZ Green LAPACK workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  bfGreen1BaseIntSize = bfSerialBaseIntSize + Nsize;
-  if(Nsize > INT_MAX - bfGreen1BaseIntSize
-      || bfHopIntSize > INT_MAX - bfGreen1BaseIntSize - Nsize) {
+  bfGreen1IntSizeLL = (long long)bfSerialBaseIntSize + bfPfIntSize
+      + Nsize + bfHopIntSize;
+  if(bfGreen1IntSizeLL < 0 || bfGreen1IntSizeLL > INT_MAX) {
     fprintf(stderr, "Error: invalid BF-FSZ Green integer workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  bfGreen1IntSize = bfGreen1BaseIntSize + Nsize + bfHopIntSize;
-  bfSerialIntSize = bfSerialBaseIntSize + Nsize + bfHopIntSize;
+  bfGreen1IntSize = (int)bfGreen1IntSizeLL;
+  bfSerialIntSize = bfGreen1IntSize;
 
   RequestWorkSpaceInt(bfSerialIntSize);
-  RequestWorkSpaceComplex(NQPFull + bfSlaterSize);
+  RequestWorkSpaceComplex(bfGreen1ComplexSize);
+  RequestWorkSpaceDouble(bfPfDoubleSize);
   RequestWorkSpaceThreadInt(bfGreen1IntSize);
   RequestWorkSpaceThreadComplex(bfGreen1ComplexSize);
-  RequestWorkSpaceThreadDouble(LapackLWork);
+  RequestWorkSpaceThreadDouble(bfPfDoubleSize);
 
   myEleIdx = GetWorkSpaceInt(Nsize);
   myEleCfg = GetWorkSpaceInt(Nsite2);
@@ -275,7 +310,11 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   myProjBFCntNew = GetWorkSpaceInt(16*Nsite*Nrange);
   myAffected = GetWorkSpaceInt(Nsize);
   myHopIntWork = GetWorkSpaceInt(bfHopIntSize);
-  myBuffer = GetWorkSpaceComplex(NQPFull + bfSlaterSize);
+  myPfIWork = GetWorkSpaceInt(bfPfIntSize);
+  myBuffer = GetWorkSpaceComplex(bfGreen1BufferSize);
+  myPfBufM = GetWorkSpaceComplex(Nsize*Nsize);
+  myPfWork = GetWorkSpaceComplex(LapackLWork);
+  myPfRWork = GetWorkSpaceDouble(bfPfDoubleSize);
 
   for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
   for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
@@ -293,13 +332,13 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     thEleSpn = GetWorkSpaceThreadInt(Nsize);
     thProjCntNew = GetWorkSpaceThreadInt(NProj);
     thProjBFCntNew = GetWorkSpaceThreadInt(16*Nsite*Nrange);
-    thPfIWork = GetWorkSpaceThreadInt(Nsize);
+    thPfIWork = GetWorkSpaceThreadInt(bfPfIntSize);
     thAffected = GetWorkSpaceThreadInt(Nsize);
     thHopIntWork = GetWorkSpaceThreadInt(bfHopIntSize);
     thBuffer = GetWorkSpaceThreadComplex(bfGreen1BufferSize);
     thPfBufM = GetWorkSpaceThreadComplex(Nsize*Nsize);
     thPfWork = GetWorkSpaceThreadComplex(LapackLWork);
-    thPfRWork = GetWorkSpaceThreadDouble(LapackLWork);
+    thPfRWork = GetWorkSpaceThreadDouble(bfPfDoubleSize);
 
     #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) thEleIdx[idx] = eleIdx[idx];
@@ -359,7 +398,8 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     }
     tmp = GreenFunc2BF_fsz(ri,rj,rk,rl,s,u,ip,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
                            myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
-                           myAffected,myHopIntWork,bfHopIntSize);
+                           myAffected,myHopIntWork,bfHopIntSize,
+                           myPfIWork,myPfRWork,myPfBufM,myPfWork);
     PhysCisAjsCktAltDC[idx] += w*tmp;
   }
   StopTimer(51);
@@ -380,6 +420,7 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
 
   ReleaseWorkSpaceInt();
   ReleaseWorkSpaceComplex();
+  ReleaseWorkSpaceDouble();
   return;
 }
 #endif

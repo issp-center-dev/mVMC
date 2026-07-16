@@ -452,8 +452,20 @@ long long BFProfileCounter[NBFProfileCounter];
 #define NBFFSZProfileSource  2
 #define NBFFSZProfileHist    22
 #define NBFFSZProfileRatioHist 8
+#define BFFSZ_PF_PATH_OPTIMIZED 0
+#define BFFSZ_PF_PATH_DIRECT_FULL 1
+#define BFFSZ_PF_PATH_FALLBACK 2
+#define NBFFSZPfPath 3
+#define BF_FSZ_PF_UPDATE_KFULL_DEFAULT 32
 int BFFSZGreenRebuildCheckEnabled = 0;
 int BFFSZAffectedCheckEnabled = 0;
+int BFFSZPfUpdateCheckEnabled = 0;
+int BFFSZPfUpdateForceFallback = 0;
+int BFFSZPfUpdateInjectedStatus = 0;
+int BFFSZPfUpdateExplicitStateCheckEnabled = 0;
+int BFFSZPfUpdateArgumentCheckEnabled = 0;
+int BFFSZPfUpdateKFull = BF_FSZ_PF_UPDATE_KFULL_DEFAULT;
+int BFFSZPermuteParticleLabelsCheckEnabled = 0;
 long long BFFSZProfileCall[NBFFSZProfileSource];
 long long BFFSZProfileChangedSum[NBFFSZProfileSource];
 long long BFFSZProfileChangedMax[NBFFSZProfileSource];
@@ -462,6 +474,7 @@ long long BFFSZProfileAffectedMax[NBFFSZProfileSource];
 long long BFFSZProfileChangedHist[NBFFSZProfileSource][NBFFSZProfileHist];
 long long BFFSZProfileAffectedHist[NBFFSZProfileSource][NBFFSZProfileHist];
 long long BFFSZProfileAffectedRatioHist[NBFFSZProfileSource][NBFFSZProfileRatioHist];
+long long BFFSZProfilePfPath[NBFFSZProfileSource][NBFFSZPfPath];
 
 static inline void AddBFProfileCounter(int idx, long long value) {
   if(!BFProfileEnabled || value == 0) return;
@@ -518,6 +531,14 @@ static inline void RecordBFFSZProfile(int source, int nChanged, int nAffected) {
       BFFSZProfileAffectedMax[source] = nAffected;
     }
   }
+}
+
+static inline void RecordBFFSZPfPath(int source, int path) {
+  if(!BFProfileEnabled) return;
+  if(source < 0 || source >= NBFFSZProfileSource
+      || path < 0 || path >= NBFFSZPfPath) return;
+#pragma omp atomic
+  BFFSZProfilePfPath[source][path]++;
 }
 
 int useDiagScale=0;

@@ -401,6 +401,26 @@ def read_bffsz_profile_hist_sum(path, source, kind):
     raise RuntimeError("{} was not found in {}".format(marker, path))
 
 
+def read_bffsz_pf_paths(path, source):
+    marker = "BF-FSZ {} Pfaffian paths".format(source)
+    with open(path) as fp:
+        for line in fp:
+            if marker not in line:
+                continue
+            values = {}
+            for token in line.split():
+                if ":" not in token:
+                    continue
+                key, value = token.rsplit(":", 1)
+                try:
+                    values[key] = int(value)
+                except ValueError:
+                    pass
+            if all(key in values for key in ("optimized", "direct-full", "fallback")):
+                return values
+    raise RuntimeError("{} was not found in {}".format(marker, path))
+
+
 def get_float(values, key):
     if key not in values:
         raise RuntimeError("{} was not found in dump".format(key))
@@ -527,10 +547,22 @@ def prepare_case(rootdir, name, include_backflow, orbital_complex_type=1,
 
 
 def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
+    pf_update_cases = {
+        "BackFlow_FSZ_PfUpdate_NonIdentity_Complex": "optimized",
+        "BackFlow_FSZ_PfUpdate_NonIdentity_Complex_mpi": "optimized",
+        "BackFlow_FSZ_PfUpdate_MoreRanks_NonIdentity_Complex_mpi": "optimized",
+        "BackFlow_FSZ_PfUpdate_Fallback_NonIdentity_Complex": "fallback",
+        "BackFlow_FSZ_PfUpdate_ExactZeroFallback_NonIdentity_Complex": "exact-zero",
+        "BackFlow_FSZ_PfUpdate_LapackFallback_NonIdentity_Complex": "lapack",
+        "BackFlow_FSZ_PfUpdate_DirectFull_NonIdentity_Complex": "direct-full",
+        "BackFlow_FSZ_PfUpdate_PermutedLabels_NonIdentity_Complex": "permuted",
+        "BackFlow_FSZ_PfUpdate_ExplicitState_NonIdentity_Complex": "explicit-state",
+        "BackFlow_FSZ_PfUpdate_InvalidArguments_NonIdentity_Complex": "arguments",
+    }
     affected_cases = (
         "BackFlow_FSZ_AffectedRows_NonIdentity_Complex",
         "BackFlow_FSZ_AffectedRows_NonIdentity_Complex_mpi",
-    )
+    ) + tuple(pf_update_cases)
     if case_name != "BackFlow_FSZ_TwoBodyG_StaleBase_NonIdentity_Complex" \
             and case_name not in affected_cases:
         return None
@@ -538,12 +570,15 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
     general_rows, contracted_rows = build_stale_base_two_body_rows()
     ordered_rows = general_rows + contracted_rows
     reference_rows = contracted_rows + general_rows
+    reference_case_rows = reference_rows
+    if case_name in pf_update_cases and pf_update_cases[case_name] == "permuted":
+        reference_case_rows = ordered_rows
 
     ordered_workdir = prepare_case(rootdir, case_name, True)
     reference_workdir = prepare_case(rootdir, case_name + "_reference", True)
     for workdir, rows in (
         (ordered_workdir, ordered_rows),
-        (reference_workdir, reference_rows),
+        (reference_workdir, reference_case_rows),
     ):
         update_modpara(workdir, {"NVMCSample": "1"})
         if case_name in affected_cases:
@@ -553,26 +588,50 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
 
     ordered_init = write_nonidentity_init(ordered_workdir)
     reference_init = write_nonidentity_init(reference_workdir)
+    ordered_env = {
+        "MVMC_BF_FSZ_GREEN_REBUILD_CHECK": "1",
+        "MVMC_BF_FSZ_AFFECTED_CHECK": "1",
+        "MVMC_BF_PROFILE": "1",
+    }
+    if case_name in pf_update_cases:
+        ordered_env["MVMC_BF_FSZ_PF_UPDATE_CHECK"] = "1"
+        if pf_update_cases[case_name] == "fallback":
+            ordered_env["MVMC_BF_FSZ_PF_UPDATE_FORCE_FALLBACK"] = "1"
+        elif pf_update_cases[case_name] == "exact-zero":
+            ordered_env["MVMC_BF_FSZ_PF_UPDATE_INJECT_STATUS"] = "1"
+        elif pf_update_cases[case_name] == "lapack":
+            ordered_env["MVMC_BF_FSZ_PF_UPDATE_INJECT_STATUS"] = "2"
+        elif pf_update_cases[case_name] == "direct-full":
+            ordered_env["MVMC_BF_FSZ_PF_UPDATE_KFULL"] = "1"
+        elif pf_update_cases[case_name] == "permuted":
+            ordered_env["MVMC_BF_FSZ_PERMUTE_PARTICLE_LABELS"] = "1"
+        elif pf_update_cases[case_name] == "explicit-state":
+            ordered_env["MVMC_BF_FSZ_PF_UPDATE_EXPLICIT_STATE_CHECK"] = "1"
+        elif pf_update_cases[case_name] == "arguments":
+            ordered_env["MVMC_BF_FSZ_PF_UPDATE_ARGUMENT_CHECK"] = "1"
     ordered_proc = run_vmc(
         rootdir,
         ordered_workdir,
         mpi_procs=mpi_procs,
         init_path=ordered_init,
-        extra_env={
-            "MVMC_BF_FSZ_GREEN_REBUILD_CHECK": "1",
-            "MVMC_BF_FSZ_AFFECTED_CHECK": "1",
-            "MVMC_BF_PROFILE": "1",
-        },
+        extra_env=ordered_env,
     )
     if ordered_proc.returncode != 0:
         print(ordered_proc.stdout)
         return ordered_proc.returncode
 
+    reference_env = None
+    if case_name in pf_update_cases and pf_update_cases[case_name] == "permuted":
+        reference_env = {
+            "MVMC_BF_FSZ_PERMUTE_PARTICLE_LABELS": "1",
+            "MVMC_BF_FSZ_PF_UPDATE_KFULL": "1",
+        }
     reference_proc = run_vmc(
         rootdir,
         reference_workdir,
         mpi_procs=mpi_procs,
         init_path=reference_init,
+        extra_env=reference_env,
     )
     if reference_proc.returncode != 0:
         print(reference_proc.stdout)
@@ -598,6 +657,29 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
                 print("ERROR: BF-FSZ {} {} count mismatch".format(source, hist_kind))
                 return -1
 
+        if case_name in pf_update_cases:
+            paths = read_bffsz_pf_paths(timer_path, source)
+            mode = pf_update_cases[case_name]
+            if mode in ("optimized", "permuted", "explicit-state", "arguments"):
+                if paths["optimized"] <= 0 or paths["fallback"] != 0:
+                    print("ERROR: BF-FSZ {} optimized Pfaffian path was not isolated".format(source))
+                    return -1
+            elif mode in ("fallback", "exact-zero", "lapack"):
+                if paths["fallback"] <= 0 or paths["optimized"] != 0:
+                    print("ERROR: BF-FSZ {} fallback Pfaffian path was not isolated".format(source))
+                    return -1
+            elif mode == "direct-full":
+                if paths["direct-full"] <= 0 or paths["optimized"] != 0 \
+                        or paths["fallback"] != 0:
+                    print("ERROR: BF-FSZ {} direct-full Pfaffian path was not isolated".format(source))
+                    return -1
+
+    if case_name in pf_update_cases and pf_update_cases[case_name] == "permuted":
+        return assert_finite_nonzero_rows(
+            os.path.join(ordered_workdir, "output", "zvo_cisajs_001.dat"),
+            "permuted-label Pfaffian update",
+        )
+
     ordered_path = os.path.join(ordered_workdir, "output", "zvo_cisajscktalt_001.dat")
     reference_path = os.path.join(reference_workdir, "output", "zvo_cisajscktalt_001.dat")
     ordered_values = read_float_rows(ordered_path)
@@ -607,7 +689,7 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         return -1
 
     ordered_by_term = dict(zip(ordered_rows, ordered_values))
-    reference_by_term = dict(zip(reference_rows, reference_values))
+    reference_by_term = dict(zip(reference_case_rows, reference_values))
     diff = max_abs_diff(
         [ordered_by_term[row] for row in ordered_rows],
         [reference_by_term[row] for row in ordered_rows],

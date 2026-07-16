@@ -467,6 +467,111 @@ static int reduceBFInfo_fsz(const int info, MPI_Comm comm) {
   return infoRdc;
 }
 
+static int BF_FSZ_PermuteParticleLabelsForCheck(int *eleIdx, int *eleCfg,
+                                                int *eleSpn) {
+  int a,b,siteA,siteB,spinA,spinB;
+  if(!BFFSZPermuteParticleLabelsCheckEnabled) return 0;
+  if(eleIdx == NULL || eleCfg == NULL || eleSpn == NULL || Nsize < 2) return 1;
+  a = 0;
+  for(b=1;b<Nsize;b++) if(eleSpn[b] != eleSpn[a]) break;
+  if(b >= Nsize) return 1;
+  siteA = eleIdx[a];
+  siteB = eleIdx[b];
+  spinA = eleSpn[a];
+  spinB = eleSpn[b];
+  if(siteA < 0 || siteA >= Nsite || siteB < 0 || siteB >= Nsite
+      || (spinA != 0 && spinA != 1) || (spinB != 0 && spinB != 1)) return 1;
+  eleIdx[a] = siteB;
+  eleSpn[a] = spinB;
+  eleIdx[b] = siteA;
+  eleSpn[b] = spinA;
+  eleCfg[siteB+spinB*Nsite] = a;
+  eleCfg[siteA+spinA*Nsite] = b;
+  return 0;
+}
+
+static int BF_FSZ_PfUpdateMatchesFull(const double complex *updated,
+                                     const double complex *full,
+                                     const int qpNum, int *badQp,
+                                     double *badError) {
+  int qpidx;
+  for(qpidx=0;qpidx<qpNum;qpidx++) {
+    const double scale = fmax(1.0,cabs(full[qpidx]));
+    const double error = cabs(updated[qpidx]-full[qpidx])/scale;
+    if(!(isfinite(error) && error <= 1.0e-10)) {
+      if(badQp != NULL) *badQp = qpidx;
+      if(badError != NULL) *badError = error;
+      return 0;
+    }
+  }
+  return 1;
+}
+
+static int BF_FSZ_RunPfUpdateArgumentChecks(
+    const int nAffected, const int *affected,
+    double complex *pfMNew, double complex *oldPfMScratch,
+    const double complex *oldInvM, const size_t invMQpStride,
+    const int *eleIdx, const int *eleSpn,
+    const int qpStart, const int qpEnd,
+    const double complex *candidateSlater,
+    double complex *complexWork, const size_t complexWorkCount,
+    int *iwork, const size_t intWorkCount,
+    double *rwork, const size_t rworkCount) {
+  static int checked = 0;
+  int badAffected = -1;
+  int status;
+  const size_t qpNum = (size_t)(qpEnd-qpStart);
+
+  if(!BFFSZPfUpdateArgumentCheckEnabled || checked || qpNum == 0) return 0;
+#define BF_FSZ_EXPECT_INVALID(call) do { \
+    status = (call); \
+    if(status != BF_FSZ_PF_UPDATE_INVALID_ARGUMENT) return 1; \
+  } while(0)
+  BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_rows_workspace(
+      0,affected,pfMNew,PfM,oldInvM,invMQpStride,eleIdx,eleSpn,
+      qpStart,qpEnd,candidateSlater,NULL,complexWork,complexWorkCount,
+      iwork,intWorkCount,rwork,rworkCount));
+  BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_rows_workspace(
+      -1,affected,pfMNew,PfM,oldInvM,invMQpStride,eleIdx,eleSpn,
+      qpStart,qpEnd,candidateSlater,NULL,complexWork,complexWorkCount,
+      iwork,intWorkCount,rwork,rworkCount));
+  BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_rows_workspace(
+      Nsize+1,affected,pfMNew,PfM,oldInvM,invMQpStride,eleIdx,eleSpn,
+      qpStart,qpEnd,candidateSlater,NULL,complexWork,complexWorkCount,
+      iwork,intWorkCount,rwork,rworkCount));
+  BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_rows_workspace(
+      1,&badAffected,pfMNew,PfM,oldInvM,invMQpStride,eleIdx,eleSpn,
+      qpStart,qpEnd,candidateSlater,NULL,complexWork,complexWorkCount,
+      iwork,intWorkCount,rwork,rworkCount));
+  BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_rows_workspace(
+      nAffected,affected,pfMNew,PfM,oldInvM,SIZE_MAX,eleIdx,eleSpn,
+      qpStart,qpEnd,candidateSlater,NULL,complexWork,complexWorkCount,
+      iwork,intWorkCount,rwork,rworkCount));
+  BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_rows_workspace(
+      nAffected,affected,pfMNew,PfM,oldInvM,invMQpStride,eleIdx,eleSpn,
+      qpStart,qpEnd,candidateSlater,NULL,complexWork,complexWorkCount-1,
+      iwork,intWorkCount,rwork,rworkCount));
+  BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_rows_workspace(
+      nAffected,affected,(double complex *)PfM,PfM,oldInvM,invMQpStride,
+      eleIdx,eleSpn,qpStart,qpEnd,candidateSlater,NULL,complexWork,
+      complexWorkCount,iwork,intWorkCount,rwork,rworkCount));
+  BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_rows_workspace(
+      nAffected,affected,pfMNew,PfM,oldInvM,invMQpStride,eleIdx,eleSpn,
+      qpStart,qpEnd,SlaterElmBF,NULL,complexWork,complexWorkCount,
+      iwork,intWorkCount,rwork,rworkCount));
+#undef BF_FSZ_EXPECT_INVALID
+
+  memcpy(oldPfMScratch,PfM,sizeof(double complex)*qpNum);
+  oldPfMScratch[0] = 0.0 + 0.0*I;
+  status = CalculateNewPfMBF_fsz_rows_workspace(
+      nAffected,affected,pfMNew,oldPfMScratch,oldInvM,invMQpStride,
+      eleIdx,eleSpn,qpStart,qpEnd,candidateSlater,NULL,complexWork,
+      complexWorkCount,iwork,intWorkCount,rwork,rworkCount);
+  if(status != BF_FSZ_PF_UPDATE_EXACT_ZERO) return 1;
+  checked = 1;
+  return 0;
+}
+
 void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   const size_t bfSlaterSize = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
   int outStep,nOutStep;
@@ -478,6 +583,15 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   double complex logIpOld,logIpNew;
   double complex *candidateSlater;
   double complex *pfMNew;
+  double complex *pfMCheck;
+  double complex *pfUpdateWork;
+  double complex *pfFullBufM, *pfFullWork;
+  double complex *oldPfMCheck, *oldInvMCheck;
+  int *pfUpdateIWork;
+  int *pfFullIWork;
+  double *pfUpdateRWork, *pfFullRWork;
+  size_t pfUpdateComplexCount, pfUpdateIntCount, pfUpdateDoubleCount;
+  size_t qpNum, nsizeSquared, oldInvCount;
   int *hopIntStorage, *affected, *hopIntWork;
   int hopIntWorkSize, hopIntStorageSize;
   int nChanged,nAffected;
@@ -492,10 +606,25 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
 
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
+  SplitLoop(&qpStart,&qpEnd,NQPFull,rank,size);
+  qpNum = (size_t)(qpEnd-qpStart);
+  nsizeSquared = (size_t)Nsize*(size_t)Nsize;
 
   if(GetSlaterElmBF_fsz_hop_int_work_size(&hopIntWorkSize) != 0
       || Nsize > INT_MAX - hopIntWorkSize) {
     fprintf(stderr, "error: invalid BF-FSZ sampling integer workspace size\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  if(GetCalculateNewPfMBF_fsz_rows_work_size(&pfUpdateComplexCount,
+      &pfUpdateIntCount, &pfUpdateDoubleCount) != 0
+      || pfUpdateComplexCount > SIZE_MAX/sizeof(double complex)
+      || pfUpdateIntCount > SIZE_MAX/sizeof(int)
+      || pfUpdateDoubleCount > SIZE_MAX/sizeof(double)
+      || nsizeSquared > SIZE_MAX/sizeof(double complex)
+      || (size_t)LapackLWork > SIZE_MAX/sizeof(double complex)
+      || (size_t)LapackLWork > SIZE_MAX/sizeof(double)
+      || (qpNum != 0 && nsizeSquared > SIZE_MAX/qpNum)) {
+    fprintf(stderr, "error: invalid BF-FSZ sampling Pfaffian-update workspace size\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
   hopIntStorageSize = Nsize + hopIntWorkSize;
@@ -506,18 +635,49 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
 
   candidateSlater = (double complex *)malloc(sizeof(double complex)*bfSlaterSize);
   pfMNew = (double complex *)malloc(sizeof(double complex)*(size_t)NQPFull);
+  pfMCheck = (double complex *)malloc(sizeof(double complex)*(size_t)NQPFull);
   hopIntStorage = (int *)malloc(sizeof(int)*(size_t)hopIntStorageSize);
-  if(candidateSlater == NULL || pfMNew == NULL || hopIntStorage == NULL) {
+  pfUpdateWork = (double complex *)malloc(sizeof(double complex)*pfUpdateComplexCount);
+  pfUpdateIWork = (int *)malloc(sizeof(int)*pfUpdateIntCount);
+  pfUpdateRWork = (double *)malloc(sizeof(double)*pfUpdateDoubleCount);
+  pfFullBufM = (double complex *)malloc(sizeof(double complex)*nsizeSquared);
+  pfFullIWork = (int *)malloc(sizeof(int)*(size_t)Nsize);
+  pfFullWork = (double complex *)malloc(sizeof(double complex)*(size_t)LapackLWork);
+  pfFullRWork = (double *)malloc(sizeof(double)*(size_t)LapackLWork);
+  oldInvCount = qpNum*nsizeSquared;
+  oldPfMCheck = NULL;
+  oldInvMCheck = NULL;
+  if(qpNum > 0 && (BFFSZPfUpdateExplicitStateCheckEnabled
+      || BFFSZPfUpdateArgumentCheckEnabled)) {
+    oldPfMCheck = (double complex *)malloc(sizeof(double complex)*qpNum);
+    oldInvMCheck = (double complex *)malloc(sizeof(double complex)*oldInvCount);
+  }
+  if(candidateSlater == NULL || pfMNew == NULL || pfMCheck == NULL
+      || hopIntStorage == NULL
+      || pfUpdateWork == NULL || pfUpdateIWork == NULL || pfUpdateRWork == NULL
+      || pfFullBufM == NULL || pfFullIWork == NULL || pfFullWork == NULL
+      || pfFullRWork == NULL
+      || (qpNum > 0 && (BFFSZPfUpdateExplicitStateCheckEnabled
+          || BFFSZPfUpdateArgumentCheckEnabled)
+          && (oldPfMCheck == NULL || oldInvMCheck == NULL))) {
     fprintf(stderr, "error: failed to allocate BF-FSZ sampling candidate workspace\n");
     free(candidateSlater);
     free(pfMNew);
+    free(pfMCheck);
     free(hopIntStorage);
+    free(pfUpdateWork);
+    free(pfUpdateIWork);
+    free(pfUpdateRWork);
+    free(pfFullBufM);
+    free(pfFullIWork);
+    free(pfFullWork);
+    free(pfFullRWork);
+    free(oldPfMCheck);
+    free(oldInvMCheck);
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
   affected = hopIntStorage;
   hopIntWork = affected + Nsize;
-
-  SplitLoop(&qpStart,&qpEnd,NQPFull,rank,size);
 
   StartTimer(30);
   if(BurnFlag==0) {
@@ -581,8 +741,92 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
       StopTimer(64);
 
       StartTimer(61);
-      info = CalculatePfM_BF_fsz_from(candidateSlater, TmpEleIdx, TmpEleSpn,
-                                      qpStart, qpEnd, pfMNew, NULL);
+      if(BF_FSZ_ShouldUseFullPfaffian(nAffected)) {
+        RecordBFFSZPfPath(BFFSZ_PROFILE_SAMPLE,BFFSZ_PF_PATH_DIRECT_FULL);
+        info = CalculatePfM_BF_fsz_from_workspace(candidateSlater,TmpEleIdx,
+            TmpEleSpn,qpStart,qpEnd,pfMNew,NULL,pfFullBufM,pfFullIWork,
+            pfFullWork,LapackLWork,pfFullRWork);
+      } else {
+        int updateDetail = 0;
+        int updateStatus;
+        const double complex *oldPfMInput = PfM;
+        const double complex *oldInvMInput = InvM;
+        double complex savedPfM = 0.0 + 0.0*I;
+        double complex savedInvM = 0.0 + 0.0*I;
+        if(BF_FSZ_RunPfUpdateArgumentChecks(nAffected,affected,pfMNew,
+            oldPfMCheck,InvM,nsizeSquared,TmpEleIdx,TmpEleSpn,qpStart,qpEnd,
+            candidateSlater,pfUpdateWork,pfUpdateComplexCount,pfUpdateIWork,
+            pfUpdateIntCount,pfUpdateRWork,pfUpdateDoubleCount) != 0) {
+          if(rank==0) fprintf(stderr,
+              "error: BF-FSZ Pfaffian-update argument/status check failed\n");
+          MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+        }
+        if(BFFSZPfUpdateExplicitStateCheckEnabled && qpNum > 0) {
+          memcpy(oldPfMCheck,PfM,sizeof(double complex)*qpNum);
+          memcpy(oldInvMCheck,InvM,sizeof(double complex)*oldInvCount);
+          oldPfMInput = oldPfMCheck;
+          oldInvMInput = oldInvMCheck;
+          savedPfM = PfM[0];
+          savedInvM = InvM[0];
+          PfM[0] = NAN + NAN*I;
+          InvM[0] = NAN + NAN*I;
+        }
+        updateStatus = CalculateNewPfMBF_fsz_rows_workspace(
+            nAffected, affected, pfMNew, oldPfMInput, oldInvMInput, nsizeSquared,
+            TmpEleIdx, TmpEleSpn, qpStart, qpEnd, candidateSlater, &updateDetail,
+            pfUpdateWork, pfUpdateComplexCount, pfUpdateIWork, pfUpdateIntCount,
+            pfUpdateRWork, pfUpdateDoubleCount);
+        if(BFFSZPfUpdateExplicitStateCheckEnabled && qpNum > 0) {
+          PfM[0] = savedPfM;
+          InvM[0] = savedInvM;
+        }
+        if(updateStatus == BF_FSZ_PF_UPDATE_OK) {
+          if(BFFSZPfUpdateInjectedStatus != BF_FSZ_PF_UPDATE_OK) {
+            updateStatus = BFFSZPfUpdateInjectedStatus;
+          } else if(BFFSZPfUpdateForceFallback) {
+            updateStatus = BF_FSZ_PF_UPDATE_NONFINITE;
+          }
+        }
+        if(updateStatus == BF_FSZ_PF_UPDATE_INVALID_ARGUMENT) {
+          if(rank==0) fprintf(stderr,
+              "error: invalid BF-FSZ sampling Pfaffian-update arguments\n");
+          MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+        if(updateStatus == BF_FSZ_PF_UPDATE_OK) {
+          RecordBFFSZPfPath(BFFSZ_PROFILE_SAMPLE,BFFSZ_PF_PATH_OPTIMIZED);
+          info = BF_FSZ_PF_OK;
+          if(BFFSZPfUpdateCheckEnabled) {
+            int badQp = -1;
+            double badError = 0.0;
+            double ipError;
+            double complex ipUpdated,ipFull;
+            info = CalculatePfM_BF_fsz_from_workspace(candidateSlater,
+                TmpEleIdx,TmpEleSpn,qpStart,qpEnd,pfMCheck,NULL,pfFullBufM,
+                pfFullIWork,pfFullWork,LapackLWork,pfFullRWork);
+            if(info != BF_FSZ_PF_OK || !BF_FSZ_PfUpdateMatchesFull(
+                pfMNew,pfMCheck,qpEnd-qpStart,&badQp,&badError)) {
+              if(rank==0) fprintf(stderr,
+                  "error: BF-FSZ sampling Pfaffian-update/full mismatch at qp=%d relative_error=%.17e\n",
+                  badQp,badError);
+              MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+            }
+            ipUpdated = CalculateIP_fcmp(pfMNew,qpStart,qpEnd,comm);
+            ipFull = CalculateIP_fcmp(pfMCheck,qpStart,qpEnd,comm);
+            ipError = cabs(ipUpdated-ipFull)/fmax(1.0,cabs(ipFull));
+            if(!(isfinite(ipError) && ipError <= 1.0e-10)) {
+              if(rank==0) fprintf(stderr,
+                  "error: BF-FSZ sampling Pfaffian-update/full IP mismatch relative_error=%.17e\n",
+                  ipError);
+              MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+            }
+          }
+        } else {
+          RecordBFFSZPfPath(BFFSZ_PROFILE_SAMPLE,BFFSZ_PF_PATH_FALLBACK);
+          info = CalculatePfM_BF_fsz_from_workspace(candidateSlater,TmpEleIdx,
+              TmpEleSpn,qpStart,qpEnd,pfMNew,NULL,pfFullBufM,pfFullIWork,
+              pfFullWork,LapackLWork,pfFullRWork);
+        }
+      }
       StopTimer(61);
 
       StartTimer(62);
@@ -606,7 +850,7 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
         StopTimer(63);
         for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
         for(i=0;i<16*Nsite*Nrange;i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
-        logIpOld = logIpNew;
+        logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
         nAccept++;
         Counter[1]++;
       } else {
@@ -643,7 +887,17 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
 
   free(candidateSlater);
   free(pfMNew);
+  free(pfMCheck);
   free(hopIntStorage);
+  free(pfUpdateWork);
+  free(pfUpdateIWork);
+  free(pfUpdateRWork);
+  free(pfFullBufM);
+  free(pfFullIWork);
+  free(pfFullWork);
+  free(pfFullRWork);
+  free(oldPfMCheck);
+  free(oldInvMCheck);
 
   return;
 }
@@ -658,6 +912,10 @@ int makeInitialSampleBF_fsz(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjC
 
   do {
     makeInitialSample_fsz(eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn,qpStart,qpEnd,comm);
+    if(BF_FSZ_PermuteParticleLabelsForCheck(eleIdx,eleCfg,eleSpn) != 0) {
+      if(rank==0) fprintf(stderr,"error: failed to permute BF-FSZ particle labels for check\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
     MakeProjBFCnt(eleProjBFCnt,eleNum);
     MakeSlaterElmBF_fsz(eleNum,eleProjBFCnt);
 

@@ -51,6 +51,9 @@ void OutputTime(int step) {
 void InitTimer() {
   int i, j;
   const char *bfProfileEnv, *greenCheckEnv, *affectedCheckEnv;
+  const char *pfUpdateCheckEnv, *pfUpdateFallbackEnv, *pfUpdateInjectEnv;
+  const char *pfUpdateExplicitStateEnv, *pfUpdateArgumentEnv, *pfUpdateKFullEnv;
+  const char *permuteParticleLabelsEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
   for(i=0;i<NTimer;i++) TimerStart[i]=0.0;
   for(i=0;i<NBFProfileCounter;i++) BFProfileCounter[i]=0;
@@ -67,6 +70,7 @@ void InitTimer() {
     for(j=0;j<NBFFSZProfileRatioHist;j++) {
       BFFSZProfileAffectedRatioHist[i][j] = 0;
     }
+    for(j=0;j<NBFFSZPfPath;j++) BFFSZProfilePfPath[i][j] = 0;
   }
   bfProfileEnv = getenv("MVMC_BF_PROFILE");
   BFProfileEnabled = (bfProfileEnv != NULL && atoi(bfProfileEnv) != 0);
@@ -74,6 +78,37 @@ void InitTimer() {
   BFFSZGreenRebuildCheckEnabled = (greenCheckEnv != NULL && atoi(greenCheckEnv) != 0);
   affectedCheckEnv = getenv("MVMC_BF_FSZ_AFFECTED_CHECK");
   BFFSZAffectedCheckEnabled = (affectedCheckEnv != NULL && atoi(affectedCheckEnv) != 0);
+  pfUpdateCheckEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_CHECK");
+  BFFSZPfUpdateCheckEnabled = (pfUpdateCheckEnv != NULL && atoi(pfUpdateCheckEnv) != 0);
+  pfUpdateFallbackEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_FORCE_FALLBACK");
+  BFFSZPfUpdateForceFallback = (pfUpdateFallbackEnv != NULL
+      && atoi(pfUpdateFallbackEnv) != 0);
+  BFFSZPfUpdateInjectedStatus = BF_FSZ_PF_UPDATE_OK;
+  pfUpdateInjectEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_INJECT_STATUS");
+  if(pfUpdateInjectEnv != NULL) {
+    const int value = atoi(pfUpdateInjectEnv);
+    if(value >= BF_FSZ_PF_UPDATE_EXACT_ZERO
+        && value <= BF_FSZ_PF_UPDATE_NONFINITE) {
+      BFFSZPfUpdateInjectedStatus = value;
+    }
+  }
+  pfUpdateExplicitStateEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_EXPLICIT_STATE_CHECK");
+  BFFSZPfUpdateExplicitStateCheckEnabled = (pfUpdateExplicitStateEnv != NULL
+      && atoi(pfUpdateExplicitStateEnv) != 0);
+  pfUpdateArgumentEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_ARGUMENT_CHECK");
+  BFFSZPfUpdateArgumentCheckEnabled = (pfUpdateArgumentEnv != NULL
+      && atoi(pfUpdateArgumentEnv) != 0);
+  BFFSZPfUpdateKFull = BF_FSZ_PF_UPDATE_KFULL_DEFAULT;
+  pfUpdateKFullEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_KFULL");
+  if(pfUpdateKFullEnv != NULL) {
+    const int value = atoi(pfUpdateKFullEnv);
+    if(value >= 1 && value <= BF_FSZ_PF_UPDATE_KFULL_DEFAULT) {
+      BFFSZPfUpdateKFull = value;
+    }
+  }
+  permuteParticleLabelsEnv = getenv("MVMC_BF_FSZ_PERMUTE_PARTICLE_LABELS");
+  BFFSZPermuteParticleLabelsCheckEnabled = (permuteParticleLabelsEnv != NULL
+      && atoi(permuteParticleLabelsEnv) != 0);
   return;
 }
 
@@ -189,6 +224,10 @@ static void OutputBFProfileCounters(FILE *fp) {
             BFFSZProfileAffectedRatioHist[i][2],BFFSZProfileAffectedRatioHist[i][3],
             BFFSZProfileAffectedRatioHist[i][4],BFFSZProfileAffectedRatioHist[i][5],
             BFFSZProfileAffectedRatioHist[i][6],BFFSZProfileAffectedRatioHist[i][7]);
+    fprintf(fp,"    BF-FSZ %s Pfaffian paths        optimized:%lld direct-full:%lld fallback:%lld kFull:%d\n",
+            label,BFFSZProfilePfPath[i][BFFSZ_PF_PATH_OPTIMIZED],
+            BFFSZProfilePfPath[i][BFFSZ_PF_PATH_DIRECT_FULL],
+            BFFSZProfilePfPath[i][BFFSZ_PF_PATH_FALLBACK],BFFSZPfUpdateKFull);
   }
 }
 

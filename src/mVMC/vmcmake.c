@@ -622,6 +622,7 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
   long long recvSource[NBFFSZProfileSource];
   long long recvHist[NBFFSZProfileSource][NBFFSZProfileHist];
   long long recvRatioHist[NBFFSZProfileSource][NBFFSZProfileRatioHist];
+  long long recvPfPath[NBFFSZProfileSource][NBFFSZPfPath];
   int i,j;
   int rank,size;
   if(!BFProfileEnabled) return;
@@ -656,6 +657,11 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
                 NBFFSZProfileSource*NBFFSZProfileRatioHist,MPI_LONG_LONG,MPI_SUM,comm);
   if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) for(j=0;j<NBFFSZProfileRatioHist;j++) {
     BFFSZProfileAffectedRatioHist[i][j] = recvRatioHist[i][j];
+  }
+  MPI_Allreduce(BFFSZProfilePfPath,recvPfPath,
+                NBFFSZProfileSource*NBFFSZPfPath,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) for(j=0;j<NBFFSZPfPath;j++) {
+    BFFSZProfilePfPath[i][j] = recvPfPath[i][j];
   }
 #endif
   return;
