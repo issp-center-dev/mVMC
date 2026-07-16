@@ -236,11 +236,15 @@ static void BF_FSZ_MaterializeGreenCandidate(
     const size_t rowAffectedStride, const int rowsBuilt,
     const int nAffected, const int *affected,
     int *hopIntWork, const int hopIntWorkSize,
-    const int useOMP, const int reason) {
+    const int useOMP, const int detailTimers, const int reason) {
   const size_t slaterCount
       = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
   int status;
 
+  if(detailTimers) {
+    StopTimer(83);
+    StartTimer(82);
+  }
   memcpy(candidateSlater,SlaterElmBF,
       sizeof(double complex)*slaterCount);
   status = useOMP
@@ -250,6 +254,10 @@ static void BF_FSZ_MaterializeGreenCandidate(
       : CommitSlaterElmBF_fsz_hop_workspace_serial(
           candidateSlater,oldEleProjBFCnt,newEleProjBFCnt,
           hopIntWork,hopIntWorkSize);
+  if(detailTimers) {
+    StopTimer(82);
+    StartTimer(83);
+  }
   if(status != BF_FSZ_ROW_BUILD_OK) {
     fprintf(stderr,"error: %s: BF-FSZ full candidate materialization failed\n",
         caller);
@@ -311,7 +319,8 @@ static double complex CalculateBF_FSZ_UpdatedCandidateIP(const char *caller,
     const size_t pfUpdateIntCount, double *pfUpdateRWork,
     const size_t pfUpdateDoubleCount, double complex *pfBufM,
     int *pfIWork, double complex *pfWork, double *pfRWork,
-    int *hopIntWork, const int hopIntWorkSize, const int useOMP) {
+    int *hopIntWork, const int hopIntWorkSize,
+    const int useOMP, const int detailTimers) {
   int status, detail = 0;
   double complex ipNew;
 
@@ -321,7 +330,7 @@ static double complex CalculateBF_FSZ_UpdatedCandidateIP(const char *caller,
         caller,candidateSlater,debugFull,eleNum,eleIdx,eleSpn,
         oldEleProjBFCnt,newEleProjBFCnt,candidateRows,rowQpStride,
         rowAffectedStride,rowsBuilt,nAffected,affected,
-        hopIntWork,hopIntWorkSize,useOMP,
+        hopIntWork,hopIntWorkSize,useOMP,detailTimers,
         BFFSZ_GREEN_MATERIALIZE_DIRECT_FULL);
     status = CalculateBF_FSZ_FullCandidatePfM(candidateSlater,eleIdx,eleSpn,
         pfMNew,&detail,pfBufM,pfIWork,pfWork,pfRWork);
@@ -356,7 +365,7 @@ static double complex CalculateBF_FSZ_UpdatedCandidateIP(const char *caller,
             caller,candidateSlater,debugFull,eleNum,eleIdx,eleSpn,
             oldEleProjBFCnt,newEleProjBFCnt,candidateRows,rowQpStride,
             rowAffectedStride,rowsBuilt,nAffected,affected,
-            hopIntWork,hopIntWorkSize,useOMP,
+            hopIntWork,hopIntWorkSize,useOMP,detailTimers,
             BFFSZ_GREEN_MATERIALIZE_ORACLE);
         if(BFFSZPfUpdateCheckEnabled) {
           status = CalculateBF_FSZ_FullCandidatePfM(
@@ -387,7 +396,7 @@ static double complex CalculateBF_FSZ_UpdatedCandidateIP(const char *caller,
           caller,candidateSlater,debugFull,eleNum,eleIdx,eleSpn,
           oldEleProjBFCnt,newEleProjBFCnt,candidateRows,rowQpStride,
           rowAffectedStride,rowsBuilt,nAffected,affected,
-          hopIntWork,hopIntWorkSize,useOMP,
+          hopIntWork,hopIntWorkSize,useOMP,detailTimers,
           BFFSZ_GREEN_MATERIALIZE_FALLBACK);
       status = CalculateBF_FSZ_FullCandidatePfM(candidateSlater,eleIdx,eleSpn,
           pfMNew,&detail,pfBufM,pfIWork,pfWork,pfRWork);
@@ -843,7 +852,7 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
       eleProjBFCnt,projBFCntNew,nAffected,affected,pfMNew,pfMFull,pfUpdateWork,
       pfUpdateComplexCount,pfIWork,pfUpdateIntCount,pfRWork,
       pfUpdateDoubleCount,pfBufM,pfIWork,pfWork,pfRWork,
-      hopIntWork,hopIntWorkSize,1);
+      hopIntWork,hopIntWorkSize,1,1);
   StopTimer(83);
 
   eleCfg[rsj] = mj;
@@ -937,7 +946,7 @@ double complex GreenFunc1BF_fsz_workspace(const int ri, const int rj, const int 
       eleProjBFCnt,projBFCntNew,nAffected,affected,pfMNew,pfMFull,pfUpdateWork,
       pfUpdateComplexCount,pfIWork,pfUpdateIntCount,pfRWork,
       pfUpdateDoubleCount,pfBufM,pfIWork,pfWork,pfRWork,
-      hopIntWork,hopIntWorkSize,0);
+      hopIntWork,hopIntWorkSize,0,0);
 
   eleCfg[rsj] = mj;
   eleCfg[rsi] = -1;
