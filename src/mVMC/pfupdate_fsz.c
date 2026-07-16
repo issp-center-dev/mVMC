@@ -575,6 +575,10 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
   const int globalQpidx = qpStart+qpidx;
   const double complex *oldInv = oldInvM+(size_t)qpidx*oldInvMQpStride;
   double complex *newInv = invMNew+(size_t)qpidx*newInvMQpStride;
+  const double complex one = 1.0+0.0*I;
+  const double complex zero = 0.0+0.0*I;
+  const double complex minusOne = -1.0+0.0*I;
+  const double complex *gemmRows = candidateRows;
   int i,j,k,l,m=n2,n=n2,lda=n2,info=0,lwork=n2;
   double maxAbs=0.0,maxSkew=0.0,maxResidual=0.0,maxGemmDifference=0.0;
   double detailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT] = {0.0};
@@ -584,15 +588,34 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
     clock_gettime(CLOCK_MONOTONIC,&detailStart);
   }
 
-  for(k=0;k<nAffected;k++) {
-    const double complex *vec_k
-        = candidateRows+(size_t)k*rowAffectedStride;
-    double complex *w_k = w+(size_t)k*(size_t)nsize;
-    for(i=0;i<nsize;i++) {
-      double complex value = 0.0+0.0*I;
-      const double complex *oldInv_i = oldInv+(size_t)i*(size_t)nsize;
-      for(j=0;j<nsize;j++) value += oldInv_i[j]*vec_k[j];
-      w_k[i] = value;
+  if(rowAffectedStride != (size_t)nsize) {
+    for(k=0;k<nAffected;k++) {
+      memcpy(matUV+(size_t)k*(size_t)nsize,
+             candidateRows+(size_t)k*rowAffectedStride,
+             sizeof(double complex)*(size_t)nsize);
+    }
+    gemmRows = matUV;
+  }
+  BF_FSZ_ZgemmRowMajorNT(
+      nAffected,nsize,nsize,gemmRows,oldInv,one,zero,w);
+  if(BFFSZInvGemmCheckEnabled) {
+    for(k=0;k<nAffected;k++) {
+      const double complex *vec_k
+          = candidateRows+(size_t)k*rowAffectedStride;
+      const double complex *w_k = w+(size_t)k*(size_t)nsize;
+      for(i=0;i<nsize;i++) {
+        double complex value = 0.0+0.0*I;
+        const double complex *oldInv_i
+            = oldInv+(size_t)i*(size_t)nsize;
+        for(j=0;j<nsize;j++) value += oldInv_i[j]*vec_k[j];
+        {
+          const double difference
+              = BF_FSZ_ScaledComplexDifference(w_k[i],value);
+          if(difference > maxGemmDifference) {
+            maxGemmDifference = difference;
+          }
+        }
+      }
     }
   }
   if(BFFSZInvDetailProfileEnabled) {
@@ -600,17 +623,31 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
         detailSeconds,BF_FSZ_INV_DETAIL_W,&detailStart);
   }
 
+  /* smallInverse is scratch until S^T is copied into it below. */
+  BF_FSZ_ZgemmRowMajorNT(
+      nAffected,nAffected,nsize,gemmRows,w,one,zero,smallInverse);
   for(k=0;k<nAffected;k++) {
     const double complex *vec_k
         = candidateRows+(size_t)k*rowAffectedStride;
     const double complex *w_k = w+(size_t)k*(size_t)nsize;
     double complex *matY_k = smallMatrix+(size_t)n2*(size_t)k+nAffected;
     for(l=k+1;l<nAffected;l++) {
-      const double complex *w_l = w+(size_t)l*(size_t)nsize;
-      double complex value = 0.0+0.0*I;
-      for(i=0;i<nsize;i++) value += w_l[i]*vec_k[i];
-      smallMatrix[(size_t)n2*(size_t)k+l]
-          = value+vec_k[affected[l]];
+      const double complex value
+          = smallInverse[(size_t)nAffected*(size_t)k+l]
+            +vec_k[affected[l]];
+      smallMatrix[(size_t)n2*(size_t)k+l] = value;
+      if(BFFSZInvGemmCheckEnabled) {
+        const double complex *w_l = w+(size_t)l*(size_t)nsize;
+        double complex scalarValue = vec_k[affected[l]];
+        for(i=0;i<nsize;i++) scalarValue += w_l[i]*vec_k[i];
+        {
+          const double difference
+              = BF_FSZ_ScaledComplexDifference(value,scalarValue);
+          if(difference > maxGemmDifference) {
+            maxGemmDifference = difference;
+          }
+        }
+      }
     }
     for(l=0;l<nAffected;l++) matY_k[l] = w_k[affected[l]];
   }
@@ -676,31 +713,59 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
         detailSeconds,BF_FSZ_INV_DETAIL_LAPACK,&detailStart);
   }
 
-  for(j=0;j<nsize;j++) {
-    const double complex *matUV_j = matUV+(size_t)j*(size_t)n2;
-    double complex *tmp_j = correctionTmp+(size_t)j*(size_t)n2;
-    for(k=0;k<n2;k++) {
-      double complex value = 0.0+0.0*I;
-      const double complex *smallInverse_k
-          = smallInverse+(size_t)k*(size_t)n2;
-      for(l=0;l<n2;l++) value += smallInverse_k[l]*matUV_j[l];
-      tmp_j[k] = value;
+  BF_FSZ_ZgemmRowMajorNT(
+      nsize,n2,n2,matUV,smallInverse,one,zero,correctionTmp);
+  if(BFFSZInvGemmCheckEnabled) {
+    for(j=0;j<nsize;j++) {
+      const double complex *matUV_j = matUV+(size_t)j*(size_t)n2;
+      const double complex *tmp_j
+          = correctionTmp+(size_t)j*(size_t)n2;
+      for(k=0;k<n2;k++) {
+        const double complex *smallInverse_k
+            = smallInverse+(size_t)k*(size_t)n2;
+        double complex value = 0.0+0.0*I;
+        for(l=0;l<n2;l++) value += smallInverse_k[l]*matUV_j[l];
+        {
+          const double difference
+              = BF_FSZ_ScaledComplexDifference(tmp_j[k],value);
+          if(difference > maxGemmDifference) {
+            maxGemmDifference = difference;
+          }
+        }
+      }
     }
   }
-  for(i=0;i<nsize;i++) {
-    const double complex *matUV_i = matUV+(size_t)i*(size_t)n2;
-    double complex *newInv_i = newInv+(size_t)i*(size_t)nsize;
-    const double complex *oldInv_i = oldInv+(size_t)i*(size_t)nsize;
-    for(j=0;j<nsize;j++) {
-      const double complex *tmp_j = correctionTmp+(size_t)j*(size_t)n2;
-      double complex value = 0.0+0.0*I;
-      for(k=0;k<n2;k++) value += matUV_i[k]*tmp_j[k];
-      newInv_i[j] = oldInv_i[j]-value;
+  memcpy(newInv,oldInv,sizeof(double complex)*(size_t)nsize*(size_t)nsize);
+  BF_FSZ_ZgemmRowMajorNT(
+      nsize,nsize,n2,matUV,correctionTmp,minusOne,one,newInv);
+  if(BFFSZInvGemmCheckEnabled) {
+    for(i=0;i<nsize;i++) {
+      const double complex *matUV_i = matUV+(size_t)i*(size_t)n2;
+      const double complex *oldInv_i = oldInv+(size_t)i*(size_t)nsize;
+      const double complex *newInv_i = newInv+(size_t)i*(size_t)nsize;
+      for(j=0;j<nsize;j++) {
+        const double complex *tmp_j
+            = correctionTmp+(size_t)j*(size_t)n2;
+        double complex value = oldInv_i[j];
+        for(k=0;k<n2;k++) value -= matUV_i[k]*tmp_j[k];
+        {
+          const double difference
+              = BF_FSZ_ScaledComplexDifference(newInv_i[j],value);
+          if(difference > maxGemmDifference) {
+            maxGemmDifference = difference;
+          }
+        }
+      }
     }
   }
   if(BFFSZInvDetailProfileEnabled) {
     BF_FSZ_RecordInvDetailBoundary(
         detailSeconds,BF_FSZ_INV_DETAIL_CORRECTION,&detailStart);
+  }
+  if(BFFSZInvGemmCheckEnabled && maxGemmDifference > 1.0e-11) {
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_GEMM_MISMATCH,BF_FSZ_INV_STAGE_GEMM_CHECK,
+        globalQpidx,0,0.0,0.0,maxGemmDifference,0.0,detailSeconds);
   }
 
   clock_gettime(CLOCK_MONOTONIC,&checkStart);
@@ -752,9 +817,6 @@ static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
         += BF_FSZ_TimeDifference(&checkStart,&detailStart);
   }
   {
-    const double complex one = 1.0+0.0*I;
-    const double complex zero = 0.0+0.0*I;
-    const double complex *gemmRows = candidateRows;
     if(rowAffectedStride != (size_t)nsize) {
       for(k=0;k<nAffected;k++) {
         memcpy(matUV+(size_t)k*(size_t)nsize,
