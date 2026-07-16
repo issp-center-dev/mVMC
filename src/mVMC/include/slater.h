@@ -1,5 +1,9 @@
 #ifndef _SLATER
 #define _SLATER
+
+#define BF_FSZ_ROW_BUILD_OK 0
+#define BF_FSZ_ROW_BUILD_NEEDS_FULL 1
+#define BF_FSZ_ROW_BUILD_INVALID_ARGUMENT 2
 void UpdateSlaterElm_fcmp();
 void SlaterElmDiff_fcmp(double complex *srOptO, const double complex ip, int *eleIdx);
 
@@ -49,6 +53,34 @@ int MakeSlaterElmBF_fsz_hop_to_with_rows_workspace_serial(
     int movedParticle, const int *eleIdx, const int *eleSpn,
     const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
     int *affected, int *nChanged, int *nAffected,
+    int *intWork, int intWorkSize);
+int GetSlaterElmBF_fsz_hop_row_work_size(size_t *complexCount,
+    int qpNum, int rowCapacity);
+int MakeSlaterElmBF_fsz_hop_rows_workspace(
+    double complex *candidateRows, size_t rowQpStride,
+    size_t rowAffectedStride, int rowCapacity,
+    const double complex *baseSltElmBF,
+    int movedParticle, const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int qpStart, int qpEnd,
+    int *affected, int *nChanged, int *nAffected,
+    int *intWork, int intWorkSize);
+int MakeSlaterElmBF_fsz_hop_rows_workspace_serial(
+    double complex *candidateRows, size_t rowQpStride,
+    size_t rowAffectedStride, int rowCapacity,
+    const double complex *baseSltElmBF,
+    int movedParticle, const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int qpStart, int qpEnd,
+    int *affected, int *nChanged, int *nAffected,
+    int *intWork, int intWorkSize);
+int CommitSlaterElmBF_fsz_hop_workspace(
+    double complex *sltElmBF,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int *intWork, int intWorkSize);
+int CommitSlaterElmBF_fsz_hop_workspace_serial(
+    double complex *sltElmBF,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
     int *intWork, int intWorkSize);
 void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int u,
                        const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex*sltElmTmp);

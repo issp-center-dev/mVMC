@@ -514,11 +514,14 @@ static int BF_FSZ_RunPfUpdateArgumentChecks(
     const int *eleIdx, const int *eleSpn,
     const int qpStart, const int qpEnd,
     const double complex *candidateSlater,
+    const double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride,
     double complex *complexWork, const size_t complexWorkCount,
     int *iwork, const size_t intWorkCount,
     double *rwork, const size_t rworkCount) {
   static int checked = 0;
   int badAffected = -1;
+  int duplicateAffected[2] = {0,0};
   int status;
   const size_t qpNum = (size_t)(qpEnd-qpStart);
 
@@ -559,6 +562,35 @@ static int BF_FSZ_RunPfUpdateArgumentChecks(
       nAffected,affected,pfMNew,PfM,oldInvM,invMQpStride,eleIdx,eleSpn,
       qpStart,qpEnd,SlaterElmBF,NULL,complexWork,complexWorkCount,
       iwork,intWorkCount,rwork,rworkCount));
+  if(BFFSZMatrixFreeArgumentCheckEnabled) {
+    BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_row_values_workspace(
+        nAffected,affected,pfMNew,PfM,oldInvM,invMQpStride,
+        qpStart,qpEnd,candidateRows,rowQpStride,(size_t)Nsize-1,NULL,
+        complexWork,complexWorkCount,iwork,intWorkCount,rwork,rworkCount));
+    BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_row_values_workspace(
+        nAffected,affected,pfMNew,PfM,oldInvM,invMQpStride,
+        qpStart,qpEnd,candidateRows,rowQpStride,rowAffectedStride,NULL,
+        complexWork,0,iwork,intWorkCount,rwork,rworkCount));
+    BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_row_values_workspace(
+        nAffected,affected,pfMNew,PfM,oldInvM,invMQpStride,
+        qpStart,qpEnd,candidateRows,rowQpStride,rowAffectedStride,NULL,
+        (double complex *)candidateRows,complexWorkCount,
+        iwork,intWorkCount,rwork,rworkCount));
+    BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_row_values_workspace(
+        nAffected,affected,pfMNew,PfM,oldInvM,invMQpStride,
+        qpStart,qpEnd,(const double complex *)iwork,rowQpStride,
+        rowAffectedStride,NULL,complexWork,complexWorkCount,
+        iwork,intWorkCount,rwork,rworkCount));
+    BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_row_values_workspace(
+        nAffected,affected,pfMNew,PfM,oldInvM,invMQpStride,
+        qpStart,qpEnd,(const double complex *)rwork,rowQpStride,
+        rowAffectedStride,NULL,complexWork,complexWorkCount,
+        iwork,intWorkCount,rwork,rworkCount));
+    BF_FSZ_EXPECT_INVALID(CalculateNewPfMBF_fsz_row_values_workspace(
+        2,duplicateAffected,pfMNew,PfM,oldInvM,invMQpStride,
+        qpStart,qpEnd,candidateRows,rowQpStride,rowAffectedStride,NULL,
+        complexWork,complexWorkCount,iwork,intWorkCount,rwork,rworkCount));
+  }
 #undef BF_FSZ_EXPECT_INVALID
 
   memcpy(oldPfMScratch,PfM,sizeof(double complex)*qpNum);
@@ -589,6 +621,110 @@ static int BF_FSZ_InvUpdateMatchesFull(const double complex *updated,
   return 1;
 }
 
+static int BF_FSZ_MatrixFreeRowsMatchFull(
+    const double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride, const int nAffected,
+    const int *affected, const int *eleIdx, const int *eleSpn,
+    const int qpStart, const int qpEnd,
+    const double complex *candidateSlater,
+    size_t *badRowIndex) {
+  int qpidx,k,i;
+  for(qpidx=qpStart;qpidx<qpEnd;qpidx++) {
+    const double complex *sltE = candidateSlater
+        +(size_t)qpidx*(size_t)Nsite2*(size_t)Nsite2;
+    const double complex *rowsQp = candidateRows
+        +(size_t)(qpidx-qpStart)*rowQpStride;
+    for(k=0;k<nAffected;k++) {
+      const int rsk = eleIdx[affected[k]]+eleSpn[affected[k]]*Nsite;
+      const double complex *row = rowsQp+(size_t)k*rowAffectedStride;
+      for(i=0;i<Nsize;i++) {
+        const int rsi = eleIdx[i]+eleSpn[i]*Nsite;
+        if(row[i] != sltE[(size_t)rsk*(size_t)Nsite2+(size_t)rsi]) {
+          if(badRowIndex != NULL) {
+            *badRowIndex = (size_t)(qpidx-qpStart)*rowQpStride
+                +(size_t)k*rowAffectedStride+(size_t)i;
+          }
+          return 0;
+        }
+      }
+    }
+  }
+  return 1;
+}
+
+static int BF_FSZ_RunMatrixFreeBuilderArgumentChecks(
+    double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride, const int rowCapacity,
+    const double complex *baseSlater, double complex *commitScratch,
+    const size_t bfSlaterSize, const int movedParticle,
+    const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    const int qpStart, const int qpEnd,
+    int *affected, int *intWork, const int intWorkSize) {
+  static int checked = 0;
+  double complex savedRow;
+  int status,nChanged,nAffected;
+  if(!BFFSZMatrixFreeArgumentCheckEnabled || checked || qpEnd == qpStart) {
+    return 0;
+  }
+  savedRow = candidateRows[0];
+  status = MakeSlaterElmBF_fsz_hop_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,0,baseSlater,
+      movedParticle,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_NEEDS_FULL || candidateRows[0] != savedRow) {
+    return 1;
+  }
+  status = MakeSlaterElmBF_fsz_hop_rows_workspace(
+      candidateRows,rowQpStride,(size_t)Nsize-1,rowCapacity,baseSlater,
+      movedParticle,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+  status = MakeSlaterElmBF_fsz_hop_rows_workspace(
+      (double complex *)baseSlater,rowQpStride,rowAffectedStride,rowCapacity,
+      baseSlater,movedParticle,eleIdx,eleSpn,
+      oldEleProjBFCnt,newEleProjBFCnt,qpStart,qpEnd,
+      affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+  status = MakeSlaterElmBF_fsz_hop_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,rowCapacity,baseSlater,
+      movedParticle,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,NQPFull+1,affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+  status = MakeSlaterElmBF_fsz_hop_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,rowCapacity,baseSlater,
+      movedParticle,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize-1);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+  status = MakeSlaterElmBF_fsz_hop_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,rowCapacity,baseSlater,
+      movedParticle,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,intWork,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+  status = MakeSlaterElmBF_fsz_hop_rows_workspace(
+      (double complex *)intWork,rowQpStride,rowAffectedStride,rowCapacity,
+      baseSlater,movedParticle,eleIdx,eleSpn,
+      oldEleProjBFCnt,newEleProjBFCnt,qpStart,qpEnd,
+      affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+
+  memcpy(commitScratch,baseSlater,sizeof(double complex)*bfSlaterSize);
+  status = CommitSlaterElmBF_fsz_hop_workspace(
+      commitScratch,oldEleProjBFCnt,newEleProjBFCnt,
+      intWork,intWorkSize-1);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT
+      || memcmp(commitScratch,baseSlater,
+          sizeof(double complex)*bfSlaterSize) != 0) {
+    return 1;
+  }
+  status = CommitSlaterElmBF_fsz_hop_workspace(
+      (double complex *)intWork,oldEleProjBFCnt,newEleProjBFCnt,
+      intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+  checked = 1;
+  return 0;
+}
+
 static int BF_FSZ_RunInvUpdateArgumentChecks(
     const int nAffected, const int *affected,
     const double complex *oldInvM, const size_t invMQpStride,
@@ -596,12 +732,15 @@ static int BF_FSZ_RunInvUpdateArgumentChecks(
     const int *eleIdx, const int *eleSpn,
     const int qpStart, const int qpEnd,
     const double complex *candidateSlater,
+    const double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride,
     double complex *complexWork, const size_t complexWorkCount,
     int *iwork, const size_t intWorkCount,
     double complex *fullBufM, int *fullIWork,
     double complex *fullWork, const int fullLWork, double *fullRWork) {
   static int checked = 0;
   int badAffected = -1;
+  int duplicateAffected[2] = {0,0};
   BF_FSZ_InvUpdateResult result;
   BF_FSZ_MAllResult fullResult;
   if(!BFFSZInvUpdateArgumentCheckEnabled || checked || qpEnd == qpStart) return 0;
@@ -641,6 +780,28 @@ static int BF_FSZ_RunInvUpdateArgumentChecks(
       nAffected,affected,oldInvM,invMQpStride,invMNew,invMQpStride,
       eleIdx,eleSpn,qpStart,qpEnd,candidateSlater,complexWork,
       0,iwork,intWorkCount));
+  if(BFFSZMatrixFreeArgumentCheckEnabled) {
+    BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_row_values_workspace(
+        nAffected,affected,oldInvM,invMQpStride,invMNew,invMQpStride,
+        qpStart,qpEnd,candidateRows,rowQpStride,(size_t)Nsize-1,
+        complexWork,complexWorkCount,iwork,intWorkCount));
+    BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_row_values_workspace(
+        nAffected,affected,oldInvM,invMQpStride,invMNew,invMQpStride,
+        qpStart,qpEnd,candidateRows,rowQpStride,rowAffectedStride,
+        complexWork,0,iwork,intWorkCount));
+    BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_row_values_workspace(
+        nAffected,affected,oldInvM,invMQpStride,invMNew,invMQpStride,
+        qpStart,qpEnd,candidateRows,rowQpStride,rowAffectedStride,
+        (double complex *)candidateRows,complexWorkCount,iwork,intWorkCount));
+    BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_row_values_workspace(
+        nAffected,affected,oldInvM,invMQpStride,invMNew,invMQpStride,
+        qpStart,qpEnd,(const double complex *)iwork,rowQpStride,
+        rowAffectedStride,complexWork,complexWorkCount,iwork,intWorkCount));
+    BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_row_values_workspace(
+        2,duplicateAffected,oldInvM,invMQpStride,invMNew,invMQpStride,
+        qpStart,qpEnd,candidateRows,rowQpStride,rowAffectedStride,
+        complexWork,complexWorkCount,iwork,intWorkCount));
+  }
 #undef BF_FSZ_EXPECT_INV_INVALID
   fullResult = CalculateMAll_BF_fsz_from_workspace(
       candidateSlater,eleIdx,eleSpn,qpStart,qpEnd,pfMNew,invMNew,SIZE_MAX,
@@ -699,12 +860,16 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   double complex *invMNew, *invMCheck, *invUpdateWork;
   double complex *pfFullBufM, *pfFullWork;
   double complex *oldPfMCheck, *oldInvMCheck;
+  double complex *matrixFreeRows, *matrixFreeCommitCheck;
   int *pfUpdateIWork, *invUpdateIWork;
   int *pfFullIWork;
+  int *matrixFreeAffected;
   double *pfUpdateRWork, *pfFullRWork;
   size_t pfUpdateComplexCount, pfUpdateIntCount, pfUpdateDoubleCount;
   size_t invUpdateComplexCount, invUpdateIntCount;
   size_t qpNum, nsizeSquared, oldInvCount;
+  size_t matrixFreeRowCount, matrixFreeRowQpStride;
+  const size_t matrixFreeRowAffectedStride = (size_t)Nsize;
   int *hopIntStorage, *affected, *hopIntWork;
   int hopIntWorkSize, hopIntStorageSize;
   int nChanged,nAffected;
@@ -722,6 +887,7 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   SplitLoop(&qpStart,&qpEnd,NQPFull,rank,size);
   qpNum = (size_t)(qpEnd-qpStart);
   nsizeSquared = (size_t)Nsize*(size_t)Nsize;
+  matrixFreeRowQpStride = nsizeSquared;
 
   if(GetSlaterElmBF_fsz_hop_int_work_size(&hopIntWorkSize) != 0
       || Nsize > INT_MAX - hopIntWorkSize) {
@@ -740,7 +906,10 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
       || nsizeSquared > SIZE_MAX/sizeof(double complex)
       || (size_t)LapackLWork > SIZE_MAX/sizeof(double complex)
       || (size_t)LapackLWork > SIZE_MAX/sizeof(double)
-      || (qpNum != 0 && nsizeSquared > SIZE_MAX/qpNum)) {
+      || (qpNum != 0 && nsizeSquared > SIZE_MAX/qpNum)
+      || GetSlaterElmBF_fsz_hop_row_work_size(
+          &matrixFreeRowCount,(int)qpNum,Nsize) != BF_FSZ_ROW_BUILD_OK
+      || matrixFreeRowCount > SIZE_MAX/sizeof(double complex)) {
     fprintf(stderr, "error: invalid BF-FSZ sampling Pfaffian-update workspace size\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
@@ -779,6 +948,19 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
     oldPfMCheck = (double complex *)malloc(sizeof(double complex)*qpNum);
     oldInvMCheck = (double complex *)malloc(sizeof(double complex)*oldInvCount);
   }
+  matrixFreeRows = NULL;
+  matrixFreeCommitCheck = NULL;
+  matrixFreeAffected = NULL;
+  if(BFFSZMatrixFreeCheckEnabled) {
+    matrixFreeRows = (double complex *)malloc(sizeof(double complex)
+        *((matrixFreeRowCount > 0) ? matrixFreeRowCount : 1));
+    matrixFreeCommitCheck = (double complex *)malloc(
+        sizeof(double complex)*bfSlaterSize);
+    matrixFreeAffected = (int *)malloc(sizeof(int)*(size_t)Nsize);
+    if(qpNum > 0 && invMCheck == NULL) {
+      invMCheck = (double complex *)malloc(sizeof(double complex)*oldInvCount);
+    }
+  }
   if(candidateSlater == NULL || pfMNew == NULL || pfMCheck == NULL
       || hopIntStorage == NULL
       || pfUpdateWork == NULL || pfUpdateIWork == NULL || pfUpdateRWork == NULL
@@ -790,7 +972,11 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
       || (qpNum > 0 && (BFFSZPfUpdateExplicitStateCheckEnabled
           || BFFSZPfUpdateArgumentCheckEnabled
           || BFFSZInvUpdateExplicitStateCheckEnabled)
-          && (oldPfMCheck == NULL || oldInvMCheck == NULL))) {
+          && (oldPfMCheck == NULL || oldInvMCheck == NULL))
+      || (BFFSZMatrixFreeCheckEnabled
+          && (matrixFreeRows == NULL || matrixFreeCommitCheck == NULL
+            || matrixFreeAffected == NULL
+            || (qpNum > 0 && invMCheck == NULL)))) {
     fprintf(stderr, "error: failed to allocate BF-FSZ sampling candidate workspace\n");
     free(candidateSlater);
     free(pfMNew);
@@ -809,6 +995,9 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
     free(pfFullRWork);
     free(oldPfMCheck);
     free(oldInvMCheck);
+    free(matrixFreeRows);
+    free(matrixFreeCommitCheck);
+    free(matrixFreeAffected);
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
   affected = hopIntStorage;
@@ -873,6 +1062,114 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
       }
       RecordBFFSZProfile(BFFSZ_PROFILE_SAMPLE,nChanged,nAffected);
+      if(BFFSZMatrixFreeCheckEnabled) {
+        int nChangedCheck,nAffectedCheck,k,qpidx,i;
+        size_t badRowIndex=0,badMatrixIndex;
+        int rowStatus = MakeSlaterElmBF_fsz_hop_rows_workspace(
+            matrixFreeRows,matrixFreeRowQpStride,
+            matrixFreeRowAffectedStride,Nsize,SlaterElmBF,
+            mi,TmpEleIdx,TmpEleSpn,TmpEleProjBFCnt,projBFCntNew,
+            qpStart,qpEnd,matrixFreeAffected,&nChangedCheck,&nAffectedCheck,
+            hopIntWork,hopIntWorkSize);
+        if(rowStatus != BF_FSZ_ROW_BUILD_OK
+            || nChangedCheck != nChanged || nAffectedCheck != nAffected) {
+          if(rank==0) fprintf(stderr,
+              "error: BF-FSZ matrix-free row metadata mismatch\n");
+          MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+        }
+        for(k=0;k<nAffected;k++) {
+          if(matrixFreeAffected[k] != affected[k]) {
+            if(rank==0) fprintf(stderr,
+                "error: BF-FSZ matrix-free affected list mismatch at %d\n",k);
+            MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+          }
+        }
+        if(!BF_FSZ_MatrixFreeRowsMatchFull(
+            matrixFreeRows,matrixFreeRowQpStride,
+            matrixFreeRowAffectedStride,nAffected,matrixFreeAffected,
+            TmpEleIdx,TmpEleSpn,qpStart,qpEnd,candidateSlater,&badRowIndex)) {
+          if(rank==0) fprintf(stderr,
+              "error: BF-FSZ matrix-free row/full mismatch at row index %zu\n",
+              badRowIndex);
+          MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+        }
+        rowStatus = MakeSlaterElmBF_fsz_hop_rows_workspace_serial(
+            matrixFreeCommitCheck,matrixFreeRowQpStride,
+            matrixFreeRowAffectedStride,Nsize,SlaterElmBF,
+            mi,TmpEleIdx,TmpEleSpn,TmpEleProjBFCnt,projBFCntNew,
+            qpStart,qpEnd,matrixFreeAffected,&nChangedCheck,&nAffectedCheck,
+            hopIntWork,hopIntWorkSize);
+        if(rowStatus != BF_FSZ_ROW_BUILD_OK
+            || nChangedCheck != nChanged || nAffectedCheck != nAffected) {
+          if(rank==0) fprintf(stderr,
+              "error: BF-FSZ matrix-free serial row metadata mismatch\n");
+          MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+        }
+        for(qpidx=0;qpidx<qpEnd-qpStart;qpidx++) {
+          for(k=0;k<nAffected;k++) {
+            const double complex *parallelRow = matrixFreeRows
+                +(size_t)qpidx*matrixFreeRowQpStride
+                +(size_t)k*matrixFreeRowAffectedStride;
+            const double complex *serialRow = matrixFreeCommitCheck
+                +(size_t)qpidx*matrixFreeRowQpStride
+                +(size_t)k*matrixFreeRowAffectedStride;
+            for(i=0;i<Nsize;i++) {
+              if(parallelRow[i] != serialRow[i]) {
+                if(rank==0) fprintf(stderr,
+                    "error: BF-FSZ matrix-free serial/parallel row mismatch "
+                    "at qp=%d affected=%d particle=%d\n",qpidx,k,i);
+                MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+              }
+            }
+          }
+        }
+        if(BF_FSZ_RunMatrixFreeBuilderArgumentChecks(
+            matrixFreeRows,matrixFreeRowQpStride,
+            matrixFreeRowAffectedStride,Nsize,SlaterElmBF,
+            matrixFreeCommitCheck,bfSlaterSize,mi,TmpEleIdx,TmpEleSpn,
+            TmpEleProjBFCnt,projBFCntNew,qpStart,qpEnd,
+            matrixFreeAffected,hopIntWork,hopIntWorkSize) != 0) {
+          if(rank==0) fprintf(stderr,
+              "error: BF-FSZ matrix-free builder argument check failed\n");
+          MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+        }
+        memcpy(matrixFreeCommitCheck,SlaterElmBF,
+            sizeof(double complex)*bfSlaterSize);
+        if(CommitSlaterElmBF_fsz_hop_workspace(
+            matrixFreeCommitCheck,TmpEleProjBFCnt,projBFCntNew,
+            hopIntWork,hopIntWorkSize) != BF_FSZ_ROW_BUILD_OK) {
+          if(rank==0) fprintf(stderr,
+              "error: BF-FSZ matrix-free commit preparation failed\n");
+          MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+        }
+        for(badMatrixIndex=0;badMatrixIndex<bfSlaterSize;badMatrixIndex++) {
+          if(matrixFreeCommitCheck[badMatrixIndex]
+              != candidateSlater[badMatrixIndex]) {
+            if(rank==0) fprintf(stderr,
+                "error: BF-FSZ matrix-free commit/full mismatch at index %zu\n",
+                badMatrixIndex);
+            MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+          }
+        }
+        memcpy(matrixFreeCommitCheck,SlaterElmBF,
+            sizeof(double complex)*bfSlaterSize);
+        if(CommitSlaterElmBF_fsz_hop_workspace_serial(
+            matrixFreeCommitCheck,TmpEleProjBFCnt,projBFCntNew,
+            hopIntWork,hopIntWorkSize) != BF_FSZ_ROW_BUILD_OK) {
+          if(rank==0) fprintf(stderr,
+              "error: BF-FSZ matrix-free serial commit preparation failed\n");
+          MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+        }
+        for(badMatrixIndex=0;badMatrixIndex<bfSlaterSize;badMatrixIndex++) {
+          if(matrixFreeCommitCheck[badMatrixIndex]
+              != candidateSlater[badMatrixIndex]) {
+            if(rank==0) fprintf(stderr,
+                "error: BF-FSZ matrix-free serial commit/full mismatch "
+                "at index %zu\n",badMatrixIndex);
+            MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+          }
+        }
+      }
       StopTimer(64);
 
       StartTimer(61);
@@ -890,7 +1187,9 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
         double complex savedInvM = 0.0 + 0.0*I;
         if(BF_FSZ_RunPfUpdateArgumentChecks(nAffected,affected,pfMNew,
             oldPfMCheck,InvM,nsizeSquared,TmpEleIdx,TmpEleSpn,qpStart,qpEnd,
-            candidateSlater,pfUpdateWork,pfUpdateComplexCount,pfUpdateIWork,
+            candidateSlater,matrixFreeRows,matrixFreeRowQpStride,
+            matrixFreeRowAffectedStride,
+            pfUpdateWork,pfUpdateComplexCount,pfUpdateIWork,
             pfUpdateIntCount,pfUpdateRWork,pfUpdateDoubleCount) != 0) {
           if(rank==0) fprintf(stderr,
               "error: BF-FSZ Pfaffian-update argument/status check failed\n");
@@ -911,6 +1210,26 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
             TmpEleIdx, TmpEleSpn, qpStart, qpEnd, candidateSlater, &updateDetail,
             pfUpdateWork, pfUpdateComplexCount, pfUpdateIWork, pfUpdateIntCount,
             pfUpdateRWork, pfUpdateDoubleCount);
+        if(BFFSZMatrixFreeCheckEnabled
+            && updateStatus == BF_FSZ_PF_UPDATE_OK) {
+          int rowDetail=0,badQp=-1;
+          double badError=0.0;
+          const int rowStatus = CalculateNewPfMBF_fsz_row_values_workspace(
+              nAffected,matrixFreeAffected,pfMCheck,oldPfMInput,oldInvMInput,
+              nsizeSquared,qpStart,qpEnd,matrixFreeRows,
+              matrixFreeRowQpStride,matrixFreeRowAffectedStride,&rowDetail,
+              pfUpdateWork,pfUpdateComplexCount,pfUpdateIWork,pfUpdateIntCount,
+              pfUpdateRWork,pfUpdateDoubleCount);
+          if(rowStatus != BF_FSZ_PF_UPDATE_OK
+              || !BF_FSZ_PfUpdateMatchesFull(
+                  pfMCheck,pfMNew,qpEnd-qpStart,&badQp,&badError)) {
+            if(rank==0) fprintf(stderr,
+                "error: BF-FSZ matrix-free Pfaffian/full-row mismatch "
+                "at qp=%d relative_error=%.17e detail=%d\n",
+                badQp,badError,rowDetail);
+            MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+          }
+        }
         if(BFFSZPfUpdateExplicitStateCheckEnabled && qpNum > 0) {
           PfM[0] = savedPfM;
           InvM[0] = savedInvM;
@@ -994,9 +1313,10 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
           double complex savedInvM = 0.0+0.0*I;
           if(BF_FSZ_RunInvUpdateArgumentChecks(nAffected,affected,InvM,
               nsizeSquared,pfMNew,invMNew,TmpEleIdx,TmpEleSpn,qpStart,qpEnd,
-              candidateSlater,invUpdateWork,invUpdateComplexCount,
-              invUpdateIWork,invUpdateIntCount,pfFullBufM,pfFullIWork,
-              pfFullWork,LapackLWork,pfFullRWork) != 0) {
+              candidateSlater,matrixFreeRows,matrixFreeRowQpStride,
+              matrixFreeRowAffectedStride,invUpdateWork,
+              invUpdateComplexCount,invUpdateIWork,invUpdateIntCount,
+              pfFullBufM,pfFullIWork,pfFullWork,LapackLWork,pfFullRWork) != 0) {
             if(rank==0) fprintf(stderr,
                 "error: BF-FSZ inverse-update argument check failed\n");
             MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
@@ -1012,6 +1332,27 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
               nsizeSquared,TmpEleIdx,TmpEleSpn,qpStart,qpEnd,
               candidateSlater,invUpdateWork,invUpdateComplexCount,
               invUpdateIWork,invUpdateIntCount);
+          if(BFFSZMatrixFreeCheckEnabled
+              && invResult.status == BF_FSZ_INV_UPDATE_OK) {
+            BF_FSZ_InvUpdateResult rowResult;
+            size_t badIndex=0;
+            double badError=0.0;
+            rowResult = PrepareInvMBF_fsz_row_values_workspace(
+                nAffected,matrixFreeAffected,oldInvInput,nsizeSquared,
+                invMCheck,nsizeSquared,qpStart,qpEnd,matrixFreeRows,
+                matrixFreeRowQpStride,matrixFreeRowAffectedStride,
+                invUpdateWork,invUpdateComplexCount,
+                invUpdateIWork,invUpdateIntCount);
+            if(rowResult.status != BF_FSZ_INV_UPDATE_OK
+                || !BF_FSZ_InvUpdateMatchesFull(
+                    invMCheck,invMNew,oldInvCount,&badIndex,&badError)) {
+              if(rank==0) fprintf(stderr,
+                  "error: BF-FSZ matrix-free inverse/full-row mismatch "
+                  "at index=%zu relative_error=%.17e status=%d\n",
+                  badIndex,badError,rowResult.status);
+              MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+            }
+          }
           if(BFFSZInvUpdateExplicitStateCheckEnabled && qpNum > 0) {
             InvM[0] = savedInvM;
           }
@@ -1120,6 +1461,9 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   free(pfFullRWork);
   free(oldPfMCheck);
   free(oldInvMCheck);
+  free(matrixFreeRows);
+  free(matrixFreeCommitCheck);
+  free(matrixFreeAffected);
 
   return;
 }

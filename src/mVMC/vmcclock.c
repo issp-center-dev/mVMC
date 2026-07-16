@@ -58,6 +58,7 @@ void InitTimer() {
   const char *invUpdateCheckEnv, *invUpdateFallbackEnv, *invUpdateInjectEnv;
   const char *invUpdateInjectRankEnv, *invUpdateExplicitStateEnv;
   const char *invUpdateArgumentEnv;
+  const char *matrixFreeCheckEnv, *matrixFreeArgumentEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
   for(i=0;i<NTimer;i++) TimerStart[i]=0.0;
   for(i=0;i<NBFProfileCounter;i++) BFProfileCounter[i]=0;
@@ -152,6 +153,15 @@ void InitTimer() {
   invUpdateArgumentEnv = getenv("MVMC_BF_FSZ_INV_UPDATE_ARGUMENT_CHECK");
   BFFSZInvUpdateArgumentCheckEnabled = (invUpdateArgumentEnv != NULL
       && atoi(invUpdateArgumentEnv) != 0);
+  matrixFreeCheckEnv = getenv("MVMC_BF_FSZ_MATRIX_FREE_CHECK");
+  BFFSZMatrixFreeCheckEnabled = (matrixFreeCheckEnv != NULL
+      && atoi(matrixFreeCheckEnv) != 0);
+  matrixFreeArgumentEnv = getenv("MVMC_BF_FSZ_MATRIX_FREE_ARGUMENT_CHECK");
+  BFFSZMatrixFreeArgumentCheckEnabled = (matrixFreeArgumentEnv != NULL
+      && atoi(matrixFreeArgumentEnv) != 0);
+  if(BFFSZMatrixFreeArgumentCheckEnabled) {
+    BFFSZMatrixFreeCheckEnabled = 1;
+  }
   return;
 }
 

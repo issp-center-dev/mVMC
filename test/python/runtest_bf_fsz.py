@@ -591,10 +591,17 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         "BackFlow_FSZ_InvUpdate_ExplicitState_NonIdentity_Complex": "explicit-state",
         "BackFlow_FSZ_InvUpdate_InvalidArguments_NonIdentity_Complex": "arguments",
     }
+    matrix_free_cases = {
+        "BackFlow_FSZ_MatrixFreeRows_NonIdentity_Complex": "optimized",
+        "BackFlow_FSZ_MatrixFreeRows_NonIdentity_Complex_mpi": "optimized",
+        "BackFlow_FSZ_MatrixFreeRows_NonIdentity_Complex_omp": "optimized",
+        "BackFlow_FSZ_MatrixFreeRows_InvalidArguments_NonIdentity_Complex": "arguments",
+    }
     affected_cases = (
         "BackFlow_FSZ_AffectedRows_NonIdentity_Complex",
         "BackFlow_FSZ_AffectedRows_NonIdentity_Complex_mpi",
-    ) + tuple(pf_update_cases) + tuple(inv_update_cases)
+    ) + tuple(pf_update_cases) + tuple(inv_update_cases) \
+        + tuple(matrix_free_cases)
     if case_name != "BackFlow_FSZ_TwoBodyG_StaleBase_NonIdentity_Complex" \
             and case_name not in affected_cases:
         return None
@@ -613,7 +620,8 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         (reference_workdir, reference_case_rows),
     ):
         update_modpara(workdir, {"NVMCSample": "1"})
-        if case_name in inv_update_cases and mpi_procs:
+        if (case_name in inv_update_cases or case_name in matrix_free_cases) \
+                and mpi_procs:
             update_modpara(workdir, {"NSplitSize": str(mpi_procs)})
         if case_name in affected_cases:
             update_modpara(workdir, {"NMPTrans": "2"})
@@ -625,6 +633,7 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
     ordered_env = {
         "MVMC_BF_FSZ_GREEN_REBUILD_CHECK": "1",
         "MVMC_BF_FSZ_AFFECTED_CHECK": "1",
+        "MVMC_BF_FSZ_MATRIX_FREE_CHECK": "1",
         "MVMC_BF_PROFILE": "1",
     }
     if case_name in pf_update_cases:
@@ -664,6 +673,11 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
             ordered_env["MVMC_BF_FSZ_INV_UPDATE_EXPLICIT_STATE_CHECK"] = "1"
         elif mode == "arguments":
             ordered_env["MVMC_BF_FSZ_INV_UPDATE_ARGUMENT_CHECK"] = "1"
+    if case_name in matrix_free_cases \
+            and matrix_free_cases[case_name] == "arguments":
+        ordered_env["MVMC_BF_FSZ_MATRIX_FREE_ARGUMENT_CHECK"] = "1"
+        ordered_env["MVMC_BF_FSZ_PF_UPDATE_ARGUMENT_CHECK"] = "1"
+        ordered_env["MVMC_BF_FSZ_INV_UPDATE_ARGUMENT_CHECK"] = "1"
     ordered_proc = run_vmc(
         rootdir,
         ordered_workdir,

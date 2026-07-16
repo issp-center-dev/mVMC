@@ -473,6 +473,8 @@ int BFFSZInvUpdateInjectedStage = 0;
 int BFFSZInvUpdateInjectedRank = -1;
 int BFFSZInvUpdateExplicitStateCheckEnabled = 0;
 int BFFSZInvUpdateArgumentCheckEnabled = 0;
+int BFFSZMatrixFreeCheckEnabled = 0;
+int BFFSZMatrixFreeArgumentCheckEnabled = 0;
 long long BFFSZProfileCall[NBFFSZProfileSource];
 long long BFFSZProfileChangedSum[NBFFSZProfileSource];
 long long BFFSZProfileChangedMax[NBFFSZProfileSource];

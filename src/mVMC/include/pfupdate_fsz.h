@@ -65,6 +65,18 @@ int CalculateNewPfMBF_fsz_rows_workspace(
     double complex *complexWork, const size_t complexWorkCount,
     int *iwork, const size_t intWorkCount,
     double *rwork, const size_t rworkCount);
+int GetCalculateNewPfMBF_fsz_row_values_work_size(size_t *complexCount,
+    size_t *intCount, size_t *doubleCount);
+int CalculateNewPfMBF_fsz_row_values_workspace(
+    const int nAffected, const int *affected,
+    double complex *pfMNew, const double complex *oldPfM,
+    const double complex *oldInvM, const size_t invMQpStride,
+    const int qpStart, const int qpEnd,
+    const double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride, int *failureDetail,
+    double complex *complexWork, const size_t complexWorkCount,
+    int *iwork, const size_t intWorkCount,
+    double *rwork, const size_t rworkCount);
 
 /* F3-b transactional accepted inverse prepare. This computes rank-local
    candidate inverse matrices into invMNew without modifying global state. */
@@ -77,6 +89,17 @@ BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_rows_workspace(
     const int *eleIdx, const int *eleSpn,
     const int qpStart, const int qpEnd,
     const double complex *candidateSlater,
+    double complex *complexWork, const size_t complexWorkCount,
+    int *iwork, const size_t intWorkCount);
+int GetPrepareInvMBF_fsz_row_values_work_size(size_t *complexCount,
+    size_t *intCount);
+BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_workspace(
+    const int nAffected, const int *affected,
+    const double complex *oldInvM, const size_t oldInvMQpStride,
+    double complex *invMNew, const size_t newInvMQpStride,
+    const int qpStart, const int qpEnd,
+    const double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride,
     double complex *complexWork, const size_t complexWorkCount,
     int *iwork, const size_t intWorkCount);
 
