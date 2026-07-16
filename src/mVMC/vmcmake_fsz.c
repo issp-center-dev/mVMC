@@ -478,7 +478,8 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   double complex logIpOld,logIpNew;
   double complex *candidateSlater;
   double complex *pfMNew;
-  int *affected;
+  int *hopIntStorage, *affected, *hopIntWork;
+  int hopIntWorkSize, hopIntStorageSize;
   int nChanged,nAffected;
   int projCntNew[NProj];
   int projBFCntNew[16*Nsite*Nrange];
@@ -492,16 +493,29 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
 
+  if(GetSlaterElmBF_fsz_hop_int_work_size(&hopIntWorkSize) != 0
+      || Nsize > INT_MAX - hopIntWorkSize) {
+    fprintf(stderr, "error: invalid BF-FSZ sampling integer workspace size\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  hopIntStorageSize = Nsize + hopIntWorkSize;
+  if((size_t)hopIntStorageSize > (size_t)-1/sizeof(int)) {
+    fprintf(stderr, "error: BF-FSZ sampling integer workspace byte size overflow\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+
   candidateSlater = (double complex *)malloc(sizeof(double complex)*bfSlaterSize);
   pfMNew = (double complex *)malloc(sizeof(double complex)*(size_t)NQPFull);
-  affected = (int *)malloc(sizeof(int)*(size_t)Nsize);
-  if(candidateSlater == NULL || pfMNew == NULL || affected == NULL) {
+  hopIntStorage = (int *)malloc(sizeof(int)*(size_t)hopIntStorageSize);
+  if(candidateSlater == NULL || pfMNew == NULL || hopIntStorage == NULL) {
     fprintf(stderr, "error: failed to allocate BF-FSZ sampling candidate workspace\n");
     free(candidateSlater);
     free(pfMNew);
-    free(affected);
+    free(hopIntStorage);
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
+  affected = hopIntStorage;
+  hopIntWork = affected + Nsize;
 
   SplitLoop(&qpStart,&qpEnd,NQPFull,rank,size);
 
@@ -555,9 +569,10 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
       StopTimer(60);
 
       StartTimer(64);
-      info = MakeSlaterElmBF_fsz_hop_to_with_rows(
+      info = MakeSlaterElmBF_fsz_hop_to_with_rows_workspace(
           candidateSlater, SlaterElmBF, mi, TmpEleIdx, TmpEleSpn,
-          TmpEleProjBFCnt, projBFCntNew, affected, &nChanged, &nAffected);
+          TmpEleProjBFCnt, projBFCntNew, affected, &nChanged, &nAffected,
+          hopIntWork, hopIntWorkSize);
       if(info != 0) {
         if(rank==0) fprintf(stderr, "error: BF-FSZ sampling affected-row collection failed\n");
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -628,7 +643,7 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
 
   free(candidateSlater);
   free(pfMNew);
-  free(affected);
+  free(hopIntStorage);
 
   return;
 }

@@ -35,6 +35,21 @@ int MakeSlaterElmBF_fsz_hop_to_with_rows_serial(
     int movedParticle, const int *eleIdx, const int *eleSpn,
     const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
     int *affected, int *nChanged, int *nAffected);
+/* The returned size excludes affected[Nsize]. The affected and intWork ranges
+ * must not overlap; sltElmBF and baseSltElmBF must not alias. */
+int GetSlaterElmBF_fsz_hop_int_work_size(int *workSize);
+int MakeSlaterElmBF_fsz_hop_to_with_rows_workspace(
+    double complex *sltElmBF, const double complex *baseSltElmBF,
+    int movedParticle, const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int *affected, int *nChanged, int *nAffected,
+    int *intWork, int intWorkSize);
+int MakeSlaterElmBF_fsz_hop_to_with_rows_workspace_serial(
+    double complex *sltElmBF, const double complex *baseSltElmBF,
+    int movedParticle, const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int *affected, int *nChanged, int *nAffected,
+    int *intWork, int intWorkSize);
 void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int u,
                        const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex*sltElmTmp);
 void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int u,
