@@ -572,6 +572,117 @@ static int BF_FSZ_RunPfUpdateArgumentChecks(
   return 0;
 }
 
+static int BF_FSZ_InvUpdateMatchesFull(const double complex *updated,
+                                       const double complex *full,
+                                       const size_t count, size_t *badIndex,
+                                       double *badError) {
+  size_t idx;
+  for(idx=0;idx<count;idx++) {
+    const double scale = fmax(1.0,cabs(full[idx]));
+    const double error = cabs(updated[idx]-full[idx])/scale;
+    if(!(isfinite(error) && error <= 1.0e-9)) {
+      if(badIndex != NULL) *badIndex = idx;
+      if(badError != NULL) *badError = error;
+      return 0;
+    }
+  }
+  return 1;
+}
+
+static int BF_FSZ_RunInvUpdateArgumentChecks(
+    const int nAffected, const int *affected,
+    const double complex *oldInvM, const size_t invMQpStride,
+    double complex *pfMNew, double complex *invMNew,
+    const int *eleIdx, const int *eleSpn,
+    const int qpStart, const int qpEnd,
+    const double complex *candidateSlater,
+    double complex *complexWork, const size_t complexWorkCount,
+    int *iwork, const size_t intWorkCount,
+    double complex *fullBufM, int *fullIWork,
+    double complex *fullWork, const int fullLWork, double *fullRWork) {
+  static int checked = 0;
+  int badAffected = -1;
+  BF_FSZ_InvUpdateResult result;
+  BF_FSZ_MAllResult fullResult;
+  if(!BFFSZInvUpdateArgumentCheckEnabled || checked || qpEnd == qpStart) return 0;
+#define BF_FSZ_EXPECT_INV_INVALID(call) do { \
+    result = (call); \
+    if(result.status != BF_FSZ_INV_UPDATE_INVALID_ARGUMENT) return 1; \
+  } while(0)
+  BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_rows_workspace(
+      0,affected,oldInvM,invMQpStride,invMNew,invMQpStride,eleIdx,eleSpn,
+      qpStart,qpEnd,candidateSlater,complexWork,complexWorkCount,
+      iwork,intWorkCount));
+  BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_rows_workspace(
+      -1,affected,oldInvM,invMQpStride,invMNew,invMQpStride,eleIdx,eleSpn,
+      qpStart,qpEnd,candidateSlater,complexWork,complexWorkCount,
+      iwork,intWorkCount));
+  BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_rows_workspace(
+      Nsize+1,affected,oldInvM,invMQpStride,invMNew,invMQpStride,eleIdx,eleSpn,
+      qpStart,qpEnd,candidateSlater,complexWork,complexWorkCount,
+      iwork,intWorkCount));
+  BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_rows_workspace(
+      1,&badAffected,oldInvM,invMQpStride,invMNew,invMQpStride,eleIdx,eleSpn,
+      qpStart,qpEnd,candidateSlater,complexWork,complexWorkCount,
+      iwork,intWorkCount));
+  BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_rows_workspace(
+      nAffected,affected,oldInvM,SIZE_MAX,invMNew,invMQpStride,eleIdx,eleSpn,
+      qpStart,qpEnd,candidateSlater,complexWork,complexWorkCount,
+      iwork,intWorkCount));
+  BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_rows_workspace(
+      nAffected,affected,oldInvM,invMQpStride,(double complex *)oldInvM,
+      invMQpStride,eleIdx,eleSpn,qpStart,qpEnd,candidateSlater,
+      complexWork,complexWorkCount,iwork,intWorkCount));
+  BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_rows_workspace(
+      nAffected,affected,oldInvM,invMQpStride,invMNew,invMQpStride,
+      eleIdx,eleSpn,qpStart,qpEnd,SlaterElmBF,complexWork,
+      complexWorkCount,iwork,intWorkCount));
+  BF_FSZ_EXPECT_INV_INVALID(PrepareInvMBF_fsz_rows_workspace(
+      nAffected,affected,oldInvM,invMQpStride,invMNew,invMQpStride,
+      eleIdx,eleSpn,qpStart,qpEnd,candidateSlater,complexWork,
+      0,iwork,intWorkCount));
+#undef BF_FSZ_EXPECT_INV_INVALID
+  fullResult = CalculateMAll_BF_fsz_from_workspace(
+      candidateSlater,eleIdx,eleSpn,qpStart,qpEnd,pfMNew,invMNew,SIZE_MAX,
+      fullBufM,fullIWork,fullWork,fullLWork,fullRWork);
+  if(fullResult.status != BF_FSZ_MALL_INVALID_ARGUMENT) return 1;
+  fullResult = CalculateMAll_BF_fsz_from_workspace(
+      candidateSlater,eleIdx,eleSpn,qpStart,qpEnd,pfMNew,invMNew,
+      invMQpStride,fullBufM,fullIWork,fullWork,0,fullRWork);
+  if(fullResult.status != BF_FSZ_MALL_INVALID_ARGUMENT) return 1;
+  checked = 1;
+  return 0;
+}
+
+static BF_FSZ_InvUpdateResult BF_FSZ_InjectedInvResult(
+    BF_FSZ_InvUpdateResult result, const int rank) {
+  if(result.status != BF_FSZ_INV_UPDATE_OK) return result;
+  if(BFFSZInvUpdateInjectedRank >= 0 && rank != BFFSZInvUpdateInjectedRank) {
+    return result;
+  }
+  if(BFFSZInvUpdateForceFallback) {
+    result.status = BF_FSZ_INV_UPDATE_NONFINITE;
+    result.stage = BF_FSZ_INV_STAGE_FINITE;
+    return result;
+  }
+  if(BFFSZInvUpdateInjectedStage == BF_FSZ_INV_STAGE_GETRF
+      || BFFSZInvUpdateInjectedStage == BF_FSZ_INV_STAGE_GETRI) {
+    result.status = BF_FSZ_INV_UPDATE_LAPACK_FAILURE;
+    result.stage = BFFSZInvUpdateInjectedStage;
+    result.lapackInfo = 1;
+  } else if(BFFSZInvUpdateInjectedStage == BF_FSZ_INV_STAGE_FINITE) {
+    result.status = BF_FSZ_INV_UPDATE_NONFINITE;
+    result.stage = BF_FSZ_INV_STAGE_FINITE;
+  } else if(BFFSZInvUpdateInjectedStage == BF_FSZ_INV_STAGE_ANTISYMMETRY) {
+    result.status = BF_FSZ_INV_UPDATE_ANTISYMMETRY;
+    result.stage = BF_FSZ_INV_STAGE_ANTISYMMETRY;
+  } else if(BFFSZInvUpdateInjectedStage == BF_FSZ_INV_STAGE_RESIDUAL) {
+    result.status = BF_FSZ_INV_UPDATE_RESIDUAL;
+    result.stage = BF_FSZ_INV_STAGE_RESIDUAL;
+  }
+  return result;
+}
+
 void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   const size_t bfSlaterSize = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
   int outStep,nOutStep;
@@ -585,12 +696,14 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   double complex *pfMNew;
   double complex *pfMCheck;
   double complex *pfUpdateWork;
+  double complex *invMNew, *invMCheck, *invUpdateWork;
   double complex *pfFullBufM, *pfFullWork;
   double complex *oldPfMCheck, *oldInvMCheck;
-  int *pfUpdateIWork;
+  int *pfUpdateIWork, *invUpdateIWork;
   int *pfFullIWork;
   double *pfUpdateRWork, *pfFullRWork;
   size_t pfUpdateComplexCount, pfUpdateIntCount, pfUpdateDoubleCount;
+  size_t invUpdateComplexCount, invUpdateIntCount;
   size_t qpNum, nsizeSquared, oldInvCount;
   int *hopIntStorage, *affected, *hopIntWork;
   int hopIntWorkSize, hopIntStorageSize;
@@ -617,9 +730,13 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   }
   if(GetCalculateNewPfMBF_fsz_rows_work_size(&pfUpdateComplexCount,
       &pfUpdateIntCount, &pfUpdateDoubleCount) != 0
+      || GetPrepareInvMBF_fsz_rows_work_size(&invUpdateComplexCount,
+          &invUpdateIntCount) != 0
       || pfUpdateComplexCount > SIZE_MAX/sizeof(double complex)
       || pfUpdateIntCount > SIZE_MAX/sizeof(int)
       || pfUpdateDoubleCount > SIZE_MAX/sizeof(double)
+      || invUpdateComplexCount > SIZE_MAX/sizeof(double complex)
+      || invUpdateIntCount > SIZE_MAX/sizeof(int)
       || nsizeSquared > SIZE_MAX/sizeof(double complex)
       || (size_t)LapackLWork > SIZE_MAX/sizeof(double complex)
       || (size_t)LapackLWork > SIZE_MAX/sizeof(double)
@@ -640,25 +757,39 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   pfUpdateWork = (double complex *)malloc(sizeof(double complex)*pfUpdateComplexCount);
   pfUpdateIWork = (int *)malloc(sizeof(int)*pfUpdateIntCount);
   pfUpdateRWork = (double *)malloc(sizeof(double)*pfUpdateDoubleCount);
+  invUpdateWork = (double complex *)malloc(
+      sizeof(double complex)*invUpdateComplexCount);
+  invUpdateIWork = (int *)malloc(sizeof(int)*invUpdateIntCount);
   pfFullBufM = (double complex *)malloc(sizeof(double complex)*nsizeSquared);
   pfFullIWork = (int *)malloc(sizeof(int)*(size_t)Nsize);
   pfFullWork = (double complex *)malloc(sizeof(double complex)*(size_t)LapackLWork);
   pfFullRWork = (double *)malloc(sizeof(double)*(size_t)LapackLWork);
   oldInvCount = qpNum*nsizeSquared;
+  invMNew = (double complex *)malloc(sizeof(double complex)
+      *((oldInvCount > 0) ? oldInvCount : 1));
+  invMCheck = NULL;
+  if(qpNum > 0 && BFFSZInvUpdateCheckEnabled) {
+    invMCheck = (double complex *)malloc(sizeof(double complex)*oldInvCount);
+  }
   oldPfMCheck = NULL;
   oldInvMCheck = NULL;
   if(qpNum > 0 && (BFFSZPfUpdateExplicitStateCheckEnabled
-      || BFFSZPfUpdateArgumentCheckEnabled)) {
+      || BFFSZPfUpdateArgumentCheckEnabled
+      || BFFSZInvUpdateExplicitStateCheckEnabled)) {
     oldPfMCheck = (double complex *)malloc(sizeof(double complex)*qpNum);
     oldInvMCheck = (double complex *)malloc(sizeof(double complex)*oldInvCount);
   }
   if(candidateSlater == NULL || pfMNew == NULL || pfMCheck == NULL
       || hopIntStorage == NULL
       || pfUpdateWork == NULL || pfUpdateIWork == NULL || pfUpdateRWork == NULL
+      || invUpdateWork == NULL || invUpdateIWork == NULL
+      || invMNew == NULL
+      || (qpNum > 0 && BFFSZInvUpdateCheckEnabled && invMCheck == NULL)
       || pfFullBufM == NULL || pfFullIWork == NULL || pfFullWork == NULL
       || pfFullRWork == NULL
       || (qpNum > 0 && (BFFSZPfUpdateExplicitStateCheckEnabled
-          || BFFSZPfUpdateArgumentCheckEnabled)
+          || BFFSZPfUpdateArgumentCheckEnabled
+          || BFFSZInvUpdateExplicitStateCheckEnabled)
           && (oldPfMCheck == NULL || oldInvMCheck == NULL))) {
     fprintf(stderr, "error: failed to allocate BF-FSZ sampling candidate workspace\n");
     free(candidateSlater);
@@ -668,6 +799,10 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
     free(pfUpdateWork);
     free(pfUpdateIWork);
     free(pfUpdateRWork);
+    free(invUpdateWork);
+    free(invUpdateIWork);
+    free(invMNew);
+    free(invMCheck);
     free(pfFullBufM);
     free(pfFullIWork);
     free(pfFullWork);
@@ -839,13 +974,96 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
       if(!isfinite(w)) w = -1.0;
 
       if(w > genrand_real2()) {
+        BF_FSZ_MAllResult fullResult;
+        BF_FSZ_InvUpdateResult invResult;
+        int invStatusGlobal;
         StartTimer(63);
-        memcpy(SlaterElmBF, candidateSlater, sizeof(double complex)*bfSlaterSize);
-        info = CalculateMAll_BF_fsz(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
-        infoGlobal = reduceBFInfo_fsz(info,comm);
-        if(infoGlobal != 0) {
-          if(rank==0) fprintf(stderr, "error: BF-FSZ accepted candidate inverse rebuild failed\n");
-          MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        if(BF_FSZ_ShouldUseFullPfaffian(nAffected)) {
+          fullResult = CalculateMAll_BF_fsz_from_workspace(candidateSlater,
+              TmpEleIdx,TmpEleSpn,qpStart,qpEnd,pfMNew,invMNew,nsizeSquared,
+              pfFullBufM,pfFullIWork,pfFullWork,LapackLWork,pfFullRWork);
+          invStatusGlobal = reduceBFInfo_fsz(fullResult.status,comm);
+          if(invStatusGlobal != BF_FSZ_MALL_OK) {
+            if(rank==0) fprintf(stderr,
+                "error: BF-FSZ accepted direct full inverse prepare failed\n");
+            MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+          }
+          RecordBFFSZInvPath(BFFSZ_PF_PATH_DIRECT_FULL);
+        } else {
+          const double complex *oldInvInput = InvM;
+          double complex savedInvM = 0.0+0.0*I;
+          if(BF_FSZ_RunInvUpdateArgumentChecks(nAffected,affected,InvM,
+              nsizeSquared,pfMNew,invMNew,TmpEleIdx,TmpEleSpn,qpStart,qpEnd,
+              candidateSlater,invUpdateWork,invUpdateComplexCount,
+              invUpdateIWork,invUpdateIntCount,pfFullBufM,pfFullIWork,
+              pfFullWork,LapackLWork,pfFullRWork) != 0) {
+            if(rank==0) fprintf(stderr,
+                "error: BF-FSZ inverse-update argument check failed\n");
+            MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+          }
+          if(BFFSZInvUpdateExplicitStateCheckEnabled && qpNum > 0) {
+            memcpy(oldInvMCheck,InvM,sizeof(double complex)*oldInvCount);
+            oldInvInput = oldInvMCheck;
+            savedInvM = InvM[0];
+            InvM[0] = NAN+NAN*I;
+          }
+          invResult = PrepareInvMBF_fsz_rows_workspace(
+              nAffected,affected,oldInvInput,nsizeSquared,invMNew,
+              nsizeSquared,TmpEleIdx,TmpEleSpn,qpStart,qpEnd,
+              candidateSlater,invUpdateWork,invUpdateComplexCount,
+              invUpdateIWork,invUpdateIntCount);
+          if(BFFSZInvUpdateExplicitStateCheckEnabled && qpNum > 0) {
+            InvM[0] = savedInvM;
+          }
+          RecordBFFSZInvChecks(invResult.checkSeconds,
+              invResult.antisymmetryResidual,invResult.affectedResidual);
+          invResult = BF_FSZ_InjectedInvResult(invResult,rank);
+          if(invResult.status == BF_FSZ_INV_UPDATE_INVALID_ARGUMENT) {
+            if(rank==0) fprintf(stderr,
+                "error: invalid BF-FSZ accepted inverse-update arguments\n");
+            MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+          }
+          invStatusGlobal = reduceBFInfo_fsz(invResult.status,comm);
+          if(invStatusGlobal == BF_FSZ_INV_UPDATE_OK) {
+            if(BFFSZInvUpdateCheckEnabled) {
+              size_t badIndex = 0;
+              double badError = 0.0;
+              fullResult = CalculateMAll_BF_fsz_from_workspace(
+                  candidateSlater,TmpEleIdx,TmpEleSpn,qpStart,qpEnd,
+                  pfMCheck,invMCheck,nsizeSquared,pfFullBufM,pfFullIWork,
+                  pfFullWork,LapackLWork,pfFullRWork);
+              infoGlobal = reduceBFInfo_fsz(fullResult.status,comm);
+              if(infoGlobal != BF_FSZ_MALL_OK
+                  || !BF_FSZ_PfUpdateMatchesFull(pfMNew,pfMCheck,
+                      qpEnd-qpStart,NULL,NULL)
+                  || !BF_FSZ_InvUpdateMatchesFull(invMNew,invMCheck,
+                      oldInvCount,&badIndex,&badError)) {
+                if(rank==0) fprintf(stderr,
+                    "error: BF-FSZ accepted inverse-update/full mismatch at index=%zu relative_error=%.17e\n",
+                    badIndex,badError);
+                MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+              }
+            }
+            RecordBFFSZInvPath(BFFSZ_PF_PATH_OPTIMIZED);
+          } else {
+            fullResult = CalculateMAll_BF_fsz_from_workspace(
+                candidateSlater,TmpEleIdx,TmpEleSpn,qpStart,qpEnd,
+                pfMNew,invMNew,nsizeSquared,pfFullBufM,pfFullIWork,
+                pfFullWork,LapackLWork,pfFullRWork);
+            infoGlobal = reduceBFInfo_fsz(fullResult.status,comm);
+            if(infoGlobal != BF_FSZ_MALL_OK) {
+              if(rank==0) fprintf(stderr,
+                  "error: BF-FSZ accepted full inverse fallback failed\n");
+              MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+            }
+            RecordBFFSZInvPath(BFFSZ_PF_PATH_FALLBACK);
+          }
+        }
+        memcpy(SlaterElmBF,candidateSlater,
+            sizeof(double complex)*bfSlaterSize);
+        if(qpNum > 0) {
+          memcpy(PfM,pfMNew,sizeof(double complex)*qpNum);
+          memcpy(InvM,invMNew,sizeof(double complex)*oldInvCount);
         }
         StopTimer(63);
         for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
@@ -892,6 +1110,10 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   free(pfUpdateWork);
   free(pfUpdateIWork);
   free(pfUpdateRWork);
+  free(invUpdateWork);
+  free(invUpdateIWork);
+  free(invMNew);
+  free(invMCheck);
   free(pfFullBufM);
   free(pfFullIWork);
   free(pfFullWork);

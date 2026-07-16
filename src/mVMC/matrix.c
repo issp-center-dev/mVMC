@@ -29,6 +29,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_MATRIX
 #define _SRC_MATRIX
 #include <complex.h>
+#include <stdint.h>
 #include "./include/global.h"
 #include "workspace.c"
 
@@ -632,6 +633,118 @@ int CalculatePfM_BF_fsz_from_workspace(const double complex *sltElmBF,
 
   if(failureDetail != NULL) *failureDetail = detail;
   return status;
+}
+
+static BF_FSZ_MAllResult BF_FSZ_MAllResultValue(const int status,
+    const int stage, const int qpidx, const int lapackInfo) {
+  BF_FSZ_MAllResult result;
+  result.status = status;
+  result.stage = stage;
+  result.qpidx = qpidx;
+  result.lapackInfo = lapackInfo;
+  return result;
+}
+
+static BF_FSZ_MAllResult calculateMAll_BF_fsz_child_from(
+    const double complex *sltElmBF, const int *eleIdx, const int *eleSpn,
+    const int qpStart, const int qpidx, double complex *pfMOut,
+    double complex *invMOut, const size_t invMQpStride,
+    double complex *bufM, int *iwork, double complex *work,
+    int lwork, double *rwork) {
+  const int nsize = Nsize;
+  const int globalQpidx = qpStart+qpidx;
+  const double complex *sltE = sltElmBF
+      + (size_t)globalQpidx*(size_t)Nsite2*(size_t)Nsite2;
+  double complex *invM = invMOut+(size_t)qpidx*invMQpStride;
+  char uplo='U',mthd='P';
+  int m=nsize,n=nsize,lda=nsize,info=0;
+  int i,j;
+  double complex pfaff;
+
+  for(i=0;i<nsize;i++) {
+    const int rsi = eleIdx[i]+eleSpn[i]*Nsite;
+    const double complex *sltE_i = sltE+(size_t)rsi*(size_t)Nsite2;
+    double complex *bufM_i = bufM+(size_t)i*(size_t)nsize;
+    for(j=0;j<nsize;j++) {
+      const int rsj = eleIdx[j]+eleSpn[j]*Nsite;
+      bufM_i[j] = -sltE_i[rsj];
+    }
+  }
+  memcpy(invM,bufM,sizeof(double complex)*(size_t)nsize*(size_t)nsize);
+
+  M_ZSKPFA(&uplo,&mthd,&n,bufM,&lda,&pfaff,iwork,work,&lwork,rwork,&info);
+  if(info != 0) {
+    return BF_FSZ_MAllResultValue(BF_FSZ_MALL_LAPACK_FAILURE,
+        BF_FSZ_MALL_STAGE_PFAFFIAN,globalQpidx,info);
+  }
+  if(!(isfinite(creal(pfaff)) && isfinite(cimag(pfaff)))) {
+    return BF_FSZ_MAllResultValue(BF_FSZ_MALL_NONFINITE,
+        BF_FSZ_MALL_STAGE_PFAFFIAN,globalQpidx,0);
+  }
+
+  M_ZGETRF(&m,&n,invM,&lda,iwork,&info);
+  if(info != 0) {
+    return BF_FSZ_MAllResultValue(BF_FSZ_MALL_LAPACK_FAILURE,
+        BF_FSZ_MALL_STAGE_GETRF,globalQpidx,info);
+  }
+  M_ZGETRI(&n,invM,&lda,iwork,work,&lwork,&info);
+  if(info != 0) {
+    return BF_FSZ_MAllResultValue(BF_FSZ_MALL_LAPACK_FAILURE,
+        BF_FSZ_MALL_STAGE_GETRI,globalQpidx,info);
+  }
+  for(i=0;i<nsize*nsize;i++) {
+    invM[i] = -invM[i];
+    if(!(isfinite(creal(invM[i])) && isfinite(cimag(invM[i])))) {
+      return BF_FSZ_MAllResultValue(BF_FSZ_MALL_NONFINITE,
+          BF_FSZ_MALL_STAGE_INVERSE,globalQpidx,0);
+    }
+  }
+  pfMOut[qpidx] = pfaff;
+  return BF_FSZ_MAllResultValue(BF_FSZ_MALL_OK,BF_FSZ_MALL_STAGE_NONE,
+      globalQpidx,0);
+}
+
+BF_FSZ_MAllResult CalculateMAll_BF_fsz_from_workspace(
+    const double complex *sltElmBF, const int *eleIdx, const int *eleSpn,
+    const int qpStart, const int qpEnd, double complex *pfMOut,
+    double complex *invMOut, const size_t invMQpStride,
+    double complex *bufM, int *iwork, double complex *work,
+    int lwork, double *rwork) {
+  const size_t nsizeSquared = (size_t)Nsize*(size_t)Nsize;
+  const int qpNum = qpEnd-qpStart;
+  int qpidx,i;
+
+  if(qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull) {
+    return BF_FSZ_MAllResultValue(BF_FSZ_MALL_INVALID_ARGUMENT,
+        BF_FSZ_MALL_STAGE_NONE,qpStart,0);
+  }
+  if(qpNum == 0) {
+    return BF_FSZ_MAllResultValue(BF_FSZ_MALL_OK,BF_FSZ_MALL_STAGE_NONE,
+        qpStart,0);
+  }
+  if(sltElmBF == NULL || eleIdx == NULL || eleSpn == NULL || pfMOut == NULL
+      || invMOut == NULL || bufM == NULL || iwork == NULL || work == NULL
+      || rwork == NULL || lwork < Nsize || invMQpStride < nsizeSquared
+      || invMQpStride > (size_t)PTRDIFF_MAX
+      || (qpNum > 1 && invMQpStride > SIZE_MAX/(size_t)(qpNum-1))) {
+    return BF_FSZ_MAllResultValue(BF_FSZ_MALL_INVALID_ARGUMENT,
+        BF_FSZ_MALL_STAGE_NONE,qpStart,0);
+  }
+  for(i=0;i<Nsize;i++) {
+    if(eleIdx[i] < 0 || eleIdx[i] >= Nsite
+        || (eleSpn[i] != 0 && eleSpn[i] != 1)) {
+      return BF_FSZ_MAllResultValue(BF_FSZ_MALL_INVALID_ARGUMENT,
+          BF_FSZ_MALL_STAGE_NONE,qpStart,0);
+    }
+  }
+  for(qpidx=0;qpidx<qpNum;qpidx++) {
+    const BF_FSZ_MAllResult result = calculateMAll_BF_fsz_child_from(
+        sltElmBF,eleIdx,eleSpn,qpStart,qpidx,pfMOut,invMOut,invMQpStride,
+        bufM,iwork,work,lwork,rwork);
+    if(result.status != BF_FSZ_MALL_OK) return result;
+  }
+  return BF_FSZ_MAllResultValue(BF_FSZ_MALL_OK,BF_FSZ_MALL_STAGE_NONE,
+      qpStart,0);
 }
 
 int calculatePfM_BF_fsz_child_from(

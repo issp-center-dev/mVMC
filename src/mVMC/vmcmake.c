@@ -623,6 +623,8 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
   long long recvHist[NBFFSZProfileSource][NBFFSZProfileHist];
   long long recvRatioHist[NBFFSZProfileSource][NBFFSZProfileRatioHist];
   long long recvPfPath[NBFFSZProfileSource][NBFFSZPfPath];
+  long long recvInvPath[NBFFSZPfPath];
+  double recvInvCheckSeconds,recvInvAntisymmetry,recvInvResidual;
   int i,j;
   int rank,size;
   if(!BFProfileEnabled) return;
@@ -662,6 +664,20 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
                 NBFFSZProfileSource*NBFFSZPfPath,MPI_LONG_LONG,MPI_SUM,comm);
   if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) for(j=0;j<NBFFSZPfPath;j++) {
     BFFSZProfilePfPath[i][j] = recvPfPath[i][j];
+  }
+  MPI_Allreduce(BFFSZProfileInvPath,recvInvPath,NBFFSZPfPath,
+                MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(j=0;j<NBFFSZPfPath;j++) BFFSZProfileInvPath[j] = recvInvPath[j];
+  MPI_Allreduce(&BFFSZProfileInvCheckSeconds,&recvInvCheckSeconds,1,
+                MPI_DOUBLE,MPI_MAX,comm);
+  MPI_Allreduce(&BFFSZProfileInvAntisymmetryMax,&recvInvAntisymmetry,1,
+                MPI_DOUBLE,MPI_MAX,comm);
+  MPI_Allreduce(&BFFSZProfileInvResidualMax,&recvInvResidual,1,
+                MPI_DOUBLE,MPI_MAX,comm);
+  if(rank==0) {
+    BFFSZProfileInvCheckSeconds = recvInvCheckSeconds;
+    BFFSZProfileInvAntisymmetryMax = recvInvAntisymmetry;
+    BFFSZProfileInvResidualMax = recvInvResidual;
   }
 #endif
   return;

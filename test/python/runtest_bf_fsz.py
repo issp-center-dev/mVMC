@@ -420,6 +420,25 @@ def read_bffsz_pf_paths(path, source):
                 return values
     raise RuntimeError("{} was not found in {}".format(marker, path))
 
+def read_bffsz_inv_paths(path):
+    marker = "BF-FSZ accepted inverse paths"
+    with open(path) as fp:
+        for line in fp:
+            if marker not in line:
+                continue
+            values = {}
+            for token in line.split():
+                if ":" not in token:
+                    continue
+                key, value = token.rsplit(":", 1)
+                try:
+                    values[key] = int(value)
+                except ValueError:
+                    pass
+            if all(key in values for key in ("optimized", "direct-full", "fallback")):
+                return values
+    raise RuntimeError("{} was not found in {}".format(marker, path))
+
 
 def get_float(values, key):
     if key not in values:
@@ -559,10 +578,22 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         "BackFlow_FSZ_PfUpdate_ExplicitState_NonIdentity_Complex": "explicit-state",
         "BackFlow_FSZ_PfUpdate_InvalidArguments_NonIdentity_Complex": "arguments",
     }
+    inv_update_cases = {
+        "BackFlow_FSZ_InvUpdate_NonIdentity_Complex": "optimized",
+        "BackFlow_FSZ_InvUpdate_NonIdentity_Complex_mpi": "optimized",
+        "BackFlow_FSZ_InvUpdate_MoreRanks_NonIdentity_Complex_mpi": "optimized",
+        "BackFlow_FSZ_InvUpdate_Fallback_NonIdentity_Complex": "fallback",
+        "BackFlow_FSZ_InvUpdate_GetrfFallback_NonIdentity_Complex": "getrf",
+        "BackFlow_FSZ_InvUpdate_GetriFallback_NonIdentity_Complex": "getri",
+        "BackFlow_FSZ_InvUpdate_RankFallback_NonIdentity_Complex_mpi": "rank-fallback",
+        "BackFlow_FSZ_InvUpdate_DirectFull_NonIdentity_Complex": "direct-full",
+        "BackFlow_FSZ_InvUpdate_ExplicitState_NonIdentity_Complex": "explicit-state",
+        "BackFlow_FSZ_InvUpdate_InvalidArguments_NonIdentity_Complex": "arguments",
+    }
     affected_cases = (
         "BackFlow_FSZ_AffectedRows_NonIdentity_Complex",
         "BackFlow_FSZ_AffectedRows_NonIdentity_Complex_mpi",
-    ) + tuple(pf_update_cases)
+    ) + tuple(pf_update_cases) + tuple(inv_update_cases)
     if case_name != "BackFlow_FSZ_TwoBodyG_StaleBase_NonIdentity_Complex" \
             and case_name not in affected_cases:
         return None
@@ -581,6 +612,8 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         (reference_workdir, reference_case_rows),
     ):
         update_modpara(workdir, {"NVMCSample": "1"})
+        if case_name in inv_update_cases and mpi_procs:
+            update_modpara(workdir, {"NSplitSize": str(mpi_procs)})
         if case_name in affected_cases:
             update_modpara(workdir, {"NMPTrans": "2"})
             make_momentum_projection(workdir)
@@ -609,6 +642,24 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
             ordered_env["MVMC_BF_FSZ_PF_UPDATE_EXPLICIT_STATE_CHECK"] = "1"
         elif pf_update_cases[case_name] == "arguments":
             ordered_env["MVMC_BF_FSZ_PF_UPDATE_ARGUMENT_CHECK"] = "1"
+    if case_name in inv_update_cases:
+        ordered_env["MVMC_BF_FSZ_INV_UPDATE_CHECK"] = "1"
+        mode = inv_update_cases[case_name]
+        if mode == "fallback":
+            ordered_env["MVMC_BF_FSZ_INV_UPDATE_FORCE_FALLBACK"] = "1"
+        elif mode == "getrf":
+            ordered_env["MVMC_BF_FSZ_INV_UPDATE_INJECT_STAGE"] = "1"
+        elif mode == "getri":
+            ordered_env["MVMC_BF_FSZ_INV_UPDATE_INJECT_STAGE"] = "2"
+        elif mode == "rank-fallback":
+            ordered_env["MVMC_BF_FSZ_INV_UPDATE_INJECT_STAGE"] = "1"
+            ordered_env["MVMC_BF_FSZ_INV_UPDATE_INJECT_RANK"] = "1"
+        elif mode == "direct-full":
+            ordered_env["MVMC_BF_FSZ_PF_UPDATE_KFULL"] = "1"
+        elif mode == "explicit-state":
+            ordered_env["MVMC_BF_FSZ_INV_UPDATE_EXPLICIT_STATE_CHECK"] = "1"
+        elif mode == "arguments":
+            ordered_env["MVMC_BF_FSZ_INV_UPDATE_ARGUMENT_CHECK"] = "1"
     ordered_proc = run_vmc(
         rootdir,
         ordered_workdir,
@@ -673,6 +724,23 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
                         or paths["fallback"] != 0:
                     print("ERROR: BF-FSZ {} direct-full Pfaffian path was not isolated".format(source))
                     return -1
+
+    if case_name in inv_update_cases:
+        paths = read_bffsz_inv_paths(timer_path)
+        mode = inv_update_cases[case_name]
+        if mode in ("optimized", "explicit-state", "arguments"):
+            if paths["optimized"] <= 0 or paths["fallback"] != 0:
+                print("ERROR: BF-FSZ optimized inverse path was not isolated")
+                return -1
+        elif mode in ("fallback", "getrf", "getri", "rank-fallback"):
+            if paths["fallback"] <= 0 or paths["optimized"] != 0:
+                print("ERROR: BF-FSZ inverse fallback path was not isolated")
+                return -1
+        elif mode == "direct-full":
+            if paths["direct-full"] <= 0 or paths["optimized"] != 0 \
+                    or paths["fallback"] != 0:
+                print("ERROR: BF-FSZ direct-full inverse path was not isolated")
+                return -1
 
     if case_name in pf_update_cases and pf_update_cases[case_name] == "permuted":
         return assert_finite_nonzero_rows(

@@ -466,6 +466,12 @@ int BFFSZPfUpdateExplicitStateCheckEnabled = 0;
 int BFFSZPfUpdateArgumentCheckEnabled = 0;
 int BFFSZPfUpdateKFull = BF_FSZ_PF_UPDATE_KFULL_DEFAULT;
 int BFFSZPermuteParticleLabelsCheckEnabled = 0;
+int BFFSZInvUpdateCheckEnabled = 0;
+int BFFSZInvUpdateForceFallback = 0;
+int BFFSZInvUpdateInjectedStage = 0;
+int BFFSZInvUpdateInjectedRank = -1;
+int BFFSZInvUpdateExplicitStateCheckEnabled = 0;
+int BFFSZInvUpdateArgumentCheckEnabled = 0;
 long long BFFSZProfileCall[NBFFSZProfileSource];
 long long BFFSZProfileChangedSum[NBFFSZProfileSource];
 long long BFFSZProfileChangedMax[NBFFSZProfileSource];
@@ -475,6 +481,10 @@ long long BFFSZProfileChangedHist[NBFFSZProfileSource][NBFFSZProfileHist];
 long long BFFSZProfileAffectedHist[NBFFSZProfileSource][NBFFSZProfileHist];
 long long BFFSZProfileAffectedRatioHist[NBFFSZProfileSource][NBFFSZProfileRatioHist];
 long long BFFSZProfilePfPath[NBFFSZProfileSource][NBFFSZPfPath];
+long long BFFSZProfileInvPath[NBFFSZPfPath];
+double BFFSZProfileInvCheckSeconds = 0.0;
+double BFFSZProfileInvAntisymmetryMax = 0.0;
+double BFFSZProfileInvResidualMax = 0.0;
 
 static inline void AddBFProfileCounter(int idx, long long value) {
   if(!BFProfileEnabled || value == 0) return;
@@ -539,6 +549,24 @@ static inline void RecordBFFSZPfPath(int source, int path) {
       || path < 0 || path >= NBFFSZPfPath) return;
 #pragma omp atomic
   BFFSZProfilePfPath[source][path]++;
+}
+
+static inline void RecordBFFSZInvPath(int path) {
+  if(!BFProfileEnabled || path < 0 || path >= NBFFSZPfPath) return;
+  BFFSZProfileInvPath[path]++;
+}
+
+static inline void RecordBFFSZInvChecks(double seconds,
+                                        double antisymmetry,
+                                        double residual) {
+  if(!BFProfileEnabled) return;
+  BFFSZProfileInvCheckSeconds += seconds;
+  if(antisymmetry > BFFSZProfileInvAntisymmetryMax) {
+    BFFSZProfileInvAntisymmetryMax = antisymmetry;
+  }
+  if(residual > BFFSZProfileInvResidualMax) {
+    BFFSZProfileInvResidualMax = residual;
+  }
 }
 
 int useDiagScale=0;
