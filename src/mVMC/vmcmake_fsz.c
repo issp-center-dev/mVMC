@@ -945,8 +945,8 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
                   badQp,badError);
               MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
             }
-            ipUpdated = CalculateIP_fcmp(pfMNew,qpStart,qpEnd,comm);
-            ipFull = CalculateIP_fcmp(pfMCheck,qpStart,qpEnd,comm);
+            ipUpdated = CalculateIP_fcmp(pfMNew,qpStart,qpEnd,MPI_COMM_SELF);
+            ipFull = CalculateIP_fcmp(pfMCheck,qpStart,qpEnd,MPI_COMM_SELF);
             ipError = cabs(ipUpdated-ipFull)/fmax(1.0,cabs(ipFull));
             if(!(isfinite(ipError) && ipError <= 1.0e-10)) {
               if(rank==0) fprintf(stderr,

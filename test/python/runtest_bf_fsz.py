@@ -573,6 +573,7 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         "BackFlow_FSZ_PfUpdate_Fallback_NonIdentity_Complex": "fallback",
         "BackFlow_FSZ_PfUpdate_ExactZeroFallback_NonIdentity_Complex": "exact-zero",
         "BackFlow_FSZ_PfUpdate_LapackFallback_NonIdentity_Complex": "lapack",
+        "BackFlow_FSZ_PfUpdate_RankFallback_NonIdentity_Complex_mpi": "rank-fallback",
         "BackFlow_FSZ_PfUpdate_DirectFull_NonIdentity_Complex": "direct-full",
         "BackFlow_FSZ_PfUpdate_PermutedLabels_NonIdentity_Complex": "permuted",
         "BackFlow_FSZ_PfUpdate_ExplicitState_NonIdentity_Complex": "explicit-state",
@@ -634,6 +635,9 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
             ordered_env["MVMC_BF_FSZ_PF_UPDATE_INJECT_STATUS"] = "1"
         elif pf_update_cases[case_name] == "lapack":
             ordered_env["MVMC_BF_FSZ_PF_UPDATE_INJECT_STATUS"] = "2"
+        elif pf_update_cases[case_name] == "rank-fallback":
+            ordered_env["MVMC_BF_FSZ_PF_UPDATE_INJECT_STATUS"] = "2"
+            ordered_env["MVMC_BF_FSZ_PF_UPDATE_INJECT_RANK"] = "1"
         elif pf_update_cases[case_name] == "direct-full":
             ordered_env["MVMC_BF_FSZ_PF_UPDATE_KFULL"] = "1"
         elif pf_update_cases[case_name] == "permuted":
@@ -718,6 +722,10 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
             elif mode in ("fallback", "exact-zero", "lapack"):
                 if paths["fallback"] <= 0 or paths["optimized"] != 0:
                     print("ERROR: BF-FSZ {} fallback Pfaffian path was not isolated".format(source))
+                    return -1
+            elif mode == "rank-fallback":
+                if paths["fallback"] <= 0 or paths["optimized"] <= 0:
+                    print("ERROR: BF-FSZ {} rank-specific Pfaffian paths did not diverge".format(source))
                     return -1
             elif mode == "direct-full":
                 if paths["direct-full"] <= 0 or paths["optimized"] != 0 \

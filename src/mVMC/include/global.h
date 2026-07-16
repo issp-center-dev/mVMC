@@ -462,6 +462,7 @@ int BFFSZAffectedCheckEnabled = 0;
 int BFFSZPfUpdateCheckEnabled = 0;
 int BFFSZPfUpdateForceFallback = 0;
 int BFFSZPfUpdateInjectedStatus = 0;
+int BFFSZPfUpdateInjectedRank = -1;
 int BFFSZPfUpdateExplicitStateCheckEnabled = 0;
 int BFFSZPfUpdateArgumentCheckEnabled = 0;
 int BFFSZPfUpdateKFull = BF_FSZ_PF_UPDATE_KFULL_DEFAULT;

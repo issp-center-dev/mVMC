@@ -52,6 +52,7 @@ void InitTimer() {
   int i, j;
   const char *bfProfileEnv, *greenCheckEnv, *affectedCheckEnv;
   const char *pfUpdateCheckEnv, *pfUpdateFallbackEnv, *pfUpdateInjectEnv;
+  const char *pfUpdateInjectRankEnv;
   const char *pfUpdateExplicitStateEnv, *pfUpdateArgumentEnv, *pfUpdateKFullEnv;
   const char *permuteParticleLabelsEnv;
   const char *invUpdateCheckEnv, *invUpdateFallbackEnv, *invUpdateInjectEnv;
@@ -97,6 +98,16 @@ void InitTimer() {
     if(value >= BF_FSZ_PF_UPDATE_EXACT_ZERO
         && value <= BF_FSZ_PF_UPDATE_NONFINITE) {
       BFFSZPfUpdateInjectedStatus = value;
+    }
+  }
+  BFFSZPfUpdateInjectedRank = -1;
+  pfUpdateInjectRankEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_INJECT_RANK");
+  if(pfUpdateInjectRankEnv != NULL) {
+    int rank = 0;
+    BFFSZPfUpdateInjectedRank = atoi(pfUpdateInjectRankEnv);
+    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+    if(BFFSZPfUpdateInjectedRank >= 0 && rank != BFFSZPfUpdateInjectedRank) {
+      BFFSZPfUpdateInjectedStatus = BF_FSZ_PF_UPDATE_OK;
     }
   }
   pfUpdateExplicitStateEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_EXPLICIT_STATE_CHECK");
