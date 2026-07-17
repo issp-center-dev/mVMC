@@ -2318,8 +2318,12 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
 -  ローカル更新は ``NExUpdatePath==0`` の hopping update のみ。
    t-J 用更新経路、exchange update、Kondo update、doublon-only update との併用は未対応です。
 
--  ペア軌道は ``Orbital`` / ``OrbitalAntiParallel`` の通常形式のみ。
-   ``OrbitalGeneral`` / FSZ には未対応です。
+-  ペア軌道は ``Orbital`` / ``OrbitalAntiParallel`` の通常形式、または
+   ``OrbitalGeneral`` / FSZを使用できます。``OrbitalGeneral``では固定
+   :math:`S_z` sectorと``2Sz=-1``の両方を使用できます。``2Sz=-1``では
+   conduction electronのhopping / spin flip samplerと、spin-changing
+   ``Transfer`` / ``OneBodyG`` / ``TwoBodyG``が有効になります。
+   局在スピンとBackFlowの併用は未対応です。
 
 -  スピン射影は未対応です。``NSPGaussLeg==1`` を指定してください。
 
@@ -2327,10 +2331,14 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
    ``NMPTrans>1`` による通常の運動量射影は、``APFlag=0`` かつ
    ``NQPOptTrans==1`` の範囲で使用できます。
 
--  Hamiltonian は ``Trans`` と number-operator 型の相互作用
-   (``CoulombIntra``, ``CoulombInter``, ``Hund``) の範囲で使用できます。
-   ``PairHop``、``Exchange``、``InterAll`` のような二体ハミルトニアン項は未対応です。
-   ただし、測定用の ``TwoBodyG`` / ``TwoBodyGEx`` 出力は使用できます。
+-  ``Orbital`` / ``OrbitalAntiParallel``の通常形式では、Hamiltonianは
+   ``Trans``とnumber-operator型の相互作用（``CoulombIntra``,
+   ``CoulombInter``, ``Hund``）の範囲で使用できます。この形式では
+   ``PairHop``、``Exchange``、``InterAll``は引き続き未対応です。
+
+-  ``OrbitalGeneral`` / FSZでは、``PairHop``、``Exchange``、``InterAll``も
+   使用できます。測定用の``OneBodyG``、``TwoBodyG``、``TwoBodyGEx``は
+   general spin labelに対応します。``NBodyG``と``NBodyInterAll``は未対応です。
 
 -  Standard mode / StdFace から BackFlow 入力は生成されません。
    BackFlow を使う場合は、エキスパートモード入力として ``BFRange`` と ``BF`` を

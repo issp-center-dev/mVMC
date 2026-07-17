@@ -42,6 +42,25 @@ double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const d
                   int *pfIWork, double *pfRWork,
                   double complex *pfBufM, double complex *pfWork);
 
+double complex GreenFunc1BF_fsz2(const int ri, const int rj, const int s, const int t,
+                  const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, int *affected,
+                  int *hopIntWork, int hopIntWorkSize,
+                  int *pfIWork, double *pfRWork,
+                  double complex *pfBufM, double complex *pfWork);
+
+double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const int u, const int v,
+                  const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, int *affected,
+                  int *hopIntWork, int hopIntWorkSize,
+                  int *pfIWork, double *pfRWork,
+                  double complex *pfBufM, double complex *pfWork);
+
 double CalculateSz_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt,int *eleSpn) {
   const int *n0 = eleNum;
@@ -243,9 +262,9 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
                              const int *eleProjBFCnt) {
   const int *n0 = eleNum;
   const int *n1 = eleNum + Nsite;
-  double complex e=0.0;
+  double complex e=0.0,tmp;
   int idx;
-  int ri,rj,s,t;
+  int ri,rj,s,t,rk,rl,u,v;
   int *myEleIdx, *myEleCfg, *myEleNum, *myEleSpn;
   int *myProjCntNew, *myProjBFCntNew, *myAffected, *myHopIntWork;
   int *myPfIWork;
@@ -259,8 +278,8 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   long long bfBaseIntSizeLL,bfIntSizeLL;
   int bfBaseIntSize, bfHopIntSize, bfIntSize, bfPfIntSize, bfPfDoubleSize;
 
-  if(NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0 || NNBodyInterAll > 0) {
-    fprintf(stderr, "Error: CalculateHamiltonianBF_fsz supports only density and one-body transfer terms.\n");
+  if(NNBodyInterAll > 0) {
+    fprintf(stderr, "Error: CalculateHamiltonianBF_fsz does not support NBodyInterAll.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
   if(GetSlaterElmBF_fsz_hop_int_work_size(&bfHopIntSize) != 0) {
@@ -359,15 +378,55 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
     s  = Transfer[idx][1];
     rj = Transfer[idx][2];
     t  = Transfer[idx][3];
-    if(s != t) {
-      fprintf(stderr, "Error: BackFlow FSZ does not support spin-changing transfer terms yet.\n");
-      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    }
     e -= ParaTransfer[idx]
-      * GreenFunc1BF_fsz(ri,rj,s,ip,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
+      * GreenFunc1BF_fsz2(ri,rj,s,t,ip,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
                          myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
                          myAffected,myHopIntWork,bfHopIntSize,
                          myPfIWork,myPfRWork,myPfBufM,myPfWork);
+  }
+
+  for(idx=0;idx<NPairHopping;idx++) {
+    ri = PairHopping[idx][0];
+    rj = PairHopping[idx][1];
+    e += ParaPairHopping[idx]
+      * GreenFunc2BF_fsz2(ri,rj,ri,rj,0,0,1,1,ip,
+                          myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
+                          myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
+                          myAffected,myHopIntWork,bfHopIntSize,
+                          myPfIWork,myPfRWork,myPfBufM,myPfWork);
+  }
+
+  for(idx=0;idx<NExchangeCoupling;idx++) {
+    ri = ExchangeCoupling[idx][0];
+    rj = ExchangeCoupling[idx][1];
+    tmp = GreenFunc2BF_fsz2(ri,rj,rj,ri,0,0,1,1,ip,
+                            myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
+                            myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
+                            myAffected,myHopIntWork,bfHopIntSize,
+                            myPfIWork,myPfRWork,myPfBufM,myPfWork);
+    tmp += GreenFunc2BF_fsz2(ri,rj,rj,ri,1,1,0,0,ip,
+                             myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
+                             myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
+                             myAffected,myHopIntWork,bfHopIntSize,
+                             myPfIWork,myPfRWork,myPfBufM,myPfWork);
+    e += ParaExchangeCoupling[idx]*tmp;
+  }
+
+  for(idx=0;idx<NInterAll;idx++) {
+    ri = InterAll[idx][0];
+    s  = InterAll[idx][1];
+    rj = InterAll[idx][2];
+    t  = InterAll[idx][3];
+    rk = InterAll[idx][4];
+    u  = InterAll[idx][5];
+    rl = InterAll[idx][6];
+    v  = InterAll[idx][7];
+    e += ParaInterAll[idx]
+      * GreenFunc2BF_fsz2(ri,rj,rk,rl,s,t,u,v,ip,
+                          myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
+                          myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
+                          myAffected,myHopIntWork,bfHopIntSize,
+                          myPfIWork,myPfRWork,myPfBufM,myPfWork);
   }
 
   ReleaseWorkSpaceInt();

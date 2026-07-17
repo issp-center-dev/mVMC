@@ -303,8 +303,8 @@ void UpdateProjCnt(const int ri, const int rj, const int s,
 
 }
 //[s] MERGE BY TM
-/* An electron with spin s hops from ri to rj with t. */
-// (ri,s) -> (rj,t) assuming s!=t
+/* An electron hops from (ri,s) to (rj,t).  This is valid for both
+ * s==t and s!=t; for s==t the count update agrees with UpdateProjCnt(). */
 void UpdateProjCnt_fsz(const int ri, const int rj, const int s,const int t,
                    int *projCntNew, const int *projCntOld,
                    const int *eleNum) {

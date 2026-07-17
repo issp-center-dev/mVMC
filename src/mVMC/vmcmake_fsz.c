@@ -898,6 +898,7 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   int outStep,nOutStep;
   int inStep,nInStep;
   int mi,ri,rj,s,t,i;
+  int flag_hop;
   int nAccept=0;
   int sample;
 
@@ -1152,9 +1153,25 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   for(outStep=0;outStep<nOutStep;outStep++) {
     for(inStep=0;inStep<nInStep;inStep++) {
       StartTimer(31);
-      Counter[0]++;
-      makeCandidate_hopping_csz(&mi, &ri, &rj, &s, &t, &rejectFlag,
-                                TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+      flag_hop = 0;
+      if(TwoSz == -1) {
+        if(genrand_real2() < 0.5) {
+          flag_hop = 1;
+          Counter[0]++;
+          makeCandidate_hopping_fsz(&mi, &ri, &rj, &s, &t, &rejectFlag,
+                                    TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+        } else {
+          Counter[4]++;
+          makeCandidate_LocalSpinFlip_conduction(
+              &mi, &ri, &rj, &s, &t, &rejectFlag,
+              TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+        }
+      } else {
+        flag_hop = 1;
+        Counter[0]++;
+        makeCandidate_hopping_csz(&mi, &ri, &rj, &s, &t, &rejectFlag,
+                                  TmpEleIdx, TmpEleCfg,TmpEleNum,TmpEleSpn);
+      }
       StopTimer(31);
 
       if(rejectFlag) continue;
@@ -1172,7 +1189,11 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
       StartTimer(32);
       StartTimer(60);
       updateEleConfig_fsz(mi,ri,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
-      UpdateProjCnt(ri,rj,s,projCntNew,TmpEleProjCnt,TmpEleNum);
+      if(s == t) {
+        UpdateProjCnt(ri,rj,s,projCntNew,TmpEleProjCnt,TmpEleNum);
+      } else {
+        UpdateProjCnt_fsz(ri,rj,s,t,projCntNew,TmpEleProjCnt,TmpEleNum);
+      }
       MakeProjBFCnt(projBFCntNew,TmpEleNum);
       StopTimer(60);
 
@@ -1661,7 +1682,11 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
         for(i=0;i<16*Nsite*Nrange;i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
         logIpOld = CalculateLogIP_fcmp(PfM,qpStart,qpEnd,comm);
         nAccept++;
-        Counter[1]++;
+        if(flag_hop) {
+          Counter[1]++;
+        } else {
+          Counter[5]++;
+        }
       } else {
         revertEleConfig_fsz(mi,ri,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         if(BFFSZSamplingRejectCheckEnabled) {
