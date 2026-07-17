@@ -48,6 +48,83 @@ void OutputTime(int step) {
   }
 }
 
+double BFFSZC2DetailMonotonicSeconds(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+  return ts.tv_sec + ts.tv_nsec*1.0e-9;
+}
+
+void InitBFFSZC2DetailContext(BFFSZC2DetailContext *context, int source) {
+  int i;
+  if(context == NULL) return;
+  context->source = source;
+  context->evaluatedCalls = 0;
+  context->changedSum = 0;
+  context->changedMax = 0;
+  context->affectedSum = 0;
+  context->affectedMax = 0;
+  context->affectedAtOrAboveKFull = 0;
+  context->orderedDescriptorTotal = 0;
+  for(i=0;i<NBFFSZC2DetailClass;i++) context->classCall[i] = 0;
+  for(i=0;i<NBFFSZC2DetailOutcome;i++) context->outcome[i] = 0;
+  for(i=0;i<NBFFSZC2DetailPath;i++) context->path[i] = 0;
+  for(i=0;i<NBFFSZProfileHist;i++) {
+    context->changedHist[i] = 0;
+    context->affectedHist[i] = 0;
+  }
+  for(i=0;i<NBFFSZC2DetailComponent;i++) context->componentSeconds[i] = 0.0;
+}
+
+void MergeBFFSZC2DetailContext(const BFFSZC2DetailContext *context) {
+  int i;
+  const int source = (context == NULL) ? -1 : context->source;
+  if(!BFFSZC2DetailProfileEnabled || source < 0
+      || source >= NBFFSZC2DetailSource) return;
+  for(i=0;i<NBFFSZC2DetailClass;i++) {
+    BFFSZC2DetailClassCall[source][i] += context->classCall[i];
+  }
+  for(i=0;i<NBFFSZC2DetailOutcome;i++) {
+    BFFSZC2DetailOutcome[source][i] += context->outcome[i];
+  }
+  for(i=0;i<NBFFSZC2DetailPath;i++) {
+    BFFSZC2DetailPath[source][i] += context->path[i];
+  }
+  BFFSZC2DetailEvaluatedCalls[source] += context->evaluatedCalls;
+  BFFSZC2DetailChangedSum[source] += context->changedSum;
+  BFFSZC2DetailAffectedSum[source] += context->affectedSum;
+  if(context->changedMax > BFFSZC2DetailChangedMax[source]) {
+    BFFSZC2DetailChangedMax[source] = context->changedMax;
+  }
+  if(context->affectedMax > BFFSZC2DetailAffectedMax[source]) {
+    BFFSZC2DetailAffectedMax[source] = context->affectedMax;
+  }
+  for(i=0;i<NBFFSZProfileHist;i++) {
+    BFFSZC2DetailChangedHist[source][i] += context->changedHist[i];
+    BFFSZC2DetailAffectedHist[source][i] += context->affectedHist[i];
+  }
+  BFFSZC2DetailAffectedAtOrAboveKFull[source]
+      += context->affectedAtOrAboveKFull;
+  BFFSZC2DetailOrderedDescriptorTotal[source]
+      += context->orderedDescriptorTotal;
+  for(i=0;i<NBFFSZC2DetailComponent;i++) {
+    BFFSZC2DetailComponentSeconds[source][i] += context->componentSeconds[i];
+  }
+}
+
+void InitBFFSZC2DetailTermContext(BFFSZC2DetailTermContext *context) {
+  int i;
+  if(context == NULL) return;
+  for(i=0;i<NBFFSZC2DetailTerm;i++) context->seconds[i] = 0.0;
+}
+
+void MergeBFFSZC2DetailTermContext(const BFFSZC2DetailTermContext *context) {
+  int i;
+  if(!BFFSZC2DetailProfileEnabled || context == NULL) return;
+  for(i=0;i<NBFFSZC2DetailTerm;i++) {
+    BFFSZC2DetailTermSeconds[i] += context->seconds[i];
+  }
+}
+
 void InitTimer() {
   int i, j;
   const char *bfProfileEnv, *greenCheckEnv, *affectedCheckEnv;
@@ -59,7 +136,7 @@ void InitTimer() {
   const char *invUpdateInjectRankEnv, *invUpdateExplicitStateEnv;
   const char *invUpdateArgumentEnv, *invGemmCheckEnv, *invDetailProfileEnv;
   const char *matrixFreeCheckEnv, *matrixFreeArgumentEnv;
-  const char *samplingRejectCheckEnv;
+  const char *samplingRejectCheckEnv, *c2DetailProfileEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
   for(i=0;i<NTimer;i++) TimerStart[i]=0.0;
   for(i=0;i<NBFProfileCounter;i++) BFProfileCounter[i]=0;
@@ -95,6 +172,27 @@ void InitTimer() {
     BFFSZProfileInvDetailSeconds[j] = 0.0;
     BFFSZProfileInvDetailMaxSeconds[j] = 0.0;
   }
+  for(i=0;i<NBFFSZC2DetailSource;i++) {
+    BFFSZC2DetailEvaluatedCalls[i] = 0;
+    BFFSZC2DetailChangedSum[i] = 0;
+    BFFSZC2DetailChangedMax[i] = 0;
+    BFFSZC2DetailAffectedSum[i] = 0;
+    BFFSZC2DetailAffectedMax[i] = 0;
+    BFFSZC2DetailAffectedAtOrAboveKFull[i] = 0;
+    BFFSZC2DetailOrderedDescriptorTotal[i] = 0;
+    for(j=0;j<NBFFSZC2DetailClass;j++) BFFSZC2DetailClassCall[i][j] = 0;
+    for(j=0;j<NBFFSZC2DetailOutcome;j++) BFFSZC2DetailOutcome[i][j] = 0;
+    for(j=0;j<NBFFSZC2DetailPath;j++) BFFSZC2DetailPath[i][j] = 0;
+    for(j=0;j<NBFFSZProfileHist;j++) {
+      BFFSZC2DetailChangedHist[i][j] = 0;
+      BFFSZC2DetailAffectedHist[i][j] = 0;
+    }
+    for(j=0;j<NBFFSZC2DetailComponent;j++) {
+      BFFSZC2DetailComponentSeconds[i][j] = 0.0;
+    }
+  }
+  for(i=0;i<NBFFSZC2DetailTerm;i++) BFFSZC2DetailTermSeconds[i] = 0.0;
+  BFFSZC2DetailSzSecondsRank0 = 0.0;
   bfProfileEnv = getenv("MVMC_BF_PROFILE");
   BFProfileEnabled = (bfProfileEnv != NULL && atoi(bfProfileEnv) != 0);
   greenCheckEnv = getenv("MVMC_BF_FSZ_GREEN_REBUILD_CHECK");
@@ -173,6 +271,9 @@ void InitTimer() {
   invDetailProfileEnv = getenv("MVMC_BF_FSZ_INV_DETAIL_PROFILE");
   BFFSZInvDetailProfileEnabled = (invDetailProfileEnv != NULL
       && atoi(invDetailProfileEnv) != 0);
+  c2DetailProfileEnv = getenv("MVMC_BF_FSZ_C2_DETAIL_PROFILE");
+  BFFSZC2DetailProfileEnabled = (c2DetailProfileEnv != NULL
+      && atoi(c2DetailProfileEnv) != 0);
   matrixFreeCheckEnv = getenv("MVMC_BF_FSZ_MATRIX_FREE_CHECK");
   BFFSZMatrixFreeCheckEnabled = (matrixFreeCheckEnv != NULL
       && atoi(matrixFreeCheckEnv) != 0);
@@ -213,7 +314,8 @@ void StopTimer(int n) {
 static void OutputBFProfileCounters(FILE *fp) {
   int i, hasData = 0;
   if(!BFProfileEnabled && !BFFSZInvGemmCheckEnabled
-      && !BFFSZInvDetailProfileEnabled) return;
+      && !BFFSZInvDetailProfileEnabled
+      && !BFFSZC2DetailProfileEnabled) return;
   if(BFProfileEnabled) {
     for(i=0;i<NBFProfileCounter;i++) {
       if(BFProfileCounter[i] != 0) {
@@ -360,6 +462,76 @@ static void OutputBFProfileCounters(FILE *fp) {
     unclassifiedSeconds = Timer[63]-classifiedSeconds;
     fprintf(fp,"    BF-FSZ inverse detail total timer63_seconds_rank0=%.9f classified_seconds_rank0=%.9f unclassified_seconds_rank0=%.9f\n",
             Timer[63],classifiedSeconds,unclassifiedSeconds);
+  }
+  if(BFFSZC2DetailProfileEnabled) {
+    const char *sourceLabels[NBFFSZC2DetailSource] = {
+      "measurement", "pair_hop", "exchange", "inter_all"
+    };
+    const char *outcomeLabels[NBFFSZC2DetailOutcome] = {
+      "occupancy_zero", "sector_zero", "evaluated"
+    };
+    const char *pathLabels[NBFFSZC2DetailPath] = {
+      "legacy_full", "optimized_row", "direct_full", "fallback", "debug_oracle"
+    };
+    const char *componentLabels[NBFFSZC2DetailComponent] = {
+      "dispatch", "state_projection", "bf_count", "candidate_build",
+      "pfaffian", "restore", "affected_collect"
+    };
+    const char *termLabels[NBFFSZC2DetailTerm] = {
+      "number", "transfer", "pair_hop", "exchange", "inter_all"
+    };
+    double termSeconds = 0.0;
+    long long gateEvaluated = 0;
+    long long gateFailures = 0;
+    int j;
+    fprintf(fp,"BF_FSZ_C2_DETAIL_PROFILE_BEGIN version=1 rank=0 env=MVMC_BF_FSZ_C2_DETAIL_PROFILE\n");
+    for(i=0;i<NBFFSZC2DetailSource;i++) {
+      for(j=0;j<NBFFSZC2DetailClass;j++) {
+        fprintf(fp,"source=%s class=%d calls=%lld\n",sourceLabels[i],j+1,
+                BFFSZC2DetailClassCall[i][j]);
+      }
+      for(j=0;j<NBFFSZC2DetailOutcome;j++) {
+        fprintf(fp,"source=%s outcome=%s calls=%lld\n",sourceLabels[i],
+                outcomeLabels[j],BFFSZC2DetailOutcome[i][j]);
+      }
+      for(j=0;j<NBFFSZC2DetailPath;j++) {
+        fprintf(fp,"source=%s path=%s calls=%lld\n",sourceLabels[i],
+                pathLabels[j],BFFSZC2DetailPath[i][j]);
+      }
+      fprintf(fp,"source=%s changed calls=%lld sum=%lld max=%lld\n",sourceLabels[i],
+              BFFSZC2DetailEvaluatedCalls[i],BFFSZC2DetailChangedSum[i],
+              BFFSZC2DetailChangedMax[i]);
+      fprintf(fp,"source=%s affected calls=%lld sum=%lld max=%lld at_or_above_k_full=%lld\n",
+              sourceLabels[i],BFFSZC2DetailEvaluatedCalls[i],
+              BFFSZC2DetailAffectedSum[i],BFFSZC2DetailAffectedMax[i],
+              BFFSZC2DetailAffectedAtOrAboveKFull[i]);
+      fprintf(fp,"source=%s ordered_descriptors=%lld\n",sourceLabels[i],
+              BFFSZC2DetailOrderedDescriptorTotal[i]);
+      for(j=0;j<NBFFSZProfileHist;j++) {
+        fprintf(fp,"source=%s changed_hist bin=%d calls=%lld\n",sourceLabels[i],j,
+                BFFSZC2DetailChangedHist[i][j]);
+        fprintf(fp,"source=%s affected_hist bin=%d calls=%lld\n",sourceLabels[i],j,
+                BFFSZC2DetailAffectedHist[i][j]);
+      }
+      for(j=0;j<NBFFSZC2DetailComponent;j++) {
+        fprintf(fp,"source=%s component=%s seconds_rank0=%.9f\n",sourceLabels[i],
+                componentLabels[j],BFFSZC2DetailComponentSeconds[i][j]);
+      }
+      gateEvaluated += BFFSZC2DetailEvaluatedCalls[i];
+      gateFailures += BFFSZC2DetailAffectedAtOrAboveKFull[i];
+    }
+    for(i=0;i<NBFFSZC2DetailTerm;i++) {
+      fprintf(fp,"hamiltonian_term=%s seconds_rank0=%.9f\n",termLabels[i],
+              BFFSZC2DetailTermSeconds[i]);
+      termSeconds += BFFSZC2DetailTermSeconds[i];
+    }
+    fprintf(fp,"sz_seconds_rank0=%.9f\n",BFFSZC2DetailSzSecondsRank0);
+    fprintf(fp,"timer41_seconds_rank0=%.9f hamiltonian_term_seconds_rank0=%.9f sz_seconds_rank0=%.9f wrapper_overhead_seconds_rank0=%.9f\n",
+            Timer[41],termSeconds,BFFSZC2DetailSzSecondsRank0,
+            Timer[41]-termSeconds-BFFSZC2DetailSzSecondsRank0);
+    fprintf(fp,"affected_gate k_full=%d evaluated_calls=%lld at_or_above_k_full=%lld pass=%d\n",
+            BFFSZPfUpdateKFull,gateEvaluated,gateFailures,(gateFailures == 0));
+    fprintf(fp,"BF_FSZ_C2_DETAIL_PROFILE_END\n");
   }
 }
 

@@ -73,6 +73,18 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
                   int *pfIWork, double *pfRWork,
                   double complex *pfBufM, double complex *pfWork);
 
+double complex GreenFunc2BF_fsz2WithProfile(
+                  const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const int u, const int v,
+                  const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, int *affected,
+                  int *hopIntWork, int hopIntWorkSize,
+                  int *pfIWork, double *pfRWork,
+                  double complex *pfBufM, double complex *pfWork,
+                  BFFSZC2DetailContext *detailProfile);
+
 
 void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx, int *eleCfg,
                          int *eleNum, int *eleSpn,int *eleProjCnt) {
@@ -261,6 +273,14 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   int *thProjCntNew, *thProjBFCntNew, *thAffected, *thHopIntWork, *thPfIWork;
   double complex *thBuffer, *thPfBufM, *thPfWork;
   double *thPfRWork;
+  BFFSZC2DetailContext c2DetailContext;
+  BFFSZC2DetailContext *c2DetailProfile = NULL;
+
+  if(BFFSZC2DetailProfileEnabled) {
+    InitBFFSZC2DetailContext(&c2DetailContext,
+        BFFSZ_C2_DETAIL_SOURCE_MEASUREMENT);
+    c2DetailProfile = &c2DetailContext;
+  }
 
   if(NTwist > 0 || NNBodyG > 0) {
     fprintf(stderr, "Error: CalculateGreenFuncBF_fsz does not support Twist or NBodyG yet.\n");
@@ -417,14 +437,15 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     rl = CisAjsCktAltDCIdx[idx][6];
     v  = CisAjsCktAltDCIdx[idx][7];
 
-    tmp = GreenFunc2BF_fsz2(ri,rj,rk,rl,s,t,u,v,ip,
+    tmp = GreenFunc2BF_fsz2WithProfile(ri,rj,rk,rl,s,t,u,v,ip,
                            myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
                            myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
                            myAffected,myHopIntWork,bfHopIntSize,
-                           myPfIWork,myPfRWork,myPfBufM,myPfWork);
+                           myPfIWork,myPfRWork,myPfBufM,myPfWork,c2DetailProfile);
     PhysCisAjsCktAltDC[idx] += w*tmp;
   }
   StopTimer(51);
+  if(c2DetailProfile != NULL) MergeBFFSZC2DetailContext(c2DetailProfile);
 
   StartTimer(52);
   for(idx=0;idx<NCisAjs;idx++) {

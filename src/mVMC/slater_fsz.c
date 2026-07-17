@@ -521,14 +521,20 @@ static int MakeBFChangedEndpointList_fsz(int *changed, int *changedList,
   return nChanged;
 }
 
-static int MakeBFAffectedParticleList_fsz(
-    const int *changed, int movedParticle,
+static int MakeBFAffectedParticleListForMoves_fsz(
+    const int *changed, const int *movedParticles, int nMovedParticles,
     const int *eleIdx, const int *eleSpn,
     int *affectedMark, int *affected) {
-  int m, rsm, nAffected = 0;
+  int i, m, rsm, nAffected = 0;
 
   memset(affectedMark, 0, sizeof(int)*(size_t)Nsize);
-  affectedMark[movedParticle] = 1;
+  for(i=0;i<nMovedParticles;i++) {
+    if(movedParticles[i] < 0 || movedParticles[i] >= Nsize) {
+      fprintf(stderr,"error: invalid BF-FSZ moved particle %d\n",movedParticles[i]);
+      return -1;
+    }
+    affectedMark[movedParticles[i]] = 1;
+  }
   for(m=0;m<Nsize;m++) {
     if(eleIdx[m] < 0 || eleIdx[m] >= Nsite || eleSpn[m] < 0 || eleSpn[m] >= 2) {
       fprintf(stderr,
@@ -547,6 +553,51 @@ static int MakeBFAffectedParticleList_fsz(
     return -1;
   }
   return nAffected;
+}
+
+static int MakeBFAffectedParticleList_fsz(
+    const int *changed, int movedParticle,
+    const int *eleIdx, const int *eleSpn,
+    int *affectedMark, int *affected) {
+  return MakeBFAffectedParticleListForMoves_fsz(changed,&movedParticle,1,
+      eleIdx,eleSpn,affectedMark,affected);
+}
+
+int CollectBFAffectedParticlesTwoMove_fsz(
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int movedParticle0, int movedParticle1,
+    const int *eleIdx, const int *eleSpn,
+    int *affected, int *intWork, int intWorkSize,
+    int *nChangedOut, int *nAffectedOut) {
+  const long long requiredWorkSizeLL = 2LL*Nsite2+Nsize;
+  int requiredWorkSize;
+  int movedParticles[2];
+  int *changed, *changedList, *affectedMark;
+  int nChanged, nAffected;
+
+  if(requiredWorkSizeLL < 0 || requiredWorkSizeLL > INT_MAX) return -1;
+  requiredWorkSize = (int)requiredWorkSizeLL;
+  if(oldEleProjBFCnt == NULL || newEleProjBFCnt == NULL
+      || eleIdx == NULL || eleSpn == NULL || affected == NULL
+      || intWork == NULL || intWorkSize < requiredWorkSize
+      || nChangedOut == NULL || nAffectedOut == NULL
+      || movedParticle0 < 0 || movedParticle0 >= Nsize
+      || movedParticle1 < 0 || movedParticle1 >= Nsize) {
+    return -1;
+  }
+  movedParticles[0] = movedParticle0;
+  movedParticles[1] = movedParticle1;
+  changed = intWork;
+  changedList = changed+Nsite2;
+  affectedMark = changedList+Nsite2;
+  nChanged = MakeBFChangedEndpointList_fsz(
+      changed,changedList,oldEleProjBFCnt,newEleProjBFCnt);
+  nAffected = MakeBFAffectedParticleListForMoves_fsz(
+      changed,movedParticles,2,eleIdx,eleSpn,affectedMark,affected);
+  if(nAffected < 0) return -1;
+  *nChangedOut = nChanged;
+  *nAffectedOut = nAffected;
+  return 0;
 }
 
 static int BF_FSZ_MemoryRangesOverlap_fsz(

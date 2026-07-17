@@ -511,6 +511,83 @@ double BFFSZProfileInvGemmDifferenceMax = 0.0;
 double BFFSZProfileInvDetailSeconds[NBFFSZInvDetail];
 double BFFSZProfileInvDetailMaxSeconds[NBFFSZInvDetail];
 
+/* Optional BF-FSZ C2 detail profiler (F4-b).  This profiler is independent
+ * from MVMC_BF_PROFILE and remains rank-local. */
+#define BFFSZ_C2_DETAIL_SOURCE_MEASUREMENT 0
+#define BFFSZ_C2_DETAIL_SOURCE_PAIR_HOP    1
+#define BFFSZ_C2_DETAIL_SOURCE_EXCHANGE    2
+#define BFFSZ_C2_DETAIL_SOURCE_INTER_ALL   3
+#define NBFFSZC2DetailSource 4
+#define NBFFSZC2DetailClass 15
+#define BFFSZ_C2_DETAIL_OUTCOME_OCCUPANCY_ZERO 0
+#define BFFSZ_C2_DETAIL_OUTCOME_SECTOR_ZERO    1
+#define BFFSZ_C2_DETAIL_OUTCOME_EVALUATED      2
+#define NBFFSZC2DetailOutcome 3
+#define BFFSZ_C2_DETAIL_PATH_LEGACY_FULL   0
+#define BFFSZ_C2_DETAIL_PATH_OPTIMIZED_ROW 1
+#define BFFSZ_C2_DETAIL_PATH_DIRECT_FULL   2
+#define BFFSZ_C2_DETAIL_PATH_FALLBACK      3
+#define BFFSZ_C2_DETAIL_PATH_DEBUG_ORACLE  4
+#define NBFFSZC2DetailPath 5
+#define BFFSZ_C2_DETAIL_COMPONENT_DISPATCH         0
+#define BFFSZ_C2_DETAIL_COMPONENT_STATE_PROJECTION 1
+#define BFFSZ_C2_DETAIL_COMPONENT_BF_COUNT         2
+#define BFFSZ_C2_DETAIL_COMPONENT_CANDIDATE_BUILD  3
+#define BFFSZ_C2_DETAIL_COMPONENT_PFAFFIAN         4
+#define BFFSZ_C2_DETAIL_COMPONENT_RESTORE          5
+#define BFFSZ_C2_DETAIL_COMPONENT_AFFECTED_COLLECT 6
+#define NBFFSZC2DetailComponent 7
+#define BFFSZ_C2_DETAIL_TERM_NUMBER    0
+#define BFFSZ_C2_DETAIL_TERM_TRANSFER  1
+#define BFFSZ_C2_DETAIL_TERM_PAIR_HOP  2
+#define BFFSZ_C2_DETAIL_TERM_EXCHANGE  3
+#define BFFSZ_C2_DETAIL_TERM_INTER_ALL 4
+#define NBFFSZC2DetailTerm 5
+
+typedef struct {
+  int source;
+  long long classCall[NBFFSZC2DetailClass];
+  long long outcome[NBFFSZC2DetailOutcome];
+  long long path[NBFFSZC2DetailPath];
+  long long evaluatedCalls;
+  long long changedSum;
+  long long changedMax;
+  long long affectedSum;
+  long long affectedMax;
+  long long changedHist[NBFFSZProfileHist];
+  long long affectedHist[NBFFSZProfileHist];
+  long long affectedAtOrAboveKFull;
+  long long orderedDescriptorTotal;
+  double componentSeconds[NBFFSZC2DetailComponent];
+} BFFSZC2DetailContext;
+
+typedef struct {
+  double seconds[NBFFSZC2DetailTerm];
+} BFFSZC2DetailTermContext;
+
+int BFFSZC2DetailProfileEnabled = 0;
+long long BFFSZC2DetailClassCall[NBFFSZC2DetailSource][NBFFSZC2DetailClass];
+long long BFFSZC2DetailOutcome[NBFFSZC2DetailSource][NBFFSZC2DetailOutcome];
+long long BFFSZC2DetailPath[NBFFSZC2DetailSource][NBFFSZC2DetailPath];
+long long BFFSZC2DetailEvaluatedCalls[NBFFSZC2DetailSource];
+long long BFFSZC2DetailChangedSum[NBFFSZC2DetailSource];
+long long BFFSZC2DetailChangedMax[NBFFSZC2DetailSource];
+long long BFFSZC2DetailAffectedSum[NBFFSZC2DetailSource];
+long long BFFSZC2DetailAffectedMax[NBFFSZC2DetailSource];
+long long BFFSZC2DetailChangedHist[NBFFSZC2DetailSource][NBFFSZProfileHist];
+long long BFFSZC2DetailAffectedHist[NBFFSZC2DetailSource][NBFFSZProfileHist];
+long long BFFSZC2DetailAffectedAtOrAboveKFull[NBFFSZC2DetailSource];
+long long BFFSZC2DetailOrderedDescriptorTotal[NBFFSZC2DetailSource];
+double BFFSZC2DetailComponentSeconds[NBFFSZC2DetailSource][NBFFSZC2DetailComponent];
+double BFFSZC2DetailTermSeconds[NBFFSZC2DetailTerm];
+double BFFSZC2DetailSzSecondsRank0 = 0.0;
+
+double BFFSZC2DetailMonotonicSeconds(void);
+void InitBFFSZC2DetailContext(BFFSZC2DetailContext *context, int source);
+void MergeBFFSZC2DetailContext(const BFFSZC2DetailContext *context);
+void InitBFFSZC2DetailTermContext(BFFSZC2DetailTermContext *context);
+void MergeBFFSZC2DetailTermContext(const BFFSZC2DetailTermContext *context);
+
 static inline void AddBFProfileCounter(int idx, long long value) {
   if(!BFProfileEnabled || value == 0) return;
 #pragma omp atomic

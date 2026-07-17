@@ -29,6 +29,40 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "sector_projection.c"
 #include <stdint.h>
 
+int CollectBFAffectedParticlesTwoMove_fsz(
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int movedParticle0, int movedParticle1,
+    const int *eleIdx, const int *eleSpn,
+    int *affected, int *intWork, int intWorkSize,
+    int *nChangedOut, int *nAffectedOut);
+
+int ClassifyGreenFunc2FSZ(const int XI, const int XJ,
+                          const int XK, const int XL) {
+  if(XI == XJ) {
+    if(XJ == XK) return (XK == XL) ? 1 : 2;
+    if(XJ == XL) return 3;
+    if(XK == XL) return 4;
+    return 5;
+  }
+  if(XI == XK) {
+    if(XJ == XL) return 6;
+    if(XK == XL) return 7;
+    return 8;
+  }
+  if(XI == XL) return (XJ == XK) ? 9 : 10;
+  if(XJ == XK) return (XK == XL) ? 11 : 12;
+  if(XJ == XL) return 13;
+  if(XK == XL) return 14;
+  return 15;
+}
+
+static void RecordBFFSZC2DispatchSeconds(BFFSZC2DetailContext *context,
+                                         const double start) {
+  if(context == NULL) return;
+  context->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_DISPATCH]
+      += BFFSZC2DetailMonotonicSeconds()-start;
+}
+
 static int BF_FSZ_IntWorkspacesOverlap(const int *workA, const int workACount,
                                        const int *workB, const int workBCount) {
   size_t workABytes, workBBytes;
@@ -114,6 +148,18 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
                   int *hopIntWork, int hopIntWorkSize,
                   int *pfIWork, double *pfRWork,
                   double complex *pfBufM, double complex *pfWork);
+
+double complex GreenFunc2BF_fsz2WithProfile(
+                  const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const int u, const int v,
+                  const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, int *affected,
+                  int *hopIntWork, int hopIntWorkSize,
+                  int *pfIWork, double *pfRWork,
+                  double complex *pfBufM, double complex *pfWork,
+                  BFFSZC2DetailContext *detailProfile);
 
 double complex GreenFuncN_fsz(const int n, int *rsi, int *rsj, const double complex ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
@@ -1035,7 +1081,8 @@ double complex GreenFunc2BF_fsz(const int ri, const int rj, const int rk, const 
       hopIntWorkSize,pfIWork,pfRWork,pfBufM,pfWork);
 }
 
-double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const int rl,
+double complex GreenFunc2BF_fsz2WithProfile(
+                  const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t, const int u, const int v,
                   const double complex ip,
                   int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
@@ -1043,10 +1090,15 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
                   double complex *buffer, int *affected,
                   int *hopIntWork, int hopIntWorkSize,
                   int *pfIWork, double *pfRWork,
-                  double complex *pfBufM, double complex *pfWork) {
+                  double complex *pfBufM, double complex *pfWork,
+                  BFFSZC2DetailContext *detailProfile) {
   double complex z,result;
-  int mj,ml;
+  int mj,ml,nChanged,nAffected;
+  int c2Class = 0;
+  int stateAllowed;
   int XI,XJ,XK,XL;
+  double dispatchStart = 0.0;
+  double componentStart = 0.0;
   double complex *pfMNew = buffer;
   double complex *candidateSlater = buffer+2*(size_t)NQPFull;
 
@@ -1055,11 +1107,19 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
   XK = rk+u*Nsite;
   XL = rl+v*Nsite;
 
+  if(detailProfile != NULL) {
+    dispatchStart = BFFSZC2DetailMonotonicSeconds();
+    c2Class = ClassifyGreenFunc2FSZ(XI,XJ,XK,XL);
+    detailProfile->classCall[c2Class-1]++;
+  }
+
   if(XI == XJ) {
     if(XJ == XK) {
       if(XK == XL) {
+        RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
         return eleNum[XI];
       } else {
+        RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
         if(eleNum[XI] == 1) return 0.0;
         return GreenFunc1BF_fsz2(rk,rl,u,v,ip,eleIdx,eleCfg,eleNum,
             eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,
@@ -1067,10 +1127,13 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
             pfIWork,pfRWork,pfBufM,pfWork);
       }
     } else if(XJ == XL) {
+      RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
       return 0.0;
     } else if(XK == XL) {
+      RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
       return eleNum[XI]*eleNum[XK];
     } else {
+      RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
       if(eleNum[XI] == 0) return 0.0;
       return GreenFunc1BF_fsz2(rk,rl,u,v,ip,eleIdx,eleCfg,eleNum,
           eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,
@@ -1078,11 +1141,14 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
           pfIWork,pfRWork,pfBufM,pfWork);
     }
   } else if(XI == XK) {
+    RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
     return 0.0;
   } else if(XI == XL) {
     if(XJ == XK) {
+      RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
       return eleNum[XI]*(1-eleNum[XJ]);
     }
+    RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
     if(eleNum[XI] == 0) return 0.0;
     return -GreenFunc1BF_fsz2(rk,rj,u,t,ip,eleIdx,eleCfg,eleNum,
         eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,
@@ -1090,20 +1156,24 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
         pfIWork,pfRWork,pfBufM,pfWork);
   } else if(XJ == XK) {
     if(XK == XL) {
+      RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
       if(eleNum[XJ] == 0) return 0.0;
       return GreenFunc1BF_fsz2(ri,rj,s,t,ip,eleIdx,eleCfg,eleNum,
           eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,
           buffer,affected,hopIntWork,hopIntWorkSize,
           pfIWork,pfRWork,pfBufM,pfWork);
     }
+    RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
     if(eleNum[XJ] == 1) return 0.0;
     return GreenFunc1BF_fsz2(ri,rl,s,v,ip,eleIdx,eleCfg,eleNum,
         eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,
         buffer,affected,hopIntWork,hopIntWorkSize,
         pfIWork,pfRWork,pfBufM,pfWork);
   } else if(XJ == XL) {
+    RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
     return 0.0;
   } else if(XK == XL) {
+    RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
     if(eleNum[XK] == 0) return 0.0;
     return GreenFunc1BF_fsz2(ri,rj,s,t,ip,eleIdx,eleCfg,eleNum,
         eleProjCnt,eleSpn,projCntNew,eleProjBFCnt,projBFCntNew,
@@ -1112,10 +1182,23 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
   }
 
   if(eleNum[XI] == 1 || eleNum[XJ] == 0
-      || eleNum[XK] == 1 || eleNum[XL] == 0) return 0.0;
+      || eleNum[XK] == 1 || eleNum[XL] == 0) {
+    if(detailProfile != NULL) {
+      RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
+      detailProfile->orderedDescriptorTotal++;
+      detailProfile->outcome[BFFSZ_C2_DETAIL_OUTCOME_OCCUPANCY_ZERO]++;
+    }
+    return 0.0;
+  }
+  if(detailProfile != NULL) {
+    RecordBFFSZC2DispatchSeconds(detailProfile,dispatchStart);
+    detailProfile->orderedDescriptorTotal++;
+  }
 
   mj = eleCfg[XJ];
   ml = eleCfg[XL];
+
+  if(detailProfile != NULL) componentStart = BFFSZC2DetailMonotonicSeconds();
 
   eleCfg[XL] = -1;
   eleCfg[XK] = ml;
@@ -1134,15 +1217,59 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
   UpdateProjCnt_fsz(rj,ri,t,s,projCntNew,projCntNew,eleNum);
 
   result = 0.0;
-  if(IsSectorStateAllowed(eleNum)) {
+  stateAllowed = IsSectorStateAllowed(eleNum);
+  if(stateAllowed) {
     z = ProjRatio(projCntNew,eleProjCnt);
+  }
+  if(detailProfile != NULL) {
+    detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_STATE_PROJECTION]
+        += BFFSZC2DetailMonotonicSeconds()-componentStart;
+  }
+  if(stateAllowed) {
+    if(detailProfile != NULL) componentStart = BFFSZC2DetailMonotonicSeconds();
     MakeProjBFCnt(projBFCntNew,eleNum);
+    if(detailProfile != NULL) {
+      detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_BF_COUNT]
+          += BFFSZC2DetailMonotonicSeconds()-componentStart;
+      componentStart = BFFSZC2DetailMonotonicSeconds();
+      if(CollectBFAffectedParticlesTwoMove_fsz(
+          eleProjBFCnt,projBFCntNew,ml,mj,eleIdx,eleSpn,
+          affected,hopIntWork,hopIntWorkSize,&nChanged,&nAffected) != 0) {
+        fprintf(stderr,"error: BF-FSZ C2 detail affected collector failed\n");
+        MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+      }
+      detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_AFFECTED_COLLECT]
+          += BFFSZC2DetailMonotonicSeconds()-componentStart;
+      detailProfile->evaluatedCalls++;
+      detailProfile->changedSum += nChanged;
+      detailProfile->affectedSum += nAffected;
+      if(nChanged > detailProfile->changedMax) detailProfile->changedMax = nChanged;
+      if(nAffected > detailProfile->affectedMax) detailProfile->affectedMax = nAffected;
+      detailProfile->changedHist[BFFSZProfileHistBin(nChanged)]++;
+      detailProfile->affectedHist[BFFSZProfileHistBin(nAffected)]++;
+      if(nAffected >= BFFSZPfUpdateKFull) detailProfile->affectedAtOrAboveKFull++;
+      detailProfile->outcome[BFFSZ_C2_DETAIL_OUTCOME_EVALUATED]++;
+      detailProfile->path[BFFSZ_C2_DETAIL_PATH_LEGACY_FULL]++;
+      componentStart = BFFSZC2DetailMonotonicSeconds();
+    }
     MakeSlaterElmBF_fsz_to_serial(candidateSlater,eleNum,projBFCntNew);
+    if(detailProfile != NULL) {
+      detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_CANDIDATE_BUILD]
+          += BFFSZC2DetailMonotonicSeconds()-componentStart;
+      componentStart = BFFSZC2DetailMonotonicSeconds();
+    }
     z *= CalculateBF_FSZ_CandidateIP("GreenFunc2BF_fsz2",candidateSlater,
         eleIdx,eleSpn,pfMNew,pfBufM,pfIWork,pfWork,pfRWork);
+    if(detailProfile != NULL) {
+      detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_PFAFFIAN]
+          += BFFSZC2DetailMonotonicSeconds()-componentStart;
+    }
     result = conj(z/ip);
+  } else if(detailProfile != NULL) {
+    detailProfile->outcome[BFFSZ_C2_DETAIL_OUTCOME_SECTOR_ZERO]++;
   }
 
+  if(detailProfile != NULL) componentStart = BFFSZC2DetailMonotonicSeconds();
   eleCfg[XL] = ml;
   eleCfg[XK] = -1;
   eleIdx[ml] = rl;
@@ -1155,8 +1282,27 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
   eleSpn[mj] = t;
   eleNum[XJ] = 1;
   eleNum[XI] = 0;
+  if(detailProfile != NULL) {
+    detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_RESTORE]
+        += BFFSZC2DetailMonotonicSeconds()-componentStart;
+  }
 
   return result;
+}
+
+double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const int u, const int v,
+                  const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, int *affected,
+                  int *hopIntWork, int hopIntWorkSize,
+                  int *pfIWork, double *pfRWork,
+                  double complex *pfBufM, double complex *pfWork) {
+  return GreenFunc2BF_fsz2WithProfile(ri,rj,rk,rl,s,t,u,v,ip,
+      eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn,projCntNew,
+      eleProjBFCnt,projBFCntNew,buffer,affected,hopIntWork,hopIntWorkSize,
+      pfIWork,pfRWork,pfBufM,pfWork,NULL);
 }
 
 /* Calculate n-body Green function in orbital-general (fsz) mode. */

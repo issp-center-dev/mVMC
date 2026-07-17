@@ -226,6 +226,15 @@ def build_spin_changing_c2_rows():
     return [spin_orbital_row(indices) for indices in classes]
 
 
+def write_c2_detail_profile_defs(workdir):
+    write_spin_changing_c2_defs(workdir)
+    class_rows = build_spin_changing_c2_rows()
+    weighted_rows = []
+    for class_id, row in enumerate(class_rows, 1):
+        weighted_rows.extend([row] * class_id)
+    write_two_body_rows(workdir, weighted_rows)
+
+
 def append_namelist_entry(workdir, keyword, filename):
     path = os.path.join(workdir, "namelist.def")
     with open(path) as fp:
@@ -1859,6 +1868,282 @@ def assert_spin_changing_c2_rows(workdir):
     return 0
 
 
+def read_c2_detail_profile(timer_path):
+    with open(timer_path) as fp:
+        lines = [line.strip() for line in fp]
+    begin = "BF_FSZ_C2_DETAIL_PROFILE_BEGIN"
+    end = "BF_FSZ_C2_DETAIL_PROFILE_END"
+    if not any(line.startswith(begin) for line in lines):
+        return []
+    records = []
+    in_section = False
+    for line in lines:
+        if line.startswith(begin):
+            in_section = True
+            continue
+        if line == end:
+            return records
+        if not in_section or not line:
+            continue
+        parts = line.split()
+        record = {}
+        if len(parts) > 1 and "=" not in parts[1]:
+            record["kind"] = parts[1]
+        for part in parts:
+            if "=" in part:
+                key, value = part.split("=", 1)
+                record[key] = value
+        if parts[0] == "affected_gate":
+            record["kind"] = "gate"
+        elif "timer41_seconds_rank0" in record:
+            record["kind"] = "total"
+        elif "ordered_descriptors" in record:
+            record["kind"] = "ordered_descriptors"
+        records.append(record)
+    raise RuntimeError("unterminated BF-FSZ C2 detail profile section")
+
+
+def get_c2_detail_record(records, **query):
+    matches = [
+        record for record in records
+        if all(record.get(key) == str(value) for key, value in query.items())
+    ]
+    if len(matches) != 1:
+        raise RuntimeError("C2 detail record mismatch for {}: {}".format(query, matches))
+    return matches[0]
+
+
+def read_stable_bf_profile_lines(timer_path):
+    stable = []
+    with open(timer_path) as fp:
+        for line in fp:
+            stripped = " ".join(line.split())
+            if not stripped.startswith("BF"):
+                continue
+            if "seconds" in stripped or "checks" in stripped:
+                continue
+            if ("[9" in stripped or " calls=" in stripped
+                    or " hist " in stripped or " paths " in stripped
+                    or " materialize " in stripped or " commits " in stripped):
+                stable.append(stripped)
+    return stable
+
+
+def assert_files_byte_identical(left_workdir, right_workdir, filenames):
+    for filename in filenames:
+        left_path = os.path.join(left_workdir, "output", filename)
+        right_path = os.path.join(right_workdir, "output", filename)
+        with open(left_path, "rb") as fp:
+            left_data = fp.read()
+        with open(right_path, "rb") as fp:
+            right_data = fp.read()
+        if left_data != right_data:
+            print("ERROR: C2 detail profile changed {}".format(filename))
+            return -1
+    return 0
+
+
+def validate_c2_detail_profile(timer_path):
+    records = read_c2_detail_profile(timer_path)
+    if not records:
+        print("ERROR: BF-FSZ C2 detail profile section is missing")
+        return -1
+    sources = ("measurement", "pair_hop", "exchange", "inter_all")
+    components = (
+        "dispatch", "state_projection", "bf_count", "candidate_build",
+        "pfaffian", "restore", "affected_collect",
+    )
+    component_seconds = {}
+    evaluated_total = 0
+    for source in sources:
+        class_calls = [
+            int(get_c2_detail_record(
+                records, source=source, **{"class": class_id},
+            )["calls"])
+            for class_id in range(1, 16)
+        ]
+        if sum(class_calls) <= 0 or class_calls[14] <= 0:
+            print("ERROR: C2 detail source {} was vacuous".format(source))
+            return -1
+        if source == "measurement":
+            base_calls = class_calls[0]
+            expected_calls = [base_calls * class_id for class_id in range(1, 16)]
+            if base_calls <= 0 or class_calls != expected_calls:
+                print("ERROR: C2 15-class counter oracle mismatch: {}".format(class_calls))
+                return -1
+
+        outcomes = {
+            name: int(get_c2_detail_record(
+                records, source=source, outcome=name,
+            )["calls"])
+            for name in ("occupancy_zero", "sector_zero", "evaluated")
+        }
+        if sum(outcomes.values()) != class_calls[14]:
+            print("ERROR: C2 {} true outcome count mismatch".format(source))
+            return -1
+        evaluated = outcomes["evaluated"]
+        evaluated_total += evaluated
+
+        paths = {
+            name: int(get_c2_detail_record(
+                records, source=source, path=name,
+            )["calls"])
+            for name in (
+                "legacy_full", "optimized_row", "direct_full", "fallback",
+                "debug_oracle",
+            )
+        }
+        if paths["legacy_full"] != evaluated \
+                or sum(paths.values()) != evaluated:
+            print("ERROR: C2 {} legacy path count mismatch".format(source))
+            return -1
+        descriptors = int(get_c2_detail_record(
+            records, source=source, kind="ordered_descriptors",
+        )["ordered_descriptors"])
+        if descriptors != class_calls[14]:
+            print("ERROR: C2 {} descriptor count mismatch".format(source))
+            return -1
+
+        changed = get_c2_detail_record(records, source=source, kind="changed")
+        affected = get_c2_detail_record(records, source=source, kind="affected")
+        if int(changed["calls"]) != evaluated or int(affected["calls"]) != evaluated:
+            print("ERROR: C2 {} affected call count mismatch".format(source))
+            return -1
+        if int(affected["at_or_above_k_full"]) != 0 \
+                or (evaluated > 0 and int(affected["max"]) <= 0):
+            print("ERROR: C2 {} affected gate failed".format(source))
+            return -1
+        for kind in ("changed_hist", "affected_hist"):
+            hist_sum = sum(
+                int(get_c2_detail_record(
+                    records, source=source, kind=kind, bin=bin_id,
+                )["calls"])
+                for bin_id in range(22)
+            )
+            if hist_sum != evaluated:
+                print("ERROR: C2 {} {} count mismatch".format(source, kind))
+                return -1
+
+        component_seconds[source] = {}
+        for component in components:
+            seconds = float(get_c2_detail_record(
+                records, source=source, component=component,
+            )["seconds_rank0"])
+            if not math.isfinite(seconds) or seconds < 0.0:
+                print("ERROR: C2 {} {} timer is invalid".format(source, component))
+                return -1
+            component_seconds[source][component] = seconds
+        if sum(component_seconds[source].values()) <= 0.0:
+            print("ERROR: C2 {} component timers were vacuous".format(source))
+            return -1
+
+    gate = get_c2_detail_record(records, kind="gate")
+    if int(gate["k_full"]) != 32 or int(gate["evaluated_calls"]) != evaluated_total \
+            or int(gate["at_or_above_k_full"]) != 0 or int(gate["pass"]) != 1:
+        print("ERROR: C2 affected gate summary mismatch")
+        return -1
+
+    term_seconds = {}
+    for term in ("number", "transfer", "pair_hop", "exchange", "inter_all"):
+        seconds = float(get_c2_detail_record(
+            records, hamiltonian_term=term,
+        )["seconds_rank0"])
+        if not math.isfinite(seconds) or seconds < 0.0:
+            print("ERROR: C2 Hamiltonian term timer {} is invalid".format(term))
+            return -1
+        term_seconds[term] = seconds
+    for source in ("pair_hop", "exchange", "inter_all"):
+        if term_seconds[source] + 5.0e-6 < sum(component_seconds[source].values()):
+            print("ERROR: C2 {} component time exceeds enclosing term".format(source))
+            return -1
+
+    total = get_c2_detail_record(records, kind="total")
+    timer41 = float(total["timer41_seconds_rank0"])
+    term_total = float(total["hamiltonian_term_seconds_rank0"])
+    sz_seconds = float(total["sz_seconds_rank0"])
+    wrapper = float(total["wrapper_overhead_seconds_rank0"])
+    if abs(term_total - sum(term_seconds.values())) > 5.0e-6 \
+            or abs(timer41 - term_total - sz_seconds - wrapper) > 5.0e-6 \
+            or wrapper < -5.0e-6:
+        print("ERROR: C2 timer41/term/Sz/wrapper consistency failed")
+        return -1
+    return 0
+
+
+def run_c2_detail_profile_case(rootdir, case_name, mpi_procs=None):
+    cases = (
+        "BackFlow_FSZ_C2_Detail_Profile_Complex",
+        "BackFlow_FSZ_C2_Detail_Profile_Complex_mpi",
+        "BackFlow_FSZ_C2_Detail_Profile_Complex_omp",
+    )
+    if case_name not in cases:
+        return None
+
+    run_specs = (
+        ("off", {}),
+        ("new", {
+            "MVMC_BF_FSZ_C2_DETAIL_PROFILE": "1",
+            "MVMC_BF_FSZ_PF_UPDATE_KFULL": "0",
+        }),
+        ("old", {"MVMC_BF_PROFILE": "1"}),
+        ("both", {
+            "MVMC_BF_PROFILE": "1",
+            "MVMC_BF_FSZ_C2_DETAIL_PROFILE": "1",
+            "MVMC_BF_FSZ_PF_UPDATE_KFULL": "33",
+        }),
+    )
+    workdirs = {}
+    for suffix, extra_env in run_specs:
+        workdir = prepare_case(rootdir, case_name + "_" + suffix, True)
+        update_modpara(workdir, {"2Sz": "-1", "NVMCSample": "16"})
+        if mpi_procs:
+            update_modpara(workdir, {"NSplitSize": str(mpi_procs)})
+        write_c2_detail_profile_defs(workdir)
+        proc = run_vmc(
+            rootdir, workdir, mpi_procs=mpi_procs, extra_env=extra_env,
+        )
+        if proc.returncode != 0:
+            print(proc.stdout)
+            return proc.returncode
+        workdirs[suffix] = workdir
+
+    physical_files = (
+        "zvo_out_001.dat", "zvo_var_001.dat", "zvo_cisajs_001.dat",
+        "zvo_cisajscktalt_001.dat", "zvo_cisajscktaltex_001.dat",
+    )
+    status = assert_files_byte_identical(
+        workdirs["off"], workdirs["new"], physical_files,
+    )
+    if status != 0:
+        return status
+
+    timer_paths = {
+        suffix: os.path.join(workdir, "output", "zvo_CalcTimer.dat")
+        for suffix, workdir in workdirs.items()
+    }
+    timer_text = {}
+    for suffix, path in timer_paths.items():
+        with open(path) as fp:
+            timer_text[suffix] = fp.read()
+    detail_marker = "BF_FSZ_C2_DETAIL_PROFILE_BEGIN"
+    old_marker = "BF profile counters (MVMC_BF_PROFILE=1)"
+    if detail_marker in timer_text["off"] or old_marker in timer_text["off"] \
+            or detail_marker not in timer_text["new"] or old_marker in timer_text["new"] \
+            or detail_marker in timer_text["old"] or old_marker not in timer_text["old"] \
+            or detail_marker not in timer_text["both"] or old_marker not in timer_text["both"]:
+        print("ERROR: old/new BF profile enable sections are not independent")
+        return -1
+    if read_stable_bf_profile_lines(timer_paths["old"]) \
+            != read_stable_bf_profile_lines(timer_paths["both"]):
+        print("ERROR: C2 detail profile changed existing BF profile counters")
+        return -1
+    for suffix in ("new", "both"):
+        status = validate_c2_detail_profile(timer_paths[suffix])
+        if status != 0:
+            return status
+    return 0
+
+
 def run_spin_changing_c2_case(rootdir, case_name, mpi_procs=None):
     cases = {
         "BackFlow_FSZ_SpinChanging_C2_Identity_Complex": (True, False, False),
@@ -2038,6 +2323,9 @@ def main():
     c2_status = run_spin_changing_c2_case(rootdir, case_name, mpi_procs)
     if c2_status is not None:
         return c2_status
+    c2_profile_status = run_c2_detail_profile_case(rootdir, case_name, mpi_procs)
+    if c2_profile_status is not None:
+        return c2_profile_status
     c2_invalid_status = run_c2_nonfsz_invalid_case(rootdir, case_name, mpi_procs)
     if c2_invalid_status is not None:
         return c2_invalid_status
