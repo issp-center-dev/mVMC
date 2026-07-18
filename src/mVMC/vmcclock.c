@@ -54,6 +54,134 @@ double BFFSZC2DetailMonotonicSeconds(void) {
   return ts.tv_sec + ts.tv_nsec*1.0e-9;
 }
 
+static unsigned long long BFFSZC2ReuseCensusHash(
+    int XI, int XJ, int XK, int XL) {
+  const int values[4] = {XI,XJ,XK,XL};
+  unsigned long long hash = 1469598103934665603ULL;
+  int i;
+  for(i=0;i<4;i++) {
+    hash ^= (unsigned int)values[i];
+    hash *= 1099511628211ULL;
+  }
+  return hash;
+}
+
+int GetBFFSZC2ReuseCensusWorkSize(
+    long long maxCalls, int *capacity, int *intWorkSize) {
+  long long required, value;
+  if(capacity == NULL || intWorkSize == NULL || maxCalls < 0) return -1;
+  *capacity = 0;
+  *intWorkSize = 0;
+  if(maxCalls == 0) return 0;
+  if(maxCalls > INT_MAX/8) return -1;
+  required = 2*maxCalls;
+  value = 1;
+  while(value < required) value *= 2;
+  if(value > INT_MAX/4) return -1;
+  *capacity = (int)value;
+  *intWorkSize = 4*(int)value;
+  return 0;
+}
+
+int InitBFFSZC2ReuseCensus(
+    BFFSZC2ReuseCensus *census, int *keys, int capacity) {
+  int i;
+  if(census == NULL || capacity < 0
+      || (capacity > 0 && (keys == NULL || (capacity & (capacity-1)) != 0))) {
+    return -1;
+  }
+  census->keys = keys;
+  census->capacity = capacity;
+  census->trueCalls = 0;
+  census->uniqueExactOrderedMoves = 0;
+  census->duplicateTrueCalls = 0;
+  census->overflowCalls = 0;
+  for(i=0;i<capacity;i++) keys[4*i] = -1;
+  return 0;
+}
+
+int RecordBFFSZC2ReuseCensus(
+    BFFSZC2ReuseCensus *census, int XI, int XJ, int XK, int XL) {
+  int probe;
+  unsigned long long slot;
+  int *key;
+  if(census == NULL || census->capacity <= 0 || census->keys == NULL
+      || (census->capacity & (census->capacity-1)) != 0
+      || XI < 0 || XJ < 0 || XK < 0 || XL < 0) {
+    return -1;
+  }
+  census->trueCalls++;
+  slot = BFFSZC2ReuseCensusHash(XI,XJ,XK,XL)
+      & (unsigned long long)(census->capacity-1);
+  for(probe=0;probe<census->capacity;probe++) {
+    key = census->keys+4*(int)slot;
+    if(key[0] < 0) {
+      key[0] = XI;
+      key[1] = XJ;
+      key[2] = XK;
+      key[3] = XL;
+      census->uniqueExactOrderedMoves++;
+      return 0;
+    }
+    if(key[0] == XI && key[1] == XJ && key[2] == XK && key[3] == XL) {
+      census->duplicateTrueCalls++;
+      return 0;
+    }
+    slot = (slot+1) & (unsigned long long)(census->capacity-1);
+  }
+  census->overflowCalls++;
+  return -1;
+}
+
+void MergeBFFSZC2ReuseCensus(
+    int scope, const BFFSZC2ReuseCensus *census) {
+  if(!BFFSZC2ReuseCensusEnabled || census == NULL
+      || scope < 0 || scope >= NBFFSZC2ReuseScope) return;
+  BFFSZC2ReuseCensusInvocations[scope]++;
+  BFFSZC2ReuseCensusTrueCalls[scope] += census->trueCalls;
+  BFFSZC2ReuseCensusUniqueExactOrderedMoves[scope]
+      += census->uniqueExactOrderedMoves;
+  BFFSZC2ReuseCensusDuplicateTrueCalls[scope] += census->duplicateTrueCalls;
+  BFFSZC2ReuseCensusOverflowCalls[scope] += census->overflowCalls;
+}
+
+static int CheckBFFSZC2ReuseCensus(void) {
+  BFFSZC2ReuseCensus census;
+  int keys[32];
+  int first[8];
+  int a,slot,firstValue=-1,secondValue=-1;
+  for(a=0;a<8;a++) first[a] = -1;
+  for(a=0;a<9;a++) {
+    slot = (int)(BFFSZC2ReuseCensusHash(a,a+1,a+2,a+3) & 7ULL);
+    if(first[slot] >= 0) {
+      firstValue = first[slot];
+      secondValue = a;
+      break;
+    }
+    first[slot] = a;
+  }
+  if(firstValue < 0 || InitBFFSZC2ReuseCensus(&census,keys,8) != 0
+      || RecordBFFSZC2ReuseCensus(&census,firstValue,firstValue+1,
+          firstValue+2,firstValue+3) != 0
+      || RecordBFFSZC2ReuseCensus(&census,secondValue,secondValue+1,
+          secondValue+2,secondValue+3) != 0
+      || RecordBFFSZC2ReuseCensus(&census,firstValue,firstValue+1,
+          firstValue+2,firstValue+3) != 0
+      || census.trueCalls != 3 || census.uniqueExactOrderedMoves != 2
+      || census.duplicateTrueCalls != 1 || census.overflowCalls != 0) {
+    return -1;
+  }
+  if(InitBFFSZC2ReuseCensus(&census,keys,8) != 0) return -1;
+  for(a=0;a<4;a++) {
+    if(RecordBFFSZC2ReuseCensus(&census,a,10+a,20+a,30+a) != 0) return -1;
+  }
+  if(census.trueCalls != 4 || census.uniqueExactOrderedMoves != 4
+      || census.duplicateTrueCalls != 0 || census.overflowCalls != 0) {
+    return -1;
+  }
+  return 0;
+}
+
 void InitBFFSZC2DetailContext(BFFSZC2DetailContext *context, int source) {
   int i;
   if(context == NULL) return;
@@ -65,6 +193,7 @@ void InitBFFSZC2DetailContext(BFFSZC2DetailContext *context, int source) {
   context->affectedMax = 0;
   context->affectedAtOrAboveKFull = 0;
   context->orderedDescriptorTotal = 0;
+  context->reuseCensus = NULL;
   for(i=0;i<NBFFSZC2DetailClass;i++) context->classCall[i] = 0;
   for(i=0;i<NBFFSZC2DetailOutcome;i++) context->outcome[i] = 0;
   for(i=0;i<NBFFSZC2DetailPath;i++) context->path[i] = 0;
@@ -137,7 +266,7 @@ void InitTimer() {
   const char *invUpdateArgumentEnv, *invGemmCheckEnv, *invDetailProfileEnv;
   const char *matrixFreeCheckEnv, *matrixFreeArgumentEnv, *multiMoveRowCheckEnv;
   const char *c2StateCheckEnv, *c2BufferCheckEnv, *c2ForceSectorZeroEnv;
-  const char *samplingRejectCheckEnv, *c2DetailProfileEnv;
+  const char *samplingRejectCheckEnv, *c2DetailProfileEnv, *c2ReuseCensusEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
   for(i=0;i<NTimer;i++) TimerStart[i]=0.0;
   for(i=0;i<NBFProfileCounter;i++) BFProfileCounter[i]=0;
@@ -194,6 +323,13 @@ void InitTimer() {
   }
   for(i=0;i<NBFFSZC2DetailTerm;i++) BFFSZC2DetailTermSeconds[i] = 0.0;
   BFFSZC2DetailSzSecondsRank0 = 0.0;
+  for(i=0;i<NBFFSZC2ReuseScope;i++) {
+    BFFSZC2ReuseCensusInvocations[i] = 0;
+    BFFSZC2ReuseCensusTrueCalls[i] = 0;
+    BFFSZC2ReuseCensusUniqueExactOrderedMoves[i] = 0;
+    BFFSZC2ReuseCensusDuplicateTrueCalls[i] = 0;
+    BFFSZC2ReuseCensusOverflowCalls[i] = 0;
+  }
   bfProfileEnv = getenv("MVMC_BF_PROFILE");
   BFProfileEnabled = (bfProfileEnv != NULL && atoi(bfProfileEnv) != 0);
   greenCheckEnv = getenv("MVMC_BF_FSZ_GREEN_REBUILD_CHECK");
@@ -275,6 +411,13 @@ void InitTimer() {
   c2DetailProfileEnv = getenv("MVMC_BF_FSZ_C2_DETAIL_PROFILE");
   BFFSZC2DetailProfileEnabled = (c2DetailProfileEnv != NULL
       && atoi(c2DetailProfileEnv) != 0);
+  c2ReuseCensusEnv = getenv("MVMC_BF_FSZ_C2_REUSE_CENSUS");
+  BFFSZC2ReuseCensusEnabled = BFFSZC2DetailProfileEnabled
+      && c2ReuseCensusEnv != NULL && atoi(c2ReuseCensusEnv) != 0;
+  if(BFFSZC2ReuseCensusEnabled && CheckBFFSZC2ReuseCensus() != 0) {
+    fprintf(stderr,"error: BF-FSZ C2 reuse census self-check failed\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
   matrixFreeCheckEnv = getenv("MVMC_BF_FSZ_MATRIX_FREE_CHECK");
   BFFSZMatrixFreeCheckEnabled = (matrixFreeCheckEnv != NULL
       && atoi(matrixFreeCheckEnv) != 0);
@@ -493,6 +636,9 @@ static void OutputBFProfileCounters(FILE *fp) {
     const char *termLabels[NBFFSZC2DetailTerm] = {
       "number", "transfer", "pair_hop", "exchange", "inter_all"
     };
+    const char *reuseScopeLabels[NBFFSZC2ReuseScope] = {
+      "measurement", "hamiltonian"
+    };
     double termSeconds = 0.0;
     long long gateEvaluated = 0;
     long long gateFailures = 0;
@@ -544,6 +690,19 @@ static void OutputBFProfileCounters(FILE *fp) {
             Timer[41]-termSeconds-BFFSZC2DetailSzSecondsRank0);
     fprintf(fp,"affected_gate k_full=%d evaluated_calls=%lld at_or_above_k_full=%lld pass=%d\n",
             BFFSZPfUpdateKFull,gateEvaluated,gateFailures,(gateFailures == 0));
+    if(BFFSZC2ReuseCensusEnabled) {
+      for(i=0;i<NBFFSZC2ReuseScope;i++) {
+        const double reuseRatio = (BFFSZC2ReuseCensusUniqueExactOrderedMoves[i] > 0)
+            ? (double)BFFSZC2ReuseCensusTrueCalls[i]
+                /(double)BFFSZC2ReuseCensusUniqueExactOrderedMoves[i] : 0.0;
+        fprintf(fp,"reuse_census scope=%s invocations=%lld true_calls=%lld unique_exact_ordered_moves=%lld duplicate_true_calls=%lld overflow_calls=%lld reuse_ratio=%.9f\n",
+                reuseScopeLabels[i],BFFSZC2ReuseCensusInvocations[i],
+                BFFSZC2ReuseCensusTrueCalls[i],
+                BFFSZC2ReuseCensusUniqueExactOrderedMoves[i],
+                BFFSZC2ReuseCensusDuplicateTrueCalls[i],
+                BFFSZC2ReuseCensusOverflowCalls[i],reuseRatio);
+      }
+    }
     fprintf(fp,"BF_FSZ_C2_DETAIL_PROFILE_END\n");
   }
 }

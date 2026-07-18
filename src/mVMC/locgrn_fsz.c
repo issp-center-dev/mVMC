@@ -1784,6 +1784,12 @@ double complex GreenFunc2BF_fsz2WithProfile(
       detailProfile->outcome[BFFSZ_C2_DETAIL_OUTCOME_EVALUATED]++;
       detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_CANDIDATE_BUILD]
           += BFFSZC2DetailMonotonicSeconds()-componentStart;
+      if(detailProfile->reuseCensus != NULL
+          && RecordBFFSZC2ReuseCensus(
+              detailProfile->reuseCensus,XI,XJ,XK,XL) != 0) {
+        fprintf(stderr,"error: BF-FSZ C2 reuse census insertion failed\n");
+        MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+      }
     }
     RecordBFFSZProfile(BFFSZ_PROFILE_GREEN,nChanged,nAffected);
     if(detailProfile != NULL) componentStart = BFFSZC2DetailMonotonicSeconds();

@@ -1918,6 +1918,8 @@ def read_c2_detail_profile(timer_path):
                 record[key] = value
         if parts[0] == "affected_gate":
             record["kind"] = "gate"
+        elif parts[0] == "reuse_census":
+            record["kind"] = "reuse_census"
         elif "timer41_seconds_rank0" in record:
             record["kind"] = "total"
         elif "ordered_descriptors" in record:
@@ -2101,6 +2103,48 @@ def validate_c2_detail_profile(timer_path):
     return 0
 
 
+def validate_c2_reuse_census(timer_path, require_duplicate=True):
+    records = read_c2_detail_profile(timer_path)
+    evaluated = {
+        source: int(get_c2_detail_record(
+            records, source=source, outcome="evaluated",
+        )["calls"])
+        for source in ("measurement", "pair_hop", "exchange", "inter_all")
+    }
+    expected_true_calls = {
+        "measurement": evaluated["measurement"],
+        "hamiltonian": sum(
+            evaluated[source] for source in ("pair_hop", "exchange", "inter_all")
+        ),
+    }
+    for scope in ("measurement", "hamiltonian"):
+        record = get_c2_detail_record(
+            records, kind="reuse_census", scope=scope,
+        )
+        invocations = int(record["invocations"])
+        true_calls = int(record["true_calls"])
+        unique_moves = int(record["unique_exact_ordered_moves"])
+        duplicate_calls = int(record["duplicate_true_calls"])
+        overflow_calls = int(record["overflow_calls"])
+        reuse_ratio = float(record["reuse_ratio"])
+        expected_ratio = true_calls / unique_moves if unique_moves else 0.0
+        if invocations <= 0 or true_calls != expected_true_calls[scope] \
+                or true_calls != unique_moves + duplicate_calls \
+                or overflow_calls != 0 \
+                or abs(reuse_ratio - expected_ratio) > 5.0e-9:
+            print("ERROR: C2 reuse census {} consistency failed".format(scope))
+            return -1
+    measurement = get_c2_detail_record(
+        records, kind="reuse_census", scope="measurement",
+    )
+    if require_duplicate \
+            and (int(measurement["unique_exact_ordered_moves"]) <= 0
+                 or int(measurement["duplicate_true_calls"]) <= 0):
+        print("ERROR: C2 reuse census duplicate-key fixture was vacuous")
+        return -1
+    return 0
+
+
 def validate_c2_matrix_free_path(timer_path, mode):
     records = read_c2_detail_profile(timer_path)
     if not records:
@@ -2190,6 +2234,11 @@ def validate_c2_matrix_free_path(timer_path, mode):
         if materialize["fallback"] < evaluated_total:
             print("ERROR: C2 fallback materialization count mismatch")
             return -1
+    status = validate_c2_reuse_census(
+        timer_path, require_duplicate=(mode != "sector"),
+    )
+    if status != 0:
+        return status
     return 0
 
 
@@ -2238,6 +2287,7 @@ def run_c2_matrix_free_paths_case(rootdir, case_name, mpi_procs=None):
         extra_env = {
             "MVMC_BF_PROFILE": "1",
             "MVMC_BF_FSZ_C2_DETAIL_PROFILE": "1",
+            "MVMC_BF_FSZ_C2_REUSE_CENSUS": "1",
             "MVMC_BF_FSZ_C2_STATE_CHECK": "1",
             "MVMC_BF_FSZ_C2_BUFFER_CHECK": "1",
         }
@@ -2295,6 +2345,11 @@ def run_c2_detail_profile_case(rootdir, case_name, mpi_procs=None):
             "MVMC_BF_FSZ_C2_DETAIL_PROFILE": "1",
             "MVMC_BF_FSZ_PF_UPDATE_KFULL": "33",
         }),
+        ("census", {
+            "MVMC_BF_FSZ_C2_DETAIL_PROFILE": "1",
+            "MVMC_BF_FSZ_C2_REUSE_CENSUS": "1",
+            "MVMC_BF_FSZ_PF_UPDATE_KFULL": "0",
+        }),
     )
     workdirs = {}
     for suffix, extra_env in run_specs:
@@ -2320,6 +2375,11 @@ def run_c2_detail_profile_case(rootdir, case_name, mpi_procs=None):
     )
     if status != 0:
         return status
+    status = assert_files_byte_identical(
+        workdirs["off"], workdirs["census"], physical_files,
+    )
+    if status != 0:
+        return status
 
     timer_paths = {
         suffix: os.path.join(workdir, "output", "zvo_CalcTimer.dat")
@@ -2331,20 +2391,30 @@ def run_c2_detail_profile_case(rootdir, case_name, mpi_procs=None):
             timer_text[suffix] = fp.read()
     detail_marker = "BF_FSZ_C2_DETAIL_PROFILE_BEGIN"
     old_marker = "BF profile counters (MVMC_BF_PROFILE=1)"
+    reuse_marker = "reuse_census scope="
     if detail_marker in timer_text["off"] or old_marker in timer_text["off"] \
             or detail_marker not in timer_text["new"] or old_marker in timer_text["new"] \
             or detail_marker in timer_text["old"] or old_marker not in timer_text["old"] \
-            or detail_marker not in timer_text["both"] or old_marker not in timer_text["both"]:
+            or detail_marker not in timer_text["both"] or old_marker not in timer_text["both"] \
+            or detail_marker not in timer_text["census"] or old_marker in timer_text["census"]:
         print("ERROR: old/new BF profile enable sections are not independent")
+        return -1
+    if reuse_marker in timer_text["off"] or reuse_marker in timer_text["new"] \
+            or reuse_marker in timer_text["old"] or reuse_marker in timer_text["both"] \
+            or reuse_marker not in timer_text["census"]:
+        print("ERROR: C2 reuse census enable section is not independent")
         return -1
     if read_stable_bf_profile_lines(timer_paths["old"]) \
             != read_stable_bf_profile_lines(timer_paths["both"]):
         print("ERROR: C2 detail profile changed existing BF profile counters")
         return -1
-    for suffix in ("new", "both"):
+    for suffix in ("new", "both", "census"):
         status = validate_c2_detail_profile(timer_paths[suffix])
         if status != 0:
             return status
+    status = validate_c2_reuse_census(timer_paths["census"])
+    if status != 0:
+        return status
     return 0
 
 

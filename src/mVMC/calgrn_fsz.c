@@ -269,12 +269,15 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   long long bfSerialBaseIntSizeLL, bfGreen1IntSizeLL;
   int bfSerialBaseIntSize;
   int bfHopIntSize, bfSerialIntSize, bfGreen1IntSize;
+  int reuseCensusCapacity=0, reuseCensusIntSize=0;
+  int *reuseCensusKeys = NULL;
   int *thEleIdx, *thEleCfg, *thEleNum, *thEleSpn;
   int *thProjCntNew, *thProjBFCntNew, *thAffected, *thHopIntWork, *thPfIWork;
   double complex *thBuffer, *thPfBufM, *thPfWork;
   double *thPfRWork;
   BFFSZC2DetailContext c2DetailContext;
   BFFSZC2DetailContext *c2DetailProfile = NULL;
+  BFFSZC2ReuseCensus reuseCensus;
 
   if(BFFSZC2DetailProfileEnabled) {
     InitBFFSZC2DetailContext(&c2DetailContext,
@@ -329,7 +332,18 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
   bfGreen1IntSize = (int)bfGreen1IntSizeLL;
-  bfSerialIntSize = bfGreen1IntSize;
+  if(BFFSZC2ReuseCensusEnabled
+      && GetBFFSZC2ReuseCensusWorkSize(
+          (long long)NCisAjsCktAltDC,&reuseCensusCapacity,
+          &reuseCensusIntSize) != 0) {
+    fprintf(stderr,"Error: invalid BF-FSZ Green C2 reuse census workspace size.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  if(reuseCensusIntSize > INT_MAX-bfGreen1IntSize) {
+    fprintf(stderr,"Error: BF-FSZ Green C2 reuse census workspace is too large.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  bfSerialIntSize = bfGreen1IntSize+reuseCensusIntSize;
 
   RequestWorkSpaceInt(bfSerialIntSize);
   RequestWorkSpaceComplex(bfGreen1ComplexSize);
@@ -347,10 +361,22 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   myAffected = GetWorkSpaceInt(Nsize);
   myHopIntWork = GetWorkSpaceInt(bfHopIntSize);
   myPfIWork = GetWorkSpaceInt(bfPfIntSize);
+  if(reuseCensusIntSize > 0) {
+    reuseCensusKeys = GetWorkSpaceInt(reuseCensusIntSize);
+  }
   myBuffer = GetWorkSpaceComplex(bfGreen1BufferSize);
   myPfBufM = GetWorkSpaceComplex(Nsize*Nsize);
   myPfWork = GetWorkSpaceComplex(LapackLWork);
   myPfRWork = GetWorkSpaceDouble(bfPfDoubleSize);
+
+  if(BFFSZC2ReuseCensusEnabled) {
+    if(InitBFFSZC2ReuseCensus(
+        &reuseCensus,reuseCensusKeys,reuseCensusCapacity) != 0) {
+      fprintf(stderr,"Error: BF-FSZ Green C2 reuse census initialization failed.\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+    c2DetailContext.reuseCensus = &reuseCensus;
+  }
 
   for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
   for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
@@ -433,6 +459,9 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   }
   StopTimer(51);
   if(c2DetailProfile != NULL) MergeBFFSZC2DetailContext(c2DetailProfile);
+  if(BFFSZC2ReuseCensusEnabled) {
+    MergeBFFSZC2ReuseCensus(BFFSZ_C2_REUSE_SCOPE_MEASUREMENT,&reuseCensus);
+  }
 
   StartTimer(52);
   for(idx=0;idx<NCisAjs;idx++) {

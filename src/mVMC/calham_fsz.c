@@ -289,6 +289,8 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   size_t bfBufferSize,bfComplexSize,nsizeSquared;
   long long bfBaseIntSizeLL,bfIntSizeLL;
   int bfBaseIntSize, bfHopIntSize, bfIntSize, bfPfIntSize, bfPfDoubleSize;
+  int reuseCensusCapacity=0, reuseCensusIntSize=0;
+  int *reuseCensusKeys = NULL;
   BFFSZC2DetailContext pairHopDetailContext;
   BFFSZC2DetailContext exchangeDetailContext;
   BFFSZC2DetailContext interAllDetailContext;
@@ -297,6 +299,7 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   BFFSZC2DetailContext *interAllDetailProfile = NULL;
   BFFSZC2DetailTermContext termDetailContext;
   BFFSZC2DetailTermContext *termDetailProfile = NULL;
+  BFFSZC2ReuseCensus reuseCensus;
   double termStart = 0.0;
 
   if(BFFSZC2DetailProfileEnabled) {
@@ -348,7 +351,16 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
   bfBaseIntSize = (int)bfBaseIntSizeLL;
-  bfIntSizeLL = (long long)bfBaseIntSize+Nsize+bfHopIntSize+bfPfIntSize;
+  if(BFFSZC2ReuseCensusEnabled
+      && (NPairHopping < 0 || NExchangeCoupling < 0 || NInterAll < 0
+          || GetBFFSZC2ReuseCensusWorkSize(
+              (long long)NPairHopping+2LL*NExchangeCoupling+NInterAll,
+              &reuseCensusCapacity,&reuseCensusIntSize) != 0)) {
+    fprintf(stderr,"Error: invalid BF-FSZ Hamiltonian C2 reuse census workspace size.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  bfIntSizeLL = (long long)bfBaseIntSize+Nsize+bfHopIntSize+bfPfIntSize
+      + reuseCensusIntSize;
   if(bfIntSizeLL < 0 || bfIntSizeLL > INT_MAX) {
     fprintf(stderr, "Error: invalid BF-FSZ Hamiltonian integer workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -368,10 +380,24 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   myAffected = GetWorkSpaceInt(Nsize);
   myHopIntWork = GetWorkSpaceInt(bfHopIntSize);
   myPfIWork = GetWorkSpaceInt(bfPfIntSize);
+  if(reuseCensusIntSize > 0) {
+    reuseCensusKeys = GetWorkSpaceInt(reuseCensusIntSize);
+  }
   myBuffer = GetWorkSpaceComplex((int)bfBufferSize);
   myPfBufM = GetWorkSpaceComplex(Nsize*Nsize);
   myPfWork = GetWorkSpaceComplex(LapackLWork);
   myPfRWork = GetWorkSpaceDouble(bfPfDoubleSize);
+
+  if(BFFSZC2ReuseCensusEnabled) {
+    if(InitBFFSZC2ReuseCensus(
+        &reuseCensus,reuseCensusKeys,reuseCensusCapacity) != 0) {
+      fprintf(stderr,"Error: BF-FSZ Hamiltonian C2 reuse census initialization failed.\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+    pairHopDetailContext.reuseCensus = &reuseCensus;
+    exchangeDetailContext.reuseCensus = &reuseCensus;
+    interAllDetailContext.reuseCensus = &reuseCensus;
+  }
 
   for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
   for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
@@ -482,6 +508,9 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
     MergeBFFSZC2DetailContext(exchangeDetailProfile);
     MergeBFFSZC2DetailContext(interAllDetailProfile);
     MergeBFFSZC2DetailTermContext(termDetailProfile);
+  }
+  if(BFFSZC2ReuseCensusEnabled) {
+    MergeBFFSZC2ReuseCensus(BFFSZ_C2_REUSE_SCOPE_HAMILTONIAN,&reuseCensus);
   }
 
   ReleaseWorkSpaceInt();

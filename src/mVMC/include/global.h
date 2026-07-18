@@ -548,6 +548,19 @@ double BFFSZProfileInvDetailMaxSeconds[NBFFSZInvDetail];
 #define BFFSZ_C2_DETAIL_TERM_INTER_ALL 4
 #define NBFFSZC2DetailTerm 5
 
+#define BFFSZ_C2_REUSE_SCOPE_MEASUREMENT 0
+#define BFFSZ_C2_REUSE_SCOPE_HAMILTONIAN 1
+#define NBFFSZC2ReuseScope 2
+
+typedef struct {
+  int *keys;
+  int capacity;
+  long long trueCalls;
+  long long uniqueExactOrderedMoves;
+  long long duplicateTrueCalls;
+  long long overflowCalls;
+} BFFSZC2ReuseCensus;
+
 typedef struct {
   int source;
   long long classCall[NBFFSZC2DetailClass];
@@ -562,6 +575,7 @@ typedef struct {
   long long affectedHist[NBFFSZProfileHist];
   long long affectedAtOrAboveKFull;
   long long orderedDescriptorTotal;
+  BFFSZC2ReuseCensus *reuseCensus;
   double componentSeconds[NBFFSZC2DetailComponent];
 } BFFSZC2DetailContext;
 
@@ -570,6 +584,7 @@ typedef struct {
 } BFFSZC2DetailTermContext;
 
 int BFFSZC2DetailProfileEnabled = 0;
+int BFFSZC2ReuseCensusEnabled = 0;
 long long BFFSZC2DetailClassCall[NBFFSZC2DetailSource][NBFFSZC2DetailClass];
 long long BFFSZC2DetailOutcome[NBFFSZC2DetailSource][NBFFSZC2DetailOutcome];
 long long BFFSZC2DetailPath[NBFFSZC2DetailSource][NBFFSZC2DetailPath];
@@ -585,12 +600,25 @@ long long BFFSZC2DetailOrderedDescriptorTotal[NBFFSZC2DetailSource];
 double BFFSZC2DetailComponentSeconds[NBFFSZC2DetailSource][NBFFSZC2DetailComponent];
 double BFFSZC2DetailTermSeconds[NBFFSZC2DetailTerm];
 double BFFSZC2DetailSzSecondsRank0 = 0.0;
+long long BFFSZC2ReuseCensusInvocations[NBFFSZC2ReuseScope];
+long long BFFSZC2ReuseCensusTrueCalls[NBFFSZC2ReuseScope];
+long long BFFSZC2ReuseCensusUniqueExactOrderedMoves[NBFFSZC2ReuseScope];
+long long BFFSZC2ReuseCensusDuplicateTrueCalls[NBFFSZC2ReuseScope];
+long long BFFSZC2ReuseCensusOverflowCalls[NBFFSZC2ReuseScope];
 
 double BFFSZC2DetailMonotonicSeconds(void);
 void InitBFFSZC2DetailContext(BFFSZC2DetailContext *context, int source);
 void MergeBFFSZC2DetailContext(const BFFSZC2DetailContext *context);
 void InitBFFSZC2DetailTermContext(BFFSZC2DetailTermContext *context);
 void MergeBFFSZC2DetailTermContext(const BFFSZC2DetailTermContext *context);
+int GetBFFSZC2ReuseCensusWorkSize(
+    long long maxCalls, int *capacity, int *intWorkSize);
+int InitBFFSZC2ReuseCensus(
+    BFFSZC2ReuseCensus *census, int *keys, int capacity);
+int RecordBFFSZC2ReuseCensus(
+    BFFSZC2ReuseCensus *census, int XI, int XJ, int XK, int XL);
+void MergeBFFSZC2ReuseCensus(
+    int scope, const BFFSZC2ReuseCensus *census);
 
 static inline void AddBFProfileCounter(int idx, long long value) {
   if(!BFProfileEnabled || value == 0) return;
