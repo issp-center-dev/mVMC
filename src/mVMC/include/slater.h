@@ -56,6 +56,33 @@ int MakeSlaterElmBF_fsz_hop_to_with_rows_workspace_serial(
     int *intWork, int intWorkSize);
 int GetSlaterElmBF_fsz_hop_row_work_size(size_t *complexCount,
     int qpNum, int rowCapacity);
+/* Multi-move candidate rows use the same layout and status contract as the
+ * one-move hop API. movedParticles must contain nMoved distinct particles.
+ * candidateRows must not overlap the base matrix, integer workspace,
+ * affected output, moved list, or particle/projection inputs. INVALID_ARGUMENT
+ * and NEEDS_FULL leave candidateRows unchanged; NEEDS_FULL still returns the
+ * complete affected list and counts. A non-NULL candidateRows buffer and its
+ * QP stride must hold rowCapacity rows per local QP. */
+int MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+    double complex *candidateRows, size_t rowQpStride,
+    size_t rowAffectedStride, int rowCapacity,
+    const double complex *baseSltElmBF,
+    int nMoved, const int *movedParticles,
+    const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int qpStart, int qpEnd,
+    int *affected, int *nChanged, int *nAffected,
+    int *intWork, int intWorkSize);
+int MakeSlaterElmBF_fsz_multi_move_rows_workspace_serial(
+    double complex *candidateRows, size_t rowQpStride,
+    size_t rowAffectedStride, int rowCapacity,
+    const double complex *baseSltElmBF,
+    int nMoved, const int *movedParticles,
+    const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    int qpStart, int qpEnd,
+    int *affected, int *nChanged, int *nAffected,
+    int *intWork, int intWorkSize);
 int MakeSlaterElmBF_fsz_hop_rows_workspace(
     double complex *candidateRows, size_t rowQpStride,
     size_t rowAffectedStride, int rowCapacity,

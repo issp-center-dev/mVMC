@@ -489,6 +489,7 @@ int BFFSZInvGemmCheckEnabled = 0;
 int BFFSZInvDetailProfileEnabled = 0;
 int BFFSZMatrixFreeCheckEnabled = 0;
 int BFFSZMatrixFreeArgumentCheckEnabled = 0;
+int BFFSZMultiMoveRowCheckEnabled = 0;
 int BFFSZSamplingRejectCheckEnabled = 0;
 long long BFFSZProfileCall[NBFFSZProfileSource];
 long long BFFSZProfileChangedSum[NBFFSZProfileSource];

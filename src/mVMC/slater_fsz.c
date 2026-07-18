@@ -525,13 +525,27 @@ static int MakeBFAffectedParticleListForMoves_fsz(
     const int *changed, const int *movedParticles, int nMovedParticles,
     const int *eleIdx, const int *eleSpn,
     int *affectedMark, int *affected) {
-  int i, m, rsm, nAffected = 0;
+  int i, j, m, rsm, nAffected = 0;
+
+  if(changed == NULL || movedParticles == NULL || eleIdx == NULL
+      || eleSpn == NULL || affectedMark == NULL || affected == NULL
+      || nMovedParticles < 1 || nMovedParticles > Nsize) {
+    fprintf(stderr,"error: invalid BF-FSZ moved-particle list\n");
+    return -1;
+  }
 
   memset(affectedMark, 0, sizeof(int)*(size_t)Nsize);
   for(i=0;i<nMovedParticles;i++) {
     if(movedParticles[i] < 0 || movedParticles[i] >= Nsize) {
       fprintf(stderr,"error: invalid BF-FSZ moved particle %d\n",movedParticles[i]);
       return -1;
+    }
+    for(j=0;j<i;j++) {
+      if(movedParticles[j] == movedParticles[i]) {
+        fprintf(stderr,"error: duplicate BF-FSZ moved particle %d\n",
+                movedParticles[i]);
+        return -1;
+      }
     }
     affectedMark[movedParticles[i]] = 1;
   }
@@ -556,11 +570,11 @@ static int MakeBFAffectedParticleListForMoves_fsz(
 }
 
 static int MakeBFAffectedParticleList_fsz(
-    const int *changed, int movedParticle,
+    const int *changed, const int movedParticle,
     const int *eleIdx, const int *eleSpn,
     int *affectedMark, int *affected) {
-  return MakeBFAffectedParticleListForMoves_fsz(changed,&movedParticle,1,
-      eleIdx,eleSpn,affectedMark,affected);
+  return MakeBFAffectedParticleListForMoves_fsz(
+      changed,&movedParticle,1,eleIdx,eleSpn,affectedMark,affected);
 }
 
 int CollectBFAffectedParticlesTwoMove_fsz(
@@ -806,26 +820,28 @@ static void MakeSlaterElmBF_fsz_hop_rows_qp(
   }
 }
 
-static int MakeSlaterElmBF_fsz_hop_rows_core(
+static int MakeSlaterElmBF_fsz_multi_move_rows_core(
     double complex *candidateRows, const size_t rowQpStride,
     const size_t rowAffectedStride, const int rowCapacity,
     const double complex *baseSltElmBF,
-    const int movedParticle, const int *eleIdx, const int *eleSpn,
+    const int nMoved, const int *movedParticles,
+    const int *eleIdx, const int *eleSpn,
     const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
     const int qpStart, const int qpEnd,
     int *affected, int *nChangedOut, int *nAffectedOut,
     int *intWork, const int intWorkSize, const int useOMP) {
   const int qpNum = qpEnd-qpStart;
   int requiredWorkSize, sparseWorkOffset;
-  int nChanged, nAffected, qpidx, i;
+  int nChanged, nAffected, qpidx, i, j;
   size_t rowDataCount, rowSpan, baseCount, projCount;
+  size_t declaredRowDataCount, candidateValidationCount;
   int *changed, *changedList, *affectedMark, *sparseIntWork;
   BFSparseWorkspace_fsz sparseWork;
 
   if(baseSltElmBF == NULL || oldEleProjBFCnt == NULL
       || newEleProjBFCnt == NULL || eleIdx == NULL || eleSpn == NULL
       || affected == NULL || nChangedOut == NULL || nAffectedOut == NULL
-      || movedParticle < 0 || movedParticle >= Nsize
+      || movedParticles == NULL || nMoved < 1 || nMoved > Nsize
       || qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull
       || rowCapacity < 0 || Nsite <= 0 || Nsite2 != 2*Nsite
       || Nsize <= 0 || Nsize > Nsite2 || Nrange <= 0
@@ -833,6 +849,16 @@ static int MakeSlaterElmBF_fsz_hop_rows_core(
     return BF_FSZ_ROW_BUILD_INVALID_ARGUMENT;
   }
   projCount = 16*(size_t)Nsite*(size_t)Nrange;
+  for(i=0;i<nMoved;i++) {
+    if(movedParticles[i] < 0 || movedParticles[i] >= Nsize) {
+      return BF_FSZ_ROW_BUILD_INVALID_ARGUMENT;
+    }
+    for(j=0;j<i;j++) {
+      if(movedParticles[j] == movedParticles[i]) {
+        return BF_FSZ_ROW_BUILD_INVALID_ARGUMENT;
+      }
+    }
+  }
   for(i=0;i<Nsize;i++) {
     if(eleIdx[i] < 0 || eleIdx[i] >= Nsite
         || (eleSpn[i] != 0 && eleSpn[i] != 1)) {
@@ -840,9 +866,45 @@ static int MakeSlaterElmBF_fsz_hop_rows_core(
     }
   }
   if(GetSlaterElmBF_fsz_hop_int_work_size(&requiredWorkSize) != 0
-      || intWork == NULL || intWorkSize < requiredWorkSize
+      || intWork == NULL || intWorkSize < requiredWorkSize) {
+    return BF_FSZ_ROW_BUILD_INVALID_ARGUMENT;
+  }
+  candidateValidationCount = 0;
+  if(candidateRows != NULL && qpNum > 0) {
+    if(rowCapacity == 0) {
+      candidateValidationCount = (size_t)Nsize;
+    } else {
+      if(rowAffectedStride < (size_t)Nsize
+          || (size_t)(rowCapacity-1)
+              > (SIZE_MAX-(size_t)Nsize)/rowAffectedStride) {
+        return BF_FSZ_ROW_BUILD_INVALID_ARGUMENT;
+      }
+      declaredRowDataCount
+          = (size_t)(rowCapacity-1)*rowAffectedStride+(size_t)Nsize;
+      if(rowQpStride < declaredRowDataCount
+          || (size_t)(qpNum-1)
+              > (SIZE_MAX-declaredRowDataCount)/rowQpStride) {
+        return BF_FSZ_ROW_BUILD_INVALID_ARGUMENT;
+      }
+      candidateValidationCount
+          = (size_t)(qpNum-1)*rowQpStride+declaredRowDataCount;
+      if(candidateValidationCount > (size_t)PTRDIFF_MAX) {
+        return BF_FSZ_ROW_BUILD_INVALID_ARGUMENT;
+      }
+    }
+  }
+  if((candidateValidationCount > 0
+          && (BF_FSZ_MemoryRangesOverlap_fsz(
+                candidateRows,candidateValidationCount,sizeof(double complex),
+                intWork,(size_t)requiredWorkSize,sizeof(int))
+            || BF_FSZ_MemoryRangesOverlap_fsz(
+                candidateRows,candidateValidationCount,sizeof(double complex),
+                affected,(size_t)Nsize,sizeof(int))))
       || BF_FSZ_IntWorkspacesOverlap_fsz(
           affected, Nsize, intWork, requiredWorkSize)
+      || BF_FSZ_MemoryRangesOverlap_fsz(
+          intWork,(size_t)requiredWorkSize,sizeof(int),
+          movedParticles,(size_t)nMoved,sizeof(int))
       || BF_FSZ_MemoryRangesOverlap_fsz(
           intWork,(size_t)requiredWorkSize,sizeof(int),
           eleIdx,(size_t)Nsize,sizeof(int))
@@ -855,6 +917,9 @@ static int MakeSlaterElmBF_fsz_hop_rows_core(
       || BF_FSZ_MemoryRangesOverlap_fsz(
           intWork,(size_t)requiredWorkSize,sizeof(int),
           newEleProjBFCnt,projCount,sizeof(int))
+      || BF_FSZ_MemoryRangesOverlap_fsz(
+          affected,(size_t)Nsize,sizeof(int),
+          movedParticles,(size_t)nMoved,sizeof(int))
       || BF_FSZ_MemoryRangesOverlap_fsz(
           affected,(size_t)Nsize,sizeof(int),
           eleIdx,(size_t)Nsize,sizeof(int))
@@ -877,8 +942,9 @@ static int MakeSlaterElmBF_fsz_hop_rows_core(
   sparseIntWork = intWork+sparseWorkOffset;
   nChanged = MakeBFChangedEndpointList_fsz(
       changed, changedList, oldEleProjBFCnt, newEleProjBFCnt);
-  nAffected = MakeBFAffectedParticleList_fsz(
-      changed, movedParticle, eleIdx, eleSpn, affectedMark, affected);
+  nAffected = MakeBFAffectedParticleListForMoves_fsz(
+      changed, movedParticles, nMoved,
+      eleIdx, eleSpn, affectedMark, affected);
   if(nAffected < 0) return BF_FSZ_ROW_BUILD_INVALID_ARGUMENT;
   *nChangedOut = nChanged;
   *nAffectedOut = nAffected;
@@ -911,6 +977,9 @@ static int MakeSlaterElmBF_fsz_hop_rows_core(
       || BF_FSZ_MemoryRangesOverlap_fsz(
           candidateRows,rowSpan,sizeof(double complex),
           affected,(size_t)Nsize,sizeof(int))
+      || BF_FSZ_MemoryRangesOverlap_fsz(
+          candidateRows,rowSpan,sizeof(double complex),
+          movedParticles,(size_t)nMoved,sizeof(int))
       || BF_FSZ_MemoryRangesOverlap_fsz(
           candidateRows,rowSpan,sizeof(double complex),
           eleIdx,(size_t)Nsize,sizeof(int))
@@ -955,6 +1024,40 @@ static int MakeSlaterElmBF_fsz_hop_rows_core(
   return BF_FSZ_ROW_BUILD_OK;
 }
 
+int MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+    double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride, const int rowCapacity,
+    const double complex *baseSltElmBF,
+    const int nMoved, const int *movedParticles,
+    const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    const int qpStart, const int qpEnd,
+    int *affected, int *nChanged, int *nAffected,
+    int *intWork, const int intWorkSize) {
+  return MakeSlaterElmBF_fsz_multi_move_rows_core(
+      candidateRows, rowQpStride, rowAffectedStride, rowCapacity,
+      baseSltElmBF, nMoved, movedParticles, eleIdx, eleSpn,
+      oldEleProjBFCnt, newEleProjBFCnt, qpStart, qpEnd,
+      affected, nChanged, nAffected, intWork, intWorkSize, 1);
+}
+
+int MakeSlaterElmBF_fsz_multi_move_rows_workspace_serial(
+    double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride, const int rowCapacity,
+    const double complex *baseSltElmBF,
+    const int nMoved, const int *movedParticles,
+    const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    const int qpStart, const int qpEnd,
+    int *affected, int *nChanged, int *nAffected,
+    int *intWork, const int intWorkSize) {
+  return MakeSlaterElmBF_fsz_multi_move_rows_core(
+      candidateRows, rowQpStride, rowAffectedStride, rowCapacity,
+      baseSltElmBF, nMoved, movedParticles, eleIdx, eleSpn,
+      oldEleProjBFCnt, newEleProjBFCnt, qpStart, qpEnd,
+      affected, nChanged, nAffected, intWork, intWorkSize, 0);
+}
+
 int MakeSlaterElmBF_fsz_hop_rows_workspace(
     double complex *candidateRows, const size_t rowQpStride,
     const size_t rowAffectedStride, const int rowCapacity,
@@ -964,11 +1067,11 @@ int MakeSlaterElmBF_fsz_hop_rows_workspace(
     const int qpStart, const int qpEnd,
     int *affected, int *nChanged, int *nAffected,
     int *intWork, const int intWorkSize) {
-  return MakeSlaterElmBF_fsz_hop_rows_core(
+  return MakeSlaterElmBF_fsz_multi_move_rows_workspace(
       candidateRows, rowQpStride, rowAffectedStride, rowCapacity,
-      baseSltElmBF, movedParticle, eleIdx, eleSpn,
+      baseSltElmBF, 1, &movedParticle, eleIdx, eleSpn,
       oldEleProjBFCnt, newEleProjBFCnt, qpStart, qpEnd,
-      affected, nChanged, nAffected, intWork, intWorkSize, 1);
+      affected, nChanged, nAffected, intWork, intWorkSize);
 }
 
 int MakeSlaterElmBF_fsz_hop_rows_workspace_serial(
@@ -980,11 +1083,11 @@ int MakeSlaterElmBF_fsz_hop_rows_workspace_serial(
     const int qpStart, const int qpEnd,
     int *affected, int *nChanged, int *nAffected,
     int *intWork, const int intWorkSize) {
-  return MakeSlaterElmBF_fsz_hop_rows_core(
+  return MakeSlaterElmBF_fsz_multi_move_rows_workspace_serial(
       candidateRows, rowQpStride, rowAffectedStride, rowCapacity,
-      baseSltElmBF, movedParticle, eleIdx, eleSpn,
+      baseSltElmBF, 1, &movedParticle, eleIdx, eleSpn,
       oldEleProjBFCnt, newEleProjBFCnt, qpStart, qpEnd,
-      affected, nChanged, nAffected, intWork, intWorkSize, 0);
+      affected, nChanged, nAffected, intWork, intWorkSize);
 }
 
 static int CommitSlaterElmBF_fsz_hop_core(

@@ -135,7 +135,7 @@ void InitTimer() {
   const char *invUpdateCheckEnv, *invUpdateFallbackEnv, *invUpdateInjectEnv;
   const char *invUpdateInjectRankEnv, *invUpdateExplicitStateEnv;
   const char *invUpdateArgumentEnv, *invGemmCheckEnv, *invDetailProfileEnv;
-  const char *matrixFreeCheckEnv, *matrixFreeArgumentEnv;
+  const char *matrixFreeCheckEnv, *matrixFreeArgumentEnv, *multiMoveRowCheckEnv;
   const char *samplingRejectCheckEnv, *c2DetailProfileEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
   for(i=0;i<NTimer;i++) TimerStart[i]=0.0;
@@ -283,6 +283,9 @@ void InitTimer() {
   if(BFFSZMatrixFreeArgumentCheckEnabled) {
     BFFSZMatrixFreeCheckEnabled = 1;
   }
+  multiMoveRowCheckEnv = getenv("MVMC_BF_FSZ_MULTI_MOVE_ROW_CHECK");
+  BFFSZMultiMoveRowCheckEnabled = (multiMoveRowCheckEnv != NULL
+      && atoi(multiMoveRowCheckEnv) != 0);
   samplingRejectCheckEnv = getenv("MVMC_BF_FSZ_SAMPLING_REJECT_CHECK");
   BFFSZSamplingRejectCheckEnabled = (samplingRejectCheckEnv != NULL
       && atoi(samplingRejectCheckEnv) != 0);

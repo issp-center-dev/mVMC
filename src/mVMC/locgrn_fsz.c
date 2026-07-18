@@ -302,6 +302,354 @@ static int BF_FSZ_GreenAffectedCoversFull(
   return 1;
 }
 
+static int BF_FSZ_MultiMoveRowsMatchFullSlice(
+    const double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride, const int nAffected,
+    const int *affected, const int *eleIdx, const int *eleSpn,
+    const int qpStart, const int qpEnd,
+    const double complex *candidateSlater) {
+  int qpidx,k,i;
+  for(qpidx=qpStart;qpidx<qpEnd;qpidx++) {
+    const double complex *sltE = candidateSlater
+        +(size_t)qpidx*(size_t)Nsite2*(size_t)Nsite2;
+    const double complex *rowsQp = candidateRows
+        +(size_t)(qpidx-qpStart)*rowQpStride;
+    for(k=0;k<nAffected;k++) {
+      const int rsk = eleIdx[affected[k]]+eleSpn[affected[k]]*Nsite;
+      const double complex *row = rowsQp+(size_t)k*rowAffectedStride;
+      for(i=0;i<Nsize;i++) {
+        const int rsi = eleIdx[i]+eleSpn[i]*Nsite;
+        if(row[i] != sltE[(size_t)rsk*(size_t)Nsite2+(size_t)rsi]) {
+          return 0;
+        }
+      }
+    }
+  }
+  return 1;
+}
+
+static int BF_FSZ_MultiMoveRowsEqual(
+    const double complex *rowsA, const double complex *rowsB,
+    const size_t rowQpStride, const size_t rowAffectedStride,
+    const int nAffected, const int qpNum) {
+  int qpidx,k;
+  for(qpidx=0;qpidx<qpNum;qpidx++) {
+    for(k=0;k<nAffected;k++) {
+      const double complex *rowA = rowsA+(size_t)qpidx*rowQpStride
+          +(size_t)k*rowAffectedStride;
+      const double complex *rowB = rowsB+(size_t)qpidx*rowQpStride
+          +(size_t)k*rowAffectedStride;
+      if(memcmp(rowA,rowB,sizeof(double complex)*(size_t)Nsize) != 0) {
+        return 0;
+      }
+    }
+  }
+  return 1;
+}
+
+static int BF_FSZ_AffectedContainsParticle(const int *affected,
+                                           const int nAffected,
+                                           const int particle) {
+  int k;
+  for(k=0;k<nAffected;k++) if(affected[k] == particle) return 1;
+  return 0;
+}
+
+static int BF_FSZ_RunMultiMoveArgumentChecks(
+    double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride, const double complex *baseSlater,
+    const int *movedParticles, const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    const int qpStart, const int qpEnd,
+    int *affected, int *intWork, const int intWorkSize) {
+  const double complex sentinel = 1234.5-678.25*I;
+  const double complex savedBase = baseSlater[0];
+  int badNegative[2] = {-1,movedParticles[1]};
+  int badLarge[2] = {movedParticles[0],Nsize};
+  int duplicate[2] = {movedParticles[0],movedParticles[0]};
+  int status,nChanged,nAffected;
+
+#define BF_FSZ_EXPECT_MULTI_INVALID(call) do { \
+    candidateRows[0] = sentinel; \
+    status = (call); \
+    if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT \
+        || candidateRows[0] != sentinel) return 1; \
+  } while(0)
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      0,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      -1,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      Nsize+1,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,NULL,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,badNegative,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,badLarge,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,duplicate,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,-1,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,(size_t)Nsize-1,Nsize,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,(size_t)Nsize-1,rowAffectedStride,Nsize,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,SIZE_MAX,Nsize,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      -1,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpEnd,qpStart,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,NQPFull+1,affected,&nChanged,&nAffected,intWork,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,NULL,intWorkSize));
+  BF_FSZ_EXPECT_MULTI_INVALID(MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize-1));
+#undef BF_FSZ_EXPECT_MULTI_INVALID
+
+  status = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      NULL,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+
+  candidateRows[0] = sentinel;
+  status = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,1,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_NEEDS_FULL || candidateRows[0] != sentinel
+      || nAffected < 2) return 1;
+
+  status = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      NULL,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpStart,affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_OK) return 1;
+
+  status = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      (double complex *)baseSlater,rowQpStride,rowAffectedStride,Nsize,
+      baseSlater,2,movedParticles,eleIdx,eleSpn,
+      oldEleProjBFCnt,newEleProjBFCnt,qpStart,qpEnd,
+      affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT || baseSlater[0] != savedBase) {
+    return 1;
+  }
+  status = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      (double complex *)intWork,rowQpStride,rowAffectedStride,Nsize,
+      baseSlater,2,movedParticles,eleIdx,eleSpn,
+      oldEleProjBFCnt,newEleProjBFCnt,qpStart,qpEnd,
+      affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+  status = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      (double complex *)affected,rowQpStride,rowAffectedStride,Nsize,
+      baseSlater,2,movedParticles,eleIdx,eleSpn,
+      oldEleProjBFCnt,newEleProjBFCnt,qpStart,qpEnd,
+      affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+  status = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      (double complex *)movedParticles,rowQpStride,rowAffectedStride,Nsize,
+      baseSlater,2,movedParticles,eleIdx,eleSpn,
+      oldEleProjBFCnt,newEleProjBFCnt,qpStart,qpEnd,
+      affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+
+  affected[0] = movedParticles[0];
+  affected[1] = movedParticles[1];
+  status = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,affected,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+
+  intWork[0] = movedParticles[0];
+  intWork[1] = movedParticles[1];
+  status = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      candidateRows,rowQpStride,rowAffectedStride,Nsize,baseSlater,
+      2,intWork,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,intWork,intWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) return 1;
+  return 0;
+}
+
+static int BF_FSZ_RunMultiMoveRowCheck(
+    const int movedParticle0, const int movedParticle1,
+    const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    const double complex *candidateSlater,
+    int *hopIntWork, const int hopIntWorkSize) {
+  const int qpStart = (NQPFull > 1) ? 1 : 0;
+  const int qpEnd = NQPFull;
+  const int qpNum = qpEnd-qpStart;
+  const size_t rowAffectedStride = (size_t)Nsize;
+  const size_t rowQpStride = (size_t)Nsize*rowAffectedStride;
+  size_t rowCount;
+  double complex *rows = NULL, *serialRows = NULL, *reverseRows = NULL;
+  int *affected = NULL, *serialAffected = NULL, *reverseAffected = NULL;
+  int movedParticles[2] = {movedParticle0,movedParticle1};
+  int reverseMovedParticles[2] = {movedParticle1,movedParticle0};
+  int status,nChanged,nAffected,serialStatus,serialChanged,serialNAffected;
+  int reverseStatus,reverseChanged,reverseNAffected,k;
+  int result = 1;
+
+  if(movedParticle0 == movedParticle1
+      || GetSlaterElmBF_fsz_hop_row_work_size(&rowCount,qpNum,Nsize)
+          != BF_FSZ_ROW_BUILD_OK
+      || rowCount > SIZE_MAX/sizeof(double complex)) return 1;
+  rows = (double complex *)malloc(sizeof(double complex)*rowCount);
+  serialRows = (double complex *)malloc(sizeof(double complex)*rowCount);
+  reverseRows = (double complex *)malloc(sizeof(double complex)*rowCount);
+  affected = (int *)malloc(sizeof(int)*(size_t)Nsize);
+  serialAffected = (int *)malloc(sizeof(int)*(size_t)Nsize);
+  reverseAffected = (int *)malloc(sizeof(int)*(size_t)Nsize);
+  if(rows == NULL || serialRows == NULL || reverseRows == NULL
+      || affected == NULL || serialAffected == NULL || reverseAffected == NULL) {
+    goto cleanup;
+  }
+
+  status = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      rows,rowQpStride,rowAffectedStride,Nsize,SlaterElmBF,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,
+      hopIntWork,hopIntWorkSize);
+  serialStatus = MakeSlaterElmBF_fsz_multi_move_rows_workspace_serial(
+      serialRows,rowQpStride,rowAffectedStride,Nsize,SlaterElmBF,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,serialAffected,&serialChanged,&serialNAffected,
+      hopIntWork,hopIntWorkSize);
+  reverseStatus = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      reverseRows,rowQpStride,rowAffectedStride,Nsize,SlaterElmBF,
+      2,reverseMovedParticles,eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,
+      qpStart,qpEnd,reverseAffected,&reverseChanged,&reverseNAffected,
+      hopIntWork,hopIntWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_OK || serialStatus != status
+      || reverseStatus != status || serialChanged != nChanged
+      || reverseChanged != nChanged || serialNAffected != nAffected
+      || reverseNAffected != nAffected || nAffected < 2
+      || !BF_FSZ_AffectedContainsParticle(affected,nAffected,movedParticle0)
+      || !BF_FSZ_AffectedContainsParticle(affected,nAffected,movedParticle1)
+      || !BF_FSZ_MultiMoveRowsMatchFullSlice(
+          rows,rowQpStride,rowAffectedStride,nAffected,affected,
+          eleIdx,eleSpn,qpStart,qpEnd,candidateSlater)
+      || !BF_FSZ_MultiMoveRowsEqual(
+          rows,serialRows,rowQpStride,rowAffectedStride,nAffected,qpNum)
+      || !BF_FSZ_MultiMoveRowsEqual(
+          rows,reverseRows,rowQpStride,rowAffectedStride,nAffected,qpNum)) {
+    goto cleanup;
+  }
+  for(k=0;k<nAffected;k++) {
+    if((k > 0 && affected[k-1] >= affected[k])
+        || serialAffected[k] != affected[k]
+        || reverseAffected[k] != affected[k]) goto cleanup;
+  }
+
+  /* With unchanged BF counts, only explicit moved-particle forcing remains.
+   * Omitting either moved particle must therefore fail the coverage oracle. */
+  status = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      rows,rowQpStride,rowAffectedStride,Nsize,SlaterElmBF,
+      2,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,oldEleProjBFCnt,
+      qpStart,qpEnd,affected,&nChanged,&nAffected,
+      hopIntWork,hopIntWorkSize);
+  serialStatus = MakeSlaterElmBF_fsz_hop_rows_workspace(
+      serialRows,rowQpStride,rowAffectedStride,Nsize,SlaterElmBF,
+      movedParticle0,eleIdx,eleSpn,oldEleProjBFCnt,oldEleProjBFCnt,
+      qpStart,qpEnd,serialAffected,&serialChanged,&serialNAffected,
+      hopIntWork,hopIntWorkSize);
+  reverseStatus = MakeSlaterElmBF_fsz_multi_move_rows_workspace(
+      reverseRows,rowQpStride,rowAffectedStride,Nsize,SlaterElmBF,
+      1,movedParticles,eleIdx,eleSpn,oldEleProjBFCnt,oldEleProjBFCnt,
+      qpStart,qpEnd,reverseAffected,&reverseChanged,&reverseNAffected,
+      hopIntWork,hopIntWorkSize);
+  if(status != BF_FSZ_ROW_BUILD_OK || nChanged != 0 || nAffected != 2
+      || !BF_FSZ_MultiMoveRowsMatchFullSlice(
+          rows,rowQpStride,rowAffectedStride,nAffected,affected,
+          eleIdx,eleSpn,qpStart,qpEnd,SlaterElmBF)
+      || serialStatus != BF_FSZ_ROW_BUILD_OK || reverseStatus != serialStatus
+      || serialChanged != 0 || reverseChanged != serialChanged
+      || serialNAffected != 1 || reverseNAffected != serialNAffected
+      || serialAffected[0] != movedParticle0
+      || reverseAffected[0] != serialAffected[0]
+      || BF_FSZ_AffectedContainsParticle(
+          serialAffected,serialNAffected,movedParticle1)
+      || !BF_FSZ_MultiMoveRowsEqual(
+          serialRows,reverseRows,rowQpStride,rowAffectedStride,
+          serialNAffected,qpNum)) {
+    goto cleanup;
+  }
+
+  if(BF_FSZ_RunMultiMoveArgumentChecks(
+      rows,rowQpStride,rowAffectedStride,SlaterElmBF,movedParticles,
+      eleIdx,eleSpn,oldEleProjBFCnt,newEleProjBFCnt,qpStart,qpEnd,
+      affected,hopIntWork,hopIntWorkSize) != 0) goto cleanup;
+  result = 0;
+
+cleanup:
+  free(rows);
+  free(serialRows);
+  free(reverseRows);
+  free(affected);
+  free(serialAffected);
+  free(reverseAffected);
+  return result;
+}
+
+static void BF_FSZ_CheckMultiMoveRowsOnce(
+    const int movedParticle0, const int movedParticle1,
+    const int *eleIdx, const int *eleSpn,
+    const int *oldEleProjBFCnt, const int *newEleProjBFCnt,
+    const double complex *candidateSlater,
+    int *hopIntWork, const int hopIntWorkSize) {
+  static int checked = 0;
+  if(!BFFSZMultiMoveRowCheckEnabled) return;
+  #pragma omp critical(BF_FSZ_multi_move_row_check)
+  {
+    if(!checked) {
+      if(BF_FSZ_RunMultiMoveRowCheck(
+          movedParticle0,movedParticle1,eleIdx,eleSpn,
+          oldEleProjBFCnt,newEleProjBFCnt,candidateSlater,
+          hopIntWork,hopIntWorkSize) != 0) {
+        fprintf(stderr,"error: BF-FSZ multi-move candidate-row check failed\n");
+        MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+      }
+      checked = 1;
+    }
+  }
+}
+
 static void BF_FSZ_MaterializeGreenCandidate(
     const char *caller, double complex *candidateSlater,
     double complex *debugFull, const int *eleNum,
@@ -1253,6 +1601,9 @@ double complex GreenFunc2BF_fsz2WithProfile(
       componentStart = BFFSZC2DetailMonotonicSeconds();
     }
     MakeSlaterElmBF_fsz_to_serial(candidateSlater,eleNum,projBFCntNew);
+    BF_FSZ_CheckMultiMoveRowsOnce(
+        ml,mj,eleIdx,eleSpn,eleProjBFCnt,projBFCntNew,
+        candidateSlater,hopIntWork,hopIntWorkSize);
     if(detailProfile != NULL) {
       detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_CANDIDATE_BUILD]
           += BFFSZC2DetailMonotonicSeconds()-componentStart;

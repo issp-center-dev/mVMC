@@ -878,6 +878,12 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         "BackFlow_FSZ_MatrixFreeRows_NonIdentity_Complex_omp": "optimized",
         "BackFlow_FSZ_MatrixFreeRows_InvalidArguments_NonIdentity_Complex": "arguments",
     }
+    multi_move_row_cases = {
+        "BackFlow_FSZ_MultiMoveRows_NonIdentity_Complex": "optimized",
+        "BackFlow_FSZ_MultiMoveRows_NonIdentity_Complex_mpi": "optimized",
+        "BackFlow_FSZ_MultiMoveRows_NonIdentity_Complex_omp": "optimized",
+        "BackFlow_FSZ_MultiMoveRows_InvalidArguments_NonIdentity_Complex": "arguments",
+    }
     green_matrix_free_cases = {
         "BackFlow_FSZ_GreenMatrixFree_Lazy_NonIdentity_Complex": "lazy",
         "BackFlow_FSZ_GreenMatrixFree_Lazy_NonIdentity_Complex_mpi": "lazy",
@@ -894,7 +900,8 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         "BackFlow_FSZ_AffectedRows_NonIdentity_Complex",
         "BackFlow_FSZ_AffectedRows_NonIdentity_Complex_mpi",
     ) + tuple(pf_update_cases) + tuple(inv_update_cases) \
-        + tuple(matrix_free_cases) + tuple(green_matrix_free_cases) \
+        + tuple(matrix_free_cases) + tuple(multi_move_row_cases) \
+        + tuple(green_matrix_free_cases) \
         + tuple(sampling_matrix_free_cases)
     if case_name != "BackFlow_FSZ_TwoBodyG_StaleBase_NonIdentity_Complex" \
             and case_name not in affected_cases:
@@ -917,6 +924,7 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
     ):
         update_modpara(workdir, {"NVMCSample": "1"})
         if (case_name in inv_update_cases or case_name in matrix_free_cases
+                or case_name in multi_move_row_cases
                 or case_name in green_matrix_free_cases
                 or case_name in sampling_matrix_free_cases) \
                 and mpi_procs:
@@ -984,6 +992,9 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
         ordered_env["MVMC_BF_FSZ_MATRIX_FREE_ARGUMENT_CHECK"] = "1"
         ordered_env["MVMC_BF_FSZ_PF_UPDATE_ARGUMENT_CHECK"] = "1"
         ordered_env["MVMC_BF_FSZ_INV_UPDATE_ARGUMENT_CHECK"] = "1"
+    if case_name in multi_move_row_cases:
+        ordered_env["MVMC_BF_FSZ_MULTI_MOVE_ROW_CHECK"] = "1"
+        ordered_env["MVMC_BF_FSZ_PERMUTE_PARTICLE_LABELS"] = "1"
     if case_name in sampling_matrix_free_cases \
             and sampling_matrix_free_cases[case_name] == "reject":
         ordered_env["MVMC_BF_FSZ_SAMPLING_REJECT_CHECK"] = "1"
@@ -1007,6 +1018,8 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
     elif case_name in sampling_matrix_free_cases \
             and sampling_matrix_free_cases[case_name] == "reject":
         reference_env = {"MVMC_BF_FSZ_SAMPLING_REJECT_CHECK": "1"}
+    elif case_name in multi_move_row_cases:
+        reference_env = {"MVMC_BF_FSZ_PERMUTE_PARTICLE_LABELS": "1"}
     reference_proc = run_vmc(
         rootdir,
         reference_workdir,
