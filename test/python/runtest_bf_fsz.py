@@ -204,8 +204,8 @@ def spin_orbital_row(indices, nsite=4):
     return tuple(row)
 
 
-def build_spin_changing_c2_rows():
-    a, b, c, d = 0, 5, 2, 7
+def build_spin_changing_c2_rows(nsite=4):
+    a, b, c, d = 0, nsite + 1, 2, nsite + 3
     classes = [
         (a, a, a, a),
         (a, a, a, b),
@@ -223,12 +223,12 @@ def build_spin_changing_c2_rows():
         (a, b, c, c),
         (a, b, c, d),
     ]
-    return [spin_orbital_row(indices) for indices in classes]
+    return [spin_orbital_row(indices, nsite=nsite) for indices in classes]
 
 
-def write_c2_detail_profile_defs(workdir):
-    write_spin_changing_c2_defs(workdir)
-    class_rows = build_spin_changing_c2_rows()
+def write_c2_detail_profile_defs(workdir, nsite=4):
+    write_spin_changing_c2_defs(workdir, nsite=nsite)
+    class_rows = build_spin_changing_c2_rows(nsite=nsite)
     weighted_rows = []
     for class_id, row in enumerate(class_rows, 1):
         weighted_rows.extend([row] * class_id)
@@ -245,9 +245,9 @@ def append_namelist_entry(workdir, keyword, filename):
         fp.writelines(lines)
 
 
-def write_spin_changing_c2_defs(workdir, reverse_two_body=False):
+def write_spin_changing_c2_defs(workdir, reverse_two_body=False, nsite=4):
     write_spin_changing_c1_defs(workdir)
-    two_body_rows = build_spin_changing_c2_rows()
+    two_body_rows = build_spin_changing_c2_rows(nsite=nsite)
     if reverse_two_body:
         two_body_rows = list(reversed(two_body_rows))
     write_two_body_rows(workdir, two_body_rows)
@@ -319,7 +319,7 @@ def make_spin_changing_two_body_g_ex(workdir):
         fp.writelines(lines)
 
 
-def make_momentum_projection(workdir):
+def make_momentum_projection(workdir, nsite=4):
     with open(os.path.join(workdir, "qptransidx.def"), "w") as fp:
         fp.write("=============================================\n")
         fp.write("NQPTrans          2\n")
@@ -328,14 +328,12 @@ def make_momentum_projection(workdir):
         fp.write("=============================================\n")
         fp.write("0    1.00000    0.00000\n")
         fp.write("1    1.00000    0.00000\n")
-        fp.write("    0      0      0      1\n")
-        fp.write("    0      1      1      1\n")
-        fp.write("    0      2      2      1\n")
-        fp.write("    0      3      3      1\n")
-        fp.write("    1      0      1      1\n")
-        fp.write("    1      1      2      1\n")
-        fp.write("    1      2      3      1\n")
-        fp.write("    1      3      0      1\n")
+        for site in range(nsite):
+            fp.write("    0 {:6d} {:6d}      1\n".format(site, site))
+        for site in range(nsite):
+            fp.write("    1 {:6d} {:6d}      1\n".format(
+                site, (site + 1) % nsite,
+            ))
 
 
 def write_locspn(workdir, local_sites, nsite=4):
@@ -348,6 +346,18 @@ def write_locspn(workdir, local_sites, nsite=4):
         fp.write("================================\n")
         for site in range(nsite):
             fp.write("{:5d} {:6d}\n".format(site, 1 if site in local_sites else 0))
+
+
+def resize_spin_changing_chain_case(workdir, nsite):
+    update_modpara(workdir, {
+        "Nsite": str(nsite),
+        "Ncond": str(nsite),
+        "NMPTrans": "2",
+    })
+    write_locspn(workdir, (), nsite=nsite)
+    write_orbital_general(workdir, nsite=nsite, complex_type=1, optimize=True)
+    write_chain_nn_backflow(workdir, length=nsite, optimize=False)
+    make_momentum_projection(workdir, nsite=nsite)
 
 
 def update_modpara(workdir, updates):
@@ -2006,9 +2016,17 @@ def validate_c2_detail_profile(timer_path):
                 "debug_oracle",
             )
         }
-        if paths["legacy_full"] != evaluated \
-                or sum(paths.values()) != evaluated:
-            print("ERROR: C2 {} legacy path count mismatch".format(source))
+        primary_path_total = sum(
+            paths[name] for name in (
+                "legacy_full", "optimized_row", "direct_full", "fallback",
+            )
+        )
+        if paths["legacy_full"] != 0 \
+                or paths["optimized_row"] + paths["direct_full"] != evaluated \
+                or paths["fallback"] != 0 \
+                or paths["debug_oracle"] != 0 \
+                or primary_path_total != evaluated:
+            print("ERROR: C2 {} matrix-free path count mismatch".format(source))
             return -1
         descriptors = int(get_c2_detail_record(
             records, source=source, kind="ordered_descriptors",
@@ -2080,6 +2098,179 @@ def validate_c2_detail_profile(timer_path):
             or wrapper < -5.0e-6:
         print("ERROR: C2 timer41/term/Sz/wrapper consistency failed")
         return -1
+    return 0
+
+
+def validate_c2_matrix_free_path(timer_path, mode):
+    records = read_c2_detail_profile(timer_path)
+    if not records:
+        print("ERROR: BF-FSZ C2 matrix-free detail profile is missing")
+        return -1
+    evaluated_total = 0
+    sector_total = 0
+    for source in ("measurement", "pair_hop", "exchange", "inter_all"):
+        outcomes = {
+            name: int(get_c2_detail_record(
+                records, source=source, outcome=name,
+            )["calls"])
+            for name in ("occupancy_zero", "sector_zero", "evaluated")
+        }
+        paths = {
+            name: int(get_c2_detail_record(
+                records, source=source, path=name,
+            )["calls"])
+            for name in (
+                "legacy_full", "optimized_row", "direct_full", "fallback",
+                "debug_oracle",
+            )
+        }
+        evaluated = outcomes["evaluated"]
+        evaluated_total += evaluated
+        sector_total += outcomes["sector_zero"]
+        primary_total = sum(
+            paths[name] for name in (
+                "legacy_full", "optimized_row", "direct_full", "fallback",
+            )
+        )
+        if paths["legacy_full"] != 0 or primary_total != evaluated:
+            print("ERROR: C2 {} {} primary path mismatch".format(source, mode))
+            return -1
+        if mode in ("optimized", "debug", "rank-fallback"):
+            if paths["optimized_row"] != evaluated \
+                    or paths["direct_full"] != 0 or paths["fallback"] != 0:
+                print("ERROR: C2 {} optimized path was not isolated".format(source))
+                return -1
+            expected_debug = evaluated if mode == "debug" else 0
+            if paths["debug_oracle"] != expected_debug:
+                print("ERROR: C2 {} debug-oracle path mismatch".format(source))
+                return -1
+        elif mode == "direct":
+            if paths["direct_full"] != evaluated \
+                    or paths["optimized_row"] != 0 or paths["fallback"] != 0 \
+                    or paths["debug_oracle"] != 0:
+                print("ERROR: C2 {} direct-full path was not isolated".format(source))
+                return -1
+        elif mode in ("exact-zero", "lapack", "nonfinite"):
+            if paths["fallback"] != evaluated \
+                    or paths["optimized_row"] != 0 or paths["direct_full"] != 0 \
+                    or paths["debug_oracle"] != 0:
+                print("ERROR: C2 {} fallback path was not isolated".format(source))
+                return -1
+        elif mode == "sector":
+            if evaluated != 0 or primary_total != 0 or paths["debug_oracle"] != 0:
+                print("ERROR: C2 {} forced sector-zero evaluated a Pfaffian".format(source))
+                return -1
+        else:
+            raise RuntimeError("unknown C2 matrix-free mode {}".format(mode))
+    if mode == "sector":
+        if sector_total <= 0:
+            print("ERROR: C2 forced sector-zero path was vacuous")
+            return -1
+    elif evaluated_total <= 0:
+        print("ERROR: C2 {} matrix-free path was vacuous".format(mode))
+        return -1
+    materialize = read_bffsz_green_materialize(timer_path)
+    if mode in ("optimized", "sector"):
+        if any(materialize[name] != 0 for name in ("direct-full", "fallback", "oracle")):
+            print("ERROR: C2 {} unexpectedly materialized a full candidate".format(mode))
+            return -1
+    elif mode == "rank-fallback":
+        if materialize["fallback"] <= 0:
+            print("ERROR: C2 rank-specific fallback did not materialize on the injected rank")
+            return -1
+    elif mode == "debug":
+        if materialize["oracle"] < evaluated_total:
+            print("ERROR: C2 debug oracle materialization count mismatch")
+            return -1
+    elif mode == "direct":
+        if materialize["direct-full"] < evaluated_total:
+            print("ERROR: C2 direct-full materialization count mismatch")
+            return -1
+    elif mode in ("exact-zero", "lapack", "nonfinite"):
+        if materialize["fallback"] < evaluated_total:
+            print("ERROR: C2 fallback materialization count mismatch")
+            return -1
+    return 0
+
+
+def run_c2_matrix_free_paths_case(rootdir, case_name, mpi_procs=None):
+    cases = (
+        "BackFlow_FSZ_C2_MatrixFree_Paths_NonIdentity_Complex",
+        "BackFlow_FSZ_C2_MatrixFree_Paths_NonIdentity_Complex_mpi",
+        "BackFlow_FSZ_C2_MatrixFree_Paths_NonIdentity_Complex_omp",
+    )
+    if case_name not in cases:
+        return None
+
+    run_specs = [
+        ("optimized", {}),
+        ("debug", {
+            "MVMC_BF_FSZ_MULTI_MOVE_ROW_CHECK": "1",
+        }),
+    ]
+    if not case_name.endswith(("_mpi", "_omp")):
+        run_specs.extend([
+            ("direct", {"MVMC_BF_FSZ_PF_UPDATE_KFULL": "1"}),
+            ("exact-zero", {"MVMC_BF_FSZ_PF_UPDATE_INJECT_STATUS": "1"}),
+            ("lapack", {"MVMC_BF_FSZ_PF_UPDATE_INJECT_STATUS": "2"}),
+            ("nonfinite", {"MVMC_BF_FSZ_PF_UPDATE_INJECT_STATUS": "3"}),
+            ("sector", {"MVMC_BF_FSZ_C2_FORCE_SECTOR_ZERO": "1"}),
+        ])
+    elif case_name.endswith("_mpi"):
+        run_specs.append(("rank-fallback", {
+            "MVMC_BF_FSZ_PF_UPDATE_INJECT_STATUS": "3",
+            "MVMC_BF_FSZ_PF_UPDATE_INJECT_RANK": "1",
+        }))
+
+    outputs = {}
+    for mode, mode_env in run_specs:
+        workdir = prepare_case(rootdir, case_name + "_" + mode, True)
+        resize_spin_changing_chain_case(workdir, 16)
+        update_modpara(workdir, {
+            "2Sz": "-1",
+            "NVMCSample": "8",
+            "NVMCWarmUp": "4",
+        })
+        if mpi_procs:
+            update_modpara(workdir, {"NSplitSize": str(mpi_procs)})
+        write_c2_detail_profile_defs(workdir, nsite=16)
+        init_path = write_nonidentity_init(workdir, nsite=16)
+        extra_env = {
+            "MVMC_BF_PROFILE": "1",
+            "MVMC_BF_FSZ_C2_DETAIL_PROFILE": "1",
+            "MVMC_BF_FSZ_C2_STATE_CHECK": "1",
+            "MVMC_BF_FSZ_C2_BUFFER_CHECK": "1",
+        }
+        extra_env.update(mode_env)
+        proc = run_vmc(
+            rootdir, workdir, mpi_procs=mpi_procs,
+            init_path=init_path, extra_env=extra_env,
+        )
+        if proc.returncode != 0:
+            print(proc.stdout)
+            return proc.returncode
+        timer_path = os.path.join(workdir, "output", "zvo_CalcTimer.dat")
+        status = validate_c2_matrix_free_path(timer_path, mode)
+        if status != 0:
+            return status
+        if mode != "sector":
+            outputs[mode] = {
+                filename: read_float_rows(os.path.join(workdir, "output", filename))
+                for filename in (
+                    "zvo_out_001.dat", "zvo_cisajscktalt_001.dat",
+                    "zvo_cisajscktaltex_001.dat",
+                )
+            }
+
+    reference = outputs["optimized"]
+    for mode, output in outputs.items():
+        for filename, reference_rows in reference.items():
+            diff = max_abs_diff(output[filename], reference_rows)
+            if diff > 1.0e-10:
+                print("ERROR: C2 {} {} mismatch: max_abs_diff={:.3e}".format(
+                    mode, filename, diff,
+                ))
+                return -1
     return 0
 
 
@@ -2336,6 +2527,11 @@ def main():
     c2_status = run_spin_changing_c2_case(rootdir, case_name, mpi_procs)
     if c2_status is not None:
         return c2_status
+    c2_matrix_free_status = run_c2_matrix_free_paths_case(
+        rootdir, case_name, mpi_procs,
+    )
+    if c2_matrix_free_status is not None:
+        return c2_matrix_free_status
     c2_profile_status = run_c2_detail_profile_case(rootdir, case_name, mpi_procs)
     if c2_profile_status is not None:
         return c2_profile_status

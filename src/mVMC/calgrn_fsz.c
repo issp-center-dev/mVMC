@@ -84,6 +84,9 @@ double complex GreenFunc2BF_fsz2WithProfile(
                   int *pfIWork, double *pfRWork,
                   double complex *pfBufM, double complex *pfWork,
                   BFFSZC2DetailContext *detailProfile);
+int GetGreenFuncBF_fsz_buffer_work_size(
+    size_t *bufferComplexCount, size_t *pfUpdateIntCount,
+    size_t *pfUpdateDoubleCount);
 
 
 void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx, int *eleCfg,
@@ -260,11 +263,8 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   double complex *myBuffer;
   double complex *myPfBufM, *myPfWork;
   double *myPfRWork;
-  const size_t bfSlaterSize = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
-  size_t pfUpdateComplexCount,pfUpdateIntCount,pfUpdateDoubleCount;
-  size_t bfGreen1BufferSizeValue,bfGreen1ComplexSizeValue,rowCount;
-  const int rowCapacity = (BFFSZPfUpdateKFull-1 < Nsize-1)
-      ? BFFSZPfUpdateKFull-1 : Nsize-1;
+  size_t pfUpdateIntCount,pfUpdateDoubleCount;
+  size_t bfGreen1BufferSizeValue,bfGreen1ComplexSizeValue;
   int bfGreen1BufferSize,bfGreen1ComplexSize,bfPfIntSize,bfPfDoubleSize;
   long long bfSerialBaseIntSizeLL, bfGreen1IntSizeLL;
   int bfSerialBaseIntSize;
@@ -290,24 +290,11 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     fprintf(stderr, "Error: invalid BF-FSZ Green hop integer workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  if(GetCalculateNewPfMBF_fsz_row_values_work_size(&pfUpdateComplexCount,
-      &pfUpdateIntCount,&pfUpdateDoubleCount) != 0
-      || GetSlaterElmBF_fsz_hop_row_work_size(
-          &rowCount,NQPFull,rowCapacity) != BF_FSZ_ROW_BUILD_OK
-      || pfUpdateIntCount > INT_MAX || pfUpdateDoubleCount > INT_MAX
-      || bfSlaterSize > SIZE_MAX-2*(size_t)NQPFull
-      || bfSlaterSize+2*(size_t)NQPFull > SIZE_MAX-rowCount
-      || bfSlaterSize+2*(size_t)NQPFull+rowCount
-          > SIZE_MAX-pfUpdateComplexCount
-      || (BFFSZGreenRebuildCheckEnabled
-          && bfSlaterSize+2*(size_t)NQPFull+rowCount+pfUpdateComplexCount
-              > SIZE_MAX-bfSlaterSize)) {
+  if(GetGreenFuncBF_fsz_buffer_work_size(
+      &bfGreen1BufferSizeValue,&pfUpdateIntCount,&pfUpdateDoubleCount) != 0) {
     fprintf(stderr,"Error: invalid BF-FSZ Green Pfaffian-update workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
   }
-  bfGreen1BufferSizeValue = 2*(size_t)NQPFull + bfSlaterSize
-      + rowCount + pfUpdateComplexCount
-      + (BFFSZGreenRebuildCheckEnabled ? bfSlaterSize : 0);
   if((size_t)Nsize*(size_t)Nsize > SIZE_MAX-(size_t)LapackLWork
       || bfGreen1BufferSizeValue > SIZE_MAX-(size_t)Nsize*(size_t)Nsize-(size_t)LapackLWork) {
     fprintf(stderr,"Error: BF-FSZ Green complex workspace size overflow.\n");

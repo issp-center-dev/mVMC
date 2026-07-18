@@ -63,6 +63,43 @@ static void RecordBFFSZC2DispatchSeconds(BFFSZC2DetailContext *context,
       += BFFSZC2DetailMonotonicSeconds()-start;
 }
 
+static void RecordBFFSZC2Path(BFFSZC2DetailContext *context, const int path) {
+  if(context == NULL || path < 0 || path >= NBFFSZC2DetailPath) return;
+  context->path[path]++;
+}
+
+static int *BF_FSZ_CaptureGreen2State(const int *eleIdx, const int *eleSpn,
+                                      const int *eleCfg, const int *eleNum) {
+  size_t count;
+  int *snapshot;
+
+  if(eleIdx == NULL || eleSpn == NULL || eleCfg == NULL || eleNum == NULL
+      || Nsize <= 0 || Nsite2 <= 0
+      || (size_t)Nsize > SIZE_MAX/2
+      || 2*(size_t)Nsize > SIZE_MAX-2*(size_t)Nsite2) return NULL;
+  count = 2*(size_t)Nsize+2*(size_t)Nsite2;
+  if(count > SIZE_MAX/sizeof(int)) return NULL;
+  snapshot = (int *)malloc(sizeof(int)*count);
+  if(snapshot == NULL) return NULL;
+  memcpy(snapshot,eleIdx,sizeof(int)*(size_t)Nsize);
+  memcpy(snapshot+Nsize,eleSpn,sizeof(int)*(size_t)Nsize);
+  memcpy(snapshot+2*Nsize,eleCfg,sizeof(int)*(size_t)Nsite2);
+  memcpy(snapshot+2*Nsize+Nsite2,eleNum,sizeof(int)*(size_t)Nsite2);
+  return snapshot;
+}
+
+static int BF_FSZ_Green2StateMatches(const int *snapshot,
+                                     const int *eleIdx, const int *eleSpn,
+                                     const int *eleCfg, const int *eleNum) {
+  if(snapshot == NULL || eleIdx == NULL || eleSpn == NULL
+      || eleCfg == NULL || eleNum == NULL) return 0;
+  return memcmp(snapshot,eleIdx,sizeof(int)*(size_t)Nsize) == 0
+      && memcmp(snapshot+Nsize,eleSpn,sizeof(int)*(size_t)Nsize) == 0
+      && memcmp(snapshot+2*Nsize,eleCfg,sizeof(int)*(size_t)Nsite2) == 0
+      && memcmp(snapshot+2*Nsize+Nsite2,eleNum,
+          sizeof(int)*(size_t)Nsite2) == 0;
+}
+
 static int BF_FSZ_IntWorkspacesOverlap(const int *workA, const int workACount,
                                        const int *workB, const int workBCount) {
   size_t workABytes, workBBytes;
@@ -650,6 +687,41 @@ static void BF_FSZ_CheckMultiMoveRowsOnce(
   }
 }
 
+int GetGreenFuncBF_fsz_buffer_work_size(
+    size_t *bufferComplexCount, size_t *pfUpdateIntCount,
+    size_t *pfUpdateDoubleCount) {
+  const int rowCapacity = (BFFSZPfUpdateKFull-1 < Nsize-1)
+      ? BFFSZPfUpdateKFull-1 : Nsize-1;
+  size_t slaterSquare,bfSlaterSize,rowCount,pfUpdateComplexCount;
+  size_t bufferCount;
+
+  if(bufferComplexCount == NULL || pfUpdateIntCount == NULL
+      || pfUpdateDoubleCount == NULL || NQPFull <= 0 || Nsite2 <= 0
+      || Nsize <= 0 || rowCapacity < 0
+      || (size_t)Nsite2 > SIZE_MAX/(size_t)Nsite2) return -1;
+  slaterSquare = (size_t)Nsite2*(size_t)Nsite2;
+  if((size_t)NQPFull > SIZE_MAX/slaterSquare) return -1;
+  bfSlaterSize = (size_t)NQPFull*slaterSquare;
+  if(GetCalculateNewPfMBF_fsz_row_values_work_size(
+        &pfUpdateComplexCount,pfUpdateIntCount,pfUpdateDoubleCount) != 0
+      || GetSlaterElmBF_fsz_hop_row_work_size(
+        &rowCount,NQPFull,rowCapacity) != BF_FSZ_ROW_BUILD_OK
+      || *pfUpdateIntCount > INT_MAX || *pfUpdateDoubleCount > INT_MAX
+      || (size_t)NQPFull > SIZE_MAX/2
+      || bfSlaterSize > SIZE_MAX-2*(size_t)NQPFull
+      || bfSlaterSize+2*(size_t)NQPFull > SIZE_MAX-rowCount
+      || bfSlaterSize+2*(size_t)NQPFull+rowCount
+          > SIZE_MAX-pfUpdateComplexCount) return -1;
+  bufferCount = 2*(size_t)NQPFull+bfSlaterSize+rowCount
+      +pfUpdateComplexCount;
+  if(BFFSZGreenRebuildCheckEnabled) {
+    if(bufferCount > SIZE_MAX-bfSlaterSize) return -1;
+    bufferCount += bfSlaterSize;
+  }
+  *bufferComplexCount = bufferCount;
+  return 0;
+}
+
 static void BF_FSZ_MaterializeGreenCandidate(
     const char *caller, double complex *candidateSlater,
     double complex *debugFull, const int *eleNum,
@@ -659,10 +731,16 @@ static void BF_FSZ_MaterializeGreenCandidate(
     const size_t rowAffectedStride, const int rowsBuilt,
     const int nAffected, const int *affected,
     int *hopIntWork, const int hopIntWorkSize,
-    const int useOMP, const int detailTimers, const int reason) {
+    const int useOMP, const int detailTimers, const int reason,
+    double *materializeSeconds) {
   const size_t slaterCount
       = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
   int status;
+  double materializeStart = 0.0;
+
+  if(materializeSeconds != NULL) {
+    materializeStart = BFFSZC2DetailMonotonicSeconds();
+  }
 
   if(detailTimers) {
     StopTimer(83);
@@ -727,6 +805,9 @@ static void BF_FSZ_MaterializeGreenCandidate(
       }
     }
   }
+  if(materializeSeconds != NULL) {
+    *materializeSeconds += BFFSZC2DetailMonotonicSeconds()-materializeStart;
+  }
 }
 
 static double complex CalculateBF_FSZ_UpdatedCandidateIP(const char *caller,
@@ -743,18 +824,41 @@ static double complex CalculateBF_FSZ_UpdatedCandidateIP(const char *caller,
     const size_t pfUpdateDoubleCount, double complex *pfBufM,
     int *pfIWork, double complex *pfWork, double *pfRWork,
     int *hopIntWork, const int hopIntWorkSize,
-    const int useOMP, const int detailTimers) {
+    const int useOMP, const int detailTimers, const int forceOracle,
+    BFFSZC2DetailContext *detailProfile, double *materializeSeconds) {
+  const unsigned char candidateSentinel = 0xa5;
+  size_t candidateCount = 0;
   int status, detail = 0;
   double complex ipNew;
 
+  if(BFFSZC2BufferCheckEnabled && detailProfile != NULL) {
+    if(NQPFull <= 0 || Nsite2 <= 0
+        || (size_t)Nsite2 > SIZE_MAX/(size_t)Nsite2
+        || (size_t)NQPFull
+            > SIZE_MAX/((size_t)Nsite2*(size_t)Nsite2)) {
+      fprintf(stderr,"error: %s: BF-FSZ candidate sentinel size overflow\n",
+          caller);
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+    candidateCount = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+    if(candidateCount > SIZE_MAX/sizeof(double complex)) {
+      fprintf(stderr,"error: %s: BF-FSZ candidate sentinel byte overflow\n",
+          caller);
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+    memset(candidateSlater,candidateSentinel,
+        sizeof(double complex)*candidateCount);
+  }
+
   if(!rowsBuilt) {
     RecordBFFSZPfPath(BFFSZ_PROFILE_GREEN,BFFSZ_PF_PATH_DIRECT_FULL);
+    RecordBFFSZC2Path(detailProfile,BFFSZ_C2_DETAIL_PATH_DIRECT_FULL);
     BF_FSZ_MaterializeGreenCandidate(
         caller,candidateSlater,debugFull,eleNum,eleIdx,eleSpn,
         oldEleProjBFCnt,newEleProjBFCnt,candidateRows,rowQpStride,
         rowAffectedStride,rowsBuilt,nAffected,affected,
         hopIntWork,hopIntWorkSize,useOMP,detailTimers,
-        BFFSZ_GREEN_MATERIALIZE_DIRECT_FULL);
+        BFFSZ_GREEN_MATERIALIZE_DIRECT_FULL,materializeSeconds);
     status = CalculateBF_FSZ_FullCandidatePfM(candidateSlater,eleIdx,eleSpn,
         pfMNew,&detail,pfBufM,pfIWork,pfWork,pfRWork);
   } else {
@@ -776,10 +880,27 @@ static double complex CalculateBF_FSZ_UpdatedCandidateIP(const char *caller,
       MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
     }
     if(updateStatus == BF_FSZ_PF_UPDATE_OK) {
+      if(BFFSZC2BufferCheckEnabled && detailProfile != NULL) {
+        const unsigned char *candidateBytes
+            = (const unsigned char *)(const void *)candidateSlater;
+        const size_t candidateByteCount
+            = sizeof(double complex)*candidateCount;
+        size_t candidateByte;
+        for(candidateByte=0;candidateByte<candidateByteCount;candidateByte++) {
+          if(candidateBytes[candidateByte] != candidateSentinel) {
+            fprintf(stderr,
+                "error: %s: BF-FSZ optimized row path wrote full candidate "
+                "at byte %zu\n",caller,candidateByte);
+            MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+          }
+        }
+      }
       RecordBFFSZPfPath(BFFSZ_PROFILE_GREEN,BFFSZ_PF_PATH_OPTIMIZED);
+      RecordBFFSZC2Path(detailProfile,BFFSZ_C2_DETAIL_PATH_OPTIMIZED_ROW);
       status = BF_FSZ_PF_OK;
       if(BFFSZPfUpdateCheckEnabled || BFFSZGreenRebuildCheckEnabled
-          || BFFSZAffectedCheckEnabled || BFFSZMatrixFreeCheckEnabled) {
+          || BFFSZAffectedCheckEnabled || BFFSZMatrixFreeCheckEnabled
+          || forceOracle) {
         int badQp = -1;
         double badError = 0.0;
         double ipError;
@@ -789,8 +910,9 @@ static double complex CalculateBF_FSZ_UpdatedCandidateIP(const char *caller,
             oldEleProjBFCnt,newEleProjBFCnt,candidateRows,rowQpStride,
             rowAffectedStride,rowsBuilt,nAffected,affected,
             hopIntWork,hopIntWorkSize,useOMP,detailTimers,
-            BFFSZ_GREEN_MATERIALIZE_ORACLE);
-        if(BFFSZPfUpdateCheckEnabled) {
+            BFFSZ_GREEN_MATERIALIZE_ORACLE,materializeSeconds);
+        RecordBFFSZC2Path(detailProfile,BFFSZ_C2_DETAIL_PATH_DEBUG_ORACLE);
+        if(BFFSZPfUpdateCheckEnabled || forceOracle) {
           status = CalculateBF_FSZ_FullCandidatePfM(
               candidateSlater,eleIdx,eleSpn,
               pfMFull,&detail,pfBufM,pfIWork,pfWork,pfRWork);
@@ -815,12 +937,13 @@ static double complex CalculateBF_FSZ_UpdatedCandidateIP(const char *caller,
       }
     } else {
       RecordBFFSZPfPath(BFFSZ_PROFILE_GREEN,BFFSZ_PF_PATH_FALLBACK);
+      RecordBFFSZC2Path(detailProfile,BFFSZ_C2_DETAIL_PATH_FALLBACK);
       BF_FSZ_MaterializeGreenCandidate(
           caller,candidateSlater,debugFull,eleNum,eleIdx,eleSpn,
           oldEleProjBFCnt,newEleProjBFCnt,candidateRows,rowQpStride,
           rowAffectedStride,rowsBuilt,nAffected,affected,
           hopIntWork,hopIntWorkSize,useOMP,detailTimers,
-          BFFSZ_GREEN_MATERIALIZE_FALLBACK);
+          BFFSZ_GREEN_MATERIALIZE_FALLBACK,materializeSeconds);
       status = CalculateBF_FSZ_FullCandidatePfM(candidateSlater,eleIdx,eleSpn,
           pfMNew,&detail,pfBufM,pfIWork,pfWork,pfRWork);
     }
@@ -1292,7 +1415,7 @@ double complex GreenFunc1BF_fsz2(const int ri, const int rj, const int s, const 
       eleProjBFCnt,projBFCntNew,nAffected,affected,pfMNew,pfMFull,pfUpdateWork,
       pfUpdateComplexCount,pfIWork,pfUpdateIntCount,pfRWork,
       pfUpdateDoubleCount,pfBufM,pfIWork,pfWork,pfRWork,
-      hopIntWork,hopIntWorkSize,1,1);
+      hopIntWork,hopIntWorkSize,1,1,0,NULL,NULL);
   StopTimer(83);
 
   eleCfg[rtj] = mj;
@@ -1403,7 +1526,7 @@ double complex GreenFunc1BF_fsz2_workspace(const int ri, const int rj,
       eleProjBFCnt,projBFCntNew,nAffected,affected,pfMNew,pfMFull,pfUpdateWork,
       pfUpdateComplexCount,pfIWork,pfUpdateIntCount,pfRWork,
       pfUpdateDoubleCount,pfBufM,pfIWork,pfWork,pfRWork,
-      hopIntWork,hopIntWorkSize,0,0);
+      hopIntWork,hopIntWorkSize,0,0,0,NULL,NULL);
 
   eleCfg[rtj] = mj;
   eleCfg[rsi] = -1;
@@ -1440,15 +1563,31 @@ double complex GreenFunc2BF_fsz2WithProfile(
                   int *pfIWork, double *pfRWork,
                   double complex *pfBufM, double complex *pfWork,
                   BFFSZC2DetailContext *detailProfile) {
-  double complex z,result;
-  int mj,ml,nChanged,nAffected;
+  double complex z,result,ipNew;
+  int mj,ml,nChanged,nAffected,rowStatus,rowsBuilt;
+  int profileNChanged=0,profileNAffected=0;
+  int movedParticles[2];
   int c2Class = 0;
   int stateAllowed;
   int XI,XJ,XK,XL;
+  int *stateSnapshot = NULL;
   double dispatchStart = 0.0;
   double componentStart = 0.0;
+  double materializeSeconds = 0.0;
+  double pfaffianSeconds = 0.0;
+  size_t pfUpdateComplexCount,pfUpdateIntCount,pfUpdateDoubleCount,rowCount;
+  const size_t bfSlaterSize
+      = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+  const int rowCapacity = (BFFSZPfUpdateKFull-1 < Nsize-1)
+      ? BFFSZPfUpdateKFull-1 : Nsize-1;
+  const size_t rowAffectedStride = (size_t)Nsize;
+  const size_t rowQpStride = (size_t)rowCapacity*rowAffectedStride;
   double complex *pfMNew = buffer;
+  double complex *pfMFull = pfMNew+NQPFull;
   double complex *candidateSlater = buffer+2*(size_t)NQPFull;
+  double complex *candidateRows = candidateSlater+bfSlaterSize;
+  double complex *pfUpdateWork;
+  double complex *debugFull;
 
   XI = ri+s*Nsite;
   XJ = rj+t*Nsite;
@@ -1529,6 +1668,14 @@ double complex GreenFunc2BF_fsz2WithProfile(
         pfIWork,pfRWork,pfBufM,pfWork);
   }
 
+  if(BFFSZC2StateCheckEnabled) {
+    stateSnapshot = BF_FSZ_CaptureGreen2State(eleIdx,eleSpn,eleCfg,eleNum);
+    if(stateSnapshot == NULL) {
+      fprintf(stderr,"error: GreenFunc2BF_fsz2 state snapshot allocation failed\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+  }
+
   if(eleNum[XI] == 1 || eleNum[XJ] == 0
       || eleNum[XK] == 1 || eleNum[XL] == 0) {
     if(detailProfile != NULL) {
@@ -1536,6 +1683,12 @@ double complex GreenFunc2BF_fsz2WithProfile(
       detailProfile->orderedDescriptorTotal++;
       detailProfile->outcome[BFFSZ_C2_DETAIL_OUTCOME_OCCUPANCY_ZERO]++;
     }
+    if(stateSnapshot != NULL && !BF_FSZ_Green2StateMatches(
+        stateSnapshot,eleIdx,eleSpn,eleCfg,eleNum)) {
+      fprintf(stderr,"error: GreenFunc2BF_fsz2 occupancy-zero changed local state\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+    free(stateSnapshot);
     return 0.0;
   }
   if(detailProfile != NULL) {
@@ -1565,7 +1718,7 @@ double complex GreenFunc2BF_fsz2WithProfile(
   UpdateProjCnt_fsz(rj,ri,t,s,projCntNew,projCntNew,eleNum);
 
   result = 0.0;
-  stateAllowed = IsSectorStateAllowed(eleNum);
+  stateAllowed = IsSectorStateAllowed(eleNum) && !BFFSZC2ForceSectorZero;
   if(stateAllowed) {
     z = ProjRatio(projCntNew,eleProjCnt);
   }
@@ -1582,12 +1735,44 @@ double complex GreenFunc2BF_fsz2WithProfile(
       componentStart = BFFSZC2DetailMonotonicSeconds();
       if(CollectBFAffectedParticlesTwoMove_fsz(
           eleProjBFCnt,projBFCntNew,ml,mj,eleIdx,eleSpn,
-          affected,hopIntWork,hopIntWorkSize,&nChanged,&nAffected) != 0) {
+          affected,hopIntWork,hopIntWorkSize,
+          &profileNChanged,&profileNAffected) != 0) {
         fprintf(stderr,"error: BF-FSZ C2 detail affected collector failed\n");
         MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
       }
       detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_AFFECTED_COLLECT]
           += BFFSZC2DetailMonotonicSeconds()-componentStart;
+      componentStart = BFFSZC2DetailMonotonicSeconds();
+    }
+    if(GetSlaterElmBF_fsz_hop_row_work_size(
+          &rowCount,NQPFull,rowCapacity) != BF_FSZ_ROW_BUILD_OK
+        || GetCalculateNewPfMBF_fsz_row_values_work_size(
+          &pfUpdateComplexCount,&pfUpdateIntCount,&pfUpdateDoubleCount) != 0
+        || pfIWork == NULL || pfRWork == NULL || pfBufM == NULL
+        || pfWork == NULL) {
+      fprintf(stderr,"error: invalid GreenFunc2BF_fsz Pfaffian workspace\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+    movedParticles[0] = ml;
+    movedParticles[1] = mj;
+    pfUpdateWork = candidateRows+rowCount;
+    debugFull = BFFSZGreenRebuildCheckEnabled
+        ? pfUpdateWork+pfUpdateComplexCount : NULL;
+    rowStatus = MakeSlaterElmBF_fsz_multi_move_rows_workspace_serial(
+        candidateRows,rowQpStride,rowAffectedStride,rowCapacity,
+        SlaterElmBF,2,movedParticles,eleIdx,eleSpn,
+        eleProjBFCnt,projBFCntNew,0,NQPFull,
+        affected,&nChanged,&nAffected,hopIntWork,hopIntWorkSize);
+    if(rowStatus == BF_FSZ_ROW_BUILD_INVALID_ARGUMENT) {
+      fprintf(stderr,"error: GreenFunc2BF_fsz candidate-row construction failed\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+    rowsBuilt = (rowStatus == BF_FSZ_ROW_BUILD_OK);
+    if(detailProfile != NULL) {
+      if(nChanged != profileNChanged || nAffected != profileNAffected) {
+        fprintf(stderr,"error: BF-FSZ C2 detail/row affected mismatch\n");
+        MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+      }
       detailProfile->evaluatedCalls++;
       detailProfile->changedSum += nChanged;
       detailProfile->affectedSum += nAffected;
@@ -1597,24 +1782,35 @@ double complex GreenFunc2BF_fsz2WithProfile(
       detailProfile->affectedHist[BFFSZProfileHistBin(nAffected)]++;
       if(nAffected >= BFFSZPfUpdateKFull) detailProfile->affectedAtOrAboveKFull++;
       detailProfile->outcome[BFFSZ_C2_DETAIL_OUTCOME_EVALUATED]++;
-      detailProfile->path[BFFSZ_C2_DETAIL_PATH_LEGACY_FULL]++;
-      componentStart = BFFSZC2DetailMonotonicSeconds();
-    }
-    MakeSlaterElmBF_fsz_to_serial(candidateSlater,eleNum,projBFCntNew);
-    BF_FSZ_CheckMultiMoveRowsOnce(
-        ml,mj,eleIdx,eleSpn,eleProjBFCnt,projBFCntNew,
-        candidateSlater,hopIntWork,hopIntWorkSize);
-    if(detailProfile != NULL) {
       detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_CANDIDATE_BUILD]
           += BFFSZC2DetailMonotonicSeconds()-componentStart;
-      componentStart = BFFSZC2DetailMonotonicSeconds();
     }
-    z *= CalculateBF_FSZ_CandidateIP("GreenFunc2BF_fsz2",candidateSlater,
-        eleIdx,eleSpn,pfMNew,pfBufM,pfIWork,pfWork,pfRWork);
+    RecordBFFSZProfile(BFFSZ_PROFILE_GREEN,nChanged,nAffected);
+    if(detailProfile != NULL) componentStart = BFFSZC2DetailMonotonicSeconds();
+    ipNew = CalculateBF_FSZ_UpdatedCandidateIP(
+        "GreenFunc2BF_fsz2",candidateRows,rowQpStride,rowAffectedStride,
+        rowsBuilt,candidateSlater,debugFull,eleIdx,eleSpn,eleNum,
+        eleProjBFCnt,projBFCntNew,nAffected,affected,pfMNew,pfMFull,
+        pfUpdateWork,pfUpdateComplexCount,pfIWork,pfUpdateIntCount,
+        pfRWork,pfUpdateDoubleCount,pfBufM,pfIWork,pfWork,pfRWork,
+        hopIntWork,hopIntWorkSize,0,0,BFFSZMultiMoveRowCheckEnabled,
+        detailProfile,(detailProfile != NULL) ? &materializeSeconds : NULL);
+    if(BFFSZMultiMoveRowCheckEnabled) {
+      BF_FSZ_CheckMultiMoveRowsOnce(
+          ml,mj,eleIdx,eleSpn,eleProjBFCnt,projBFCntNew,
+          candidateSlater,hopIntWork,hopIntWorkSize);
+    }
     if(detailProfile != NULL) {
+      pfaffianSeconds = BFFSZC2DetailMonotonicSeconds()-componentStart;
+      if(materializeSeconds > pfaffianSeconds) {
+        materializeSeconds = pfaffianSeconds;
+      }
+      detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_CANDIDATE_BUILD]
+          += materializeSeconds;
       detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_PFAFFIAN]
-          += BFFSZC2DetailMonotonicSeconds()-componentStart;
+          += pfaffianSeconds-materializeSeconds;
     }
+    z *= ipNew;
     result = conj(z/ip);
   } else if(detailProfile != NULL) {
     detailProfile->outcome[BFFSZ_C2_DETAIL_OUTCOME_SECTOR_ZERO]++;
@@ -1637,6 +1833,13 @@ double complex GreenFunc2BF_fsz2WithProfile(
     detailProfile->componentSeconds[BFFSZ_C2_DETAIL_COMPONENT_RESTORE]
         += BFFSZC2DetailMonotonicSeconds()-componentStart;
   }
+
+  if(stateSnapshot != NULL && !BF_FSZ_Green2StateMatches(
+      stateSnapshot,eleIdx,eleSpn,eleCfg,eleNum)) {
+    fprintf(stderr,"error: GreenFunc2BF_fsz2 failed to restore local state\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  free(stateSnapshot);
 
   return result;
 }
