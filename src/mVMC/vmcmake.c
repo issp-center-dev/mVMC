@@ -619,15 +619,111 @@ void ReduceBFProfileCounter(MPI_Comm comm) {
 #ifdef _mpi_use
   int n=NBFProfileCounter;
   long long recv[NBFProfileCounter];
-  int i;
+  long long recvSource[NBFFSZProfileSource];
+  long long recvHist[NBFFSZProfileSource][NBFFSZProfileHist];
+  long long recvRatioHist[NBFFSZProfileSource][NBFFSZProfileRatioHist];
+  long long recvPfPath[NBFFSZProfileSource][NBFFSZPfPath];
+  long long recvInvPath[NBFFSZPfPath];
+  long long recvGreenMaterialize[NBFFSZGreenMaterialize];
+  long long recvSampleMaterialize[NBFFSZSampleMaterialize];
+  long long recvSampleCommit[NBFFSZPfPath];
+  long long recvInvGemmCheckCount;
+  double recvInvCheckSeconds,recvInvAntisymmetry,recvInvResidual;
+  double recvInvGemmDifference;
+  double recvInvDetailSeconds[NBFFSZInvDetail];
+  int i,j;
   int rank,size;
-  if(!BFProfileEnabled) return;
+  if(!BFProfileEnabled && !BFFSZInvGemmCheckEnabled
+      && !BFFSZInvDetailProfileEnabled) return;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
 
   MPI_Allreduce(BFProfileCounter,recv,n,MPI_LONG_LONG,MPI_SUM,comm);
   if(rank==0) {
     for(i=0;i<n;i++) BFProfileCounter[i] = recv[i];
+  }
+  MPI_Allreduce(BFFSZProfileCall,recvSource,NBFFSZProfileSource,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) BFFSZProfileCall[i] = recvSource[i];
+  MPI_Allreduce(BFFSZProfileChangedSum,recvSource,NBFFSZProfileSource,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) BFFSZProfileChangedSum[i] = recvSource[i];
+  MPI_Allreduce(BFFSZProfileAffectedSum,recvSource,NBFFSZProfileSource,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) BFFSZProfileAffectedSum[i] = recvSource[i];
+  MPI_Allreduce(BFFSZProfileChangedMax,recvSource,NBFFSZProfileSource,MPI_LONG_LONG,MPI_MAX,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) BFFSZProfileChangedMax[i] = recvSource[i];
+  MPI_Allreduce(BFFSZProfileAffectedMax,recvSource,NBFFSZProfileSource,MPI_LONG_LONG,MPI_MAX,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) BFFSZProfileAffectedMax[i] = recvSource[i];
+  MPI_Allreduce(BFFSZProfileChangedHist,recvHist,NBFFSZProfileSource*NBFFSZProfileHist,
+                MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) for(j=0;j<NBFFSZProfileHist;j++) {
+    BFFSZProfileChangedHist[i][j] = recvHist[i][j];
+  }
+  MPI_Allreduce(BFFSZProfileAffectedHist,recvHist,NBFFSZProfileSource*NBFFSZProfileHist,
+                MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) for(j=0;j<NBFFSZProfileHist;j++) {
+    BFFSZProfileAffectedHist[i][j] = recvHist[i][j];
+  }
+  MPI_Allreduce(BFFSZProfileAffectedRatioHist,recvRatioHist,
+                NBFFSZProfileSource*NBFFSZProfileRatioHist,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) for(j=0;j<NBFFSZProfileRatioHist;j++) {
+    BFFSZProfileAffectedRatioHist[i][j] = recvRatioHist[i][j];
+  }
+  MPI_Allreduce(BFFSZProfilePfPath,recvPfPath,
+                NBFFSZProfileSource*NBFFSZPfPath,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(i=0;i<NBFFSZProfileSource;i++) for(j=0;j<NBFFSZPfPath;j++) {
+    BFFSZProfilePfPath[i][j] = recvPfPath[i][j];
+  }
+  MPI_Allreduce(BFFSZProfileInvPath,recvInvPath,NBFFSZPfPath,
+                MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(j=0;j<NBFFSZPfPath;j++) BFFSZProfileInvPath[j] = recvInvPath[j];
+  MPI_Allreduce(BFFSZProfileGreenMaterialize,recvGreenMaterialize,
+                NBFFSZGreenMaterialize,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(j=0;j<NBFFSZGreenMaterialize;j++) {
+    BFFSZProfileGreenMaterialize[j] = recvGreenMaterialize[j];
+  }
+  MPI_Allreduce(BFFSZProfileSampleMaterialize,recvSampleMaterialize,
+                NBFFSZSampleMaterialize,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(j=0;j<NBFFSZSampleMaterialize;j++) {
+    BFFSZProfileSampleMaterialize[j] = recvSampleMaterialize[j];
+  }
+  MPI_Allreduce(BFFSZProfileSampleCommit,recvSampleCommit,
+                NBFFSZPfPath,MPI_LONG_LONG,MPI_SUM,comm);
+  if(rank==0) for(j=0;j<NBFFSZPfPath;j++) {
+    BFFSZProfileSampleCommit[j] = recvSampleCommit[j];
+  }
+  MPI_Allreduce(&BFFSZProfileInvCheckSeconds,&recvInvCheckSeconds,1,
+                MPI_DOUBLE,MPI_MAX,comm);
+  MPI_Allreduce(&BFFSZProfileInvAntisymmetryMax,&recvInvAntisymmetry,1,
+                MPI_DOUBLE,MPI_MAX,comm);
+  MPI_Allreduce(&BFFSZProfileInvResidualMax,&recvInvResidual,1,
+                MPI_DOUBLE,MPI_MAX,comm);
+  if(rank==0) {
+    BFFSZProfileInvCheckSeconds = recvInvCheckSeconds;
+    BFFSZProfileInvAntisymmetryMax = recvInvAntisymmetry;
+    BFFSZProfileInvResidualMax = recvInvResidual;
+  }
+  if(BFFSZInvGemmCheckEnabled) {
+    MPI_Allreduce(&BFFSZProfileInvGemmCheckCount,&recvInvGemmCheckCount,1,
+                  MPI_LONG_LONG,MPI_SUM,comm);
+    MPI_Allreduce(&BFFSZProfileInvGemmDifferenceMax,&recvInvGemmDifference,1,
+                  MPI_DOUBLE,MPI_MAX,comm);
+    if(rank==0) {
+      BFFSZProfileInvGemmCheckCount = recvInvGemmCheckCount;
+      BFFSZProfileInvGemmDifferenceMax = recvInvGemmDifference;
+    }
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    MPI_Allreduce(BFFSZProfileInvDetailSeconds,recvInvDetailSeconds,
+                  NBFFSZInvDetail,MPI_DOUBLE,MPI_MAX,comm);
+    if(rank==0) for(i=0;i<NBFFSZInvDetail;i++) {
+      BFFSZProfileInvDetailMaxSeconds[i] = recvInvDetailSeconds[i];
+    }
+  }
+#else
+  int i;
+  if(BFFSZInvDetailProfileEnabled) {
+    for(i=0;i<NBFFSZInvDetail;i++) {
+      BFFSZProfileInvDetailMaxSeconds[i] = BFFSZProfileInvDetailSeconds[i];
+    }
   }
 #endif
   return;

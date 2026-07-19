@@ -27,8 +27,1211 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 
 #include "pfupdate_fsz.h"
+#include <stdint.h>
+#include <time.h>
 #ifndef _PFUDATE_FSZ_SRC
 #define _PFUDATE_FSZ_SRC
+
+static int BF_FSZ_MultiplySize(const size_t a, const size_t b, size_t *result) {
+  if(result == NULL || (a != 0 && b > SIZE_MAX/a)) return 1;
+  *result = a*b;
+  return 0;
+}
+
+static int BF_FSZ_MemoryRangesOverlap(
+    const void *rangeA, const size_t countA, const size_t elementSizeA,
+    const void *rangeB, const size_t countB, const size_t elementSizeB) {
+  size_t bytesA, bytesB;
+  uintptr_t beginA, beginB;
+  if(countA == 0 || countB == 0) return 0;
+  if(rangeA == NULL || rangeB == NULL || elementSizeA == 0
+      || elementSizeB == 0 || countA > SIZE_MAX/elementSizeA
+      || countB > SIZE_MAX/elementSizeB) return 1;
+  bytesA = countA*elementSizeA;
+  bytesB = countB*elementSizeB;
+  beginA = (uintptr_t)rangeA;
+  beginB = (uintptr_t)rangeB;
+  if(beginA > UINTPTR_MAX-bytesA || beginB > UINTPTR_MAX-bytesB) return 1;
+  return beginA < beginB+bytesB && beginB < beginA+bytesA;
+}
+
+static int BF_FSZ_ComplexRangesOverlap(
+    const double complex *rangeA, const size_t countA,
+    const double complex *rangeB, const size_t countB) {
+  return BF_FSZ_MemoryRangesOverlap(
+      rangeA,countA,sizeof(double complex),
+      rangeB,countB,sizeof(double complex));
+}
+
+/* Row-major C(m,n) = alpha*A(m,k)*B(k,n) + beta*C.
+   Fortran BLAS sees the transposed product C^T = B^T*A^T. */
+static void BF_FSZ_ZgemmRowMajorNN(
+    const int m, const int n, const int k,
+    const double complex *a, const double complex *b,
+    const double complex alpha, const double complex beta,
+    double complex *c) {
+  const char trans = 'N';
+  const int fm = n, fn = m, fk = k;
+  const int lda = n, ldb = k, ldc = n;
+  M_ZGEMM(&trans,&trans,&fm,&fn,&fk,&alpha,b,&lda,a,&ldb,&beta,c,&ldc);
+}
+
+/* Row-major C(m,n) = alpha*A(m,k)*B(n,k)^T + beta*C.
+   This is a plain transpose, never a complex-conjugate transpose. */
+static void BF_FSZ_ZgemmRowMajorNT(
+    const int m, const int n, const int k,
+    const double complex *a, const double complex *b,
+    const double complex alpha, const double complex beta,
+    double complex *c) {
+  const char transa = 'T', transb = 'N';
+  const int fm = n, fn = m, fk = k;
+  const int lda = k, ldb = k, ldc = n;
+  M_ZGEMM(&transa,&transb,&fm,&fn,&fk,
+          &alpha,b,&lda,a,&ldb,&beta,c,&ldc);
+}
+
+static double BF_FSZ_ScaledComplexDifference(
+    const double complex a, const double complex b) {
+  const double absA = cabs(a);
+  const double absB = cabs(b);
+  const double diff = cabs(a-b);
+  if(!isfinite(absA) || !isfinite(absB) || !isfinite(diff)) return INFINITY;
+  return diff/fmax(1.0,fmax(absA,absB));
+}
+
+static int BF_FSZ_PfUpdateTailWorkSizeForK(
+    const int k, size_t *complexCount,
+    size_t *intCount, size_t *doubleCount) {
+  size_t kk, n, smallCount, total;
+  if(k < 1 || k > Nsize || complexCount == NULL || intCount == NULL
+      || doubleCount == NULL) return 1;
+  kk = (size_t)k;
+  n = (size_t)Nsize;
+  if(BF_FSZ_MultiplySize(kk, kk, &smallCount) != 0
+      || smallCount > SIZE_MAX/4) return 1;
+  smallCount *= 4; /* (2*k)^2 */
+  if(n > SIZE_MAX-smallCount || n+smallCount > SIZE_MAX-smallCount) return 1;
+  total = n+smallCount+smallCount;
+  if(kk > SIZE_MAX/2) return 1;
+  *complexCount = total;
+  *intCount = 2*kk;
+  *doubleCount = smallCount;
+  return 0;
+}
+
+static int BF_FSZ_PfUpdateWorkSizeForK(const int k, size_t *complexCount,
+                                       size_t *intCount, size_t *doubleCount) {
+  size_t vecCount, tailCount;
+  if(BF_FSZ_PfUpdateTailWorkSizeForK(
+      k, &tailCount, intCount, doubleCount) != 0
+      || BF_FSZ_MultiplySize((size_t)k, (size_t)Nsize, &vecCount) != 0
+      || vecCount > SIZE_MAX-tailCount) return 1;
+  *complexCount = vecCount+tailCount;
+  return 0;
+}
+
+int GetCalculateNewPfMBF_fsz_rows_work_size(size_t *complexCount,
+    size_t *intCount, size_t *doubleCount) {
+  int kMax;
+  if(Nsize < 2 || complexCount == NULL || intCount == NULL
+      || doubleCount == NULL) return 1;
+  kMax = Nsize - 1; /* nAffected==Nsize always selects the full path. */
+  if(kMax >= BF_FSZ_PF_UPDATE_KFULL_DEFAULT) {
+    kMax = BF_FSZ_PF_UPDATE_KFULL_DEFAULT - 1;
+  }
+  return BF_FSZ_PfUpdateWorkSizeForK(kMax, complexCount, intCount, doubleCount);
+}
+
+int GetCalculateNewPfMBF_fsz_row_values_work_size(size_t *complexCount,
+    size_t *intCount, size_t *doubleCount) {
+  int kMax;
+  if(Nsize < 2 || complexCount == NULL || intCount == NULL
+      || doubleCount == NULL) return 1;
+  kMax = Nsize-1;
+  if(kMax >= BF_FSZ_PF_UPDATE_KFULL_DEFAULT) {
+    kMax = BF_FSZ_PF_UPDATE_KFULL_DEFAULT-1;
+  }
+  return BF_FSZ_PfUpdateTailWorkSizeForK(
+      kMax, complexCount, intCount, doubleCount);
+}
+
+int BF_FSZ_ShouldUseFullPfaffian(const int nAffected) {
+  return nAffected >= BFFSZPfUpdateKFull || nAffected == Nsize;
+}
+
+static int CalculateNewPfMBF_fsz_row_values_child(
+    const int nAffected, const int *affected,
+    double complex *pfMNew, const double complex *oldPfM,
+    const double complex *oldInvM, const size_t invMQpStride,
+    const int qpStart, const int qpidx,
+    const double complex *candidateRows, const size_t rowAffectedStride,
+    int *failureDetail, double complex *w,
+    double complex *smallMatrix, int *iwork, double complex *pfWork,
+    double *rwork) {
+  const int nsize = Nsize;
+  const int n2 = 2*nAffected;
+  const int globalQpidx = qpStart + qpidx;
+  const double complex *invM = oldInvM + (size_t)qpidx*invMQpStride;
+  char uplo = 'U', method = 'P';
+  int k,l,i,j,nn=n2,lda=n2,info=0,lwork=n2*n2;
+  double complex pfaff, result;
+  double sign;
+
+  /* w = InvM * vec_k. Keeping one w row at a time makes this scalar
+     implementation O(k*Nsize^2 + k^2*Nsize) without a k*Nsize cache. */
+  for(k=0;k<nAffected;k++) {
+    const double complex *vec_k
+        = candidateRows+(size_t)k*rowAffectedStride;
+    double complex *matY_k = smallMatrix + (size_t)n2*(size_t)k + nAffected;
+    for(i=0;i<nsize;i++) {
+      double complex value = 0.0 + 0.0*I;
+      const double complex *invM_i = invM + (size_t)i*(size_t)nsize;
+      for(j=0;j<nsize;j++) value += invM_i[j]*vec_k[j];
+      w[i] = value;
+    }
+
+    for(l=0;l<k;l++) {
+      const double complex *vec_l
+          = candidateRows+(size_t)l*rowAffectedStride;
+      double complex value = 0.0 + 0.0*I;
+      for(i=0;i<nsize;i++) value += w[i]*vec_l[i];
+      smallMatrix[(size_t)n2*(size_t)l+k] = value + vec_l[affected[k]];
+    }
+    for(l=0;l<nAffected;l++) matY_k[l] = w[affected[l]];
+  }
+
+  for(k=0;k<nAffected;k++) {
+    const double complex *invM_k = invM + (size_t)affected[k]*(size_t)nsize;
+    double complex *matZ_k = smallMatrix
+        + (size_t)n2*(size_t)(k+nAffected) + nAffected;
+    for(l=k+1;l<nAffected;l++) matZ_k[l] = invM_k[affected[l]];
+  }
+
+  for(k=0;k<n2;k++) {
+    for(l=0;l<k;l++) {
+      smallMatrix[(size_t)n2*(size_t)k+l]
+          = -smallMatrix[(size_t)n2*(size_t)l+k];
+    }
+    smallMatrix[(size_t)n2*(size_t)k+k] = 0.0 + 0.0*I;
+  }
+
+  M_ZSKPFA(&uplo, &method, &nn, smallMatrix, &lda, &pfaff,
+      iwork, pfWork, &lwork, rwork, &info);
+  if(info != 0) {
+    if(failureDetail != NULL) *failureDetail = info;
+    return BF_FSZ_PF_UPDATE_LAPACK_FAILURE;
+  }
+  if(!(isfinite(creal(pfaff)) && isfinite(cimag(pfaff)))) {
+    if(failureDetail != NULL) *failureDetail = globalQpidx;
+    return BF_FSZ_PF_UPDATE_NONFINITE;
+  }
+  if(pfaff == 0.0 + 0.0*I || oldPfM[qpidx] == 0.0 + 0.0*I) {
+    if(failureDetail != NULL) *failureDetail = globalQpidx;
+    return BF_FSZ_PF_UPDATE_EXACT_ZERO;
+  }
+  if(!(isfinite(creal(oldPfM[qpidx])) && isfinite(cimag(oldPfM[qpidx])))) {
+    if(failureDetail != NULL) *failureDetail = globalQpidx;
+    return BF_FSZ_PF_UPDATE_NONFINITE;
+  }
+
+  sign = (((nAffected*(nAffected-1)/2) & 1) == 0) ? 1.0 : -1.0;
+  result = sign*pfaff*oldPfM[qpidx];
+  if(!(isfinite(creal(result)) && isfinite(cimag(result)))) {
+    if(failureDetail != NULL) *failureDetail = globalQpidx;
+    return BF_FSZ_PF_UPDATE_NONFINITE;
+  }
+  pfMNew[qpidx] = result;
+  return BF_FSZ_PF_UPDATE_OK;
+}
+
+int CalculateNewPfMBF_fsz_rows_workspace(
+    const int nAffected, const int *affected,
+    double complex *pfMNew, const double complex *oldPfM,
+    const double complex *oldInvM, const size_t invMQpStride,
+    const int *eleIdx, const int *eleSpn,
+    const int qpStart, const int qpEnd,
+    const double complex *candidateSlater, int *failureDetail,
+    double complex *complexWork, const size_t complexWorkCount,
+    int *iwork, const size_t intWorkCount,
+    double *rwork, const size_t rworkCount) {
+  size_t requiredComplex, requiredInt, requiredDouble;
+  size_t vecCount, smallCount;
+  size_t qpNum;
+  double complex *vec, *w, *smallMatrix, *pfWork;
+  int i,j,qpidx;
+
+  if(failureDetail != NULL) *failureDetail = 0;
+  if(nAffected < 1 || nAffected > Nsize
+      || qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull
+      || BF_FSZ_ShouldUseFullPfaffian(nAffected)) {
+    return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+  }
+  if(affected == NULL || pfMNew == NULL || oldPfM == NULL || oldInvM == NULL
+      || eleIdx == NULL || eleSpn == NULL || candidateSlater == NULL
+      || complexWork == NULL || iwork == NULL || rwork == NULL
+      || invMQpStride < (size_t)Nsize*(size_t)Nsize
+      || invMQpStride > (size_t)PTRDIFF_MAX
+      || pfMNew == oldPfM || candidateSlater == SlaterElmBF) {
+    return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+  }
+  qpNum = (size_t)(qpEnd-qpStart);
+  if(qpNum > 1
+      && (qpNum-1) > (SIZE_MAX-(size_t)Nsize*(size_t)Nsize)/invMQpStride) {
+    return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+  }
+  if(BF_FSZ_PfUpdateWorkSizeForK(nAffected, &requiredComplex,
+      &requiredInt, &requiredDouble) != 0
+      || complexWorkCount < requiredComplex || intWorkCount < requiredInt
+      || rworkCount < requiredDouble) {
+    return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+  }
+  for(i=0;i<nAffected;i++) {
+    if(affected[i] < 0 || affected[i] >= Nsize) {
+      return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+    }
+    for(j=0;j<i;j++) if(affected[j] == affected[i]) {
+      return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+    }
+  }
+  for(i=0;i<Nsize;i++) {
+    if(eleIdx[i] < 0 || eleIdx[i] >= Nsite
+        || (eleSpn[i] != 0 && eleSpn[i] != 1)) {
+      return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+    }
+  }
+
+  vecCount = (size_t)nAffected*(size_t)Nsize;
+  smallCount = 4*(size_t)nAffected*(size_t)nAffected;
+  vec = complexWork;
+  w = vec + vecCount;
+  smallMatrix = w + Nsize;
+  pfWork = smallMatrix + smallCount;
+
+  for(qpidx=0;qpidx<qpEnd-qpStart;qpidx++) {
+    const int globalQpidx = qpStart+qpidx;
+    const double complex *sltE = candidateSlater
+        +(size_t)globalQpidx*(size_t)Nsite2*(size_t)Nsite2;
+    int k;
+    for(k=0;k<nAffected;k++) {
+      const int rsk = eleIdx[affected[k]]+eleSpn[affected[k]]*Nsite;
+      const double complex *sltE_k = sltE+(size_t)rsk*(size_t)Nsite2;
+      double complex *vec_k = vec+(size_t)k*(size_t)Nsize;
+      for(i=0;i<Nsize;i++) {
+        const int rsi = eleIdx[i]+eleSpn[i]*Nsite;
+        vec_k[i] = sltE_k[rsi];
+      }
+    }
+    {
+      const int status = CalculateNewPfMBF_fsz_row_values_child(
+        nAffected, affected, pfMNew, oldPfM, oldInvM, invMQpStride,
+        qpStart, qpidx, vec, (size_t)Nsize, failureDetail,
+        w, smallMatrix, iwork, pfWork, rwork);
+      if(status != BF_FSZ_PF_UPDATE_OK) return status;
+    }
+  }
+  return BF_FSZ_PF_UPDATE_OK;
+}
+
+int CalculateNewPfMBF_fsz_row_values_workspace(
+    const int nAffected, const int *affected,
+    double complex *pfMNew, const double complex *oldPfM,
+    const double complex *oldInvM, const size_t invMQpStride,
+    const int qpStart, const int qpEnd,
+    const double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride, int *failureDetail,
+    double complex *complexWork, const size_t complexWorkCount,
+    int *iwork, const size_t intWorkCount,
+    double *rwork, const size_t rworkCount) {
+  const size_t qpNum = (size_t)(qpEnd-qpStart);
+  size_t requiredComplex, requiredInt, requiredDouble;
+  size_t smallCount, rowDataCount = 0, rowSpan = 0;
+  double complex *w, *smallMatrix, *pfWork;
+  int i, j, qpidx;
+
+  if(failureDetail != NULL) *failureDetail = 0;
+  if(nAffected < 1 || nAffected > Nsize
+      || qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull
+      || BF_FSZ_ShouldUseFullPfaffian(nAffected)
+      || affected == NULL || pfMNew == NULL || oldPfM == NULL
+      || oldInvM == NULL || complexWork == NULL || iwork == NULL
+      || rwork == NULL || invMQpStride < (size_t)Nsize*(size_t)Nsize
+      || invMQpStride > (size_t)PTRDIFF_MAX
+      || pfMNew == oldPfM
+      || (qpNum > 1
+          && (qpNum-1)
+              > (SIZE_MAX-(size_t)Nsize*(size_t)Nsize)/invMQpStride)) {
+    return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+  }
+  if(BF_FSZ_PfUpdateTailWorkSizeForK(nAffected, &requiredComplex,
+      &requiredInt, &requiredDouble) != 0
+      || complexWorkCount < requiredComplex || intWorkCount < requiredInt
+      || rworkCount < requiredDouble) {
+    return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+  }
+  for(i=0;i<nAffected;i++) {
+    if(affected[i] < 0 || affected[i] >= Nsize) {
+      return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+    }
+    for(j=0;j<i;j++) if(affected[j] == affected[i]) {
+      return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+    }
+  }
+  if(qpNum > 0) {
+    if(candidateRows == NULL || rowAffectedStride < (size_t)Nsize
+        || (size_t)(nAffected-1)
+            > (SIZE_MAX-(size_t)Nsize)/rowAffectedStride) {
+      return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+    }
+    rowDataCount = (size_t)(nAffected-1)*rowAffectedStride+(size_t)Nsize;
+    if(rowQpStride < rowDataCount
+        || (qpNum-1) > (SIZE_MAX-rowDataCount)/rowQpStride) {
+      return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+    }
+    rowSpan = (qpNum-1)*rowQpStride+rowDataCount;
+    if(rowSpan > (size_t)PTRDIFF_MAX
+        || BF_FSZ_ComplexRangesOverlap(
+            candidateRows, rowSpan, complexWork, complexWorkCount)
+        || BF_FSZ_ComplexRangesOverlap(
+            candidateRows, rowSpan, pfMNew, qpNum)
+        || BF_FSZ_MemoryRangesOverlap(
+            candidateRows,rowSpan,sizeof(double complex),
+            iwork,intWorkCount,sizeof(int))
+        || BF_FSZ_MemoryRangesOverlap(
+            candidateRows,rowSpan,sizeof(double complex),
+            rwork,rworkCount,sizeof(double))) {
+      return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+    }
+  }
+
+  smallCount = 4*(size_t)nAffected*(size_t)nAffected;
+  w = complexWork;
+  smallMatrix = w+Nsize;
+  pfWork = smallMatrix+smallCount;
+  for(qpidx=0;qpidx<qpEnd-qpStart;qpidx++) {
+    const int status = CalculateNewPfMBF_fsz_row_values_child(
+        nAffected, affected, pfMNew, oldPfM, oldInvM, invMQpStride,
+        qpStart, qpidx, candidateRows+(size_t)qpidx*rowQpStride,
+        rowAffectedStride, failureDetail, w, smallMatrix, iwork, pfWork, rwork);
+    if(status != BF_FSZ_PF_UPDATE_OK) return status;
+  }
+  return BF_FSZ_PF_UPDATE_OK;
+}
+
+int CalculateNewPfMBF_fsz_rows(
+    const int nAffected, const int *affected,
+    double complex *pfMNew, const double complex *oldPfM,
+    const double complex *oldInvM, const size_t invMQpStride,
+    const int *eleIdx, const int *eleSpn,
+    const int qpStart, const int qpEnd,
+    const double complex *candidateSlater, int *failureDetail) {
+  size_t complexCount, intCount, doubleCount;
+  double complex *complexWork = NULL;
+  int *iwork = NULL;
+  double *rwork = NULL;
+  int status;
+
+  if(BF_FSZ_PfUpdateWorkSizeForK(nAffected, &complexCount, &intCount,
+      &doubleCount) != 0 || complexCount > SIZE_MAX/sizeof(double complex)
+      || intCount > SIZE_MAX/sizeof(int)
+      || doubleCount > SIZE_MAX/sizeof(double)) {
+    return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+  }
+  complexWork = (double complex *)malloc(sizeof(double complex)*complexCount);
+  iwork = (int *)malloc(sizeof(int)*intCount);
+  rwork = (double *)malloc(sizeof(double)*doubleCount);
+  if(complexWork == NULL || iwork == NULL || rwork == NULL) {
+    free(complexWork);
+    free(iwork);
+    free(rwork);
+    return BF_FSZ_PF_UPDATE_INVALID_ARGUMENT;
+  }
+  status = CalculateNewPfMBF_fsz_rows_workspace(
+      nAffected, affected, pfMNew, oldPfM, oldInvM, invMQpStride,
+      eleIdx, eleSpn, qpStart, qpEnd, candidateSlater, failureDetail,
+      complexWork, complexCount, iwork, intCount, rwork, doubleCount);
+  free(complexWork);
+  free(iwork);
+  free(rwork);
+  return status;
+}
+
+static BF_FSZ_InvUpdateResult BF_FSZ_InvResultValue(const int status,
+    const int stage, const int qpidx, const int lapackInfo,
+    const double antisymmetryResidual, const double affectedResidual,
+    const double checkSeconds) {
+  BF_FSZ_InvUpdateResult result;
+  int i;
+  result.status = status;
+  result.stage = stage;
+  result.qpidx = qpidx;
+  result.lapackInfo = lapackInfo;
+  result.antisymmetryResidual = antisymmetryResidual;
+  result.affectedResidual = affectedResidual;
+  result.gemmDifference = 0.0;
+  result.checkSeconds = checkSeconds;
+  for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+    result.detailSeconds[i] = 0.0;
+  }
+  return result;
+}
+
+static BF_FSZ_InvUpdateResult BF_FSZ_InvResultValueWithDetail(
+    const int status, const int stage, const int qpidx, const int lapackInfo,
+    const double antisymmetryResidual, const double affectedResidual,
+    const double gemmDifference, const double checkSeconds,
+    const double detailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT]) {
+  BF_FSZ_InvUpdateResult result = BF_FSZ_InvResultValue(
+      status,stage,qpidx,lapackInfo,antisymmetryResidual,affectedResidual,
+      checkSeconds);
+  result.gemmDifference = gemmDifference;
+  int i;
+  if(detailSeconds != NULL) {
+    for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+      result.detailSeconds[i] = detailSeconds[i];
+    }
+  }
+  return result;
+}
+
+static double BF_FSZ_TimeDifference(const struct timespec *start,
+                                    const struct timespec *end) {
+  return (double)(end->tv_sec-start->tv_sec)
+      + 1.0e-9*(double)(end->tv_nsec-start->tv_nsec);
+}
+
+static void BF_FSZ_RecordInvDetailBoundary(
+    double detailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT],
+    const int component, struct timespec *start) {
+  struct timespec end;
+  clock_gettime(CLOCK_MONOTONIC,&end);
+  detailSeconds[component] += BF_FSZ_TimeDifference(start,&end);
+  *start = end;
+}
+
+static int BF_FSZ_InvUpdateTailWorkSizeForK(
+    const int k, size_t *complexCount, size_t *intCount) {
+  size_t kk,n,kn,small,n2,total;
+  if(k < 1 || k > Nsize || complexCount == NULL || intCount == NULL) return 1;
+  kk = (size_t)k;
+  n = (size_t)Nsize;
+  if(BF_FSZ_MultiplySize(kk,n,&kn) != 0
+      || BF_FSZ_MultiplySize(kk,kk,&small) != 0
+      || small > SIZE_MAX/4 || kk > SIZE_MAX/2) return 1;
+  small *= 4;
+  n2 = 2*kk;
+  /* w + matUV + correctionTmp + small matrix + inverse + GETRI work */
+  if(kn > SIZE_MAX/5 || small > SIZE_MAX/2
+      || 5*kn > SIZE_MAX-2*small
+      || 5*kn+2*small > SIZE_MAX-n2) return 1;
+  total = 5*kn+2*small+n2;
+  *complexCount = total;
+  *intCount = n2;
+  return 0;
+}
+
+static int BF_FSZ_InvUpdateWorkSizeForK(const int k, size_t *complexCount,
+                                        size_t *intCount) {
+  size_t vecCount, tailCount;
+  if(BF_FSZ_InvUpdateTailWorkSizeForK(k, &tailCount, intCount) != 0
+      || BF_FSZ_MultiplySize((size_t)k, (size_t)Nsize, &vecCount) != 0
+      || vecCount > SIZE_MAX-tailCount) return 1;
+  *complexCount = vecCount+tailCount;
+  return 0;
+}
+
+int GetPrepareInvMBF_fsz_rows_work_size(size_t *complexCount,
+    size_t *intCount) {
+  int kMax;
+  if(Nsize < 2 || complexCount == NULL || intCount == NULL) return 1;
+  kMax = Nsize-1;
+  if(kMax >= BF_FSZ_PF_UPDATE_KFULL_DEFAULT) {
+    kMax = BF_FSZ_PF_UPDATE_KFULL_DEFAULT-1;
+  }
+  return BF_FSZ_InvUpdateWorkSizeForK(kMax,complexCount,intCount);
+}
+
+int GetPrepareInvMBF_fsz_row_values_work_size(size_t *complexCount,
+    size_t *intCount) {
+  int kMax;
+  if(Nsize < 2 || complexCount == NULL || intCount == NULL) return 1;
+  kMax = Nsize-1;
+  if(kMax >= BF_FSZ_PF_UPDATE_KFULL_DEFAULT) {
+    kMax = BF_FSZ_PF_UPDATE_KFULL_DEFAULT-1;
+  }
+  return BF_FSZ_InvUpdateTailWorkSizeForK(kMax,complexCount,intCount);
+}
+
+static BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_child(
+    const int nAffected, const int *affected,
+    const double complex *oldInvM, const size_t oldInvMQpStride,
+    double complex *invMNew, const size_t newInvMQpStride,
+    const int qpStart, const int qpidx,
+    const double complex *candidateRows, const size_t rowAffectedStride,
+    double complex *w, double complex *smallMatrix,
+    double complex *smallInverse, double complex *matUV,
+    double complex *correctionTmp, double complex *lapackWork, int *iwork) {
+  const int nsize = Nsize;
+  const int n2 = 2*nAffected;
+  const int globalQpidx = qpStart+qpidx;
+  const double complex *oldInv = oldInvM+(size_t)qpidx*oldInvMQpStride;
+  double complex *newInv = invMNew+(size_t)qpidx*newInvMQpStride;
+  const double complex one = 1.0+0.0*I;
+  const double complex zero = 0.0+0.0*I;
+  const double complex minusOne = -1.0+0.0*I;
+  const double complex *gemmRows = candidateRows;
+  int i,j,k,l,m=n2,n=n2,lda=n2,info=0,lwork=n2;
+  double maxAbs=0.0,maxSkew=0.0,maxResidual=0.0,maxGemmDifference=0.0;
+  double detailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT] = {0.0};
+  struct timespec detailStart,checkStart,checkEnd;
+
+  if(BFFSZInvDetailProfileEnabled) {
+    clock_gettime(CLOCK_MONOTONIC,&detailStart);
+  }
+
+  if(rowAffectedStride != (size_t)nsize) {
+    for(k=0;k<nAffected;k++) {
+      memcpy(matUV+(size_t)k*(size_t)nsize,
+             candidateRows+(size_t)k*rowAffectedStride,
+             sizeof(double complex)*(size_t)nsize);
+    }
+    gemmRows = matUV;
+  }
+  BF_FSZ_ZgemmRowMajorNT(
+      nAffected,nsize,nsize,gemmRows,oldInv,one,zero,w);
+  if(BFFSZInvGemmCheckEnabled) {
+    for(k=0;k<nAffected;k++) {
+      const double complex *vec_k
+          = candidateRows+(size_t)k*rowAffectedStride;
+      const double complex *w_k = w+(size_t)k*(size_t)nsize;
+      for(i=0;i<nsize;i++) {
+        double complex value = 0.0+0.0*I;
+        const double complex *oldInv_i
+            = oldInv+(size_t)i*(size_t)nsize;
+        for(j=0;j<nsize;j++) value += oldInv_i[j]*vec_k[j];
+        {
+          const double difference
+              = BF_FSZ_ScaledComplexDifference(w_k[i],value);
+          if(difference > maxGemmDifference) {
+            maxGemmDifference = difference;
+          }
+        }
+      }
+    }
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    BF_FSZ_RecordInvDetailBoundary(
+        detailSeconds,BF_FSZ_INV_DETAIL_W,&detailStart);
+  }
+
+  /* smallInverse is scratch until S^T is copied into it below. */
+  BF_FSZ_ZgemmRowMajorNT(
+      nAffected,nAffected,nsize,gemmRows,w,one,zero,smallInverse);
+  for(k=0;k<nAffected;k++) {
+    const double complex *vec_k
+        = candidateRows+(size_t)k*rowAffectedStride;
+    const double complex *w_k = w+(size_t)k*(size_t)nsize;
+    double complex *matY_k = smallMatrix+(size_t)n2*(size_t)k+nAffected;
+    for(l=k+1;l<nAffected;l++) {
+      const double complex value
+          = smallInverse[(size_t)nAffected*(size_t)k+l]
+            +vec_k[affected[l]];
+      smallMatrix[(size_t)n2*(size_t)k+l] = value;
+      if(BFFSZInvGemmCheckEnabled) {
+        const double complex *w_l = w+(size_t)l*(size_t)nsize;
+        double complex scalarValue = vec_k[affected[l]];
+        for(i=0;i<nsize;i++) scalarValue += w_l[i]*vec_k[i];
+        {
+          const double difference
+              = BF_FSZ_ScaledComplexDifference(value,scalarValue);
+          if(difference > maxGemmDifference) {
+            maxGemmDifference = difference;
+          }
+        }
+      }
+    }
+    for(l=0;l<nAffected;l++) matY_k[l] = w_k[affected[l]];
+  }
+  for(k=0;k<nAffected;k++) {
+    const double complex *oldInv_k
+        = oldInv+(size_t)affected[k]*(size_t)nsize;
+    double complex *matZ_k = smallMatrix
+        +(size_t)n2*(size_t)(k+nAffected)+nAffected;
+    for(l=k+1;l<nAffected;l++) matZ_k[l] = oldInv_k[affected[l]];
+  }
+  for(k=0;k<n2;k++) {
+    for(l=0;l<k;l++) {
+      smallMatrix[(size_t)n2*(size_t)k+l]
+          = -smallMatrix[(size_t)n2*(size_t)l+k];
+    }
+    smallMatrix[(size_t)n2*(size_t)k+k] = 0.0+0.0*I;
+  }
+  for(k=0;k<n2;k++) for(l=0;l<n2;l++) {
+    smallInverse[(size_t)n2*(size_t)k+l]
+        = smallMatrix[(size_t)n2*(size_t)l+k];
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    BF_FSZ_RecordInvDetailBoundary(
+        detailSeconds,BF_FSZ_INV_DETAIL_SMALL_TRANSPOSE,&detailStart);
+  }
+
+  for(i=0;i<nsize;i++) {
+    double complex *matUV_i = matUV+(size_t)i*(size_t)n2;
+    const double complex *oldInv_i = oldInv+(size_t)i*(size_t)nsize;
+    for(k=0;k<nAffected;k++) {
+      matUV_i[k] = -w[(size_t)k*(size_t)nsize+i]
+          - ((affected[k] == i) ? 1.0 : 0.0);
+      matUV_i[k+nAffected] = oldInv_i[affected[k]];
+    }
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    BF_FSZ_RecordInvDetailBoundary(
+        detailSeconds,BF_FSZ_INV_DETAIL_U,&detailStart);
+  }
+
+  M_ZGETRF(&m,&n,smallInverse,&lda,iwork,&info);
+  if(info != 0) {
+    if(BFFSZInvDetailProfileEnabled) {
+      BF_FSZ_RecordInvDetailBoundary(
+          detailSeconds,BF_FSZ_INV_DETAIL_LAPACK,&detailStart);
+    }
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_LAPACK_FAILURE,BF_FSZ_INV_STAGE_GETRF,
+        globalQpidx,info,0.0,0.0,0.0,0.0,detailSeconds);
+  }
+  M_ZGETRI(&n,smallInverse,&lda,iwork,lapackWork,&lwork,&info);
+  if(info != 0) {
+    if(BFFSZInvDetailProfileEnabled) {
+      BF_FSZ_RecordInvDetailBoundary(
+          detailSeconds,BF_FSZ_INV_DETAIL_LAPACK,&detailStart);
+    }
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_LAPACK_FAILURE,BF_FSZ_INV_STAGE_GETRI,
+        globalQpidx,info,0.0,0.0,0.0,0.0,detailSeconds);
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    BF_FSZ_RecordInvDetailBoundary(
+        detailSeconds,BF_FSZ_INV_DETAIL_LAPACK,&detailStart);
+  }
+
+  BF_FSZ_ZgemmRowMajorNT(
+      nsize,n2,n2,matUV,smallInverse,one,zero,correctionTmp);
+  if(BFFSZInvGemmCheckEnabled) {
+    for(j=0;j<nsize;j++) {
+      const double complex *matUV_j = matUV+(size_t)j*(size_t)n2;
+      const double complex *tmp_j
+          = correctionTmp+(size_t)j*(size_t)n2;
+      for(k=0;k<n2;k++) {
+        const double complex *smallInverse_k
+            = smallInverse+(size_t)k*(size_t)n2;
+        double complex value = 0.0+0.0*I;
+        for(l=0;l<n2;l++) value += smallInverse_k[l]*matUV_j[l];
+        {
+          const double difference
+              = BF_FSZ_ScaledComplexDifference(tmp_j[k],value);
+          if(difference > maxGemmDifference) {
+            maxGemmDifference = difference;
+          }
+        }
+      }
+    }
+  }
+  memcpy(newInv,oldInv,sizeof(double complex)*(size_t)nsize*(size_t)nsize);
+  BF_FSZ_ZgemmRowMajorNT(
+      nsize,nsize,n2,matUV,correctionTmp,minusOne,one,newInv);
+  if(BFFSZInvGemmCheckEnabled) {
+    for(i=0;i<nsize;i++) {
+      const double complex *matUV_i = matUV+(size_t)i*(size_t)n2;
+      const double complex *oldInv_i = oldInv+(size_t)i*(size_t)nsize;
+      const double complex *newInv_i = newInv+(size_t)i*(size_t)nsize;
+      for(j=0;j<nsize;j++) {
+        const double complex *tmp_j
+            = correctionTmp+(size_t)j*(size_t)n2;
+        double complex value = oldInv_i[j];
+        for(k=0;k<n2;k++) value -= matUV_i[k]*tmp_j[k];
+        {
+          const double difference
+              = BF_FSZ_ScaledComplexDifference(newInv_i[j],value);
+          if(difference > maxGemmDifference) {
+            maxGemmDifference = difference;
+          }
+        }
+      }
+    }
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    BF_FSZ_RecordInvDetailBoundary(
+        detailSeconds,BF_FSZ_INV_DETAIL_CORRECTION,&detailStart);
+  }
+  if(BFFSZInvGemmCheckEnabled && maxGemmDifference > 1.0e-11) {
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_GEMM_MISMATCH,BF_FSZ_INV_STAGE_GEMM_CHECK,
+        globalQpidx,0,0.0,0.0,maxGemmDifference,0.0,detailSeconds);
+  }
+
+  clock_gettime(CLOCK_MONOTONIC,&checkStart);
+  {
+    double scalarMaxAbs=0.0,scalarMaxSkew=0.0;
+    if(BFFSZInvGemmCheckEnabled) {
+      for(i=0;i<nsize;i++) for(j=0;j<nsize;j++) {
+        const double valueAbs
+            = cabs(newInv[(size_t)i*(size_t)nsize+j]);
+        const double skewAbs = cabs(newInv[(size_t)i*(size_t)nsize+j]
+            +newInv[(size_t)j*(size_t)nsize+i]);
+        if(valueAbs > scalarMaxAbs) scalarMaxAbs = valueAbs;
+        if(skewAbs > scalarMaxSkew) scalarMaxSkew = skewAbs;
+      }
+    }
+    for(i=0;i<nsize;i++) {
+      double complex *upperRow = newInv+(size_t)i*(size_t)nsize;
+      const double diagonalAbs = cabs(upperRow[i]);
+      const double diagonalSkewAbs = cabs(upperRow[i]+upperRow[i]);
+      if(!isfinite(diagonalAbs)) {
+        clock_gettime(CLOCK_MONOTONIC,&checkEnd);
+        if(BFFSZInvDetailProfileEnabled) {
+          detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
+              += BF_FSZ_TimeDifference(&checkStart,&checkEnd);
+        }
+        return BF_FSZ_InvResultValueWithDetail(
+            BF_FSZ_INV_UPDATE_NONFINITE,BF_FSZ_INV_STAGE_FINITE,
+            globalQpidx,0,maxSkew,maxResidual,
+            maxGemmDifference,
+            BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
+      }
+      if(diagonalAbs > maxAbs) maxAbs = diagonalAbs;
+      if(diagonalSkewAbs > maxSkew) maxSkew = diagonalSkewAbs;
+      upperRow[i] = 0.0+0.0*I;
+      for(j=i+1;j<nsize;j++) {
+        double complex *lower
+            = newInv+(size_t)j*(size_t)nsize+i;
+        const double complex upperValue = upperRow[j];
+        const double complex lowerValue = *lower;
+        const double upperAbs = cabs(upperValue);
+        const double lowerAbs = cabs(lowerValue);
+        const double skewAbs = cabs(upperValue+lowerValue);
+        const double complex projectedValue
+            = 0.5*(upperValue-lowerValue);
+        if(!isfinite(upperAbs) || !isfinite(lowerAbs)) {
+          clock_gettime(CLOCK_MONOTONIC,&checkEnd);
+          if(BFFSZInvDetailProfileEnabled) {
+            detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
+                += BF_FSZ_TimeDifference(&checkStart,&checkEnd);
+          }
+          return BF_FSZ_InvResultValueWithDetail(
+              BF_FSZ_INV_UPDATE_NONFINITE,BF_FSZ_INV_STAGE_FINITE,
+              globalQpidx,0,maxSkew,maxResidual,
+              maxGemmDifference,
+              BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
+        }
+        if(upperAbs > maxAbs) maxAbs = upperAbs;
+        if(lowerAbs > maxAbs) maxAbs = lowerAbs;
+        if(skewAbs > maxSkew) maxSkew = skewAbs;
+        upperRow[j] = projectedValue;
+        *lower = -projectedValue;
+      }
+    }
+    if(BFFSZInvGemmCheckEnabled) {
+      const double absDifference
+          = BF_FSZ_ScaledComplexDifference(maxAbs,scalarMaxAbs);
+      const double skewDifference
+          = BF_FSZ_ScaledComplexDifference(maxSkew,scalarMaxSkew);
+      if(absDifference > maxGemmDifference) {
+        maxGemmDifference = absDifference;
+      }
+      if(skewDifference > maxGemmDifference) {
+        maxGemmDifference = skewDifference;
+      }
+    }
+  }
+  if(BFFSZInvGemmCheckEnabled && maxGemmDifference > 1.0e-11) {
+    clock_gettime(CLOCK_MONOTONIC,&checkEnd);
+    if(BFFSZInvDetailProfileEnabled) {
+      detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
+          += BF_FSZ_TimeDifference(&checkStart,&checkEnd);
+    }
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_GEMM_MISMATCH,BF_FSZ_INV_STAGE_GEMM_CHECK,
+        globalQpidx,0,maxSkew/fmax(1.0,maxAbs),0.0,maxGemmDifference,
+        BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
+  }
+  if(maxSkew/fmax(1.0,maxAbs) > 1.0e-9) {
+    clock_gettime(CLOCK_MONOTONIC,&checkEnd);
+    if(BFFSZInvDetailProfileEnabled) {
+      detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
+          += BF_FSZ_TimeDifference(&checkStart,&checkEnd);
+    }
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_ANTISYMMETRY,BF_FSZ_INV_STAGE_ANTISYMMETRY,
+        globalQpidx,0,
+        maxSkew/fmax(1.0,maxAbs),0.0,
+        maxGemmDifference,
+        BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    clock_gettime(CLOCK_MONOTONIC,&detailStart);
+    detailSeconds[BF_FSZ_INV_DETAIL_SCAN_ANTISYMMETRIZE]
+        += BF_FSZ_TimeDifference(&checkStart,&detailStart);
+  }
+  {
+    if(rowAffectedStride != (size_t)nsize) {
+      for(k=0;k<nAffected;k++) {
+        memcpy(matUV+(size_t)k*(size_t)nsize,
+               candidateRows+(size_t)k*rowAffectedStride,
+               sizeof(double complex)*(size_t)nsize);
+      }
+      gemmRows = matUV;
+    }
+    BF_FSZ_ZgemmRowMajorNN(
+        nAffected,nsize,nsize,gemmRows,newInv,one,zero,w);
+    for(k=0;k<nAffected;k++) {
+      const int row = affected[k];
+      double complex *residualRow = w+(size_t)k*(size_t)nsize;
+      for(j=0;j<nsize;j++) {
+        residualRow[j] -= (row == j) ? 1.0 : 0.0;
+        {
+          const double residualAbs = cabs(residualRow[j]);
+          if(!isfinite(residualAbs)) {
+            maxResidual = INFINITY;
+          } else if(residualAbs > maxResidual) {
+            maxResidual = residualAbs;
+          }
+        }
+      }
+    }
+    if(BFFSZInvGemmCheckEnabled) {
+      for(k=0;k<nAffected;k++) for(i=0;i<nsize;i++) {
+        matUV[(size_t)k*(size_t)nsize+i]
+            = (0.001*(double)(1+(7*k+3*i)%17))
+            + I*(0.002*(double)(1+(5*k+11*i)%19));
+        correctionTmp[(size_t)k*(size_t)nsize+i]
+            = (0.003*(double)(1+(13*k+2*i)%23))
+            - I*(0.001*(double)(1+(3*k+7*i)%29));
+      }
+      BF_FSZ_ZgemmRowMajorNT(
+          nAffected,nAffected,nsize,matUV,correctionTmp,
+          one,zero,smallMatrix);
+      for(k=0;k<nAffected;k++) for(l=0;l<nAffected;l++) {
+        double complex value = 0.0+0.0*I;
+        const double complex *rowK = matUV+(size_t)k*(size_t)nsize;
+        const double complex *rowL
+            = correctionTmp+(size_t)l*(size_t)nsize;
+        for(i=0;i<nsize;i++) value += rowK[i]*rowL[i];
+        smallInverse[(size_t)k*(size_t)nAffected+l] = value;
+        {
+          const double difference = BF_FSZ_ScaledComplexDifference(
+              smallMatrix[(size_t)k*(size_t)nAffected+l],value);
+          if(difference > maxGemmDifference) {
+            maxGemmDifference = difference;
+          }
+        }
+      }
+      for(k=0;k<nAffected;k++) {
+        const int row = affected[k];
+        const double complex *candidateRow
+            = candidateRows+(size_t)k*rowAffectedStride;
+        double complex *scalarRow
+            = correctionTmp+(size_t)k*(size_t)nsize;
+        const double complex *residualRow
+            = w+(size_t)k*(size_t)nsize;
+        for(j=0;j<nsize;j++) {
+          double complex value = 0.0+0.0*I;
+          for(i=0;i<nsize;i++) {
+            value += candidateRow[i]
+                *newInv[(size_t)i*(size_t)nsize+j];
+          }
+          value -= (row == j) ? 1.0 : 0.0;
+          scalarRow[j] = value;
+          {
+            const double difference
+                = BF_FSZ_ScaledComplexDifference(residualRow[j],value);
+            if(difference > maxGemmDifference) {
+              maxGemmDifference = difference;
+            }
+          }
+        }
+      }
+    }
+  }
+  clock_gettime(CLOCK_MONOTONIC,&checkEnd);
+  if(BFFSZInvDetailProfileEnabled) {
+    detailSeconds[BF_FSZ_INV_DETAIL_AFFECTED_RESIDUAL]
+        += BF_FSZ_TimeDifference(&detailStart,&checkEnd);
+  }
+  if(BFFSZInvGemmCheckEnabled && maxGemmDifference > 1.0e-11) {
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_GEMM_MISMATCH,BF_FSZ_INV_STAGE_GEMM_CHECK,
+        globalQpidx,0,maxSkew/fmax(1.0,maxAbs),maxResidual,
+        maxGemmDifference,
+        BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
+  }
+  if(!(isfinite(maxResidual) && maxResidual <= 1.0e-9)) {
+    return BF_FSZ_InvResultValueWithDetail(
+        BF_FSZ_INV_UPDATE_RESIDUAL,BF_FSZ_INV_STAGE_RESIDUAL,
+        globalQpidx,0,
+        maxSkew/fmax(1.0,maxAbs),maxResidual,
+        maxGemmDifference,
+        BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
+  }
+  return BF_FSZ_InvResultValueWithDetail(
+      BF_FSZ_INV_UPDATE_OK,BF_FSZ_INV_STAGE_NONE,
+      globalQpidx,0,maxSkew/fmax(1.0,maxAbs),maxResidual,
+      maxGemmDifference,
+      BF_FSZ_TimeDifference(&checkStart,&checkEnd),detailSeconds);
+}
+
+BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_rows_workspace(
+    const int nAffected, const int *affected,
+    const double complex *oldInvM, const size_t oldInvMQpStride,
+    double complex *invMNew, const size_t newInvMQpStride,
+    const int *eleIdx, const int *eleSpn,
+    const int qpStart, const int qpEnd,
+    const double complex *candidateSlater,
+    double complex *complexWork, const size_t complexWorkCount,
+    int *iwork, const size_t intWorkCount) {
+  const size_t nsizeSquared = (size_t)Nsize*(size_t)Nsize;
+  const size_t qpNum = (size_t)(qpEnd-qpStart);
+  size_t requiredComplex,requiredInt,kn,small,n2;
+  double complex *vec,*w,*smallMatrix,*smallInverse,*matUV;
+  double complex *correctionTmp,*lapackWork;
+  double totalCheckSeconds=0.0,maxAntisymmetry=0.0,maxResidual=0.0;
+  double maxGemmDifference=0.0;
+  double totalDetailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT] = {0.0};
+  int i,j,qpidx;
+
+  if(nAffected < 1 || nAffected > Nsize
+      || qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull
+      || BF_FSZ_ShouldUseFullPfaffian(nAffected)) {
+    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+        BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+  }
+  if(qpNum == 0) {
+    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_OK,
+        BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+  }
+  if(affected == NULL || oldInvM == NULL || invMNew == NULL
+      || eleIdx == NULL || eleSpn == NULL || candidateSlater == NULL
+      || complexWork == NULL || iwork == NULL || invMNew == oldInvM
+      || candidateSlater == SlaterElmBF
+      || oldInvMQpStride < nsizeSquared || newInvMQpStride < nsizeSquared
+      || oldInvMQpStride > (size_t)PTRDIFF_MAX
+      || newInvMQpStride > (size_t)PTRDIFF_MAX
+      || (qpNum > 1
+          && ((qpNum-1) > (SIZE_MAX-nsizeSquared)/oldInvMQpStride
+            || (qpNum-1) > (SIZE_MAX-nsizeSquared)/newInvMQpStride))) {
+    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+        BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+  }
+  if(BF_FSZ_InvUpdateWorkSizeForK(nAffected,&requiredComplex,&requiredInt) != 0
+      || complexWorkCount < requiredComplex || intWorkCount < requiredInt) {
+    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+        BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+  }
+  for(i=0;i<nAffected;i++) {
+    if(affected[i] < 0 || affected[i] >= Nsize) {
+      return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+          BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+    }
+    for(j=0;j<i;j++) if(affected[i] == affected[j]) {
+      return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+          BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+    }
+  }
+  for(i=0;i<Nsize;i++) {
+    if(eleIdx[i] < 0 || eleIdx[i] >= Nsite
+        || (eleSpn[i] != 0 && eleSpn[i] != 1)) {
+      return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+          BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+    }
+  }
+
+  kn = (size_t)nAffected*(size_t)Nsize;
+  small = 4*(size_t)nAffected*(size_t)nAffected;
+  n2 = 2*(size_t)nAffected;
+  vec = complexWork;
+  w = vec+kn;
+  smallMatrix = w+kn;
+  smallInverse = smallMatrix+small;
+  matUV = smallInverse+small;
+  correctionTmp = matUV+2*kn;
+  lapackWork = correctionTmp+2*kn;
+
+  for(qpidx=0;qpidx<qpEnd-qpStart;qpidx++) {
+    const int globalQpidx = qpStart+qpidx;
+    const double complex *sltE = candidateSlater
+        +(size_t)globalQpidx*(size_t)Nsite2*(size_t)Nsite2;
+    int k;
+    for(k=0;k<nAffected;k++) {
+      const int rsk = eleIdx[affected[k]]+eleSpn[affected[k]]*Nsite;
+      const double complex *sltE_k = sltE+(size_t)rsk*(size_t)Nsite2;
+      double complex *vec_k = vec+(size_t)k*(size_t)Nsize;
+      for(i=0;i<Nsize;i++) {
+        const int rsi = eleIdx[i]+eleSpn[i]*Nsite;
+        vec_k[i] = sltE_k[rsi];
+      }
+    }
+    BF_FSZ_InvUpdateResult result = PrepareInvMBF_fsz_row_values_child(
+        nAffected,affected,oldInvM,oldInvMQpStride,invMNew,newInvMQpStride,
+        qpStart,qpidx,vec,(size_t)Nsize,w,smallMatrix,
+        smallInverse,matUV,correctionTmp,lapackWork,iwork);
+    totalCheckSeconds += result.checkSeconds;
+    for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+      totalDetailSeconds[i] += result.detailSeconds[i];
+    }
+    if(result.antisymmetryResidual > maxAntisymmetry) {
+      maxAntisymmetry = result.antisymmetryResidual;
+    }
+    if(result.affectedResidual > maxResidual) {
+      maxResidual = result.affectedResidual;
+    }
+    if(result.gemmDifference > maxGemmDifference) {
+      maxGemmDifference = result.gemmDifference;
+    }
+    if(result.status != BF_FSZ_INV_UPDATE_OK) {
+      result.checkSeconds = totalCheckSeconds;
+      result.antisymmetryResidual = maxAntisymmetry;
+      result.affectedResidual = maxResidual;
+      result.gemmDifference = maxGemmDifference;
+      for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+        result.detailSeconds[i] = totalDetailSeconds[i];
+      }
+      return result;
+    }
+  }
+  return BF_FSZ_InvResultValueWithDetail(
+      BF_FSZ_INV_UPDATE_OK,BF_FSZ_INV_STAGE_NONE,
+      qpStart,0,maxAntisymmetry,maxResidual,maxGemmDifference,totalCheckSeconds,
+      totalDetailSeconds);
+}
+
+BF_FSZ_InvUpdateResult PrepareInvMBF_fsz_row_values_workspace(
+    const int nAffected, const int *affected,
+    const double complex *oldInvM, const size_t oldInvMQpStride,
+    double complex *invMNew, const size_t newInvMQpStride,
+    const int qpStart, const int qpEnd,
+    const double complex *candidateRows, const size_t rowQpStride,
+    const size_t rowAffectedStride,
+    double complex *complexWork, const size_t complexWorkCount,
+    int *iwork, const size_t intWorkCount) {
+  const size_t nsizeSquared = (size_t)Nsize*(size_t)Nsize;
+  const size_t qpNum = (size_t)(qpEnd-qpStart);
+  size_t requiredComplex,requiredInt,kn,small,n2;
+  size_t rowDataCount,rowSpan,newInvSpan;
+  double complex *w,*smallMatrix,*smallInverse,*matUV;
+  double complex *correctionTmp,*lapackWork;
+  double totalCheckSeconds=0.0,maxAntisymmetry=0.0,maxResidual=0.0;
+  double maxGemmDifference=0.0;
+  double totalDetailSeconds[BF_FSZ_INV_DETAIL_KERNEL_COUNT] = {0.0};
+  int i,j,qpidx;
+
+  if(nAffected < 1 || nAffected > Nsize
+      || qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull
+      || BF_FSZ_ShouldUseFullPfaffian(nAffected)) {
+    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+        BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+  }
+  if(qpNum == 0) {
+    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_OK,
+        BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+  }
+  if(affected == NULL || oldInvM == NULL || invMNew == NULL
+      || candidateRows == NULL || complexWork == NULL || iwork == NULL
+      || invMNew == oldInvM
+      || oldInvMQpStride < nsizeSquared || newInvMQpStride < nsizeSquared
+      || oldInvMQpStride > (size_t)PTRDIFF_MAX
+      || newInvMQpStride > (size_t)PTRDIFF_MAX
+      || (qpNum > 1
+          && ((qpNum-1) > (SIZE_MAX-nsizeSquared)/oldInvMQpStride
+            || (qpNum-1) > (SIZE_MAX-nsizeSquared)/newInvMQpStride))) {
+    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+        BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+  }
+  if(BF_FSZ_InvUpdateTailWorkSizeForK(
+      nAffected,&requiredComplex,&requiredInt) != 0
+      || complexWorkCount < requiredComplex || intWorkCount < requiredInt) {
+    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+        BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+  }
+  for(i=0;i<nAffected;i++) {
+    if(affected[i] < 0 || affected[i] >= Nsize) {
+      return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+          BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+    }
+    for(j=0;j<i;j++) if(affected[i] == affected[j]) {
+      return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+          BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+    }
+  }
+  if(rowAffectedStride < (size_t)Nsize
+      || (size_t)(nAffected-1)
+          > (SIZE_MAX-(size_t)Nsize)/rowAffectedStride) {
+    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+        BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+  }
+  rowDataCount = (size_t)(nAffected-1)*rowAffectedStride+(size_t)Nsize;
+  if(rowQpStride < rowDataCount
+      || (qpNum-1) > (SIZE_MAX-rowDataCount)/rowQpStride) {
+    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+        BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+  }
+  rowSpan = (qpNum-1)*rowQpStride+rowDataCount;
+  newInvSpan = (qpNum-1)*newInvMQpStride+nsizeSquared;
+  if(rowSpan > (size_t)PTRDIFF_MAX || newInvSpan > (size_t)PTRDIFF_MAX
+      || BF_FSZ_ComplexRangesOverlap(
+          candidateRows,rowSpan,complexWork,complexWorkCount)
+      || BF_FSZ_ComplexRangesOverlap(
+          candidateRows,rowSpan,invMNew,newInvSpan)
+      || BF_FSZ_MemoryRangesOverlap(
+          candidateRows,rowSpan,sizeof(double complex),
+          iwork,intWorkCount,sizeof(int))) {
+    return BF_FSZ_InvResultValue(BF_FSZ_INV_UPDATE_INVALID_ARGUMENT,
+        BF_FSZ_INV_STAGE_NONE,qpStart,0,0.0,0.0,0.0);
+  }
+
+  kn = (size_t)nAffected*(size_t)Nsize;
+  small = 4*(size_t)nAffected*(size_t)nAffected;
+  n2 = 2*(size_t)nAffected;
+  w = complexWork;
+  smallMatrix = w+kn;
+  smallInverse = smallMatrix+small;
+  matUV = smallInverse+small;
+  correctionTmp = matUV+2*kn;
+  lapackWork = correctionTmp+2*kn;
+
+  for(qpidx=0;qpidx<qpEnd-qpStart;qpidx++) {
+    BF_FSZ_InvUpdateResult result
+        = PrepareInvMBF_fsz_row_values_child(
+            nAffected,affected,oldInvM,oldInvMQpStride,
+            invMNew,newInvMQpStride,qpStart,qpidx,
+            candidateRows+(size_t)qpidx*rowQpStride,rowAffectedStride,
+            w,smallMatrix,smallInverse,matUV,correctionTmp,lapackWork,iwork);
+    totalCheckSeconds += result.checkSeconds;
+    for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+      totalDetailSeconds[i] += result.detailSeconds[i];
+    }
+    if(result.antisymmetryResidual > maxAntisymmetry) {
+      maxAntisymmetry = result.antisymmetryResidual;
+    }
+    if(result.affectedResidual > maxResidual) {
+      maxResidual = result.affectedResidual;
+    }
+    if(result.gemmDifference > maxGemmDifference) {
+      maxGemmDifference = result.gemmDifference;
+    }
+    if(result.status != BF_FSZ_INV_UPDATE_OK) {
+      result.checkSeconds = totalCheckSeconds;
+      result.antisymmetryResidual = maxAntisymmetry;
+      result.affectedResidual = maxResidual;
+      result.gemmDifference = maxGemmDifference;
+      for(i=0;i<BF_FSZ_INV_DETAIL_KERNEL_COUNT;i++) {
+        result.detailSeconds[i] = totalDetailSeconds[i];
+      }
+      return result;
+    }
+  }
+  return BF_FSZ_InvResultValueWithDetail(
+      BF_FSZ_INV_UPDATE_OK,BF_FSZ_INV_STAGE_NONE,
+      qpStart,0,maxAntisymmetry,maxResidual,maxGemmDifference,totalCheckSeconds,
+      totalDetailSeconds);
+}
 
 
 /* Calculate new pfaffian. The ma-th electron with spin s hops. */

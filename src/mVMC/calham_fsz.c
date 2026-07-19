@@ -37,7 +37,10 @@ double complex GreenFuncN_fsz(const int n, int *rsi, int *rsj,
 double complex GreenFunc1BF_fsz(const int ri, const int rj, const int s, const double complex ip,
                   int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
                   int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
-                  double complex *buffer);
+                  double complex *buffer, int *affected,
+                  int *hopIntWork, int hopIntWorkSize,
+                  int *pfIWork, double *pfRWork,
+                  double complex *pfBufM, double complex *pfWork);
 
 double CalculateSz_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt,int *eleSpn) {
@@ -244,17 +247,76 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   int idx;
   int ri,rj,s,t;
   int *myEleIdx, *myEleCfg, *myEleNum, *myEleSpn;
-  int *myProjCntNew, *myProjBFCntNew;
-  double complex *myBuffer;
-  const int bfSlaterSize = NQPFull*Nsite2*Nsite2;
+  int *myProjCntNew, *myProjBFCntNew, *myAffected, *myHopIntWork;
+  int *myPfIWork;
+  double complex *myBuffer, *myPfBufM, *myPfWork;
+  double *myPfRWork;
+  const size_t bfSlaterSize = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+  size_t pfUpdateComplexCount,pfUpdateIntCount,pfUpdateDoubleCount;
+  size_t bfBufferSize,bfComplexSize,nsizeSquared,rowCount;
+  const int rowCapacity = (BFFSZPfUpdateKFull-1 < Nsize-1)
+      ? BFFSZPfUpdateKFull-1 : Nsize-1;
+  long long bfBaseIntSizeLL,bfIntSizeLL;
+  int bfBaseIntSize, bfHopIntSize, bfIntSize, bfPfIntSize, bfPfDoubleSize;
 
   if(NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0 || NNBodyInterAll > 0) {
     fprintf(stderr, "Error: CalculateHamiltonianBF_fsz supports only density and one-body transfer terms.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
+  if(GetSlaterElmBF_fsz_hop_int_work_size(&bfHopIntSize) != 0) {
+    fprintf(stderr, "Error: invalid BF-FSZ Hamiltonian hop integer workspace size.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  if(GetCalculateNewPfMBF_fsz_row_values_work_size(&pfUpdateComplexCount,
+      &pfUpdateIntCount,&pfUpdateDoubleCount) != 0
+      || GetSlaterElmBF_fsz_hop_row_work_size(
+          &rowCount,NQPFull,rowCapacity) != BF_FSZ_ROW_BUILD_OK
+      || pfUpdateIntCount > INT_MAX || pfUpdateDoubleCount > INT_MAX
+      || bfSlaterSize > SIZE_MAX-2*(size_t)NQPFull
+      || bfSlaterSize+2*(size_t)NQPFull > SIZE_MAX-rowCount
+      || bfSlaterSize+2*(size_t)NQPFull+rowCount
+          > SIZE_MAX-pfUpdateComplexCount
+      || (BFFSZGreenRebuildCheckEnabled
+          && bfSlaterSize+2*(size_t)NQPFull+rowCount+pfUpdateComplexCount
+              > SIZE_MAX-bfSlaterSize)) {
+    fprintf(stderr,"Error: invalid BF-FSZ Hamiltonian Pfaffian workspace size.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  nsizeSquared = (size_t)Nsize*(size_t)Nsize;
+  bfBufferSize = 2*(size_t)NQPFull + bfSlaterSize + rowCount
+      + pfUpdateComplexCount
+      + (BFFSZGreenRebuildCheckEnabled ? bfSlaterSize : 0);
+  if(nsizeSquared > SIZE_MAX-(size_t)LapackLWork
+      || bfBufferSize > SIZE_MAX-nsizeSquared-(size_t)LapackLWork) {
+    fprintf(stderr,"Error: BF-FSZ Hamiltonian complex workspace size overflow.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  bfComplexSize = bfBufferSize+nsizeSquared+(size_t)LapackLWork;
+  if(bfComplexSize > INT_MAX) {
+    fprintf(stderr,"Error: BF-FSZ Hamiltonian complex workspace is too large.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  bfPfIntSize = (Nsize > (int)pfUpdateIntCount)
+      ? Nsize : (int)pfUpdateIntCount;
+  bfPfDoubleSize = (LapackLWork > (int)pfUpdateDoubleCount)
+      ? LapackLWork : (int)pfUpdateDoubleCount;
+  bfBaseIntSizeLL = 2LL*Nsize + 2LL*Nsite2 + (long long)NProj
+      + 16LL*Nsite*Nrange;
+  if(bfBaseIntSizeLL < 0 || bfBaseIntSizeLL > INT_MAX) {
+    fprintf(stderr, "Error: invalid BF-FSZ Hamiltonian base integer workspace size.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  bfBaseIntSize = (int)bfBaseIntSizeLL;
+  bfIntSizeLL = (long long)bfBaseIntSize+Nsize+bfHopIntSize+bfPfIntSize;
+  if(bfIntSizeLL < 0 || bfIntSizeLL > INT_MAX) {
+    fprintf(stderr, "Error: invalid BF-FSZ Hamiltonian integer workspace size.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  bfIntSize = (int)bfIntSizeLL;
 
-  RequestWorkSpaceInt(Nsize+Nsite2+Nsite2+Nsize+NProj+16*Nsite*Nrange);
-  RequestWorkSpaceComplex(NQPFull + bfSlaterSize);
+  RequestWorkSpaceInt(bfIntSize);
+  RequestWorkSpaceComplex((int)bfComplexSize);
+  RequestWorkSpaceDouble(bfPfDoubleSize);
 
   myEleIdx = GetWorkSpaceInt(Nsize);
   myEleCfg = GetWorkSpaceInt(Nsite2);
@@ -262,7 +324,13 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   myEleSpn = GetWorkSpaceInt(Nsize);
   myProjCntNew = GetWorkSpaceInt(NProj);
   myProjBFCntNew = GetWorkSpaceInt(16*Nsite*Nrange);
-  myBuffer = GetWorkSpaceComplex(NQPFull + bfSlaterSize);
+  myAffected = GetWorkSpaceInt(Nsize);
+  myHopIntWork = GetWorkSpaceInt(bfHopIntSize);
+  myPfIWork = GetWorkSpaceInt(bfPfIntSize);
+  myBuffer = GetWorkSpaceComplex((int)bfBufferSize);
+  myPfBufM = GetWorkSpaceComplex(Nsize*Nsize);
+  myPfWork = GetWorkSpaceComplex(LapackLWork);
+  myPfRWork = GetWorkSpaceDouble(bfPfDoubleSize);
 
   for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
   for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
@@ -297,11 +365,14 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
     }
     e -= ParaTransfer[idx]
       * GreenFunc1BF_fsz(ri,rj,s,ip,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
-                         myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer);
+                         myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
+                         myAffected,myHopIntWork,bfHopIntSize,
+                         myPfIWork,myPfRWork,myPfBufM,myPfWork);
   }
 
   ReleaseWorkSpaceInt();
   ReleaseWorkSpaceComplex();
+  ReleaseWorkSpaceDouble();
   return e;
 }
 

@@ -447,10 +447,184 @@ int Counter_max = 6;
 int BFProfileEnabled = 0;
 long long BFProfileCounter[NBFProfileCounter];
 
+#define BFFSZ_PROFILE_SAMPLE 0
+#define BFFSZ_PROFILE_GREEN  1
+#define NBFFSZProfileSource  2
+#define NBFFSZProfileHist    22
+#define NBFFSZProfileRatioHist 8
+#define BFFSZ_PF_PATH_OPTIMIZED 0
+#define BFFSZ_PF_PATH_DIRECT_FULL 1
+#define BFFSZ_PF_PATH_FALLBACK 2
+#define NBFFSZPfPath 3
+#define BFFSZ_GREEN_MATERIALIZE_DIRECT_FULL 0
+#define BFFSZ_GREEN_MATERIALIZE_FALLBACK 1
+#define BFFSZ_GREEN_MATERIALIZE_ORACLE 2
+#define NBFFSZGreenMaterialize 3
+#define BFFSZ_SAMPLE_MATERIALIZE_DIRECT_FULL 0
+#define BFFSZ_SAMPLE_MATERIALIZE_PF_FALLBACK 1
+#define BFFSZ_SAMPLE_MATERIALIZE_INV_FALLBACK 2
+#define BFFSZ_SAMPLE_MATERIALIZE_ORACLE 3
+#define NBFFSZSampleMaterialize 4
+#define BFFSZ_INV_DETAIL_MPI_AGREEMENT 7
+#define BFFSZ_INV_DETAIL_COMMIT_COPY 8
+#define NBFFSZInvDetail 9
+#define BF_FSZ_PF_UPDATE_KFULL_DEFAULT 32
+int BFFSZGreenRebuildCheckEnabled = 0;
+int BFFSZAffectedCheckEnabled = 0;
+int BFFSZPfUpdateCheckEnabled = 0;
+int BFFSZPfUpdateForceFallback = 0;
+int BFFSZPfUpdateInjectedStatus = 0;
+int BFFSZPfUpdateInjectedRank = -1;
+int BFFSZPfUpdateExplicitStateCheckEnabled = 0;
+int BFFSZPfUpdateArgumentCheckEnabled = 0;
+int BFFSZPfUpdateKFull = BF_FSZ_PF_UPDATE_KFULL_DEFAULT;
+int BFFSZPermuteParticleLabelsCheckEnabled = 0;
+int BFFSZInvUpdateCheckEnabled = 0;
+int BFFSZInvUpdateForceFallback = 0;
+int BFFSZInvUpdateInjectedStage = 0;
+int BFFSZInvUpdateInjectedRank = -1;
+int BFFSZInvUpdateExplicitStateCheckEnabled = 0;
+int BFFSZInvUpdateArgumentCheckEnabled = 0;
+int BFFSZInvGemmCheckEnabled = 0;
+int BFFSZInvDetailProfileEnabled = 0;
+int BFFSZMatrixFreeCheckEnabled = 0;
+int BFFSZMatrixFreeArgumentCheckEnabled = 0;
+int BFFSZSamplingRejectCheckEnabled = 0;
+long long BFFSZProfileCall[NBFFSZProfileSource];
+long long BFFSZProfileChangedSum[NBFFSZProfileSource];
+long long BFFSZProfileChangedMax[NBFFSZProfileSource];
+long long BFFSZProfileAffectedSum[NBFFSZProfileSource];
+long long BFFSZProfileAffectedMax[NBFFSZProfileSource];
+long long BFFSZProfileChangedHist[NBFFSZProfileSource][NBFFSZProfileHist];
+long long BFFSZProfileAffectedHist[NBFFSZProfileSource][NBFFSZProfileHist];
+long long BFFSZProfileAffectedRatioHist[NBFFSZProfileSource][NBFFSZProfileRatioHist];
+long long BFFSZProfilePfPath[NBFFSZProfileSource][NBFFSZPfPath];
+long long BFFSZProfileInvPath[NBFFSZPfPath];
+long long BFFSZProfileGreenMaterialize[NBFFSZGreenMaterialize];
+long long BFFSZProfileSampleMaterialize[NBFFSZSampleMaterialize];
+long long BFFSZProfileSampleCommit[NBFFSZPfPath];
+double BFFSZProfileInvCheckSeconds = 0.0;
+double BFFSZProfileInvAntisymmetryMax = 0.0;
+double BFFSZProfileInvResidualMax = 0.0;
+long long BFFSZProfileInvGemmCheckCount = 0;
+double BFFSZProfileInvGemmDifferenceMax = 0.0;
+double BFFSZProfileInvDetailSeconds[NBFFSZInvDetail];
+double BFFSZProfileInvDetailMaxSeconds[NBFFSZInvDetail];
+
 static inline void AddBFProfileCounter(int idx, long long value) {
   if(!BFProfileEnabled || value == 0) return;
 #pragma omp atomic
   BFProfileCounter[idx] += value;
+}
+
+static inline int BFFSZProfileHistBin(int value) {
+  if(value <= 0) return 0;
+  if(value <= 16) return value;
+  if(value <= 32) return 17;
+  if(value <= 64) return 18;
+  if(value <= 128) return 19;
+  if(value <= 256) return 20;
+  return 21;
+}
+
+static inline int BFFSZProfileRatioHistBin(int value, int total) {
+  if(value <= 0 || total <= 0) return 0;
+  if(16LL*value <= total) return 1;
+  if(8LL*value <= total) return 2;
+  if(4LL*value <= total) return 3;
+  if(2LL*value <= total) return 4;
+  if(4LL*value <= 3LL*total) return 5;
+  if(value < total) return 6;
+  return 7;
+}
+
+static inline void RecordBFFSZProfile(int source, int nChanged, int nAffected) {
+  int changedBin, affectedBin, ratioBin;
+  if(!BFProfileEnabled) return;
+  if(source < 0 || source >= NBFFSZProfileSource) return;
+  changedBin = BFFSZProfileHistBin(nChanged);
+  affectedBin = BFFSZProfileHistBin(nAffected);
+  ratioBin = BFFSZProfileRatioHistBin(nAffected, Nsize);
+#pragma omp atomic
+  BFFSZProfileCall[source]++;
+#pragma omp atomic
+  BFFSZProfileChangedSum[source] += nChanged;
+#pragma omp atomic
+  BFFSZProfileAffectedSum[source] += nAffected;
+#pragma omp atomic
+  BFFSZProfileChangedHist[source][changedBin]++;
+#pragma omp atomic
+  BFFSZProfileAffectedHist[source][affectedBin]++;
+#pragma omp atomic
+  BFFSZProfileAffectedRatioHist[source][ratioBin]++;
+#pragma omp critical(BFFSZProfileMax)
+  {
+    if(nChanged > BFFSZProfileChangedMax[source]) {
+      BFFSZProfileChangedMax[source] = nChanged;
+    }
+    if(nAffected > BFFSZProfileAffectedMax[source]) {
+      BFFSZProfileAffectedMax[source] = nAffected;
+    }
+  }
+}
+
+static inline void RecordBFFSZPfPath(int source, int path) {
+  if(!BFProfileEnabled) return;
+  if(source < 0 || source >= NBFFSZProfileSource
+      || path < 0 || path >= NBFFSZPfPath) return;
+#pragma omp atomic
+  BFFSZProfilePfPath[source][path]++;
+}
+
+static inline void RecordBFFSZInvPath(int path) {
+  if(!BFProfileEnabled || path < 0 || path >= NBFFSZPfPath) return;
+  BFFSZProfileInvPath[path]++;
+}
+
+static inline void RecordBFFSZGreenMaterialize(int reason) {
+  if(!BFProfileEnabled
+      || reason < 0 || reason >= NBFFSZGreenMaterialize) return;
+#pragma omp atomic
+  BFFSZProfileGreenMaterialize[reason]++;
+}
+
+static inline void RecordBFFSZSampleMaterialize(int reason) {
+  if(!BFProfileEnabled
+      || reason < 0 || reason >= NBFFSZSampleMaterialize) return;
+  BFFSZProfileSampleMaterialize[reason]++;
+}
+
+static inline void RecordBFFSZSampleCommit(int path) {
+  if(!BFProfileEnabled || path < 0 || path >= NBFFSZPfPath) return;
+  BFFSZProfileSampleCommit[path]++;
+}
+
+static inline void RecordBFFSZInvChecks(double seconds,
+                                        double antisymmetry,
+                                        double residual) {
+  if(!BFProfileEnabled) return;
+  BFFSZProfileInvCheckSeconds += seconds;
+  if(antisymmetry > BFFSZProfileInvAntisymmetryMax) {
+    BFFSZProfileInvAntisymmetryMax = antisymmetry;
+  }
+  if(residual > BFFSZProfileInvResidualMax) {
+    BFFSZProfileInvResidualMax = residual;
+  }
+}
+
+static inline void RecordBFFSZInvGemmCheck(double difference) {
+  if(!BFFSZInvGemmCheckEnabled) return;
+  BFFSZProfileInvGemmCheckCount++;
+  if(difference > BFFSZProfileInvGemmDifferenceMax) {
+    BFFSZProfileInvGemmDifferenceMax = difference;
+  }
+}
+
+static inline void RecordBFFSZInvDetail(int component, double seconds) {
+  if(!BFFSZInvDetailProfileEnabled
+      || component < 0 || component >= NBFFSZInvDetail
+      || seconds <= 0.0) return;
+  BFFSZProfileInvDetailSeconds[component] += seconds;
 }
 
 int useDiagScale=0;

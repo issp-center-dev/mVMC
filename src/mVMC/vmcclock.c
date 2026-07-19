@@ -49,13 +49,142 @@ void OutputTime(int step) {
 }
 
 void InitTimer() {
-  int i;
-  const char *bfProfileEnv;
+  int i, j;
+  const char *bfProfileEnv, *greenCheckEnv, *affectedCheckEnv;
+  const char *pfUpdateCheckEnv, *pfUpdateFallbackEnv, *pfUpdateInjectEnv;
+  const char *pfUpdateInjectRankEnv;
+  const char *pfUpdateExplicitStateEnv, *pfUpdateArgumentEnv, *pfUpdateKFullEnv;
+  const char *permuteParticleLabelsEnv;
+  const char *invUpdateCheckEnv, *invUpdateFallbackEnv, *invUpdateInjectEnv;
+  const char *invUpdateInjectRankEnv, *invUpdateExplicitStateEnv;
+  const char *invUpdateArgumentEnv, *invGemmCheckEnv, *invDetailProfileEnv;
+  const char *matrixFreeCheckEnv, *matrixFreeArgumentEnv;
+  const char *samplingRejectCheckEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
   for(i=0;i<NTimer;i++) TimerStart[i]=0.0;
   for(i=0;i<NBFProfileCounter;i++) BFProfileCounter[i]=0;
+  for(i=0;i<NBFFSZProfileSource;i++) {
+    BFFSZProfileCall[i] = 0;
+    BFFSZProfileChangedSum[i] = 0;
+    BFFSZProfileChangedMax[i] = 0;
+    BFFSZProfileAffectedSum[i] = 0;
+    BFFSZProfileAffectedMax[i] = 0;
+    for(j=0;j<NBFFSZProfileHist;j++) {
+      BFFSZProfileChangedHist[i][j] = 0;
+      BFFSZProfileAffectedHist[i][j] = 0;
+    }
+    for(j=0;j<NBFFSZProfileRatioHist;j++) {
+      BFFSZProfileAffectedRatioHist[i][j] = 0;
+    }
+    for(j=0;j<NBFFSZPfPath;j++) BFFSZProfilePfPath[i][j] = 0;
+  }
+  for(j=0;j<NBFFSZPfPath;j++) BFFSZProfileInvPath[j] = 0;
+  for(j=0;j<NBFFSZGreenMaterialize;j++) {
+    BFFSZProfileGreenMaterialize[j] = 0;
+  }
+  for(j=0;j<NBFFSZSampleMaterialize;j++) {
+    BFFSZProfileSampleMaterialize[j] = 0;
+  }
+  for(j=0;j<NBFFSZPfPath;j++) BFFSZProfileSampleCommit[j] = 0;
+  BFFSZProfileInvCheckSeconds = 0.0;
+  BFFSZProfileInvAntisymmetryMax = 0.0;
+  BFFSZProfileInvResidualMax = 0.0;
+  BFFSZProfileInvGemmCheckCount = 0;
+  BFFSZProfileInvGemmDifferenceMax = 0.0;
+  for(j=0;j<NBFFSZInvDetail;j++) {
+    BFFSZProfileInvDetailSeconds[j] = 0.0;
+    BFFSZProfileInvDetailMaxSeconds[j] = 0.0;
+  }
   bfProfileEnv = getenv("MVMC_BF_PROFILE");
   BFProfileEnabled = (bfProfileEnv != NULL && atoi(bfProfileEnv) != 0);
+  greenCheckEnv = getenv("MVMC_BF_FSZ_GREEN_REBUILD_CHECK");
+  BFFSZGreenRebuildCheckEnabled = (greenCheckEnv != NULL && atoi(greenCheckEnv) != 0);
+  affectedCheckEnv = getenv("MVMC_BF_FSZ_AFFECTED_CHECK");
+  BFFSZAffectedCheckEnabled = (affectedCheckEnv != NULL && atoi(affectedCheckEnv) != 0);
+  pfUpdateCheckEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_CHECK");
+  BFFSZPfUpdateCheckEnabled = (pfUpdateCheckEnv != NULL && atoi(pfUpdateCheckEnv) != 0);
+  pfUpdateFallbackEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_FORCE_FALLBACK");
+  BFFSZPfUpdateForceFallback = (pfUpdateFallbackEnv != NULL
+      && atoi(pfUpdateFallbackEnv) != 0);
+  BFFSZPfUpdateInjectedStatus = BF_FSZ_PF_UPDATE_OK;
+  pfUpdateInjectEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_INJECT_STATUS");
+  if(pfUpdateInjectEnv != NULL) {
+    const int value = atoi(pfUpdateInjectEnv);
+    if(value >= BF_FSZ_PF_UPDATE_EXACT_ZERO
+        && value <= BF_FSZ_PF_UPDATE_NONFINITE) {
+      BFFSZPfUpdateInjectedStatus = value;
+    }
+  }
+  BFFSZPfUpdateInjectedRank = -1;
+  pfUpdateInjectRankEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_INJECT_RANK");
+  if(pfUpdateInjectRankEnv != NULL) {
+    int rank = 0;
+    BFFSZPfUpdateInjectedRank = atoi(pfUpdateInjectRankEnv);
+    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+    if(BFFSZPfUpdateInjectedRank >= 0 && rank != BFFSZPfUpdateInjectedRank) {
+      BFFSZPfUpdateInjectedStatus = BF_FSZ_PF_UPDATE_OK;
+    }
+  }
+  pfUpdateExplicitStateEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_EXPLICIT_STATE_CHECK");
+  BFFSZPfUpdateExplicitStateCheckEnabled = (pfUpdateExplicitStateEnv != NULL
+      && atoi(pfUpdateExplicitStateEnv) != 0);
+  pfUpdateArgumentEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_ARGUMENT_CHECK");
+  BFFSZPfUpdateArgumentCheckEnabled = (pfUpdateArgumentEnv != NULL
+      && atoi(pfUpdateArgumentEnv) != 0);
+  BFFSZPfUpdateKFull = BF_FSZ_PF_UPDATE_KFULL_DEFAULT;
+  pfUpdateKFullEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_KFULL");
+  if(pfUpdateKFullEnv != NULL) {
+    const int value = atoi(pfUpdateKFullEnv);
+    if(value >= 1 && value <= BF_FSZ_PF_UPDATE_KFULL_DEFAULT) {
+      BFFSZPfUpdateKFull = value;
+    }
+  }
+  permuteParticleLabelsEnv = getenv("MVMC_BF_FSZ_PERMUTE_PARTICLE_LABELS");
+  BFFSZPermuteParticleLabelsCheckEnabled = (permuteParticleLabelsEnv != NULL
+      && atoi(permuteParticleLabelsEnv) != 0);
+  invUpdateCheckEnv = getenv("MVMC_BF_FSZ_INV_UPDATE_CHECK");
+  BFFSZInvUpdateCheckEnabled = (invUpdateCheckEnv != NULL
+      && atoi(invUpdateCheckEnv) != 0);
+  invUpdateFallbackEnv = getenv("MVMC_BF_FSZ_INV_UPDATE_FORCE_FALLBACK");
+  BFFSZInvUpdateForceFallback = (invUpdateFallbackEnv != NULL
+      && atoi(invUpdateFallbackEnv) != 0);
+  BFFSZInvUpdateInjectedStage = BF_FSZ_INV_STAGE_NONE;
+  invUpdateInjectEnv = getenv("MVMC_BF_FSZ_INV_UPDATE_INJECT_STAGE");
+  if(invUpdateInjectEnv != NULL) {
+    const int value = atoi(invUpdateInjectEnv);
+    if(value >= BF_FSZ_INV_STAGE_GETRF && value <= BF_FSZ_INV_STAGE_RESIDUAL) {
+      BFFSZInvUpdateInjectedStage = value;
+    }
+  }
+  BFFSZInvUpdateInjectedRank = -1;
+  invUpdateInjectRankEnv = getenv("MVMC_BF_FSZ_INV_UPDATE_INJECT_RANK");
+  if(invUpdateInjectRankEnv != NULL) {
+    BFFSZInvUpdateInjectedRank = atoi(invUpdateInjectRankEnv);
+  }
+  invUpdateExplicitStateEnv = getenv("MVMC_BF_FSZ_INV_UPDATE_EXPLICIT_STATE_CHECK");
+  BFFSZInvUpdateExplicitStateCheckEnabled = (invUpdateExplicitStateEnv != NULL
+      && atoi(invUpdateExplicitStateEnv) != 0);
+  invUpdateArgumentEnv = getenv("MVMC_BF_FSZ_INV_UPDATE_ARGUMENT_CHECK");
+  BFFSZInvUpdateArgumentCheckEnabled = (invUpdateArgumentEnv != NULL
+      && atoi(invUpdateArgumentEnv) != 0);
+  invGemmCheckEnv = getenv("MVMC_BF_FSZ_INV_GEMM_CHECK");
+  BFFSZInvGemmCheckEnabled = (invGemmCheckEnv != NULL
+      && atoi(invGemmCheckEnv) != 0);
+  invDetailProfileEnv = getenv("MVMC_BF_FSZ_INV_DETAIL_PROFILE");
+  BFFSZInvDetailProfileEnabled = (invDetailProfileEnv != NULL
+      && atoi(invDetailProfileEnv) != 0);
+  matrixFreeCheckEnv = getenv("MVMC_BF_FSZ_MATRIX_FREE_CHECK");
+  BFFSZMatrixFreeCheckEnabled = (matrixFreeCheckEnv != NULL
+      && atoi(matrixFreeCheckEnv) != 0);
+  matrixFreeArgumentEnv = getenv("MVMC_BF_FSZ_MATRIX_FREE_ARGUMENT_CHECK");
+  BFFSZMatrixFreeArgumentCheckEnabled = (matrixFreeArgumentEnv != NULL
+      && atoi(matrixFreeArgumentEnv) != 0);
+  if(BFFSZMatrixFreeArgumentCheckEnabled) {
+    BFFSZMatrixFreeCheckEnabled = 1;
+  }
+  samplingRejectCheckEnv = getenv("MVMC_BF_FSZ_SAMPLING_REJECT_CHECK");
+  BFFSZSamplingRejectCheckEnabled = (samplingRejectCheckEnv != NULL
+      && atoi(samplingRejectCheckEnv) != 0);
   return;
 }
 
@@ -83,16 +212,18 @@ void StopTimer(int n) {
 
 static void OutputBFProfileCounters(FILE *fp) {
   int i, hasData = 0;
-  if(!BFProfileEnabled) return;
-  for(i=0;i<NBFProfileCounter;i++) {
-    if(BFProfileCounter[i] != 0) {
-      hasData = 1;
-      break;
+  if(!BFProfileEnabled && !BFFSZInvGemmCheckEnabled
+      && !BFFSZInvDetailProfileEnabled) return;
+  if(BFProfileEnabled) {
+    for(i=0;i<NBFProfileCounter;i++) {
+      if(BFProfileCounter[i] != 0) {
+        hasData = 1;
+        break;
+      }
     }
-  }
-  if(!hasData) return;
-
-  fprintf(fp,"  BF profile counters (MVMC_BF_PROFILE=1)\n");
+    if(hasData || BFFSZProfileCall[BFFSZ_PROFILE_SAMPLE] != 0
+        || BFFSZProfileCall[BFFSZ_PROFILE_GREEN] != 0) {
+      fprintf(fp,"  BF profile counters (MVMC_BF_PROFILE=1)\n");
   fprintf(fp,"    BF sample row requests          [910] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_ROW_REQUEST]);
   fprintf(fp,"    BF sample row recompute         [911] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_ROW_RECOMPUTE]);
   fprintf(fp,"    BF sample row reuse             [912] %12lld\n",BFProfileCounter[BFPROF_SAMPLE_ROW_REUSE]);
@@ -141,6 +272,95 @@ static void OutputBFProfileCounters(FILE *fp) {
   fprintf(fp,"    BF exchange valid               [947] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_VALID]);
   fprintf(fp,"    BF exchange accept              [948] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_ACCEPT]);
   fprintf(fp,"    BF exchange metropolis reject   [949] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_METROPOLIS_REJECT]);
+
+  for(i=0;i<NBFFSZProfileSource;i++) {
+    const char *label = (i == BFFSZ_PROFILE_SAMPLE) ? "sample" : "green";
+    int k;
+    double changedMean, affectedMean;
+    if(BFFSZProfileCall[i] == 0) continue;
+    changedMean = (double)BFFSZProfileChangedSum[i] / (double)BFFSZProfileCall[i];
+    affectedMean = (double)BFFSZProfileAffectedSum[i] / (double)BFFSZProfileCall[i];
+    fprintf(fp,"    BF-FSZ %s changed stats         calls=%lld mean=%.6f max=%lld\n",
+            label, BFFSZProfileCall[i], changedMean, BFFSZProfileChangedMax[i]);
+    fprintf(fp,"    BF-FSZ %s affected stats        calls=%lld mean=%.6f max=%lld\n",
+            label, BFFSZProfileCall[i], affectedMean, BFFSZProfileAffectedMax[i]);
+    fprintf(fp,"    BF-FSZ %s changed hist          ",label);
+    for(k=0;k<=16;k++) fprintf(fp," %d:%lld",k,BFFSZProfileChangedHist[i][k]);
+    fprintf(fp," 17-32:%lld 33-64:%lld 65-128:%lld 129-256:%lld 257+:%lld\n",
+            BFFSZProfileChangedHist[i][17],BFFSZProfileChangedHist[i][18],
+            BFFSZProfileChangedHist[i][19],BFFSZProfileChangedHist[i][20],
+            BFFSZProfileChangedHist[i][21]);
+    fprintf(fp,"    BF-FSZ %s affected hist         ",label);
+    for(k=0;k<=16;k++) fprintf(fp," %d:%lld",k,BFFSZProfileAffectedHist[i][k]);
+    fprintf(fp," 17-32:%lld 33-64:%lld 65-128:%lld 129-256:%lld 257+:%lld\n",
+            BFFSZProfileAffectedHist[i][17],BFFSZProfileAffectedHist[i][18],
+            BFFSZProfileAffectedHist[i][19],BFFSZProfileAffectedHist[i][20],
+            BFFSZProfileAffectedHist[i][21]);
+    fprintf(fp,"    BF-FSZ %s affected ratio hist   0:%lld <=1/16:%lld <=1/8:%lld <=1/4:%lld <=1/2:%lld <=3/4:%lld <1:%lld =1:%lld\n",
+            label,BFFSZProfileAffectedRatioHist[i][0],BFFSZProfileAffectedRatioHist[i][1],
+            BFFSZProfileAffectedRatioHist[i][2],BFFSZProfileAffectedRatioHist[i][3],
+            BFFSZProfileAffectedRatioHist[i][4],BFFSZProfileAffectedRatioHist[i][5],
+            BFFSZProfileAffectedRatioHist[i][6],BFFSZProfileAffectedRatioHist[i][7]);
+    fprintf(fp,"    BF-FSZ %s Pfaffian paths        optimized:%lld direct-full:%lld fallback:%lld kFull:%d\n",
+            label,BFFSZProfilePfPath[i][BFFSZ_PF_PATH_OPTIMIZED],
+            BFFSZProfilePfPath[i][BFFSZ_PF_PATH_DIRECT_FULL],
+            BFFSZProfilePfPath[i][BFFSZ_PF_PATH_FALLBACK],BFFSZPfUpdateKFull);
+  }
+  fprintf(fp,"    BF-FSZ accepted inverse paths   optimized:%lld direct-full:%lld fallback:%lld kFull:%d\n",
+          BFFSZProfileInvPath[BFFSZ_PF_PATH_OPTIMIZED],
+          BFFSZProfileInvPath[BFFSZ_PF_PATH_DIRECT_FULL],
+          BFFSZProfileInvPath[BFFSZ_PF_PATH_FALLBACK],BFFSZPfUpdateKFull);
+  fprintf(fp,"    BF-FSZ green full materialize   direct-full:%lld fallback:%lld oracle:%lld\n",
+          BFFSZProfileGreenMaterialize[BFFSZ_GREEN_MATERIALIZE_DIRECT_FULL],
+          BFFSZProfileGreenMaterialize[BFFSZ_GREEN_MATERIALIZE_FALLBACK],
+          BFFSZProfileGreenMaterialize[BFFSZ_GREEN_MATERIALIZE_ORACLE]);
+  fprintf(fp,"    BF-FSZ sample full materialize  direct-full:%lld pf-fallback:%lld inv-fallback:%lld oracle:%lld\n",
+          BFFSZProfileSampleMaterialize[BFFSZ_SAMPLE_MATERIALIZE_DIRECT_FULL],
+          BFFSZProfileSampleMaterialize[BFFSZ_SAMPLE_MATERIALIZE_PF_FALLBACK],
+          BFFSZProfileSampleMaterialize[BFFSZ_SAMPLE_MATERIALIZE_INV_FALLBACK],
+          BFFSZProfileSampleMaterialize[BFFSZ_SAMPLE_MATERIALIZE_ORACLE]);
+  fprintf(fp,"    BF-FSZ sample Slater commits    optimized:%lld direct-full:%lld fallback:%lld\n",
+          BFFSZProfileSampleCommit[BFFSZ_PF_PATH_OPTIMIZED],
+          BFFSZProfileSampleCommit[BFFSZ_PF_PATH_DIRECT_FULL],
+          BFFSZProfileSampleCommit[BFFSZ_PF_PATH_FALLBACK]);
+      fprintf(fp,"    BF-FSZ inverse checks           seconds_max_rank:%.9f antisymmetry_max:%.17e affected_residual_max:%.17e\n",
+              BFFSZProfileInvCheckSeconds,BFFSZProfileInvAntisymmetryMax,
+              BFFSZProfileInvResidualMax);
+    }
+  }
+  if(BFFSZInvGemmCheckEnabled) {
+    fprintf(fp,"  BF-FSZ inverse GEMM check (MVMC_BF_FSZ_INV_GEMM_CHECK=1)\n");
+    fprintf(fp,"    BF-FSZ inverse GEMM checks      calls=%lld scaled_max=%.17e\n",
+            BFFSZProfileInvGemmCheckCount,
+            BFFSZProfileInvGemmDifferenceMax);
+  }
+  if(BFFSZInvDetailProfileEnabled) {
+    const char *labels[NBFFSZInvDetail] = {
+      "w",
+      "small-transpose",
+      "u",
+      "lapack",
+      "correction",
+      "scan-antisymmetrize",
+      "affected-residual",
+      "mpi-agreement",
+      "commit-copy"
+    };
+    double classifiedSeconds = 0.0;
+    double unclassifiedSeconds;
+    fprintf(fp,"  BF-FSZ inverse detail profile (MVMC_BF_FSZ_INV_DETAIL_PROFILE=1)\n");
+    for(i=0;i<NBFFSZInvDetail;i++) {
+      const double share = (Timer[63] > 0.0)
+          ? BFFSZProfileInvDetailSeconds[i]/Timer[63] : 0.0;
+      classifiedSeconds += BFFSZProfileInvDetailSeconds[i];
+      fprintf(fp,"    BF-FSZ inverse detail component=%s seconds_rank0=%.9f seconds_max_rank=%.9f share_rank0=%.9f\n",
+              labels[i],BFFSZProfileInvDetailSeconds[i],
+              BFFSZProfileInvDetailMaxSeconds[i],share);
+    }
+    unclassifiedSeconds = Timer[63]-classifiedSeconds;
+    fprintf(fp,"    BF-FSZ inverse detail total timer63_seconds_rank0=%.9f classified_seconds_rank0=%.9f unclassified_seconds_rank0=%.9f\n",
+            Timer[63],classifiedSeconds,unclassifiedSeconds);
+  }
 }
 
 void OutputTimerParaOpt() {
@@ -165,6 +385,7 @@ void OutputTimerParaOpt() {
   fprintf(fp,"      CalculateLogIP       [62] %12.5lf\n",Timer[62]);
   fprintf(fp,"      UpdateMAll           [63] %12.5lf\n",Timer[63]);
   fprintf(fp,"      UpdateSlaterElmBF    [64] %12.5lf\n",Timer[64]);
+  fprintf(fp,"      CommitSlaterElmBF    [94] %12.5lf\n",Timer[94]);
   fprintf(fp,"    exchange update        [33] %12.5lf\n",Timer[33]);
   fprintf(fp,"      UpdateProjCnt        [65] %12.5lf\n",Timer[65]);
   fprintf(fp,"      CalculateNewPfMTwo2  [66] %12.5lf\n",Timer[66]);
@@ -242,6 +463,7 @@ void OutputTimerPhysCal() {
   fprintf(fp,"      CalculateLogIP       [62] %12.5lf\n",Timer[62]);
   fprintf(fp,"      UpdateMAll           [63] %12.5lf\n",Timer[63]);
   fprintf(fp,"      UpdateSlaterElmBF    [64] %12.5lf\n",Timer[64]);
+  fprintf(fp,"      CommitSlaterElmBF    [94] %12.5lf\n",Timer[94]);
   fprintf(fp,"    exchange update        [33] %12.5lf\n",Timer[33]);
   fprintf(fp,"      UpdateProjCnt        [65] %12.5lf\n",Timer[65]);
   fprintf(fp,"      CalculateNewPfMTwo2  [66] %12.5lf\n",Timer[66]);

@@ -5,6 +5,24 @@
 #define BF_FSZ_PF_LAPACK_FAILURE 1
 #define BF_FSZ_PF_NONFINITE 2
 
+#define BF_FSZ_MALL_OK 0
+#define BF_FSZ_MALL_LAPACK_FAILURE 1
+#define BF_FSZ_MALL_NONFINITE 2
+#define BF_FSZ_MALL_INVALID_ARGUMENT 3
+
+#define BF_FSZ_MALL_STAGE_NONE 0
+#define BF_FSZ_MALL_STAGE_PFAFFIAN 1
+#define BF_FSZ_MALL_STAGE_GETRF 2
+#define BF_FSZ_MALL_STAGE_GETRI 3
+#define BF_FSZ_MALL_STAGE_INVERSE 4
+
+typedef struct {
+  int status;
+  int stage;
+  int qpidx;
+  int lapackInfo;
+} BF_FSZ_MAllResult;
+
 int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd);
 int CalculateMAll_real(const int *eleIdx, const int qpStart, const int qpEnd);
 
@@ -20,6 +38,12 @@ int CalculatePfM_BF_fsz_from_workspace(const double complex *sltElmBF,
     const int *eleIdx, const int *eleSpn, const int qpStart, const int qpEnd,
     double complex *pfMOut, int *failureDetail, double complex *bufM,
     int *iwork, double complex *work, int lwork, double *rwork);
+BF_FSZ_MAllResult CalculateMAll_BF_fsz_from_workspace(
+    const double complex *sltElmBF, const int *eleIdx, const int *eleSpn,
+    const int qpStart, const int qpEnd, double complex *pfMOut,
+    double complex *invMOut, const size_t invMQpStride,
+    double complex *bufM, int *iwork, double complex *work,
+    int lwork, double *rwork);
 
 int CalculateMAll_fsz(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd);
 int CalculateMAll_fsz_real(const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd);
