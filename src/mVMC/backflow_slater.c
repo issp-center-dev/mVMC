@@ -14,10 +14,10 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details. 
+GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with this program. If not, see http://www.gnu.org/licenses/. 
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
 */
 /*-------------------------------------------------------------
  * Variational Monte Carlo
@@ -170,7 +170,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
   const int nSlater = NSlater;
   const int nTrans = NMPTrans * NQPOptTrans;
   const double complex invIP = 1.0/ip;
-  
+
   int xk,xl,xn,xm;
   int s,idx,rsi,rsj;
   //double eta;
@@ -213,7 +213,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
   transOrbIdx = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbIdx[mpidx][msi][msj] */
 //  transOrbSgn = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbSgn[mpidx][msi][msj] */
   buffer = GetWorkSpaceComplex(NQPFull*NSlater);
-  
+
   for(i=0;i<nBuf;i++) buffer[i]=0.0;
 
   #pragma omp parallel for default(shared)        \
@@ -235,7 +235,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
       }
     }
   }
-            
+
   for(idx=0;idx<Nsite2*Nsite2;idx++){
      pTrans[idx]=0.0;
   }
@@ -283,7 +283,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
        // if(slt_ij == 0.0){eta = 1.0;}
        // else{eta = ProjBF[0];}
         //slt_ij += eta*Slater[ OrbitalIdx[tri][trj] ];
-        
+
     //BackFlow Correlation eta1
     if(NBackFlowIdx > 0){
       #pragma loop norecurrence
@@ -319,7 +319,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
               bfidx=BFSubIdx[xn][xm];
 //              bfCnt2_m=bfCnt2+xm*nSiteRange;
               bfCnt3_m=bfCnt3+xm*nSiteRange;
-          
+
               for(xk=0;xk<nRange;xk++) {
                 rki=posBF[tri][xk];
                 rk=xqpInv[rki];
@@ -327,7 +327,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
                 msk = eleCfg[rk];
                 idx_ik=tri*nRange+xk;
                 invM_k = invM + msk*nsize;
-              
+
                 dki = RangeIdx[tri][rki];
                 xtmp = 4*dki+xn;
                 nidx = xtmp-3-dki;
@@ -342,7 +342,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
                   if(eleCfg[rl+Nsite] == -1) continue;
                   msl = eleCfg[rl+Nsite]+ne;
                   idx_jl=trj*nRange+xl;
-                
+
                   dlj = RangeIdx[trj][rlj];
                   xtmp = 4*dlj+xm;
                   midx = xtmp-3-dlj;
@@ -599,14 +599,14 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
             bfCnt1_n=bfCnt1+xn*nSiteRange;
             bfCnt0_m=bfCnt0+xm*nSiteRange;
             bfCnt1_m=bfCnt1+xm*nSiteRange;
-            
+
             //bufM_ni = bufM_i + (4*xn+xm)*Nsize*Nsize;
             for(xk=0;xk<nRange;xk++) {
               rki=posBF[tri][xk];
               rkj=posBF[trj][xk];
               idx_ik=tri*nRange+xk;
               idx_jk=trj*nRange+xk;
-            
+
               dki = RangeIdx[tri][rki];
               itmp = 4*dki+xn;
               nidx = itmp-3-dki;
@@ -614,13 +614,13 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
               if((itmp%4)==0){nidx=-1;}
               if(itmp==0){nidx=0;}
               if(nidx<0){continue;}
-            
+
               for(xl=0;xl<nRange;xl++){
                 rli=posBF[tri][xl];
                 rlj=posBF[trj][xl];
                 idx_il=tri*nRange+xl;
                 idx_jl=trj*nRange+xl;
-            
+
                 dlj = RangeIdx[trj][rlj];
                 itmp = 4*dlj+xm;
                 midx = itmp-3-dlj;
@@ -628,7 +628,7 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
                 if(itmp==0){midx=0;}
                 if(midx<0){continue;}
                 bfidx=BFSubIdx[nidx][midx];
-                          
+
                 tmp = -bfCnt0_n[idx_ik]*bfCnt1_m[idx_jl]*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj]
                       -bfCnt1_n[idx_jk]*bfCnt0_m[idx_il]*Slater[ OrbitalIdx[rli][rkj]]*OrbitalSgn[rli][rkj];
                 trM[bfidx] -= invM_i[msj]*tmp;
@@ -2160,7 +2160,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
     //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,
     //        ijcount,jicount,qpidx,hop,itmp1,itmp0,
     //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
-    
+
     //#pragma omp parallel for default(shared)
     //private(zidx,mi0,mi1,
     //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,
@@ -2239,7 +2239,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
           jcount1[zidx]++;
         }
       }
-    } 
+    }
     for(zidx=0;zidx<icount;zidx++){
       ri  = rsz[zidx];
       tri = xqp[ri];
@@ -2247,7 +2247,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
       rsi1 = ri+Nsite;
       mi0 = eleCfg[rsi0];
       mi1 = eleCfg[rsi1];
-      
+
       //if((jcount == Nsite)){
       if((jcount[zidx] >= 1)){
         rhop0[itmp0] = rsi0;
