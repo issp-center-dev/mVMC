@@ -119,6 +119,7 @@ extern void omp_set_num_threads(int);
 #include "../vmcmake_fsz.c"
 #include "../vmcmake_fsz_real.c"
 #include "../vmccal.c"
+#include "../backflow_vmc.c"
 #include "../vmccal_fsz.c"
 
 #include "../rbm.c"
