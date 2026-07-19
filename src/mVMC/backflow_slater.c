@@ -1,0 +1,2388 @@
+/*
+mVMC - A numerical solver package for a wide range of quantum lattice models based on many-variable Variational Monte Carlo method
+Copyright (C) 2016 The University of Tokyo, All rights reserved.
+
+This program is developed based on the mVMC-mini program
+(https://github.com/fiber-miniapp/mVMC-mini)
+which follows "The BSD 3-Clause License".
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details. 
+
+You should have received a copy of the GNU General Public License 
+along with this program. If not, see http://www.gnu.org/licenses/. 
+*/
+/*-------------------------------------------------------------
+ * Variational Monte Carlo
+ * slater elements
+ *-------------------------------------------------------------
+ * by Satoshi Morita
+ *-------------------------------------------------------------*/
+#include <complex.h>
+#include "./include/global.h"
+#include "./include/slater.h"
+
+#include "./include/projection.h"
+
+void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex*slt_ij, int *ijcount, double complex*slt_ji, int *jicount, const int *eleProjBFCnt);
+
+void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijcount, double *slt_ji, int *jicount, const int *eleProjBFCnt);
+
+typedef struct {
+  int r;
+  int coord;
+  int cnt0;
+  int cnt1;
+} BFRealSparseEntry;
+
+typedef struct {
+  long long denseCandidate;
+  long long geometryValid;
+  long long sparsePair;
+  long long actualAdd;
+} BFRealSparseStats;
+
+static void MakeBFEtaFlag_real(unsigned char *bfEtaFlag, const int *eleProjBFCnt);
+static void MakeBFRealSparseCountList(BFRealSparseEntry *entry, int *offset, int *count, int *geomCount,
+                                      const int *eleProjBFCnt);
+static void SubSlaterElmBF_real_eta_sparse(const int tri, const int trj, double *slt_ij, double *slt_ji,
+                                           const BFRealSparseEntry *entry, const int *offset,
+                                           const int *count, const int *geomCount,
+                                           const unsigned char *bfEtaFlag, BFRealSparseStats *stats);
+static long long CountBFRealBFCntChangedEntries(const int *oldCnt, const int *newCnt);
+static void MakeBFRealSparseChangedCount(const BFRealSparseEntry *oldEntry, const int *oldOffset,
+                                         const int *oldCount, const BFRealSparseEntry *newEntry,
+                                         const int *newOffset, const int *newCount,
+                                         int *oldChangedCount, int *newChangedCount);
+static long long CountBFRealDeltaSparsePairsForRow(const int tri, const int *count,
+                                                   const int *changedCount);
+
+void MakeProjBFCnt(int *projCnt, const int *eleNum) {
+  const int *n0 = eleNum;
+  const int *n1 = eleNum + Nsite;
+  int idx;
+  int k;
+  int ri, rk;
+  int xid, xih, xkd, xkh;
+  int xidh, xihd, xkdh, xkhd;
+  int *nBF0, *nBF1, *nBF2, *nBF3;
+  long long groupNnz[4] = {0,0,0,0};
+  long long stateNnz[4] = {0,0,0,0};
+  int group,state,base;
+  /* optimization for Kei */
+  const int nSite = Nsite;
+  const int nRange = Nrange;
+
+  /* initialization */
+  for (idx = 0; idx < 16 * nSite * nRange; idx++) projCnt[idx] = 0;
+
+  nBF0 = projCnt;
+  nBF1 = projCnt + 4 * nSite * nRange;
+  nBF2 = projCnt + 8 * nSite * nRange;
+  nBF3 = projCnt + 12 * nSite * nRange;
+
+  /* BackFlow factor */
+  if (NBackFlowIdx > 0) {
+    for (ri = 0; ri < nSite; ri++) {
+      xid = n0[ri] * n1[ri];
+      xih = (1 - n0[ri]) * (1 - n1[ri]);
+      xidh = n0[ri] * (1 - n1[ri]);
+      xihd = n1[ri] * (1 - n0[ri]);
+      //posBF = PosBF + ri*nSite;
+      for (k = 0; k < nRange; k++) {
+        rk = PosBF[ri][k];
+        xkd = n0[rk] * n1[rk];
+        xkh = (1 - n0[rk]) * (1 - n1[rk]);
+        xkdh = n0[rk] * (1 - n1[rk]);
+        xkhd = n1[rk] * (1 - n0[rk]);
+
+        if (ri == rk) {
+          nBF0[ri * nRange + k] = 1;
+          nBF1[ri * nRange + k] = 1;
+          nBF2[ri * nRange + k] = 1;
+          nBF3[ri * nRange + k] = 1;
+        } else {
+          nBF0[ri * nRange + k] = 0;
+          nBF1[ri * nRange + k] = 0;
+          nBF2[ri * nRange + k] = 0;
+          nBF3[ri * nRange + k] = 0;
+        }
+        nBF0[nSite * nRange + ri * nRange + k] = xid * xkh;
+        nBF0[2 * nSite * nRange + ri * nRange + k] = xidh * xkhd;
+        nBF0[3 * nSite * nRange + ri * nRange + k] = xid * xkhd + xidh * xkh;
+
+        nBF2[nSite * nRange + ri * nRange + k] = xkd * xih;
+        nBF2[2 * nSite * nRange + ri * nRange + k] = xkdh * xihd;
+        nBF2[3 * nSite * nRange + ri * nRange + k] = xkd * xihd + xkdh * xih;
+
+        nBF1[nSite * nRange + ri * nRange + k] = xid * xkh;
+        nBF1[2 * nSite * nRange + ri * nRange + k] = xihd * xkdh;
+        nBF1[3 * nSite * nRange + ri * nRange + k] = xid * xkdh + xihd * xkh;
+
+        nBF3[nSite * nRange + ri * nRange + k] = xkd * xih;
+        nBF3[2 * nSite * nRange + ri * nRange + k] = xkhd * xidh;
+        nBF3[3 * nSite * nRange + ri * nRange + k] = xkd * xidh + xkhd * xih;
+      }
+    }
+  }
+
+  if(BFProfileEnabled) {
+    for(group=0;group<4;group++) {
+      base = group * 4 * nSite * nRange;
+      for(state=0;state<4;state++) {
+        for(idx=0;idx<nSite*nRange;idx++) {
+          if(projCnt[base + state*nSite*nRange + idx] != 0) {
+            groupNnz[group]++;
+            stateNnz[state]++;
+          }
+        }
+      }
+    }
+    AddBFProfileCounter(BFPROF_BFCNT_SNAPSHOT, 1);
+    AddBFProfileCounter(BFPROF_BFCNT_TOTAL_ENTRY, 16LL*nSite*nRange);
+    AddBFProfileCounter(BFPROF_BFCNT_GROUP0_NNZ, groupNnz[0]);
+    AddBFProfileCounter(BFPROF_BFCNT_GROUP1_NNZ, groupNnz[1]);
+    AddBFProfileCounter(BFPROF_BFCNT_GROUP2_NNZ, groupNnz[2]);
+    AddBFProfileCounter(BFPROF_BFCNT_GROUP3_NNZ, groupNnz[3]);
+    AddBFProfileCounter(BFPROF_BFCNT_STATE0_NNZ, stateNnz[0]);
+    AddBFProfileCounter(BFPROF_BFCNT_STATE1_NNZ, stateNnz[1]);
+    AddBFProfileCounter(BFPROF_BFCNT_STATE2_NNZ, stateNnz[2]);
+    AddBFProfileCounter(BFPROF_BFCNT_STATE3_NNZ, stateNnz[3]);
+  }
+
+  return;
+}
+//[e] MERGE BY TM
+
+void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *eleIdx, int *eleNum, int *eleCfg, int *eleProjConst,const int * eleProjBFCnt){
+  const int nBuf=NSlater*NQPFull;
+  const int nsize = Nsize;
+  const int ne = Ne;
+  const int nQPFull = NQPFull;
+  const int nMPTrans = NMPTrans;
+  const int nSlater = NSlater;
+  const int nTrans = NMPTrans * NQPOptTrans;
+  const double complex invIP = 1.0/ip;
+  
+  int xk,xl,xn,xm;
+  int s,idx,rsi,rsj;
+  //double eta;
+  int mi,mj,msi,msj,msk,msl,ri,rj,rk,rl;
+  int tri,trj;
+  int mpidx,spidx,orbidx,orbsgn,qpidx,i;
+  double complex cs,cc,ss;
+  int *xqp, *xqpInv;
+  double complex *invM,*invM_i,*invM_k;
+//  const int *bfCnt0=eleProjBFCnt;
+//  const int *bfCnt1=eleProjBFCnt + 4*Nsite*Nrange;
+  const int *bfCnt2=eleProjBFCnt + 8*Nsite*Nrange;
+  const int *bfCnt3=eleProjBFCnt +12*Nsite*Nrange;
+  const int *bfCnt2_n,*bfCnt3_m;
+  int **posBF = PosBF;
+
+  int *orbitalIdx_i,*orbitalSgn_i;
+  int *transOrbIdx; /* transOrbIdx[mpidx][msi][msj] */
+//  int *transOrbSgn; /* transOrbSgn[mpidx][msi][msj] */
+  int *tOrbIdx,*tOrbIdx_i;
+  int *tOrbSgn_i;
+  double complex *buf,*buffer;
+  double complex tmp;
+  //double complex bfdhidx[NMultiSlater*NQPFull*Nsize*Nsize];
+  //double complex *bfdhidx_i;
+  double complex pTrans[Nsite2*Nsite2];
+  double complex *pTrans_i;
+
+  int rki,rlj;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nSiteRange = nRange*nSite;
+  int idx_ik,idx_jl;
+  int bfidx;
+  int dki,dlj,nidx,midx,xtmp;
+
+  RequestWorkSpaceInt(2*nTrans*Nsize*Nsize);
+  RequestWorkSpaceComplex(NQPFull*NSlater);
+
+  transOrbIdx = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbIdx[mpidx][msi][msj] */
+//  transOrbSgn = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbSgn[mpidx][msi][msj] */
+  buffer = GetWorkSpaceComplex(NQPFull*NSlater);
+  
+  for(i=0;i<nBuf;i++) buffer[i]=0.0;
+
+  #pragma omp parallel for default(shared)        \
+    private(mpidx,msi,msj,xqp,ri,tri,rj,trj,      \
+            tOrbIdx,tOrbIdx_i,orbitalIdx_i)
+  #pragma loop noalias
+  for(mpidx=0;mpidx<nMPTrans;mpidx++) {
+    xqp = QPTrans[mpidx];
+    tOrbIdx = transOrbIdx + mpidx*nsize*nsize;
+    for(msi=0;msi<nsize;msi++) {
+      ri = eleIdx[msi];
+      tri = xqp[ri];
+      tOrbIdx_i = tOrbIdx + msi*nsize;
+      orbitalIdx_i = OrbitalIdx[tri];
+      for(msj=0;msj<nsize;msj++) {
+        rj = eleIdx[msj];
+        trj = xqp[rj];
+        tOrbIdx_i[msj] = orbitalIdx_i[trj];
+      }
+    }
+  }
+            
+  for(idx=0;idx<Nsite2*Nsite2;idx++){
+     pTrans[idx]=0.0;
+  }
+  for(idx=0;idx<NTransfer;idx++){
+    ri = Transfer[idx][0];
+    rj = Transfer[idx][2];
+    s  = Transfer[idx][1];// C_ris a_rjs
+    rsi = ri + Nsite*s;
+    rsj = rj + Nsite*s;
+    pTrans_i = pTrans + rsi*Nsite2;
+    pTrans_i[rsj] = ParaTransfer[idx];
+  }
+  /*for(idx=0;idx<Nsite2*Nsite2;idx++){
+    rsi = idx/Nsite2;
+    rsj = idx%Nsite2;
+    printf("Transfer[%d][%d]=%.5e,%.5e\n",rsi,rsj,creal(pTrans[idx]),cimag(pTrans[idx]));
+  }*/
+
+  #pragma omp parallel for default(shared)        \
+    private(qpidx,mpidx,spidx,cs,cc,ss,           \
+            tOrbIdx,invM,buf,msi,msj,             \
+            ri,rj,rk,rl,tri,trj,idx,              \
+            mi,mj,msk,msl,xn,xm,xk,xl,            \
+            rki,rlj,idx_ik,idx_jl,                \
+            bfCnt2_n,bfCnt3_m,bfidx,              \
+            dki,dlj,nidx,midx,xtmp,               \
+            xqp,xqpInv,orbitalIdx_i,orbitalSgn_i, \
+            orbsgn,tOrbIdx_i,invM_i,invM_k,orbidx)
+  #pragma loop noalias
+  for(qpidx=0;qpidx<nQPFull;qpidx++) {
+    mpidx = qpidx / NSPGaussLeg;
+    spidx = qpidx % NSPGaussLeg;
+    xqp = QPTrans[mpidx];
+    xqpInv = QPTransInv[mpidx];
+
+    cs = PfM[qpidx] * SPGLCosSin[spidx];
+    cc = PfM[qpidx] * SPGLCosCos[spidx];
+    ss = PfM[qpidx] * SPGLSinSin[spidx];
+
+    tOrbIdx = transOrbIdx + mpidx*nsize*nsize;
+//    tOrbSgn = transOrbSgn + mpidx*nsize*nsize;
+    invM = InvM + qpidx*Nsize*Nsize;
+    buf = buffer + qpidx*NSlater;
+
+       // if(slt_ij == 0.0){eta = 1.0;}
+       // else{eta = ProjBF[0];}
+        //slt_ij += eta*Slater[ OrbitalIdx[tri][trj] ];
+        
+    //BackFlow Correlation eta1
+    if(NBackFlowIdx > 0){
+      #pragma loop norecurrence
+      //for(msi=0;msi<ne;msi++) {
+      for(ri=0;ri<Nsite;ri++) {
+        mi = eleCfg[ri];
+        msi = mi;
+        tri = xqp[ri];
+        orbitalIdx_i = OrbitalIdx[tri];
+        orbitalSgn_i = OrbitalSgn[tri];
+        for(rj=0;rj<Nsite;rj++) {
+          // si=0 sj=1
+          mj = eleCfg[rj+Nsite];
+          msj = mj + ne;
+          trj = xqp[rj];
+          orbidx = orbitalIdx_i[trj];
+          orbsgn = orbitalSgn_i[trj];
+
+          if((mi != -1) && (mj != -1)){
+            invM_i = invM + msi*nsize;
+            //buf[orbidx] -= tEta[tri][trj]*invM_i[msj]*cc;
+            //printf("eta[%d][%d]",tri,trj);
+            //printf("=%.2e\n",eta[tri][trj]);
+            buf[orbidx] -= eta[tri][trj]*invM_i[msj]*cc*orbsgn;
+            //buf[orbidx] -= eta[tri][trj]*invM_i[msj]*cc*tOrbSgn_i[msj];
+          }
+
+          for(xn=0;xn<4;xn++){
+            bfCnt2_n=bfCnt2+xn*nSiteRange;
+//            bfCnt3_n=bfCnt3+xn*nSiteRange;
+            for(xm=0;xm<4;xm++){
+              if(xm==0 && xn == 0) continue;
+              bfidx=BFSubIdx[xn][xm];
+//              bfCnt2_m=bfCnt2+xm*nSiteRange;
+              bfCnt3_m=bfCnt3+xm*nSiteRange;
+          
+              for(xk=0;xk<nRange;xk++) {
+                rki=posBF[tri][xk];
+                rk=xqpInv[rki];
+                if(eleCfg[rk] == -1) continue;
+                msk = eleCfg[rk];
+                idx_ik=tri*nRange+xk;
+                invM_k = invM + msk*nsize;
+              
+                dki = RangeIdx[tri][rki];
+                xtmp = 4*dki+xn;
+                nidx = xtmp-3-dki;
+                //if(itmp <= 3 || itmp%4==0){continue;}
+                if(xtmp%4==0){nidx=-1;}
+                if(xtmp==0){nidx=0;}
+                if(nidx<0){continue;}
+
+                for(xl=0;xl<nRange;xl++) {
+                  rlj=posBF[trj][xl];
+                  rl=xqpInv[rlj];
+                  if(eleCfg[rl+Nsite] == -1) continue;
+                  msl = eleCfg[rl+Nsite]+ne;
+                  idx_jl=trj*nRange+xl;
+                
+                  dlj = RangeIdx[trj][rlj];
+                  xtmp = 4*dlj+xm;
+                  midx = xtmp-3-dlj;
+                  //if(itmp <= 3 || itmp%4==0){continue;}
+                  if(xtmp%4==0){midx=-1;}
+                  if(xtmp==0){midx=0;}
+                  if(midx<0){continue;}
+                  bfidx=BFSubIdx[nidx][midx];
+                  orbsgn =  OrbitalSgn[rki][rlj];
+
+                  buf[orbidx] -= -orbsgn*invM_k[msl]*ProjBF[bfidx]*bfCnt2_n[idx_ik]*bfCnt3_m[idx_jl]*PfM[qpidx];
+                }
+              }
+            }
+          }
+        }
+      }
+      /*#pragma loop norecurrence
+      for(msi=ne;msi<nsize;msi++) {
+        tOrbIdx_i = tOrbIdx + msi*nsize;
+        invM_i = invM + msi*nsize;
+        for(msj=0;msj<ne;msj++) {
+          // si=1 sj=0
+          orbidx  = tOrbIdx_i[msj];
+          buf[orbidx] += invM_i[msj]*cs*tOrbSgn_i[msj];
+        }
+        for(msj=ne;msj<nsize;msj++) {
+          // si=1 sj=1
+          orbidx = tOrbIdx_i[msj];
+          buf[orbidx] -= invM_i[msj]*cc*tOrbSgn_i[msj];
+        }
+      }*/
+    }else{
+    // TODO: Check
+      #pragma loop norecurrence
+      for(msi=0;msi<ne;msi++) {
+        tOrbIdx_i = tOrbIdx + msi*nsize;
+        invM_i = invM + msi*nsize;
+        for(msj=0;msj<ne;msj++) {
+          // si=0 sj=0
+          orbidx = tOrbIdx_i[msj];
+          buf[orbidx] += invM_i[msj]*ss*tOrbSgn_i[msj];
+        }
+        for(msj=ne;msj<nsize;msj++) {
+          // si=0 sj=1
+          orbidx = tOrbIdx_i[msj];
+          buf[orbidx] -= invM_i[msj]*cs*tOrbSgn_i[msj];
+        }
+      }
+      #pragma loop norecurrence
+      for(msi=ne;msi<nsize;msi++) {
+        tOrbIdx_i = tOrbIdx + msi*nsize;
+        invM_i = invM + msi*nsize;
+        for(msj=0;msj<ne;msj++) {
+          // si=1 sj=0
+          orbidx = tOrbIdx_i[msj];
+          buf[orbidx] += invM_i[msj]*ss*tOrbSgn_i[msj];
+        }
+        for(msj=ne;msj<nsize;msj++) {
+          // si=1 sj=1
+          orbidx = tOrbIdx_i[msj];
+          buf[orbidx] -= invM_i[msj]*cs*tOrbSgn_i[msj];
+        }
+      }
+    }
+
+  }
+
+  /* store SROptO[] */
+  for(orbidx=0;orbidx<nSlater;orbidx++) {
+    srOptO[2*orbidx] = 0.0+0.0*I;
+    srOptO[2*orbidx+1] = 0.0+0.0*I;
+  }
+  #pragma loop noalias
+  for(qpidx=0;qpidx<nQPFull;qpidx++) {
+    tmp = QPFullWeight[qpidx];
+    buf = buffer + qpidx*nSlater;
+    for(orbidx=0;orbidx<nSlater;orbidx++) {
+      srOptO[2*orbidx] += tmp * buf[orbidx];
+      srOptO[2*orbidx+1] += tmp * buf[orbidx]*I;
+    }
+  }
+  for(orbidx=0;orbidx<nSlater;orbidx++) {
+    srOptO[2*orbidx] *= invIP;
+    srOptO[2*orbidx+1] *= invIP;
+  }
+
+  ReleaseWorkSpaceInt();
+  ReleaseWorkSpaceComplex();
+  return;
+}
+
+/* buffer size = NQPFull*NSlater */
+/* bufInt size = NMPTrans*Nsize*Nsize */
+void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *eleIdx, const int *eleNum, int *eleProjConst,
+                   const int *eleProjBFCnt) {
+
+  const double complex invIP = 1.0/ip;
+  int msi,msj,ri,rj,tri,trj;
+  int mpidx,qpidx;
+  int *xqp;
+  const double complex *invM,*invM_i;
+
+  int *orbitalIdx_i;
+  int *transOrbIdx; /* transOrbIdx[mpidx][msi][msj] */
+  int *tOrbIdx,*tOrbIdx_i;
+  double complex tmp;
+
+  const int nsize = Nsize;
+  const int ne = Ne;
+  const int nQPFull = NQPFull;
+  const int nMPTrans = NMPTrans;
+  const int nTrans = NMPTrans * NQPOptTrans;
+
+  int bfidx;
+  //double bufM[NQPFull*16*Nsize*Nsize];
+  double complex *bufM;
+  double complex *bufM_qp;
+  double complex *bufM_i;
+  double complex *bfBuffer;
+  double complex *bfBuffer_i;
+  //double complex trM0=0.0,trM1=0.0,trM2=0.0,trM3=0.0,trM4=0.0,trM5=0.0,trM6=0.0;
+  double complex pfM;
+  int rki,rkj,rli,rlj;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nSiteRange = nRange*nSite;
+  const int bufMStride = 16*nsize*nsize;
+  int idx_ik,idx_jk,idx_il,idx_jl;
+  const int *bfCnt0=eleProjBFCnt;
+  const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
+  const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
+  int **posBF = PosBF;
+  int xk,xl,xn,xm;
+  int dki,dlj,nidx,midx,itmp;
+  int i;
+
+  RequestWorkSpaceInt(2*nTrans*Nsize*Nsize);
+  //RequestWorkSpaceDouble(NQPFull*NSlater);
+  RequestWorkSpaceComplex(NQPFull*NProjBF + 16*NQPFull*Nsize*Nsize);
+
+  transOrbIdx = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbIdx[mpidx][msi][msj] */
+  //transOrbSgn = GetWorkSpaceInt(nTrans*Nsize*Nsize); /* transOrbSgn[mpidx][msi][msj] */
+  //buffer = GetWorkSpaceDouble(NQPFull*NSlater);
+  bfBuffer = GetWorkSpaceComplex(NQPFull*NProjBF);
+  bufM = GetWorkSpaceComplex(16*NQPFull*Nsize*Nsize);
+
+  for(i=0;i<NQPFull*NProjBF;i++) bfBuffer[i] = 0.0+0.0*I;
+  for(bfidx=0;bfidx<NProjBF;bfidx++) {
+    srOptO[2*bfidx] = 0.0 + 0.0*I;
+    srOptO[2*bfidx+1] = 0.0 + 0.0*I;
+  }
+
+  #pragma omp parallel for default(shared)        \
+    private(mpidx,msi,msj,xqp,ri,tri,rj,trj,      \
+            tOrbIdx,tOrbIdx_i,orbitalIdx_i)
+  #pragma loop noalias
+  for(mpidx=0;mpidx<nMPTrans;mpidx++) {
+    xqp = QPTrans[mpidx];
+    tOrbIdx = transOrbIdx + mpidx*nsize*nsize;
+    for(msi=0;msi<nsize;msi++) {
+      ri = eleIdx[msi];
+      tri = xqp[ri];
+      tOrbIdx_i = tOrbIdx + msi*nsize;
+      orbitalIdx_i = OrbitalIdx[tri];
+      for(msj=0;msj<nsize;msj++) {
+        rj = eleIdx[msj];
+        trj = xqp[rj];
+        tOrbIdx_i[msj] = orbitalIdx_i[trj];
+      }
+    }
+  }
+
+  #pragma omp parallel for default(shared)        \
+    private(qpidx,mpidx,xqp,                  \
+            tOrbIdx,invM,msi,msj,             \
+            ri,rj,tri,trj,invM_i,             \
+            bufM_qp,bufM_i,bfBuffer_i,pfM,    \
+            rki,rkj,rli,rlj,                  \
+            idx_ik,idx_jk,idx_il,idx_jl,      \
+            bfCnt0_n,bfCnt0_m,bfCnt1_n,bfCnt1_m, \
+            xk,xl,xn,xm,dki,dlj,nidx,midx,itmp,bfidx,tmp)
+    //reduction(-:trM0,trM1,trM2)
+  #pragma loop noalias
+  for(qpidx=0;qpidx<nQPFull;qpidx++) {
+    double complex trM[NProjBF];
+    mpidx = qpidx / NSPGaussLeg;
+    xqp = QPTrans[mpidx];
+
+    tOrbIdx = transOrbIdx + mpidx*nsize*nsize;
+    //sltE = SlaterElm + qpidx*Nsite2*Nsite2;
+    invM = InvM + qpidx*Nsize*Nsize;
+    //buf = buffer + qpidx*Nsize*Nsize;
+    //buf = bufM + qpidx*Nsize*Nsize;
+    bufM_qp = bufM + qpidx*bufMStride;
+    bfBuffer_i = bfBuffer + qpidx*NProjBF;
+    pfM = PfM[qpidx];
+    //flagTmp = etaFlag + qpidx*Nsite*Nsite;
+
+    for(bfidx=0;bfidx<NProjBF;bfidx++) {
+      trM[bfidx] = 0.0+0.0*I;
+    }
+    /* store bufM */
+    /* Note that bufM is row-major and skew-symmetric. */
+    /* bufM[msj][msi] = sltE[rsi][rsj] */
+    #pragma loop noalias
+    for(msi=0;msi<ne;msi++) {
+      ri = eleIdx[msi];
+      tri = xqp[ri];
+      //rsi = ri + (msi/Ne)*Nsite;
+      bufM_i = bufM_qp + msi*Nsize;
+      invM_i = invM + msi*Nsize;
+      #pragma loop norecurrence
+      for(msj=ne;msj<nsize;msj++) {
+        rj = eleIdx[msj];
+        trj = xqp[rj];
+        //rsj = rj + (msj/Ne)*Nsite;
+        if(etaFlag[tri][trj] == 0){
+          bufM_i[msj] = 0.0;
+        }else{
+          bufM_i[msj] = Slater[ OrbitalIdx[tri][trj]]*OrbitalSgn[tri][trj];
+        }
+        trM[0] -= 2.0*invM_i[msj]*bufM_i[msj];
+      }
+    }
+
+    //printf("eta1\n");
+    /* Clear bufM */
+    for(msi=0;msi<bufMStride;msi++) {
+      bufM_qp[msi]=0.0+0.0*I;
+    }
+    /* store bufM */
+    /* Note that bufM is row-major and skew-symmetric. */
+    /* bufM[msi][msj] = sltE[rsi][rsj] */
+    #pragma loop noalias
+    for(msi=0;msi<ne;msi++) {
+      ri = eleIdx[msi];
+      tri = xqp[ri];
+      //rsi = eleIdx[msi] + (msi/Ne)*Nsite;
+      bufM_i = bufM_qp + msi*Nsize;
+      invM_i = invM + msi*Nsize;
+      //xid = n0[tri]*n1[tri];
+      #pragma loop norecurrence
+      for(msj=ne;msj<nsize;msj++) {
+        rj = eleIdx[msj];
+        trj = xqp[rj];
+        //rsj = eleIdx[msj] + (msj/Ne)*Nsite;
+        //xjd = n0[trj]*n1[trj];
+
+        for(xn=0;xn<4;xn++) {
+          for(xm=0;xm<4;xm++){
+            if(xm==0 && xn == 0) continue;
+            bfCnt0_n=bfCnt0+xn*nSiteRange;
+            bfCnt1_n=bfCnt1+xn*nSiteRange;
+            bfCnt0_m=bfCnt0+xm*nSiteRange;
+            bfCnt1_m=bfCnt1+xm*nSiteRange;
+            
+            //bufM_ni = bufM_i + (4*xn+xm)*Nsize*Nsize;
+            for(xk=0;xk<nRange;xk++) {
+              rki=posBF[tri][xk];
+              rkj=posBF[trj][xk];
+              idx_ik=tri*nRange+xk;
+              idx_jk=trj*nRange+xk;
+            
+              dki = RangeIdx[tri][rki];
+              itmp = 4*dki+xn;
+              nidx = itmp-3-dki;
+              //if(itmp <= 3 || itmp%4==0){continue;}
+              if((itmp%4)==0){nidx=-1;}
+              if(itmp==0){nidx=0;}
+              if(nidx<0){continue;}
+            
+              for(xl=0;xl<nRange;xl++){
+                rli=posBF[tri][xl];
+                rlj=posBF[trj][xl];
+                idx_il=tri*nRange+xl;
+                idx_jl=trj*nRange+xl;
+            
+                dlj = RangeIdx[trj][rlj];
+                itmp = 4*dlj+xm;
+                midx = itmp-3-dlj;
+                if((itmp%4)==0){midx=-1;}
+                if(itmp==0){midx=0;}
+                if(midx<0){continue;}
+                bfidx=BFSubIdx[nidx][midx];
+                          
+                tmp = -bfCnt0_n[idx_ik]*bfCnt1_m[idx_jl]*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj]
+                      -bfCnt1_n[idx_jk]*bfCnt0_m[idx_il]*Slater[ OrbitalIdx[rli][rkj]]*OrbitalSgn[rli][rkj];
+                trM[bfidx] -= invM_i[msj]*tmp;
+              }
+            }
+          }
+        }
+
+      }
+    }
+    //TODO: Check
+    for(bfidx=0;bfidx<NProjBF;bfidx++) {
+      bfBuffer_i[bfidx] = 0.5*QPFullWeight[qpidx]*trM[bfidx]*pfM*invIP;
+    }
+  }//QP
+
+  for(qpidx=0;qpidx<nQPFull;qpidx++) {
+    bfBuffer_i = bfBuffer + qpidx*NProjBF;
+    for(bfidx=0;bfidx<NProjBF;bfidx++) {
+      srOptO[2*bfidx] += bfBuffer_i[bfidx];
+      srOptO[2*bfidx+1] += bfBuffer_i[bfidx]*I;
+    }
+  }
+
+  ReleaseWorkSpaceInt();
+  ReleaseWorkSpaceComplex();
+
+  return;
+}
+
+
+void MakeSlaterElmBF_fcmp(const int *eleNum, const int *eleProjBFCnt) {
+  int icount, jcount;
+  //double eta;
+  int ri,tri,rsi0,rsi1;
+  int rj,trj,rsj0,rsj1;
+  int qpidx,mpidx,spidx;
+  double complex cs,cc,ss;
+  double complex slt_ij,slt_ji;
+  int *xqp;
+  double complex *sltE,*sltE_i0,*sltE_i1;
+
+#pragma omp parallel for default(shared)        \
+    private(qpidx,mpidx,spidx,xqp,cs,cc,ss,sltE,  \
+            icount,jcount,    \
+            ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,     \
+            rj,trj,rsj0,rsj1,slt_ij,slt_ji)
+#pragma loop noalias
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    mpidx = qpidx / NSPGaussLeg;
+    spidx = qpidx % NSPGaussLeg;
+
+    xqp = QPTrans[mpidx];
+    cs = SPGLCosSin[spidx];
+    cc = SPGLCosCos[spidx];
+    ss = SPGLSinSin[spidx];
+
+    sltE = SlaterElmBF + qpidx*Nsite2*Nsite2;
+
+    for(ri=0;ri<Nsite;ri++) {
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      sltE_i0 = sltE + rsi0*Nsite2;
+      sltE_i1 = sltE + rsi1*Nsite2;
+
+      for(rj=0;rj<Nsite;rj++) {
+        trj = xqp[rj];
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+
+        /* backflow correlation factor */
+        SubSlaterElmBF_fcmp(tri,trj,&slt_ij,&icount,&slt_ji,&jcount,eleProjBFCnt);
+        //printf("icount=%d, slt_ij=%.2e\n",icount,slt_ij);
+
+        if(qpidx == 0) {
+          if(icount == 0){eta[tri][trj] = 1.0;  etaFlag[tri][trj]=0;}
+          else{eta[tri][trj] = creal(ProjBF[0]); etaFlag[tri][trj]=1;}
+
+          if(jcount == 0){eta[trj][tri] = 1.0; etaFlag[trj][tri]=0;}
+          else{eta[trj][tri] = creal(ProjBF[0]); etaFlag[trj][tri]=1;}
+        }
+
+        sltE_i0[rsj0] = -(slt_ij - slt_ji)*cs;
+        sltE_i0[rsj1] = slt_ij*cc + slt_ji*ss;
+        sltE_i1[rsj0] = -slt_ij*ss - slt_ji*cc;
+        sltE_i1[rsj1] = (slt_ij - slt_ji)*cs;
+      }
+    }
+  }
+
+  return;
+}
+
+void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, int *ijcount, double complex* slt_ji, int *jicount, const int *eleProjBFCnt){
+  int xn,xm,xk,xl;
+  int rki,rlj;
+  int idx_ik,idx_jk,idx_jl;
+  int bfidx;
+  int dki,dlj,nidx,midx,xtmp;
+  int cnt_ij_i,cnt_ji_i,cnt_ij_j,cnt_ji_j;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nSiteRange = nRange*nSite;
+  const int *bfCnt0=eleProjBFCnt;
+  const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
+  const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
+  double eta;
+  int **posBF = PosBF;
+
+  *slt_ij = 0.0;
+  *slt_ji = 0.0;
+  *ijcount = 0;
+  *jicount = 0;
+  //#pragma omp parallel for reduction(+:slt_ij,slt_ji)
+  for(xn=0;xn<4;xn++){
+    bfCnt0_n=bfCnt0+xn*nSiteRange;
+    bfCnt1_n=bfCnt1+xn*nSiteRange;
+    for(xm=0;xm<4;xm++){
+      if(xm==0 && xn == 0) continue;
+      bfCnt0_m=bfCnt0+xm*nSiteRange;
+      bfCnt1_m=bfCnt1+xm*nSiteRange;
+
+      for(xk=0;xk<nRange;xk++) {
+        rki=posBF[tri][xk];
+        //rkj=posBF[trj][xk];
+        idx_ik=tri*nRange+xk;
+        idx_jk=trj*nRange+xk;
+
+        dki = RangeIdx[tri][rki];
+        xtmp = 4*dki+xn;
+        nidx = xtmp-3-dki;
+        if(xtmp%4==0){nidx=-1;}
+        if(xtmp==0){nidx=0;}
+        if(nidx<0){continue;}
+
+        *ijcount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
+        *jicount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
+
+        cnt_ij_i = bfCnt0_n[idx_ik];
+        cnt_ji_i = bfCnt1_n[idx_ik];
+        if(cnt_ij_i == 0 && cnt_ji_i == 0) continue;
+
+        for(xl=0;xl<nRange;xl++){
+          //rli=posBF[tri][xl];
+          rlj=posBF[trj][xl];
+          //idx_il=tri*nRange+xl;
+          idx_jl=trj*nRange+xl;
+
+          cnt_ij_j = bfCnt1_m[idx_jl];
+          cnt_ji_j = bfCnt0_m[idx_jl];
+          if((cnt_ij_i == 0 || cnt_ij_j == 0) && (cnt_ji_i == 0 || cnt_ji_j == 0)) continue;
+
+          dlj = RangeIdx[trj][rlj];
+          xtmp = 4*dlj+xm;
+          midx = xtmp-3-dlj;
+          if(xtmp%4==0){midx=-1;}
+          if(xtmp==0){midx=0;}
+          if(midx<0){continue;}
+          bfidx=BFSubIdx[nidx][midx];
+
+          //printf("ProjBF[%d]=%.2e\n",bfidx,ProjBF[bfidx]);
+          //printf("OrbitalSgn[%d][%d]=%d\n",rki,rlj,OrbitalSgn[rki][rlj]);
+          //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
+          //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
+          if(cnt_ij_i != 0 && cnt_ij_j != 0) {
+            *slt_ij += -ProjBF[bfidx]*cnt_ij_i*cnt_ij_j*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj];
+          }
+          if(cnt_ji_i != 0 && cnt_ji_j != 0) {
+            *slt_ji += -ProjBF[bfidx]*cnt_ji_i*cnt_ji_j*Slater[ OrbitalIdx[rlj][rki]]*OrbitalSgn[rlj][rki];
+          }
+        }
+      }
+    }
+  }
+
+  if(*ijcount == 0){eta = 1.0;}
+  else{eta = creal(ProjBF[0]);} //TODO: Check
+  *slt_ij += eta*Slater[ OrbitalIdx[tri][trj] ]*OrbitalSgn[tri][trj];
+
+  if(*jicount == 0){eta = 1.0;}
+  else{eta = creal(ProjBF[0]);}
+  *slt_ji += eta*Slater[ OrbitalIdx[trj][tri] ]*OrbitalSgn[trj][tri];
+
+  return;
+
+}
+
+
+void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijcount, double* slt_ji, int *jicount, const int *eleProjBFCnt){
+  int xn,xm,xk,xl;
+  int rki,rlj;
+  int idx_ik,idx_jk,idx_jl;
+  int bfidx;
+  int dki,dlj,nidx,midx,xtmp;
+  int cnt_ij_i,cnt_ji_i,cnt_ij_j,cnt_ji_j;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nSiteRange = nRange*nSite;
+  const int *bfCnt0=eleProjBFCnt;
+  const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
+  const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
+  double eta;
+  int **posBF = PosBF;
+
+  *slt_ij = 0.0;
+  *slt_ji = 0.0;
+  *ijcount = 0;
+  *jicount = 0;
+  //#pragma omp parallel for reduction(+:slt_ij,slt_ji)
+  for(xn=0;xn<4;xn++){
+    bfCnt0_n=bfCnt0+xn*nSiteRange;
+    bfCnt1_n=bfCnt1+xn*nSiteRange;
+    for(xm=0;xm<4;xm++){
+      if(xm==0 && xn == 0) continue;
+      bfCnt0_m=bfCnt0+xm*nSiteRange;
+      bfCnt1_m=bfCnt1+xm*nSiteRange;
+
+      for(xk=0;xk<nRange;xk++) {
+        rki=posBF[tri][xk];
+        //rkj=posBF[trj][xk];
+        idx_ik=tri*nRange+xk;
+        idx_jk=trj*nRange+xk;
+
+        dki = RangeIdx[tri][rki];
+        xtmp = 4*dki+xn;
+        nidx = xtmp-3-dki;
+        if(xtmp%4==0){nidx=-1;}
+        if(xtmp==0){nidx=0;}
+        if(nidx<0){continue;}
+
+        *ijcount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
+        *jicount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
+
+        cnt_ij_i = bfCnt0_n[idx_ik];
+        cnt_ji_i = bfCnt1_n[idx_ik];
+        if(cnt_ij_i == 0 && cnt_ji_i == 0) continue;
+
+        for(xl=0;xl<nRange;xl++){
+          //rli=posBF[tri][xl];
+          rlj=posBF[trj][xl];
+          //idx_il=tri*nRange+xl;
+          idx_jl=trj*nRange+xl;
+
+          cnt_ij_j = bfCnt1_m[idx_jl];
+          cnt_ji_j = bfCnt0_m[idx_jl];
+          if((cnt_ij_i == 0 || cnt_ij_j == 0) && (cnt_ji_i == 0 || cnt_ji_j == 0)) continue;
+
+          dlj = RangeIdx[trj][rlj];
+          xtmp = 4*dlj+xm;
+          midx = xtmp-3-dlj;
+          if(xtmp%4==0){midx=-1;}
+          if(xtmp==0){midx=0;}
+          if(midx<0){continue;}
+          bfidx=BFSubIdx[nidx][midx];
+
+          //printf("ProjBF[%d]=%.2e\n",bfidx,ProjBF[bfidx]);
+          //printf("OrbitalSgn[%d][%d]=%d\n",rki,rlj,OrbitalSgn[rki][rlj]);
+          //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
+          //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
+          if(cnt_ij_i != 0 && cnt_ij_j != 0) {
+            *slt_ij += -creal(ProjBF[bfidx])*cnt_ij_i*cnt_ij_j*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
+          }
+          if(cnt_ji_i != 0 && cnt_ji_j != 0) {
+            *slt_ji += -creal(ProjBF[bfidx])*cnt_ji_i*cnt_ji_j*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
+          }
+        }
+      }
+    }
+  }
+
+  if(*ijcount == 0){eta = 1.0;}
+  else{eta = creal(ProjBF[0]);} //TODO: Check
+  *slt_ij += eta*Slater[ OrbitalIdx[tri][trj] ]*OrbitalSgn[tri][trj];
+
+  if(*jicount == 0){eta = 1.0;}
+  else{eta = creal(ProjBF[0]);}
+  *slt_ji += eta*Slater[ OrbitalIdx[trj][tri] ]*OrbitalSgn[trj][tri];
+
+  return;
+
+}
+
+static void MakeBFEtaFlag_real(unsigned char *bfEtaFlag, const int *eleProjBFCnt){
+  int ri,xk;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nSiteRange = nRange*nSite;
+  const int *bfCnt0=eleProjBFCnt;
+
+  for(ri=0;ri<nSite;ri++){
+    bfEtaFlag[ri] = 0;
+    for(xk=0;xk<nRange;xk++){
+      if(bfCnt0[nSiteRange+ri*nRange+xk] != 0){
+        bfEtaFlag[ri] = 1;
+        break;
+      }
+    }
+  }
+
+  return;
+}
+
+static int BFRealCoord(const int center, const int site, const int state){
+  int d,xtmp,coord;
+
+  d = RangeIdx[center][site];
+  xtmp = 4*d+state;
+  coord = xtmp-3-d;
+  if(xtmp%4==0){coord=-1;}
+  if(xtmp==0){coord=0;}
+
+  return coord;
+}
+
+static void MakeBFRealSparseCountList(BFRealSparseEntry *entry, int *offset, int *count, int *geomCount,
+                                      const int *eleProjBFCnt){
+  int state,ri,xk,key,idx,r,coord,cursor;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nSiteRange = nRange*nSite;
+  const int *bfCnt0=eleProjBFCnt;
+  const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
+  const int *bfCnt0_state,*bfCnt1_state;
+
+  cursor = 0;
+  for(state=0;state<4;state++){
+    bfCnt0_state=bfCnt0+state*nSiteRange;
+    bfCnt1_state=bfCnt1+state*nSiteRange;
+    for(ri=0;ri<nSite;ri++){
+      key = state*nSite+ri;
+      offset[key] = cursor;
+      count[key] = 0;
+      geomCount[key] = 0;
+      for(xk=0;xk<nRange;xk++){
+        idx=ri*nRange+xk;
+        r=PosBF[ri][xk];
+        coord=BFRealCoord(ri,r,state);
+        if(coord<0) continue;
+        geomCount[key]++;
+        if(bfCnt0_state[idx] == 0 && bfCnt1_state[idx] == 0) continue;
+        entry[cursor].r = r;
+        entry[cursor].coord = coord;
+        entry[cursor].cnt0 = bfCnt0_state[idx];
+        entry[cursor].cnt1 = bfCnt1_state[idx];
+        cursor++;
+        count[key]++;
+      }
+    }
+  }
+
+  return;
+}
+
+static void SubSlaterElmBF_real_eta_sparse(const int tri, const int trj, double *slt_ij, double* slt_ji,
+                                           const BFRealSparseEntry *entry, const int *offset,
+                                           const int *count, const int *geomCount,
+                                           const unsigned char *bfEtaFlag, BFRealSparseStats *stats){
+  int xn,xm,li,ri;
+  int leftKey,rightKey;
+  int leftCount,rightCount;
+  int rki,rlj;
+  const int nSite=Nsite;
+  const int nRange=Nrange;
+  const int nRangeIdx=NrangeIdx;
+  const double *bfRealProj=BFRealProj;
+  const double *bfRealSlater=BFRealSlater;
+  const double *bfRealSlaterSign=BFRealSlaterSign;
+  const BFRealSparseEntry *leftEntry,*rightEntry;
+  const BFRealSparseEntry *left,*right;
+  double eta;
+
+  if(stats != NULL) {
+    stats->denseCandidate += 15LL*nRange*nRange;
+    for(xn=0;xn<4;xn++){
+      leftKey = xn*nSite+tri;
+      for(xm=0;xm<4;xm++){
+        if(xm==0 && xn == 0) continue;
+        rightKey = xm*nSite+trj;
+        stats->geometryValid += (long long)geomCount[leftKey]*(long long)geomCount[rightKey];
+      }
+    }
+  }
+
+  *slt_ij = 0.0;
+  *slt_ji = 0.0;
+  //#pragma omp parallel for reduction(+:slt_ij,slt_ji)
+  for(xn=0;xn<4;xn++){
+    leftKey = xn*nSite+tri;
+    leftCount = count[leftKey];
+    if(leftCount == 0) continue;
+    leftEntry = entry + offset[leftKey];
+    for(xm=0;xm<4;xm++){
+      if(xm==0 && xn == 0) continue;
+      rightKey = xm*nSite+trj;
+      rightCount = count[rightKey];
+      if(rightCount == 0) continue;
+      rightEntry = entry + offset[rightKey];
+
+      for(li=0;li<leftCount;li++) {
+        left = leftEntry + li;
+        rki = left->r;
+        for(ri=0;ri<rightCount;ri++){
+          right = rightEntry + ri;
+          rlj = right->r;
+          if(stats != NULL) stats->sparsePair++;
+
+          if(left->cnt0 != 0 && right->cnt1 != 0) {
+            *slt_ij += bfRealProj[left->coord*nRangeIdx+right->coord]*left->cnt0*right->cnt1*bfRealSlater[rki*nSite+rlj]*bfRealSlaterSign[rki*nSite+rlj];
+            if(stats != NULL) stats->actualAdd++;
+          }
+          if(left->cnt1 != 0 && right->cnt0 != 0) {
+            *slt_ji += bfRealProj[left->coord*nRangeIdx+right->coord]*left->cnt1*right->cnt0*bfRealSlater[rlj*nSite+rki]*bfRealSlaterSign[rlj*nSite+rki];
+            if(stats != NULL) stats->actualAdd++;
+          }
+        }
+      }
+    }
+  }
+
+  if(bfEtaFlag[tri] == 0 && bfEtaFlag[trj] == 0){eta = 1.0;}
+  else{eta = BFRealEta;} //TODO: Check
+  *slt_ij += eta*bfRealSlater[tri*nSite+trj]*bfRealSlaterSign[tri*nSite+trj];
+  *slt_ji += eta*bfRealSlater[trj*nSite+tri]*bfRealSlaterSign[trj*nSite+tri];
+
+  return;
+}
+
+static long long CountBFRealBFCntChangedEntries(const int *oldCnt, const int *newCnt) {
+  const int nEntry = 16*Nsite*Nrange;
+  int idx;
+  long long changed = 0;
+
+  for(idx=0;idx<nEntry;idx++) {
+    if(oldCnt[idx] != newCnt[idx]) changed++;
+  }
+
+  return changed;
+}
+
+static int FindBFRealSparseEntryByCoord(const BFRealSparseEntry *entry, const int nEntry,
+                                        const int coord) {
+  int idx;
+
+  for(idx=0;idx<nEntry;idx++) {
+    if(entry[idx].coord == coord) return idx;
+  }
+
+  return -1;
+}
+
+static void MakeBFRealSparseChangedCount(const BFRealSparseEntry *oldEntry, const int *oldOffset,
+                                         const int *oldCount, const BFRealSparseEntry *newEntry,
+                                         const int *newOffset, const int *newCount,
+                                         int *oldChangedCount, int *newChangedCount) {
+  const int nKey = 4*Nsite;
+  int key, idx, found;
+  const BFRealSparseEntry *oldKeyEntry;
+  const BFRealSparseEntry *newKeyEntry;
+
+  for(key=0;key<nKey;key++) {
+    oldChangedCount[key] = 0;
+    newChangedCount[key] = 0;
+    oldKeyEntry = oldEntry + oldOffset[key];
+    newKeyEntry = newEntry + newOffset[key];
+
+    for(idx=0;idx<newCount[key];idx++) {
+      found = FindBFRealSparseEntryByCoord(oldKeyEntry, oldCount[key], newKeyEntry[idx].coord);
+      if(found < 0 ||
+         oldKeyEntry[found].cnt0 != newKeyEntry[idx].cnt0 ||
+         oldKeyEntry[found].cnt1 != newKeyEntry[idx].cnt1) {
+        newChangedCount[key]++;
+      }
+    }
+
+    for(idx=0;idx<oldCount[key];idx++) {
+      found = FindBFRealSparseEntryByCoord(newKeyEntry, newCount[key], oldKeyEntry[idx].coord);
+      if(found < 0 ||
+         newKeyEntry[found].cnt0 != oldKeyEntry[idx].cnt0 ||
+         newKeyEntry[found].cnt1 != oldKeyEntry[idx].cnt1) {
+        oldChangedCount[key]++;
+      }
+    }
+  }
+
+  return;
+}
+
+static long long CountBFRealDeltaSparsePairsForRow(const int tri, const int *count,
+                                                   const int *changedCount) {
+  int xn, xm, trj;
+  int leftKey, rightKey;
+  long long total = 0;
+  long long leftCount, rightCount, leftChanged, rightChanged;
+
+  for(xn=0;xn<4;xn++) {
+    leftKey = xn*Nsite + tri;
+    leftCount = count[leftKey];
+    leftChanged = changedCount[leftKey];
+    if(leftCount == 0 || leftChanged > leftCount) continue;
+    for(xm=0;xm<4;xm++) {
+      if(xm==0 && xn==0) continue;
+      for(trj=0;trj<Nsite;trj++) {
+        rightKey = xm*Nsite + trj;
+        rightCount = count[rightKey];
+        rightChanged = changedCount[rightKey];
+        if(rightCount == 0 || rightChanged > rightCount) continue;
+        total += leftChanged*rightCount + (leftCount-leftChanged)*rightChanged;
+      }
+    }
+  }
+
+  return total;
+}
+
+
+void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int u,
+                       const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex*sltElmTmp){
+  int **posBF = PosBF;
+  const int mua = ma + Ne*u;
+  int trua, trub;
+  int idx, rtmp;
+  int ri,tri,rsi0,rsi1;
+  int rj,trj,rsj0,rsj1;
+  int qpidx,mpidx;
+  double complex slt_ij,slt_ji;
+  int *xqp, *xqpInv;
+  double complex*sltE,*sltE_i0,*sltE_i1;
+  int rsz[Nsite2];
+  int rhop0[Nsite2],rhop1[Nsite2];
+  int zidx,hop,icount;
+  int jcount[Nsite],jcount1[Nsite];
+  int jcountTmp[Nsite][Nsite],jcount1Tmp[Nsite][Nsite];
+  int mi0,mi1,flag,hidx,itmp0=0,itmp1=0;
+  int ijcount,jicount;
+  double complex sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    StartTimer(91);
+    itmp0=0;
+    itmp1=0;
+    mpidx = qpidx / NSPGaussLeg;
+
+    xqp = QPTrans[mpidx];
+    xqpInv = QPTransInv[mpidx];
+
+    sltE = sltElmTmp + qpidx*Nsite2*Nsite2;
+
+    icount=0;
+    trua = xqpInv[ra];
+    rsz[icount] = trua;
+    icount++;
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trua][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    trub = xqpInv[rb];
+    flag=0;
+    for(zidx=0;zidx<icount;zidx++){
+      if(rsz[zidx] == trub) flag=1;
+    }
+    if(flag==0){
+      rsz[icount] = trub;
+      icount++;
+    }
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trub][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    hop=0;
+    msa[qpidx*Nsize+hop]= ma + Ne*u;
+    hop++;
+
+    for(zidx=0;zidx<icount;zidx++){
+      jcount[zidx]=0;
+      jcount1[zidx]=0;
+      for(rj=0;rj<Nsite;rj++){
+        jcountTmp[rj][zidx] = 0;
+        jcount1Tmp[rj][zidx] = 0;
+      }
+    }
+
+#pragma omp parallel for default(shared)
+    for(zidx=0;zidx<Nsite*Nsite;zidx++){
+      sltElm[zidx] = 0.0;
+      sltElm2[zidx] = 0.0;
+    }
+
+    StopTimer(91);
+    StartTimer(92);
+#pragma omp parallel for default(shared) \
+    private(zidx,  \
+        ri,tri,rsi0,rsi1,rj,trj,rsj0,rsj1, \
+        ijcount,jicount,slt_ij,slt_ji)
+    for(zidx=0;zidx<icount*Nsite;zidx++){
+      ri  = rsz[zidx/Nsite];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+
+      rj = zidx%Nsite;
+      trj = xqp[rj];
+      rsj0 = rj;
+      rsj1 = rj+Nsite;
+
+      SubSlaterElmBF_fcmp(tri,trj,&slt_ij,&ijcount,&slt_ji,&jicount,eleProjBFCnt);
+
+      sltElm[tri*Nsite+trj] = slt_ij;
+      sltElm2[tri*Nsite+trj] = slt_ji;
+    }
+
+    StopTimer(92);
+    StartTimer(93);
+    for(zidx=0;zidx<icount*Nsite;zidx++){
+      ri  = rsz[zidx/Nsite];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+
+      rj = zidx%Nsite;
+      trj = xqp[rj];
+      rsj0 = rj;
+      rsj1 = rj+Nsite;
+
+      sltE_i0 = sltE + rsi0*Nsite2;
+      sltE_i1 = sltE + rsi1*Nsite2;
+
+      slt_ij = sltElm[tri*Nsite+trj];
+      slt_ji = sltElm2[tri*Nsite+trj];
+
+      if(sltE_i0[rsj1] != slt_ij){
+        sltE_i0[rsj1] = slt_ij;
+        jcountTmp[rj][zidx/Nsite]=1;
+      }
+      if(sltE_i1[rsj0] != -slt_ji){
+        sltE_i1[rsj0] = -slt_ji;
+        jcount1Tmp[rj][zidx/Nsite]=1;
+      }
+    }
+
+    for(zidx=0;zidx<icount*Nsite;zidx++){
+      jcount[zidx/Nsite] += jcountTmp[zidx%Nsite][zidx/Nsite];
+      jcount1[zidx/Nsite]+= jcount1Tmp[zidx%Nsite][zidx/Nsite];
+    }
+
+    //#pragma loop noalias
+    for(zidx=0;zidx<icount;zidx++){
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      mi0 = eleCfg[rsi0];
+      mi1 = eleCfg[rsi1];
+
+      //if((jcount == Nsite)){
+      if((jcount[zidx] >= 1)){
+        rhop0[itmp0] = rsi0;
+        itmp0++;
+      }
+      //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
+      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+        msa[qpidx*Nsize+hop]=mi0;
+        hop++;
+      }
+      //if((jcount1 == Nsite) ){
+      if((jcount1[zidx] >= 1) ){
+        rhop1[itmp1] = rsi1;
+        itmp1++;
+      }
+      //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
+      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+        msa[qpidx*Nsize+hop]=mi1+Ne;
+        hop++;
+      }
+    }
+    for(hidx=0;hidx<itmp0;hidx++){
+      rsi0= rhop0[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj1*Nsite2+rsi0]=-sltE[rsi0*Nsite2+rsj1];
+      }
+    }
+    for(hidx=0;hidx<itmp1;hidx++){
+      rsi1= rhop1[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj0*Nsite2+rsi1]=-sltE[rsi1*Nsite2+rsj0];
+      }
+    }
+
+    hopNum[qpidx] = hop;
+
+    StopTimer(93);
+    }
+
+    return ;
+}
+
+void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int u,
+                       const int *eleCfg, const int *eleNum, const int *eleProjBFCntOld,
+                       const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp){
+  int **posBF = PosBF;
+  const int mua = ma + Ne*u;
+  int trua, trub;
+  int idx, rtmp;
+  int ri,tri,rsi0,rsi1;
+  int rj,trj,rsj0,rsj1;
+  int qpidx,mpidx;
+  double slt_ij,slt_ji;
+  int *xqp, *xqpInv;
+  double *sltE,*sltE_i0,*sltE_i1;
+  int rsz[Nsite2];
+  int rhop0[Nsite2],rhop1[Nsite2];
+  int zidx,hop,icount;
+  int jcount[Nsite],jcount1[Nsite];
+  int mi0,mi1,flag,hidx,itmp0=0,itmp1=0;
+  int row;
+  unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
+  BFRealSparseEntry bfSparseEntry[4*Nsite*Nrange];
+  int bfSparseOffset[4*Nsite],bfSparseCount[4*Nsite],bfSparseGeomCount[4*Nsite];
+  BFRealSparseEntry bfOldSparseEntry[4*Nsite*Nrange];
+  int bfOldSparseOffset[4*Nsite],bfOldSparseCount[4*Nsite],bfOldSparseGeomCount[4*Nsite];
+  int bfDeltaNewChangedCount[4*Nsite],bfDeltaOldChangedCount[4*Nsite];
+  double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
+  long long profileRowRequests=0,profileRowRecompute=0,profileRowReuse=0;
+  long long profileTermDenseCandidate=0,profileTermGeometryValid=0;
+  long long profileTermSparsePair=0,profileTermActualAdd=0;
+  long long profileDeltaCntTotal=0,profileDeltaCntChanged=0;
+  long long profileDeltaPairNew=0,profileDeltaPairOld=0;
+  int profileDeltaEnabled=0;
+
+  MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
+  MakeBFRealSparseCountList(bfSparseEntry, bfSparseOffset, bfSparseCount, bfSparseGeomCount, eleProjBFCnt);
+  if(BFProfileEnabled && eleProjBFCntOld != NULL) {
+    MakeBFRealSparseCountList(bfOldSparseEntry, bfOldSparseOffset, bfOldSparseCount,
+                              bfOldSparseGeomCount, eleProjBFCntOld);
+    MakeBFRealSparseChangedCount(bfOldSparseEntry, bfOldSparseOffset, bfOldSparseCount,
+                                 bfSparseEntry, bfSparseOffset, bfSparseCount,
+                                 bfDeltaOldChangedCount, bfDeltaNewChangedCount);
+    profileDeltaCntTotal = 16LL*Nsite*Nrange;
+    profileDeltaCntChanged = CountBFRealBFCntChangedEntries(eleProjBFCntOld, eleProjBFCnt);
+    profileDeltaEnabled = 1;
+  }
+  for(row=0;row<Nsite;row++){
+    rowDone[row] = 0;
+  }
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    StartTimer(91);
+    itmp0=0;
+    itmp1=0;
+    mpidx = qpidx / NSPGaussLeg;
+
+    xqp = QPTrans[mpidx];
+    xqpInv = QPTransInv[mpidx];
+
+    sltE = sltElmTmp + qpidx*Nsite2*Nsite2;
+
+    icount=0;
+    trua = xqpInv[ra];
+    rsz[icount] = trua;
+    icount++;
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trua][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    trub = xqpInv[rb];
+    flag=0;
+    for(zidx=0;zidx<icount;zidx++){
+      if(rsz[zidx] == trub) flag=1;
+    }
+    if(flag==0){
+      rsz[icount] = trub;
+      icount++;
+    }
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trub][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    hop=0;
+    msa[qpidx*Nsize+hop]= ma + Ne*u;
+    hop++;
+
+    for(zidx=0;zidx<icount;zidx++){
+      jcount[zidx]=0;
+      jcount1[zidx]=0;
+    }
+
+    StopTimer(91);
+    StartTimer(92);
+    if(BFProfileEnabled) {
+      profileRowRequests += icount;
+      for(zidx=0;zidx<icount;zidx++){
+        tri = xqp[rsz[zidx]];
+        if(rowDone[tri]) {
+          profileRowReuse++;
+        } else {
+          profileRowRecompute++;
+        }
+      }
+    }
+
+    if(BFProfileEnabled) {
+#pragma omp parallel for if(NQPFull == 1) default(shared) \
+      private(zidx,  \
+          ri,tri,rj,trj, \
+          slt_ij,slt_ji) \
+      reduction(+:profileTermDenseCandidate,profileTermGeometryValid, \
+          profileTermSparsePair,profileTermActualAdd)
+      for(zidx=0;zidx<icount;zidx++){
+        BFRealSparseStats profilePairStats;
+        ri  = rsz[zidx];
+        tri = xqp[ri];
+
+        if(rowDone[tri]) continue;
+        if(profileDeltaEnabled) {
+          profileDeltaPairNew += CountBFRealDeltaSparsePairsForRow(tri, bfSparseCount,
+                                                                   bfDeltaNewChangedCount);
+          profileDeltaPairOld += CountBFRealDeltaSparsePairsForRow(tri, bfOldSparseCount,
+                                                                   bfDeltaOldChangedCount);
+        }
+
+        for(rj=0;rj<Nsite;rj++){
+          trj = xqp[rj];
+
+          profilePairStats.denseCandidate = 0;
+          profilePairStats.geometryValid = 0;
+          profilePairStats.sparsePair = 0;
+          profilePairStats.actualAdd = 0;
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,&profilePairStats);
+          profileTermDenseCandidate += profilePairStats.denseCandidate;
+          profileTermGeometryValid += profilePairStats.geometryValid;
+          profileTermSparsePair += profilePairStats.sparsePair;
+          profileTermActualAdd += profilePairStats.actualAdd;
+
+          sltElm[tri*Nsite+trj] = slt_ij;
+          sltElm2[tri*Nsite+trj] = slt_ji;
+        }
+
+        rowDone[tri] = 1;
+      }
+    } else {
+#pragma omp parallel for if(NQPFull == 1) default(shared) \
+      private(zidx,  \
+          ri,tri,rj,trj, \
+          slt_ij,slt_ji)
+      for(zidx=0;zidx<icount;zidx++){
+        ri  = rsz[zidx];
+        tri = xqp[ri];
+
+        if(rowDone[tri]) continue;
+
+        for(rj=0;rj<Nsite;rj++){
+          trj = xqp[rj];
+
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,NULL);
+
+          sltElm[tri*Nsite+trj] = slt_ij;
+          sltElm2[tri*Nsite+trj] = slt_ji;
+        }
+
+        rowDone[tri] = 1;
+      }
+    }
+
+    StopTimer(92);
+    StartTimer(93);
+    for(zidx=0;zidx<icount;zidx++){
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+
+      sltE_i0 = sltE + rsi0*Nsite2;
+      sltE_i1 = sltE + rsi1*Nsite2;
+
+      for(rj=0;rj<Nsite;rj++){
+        trj = xqp[rj];
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+
+        slt_ij = sltElm[tri*Nsite+trj];
+        slt_ji = sltElm2[tri*Nsite+trj];
+
+        if(sltE_i0[rsj1] != slt_ij){
+          sltE_i0[rsj1] = slt_ij;
+          jcount[zidx]++;
+        }
+        if(sltE_i1[rsj0] != -slt_ji){
+          sltE_i1[rsj0] = -slt_ji;
+          jcount1[zidx]++;
+        }
+      }
+    }
+
+    //#pragma loop noalias
+    for(zidx=0;zidx<icount;zidx++){
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      mi0 = eleCfg[rsi0];
+      mi1 = eleCfg[rsi1];
+
+      //if((jcount == Nsite)){
+      if((jcount[zidx] >= 1)){
+        rhop0[itmp0] = rsi0;
+        itmp0++;
+      }
+      //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
+      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+        msa[qpidx*Nsize+hop]=mi0;
+        hop++;
+      }
+      //if((jcount1 == Nsite) ){
+      if((jcount1[zidx] >= 1) ){
+        rhop1[itmp1] = rsi1;
+        itmp1++;
+      }
+      //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
+      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+        msa[qpidx*Nsize+hop]=mi1+Ne;
+        hop++;
+      }
+    }
+    for(hidx=0;hidx<itmp0;hidx++){
+      rsi0= rhop0[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj1*Nsite2+rsi0]=-sltE[rsi0*Nsite2+rsj1];
+      }
+    }
+    for(hidx=0;hidx<itmp1;hidx++){
+      rsi1= rhop1[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj0*Nsite2+rsi1]=-sltE[rsi1*Nsite2+rsj0];
+      }
+    }
+
+    hopNum[qpidx] = hop;
+
+    StopTimer(93);
+  }
+
+  if(BFProfileEnabled) {
+    AddBFProfileCounter(BFPROF_SAMPLE_ROW_REQUEST, profileRowRequests);
+    AddBFProfileCounter(BFPROF_SAMPLE_ROW_RECOMPUTE, profileRowRecompute);
+    AddBFProfileCounter(BFPROF_SAMPLE_ROW_REUSE, profileRowReuse);
+    AddBFProfileCounter(BFPROF_SAMPLE_PAIR_REQUEST, profileRowRequests*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_SAMPLE_PAIR_RECOMPUTE, profileRowRecompute*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_SAMPLE_TERM_DENSE_CANDIDATE, profileTermDenseCandidate);
+    AddBFProfileCounter(BFPROF_SAMPLE_TERM_GEOMETRY_VALID, profileTermGeometryValid);
+    AddBFProfileCounter(BFPROF_SAMPLE_TERM_SPARSE_PAIR, profileTermSparsePair);
+    AddBFProfileCounter(BFPROF_SAMPLE_TERM_ACTUAL_ADD, profileTermActualAdd);
+    AddBFProfileCounter(BFPROF_SAMPLE_DELTA_CNT_TOTAL, profileDeltaCntTotal);
+    AddBFProfileCounter(BFPROF_SAMPLE_DELTA_CNT_CHANGED, profileDeltaCntChanged);
+    AddBFProfileCounter(BFPROF_SAMPLE_DELTA_PAIR_NEW, profileDeltaPairNew);
+    AddBFProfileCounter(BFPROF_SAMPLE_DELTA_PAIR_OLD, profileDeltaPairOld);
+    AddBFProfileCounter(BFPROF_SAMPLE_DELTA_PAIR_TOTAL, profileDeltaPairNew+profileDeltaPairOld);
+  }
+
+  return ;
+}
+
+void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
+                          const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex* sltElmTmp){
+  int **posBF = PosBF;
+  //int rua=ra+Nsite*u, rub=rb+Nsite*u;
+  const int mua = ma + Ne*u;
+  int trua, trub;
+  int idx, rtmp;
+  int ri,tri,rsi0,rsi1;
+  int rj,trj,rsj0,rsj1;
+  int qpidx,mpidx;
+  double complex slt_ij,slt_ji;
+  int *xqp, *xqpInv;
+  double complex *sltE,*sltE_i0,*sltE_i1;
+  //double complex pTrans[Nsite2*Nsite2];
+  //double complex *pTrans_i;
+  int rsz[Nsite2];
+  int rhop0[Nsite2],rhop1[Nsite2];
+  int zidx,itmp,hop,icount;
+  int jcount[Nsite],jcount1[Nsite];
+  int mi0,mi1,flag,hidx,itmp0=0,itmp1=0;
+  int ijcount,jicount;
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    itmp0=0;
+    itmp1=0;
+    mpidx = qpidx / NSPGaussLeg;
+
+    xqp = QPTrans[mpidx];
+    xqpInv = QPTransInv[mpidx];
+
+    sltE = sltElmTmp + qpidx*Nsite2*Nsite2;
+
+    icount=0;
+    trua = xqpInv[ra];
+    rsz[icount] = trua;
+    icount++;
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trua][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    trub = xqpInv[rb];
+    flag=0;
+    for(zidx=0;zidx<icount;zidx++){
+      if(rsz[zidx] == trub) flag=1;
+    }
+    if(flag==0){
+      rsz[icount] = trub;
+      icount++;
+    }
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trub][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    hop=0;
+    msa[qpidx*Nsize+hop]= ma + Ne*u;
+    hop++;
+
+    itmp=0;
+    for(zidx=0;zidx<icount;zidx++){
+      jcount[zidx]=0;
+      jcount1[zidx]=0;
+    }
+    //#pragma omp parallel for reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
+    //private(zidx,mi0,mi1,jcount,jcount1,itmp,
+    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,
+    //        ijcount,jicount,qpidx,hop,itmp1,itmp0,
+    //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
+
+    //#pragma omp parallel for default(shared)
+    //private(zidx,mi0,mi1,
+    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,
+    //        ijcount,jicount,qpidx,
+    //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
+    //reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
+    //#pragma loop noalias
+    for(zidx=0;zidx<icount*Nsite;zidx++) {
+      ri  = rsz[zidx/Nsite];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      sltE_i0 = sltE + rsi0*Nsite2;
+      sltE_i1 = sltE + rsi1*Nsite2;
+
+      mi0 = eleCfg[rsi0];
+      mi1 = eleCfg[rsi1];
+
+      rj = zidx%Nsite;
+      trj = xqp[rj];
+      rsj0 = rj;
+      rsj1 = rj+Nsite;
+
+      SubSlaterElmBF_fcmp(tri,trj,&slt_ij,&ijcount,&slt_ji,&jicount,eleProjBFCnt);
+
+      if(sltE_i0[rsj1] != slt_ij){
+        sltE_i0[rsj1] = slt_ij;
+        jcount[zidx/Nsite]++;
+      }
+      if(sltE_i1[rsj0] != -slt_ji){
+        sltE_i1[rsj0] = -slt_ji;
+        jcount1[zidx/Nsite]++;
+      }
+      itmp++;
+    }
+    for(zidx=0;zidx<icount;zidx++){
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      mi0 = eleCfg[rsi0];
+      mi1 = eleCfg[rsi1];
+
+      //if((jcount == Nsite)){
+      if((jcount[zidx] >= 1)){
+        rhop0[itmp0] = rsi0;
+        itmp0++;
+      }
+      //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
+      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+        msa[qpidx*Nsize+hop]=mi0;
+        hop++;
+      }
+      //if((jcount1 == Nsite) ){
+      if((jcount1[zidx] >= 1) ){
+        rhop1[itmp1] = rsi1;
+        itmp1++;
+      }
+      //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
+      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+        msa[qpidx*Nsize+hop]=mi1+Ne;
+        hop++;
+      }
+    }
+    for(hidx=0;hidx<itmp0;hidx++){
+      rsi0= rhop0[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj1*Nsite2+rsi0]=-sltE[rsi0*Nsite2+rsj1];
+      }
+    }
+    for(hidx=0;hidx<itmp1;hidx++){
+      rsi1= rhop1[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj0*Nsite2+rsi1]=-sltE[rsi1*Nsite2+rsj0];
+      }
+    }
+
+    hopNum[qpidx] = hop;
+
+    }
+
+    return ;
+    }
+
+
+static void SetSlaterElmBFGrnVecRow_real(double *vecRow, const int msa,
+                                         const int *eleIdx, const int *xqp,
+                                         const double *baseSltE,
+                                         const double *sltElm, const double *sltElm2,
+                                         const unsigned char *rowDone,
+                                         const BFRealSparseEntry *bfSparseEntry,
+                                         const int *bfSparseOffset,
+                                         const int *bfSparseCount,
+                                         const int *bfSparseGeomCount,
+                                         const unsigned char *bfEtaFlag) {
+  int msi, spin, colSpin;
+  int ri, tri, rsi, rj, trj;
+  double slt_ij, slt_ji;
+  const double *baseRow;
+
+  spin = msa/Ne;
+  ri = eleIdx[msa];
+  tri = xqp[ri];
+  rsi = ri + spin*Nsite;
+  baseRow = baseSltE + rsi*Nsite2;
+
+  for(msi=0;msi<Nsize;msi++) {
+    colSpin = msi/Ne;
+    rj = eleIdx[msi];
+    trj = xqp[rj];
+    if(spin == 0 && colSpin == 1) {
+      if(rowDone[tri]) {
+        vecRow[msi] = sltElm[tri*Nsite+trj];
+      } else {
+        SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                       bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                       bfEtaFlag,NULL);
+        vecRow[msi] = slt_ij;
+      }
+    } else if(spin == 1 && colSpin == 0) {
+      if(rowDone[tri]) {
+        vecRow[msi] = -sltElm2[tri*Nsite+trj];
+      } else {
+        SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                       bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                       bfEtaFlag,NULL);
+        vecRow[msi] = -slt_ji;
+      }
+    } else {
+      vecRow[msi] = baseRow[rj + colSpin*Nsite];
+    }
+  }
+}
+
+void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, const int u,
+                     const int *eleIdx, const int *eleCfg, const int *eleNum,
+                     const int *eleProjBFCntOld, const int *eleProjBFCnt,
+                     int *msa, int *hopNum, double *vecTmp){
+  int **posBF = PosBF;
+  const int mua = ma + Ne*u;
+  int trua, trub;
+  int idx, rtmp;
+  int ri,tri,rsi0,rsi1;
+  int rj,trj,rsj0,rsj1;
+  int qpidx,mpidx;
+  double slt_ij,slt_ji;
+  int *xqp, *xqpInv;
+  const double *baseSltE,*baseSltE_i0,*baseSltE_i1;
+  double *vecQp;
+  int rsz[Nsite2];
+  int zidx,hop,icount;
+  int jcount[Nsite],jcount1[Nsite];
+  int mi0,mi1,flag;
+  int row;
+  unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
+  BFRealSparseEntry bfSparseEntry[4*Nsite*Nrange];
+  int bfSparseOffset[4*Nsite],bfSparseCount[4*Nsite],bfSparseGeomCount[4*Nsite];
+  BFRealSparseEntry bfOldSparseEntry[4*Nsite*Nrange];
+  int bfOldSparseOffset[4*Nsite],bfOldSparseCount[4*Nsite],bfOldSparseGeomCount[4*Nsite];
+  int bfDeltaNewChangedCount[4*Nsite],bfDeltaOldChangedCount[4*Nsite];
+  double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
+  long long profileRowRequests=0,profileRowRecompute=0,profileRowReuse=0;
+  long long profileTermDenseCandidate=0,profileTermGeometryValid=0;
+  long long profileTermSparsePair=0,profileTermActualAdd=0;
+  long long profileDeltaCntTotal=0,profileDeltaCntChanged=0;
+  long long profileDeltaPairNew=0,profileDeltaPairOld=0;
+  int profileDeltaEnabled=0;
+
+  MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
+  MakeBFRealSparseCountList(bfSparseEntry, bfSparseOffset, bfSparseCount, bfSparseGeomCount, eleProjBFCnt);
+  if(BFProfileEnabled && eleProjBFCntOld != NULL) {
+    MakeBFRealSparseCountList(bfOldSparseEntry, bfOldSparseOffset, bfOldSparseCount,
+                              bfOldSparseGeomCount, eleProjBFCntOld);
+    MakeBFRealSparseChangedCount(bfOldSparseEntry, bfOldSparseOffset, bfOldSparseCount,
+                                 bfSparseEntry, bfSparseOffset, bfSparseCount,
+                                 bfDeltaOldChangedCount, bfDeltaNewChangedCount);
+    profileDeltaCntTotal = 16LL*Nsite*Nrange;
+    profileDeltaCntChanged = CountBFRealBFCntChangedEntries(eleProjBFCntOld, eleProjBFCnt);
+    profileDeltaEnabled = 1;
+  }
+  for(row=0;row<Nsite;row++){
+    rowDone[row] = 0;
+  }
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    mpidx = qpidx / NSPGaussLeg;
+
+    xqp = QPTrans[mpidx];
+    xqpInv = QPTransInv[mpidx];
+
+    baseSltE = SlaterElmBF_real + qpidx*Nsite2*Nsite2;
+    vecQp = vecTmp + qpidx*Nsize*Nsize;
+
+    icount=0;
+    trua = xqpInv[ra];
+    rsz[icount] = trua;
+    icount++;
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trua][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    trub = xqpInv[rb];
+    flag=0;
+    for(zidx=0;zidx<icount;zidx++){
+      if(rsz[zidx] == trub) flag=1;
+    }
+    if(flag==0){
+      rsz[icount] = trub;
+      icount++;
+    }
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trub][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    hop=0;
+    msa[qpidx*Nsize+hop]= ma + Ne*u;
+    hop++;
+
+    for(zidx=0;zidx<icount;zidx++){
+      jcount[zidx]=0;
+      jcount1[zidx]=0;
+    }
+
+    if(BFProfileEnabled) {
+      profileRowRequests += icount;
+      for(zidx=0;zidx<icount;zidx++) {
+        tri = xqp[rsz[zidx]];
+        if(rowDone[tri]) {
+          profileRowReuse++;
+        } else {
+          profileRowRecompute++;
+        }
+      }
+    }
+
+    for(zidx=0;zidx<icount;zidx++) {
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      if(rowDone[tri]) continue;
+      if(profileDeltaEnabled) {
+        profileDeltaPairNew += CountBFRealDeltaSparsePairsForRow(tri, bfSparseCount,
+                                                                 bfDeltaNewChangedCount);
+        profileDeltaPairOld += CountBFRealDeltaSparsePairsForRow(tri, bfOldSparseCount,
+                                                                 bfDeltaOldChangedCount);
+      }
+
+      for(rj=0;rj<Nsite;rj++){
+        BFRealSparseStats profilePairStats;
+        trj = xqp[rj];
+
+        if(BFProfileEnabled) {
+          profilePairStats.denseCandidate = 0;
+          profilePairStats.geometryValid = 0;
+          profilePairStats.sparsePair = 0;
+          profilePairStats.actualAdd = 0;
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,&profilePairStats);
+          profileTermDenseCandidate += profilePairStats.denseCandidate;
+          profileTermGeometryValid += profilePairStats.geometryValid;
+          profileTermSparsePair += profilePairStats.sparsePair;
+          profileTermActualAdd += profilePairStats.actualAdd;
+        } else {
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,NULL);
+        }
+
+        sltElm[tri*Nsite+trj] = slt_ij;
+        sltElm2[tri*Nsite+trj] = slt_ji;
+      }
+
+      rowDone[tri] = 1;
+    }
+
+    for(zidx=0;zidx<icount;zidx++) {
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      baseSltE_i0 = baseSltE + rsi0*Nsite2;
+      baseSltE_i1 = baseSltE + rsi1*Nsite2;
+
+      for(rj=0;rj<Nsite;rj++){
+        trj = xqp[rj];
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+
+        slt_ij = sltElm[tri*Nsite+trj];
+        slt_ji = sltElm2[tri*Nsite+trj];
+
+        if(baseSltE_i0[rsj1] != slt_ij){
+          jcount[zidx]++;
+        }
+        if(baseSltE_i1[rsj0] != -slt_ji){
+          jcount1[zidx]++;
+        }
+      }
+    }
+    for(zidx=0;zidx<icount;zidx++){
+      ri  = rsz[zidx];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      mi0 = eleCfg[rsi0];
+      mi1 = eleCfg[rsi1];
+
+      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+        msa[qpidx*Nsize+hop]=mi0;
+        hop++;
+      }
+      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+        msa[qpidx*Nsize+hop]=mi1+Ne;
+        hop++;
+      }
+    }
+
+    hopNum[qpidx] = hop;
+    for(idx=0;idx<hop;idx++) {
+      SetSlaterElmBFGrnVecRow_real(vecQp + idx*Nsize, msa[qpidx*Nsize+idx],
+                                   eleIdx, xqp, baseSltE, sltElm, sltElm2,
+                                   rowDone, bfSparseEntry, bfSparseOffset, bfSparseCount,
+                                   bfSparseGeomCount, bfEtaFlag);
+    }
+  }
+
+  if(BFProfileEnabled) {
+    AddBFProfileCounter(BFPROF_GREEN_ROW_REQUEST, profileRowRequests);
+    AddBFProfileCounter(BFPROF_GREEN_ROW_RECOMPUTE, profileRowRecompute);
+    AddBFProfileCounter(BFPROF_GREEN_ROW_REUSE, profileRowReuse);
+    AddBFProfileCounter(BFPROF_GREEN_PAIR_REQUEST, profileRowRequests*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_GREEN_PAIR_RECOMPUTE, profileRowRecompute*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_DENSE_CANDIDATE, profileTermDenseCandidate);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_GEOMETRY_VALID, profileTermGeometryValid);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_SPARSE_PAIR, profileTermSparsePair);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_ACTUAL_ADD, profileTermActualAdd);
+    AddBFProfileCounter(BFPROF_GREEN_DELTA_CNT_TOTAL, profileDeltaCntTotal);
+    AddBFProfileCounter(BFPROF_GREEN_DELTA_CNT_CHANGED, profileDeltaCntChanged);
+    AddBFProfileCounter(BFPROF_GREEN_DELTA_PAIR_NEW, profileDeltaPairNew);
+    AddBFProfileCounter(BFPROF_GREEN_DELTA_PAIR_OLD, profileDeltaPairOld);
+    AddBFProfileCounter(BFPROF_GREEN_DELTA_PAIR_TOTAL, profileDeltaPairNew+profileDeltaPairOld);
+  }
+
+  return ;
+}
+
+void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const int u,
+                     const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp,
+                     int *restoreRows, int *restoreRowCount){
+  int **posBF = PosBF;
+  //int rua=ra+Nsite*u, rub=rb+Nsite*u;
+  const int mua = ma + Ne*u;
+  int trua, trub;
+  int idx, rtmp;
+  int ri,tri,rsi0,rsi1;
+  int rj,trj,rsj0,rsj1;
+  int qpidx,mpidx;
+  double slt_ij,slt_ji;
+  int *xqp, *xqpInv;
+  double *sltE,*sltE_i0,*sltE_i1;
+  //double complex pTrans[Nsite2*Nsite2];
+  //double complex *pTrans_i;
+  int rsz[Nsite2];
+  int rhop0[Nsite2],rhop1[Nsite2];
+  int zidx,hop,icount;
+  int jcount[Nsite],jcount1[Nsite];
+  int mi0,mi1,flag,hidx,itmp0=0,itmp1=0;
+  int row;
+  unsigned char bfEtaFlag[Nsite],rowDone[Nsite];
+  BFRealSparseEntry bfSparseEntry[4*Nsite*Nrange];
+  int bfSparseOffset[4*Nsite],bfSparseCount[4*Nsite],bfSparseGeomCount[4*Nsite];
+  double sltElm[Nsite*Nsite],sltElm2[Nsite*Nsite];
+  long long profileRowRequests=0,profileRowRecompute=0,profileRowReuse=0;
+  long long profileTermDenseCandidate=0,profileTermGeometryValid=0;
+  long long profileTermSparsePair=0,profileTermActualAdd=0;
+
+  MakeBFEtaFlag_real(bfEtaFlag, eleProjBFCnt);
+  MakeBFRealSparseCountList(bfSparseEntry, bfSparseOffset, bfSparseCount, bfSparseGeomCount, eleProjBFCnt);
+  for(row=0;row<Nsite;row++){
+    rowDone[row] = 0;
+  }
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    itmp0=0;
+    itmp1=0;
+    if(restoreRowCount != NULL) restoreRowCount[qpidx] = 0;
+    mpidx = qpidx / NSPGaussLeg;
+
+    xqp = QPTrans[mpidx];
+    xqpInv = QPTransInv[mpidx];
+
+    sltE = sltElmTmp + qpidx*Nsite2*Nsite2;
+
+    icount=0;
+    trua = xqpInv[ra];
+    rsz[icount] = trua;
+    icount++;
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trua][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    trub = xqpInv[rb];
+    flag=0;
+    for(zidx=0;zidx<icount;zidx++){
+      if(rsz[zidx] == trub) flag=1;
+    }
+    if(flag==0){
+      rsz[icount] = trub;
+      icount++;
+    }
+    for(idx=0;idx<Nrange;idx++) {
+      rtmp=posBF[trub][idx];
+      flag=0;
+      for(zidx=0;zidx<icount;zidx++){
+        if(rsz[zidx] == rtmp) flag=1;
+      }
+      if(flag==1) continue;
+      rsz[icount] = rtmp;
+      icount++;
+    }
+    hop=0;
+    msa[qpidx*Nsize+hop]= ma + Ne*u;
+    hop++;
+
+    for(zidx=0;zidx<icount;zidx++){
+      jcount[zidx]=0;
+      jcount1[zidx]=0;
+    }
+    //#pragma omp parallel for reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
+    //private(zidx,mi0,mi1,jcount,jcount1,itmp,
+    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,
+    //        ijcount,jicount,qpidx,hop,itmp1,itmp0,
+    //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
+    
+    //#pragma omp parallel for default(shared)
+    //private(zidx,mi0,mi1,
+    //        ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,
+    //        ijcount,jicount,qpidx,
+    //        rj,trj,rsj0,rsj1,slt_ij,slt_ji)
+    //reduction(+:jcount,jcount1,itmp,itmp0,itmp1,hop)
+    //#pragma loop noalias
+    if(BFProfileEnabled) {
+      profileRowRequests += icount;
+      for(zidx=0;zidx<icount;zidx++) {
+        tri = xqp[rsz[zidx]];
+        if(rowDone[tri]) {
+          profileRowReuse++;
+        } else {
+          profileRowRecompute++;
+        }
+      }
+    }
+
+    for(zidx=0;zidx<icount;zidx++) {
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      if(rowDone[tri]) continue;
+
+      for(rj=0;rj<Nsite;rj++){
+        BFRealSparseStats profilePairStats;
+        trj = xqp[rj];
+
+        if(BFProfileEnabled) {
+          profilePairStats.denseCandidate = 0;
+          profilePairStats.geometryValid = 0;
+          profilePairStats.sparsePair = 0;
+          profilePairStats.actualAdd = 0;
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,&profilePairStats);
+          profileTermDenseCandidate += profilePairStats.denseCandidate;
+          profileTermGeometryValid += profilePairStats.geometryValid;
+          profileTermSparsePair += profilePairStats.sparsePair;
+          profileTermActualAdd += profilePairStats.actualAdd;
+        } else {
+          SubSlaterElmBF_real_eta_sparse(tri,trj,&slt_ij,&slt_ji,
+                                         bfSparseEntry,bfSparseOffset,bfSparseCount,bfSparseGeomCount,
+                                         bfEtaFlag,NULL);
+        }
+
+        sltElm[tri*Nsite+trj] = slt_ij;
+        sltElm2[tri*Nsite+trj] = slt_ji;
+      }
+
+      rowDone[tri] = 1;
+    }
+
+    for(zidx=0;zidx<icount;zidx++) {
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      sltE_i0 = sltE + rsi0*Nsite2;
+      sltE_i1 = sltE + rsi1*Nsite2;
+
+      for(rj=0;rj<Nsite;rj++){
+        trj = xqp[rj];
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+
+        slt_ij = sltElm[tri*Nsite+trj];
+        slt_ji = sltElm2[tri*Nsite+trj];
+
+        if(sltE_i0[rsj1] != slt_ij){
+          sltE_i0[rsj1] = slt_ij;
+          jcount[zidx]++;
+        }
+        if(sltE_i1[rsj0] != -slt_ji){
+          sltE_i1[rsj0] = -slt_ji;
+          jcount1[zidx]++;
+        }
+      }
+    } 
+    for(zidx=0;zidx<icount;zidx++){
+      ri  = rsz[zidx];
+      tri = xqp[ri];
+      rsi0 = ri;
+      rsi1 = ri+Nsite;
+      mi0 = eleCfg[rsi0];
+      mi1 = eleCfg[rsi1];
+      
+      //if((jcount == Nsite)){
+      if((jcount[zidx] >= 1)){
+        rhop0[itmp0] = rsi0;
+        itmp0++;
+      }
+      //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
+      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+        msa[qpidx*Nsize+hop]=mi0;
+        hop++;
+      }
+      //if((jcount1 == Nsite) ){
+      if((jcount1[zidx] >= 1) ){
+        rhop1[itmp1] = rsi1;
+        itmp1++;
+      }
+      //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
+      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+        msa[qpidx*Nsize+hop]=mi1+Ne;
+        hop++;
+      }
+    }
+    if(restoreRows != NULL && restoreRowCount != NULL) {
+      int restoreCount = 0;
+      for(hidx=0;hidx<itmp0;hidx++) {
+        restoreRows[qpidx*Nsite2 + restoreCount] = rhop0[hidx];
+        restoreCount++;
+      }
+      for(hidx=0;hidx<itmp1;hidx++) {
+        restoreRows[qpidx*Nsite2 + restoreCount] = rhop1[hidx];
+        restoreCount++;
+      }
+      restoreRowCount[qpidx] = restoreCount;
+    }
+    for(hidx=0;hidx<itmp0;hidx++){
+      rsi0= rhop0[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj1*Nsite2+rsi0]=-sltE[rsi0*Nsite2+rsj1];
+      }
+    }
+    for(hidx=0;hidx<itmp1;hidx++){
+      rsi1= rhop1[hidx];
+      for(rj=0;rj<Nsite;rj++) {
+        rsj0 = rj;
+        rsj1 = rj+Nsite;
+        sltE[rsj0*Nsite2+rsi1]=-sltE[rsi1*Nsite2+rsj0];
+      }
+    }
+
+    hopNum[qpidx] = hop;
+
+  }
+
+  if(BFProfileEnabled) {
+    AddBFProfileCounter(BFPROF_GREEN_ROW_REQUEST, profileRowRequests);
+    AddBFProfileCounter(BFPROF_GREEN_ROW_RECOMPUTE, profileRowRecompute);
+    AddBFProfileCounter(BFPROF_GREEN_ROW_REUSE, profileRowReuse);
+    AddBFProfileCounter(BFPROF_GREEN_PAIR_REQUEST, profileRowRequests*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_GREEN_PAIR_RECOMPUTE, profileRowRecompute*(long long)Nsite);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_DENSE_CANDIDATE, profileTermDenseCandidate);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_GEOMETRY_VALID, profileTermGeometryValid);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_SPARSE_PAIR, profileTermSparsePair);
+    AddBFProfileCounter(BFPROF_GREEN_TERM_ACTUAL_ADD, profileTermActualAdd);
+  }
+
+  return ;
+}
+
+
+void StoreSlaterElmBF_fcmp(complex double *bufM){
+  int qpidx,rsi,rsj;
+  const double complex* sltE;
+  const double complex* sltE_i;
+  double complex*bufM_i;
+
+  /* store SlaterElmBF before hopping */
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    sltE = SlaterElmBF + qpidx*Nsite2*Nsite2;
+    for(rsi=0;rsi<Nsite2;rsi++) {
+      bufM_i = bufM + rsi*Nsite2 + qpidx*Nsite2*Nsite2;
+      sltE_i = sltE + rsi*Nsite2;
+      //#pragma loop norecurrence
+      for(rsj=0;rsj<Nsite2;rsj++) {
+        bufM_i[rsj] = sltE_i[rsj];
+        //printf("bufM[%d]=%.5e\n",msi*Nsize+msj,cabs(bufM[msi*Nsize+msj]));
+      }
+    }
+  }
+
+  return;
+}
+
+void StoreSlaterElmBF_real(double *bufM){
+  int qpidx,rsi,rsj;
+  const double * sltE;
+  const double * sltE_i;
+  double *bufM_i;
+
+  /* store SlaterElmBF before hopping */
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    sltE = SlaterElmBF_real + qpidx*Nsite2*Nsite2;
+    for(rsi=0;rsi<Nsite2;rsi++) {
+      bufM_i = bufM + rsi*Nsite2 + qpidx*Nsite2*Nsite2;
+      sltE_i = sltE + rsi*Nsite2;
+      //#pragma loop norecurrence
+      for(rsj=0;rsj<Nsite2;rsj++) {
+        bufM_i[rsj] = sltE_i[rsj];
+        //printf("bufM[%d]=%.5e\n",msi*Nsize+msj,cabs(bufM[msi*Nsize+msj]));
+      }
+    }
+  }
+  return;
+}
+
+void StoreSlaterElmBF_real_rows(double *bufM, const int *restoreRows, const int *restoreRowCount){
+  int qpidx, idx, row, col;
+  const double *sltE;
+  double *bufM_qp;
+
+  if(restoreRows == NULL || restoreRowCount == NULL) {
+    StoreSlaterElmBF_real(bufM);
+    return;
+  }
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    sltE = SlaterElmBF_real + qpidx*Nsite2*Nsite2;
+    bufM_qp = bufM + qpidx*Nsite2*Nsite2;
+    for(idx=0;idx<restoreRowCount[qpidx];idx++) {
+      row = restoreRows[qpidx*Nsite2 + idx];
+      for(col=0;col<Nsite2;col++) {
+        bufM_qp[row*Nsite2 + col] = sltE[row*Nsite2 + col];
+        bufM_qp[col*Nsite2 + row] = sltE[col*Nsite2 + row];
+      }
+    }
+  }
+  return;
+}
