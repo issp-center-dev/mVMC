@@ -604,6 +604,7 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm) {
   double sqrtw;
   double complex we;
   double Sz;
+  double c2SzStart = 0.0;
   const char *bfFSZSRDiffDumpPath = getenv("MVMC_BF_FSZ_SR_DIFF_DUMP");
 
   const int qpStart=0;
@@ -672,7 +673,13 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm) {
 
     StartTimer(41);
     e = CalculateHamiltonianBF_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn,eleProjBFCnt);
+    if(BFFSZC2DetailProfileEnabled) {
+      c2SzStart = BFFSZC2DetailMonotonicSeconds();
+    }
     Sz = CalculateSz_fsz(ip,eleIdx,eleCfg,eleNum,eleProjCnt,eleSpn);
+    if(BFFSZC2DetailProfileEnabled) {
+      BFFSZC2DetailSzSecondsRank0 += BFFSZC2DetailMonotonicSeconds()-c2SzStart;
+    }
     StopTimer(41);
 
     if(!isfinite(creal(e) + cimag(e))) {

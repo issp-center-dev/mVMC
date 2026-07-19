@@ -73,6 +73,21 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
                   int *pfIWork, double *pfRWork,
                   double complex *pfBufM, double complex *pfWork);
 
+double complex GreenFunc2BF_fsz2WithProfile(
+                  const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const int u, const int v,
+                  const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, int *affected,
+                  int *hopIntWork, int hopIntWorkSize,
+                  int *pfIWork, double *pfRWork,
+                  double complex *pfBufM, double complex *pfWork,
+                  BFFSZC2DetailContext *detailProfile);
+int GetGreenFuncBF_fsz_buffer_work_size(
+    size_t *bufferComplexCount, size_t *pfUpdateIntCount,
+    size_t *pfUpdateDoubleCount);
+
 
 void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx, int *eleCfg,
                          int *eleNum, int *eleSpn,int *eleProjCnt) {
@@ -248,19 +263,27 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   double complex *myBuffer;
   double complex *myPfBufM, *myPfWork;
   double *myPfRWork;
-  const size_t bfSlaterSize = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
-  size_t pfUpdateComplexCount,pfUpdateIntCount,pfUpdateDoubleCount;
-  size_t bfGreen1BufferSizeValue,bfGreen1ComplexSizeValue,rowCount;
-  const int rowCapacity = (BFFSZPfUpdateKFull-1 < Nsize-1)
-      ? BFFSZPfUpdateKFull-1 : Nsize-1;
+  size_t pfUpdateIntCount,pfUpdateDoubleCount;
+  size_t bfGreen1BufferSizeValue,bfGreen1ComplexSizeValue;
   int bfGreen1BufferSize,bfGreen1ComplexSize,bfPfIntSize,bfPfDoubleSize;
   long long bfSerialBaseIntSizeLL, bfGreen1IntSizeLL;
   int bfSerialBaseIntSize;
   int bfHopIntSize, bfSerialIntSize, bfGreen1IntSize;
+  int reuseCensusCapacity=0, reuseCensusIntSize=0;
+  int *reuseCensusKeys = NULL;
   int *thEleIdx, *thEleCfg, *thEleNum, *thEleSpn;
   int *thProjCntNew, *thProjBFCntNew, *thAffected, *thHopIntWork, *thPfIWork;
   double complex *thBuffer, *thPfBufM, *thPfWork;
   double *thPfRWork;
+  BFFSZC2DetailContext c2DetailContext;
+  BFFSZC2DetailContext *c2DetailProfile = NULL;
+  BFFSZC2ReuseCensus reuseCensus;
+
+  if(BFFSZC2DetailProfileEnabled) {
+    InitBFFSZC2DetailContext(&c2DetailContext,
+        BFFSZ_C2_DETAIL_SOURCE_MEASUREMENT);
+    c2DetailProfile = &c2DetailContext;
+  }
 
   if(NTwist > 0 || NNBodyG > 0) {
     fprintf(stderr, "Error: CalculateGreenFuncBF_fsz does not support Twist or NBodyG yet.\n");
@@ -270,24 +293,11 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     fprintf(stderr, "Error: invalid BF-FSZ Green hop integer workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  if(GetCalculateNewPfMBF_fsz_row_values_work_size(&pfUpdateComplexCount,
-      &pfUpdateIntCount,&pfUpdateDoubleCount) != 0
-      || GetSlaterElmBF_fsz_hop_row_work_size(
-          &rowCount,NQPFull,rowCapacity) != BF_FSZ_ROW_BUILD_OK
-      || pfUpdateIntCount > INT_MAX || pfUpdateDoubleCount > INT_MAX
-      || bfSlaterSize > SIZE_MAX-2*(size_t)NQPFull
-      || bfSlaterSize+2*(size_t)NQPFull > SIZE_MAX-rowCount
-      || bfSlaterSize+2*(size_t)NQPFull+rowCount
-          > SIZE_MAX-pfUpdateComplexCount
-      || (BFFSZGreenRebuildCheckEnabled
-          && bfSlaterSize+2*(size_t)NQPFull+rowCount+pfUpdateComplexCount
-              > SIZE_MAX-bfSlaterSize)) {
+  if(GetGreenFuncBF_fsz_buffer_work_size(
+      &bfGreen1BufferSizeValue,&pfUpdateIntCount,&pfUpdateDoubleCount) != 0) {
     fprintf(stderr,"Error: invalid BF-FSZ Green Pfaffian-update workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
   }
-  bfGreen1BufferSizeValue = 2*(size_t)NQPFull + bfSlaterSize
-      + rowCount + pfUpdateComplexCount
-      + (BFFSZGreenRebuildCheckEnabled ? bfSlaterSize : 0);
   if((size_t)Nsize*(size_t)Nsize > SIZE_MAX-(size_t)LapackLWork
       || bfGreen1BufferSizeValue > SIZE_MAX-(size_t)Nsize*(size_t)Nsize-(size_t)LapackLWork) {
     fprintf(stderr,"Error: BF-FSZ Green complex workspace size overflow.\n");
@@ -322,7 +332,18 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
   bfGreen1IntSize = (int)bfGreen1IntSizeLL;
-  bfSerialIntSize = bfGreen1IntSize;
+  if(BFFSZC2ReuseCensusEnabled
+      && GetBFFSZC2ReuseCensusWorkSize(
+          (long long)NCisAjsCktAltDC,&reuseCensusCapacity,
+          &reuseCensusIntSize) != 0) {
+    fprintf(stderr,"Error: invalid BF-FSZ Green C2 reuse census workspace size.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  if(reuseCensusIntSize > INT_MAX-bfGreen1IntSize) {
+    fprintf(stderr,"Error: BF-FSZ Green C2 reuse census workspace is too large.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  bfSerialIntSize = bfGreen1IntSize+reuseCensusIntSize;
 
   RequestWorkSpaceInt(bfSerialIntSize);
   RequestWorkSpaceComplex(bfGreen1ComplexSize);
@@ -340,10 +361,22 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   myAffected = GetWorkSpaceInt(Nsize);
   myHopIntWork = GetWorkSpaceInt(bfHopIntSize);
   myPfIWork = GetWorkSpaceInt(bfPfIntSize);
+  if(reuseCensusIntSize > 0) {
+    reuseCensusKeys = GetWorkSpaceInt(reuseCensusIntSize);
+  }
   myBuffer = GetWorkSpaceComplex(bfGreen1BufferSize);
   myPfBufM = GetWorkSpaceComplex(Nsize*Nsize);
   myPfWork = GetWorkSpaceComplex(LapackLWork);
   myPfRWork = GetWorkSpaceDouble(bfPfDoubleSize);
+
+  if(BFFSZC2ReuseCensusEnabled) {
+    if(InitBFFSZC2ReuseCensus(
+        &reuseCensus,reuseCensusKeys,reuseCensusCapacity) != 0) {
+      fprintf(stderr,"Error: BF-FSZ Green C2 reuse census initialization failed.\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+    c2DetailContext.reuseCensus = &reuseCensus;
+  }
 
   for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
   for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
@@ -417,14 +450,18 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     rl = CisAjsCktAltDCIdx[idx][6];
     v  = CisAjsCktAltDCIdx[idx][7];
 
-    tmp = GreenFunc2BF_fsz2(ri,rj,rk,rl,s,t,u,v,ip,
+    tmp = GreenFunc2BF_fsz2WithProfile(ri,rj,rk,rl,s,t,u,v,ip,
                            myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
                            myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
                            myAffected,myHopIntWork,bfHopIntSize,
-                           myPfIWork,myPfRWork,myPfBufM,myPfWork);
+                           myPfIWork,myPfRWork,myPfBufM,myPfWork,c2DetailProfile);
     PhysCisAjsCktAltDC[idx] += w*tmp;
   }
   StopTimer(51);
+  if(c2DetailProfile != NULL) MergeBFFSZC2DetailContext(c2DetailProfile);
+  if(BFFSZC2ReuseCensusEnabled) {
+    MergeBFFSZC2ReuseCensus(BFFSZ_C2_REUSE_SCOPE_MEASUREMENT,&reuseCensus);
+  }
 
   StartTimer(52);
   for(idx=0;idx<NCisAjs;idx++) {

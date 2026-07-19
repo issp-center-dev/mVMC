@@ -61,6 +61,21 @@ double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const
                   int *pfIWork, double *pfRWork,
                   double complex *pfBufM, double complex *pfWork);
 
+double complex GreenFunc2BF_fsz2WithProfile(
+                  const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const int u, const int v,
+                  const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, int *affected,
+                  int *hopIntWork, int hopIntWorkSize,
+                  int *pfIWork, double *pfRWork,
+                  double complex *pfBufM, double complex *pfWork,
+                  BFFSZC2DetailContext *detailProfile);
+int GetGreenFuncBF_fsz_buffer_work_size(
+    size_t *bufferComplexCount, size_t *pfUpdateIntCount,
+    size_t *pfUpdateDoubleCount);
+
 double CalculateSz_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt,int *eleSpn) {
   const int *n0 = eleNum;
@@ -270,13 +285,36 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   int *myPfIWork;
   double complex *myBuffer, *myPfBufM, *myPfWork;
   double *myPfRWork;
-  const size_t bfSlaterSize = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
-  size_t pfUpdateComplexCount,pfUpdateIntCount,pfUpdateDoubleCount;
-  size_t bfBufferSize,bfComplexSize,nsizeSquared,rowCount;
-  const int rowCapacity = (BFFSZPfUpdateKFull-1 < Nsize-1)
-      ? BFFSZPfUpdateKFull-1 : Nsize-1;
+  size_t pfUpdateIntCount,pfUpdateDoubleCount;
+  size_t bfBufferSize,bfComplexSize,nsizeSquared;
   long long bfBaseIntSizeLL,bfIntSizeLL;
   int bfBaseIntSize, bfHopIntSize, bfIntSize, bfPfIntSize, bfPfDoubleSize;
+  int reuseCensusCapacity=0, reuseCensusIntSize=0;
+  int *reuseCensusKeys = NULL;
+  BFFSZC2DetailContext pairHopDetailContext;
+  BFFSZC2DetailContext exchangeDetailContext;
+  BFFSZC2DetailContext interAllDetailContext;
+  BFFSZC2DetailContext *pairHopDetailProfile = NULL;
+  BFFSZC2DetailContext *exchangeDetailProfile = NULL;
+  BFFSZC2DetailContext *interAllDetailProfile = NULL;
+  BFFSZC2DetailTermContext termDetailContext;
+  BFFSZC2DetailTermContext *termDetailProfile = NULL;
+  BFFSZC2ReuseCensus reuseCensus;
+  double termStart = 0.0;
+
+  if(BFFSZC2DetailProfileEnabled) {
+    InitBFFSZC2DetailContext(&pairHopDetailContext,
+        BFFSZ_C2_DETAIL_SOURCE_PAIR_HOP);
+    InitBFFSZC2DetailContext(&exchangeDetailContext,
+        BFFSZ_C2_DETAIL_SOURCE_EXCHANGE);
+    InitBFFSZC2DetailContext(&interAllDetailContext,
+        BFFSZ_C2_DETAIL_SOURCE_INTER_ALL);
+    InitBFFSZC2DetailTermContext(&termDetailContext);
+    pairHopDetailProfile = &pairHopDetailContext;
+    exchangeDetailProfile = &exchangeDetailContext;
+    interAllDetailProfile = &interAllDetailContext;
+    termDetailProfile = &termDetailContext;
+  }
 
   if(NNBodyInterAll > 0) {
     fprintf(stderr, "Error: CalculateHamiltonianBF_fsz does not support NBodyInterAll.\n");
@@ -286,25 +324,12 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
     fprintf(stderr, "Error: invalid BF-FSZ Hamiltonian hop integer workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  if(GetCalculateNewPfMBF_fsz_row_values_work_size(&pfUpdateComplexCount,
-      &pfUpdateIntCount,&pfUpdateDoubleCount) != 0
-      || GetSlaterElmBF_fsz_hop_row_work_size(
-          &rowCount,NQPFull,rowCapacity) != BF_FSZ_ROW_BUILD_OK
-      || pfUpdateIntCount > INT_MAX || pfUpdateDoubleCount > INT_MAX
-      || bfSlaterSize > SIZE_MAX-2*(size_t)NQPFull
-      || bfSlaterSize+2*(size_t)NQPFull > SIZE_MAX-rowCount
-      || bfSlaterSize+2*(size_t)NQPFull+rowCount
-          > SIZE_MAX-pfUpdateComplexCount
-      || (BFFSZGreenRebuildCheckEnabled
-          && bfSlaterSize+2*(size_t)NQPFull+rowCount+pfUpdateComplexCount
-              > SIZE_MAX-bfSlaterSize)) {
+  if(GetGreenFuncBF_fsz_buffer_work_size(
+      &bfBufferSize,&pfUpdateIntCount,&pfUpdateDoubleCount) != 0) {
     fprintf(stderr,"Error: invalid BF-FSZ Hamiltonian Pfaffian workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
   }
   nsizeSquared = (size_t)Nsize*(size_t)Nsize;
-  bfBufferSize = 2*(size_t)NQPFull + bfSlaterSize + rowCount
-      + pfUpdateComplexCount
-      + (BFFSZGreenRebuildCheckEnabled ? bfSlaterSize : 0);
   if(nsizeSquared > SIZE_MAX-(size_t)LapackLWork
       || bfBufferSize > SIZE_MAX-nsizeSquared-(size_t)LapackLWork) {
     fprintf(stderr,"Error: BF-FSZ Hamiltonian complex workspace size overflow.\n");
@@ -326,7 +351,16 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
   bfBaseIntSize = (int)bfBaseIntSizeLL;
-  bfIntSizeLL = (long long)bfBaseIntSize+Nsize+bfHopIntSize+bfPfIntSize;
+  if(BFFSZC2ReuseCensusEnabled
+      && (NPairHopping < 0 || NExchangeCoupling < 0 || NInterAll < 0
+          || GetBFFSZC2ReuseCensusWorkSize(
+              (long long)NPairHopping+2LL*NExchangeCoupling+NInterAll,
+              &reuseCensusCapacity,&reuseCensusIntSize) != 0)) {
+    fprintf(stderr,"Error: invalid BF-FSZ Hamiltonian C2 reuse census workspace size.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+  bfIntSizeLL = (long long)bfBaseIntSize+Nsize+bfHopIntSize+bfPfIntSize
+      + reuseCensusIntSize;
   if(bfIntSizeLL < 0 || bfIntSizeLL > INT_MAX) {
     fprintf(stderr, "Error: invalid BF-FSZ Hamiltonian integer workspace size.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -346,16 +380,31 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   myAffected = GetWorkSpaceInt(Nsize);
   myHopIntWork = GetWorkSpaceInt(bfHopIntSize);
   myPfIWork = GetWorkSpaceInt(bfPfIntSize);
+  if(reuseCensusIntSize > 0) {
+    reuseCensusKeys = GetWorkSpaceInt(reuseCensusIntSize);
+  }
   myBuffer = GetWorkSpaceComplex((int)bfBufferSize);
   myPfBufM = GetWorkSpaceComplex(Nsize*Nsize);
   myPfWork = GetWorkSpaceComplex(LapackLWork);
   myPfRWork = GetWorkSpaceDouble(bfPfDoubleSize);
+
+  if(BFFSZC2ReuseCensusEnabled) {
+    if(InitBFFSZC2ReuseCensus(
+        &reuseCensus,reuseCensusKeys,reuseCensusCapacity) != 0) {
+      fprintf(stderr,"Error: BF-FSZ Hamiltonian C2 reuse census initialization failed.\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+    pairHopDetailContext.reuseCensus = &reuseCensus;
+    exchangeDetailContext.reuseCensus = &reuseCensus;
+    interAllDetailContext.reuseCensus = &reuseCensus;
+  }
 
   for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
   for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
   for(idx=0;idx<Nsite2;idx++) myEleNum[idx] = eleNum[idx];
   for(idx=0;idx<Nsize;idx++) myEleSpn[idx] = eleSpn[idx];
 
+  if(termDetailProfile != NULL) termStart = BFFSZC2DetailMonotonicSeconds();
   for(idx=0;idx<NCoulombIntra;idx++) {
     ri = CoulombIntra[idx];
     e += ParaCoulombIntra[idx] * n0[ri] * n1[ri];
@@ -372,6 +421,11 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
     rj = HundCoupling[idx][1];
     e -= ParaHundCoupling[idx] * (n0[ri]*n0[rj] + n1[ri]*n1[rj]);
   }
+  if(termDetailProfile != NULL) {
+    termDetailProfile->seconds[BFFSZ_C2_DETAIL_TERM_NUMBER]
+        += BFFSZC2DetailMonotonicSeconds()-termStart;
+    termStart = BFFSZC2DetailMonotonicSeconds();
+  }
 
   for(idx=0;idx<NTransfer;idx++) {
     ri = Transfer[idx][0];
@@ -384,32 +438,50 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
                          myAffected,myHopIntWork,bfHopIntSize,
                          myPfIWork,myPfRWork,myPfBufM,myPfWork);
   }
+  if(termDetailProfile != NULL) {
+    termDetailProfile->seconds[BFFSZ_C2_DETAIL_TERM_TRANSFER]
+        += BFFSZC2DetailMonotonicSeconds()-termStart;
+    termStart = BFFSZC2DetailMonotonicSeconds();
+  }
 
   for(idx=0;idx<NPairHopping;idx++) {
     ri = PairHopping[idx][0];
     rj = PairHopping[idx][1];
     e += ParaPairHopping[idx]
-      * GreenFunc2BF_fsz2(ri,rj,ri,rj,0,0,1,1,ip,
+      * GreenFunc2BF_fsz2WithProfile(ri,rj,ri,rj,0,0,1,1,ip,
                           myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
                           myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
                           myAffected,myHopIntWork,bfHopIntSize,
-                          myPfIWork,myPfRWork,myPfBufM,myPfWork);
+                          myPfIWork,myPfRWork,myPfBufM,myPfWork,
+                          pairHopDetailProfile);
+  }
+  if(termDetailProfile != NULL) {
+    termDetailProfile->seconds[BFFSZ_C2_DETAIL_TERM_PAIR_HOP]
+        += BFFSZC2DetailMonotonicSeconds()-termStart;
+    termStart = BFFSZC2DetailMonotonicSeconds();
   }
 
   for(idx=0;idx<NExchangeCoupling;idx++) {
     ri = ExchangeCoupling[idx][0];
     rj = ExchangeCoupling[idx][1];
-    tmp = GreenFunc2BF_fsz2(ri,rj,rj,ri,0,0,1,1,ip,
+    tmp = GreenFunc2BF_fsz2WithProfile(ri,rj,rj,ri,0,0,1,1,ip,
                             myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
                             myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
                             myAffected,myHopIntWork,bfHopIntSize,
-                            myPfIWork,myPfRWork,myPfBufM,myPfWork);
-    tmp += GreenFunc2BF_fsz2(ri,rj,rj,ri,1,1,0,0,ip,
+                            myPfIWork,myPfRWork,myPfBufM,myPfWork,
+                            exchangeDetailProfile);
+    tmp += GreenFunc2BF_fsz2WithProfile(ri,rj,rj,ri,1,1,0,0,ip,
                              myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
                              myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
                              myAffected,myHopIntWork,bfHopIntSize,
-                             myPfIWork,myPfRWork,myPfBufM,myPfWork);
+                             myPfIWork,myPfRWork,myPfBufM,myPfWork,
+                             exchangeDetailProfile);
     e += ParaExchangeCoupling[idx]*tmp;
+  }
+  if(termDetailProfile != NULL) {
+    termDetailProfile->seconds[BFFSZ_C2_DETAIL_TERM_EXCHANGE]
+        += BFFSZC2DetailMonotonicSeconds()-termStart;
+    termStart = BFFSZC2DetailMonotonicSeconds();
   }
 
   for(idx=0;idx<NInterAll;idx++) {
@@ -422,11 +494,23 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
     rl = InterAll[idx][6];
     v  = InterAll[idx][7];
     e += ParaInterAll[idx]
-      * GreenFunc2BF_fsz2(ri,rj,rk,rl,s,t,u,v,ip,
+      * GreenFunc2BF_fsz2WithProfile(ri,rj,rk,rl,s,t,u,v,ip,
                           myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
                           myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
                           myAffected,myHopIntWork,bfHopIntSize,
-                          myPfIWork,myPfRWork,myPfBufM,myPfWork);
+                          myPfIWork,myPfRWork,myPfBufM,myPfWork,
+                          interAllDetailProfile);
+  }
+  if(termDetailProfile != NULL) {
+    termDetailProfile->seconds[BFFSZ_C2_DETAIL_TERM_INTER_ALL]
+        += BFFSZC2DetailMonotonicSeconds()-termStart;
+    MergeBFFSZC2DetailContext(pairHopDetailProfile);
+    MergeBFFSZC2DetailContext(exchangeDetailProfile);
+    MergeBFFSZC2DetailContext(interAllDetailProfile);
+    MergeBFFSZC2DetailTermContext(termDetailProfile);
+  }
+  if(BFFSZC2ReuseCensusEnabled) {
+    MergeBFFSZC2ReuseCensus(BFFSZ_C2_REUSE_SCOPE_HAMILTONIAN,&reuseCensus);
   }
 
   ReleaseWorkSpaceInt();
