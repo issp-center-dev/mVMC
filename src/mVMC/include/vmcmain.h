@@ -91,6 +91,7 @@ extern void omp_set_num_threads(int);
 #include "../matrix.c"
 #include "../pfupdate.c"
 #include "../pfupdate_real.c"
+#include "../backflow_pf.c"
 #include "../pfupdate_fsz.c"
 #include "../pfupdate_fsz_real.c"
 #include "../pfupdate_two_fcmp.c"
