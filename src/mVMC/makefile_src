@@ -23,6 +23,7 @@ OBJS = \
 
 SOURCES = \
 backflow.c \
+backflow_measure.c \
 backflow_pf.c \
 backflow_slater.c \
 average.c \

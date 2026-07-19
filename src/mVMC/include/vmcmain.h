@@ -107,6 +107,7 @@ extern void omp_set_num_threads(int);
 #include "../calham_fsz.c"
 #include "../calham_fsz_real.c"
 #include "../calgrn.c"
+#include "../backflow_measure.c"
 #include "../calgrn_fsz.c"
 #include "../backflow.c"
 #include "../setmemory.c"
