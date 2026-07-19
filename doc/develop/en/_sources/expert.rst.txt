@@ -2427,8 +2427,12 @@ Inputs outside this range are rejected.
    ``NExUpdatePath==0``. t-J update paths, exchange updates, Kondo
    updates, and doublon-only updates are not supported.
 
--  Pair orbitals must use the normal ``Orbital`` /
-   ``OrbitalAntiParallel`` format. ``OrbitalGeneral`` / FSZ is not
+-  Pair orbitals may use the normal ``Orbital`` /
+   ``OrbitalAntiParallel`` format or ``OrbitalGeneral`` / FSZ. With
+   ``OrbitalGeneral``, both a fixed :math:`S_z` sector and ``2Sz=-1``
+   are supported. ``2Sz=-1`` enables the conduction-electron hopping /
+   spin-flip sampler and spin-changing ``Transfer``, ``OneBodyG``, and
+   ``TwoBodyG`` operators. BackFlow with localized spins is not
    supported.
 
 -  Spin projection is not supported. Use ``NSPGaussLeg==1``.
@@ -2437,11 +2441,16 @@ Inputs outside this range are rejected.
    are not supported. The usual momentum projection with ``NMPTrans>1``
    can be used only with ``APFlag=0`` and ``NQPOptTrans==1``.
 
--  The Hamiltonian may contain ``Trans`` and number-operator
-   interactions (``CoulombIntra``, ``CoulombInter``, ``Hund``).
-   Two-body Hamiltonian terms such as ``PairHop``, ``Exchange``, and
-   ``InterAll`` are not supported. Measurement outputs ``TwoBodyG`` and
-   ``TwoBodyGEx`` are supported.
+-  With the normal ``Orbital`` / ``OrbitalAntiParallel`` format, the
+   Hamiltonian may contain ``Trans`` and number-operator interactions
+   (``CoulombIntra``, ``CoulombInter``, ``Hund``). Two-body Hamiltonian
+   terms such as ``PairHop``, ``Exchange``, and ``InterAll`` remain
+   unsupported in this mode.
+
+-  With ``OrbitalGeneral`` / FSZ, ``PairHop``, ``Exchange``, and
+   ``InterAll`` are additionally supported. Measurement outputs
+   ``OneBodyG``, ``TwoBodyG``, and ``TwoBodyGEx`` support general spin
+   labels. ``NBodyG`` and ``NBodyInterAll`` are not supported.
 
 -  Standard mode and StdFace do not generate BackFlow inputs. To use
    BackFlow, prepare ``BFRange`` and ``BF`` manually as Expert-mode
