@@ -159,6 +159,127 @@ def make_spin_changing_one_body_g(workdir):
     )
 
 
+def write_spin_changing_c1_defs(workdir):
+    transfer_rows = [
+        (0, 0, 0, 1, 0.70, 0.0),
+        (0, 1, 0, 0, 0.70, 0.0),
+        (1, 0, 0, 1, -0.40, 0.0),
+        (0, 1, 1, 0, -0.40, 0.0),
+    ]
+    with open(os.path.join(workdir, "trans.def"), "w") as fp:
+        fp.write("========================\n")
+        fp.write("NTransfer      {}\n".format(len(transfer_rows)))
+        fp.write("========================\n")
+        fp.write("========i_j_s_tijs=======\n")
+        fp.write("========================\n")
+        for ri, s, rj, t, real, imag in transfer_rows:
+            fp.write(
+                "{:5d} {:5d} {:5d} {:5d} {:25.15f} {:25.15f}\n".format(
+                    ri, s, rj, t, real, imag,
+                )
+            )
+
+    one_body_rows = [
+        (0, 0, 0, 0),
+        (0, 0, 0, 1),
+        (0, 1, 0, 0),
+        (1, 0, 0, 1),
+        (0, 1, 1, 0),
+        (0, 0, 1, 0),
+    ]
+    with open(os.path.join(workdir, "greenone.def"), "w") as fp:
+        fp.write("===============================\n")
+        fp.write("NCisAjs         {}\n".format(len(one_body_rows)))
+        fp.write("===============================\n")
+        fp.write("======== Green functions ======\n")
+        fp.write("===============================\n")
+        for row in one_body_rows:
+            fp.write(" ".join("{:5d}".format(value) for value in row) + "\n")
+
+
+def spin_orbital_row(indices, nsite=4):
+    row = []
+    for index in indices:
+        row.extend((index % nsite, index // nsite))
+    return tuple(row)
+
+
+def build_spin_changing_c2_rows():
+    a, b, c, d = 0, 5, 2, 7
+    classes = [
+        (a, a, a, a),
+        (a, a, a, b),
+        (a, a, b, a),
+        (a, a, b, b),
+        (a, a, b, c),
+        (a, b, a, b),
+        (a, b, a, a),
+        (a, b, a, c),
+        (a, b, b, a),
+        (a, b, c, a),
+        (a, b, b, b),
+        (a, b, b, c),
+        (a, b, c, b),
+        (a, b, c, c),
+        (a, b, c, d),
+    ]
+    return [spin_orbital_row(indices) for indices in classes]
+
+
+def append_namelist_entry(workdir, keyword, filename):
+    path = os.path.join(workdir, "namelist.def")
+    with open(path) as fp:
+        lines = fp.readlines()
+    if not any(line.split() and line.split()[0] == keyword for line in lines):
+        lines.append("{:>16}  {}\n".format(keyword, filename))
+    with open(path, "w") as fp:
+        fp.writelines(lines)
+
+
+def write_spin_changing_c2_defs(workdir, reverse_two_body=False):
+    write_spin_changing_c1_defs(workdir)
+    two_body_rows = build_spin_changing_c2_rows()
+    if reverse_two_body:
+        two_body_rows = list(reversed(two_body_rows))
+    write_two_body_rows(workdir, two_body_rows)
+
+    with open(os.path.join(workdir, "pairhop.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NPairHopp          1\n")
+        fp.write("=============================================\n")
+        fp.write("====== Pair-Hopping term ====================\n")
+        fp.write("=============================================\n")
+        fp.write("    0     1          0.370000000000000\n")
+
+    with open(os.path.join(workdir, "exchange.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NExchange          1\n")
+        fp.write("=============================================\n")
+        fp.write("====== ExchangeCoupling coupling ============\n")
+        fp.write("=============================================\n")
+        fp.write("    1     2         -0.230000000000000\n")
+
+    interall_rows = [
+        (0, 0, 1, 1, 2, 0, 3, 1, 0.31, 0.0),
+        (3, 1, 2, 0, 1, 1, 0, 0, 0.31, 0.0),
+        (0, 0, 0, 1, 1, 1, 1, 0, -0.19, 0.0),
+    ]
+    with open(os.path.join(workdir, "interall.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NInterAll          {}\n".format(len(interall_rows)))
+        fp.write("=============================================\n")
+        fp.write("====== General two-body interactions ========\n")
+        fp.write("=============================================\n")
+        for row in interall_rows:
+            fp.write(" ".join("{}".format(value) for value in row) + "\n")
+
+    append_namelist_entry(workdir, "PairHop", "pairhop.def")
+    append_namelist_entry(workdir, "Exchange", "exchange.def")
+    append_namelist_entry(workdir, "InterAll", "interall.def")
+    make_spin_changing_two_body_g_ex(workdir)
+    return two_body_rows
+
+
 def make_spin_changing_two_body_g(workdir):
     replace_data_line(
         workdir,
@@ -336,6 +457,24 @@ def read_flat_floats(path):
         for line in fp:
             values.extend(float(x) for x in line.split())
     return values
+
+
+def read_sampling_counters(path):
+    last = None
+    with open(path) as fp:
+        for line in fp:
+            cols = line.replace(":", " ").split()
+            if len(cols) < 7 or not cols[0].isdigit() or cols[0] == "00000":
+                continue
+            last = {
+                "acc_hop": float(cols[1]),
+                "acc_lsf": float(cols[3]),
+                "n_hop": int(cols[4]),
+                "n_lsf": int(cols[6]),
+            }
+    if last is None:
+        raise RuntimeError("sampling counters were not found in {}".format(path))
+    return last
 
 
 def read_child_opt_rows(path):
@@ -1100,18 +1239,26 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
 
 def run_sr_diff_case(rootdir, case_name, mpi_procs=None):
     sr_diff_cases = {
-        "BackFlow_FSZ_SRDiff_Identity_Complex": (False, False, True),
-        "BackFlow_FSZ_SRDiff_Identity_Complex_mpi": (False, False, True),
-        "BackFlow_FSZ_SRDiff_MomentumProjection_Complex": (True, False, True),
-        "BackFlow_FSZ_SRDiff_NonIdentity_Complex": (False, True, False),
-        "BackFlow_FSZ_SRDiff_MomentumProjection_NonIdentity_Complex": (True, True, False),
+        "BackFlow_FSZ_SRDiff_Identity_Complex": (False, False, True, False),
+        "BackFlow_FSZ_SRDiff_Identity_Complex_mpi": (False, False, True, False),
+        "BackFlow_FSZ_SRDiff_MomentumProjection_Complex": (True, False, True, False),
+        "BackFlow_FSZ_SRDiff_NonIdentity_Complex": (False, True, False, False),
+        "BackFlow_FSZ_SRDiff_MomentumProjection_NonIdentity_Complex": (
+            True, True, False, False,
+        ),
+        "BackFlow_FSZ_SRDiff_SpinChanging_NonIdentity_Complex": (
+            False, True, False, True,
+        ),
     }
     if case_name not in sr_diff_cases:
         return None
 
-    use_momentum, use_nonidentity, check_identity = sr_diff_cases[case_name]
+    use_momentum, use_nonidentity, check_identity, use_spin_changing = sr_diff_cases[case_name]
     workdir = prepare_case(rootdir, case_name, True)
     update_modpara(workdir, {"NVMCSample": "1"})
+    if use_spin_changing:
+        update_modpara(workdir, {"2Sz": "-1"})
+        write_spin_changing_c2_defs(workdir)
     if use_momentum:
         update_modpara(workdir, {"NMPTrans": "2"})
         make_momentum_projection(workdir)
@@ -1452,6 +1599,30 @@ def run_optimization_case(rootdir, case_name, mpi_procs=None):
     return run_positive_optimization_case(rootdir, case_name, mpi_procs, options)
 
 
+def run_spin_changing_optimization_case(rootdir, case_name, mpi_procs=None):
+    if case_name != "BackFlow_FSZ_SpinChanging_C_Optimization_NonIdentity_Complex":
+        return None
+    workdir = prepare_optimization_case(
+        rootdir,
+        case_name,
+        include_backflow=True,
+        orbital_complex_type=1,
+        orbital_optimize=True,
+        backflow_optimize=True,
+        nstore=0,
+        nsrcg=0,
+        samples=16,
+    )
+    update_modpara(workdir, {"2Sz": "-1"})
+    write_spin_changing_c2_defs(workdir)
+    init_path = write_nonidentity_init(workdir)
+    proc = run_vmc(rootdir, workdir, mpi_procs=mpi_procs, init_path=init_path)
+    if proc.returncode != 0:
+        print(proc.stdout)
+        return proc.returncode
+    return assert_optimization_outputs(workdir, include_backflow=True)
+
+
 def expect_invalid(rootdir, name, updates, expected, mpi_procs=None, local_sites=None, mutate_defs=None):
     workdir = prepare_case(rootdir, name, True)
     update_modpara(workdir, updates)
@@ -1510,6 +1681,346 @@ def get_named_invalid_case(case_name):
     return invalid_cases.get(case_name)
 
 
+def assert_spin_changing_c1_counters(workdir, expect_accept):
+    counters = read_sampling_counters(
+        os.path.join(workdir, "output", "zvo_time_001.dat"),
+    )
+    if counters["n_hop"] <= 0 or counters["n_lsf"] <= 0:
+        print("ERROR: spin-changing sampler did not propose both hop and local spin flip: {}".format(
+            counters))
+        return -1
+    if expect_accept:
+        if counters["acc_hop"] <= 0.0 or counters["acc_lsf"] <= 0.0:
+            print("ERROR: spin-changing sampler did not accept both proposal classes: {}".format(
+                counters))
+            return -1
+    elif counters["acc_hop"] != 0.0 or counters["acc_lsf"] != 0.0:
+        print("ERROR: forced-reject spin-changing sampler accepted a proposal: {}".format(
+            counters))
+        return -1
+    return 0
+
+
+def assert_spin_changing_one_body_nonzero(workdir):
+    rows = read_float_rows(
+        os.path.join(workdir, "output", "zvo_cisajs_001.dat"),
+    )
+    spin_changing_rows = rows[1:5]
+    max_abs = max(abs(value) for row in spin_changing_rows for value in row[-2:])
+    if not math.isfinite(max_abs) or max_abs <= 1.0e-12:
+        print("ERROR: spin-changing OneBodyG result was vacuous")
+        return -1
+    return 0
+
+
+def run_spin_changing_c1_case(rootdir, case_name, mpi_procs=None):
+    cases = {
+        "BackFlow_FSZ_SpinChanging_C1_Identity_Complex": (True, False, False, False),
+        "BackFlow_FSZ_SpinChanging_C1_Identity_Complex_mpi": (True, False, False, False),
+        "BackFlow_FSZ_SpinChanging_C1_Identity_Complex_omp": (True, False, False, False),
+        "BackFlow_FSZ_SpinChanging_C1_Identity_Complex_omp_nested_off": (True, False, False, False),
+        "BackFlow_FSZ_SpinChanging_C1_MomentumProjection_Complex": (True, True, False, False),
+        "BackFlow_FSZ_SpinChanging_C1_MomentumProjection_NonIdentity_Complex": (
+            False, True, False, False,
+        ),
+        "BackFlow_FSZ_SpinChanging_C1_NonIdentity_Complex_mpi": (False, False, False, False),
+        "BackFlow_FSZ_SpinChanging_C1_Reject_NonIdentity_Complex": (False, False, True, False),
+        "BackFlow_FSZ_SpinChanging_C1_RankFallback_NonIdentity_Complex_mpi": (
+            False, True, False, True,
+        ),
+    }
+    if case_name not in cases:
+        return None
+
+    compare_no_bf, use_momentum, force_reject, rank_fallback = cases[case_name]
+    bf_workdir = prepare_case(rootdir, case_name, True)
+    update_modpara(bf_workdir, {"2Sz": "-1"})
+    if mpi_procs:
+        update_modpara(bf_workdir, {"NSplitSize": str(mpi_procs)})
+    write_spin_changing_c1_defs(bf_workdir)
+    if use_momentum:
+        update_modpara(bf_workdir, {"NMPTrans": "2"})
+        make_momentum_projection(bf_workdir)
+
+    init_path = None if compare_no_bf else write_nonidentity_init(bf_workdir)
+    bf_env = {
+        "MVMC_BF_PROFILE": "1",
+        "MVMC_BF_FSZ_GREEN_REBUILD_CHECK": "1",
+        "MVMC_BF_FSZ_AFFECTED_CHECK": "1",
+        "MVMC_BF_FSZ_MATRIX_FREE_CHECK": "1",
+        "MVMC_BF_FSZ_PF_UPDATE_CHECK": "1",
+        "MVMC_BF_FSZ_INV_UPDATE_CHECK": "1",
+    }
+    if force_reject:
+        bf_env["MVMC_BF_FSZ_SAMPLING_REJECT_CHECK"] = "1"
+    if rank_fallback:
+        bf_env["MVMC_BF_FSZ_INV_UPDATE_INJECT_STAGE"] = "1"
+        bf_env["MVMC_BF_FSZ_INV_UPDATE_INJECT_RANK"] = "1"
+
+    bf_proc = run_vmc(
+        rootdir,
+        bf_workdir,
+        mpi_procs=mpi_procs,
+        init_path=init_path,
+        extra_env=bf_env,
+    )
+    if bf_proc.returncode != 0:
+        print(bf_proc.stdout)
+        return bf_proc.returncode
+
+    status = assert_spin_changing_c1_counters(bf_workdir, not force_reject)
+    if status != 0:
+        return status
+
+    timer_path = os.path.join(bf_workdir, "output", "zvo_CalcTimer.dat")
+    if force_reject:
+        inv_paths = read_bffsz_inv_paths(timer_path)
+        commits = read_bffsz_sample_commits(timer_path)
+        path_names = ("optimized", "direct-full", "fallback")
+        if sum(inv_paths[name] for name in path_names) != 0 \
+                or sum(commits[name] for name in path_names) != 0:
+            print("ERROR: forced-reject spin-changing proposal committed matrix state")
+            return -1
+        return 0
+
+    for filename, label in (
+        ("zvo_out_001.dat", "spin-changing Hamiltonian"),
+        ("zvo_cisajs_001.dat", "spin-changing OneBodyG"),
+        ("zvo_cisajscktalt_001.dat", "C1 spin-conserving TwoBodyG"),
+    ):
+        status = assert_finite_nonzero_rows(
+            os.path.join(bf_workdir, "output", filename), label,
+        )
+        if status != 0:
+            return status
+    status = assert_spin_changing_one_body_nonzero(bf_workdir)
+    if status != 0:
+        return status
+
+    if rank_fallback:
+        inv_paths = read_bffsz_inv_paths(timer_path)
+        commits = read_bffsz_sample_commits(timer_path)
+        if inv_paths["fallback"] <= 0 or inv_paths["optimized"] != 0:
+            print("ERROR: rank-specific spin-changing inverse fallback was not collective")
+            return -1
+        if commits["fallback"] != inv_paths["fallback"]:
+            print("ERROR: rank-specific spin-changing fallback commit count mismatch")
+            return -1
+
+    if not compare_no_bf:
+        return 0
+
+    no_bf_workdir = prepare_case(rootdir, case_name + "_nobf", False)
+    update_modpara(no_bf_workdir, {"2Sz": "-1"})
+    if mpi_procs:
+        update_modpara(no_bf_workdir, {"NSplitSize": str(mpi_procs)})
+    write_spin_changing_c1_defs(no_bf_workdir)
+    if use_momentum:
+        update_modpara(no_bf_workdir, {"NMPTrans": "2"})
+        make_momentum_projection(no_bf_workdir)
+    no_bf_proc = run_vmc(rootdir, no_bf_workdir, mpi_procs=mpi_procs)
+    if no_bf_proc.returncode != 0:
+        print(no_bf_proc.stdout)
+        return no_bf_proc.returncode
+    status = assert_spin_changing_c1_counters(no_bf_workdir, True)
+    if status != 0:
+        return status
+
+    for filename, label in (
+        ("zvo_out_001.dat", "spin-changing energy"),
+        ("zvo_cisajs_001.dat", "spin-changing OneBodyG"),
+        ("zvo_cisajscktalt_001.dat", "C1 TwoBodyG"),
+    ):
+        bf_rows = read_float_rows(os.path.join(bf_workdir, "output", filename))
+        no_bf_rows = read_float_rows(os.path.join(no_bf_workdir, "output", filename))
+        diff = max_abs_diff(bf_rows, no_bf_rows)
+        if diff > 1.0e-10:
+            print("ERROR: BackFlow FSZ identity {} mismatch: max_abs_diff={:.3e}".format(
+                label, diff))
+            return -1
+    return 0
+
+
+def assert_spin_changing_c2_rows(workdir):
+    rows = read_float_rows(
+        os.path.join(workdir, "output", "zvo_cisajscktalt_001.dat"),
+    )
+    if len(rows) != 15:
+        print("ERROR: C2 Green2 class row count mismatch: {}".format(len(rows)))
+        return -1
+    for index in (2, 5, 6, 7, 12):
+        if max(abs(value) for value in rows[index][-2:]) > 1.0e-12:
+            print("ERROR: C2 structural-zero class {} was nonzero".format(index + 1))
+            return -1
+    true_two_body = max(abs(value) for value in rows[14][-2:])
+    if not math.isfinite(true_two_body) or true_two_body <= 1.0e-12:
+        print("ERROR: C2 true two-particle Green2 path was vacuous")
+        return -1
+    return 0
+
+
+def run_spin_changing_c2_case(rootdir, case_name, mpi_procs=None):
+    cases = {
+        "BackFlow_FSZ_SpinChanging_C2_Identity_Complex": (True, False, False),
+        "BackFlow_FSZ_SpinChanging_C2_Identity_Complex_mpi": (True, False, False),
+        "BackFlow_FSZ_SpinChanging_C2_Identity_Complex_omp": (True, False, False),
+        "BackFlow_FSZ_SpinChanging_C2_MomentumProjection_Complex": (True, True, False),
+        "BackFlow_FSZ_SpinChanging_C2_MomentumProjection_NonIdentity_Complex": (
+            False, True, False,
+        ),
+        "BackFlow_FSZ_SpinChanging_C2_Order_NonIdentity_Complex": (False, False, True),
+    }
+    if case_name not in cases:
+        return None
+
+    compare_no_bf, use_momentum, compare_order = cases[case_name]
+    bf_workdir = prepare_case(rootdir, case_name, True)
+    update_modpara(bf_workdir, {"2Sz": "-1", "NVMCSample": "64"})
+    if mpi_procs:
+        update_modpara(bf_workdir, {"NSplitSize": str(mpi_procs)})
+    two_body_rows = write_spin_changing_c2_defs(bf_workdir)
+    if use_momentum:
+        update_modpara(bf_workdir, {"NMPTrans": "2"})
+        make_momentum_projection(bf_workdir)
+    init_path = None if compare_no_bf else write_nonidentity_init(bf_workdir)
+    bf_env = {
+        "MVMC_BF_FSZ_GREEN_REBUILD_CHECK": "1",
+        "MVMC_BF_FSZ_AFFECTED_CHECK": "1",
+        "MVMC_BF_FSZ_MATRIX_FREE_CHECK": "1",
+    }
+    bf_proc = run_vmc(
+        rootdir,
+        bf_workdir,
+        mpi_procs=mpi_procs,
+        init_path=init_path,
+        extra_env=bf_env,
+    )
+    if bf_proc.returncode != 0:
+        print(bf_proc.stdout)
+        return bf_proc.returncode
+    status = assert_spin_changing_c1_counters(bf_workdir, True)
+    if status != 0:
+        return status
+    status = assert_spin_changing_one_body_nonzero(bf_workdir)
+    if status != 0:
+        return status
+    status = assert_spin_changing_c2_rows(bf_workdir)
+    if status != 0:
+        return status
+
+    if compare_order:
+        reference_workdir = prepare_case(rootdir, case_name + "_reference", True)
+        update_modpara(reference_workdir, {"2Sz": "-1", "NVMCSample": "64"})
+        reference_rows = write_spin_changing_c2_defs(
+            reference_workdir, reverse_two_body=True,
+        )
+        reference_init = write_nonidentity_init(reference_workdir)
+        reference_proc = run_vmc(
+            rootdir,
+            reference_workdir,
+            init_path=reference_init,
+            extra_env=bf_env,
+        )
+        if reference_proc.returncode != 0:
+            print(reference_proc.stdout)
+            return reference_proc.returncode
+        ordered_values = read_float_rows(
+            os.path.join(bf_workdir, "output", "zvo_cisajscktalt_001.dat"),
+        )
+        reference_values = read_float_rows(
+            os.path.join(reference_workdir, "output", "zvo_cisajscktalt_001.dat"),
+        )
+        ordered_by_term = dict(zip(two_body_rows, ordered_values))
+        reference_by_term = dict(zip(reference_rows, reference_values))
+        diff = max_abs_diff(
+            [ordered_by_term[row][-2:] for row in two_body_rows],
+            [reference_by_term[row][-2:] for row in two_body_rows],
+        )
+        if diff > 1.0e-12:
+            print("ERROR: C2 Green2 depends on term order: max_abs_diff={:.3e}".format(diff))
+            return -1
+        ordered_energy = read_first_row(
+            os.path.join(bf_workdir, "output", "zvo_out_001.dat"),
+        )
+        reference_energy = read_first_row(
+            os.path.join(reference_workdir, "output", "zvo_out_001.dat"),
+        )
+        if max_abs_diff([ordered_energy], [reference_energy]) > 1.0e-12:
+            print("ERROR: C2 Hamiltonian changed after Green2 term reordering")
+            return -1
+        return 0
+
+    if not compare_no_bf:
+        return 0
+
+    no_bf_workdir = prepare_case(rootdir, case_name + "_nobf", False)
+    update_modpara(no_bf_workdir, {"2Sz": "-1", "NVMCSample": "64"})
+    if mpi_procs:
+        update_modpara(no_bf_workdir, {"NSplitSize": str(mpi_procs)})
+    write_spin_changing_c2_defs(no_bf_workdir)
+    if use_momentum:
+        update_modpara(no_bf_workdir, {"NMPTrans": "2"})
+        make_momentum_projection(no_bf_workdir)
+    no_bf_proc = run_vmc(rootdir, no_bf_workdir, mpi_procs=mpi_procs)
+    if no_bf_proc.returncode != 0:
+        print(no_bf_proc.stdout)
+        return no_bf_proc.returncode
+    status = assert_spin_changing_c2_rows(no_bf_workdir)
+    if status != 0:
+        return status
+
+    for filename, label in (
+        ("zvo_out_001.dat", "C2 two-body Hamiltonian"),
+        ("zvo_cisajs_001.dat", "C2 OneBodyG"),
+        ("zvo_cisajscktaltex_001.dat", "C2 TwoBodyGEx"),
+        ("zvo_cisajscktalt_001.dat", "C2 Green2 classes"),
+    ):
+        bf_rows = read_float_rows(os.path.join(bf_workdir, "output", filename))
+        no_bf_rows = read_float_rows(os.path.join(no_bf_workdir, "output", filename))
+        diff = max_abs_diff(bf_rows, no_bf_rows)
+        if diff > 1.0e-10:
+            print("ERROR: BackFlow FSZ identity {} mismatch: max_abs_diff={:.3e}".format(
+                label, diff))
+            return -1
+    return 0
+
+
+def run_c2_nonfsz_invalid_case(rootdir, case_name, mpi_procs=None):
+    if case_name != "BackFlow_InvalidTwoBodyHamiltonian_NonFSZ":
+        return None
+    refdir = os.path.join(rootdir, "data", "BackFlow_Identity_Complex")
+    workdir = os.path.join(rootdir, "work", case_name)
+    if os.path.exists(workdir):
+        shutil.rmtree(workdir)
+    os.makedirs(workdir)
+    for filename in os.listdir(refdir):
+        source = os.path.join(refdir, filename)
+        if os.path.isfile(source):
+            shutil.copy(source, os.path.join(workdir, filename))
+    write_chain_nn_backflow(workdir, length=4, optimize=False)
+    with open(os.path.join(workdir, "pairhop.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NPairHopp          1\n")
+        fp.write("=============================================\n")
+        fp.write("====== Pair-Hopping term ====================\n")
+        fp.write("=============================================\n")
+        fp.write("    0     1          0.370000000000000\n")
+    append_namelist_entry(workdir, "PairHop", "pairhop.def")
+    proc = run_vmc(rootdir, workdir, mpi_procs=mpi_procs)
+    expected = "BackFlow MVP does not support two-body Hamiltonian terms"
+    if proc.returncode == 0:
+        print("ERROR: non-FSZ BackFlow two-body Hamiltonian unexpectedly succeeded")
+        return -1
+    if expected not in proc.stdout:
+        print("ERROR: non-FSZ BackFlow two-body Hamiltonian did not report expected error")
+        print(proc.stdout)
+        return -1
+    if "Start: Sampling." in proc.stdout:
+        print("ERROR: non-FSZ BackFlow two-body Hamiltonian reached sampling")
+        return -1
+    return 0
+
+
 def main():
     case_name = sys.argv[1] if len(sys.argv) > 1 else "BackFlow_FSZ_IdentityEnergy_Complex"
     rootdir = os.getcwd()
@@ -1521,6 +2032,15 @@ def main():
     )
     nonidentity_momentum_case = case_name == "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex"
     named_invalid = get_named_invalid_case(case_name)
+    c1_status = run_spin_changing_c1_case(rootdir, case_name, mpi_procs)
+    if c1_status is not None:
+        return c1_status
+    c2_status = run_spin_changing_c2_case(rootdir, case_name, mpi_procs)
+    if c2_status is not None:
+        return c2_status
+    c2_invalid_status = run_c2_nonfsz_invalid_case(rootdir, case_name, mpi_procs)
+    if c2_invalid_status is not None:
+        return c2_invalid_status
     stale_base_status = run_twobody_stale_base_case(rootdir, case_name, mpi_procs)
     if stale_base_status is not None:
         return stale_base_status
@@ -1530,6 +2050,11 @@ def main():
     optimization_status = run_optimization_case(rootdir, case_name, mpi_procs)
     if optimization_status is not None:
         return optimization_status
+    spin_optimization_status = run_spin_changing_optimization_case(
+        rootdir, case_name, mpi_procs,
+    )
+    if spin_optimization_status is not None:
+        return spin_optimization_status
     if named_invalid is not None:
         updates, expected, local_sites, mutate_defs = named_invalid
         return expect_invalid(rootdir, case_name, updates, expected, mpi_procs, local_sites, mutate_defs)

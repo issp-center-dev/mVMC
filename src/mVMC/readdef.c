@@ -2442,10 +2442,6 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               bufInt[IdxNCond] = (int) dtmp;
             } else if (CheckWords(ctmp, "2Sz") == 0) {
               bufInt[Idx2Sz] = (int) dtmp;
-              if (bufInt[Idx2Sz] == -1) {
-                fprintf(stdout, "Error: 2Sz must be even number.\n");
-                return (-1);
-              }
             } else if (CheckWords(ctmp, "NSPGaussLeg") == 0) {
               bufInt[IdxSPGaussLeg] = (int) dtmp;
             } else if (CheckWords(ctmp, "NSPStot") == 0) {

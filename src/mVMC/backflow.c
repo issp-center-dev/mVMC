@@ -201,10 +201,6 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
     fprintf(stderr, "Error: BackFlow MVP supports only NExUpdatePath==0 (got %d).\n", NExUpdatePath);
     return 1;
   }
-  if (iFlgOrbitalGeneral != 0 && TwoSz == -1) {
-    fprintf(stderr, "Error: BackFlow FSZ does not support TwoSz==-1 spin-changing updates yet.\n");
-    return 1;
-  }
   if (NSPGaussLeg != 1) {
     fprintf(stderr, "Error: BackFlow MVP supports only NSPGaussLeg==1 (got %d).\n", NSPGaussLeg);
     return 1;
@@ -239,7 +235,8 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
     fprintf(stderr, "Error: BackFlow MVP does not support NLanczosMode > 0.\n");
     return 1;
   }
-  if (NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0) {
+  if (iFlgOrbitalGeneral == 0 &&
+      (NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0)) {
     fprintf(stderr, "Error: BackFlow MVP does not support two-body Hamiltonian terms.\n");
     return 1;
   }
@@ -252,21 +249,22 @@ int BFValidateFszDefinitionDetails(void) {
   if (NProjBF <= 0 || iFlgOrbitalGeneral == 0) return 0;
 
   for (idx = 0; idx < NTransfer; idx++) {
-    if (Transfer[idx][1] != Transfer[idx][3]) {
+    if (TwoSz != -1 && Transfer[idx][1] != Transfer[idx][3]) {
       fprintf(stderr, "Error: BackFlow FSZ supports only spin-conserving Transfer terms.\n");
       return 1;
     }
   }
   for (idx = 0; idx < NCisAjs; idx++) {
-    if (CisAjsIdx[idx][1] != CisAjsIdx[idx][3]) {
+    if (TwoSz != -1 && CisAjsIdx[idx][1] != CisAjsIdx[idx][3]) {
       fprintf(stderr, "Error: BackFlow FSZ supports only spin-conserving OneBodyG terms "
                       "(including entries derived from TwoBodyGEx).\n");
       return 1;
     }
   }
   for (idx = 0; idx < NCisAjsCktAltDC; idx++) {
-    if (CisAjsCktAltDCIdx[idx][1] != CisAjsCktAltDCIdx[idx][3] ||
-        CisAjsCktAltDCIdx[idx][5] != CisAjsCktAltDCIdx[idx][7]) {
+    if (TwoSz != -1 &&
+        (CisAjsCktAltDCIdx[idx][1] != CisAjsCktAltDCIdx[idx][3] ||
+         CisAjsCktAltDCIdx[idx][5] != CisAjsCktAltDCIdx[idx][7])) {
       fprintf(stderr, "Error: BackFlow FSZ supports only spin-conserving TwoBodyG terms.\n");
       return 1;
     }

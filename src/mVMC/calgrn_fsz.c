@@ -45,8 +45,27 @@ double complex GreenFunc1BF_fsz_workspace(const int ri, const int rj, const int 
                   int *affected, int *hopIntWork, int hopIntWorkSize, int *pfIWork,
                   double complex *pfWork, double *pfRWork);
 
+double complex GreenFunc1BF_fsz2_workspace(const int ri, const int rj,
+                  const int s, const int t, const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum,
+                  const int *eleProjCnt, int *eleSpn, int *projCntNew,
+                  const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, double complex *pfBufM,
+                  int *affected, int *hopIntWork, int hopIntWorkSize, int *pfIWork,
+                  double complex *pfWork, double *pfRWork);
+
 double complex GreenFunc2BF_fsz(const int ri, const int rj, const int rk, const int rl,
                   const int s, const int t, const double complex ip,
+                  int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
+                  double complex *buffer, int *affected,
+                  int *hopIntWork, int hopIntWorkSize,
+                  int *pfIWork, double *pfRWork,
+                  double complex *pfBufM, double complex *pfWork);
+
+double complex GreenFunc2BF_fsz2(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t, const int u, const int v,
+                  const double complex ip,
                   int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
                   int *projCntNew, const int *eleProjBFCnt, int *projBFCntNew,
                   double complex *buffer, int *affected,
@@ -370,15 +389,11 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
       s  = CisAjsIdx[idx][1];
       rj = CisAjsIdx[idx][2];
       t  = CisAjsIdx[idx][3];
-      if(s != t) {
-        fprintf(stderr, "Error: BackFlow FSZ does not support spin-changing OneBodyG yet.\n");
-        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-      }
-      tmp = GreenFunc1BF_fsz_workspace(ri,rj,s,ip,thEleIdx,thEleCfg,thEleNum,
-                              eleProjCnt,thEleSpn,thProjCntNew,eleProjBFCnt,
-                              thProjBFCntNew,thBuffer,thPfBufM,
-                              thAffected,thHopIntWork,bfHopIntSize,thPfIWork,
-                              thPfWork,thPfRWork);
+      tmp = GreenFunc1BF_fsz2_workspace(ri,rj,s,t,ip,
+                              thEleIdx,thEleCfg,thEleNum,eleProjCnt,thEleSpn,
+                              thProjCntNew,eleProjBFCnt,thProjBFCntNew,
+                              thBuffer,thPfBufM,thAffected,thHopIntWork,
+                              bfHopIntSize,thPfIWork,thPfWork,thPfRWork);
       LocalCisAjs[idx] = tmp;
     }
 
@@ -402,11 +417,8 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     rl = CisAjsCktAltDCIdx[idx][6];
     v  = CisAjsCktAltDCIdx[idx][7];
 
-    if(s != t || u != v) {
-      fprintf(stderr, "Error: BackFlow FSZ does not support spin-changing TwoBodyG yet.\n");
-      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    }
-    tmp = GreenFunc2BF_fsz(ri,rj,rk,rl,s,u,ip,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
+    tmp = GreenFunc2BF_fsz2(ri,rj,rk,rl,s,t,u,v,ip,
+                           myEleIdx,myEleCfg,myEleNum,eleProjCnt,myEleSpn,
                            myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
                            myAffected,myHopIntWork,bfHopIntSize,
                            myPfIWork,myPfRWork,myPfBufM,myPfWork);
