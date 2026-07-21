@@ -2,8 +2,8 @@
 #define _VMCCAL_FSZ
 #include <complex.h>
 
-void VMCMainCal_fsz(MPI_Comm comm);
-void VMC_BF_MainCal_fsz(MPI_Comm comm);
+/* parent: run-wide diagnostics/accounting; child: sample decomposition. */
+void VMCMainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm_child);
+void VMC_BF_MainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm_child);
 
 #endif
-

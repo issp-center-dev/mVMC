@@ -1,8 +1,7 @@
 #ifndef _VMCCAL
 #define _VMCCAL
 #include <complex.h>
-void VMCMainCal(MPI_Comm comm);
-void VMC_BF_MainCal(MPI_Comm comm);
+/* parent: run-wide diagnostics/accounting; child: sample decomposition. */
+void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm_child);
+void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm_child);
 #endif
-
-
