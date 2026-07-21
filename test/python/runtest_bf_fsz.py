@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import sys
+import glob
 
 from backflow_def_helper import build_chain_nn_backflow, write_chain_nn_backflow
 
@@ -846,6 +847,629 @@ def prepare_case(rootdir, name, include_backflow, orbital_complex_type=1,
     if include_backflow:
         write_chain_nn_backflow(workdir, length=4, optimize=backflow_optimize)
     return workdir
+
+
+def assert_lanczos_outputs(workdir, label):
+    for filename in ("zvo_ls_out_001.dat", "zvo_ls_qqqq_001.dat"):
+        path = os.path.join(workdir, "output", filename)
+        if not os.path.exists(path):
+            print("ERROR: {} did not create {}".format(label, filename))
+            return -1
+        status = assert_finite_nonzero_rows(path, "{} {}".format(label, filename))
+        if status != 0:
+            return status
+    return 0
+
+
+def write_lanczos_init(workdir):
+    nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidxgen.def"))
+    values = [0.0] * 6
+    for idx in range(nslater):
+        values.extend([
+            math.sin(0.37 * float(idx + 1)),
+            0.0,
+            0.0,
+        ])
+    filename = "lanczos_init.dat"
+    with open(os.path.join(workdir, filename), "w") as fp:
+        fp.write(" ".join("{:.18e}".format(value) for value in values))
+        fp.write("\n")
+    return filename
+
+
+def write_nonfsz_lanczos_namelist(workdir):
+    lines = [
+        "         ModPara  modpara.def",
+        "         LocSpin  locspn.def",
+        "           Trans  trans.def",
+        "        OneBodyG  greenone.def",
+        "        TwoBodyG  greentwo.def",
+        "         Orbital  orbitalidx.def",
+        "        TransSym  qptransidx.def",
+    ]
+    with open(os.path.join(workdir, "namelist.def"), "w") as fp:
+        fp.write("\n".join(lines) + "\n")
+
+
+def lanczos_cross_family_values(nsite=4):
+    return [math.sin(0.37 * float(idx + 1))
+            for idx in range(nsite * nsite)]
+
+
+def write_lanczos_cross_family_init(workdir, general, nsite=4):
+    ap_values = lanczos_cross_family_values(nsite)
+    orbital_values = []
+    if general:
+        nsite2 = 2 * nsite
+        for all_i in range(nsite2):
+            for all_j in range(all_i + 1, nsite2):
+                if all_i < nsite and all_j >= nsite:
+                    site_i = all_i
+                    site_j = all_j - nsite
+                    orbital_values.append(0.5 * ap_values[site_i*nsite + site_j])
+                else:
+                    orbital_values.append(0.0)
+    else:
+        orbital_values = ap_values
+
+    values = [0.0] * 6
+    for value in orbital_values:
+        values.extend([value, 0.0, 0.0])
+    filename = "lanczos_cross_family_init.dat"
+    with open(os.path.join(workdir, filename), "w") as fp:
+        fp.write(" ".join("{:.18e}".format(value) for value in values))
+        fp.write("\n")
+    return filename
+
+
+def read_lanczos_oracle(path):
+    rows = []
+    with open(path) as fp:
+        for line in fp:
+            cols = line.split()
+            if len(cols) < 4 or cols[0] != "sample" or "lslq" not in cols:
+                raise RuntimeError("invalid Lanczos oracle row in {}".format(path))
+            split = cols.index("lslq")
+            occupancy = tuple(int(value) for value in cols[3:split])
+            raw_values = [float(value) for value in cols[split + 1:]]
+            if len(raw_values) != 8:
+                raise RuntimeError("invalid LSLQ width in {}".format(path))
+            lslq = tuple(complex(raw_values[idx], raw_values[idx + 1])
+                          for idx in range(0, len(raw_values), 2))
+            rows.append((occupancy, lslq))
+    if not rows:
+        raise RuntimeError("Lanczos oracle dump is empty: {}".format(path))
+    return rows
+
+
+def scaled_complex_diff(left, right, abs_tol, rel_tol):
+    allowed = abs_tol + rel_tol * max(abs(left), abs(right))
+    return abs(left - right) / allowed
+
+
+def lanczos_oracle_by_occupancy(rows, abs_tol=1.0e-10,
+                                rel_tol=1.0e-9):
+    values = {}
+    for occupancy, lslq in rows:
+        if occupancy in values:
+            scaled = max(scaled_complex_diff(left, right, abs_tol, rel_tol)
+                         for left, right in zip(values[occupancy], lslq))
+            if scaled > 1.0:
+                raise RuntimeError(
+                    "sample-local LSLQ changed for occupancy {}: "
+                    "max_scaled_diff={:.3e}".format(occupancy, scaled))
+        else:
+            values[occupancy] = lslq
+    return values
+
+
+def read_lanczos_oracle_set(workdir, basename, rank_count=1):
+    base_path = os.path.join(workdir, basename)
+    if rank_count > 1:
+        expected = [base_path + ".rank{:04d}".format(rank)
+                    for rank in range(rank_count)]
+    else:
+        expected = [base_path]
+    paths = sorted(glob.glob(base_path + "*"))
+    if paths != expected:
+        raise RuntimeError(
+            "Lanczos oracle rank files mismatch for {}: expected {}, got {}".format(
+                base_path, expected, paths))
+    rows = []
+    for path in paths:
+        rows.extend(read_lanczos_oracle(path))
+    return lanczos_oracle_by_occupancy(rows)
+
+
+def compare_lanczos_oracle_sets(left_workdir, left_name,
+                                 right_workdir, right_name,
+                                 label, abs_tol=1.0e-10,
+                                 rel_tol=1.0e-9, rank_count=1):
+    try:
+        left = read_lanczos_oracle_set(left_workdir, left_name, rank_count)
+        right = read_lanczos_oracle_set(right_workdir, right_name, rank_count)
+    except (OSError, RuntimeError, ValueError) as exc:
+        print("ERROR: {}".format(exc))
+        return -1
+    common = sorted(set(left).intersection(right))
+    if len(common) < 4:
+        print("ERROR: {} has only {} common sampled occupancies".format(
+            label, len(common)))
+        return -1
+    max_scaled_diff = 0.0
+    for occupancy in common:
+        max_scaled_diff = max(max_scaled_diff, max(
+            scaled_complex_diff(x, y, abs_tol, rel_tol)
+            for x, y in zip(left[occupancy], right[occupancy])))
+    if max_scaled_diff > 1.0:
+        print("ERROR: {} mismatch across {} occupancies: "
+              "max_scaled_diff={:.3e}".format(
+                  label, len(common), max_scaled_diff))
+        return -1
+    return 0
+
+
+def compare_lanczos_output_files(left_workdir, right_workdir,
+                                  label, abs_tol=1.0e-9,
+                                  rel_tol=1.0e-8):
+    for filename in ("zvo_ls_out_001.dat", "zvo_ls_qqqq_001.dat"):
+        left = read_float_rows(os.path.join(left_workdir, "output", filename))
+        right = read_float_rows(os.path.join(right_workdir, "output", filename))
+        if len(left) != len(right):
+            print("ERROR: {} {} row-count mismatch".format(label, filename))
+            return -1
+        max_scaled_diff = 0.0
+        for left_row, right_row in zip(left, right):
+            if len(left_row) != len(right_row):
+                print("ERROR: {} {} column-count mismatch".format(
+                    label, filename))
+                return -1
+            max_scaled_diff = max(max_scaled_diff, max(
+                scaled_complex_diff(x, y, abs_tol, rel_tol)
+                for x, y in zip(left_row, right_row)))
+        if max_scaled_diff > 1.0:
+            print("ERROR: {} {} mismatch: max_scaled_diff={:.3e}".format(
+                label, filename, max_scaled_diff))
+            return -1
+    return 0
+
+
+def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
+    if case_name == "BackFlow_FSZ_Lanczos_ProfileIsolation":
+        if mpi_procs:
+            raise RuntimeError("BF-FSZ Lanczos profile isolation is a single-rank test")
+        workdirs = {}
+        for suffix, lanczos_mode in (("baseline", "0"), ("lanczos", "1")):
+            workdir = prepare_case(
+                rootdir, case_name + "_" + suffix, include_backflow=True,
+                orbital_complex_type=1, orbital_optimize=True,
+                backflow_optimize=False)
+            update_modpara(workdir, {
+                "NLanczosMode": lanczos_mode,
+                "NVMCCalMode": "1",
+                "NVMCSample": "32",
+                "NVMCWarmUp": "8",
+            })
+            init_path = write_nonidentity_init(workdir)
+            proc = run_vmc(
+                rootdir, workdir, init_path=init_path,
+                extra_env={
+                    "MVMC_BF_PROFILE": "1",
+                    "MVMC_BF_LANCZOS_STATE_CHECK": "1",
+                })
+            if proc.returncode != 0:
+                print(proc.stdout)
+                return proc.returncode
+            workdirs[suffix] = workdir
+        status = assert_lanczos_outputs(workdirs["lanczos"], case_name)
+        if status != 0:
+            return status
+        baseline_timer = os.path.join(
+            workdirs["baseline"], "output", "zvo_CalcTimer.dat")
+        lanczos_timer = os.path.join(
+            workdirs["lanczos"], "output", "zvo_CalcTimer.dat")
+        if read_stable_bf_profile_lines(baseline_timer) \
+                != read_stable_bf_profile_lines(lanczos_timer):
+            print("ERROR: BF-FSZ Lanczos trial evaluation polluted BF profile counters")
+            return -1
+        return assert_files_byte_identical(
+            workdirs["baseline"], workdirs["lanczos"], (
+                "zvo_out_001.dat", "zvo_var_001.dat",
+                "zvo_cisajs_001.dat", "zvo_cisajscktalt_001.dat",
+            ))
+
+    cases = {
+        "BackFlow_FSZ_Lanczos_Identity_Complex": (1, False, False, False, True),
+        "BackFlow_FSZ_Lanczos_Identity_Complex_mpi": (1, False, False, False, True),
+        "BackFlow_FSZ_Lanczos_Identity_Complex_omp": (1, False, False, False, True),
+        "BackFlow_FSZ_Lanczos_Identity_Real": (0, False, False, False, True),
+        "BackFlow_FSZ_Lanczos_SpinChanging_Identity_Complex": (1, True, False, False, True),
+        "BackFlow_FSZ_Lanczos_SpinChanging_Identity_Complex_mpi": (1, True, False, False, True),
+        "BackFlow_FSZ_Lanczos_SpinChanging_Identity_Complex_omp": (1, True, False, False, True),
+        "BackFlow_FSZ_Lanczos_SpinChanging_NonIdentity_Complex": (1, True, False, True, False),
+        "BackFlow_FSZ_Lanczos_SpinChanging_NonIdentity_Complex_omp": (1, True, False, True, False),
+        "BackFlow_FSZ_Lanczos_MomentumProjection_Identity_Complex": (1, False, True, False, True),
+        "BackFlow_FSZ_Lanczos_MomentumProjection_NonIdentity_Complex": (1, False, True, True, False),
+        "BackFlow_FSZ_Lanczos_NonfiniteThreshold": (1, False, False, False, False),
+        "BackFlow_FSZ_Lanczos_NonfiniteThreshold_mpi": (1, False, False, False, False),
+        "BackFlow_FSZ_Lanczos_NonfiniteWarning": (1, False, False, False, False),
+        "BackFlow_FSZ_Lanczos_NonfiniteAggregateWarning_mpi": (1, False, False, False, False),
+        "BackFlow_FSZ_Lanczos_RebuildFailureWarning": (1, False, False, False, False),
+    }
+    if case_name not in cases:
+        return None
+    orbital_complex_type, spin_changing, momentum, nonidentity, compare_no_bf = cases[case_name]
+    bf_workdir = prepare_case(
+        rootdir, case_name, include_backflow=True,
+        orbital_complex_type=orbital_complex_type,
+        orbital_optimize=True, backflow_optimize=False)
+    updates = {
+        "NLanczosMode": "1",
+        "NVMCCalMode": "1",
+        "NVMCSample": ("75" if case_name.endswith(
+                       "NonfiniteAggregateWarning_mpi") else
+                       ("128" if case_name.endswith(
+                        ("NonfiniteWarning", "RebuildFailureWarning")) else "32")),
+        "NVMCWarmUp": "8",
+    }
+    if spin_changing:
+        updates["2Sz"] = "-1"
+    if momentum:
+        updates["NMPTrans"] = "2"
+    update_modpara(bf_workdir, updates)
+    if spin_changing:
+        write_spin_changing_c1_defs(bf_workdir)
+    if momentum:
+        make_momentum_projection(bf_workdir)
+    init_path = write_nonidentity_init(bf_workdir) if nonidentity else None
+    bf_dump = "lanczos_oracle_bf_fsz.dat"
+    bf_env = {
+        "MVMC_LANCZOS_ORACLE_DUMP": bf_dump,
+        "MVMC_BF_LANCZOS_STATE_CHECK": "1",
+    }
+    if case_name.startswith("BackFlow_FSZ_Lanczos_NonfiniteThreshold"):
+        bf_env["MVMC_LANCZOS_TEST_NONFINITE_SAMPLE"] = "0"
+    if case_name.endswith("NonfiniteWarning"):
+        bf_env["MVMC_LANCZOS_TEST_NONFINITE_SAMPLE"] = "0"
+    if case_name.endswith("NonfiniteAggregateWarning_mpi"):
+        bf_env["MVMC_LANCZOS_TEST_NONFINITE_SAMPLE"] = "0"
+        bf_env["MVMC_LANCZOS_TEST_NONFINITE_PARENT_RANK"] = "0"
+    if case_name.endswith("RebuildFailureWarning"):
+        bf_env["MVMC_LANCZOS_TEST_REBUILD_FAILURES"] = "1"
+    bf_proc = run_vmc(rootdir, bf_workdir, mpi_procs=mpi_procs,
+                      init_path=init_path, extra_env=bf_env)
+    if case_name.startswith("BackFlow_FSZ_Lanczos_NonfiniteThreshold"):
+        if bf_proc.returncode == 0:
+            print("ERROR: BF-FSZ non-finite Lanczos injection unexpectedly succeeded")
+            return -1
+        if "biased output will not be written" not in bf_proc.stdout:
+            print("ERROR: BF-FSZ non-finite injection missed threshold diagnostic")
+            print(bf_proc.stdout)
+            return -1
+        return 0
+    if case_name.endswith(("NonfiniteWarning", "NonfiniteAggregateWarning_mpi",
+                           "RebuildFailureWarning")):
+        if bf_proc.returncode != 0:
+            print(bf_proc.stdout)
+            return bf_proc.returncode
+        expected_count = ("1/150" if case_name.endswith(
+                          "NonfiniteAggregateWarning_mpi") else "1/128")
+        if "rejected {} samples".format(expected_count) not in bf_proc.stdout:
+            print("ERROR: BF-FSZ Lanczos rejection warning was not aggregated")
+            print(bf_proc.stdout)
+            return -1
+        return assert_lanczos_outputs(bf_workdir, case_name)
+    if bf_proc.returncode != 0:
+        print(bf_proc.stdout)
+        return bf_proc.returncode
+    status = assert_lanczos_outputs(bf_workdir, case_name)
+    if status != 0 or not compare_no_bf:
+        return status
+
+    no_bf_workdir = prepare_case(
+        rootdir, case_name + "_nobf", include_backflow=False,
+        orbital_complex_type=orbital_complex_type,
+        orbital_optimize=True)
+    update_modpara(no_bf_workdir, updates)
+    if spin_changing:
+        write_spin_changing_c1_defs(no_bf_workdir)
+    if momentum:
+        make_momentum_projection(no_bf_workdir)
+    no_bf_dump = "lanczos_oracle_fsz.dat"
+    no_bf_proc = run_vmc(
+        rootdir, no_bf_workdir, mpi_procs=mpi_procs,
+        extra_env={
+            "MVMC_LANCZOS_ORACLE_DUMP": no_bf_dump,
+            "MVMC_BF_LANCZOS_STATE_CHECK": "1",
+        })
+    if no_bf_proc.returncode != 0:
+        print(no_bf_proc.stdout)
+        return no_bf_proc.returncode
+    status = assert_lanczos_outputs(no_bf_workdir, case_name + " no-BF")
+    if status != 0:
+        return status
+    status = compare_lanczos_oracle_sets(
+        bf_workdir, bf_dump, no_bf_workdir, no_bf_dump,
+        case_name + " sample-local",
+        rank_count=int(mpi_procs) if mpi_procs else 1)
+    if status != 0:
+        return status
+    return compare_lanczos_output_files(
+        bf_workdir, no_bf_workdir, case_name + " aggregate")
+
+
+def run_lanczos_cross_family_case(rootdir, case_name, mpi_procs=None):
+    if case_name != "FSZ_Lanczos_CrossFamilyProbe":
+        return None
+    if mpi_procs:
+        raise RuntimeError("cross-family probe is a single-rank test")
+
+    nonfsz_workdir = prepare_case(
+        rootdir, case_name + "_nonfsz", include_backflow=False)
+    fsz_workdir = prepare_case(
+        rootdir, case_name + "_fsz", include_backflow=False)
+    refdir = os.path.join(rootdir, "data", "BackFlow_Identity_Complex")
+    shutil.copy(os.path.join(refdir, "orbitalidx.def"),
+                os.path.join(nonfsz_workdir, "orbitalidx.def"))
+    write_nonfsz_lanczos_namelist(nonfsz_workdir)
+
+    updates = {
+        "NLanczosMode": "1",
+        "NVMCCalMode": "1",
+        "NVMCSample": "128",
+        "NVMCWarmUp": "16",
+    }
+    update_modpara(nonfsz_workdir, updates)
+    update_modpara(fsz_workdir, updates)
+    nonfsz_init = write_lanczos_cross_family_init(nonfsz_workdir, general=False)
+    fsz_init = write_lanczos_cross_family_init(fsz_workdir, general=True)
+
+    nonfsz_dump = "lanczos_oracle_nonfsz.dat"
+    fsz_dump = "lanczos_oracle_fsz.dat"
+    nonfsz_proc = run_vmc(
+        rootdir, nonfsz_workdir, init_path=nonfsz_init,
+        extra_env={"MVMC_LANCZOS_ORACLE_DUMP": nonfsz_dump})
+    if nonfsz_proc.returncode != 0:
+        print(nonfsz_proc.stdout)
+        return nonfsz_proc.returncode
+    fsz_proc = run_vmc(
+        rootdir, fsz_workdir, init_path=fsz_init,
+        extra_env={"MVMC_LANCZOS_ORACLE_DUMP": fsz_dump})
+    if fsz_proc.returncode != 0:
+        print(fsz_proc.stdout)
+        return fsz_proc.returncode
+
+    try:
+        nonfsz_rows = read_lanczos_oracle(
+            os.path.join(nonfsz_workdir, nonfsz_dump))
+        fsz_rows = read_lanczos_oracle(os.path.join(fsz_workdir, fsz_dump))
+        nonfsz_values = lanczos_oracle_by_occupancy(nonfsz_rows)
+        fsz_values = lanczos_oracle_by_occupancy(fsz_rows)
+    except (OSError, RuntimeError, ValueError) as exc:
+        print("ERROR: {}".format(exc))
+        return -1
+
+    common = sorted(set(nonfsz_values).intersection(fsz_values))
+    if len(common) < 4:
+        print("ERROR: cross-family probe has only {} common occupancies".format(
+            len(common)))
+        return -1
+    max_scaled_diff = 0.0
+    for occupancy in common:
+        max_scaled_diff = max(
+            max_scaled_diff,
+            max(scaled_complex_diff(left, right, 1.0e-10, 1.0e-9)
+                for left, right in zip(
+                    nonfsz_values[occupancy], fsz_values[occupancy])),
+        )
+    if max_scaled_diff > 1.0:
+        print("ERROR: cross-family LSLQ mismatch across {} occupancies: "
+              "max_scaled_diff={:.3e}".format(
+                  len(common), max_scaled_diff))
+        return -1
+    return 0
+
+
+def run_lanczos_case(rootdir, case_name, mpi_procs=None):
+    cases = {
+        "FSZ_Lanczos_Identity_Complex": (1, False),
+        "FSZ_Lanczos_Identity_Complex_mpi": (1, False),
+        "FSZ_Lanczos_Identity_Real": (0, False),
+        "FSZ_Lanczos_SpinChanging_Complex": (1, True),
+        "FSZ_Lanczos_NonfiniteThreshold": (1, False),
+        "FSZ_Lanczos_NonfiniteWarning": (1, False),
+        "FSZ_Lanczos_NonfiniteAggregateWarning_mpi": (1, False),
+        "FSZ_Lanczos_RebuildFailureWarning": (1, False),
+    }
+    if case_name not in cases:
+        return None
+
+    orbital_complex_type, spin_changing = cases[case_name]
+    workdir = prepare_case(
+        rootdir,
+        case_name,
+        include_backflow=False,
+        orbital_complex_type=orbital_complex_type,
+        orbital_optimize=True,
+    )
+    update_modpara(workdir, {
+        "NLanczosMode": "1",
+        "NVMCCalMode": "1",
+        "NVMCSample": ("75" if case_name.endswith(
+                       "NonfiniteAggregateWarning_mpi") else
+                       ("128" if case_name.endswith(
+                        ("NonfiniteWarning", "RebuildFailureWarning")) else "32")),
+        "NVMCWarmUp": "8",
+    })
+    if spin_changing:
+        update_modpara(workdir, {"2Sz": "-1"})
+        write_spin_changing_c1_defs(workdir)
+
+    init_path = write_lanczos_init(workdir)
+    extra_env = None
+    if case_name == "FSZ_Lanczos_NonfiniteThreshold":
+        extra_env = {"MVMC_LANCZOS_TEST_NONFINITE_SAMPLE": "0"}
+    if case_name == "FSZ_Lanczos_NonfiniteWarning":
+        extra_env = {"MVMC_LANCZOS_TEST_NONFINITE_SAMPLE": "0"}
+    if case_name == "FSZ_Lanczos_NonfiniteAggregateWarning_mpi":
+        extra_env = {
+            "MVMC_LANCZOS_TEST_NONFINITE_SAMPLE": "0",
+            "MVMC_LANCZOS_TEST_NONFINITE_PARENT_RANK": "0",
+        }
+    if case_name == "FSZ_Lanczos_RebuildFailureWarning":
+        extra_env = {"MVMC_LANCZOS_TEST_REBUILD_FAILURES": "1"}
+    proc = run_vmc(rootdir, workdir, mpi_procs=mpi_procs,
+                   init_path=init_path, extra_env=extra_env)
+    if case_name == "FSZ_Lanczos_NonfiniteThreshold":
+        if proc.returncode == 0:
+            print("ERROR: non-finite Lanczos injection unexpectedly succeeded")
+            return -1
+        if "biased output will not be written" not in proc.stdout:
+            print("ERROR: non-finite Lanczos injection missed threshold diagnostic")
+            print(proc.stdout)
+            return -1
+        return 0
+    if case_name in ("FSZ_Lanczos_NonfiniteWarning",
+                      "FSZ_Lanczos_NonfiniteAggregateWarning_mpi",
+                      "FSZ_Lanczos_RebuildFailureWarning"):
+        if proc.returncode != 0:
+            print(proc.stdout)
+            return proc.returncode
+        expected_count = ("1/150" if case_name.endswith(
+                          "NonfiniteAggregateWarning_mpi") else "1/128")
+        if "rejected {} samples".format(expected_count) not in proc.stdout:
+            print("ERROR: FSZ Lanczos rejection warning was not aggregated")
+            print(proc.stdout)
+            return -1
+        return assert_lanczos_outputs(workdir, case_name)
+    if proc.returncode != 0:
+        print(proc.stdout)
+        return proc.returncode
+    return assert_lanczos_outputs(workdir, case_name)
+
+
+def write_lanczos_pairhop(workdir):
+    with open(os.path.join(workdir, "lanczos_pairhop.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NPairHopp          1\n")
+        fp.write("=============================================\n")
+        fp.write("====== Pair-Hopping term ====================\n")
+        fp.write("=============================================\n")
+        fp.write("    0     1          0.370000000000000\n")
+    append_namelist_entry(workdir, "PairHop", "lanczos_pairhop.def")
+
+
+def write_lanczos_exchange(workdir):
+    with open(os.path.join(workdir, "lanczos_exchange.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NExchange          1\n")
+        fp.write("=============================================\n")
+        fp.write("====== ExchangeCoupling coupling ============\n")
+        fp.write("=============================================\n")
+        fp.write("    0     1         -0.230000000000000\n")
+    append_namelist_entry(workdir, "Exchange", "lanczos_exchange.def")
+
+
+def write_lanczos_interall(workdir):
+    with open(os.path.join(workdir, "lanczos_interall.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NInterAll          1\n")
+        fp.write("=============================================\n")
+        fp.write("====== General two-body interactions ========\n")
+        fp.write("=============================================\n")
+        fp.write("0 0 1 0 1 1 0 1 0.310000000000000 0.0\n")
+    append_namelist_entry(workdir, "InterAll", "lanczos_interall.def")
+
+
+def run_lanczos_invalid_case(rootdir, case_name, mpi_procs=None):
+    cases = {
+        "FSZ_Lanczos_InvalidNegativeMode": (
+            {"NLanczosMode": "-1", "NVMCCalMode": "1"},
+            "NLanczosMode must be non-negative",
+            None,
+        ),
+        "FSZ_Lanczos_InvalidMode2": (
+            {"NLanczosMode": "2", "NVMCCalMode": "1"},
+            "FSZ supports only NLanczosMode==1",
+            None,
+        ),
+        "FSZ_Lanczos_InvalidMode2_mpi": (
+            {"NLanczosMode": "2", "NVMCCalMode": "1"},
+            "FSZ supports only NLanczosMode==1",
+            None,
+        ),
+        "FSZ_Lanczos_InvalidOptimization": (
+            {"NLanczosMode": "1", "NVMCCalMode": "0"},
+            "requires NVMCCalMode==1",
+            None,
+        ),
+        "FSZ_Lanczos_InvalidSPGaussLeg": (
+            {"NLanczosMode": "1", "NVMCCalMode": "1", "NSPGaussLeg": "2"},
+            "requires input SPGaussLeg <= 1",
+            None,
+        ),
+        "FSZ_Lanczos_InvalidPairHop": (
+            {"NLanczosMode": "1", "NVMCCalMode": "1"},
+            "currently supports only diagonal and Transfer Hamiltonian terms",
+            write_lanczos_pairhop,
+        ),
+        "BackFlow_FSZ_Lanczos_InvalidMode2": (
+            {"NLanczosMode": "2", "NVMCCalMode": "1"},
+            "FSZ supports only NLanczosMode==1",
+            None,
+        ),
+        "BackFlow_FSZ_Lanczos_InvalidOptimization": (
+            {"NLanczosMode": "1", "NVMCCalMode": "0"},
+            "requires NVMCCalMode==1",
+            None,
+        ),
+        "BackFlow_FSZ_Lanczos_InvalidSPGaussLeg": (
+            {"NLanczosMode": "1", "NVMCCalMode": "1", "NSPGaussLeg": "2"},
+            "requires input SPGaussLeg <= 1",
+            None,
+        ),
+        "BackFlow_FSZ_Lanczos_InvalidPairHop": (
+            {"NLanczosMode": "1", "NVMCCalMode": "1"},
+            "currently supports only diagonal and Transfer Hamiltonian terms",
+            write_lanczos_pairhop,
+        ),
+        "BackFlow_FSZ_Lanczos_InvalidExchange": (
+            {"NLanczosMode": "1", "NVMCCalMode": "1"},
+            "currently supports only diagonal and Transfer Hamiltonian terms",
+            write_lanczos_exchange,
+        ),
+        "BackFlow_FSZ_Lanczos_InvalidInterAll": (
+            {"NLanczosMode": "1", "NVMCCalMode": "1"},
+            "currently supports only diagonal and Transfer Hamiltonian terms",
+            write_lanczos_interall,
+        ),
+        "FSZ_Lanczos_InvalidReweight": (
+            {"NLanczosMode": "1", "NVMCCalMode": "1", "reweight": "1"},
+            "does not support RBM, Twist, reweight",
+            None,
+        ),
+    }
+    if case_name not in cases:
+        return None
+    updates, expected, mutate_defs = cases[case_name]
+    workdir = prepare_case(
+        rootdir, case_name, include_backflow=case_name.startswith("BackFlow_"))
+    update_modpara(workdir, updates)
+    if mutate_defs is not None:
+        mutate_defs(workdir)
+    proc = run_vmc(rootdir, workdir, mpi_procs=mpi_procs)
+    if proc.returncode == 0:
+        print("ERROR: {} unexpectedly succeeded".format(case_name))
+        return -1
+    if expected not in proc.stdout:
+        print("ERROR: {} did not report expected error: {}".format(case_name, expected))
+        print(proc.stdout)
+        return -1
+    if "Start: Sampling." in proc.stdout:
+        print("ERROR: {} reached sampling before failing".format(case_name))
+        print(proc.stdout)
+        return -1
+    return 0
 
 
 def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
@@ -2590,6 +3214,20 @@ def main():
         "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex",
     )
     nonidentity_momentum_case = case_name == "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex"
+    bf_fsz_lanczos_status = run_bf_fsz_lanczos_case(
+        rootdir, case_name, mpi_procs)
+    if bf_fsz_lanczos_status is not None:
+        return bf_fsz_lanczos_status
+    lanczos_status = run_lanczos_case(rootdir, case_name, mpi_procs)
+    if lanczos_status is not None:
+        return lanczos_status
+    lanczos_cross_family_status = run_lanczos_cross_family_case(
+        rootdir, case_name, mpi_procs)
+    if lanczos_cross_family_status is not None:
+        return lanczos_cross_family_status
+    lanczos_invalid_status = run_lanczos_invalid_case(rootdir, case_name, mpi_procs)
+    if lanczos_invalid_status is not None:
+        return lanczos_invalid_status
     named_invalid = get_named_invalid_case(case_name)
     c1_status = run_spin_changing_c1_case(rootdir, case_name, mpi_procs)
     if c1_status is not None:

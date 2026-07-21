@@ -9,8 +9,22 @@ import sys
 
 import numpy as np
 
+from runtest_bf_fsz import (
+    append_namelist_entry,
+    prepare_case,
+    run_vmc,
+    update_modpara,
+    write_lanczos_init,
+    write_spin_changing_c1_defs,
+)
+
 
 NSITE = 4
+COULOMB_INTRA = (0.35, 0.70, 1.05, 1.40)
+PROJECTION_BRANCH_GUTZWILLER = 1.0
+PROJECTION_BRANCH_RAW_RATIO = 5.0e-13
+PROJECTION_BRANCH_BASE_STATE = 75
+PROJECTION_BRANCH_TARGET_STATE = 89
 
 
 def read_out(filename):
@@ -113,8 +127,99 @@ def operator_matrix(basis, terms):
     return mat
 
 
+def operator_matrix_complex(basis, terms):
+    index = dict((state, i) for i, state in enumerate(basis))
+    mat = np.zeros((len(basis), len(basis)), dtype=complex)
+    for col, state in enumerate(basis):
+        for coeff, ops in terms:
+            result = apply_ops(state, ops)
+            if result is None:
+                continue
+            next_state, sign = result
+            if next_state in index:
+                mat[index[next_state], col] += coeff * sign
+    return mat
+
+
 def one_body(ri, rj, spin):
     return [("c", ri + spin * NSITE), ("a", rj + spin * NSITE)]
+
+
+def one_body_fsz(ri, spin_i, rj, spin_j):
+    return [
+        ("c", ri + spin_i * NSITE),
+        ("a", rj + spin_j * NSITE),
+    ]
+
+
+def coulomb_intra(site):
+    return [
+        ("c", site),
+        ("a", site),
+        ("c", site + NSITE),
+        ("a", site + NSITE),
+    ]
+
+
+def general_pairing_values():
+    return [
+        math.sin(0.37 * float(idx + 1))
+        for idx in range((2 * NSITE) * (2 * NSITE - 1) // 2)
+    ]
+
+
+def general_pairing_amplitude(state, values=None):
+    occupied_orbitals = [orb for orb in range(2 * NSITE) if occupied(state, orb)]
+    if len(occupied_orbitals) != 4:
+        return 0.0
+
+    source_values = general_pairing_values() if values is None else values
+    pair_values = {}
+    idx = 0
+    for left in range(2 * NSITE):
+        for right in range(left + 1, 2 * NSITE):
+            pair_values[(left, right)] = source_values[idx]
+            idx += 1
+
+    def pair(left, right):
+        if left < right:
+            return pair_values[(left, right)]
+        return -pair_values[(right, left)]
+
+    a, b, c, d = occupied_orbitals
+    return (
+        pair(a, b) * pair(c, d)
+        - pair(a, c) * pair(b, d)
+        + pair(a, d) * pair(b, c)
+    )
+
+
+def doublon_count(state):
+    return sum(
+        occupied(state, site) * occupied(state, site + NSITE)
+        for site in range(NSITE)
+    )
+
+
+def projection_branch_pairing_values():
+    values = general_pairing_values()
+    pair_index = {}
+    idx = 0
+    for left in range(2 * NSITE):
+        for right in range(left + 1, 2 * NSITE):
+            pair_index[(left, right)] = idx
+            idx += 1
+
+    base_amplitude = general_pairing_amplitude(
+        PROJECTION_BRANCH_BASE_STATE, values)
+    desired = PROJECTION_BRANCH_RAW_RATIO * base_amplitude
+    p03 = values[pair_index[(0, 3)]]
+    p04 = values[pair_index[(0, 4)]]
+    p06 = values[pair_index[(0, 6)]]
+    p34 = values[pair_index[(3, 4)]]
+    p36 = values[pair_index[(3, 6)]]
+    values[pair_index[(4, 6)]] = (p04 * p36 - p06 * p34 + desired) / p03
+    return values
 
 
 def pair_hop(ri, rj):
@@ -190,6 +295,18 @@ def assert_close(name, actual, expected, tol):
         raise AssertionError(
             "{} mismatch: actual={} expected={} diff={} tol={}".format(
                 name, actual, expected, diff, tol
+            )
+        )
+
+
+def assert_tight_close(name, actual, expected,
+                       abs_tol=1.0e-10, rel_tol=1.0e-9):
+    diff = abs(actual - expected)
+    tolerance = abs_tol + rel_tol * max(abs(actual), abs(expected))
+    if diff > tolerance:
+        raise AssertionError(
+            "{} mismatch: actual={} expected={} diff={} tolerance={}".format(
+                name, actual, expected, diff, tolerance
             )
         )
 
@@ -284,10 +401,290 @@ def check_doublon_only_against_mvmc(rootdir):
     assert_close("Lanczos alpha", ls_out[2], reference["alpha"], 0.10)
 
 
+def spin_changing_local_reference():
+    basis = [state for state in range(1 << (2 * NSITE)) if popcount(state) == 4]
+    psi = np.array([general_pairing_amplitude(state) for state in basis], dtype=float)
+    terms = [
+        (-0.70 - 0.20j, one_body_fsz(0, 0, 0, 1)),
+        (-0.70 + 0.20j, one_body_fsz(0, 1, 0, 0)),
+        (0.40 - 0.15j, one_body_fsz(1, 0, 0, 1)),
+        (0.40 + 0.15j, one_body_fsz(0, 1, 1, 0)),
+    ]
+    terms.extend(
+        (coupling, coulomb_intra(site))
+        for site, coupling in enumerate(COULOMB_INTRA)
+    )
+    ham = operator_matrix_complex(basis, terms)
+    hpsi = np.dot(ham, psi)
+    h2psi = np.dot(ham, hpsi)
+    result = {}
+    for idx, state in enumerate(basis):
+        if abs(psi[idx]) <= 1.0e-13:
+            continue
+        # mVMC stores the bra-oriented estimator <psi|H|x>/<psi|x>.
+        # For a Hermitian Hamiltonian this is the complex conjugate of the
+        # conventional ket-oriented (H psi)(x)/psi(x) local estimator.
+        result[state] = (
+            np.conj(hpsi[idx] / psi[idx]),
+            np.conj(h2psi[idx] / psi[idx]),
+        )
+    return result
+
+
+def write_complex_spin_changing_transfer(workdir):
+    rows = [
+        (0, 0, 0, 1, 0.70, 0.20),
+        (0, 1, 0, 0, 0.70, -0.20),
+        (1, 0, 0, 1, -0.40, 0.15),
+        (0, 1, 1, 0, -0.40, -0.15),
+    ]
+    with open(os.path.join(workdir, "trans.def"), "w") as fp:
+        fp.write("========================\n")
+        fp.write("NTransfer      {}\n".format(len(rows)))
+        fp.write("========================\n")
+        fp.write("========i_j_s_tijs=======\n")
+        fp.write("========================\n")
+        for ri, spin_i, rj, spin_j, real, imag in rows:
+            fp.write(
+                "{:5d} {:5d} {:5d} {:5d} {:25.15f} {:25.15f}\n".format(
+                    ri, spin_i, rj, spin_j, real, imag,
+                )
+            )
+
+
+def write_coulomb_intra(workdir):
+    with open(os.path.join(workdir, "coulombintra.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NCoulombIntra          {}\n".format(len(COULOMB_INTRA)))
+        fp.write("=============================================\n")
+        fp.write("================== CoulombIntra ================\n")
+        fp.write("=============================================\n")
+        for site, coupling in enumerate(COULOMB_INTRA):
+            fp.write("{:5d} {:25.15f}\n".format(site, coupling))
+    append_namelist_entry(workdir, "CoulombIntra", "coulombintra.def")
+
+
+def write_gutzwiller(workdir):
+    with open(os.path.join(workdir, "gutzwilleridx.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NGutzwillerIdx          1\n")
+        fp.write("ComplexType             0\n")
+        fp.write("=============================================\n")
+        fp.write("=============================================\n")
+        for site in range(NSITE):
+            fp.write("{:5d} {:5d}\n".format(site, 0))
+        fp.write("{:5d} {:5d}\n".format(0, 0))
+    append_namelist_entry(workdir, "Gutzwiller", "gutzwilleridx.def")
+
+
+def write_projection_branch_init(workdir, pairing_values):
+    values = [0.0] * 6
+    values.extend([PROJECTION_BRANCH_GUTZWILLER, 0.0, 0.0])
+    for value in pairing_values:
+        values.extend([value, 0.0, 0.0])
+    filename = "projection_branch_init.dat"
+    with open(os.path.join(workdir, filename), "w") as fp:
+        fp.write(" ".join("{:.18e}".format(value) for value in values))
+        fp.write("\n")
+    return filename
+
+
+def read_lanczos_oracle_dump(path):
+    rows = []
+    with open(path) as fp:
+        for line in fp:
+            cols = line.split()
+            if len(cols) != 3 + 2 * NSITE + 1 + 8:
+                raise AssertionError("invalid FSZ Lanczos oracle row: {}".format(line.rstrip()))
+            if cols[0] != "sample" or cols[2] != "occ" or cols[3 + 2 * NSITE] != "lslq":
+                raise AssertionError("invalid FSZ Lanczos oracle markers")
+            occupation = [int(value) for value in cols[3:3 + 2 * NSITE]]
+            state = 0
+            for orb, value in enumerate(occupation):
+                if value:
+                    state |= 1 << orb
+            values = [float(value) for value in cols[4 + 2 * NSITE:]]
+            lslq = [complex(values[2 * idx], values[2 * idx + 1]) for idx in range(4)]
+            rows.append((int(cols[1]), state, lslq))
+    if not rows:
+        raise AssertionError("FSZ Lanczos oracle dump is empty")
+    return rows
+
+
+def check_spin_changing_fsz_local_oracle(rootdir):
+    case_name = "LanczosSectorED_FSZSpinChanging"
+    workdir = prepare_case(
+        rootdir,
+        case_name,
+        include_backflow=False,
+        orbital_complex_type=1,
+        orbital_optimize=True,
+    )
+    update_modpara(workdir, {
+        "NLanczosMode": "1",
+        "NVMCCalMode": "1",
+        "NVMCSample": "128",
+        "NVMCWarmUp": "16",
+        "2Sz": "-1",
+    })
+    write_spin_changing_c1_defs(workdir)
+    write_complex_spin_changing_transfer(workdir)
+    write_coulomb_intra(workdir)
+    init_path = write_lanczos_init(workdir)
+    dump_name = "lanczos_sector_ed_oracle.dat"
+    proc = run_vmc(
+        rootdir,
+        workdir,
+        init_path=init_path,
+        extra_env={
+            "MVMC_BF_LANCZOS_STATE_CHECK": "1",
+            "MVMC_LANCZOS_ORACLE_DUMP": dump_name,
+        },
+    )
+    if proc.returncode != 0:
+        raise AssertionError("FSZ spin-changing vmc.out failed:\n{}".format(proc.stdout))
+
+    reference = spin_changing_local_reference()
+    rows = read_lanczos_oracle_dump(os.path.join(workdir, dump_name))
+    sampled_nup = set()
+    for sample, state, lslq in rows:
+        if state not in reference:
+            raise AssertionError("sample {} has zero or missing ED amplitude".format(sample))
+        expected_h1, expected_h2 = reference[state]
+        assert_tight_close(
+            "sample {} h1.real".format(sample),
+            lslq[1].real, expected_h1.real)
+        assert_tight_close(
+            "sample {} h1.imag".format(sample),
+            lslq[1].imag, expected_h1.imag)
+        assert_tight_close(
+            "sample {} h2.real".format(sample),
+            lslq[3].real, expected_h2.real)
+        assert_tight_close(
+            "sample {} h2.imag".format(sample),
+            lslq[3].imag, expected_h2.imag)
+        sampled_nup.add(sum(occupied(state, site) for site in range(NSITE)))
+    if len(sampled_nup) < 2:
+        raise AssertionError("spin-changing oracle did not sample multiple spin sectors")
+
+
+def projection_branch_local_reference(pairing_values):
+    basis = [state for state in range(1 << (2 * NSITE)) if popcount(state) == 4]
+    psi = np.array([
+        general_pairing_amplitude(state, pairing_values) * math.exp(
+            PROJECTION_BRANCH_GUTZWILLER * doublon_count(state))
+        for state in basis
+    ], dtype=float)
+    terms = [
+        (0.40, one_body_fsz(0, 1, 1, 0)),
+        (0.40, one_body_fsz(1, 0, 0, 1)),
+    ]
+    ham = operator_matrix_complex(basis, terms)
+    hpsi = np.dot(ham, psi)
+    h2psi = np.dot(ham, hpsi)
+    result = {}
+    for idx, state in enumerate(basis):
+        if abs(psi[idx]) <= 1.0e-14:
+            continue
+        result[state] = (
+            np.conj(hpsi[idx] / psi[idx]),
+            np.conj(h2psi[idx] / psi[idx]),
+        )
+    return result
+
+
+def write_projection_branch_transfer(workdir):
+    rows = [
+        (0, 1, 1, 0, -0.40, 0.0),
+        (1, 0, 0, 1, -0.40, 0.0),
+    ]
+    with open(os.path.join(workdir, "trans.def"), "w") as fp:
+        fp.write("========================\n")
+        fp.write("NTransfer      {}\n".format(len(rows)))
+        fp.write("========================\n")
+        fp.write("========i_j_s_tijs=======\n")
+        fp.write("========================\n")
+        for ri, spin_i, rj, spin_j, real, imag in rows:
+            fp.write(
+                "{:5d} {:5d} {:5d} {:5d} {:25.15f} {:25.15f}\n".format(
+                    ri, spin_i, rj, spin_j, real, imag,
+                )
+            )
+
+
+def check_projection_branch_fsz_local_oracle(rootdir):
+    pairing_values = projection_branch_pairing_values()
+    base_amplitude = general_pairing_amplitude(
+        PROJECTION_BRANCH_BASE_STATE, pairing_values)
+    target_amplitude = general_pairing_amplitude(
+        PROJECTION_BRANCH_TARGET_STATE, pairing_values)
+    raw_ratio = abs(target_amplitude / base_amplitude)
+    projection_delta = (
+        doublon_count(PROJECTION_BRANCH_TARGET_STATE)
+        - doublon_count(PROJECTION_BRANCH_BASE_STATE)
+    )
+    projected_ratio = raw_ratio * math.exp(
+        PROJECTION_BRANCH_GUTZWILLER * projection_delta)
+    if not raw_ratio < 1.0e-12:
+        raise AssertionError("projection branch fixture raw ratio is not below threshold")
+    if not projected_ratio > 1.0e-12:
+        raise AssertionError("projection branch fixture full ratio is not above threshold")
+
+    case_name = "LanczosSectorED_FSZProjectionBranch"
+    workdir = prepare_case(
+        rootdir,
+        case_name,
+        include_backflow=False,
+        orbital_complex_type=1,
+        orbital_optimize=True,
+    )
+    update_modpara(workdir, {
+        "NLanczosMode": "1",
+        "NVMCCalMode": "1",
+        "NVMCSample": "4096",
+        "NVMCWarmUp": "32",
+        "2Sz": "-1",
+    })
+    write_projection_branch_transfer(workdir)
+    write_gutzwiller(workdir)
+    init_path = write_projection_branch_init(workdir, pairing_values)
+    dump_name = "lanczos_projection_branch_oracle.dat"
+    proc = run_vmc(
+        rootdir,
+        workdir,
+        init_path=init_path,
+        extra_env={
+            "MVMC_BF_LANCZOS_STATE_CHECK": "1",
+            "MVMC_LANCZOS_ORACLE_DUMP": dump_name,
+            "MVMC_LANCZOS_TEST_PROJECTION_BRANCH_AUDIT": "1",
+        },
+    )
+    if proc.returncode != 0:
+        raise AssertionError("FSZ projection-branch vmc.out failed:\n{}".format(proc.stdout))
+
+    reference = projection_branch_local_reference(pairing_values)
+    rows = read_lanczos_oracle_dump(os.path.join(workdir, dump_name))
+    sampled_states = set()
+    for sample, state, lslq in rows:
+        if state not in reference:
+            raise AssertionError("sample {} has zero or missing ED amplitude".format(sample))
+        expected_h1, expected_h2 = reference[state]
+        assert_tight_close(
+            "projection sample {} h1".format(sample), lslq[1], expected_h1)
+        assert_tight_close(
+            "projection sample {} h2".format(sample), lslq[3], expected_h2)
+        sampled_states.add(state)
+    if PROJECTION_BRANCH_BASE_STATE not in sampled_states:
+        raise AssertionError(
+            "projection branch fixture did not sample the threshold-crossing base state")
+
+
 def main():
     rootdir = os.getcwd()
     check_projected_operators()
     check_doublon_only_against_mvmc(rootdir)
+    check_spin_changing_fsz_local_oracle(rootdir)
+    check_projection_branch_fsz_local_oracle(rootdir)
     print("Lanczos sector ED verification passed")
     return 0
 
