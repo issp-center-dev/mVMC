@@ -522,6 +522,13 @@ Keywords and parameters
    body Green’s functions by using Single Lanczos Step (Condition: The
    options 1 and 2 can be selected when ``NVMCCalMode`` = 1).
 
+   With ``OrbitalGeneral`` / FSZ or BackFlow, only
+   ``NLanczosMode=1`` is supported. In these cases the Hamiltonian is
+   limited to ``Transfer`` and diagonal number-operator interactions
+   (``CoulombIntra``, ``CoulombInter``, and ``Hund``).
+   ``NLanczosMode=2``, the second Lanczos step, and Lanczos corrections
+   for ``NBodyG`` / ``NBodyInterAll`` are not supported.
+
 -  ``NDataIdxStart``
 
    **Type :** int-type (default value: 0)
@@ -2437,9 +2444,19 @@ Inputs outside this range are rejected.
 
 -  Spin projection is not supported. Use ``NSPGaussLeg==1``.
 
--  RBM, Lanczos, Twist, reweight, ``APFlag=1``, and ``NQPOptTrans>1``
-   are not supported. The usual momentum projection with ``NMPTrans>1``
-   can be used only with ``APFlag=0`` and ``NQPOptTrans==1``.
+-  RBM, Twist, reweight, ``APFlag=1``, and ``NQPOptTrans>1`` are not
+   supported. Single Lanczos Step is available only with
+   ``NVMCCalMode=1`` and ``NLanczosMode=1``; its Hamiltonian is limited
+   to ``Transfer`` and diagonal number-operator interactions.
+   Spin-changing ``Transfer`` with ``OrbitalGeneral`` / FSZ additionally
+   requires ``2Sz=-1``. ``NLanczosMode>=2``, the second Lanczos step,
+   and BackFlow Lanczos corrections for ``NBodyG`` / ``NBodyInterAll``
+   are not supported.
+
+-  The usual momentum projection with ``NMPTrans>1`` is available with
+   ``OrbitalGeneral`` / FSZ, ``APFlag=0``, and ``NQPOptTrans==1``.
+   BackFlow with the normal ``Orbital`` / ``OrbitalAntiParallel`` format
+   requires ``NMPTrans==1``.
 
 -  With the normal ``Orbital`` / ``OrbitalAntiParallel`` format, the
    Hamiltonian may contain ``Trans`` and number-operator interactions
@@ -2450,7 +2467,9 @@ Inputs outside this range are rejected.
 -  With ``OrbitalGeneral`` / FSZ, ``PairHop``, ``Exchange``, and
    ``InterAll`` are additionally supported. Measurement outputs
    ``OneBodyG``, ``TwoBodyG``, and ``TwoBodyGEx`` support general spin
-   labels. ``NBodyG`` and ``NBodyInterAll`` are not supported.
+   labels. ``NBodyG`` and ``NBodyInterAll`` are not supported. When
+   ``NLanczosMode=1`` is enabled, ``PairHop``, ``Exchange``, and
+   ``InterAll`` are also outside the supported scope.
 
 -  Standard mode and StdFace do not generate BackFlow inputs. To use
    BackFlow, prepare ``BFRange`` and ``BF`` manually as Expert-mode
