@@ -517,6 +517,12 @@ Calculation of one body and two body Green’s functions.</p>
 energy by using Single Lanczos Step, [2] Calculating one body and two
 body Green’s functions by using Single Lanczos Step (Condition: The
 options 1 and 2 can be selected when <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> = 1).</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ or BackFlow, only
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code> is supported. In these cases the Hamiltonian is
+limited to <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> and diagonal number-operator interactions
+(<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, and <code class="docutils literal notranslate"><span class="pre">Hund</span></code>).
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=2</span></code>, the second Lanczos step, and Lanczos corrections
+for <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> / <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> are not supported.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 0)</p>
@@ -2087,9 +2093,18 @@ spin-flip sampler and spin-changing <code class="docutils literal notranslate"><
 <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> operators. BackFlow with localized spins is not
 supported.</p></li>
 <li><p>Spin projection is not supported. Use <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg==1</span></code>.</p></li>
-<li><p>RBM, Lanczos, Twist, reweight, <code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code>
-are not supported. The usual momentum projection with <code class="docutils literal notranslate"><span class="pre">NMPTrans&gt;1</span></code>
-can be used only with <code class="docutils literal notranslate"><span class="pre">APFlag=0</span></code> and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans==1</span></code>.</p></li>
+<li><p>RBM, Twist, reweight, <code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code> are not
+supported. Single Lanczos Step is available only with
+<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code> and <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>; its Hamiltonian is limited
+to <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> and diagonal number-operator interactions.
+Spin-changing <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> with <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ additionally
+requires <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>. <code class="docutils literal notranslate"><span class="pre">NLanczosMode&gt;=2</span></code>, the second Lanczos step,
+and BackFlow Lanczos corrections for <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> / <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code>
+are not supported.</p></li>
+<li><p>The usual momentum projection with <code class="docutils literal notranslate"><span class="pre">NMPTrans&gt;1</span></code> is available with
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, <code class="docutils literal notranslate"><span class="pre">APFlag=0</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans==1</span></code>.
+BackFlow with the normal <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format
+requires <code class="docutils literal notranslate"><span class="pre">NMPTrans==1</span></code>.</p></li>
 <li><p>With the normal <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format, the
 Hamiltonian may contain <code class="docutils literal notranslate"><span class="pre">Trans</span></code> and number-operator interactions
 (<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>). Two-body Hamiltonian
@@ -2098,7 +2113,9 @@ unsupported in this mode.</p></li>
 <li><p>With <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> are additionally supported. Measurement outputs
 <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code>, <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code>, and <code class="docutils literal notranslate"><span class="pre">TwoBodyGEx</span></code> support general spin
-labels. <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> and <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> are not supported.</p></li>
+labels. <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> and <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> are not supported. When
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code> is enabled, <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> are also outside the supported scope.</p></li>
 <li><p>Standard mode and StdFace do not generate BackFlow inputs. To use
 BackFlow, prepare <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> and <code class="docutils literal notranslate"><span class="pre">BF</span></code> manually as Expert-mode
 input files.</p></li>
