@@ -231,8 +231,23 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
     fprintf(stderr, "Error: BackFlow MVP supports only NQPOptTrans==1 (got %d).\n", NQPOptTrans);
     return 1;
   }
-  if (NLanczosMode > 0) {
-    fprintf(stderr, "Error: BackFlow MVP does not support NLanczosMode > 0.\n");
+  if (NLanczosMode > 1) {
+    fprintf(stderr,
+            "Error: BackFlow MVP supports only NLanczosMode==1 (got %d).\n",
+            NLanczosMode);
+    return 1;
+  }
+  if (NLanczosMode == 1 && NVMCCalMode != 1) {
+    fprintf(stderr,
+            "Error: BackFlow NLanczosMode==1 requires NVMCCalMode==1 (got %d).\n",
+            NVMCCalMode);
+    return 1;
+  }
+  if (NLanczosMode == 1 &&
+      (NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0 ||
+       NNBodyInterAll > 0)) {
+    fprintf(stderr,
+            "Error: BackFlow NLanczosMode==1 currently supports only diagonal and Transfer Hamiltonian terms.\n");
     return 1;
   }
   if (iFlgOrbitalGeneral == 0 &&

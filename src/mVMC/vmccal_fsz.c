@@ -28,13 +28,77 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifndef _SRC_VMCCAL_FSZ
 #define _SRC_VMCCAL_FSZ
 
+#include <errno.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "vmccal_fsz.h"
 #include "matrix.h"
 #include "calham_fsz_real.h"
 #include "calham_fsz.h"
 #include "calgrn_fsz.h"
+#include "lslocgrn_fsz.h"
+#include "lslocgrn_bf_fsz.h"
+
+static int isFiniteLSLQFSZComplex(const double complex *lslq) {
+  int i;
+  for(i=0; i<NLSHam*NLSHam; i++) {
+    if(!isfinite(creal(lslq[i])) || !isfinite(cimag(lslq[i]))) return 0;
+  }
+  return 1;
+}
+
+static int isFiniteLSLQFSZReal(const double *lslq) {
+  int i;
+  for(i=0; i<NLSHam*NLSHam; i++) {
+    if(!isfinite(lslq[i])) return 0;
+  }
+  return 1;
+}
+
+static long getLanczosNonfiniteInjectionSample(void) {
+  const char *value = getenv("MVMC_LANCZOS_TEST_NONFINITE_SAMPLE");
+  char *end = NULL;
+  long sample;
+  if(value == NULL || value[0] == '\0') return -1;
+  errno = 0;
+  sample = strtol(value, &end, 10);
+  if(errno != 0 || end == value || *end != '\0' || sample < 0) return -2;
+  return sample;
+}
+
+static void finalizeLanczosFSZAccounting(MPI_Comm comm, int rank,
+                                         long long checkedLocal,
+                                         long long rejectedLocal) {
+  long long local[2] = {checkedLocal, rejectedLocal};
+  long long global[2] = {checkedLocal, rejectedLocal};
+#ifdef _mpi_use
+  MPI_Allreduce(local, global, 2, MPI_LONG_LONG, MPI_SUM, comm);
+#endif
+  if(global[0] <= 0) {
+    if(rank == 0) {
+      fprintf(stderr, "Error: FSZ Lanczos checked zero samples.\n");
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if(global[1] > 0 && global[1]*100 <= global[0]) {
+    if(rank == 0) {
+      fprintf(stderr,
+              "warning: FSZ Lanczos rejected %lld/%lld samples due to "
+              "non-finite local vectors or numerical candidate rebuild failures.\n",
+              global[1], global[0]);
+    }
+  } else if(global[1]*100 > global[0]) {
+    if(rank == 0) {
+      fprintf(stderr,
+              "Error: FSZ Lanczos rejected %lld/%lld samples (>1%%); biased output will not be written.\n",
+              global[1], global[0]);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+}
 
 static void clearStoredOSampleRange_fsz(const int sampleStart, const int sampleEnd) {
   const int sampleSize = sampleEnd - sampleStart;
@@ -365,7 +429,7 @@ static void dumpBFFSZSRDiffCheck(const char *path, int *eleIdx, int *eleSpn,
   free(slaterStore);
 }
 
-void VMCMainCal_fsz(MPI_Comm comm) {
+void VMCMainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt,*eleSpn; //fsz
   double complex e,ip;
   double w,x;
@@ -384,9 +448,19 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   double         *srOptO_real = SROptO_real;
   int tmp_i;
 
-  int rank,size,int_i;
+  int rank,size,parentRank,parentSize,int_i;
+  LSLanczosFSZScratch lanczosScratch;
+  int lanczosScratchReady = 0;
+  int lanczosWarnings = 0;
+  long lanczosInjectSample = -1;
+  long lanczosInjectParentRank = -1;
+  long long lanczosCheckedSamples = 0;
+  long long lanczosRejectedSamples = 0;
+  FILE *lanczosOracleDump = NULL;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
+  MPI_Comm_size(comm_parent,&parentSize);
+  MPI_Comm_rank(comm_parent,&parentRank);
 #ifdef __DEBUG_DETAILDETAIL
   printf("  Debug: SplitLoop\n");
 #endif
@@ -396,6 +470,64 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   StartTimer(24);
   clearPhysQuantity();
   StopTimer(24);
+
+  memset(&lanczosScratch, 0, sizeof(lanczosScratch));
+  if(NVMCCalMode == 1 && NLanczosMode == 1) {
+    const char *dumpValue = getenv("MVMC_LANCZOS_ORACLE_DUMP");
+    lanczosInjectSample = getLanczosNonfiniteInjectionSample();
+    lanczosInjectParentRank = LSLanczosTestNonfiniteParentRank();
+    if(lanczosInjectSample == -2) {
+      if(rank == 0) {
+        fprintf(stderr,
+                "Error: MVMC_LANCZOS_TEST_NONFINITE_SAMPLE must be a non-negative integer.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    if(lanczosInjectParentRank == -2 ||
+       lanczosInjectParentRank >= parentSize) {
+      if(parentRank == 0) {
+        fprintf(stderr,
+                "Error: MVMC_LANCZOS_TEST_NONFINITE_PARENT_RANK must identify a parent communicator rank.\n");
+      }
+      MPI_Abort(comm_parent, EXIT_FAILURE);
+    }
+    if(lanczosInjectParentRank >= 0 &&
+       lanczosInjectParentRank != parentRank) {
+      lanczosInjectSample = -1;
+    }
+    if(LSLanczosFSZScratchInit(&lanczosScratch, AllComplexFlag == 0) != 0) {
+      if(rank == 0) {
+        fprintf(stderr, "Error: failed to allocate FSZ Lanczos scratch.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    lanczosScratchReady = 1;
+    if(dumpValue != NULL && dumpValue[0] != '\0' && strcmp(dumpValue, "0") != 0) {
+      char dumpPath[1024];
+      int pathLength;
+      const char *basePath = strcmp(dumpValue, "1") == 0
+                           ? "lanczos_oracle_fsz.dat" : dumpValue;
+      if(parentSize > 1) {
+        pathLength = snprintf(dumpPath, sizeof(dumpPath), "%s.rank%04d",
+                              basePath, parentRank);
+      } else {
+        pathLength = snprintf(dumpPath, sizeof(dumpPath), "%s", basePath);
+      }
+      if(pathLength < 0 || (size_t)pathLength >= sizeof(dumpPath)) {
+        fprintf(stderr,
+                "Error: FSZ Lanczos oracle dump path is too long on rank %d.\n",
+                parentRank);
+        MPI_Abort(comm_parent, EXIT_FAILURE);
+      }
+      lanczosOracleDump = fopen(dumpPath, "w");
+      if(lanczosOracleDump == NULL) {
+        fprintf(stderr,
+                "Error: failed to open FSZ Lanczos oracle dump '%s' on rank %d.\n",
+                dumpPath, parentRank);
+        MPI_Abort(comm_parent, EXIT_FAILURE);
+      }
+    }
+  }
 
   if(NVMCCalMode==0 && NStoreO!=0 && NSRCG==0) {
     clearStoredOSampleRange_fsz(sampleStart, sampleEnd);
@@ -484,6 +616,72 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       continue;
     }
 
+    if(NVMCCalMode == 1 && NLanczosMode == 1) {
+      int lanczosInfo;
+      int lanczosFinite;
+      lanczosCheckedSamples++;
+      StartTimer(43);
+      if(AllComplexFlag == 0) {
+        lanczosInfo = LSLocalQ_fsz_real(creal(e), creal(ip), eleIdx,
+                                        eleCfg, eleNum, eleProjCnt, eleSpn,
+                                        &lanczosScratch, LSLQ_real);
+      } else {
+        lanczosInfo = LSLocalQ_fsz(e, ip, eleIdx, eleCfg, eleNum,
+                                   eleProjCnt, eleSpn, &lanczosScratch,
+                                   LSLQ);
+      }
+      StopTimer(43);
+      if(lanczosInfo == LSLANCZOS_NUMERIC_REJECT) {
+        lanczosRejectedSamples++;
+        if(lanczosWarnings < 3) {
+          fprintf(stderr,
+                  "warning: FSZ Lanczos rejected numerical candidate "
+                  "rebuild rank:%d sample:%d.\n", rank, sample);
+          lanczosWarnings++;
+        }
+        continue;
+      }
+      if(lanczosInfo != LSLANCZOS_OK) {
+        fprintf(stderr,
+                "Error: FSZ Lanczos state or contract failure rank:%d "
+                "sample:%d status:%d.\n", rank, sample, lanczosInfo);
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
+      if(AllComplexFlag == 0) {
+        if((long)sample == lanczosInjectSample) LSLQ_real[3] = NAN;
+        lanczosFinite = isFiniteLSLQFSZReal(LSLQ_real);
+      } else {
+        if((long)sample == lanczosInjectSample) LSLQ[3] = NAN + 0.0*I;
+        lanczosFinite = isFiniteLSLQFSZComplex(LSLQ);
+      }
+      if(!lanczosFinite) {
+        lanczosRejectedSamples++;
+        if(lanczosWarnings < 3) {
+          fprintf(stderr,
+                  "warning: FSZ Lanczos rejected non-finite local vector rank:%d sample:%d.\n",
+                  rank, sample);
+          lanczosWarnings++;
+        }
+        continue;
+      }
+      if(lanczosOracleDump != NULL) {
+        fprintf(lanczosOracleDump, "sample %d occ", sample);
+        for(i=0; i<Nsite2; i++) fprintf(lanczosOracleDump, " %d", eleNum[i]);
+        fprintf(lanczosOracleDump, " lslq");
+        if(AllComplexFlag == 0) {
+          for(i=0; i<NLSHam*NLSHam; i++) {
+            fprintf(lanczosOracleDump, " %.17e %.17e", LSLQ_real[i], 0.0);
+          }
+        } else {
+          for(i=0; i<NLSHam*NLSHam; i++) {
+            fprintf(lanczosOracleDump, " %.17e %.17e",
+                    creal(LSLQ[i]), cimag(LSLQ[i]));
+          }
+        }
+        fprintf(lanczosOracleDump, "\n");
+      }
+    }
+
     Wc    += w;
     Etot  += w * e;
     Sztot += w * Sz;
@@ -561,10 +759,21 @@ void VMCMainCal_fsz(MPI_Comm comm) {
       StopTimer(42);
 
       if(NLanczosMode>0){
-        // for sz!=0, Lanczso is not supported
+        if(AllComplexFlag == 0) {
+          calculateQQQQ_real(QQQQ_real, LSLQ_real, w, NLSHam);
+        } else {
+          calculateQQQQ(QQQQ, LSLQ, w, NLSHam);
+        }
       }
     }
   } /* end of for(sample) */
+
+  if(NVMCCalMode == 1 && NLanczosMode == 1) {
+    finalizeLanczosFSZAccounting(comm_parent, parentRank, lanczosCheckedSamples,
+                                 lanczosRejectedSamples);
+  }
+  if(lanczosOracleDump != NULL) fclose(lanczosOracleDump);
+  if(lanczosScratchReady) LSLanczosFSZScratchFree(&lanczosScratch);
 
 // calculate OO and HO at NVMCCalMode==0
   if(NVMCCalMode==0){
@@ -597,7 +806,7 @@ void VMCMainCal_fsz(MPI_Comm comm) {
   return;
 }
 
-void VMC_BF_MainCal_fsz(MPI_Comm comm) {
+void VMC_BF_MainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt,*eleSpn,*eleProjBFCnt;
   double complex e,ip;
   double w,x;
@@ -616,14 +825,83 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm) {
   double complex *srOptO = SROptO;
   double         *srOptO_real = SROptO_real;
 
-  int rank,size;
+  int rank,size,parentRank,parentSize;
+  LSLanczosBFFSZScratch lanczosScratch;
+  int lanczosScratchReady = 0;
+  int lanczosWarnings = 0;
+  long lanczosInjectSample = -1;
+  long lanczosInjectParentRank = -1;
+  long long lanczosCheckedSamples = 0;
+  long long lanczosRejectedSamples = 0;
+  FILE *lanczosOracleDump = NULL;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
+  MPI_Comm_size(comm_parent,&parentSize);
+  MPI_Comm_rank(comm_parent,&parentRank);
   SplitLoop(&sampleStart,&sampleEnd,NVMCSample,rank,size);
 
   StartTimer(24);
   clearPhysQuantity();
   StopTimer(24);
+
+  memset(&lanczosScratch, 0, sizeof(lanczosScratch));
+  if(NVMCCalMode == 1 && NLanczosMode == 1) {
+    const char *dumpValue = getenv("MVMC_LANCZOS_ORACLE_DUMP");
+    lanczosInjectSample = getLanczosNonfiniteInjectionSample();
+    lanczosInjectParentRank = LSLanczosTestNonfiniteParentRank();
+    if(lanczosInjectSample == -2) {
+      if(rank == 0) {
+        fprintf(stderr,
+                "Error: MVMC_LANCZOS_TEST_NONFINITE_SAMPLE must be a non-negative integer.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    if(lanczosInjectParentRank == -2 ||
+       lanczosInjectParentRank >= parentSize) {
+      if(parentRank == 0) {
+        fprintf(stderr,
+                "Error: MVMC_LANCZOS_TEST_NONFINITE_PARENT_RANK must identify a parent communicator rank.\n");
+      }
+      MPI_Abort(comm_parent, EXIT_FAILURE);
+    }
+    if(lanczosInjectParentRank >= 0 &&
+       lanczosInjectParentRank != parentRank) {
+      lanczosInjectSample = -1;
+    }
+    if(LSLanczosBFFSZScratchInit(&lanczosScratch) != 0) {
+      if(rank == 0) {
+        fprintf(stderr, "Error: failed to allocate BF-FSZ Lanczos scratch.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    lanczosScratchReady = 1;
+    if(dumpValue != NULL && dumpValue[0] != '\0' &&
+       strcmp(dumpValue, "0") != 0) {
+      char dumpPath[1024];
+      int pathLength;
+      const char *basePath = strcmp(dumpValue, "1") == 0
+                           ? "lanczos_oracle_bf_fsz.dat" : dumpValue;
+      if(parentSize > 1) {
+        pathLength = snprintf(dumpPath, sizeof(dumpPath), "%s.rank%04d",
+                              basePath, parentRank);
+      } else {
+        pathLength = snprintf(dumpPath, sizeof(dumpPath), "%s", basePath);
+      }
+      if(pathLength < 0 || (size_t)pathLength >= sizeof(dumpPath)) {
+        fprintf(stderr,
+                "Error: BF-FSZ Lanczos oracle dump path is too long on rank %d.\n",
+                parentRank);
+        MPI_Abort(comm_parent, EXIT_FAILURE);
+      }
+      lanczosOracleDump = fopen(dumpPath, "w");
+      if(lanczosOracleDump == NULL) {
+        fprintf(stderr,
+                "Error: failed to open BF-FSZ Lanczos oracle dump '%s' on rank %d.\n",
+                dumpPath, parentRank);
+        MPI_Abort(comm_parent, EXIT_FAILURE);
+      }
+    }
+  }
 
   if(NVMCCalMode==0 && NStoreO!=0 && NSRCG==0) {
     clearStoredOSampleRange_fsz(sampleStart, sampleEnd);
@@ -687,6 +965,86 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm) {
       continue;
     }
 
+    if(NVMCCalMode == 1 && NLanczosMode == 1) {
+      int lanczosInfo;
+      int lanczosFinite;
+      lanczosCheckedSamples++;
+      StartTimer(43);
+      if(AllComplexFlag == 0) {
+        lanczosInfo = LSLocalQBF_fsz_real(
+            e, ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn,
+            eleProjBFCnt, &lanczosScratch, LSLQ_real);
+      } else {
+        lanczosInfo = LSLocalQBF_fsz(
+            e, ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn,
+            eleProjBFCnt, &lanczosScratch, LSLQ);
+      }
+      StopTimer(43);
+      if(lanczosInfo == LSLANCZOS_REAL_GATE_FAILURE) {
+        fprintf(stderr,
+                "Error: BF-FSZ real Lanczos vector has a significant imaginary "
+                "component rank:%d sample:%d index:%d value:(%.17e,%.17e) "
+                "tolerance:%.17e.\n", rank, sample,
+                lanczosScratch.realGateIndex,
+                creal(lanczosScratch.realGateValue),
+                cimag(lanczosScratch.realGateValue),
+                lanczosScratch.realGateTolerance);
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
+      if(lanczosInfo == LSLANCZOS_NUMERIC_REJECT) {
+        lanczosRejectedSamples++;
+        if(lanczosWarnings < 3) {
+          fprintf(stderr,
+                  "warning: BF-FSZ Lanczos rejected numerical candidate "
+                  "rebuild rank:%d sample:%d.\n", rank, sample);
+          lanczosWarnings++;
+        }
+        continue;
+      }
+      if(lanczosInfo != LSLANCZOS_OK) {
+        fprintf(stderr,
+                "Error: BF-FSZ Lanczos state or contract failure rank:%d "
+                "sample:%d status:%d.\n", rank, sample, lanczosInfo);
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
+      if((long)sample == lanczosInjectSample) {
+        if(AllComplexFlag == 0) {
+          LSLQ_real[3] = NAN;
+        } else {
+          LSLQ[3] = NAN + 0.0*I;
+        }
+      }
+      lanczosFinite = AllComplexFlag == 0
+                    ? isFiniteLSLQFSZReal(LSLQ_real)
+                    : isFiniteLSLQFSZComplex(LSLQ);
+      if(!lanczosFinite) {
+        lanczosRejectedSamples++;
+        if(lanczosWarnings < 3) {
+          fprintf(stderr,
+                  "warning: BF-FSZ Lanczos rejected non-finite local vector "
+                  "rank:%d sample:%d.\n", rank, sample);
+          lanczosWarnings++;
+        }
+        continue;
+      }
+      if(lanczosOracleDump != NULL) {
+        fprintf(lanczosOracleDump, "sample %d occ", sample);
+        for(i=0; i<Nsite2; i++) fprintf(lanczosOracleDump, " %d", eleNum[i]);
+        fprintf(lanczosOracleDump, " lslq");
+        if(AllComplexFlag == 0) {
+          for(i=0; i<NLSHam*NLSHam; i++) {
+            fprintf(lanczosOracleDump, " %.17e %.17e", LSLQ_real[i], 0.0);
+          }
+        } else {
+          for(i=0; i<NLSHam*NLSHam; i++) {
+            fprintf(lanczosOracleDump, " %.17e %.17e",
+                    creal(LSLQ[i]), cimag(LSLQ[i]));
+          }
+        }
+        fprintf(lanczosOracleDump, "\n");
+      }
+    }
+
     Wc    += w;
     Etot  += w * e;
     Sztot += w * Sz;
@@ -748,8 +1106,23 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm) {
       StartTimer(42);
       CalculateGreenFuncBF_fsz(w,ip,eleIdx,eleCfg,eleNum,eleSpn,eleProjCnt,eleProjBFCnt);
       StopTimer(42);
+
+      if(NLanczosMode>0) {
+        if(AllComplexFlag == 0) {
+          calculateQQQQ_real(QQQQ_real, LSLQ_real, w, NLSHam);
+        } else {
+          calculateQQQQ(QQQQ, LSLQ, w, NLSHam);
+        }
+      }
     }
   }
+
+  if(NVMCCalMode == 1 && NLanczosMode == 1) {
+    finalizeLanczosFSZAccounting(comm_parent, parentRank, lanczosCheckedSamples,
+                                 lanczosRejectedSamples);
+  }
+  if(lanczosOracleDump != NULL) fclose(lanczosOracleDump);
+  if(lanczosScratchReady) LSLanczosBFFSZScratchFree(&lanczosScratch);
 
   if(NVMCCalMode==0){
     if(NStoreO!=0 || NSRCG!=0){

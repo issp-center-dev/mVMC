@@ -27,6 +27,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 
 #include "sector_projection.c"
+#include "locgrn_fsz.h"
 #include <stdint.h>
 
 int CollectBFAffectedParticlesTwoMove_fsz(

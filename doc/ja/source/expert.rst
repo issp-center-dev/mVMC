@@ -520,6 +520,13 @@ ModParaファイル (modpara.def)
    体のグリーン関数まで計算(条件: 1, 2 は ``NVMCCalMode`` =
    1のみ使用可能。)
 
+   ``OrbitalGeneral`` / FSZ、および BackFlow では ``NLanczosMode=1``
+   のみ対応します。この場合、Hamiltonian は ``Transfer`` と
+   number-operator 型の対角相互作用（``CoulombIntra``,
+   ``CoulombInter``, ``Hund``）に限定されます。``NLanczosMode=2``、
+   2nd Lanczos、``NBodyG`` / ``NBodyInterAll`` の Lanczos 補正は
+   未対応です。
+
 -  ``NDataIdxStart``
 
    **形式 :** int型 (デフォルト値 = 0)
@@ -2319,26 +2326,37 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
    t-J 用更新経路、exchange update、Kondo update、doublon-only update との併用は未対応です。
 
 -  ペア軌道は ``Orbital`` / ``OrbitalAntiParallel`` の通常形式、または
-   ``OrbitalGeneral`` / FSZを使用できます。``OrbitalGeneral``では固定
-   :math:`S_z` sectorと``2Sz=-1``の両方を使用できます。``2Sz=-1``では
-   conduction electronのhopping / spin flip samplerと、spin-changing
-   ``Transfer`` / ``OneBodyG`` / ``TwoBodyG``が有効になります。
-   局在スピンとBackFlowの併用は未対応です。
+   ``OrbitalGeneral`` / FSZ を使用できます。``OrbitalGeneral`` では固定
+   :math:`S_z` sector と ``2Sz=-1`` の両方を使用できます。``2Sz=-1`` では
+   conduction electron の hopping / spin flip sampler と、spin-changing
+   ``Transfer`` / ``OneBodyG`` / ``TwoBodyG`` が有効になります。
+   局在スピンと BackFlow の併用は未対応です。
 
 -  スピン射影は未対応です。``NSPGaussLeg==1`` を指定してください。
 
--  RBM、Lanczos、Twist、reweight、``APFlag=1``、``NQPOptTrans>1`` は未対応です。
-   ``NMPTrans>1`` による通常の運動量射影は、``APFlag=0`` かつ
-   ``NQPOptTrans==1`` の範囲で使用できます。
+-  RBM、Twist、reweight、``APFlag=1``、``NQPOptTrans>1`` は未対応です。
+   Single Lanczos Step は ``NVMCCalMode=1`` かつ ``NLanczosMode=1``
+   のみ使用でき、Hamiltonian は ``Transfer`` と number-operator 型の
+   対角相互作用に限定されます。``OrbitalGeneral`` / FSZ の
+   spin-changing ``Transfer`` は ``2Sz=-1`` の場合だけ使用できます。
+   ``NLanczosMode>=2``、2nd Lanczos、および ``NBodyG`` /
+   ``NBodyInterAll`` に対する BackFlow の Lanczos 補正は未対応です。
 
--  ``Orbital`` / ``OrbitalAntiParallel``の通常形式では、Hamiltonianは
-   ``Trans``とnumber-operator型の相互作用（``CoulombIntra``,
+-  ``NMPTrans>1`` による通常の運動量射影は ``OrbitalGeneral`` / FSZ、
+   ``APFlag=0``、``NQPOptTrans==1`` の組み合わせで使用できます。
+   通常の ``Orbital`` / ``OrbitalAntiParallel`` 形式の BackFlow では
+   ``NMPTrans==1`` を指定してください。
+
+-  ``Orbital`` / ``OrbitalAntiParallel`` の通常形式では、Hamiltonian は
+   ``Trans`` と number-operator 型の相互作用（``CoulombIntra``,
    ``CoulombInter``, ``Hund``）の範囲で使用できます。この形式では
-   ``PairHop``、``Exchange``、``InterAll``は引き続き未対応です。
+   ``PairHop``、``Exchange``、``InterAll`` は引き続き未対応です。
 
--  ``OrbitalGeneral`` / FSZでは、``PairHop``、``Exchange``、``InterAll``も
-   使用できます。測定用の``OneBodyG``、``TwoBodyG``、``TwoBodyGEx``は
-   general spin labelに対応します。``NBodyG``と``NBodyInterAll``は未対応です。
+-  ``OrbitalGeneral`` / FSZ では、``PairHop``、``Exchange``、``InterAll`` も
+   使用できます。測定用の ``OneBodyG``、``TwoBodyG``、``TwoBodyGEx`` は
+   general spin label に対応します。``NBodyG`` と ``NBodyInterAll`` は未対応です。
+   ただし ``NLanczosMode=1`` との併用時は ``PairHop``、``Exchange``、
+   ``InterAll`` も対象外です。
 
 -  Standard mode / StdFace から BackFlow 入力は生成されません。
    BackFlow を使う場合は、エキスパートモード入力として ``BFRange`` と ``BF`` を

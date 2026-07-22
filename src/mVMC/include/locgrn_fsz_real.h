@@ -14,5 +14,10 @@ double GreenFunc2_fsz_real(const int ri, const int rj, const int rk, const int r
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
                   int *projCntNew, double *buffer);
 
+double GreenFunc2_fsz2_real(const int ri, const int rj, const int rk, const int rl,
+                  const int s, const int t,const int u,const int v, const double ip,
+                  int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,int *eleSpn,
+                  int *projCntNew, double *buffer);
+
 
 #endif

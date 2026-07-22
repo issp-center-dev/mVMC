@@ -31,6 +31,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "vmccal.h"
 #include "matrix.h"
@@ -102,7 +103,7 @@ static void clearStoredOSampleRange(const int sampleStart, const int sampleEnd) 
   }
 }
 
-void VMCMainCal(MPI_Comm comm) {
+void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
   double complex e,ip;
   double x,w;
@@ -122,9 +123,12 @@ void VMCMainCal(MPI_Comm comm) {
   double complex *rbmCnt;
   const int nSizeRBM=NRBM_PhysLayerIdx + Nneuron;
 
-  int rank,size,int_i;
+  int rank,size,parentRank,parentSize,int_i;
+  FILE *lanczosOracleDump = NULL;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
+  MPI_Comm_size(comm_parent,&parentSize);
+  MPI_Comm_rank(comm_parent,&parentRank);
 #ifdef _DEBUG_VMCCAL
   printf("  Debug: SplitLoop\n");
 #endif
@@ -134,6 +138,35 @@ void VMCMainCal(MPI_Comm comm) {
   StartTimer(24);
   clearPhysQuantity();
   StopTimer(24);
+
+  if(NVMCCalMode == 1 && NLanczosMode > 0) {
+    const char *dumpValue = getenv("MVMC_LANCZOS_ORACLE_DUMP");
+    if(dumpValue != NULL && dumpValue[0] != '\0' && strcmp(dumpValue, "0") != 0) {
+      char dumpPath[1024];
+      int pathLength;
+      const char *basePath = strcmp(dumpValue, "1") == 0
+                           ? "lanczos_oracle_nonfsz.dat" : dumpValue;
+      if(parentSize > 1) {
+        pathLength = snprintf(dumpPath, sizeof(dumpPath), "%s.rank%04d",
+                              basePath, parentRank);
+      } else {
+        pathLength = snprintf(dumpPath, sizeof(dumpPath), "%s", basePath);
+      }
+      if(pathLength < 0 || (size_t)pathLength >= sizeof(dumpPath)) {
+        fprintf(stderr,
+                "Error: non-FSZ Lanczos oracle dump path is too long on rank %d.\n",
+                parentRank);
+        MPI_Abort(comm_parent, EXIT_FAILURE);
+      }
+      lanczosOracleDump = fopen(dumpPath, "w");
+      if(lanczosOracleDump == NULL) {
+        fprintf(stderr,
+                "Error: failed to open non-FSZ Lanczos oracle dump '%s' on rank %d.\n",
+                dumpPath, parentRank);
+        MPI_Abort(comm_parent, EXIT_FAILURE);
+      }
+    }
+  }
 
   if(NVMCCalMode==0 && NStoreO!=0 && NSRCG==0) {
     clearStoredOSampleRange(sampleStart, sampleEnd);
@@ -312,6 +345,22 @@ void VMCMainCal(MPI_Comm comm) {
           LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt, LSLQ);
           calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
         }
+        if(lanczosOracleDump != NULL) {
+          fprintf(lanczosOracleDump, "sample %d occ", sample);
+          for(i=0; i<Nsite2; i++) fprintf(lanczosOracleDump, " %d", eleNum[i]);
+          fprintf(lanczosOracleDump, " lslq");
+          if(AllComplexFlag == 0) {
+            for(i=0; i<NLSHam*NLSHam; i++) {
+              fprintf(lanczosOracleDump, " %.17e %.17e", LSLQ_real[i], 0.0);
+            }
+          } else {
+            for(i=0; i<NLSHam*NLSHam; i++) {
+              fprintf(lanczosOracleDump, " %.17e %.17e",
+                      creal(LSLQ[i]), cimag(LSLQ[i]));
+            }
+          }
+          fprintf(lanczosOracleDump, "\n");
+        }
         StopTimer(43);
 
         // LanczosGreen
@@ -341,6 +390,8 @@ void VMCMainCal(MPI_Comm comm) {
       }
     }
   } /* end of for(sample) */
+
+  if(lanczosOracleDump != NULL) fclose(lanczosOracleDump);
 
 // calculate OO and HO at NVMCCalMode==0
   if(NVMCCalMode==0){

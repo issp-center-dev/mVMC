@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import sys
+import glob
 
 from backflow_def_helper import build_chain_nn_backflow, write_chain_nn_backflow
 
@@ -154,9 +155,149 @@ def max_scaled_row_diff(left, right, abs_tol, rel_tol):
         raise RuntimeError("row length mismatch: left={} right={}".format(len(left), len(right)))
     scaled = []
     for x, y in zip(left, right):
-        scale = max(abs_tol, rel_tol * max(abs(x), abs(y), 1.0))
+        scale = abs_tol + rel_tol * max(abs(x), abs(y))
         scaled.append(abs(x - y) / scale)
     return max(scaled) if scaled else 0.0
+
+
+def assert_lanczos_outputs(workdir, label):
+    for filename in ("zvo_ls_out_001.dat", "zvo_ls_qqqq_001.dat"):
+        path = os.path.join(workdir, "output", filename)
+        if not os.path.exists(path):
+            print("ERROR: {} did not create {}".format(label, filename))
+            return -1
+        rows = read_float_rows(path)
+        if not rows:
+            print("ERROR: {} {} is empty".format(label, filename))
+            return -1
+        max_abs = 0.0
+        for row in rows:
+            for value in row:
+                if not math.isfinite(value):
+                    print("ERROR: {} {} contains non-finite values".format(
+                        label, filename))
+                    return -1
+                max_abs = max(max_abs, abs(value))
+        if max_abs <= 1.0e-12:
+            print("ERROR: {} {} is vacuous".format(label, filename))
+            return -1
+    return 0
+
+
+def read_lanczos_oracle_rows(path):
+    rows = []
+    with open(path) as fp:
+        for line in fp:
+            cols = line.split()
+            if len(cols) < 4 or cols[0] != "sample" or "lslq" not in cols:
+                raise RuntimeError("invalid Lanczos oracle row in {}".format(path))
+            split = cols.index("lslq")
+            sample = int(cols[1])
+            occupancy = tuple(int(value) for value in cols[3:split])
+            raw = [float(value) for value in cols[split + 1:]]
+            if len(raw) != 8:
+                raise RuntimeError("invalid LSLQ width in {}".format(path))
+            lslq = tuple(complex(raw[idx], raw[idx + 1])
+                          for idx in range(0, len(raw), 2))
+            rows.append((sample, occupancy, lslq))
+    if not rows:
+        raise RuntimeError("Lanczos oracle dump is empty: {}".format(path))
+    return rows
+
+
+def expected_lanczos_oracle_paths(workdir, basename, rank_count):
+    base_path = os.path.join(workdir, basename)
+    if rank_count > 1:
+        expected = [base_path + ".rank{:04d}".format(rank)
+                    for rank in range(rank_count)]
+    else:
+        expected = [base_path]
+    actual = sorted(glob.glob(base_path + "*"))
+    if actual != expected:
+        raise RuntimeError(
+            "Lanczos oracle rank files mismatch for {}: expected {}, got {}".format(
+                base_path, expected, actual))
+    return expected
+
+
+def compare_lanczos_oracle_rows(bf_workdir, no_bf_workdir, mpi_procs,
+                                 abs_tol=1.0e-10, rel_tol=1.0e-9):
+    rank_count = int(mpi_procs) if mpi_procs else 1
+    try:
+        bf_paths = expected_lanczos_oracle_paths(
+            bf_workdir, "lanczos_oracle_bf.dat", rank_count)
+        no_bf_paths = expected_lanczos_oracle_paths(
+            no_bf_workdir, "lanczos_oracle_nonfsz.dat", rank_count)
+    except RuntimeError as exc:
+        print("ERROR: {}".format(exc))
+        return -1
+    for rank, (bf_path, no_bf_path) in enumerate(zip(bf_paths, no_bf_paths)):
+        try:
+            bf_rows = read_lanczos_oracle_rows(bf_path)
+            no_bf_rows = read_lanczos_oracle_rows(no_bf_path)
+        except (OSError, RuntimeError, ValueError) as exc:
+            print("ERROR: {}".format(exc))
+            return -1
+        if len(bf_rows) != len(no_bf_rows):
+            print("ERROR: rank {} Lanczos oracle row count mismatch".format(rank))
+            return -1
+        for bf_row, no_bf_row in zip(bf_rows, no_bf_rows):
+            if bf_row[:2] != no_bf_row[:2]:
+                print("ERROR: rank {} BackFlow changed the identity sample chain".format(
+                    rank))
+                return -1
+            max_scaled_diff = max(
+                abs(left - right) /
+                (abs_tol + rel_tol * max(abs(left), abs(right)))
+                for left, right in zip(bf_row[2], no_bf_row[2]))
+            if max_scaled_diff > 1.0:
+                print("ERROR: rank {} sample {} identity BackFlow LSLQ mismatch: "
+                      "max_scaled_diff={:.3e}".format(
+                          rank, bf_row[0], max_scaled_diff))
+                return -1
+    return 0
+
+
+def compare_no_bf_lanczos(rootdir, refdir, bf_workdir, mpi_procs,
+                           modpara_updates, abs_tol=1.0e-10,
+                           rel_tol=1.0e-9):
+    no_bf_workdir = bf_workdir + "_nobf_lanczos"
+    if os.path.exists(no_bf_workdir):
+        shutil.rmtree(no_bf_workdir)
+    os.makedirs(no_bf_workdir)
+    copy_def_files(refdir, no_bf_workdir, include_backflow=False)
+    update_modpara(os.path.join(no_bf_workdir, "modpara.def"), modpara_updates)
+    proc = run_vmc(rootdir, no_bf_workdir, mpi_procs,
+                   log_name="bf_test_nobf_lanczos.log")
+    if proc.returncode != 0:
+        print(proc.stdout)
+        return proc.returncode
+    status = assert_lanczos_outputs(no_bf_workdir, "no-BackFlow Lanczos")
+    if status != 0:
+        return status
+    if os.environ.get("MVMC_LANCZOS_ORACLE_DUMP"):
+        status = compare_lanczos_oracle_rows(
+            bf_workdir, no_bf_workdir, mpi_procs, abs_tol, rel_tol)
+        if status != 0:
+            return status
+
+    for filename in ("zvo_ls_out_001.dat", "zvo_ls_qqqq_001.dat"):
+        bf_rows = read_float_rows(os.path.join(bf_workdir, "output", filename))
+        no_bf_rows = read_float_rows(os.path.join(no_bf_workdir, "output", filename))
+        if len(bf_rows) != len(no_bf_rows):
+            print("ERROR: {} row count mismatch".format(filename))
+            return -1
+        max_scaled_diff = 0.0
+        for bf_row, no_bf_row in zip(bf_rows, no_bf_rows):
+            max_scaled_diff = max(
+                max_scaled_diff,
+                max_scaled_row_diff(bf_row, no_bf_row, 1.0e-9, 1.0e-8))
+        if max_scaled_diff > 1.0:
+            print("ERROR: identity BackFlow Lanczos {} mismatch: "
+                  "max_scaled_diff={:.3e}".format(
+                      filename, max_scaled_diff))
+            return -1
+    return 0
 
 
 def read_key_value_blocks(path):
@@ -845,13 +986,20 @@ def check_bf_green2_bruteforce_dump(path, tol, expected_all_complex_flag):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
     expected_error = None
+    expect_lanczos_nonfinite = False
+    expect_lanczos_warning = False
+    expected_lanczos_warning_count = None
+    lanczos_samples_override = None
     expected_nqp_full = None
     compare_energy = False
+    compare_lanczos = False
+    lanczos_mode = None
+    vmc_cal_mode = None
     compare_twobodyg = False
     compare_twobodygex = False
     compare_gradient = False
@@ -870,11 +1018,34 @@ def main():
         if sys.argv[argi] == "--expect-error" and argi + 1 < len(sys.argv):
             expected_error = sys.argv[argi + 1]
             argi += 2
+        elif sys.argv[argi] == "--expect-lanczos-nonfinite":
+            expect_lanczos_nonfinite = True
+            argi += 1
+        elif sys.argv[argi] == "--expect-lanczos-warning":
+            expect_lanczos_warning = True
+            argi += 1
+        elif (sys.argv[argi] == "--expect-lanczos-warning-count" and
+              argi + 1 < len(sys.argv)):
+            expect_lanczos_warning = True
+            expected_lanczos_warning_count = sys.argv[argi + 1]
+            argi += 2
+        elif sys.argv[argi] == "--lanczos-samples" and argi + 1 < len(sys.argv):
+            lanczos_samples_override = str(int(sys.argv[argi + 1]))
+            argi += 2
         elif sys.argv[argi] == "--expect-nqp-full" and argi + 1 < len(sys.argv):
             expected_nqp_full = int(sys.argv[argi + 1])
             argi += 2
         elif sys.argv[argi] == "--compare-no-bf-energy":
             compare_energy = True
+            argi += 1
+        elif sys.argv[argi] == "--lanczos-mode" and argi + 1 < len(sys.argv):
+            lanczos_mode = str(int(sys.argv[argi + 1]))
+            argi += 2
+        elif sys.argv[argi] == "--vmc-cal-mode" and argi + 1 < len(sys.argv):
+            vmc_cal_mode = str(int(sys.argv[argi + 1]))
+            argi += 2
+        elif sys.argv[argi] == "--compare-no-bf-lanczos":
+            compare_lanczos = True
             argi += 1
         elif sys.argv[argi] == "--compare-no-bf-twobodyg":
             compare_twobodyg = True
@@ -916,7 +1087,7 @@ def main():
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-nqp-full <n>] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -936,6 +1107,8 @@ def main():
     work_suffix = ""
     if compare_energy:
         work_suffix += "_energy"
+    if lanczos_mode is not None:
+        work_suffix += "_lanczos{}".format(lanczos_mode)
     if compare_twobodyg:
         work_suffix += "_twobodyg"
     if compare_twobodygex:
@@ -974,6 +1147,15 @@ def main():
         modpara_updates["Ncond"] = ncond_override
     if nsplit_size_override is not None:
         modpara_updates["NSplitSize"] = nsplit_size_override
+    if lanczos_mode is not None:
+        modpara_updates["NLanczosMode"] = lanczos_mode
+        modpara_updates["NVMCCalMode"] = "1"
+        modpara_updates["NVMCSample"] = (
+            lanczos_samples_override if lanczos_samples_override is not None
+            else ("128" if expect_lanczos_warning else "32"))
+        modpara_updates["NVMCWarmUp"] = "8"
+    if vmc_cal_mode is not None:
+        modpara_updates["NVMCCalMode"] = vmc_cal_mode
     if modpara_updates:
         update_modpara(os.path.join(workdir, "modpara.def"), modpara_updates)
 
@@ -1020,6 +1202,28 @@ def main():
             return -1
         return 0
 
+    if expect_lanczos_nonfinite:
+        if proc.returncode == 0:
+            print("ERROR: non-finite BackFlow Lanczos injection unexpectedly succeeded")
+            return -1
+        if "biased output will not be written" not in proc.stdout:
+            print("ERROR: non-finite BackFlow Lanczos injection missed threshold diagnostic")
+            print(proc.stdout)
+            return -1
+        return 0
+
+    if expect_lanczos_warning:
+        if proc.returncode != 0:
+            print(proc.stdout)
+            return proc.returncode
+        warning_count = (expected_lanczos_warning_count
+                         if expected_lanczos_warning_count is not None
+                         else "1/128")
+        if "rejected {} samples".format(warning_count) not in proc.stdout:
+            print("ERROR: non-finite BackFlow Lanczos warning was not aggregated")
+            print(proc.stdout)
+            return -1
+
     if proc.returncode != 0:
         print(proc.stdout)
         return proc.returncode
@@ -1031,6 +1235,14 @@ def main():
         print("---- output end ----")
         return -1
     tol = 1.0e-10
+    if lanczos_mode == "1":
+        status = assert_lanczos_outputs(workdir, "BackFlow Lanczos")
+        if status != 0:
+            return status
+        if compare_lanczos:
+            return compare_no_bf_lanczos(
+                rootdir, refdir, workdir, mpi_procs, modpara_updates)
+        return 0
     if dump_path is not None:
         if not os.path.exists(dump_path):
             print("ERROR: BackFlow identity dump was not written.")

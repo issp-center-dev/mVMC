@@ -41,6 +41,9 @@ locgrn.c \
 locgrn_real.c \
 locgrn_fsz.c \
 lslocgrn.c \
+lslocgrn_bf.c \
+lslocgrn_bf_fsz.c \
+lslocgrn_fsz.c \
 lslocgrn_real.c \
 matrix.c \
 parameter.c \
@@ -85,8 +88,13 @@ HEADERS = \
 ./include/initfile.h \
 ./include/legendrepoly.h \
 ./include/locgrn.h \
+./include/locgrn_fsz.h \
 ./include/locgrn_real.h \
 ./include/lslocgrn.h \
+./include/lslocgrn_bf.h \
+./include/lslocgrn_bf_fsz.h \
+./include/lslocgrn_fsz.h \
+./include/lslocgrn_status.h \
 ./include/lslocgrn_real.h \
 ./include/matrix.h \
 ./include/parameter.h \

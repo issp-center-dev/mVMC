@@ -760,13 +760,34 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
     }
 
+    if (bufInt[IdxLanczosMode] < 0) {
+      fprintf(stderr, "Error: NLanczosMode must be non-negative (got %d).\n",
+              bufInt[IdxLanczosMode]);
+      info = 1;
+    }
     if (iFlgOrbitalGeneral == 1) {
       if (bufInt[IdxSPGaussLeg] > 1) {    //Check NSPGaussLeg
-        fprintf(stdout, "Warning: SPGaussLeg (in modpara.def) must be 0 or 1 when orbital is general.\n");
-        fprintf(stdout, "         SPGaussLeg set as 1.\n");
-        bufInt[IdxSPGaussLeg] = 1;
-      } else if (bufInt[IdxLanczosMode] != 0) {
-        fprintf(stderr, "Error: Lanczos mode is not supported when orbital is general.\n");
+        if (bufInt[IdxLanczosMode] > 0) {
+          fprintf(stderr,
+                  "Error: FSZ Lanczos requires input SPGaussLeg <= 1 (got %d).\n",
+                  bufInt[IdxSPGaussLeg]);
+          info = 1;
+        } else {
+          fprintf(stdout, "Warning: SPGaussLeg (in modpara.def) must be 0 or 1 when orbital is general.\n");
+          fprintf(stdout, "         SPGaussLeg set as 1.\n");
+          bufInt[IdxSPGaussLeg] = 1;
+        }
+      }
+      if (bufInt[IdxLanczosMode] > 1) {
+        fprintf(stderr,
+                "Error: FSZ supports only NLanczosMode==1 (got %d).\n",
+                bufInt[IdxLanczosMode]);
+        info = 1;
+      } else if (bufInt[IdxLanczosMode] == 1 &&
+                 bufInt[IdxVMCCalcMode] != 1) {
+        fprintf(stderr,
+                "Error: FSZ NLanczosMode==1 requires NVMCCalMode==1 (got %d).\n",
+                bufInt[IdxVMCCalcMode]);
         info = 1;
       }
     }
@@ -1110,6 +1131,28 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     NMPTrans *= -1;
   } else {
     APFlag = 0;
+  }
+
+  {
+    int fszLanczosInfo = 0;
+    if (rank == 0 && iFlgOrbitalGeneral != 0 && NLanczosMode == 1) {
+      if (NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0 ||
+          NNBodyInterAll > 0) {
+        fprintf(stderr,
+                "Error: FSZ NLanczosMode==1 currently supports only diagonal and Transfer Hamiltonian terms.\n");
+        fszLanczosInfo = 1;
+      }
+      if (FlagRBM != 0 || NTwist > 0 || reweight == 1 || APFlag != 0 ||
+          FlagOptTrans > 0 || NExUpdatePath != 0) {
+        fprintf(stderr,
+                "Error: FSZ NLanczosMode==1 does not support RBM, Twist, reweight, APFlag, OptTrans, or special update paths.\n");
+        fszLanczosInfo = 1;
+      }
+    }
+#ifdef _mpi_use
+    MPI_Bcast(&fszLanczosInfo, 1, MPI_INT, 0, comm);
+#endif
+    if (fszLanczosInfo != 0) MPI_Abort(comm, EXIT_FAILURE);
   }
 
   {
