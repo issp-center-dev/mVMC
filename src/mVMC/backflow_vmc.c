@@ -1399,6 +1399,7 @@ static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
 }
 
 static int dumpBFNBodyComponentCheck(const char *path,
+                                     const int *eleIdx,
                                      const int *eleNum,
                                      const int *eleProjBFCnt) {
   const size_t slaterCount = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
@@ -1406,28 +1407,69 @@ static int dumpBFNBodyComponentCheck(const char *path,
       (size_t)NQPFull*((size_t)Nsize*(size_t)Nsize + 1u);
   const size_t etaCount = (size_t)Nsite*(size_t)Nsite;
   double complex *candidate = NULL;
+  double complex *zeroSlater = NULL;
   double complex *slaterBefore = NULL;
   double *slaterRealBefore = NULL;
   double complex *invPfBefore = NULL;
+  double complex *invPfAfterReference = NULL;
   double complex *etaBefore = NULL;
+  double complex *pfCandidate = NULL;
+  double complex *pfReference = NULL;
+  double complex *pfZero = NULL;
+  double complex *pfBufM = NULL;
+  double complex *pfWork = NULL;
   int *etaFlagBefore = NULL;
-  double maxDiff = 0.0;
+  int *eleSpn = NULL;
+  int *pfIWork = NULL;
+  double *pfRWork = NULL;
+  double slaterMaxDiff = 0.0;
+  double pfMaxDiff = 0.0;
   int slaterGlobalStateChanged;
   int etaStateChanged = 0;
   int etaFlagStateChanged = 0;
+  int pfReferenceStatus;
+  int pfStatus;
+  int pfFailureDetail = -1;
+  int pfGlobalStateChanged;
+  int pfZeroStatus;
+  int pfZeroCandidateNonzero = 0;
+  int pfInvalidNullStatus;
+  int pfInvalidRangeStatus;
+  int pfInvalidWorkspaceStatus;
+  int pfInvalidFailureDetail = 0;
+  int invalidDetail;
   size_t idx;
   int ri;
   FILE *fp = NULL;
   int status = -1;
 
   candidate = (double complex *)malloc(slaterCount*sizeof(double complex));
+  zeroSlater = (double complex *)calloc(slaterCount, sizeof(double complex));
   slaterBefore = (double complex *)malloc(slaterCount*sizeof(double complex));
   slaterRealBefore = (double *)malloc(slaterCount*sizeof(double));
   invPfBefore = (double complex *)malloc(invPfCount*sizeof(double complex));
+  invPfAfterReference =
+      (double complex *)malloc(invPfCount*sizeof(double complex));
   etaBefore = (double complex *)malloc(etaCount*sizeof(double complex));
   etaFlagBefore = (int *)malloc(etaCount*sizeof(int));
-  if(candidate == NULL || slaterBefore == NULL || slaterRealBefore == NULL
-     || invPfBefore == NULL || etaBefore == NULL || etaFlagBefore == NULL) {
+  pfCandidate =
+      (double complex *)malloc((size_t)NQPFull*sizeof(double complex));
+  pfReference =
+      (double complex *)malloc((size_t)NQPFull*sizeof(double complex));
+  pfZero = (double complex *)malloc((size_t)NQPFull*sizeof(double complex));
+  pfBufM = (double complex *)malloc(
+      (size_t)Nsize*(size_t)Nsize*sizeof(double complex));
+  pfWork =
+      (double complex *)malloc((size_t)LapackLWork*sizeof(double complex));
+  eleSpn = (int *)malloc((size_t)Nsize*sizeof(int));
+  pfIWork = (int *)malloc((size_t)Nsize*sizeof(int));
+  pfRWork = (double *)malloc((size_t)LapackLWork*sizeof(double));
+  if(candidate == NULL || zeroSlater == NULL || slaterBefore == NULL
+     || slaterRealBefore == NULL || invPfBefore == NULL
+     || invPfAfterReference == NULL || etaBefore == NULL
+     || etaFlagBefore == NULL || pfCandidate == NULL || pfReference == NULL
+     || pfZero == NULL || pfBufM == NULL || pfWork == NULL || eleSpn == NULL
+     || pfIWork == NULL || pfRWork == NULL) {
     fprintf(stderr,
             "Error: failed to allocate BackFlow N-body component diagnostic buffers.\n");
     goto cleanup;
@@ -1446,7 +1488,7 @@ static int dumpBFNBodyComponentCheck(const char *path,
   MakeSlaterElmBF_fcmp_to_serial(candidate, eleNum, eleProjBFCnt);
   for(idx=0;idx<slaterCount;idx++) {
     const double diff = cabs(candidate[idx] - slaterBefore[idx]);
-    if(diff > maxDiff) maxDiff = diff;
+    if(diff > slaterMaxDiff) slaterMaxDiff = diff;
   }
 
   slaterGlobalStateChanged =
@@ -1467,6 +1509,63 @@ static int dumpBFNBodyComponentCheck(const char *path,
     }
   }
 
+  for(idx=0;idx<(size_t)Nsize;idx++) {
+    eleSpn[idx] = idx < (size_t)Ne ? 0 : 1;
+  }
+  for(idx=0;idx<(size_t)NQPFull;idx++) {
+    pfCandidate[idx] = 1.0 + 0.0*I;
+    pfReference[idx] = 1.0 + 0.0*I;
+    pfZero[idx] = 1.0 + 0.0*I;
+  }
+  pfReferenceStatus = CalculateMAll_BF_fcmp(eleIdx, 0, NQPFull);
+  memcpy(pfReference, PfM, (size_t)NQPFull*sizeof(double complex));
+  memcpy(invPfAfterReference, InvM,
+         invPfCount*sizeof(double complex));
+
+  pfStatus = CalculatePfM_BF_from_workspace(
+      candidate, eleIdx, eleSpn, 0, NQPFull, pfCandidate, &pfFailureDetail,
+      pfBufM, pfIWork, pfWork, LapackLWork, pfRWork);
+  for(idx=0;idx<(size_t)NQPFull;idx++) {
+    const double diff = cabs(pfCandidate[idx] - pfReference[idx]);
+    if(diff > pfMaxDiff) pfMaxDiff = diff;
+  }
+
+  pfZeroStatus = CalculatePfM_BF_from_workspace(
+      zeroSlater, eleIdx, eleSpn, 0, NQPFull, pfZero, NULL,
+      pfBufM, pfIWork, pfWork, LapackLWork, pfRWork);
+  for(idx=0;idx<(size_t)NQPFull;idx++) {
+    if(creal(pfZero[idx]) != 0.0 || cimag(pfZero[idx]) != 0.0) {
+      pfZeroCandidateNonzero = 1;
+    }
+  }
+
+  invalidDetail = -1;
+  pfInvalidNullStatus = CalculatePfM_BF_from_workspace(
+      NULL, eleIdx, eleSpn, 0, NQPFull, pfCandidate,
+      &invalidDetail, pfBufM, pfIWork, pfWork, LapackLWork,
+      pfRWork);
+  if(invalidDetail != 0) pfInvalidFailureDetail = 1;
+  invalidDetail = -1;
+  pfInvalidRangeStatus = CalculatePfM_BF_from_workspace(
+      candidate, eleIdx, eleSpn, 0, 0, pfCandidate,
+      &invalidDetail, pfBufM, pfIWork, pfWork, LapackLWork,
+      pfRWork);
+  if(invalidDetail != 0) pfInvalidFailureDetail = 1;
+  invalidDetail = -1;
+  pfInvalidWorkspaceStatus = CalculatePfM_BF_from_workspace(
+      candidate, eleIdx, eleSpn, 0, NQPFull, pfCandidate,
+      &invalidDetail, pfBufM, pfIWork, pfWork, LapackLWork-1,
+      pfRWork);
+  if(invalidDetail != 0) pfInvalidFailureDetail = 1;
+
+  pfGlobalStateChanged =
+      memcmp(slaterBefore, SlaterElmBF,
+             slaterCount*sizeof(double complex)) != 0
+      || memcmp(slaterRealBefore, SlaterElmBF_real,
+                slaterCount*sizeof(double)) != 0
+      || memcmp(invPfAfterReference, InvM,
+                invPfCount*sizeof(double complex)) != 0;
+
   /* Keep this test-only diagnostic non-invasive if a future regression occurs. */
   memcpy(SlaterElmBF, slaterBefore, slaterCount*sizeof(double complex));
   memcpy(SlaterElmBF_real, slaterRealBefore, slaterCount*sizeof(double));
@@ -1485,21 +1584,45 @@ static int dumpBFNBodyComponentCheck(const char *path,
             path);
     goto cleanup;
   }
-  fprintf(fp, "slater_max_abs_diff %.17e\n", maxDiff);
+  fprintf(fp, "slater_max_abs_diff %.17e\n", slaterMaxDiff);
   fprintf(fp, "slater_global_state_changed %d\n",
           slaterGlobalStateChanged);
   fprintf(fp, "eta_state_changed %d\n", etaStateChanged);
   fprintf(fp, "eta_flag_state_changed %d\n", etaFlagStateChanged);
+  fprintf(fp, "pf_max_abs_diff %.17e\n", pfMaxDiff);
+  fprintf(fp, "pf_reference_status %d\n", pfReferenceStatus);
+  fprintf(fp, "pf_status %d\n", pfStatus);
+  fprintf(fp, "pf_failure_detail %d\n", pfFailureDetail);
+  fprintf(fp, "pf_global_state_changed %d\n", pfGlobalStateChanged);
+  fprintf(fp, "pf_zero_status %d\n", pfZeroStatus);
+  fprintf(fp, "pf_zero_candidate_nonzero %d\n",
+          pfZeroCandidateNonzero);
+  fprintf(fp, "pf_invalid_null_status %d\n", pfInvalidNullStatus);
+  fprintf(fp, "pf_invalid_range_status %d\n", pfInvalidRangeStatus);
+  fprintf(fp, "pf_invalid_workspace_status %d\n",
+          pfInvalidWorkspaceStatus);
+  fprintf(fp, "pf_invalid_failure_detail %d\n",
+          pfInvalidFailureDetail);
   status = 0;
 
 cleanup:
   if(fp != NULL) fclose(fp);
   free(candidate);
+  free(zeroSlater);
   free(slaterBefore);
   free(slaterRealBefore);
   free(invPfBefore);
+  free(invPfAfterReference);
   free(etaBefore);
   free(etaFlagBefore);
+  free(pfCandidate);
+  free(pfReference);
+  free(pfZero);
+  free(pfBufM);
+  free(pfWork);
+  free(eleSpn);
+  free(pfIWork);
+  free(pfRWork);
   return status;
 }
 
@@ -1636,8 +1759,8 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     if(rank == 0 && !bfNBodyComponentDumped
        && bfNBodyComponentDumpPath != NULL
        && bfNBodyComponentDumpPath[0] != '\0') {
-      if(dumpBFNBodyComponentCheck(bfNBodyComponentDumpPath, eleNum,
-                                   eleProjBFCnt) != 0) {
+      if(dumpBFNBodyComponentCheck(bfNBodyComponentDumpPath, eleIdx,
+                                   eleNum, eleProjBFCnt) != 0) {
         MPI_Abort(comm, EXIT_FAILURE);
       }
       bfNBodyComponentDumped = 1;

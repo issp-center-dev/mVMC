@@ -998,6 +998,17 @@ def check_bf_nbody_component_dump(path, tol):
         "slater_global_state_changed",
         "eta_state_changed",
         "eta_flag_state_changed",
+        "pf_max_abs_diff",
+        "pf_reference_status",
+        "pf_status",
+        "pf_failure_detail",
+        "pf_global_state_changed",
+        "pf_zero_status",
+        "pf_zero_candidate_nonzero",
+        "pf_invalid_null_status",
+        "pf_invalid_range_status",
+        "pf_invalid_workspace_status",
+        "pf_invalid_failure_detail",
     )
     missing = [key for key in required if key not in values]
     if missing:
@@ -1010,10 +1021,34 @@ def check_bf_nbody_component_dump(path, tol):
         print("ERROR: serial BackFlow Slater mismatch: max_abs_diff={:.3e}".format(
             max_diff))
         return -1
-    for key in required[1:]:
-        if int(values[key]) != 0:
-            print("ERROR: serial BackFlow Slater builder changed global state: {}={}".format(
-                key, values[key]))
+    pf_max_diff = float(values["pf_max_abs_diff"])
+    if not math.isfinite(pf_max_diff) or pf_max_diff > 1.0e-12:
+        print("ERROR: neutral BackFlow Pfaffian mismatch: max_abs_diff={:.3e}".format(
+            pf_max_diff))
+        return -1
+    status_fields = (
+        "slater_global_state_changed",
+        "eta_state_changed",
+        "eta_flag_state_changed",
+        "pf_reference_status",
+        "pf_status",
+        "pf_failure_detail",
+        "pf_global_state_changed",
+        "pf_zero_status",
+        "pf_zero_candidate_nonzero",
+        "pf_invalid_null_status",
+        "pf_invalid_range_status",
+        "pf_invalid_workspace_status",
+        "pf_invalid_failure_detail",
+    )
+    for key in status_fields:
+        if key.startswith("pf_invalid_") and key.endswith("_status"):
+            expected = 3
+        else:
+            expected = 0
+        if int(values[key]) != expected:
+            print("ERROR: BackFlow N-body component check failed: {}={} expected {}".format(
+                key, values[key], expected))
             return -1
     return 0
 

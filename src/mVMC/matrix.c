@@ -493,16 +493,37 @@ int CalculatePfM_BF_fsz_from_workspace(const double complex *sltElmBF,
     const int *eleIdx, const int *eleSpn, const int qpStart, const int qpEnd,
     double complex *pfMOut, int *failureDetail, double complex *bufM,
     int *iwork, double complex *work, int lwork, double *rwork) {
-  const int qpNum = qpEnd-qpStart;
+  if(qpStart == qpEnd && qpStart >= 0 && qpEnd <= NQPFull) {
+    if(failureDetail != NULL) *failureDetail = 0;
+    return BF_FSZ_PF_OK;
+  }
+  return CalculatePfM_BF_from_workspace(sltElmBF, eleIdx, eleSpn, qpStart,
+      qpEnd, pfMOut, failureDetail, bufM, iwork, work, lwork, rwork);
+}
+
+int CalculatePfM_BF_from_workspace(const double complex *sltElmBF,
+    const int *eleIdx, const int *eleSpn, int qpStart, int qpEnd,
+    double complex *pfMOut, int *failureDetail, double complex *bufM,
+    int *iwork, double complex *work, int lwork, double *rwork) {
+  int qpNum;
   int qpidx;
-  int status = BF_FSZ_PF_OK;
+  int status = BF_PF_OK;
   int detail = 0;
 
+  if(failureDetail != NULL) *failureDetail = 0;
+  if(sltElmBF == NULL || eleIdx == NULL || eleSpn == NULL || pfMOut == NULL
+     || bufM == NULL || iwork == NULL || work == NULL || rwork == NULL
+     || qpStart < 0 || qpStart >= qpEnd || qpEnd > NQPFull
+     || Nsize <= 0 || Nsite2 <= 0 || lwork < LapackLWork) {
+    return BF_PF_INVALID_ARGUMENT;
+  }
+
+  qpNum = qpEnd-qpStart;
   for(qpidx=0;qpidx<qpNum;qpidx++) {
     int myDetail = 0;
     int myStatus = calculatePfM_BF_fsz_child_from(sltElmBF, eleIdx, eleSpn,
         qpStart, qpidx, bufM, iwork, work, lwork, rwork, pfMOut, &myDetail);
-    if(status==BF_FSZ_PF_OK && myStatus!=BF_FSZ_PF_OK) {
+    if(status==BF_PF_OK && myStatus!=BF_PF_OK) {
       status = myStatus;
       detail = myDetail;
     }
