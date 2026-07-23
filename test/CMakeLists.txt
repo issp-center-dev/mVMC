@@ -10,7 +10,8 @@ endif()
 
 add_executable(nbody_operator_unit
     nbody_operator_unit.c
-    ${CMAKE_SOURCE_DIR}/src/mVMC/nbody_operator.c)
+    ${CMAKE_SOURCE_DIR}/src/mVMC/nbody_operator.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/backflow_nbody_scratch.c)
 target_include_directories(nbody_operator_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 add_test(NAME NBodyOperator_Unit COMMAND nbody_operator_unit)

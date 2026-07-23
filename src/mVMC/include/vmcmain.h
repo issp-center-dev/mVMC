@@ -103,6 +103,8 @@ extern void omp_set_num_threads(int);
 #include "../locgrn_real.c"
 #include "../locgrn_fsz.c"
 #include "../locgrn_fsz_real.c"
+#include "../backflow_nbody_scratch.c"
+#include "../backflow_nbody.c"
 #include "../calham.c"
 #include "../calham_real.c"
 #include "../calham_fsz.c"

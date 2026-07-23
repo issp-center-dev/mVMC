@@ -24,6 +24,8 @@ OBJS = \
 SOURCES = \
 backflow.c \
 backflow_measure.c \
+backflow_nbody.c \
+backflow_nbody_scratch.c \
 backflow_pf.c \
 backflow_slater.c \
 backflow_vmc.c \
@@ -79,6 +81,7 @@ workspace.c
 
 HEADERS = \
 ./include/backflow.h \
+./include/backflow_nbody.h \
 ./include/average.h \
 ./include/avevar.h \
 ./include/calgrn.h \

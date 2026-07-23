@@ -1,7 +1,10 @@
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include "backflow_nbody.h"
 #include "nbody_operator.h"
 
 int NExUpdatePath = 0;
@@ -312,11 +315,262 @@ static void TestSectorHelpers(void) {
         "WouldPreserve_2hopPre did not restore occupation");
 }
 
+static BFNBodyScratchDimensions ScratchDimensions(int useFsz) {
+  BFNBodyScratchDimensions dimensions;
+  memset(&dimensions, 0, sizeof(dimensions));
+  dimensions.maxOrder = 4;
+  dimensions.useFsz = useFsz;
+  dimensions.nsize = 4;
+  dimensions.nsite2 = 8;
+  dimensions.nproj = 3;
+  dimensions.nsite = 4;
+  dimensions.nrange = 2;
+  dimensions.nqpFull = 2;
+  dimensions.lapackLWork = 64;
+  if (useFsz) {
+    dimensions.bfFszGreenBufferCount = 96;
+    dimensions.pfUpdateIntCount = 24;
+    dimensions.pfUpdateDoubleCount = 80;
+    dimensions.bfHopIntSize = 40;
+  }
+  return dimensions;
+}
+
+static size_t SumIntSlices(const BFNBodyScratchSizes *sizes) {
+  return sizes->rsiCount + sizes->rsjCount + sizes->movedCount
+      + sizes->eleIdxCount + sizes->eleCfgCount + sizes->eleNumCount
+      + sizes->eleSpnCount + sizes->projCntCount + sizes->projBFCntCount
+      + sizes->pfIWorkCount + sizes->affectedCount
+      + sizes->hopIntWorkCount;
+}
+
+static size_t SumComplexSlices(const BFNBodyScratchSizes *sizes) {
+  return sizes->greenBufferCount + sizes->slaterCount
+      + sizes->candidatePfCount + sizes->pfBufMCount
+      + sizes->pfWorkCount;
+}
+
+static void CheckScratchPointerLayout(const BFNBodyScratchSizes *sizes,
+                                      const BFNBodyScratch *scratch,
+                                      int *intBase,
+                                      double complex *complexBase,
+                                      double *doubleBase) {
+  size_t offset = 0;
+#define CHECK_INT_SLICE(field, countField)                                      \
+  do {                                                                          \
+    if (sizes->countField == 0) {                                                \
+      CHECK(scratch->field == NULL, #field " zero slice is not NULL");          \
+    } else {                                                                     \
+      CHECK(scratch->field == intBase + offset, #field " offset mismatch");     \
+    }                                                                            \
+    offset += sizes->countField;                                                 \
+  } while (0)
+  CHECK_INT_SLICE(rsi, rsiCount);
+  CHECK_INT_SLICE(rsj, rsjCount);
+  CHECK_INT_SLICE(moved, movedCount);
+  CHECK_INT_SLICE(eleIdx, eleIdxCount);
+  CHECK_INT_SLICE(eleCfg, eleCfgCount);
+  CHECK_INT_SLICE(eleNum, eleNumCount);
+  CHECK_INT_SLICE(eleSpn, eleSpnCount);
+  CHECK_INT_SLICE(projCnt, projCntCount);
+  CHECK_INT_SLICE(projBFCnt, projBFCntCount);
+  CHECK_INT_SLICE(pfIWork, pfIWorkCount);
+  CHECK_INT_SLICE(affected, affectedCount);
+  CHECK_INT_SLICE(hopIntWork, hopIntWorkCount);
+#undef CHECK_INT_SLICE
+  CHECK(offset == sizes->intCount, "integer slice end mismatch");
+
+  offset = 0;
+#define CHECK_COMPLEX_SLICE(field, countField)                                  \
+  do {                                                                          \
+    CHECK(scratch->field == complexBase + offset, #field " offset mismatch");   \
+    offset += sizes->countField;                                                 \
+  } while (0)
+  CHECK_COMPLEX_SLICE(greenBuffer, greenBufferCount);
+  CHECK_COMPLEX_SLICE(slater, slaterCount);
+  CHECK_COMPLEX_SLICE(candidatePf, candidatePfCount);
+  CHECK_COMPLEX_SLICE(pfBufM, pfBufMCount);
+  CHECK_COMPLEX_SLICE(pfWork, pfWorkCount);
+#undef CHECK_COMPLEX_SLICE
+  CHECK(offset == sizes->complexCount, "complex slice end mismatch");
+
+  CHECK(scratch->pfRWork == doubleBase, "pfRWork offset mismatch");
+  CHECK(sizes->pfRWorkCount == sizes->doubleCount,
+        "double slice total mismatch");
+}
+
+static void TestScratchSizes(void) {
+  BFNBodyScratchDimensions dimensions = ScratchDimensions(0);
+  BFNBodyScratchDimensions invalid[10];
+  BFNBodyScratchDimensions overflow;
+  BFNBodyScratchSizes nonFsz;
+  BFNBodyScratchSizes fsz;
+  BFNBodyScratchSizes sizes;
+  BFNBodyScratch scratch;
+  BFNBodyScratch before;
+  int *intBase;
+  double complex *complexBase;
+  double *doubleBase;
+  int i;
+
+  for (i = 0; i < 10; i++) invalid[i] = dimensions;
+  invalid[0].maxOrder = 0;
+  invalid[1].nsize = 0;
+  invalid[2].nsite2 = 0;
+  invalid[3].nproj = -1;
+  invalid[4].nsite = 0;
+  invalid[5].nrange = 0;
+  invalid[6].nqpFull = 0;
+  invalid[7].lapackLWork = 0;
+  invalid[8].nsize = -1;
+  invalid[9].nrange = -1;
+  for (i = 0; i < 10; i++) {
+    memset(&sizes, 0x5a, sizeof(sizes));
+    CHECK(ComputeBFNBodyScratchSizes(&invalid[i], &sizes)
+              == BF_NBODY_WORKSPACE_ERROR,
+          "invalid scratch dimensions case %d accepted", i);
+  }
+
+  dimensions = ScratchDimensions(0);
+  dimensions.nproj = 0;
+  CHECK(ComputeBFNBodyScratchSizes(&dimensions, &sizes) == BF_NBODY_OK
+            && sizes.projCntCount == 0,
+        "zero-length optional NProj slice rejected");
+  dimensions = ScratchDimensions(0);
+  dimensions.nsite2 = 6;
+  CHECK(ComputeBFNBodyScratchSizes(&dimensions, &sizes)
+            == BF_NBODY_WORKSPACE_ERROR,
+        "nsite2 != 2*nsite accepted");
+  dimensions = ScratchDimensions(0);
+  dimensions.useFsz = 2;
+  CHECK(ComputeBFNBodyScratchSizes(&dimensions, &sizes)
+            == BF_NBODY_WORKSPACE_ERROR,
+        "invalid useFsz accepted");
+
+  overflow = ScratchDimensions(0);
+  overflow.nsite = INT_MAX/2;
+  overflow.nsite2 = INT_MAX-1;
+  overflow.nrange = INT_MAX;
+  CHECK(ComputeBFNBodyScratchSizes(&overflow, &sizes)
+            == BF_NBODY_WORKSPACE_ERROR,
+        "overflowing scratch multiplication accepted");
+
+  CHECK(ComputeBFNBodyScratchSizes(NULL, &sizes)
+            == BF_NBODY_WORKSPACE_ERROR,
+        "NULL dimensions accepted");
+  CHECK(ComputeBFNBodyScratchSizes(&dimensions, NULL)
+            == BF_NBODY_WORKSPACE_ERROR,
+        "NULL sizes output accepted");
+
+  dimensions = ScratchDimensions(0);
+  CHECK(ComputeBFNBodyScratchSizes(&dimensions, &nonFsz) == BF_NBODY_OK,
+        "non-FSZ scratch sizing failed");
+  dimensions = ScratchDimensions(1);
+  CHECK(ComputeBFNBodyScratchSizes(&dimensions, &fsz) == BF_NBODY_OK,
+        "FSZ scratch sizing failed");
+
+  CHECK(nonFsz.intCount == SumIntSlices(&nonFsz),
+        "non-FSZ integer total is not the slice sum");
+  CHECK(nonFsz.complexCount == SumComplexSlices(&nonFsz),
+        "non-FSZ complex total is not the slice sum");
+  CHECK(nonFsz.doubleCount == nonFsz.pfRWorkCount,
+        "non-FSZ double total is not the slice sum");
+  CHECK(fsz.intCount == SumIntSlices(&fsz),
+        "FSZ integer total is not the slice sum");
+  CHECK(fsz.complexCount == SumComplexSlices(&fsz),
+        "FSZ complex total is not the slice sum");
+  CHECK(fsz.doubleCount == fsz.pfRWorkCount,
+        "FSZ double total is not the slice sum");
+  CHECK(nonFsz.affectedCount == 0 && nonFsz.hopIntWorkCount == 0,
+        "non-FSZ scratch contains FSZ-only slices");
+  CHECK(fsz.affectedCount == (size_t)dimensions.nsize
+            && fsz.hopIntWorkCount == (size_t)dimensions.bfHopIntSize,
+        "FSZ-only scratch slices have wrong sizes");
+  CHECK(nonFsz.greenBufferCount == 10
+            && fsz.greenBufferCount
+                == dimensions.bfFszGreenBufferCount
+            && nonFsz.pfIWorkCount == 4
+            && fsz.pfIWorkCount == dimensions.pfUpdateIntCount
+            && nonFsz.pfRWorkCount == 64
+            && fsz.pfRWorkCount == dimensions.pfUpdateDoubleCount,
+        "FSZ update-work maxima have wrong sizes");
+  CHECK(nonFsz.rsiCount == fsz.rsiCount
+            && nonFsz.rsjCount == fsz.rsjCount
+            && nonFsz.movedCount == fsz.movedCount
+            && nonFsz.eleIdxCount == fsz.eleIdxCount
+            && nonFsz.eleCfgCount == fsz.eleCfgCount
+            && nonFsz.eleNumCount == fsz.eleNumCount
+            && nonFsz.eleSpnCount == fsz.eleSpnCount
+            && nonFsz.projCntCount == fsz.projCntCount
+            && nonFsz.projBFCntCount == fsz.projBFCntCount
+            && nonFsz.slaterCount == fsz.slaterCount
+            && nonFsz.candidatePfCount == fsz.candidatePfCount
+            && nonFsz.pfBufMCount == fsz.pfBufMCount
+            && nonFsz.pfWorkCount == fsz.pfWorkCount,
+        "FSZ changed a non-update scratch slice");
+
+  sizes = fsz;
+  intBase = (int *)malloc(sizes.intCount*sizeof(int));
+  complexBase = (double complex *)malloc(
+      sizes.complexCount*sizeof(double complex));
+  doubleBase = (double *)malloc(sizes.doubleCount*sizeof(double));
+  CHECK(intBase != NULL && complexBase != NULL && doubleBase != NULL,
+        "scratch fixture allocation failed");
+  if (intBase == NULL || complexBase == NULL || doubleBase == NULL) {
+    free(intBase);
+    free(complexBase);
+    free(doubleBase);
+    return;
+  }
+
+  memset(&scratch, 0xa5, sizeof(scratch));
+  before = scratch;
+  CHECK(BindBFNBodyScratch(&sizes, intBase, sizes.intCount-1,
+                           complexBase, sizes.complexCount,
+                           doubleBase, sizes.doubleCount, &scratch)
+            == BF_NBODY_WORKSPACE_ERROR,
+        "undersized integer base accepted");
+  CHECK(memcmp(&scratch, &before, sizeof(scratch)) == 0,
+        "failed integer binding modified scratch");
+  CHECK(BindBFNBodyScratch(&sizes, intBase, sizes.intCount,
+                           complexBase, sizes.complexCount-1,
+                           doubleBase, sizes.doubleCount, &scratch)
+            == BF_NBODY_WORKSPACE_ERROR,
+        "undersized complex base accepted");
+  CHECK(memcmp(&scratch, &before, sizeof(scratch)) == 0,
+        "failed complex binding modified scratch");
+  CHECK(BindBFNBodyScratch(&sizes, intBase, sizes.intCount,
+                           complexBase, sizes.complexCount,
+                           doubleBase, sizes.doubleCount-1, &scratch)
+            == BF_NBODY_WORKSPACE_ERROR,
+        "undersized double base accepted");
+  CHECK(memcmp(&scratch, &before, sizeof(scratch)) == 0,
+        "failed double binding modified scratch");
+
+  CHECK(BindBFNBodyScratch(&sizes, intBase, sizes.intCount,
+                           complexBase, sizes.complexCount,
+                           doubleBase, sizes.doubleCount, &scratch)
+            == BF_NBODY_OK,
+        "exact-size scratch binding failed");
+  CHECK(scratch.maxOrder == sizes.maxOrder
+            && scratch.useFsz == sizes.useFsz,
+        "scratch metadata did not come from sizes");
+  CHECK(memcmp(&scratch.sizes, &sizes, sizeof(sizes)) == 0,
+        "bound scratch did not retain authoritative sizes");
+  CheckScratchPointerLayout(&sizes, &scratch, intBase, complexBase,
+                            doubleBase);
+
+  free(intBase);
+  free(complexBase);
+  free(doubleBase);
+}
+
 int main(void) {
   TestInvalidArguments();
   TestNamedSixOrbitalCases();
   TestExhaustiveFourOrbital();
   TestSectorHelpers();
+  TestScratchSizes();
 
   CHECK(kindCounts[NBODY_REDUCED_ZERO] > 0, "zero class was not covered");
   CHECK(kindCounts[NBODY_REDUCED_SCALAR] > 0, "scalar class was not covered");
