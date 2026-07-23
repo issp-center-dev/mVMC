@@ -1108,7 +1108,7 @@ def check_bf_nbody_dispatch_dump(path, tol):
         "scalar",
         "zero",
         "dispatch1",
-        "dispatch2",
+        "rebuild2",
         "full_rebuild",
         "alias_rejections",
         "contract_failures",
@@ -1126,7 +1126,7 @@ def check_bf_nbody_dispatch_dump(path, tol):
         print("ERROR: BackFlow N-body dispatch dump is missing fields: {}".format(
             ", ".join(missing)))
         return -1
-    for key in ("scalar", "zero", "dispatch1", "dispatch2", "full_rebuild"):
+    for key in ("scalar", "zero", "dispatch1", "rebuild2", "full_rebuild"):
         if int(values[key]) <= 0:
             print("ERROR: BackFlow N-body dispatch class was not exercised: {}={}".format(
                 key, values[key]))

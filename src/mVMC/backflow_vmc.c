@@ -1714,8 +1714,7 @@ static int BFDiagDirectValue(
     *valueOut = (double)reduction.sign+0.0*I;
     return 0;
   }
-  if(reduction.kind != NBODY_REDUCED_HOPS
-     || reduction.order < 1 || reduction.order > 2) {
+  if(reduction.kind != NBODY_REDUCED_HOPS || reduction.order != 1) {
     return -1;
   }
 
@@ -1730,22 +1729,12 @@ static int BFDiagDirectValue(
   memcpy(scratch->slater, SlaterElmBF,
          slaterCount*sizeof(double complex));
 
-  if(reduction.order == 1) {
-    value = GreenFunc1BF(
-        scratch->rsi[0]%Nsite, scratch->rsj[0]%Nsite,
-        scratch->rsj[0]/Nsite, ip, scratch->slater,
-        scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
-        eleProjCnt, scratch->projCnt, eleProjBFCnt,
-        scratch->projBFCnt, scratch->greenBuffer);
-  } else {
-    value = GreenFunc2BF(
-        scratch->rsi[0]%Nsite, scratch->rsj[0]%Nsite,
-        scratch->rsi[1]%Nsite, scratch->rsj[1]%Nsite,
-        scratch->rsj[0]/Nsite, scratch->rsj[1]/Nsite, ip,
-        scratch->slater, scratch->eleIdx, scratch->eleCfg,
-        scratch->eleNum, eleProjCnt, scratch->projCnt,
-        eleProjBFCnt, scratch->projBFCnt, scratch->greenBuffer);
-  }
+  value = GreenFunc1BF(
+      scratch->rsi[0]%Nsite, scratch->rsj[0]%Nsite,
+      scratch->rsj[0]/Nsite, ip, scratch->slater,
+      scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
+      eleProjCnt, scratch->projCnt, eleProjBFCnt,
+      scratch->projBFCnt, scratch->greenBuffer);
   if(memcmp(scratch->eleIdx, eleIdx, (size_t)Nsize*sizeof(int)) != 0
      || memcmp(scratch->eleCfg, eleCfg,
                (size_t)Nsite2*sizeof(int)) != 0
@@ -1906,7 +1895,7 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
   int scalarCount = 0;
   int zeroCount = 0;
   int dispatch1Count = 0;
-  int dispatch2Count = 0;
+  int rebuild2Count = 0;
   int fullRebuildCount = 0;
   int aliasRejectionCount = 0;
   int contractFailures = 0;
@@ -2063,30 +2052,32 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
   {
     const int rsi[2] = {target[0], target[1]};
     const int rsj[2] = {source[0], source[1]};
-    NBodyReduction reduction;
-    double complex direct;
+    double complex full;
     BFNBodyResult result;
-    if(BFDiagDirectValue(
-           2, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
-           eleProjCnt, eleProjBFCnt, &reference.scratch,
-           &reduction, &direct) != 0) {
+    globalStateChanged |= BFDiagGlobalsDiffer(
+        slaterBefore, slaterRealBefore, invBefore, pfBefore,
+        etaBefore, etaFlagBefore);
+    if(BFDiagFullRebuildValue(
+           2, rsi, rsj, ip, eleIdx, eleCfg, eleNum, eleProjCnt,
+           &reference.scratch, slaterBefore, slaterRealBefore,
+           invBefore, pfBefore, etaBefore, etaFlagBefore, &full) != 0) {
       setupFailures++;
     } else {
       const BFNBodyStatus expectedStatus =
-          cabs(direct) == 0.0 ? BF_NBODY_PHYSICAL_ZERO : BF_NBODY_OK;
+          cabs(full) == 0.0 ? BF_NBODY_PHYSICAL_ZERO : BF_NBODY_OK;
       const BFNBodyStage expectedStage =
-          cabs(direct) == 0.0 ? BF_NBODY_STAGE_RATIO : BF_NBODY_STAGE_NONE;
+          cabs(full) == 0.0 ? BF_NBODY_STAGE_RATIO : BF_NBODY_STAGE_NONE;
       result = GreenFuncNBF(
           2, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
           eleProjCnt, eleProjBFCnt, &evaluator.scratch);
-      dispatch2Count++;
+      rebuild2Count++;
       if(!BFDiagResultMatches(
              result, expectedStatus, expectedStage, BF_NBODY_DETAIL_NONE,
-             2, direct, tolerance)) {
+             2, full, tolerance)) {
         contractFailures++;
       }
-      if(cabs(result.value-direct) > maxDirectDiff) {
-        maxDirectDiff = cabs(result.value-direct);
+      if(cabs(result.value-full) > maxFullRebuildDiff) {
+        maxFullRebuildDiff = cabs(result.value-full);
       }
     }
   }
@@ -2094,30 +2085,44 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
     const int rsi[3] = {target[0], target[2], target[1]};
     const int rsj[3] = {target[2], source[0], source[1]};
     NBodyReduction reduction;
-    double complex direct;
+    double complex full;
     BFNBodyResult result;
-    if(BFDiagDirectValue(
-           3, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
-           eleProjCnt, eleProjBFCnt, &reference.scratch,
-           &reduction, &direct) != 0 || reduction.order != 2
+    if(ReduceNBodyTerm(
+           3, rsi, rsj, eleNum, Nsite2,
+           reference.scratch.rsi, reference.scratch.rsj,
+           reference.scratch.maxOrder, &reduction) != 0
+       || reduction.kind != NBODY_REDUCED_HOPS || reduction.order != 2
        || reduction.sign != 1) {
       setupFailures++;
     } else {
-      const BFNBodyStatus expectedStatus =
-          cabs(direct) == 0.0 ? BF_NBODY_PHYSICAL_ZERO : BF_NBODY_OK;
-      const BFNBodyStage expectedStage =
-          cabs(direct) == 0.0 ? BF_NBODY_STAGE_RATIO : BF_NBODY_STAGE_NONE;
-      result = GreenFuncNBF(
-          3, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
-          eleProjCnt, eleProjBFCnt, &evaluator.scratch);
-      dispatch2Count++;
-      if(!BFDiagResultMatches(
-             result, expectedStatus, expectedStage, BF_NBODY_DETAIL_NONE,
-             2, direct, tolerance)) {
-        contractFailures++;
-      }
-      if(cabs(result.value-direct) > maxDirectDiff) {
-        maxDirectDiff = cabs(result.value-direct);
+      globalStateChanged |= BFDiagGlobalsDiffer(
+          slaterBefore, slaterRealBefore, invBefore, pfBefore,
+          etaBefore, etaFlagBefore);
+      if(BFDiagFullRebuildValue(
+             reduction.order, reference.scratch.rsi,
+             reference.scratch.rsj, ip, eleIdx, eleCfg, eleNum,
+             eleProjCnt, &reference.scratch, slaterBefore,
+             slaterRealBefore, invBefore, pfBefore, etaBefore,
+             etaFlagBefore, &full) != 0) {
+        setupFailures++;
+      } else {
+        const BFNBodyStatus expectedStatus =
+            cabs(full) == 0.0 ? BF_NBODY_PHYSICAL_ZERO : BF_NBODY_OK;
+        const BFNBodyStage expectedStage =
+            cabs(full) == 0.0 ? BF_NBODY_STAGE_RATIO : BF_NBODY_STAGE_NONE;
+        full *= (double)reduction.sign;
+        result = GreenFuncNBF(
+            3, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+            eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+        rebuild2Count++;
+        if(!BFDiagResultMatches(
+               result, expectedStatus, expectedStage, BF_NBODY_DETAIL_NONE,
+               2, full, tolerance)) {
+          contractFailures++;
+        }
+        if(cabs(result.value-full) > maxFullRebuildDiff) {
+          maxFullRebuildDiff = cabs(result.value-full);
+        }
       }
     }
   }
@@ -2347,7 +2352,7 @@ write_dump:
   fprintf(fp, "scalar %d\n", scalarCount);
   fprintf(fp, "zero %d\n", zeroCount);
   fprintf(fp, "dispatch1 %d\n", dispatch1Count);
-  fprintf(fp, "dispatch2 %d\n", dispatch2Count);
+  fprintf(fp, "rebuild2 %d\n", rebuild2Count);
   fprintf(fp, "full_rebuild %d\n", fullRebuildCount);
   fprintf(fp, "alias_rejections %d\n", aliasRejectionCount);
   fprintf(fp, "contract_failures %d\n", contractFailures);
