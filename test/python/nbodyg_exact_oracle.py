@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import glob
 import itertools
 import math
 import os
@@ -726,6 +727,76 @@ def backflow_n4_config_oracle_case(workdir):
     return nsite, terms, categories, {"full4"}
 
 
+def backflow_fsz_n3_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        (1, (0, 0, 2, 1)),
+        (2, (0, 0, 2, 1, 3, 1, 1, 1)),
+        (3, (0, 0, 2, 1, 3, 1, 1, 0, 1, 1, 4, 1)),
+    ]
+    categories = ["dispatch1", "effective2", "full3"]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 512, 90434, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return nsite, terms, categories, {
+        "dispatch1", "effective2", "full3"
+    }
+
+
+def backflow_fsz_n4_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        (
+            4,
+            (
+                0, 0, 2, 1,
+                1, 0, 3, 0,
+                5, 1, 1, 1,
+                4, 1, 0, 0,
+            ),
+        ),
+    ]
+    categories = ["full4"]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 1024, 90435, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return nsite, terms, categories, {"full4"}
+
+
+def backflow_fsz_multi_qp_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        (2, (0, 0, 2, 1, 3, 1, 1, 1)),
+        (3, (0, 0, 2, 1, 3, 1, 1, 0, 1, 1, 4, 1)),
+    ]
+    categories = ["effective2", "full3"]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir,
+        nsite,
+        512,
+        90436,
+        "OrbitalGeneral",
+        "orbitalidxgen.def",
+        n_mp_trans=2,
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return nsite, terms, categories, {"effective2", "full3"}
+
+
 EXACT_CASES = {
     "NBodyG_Complex_N3_Oracle": complex_n3_case,
     "NBodyG_fsz_N3_Oracle": fsz_n3_case,
@@ -746,6 +817,12 @@ CONFIG_ORACLE_CASES = {
         backflow_n3_config_oracle_case,
     "BackFlow_NBodyG_NonIdentity_N4_ConfigOracle":
         backflow_n4_config_oracle_case,
+    "BackFlow_FSZ_NBodyG_SpinChanging_N3_ConfigOracle":
+        backflow_fsz_n3_config_oracle_case,
+    "BackFlow_FSZ_NBodyG_SpinChanging_N4_ConfigOracle":
+        backflow_fsz_n4_config_oracle_case,
+    "BackFlow_FSZ_NBody_MultiQP_ConfigOracle":
+        backflow_fsz_multi_qp_config_oracle_case,
 }
 
 NONVACUOUS_GENERATED_CASES = {
@@ -865,7 +942,7 @@ def _parse_marker(cols, pos, marker, count, converter):
     return values, end
 
 
-def parse_config_oracle_dump(path, nsite):
+def parse_config_oracle_dump(path, nsite, rank=0):
     rows = []
     with open(path) as f:
         for line_no, line in enumerate(f, 1):
@@ -907,6 +984,7 @@ def parse_config_oracle_dump(path, nsite):
                 )
             rows.append(
                 {
+                    "rank": rank,
                     "sample": sample[0],
                     "source": source[0],
                     "term": term[0],
@@ -972,7 +1050,12 @@ def validate_config_oracle_rows(
     max_expected_imag = 0.0
 
     for row in rows:
-        key = (row["sample"], row["source"], row["term"])
+        key = (
+            row["rank"],
+            row["sample"],
+            row["source"],
+            row["term"],
+        )
         if key in seen:
             raise AssertionError(
                 "configuration oracle duplicated row {}".format(key)
@@ -1057,7 +1140,7 @@ def validate_config_oracle_rows(
                 coverage[category] += 1
             max_expected_imag = max(max_expected_imag, abs(expected.imag))
 
-        sample = row["sample"]
+        sample = (row["rank"], row["sample"])
         production_by_sample[sample] = (
             production_by_sample.get(sample, 0.0 + 0.0j)
             + row["coeff"] * row["value"]
@@ -1071,7 +1154,8 @@ def validate_config_oracle_rows(
     samples = sorted(production_by_sample)
     for sample in samples:
         expected_keys = set(
-            (sample, source, term_idx) for term_idx in range(len(terms))
+            (sample[0], sample[1], source, term_idx)
+            for term_idx in range(len(terms))
         )
         if not expected_keys.issubset(seen):
             raise AssertionError(
@@ -1096,11 +1180,44 @@ def validate_config_oracle_rows(
     return production_by_sample, expected_by_sample, values_by_term
 
 
-def config_oracle_dump_path(workdir):
+def config_oracle_dump_paths(workdir):
     dump_name = os.environ.get("MVMC_BF_NBODY_ORACLE_DUMP")
     if not dump_name or dump_name == "0":
         raise AssertionError("MVMC_BF_NBODY_ORACLE_DUMP is not configured")
-    return os.path.join(workdir, dump_name)
+    base_path = os.path.join(workdir, dump_name)
+    rank_paths = sorted(glob.glob(base_path + ".rank*"))
+    mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+    if mpi_procs:
+        try:
+            rank_count = int(mpi_procs)
+        except ValueError:
+            raise AssertionError("MVMC_MPI_PROCS is not an integer")
+        if rank_count < 1:
+            raise AssertionError("MVMC_MPI_PROCS must be positive")
+        expected = [
+            "{}.rank{:04d}".format(base_path, rank)
+            for rank in range(rank_count)
+        ]
+        if os.path.exists(base_path):
+            raise AssertionError(
+                "MPI configuration oracle wrote an unsuffixed dump: {}".format(
+                    base_path
+                )
+            )
+        if rank_paths != expected:
+            raise AssertionError(
+                "configuration oracle rank dumps mismatch: actual={} expected={}".format(
+                    rank_paths, expected
+                )
+            )
+        return expected
+    if rank_paths:
+        raise AssertionError(
+            "single-rank configuration oracle wrote rank dumps: {}".format(
+                rank_paths
+            )
+        )
+    return [base_path]
 
 
 def main():
@@ -1130,7 +1247,8 @@ def main():
         return -1
 
     rootdir = os.getcwd()
-    workdir = os.path.join(rootdir, "work", model)
+    work_suffix = os.environ.get("MVMC_BF_NBODY_TEST_WORK_SUFFIX", "")
+    workdir = os.path.join(rootdir, "work", model + work_suffix)
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
@@ -1196,14 +1314,22 @@ def main():
             )
         return 0
 
-    result = subprocess.call([bin_to_test, "-e", "namelist.def", "initial.def"], cwd=workdir)
+    mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+    if mpi_procs:
+        cmd = [
+            "mpirun", "-np", mpi_procs, bin_to_test,
+            "-e", "namelist.def", "initial.def",
+        ]
+    else:
+        cmd = [bin_to_test, "-e", "namelist.def", "initial.def"]
+    result = subprocess.call(cmd, cwd=workdir)
     if result != 0:
         return result
 
     if model in CONFIG_ORACLE_CASES:
-        rows = parse_config_oracle_dump(
-            config_oracle_dump_path(workdir), nsite
-        )
+        rows = []
+        for rank, dump_path in enumerate(config_oracle_dump_paths(workdir)):
+            rows.extend(parse_config_oracle_dump(dump_path, nsite, rank))
         unused_production, unused_expected, values_by_term = (
             validate_config_oracle_rows(
                 rows,

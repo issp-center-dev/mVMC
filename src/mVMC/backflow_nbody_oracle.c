@@ -14,6 +14,7 @@
 
 typedef struct {
   int enabled;
+  int useFsz;
   FILE *stream;
   BFNBodyScratchSizes sizes;
   BFNBodyScratch scratch;
@@ -53,15 +54,16 @@ static void BFNBodyOracleClose(BFNBodyOracle *oracle) {
 }
 
 static int BFNBodyOracleOpen(BFNBodyOracle *oracle, int parentRank,
-                             int parentSize) {
+                             int parentSize, int useFsz) {
   const char *dumpValue;
   char dumpPath[1024];
   int maxOrder;
   int pathLength;
   size_t nsizeSquare;
 
-  if(oracle == NULL) return -1;
+  if(oracle == NULL || (useFsz != 0 && useFsz != 1)) return -1;
   memset(oracle, 0, sizeof(*oracle));
+  oracle->useFsz = useFsz;
   dumpValue = getenv("MVMC_BF_NBODY_ORACLE_DUMP");
   if(dumpValue == NULL || dumpValue[0] == '\0'
      || strcmp(dumpValue, "0") == 0) {
@@ -75,7 +77,7 @@ static int BFNBodyOracleOpen(BFNBodyOracle *oracle, int parentRank,
   maxOrder = NBodyGMaxN > NBodyInterAllMaxN
            ? NBodyGMaxN : NBodyInterAllMaxN;
   if(maxOrder < 1
-     || GetBFNBodyScratchSizes(maxOrder, 0, &oracle->sizes)
+     || GetBFNBodyScratchSizes(maxOrder, useFsz, &oracle->sizes)
           != BF_NBODY_OK
      || BFNBodyOracleSizeMul((size_t)Nsize, (size_t)Nsize,
                              &nsizeSquare) != 0
@@ -223,26 +225,72 @@ static int BFNBodyOracleCanonicalEleIdx(int *canonical,
   return 0;
 }
 
+static int BFNBodyOracleFSZCanonicalParity(
+    const int *eleIdx, const int *eleSpn, const int *eleNum,
+    int *parity) {
+  int value = 1;
+  int particle;
+
+  if(eleIdx == NULL || eleSpn == NULL || eleNum == NULL
+     || parity == NULL) {
+    return -1;
+  }
+  for(particle=0;particle<Nsize;particle++) {
+    const int orbital =
+        eleIdx[particle]+eleSpn[particle]*Nsite;
+    int earlier;
+    if(eleIdx[particle] < 0 || eleIdx[particle] >= Nsite
+       || eleSpn[particle] < 0 || eleSpn[particle] > 1
+       || orbital < 0 || orbital >= Nsite2
+       || eleNum[orbital] != 1) {
+      return -1;
+    }
+    for(earlier=0;earlier<particle;earlier++) {
+      const int earlierOrbital =
+          eleIdx[earlier]+eleSpn[earlier]*Nsite;
+      if(earlierOrbital == orbital) return -1;
+      if(earlierOrbital > orbital) value = -value;
+    }
+  }
+  *parity = value;
+  return 0;
+}
+
 static int BFNBodyOracleProjectedAmplitude(
-    BFNBodyOracle *oracle, const int *eleNum, double complex *psi) {
+    BFNBodyOracle *oracle, const int *eleIdx, const int *eleSpn,
+    const int *eleNum, double complex *psi) {
   double complex ipFull;
   double logProj;
+  int canonicalParity = 1;
 
   if(oracle == NULL || eleNum == NULL || psi == NULL
-     || BFNBodyOracleCanonicalEleIdx(
-            oracle->scratch.eleSpn, eleNum) != 0) {
+     || (oracle->useFsz
+         && (eleIdx == NULL || eleSpn == NULL))) {
     return -1;
   }
   MakeProjCnt(oracle->scratch.projCnt, eleNum);
   MakeProjBFCnt(oracle->scratch.projBFCnt, eleNum);
-  MakeSlaterElmBF_fcmp(eleNum, oracle->scratch.projBFCnt);
-  if(CalculateMAll_BF_fcmp(
-         oracle->scratch.eleSpn, 0, NQPFull) != 0) {
-    return -1;
+  if(oracle->useFsz) {
+    MakeSlaterElmBF_fsz(eleNum, oracle->scratch.projBFCnt);
+    if(CalculateMAll_BF_fsz(eleIdx, eleSpn, 0, NQPFull) != 0
+       || BFNBodyOracleFSZCanonicalParity(
+              eleIdx, eleSpn, eleNum, &canonicalParity) != 0) {
+      return -1;
+    }
+  } else {
+    if(BFNBodyOracleCanonicalEleIdx(
+           oracle->scratch.eleSpn, eleNum) != 0) {
+      return -1;
+    }
+    MakeSlaterElmBF_fcmp(eleNum, oracle->scratch.projBFCnt);
+    if(CalculateMAll_BF_fcmp(
+           oracle->scratch.eleSpn, 0, NQPFull) != 0) {
+      return -1;
+    }
   }
   ipFull = CalculateIP_fcmp(PfM, 0, NQPFull, MPI_COMM_SELF);
   logProj = LogProjVal(oracle->scratch.projCnt);
-  *psi = exp(logProj)*ipFull;
+  *psi = (double)canonicalParity*exp(logProj)*ipFull;
   return isfinite(creal(*psi)) && isfinite(cimag(*psi)) ? 0 : -1;
 }
 
@@ -252,12 +300,17 @@ static int BFNBodyOracleProjectedAmplitude(
  */
 static int BFNBodyOracleApplyOriginal(
     BFNBodyOracle *oracle, int n, const int *rsi, const int *rsj,
-    const int *eleIdx, const int *eleCfg, const int *eleNum) {
+    const int *eleIdx, const int *eleCfg, const int *eleNum,
+    const int *eleSpn) {
   int k;
 
   memcpy(oracle->scratch.eleIdx, eleIdx, (size_t)Nsize*sizeof(int));
   memcpy(oracle->scratch.eleCfg, eleCfg, (size_t)Nsite2*sizeof(int));
   memcpy(oracle->scratch.eleNum, eleNum, (size_t)Nsite2*sizeof(int));
+  if(oracle->useFsz) {
+    if(eleSpn == NULL) return -1;
+    memcpy(oracle->scratch.eleSpn, eleSpn, (size_t)Nsize*sizeof(int));
+  }
 
   for(k=n-1;k>=0;k--) {
     const int target = rsi[k];
@@ -268,24 +321,35 @@ static int BFNBodyOracleApplyOriginal(
     int particle;
 
     if(source < 0 || source >= Nsite2 || target < 0 || target >= Nsite2
-       || sourceSpin != targetSpin) {
+       || (!oracle->useFsz && sourceSpin != targetSpin)) {
       return -1;
     }
     if(oracle->scratch.eleNum[source] == 0) return 0;
     localLabel = oracle->scratch.eleCfg[source];
-    particle = localLabel+sourceSpin*Ne;
-    if(localLabel < 0 || localLabel >= Ne || particle < 0
-       || particle >= Nsize
+    particle = oracle->useFsz
+             ? localLabel : localLabel+sourceSpin*Ne;
+    if((oracle->useFsz
+        ? (localLabel < 0 || localLabel >= Nsize)
+        : (localLabel < 0 || localLabel >= Ne))
+       || particle < 0 || particle >= Nsize
        || oracle->scratch.eleIdx[particle] != source%Nsite) {
+      return -1;
+    }
+    if(oracle->useFsz
+       && oracle->scratch.eleSpn[particle] != sourceSpin) {
       return -1;
     }
 
     oracle->scratch.eleCfg[source] = -1;
     oracle->scratch.eleNum[source] = 0;
     if(oracle->scratch.eleNum[target] != 0) return 0;
-    oracle->scratch.eleCfg[target] = localLabel;
+    oracle->scratch.eleCfg[target] =
+        oracle->useFsz ? particle : localLabel;
     oracle->scratch.eleNum[target] = 1;
     oracle->scratch.eleIdx[particle] = target%Nsite;
+    if(oracle->useFsz) {
+      oracle->scratch.eleSpn[particle] = targetSpin;
+    }
   }
   return 1;
 }
@@ -294,23 +358,30 @@ static int BFNBodyOracleWriteRow(
     BFNBodyOracle *oracle, int sample, char sourceKind, int term, int n,
     const int *rsi, const int *rsj, double complex ip,
     const int *eleIdx, const int *eleCfg, const int *eleNum,
-    const int *eleProjCnt, const int *eleProjBFCnt,
+    const int *eleProjCnt, const int *eleSpn,
+    const int *eleProjBFCnt,
     double complex basePsi, double complex coefficient) {
   BFNBodyResult result;
   double complex targetPsi = 0.0+0.0*I;
   int targetValid;
   int orbital;
 
-  result = GreenFuncNBF(
-      n, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
-      eleProjCnt, eleProjBFCnt, &oracle->scratch);
+  if(oracle->useFsz) {
+    result = GreenFuncNBF_fsz(
+        n, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleSpn, eleProjBFCnt, &oracle->scratch);
+  } else {
+    result = GreenFuncNBF(
+        n, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleProjBFCnt, &oracle->scratch);
+  }
   if(result.status != BF_NBODY_OK
      && result.status != BF_NBODY_PHYSICAL_ZERO) {
     return -1;
   }
 
   targetValid = BFNBodyOracleApplyOriginal(
-      oracle, n, rsi, rsj, eleIdx, eleCfg, eleNum);
+      oracle, n, rsi, rsj, eleIdx, eleCfg, eleNum, eleSpn);
   if(targetValid < 0) return -1;
   if(targetValid == 0) {
     if(result.status != BF_NBODY_PHYSICAL_ZERO
@@ -319,7 +390,8 @@ static int BFNBodyOracleWriteRow(
     }
   } else {
     if(BFNBodyOracleProjectedAmplitude(
-           oracle, oracle->scratch.eleNum, &targetPsi) != 0) {
+           oracle, oracle->scratch.eleIdx, oracle->scratch.eleSpn,
+           oracle->scratch.eleNum, &targetPsi) != 0) {
       BFNBodyOracleRestoreGlobals(oracle);
       return -1;
     }
@@ -349,7 +421,8 @@ static int BFNBodyOracleWriteRow(
 static int BFNBodyOracleDumpSample(
     BFNBodyOracle *oracle, int sample, double complex ip,
     const int *eleIdx, const int *eleCfg, const int *eleNum,
-    const int *eleProjCnt, const int *eleProjBFCnt) {
+    const int *eleProjCnt, const int *eleSpn,
+    const int *eleProjBFCnt) {
   double complex basePsi;
   int term;
   int k;
@@ -357,13 +430,14 @@ static int BFNBodyOracleDumpSample(
   if(oracle == NULL || !oracle->enabled || oracle->stream == NULL
      || eleIdx == NULL || eleCfg == NULL || eleNum == NULL
      || (NProj > 0 && eleProjCnt == NULL) || eleProjBFCnt == NULL
+     || (oracle != NULL && oracle->useFsz && eleSpn == NULL)
      || !isfinite(creal(ip)) || !isfinite(cimag(ip)) || cabs(ip) == 0.0) {
     return -1;
   }
 
   BFNBodyOracleSaveGlobals(oracle);
   if(BFNBodyOracleProjectedAmplitude(
-         oracle, eleNum, &basePsi) != 0
+         oracle, eleIdx, eleSpn, eleNum, &basePsi) != 0
      || cabs(basePsi) == 0.0) {
     BFNBodyOracleRestoreGlobals(oracle);
     return -1;
@@ -382,7 +456,8 @@ static int BFNBodyOracleDumpSample(
     if(BFNBodyOracleWriteRow(
            oracle, sample, 'g', term, n,
            oracle->scratch.inputRsi, oracle->scratch.inputRsj,
-           ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt,
+           ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn,
+           eleProjBFCnt,
            basePsi, 1.0+0.0*I) != 0) {
       BFNBodyOracleRestoreGlobals(oracle);
       return -1;
@@ -402,7 +477,8 @@ static int BFNBodyOracleDumpSample(
     if(BFNBodyOracleWriteRow(
            oracle, sample, 'h', term, n,
            oracle->scratch.inputRsi, oracle->scratch.inputRsj,
-           ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt,
+           ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn,
+           eleProjBFCnt,
            basePsi, ParaNBodyInterAll[term]) != 0) {
       BFNBodyOracleRestoreGlobals(oracle);
       return -1;

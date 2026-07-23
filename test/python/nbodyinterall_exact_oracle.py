@@ -12,7 +12,7 @@ from nbodyg_exact_oracle import (
     TOL,
     apply_ops,
     assert_config_close,
-    config_oracle_dump_path,
+    config_oracle_dump_paths,
     enable_nonidentity_backflow,
     enable_config_oracle_backflow,
     fixed_sz_basis,
@@ -406,6 +406,41 @@ def backflow_mixed_config_oracle_case(workdir):
     }
 
 
+def backflow_fsz_mixed_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        (1, (0, 0, 2, 1), 0.19 + 0.07j),
+        (2, (0, 0, 2, 1, 3, 1, 1, 1), -0.17 + 0.13j),
+        (
+            3,
+            (0, 0, 2, 1, 3, 1, 1, 0, 1, 1, 4, 1),
+            0.23 - 0.11j,
+        ),
+        (
+            4,
+            (
+                0, 0, 2, 1,
+                1, 0, 3, 0,
+                5, 1, 1, 1,
+                4, 1, 0, 0,
+            ),
+            -0.09 + 0.21j,
+        ),
+    ]
+    categories = ["dispatch1", "effective2", "full3", "full4"]
+    slater_elm = complex_general_state(nsite)
+    write_common_nbodyinterall_defs(
+        workdir, nsite, 1024, 90437, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyinterall_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return nsite, terms, categories, {
+        "dispatch1", "effective2", "full3", "full4"
+    }
+
+
 EXACT_CASES = {
     "NBodyInterAll_N1_TransferLike": n1_transfer_like_case,
     "NBodyInterAll_N2_InterAllLike": n2_interall_like_case,
@@ -428,6 +463,8 @@ SMOKE_CASES = {
 CONFIG_ORACLE_CASES = {
     "BackFlow_NBodyInterAll_NonIdentity_Mixed_ConfigOracle":
         backflow_mixed_config_oracle_case,
+    "BackFlow_FSZ_NBodyInterAll_Mixed_ConfigOracle":
+        backflow_fsz_mixed_config_oracle_case,
 }
 
 NONVACUOUS_ENERGY_CASES = {
@@ -470,7 +507,8 @@ def main():
 
     model = sys.argv[1]
     rootdir = os.getcwd()
-    workdir = os.path.join(rootdir, "work", model)
+    work_suffix = os.environ.get("MVMC_BF_NBODY_TEST_WORK_SUFFIX", "")
+    workdir = os.path.join(rootdir, "work", model + work_suffix)
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
@@ -499,9 +537,9 @@ def main():
 
     actual = parse_energy(workdir)
     if model in CONFIG_ORACLE_CASES:
-        rows = parse_config_oracle_dump(
-            config_oracle_dump_path(workdir), nsite
-        )
+        rows = []
+        for rank, dump_path in enumerate(config_oracle_dump_paths(workdir)):
+            rows.extend(parse_config_oracle_dump(dump_path, nsite, rank))
         production_by_sample, unused_expected, unused_values = (
             validate_config_oracle_rows(
                 rows,

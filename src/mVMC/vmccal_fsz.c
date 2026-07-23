@@ -1433,10 +1433,18 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
   long long lanczosCheckedSamples = 0;
   long long lanczosRejectedSamples = 0;
   FILE *lanczosOracleDump = NULL;
+  BFNBodyOracle nbodyOracle;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm_parent,&parentSize);
   MPI_Comm_rank(comm_parent,&parentRank);
+  if(BFNBodyOracleOpen(
+         &nbodyOracle, parentRank, parentSize, 1) != 0) {
+    fprintf(stderr,
+            "Error: failed to initialize BF-FSZ N-body configuration "
+            "oracle on parent rank %d.\n", parentRank);
+    MPI_Abort(comm_parent, EXIT_FAILURE);
+  }
   SplitLoop(&sampleStart,&sampleEnd,NVMCSample,rank,size);
 
   StartTimer(24);
@@ -1534,6 +1542,16 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
       fprintf(stderr,"warning: VMC_BF_MainCal_fsz rank:%d sample:%d ip=%e %e\n",
               rank,sample,creal(ip),cimag(ip));
       continue;
+    }
+
+    if(nbodyOracle.enabled && cabs(ip) > 0.0
+       && BFNBodyOracleDumpSample(
+              &nbodyOracle, sample, ip, eleIdx, eleCfg, eleNum,
+              eleProjCnt, eleSpn, eleProjBFCnt) != 0) {
+      fprintf(stderr,
+              "Error: BF-FSZ N-body configuration oracle failed on "
+              "parent rank %d sample %d.\n", parentRank, sample);
+      MPI_Abort(comm_parent, EXIT_FAILURE);
     }
 
     if(parentRank == 0 && !bfFSZNBodyDispatchDumped
@@ -1733,6 +1751,7 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
   }
   if(lanczosOracleDump != NULL) fclose(lanczosOracleDump);
   if(lanczosScratchReady) LSLanczosBFFSZScratchFree(&lanczosScratch);
+  BFNBodyOracleClose(&nbodyOracle);
 
   if(NVMCCalMode==0){
     if(NStoreO!=0 || NSRCG!=0){

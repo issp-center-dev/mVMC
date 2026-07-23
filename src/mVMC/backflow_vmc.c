@@ -2434,7 +2434,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   MPI_Comm_size(comm_parent, &parentSize);
   MPI_Comm_rank(comm_parent, &parentRank);
 
-  if(BFNBodyOracleOpen(&nbodyOracle, parentRank, parentSize) != 0) {
+  if(BFNBodyOracleOpen(&nbodyOracle, parentRank, parentSize, 0) != 0) {
     fprintf(stderr,
             "Error: failed to initialize BackFlow N-body configuration "
             "oracle on parent rank %d.\n", parentRank);
@@ -2597,7 +2597,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
        && isfinite(creal(ip)) && isfinite(cimag(ip)) && cabs(ip) > 0.0
        && BFNBodyOracleDumpSample(
               &nbodyOracle, sample, ip, eleIdx, eleCfg, eleNum,
-              eleProjCnt, eleProjBFCnt) != 0) {
+              eleProjCnt, NULL, eleProjBFCnt) != 0) {
       fprintf(stderr,
               "Error: BackFlow N-body configuration oracle failed on "
               "parent rank %d sample %d.\n", parentRank, sample);
