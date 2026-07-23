@@ -32,7 +32,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "pfupdate.h"
 #include "pfupdate_two_fcmp.h"
 #include "qp.h"
-#include "sector_projection.c"
+#include "sector_projection.h"
 
 #include "locgrn_real.h"
 #include "calham.h"

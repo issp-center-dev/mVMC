@@ -26,7 +26,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 
-#include "sector_projection.c"
+#include "sector_projection.h"
 #include "locgrn_fsz.h"
 #include <stdint.h>
 

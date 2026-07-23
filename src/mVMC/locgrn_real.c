@@ -34,7 +34,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "global.h"
 #include "projection.h"
 #include "qp_real.c"
-#include "sector_projection.c"
+#include "sector_projection.h"
 
 #ifndef _SRC_LOCGRN_REAL
 #define _SRC_LOCGRN_REAL

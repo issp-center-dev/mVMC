@@ -98,6 +98,7 @@ extern void omp_set_num_threads(int);
 #include "../pfupdate_two_real.c"
 #include "../pfupdate_two_fsz.c"
 #include "../pfupdate_two_fsz_real.c"
+#include "../nbody_operator.c"
 #include "../locgrn.c"
 #include "../locgrn_real.c"
 #include "../locgrn_fsz.c"

@@ -46,6 +46,7 @@ lslocgrn_bf_fsz.c \
 lslocgrn_fsz.c \
 lslocgrn_real.c \
 matrix.c \
+nbody_operator.c \
 parameter.c \
 pfupdate.c \
 pfupdate_fsz.c \
@@ -97,6 +98,7 @@ HEADERS = \
 ./include/lslocgrn_status.h \
 ./include/lslocgrn_real.h \
 ./include/matrix.h \
+./include/nbody_operator.h \
 ./include/parameter.h \
 ./include/pfupdate.h \
 ./include/pfupdate_real.h \
@@ -107,6 +109,7 @@ HEADERS = \
 ./include/qp.h \
 ./include/qp_real.h \
 ./include/readdef.h \
+./include/sector_projection.h \
 ./include/setmemory.h \
 ./include/slater.h \
 ./include/splitloop.h \
