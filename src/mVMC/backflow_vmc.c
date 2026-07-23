@@ -1401,7 +1401,9 @@ static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
 static int dumpBFNBodyComponentCheck(const char *path,
                                      const int *eleIdx,
                                      const int *eleNum,
-                                     const int *eleProjBFCnt) {
+                                     const int *eleProjBFCnt,
+                                     int parentRank,
+                                     int childRank) {
   const size_t slaterCount = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
   const size_t invPfCount =
       (size_t)NQPFull*((size_t)Nsize*(size_t)Nsize + 1u);
@@ -1603,6 +1605,8 @@ static int dumpBFNBodyComponentCheck(const char *path,
           pfInvalidWorkspaceStatus);
   fprintf(fp, "pf_invalid_failure_detail %d\n",
           pfInvalidFailureDetail);
+  fprintf(fp, "writer_parent_rank %d\n", parentRank);
+  fprintf(fp, "writer_child_rank %d\n", childRank);
   status = 0;
 
 cleanup:
@@ -1756,12 +1760,13 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
     StopTimer(45);
 
-    if(rank == 0 && !bfNBodyComponentDumped
+    if(parentRank == 0 && !bfNBodyComponentDumped
        && bfNBodyComponentDumpPath != NULL
        && bfNBodyComponentDumpPath[0] != '\0') {
       if(dumpBFNBodyComponentCheck(bfNBodyComponentDumpPath, eleIdx,
-                                   eleNum, eleProjBFCnt) != 0) {
-        MPI_Abort(comm, EXIT_FAILURE);
+                                   eleNum, eleProjBFCnt,
+                                   parentRank, rank) != 0) {
+        MPI_Abort(comm_parent, EXIT_FAILURE);
       }
       bfNBodyComponentDumped = 1;
     }

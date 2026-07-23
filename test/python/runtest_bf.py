@@ -1009,6 +1009,8 @@ def check_bf_nbody_component_dump(path, tol):
         "pf_invalid_range_status",
         "pf_invalid_workspace_status",
         "pf_invalid_failure_detail",
+        "writer_parent_rank",
+        "writer_child_rank",
     )
     missing = [key for key in required if key not in values]
     if missing:
@@ -1050,6 +1052,14 @@ def check_bf_nbody_component_dump(path, tol):
             print("ERROR: BackFlow N-body component check failed: {}={} expected {}".format(
                 key, values[key], expected))
             return -1
+    if int(values["writer_parent_rank"]) != 0:
+        print("ERROR: BackFlow N-body component dump was written by parent rank {}.".format(
+            values["writer_parent_rank"]))
+        return -1
+    if int(values["writer_child_rank"]) != 0:
+        print("ERROR: BackFlow N-body component dump was written by child rank {}.".format(
+            values["writer_child_rank"]))
+        return -1
     return 0
 
 

@@ -709,6 +709,7 @@ void BFAllocRuntime(void) {
   slaterCount = (size_t)NQPFull * (size_t)Nsite2 * (size_t)Nsite2;
   SlaterElmBF = (double complex *)BFMallocArray(slaterCount, sizeof(double complex), "SlaterElmBF");
   SlaterElmBF_real = (double *)BFMallocArray(slaterCount, sizeof(double), "SlaterElmBF_real");
+  memset(SlaterElmBF_real, 0, slaterCount * sizeof(double));
   SmpSltElmBF_real = (double *)BFMallocArray((size_t)NVMCSample * slaterCount,
                                              sizeof(double), "SmpSltElmBF_real");
   SmpEta = (double *)BFMallocArray((size_t)NVMCSample * (size_t)NQPFull *

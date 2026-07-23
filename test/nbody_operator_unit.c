@@ -161,14 +161,22 @@ static void CheckOneReduction(uint64_t state, int n, int nOrbitals,
 }
 
 static void TestInvalidArguments(void) {
-  const int rsi[2] = {1, 2};
-  const int rsj[2] = {0, 1};
-  const int occupation[3] = {1, 1, 0};
+  int rsi[2] = {1, 2};
+  int rsj[2] = {0, 1};
+  int occupation[3] = {1, 1, 0};
+  int rsiBefore[2];
+  int rsjBefore[2];
+  int occupationBefore[3];
   int badOccupation[3] = {1, 2, 0};
   int rsiWork[2] = {12345, 12345};
   int rsjWork[2] = {-12345, -12345};
   int sharedWork[2] = {777, 777};
   int badRsi[2] = {1, 3};
+  union {
+    int work[4];
+    NBodyReduction reduction;
+  } outputAlias;
+  unsigned char outputAliasBefore[sizeof(outputAlias)];
   NBodyReduction reduction;
 
   CHECK(ReduceNBodyTerm(0, rsi, rsj, occupation, 3,
@@ -204,6 +212,32 @@ static void TestInvalidArguments(void) {
   CHECK(ReduceNBodyTerm(2, rsi, rsj, occupation, 3,
                         sharedWork, sharedWork, 2, &reduction) != 0,
         "aliased work arrays were accepted");
+
+  memcpy(rsiBefore, rsi, sizeof(rsi));
+  memcpy(rsjBefore, rsj, sizeof(rsj));
+  memcpy(occupationBefore, occupation, sizeof(occupation));
+  CHECK(ReduceNBodyTerm(2, rsi, rsj, occupation, 3,
+                        rsj, rsiWork, 2, &reduction) != 0,
+        "rsiWork aliasing rsj input was accepted");
+  CHECK(ReduceNBodyTerm(2, rsi, rsj, occupation, 3,
+                        rsiWork, rsi, 2, &reduction) != 0,
+        "rsjWork aliasing rsi input was accepted");
+  CHECK(ReduceNBodyTerm(2, rsi, rsj, occupation, 3,
+                        occupation, rsjWork, 2, &reduction) != 0,
+        "rsiWork aliasing occupation input was accepted");
+  CHECK(memcmp(rsiBefore, rsi, sizeof(rsi)) == 0
+            && memcmp(rsjBefore, rsj, sizeof(rsj)) == 0
+            && memcmp(occupationBefore, occupation, sizeof(occupation)) == 0,
+        "rejected cross-alias call modified an input array");
+
+  memset(&outputAlias, 0x5a, sizeof(outputAlias));
+  memcpy(outputAliasBefore, &outputAlias, sizeof(outputAlias));
+  CHECK(ReduceNBodyTerm(2, rsi, rsj, occupation, 3,
+                        outputAlias.work, rsjWork, 2,
+                        &outputAlias.reduction) != 0,
+        "reduction aliasing a work array was accepted");
+  CHECK(memcmp(outputAliasBefore, &outputAlias, sizeof(outputAlias)) == 0,
+        "rejected reduction/work alias modified shared storage");
 
   rsiWork[0] = rsiWork[1] = 12345;
   rsjWork[0] = rsjWork[1] = -12345;
@@ -399,12 +433,50 @@ static void CheckScratchPointerLayout(const BFNBodyScratchSizes *sizes,
         "double slice total mismatch");
 }
 
+static void CheckExactScratchBinding(const BFNBodyScratchSizes *sizes,
+                                     const char *label) {
+  BFNBodyScratch scratch;
+  int bindStatus;
+  int *intBase = (int *)malloc(sizes->intCount * sizeof(int));
+  double complex *complexBase = (double complex *)malloc(
+      sizes->complexCount * sizeof(double complex));
+  double *doubleBase = (double *)malloc(sizes->doubleCount * sizeof(double));
+
+  CHECK(intBase != NULL && complexBase != NULL && doubleBase != NULL,
+        "%s binding fixture allocation failed", label);
+  if (intBase == NULL || complexBase == NULL || doubleBase == NULL) {
+    free(intBase);
+    free(complexBase);
+    free(doubleBase);
+    return;
+  }
+
+  memset(&scratch, 0xa5, sizeof(scratch));
+  bindStatus = BindBFNBodyScratch(sizes, intBase, sizes->intCount,
+                                  complexBase, sizes->complexCount,
+                                  doubleBase, sizes->doubleCount, &scratch);
+  CHECK(bindStatus == BF_NBODY_OK, "%s exact-size binding failed", label);
+  if (bindStatus == BF_NBODY_OK) {
+    CHECK(scratch.maxOrder == sizes->maxOrder
+              && scratch.useFsz == sizes->useFsz
+              && memcmp(&scratch.sizes, sizes, sizeof(*sizes)) == 0,
+          "%s binding did not retain authoritative metadata", label);
+    CheckScratchPointerLayout(sizes, &scratch, intBase, complexBase,
+                              doubleBase);
+  }
+
+  free(intBase);
+  free(complexBase);
+  free(doubleBase);
+}
+
 static void TestScratchSizes(void) {
   BFNBodyScratchDimensions dimensions = ScratchDimensions(0);
   BFNBodyScratchDimensions invalid[10];
   BFNBodyScratchDimensions overflow;
   BFNBodyScratchSizes nonFsz;
   BFNBodyScratchSizes fsz;
+  BFNBodyScratchSizes zeroNproj;
   BFNBodyScratchSizes sizes;
   BFNBodyScratch scratch;
   BFNBodyScratch before;
@@ -433,8 +505,8 @@ static void TestScratchSizes(void) {
 
   dimensions = ScratchDimensions(0);
   dimensions.nproj = 0;
-  CHECK(ComputeBFNBodyScratchSizes(&dimensions, &sizes) == BF_NBODY_OK
-            && sizes.projCntCount == 0,
+  CHECK(ComputeBFNBodyScratchSizes(&dimensions, &zeroNproj) == BF_NBODY_OK
+            && zeroNproj.projCntCount == 0,
         "zero-length optional NProj slice rejected");
   dimensions = ScratchDimensions(0);
   dimensions.nsite2 = 6;
@@ -563,6 +635,9 @@ static void TestScratchSizes(void) {
   free(intBase);
   free(complexBase);
   free(doubleBase);
+
+  CheckExactScratchBinding(&nonFsz, "non-FSZ");
+  CheckExactScratchBinding(&zeroNproj, "zero-NProj");
 }
 
 int main(void) {

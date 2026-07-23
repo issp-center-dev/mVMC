@@ -10,6 +10,11 @@ static void SetReduction(NBodyReduction *reduction, NBodyReducedKind kind,
   reduction->sign = sign;
 }
 
+static int ReductionAliasesArray(const NBodyReduction *reduction,
+                                 const int *array) {
+  return (const void *)reduction == (const void *)array;
+}
+
 static void RemoveFactor(int index, int order, int *rsiWork, int *rsjWork) {
   int k;
   for (k = index; k < order - 1; k++) {
@@ -26,12 +31,22 @@ int ReduceNBodyTerm(int n, const int *rsi, const int *rsj,
   int order;
   int sign = 1;
 
+  if (reduction == NULL) return -1;
+  if (ReductionAliasesArray(reduction, rsi)
+      || ReductionAliasesArray(reduction, rsj)
+      || ReductionAliasesArray(reduction, occupation)
+      || ReductionAliasesArray(reduction, rsiWork)
+      || ReductionAliasesArray(reduction, rsjWork)) {
+    return -1;
+  }
   SetReduction(reduction, NBODY_REDUCED_INVALID, 0, 1);
 
   if (n <= 0 || nOrbitals <= 0 || workCapacity < n ||
       rsi == NULL || rsj == NULL || occupation == NULL ||
-      rsiWork == NULL || rsjWork == NULL || reduction == NULL ||
-      rsiWork == rsjWork) {
+      rsiWork == NULL || rsjWork == NULL ||
+      rsiWork == rsjWork ||
+      rsiWork == rsi || rsiWork == rsj || rsiWork == occupation ||
+      rsjWork == rsi || rsjWork == rsj || rsjWork == occupation) {
     return -1;
   }
 
