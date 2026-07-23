@@ -21,10 +21,12 @@ from nbodyg_exact_oracle import (
     occupied,
     pfaffian,
     parse_config_oracle_dump,
+    update_modpara,
     write,
     write_antiparallel_orbital,
     write_common_defs,
     write_general_orbital,
+    write_nbodyg_def,
     validate_config_oracle_rows,
 )
 
@@ -306,6 +308,55 @@ def backflow_zero_terms_case(workdir):
     return None
 
 
+def backflow_fsz_spin_changing_mixed_energy_case(workdir):
+    nsite = 6
+    terms = [
+        (1, (0, 0, 2, 1), 0.19 + 0.07j),
+        (2, (0, 0, 2, 1, 3, 1, 1, 1), -0.17 + 0.13j),
+        (
+            3,
+            (0, 0, 2, 1, 3, 1, 1, 0, 1, 1, 4, 1),
+            0.23 - 0.11j,
+        ),
+        (
+            4,
+            (
+                0, 0, 2, 1,
+                1, 0, 3, 0,
+                5, 1, 1, 1,
+                4, 1, 0, 0,
+            ),
+            -0.09 + 0.21j,
+        ),
+    ]
+    slater_elm = complex_general_state(nsite)
+    write_common_nbodyinterall_defs(
+        workdir, nsite, 600, 71505, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyinterall_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return None
+
+
+def backflow_fsz_zero_terms_case(workdir):
+    nsite = 6
+    terms = []
+    slater_elm = complex_general_state(nsite)
+    write_common_nbodyinterall_defs(
+        workdir, nsite, 200, 71506, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyinterall_def(workdir, terms)
+    write_nbodyg_def(workdir, [])
+    with open(os.path.join(workdir, "namelist.def"), "a") as f:
+        f.write("          NBodyG  nbodyg.def\n")
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return None
+
+
 def backflow_mixed_config_oracle_case(workdir):
     nsite = 6
     terms = [
@@ -369,6 +420,9 @@ SMOKE_CASES = {
     "BackFlow_NBodyInterAll_NonIdentity_N2_Energy": backflow_n2_energy_case,
     "BackFlow_NBodyInterAll_NonIdentity_Mixed_Energy": backflow_mixed_energy_case,
     "BackFlow_NBody_ZeroTerms_NonFSZ": backflow_zero_terms_case,
+    "BackFlow_FSZ_NBodyInterAll_SpinChanging_Mixed_Energy":
+        backflow_fsz_spin_changing_mixed_energy_case,
+    "BackFlow_FSZ_NBody_ZeroTerms": backflow_fsz_zero_terms_case,
 }
 
 CONFIG_ORACLE_CASES = {
@@ -380,6 +434,7 @@ NONVACUOUS_ENERGY_CASES = {
     "BackFlow_NBodyInterAll_NonIdentity_N1_Energy",
     "BackFlow_NBodyInterAll_NonIdentity_N2_Energy",
     "BackFlow_NBodyInterAll_NonIdentity_Mixed_Energy",
+    "BackFlow_FSZ_NBodyInterAll_SpinChanging_Mixed_Energy",
 }
 
 

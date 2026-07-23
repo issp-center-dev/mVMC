@@ -544,6 +544,51 @@ def backflow_nonidentity_n3_output_case(workdir):
     return terms, 1
 
 
+def backflow_fsz_spin_changing_n3_output_case(workdir):
+    nsite = 6
+    terms = [
+        (3, (0, 0, 2, 1, 3, 1, 1, 0, 1, 1, 4, 1)),
+        (3, (0, 0, 4, 1, 3, 1, 1, 0, 1, 1, 2, 1)),
+        (3, (1, 0, 3, 1, 2, 1, 0, 0, 4, 1, 1, 1)),
+    ]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 400, 54322, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return terms, 1
+
+
+def backflow_fsz_mixed_n4_output_case(workdir):
+    nsite = 6
+    terms = [
+        (1, (0, 0, 2, 1)),
+        (2, (0, 0, 2, 1, 3, 1, 1, 1)),
+        (3, (0, 0, 2, 1, 3, 1, 1, 0, 1, 1, 4, 1)),
+        (
+            4,
+            (
+                0, 0, 2, 1,
+                1, 0, 3, 0,
+                5, 1, 1, 1,
+                4, 1, 0, 0,
+            ),
+        ),
+    ]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 600, 54323, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return terms, 1
+
+
 def invalid_backflow_state(nsite):
     f_matrix = np.zeros((nsite, nsite), dtype=complex)
     for i in range(nsite):
@@ -690,6 +735,10 @@ GENERATED_CHECK_CASES = {
     "NBodyG_Projector_N3_MultiTerm": projector_n3_multiterm_case,
     "NBodyG_MultiBin": multibin_case,
     "BackFlow_NBodyG_NonIdentity_N3_Output": backflow_nonidentity_n3_output_case,
+    "BackFlow_FSZ_NBodyG_SpinChanging_N3_Output":
+        backflow_fsz_spin_changing_n3_output_case,
+    "BackFlow_FSZ_NBodyG_Mixed_N4_Output":
+        backflow_fsz_mixed_n4_output_case,
 }
 
 CONFIG_ORACLE_CASES = {
@@ -701,6 +750,8 @@ CONFIG_ORACLE_CASES = {
 
 NONVACUOUS_GENERATED_CASES = {
     "BackFlow_NBodyG_NonIdentity_N3_Output",
+    "BackFlow_FSZ_NBodyG_SpinChanging_N3_Output",
+    "BackFlow_FSZ_NBodyG_Mixed_N4_Output",
 }
 
 INVALID_CASES = {

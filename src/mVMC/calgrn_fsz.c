@@ -26,6 +26,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #include "calgrn_fsz.h"
+#include "backflow_nbody.h"
 #ifndef _CALGRN_FSZ_SRC
 #define _CALGRN_FSZ_SRC
 
@@ -87,6 +88,41 @@ double complex GreenFunc2BF_fsz2WithProfile(
 int GetGreenFuncBF_fsz_buffer_work_size(
     size_t *bufferComplexCount, size_t *pfUpdateIntCount,
     size_t *pfUpdateDoubleCount);
+
+typedef struct {
+  BFNBodyStatus status;
+  int term;
+  BFNBodyStage stage;
+  int detail;
+} BFFSZGreenNBodyFailure;
+
+static void RecordBFFSZGreenNBodyFailure(
+    BFFSZGreenNBodyFailure *failure, int term,
+    const BFNBodyResult *result) {
+  if(failure == NULL || result == NULL
+     || result->status == BF_NBODY_OK
+     || result->status == BF_NBODY_PHYSICAL_ZERO) {
+    return;
+  }
+#pragma omp critical(BFFSZGreenNBodyFailureRecord)
+  {
+    if(failure->status == BF_NBODY_OK) {
+      failure->status = result->status;
+      failure->term = term;
+      failure->stage = result->stage;
+      failure->detail = result->detail;
+    }
+  }
+}
+
+static void AbortBFFSZGreenNBodyFailure(
+    const char *context, const BFFSZGreenNBodyFailure *failure) {
+  fprintf(stderr,
+          "Error: %s failed: status=%d term=%d stage=%d detail=%d.\n",
+          context, (int)failure->status, failure->term,
+          (int)failure->stage, failure->detail);
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+}
 
 
 void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx, int *eleCfg,
@@ -278,6 +314,19 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   BFFSZC2DetailContext c2DetailContext;
   BFFSZC2DetailContext *c2DetailProfile = NULL;
   BFFSZC2ReuseCensus reuseCensus;
+  const int maxNBody = NBodyGMaxN > 2 ? NBodyGMaxN : 2;
+  BFNBodyScratchSizes nbodyScratchSizes;
+  BFFSZGreenNBodyFailure nbodyFailure = {
+      BF_NBODY_OK, -1, BF_NBODY_STAGE_NONE, BF_NBODY_DETAIL_NONE
+  };
+  int workspaceBindingFailed = 0;
+  int *thIntBase;
+  double complex *thComplexBase;
+  double *thDoubleBase;
+  BFNBodyScratch thNBodyScratch;
+  BFNBodyResult nbodyResult;
+  int bindStatus;
+  int k, offset, nbody;
 
   if(BFFSZC2DetailProfileEnabled) {
     InitBFFSZC2DetailContext(&c2DetailContext,
@@ -285,9 +334,17 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
     c2DetailProfile = &c2DetailContext;
   }
 
-  if(NTwist > 0 || NNBodyG > 0) {
-    fprintf(stderr, "Error: CalculateGreenFuncBF_fsz does not support Twist or NBodyG yet.\n");
+  if(NTwist > 0) {
+    fprintf(stderr, "Error: CalculateGreenFuncBF_fsz does not support Twist yet.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  if(NNBodyG > 0
+     && GetBFNBodyScratchSizes(maxNBody, 1, &nbodyScratchSizes)
+          != BF_NBODY_OK) {
+    nbodyFailure.status = BF_NBODY_WORKSPACE_ERROR;
+    AbortBFFSZGreenNBodyFailure(
+        "BackFlow FSZ NBodyG workspace sizing", &nbodyFailure);
+    return;
   }
   if(GetSlaterElmBF_fsz_hop_int_work_size(&bfHopIntSize) != 0) {
     fprintf(stderr, "Error: invalid BF-FSZ Green hop integer workspace size.\n");
@@ -348,9 +405,15 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   RequestWorkSpaceInt(bfSerialIntSize);
   RequestWorkSpaceComplex(bfGreen1ComplexSize);
   RequestWorkSpaceDouble(bfPfDoubleSize);
-  RequestWorkSpaceThreadInt(bfGreen1IntSize);
-  RequestWorkSpaceThreadComplex(bfGreen1ComplexSize);
-  RequestWorkSpaceThreadDouble(bfPfDoubleSize);
+  if(NNBodyG > 0) {
+    RequestWorkSpaceThreadInt((int)nbodyScratchSizes.intCount);
+    RequestWorkSpaceThreadComplex((int)nbodyScratchSizes.complexCount);
+    RequestWorkSpaceThreadDouble((int)nbodyScratchSizes.doubleCount);
+  } else {
+    RequestWorkSpaceThreadInt(bfGreen1IntSize);
+    RequestWorkSpaceThreadComplex(bfGreen1ComplexSize);
+    RequestWorkSpaceThreadDouble(bfPfDoubleSize);
+  }
 
   myEleIdx = GetWorkSpaceInt(Nsize);
   myEleCfg = GetWorkSpaceInt(Nsite2);
@@ -386,58 +449,142 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
   #pragma omp parallel default(shared)                                      \
     private(thEleIdx,thEleCfg,thEleNum,thEleSpn,thProjCntNew,thProjBFCntNew, \
             thAffected,thHopIntWork,thPfIWork,thBuffer,thPfBufM,thPfWork,thPfRWork, \
-            idx,ri,rj,s,t,tmp)
+            thIntBase,thComplexBase,thDoubleBase,thNBodyScratch,nbodyResult, \
+            bindStatus,idx,ri,rj,s,t,tmp,k,offset,nbody)
   {
-    thEleIdx = GetWorkSpaceThreadInt(Nsize);
-    thEleCfg = GetWorkSpaceThreadInt(Nsite2);
-    thEleNum = GetWorkSpaceThreadInt(Nsite2);
-    thEleSpn = GetWorkSpaceThreadInt(Nsize);
-    thProjCntNew = GetWorkSpaceThreadInt(NProj);
-    thProjBFCntNew = GetWorkSpaceThreadInt(16*Nsite*Nrange);
-    thPfIWork = GetWorkSpaceThreadInt(bfPfIntSize);
-    thAffected = GetWorkSpaceThreadInt(Nsize);
-    thHopIntWork = GetWorkSpaceThreadInt(bfHopIntSize);
-    thBuffer = GetWorkSpaceThreadComplex(bfGreen1BufferSize);
-    thPfBufM = GetWorkSpaceThreadComplex(Nsize*Nsize);
-    thPfWork = GetWorkSpaceThreadComplex(LapackLWork);
-    thPfRWork = GetWorkSpaceThreadDouble(bfPfDoubleSize);
-
-    #pragma loop noalias
-    for(idx=0;idx<Nsize;idx++) thEleIdx[idx] = eleIdx[idx];
-    #pragma loop noalias
-    for(idx=0;idx<Nsite2;idx++) thEleCfg[idx] = eleCfg[idx];
-    #pragma loop noalias
-    for(idx=0;idx<Nsite2;idx++) thEleNum[idx] = eleNum[idx];
-    #pragma loop noalias
-    for(idx=0;idx<Nsize;idx++) thEleSpn[idx] = eleSpn[idx];
-
-    #pragma omp barrier
-    #pragma omp master
-    { StartTimer(50); }
-    #pragma omp barrier
-
-    #pragma omp for schedule(dynamic)
-    for(idx=0;idx<NCisAjs;idx++) {
-      ri = CisAjsIdx[idx][0];
-      s  = CisAjsIdx[idx][1];
-      rj = CisAjsIdx[idx][2];
-      t  = CisAjsIdx[idx][3];
-      tmp = GreenFunc1BF_fsz2_workspace(ri,rj,s,t,ip,
-                              thEleIdx,thEleCfg,thEleNum,eleProjCnt,thEleSpn,
-                              thProjCntNew,eleProjBFCnt,thProjBFCntNew,
-                              thBuffer,thPfBufM,thAffected,thHopIntWork,
-                              bfHopIntSize,thPfIWork,thPfWork,thPfRWork);
-      LocalCisAjs[idx] = tmp;
+    if(NNBodyG > 0) {
+      thIntBase =
+          GetWorkSpaceThreadInt((int)nbodyScratchSizes.intCount);
+      thComplexBase =
+          GetWorkSpaceThreadComplex((int)nbodyScratchSizes.complexCount);
+      thDoubleBase =
+          GetWorkSpaceThreadDouble((int)nbodyScratchSizes.doubleCount);
+      bindStatus = BindBFNBodyScratch(
+          &nbodyScratchSizes,
+          thIntBase, nbodyScratchSizes.intCount,
+          thComplexBase, nbodyScratchSizes.complexCount,
+          thDoubleBase, nbodyScratchSizes.doubleCount,
+          &thNBodyScratch);
+      if(bindStatus != BF_NBODY_OK) {
+        const BFNBodyResult bindResult = {
+            BF_NBODY_WORKSPACE_ERROR, BF_NBODY_STAGE_NONE,
+            bindStatus, 0, 0.0+0.0*I
+        };
+        RecordBFFSZGreenNBodyFailure(&nbodyFailure, -1, &bindResult);
+#pragma omp atomic write
+        workspaceBindingFailed = 1;
+      } else {
+        thEleIdx = thNBodyScratch.eleIdx;
+        thEleCfg = thNBodyScratch.eleCfg;
+        thEleNum = thNBodyScratch.eleNum;
+        thEleSpn = thNBodyScratch.eleSpn;
+        thProjCntNew = thNBodyScratch.projCnt;
+        thProjBFCntNew = thNBodyScratch.projBFCnt;
+        thPfIWork = thNBodyScratch.pfIWork;
+        thAffected = thNBodyScratch.affected;
+        thHopIntWork = thNBodyScratch.hopIntWork;
+        thBuffer = thNBodyScratch.greenBuffer;
+        thPfBufM = thNBodyScratch.pfBufM;
+        thPfWork = thNBodyScratch.pfWork;
+        thPfRWork = thNBodyScratch.pfRWork;
+      }
+    } else {
+      thEleIdx = GetWorkSpaceThreadInt(Nsize);
+      thEleCfg = GetWorkSpaceThreadInt(Nsite2);
+      thEleNum = GetWorkSpaceThreadInt(Nsite2);
+      thEleSpn = GetWorkSpaceThreadInt(Nsize);
+      thProjCntNew = GetWorkSpaceThreadInt(NProj);
+      thProjBFCntNew = GetWorkSpaceThreadInt(16*Nsite*Nrange);
+      thPfIWork = GetWorkSpaceThreadInt(bfPfIntSize);
+      thAffected = GetWorkSpaceThreadInt(Nsize);
+      thHopIntWork = GetWorkSpaceThreadInt(bfHopIntSize);
+      thBuffer = GetWorkSpaceThreadComplex(bfGreen1BufferSize);
+      thPfBufM = GetWorkSpaceThreadComplex(Nsize*Nsize);
+      thPfWork = GetWorkSpaceThreadComplex(LapackLWork);
+      thPfRWork = GetWorkSpaceThreadDouble(bfPfDoubleSize);
     }
 
-    #pragma omp barrier
-    #pragma omp master
-    { StopTimer(50); }
+#pragma omp barrier
+    if(!workspaceBindingFailed) {
+#pragma loop noalias
+      for(idx=0;idx<Nsize;idx++) thEleIdx[idx] = eleIdx[idx];
+#pragma loop noalias
+      for(idx=0;idx<Nsite2;idx++) thEleCfg[idx] = eleCfg[idx];
+#pragma loop noalias
+      for(idx=0;idx<Nsite2;idx++) thEleNum[idx] = eleNum[idx];
+#pragma loop noalias
+      for(idx=0;idx<Nsize;idx++) thEleSpn[idx] = eleSpn[idx];
+
+#pragma omp barrier
+#pragma omp master
+      { StartTimer(50); }
+#pragma omp barrier
+
+#pragma omp for schedule(dynamic)
+      for(idx=0;idx<NCisAjs;idx++) {
+        ri = CisAjsIdx[idx][0];
+        s  = CisAjsIdx[idx][1];
+        rj = CisAjsIdx[idx][2];
+        t  = CisAjsIdx[idx][3];
+        tmp = GreenFunc1BF_fsz2_workspace(
+            ri,rj,s,t,ip,
+            thEleIdx,thEleCfg,thEleNum,eleProjCnt,thEleSpn,
+            thProjCntNew,eleProjBFCnt,thProjBFCntNew,
+            thBuffer,thPfBufM,thAffected,thHopIntWork,
+            bfHopIntSize,thPfIWork,thPfWork,thPfRWork);
+        LocalCisAjs[idx] = tmp;
+      }
+
+#pragma omp barrier
+#pragma omp master
+      { StopTimer(50); }
+
+      if(NNBodyG > 0) {
+#pragma omp barrier
+#pragma omp master
+        { StartTimer(54); }
+#pragma omp barrier
+#pragma omp for private(idx,k,offset,nbody,nbodyResult) schedule(dynamic)
+        for(idx=0;idx<NNBodyG;idx++) {
+          nbody = NBodyGN[idx];
+          offset = NBodyGOffset[idx];
+          for(k=0;k<nbody;k++) {
+            thNBodyScratch.inputRsi[k] =
+                NBodyGIdx[offset+k][0] + NBodyGIdx[offset+k][1]*Nsite;
+            thNBodyScratch.inputRsj[k] =
+                NBodyGIdx[offset+k][2] + NBodyGIdx[offset+k][3]*Nsite;
+          }
+          nbodyResult = GreenFuncNBF_fsz(
+              nbody,
+              thNBodyScratch.inputRsi, thNBodyScratch.inputRsj, ip,
+              eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn,
+              eleProjBFCnt, &thNBodyScratch);
+          if(nbodyResult.status == BF_NBODY_OK
+             || nbodyResult.status == BF_NBODY_PHYSICAL_ZERO) {
+            PhysNBodyG[idx] += w*nbodyResult.value;
+          } else {
+            RecordBFFSZGreenNBodyFailure(
+                &nbodyFailure, idx, &nbodyResult);
+          }
+        }
+#pragma omp barrier
+#pragma omp master
+        { StopTimer(54); }
+      }
+    }
   }
 
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();
   ReleaseWorkSpaceThreadDouble();
+  if(nbodyFailure.status != BF_NBODY_OK) {
+    ReleaseWorkSpaceInt();
+    ReleaseWorkSpaceComplex();
+    ReleaseWorkSpaceDouble();
+    AbortBFFSZGreenNBodyFailure(
+        "BackFlow FSZ NBodyG evaluation", &nbodyFailure);
+    return;
+  }
 
   StartTimer(51);
   for(idx=0;idx<NCisAjsCktAltDC;idx++) {
