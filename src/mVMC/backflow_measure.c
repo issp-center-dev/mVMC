@@ -26,6 +26,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #pragma once
+#include "backflow_nbody.h"
 #include "locgrn.h"
 #include "projection.h"
 #include "rbm.h"
@@ -628,149 +629,268 @@ double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
 #define BF_TRANSFER_BATCH_SIZE 8
 #endif
 
+typedef struct {
+  BFNBodyStatus status;
+  int term;
+  BFNBodyStage stage;
+  int detail;
+} BFNBodyLoopFailure;
+
+static void RecordBFNBodyLoopFailure(BFNBodyLoopFailure *failure, int term,
+                                     const BFNBodyResult *result) {
+  if(failure == NULL || result == NULL
+     || result->status == BF_NBODY_OK
+     || result->status == BF_NBODY_PHYSICAL_ZERO) {
+    return;
+  }
+#pragma omp critical(BFNBodyLoopFailureRecord)
+  {
+    if(failure->status == BF_NBODY_OK) {
+      failure->status = result->status;
+      failure->term = term;
+      failure->stage = result->stage;
+      failure->detail = result->detail;
+    }
+  }
+}
+
+static void AbortBFNBodyLoopFailure(const char *context,
+                                    const BFNBodyLoopFailure *failure) {
+  fprintf(stderr,
+          "Error: %s failed: status=%d term=%d stage=%d detail=%d.\n",
+          context, (int)failure->status, failure->term,
+          (int)failure->stage, failure->detail);
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+}
+
 double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx, const int *eleCfg,
                               int *eleNum, const int *eleProjCnt, const int *eleProjBFCnt)
 {
   const int *n0 = eleNum;
   const int *n1 = eleNum + Nsite;
+  const int maxNBody =
+      NBodyInterAllMaxN > 2 ? NBodyInterAllMaxN : 2;
+  BFNBodyScratchSizes scratchSizes;
+  BFNBodyLoopFailure nbodyFailure = {
+      BF_NBODY_OK, -1, BF_NBODY_STAGE_NONE, BF_NBODY_DETAIL_NONE
+  };
   double complex e=0.0, tmp;
-  int idx;
+  int idx, k, offset, nbody;
   int ri,rj,s,rk,rl,t;
+  int workspaceBindingFailed = 0;
   int *myEleIdx, *myEleNum, *myEleCfg, *myProjCntNew, *myProjBFCntNew;
-  //double sltTmp[NThread*NQPFull*Nsite2*Nsite2];
+  int *myIntBase;
   double complex *mySltBFTmp;
   double complex *myBuffer;
+  double complex *myComplexBase;
+  double *myDoubleBase;
   double complex myEnergy;
+  BFNBodyScratch scratch;
+  BFNBodyResult result;
+  int bindStatus;
 
-  RequestWorkSpaceThreadInt(Nsize+2*Nsite2+NProj+16*Nsite*Nrange);
-  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize+NQPFull*Nsite2*Nsite2);
-  /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
+  if(GetBFNBodyScratchSizes(maxNBody, 0, &scratchSizes) != BF_NBODY_OK) {
+    nbodyFailure.status = BF_NBODY_WORKSPACE_ERROR;
+    AbortBFNBodyLoopFailure("BackFlow NBodyInterAll workspace sizing",
+                            &nbodyFailure);
+    return 0.0+0.0*I;
+  }
+  RequestWorkSpaceThreadInt((int)scratchSizes.intCount);
+  RequestWorkSpaceThreadComplex((int)scratchSizes.complexCount);
+  RequestWorkSpaceThreadDouble((int)scratchSizes.doubleCount);
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myBuffer,mySltBFTmp,myEnergy)\
+  private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myIntBase,\
+          myBuffer,mySltBFTmp,myComplexBase,myDoubleBase,myEnergy,scratch,\
+          result,bindStatus)\
   reduction(+:e)
   {
-    myEleIdx = GetWorkSpaceThreadInt(Nsize);
-    myEleNum = GetWorkSpaceThreadInt(Nsite2);
-    myEleCfg = GetWorkSpaceThreadInt(Nsite2);
-    myProjCntNew   = GetWorkSpaceThreadInt(NProj);
-    myProjBFCntNew = GetWorkSpaceThreadInt(16*Nsite*Nrange);
-    myBuffer   = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
-    mySltBFTmp = GetWorkSpaceThreadComplex(NQPFull*Nsite2*Nsite2);
-
-#pragma loop noalias
-    for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
-#pragma loop noalias
-    for(idx=0;idx<Nsite2;idx++) myEleNum[idx] = eleNum[idx];
-#pragma loop noalias
-    for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
-
-    StoreSlaterElmBF_fcmp(mySltBFTmp);
+    myEnergy = 0.0;
+    myIntBase = GetWorkSpaceThreadInt((int)scratchSizes.intCount);
+    myComplexBase =
+        GetWorkSpaceThreadComplex((int)scratchSizes.complexCount);
+    myDoubleBase = GetWorkSpaceThreadDouble((int)scratchSizes.doubleCount);
+    bindStatus = BindBFNBodyScratch(
+        &scratchSizes, myIntBase, scratchSizes.intCount,
+        myComplexBase, scratchSizes.complexCount,
+        myDoubleBase, scratchSizes.doubleCount, &scratch);
+    if(bindStatus != BF_NBODY_OK) {
+      BFNBodyResult bindResult = {
+          BF_NBODY_WORKSPACE_ERROR, BF_NBODY_STAGE_NONE,
+          bindStatus, 0, 0.0+0.0*I
+      };
+      RecordBFNBodyLoopFailure(&nbodyFailure, -1, &bindResult);
+#pragma omp atomic write
+      workspaceBindingFailed = 1;
+    }
 #pragma omp barrier
 
+    if(!workspaceBindingFailed) {
+      myEleIdx = scratch.eleIdx;
+      myEleNum = scratch.eleNum;
+      myEleCfg = scratch.eleCfg;
+      myProjCntNew = scratch.projCnt;
+      myProjBFCntNew = scratch.projBFCnt;
+      myBuffer = scratch.greenBuffer;
+      mySltBFTmp = scratch.slater;
 
-    myEnergy = 0.0;
+#pragma loop noalias
+      for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
+#pragma loop noalias
+      for(idx=0;idx<Nsite2;idx++) myEleNum[idx] = eleNum[idx];
+#pragma loop noalias
+      for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
+
+      StoreSlaterElmBF_fcmp(mySltBFTmp);
+#pragma omp barrier
 
 #pragma omp master
-    {StartTimer(70);}
+      {StartTimer(70);}
 
-    /* CoulombIntra */
+      /* CoulombIntra */
 #pragma omp for private(idx,ri) nowait
-    for(idx=0;idx<NCoulombIntra;idx++) {
-      ri = CoulombIntra[idx];
-      myEnergy += ParaCoulombIntra[idx] * n0[ri] * n1[ri];
-    }
+      for(idx=0;idx<NCoulombIntra;idx++) {
+        ri = CoulombIntra[idx];
+        myEnergy += ParaCoulombIntra[idx] * n0[ri] * n1[ri];
+      }
 
-    /* CoulombInter */
+      /* CoulombInter */
 #pragma omp for private(idx,ri,rj) nowait
-    for(idx=0;idx<NCoulombInter;idx++) {
-      ri = CoulombInter[idx][0];
-      rj = CoulombInter[idx][1];
-      myEnergy += ParaCoulombInter[idx] * (n0[ri]+n1[ri]) * (n0[rj]+n1[rj]);
-    }
+      for(idx=0;idx<NCoulombInter;idx++) {
+        ri = CoulombInter[idx][0];
+        rj = CoulombInter[idx][1];
+        myEnergy +=
+            ParaCoulombInter[idx] * (n0[ri]+n1[ri]) * (n0[rj]+n1[rj]);
+      }
 
-    /* HundCoupling */
+      /* HundCoupling */
 #pragma omp for private(idx,ri,rj) nowait
-    for(idx=0;idx<NHundCoupling;idx++) {
-      ri = HundCoupling[idx][0];
-      rj = HundCoupling[idx][1];
-      myEnergy -= ParaHundCoupling[idx] * (n0[ri]*n0[rj] + n1[ri]*n1[rj]);
-      /* Caution: negative sign */
-    }
+      for(idx=0;idx<NHundCoupling;idx++) {
+        ri = HundCoupling[idx][0];
+        rj = HundCoupling[idx][1];
+        myEnergy -=
+            ParaHundCoupling[idx] * (n0[ri]*n0[rj] + n1[ri]*n1[rj]);
+        /* Caution: negative sign */
+      }
 
 #pragma omp master
-    {StopTimer(70);StartTimer(71);}
+      {StopTimer(70);StartTimer(71);}
 
-    /* Transfer */
+      /* Transfer */
 #pragma omp for private(idx,ri,rj,s) schedule(dynamic) nowait
-    for(idx=0;idx<NTransfer;idx++) {
-      ri = Transfer[idx][0];
-      rj = Transfer[idx][2];
-      s  = Transfer[idx][3];
+      for(idx=0;idx<NTransfer;idx++) {
+        ri = Transfer[idx][0];
+        rj = Transfer[idx][2];
+        s  = Transfer[idx][3];
 
-      myEnergy -= ParaTransfer[idx]
-                  //* GreenFunc1(ri,rj,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
-                  *GreenFunc1BF(ri,rj,s,ip,mySltBFTmp,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer);
-      /* Caution: negative sign */
-    }
+        myEnergy -= ParaTransfer[idx]
+                    *GreenFunc1BF(ri,rj,s,ip,mySltBFTmp,myEleIdx,
+                                  myEleCfg,myEleNum,eleProjCnt,
+                                  myProjCntNew,eleProjBFCnt,
+                                  myProjBFCntNew,myBuffer);
+        /* Caution: negative sign */
+      }
 
 #pragma omp master
-    {StopTimer(71);StartTimer(72);}
+      {StopTimer(71);StartTimer(72);}
 
-    /* Pair Hopping */
+      /* Pair Hopping */
 #pragma omp for private(idx,ri,rj) schedule(dynamic) nowait
-    for(idx=0;idx<NPairHopping;idx++) {
-      ri = PairHopping[idx][0];
-      rj = PairHopping[idx][1];
+      for(idx=0;idx<NPairHopping;idx++) {
+        ri = PairHopping[idx][0];
+        rj = PairHopping[idx][1];
 
-      if (!FlagRBM) {
-        const double complex *rbmCnt;
-        double complex *rbmCntNew;
-        myEnergy += ParaPairHopping[idx]
-                    * GreenFunc2(ri,rj,ri,rj,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
+        if (!FlagRBM) {
+          const double complex *rbmCnt;
+          double complex *rbmCntNew;
+          myEnergy += ParaPairHopping[idx]
+                      * GreenFunc2(ri,rj,ri,rj,0,1,ip,myEleIdx,eleCfg,
+                                   myEleNum,eleProjCnt,myProjCntNew,
+                                   rbmCnt,rbmCntNew,myBuffer);
+        }
       }
-    }
 
-    /* Exchange Coupling */
+      /* Exchange Coupling */
 #pragma omp for private(idx,ri,rj,tmp) schedule(dynamic) nowait
-    for(idx=0;idx<NExchangeCoupling;idx++) {
-      ri = ExchangeCoupling[idx][0];
-      rj = ExchangeCoupling[idx][1];
+      for(idx=0;idx<NExchangeCoupling;idx++) {
+        ri = ExchangeCoupling[idx][0];
+        rj = ExchangeCoupling[idx][1];
 
-      if (!FlagRBM) {
-        const double complex *rbmCnt;
-        double complex *rbmCntNew;
-        tmp =  GreenFunc2(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
-        tmp += GreenFunc2(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
-        myEnergy += ParaExchangeCoupling[idx] * tmp;
+        if (!FlagRBM) {
+          const double complex *rbmCnt;
+          double complex *rbmCntNew;
+          tmp = GreenFunc2(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,
+                           myEleNum,eleProjCnt,myProjCntNew,
+                           rbmCnt,rbmCntNew,myBuffer);
+          tmp += GreenFunc2(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,
+                            myEleNum,eleProjCnt,myProjCntNew,
+                            rbmCnt,rbmCntNew,myBuffer);
+          myEnergy += ParaExchangeCoupling[idx] * tmp;
+        }
       }
-    }
 
-    /* Inter All */
+      /* Inter All */
 #pragma omp for private(idx,ri,rj,s,rk,rl,t) schedule(dynamic) nowait
-    for(idx=0;idx<NInterAll;idx++) {
-      ri = InterAll[idx][0];
-      rj = InterAll[idx][2];
-      s  = InterAll[idx][3];
-      rk = InterAll[idx][4];
-      rl = InterAll[idx][6];
-      t  = InterAll[idx][7];
-      if (!FlagRBM) {
-        const double complex *rbmCnt;
-        double complex *rbmCntNew;
-        myEnergy += ParaInterAll[idx]
-                    * GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,rbmCnt,rbmCntNew,myBuffer);
+      for(idx=0;idx<NInterAll;idx++) {
+        ri = InterAll[idx][0];
+        rj = InterAll[idx][2];
+        s  = InterAll[idx][3];
+        rk = InterAll[idx][4];
+        rl = InterAll[idx][6];
+        t  = InterAll[idx][7];
+        if (!FlagRBM) {
+          const double complex *rbmCnt;
+          double complex *rbmCntNew;
+          myEnergy += ParaInterAll[idx]
+                      * GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,
+                                   myEleNum,eleProjCnt,myProjCntNew,
+                                   rbmCnt,rbmCntNew,myBuffer);
+        }
       }
-    }
+
+      /*
+       * scratch.slater aliases mySltBFTmp. N>=3 evaluation replaces that
+       * base snapshot, so this loop must remain after all legacy consumers.
+       * GreenFuncNBF reconstructs the state needed by every term.
+       */
+#pragma omp for private(idx,k,offset,nbody,result) schedule(dynamic)
+      for(idx=0;idx<NNBodyInterAll;idx++) {
+        nbody = NBodyInterAllN[idx];
+        offset = NBodyInterAllOffset[idx];
+        for(k=0;k<nbody;k++) {
+          scratch.inputRsi[k] =
+              NBodyInterAllIdx[offset+k][0]
+              + NBodyInterAllIdx[offset+k][1]*Nsite;
+          scratch.inputRsj[k] =
+              NBodyInterAllIdx[offset+k][2]
+              + NBodyInterAllIdx[offset+k][3]*Nsite;
+        }
+        result = GreenFuncNBF(
+            nbody, scratch.inputRsi, scratch.inputRsj, ip,
+            eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt,
+            &scratch);
+        if(result.status == BF_NBODY_OK
+           || result.status == BF_NBODY_PHYSICAL_ZERO) {
+          myEnergy += ParaNBodyInterAll[idx] * result.value;
+        } else {
+          RecordBFNBodyLoopFailure(&nbodyFailure, idx, &result);
+        }
+      }
 
 #pragma omp master
-    {StopTimer(72);}
+      {StopTimer(72);}
+    }
 
     e += myEnergy;
   }
 
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();
+  ReleaseWorkSpaceThreadDouble();
+  if(nbodyFailure.status != BF_NBODY_OK) {
+    AbortBFNBodyLoopFailure("BackFlow NBodyInterAll evaluation",
+                            &nbodyFailure);
+  }
   return e;
 }
 double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleCfg,
@@ -961,92 +1081,173 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
 void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, int *eleCfg,
                           int *eleNum, int *eleProjCnt, const int *eleProjBFCnt) {
 
-  int idx,idx0,idx1;
+  const int maxNBody = NBodyGMaxN > 2 ? NBodyGMaxN : 2;
+  BFNBodyScratchSizes scratchSizes;
+  BFNBodyLoopFailure nbodyFailure = {
+      BF_NBODY_OK, -1, BF_NBODY_STAGE_NONE, BF_NBODY_DETAIL_NONE
+  };
+  int idx,idx0,idx1,k,offset,nbody;
   int ri,rj,s,rk,rl,t;
+  int workspaceBindingFailed = 0;
   double complex tmp;
   int *myEleIdx, *myEleNum, *myEleCfg, *myProjCntNew, *myProjBFCntNew;
+  int *myIntBase;
   double complex* mySltBFTmp;
   double complex* myBuffer;
+  double complex *myComplexBase;
+  double *myDoubleBase;
+  BFNBodyScratch scratch;
+  BFNBodyResult result;
+  int bindStatus;
 
-  RequestWorkSpaceThreadInt(Nsize+2*Nsite2+NProj+16*Nsite*Nrange);
-  RequestWorkSpaceThreadComplex(NQPFull+2*Nsize+NQPFull*Nsite2*Nsite2);
-  /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize */
+  if(GetBFNBodyScratchSizes(maxNBody, 0, &scratchSizes) != BF_NBODY_OK) {
+    nbodyFailure.status = BF_NBODY_WORKSPACE_ERROR;
+    AbortBFNBodyLoopFailure("BackFlow NBodyG workspace sizing",
+                            &nbodyFailure);
+    return;
+  }
+  RequestWorkSpaceThreadInt((int)scratchSizes.intCount);
+  RequestWorkSpaceThreadComplex((int)scratchSizes.complexCount);
+  RequestWorkSpaceThreadDouble((int)scratchSizes.doubleCount);
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myBuffer,mySltBFTmp)
+  private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myIntBase,\
+          myBuffer,mySltBFTmp,myComplexBase,myDoubleBase,scratch,result,\
+          bindStatus)
   {
-    myEleIdx = GetWorkSpaceThreadInt(Nsize);
-    myEleNum = GetWorkSpaceThreadInt(Nsite2);
-    myEleCfg = GetWorkSpaceThreadInt(Nsite2);
-    myProjCntNew   = GetWorkSpaceThreadInt(NProj);
-    myProjBFCntNew = GetWorkSpaceThreadInt(16*Nsite*Nrange);
-    myBuffer   = GetWorkSpaceThreadComplex(NQPFull+2*Nsize);
-    mySltBFTmp = GetWorkSpaceThreadComplex(NQPFull*Nsite2*Nsite2);
+    myIntBase = GetWorkSpaceThreadInt((int)scratchSizes.intCount);
+    myComplexBase =
+        GetWorkSpaceThreadComplex((int)scratchSizes.complexCount);
+    myDoubleBase = GetWorkSpaceThreadDouble((int)scratchSizes.doubleCount);
+    bindStatus = BindBFNBodyScratch(
+        &scratchSizes, myIntBase, scratchSizes.intCount,
+        myComplexBase, scratchSizes.complexCount,
+        myDoubleBase, scratchSizes.doubleCount, &scratch);
+    if(bindStatus != BF_NBODY_OK) {
+      BFNBodyResult bindResult = {
+          BF_NBODY_WORKSPACE_ERROR, BF_NBODY_STAGE_NONE,
+          bindStatus, 0, 0.0+0.0*I
+      };
+      RecordBFNBodyLoopFailure(&nbodyFailure, -1, &bindResult);
+#pragma omp atomic write
+      workspaceBindingFailed = 1;
+    }
+#pragma omp barrier
+
+    if(!workspaceBindingFailed) {
+      myEleIdx = scratch.eleIdx;
+      myEleNum = scratch.eleNum;
+      myEleCfg = scratch.eleCfg;
+      myProjCntNew = scratch.projCnt;
+      myProjBFCntNew = scratch.projBFCnt;
+      myBuffer = scratch.greenBuffer;
+      mySltBFTmp = scratch.slater;
 
 #pragma loop noalias
-    for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
+      for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
 #pragma loop noalias
-    for(idx=0;idx<Nsite2;idx++) myEleNum[idx] = eleNum[idx];
+      for(idx=0;idx<Nsite2;idx++) myEleNum[idx] = eleNum[idx];
 #pragma loop noalias
-    for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
+      for(idx=0;idx<Nsite2;idx++) myEleCfg[idx] = eleCfg[idx];
 
-    StoreSlaterElmBF_fcmp(mySltBFTmp);
+      StoreSlaterElmBF_fcmp(mySltBFTmp);
 #pragma omp master
-    {StartTimer(50);}
+      {StartTimer(50);}
 
 #pragma omp for private(idx,ri,rj,s,tmp) schedule(dynamic) nowait
-    for(idx=0;idx<NCisAjs;idx++) {
-      ri = CisAjsIdx[idx][0];
-      rj = CisAjsIdx[idx][2];
-      s  = CisAjsIdx[idx][3];
-      tmp = GreenFunc1BF(ri,rj,s,ip,mySltBFTmp,myEleIdx,myEleCfg,myEleNum,eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer);
-      LocalCisAjs[idx] = tmp;
-    }
+      for(idx=0;idx<NCisAjs;idx++) {
+        ri = CisAjsIdx[idx][0];
+        rj = CisAjsIdx[idx][2];
+        s  = CisAjsIdx[idx][3];
+        tmp = GreenFunc1BF(ri,rj,s,ip,mySltBFTmp,myEleIdx,myEleCfg,
+                           myEleNum,eleProjCnt,myProjCntNew,
+                           eleProjBFCnt,myProjBFCntNew,myBuffer);
+        LocalCisAjs[idx] = tmp;
+      }
 
 #pragma omp master
-    {StopTimer(50);StartTimer(51);}
+      {StopTimer(50);StartTimer(51);}
 
 #pragma omp for private(idx,ri,rj,s,rk,rl,t,tmp) schedule(dynamic)
-    for(idx=0;idx<NCisAjsCktAltDC;idx++) {
-      ri = CisAjsCktAltDCIdx[idx][0];
-      rj = CisAjsCktAltDCIdx[idx][2];
-      s  = CisAjsCktAltDCIdx[idx][1];
-      rk = CisAjsCktAltDCIdx[idx][4];
-      rl = CisAjsCktAltDCIdx[idx][6];
-      t  = CisAjsCktAltDCIdx[idx][5];
-      tmp = GreenFunc2BF(ri,rj,rk,rl,s,t,ip,mySltBFTmp,myEleIdx,myEleCfg,myEleNum,eleProjCnt,
-                         myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer);
-      LocalCisAjsCktAltDC[idx] = tmp;
-    }
+      for(idx=0;idx<NCisAjsCktAltDC;idx++) {
+        ri = CisAjsCktAltDCIdx[idx][0];
+        rj = CisAjsCktAltDCIdx[idx][2];
+        s  = CisAjsCktAltDCIdx[idx][1];
+        rk = CisAjsCktAltDCIdx[idx][4];
+        rl = CisAjsCktAltDCIdx[idx][6];
+        t  = CisAjsCktAltDCIdx[idx][5];
+        tmp = GreenFunc2BF(ri,rj,rk,rl,s,t,ip,mySltBFTmp,
+                           myEleIdx,myEleCfg,myEleNum,eleProjCnt,
+                           myProjCntNew,eleProjBFCnt,myProjBFCntNew,
+                           myBuffer);
+        LocalCisAjsCktAltDC[idx] = tmp;
+      }
 
 #pragma omp master
-    {StopTimer(51);StartTimer(52);}
+      {StopTimer(51);StartTimer(52);}
 
 #pragma omp for private(idx) nowait
-    for(idx=0;idx<NCisAjs;idx++) {
-      PhysCisAjs[idx] += w*LocalCisAjs[idx];
-    }
+      for(idx=0;idx<NCisAjs;idx++) {
+        PhysCisAjs[idx] += w*LocalCisAjs[idx];
+      }
 
 #pragma omp for private(idx) nowait
-    for (idx=0;idx<NCisAjsCktAltDC;idx++) {
-      PhysCisAjsCktAltDC[idx] += w*LocalCisAjsCktAltDC[idx];
-    }
+      for (idx=0;idx<NCisAjsCktAltDC;idx++) {
+        PhysCisAjsCktAltDC[idx] += w*LocalCisAjsCktAltDC[idx];
+      }
 
 #pragma omp master
-    {StopTimer(52);StartTimer(53);}
+      {StopTimer(52);StartTimer(53);}
 
 #pragma omp for private(idx,idx0,idx1) nowait
-    for(idx=0;idx<NCisAjsCktAlt;idx++) {
-      idx0 = CisAjsCktAltIdx[idx][0];
-      idx1 = CisAjsCktAltIdx[idx][1];
-      PhysCisAjsCktAlt[idx] += w*LocalCisAjs[idx0]*conj(LocalCisAjs[idx1]);
-    }
+      for(idx=0;idx<NCisAjsCktAlt;idx++) {
+        idx0 = CisAjsCktAltIdx[idx][0];
+        idx1 = CisAjsCktAltIdx[idx][1];
+        PhysCisAjsCktAlt[idx] +=
+            w*LocalCisAjs[idx0]*conj(LocalCisAjs[idx1]);
+      }
 
 #pragma omp master
-    {StopTimer(53);}
+      {StopTimer(53);StartTimer(54);}
+
+      /*
+       * scratch.slater aliases mySltBFTmp. N>=3 evaluation replaces that
+       * base snapshot, so this loop must remain after every legacy and
+       * derived-observable consumer. GreenFuncNBF reconstructs the state
+       * needed by every term.
+       */
+#pragma omp for private(idx,k,offset,nbody,result) schedule(dynamic)
+      for(idx=0;idx<NNBodyG;idx++) {
+        nbody = NBodyGN[idx];
+        offset = NBodyGOffset[idx];
+        for(k=0;k<nbody;k++) {
+          scratch.inputRsi[k] =
+              NBodyGIdx[offset+k][0] + NBodyGIdx[offset+k][1]*Nsite;
+          scratch.inputRsj[k] =
+              NBodyGIdx[offset+k][2] + NBodyGIdx[offset+k][3]*Nsite;
+        }
+        result = GreenFuncNBF(
+            nbody, scratch.inputRsi, scratch.inputRsj, ip,
+            eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt,
+            &scratch);
+        if(result.status == BF_NBODY_OK
+           || result.status == BF_NBODY_PHYSICAL_ZERO) {
+          PhysNBodyG[idx] += w*result.value;
+        } else {
+          RecordBFNBodyLoopFailure(&nbodyFailure, idx, &result);
+        }
+      }
+
+#pragma omp master
+      {StopTimer(54);}
+    }
   }
 
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadComplex();
+  ReleaseWorkSpaceThreadDouble();
+  if(nbodyFailure.status != BF_NBODY_OK) {
+    AbortBFNBodyLoopFailure("BackFlow NBodyG evaluation", &nbodyFailure);
+  }
   return;
 }

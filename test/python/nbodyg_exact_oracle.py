@@ -9,6 +9,11 @@ import sys
 
 import numpy as np
 
+from backflow_def_helper import (
+    build_chain_nn_backflow,
+    write_chain_nn_backflow,
+)
+
 
 TOL = 1.2e-2
 
@@ -243,6 +248,43 @@ def write_initial(workdir, slater_values):
     write(os.path.join(workdir, "initial.def"), " ".join(fmt(x) for x in values) + "\n")
 
 
+def write_backflow_initial(workdir, nprojbf, slater_values):
+    projbf_template = [
+        0.93, 0.08, -0.05, 0.035, -0.025,
+        0.015, -0.012, 0.010, -0.007, 0.005,
+    ]
+    if nprojbf < 2:
+        raise AssertionError("non-identity BackFlow case needs at least two ProjBF values")
+
+    projbf_values = []
+    for idx in range(nprojbf):
+        if idx < len(projbf_template):
+            projbf_values.append(projbf_template[idx])
+        else:
+            projbf_values.append(0.001 / float(idx + 1))
+    if projbf_values[0] != 0.93 or not any(value != 0.0 for value in projbf_values[1:]):
+        raise AssertionError("BackFlow initial parameters are not non-identity")
+
+    values = [0.0] * 6
+    for value in projbf_values:
+        values.extend([value, 0.0, 0.0])
+    for value in slater_values:
+        values.extend([float(np.real(value)), float(np.imag(value)), 0.0])
+    write(os.path.join(workdir, "initial.def"), " ".join(fmt(x) for x in values) + "\n")
+    return projbf_values
+
+
+def enable_nonidentity_backflow(workdir, nsite, slater_values):
+    definition = build_chain_nn_backflow(length=nsite, optimize=False)
+    write_chain_nn_backflow(workdir, length=nsite, optimize=False)
+    namelist_path = os.path.join(workdir, "namelist.def")
+    with open(namelist_path, "a") as f:
+        f.write("              BF  bf.def\n")
+        f.write("         BFRange  rangebf.def\n")
+    write_backflow_initial(workdir, definition.n_proj_bf, slater_values)
+    return definition
+
+
 def write_antiparallel_orbital(workdir, f_matrix):
     nsite = f_matrix.shape[0]
     lines = [
@@ -263,6 +305,30 @@ def write_antiparallel_orbital(workdir, f_matrix):
         lines.append("{:5d}      1".format(idx))
     write(os.path.join(workdir, "orbitalidx.def"), "\n".join(lines) + "\n")
     write_initial(workdir, values)
+    return values
+
+
+def write_real_antiparallel_orbital(workdir, f_matrix):
+    nsite = f_matrix.shape[0]
+    lines = [
+        "=============================================",
+        "NOrbitalIdx         {}".format(nsite * nsite),
+        "ComplexType          0",
+        "=============================================",
+        "=============================================",
+    ]
+    values = []
+    idx = 0
+    for i in range(nsite):
+        for j in range(nsite):
+            lines.append("{:5d} {:6d} {:6d}      1".format(i, j, idx))
+            values.append(float(np.real(f_matrix[i, j])))
+            idx += 1
+    for idx in range(nsite * nsite):
+        lines.append("{:5d}      1".format(idx))
+    write(os.path.join(workdir, "orbitalidx.def"), "\n".join(lines) + "\n")
+    write_initial(workdir, values)
+    return values
 
 
 def write_general_orbital(workdir, slater_elm):
@@ -297,6 +363,7 @@ def write_general_orbital(workdir, slater_elm):
         lines.append("{:5d}      1".format(idx))
     write(os.path.join(workdir, "orbitalidxgen.def"), "\n".join(lines) + "\n")
     write_initial(workdir, values)
+    return values
 
 
 def complex_n3_case(workdir):
@@ -413,6 +480,111 @@ def multibin_case(workdir):
     return terms, 2
 
 
+def backflow_nonidentity_n3_output_case(workdir):
+    nsite = 6
+    terms = [
+        (3, (0, 0, 2, 0, 1, 0, 3, 0, 5, 1, 1, 1)),
+        (3, (0, 0, 3, 0, 1, 0, 2, 0, 5, 1, 1, 1)),
+        (3, (2, 0, 0, 0, 3, 0, 1, 0, 1, 1, 5, 1)),
+    ]
+    f_matrix = np.zeros((nsite, nsite), dtype=complex)
+    for i in range(nsite):
+        for j in range(nsite):
+            real = math.sin(1.7 * (i + 1) * (j + 2))
+            real += 0.4 * math.cos(0.2 * (i + 2) * (j + 1))
+            imag = math.cos(1.1 * (i + 1) * (j + 1))
+            imag -= 0.3 * math.sin((i + 3) * (j + 1))
+            f_matrix[i, j] = real + 1j * imag
+
+    write_common_defs(workdir, nsite, 400, 54321, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    return terms, 1
+
+
+def invalid_backflow_state(nsite):
+    f_matrix = np.zeros((nsite, nsite), dtype=complex)
+    for i in range(nsite):
+        for j in range(nsite):
+            real = math.sin(1.3 * (i + 1) * (j + 2))
+            real += 0.35 * math.cos(0.4 * (i + 2) * (j + 1))
+            imag = math.cos(0.9 * (i + 1) * (j + 1))
+            imag -= 0.25 * math.sin((i + 3) * (j + 1))
+            f_matrix[i, j] = real + 1j * imag
+
+    slater_elm = np.zeros((2 * nsite, 2 * nsite), dtype=complex)
+    for i in range(2 * nsite):
+        for j in range(i + 1, 2 * nsite):
+            value = (
+                math.sin(0.7 * (i + 1) * (j + 2))
+                + 1j * math.cos(0.5 * (i + 3) * (j + 1))
+            )
+            slater_elm[i, j] = value
+            slater_elm[j, i] = -value
+    return f_matrix, slater_elm
+
+
+def update_modpara(workdir, keyword, value):
+    path = os.path.join(workdir, "modpara.def")
+    lines = []
+    found = False
+    with open(path) as f:
+        for line in f:
+            cols = line.split()
+            if cols and cols[0] == keyword:
+                lines.append("{:<15} {}\n".format(keyword, value))
+                found = True
+            else:
+                lines.append(line)
+    if not found:
+        raise AssertionError("{} is missing from modpara.def".format(keyword))
+    write(path, "".join(lines))
+
+
+def invalid_backflow_real_case(workdir):
+    nsite = 6
+    terms = [(1, (0, 0, 2, 0))]
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 20, 86420, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_real_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+
+
+def invalid_backflow_lanczos_case(workdir):
+    nsite = 6
+    terms = [(1, (0, 0, 2, 0))]
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 20, 86421, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "NLanczosMode", 1)
+
+
+def invalid_backflow_spin_change_nonfsz_case(workdir):
+    nsite = 6
+    terms = [(1, (0, 0, 2, 1))]
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 20, 86422, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+
+
+def invalid_backflow_fsz_spin_change_fixedsz_case(workdir):
+    nsite = 6
+    terms = [(1, (0, 0, 2, 1))]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 20, 86423, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+
+
 EXACT_CASES = {
     "NBodyG_Complex_N3_Oracle": complex_n3_case,
     "NBodyG_fsz_N3_Oracle": fsz_n3_case,
@@ -421,6 +593,21 @@ EXACT_CASES = {
 GENERATED_CHECK_CASES = {
     "NBodyG_Projector_N3_MultiTerm": projector_n3_multiterm_case,
     "NBodyG_MultiBin": multibin_case,
+    "BackFlow_NBodyG_NonIdentity_N3_Output": backflow_nonidentity_n3_output_case,
+}
+
+NONVACUOUS_GENERATED_CASES = {
+    "BackFlow_NBodyG_NonIdentity_N3_Output",
+}
+
+INVALID_CASES = {
+    "NBodyG_InvalidBackFlow": invalid_backflow_real_case,
+    "NBodyG_InvalidBackFlow_mpi": invalid_backflow_real_case,
+    "NBodyG_InvalidBackFlowLanczos": invalid_backflow_lanczos_case,
+    "NBodyG_InvalidBackFlowSpinChangeNonFSZ":
+        invalid_backflow_spin_change_nonfsz_case,
+    "NBodyG_InvalidBackFlowFszSpinChangeFixedSz":
+        invalid_backflow_fsz_spin_change_fixedsz_case,
 }
 
 
@@ -453,8 +640,9 @@ def assert_close(label, actual, expected):
         )
 
 
-def assert_nbodyg_outputs(workdir, terms, bin_count):
+def assert_nbodyg_outputs(workdir, terms, bin_count, require_nonzero=False):
     found_n_ge_3 = 0
+    max_abs_value = 0.0
     for idx in range(1, bin_count + 1):
         path = os.path.join(workdir, "output", "zvo_NBodyG_{:03d}.dat".format(idx))
         if not os.path.exists(path):
@@ -475,28 +663,65 @@ def assert_nbodyg_outputs(workdir, terms, bin_count):
                 found_n_ge_3 += 1
             if not (math.isfinite(value.real) and math.isfinite(value.imag)):
                 raise AssertionError("NBodyG bin {} row {} is not finite: {}".format(idx, row_idx, value))
+            max_abs_value = max(max_abs_value, abs(value))
 
     extra_path = os.path.join(workdir, "output", "zvo_NBodyG_{:03d}.dat".format(bin_count + 1))
     if os.path.exists(extra_path):
         raise AssertionError("unexpected extra NBodyG output: {}".format(extra_path))
     if found_n_ge_3 == 0:
         raise AssertionError("generated NBodyG check did not exercise any N>=3 term")
+    if require_nonzero and max_abs_value <= 1.0e-12:
+        raise AssertionError("generated NBodyG output is vacuous")
+
+
+def assert_finite_energy_output(workdir):
+    path = os.path.join(workdir, "output", "zvo_out_001.dat")
+    if not os.path.exists(path):
+        raise AssertionError("missing energy output: {}".format(path))
+    with open(path) as f:
+        cols = f.readline().split()
+    if len(cols) < 2:
+        raise AssertionError("malformed energy output: {}".format(path))
+    energy = complex(float(cols[0]), float(cols[1]))
+    if not (math.isfinite(energy.real) and math.isfinite(energy.imag)):
+        raise AssertionError("energy is not finite: {}".format(energy))
 
 
 def main():
-    all_cases = sorted(list(EXACT_CASES) + list(GENERATED_CHECK_CASES))
-    if len(sys.argv) != 2 or sys.argv[1] not in all_cases:
-        print("usage: {} {}".format(sys.argv[0], "|".join(all_cases)))
+    all_cases = sorted(
+        list(EXACT_CASES) + list(GENERATED_CHECK_CASES) + list(INVALID_CASES)
+    )
+    if len(sys.argv) not in (2, 4) or sys.argv[1] not in all_cases:
+        print(
+            "usage: {} {} [--expect-error <substring>]".format(
+                sys.argv[0], "|".join(all_cases)
+            )
+        )
         return -1
 
     model = sys.argv[1]
+    expected_error = None
+    if len(sys.argv) == 4:
+        if sys.argv[2] != "--expect-error" or model not in INVALID_CASES:
+            print("ERROR: --expect-error is valid only for invalid cases")
+            return -1
+        expected_error = sys.argv[3]
+    elif model in INVALID_CASES:
+        print("ERROR: invalid cases require --expect-error")
+        return -1
+
     rootdir = os.getcwd()
     workdir = os.path.join(rootdir, "work", model)
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
 
-    if model in EXACT_CASES:
+    if model in INVALID_CASES:
+        INVALID_CASES[model](workdir)
+        expected = None
+        terms = None
+        bin_count = 0
+    elif model in EXACT_CASES:
         nsite, nup, ndown, slater_elm, terms = EXACT_CASES[model](workdir)
         expected = exact_nbody_values(nsite, nup, ndown, slater_elm, terms)
         if max(abs(x.real) for x in expected) < 1.0e-3:
@@ -509,12 +734,56 @@ def main():
         expected = None
 
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
+    if model in INVALID_CASES:
+        mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+        if mpi_procs:
+            cmd = [
+                "mpirun", "-np", mpi_procs, bin_to_test,
+                "-e", "namelist.def",
+            ]
+        else:
+            cmd = [bin_to_test, "-e", "namelist.def"]
+        proc = subprocess.run(
+            cmd,
+            cwd=workdir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        with open(os.path.join(workdir, "invalid_test.log"), "w") as f:
+            f.write(proc.stdout)
+        if proc.returncode == 0:
+            raise AssertionError("vmc.out unexpectedly accepted invalid input")
+        if expected_error not in proc.stdout:
+            raise AssertionError(
+                "expected error substring not found: {}\n{}".format(
+                    expected_error, proc.stdout
+                )
+            )
+        if "Start: Sampling." in proc.stdout:
+            raise AssertionError("invalid input reached sampling")
+        if (
+            mpi_procs
+            and "Error: Definition files(*.def) are incomplete." in proc.stdout
+        ):
+            raise AssertionError(
+                "MPI invalid case stopped at the rank-0 pre-broadcast gate"
+            )
+        return 0
+
     result = subprocess.call([bin_to_test, "-e", "namelist.def", "initial.def"], cwd=workdir)
     if result != 0:
         return result
 
     if expected is None:
-        assert_nbodyg_outputs(workdir, terms, bin_count)
+        assert_nbodyg_outputs(
+            workdir,
+            terms,
+            bin_count,
+            require_nonzero=model in NONVACUOUS_GENERATED_CASES,
+        )
+        if model in NONVACUOUS_GENERATED_CASES:
+            assert_finite_energy_output(workdir)
         print("{} generated NBodyG check passed".format(model))
         return 0
 

@@ -62,6 +62,7 @@ static int BFValidateNBodyScratch(const BFNBodyScratch *scratch, int n) {
   if(scratch == NULL || n < 1 || scratch->maxOrder < n
      || scratch->useFsz != 0 || scratch->sizes.maxOrder != scratch->maxOrder
      || scratch->sizes.useFsz != scratch->useFsz
+     || scratch->inputRsi == NULL || scratch->inputRsj == NULL
      || scratch->rsi == NULL || scratch->rsj == NULL
      || scratch->moved == NULL || scratch->eleIdx == NULL
      || scratch->eleCfg == NULL || scratch->eleNum == NULL
@@ -74,6 +75,8 @@ static int BFValidateNBodyScratch(const BFNBodyScratch *scratch, int n) {
      || GetBFNBodyScratchSizes(scratch->maxOrder, 0, &needed)
           != BF_NBODY_OK
      || Ne <= 0 || Ne > INT_MAX/2 || Nsize != 2*Ne
+     || scratch->sizes.inputRsiCount < needed.inputRsiCount
+     || scratch->sizes.inputRsjCount < needed.inputRsjCount
      || scratch->sizes.rsiCount < needed.rsiCount
      || scratch->sizes.rsjCount < needed.rsjCount
      || scratch->sizes.movedCount < needed.movedCount
@@ -93,6 +96,29 @@ static int BFValidateNBodyScratch(const BFNBodyScratch *scratch, int n) {
     return 0;
   }
   return 1;
+}
+
+static int BFCallerStateAliasesNBodyScratch(
+    const int *eleIdx, const int *eleCfg, const int *eleNum,
+    const int *eleProjCnt, const int *eleProjBFCnt,
+    const BFNBodyScratch *scratch) {
+  const int *callerState[5] = {
+      eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt
+  };
+  const int *scratchState[5] = {
+      scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
+      scratch->projCnt, scratch->projBFCnt
+  };
+  int callerIdx;
+  int scratchIdx;
+
+  for(callerIdx=0;callerIdx<5;callerIdx++) {
+    if(callerState[callerIdx] == NULL) continue;
+    for(scratchIdx=0;scratchIdx<5;scratchIdx++) {
+      if(callerState[callerIdx] == scratchState[scratchIdx]) return 1;
+    }
+  }
+  return 0;
 }
 
 static BFNBodyResult BFDispatchReducedNBody(
@@ -303,6 +329,12 @@ BFNBodyResult GreenFuncNBF(
     }
     return BFNBodyResultValue(
         BF_NBODY_WORKSPACE_ERROR, BF_NBODY_STAGE_NONE,
+        BF_NBODY_DETAIL_NONE, 0, 0.0+0.0*I);
+  }
+  if(BFCallerStateAliasesNBodyScratch(
+         eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt, scratch)) {
+    return BFNBodyResultValue(
+        BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_CANDIDATE,
         BF_NBODY_DETAIL_NONE, 0, 0.0+0.0*I);
   }
   reduceStatus = ReduceNBodyTerm(

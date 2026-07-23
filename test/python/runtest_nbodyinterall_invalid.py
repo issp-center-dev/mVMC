@@ -5,12 +5,18 @@ import shutil
 import subprocess
 import sys
 
+from backflow_def_helper import write_chain_nn_backflow
 from nbodyinterall_exact_oracle import (
     complex_antiparallel_state,
+    complex_general_state,
     write_common_nbodyinterall_defs,
     write_nbodyinterall_def,
 )
-from nbodyg_exact_oracle import write, write_antiparallel_orbital
+from nbodyg_exact_oracle import (
+    write,
+    write_antiparallel_orbital,
+    write_general_orbital,
+)
 
 
 def write_real_antiparallel_orbital(workdir, nsite):
@@ -31,14 +37,25 @@ def write_real_antiparallel_orbital(workdir, nsite):
     write(os.path.join(workdir, "orbitalidx.def"), "\n".join(lines) + "\n")
 
 
-def write_base_case(workdir, orbital_complex=True, lanczos_mode=0, backflow=False):
+def write_base_case(workdir, orbital_complex=True, orbital_general=False,
+                    lanczos_mode=0, backflow=False):
     nsite = 6
     f_matrix, _ = complex_antiparallel_state(nsite)
-    write_common_nbodyinterall_defs(workdir, nsite, 20, 77889,
-                                    "Orbital", "orbitalidx.def")
-    if orbital_complex:
+    if orbital_general:
+        write_common_nbodyinterall_defs(
+            workdir, nsite, 20, 77889,
+            "OrbitalGeneral", "orbitalidxgen.def",
+        )
+        write_general_orbital(workdir, complex_general_state(nsite))
+    elif orbital_complex:
+        write_common_nbodyinterall_defs(
+            workdir, nsite, 20, 77889, "Orbital", "orbitalidx.def"
+        )
         write_antiparallel_orbital(workdir, f_matrix)
     else:
+        write_common_nbodyinterall_defs(
+            workdir, nsite, 20, 77889, "Orbital", "orbitalidx.def"
+        )
         write_real_antiparallel_orbital(workdir, nsite)
 
     modpara = os.path.join(workdir, "modpara.def")
@@ -47,19 +64,12 @@ def write_base_case(workdir, orbital_complex=True, lanczos_mode=0, backflow=Fals
     write(modpara, text)
 
     if backflow:
+        write_chain_nn_backflow(workdir, length=nsite, optimize=False)
         namelist = os.path.join(workdir, "namelist.def")
-        text = open(namelist).read() + "              BF  backflow.def\n"
+        text = open(namelist).read()
+        text += "              BF  bf.def\n"
+        text += "         BFRange  rangebf.def\n"
         write(namelist, text)
-        write(
-            os.path.join(workdir, "backflow.def"),
-            (
-                "=============================================\n"
-                "NBackFlowIdx     1\n"
-                "=============================================\n"
-                "======== BackFlow parameters ================\n"
-                "=============================================\n"
-            ),
-        )
 
 
 def write_raw_nbodyinterall(workdir, count, body):
@@ -122,8 +132,23 @@ def case_real_path(workdir):
 
 
 def case_backflow(workdir):
-    write_base_case(workdir, backflow=True)
+    write_base_case(workdir, lanczos_mode=1, backflow=True)
     write_nbodyinterall_def(workdir, [(1, (0, 0, 0, 0), 1.0 + 0.0j)])
+
+
+def case_backflow_real(workdir):
+    write_base_case(workdir, orbital_complex=False, backflow=True)
+    write_nbodyinterall_def(workdir, [(1, (0, 0, 0, 0), 1.0 + 0.0j)])
+
+
+def case_backflow_spin_change_non_fsz(workdir):
+    write_base_case(workdir, backflow=True)
+    write_nbodyinterall_def(workdir, [(1, (0, 0, 0, 1), 1.0 + 0.0j)])
+
+
+def case_backflow_fsz_spin_change_fixed_sz(workdir):
+    write_base_case(workdir, orbital_general=True, backflow=True)
+    write_nbodyinterall_def(workdir, [(1, (0, 0, 0, 1), 1.0 + 0.0j)])
 
 
 def case_lanczos(workdir):
@@ -142,6 +167,11 @@ CASES = {
     "NBodyInterAll_InvalidSpinChangeNonFsz": case_spin_change_non_fsz,
     "NBodyInterAll_InvalidRealPath": case_real_path,
     "NBodyInterAll_InvalidBackFlow": case_backflow,
+    "NBodyInterAll_InvalidBackFlowReal": case_backflow_real,
+    "NBodyInterAll_InvalidBackFlowSpinChangeNonFSZ":
+        case_backflow_spin_change_non_fsz,
+    "NBodyInterAll_InvalidBackFlowFszSpinChangeFixedSz":
+        case_backflow_fsz_spin_change_fixed_sz,
     "NBodyInterAll_InvalidLanczos": case_lanczos,
 }
 

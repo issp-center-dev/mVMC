@@ -1908,6 +1908,7 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
   int dispatch1Count = 0;
   int dispatch2Count = 0;
   int fullRebuildCount = 0;
+  int aliasRejectionCount = 0;
   int contractFailures = 0;
   int setupFailures = 0;
   int mixedOrderFailures = 0;
@@ -2302,6 +2303,28 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
            0.0+0.0*I, 0.0)) {
       contractFailures++;
     }
+    memcpy(evaluator.scratch.eleIdx, eleIdx,
+           (size_t)Nsize*sizeof(int));
+    memcpy(evaluator.scratch.eleCfg, eleCfg,
+           (size_t)Nsite2*sizeof(int));
+    memcpy(evaluator.scratch.eleNum, eleNum,
+           (size_t)Nsite2*sizeof(int));
+    result = GreenFuncNBF(
+        1, rsi, rsj, ip, evaluator.scratch.eleIdx,
+        evaluator.scratch.eleCfg, evaluator.scratch.eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    aliasRejectionCount++;
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_CANDIDATE,
+           BF_NBODY_DETAIL_NONE, 0, 0.0+0.0*I, 0.0)
+       || memcmp(evaluator.scratch.eleIdx, eleIdx,
+                 (size_t)Nsize*sizeof(int)) != 0
+       || memcmp(evaluator.scratch.eleCfg, eleCfg,
+                 (size_t)Nsite2*sizeof(int)) != 0
+       || memcmp(evaluator.scratch.eleNum, eleNum,
+                 (size_t)Nsite2*sizeof(int)) != 0) {
+      contractFailures++;
+    }
   }
 
   callerStateChanged =
@@ -2326,6 +2349,7 @@ write_dump:
   fprintf(fp, "dispatch1 %d\n", dispatch1Count);
   fprintf(fp, "dispatch2 %d\n", dispatch2Count);
   fprintf(fp, "full_rebuild %d\n", fullRebuildCount);
+  fprintf(fp, "alias_rejections %d\n", aliasRejectionCount);
   fprintf(fp, "contract_failures %d\n", contractFailures);
   fprintf(fp, "setup_failures %d\n", setupFailures);
   fprintf(fp, "mixed_order_failures %d\n", mixedOrderFailures);

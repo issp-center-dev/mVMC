@@ -46,6 +46,8 @@ typedef struct {
   size_t intCount;
   size_t complexCount;
   size_t doubleCount;
+  size_t inputRsiCount;
+  size_t inputRsjCount;
   size_t rsiCount;
   size_t rsjCount;
   size_t movedCount;
@@ -69,6 +71,8 @@ typedef struct {
 typedef struct {
   int maxOrder;
   int useFsz;
+  int *inputRsi;
+  int *inputRsj;
   int *rsi;
   int *rsj;
   int *moved;
@@ -116,6 +120,10 @@ int BindBFNBodyScratch(const BFNBodyScratchSizes *sizes,
                        double *doubleBase, size_t doubleCount,
                        BFNBodyScratch *scratch);
 
+/*
+ * The read-only caller-state arrays must not alias writable state slices in
+ * scratch. GreenFuncNBF rejects exact pointer aliases before evaluation.
+ */
 BFNBodyResult GreenFuncNBF(
     int n, const int *rsi, const int *rsj, double complex ip,
     const int *eleIdx, const int *eleCfg, const int *eleNum,

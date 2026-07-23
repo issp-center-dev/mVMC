@@ -284,6 +284,23 @@ int BFValidateFszDefinitionDetails(void) {
       return 1;
     }
   }
+  for (idx = 0; idx < NBodyGTotalFactors; idx++) {
+    if (TwoSz != -1 && NBodyGIdx[idx][1] != NBodyGIdx[idx][3]) {
+      fprintf(stderr,
+              "Error: BackFlow FSZ spin-changing NBodyG factors require "
+              "TwoSz==-1.\n");
+      return 1;
+    }
+  }
+  for (idx = 0; idx < NBodyInterAllTotalFactors; idx++) {
+    if (TwoSz != -1
+        && NBodyInterAllIdx[idx][1] != NBodyInterAllIdx[idx][3]) {
+      fprintf(stderr,
+              "Error: BackFlow FSZ spin-changing NBodyInterAll factors "
+              "require TwoSz==-1.\n");
+      return 1;
+    }
+  }
   return 0;
 }
 

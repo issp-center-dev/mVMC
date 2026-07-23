@@ -1110,6 +1110,7 @@ def check_bf_nbody_dispatch_dump(path, tol):
         "dispatch1",
         "dispatch2",
         "full_rebuild",
+        "alias_rejections",
         "contract_failures",
         "setup_failures",
         "mixed_order_failures",
@@ -1130,6 +1131,9 @@ def check_bf_nbody_dispatch_dump(path, tol):
             print("ERROR: BackFlow N-body dispatch class was not exercised: {}={}".format(
                 key, values[key]))
             return -1
+    if int(values["alias_rejections"]) <= 0:
+        print("ERROR: BackFlow N-body caller/scratch alias rejection was not exercised.")
+        return -1
     if int(values["normal_projection_count"]) <= 0:
         print("ERROR: BackFlow N-body caller-state check did not exercise normal projection counts.")
         return -1

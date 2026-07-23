@@ -52,6 +52,8 @@ int ComputeBFNBodyScratchSizes(const BFNBodyScratchDimensions *dimensions,
   memset(&value, 0, sizeof(value));
   value.maxOrder = dimensions->maxOrder;
   value.useFsz = dimensions->useFsz;
+  value.inputRsiCount = (size_t)dimensions->maxOrder;
+  value.inputRsjCount = (size_t)dimensions->maxOrder;
   value.rsiCount = (size_t)dimensions->maxOrder;
   value.rsjCount = (size_t)dimensions->maxOrder;
   value.movedCount = (size_t)dimensions->maxOrder;
@@ -97,7 +99,9 @@ int ComputeBFNBodyScratchSizes(const BFNBodyScratchDimensions *dimensions,
   value.pfBufMCount = nsizeSquare;
   value.pfWorkCount = (size_t)dimensions->lapackLWork;
 
-  if(BFAddSlice(&value.intCount, value.rsiCount) != 0
+  if(BFAddSlice(&value.intCount, value.inputRsiCount) != 0
+     || BFAddSlice(&value.intCount, value.inputRsjCount) != 0
+     || BFAddSlice(&value.intCount, value.rsiCount) != 0
      || BFAddSlice(&value.intCount, value.rsjCount) != 0
      || BFAddSlice(&value.intCount, value.movedCount) != 0
      || BFAddSlice(&value.intCount, value.eleIdxCount) != 0
@@ -135,6 +139,8 @@ static int BFValidateScratchSizes(const BFNBodyScratchSizes *sizes) {
      || (sizes->useFsz != 0 && sizes->useFsz != 1)
      || sizes->intCount == 0 || sizes->complexCount == 0
      || sizes->doubleCount == 0
+     || sizes->inputRsiCount != (size_t)sizes->maxOrder
+     || sizes->inputRsjCount != (size_t)sizes->maxOrder
      || sizes->rsiCount != (size_t)sizes->maxOrder
      || sizes->rsjCount != (size_t)sizes->maxOrder
      || sizes->movedCount != (size_t)sizes->maxOrder
@@ -143,7 +149,9 @@ static int BFValidateScratchSizes(const BFNBodyScratchSizes *sizes) {
     return -1;
   }
 
-  if(BFAddSlice(&intTotal, sizes->rsiCount) != 0
+  if(BFAddSlice(&intTotal, sizes->inputRsiCount) != 0
+     || BFAddSlice(&intTotal, sizes->inputRsjCount) != 0
+     || BFAddSlice(&intTotal, sizes->rsiCount) != 0
      || BFAddSlice(&intTotal, sizes->rsjCount) != 0
      || BFAddSlice(&intTotal, sizes->movedCount) != 0
      || BFAddSlice(&intTotal, sizes->eleIdxCount) != 0
@@ -192,6 +200,8 @@ int BindBFNBodyScratch(const BFNBodyScratchSizes *sizes,
     value.field = sizes->countField == 0 ? NULL : intBase+intOffset;           \
     intOffset += sizes->countField;                                             \
   } while(0)
+  BF_BIND_INT(inputRsi, inputRsiCount);
+  BF_BIND_INT(inputRsj, inputRsjCount);
   BF_BIND_INT(rsi, rsiCount);
   BF_BIND_INT(rsj, rsjCount);
   BF_BIND_INT(moved, movedCount);

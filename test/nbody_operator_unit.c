@@ -371,7 +371,8 @@ static BFNBodyScratchDimensions ScratchDimensions(int useFsz) {
 }
 
 static size_t SumIntSlices(const BFNBodyScratchSizes *sizes) {
-  return sizes->rsiCount + sizes->rsjCount + sizes->movedCount
+  return sizes->inputRsiCount + sizes->inputRsjCount
+      + sizes->rsiCount + sizes->rsjCount + sizes->movedCount
       + sizes->eleIdxCount + sizes->eleCfgCount + sizes->eleNumCount
       + sizes->eleSpnCount + sizes->projCntCount + sizes->projBFCntCount
       + sizes->pfIWorkCount + sizes->affectedCount
@@ -399,6 +400,8 @@ static void CheckScratchPointerLayout(const BFNBodyScratchSizes *sizes,
     }                                                                            \
     offset += sizes->countField;                                                 \
   } while (0)
+  CHECK_INT_SLICE(inputRsi, inputRsiCount);
+  CHECK_INT_SLICE(inputRsj, inputRsjCount);
   CHECK_INT_SLICE(rsi, rsiCount);
   CHECK_INT_SLICE(rsj, rsjCount);
   CHECK_INT_SLICE(moved, movedCount);
@@ -566,7 +569,9 @@ static void TestScratchSizes(void) {
             && nonFsz.pfRWorkCount == 64
             && fsz.pfRWorkCount == dimensions.pfUpdateDoubleCount,
         "FSZ update-work maxima have wrong sizes");
-  CHECK(nonFsz.rsiCount == fsz.rsiCount
+  CHECK(nonFsz.inputRsiCount == fsz.inputRsiCount
+            && nonFsz.inputRsjCount == fsz.inputRsjCount
+            && nonFsz.rsiCount == fsz.rsiCount
             && nonFsz.rsjCount == fsz.rsjCount
             && nonFsz.movedCount == fsz.movedCount
             && nonFsz.eleIdxCount == fsz.eleIdxCount

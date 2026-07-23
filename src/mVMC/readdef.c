@@ -384,7 +384,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   char ctmp[D_FileNameMax];
   char ctmp2[D_FileNameMax];
 
-  int rank, info = 0;
+  int rank, size, info = 0;
   const int nBufInt = ParamIdxInt_End;
   const int nBufDouble = ParamIdxDouble_End;
   const int nBufChar = D_FileNameMax;
@@ -402,6 +402,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   int iOrbitalComplex = 0;
   iFlgOrbitalGeneral = 0;
   MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
 
   if (rank == 0) {
     cFileNameListFile = malloc(sizeof(char) * D_CharTmpReadDef * KWIdxInt_end);
@@ -837,21 +838,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
     }
 
-    if (bufInt[IdxNNBodyG] > 0 && bufInt[IdxNBF] > 0) {
-      fprintf(stderr,
-              "Error: NBodyG is not implemented for BackFlow measurement "
-              "(NNBodyG=%d, NBackFlowIdx=%d).\n",
-              bufInt[IdxNNBodyG], bufInt[IdxNBF]);
-      info = 1;
-    }
-    if (bufInt[IdxNNBodyInterAll] > 0 && bufInt[IdxNBF] > 0) {
-      fprintf(stderr,
-              "Error: NBodyInterAll is not implemented for BackFlow local energy "
-              "(NNBodyInterAll=%d, NBackFlowIdx=%d).\n",
-              bufInt[IdxNNBodyInterAll], bufInt[IdxNBF]);
-      info = 1;
-    }
-    if (bufInt[IdxNNBodyInterAll] > 0 && bufInt[IdxLanczosMode] > 0) {
+    if (bufInt[IdxNNBodyInterAll] > 0
+        && bufInt[IdxNBF] == 0 && bufInt[IdxLanczosMode] > 0) {
       fprintf(stderr,
               "Error: NBodyInterAll is not implemented for Lanczos mode.\n");
       info = 1;
@@ -876,7 +864,39 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       fprintf(stderr, "Error: RBM requires complex variational parameters (AllComplexFlag != 0).\n");
       info = 1;
     }
-    if (bufInt[IdxNNBodyInterAll] > 0 && AllComplexFlag == 0) {
+    /*
+     * Single-rank runs exercise the rank-0 pre-broadcast capability gate.
+     * Multi-rank runs defer these scalar checks until after MPI_Bcast so
+     * every rank executes the duplicated all-rank validation below.
+     */
+    if (size == 1 && bufInt[IdxNBF] > 0 && bufInt[IdxNNBodyG] > 0) {
+      if (AllComplexFlag == 0) {
+        fprintf(stderr,
+                "Error: BackFlow NBodyG requires complex variational "
+                "parameters.\n");
+        info = 1;
+      } else if (bufInt[IdxLanczosMode] > 0) {
+        fprintf(stderr,
+                "Error: BackFlow NBodyG is not supported with Lanczos mode.\n");
+        info = 1;
+      }
+    }
+    if (size == 1
+        && bufInt[IdxNBF] > 0 && bufInt[IdxNNBodyInterAll] > 0) {
+      if (AllComplexFlag == 0) {
+        fprintf(stderr,
+                "Error: BackFlow NBodyInterAll requires complex variational "
+                "parameters.\n");
+        info = 1;
+      } else if (bufInt[IdxLanczosMode] > 0) {
+        fprintf(stderr,
+                "Error: BackFlow NBodyInterAll is not supported with "
+                "Lanczos mode.\n");
+        info = 1;
+      }
+    }
+    if (bufInt[IdxNNBodyInterAll] > 0
+        && bufInt[IdxNBF] == 0 && AllComplexFlag == 0) {
       fprintf(stderr,
               "Error: NBodyInterAll requires complex variational parameters "
               "because the real local-energy kernels are not implemented "
@@ -1016,15 +1036,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     }
     MPI_Abort(comm, EXIT_FAILURE);
   }
-  if (NNBodyG > 0 && NBackFlowIdx > 0) {
-    if (rank == 0) {
-      fprintf(stderr,
-              "Error: NBodyG is not implemented for BackFlow measurement "
-              "(NNBodyG=%d, NBackFlowIdx=%d).\n",
-              NNBodyG, NBackFlowIdx);
-    }
-    MPI_Abort(comm, EXIT_FAILURE);
-  }
   if (NNBodyInterAll < 0 ||
       NBodyInterAllTotalFactors < 0 ||
       NBodyInterAllMaxN < 0) {
@@ -1048,23 +1059,51 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     }
     MPI_Abort(comm, EXIT_FAILURE);
   }
-  if (NNBodyInterAll > 0 && NBackFlowIdx > 0) {
-    if (rank == 0) {
-      fprintf(stderr,
-              "Error: NBodyInterAll is not implemented for BackFlow local energy "
-              "(NNBodyInterAll=%d, NBackFlowIdx=%d).\n",
-              NNBodyInterAll, NBackFlowIdx);
+  if (NBackFlowIdx > 0 && NNBodyG > 0) {
+    if (AllComplexFlag == 0) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: BackFlow NBodyG requires complex variational "
+                "parameters.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
     }
-    MPI_Abort(comm, EXIT_FAILURE);
+    if (NLanczosMode > 0) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: BackFlow NBodyG is not supported with Lanczos mode.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
   }
-  if (NNBodyInterAll > 0 && NLanczosMode > 0) {
+  if (NBackFlowIdx > 0 && NNBodyInterAll > 0) {
+    if (AllComplexFlag == 0) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: BackFlow NBodyInterAll requires complex variational "
+                "parameters.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    if (NLanczosMode > 0) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: BackFlow NBodyInterAll is not supported with "
+                "Lanczos mode.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+  }
+  if (NNBodyInterAll > 0
+      && NBackFlowIdx == 0 && NLanczosMode > 0) {
     if (rank == 0) {
       fprintf(stderr,
               "Error: NBodyInterAll is not implemented for Lanczos mode.\n");
     }
     MPI_Abort(comm, EXIT_FAILURE);
   }
-  if (NNBodyInterAll > 0 && AllComplexFlag == 0) {
+  if (NNBodyInterAll > 0
+      && NBackFlowIdx == 0 && AllComplexFlag == 0) {
     if (rank == 0) {
       fprintf(stderr,
               "Error: NBodyInterAll requires complex variational parameters "

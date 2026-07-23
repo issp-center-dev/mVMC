@@ -11,6 +11,7 @@ import numpy as np
 from nbodyg_exact_oracle import (
     TOL,
     apply_ops,
+    enable_nonidentity_backflow,
     fixed_sz_basis,
     fmt,
     nbody_ops,
@@ -220,6 +221,86 @@ def projector_multiterm_smoke_case(workdir):
     return None
 
 
+def backflow_n1_energy_case(workdir):
+    nsite = 6
+    terms = [
+        (1, (0, 0, 2, 0), 0.37 + 0.21j),
+        (1, (4, 1, 1, 1), -0.19 + 0.11j),
+    ]
+    f_matrix, unused_slater = complex_antiparallel_state(nsite)
+    write_common_nbodyinterall_defs(
+        workdir, nsite, 400, 71501, "Orbital", "orbitalidx.def"
+    )
+    write_nbodyinterall_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    return None
+
+
+def backflow_n2_energy_case(workdir):
+    nsite = 6
+    terms = [
+        (2, (0, 0, 2, 0, 5, 1, 1, 1), -0.28 + 0.16j),
+        (2, (3, 0, 1, 0, 4, 1, 0, 1), 0.41 - 0.09j),
+    ]
+    f_matrix, unused_slater = complex_antiparallel_state(nsite)
+    write_common_nbodyinterall_defs(
+        workdir, nsite, 400, 71502, "Orbital", "orbitalidx.def"
+    )
+    write_nbodyinterall_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    return None
+
+
+def backflow_mixed_energy_case(workdir):
+    nsite = 6
+    terms = [
+        # Effective N=1 and N=2 dispatch.
+        (1, (0, 0, 2, 0), 0.19 + 0.07j),
+        (2, (0, 0, 2, 0, 5, 1, 1, 1), -0.17 + 0.13j),
+        # Genuine N=3 and N=4 full rebuilds.
+        (3, (0, 0, 2, 0, 1, 0, 3, 0, 5, 1, 1, 1), 0.23 - 0.11j),
+        (
+            4,
+            (
+                0, 0, 2, 0,
+                1, 0, 3, 0,
+                5, 1, 1, 1,
+                4, 1, 0, 1,
+            ),
+            -0.09 + 0.21j,
+        ),
+        # N=3 contractions to lower effective order.
+        (3, (5, 0, 2, 0, 2, 0, 1, 0, 4, 1, 0, 1), 0.08 + 0.06j),
+        (3, (2, 0, 1, 0, 4, 0, 2, 0, 5, 0, 5, 0), -0.07 + 0.04j),
+        # Complete scalar contraction and exact repeated-annihilation zero.
+        (3, (0, 0, 0, 0, 1, 0, 1, 0, 2, 1, 2, 1), 0.03 - 0.02j),
+        (3, (3, 0, 0, 0, 4, 0, 0, 0, 5, 1, 1, 1), 0.31 + 0.17j),
+    ]
+    f_matrix, unused_slater = complex_antiparallel_state(nsite)
+    write_common_nbodyinterall_defs(
+        workdir, nsite, 600, 71503, "Orbital", "orbitalidx.def"
+    )
+    write_nbodyinterall_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    return None
+
+
+def backflow_zero_terms_case(workdir):
+    nsite = 6
+    terms = []
+    f_matrix, unused_slater = complex_antiparallel_state(nsite)
+    write_common_nbodyinterall_defs(
+        workdir, nsite, 200, 71504, "Orbital", "orbitalidx.def"
+    )
+    write_nbodyinterall_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    return None
+
+
 EXACT_CASES = {
     "NBodyInterAll_N1_TransferLike": n1_transfer_like_case,
     "NBodyInterAll_N2_InterAllLike": n2_interall_like_case,
@@ -230,6 +311,16 @@ EXACT_CASES = {
 
 SMOKE_CASES = {
     "NBodyInterAll_Projector_N3_MultiTerm": projector_multiterm_smoke_case,
+    "BackFlow_NBodyInterAll_NonIdentity_N1_Energy": backflow_n1_energy_case,
+    "BackFlow_NBodyInterAll_NonIdentity_N2_Energy": backflow_n2_energy_case,
+    "BackFlow_NBodyInterAll_NonIdentity_Mixed_Energy": backflow_mixed_energy_case,
+    "BackFlow_NBody_ZeroTerms_NonFSZ": backflow_zero_terms_case,
+}
+
+NONVACUOUS_ENERGY_CASES = {
+    "BackFlow_NBodyInterAll_NonIdentity_N1_Energy",
+    "BackFlow_NBodyInterAll_NonIdentity_N2_Energy",
+    "BackFlow_NBodyInterAll_NonIdentity_Mixed_Energy",
 }
 
 
@@ -288,6 +379,8 @@ def main():
     actual = parse_energy(workdir)
     if expected is not None:
         assert_close("{} energy".format(model), actual, expected)
+    if model in NONVACUOUS_ENERGY_CASES and abs(actual) <= 1.0e-12:
+        raise AssertionError("{} energy is vacuous".format(model))
     print("{} NBodyInterAll energy check passed".format(model))
     return 0
 
