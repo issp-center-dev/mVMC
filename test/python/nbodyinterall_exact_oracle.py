@@ -11,16 +11,21 @@ import numpy as np
 from nbodyg_exact_oracle import (
     TOL,
     apply_ops,
+    assert_config_close,
+    config_oracle_dump_path,
     enable_nonidentity_backflow,
+    enable_config_oracle_backflow,
     fixed_sz_basis,
     fmt,
     nbody_ops,
     occupied,
     pfaffian,
+    parse_config_oracle_dump,
     write,
     write_antiparallel_orbital,
     write_common_defs,
     write_general_orbital,
+    validate_config_oracle_rows,
 )
 
 
@@ -301,6 +306,55 @@ def backflow_zero_terms_case(workdir):
     return None
 
 
+def backflow_mixed_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        (1, (0, 0, 2, 0), 0.19 + 0.07j),
+        (2, (0, 0, 2, 0, 5, 1, 1, 1), -0.17 + 0.13j),
+        (3, (0, 0, 2, 0, 1, 0, 3, 0, 5, 1, 1, 1), 0.23 - 0.11j),
+        (
+            4,
+            (
+                0, 0, 2, 0,
+                1, 0, 3, 0,
+                5, 1, 1, 1,
+                4, 1, 0, 1,
+            ),
+            -0.09 + 0.21j,
+        ),
+        (3, (5, 0, 2, 0, 2, 0, 1, 0, 4, 1, 0, 1), 0.08 + 0.06j),
+        (3, (2, 0, 1, 0, 4, 0, 2, 0, 5, 0, 5, 0), -0.07 + 0.04j),
+        (3, (0, 0, 0, 0, 1, 0, 1, 0, 2, 1, 2, 1), 0.03 - 0.02j),
+        (3, (3, 0, 0, 0, 4, 0, 0, 0, 5, 1, 1, 1), 0.31 + 0.17j),
+    ]
+    categories = [
+        "dispatch1",
+        "effective2",
+        "full3",
+        "full4",
+        "contraction",
+        "contraction",
+        "scalar",
+        "zero",
+    ]
+    f_matrix, unused_slater = complex_antiparallel_state(nsite)
+    write_common_nbodyinterall_defs(
+        workdir, nsite, 64, 90433, "Orbital", "orbitalidx.def"
+    )
+    write_nbodyinterall_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    return nsite, terms, categories, {
+        "dispatch1",
+        "effective2",
+        "full3",
+        "full4",
+        "contraction",
+        "scalar",
+        "zero",
+    }
+
+
 EXACT_CASES = {
     "NBodyInterAll_N1_TransferLike": n1_transfer_like_case,
     "NBodyInterAll_N2_InterAllLike": n2_interall_like_case,
@@ -315,6 +369,11 @@ SMOKE_CASES = {
     "BackFlow_NBodyInterAll_NonIdentity_N2_Energy": backflow_n2_energy_case,
     "BackFlow_NBodyInterAll_NonIdentity_Mixed_Energy": backflow_mixed_energy_case,
     "BackFlow_NBody_ZeroTerms_NonFSZ": backflow_zero_terms_case,
+}
+
+CONFIG_ORACLE_CASES = {
+    "BackFlow_NBodyInterAll_NonIdentity_Mixed_ConfigOracle":
+        backflow_mixed_config_oracle_case,
 }
 
 NONVACUOUS_ENERGY_CASES = {
@@ -347,7 +406,9 @@ def assert_close(label, actual, expected, tol=TOL):
 
 
 def main():
-    all_cases = sorted(list(EXACT_CASES) + list(SMOKE_CASES))
+    all_cases = sorted(
+        list(EXACT_CASES) + list(SMOKE_CASES) + list(CONFIG_ORACLE_CASES)
+    )
     if len(sys.argv) != 2 or sys.argv[1] not in all_cases:
         print("usage: {} {}".format(sys.argv[0], "|".join(all_cases)))
         return -1
@@ -362,8 +423,13 @@ def main():
     if model in EXACT_CASES:
         nsite, nup, ndown, slater_elm, terms = EXACT_CASES[model](workdir)
         expected = exact_nbodyinterall_energy(nsite, nup, ndown, slater_elm, terms)
-    else:
+    elif model in SMOKE_CASES:
         SMOKE_CASES[model](workdir)
+        expected = None
+    else:
+        nsite, terms, categories, required_categories = (
+            CONFIG_ORACLE_CASES[model](workdir)
+        )
         expected = None
 
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
@@ -377,6 +443,29 @@ def main():
         return result
 
     actual = parse_energy(workdir)
+    if model in CONFIG_ORACLE_CASES:
+        rows = parse_config_oracle_dump(
+            config_oracle_dump_path(workdir), nsite
+        )
+        production_by_sample, unused_expected, unused_values = (
+            validate_config_oracle_rows(
+                rows,
+                nsite,
+                "h",
+                terms,
+                categories,
+                required_categories,
+            )
+        )
+        average = sum(
+            production_by_sample.values(), 0.0 + 0.0j
+        ) / float(len(production_by_sample))
+        assert_config_close(
+            "configuration oracle final energy", actual, average
+        )
+        print("{} configuration oracle passed".format(model))
+        return 0
+
     if expected is not None:
         assert_close("{} energy".format(model), actual, expected)
     if model in NONVACUOUS_ENERGY_CASES and abs(actual) <= 1.0e-12:

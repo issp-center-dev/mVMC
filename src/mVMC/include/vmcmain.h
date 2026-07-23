@@ -124,6 +124,7 @@ extern void omp_set_num_threads(int);
 #include "../vmcmake_real.c"
 #include "../vmcmake_fsz.c"
 #include "../vmcmake_fsz_real.c"
+#include "../backflow_nbody_oracle.c"
 #include "../vmccal.c"
 #include "../backflow_vmc.c"
 #include "../vmccal_fsz.c"

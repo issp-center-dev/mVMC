@@ -16,6 +16,9 @@ from backflow_def_helper import (
 
 
 TOL = 1.2e-2
+CONFIG_ORACLE_TOL = 1.0e-10
+BF_NBODY_OK = 0
+BF_NBODY_PHYSICAL_ZERO = 1
 
 
 def pfaffian(mat):
@@ -248,7 +251,8 @@ def write_initial(workdir, slater_values):
     write(os.path.join(workdir, "initial.def"), " ".join(fmt(x) for x in values) + "\n")
 
 
-def write_backflow_initial(workdir, nprojbf, slater_values):
+def write_backflow_initial(workdir, nprojbf, slater_values,
+                           projection_values=()):
     projbf_template = [
         0.93, 0.08, -0.05, 0.035, -0.025,
         0.015, -0.012, 0.010, -0.007, 0.005,
@@ -266,6 +270,8 @@ def write_backflow_initial(workdir, nprojbf, slater_values):
         raise AssertionError("BackFlow initial parameters are not non-identity")
 
     values = [0.0] * 6
+    for value in projection_values:
+        values.extend([value, 0.0, 0.0])
     for value in projbf_values:
         values.extend([value, 0.0, 0.0])
     for value in slater_values:
@@ -274,14 +280,49 @@ def write_backflow_initial(workdir, nprojbf, slater_values):
     return projbf_values
 
 
-def enable_nonidentity_backflow(workdir, nsite, slater_values):
+def enable_nonidentity_backflow(workdir, nsite, slater_values,
+                                projection_values=()):
     definition = build_chain_nn_backflow(length=nsite, optimize=False)
     write_chain_nn_backflow(workdir, length=nsite, optimize=False)
     namelist_path = os.path.join(workdir, "namelist.def")
     with open(namelist_path, "a") as f:
         f.write("              BF  bf.def\n")
         f.write("         BFRange  rangebf.def\n")
-    write_backflow_initial(workdir, definition.n_proj_bf, slater_values)
+    write_backflow_initial(
+        workdir,
+        definition.n_proj_bf,
+        slater_values,
+        projection_values=projection_values,
+    )
+    return definition
+
+
+def write_uniform_gutzwiller(workdir, nsite):
+    lines = [
+        "=============================================",
+        "NGutzwillerIdx          1",
+        "ComplexType             0",
+        "=============================================",
+        "=============================================",
+    ]
+    lines.extend("{:5d} {:5d}".format(site, 0) for site in range(nsite))
+    lines.append("{:5d} {:5d}".format(0, 0))
+    write(os.path.join(workdir, "gutzwilleridx.def"), "\n".join(lines) + "\n")
+    with open(os.path.join(workdir, "namelist.def"), "a") as f:
+        f.write("     Gutzwiller  gutzwilleridx.def\n")
+
+
+def enable_config_oracle_backflow(workdir, nsite, slater_values):
+    projection_value = 0.21
+    write_uniform_gutzwiller(workdir, nsite)
+    definition = enable_nonidentity_backflow(
+        workdir,
+        nsite,
+        slater_values,
+        projection_values=(projection_value,),
+    )
+    if projection_value == 0.0 or definition.n_proj_bf < 2:
+        raise AssertionError("configuration oracle projection is vacuous")
     return definition
 
 
@@ -585,6 +626,61 @@ def invalid_backflow_fsz_spin_change_fixedsz_case(workdir):
     enable_nonidentity_backflow(workdir, nsite, slater_values)
 
 
+def backflow_n3_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        # Effective N=1 uses the legacy dispatch; effective N=2 is rebuilt.
+        (1, (0, 0, 2, 0)),
+        (2, (0, 0, 2, 0, 5, 1, 1, 1)),
+        # Genuine N=3 must precede both contracted terms (T6R-H-1 regression).
+        (3, (0, 0, 2, 0, 1, 0, 3, 0, 5, 1, 1, 1)),
+        (3, (5, 0, 2, 0, 2, 0, 1, 0, 4, 1, 0, 1)),
+        (3, (2, 0, 1, 0, 4, 0, 2, 0, 5, 0, 5, 0)),
+        # Complete scalar contraction and repeated-annihilation zero.
+        (3, (0, 0, 0, 0, 1, 0, 1, 0, 2, 1, 2, 1)),
+        (3, (3, 0, 0, 0, 4, 0, 0, 0, 5, 1, 1, 1)),
+    ]
+    categories = [
+        "dispatch1",
+        "effective2",
+        "full3",
+        "contraction",
+        "contraction",
+        "scalar",
+        "zero",
+    ]
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 64, 90431, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    return nsite, terms, categories, {
+        "dispatch1", "effective2", "full3", "contraction", "scalar", "zero"
+    }
+
+
+def backflow_n4_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        (
+            4,
+            (
+                0, 0, 2, 0,
+                1, 0, 3, 0,
+                5, 1, 1, 1,
+                4, 1, 0, 1,
+            ),
+        ),
+    ]
+    categories = ["full4"]
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 512, 90432, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    return nsite, terms, categories, {"full4"}
+
+
 EXACT_CASES = {
     "NBodyG_Complex_N3_Oracle": complex_n3_case,
     "NBodyG_fsz_N3_Oracle": fsz_n3_case,
@@ -594,6 +690,13 @@ GENERATED_CHECK_CASES = {
     "NBodyG_Projector_N3_MultiTerm": projector_n3_multiterm_case,
     "NBodyG_MultiBin": multibin_case,
     "BackFlow_NBodyG_NonIdentity_N3_Output": backflow_nonidentity_n3_output_case,
+}
+
+CONFIG_ORACLE_CASES = {
+    "BackFlow_NBodyG_NonIdentity_N3_ConfigOracle":
+        backflow_n3_config_oracle_case,
+    "BackFlow_NBodyG_NonIdentity_N4_ConfigOracle":
+        backflow_n4_config_oracle_case,
 }
 
 NONVACUOUS_GENERATED_CASES = {
@@ -687,9 +790,270 @@ def assert_finite_energy_output(workdir):
         raise AssertionError("energy is not finite: {}".format(energy))
 
 
+def _parse_marker(cols, pos, marker, count, converter):
+    if pos >= len(cols) or cols[pos] != marker:
+        raise AssertionError(
+            "configuration oracle expected marker {} at column {}".format(
+                marker, pos
+            )
+        )
+    begin = pos + 1
+    end = begin + count
+    if end > len(cols):
+        raise AssertionError(
+            "configuration oracle marker {} is truncated".format(marker)
+        )
+    try:
+        values = [converter(value) for value in cols[begin:end]]
+    except ValueError as exc:
+        raise AssertionError(
+            "configuration oracle marker {} has invalid value: {}".format(
+                marker, exc
+            )
+        )
+    return values, end
+
+
+def parse_config_oracle_dump(path, nsite):
+    rows = []
+    with open(path) as f:
+        for line_no, line in enumerate(f, 1):
+            cols = line.split()
+            if not cols:
+                continue
+            pos = 0
+            sample, pos = _parse_marker(cols, pos, "sample", 1, int)
+            source, pos = _parse_marker(cols, pos, "source", 1, str)
+            term, pos = _parse_marker(cols, pos, "term", 1, int)
+            order, pos = _parse_marker(cols, pos, "n", 1, int)
+            status, pos = _parse_marker(cols, pos, "status", 1, int)
+            base_occ, pos = _parse_marker(
+                cols, pos, "base_occ", 2 * nsite, int
+            )
+            target_valid, pos = _parse_marker(
+                cols, pos, "target_valid", 1, int
+            )
+            target_occ, pos = _parse_marker(
+                cols, pos, "target_occ", 2 * nsite, int
+            )
+            base_psi, pos = _parse_marker(cols, pos, "base_psi", 2, float)
+            target_psi, pos = _parse_marker(
+                cols, pos, "target_psi", 2, float
+            )
+            value, pos = _parse_marker(cols, pos, "value", 2, float)
+            coeff, pos = _parse_marker(cols, pos, "coeff", 2, float)
+            if pos != len(cols):
+                raise AssertionError(
+                    "configuration oracle line {} has extra columns".format(
+                        line_no
+                    )
+                )
+            if source[0] not in ("g", "h"):
+                raise AssertionError(
+                    "configuration oracle line {} has invalid source".format(
+                        line_no
+                    )
+                )
+            rows.append(
+                {
+                    "sample": sample[0],
+                    "source": source[0],
+                    "term": term[0],
+                    "n": order[0],
+                    "status": status[0],
+                    "base_occ": tuple(base_occ),
+                    "target_valid": target_valid[0],
+                    "target_occ": tuple(target_occ),
+                    "base_psi": complex(*base_psi),
+                    "target_psi": complex(*target_psi),
+                    "value": complex(*value),
+                    "coeff": complex(*coeff),
+                }
+            )
+    if not rows:
+        raise AssertionError("configuration oracle dump is empty: {}".format(path))
+    return rows
+
+
+def _state_from_occupation(occupation):
+    state = 0
+    for orbital, value in enumerate(occupation):
+        if value not in (0, 1):
+            raise AssertionError(
+                "configuration oracle occupation is not binary"
+            )
+        if value:
+            state |= 1 << orbital
+    return state
+
+
+def assert_config_close(label, actual, expected):
+    if not (
+        math.isfinite(actual.real)
+        and math.isfinite(actual.imag)
+        and math.isfinite(expected.real)
+        and math.isfinite(expected.imag)
+    ):
+        raise AssertionError(
+            "{} is non-finite: actual={} expected={}".format(
+                label, actual, expected
+            )
+        )
+    tolerance = CONFIG_ORACLE_TOL * (1.0 + abs(expected))
+    if abs(actual - expected) > tolerance:
+        raise AssertionError(
+            "{} mismatch: actual={} expected={} diff={} tol={}".format(
+                label, actual, expected, abs(actual - expected), tolerance
+            )
+        )
+
+
+def validate_config_oracle_rows(
+    rows, nsite, source, terms, categories, required_categories
+):
+    if len(categories) != len(terms):
+        raise AssertionError("configuration oracle category count mismatch")
+    coverage = dict((name, 0) for name in required_categories)
+    production_by_sample = {}
+    expected_by_sample = {}
+    values_by_term = dict((idx, []) for idx in range(len(terms)))
+    seen = set()
+    max_expected_imag = 0.0
+
+    for row in rows:
+        key = (row["sample"], row["source"], row["term"])
+        if key in seen:
+            raise AssertionError(
+                "configuration oracle duplicated row {}".format(key)
+            )
+        seen.add(key)
+        if row["source"] != source:
+            raise AssertionError(
+                "configuration oracle source mismatch: {}".format(row["source"])
+            )
+        term_idx = row["term"]
+        if term_idx < 0 or term_idx >= len(terms):
+            raise AssertionError("configuration oracle term index out of range")
+        term = terms[term_idx]
+        nbody = term[0]
+        factors = term[1]
+        coefficient = 1.0 + 0.0j if source == "g" else term[2]
+        if row["n"] != nbody:
+            raise AssertionError("configuration oracle term order mismatch")
+        assert_config_close(
+            "configuration oracle coefficient", row["coeff"], coefficient
+        )
+        if not (
+            math.isfinite(row["base_psi"].real)
+            and math.isfinite(row["base_psi"].imag)
+            and abs(row["base_psi"]) > 0.0
+        ):
+            raise AssertionError("configuration oracle base amplitude is invalid")
+
+        base_state = _state_from_occupation(row["base_occ"])
+        applied = apply_ops(base_state, nbody_ops(nsite, factors))
+        category = categories[term_idx]
+        if applied is None:
+            if (
+                row["target_valid"] != 0
+                or row["status"] != BF_NBODY_PHYSICAL_ZERO
+            ):
+                raise AssertionError(
+                    "vanishing operator action is not a physical zero"
+                )
+            assert_config_close(
+                "configuration oracle physical-zero value",
+                row["value"],
+                0.0 + 0.0j,
+            )
+            if category in coverage:
+                coverage[category] += 1
+            expected = 0.0 + 0.0j
+        else:
+            target_state, sign = applied
+            expected_occ = tuple(
+                1 if occupied(target_state, orbital) else 0
+                for orbital in range(2 * nsite)
+            )
+            if row["target_valid"] != 1 or row["target_occ"] != expected_occ:
+                raise AssertionError(
+                    "configuration oracle target occupation mismatch"
+                )
+            expected = sign * np.conj(
+                row["target_psi"] / row["base_psi"]
+            )
+            assert_config_close(
+                "configuration oracle production value",
+                row["value"],
+                expected,
+            )
+            expected_status = (
+                BF_NBODY_PHYSICAL_ZERO
+                if abs(expected) == 0.0
+                else BF_NBODY_OK
+            )
+            if row["status"] != expected_status:
+                raise AssertionError(
+                    "configuration oracle status mismatch: actual={} expected={}".format(
+                        row["status"], expected_status
+                    )
+                )
+            if category in coverage and abs(expected) > 1.0e-12:
+                coverage[category] += 1
+            max_expected_imag = max(max_expected_imag, abs(expected.imag))
+
+        sample = row["sample"]
+        production_by_sample[sample] = (
+            production_by_sample.get(sample, 0.0 + 0.0j)
+            + row["coeff"] * row["value"]
+        )
+        expected_by_sample[sample] = (
+            expected_by_sample.get(sample, 0.0 + 0.0j)
+            + coefficient * expected
+        )
+        values_by_term[term_idx].append(row["value"])
+
+    samples = sorted(production_by_sample)
+    for sample in samples:
+        expected_keys = set(
+            (sample, source, term_idx) for term_idx in range(len(terms))
+        )
+        if not expected_keys.issubset(seen):
+            raise AssertionError(
+                "configuration oracle sample {} is missing terms".format(sample)
+            )
+        assert_config_close(
+            "configuration oracle Hamiltonian sum sample {}".format(sample),
+            production_by_sample[sample],
+            expected_by_sample[sample],
+        )
+    missing = sorted(name for name, count in coverage.items() if count == 0)
+    if missing:
+        raise AssertionError(
+            "configuration oracle has empty coverage: {}".format(
+                ", ".join(missing)
+            )
+        )
+    if max_expected_imag <= 1.0e-8:
+        raise AssertionError(
+            "configuration oracle did not exercise an imaginary expected value"
+        )
+    return production_by_sample, expected_by_sample, values_by_term
+
+
+def config_oracle_dump_path(workdir):
+    dump_name = os.environ.get("MVMC_BF_NBODY_ORACLE_DUMP")
+    if not dump_name or dump_name == "0":
+        raise AssertionError("MVMC_BF_NBODY_ORACLE_DUMP is not configured")
+    return os.path.join(workdir, dump_name)
+
+
 def main():
     all_cases = sorted(
-        list(EXACT_CASES) + list(GENERATED_CHECK_CASES) + list(INVALID_CASES)
+        list(EXACT_CASES)
+        + list(GENERATED_CHECK_CASES)
+        + list(CONFIG_ORACLE_CASES)
+        + list(INVALID_CASES)
     )
     if len(sys.argv) not in (2, 4) or sys.argv[1] not in all_cases:
         print(
@@ -729,8 +1093,14 @@ def main():
         if max(abs(x.imag) for x in expected) < 1.0e-3:
             raise AssertionError("oracle terms do not exercise a nonzero imaginary component")
         bin_count = 1
-    else:
+    elif model in GENERATED_CHECK_CASES:
         terms, bin_count = GENERATED_CHECK_CASES[model](workdir)
+        expected = None
+    else:
+        nsite, terms, categories, required_categories = (
+            CONFIG_ORACLE_CASES[model](workdir)
+        )
+        bin_count = 1
         expected = None
 
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
@@ -774,6 +1144,35 @@ def main():
     result = subprocess.call([bin_to_test, "-e", "namelist.def", "initial.def"], cwd=workdir)
     if result != 0:
         return result
+
+    if model in CONFIG_ORACLE_CASES:
+        rows = parse_config_oracle_dump(
+            config_oracle_dump_path(workdir), nsite
+        )
+        unused_production, unused_expected, values_by_term = (
+            validate_config_oracle_rows(
+                rows,
+                nsite,
+                "g",
+                terms,
+                categories,
+                required_categories,
+            )
+        )
+        assert_nbodyg_outputs(workdir, terms, bin_count, require_nonzero=True)
+        output_rows = parse_nbodyg_output(
+            os.path.join(workdir, "output", "zvo_NBodyG_001.dat")
+        )
+        for term_idx, output_row in enumerate(output_rows):
+            values = values_by_term[term_idx]
+            average = sum(values, 0.0 + 0.0j) / float(len(values))
+            assert_config_close(
+                "configuration oracle NBodyG output term {}".format(term_idx),
+                output_row[2],
+                average,
+            )
+        print("{} configuration oracle passed".format(model))
+        return 0
 
     if expected is None:
         assert_nbodyg_outputs(

@@ -2413,6 +2413,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   long long lanczosCheckedSamples = 0;
   long long lanczosRejectedSamples = 0;
   FILE *lanczosOracleDump = NULL;
+  BFNBodyOracle nbodyOracle;
 //  double *InvM_real_Moto, *PfM_real_Moto;
 
   /* optimazation for Kei */
@@ -2427,6 +2428,13 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm_parent, &parentSize);
   MPI_Comm_rank(comm_parent, &parentRank);
+
+  if(BFNBodyOracleOpen(&nbodyOracle, parentRank, parentSize) != 0) {
+    fprintf(stderr,
+            "Error: failed to initialize BackFlow N-body configuration "
+            "oracle on parent rank %d.\n", parentRank);
+    MPI_Abort(comm_parent, EXIT_FAILURE);
+  }
 
   SplitLoop(&sampleStart, &sampleEnd, NVMCSample, rank, size);
   //SplitLoop(&sampleStart,&sampleEnd,NExactSample,rank,size);
@@ -2578,6 +2586,17 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       ip = CalculateIP_real(PfM_real, qpStart, qpEnd, MPI_COMM_SELF);
     } else {
       ip = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+    }
+
+    if(nbodyOracle.enabled
+       && isfinite(creal(ip)) && isfinite(cimag(ip)) && cabs(ip) > 0.0
+       && BFNBodyOracleDumpSample(
+              &nbodyOracle, sample, ip, eleIdx, eleCfg, eleNum,
+              eleProjCnt, eleProjBFCnt) != 0) {
+      fprintf(stderr,
+              "Error: BackFlow N-body configuration oracle failed on "
+              "parent rank %d sample %d.\n", parentRank, sample);
+      MPI_Abort(comm_parent, EXIT_FAILURE);
     }
 
     LogProjVal(eleProjCnt);
@@ -2770,6 +2789,7 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
   }
   if(lanczosOracleDump != NULL) fclose(lanczosOracleDump);
   if(lanczosScratchReady) LSLanczosBFScratchFree(&lanczosScratch);
+  BFNBodyOracleClose(&nbodyOracle);
 
   // calculate OO and HO at NVMCCalMode==0
   if(NVMCCalMode==0){

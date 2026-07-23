@@ -128,8 +128,16 @@ static BFNBodyResult BFDispatchReducedNBody(
     BFNBodyScratch *scratch) {
   const size_t slaterCount =
       (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+  const int target = scratch->rsi[0];
+  const int source = scratch->rsj[0];
+  const int spin = source/Nsite;
   double complex value;
 
+  if(reduction->order != 1) {
+    return BFNBodyResultValue(
+        BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_DISPATCH,
+        BF_NBODY_DETAIL_NONE, reduction->order, 0.0+0.0*I);
+  }
   memcpy(scratch->eleIdx, eleIdx, (size_t)Nsize*sizeof(int));
   memcpy(scratch->eleCfg, eleCfg, (size_t)Nsite2*sizeof(int));
   memcpy(scratch->eleNum, eleNum, (size_t)Nsite2*sizeof(int));
@@ -141,28 +149,11 @@ static BFNBodyResult BFDispatchReducedNBody(
   memcpy(scratch->slater, SlaterElmBF,
          slaterCount*sizeof(double complex));
 
-  if(reduction->order == 1) {
-    const int target = scratch->rsi[0];
-    const int source = scratch->rsj[0];
-    const int spin = source/Nsite;
-    value = GreenFunc1BF(
-        target%Nsite, source%Nsite, spin, ip, scratch->slater,
-        scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
-        eleProjCnt, scratch->projCnt, eleProjBFCnt,
-        scratch->projBFCnt, scratch->greenBuffer);
-  } else {
-    const int target0 = scratch->rsi[0];
-    const int source0 = scratch->rsj[0];
-    const int target1 = scratch->rsi[1];
-    const int source1 = scratch->rsj[1];
-    value = GreenFunc2BF(
-        target0%Nsite, source0%Nsite,
-        target1%Nsite, source1%Nsite,
-        source0/Nsite, source1/Nsite, ip, scratch->slater,
-        scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
-        eleProjCnt, scratch->projCnt, eleProjBFCnt,
-        scratch->projBFCnt, scratch->greenBuffer);
-  }
+  value = GreenFunc1BF(
+      target%Nsite, source%Nsite, spin, ip, scratch->slater,
+      scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
+      eleProjCnt, scratch->projCnt, eleProjBFCnt,
+      scratch->projBFCnt, scratch->greenBuffer);
 
   if(memcmp(scratch->eleIdx, eleIdx, (size_t)Nsize*sizeof(int)) != 0
      || memcmp(scratch->eleCfg, eleCfg,
@@ -381,7 +372,7 @@ BFNBodyResult GreenFuncNBF(
     if(scratch->rsi[k]/Nsite != scratch->rsj[k]/Nsite) {
       return BFNBodyResultValue(
           BF_NBODY_INVALID_ARGUMENT,
-          reduction.order <= 2 ? BF_NBODY_STAGE_DISPATCH
+          reduction.order == 1 ? BF_NBODY_STAGE_DISPATCH
                                : BF_NBODY_STAGE_CANDIDATE,
           BF_NBODY_DETAIL_SPIN_CHANGE, reduction.order, 0.0+0.0*I);
     }
@@ -394,7 +385,12 @@ BFNBodyResult GreenFuncNBF(
           0.0+0.0*I);
     }
   }
-  if(reduction.order <= 2) {
+  /*
+   * Keep the established one-body update. The legacy two-body BackFlow
+   * update is not configuration-exact for every non-identity projection,
+   * so effective N>=2 uses the checked out-of-place one-shot rebuild.
+   */
+  if(reduction.order == 1) {
     return BFDispatchReducedNBody(
         &reduction, ip, eleIdx, eleCfg, eleNum, eleProjCnt,
         eleProjBFCnt, scratch);
