@@ -389,7 +389,8 @@ def parse_norbitalidx(path):
     raise RuntimeError("NOrbitalIdx was not found in {}".format(path))
 
 
-def write_nonidentity_init_parameter(path, nprojbf, nslater):
+def write_nonidentity_init_parameter(path, nprojbf, nslater,
+                                     complex_orbitals=False):
     projbf_values = [
         0.93, 0.08, -0.05, 0.035, -0.025,
         0.015, -0.012, 0.010, -0.007, 0.005,
@@ -409,14 +410,16 @@ def write_nonidentity_init_parameter(path, nprojbf, nslater):
             real = 1.0 + 0.1 * row if row == col else 0.03 * float(row - col)
         else:
             real = math.sin(0.37 * (idx + 1))
-        values.extend([real, 0.0, 0.0])
+        imag = (0.017 * math.sin(0.73 * (idx + 1))
+                if complex_orbitals else 0.0)
+        values.extend([real, imag, 0.0])
 
     with open(path, "w") as fp:
         fp.write(" ".join("{:.18e}".format(value) for value in values))
         fp.write("\n")
 
 
-def write_nonidentity_init(workdir, nsite=4):
+def write_nonidentity_init(workdir, nsite=4, complex_orbitals=False):
     definition = build_chain_nn_backflow(length=nsite, optimize=False)
     nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidxgen.def"))
     init_name = "nonidentity_init.dat"
@@ -424,6 +427,7 @@ def write_nonidentity_init(workdir, nsite=4):
         os.path.join(workdir, init_name),
         definition.n_proj_bf,
         nslater,
+        complex_orbitals=complex_orbitals,
     )
     return init_name
 
@@ -847,6 +851,108 @@ def prepare_case(rootdir, name, include_backflow, orbital_complex_type=1,
     if include_backflow:
         write_chain_nn_backflow(workdir, length=4, optimize=backflow_optimize)
     return workdir
+
+
+def run_nbody_dispatch_case(rootdir, case_name, mpi_procs=None):
+    if case_name != "BackFlow_FSZ_NBody_Dispatch_NonIdentity_Complex":
+        return None
+    if mpi_procs:
+        raise RuntimeError("BF-FSZ N-body dispatch is a single-rank test")
+
+    workdir = prepare_case(
+        rootdir, case_name, include_backflow=True,
+        orbital_complex_type=1, orbital_optimize=True,
+        backflow_optimize=False)
+    update_modpara(workdir, {
+        "2Sz": "-1",
+        "NVMCCalMode": "1",
+        "NVMCSample": "16",
+        "NVMCWarmUp": "8",
+    })
+    init_path = write_nonidentity_init(
+        workdir, complex_orbitals=True)
+    dump_name = "backflow_fsz_nbody_dispatch.dat"
+    proc = run_vmc(
+        rootdir, workdir, init_path=init_path,
+        extra_env={"MVMC_BF_FSZ_NBODY_DISPATCH_DUMP": dump_name})
+    if proc.returncode != 0:
+        print(proc.stdout)
+        return proc.returncode
+
+    dump_path = os.path.join(workdir, dump_name)
+    if not os.path.exists(dump_path):
+        print("ERROR: BF-FSZ N-body dispatch dump was not written")
+        return -1
+    values = {}
+    with open(dump_path) as fp:
+        for line in fp:
+            cols = line.split()
+            if len(cols) == 2:
+                values[cols[0]] = cols[1]
+    required = (
+        "implemented",
+        "scalar",
+        "physical_zero",
+        "contraction1",
+        "direct1_spin_conserving",
+        "direct1_spin_changing",
+        "direct2_spin_conserving",
+        "direct2_mixed",
+        "rebuild3",
+        "rebuild4",
+        "alias_rejections",
+        "contract_failures",
+        "setup_failures",
+        "caller_state_changed",
+        "global_state_changed",
+        "max_direct_diff",
+        "max_rebuild_diff",
+        "max_imag",
+    )
+    missing = [key for key in required if key not in values]
+    if missing:
+        print("ERROR: BF-FSZ N-body dispatch dump is missing fields: {}".format(
+            ", ".join(missing)))
+        return -1
+    if int(values["implemented"]) != 1:
+        print("ERROR: GreenFuncNBF_fsz is not implemented")
+        return -1
+    for key in (
+            "scalar",
+            "physical_zero",
+            "contraction1",
+            "direct1_spin_conserving",
+            "direct1_spin_changing",
+            "direct2_spin_conserving",
+            "direct2_mixed",
+            "rebuild3",
+            "rebuild4"):
+        if int(values[key]) <= 0:
+            print("ERROR: BF-FSZ N-body class was not exercised: {}={}".format(
+                key, values[key]))
+            return -1
+    if int(values["alias_rejections"]) <= 0:
+        print("ERROR: BF-FSZ N-body caller/scratch alias rejection "
+              "was not exercised")
+        return -1
+    for key in ("contract_failures", "setup_failures",
+                "caller_state_changed", "global_state_changed"):
+        if int(values[key]) != 0:
+            print("ERROR: BF-FSZ N-body dispatch check failed: {}={}".format(
+                key, values[key]))
+            return -1
+    for key in ("max_direct_diff", "max_rebuild_diff"):
+        value = float(values[key])
+        if not math.isfinite(value) or value > 1.0e-10:
+            print("ERROR: BF-FSZ N-body mismatch: {}={:.3e}".format(
+                key, value))
+            return -1
+    max_imag = float(values["max_imag"])
+    if not math.isfinite(max_imag) or max_imag <= 1.0e-12:
+        print("ERROR: BF-FSZ complex dispatch check was vacuous: "
+              "max_imag={:.3e}".format(max_imag))
+        return -1
+    return 0
 
 
 def assert_lanczos_outputs(workdir, label):
@@ -3214,6 +3320,10 @@ def main():
         "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex",
     )
     nonidentity_momentum_case = case_name == "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex"
+    nbody_dispatch_status = run_nbody_dispatch_case(
+        rootdir, case_name, mpi_procs)
+    if nbody_dispatch_status is not None:
+        return nbody_dispatch_status
     bf_fsz_lanczos_status = run_bf_fsz_lanczos_case(
         rootdir, case_name, mpi_procs)
     if bf_fsz_lanczos_status is not None:

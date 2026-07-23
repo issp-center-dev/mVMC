@@ -56,11 +56,13 @@ static BFNBodyResult BFNBodyResultValue(BFNBodyStatus status,
   return result;
 }
 
-static int BFValidateNBodyScratch(const BFNBodyScratch *scratch, int n) {
+static int BFValidateNBodyScratch(const BFNBodyScratch *scratch, int n,
+                                  int useFsz) {
   BFNBodyScratchSizes needed;
 
   if(scratch == NULL || n < 1 || scratch->maxOrder < n
-     || scratch->useFsz != 0 || scratch->sizes.maxOrder != scratch->maxOrder
+     || scratch->useFsz != useFsz
+     || scratch->sizes.maxOrder != scratch->maxOrder
      || scratch->sizes.useFsz != scratch->useFsz
      || scratch->inputRsi == NULL || scratch->inputRsj == NULL
      || scratch->rsi == NULL || scratch->rsj == NULL
@@ -71,10 +73,12 @@ static int BFValidateNBodyScratch(const BFNBodyScratch *scratch, int n) {
      || scratch->slater == NULL || scratch->candidatePf == NULL
      || scratch->pfBufM == NULL || scratch->pfWork == NULL
      || scratch->pfRWork == NULL
+     || (useFsz
+         && (scratch->affected == NULL || scratch->hopIntWork == NULL))
      || (NProj > 0 && scratch->projCnt == NULL)
-     || GetBFNBodyScratchSizes(scratch->maxOrder, 0, &needed)
+     || GetBFNBodyScratchSizes(scratch->maxOrder, useFsz, &needed)
           != BF_NBODY_OK
-     || Ne <= 0 || Ne > INT_MAX/2 || Nsize != 2*Ne
+     || (!useFsz && (Ne <= 0 || Ne > INT_MAX/2 || Nsize != 2*Ne))
      || scratch->sizes.inputRsiCount < needed.inputRsiCount
      || scratch->sizes.inputRsjCount < needed.inputRsjCount
      || scratch->sizes.rsiCount < needed.rsiCount
@@ -87,6 +91,8 @@ static int BFValidateNBodyScratch(const BFNBodyScratch *scratch, int n) {
      || scratch->sizes.projCntCount < needed.projCntCount
      || scratch->sizes.projBFCntCount < needed.projBFCntCount
      || scratch->sizes.pfIWorkCount < needed.pfIWorkCount
+     || scratch->sizes.affectedCount < needed.affectedCount
+     || scratch->sizes.hopIntWorkCount < needed.hopIntWorkCount
      || scratch->sizes.greenBufferCount < needed.greenBufferCount
      || scratch->sizes.slaterCount < needed.slaterCount
      || scratch->sizes.candidatePfCount < needed.candidatePfCount
@@ -100,21 +106,21 @@ static int BFValidateNBodyScratch(const BFNBodyScratch *scratch, int n) {
 
 static int BFCallerStateAliasesNBodyScratch(
     const int *eleIdx, const int *eleCfg, const int *eleNum,
-    const int *eleProjCnt, const int *eleProjBFCnt,
+    const int *eleProjCnt, const int *eleSpn, const int *eleProjBFCnt,
     const BFNBodyScratch *scratch) {
-  const int *callerState[5] = {
-      eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt
+  const int *callerState[6] = {
+      eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn, eleProjBFCnt
   };
-  const int *scratchState[5] = {
+  const int *scratchState[6] = {
       scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
-      scratch->projCnt, scratch->projBFCnt
+      scratch->projCnt, scratch->eleSpn, scratch->projBFCnt
   };
   int callerIdx;
   int scratchIdx;
 
-  for(callerIdx=0;callerIdx<5;callerIdx++) {
+  for(callerIdx=0;callerIdx<6;callerIdx++) {
     if(callerState[callerIdx] == NULL) continue;
-    for(scratchIdx=0;scratchIdx<5;scratchIdx++) {
+    for(scratchIdx=0;scratchIdx<6;scratchIdx++) {
       if(callerState[callerIdx] == scratchState[scratchIdx]) return 1;
     }
   }
@@ -312,7 +318,7 @@ BFNBodyResult GreenFuncNBF(
   int reduceStatus;
   int k;
 
-  if(!BFValidateNBodyScratch(scratch, n)) {
+  if(!BFValidateNBodyScratch(scratch, n, 0)) {
     if(n < 1) {
       return BFNBodyResultValue(
           BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_REDUCE,
@@ -323,7 +329,8 @@ BFNBodyResult GreenFuncNBF(
         BF_NBODY_DETAIL_NONE, 0, 0.0+0.0*I);
   }
   if(BFCallerStateAliasesNBodyScratch(
-         eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt, scratch)) {
+         eleIdx, eleCfg, eleNum, eleProjCnt, NULL, eleProjBFCnt,
+         scratch)) {
     return BFNBodyResultValue(
         BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_CANDIDATE,
         BF_NBODY_DETAIL_NONE, 0, 0.0+0.0*I);
@@ -398,4 +405,279 @@ BFNBodyResult GreenFuncNBF(
   return BFRebuildReducedNBody(
       &reduction, ip, eleIdx, eleCfg, eleNum, eleProjCnt,
       eleProjBFCnt, scratch);
+}
+
+static BFNBodyResult BFDispatchReducedNBodyFSZ(
+    const NBodyReduction *reduction, double complex ip,
+    const int *eleIdx, const int *eleCfg, const int *eleNum,
+    const int *eleProjCnt, const int *eleSpn,
+    const int *eleProjBFCnt, BFNBodyScratch *scratch) {
+  double complex value;
+
+  if(reduction->order < 1 || reduction->order > 2) {
+    return BFNBodyResultValue(
+        BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_DISPATCH,
+        BF_NBODY_DETAIL_NONE, reduction->order, 0.0+0.0*I);
+  }
+  memcpy(scratch->eleIdx, eleIdx, (size_t)Nsize*sizeof(int));
+  memcpy(scratch->eleCfg, eleCfg, (size_t)Nsite2*sizeof(int));
+  memcpy(scratch->eleNum, eleNum, (size_t)Nsite2*sizeof(int));
+  memcpy(scratch->eleSpn, eleSpn, (size_t)Nsize*sizeof(int));
+  if(NProj > 0) {
+    memcpy(scratch->projCnt, eleProjCnt, (size_t)NProj*sizeof(int));
+  }
+  memcpy(scratch->projBFCnt, eleProjBFCnt,
+         (size_t)16*(size_t)Nsite*(size_t)Nrange*sizeof(int));
+
+  if(reduction->order == 1) {
+    const int target = scratch->rsi[0];
+    const int source = scratch->rsj[0];
+    value = GreenFunc1BF_fsz2_workspace(
+        target%Nsite, source%Nsite, target/Nsite, source/Nsite, ip,
+        scratch->eleIdx, scratch->eleCfg, scratch->eleNum, eleProjCnt,
+        scratch->eleSpn, scratch->projCnt, eleProjBFCnt,
+        scratch->projBFCnt, scratch->greenBuffer, scratch->pfBufM,
+        scratch->affected, scratch->hopIntWork,
+        (int)scratch->sizes.hopIntWorkCount, scratch->pfIWork,
+        scratch->pfWork, scratch->pfRWork);
+  } else {
+    const int target0 = scratch->rsi[0];
+    const int source0 = scratch->rsj[0];
+    const int target1 = scratch->rsi[1];
+    const int source1 = scratch->rsj[1];
+    value = GreenFunc2BF_fsz2(
+        target0%Nsite, source0%Nsite, target1%Nsite, source1%Nsite,
+        target0/Nsite, source0/Nsite, target1/Nsite, source1/Nsite,
+        ip, scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
+        eleProjCnt, scratch->eleSpn, scratch->projCnt, eleProjBFCnt,
+        scratch->projBFCnt, scratch->greenBuffer, scratch->affected,
+        scratch->hopIntWork, (int)scratch->sizes.hopIntWorkCount,
+        scratch->pfIWork, scratch->pfRWork, scratch->pfBufM,
+        scratch->pfWork);
+  }
+
+  if(memcmp(scratch->eleIdx, eleIdx, (size_t)Nsize*sizeof(int)) != 0
+     || memcmp(scratch->eleCfg, eleCfg,
+               (size_t)Nsite2*sizeof(int)) != 0
+     || memcmp(scratch->eleNum, eleNum,
+               (size_t)Nsite2*sizeof(int)) != 0
+     || memcmp(scratch->eleSpn, eleSpn,
+               (size_t)Nsize*sizeof(int)) != 0) {
+    return BFNBodyResultValue(
+        BF_NBODY_WORKSPACE_ERROR, BF_NBODY_STAGE_DISPATCH,
+        BF_NBODY_DETAIL_LEGACY_STATE_RESTORE, reduction->order,
+        0.0+0.0*I);
+  }
+
+  value *= (double)reduction->sign;
+  if(!isfinite(creal(value)) || !isfinite(cimag(value))) {
+    return BFNBodyResultValue(
+        BF_NBODY_NONFINITE, BF_NBODY_STAGE_DISPATCH,
+        BF_NBODY_DETAIL_NONE, reduction->order, 0.0+0.0*I);
+  }
+  if(cabs(value) == 0.0) {
+    return BFNBodyResultValue(
+        BF_NBODY_PHYSICAL_ZERO, BF_NBODY_STAGE_RATIO,
+        BF_NBODY_DETAIL_NONE, reduction->order, 0.0+0.0*I);
+  }
+  return BFNBodyResultValue(
+      BF_NBODY_OK, BF_NBODY_STAGE_NONE, BF_NBODY_DETAIL_NONE,
+      reduction->order, value);
+}
+
+static BFNBodyResult BFRebuildReducedNBodyFSZ(
+    const NBodyReduction *reduction, double complex ip,
+    const int *eleIdx, const int *eleCfg, const int *eleNum,
+    const int *eleProjCnt, const int *eleSpn,
+    BFNBodyScratch *scratch) {
+  double complex ipNew;
+  double complex ratio;
+  double projRatio;
+  int pfDetail = 0;
+  int pfStatus;
+  int k;
+
+  memcpy(scratch->eleIdx, eleIdx, (size_t)Nsize*sizeof(int));
+  memcpy(scratch->eleCfg, eleCfg, (size_t)Nsite2*sizeof(int));
+  memcpy(scratch->eleNum, eleNum, (size_t)Nsite2*sizeof(int));
+  memcpy(scratch->eleSpn, eleSpn, (size_t)Nsize*sizeof(int));
+
+  for(k=0;k<reduction->order;k++) {
+    const int target = scratch->rsi[k];
+    const int source = scratch->rsj[k];
+    const int particle = eleCfg[source];
+    int l;
+
+    if(particle < 0 || particle >= Nsize || eleNum[source] != 1
+       || eleNum[target] != 0 || eleIdx[particle] != source%Nsite
+       || eleSpn[particle] != source/Nsite) {
+      return BFNBodyResultValue(
+          BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_CANDIDATE,
+          BF_NBODY_DETAIL_BAD_ELECTRON_LABEL, reduction->order,
+          0.0+0.0*I);
+    }
+    for(l=0;l<k;l++) {
+      if(scratch->moved[l] == particle
+         || scratch->rsi[l] == target || scratch->rsj[l] == source) {
+        return BFNBodyResultValue(
+            BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_CANDIDATE,
+            BF_NBODY_DETAIL_BAD_ELECTRON_LABEL, reduction->order,
+            0.0+0.0*I);
+      }
+    }
+    scratch->moved[k] = particle;
+  }
+
+  for(k=0;k<reduction->order;k++) {
+    const int source = scratch->rsj[k];
+    scratch->eleCfg[source] = -1;
+    scratch->eleNum[source] = 0;
+  }
+  for(k=0;k<reduction->order;k++) {
+    const int target = scratch->rsi[k];
+    const int particle = scratch->moved[k];
+    scratch->eleCfg[target] = particle;
+    scratch->eleNum[target] = 1;
+    scratch->eleIdx[particle] = target%Nsite;
+    scratch->eleSpn[particle] = target/Nsite;
+  }
+
+  MakeProjCnt(scratch->projCnt, scratch->eleNum);
+  MakeProjBFCnt(scratch->projBFCnt, scratch->eleNum);
+  if(!IsSectorStateAllowed(scratch->eleNum)) {
+    return BFNBodyResultValue(
+        BF_NBODY_PHYSICAL_ZERO, BF_NBODY_STAGE_PROJECTION,
+        BF_NBODY_DETAIL_NONE, reduction->order, 0.0+0.0*I);
+  }
+
+  MakeSlaterElmBF_fsz_to_serial(
+      scratch->slater, scratch->eleNum, scratch->projBFCnt);
+  pfStatus = CalculatePfM_BF_from_workspace(
+      scratch->slater, scratch->eleIdx, scratch->eleSpn, 0, NQPFull,
+      scratch->candidatePf, &pfDetail, scratch->pfBufM,
+      scratch->pfIWork, scratch->pfWork, LapackLWork, scratch->pfRWork);
+  if(pfStatus != BF_PF_OK) {
+    const BFNBodyStatus status =
+        pfStatus == BF_PF_NONFINITE
+        ? BF_NBODY_NONFINITE : BF_NBODY_PFAFFIAN_ERROR;
+    return BFNBodyResultValue(
+        status, BF_NBODY_STAGE_PFAFFIAN,
+        pfDetail != 0 ? pfDetail : pfStatus,
+        reduction->order, 0.0+0.0*I);
+  }
+
+  ipNew = CalculateIP_fcmp(
+      scratch->candidatePf, 0, NQPFull, MPI_COMM_SELF);
+  if(!isfinite(creal(ipNew)) || !isfinite(cimag(ipNew))) {
+    return BFNBodyResultValue(
+        BF_NBODY_NONFINITE, BF_NBODY_STAGE_RATIO,
+        BF_NBODY_DETAIL_NONE, reduction->order, 0.0+0.0*I);
+  }
+  if(cabs(ipNew) == 0.0) {
+    return BFNBodyResultValue(
+        BF_NBODY_PHYSICAL_ZERO, BF_NBODY_STAGE_RATIO,
+        BF_NBODY_DETAIL_NONE, reduction->order, 0.0+0.0*I);
+  }
+
+  projRatio = ProjRatio(scratch->projCnt, eleProjCnt);
+  if(!isfinite(projRatio)) {
+    return BFNBodyResultValue(
+        BF_NBODY_NONFINITE, BF_NBODY_STAGE_PROJECTION,
+        BF_NBODY_DETAIL_NONE, reduction->order, 0.0+0.0*I);
+  }
+  ratio = (double)reduction->sign*conj(projRatio*ipNew/ip);
+  if(!isfinite(creal(ratio)) || !isfinite(cimag(ratio))) {
+    return BFNBodyResultValue(
+        BF_NBODY_NONFINITE, BF_NBODY_STAGE_RATIO,
+        BF_NBODY_DETAIL_NONE, reduction->order, 0.0+0.0*I);
+  }
+  return BFNBodyResultValue(
+      BF_NBODY_OK, BF_NBODY_STAGE_NONE, BF_NBODY_DETAIL_NONE,
+      reduction->order, ratio);
+}
+
+BFNBodyResult GreenFuncNBF_fsz(
+    int n, const int *rsi, const int *rsj, double complex ip,
+    const int *eleIdx, const int *eleCfg, const int *eleNum,
+    const int *eleProjCnt, const int *eleSpn,
+    const int *eleProjBFCnt, BFNBodyScratch *scratch) {
+  NBodyReduction reduction;
+  int reduceStatus;
+  int k;
+
+  if(!BFValidateNBodyScratch(scratch, n, 1)) {
+    if(n < 1) {
+      return BFNBodyResultValue(
+          BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_REDUCE,
+          BF_NBODY_DETAIL_REDUCER, 0, 0.0+0.0*I);
+    }
+    return BFNBodyResultValue(
+        BF_NBODY_WORKSPACE_ERROR, BF_NBODY_STAGE_NONE,
+        BF_NBODY_DETAIL_NONE, 0, 0.0+0.0*I);
+  }
+  if(BFCallerStateAliasesNBodyScratch(
+         eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn, eleProjBFCnt,
+         scratch)) {
+    return BFNBodyResultValue(
+        BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_CANDIDATE,
+        BF_NBODY_DETAIL_NONE, 0, 0.0+0.0*I);
+  }
+  reduceStatus = ReduceNBodyTerm(
+      n, rsi, rsj, eleNum, Nsite2, scratch->rsi, scratch->rsj,
+      scratch->maxOrder, &reduction);
+  if(reduceStatus != 0 || reduction.kind == NBODY_REDUCED_INVALID) {
+    return BFNBodyResultValue(
+        BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_REDUCE,
+        reduceStatus != 0 ? reduceStatus : BF_NBODY_DETAIL_REDUCER,
+        0, 0.0+0.0*I);
+  }
+  if(reduction.kind == NBODY_REDUCED_ZERO) {
+    return BFNBodyResultValue(
+        BF_NBODY_PHYSICAL_ZERO, BF_NBODY_STAGE_REDUCE,
+        BF_NBODY_DETAIL_NONE, 0, 0.0+0.0*I);
+  }
+  if(reduction.kind == NBODY_REDUCED_SCALAR) {
+    return BFNBodyResultValue(
+        BF_NBODY_OK, BF_NBODY_STAGE_REDUCE, BF_NBODY_DETAIL_NONE, 0,
+        (double)reduction.sign+0.0*I);
+  }
+  if(eleIdx == NULL || eleCfg == NULL || eleNum == NULL
+     || (NProj > 0 && eleProjCnt == NULL) || eleSpn == NULL
+     || eleProjBFCnt == NULL) {
+    return BFNBodyResultValue(
+        BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_CANDIDATE,
+        BF_NBODY_DETAIL_NONE, reduction.order, 0.0+0.0*I);
+  }
+  if(!isfinite(creal(ip)) || !isfinite(cimag(ip))) {
+    return BFNBodyResultValue(
+        BF_NBODY_NONFINITE, BF_NBODY_STAGE_RATIO,
+        BF_NBODY_DETAIL_NONE, reduction.order, 0.0+0.0*I);
+  }
+  if(cabs(ip) == 0.0) {
+    return BFNBodyResultValue(
+        BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_RATIO,
+        BF_NBODY_DETAIL_NONE, reduction.order, 0.0+0.0*I);
+  }
+  for(k=0;k<reduction.order;k++) {
+    const int source = scratch->rsj[k];
+    const int target = scratch->rsi[k];
+    const int particle = eleCfg[source];
+    if(particle < 0 || particle >= Nsize || eleNum[source] != 1
+       || eleNum[target] != 0 || eleIdx[particle] != source%Nsite
+       || eleSpn[particle] != source/Nsite) {
+      return BFNBodyResultValue(
+          BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_CANDIDATE,
+          BF_NBODY_DETAIL_BAD_ELECTRON_LABEL, reduction.order,
+          0.0+0.0*I);
+    }
+  }
+
+  if(reduction.order <= 2) {
+    return BFDispatchReducedNBodyFSZ(
+        &reduction, ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn,
+        eleProjBFCnt, scratch);
+  }
+  return BFRebuildReducedNBodyFSZ(
+      &reduction, ip, eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn,
+      scratch);
 }

@@ -122,7 +122,7 @@ int BindBFNBodyScratch(const BFNBodyScratchSizes *sizes,
 
 /*
  * The read-only caller-state arrays must not alias writable state slices in
- * scratch. GreenFuncNBF rejects exact pointer aliases before evaluation.
+ * scratch. Both evaluators reject exact pointer aliases before evaluation.
  */
 BFNBodyResult GreenFuncNBF(
     int n, const int *rsi, const int *rsj, double complex ip,
