@@ -395,7 +395,8 @@ def write_minimal_twobodygex(workdir, nsite):
             fp.writelines(lines)
 
 
-def write_nonidentity_init_parameter(path, nprojbf, nslater):
+def write_nonidentity_init_parameter(path, nprojbf, nslater,
+                                     complex_orbitals=False):
     projbf_values = [
         0.93, 0.08, -0.05, 0.035, -0.025,
         0.015, -0.012, 0.010, -0.007, 0.005,
@@ -418,7 +419,9 @@ def write_nonidentity_init_parameter(path, nprojbf, nslater):
                 real = 0.03 * float(row - col)
         else:
             real = math.sin(0.37 * (idx + 1))
-        values.extend([real, 0.0, 0.0])
+        imag = (0.017 * math.sin(0.73 * (idx + 1))
+                if complex_orbitals else 0.0)
+        values.extend([real, imag, 0.0])
 
     with open(path, "w") as fp:
         fp.write(" ".join("{:.18e}".format(value) for value in values))
@@ -453,7 +456,7 @@ def write_orbital_opt_flags(path, nsite, nslater, opt_flag):
 
 
 def run_vmc(rootdir, workdir, mpi_procs, dump_path=None, diff_dump_path=None, fd_dump_path=None,
-            green2_dump_path=None, component_dump_path=None, init_path=None,
+            green2_dump_path=None, component_dump_path=None, dispatch_dump_path=None, init_path=None,
             log_name="bf_test.log"):
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
     env = os.environ.copy()
@@ -467,6 +470,8 @@ def run_vmc(rootdir, workdir, mpi_procs, dump_path=None, diff_dump_path=None, fd
         env["MVMC_BF_GREEN2_DUMP"] = green2_dump_path
     if component_dump_path is not None:
         env["MVMC_BF_NBODY_COMPONENT_DUMP"] = component_dump_path
+    if dispatch_dump_path is not None:
+        env["MVMC_BF_NBODY_DISPATCH_DUMP"] = dispatch_dump_path
 
     cmd = [bin_to_test, "-e", "namelist.def"]
     if init_path is not None:
@@ -1063,9 +1068,67 @@ def check_bf_nbody_component_dump(path, tol):
     return 0
 
 
+def check_bf_nbody_dispatch_dump(path, tol):
+    if not os.path.exists(path):
+        print("ERROR: BackFlow N-body dispatch dump was not written.")
+        return -1
+
+    values = read_key_value_file(path)
+    if int(values.get("implemented", "0")) != 1:
+        print("ERROR: BackFlow N-body dispatch diagnostic did not complete.")
+        return -1
+    required = (
+        "scalar",
+        "zero",
+        "dispatch1",
+        "dispatch2",
+        "full_rebuild",
+        "contract_failures",
+        "setup_failures",
+        "mixed_order_failures",
+        "caller_state_changed",
+        "global_state_changed",
+        "max_direct_diff",
+        "max_full_rebuild_diff",
+        "max_n4_imag",
+    )
+    missing = [key for key in required if key not in values]
+    if missing:
+        print("ERROR: BackFlow N-body dispatch dump is missing fields: {}".format(
+            ", ".join(missing)))
+        return -1
+    for key in ("scalar", "zero", "dispatch1", "dispatch2", "full_rebuild"):
+        if int(values[key]) <= 0:
+            print("ERROR: BackFlow N-body dispatch class was not exercised: {}={}".format(
+                key, values[key]))
+            return -1
+    for key in (
+            "contract_failures",
+            "setup_failures",
+            "mixed_order_failures",
+            "caller_state_changed",
+            "global_state_changed"):
+        if int(values[key]) != 0:
+            print("ERROR: BackFlow N-body dispatch check failed: {}={}".format(
+                key, values[key]))
+            return -1
+    for key in ("max_direct_diff", "max_full_rebuild_diff"):
+        value = float(values[key])
+        if not math.isfinite(value) or value > tol:
+            print("ERROR: BackFlow N-body dispatch mismatch: {}={:.3e}".format(
+                key, value))
+            return -1
+    max_n4_imag = float(values["max_n4_imag"])
+    if not math.isfinite(max_n4_imag) or max_n4_imag <= 1.0e-12:
+        print("ERROR: genuine N=4 complex check was vacuous: max_n4_imag={:.3e}".format(
+            max_n4_imag))
+        return -1
+    return 0
+
+
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -1085,6 +1148,7 @@ def main():
     compare_proj_bf_fd = False
     check_bf_green2_bruteforce = False
     check_bf_nbody_components = False
+    check_bf_nbody_dispatch = False
     compact_backflow = False
     use_nonidentity_init = False
     expected_all_complex_flag = None
@@ -1145,6 +1209,9 @@ def main():
         elif sys.argv[argi] == "--check-bf-nbody-components":
             check_bf_nbody_components = True
             argi += 1
+        elif sys.argv[argi] == "--check-bf-nbody-dispatch":
+            check_bf_nbody_dispatch = True
+            argi += 1
         elif sys.argv[argi] == "--compact-backflow":
             compact_backflow = True
             argi += 1
@@ -1170,7 +1237,7 @@ def main():
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -1204,6 +1271,8 @@ def main():
         work_suffix += "_green2_bruteforce"
     if check_bf_nbody_components:
         work_suffix += "_nbody_components"
+    if check_bf_nbody_dispatch:
+        work_suffix += "_nbody_dispatch"
     if compact_backflow:
         work_suffix += "_compact"
     if use_nonidentity_init:
@@ -1262,6 +1331,7 @@ def main():
             os.path.join(workdir, init_name),
             definition.n_proj_bf,
             nslater,
+            complex_orbitals=check_bf_nbody_dispatch,
         )
         if projbf[0] == 1.0 or all(value == 0.0 for value in projbf[1:]):
             print("ERROR: non-identity ProjBF initialization is invalid.")
@@ -1273,9 +1343,11 @@ def main():
     fd_dump_path = os.path.join(workdir, "bf_projbf_fd_dump.dat") if compare_proj_bf_fd else None
     green2_dump_path = os.path.join(workdir, "bf_green2_bruteforce_dump.dat") if check_bf_green2_bruteforce else None
     component_dump_path = os.path.join(workdir, "bf_nbody_components.dat") if check_bf_nbody_components else None
+    dispatch_dump_path = os.path.join(workdir, "bf_nbody_dispatch.dat") if check_bf_nbody_dispatch else None
     proc = run_vmc(rootdir, workdir, mpi_procs, dump_path=dump_path, diff_dump_path=diff_dump_path,
                    fd_dump_path=fd_dump_path, green2_dump_path=green2_dump_path,
-                   component_dump_path=component_dump_path, init_path=init_path)
+                   component_dump_path=component_dump_path, dispatch_dump_path=dispatch_dump_path,
+                   init_path=init_path)
 
     if expected_error is not None:
         if expected_error not in proc.stdout:
@@ -1391,6 +1463,10 @@ def main():
             return result
     if check_bf_nbody_components:
         result = check_bf_nbody_component_dump(component_dump_path, 1.0e-13)
+        if result != 0:
+            return result
+    if check_bf_nbody_dispatch:
+        result = check_bf_nbody_dispatch_dump(dispatch_dump_path, 1.0e-11)
         if result != 0:
             return result
 

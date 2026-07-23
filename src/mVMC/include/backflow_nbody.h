@@ -32,6 +32,14 @@ typedef struct {
   double complex value;
 } BFNBodyResult;
 
+typedef enum {
+  BF_NBODY_DETAIL_NONE = 0,
+  BF_NBODY_DETAIL_REDUCER = -1,
+  BF_NBODY_DETAIL_SPIN_CHANGE = 1,
+  BF_NBODY_DETAIL_BAD_ELECTRON_LABEL = 2,
+  BF_NBODY_DETAIL_LEGACY_STATE_RESTORE = 3
+} BFNBodyDetail;
+
 typedef struct {
   int maxOrder;
   int useFsz;
