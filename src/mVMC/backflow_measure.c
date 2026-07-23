@@ -702,7 +702,7 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
 #pragma omp parallel default(shared)\
   private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myIntBase,\
           myBuffer,mySltBFTmp,myComplexBase,myDoubleBase,myEnergy,scratch,\
-          result,bindStatus)\
+          result,bindStatus,idx)\
   reduction(+:e)
   {
     myEnergy = 0.0;
@@ -1113,7 +1113,7 @@ void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, 
 #pragma omp parallel default(shared)\
   private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myIntBase,\
           myBuffer,mySltBFTmp,myComplexBase,myDoubleBase,scratch,result,\
-          bindStatus)
+          bindStatus,idx)
   {
     myIntBase = GetWorkSpaceThreadInt((int)scratchSizes.intCount);
     myComplexBase =

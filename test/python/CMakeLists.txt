@@ -677,6 +677,22 @@ add_python_vmc_test_bf_green2_bruteforce(BackFlow_NonIdentity_TwoBodyG_BruteForc
 add_python_vmc_test_bf_nbody_components(BackFlow_NBody_Components_NonFSZ BackFlow_Identity_Complex)
 add_python_vmc_test_bf_nbody_components_mpi_nsplit(BackFlow_NBody_Components_NonFSZ_MPI4Split2 BackFlow_Identity_Complex 4 2)
 add_python_vmc_test_bf_nbody_dispatch(BackFlow_NBody_Dispatch_NonFSZ BackFlow_Identity_Complex)
+add_test(
+    NAME BackFlow_Complex_CopyIndex_Private_Source
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/check_backflow_omp_private.py
+            ${CMAKE_SOURCE_DIR}/src/mVMC/backflow_measure.c)
+add_test(
+    NAME BackFlow_Complex_CopyIndex_OMP4
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex
+            --expect-nqp-full 1
+            --compare-no-bf-twobodyg
+            --reject-output "Error:"
+            --reject-output "error:")
+set_tests_properties(
+    BackFlow_Complex_CopyIndex_OMP4
+    PROPERTIES ENVIRONMENT
+               "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Complex_CopyIndex_OMP4")
 add_python_vmc_test_bf_real_complex_nonidentity(BackFlow_NonIdentity_RealVsComplex BackFlow_Identity_Real BackFlow_Identity_Complex 1)
 add_python_vmc_test_bf_opt_output_restart(BackFlow_Optimization_OptOutputRestart BackFlow_Optimization_Complex 1)
 add_python_vmc_test_bf_nonidentity_ncond(BackFlow_NonIdentity_HighFilling_Complex BackFlow_Identity_Complex 6 1)
