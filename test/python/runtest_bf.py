@@ -453,7 +453,8 @@ def write_orbital_opt_flags(path, nsite, nslater, opt_flag):
 
 
 def run_vmc(rootdir, workdir, mpi_procs, dump_path=None, diff_dump_path=None, fd_dump_path=None,
-            green2_dump_path=None, init_path=None, log_name="bf_test.log"):
+            green2_dump_path=None, component_dump_path=None, init_path=None,
+            log_name="bf_test.log"):
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
     env = os.environ.copy()
     if dump_path is not None:
@@ -464,6 +465,8 @@ def run_vmc(rootdir, workdir, mpi_procs, dump_path=None, diff_dump_path=None, fd
         env["MVMC_BF_FD_DUMP"] = fd_dump_path
     if green2_dump_path is not None:
         env["MVMC_BF_GREEN2_DUMP"] = green2_dump_path
+    if component_dump_path is not None:
+        env["MVMC_BF_NBODY_COMPONENT_DUMP"] = component_dump_path
 
     cmd = [bin_to_test, "-e", "namelist.def"]
     if init_path is not None:
@@ -984,9 +987,40 @@ def check_bf_green2_bruteforce_dump(path, tol, expected_all_complex_flag):
     return 0
 
 
+def check_bf_nbody_component_dump(path, tol):
+    if not os.path.exists(path):
+        print("ERROR: BackFlow N-body component dump was not written.")
+        return -1
+
+    values = read_key_value_file(path)
+    required = (
+        "slater_max_abs_diff",
+        "slater_global_state_changed",
+        "eta_state_changed",
+        "eta_flag_state_changed",
+    )
+    missing = [key for key in required if key not in values]
+    if missing:
+        print("ERROR: BackFlow N-body component dump is missing fields: {}".format(
+            ", ".join(missing)))
+        return -1
+
+    max_diff = float(values["slater_max_abs_diff"])
+    if not math.isfinite(max_diff) or max_diff > tol:
+        print("ERROR: serial BackFlow Slater mismatch: max_abs_diff={:.3e}".format(
+            max_diff))
+        return -1
+    for key in required[1:]:
+        if int(values[key]) != 0:
+            print("ERROR: serial BackFlow Slater builder changed global state: {}={}".format(
+                key, values[key]))
+            return -1
+    return 0
+
+
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -1005,6 +1039,7 @@ def main():
     compare_gradient = False
     compare_proj_bf_fd = False
     check_bf_green2_bruteforce = False
+    check_bf_nbody_components = False
     compact_backflow = False
     use_nonidentity_init = False
     expected_all_complex_flag = None
@@ -1062,6 +1097,9 @@ def main():
         elif sys.argv[argi] == "--check-bf-green2-bruteforce":
             check_bf_green2_bruteforce = True
             argi += 1
+        elif sys.argv[argi] == "--check-bf-nbody-components":
+            check_bf_nbody_components = True
+            argi += 1
         elif sys.argv[argi] == "--compact-backflow":
             compact_backflow = True
             argi += 1
@@ -1087,7 +1125,7 @@ def main():
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -1119,6 +1157,8 @@ def main():
         work_suffix += "_projbf_fd"
     if check_bf_green2_bruteforce:
         work_suffix += "_green2_bruteforce"
+    if check_bf_nbody_components:
+        work_suffix += "_nbody_components"
     if compact_backflow:
         work_suffix += "_compact"
     if use_nonidentity_init:
@@ -1187,8 +1227,10 @@ def main():
     diff_dump_path = os.path.join(workdir, "bf_diff_dump.dat") if compare_gradient else None
     fd_dump_path = os.path.join(workdir, "bf_projbf_fd_dump.dat") if compare_proj_bf_fd else None
     green2_dump_path = os.path.join(workdir, "bf_green2_bruteforce_dump.dat") if check_bf_green2_bruteforce else None
+    component_dump_path = os.path.join(workdir, "bf_nbody_components.dat") if check_bf_nbody_components else None
     proc = run_vmc(rootdir, workdir, mpi_procs, dump_path=dump_path, diff_dump_path=diff_dump_path,
-                   fd_dump_path=fd_dump_path, green2_dump_path=green2_dump_path, init_path=init_path)
+                   fd_dump_path=fd_dump_path, green2_dump_path=green2_dump_path,
+                   component_dump_path=component_dump_path, init_path=init_path)
 
     if expected_error is not None:
         if expected_error not in proc.stdout:
@@ -1300,6 +1342,10 @@ def main():
             return result
     if check_bf_green2_bruteforce:
         result = check_bf_green2_bruteforce_dump(green2_dump_path, 1.0e-10, expected_all_complex_flag)
+        if result != 0:
+            return result
+    if check_bf_nbody_components:
+        result = check_bf_nbody_component_dump(component_dump_path, 1.0e-13)
         if result != 0:
             return result
 

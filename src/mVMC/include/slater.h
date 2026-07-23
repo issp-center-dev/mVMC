@@ -19,6 +19,9 @@ void BackFlowDiff_fsz(double complex *srOptO, const double complex ip,
                       const int *eleNum, const int *eleProjBFCnt);
 
 void MakeSlaterElmBF_fcmp(const int *eleNum, const int *eleProjBFCnt);
+void MakeSlaterElmBF_fcmp_to_serial(double complex *sltElmBF,
+                                    const int *eleNum,
+                                    const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz_to(double complex *sltElmBF, const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz_to_serial(double complex *sltElmBF, const int *eleNum,

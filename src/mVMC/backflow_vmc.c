@@ -1398,6 +1398,111 @@ static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
   free(sltBFTmpReal);
 }
 
+static int dumpBFNBodyComponentCheck(const char *path,
+                                     const int *eleNum,
+                                     const int *eleProjBFCnt) {
+  const size_t slaterCount = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+  const size_t invPfCount =
+      (size_t)NQPFull*((size_t)Nsize*(size_t)Nsize + 1u);
+  const size_t etaCount = (size_t)Nsite*(size_t)Nsite;
+  double complex *candidate = NULL;
+  double complex *slaterBefore = NULL;
+  double *slaterRealBefore = NULL;
+  double complex *invPfBefore = NULL;
+  double complex *etaBefore = NULL;
+  int *etaFlagBefore = NULL;
+  double maxDiff = 0.0;
+  int slaterGlobalStateChanged;
+  int etaStateChanged = 0;
+  int etaFlagStateChanged = 0;
+  size_t idx;
+  int ri;
+  FILE *fp = NULL;
+  int status = -1;
+
+  candidate = (double complex *)malloc(slaterCount*sizeof(double complex));
+  slaterBefore = (double complex *)malloc(slaterCount*sizeof(double complex));
+  slaterRealBefore = (double *)malloc(slaterCount*sizeof(double));
+  invPfBefore = (double complex *)malloc(invPfCount*sizeof(double complex));
+  etaBefore = (double complex *)malloc(etaCount*sizeof(double complex));
+  etaFlagBefore = (int *)malloc(etaCount*sizeof(int));
+  if(candidate == NULL || slaterBefore == NULL || slaterRealBefore == NULL
+     || invPfBefore == NULL || etaBefore == NULL || etaFlagBefore == NULL) {
+    fprintf(stderr,
+            "Error: failed to allocate BackFlow N-body component diagnostic buffers.\n");
+    goto cleanup;
+  }
+
+  memcpy(slaterBefore, SlaterElmBF, slaterCount*sizeof(double complex));
+  memcpy(slaterRealBefore, SlaterElmBF_real, slaterCount*sizeof(double));
+  memcpy(invPfBefore, InvM, invPfCount*sizeof(double complex));
+  for(ri=0;ri<Nsite;ri++) {
+    memcpy(etaBefore + (size_t)ri*(size_t)Nsite, eta[ri],
+           (size_t)Nsite*sizeof(double complex));
+    memcpy(etaFlagBefore + (size_t)ri*(size_t)Nsite, etaFlag[ri],
+           (size_t)Nsite*sizeof(int));
+  }
+
+  MakeSlaterElmBF_fcmp_to_serial(candidate, eleNum, eleProjBFCnt);
+  for(idx=0;idx<slaterCount;idx++) {
+    const double diff = cabs(candidate[idx] - slaterBefore[idx]);
+    if(diff > maxDiff) maxDiff = diff;
+  }
+
+  slaterGlobalStateChanged =
+      memcmp(slaterBefore, SlaterElmBF,
+             slaterCount*sizeof(double complex)) != 0
+      || memcmp(slaterRealBefore, SlaterElmBF_real,
+                slaterCount*sizeof(double)) != 0
+      || memcmp(invPfBefore, InvM,
+                invPfCount*sizeof(double complex)) != 0;
+  for(ri=0;ri<Nsite;ri++) {
+    if(memcmp(etaBefore + (size_t)ri*(size_t)Nsite, eta[ri],
+              (size_t)Nsite*sizeof(double complex)) != 0) {
+      etaStateChanged = 1;
+    }
+    if(memcmp(etaFlagBefore + (size_t)ri*(size_t)Nsite, etaFlag[ri],
+              (size_t)Nsite*sizeof(int)) != 0) {
+      etaFlagStateChanged = 1;
+    }
+  }
+
+  /* Keep this test-only diagnostic non-invasive if a future regression occurs. */
+  memcpy(SlaterElmBF, slaterBefore, slaterCount*sizeof(double complex));
+  memcpy(SlaterElmBF_real, slaterRealBefore, slaterCount*sizeof(double));
+  memcpy(InvM, invPfBefore, invPfCount*sizeof(double complex));
+  for(ri=0;ri<Nsite;ri++) {
+    memcpy(eta[ri], etaBefore + (size_t)ri*(size_t)Nsite,
+           (size_t)Nsite*sizeof(double complex));
+    memcpy(etaFlag[ri], etaFlagBefore + (size_t)ri*(size_t)Nsite,
+           (size_t)Nsite*sizeof(int));
+  }
+
+  fp = fopen(path, "w");
+  if(fp == NULL) {
+    fprintf(stderr,
+            "Error: failed to open BackFlow N-body component dump file: %s\n",
+            path);
+    goto cleanup;
+  }
+  fprintf(fp, "slater_max_abs_diff %.17e\n", maxDiff);
+  fprintf(fp, "slater_global_state_changed %d\n",
+          slaterGlobalStateChanged);
+  fprintf(fp, "eta_state_changed %d\n", etaStateChanged);
+  fprintf(fp, "eta_flag_state_changed %d\n", etaFlagStateChanged);
+  status = 0;
+
+cleanup:
+  if(fp != NULL) fclose(fp);
+  free(candidate);
+  free(slaterBefore);
+  free(slaterRealBefore);
+  free(invPfBefore);
+  free(etaBefore);
+  free(etaFlagBefore);
+  return status;
+}
+
 void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   int *eleIdx, *eleCfg, *eleNum, *eleProjCnt, *eleProjBFCnt;
   double complex e, ip; //db is double?
@@ -1410,6 +1515,9 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   const char *bfDiffDumpPath = getenv("MVMC_BF_DIFF_DUMP");
   const char *bfFDDumpPath = getenv("MVMC_BF_FD_DUMP");
   const char *bfGreen2DumpPath = getenv("MVMC_BF_GREEN2_DUMP");
+  const char *bfNBodyComponentDumpPath =
+      getenv("MVMC_BF_NBODY_COMPONENT_DUMP");
+  int bfNBodyComponentDumped = 0;
   const int qpStart = 0;
   const int qpEnd = NQPFull;
   int sample, sampleStart, sampleEnd;
@@ -1525,6 +1633,15 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
     StopTimer(45);
 
+    if(rank == 0 && !bfNBodyComponentDumped
+       && bfNBodyComponentDumpPath != NULL
+       && bfNBodyComponentDumpPath[0] != '\0') {
+      if(dumpBFNBodyComponentCheck(bfNBodyComponentDumpPath, eleNum,
+                                   eleProjBFCnt) != 0) {
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
+      bfNBodyComponentDumped = 1;
+    }
     if (rank == 0 && !bfIdentityDumped &&
         bfIdentityDumpPath != NULL && bfIdentityDumpPath[0] != '\0') {
       dumpBFIdentityCheck(bfIdentityDumpPath, eleIdx, qpStart, qpEnd);
