@@ -1883,6 +1883,8 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
   const size_t invCount =
       (size_t)NQPFull*(size_t)Nsize*(size_t)Nsize;
   const size_t etaCount = (size_t)Nsite*(size_t)Nsite;
+  const size_t projBFCount =
+      (size_t)16*(size_t)Nsite*(size_t)Nrange;
   BFDiagScratch evaluator;
   BFDiagScratch reference;
   double complex *slaterBefore = NULL;
@@ -1894,6 +1896,8 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
   int *idxBefore = NULL;
   int *cfgBefore = NULL;
   int *numBefore = NULL;
+  int *projBefore = NULL;
+  int *projBFBefore = NULL;
   int *badCfg = NULL;
   int *occupied = NULL;
   int *empty = NULL;
@@ -1935,13 +1939,18 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
   idxBefore = (int *)malloc((size_t)Nsize*sizeof(int));
   cfgBefore = (int *)malloc((size_t)Nsite2*sizeof(int));
   numBefore = (int *)malloc((size_t)Nsite2*sizeof(int));
+  if(NProj > 0) {
+    projBefore = (int *)malloc((size_t)NProj*sizeof(int));
+  }
+  projBFBefore = (int *)malloc(projBFCount*sizeof(int));
   badCfg = (int *)malloc((size_t)Nsite2*sizeof(int));
   occupied = (int *)malloc((size_t)Nsite2*sizeof(int));
   empty = (int *)malloc((size_t)Nsite2*sizeof(int));
   if(slaterBefore == NULL || slaterRealBefore == NULL
      || invBefore == NULL || pfBefore == NULL || etaBefore == NULL
      || etaFlagBefore == NULL || idxBefore == NULL || cfgBefore == NULL
-     || numBefore == NULL || badCfg == NULL
+     || numBefore == NULL || (NProj > 0 && projBefore == NULL)
+     || projBFBefore == NULL || badCfg == NULL
      || occupied == NULL || empty == NULL) {
     goto cleanup;
   }
@@ -1960,6 +1969,10 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
   memcpy(idxBefore, eleIdx, (size_t)Nsize*sizeof(int));
   memcpy(cfgBefore, eleCfg, (size_t)Nsite2*sizeof(int));
   memcpy(numBefore, eleNum, (size_t)Nsite2*sizeof(int));
+  if(NProj > 0) {
+    memcpy(projBefore, eleProjCnt, (size_t)NProj*sizeof(int));
+  }
+  memcpy(projBFBefore, eleProjBFCnt, projBFCount*sizeof(int));
   for(k=0;k<Nsite;k++) {
     memcpy(etaBefore+(size_t)k*(size_t)Nsite, eta[k],
            (size_t)Nsite*sizeof(double complex));
@@ -2143,6 +2156,9 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
     const int rsj[3] = {source[0], source[1], source[2]};
     double complex full;
     BFNBodyResult result;
+    globalStateChanged |= BFDiagGlobalsDiffer(
+        slaterBefore, slaterRealBefore, invBefore, pfBefore,
+        etaBefore, etaFlagBefore);
     if(BFDiagFullRebuildValue(
            3, rsi, rsj, ip, eleIdx, eleCfg, eleNum, eleProjCnt,
            &reference.scratch, slaterBefore, slaterRealBefore,
@@ -2184,6 +2200,9 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
         rsi[pairStart[1]] = rsi[pairStart[1]+1];
         rsi[pairStart[1]+1] = tmp;
       }
+      globalStateChanged |= BFDiagGlobalsDiffer(
+          slaterBefore, slaterRealBefore, invBefore, pfBefore,
+          etaBefore, etaFlagBefore);
       if(BFDiagFullRebuildValue(
              4, rsi, rsj, ip, eleIdx, eleCfg, eleNum, eleProjCnt,
              &reference.scratch, slaterBefore, slaterRealBefore,
@@ -2288,8 +2307,13 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
   callerStateChanged =
       memcmp(eleIdx, idxBefore, (size_t)Nsize*sizeof(int)) != 0
       || memcmp(eleCfg, cfgBefore, (size_t)Nsite2*sizeof(int)) != 0
-      || memcmp(eleNum, numBefore, (size_t)Nsite2*sizeof(int)) != 0;
-  globalStateChanged = BFDiagGlobalsDiffer(
+      || memcmp(eleNum, numBefore, (size_t)Nsite2*sizeof(int)) != 0
+      || (NProj > 0
+          && memcmp(eleProjCnt, projBefore,
+                    (size_t)NProj*sizeof(int)) != 0)
+      || memcmp(eleProjBFCnt, projBFBefore,
+                projBFCount*sizeof(int)) != 0;
+  globalStateChanged |= BFDiagGlobalsDiffer(
       slaterBefore, slaterRealBefore, invBefore, pfBefore,
       etaBefore, etaFlagBefore);
 
@@ -2305,6 +2329,7 @@ write_dump:
   fprintf(fp, "contract_failures %d\n", contractFailures);
   fprintf(fp, "setup_failures %d\n", setupFailures);
   fprintf(fp, "mixed_order_failures %d\n", mixedOrderFailures);
+  fprintf(fp, "normal_projection_count %d\n", NProj);
   fprintf(fp, "caller_state_changed %d\n", callerStateChanged);
   fprintf(fp, "global_state_changed %d\n", globalStateChanged);
   fprintf(fp, "max_direct_diff %.17e\n", maxDirectDiff);
@@ -2325,6 +2350,8 @@ cleanup:
   free(idxBefore);
   free(cfgBefore);
   free(numBefore);
+  free(projBefore);
+  free(projBFBefore);
   free(badCfg);
   free(occupied);
   free(empty);

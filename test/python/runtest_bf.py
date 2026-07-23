@@ -38,7 +38,7 @@ def read_namelist_keywords(namelist_path):
     return keywords
 
 
-def assert_nonidentity_init_layout(workdir):
+def assert_nonidentity_init_layout(workdir, allow_gutzwiller=False):
     keywords = read_namelist_keywords(os.path.join(workdir, "namelist.def"))
     nproj_keywords = set([
         "Gutzwiller",
@@ -59,6 +59,8 @@ def assert_nonidentity_init_layout(workdir):
         "GeneralRBM_PhysHidden",
     ])
     unsupported = (keywords & nproj_keywords) | (keywords & rbm_keywords)
+    if allow_gutzwiller:
+        unsupported.discard("Gutzwiller")
     if "OptTrans" in keywords:
         unsupported.add("OptTrans")
     if unsupported:
@@ -396,7 +398,8 @@ def write_minimal_twobodygex(workdir, nsite):
 
 
 def write_nonidentity_init_parameter(path, nprojbf, nslater,
-                                     complex_orbitals=False):
+                                     complex_orbitals=False,
+                                     proj_values=()):
     projbf_values = [
         0.93, 0.08, -0.05, 0.035, -0.025,
         0.015, -0.012, 0.010, -0.007, 0.005,
@@ -405,6 +408,8 @@ def write_nonidentity_init_parameter(path, nprojbf, nslater,
         raise RuntimeError("non-identity BackFlow test requires at least two ProjBF parameters")
 
     values = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    for real in proj_values:
+        values.extend([real, 0.0, 0.0])
     for idx in range(nprojbf):
         real = projbf_values[idx] if idx < len(projbf_values) else 0.001 / float(idx + 1)
         values.extend([real, 0.0, 0.0])
@@ -427,6 +432,28 @@ def write_nonidentity_init_parameter(path, nprojbf, nslater,
         fp.write(" ".join("{:.18e}".format(value) for value in values))
         fp.write("\n")
     return projbf_values[:nprojbf]
+
+
+def write_uniform_gutzwiller(workdir, nsite):
+    path = os.path.join(workdir, "gutzwilleridx.def")
+    with open(path, "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NGutzwillerIdx          1\n")
+        fp.write("ComplexType             0\n")
+        fp.write("=============================================\n")
+        fp.write("=============================================\n")
+        for site in range(nsite):
+            fp.write("{:5d} {:5d}\n".format(site, 0))
+        fp.write("{:5d} {:5d}\n".format(0, 0))
+
+    namelist_path = os.path.join(workdir, "namelist.def")
+    with open(namelist_path) as fp:
+        lines = fp.readlines()
+    if not any(line.split() and line.split()[0] == "Gutzwiller"
+               for line in lines):
+        lines.append("     Gutzwiller  gutzwilleridx.def\n")
+        with open(namelist_path, "w") as fp:
+            fp.writelines(lines)
 
 
 def write_orbital_opt_flags(path, nsite, nslater, opt_flag):
@@ -1086,6 +1113,7 @@ def check_bf_nbody_dispatch_dump(path, tol):
         "contract_failures",
         "setup_failures",
         "mixed_order_failures",
+        "normal_projection_count",
         "caller_state_changed",
         "global_state_changed",
         "max_direct_diff",
@@ -1102,6 +1130,9 @@ def check_bf_nbody_dispatch_dump(path, tol):
             print("ERROR: BackFlow N-body dispatch class was not exercised: {}={}".format(
                 key, values[key]))
             return -1
+    if int(values["normal_projection_count"]) <= 0:
+        print("ERROR: BackFlow N-body caller-state check did not exercise normal projection counts.")
+        return -1
     for key in (
             "contract_failures",
             "setup_failures",
@@ -1316,6 +1347,8 @@ def main():
     nsite = parse_nsite(os.path.join(workdir, "modpara.def"))
     definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd)
     write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd, compact=compact_backflow)
+    if check_bf_nbody_dispatch:
+        write_uniform_gutzwiller(workdir, nsite)
     if compare_twobodyg or check_bf_green2_bruteforce:
         write_minimal_twobodyg(workdir, nsite)
     if compare_twobodygex:
@@ -1323,7 +1356,8 @@ def main():
 
     init_path = None
     if use_nonidentity_init:
-        assert_nonidentity_init_layout(workdir)
+        assert_nonidentity_init_layout(
+            workdir, allow_gutzwiller=check_bf_nbody_dispatch)
         nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidx.def"))
         write_orbital_opt_flags(os.path.join(workdir, "orbitalidx.def"), nsite, nslater, 0)
         init_name = "nonidentity_init.dat"
@@ -1332,6 +1366,7 @@ def main():
             definition.n_proj_bf,
             nslater,
             complex_orbitals=check_bf_nbody_dispatch,
+            proj_values=(0.21,) if check_bf_nbody_dispatch else (),
         )
         if projbf[0] == 1.0 or all(value == 0.0 for value in projbf[1:]):
             print("ERROR: non-identity ProjBF initialization is invalid.")
