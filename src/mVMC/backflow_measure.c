@@ -849,7 +849,7 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
       }
 
       /*
-       * scratch.slater aliases mySltBFTmp. N>=3 evaluation replaces that
+       * scratch.slater aliases mySltBFTmp. N>=2 evaluation replaces that
        * base snapshot, so this loop must remain after all legacy consumers.
        * GreenFuncNBF reconstructs the state needed by every term.
        */
@@ -1211,7 +1211,7 @@ void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, 
       {StopTimer(53);StartTimer(54);}
 
       /*
-       * scratch.slater aliases mySltBFTmp. N>=3 evaluation replaces that
+       * scratch.slater aliases mySltBFTmp. N>=2 evaluation replaces that
        * base snapshot, so this loop must remain after every legacy and
        * derived-observable consumer. GreenFuncNBF reconstructs the state
        * needed by every term.

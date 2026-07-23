@@ -261,7 +261,7 @@ def backflow_n2_energy_case(workdir):
 def backflow_mixed_energy_case(workdir):
     nsite = 6
     terms = [
-        # Effective N=1 and N=2 dispatch.
+        # Effective N=1 dispatch and effective N=2 checked rebuild.
         (1, (0, 0, 2, 0), 0.19 + 0.07j),
         (2, (0, 0, 2, 0, 5, 1, 1, 1), -0.17 + 0.13j),
         # Genuine N=3 and N=4 full rebuilds.

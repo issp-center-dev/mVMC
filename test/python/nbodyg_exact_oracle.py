@@ -966,10 +966,14 @@ def validate_config_oracle_rows(
                 row["value"],
                 0.0 + 0.0j,
             )
-            if category in coverage:
+            if category == "zero":
                 coverage[category] += 1
             expected = 0.0 + 0.0j
         else:
+            if category == "zero":
+                raise AssertionError(
+                    "configuration oracle zero category had nonzero action"
+                )
             target_state, sign = applied
             expected_occ = tuple(
                 1 if occupied(target_state, orbital) else 0
