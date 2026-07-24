@@ -2522,6 +2522,18 @@ def get_named_invalid_case(case_name):
             None,
             make_spin_changing_two_body_g_ex,
         ),
+        "BackFlow_FSZ_InvalidReweight": (
+            {"reweight": "1"},
+            "BackFlow MVP does not support reweight",
+            None,
+            None,
+        ),
+        "BackFlow_FSZ_InvalidReweight_mpi": (
+            {"reweight": "1"},
+            "BackFlow MVP does not support reweight",
+            None,
+            None,
+        ),
     }
     return invalid_cases.get(case_name)
 

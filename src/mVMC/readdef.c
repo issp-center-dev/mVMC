@@ -1292,22 +1292,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     MPI_Abort(comm, EXIT_FAILURE);
   }
 
-  /* BackFlow is experimental: VMC_BF_MainCal/CalculateGreenFuncBF do not
-     implement reweight or Twist yet, so warn instead of silently ignoring. */
-  if (NProjBF > 0 && rank == 0) {
-    if (NTwist > 0) {
-      fprintf(stderr,
-              "warning: Twist operators are not implemented in the BackFlow "
-              "measurement path (NTwist=%d, NBackFlowIdx=%d); "
-              "zvo_twist output will be all zeros.\n",
-              NTwist, NBackFlowIdx);
-    }
-    if (reweight == 1) {
-      fprintf(stderr,
-              "warning: reweight is not implemented in the BackFlow "
-              "calculation path; sample weights stay w=1 (reweight ignored).\n");
-    }
-  }
+  /* BFValidateSettings has already rejected unsupported BackFlow Twist and
+     reweight inputs before the derived sizes are finalized here. */
 
   NPara = NProj + NSlater + NOptTrans + NProjBF + NRBM * FlagRBM;
   NQPFix = NSPGaussLeg * NMPTrans;
