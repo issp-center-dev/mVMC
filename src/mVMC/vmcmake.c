@@ -51,8 +51,9 @@ void VMCMakeSample(MPI_Comm comm) {
   int sample;
 
   double complex logIpOld,logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
-  int projCntNew[NProj];
-  double complex rbmCntNew[NRBM_PhysLayerIdx + Nneuron];
+  int projCntNew[NProj > 0 ? NProj : 1];
+  double complex rbmCntNew[
+      NRBM_PhysLayerIdx + Nneuron > 0 ? NRBM_PhysLayerIdx + Nneuron : 1];
   double complex pfMNew[NQPFull];
   double w;
   double complex x;

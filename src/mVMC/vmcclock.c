@@ -56,6 +56,10 @@ static int ParseBFNBodyBooleanEnvironment(const char *name) {
 static int ParseBFNBodyInjectionTerm(const char *value) {
   char *end = NULL;
   long parsed;
+  if(value == NULL || value[0] < '0' || value[0] > '9') {
+    AbortInvalidBFNBodyEnvironment("MVMC_BF_NBODY_INJECT_TERM");
+    return -1;
+  }
   errno = 0;
   parsed = strtol(value, &end, 10);
   if(errno != 0 || end == value || *end != '\0'

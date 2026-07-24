@@ -1202,6 +1202,25 @@ def write_nbody_failure_def(workdir):
         fp.writelines(lines)
 
 
+def write_nbodyg_failure_def(workdir):
+    path = os.path.join(workdir, "nbodyg.def")
+    with open(path, "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NNBodyG          1\n")
+        fp.write("=============================================\n")
+        fp.write("======== NBodyG correlation functions =======\n")
+        fp.write("=============================================\n")
+        fp.write("3 0 0 1 0 2 0 3 0 1 0 0 0\n")
+    namelist_path = os.path.join(workdir, "namelist.def")
+    with open(namelist_path) as fp:
+        lines = fp.readlines()
+    if not any(line.split() and line.split()[0] == "NBodyG"
+               for line in lines):
+        lines.append("          NBodyG  nbodyg.def\n")
+    with open(namelist_path, "w") as fp:
+        fp.writelines(lines)
+
+
 def main():
     if len(sys.argv) < 2:
         print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
@@ -1360,6 +1379,13 @@ def main():
         work_suffix += "_nbody_dispatch"
     if check_bf_nbody_state:
         work_suffix += "_nbody_state"
+    nbody_failure_stage = inject_bf_nbody_failure
+    nbody_failure_uses_nbodyg = False
+    if (inject_bf_nbody_failure is not None
+            and inject_bf_nbody_failure.startswith("nbodyg-")):
+        nbody_failure_stage = inject_bf_nbody_failure[len("nbodyg-"):]
+        nbody_failure_uses_nbodyg = True
+
     if inject_bf_nbody_failure is not None:
         work_suffix += "_nbody_failure_{}".format(inject_bf_nbody_failure)
     if compact_backflow:
@@ -1408,7 +1434,10 @@ def main():
     if check_bf_nbody_dispatch or check_bf_nbody_state:
         write_uniform_gutzwiller(workdir, nsite)
     if inject_bf_nbody_failure is not None:
-        write_nbody_failure_def(workdir)
+        if nbody_failure_uses_nbodyg:
+            write_nbodyg_failure_def(workdir)
+        else:
+            write_nbody_failure_def(workdir)
     if compare_twobodyg or check_bf_green2_bruteforce:
         write_minimal_twobodyg(workdir, nsite)
     if compare_twobodygex:
@@ -1449,27 +1478,52 @@ def main():
     nbody_env = {}
     if check_bf_nbody_state:
         nbody_env["MVMC_BF_NBODY_STATE_CHECK"] = "1"
-    if inject_bf_nbody_failure in ("workspace", "candidate", "pfaffian"):
+    if nbody_failure_stage in ("workspace", "candidate", "pfaffian"):
         nbody_env.update({
             "MVMC_BF_NBODY_STATE_CHECK": "1",
-            "MVMC_BF_NBODY_INJECT_STAGE": inject_bf_nbody_failure,
+            "MVMC_BF_NBODY_INJECT_STAGE": nbody_failure_stage,
             "MVMC_BF_NBODY_INJECT_TERM": "0",
         })
-    elif inject_bf_nbody_failure == "invalid-stage":
+    elif nbody_failure_stage == "invalid-stage":
         nbody_env.update({
             "MVMC_BF_NBODY_INJECT_STAGE": "invalid",
             "MVMC_BF_NBODY_INJECT_TERM": "0",
         })
-    elif inject_bf_nbody_failure == "invalid-term":
+    elif nbody_failure_stage == "invalid-term":
         nbody_env.update({
             "MVMC_BF_NBODY_INJECT_STAGE": "workspace",
             "MVMC_BF_NBODY_INJECT_TERM": "-1",
         })
-    elif inject_bf_nbody_failure == "invalid-state-check":
+    elif nbody_failure_stage == "invalid-term-nonnumeric":
+        nbody_env.update({
+            "MVMC_BF_NBODY_INJECT_STAGE": "workspace",
+            "MVMC_BF_NBODY_INJECT_TERM": "not-a-number",
+        })
+    elif nbody_failure_stage == "invalid-term-overflow":
+        nbody_env.update({
+            "MVMC_BF_NBODY_INJECT_STAGE": "workspace",
+            "MVMC_BF_NBODY_INJECT_TERM": "2147483648",
+        })
+    elif nbody_failure_stage == "invalid-term-plus":
+        nbody_env.update({
+            "MVMC_BF_NBODY_INJECT_STAGE": "workspace",
+            "MVMC_BF_NBODY_INJECT_TERM": "+0",
+        })
+    elif nbody_failure_stage == "invalid-term-space":
+        nbody_env.update({
+            "MVMC_BF_NBODY_INJECT_STAGE": "workspace",
+            "MVMC_BF_NBODY_INJECT_TERM": " 0",
+        })
+    elif nbody_failure_stage == "invalid-term-out-of-range":
+        nbody_env.update({
+            "MVMC_BF_NBODY_INJECT_STAGE": "workspace",
+            "MVMC_BF_NBODY_INJECT_TERM": "1",
+        })
+    elif nbody_failure_stage == "invalid-state-check":
         nbody_env["MVMC_BF_NBODY_STATE_CHECK"] = "invalid"
-    elif inject_bf_nbody_failure == "missing-stage":
+    elif nbody_failure_stage == "missing-stage":
         nbody_env["MVMC_BF_NBODY_INJECT_TERM"] = "0"
-    elif inject_bf_nbody_failure == "missing-term":
+    elif nbody_failure_stage == "missing-term":
         nbody_env["MVMC_BF_NBODY_INJECT_STAGE"] = "workspace"
     elif inject_bf_nbody_failure is not None:
         print("ERROR: unknown BackFlow N-body failure mode: {}".format(
@@ -1484,8 +1538,8 @@ def main():
         if proc.returncode == 0:
             print("ERROR: BackFlow N-body failure injection unexpectedly succeeded")
             return -1
-        if inject_bf_nbody_failure in ("workspace", "candidate", "pfaffian"):
-            expected = "term=0 stage={}(".format(inject_bf_nbody_failure)
+        if nbody_failure_stage in ("workspace", "candidate", "pfaffian"):
+            expected = "term=0 stage={}(".format(nbody_failure_stage)
             diagnostics = [
                 line for line in proc.stdout.splitlines()
                 if expected in line and "detail=injected(" in line

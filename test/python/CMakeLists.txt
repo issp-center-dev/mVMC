@@ -103,7 +103,9 @@ endfunction(add_python_nbodyg_invalid_mpi)
 
 function(add_python_nbodyinterall_exact_oracle test_name)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} nbodyinterall_exact_oracle.py ${test_name})
-    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1"
+        RESOURCE_LOCK "nbodyinterall_${test_name}_workdir")
 endfunction(add_python_nbodyinterall_exact_oracle)
 
 function(add_python_nbodyinterall_generated_check test_name omp_threads)
@@ -128,7 +130,9 @@ endfunction(add_python_nbodyinterall_config_oracle_mpi)
 
 function(add_python_nbodyinterall_mpi test_name model)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} nbodyinterall_exact_oracle.py ${model})
-    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
+        RESOURCE_LOCK "nbodyinterall_${model}_workdir")
 endfunction(add_python_nbodyinterall_mpi)
 
 function(add_python_nbodyinterall_invalid test_name expected_error)
@@ -339,8 +343,17 @@ endfunction(add_python_vmc_test_bf_nbody_state)
 
 function(add_python_vmc_test_bf_nbody_failure test_name model mode)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --inject-bf-nbody-failure ${mode} --use-nonidentity-init)
-    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1"
+        RESOURCE_LOCK "bf_nbody_failure_${model}_${mode}_workdir")
 endfunction(add_python_vmc_test_bf_nbody_failure)
+
+function(add_python_vmc_test_bf_nbody_failure_mpi test_name model mode)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --inject-bf-nbody-failure ${mode} --use-nonidentity-init)
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2;OMP_NUM_THREADS=1"
+        RESOURCE_LOCK "bf_nbody_failure_${model}_${mode}_workdir")
+endfunction(add_python_vmc_test_bf_nbody_failure_mpi)
 
 function(add_python_vmc_test_bf_real_complex_nonidentity test_name real_model complex_model omp_threads)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${real_model} --compare-real-complex-nonidentity ${complex_model} --reject-output "Error:" --reject-output "error:")
@@ -723,6 +736,15 @@ add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_InvalidTerm BackFlow
 add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_InvalidStateCheck BackFlow_Identity_Complex invalid-state-check)
 add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_MissingStage BackFlow_Identity_Complex missing-stage)
 add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_MissingTerm BackFlow_Identity_Complex missing-term)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBodyG_Failure_Workspace BackFlow_Identity_Complex nbodyg-workspace)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBodyG_Failure_Candidate BackFlow_Identity_Complex nbodyg-candidate)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBodyG_Failure_Pfaffian BackFlow_Identity_Complex nbodyg-pfaffian)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_InvalidTermNonNumeric BackFlow_Identity_Complex invalid-term-nonnumeric)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_InvalidTermOverflow BackFlow_Identity_Complex invalid-term-overflow)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_InvalidTermPlus BackFlow_Identity_Complex invalid-term-plus)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_InvalidTermSpace BackFlow_Identity_Complex invalid-term-space)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_InvalidTermOutOfRange BackFlow_Identity_Complex invalid-term-out-of-range)
+add_python_vmc_test_bf_nbody_failure_mpi(BackFlow_NBody_Failure_InvalidTermNonNumeric_mpi BackFlow_Identity_Complex invalid-term-nonnumeric)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_NBody_State)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_NBody_Failure_Workspace)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_NBody_Failure_Candidate)

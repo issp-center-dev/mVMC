@@ -1059,6 +1059,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     }
     MPI_Abort(comm, EXIT_FAILURE);
   }
+  if (BFNBodyInjectStage != BF_NBODY_INJECT_NONE
+      && BFNBodyInjectTerm >= NNBodyG
+      && BFNBodyInjectTerm >= NNBodyInterAll) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: invalid MVMC_BF_NBODY_INJECT_TERM environment value "
+              "(term=%d, NNBodyG=%d, NNBodyInterAll=%d).\n",
+              BFNBodyInjectTerm, NNBodyG, NNBodyInterAll);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
   if (NBackFlowIdx > 0 && NNBodyG > 0) {
     if (AllComplexFlag == 0) {
       if (rank == 0) {
