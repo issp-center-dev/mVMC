@@ -422,7 +422,7 @@ def backflow_fsz_mixed_config_oracle_case(workdir):
                 0, 0, 2, 1,
                 1, 0, 3, 0,
                 5, 1, 1, 1,
-                4, 1, 0, 0,
+                4, 1, 0, 1,
             ),
             -0.09 + 0.21j,
         ),

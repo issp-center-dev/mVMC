@@ -399,8 +399,10 @@ static int BFNBodyOracleWriteRow(
   }
 
   fprintf(oracle->stream,
-          "sample %d source %c term %d n %d status %d base_occ",
-          sample, sourceKind, term, n, (int)result.status);
+          "sample %d source %c term %d n %d status %d reduced_order %d"
+          " base_occ",
+          sample, sourceKind, term, n, (int)result.status,
+          result.reducedOrder);
   for(orbital=0;orbital<Nsite2;orbital++) {
     fprintf(oracle->stream, " %d", eleNum[orbital]);
   }

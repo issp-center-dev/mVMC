@@ -755,9 +755,9 @@ def backflow_fsz_n4_config_oracle_case(workdir):
             4,
             (
                 0, 0, 2, 1,
-                1, 0, 3, 0,
-                5, 1, 1, 1,
-                4, 1, 0, 0,
+                3, 0, 1, 0,
+                5, 0, 4, 0,
+                1, 1, 4, 1,
             ),
         ),
     ]
@@ -955,6 +955,9 @@ def parse_config_oracle_dump(path, nsite, rank=0):
             term, pos = _parse_marker(cols, pos, "term", 1, int)
             order, pos = _parse_marker(cols, pos, "n", 1, int)
             status, pos = _parse_marker(cols, pos, "status", 1, int)
+            reduced_order, pos = _parse_marker(
+                cols, pos, "reduced_order", 1, int
+            )
             base_occ, pos = _parse_marker(
                 cols, pos, "base_occ", 2 * nsite, int
             )
@@ -990,6 +993,7 @@ def parse_config_oracle_dump(path, nsite, rank=0):
                     "term": term[0],
                     "n": order[0],
                     "status": status[0],
+                    "reduced_order": reduced_order[0],
                     "base_occ": tuple(base_occ),
                     "target_valid": target_valid[0],
                     "target_occ": tuple(target_occ),
@@ -1107,6 +1111,24 @@ def validate_config_oracle_rows(
             if category == "zero":
                 raise AssertionError(
                     "configuration oracle zero category had nonzero action"
+                )
+            expected_reduced_order = {
+                "dispatch1": 1,
+                "effective2": 2,
+                "full3": 3,
+                "full4": 4,
+            }.get(category)
+            if (
+                expected_reduced_order is not None
+                and row["reduced_order"] != expected_reduced_order
+            ):
+                raise AssertionError(
+                    "configuration oracle {} reduced order mismatch: "
+                    "actual={} expected={}".format(
+                        category,
+                        row["reduced_order"],
+                        expected_reduced_order,
+                    )
                 )
             target_state, sign = applied
             expected_occ = tuple(
