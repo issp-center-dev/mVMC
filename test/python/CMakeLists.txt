@@ -54,12 +54,16 @@ endfunction(add_python_vmc_test_expert_phys)
 
 function(add_python_vmc_test_nbodyg model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_nbodyg.py ${model})
-    set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+    set_tests_properties(${model} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python"
+        RESOURCE_LOCK "nbodyg_${model}_workdir")
 endfunction(add_python_vmc_test_nbodyg)
 
 function(add_python_vmc_test_nbodyg_mpi test_name model)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_nbodyg.py ${model})
-    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2")
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2"
+        RESOURCE_LOCK "nbodyg_${model}_workdir")
 endfunction(add_python_vmc_test_nbodyg_mpi)
 
 function(add_python_nbodyg_exact_oracle test_name)
