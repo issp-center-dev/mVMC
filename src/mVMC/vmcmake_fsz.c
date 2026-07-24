@@ -55,7 +55,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
   int sample;
 
   double complex logIpOld,logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
-  int projCntNew[NProj];
+  int projCntNew[NProj > 0 ? NProj : 1];
   double complex pfMNew[NQPFull];
   double x,w; // TBC x will be complex number
 
@@ -930,7 +930,7 @@ void VMC_BF_MakeSample_fsz(MPI_Comm comm) {
   int *hopIntStorage, *affected, *hopIntWork;
   int hopIntWorkSize, hopIntStorageSize;
   int nChanged,nAffected,rowStatus,directFull,fullMaterialized,commitPath;
-  int projCntNew[NProj];
+  int projCntNew[NProj > 0 ? NProj : 1];
   int projBFCntNew[16*Nsite*Nrange];
   double x,w;
 

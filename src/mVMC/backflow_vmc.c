@@ -119,7 +119,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
   int sample;
 
   double complex logIpOld, logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
-  int projCntNew[NProj];
+  int projCntNew[NProj > 0 ? NProj : 1];
   int projBFCntNew[16 * Nsite * Nrange]; // For BackFlow
   int msaTmp[NQPFull * Nsize], icount[NQPFull]; // For BackFlow
   double complex pfMNew[NQPFull];
@@ -509,7 +509,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   int tmp_i;
 
   double logIpOld, logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
-  int projCntNew[NProj];
+  int projCntNew[NProj > 0 ? NProj : 1];
   int projBFCntNew[16 * Nsite * Nrange]; // For BackFlow
   int msaTmp[NQPFull * Nsize], icount[NQPFull]; // For BackFlow
 #ifdef MVMC_DEBUG_BF_REAL_UPDATE
