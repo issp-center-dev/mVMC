@@ -4,6 +4,8 @@ import glob
 import itertools
 import math
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -20,6 +22,27 @@ TOL = 1.2e-2
 CONFIG_ORACLE_TOL = 1.0e-10
 BF_NBODY_OK = 0
 BF_NBODY_PHYSICAL_ZERO = 1
+
+
+def validated_work_suffix():
+    suffix = os.environ.get("MVMC_BF_NBODY_TEST_WORK_SUFFIX", "")
+    if suffix and re.fullmatch(r"_[A-Za-z0-9_.-]+", suffix) is None:
+        raise ValueError("invalid MVMC_BF_NBODY_TEST_WORK_SUFFIX")
+    return suffix
+
+
+def mpi_command(mpi_procs, command):
+    configured = os.environ.get("MVMC_MPIEXEC")
+    if configured:
+        launcher = shlex.split(configured)
+    else:
+        executable = shutil.which("mpiexec") or shutil.which("mpirun")
+        if executable is None:
+            raise RuntimeError("MPI launcher was not found")
+        launcher = [executable]
+    if not launcher:
+        raise ValueError("MVMC_MPIEXEC must name an MPI launcher")
+    return launcher + ["-np", str(mpi_procs)] + command
 
 
 def pfaffian(mat):
@@ -1269,7 +1292,7 @@ def main():
         return -1
 
     rootdir = os.getcwd()
-    work_suffix = os.environ.get("MVMC_BF_NBODY_TEST_WORK_SUFFIX", "")
+    work_suffix = validated_work_suffix()
     workdir = os.path.join(rootdir, "work", model + work_suffix)
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
@@ -1302,10 +1325,9 @@ def main():
     if model in INVALID_CASES:
         mpi_procs = os.environ.get("MVMC_MPI_PROCS")
         if mpi_procs:
-            cmd = [
-                "mpirun", "-np", mpi_procs, bin_to_test,
-                "-e", "namelist.def",
-            ]
+            cmd = mpi_command(
+                mpi_procs,
+                [bin_to_test, "-e", "namelist.def"])
         else:
             cmd = [bin_to_test, "-e", "namelist.def"]
         proc = subprocess.run(
@@ -1338,10 +1360,9 @@ def main():
 
     mpi_procs = os.environ.get("MVMC_MPI_PROCS")
     if mpi_procs:
-        cmd = [
-            "mpirun", "-np", mpi_procs, bin_to_test,
-            "-e", "namelist.def", "initial.def",
-        ]
+        cmd = mpi_command(
+            mpi_procs,
+            [bin_to_test, "-e", "namelist.def", "initial.def"])
     else:
         cmd = [bin_to_test, "-e", "namelist.def", "initial.def"]
     result = subprocess.call(cmd, cwd=workdir)

@@ -21,7 +21,9 @@ from nbodyg_exact_oracle import (
     occupied,
     pfaffian,
     parse_config_oracle_dump,
+    mpi_command,
     update_modpara,
+    validated_work_suffix,
     write,
     write_antiparallel_orbital,
     write_common_defs,
@@ -507,7 +509,7 @@ def main():
 
     model = sys.argv[1]
     rootdir = os.getcwd()
-    work_suffix = os.environ.get("MVMC_BF_NBODY_TEST_WORK_SUFFIX", "")
+    work_suffix = validated_work_suffix()
     workdir = os.path.join(rootdir, "work", model + work_suffix)
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
@@ -528,7 +530,9 @@ def main():
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
     mpi_procs = os.environ.get("MVMC_MPI_PROCS")
     if mpi_procs:
-        cmd = ["mpirun", "-np", mpi_procs, bin_to_test, "-e", "namelist.def", "initial.def"]
+        cmd = mpi_command(
+            mpi_procs,
+            [bin_to_test, "-e", "namelist.def", "initial.def"])
     else:
         cmd = [bin_to_test, "-e", "namelist.def", "initial.def"]
     result = subprocess.call(cmd, cwd=workdir)

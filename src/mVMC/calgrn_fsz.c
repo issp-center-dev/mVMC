@@ -118,9 +118,11 @@ static void RecordBFFSZGreenNBodyFailure(
 static void AbortBFFSZGreenNBodyFailure(
     const char *context, const BFFSZGreenNBodyFailure *failure) {
   fprintf(stderr,
-          "Error: %s failed: status=%d term=%d stage=%d detail=%d.\n",
+          "Error: %s failed: status=%d term=%d stage=%s(%d) "
+          "detail=%s(%d).\n",
           context, (int)failure->status, failure->term,
-          (int)failure->stage, failure->detail);
+          BFNBodyStageName(failure->stage), (int)failure->stage,
+          BFNBodyDetailName(failure->detail), failure->detail);
   MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 }
 
@@ -546,6 +548,7 @@ void CalculateGreenFuncBF_fsz(const double w, const double complex ip, int *eleI
 #pragma omp barrier
 #pragma omp for private(idx,k,offset,nbody,nbodyResult) schedule(dynamic)
         for(idx=0;idx<NNBodyG;idx++) {
+          thNBodyScratch.termIndex = idx;
           nbody = NBodyGN[idx];
           offset = NBodyGOffset[idx];
           for(k=0;k<nbody;k++) {

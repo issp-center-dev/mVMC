@@ -328,6 +328,16 @@ function(add_python_vmc_test_bf_nbody_dispatch test_name model)
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
 endfunction(add_python_vmc_test_bf_nbody_dispatch)
 
+function(add_python_vmc_test_bf_nbody_state test_name model)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --check-bf-nbody-state --use-nonidentity-init)
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+endfunction(add_python_vmc_test_bf_nbody_state)
+
+function(add_python_vmc_test_bf_nbody_failure test_name model mode)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --inject-bf-nbody-failure ${mode} --use-nonidentity-init)
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+endfunction(add_python_vmc_test_bf_nbody_failure)
+
 function(add_python_vmc_test_bf_real_complex_nonidentity test_name real_model complex_model omp_threads)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${real_model} --compare-real-complex-nonidentity ${complex_model} --reject-output "Error:" --reject-output "error:")
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads}")
@@ -698,6 +708,19 @@ add_python_vmc_test_bf_green2_bruteforce(BackFlow_NonIdentity_TwoBodyG_BruteForc
 add_python_vmc_test_bf_nbody_components(BackFlow_NBody_Components_NonFSZ BackFlow_Identity_Complex)
 add_python_vmc_test_bf_nbody_components_mpi_nsplit(BackFlow_NBody_Components_NonFSZ_MPI4Split2 BackFlow_Identity_Complex 4 2)
 add_python_vmc_test_bf_nbody_dispatch(BackFlow_NBody_Dispatch_NonFSZ BackFlow_Identity_Complex)
+add_python_vmc_test_bf_nbody_state(BackFlow_NBody_State_NonFSZ BackFlow_Identity_Complex)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_Workspace BackFlow_Identity_Complex workspace)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_Candidate BackFlow_Identity_Complex candidate)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_Pfaffian BackFlow_Identity_Complex pfaffian)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_InvalidStage BackFlow_Identity_Complex invalid-stage)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_InvalidTerm BackFlow_Identity_Complex invalid-term)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_InvalidStateCheck BackFlow_Identity_Complex invalid-state-check)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_MissingStage BackFlow_Identity_Complex missing-stage)
+add_python_vmc_test_bf_nbody_failure(BackFlow_NBody_Failure_MissingTerm BackFlow_Identity_Complex missing-term)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_NBody_State)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_NBody_Failure_Workspace)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_NBody_Failure_Candidate)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_NBody_Failure_Pfaffian)
 add_test(
     NAME BackFlow_Complex_CopyIndex_Private_Source
     COMMAND ${PYTHON_EXECUTABLE}

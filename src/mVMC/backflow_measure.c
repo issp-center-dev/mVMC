@@ -657,9 +657,11 @@ static void RecordBFNBodyLoopFailure(BFNBodyLoopFailure *failure, int term,
 static void AbortBFNBodyLoopFailure(const char *context,
                                     const BFNBodyLoopFailure *failure) {
   fprintf(stderr,
-          "Error: %s failed: status=%d term=%d stage=%d detail=%d.\n",
+          "Error: %s failed: status=%d term=%d stage=%s(%d) "
+          "detail=%s(%d).\n",
           context, (int)failure->status, failure->term,
-          (int)failure->stage, failure->detail);
+          BFNBodyStageName(failure->stage), (int)failure->stage,
+          BFNBodyDetailName(failure->detail), failure->detail);
   MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 }
 
@@ -855,6 +857,7 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
        */
 #pragma omp for private(idx,k,offset,nbody,result) schedule(dynamic)
       for(idx=0;idx<NNBodyInterAll;idx++) {
+        scratch.termIndex = idx;
         nbody = NBodyInterAllN[idx];
         offset = NBodyInterAllOffset[idx];
         for(k=0;k<nbody;k++) {
@@ -1218,6 +1221,7 @@ void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, 
        */
 #pragma omp for private(idx,k,offset,nbody,result) schedule(dynamic)
       for(idx=0;idx<NNBodyG;idx++) {
+        scratch.termIndex = idx;
         nbody = NBodyGN[idx];
         offset = NBodyGOffset[idx];
         for(k=0;k<nbody;k++) {

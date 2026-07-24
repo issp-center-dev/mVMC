@@ -853,8 +853,25 @@ def prepare_case(rootdir, name, include_backflow, orbital_complex_type=1,
     return workdir
 
 
+def write_nbody_failure_def(workdir):
+    with open(os.path.join(workdir, "nbodyinterall.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NNBodyInterAll   1\n")
+        fp.write("=============================================\n")
+        fp.write("======== NBodyInterAll interactions =========\n")
+        fp.write("=============================================\n")
+        fp.write(
+            "3 0 0 1 1 2 0 3 0 1 1 0 0 "
+            "2.5000000000000000e-01 1.0000000000000001e-01\n"
+        )
+    append_namelist_entry(workdir, "NBodyInterAll", "nbodyinterall.def")
+
+
 def run_nbody_dispatch_case(rootdir, case_name, mpi_procs=None):
-    if case_name != "BackFlow_FSZ_NBody_Dispatch_NonIdentity_Complex":
+    state_check = case_name == "BackFlow_FSZ_NBody_State"
+    if case_name not in (
+            "BackFlow_FSZ_NBody_Dispatch_NonIdentity_Complex",
+            "BackFlow_FSZ_NBody_State"):
         return None
     if mpi_procs:
         raise RuntimeError("BF-FSZ N-body dispatch is a single-rank test")
@@ -872,9 +889,12 @@ def run_nbody_dispatch_case(rootdir, case_name, mpi_procs=None):
     init_path = write_nonidentity_init(
         workdir, complex_orbitals=True)
     dump_name = "backflow_fsz_nbody_dispatch.dat"
+    extra_env = {"MVMC_BF_FSZ_NBODY_DISPATCH_DUMP": dump_name}
+    if state_check:
+        extra_env["MVMC_BF_NBODY_STATE_CHECK"] = "1"
     proc = run_vmc(
         rootdir, workdir, init_path=init_path,
-        extra_env={"MVMC_BF_FSZ_NBODY_DISPATCH_DUMP": dump_name})
+        extra_env=extra_env)
     if proc.returncode != 0:
         print(proc.stdout)
         return proc.returncode
@@ -898,6 +918,7 @@ def run_nbody_dispatch_case(rootdir, case_name, mpi_procs=None):
         "direct1_spin_changing",
         "direct2_spin_conserving",
         "direct2_mixed",
+        "direct2_spin_changing",
         "rebuild3",
         "rebuild4",
         "alias_rejections",
@@ -925,6 +946,7 @@ def run_nbody_dispatch_case(rootdir, case_name, mpi_procs=None):
             "direct1_spin_changing",
             "direct2_spin_conserving",
             "direct2_mixed",
+            "direct2_spin_changing",
             "rebuild3",
             "rebuild4"):
         if int(values[key]) <= 0:
@@ -951,6 +973,67 @@ def run_nbody_dispatch_case(rootdir, case_name, mpi_procs=None):
     if not math.isfinite(max_imag) or max_imag <= 1.0e-12:
         print("ERROR: BF-FSZ complex dispatch check was vacuous: "
               "max_imag={:.3e}".format(max_imag))
+        return -1
+    if state_check:
+        for key in (
+                "state_checks", "state_check_failures",
+                "stale_base_rejections"):
+            if key not in values:
+                print("ERROR: BF-FSZ N-body state dump is missing {}".format(
+                    key))
+                return -1
+        if int(values["state_checks"]) <= 0:
+            print("ERROR: BF-FSZ N-body state hook was not exercised")
+            return -1
+        if int(values["state_check_failures"]) != 0:
+            print("ERROR: BF-FSZ N-body state hook detected a mutation")
+            return -1
+        if int(values["stale_base_rejections"]) != 3:
+            print("ERROR: BF-FSZ N-body stale base was not rejected")
+            return -1
+    return 0
+
+
+def run_nbody_failure_case(rootdir, case_name, mpi_procs=None):
+    prefix = "BackFlow_FSZ_NBody_Failure_"
+    if not case_name.startswith(prefix):
+        return None
+    if mpi_procs:
+        raise RuntimeError("BF-FSZ N-body failure injection is single-rank")
+    stage = case_name[len(prefix):].lower()
+    if stage not in ("workspace", "candidate", "pfaffian"):
+        raise RuntimeError("unknown BF-FSZ N-body failure stage: {}".format(
+            stage))
+    workdir = prepare_case(
+        rootdir, case_name, include_backflow=True,
+        orbital_complex_type=1, orbital_optimize=True,
+        backflow_optimize=False)
+    update_modpara(workdir, {
+        "2Sz": "-1",
+        "NVMCCalMode": "1",
+        "NVMCSample": "8",
+        "NVMCWarmUp": "4",
+    })
+    write_nbody_failure_def(workdir)
+    init_path = write_nonidentity_init(workdir, complex_orbitals=True)
+    proc = run_vmc(
+        rootdir, workdir, init_path=init_path,
+        extra_env={
+            "MVMC_BF_NBODY_STATE_CHECK": "1",
+            "MVMC_BF_NBODY_INJECT_STAGE": stage,
+            "MVMC_BF_NBODY_INJECT_TERM": "0",
+        })
+    if proc.returncode == 0:
+        print("ERROR: BF-FSZ N-body failure injection unexpectedly succeeded")
+        return -1
+    expected = "term=0 stage={}(".format(stage)
+    diagnostics = [
+        line for line in proc.stdout.splitlines()
+        if expected in line and "detail=injected(" in line
+    ]
+    if len(diagnostics) != 1:
+        print("ERROR: BF-FSZ N-body failure diagnostic mismatch")
+        print(proc.stdout)
         return -1
     return 0
 
@@ -3324,6 +3407,10 @@ def main():
         rootdir, case_name, mpi_procs)
     if nbody_dispatch_status is not None:
         return nbody_dispatch_status
+    nbody_failure_status = run_nbody_failure_case(
+        rootdir, case_name, mpi_procs)
+    if nbody_failure_status is not None:
+        return nbody_failure_status
     bf_fsz_lanczos_status = run_bf_fsz_lanczos_case(
         rootdir, case_name, mpi_procs)
     if bf_fsz_lanczos_status is not None:

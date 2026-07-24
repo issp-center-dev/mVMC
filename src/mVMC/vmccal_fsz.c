@@ -30,6 +30,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #include <errno.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -84,17 +85,34 @@ typedef struct {
   double *doubleBase;
 } BFFSZNBodyDiagScratch;
 
+static int BFFSZNBodyDiagSizeMul(size_t left, size_t right,
+                                 size_t *value) {
+  if(value == NULL || (right != 0 && left > SIZE_MAX/right)) return -1;
+  *value = left*right;
+  return 0;
+}
+
+static void *BFFSZNBodyDiagAlloc(size_t count, size_t width) {
+  size_t bytes;
+  if(count == 0
+     || BFFSZNBodyDiagSizeMul(count, width, &bytes) != 0) {
+    return NULL;
+  }
+  return malloc(bytes);
+}
+
 static int BFFSZNBodyDiagScratchInit(BFFSZNBodyDiagScratch *owned) {
   if(owned == NULL) return -1;
   memset(owned, 0, sizeof(*owned));
   if(GetBFNBodyScratchSizes(4, 1, &owned->sizes) != BF_NBODY_OK) {
     return -1;
   }
-  owned->intBase = (int *)malloc(owned->sizes.intCount*sizeof(int));
-  owned->complexBase = (double complex *)malloc(
-      owned->sizes.complexCount*sizeof(double complex));
-  owned->doubleBase =
-      (double *)malloc(owned->sizes.doubleCount*sizeof(double));
+  owned->intBase =
+      (int *)BFFSZNBodyDiagAlloc(owned->sizes.intCount, sizeof(int));
+  owned->complexBase = (double complex *)BFFSZNBodyDiagAlloc(
+      owned->sizes.complexCount, sizeof(double complex));
+  owned->doubleBase = (double *)BFFSZNBodyDiagAlloc(
+      owned->sizes.doubleCount, sizeof(double));
   if(owned->intBase == NULL || owned->complexBase == NULL
      || owned->doubleBase == NULL) {
     return -1;
@@ -154,6 +172,7 @@ static int BFFSZNBodyDiagDirectValue(
   double complex value;
 
   if(scratch == NULL || reductionOut == NULL || valueOut == NULL
+     || !ValidateBFNBodyScratch(scratch, n, 1)
      || ReduceNBodyTerm(
             n, rsi, rsj, eleNum, Nsite2, scratch->rsi, scratch->rsj,
             scratch->maxOrder, &reduction) != 0
@@ -218,6 +237,7 @@ static int BFFSZNBodyDiagFullRebuildValue(
   int k;
 
   if(scratch == NULL || reductionOut == NULL || valueOut == NULL
+     || !ValidateBFNBodyScratch(scratch, n, 1)
      || ReduceNBodyTerm(
             n, rsi, rsj, eleNum, Nsite2, scratch->rsi, scratch->rsj,
             scratch->maxOrder, &reduction) != 0
@@ -306,12 +326,10 @@ static int dumpBFFSZNBodyDispatchCheck(
     const int *eleCfg, const int *eleNum, const int *eleProjCnt,
     const int *eleSpn, const int *eleProjBFCnt) {
   const double tolerance = 1.0e-11;
-  const size_t slaterCount =
-      (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
-  const size_t invCount =
-      (size_t)NQPFull*(size_t)Nsize*(size_t)Nsize;
-  const size_t projBFCount =
-      (size_t)16*(size_t)Nsite*(size_t)Nrange;
+  size_t slaterCount;
+  size_t invCount;
+  size_t projBFCount;
+  size_t squareCount;
   BFFSZNBodyDiagScratch evaluator;
   BFFSZNBodyDiagScratch reference;
   double complex *slaterBefore = NULL;
@@ -334,16 +352,21 @@ static int dumpBFFSZNBodyDispatchCheck(
   int direct1SpinChangingCount = 0;
   int direct2SpinConservingCount = 0;
   int direct2MixedCount = 0;
+  int direct2SpinChangingCount = 0;
   int rebuild3Count = 0;
   int rebuild4Count = 0;
   int aliasRejectionCount = 0;
   int contractFailures = 0;
   int setupFailures = 0;
+  int staleBaseRejectionCount = 0;
   int callerStateChanged = 0;
   int globalStateChanged = 0;
   double maxDirectDiff = 0.0;
   double maxRebuildDiff = 0.0;
   double maxImag = 0.0;
+  const long long stateChecksBefore = BFNBodyStateCheckCount;
+  const long long stateCheckFailuresBefore =
+      BFNBodyStateCheckFailureCount;
   FILE *fp = NULL;
   int orbital;
   int a, b, c, d;
@@ -351,26 +374,47 @@ static int dumpBFFSZNBodyDispatchCheck(
 
   memset(&evaluator, 0, sizeof(evaluator));
   memset(&reference, 0, sizeof(reference));
-  if(path == NULL || BFFSZNBodyDiagScratchInit(&evaluator) != 0
+  if(path == NULL
+     || BFFSZNBodyDiagSizeMul(
+            (size_t)Nsite2, (size_t)Nsite2, &squareCount) != 0
+     || BFFSZNBodyDiagSizeMul(
+            (size_t)NQPFull, squareCount, &slaterCount) != 0
+     || BFFSZNBodyDiagSizeMul(
+            (size_t)Nsize, (size_t)Nsize, &squareCount) != 0
+     || BFFSZNBodyDiagSizeMul(
+            (size_t)NQPFull, squareCount, &invCount) != 0
+     || BFFSZNBodyDiagSizeMul(
+            (size_t)Nsite, (size_t)Nrange, &squareCount) != 0
+     || BFFSZNBodyDiagSizeMul(
+            (size_t)16, squareCount, &projBFCount) != 0
+     || BFFSZNBodyDiagScratchInit(&evaluator) != 0
      || BFFSZNBodyDiagScratchInit(&reference) != 0) {
     goto cleanup;
   }
-  slaterBefore =
-      (double complex *)malloc(slaterCount*sizeof(double complex));
-  invBefore =
-      (double complex *)malloc(invCount*sizeof(double complex));
-  pfBefore =
-      (double complex *)malloc((size_t)NQPFull*sizeof(double complex));
-  idxBefore = (int *)malloc((size_t)Nsize*sizeof(int));
-  cfgBefore = (int *)malloc((size_t)Nsite2*sizeof(int));
-  numBefore = (int *)malloc((size_t)Nsite2*sizeof(int));
+  slaterBefore = (double complex *)BFFSZNBodyDiagAlloc(
+      slaterCount, sizeof(double complex));
+  invBefore = (double complex *)BFFSZNBodyDiagAlloc(
+      invCount, sizeof(double complex));
+  pfBefore = (double complex *)BFFSZNBodyDiagAlloc(
+      (size_t)NQPFull, sizeof(double complex));
+  idxBefore =
+      (int *)BFFSZNBodyDiagAlloc((size_t)Nsize, sizeof(int));
+  cfgBefore =
+      (int *)BFFSZNBodyDiagAlloc((size_t)Nsite2, sizeof(int));
+  numBefore =
+      (int *)BFFSZNBodyDiagAlloc((size_t)Nsite2, sizeof(int));
   if(NProj > 0) {
-    projBefore = (int *)malloc((size_t)NProj*sizeof(int));
+    projBefore =
+        (int *)BFFSZNBodyDiagAlloc((size_t)NProj, sizeof(int));
   }
-  spnBefore = (int *)malloc((size_t)Nsize*sizeof(int));
-  projBFBefore = (int *)malloc(projBFCount*sizeof(int));
-  occupied = (int *)malloc((size_t)Nsite2*sizeof(int));
-  empty = (int *)malloc((size_t)Nsite2*sizeof(int));
+  spnBefore =
+      (int *)BFFSZNBodyDiagAlloc((size_t)Nsize, sizeof(int));
+  projBFBefore =
+      (int *)BFFSZNBodyDiagAlloc(projBFCount, sizeof(int));
+  occupied =
+      (int *)BFFSZNBodyDiagAlloc((size_t)Nsite2, sizeof(int));
+  empty =
+      (int *)BFFSZNBodyDiagAlloc((size_t)Nsite2, sizeof(int));
   if(slaterBefore == NULL || invBefore == NULL || pfBefore == NULL
      || idxBefore == NULL || cfgBefore == NULL || numBefore == NULL
      || (NProj > 0 && projBefore == NULL) || spnBefore == NULL
@@ -472,7 +516,7 @@ static int dumpBFFSZNBodyDispatchCheck(
               + (rsi[1]/Nsite != rsj[1]/Nsite);
           if(spinChanges == 0) count = &direct2SpinConservingCount;
           else if(spinChanges == 1) count = &direct2MixedCount;
-          else continue;
+          else count = &direct2SpinChangingCount;
           if(BFFSZNBodyDiagDirectValue(
                  2, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
                  eleProjCnt, eleSpn, eleProjBFCnt, &reference.scratch,
@@ -603,6 +647,55 @@ static int dumpBFFSZNBodyDispatchCheck(
     }
   }
 
+  if(BFNBodyStateCheckEnabled) {
+    const int rsi[1] = {empty[0]};
+    const int rsj[1] = {occupied[0]};
+    double complex saved;
+    BFNBodyResult result;
+
+    saved = SlaterElmBF[0];
+    SlaterElmBF[0] = saved+(1.0+0.5*I);
+    result = GreenFuncNBF_fsz(
+        1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleSpn, eleProjBFCnt, &evaluator.scratch);
+    SlaterElmBF[0] = saved;
+    staleBaseRejectionCount++;
+    if(result.status != BF_NBODY_WORKSPACE_ERROR
+       || result.stage != BF_NBODY_STAGE_DISPATCH
+       || result.detail != BF_NBODY_DETAIL_BASE_STATE_STALE
+       || result.reducedOrder != 0 || cabs(result.value) != 0.0) {
+      contractFailures++;
+    }
+
+    saved = PfM[0];
+    PfM[0] = saved+(1.0+0.5*I);
+    result = GreenFuncNBF_fsz(
+        1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleSpn, eleProjBFCnt, &evaluator.scratch);
+    PfM[0] = saved;
+    staleBaseRejectionCount++;
+    if(result.status != BF_NBODY_WORKSPACE_ERROR
+       || result.stage != BF_NBODY_STAGE_DISPATCH
+       || result.detail != BF_NBODY_DETAIL_BASE_STATE_STALE
+       || result.reducedOrder != 0 || cabs(result.value) != 0.0) {
+      contractFailures++;
+    }
+
+    saved = InvM[0];
+    InvM[0] = saved+(1.0+0.5*I);
+    result = GreenFuncNBF_fsz(
+        1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleSpn, eleProjBFCnt, &evaluator.scratch);
+    InvM[0] = saved;
+    staleBaseRejectionCount++;
+    if(result.status != BF_NBODY_WORKSPACE_ERROR
+       || result.stage != BF_NBODY_STAGE_DISPATCH
+       || result.detail != BF_NBODY_DETAIL_BASE_STATE_STALE
+       || result.reducedOrder != 0 || cabs(result.value) != 0.0) {
+      contractFailures++;
+    }
+  }
+
   callerStateChanged =
       memcmp(eleIdx, idxBefore, (size_t)Nsize*sizeof(int)) != 0
       || memcmp(eleCfg, cfgBefore, (size_t)Nsite2*sizeof(int)) != 0
@@ -635,6 +728,8 @@ write_dump:
   fprintf(fp, "direct2_spin_conserving %d\n",
           direct2SpinConservingCount);
   fprintf(fp, "direct2_mixed %d\n", direct2MixedCount);
+  fprintf(fp, "direct2_spin_changing %d\n",
+          direct2SpinChangingCount);
   fprintf(fp, "rebuild3 %d\n", rebuild3Count);
   fprintf(fp, "rebuild4 %d\n", rebuild4Count);
   fprintf(fp, "alias_rejections %d\n", aliasRejectionCount);
@@ -642,10 +737,29 @@ write_dump:
   fprintf(fp, "setup_failures %d\n", setupFailures);
   fprintf(fp, "caller_state_changed %d\n", callerStateChanged);
   fprintf(fp, "global_state_changed %d\n", globalStateChanged);
+  fprintf(fp, "state_checks %lld\n",
+          BFNBodyStateCheckCount-stateChecksBefore);
+  fprintf(fp, "state_check_failures %lld\n",
+          BFNBodyStateCheckFailureCount-stateCheckFailuresBefore);
+  fprintf(fp, "stale_base_rejections %d\n",
+          staleBaseRejectionCount);
   fprintf(fp, "max_direct_diff %.17e\n", maxDirectDiff);
   fprintf(fp, "max_rebuild_diff %.17e\n", maxRebuildDiff);
   fprintf(fp, "max_imag %.17e\n", maxImag);
-  status = 0;
+  status =
+      contractFailures == 0 && setupFailures == 0
+      && callerStateChanged == 0 && globalStateChanged == 0
+      && scalarCount > 0 && zeroCount > 0 && contraction1Count > 0
+      && direct1SpinConservingCount > 0
+      && direct1SpinChangingCount > 0
+      && direct2SpinConservingCount > 0 && direct2MixedCount > 0
+      && direct2SpinChangingCount > 0
+      && rebuild3Count > 0 && rebuild4Count > 0
+      && aliasRejectionCount > 0
+      && (!BFNBodyStateCheckEnabled || staleBaseRejectionCount == 3)
+      && isfinite(maxDirectDiff) && maxDirectDiff <= tolerance
+      && isfinite(maxRebuildDiff) && maxRebuildDiff <= tolerance
+      && isfinite(maxImag) && maxImag > 1.0e-12 ? 0 : -1;
 
 cleanup:
   if(fp != NULL) fclose(fp);

@@ -102,9 +102,11 @@ static void RecordBFFSZHamiltonianNBodyFailure(
 static void AbortBFFSZHamiltonianNBodyFailure(
     const char *context, const BFFSZHamiltonianNBodyFailure *failure) {
   fprintf(stderr,
-          "Error: %s failed: status=%d term=%d stage=%d detail=%d.\n",
+          "Error: %s failed: status=%d term=%d stage=%s(%d) "
+          "detail=%s(%d).\n",
           context, (int)failure->status, failure->term,
-          (int)failure->stage, failure->detail);
+          BFNBodyStageName(failure->stage), (int)failure->stage,
+          BFNBodyDetailName(failure->detail), failure->detail);
   MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 }
 
@@ -612,6 +614,7 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
         += BFFSZC2DetailMonotonicSeconds()-termStart;
   }
   for(idx=0;idx<NNBodyInterAll;idx++) {
+    nbodyScratch.termIndex = idx;
     nbody = NBodyInterAllN[idx];
     offset = NBodyInterAllOffset[idx];
     for(k=0;k<nbody;k++) {

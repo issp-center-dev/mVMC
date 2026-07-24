@@ -21,12 +21,14 @@ typedef enum {
   BF_NBODY_STAGE_PROJECTION = 4,
   BF_NBODY_STAGE_SLATER = 5,
   BF_NBODY_STAGE_PFAFFIAN = 6,
-  BF_NBODY_STAGE_RATIO = 7
+  BF_NBODY_STAGE_RATIO = 7,
+  BF_NBODY_STAGE_WORKSPACE = 8
 } BFNBodyStage;
 
 typedef struct {
   BFNBodyStatus status;
   BFNBodyStage stage;
+  /* Interpret detail in the context of stage; numeric domains may overlap. */
   int detail;
   int reducedOrder;
   double complex value;
@@ -37,7 +39,11 @@ typedef enum {
   BF_NBODY_DETAIL_REDUCER = -1,
   BF_NBODY_DETAIL_SPIN_CHANGE = 1,
   BF_NBODY_DETAIL_BAD_ELECTRON_LABEL = 2,
-  BF_NBODY_DETAIL_LEGACY_STATE_RESTORE = 3
+  BF_NBODY_DETAIL_LEGACY_STATE_RESTORE = 3,
+  BF_NBODY_DETAIL_INJECTED = 4,
+  BF_NBODY_DETAIL_STATE_CHANGED = 5,
+  BF_NBODY_DETAIL_BASE_STATE_STALE = 6,
+  BF_NBODY_DETAIL_STATE_SNAPSHOT = 7
 } BFNBodyDetail;
 
 typedef struct {
@@ -71,6 +77,7 @@ typedef struct {
 typedef struct {
   int maxOrder;
   int useFsz;
+  int termIndex;
   int *inputRsi;
   int *inputRsj;
   int *rsi;
@@ -94,6 +101,9 @@ typedef struct {
   BFNBodyScratchSizes sizes;
 } BFNBodyScratch;
 
+const char *BFNBodyStageName(BFNBodyStage stage);
+const char *BFNBodyDetailName(int detail);
+
 typedef struct {
   int maxOrder;
   int useFsz;
@@ -114,6 +124,8 @@ int ComputeBFNBodyScratchSizes(const BFNBodyScratchDimensions *dimensions,
                                BFNBodyScratchSizes *sizes);
 int GetBFNBodyScratchSizes(int maxOrder, int useFsz,
                            BFNBodyScratchSizes *sizes);
+int ValidateBFNBodyScratch(const BFNBodyScratch *scratch, int n,
+                           int useFsz);
 int BindBFNBodyScratch(const BFNBodyScratchSizes *sizes,
                        int *intBase, size_t intCount,
                        double complex *complexBase, size_t complexCount,

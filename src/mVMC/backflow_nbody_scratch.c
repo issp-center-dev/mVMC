@@ -195,6 +195,7 @@ int BindBFNBodyScratch(const BFNBodyScratchSizes *sizes,
   memset(&value, 0, sizeof(value));
   value.maxOrder = sizes->maxOrder;
   value.useFsz = sizes->useFsz;
+  value.termIndex = -1;
 #define BF_BIND_INT(field, countField)                                         \
   do {                                                                         \
     value.field = sizes->countField == 0 ? NULL : intBase+intOffset;           \

@@ -28,9 +28,43 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  *-------------------------------------------------------------*/
 #include <time.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <limits.h>
+#include <string.h>
 #include "setmemory.h"
 #ifndef _SRC_TIME
 #define _SRC_TIME
+
+static void AbortInvalidBFNBodyEnvironment(const char *name) {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if(rank == 0) {
+    fprintf(stderr, "Error: invalid %s environment value.\n", name);
+  }
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+}
+
+static int ParseBFNBodyBooleanEnvironment(const char *name) {
+  const char *value = getenv(name);
+  if(value == NULL) return 0;
+  if(strcmp(value, "0") == 0) return 0;
+  if(strcmp(value, "1") == 0) return 1;
+  AbortInvalidBFNBodyEnvironment(name);
+  return 0;
+}
+
+static int ParseBFNBodyInjectionTerm(const char *value) {
+  char *end = NULL;
+  long parsed;
+  errno = 0;
+  parsed = strtol(value, &end, 10);
+  if(errno != 0 || end == value || *end != '\0'
+     || parsed < 0 || parsed > INT_MAX) {
+    AbortInvalidBFNBodyEnvironment("MVMC_BF_NBODY_INJECT_TERM");
+    return -1;
+  }
+  return (int)parsed;
+}
 
 void OutputTime(int step) {
   time_t tx;
@@ -267,6 +301,7 @@ void InitTimer() {
   const char *matrixFreeCheckEnv, *matrixFreeArgumentEnv, *multiMoveRowCheckEnv;
   const char *c2StateCheckEnv, *c2BufferCheckEnv, *c2ForceSectorZeroEnv;
   const char *samplingRejectCheckEnv, *c2DetailProfileEnv, *c2ReuseCensusEnv;
+  const char *nbodyInjectStageEnv, *nbodyInjectTermEnv;
   for(i=0;i<NTimer;i++) Timer[i]=0.0;
   for(i=0;i<NTimer;i++) TimerStart[i]=0.0;
   for(i=0;i<NBFProfileCounter;i++) BFProfileCounter[i]=0;
@@ -329,6 +364,32 @@ void InitTimer() {
     BFFSZC2ReuseCensusUniqueExactOrderedMoves[i] = 0;
     BFFSZC2ReuseCensusDuplicateTrueCalls[i] = 0;
     BFFSZC2ReuseCensusOverflowCalls[i] = 0;
+  }
+  BFNBodyStateCheckEnabled =
+      ParseBFNBodyBooleanEnvironment("MVMC_BF_NBODY_STATE_CHECK");
+  BFNBodyInjectStage = BF_NBODY_INJECT_NONE;
+  BFNBodyInjectTerm = -1;
+  BFNBodyStateCheckCount = 0;
+  BFNBodyStateCheckFailureCount = 0;
+  nbodyInjectStageEnv = getenv("MVMC_BF_NBODY_INJECT_STAGE");
+  nbodyInjectTermEnv = getenv("MVMC_BF_NBODY_INJECT_TERM");
+  if((nbodyInjectStageEnv == NULL) != (nbodyInjectTermEnv == NULL)) {
+    AbortInvalidBFNBodyEnvironment(
+        nbodyInjectStageEnv == NULL
+        ? "MVMC_BF_NBODY_INJECT_STAGE"
+        : "MVMC_BF_NBODY_INJECT_TERM");
+  }
+  if(nbodyInjectStageEnv != NULL) {
+    if(strcmp(nbodyInjectStageEnv, "workspace") == 0) {
+      BFNBodyInjectStage = BF_NBODY_INJECT_WORKSPACE;
+    } else if(strcmp(nbodyInjectStageEnv, "candidate") == 0) {
+      BFNBodyInjectStage = BF_NBODY_INJECT_CANDIDATE;
+    } else if(strcmp(nbodyInjectStageEnv, "pfaffian") == 0) {
+      BFNBodyInjectStage = BF_NBODY_INJECT_PFAFFIAN;
+    } else {
+      AbortInvalidBFNBodyEnvironment("MVMC_BF_NBODY_INJECT_STAGE");
+    }
+    BFNBodyInjectTerm = ParseBFNBodyInjectionTerm(nbodyInjectTermEnv);
   }
   bfProfileEnv = getenv("MVMC_BF_PROFILE");
   BFProfileEnabled = (bfProfileEnv != NULL && atoi(bfProfileEnv) != 0);

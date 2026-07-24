@@ -38,6 +38,15 @@ static int BFNBodyOracleSizeMul(size_t left, size_t right, size_t *value) {
   return 0;
 }
 
+static void *BFNBodyOracleAlloc(size_t count, size_t width) {
+  size_t bytes;
+  if(count == 0
+     || BFNBodyOracleSizeMul(count, width, &bytes) != 0) {
+    return NULL;
+  }
+  return malloc(bytes);
+}
+
 static void BFNBodyOracleClose(BFNBodyOracle *oracle) {
   if(oracle == NULL) return;
   if(oracle->stream != NULL) fclose(oracle->stream);
@@ -90,23 +99,23 @@ static int BFNBodyOracleOpen(BFNBodyOracle *oracle, int parentRank,
   oracle->slaterCount = oracle->sizes.slaterCount;
 
   oracle->intBase =
-      (int *)malloc(oracle->sizes.intCount*sizeof(int));
-  oracle->complexBase = (double complex *)malloc(
-      oracle->sizes.complexCount*sizeof(double complex));
-  oracle->doubleBase =
-      (double *)malloc(oracle->sizes.doubleCount*sizeof(double));
-  oracle->slaterBefore = (double complex *)malloc(
-      oracle->slaterCount*sizeof(double complex));
-  oracle->slaterRealBefore =
-      (double *)malloc(oracle->slaterCount*sizeof(double));
-  oracle->invBefore =
-      (double complex *)malloc(oracle->invCount*sizeof(double complex));
-  oracle->pfBefore =
-      (double complex *)malloc((size_t)NQPFull*sizeof(double complex));
-  oracle->etaBefore =
-      (double complex *)malloc(oracle->etaCount*sizeof(double complex));
+      (int *)BFNBodyOracleAlloc(oracle->sizes.intCount, sizeof(int));
+  oracle->complexBase = (double complex *)BFNBodyOracleAlloc(
+      oracle->sizes.complexCount, sizeof(double complex));
+  oracle->doubleBase = (double *)BFNBodyOracleAlloc(
+      oracle->sizes.doubleCount, sizeof(double));
+  oracle->slaterBefore = (double complex *)BFNBodyOracleAlloc(
+      oracle->slaterCount, sizeof(double complex));
+  oracle->slaterRealBefore = (double *)BFNBodyOracleAlloc(
+      oracle->slaterCount, sizeof(double));
+  oracle->invBefore = (double complex *)BFNBodyOracleAlloc(
+      oracle->invCount, sizeof(double complex));
+  oracle->pfBefore = (double complex *)BFNBodyOracleAlloc(
+      (size_t)NQPFull, sizeof(double complex));
+  oracle->etaBefore = (double complex *)BFNBodyOracleAlloc(
+      oracle->etaCount, sizeof(double complex));
   oracle->etaFlagBefore =
-      (int *)malloc(oracle->etaCount*sizeof(int));
+      (int *)BFNBodyOracleAlloc(oracle->etaCount, sizeof(int));
   if(oracle->intBase == NULL || oracle->complexBase == NULL
      || oracle->doubleBase == NULL || oracle->slaterBefore == NULL
      || oracle->slaterRealBefore == NULL || oracle->invBefore == NULL
@@ -377,6 +386,10 @@ static int BFNBodyOracleWriteRow(
   }
   if(result.status != BF_NBODY_OK
      && result.status != BF_NBODY_PHYSICAL_ZERO) {
+    return -1;
+  }
+  if(BFNBodyOracleGlobalsDiffer(oracle)) {
+    BFNBodyOracleRestoreGlobals(oracle);
     return -1;
   }
 
