@@ -9,7 +9,6 @@ import sys
 import numpy as np
 
 from nbodyg_exact_oracle import (
-    TOL,
     apply_ops,
     assert_config_close,
     config_oracle_dump_paths,
@@ -31,6 +30,8 @@ from nbodyg_exact_oracle import (
     write_nbodyg_def,
     validate_config_oracle_rows,
 )
+
+NBODYINTERALL_ENERGY_TOL = 1.2e-2
 
 
 def write_common_nbodyinterall_defs(workdir, nsite, sample_count, seed,
@@ -489,7 +490,9 @@ def parse_energy(workdir):
     return energy
 
 
-def assert_close(label, actual, expected, tol=TOL):
+def assert_close(
+    label, actual, expected, tol=NBODYINTERALL_ENERGY_TOL
+):
     diff = abs(actual - expected)
     if diff > tol:
         raise AssertionError(

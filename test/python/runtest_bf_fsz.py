@@ -3369,9 +3369,27 @@ def run_spin_changing_c2_case(rootdir, case_name, mpi_procs=None):
     return 0
 
 
-def run_c2_nonfsz_invalid_case(rootdir, case_name, mpi_procs=None):
-    if case_name != "BackFlow_InvalidTwoBodyHamiltonian_NonFSZ":
+def run_nonfsz_invalid_case(rootdir, case_name, mpi_procs=None):
+    cases = {
+        "BackFlow_InvalidTwoBodyHamiltonian_NonFSZ": (
+            {},
+            "BackFlow MVP does not support two-body Hamiltonian terms",
+            True,
+        ),
+        "BackFlow_InvalidReweight": (
+            {"reweight": "1"},
+            "BackFlow MVP does not support reweight",
+            False,
+        ),
+        "BackFlow_InvalidReweight_mpi": (
+            {"reweight": "1"},
+            "BackFlow MVP does not support reweight",
+            False,
+        ),
+    }
+    if case_name not in cases:
         return None
+    updates, expected, add_pair_hop = cases[case_name]
     refdir = os.path.join(rootdir, "data", "BackFlow_Identity_Complex")
     workdir = os.path.join(rootdir, "work", case_name)
     if os.path.exists(workdir):
@@ -3382,25 +3400,31 @@ def run_c2_nonfsz_invalid_case(rootdir, case_name, mpi_procs=None):
         if os.path.isfile(source):
             shutil.copy(source, os.path.join(workdir, filename))
     write_chain_nn_backflow(workdir, length=4, optimize=False)
-    with open(os.path.join(workdir, "pairhop.def"), "w") as fp:
-        fp.write("=============================================\n")
-        fp.write("NPairHopp          1\n")
-        fp.write("=============================================\n")
-        fp.write("====== Pair-Hopping term ====================\n")
-        fp.write("=============================================\n")
-        fp.write("    0     1          0.370000000000000\n")
-    append_namelist_entry(workdir, "PairHop", "pairhop.def")
+    update_modpara(workdir, updates)
+    if add_pair_hop:
+        with open(os.path.join(workdir, "pairhop.def"), "w") as fp:
+            fp.write("=============================================\n")
+            fp.write("NPairHopp          1\n")
+            fp.write("=============================================\n")
+            fp.write("====== Pair-Hopping term ====================\n")
+            fp.write("=============================================\n")
+            fp.write("    0     1          0.370000000000000\n")
+        append_namelist_entry(workdir, "PairHop", "pairhop.def")
     proc = run_vmc(rootdir, workdir, mpi_procs=mpi_procs)
-    expected = "BackFlow MVP does not support two-body Hamiltonian terms"
     if proc.returncode == 0:
-        print("ERROR: non-FSZ BackFlow two-body Hamiltonian unexpectedly succeeded")
+        print("ERROR: {} unexpectedly succeeded".format(case_name))
         return -1
     if expected not in proc.stdout:
-        print("ERROR: non-FSZ BackFlow two-body Hamiltonian did not report expected error")
+        print("ERROR: {} did not report expected error".format(case_name))
         print(proc.stdout)
         return -1
     if "Start: Sampling." in proc.stdout:
-        print("ERROR: non-FSZ BackFlow two-body Hamiltonian reached sampling")
+        print("ERROR: {} reached sampling".format(case_name))
+        return -1
+    if mpi_procs and "Definition files(*.def) are incomplete." in proc.stdout:
+        print("ERROR: {} stopped at the rank-0 pre-broadcast gate".format(
+            case_name
+        ))
         return -1
     return 0
 
@@ -3452,9 +3476,11 @@ def main():
     c2_profile_status = run_c2_detail_profile_case(rootdir, case_name, mpi_procs)
     if c2_profile_status is not None:
         return c2_profile_status
-    c2_invalid_status = run_c2_nonfsz_invalid_case(rootdir, case_name, mpi_procs)
-    if c2_invalid_status is not None:
-        return c2_invalid_status
+    nonfsz_invalid_status = run_nonfsz_invalid_case(
+        rootdir, case_name, mpi_procs
+    )
+    if nonfsz_invalid_status is not None:
+        return nonfsz_invalid_status
     stale_base_status = run_twobody_stale_base_case(rootdir, case_name, mpi_procs)
     if stale_base_status is not None:
         return stale_base_status

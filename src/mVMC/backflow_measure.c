@@ -656,12 +656,16 @@ static void RecordBFNBodyLoopFailure(BFNBodyLoopFailure *failure, int term,
 
 static void AbortBFNBodyLoopFailure(const char *context,
                                     const BFNBodyLoopFailure *failure) {
-  fprintf(stderr,
-          "Error: %s failed: status=%d term=%d stage=%s(%d) "
-          "detail=%s(%d).\n",
-          context, (int)failure->status, failure->term,
-          BFNBodyStageName(failure->stage), (int)failure->stage,
-          BFNBodyDetailName(failure->detail), failure->detail);
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if(rank == 0) {
+    fprintf(stderr,
+            "Error: %s failed: status=%d term=%d stage=%s(%d) "
+            "detail=%s(%d).\n",
+            context, (int)failure->status, failure->term,
+            BFNBodyStageName(failure->stage), (int)failure->stage,
+            BFNBodyDetailName(failure->detail), failure->detail);
+  }
   MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 }
 

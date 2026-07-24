@@ -18,7 +18,12 @@ from backflow_def_helper import (
 )
 
 
-TOL = 1.2e-2
+ED_BIN_COUNT = 8
+ED_ABS_TOL = 2.5e-4
+ED_REL_TOL = 2.0e-2
+ED_SE_MULTIPLIER = 3.0
+ED_MAX_REL_SE = 3.0e-2
+ED_MIN_SCALE = 1.0e-2
 CONFIG_ORACLE_TOL = 1.0e-10
 BF_NBODY_OK = 0
 BF_NBODY_PHYSICAL_ZERO = 1
@@ -275,8 +280,7 @@ def write_initial(workdir, slater_values):
     write(os.path.join(workdir, "initial.def"), " ".join(fmt(x) for x in values) + "\n")
 
 
-def write_backflow_initial(workdir, nprojbf, slater_values,
-                           projection_values=()):
+def backflow_projection_values(nprojbf):
     projbf_template = [
         0.93, 0.08, -0.05, 0.035, -0.025,
         0.015, -0.012, 0.010, -0.007, 0.005,
@@ -292,6 +296,12 @@ def write_backflow_initial(workdir, nprojbf, slater_values,
             projbf_values.append(0.001 / float(idx + 1))
     if projbf_values[0] != 0.93 or not any(value != 0.0 for value in projbf_values[1:]):
         raise AssertionError("BackFlow initial parameters are not non-identity")
+    return projbf_values
+
+
+def write_backflow_initial(workdir, nprojbf, slater_values,
+                           projection_values=()):
+    projbf_values = backflow_projection_values(nprojbf)
 
     values = [0.0] * 6
     for value in projection_values:
@@ -348,6 +358,239 @@ def enable_config_oracle_backflow(workdir, nsite, slater_values):
     if projection_value == 0.0 or definition.n_proj_bf < 2:
         raise AssertionError("configuration oracle projection is vacuous")
     return definition
+
+
+def _bf_local_states(occupation, nsite, site):
+    up = occupation[site]
+    down = occupation[site + nsite]
+    return {
+        "doublon": up * down,
+        "holon": (1 - up) * (1 - down),
+        "up": up * (1 - down),
+        "down": down * (1 - up),
+    }
+
+
+def _bf_theta_count(occupation, nsite, spin, mu, center, range_site):
+    if center == range_site:
+        return 1 if mu == 0 else 0
+    center_state = _bf_local_states(occupation, nsite, center)
+    range_state = _bf_local_states(occupation, nsite, range_site)
+    if mu == 0:
+        return 0
+    if mu == 1:
+        return center_state["doublon"] * range_state["holon"]
+    if spin == 0:
+        if mu == 2:
+            return center_state["up"] * range_state["down"]
+        if mu == 3:
+            return (
+                center_state["doublon"] * range_state["down"]
+                + center_state["up"] * range_state["holon"]
+            )
+    else:
+        if mu == 2:
+            return center_state["down"] * range_state["up"]
+        if mu == 3:
+            return (
+                center_state["doublon"] * range_state["up"]
+                + center_state["down"] * range_state["holon"]
+            )
+    raise AssertionError("invalid independent BackFlow theta channel")
+
+
+def _bf_range_sites(nsite, center):
+    return (center, (center - 1) % nsite, (center + 1) % nsite)
+
+
+def _bf_sub_index(mu, center, range_site):
+    shell = 0 if center == range_site else 1
+    raw = 4 * shell + mu
+    index = raw - 3 - shell
+    if raw % 4 == 0:
+        index = -1
+    if raw == 0:
+        index = 0
+    return index
+
+
+def _bf_parameter_index(left, right, width=4):
+    if left > right:
+        left, right = right, left
+    if left < 0 or right >= width:
+        raise AssertionError("independent BackFlow parameter index is invalid")
+    return left * width - left * (left - 1) // 2 + right - left
+
+
+def _independent_bf_directed(
+    context, occupation, site_i, spin_i, site_j, spin_j, projbf
+):
+    nsite = context["nsite"]
+    orbital = context["orbital"]
+    value = 0.0 + 0.0j
+    for mu in range(4):
+        for nu in range(4):
+            if mu == 0 and nu == 0:
+                continue
+            for range_i in _bf_range_sites(nsite, site_i):
+                count_i = _bf_theta_count(
+                    occupation, nsite, spin_i, mu, site_i, range_i
+                )
+                if count_i == 0:
+                    continue
+                sub_i = _bf_sub_index(mu, site_i, range_i)
+                if sub_i < 0:
+                    continue
+                for range_j in _bf_range_sites(nsite, site_j):
+                    count_j = _bf_theta_count(
+                        occupation, nsite, spin_j, nu, site_j, range_j
+                    )
+                    if count_j == 0:
+                        continue
+                    sub_j = _bf_sub_index(nu, site_j, range_j)
+                    if sub_j < 0:
+                        continue
+                    parameter = projbf[
+                        _bf_parameter_index(sub_i, sub_j)
+                    ]
+                    value -= (
+                        parameter
+                        * count_i
+                        * count_j
+                        * orbital[
+                            range_i + spin_i * nsite,
+                            range_j + spin_j * nsite,
+                        ]
+                    )
+
+    if context["use_fsz"]:
+        eta_active = any(
+            _bf_theta_count(
+                occupation, nsite, spin, 1, site, range_site
+            )
+            for site, spin in ((site_i, spin_i), (site_j, spin_j))
+            for range_site in _bf_range_sites(nsite, site)
+        )
+    else:
+        # The non-FSZ implementation's eta gate is defined by its up-spin
+        # doublon-holon channel for both site endpoints.
+        eta_active = any(
+            _bf_theta_count(
+                occupation, nsite, 0, 1, site, range_site
+            )
+            for site in (site_i, site_j)
+            for range_site in _bf_range_sites(nsite, site)
+        )
+    eta = projbf[0] if eta_active else 1.0
+    value += (
+        eta
+        * orbital[
+            site_i + spin_i * nsite,
+            site_j + spin_j * nsite,
+        ]
+    )
+    return value
+
+
+def _independent_bf_matrix(context, occupation, projbf):
+    nsite = context["nsite"]
+    matrix = np.zeros((2 * nsite, 2 * nsite), dtype=complex)
+    if context["use_fsz"]:
+        for orbital_i in range(2 * nsite):
+            site_i = orbital_i % nsite
+            spin_i = orbital_i // nsite
+            for orbital_j in range(orbital_i + 1, 2 * nsite):
+                site_j = orbital_j % nsite
+                spin_j = orbital_j // nsite
+                value = _independent_bf_directed(
+                    context,
+                    occupation,
+                    site_i,
+                    spin_i,
+                    site_j,
+                    spin_j,
+                    projbf,
+                ) - _independent_bf_directed(
+                    context,
+                    occupation,
+                    site_j,
+                    spin_j,
+                    site_i,
+                    spin_i,
+                    projbf,
+                )
+                matrix[orbital_i, orbital_j] = value
+                matrix[orbital_j, orbital_i] = -value
+    else:
+        for site_i in range(nsite):
+            for site_j in range(nsite):
+                value = _independent_bf_directed(
+                    context,
+                    occupation,
+                    site_i,
+                    0,
+                    site_j,
+                    1,
+                    projbf,
+                )
+                matrix[site_i, nsite + site_j] = value
+                matrix[nsite + site_j, site_i] = -value
+    return matrix
+
+
+def _independent_bf_amplitude(context, occupation, identity=False):
+    key = (tuple(occupation), identity)
+    if key in context["amplitude_cache"]:
+        return context["amplitude_cache"][key]
+    nsite = context["nsite"]
+    if len(occupation) != 2 * nsite:
+        raise AssertionError("independent BackFlow occupation width mismatch")
+    if sum(occupation) != context["ncond"]:
+        raise AssertionError("independent BackFlow particle count mismatch")
+    projbf = (
+        [1.0] + [0.0] * (len(context["projbf"]) - 1)
+        if identity
+        else context["projbf"]
+    )
+    matrix = _independent_bf_matrix(context, occupation, projbf)
+    occupied_orbitals = [
+        orbital for orbital, value in enumerate(occupation) if value
+    ]
+    submatrix = [
+        [matrix[row, column] for column in occupied_orbitals]
+        for row in occupied_orbitals
+    ]
+    doublons = sum(
+        occupation[site] * occupation[site + nsite]
+        for site in range(nsite)
+    )
+    amplitude = (
+        math.exp(context["gutzwiller"] * doublons)
+        * pfaffian(submatrix)
+    )
+    context["amplitude_cache"][key] = amplitude
+    return amplitude
+
+
+def independent_bf_exact_context(
+    nsite, orbital, projbf, use_fsz, gutzwiller=0.21, ncond=6
+):
+    orbital = np.array(orbital, dtype=complex, copy=True)
+    if orbital.shape != (2 * nsite, 2 * nsite):
+        raise AssertionError("independent BackFlow orbital matrix shape mismatch")
+    if projbf[0] == 1.0 and not any(projbf[1:]):
+        raise AssertionError("independent BackFlow fixture is identity")
+    if gutzwiller == 0.0:
+        raise AssertionError("independent BackFlow Gutzwiller fixture is vacuous")
+    return {
+        "nsite": nsite,
+        "ncond": ncond,
+        "orbital": orbital,
+        "projbf": tuple(projbf),
+        "use_fsz": use_fsz,
+        "gutzwiller": gutzwiller,
+        "amplitude_cache": {},
+    }
 
 
 def write_antiparallel_orbital(workdir, f_matrix):
@@ -453,7 +696,15 @@ def complex_n3_case(workdir):
             slater_elm[i, nsite + j] = f_matrix[i, j]
             slater_elm[nsite + j, i] = -f_matrix[i, j]
 
-    write_common_defs(workdir, nsite, 8000, 13579, "Orbital", "orbitalidx.def")
+    write_common_defs(
+        workdir,
+        nsite,
+        8000,
+        13579,
+        "Orbital",
+        "orbitalidx.def",
+        data_qty=ED_BIN_COUNT,
+    )
     write_nbodyg_def(workdir, terms)
     write_antiparallel_orbital(workdir, f_matrix)
     return nsite, 3, 3, slater_elm, terms
@@ -476,7 +727,15 @@ def fsz_n3_case(workdir):
             slater_elm[i, j] = real + 1j * imag
             slater_elm[j, i] = -slater_elm[i, j]
 
-    write_common_defs(workdir, nsite, 8000, 24680, "OrbitalGeneral", "orbitalidxgen.def")
+    write_common_defs(
+        workdir,
+        nsite,
+        8000,
+        24680,
+        "OrbitalGeneral",
+        "orbitalidxgen.def",
+        data_qty=ED_BIN_COUNT,
+    )
     write_nbodyg_def(workdir, terms)
     write_general_orbital(workdir, slater_elm)
     return nsite, 3, 3, slater_elm, terms
@@ -728,6 +987,62 @@ def backflow_n3_config_oracle_case(workdir):
     }
 
 
+def backflow_n2_independent_exact_case(workdir):
+    nsite = 6
+    terms = [
+        (2, (0, 0, 2, 0, 5, 1, 1, 1)),
+        (2, (4, 0, 0, 0, 2, 1, 5, 1)),
+        (2, (1, 0, 3, 0, 0, 1, 4, 1)),
+    ]
+    categories = ["effective2"] * len(terms)
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 512, 90437, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    definition = enable_config_oracle_backflow(
+        workdir, nsite, slater_values
+    )
+    orbital = np.zeros((2 * nsite, 2 * nsite), dtype=complex)
+    for site_i in range(nsite):
+        for site_j in range(nsite):
+            orbital[site_i, nsite + site_j] = f_matrix[site_i, site_j]
+            orbital[nsite + site_j, site_i] = -f_matrix[site_i, site_j]
+    exact_context = independent_bf_exact_context(
+        nsite,
+        orbital,
+        backflow_projection_values(definition.n_proj_bf),
+        use_fsz=False,
+    )
+    return nsite, terms, categories, {"effective2"}, exact_context
+
+
+def backflow_fsz_n2_independent_exact_case(workdir):
+    nsite = 6
+    terms = [
+        (2, (0, 0, 2, 1, 3, 1, 1, 1)),
+        (2, (4, 1, 0, 0, 1, 0, 3, 1)),
+        (2, (2, 0, 5, 1, 0, 1, 4, 0)),
+    ]
+    categories = ["effective2"] * len(terms)
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 512, 90438, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    definition = enable_config_oracle_backflow(
+        workdir, nsite, slater_values
+    )
+    update_modpara(workdir, "2Sz", -1)
+    exact_context = independent_bf_exact_context(
+        nsite,
+        slater_elm / 2.0,
+        backflow_projection_values(definition.n_proj_bf),
+        use_fsz=True,
+    )
+    return nsite, terms, categories, {"effective2"}, exact_context
+
+
 def backflow_n4_config_oracle_case(workdir):
     nsite = 6
     terms = [
@@ -796,6 +1111,45 @@ def backflow_fsz_n4_config_oracle_case(workdir):
     return nsite, terms, categories, {"full4"}
 
 
+def backflow_fsz_n5_config_oracle_case(workdir):
+    nsite = 6
+    orbital_count = 2 * nsite
+    terms = []
+    for shift in range(6):
+        annihilated = [
+            (shift + offset) % orbital_count for offset in range(5)
+        ]
+        created = [
+            (shift + 5 + offset) % orbital_count for offset in range(5)
+        ]
+        if len(set(annihilated + created)) != 10:
+            raise AssertionError("full N=5 fixture has overlapping orbitals")
+        factors = []
+        for created_orbital, annihilated_orbital in zip(
+            created, annihilated
+        ):
+            factors.extend(
+                (
+                    created_orbital % nsite,
+                    created_orbital // nsite,
+                    annihilated_orbital % nsite,
+                    annihilated_orbital // nsite,
+                )
+            )
+        terms.append((5, tuple(factors)))
+
+    categories = ["full5"] * len(terms)
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 4096, 90439, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return nsite, terms, categories, {"full5"}
+
+
 def backflow_fsz_multi_qp_config_oracle_case(workdir):
     nsite = 6
     terms = [
@@ -838,12 +1192,18 @@ GENERATED_CHECK_CASES = {
 CONFIG_ORACLE_CASES = {
     "BackFlow_NBodyG_NonIdentity_N3_ConfigOracle":
         backflow_n3_config_oracle_case,
+    "BackFlow_NBodyG_EffectiveN2_IndependentExactOracle":
+        backflow_n2_independent_exact_case,
     "BackFlow_NBodyG_NonIdentity_N4_ConfigOracle":
         backflow_n4_config_oracle_case,
     "BackFlow_FSZ_NBodyG_SpinChanging_N3_ConfigOracle":
         backflow_fsz_n3_config_oracle_case,
+    "BackFlow_FSZ_NBodyG_EffectiveN2_IndependentExactOracle":
+        backflow_fsz_n2_independent_exact_case,
     "BackFlow_FSZ_NBodyG_SpinChanging_N4_ConfigOracle":
         backflow_fsz_n4_config_oracle_case,
+    "BackFlow_FSZ_NBodyG_SpinChanging_N5_ConfigOracle":
+        backflow_fsz_n5_config_oracle_case,
     "BackFlow_FSZ_NBody_MultiQP_ConfigOracle":
         backflow_fsz_multi_qp_config_oracle_case,
 }
@@ -884,17 +1244,53 @@ def parse_nbodyg_output(path):
     return rows
 
 
-def assert_close(label, actual, expected):
+def complex_mean_and_standard_error(values):
+    if len(values) < 2:
+        raise AssertionError("ED comparison needs at least two measurement bins")
+    mean = sum(values, 0.0 + 0.0j) / float(len(values))
+    standard_error = math.sqrt(
+        sum(abs(value - mean) ** 2 for value in values)
+        / float(len(values) * (len(values) - 1))
+    )
+    return mean, standard_error
+
+
+def assert_close(label, actual, expected, standard_error):
     diff = abs(actual - expected)
-    if diff > TOL:
+    scale = max(abs(expected), ED_MIN_SCALE)
+    max_standard_error = ED_MAX_REL_SE * scale
+    if standard_error > max_standard_error:
         raise AssertionError(
-            "{} mismatch: actual={} expected={} diff={} tol={}".format(
-                label, actual, expected, diff, TOL
+            "{} is too noisy: se={} max_se={}".format(
+                label, standard_error, max_standard_error
             )
         )
+    tolerance = (
+        ED_ABS_TOL
+        + ED_REL_TOL * abs(expected)
+        + ED_SE_MULTIPLIER * standard_error
+    )
+    if diff > tolerance:
+        raise AssertionError(
+            "{} mismatch: actual={} expected={} diff={} tol={} "
+            "(abs={} rel={} se={}*{})".format(
+                label,
+                actual,
+                expected,
+                diff,
+                tolerance,
+                ED_ABS_TOL,
+                ED_REL_TOL,
+                standard_error,
+                ED_SE_MULTIPLIER,
+            )
+        )
+    return tolerance
 
 
-def assert_nbodyg_outputs(workdir, terms, bin_count, require_nonzero=False):
+def assert_nbodyg_outputs(
+    workdir, terms, bin_count, require_nonzero=False, require_n_ge_3=True
+):
     found_n_ge_3 = 0
     max_abs_value = 0.0
     for idx in range(1, bin_count + 1):
@@ -922,7 +1318,7 @@ def assert_nbodyg_outputs(workdir, terms, bin_count, require_nonzero=False):
     extra_path = os.path.join(workdir, "output", "zvo_NBodyG_{:03d}.dat".format(bin_count + 1))
     if os.path.exists(extra_path):
         raise AssertionError("unexpected extra NBodyG output: {}".format(extra_path))
-    if found_n_ge_3 == 0:
+    if require_n_ge_3 and found_n_ge_3 == 0:
         raise AssertionError("generated NBodyG check did not exercise any N>=3 term")
     if require_nonzero and max_abs_value <= 1.0e-12:
         raise AssertionError("generated NBodyG output is vacuous")
@@ -1140,6 +1536,7 @@ def validate_config_oracle_rows(
                 "effective2": 2,
                 "full3": 3,
                 "full4": 4,
+                "full5": 5,
             }.get(category)
             if (
                 expected_reduced_order is not None
@@ -1225,6 +1622,112 @@ def validate_config_oracle_rows(
     return production_by_sample, expected_by_sample, values_by_term
 
 
+def validate_independent_effective_n2(rows, nsite, terms, context):
+    checked = 0
+    projection_changes = 0
+    backflow_changes = 0
+    max_real = 0.0
+    max_imag = 0.0
+
+    for row in rows:
+        term_idx = row["term"]
+        if term_idx < 0 or term_idx >= len(terms):
+            raise AssertionError("independent N=2 term index out of range")
+        nbody, factors = terms[term_idx]
+        if nbody != 2 or row["n"] != 2:
+            raise AssertionError(
+                "independent exact oracle must exercise effective N=2"
+            )
+        base_state = _state_from_occupation(row["base_occ"])
+        applied = apply_ops(base_state, nbody_ops(nsite, factors))
+        if applied is None:
+            continue
+        if row["reduced_order"] != 2:
+            raise AssertionError(
+                "independent exact oracle reduced order mismatch"
+            )
+        target_state, fermion_sign = applied
+        expected_target = tuple(
+            1 if occupied(target_state, orbital) else 0
+            for orbital in range(2 * nsite)
+        )
+        if row["target_valid"] != 1 or row["target_occ"] != expected_target:
+            raise AssertionError(
+                "independent exact oracle target occupation mismatch"
+            )
+
+        base_amplitude = _independent_bf_amplitude(
+            context, row["base_occ"]
+        )
+        target_amplitude = _independent_bf_amplitude(
+            context, row["target_occ"]
+        )
+        if abs(base_amplitude) <= 1.0e-14:
+            raise AssertionError(
+                "independent exact oracle base amplitude is singular"
+            )
+        exact_value = fermion_sign * np.conj(
+            target_amplitude / base_amplitude
+        )
+        assert_config_close(
+            "independent effective N=2 exact value",
+            row["value"],
+            exact_value,
+        )
+        checked += 1
+        max_real = max(max_real, abs(exact_value.real))
+        max_imag = max(max_imag, abs(exact_value.imag))
+
+        base_doublons = sum(
+            row["base_occ"][site] * row["base_occ"][site + nsite]
+            for site in range(nsite)
+        )
+        target_doublons = sum(
+            row["target_occ"][site] * row["target_occ"][site + nsite]
+            for site in range(nsite)
+        )
+        if base_doublons != target_doublons:
+            projection_changes += 1
+
+        identity_base = _independent_bf_amplitude(
+            context, row["base_occ"], identity=True
+        )
+        identity_target = _independent_bf_amplitude(
+            context, row["target_occ"], identity=True
+        )
+        if abs(identity_base) > 1.0e-14:
+            identity_value = fermion_sign * np.conj(
+                identity_target / identity_base
+            )
+            if abs(exact_value - identity_value) > (
+                1.0e-8 * (1.0 + abs(exact_value))
+            ):
+                backflow_changes += 1
+
+    if checked < len(terms):
+        raise AssertionError(
+            "independent exact oracle checked too few nonzero actions: "
+            "{}".format(checked)
+        )
+    if projection_changes == 0:
+        raise AssertionError(
+            "independent exact oracle did not exercise a Gutzwiller change"
+        )
+    if backflow_changes == 0:
+        raise AssertionError(
+            "independent exact oracle is indistinguishable from identity BF"
+        )
+    if max_real <= 1.0e-8 or max_imag <= 1.0e-8:
+        raise AssertionError(
+            "independent exact oracle did not exercise complex values"
+        )
+    return {
+        "checked": checked,
+        "projection_changes": projection_changes,
+        "backflow_changes": backflow_changes,
+    }
+
+
 def config_oracle_dump_paths(workdir):
     dump_name = os.environ.get("MVMC_BF_NBODY_ORACLE_DUMP")
     if not dump_name or dump_name == "0":
@@ -1297,6 +1800,7 @@ def main():
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
+    exact_context = None
 
     if model in INVALID_CASES:
         INVALID_CASES[model](workdir)
@@ -1310,14 +1814,15 @@ def main():
             raise AssertionError("oracle terms do not exercise a nonzero real component")
         if max(abs(x.imag) for x in expected) < 1.0e-3:
             raise AssertionError("oracle terms do not exercise a nonzero imaginary component")
-        bin_count = 1
+        bin_count = ED_BIN_COUNT
     elif model in GENERATED_CHECK_CASES:
         terms, bin_count = GENERATED_CHECK_CASES[model](workdir)
         expected = None
     else:
-        nsite, terms, categories, required_categories = (
-            CONFIG_ORACLE_CASES[model](workdir)
-        )
+        case = CONFIG_ORACLE_CASES[model](workdir)
+        nsite, terms, categories, required_categories = case[:4]
+        if len(case) == 5:
+            exact_context = case[4]
         bin_count = 1
         expected = None
 
@@ -1383,7 +1888,22 @@ def main():
                 required_categories,
             )
         )
-        assert_nbodyg_outputs(workdir, terms, bin_count, require_nonzero=True)
+        if exact_context is not None:
+            independent_coverage = validate_independent_effective_n2(
+                rows, nsite, terms, exact_context
+            )
+            print(
+                "{} independent exact checks: {}".format(
+                    model, independent_coverage
+                )
+            )
+        assert_nbodyg_outputs(
+            workdir,
+            terms,
+            bin_count,
+            require_nonzero=True,
+            require_n_ge_3=exact_context is None,
+        )
         output_rows = parse_nbodyg_output(
             os.path.join(workdir, "output", "zvo_NBodyG_001.dat")
         )
@@ -1410,16 +1930,42 @@ def main():
         print("{} generated NBodyG check passed".format(model))
         return 0
 
-    rows = parse_nbodyg_output(os.path.join(workdir, "output", "zvo_NBodyG_001.dat"))
-    if len(rows) != len(terms):
-        raise AssertionError("NBodyG row count mismatch: output={} expected={}".format(len(rows), len(terms)))
+    assert_nbodyg_outputs(workdir, terms, bin_count)
+    values_by_term = [[] for unused_term in terms]
+    for bin_idx in range(1, bin_count + 1):
+        rows = parse_nbodyg_output(
+            os.path.join(
+                workdir,
+                "output",
+                "zvo_NBodyG_{:03d}.dat".format(bin_idx),
+            )
+        )
+        for term_idx, (nbody, factors, value) in enumerate(rows):
+            if (nbody, factors) != terms[term_idx]:
+                raise AssertionError(
+                    "NBodyG bin {} term {} does not preserve input order".format(
+                        bin_idx, term_idx
+                    )
+                )
+            values_by_term[term_idx].append(value)
 
-    for idx, ((nbody, factors, actual), term, ref) in enumerate(zip(rows, terms, expected)):
-        if (nbody, factors) != term:
-            raise AssertionError("NBodyG term {} does not preserve input order".format(idx))
-        if not (math.isfinite(actual.real) and math.isfinite(actual.imag)):
-            raise AssertionError("NBodyG oracle row {} is not finite: {}".format(idx, actual))
-        assert_close("NBodyG exact oracle row {}".format(idx), actual, ref)
+    for term_idx, (values, ref) in enumerate(zip(values_by_term, expected)):
+        actual, standard_error = complex_mean_and_standard_error(values)
+        tolerance = assert_close(
+            "NBodyG exact oracle row {}".format(term_idx),
+            actual,
+            ref,
+            standard_error,
+        )
+        print(
+            "{} ED row {}: diff={} se={} tol={}".format(
+                model,
+                term_idx,
+                abs(actual - ref),
+                standard_error,
+                tolerance,
+            )
+        )
     print("{} exact N=3 oracle passed".format(model))
     return 0
 

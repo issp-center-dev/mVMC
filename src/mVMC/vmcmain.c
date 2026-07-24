@@ -330,6 +330,11 @@ int main(int argc, char* argv[])
   FreeMemoryDef();
   if(rank0==0) fprintf(stdout,"End: Free Memory.\n");
 
+#ifdef _mpi_use
+  MPI_Comm_free(&comm2);
+  MPI_Comm_free(&comm1);
+#endif
+  MPI_Comm_free(&comm0);
   MPI_Finalize();
   if(rank0==0) fprintf(stdout,"Finish calculation.\n");
 
