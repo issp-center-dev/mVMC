@@ -660,67 +660,84 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
 }
 
 
-void MakeSlaterElmBF_fcmp(const int *eleNum, const int *eleProjBFCnt) {
+static void MakeSlaterElmBF_fcmp_qp_to(double complex *sltElmBF,
+                                       const int qpidx,
+                                       const int updateEta,
+                                       const int *eleProjBFCnt) {
   int icount, jcount;
-  //double eta;
   int ri,tri,rsi0,rsi1;
   int rj,trj,rsj0,rsj1;
-  int qpidx,mpidx,spidx;
+  int mpidx,spidx;
   double complex cs,cc,ss;
   double complex slt_ij,slt_ji;
   int *xqp;
   double complex *sltE,*sltE_i0,*sltE_i1;
 
+  mpidx = qpidx / NSPGaussLeg;
+  spidx = qpidx % NSPGaussLeg;
+
+  xqp = QPTrans[mpidx];
+  cs = SPGLCosSin[spidx];
+  cc = SPGLCosCos[spidx];
+  ss = SPGLSinSin[spidx];
+
+  sltE = sltElmBF + qpidx*Nsite2*Nsite2;
+
+  for(ri=0;ri<Nsite;ri++) {
+    tri = xqp[ri];
+    rsi0 = ri;
+    rsi1 = ri+Nsite;
+    sltE_i0 = sltE + rsi0*Nsite2;
+    sltE_i1 = sltE + rsi1*Nsite2;
+
+    for(rj=0;rj<Nsite;rj++) {
+      trj = xqp[rj];
+      rsj0 = rj;
+      rsj1 = rj+Nsite;
+
+      /* backflow correlation factor */
+      SubSlaterElmBF_fcmp(tri,trj,&slt_ij,&icount,&slt_ji,&jcount,eleProjBFCnt);
+
+      if(updateEta) {
+        if(icount == 0){eta[tri][trj] = 1.0;  etaFlag[tri][trj]=0;}
+        else{eta[tri][trj] = creal(ProjBF[0]); etaFlag[tri][trj]=1;}
+
+        if(jcount == 0){eta[trj][tri] = 1.0; etaFlag[trj][tri]=0;}
+        else{eta[trj][tri] = creal(ProjBF[0]); etaFlag[trj][tri]=1;}
+      }
+
+      sltE_i0[rsj0] = -(slt_ij - slt_ji)*cs;
+      sltE_i0[rsj1] = slt_ij*cc + slt_ji*ss;
+      sltE_i1[rsj0] = -slt_ij*ss - slt_ji*cc;
+      sltE_i1[rsj1] = (slt_ij - slt_ji)*cs;
+    }
+  }
+}
+
+void MakeSlaterElmBF_fcmp(const int *eleNum, const int *eleProjBFCnt) {
+  int qpidx;
+
+  (void)eleNum;
 #pragma omp parallel for default(shared)        \
-    private(qpidx,mpidx,spidx,xqp,cs,cc,ss,sltE,  \
-            icount,jcount,    \
-            ri,tri,rsi0,rsi1,sltE_i0,sltE_i1,     \
-            rj,trj,rsj0,rsj1,slt_ij,slt_ji)
+    private(qpidx)
 #pragma loop noalias
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
-    mpidx = qpidx / NSPGaussLeg;
-    spidx = qpidx % NSPGaussLeg;
-
-    xqp = QPTrans[mpidx];
-    cs = SPGLCosSin[spidx];
-    cc = SPGLCosCos[spidx];
-    ss = SPGLSinSin[spidx];
-
-    sltE = SlaterElmBF + qpidx*Nsite2*Nsite2;
-
-    for(ri=0;ri<Nsite;ri++) {
-      tri = xqp[ri];
-      rsi0 = ri;
-      rsi1 = ri+Nsite;
-      sltE_i0 = sltE + rsi0*Nsite2;
-      sltE_i1 = sltE + rsi1*Nsite2;
-
-      for(rj=0;rj<Nsite;rj++) {
-        trj = xqp[rj];
-        rsj0 = rj;
-        rsj1 = rj+Nsite;
-
-        /* backflow correlation factor */
-        SubSlaterElmBF_fcmp(tri,trj,&slt_ij,&icount,&slt_ji,&jcount,eleProjBFCnt);
-        //printf("icount=%d, slt_ij=%.2e\n",icount,slt_ij);
-
-        if(qpidx == 0) {
-          if(icount == 0){eta[tri][trj] = 1.0;  etaFlag[tri][trj]=0;}
-          else{eta[tri][trj] = creal(ProjBF[0]); etaFlag[tri][trj]=1;}
-
-          if(jcount == 0){eta[trj][tri] = 1.0; etaFlag[trj][tri]=0;}
-          else{eta[trj][tri] = creal(ProjBF[0]); etaFlag[trj][tri]=1;}
-        }
-
-        sltE_i0[rsj0] = -(slt_ij - slt_ji)*cs;
-        sltE_i0[rsj1] = slt_ij*cc + slt_ji*ss;
-        sltE_i1[rsj0] = -slt_ij*ss - slt_ji*cc;
-        sltE_i1[rsj1] = (slt_ij - slt_ji)*cs;
-      }
-    }
+    MakeSlaterElmBF_fcmp_qp_to(SlaterElmBF, qpidx, qpidx == 0,
+                               eleProjBFCnt);
   }
 
   return;
+}
+
+void MakeSlaterElmBF_fcmp_to_serial(double complex *sltElmBF,
+                                    const int *eleNum,
+                                    const int *eleProjBFCnt) {
+  int qpidx;
+
+  (void)eleNum;
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    MakeSlaterElmBF_fcmp_qp_to(sltElmBF, qpidx, 0, eleProjBFCnt);
+  }
 }
 
 void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, int *ijcount, double complex* slt_ji, int *jicount, const int *eleProjBFCnt){

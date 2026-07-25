@@ -96,7 +96,7 @@ void RequestWorkSpaceInt(int n) {
 }
 int* GetWorkSpaceInt(int n) {
   int *p=WorkSpaceIntNow;
-  WorkSpaceIntNow += n;
+  if(n>0) WorkSpaceIntNow += n;
   return p;
 }
 void ReleaseWorkSpaceInt() {
@@ -117,7 +117,7 @@ void RequestWorkSpaceDouble(int n) {
 }
 double* GetWorkSpaceDouble(int n) {
   double *p=WorkSpaceDoubleNow;
-  WorkSpaceDoubleNow += n;
+  if(n>0) WorkSpaceDoubleNow += n;
   return p;
 }
 void ReleaseWorkSpaceDouble() {
@@ -137,7 +137,7 @@ void RequestWorkSpaceComplex(int n) {
 }
 double complex * GetWorkSpaceComplex(int n) {
   double complex *p=WorkSpaceComplexNow;
-  WorkSpaceComplexNow += n;
+  if(n>0) WorkSpaceComplexNow += n;
   return p;
 }
 void ReleaseWorkSpaceComplex() {
@@ -167,7 +167,7 @@ int* GetWorkSpaceThreadInt(int n) {
   /* This function should be called "in" an openMP parallel region. */
   int i = omp_get_thread_num();
   int *p = WorkSpaceThreadIntNow[i];
-  WorkSpaceThreadIntNow[i] += n;
+  if(n>0) WorkSpaceThreadIntNow[i] += n;
   return p;
 }
 void ReleaseWorkSpaceThreadInt() {
@@ -200,7 +200,7 @@ double* GetWorkSpaceThreadDouble(int n) {
   /* This function should be called "in" an openMP parallel region. */
   int i = omp_get_thread_num();
   double *p = WorkSpaceThreadDoubleNow[i];
-  WorkSpaceThreadDoubleNow[i] += n;
+  if(n>0) WorkSpaceThreadDoubleNow[i] += n;
   return p;
 }
 void ReleaseWorkSpaceThreadDouble() {
@@ -233,7 +233,7 @@ double complex* GetWorkSpaceThreadComplex(int n) {
   /* This function should be called "in" an openMP parallel region. */
   int i = omp_get_thread_num();
   double complex *p = WorkSpaceThreadComplexNow[i];
-  WorkSpaceThreadComplexNow[i] += n;
+  if(n>0) WorkSpaceThreadComplexNow[i] += n;
   return p;
 }
 void ReleaseWorkSpaceThreadComplex() {

@@ -1,16 +1,53 @@
 from __future__ import print_function
 
+import glob
 import itertools
 import math
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
 
 import numpy as np
 
+from backflow_def_helper import (
+    build_chain_nn_backflow,
+    write_chain_nn_backflow,
+)
 
-TOL = 1.2e-2
+
+ED_BIN_COUNT = 8
+ED_ABS_TOL = 2.5e-4
+ED_REL_TOL = 2.0e-2
+ED_SE_MULTIPLIER = 3.0
+ED_MAX_REL_SE = 3.0e-2
+ED_MIN_SCALE = 1.0e-2
+CONFIG_ORACLE_TOL = 1.0e-10
+BF_NBODY_OK = 0
+BF_NBODY_PHYSICAL_ZERO = 1
+
+
+def validated_work_suffix():
+    suffix = os.environ.get("MVMC_BF_NBODY_TEST_WORK_SUFFIX", "")
+    if suffix and re.fullmatch(r"_[A-Za-z0-9_.-]+", suffix) is None:
+        raise ValueError("invalid MVMC_BF_NBODY_TEST_WORK_SUFFIX")
+    return suffix
+
+
+def mpi_command(mpi_procs, command):
+    configured = os.environ.get("MVMC_MPIEXEC")
+    if configured:
+        launcher = shlex.split(configured)
+    else:
+        executable = shutil.which("mpiexec") or shutil.which("mpirun")
+        if executable is None:
+            raise RuntimeError("MPI launcher was not found")
+        launcher = [executable]
+    if not launcher:
+        raise ValueError("MVMC_MPIEXEC must name an MPI launcher")
+    return launcher + ["-np", str(mpi_procs)] + command
 
 
 def pfaffian(mat):
@@ -243,6 +280,319 @@ def write_initial(workdir, slater_values):
     write(os.path.join(workdir, "initial.def"), " ".join(fmt(x) for x in values) + "\n")
 
 
+def backflow_projection_values(nprojbf):
+    projbf_template = [
+        0.93, 0.08, -0.05, 0.035, -0.025,
+        0.015, -0.012, 0.010, -0.007, 0.005,
+    ]
+    if nprojbf < 2:
+        raise AssertionError("non-identity BackFlow case needs at least two ProjBF values")
+
+    projbf_values = []
+    for idx in range(nprojbf):
+        if idx < len(projbf_template):
+            projbf_values.append(projbf_template[idx])
+        else:
+            projbf_values.append(0.001 / float(idx + 1))
+    if projbf_values[0] != 0.93 or not any(value != 0.0 for value in projbf_values[1:]):
+        raise AssertionError("BackFlow initial parameters are not non-identity")
+    return projbf_values
+
+
+def write_backflow_initial(workdir, nprojbf, slater_values,
+                           projection_values=()):
+    projbf_values = backflow_projection_values(nprojbf)
+
+    values = [0.0] * 6
+    for value in projection_values:
+        values.extend([value, 0.0, 0.0])
+    for value in projbf_values:
+        values.extend([value, 0.0, 0.0])
+    for value in slater_values:
+        values.extend([float(np.real(value)), float(np.imag(value)), 0.0])
+    write(os.path.join(workdir, "initial.def"), " ".join(fmt(x) for x in values) + "\n")
+    return projbf_values
+
+
+def enable_nonidentity_backflow(workdir, nsite, slater_values,
+                                projection_values=()):
+    definition = build_chain_nn_backflow(length=nsite, optimize=False)
+    write_chain_nn_backflow(workdir, length=nsite, optimize=False)
+    namelist_path = os.path.join(workdir, "namelist.def")
+    with open(namelist_path, "a") as f:
+        f.write("              BF  bf.def\n")
+        f.write("         BFRange  rangebf.def\n")
+    write_backflow_initial(
+        workdir,
+        definition.n_proj_bf,
+        slater_values,
+        projection_values=projection_values,
+    )
+    return definition
+
+
+def write_uniform_gutzwiller(workdir, nsite):
+    lines = [
+        "=============================================",
+        "NGutzwillerIdx          1",
+        "ComplexType             0",
+        "=============================================",
+        "=============================================",
+    ]
+    lines.extend("{:5d} {:5d}".format(site, 0) for site in range(nsite))
+    lines.append("{:5d} {:5d}".format(0, 0))
+    write(os.path.join(workdir, "gutzwilleridx.def"), "\n".join(lines) + "\n")
+    with open(os.path.join(workdir, "namelist.def"), "a") as f:
+        f.write("     Gutzwiller  gutzwilleridx.def\n")
+
+
+def enable_config_oracle_backflow(workdir, nsite, slater_values):
+    projection_value = 0.21
+    write_uniform_gutzwiller(workdir, nsite)
+    definition = enable_nonidentity_backflow(
+        workdir,
+        nsite,
+        slater_values,
+        projection_values=(projection_value,),
+    )
+    if projection_value == 0.0 or definition.n_proj_bf < 2:
+        raise AssertionError("configuration oracle projection is vacuous")
+    return definition
+
+
+def _bf_local_states(occupation, nsite, site):
+    up = occupation[site]
+    down = occupation[site + nsite]
+    return {
+        "doublon": up * down,
+        "holon": (1 - up) * (1 - down),
+        "up": up * (1 - down),
+        "down": down * (1 - up),
+    }
+
+
+def _bf_theta_count(occupation, nsite, spin, mu, center, range_site):
+    if center == range_site:
+        return 1 if mu == 0 else 0
+    center_state = _bf_local_states(occupation, nsite, center)
+    range_state = _bf_local_states(occupation, nsite, range_site)
+    if mu == 0:
+        return 0
+    if mu == 1:
+        return center_state["doublon"] * range_state["holon"]
+    if spin == 0:
+        if mu == 2:
+            return center_state["up"] * range_state["down"]
+        if mu == 3:
+            return (
+                center_state["doublon"] * range_state["down"]
+                + center_state["up"] * range_state["holon"]
+            )
+    else:
+        if mu == 2:
+            return center_state["down"] * range_state["up"]
+        if mu == 3:
+            return (
+                center_state["doublon"] * range_state["up"]
+                + center_state["down"] * range_state["holon"]
+            )
+    raise AssertionError("invalid independent BackFlow theta channel")
+
+
+def _bf_range_sites(nsite, center):
+    return (center, (center - 1) % nsite, (center + 1) % nsite)
+
+
+def _bf_sub_index(mu, center, range_site):
+    shell = 0 if center == range_site else 1
+    raw = 4 * shell + mu
+    index = raw - 3 - shell
+    if raw % 4 == 0:
+        index = -1
+    if raw == 0:
+        index = 0
+    return index
+
+
+def _bf_parameter_index(left, right, width=4):
+    if left > right:
+        left, right = right, left
+    if left < 0 or right >= width:
+        raise AssertionError("independent BackFlow parameter index is invalid")
+    return left * width - left * (left - 1) // 2 + right - left
+
+
+def _independent_bf_directed(
+    context, occupation, site_i, spin_i, site_j, spin_j, projbf
+):
+    nsite = context["nsite"]
+    orbital = context["orbital"]
+    value = 0.0 + 0.0j
+    for mu in range(4):
+        for nu in range(4):
+            if mu == 0 and nu == 0:
+                continue
+            for range_i in _bf_range_sites(nsite, site_i):
+                count_i = _bf_theta_count(
+                    occupation, nsite, spin_i, mu, site_i, range_i
+                )
+                if count_i == 0:
+                    continue
+                sub_i = _bf_sub_index(mu, site_i, range_i)
+                if sub_i < 0:
+                    continue
+                for range_j in _bf_range_sites(nsite, site_j):
+                    count_j = _bf_theta_count(
+                        occupation, nsite, spin_j, nu, site_j, range_j
+                    )
+                    if count_j == 0:
+                        continue
+                    sub_j = _bf_sub_index(nu, site_j, range_j)
+                    if sub_j < 0:
+                        continue
+                    parameter = projbf[
+                        _bf_parameter_index(sub_i, sub_j)
+                    ]
+                    value -= (
+                        parameter
+                        * count_i
+                        * count_j
+                        * orbital[
+                            range_i + spin_i * nsite,
+                            range_j + spin_j * nsite,
+                        ]
+                    )
+
+    if context["use_fsz"]:
+        eta_active = any(
+            _bf_theta_count(
+                occupation, nsite, spin, 1, site, range_site
+            )
+            for site, spin in ((site_i, spin_i), (site_j, spin_j))
+            for range_site in _bf_range_sites(nsite, site)
+        )
+    else:
+        # The non-FSZ implementation's eta gate is defined by its up-spin
+        # doublon-holon channel for both site endpoints.
+        eta_active = any(
+            _bf_theta_count(
+                occupation, nsite, 0, 1, site, range_site
+            )
+            for site in (site_i, site_j)
+            for range_site in _bf_range_sites(nsite, site)
+        )
+    eta = projbf[0] if eta_active else 1.0
+    value += (
+        eta
+        * orbital[
+            site_i + spin_i * nsite,
+            site_j + spin_j * nsite,
+        ]
+    )
+    return value
+
+
+def _independent_bf_matrix(context, occupation, projbf):
+    nsite = context["nsite"]
+    matrix = np.zeros((2 * nsite, 2 * nsite), dtype=complex)
+    if context["use_fsz"]:
+        for orbital_i in range(2 * nsite):
+            site_i = orbital_i % nsite
+            spin_i = orbital_i // nsite
+            for orbital_j in range(orbital_i + 1, 2 * nsite):
+                site_j = orbital_j % nsite
+                spin_j = orbital_j // nsite
+                value = _independent_bf_directed(
+                    context,
+                    occupation,
+                    site_i,
+                    spin_i,
+                    site_j,
+                    spin_j,
+                    projbf,
+                ) - _independent_bf_directed(
+                    context,
+                    occupation,
+                    site_j,
+                    spin_j,
+                    site_i,
+                    spin_i,
+                    projbf,
+                )
+                matrix[orbital_i, orbital_j] = value
+                matrix[orbital_j, orbital_i] = -value
+    else:
+        for site_i in range(nsite):
+            for site_j in range(nsite):
+                value = _independent_bf_directed(
+                    context,
+                    occupation,
+                    site_i,
+                    0,
+                    site_j,
+                    1,
+                    projbf,
+                )
+                matrix[site_i, nsite + site_j] = value
+                matrix[nsite + site_j, site_i] = -value
+    return matrix
+
+
+def _independent_bf_amplitude(context, occupation, identity=False):
+    key = (tuple(occupation), identity)
+    if key in context["amplitude_cache"]:
+        return context["amplitude_cache"][key]
+    nsite = context["nsite"]
+    if len(occupation) != 2 * nsite:
+        raise AssertionError("independent BackFlow occupation width mismatch")
+    if sum(occupation) != context["ncond"]:
+        raise AssertionError("independent BackFlow particle count mismatch")
+    projbf = (
+        [1.0] + [0.0] * (len(context["projbf"]) - 1)
+        if identity
+        else context["projbf"]
+    )
+    matrix = _independent_bf_matrix(context, occupation, projbf)
+    occupied_orbitals = [
+        orbital for orbital, value in enumerate(occupation) if value
+    ]
+    submatrix = [
+        [matrix[row, column] for column in occupied_orbitals]
+        for row in occupied_orbitals
+    ]
+    doublons = sum(
+        occupation[site] * occupation[site + nsite]
+        for site in range(nsite)
+    )
+    amplitude = (
+        math.exp(context["gutzwiller"] * doublons)
+        * pfaffian(submatrix)
+    )
+    context["amplitude_cache"][key] = amplitude
+    return amplitude
+
+
+def independent_bf_exact_context(
+    nsite, orbital, projbf, use_fsz, gutzwiller=0.21, ncond=6
+):
+    orbital = np.array(orbital, dtype=complex, copy=True)
+    if orbital.shape != (2 * nsite, 2 * nsite):
+        raise AssertionError("independent BackFlow orbital matrix shape mismatch")
+    if projbf[0] == 1.0 and not any(projbf[1:]):
+        raise AssertionError("independent BackFlow fixture is identity")
+    if gutzwiller == 0.0:
+        raise AssertionError("independent BackFlow Gutzwiller fixture is vacuous")
+    return {
+        "nsite": nsite,
+        "ncond": ncond,
+        "orbital": orbital,
+        "projbf": tuple(projbf),
+        "use_fsz": use_fsz,
+        "gutzwiller": gutzwiller,
+        "amplitude_cache": {},
+    }
+
+
 def write_antiparallel_orbital(workdir, f_matrix):
     nsite = f_matrix.shape[0]
     lines = [
@@ -263,6 +613,30 @@ def write_antiparallel_orbital(workdir, f_matrix):
         lines.append("{:5d}      1".format(idx))
     write(os.path.join(workdir, "orbitalidx.def"), "\n".join(lines) + "\n")
     write_initial(workdir, values)
+    return values
+
+
+def write_real_antiparallel_orbital(workdir, f_matrix):
+    nsite = f_matrix.shape[0]
+    lines = [
+        "=============================================",
+        "NOrbitalIdx         {}".format(nsite * nsite),
+        "ComplexType          0",
+        "=============================================",
+        "=============================================",
+    ]
+    values = []
+    idx = 0
+    for i in range(nsite):
+        for j in range(nsite):
+            lines.append("{:5d} {:6d} {:6d}      1".format(i, j, idx))
+            values.append(float(np.real(f_matrix[i, j])))
+            idx += 1
+    for idx in range(nsite * nsite):
+        lines.append("{:5d}      1".format(idx))
+    write(os.path.join(workdir, "orbitalidx.def"), "\n".join(lines) + "\n")
+    write_initial(workdir, values)
+    return values
 
 
 def write_general_orbital(workdir, slater_elm):
@@ -297,6 +671,7 @@ def write_general_orbital(workdir, slater_elm):
         lines.append("{:5d}      1".format(idx))
     write(os.path.join(workdir, "orbitalidxgen.def"), "\n".join(lines) + "\n")
     write_initial(workdir, values)
+    return values
 
 
 def complex_n3_case(workdir):
@@ -321,7 +696,15 @@ def complex_n3_case(workdir):
             slater_elm[i, nsite + j] = f_matrix[i, j]
             slater_elm[nsite + j, i] = -f_matrix[i, j]
 
-    write_common_defs(workdir, nsite, 8000, 13579, "Orbital", "orbitalidx.def")
+    write_common_defs(
+        workdir,
+        nsite,
+        8000,
+        13579,
+        "Orbital",
+        "orbitalidx.def",
+        data_qty=ED_BIN_COUNT,
+    )
     write_nbodyg_def(workdir, terms)
     write_antiparallel_orbital(workdir, f_matrix)
     return nsite, 3, 3, slater_elm, terms
@@ -344,7 +727,15 @@ def fsz_n3_case(workdir):
             slater_elm[i, j] = real + 1j * imag
             slater_elm[j, i] = -slater_elm[i, j]
 
-    write_common_defs(workdir, nsite, 8000, 24680, "OrbitalGeneral", "orbitalidxgen.def")
+    write_common_defs(
+        workdir,
+        nsite,
+        8000,
+        24680,
+        "OrbitalGeneral",
+        "orbitalidxgen.def",
+        data_qty=ED_BIN_COUNT,
+    )
     write_nbodyg_def(workdir, terms)
     write_general_orbital(workdir, slater_elm)
     return nsite, 3, 3, slater_elm, terms
@@ -413,6 +804,376 @@ def multibin_case(workdir):
     return terms, 2
 
 
+def backflow_nonidentity_n3_output_case(workdir):
+    nsite = 6
+    terms = [
+        (3, (0, 0, 2, 0, 1, 0, 3, 0, 5, 1, 1, 1)),
+        (3, (0, 0, 3, 0, 1, 0, 2, 0, 5, 1, 1, 1)),
+        (3, (2, 0, 0, 0, 3, 0, 1, 0, 1, 1, 5, 1)),
+    ]
+    f_matrix = np.zeros((nsite, nsite), dtype=complex)
+    for i in range(nsite):
+        for j in range(nsite):
+            real = math.sin(1.7 * (i + 1) * (j + 2))
+            real += 0.4 * math.cos(0.2 * (i + 2) * (j + 1))
+            imag = math.cos(1.1 * (i + 1) * (j + 1))
+            imag -= 0.3 * math.sin((i + 3) * (j + 1))
+            f_matrix[i, j] = real + 1j * imag
+
+    write_common_defs(workdir, nsite, 400, 54321, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    return terms, 1
+
+
+def backflow_fsz_spin_changing_n3_output_case(workdir):
+    nsite = 6
+    terms = [
+        (3, (0, 0, 2, 1, 3, 1, 1, 0, 1, 1, 4, 1)),
+        (3, (0, 0, 4, 1, 3, 1, 1, 0, 1, 1, 2, 1)),
+        (3, (1, 0, 3, 1, 2, 1, 0, 0, 4, 1, 1, 1)),
+    ]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 400, 54322, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return terms, 1
+
+
+def backflow_fsz_mixed_n4_output_case(workdir):
+    nsite = 6
+    terms = [
+        (1, (0, 0, 2, 1)),
+        (2, (0, 0, 2, 1, 3, 1, 1, 1)),
+        (3, (0, 0, 2, 1, 3, 1, 1, 0, 1, 1, 4, 1)),
+        (
+            4,
+            (
+                0, 0, 2, 1,
+                1, 0, 3, 0,
+                5, 1, 1, 1,
+                4, 1, 0, 0,
+            ),
+        ),
+    ]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 600, 54323, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return terms, 1
+
+
+def invalid_backflow_state(nsite):
+    f_matrix = np.zeros((nsite, nsite), dtype=complex)
+    for i in range(nsite):
+        for j in range(nsite):
+            real = math.sin(1.3 * (i + 1) * (j + 2))
+            real += 0.35 * math.cos(0.4 * (i + 2) * (j + 1))
+            imag = math.cos(0.9 * (i + 1) * (j + 1))
+            imag -= 0.25 * math.sin((i + 3) * (j + 1))
+            f_matrix[i, j] = real + 1j * imag
+
+    slater_elm = np.zeros((2 * nsite, 2 * nsite), dtype=complex)
+    for i in range(2 * nsite):
+        for j in range(i + 1, 2 * nsite):
+            value = (
+                math.sin(0.7 * (i + 1) * (j + 2))
+                + 1j * math.cos(0.5 * (i + 3) * (j + 1))
+            )
+            slater_elm[i, j] = value
+            slater_elm[j, i] = -value
+    return f_matrix, slater_elm
+
+
+def update_modpara(workdir, keyword, value):
+    path = os.path.join(workdir, "modpara.def")
+    lines = []
+    found = False
+    with open(path) as f:
+        for line in f:
+            cols = line.split()
+            if cols and cols[0] == keyword:
+                lines.append("{:<15} {}\n".format(keyword, value))
+                found = True
+            else:
+                lines.append(line)
+    if not found:
+        raise AssertionError("{} is missing from modpara.def".format(keyword))
+    write(path, "".join(lines))
+
+
+def invalid_backflow_real_case(workdir):
+    nsite = 6
+    terms = [(1, (0, 0, 2, 0))]
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 20, 86420, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_real_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+
+
+def invalid_backflow_lanczos_case(workdir):
+    nsite = 6
+    terms = [(1, (0, 0, 2, 0))]
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 20, 86421, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "NLanczosMode", 1)
+
+
+def invalid_backflow_spin_change_nonfsz_case(workdir):
+    nsite = 6
+    terms = [(1, (0, 0, 2, 1))]
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 20, 86422, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+
+
+def invalid_backflow_fsz_spin_change_fixedsz_case(workdir):
+    nsite = 6
+    terms = [(1, (0, 0, 2, 1))]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 20, 86423, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+
+
+def backflow_n3_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        # Effective N=1 uses the legacy dispatch; effective N=2 is rebuilt.
+        (1, (0, 0, 2, 0)),
+        (2, (0, 0, 2, 0, 5, 1, 1, 1)),
+        # Genuine N=3 must precede both contracted terms (T6R-H-1 regression).
+        (3, (0, 0, 2, 0, 1, 0, 3, 0, 5, 1, 1, 1)),
+        (3, (5, 0, 2, 0, 2, 0, 1, 0, 4, 1, 0, 1)),
+        (3, (2, 0, 1, 0, 4, 0, 2, 0, 5, 0, 5, 0)),
+        # Complete scalar contraction and repeated-annihilation zero.
+        (3, (0, 0, 0, 0, 1, 0, 1, 0, 2, 1, 2, 1)),
+        (3, (3, 0, 0, 0, 4, 0, 0, 0, 5, 1, 1, 1)),
+    ]
+    categories = [
+        "dispatch1",
+        "effective2",
+        "full3",
+        "contraction",
+        "contraction",
+        "scalar",
+        "zero",
+    ]
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 64, 90431, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    return nsite, terms, categories, {
+        "dispatch1", "effective2", "full3", "contraction", "scalar", "zero"
+    }
+
+
+def backflow_n2_independent_exact_case(workdir):
+    nsite = 6
+    terms = [
+        (2, (0, 0, 2, 0, 5, 1, 1, 1)),
+        (2, (4, 0, 0, 0, 2, 1, 5, 1)),
+        (2, (1, 0, 3, 0, 0, 1, 4, 1)),
+    ]
+    categories = ["effective2"] * len(terms)
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 512, 90437, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    definition = enable_config_oracle_backflow(
+        workdir, nsite, slater_values
+    )
+    orbital = np.zeros((2 * nsite, 2 * nsite), dtype=complex)
+    for site_i in range(nsite):
+        for site_j in range(nsite):
+            orbital[site_i, nsite + site_j] = f_matrix[site_i, site_j]
+            orbital[nsite + site_j, site_i] = -f_matrix[site_i, site_j]
+    exact_context = independent_bf_exact_context(
+        nsite,
+        orbital,
+        backflow_projection_values(definition.n_proj_bf),
+        use_fsz=False,
+    )
+    return nsite, terms, categories, {"effective2"}, exact_context
+
+
+def backflow_fsz_n2_independent_exact_case(workdir):
+    nsite = 6
+    terms = [
+        (2, (0, 0, 2, 1, 3, 1, 1, 1)),
+        (2, (4, 1, 0, 0, 1, 0, 3, 1)),
+        (2, (2, 0, 5, 1, 0, 1, 4, 0)),
+    ]
+    categories = ["effective2"] * len(terms)
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 512, 90438, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    definition = enable_config_oracle_backflow(
+        workdir, nsite, slater_values
+    )
+    update_modpara(workdir, "2Sz", -1)
+    exact_context = independent_bf_exact_context(
+        nsite,
+        slater_elm / 2.0,
+        backflow_projection_values(definition.n_proj_bf),
+        use_fsz=True,
+    )
+    return nsite, terms, categories, {"effective2"}, exact_context
+
+
+def backflow_n4_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        (
+            4,
+            (
+                0, 0, 2, 0,
+                1, 0, 3, 0,
+                5, 1, 1, 1,
+                4, 1, 0, 1,
+            ),
+        ),
+    ]
+    categories = ["full4"]
+    f_matrix, unused_slater = invalid_backflow_state(nsite)
+    write_common_defs(workdir, nsite, 512, 90432, "Orbital", "orbitalidx.def")
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    return nsite, terms, categories, {"full4"}
+
+
+def backflow_fsz_n3_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        (1, (0, 0, 2, 1)),
+        (2, (0, 0, 2, 1, 3, 1, 1, 1)),
+        (3, (0, 0, 2, 1, 3, 1, 1, 0, 1, 1, 4, 1)),
+    ]
+    categories = ["dispatch1", "effective2", "full3"]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 512, 90434, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return nsite, terms, categories, {
+        "dispatch1", "effective2", "full3"
+    }
+
+
+def backflow_fsz_n4_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        (
+            4,
+            (
+                0, 0, 2, 1,
+                3, 0, 1, 0,
+                5, 0, 4, 0,
+                1, 1, 4, 1,
+            ),
+        ),
+    ]
+    categories = ["full4"]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 1024, 90435, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return nsite, terms, categories, {"full4"}
+
+
+def backflow_fsz_n5_config_oracle_case(workdir):
+    nsite = 6
+    orbital_count = 2 * nsite
+    terms = []
+    for shift in range(6):
+        annihilated = [
+            (shift + offset) % orbital_count for offset in range(5)
+        ]
+        created = [
+            (shift + 5 + offset) % orbital_count for offset in range(5)
+        ]
+        if len(set(annihilated + created)) != 10:
+            raise AssertionError("full N=5 fixture has overlapping orbitals")
+        factors = []
+        for created_orbital, annihilated_orbital in zip(
+            created, annihilated
+        ):
+            factors.extend(
+                (
+                    created_orbital % nsite,
+                    created_orbital // nsite,
+                    annihilated_orbital % nsite,
+                    annihilated_orbital // nsite,
+                )
+            )
+        terms.append((5, tuple(factors)))
+
+    categories = ["full5"] * len(terms)
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir, nsite, 4096, 90439, "OrbitalGeneral", "orbitalidxgen.def"
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return nsite, terms, categories, {"full5"}
+
+
+def backflow_fsz_multi_qp_config_oracle_case(workdir):
+    nsite = 6
+    terms = [
+        (2, (0, 0, 2, 1, 3, 1, 1, 1)),
+        (3, (0, 0, 2, 1, 3, 1, 1, 0, 1, 1, 4, 1)),
+    ]
+    categories = ["effective2", "full3"]
+    unused_f_matrix, slater_elm = invalid_backflow_state(nsite)
+    write_common_defs(
+        workdir,
+        nsite,
+        512,
+        90436,
+        "OrbitalGeneral",
+        "orbitalidxgen.def",
+        n_mp_trans=2,
+    )
+    write_nbodyg_def(workdir, terms)
+    slater_values = write_general_orbital(workdir, slater_elm)
+    enable_config_oracle_backflow(workdir, nsite, slater_values)
+    update_modpara(workdir, "2Sz", -1)
+    return nsite, terms, categories, {"effective2", "full3"}
+
+
 EXACT_CASES = {
     "NBodyG_Complex_N3_Oracle": complex_n3_case,
     "NBodyG_fsz_N3_Oracle": fsz_n3_case,
@@ -421,6 +1182,46 @@ EXACT_CASES = {
 GENERATED_CHECK_CASES = {
     "NBodyG_Projector_N3_MultiTerm": projector_n3_multiterm_case,
     "NBodyG_MultiBin": multibin_case,
+    "BackFlow_NBodyG_NonIdentity_N3_Output": backflow_nonidentity_n3_output_case,
+    "BackFlow_FSZ_NBodyG_SpinChanging_N3_Output":
+        backflow_fsz_spin_changing_n3_output_case,
+    "BackFlow_FSZ_NBodyG_Mixed_N4_Output":
+        backflow_fsz_mixed_n4_output_case,
+}
+
+CONFIG_ORACLE_CASES = {
+    "BackFlow_NBodyG_NonIdentity_N3_ConfigOracle":
+        backflow_n3_config_oracle_case,
+    "BackFlow_NBodyG_EffectiveN2_IndependentExactOracle":
+        backflow_n2_independent_exact_case,
+    "BackFlow_NBodyG_NonIdentity_N4_ConfigOracle":
+        backflow_n4_config_oracle_case,
+    "BackFlow_FSZ_NBodyG_SpinChanging_N3_ConfigOracle":
+        backflow_fsz_n3_config_oracle_case,
+    "BackFlow_FSZ_NBodyG_EffectiveN2_IndependentExactOracle":
+        backflow_fsz_n2_independent_exact_case,
+    "BackFlow_FSZ_NBodyG_SpinChanging_N4_ConfigOracle":
+        backflow_fsz_n4_config_oracle_case,
+    "BackFlow_FSZ_NBodyG_SpinChanging_N5_ConfigOracle":
+        backflow_fsz_n5_config_oracle_case,
+    "BackFlow_FSZ_NBody_MultiQP_ConfigOracle":
+        backflow_fsz_multi_qp_config_oracle_case,
+}
+
+NONVACUOUS_GENERATED_CASES = {
+    "BackFlow_NBodyG_NonIdentity_N3_Output",
+    "BackFlow_FSZ_NBodyG_SpinChanging_N3_Output",
+    "BackFlow_FSZ_NBodyG_Mixed_N4_Output",
+}
+
+INVALID_CASES = {
+    "NBodyG_InvalidBackFlow": invalid_backflow_real_case,
+    "NBodyG_InvalidBackFlow_mpi": invalid_backflow_real_case,
+    "NBodyG_InvalidBackFlowLanczos": invalid_backflow_lanczos_case,
+    "NBodyG_InvalidBackFlowSpinChangeNonFSZ":
+        invalid_backflow_spin_change_nonfsz_case,
+    "NBodyG_InvalidBackFlowFszSpinChangeFixedSz":
+        invalid_backflow_fsz_spin_change_fixedsz_case,
 }
 
 
@@ -443,18 +1244,55 @@ def parse_nbodyg_output(path):
     return rows
 
 
-def assert_close(label, actual, expected):
+def complex_mean_and_standard_error(values):
+    if len(values) < 2:
+        raise AssertionError("ED comparison needs at least two measurement bins")
+    mean = sum(values, 0.0 + 0.0j) / float(len(values))
+    standard_error = math.sqrt(
+        sum(abs(value - mean) ** 2 for value in values)
+        / float(len(values) * (len(values) - 1))
+    )
+    return mean, standard_error
+
+
+def assert_close(label, actual, expected, standard_error):
     diff = abs(actual - expected)
-    if diff > TOL:
+    scale = max(abs(expected), ED_MIN_SCALE)
+    max_standard_error = ED_MAX_REL_SE * scale
+    if standard_error > max_standard_error:
         raise AssertionError(
-            "{} mismatch: actual={} expected={} diff={} tol={}".format(
-                label, actual, expected, diff, TOL
+            "{} is too noisy: se={} max_se={}".format(
+                label, standard_error, max_standard_error
             )
         )
+    tolerance = (
+        ED_ABS_TOL
+        + ED_REL_TOL * abs(expected)
+        + ED_SE_MULTIPLIER * standard_error
+    )
+    if diff > tolerance:
+        raise AssertionError(
+            "{} mismatch: actual={} expected={} diff={} tol={} "
+            "(abs={} rel={} se={}*{})".format(
+                label,
+                actual,
+                expected,
+                diff,
+                tolerance,
+                ED_ABS_TOL,
+                ED_REL_TOL,
+                standard_error,
+                ED_SE_MULTIPLIER,
+            )
+        )
+    return tolerance
 
 
-def assert_nbodyg_outputs(workdir, terms, bin_count):
+def assert_nbodyg_outputs(
+    workdir, terms, bin_count, require_nonzero=False, require_n_ge_3=True
+):
     found_n_ge_3 = 0
+    max_abs_value = 0.0
     for idx in range(1, bin_count + 1):
         path = os.path.join(workdir, "output", "zvo_NBodyG_{:03d}.dat".format(idx))
         if not os.path.exists(path):
@@ -475,59 +1313,659 @@ def assert_nbodyg_outputs(workdir, terms, bin_count):
                 found_n_ge_3 += 1
             if not (math.isfinite(value.real) and math.isfinite(value.imag)):
                 raise AssertionError("NBodyG bin {} row {} is not finite: {}".format(idx, row_idx, value))
+            max_abs_value = max(max_abs_value, abs(value))
 
     extra_path = os.path.join(workdir, "output", "zvo_NBodyG_{:03d}.dat".format(bin_count + 1))
     if os.path.exists(extra_path):
         raise AssertionError("unexpected extra NBodyG output: {}".format(extra_path))
-    if found_n_ge_3 == 0:
+    if require_n_ge_3 and found_n_ge_3 == 0:
         raise AssertionError("generated NBodyG check did not exercise any N>=3 term")
+    if require_nonzero and max_abs_value <= 1.0e-12:
+        raise AssertionError("generated NBodyG output is vacuous")
+
+
+def assert_finite_energy_output(workdir):
+    path = os.path.join(workdir, "output", "zvo_out_001.dat")
+    if not os.path.exists(path):
+        raise AssertionError("missing energy output: {}".format(path))
+    with open(path) as f:
+        cols = f.readline().split()
+    if len(cols) < 2:
+        raise AssertionError("malformed energy output: {}".format(path))
+    energy = complex(float(cols[0]), float(cols[1]))
+    if not (math.isfinite(energy.real) and math.isfinite(energy.imag)):
+        raise AssertionError("energy is not finite: {}".format(energy))
+
+
+def _parse_marker(cols, pos, marker, count, converter):
+    if pos >= len(cols) or cols[pos] != marker:
+        raise AssertionError(
+            "configuration oracle expected marker {} at column {}".format(
+                marker, pos
+            )
+        )
+    begin = pos + 1
+    end = begin + count
+    if end > len(cols):
+        raise AssertionError(
+            "configuration oracle marker {} is truncated".format(marker)
+        )
+    try:
+        values = [converter(value) for value in cols[begin:end]]
+    except ValueError as exc:
+        raise AssertionError(
+            "configuration oracle marker {} has invalid value: {}".format(
+                marker, exc
+            )
+        )
+    return values, end
+
+
+def parse_config_oracle_dump(path, nsite, rank=0):
+    rows = []
+    with open(path) as f:
+        for line_no, line in enumerate(f, 1):
+            cols = line.split()
+            if not cols:
+                continue
+            pos = 0
+            sample, pos = _parse_marker(cols, pos, "sample", 1, int)
+            source, pos = _parse_marker(cols, pos, "source", 1, str)
+            term, pos = _parse_marker(cols, pos, "term", 1, int)
+            order, pos = _parse_marker(cols, pos, "n", 1, int)
+            status, pos = _parse_marker(cols, pos, "status", 1, int)
+            reduced_order, pos = _parse_marker(
+                cols, pos, "reduced_order", 1, int
+            )
+            base_occ, pos = _parse_marker(
+                cols, pos, "base_occ", 2 * nsite, int
+            )
+            target_valid, pos = _parse_marker(
+                cols, pos, "target_valid", 1, int
+            )
+            target_occ, pos = _parse_marker(
+                cols, pos, "target_occ", 2 * nsite, int
+            )
+            base_psi, pos = _parse_marker(cols, pos, "base_psi", 2, float)
+            target_psi, pos = _parse_marker(
+                cols, pos, "target_psi", 2, float
+            )
+            value, pos = _parse_marker(cols, pos, "value", 2, float)
+            coeff, pos = _parse_marker(cols, pos, "coeff", 2, float)
+            if pos != len(cols):
+                raise AssertionError(
+                    "configuration oracle line {} has extra columns".format(
+                        line_no
+                    )
+                )
+            if source[0] not in ("g", "h"):
+                raise AssertionError(
+                    "configuration oracle line {} has invalid source".format(
+                        line_no
+                    )
+                )
+            rows.append(
+                {
+                    "rank": rank,
+                    "sample": sample[0],
+                    "source": source[0],
+                    "term": term[0],
+                    "n": order[0],
+                    "status": status[0],
+                    "reduced_order": reduced_order[0],
+                    "base_occ": tuple(base_occ),
+                    "target_valid": target_valid[0],
+                    "target_occ": tuple(target_occ),
+                    "base_psi": complex(*base_psi),
+                    "target_psi": complex(*target_psi),
+                    "value": complex(*value),
+                    "coeff": complex(*coeff),
+                }
+            )
+    if not rows:
+        raise AssertionError("configuration oracle dump is empty: {}".format(path))
+    return rows
+
+
+def _state_from_occupation(occupation):
+    state = 0
+    for orbital, value in enumerate(occupation):
+        if value not in (0, 1):
+            raise AssertionError(
+                "configuration oracle occupation is not binary"
+            )
+        if value:
+            state |= 1 << orbital
+    return state
+
+
+def assert_config_close(label, actual, expected):
+    if not (
+        math.isfinite(actual.real)
+        and math.isfinite(actual.imag)
+        and math.isfinite(expected.real)
+        and math.isfinite(expected.imag)
+    ):
+        raise AssertionError(
+            "{} is non-finite: actual={} expected={}".format(
+                label, actual, expected
+            )
+        )
+    tolerance = CONFIG_ORACLE_TOL * (1.0 + abs(expected))
+    if abs(actual - expected) > tolerance:
+        raise AssertionError(
+            "{} mismatch: actual={} expected={} diff={} tol={}".format(
+                label, actual, expected, abs(actual - expected), tolerance
+            )
+        )
+
+
+def validate_config_oracle_rows(
+    rows, nsite, source, terms, categories, required_categories
+):
+    if len(categories) != len(terms):
+        raise AssertionError("configuration oracle category count mismatch")
+    coverage = dict((name, 0) for name in required_categories)
+    production_by_sample = {}
+    expected_by_sample = {}
+    values_by_term = dict((idx, []) for idx in range(len(terms)))
+    seen = set()
+    max_expected_imag = 0.0
+
+    for row in rows:
+        key = (
+            row["rank"],
+            row["sample"],
+            row["source"],
+            row["term"],
+        )
+        if key in seen:
+            raise AssertionError(
+                "configuration oracle duplicated row {}".format(key)
+            )
+        seen.add(key)
+        if row["source"] != source:
+            raise AssertionError(
+                "configuration oracle source mismatch: {}".format(row["source"])
+            )
+        term_idx = row["term"]
+        if term_idx < 0 or term_idx >= len(terms):
+            raise AssertionError("configuration oracle term index out of range")
+        term = terms[term_idx]
+        nbody = term[0]
+        factors = term[1]
+        coefficient = 1.0 + 0.0j if source == "g" else term[2]
+        if row["n"] != nbody:
+            raise AssertionError("configuration oracle term order mismatch")
+        assert_config_close(
+            "configuration oracle coefficient", row["coeff"], coefficient
+        )
+        if not (
+            math.isfinite(row["base_psi"].real)
+            and math.isfinite(row["base_psi"].imag)
+            and abs(row["base_psi"]) > 0.0
+        ):
+            raise AssertionError("configuration oracle base amplitude is invalid")
+
+        base_state = _state_from_occupation(row["base_occ"])
+        applied = apply_ops(base_state, nbody_ops(nsite, factors))
+        category = categories[term_idx]
+        if applied is None:
+            if (
+                row["target_valid"] != 0
+                or row["status"] != BF_NBODY_PHYSICAL_ZERO
+            ):
+                raise AssertionError(
+                    "vanishing operator action is not a physical zero"
+                )
+            assert_config_close(
+                "configuration oracle physical-zero value",
+                row["value"],
+                0.0 + 0.0j,
+            )
+            if category == "zero":
+                coverage[category] += 1
+            expected = 0.0 + 0.0j
+        else:
+            if category == "zero":
+                raise AssertionError(
+                    "configuration oracle zero category had nonzero action"
+                )
+            expected_reduced_order = {
+                "dispatch1": 1,
+                "effective2": 2,
+                "full3": 3,
+                "full4": 4,
+                "full5": 5,
+            }.get(category)
+            if (
+                expected_reduced_order is not None
+                and row["reduced_order"] != expected_reduced_order
+            ):
+                raise AssertionError(
+                    "configuration oracle {} reduced order mismatch: "
+                    "actual={} expected={}".format(
+                        category,
+                        row["reduced_order"],
+                        expected_reduced_order,
+                    )
+                )
+            target_state, sign = applied
+            expected_occ = tuple(
+                1 if occupied(target_state, orbital) else 0
+                for orbital in range(2 * nsite)
+            )
+            if row["target_valid"] != 1 or row["target_occ"] != expected_occ:
+                raise AssertionError(
+                    "configuration oracle target occupation mismatch"
+                )
+            expected = sign * np.conj(
+                row["target_psi"] / row["base_psi"]
+            )
+            assert_config_close(
+                "configuration oracle production value",
+                row["value"],
+                expected,
+            )
+            expected_status = (
+                BF_NBODY_PHYSICAL_ZERO
+                if abs(expected) == 0.0
+                else BF_NBODY_OK
+            )
+            if row["status"] != expected_status:
+                raise AssertionError(
+                    "configuration oracle status mismatch: actual={} expected={}".format(
+                        row["status"], expected_status
+                    )
+                )
+            if category in coverage and abs(expected) > 1.0e-12:
+                coverage[category] += 1
+            max_expected_imag = max(max_expected_imag, abs(expected.imag))
+
+        sample = (row["rank"], row["sample"])
+        production_by_sample[sample] = (
+            production_by_sample.get(sample, 0.0 + 0.0j)
+            + row["coeff"] * row["value"]
+        )
+        expected_by_sample[sample] = (
+            expected_by_sample.get(sample, 0.0 + 0.0j)
+            + coefficient * expected
+        )
+        values_by_term[term_idx].append(row["value"])
+
+    samples = sorted(production_by_sample)
+    for sample in samples:
+        expected_keys = set(
+            (sample[0], sample[1], source, term_idx)
+            for term_idx in range(len(terms))
+        )
+        if not expected_keys.issubset(seen):
+            raise AssertionError(
+                "configuration oracle sample {} is missing terms".format(sample)
+            )
+        assert_config_close(
+            "configuration oracle Hamiltonian sum sample {}".format(sample),
+            production_by_sample[sample],
+            expected_by_sample[sample],
+        )
+    missing = sorted(name for name, count in coverage.items() if count == 0)
+    if missing:
+        raise AssertionError(
+            "configuration oracle has empty coverage: {}".format(
+                ", ".join(missing)
+            )
+        )
+    if max_expected_imag <= 1.0e-8:
+        raise AssertionError(
+            "configuration oracle did not exercise an imaginary expected value"
+        )
+    return production_by_sample, expected_by_sample, values_by_term
+
+
+def validate_independent_effective_n2(rows, nsite, terms, context):
+    checked = 0
+    projection_changes = 0
+    backflow_changes = 0
+    max_real = 0.0
+    max_imag = 0.0
+
+    for row in rows:
+        term_idx = row["term"]
+        if term_idx < 0 or term_idx >= len(terms):
+            raise AssertionError("independent N=2 term index out of range")
+        nbody, factors = terms[term_idx]
+        if nbody != 2 or row["n"] != 2:
+            raise AssertionError(
+                "independent exact oracle must exercise effective N=2"
+            )
+        base_state = _state_from_occupation(row["base_occ"])
+        applied = apply_ops(base_state, nbody_ops(nsite, factors))
+        if applied is None:
+            continue
+        if row["reduced_order"] != 2:
+            raise AssertionError(
+                "independent exact oracle reduced order mismatch"
+            )
+        target_state, fermion_sign = applied
+        expected_target = tuple(
+            1 if occupied(target_state, orbital) else 0
+            for orbital in range(2 * nsite)
+        )
+        if row["target_valid"] != 1 or row["target_occ"] != expected_target:
+            raise AssertionError(
+                "independent exact oracle target occupation mismatch"
+            )
+
+        base_amplitude = _independent_bf_amplitude(
+            context, row["base_occ"]
+        )
+        target_amplitude = _independent_bf_amplitude(
+            context, row["target_occ"]
+        )
+        if abs(base_amplitude) <= 1.0e-14:
+            raise AssertionError(
+                "independent exact oracle base amplitude is singular"
+            )
+        exact_value = fermion_sign * np.conj(
+            target_amplitude / base_amplitude
+        )
+        assert_config_close(
+            "independent effective N=2 exact value",
+            row["value"],
+            exact_value,
+        )
+        checked += 1
+        max_real = max(max_real, abs(exact_value.real))
+        max_imag = max(max_imag, abs(exact_value.imag))
+
+        base_doublons = sum(
+            row["base_occ"][site] * row["base_occ"][site + nsite]
+            for site in range(nsite)
+        )
+        target_doublons = sum(
+            row["target_occ"][site] * row["target_occ"][site + nsite]
+            for site in range(nsite)
+        )
+        if base_doublons != target_doublons:
+            projection_changes += 1
+
+        identity_base = _independent_bf_amplitude(
+            context, row["base_occ"], identity=True
+        )
+        identity_target = _independent_bf_amplitude(
+            context, row["target_occ"], identity=True
+        )
+        if abs(identity_base) > 1.0e-14:
+            identity_value = fermion_sign * np.conj(
+                identity_target / identity_base
+            )
+            if abs(exact_value - identity_value) > (
+                1.0e-8 * (1.0 + abs(exact_value))
+            ):
+                backflow_changes += 1
+
+    if checked < len(terms):
+        raise AssertionError(
+            "independent exact oracle checked too few nonzero actions: "
+            "{}".format(checked)
+        )
+    if projection_changes == 0:
+        raise AssertionError(
+            "independent exact oracle did not exercise a Gutzwiller change"
+        )
+    if backflow_changes == 0:
+        raise AssertionError(
+            "independent exact oracle is indistinguishable from identity BF"
+        )
+    if max_real <= 1.0e-8 or max_imag <= 1.0e-8:
+        raise AssertionError(
+            "independent exact oracle did not exercise complex values"
+        )
+    return {
+        "checked": checked,
+        "projection_changes": projection_changes,
+        "backflow_changes": backflow_changes,
+    }
+
+
+def config_oracle_dump_paths(workdir):
+    dump_name = os.environ.get("MVMC_BF_NBODY_ORACLE_DUMP")
+    if not dump_name or dump_name == "0":
+        raise AssertionError("MVMC_BF_NBODY_ORACLE_DUMP is not configured")
+    base_path = os.path.join(workdir, dump_name)
+    rank_paths = sorted(glob.glob(base_path + ".rank*"))
+    mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+    if mpi_procs:
+        try:
+            rank_count = int(mpi_procs)
+        except ValueError:
+            raise AssertionError("MVMC_MPI_PROCS is not an integer")
+        if rank_count < 1:
+            raise AssertionError("MVMC_MPI_PROCS must be positive")
+        expected = [
+            "{}.rank{:04d}".format(base_path, rank)
+            for rank in range(rank_count)
+        ]
+        if os.path.exists(base_path):
+            raise AssertionError(
+                "MPI configuration oracle wrote an unsuffixed dump: {}".format(
+                    base_path
+                )
+            )
+        if rank_paths != expected:
+            raise AssertionError(
+                "configuration oracle rank dumps mismatch: actual={} expected={}".format(
+                    rank_paths, expected
+                )
+            )
+        return expected
+    if rank_paths:
+        raise AssertionError(
+            "single-rank configuration oracle wrote rank dumps: {}".format(
+                rank_paths
+            )
+        )
+    return [base_path]
 
 
 def main():
-    all_cases = sorted(list(EXACT_CASES) + list(GENERATED_CHECK_CASES))
-    if len(sys.argv) != 2 or sys.argv[1] not in all_cases:
-        print("usage: {} {}".format(sys.argv[0], "|".join(all_cases)))
+    all_cases = sorted(
+        list(EXACT_CASES)
+        + list(GENERATED_CHECK_CASES)
+        + list(CONFIG_ORACLE_CASES)
+        + list(INVALID_CASES)
+    )
+    if len(sys.argv) not in (2, 4) or sys.argv[1] not in all_cases:
+        print(
+            "usage: {} {} [--expect-error <substring>]".format(
+                sys.argv[0], "|".join(all_cases)
+            )
+        )
         return -1
 
     model = sys.argv[1]
+    expected_error = None
+    if len(sys.argv) == 4:
+        if sys.argv[2] != "--expect-error" or model not in INVALID_CASES:
+            print("ERROR: --expect-error is valid only for invalid cases")
+            return -1
+        expected_error = sys.argv[3]
+    elif model in INVALID_CASES:
+        print("ERROR: invalid cases require --expect-error")
+        return -1
+
     rootdir = os.getcwd()
-    workdir = os.path.join(rootdir, "work", model)
+    work_suffix = validated_work_suffix()
+    workdir = os.path.join(rootdir, "work", model + work_suffix)
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
+    exact_context = None
 
-    if model in EXACT_CASES:
+    if model in INVALID_CASES:
+        INVALID_CASES[model](workdir)
+        expected = None
+        terms = None
+        bin_count = 0
+    elif model in EXACT_CASES:
         nsite, nup, ndown, slater_elm, terms = EXACT_CASES[model](workdir)
         expected = exact_nbody_values(nsite, nup, ndown, slater_elm, terms)
         if max(abs(x.real) for x in expected) < 1.0e-3:
             raise AssertionError("oracle terms do not exercise a nonzero real component")
         if max(abs(x.imag) for x in expected) < 1.0e-3:
             raise AssertionError("oracle terms do not exercise a nonzero imaginary component")
-        bin_count = 1
-    else:
+        bin_count = ED_BIN_COUNT
+    elif model in GENERATED_CHECK_CASES:
         terms, bin_count = GENERATED_CHECK_CASES[model](workdir)
+        expected = None
+    else:
+        case = CONFIG_ORACLE_CASES[model](workdir)
+        nsite, terms, categories, required_categories = case[:4]
+        if len(case) == 5:
+            exact_context = case[4]
+        bin_count = 1
         expected = None
 
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
-    result = subprocess.call([bin_to_test, "-e", "namelist.def", "initial.def"], cwd=workdir)
+    if model in INVALID_CASES:
+        mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+        if mpi_procs:
+            cmd = mpi_command(
+                mpi_procs,
+                [bin_to_test, "-e", "namelist.def"])
+        else:
+            cmd = [bin_to_test, "-e", "namelist.def"]
+        proc = subprocess.run(
+            cmd,
+            cwd=workdir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        with open(os.path.join(workdir, "invalid_test.log"), "w") as f:
+            f.write(proc.stdout)
+        if proc.returncode == 0:
+            raise AssertionError("vmc.out unexpectedly accepted invalid input")
+        if expected_error not in proc.stdout:
+            raise AssertionError(
+                "expected error substring not found: {}\n{}".format(
+                    expected_error, proc.stdout
+                )
+            )
+        if "Start: Sampling." in proc.stdout:
+            raise AssertionError("invalid input reached sampling")
+        if (
+            mpi_procs
+            and "Error: Definition files(*.def) are incomplete." in proc.stdout
+        ):
+            raise AssertionError(
+                "MPI invalid case stopped at the rank-0 pre-broadcast gate"
+            )
+        return 0
+
+    mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+    if mpi_procs:
+        cmd = mpi_command(
+            mpi_procs,
+            [bin_to_test, "-e", "namelist.def", "initial.def"])
+    else:
+        cmd = [bin_to_test, "-e", "namelist.def", "initial.def"]
+    result = subprocess.call(cmd, cwd=workdir)
     if result != 0:
         return result
 
+    if model in CONFIG_ORACLE_CASES:
+        rows = []
+        for rank, dump_path in enumerate(config_oracle_dump_paths(workdir)):
+            rows.extend(parse_config_oracle_dump(dump_path, nsite, rank))
+        unused_production, unused_expected, values_by_term = (
+            validate_config_oracle_rows(
+                rows,
+                nsite,
+                "g",
+                terms,
+                categories,
+                required_categories,
+            )
+        )
+        if exact_context is not None:
+            independent_coverage = validate_independent_effective_n2(
+                rows, nsite, terms, exact_context
+            )
+            print(
+                "{} independent exact checks: {}".format(
+                    model, independent_coverage
+                )
+            )
+        assert_nbodyg_outputs(
+            workdir,
+            terms,
+            bin_count,
+            require_nonzero=True,
+            require_n_ge_3=exact_context is None,
+        )
+        output_rows = parse_nbodyg_output(
+            os.path.join(workdir, "output", "zvo_NBodyG_001.dat")
+        )
+        for term_idx, output_row in enumerate(output_rows):
+            values = values_by_term[term_idx]
+            average = sum(values, 0.0 + 0.0j) / float(len(values))
+            assert_config_close(
+                "configuration oracle NBodyG output term {}".format(term_idx),
+                output_row[2],
+                average,
+            )
+        print("{} configuration oracle passed".format(model))
+        return 0
+
     if expected is None:
-        assert_nbodyg_outputs(workdir, terms, bin_count)
+        assert_nbodyg_outputs(
+            workdir,
+            terms,
+            bin_count,
+            require_nonzero=model in NONVACUOUS_GENERATED_CASES,
+        )
+        if model in NONVACUOUS_GENERATED_CASES:
+            assert_finite_energy_output(workdir)
         print("{} generated NBodyG check passed".format(model))
         return 0
 
-    rows = parse_nbodyg_output(os.path.join(workdir, "output", "zvo_NBodyG_001.dat"))
-    if len(rows) != len(terms):
-        raise AssertionError("NBodyG row count mismatch: output={} expected={}".format(len(rows), len(terms)))
+    assert_nbodyg_outputs(workdir, terms, bin_count)
+    values_by_term = [[] for unused_term in terms]
+    for bin_idx in range(1, bin_count + 1):
+        rows = parse_nbodyg_output(
+            os.path.join(
+                workdir,
+                "output",
+                "zvo_NBodyG_{:03d}.dat".format(bin_idx),
+            )
+        )
+        for term_idx, (nbody, factors, value) in enumerate(rows):
+            if (nbody, factors) != terms[term_idx]:
+                raise AssertionError(
+                    "NBodyG bin {} term {} does not preserve input order".format(
+                        bin_idx, term_idx
+                    )
+                )
+            values_by_term[term_idx].append(value)
 
-    for idx, ((nbody, factors, actual), term, ref) in enumerate(zip(rows, terms, expected)):
-        if (nbody, factors) != term:
-            raise AssertionError("NBodyG term {} does not preserve input order".format(idx))
-        if not (math.isfinite(actual.real) and math.isfinite(actual.imag)):
-            raise AssertionError("NBodyG oracle row {} is not finite: {}".format(idx, actual))
-        assert_close("NBodyG exact oracle row {}".format(idx), actual, ref)
+    for term_idx, (values, ref) in enumerate(zip(values_by_term, expected)):
+        actual, standard_error = complex_mean_and_standard_error(values)
+        tolerance = assert_close(
+            "NBodyG exact oracle row {}".format(term_idx),
+            actual,
+            ref,
+            standard_error,
+        )
+        print(
+            "{} ED row {}: diff={} se={} tol={}".format(
+                model,
+                term_idx,
+                abs(actual - ref),
+                standard_error,
+                tolerance,
+            )
+        )
     print("{} exact N=3 oracle passed".format(model))
     return 0
 

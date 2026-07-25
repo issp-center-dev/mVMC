@@ -27,11 +27,14 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #include <errno.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "global.h"
+#include "backflow_nbody.h"
+#include "nbody_operator.h"
 #include "vmcmake.h"
 #include "vmcmake_real.h"
 #include "vmccal.h"
@@ -116,7 +119,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
   int sample;
 
   double complex logIpOld, logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
-  int projCntNew[NProj];
+  int projCntNew[NProj > 0 ? NProj : 1];
   int projBFCntNew[16 * Nsite * Nrange]; // For BackFlow
   int msaTmp[NQPFull * Nsize], icount[NQPFull]; // For BackFlow
   double complex pfMNew[NQPFull];
@@ -506,7 +509,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   int tmp_i;
 
   double logIpOld, logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
-  int projCntNew[NProj];
+  int projCntNew[NProj > 0 ? NProj : 1];
   int projBFCntNew[16 * Nsite * Nrange]; // For BackFlow
   int msaTmp[NQPFull * Nsize], icount[NQPFull]; // For BackFlow
 #ifdef MVMC_DEBUG_BF_REAL_UPDATE
@@ -1398,6 +1401,1101 @@ static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
   free(sltBFTmpReal);
 }
 
+static int dumpBFNBodyComponentCheck(const char *path,
+                                     const int *eleIdx,
+                                     const int *eleNum,
+                                     const int *eleProjBFCnt,
+                                     int parentRank,
+                                     int childRank) {
+  const size_t slaterCount = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+  const size_t invPfCount =
+      (size_t)NQPFull*((size_t)Nsize*(size_t)Nsize + 1u);
+  const size_t etaCount = (size_t)Nsite*(size_t)Nsite;
+  double complex *candidate = NULL;
+  double complex *zeroSlater = NULL;
+  double complex *slaterBefore = NULL;
+  double *slaterRealBefore = NULL;
+  double complex *invPfBefore = NULL;
+  double complex *invPfAfterReference = NULL;
+  double complex *etaBefore = NULL;
+  double complex *pfCandidate = NULL;
+  double complex *pfReference = NULL;
+  double complex *pfZero = NULL;
+  double complex *pfBufM = NULL;
+  double complex *pfWork = NULL;
+  int *etaFlagBefore = NULL;
+  int *eleSpn = NULL;
+  int *pfIWork = NULL;
+  double *pfRWork = NULL;
+  double slaterMaxDiff = 0.0;
+  double pfMaxDiff = 0.0;
+  int slaterGlobalStateChanged;
+  int etaStateChanged = 0;
+  int etaFlagStateChanged = 0;
+  int pfReferenceStatus;
+  int pfStatus;
+  int pfFailureDetail = -1;
+  int pfGlobalStateChanged;
+  int pfZeroStatus;
+  int pfZeroCandidateNonzero = 0;
+  int pfInvalidNullStatus;
+  int pfInvalidRangeStatus;
+  int pfInvalidWorkspaceStatus;
+  int pfInvalidFailureDetail = 0;
+  int invalidDetail;
+  size_t idx;
+  int ri;
+  FILE *fp = NULL;
+  int status = -1;
+
+  candidate = (double complex *)malloc(slaterCount*sizeof(double complex));
+  zeroSlater = (double complex *)calloc(slaterCount, sizeof(double complex));
+  slaterBefore = (double complex *)malloc(slaterCount*sizeof(double complex));
+  slaterRealBefore = (double *)malloc(slaterCount*sizeof(double));
+  invPfBefore = (double complex *)malloc(invPfCount*sizeof(double complex));
+  invPfAfterReference =
+      (double complex *)malloc(invPfCount*sizeof(double complex));
+  etaBefore = (double complex *)malloc(etaCount*sizeof(double complex));
+  etaFlagBefore = (int *)malloc(etaCount*sizeof(int));
+  pfCandidate =
+      (double complex *)malloc((size_t)NQPFull*sizeof(double complex));
+  pfReference =
+      (double complex *)malloc((size_t)NQPFull*sizeof(double complex));
+  pfZero = (double complex *)malloc((size_t)NQPFull*sizeof(double complex));
+  pfBufM = (double complex *)malloc(
+      (size_t)Nsize*(size_t)Nsize*sizeof(double complex));
+  pfWork =
+      (double complex *)malloc((size_t)LapackLWork*sizeof(double complex));
+  eleSpn = (int *)malloc((size_t)Nsize*sizeof(int));
+  pfIWork = (int *)malloc((size_t)Nsize*sizeof(int));
+  pfRWork = (double *)malloc((size_t)LapackLWork*sizeof(double));
+  if(candidate == NULL || zeroSlater == NULL || slaterBefore == NULL
+     || slaterRealBefore == NULL || invPfBefore == NULL
+     || invPfAfterReference == NULL || etaBefore == NULL
+     || etaFlagBefore == NULL || pfCandidate == NULL || pfReference == NULL
+     || pfZero == NULL || pfBufM == NULL || pfWork == NULL || eleSpn == NULL
+     || pfIWork == NULL || pfRWork == NULL) {
+    fprintf(stderr,
+            "Error: failed to allocate BackFlow N-body component diagnostic buffers.\n");
+    goto cleanup;
+  }
+
+  memcpy(slaterBefore, SlaterElmBF, slaterCount*sizeof(double complex));
+  memcpy(slaterRealBefore, SlaterElmBF_real, slaterCount*sizeof(double));
+  memcpy(invPfBefore, InvM, invPfCount*sizeof(double complex));
+  for(ri=0;ri<Nsite;ri++) {
+    memcpy(etaBefore + (size_t)ri*(size_t)Nsite, eta[ri],
+           (size_t)Nsite*sizeof(double complex));
+    memcpy(etaFlagBefore + (size_t)ri*(size_t)Nsite, etaFlag[ri],
+           (size_t)Nsite*sizeof(int));
+  }
+
+  MakeSlaterElmBF_fcmp_to_serial(candidate, eleNum, eleProjBFCnt);
+  for(idx=0;idx<slaterCount;idx++) {
+    const double diff = cabs(candidate[idx] - slaterBefore[idx]);
+    if(diff > slaterMaxDiff) slaterMaxDiff = diff;
+  }
+
+  slaterGlobalStateChanged =
+      memcmp(slaterBefore, SlaterElmBF,
+             slaterCount*sizeof(double complex)) != 0
+      || memcmp(slaterRealBefore, SlaterElmBF_real,
+                slaterCount*sizeof(double)) != 0
+      || memcmp(invPfBefore, InvM,
+                invPfCount*sizeof(double complex)) != 0;
+  for(ri=0;ri<Nsite;ri++) {
+    if(memcmp(etaBefore + (size_t)ri*(size_t)Nsite, eta[ri],
+              (size_t)Nsite*sizeof(double complex)) != 0) {
+      etaStateChanged = 1;
+    }
+    if(memcmp(etaFlagBefore + (size_t)ri*(size_t)Nsite, etaFlag[ri],
+              (size_t)Nsite*sizeof(int)) != 0) {
+      etaFlagStateChanged = 1;
+    }
+  }
+
+  for(idx=0;idx<(size_t)Nsize;idx++) {
+    eleSpn[idx] = idx < (size_t)Ne ? 0 : 1;
+  }
+  for(idx=0;idx<(size_t)NQPFull;idx++) {
+    pfCandidate[idx] = 1.0 + 0.0*I;
+    pfReference[idx] = 1.0 + 0.0*I;
+    pfZero[idx] = 1.0 + 0.0*I;
+  }
+  pfReferenceStatus = CalculateMAll_BF_fcmp(eleIdx, 0, NQPFull);
+  memcpy(pfReference, PfM, (size_t)NQPFull*sizeof(double complex));
+  memcpy(invPfAfterReference, InvM,
+         invPfCount*sizeof(double complex));
+
+  pfStatus = CalculatePfM_BF_from_workspace(
+      candidate, eleIdx, eleSpn, 0, NQPFull, pfCandidate, &pfFailureDetail,
+      pfBufM, pfIWork, pfWork, LapackLWork, pfRWork);
+  for(idx=0;idx<(size_t)NQPFull;idx++) {
+    const double diff = cabs(pfCandidate[idx] - pfReference[idx]);
+    if(diff > pfMaxDiff) pfMaxDiff = diff;
+  }
+
+  pfZeroStatus = CalculatePfM_BF_from_workspace(
+      zeroSlater, eleIdx, eleSpn, 0, NQPFull, pfZero, NULL,
+      pfBufM, pfIWork, pfWork, LapackLWork, pfRWork);
+  for(idx=0;idx<(size_t)NQPFull;idx++) {
+    if(creal(pfZero[idx]) != 0.0 || cimag(pfZero[idx]) != 0.0) {
+      pfZeroCandidateNonzero = 1;
+    }
+  }
+
+  invalidDetail = -1;
+  pfInvalidNullStatus = CalculatePfM_BF_from_workspace(
+      NULL, eleIdx, eleSpn, 0, NQPFull, pfCandidate,
+      &invalidDetail, pfBufM, pfIWork, pfWork, LapackLWork,
+      pfRWork);
+  if(invalidDetail != 0) pfInvalidFailureDetail = 1;
+  invalidDetail = -1;
+  pfInvalidRangeStatus = CalculatePfM_BF_from_workspace(
+      candidate, eleIdx, eleSpn, 0, 0, pfCandidate,
+      &invalidDetail, pfBufM, pfIWork, pfWork, LapackLWork,
+      pfRWork);
+  if(invalidDetail != 0) pfInvalidFailureDetail = 1;
+  invalidDetail = -1;
+  pfInvalidWorkspaceStatus = CalculatePfM_BF_from_workspace(
+      candidate, eleIdx, eleSpn, 0, NQPFull, pfCandidate,
+      &invalidDetail, pfBufM, pfIWork, pfWork, LapackLWork-1,
+      pfRWork);
+  if(invalidDetail != 0) pfInvalidFailureDetail = 1;
+
+  pfGlobalStateChanged =
+      memcmp(slaterBefore, SlaterElmBF,
+             slaterCount*sizeof(double complex)) != 0
+      || memcmp(slaterRealBefore, SlaterElmBF_real,
+                slaterCount*sizeof(double)) != 0
+      || memcmp(invPfAfterReference, InvM,
+                invPfCount*sizeof(double complex)) != 0;
+
+  /* Keep this test-only diagnostic non-invasive if a future regression occurs. */
+  memcpy(SlaterElmBF, slaterBefore, slaterCount*sizeof(double complex));
+  memcpy(SlaterElmBF_real, slaterRealBefore, slaterCount*sizeof(double));
+  memcpy(InvM, invPfBefore, invPfCount*sizeof(double complex));
+  for(ri=0;ri<Nsite;ri++) {
+    memcpy(eta[ri], etaBefore + (size_t)ri*(size_t)Nsite,
+           (size_t)Nsite*sizeof(double complex));
+    memcpy(etaFlag[ri], etaFlagBefore + (size_t)ri*(size_t)Nsite,
+           (size_t)Nsite*sizeof(int));
+  }
+
+  fp = fopen(path, "w");
+  if(fp == NULL) {
+    fprintf(stderr,
+            "Error: failed to open BackFlow N-body component dump file: %s\n",
+            path);
+    goto cleanup;
+  }
+  fprintf(fp, "slater_max_abs_diff %.17e\n", slaterMaxDiff);
+  fprintf(fp, "slater_global_state_changed %d\n",
+          slaterGlobalStateChanged);
+  fprintf(fp, "eta_state_changed %d\n", etaStateChanged);
+  fprintf(fp, "eta_flag_state_changed %d\n", etaFlagStateChanged);
+  fprintf(fp, "pf_max_abs_diff %.17e\n", pfMaxDiff);
+  fprintf(fp, "pf_reference_status %d\n", pfReferenceStatus);
+  fprintf(fp, "pf_status %d\n", pfStatus);
+  fprintf(fp, "pf_failure_detail %d\n", pfFailureDetail);
+  fprintf(fp, "pf_global_state_changed %d\n", pfGlobalStateChanged);
+  fprintf(fp, "pf_zero_status %d\n", pfZeroStatus);
+  fprintf(fp, "pf_zero_candidate_nonzero %d\n",
+          pfZeroCandidateNonzero);
+  fprintf(fp, "pf_invalid_null_status %d\n", pfInvalidNullStatus);
+  fprintf(fp, "pf_invalid_range_status %d\n", pfInvalidRangeStatus);
+  fprintf(fp, "pf_invalid_workspace_status %d\n",
+          pfInvalidWorkspaceStatus);
+  fprintf(fp, "pf_invalid_failure_detail %d\n",
+          pfInvalidFailureDetail);
+  fprintf(fp, "writer_parent_rank %d\n", parentRank);
+  fprintf(fp, "writer_child_rank %d\n", childRank);
+  status = 0;
+
+cleanup:
+  if(fp != NULL) fclose(fp);
+  free(candidate);
+  free(zeroSlater);
+  free(slaterBefore);
+  free(slaterRealBefore);
+  free(invPfBefore);
+  free(invPfAfterReference);
+  free(etaBefore);
+  free(etaFlagBefore);
+  free(pfCandidate);
+  free(pfReference);
+  free(pfZero);
+  free(pfBufM);
+  free(pfWork);
+  free(eleSpn);
+  free(pfIWork);
+  free(pfRWork);
+  return status;
+}
+
+typedef struct {
+  BFNBodyScratchSizes sizes;
+  BFNBodyScratch scratch;
+  int *intBase;
+  double complex *complexBase;
+  double *doubleBase;
+} BFDiagScratch;
+
+static int BFDiagSizeMul(size_t left, size_t right, size_t *value) {
+  if(value == NULL || (right != 0 && left > SIZE_MAX/right)) return -1;
+  *value = left*right;
+  return 0;
+}
+
+static void *BFDiagAlloc(size_t count, size_t width) {
+  size_t bytes;
+  if(count == 0 || BFDiagSizeMul(count, width, &bytes) != 0) {
+    return NULL;
+  }
+  return malloc(bytes);
+}
+
+static int initBFDiagScratch(BFDiagScratch *owned) {
+  if(owned == NULL) return -1;
+  memset(owned, 0, sizeof(*owned));
+  if(GetBFNBodyScratchSizes(4, 0, &owned->sizes) != BF_NBODY_OK) {
+    return -1;
+  }
+  owned->intBase =
+      (int *)BFDiagAlloc(owned->sizes.intCount, sizeof(int));
+  owned->complexBase = (double complex *)BFDiagAlloc(
+      owned->sizes.complexCount, sizeof(double complex));
+  owned->doubleBase =
+      (double *)BFDiagAlloc(owned->sizes.doubleCount, sizeof(double));
+  if(owned->intBase == NULL || owned->complexBase == NULL
+     || owned->doubleBase == NULL) {
+    return -1;
+  }
+  memset(owned->intBase, 0x5a,
+         owned->sizes.intCount*sizeof(int));
+  memset(owned->complexBase, 0xa5,
+         owned->sizes.complexCount*sizeof(double complex));
+  memset(owned->doubleBase, 0x3c,
+         owned->sizes.doubleCount*sizeof(double));
+  return BindBFNBodyScratch(
+      &owned->sizes, owned->intBase, owned->sizes.intCount,
+      owned->complexBase, owned->sizes.complexCount,
+      owned->doubleBase, owned->sizes.doubleCount, &owned->scratch)
+      == BF_NBODY_OK ? 0 : -1;
+}
+
+static void freeBFDiagScratch(BFDiagScratch *owned) {
+  if(owned == NULL) return;
+  free(owned->intBase);
+  free(owned->complexBase);
+  free(owned->doubleBase);
+  memset(owned, 0, sizeof(*owned));
+}
+
+static int BFDiagResultMatches(BFNBodyResult result,
+                               BFNBodyStatus status,
+                               BFNBodyStage stage, int detail,
+                               int reducedOrder,
+                               double complex value, double tolerance) {
+  return result.status == status && result.stage == stage
+      && result.detail == detail && result.reducedOrder == reducedOrder
+      && isfinite(creal(result.value)) && isfinite(cimag(result.value))
+      && cabs(result.value-value) <= tolerance;
+}
+
+static int BFDiagDirectValue(
+    int n, const int *rsi, const int *rsj, double complex ip,
+    const int *eleIdx, const int *eleCfg, const int *eleNum,
+    const int *eleProjCnt, const int *eleProjBFCnt,
+    BFNBodyScratch *scratch, NBodyReduction *reductionOut,
+    double complex *valueOut) {
+  NBodyReduction reduction;
+  double complex value;
+  const size_t slaterCount =
+      (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+
+  if(scratch == NULL || reductionOut == NULL || valueOut == NULL
+     || ReduceNBodyTerm(n, rsi, rsj, eleNum, Nsite2,
+                        scratch->rsi, scratch->rsj,
+                        scratch->maxOrder, &reduction) != 0) {
+    return -1;
+  }
+  *reductionOut = reduction;
+  if(reduction.kind == NBODY_REDUCED_ZERO) {
+    *valueOut = 0.0+0.0*I;
+    return 0;
+  }
+  if(reduction.kind == NBODY_REDUCED_SCALAR) {
+    *valueOut = (double)reduction.sign+0.0*I;
+    return 0;
+  }
+  if(reduction.kind != NBODY_REDUCED_HOPS || reduction.order != 1) {
+    return -1;
+  }
+
+  memcpy(scratch->eleIdx, eleIdx, (size_t)Nsize*sizeof(int));
+  memcpy(scratch->eleCfg, eleCfg, (size_t)Nsite2*sizeof(int));
+  memcpy(scratch->eleNum, eleNum, (size_t)Nsite2*sizeof(int));
+  if(NProj > 0) {
+    memcpy(scratch->projCnt, eleProjCnt, (size_t)NProj*sizeof(int));
+  }
+  memcpy(scratch->projBFCnt, eleProjBFCnt,
+         (size_t)16*(size_t)Nsite*(size_t)Nrange*sizeof(int));
+  memcpy(scratch->slater, SlaterElmBF,
+         slaterCount*sizeof(double complex));
+
+  value = GreenFunc1BF(
+      scratch->rsi[0]%Nsite, scratch->rsj[0]%Nsite,
+      scratch->rsj[0]/Nsite, ip, scratch->slater,
+      scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
+      eleProjCnt, scratch->projCnt, eleProjBFCnt,
+      scratch->projBFCnt, scratch->greenBuffer);
+  if(memcmp(scratch->eleIdx, eleIdx, (size_t)Nsize*sizeof(int)) != 0
+     || memcmp(scratch->eleCfg, eleCfg,
+               (size_t)Nsite2*sizeof(int)) != 0
+     || memcmp(scratch->eleNum, eleNum,
+               (size_t)Nsite2*sizeof(int)) != 0
+     || memcmp(scratch->slater, SlaterElmBF,
+               slaterCount*sizeof(double complex)) != 0) {
+    return -1;
+  }
+  *valueOut = (double)reduction.sign*value;
+  return isfinite(creal(*valueOut)) && isfinite(cimag(*valueOut)) ? 0 : -1;
+}
+
+static void BFDiagRestoreGlobals(
+    const double complex *slater, const double *slaterReal,
+    const double complex *invM, const double complex *pfM,
+    const double complex *etaValues, const int *etaFlags) {
+  const size_t slaterCount =
+      (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+  const size_t invCount =
+      (size_t)NQPFull*(size_t)Nsize*(size_t)Nsize;
+  int ri;
+
+  memcpy(SlaterElmBF, slater, slaterCount*sizeof(double complex));
+  memcpy(SlaterElmBF_real, slaterReal, slaterCount*sizeof(double));
+  memcpy(InvM, invM, invCount*sizeof(double complex));
+  memcpy(PfM, pfM, (size_t)NQPFull*sizeof(double complex));
+  for(ri=0;ri<Nsite;ri++) {
+    memcpy(eta[ri], etaValues+(size_t)ri*(size_t)Nsite,
+           (size_t)Nsite*sizeof(double complex));
+    memcpy(etaFlag[ri], etaFlags+(size_t)ri*(size_t)Nsite,
+           (size_t)Nsite*sizeof(int));
+  }
+}
+
+static int BFDiagGlobalsDiffer(
+    const double complex *slater, const double *slaterReal,
+    const double complex *invM, const double complex *pfM,
+    const double complex *etaValues, const int *etaFlags) {
+  const size_t slaterCount =
+      (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+  const size_t invCount =
+      (size_t)NQPFull*(size_t)Nsize*(size_t)Nsize;
+  int ri;
+
+  if(memcmp(SlaterElmBF, slater,
+            slaterCount*sizeof(double complex)) != 0
+     || memcmp(SlaterElmBF_real, slaterReal,
+               slaterCount*sizeof(double)) != 0
+     || memcmp(InvM, invM, invCount*sizeof(double complex)) != 0
+     || memcmp(PfM, pfM,
+               (size_t)NQPFull*sizeof(double complex)) != 0) {
+    return 1;
+  }
+  for(ri=0;ri<Nsite;ri++) {
+    if(memcmp(eta[ri], etaValues+(size_t)ri*(size_t)Nsite,
+              (size_t)Nsite*sizeof(double complex)) != 0
+       || memcmp(etaFlag[ri], etaFlags+(size_t)ri*(size_t)Nsite,
+                 (size_t)Nsite*sizeof(int)) != 0) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static int BFDiagFullRebuildValue(
+    int n, const int *rsi, const int *rsj, double complex ip,
+    const int *eleIdx, const int *eleCfg, const int *eleNum,
+    const int *eleProjCnt, BFNBodyScratch *scratch,
+    const double complex *slaterBefore, const double *slaterRealBefore,
+    const double complex *invBefore, const double complex *pfBefore,
+    const double complex *etaBefore, const int *etaFlagBefore,
+    double complex *valueOut, BFNBodyStage *zeroStageOut) {
+  double complex ipNew;
+  double projRatio;
+  int k;
+  int info = -1;
+
+  if(valueOut == NULL || zeroStageOut == NULL) return -1;
+  *zeroStageOut = BF_NBODY_STAGE_RATIO;
+  memcpy(scratch->eleIdx, eleIdx, (size_t)Nsize*sizeof(int));
+  memcpy(scratch->eleCfg, eleCfg, (size_t)Nsite2*sizeof(int));
+  memcpy(scratch->eleNum, eleNum, (size_t)Nsite2*sizeof(int));
+  for(k=0;k<n;k++) {
+    const int source = rsj[k];
+    const int spin = source/Nsite;
+    const int localLabel = eleCfg[source];
+    const int particle = localLabel+spin*Ne;
+    if(rsi[k]/Nsite != spin || localLabel < 0 || localLabel >= Ne
+       || particle < 0 || particle >= Nsize
+       || eleNum[source] != 1 || eleNum[rsi[k]] != 0
+       || eleIdx[particle] != source%Nsite) {
+      goto restore;
+    }
+    scratch->moved[k] = particle;
+  }
+  for(k=0;k<n;k++) {
+    scratch->eleCfg[rsj[k]] = -1;
+    scratch->eleNum[rsj[k]] = 0;
+  }
+  for(k=0;k<n;k++) {
+    const int particle = scratch->moved[k];
+    scratch->eleCfg[rsi[k]] = particle%Ne;
+    scratch->eleNum[rsi[k]] = 1;
+    scratch->eleIdx[particle] = rsi[k]%Nsite;
+  }
+  MakeProjCnt(scratch->projCnt, scratch->eleNum);
+  MakeProjBFCnt(scratch->projBFCnt, scratch->eleNum);
+  if(!IsSectorStateAllowed(scratch->eleNum)) {
+    *valueOut = 0.0+0.0*I;
+    *zeroStageOut = BF_NBODY_STAGE_PROJECTION;
+    info = 0;
+    goto restore;
+  }
+  MakeSlaterElmBF_fcmp(scratch->eleNum, scratch->projBFCnt);
+  if(CalculateMAll_BF_fcmp(scratch->eleIdx, 0, NQPFull) != 0) {
+    goto restore;
+  }
+  ipNew = CalculateIP_fcmp(PfM, 0, NQPFull, MPI_COMM_SELF);
+  projRatio = ProjRatio(scratch->projCnt, eleProjCnt);
+  *valueOut = conj(projRatio*ipNew/ip);
+  if(isfinite(creal(*valueOut)) && isfinite(cimag(*valueOut))) info = 0;
+
+restore:
+  BFDiagRestoreGlobals(
+      slaterBefore, slaterRealBefore, invBefore, pfBefore,
+      etaBefore, etaFlagBefore);
+  return info;
+}
+
+static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
+                                    const int *eleCfg, const int *eleNum,
+                                    const int *eleProjCnt,
+                                    const int *eleProjBFCnt) {
+  const double tolerance = 1.0e-11;
+  size_t slaterCount;
+  size_t invCount;
+  size_t etaCount;
+  size_t projBFCount;
+  size_t squareCount;
+  BFDiagScratch evaluator;
+  BFDiagScratch reference;
+  double complex *slaterBefore = NULL;
+  double *slaterRealBefore = NULL;
+  double complex *invBefore = NULL;
+  double complex *pfBefore = NULL;
+  double complex *etaBefore = NULL;
+  int *etaFlagBefore = NULL;
+  int *idxBefore = NULL;
+  int *cfgBefore = NULL;
+  int *numBefore = NULL;
+  int *projBefore = NULL;
+  int *projBFBefore = NULL;
+  int *badCfg = NULL;
+  int *occupied = NULL;
+  int *empty = NULL;
+  int source[4], target[4];
+  int pairStart[2], pairCount[2];
+  int scalarCount = 0;
+  int zeroCount = 0;
+  int dispatch1Count = 0;
+  int rebuild2Count = 0;
+  int fullRebuildCount = 0;
+  int aliasRejectionCount = 0;
+  int contractFailures = 0;
+  int setupFailures = 0;
+  int mixedOrderFailures = 0;
+  int staleBaseRejectionCount = 0;
+  int callerStateChanged = 0;
+  int globalStateChanged = 0;
+  double maxDirectDiff = 0.0;
+  double maxFullRebuildDiff = 0.0;
+  double maxN4Imag = 0.0;
+  const long long stateChecksBefore = BFNBodyStateCheckCount;
+  const long long stateCheckFailuresBefore =
+      BFNBodyStateCheckFailureCount;
+  double complex ip = 0.0+0.0*I;
+  FILE *fp = NULL;
+  int spin;
+  int k;
+  int status = -1;
+
+  memset(&evaluator, 0, sizeof(evaluator));
+  memset(&reference, 0, sizeof(reference));
+  if(path == NULL
+     || BFDiagSizeMul(
+            (size_t)Nsite2, (size_t)Nsite2, &squareCount) != 0
+     || BFDiagSizeMul(
+            (size_t)NQPFull, squareCount, &slaterCount) != 0
+     || BFDiagSizeMul(
+            (size_t)Nsize, (size_t)Nsize, &squareCount) != 0
+     || BFDiagSizeMul(
+            (size_t)NQPFull, squareCount, &invCount) != 0
+     || BFDiagSizeMul(
+            (size_t)Nsite, (size_t)Nsite, &etaCount) != 0
+     || BFDiagSizeMul(
+            (size_t)Nsite, (size_t)Nrange, &squareCount) != 0
+     || BFDiagSizeMul(
+            (size_t)16, squareCount, &projBFCount) != 0
+     || initBFDiagScratch(&evaluator) != 0
+     || initBFDiagScratch(&reference) != 0) {
+    goto cleanup;
+  }
+  slaterBefore = (double complex *)BFDiagAlloc(
+      slaterCount, sizeof(double complex));
+  slaterRealBefore =
+      (double *)BFDiagAlloc(slaterCount, sizeof(double));
+  invBefore =
+      (double complex *)BFDiagAlloc(invCount, sizeof(double complex));
+  pfBefore = (double complex *)BFDiagAlloc(
+      (size_t)NQPFull, sizeof(double complex));
+  etaBefore = (double complex *)BFDiagAlloc(
+      etaCount, sizeof(double complex));
+  etaFlagBefore = (int *)BFDiagAlloc(etaCount, sizeof(int));
+  idxBefore = (int *)BFDiagAlloc((size_t)Nsize, sizeof(int));
+  cfgBefore = (int *)BFDiagAlloc((size_t)Nsite2, sizeof(int));
+  numBefore = (int *)BFDiagAlloc((size_t)Nsite2, sizeof(int));
+  if(NProj > 0) {
+    projBefore =
+        (int *)BFDiagAlloc((size_t)NProj, sizeof(int));
+  }
+  projBFBefore = (int *)BFDiagAlloc(projBFCount, sizeof(int));
+  badCfg = (int *)BFDiagAlloc((size_t)Nsite2, sizeof(int));
+  occupied = (int *)BFDiagAlloc((size_t)Nsite2, sizeof(int));
+  empty = (int *)BFDiagAlloc((size_t)Nsite2, sizeof(int));
+  if(slaterBefore == NULL || slaterRealBefore == NULL
+     || invBefore == NULL || pfBefore == NULL || etaBefore == NULL
+     || etaFlagBefore == NULL || idxBefore == NULL || cfgBefore == NULL
+     || numBefore == NULL || (NProj > 0 && projBefore == NULL)
+     || projBFBefore == NULL || badCfg == NULL
+     || occupied == NULL || empty == NULL) {
+    goto cleanup;
+  }
+
+  if(CalculateMAll_BF_fcmp(eleIdx, 0, NQPFull) != 0) goto cleanup;
+  ip = CalculateIP_fcmp(PfM, 0, NQPFull, MPI_COMM_SELF);
+  if(!isfinite(creal(ip)) || !isfinite(cimag(ip)) || cabs(ip) == 0.0) {
+    goto cleanup;
+  }
+  memcpy(slaterBefore, SlaterElmBF,
+         slaterCount*sizeof(double complex));
+  memcpy(slaterRealBefore, SlaterElmBF_real,
+         slaterCount*sizeof(double));
+  memcpy(invBefore, InvM, invCount*sizeof(double complex));
+  memcpy(pfBefore, PfM, (size_t)NQPFull*sizeof(double complex));
+  memcpy(idxBefore, eleIdx, (size_t)Nsize*sizeof(int));
+  memcpy(cfgBefore, eleCfg, (size_t)Nsite2*sizeof(int));
+  memcpy(numBefore, eleNum, (size_t)Nsite2*sizeof(int));
+  if(NProj > 0) {
+    memcpy(projBefore, eleProjCnt, (size_t)NProj*sizeof(int));
+  }
+  memcpy(projBFBefore, eleProjBFCnt, projBFCount*sizeof(int));
+  for(k=0;k<Nsite;k++) {
+    memcpy(etaBefore+(size_t)k*(size_t)Nsite, eta[k],
+           (size_t)Nsite*sizeof(double complex));
+    memcpy(etaFlagBefore+(size_t)k*(size_t)Nsite, etaFlag[k],
+           (size_t)Nsite*sizeof(int));
+  }
+
+  k = 0;
+  for(spin=0;spin<2;spin++) {
+    int occupiedCount = 0;
+    int emptyCount = 0;
+    int orbital;
+    pairStart[spin] = k;
+    for(orbital=spin*Nsite;orbital<(spin+1)*Nsite;orbital++) {
+      if(eleNum[orbital] == 1) occupied[occupiedCount++] = orbital;
+      else empty[emptyCount++] = orbital;
+    }
+    pairCount[spin] =
+        occupiedCount < emptyCount ? occupiedCount : emptyCount;
+    for(orbital=0;orbital<pairCount[spin] && k<4;orbital++) {
+      source[k] = occupied[orbital];
+      target[k] = empty[orbital];
+      k++;
+    }
+  }
+  if(k != 4 || pairCount[0] != 2 || pairCount[1] != 2) {
+    setupFailures++;
+    goto write_dump;
+  }
+
+  {
+    const int rsi[1] = {source[0]};
+    const int rsj[1] = {source[0]};
+    BFNBodyResult result = GreenFuncNBF(
+        1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    scalarCount++;
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_OK, BF_NBODY_STAGE_REDUCE,
+           BF_NBODY_DETAIL_NONE, 0, 1.0+0.0*I, 0.0)) {
+      contractFailures++;
+    }
+  }
+  {
+    const int rsi[1] = {target[0]};
+    const int rsj[1] = {target[0]};
+    BFNBodyResult result = GreenFuncNBF(
+        1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    zeroCount++;
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_PHYSICAL_ZERO, BF_NBODY_STAGE_REDUCE,
+           BF_NBODY_DETAIL_NONE, 0, 0.0+0.0*I, 0.0)) {
+      contractFailures++;
+    }
+  }
+  {
+    const int rsi[1] = {target[0]};
+    const int rsj[1] = {source[0]};
+    NBodyReduction reduction;
+    double complex direct;
+    BFNBodyResult result;
+    if(BFDiagDirectValue(
+           1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+           eleProjCnt, eleProjBFCnt, &reference.scratch,
+           &reduction, &direct) != 0) {
+      setupFailures++;
+    } else {
+      const BFNBodyStatus expectedStatus =
+          cabs(direct) == 0.0 ? BF_NBODY_PHYSICAL_ZERO : BF_NBODY_OK;
+      const BFNBodyStage expectedStage =
+          cabs(direct) == 0.0 ? BF_NBODY_STAGE_RATIO : BF_NBODY_STAGE_NONE;
+      result = GreenFuncNBF(
+          1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+          eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+      dispatch1Count++;
+      if(!BFDiagResultMatches(
+             result, expectedStatus, expectedStage, BF_NBODY_DETAIL_NONE,
+             1, direct, tolerance)) {
+        contractFailures++;
+      }
+      if(cabs(result.value-direct) > maxDirectDiff) {
+        maxDirectDiff = cabs(result.value-direct);
+      }
+    }
+  }
+  {
+    const int rsi[2] = {target[0], target[1]};
+    const int rsj[2] = {source[0], source[1]};
+    double complex full;
+    BFNBodyStage zeroStage;
+    BFNBodyResult result;
+    globalStateChanged |= BFDiagGlobalsDiffer(
+        slaterBefore, slaterRealBefore, invBefore, pfBefore,
+        etaBefore, etaFlagBefore);
+    if(BFDiagFullRebuildValue(
+           2, rsi, rsj, ip, eleIdx, eleCfg, eleNum, eleProjCnt,
+           &reference.scratch, slaterBefore, slaterRealBefore,
+           invBefore, pfBefore, etaBefore, etaFlagBefore,
+           &full, &zeroStage) != 0) {
+      setupFailures++;
+    } else {
+      const BFNBodyStatus expectedStatus =
+          cabs(full) == 0.0 ? BF_NBODY_PHYSICAL_ZERO : BF_NBODY_OK;
+      const BFNBodyStage expectedStage =
+          cabs(full) == 0.0 ? zeroStage : BF_NBODY_STAGE_NONE;
+      result = GreenFuncNBF(
+          2, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+          eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+      rebuild2Count++;
+      if(!BFDiagResultMatches(
+             result, expectedStatus, expectedStage, BF_NBODY_DETAIL_NONE,
+             2, full, tolerance)) {
+        contractFailures++;
+      }
+      if(cabs(result.value-full) > maxFullRebuildDiff) {
+        maxFullRebuildDiff = cabs(result.value-full);
+      }
+    }
+  }
+  {
+    const int rsi[3] = {target[0], target[2], target[1]};
+    const int rsj[3] = {target[2], source[0], source[1]};
+    NBodyReduction reduction;
+    double complex full;
+    BFNBodyStage zeroStage;
+    BFNBodyResult result;
+    if(ReduceNBodyTerm(
+           3, rsi, rsj, eleNum, Nsite2,
+           reference.scratch.rsi, reference.scratch.rsj,
+           reference.scratch.maxOrder, &reduction) != 0
+       || reduction.kind != NBODY_REDUCED_HOPS || reduction.order != 2
+       || reduction.sign != 1) {
+      setupFailures++;
+    } else {
+      globalStateChanged |= BFDiagGlobalsDiffer(
+          slaterBefore, slaterRealBefore, invBefore, pfBefore,
+          etaBefore, etaFlagBefore);
+      if(BFDiagFullRebuildValue(
+             reduction.order, reference.scratch.rsi,
+             reference.scratch.rsj, ip, eleIdx, eleCfg, eleNum,
+             eleProjCnt, &reference.scratch, slaterBefore,
+             slaterRealBefore, invBefore, pfBefore, etaBefore,
+             etaFlagBefore, &full, &zeroStage) != 0) {
+        setupFailures++;
+      } else {
+        const BFNBodyStatus expectedStatus =
+            cabs(full) == 0.0 ? BF_NBODY_PHYSICAL_ZERO : BF_NBODY_OK;
+        const BFNBodyStage expectedStage =
+            cabs(full) == 0.0 ? zeroStage : BF_NBODY_STAGE_NONE;
+        full *= (double)reduction.sign;
+        result = GreenFuncNBF(
+            3, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+            eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+        rebuild2Count++;
+        if(!BFDiagResultMatches(
+               result, expectedStatus, expectedStage, BF_NBODY_DETAIL_NONE,
+               2, full, tolerance)) {
+          contractFailures++;
+        }
+        if(cabs(result.value-full) > maxFullRebuildDiff) {
+          maxFullRebuildDiff = cabs(result.value-full);
+        }
+      }
+    }
+  }
+  {
+    const int rsi[3] = {source[2], target[0], source[1]};
+    const int rsj[3] = {source[0], source[2], source[1]};
+    NBodyReduction reduction;
+    double complex direct;
+    BFNBodyResult result;
+    if(BFDiagDirectValue(
+           3, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+           eleProjCnt, eleProjBFCnt, &reference.scratch,
+           &reduction, &direct) != 0 || reduction.order != 1
+       || reduction.sign != -1) {
+      setupFailures++;
+    } else {
+      const BFNBodyStatus expectedStatus =
+          cabs(direct) == 0.0 ? BF_NBODY_PHYSICAL_ZERO : BF_NBODY_OK;
+      const BFNBodyStage expectedStage =
+          cabs(direct) == 0.0 ? BF_NBODY_STAGE_RATIO : BF_NBODY_STAGE_NONE;
+      result = GreenFuncNBF(
+          3, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+          eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+      dispatch1Count++;
+      if(!BFDiagResultMatches(
+             result, expectedStatus, expectedStage, BF_NBODY_DETAIL_NONE,
+             1, direct, tolerance)) {
+        contractFailures++;
+      }
+      if(cabs(result.value-direct) > maxDirectDiff) {
+        maxDirectDiff = cabs(result.value-direct);
+      }
+    }
+  }
+  {
+    const int rsi[3] = {target[0], target[1], target[2]};
+    const int rsj[3] = {source[0], source[1], source[2]};
+    double complex full;
+    BFNBodyStage zeroStage;
+    BFNBodyResult result;
+    globalStateChanged |= BFDiagGlobalsDiffer(
+        slaterBefore, slaterRealBefore, invBefore, pfBefore,
+        etaBefore, etaFlagBefore);
+    if(BFDiagFullRebuildValue(
+           3, rsi, rsj, ip, eleIdx, eleCfg, eleNum, eleProjCnt,
+           &reference.scratch, slaterBefore, slaterRealBefore,
+           invBefore, pfBefore, etaBefore, etaFlagBefore,
+           &full, &zeroStage) != 0) {
+      setupFailures++;
+    } else {
+      result = GreenFuncNBF(
+          3, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+          eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+      fullRebuildCount++;
+      if(!BFDiagResultMatches(
+             result, cabs(full) == 0.0 ? BF_NBODY_PHYSICAL_ZERO
+                                       : BF_NBODY_OK,
+             cabs(full) == 0.0 ? zeroStage
+                               : BF_NBODY_STAGE_NONE,
+             BF_NBODY_DETAIL_NONE, 3, full, tolerance)) {
+        contractFailures++;
+      }
+      if(cabs(result.value-full) > maxFullRebuildDiff) {
+        maxFullRebuildDiff = cabs(result.value-full);
+      }
+    }
+  }
+  {
+    int permutation;
+    for(permutation=0;permutation<4;permutation++) {
+      int rsi[4] = {target[0], target[1], target[2], target[3]};
+      const int rsj[4] = {source[0], source[1], source[2], source[3]};
+      double complex full;
+      BFNBodyStage zeroStage;
+      BFNBodyResult result;
+      double diff;
+      if(permutation & 1) {
+        const int tmp = rsi[pairStart[0]];
+        rsi[pairStart[0]] = rsi[pairStart[0]+1];
+        rsi[pairStart[0]+1] = tmp;
+      }
+      if(permutation & 2) {
+        const int tmp = rsi[pairStart[1]];
+        rsi[pairStart[1]] = rsi[pairStart[1]+1];
+        rsi[pairStart[1]+1] = tmp;
+      }
+      globalStateChanged |= BFDiagGlobalsDiffer(
+          slaterBefore, slaterRealBefore, invBefore, pfBefore,
+          etaBefore, etaFlagBefore);
+      if(BFDiagFullRebuildValue(
+             4, rsi, rsj, ip, eleIdx, eleCfg, eleNum, eleProjCnt,
+             &reference.scratch, slaterBefore, slaterRealBefore,
+             invBefore, pfBefore, etaBefore, etaFlagBefore,
+             &full, &zeroStage) != 0) {
+        setupFailures++;
+        continue;
+      }
+      result = GreenFuncNBF(
+          4, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+          eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+      fullRebuildCount++;
+      if(!BFDiagResultMatches(
+             result, cabs(full) == 0.0 ? BF_NBODY_PHYSICAL_ZERO
+                                       : BF_NBODY_OK,
+             cabs(full) == 0.0 ? zeroStage
+                               : BF_NBODY_STAGE_NONE,
+             BF_NBODY_DETAIL_NONE, 4, full, tolerance)) {
+        contractFailures++;
+      }
+      diff = cabs(result.value-full);
+      if(diff > maxFullRebuildDiff) maxFullRebuildDiff = diff;
+      if(fabs(cimag(result.value)) > maxN4Imag) {
+        maxN4Imag = fabs(cimag(result.value));
+      }
+    }
+  }
+  {
+    const int rsi[1] = {target[0]};
+    const int rsj[1] = {source[0]};
+    NBodyReduction reduction;
+    double complex direct;
+    BFNBodyResult result;
+    if(BFDiagDirectValue(
+           1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+           eleProjCnt, eleProjBFCnt, &reference.scratch,
+           &reduction, &direct) != 0) {
+      mixedOrderFailures++;
+    } else {
+      result = GreenFuncNBF(
+          1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+          eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+      dispatch1Count++;
+      if(cabs(result.value-direct) > tolerance
+         || result.reducedOrder != 1
+         || (cabs(direct) == 0.0
+             ? result.status != BF_NBODY_PHYSICAL_ZERO
+             : result.status != BF_NBODY_OK)) {
+        mixedOrderFailures++;
+      }
+    }
+  }
+  {
+    const int rsi[1] = {target[0]};
+    const int rsj[1] = {source[0]};
+    const int crossTarget = target[pairStart[1]];
+    BFNBodyResult result;
+    result = GreenFuncNBF(
+        0, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_REDUCE,
+           BF_NBODY_DETAIL_REDUCER, 0, 0.0+0.0*I, 0.0)) {
+      contractFailures++;
+    }
+    result = GreenFuncNBF(
+        1, rsi, rsj, 0.0+0.0*I, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_RATIO,
+           BF_NBODY_DETAIL_NONE, 1, 0.0+0.0*I, 0.0)) {
+      contractFailures++;
+    }
+    result = GreenFuncNBF(
+        1, rsi, rsj, NAN+0.0*I, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_NONFINITE, BF_NBODY_STAGE_RATIO,
+           BF_NBODY_DETAIL_NONE, 1, 0.0+0.0*I, 0.0)) {
+      contractFailures++;
+    }
+    result = GreenFuncNBF(
+        1, &crossTarget, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_DISPATCH,
+           BF_NBODY_DETAIL_SPIN_CHANGE, 1, 0.0+0.0*I, 0.0)) {
+      contractFailures++;
+    }
+    memcpy(badCfg, eleCfg, (size_t)Nsite2*sizeof(int));
+    badCfg[source[0]] = -1;
+    result = GreenFuncNBF(
+        1, rsi, rsj, ip, eleIdx, badCfg, eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_CANDIDATE,
+           BF_NBODY_DETAIL_BAD_ELECTRON_LABEL, 1,
+           0.0+0.0*I, 0.0)) {
+      contractFailures++;
+    }
+    memcpy(evaluator.scratch.eleIdx, eleIdx,
+           (size_t)Nsize*sizeof(int));
+    memcpy(evaluator.scratch.eleCfg, eleCfg,
+           (size_t)Nsite2*sizeof(int));
+    memcpy(evaluator.scratch.eleNum, eleNum,
+           (size_t)Nsite2*sizeof(int));
+    result = GreenFuncNBF(
+        1, rsi, rsj, ip, evaluator.scratch.eleIdx,
+        evaluator.scratch.eleCfg, evaluator.scratch.eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    aliasRejectionCount++;
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_INVALID_ARGUMENT, BF_NBODY_STAGE_CANDIDATE,
+           BF_NBODY_DETAIL_NONE, 0, 0.0+0.0*I, 0.0)
+       || memcmp(evaluator.scratch.eleIdx, eleIdx,
+                 (size_t)Nsize*sizeof(int)) != 0
+       || memcmp(evaluator.scratch.eleCfg, eleCfg,
+                 (size_t)Nsite2*sizeof(int)) != 0
+       || memcmp(evaluator.scratch.eleNum, eleNum,
+                 (size_t)Nsite2*sizeof(int)) != 0) {
+      contractFailures++;
+    }
+  }
+
+  if(BFNBodyStateCheckEnabled) {
+    const int rsi[1] = {target[0]};
+    const int rsj[1] = {source[0]};
+    double complex saved;
+    BFNBodyResult result;
+
+    saved = SlaterElmBF[0];
+    SlaterElmBF[0] = saved+(1.0+0.5*I);
+    result = GreenFuncNBF(
+        1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    SlaterElmBF[0] = saved;
+    staleBaseRejectionCount++;
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_WORKSPACE_ERROR, BF_NBODY_STAGE_DISPATCH,
+           BF_NBODY_DETAIL_BASE_STATE_STALE, 0, 0.0+0.0*I, 0.0)) {
+      contractFailures++;
+    }
+
+    saved = PfM[0];
+    PfM[0] = saved+(1.0+0.5*I);
+    result = GreenFuncNBF(
+        1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    PfM[0] = saved;
+    staleBaseRejectionCount++;
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_WORKSPACE_ERROR, BF_NBODY_STAGE_DISPATCH,
+           BF_NBODY_DETAIL_BASE_STATE_STALE, 0, 0.0+0.0*I, 0.0)) {
+      contractFailures++;
+    }
+
+    saved = InvM[0];
+    InvM[0] = saved+(1.0+0.5*I);
+    result = GreenFuncNBF(
+        1, rsi, rsj, ip, eleIdx, eleCfg, eleNum,
+        eleProjCnt, eleProjBFCnt, &evaluator.scratch);
+    InvM[0] = saved;
+    staleBaseRejectionCount++;
+    if(!BFDiagResultMatches(
+           result, BF_NBODY_WORKSPACE_ERROR, BF_NBODY_STAGE_DISPATCH,
+           BF_NBODY_DETAIL_BASE_STATE_STALE, 0, 0.0+0.0*I, 0.0)) {
+      contractFailures++;
+    }
+  }
+
+  callerStateChanged =
+      memcmp(eleIdx, idxBefore, (size_t)Nsize*sizeof(int)) != 0
+      || memcmp(eleCfg, cfgBefore, (size_t)Nsite2*sizeof(int)) != 0
+      || memcmp(eleNum, numBefore, (size_t)Nsite2*sizeof(int)) != 0
+      || (NProj > 0
+          && memcmp(eleProjCnt, projBefore,
+                    (size_t)NProj*sizeof(int)) != 0)
+      || memcmp(eleProjBFCnt, projBFBefore,
+                projBFCount*sizeof(int)) != 0;
+  globalStateChanged |= BFDiagGlobalsDiffer(
+      slaterBefore, slaterRealBefore, invBefore, pfBefore,
+      etaBefore, etaFlagBefore);
+
+write_dump:
+  fp = fopen(path, "w");
+  if(fp == NULL) goto cleanup;
+  fprintf(fp, "implemented 1\n");
+  fprintf(fp, "scalar %d\n", scalarCount);
+  fprintf(fp, "zero %d\n", zeroCount);
+  fprintf(fp, "dispatch1 %d\n", dispatch1Count);
+  fprintf(fp, "rebuild2 %d\n", rebuild2Count);
+  fprintf(fp, "full_rebuild %d\n", fullRebuildCount);
+  fprintf(fp, "alias_rejections %d\n", aliasRejectionCount);
+  fprintf(fp, "contract_failures %d\n", contractFailures);
+  fprintf(fp, "setup_failures %d\n", setupFailures);
+  fprintf(fp, "mixed_order_failures %d\n", mixedOrderFailures);
+  fprintf(fp, "normal_projection_count %d\n", NProj);
+  fprintf(fp, "caller_state_changed %d\n", callerStateChanged);
+  fprintf(fp, "global_state_changed %d\n", globalStateChanged);
+  fprintf(fp, "state_checks %lld\n",
+          BFNBodyStateCheckCount-stateChecksBefore);
+  fprintf(fp, "state_check_failures %lld\n",
+          BFNBodyStateCheckFailureCount-stateCheckFailuresBefore);
+  fprintf(fp, "stale_base_rejections %d\n",
+          staleBaseRejectionCount);
+  fprintf(fp, "max_direct_diff %.17e\n", maxDirectDiff);
+  fprintf(fp, "max_full_rebuild_diff %.17e\n", maxFullRebuildDiff);
+  fprintf(fp, "max_n4_imag %.17e\n", maxN4Imag);
+  status =
+      contractFailures == 0 && setupFailures == 0
+      && mixedOrderFailures == 0 && callerStateChanged == 0
+      && globalStateChanged == 0 && scalarCount > 0 && zeroCount > 0
+      && dispatch1Count > 0 && rebuild2Count > 0
+      && fullRebuildCount > 0 && aliasRejectionCount > 0
+      && (!BFNBodyStateCheckEnabled || staleBaseRejectionCount == 3)
+      && NProj > 0
+      && isfinite(maxDirectDiff) && maxDirectDiff <= tolerance
+      && isfinite(maxFullRebuildDiff)
+      && maxFullRebuildDiff <= tolerance
+      && isfinite(maxN4Imag) && maxN4Imag > 1.0e-12 ? 0 : -1;
+
+cleanup:
+  if(fp != NULL) fclose(fp);
+  freeBFDiagScratch(&evaluator);
+  freeBFDiagScratch(&reference);
+  free(slaterBefore);
+  free(slaterRealBefore);
+  free(invBefore);
+  free(pfBefore);
+  free(etaBefore);
+  free(etaFlagBefore);
+  free(idxBefore);
+  free(cfgBefore);
+  free(numBefore);
+  free(projBefore);
+  free(projBFBefore);
+  free(badCfg);
+  free(occupied);
+  free(empty);
+  return status;
+}
+
 void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   int *eleIdx, *eleCfg, *eleNum, *eleProjCnt, *eleProjBFCnt;
   double complex e, ip; //db is double?
@@ -1410,6 +2508,12 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   const char *bfDiffDumpPath = getenv("MVMC_BF_DIFF_DUMP");
   const char *bfFDDumpPath = getenv("MVMC_BF_FD_DUMP");
   const char *bfGreen2DumpPath = getenv("MVMC_BF_GREEN2_DUMP");
+  const char *bfNBodyComponentDumpPath =
+      getenv("MVMC_BF_NBODY_COMPONENT_DUMP");
+  int bfNBodyComponentDumped = 0;
+  const char *bfNBodyDispatchDumpPath =
+      getenv("MVMC_BF_NBODY_DISPATCH_DUMP");
+  int bfNBodyDispatchDumped = 0;
   const int qpStart = 0;
   const int qpEnd = NQPFull;
   int sample, sampleStart, sampleEnd;
@@ -1423,6 +2527,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   long long lanczosCheckedSamples = 0;
   long long lanczosRejectedSamples = 0;
   FILE *lanczosOracleDump = NULL;
+  BFNBodyOracle nbodyOracle;
 //  double *InvM_real_Moto, *PfM_real_Moto;
 
   /* optimazation for Kei */
@@ -1437,6 +2542,13 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm_parent, &parentSize);
   MPI_Comm_rank(comm_parent, &parentRank);
+
+  if(BFNBodyOracleOpen(&nbodyOracle, parentRank, parentSize, 0) != 0) {
+    fprintf(stderr,
+            "Error: failed to initialize BackFlow N-body configuration "
+            "oracle on parent rank %d.\n", parentRank);
+    MPI_Abort(comm_parent, EXIT_FAILURE);
+  }
 
   SplitLoop(&sampleStart, &sampleEnd, NVMCSample, rank, size);
   //SplitLoop(&sampleStart,&sampleEnd,NExactSample,rank,size);
@@ -1525,6 +2637,25 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
     StopTimer(45);
 
+    if(parentRank == 0 && !bfNBodyComponentDumped
+       && bfNBodyComponentDumpPath != NULL
+       && bfNBodyComponentDumpPath[0] != '\0') {
+      if(dumpBFNBodyComponentCheck(bfNBodyComponentDumpPath, eleIdx,
+                                   eleNum, eleProjBFCnt,
+                                   parentRank, rank) != 0) {
+        MPI_Abort(comm_parent, EXIT_FAILURE);
+      }
+      bfNBodyComponentDumped = 1;
+    }
+    if(parentRank == 0 && !bfNBodyDispatchDumped
+       && bfNBodyDispatchDumpPath != NULL
+       && bfNBodyDispatchDumpPath[0] != '\0') {
+      if(dumpBFNBodyDispatchCheck(bfNBodyDispatchDumpPath, eleIdx, eleCfg,
+                                  eleNum, eleProjCnt, eleProjBFCnt) != 0) {
+        MPI_Abort(comm_parent, EXIT_FAILURE);
+      }
+      bfNBodyDispatchDumped = 1;
+    }
     if (rank == 0 && !bfIdentityDumped &&
         bfIdentityDumpPath != NULL && bfIdentityDumpPath[0] != '\0') {
       dumpBFIdentityCheck(bfIdentityDumpPath, eleIdx, qpStart, qpEnd);
@@ -1569,6 +2700,17 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       ip = CalculateIP_real(PfM_real, qpStart, qpEnd, MPI_COMM_SELF);
     } else {
       ip = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+    }
+
+    if(nbodyOracle.enabled
+       && isfinite(creal(ip)) && isfinite(cimag(ip)) && cabs(ip) > 0.0
+       && BFNBodyOracleDumpSample(
+              &nbodyOracle, sample, ip, eleIdx, eleCfg, eleNum,
+              eleProjCnt, NULL, eleProjBFCnt) != 0) {
+      fprintf(stderr,
+              "Error: BackFlow N-body configuration oracle failed on "
+              "parent rank %d sample %d.\n", parentRank, sample);
+      MPI_Abort(comm_parent, EXIT_FAILURE);
     }
 
     LogProjVal(eleProjCnt);
@@ -1761,6 +2903,7 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
   }
   if(lanczosOracleDump != NULL) fclose(lanczosOracleDump);
   if(lanczosScratchReady) LSLanczosBFScratchFree(&lanczosScratch);
+  BFNBodyOracleClose(&nbodyOracle);
 
   // calculate OO and HO at NVMCCalMode==0
   if(NVMCCalMode==0){

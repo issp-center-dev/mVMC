@@ -284,6 +284,23 @@ int BFValidateFszDefinitionDetails(void) {
       return 1;
     }
   }
+  for (idx = 0; idx < NBodyGTotalFactors; idx++) {
+    if (TwoSz != -1 && NBodyGIdx[idx][1] != NBodyGIdx[idx][3]) {
+      fprintf(stderr,
+              "Error: BackFlow FSZ spin-changing NBodyG factors require "
+              "TwoSz==-1.\n");
+      return 1;
+    }
+  }
+  for (idx = 0; idx < NBodyInterAllTotalFactors; idx++) {
+    if (TwoSz != -1
+        && NBodyInterAllIdx[idx][1] != NBodyInterAllIdx[idx][3]) {
+      fprintf(stderr,
+              "Error: BackFlow FSZ spin-changing NBodyInterAll factors "
+              "require TwoSz==-1.\n");
+      return 1;
+    }
+  }
   return 0;
 }
 
@@ -709,6 +726,7 @@ void BFAllocRuntime(void) {
   slaterCount = (size_t)NQPFull * (size_t)Nsite2 * (size_t)Nsite2;
   SlaterElmBF = (double complex *)BFMallocArray(slaterCount, sizeof(double complex), "SlaterElmBF");
   SlaterElmBF_real = (double *)BFMallocArray(slaterCount, sizeof(double), "SlaterElmBF_real");
+  memset(SlaterElmBF_real, 0, slaterCount * sizeof(double));
   SmpSltElmBF_real = (double *)BFMallocArray((size_t)NVMCSample * slaterCount,
                                              sizeof(double), "SmpSltElmBF_real");
   SmpEta = (double *)BFMallocArray((size_t)NVMCSample * (size_t)NQPFull *

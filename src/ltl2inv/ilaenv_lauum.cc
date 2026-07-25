@@ -31,10 +31,10 @@ template <> int ilaenv_lauum<cctype>(uplo_t uplo, int n) \
 #define EXPANDMAC(cctype, name) \
 template <> int ilaenv_lauum<cctype>(uplo_t uplo, int n) \
 { \
-    char uplo_ = uplo2char(uplo); \
+    char uplo_[2] = {uplo2char(uplo), '\0'}; \
     int ispec = 1; \
     int dummy = -1; \
-    return ilaenv_wrap(ispec, #name, &uplo_, n, dummy, dummy, dummy); \
+    return ilaenv_wrap(ispec, #name, uplo_, n, dummy, dummy, dummy); \
 }
 #else
 #define EXPANDMAC(cctype, name) \

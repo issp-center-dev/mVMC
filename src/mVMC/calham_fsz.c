@@ -26,6 +26,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #include "calham_fsz.h"
+#include "backflow_nbody.h"
 
 #pragma once
 
@@ -75,6 +76,43 @@ double complex GreenFunc2BF_fsz2WithProfile(
 int GetGreenFuncBF_fsz_buffer_work_size(
     size_t *bufferComplexCount, size_t *pfUpdateIntCount,
     size_t *pfUpdateDoubleCount);
+
+typedef struct {
+  BFNBodyStatus status;
+  int term;
+  BFNBodyStage stage;
+  int detail;
+} BFFSZHamiltonianNBodyFailure;
+
+static void RecordBFFSZHamiltonianNBodyFailure(
+    BFFSZHamiltonianNBodyFailure *failure, int term,
+    const BFNBodyResult *result) {
+  if(failure == NULL || result == NULL
+     || result->status == BF_NBODY_OK
+     || result->status == BF_NBODY_PHYSICAL_ZERO
+     || failure->status != BF_NBODY_OK) {
+    return;
+  }
+  failure->status = result->status;
+  failure->term = term;
+  failure->stage = result->stage;
+  failure->detail = result->detail;
+}
+
+static void AbortBFFSZHamiltonianNBodyFailure(
+    const char *context, const BFFSZHamiltonianNBodyFailure *failure) {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if(rank == 0) {
+    fprintf(stderr,
+            "Error: %s failed: status=%d term=%d stage=%s(%d) "
+            "detail=%s(%d).\n",
+            context, (int)failure->status, failure->term,
+            BFNBodyStageName(failure->stage), (int)failure->stage,
+            BFNBodyDetailName(failure->detail), failure->detail);
+  }
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+}
 
 double CalculateSz_fsz(const double complex ip, int *eleIdx, const int *eleCfg,
                              int *eleNum, const int *eleProjCnt,int *eleSpn) {
@@ -278,7 +316,7 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   const int *n0 = eleNum;
   const int *n1 = eleNum + Nsite;
   double complex e=0.0,tmp;
-  int idx;
+  int idx,k,offset,nbody;
   int ri,rj,s,t,rk,rl,u,v;
   int *myEleIdx, *myEleCfg, *myEleNum, *myEleSpn;
   int *myProjCntNew, *myProjBFCntNew, *myAffected, *myHopIntWork;
@@ -301,6 +339,19 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   BFFSZC2DetailTermContext *termDetailProfile = NULL;
   BFFSZC2ReuseCensus reuseCensus;
   double termStart = 0.0;
+  const int maxNBody =
+      NBodyInterAllMaxN > 2 ? NBodyInterAllMaxN : 2;
+  BFNBodyScratchSizes nbodyScratchSizes;
+  BFNBodyScratch nbodyScratch;
+  BFNBodyResult nbodyResult;
+  BFFSZHamiltonianNBodyFailure nbodyFailure = {
+      BF_NBODY_OK, -1, BF_NBODY_STAGE_NONE, BF_NBODY_DETAIL_NONE
+  };
+  int *nbodyIntBase;
+  double complex *nbodyComplexBase;
+  double *nbodyDoubleBase;
+  int bindStatus;
+  int nbodyIntSize;
 
   if(BFFSZC2DetailProfileEnabled) {
     InitBFFSZC2DetailContext(&pairHopDetailContext,
@@ -316,9 +367,13 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
     termDetailProfile = &termDetailContext;
   }
 
-  if(NNBodyInterAll > 0) {
-    fprintf(stderr, "Error: CalculateHamiltonianBF_fsz does not support NBodyInterAll.\n");
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  if(NNBodyInterAll > 0
+     && GetBFNBodyScratchSizes(maxNBody, 1, &nbodyScratchSizes)
+          != BF_NBODY_OK) {
+    nbodyFailure.status = BF_NBODY_WORKSPACE_ERROR;
+    AbortBFFSZHamiltonianNBodyFailure(
+        "BackFlow FSZ NBodyInterAll workspace sizing", &nbodyFailure);
+    return 0.0+0.0*I;
   }
   if(GetSlaterElmBF_fsz_hop_int_work_size(&bfHopIntSize) != 0) {
     fprintf(stderr, "Error: invalid BF-FSZ Hamiltonian hop integer workspace size.\n");
@@ -367,26 +422,83 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   }
   bfIntSize = (int)bfIntSizeLL;
 
-  RequestWorkSpaceInt(bfIntSize);
-  RequestWorkSpaceComplex((int)bfComplexSize);
-  RequestWorkSpaceDouble(bfPfDoubleSize);
+  if(NNBodyInterAll > 0) {
+    if(nbodyScratchSizes.intCount
+         > (size_t)INT_MAX-(size_t)reuseCensusIntSize) {
+      nbodyFailure.status = BF_NBODY_WORKSPACE_ERROR;
+      AbortBFFSZHamiltonianNBodyFailure(
+          "BackFlow FSZ NBodyInterAll workspace sizing", &nbodyFailure);
+      return 0.0+0.0*I;
+    }
+    nbodyIntSize =
+        (int)nbodyScratchSizes.intCount+reuseCensusIntSize;
+    RequestWorkSpaceInt(nbodyIntSize);
+    RequestWorkSpaceComplex((int)nbodyScratchSizes.complexCount);
+    RequestWorkSpaceDouble((int)nbodyScratchSizes.doubleCount);
+    nbodyIntBase =
+        GetWorkSpaceInt((int)nbodyScratchSizes.intCount);
+    if(reuseCensusIntSize > 0) {
+      reuseCensusKeys = GetWorkSpaceInt(reuseCensusIntSize);
+    }
+    nbodyComplexBase =
+        GetWorkSpaceComplex((int)nbodyScratchSizes.complexCount);
+    nbodyDoubleBase =
+        GetWorkSpaceDouble((int)nbodyScratchSizes.doubleCount);
+    bindStatus = BindBFNBodyScratch(
+        &nbodyScratchSizes,
+        nbodyIntBase, nbodyScratchSizes.intCount,
+        nbodyComplexBase, nbodyScratchSizes.complexCount,
+        nbodyDoubleBase, nbodyScratchSizes.doubleCount,
+        &nbodyScratch);
+    if(bindStatus != BF_NBODY_OK) {
+      const BFNBodyResult bindResult = {
+          BF_NBODY_WORKSPACE_ERROR, BF_NBODY_STAGE_NONE,
+          bindStatus, 0, 0.0+0.0*I
+      };
+      RecordBFFSZHamiltonianNBodyFailure(
+          &nbodyFailure, -1, &bindResult);
+      ReleaseWorkSpaceInt();
+      ReleaseWorkSpaceComplex();
+      ReleaseWorkSpaceDouble();
+      AbortBFFSZHamiltonianNBodyFailure(
+          "BackFlow FSZ NBodyInterAll workspace binding", &nbodyFailure);
+      return 0.0+0.0*I;
+    }
+    myEleIdx = nbodyScratch.eleIdx;
+    myEleCfg = nbodyScratch.eleCfg;
+    myEleNum = nbodyScratch.eleNum;
+    myEleSpn = nbodyScratch.eleSpn;
+    myProjCntNew = nbodyScratch.projCnt;
+    myProjBFCntNew = nbodyScratch.projBFCnt;
+    myAffected = nbodyScratch.affected;
+    myHopIntWork = nbodyScratch.hopIntWork;
+    myPfIWork = nbodyScratch.pfIWork;
+    myBuffer = nbodyScratch.greenBuffer;
+    myPfBufM = nbodyScratch.pfBufM;
+    myPfWork = nbodyScratch.pfWork;
+    myPfRWork = nbodyScratch.pfRWork;
+  } else {
+    RequestWorkSpaceInt(bfIntSize);
+    RequestWorkSpaceComplex((int)bfComplexSize);
+    RequestWorkSpaceDouble(bfPfDoubleSize);
 
-  myEleIdx = GetWorkSpaceInt(Nsize);
-  myEleCfg = GetWorkSpaceInt(Nsite2);
-  myEleNum = GetWorkSpaceInt(Nsite2);
-  myEleSpn = GetWorkSpaceInt(Nsize);
-  myProjCntNew = GetWorkSpaceInt(NProj);
-  myProjBFCntNew = GetWorkSpaceInt(16*Nsite*Nrange);
-  myAffected = GetWorkSpaceInt(Nsize);
-  myHopIntWork = GetWorkSpaceInt(bfHopIntSize);
-  myPfIWork = GetWorkSpaceInt(bfPfIntSize);
-  if(reuseCensusIntSize > 0) {
-    reuseCensusKeys = GetWorkSpaceInt(reuseCensusIntSize);
+    myEleIdx = GetWorkSpaceInt(Nsize);
+    myEleCfg = GetWorkSpaceInt(Nsite2);
+    myEleNum = GetWorkSpaceInt(Nsite2);
+    myEleSpn = GetWorkSpaceInt(Nsize);
+    myProjCntNew = GetWorkSpaceInt(NProj);
+    myProjBFCntNew = GetWorkSpaceInt(16*Nsite*Nrange);
+    myAffected = GetWorkSpaceInt(Nsize);
+    myHopIntWork = GetWorkSpaceInt(bfHopIntSize);
+    myPfIWork = GetWorkSpaceInt(bfPfIntSize);
+    if(reuseCensusIntSize > 0) {
+      reuseCensusKeys = GetWorkSpaceInt(reuseCensusIntSize);
+    }
+    myBuffer = GetWorkSpaceComplex((int)bfBufferSize);
+    myPfBufM = GetWorkSpaceComplex(Nsize*Nsize);
+    myPfWork = GetWorkSpaceComplex(LapackLWork);
+    myPfRWork = GetWorkSpaceDouble(bfPfDoubleSize);
   }
-  myBuffer = GetWorkSpaceComplex((int)bfBufferSize);
-  myPfBufM = GetWorkSpaceComplex(Nsize*Nsize);
-  myPfWork = GetWorkSpaceComplex(LapackLWork);
-  myPfRWork = GetWorkSpaceDouble(bfPfDoubleSize);
 
   if(BFFSZC2ReuseCensusEnabled) {
     if(InitBFFSZC2ReuseCensus(
@@ -504,6 +616,33 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   if(termDetailProfile != NULL) {
     termDetailProfile->seconds[BFFSZ_C2_DETAIL_TERM_INTER_ALL]
         += BFFSZC2DetailMonotonicSeconds()-termStart;
+  }
+  for(idx=0;idx<NNBodyInterAll;idx++) {
+    nbodyScratch.termIndex = idx;
+    nbody = NBodyInterAllN[idx];
+    offset = NBodyInterAllOffset[idx];
+    for(k=0;k<nbody;k++) {
+      nbodyScratch.inputRsi[k] =
+          NBodyInterAllIdx[offset+k][0]
+          + NBodyInterAllIdx[offset+k][1]*Nsite;
+      nbodyScratch.inputRsj[k] =
+          NBodyInterAllIdx[offset+k][2]
+          + NBodyInterAllIdx[offset+k][3]*Nsite;
+    }
+    nbodyResult = GreenFuncNBF_fsz(
+        nbody, nbodyScratch.inputRsi, nbodyScratch.inputRsj, ip,
+        eleIdx, eleCfg, eleNum, eleProjCnt, eleSpn,
+        eleProjBFCnt, &nbodyScratch);
+    if(nbodyResult.status == BF_NBODY_OK
+       || nbodyResult.status == BF_NBODY_PHYSICAL_ZERO) {
+      e += ParaNBodyInterAll[idx]*nbodyResult.value;
+    } else {
+      RecordBFFSZHamiltonianNBodyFailure(
+          &nbodyFailure, idx, &nbodyResult);
+      break;
+    }
+  }
+  if(termDetailProfile != NULL) {
     MergeBFFSZC2DetailContext(pairHopDetailProfile);
     MergeBFFSZC2DetailContext(exchangeDetailProfile);
     MergeBFFSZC2DetailContext(interAllDetailProfile);
@@ -516,6 +655,10 @@ double complex CalculateHamiltonianBF_fsz(const double complex ip, int *eleIdx, 
   ReleaseWorkSpaceInt();
   ReleaseWorkSpaceComplex();
   ReleaseWorkSpaceDouble();
+  if(nbodyFailure.status != BF_NBODY_OK) {
+    AbortBFFSZHamiltonianNBodyFailure(
+        "BackFlow FSZ NBodyInterAll evaluation", &nbodyFailure);
+  }
   return e;
 }
 

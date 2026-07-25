@@ -389,7 +389,8 @@ def parse_norbitalidx(path):
     raise RuntimeError("NOrbitalIdx was not found in {}".format(path))
 
 
-def write_nonidentity_init_parameter(path, nprojbf, nslater):
+def write_nonidentity_init_parameter(path, nprojbf, nslater,
+                                     complex_orbitals=False):
     projbf_values = [
         0.93, 0.08, -0.05, 0.035, -0.025,
         0.015, -0.012, 0.010, -0.007, 0.005,
@@ -409,14 +410,16 @@ def write_nonidentity_init_parameter(path, nprojbf, nslater):
             real = 1.0 + 0.1 * row if row == col else 0.03 * float(row - col)
         else:
             real = math.sin(0.37 * (idx + 1))
-        values.extend([real, 0.0, 0.0])
+        imag = (0.017 * math.sin(0.73 * (idx + 1))
+                if complex_orbitals else 0.0)
+        values.extend([real, imag, 0.0])
 
     with open(path, "w") as fp:
         fp.write(" ".join("{:.18e}".format(value) for value in values))
         fp.write("\n")
 
 
-def write_nonidentity_init(workdir, nsite=4):
+def write_nonidentity_init(workdir, nsite=4, complex_orbitals=False):
     definition = build_chain_nn_backflow(length=nsite, optimize=False)
     nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidxgen.def"))
     init_name = "nonidentity_init.dat"
@@ -424,6 +427,7 @@ def write_nonidentity_init(workdir, nsite=4):
         os.path.join(workdir, init_name),
         definition.n_proj_bf,
         nslater,
+        complex_orbitals=complex_orbitals,
     )
     return init_name
 
@@ -847,6 +851,191 @@ def prepare_case(rootdir, name, include_backflow, orbital_complex_type=1,
     if include_backflow:
         write_chain_nn_backflow(workdir, length=4, optimize=backflow_optimize)
     return workdir
+
+
+def write_nbody_failure_def(workdir):
+    with open(os.path.join(workdir, "nbodyinterall.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NNBodyInterAll   1\n")
+        fp.write("=============================================\n")
+        fp.write("======== NBodyInterAll interactions =========\n")
+        fp.write("=============================================\n")
+        fp.write(
+            "3 0 0 1 1 2 0 3 0 1 1 0 0 "
+            "2.5000000000000000e-01 1.0000000000000001e-01\n"
+        )
+    append_namelist_entry(workdir, "NBodyInterAll", "nbodyinterall.def")
+
+
+def run_nbody_dispatch_case(rootdir, case_name, mpi_procs=None):
+    state_check = case_name == "BackFlow_FSZ_NBody_State"
+    if case_name not in (
+            "BackFlow_FSZ_NBody_Dispatch_NonIdentity_Complex",
+            "BackFlow_FSZ_NBody_State"):
+        return None
+    if mpi_procs:
+        raise RuntimeError("BF-FSZ N-body dispatch is a single-rank test")
+
+    workdir = prepare_case(
+        rootdir, case_name, include_backflow=True,
+        orbital_complex_type=1, orbital_optimize=True,
+        backflow_optimize=False)
+    update_modpara(workdir, {
+        "2Sz": "-1",
+        "NVMCCalMode": "1",
+        "NVMCSample": "16",
+        "NVMCWarmUp": "8",
+    })
+    init_path = write_nonidentity_init(
+        workdir, complex_orbitals=True)
+    dump_name = "backflow_fsz_nbody_dispatch.dat"
+    extra_env = {"MVMC_BF_FSZ_NBODY_DISPATCH_DUMP": dump_name}
+    if state_check:
+        extra_env["MVMC_BF_NBODY_STATE_CHECK"] = "1"
+    proc = run_vmc(
+        rootdir, workdir, init_path=init_path,
+        extra_env=extra_env)
+    if proc.returncode != 0:
+        print(proc.stdout)
+        return proc.returncode
+
+    dump_path = os.path.join(workdir, dump_name)
+    if not os.path.exists(dump_path):
+        print("ERROR: BF-FSZ N-body dispatch dump was not written")
+        return -1
+    values = {}
+    with open(dump_path) as fp:
+        for line in fp:
+            cols = line.split()
+            if len(cols) == 2:
+                values[cols[0]] = cols[1]
+    required = (
+        "implemented",
+        "scalar",
+        "physical_zero",
+        "contraction1",
+        "direct1_spin_conserving",
+        "direct1_spin_changing",
+        "direct2_spin_conserving",
+        "direct2_mixed",
+        "direct2_spin_changing",
+        "rebuild3",
+        "rebuild4",
+        "alias_rejections",
+        "contract_failures",
+        "setup_failures",
+        "caller_state_changed",
+        "global_state_changed",
+        "max_direct_diff",
+        "max_rebuild_diff",
+        "max_imag",
+    )
+    missing = [key for key in required if key not in values]
+    if missing:
+        print("ERROR: BF-FSZ N-body dispatch dump is missing fields: {}".format(
+            ", ".join(missing)))
+        return -1
+    if int(values["implemented"]) != 1:
+        print("ERROR: GreenFuncNBF_fsz is not implemented")
+        return -1
+    for key in (
+            "scalar",
+            "physical_zero",
+            "contraction1",
+            "direct1_spin_conserving",
+            "direct1_spin_changing",
+            "direct2_spin_conserving",
+            "direct2_mixed",
+            "direct2_spin_changing",
+            "rebuild3",
+            "rebuild4"):
+        if int(values[key]) <= 0:
+            print("ERROR: BF-FSZ N-body class was not exercised: {}={}".format(
+                key, values[key]))
+            return -1
+    if int(values["alias_rejections"]) <= 0:
+        print("ERROR: BF-FSZ N-body caller/scratch alias rejection "
+              "was not exercised")
+        return -1
+    for key in ("contract_failures", "setup_failures",
+                "caller_state_changed", "global_state_changed"):
+        if int(values[key]) != 0:
+            print("ERROR: BF-FSZ N-body dispatch check failed: {}={}".format(
+                key, values[key]))
+            return -1
+    for key in ("max_direct_diff", "max_rebuild_diff"):
+        value = float(values[key])
+        if not math.isfinite(value) or value > 1.0e-10:
+            print("ERROR: BF-FSZ N-body mismatch: {}={:.3e}".format(
+                key, value))
+            return -1
+    max_imag = float(values["max_imag"])
+    if not math.isfinite(max_imag) or max_imag <= 1.0e-12:
+        print("ERROR: BF-FSZ complex dispatch check was vacuous: "
+              "max_imag={:.3e}".format(max_imag))
+        return -1
+    if state_check:
+        for key in (
+                "state_checks", "state_check_failures",
+                "stale_base_rejections"):
+            if key not in values:
+                print("ERROR: BF-FSZ N-body state dump is missing {}".format(
+                    key))
+                return -1
+        if int(values["state_checks"]) <= 0:
+            print("ERROR: BF-FSZ N-body state hook was not exercised")
+            return -1
+        if int(values["state_check_failures"]) != 0:
+            print("ERROR: BF-FSZ N-body state hook detected a mutation")
+            return -1
+        if int(values["stale_base_rejections"]) != 3:
+            print("ERROR: BF-FSZ N-body stale base was not rejected")
+            return -1
+    return 0
+
+
+def run_nbody_failure_case(rootdir, case_name, mpi_procs=None):
+    prefix = "BackFlow_FSZ_NBody_Failure_"
+    if not case_name.startswith(prefix):
+        return None
+    if mpi_procs:
+        raise RuntimeError("BF-FSZ N-body failure injection is single-rank")
+    stage = case_name[len(prefix):].lower()
+    if stage not in ("workspace", "candidate", "pfaffian"):
+        raise RuntimeError("unknown BF-FSZ N-body failure stage: {}".format(
+            stage))
+    workdir = prepare_case(
+        rootdir, case_name, include_backflow=True,
+        orbital_complex_type=1, orbital_optimize=True,
+        backflow_optimize=False)
+    update_modpara(workdir, {
+        "2Sz": "-1",
+        "NVMCCalMode": "1",
+        "NVMCSample": "8",
+        "NVMCWarmUp": "4",
+    })
+    write_nbody_failure_def(workdir)
+    init_path = write_nonidentity_init(workdir, complex_orbitals=True)
+    proc = run_vmc(
+        rootdir, workdir, init_path=init_path,
+        extra_env={
+            "MVMC_BF_NBODY_STATE_CHECK": "1",
+            "MVMC_BF_NBODY_INJECT_STAGE": stage,
+            "MVMC_BF_NBODY_INJECT_TERM": "0",
+        })
+    if proc.returncode == 0:
+        print("ERROR: BF-FSZ N-body failure injection unexpectedly succeeded")
+        return -1
+    expected = "term=0 stage={}(".format(stage)
+    diagnostics = [
+        line for line in proc.stdout.splitlines()
+        if expected in line and "detail=injected(" in line
+    ]
+    if len(diagnostics) != 1:
+        print("ERROR: BF-FSZ N-body failure diagnostic mismatch")
+        print(proc.stdout)
+        return -1
+    return 0
 
 
 def assert_lanczos_outputs(workdir, label):
@@ -2333,6 +2522,18 @@ def get_named_invalid_case(case_name):
             None,
             make_spin_changing_two_body_g_ex,
         ),
+        "BackFlow_FSZ_InvalidReweight": (
+            {"reweight": "1"},
+            "BackFlow MVP does not support reweight",
+            None,
+            None,
+        ),
+        "BackFlow_FSZ_InvalidReweight_mpi": (
+            {"reweight": "1"},
+            "BackFlow MVP does not support reweight",
+            None,
+            None,
+        ),
     }
     return invalid_cases.get(case_name)
 
@@ -3168,9 +3369,27 @@ def run_spin_changing_c2_case(rootdir, case_name, mpi_procs=None):
     return 0
 
 
-def run_c2_nonfsz_invalid_case(rootdir, case_name, mpi_procs=None):
-    if case_name != "BackFlow_InvalidTwoBodyHamiltonian_NonFSZ":
+def run_nonfsz_invalid_case(rootdir, case_name, mpi_procs=None):
+    cases = {
+        "BackFlow_InvalidTwoBodyHamiltonian_NonFSZ": (
+            {},
+            "BackFlow MVP does not support two-body Hamiltonian terms",
+            True,
+        ),
+        "BackFlow_InvalidReweight": (
+            {"reweight": "1"},
+            "BackFlow MVP does not support reweight",
+            False,
+        ),
+        "BackFlow_InvalidReweight_mpi": (
+            {"reweight": "1"},
+            "BackFlow MVP does not support reweight",
+            False,
+        ),
+    }
+    if case_name not in cases:
         return None
+    updates, expected, add_pair_hop = cases[case_name]
     refdir = os.path.join(rootdir, "data", "BackFlow_Identity_Complex")
     workdir = os.path.join(rootdir, "work", case_name)
     if os.path.exists(workdir):
@@ -3181,25 +3400,31 @@ def run_c2_nonfsz_invalid_case(rootdir, case_name, mpi_procs=None):
         if os.path.isfile(source):
             shutil.copy(source, os.path.join(workdir, filename))
     write_chain_nn_backflow(workdir, length=4, optimize=False)
-    with open(os.path.join(workdir, "pairhop.def"), "w") as fp:
-        fp.write("=============================================\n")
-        fp.write("NPairHopp          1\n")
-        fp.write("=============================================\n")
-        fp.write("====== Pair-Hopping term ====================\n")
-        fp.write("=============================================\n")
-        fp.write("    0     1          0.370000000000000\n")
-    append_namelist_entry(workdir, "PairHop", "pairhop.def")
+    update_modpara(workdir, updates)
+    if add_pair_hop:
+        with open(os.path.join(workdir, "pairhop.def"), "w") as fp:
+            fp.write("=============================================\n")
+            fp.write("NPairHopp          1\n")
+            fp.write("=============================================\n")
+            fp.write("====== Pair-Hopping term ====================\n")
+            fp.write("=============================================\n")
+            fp.write("    0     1          0.370000000000000\n")
+        append_namelist_entry(workdir, "PairHop", "pairhop.def")
     proc = run_vmc(rootdir, workdir, mpi_procs=mpi_procs)
-    expected = "BackFlow MVP does not support two-body Hamiltonian terms"
     if proc.returncode == 0:
-        print("ERROR: non-FSZ BackFlow two-body Hamiltonian unexpectedly succeeded")
+        print("ERROR: {} unexpectedly succeeded".format(case_name))
         return -1
     if expected not in proc.stdout:
-        print("ERROR: non-FSZ BackFlow two-body Hamiltonian did not report expected error")
+        print("ERROR: {} did not report expected error".format(case_name))
         print(proc.stdout)
         return -1
     if "Start: Sampling." in proc.stdout:
-        print("ERROR: non-FSZ BackFlow two-body Hamiltonian reached sampling")
+        print("ERROR: {} reached sampling".format(case_name))
+        return -1
+    if mpi_procs and "Definition files(*.def) are incomplete." in proc.stdout:
+        print("ERROR: {} stopped at the rank-0 pre-broadcast gate".format(
+            case_name
+        ))
         return -1
     return 0
 
@@ -3214,6 +3439,14 @@ def main():
         "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex",
     )
     nonidentity_momentum_case = case_name == "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex"
+    nbody_dispatch_status = run_nbody_dispatch_case(
+        rootdir, case_name, mpi_procs)
+    if nbody_dispatch_status is not None:
+        return nbody_dispatch_status
+    nbody_failure_status = run_nbody_failure_case(
+        rootdir, case_name, mpi_procs)
+    if nbody_failure_status is not None:
+        return nbody_failure_status
     bf_fsz_lanczos_status = run_bf_fsz_lanczos_case(
         rootdir, case_name, mpi_procs)
     if bf_fsz_lanczos_status is not None:
@@ -3243,9 +3476,11 @@ def main():
     c2_profile_status = run_c2_detail_profile_case(rootdir, case_name, mpi_procs)
     if c2_profile_status is not None:
         return c2_profile_status
-    c2_invalid_status = run_c2_nonfsz_invalid_case(rootdir, case_name, mpi_procs)
-    if c2_invalid_status is not None:
-        return c2_invalid_status
+    nonfsz_invalid_status = run_nonfsz_invalid_case(
+        rootdir, case_name, mpi_procs
+    )
+    if nonfsz_invalid_status is not None:
+        return nonfsz_invalid_status
     stale_base_status = run_twobody_stale_base_case(rootdir, case_name, mpi_procs)
     if stale_base_status is not None:
         return stale_base_status

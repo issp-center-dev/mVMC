@@ -494,6 +494,15 @@ int BFFSZC2StateCheckEnabled = 0;
 int BFFSZC2BufferCheckEnabled = 0;
 int BFFSZC2ForceSectorZero = 0;
 int BFFSZSamplingRejectCheckEnabled = 0;
+#define BF_NBODY_INJECT_NONE 0
+#define BF_NBODY_INJECT_WORKSPACE 1
+#define BF_NBODY_INJECT_CANDIDATE 2
+#define BF_NBODY_INJECT_PFAFFIAN 3
+int BFNBodyStateCheckEnabled = 0;
+int BFNBodyInjectStage = BF_NBODY_INJECT_NONE;
+int BFNBodyInjectTerm = -1;
+long long BFNBodyStateCheckCount = 0;
+long long BFNBodyStateCheckFailureCount = 0;
 long long BFFSZProfileCall[NBFFSZProfileSource];
 long long BFFSZProfileChangedSum[NBFFSZProfileSource];
 long long BFFSZProfileChangedMax[NBFFSZProfileSource];

@@ -177,8 +177,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     eleIdx = EleIdx + sample*Nsize;
     eleCfg = EleCfg + sample*Nsite2;
     eleNum = EleNum + sample*Nsite2;
-    eleProjCnt = EleProjCnt + sample*NProj;
-    rbmCnt = RBMCnt + sample*nSizeRBM;
+    eleProjCnt = NProj > 0 ? EleProjCnt + sample*NProj : NULL;
+    rbmCnt = FlagRBM ? RBMCnt + sample*nSizeRBM : NULL;
 
     StartTimer(40);
 #ifdef _DEBUG_VMCCAL

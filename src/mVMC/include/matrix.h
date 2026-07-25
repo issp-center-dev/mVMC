@@ -1,9 +1,15 @@
 #ifndef _MATRIX
 #define _MATRIX
 
-#define BF_FSZ_PF_OK 0
-#define BF_FSZ_PF_LAPACK_FAILURE 1
-#define BF_FSZ_PF_NONFINITE 2
+#define BF_PF_OK 0
+#define BF_PF_LAPACK_FAILURE 1
+#define BF_PF_NONFINITE 2
+#define BF_PF_INVALID_ARGUMENT 3
+
+#define BF_FSZ_PF_OK BF_PF_OK
+#define BF_FSZ_PF_LAPACK_FAILURE BF_PF_LAPACK_FAILURE
+#define BF_FSZ_PF_NONFINITE BF_PF_NONFINITE
+#define BF_FSZ_PF_INVALID_ARGUMENT BF_PF_INVALID_ARGUMENT
 
 #define BF_FSZ_MALL_OK 0
 #define BF_FSZ_MALL_LAPACK_FAILURE 1
@@ -36,6 +42,10 @@ int CalculatePfM_BF_fsz_from(const double complex *sltElmBF, const int *eleIdx,
     double complex *pfMOut, int *failureDetail);
 int CalculatePfM_BF_fsz_from_workspace(const double complex *sltElmBF,
     const int *eleIdx, const int *eleSpn, const int qpStart, const int qpEnd,
+    double complex *pfMOut, int *failureDetail, double complex *bufM,
+    int *iwork, double complex *work, int lwork, double *rwork);
+int CalculatePfM_BF_from_workspace(const double complex *sltElmBF,
+    const int *eleIdx, const int *eleSpn, int qpStart, int qpEnd,
     double complex *pfMOut, int *failureDetail, double complex *bufM,
     int *iwork, double complex *work, int lwork, double *rwork);
 BF_FSZ_MAllResult CalculateMAll_BF_fsz_from_workspace(

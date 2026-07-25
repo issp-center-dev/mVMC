@@ -1244,10 +1244,29 @@ Use rules
    factor must satisfy :math:`\sigma_a = \tau_a`. Spin-changing factors
    require orbital-general mode.
 
--  The first implementation supports normal VMC local energy only.
-   BackFlow and Lanczos modes are not implemented. Real local-energy
-   kernels are not implemented, so complex variational parameters are
-   required when ``NBodyInterAll`` terms are present.
+-  ``NBodyInterAll`` contributes to the normal energy output; it does
+   not create a separate interaction-output file.
+
+-  Real local-energy kernels and N-body Lanczos corrections are not
+   implemented. Complex variational parameters are therefore required,
+   and ``NLanczosMode`` must be 0 whenever ``NBodyInterAll`` is present.
+
+-  BackFlow supports terms of any positive input order. With the normal
+   ``Orbital`` / ``OrbitalAntiParallel`` format, every factor must
+   conserve spin. With ``OrbitalGeneral`` / FSZ, spin-changing factors
+   are accepted only when ``2Sz=-1``.
+
+-  After algebraic reduction, non-FSZ BackFlow dispatches effective
+   order 1 to the one-body kernel and rebuilds the complete candidate
+   BackFlow Slater/Pfaffian state for effective order 2 or greater.
+   BF-FSZ uses its validated order-1/order-2 dispatch and rebuilds higher
+   orders. A genuine effective order of 3 or greater therefore costs one
+   full BackFlow Slater/Pfaffian construction per surviving term.
+
+-  Native non-FSZ BackFlow ``PairHop``, ``Exchange``, and ``InterAll``
+   inputs remain unsupported. Equivalent ordered factors may be supplied
+   through ``NBodyInterAll`` while satisfying the restrictions above.
+   BackFlow with ``reweight=1`` is rejected.
 
 CoulombIntra file (coulombintra.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2444,8 +2463,9 @@ Inputs outside this range are rejected.
 
 -  Spin projection is not supported. Use ``NSPGaussLeg==1``.
 
--  RBM, Twist, reweight, ``APFlag=1``, and ``NQPOptTrans>1`` are not
-   supported. Single Lanczos Step is available only with
+-  RBM, Twist, ``APFlag=1``, and ``NQPOptTrans>1`` are not supported.
+   ``reweight=1`` is rejected for every BackFlow calculation, including
+   BF-FSZ and BackFlow N-body inputs. Single Lanczos Step is available only with
    ``NVMCCalMode=1`` and ``NLanczosMode=1``; its Hamiltonian is limited
    to ``Transfer`` and diagonal number-operator interactions.
    Spin-changing ``Transfer`` with ``OrbitalGeneral`` / FSZ additionally
@@ -2467,13 +2487,56 @@ Inputs outside this range are rejected.
 -  With ``OrbitalGeneral`` / FSZ, ``PairHop``, ``Exchange``, and
    ``InterAll`` are additionally supported. Measurement outputs
    ``OneBodyG``, ``TwoBodyG``, and ``TwoBodyGEx`` support general spin
-   labels. ``NBodyG`` and ``NBodyInterAll`` are not supported. When
-   ``NLanczosMode=1`` is enabled, ``PairHop``, ``Exchange``, and
-   ``InterAll`` are also outside the supported scope.
+   labels. ``NBodyG`` and ``NBodyInterAll`` support general spin labels
+   only when ``2Sz=-1``; in a fixed :math:`S_z` sector every N-body
+   factor must conserve spin. Any BackFlow N-body input requires
+   complex variational parameters and ``NLanczosMode=0``. When
+   ``NLanczosMode=1`` is enabled, ``PairHop``, ``Exchange``,
+   ``InterAll``, ``NBodyG``, and ``NBodyInterAll`` are outside the
+   supported scope.
 
 -  Standard mode and StdFace do not generate BackFlow inputs. To use
    BackFlow, prepare ``BFRange`` and ``BF`` manually as Expert-mode
    input files.
+
+BackFlow N-body support matrix
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :widths: 28 17 20 35
+   :header-rows: 1
+
+   * - BackFlow mode or setting
+     - ``NBodyG``
+     - ``NBodyInterAll``
+     - Conditions
+   * - ``Orbital`` / ``OrbitalAntiParallel``
+     - Supported
+     - Supported
+     - Complex parameters, spin-conserving factors, and
+       ``NLanczosMode=0``.
+   * - ``OrbitalGeneral`` / FSZ, fixed :math:`S_z`
+     - Supported
+     - Supported
+     - Complex parameters, spin-conserving factors, and
+       ``NLanczosMode=0``.
+   * - ``OrbitalGeneral`` / FSZ, ``2Sz=-1``
+     - Supported
+     - Supported
+     - Complex parameters; spin-changing factors are accepted;
+       ``NLanczosMode=0``.
+   * - Real variational parameters
+     - Rejected
+     - Rejected
+     - No real BackFlow N-body measurement or local-energy kernel.
+   * - ``reweight=1``
+     - Rejected
+     - Rejected
+     - Reweighting is outside the supported BackFlow contract.
+   * - ``NLanczosMode>0``
+     - Rejected
+     - Rejected
+     - N-body Lanczos corrections are not implemented.
 
 DH2 file
 ~~~~~~~~
@@ -4079,9 +4142,25 @@ Use rules
    factor must satisfy :math:`\sigma_a = \tau_a`. Spin-changing factors
    require orbital-general mode.
 
--  This output is supported for physical-quantity calculations. It is
-   not implemented for BackFlow measurement, and no Lanczos-corrected
-   ``ls_NBodyG`` output file is produced.
+-  This output is supported for physical-quantity calculations with or
+   without BackFlow. BackFlow N-body measurement requires complex
+   variational parameters, ``NLanczosMode=0``, and ``reweight=0``.
+   No real BackFlow N-body kernel or Lanczos-corrected ``ls_NBodyG``
+   output is implemented.
+
+-  With normal ``Orbital`` / ``OrbitalAntiParallel`` BackFlow, every
+   factor must conserve spin. ``OrbitalGeneral`` / FSZ accepts
+   spin-changing factors only when ``2Sz=-1``.
+
+-  Input order may be any positive integer. After reduction, non-FSZ
+   BackFlow dispatches effective order 1 to the one-body kernel and
+   rebuilds the complete candidate state for effective order 2 or
+   greater. BF-FSZ uses its validated order-1/order-2 dispatch and
+   rebuilds higher orders. A genuine effective order of 3 or greater
+   costs one full BackFlow Slater/Pfaffian construction per surviving
+   component.
+
+-  Output filenames remain ``xxx_NBodyG_%03d.dat``.
 
 
 Twist file (twist.def)
