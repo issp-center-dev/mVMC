@@ -1041,8 +1041,23 @@ c_{j_{\alpha a}\tau_{\alpha a}}\]</div>
 <li><p>サイト番号またはスピン番号に範囲外の整数を指定した場合、または係数が非有限値の場合はエラー終了します。</p></li>
 <li><p>スピンを変える因子 <span class="math notranslate nohighlight">\(\sigma_a \neq \tau_a\)</span> は orbital-general モードでのみ指定できます。
 それ以外のモードでは各因子が <span class="math notranslate nohighlight">\(\sigma_a = \tau_a\)</span> を満たす必要があります。</p></li>
-<li><p>初回実装では通常 VMC の局所エネルギーのみ対応しています。BackFlow と Lanczos mode には未対応です。
-real local-energy kernel は未実装のため、 <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> 項を使う場合は複素変分パラメータが必要です。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> は通常のエネルギー出力へ寄与し、相互作用専用の出力ファイルは生成しません。</p></li>
+<li><p>real local-energy kernel と <span class="math notranslate nohighlight">\(N\)</span> 体 Lanczos 補正は未実装です。
+このため <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> を使う場合は複素変分パラメータが必要で、
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode</span></code> は 0 とする必要があります。</p></li>
+<li><p>BackFlow では任意の正の入力次数を使用できます。通常の <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> /
+<code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> 形式では全因子がスピンを保存する必要があります。
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ でスピンを変える因子を使用できるのは
+<code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code> の場合だけです。</p></li>
+<li><p>代数的な縮約後、non-FSZ BackFlow は実効次数1をone-body kernelへdispatchし、
+実効次数2以上ではcandidateのBackFlow Slater/Pfaffian状態を完全に再構築します。
+BF-FSZは検証済みの次数1/2 dispatchを使用し、それより高い次数を再構築します。
+したがって真正な実効次数3以上では、残った各項ごとにBackFlow
+Slater/Pfaffianを完全構築する計算量が必要です。</p></li>
+<li><p>non-FSZ BackFlowのnative <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>、<code class="docutils literal notranslate"><span class="pre">Exchange</span></code>、<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> 入力は
+引き続き未対応です。同値な演算子因子は、上記の制約を満たす
+<code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> として指定できます。BackFlowと <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> の併用は
+エラー終了します。</p></li>
 </ul>
 </section>
 </section>
@@ -1963,7 +1978,9 @@ conduction electron の hopping / spin flip sampler と、spin-changing
 <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> / <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code> / <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> が有効になります。
 局在スピンと BackFlow の併用は未対応です。</p></li>
 <li><p>スピン射影は未対応です。<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg==1</span></code> を指定してください。</p></li>
-<li><p>RBM、Twist、reweight、<code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code> は未対応です。
+<li><p>RBM、Twist、<code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code> は未対応です。
+BF-FSZとBackFlow <span class="math notranslate nohighlight">\(N\)</span> 体入力を含む全てのBackFlow計算で
+<code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> はエラー終了します。
 Single Lanczos Step は <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code> かつ <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>
 のみ使用でき、Hamiltonian は <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> と number-operator 型の
 対角相互作用に限定されます。<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ の
@@ -1980,13 +1997,70 @@ spin-changing <code class="docutils literal notranslate"><span class="pre">Trans
 <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>、<code class="docutils literal notranslate"><span class="pre">Exchange</span></code>、<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> は引き続き未対応です。</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ では、<code class="docutils literal notranslate"><span class="pre">PairHop</span></code>、<code class="docutils literal notranslate"><span class="pre">Exchange</span></code>、<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> も
 使用できます。測定用の <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code>、<code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code>、<code class="docutils literal notranslate"><span class="pre">TwoBodyGEx</span></code> は
-general spin label に対応します。<code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> と <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> は未対応です。
-ただし <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code> との併用時は <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>、<code class="docutils literal notranslate"><span class="pre">Exchange</span></code>、
-<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> も対象外です。</p></li>
+general spin label に対応します。<code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> と <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> で
+general spin labelを使えるのは <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code> の場合だけで、固定
+<span class="math notranslate nohighlight">\(S_z\)</span> sectorでは全ての <span class="math notranslate nohighlight">\(N\)</span> 体因子がスピンを保存する必要があります。
+BackFlow <span class="math notranslate nohighlight">\(N\)</span> 体入力では複素変分パラメータと
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code> が必要です。<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code> との併用時は
+<code class="docutils literal notranslate"><span class="pre">PairHop</span></code>、<code class="docutils literal notranslate"><span class="pre">Exchange</span></code>、<code class="docutils literal notranslate"><span class="pre">InterAll</span></code>、<code class="docutils literal notranslate"><span class="pre">NBodyG</span></code>、
+<code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> が対象外です。</p></li>
 <li><p>Standard mode / StdFace から BackFlow 入力は生成されません。
 BackFlow を使う場合は、エキスパートモード入力として <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> と <code class="docutils literal notranslate"><span class="pre">BF</span></code> を
 手動で用意してください。</p></li>
 </ul>
+</section>
+<section id="backflow-n-support-matrix">
+<h3>BackFlow <span class="math notranslate nohighlight">\(N\)</span> 体機能のsupport matrix<a class="headerlink" href="#backflow-n-support-matrix" title="この見出しへのパーマリンク">¶</a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28.0%" />
+<col style="width: 17.0%" />
+<col style="width: 20.0%" />
+<col style="width: 35.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>BackFlow modeまたは設定</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">NBodyG</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code></p></th>
+<th class="head"><p>条件</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code></p></td>
+<td><p>対応</p></td>
+<td><p>対応</p></td>
+<td><p>複素変分パラメータ、spin-conserving因子、
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>。</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ、固定 <span class="math notranslate nohighlight">\(S_z\)</span></p></td>
+<td><p>対応</p></td>
+<td><p>対応</p></td>
+<td><p>複素変分パラメータ、spin-conserving因子、
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>。</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ、<code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code></p></td>
+<td><p>対応</p></td>
+<td><p>対応</p></td>
+<td><p>複素変分パラメータ、spin-changing因子を使用可能、
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>。</p></td>
+</tr>
+<tr class="row-odd"><td><p>実変分パラメータ</p></td>
+<td><p>エラー終了</p></td>
+<td><p>エラー終了</p></td>
+<td><p>real BackFlow <span class="math notranslate nohighlight">\(N\)</span> 体measurement/local-energy kernelは未実装。</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">reweight=1</span></code></p></td>
+<td><p>エラー終了</p></td>
+<td><p>エラー終了</p></td>
+<td><p>reweightはBackFlowのsupport contract外。</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">NLanczosMode&gt;0</span></code></p></td>
+<td><p>エラー終了</p></td>
+<td><p>エラー終了</p></td>
+<td><p><span class="math notranslate nohighlight">\(N\)</span> 体Lanczos補正は未実装。</p></td>
+</tr>
+</tbody>
+</table>
 </section>
 </section>
 <section id="dh2">
@@ -3186,8 +3260,19 @@ NCisAjsCktAltDC        576
 <li><p>サイト番号またはスピン番号に範囲外の整数を指定した場合はエラー終了します。</p></li>
 <li><p>スピンを変える因子 <span class="math notranslate nohighlight">\(\sigma_a \neq \tau_a\)</span> は orbital-general モードでのみ指定できます。
 それ以外のモードでは各因子が <span class="math notranslate nohighlight">\(\sigma_a = \tau_a\)</span> を満たす必要があります。</p></li>
-<li><p>本出力は物理量計算で使用できます。BackFlow 測定には未対応です。また、Lanczos 補正付きの
-<code class="docutils literal notranslate"><span class="pre">ls_NBodyG</span></code> 出力ファイルは生成されません。</p></li>
+<li><p>本出力はBackFlowの有無によらず物理量計算で使用できます。BackFlow
+<span class="math notranslate nohighlight">\(N\)</span> 体測定では複素変分パラメータ、<code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>、
+<code class="docutils literal notranslate"><span class="pre">reweight=0</span></code> が必要です。real BackFlow <span class="math notranslate nohighlight">\(N\)</span> 体kernelと
+Lanczos補正付き <code class="docutils literal notranslate"><span class="pre">ls_NBodyG</span></code> 出力は未実装です。</p></li>
+<li><p>通常の <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> BackFlowでは全因子が
+スピンを保存する必要があります。<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZで
+スピンを変える因子を使用できるのは <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code> の場合だけです。</p></li>
+<li><p>入力次数には任意の正の整数を指定できます。縮約後、non-FSZ BackFlowは
+実効次数1をone-body kernelへdispatchし、実効次数2以上ではcandidate状態を
+完全に再構築します。BF-FSZは検証済みの次数1/2 dispatchを使用し、
+それより高い次数を再構築します。真正な実効次数3以上では、残った各成分ごとに
+BackFlow Slater/Pfaffianを完全構築する計算量が必要です。</p></li>
+<li><p>出力ファイル名は従来どおり <code class="docutils literal notranslate"><span class="pre">xxx_NBodyG_%03d.dat</span></code> です。</p></li>
 </ul>
 </section>
 </section>
@@ -3476,6 +3561,7 @@ lattice.def の座標と twist.def の位相が意図した幾何を表すよう
 <li><a class="reference internal" href="#id52">パラメータ</a></li>
 <li><a class="reference internal" href="#id53">使用ルール</a></li>
 <li><a class="reference internal" href="#id54">制限事項</a></li>
+<li><a class="reference internal" href="#backflow-n-support-matrix">BackFlow <span class="math notranslate nohighlight">\(N\)</span> 体機能のsupport matrix</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#dh2">DH2指定ファイル</a><ul>

@@ -1192,8 +1192,27 @@ NBodyInterAll指定ファイル(nbodyinterall.def)
 -  スピンを変える因子 :math:`\sigma_a \neq \tau_a` は orbital-general モードでのみ指定できます。
    それ以外のモードでは各因子が :math:`\sigma_a = \tau_a` を満たす必要があります。
 
--  初回実装では通常 VMC の局所エネルギーのみ対応しています。BackFlow と Lanczos mode には未対応です。
-   real local-energy kernel は未実装のため、 ``NBodyInterAll`` 項を使う場合は複素変分パラメータが必要です。
+-  ``NBodyInterAll`` は通常のエネルギー出力へ寄与し、相互作用専用の出力ファイルは生成しません。
+
+-  real local-energy kernel と :math:`N` 体 Lanczos 補正は未実装です。
+   このため ``NBodyInterAll`` を使う場合は複素変分パラメータが必要で、
+   ``NLanczosMode`` は 0 とする必要があります。
+
+-  BackFlow では任意の正の入力次数を使用できます。通常の ``Orbital`` /
+   ``OrbitalAntiParallel`` 形式では全因子がスピンを保存する必要があります。
+   ``OrbitalGeneral`` / FSZ でスピンを変える因子を使用できるのは
+   ``2Sz=-1`` の場合だけです。
+
+-  代数的な縮約後、non-FSZ BackFlow は実効次数1をone-body kernelへdispatchし、
+   実効次数2以上ではcandidateのBackFlow Slater/Pfaffian状態を完全に再構築します。
+   BF-FSZは検証済みの次数1/2 dispatchを使用し、それより高い次数を再構築します。
+   したがって真正な実効次数3以上では、残った各項ごとにBackFlow
+   Slater/Pfaffianを完全構築する計算量が必要です。
+
+-  non-FSZ BackFlowのnative ``PairHop``、``Exchange``、``InterAll`` 入力は
+   引き続き未対応です。同値な演算子因子は、上記の制約を満たす
+   ``NBodyInterAll`` として指定できます。BackFlowと ``reweight=1`` の併用は
+   エラー終了します。
 
 CoulombIntra指定ファイル(coulombintra.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2334,7 +2353,9 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
 
 -  スピン射影は未対応です。``NSPGaussLeg==1`` を指定してください。
 
--  RBM、Twist、reweight、``APFlag=1``、``NQPOptTrans>1`` は未対応です。
+-  RBM、Twist、``APFlag=1``、``NQPOptTrans>1`` は未対応です。
+   BF-FSZとBackFlow :math:`N` 体入力を含む全てのBackFlow計算で
+   ``reweight=1`` はエラー終了します。
    Single Lanczos Step は ``NVMCCalMode=1`` かつ ``NLanczosMode=1``
    のみ使用でき、Hamiltonian は ``Transfer`` と number-operator 型の
    対角相互作用に限定されます。``OrbitalGeneral`` / FSZ の
@@ -2354,13 +2375,56 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
 
 -  ``OrbitalGeneral`` / FSZ では、``PairHop``、``Exchange``、``InterAll`` も
    使用できます。測定用の ``OneBodyG``、``TwoBodyG``、``TwoBodyGEx`` は
-   general spin label に対応します。``NBodyG`` と ``NBodyInterAll`` は未対応です。
-   ただし ``NLanczosMode=1`` との併用時は ``PairHop``、``Exchange``、
-   ``InterAll`` も対象外です。
+   general spin label に対応します。``NBodyG`` と ``NBodyInterAll`` で
+   general spin labelを使えるのは ``2Sz=-1`` の場合だけで、固定
+   :math:`S_z` sectorでは全ての :math:`N` 体因子がスピンを保存する必要があります。
+   BackFlow :math:`N` 体入力では複素変分パラメータと
+   ``NLanczosMode=0`` が必要です。``NLanczosMode=1`` との併用時は
+   ``PairHop``、``Exchange``、``InterAll``、``NBodyG``、
+   ``NBodyInterAll`` が対象外です。
 
 -  Standard mode / StdFace から BackFlow 入力は生成されません。
    BackFlow を使う場合は、エキスパートモード入力として ``BFRange`` と ``BF`` を
    手動で用意してください。
+
+BackFlow :math:`N` 体機能のsupport matrix
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :widths: 28 17 20 35
+   :header-rows: 1
+
+   * - BackFlow modeまたは設定
+     - ``NBodyG``
+     - ``NBodyInterAll``
+     - 条件
+   * - ``Orbital`` / ``OrbitalAntiParallel``
+     - 対応
+     - 対応
+     - 複素変分パラメータ、spin-conserving因子、
+       ``NLanczosMode=0``。
+   * - ``OrbitalGeneral`` / FSZ、固定 :math:`S_z`
+     - 対応
+     - 対応
+     - 複素変分パラメータ、spin-conserving因子、
+       ``NLanczosMode=0``。
+   * - ``OrbitalGeneral`` / FSZ、``2Sz=-1``
+     - 対応
+     - 対応
+     - 複素変分パラメータ、spin-changing因子を使用可能、
+       ``NLanczosMode=0``。
+   * - 実変分パラメータ
+     - エラー終了
+     - エラー終了
+     - real BackFlow :math:`N` 体measurement/local-energy kernelは未実装。
+   * - ``reweight=1``
+     - エラー終了
+     - エラー終了
+     - reweightはBackFlowのsupport contract外。
+   * - ``NLanczosMode>0``
+     - エラー終了
+     - エラー終了
+     - :math:`N` 体Lanczos補正は未実装。
 
 DH2指定ファイル
 ~~~~~~~~~~~~~~~
@@ -3845,8 +3909,22 @@ NBodyG指定ファイル(nbodyg.def)
 -  スピンを変える因子 :math:`\sigma_a \neq \tau_a` は orbital-general モードでのみ指定できます。
    それ以外のモードでは各因子が :math:`\sigma_a = \tau_a` を満たす必要があります。
 
--  本出力は物理量計算で使用できます。BackFlow 測定には未対応です。また、Lanczos 補正付きの
-   ``ls_NBodyG`` 出力ファイルは生成されません。
+-  本出力はBackFlowの有無によらず物理量計算で使用できます。BackFlow
+   :math:`N` 体測定では複素変分パラメータ、``NLanczosMode=0``、
+   ``reweight=0`` が必要です。real BackFlow :math:`N` 体kernelと
+   Lanczos補正付き ``ls_NBodyG`` 出力は未実装です。
+
+-  通常の ``Orbital`` / ``OrbitalAntiParallel`` BackFlowでは全因子が
+   スピンを保存する必要があります。``OrbitalGeneral`` / FSZで
+   スピンを変える因子を使用できるのは ``2Sz=-1`` の場合だけです。
+
+-  入力次数には任意の正の整数を指定できます。縮約後、non-FSZ BackFlowは
+   実効次数1をone-body kernelへdispatchし、実効次数2以上ではcandidate状態を
+   完全に再構築します。BF-FSZは検証済みの次数1/2 dispatchを使用し、
+   それより高い次数を再構築します。真正な実効次数3以上では、残った各成分ごとに
+   BackFlow Slater/Pfaffianを完全構築する計算量が必要です。
+
+-  出力ファイル名は従来どおり ``xxx_NBodyG_%03d.dat`` です。
 
 Twist指定ファイル(twist.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

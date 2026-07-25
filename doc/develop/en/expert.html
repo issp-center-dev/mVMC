@@ -1102,10 +1102,25 @@ or when coefficients are non-finite.</p></li>
 <li><p>In orbital modes that do not allow spin-changing contractions, each
 factor must satisfy <span class="math notranslate nohighlight">\(\sigma_a = \tau_a\)</span>. Spin-changing factors
 require orbital-general mode.</p></li>
-<li><p>The first implementation supports normal VMC local energy only.
-BackFlow and Lanczos modes are not implemented. Real local-energy
-kernels are not implemented, so complex variational parameters are
-required when <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> terms are present.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> contributes to the normal energy output; it does
+not create a separate interaction-output file.</p></li>
+<li><p>Real local-energy kernels and N-body Lanczos corrections are not
+implemented. Complex variational parameters are therefore required,
+and <code class="docutils literal notranslate"><span class="pre">NLanczosMode</span></code> must be 0 whenever <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> is present.</p></li>
+<li><p>BackFlow supports terms of any positive input order. With the normal
+<code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format, every factor must
+conserve spin. With <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, spin-changing factors
+are accepted only when <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>.</p></li>
+<li><p>After algebraic reduction, non-FSZ BackFlow dispatches effective
+order 1 to the one-body kernel and rebuilds the complete candidate
+BackFlow Slater/Pfaffian state for effective order 2 or greater.
+BF-FSZ uses its validated order-1/order-2 dispatch and rebuilds higher
+orders. A genuine effective order of 3 or greater therefore costs one
+full BackFlow Slater/Pfaffian construction per surviving term.</p></li>
+<li><p>Native non-FSZ BackFlow <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>, and <code class="docutils literal notranslate"><span class="pre">InterAll</span></code>
+inputs remain unsupported. Equivalent ordered factors may be supplied
+through <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> while satisfying the restrictions above.
+BackFlow with <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> is rejected.</p></li>
 </ul>
 </section>
 </section>
@@ -2093,8 +2108,9 @@ spin-flip sampler and spin-changing <code class="docutils literal notranslate"><
 <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> operators. BackFlow with localized spins is not
 supported.</p></li>
 <li><p>Spin projection is not supported. Use <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg==1</span></code>.</p></li>
-<li><p>RBM, Twist, reweight, <code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code> are not
-supported. Single Lanczos Step is available only with
+<li><p>RBM, Twist, <code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code> are not supported.
+<code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> is rejected for every BackFlow calculation, including
+BF-FSZ and BackFlow N-body inputs. Single Lanczos Step is available only with
 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code> and <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>; its Hamiltonian is limited
 to <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> and diagonal number-operator interactions.
 Spin-changing <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> with <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ additionally
@@ -2113,13 +2129,70 @@ unsupported in this mode.</p></li>
 <li><p>With <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> are additionally supported. Measurement outputs
 <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code>, <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code>, and <code class="docutils literal notranslate"><span class="pre">TwoBodyGEx</span></code> support general spin
-labels. <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> and <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> are not supported. When
-<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code> is enabled, <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>, and
-<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> are also outside the supported scope.</p></li>
+labels. <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> and <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> support general spin labels
+only when <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>; in a fixed <span class="math notranslate nohighlight">\(S_z\)</span> sector every N-body
+factor must conserve spin. Any BackFlow N-body input requires
+complex variational parameters and <code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>. When
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code> is enabled, <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>,
+<code class="docutils literal notranslate"><span class="pre">InterAll</span></code>, <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code>, and <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> are outside the
+supported scope.</p></li>
 <li><p>Standard mode and StdFace do not generate BackFlow inputs. To use
 BackFlow, prepare <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> and <code class="docutils literal notranslate"><span class="pre">BF</span></code> manually as Expert-mode
 input files.</p></li>
 </ul>
+</section>
+<section id="backflow-n-body-support-matrix">
+<h3>BackFlow N-body support matrix<a class="headerlink" href="#backflow-n-body-support-matrix" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28.0%" />
+<col style="width: 17.0%" />
+<col style="width: 20.0%" />
+<col style="width: 35.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>BackFlow mode or setting</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">NBodyG</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code></p></th>
+<th class="head"><p>Conditions</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code></p></td>
+<td><p>Supported</p></td>
+<td><p>Supported</p></td>
+<td><p>Complex parameters, spin-conserving factors, and
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, fixed <span class="math notranslate nohighlight">\(S_z\)</span></p></td>
+<td><p>Supported</p></td>
+<td><p>Supported</p></td>
+<td><p>Complex parameters, spin-conserving factors, and
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code></p></td>
+<td><p>Supported</p></td>
+<td><p>Supported</p></td>
+<td><p>Complex parameters; spin-changing factors are accepted;
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Real variational parameters</p></td>
+<td><p>Rejected</p></td>
+<td><p>Rejected</p></td>
+<td><p>No real BackFlow N-body measurement or local-energy kernel.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">reweight=1</span></code></p></td>
+<td><p>Rejected</p></td>
+<td><p>Rejected</p></td>
+<td><p>Reweighting is outside the supported BackFlow contract.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">NLanczosMode&gt;0</span></code></p></td>
+<td><p>Rejected</p></td>
+<td><p>Rejected</p></td>
+<td><p>N-body Lanczos corrections are not implemented.</p></td>
+</tr>
+</tbody>
+</table>
 </section>
 </section>
 <section id="dh2-file">
@@ -3421,9 +3494,22 @@ number of <span class="math notranslate nohighlight">\(N\)</span>-body correlati
 <li><p>In orbital modes that do not allow spin-changing contractions, each
 factor must satisfy <span class="math notranslate nohighlight">\(\sigma_a = \tau_a\)</span>. Spin-changing factors
 require orbital-general mode.</p></li>
-<li><p>This output is supported for physical-quantity calculations. It is
-not implemented for BackFlow measurement, and no Lanczos-corrected
-<code class="docutils literal notranslate"><span class="pre">ls_NBodyG</span></code> output file is produced.</p></li>
+<li><p>This output is supported for physical-quantity calculations with or
+without BackFlow. BackFlow N-body measurement requires complex
+variational parameters, <code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>, and <code class="docutils literal notranslate"><span class="pre">reweight=0</span></code>.
+No real BackFlow N-body kernel or Lanczos-corrected <code class="docutils literal notranslate"><span class="pre">ls_NBodyG</span></code>
+output is implemented.</p></li>
+<li><p>With normal <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> BackFlow, every
+factor must conserve spin. <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ accepts
+spin-changing factors only when <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>.</p></li>
+<li><p>Input order may be any positive integer. After reduction, non-FSZ
+BackFlow dispatches effective order 1 to the one-body kernel and
+rebuilds the complete candidate state for effective order 2 or
+greater. BF-FSZ uses its validated order-1/order-2 dispatch and
+rebuilds higher orders. A genuine effective order of 3 or greater
+costs one full BackFlow Slater/Pfaffian construction per surviving
+component.</p></li>
+<li><p>Output filenames remain <code class="docutils literal notranslate"><span class="pre">xxx_NBodyG_%03d.dat</span></code>.</p></li>
 </ul>
 </section>
 </section>
@@ -3708,6 +3794,7 @@ indices are rejected as input errors.</p></li>
 <li><a class="reference internal" href="#id43">Parameters</a></li>
 <li><a class="reference internal" href="#id44">User rules</a></li>
 <li><a class="reference internal" href="#limitations">Limitations</a></li>
+<li><a class="reference internal" href="#backflow-n-body-support-matrix">BackFlow N-body support matrix</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#dh2-file">DH2 file</a><ul>
