@@ -313,6 +313,65 @@ Power-Lanczos法での最適化パラメータ :math:`\alpha` の決定方法に
 それを解くことで :math:`\alpha` が決定されます。
 分散に関しても同様の手法で計算することが可能です。
 
+2nd power-Lanczos step
+~~~~~~~~~~~~~~~~~~~~~~
+
+``NLanczosStep=2`` では、まず4個のlocal power
+
+.. math::
+
+   F_a(x)=\frac{\langle x|\hat{H}^a|\psi\rangle}
+                 {\langle x|\psi\rangle},\qquad a=0,1,2,3
+
+をsamplingして各sampleについて保持します。sample loopの終了後にglobalな
+weighted平均エネルギー :math:`\sigma=\langle H\rangle` を求め、momentの積を
+蓄積する前に
+
+.. math::
+
+   F'_a(x)=\sum_{j=0}^{a}{a\choose j}(-\sigma)^{a-j}F_j(x)
+
+へ変換します。:math:`F'_a` は :math:`(\hat H-\sigma)^a` のlocal estimator
+です。mVMCはcentered moment行列
+
+.. math::
+
+   M'_{ab}=\sum_x \rho(x)F'_a(x)^\dagger F'_b(x)
+
+を構成します。
+このaccumulation前の中心化により、extensiveなエネルギーが大きい場合に
+:math:`\langle H^6\rangle` などのraw momentを形成して生じる桁落ちを避けます。
+必要な追加memoryはMonte Carlo sampleあたり4個のlocal powerに比例します。
+ただし、中心化が縮小するのは主に平均エネルギーによるoffsetです。
+:math:`|\langle H\rangle|` がエネルギー分布の広がりに比べて小さい場合は
+高次local powerの動的範囲が十分に縮まらないため、中心化だけで任意の系の
+数値精度が保証されるわけではありません。
+
+:math:`H^3` のlocal powerは ``Transfer`` 項のouter/inner二重loopで評価し、
+支配的なoperator数は :math:`O(N_{\mathrm{Transfer}}^2)` で増加します。
+実時間は波動関数、射影、計算環境にも依存します。
+
+:math:`X=\hat H-\sigma` とすると、
+:math:`\{|\psi\rangle,X|\psi\rangle,X^2|\psi\rangle\}`
+を基底としたoverlap行列、centered Hamiltonian行列、centered Hamiltonian
+二乗行列は
+
+.. math::
+
+   S_{ab}=M'_{ab},\qquad
+   H'_{ab}=\frac{M'_{a,b+1}+M'_{a+1,b}}{2},\qquad
+   G'_{ab}=M'_{a+1,b+1}
+
+です。ここで :math:`a,b=0,1,2` です。一般化固有値問題
+:math:`H'd=E'Sd` の最低解から :math:`E=E'+\sigma` を求めます。
+多項式係数はunshifted basisへ戻してから出力するため、
+:math:`|\phi\rangle=(c_0+c_1\hat{H}+c_2\hat{H}^2)|\psi\rangle`
+を得ます。出力する分散は :math:`d^\dagger Sd=1` の規格化のもとで
+:math:`d^\dagger G'd-(d^\dagger H'd)^2` としてcentered basisで評価します。
+また、:math:`c_0` が
+数値的に定義できる場合は :math:`\alpha_1=c_1/c_0` と
+:math:`\alpha_2=c_2/c_0` も出力します。
+
 物理量の計算
 ~~~~~~~~~~~~
 

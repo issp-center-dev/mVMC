@@ -441,9 +441,61 @@ xxx\_ls\_out\_yyy.dat
 Power Lanczos法により求めた :math:`\langle H \rangle`,
 :math:`(\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2` および最適化パラメータ :math:`\alpha` の順に出力されます。
 ``ModPara`` 指定ファイルで ``NVMCCalMode`` =1, ``NLanczosmode`` =1,
-2に設定することで計算されます。
+2、``NLanczosStep`` = 1に設定することで計算されます。
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
 ``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。
+
+xxx\_ls2\_out\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~~
+
+``NVMCCalMode=1``、``NLanczosMode=1``、``NLanczosStep=2`` の場合に
+出力する2行のファイルです。1行目はversion付きheaderです。2行目には次の
+17項目を出力します: ``E``、``sigma2_over_E2``、``c0``・``c1``・
+``c2`` の実部と虚部、``alpha1=c1/c0``・``alpha2=c2/c0`` の実部と
+虚部、``solve_flag``、``epsilon``、``shift``、
+``antihermitian_residual``、``hankel_residual``。
+係数はunshiftedな多項式 :math:`c_0+c_1H+c_2H^2` に対する値です。
+``shift`` はconditioned一般化固有値問題で使用した全energy shiftであり、通常は
+丸め誤差の範囲で ``xxx_ls2_moment_yyy.dat`` に記録するaccumulation shiftと
+一致します。
+
+``solve_flag`` はbit maskです。bit 0は :math:`10^{-12}` のoverlap
+regularizationによる1回だけの再試行を使用したことを表します。bit 1は
+``c0`` が数値的に0で ``alpha1``・``alpha2`` を定義できないことを表し、
+この場合のalpha欄にはNaNを出力します。
+
+``antihermitian_residual`` は
+:math:`M'_{ba}=M_{ab}^{\prime *}` からのずれです。全ての表要素を同じ
+sample-local outer productから構成するため、構造上ほぼ丸め誤差となり、
+主にaccumulationやreductionの破損検出に使用します。独立な物理精度の指標
+ではありません。``hankel_residual`` は :math:`a+b` が同じ要素間のずれを
+各反対角ごとに
+:math:`\max_{a+b=k}\sqrt{|M_{aa}M_{bb}|}` というCauchyスケール
+（および観測要素の最大絶対値）で正規化してから、その最大値を取ります。
+このため高次momentが低次の不一致を隠さず、期待値が0の反対角にも同次数の
+有限なスケールを与えます。独立な有限sampleでは
+:math:`O(1/\sqrt{N_{\mathrm{VMCSample}}})` 程度で減少する統計的診断であり、
+solver toleranceではありません。
+
+xxx\_ls2\_moment\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``xxx_ls2_out_yyy.dat`` と同時に出力する2行の診断用ファイルです。
+version 2のheaderには ``basis_shift=<sigma>`` を記録します。ここで
+:math:`\sigma=\langle H\rangle` はmoment accumulation前に適用するglobalな
+weighted shiftです。data行には16個のcentered moment
+
+.. math::
+
+   M'_{ab}=\left\langle
+   (\hat H-\sigma)^a\psi\mid(\hat H-\sigma)^b\psi
+   \right\rangle
+
+を :math:`M'_{00}` から :math:`M'_{33}` までrow-major順で出力します。
+各momentは実部・虚部の2項目で表し、数値項目は合計32個です。
+shiftとcentered momentによりsolver入力を再現でき、:math:`|E|` が大きい場合の
+raw高次momentの桁落ちを避けられます。HermiticityおよびHankel恒等式の独立検証
+にも使用できます。
 
 xxx\_ls\_cisajs\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~

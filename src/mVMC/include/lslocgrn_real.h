@@ -3,6 +3,10 @@
 
 void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, double *_LSLQ_real);
 
+void CalculateLS2LocalPower_real(const double h1, const double ip,
+                                 int *eleIdx, int *eleCfg, int *eleNum,
+                                 int *eleProjCnt, double *localPower);
+
 double calculateHK_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt);
 
 double calHCA_real(const int ri, const int rj, const int s,

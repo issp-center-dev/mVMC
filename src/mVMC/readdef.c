@@ -32,6 +32,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <math.h>
 #include <stdlib.h>
 #include "./include/backflow.h"
+#include "./include/lanczos2_contract.h"
 #include "./include/readdef.h"
 #include "./include/global.h"
 #include "safempi_fcmp.c"
@@ -965,6 +966,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
   NVMCCalMode = bufInt[IdxVMCCalcMode];
   NLanczosMode = bufInt[IdxLanczosMode];
+  NLanczosStep = bufInt[IdxLanczosStep];
   NDataIdxStart = bufInt[IdxDataIdxStart];
   NDataQtySmp = bufInt[IdxDataQtySmp];
   Nsite = bufInt[IdxNsite];
@@ -1277,6 +1279,40 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
   if (BFComputeSizes(NBackFlowIdx, Nrange, NzBF, &NrangeIdx, &NBFIdxTotal, &NProjBF) != 0) {
     MPI_Abort(comm, EXIT_FAILURE);
+  }
+
+  {
+    const Lanczos2Contract lanczos2Contract = {
+        NLanczosStep,
+        NLanczosMode,
+        NVMCCalMode,
+        iFlgOrbitalGeneral,
+        NProjBF,
+        FlagRBM,
+        NExUpdatePath,
+        NPairHopping,
+        NExchangeCoupling,
+        NInterAll,
+        NNBodyInterAll,
+        NNBodyG,
+        0 /* Transfer contents are validated after ReadDefFileIdxPara. */};
+    int lanczos2StatusCode = LANCZOS2_CONTRACT_OK;
+    Lanczos2ContractStatus lanczos2Status;
+    if (rank == 0) {
+      lanczos2StatusCode =
+          (int)ValidateLanczos2Contract(&lanczos2Contract);
+    }
+#ifdef _mpi_use
+    MPI_Bcast(&lanczos2StatusCode, 1, MPI_INT, 0, comm);
+#endif
+    lanczos2Status = (Lanczos2ContractStatus)lanczos2StatusCode;
+    if (lanczos2Status != LANCZOS2_CONTRACT_OK) {
+      if (rank == 0) {
+        fprintf(stderr, "Error: %s.\n",
+                Lanczos2ContractError(lanczos2Status));
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
   }
 
   /* BFValidateSettings has already rejected unsupported BackFlow Twist and
@@ -1702,6 +1738,36 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   SafeMpiBcast(ParaCoulombIntra, NTotalDefDouble, comm);
   SafeMpiBcast_fcmp(ParaQPTrans, NQPTrans, comm);
 #endif /* _mpi_use */
+
+  {
+    int nSpinFlipTransfer = 0;
+    Lanczos2ContractStatus lanczos2Status;
+    Lanczos2Contract lanczos2Contract;
+    for (i = 0; i < NTransfer; i++) {
+      if (Transfer[i][1] != Transfer[i][3]) nSpinFlipTransfer++;
+    }
+    lanczos2Contract.step = NLanczosStep;
+    lanczos2Contract.lanczosMode = NLanczosMode;
+    lanczos2Contract.vmcCalMode = NVMCCalMode;
+    lanczos2Contract.orbitalGeneral = iFlgOrbitalGeneral;
+    lanczos2Contract.nProjBF = NProjBF;
+    lanczos2Contract.flagRBM = FlagRBM;
+    lanczos2Contract.exUpdatePath = NExUpdatePath;
+    lanczos2Contract.nPairHopping = NPairHopping;
+    lanczos2Contract.nExchangeCoupling = NExchangeCoupling;
+    lanczos2Contract.nInterAll = NInterAll;
+    lanczos2Contract.nNBodyInterAll = NNBodyInterAll;
+    lanczos2Contract.nNBodyG = NNBodyG;
+    lanczos2Contract.nSpinFlipTransfer = nSpinFlipTransfer;
+    lanczos2Status = ValidateLanczos2Contract(&lanczos2Contract);
+    if (lanczos2Status != LANCZOS2_CONTRACT_OK) {
+      if (rank == 0) {
+        fprintf(stderr, "Error: %s.\n",
+                Lanczos2ContractError(lanczos2Status));
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+  }
 
   /* set FlagShift */
   if (NVMCCalMode == 0) {
@@ -2342,6 +2408,7 @@ int GetFileName(
 void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[IdxVMCCalcMode] = 0;
   bufInt[IdxLanczosMode] = 0;
+  bufInt[IdxLanczosStep] = 1;
   bufInt[IdxDataIdxStart] = 0;
   bufInt[IdxDataQtySmp] = 1;
   bufInt[IdxNsite] = 16;
@@ -2485,6 +2552,14 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               bufInt[IdxVMCCalcMode] = (int) dtmp;
             } else if (CheckWords(ctmp, "NLanczosMode") == 0) {
               bufInt[IdxLanczosMode] = (int) dtmp;
+            } else if (CheckWords(ctmp, "NLanczosStep") == 0) {
+              /*
+               * Do not silently truncate a fractional or non-finite step.
+               * Store an invalid sentinel and let the rank-safe capability
+               * gate issue the single canonical diagnostic.
+               */
+              bufInt[IdxLanczosStep] =
+                  (dtmp == 1.0 || dtmp == 2.0) ? (int)dtmp : 0;
             } else if (CheckWords(ctmp, "NDataIdxStart") == 0) {
               bufInt[IdxDataIdxStart] = (int) dtmp;
             } else if (CheckWords(ctmp, "NDataQtySmp") == 0) {

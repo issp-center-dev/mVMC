@@ -914,6 +914,7 @@ void OutputTimerPhysCal() {
   OutputBFProfileCounters(fp);
   fprintf(fp,"    Lanczos1               [43] %12.5lf\n",Timer[43]);
   fprintf(fp,"    Lanczos2               [44] %12.5lf\n",Timer[44]);
+  fprintf(fp,"    2nd-step local powers  [95] %12.5lf\n",Timer[95]);
   fprintf(fp,"  UpdateSlaterElm          [20] %12.5lf\n",Timer[20]);
   fprintf(fp,"  WeightAverage            [21] %12.5lf\n",Timer[21]);
   fprintf(fp,"  outputData               [22] %12.5lf\n",Timer[22]);

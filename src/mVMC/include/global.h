@@ -41,6 +41,7 @@ int NVMCCalMode; /* calculation mode
                     1: calculation of expectation values */
 int NLanczosMode; /* mode of the single Lanczos step
                      0: none, 1: only energy, 2: Green functions */
+int NLanczosStep; /* polynomial order of the Lanczos wave function: 1 or 2 */
 
 int NStoreO; /* choice of store O: 0-> normal other-> store  */
 int NSRCG; /* choice of solver for Sx=g: 0-> (Sca)LAPACK other-> CG  */
@@ -339,6 +340,16 @@ double complex *LSLQ; /* [NLSHam][NLSHam]*/                      //TBC
 double *QQQQ_real; /* QQQQ[NLSHam][NLSHam][NLSHam][NLSHam]*/  //TBC
 double *LSLQ_real; /* [NLSHam][NLSHam]*/                      //TBC
 
+double complex *LS2Moment; /* row-major [4][4], NLanczosStep==2 */
+double complex *LS2LocalPower; /* [I,H,H^2,H^3] */
+double complex *LS2SamplePower; /* [NVMCSample][I,H,H^2,H^3] */
+double *LS2Moment_real; /* row-major [4][4], NLanczosStep==2 */
+double *LS2LocalPower_real; /* [I,H,H^2,H^3] */
+double *LS2SamplePower_real; /* [NVMCSample][I,H,H^2,H^3] */
+double *LS2SampleWeight; /* [NVMCSample] */
+unsigned char *LS2SampleValid; /* [NVMCSample] */
+double LS2MomentBasisShift; /* basis is (H-LS2MomentBasisShift)^k */
+
 double complex *QCisAjsQ; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/ //TBC
 double complex *QCisAjsCktAltQ; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/ //TBC
 double complex *QCisAjsCktAltQDC; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]
@@ -369,6 +380,8 @@ FILE *FileLSQCisAjsCktAltQ;
 FILE *FileLSCisAjs;
 FILE *FileLSCisAjsCktAlt;
 FILE *FileLSCisAjsCktAltDC;
+FILE *FileLS2;
+FILE *FileLS2Moment;
 
 
 /* FILE *FileTimerList; */

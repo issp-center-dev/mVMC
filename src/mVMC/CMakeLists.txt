@@ -11,7 +11,8 @@ include_directories("${STDFACE_DIR}/src")
 add_definitions(-DMEXP=19937)
 
 set(SOURCES_vmcmain
-        vmcmain.c physcal_lanczos.c splitloop.c 
+        vmcmain.c physcal_lanczos.c physcal_lanczos2.c
+        lanczos2_contract.c splitloop.c
  )
 
 set(SOURCES_sfmt
@@ -23,6 +24,10 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../pfapack)
 add_executable(vmcdry.out vmcdry.c)
 target_link_libraries(vmcdry.out StdFace_mvmc m)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
+if(Testing)
+  # Compile deliberate fault injection only into test-enabled builds.
+  target_compile_definitions(vmc.out PRIVATE MVMC_ENABLE_FAULT_INJECTION)
+endif(Testing)
 target_link_libraries(vmc.out StdFace_mvmc m)
 target_link_libraries(vmc.out pfapack)
 target_link_libraries(vmc.out ltl2inv)

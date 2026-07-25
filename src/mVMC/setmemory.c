@@ -28,12 +28,35 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 
 #include <complex.h>
+#include <stdint.h>
 #include "backflow.h"
 #include "global.h"
+#include "physcal_lanczos2.h"
 #include "setmemory.h"
 
 #ifndef _SRC_SETMEMORY
 #define _SRC_SETMEMORY
+
+static void *CheckedLanczos2Calloc(size_t count, size_t elementSize) {
+  void *result;
+  int rank = 0;
+  if (elementSize != 0 && count > SIZE_MAX / elementSize) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+      fprintf(stderr, "Error: Lanczos2 allocation size overflow.\n");
+    }
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  result = calloc(count, elementSize);
+  if (result == NULL && count != 0) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+      fprintf(stderr, "Error: failed to allocate Lanczos2 buffers.\n");
+    }
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  return result;
+}
 
 void SetMemoryDef() {
   int i, j;
@@ -464,7 +487,7 @@ void SetMemory() {
       PhysNBodyG = NULL;
     }
 
-    if(NLanczosMode>0){
+    if(NLanczosMode>0 && NLanczosStep==1){
       QQQQ = (double complex*)malloc(sizeof(double complex)
         *(NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam) );
       LSLQ = QQQQ + NLSHam*NLSHam*NLSHam*NLSHam;
@@ -488,6 +511,38 @@ void SetMemory() {
 
       }
     }
+    if(NLanczosMode>0 && NLanczosStep==2){
+      const size_t sampleCount = (size_t)NVMCSample;
+      if(NVMCSample <= 0) {
+        int rank = 0;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank == 0) {
+          fprintf(stderr,
+                  "Error: Lanczos2 requires a positive NVMCSample.\n");
+        }
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+      }
+      if(AllComplexFlag==0){
+        LS2Moment_real = (double*)CheckedLanczos2Calloc(
+            LANCZOS2_MOMENT_COUNT + LANCZOS2_POWER_COUNT,
+            sizeof(double));
+        LS2LocalPower_real = LS2Moment_real + LANCZOS2_MOMENT_COUNT;
+        LS2SamplePower_real = (double*)CheckedLanczos2Calloc(
+            sampleCount * LANCZOS2_POWER_COUNT, sizeof(double));
+      }else{
+        LS2Moment = (double complex*)CheckedLanczos2Calloc(
+            LANCZOS2_MOMENT_COUNT + LANCZOS2_POWER_COUNT,
+            sizeof(double complex));
+        LS2LocalPower = LS2Moment + LANCZOS2_MOMENT_COUNT;
+        LS2SamplePower = (double complex*)CheckedLanczos2Calloc(
+            sampleCount * LANCZOS2_POWER_COUNT,
+            sizeof(double complex));
+      }
+      LS2SampleWeight = (double*)CheckedLanczos2Calloc(
+          sampleCount, sizeof(double));
+      LS2SampleValid = (unsigned char*)CheckedLanczos2Calloc(
+          sampleCount, sizeof(unsigned char));
+    }
   }
 
   initializeWorkSpaceAll();
@@ -500,13 +555,21 @@ void FreeMemory() {
   if(NVMCCalMode==1){
     free(PhysCisAjs);
     free(PhysNBodyG);
-    if(NLanczosMode>0){
+    if(NLanczosMode>0 && NLanczosStep==1){
       free(QQQQ);
       free(QQQQ_real);
       if(NLanczosMode>1){
         free(QCisAjsQ);
         free(QCisAjsQ_real);
       }
+    }
+    if(NLanczosMode>0 && NLanczosStep==2){
+      free(LS2Moment);
+      free(LS2Moment_real);
+      free(LS2SamplePower);
+      free(LS2SamplePower_real);
+      free(LS2SampleWeight);
+      free(LS2SampleValid);
     }
   }
 

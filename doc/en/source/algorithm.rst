@@ -328,6 +328,67 @@ From the condition
 solving the quadratic equations, we can determine the :math:`\alpha`.
 The variance is calculate in the similar way.
 
+Second power-Lanczos step
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For ``NLanczosStep=2``, mVMC first samples and retains the four local powers
+
+.. math::
+
+   F_a(x)=\frac{\langle x|\hat{H}^a|\psi\rangle}
+                 {\langle x|\psi\rangle},\qquad a=0,1,2,3,
+
+After the sample loop, the globally weighted variational energy
+:math:`\sigma=\langle H\rangle` is computed.  Before any moment products
+are accumulated, each sample is transformed to
+
+.. math::
+
+   F'_a(x)=\sum_{j=0}^{a}{a\choose j}(-\sigma)^{a-j}F_j(x).
+
+Thus :math:`F'_a` is the local estimator of
+:math:`(\hat H-\sigma)^a`, and mVMC forms the centered moment matrix
+
+.. math::
+
+   M'_{ab}=\sum_x \rho(x)F'_a(x)^\dagger F'_b(x).
+
+Centering before accumulation avoids the precision loss that would occur
+when raw moments such as :math:`\langle H^6\rangle` are formed for a
+large extensive energy.  It requires storage proportional to four local
+powers per Monte Carlo sample.
+Centering primarily removes the offset from the mean energy.  When
+:math:`|\langle H\rangle|` is small compared with the width of the energy
+distribution, the dynamic range of the high-order local powers may remain
+large; centering alone therefore does not guarantee numerical accuracy for
+every system.
+
+The :math:`H^3` local power uses nested outer and inner loops over
+``Transfer`` terms, so its dominant operator count grows as
+:math:`O(N_{\mathrm{Transfer}}^2)`. Wall-clock cost also depends on the
+wave function, projection, and execution environment.
+
+With :math:`X=\hat H-\sigma`, the overlap, centered-Hamiltonian, and
+centered squared-Hamiltonian matrices in the basis
+:math:`\{|\psi\rangle,X|\psi\rangle,X^2|\psi\rangle\}` are
+
+.. math::
+
+   S_{ab}=M'_{ab},\qquad
+   H'_{ab}=\frac{M'_{a,b+1}+M'_{a+1,b}}{2},\qquad
+   G'_{ab}=M'_{a+1,b+1},
+
+where :math:`a,b=0,1,2`. The lowest solution of
+:math:`H'd=E'Sd` gives :math:`E=E'+\sigma`.  The polynomial
+coefficients are transformed back to the unshifted basis so that the
+reported state is
+:math:`|\phi\rangle=(c_0+c_1\hat{H}+c_2\hat{H}^2)|\psi\rangle`.
+The reported variance is evaluated in the centered basis as
+:math:`d^\dagger G'd-(d^\dagger H'd)^2`, with
+:math:`d^\dagger Sd=1`. The ratios
+:math:`\alpha_1=c_1/c_0` and :math:`\alpha_2=c_2/c_0` are also
+reported when :math:`c_0` is numerically defined.
+
 Calculation of physical quantities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -351,5 +412,3 @@ where we define :math:`A_0`, :math:`A_{1(10)},~A_{1(01)},` and
    &A_{1(01)}=\sum_{x} \rho(x) F(x, \hat{A}\hat{H}),\\
    &A_{2(11)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H})F(x,  \hat{A}\hat{H}).
    \end{aligned}
-
-

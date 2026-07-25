@@ -97,7 +97,7 @@ extern char (*cFileNameListFile)[D_CharTmpReadDef];
 
 
 enum ParamIdxInt{
-  IdxVMCCalcMode, IdxLanczosMode, IdxDataIdxStart,
+  IdxVMCCalcMode, IdxLanczosMode, IdxLanczosStep, IdxDataIdxStart,
   IdxDataQtySmp, IdxNsite, IdxNe,
   //RBM
   IdxNneuron, IdxNneuronCharge, IdxNneuronSpin,IdxNneuronGeneral,

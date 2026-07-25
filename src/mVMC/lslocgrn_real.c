@@ -63,6 +63,69 @@ void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, i
   return;
 }
 
+/*
+ * Calculate F[k] = <psi|H^k|x>/<psi|x>, k=0..3, for the initial
+ * second-step scope H=V+K.  The outer loops intentionally do not acquire the
+ * serial workspace arena: calHCA_real/calHCACA_real own their scratch.
+ */
+void CalculateLS2LocalPower_real(const double h1, const double ip,
+                                 int *eleIdx, int *eleCfg, int *eleNum,
+                                 int *eleProjCnt, double *localPower) {
+  double legacyLocalPower[4];
+  double h3;
+  const double diagonalEnergy = CalculateHamiltonian0_real(eleNum);
+  int outer;
+
+  LSLocalQ_real(h1, ip, eleIdx, eleCfg, eleNum, eleProjCnt,
+                legacyLocalPower);
+  localPower[0] = 1.0;
+  localPower[1] = h1;
+  localPower[2] = legacyLocalPower[3];
+  h3 = diagonalEnergy * localPower[2];
+
+  for (outer = 0; outer < NTransfer; outer++) {
+    const int outerRi = Transfer[outer][0];
+    const int outerRj = Transfer[outer][2];
+    const int outerSpin = Transfer[outer][3];
+    const int outerRsi = outerRi + outerSpin * Nsite;
+    const int outerRsj = outerRj + outerSpin * Nsite;
+    const double outerCoefficient = -creal(ParaTransfer[outer]);
+    double outerDiagonalEnergy;
+    double innerContribution = 0.0;
+    double hca;
+    int inner;
+
+    if (outerRsi == outerRsj) {
+      if (eleNum[outerRsi] == 0) continue;
+      outerDiagonalEnergy = diagonalEnergy;
+    } else {
+      if (eleNum[outerRsj] == 0 || eleNum[outerRsi] != 0) continue;
+      eleNum[outerRsj] = 0;
+      eleNum[outerRsi] = 1;
+      outerDiagonalEnergy = CalculateHamiltonian0_real(eleNum);
+      eleNum[outerRsj] = 1;
+      eleNum[outerRsi] = 0;
+    }
+
+    hca = calHCA_real(outerRi, outerRj, outerSpin, h1, ip, eleIdx,
+                      eleCfg, eleNum, eleProjCnt);
+    for (inner = 0; inner < NTransfer; inner++) {
+      const int innerRi = Transfer[inner][0];
+      const int innerRj = Transfer[inner][2];
+      const int innerSpin = Transfer[inner][3];
+      const double innerCoefficient = -creal(ParaTransfer[inner]);
+      innerContribution +=
+          innerCoefficient *
+          calHCACA_real(innerRi, innerRj, outerRi, outerRj, innerSpin,
+                        outerSpin, h1, ip, eleIdx, eleCfg, eleNum,
+                        eleProjCnt);
+    }
+    h3 += outerCoefficient *
+          (outerDiagonalEnergy * hca + innerContribution);
+  }
+  localPower[3] = h3;
+}
+
 ///
 /// \param h1
 /// \param ip
@@ -285,7 +348,7 @@ double calHCA2_real(const int ri, const int rj, const int s,
   /* end of H0 term */
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj)  \
+  private(idx,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj)  \
   reduction(+:v)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
@@ -480,7 +543,15 @@ double calHCACA_real(const int ri, const int rj, const int rk, const int rl,
   if(!WouldPreserve_2hopPre(rsi,rsj,rsk,rsl,eleNum)) return 0.0;
 
   g = checkGF2_real(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum);
-  if(fabs(g)>1.0e-12) {
+  /*
+   * The mutate-and-rank-two-update path does not preserve the projected
+   * H*CACA matrix element when several quantum-projection components are
+   * summed.  GreenFuncN contracts that projected matrix element directly
+   * from the original state, so keep the legacy fast path only for the
+   * identity quantum projection.  Do not alter the established first-step
+   * Lanczos path.
+   */
+  if(fabs(g)>1.0e-12 && (NLanczosStep != 2 || NQPFull == 1)) {
     val = calHCACA1_real(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
   } else {
     val = calHCACA2_real(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
@@ -664,7 +735,7 @@ double calHCACA2_real(const int ri, const int rj, const int rk, const int rl,
   /* end of H0 term */
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj)  \
+  private(idx,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj)  \
   reduction(+:v)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);

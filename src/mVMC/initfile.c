@@ -120,7 +120,7 @@ void InitFilePhysCal(int i, int rank) {
     FileNBodyG = fopen(fileName, "w");
   }
 
-  if(NLanczosMode>0){
+  if(NLanczosMode>0 && NLanczosStep==1){
     sprintf(fileName, "%s_ls_out_%03d.dat", CDataFileHead, idx);
     FileLS = fopen(fileName, "w");
 
@@ -150,6 +150,23 @@ void InitFilePhysCal(int i, int rank) {
       sprintf(fileName, "%s_ls_cisajscktalt_%03d.dat",
               CDataFileHead, idx);
       FileLSCisAjsCktAltDC = fopen(fileName, "w");
+    }
+  }
+  if(NLanczosMode>0 && NLanczosStep==2){
+    sprintf(fileName, "%s_ls2_out_%03d.dat", CDataFileHead, idx);
+    FileLS2 = fopen(fileName, "w");
+    if(FileLS2 == NULL){
+      fprintf(stderr, "Error: failed to open Lanczos2 output file '%s'.\n",
+              fileName);
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+
+    sprintf(fileName, "%s_ls2_moment_%03d.dat", CDataFileHead, idx);
+    FileLS2Moment = fopen(fileName, "w");
+    if(FileLS2Moment == NULL){
+      fprintf(stderr, "Error: failed to open Lanczos2 moment file '%s'.\n",
+              fileName);
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
   }
 
@@ -192,7 +209,7 @@ void CloseFilePhysCal(int rank) {
     fclose(FileNBodyG);
   }
 
-  if(NLanczosMode>0){
+  if(NLanczosMode>0 && NLanczosStep==1){
     fclose(FileLS);
     fclose(FileLSQQQQ);
 
@@ -205,6 +222,10 @@ void CloseFilePhysCal(int rank) {
       fclose(FileLSCisAjsCktAlt);
       fclose(FileLSCisAjsCktAltDC);
     }
+  }
+  if(NLanczosMode>0 && NLanczosStep==2){
+    fclose(FileLS2);
+    fclose(FileLS2Moment);
   }
 
   return;
