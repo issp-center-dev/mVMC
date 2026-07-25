@@ -1,14 +1,17 @@
 """Manual, non-CI structural scaling probe for second power-Lanczos.
 
 The qualitative checks below verify that the expected H^3 work is exercised
-as NTransfer grows.  They are not a portable performance-regression gate:
-absolute ratios depend on the compiler, architecture, and linear-algebra
-stack.  Establish quantitative baselines on the same Linux/HPC environment.
+as NTransfer grows.  The projection grid records both the identity fast path
+and the NQPFull>1 direct-contraction path.  These measurements are not a
+portable performance-regression gate: absolute ratios depend on the compiler,
+architecture, and linear-algebra stack.  Establish quantitative baselines on
+the same Linux/HPC environment.
 """
 
 from __future__ import print_function
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -22,6 +25,14 @@ import tempfile
 
 
 TIMER_PATTERN = re.compile(r"\[(41|95)\]\s+([0-9.eE+-]+)\s*$")
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as source:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def write_standard_input(path, size, samples, warmup):
@@ -43,6 +54,40 @@ NLanczosMode = 1
 RndSeed = 2468
 """.format(size=size, samples=samples, warmup=warmup)
         )
+
+
+def write_momentum_projection(path, size, nmptrans):
+    """Write a k=0 projector for a cyclic translation subgroup."""
+    if size % nmptrans != 0:
+        raise RuntimeError(
+            "NMPTrans={} must divide L={} to form a cyclic subgroup".format(
+                nmptrans, size
+            )
+        )
+    stride = size // nmptrans
+    with open(path, "w") as destination:
+        destination.write("=============================================\n")
+        destination.write("NQPTrans          {}\n".format(nmptrans))
+        destination.write("=============================================\n")
+        destination.write(
+            "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n"
+        )
+        destination.write("=============================================\n")
+        for index in range(nmptrans):
+            destination.write(
+                "{:5d} {:25.15f} {:25.15f}\n".format(index, 1.0, 0.0)
+            )
+        for index in range(nmptrans):
+            displacement = index * stride
+            for origin in range(size):
+                destination.write(
+                    "{:5d} {:5d} {:5d} {:5d}\n".format(
+                        index,
+                        origin,
+                        (origin + displacement) % size,
+                        1,
+                    )
+                )
 
 
 def replace_parameters(path, updates):
@@ -146,8 +191,26 @@ def run_checked(command, workdir, environment):
     return process.stdout
 
 
-def prepare_case(root, vmcdry, size, samples, warmup, environment):
-    case = os.path.join(root, "L{}".format(size), "template")
+def projection_label(nspgaussleg, nmptrans):
+    return "sp{}-mp{}".format(nspgaussleg, nmptrans)
+
+
+def prepare_case(
+    root,
+    vmcdry,
+    size,
+    samples,
+    warmup,
+    nspgaussleg,
+    nmptrans,
+    environment,
+):
+    case = os.path.join(
+        root,
+        projection_label(nspgaussleg, nmptrans),
+        "L{}".format(size),
+        "template",
+    )
     os.makedirs(case)
     standard_input = os.path.join(case, "StdFace.def")
     write_standard_input(standard_input, size, samples, warmup)
@@ -161,10 +224,13 @@ def prepare_case(root, vmcdry, size, samples, warmup, environment):
             "NVMCSample": str(samples),
             "NVMCWarmUp": str(warmup),
             "NExUpdatePath": "0",
-            "NSPGaussLeg": "1",
-            "NMPTrans": "1",
+            "NSPGaussLeg": str(nspgaussleg),
+            "NMPTrans": str(nmptrans),
             "NDataQtySmp": "1",
         },
+    )
+    write_momentum_projection(
+        os.path.join(case, "qptransidx.def"), size, nmptrans
     )
     write_initial_parameter(os.path.join(case, "initial.dat"), case)
     transfer_count = read_transfer_count(os.path.join(case, "trans.def"))
@@ -178,11 +244,23 @@ def prepare_case(root, vmcdry, size, samples, warmup, environment):
     return case, transfer_count
 
 
-def measure_case(root, template, vmc, size, repeats, environment):
+def measure_case(
+    root,
+    template,
+    vmc,
+    size,
+    repeats,
+    nspgaussleg,
+    nmptrans,
+    environment,
+):
     measurements = []
     for repeat in range(repeats):
         workdir = os.path.join(
-            root, "L{}".format(size), "repeat{}".format(repeat + 1)
+            root,
+            projection_label(nspgaussleg, nmptrans),
+            "L{}".format(size),
+            "repeat{}".format(repeat + 1),
         )
         shutil.copytree(template, workdir)
         replace_parameters(
@@ -207,7 +285,9 @@ def measure_case(root, template, vmc, size, repeats, environment):
     return measurements
 
 
-def summarize(size, transfer_count, measurements):
+def summarize(
+    size, transfer_count, nspgaussleg, nmptrans, measurements
+):
     timer41 = statistics.median(
         row["timer41_seconds"] for row in measurements
     )
@@ -220,6 +300,9 @@ def summarize(size, transfer_count, measurements):
     return {
         "L": size,
         "NTransfer": transfer_count,
+        "NSPGaussLeg": nspgaussleg,
+        "NMPTrans": nmptrans,
+        "NQPFull": nspgaussleg * nmptrans,
         "timer41_seconds_median": timer41,
         "timer95_seconds_median": timer95,
         "timer95_over_timer41_median": ratio,
@@ -228,23 +311,48 @@ def summarize(size, transfer_count, measurements):
     }
 
 
+def projection_groups(rows):
+    groups = {}
+    for row in rows:
+        key = (row["NSPGaussLeg"], row["NMPTrans"])
+        groups.setdefault(key, []).append(row)
+    return [
+        (key, sorted(group, key=lambda row: row["L"]))
+        for key, group in sorted(groups.items())
+    ]
+
+
 def check_scaling(rows):
     # Deliberately check only qualitative growth.  Cross-platform absolute
     # timing bands belong to a separately recorded Linux/HPC baseline.
-    ratios = [row["timer95_over_timer41_median"] for row in rows]
-    for previous, current in zip(ratios, ratios[1:]):
-        if current < 0.9 * previous:
+    for (nspgaussleg, nmptrans), group in projection_groups(rows):
+        if len(group) < 2:
             raise RuntimeError(
-                "Timer[95]/Timer[41] is not monotone within 10%: {}".format(
-                    ratios
+                "--check-scaling needs at least two sizes for "
+                "NSPGaussLeg={}, NMPTrans={}".format(
+                    nspgaussleg, nmptrans
                 )
             )
-    if ratios[-1] < 1.3 * ratios[0]:
-        raise RuntimeError(
-            "endpoint Timer[95]/Timer[41] growth is below 1.3x: {}".format(
-                ratios[-1] / ratios[0]
+        ratios = [
+            row["timer95_over_timer41_median"] for row in group
+        ]
+        for previous, current in zip(ratios, ratios[1:]):
+            if current < 0.9 * previous:
+                raise RuntimeError(
+                    "Timer[95]/Timer[41] is not monotone within 10% for "
+                    "NSPGaussLeg={}, NMPTrans={}: {}".format(
+                        nspgaussleg, nmptrans, ratios
+                    )
+                )
+        if ratios[-1] < 1.3 * ratios[0]:
+            raise RuntimeError(
+                "endpoint Timer[95]/Timer[41] growth is below 1.3x for "
+                "NSPGaussLeg={}, NMPTrans={}: {}".format(
+                    nspgaussleg,
+                    nmptrans,
+                    ratios[-1] / ratios[0],
+                )
             )
-        )
 
 
 def print_markdown(result):
@@ -261,36 +369,69 @@ def print_markdown(result):
     )
     print()
     print(
-        "| L | NTransfer | Timer[41] median (s) | Timer[95] median (s) "
+        "| L | NSPGaussLeg | NMPTrans | NQPFull | NTransfer "
+        "| Timer[41] median (s) | Timer[95] median (s) "
         "| [95]/[41] | ratio/NTransfer |"
     )
-    print("|---:|---:|---:|---:|---:|---:|")
+    print("|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for row in result["rows"]:
         print(
-            "| {L} | {NTransfer} | {timer41_seconds_median:.6g} "
+            "| {L} | {NSPGaussLeg} | {NMPTrans} | {NQPFull} "
+            "| {NTransfer} | {timer41_seconds_median:.6g} "
             "| {timer95_seconds_median:.6g} "
             "| {timer95_over_timer41_median:.6g} "
             "| {ratio_per_transfer:.6g} |".format(**row)
         )
-    endpoint = (
-        result["rows"][-1]["timer95_over_timer41_median"]
-        / result["rows"][0]["timer95_over_timer41_median"]
-    )
-    print()
-    print(
-        "Endpoint growth of Timer[95]/Timer[41]: {:.6g}x.".format(endpoint)
-    )
+    for (nspgaussleg, nmptrans), group in projection_groups(
+        result["rows"]
+    ):
+        if len(group) >= 2:
+            endpoint = (
+                group[-1]["timer95_over_timer41_median"]
+                / group[0]["timer95_over_timer41_median"]
+            )
+            print()
+            print(
+                "Endpoint growth of Timer[95]/Timer[41] for "
+                "NSPGaussLeg={}, NMPTrans={} (NQPFull={}): {:.6g}x.".format(
+                    nspgaussleg,
+                    nmptrans,
+                    nspgaussleg * nmptrans,
+                    endpoint,
+                )
+            )
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description=(
-            "Manual, non-CI L=4/6/8 Timer[95]/Timer[41] scaling probe."
+            "Manual, non-CI Timer[95]/Timer[41] scaling and projection "
+            "cost probe."
         )
     )
     parser.add_argument("--vmc", required=True, help="path to vmc.out")
     parser.add_argument("--vmcdry", required=True, help="path to vmcdry.out")
     parser.add_argument("--sizes", type=int, nargs="+", default=[4, 6, 8])
+    parser.add_argument(
+        "--nspgaussleg",
+        type=int,
+        nargs="+",
+        default=[1],
+        help=(
+            "spin-projection quadrature counts; all values are crossed "
+            "with --nmptrans (default: 1)"
+        ),
+    )
+    parser.add_argument(
+        "--nmptrans",
+        type=int,
+        nargs="+",
+        default=[1],
+        help=(
+            "cyclic momentum-projection subgroup sizes; each value must "
+            "divide every L (default: 1)"
+        ),
+    )
     parser.add_argument("--samples", type=int, default=4096)
     parser.add_argument("--warmup", type=int, default=64)
     parser.add_argument("--repeats", type=int, default=3)
@@ -314,13 +455,29 @@ def main():
         arguments.samples <= 0
         or arguments.warmup < 0
         or arguments.repeats <= 0
-        or len(arguments.sizes) < 2
+        or not arguments.sizes
         or any(size <= 0 or size % 2 != 0 for size in arguments.sizes)
+        or any(value <= 0 for value in arguments.nspgaussleg)
+        or any(value <= 0 for value in arguments.nmptrans)
     ):
         raise RuntimeError(
-            "sizes must be positive even integers; samples/repeats must be "
-            "positive and warmup non-negative"
+            "sizes must be positive even integers; projection counts and "
+            "samples/repeats must be positive; warmup must be non-negative"
         )
+    sizes = sorted(set(arguments.sizes))
+    nspgaussleg_values = sorted(set(arguments.nspgaussleg))
+    nmptrans_values = sorted(set(arguments.nmptrans))
+    for size in sizes:
+        for nmptrans in nmptrans_values:
+            if size % nmptrans != 0:
+                raise RuntimeError(
+                    "NMPTrans={} must divide L={}; choose a cyclic "
+                    "translation subgroup for every measured size".format(
+                        nmptrans, size
+                    )
+                )
+    if arguments.check_scaling and len(sizes) < 2:
+        raise RuntimeError("--check-scaling requires at least two sizes")
     vmc = os.path.abspath(arguments.vmc)
     vmcdry = os.path.abspath(arguments.vmcdry)
     for binary in (vmc, vmcdry):
@@ -341,31 +498,59 @@ def main():
     )
     try:
         rows = []
-        for size in sorted(arguments.sizes):
-            template, transfer_count = prepare_case(
-                workroot,
-                vmcdry,
-                size,
-                arguments.samples,
-                arguments.warmup,
-                environment,
-            )
-            measurements = measure_case(
-                workroot,
-                template,
-                vmc,
-                size,
-                arguments.repeats,
-                environment,
-            )
-            rows.append(summarize(size, transfer_count, measurements))
+        for nspgaussleg in nspgaussleg_values:
+            for nmptrans in nmptrans_values:
+                for size in sizes:
+                    template, transfer_count = prepare_case(
+                        workroot,
+                        vmcdry,
+                        size,
+                        arguments.samples,
+                        arguments.warmup,
+                        nspgaussleg,
+                        nmptrans,
+                        environment,
+                    )
+                    measurements = measure_case(
+                        workroot,
+                        template,
+                        vmc,
+                        size,
+                        arguments.repeats,
+                        nspgaussleg,
+                        nmptrans,
+                        environment,
+                    )
+                    rows.append(
+                        summarize(
+                            size,
+                            transfer_count,
+                            nspgaussleg,
+                            nmptrans,
+                            measurements,
+                        )
+                    )
         if arguments.check_scaling:
             check_scaling(rows)
         result = {
             "platform": platform.platform(),
+            "python": platform.python_version(),
+            "probe_sha256": sha256_file(os.path.abspath(__file__)),
+            "vmc_sha256": sha256_file(vmc),
+            "vmcdry_sha256": sha256_file(vmcdry),
+            "threads": {
+                "OMP_NUM_THREADS": 1,
+                "OPENBLAS_NUM_THREADS": 1,
+                "MKL_NUM_THREADS": 1,
+                "VECLIB_MAXIMUM_THREADS": 1,
+            },
+            "projection_definition": "cyclic k=0 translation subgroup",
+            "NQPOptTrans": 1,
             "samples": arguments.samples,
             "warmup": arguments.warmup,
             "repeats": arguments.repeats,
+            "nspgaussleg": nspgaussleg_values,
+            "nmptrans": nmptrans_values,
             "rows": rows,
         }
         print_markdown(result)

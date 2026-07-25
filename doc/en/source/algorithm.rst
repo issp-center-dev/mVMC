@@ -363,10 +363,18 @@ distribution, the dynamic range of the high-order local powers may remain
 large; centering alone therefore does not guarantee numerical accuracy for
 every system.
 
-The :math:`H^3` local power uses nested outer and inner loops over
-``Transfer`` terms, so its dominant operator count grows as
-:math:`O(N_{\mathrm{Transfer}}^2)`. Wall-clock cost also depends on the
-wave function, projection, and execution environment.
+With the identity quantum projection (``NQPFull=1``), the :math:`H^3`
+local power uses nested outer and inner loops over ``Transfer`` terms, so
+its dominant operator count grows as
+:math:`O(N_{\mathrm{Transfer}}^2)`.  For a nontrivial quantum projection
+(``NQPFull>1``), second power-Lanczos evaluates the projected
+:math:`H\,CACA` matrix elements by direct contraction from the original
+configuration.  Each such contraction adds an internal loop over
+``Transfer`` terms, giving a dominant
+:math:`O(N_{\mathrm{Transfer}}^3)` operator count on this path; the
+``GreenFuncN`` contraction work is also proportional to ``NQPFull``.
+Wall-clock cost therefore depends strongly on the projection as well as
+the wave function and execution environment.
 
 With :math:`X=\hat H-\sigma`, the overlap, centered-Hamiltonian, and
 centered squared-Hamiltonian matrices in the basis

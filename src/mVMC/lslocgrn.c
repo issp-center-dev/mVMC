@@ -39,6 +39,13 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "pfupdate_two_fcmp.h"
 #include "projection.h"
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+static int Lanczos2CalHCAGuardAuditComplexEnabled = 0;
+static long long Lanczos2CalHCAGuardAuditComplexDirectCount = 0;
+static long long Lanczos2CalHCAGuardAuditComplexZeroComponentCount = 0;
+static int Lanczos2CalHCAGuardAuditComplexLastMovedHasZeroComponent = 0;
+#endif
+
 double complex calculateHK(const double complex h1, const double complex ip, int *eleIdx, int *eleCfg,
                    int *eleNum, int *eleProjCnt, double complex *rbmCnt);
 double complex calculateHW(const double complex h1, const double complex ip, int *eleIdx, int *eleCfg,
@@ -262,9 +269,26 @@ double complex calHCA(const int ri, const int rj, const int s,
   if(!IsSectorPreserved_1hopPre(ri,rj,s,eleNum)) return 0.0;
 
   g = checkGF1(ri,rj,s,ip,eleIdx,eleCfg,eleNum);
-  if(cabs(g)>1.0e-12) {
+  /*
+   * In a multi-component projected state, the moved configuration may
+   * have a zero Pfaffian in one component even though its total projected
+   * overlap is nonzero.  Updating that singular component leaves an invalid
+   * inverse for CalculateHamiltonian.  Contract the second-Lanczos matrix
+   * element directly from the original state in this case, matching the
+   * multi-component calHCACA guard below.
+   */
+  if(cabs(g)>1.0e-12 && (NLanczosStep != 2 || NQPFull == 1)) {
     val = calHCA1(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
   } else {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    if(Lanczos2CalHCAGuardAuditComplexEnabled &&
+       cabs(g)>1.0e-12 && NLanczosStep == 2 && NQPFull > 1) {
+      Lanczos2CalHCAGuardAuditComplexDirectCount++;
+      if(Lanczos2CalHCAGuardAuditComplexLastMovedHasZeroComponent) {
+        Lanczos2CalHCAGuardAuditComplexZeroComponentCount++;
+      }
+    }
+#endif
     val = calHCA2(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
   }
 
@@ -276,6 +300,9 @@ double complex checkGF1(const int ri, const int rj, const int s, const double co
   double complex z;
   int mj,msj,rsi,rsj;
   double complex pfMNew[NQPFull];
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  int qpidx;
+#endif
 
   mj = eleCfg[rj+s*Nsite];
   msj = mj + s*Ne;
@@ -288,8 +315,19 @@ double complex checkGF1(const int ri, const int rj, const int s, const double co
   eleNum[rsi] = 1;
 
   /* calculate Pfaffian */
-    CalculateNewPfM(mj, s, pfMNew, eleIdx, 0, NQPFull);
-    z = CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  CalculateNewPfM(mj, s, pfMNew, eleIdx, 0, NQPFull);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if(Lanczos2CalHCAGuardAuditComplexEnabled) {
+    Lanczos2CalHCAGuardAuditComplexLastMovedHasZeroComponent = 0;
+    for(qpidx=0; qpidx<NQPFull; qpidx++) {
+      if(cabs(pfMNew[qpidx]) <= 1.0e-12) {
+        Lanczos2CalHCAGuardAuditComplexLastMovedHasZeroComponent = 1;
+        break;
+      }
+    }
+  }
+#endif
+  z = CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
   /* revert hopping */
   eleIdx[msj] = rj;

@@ -647,16 +647,31 @@ add_test(NAME Lanczos2_Complex_ED_mpi
 set_tests_properties(Lanczos2_Complex_ED_mpi PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_LANCZOS2_STATE_CHECK=1"
     RESOURCE_LOCK "lanczos2_complex_ed_mpi_workdir")
+add_test(NAME Lanczos2_Complex_ED_omp
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_complex_ed.py)
+set_tests_properties(Lanczos2_Complex_ED_omp PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_complex_ed_workdir")
 add_test(NAME Lanczos2_Projected_ED
     COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_projected_ed.py)
 set_tests_properties(Lanczos2_Projected_ED PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1;MVMC_LANCZOS2_TEST_CALHCA_GUARD_AUDIT=1"
     RESOURCE_LOCK "lanczos2_projected_ed_workdir")
+add_test(NAME Lanczos2_Projected_Complex_ED_Guard
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_projected_ed.py --complex)
+set_tests_properties(Lanczos2_Projected_Complex_ED_Guard PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1;MVMC_LANCZOS2_TEST_CALHCA_GUARD_AUDIT=1"
+    RESOURCE_LOCK "lanczos2_projected_complex_ed_workdir")
 add_test(NAME Lanczos2_Projected_ED_mpi
     COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_projected_ed.py)
 set_tests_properties(Lanczos2_Projected_ED_mpi PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_LANCZOS2_STATE_CHECK=1"
     RESOURCE_LOCK "lanczos2_projected_ed_mpi_workdir")
+add_test(NAME Lanczos2_Projected_ED_omp
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_projected_ed.py)
+set_tests_properties(Lanczos2_Projected_ED_omp PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_projected_ed_workdir")
 add_test(NAME Lanczos2_Projection_Smoke
     COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_projection_smoke.py)
 set_tests_properties(Lanczos2_Projection_Smoke PROPERTIES

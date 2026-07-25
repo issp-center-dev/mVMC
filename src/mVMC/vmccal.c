@@ -246,6 +246,7 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   Lanczos2StateSnapshot lanczos2StateSnapshot;
 #ifdef MVMC_ENABLE_FAULT_INJECTION
   int lanczos2InjectNonfinite = 0;
+  int lanczos2CalHCAGuardAudit = 0;
 #endif
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
@@ -273,6 +274,27 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     lanczos2InjectNonfinite =
         injectValue != NULL && injectValue[0] != '\0' &&
         strcmp(injectValue, "0") != 0;
+  }
+  {
+    const char *auditValue =
+        getenv("MVMC_LANCZOS2_TEST_CALHCA_GUARD_AUDIT");
+    lanczos2CalHCAGuardAudit =
+        auditValue != NULL && auditValue[0] != '\0' &&
+        strcmp(auditValue, "0") != 0;
+    if(lanczos2CalHCAGuardAudit &&
+       (parentSize != 1 || NVMCCalMode != 1 || NLanczosMode <= 0 ||
+        NLanczosStep != 2 || NQPFull <= 1)) {
+      fprintf(stderr,
+              "Error: Lanczos2 calHCA guard audit requires single-rank "
+              "step=2 physical calculation with NQPFull>1.\n");
+      MPI_Abort(comm_parent, EXIT_FAILURE);
+    }
+    Lanczos2CalHCAGuardAuditRealDirectCount = 0;
+    Lanczos2CalHCAGuardAuditRealZeroComponentCount = 0;
+    Lanczos2CalHCAGuardAuditComplexDirectCount = 0;
+    Lanczos2CalHCAGuardAuditComplexZeroComponentCount = 0;
+    Lanczos2CalHCAGuardAuditRealEnabled = lanczos2CalHCAGuardAudit;
+    Lanczos2CalHCAGuardAuditComplexEnabled = lanczos2CalHCAGuardAudit;
   }
 #endif
   if(NVMCCalMode == 1 && NLanczosMode > 0 && NLanczosStep == 2 &&
@@ -625,6 +647,31 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       }
     }
   } /* end of for(sample) */
+
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if(lanczos2CalHCAGuardAudit) {
+    const long long directCount =
+        AllComplexFlag == 0
+            ? Lanczos2CalHCAGuardAuditRealDirectCount
+            : Lanczos2CalHCAGuardAuditComplexDirectCount;
+    const long long zeroComponentCount =
+        AllComplexFlag == 0
+            ? Lanczos2CalHCAGuardAuditRealZeroComponentCount
+            : Lanczos2CalHCAGuardAuditComplexZeroComponentCount;
+    if(directCount <= 0 || zeroComponentCount <= 0) {
+      fprintf(stderr,
+              "Error: Lanczos2 calHCA guard audit did not exercise a direct "
+              "multi-QP zero-component branch "
+              "(direct=%lld, zero_component=%lld).\n",
+              directCount,zeroComponentCount);
+      MPI_Abort(comm_parent, EXIT_FAILURE);
+    }
+    printf("Lanczos2 calHCA guard audit: %s direct=%lld "
+           "zero_component=%lld\n",
+           AllComplexFlag == 0 ? "real" : "complex",
+           directCount,zeroComponentCount);
+  }
+#endif
 
   if(lanczosOracleDump != NULL) fclose(lanczosOracleDump);
   Lanczos2StateSnapshotFree(&lanczos2StateSnapshot);

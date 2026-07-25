@@ -33,8 +33,9 @@ GUTZWILLER_PARAMETER = -0.43
 HANKEL_RESIDUAL_LIMIT = 0.5
 # The stochastic Hankel identities are checked with contiguous-block standard
 # errors, so the gate scales with the observed Monte Carlo uncertainty instead
-# of relying only on the absolute residual above.  Eight standard errors is a
-# conservative CI-stable outlier threshold across the ten matrix comparisons.
+# of relying only on the absolute residual above.  Consecutive blocks can
+# remain correlated, so this is an empirical outlier score, not a calibrated
+# number of sigma.  The limit of eight is deliberately CI-stable.
 HANKEL_STANDARD_ERROR_LIMIT = 8.0
 
 

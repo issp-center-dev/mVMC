@@ -347,9 +347,15 @@ weighted平均エネルギー :math:`\sigma=\langle H\rangle` を求め、moment
 高次local powerの動的範囲が十分に縮まらないため、中心化だけで任意の系の
 数値精度が保証されるわけではありません。
 
-:math:`H^3` のlocal powerは ``Transfer`` 項のouter/inner二重loopで評価し、
-支配的なoperator数は :math:`O(N_{\mathrm{Transfer}}^2)` で増加します。
-実時間は波動関数、射影、計算環境にも依存します。
+量子射影がidentity（``NQPFull=1``）の場合、:math:`H^3` のlocal powerは
+``Transfer`` 項のouter/inner二重loopで評価し、支配的なoperator数は
+:math:`O(N_{\mathrm{Transfer}}^2)` で増加します。非自明な量子射影
+（``NQPFull>1``）では、2nd power-Lanczosは射影された
+:math:`H\,CACA` 行列要素を元configurationから直接縮約します。
+この縮約は内部にもう1段の ``Transfer`` loopを含むため、この経路の支配的な
+operator数は :math:`O(N_{\mathrm{Transfer}}^3)` となり、
+``GreenFuncN`` の縮約量は ``NQPFull`` にも比例します。そのため実時間は
+波動関数と計算環境だけでなく、射影設定にも強く依存します。
 
 :math:`X=\hat H-\sigma` とすると、
 :math:`\{|\psi\rangle,X|\psi\rangle,X^2|\psi\rangle\}`

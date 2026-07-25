@@ -547,14 +547,27 @@ ModParaファイル (modpara.def)
    ``Exchange``、``InterAll``、``NBodyInterAll``、``NBodyG`` は
    sampling開始前にエラー終了します。2nd stepのGreen関数は計算しません。
    Gutzwillerの ``ProjRatio`` 経路は独立ED oracleで値を検証しています。
-   非自明なスピン射影・運動量射影はruntimeおよび構造のsmoke testまでで、
+   非自明な :math:`k=\pi` 運動量射影は、real/complexの独立projected ED
+   value oracleで検証しています。real oracleはserial、MPI、OpenMP経路を
+   対象とし、complex oracleは現時点でserial経路を対象とします。
+   非自明なスピン射影はruntimeおよび構造のsmoke testまでで、
    projected EDによる独立な値oracleは現時点ではありません。
 
-   :math:`H^3` のlocal powerは ``Transfer`` 項に対するouter/inner二重loopで
-   評価するため、支配的なoperator数は :math:`O(N_{\mathrm{Transfer}}^2)` で
-   増加します。実時間は系・射影・compiler・計算機に依存するので、実サイズの
-   計算前に小さい系で測定し、性能判断には対象Linux/HPC環境のbaselineを使用して
-   ください。
+   ``NQPFull=1`` の場合、:math:`H^3` のlocal powerは ``Transfer`` 項に対する
+   outer/inner二重loopで評価するため、支配的なoperator数は
+   :math:`O(N_{\mathrm{Transfer}}^2)` で増加します。非自明な量子射影
+   （``NQPFull>1``）では、射影された :math:`H\,CACA` 行列要素の直接縮約経路に
+   もう1段の ``Transfer`` loopが加わります。そのため支配的なoperator数は
+   :math:`O(N_{\mathrm{Transfer}}^3)` となり、``GreenFuncN`` の縮約量は
+   ``NQPFull`` にも比例します。
+
+   したがって、射影により2nd stepの測定時間が大幅に増える場合があります。
+   実サイズの計算前に、実計算と同じ ``NSPGaussLeg`` と ``NMPTrans`` を使った
+   小さい系で測定し、性能判断には対象Linux/HPC環境のbaselineを使用してください。
+   source treeにある非CIの手動probe
+   ``test/python/lanczos2_cost_probe.py`` は ``--nspgaussleg`` と
+   ``--nmptrans`` のgridを受け取り、JSON出力へ ``NQPFull``、Timer 41、
+   Timer 95を記録します。
 
    local powerまたはmomentの非有限値、不正なoverlap行列、一般化固有値
    solverの失敗、出力エラーを検出すると診断を表示して終了します。

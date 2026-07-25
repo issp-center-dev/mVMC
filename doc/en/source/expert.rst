@@ -551,16 +551,30 @@ Keywords and parameters
    ``InterAll``, ``NBodyInterAll``, and ``NBodyG`` are rejected before
    sampling. Second-step Green's functions are not calculated.
    The Gutzwiller ``ProjRatio`` path is checked against an independent
-   ED oracle. Nontrivial spin and momentum projections currently have
-   runtime and structural smoke coverage, but not an independent
+   ED oracle. A nontrivial :math:`k=\pi` momentum projection is checked
+   against independent real and complex projected-ED value oracles.
+   The real oracle covers serial, MPI, and OpenMP paths; the complex
+   oracle currently covers the serial path. Nontrivial spin projection
+   has runtime and structural smoke coverage, but not an independent
    projected-ED value oracle.
 
-   The :math:`H^3` local power is evaluated by nested outer and inner
-   loops over ``Transfer`` terms, so its dominant operator count grows as
-   :math:`O(N_{\mathrm{Transfer}}^2)`. Wall-clock cost also depends on the
-   system, projection, compiler, and machine. Benchmark a small instance
-   first and use a baseline from the target Linux/HPC environment for
-   performance decisions.
+   With ``NQPFull=1``, the :math:`H^3` local power is evaluated by nested
+   outer and inner loops over ``Transfer`` terms, so its dominant operator
+   count grows as :math:`O(N_{\mathrm{Transfer}}^2)`.  With a nontrivial
+   quantum projection (``NQPFull>1``), the direct-contraction path for
+   projected :math:`H\,CACA` matrix elements adds another ``Transfer``
+   loop.  Its dominant operator count is therefore
+   :math:`O(N_{\mathrm{Transfer}}^3)`, and its ``GreenFuncN`` work is
+   proportional to ``NQPFull``.
+
+   Projection can consequently increase second-step measurement time
+   substantially. Benchmark a small instance with the same
+   ``NSPGaussLeg`` and ``NMPTrans`` intended for the production run, and
+   use a baseline from the target Linux/HPC environment for performance
+   decisions. The manual, non-CI source-tree probe
+   ``test/python/lanczos2_cost_probe.py`` accepts ``--nspgaussleg`` and
+   ``--nmptrans`` grids and records ``NQPFull``, Timer 41, and Timer 95 in
+   its JSON output.
 
    A non-finite local power or moment, an invalid overlap matrix, a
    failed generalized eigensolve, or an output error terminates the run
