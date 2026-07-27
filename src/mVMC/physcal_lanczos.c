@@ -61,8 +61,16 @@ int PhysCalLanczos_real
   LS_CisAjsCktAlt_real = (double*)malloc(sizeof(double)*_nCisAjsCktAlt);
   LS_CisAjsCktAltDC_real = (double*)malloc(sizeof(double)*_nCisAjsCktAltDC);
 
-  CalculateEne(_QQQQ_real[2], _QQQQ_real[3], _QQQQ_real[10], _QQQQ_real[11], _QQQQ_real[15],
-   &alpha_p,  &ene_p,  &ene_vp, &alpha_m,  &ene_m,  &ene_vm);
+  if (CalculateEne(_QQQQ_real[2], _QQQQ_real[3], _QQQQ_real[10],
+                   _QQQQ_real[11], _QQQQ_real[15], &alpha_p, &ene_p,
+                   &ene_vp, &alpha_m, &ene_m, &ene_vm) != 0) {
+    fprintf(stderr,
+            "Error: Lanczos method is failed due to illegal value of alpha.\n");
+    free(LS_CisAjs_real);
+    free(LS_CisAjsCktAlt_real);
+    free(LS_CisAjsCktAltDC_real);
+    return -1;
+  }
 
   //determine alpha
   if (ene_p > ene_m) {
@@ -183,12 +191,14 @@ int PhysCalLanczos_fcmp(
   LS_CisAjsCktAltDC = (double complex*)malloc(sizeof(double complex)*_nCisAjsCktAltDC);
 
   /* zvo_ls.dat */
-  if(!CalculateEne(creal(_QQQQ[2]),creal(_QQQQ[3]),
-           creal(_QQQQ[10]), creal(_QQQQ[11]), creal(_QQQQ[15]),
-         &alpha_p,  &ene_p,  &ene_vp, &alpha_m,  &ene_m,  &ene_vm)==0){
+  if (CalculateEne(creal(_QQQQ[2]), creal(_QQQQ[3]),
+                   creal(_QQQQ[10]), creal(_QQQQ[11]),
+                   creal(_QQQQ[15]), &alpha_p, &ene_p, &ene_vp, &alpha_m,
+                   &ene_m, &ene_vm) != 0) {
     fprintf(stderr,"Error: Lanczos method is failed due to illegal value of alpha.\n");
     free(LS_CisAjs);
     free(LS_CisAjsCktAlt);
+    free(LS_CisAjsCktAltDC);
     return -1;
   }
   //determine alpha

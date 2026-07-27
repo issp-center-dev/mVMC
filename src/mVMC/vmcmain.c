@@ -663,6 +663,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
 void outputData() {
   int i, k, offset;
+  int lanczosStatus;
 
   /* zvo_out.dat */
 //[s] MERGE BY TM
@@ -737,17 +738,20 @@ void outputData() {
     if (NLanczosMode > 0) {
       if (NLanczosStep == 1) {
       if (AllComplexFlag == 0) { //real
-        PhysCalLanczos_real(
+        lanczosStatus = PhysCalLanczos_real(
           QQQQ_real, QCisAjsQ_real, QCisAjsCktAltQ_real, QCisAjsCktAltQDC_real,
           NLSHam, Nsite, NCisAjs, NCisAjs, iOneBodyGIdx, CisAjsIdx, NCisAjsCktAlt, NCisAjsCktAltDC, CisAjsCktAltDCIdx,
           NLanczosMode, FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
           FileLSCisAjs, FileLSCisAjsCktAlt, FileLSCisAjsCktAltDC);
       }else { //complex
-        PhysCalLanczos_fcmp(
+        lanczosStatus = PhysCalLanczos_fcmp(
           QQQQ, QCisAjsQ, QCisAjsCktAltQ, QCisAjsCktAltQDC,
           NLSHam, Nsite, NCisAjs, NCisAjs, iOneBodyGIdx, CisAjsIdx, NCisAjsCktAlt, NCisAjsCktAltDC, CisAjsCktAltDCIdx,
           NLanczosMode, FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
           FileLSCisAjs, FileLSCisAjsCktAlt, FileLSCisAjsCktAltDC);
+      }
+      if (lanczosStatus != 0) {
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
       }
       } else {
         Lanczos2Result lanczos2Result = {0};

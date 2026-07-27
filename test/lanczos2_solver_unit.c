@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "physcal_lanczos.h"
 #include "physcal_lanczos2.h"
 
 int CalculateEne(double H1, double H2_1, double H2_2, double H3, double H4,
@@ -399,6 +400,36 @@ static void TestLegacyDimensionTwoReduction(void) {
         legacyAlpha);
 }
 
+static void TestLegacyNegativeDiscriminantFails(void) {
+  double realMoment[16] = {0.0};
+  double complex complexMoment[16] = {0.0};
+  double alphaPlus;
+  double energyPlus;
+  double variancePlus;
+  double alphaMinus;
+  double energyMinus;
+  double varianceMinus;
+  int status;
+
+  realMoment[3] = -1.0;
+  complexMoment[3] = -1.0;
+
+  status = CalculateEne(0.0, -1.0, 0.0, 0.0, 0.0, &alphaPlus,
+                        &energyPlus, &variancePlus, &alphaMinus,
+                        &energyMinus, &varianceMinus);
+  CHECK(status != 0, "negative discriminant CalculateEne status=%d", status);
+
+  status = PhysCalLanczos_real(
+      realMoment, NULL, NULL, NULL, 2, 0, 0, 0, NULL, NULL, 0, 0, NULL, 1,
+      NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+  CHECK(status != 0, "negative discriminant real path status=%d", status);
+
+  status = PhysCalLanczos_fcmp(
+      complexMoment, NULL, NULL, NULL, 2, 0, 0, 0, NULL, NULL, 0, 0, NULL, 1,
+      NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+  CHECK(status != 0, "negative discriminant complex path status=%d", status);
+}
+
 static void TestMomentAccumulation(void) {
   const double realPower[4] = {1.0, -2.0, 3.0, -4.0};
   const double complex complexPower[4] = {
@@ -551,6 +582,7 @@ int main(void) {
   TestAlphaUndefined();
   TestNonfiniteAndInvalidInputs();
   TestLegacyDimensionTwoReduction();
+  TestLegacyNegativeDiscriminantFails();
   TestMomentAccumulation();
   TestOutputLayout();
 
