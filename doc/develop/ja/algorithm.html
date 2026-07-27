@@ -201,7 +201,7 @@ mVMC ver1.0以降ではこの表式を使用しています。</p>
 (\Phi_{\uparrow})_{in}=\Phi_{in\uparrow},~~~
 (\Phi_{\downarrow})_{in}=\Phi_{in\downarrow}, \\
 &amp;\Sigma={\rm diag}[\underbrace{1,\cdots,1}_{N_e/2},0,0,0],\end{aligned}\end{split}\]</div>
-<p>として定義します。前節のように <span class="math notranslate nohighlight">\(f_{ij}\)</span> (すなわち:math:<cite>F</cite>)が単一スレーター行列と関係づけられて
+<p>として定義します。前節のように <span class="math notranslate nohighlight">\(f_{ij}\)</span> （すなわち <span class="math notranslate nohighlight">\(F\)</span>）が単一スレーター行列と関係づけられて
 いるとき、 <span class="math notranslate nohighlight">\(F\)</span> の特異値分解は</p>
 <div class="math notranslate nohighlight">
 \[\begin{aligned}
@@ -218,73 +218,370 @@ F=\Phi_{\uparrow}\Sigma\Phi_{\downarrow}^{t}.\end{aligned}\]</div>
 </section>
 <section id="power-lanczos">
 <h2>Power-Lanczos法<a class="headerlink" href="#power-lanczos" title="この見出しへのパーマリンク">¶</a></h2>
-<p>このセクションでは,
-Power-Lanczos法での最適化パラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> の決定方法について述べます。
-また,
-ここではシングルステップのLanczos法を適用した後の物理量の計算についても説明します。</p>
-<section id="alpha">
-<h3><span class="math notranslate nohighlight">\(\alpha\)</span> の決定<a class="headerlink" href="#alpha" title="この見出しへのパーマリンク">¶</a></h3>
+<p>Power-Lanczos法では、最適化済みのVMC波動関数 <span class="math notranslate nohighlight">\(|\psi\rangle\)</span> に
+Hamiltonianの多項式を作用させた</p>
+<div class="math notranslate nohighlight">
+\[|\phi_p\rangle
+=P_p(\hat H)|\psi\rangle
+=\sum_{k=0}^{p}c_k\hat H^k|\psi\rangle\]</div>
+<p>を改良された試行波動関数とします。これは
+<span class="math notranslate nohighlight">\(\{|\psi\rangle,\hat H|\psi\rangle,\ldots,\hat H^p|\psi\rangle\}\)</span>
+が張るKrylov部分空間で、エネルギーを最小にする係数 <span class="math notranslate nohighlight">\(c_k\)</span> を求める方法です。
+mVMCで用いる1st stepと2nd stepの試行波動関数は、それぞれ</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+|\phi_1\rangle &amp;= (1+\alpha\hat H)|\psi\rangle,\\
+|\phi_2\rangle &amp;= (1+\alpha\hat H+\beta\hat H^2)|\psi\rangle
+\end{aligned}\end{split}\]</div>
+<p>です。1st stepは <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosMode&gt;=1</span></code>、
+<code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code> で実行されます。2nd stepには
+<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosStep=2</span></code> が必要です。</p>
+<p>以下では、まず1st stepの <span class="math notranslate nohighlight">\(\alpha\)</span> の決定方法を説明し、
+次に2nd stepの <span class="math notranslate nohighlight">\(\alpha,\beta\)</span> を決める変分原理と、
+その問題を数値的に安定して解くための実装を分けて説明します。
+最後に、1st stepを適用した後の物理量の計算方法を説明します。</p>
+<section id="st-power-lanczos-step-alpha">
+<h3>1st power-Lanczos stepと <span class="math notranslate nohighlight">\(\alpha\)</span> の決定<a class="headerlink" href="#st-power-lanczos-step-alpha" title="この見出しへのパーマリンク">¶</a></h3>
 <p>最初に, 変分モンテカルロ法のサンプリングに関して簡単に説明します。
-物理量 <span class="math notranslate nohighlight">\(\hat{A}\)</span> は以下の手順で計算されます:</p>
+ここで <span class="math notranslate nohighlight">\(x\)</span> は基底VMC波動関数 <span class="math notranslate nohighlight">\(|\psi\rangle\)</span> からサンプリングする
+配置です。物理量 <span class="math notranslate nohighlight">\(\hat{A}\)</span> の期待値は</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{aligned}
-&amp;\langle \hat{A}\rangle = \frac{\langle \phi| \hat{A}|\phi \rangle}{\langle \phi| \phi \rangle} = \sum_{x} \rho(x) F(x, {\hat{A}}),\\
-&amp; \rho(x)=\frac{|\langle \phi|x\rangle|^2}{\langle \phi | \phi \rangle}, ~~~~F(x,  {\hat{A}}) =  \frac{\langle x| \hat{A}|\phi \rangle}{\langle x| \phi \rangle}.\end{aligned}\end{split}\]</div>
-<p>演算子の積 <span class="math notranslate nohighlight">\(\hat{A}\hat{B}\)</span> を計算する場合には,
-以下の二通りの方法があります。</p>
+&amp;\langle \hat{A}\rangle_\psi
+= \frac{\langle \psi|\hat{A}|\psi\rangle}{\langle \psi|\psi\rangle}
+= \sum_x \rho_\psi(x)F(x,\hat{A}),\\
+&amp;\rho_\psi(x)=\frac{|\langle x|\psi\rangle|^2}{\langle \psi|\psi\rangle},
+\qquad
+F(x,\hat{A})=\frac{\langle x|\hat{A}|\psi\rangle}
+                   {\langle x|\psi\rangle}
+\end{aligned}\end{split}\]</div>
+<p>と書けます。<span class="math notranslate nohighlight">\(F(x,\hat A)\)</span> は配置 <span class="math notranslate nohighlight">\(x\)</span> における
+<span class="math notranslate nohighlight">\(\hat A\)</span> のlocal estimatorです。演算子の積
+<span class="math notranslate nohighlight">\(\hat{A}\hat{B}\)</span> の期待値には、以下の二通りの表現があります。</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{aligned}
-&amp;\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F(x, {\hat{A}\hat{B}}),\\
-&amp;\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F^{\dagger}(x, {\hat{A})F(x, \hat{B}}).\end{aligned}\end{split}\]</div>
-<p>後述するように, 後者の表記の方が数値的には安定します。 例えば,
-エネルギーの期待値の分散 <span class="math notranslate nohighlight">\(\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle\)</span> を考えてみると,
-分散は以下の2通りの方法で計算できます。</p>
+&amp;\langle \hat{A}\hat{B}\rangle_\psi
+= \sum_x \rho_\psi(x)F(x,\hat{A}\hat{B}),\\
+&amp;\langle \hat{A}\hat{B}\rangle_\psi
+= \sum_x \rho_\psi(x)F^\dagger(x,\hat{A})F(x,\hat{B})
+\end{aligned}\end{split}\]</div>
+<p>前者は積 <span class="math notranslate nohighlight">\(\hat{A}\hat{B}\)</span> 全体を1つのlocal estimatorとして
+評価する方法、後者は <span class="math notranslate nohighlight">\(\hat{A}\)</span> と <span class="math notranslate nohighlight">\(\hat{B}\)</span> の間に完全系
+<span class="math notranslate nohighlight">\(\sum_{x} |x\rangle \langle x|\)</span> を挿入し、<span class="math notranslate nohighlight">\(\hat{A}\)</span> を
+ブラ側、<span class="math notranslate nohighlight">\(\hat{B}\)</span> をケット側に分割して評価する方法です。
+後者の式では <span class="math notranslate nohighlight">\(\hat A\)</span> がHermite演算子であることを仮定しています。
+一般の <span class="math notranslate nohighlight">\(\hat A\)</span> に対しては
+<span class="math notranslate nohighlight">\(F^\dagger(x,\hat A)\)</span> を <span class="math notranslate nohighlight">\(F^\dagger(x,\hat A^\dagger)\)</span> で
+置き換える必要があります。
+両者はサンプル数無限大の極限では同じ期待値を与えますが、
+有限のサンプル数では一致せず、一般に後者の方が数値的に安定です。
+以下では表記を簡単にするため <span class="math notranslate nohighlight">\(\rho_\psi(x)\)</span> を
+<span class="math notranslate nohighlight">\(\rho(x)\)</span> と略記します。</p>
+<p>例えば、エネルギーの分散
+<span class="math notranslate nohighlight">\(\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle\)</span> を
+それぞれの方法で計算すると以下のようになります。</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{aligned}
 \sigma^2 &amp;=\sum_{x} \rho(x) F(x,  (\hat{H}-\langle \hat{H}\rangle)^2) = \sum_{x} \rho(x) F(x,  \hat{H}^2) - \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 ,\\
 \sigma^2 &amp;=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}-\langle \hat{H}\rangle)F(x,  \hat{H}-\langle \hat{H}\rangle) \nonumber \\
 &amp;= \sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}) F(x, \hat{H})- \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2
 \end{aligned}\end{split}\]</div>
-<p>この定義から,
-後者の方法では常に正の値となることが保証されているのに対して,
-前者の方法では分散が正の値になることが必ずしも保証されないことが分かります。次に,
-シングルステップでのpower-Lanczos波動関数 <span class="math notranslate nohighlight">\(|\phi\rangle =(1+\alpha \hat{H}) |\psi \rangle\)</span>
-に対するエネルギーの期待値とその分散を考えます。エネルギーは以下の式で計算されます：</p>
+<p>後者の方法では有限サンプリングでも分散が非負となることが
+保証されているのに対して、前者の方法ではそれが保証されません。</p>
+<p>次に、1st stepの波動関数
+<span class="math notranslate nohighlight">\(|\phi_1\rangle =(1+\alpha \hat{H}) |\psi \rangle\)</span> の
+エネルギー期待値を考えます。<span class="math notranslate nohighlight">\(\alpha\)</span> について展開すると
+(分子・分母を <span class="math notranslate nohighlight">\(\langle \psi | \psi \rangle\)</span> で割っています)、</p>
 <div class="math notranslate nohighlight">
 \[\begin{aligned}
-E_{LS}(\alpha) =\frac{\langle \phi| \hat{H} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{h_1 + \alpha(h_{2(20)} + h_{2(11)}) + \alpha^2 h_{3(12)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+E_{LS}(\alpha) =\frac{\langle \phi_1| \hat{H} |\phi_1\rangle}{\langle \phi_1|\phi_1\rangle}
+=\frac{\langle \hat{H} \rangle_\psi + 2\alpha \langle \hat{H}^2 \rangle_\psi + \alpha^2 \langle \hat{H}^3 \rangle_\psi}
+{1 + 2\alpha \langle \hat{H} \rangle_\psi + \alpha^2 \langle \hat{H}^2 \rangle_\psi}
 \end{aligned}\]</div>
-<p>ここで, <span class="math notranslate nohighlight">\(h_1\)</span>, <span class="math notranslate nohighlight">\(h_{2(11)},~h_{2(20)},\)</span> and
-<span class="math notranslate nohighlight">\(h_{3(12)}\)</span> を以下のように定義しました：</p>
+<p>となり、<span class="math notranslate nohighlight">\(\hat{H}\)</span> の3次までのモーメントが必要になります。
+これらのモーメントを上述の「分割」によって推定するため、
+以下の記法を導入します:</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+h_{n(ij)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}^i) F(x, \hat{H}^j), ~~~~ i+j=n.
+\end{aligned}\]</div>
+<p>すなわち、<span class="math notranslate nohighlight">\(h_{n(ij)}\)</span> は <span class="math notranslate nohighlight">\(n\)</span> 次のモーメント
+<span class="math notranslate nohighlight">\(\langle \hat{H}^n \rangle_\psi\)</span> を、ブラ側に <span class="math notranslate nohighlight">\(\hat{H}^i\)</span>、
+ケット側に <span class="math notranslate nohighlight">\(\hat{H}^j\)</span> を割り振って推定した量です
+(<span class="math notranslate nohighlight">\(F(x, \hat{H}^0)=1\)</span> とし、<span class="math notranslate nohighlight">\(h_{1(10)}\)</span> は <span class="math notranslate nohighlight">\(h_1\)</span> と
+略記します)。計算に必要となるのは以下の量です:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{aligned}
 &amp;h_1 =\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}),\\
 &amp;h_{2(11)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}) F(x, \hat{H}),\\
 &amp;h_{2(20)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}^2),\\
-&amp;h_{3(12)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H})F(x,  \hat{H}^2).\end{aligned}\end{split}\]</div>
-<p><span class="math notranslate nohighlight">\(\frac{\partial E_{LS}(\alpha)}{\partial \alpha}=0\)</span> の条件から
-<span class="math notranslate nohighlight">\(\alpha\)</span> の二次方程式が導出され,
-それを解くことで <span class="math notranslate nohighlight">\(\alpha\)</span> が決定されます。
-分散に関しても同様の手法で計算することが可能です。</p>
-</section>
-<section id="id4">
-<h3>物理量の計算<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
-<p>最適化パラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> を用いることで,
-演算子 <span class="math notranslate nohighlight">\(\hat{A}\)</span> の期待値を以下の式から計算することが出来ます：</p>
+&amp;h_{3(12)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H})F(x,  \hat{H}^2),\\
+&amp;h_{4(22)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}^2)F(x,  \hat{H}^2).\end{aligned}\end{split}\]</div>
+<p><span class="math notranslate nohighlight">\(h_{2(11)}\)</span> と <span class="math notranslate nohighlight">\(h_{2(20)}\)</span> はどちらも
+<span class="math notranslate nohighlight">\(\langle \hat{H}^2 \rangle_\psi\)</span> の推定量ですが、
+分割の仕方が異なるため有限のサンプル数では一致しません。
+また、次数をブラ側とケット側へできるだけ均等に割り振ることで、
+local estimatorとしては <span class="math notranslate nohighlight">\(F(x, \hat{H}^2)\)</span> までしか現れず、
+<span class="math notranslate nohighlight">\(\hat{H}^3\)</span> や <span class="math notranslate nohighlight">\(\hat{H}^4\)</span> のlocal estimatorを
+直接評価する必要がなくなっています。</p>
+<p>これらの推定量を用いると、エネルギー期待値は</p>
 <div class="math notranslate nohighlight">
 \[\begin{aligned}
-A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{A_0 + \alpha(A_{1(10)} + A_{1(01)}) + \alpha^2 A_{2(11)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+E_{LS}(\alpha) =\frac{h_1 + \alpha(h_{2(20)} + h_{2(11)}) + \alpha^2 h_{3(12)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}}
 \end{aligned}\]</div>
-<p>ここで, <span class="math notranslate nohighlight">\(A_0\)</span>, <span class="math notranslate nohighlight">\(A_{1(10)},~A_{1(01)},\)</span> and
-<span class="math notranslate nohighlight">\(A_{2(11)}\)</span> は</p>
+<p>と評価されます。分子の <span class="math notranslate nohighlight">\(\alpha\)</span> の1次の項に現れる2つの
+<span class="math notranslate nohighlight">\(\langle \hat{H}^2 \rangle_\psi\)</span> は、それぞれブラ側・ケット側の
+<span class="math notranslate nohighlight">\((1+\alpha \hat{H})\)</span> に由来する別々の項であるため、
+一方を <span class="math notranslate nohighlight">\(h_{2(11)}\)</span>、もう一方を <span class="math notranslate nohighlight">\(h_{2(20)}\)</span> で推定しています。</p>
+<p>停留条件 <span class="math notranslate nohighlight">\(\partial E_{LS}(\alpha)/\partial \alpha=0\)</span> は、
+<span class="math notranslate nohighlight">\(\alpha\)</span> に関する以下の二次方程式に帰着します:</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+\left[2 h_1 h_{3(12)} - h_{2(11)}\left(h_{2(11)}+h_{2(20)}\right)\right] \alpha^2
++ 2\left[h_{3(12)} - h_1 h_{2(11)}\right] \alpha
++ \left(h_{2(11)}+h_{2(20)}\right) - 2h_1^2 = 0.
+\end{aligned}\]</div>
+<p>この二次方程式の2つの実数解 <span class="math notranslate nohighlight">\(\alpha_{\pm}\)</span> のそれぞれについて
+<span class="math notranslate nohighlight">\(E_{LS}(\alpha_{\pm})\)</span> を評価し、エネルギーが低くなる方を
+最適な <span class="math notranslate nohighlight">\(\alpha\)</span> として採用します
+(判別式が負となり実数解が存在しない場合には、
+Lanczos計算はエラーとして終了します)。
+また、最適化された <span class="math notranslate nohighlight">\(|\phi_1\rangle\)</span> に対するエネルギーの分散も</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+\sigma^2_{LS}(\alpha) = \frac{\langle \phi_1| \hat{H}^2 |\phi_1\rangle}{\langle \phi_1|\phi_1\rangle} - E_{LS}(\alpha)^2,~~~~
+\frac{\langle \phi_1| \hat{H}^2 |\phi_1\rangle}{\langle \phi_1|\phi_1\rangle}
+= \frac{h_{2(11)} + 2\alpha h_{3(12)} + \alpha^2 h_{4(22)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}}
+\end{aligned}\]</div>
+<p>から同様に計算できます。</p>
+</section>
+<section id="nd-power-lanczos-step">
+<h3>2nd power-Lanczos step<a class="headerlink" href="#nd-power-lanczos-step" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="alpha-beta">
+<h4>変分原理による <span class="math notranslate nohighlight">\(\alpha,\beta\)</span> の決定<a class="headerlink" href="#alpha-beta" title="この見出しへのパーマリンク">¶</a></h4>
+<p><code class="docutils literal notranslate"><span class="pre">NLanczosStep=2</span></code> では、
+<span class="math notranslate nohighlight">\(|\phi_2\rangle=(1+\alpha\hat H+\beta\hat H^2)|\psi\rangle\)</span>
+の変分エネルギー</p>
+<div class="math notranslate nohighlight">
+\[E_2(\alpha,\beta)
+=\frac{\langle\phi_2|\hat H|\phi_2\rangle}
+       {\langle\phi_2|\phi_2\rangle}\]</div>
+<p>を最小にする <span class="math notranslate nohighlight">\(\alpha,\beta\)</span> を求めます。これは1st stepで
+<span class="math notranslate nohighlight">\(E_{LS}(\alpha)\)</span> の停留条件から <span class="math notranslate nohighlight">\(\alpha\)</span> を決めることの
+直接の拡張です。</p>
+<p>この最小化は、Krylov基底</p>
+<div class="math notranslate nohighlight">
+\[|v_a\rangle=\hat H^a|\psi\rangle,\qquad a=0,1,2\]</div>
+<p>における一般化固有値問題として表せます。overlap行列とHamiltonian行列を</p>
+<div class="math notranslate nohighlight">
+\[S_{ab}=\frac{\langle v_a|v_b\rangle}{\langle\psi|\psi\rangle},
+\qquad
+{\cal H}_{ab}
+=\frac{\langle v_a|\hat H|v_b\rangle}{\langle\psi|\psi\rangle}\]</div>
+<p>と定義します。<span class="math notranslate nohighlight">\(|v_a\rangle\)</span> の定義から、これらの行列要素は
+基底波動関数に対するHamiltonianのモーメントそのものです:</p>
+<div class="math notranslate nohighlight">
+\[S_{ab}=\langle \hat H^{a+b}\rangle_\psi,
+\qquad
+{\cal H}_{ab}=\langle \hat H^{a+b+1}\rangle_\psi.\]</div>
+<p>したがって2nd stepでは <span class="math notranslate nohighlight">\(\langle \hat H^5\rangle_\psi\)</span> までの
+モーメント(後述する分散の評価まで含めると
+<span class="math notranslate nohighlight">\(\langle \hat H^6\rangle_\psi\)</span> まで)が必要になります。
+<span class="math notranslate nohighlight">\(\boldsymbol{c}=(c_0,c_1,c_2)^{\mathsf T}\)</span> とすると、</p>
+<div class="math notranslate nohighlight">
+\[|\phi_2\rangle=\sum_{a=0}^{2}c_a|v_a\rangle,\qquad
+E_2(\boldsymbol{c})
+=\frac{\boldsymbol{c}^\dagger{\cal H}\boldsymbol{c}}
+       {\boldsymbol{c}^\dagger S\boldsymbol{c}}.\]</div>
+<p>したがって停留条件は</p>
+<div class="math notranslate nohighlight">
+\[{\cal H}\boldsymbol{c}=E_2 S\boldsymbol{c}\]</div>
+<p>となり、最低固有値に対応する固有ベクトルが最適な係数を与えます。
+固有ベクトルの全体のスケールは任意なので、
+<span class="math notranslate nohighlight">\(\alpha=c_1/c_0\)</span>、<span class="math notranslate nohighlight">\(\beta=c_2/c_0\)</span> とすれば、
+冒頭の <span class="math notranslate nohighlight">\((1+\alpha\hat H+\beta\hat H^2)|\psi\rangle\)</span>
+という表式に戻ります。以上が2nd power-Lanczos stepの原理です。
+なお、<span class="math notranslate nohighlight">\(c_2=0\)</span> に固定して <span class="math notranslate nohighlight">\(c_1/c_0\)</span> のみを最適化すると、
+この一般化固有値問題は1st stepの二次方程式と等価になります。
+つまり2nd stepは、1st stepと同じ変分原理を、Krylov部分空間の次元を
+2から3へ広げて適用したものです。</p>
+</section>
+<section id="id4">
+<h4>数値的安定性のための実装<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h4>
+<p>ここからは上の変分原理を変えるものではなく、同じ行列要素をMonte Carlo
+sampleから安定に評価し、一般化固有値問題を安定に解くための手順です。</p>
+<p>まず、上で定義したlocal estimator <span class="math notranslate nohighlight">\(F(x,\hat A)\)</span> へ
+<span class="math notranslate nohighlight">\(\hat A=\hat H^a\)</span> を代入したlocal power</p>
+<div class="math notranslate nohighlight">
+\[F_a(x)\equiv F(x,\hat H^a)
+=\frac{\langle x|\hat H^a|\psi\rangle}
+       {\langle x|\psi\rangle},
+\qquad a=0,1,2,3\]</div>
+<p>を各配置 <span class="math notranslate nohighlight">\(x\)</span> で計算し、Monte Carlo sampleごとに保持します。
+<span class="math notranslate nohighlight">\(F_0(x)=1\)</span>、<span class="math notranslate nohighlight">\(F_1(x)\)</span> は通常のlocal energyであり、
+<span class="math notranslate nohighlight">\(F_2(x)\)</span> と <span class="math notranslate nohighlight">\(F_3(x)\)</span> はそれぞれ <span class="math notranslate nohighlight">\(\hat H^2\)</span> と
+<span class="math notranslate nohighlight">\(\hat H^3\)</span> のlocal estimatorです。これらは試行波動関数そのものではなく、
+<span class="math notranslate nohighlight">\(S\)</span>、<span class="math notranslate nohighlight">\({\cal H}\)</span> および分散計算用の
+Hamiltonian二乗行列をMonte Carlo平均から構成するための量です。</p>
+<p>sample loopの終了後に、基底VMC波動関数のglobalなweighted平均エネルギー
+<span class="math notranslate nohighlight">\(E_{\rm shift}=\langle\hat H\rangle_\psi\)</span> を求め、
+<span class="math notranslate nohighlight">\(X=\hat H-E_{\rm shift}\)</span> とします。この置換は</p>
+<div class="math notranslate nohighlight">
+\[{\rm span}\{|\psi\rangle,\hat H|\psi\rangle,\hat H^2|\psi\rangle\}
+=
+{\rm span}\{|\psi\rangle,X|\psi\rangle,X^2|\psi\rangle\}\]</div>
+<p>を満たすため、変分空間と最適解を変えません。これは数値的安定性のための
+基底変換です。momentの積を蓄積する前にlocal powerを</p>
+<div class="math notranslate nohighlight">
+\[\widetilde F_a(x)
+=\sum_{j=0}^{a}{a\choose j}(-E_{\rm shift})^{a-j}F_j(x)\]</div>
+<p>へ変換します。<span class="math notranslate nohighlight">\(\widetilde F_a\)</span> は <span class="math notranslate nohighlight">\(X^a\)</span> のlocal estimator
+です。mVMCはcentered moment行列</p>
+<div class="math notranslate nohighlight">
+\[\widetilde M_{ab}
+=\sum_x \rho(x)\widetilde F_a(x)^\dagger\widetilde F_b(x)\]</div>
+<p>を構成します。実装は <span class="math notranslate nohighlight">\(a,b=0,\ldots,3\)</span> の全組合せを保持します。
+各 <span class="math notranslate nohighlight">\(\widetilde M_{ab}\)</span> は、1st stepの <span class="math notranslate nohighlight">\(h_{n(ij)}\)</span> と同様に、
+<span class="math notranslate nohighlight">\(n=a+b\)</span> 次のモーメント <span class="math notranslate nohighlight">\(\langle X^{a+b}\rangle_\psi\)</span> を
+ブラ側 <span class="math notranslate nohighlight">\(\widetilde F_a^\dagger\)</span> とケット側
+<span class="math notranslate nohighlight">\(\widetilde F_b\)</span> に分割した推定量です。各側の次数が最大3なので、
+<span class="math notranslate nohighlight">\(\widetilde M_{33}\)</span> として <span class="math notranslate nohighlight">\(X^6\)</span> のモーメントまで表しながら、
+local powerとして必要なのは <span class="math notranslate nohighlight">\(F_3\)</span> までです。
+このaccumulation前の中心化により、extensiveなエネルギーが大きい場合に
+<span class="math notranslate nohighlight">\(\langle H^6\rangle\)</span> などのraw momentを形成して生じる桁落ちを避けます。
+必要な追加memoryはMonte Carlo sampleあたり4個のlocal powerに比例します。
+ただし、中心化が縮小するのは主に平均エネルギーによるoffsetです。
+<span class="math notranslate nohighlight">\(|\langle H\rangle|\)</span> がエネルギー分布の広がりに比べて小さい場合は
+高次local powerの動的範囲が十分に縮まらないため、中心化だけで任意の系の
+数値精度が保証されるわけではありません。</p>
+<p>同じsampleから構成する <span class="math notranslate nohighlight">\(\widetilde M_{ab}\)</span> と
+<span class="math notranslate nohighlight">\(\widetilde M_{ba}^\dagger\)</span> は各sampleの寄与ごとに等しいため、
+有限sampleであること自体は両者の差を生みません。ただし、浮動小数点演算や
+並列reductionの丸め誤差によって小さな非Hermite成分が生じ得るため、
+mVMCはmoment行列をHermite化します。一方、
+<span class="math notranslate nohighlight">\(a+b=c+d\)</span> を満たす異なる分割
+<span class="math notranslate nohighlight">\(\widetilde M_{ab}\)</span> と <span class="math notranslate nohighlight">\(\widetilde M_{cd}\)</span> の差には
+有限sampleの統計誤差が含まれ、<code class="docutils literal notranslate"><span class="pre">hankel_residual</span></code> として出力されます。
+その後、centered Krylov基底のoverlap行列、
+Hamiltonian行列、Hamiltonian二乗行列を</p>
+<div class="math notranslate nohighlight">
+\[\widetilde S_{ab}=\widetilde M_{ab},\qquad
+\widetilde{\cal H}_{ab}
+=\frac{\widetilde M_{a,b+1}+\widetilde M_{a+1,b}}{2},\qquad
+\widetilde G_{ab}=\widetilde M_{a+1,b+1}\]</div>
+<p>と構成します。ここで <span class="math notranslate nohighlight">\(a,b=0,1,2\)</span> です。
+<span class="math notranslate nohighlight">\(\widetilde{\cal H}\)</span> の二つのmomentを平均することも、
+有限sampleでのHermite性を保つための処理です。</p>
+<p>さらに各基底ベクトルのノルムの差を抑えるため、</p>
+<div class="math notranslate nohighlight">
+\[D_{aa}=\frac{1}{\sqrt{\widetilde S_{aa}}}\]</div>
+<p>による対角scale変換を行い、</p>
+<div class="math notranslate nohighlight">
+\[(D\widetilde{\cal H}D)\boldsymbol{u}
+=E_X(D\widetilde S D)\boldsymbol{u}\]</div>
+<p>を解きます。overlap行列の分解に失敗した場合だけ、
+<span class="math notranslate nohighlight">\(D\widetilde S D\)</span> の対角へ小さな正則化項を加えて再試行します。
+中心化、Hermite化、対角scale変換およびこのフォールバックの正則化が、
+原理とは別に導入されている数値安定化です。</p>
+<p>最低固有値から元のHamiltonianのエネルギー
+<span class="math notranslate nohighlight">\(E=E_X+E_{\rm shift}\)</span> を得ます。centered basisの係数を
+<span class="math notranslate nohighlight">\(\boldsymbol{d}=(d_0,d_1,d_2)^{\mathsf T}\)</span> とすると、</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+c_0 &amp;= d_0-E_{\rm shift}d_1+E_{\rm shift}^2d_2,\\
+c_1 &amp;= d_1-2E_{\rm shift}d_2,\\
+c_2 &amp;= d_2
+\end{aligned}\end{split}\]</div>
+<p>によってunshifted basisへ戻します。mVMCは <span class="math notranslate nohighlight">\(c_0,c_1,c_2\)</span> と、
+上で定義した <span class="math notranslate nohighlight">\(\alpha,\beta\)</span> をそれぞれ
+<span class="math notranslate nohighlight">\(\alpha_1,\alpha_2\)</span> として出力します。分散は
+<span class="math notranslate nohighlight">\(\boldsymbol{d}^\dagger\widetilde S\boldsymbol{d}=1\)</span> の規格化のもとで</p>
+<div class="math notranslate nohighlight">
+\[\sigma_E^2
+=\boldsymbol{d}^\dagger\widetilde G\boldsymbol{d}
+ -(\boldsymbol{d}^\dagger\widetilde{\cal H}\boldsymbol{d})^2\]</div>
+<p>としてcentered basisで評価します。</p>
+</section>
+<section id="id5">
+<h4>計算量<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h4>
+<p>2nd stepで新たに必要になるのは、sampleごとのlocal power
+<span class="math notranslate nohighlight">\(F_2(x)\)</span> と <span class="math notranslate nohighlight">\(F_3(x)\)</span> の評価であり、このうち
+<span class="math notranslate nohighlight">\(F_3(x)=\langle x|\hat H^3|\psi\rangle/\langle x|\psi\rangle\)</span>
+が計算量を支配します。</p>
+<p>現在の2nd step実装では、Hamiltonianはspinを保存する <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項と
+number-operator型の対角相互作用に限定されています。
+<span class="math notranslate nohighlight">\(F_3\)</span> の評価では、非対角な <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項に対する
+outer/innerの二重loopを回します。2つの <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項の積は二体演算子</p>
+<div class="math notranslate nohighlight">
+\[CACA \equiv
+c_{i\sigma}^\dagger c_{j\sigma} c_{k\tau}^\dagger c_{l\tau}\]</div>
+<p>の形にまとまるため、二重loopで生成される
+<span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^2)\)</span> 個の <code class="docutils literal notranslate"><span class="pre">CACA</span></code> のそれぞれについて、
+残りの <span class="math notranslate nohighlight">\(\hat H\)</span> を含む行列要素
+<span class="math notranslate nohighlight">\(\langle \psi|\hat H\,CACA|x\rangle/\langle \psi|x\rangle\)</span>
+を評価することになります。</p>
+<p>量子射影がidentity（<code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code>）の場合は、<code class="docutils literal notranslate"><span class="pre">CACA</span></code> を
+サンプリングされた配置 <span class="math notranslate nohighlight">\(x\)</span> に作用させて一時的な配置
+<span class="math notranslate nohighlight">\(x'\)</span> を作り、<span class="math notranslate nohighlight">\(x'\)</span> における <span class="math notranslate nohighlight">\(\hat H\)</span> の
+local estimatorに重なり比
+<span class="math notranslate nohighlight">\(\langle \psi|CACA|x\rangle/\langle \psi|x\rangle\)</span> を掛ける、
+という分解で評価できます。二重loopが生成する <code class="docutils literal notranslate"><span class="pre">CACA</span></code> の個数は
+<span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^2)\)</span> ですが、各 <code class="docutils literal notranslate"><span class="pre">CACA</span></code> に対する
+Hamiltonianのlocal estimatorがさらに <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> loopを含むため、
+この経路の最悪計算量も
+<span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^3)\)</span> です。ただし、通常のlocal
+estimatorとrank-two updateを利用でき、<code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> に比例する
+<code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> の評価を避けられるため、非自明な射影の経路より
+計算量の係数は小さくなります。</p>
+<p>非自明な量子射影（<code class="docutils literal notranslate"><span class="pre">NQPFull&gt;1</span></code>）では、この分解は複数の量子射影成分の
+和を正しく保てません。そのため2nd power-Lanczosでは、
+<span class="math notranslate nohighlight">\(\hat H=\sum_\mu h_\mu\hat O_\mu\)</span> の各項について
+<span class="math notranslate nohighlight">\(\hat O_\mu\,CACA\)</span> を一つの多体演算子として扱い、
+<code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> で対応する多体Green関数を元の配置 <span class="math notranslate nohighlight">\(x\)</span> から
+量子射影成分を含めて評価し、係数 <span class="math notranslate nohighlight">\(h_\mu\)</span> 付きで加算します。
+この直接評価では、各 <span class="math notranslate nohighlight">\(\hat O_\mu\,CACA\)</span> の多体Green関数を
+求める際に内部へもう1段の <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> loopが加わるため、
+この経路の支配的なoperator数は <span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^3)\)</span>
+となり、<code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> の計算量は <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> にも比例します。
+したがって実時間は波動関数と計算環境だけでなく、
+射影設定にも強く依存します。</p>
+</section>
+</section>
+<section id="st-power-lanczos-step">
+<h3>1st power-Lanczos stepでの物理量の計算<a class="headerlink" href="#st-power-lanczos-step" title="この見出しへのパーマリンク">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">NLanczosMode=2</span></code> の場合には、最適化されたパラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> を
+用いて、1st step波動関数 <span class="math notranslate nohighlight">\(|\phi_1\rangle\)</span> に対する物理量
+(一体・二体グリーン関数)を計算します
+(2nd stepでのGreen関数計算は未対応です)。
+演算子 <span class="math notranslate nohighlight">\(\hat{A}\)</span> の期待値の分子を <span class="math notranslate nohighlight">\(\alpha\)</span> について
+展開すると</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+\langle \phi_1| \hat{A} |\phi_1\rangle = \langle \psi| \hat{A} |\psi\rangle
++ \alpha \langle \psi| \hat{H}\hat{A} |\psi\rangle
++ \alpha \langle \psi| \hat{A}\hat{H} |\psi\rangle
++ \alpha^2 \langle \psi| \hat{H}\hat{A}\hat{H} |\psi\rangle
+\end{aligned}\]</div>
+<p>となります。エネルギーの場合と同様に、各項をブラ側の <span class="math notranslate nohighlight">\(\hat{H}^i\)</span> と
+ケット側の <span class="math notranslate nohighlight">\(\hat{A}\hat{H}^j\)</span> に分割して推定します:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{aligned}
 &amp;A_0 =\sum_{x} \rho(x) F(x,  \hat{A}),\\
 &amp;A_{1(10)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}) F(x, \hat{A}),\\
 &amp;A_{1(01)}=\sum_{x} \rho(x) F(x, \hat{A}\hat{H}),\\
 &amp;A_{2(11)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H})F(x,  \hat{A}\hat{H}).\end{aligned}\end{split}\]</div>
-<p>として定義される変数を表します。プログラムでは,
-この表式に基づき一体グリーン関数および二体グリーン関数の計算を行っています。</p>
+<p>ここで添字 <span class="math notranslate nohighlight">\(n(ij)\)</span> は、エネルギーの場合と同様に、
+<span class="math notranslate nohighlight">\(\hat{H}\)</span> の合計次数 <span class="math notranslate nohighlight">\(n=i+j\)</span> と、
+ブラ側(<span class="math notranslate nohighlight">\(\hat{H}^i\)</span>)・ケット側(<span class="math notranslate nohighlight">\(\hat{A}\hat{H}^j\)</span>)への
+割り振りを表します。これらの推定量を用いると、期待値は</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+A_{LS}(\alpha) =\frac{\langle \phi_1| \hat{A} |\phi_1\rangle}{\langle \phi_1|\phi_1\rangle}=\frac{A_0 + \alpha(A_{1(10)} + A_{1(01)}) + \alpha^2 A_{2(11)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}}
+\end{aligned}\]</div>
+<p>と計算されます。分母はエネルギーの場合と同じ規格化因子
+<span class="math notranslate nohighlight">\(\langle \phi_1 | \phi_1 \rangle\)</span> です。プログラムでは、
+この表式に基づき一体グリーン関数および二体グリーン関数の計算を
+行っています。</p>
 </section>
 </section>
 </section>
@@ -312,8 +609,14 @@ A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rang
 </ul>
 </li>
 <li><a class="reference internal" href="#power-lanczos">Power-Lanczos法</a><ul>
-<li><a class="reference internal" href="#alpha"><span class="math notranslate nohighlight">\(\alpha\)</span> の決定</a></li>
-<li><a class="reference internal" href="#id4">物理量の計算</a></li>
+<li><a class="reference internal" href="#st-power-lanczos-step-alpha">1st power-Lanczos stepと <span class="math notranslate nohighlight">\(\alpha\)</span> の決定</a></li>
+<li><a class="reference internal" href="#nd-power-lanczos-step">2nd power-Lanczos step</a><ul>
+<li><a class="reference internal" href="#alpha-beta">変分原理による <span class="math notranslate nohighlight">\(\alpha,\beta\)</span> の決定</a></li>
+<li><a class="reference internal" href="#id4">数値的安定性のための実装</a></li>
+<li><a class="reference internal" href="#id5">計算量</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#st-power-lanczos-step">1st power-Lanczos stepでの物理量の計算</a></li>
 </ul>
 </li>
 </ul>

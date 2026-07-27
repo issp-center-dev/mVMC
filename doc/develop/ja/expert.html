@@ -421,6 +421,7 @@ TransSymです。それ以外のキーワードについては、指定がない
 <span class="o">--------------------</span>
 <span class="n">NVMCCalMode</span>    <span class="mi">0</span>
 <span class="n">NLanczosMode</span>   <span class="mi">0</span>
+<span class="n">NLanczosStep</span>   <span class="mi">1</span>
 <span class="o">--------------------</span>
 <span class="n">NDataIdxStart</span>  <span class="mi">1</span>
 <span class="n">NDataQtySmp</span>    <span class="mi">1</span>
@@ -513,8 +514,53 @@ TransSymです。それ以外のキーワードについては、指定がない
 のみ対応します。この場合、Hamiltonian は <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> と
 number-operator 型の対角相互作用（<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>,
 <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>）に限定されます。<code class="docutils literal notranslate"><span class="pre">NLanczosMode=2</span></code>、
-2nd Lanczos、<code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> / <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> の Lanczos 補正は
-未対応です。</p>
+<code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> / <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> の Lanczos 補正は未対応です。</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NLanczosStep</span></code></p>
+<p><strong>形式 :</strong> int型 (デフォルト値 = 1)</p>
+<p><strong>説明 :</strong> Power-Lanczos計算の次数を指定します。[1] は従来の
+single-step計算および出力を変更せずに使用します。[2] は3次元Krylov
+部分空間で
+<span class="math notranslate nohighlight">\((c_0+c_1\hat{H}+c_2\hat{H}^2)|\psi\rangle\)</span>
+を最適化します。</p>
+<p>初期実装の2nd stepには <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>、
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code> が必要です。実数または複素数のnon-FSZペア軌道に
+対応し、既存のスピン射影・運動量射影を使用できます。Hamiltonianは
+spinを保存する <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項（<span class="math notranslate nohighlight">\(\sigma_1=\sigma_2\)</span>）と
+number-operator型の対角相互作用
+（<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>）に限定されます。
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ、BackFlow、RBM、<code class="docutils literal notranslate"><span class="pre">PairHop</span></code>、
+<code class="docutils literal notranslate"><span class="pre">Exchange</span></code>、<code class="docutils literal notranslate"><span class="pre">InterAll</span></code>、<code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code>、<code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> は
+sampling開始前にエラー終了します。2nd stepのGreen関数は計算しません。
+Gutzwillerの <code class="docutils literal notranslate"><span class="pre">ProjRatio</span></code> 経路は独立ED oracleで値を検証しています。
+非自明な <span class="math notranslate nohighlight">\(k=\pi\)</span> 運動量射影は、real/complexの独立projected ED
+value oracleで検証しています。real oracleはserial、MPI、OpenMP経路を
+対象とし、complex oracleは現時点でserial経路を対象とします。
+非自明なスピン射影はruntimeおよび構造のsmoke testまでで、
+projected EDによる独立な値oracleは現時点ではありません。</p>
+<p><code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code> の場合、<span class="math notranslate nohighlight">\(H^3\)</span> のlocal powerは <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項に対する
+outer/inner二重loopで評価するため、支配的なoperator数は
+<span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^2)\)</span> で増加します。非自明な量子射影
+（<code class="docutils literal notranslate"><span class="pre">NQPFull&gt;1</span></code>）では、射影された <span class="math notranslate nohighlight">\(H\,CACA\)</span> 行列要素の直接縮約経路に
+もう1段の <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> loopが加わります。そのため支配的なoperator数は
+<span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^3)\)</span> となり、<code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> の縮約量は
+<code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> にも比例します。</p>
+<p>したがって、射影により2nd stepの測定時間が大幅に増える場合があります。
+実サイズの計算前に、実計算と同じ <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> と <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> を使った
+小さい系で測定し、性能判断には対象Linux/HPC環境のbaselineを使用してください。
+source treeにある非CIの手動probe
+<code class="docutils literal notranslate"><span class="pre">test/python/lanczos2_cost_probe.py</span></code> は <code class="docutils literal notranslate"><span class="pre">--nspgaussleg</span></code> と
+<code class="docutils literal notranslate"><span class="pre">--nmptrans</span></code> のgridを受け取り、JSON出力へ <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code>、Timer 41、
+Timer 95を記録します。</p>
+<p>local powerまたはmomentの非有限値、不正なoverlap行列、一般化固有値
+solverの失敗、出力エラーを検出すると診断を表示して終了します。
+非有限値のエラー経路を検証する環境変数
+<code class="docutils literal notranslate"><span class="pre">MVMC_LANCZOS2_TEST_NONFINITE_SAMPLE</span></code> はテスト専用です。
+<code class="docutils literal notranslate"><span class="pre">Testing=ON</span></code> のbuildだけにコンパイルされ、通常の
+<code class="docutils literal notranslate"><span class="pre">Testing=OFF</span></code> buildには故障注入コードが含まれません。
+overlap行列が正定値でない場合は、相対対角regularization
+<span class="math notranslate nohighlight">\(10^{-12}\)</span> を加えて1回だけ再試行し、結果を <code class="docutils literal notranslate"><span class="pre">solve_flag</span></code> に
+記録します。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code></p>
 <p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>

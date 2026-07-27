@@ -230,72 +230,375 @@ determinant.</p>
 </section>
 <section id="power-lanczos-method">
 <h2>Power Lanczos method<a class="headerlink" href="#power-lanczos-method" title="Permalink to this heading">¶</a></h2>
-<p>In this section, we show how to determine <span class="math notranslate nohighlight">\(\alpha\)</span> in the
-power-Lanczos method. We also explain the calculation of physical
-quantities after the single-step Lanczos method.</p>
-<section id="determination-of-alpha">
-<h3>Determination of <span class="math notranslate nohighlight">\(\alpha\)</span><a class="headerlink" href="#determination-of-alpha" title="Permalink to this heading">¶</a></h3>
+<p>The power-Lanczos method improves an optimized VMC wave function
+<span class="math notranslate nohighlight">\(|\psi\rangle\)</span> by using the trial wave function</p>
+<div class="math notranslate nohighlight">
+\[|\phi_p\rangle
+=P_p(\hat H)|\psi\rangle
+=\sum_{k=0}^{p}c_k\hat H^k|\psi\rangle.\]</div>
+<p>The coefficients <span class="math notranslate nohighlight">\(c_k\)</span> minimize the energy in the Krylov subspace
+spanned by
+<span class="math notranslate nohighlight">\(\{|\psi\rangle,\hat H|\psi\rangle,\ldots,\hat H^p|\psi\rangle\}\)</span>.
+The first- and second-step trial wave functions used by mVMC are</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+|\phi_1\rangle &amp;= (1+\alpha\hat H)|\psi\rangle,\\
+|\phi_2\rangle &amp;= (1+\alpha\hat H+\beta\hat H^2)|\psi\rangle.
+\end{aligned}\end{split}\]</div>
+<p>The first step requires <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosMode&gt;=1</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code>. The second step requires <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NLanczosStep=2</span></code>.</p>
+<p>The following subsections first explain the first-step optimization of
+<span class="math notranslate nohighlight">\(\alpha\)</span>. They then separate the variational principle that
+determines <span class="math notranslate nohighlight">\(\alpha,\beta\)</span> in the second step from the numerical
+stabilization used by the implementation. The final subsection describes
+the calculation of observables after the first power-Lanczos step.</p>
+<section id="first-power-lanczos-step-and-determination-of-alpha">
+<h3>First power-Lanczos step and determination of <span class="math notranslate nohighlight">\(\alpha\)</span><a class="headerlink" href="#first-power-lanczos-step-and-determination-of-alpha" title="Permalink to this heading">¶</a></h3>
 <p>First, we briefly explain the sampling procedure of the variational
-Monte Carlo (VMC) method. Physical properties <span class="math notranslate nohighlight">\(\hat{A}\)</span> are
-calculated as follows:</p>
+Monte Carlo (VMC) method. Here, <span class="math notranslate nohighlight">\(x\)</span> denotes a configuration sampled
+from the base VMC wave function <span class="math notranslate nohighlight">\(|\psi\rangle\)</span>. The expectation
+value of an observable <span class="math notranslate nohighlight">\(\hat A\)</span> is</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{aligned}
-&amp;\langle \hat{A}\rangle = \frac{\langle \phi| \hat{A}|\phi \rangle}{\langle \phi| \phi \rangle} = \sum_{x} \rho(x) F(x, {\hat{A}}),\\
-&amp; \rho(x)=\frac{|\langle \phi|x\rangle|^2}{\langle \phi | \phi \rangle}, ~~~~F(x,  {\hat{A}}) =  \frac{\langle x| \hat{A}|\phi \rangle}{\langle x| \phi \rangle}.
+&amp;\langle \hat{A}\rangle_\psi
+= \frac{\langle \psi|\hat A|\psi\rangle}{\langle \psi|\psi\rangle}
+= \sum_x \rho_\psi(x)F(x,\hat A),\\
+&amp;\rho_\psi(x)=\frac{|\langle x|\psi\rangle|^2}{\langle\psi|\psi\rangle},
+\qquad
+F(x,\hat A)=\frac{\langle x|\hat A|\psi\rangle}
+                  {\langle x|\psi\rangle}.
 \end{aligned}\end{split}\]</div>
-<p>There are two ways to calculate the product of the operators
-<span class="math notranslate nohighlight">\(\hat{A}\hat{B}\)</span>.</p>
+<p>The quantity <span class="math notranslate nohighlight">\(F(x,\hat A)\)</span> is the local estimator of <span class="math notranslate nohighlight">\(\hat A\)</span>
+at configuration <span class="math notranslate nohighlight">\(x\)</span>. The expectation value of a product
+<span class="math notranslate nohighlight">\(\hat A\hat B\)</span> has the following two representations:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{aligned}
-&amp;\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F(x, {\hat{A}\hat{B}}),\\
-&amp;\langle \hat{A} \hat{B}\rangle = \sum_{x} \rho(x) F^{\dagger}(x, {\hat{A})F(x, \hat{B}}).
+&amp;\langle \hat A\hat B\rangle_\psi
+= \sum_x\rho_\psi(x)F(x,\hat A\hat B),\\
+&amp;\langle \hat A\hat B\rangle_\psi
+= \sum_x\rho_\psi(x)F^\dagger(x,\hat A)F(x,\hat B).
 \end{aligned}\end{split}\]</div>
-<p>As we explain later, in general, the latter way is numerical stable
-one. For example, we consider the expectation value of the variance,
-which is defined as
-<span class="math notranslate nohighlight">\(\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle\)</span>.
-There are two ways to calculate the variance.</p>
+<p>In the former representation, the product <span class="math notranslate nohighlight">\(\hat A\hat B\)</span> is
+evaluated as a single local estimator. In the latter, the complete set
+<span class="math notranslate nohighlight">\(\sum_{x} |x\rangle \langle x|\)</span> is inserted between
+<span class="math notranslate nohighlight">\(\hat A\)</span> and <span class="math notranslate nohighlight">\(\hat B\)</span>, i.e., the product is split into the
+bra part <span class="math notranslate nohighlight">\(\hat A\)</span> and the ket part <span class="math notranslate nohighlight">\(\hat B\)</span>.
+The latter expression assumes that <span class="math notranslate nohighlight">\(\hat A\)</span> is Hermitian. For a
+general <span class="math notranslate nohighlight">\(\hat A\)</span>, <span class="math notranslate nohighlight">\(F^\dagger(x,\hat A)\)</span> must be replaced by
+<span class="math notranslate nohighlight">\(F^\dagger(x,\hat A^\dagger)\)</span>.
+Both representations then give the same expectation value in the limit of an
+infinite number of samples. They differ for a finite number of samples,
+and the latter is numerically more stable in general. For compact
+notation, <span class="math notranslate nohighlight">\(\rho_\psi(x)\)</span> is abbreviated as <span class="math notranslate nohighlight">\(\rho(x)\)</span> below.</p>
+<p>For example, the variance of the energy,
+<span class="math notranslate nohighlight">\(\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle\)</span>, can
+be calculated in the two ways:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{aligned}
 \sigma^2&amp;=\sum_{x} \rho(x) F(x,  (\hat{H}-\langle \hat{H}\rangle)^2) = \sum_{x} \rho(x) F(x,  \hat{H}^2) - \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2 ,\\
 \sigma^2&amp;=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}-\langle \hat{H}\rangle)F(x,  \hat{H}-\langle \hat{H}\rangle) \nonumber \\
 &amp;= \sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}) F(x, \hat{H})- \left[ \sum_{x} \rho(x) F(x,  \hat{H})\right]^2
 \end{aligned}\end{split}\]</div>
-<p>From its definition, the latter way gives the positive definitive
-variance even for the finite sampling while the former way does not
-guarantee the positive definitiveness of the variance. Here, we consider
-the expectation values of energy and variance for the (single-step)
-power Lanczos wave function
-<span class="math notranslate nohighlight">\(|\phi\rangle =(1+\alpha \hat{H}) |\psi \rangle\)</span>. The energy is
-calculated as</p>
+<p>The latter way guarantees that the variance is non-negative even for a
+finite number of samples, while the former way does not.</p>
+<p>Next, we consider the energy expectation value of the first-step wave
+function <span class="math notranslate nohighlight">\(|\phi_1\rangle =(1+\alpha \hat{H}) |\psi \rangle\)</span>.
+Expanding it with respect to <span class="math notranslate nohighlight">\(\alpha\)</span> (the numerator and the
+denominator are divided by <span class="math notranslate nohighlight">\(\langle \psi | \psi \rangle\)</span>) gives</p>
 <div class="math notranslate nohighlight">
 \[\begin{aligned}
-E_{LS}(\alpha) =\frac{\langle \phi| \hat{H} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{h_1 + \alpha(h_{2(20)} + h_{2(11)}) + \alpha^2 h_{3(12)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+E_{LS}(\alpha) =\frac{\langle \phi_1| \hat{H} |\phi_1\rangle}{\langle \phi_1|\phi_1\rangle}
+=\frac{\langle \hat{H} \rangle_\psi + 2\alpha \langle \hat{H}^2 \rangle_\psi + \alpha^2 \langle \hat{H}^3 \rangle_\psi}
+{1 + 2\alpha \langle \hat{H} \rangle_\psi + \alpha^2 \langle \hat{H}^2 \rangle_\psi},
 \end{aligned}\]</div>
-<p>where we define <span class="math notranslate nohighlight">\(h_1\)</span>, <span class="math notranslate nohighlight">\(h_{2(11)},~h_{2(20)},\)</span> and
-<span class="math notranslate nohighlight">\(h_{3(12)}\)</span> as</p>
+<p>which requires the moments of <span class="math notranslate nohighlight">\(\hat{H}\)</span> up to the third order. To
+estimate these moments with the splitting described above, we introduce
+the following notation:</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+h_{n(ij)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}^i) F(x, \hat{H}^j), ~~~~ i+j=n.
+\end{aligned}\]</div>
+<p>Namely, <span class="math notranslate nohighlight">\(h_{n(ij)}\)</span> is an estimator of the <span class="math notranslate nohighlight">\(n\)</span>-th moment
+<span class="math notranslate nohighlight">\(\langle \hat{H}^n \rangle_\psi\)</span>, in which <span class="math notranslate nohighlight">\(\hat{H}^i\)</span> is
+assigned to the bra side and <span class="math notranslate nohighlight">\(\hat{H}^j\)</span> to the ket side (we set
+<span class="math notranslate nohighlight">\(F(x, \hat{H}^0)=1\)</span> and abbreviate <span class="math notranslate nohighlight">\(h_{1(10)}\)</span> as
+<span class="math notranslate nohighlight">\(h_1\)</span>). The quantities used in the calculation are</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{aligned}
 &amp;h_1 =\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}),\\
 &amp;h_{2(11)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}) F(x, \hat{H}),\\
 &amp;h_{2(20)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}^2),\\
-&amp;h_{3(12)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H})F(x,  \hat{H}^2).
+&amp;h_{3(12)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H})F(x,  \hat{H}^2),\\
+&amp;h_{4(22)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H}^2)F(x,  \hat{H}^2).
 \end{aligned}\end{split}\]</div>
-<p>From the condition
-<span class="math notranslate nohighlight">\(\frac{\partial E_{LS}(\alpha)}{\partial \alpha}=0\)</span>, i.e., by
-solving the quadratic equations, we can determine the <span class="math notranslate nohighlight">\(\alpha\)</span>.
-The variance is calculate in the similar way.</p>
-</section>
-<section id="calculation-of-physical-quantities">
-<h3>Calculation of physical quantities<a class="headerlink" href="#calculation-of-physical-quantities" title="Permalink to this heading">¶</a></h3>
-<p>By using the optimized parameter <span class="math notranslate nohighlight">\(\alpha\)</span>, we can calculate the
-expected value of the operator <span class="math notranslate nohighlight">\(\hat{A}\)</span> as</p>
+<p>Note that both <span class="math notranslate nohighlight">\(h_{2(11)}\)</span> and <span class="math notranslate nohighlight">\(h_{2(20)}\)</span> are estimators
+of <span class="math notranslate nohighlight">\(\langle \hat{H}^2 \rangle_\psi\)</span>, but they differ for a finite
+number of samples because of the different splittings. By assigning the
+powers of <span class="math notranslate nohighlight">\(\hat{H}\)</span> to the bra and ket sides as evenly as
+possible, only <span class="math notranslate nohighlight">\(F(x, \hat{H}^2)\)</span> appears as the local estimator,
+i.e., it is not necessary to evaluate the local estimators of
+<span class="math notranslate nohighlight">\(\hat{H}^3\)</span> and <span class="math notranslate nohighlight">\(\hat{H}^4\)</span> directly.</p>
+<p>With these estimators, the energy expectation value is evaluated as</p>
 <div class="math notranslate nohighlight">
 \[\begin{aligned}
-A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rangle}=\frac{A_0 + \alpha(A_{1(10)} + A_{1(01)}) + \alpha^2 A_{2(11)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+E_{LS}(\alpha) =\frac{h_1 + \alpha(h_{2(20)} + h_{2(11)}) + \alpha^2 h_{3(12)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}}.
 \end{aligned}\]</div>
-<p>where we define <span class="math notranslate nohighlight">\(A_0\)</span>, <span class="math notranslate nohighlight">\(A_{1(10)},~A_{1(01)},\)</span> and
-<span class="math notranslate nohighlight">\(A_{2(11)}\)</span> as</p>
+<p>The two <span class="math notranslate nohighlight">\(\langle \hat{H}^2 \rangle_\psi\)</span> terms in the first order
+of <span class="math notranslate nohighlight">\(\alpha\)</span> in the numerator originate from the different factors
+<span class="math notranslate nohighlight">\((1+\alpha \hat{H})\)</span> on the bra and ket sides, and thus one of
+them is estimated by <span class="math notranslate nohighlight">\(h_{2(11)}\)</span> and the other by
+<span class="math notranslate nohighlight">\(h_{2(20)}\)</span>.</p>
+<p>The stationary condition
+<span class="math notranslate nohighlight">\(\partial E_{LS}(\alpha)/\partial \alpha=0\)</span> reduces to the
+following quadratic equation for <span class="math notranslate nohighlight">\(\alpha\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+\left[2 h_1 h_{3(12)} - h_{2(11)}\left(h_{2(11)}+h_{2(20)}\right)\right] \alpha^2
++ 2\left[h_{3(12)} - h_1 h_{2(11)}\right] \alpha
++ \left(h_{2(11)}+h_{2(20)}\right) - 2h_1^2 = 0.
+\end{aligned}\]</div>
+<p>We evaluate <span class="math notranslate nohighlight">\(E_{LS}(\alpha_{\pm})\)</span> for the two real roots
+<span class="math notranslate nohighlight">\(\alpha_{\pm}\)</span> of this quadratic equation and adopt the one that
+gives the lower energy as the optimized <span class="math notranslate nohighlight">\(\alpha\)</span> (if the
+discriminant is negative and no real root exists, the Lanczos
+calculation stops with an error). The variance of the energy for the
+optimized <span class="math notranslate nohighlight">\(|\phi_1\rangle\)</span> is also calculated as</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+\sigma^2_{LS}(\alpha) = \frac{\langle \phi_1| \hat{H}^2 |\phi_1\rangle}{\langle \phi_1|\phi_1\rangle} - E_{LS}(\alpha)^2,~~~~
+\frac{\langle \phi_1| \hat{H}^2 |\phi_1\rangle}{\langle \phi_1|\phi_1\rangle}
+= \frac{h_{2(11)} + 2\alpha h_{3(12)} + \alpha^2 h_{4(22)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}}.
+\end{aligned}\]</div>
+</section>
+<section id="second-power-lanczos-step">
+<h3>Second power-Lanczos step<a class="headerlink" href="#second-power-lanczos-step" title="Permalink to this heading">¶</a></h3>
+<section id="variational-determination-of-alpha-and-beta">
+<h4>Variational determination of <span class="math notranslate nohighlight">\(\alpha\)</span> and <span class="math notranslate nohighlight">\(\beta\)</span><a class="headerlink" href="#variational-determination-of-alpha-and-beta" title="Permalink to this heading">¶</a></h4>
+<p>For <code class="docutils literal notranslate"><span class="pre">NLanczosStep=2</span></code>, mVMC minimizes the variational energy</p>
+<div class="math notranslate nohighlight">
+\[E_2(\alpha,\beta)
+=\frac{\langle\phi_2|\hat H|\phi_2\rangle}
+       {\langle\phi_2|\phi_2\rangle}\]</div>
+<p>of the trial wave function
+<span class="math notranslate nohighlight">\(|\phi_2\rangle=(1+\alpha\hat H+\beta\hat H^2)|\psi\rangle\)</span>
+with respect to <span class="math notranslate nohighlight">\(\alpha,\beta\)</span>. This is the direct extension of
+determining <span class="math notranslate nohighlight">\(\alpha\)</span> from the stationary condition of
+<span class="math notranslate nohighlight">\(E_{LS}(\alpha)\)</span> in the first step.</p>
+<p>The minimization can be written as a generalized eigenvalue problem in the
+Krylov basis</p>
+<div class="math notranslate nohighlight">
+\[|v_a\rangle=\hat H^a|\psi\rangle,\qquad a=0,1,2.\]</div>
+<p>Define the overlap and Hamiltonian matrices by</p>
+<div class="math notranslate nohighlight">
+\[S_{ab}=\frac{\langle v_a|v_b\rangle}{\langle\psi|\psi\rangle},
+\qquad
+{\cal H}_{ab}
+=\frac{\langle v_a|\hat H|v_b\rangle}{\langle\psi|\psi\rangle}.\]</div>
+<p>From the definition of <span class="math notranslate nohighlight">\(|v_a\rangle\)</span>, these matrix elements are
+nothing but the moments of the Hamiltonian with respect to the base wave
+function:</p>
+<div class="math notranslate nohighlight">
+\[S_{ab}=\langle \hat H^{a+b}\rangle_\psi,
+\qquad
+{\cal H}_{ab}=\langle \hat H^{a+b+1}\rangle_\psi.\]</div>
+<p>The second step therefore requires the moments up to
+<span class="math notranslate nohighlight">\(\langle \hat H^5\rangle_\psi\)</span> (up to
+<span class="math notranslate nohighlight">\(\langle \hat H^6\rangle_\psi\)</span> when the variance described below
+is also evaluated). For <span class="math notranslate nohighlight">\(\boldsymbol{c}=(c_0,c_1,c_2)^{\mathsf T}\)</span>,</p>
+<div class="math notranslate nohighlight">
+\[|\phi_2\rangle=\sum_{a=0}^{2}c_a|v_a\rangle,\qquad
+E_2(\boldsymbol{c})
+=\frac{\boldsymbol{c}^\dagger{\cal H}\boldsymbol{c}}
+       {\boldsymbol{c}^\dagger S\boldsymbol{c}}.\]</div>
+<p>The stationary condition is therefore</p>
+<div class="math notranslate nohighlight">
+\[{\cal H}\boldsymbol{c}=E_2 S\boldsymbol{c}.\]</div>
+<p>The eigenvector associated with the lowest eigenvalue gives the optimal
+coefficients. Its overall scale is arbitrary; setting
+<span class="math notranslate nohighlight">\(\alpha=c_1/c_0\)</span> and <span class="math notranslate nohighlight">\(\beta=c_2/c_0\)</span> recovers the
+<span class="math notranslate nohighlight">\((1+\alpha\hat H+\beta\hat H^2)|\psi\rangle\)</span> notation above.
+This generalized eigenvalue problem is the principle of the second
+power-Lanczos step. Note that fixing <span class="math notranslate nohighlight">\(c_2=0\)</span> and optimizing only
+<span class="math notranslate nohighlight">\(c_1/c_0\)</span> reduces this generalized eigenvalue problem to the
+quadratic equation of the first step. In other words, the second step
+applies the same variational principle with the dimension of the Krylov
+subspace extended from two to three.</p>
+</section>
+<section id="numerically-stable-implementation">
+<h4>Numerically stable implementation<a class="headerlink" href="#numerically-stable-implementation" title="Permalink to this heading">¶</a></h4>
+<p>The following operations do not change the variational principle. They
+evaluate the same matrix elements from Monte Carlo samples and solve the
+generalized eigenvalue problem more stably.</p>
+<p>First, mVMC applies the local-estimator definition above to
+<span class="math notranslate nohighlight">\(\hat A=\hat H^a\)</span> and samples the four local powers</p>
+<div class="math notranslate nohighlight">
+\[F_a(x)\equiv F(x,\hat H^a)
+=\frac{\langle x|\hat H^a|\psi\rangle}
+       {\langle x|\psi\rangle},
+\qquad a=0,1,2,3.\]</div>
+<p>For every sampled configuration <span class="math notranslate nohighlight">\(x\)</span>, mVMC retains these four
+quantities. Here, <span class="math notranslate nohighlight">\(F_0(x)=1\)</span>, <span class="math notranslate nohighlight">\(F_1(x)\)</span> is the usual local
+energy, and <span class="math notranslate nohighlight">\(F_2(x)\)</span> and <span class="math notranslate nohighlight">\(F_3(x)\)</span> are the local estimators of
+<span class="math notranslate nohighlight">\(\hat H^2\)</span> and <span class="math notranslate nohighlight">\(\hat H^3\)</span>, respectively. They are not trial
+wave functions; they are sample-local quantities used to construct the
+overlap matrix <span class="math notranslate nohighlight">\(S\)</span>, Hamiltonian matrix <span class="math notranslate nohighlight">\({\cal H}\)</span>, and the
+squared-Hamiltonian matrix used to calculate the variance.</p>
+<p>After the sample loop, the globally weighted energy of the base VMC wave
+function, <span class="math notranslate nohighlight">\(E_{\rm shift}=\langle\hat H\rangle_\psi\)</span>, is computed,
+and <span class="math notranslate nohighlight">\(X=\hat H-E_{\rm shift}\)</span> is introduced. Because</p>
+<div class="math notranslate nohighlight">
+\[{\rm span}\{|\psi\rangle,\hat H|\psi\rangle,\hat H^2|\psi\rangle\}
+=
+{\rm span}\{|\psi\rangle,X|\psi\rangle,X^2|\psi\rangle\},\]</div>
+<p>this basis transformation changes neither the variational space nor its
+optimum. It is introduced only for numerical stability. Before any
+moment products are accumulated, each sample is transformed to</p>
+<div class="math notranslate nohighlight">
+\[\widetilde F_a(x)
+=\sum_{j=0}^{a}{a\choose j}(-E_{\rm shift})^{a-j}F_j(x).\]</div>
+<p>Thus <span class="math notranslate nohighlight">\(\widetilde F_a\)</span> is the local estimator of <span class="math notranslate nohighlight">\(X^a\)</span>, and
+mVMC forms the centered moment matrix</p>
+<div class="math notranslate nohighlight">
+\[\widetilde M_{ab}
+=\sum_x \rho(x)\widetilde F_a(x)^\dagger\widetilde F_b(x).\]</div>
+<p>The implementation retains all combinations with
+<span class="math notranslate nohighlight">\(a,b=0,\ldots,3\)</span>. As in <span class="math notranslate nohighlight">\(h_{n(ij)}\)</span> for the first step,
+each <span class="math notranslate nohighlight">\(\widetilde M_{ab}\)</span> estimates the <span class="math notranslate nohighlight">\((a+b)\)</span>-th moment
+<span class="math notranslate nohighlight">\(\langle X^{a+b}\rangle_\psi\)</span> by splitting the powers between the
+bra <span class="math notranslate nohighlight">\(\widetilde F_a^\dagger\)</span> and the ket
+<span class="math notranslate nohighlight">\(\widetilde F_b\)</span>. Because neither side has an exponent larger
+than three, <span class="math notranslate nohighlight">\(\widetilde M_{33}\)</span> represents the moment through
+<span class="math notranslate nohighlight">\(X^6\)</span> while requiring local powers only through <span class="math notranslate nohighlight">\(F_3\)</span>.
+Centering before accumulation avoids the precision loss that would occur
+when raw moments such as <span class="math notranslate nohighlight">\(\langle H^6\rangle\)</span> are formed for a
+large extensive energy.  It requires storage proportional to four local
+powers per Monte Carlo sample.
+Centering primarily removes the offset from the mean energy.  When
+<span class="math notranslate nohighlight">\(|\langle H\rangle|\)</span> is small compared with the width of the energy
+distribution, the dynamic range of the high-order local powers may remain
+large; centering alone therefore does not guarantee numerical accuracy for
+every system.</p>
+<p>Because <span class="math notranslate nohighlight">\(\widetilde M_{ab}\)</span> and
+<span class="math notranslate nohighlight">\(\widetilde M_{ba}^\dagger\)</span> are accumulated from the same
+samples, their contributions are equal sample by sample; finite sampling
+itself does not create a difference between them. Small anti-Hermitian
+components can nevertheless arise from floating-point arithmetic and
+parallel reductions, so mVMC projects the moment matrix onto its
+Hermitian part. In contrast, finite-sample statistical error affects
+different splittings <span class="math notranslate nohighlight">\(\widetilde M_{ab}\)</span> and
+<span class="math notranslate nohighlight">\(\widetilde M_{cd}\)</span> with <span class="math notranslate nohighlight">\(a+b=c+d\)</span>; this difference is
+reported as <code class="docutils literal notranslate"><span class="pre">hankel_residual</span></code>. mVMC then constructs the overlap,
+Hamiltonian, and squared-Hamiltonian matrices in the centered Krylov basis:</p>
+<div class="math notranslate nohighlight">
+\[\widetilde S_{ab}=\widetilde M_{ab},\qquad
+\widetilde{\cal H}_{ab}
+=\frac{\widetilde M_{a,b+1}+\widetilde M_{a+1,b}}{2},\qquad
+\widetilde G_{ab}=\widetilde M_{a+1,b+1},\]</div>
+<p>where <span class="math notranslate nohighlight">\(a,b=0,1,2\)</span>. Averaging the two moment estimates in
+<span class="math notranslate nohighlight">\(\widetilde{\cal H}\)</span> also preserves Hermiticity at finite sample
+size.</p>
+<p>To reduce differences among the norms of the basis vectors, mVMC applies
+the diagonal scaling</p>
+<div class="math notranslate nohighlight">
+\[D_{aa}=\frac{1}{\sqrt{\widetilde S_{aa}}}\]</div>
+<p>and solves</p>
+<div class="math notranslate nohighlight">
+\[(D\widetilde{\cal H}D)\boldsymbol{u}
+=E_X(D\widetilde S D)\boldsymbol{u}.\]</div>
+<p>Only if the overlap factorization fails, a small regularization is added
+to the diagonal of <span class="math notranslate nohighlight">\(D\widetilde S D\)</span> before retrying. Centering,
+Hermitian projection, diagonal scaling, and this fallback regularization
+are numerical stabilization steps separate from the variational
+principle.</p>
+<p>The lowest eigenvalue gives the energy of the original Hamiltonian as
+<span class="math notranslate nohighlight">\(E=E_X+E_{\rm shift}\)</span>. If
+<span class="math notranslate nohighlight">\(\boldsymbol{d}=(d_0,d_1,d_2)^{\mathsf T}\)</span> denotes the coefficients
+in the centered basis, the unshifted coefficients are</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+c_0 &amp;= d_0-E_{\rm shift}d_1+E_{\rm shift}^2d_2,\\
+c_1 &amp;= d_1-2E_{\rm shift}d_2,\\
+c_2 &amp;= d_2.
+\end{aligned}\end{split}\]</div>
+<p>mVMC reports <span class="math notranslate nohighlight">\(c_0,c_1,c_2\)</span> and reports the
+<span class="math notranslate nohighlight">\(\alpha,\beta\)</span> defined above as <span class="math notranslate nohighlight">\(\alpha_1,\alpha_2\)</span>,
+respectively.
+With <span class="math notranslate nohighlight">\(\boldsymbol{d}^\dagger\widetilde S\boldsymbol{d}=1\)</span>, the
+variance is evaluated in the centered basis as</p>
+<div class="math notranslate nohighlight">
+\[\sigma_E^2
+=\boldsymbol{d}^\dagger\widetilde G\boldsymbol{d}
+ -(\boldsymbol{d}^\dagger\widetilde{\cal H}\boldsymbol{d})^2.\]</div>
+</section>
+<section id="computational-cost">
+<h4>Computational cost<a class="headerlink" href="#computational-cost" title="Permalink to this heading">¶</a></h4>
+<p>The new cost introduced by the second step is the evaluation of the
+local powers <span class="math notranslate nohighlight">\(F_2(x)\)</span> and <span class="math notranslate nohighlight">\(F_3(x)\)</span> for every sample, among
+which
+<span class="math notranslate nohighlight">\(F_3(x)=\langle x|\hat H^3|\psi\rangle/\langle x|\psi\rangle\)</span>
+dominates.</p>
+<p>In the current second-step implementation, the Hamiltonian is limited to
+spin-conserving <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms and number-operator-type diagonal
+interactions. The
+evaluation of <span class="math notranslate nohighlight">\(F_3\)</span> runs nested outer and inner loops over the
+off-diagonal <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms. Since the product of two <code class="docutils literal notranslate"><span class="pre">Transfer</span></code>
+terms combines into the two-body operator</p>
+<div class="math notranslate nohighlight">
+\[CACA \equiv
+c_{i\sigma}^\dagger c_{j\sigma} c_{k\tau}^\dagger c_{l\tau},\]</div>
+<p>the double loop generates <span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^2)\)</span> <code class="docutils literal notranslate"><span class="pre">CACA</span></code>
+operators, and for each of them the matrix element containing the
+remaining <span class="math notranslate nohighlight">\(\hat H\)</span>,
+<span class="math notranslate nohighlight">\(\langle \psi|\hat H\,CACA|x\rangle/\langle \psi|x\rangle\)</span>, must
+be evaluated.</p>
+<p>With the identity quantum projection (<code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code>), this matrix
+element factorizes: <code class="docutils literal notranslate"><span class="pre">CACA</span></code> is applied to the sampled configuration
+<span class="math notranslate nohighlight">\(x\)</span> to form a temporary configuration <span class="math notranslate nohighlight">\(x'\)</span>, and the local
+estimator of <span class="math notranslate nohighlight">\(\hat H\)</span> at <span class="math notranslate nohighlight">\(x'\)</span> is multiplied by the overlap
+ratio <span class="math notranslate nohighlight">\(\langle \psi|CACA|x\rangle/\langle \psi|x\rangle\)</span>. The
+double loop generates <span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^2)\)</span> <code class="docutils literal notranslate"><span class="pre">CACA</span></code>
+operators, but the Hamiltonian local estimator for each <code class="docutils literal notranslate"><span class="pre">CACA</span></code> has
+another <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> loop. Therefore, the worst-case complexity of this
+path is also <span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^3)\)</span>. Its prefactor is
+smaller than that of the nontrivial-projection path because it can use
+the ordinary local estimator and a rank-two update and avoids the
+<code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> work proportional to <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code>.</p>
+<p>For a nontrivial quantum projection (<code class="docutils literal notranslate"><span class="pre">NQPFull&gt;1</span></code>), this factorization
+does not preserve the sum over quantum-projection components. The second
+power-Lanczos implementation therefore expands
+<span class="math notranslate nohighlight">\(\hat H=\sum_\mu h_\mu\hat O_\mu\)</span> and treats
+<span class="math notranslate nohighlight">\(\hat O_\mu\,CACA\)</span> as one many-body operator for every term.
+<code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> evaluates the corresponding many-body Green function from
+the original configuration <span class="math notranslate nohighlight">\(x\)</span>, including the quantum-projection
+components, and the results are accumulated with weights <span class="math notranslate nohighlight">\(h_\mu\)</span>.
+This direct evaluation introduces one additional internal loop over
+<code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms for each <span class="math notranslate nohighlight">\(\hat O_\mu\,CACA\)</span> many-body Green
+function, so the dominant operator count of this path grows as
+<span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^3)\)</span>, and the <code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> work is also
+proportional to <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code>. Wall-clock cost therefore depends strongly
+on the projection as well as the wave function and execution
+environment.</p>
+</section>
+</section>
+<section id="calculation-of-physical-quantities-after-the-first-power-lanczos-step">
+<h3>Calculation of physical quantities after the first power-Lanczos step<a class="headerlink" href="#calculation-of-physical-quantities-after-the-first-power-lanczos-step" title="Permalink to this heading">¶</a></h3>
+<p>For <code class="docutils literal notranslate"><span class="pre">NLanczosMode=2</span></code>, by using the optimized parameter
+<span class="math notranslate nohighlight">\(\alpha\)</span>, the physical quantities (one-body and two-body Green
+functions) are calculated for the first-step wave function
+<span class="math notranslate nohighlight">\(|\phi_1\rangle\)</span> (Green functions for the second step are not
+supported). The numerator of the expectation value of an operator
+<span class="math notranslate nohighlight">\(\hat{A}\)</span> is expanded with respect to <span class="math notranslate nohighlight">\(\alpha\)</span> as</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+\langle \phi_1| \hat{A} |\phi_1\rangle = \langle \psi| \hat{A} |\psi\rangle
++ \alpha \langle \psi| \hat{H}\hat{A} |\psi\rangle
++ \alpha \langle \psi| \hat{A}\hat{H} |\psi\rangle
++ \alpha^2 \langle \psi| \hat{H}\hat{A}\hat{H} |\psi\rangle.
+\end{aligned}\]</div>
+<p>As in the case of the energy, each term is estimated by splitting it
+into the bra part <span class="math notranslate nohighlight">\(\hat{H}^i\)</span> and the ket part
+<span class="math notranslate nohighlight">\(\hat{A}\hat{H}^j\)</span>:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{aligned}
 &amp;A_0 =\sum_{x} \rho(x) F(x,  \hat{A}),\\
@@ -303,6 +606,19 @@ A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rang
 &amp;A_{1(01)}=\sum_{x} \rho(x) F(x, \hat{A}\hat{H}),\\
 &amp;A_{2(11)}=\sum_{x} \rho(x) F^{\dagger}(x,  \hat{H})F(x,  \hat{A}\hat{H}).
 \end{aligned}\end{split}\]</div>
+<p>Here, as in the case of the energy, the subscript <span class="math notranslate nohighlight">\(n(ij)\)</span> denotes
+the total power <span class="math notranslate nohighlight">\(n=i+j\)</span> of <span class="math notranslate nohighlight">\(\hat{H}\)</span> and its assignment to
+the bra side (<span class="math notranslate nohighlight">\(\hat{H}^i\)</span>) and the ket side
+(<span class="math notranslate nohighlight">\(\hat{A}\hat{H}^j\)</span>). With these estimators, the expectation
+value is calculated as</p>
+<div class="math notranslate nohighlight">
+\[\begin{aligned}
+A_{LS}(\alpha) =\frac{\langle \phi_1| \hat{A} |\phi_1\rangle}{\langle \phi_1|\phi_1\rangle}=\frac{A_0 + \alpha(A_{1(10)} + A_{1(01)}) + \alpha^2 A_{2(11)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}},
+\end{aligned}\]</div>
+<p>where the denominator is the same normalization factor
+<span class="math notranslate nohighlight">\(\langle \phi_1 | \phi_1 \rangle\)</span> as that for the energy. In the
+program, the one-body and two-body Green functions are calculated based
+on this expression.</p>
 </section>
 </section>
 </section>
@@ -330,8 +646,14 @@ A_{LS}(\alpha) =\frac{\langle \phi| \hat{A} |\phi\rangle}{\langle \phi|\phi\rang
 </ul>
 </li>
 <li><a class="reference internal" href="#power-lanczos-method">Power Lanczos method</a><ul>
-<li><a class="reference internal" href="#determination-of-alpha">Determination of <span class="math notranslate nohighlight">\(\alpha\)</span></a></li>
-<li><a class="reference internal" href="#calculation-of-physical-quantities">Calculation of physical quantities</a></li>
+<li><a class="reference internal" href="#first-power-lanczos-step-and-determination-of-alpha">First power-Lanczos step and determination of <span class="math notranslate nohighlight">\(\alpha\)</span></a></li>
+<li><a class="reference internal" href="#second-power-lanczos-step">Second power-Lanczos step</a><ul>
+<li><a class="reference internal" href="#variational-determination-of-alpha-and-beta">Variational determination of <span class="math notranslate nohighlight">\(\alpha\)</span> and <span class="math notranslate nohighlight">\(\beta\)</span></a></li>
+<li><a class="reference internal" href="#numerically-stable-implementation">Numerically stable implementation</a></li>
+<li><a class="reference internal" href="#computational-cost">Computational cost</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#calculation-of-physical-quantities-after-the-first-power-lanczos-step">Calculation of physical quantities after the first power-Lanczos step</a></li>
 </ul>
 </li>
 </ul>

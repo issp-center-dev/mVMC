@@ -497,11 +497,60 @@ respectively.</p>
 <span class="math notranslate nohighlight">\((\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2\)</span>, and the optimized parameter <span class="math notranslate nohighlight">\(\alpha\)</span>
 obtained by Power Lanczos method. This file is outputted when
 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> = 1, <code class="docutils literal notranslate"><span class="pre">NLanczosmode</span></code> = 1 or 2 are set in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code>
-file. Here, xxx is the header indicated by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in
+file and <code class="docutils literal notranslate"><span class="pre">NLanczosStep</span></code> = 1. Here, xxx is the header indicated by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in
 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file and yyy is a number given by
 <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code>,
 where both <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> and <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> are defined in
 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file.</p>
+</section>
+<section id="xxx-ls2-out-yyy-dat">
+<h2>xxx_ls2_out_yyy.dat<a class="headerlink" href="#xxx-ls2-out-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<p>This two-line file is written for <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NLanczosStep=2</span></code>. The first line is a
+versioned header. The second line has the following 17 fields:
+<code class="docutils literal notranslate"><span class="pre">E</span></code>, <code class="docutils literal notranslate"><span class="pre">sigma2_over_E2</span></code>, the real and imaginary parts of
+<code class="docutils literal notranslate"><span class="pre">c0</span></code>, <code class="docutils literal notranslate"><span class="pre">c1</span></code>, and <code class="docutils literal notranslate"><span class="pre">c2</span></code>, the real and imaginary parts of
+<code class="docutils literal notranslate"><span class="pre">alpha1=c1/c0</span></code> and <code class="docutils literal notranslate"><span class="pre">alpha2=c2/c0</span></code>, <code class="docutils literal notranslate"><span class="pre">solve_flag</span></code>, <code class="docutils literal notranslate"><span class="pre">epsilon</span></code>,
+<code class="docutils literal notranslate"><span class="pre">shift</span></code>, <code class="docutils literal notranslate"><span class="pre">antihermitian_residual</span></code>, and <code class="docutils literal notranslate"><span class="pre">hankel_residual</span></code>.
+The coefficients refer to the unshifted polynomial
+<span class="math notranslate nohighlight">\(c_0+c_1H+c_2H^2\)</span>. <code class="docutils literal notranslate"><span class="pre">shift</span></code> is the total energy shift used by the
+conditioned generalized eigenproblem; it is normally equal, up to roundoff,
+to the accumulation shift recorded in <code class="docutils literal notranslate"><span class="pre">xxx_ls2_moment_yyy.dat</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">solve_flag</span></code> is a bit mask. Bit 0 means that the single
+<span class="math notranslate nohighlight">\(10^{-12}\)</span> overlap regularization retry was used. Bit 1 means
+that <code class="docutils literal notranslate"><span class="pre">alpha1</span></code> and <code class="docutils literal notranslate"><span class="pre">alpha2</span></code> are undefined because <code class="docutils literal notranslate"><span class="pre">c0</span></code> is
+numerically zero; their fields contain NaN in this case.</p>
+<p><code class="docutils literal notranslate"><span class="pre">antihermitian_residual</span></code> measures departure from
+<span class="math notranslate nohighlight">\(M'_{ba}=M_{ab}^{\prime *}\)</span>. Because every table entry is formed
+from the same sample-local outer product, this value is structurally
+near roundoff and mainly detects corruption in accumulation or reduction;
+it is not an independent physics-accuracy measure.
+<code class="docutils literal notranslate"><span class="pre">hankel_residual</span></code> measures departures among entries with the same
+<span class="math notranslate nohighlight">\(a+b\)</span>, normalized separately on each anti-diagonal by the Cauchy
+scale <span class="math notranslate nohighlight">\(\max_{a+b=k}\sqrt{|M_{aa}M_{bb}|}\)</span> (and by the largest
+observed entry magnitude) before taking the maximum. A large high-order
+moment therefore cannot hide a lower-order mismatch, while an
+anti-diagonal with zero expectation still has a finite scale of the same
+order. For independent finite samples it is a statistical diagnostic
+that is expected to decrease approximately as
+<span class="math notranslate nohighlight">\(O(1/\sqrt{N_{\mathrm{VMCSample}}})\)</span>; it is not a solver tolerance.</p>
+</section>
+<section id="xxx-ls2-moment-yyy-dat">
+<h2>xxx_ls2_moment_yyy.dat<a class="headerlink" href="#xxx-ls2-moment-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<p>This two-line diagnostic file accompanies <code class="docutils literal notranslate"><span class="pre">xxx_ls2_out_yyy.dat</span></code>.
+The version-2 header contains <code class="docutils literal notranslate"><span class="pre">basis_shift=&lt;sigma&gt;</span></code>, where
+<span class="math notranslate nohighlight">\(\sigma=\langle H\rangle\)</span> is the globally weighted shift applied
+before moment accumulation. The data line stores all 16 centered moments</p>
+<div class="math notranslate nohighlight">
+\[M'_{ab}=\left\langle
+(\hat H-\sigma)^a\psi\mid(\hat H-\sigma)^b\psi
+\right\rangle\]</div>
+<p>in row-major order, from <span class="math notranslate nohighlight">\(M'_{00}\)</span> to <span class="math notranslate nohighlight">\(M'_{33}\)</span>. Each moment
+is represented by adjacent real and imaginary fields, for 32 numeric
+fields in total. The shift and centered moments reproduce the solver
+input while avoiding the precision loss of raw high-order moments at
+large <span class="math notranslate nohighlight">\(|E|\)</span>. They can be used for independent checks of
+Hermiticity and the Hankel identities.</p>
 </section>
 <section id="xxx-ls-cisajs-yyy-dat">
 <h2>xxx_ls_cisajs_yyy.dat<a class="headerlink" href="#xxx-ls-cisajs-yyy-dat" title="Permalink to this heading">¶</a></h2>
@@ -569,6 +618,8 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-ls2-out-yyy-dat">xxx_ls2_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-ls2-moment-yyy-dat">xxx_ls2_moment_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajs-yyy-dat">xxx_ls_cisajs_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajscktalt-yyy-dat">xxx_ls_cisajscktalt_yyy.dat</a></li>
 </ul>

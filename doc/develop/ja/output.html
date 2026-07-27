@@ -472,9 +472,54 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 <p>Power Lanczos法により求めた <span class="math notranslate nohighlight">\(\langle H \rangle\)</span>,
 <span class="math notranslate nohighlight">\((\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2\)</span> および最適化パラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> の順に出力されます。
 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> 指定ファイルで <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> =1, <code class="docutils literal notranslate"><span class="pre">NLanczosmode</span></code> =1,
-2に設定することで計算されます。
+2、<code class="docutils literal notranslate"><span class="pre">NLanczosStep</span></code> = 1に設定することで計算されます。
 xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
 <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。</p>
+</section>
+<section id="xxx-ls2-out-yyy-dat">
+<h2>xxx_ls2_out_yyy.dat<a class="headerlink" href="#xxx-ls2-out-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosStep=2</span></code> の場合に
+出力する2行のファイルです。1行目はversion付きheaderです。2行目には次の
+17項目を出力します: <code class="docutils literal notranslate"><span class="pre">E</span></code>、<code class="docutils literal notranslate"><span class="pre">sigma2_over_E2</span></code>、<code class="docutils literal notranslate"><span class="pre">c0</span></code>・<code class="docutils literal notranslate"><span class="pre">c1</span></code>・
+<code class="docutils literal notranslate"><span class="pre">c2</span></code> の実部と虚部、<code class="docutils literal notranslate"><span class="pre">alpha1=c1/c0</span></code>・<code class="docutils literal notranslate"><span class="pre">alpha2=c2/c0</span></code> の実部と
+虚部、<code class="docutils literal notranslate"><span class="pre">solve_flag</span></code>、<code class="docutils literal notranslate"><span class="pre">epsilon</span></code>、<code class="docutils literal notranslate"><span class="pre">shift</span></code>、
+<code class="docutils literal notranslate"><span class="pre">antihermitian_residual</span></code>、<code class="docutils literal notranslate"><span class="pre">hankel_residual</span></code>。
+係数はunshiftedな多項式 <span class="math notranslate nohighlight">\(c_0+c_1H+c_2H^2\)</span> に対する値です。
+<code class="docutils literal notranslate"><span class="pre">shift</span></code> はconditioned一般化固有値問題で使用した全energy shiftであり、通常は
+丸め誤差の範囲で <code class="docutils literal notranslate"><span class="pre">xxx_ls2_moment_yyy.dat</span></code> に記録するaccumulation shiftと
+一致します。</p>
+<p><code class="docutils literal notranslate"><span class="pre">solve_flag</span></code> はbit maskです。bit 0は <span class="math notranslate nohighlight">\(10^{-12}\)</span> のoverlap
+regularizationによる1回だけの再試行を使用したことを表します。bit 1は
+<code class="docutils literal notranslate"><span class="pre">c0</span></code> が数値的に0で <code class="docutils literal notranslate"><span class="pre">alpha1</span></code>・<code class="docutils literal notranslate"><span class="pre">alpha2</span></code> を定義できないことを表し、
+この場合のalpha欄にはNaNを出力します。</p>
+<p><code class="docutils literal notranslate"><span class="pre">antihermitian_residual</span></code> は
+<span class="math notranslate nohighlight">\(M'_{ba}=M_{ab}^{\prime *}\)</span> からのずれです。全ての表要素を同じ
+sample-local outer productから構成するため、構造上ほぼ丸め誤差となり、
+主にaccumulationやreductionの破損検出に使用します。独立な物理精度の指標
+ではありません。<code class="docutils literal notranslate"><span class="pre">hankel_residual</span></code> は <span class="math notranslate nohighlight">\(a+b\)</span> が同じ要素間のずれを
+各反対角ごとに
+<span class="math notranslate nohighlight">\(\max_{a+b=k}\sqrt{|M_{aa}M_{bb}|}\)</span> というCauchyスケール
+（および観測要素の最大絶対値）で正規化してから、その最大値を取ります。
+このため高次momentが低次の不一致を隠さず、期待値が0の反対角にも同次数の
+有限なスケールを与えます。独立な有限sampleでは
+<span class="math notranslate nohighlight">\(O(1/\sqrt{N_{\mathrm{VMCSample}}})\)</span> 程度で減少する統計的診断であり、
+solver toleranceではありません。</p>
+</section>
+<section id="xxx-ls2-moment-yyy-dat">
+<h2>xxx_ls2_moment_yyy.dat<a class="headerlink" href="#xxx-ls2-moment-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">xxx_ls2_out_yyy.dat</span></code> と同時に出力する2行の診断用ファイルです。
+version 2のheaderには <code class="docutils literal notranslate"><span class="pre">basis_shift=&lt;sigma&gt;</span></code> を記録します。ここで
+<span class="math notranslate nohighlight">\(\sigma=\langle H\rangle\)</span> はmoment accumulation前に適用するglobalな
+weighted shiftです。data行には16個のcentered moment</p>
+<div class="math notranslate nohighlight">
+\[M'_{ab}=\left\langle
+(\hat H-\sigma)^a\psi\mid(\hat H-\sigma)^b\psi
+\right\rangle\]</div>
+<p>を <span class="math notranslate nohighlight">\(M'_{00}\)</span> から <span class="math notranslate nohighlight">\(M'_{33}\)</span> までrow-major順で出力します。
+各momentは実部・虚部の2項目で表し、数値項目は合計32個です。
+shiftとcentered momentによりsolver入力を再現でき、<span class="math notranslate nohighlight">\(|E|\)</span> が大きい場合の
+raw高次momentの桁落ちを避けられます。HermiticityおよびHankel恒等式の独立検証
+にも使用できます。</p>
 </section>
 <section id="xxx-ls-cisajs-yyy-dat">
 <h2>xxx_ls_cisajs_yyy.dat<a class="headerlink" href="#xxx-ls-cisajs-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
@@ -539,6 +584,8 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-ls2-out-yyy-dat">xxx_ls2_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-ls2-moment-yyy-dat">xxx_ls2_moment_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajs-yyy-dat">xxx_ls_cisajs_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajscktalt-yyy-dat">xxx_ls_cisajscktalt_yyy.dat</a></li>
 </ul>

@@ -426,6 +426,7 @@ file format is shown as follows.</p>
 <span class="o">--------------------</span>
 <span class="n">NVMCCalMode</span>    <span class="mi">0</span>
 <span class="n">NLanczosMode</span>   <span class="mi">0</span>
+<span class="n">NLanczosStep</span>   <span class="mi">1</span>
 <span class="o">--------------------</span>
 <span class="n">NDataIdxStart</span>  <span class="mi">1</span>
 <span class="n">NDataQtySmp</span>    <span class="mi">1</span>
@@ -521,8 +522,58 @@ options 1 and 2 can be selected when <code class="docutils literal notranslate">
 <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code> is supported. In these cases the Hamiltonian is
 limited to <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> and diagonal number-operator interactions
 (<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, and <code class="docutils literal notranslate"><span class="pre">Hund</span></code>).
-<code class="docutils literal notranslate"><span class="pre">NLanczosMode=2</span></code>, the second Lanczos step, and Lanczos corrections
-for <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> / <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> are not supported.</p>
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=2</span></code> and Lanczos corrections for <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> /
+<code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> are not supported.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NLanczosStep</span></code></p>
+<p><strong>Type :</strong> int-type (default value: 1)</p>
+<p><strong>Description :</strong> Selects the order of the power-Lanczos calculation.
+[1] keeps the legacy single-step calculation and output unchanged.
+[2] optimizes a wave function
+<span class="math notranslate nohighlight">\((c_0+c_1\hat{H}+c_2\hat{H}^2)|\psi\rangle\)</span> in the
+three-dimensional Krylov subspace.</p>
+<p>The initial second-step implementation requires
+<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>.
+It supports real or complex non-FSZ pair orbitals, including the
+existing spin and momentum projections. Its Hamiltonian is limited
+to spin-conserving <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms
+(<span class="math notranslate nohighlight">\(\sigma_1=\sigma_2\)</span>) and diagonal number-operator interactions
+(<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, and <code class="docutils literal notranslate"><span class="pre">Hund</span></code>).
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, BackFlow, RBM, <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>,
+<code class="docutils literal notranslate"><span class="pre">InterAll</span></code>, <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code>, and <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> are rejected before
+sampling. Second-step Green’s functions are not calculated.
+The Gutzwiller <code class="docutils literal notranslate"><span class="pre">ProjRatio</span></code> path is checked against an independent
+ED oracle. A nontrivial <span class="math notranslate nohighlight">\(k=\pi\)</span> momentum projection is checked
+against independent real and complex projected-ED value oracles.
+The real oracle covers serial, MPI, and OpenMP paths; the complex
+oracle currently covers the serial path. Nontrivial spin projection
+has runtime and structural smoke coverage, but not an independent
+projected-ED value oracle.</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code>, the <span class="math notranslate nohighlight">\(H^3\)</span> local power is evaluated by nested
+outer and inner loops over <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms, so its dominant operator
+count grows as <span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^2)\)</span>.  With a nontrivial
+quantum projection (<code class="docutils literal notranslate"><span class="pre">NQPFull&gt;1</span></code>), the direct-contraction path for
+projected <span class="math notranslate nohighlight">\(H\,CACA\)</span> matrix elements adds another <code class="docutils literal notranslate"><span class="pre">Transfer</span></code>
+loop.  Its dominant operator count is therefore
+<span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^3)\)</span>, and its <code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> work is
+proportional to <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code>.</p>
+<p>Projection can consequently increase second-step measurement time
+substantially. Benchmark a small instance with the same
+<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> and <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> intended for the production run, and
+use a baseline from the target Linux/HPC environment for performance
+decisions. The manual, non-CI source-tree probe
+<code class="docutils literal notranslate"><span class="pre">test/python/lanczos2_cost_probe.py</span></code> accepts <code class="docutils literal notranslate"><span class="pre">--nspgaussleg</span></code> and
+<code class="docutils literal notranslate"><span class="pre">--nmptrans</span></code> grids and records <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code>, Timer 41, and Timer 95 in
+its JSON output.</p>
+<p>A non-finite local power or moment, an invalid overlap matrix, a
+failed generalized eigensolve, or an output error terminates the run
+with a diagnostic. The
+<code class="docutils literal notranslate"><span class="pre">MVMC_LANCZOS2_TEST_NONFINITE_SAMPLE</span></code> environment variable used
+to test this failure path is test-only: it is compiled into
+<code class="docutils literal notranslate"><span class="pre">Testing=ON</span></code> builds and is absent from normal <code class="docutils literal notranslate"><span class="pre">Testing=OFF</span></code>
+builds. If the overlap matrix is not positive definite,
+the solver retries once with a relative diagonal regularization of
+<span class="math notranslate nohighlight">\(10^{-12}\)</span> and records this in <code class="docutils literal notranslate"><span class="pre">solve_flag</span></code>.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 0)</p>

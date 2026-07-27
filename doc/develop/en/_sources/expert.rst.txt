@@ -414,6 +414,7 @@ file format is shown as follows.
     --------------------
     NVMCCalMode    0
     NLanczosMode   0
+    NLanczosStep   1
     --------------------
     NDataIdxStart  1
     NDataQtySmp    1
@@ -526,8 +527,64 @@ Keywords and parameters
    ``NLanczosMode=1`` is supported. In these cases the Hamiltonian is
    limited to ``Transfer`` and diagonal number-operator interactions
    (``CoulombIntra``, ``CoulombInter``, and ``Hund``).
-   ``NLanczosMode=2``, the second Lanczos step, and Lanczos corrections
-   for ``NBodyG`` / ``NBodyInterAll`` are not supported.
+   ``NLanczosMode=2`` and Lanczos corrections for ``NBodyG`` /
+   ``NBodyInterAll`` are not supported.
+
+-  ``NLanczosStep``
+
+   **Type :** int-type (default value: 1)
+
+   **Description :** Selects the order of the power-Lanczos calculation.
+   [1] keeps the legacy single-step calculation and output unchanged.
+   [2] optimizes a wave function
+   :math:`(c_0+c_1\hat{H}+c_2\hat{H}^2)|\psi\rangle` in the
+   three-dimensional Krylov subspace.
+
+   The initial second-step implementation requires
+   ``NVMCCalMode=1``, ``NLanczosMode=1``, and ``NExUpdatePath=0``.
+   It supports real or complex non-FSZ pair orbitals, including the
+   existing spin and momentum projections. Its Hamiltonian is limited
+   to spin-conserving ``Transfer`` terms
+   (:math:`\sigma_1=\sigma_2`) and diagonal number-operator interactions
+   (``CoulombIntra``, ``CoulombInter``, and ``Hund``).
+   ``OrbitalGeneral`` / FSZ, BackFlow, RBM, ``PairHop``, ``Exchange``,
+   ``InterAll``, ``NBodyInterAll``, and ``NBodyG`` are rejected before
+   sampling. Second-step Green's functions are not calculated.
+   The Gutzwiller ``ProjRatio`` path is checked against an independent
+   ED oracle. A nontrivial :math:`k=\pi` momentum projection is checked
+   against independent real and complex projected-ED value oracles.
+   The real oracle covers serial, MPI, and OpenMP paths; the complex
+   oracle currently covers the serial path. Nontrivial spin projection
+   has runtime and structural smoke coverage, but not an independent
+   projected-ED value oracle.
+
+   With ``NQPFull=1``, the :math:`H^3` local power is evaluated by nested
+   outer and inner loops over ``Transfer`` terms, so its dominant operator
+   count grows as :math:`O(N_{\mathrm{Transfer}}^2)`.  With a nontrivial
+   quantum projection (``NQPFull>1``), the direct-contraction path for
+   projected :math:`H\,CACA` matrix elements adds another ``Transfer``
+   loop.  Its dominant operator count is therefore
+   :math:`O(N_{\mathrm{Transfer}}^3)`, and its ``GreenFuncN`` work is
+   proportional to ``NQPFull``.
+
+   Projection can consequently increase second-step measurement time
+   substantially. Benchmark a small instance with the same
+   ``NSPGaussLeg`` and ``NMPTrans`` intended for the production run, and
+   use a baseline from the target Linux/HPC environment for performance
+   decisions. The manual, non-CI source-tree probe
+   ``test/python/lanczos2_cost_probe.py`` accepts ``--nspgaussleg`` and
+   ``--nmptrans`` grids and records ``NQPFull``, Timer 41, and Timer 95 in
+   its JSON output.
+
+   A non-finite local power or moment, an invalid overlap matrix, a
+   failed generalized eigensolve, or an output error terminates the run
+   with a diagnostic. The
+   ``MVMC_LANCZOS2_TEST_NONFINITE_SAMPLE`` environment variable used
+   to test this failure path is test-only: it is compiled into
+   ``Testing=ON`` builds and is absent from normal ``Testing=OFF``
+   builds. If the overlap matrix is not positive definite,
+   the solver retries once with a relative diagonal regularization of
+   :math:`10^{-12}` and records this in ``solve_flag``.
 
 -  ``NDataIdxStart``
 
