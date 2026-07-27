@@ -39,6 +39,13 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "pfupdate_two_fcmp.h"
 #include "projection.h"
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+static int Lanczos2CalHCAGuardAuditComplexEnabled = 0;
+static long long Lanczos2CalHCAGuardAuditComplexDirectCount = 0;
+static long long Lanczos2CalHCAGuardAuditComplexZeroComponentCount = 0;
+static int Lanczos2CalHCAGuardAuditComplexLastMovedHasZeroComponent = 0;
+#endif
+
 double complex calculateHK(const double complex h1, const double complex ip, int *eleIdx, int *eleCfg,
                    int *eleNum, int *eleProjCnt, double complex *rbmCnt);
 double complex calculateHW(const double complex h1, const double complex ip, int *eleIdx, int *eleCfg,
@@ -92,6 +99,71 @@ void LSLocalQ(const double complex h1, const double complex ip, int *eleIdx, int
   _LSLQ[3] = h2;  /* H*H */
 
   return;
+}
+
+/*
+ * Complex counterpart of LS2LocalPower_real.  The rightmost Transfer
+ * operator is the second operator passed to calHCACA, matching the
+ * ket-oriented recursion H O_inner O_outer |x>.
+ */
+void CalculateLS2LocalPower(const double complex h1,
+                            const double complex ip, int *eleIdx,
+                            int *eleCfg, int *eleNum, int *eleProjCnt,
+                            double complex *rbmCnt,
+                            double complex *localPower) {
+  double complex legacyLocalPower[4];
+  double complex h3;
+  const double complex diagonalEnergy = CalculateHamiltonian0(eleNum);
+  int outer;
+
+  LSLocalQ(h1, ip, eleIdx, eleCfg, eleNum, eleProjCnt, rbmCnt,
+           legacyLocalPower);
+  localPower[0] = 1.0;
+  localPower[1] = h1;
+  localPower[2] = legacyLocalPower[3];
+  h3 = diagonalEnergy * localPower[2];
+
+  for (outer = 0; outer < NTransfer; outer++) {
+    const int outerRi = Transfer[outer][0];
+    const int outerRj = Transfer[outer][2];
+    const int outerSpin = Transfer[outer][3];
+    const int outerRsi = outerRi + outerSpin * Nsite;
+    const int outerRsj = outerRj + outerSpin * Nsite;
+    const double complex outerCoefficient = -ParaTransfer[outer];
+    double complex outerDiagonalEnergy;
+    double complex innerContribution = 0.0;
+    double complex hca;
+    int inner;
+
+    if (outerRsi == outerRsj) {
+      if (eleNum[outerRsi] == 0) continue;
+      outerDiagonalEnergy = diagonalEnergy;
+    } else {
+      if (eleNum[outerRsj] == 0 || eleNum[outerRsi] != 0) continue;
+      eleNum[outerRsj] = 0;
+      eleNum[outerRsi] = 1;
+      outerDiagonalEnergy = CalculateHamiltonian0(eleNum);
+      eleNum[outerRsj] = 1;
+      eleNum[outerRsi] = 0;
+    }
+
+    hca = calHCA(outerRi, outerRj, outerSpin, h1, ip, eleIdx, eleCfg,
+                 eleNum, eleProjCnt, rbmCnt);
+    for (inner = 0; inner < NTransfer; inner++) {
+      const int innerRi = Transfer[inner][0];
+      const int innerRj = Transfer[inner][2];
+      const int innerSpin = Transfer[inner][3];
+      const double complex innerCoefficient = -ParaTransfer[inner];
+      innerContribution +=
+          innerCoefficient *
+          calHCACA(innerRi, innerRj, outerRi, outerRj, innerSpin,
+                   outerSpin, h1, ip, eleIdx, eleCfg, eleNum, eleProjCnt,
+                   rbmCnt);
+    }
+    h3 += outerCoefficient *
+          (outerDiagonalEnergy * hca + innerContribution);
+  }
+  localPower[3] = h3;
 }
 
 /* Calculate <psi|QCisAjs|x>/<psi|x> */
@@ -197,9 +269,26 @@ double complex calHCA(const int ri, const int rj, const int s,
   if(!IsSectorPreserved_1hopPre(ri,rj,s,eleNum)) return 0.0;
 
   g = checkGF1(ri,rj,s,ip,eleIdx,eleCfg,eleNum);
-  if(cabs(g)>1.0e-12) {
+  /*
+   * In a multi-component projected state, the moved configuration may
+   * have a zero Pfaffian in one component even though its total projected
+   * overlap is nonzero.  Updating that singular component leaves an invalid
+   * inverse for CalculateHamiltonian.  Contract the second-Lanczos matrix
+   * element directly from the original state in this case, matching the
+   * multi-component calHCACA guard below.
+   */
+  if(cabs(g)>1.0e-12 && (NLanczosStep != 2 || NQPFull == 1)) {
     val = calHCA1(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
   } else {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    if(Lanczos2CalHCAGuardAuditComplexEnabled &&
+       cabs(g)>1.0e-12 && NLanczosStep == 2 && NQPFull > 1) {
+      Lanczos2CalHCAGuardAuditComplexDirectCount++;
+      if(Lanczos2CalHCAGuardAuditComplexLastMovedHasZeroComponent) {
+        Lanczos2CalHCAGuardAuditComplexZeroComponentCount++;
+      }
+    }
+#endif
     val = calHCA2(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
   }
 
@@ -211,6 +300,9 @@ double complex checkGF1(const int ri, const int rj, const int s, const double co
   double complex z;
   int mj,msj,rsi,rsj;
   double complex pfMNew[NQPFull];
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  int qpidx;
+#endif
 
   mj = eleCfg[rj+s*Nsite];
   msj = mj + s*Ne;
@@ -223,8 +315,19 @@ double complex checkGF1(const int ri, const int rj, const int s, const double co
   eleNum[rsi] = 1;
 
   /* calculate Pfaffian */
-    CalculateNewPfM(mj, s, pfMNew, eleIdx, 0, NQPFull);
-    z = CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
+  CalculateNewPfM(mj, s, pfMNew, eleIdx, 0, NQPFull);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if(Lanczos2CalHCAGuardAuditComplexEnabled) {
+    Lanczos2CalHCAGuardAuditComplexLastMovedHasZeroComponent = 0;
+    for(qpidx=0; qpidx<NQPFull; qpidx++) {
+      if(cabs(pfMNew[qpidx]) <= 1.0e-12) {
+        Lanczos2CalHCAGuardAuditComplexLastMovedHasZeroComponent = 1;
+        break;
+      }
+    }
+  }
+#endif
+  z = CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
   /* revert hopping */
   eleIdx[msj] = rj;
@@ -353,7 +456,7 @@ double complex calHCA2(const int ri, const int rj, const int s,
   /* end of H0 term */
 
 #pragma omp parallel default(shared)\
-  private(myRBMCntNew,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj,myRWork)  \
+  private(idx,myRBMCntNew,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj,myRWork)  \
   reduction(+:v)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
@@ -496,7 +599,15 @@ double complex calHCACA(const int ri, const int rj, const int rk, const int rl,
   if(!WouldPreserve_2hopPre(rsi,rsj,rsk,rsl,eleNum)) return 0.0;
 
   g = checkGF2(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum);
-  if(cabs(g)>1.0e-12) {
+  /*
+   * The mutate-and-rank-two-update path does not preserve the projected
+   * H*CACA matrix element when several quantum-projection components are
+   * summed.  GreenFuncN contracts that projected matrix element directly
+   * from the original state, so keep the legacy fast path only for the
+   * identity quantum projection.  Do not alter the established first-step
+   * Lanczos path.
+   */
+  if(cabs(g)>1.0e-12 && (NLanczosStep != 2 || NQPFull == 1)) {
     val = calHCACA1(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
   } else {
     val = calHCACA2(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
@@ -701,7 +812,7 @@ double complex calHCACA2(const int ri, const int rj, const int rk, const int rl,
   /* end of H0 term */
 
 #pragma omp parallel default(shared)\
-  private(myRBMCntNew,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj,myRWork)  \
+  private(idx,myRBMCntNew,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj,myRWork)  \
   reduction(+:v)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);

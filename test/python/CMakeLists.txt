@@ -17,6 +17,11 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf.py DESTINATION ${CMAKE_BINARY_D
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_fsz.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_sector_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_step1_compat.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_real_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_complex_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_projected_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_projection_smoke.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyg.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -46,6 +51,14 @@ function(add_python_vmc_test_invalid_expert model expected_error)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py ${model} "${expected_error}")
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_vmc_test_invalid_expert)
+
+function(add_python_vmc_test_invalid_expert_with_updates test_name model expected_error)
+    add_test(NAME ${test_name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py
+        ${model} "${expected_error}" ${ARGN})
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+endfunction(add_python_vmc_test_invalid_expert_with_updates)
 
 function(add_python_vmc_test_expert_phys model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_expert_phys.py ${model})
@@ -474,6 +487,8 @@ set(python_test_uhf_model
 foreach(model ${python_test_vmc_model})
     add_python_vmc_test(${model})
 endforeach(model)
+set_tests_properties(HubbardTetragonal_MomentumProjection PROPERTIES
+    FIXTURES_SETUP lanczos2_projection_input)
 
 foreach(model ${python_test_vmc_model_mpi})
     add_python_vmc_test(${model})
@@ -512,7 +527,157 @@ add_python_vmc_test_lanczos_expert(TJChainL4_Ncond2_J_path5_Lanczos)
 add_python_vmc_test_lanczos_expert(TJChainL4_Ncond2_J_path4_Lanczos2)
 add_python_vmc_test_lanczos_expert(DoublonOnly_Lanczos)
 add_python_vmc_test_lanczos_sector_ed(LanczosSectorED)
+add_test(NAME Lanczos2_Step1_OmittedExplicit_ByteEquivalent
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_step1_compat.py
+    HubbardChainLanczos)
+set_tests_properties(Lanczos2_Step1_OmittedExplicit_ByteEquivalent PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    RESOURCE_LOCK "lanczos2_step1_compat_workdir")
 
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidStepZero HubbardChain_SpinJastrow
+    "NLanczosStep must be 1 or 2" NLanczosStep=0)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidStepNegative HubbardChain_SpinJastrow
+    "NLanczosStep must be 1 or 2" NLanczosStep=-1)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidStepThree HubbardChain_SpinJastrow
+    "NLanczosStep must be 1 or 2" NLanczosStep=3)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidStepFractional HubbardChain_SpinJastrow
+    "NLanczosStep must be 1 or 2" NLanczosStep=1.5)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidLanczosMode HubbardChain_SpinJastrow
+    "NLanczosStep=2 requires NLanczosMode=1"
+    NLanczosStep=2 NLanczosMode=0 NVMCCalMode=1)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidVmcCalMode HubbardChain_SpinJastrow
+    "NLanczosStep=2 requires NVMCCalMode=1"
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=0)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidUpdatePath HubbardChain_SpinJastrow
+    "NLanczosStep=2 requires NExUpdatePath=0"
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1 NExUpdatePath=1)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidFSZ HubbardChain_fsz_SpinJastrow
+    "does not support orbital-general (FSZ) mode"
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1
+    NExUpdatePath=0 NMPTrans=1)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidRBM GeneralRBM_cmp
+    "does not support RBM"
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidPairHopping DoublonOnly_Lanczos
+    "does not support PairHopping"
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1 NExUpdatePath=0)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidExchange TJChainL4_Ncond2_J_path4_Lanczos
+    "does not support Exchange"
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1 NExUpdatePath=0)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidInterAll UHF_InterAll_N2
+    "does not support InterAll"
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidNBodyG NBodyG_Compare
+    "does not support NBodyG"
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidSpinFlipTransfer HubbardChain_SpinJastrow
+    "supports only spin-conserving Transfer terms"
+    spin_flip_transfer NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1)
+add_test(NAME Lanczos2_InvalidBackFlow
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real
+    --expect-error "NLanczosStep=2 does not support BackFlow"
+    --lanczos-mode 1 --lanczos-step 2 --vmc-cal-mode 1)
+set_tests_properties(Lanczos2_InvalidBackFlow PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidLanczosMode_mpi HubbardChain_SpinJastrow
+    "NLanczosStep=2 requires NLanczosMode=1"
+    NLanczosStep=2 NLanczosMode=0 NVMCCalMode=1)
+set_tests_properties(Lanczos2_InvalidLanczosMode_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+add_test(NAME Lanczos2_ContractPositive_TwoSz0_NonFSZ
+    COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py
+    HubbardChain_SpinJastrow "Finish calculation." allow_success
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1)
+set_tests_properties(Lanczos2_ContractPositive_TwoSz0_NonFSZ PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME Lanczos2_Real_ED
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_real_ed.py)
+set_tests_properties(Lanczos2_Real_ED PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_real_ed_workdir")
+add_test(NAME Lanczos2_Real_ED_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_real_ed.py)
+set_tests_properties(Lanczos2_Real_ED_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_real_ed_mpi_workdir")
+add_test(NAME Lanczos2_Real_ED_Split2_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_real_ed.py)
+set_tests_properties(Lanczos2_Real_ED_Split2_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_NSPLIT_SIZE=2;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_real_ed_split2_mpi_workdir")
+add_test(NAME Lanczos2_Real_ED_omp
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_real_ed.py)
+set_tests_properties(Lanczos2_Real_ED_omp PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_real_ed_workdir")
+add_test(NAME Lanczos2_NonfiniteSample_Fails
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_real_ed.py
+    "Lanczos2 moment or transformed matrix is not finite")
+set_tests_properties(Lanczos2_NonfiniteSample_Fails PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_TEST_NONFINITE_SAMPLE=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_real_ed_workdir")
+add_test(NAME Lanczos2_NonfiniteSample_Fails_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_real_ed.py
+    "Lanczos2 moment or transformed matrix is not finite")
+set_tests_properties(Lanczos2_NonfiniteSample_Fails_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_LANCZOS2_TEST_NONFINITE_SAMPLE=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_real_ed_mpi_workdir")
+add_test(NAME Lanczos2_Complex_ED
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_complex_ed.py)
+set_tests_properties(Lanczos2_Complex_ED PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_complex_ed_workdir")
+add_test(NAME Lanczos2_Complex_ED_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_complex_ed.py)
+set_tests_properties(Lanczos2_Complex_ED_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_complex_ed_mpi_workdir")
+add_test(NAME Lanczos2_Complex_ED_omp
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_complex_ed.py)
+set_tests_properties(Lanczos2_Complex_ED_omp PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_complex_ed_workdir")
+add_test(NAME Lanczos2_Projected_ED
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_projected_ed.py)
+set_tests_properties(Lanczos2_Projected_ED PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1;MVMC_LANCZOS2_TEST_CALHCA_GUARD_AUDIT=1"
+    RESOURCE_LOCK "lanczos2_projected_ed_workdir")
+add_test(NAME Lanczos2_Projected_Complex_ED_Guard
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_projected_ed.py --complex)
+set_tests_properties(Lanczos2_Projected_Complex_ED_Guard PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1;MVMC_LANCZOS2_TEST_CALHCA_GUARD_AUDIT=1"
+    RESOURCE_LOCK "lanczos2_projected_complex_ed_workdir")
+add_test(NAME Lanczos2_Projected_ED_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_projected_ed.py)
+set_tests_properties(Lanczos2_Projected_ED_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_projected_ed_mpi_workdir")
+add_test(NAME Lanczos2_Projected_ED_omp
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_projected_ed.py)
+set_tests_properties(Lanczos2_Projected_ED_omp PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_projected_ed_workdir")
+add_test(NAME Lanczos2_Projection_Smoke
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_projection_smoke.py)
+set_tests_properties(Lanczos2_Projection_Smoke PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    FIXTURES_REQUIRED lanczos2_projection_input
+    RESOURCE_LOCK "lanczos2_projection_smoke_workdir")
 foreach(model ${python_test_vmc_model_sr})
     add_python_vmc_test_sr(${model})
 endforeach(model)

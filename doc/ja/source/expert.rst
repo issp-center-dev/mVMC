@@ -410,6 +410,7 @@ ModParaファイル (modpara.def)
     --------------------
     NVMCCalMode    0
     NLanczosMode   0
+    NLanczosStep   1
     --------------------
     NDataIdxStart  1
     NDataQtySmp    1
@@ -524,8 +525,59 @@ ModParaファイル (modpara.def)
    のみ対応します。この場合、Hamiltonian は ``Transfer`` と
    number-operator 型の対角相互作用（``CoulombIntra``,
    ``CoulombInter``, ``Hund``）に限定されます。``NLanczosMode=2``、
-   2nd Lanczos、``NBodyG`` / ``NBodyInterAll`` の Lanczos 補正は
-   未対応です。
+   ``NBodyG`` / ``NBodyInterAll`` の Lanczos 補正は未対応です。
+
+-  ``NLanczosStep``
+
+   **形式 :** int型 (デフォルト値 = 1)
+
+   **説明 :** Power-Lanczos計算の次数を指定します。[1] は従来の
+   single-step計算および出力を変更せずに使用します。[2] は3次元Krylov
+   部分空間で
+   :math:`(c_0+c_1\hat{H}+c_2\hat{H}^2)|\psi\rangle`
+   を最適化します。
+
+   初期実装の2nd stepには ``NVMCCalMode=1``、``NLanczosMode=1``、
+   ``NExUpdatePath=0`` が必要です。実数または複素数のnon-FSZペア軌道に
+   対応し、既存のスピン射影・運動量射影を使用できます。Hamiltonianは
+   spinを保存する ``Transfer`` 項（:math:`\sigma_1=\sigma_2`）と
+   number-operator型の対角相互作用
+   （``CoulombIntra``, ``CoulombInter``, ``Hund``）に限定されます。
+   ``OrbitalGeneral`` / FSZ、BackFlow、RBM、``PairHop``、
+   ``Exchange``、``InterAll``、``NBodyInterAll``、``NBodyG`` は
+   sampling開始前にエラー終了します。2nd stepのGreen関数は計算しません。
+   Gutzwillerの ``ProjRatio`` 経路は独立ED oracleで値を検証しています。
+   非自明な :math:`k=\pi` 運動量射影は、real/complexの独立projected ED
+   value oracleで検証しています。real oracleはserial、MPI、OpenMP経路を
+   対象とし、complex oracleは現時点でserial経路を対象とします。
+   非自明なスピン射影はruntimeおよび構造のsmoke testまでで、
+   projected EDによる独立な値oracleは現時点ではありません。
+
+   ``NQPFull=1`` の場合、:math:`H^3` のlocal powerは ``Transfer`` 項に対する
+   outer/inner二重loopで評価するため、支配的なoperator数は
+   :math:`O(N_{\mathrm{Transfer}}^2)` で増加します。非自明な量子射影
+   （``NQPFull>1``）では、射影された :math:`H\,CACA` 行列要素の直接縮約経路に
+   もう1段の ``Transfer`` loopが加わります。そのため支配的なoperator数は
+   :math:`O(N_{\mathrm{Transfer}}^3)` となり、``GreenFuncN`` の縮約量は
+   ``NQPFull`` にも比例します。
+
+   したがって、射影により2nd stepの測定時間が大幅に増える場合があります。
+   実サイズの計算前に、実計算と同じ ``NSPGaussLeg`` と ``NMPTrans`` を使った
+   小さい系で測定し、性能判断には対象Linux/HPC環境のbaselineを使用してください。
+   source treeにある非CIの手動probe
+   ``test/python/lanczos2_cost_probe.py`` は ``--nspgaussleg`` と
+   ``--nmptrans`` のgridを受け取り、JSON出力へ ``NQPFull``、Timer 41、
+   Timer 95を記録します。
+
+   local powerまたはmomentの非有限値、不正なoverlap行列、一般化固有値
+   solverの失敗、出力エラーを検出すると診断を表示して終了します。
+   非有限値のエラー経路を検証する環境変数
+   ``MVMC_LANCZOS2_TEST_NONFINITE_SAMPLE`` はテスト専用です。
+   ``Testing=ON`` のbuildだけにコンパイルされ、通常の
+   ``Testing=OFF`` buildには故障注入コードが含まれません。
+   overlap行列が正定値でない場合は、相対対角regularization
+   :math:`10^{-12}` を加えて1回だけ再試行し、結果を ``solve_flag`` に
+   記録します。
 
 -  ``NDataIdxStart``
 

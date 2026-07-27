@@ -41,6 +41,30 @@ def update_modpara(filename, updates):
         f.writelines(lines)
 
 
+def inject_spin_flip_transfer(filename):
+    with open(filename) as source:
+        lines = source.readlines()
+    for index, line in enumerate(lines):
+        words = line.split()
+        if len(words) != 6:
+            continue
+        try:
+            int(words[0])
+            source_spin = int(words[1])
+            int(words[2])
+            int(words[3])
+            float(words[4])
+            float(words[5])
+        except ValueError:
+            continue
+        words[3] = str(1 - source_spin)
+        lines[index] = " ".join(words) + "\n"
+        with open(filename, "w") as destination:
+            destination.writelines(lines)
+        return
+    raise RuntimeError("no Transfer data row was available for mutation")
+
+
 def main():
     if len(sys.argv) < 3:
         print(
@@ -52,10 +76,13 @@ def main():
     model = sys.argv[1]
     expected = sys.argv[2]
     allow_success = False
+    spin_flip_transfer = False
     modpara_updates = {}
     for arg in sys.argv[3:]:
         if arg == "allow_success":
             allow_success = True
+        elif arg == "spin_flip_transfer":
+            spin_flip_transfer = True
         elif "=" in arg:
             key, value = arg.split("=", 1)
             modpara_updates[key] = value
@@ -82,10 +109,20 @@ def main():
 
     if modpara_updates:
         update_modpara("modpara.def", modpara_updates)
+    if spin_flip_transfer:
+        try:
+            inject_spin_flip_transfer("trans.def")
+        except RuntimeError as error:
+            print("ERROR: {}".format(error))
+            return -1
 
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
+    command = [bin_to_test, "-e", "namelist.def"]
+    mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+    if mpi_procs:
+        command = ["mpirun", "-np", mpi_procs] + command
     proc = subprocess.run(
-        [bin_to_test, "-e", "namelist.def"],
+        command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

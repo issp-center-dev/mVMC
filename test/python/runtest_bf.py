@@ -1236,6 +1236,7 @@ def main():
     compare_energy = False
     compare_lanczos = False
     lanczos_mode = None
+    lanczos_step = None
     vmc_cal_mode = None
     compare_twobodyg = False
     compare_twobodygex = False
@@ -1281,6 +1282,9 @@ def main():
             argi += 1
         elif sys.argv[argi] == "--lanczos-mode" and argi + 1 < len(sys.argv):
             lanczos_mode = str(int(sys.argv[argi + 1]))
+            argi += 2
+        elif sys.argv[argi] == "--lanczos-step" and argi + 1 < len(sys.argv):
+            lanczos_step = str(int(sys.argv[argi + 1]))
             argi += 2
         elif sys.argv[argi] == "--vmc-cal-mode" and argi + 1 < len(sys.argv):
             vmc_cal_mode = str(int(sys.argv[argi + 1]))
@@ -1363,6 +1367,8 @@ def main():
         work_suffix += "_energy"
     if lanczos_mode is not None:
         work_suffix += "_lanczos{}".format(lanczos_mode)
+    if lanczos_step is not None:
+        work_suffix += "_lanczos_step{}".format(lanczos_step)
     if compare_twobodyg:
         work_suffix += "_twobodyg"
     if compare_twobodygex:
@@ -1423,6 +1429,8 @@ def main():
             lanczos_samples_override if lanczos_samples_override is not None
             else ("128" if expect_lanczos_warning else "32"))
         modpara_updates["NVMCWarmUp"] = "8"
+    if lanczos_step is not None:
+        modpara_updates["NLanczosStep"] = lanczos_step
     if vmc_cal_mode is not None:
         modpara_updates["NVMCCalMode"] = vmc_cal_mode
     if modpara_updates:

@@ -484,11 +484,67 @@ This file is the outputted files for :math:`\langle H \rangle`,
 :math:`(\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2`, and the optimized parameter :math:`\alpha`
 obtained by Power Lanczos method. This file is outputted when
 ``NVMCCalMode`` = 1, ``NLanczosmode`` = 1 or 2 are set in ``ModPara``
-file. Here, xxx is the header indicated by ``CDataFileHead`` in
+file and ``NLanczosStep`` = 1. Here, xxx is the header indicated by ``CDataFileHead`` in
 ``ModPara`` file and yyy is a number given by
 ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp``,
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 ``ModPara`` file.
+
+xxx\_ls2\_out\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~~
+
+This two-line file is written for ``NVMCCalMode=1``,
+``NLanczosMode=1``, and ``NLanczosStep=2``. The first line is a
+versioned header. The second line has the following 17 fields:
+``E``, ``sigma2_over_E2``, the real and imaginary parts of
+``c0``, ``c1``, and ``c2``, the real and imaginary parts of
+``alpha1=c1/c0`` and ``alpha2=c2/c0``, ``solve_flag``, ``epsilon``,
+``shift``, ``antihermitian_residual``, and ``hankel_residual``.
+The coefficients refer to the unshifted polynomial
+:math:`c_0+c_1H+c_2H^2`. ``shift`` is the total energy shift used by the
+conditioned generalized eigenproblem; it is normally equal, up to roundoff,
+to the accumulation shift recorded in ``xxx_ls2_moment_yyy.dat``.
+
+``solve_flag`` is a bit mask. Bit 0 means that the single
+:math:`10^{-12}` overlap regularization retry was used. Bit 1 means
+that ``alpha1`` and ``alpha2`` are undefined because ``c0`` is
+numerically zero; their fields contain NaN in this case.
+
+``antihermitian_residual`` measures departure from
+:math:`M'_{ba}=M_{ab}^{\prime *}`. Because every table entry is formed
+from the same sample-local outer product, this value is structurally
+near roundoff and mainly detects corruption in accumulation or reduction;
+it is not an independent physics-accuracy measure.
+``hankel_residual`` measures departures among entries with the same
+:math:`a+b`, normalized separately on each anti-diagonal by the Cauchy
+scale :math:`\max_{a+b=k}\sqrt{|M_{aa}M_{bb}|}` (and by the largest
+observed entry magnitude) before taking the maximum. A large high-order
+moment therefore cannot hide a lower-order mismatch, while an
+anti-diagonal with zero expectation still has a finite scale of the same
+order. For independent finite samples it is a statistical diagnostic
+that is expected to decrease approximately as
+:math:`O(1/\sqrt{N_{\mathrm{VMCSample}}})`; it is not a solver tolerance.
+
+xxx\_ls2\_moment\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This two-line diagnostic file accompanies ``xxx_ls2_out_yyy.dat``.
+The version-2 header contains ``basis_shift=<sigma>``, where
+:math:`\sigma=\langle H\rangle` is the globally weighted shift applied
+before moment accumulation. The data line stores all 16 centered moments
+
+.. math::
+
+   M'_{ab}=\left\langle
+   (\hat H-\sigma)^a\psi\mid(\hat H-\sigma)^b\psi
+   \right\rangle
+
+in row-major order, from :math:`M'_{00}` to :math:`M'_{33}`. Each moment
+is represented by adjacent real and imaginary fields, for 32 numeric
+fields in total. The shift and centered moments reproduce the solver
+input while avoiding the precision loss of raw high-order moments at
+large :math:`|E|`. They can be used for independent checks of
+Hermiticity and the Hankel identities.
 
 xxx\_ls\_cisajs\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~

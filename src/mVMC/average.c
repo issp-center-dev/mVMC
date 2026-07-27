@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <complex.h>
 #include "global.h"
 #include "average.h"
+#include "physcal_lanczos2.h"
 #ifndef _SRC_AVERAGE
 #define _SRC_AVERAGE
 
@@ -222,7 +223,7 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
     weightAverageReduce_fcmp(NNBodyG,vec,comm);
   }
 
-  if(NLanczosMode>0){
+  if(NLanczosMode>0 && NLanczosStep==1){
     /* QQQQ */
     n = NLSHam*NLSHam*NLSHam*NLSHam;
     //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){
@@ -245,6 +246,43 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
         vec = QCisAjsQ;
         weightAverageReduce_fcmp(n, vec, comm);
       }
+    }
+  }
+  if(NLanczosMode>0 && NLanczosStep==2){
+    Lanczos2SolveStatus lanczos2Status;
+    int rank = 0;
+    MPI_Comm_rank(comm,&rank);
+    LS2MomentBasisShift = creal(Etot);
+    /*
+     * Every rank must center its local moments in the same basis before
+     * their reduction.  WeightAverageWE already all-reduces Etot; keep
+     * that invariant local to this use site as defensive hardening.
+     */
+    SafeMpiBcast(&LS2MomentBasisShift,1,comm);
+    if(AllComplexFlag==0){
+      lanczos2Status = BuildLanczos2ShiftedMomentReal(
+          LS2Moment_real,LS2SamplePower_real,LS2SampleWeight,
+          LS2SampleValid,(size_t)NVMCSample,LS2MomentBasisShift);
+      if(lanczos2Status != LANCZOS2_SOLVE_OK) {
+        fprintf(stderr,
+                "Error: Lanczos2 shifted moment construction failed on "
+                "rank %d: %s.\n",
+                rank,Lanczos2SolveError(lanczos2Status));
+        MPI_Abort(comm,EXIT_FAILURE);
+      }
+      weightAverageReduce_real(LANCZOS2_MOMENT_COUNT,LS2Moment_real,comm);
+    }else{
+      lanczos2Status = BuildLanczos2ShiftedMomentComplex(
+          LS2Moment,LS2SamplePower,LS2SampleWeight,LS2SampleValid,
+          (size_t)NVMCSample,LS2MomentBasisShift);
+      if(lanczos2Status != LANCZOS2_SOLVE_OK) {
+        fprintf(stderr,
+                "Error: Lanczos2 shifted moment construction failed on "
+                "rank %d: %s.\n",
+                rank,Lanczos2SolveError(lanczos2Status));
+        MPI_Abort(comm,EXIT_FAILURE);
+      }
+      weightAverageReduce_fcmp(LANCZOS2_MOMENT_COUNT,LS2Moment,comm);
     }
   }
   return;

@@ -41,6 +41,13 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "qp_real.c"
 #include "projection.h"
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+static int Lanczos2CalHCAGuardAuditRealEnabled = 0;
+static long long Lanczos2CalHCAGuardAuditRealDirectCount = 0;
+static long long Lanczos2CalHCAGuardAuditRealZeroComponentCount = 0;
+static int Lanczos2CalHCAGuardAuditRealLastMovedHasZeroComponent = 0;
+#endif
+
 /* Calculate <psi|QQ|x>/<psi|x> */
 void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, double *_LSLQ_real)
 {
@@ -61,6 +68,69 @@ void LSLocalQ_real(const double h1, const double ip, int *eleIdx, int *eleCfg, i
   _LSLQ_real[3] = h2;  /* H*H */
 
   return;
+}
+
+/*
+ * Calculate F[k] = <psi|H^k|x>/<psi|x>, k=0..3, for the initial
+ * second-step scope H=V+K.  The outer loops intentionally do not acquire the
+ * serial workspace arena: calHCA_real/calHCACA_real own their scratch.
+ */
+void CalculateLS2LocalPower_real(const double h1, const double ip,
+                                 int *eleIdx, int *eleCfg, int *eleNum,
+                                 int *eleProjCnt, double *localPower) {
+  double legacyLocalPower[4];
+  double h3;
+  const double diagonalEnergy = CalculateHamiltonian0_real(eleNum);
+  int outer;
+
+  LSLocalQ_real(h1, ip, eleIdx, eleCfg, eleNum, eleProjCnt,
+                legacyLocalPower);
+  localPower[0] = 1.0;
+  localPower[1] = h1;
+  localPower[2] = legacyLocalPower[3];
+  h3 = diagonalEnergy * localPower[2];
+
+  for (outer = 0; outer < NTransfer; outer++) {
+    const int outerRi = Transfer[outer][0];
+    const int outerRj = Transfer[outer][2];
+    const int outerSpin = Transfer[outer][3];
+    const int outerRsi = outerRi + outerSpin * Nsite;
+    const int outerRsj = outerRj + outerSpin * Nsite;
+    const double outerCoefficient = -creal(ParaTransfer[outer]);
+    double outerDiagonalEnergy;
+    double innerContribution = 0.0;
+    double hca;
+    int inner;
+
+    if (outerRsi == outerRsj) {
+      if (eleNum[outerRsi] == 0) continue;
+      outerDiagonalEnergy = diagonalEnergy;
+    } else {
+      if (eleNum[outerRsj] == 0 || eleNum[outerRsi] != 0) continue;
+      eleNum[outerRsj] = 0;
+      eleNum[outerRsi] = 1;
+      outerDiagonalEnergy = CalculateHamiltonian0_real(eleNum);
+      eleNum[outerRsj] = 1;
+      eleNum[outerRsi] = 0;
+    }
+
+    hca = calHCA_real(outerRi, outerRj, outerSpin, h1, ip, eleIdx,
+                      eleCfg, eleNum, eleProjCnt);
+    for (inner = 0; inner < NTransfer; inner++) {
+      const int innerRi = Transfer[inner][0];
+      const int innerRj = Transfer[inner][2];
+      const int innerSpin = Transfer[inner][3];
+      const double innerCoefficient = -creal(ParaTransfer[inner]);
+      innerContribution +=
+          innerCoefficient *
+          calHCACA_real(innerRi, innerRj, outerRi, outerRj, innerSpin,
+                        outerSpin, h1, ip, eleIdx, eleCfg, eleNum,
+                        eleProjCnt);
+    }
+    h3 += outerCoefficient *
+          (outerDiagonalEnergy * hca + innerContribution);
+  }
+  localPower[3] = h3;
 }
 
 ///
@@ -121,9 +191,26 @@ double calHCA_real(const int ri, const int rj, const int s,
   if(!IsSectorPreserved_1hopPre(ri,rj,s,eleNum)) return 0.0;
 
   g = checkGF1_real(ri,rj,s,ip,eleIdx,eleCfg,eleNum);
-  if(fabs(g)>1.0e-12) {
+  /*
+   * In a multi-component projected state, the moved configuration may
+   * have a zero Pfaffian in one component even though its total projected
+   * overlap is nonzero.  Updating that singular component leaves an invalid
+   * inverse for CalculateHamiltonian.  Contract the second-Lanczos matrix
+   * element directly from the original state in this case, matching the
+   * multi-component calHCACA guard below.
+   */
+  if(fabs(g)>1.0e-12 && (NLanczosStep != 2 || NQPFull == 1)) {
     val = calHCA1_real(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
   } else {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    if(Lanczos2CalHCAGuardAuditRealEnabled &&
+       fabs(g)>1.0e-12 && NLanczosStep == 2 && NQPFull > 1) {
+      Lanczos2CalHCAGuardAuditRealDirectCount++;
+      if(Lanczos2CalHCAGuardAuditRealLastMovedHasZeroComponent) {
+        Lanczos2CalHCAGuardAuditRealZeroComponentCount++;
+      }
+    }
+#endif
     val = calHCA2_real(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
   }
 
@@ -145,6 +232,9 @@ double checkGF1_real(const int ri, const int rj, const int s, const double ip,
   double z;
   int mj,msj,rsi,rsj;
   double pfMNew[NQPFull];
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  int qpidx;
+#endif
 
   mj = eleCfg[rj+s*Nsite];
   msj = mj + s*Ne;
@@ -158,6 +248,17 @@ double checkGF1_real(const int ri, const int rj, const int s, const double ip,
 
   /* calculate Pfaffian */
   CalculateNewPfM_real(mj, s, pfMNew, eleIdx, 0, NQPFull);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if(Lanczos2CalHCAGuardAuditRealEnabled) {
+    Lanczos2CalHCAGuardAuditRealLastMovedHasZeroComponent = 0;
+    for(qpidx=0; qpidx<NQPFull; qpidx++) {
+      if(fabs(pfMNew[qpidx]) <= 1.0e-12) {
+        Lanczos2CalHCAGuardAuditRealLastMovedHasZeroComponent = 1;
+        break;
+      }
+    }
+  }
+#endif
   z = CalculateIP_real(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
   /* revert hopping */
@@ -285,7 +386,7 @@ double calHCA2_real(const int ri, const int rj, const int s,
   /* end of H0 term */
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj)  \
+  private(idx,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj)  \
   reduction(+:v)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
@@ -480,7 +581,15 @@ double calHCACA_real(const int ri, const int rj, const int rk, const int rl,
   if(!WouldPreserve_2hopPre(rsi,rsj,rsk,rsl,eleNum)) return 0.0;
 
   g = checkGF2_real(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum);
-  if(fabs(g)>1.0e-12) {
+  /*
+   * The mutate-and-rank-two-update path does not preserve the projected
+   * H*CACA matrix element when several quantum-projection components are
+   * summed.  GreenFuncN contracts that projected matrix element directly
+   * from the original state, so keep the legacy fast path only for the
+   * identity quantum projection.  Do not alter the established first-step
+   * Lanczos path.
+   */
+  if(fabs(g)>1.0e-12 && (NLanczosStep != 2 || NQPFull == 1)) {
     val = calHCACA1_real(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
   } else {
     val = calHCACA2_real(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
@@ -664,7 +773,7 @@ double calHCACA2_real(const int ri, const int rj, const int rk, const int rl,
   /* end of H0 term */
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj)  \
+  private(idx,myEleIdx,myEleNum,myBufferInt,myBuffer,myValue,myRsi,myRsj)  \
   reduction(+:v)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);

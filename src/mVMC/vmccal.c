@@ -30,7 +30,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "vmccal.h"
@@ -40,6 +42,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "lslocgrn_real.c"
 #include "lslocgrn.c"
 #include "calgrn.c"
+#include "physcal_lanczos2.h"
 
 //#define _DEBUG_VMCCAL
 //#define _DEBUG_VMCCAL_DETAIL
@@ -103,6 +106,121 @@ static void clearStoredOSampleRange(const int sampleStart, const int sampleEnd) 
   }
 }
 
+typedef struct {
+  int enabled;
+  int *discrete;
+  double *matrixReal;
+  double complex *matrixComplex;
+  size_t discreteCount;
+  size_t matrixCount;
+} Lanczos2StateSnapshot;
+
+static int Lanczos2StateSnapshotInit(Lanczos2StateSnapshot *snapshot) {
+  const char *value = getenv("MVMC_LANCZOS2_STATE_CHECK");
+  size_t matrixStride;
+  size_t matrixSize;
+  memset(snapshot, 0, sizeof(*snapshot));
+  if (value == NULL || value[0] == '\0' || strcmp(value, "0") == 0) {
+    return 0;
+  }
+  snapshot->enabled = 1;
+  if (Nsize < 0 || Nsite2 < 0 || NProj < 0 || NQPFull < 0 ||
+      (size_t)Nsite2 >
+          (SIZE_MAX - (size_t)Nsize - (size_t)NProj) / 2) {
+    return -1;
+  }
+  snapshot->discreteCount =
+      (size_t)Nsize + 2 * (size_t)Nsite2 + (size_t)NProj;
+  if (Nsize != 0 &&
+      (size_t)Nsize > SIZE_MAX / (size_t)Nsize) return -1;
+  matrixStride = (size_t)Nsize * (size_t)Nsize + 1;
+  if (matrixStride != 0 &&
+      (size_t)NQPFull > SIZE_MAX / matrixStride) return -1;
+  snapshot->matrixCount = (size_t)NQPFull * matrixStride;
+  if (snapshot->discreteCount > SIZE_MAX / sizeof(*snapshot->discrete)) {
+    return -1;
+  }
+  snapshot->discrete =
+      (int *)malloc(snapshot->discreteCount * sizeof(*snapshot->discrete));
+  matrixSize = AllComplexFlag == 0 ? sizeof(*snapshot->matrixReal)
+                                   : sizeof(*snapshot->matrixComplex);
+  if (snapshot->matrixCount > SIZE_MAX / matrixSize) return -1;
+  if (AllComplexFlag == 0) {
+    snapshot->matrixReal =
+        (double *)malloc(snapshot->matrixCount * matrixSize);
+  } else {
+    snapshot->matrixComplex =
+        (double complex *)malloc(snapshot->matrixCount * matrixSize);
+  }
+  if (snapshot->discrete == NULL ||
+      (AllComplexFlag == 0 && snapshot->matrixReal == NULL) ||
+      (AllComplexFlag != 0 && snapshot->matrixComplex == NULL)) {
+    free(snapshot->discrete);
+    free(snapshot->matrixReal);
+    free(snapshot->matrixComplex);
+    memset(snapshot, 0, sizeof(*snapshot));
+    return -1;
+  }
+  return 0;
+}
+
+static void Lanczos2StateSnapshotCapture(
+    Lanczos2StateSnapshot *snapshot, const int *eleIdx, const int *eleCfg,
+    const int *eleNum, const int *eleProjCnt) {
+  int *destination;
+  if (!snapshot->enabled) return;
+  destination = snapshot->discrete;
+  memcpy(destination, eleIdx, (size_t)Nsize * sizeof(*destination));
+  destination += Nsize;
+  memcpy(destination, eleCfg, (size_t)Nsite2 * sizeof(*destination));
+  destination += Nsite2;
+  memcpy(destination, eleNum, (size_t)Nsite2 * sizeof(*destination));
+  destination += Nsite2;
+  if (NProj > 0) {
+    memcpy(destination, eleProjCnt, (size_t)NProj * sizeof(*destination));
+  }
+  if (AllComplexFlag == 0) {
+    memcpy(snapshot->matrixReal, InvM_real,
+           snapshot->matrixCount * sizeof(*snapshot->matrixReal));
+  } else {
+    memcpy(snapshot->matrixComplex, InvM,
+           snapshot->matrixCount * sizeof(*snapshot->matrixComplex));
+  }
+}
+
+static int Lanczos2StateSnapshotMatches(
+    const Lanczos2StateSnapshot *snapshot, const int *eleIdx,
+    const int *eleCfg, const int *eleNum, const int *eleProjCnt) {
+  const int *source;
+  if (!snapshot->enabled) return 1;
+  source = snapshot->discrete;
+  if (memcmp(source, eleIdx, (size_t)Nsize * sizeof(*source)) != 0) return 0;
+  source += Nsize;
+  if (memcmp(source, eleCfg, (size_t)Nsite2 * sizeof(*source)) != 0) return 0;
+  source += Nsite2;
+  if (memcmp(source, eleNum, (size_t)Nsite2 * sizeof(*source)) != 0) return 0;
+  source += Nsite2;
+  if (NProj > 0 &&
+      memcmp(source, eleProjCnt, (size_t)NProj * sizeof(*source)) != 0) {
+    return 0;
+  }
+  if (AllComplexFlag == 0) {
+    return memcmp(snapshot->matrixReal, InvM_real,
+                  snapshot->matrixCount *
+                      sizeof(*snapshot->matrixReal)) == 0;
+  }
+  return memcmp(snapshot->matrixComplex, InvM,
+                snapshot->matrixCount *
+                    sizeof(*snapshot->matrixComplex)) == 0;
+}
+
+static void Lanczos2StateSnapshotFree(Lanczos2StateSnapshot *snapshot) {
+  free(snapshot->discrete);
+  free(snapshot->matrixReal);
+  free(snapshot->matrixComplex);
+  memset(snapshot, 0, sizeof(*snapshot));
+}
+
 void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   int *eleIdx,*eleCfg,*eleNum,*eleProjCnt;
   double complex e,ip;
@@ -125,6 +243,11 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
 
   int rank,size,parentRank,parentSize,int_i;
   FILE *lanczosOracleDump = NULL;
+  Lanczos2StateSnapshot lanczos2StateSnapshot;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  int lanczos2InjectNonfinite = 0;
+  int lanczos2CalHCAGuardAudit = 0;
+#endif
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm_parent,&parentSize);
@@ -138,6 +261,49 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   StartTimer(24);
   clearPhysQuantity();
   StopTimer(24);
+
+  memset(&lanczos2StateSnapshot, 0, sizeof(lanczos2StateSnapshot));
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  /*
+   * Test-only hook for exercising the collective non-finite failure path.
+   * Production builds (Testing=OFF) do not compile this mutation.
+   */
+  {
+    const char *injectValue =
+        getenv("MVMC_LANCZOS2_TEST_NONFINITE_SAMPLE");
+    lanczos2InjectNonfinite =
+        injectValue != NULL && injectValue[0] != '\0' &&
+        strcmp(injectValue, "0") != 0;
+  }
+  {
+    const char *auditValue =
+        getenv("MVMC_LANCZOS2_TEST_CALHCA_GUARD_AUDIT");
+    lanczos2CalHCAGuardAudit =
+        auditValue != NULL && auditValue[0] != '\0' &&
+        strcmp(auditValue, "0") != 0;
+    if(lanczos2CalHCAGuardAudit &&
+       (parentSize != 1 || NVMCCalMode != 1 || NLanczosMode <= 0 ||
+        NLanczosStep != 2 || NQPFull <= 1)) {
+      fprintf(stderr,
+              "Error: Lanczos2 calHCA guard audit requires single-rank "
+              "step=2 physical calculation with NQPFull>1.\n");
+      MPI_Abort(comm_parent, EXIT_FAILURE);
+    }
+    Lanczos2CalHCAGuardAuditRealDirectCount = 0;
+    Lanczos2CalHCAGuardAuditRealZeroComponentCount = 0;
+    Lanczos2CalHCAGuardAuditComplexDirectCount = 0;
+    Lanczos2CalHCAGuardAuditComplexZeroComponentCount = 0;
+    Lanczos2CalHCAGuardAuditRealEnabled = lanczos2CalHCAGuardAudit;
+    Lanczos2CalHCAGuardAuditComplexEnabled = lanczos2CalHCAGuardAudit;
+  }
+#endif
+  if(NVMCCalMode == 1 && NLanczosMode > 0 && NLanczosStep == 2 &&
+     Lanczos2StateSnapshotInit(&lanczos2StateSnapshot) != 0) {
+    fprintf(stderr,
+            "Error: failed to allocate Lanczos2 state snapshot on rank %d.\n",
+            parentRank);
+    MPI_Abort(comm_parent, EXIT_FAILURE);
+  }
 
   if(NVMCCalMode == 1 && NLanczosMode > 0) {
     const char *dumpValue = getenv("MVMC_LANCZOS_ORACLE_DUMP");
@@ -335,6 +501,7 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
 #ifdef _DEBUG_VMCCAL
   fprintf(stdout, "Debug: Start: Lanczos\n");
 #endif
+        if(NLanczosStep==1){
         // ignoring Lanczos: to be added
         /* Calculate local QQQQ */
         StartTimer(43);
@@ -387,11 +554,127 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
           }
           StopTimer(44);
         }
+        }else{
+          Lanczos2SolveStatus lanczos2Status;
+          StartTimer(95);
+          Lanczos2StateSnapshotCapture(
+              &lanczos2StateSnapshot,eleIdx,eleCfg,eleNum,eleProjCnt);
+          if(AllComplexFlag==0) {
+            CalculateLS2LocalPower_real(
+                creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt,
+                LS2LocalPower_real);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+            if(lanczos2InjectNonfinite && parentRank == 0 &&
+               sample == sampleStart) {
+              LS2LocalPower_real[LANCZOS2_POWER_COUNT-1] = NAN;
+            }
+#endif
+            lanczos2Status = LANCZOS2_SOLVE_OK;
+            for(i=0; i<LANCZOS2_POWER_COUNT; i++) {
+              if(!isfinite(LS2LocalPower_real[i])) {
+                lanczos2Status = LANCZOS2_SOLVE_NONFINITE_MOMENT;
+                break;
+              }
+            }
+            if(lanczos2Status == LANCZOS2_SOLVE_OK) {
+              memcpy(LS2SamplePower_real +
+                         (size_t)sample * LANCZOS2_POWER_COUNT,
+                     LS2LocalPower_real,
+                     LANCZOS2_POWER_COUNT * sizeof(double));
+            }
+          }else{
+            CalculateLS2LocalPower(
+                e,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,LS2LocalPower);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+            if(lanczos2InjectNonfinite && parentRank == 0 &&
+               sample == sampleStart) {
+              LS2LocalPower[LANCZOS2_POWER_COUNT-1] = NAN + 0.0*I;
+            }
+#endif
+            lanczos2Status = LANCZOS2_SOLVE_OK;
+            for(i=0; i<LANCZOS2_POWER_COUNT; i++) {
+              if(!isfinite(creal(LS2LocalPower[i])) ||
+                 !isfinite(cimag(LS2LocalPower[i]))) {
+                lanczos2Status = LANCZOS2_SOLVE_NONFINITE_MOMENT;
+                break;
+              }
+            }
+            if(lanczos2Status == LANCZOS2_SOLVE_OK) {
+              memcpy(LS2SamplePower +
+                         (size_t)sample * LANCZOS2_POWER_COUNT,
+                     LS2LocalPower,
+                     LANCZOS2_POWER_COUNT * sizeof(double complex));
+            }
+          }
+          if(!Lanczos2StateSnapshotMatches(
+                 &lanczos2StateSnapshot,eleIdx,eleCfg,eleNum,eleProjCnt)) {
+            fprintf(stderr,
+                    "Error: Lanczos2 state restoration failure on rank %d, "
+                    "sample %d.\n",
+                    parentRank,sample);
+            MPI_Abort(comm_parent,EXIT_FAILURE);
+          }
+          if(lanczos2Status != LANCZOS2_SOLVE_OK) {
+            fprintf(stderr,
+                    "Error: Lanczos2 local power failure on rank %d, "
+                    "sample %d, stage accumulation: %s.\n",
+                    parentRank,sample,Lanczos2SolveError(lanczos2Status));
+            MPI_Abort(comm_parent,EXIT_FAILURE);
+          }
+          LS2SampleWeight[sample] = w;
+          LS2SampleValid[sample] = 1;
+          if(lanczosOracleDump != NULL) {
+            fprintf(lanczosOracleDump, "sample %d occ", sample);
+            for(i=0; i<Nsite2; i++) {
+              fprintf(lanczosOracleDump, " %d", eleNum[i]);
+            }
+            fprintf(lanczosOracleDump, " ls2power");
+            if(AllComplexFlag == 0) {
+              for(i=0; i<LANCZOS2_POWER_COUNT; i++) {
+                fprintf(lanczosOracleDump, " %.17e %.17e",
+                        LS2LocalPower_real[i],0.0);
+              }
+            }else{
+              for(i=0; i<LANCZOS2_POWER_COUNT; i++) {
+                fprintf(lanczosOracleDump, " %.17e %.17e",
+                        creal(LS2LocalPower[i]),cimag(LS2LocalPower[i]));
+              }
+            }
+            fprintf(lanczosOracleDump, "\n");
+          }
+          StopTimer(95);
+        }
       }
     }
   } /* end of for(sample) */
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if(lanczos2CalHCAGuardAudit) {
+    const long long directCount =
+        AllComplexFlag == 0
+            ? Lanczos2CalHCAGuardAuditRealDirectCount
+            : Lanczos2CalHCAGuardAuditComplexDirectCount;
+    const long long zeroComponentCount =
+        AllComplexFlag == 0
+            ? Lanczos2CalHCAGuardAuditRealZeroComponentCount
+            : Lanczos2CalHCAGuardAuditComplexZeroComponentCount;
+    if(directCount <= 0 || zeroComponentCount <= 0) {
+      fprintf(stderr,
+              "Error: Lanczos2 calHCA guard audit did not exercise a direct "
+              "multi-QP zero-component branch "
+              "(direct=%lld, zero_component=%lld).\n",
+              directCount,zeroComponentCount);
+      MPI_Abort(comm_parent, EXIT_FAILURE);
+    }
+    printf("Lanczos2 calHCA guard audit: %s direct=%lld "
+           "zero_component=%lld\n",
+           AllComplexFlag == 0 ? "real" : "complex",
+           directCount,zeroComponentCount);
+  }
+#endif
+
   if(lanczosOracleDump != NULL) fclose(lanczosOracleDump);
+  Lanczos2StateSnapshotFree(&lanczos2StateSnapshot);
 
 // calculate OO and HO at NVMCCalMode==0
   if(NVMCCalMode==0){
@@ -465,7 +748,7 @@ void clearPhysQuantity(){
 #pragma omp parallel for default(shared) private(i)
     for(i=0;i<NNBodyG;i++) vec[i] = 0.0+0.0*I;
 
-    if(NLanczosMode>0) {
+    if(NLanczosMode>0 && NLanczosStep==1) {
       /* QQQQ, LSLQ */
         //[TODO]: Check the value n
       n = NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam;
@@ -493,6 +776,28 @@ void clearPhysQuantity(){
 #pragma omp parallel for default(shared) private(i)
         for(i=0;i<n;i++) vec_real[i] = 0.0;
       }
+    }
+    if(NLanczosMode>0 && NLanczosStep==2) {
+      if(AllComplexFlag==0) {
+        for(i=0;i<LANCZOS2_MOMENT_COUNT+LANCZOS2_POWER_COUNT;i++) {
+          LS2Moment_real[i] = 0.0;
+        }
+        for(i=0;i<NVMCSample*LANCZOS2_POWER_COUNT;i++) {
+          LS2SamplePower_real[i] = 0.0;
+        }
+      }else{
+        for(i=0;i<LANCZOS2_MOMENT_COUNT+LANCZOS2_POWER_COUNT;i++) {
+          LS2Moment[i] = 0.0;
+        }
+        for(i=0;i<NVMCSample*LANCZOS2_POWER_COUNT;i++) {
+          LS2SamplePower[i] = 0.0;
+        }
+      }
+      for(i=0;i<NVMCSample;i++) {
+        LS2SampleWeight[i] = 0.0;
+        LS2SampleValid[i] = 0;
+      }
+      LS2MomentBasisShift = 0.0;
     }
   }
   return;
