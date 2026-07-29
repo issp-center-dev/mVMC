@@ -20,6 +20,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_sector_ed.py DESTINATION $
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_step1_compat.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_real_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_complex_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_heisenberg_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_projected_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_projection_smoke.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyg.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -556,7 +557,7 @@ add_python_vmc_test_invalid_expert_with_updates(
     NLanczosStep=2 NLanczosMode=1 NVMCCalMode=0)
 add_python_vmc_test_invalid_expert_with_updates(
     Lanczos2_InvalidUpdatePath HubbardChain_SpinJastrow
-    "NLanczosStep=2 requires NExUpdatePath=0"
+    "NLanczosStep=2 supports NExUpdatePath=0"
     NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1 NExUpdatePath=1)
 add_python_vmc_test_invalid_expert_with_updates(
     Lanczos2_InvalidFSZ HubbardChain_fsz_SpinJastrow
@@ -599,6 +600,14 @@ add_python_vmc_test_invalid_expert_with_updates(
     NLanczosStep=2 NLanczosMode=0 NVMCCalMode=1)
 set_tests_properties(Lanczos2_InvalidLanczosMode_mpi PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_Heisenberg_InvalidLanczosMode HeisenbergChain_SpinJastrow
+    "NLanczosStep=2 requires NLanczosMode=1"
+    NLanczosStep=2 NLanczosMode=2 NVMCCalMode=1 NMPTrans=1)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_Heisenberg_InvalidMultiQP HeisenbergChain_SpinJastrow
+    "pure-spin mode currently requires NQPFull=1"
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1 NMPTrans=2)
 add_test(NAME Lanczos2_ContractPositive_TwoSz0_NonFSZ
     COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py
     HubbardChain_SpinJastrow "Finish calculation." allow_success
@@ -652,6 +661,66 @@ add_test(NAME Lanczos2_Complex_ED_omp
 set_tests_properties(Lanczos2_Complex_ED_omp PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
     RESOURCE_LOCK "lanczos2_complex_ed_workdir")
+add_test(NAME Lanczos2_Heisenberg_Real_ED
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py)
+set_tests_properties(Lanczos2_Heisenberg_Real_ED PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_heisenberg_real_ed_workdir")
+add_test(NAME Lanczos2_Heisenberg_Complex_ED
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py --complex)
+set_tests_properties(Lanczos2_Heisenberg_Complex_ED PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_heisenberg_complex_ed_workdir")
+add_test(NAME Lanczos2_Heisenberg_Ising_ED
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py --ising)
+set_tests_properties(Lanczos2_Heisenberg_Ising_ED PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_heisenberg_ising_ed_workdir")
+add_test(NAME Lanczos2_Heisenberg_Standard_Smoke
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py --standard-smoke)
+set_tests_properties(Lanczos2_Heisenberg_Standard_Smoke PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_heisenberg_standard_smoke_workdir")
+add_test(NAME Lanczos2_Heisenberg_InvalidLocSpin
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py --invalid-locspin)
+set_tests_properties(Lanczos2_Heisenberg_InvalidLocSpin PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    RESOURCE_LOCK "lanczos2_heisenberg_invalid_locspin_workdir")
+add_test(NAME Lanczos2_Heisenberg_InvalidLocSpin_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py --invalid-locspin)
+set_tests_properties(Lanczos2_Heisenberg_InvalidLocSpin_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2"
+    RESOURCE_LOCK "lanczos2_heisenberg_invalid_locspin_mpi_workdir")
+add_test(NAME Lanczos2_Heisenberg_Real_ED_omp
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py)
+set_tests_properties(Lanczos2_Heisenberg_Real_ED_omp PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_heisenberg_real_ed_workdir")
+add_test(NAME Lanczos2_Heisenberg_Complex_ED_omp
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py --complex)
+set_tests_properties(Lanczos2_Heisenberg_Complex_ED_omp PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_heisenberg_complex_ed_workdir")
+add_test(NAME Lanczos2_Heisenberg_Real_ED_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py)
+set_tests_properties(Lanczos2_Heisenberg_Real_ED_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_heisenberg_real_ed_mpi_workdir")
+add_test(NAME Lanczos2_Heisenberg_Complex_ED_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py --complex)
+set_tests_properties(Lanczos2_Heisenberg_Complex_ED_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_heisenberg_complex_ed_mpi_workdir")
+add_test(NAME Lanczos2_Heisenberg_Real_ED_Split2_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py)
+set_tests_properties(Lanczos2_Heisenberg_Real_ED_Split2_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_NSPLIT_SIZE=2;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_heisenberg_real_ed_split2_mpi_workdir")
+add_test(NAME Lanczos2_Heisenberg_Real_ED_Rank4_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_heisenberg_ed.py)
+set_tests_properties(Lanczos2_Heisenberg_Real_ED_Rank4_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=4;MVMC_LANCZOS2_STATE_CHECK=1"
+    RESOURCE_LOCK "lanczos2_heisenberg_real_ed_mpi_workdir")
 add_test(NAME Lanczos2_Projected_ED
     COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_projected_ed.py)
 set_tests_properties(Lanczos2_Projected_ED PROPERTIES

@@ -537,15 +537,26 @@ ModParaファイル (modpara.def)
    :math:`(c_0+c_1\hat{H}+c_2\hat{H}^2)|\psi\rangle`
    を最適化します。
 
-   初期実装の2nd stepには ``NVMCCalMode=1``、``NLanczosMode=1``、
-   ``NExUpdatePath=0`` が必要です。実数または複素数のnon-FSZペア軌道に
-   対応し、既存のスピン射影・運動量射影を使用できます。Hamiltonianは
-   spinを保存する ``Transfer`` 項（:math:`\sigma_1=\sigma_2`）と
-   number-operator型の対角相互作用
-   （``CoulombIntra``, ``CoulombInter``, ``Hund``）に限定されます。
+   2nd stepには ``NVMCCalMode=1`` と ``NLanczosMode=1`` が必要です。
+   実数または複素数のnon-FSZペア軌道について、次の2つのmodel classに
+   対応します。
+
+   * electronic classは ``NExUpdatePath=0`` を使用し、spinを保存する
+     ``Transfer`` 項（:math:`\sigma_1=\sigma_2`）とnumber-operator型の
+     対角相互作用（``CoulombIntra``, ``CoulombInter``, ``Hund``）に
+     対応します。既存のスピン射影・運動量射影を使用できます。
+   * pure spin-1/2 classは ``NExUpdatePath=2`` を使用し、
+     ``NLocalSpin=Nsite=2*Ne``、``NTransfer=0``、``NQPFull=1`` を
+     必須とします。Hamiltonianにはnumber-operator型の対角相互作用と
+     ``Exchange`` 項を指定できます。固定 ``2Sz=0`` sectorの
+     Heisenberg/XXZ、非一様結合、Ising極限を含みます。
+
    ``OrbitalGeneral`` / FSZ、BackFlow、RBM、``PairHop``、
-   ``Exchange``、``InterAll``、``NBodyInterAll``、``NBodyG`` は
-   sampling開始前にエラー終了します。2nd stepのGreen関数は計算しません。
+   ``InterAll``、``NBodyInterAll``、``NBodyG`` はsampling開始前に
+   エラー終了します。``Exchange`` はelectronic classでは未対応、
+   ``Transfer`` はpure-spin classでは未対応です。局在spinと遍歴電子の
+   mixed系、および ``NQPFull>1`` のpure-spin量子射影も現scope外です。
+   2nd stepのGreen関数は計算しません。
    Gutzwillerの ``ProjRatio`` 経路は独立ED oracleで値を検証しています。
    非自明な :math:`k=\pi` 運動量射影は、real/complexの独立projected ED
    value oracleで検証しています。real oracleはserial、MPI、OpenMP経路を
@@ -553,13 +564,21 @@ ModParaファイル (modpara.def)
    非自明なスピン射影はruntimeおよび構造のsmoke testまでで、
    projected EDによる独立な値oracleは現時点ではありません。
 
-   ``NQPFull=1`` の場合、:math:`H^3` のlocal powerは ``Transfer`` 項に対する
+   electronic classで ``NQPFull=1`` の場合、:math:`H^3` のlocal powerは
+   ``Transfer`` 項に対する
    outer/inner二重loopで評価するため、支配的なoperator数は
    :math:`O(N_{\mathrm{Transfer}}^2)` で増加します。非自明な量子射影
    （``NQPFull>1``）では、射影された :math:`H\,CACA` 行列要素の直接縮約経路に
    もう1段の ``Transfer`` loopが加わります。そのため支配的なoperator数は
    :math:`O(N_{\mathrm{Transfer}}^3)` となり、``GreenFuncN`` の縮約量は
    ``NQPFull`` にも比例します。
+
+   pure-spin classでは、各 ``Exchange`` bondを2つの向き付きspin-exchange
+   演算子へ展開します。:math:`H^3` の直接縮約は、深さ1、2、3のactive pathを
+   それぞれ2、4、6次の ``GreenFuncN`` で評価します。sampleあたり
+   :math:`A` 個の向き付きexchangeがactiveなら、各深さのcall数上限は
+   :math:`A`、:math:`A^2`、:math:`A^3` で、深さ3が支配します。
+   このclassは現時点で ``NQPFull=1`` のみ対応します。
 
    したがって、射影により2nd stepの測定時間が大幅に増える場合があります。
    実サイズの計算前に、実計算と同じ ``NSPGaussLeg`` と ``NMPTrans`` を使った

@@ -46,6 +46,8 @@ static int Lanczos2CalHCAGuardAuditRealEnabled = 0;
 static long long Lanczos2CalHCAGuardAuditRealDirectCount = 0;
 static long long Lanczos2CalHCAGuardAuditRealZeroComponentCount = 0;
 static int Lanczos2CalHCAGuardAuditRealLastMovedHasZeroComponent = 0;
+static int Lanczos2HeisenbergZeroOverlapAuditRealEnabled = 0;
+static long long Lanczos2HeisenbergZeroOverlapAuditRealCount = 0;
 #endif
 
 /* Calculate <psi|QQ|x>/<psi|x> */
@@ -592,6 +594,12 @@ double calHCACA_real(const int ri, const int rj, const int rk, const int rl,
   if(fabs(g)>1.0e-12 && (NLanczosStep != 2 || NQPFull == 1)) {
     val = calHCACA1_real(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
   } else {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    if(Lanczos2HeisenbergZeroOverlapAuditRealEnabled &&
+       fabs(g)<=1.0e-12 && NLanczosStep == 2 && NQPFull == 1) {
+      Lanczos2HeisenbergZeroOverlapAuditRealCount++;
+    }
+#endif
     val = calHCACA2_real(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt);
   }
 

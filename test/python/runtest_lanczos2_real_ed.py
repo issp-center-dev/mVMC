@@ -221,7 +221,9 @@ def shift_local_power(power, shift):
     )
 
 
-def stochastic_hankel_standard_error(powers, shift):
+def stochastic_hankel_standard_error(
+        powers, shift,
+        standard_error_limit=HANKEL_STANDARD_ERROR_LIMIT):
     shifted = np.array(
         [shift_local_power(power, shift) for power in powers],
         dtype=complex,
@@ -289,11 +291,11 @@ def stochastic_hankel_standard_error(powers, shift):
         raise AssertionError(
             "stochastic Hankel diagnostic found no nontrivial comparison"
         )
-    if maximum_score >= HANKEL_STANDARD_ERROR_LIMIT:
+    if maximum_score >= standard_error_limit:
         raise AssertionError(
             "stochastic Hankel identity exceeds its block standard error: "
             "max score={} (limit={})".format(
-                maximum_score, HANKEL_STANDARD_ERROR_LIMIT
+                maximum_score, standard_error_limit
             )
         )
     return maximum_score
@@ -424,7 +426,10 @@ def assert_scaled_close(label, actual, expected, absolute=2.0e-10,
         )
 
 
-def check_solver_output(workdir, rows):
+def check_solver_output(
+        workdir, rows, hankel_residual_limit=HANKEL_RESIDUAL_LIMIT,
+        require_nontrivial_hankel=True,
+        hankel_standard_error_limit=HANKEL_STANDARD_ERROR_LIMIT):
     output_path = os.path.join(workdir, "output", "zvo_ls2_out_001.dat")
     moment_path = os.path.join(workdir, "output", "zvo_ls2_moment_001.dat")
     output = read_numeric_record(output_path)
@@ -438,11 +443,11 @@ def check_solver_output(workdir, rows):
             )
         )
     if not np.isfinite(output[16]) or \
-            output[16] >= HANKEL_RESIDUAL_LIMIT:
+            output[16] >= hankel_residual_limit:
         raise AssertionError(
             "hankel_residual is not a finite sub-unity diagnostic: "
             "{} (limit={})".format(
-                output[16], HANKEL_RESIDUAL_LIMIT
+                output[16], hankel_residual_limit
             )
         )
     if os.path.exists(os.path.join(workdir, "output", "zvo_ls_out_001.dat")):
@@ -471,8 +476,14 @@ def check_solver_output(workdir, rows):
             "shifted moment does not match centered sample-local powers: "
             "max diff={}".format(difference)
         )
-    hankel_standard_error = stochastic_hankel_standard_error(
-        [power for _, _, power in rows], basis_shift
+    hankel_standard_error = (
+        stochastic_hankel_standard_error(
+            [power for _, _, power in rows],
+            basis_shift,
+            hankel_standard_error_limit,
+        )
+        if require_nontrivial_hankel
+        else 0.0
     )
 
     overlap = expected_raw_moment[:3, :3]

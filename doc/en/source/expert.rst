@@ -540,16 +540,28 @@ Keywords and parameters
    :math:`(c_0+c_1\hat{H}+c_2\hat{H}^2)|\psi\rangle` in the
    three-dimensional Krylov subspace.
 
-   The initial second-step implementation requires
-   ``NVMCCalMode=1``, ``NLanczosMode=1``, and ``NExUpdatePath=0``.
-   It supports real or complex non-FSZ pair orbitals, including the
-   existing spin and momentum projections. Its Hamiltonian is limited
-   to spin-conserving ``Transfer`` terms
-   (:math:`\sigma_1=\sigma_2`) and diagonal number-operator interactions
-   (``CoulombIntra``, ``CoulombInter``, and ``Hund``).
-   ``OrbitalGeneral`` / FSZ, BackFlow, RBM, ``PairHop``, ``Exchange``,
-   ``InterAll``, ``NBodyInterAll``, and ``NBodyG`` are rejected before
-   sampling. Second-step Green's functions are not calculated.
+   The second step requires ``NVMCCalMode=1`` and ``NLanczosMode=1``.
+   It supports two model classes with real or complex non-FSZ pair
+   orbitals:
+
+   * The electronic class uses ``NExUpdatePath=0`` and supports
+     spin-conserving ``Transfer`` terms
+     (:math:`\sigma_1=\sigma_2`) and diagonal number-operator
+     interactions (``CoulombIntra``, ``CoulombInter``, and ``Hund``).
+     Existing spin and momentum projections are supported.
+   * The pure spin-1/2 class uses ``NExUpdatePath=2`` and requires
+     ``NLocalSpin=Nsite=2*Ne``, ``NTransfer=0``, and ``NQPFull=1``.
+     Its Hamiltonian may contain diagonal number-operator interactions
+     and ``Exchange`` terms. This covers Heisenberg/XXZ, nonuniform,
+     and Ising-limit inputs in the fixed ``2Sz=0`` sector.
+
+   ``OrbitalGeneral`` / FSZ, BackFlow, RBM, ``PairHop``, ``InterAll``,
+   ``NBodyInterAll``, and ``NBodyG`` are rejected before sampling.
+   ``Exchange`` remains unsupported in the electronic class, and
+   ``Transfer`` remains unsupported in the pure-spin class. Mixed
+   localized/itinerant models and pure-spin quantum projection with
+   ``NQPFull>1`` are also outside the current scope. Second-step Green's
+   functions are not calculated.
    The Gutzwiller ``ProjRatio`` path is checked against an independent
    ED oracle. A nontrivial :math:`k=\pi` momentum projection is checked
    against independent real and complex projected-ED value oracles.
@@ -558,7 +570,8 @@ Keywords and parameters
    has runtime and structural smoke coverage, but not an independent
    projected-ED value oracle.
 
-   With ``NQPFull=1``, the :math:`H^3` local power is evaluated by nested
+   In the electronic class with ``NQPFull=1``, the :math:`H^3` local
+   power is evaluated by nested
    outer and inner loops over ``Transfer`` terms, so its dominant operator
    count grows as :math:`O(N_{\mathrm{Transfer}}^2)`.  With a nontrivial
    quantum projection (``NQPFull>1``), the direct-contraction path for
@@ -566,6 +579,14 @@ Keywords and parameters
    loop.  Its dominant operator count is therefore
    :math:`O(N_{\mathrm{Transfer}}^3)`, and its ``GreenFuncN`` work is
    proportional to ``NQPFull``.
+
+   In the pure-spin class, each ``Exchange`` bond is expanded into its
+   two oriented spin-exchange operators. The direct :math:`H^3`
+   contraction evaluates active paths of depth one, two, and three with
+   ``GreenFuncN`` orders 2, 4, and 6. If :math:`A` oriented exchanges
+   are active for a sample, the corresponding call-count bounds are
+   :math:`A`, :math:`A^2`, and :math:`A^3`; the depth-three term
+   dominates. Only ``NQPFull=1`` is currently supported for this class.
 
    Projection can consequently increase second-step measurement time
    substantially. Benchmark a small instance with the same

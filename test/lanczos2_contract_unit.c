@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -16,21 +17,22 @@ static int failures = 0;
   } while (0)
 
 static Lanczos2Contract SupportedContract(void) {
-  Lanczos2Contract contract = {
-      2, /* step */
-      1, /* lanczosMode */
-      1, /* vmcCalMode */
-      0, /* orbitalGeneral */
-      0, /* nProjBF */
-      0, /* flagRBM */
-      0, /* exUpdatePath */
-      0, /* nPairHopping */
-      0, /* nExchangeCoupling */
-      0, /* nInterAll */
-      0, /* nNBodyInterAll */
-      0, /* nNBodyG */
-      0  /* nSpinFlipTransfer */
-  };
+  Lanczos2Contract contract;
+  memset(&contract, 0, sizeof(contract));
+  contract.step = 2;
+  contract.lanczosMode = 1;
+  contract.vmcCalMode = 1;
+  contract.nsite = 4;
+  contract.ne = 2;
+  contract.nQPFull = 1;
+  return contract;
+}
+
+static Lanczos2Contract SupportedHeisenbergContract(void) {
+  Lanczos2Contract contract = SupportedContract();
+  contract.exUpdatePath = 2;
+  contract.nExchangeCoupling = 4;
+  contract.nLocSpn = 4;
   return contract;
 }
 
@@ -49,6 +51,21 @@ static void CheckStatus(const Lanczos2Contract *contract,
 static void TestAllowedInputs(void) {
   Lanczos2Contract contract = SupportedContract();
   CheckStatus(&contract, LANCZOS2_CONTRACT_OK, "supported step 2");
+
+  contract = SupportedHeisenbergContract();
+  CheckStatus(&contract, LANCZOS2_CONTRACT_OK,
+              "supported pure-spin Heisenberg step 2");
+  CHECK(ClassifyLanczos2Model(&contract) ==
+            LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE,
+        "pure-spin model classification");
+
+  contract.nExchangeCoupling = 0;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_OK,
+              "supported pure-spin Ising step 2");
+
+  contract = SupportedContract();
+  CHECK(ClassifyLanczos2Model(&contract) == LANCZOS2_MODEL_ELECTRONIC_VK,
+        "electronic model classification");
 
   /*
    * Step 1 is the compatibility path: the new step-2 capability gate must not
@@ -102,6 +119,34 @@ static void TestEachUnsupportedCapability(void) {
   CheckStatus(&contract, LANCZOS2_CONTRACT_UNSUPPORTED_UPDATE_PATH,
               "update path");
 
+  contract = SupportedHeisenbergContract();
+  contract.nLocSpn = 3;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_REQUIRES_PURE_LOCALIZED_SPIN,
+              "mixed localized and itinerant model");
+
+  contract = SupportedHeisenbergContract();
+  contract.nsite = 5;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_REQUIRES_PURE_LOCALIZED_SPIN,
+              "localized spin does not cover every site");
+
+  contract = SupportedHeisenbergContract();
+  contract.nTransfer = 1;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_UNSUPPORTED_TRANSFER,
+              "pure-spin Transfer");
+
+  contract = SupportedHeisenbergContract();
+  contract.nQPFull = 2;
+  CheckStatus(&contract,
+              LANCZOS2_CONTRACT_UNSUPPORTED_QUANTUM_PROJECTION,
+              "pure-spin multi-QP");
+
+  contract = SupportedHeisenbergContract();
+  contract.ne = INT_MAX;
+  contract.nsite = INT_MAX;
+  contract.nLocSpn = INT_MAX;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_REQUIRES_PURE_LOCALIZED_SPIN,
+              "pure-spin electron-count overflow");
+
   contract = SupportedContract();
   contract.nPairHopping = 2;
   CheckStatus(&contract, LANCZOS2_CONTRACT_UNSUPPORTED_PAIR_HOPPING,
@@ -129,6 +174,18 @@ static void TestEachUnsupportedCapability(void) {
   CheckStatus(
       &contract, LANCZOS2_CONTRACT_UNSUPPORTED_SPIN_FLIP_TRANSFER,
       "spin-flip Transfer");
+
+  {
+    const int unsupportedPaths[] = {1, 3, 4, 5, 6};
+    size_t i;
+    for (i = 0;
+         i < sizeof(unsupportedPaths) / sizeof(unsupportedPaths[0]); i++) {
+      contract = SupportedHeisenbergContract();
+      contract.exUpdatePath = unsupportedPaths[i];
+      CheckStatus(&contract, LANCZOS2_CONTRACT_UNSUPPORTED_UPDATE_PATH,
+                  "pure-spin unsupported update path");
+    }
+  }
 }
 
 static void TestFirstFailureIsStable(void) {
@@ -137,6 +194,12 @@ static void TestFirstFailureIsStable(void) {
   contract.nNBodyG = 1;
   CheckStatus(&contract, LANCZOS2_CONTRACT_REQUIRES_LANCZOS_MODE_1,
               "first-failure order");
+
+  contract = SupportedHeisenbergContract();
+  contract.lanczosMode = 2;
+  contract.nTransfer = 1;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_REQUIRES_LANCZOS_MODE_1,
+              "pure-spin first-failure order");
 }
 
 int main(void) {
