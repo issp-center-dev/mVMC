@@ -1,9 +1,29 @@
+#include <limits.h>
 #include <stddef.h>
 
 #include "lanczos2_contract.h"
 
+Lanczos2ModelClass ClassifyLanczos2Model(
+    const Lanczos2Contract *contract) {
+  if (contract == NULL) return LANCZOS2_MODEL_INVALID;
+  if (contract->exUpdatePath == 0) {
+    return LANCZOS2_MODEL_ELECTRONIC_VK;
+  }
+  if (contract->exUpdatePath == 2 &&
+      contract->nsite > 0 &&
+      contract->ne > 0 &&
+      contract->ne <= INT_MAX / 2 &&
+      contract->nLocSpn == contract->nsite &&
+      contract->nLocSpn == 2 * contract->ne) {
+    return LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE;
+  }
+  return LANCZOS2_MODEL_INVALID;
+}
+
 Lanczos2ContractStatus ValidateLanczos2Contract(
     const Lanczos2Contract *contract) {
+  Lanczos2ModelClass model;
+
   if (contract == NULL || (contract->step != 1 && contract->step != 2)) {
     return LANCZOS2_CONTRACT_INVALID_STEP;
   }
@@ -24,13 +44,23 @@ Lanczos2ContractStatus ValidateLanczos2Contract(
   if (contract->flagRBM != 0) {
     return LANCZOS2_CONTRACT_UNSUPPORTED_RBM;
   }
-  if (contract->exUpdatePath != 0) {
+  if (contract->exUpdatePath != 0 && contract->exUpdatePath != 2) {
     return LANCZOS2_CONTRACT_UNSUPPORTED_UPDATE_PATH;
+  }
+  model = ClassifyLanczos2Model(contract);
+  if (contract->exUpdatePath == 2 &&
+      model != LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE) {
+    return LANCZOS2_CONTRACT_REQUIRES_PURE_LOCALIZED_SPIN;
+  }
+  if (model == LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE &&
+      contract->nTransfer != 0) {
+    return LANCZOS2_CONTRACT_UNSUPPORTED_TRANSFER;
   }
   if (contract->nPairHopping != 0) {
     return LANCZOS2_CONTRACT_UNSUPPORTED_PAIR_HOPPING;
   }
-  if (contract->nExchangeCoupling != 0) {
+  if (model == LANCZOS2_MODEL_ELECTRONIC_VK &&
+      contract->nExchangeCoupling != 0) {
     return LANCZOS2_CONTRACT_UNSUPPORTED_EXCHANGE;
   }
   if (contract->nInterAll != 0) {
@@ -44,6 +74,10 @@ Lanczos2ContractStatus ValidateLanczos2Contract(
   }
   if (contract->nSpinFlipTransfer != 0) {
     return LANCZOS2_CONTRACT_UNSUPPORTED_SPIN_FLIP_TRANSFER;
+  }
+  if (model == LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE &&
+      contract->nQPFull != 1) {
+    return LANCZOS2_CONTRACT_UNSUPPORTED_QUANTUM_PROJECTION;
   }
   return LANCZOS2_CONTRACT_OK;
 }
@@ -65,7 +99,8 @@ const char *Lanczos2ContractError(Lanczos2ContractStatus status) {
     case LANCZOS2_CONTRACT_UNSUPPORTED_RBM:
       return "NLanczosStep=2 does not support RBM";
     case LANCZOS2_CONTRACT_UNSUPPORTED_UPDATE_PATH:
-      return "NLanczosStep=2 requires NExUpdatePath=0";
+      return "NLanczosStep=2 supports NExUpdatePath=0, or "
+             "NExUpdatePath=2 for pure-spin mode";
     case LANCZOS2_CONTRACT_UNSUPPORTED_PAIR_HOPPING:
       return "NLanczosStep=2 does not support PairHopping";
     case LANCZOS2_CONTRACT_UNSUPPORTED_EXCHANGE:
@@ -78,6 +113,13 @@ const char *Lanczos2ContractError(Lanczos2ContractStatus status) {
       return "NLanczosStep=2 does not support NBodyG";
     case LANCZOS2_CONTRACT_UNSUPPORTED_SPIN_FLIP_TRANSFER:
       return "NLanczosStep=2 supports only spin-conserving Transfer terms";
+    case LANCZOS2_CONTRACT_REQUIRES_PURE_LOCALIZED_SPIN:
+      return "NLanczosStep=2 with NExUpdatePath=2 requires "
+             "NLocalSpin=Nsite=2*Ne";
+    case LANCZOS2_CONTRACT_UNSUPPORTED_TRANSFER:
+      return "NLanczosStep=2 pure-spin mode requires NTransfer=0";
+    case LANCZOS2_CONTRACT_UNSUPPORTED_QUANTUM_PROJECTION:
+      return "NLanczosStep=2 pure-spin mode currently requires NQPFull=1";
   }
   return "unknown NLanczosStep contract error";
 }

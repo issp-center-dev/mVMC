@@ -15,7 +15,18 @@ typedef struct {
   int nNBodyInterAll;
   int nNBodyG;
   int nSpinFlipTransfer;
+  int nLocSpn;
+  int nsite;
+  int ne;
+  int nTransfer;
+  int nQPFull;
 } Lanczos2Contract;
+
+typedef enum {
+  LANCZOS2_MODEL_INVALID = 0,
+  LANCZOS2_MODEL_ELECTRONIC_VK,
+  LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE
+} Lanczos2ModelClass;
 
 typedef enum {
   LANCZOS2_CONTRACT_OK = 0,
@@ -31,8 +42,14 @@ typedef enum {
   LANCZOS2_CONTRACT_UNSUPPORTED_INTER_ALL,
   LANCZOS2_CONTRACT_UNSUPPORTED_NBODY_INTER_ALL,
   LANCZOS2_CONTRACT_UNSUPPORTED_NBODY_G,
-  LANCZOS2_CONTRACT_UNSUPPORTED_SPIN_FLIP_TRANSFER
+  LANCZOS2_CONTRACT_UNSUPPORTED_SPIN_FLIP_TRANSFER,
+  LANCZOS2_CONTRACT_REQUIRES_PURE_LOCALIZED_SPIN,
+  LANCZOS2_CONTRACT_UNSUPPORTED_TRANSFER,
+  LANCZOS2_CONTRACT_UNSUPPORTED_QUANTUM_PROJECTION
 } Lanczos2ContractStatus;
+
+Lanczos2ModelClass ClassifyLanczos2Model(
+    const Lanczos2Contract *contract);
 
 Lanczos2ContractStatus ValidateLanczos2Contract(
     const Lanczos2Contract *contract);

@@ -41,6 +41,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "calham.h"
 #include "lslocgrn_real.c"
 #include "lslocgrn.c"
+#include "lslocgrn_heisenberg.c"
 #include "calgrn.c"
 #include "physcal_lanczos2.h"
 
@@ -244,6 +245,7 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   int rank,size,parentRank,parentSize,int_i;
   FILE *lanczosOracleDump = NULL;
   Lanczos2StateSnapshot lanczos2StateSnapshot;
+  Lanczos2HeisenbergScratch lanczos2HeisenbergScratch;
 #ifdef MVMC_ENABLE_FAULT_INJECTION
   int lanczos2InjectNonfinite = 0;
   int lanczos2CalHCAGuardAudit = 0;
@@ -263,6 +265,7 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   StopTimer(24);
 
   memset(&lanczos2StateSnapshot, 0, sizeof(lanczos2StateSnapshot));
+  memset(&lanczos2HeisenbergScratch, 0, sizeof(lanczos2HeisenbergScratch));
 #ifdef MVMC_ENABLE_FAULT_INJECTION
   /*
    * Test-only hook for exercising the collective non-finite failure path.
@@ -304,6 +307,34 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
             parentRank);
     MPI_Abort(comm_parent, EXIT_FAILURE);
   }
+  if(NVMCCalMode == 1 && NLanczosMode > 0 && NLanczosStep == 2 &&
+     NExUpdatePath == 2 &&
+     Lanczos2HeisenbergScratchInit(
+         &lanczos2HeisenbergScratch, AllComplexFlag != 0) != 0) {
+    fprintf(stderr,
+            "Error: failed to allocate Lanczos2 Heisenberg scratch "
+            "on rank %d.\n",
+            parentRank);
+    MPI_Abort(comm_parent, EXIT_FAILURE);
+  }
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if(lanczos2HeisenbergScratch.auditEnabled) {
+    if(parentSize != 1 || NVMCCalMode != 1 || NLanczosMode != 1 ||
+       NLanczosStep != 2 || NExUpdatePath != 2 || NQPFull != 1 ||
+       NExchangeCoupling <= 0) {
+      fprintf(stderr,
+              "Error: Lanczos2 Heisenberg audit requires a single-rank "
+              "pure-spin Exchange calculation with NQPFull=1.\n");
+      MPI_Abort(comm_parent, EXIT_FAILURE);
+    }
+    Lanczos2HeisenbergZeroOverlapAuditRealCount = 0;
+    Lanczos2HeisenbergZeroOverlapAuditComplexCount = 0;
+    Lanczos2HeisenbergZeroOverlapAuditRealEnabled =
+        AllComplexFlag == 0;
+    Lanczos2HeisenbergZeroOverlapAuditComplexEnabled =
+        AllComplexFlag != 0;
+  }
+#endif
 
   if(NVMCCalMode == 1 && NLanczosMode > 0) {
     const char *dumpValue = getenv("MVMC_LANCZOS_ORACLE_DUMP");
@@ -560,17 +591,29 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
           Lanczos2StateSnapshotCapture(
               &lanczos2StateSnapshot,eleIdx,eleCfg,eleNum,eleProjCnt);
           if(AllComplexFlag==0) {
-            CalculateLS2LocalPower_real(
-                creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt,
-                LS2LocalPower_real);
+            if(NExUpdatePath == 2) {
+              lanczos2Status =
+                  CalculateLS2HeisenbergLocalPowerReal(
+                      creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt,
+                      &lanczos2HeisenbergScratch,LS2LocalPower_real) == 0
+                      ? LANCZOS2_SOLVE_OK
+                      : LANCZOS2_SOLVE_INVALID_ARGUMENT;
+            }else{
+              CalculateLS2LocalPower_real(
+                  creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt,
+                  LS2LocalPower_real);
+              lanczos2Status = LANCZOS2_SOLVE_OK;
+            }
 #ifdef MVMC_ENABLE_FAULT_INJECTION
             if(lanczos2InjectNonfinite && parentRank == 0 &&
                sample == sampleStart) {
               LS2LocalPower_real[LANCZOS2_POWER_COUNT-1] = NAN;
             }
 #endif
-            lanczos2Status = LANCZOS2_SOLVE_OK;
-            for(i=0; i<LANCZOS2_POWER_COUNT; i++) {
+            for(i=0;
+                lanczos2Status == LANCZOS2_SOLVE_OK &&
+                i<LANCZOS2_POWER_COUNT;
+                i++) {
               if(!isfinite(LS2LocalPower_real[i])) {
                 lanczos2Status = LANCZOS2_SOLVE_NONFINITE_MOMENT;
                 break;
@@ -583,16 +626,29 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
                      LANCZOS2_POWER_COUNT * sizeof(double));
             }
           }else{
-            CalculateLS2LocalPower(
-                e,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,LS2LocalPower);
+            if(NExUpdatePath == 2) {
+              lanczos2Status =
+                  CalculateLS2HeisenbergLocalPowerComplex(
+                      e,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,
+                      &lanczos2HeisenbergScratch,LS2LocalPower) == 0
+                      ? LANCZOS2_SOLVE_OK
+                      : LANCZOS2_SOLVE_INVALID_ARGUMENT;
+            }else{
+              CalculateLS2LocalPower(
+                  e,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt,
+                  LS2LocalPower);
+              lanczos2Status = LANCZOS2_SOLVE_OK;
+            }
 #ifdef MVMC_ENABLE_FAULT_INJECTION
             if(lanczos2InjectNonfinite && parentRank == 0 &&
                sample == sampleStart) {
               LS2LocalPower[LANCZOS2_POWER_COUNT-1] = NAN + 0.0*I;
             }
 #endif
-            lanczos2Status = LANCZOS2_SOLVE_OK;
-            for(i=0; i<LANCZOS2_POWER_COUNT; i++) {
+            for(i=0;
+                lanczos2Status == LANCZOS2_SOLVE_OK &&
+                i<LANCZOS2_POWER_COUNT;
+                i++) {
               if(!isfinite(creal(LS2LocalPower[i])) ||
                  !isfinite(cimag(LS2LocalPower[i]))) {
                 lanczos2Status = LANCZOS2_SOLVE_NONFINITE_MOMENT;
@@ -673,8 +729,33 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   }
 #endif
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if(lanczos2HeisenbergScratch.auditEnabled) {
+    const long long zeroOverlapCount =
+        AllComplexFlag == 0
+            ? Lanczos2HeisenbergZeroOverlapAuditRealCount
+            : Lanczos2HeisenbergZeroOverlapAuditComplexCount;
+    if(lanczos2HeisenbergScratch.auditedSamples <= 0 ||
+       zeroOverlapCount <= 0) {
+      fprintf(stderr,
+              "Error: Lanczos2 Heisenberg audit did not exercise all "
+              "required paths (samples=%lld, zero_overlap=%lld).\n",
+              lanczos2HeisenbergScratch.auditedSamples,zeroOverlapCount);
+      MPI_Abort(comm_parent, EXIT_FAILURE);
+    }
+    printf("Lanczos2 Heisenberg audit: %s samples=%lld "
+           "zero_overlap=%lld green2=%lld green4=%lld green6=%lld\n",
+           AllComplexFlag == 0 ? "real" : "complex",
+           lanczos2HeisenbergScratch.auditedSamples,zeroOverlapCount,
+           lanczos2HeisenbergScratch.greenCalls[0],
+           lanczos2HeisenbergScratch.greenCalls[1],
+           lanczos2HeisenbergScratch.greenCalls[2]);
+  }
+#endif
+
   if(lanczosOracleDump != NULL) fclose(lanczosOracleDump);
   Lanczos2StateSnapshotFree(&lanczos2StateSnapshot);
+  Lanczos2HeisenbergScratchFree(&lanczos2HeisenbergScratch);
 
 // calculate OO and HO at NVMCCalMode==0
   if(NVMCCalMode==0){

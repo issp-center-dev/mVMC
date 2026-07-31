@@ -44,6 +44,8 @@ static int Lanczos2CalHCAGuardAuditComplexEnabled = 0;
 static long long Lanczos2CalHCAGuardAuditComplexDirectCount = 0;
 static long long Lanczos2CalHCAGuardAuditComplexZeroComponentCount = 0;
 static int Lanczos2CalHCAGuardAuditComplexLastMovedHasZeroComponent = 0;
+static int Lanczos2HeisenbergZeroOverlapAuditComplexEnabled = 0;
+static long long Lanczos2HeisenbergZeroOverlapAuditComplexCount = 0;
 #endif
 
 double complex calculateHK(const double complex h1, const double complex ip, int *eleIdx, int *eleCfg,
@@ -610,6 +612,12 @@ double complex calHCACA(const int ri, const int rj, const int rk, const int rl,
   if(cabs(g)>1.0e-12 && (NLanczosStep != 2 || NQPFull == 1)) {
     val = calHCACA1(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
   } else {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    if(Lanczos2HeisenbergZeroOverlapAuditComplexEnabled &&
+       cabs(g)<=1.0e-12 && NLanczosStep == 2 && NQPFull == 1) {
+      Lanczos2HeisenbergZeroOverlapAuditComplexCount++;
+    }
+#endif
     val = calHCACA2(ri,rj,rk,rl,si,sk,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
   }
 

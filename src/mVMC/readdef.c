@@ -54,7 +54,8 @@ int CheckQuadSite(const int iSite1, const int iSite2, const int iSite3, const in
 
 int GetTransferInfo(FILE *fp, int **ArrayIdx, double complex *ArrayValue, int Nsite, int NArray, char *defname);
 
-int GetLocSpinInfo(FILE *fp, int *ArrayIdx, int Nsite, char *defname);
+int GetLocSpinInfo(FILE *fp, int *ArrayIdx, int Nsite, int NLocalSpin,
+                   char *defname);
 
 int GetInfoCoulombIntra(FILE *fp, int *ArrayIdx, double *ArrayValue, int Nsite, int NArray, char *defname);
 
@@ -1282,20 +1283,36 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   }
 
   {
+    int lanczos2NQPFull = 0;
+    const long long lanczos2MPTrans =
+        NMPTrans < 0 ? -(long long)NMPTrans : (long long)NMPTrans;
+    if (NSPGaussLeg > 0 && lanczos2MPTrans > 0 &&
+        lanczos2MPTrans <= INT_MAX && NQPOptTrans > 0 &&
+        NSPGaussLeg <= INT_MAX / (int)lanczos2MPTrans &&
+        NSPGaussLeg * (int)lanczos2MPTrans <=
+            INT_MAX / NQPOptTrans) {
+      lanczos2NQPFull =
+          NSPGaussLeg * (int)lanczos2MPTrans * NQPOptTrans;
+    }
     const Lanczos2Contract lanczos2Contract = {
-        NLanczosStep,
-        NLanczosMode,
-        NVMCCalMode,
-        iFlgOrbitalGeneral,
-        NProjBF,
-        FlagRBM,
-        NExUpdatePath,
-        NPairHopping,
-        NExchangeCoupling,
-        NInterAll,
-        NNBodyInterAll,
-        NNBodyG,
-        0 /* Transfer contents are validated after ReadDefFileIdxPara. */};
+        .step = NLanczosStep,
+        .lanczosMode = NLanczosMode,
+        .vmcCalMode = NVMCCalMode,
+        .orbitalGeneral = iFlgOrbitalGeneral,
+        .nProjBF = NProjBF,
+        .flagRBM = FlagRBM,
+        .exUpdatePath = NExUpdatePath,
+        .nPairHopping = NPairHopping,
+        .nExchangeCoupling = NExchangeCoupling,
+        .nInterAll = NInterAll,
+        .nNBodyInterAll = NNBodyInterAll,
+        .nNBodyG = NNBodyG,
+        .nSpinFlipTransfer = 0,
+        .nLocSpn = NLocSpn,
+        .nsite = Nsite,
+        .ne = Ne,
+        .nTransfer = NTransfer,
+        .nQPFull = lanczos2NQPFull};
     int lanczos2StatusCode = LANCZOS2_CONTRACT_OK;
     Lanczos2ContractStatus lanczos2Status;
     if (rank == 0) {
@@ -1423,7 +1440,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
       for (i = 0; i < IgnoreLinesInDef; i++) fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
       switch (iKWidx) {
         case KWLocSpin: /* Read locspn.def----------------------------------------*/
-          if (GetLocSpinInfo(fp, LocSpn, Nsite, defname) != 0) info = 1;
+          if (GetLocSpinInfo(fp, LocSpn, Nsite, NLocSpn, defname) != 0) info = 1;
           break;//locspn
 
         case KWTrans: /* transfer.def--------------------------------------*/
@@ -1708,6 +1725,15 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
     fprintf(stdout, "finish reading parameters.\n");
   } /* if(rank==0) */
 
+  /*
+   * Definition arrays are read only on rank 0.  Broadcast the verdict before
+   * any rank consumes them so malformed input reaches the same abort path on
+   * every rank.
+   */
+#ifdef _mpi_use
+  MPI_Bcast(&info, 1, MPI_INT, 0, comm);
+#endif
+
   if (FlagOptTrans <= 0) { // initialization of QPOptTrans
     ParaQPOptTrans[0] = 1.0;
     for (i = 0; i < Nsite; ++i) {
@@ -1759,6 +1785,11 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
     lanczos2Contract.nNBodyInterAll = NNBodyInterAll;
     lanczos2Contract.nNBodyG = NNBodyG;
     lanczos2Contract.nSpinFlipTransfer = nSpinFlipTransfer;
+    lanczos2Contract.nLocSpn = NLocSpn;
+    lanczos2Contract.nsite = Nsite;
+    lanczos2Contract.ne = Ne;
+    lanczos2Contract.nTransfer = NTransfer;
+    lanczos2Contract.nQPFull = NQPFull;
     lanczos2Status = ValidateLanczos2Contract(&lanczos2Contract);
     if (lanczos2Status != LANCZOS2_CONTRACT_OK) {
       if (rank == 0) {
@@ -2682,21 +2713,62 @@ int GetTransferInfo(FILE *fp, int **ArrayIdx, double complex *ArrayValue, int Ns
   return info;
 }
 
-int GetLocSpinInfo(FILE *fp, int *ArrayIdx, int Nsite, char *defname) {
+int GetLocSpinInfo(FILE *fp, int *ArrayIdx, int Nsite, int NLocalSpin,
+                   char *defname) {
   char ctmp2[256];
-  int idx = 0, info = 0;
+  int idx = 0, info = 0, localSpinCount = 0;
+  int site;
   int x0 = 0, x1 = 0;
+  if (fp == NULL || ArrayIdx == NULL || Nsite <= 0 ||
+      NLocalSpin < 0 || NLocalSpin > Nsite) {
+    fprintf(stderr, "Error: Invalid LocSpin dimensions.\n");
+    return 1;
+  }
+  for (site = 0; site < Nsite; site++) ArrayIdx[site] = -1;
   while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-    sscanf(ctmp2, "%d %d \n", &x0, &x1);
-    ArrayIdx[x0] = x1;
+    if (sscanf(ctmp2, "%d %d", &x0, &x1) != 2) {
+      fprintf(stderr, "Error: Malformed LocSpin definition.\n");
+      info = 1;
+      break;
+    }
     if (CheckSite(x0, Nsite) != 0) {
       fprintf(stderr, "Error: Site index is incorrect.\n");
       info = 1;
       break;
     }
+    if (x1 != 0 && x1 != 1) {
+      fprintf(stderr,
+              "Error: LocSpin flag must be 0 or 1 (site=%d, value=%d).\n",
+              x0, x1);
+      info = 1;
+      break;
+    }
+    if (ArrayIdx[x0] != -1) {
+      fprintf(stderr, "Error: Duplicate LocSpin site index: %d.\n", x0);
+      info = 1;
+      break;
+    }
+    ArrayIdx[x0] = x1;
+    localSpinCount += x1;
     idx++;
   }
-  if (idx != Nsite) info = ReadDefFileError(defname);
+  if (info == 0) {
+    for (site = 0; site < Nsite; site++) {
+      if (ArrayIdx[site] == -1) {
+        fprintf(stderr, "Error: Missing LocSpin site index: %d.\n", site);
+        info = 1;
+        break;
+      }
+    }
+  }
+  if (info == 0 && idx != Nsite) info = ReadDefFileError(defname);
+  if (info == 0 && localSpinCount != NLocalSpin) {
+    fprintf(stderr,
+            "Error: NLocalSpin header (%d) does not match LocSpin flag "
+            "count (%d).\n",
+            NLocalSpin, localSpinCount);
+    info = 1;
+  }
   return info;
 }
 
