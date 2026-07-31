@@ -538,12 +538,14 @@ local powers <span class="math notranslate nohighlight">\(F_2(x)\)</span> and <s
 which
 <span class="math notranslate nohighlight">\(F_3(x)=\langle x|\hat H^3|\psi\rangle/\langle x|\psi\rangle\)</span>
 dominates.</p>
-<p>In the current second-step implementation, the Hamiltonian is limited to
-spin-conserving <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms and number-operator-type diagonal
-interactions. The
-evaluation of <span class="math notranslate nohighlight">\(F_3\)</span> runs nested outer and inner loops over the
-off-diagonal <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms. Since the product of two <code class="docutils literal notranslate"><span class="pre">Transfer</span></code>
-terms combines into the two-body operator</p>
+<p>The current second-step implementation has two Hamiltonian classes.
+The electronic class contains spin-conserving <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms and
+number-operator-type diagonal interactions. The pure spin-1/2 class
+contains diagonal interactions and <code class="docutils literal notranslate"><span class="pre">Exchange</span></code> terms, preserves one
+electron per site, and is currently limited to <code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code>.</p>
+<p>For the electronic class, the evaluation of <span class="math notranslate nohighlight">\(F_3\)</span> runs nested
+outer and inner loops over the off-diagonal <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms. Since
+the product of two <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms combines into the two-body operator</p>
 <div class="math notranslate nohighlight">
 \[CACA \equiv
 c_{i\sigma}^\dagger c_{j\sigma} c_{k\tau}^\dagger c_{l\tau},\]</div>
@@ -579,6 +581,22 @@ function, so the dominant operator count of this path grows as
 proportional to <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code>. Wall-clock cost therefore depends strongly
 on the projection as well as the wave function and execution
 environment.</p>
+<p>For the pure-spin class, write each exchange bond as the sum of two
+oriented operators <span class="math notranslate nohighlight">\(X_a\)</span>. Direct contraction gives</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+F_3(x)={}&amp;V_0^3
++\sum_a j_a(V_0^2+V_0V_a+V_a^2)G_a\\
+&amp;+\sum_{a,b}j_bj_a(V_0+V_a+V_{ba})G_{ba}
++\sum_{a,b,c}j_cj_bj_aG_{cba},
+\end{aligned}\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(V_a\)</span> and <span class="math notranslate nohighlight">\(V_{ba}\)</span> are the diagonal energies after
+the indicated exchanges, and <span class="math notranslate nohighlight">\(G_a\)</span>, <span class="math notranslate nohighlight">\(G_{ba}\)</span>, and
+<span class="math notranslate nohighlight">\(G_{cba}\)</span> are evaluated from the original sampled configuration
+with <code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> orders 2, 4, and 6. This avoids division by an
+intermediate wave-function amplitude and remains valid when that
+amplitude is zero. For <span class="math notranslate nohighlight">\(A\)</span> active oriented exchanges, the
+depth-three call count is bounded by <span class="math notranslate nohighlight">\(A^3\)</span>.</p>
 </section>
 </section>
 <section id="calculation-of-physical-quantities-after-the-first-power-lanczos-step">

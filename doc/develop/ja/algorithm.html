@@ -508,9 +508,12 @@ c_2 &amp;= d_2
 <span class="math notranslate nohighlight">\(F_2(x)\)</span> と <span class="math notranslate nohighlight">\(F_3(x)\)</span> の評価であり、このうち
 <span class="math notranslate nohighlight">\(F_3(x)=\langle x|\hat H^3|\psi\rangle/\langle x|\psi\rangle\)</span>
 が計算量を支配します。</p>
-<p>現在の2nd step実装では、Hamiltonianはspinを保存する <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項と
-number-operator型の対角相互作用に限定されています。
-<span class="math notranslate nohighlight">\(F_3\)</span> の評価では、非対角な <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項に対する
+<p>現在の2nd step実装には2種類のHamiltonian classがあります。
+electronic classはspinを保存する <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項とnumber-operator型の
+対角相互作用を含みます。pure spin-1/2 classは対角相互作用と
+<code class="docutils literal notranslate"><span class="pre">Exchange</span></code> 項を含み、全siteの1電子占有を保存し、現時点では
+<code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code> に限定されます。</p>
+<p>electronic classの <span class="math notranslate nohighlight">\(F_3\)</span> 評価では、非対角な <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項に対する
 outer/innerの二重loopを回します。2つの <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項の積は二体演算子</p>
 <div class="math notranslate nohighlight">
 \[CACA \equiv
@@ -545,6 +548,21 @@ estimatorとrank-two updateを利用でき、<code class="docutils literal notra
 となり、<code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> の計算量は <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> にも比例します。
 したがって実時間は波動関数と計算環境だけでなく、
 射影設定にも強く依存します。</p>
+<p>pure-spin classでは各exchange bondを2つの向き付き演算子
+<span class="math notranslate nohighlight">\(X_a\)</span> の和として表します。直接縮約により</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+F_3(x)={}&amp;V_0^3
++\sum_a j_a(V_0^2+V_0V_a+V_a^2)G_a\\
+&amp;+\sum_{a,b}j_bj_a(V_0+V_a+V_{ba})G_{ba}
++\sum_{a,b,c}j_cj_bj_aG_{cba}
+\end{aligned}\end{split}\]</div>
+<p>を評価します。ここで <span class="math notranslate nohighlight">\(V_a\)</span> と <span class="math notranslate nohighlight">\(V_{ba}\)</span> は各exchange作用後の
+対角energy、<span class="math notranslate nohighlight">\(G_a\)</span>、<span class="math notranslate nohighlight">\(G_{ba}\)</span>、<span class="math notranslate nohighlight">\(G_{cba}\)</span> は元のsample配置から
+それぞれ2、4、6次の <code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> で求める行列要素です。
+途中配置の波動関数振幅で割らないため、その振幅が0でも有効です。
+向き付きexchangeが <span class="math notranslate nohighlight">\(A\)</span> 個activeなら、深さ3のcall数は
+<span class="math notranslate nohighlight">\(A^3\)</span> 以下です。</p>
 </section>
 </section>
 <section id="st-power-lanczos-step">

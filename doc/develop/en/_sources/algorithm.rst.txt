@@ -657,12 +657,15 @@ which
 :math:`F_3(x)=\langle x|\hat H^3|\psi\rangle/\langle x|\psi\rangle`
 dominates.
 
-In the current second-step implementation, the Hamiltonian is limited to
-spin-conserving ``Transfer`` terms and number-operator-type diagonal
-interactions. The
-evaluation of :math:`F_3` runs nested outer and inner loops over the
-off-diagonal ``Transfer`` terms. Since the product of two ``Transfer``
-terms combines into the two-body operator
+The current second-step implementation has two Hamiltonian classes.
+The electronic class contains spin-conserving ``Transfer`` terms and
+number-operator-type diagonal interactions. The pure spin-1/2 class
+contains diagonal interactions and ``Exchange`` terms, preserves one
+electron per site, and is currently limited to ``NQPFull=1``.
+
+For the electronic class, the evaluation of :math:`F_3` runs nested
+outer and inner loops over the off-diagonal ``Transfer`` terms. Since
+the product of two ``Transfer`` terms combines into the two-body operator
 
 .. math::
 
@@ -703,6 +706,26 @@ function, so the dominant operator count of this path grows as
 proportional to ``NQPFull``. Wall-clock cost therefore depends strongly
 on the projection as well as the wave function and execution
 environment.
+
+For the pure-spin class, write each exchange bond as the sum of two
+oriented operators :math:`X_a`. Direct contraction gives
+
+.. math::
+
+   \begin{aligned}
+   F_3(x)={}&V_0^3
+   +\sum_a j_a(V_0^2+V_0V_a+V_a^2)G_a\\
+   &+\sum_{a,b}j_bj_a(V_0+V_a+V_{ba})G_{ba}
+   +\sum_{a,b,c}j_cj_bj_aG_{cba},
+   \end{aligned}
+
+where :math:`V_a` and :math:`V_{ba}` are the diagonal energies after
+the indicated exchanges, and :math:`G_a`, :math:`G_{ba}`, and
+:math:`G_{cba}` are evaluated from the original sampled configuration
+with ``GreenFuncN`` orders 2, 4, and 6. This avoids division by an
+intermediate wave-function amplitude and remains valid when that
+amplitude is zero. For :math:`A` active oriented exchanges, the
+depth-three call count is bounded by :math:`A^3`.
 
 Calculation of physical quantities after the first power-Lanczos step
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

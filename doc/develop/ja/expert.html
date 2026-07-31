@@ -523,28 +523,46 @@ single-step計算および出力を変更せずに使用します。[2] は3次�
 部分空間で
 <span class="math notranslate nohighlight">\((c_0+c_1\hat{H}+c_2\hat{H}^2)|\psi\rangle\)</span>
 を最適化します。</p>
-<p>初期実装の2nd stepには <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>、
-<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code> が必要です。実数または複素数のnon-FSZペア軌道に
-対応し、既存のスピン射影・運動量射影を使用できます。Hamiltonianは
-spinを保存する <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項（<span class="math notranslate nohighlight">\(\sigma_1=\sigma_2\)</span>）と
-number-operator型の対角相互作用
-（<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>）に限定されます。
-<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ、BackFlow、RBM、<code class="docutils literal notranslate"><span class="pre">PairHop</span></code>、
-<code class="docutils literal notranslate"><span class="pre">Exchange</span></code>、<code class="docutils literal notranslate"><span class="pre">InterAll</span></code>、<code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code>、<code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> は
-sampling開始前にエラー終了します。2nd stepのGreen関数は計算しません。
+<p>2nd stepには <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code> と <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code> が必要です。
+実数または複素数のnon-FSZペア軌道について、次の2つのmodel classに
+対応します。</p>
+<ul class="simple">
+<li><p>electronic classは <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code> を使用し、spinを保存する
+<code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項（<span class="math notranslate nohighlight">\(\sigma_1=\sigma_2\)</span>）とnumber-operator型の
+対角相互作用（<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>）に
+対応します。既存のスピン射影・運動量射影を使用できます。</p></li>
+<li><p>pure spin-1/2 classは <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=2</span></code> を使用し、
+<code class="docutils literal notranslate"><span class="pre">NLocalSpin=Nsite=2*Ne</span></code>、<code class="docutils literal notranslate"><span class="pre">NTransfer=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code> を
+必須とします。Hamiltonianにはnumber-operator型の対角相互作用と
+<code class="docutils literal notranslate"><span class="pre">Exchange</span></code> 項を指定できます。固定 <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code> sectorの
+Heisenberg/XXZ、非一様結合、Ising極限を含みます。</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ、BackFlow、RBM、<code class="docutils literal notranslate"><span class="pre">PairHop</span></code>、
+<code class="docutils literal notranslate"><span class="pre">InterAll</span></code>、<code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code>、<code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> はsampling開始前に
+エラー終了します。<code class="docutils literal notranslate"><span class="pre">Exchange</span></code> はelectronic classでは未対応、
+<code class="docutils literal notranslate"><span class="pre">Transfer</span></code> はpure-spin classでは未対応です。局在spinと遍歴電子の
+mixed系、および <code class="docutils literal notranslate"><span class="pre">NQPFull&gt;1</span></code> のpure-spin量子射影も現scope外です。
+2nd stepのGreen関数は計算しません。
 Gutzwillerの <code class="docutils literal notranslate"><span class="pre">ProjRatio</span></code> 経路は独立ED oracleで値を検証しています。
 非自明な <span class="math notranslate nohighlight">\(k=\pi\)</span> 運動量射影は、real/complexの独立projected ED
 value oracleで検証しています。real oracleはserial、MPI、OpenMP経路を
 対象とし、complex oracleは現時点でserial経路を対象とします。
 非自明なスピン射影はruntimeおよび構造のsmoke testまでで、
 projected EDによる独立な値oracleは現時点ではありません。</p>
-<p><code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code> の場合、<span class="math notranslate nohighlight">\(H^3\)</span> のlocal powerは <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項に対する
+<p>electronic classで <code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code> の場合、<span class="math notranslate nohighlight">\(H^3\)</span> のlocal powerは
+<code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項に対する
 outer/inner二重loopで評価するため、支配的なoperator数は
 <span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^2)\)</span> で増加します。非自明な量子射影
 （<code class="docutils literal notranslate"><span class="pre">NQPFull&gt;1</span></code>）では、射影された <span class="math notranslate nohighlight">\(H\,CACA\)</span> 行列要素の直接縮約経路に
 もう1段の <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> loopが加わります。そのため支配的なoperator数は
 <span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^3)\)</span> となり、<code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> の縮約量は
 <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> にも比例します。</p>
+<p>pure-spin classでは、各 <code class="docutils literal notranslate"><span class="pre">Exchange</span></code> bondを2つの向き付きspin-exchange
+演算子へ展開します。<span class="math notranslate nohighlight">\(H^3\)</span> の直接縮約は、深さ1、2、3のactive pathを
+それぞれ2、4、6次の <code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> で評価します。sampleあたり
+<span class="math notranslate nohighlight">\(A\)</span> 個の向き付きexchangeがactiveなら、各深さのcall数上限は
+<span class="math notranslate nohighlight">\(A\)</span>、<span class="math notranslate nohighlight">\(A^2\)</span>、<span class="math notranslate nohighlight">\(A^3\)</span> で、深さ3が支配します。
+このclassは現時点で <code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code> のみ対応します。</p>
 <p>したがって、射影により2nd stepの測定時間が大幅に増える場合があります。
 実サイズの計算前に、実計算と同じ <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> と <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> を使った
 小さい系で測定し、性能判断には対象Linux/HPC環境のbaselineを使用してください。

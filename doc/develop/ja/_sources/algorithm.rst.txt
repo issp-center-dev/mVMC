@@ -633,9 +633,13 @@ Hamiltonian行列、Hamiltonian二乗行列を
 :math:`F_3(x)=\langle x|\hat H^3|\psi\rangle/\langle x|\psi\rangle`
 が計算量を支配します。
 
-現在の2nd step実装では、Hamiltonianはspinを保存する ``Transfer`` 項と
-number-operator型の対角相互作用に限定されています。
-:math:`F_3` の評価では、非対角な ``Transfer`` 項に対する
+現在の2nd step実装には2種類のHamiltonian classがあります。
+electronic classはspinを保存する ``Transfer`` 項とnumber-operator型の
+対角相互作用を含みます。pure spin-1/2 classは対角相互作用と
+``Exchange`` 項を含み、全siteの1電子占有を保存し、現時点では
+``NQPFull=1`` に限定されます。
+
+electronic classの :math:`F_3` 評価では、非対角な ``Transfer`` 項に対する
 outer/innerの二重loopを回します。2つの ``Transfer`` 項の積は二体演算子
 
 .. math::
@@ -675,6 +679,25 @@ estimatorとrank-two updateを利用でき、``NQPFull`` に比例する
 となり、``GreenFuncN`` の計算量は ``NQPFull`` にも比例します。
 したがって実時間は波動関数と計算環境だけでなく、
 射影設定にも強く依存します。
+
+pure-spin classでは各exchange bondを2つの向き付き演算子
+:math:`X_a` の和として表します。直接縮約により
+
+.. math::
+
+   \begin{aligned}
+   F_3(x)={}&V_0^3
+   +\sum_a j_a(V_0^2+V_0V_a+V_a^2)G_a\\
+   &+\sum_{a,b}j_bj_a(V_0+V_a+V_{ba})G_{ba}
+   +\sum_{a,b,c}j_cj_bj_aG_{cba}
+   \end{aligned}
+
+を評価します。ここで :math:`V_a` と :math:`V_{ba}` は各exchange作用後の
+対角energy、:math:`G_a`、:math:`G_{ba}`、:math:`G_{cba}` は元のsample配置から
+それぞれ2、4、6次の ``GreenFuncN`` で求める行列要素です。
+途中配置の波動関数振幅で割らないため、その振幅が0でも有効です。
+向き付きexchangeが :math:`A` 個activeなら、深さ3のcall数は
+:math:`A^3` 以下です。
 
 1st power-Lanczos stepでの物理量の計算
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

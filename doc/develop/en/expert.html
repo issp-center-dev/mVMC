@@ -532,16 +532,28 @@ limited to <code class="docutils literal notranslate"><span class="pre">Transfer
 [2] optimizes a wave function
 <span class="math notranslate nohighlight">\((c_0+c_1\hat{H}+c_2\hat{H}^2)|\psi\rangle\)</span> in the
 three-dimensional Krylov subspace.</p>
-<p>The initial second-step implementation requires
-<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>.
-It supports real or complex non-FSZ pair orbitals, including the
-existing spin and momentum projections. Its Hamiltonian is limited
-to spin-conserving <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms
-(<span class="math notranslate nohighlight">\(\sigma_1=\sigma_2\)</span>) and diagonal number-operator interactions
-(<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, and <code class="docutils literal notranslate"><span class="pre">Hund</span></code>).
-<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, BackFlow, RBM, <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>,
-<code class="docutils literal notranslate"><span class="pre">InterAll</span></code>, <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code>, and <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> are rejected before
-sampling. Second-step Green’s functions are not calculated.
+<p>The second step requires <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code> and <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>.
+It supports two model classes with real or complex non-FSZ pair
+orbitals:</p>
+<ul class="simple">
+<li><p>The electronic class uses <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code> and supports
+spin-conserving <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms
+(<span class="math notranslate nohighlight">\(\sigma_1=\sigma_2\)</span>) and diagonal number-operator
+interactions (<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, and <code class="docutils literal notranslate"><span class="pre">Hund</span></code>).
+Existing spin and momentum projections are supported.</p></li>
+<li><p>The pure spin-1/2 class uses <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=2</span></code> and requires
+<code class="docutils literal notranslate"><span class="pre">NLocalSpin=Nsite=2*Ne</span></code>, <code class="docutils literal notranslate"><span class="pre">NTransfer=0</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code>.
+Its Hamiltonian may contain diagonal number-operator interactions
+and <code class="docutils literal notranslate"><span class="pre">Exchange</span></code> terms. This covers Heisenberg/XXZ, nonuniform,
+and Ising-limit inputs in the fixed <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code> sector.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, BackFlow, RBM, <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">InterAll</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code>, and <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> are rejected before sampling.
+<code class="docutils literal notranslate"><span class="pre">Exchange</span></code> remains unsupported in the electronic class, and
+<code class="docutils literal notranslate"><span class="pre">Transfer</span></code> remains unsupported in the pure-spin class. Mixed
+localized/itinerant models and pure-spin quantum projection with
+<code class="docutils literal notranslate"><span class="pre">NQPFull&gt;1</span></code> are also outside the current scope. Second-step Green’s
+functions are not calculated.
 The Gutzwiller <code class="docutils literal notranslate"><span class="pre">ProjRatio</span></code> path is checked against an independent
 ED oracle. A nontrivial <span class="math notranslate nohighlight">\(k=\pi\)</span> momentum projection is checked
 against independent real and complex projected-ED value oracles.
@@ -549,7 +561,8 @@ The real oracle covers serial, MPI, and OpenMP paths; the complex
 oracle currently covers the serial path. Nontrivial spin projection
 has runtime and structural smoke coverage, but not an independent
 projected-ED value oracle.</p>
-<p>With <code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code>, the <span class="math notranslate nohighlight">\(H^3\)</span> local power is evaluated by nested
+<p>In the electronic class with <code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code>, the <span class="math notranslate nohighlight">\(H^3\)</span> local
+power is evaluated by nested
 outer and inner loops over <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms, so its dominant operator
 count grows as <span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^2)\)</span>.  With a nontrivial
 quantum projection (<code class="docutils literal notranslate"><span class="pre">NQPFull&gt;1</span></code>), the direct-contraction path for
@@ -557,6 +570,13 @@ projected <span class="math notranslate nohighlight">\(H\,CACA\)</span> matrix e
 loop.  Its dominant operator count is therefore
 <span class="math notranslate nohighlight">\(O(N_{\mathrm{Transfer}}^3)\)</span>, and its <code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> work is
 proportional to <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code>.</p>
+<p>In the pure-spin class, each <code class="docutils literal notranslate"><span class="pre">Exchange</span></code> bond is expanded into its
+two oriented spin-exchange operators. The direct <span class="math notranslate nohighlight">\(H^3\)</span>
+contraction evaluates active paths of depth one, two, and three with
+<code class="docutils literal notranslate"><span class="pre">GreenFuncN</span></code> orders 2, 4, and 6. If <span class="math notranslate nohighlight">\(A\)</span> oriented exchanges
+are active for a sample, the corresponding call-count bounds are
+<span class="math notranslate nohighlight">\(A\)</span>, <span class="math notranslate nohighlight">\(A^2\)</span>, and <span class="math notranslate nohighlight">\(A^3\)</span>; the depth-three term
+dominates. Only <code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code> is currently supported for this class.</p>
 <p>Projection can consequently increase second-step measurement time
 substantially. Benchmark a small instance with the same
 <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> and <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> intended for the production run, and
