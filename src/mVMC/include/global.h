@@ -42,6 +42,7 @@ int NVMCCalMode; /* calculation mode
 int NLanczosMode; /* mode of the single Lanczos step
                      0: none, 1: only energy, 2: Green functions */
 int NLanczosStep; /* polynomial order of the Lanczos wave function: 1 or 2 */
+int NLanczosSupportMode; /* 0: strict support gate, 1: experimental legacy */
 
 int NStoreO; /* choice of store O: 0-> normal other-> store  */
 int NSRCG; /* choice of solver for Sx=g: 0-> (Sca)LAPACK other-> CG  */
@@ -349,6 +350,8 @@ double *LS2SamplePower_real; /* [NVMCSample][I,H,H^2,H^3] */
 double *LS2SampleWeight; /* [NVMCSample] */
 unsigned char *LS2SampleValid; /* [NVMCSample] */
 double LS2MomentBasisShift; /* basis is (H-LS2MomentBasisShift)^k */
+double *PowerLanczosSupportSampleData; /* rank-local [NVMCSample][support fields] */
+int PowerLanczosSupportSampleCapacity; /* rank-local support records */
 
 double complex *QCisAjsQ; /* QCisAjsQ[NLSHam][NLSHam][NCisAjs]*/ //TBC
 double complex *QCisAjsCktAltQ; /* QCisAjsCktAltQ[NLSHam][NLSHam][NCisAjsCktAlt]*/ //TBC
@@ -382,6 +385,7 @@ FILE *FileLSCisAjsCktAlt;
 FILE *FileLSCisAjsCktAltDC;
 FILE *FileLS2;
 FILE *FileLS2Moment;
+FILE *FileLSSupport;
 
 
 /* FILE *FileTimerList; */

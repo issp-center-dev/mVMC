@@ -16,6 +16,27 @@ typedef int MPI_Comm;
 #define MATRIX_INDEX(row, column, leadingDimension) \
   ((row) * (leadingDimension) + (column))
 
+enum {
+  SUPPORT_VALID = 0,
+  SUPPORT_WEIGHT,
+  SUPPORT_M02_REAL,
+  SUPPORT_M02_IMAG,
+  SUPPORT_M11_REAL,
+  SUPPORT_M11_IMAG,
+  SUPPORT_M03_REAL,
+  SUPPORT_M03_IMAG,
+  SUPPORT_M12_REAL,
+  SUPPORT_M12_IMAG
+};
+
+static const double POWER_LANCZOS_SUPPORT_RELATIVE_TOLERANCE = 1.0e-8;
+static const double POWER_LANCZOS_SUPPORT_SCORE_TOLERANCE = 4.5;
+/* A separate effect-size gate prevents a noisy, order-one disagreement
+ * from being labeled pass without turning the numerical 1e-8 mismatch
+ * floor into an impractical equivalence-test tolerance. */
+static const double POWER_LANCZOS_SUPPORT_UNRESOLVED_RELATIVE_TOLERANCE =
+    0.5;
+
 static int ValidDimension(int dimension) {
   return dimension == 2 || dimension == 3;
 }
@@ -35,6 +56,349 @@ static void ClearResult(Lanczos2Result *result, int dimension) {
 
 static double RelativeResidual(double numerator, double scale) {
   return numerator / fmax(scale, DBL_MIN);
+}
+
+static void ClearSupportDiagnostic(
+    PowerLanczosSupportDiagnostic *diagnostic, int hasThirdAnchor) {
+  memset(diagnostic, 0, sizeof(*diagnostic));
+  diagnostic->status = POWER_LANCZOS_SUPPORT_INVALID;
+  diagnostic->hasThirdAnchor = hasThirdAnchor != 0;
+  diagnostic->m02 = diagnostic->m11 = NAN + I * NAN;
+  diagnostic->m03 = diagnostic->m12 = NAN + I * NAN;
+  diagnostic->delta2 = diagnostic->delta3 = NAN + I * NAN;
+  diagnostic->relativeDifference2 = NAN;
+  diagnostic->relativeDifference3 = NAN;
+  diagnostic->standardError2 = NAN;
+  diagnostic->standardError3 = NAN;
+  diagnostic->score2 = NAN;
+  diagnostic->score3 = NAN;
+}
+
+Lanczos2SolveStatus RecordPowerLanczosSupportSampleComplex(
+    double sample[POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH],
+    const double complex localPower[LANCZOS2_POWER_COUNT], int powerCount,
+    double weight) {
+  double complex m02;
+  double complex m11;
+  double complex m03 = 0.0;
+  double complex m12 = 0.0;
+  int i;
+  if (sample == NULL || localPower == NULL ||
+      (powerCount != 3 && powerCount != 4) ||
+      !isfinite(weight) || weight < 0.0) {
+    return LANCZOS2_SOLVE_INVALID_ARGUMENT;
+  }
+  /* A zero self-normalized reweighting contribution carries no moment and
+   * remains an unmarked row; it may reduce the final valid-sample count. */
+  if (weight == 0.0) {
+    memset(sample, 0, POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH * sizeof(*sample));
+    return LANCZOS2_SOLVE_OK;
+  }
+  for (i = 0; i < powerCount; i++) {
+    if (!isfinite(creal(localPower[i])) ||
+        !isfinite(cimag(localPower[i]))) {
+      return LANCZOS2_SOLVE_NONFINITE_MOMENT;
+    }
+  }
+  m02 = weight * conj(localPower[0]) * localPower[2];
+  m11 = weight * conj(localPower[1]) * localPower[1];
+  if (powerCount == 4) {
+    m03 = weight * conj(localPower[0]) * localPower[3];
+    m12 = weight * conj(localPower[1]) * localPower[2];
+  }
+  if (!isfinite(creal(m02)) || !isfinite(cimag(m02)) ||
+      !isfinite(creal(m11)) || !isfinite(cimag(m11)) ||
+      !isfinite(creal(m03)) || !isfinite(cimag(m03)) ||
+      !isfinite(creal(m12)) || !isfinite(cimag(m12))) {
+    return LANCZOS2_SOLVE_NONFINITE_MOMENT;
+  }
+  sample[SUPPORT_VALID] = 1.0;
+  sample[SUPPORT_WEIGHT] = weight;
+  sample[SUPPORT_M02_REAL] = creal(m02);
+  sample[SUPPORT_M02_IMAG] = cimag(m02);
+  sample[SUPPORT_M11_REAL] = creal(m11);
+  sample[SUPPORT_M11_IMAG] = cimag(m11);
+  sample[SUPPORT_M03_REAL] = creal(m03);
+  sample[SUPPORT_M03_IMAG] = cimag(m03);
+  sample[SUPPORT_M12_REAL] = creal(m12);
+  sample[SUPPORT_M12_IMAG] = cimag(m12);
+  return LANCZOS2_SOLVE_OK;
+}
+
+Lanczos2SolveStatus RecordPowerLanczosSupportSampleReal(
+    double sample[POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH],
+    const double localPower[LANCZOS2_POWER_COUNT], int powerCount,
+    double weight) {
+  double complex complexPower[LANCZOS2_POWER_COUNT] = {0.0, 0.0, 0.0, 0.0};
+  int i;
+  if (localPower == NULL) return LANCZOS2_SOLVE_INVALID_ARGUMENT;
+  for (i = 0; i < powerCount && i < LANCZOS2_POWER_COUNT; i++) {
+    complexPower[i] = localPower[i];
+  }
+  return RecordPowerLanczosSupportSampleComplex(
+      sample, complexPower, powerCount, weight);
+}
+
+static double complex SupportValue(const double *sample, int realIndex) {
+  return sample[realIndex] + I * sample[realIndex + 1];
+}
+
+static int FiniteComplex(double complex value) {
+  return isfinite(creal(value)) && isfinite(cimag(value));
+}
+
+static double ComplexBlockStandardError(
+    const double complex *value, int count) {
+  double complex mean = 0.0;
+  double sumSquared = 0.0;
+  int block;
+  if (count < 2) return NAN;
+  for (block = 0; block < count; block++) mean += value[block];
+  mean /= (double)count;
+  for (block = 0; block < count; block++) {
+    const double residual = cabs(value[block] - mean);
+    sumSquared += residual * residual;
+  }
+  return sqrt(sumSquared / ((double)count * (double)(count - 1)));
+}
+
+PowerLanczosSupportStatus AnalyzePowerLanczosSupport(
+    const double *sampleData, size_t sampleCapacity, int hasThirdAnchor,
+    PowerLanczosSupportDiagnostic *diagnostic) {
+  double complex totalM02 = 0.0;
+  double complex totalM11 = 0.0;
+  double complex totalM03 = 0.0;
+  double complex totalM12 = 0.0;
+  double blockWeight[POWER_LANCZOS_SUPPORT_MAX_BLOCKS] = {0.0};
+  double complex blockM02[POWER_LANCZOS_SUPPORT_MAX_BLOCKS] = {0.0};
+  double complex blockM11[POWER_LANCZOS_SUPPORT_MAX_BLOCKS] = {0.0};
+  double complex blockM03[POWER_LANCZOS_SUPPORT_MAX_BLOCKS] = {0.0};
+  double complex blockM12[POWER_LANCZOS_SUPPORT_MAX_BLOCKS] = {0.0};
+  double complex blockDelta2[POWER_LANCZOS_SUPPORT_MAX_BLOCKS];
+  double complex blockDelta3[POWER_LANCZOS_SUPPORT_MAX_BLOCKS];
+  double sumWeight = 0.0;
+  double sumWeightSquared = 0.0;
+  size_t validCount = 0;
+  size_t validIndex = 0;
+  size_t sampleIndex;
+  int blockCount;
+  int block;
+  if (diagnostic == NULL) return POWER_LANCZOS_SUPPORT_INVALID;
+  ClearSupportDiagnostic(diagnostic, hasThirdAnchor);
+  if (sampleData == NULL || sampleCapacity == 0) return diagnostic->status;
+
+  for (sampleIndex = 0; sampleIndex < sampleCapacity; sampleIndex++) {
+    const double *sample =
+        sampleData + sampleIndex * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH;
+    int field;
+    if (sample[SUPPORT_VALID] == 0.0) continue;
+    if (sample[SUPPORT_VALID] != 1.0) return diagnostic->status;
+    for (field = SUPPORT_WEIGHT;
+         field < POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH; field++) {
+      if (!isfinite(sample[field])) return diagnostic->status;
+    }
+    if (!(sample[SUPPORT_WEIGHT] > 0.0)) return diagnostic->status;
+    validCount++;
+  }
+  diagnostic->sampleCount = validCount;
+  if (validCount < POWER_LANCZOS_SUPPORT_MIN_SAMPLES) {
+    diagnostic->status = POWER_LANCZOS_SUPPORT_INCONCLUSIVE;
+    return diagnostic->status;
+  }
+  blockCount = (int)(validCount / 8);
+  if (blockCount > POWER_LANCZOS_SUPPORT_MAX_BLOCKS) {
+    blockCount = POWER_LANCZOS_SUPPORT_MAX_BLOCKS;
+  }
+  if (blockCount < 4) {
+    diagnostic->status = POWER_LANCZOS_SUPPORT_INCONCLUSIVE;
+    return diagnostic->status;
+  }
+  diagnostic->blockCount = blockCount;
+
+  for (sampleIndex = 0; sampleIndex < sampleCapacity; sampleIndex++) {
+    const double *sample =
+        sampleData + sampleIndex * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH;
+    const double weight = sample[SUPPORT_WEIGHT];
+    if (sample[SUPPORT_VALID] == 0.0) continue;
+    block = (int)(validIndex * (size_t)blockCount / validCount);
+    if (block >= blockCount) block = blockCount - 1;
+    sumWeight += weight;
+    sumWeightSquared += weight * weight;
+    totalM02 += SupportValue(sample, SUPPORT_M02_REAL);
+    totalM11 += SupportValue(sample, SUPPORT_M11_REAL);
+    totalM03 += SupportValue(sample, SUPPORT_M03_REAL);
+    totalM12 += SupportValue(sample, SUPPORT_M12_REAL);
+    blockWeight[block] += weight;
+    blockM02[block] += SupportValue(sample, SUPPORT_M02_REAL);
+    blockM11[block] += SupportValue(sample, SUPPORT_M11_REAL);
+    blockM03[block] += SupportValue(sample, SUPPORT_M03_REAL);
+    blockM12[block] += SupportValue(sample, SUPPORT_M12_REAL);
+    validIndex++;
+  }
+  if (!isfinite(sumWeight) || !isfinite(sumWeightSquared) ||
+      !(sumWeight > 0.0) || !(sumWeightSquared > 0.0) ||
+      !FiniteComplex(totalM02) || !FiniteComplex(totalM11) ||
+      !FiniteComplex(totalM03) || !FiniteComplex(totalM12)) {
+    return diagnostic->status;
+  }
+  diagnostic->totalWeight = sumWeight;
+  diagnostic->effectiveSampleCount =
+      sumWeight * sumWeight / sumWeightSquared;
+  diagnostic->m02 = totalM02 / sumWeight;
+  diagnostic->m11 = totalM11 / sumWeight;
+  diagnostic->m03 = totalM03 / sumWeight;
+  diagnostic->m12 = totalM12 / sumWeight;
+  diagnostic->delta2 = diagnostic->m02 - diagnostic->m11;
+  diagnostic->delta3 = diagnostic->m03 - diagnostic->m12;
+  diagnostic->relativeDifference2 =
+      RelativeResidual(cabs(diagnostic->delta2),
+                       fmax(cabs(diagnostic->m02), cabs(diagnostic->m11)));
+  diagnostic->relativeDifference3 =
+      RelativeResidual(cabs(diagnostic->delta3),
+                       fmax(cabs(diagnostic->m03), cabs(diagnostic->m12)));
+  if (!isfinite(diagnostic->effectiveSampleCount) ||
+      !FiniteComplex(diagnostic->m02) || !FiniteComplex(diagnostic->m11) ||
+      !FiniteComplex(diagnostic->m03) || !FiniteComplex(diagnostic->m12) ||
+      !FiniteComplex(diagnostic->delta2) ||
+      !FiniteComplex(diagnostic->delta3) ||
+      !isfinite(diagnostic->relativeDifference2) ||
+      !isfinite(diagnostic->relativeDifference3)) {
+    return diagnostic->status;
+  }
+
+  for (block = 0; block < blockCount; block++) {
+    if (!(blockWeight[block] > 0.0) ||
+        !FiniteComplex(blockM02[block]) ||
+        !FiniteComplex(blockM11[block]) ||
+        !FiniteComplex(blockM03[block]) ||
+        !FiniteComplex(blockM12[block])) {
+      return diagnostic->status;
+    }
+    blockDelta2[block] =
+        (blockM02[block] - blockM11[block]) / blockWeight[block];
+    blockDelta3[block] =
+        (blockM03[block] - blockM12[block]) / blockWeight[block];
+  }
+  diagnostic->standardError2 =
+      ComplexBlockStandardError(blockDelta2, blockCount);
+  diagnostic->standardError3 =
+      ComplexBlockStandardError(blockDelta3, blockCount);
+  if (!isfinite(diagnostic->standardError2) ||
+      !isfinite(diagnostic->standardError3)) {
+    return diagnostic->status;
+  }
+  {
+    const double scale2 =
+        fmax(cabs(diagnostic->m02), cabs(diagnostic->m11));
+    const double scale3 =
+        fmax(cabs(diagnostic->m03), cabs(diagnostic->m12));
+    const double floor2 = 256.0 * DBL_EPSILON * fmax(scale2, 1.0);
+    const double floor3 = 256.0 * DBL_EPSILON * fmax(scale3, 1.0);
+    diagnostic->score2 = cabs(diagnostic->delta2) /
+                         fmax(diagnostic->standardError2, floor2);
+    diagnostic->score3 = cabs(diagnostic->delta3) /
+                         fmax(diagnostic->standardError3, floor3);
+  }
+  if (!isfinite(diagnostic->score2) || !isfinite(diagnostic->score3)) {
+    return diagnostic->status;
+  }
+  {
+    const int mismatch2 =
+        diagnostic->relativeDifference2 >=
+            POWER_LANCZOS_SUPPORT_RELATIVE_TOLERANCE &&
+        diagnostic->score2 >= POWER_LANCZOS_SUPPORT_SCORE_TOLERANCE;
+    const int mismatch3 =
+        diagnostic->hasThirdAnchor &&
+        diagnostic->relativeDifference3 >=
+            POWER_LANCZOS_SUPPORT_RELATIVE_TOLERANCE &&
+        diagnostic->score3 >= POWER_LANCZOS_SUPPORT_SCORE_TOLERANCE;
+    const int unresolved2 =
+        diagnostic->relativeDifference2 >=
+            POWER_LANCZOS_SUPPORT_UNRESOLVED_RELATIVE_TOLERANCE &&
+        diagnostic->score2 < POWER_LANCZOS_SUPPORT_SCORE_TOLERANCE;
+    const int unresolved3 =
+        diagnostic->hasThirdAnchor &&
+        diagnostic->relativeDifference3 >=
+            POWER_LANCZOS_SUPPORT_UNRESOLVED_RELATIVE_TOLERANCE &&
+        diagnostic->score3 < POWER_LANCZOS_SUPPORT_SCORE_TOLERANCE;
+    diagnostic->status =
+        mismatch2 || mismatch3
+            ? POWER_LANCZOS_SUPPORT_MISMATCH
+            : (unresolved2 || unresolved3
+                   ? POWER_LANCZOS_SUPPORT_INCONCLUSIVE
+                   : POWER_LANCZOS_SUPPORT_PASS);
+  }
+  if (!diagnostic->hasThirdAnchor) {
+    diagnostic->m03 = diagnostic->m12 = NAN + I * NAN;
+    diagnostic->delta3 = NAN + I * NAN;
+    diagnostic->relativeDifference3 = NAN;
+    diagnostic->standardError3 = NAN;
+    diagnostic->score3 = NAN;
+  }
+  return diagnostic->status;
+}
+
+const char *PowerLanczosSupportStatusName(
+    PowerLanczosSupportStatus status) {
+  switch (status) {
+    case POWER_LANCZOS_SUPPORT_PASS:
+      return "pass";
+    case POWER_LANCZOS_SUPPORT_MISMATCH:
+      return "mismatch";
+    case POWER_LANCZOS_SUPPORT_INCONCLUSIVE:
+      return "inconclusive";
+    case POWER_LANCZOS_SUPPORT_INVALID:
+      return "invalid";
+  }
+  return "invalid";
+}
+
+Lanczos2SolveStatus WritePowerLanczosSupportDiagnostic(
+    FILE *output, int lanczosStep, int experimentalMode,
+    const PowerLanczosSupportDiagnostic *diagnostic) {
+  const char *quality;
+  if (output == NULL || diagnostic == NULL ||
+      (lanczosStep != 1 && lanczosStep != 2) ||
+      (experimentalMode != 0 && experimentalMode != 1)) {
+    return LANCZOS2_SOLVE_INVALID_ARGUMENT;
+  }
+  quality = diagnostic->status == POWER_LANCZOS_SUPPORT_PASS
+                ? "support-check-passed-not-proof"
+                : (experimentalMode ? "biased-diagnostic-only"
+                                    : "invalid-biased-estimator");
+  if (fprintf(output,
+              "# mVMC power_lanczos_support v1 step=%d mode=%s "
+              "result=%s quality=%s scope=necessary-not-sufficient\n",
+              lanczosStep, experimentalMode ? "experimental" : "strict",
+              PowerLanczosSupportStatusName(diagnostic->status), quality) < 0 ||
+      fprintf(output,
+              "# sample_count block_count total_weight effective_sample_count "
+              "M02_re M02_im M11_re M11_im delta2_re delta2_im "
+              "relative_difference2 standard_error2 score2 "
+              "M03_re M03_im M12_re M12_im delta3_re delta3_im "
+              "relative_difference3 standard_error3 score3\n") < 0 ||
+      fprintf(output,
+              "%zu %d % .18e % .18e "
+              "% .18e % .18e % .18e % .18e % .18e % .18e "
+              "% .18e % .18e % .18e "
+              "% .18e % .18e % .18e % .18e % .18e % .18e "
+              "% .18e % .18e % .18e\n",
+              diagnostic->sampleCount, diagnostic->blockCount,
+              diagnostic->totalWeight, diagnostic->effectiveSampleCount,
+              creal(diagnostic->m02), cimag(diagnostic->m02),
+              creal(diagnostic->m11), cimag(diagnostic->m11),
+              creal(diagnostic->delta2), cimag(diagnostic->delta2),
+              diagnostic->relativeDifference2,
+              diagnostic->standardError2, diagnostic->score2,
+              creal(diagnostic->m03), cimag(diagnostic->m03),
+              creal(diagnostic->m12), cimag(diagnostic->m12),
+              creal(diagnostic->delta3), cimag(diagnostic->delta3),
+              diagnostic->relativeDifference3,
+              diagnostic->standardError3, diagnostic->score3) < 0 ||
+      fflush(output) != 0 || ferror(output)) {
+    return LANCZOS2_SOLVE_IO_FAILURE;
+  }
+  return LANCZOS2_SOLVE_OK;
 }
 
 static double HankelResidualReal(const double *moment) {

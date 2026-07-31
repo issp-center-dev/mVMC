@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 
 #include <complex.h>
+#include <limits.h>
 #include <stdint.h>
 #include "backflow.h"
 #include "global.h"
@@ -511,6 +512,28 @@ void SetMemory() {
 
       }
     }
+    if(NLanczosMode>0){
+      size_t sampleCount;
+      if(NVMCSample <= 0 ||
+         (size_t)NVMCSample >
+             SIZE_MAX / POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH ||
+         NVMCSample >
+             INT_MAX / POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH) {
+        int rank = 0;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank == 0) {
+          fprintf(stderr,
+                  "Error: power-Lanczos support audit requires a positive "
+                  "representable sample count.\n");
+        }
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+      }
+      PowerLanczosSupportSampleCapacity = NVMCSample;
+      sampleCount = (size_t)PowerLanczosSupportSampleCapacity;
+      PowerLanczosSupportSampleData = (double*)CheckedLanczos2Calloc(
+          sampleCount * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH,
+          sizeof(double));
+    }
     if(NLanczosMode>0 && NLanczosStep==2){
       const size_t sampleCount = (size_t)NVMCSample;
       if(NVMCSample <= 0) {
@@ -570,6 +593,9 @@ void FreeMemory() {
       free(LS2SamplePower_real);
       free(LS2SampleWeight);
       free(LS2SampleValid);
+    }
+    if(NLanczosMode>0){
+      free(PowerLanczosSupportSampleData);
     }
   }
 

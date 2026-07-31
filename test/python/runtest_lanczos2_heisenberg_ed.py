@@ -45,6 +45,178 @@ HEISENBERG_HANKEL_RESIDUAL_LIMIT = 0.8
 HEISENBERG_HANKEL_STANDARD_ERROR_LIMIT = 12.0
 ZERO_AMPLITUDE_UPS = (0, 1)
 ZERO_AMPLITUDE_DOWNS = (2, 3)
+EXACT_SUPPORT_REFERENCE = {
+    False: {
+        "mu2": 1.621983259441473,
+        "restricted_m11": 1.266138735728027,
+        "delta2": 0.355844523713446,
+        "delta3_abs": 0.583745170414107,
+        "p1_full": -1.723240632552358,
+        "p1_restricted": -1.703521587320468,
+        "p2_full": -1.795545994455297,
+        "p2_restricted": -1.777446224885233,
+    },
+    True: {
+        "mu2": 1.642199795817063,
+        "restricted_m11": 1.282974521245426,
+        "delta2": 0.359225274571637,
+        "delta3_abs": 0.589315487817609,
+        "p1_full": -1.722520204414543,
+        "p1_restricted": -1.702048688627278,
+        "p2_full": -1.795455642029881,
+        "p2_restricted": -1.777603929611767,
+    },
+}
+
+
+def read_support_diagnostic(path):
+    with open(path) as source:
+        lines = [line.strip() for line in source if line.strip()]
+    if len(lines) != 3:
+        raise AssertionError(
+            "support diagnostic has {} lines".format(len(lines))
+        )
+    metadata = {}
+    for token in lines[0].split()[4:]:
+        if "=" in token:
+            key, value = token.split("=", 1)
+            metadata[key] = value
+    columns = lines[1].lstrip("# ").split()
+    values = lines[2].split()
+    if len(columns) != len(values):
+        raise AssertionError(
+            "support diagnostic columns={} values={}".format(
+                len(columns), len(values)
+            )
+        )
+    return metadata, {
+        name: float(value) for name, value in zip(columns, values)
+    }
+
+
+def check_support_diagnostic(
+        workdir, rows, expected_mode, expected_result, expected_step=2):
+    path = os.path.join(
+        workdir, "output", "zvo_ls_support_001.dat"
+    )
+    metadata, values = read_support_diagnostic(path)
+    if expected_result == "pass":
+        expected_quality = "support-check-passed-not-proof"
+    elif expected_mode == "experimental":
+        expected_quality = "biased-diagnostic-only"
+    else:
+        expected_quality = "invalid-biased-estimator"
+    for key, expected in (
+        ("step", str(expected_step)),
+        ("mode", expected_mode),
+        ("result", expected_result),
+        ("quality", expected_quality),
+        ("scope", "necessary-not-sufficient"),
+    ):
+        if metadata.get(key) != expected:
+            raise AssertionError(
+                "support diagnostic {}={} expected {}".format(
+                    key, metadata.get(key), expected
+                )
+            )
+    if rows is None:
+        return values
+    powers = np.array([power for _, _, power in rows], dtype=complex)
+    expected = {
+        "M02": np.mean(np.conj(powers[:, 0]) * powers[:, 2]),
+        "M11": np.mean(np.conj(powers[:, 1]) * powers[:, 1]),
+        "M03": np.mean(np.conj(powers[:, 0]) * powers[:, 3]),
+        "M12": np.mean(np.conj(powers[:, 1]) * powers[:, 2]),
+    }
+    for name, target in expected.items():
+        observed = complex(values[name + "_re"], values[name + "_im"])
+        assert_scaled_close(
+            "support diagnostic " + name,
+            observed,
+            target,
+            2.0e-12,
+            2.0e-12,
+        )
+    return values
+
+
+def generalized_minimum(gram, dimension):
+    overlap = gram[:dimension, :dimension]
+    hamiltonian = 0.5 * (
+        gram[:dimension, 1:dimension + 1]
+        + gram[1:dimension + 1, :dimension]
+    )
+    eigenvalue, eigenvector = np.linalg.eigh(overlap)
+    keep = eigenvalue > 1.0e-12 * np.max(eigenvalue)
+    transform = eigenvector[:, keep] / np.sqrt(eigenvalue[keep])
+    projected = np.dot(
+        np.conj(transform.T), np.dot(hamiltonian, transform)
+    )
+    projected = 0.5 * (projected + np.conj(projected.T))
+    return np.linalg.eigvalsh(projected)[0]
+
+
+def exact_support_negative_control(complex_mode):
+    basis = pure_spin_basis()
+    orbital = pair_orbitals(complex_mode)
+    psi = np.array(
+        [pair_amplitude(state, orbital) for state in basis], dtype=complex
+    )
+    target_index = basis.index(zero_amplitude_state())
+    psi[target_index] = 0.0
+    hamiltonian = build_hamiltonian(basis, False)
+    powers = [psi]
+    for _ in range(3):
+        powers.append(np.dot(hamiltonian, powers[-1]))
+    support = np.abs(psi) > 1.0e-13
+    normalization = np.vdot(psi, psi).real
+    full = np.array(
+        [
+            [np.vdot(powers[a], powers[b]) / normalization
+             for b in range(4)]
+            for a in range(4)
+        ]
+    )
+    restricted = np.array(
+        [
+            [np.vdot(powers[a][support], powers[b][support])
+             / normalization for b in range(4)]
+            for a in range(4)
+        ]
+    )
+    observed = {
+        "mu2": full[0, 2].real,
+        "restricted_m11": restricted[1, 1].real,
+        "delta2": (full[0, 2] - restricted[1, 1]).real,
+        "delta3_abs": abs(full[0, 3] - restricted[1, 2]),
+        "p1_full": generalized_minimum(full, 2),
+        "p1_restricted": generalized_minimum(restricted, 2),
+        "p2_full": generalized_minimum(full, 3),
+        "p2_restricted": generalized_minimum(restricted, 3),
+    }
+    if len(basis) != 6 or np.count_nonzero(support) != 5:
+        raise AssertionError(
+            "exact support fixture is {}/{} instead of 5/6".format(
+                np.count_nonzero(support), len(basis)
+            )
+        )
+    if abs(full[0, 2] - full[1, 1]) > 5.0e-13 or \
+            abs(full[0, 3] - full[1, 2]) > 5.0e-13:
+        raise AssertionError("full-basis power identities do not close")
+    if abs(restricted[0, 2] - full[0, 2]) > 5.0e-13:
+        raise AssertionError("restricted M02 changed despite its v0 factor")
+    for name, expected in EXACT_SUPPORT_REFERENCE[complex_mode].items():
+        assert_scaled_close(
+            "exact support " + name,
+            observed[name],
+            expected,
+            5.0e-13,
+            5.0e-13,
+        )
+    if not observed["p1_restricted"] > observed["p1_full"] or \
+            not observed["p2_restricted"] > observed["p2_full"]:
+        raise AssertionError("restricted energies did not retain known bias")
+    return observed
 
 
 def write_standard_input(path):
@@ -637,6 +809,50 @@ def main():
         init_path=init_path,
         extra_env=extra_env,
     )
+    if not args.ising:
+        if process.returncode == 0:
+            raise AssertionError(
+                "strict zero-support negative control unexpectedly succeeded"
+            )
+        if "power-Lanczos support mismatch" not in process.stdout:
+            raise AssertionError(
+                "strict zero-support run missed support mismatch:\n{}".format(
+                    process.stdout
+                )
+            )
+        check_support_diagnostic(workdir, None, "strict", "mismatch")
+        update_modpara(workdir, {"NLanczosStep": "1"})
+        step1_process = run_vmc(
+            rootdir,
+            workdir,
+            mpi_procs=mpi_procs,
+            init_path=init_path,
+            extra_env=extra_env,
+        )
+        if step1_process.returncode == 0 or \
+                "power-Lanczos support mismatch" not in step1_process.stdout:
+            raise AssertionError(
+                "strict first-step zero-support negative control failed:\n{}"
+                .format(step1_process.stdout)
+            )
+        check_support_diagnostic(
+            workdir, None, "strict", "mismatch", expected_step=1
+        )
+        for filename in ("zvo_ls_out_001.dat", "zvo_ls_qqqq_001.dat"):
+            path = os.path.join(workdir, "output", filename)
+            if os.path.exists(path):
+                os.remove(path)
+        update_modpara(
+            workdir,
+            {"NLanczosStep": "2", "NLanczosSupportMode": "1"},
+        )
+        process = run_vmc(
+            rootdir,
+            workdir,
+            mpi_procs=mpi_procs,
+            init_path=init_path,
+            extra_env=extra_env,
+        )
     if process.returncode != 0:
         raise AssertionError(
             "Lanczos2 Heisenberg vmc.out failed:\n{}".format(
@@ -651,6 +867,8 @@ def main():
     reference, unconjugated, zero_states, bridge_sources = build_reference(
         args.complex, args.ising
     )
+    if not args.ising:
+        exact_support_negative_control(args.complex)
     if len(zero_states) != 1:
         raise AssertionError(
             "expected one zero-overlap state, got {}".format(
@@ -710,6 +928,13 @@ def main():
             raise AssertionError(
                 "complex Heisenberg fixture is insensitive to conjugation"
             )
+
+    check_support_diagnostic(
+        workdir,
+        rows,
+        "strict" if args.ising else "experimental",
+        "pass" if args.ising else "mismatch",
+    )
 
     hankel_standard_error = check_solver_output(
         workdir,

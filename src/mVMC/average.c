@@ -26,6 +26,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #include <complex.h>
+#include <stdint.h>
 #include "global.h"
 #include "average.h"
 #include "physcal_lanczos2.h"
@@ -35,6 +36,96 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 void weightAverageReduce(int n, double *vec, MPI_Comm comm);
 void weightAverageReduce_fcmp(int n, double complex *vec, MPI_Comm comm);
 void weightAverageReduce_real(int n, double *vec, MPI_Comm comm);
+
+static void CheckPowerLanczosSupport(MPI_Comm comm) {
+  PowerLanczosSupportDiagnostic diagnostic;
+  PowerLanczosSupportStatus supportStatus = POWER_LANCZOS_SUPPORT_INVALID;
+  Lanczos2SolveStatus outputStatus = LANCZOS2_SOLVE_OK;
+  double *reduced = PowerLanczosSupportSampleData;
+  size_t analyzedCapacity = (size_t)PowerLanczosSupportSampleCapacity;
+  const int count =
+      PowerLanczosSupportSampleCapacity *
+      POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH;
+  int statusCode = POWER_LANCZOS_SUPPORT_INVALID;
+  int rank = 0;
+  int size = 1;
+  MPI_Comm_rank(comm,&rank);
+  MPI_Comm_size(comm,&size);
+  if(size>1) {
+    /*
+     * Each rank stores only its local NVMCSample rows.  A root-only gather
+     * preserves the previous rank-major sample order without replicating a
+     * world-sized audit buffer, or its reduction buffer, on every rank.
+     */
+    if(analyzedCapacity > SIZE_MAX / (size_t)size) {
+      if(rank == 0) {
+        fprintf(stderr,
+                "Error: power-Lanczos gathered support capacity is too "
+                "large.\n");
+      }
+      MPI_Abort(comm,EXIT_FAILURE);
+    }
+    analyzedCapacity *= (size_t)size;
+    if(rank == 0) {
+      if(analyzedCapacity >
+             SIZE_MAX / POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH ||
+         analyzedCapacity * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH >
+             SIZE_MAX / sizeof(double)) {
+        fprintf(stderr,
+                "Error: power-Lanczos gathered support buffer is too "
+                "large.\n");
+        MPI_Abort(comm,EXIT_FAILURE);
+      }
+      reduced = (double*)malloc(
+          analyzedCapacity * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH *
+          sizeof(double));
+      if(reduced == NULL) {
+        fprintf(stderr,
+                "Error: failed to allocate power-Lanczos support gather "
+                "buffer.\n");
+        MPI_Abort(comm,EXIT_FAILURE);
+      }
+    }
+#ifdef _mpi_use
+    MPI_Gather(PowerLanczosSupportSampleData,count,MPI_DOUBLE,
+               reduced,count,MPI_DOUBLE,0,comm);
+#endif
+  }
+  if(rank == 0) {
+    supportStatus = AnalyzePowerLanczosSupport(
+        reduced,analyzedCapacity,
+        NLanczosStep==2,&diagnostic);
+    outputStatus = WritePowerLanczosSupportDiagnostic(
+        FileLSSupport,NLanczosStep,NLanczosSupportMode,&diagnostic);
+    if(outputStatus != LANCZOS2_SOLVE_OK) {
+      fprintf(stderr,
+              "Error: power-Lanczos support diagnostic output failed: %s.\n",
+              Lanczos2SolveError(outputStatus));
+      supportStatus = POWER_LANCZOS_SUPPORT_INVALID;
+    }
+    statusCode = (int)supportStatus;
+    if(supportStatus != POWER_LANCZOS_SUPPORT_PASS) {
+      fprintf(stderr,
+              "%s: power-Lanczos support %s: "
+              "M02-M11=(%.6e,%.6e), score=%.6e, "
+              "M03-M12=(%.6e,%.6e), score=%.6e, samples=%zu.\n",
+              NLanczosSupportMode == 0 ? "Error" : "Warning",
+              PowerLanczosSupportStatusName(supportStatus),
+              creal(diagnostic.delta2),cimag(diagnostic.delta2),
+              diagnostic.score2,creal(diagnostic.delta3),
+              cimag(diagnostic.delta3),diagnostic.score3,
+              diagnostic.sampleCount);
+    }
+  }
+#ifdef _mpi_use
+  MPI_Bcast(&statusCode,1,MPI_INT,0,comm);
+#endif
+  if(size>1 && rank == 0) free(reduced);
+  if(NLanczosSupportMode == 0 &&
+     statusCode != POWER_LANCZOS_SUPPORT_PASS) {
+    MPI_Abort(comm,EXIT_FAILURE);
+  }
+}
 
 
 /* calculate average of Wc, Etot and Etot2 ;Sztot,Sztot2 for fsz*/
@@ -284,6 +375,9 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
       }
       weightAverageReduce_fcmp(LANCZOS2_MOMENT_COUNT,LS2Moment,comm);
     }
+  }
+  if(NLanczosMode>0){
+    CheckPowerLanczosSupport(comm);
   }
   return;
 }

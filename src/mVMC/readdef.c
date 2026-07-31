@@ -949,6 +949,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&RescaleSmat, 1, MPI_INT, 0, comm); // for Rescale S matrix
   MPI_Bcast(&useDiagScale, 1, MPI_INT, 0, comm); // for Jacobi preconditioned CG
   MPI_Bcast(&reweight, 1, MPI_INT, 0, comm); // for reweight
+  MPI_Bcast(&NLanczosSupportMode, 1, MPI_INT, 0, comm);
   MPI_Bcast(&AllComplexFlag, 1, MPI_INT, 0, comm); // for Real
   MPI_Bcast(&iFlgOrbitalGeneral, 1, MPI_INT, 0, comm); // for fsz
   MPI_Bcast(&hasLattice, 1, MPI_INT, 0, comm);
@@ -968,6 +969,12 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NVMCCalMode = bufInt[IdxVMCCalcMode];
   NLanczosMode = bufInt[IdxLanczosMode];
   NLanczosStep = bufInt[IdxLanczosStep];
+  if (NLanczosSupportMode != 0 && NLanczosSupportMode != 1) {
+    if (rank == 0) {
+      fprintf(stderr, "Error: NLanczosSupportMode must be 0 or 1.\n");
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
   NDataIdxStart = bufInt[IdxDataIdxStart];
   NDataQtySmp = bufInt[IdxDataQtySmp];
   Nsite = bufInt[IdxNsite];
@@ -1301,6 +1308,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         .orbitalGeneral = iFlgOrbitalGeneral,
         .nProjBF = NProjBF,
         .flagRBM = FlagRBM,
+        .reweight = reweight,
         .exUpdatePath = NExUpdatePath,
         .nPairHopping = NPairHopping,
         .nExchangeCoupling = NExchangeCoupling,
@@ -1778,6 +1786,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
     lanczos2Contract.orbitalGeneral = iFlgOrbitalGeneral;
     lanczos2Contract.nProjBF = NProjBF;
     lanczos2Contract.flagRBM = FlagRBM;
+    lanczos2Contract.reweight = reweight;
     lanczos2Contract.exUpdatePath = NExUpdatePath;
     lanczos2Contract.nPairHopping = NPairHopping;
     lanczos2Contract.nExchangeCoupling = NExchangeCoupling;
@@ -2516,6 +2525,7 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   RescaleSmat  = 0;
   useDiagScale = 0;
   reweight = 0;
+  NLanczosSupportMode = 0;
 
   bufInt[IdxNx] = 1;
   bufInt[IdxNy] = 1;
@@ -2649,6 +2659,9 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               useDiagScale = (int) dtmp;
             } else if (CheckWords(ctmp, "reweight") == 0) {
               reweight = (int) dtmp;
+            } else if (CheckWords(ctmp, "NLanczosSupportMode") == 0) {
+              NLanczosSupportMode =
+                  (dtmp == 0.0 || dtmp == 1.0) ? (int)dtmp : -1;
 //RBM
             } else if (CheckWords(ctmp, "Nneuron") == 0) {
               bufInt[IdxNneuron] = (int) dtmp;

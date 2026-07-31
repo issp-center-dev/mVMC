@@ -1050,6 +1050,43 @@ def assert_lanczos_outputs(workdir, label):
     return 0
 
 
+def assert_power_lanczos_support(workdir, label, expected_mode,
+                                  expected_result):
+    path = os.path.join(workdir, "output", "zvo_ls_support_001.dat")
+    try:
+        with open(path) as fp:
+            lines = [line.strip() for line in fp if line.strip()]
+    except OSError as exc:
+        print("ERROR: {} support diagnostic is unavailable: {}".format(
+            label, exc))
+        return -1
+    if len(lines) != 3 or not lines[0].startswith(
+            "# mVMC power_lanczos_support v1 "):
+        print("ERROR: {} support diagnostic has an invalid format".format(
+            label))
+        return -1
+    metadata = {}
+    for token in lines[0].split()[4:]:
+        if "=" in token:
+            key, value = token.split("=", 1)
+            metadata[key] = value
+    expected_quality = (
+        "support-check-passed-not-proof" if expected_result == "pass" else
+        ("biased-diagnostic-only" if expected_mode == "experimental" else
+         "invalid-biased-estimator"))
+    for key, expected in (
+            ("step", "1"),
+            ("mode", expected_mode),
+            ("result", expected_result),
+            ("quality", expected_quality),
+            ("scope", "necessary-not-sufficient")):
+        if metadata.get(key) != expected:
+            print("ERROR: {} support diagnostic {}={} expected {}".format(
+                label, key, metadata.get(key), expected))
+            return -1
+    return 0
+
+
 def write_lanczos_init(workdir):
     nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidxgen.def"))
     values = [0.0] * 6
@@ -1271,7 +1308,8 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
         "BackFlow_FSZ_Lanczos_Identity_Complex": (1, False, False, False, True),
         "BackFlow_FSZ_Lanczos_Identity_Complex_mpi": (1, False, False, False, True),
         "BackFlow_FSZ_Lanczos_Identity_Complex_omp": (1, False, False, False, True),
-        "BackFlow_FSZ_Lanczos_Identity_Real": (0, False, False, False, True),
+        "BackFlow_FSZ_Lanczos_Identity_Real": (0, False, False, False, False),
+        "BackFlow_FSZ_Lanczos_Identity_Real_Experimental": (0, False, False, False, True),
         "BackFlow_FSZ_Lanczos_SpinChanging_Identity_Complex": (1, True, False, False, True),
         "BackFlow_FSZ_Lanczos_SpinChanging_Identity_Complex_mpi": (1, True, False, False, True),
         "BackFlow_FSZ_Lanczos_SpinChanging_Identity_Complex_omp": (1, True, False, False, True),
@@ -1301,6 +1339,8 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
                         ("NonfiniteWarning", "RebuildFailureWarning")) else "32")),
         "NVMCWarmUp": "8",
     }
+    if case_name.endswith("Identity_Real_Experimental"):
+        updates["NLanczosSupportMode"] = "1"
     if spin_changing:
         updates["2Sz"] = "-1"
     if momentum:
@@ -1327,6 +1367,16 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
         bf_env["MVMC_LANCZOS_TEST_REBUILD_FAILURES"] = "1"
     bf_proc = run_vmc(rootdir, bf_workdir, mpi_procs=mpi_procs,
                       init_path=init_path, extra_env=bf_env)
+    if case_name == "BackFlow_FSZ_Lanczos_Identity_Real":
+        if bf_proc.returncode == 0:
+            print("ERROR: BF-FSZ real support mismatch unexpectedly succeeded")
+            return -1
+        if "power-Lanczos support mismatch" not in bf_proc.stdout:
+            print("ERROR: BF-FSZ real support mismatch was not diagnosed")
+            print(bf_proc.stdout)
+            return -1
+        return assert_power_lanczos_support(
+            bf_workdir, case_name, "strict", "mismatch")
     if case_name.startswith("BackFlow_FSZ_Lanczos_NonfiniteThreshold"):
         if bf_proc.returncode == 0:
             print("ERROR: BF-FSZ non-finite Lanczos injection unexpectedly succeeded")
@@ -1352,6 +1402,9 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
         print(bf_proc.stdout)
         return bf_proc.returncode
     status = assert_lanczos_outputs(bf_workdir, case_name)
+    if case_name.endswith("Identity_Real_Experimental"):
+        status = assert_power_lanczos_support(
+            bf_workdir, case_name, "experimental", "mismatch")
     if status != 0 or not compare_no_bf:
         return status
 

@@ -88,6 +88,32 @@ void calculateQCACAQDC(double complex *qcacaq, const double complex *lslq, const
                        int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
                        const double complex h1, const double complex ip,double complex *rbmCnt);
 
+static void RecordPowerLanczosSupportLSLQSample(
+    const double *lslqReal, const double complex *lslqComplex,
+    double weight, int parentRank, int sample, MPI_Comm comm) {
+  Lanczos2SolveStatus status;
+  const size_t offset =
+      (size_t)sample * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH;
+  if(AllComplexFlag == 0) {
+    const double power[LANCZOS2_POWER_COUNT] = {
+        lslqReal[0],lslqReal[1],lslqReal[3],0.0};
+    status = RecordPowerLanczosSupportSampleReal(
+        PowerLanczosSupportSampleData + offset,power,3,weight);
+  }else{
+    const double complex power[LANCZOS2_POWER_COUNT] = {
+        lslqComplex[0],lslqComplex[1],lslqComplex[3],0.0};
+    status = RecordPowerLanczosSupportSampleComplex(
+        PowerLanczosSupportSampleData + offset,power,3,weight);
+  }
+  if(status != LANCZOS2_SOLVE_OK) {
+    fprintf(stderr,
+            "Error: power-Lanczos support sample failure on rank %d, "
+            "sample %d: %s.\n",
+            parentRank,sample,Lanczos2SolveError(status));
+    MPI_Abort(comm,EXIT_FAILURE);
+  }
+}
+
 static void clearStoredOSampleRange(const int sampleStart, const int sampleEnd) {
   const int sampleSize = sampleEnd - sampleStart;
 
@@ -538,9 +564,13 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
         StartTimer(43);
         if(AllComplexFlag==0) {
           LSLocalQ_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt, LSLQ_real);
+          RecordPowerLanczosSupportLSLQSample(
+              LSLQ_real,NULL,w,parentRank,sample,comm_parent);
           calculateQQQQ_real(QQQQ_real,LSLQ_real,w,NLSHam);
         }else{
           LSLocalQ(e,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt, LSLQ);
+          RecordPowerLanczosSupportLSLQSample(
+              NULL,LSLQ,w,parentRank,sample,comm_parent);
           calculateQQQQ(QQQQ,LSLQ,w,NLSHam);
         }
         if(lanczosOracleDump != NULL) {
@@ -679,6 +709,26 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
           }
           LS2SampleWeight[sample] = w;
           LS2SampleValid[sample] = 1;
+          if(AllComplexFlag==0) {
+            lanczos2Status = RecordPowerLanczosSupportSampleReal(
+                PowerLanczosSupportSampleData +
+                    (size_t)sample *
+                    POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH,
+                LS2LocalPower_real,LANCZOS2_POWER_COUNT,w);
+          }else{
+            lanczos2Status = RecordPowerLanczosSupportSampleComplex(
+                PowerLanczosSupportSampleData +
+                    (size_t)sample *
+                    POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH,
+                LS2LocalPower,LANCZOS2_POWER_COUNT,w);
+          }
+          if(lanczos2Status != LANCZOS2_SOLVE_OK) {
+            fprintf(stderr,
+                    "Error: power-Lanczos support sample failure on rank %d, "
+                    "sample %d: %s.\n",
+                    parentRank,sample,Lanczos2SolveError(lanczos2Status));
+            MPI_Abort(comm_parent,EXIT_FAILURE);
+          }
           if(lanczosOracleDump != NULL) {
             fprintf(lanczosOracleDump, "sample %d occ", sample);
             for(i=0; i<Nsite2; i++) {
@@ -879,6 +929,14 @@ void clearPhysQuantity(){
         LS2SampleValid[i] = 0;
       }
       LS2MomentBasisShift = 0.0;
+    }
+    if(NLanczosMode>0) {
+      for(i=0;
+          i<PowerLanczosSupportSampleCapacity *
+                POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH;
+          i++) {
+        PowerLanczosSupportSampleData[i] = 0.0;
+      }
     }
   }
   return;

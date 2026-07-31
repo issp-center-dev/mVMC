@@ -415,6 +415,7 @@ file format is shown as follows.
     NVMCCalMode    0
     NLanczosMode   0
     NLanczosStep   1
+    NLanczosSupportMode 0
     --------------------
     NDataIdxStart  1
     NDataQtySmp    1
@@ -557,6 +558,9 @@ Keywords and parameters
 
    ``OrbitalGeneral`` / FSZ, BackFlow, RBM, ``PairHop``, ``InterAll``,
    ``NBodyInterAll``, and ``NBodyG`` are rejected before sampling.
+   ``reweight=1`` is also rejected for the second step: it changes weights
+   only on the base-wave-function support and cannot recover configurations
+   having zero base amplitude.
    ``Exchange`` remains unsupported in the electronic class, and
    ``Transfer`` remains unsupported in the pure-spin class. Mixed
    localized/itinerant models and pure-spin quantum projection with
@@ -606,6 +610,23 @@ Keywords and parameters
    builds. If the overlap matrix is not positive definite,
    the solver retries once with a relative diagonal regularization of
    :math:`10^{-12}` and records this in ``solve_flag``.
+
+-  ``NLanczosSupportMode``
+
+   **Type :** int-type (default value: 0)
+
+   **Description :** Controls the independent power-Lanczos support audit.
+   [0] is strict production mode. It stops before the Lanczos solver when
+   ``M02`` and ``M11`` disagree, when (for the second step) ``M03`` and
+   ``M12`` disagree, or when fewer than 32 valid samples make the audit
+   inconclusive, or when a relative difference of at least 0.5 remains below
+   the 4.5-score mismatch threshold and is therefore unresolved. Samples
+   with an exactly zero reweighting weight are omitted from the valid count.
+   [1] is an explicit experimental compatibility mode. It
+   continues through the legacy support-restricted estimator and marks a
+   failed audit as ``biased-diagnostic-only`` in
+   ``xxx_ls_support_yyy.dat``. A passing audit is necessary but not
+   sufficient to prove complete support at every higher Krylov order.
 
 -  ``NDataIdxStart``
 
