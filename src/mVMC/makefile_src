@@ -15,6 +15,7 @@ ifneq ($(BLIS_ROOT),)
 endif
 
 OBJS = \
+	absolute_pfaffian.o \
 	physcal_lanczos.o \
 	splitloop.o \
 	vmcmain.o \
@@ -22,6 +23,7 @@ OBJS = \
 	$(PFUPDATES) $(LTL2INV)
 
 SOURCES = \
+absolute_pfaffian.c \
 backflow.c \
 backflow_measure.c \
 backflow_nbody.c \
@@ -81,6 +83,7 @@ vmcmake_real.c \
 workspace.c
 
 HEADERS = \
+./include/absolute_pfaffian.h \
 ./include/backflow.h \
 ./include/backflow_nbody.h \
 ./include/average.h \

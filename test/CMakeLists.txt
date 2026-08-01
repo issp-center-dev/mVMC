@@ -35,4 +35,29 @@ if(MPI_FOUND)
 endif()
 add_test(NAME Lanczos2Solver_Unit COMMAND lanczos2_solver_unit)
 
+add_executable(absolute_pfaffian_unit
+    absolute_pfaffian_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_include_directories(absolute_pfaffian_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(absolute_pfaffian_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(absolute_pfaffian_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(absolute_pfaffian_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(absolute_pfaffian_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME AbsolutePfaffian_Unit COMMAND absolute_pfaffian_unit)
+if(MPI_FOUND)
+    add_test(NAME AbsolutePfaffian_Unit_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:absolute_pfaffian_unit>
+                ${MPIEXEC_POSTFLAGS})
+endif()
+
 add_subdirectory(python)
