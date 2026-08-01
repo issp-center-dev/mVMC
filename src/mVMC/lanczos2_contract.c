@@ -44,6 +44,9 @@ Lanczos2ContractStatus ValidateLanczos2Contract(
   if (contract->flagRBM != 0) {
     return LANCZOS2_CONTRACT_UNSUPPORTED_RBM;
   }
+  if (contract->reweight != 0) {
+    return LANCZOS2_CONTRACT_UNSUPPORTED_REWEIGHT;
+  }
   if (contract->exUpdatePath != 0 && contract->exUpdatePath != 2) {
     return LANCZOS2_CONTRACT_UNSUPPORTED_UPDATE_PATH;
   }
@@ -98,6 +101,8 @@ const char *Lanczos2ContractError(Lanczos2ContractStatus status) {
       return "NLanczosStep=2 does not support BackFlow";
     case LANCZOS2_CONTRACT_UNSUPPORTED_RBM:
       return "NLanczosStep=2 does not support RBM";
+    case LANCZOS2_CONTRACT_UNSUPPORTED_REWEIGHT:
+      return "NLanczosStep=2 does not support reweight=1";
     case LANCZOS2_CONTRACT_UNSUPPORTED_UPDATE_PATH:
       return "NLanczosStep=2 supports NExUpdatePath=0, or "
              "NExUpdatePath=2 for pure-spin mode";

@@ -481,6 +481,165 @@ static void TestMomentAccumulation(void) {
   }
 }
 
+static void TestPowerLanczosSupportDiagnostic(void) {
+  double negative[32 * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH] = {0.0};
+  double matching[32 * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH] = {0.0};
+  double complexNegative[32 * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH] = {0.0};
+  double unresolved[32 * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH] = {0.0};
+  PowerLanczosSupportDiagnostic diagnostic;
+  Lanczos2SolveStatus solveStatus;
+  PowerLanczosSupportStatus supportStatus;
+  int sample;
+
+  for (sample = 0; sample < 32; sample++) {
+    const double twoStatePower[4] = {1.0, 0.0, 4.0, 0.0};
+    const double matchingPower[4] = {
+        1.0, sample % 2 == 0 ? 0.0 : 2.0, 2.0, 2.0};
+    const double complex complexPower[4] = {
+        1.0, 0.0, 0.0 + 3.0 * I, 0.0};
+    const double unresolvedPower[4] = {
+        1.0, 0.0, sample < 16 ? 200.0 : -100.0, 0.0};
+    solveStatus = RecordPowerLanczosSupportSampleReal(
+        negative + sample * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH,
+        twoStatePower, 4, 1.0);
+    CHECK(solveStatus == LANCZOS2_SOLVE_OK,
+          "two-state support record status=%d", solveStatus);
+    solveStatus = RecordPowerLanczosSupportSampleReal(
+        matching + sample * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH,
+        matchingPower, 4, 1.0);
+    CHECK(solveStatus == LANCZOS2_SOLVE_OK,
+          "matching support record status=%d", solveStatus);
+    solveStatus = RecordPowerLanczosSupportSampleComplex(
+        complexNegative + sample * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH,
+        complexPower, 4, 1.0);
+    CHECK(solveStatus == LANCZOS2_SOLVE_OK,
+          "complex support record status=%d", solveStatus);
+    solveStatus = RecordPowerLanczosSupportSampleReal(
+        unresolved + sample * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH,
+        unresolvedPower, 4, 1.0);
+    CHECK(solveStatus == LANCZOS2_SOLVE_OK,
+          "unresolved support record status=%d", solveStatus);
+  }
+
+  supportStatus = AnalyzePowerLanczosSupport(
+      negative, 32, 1, &diagnostic);
+  CHECK(supportStatus == POWER_LANCZOS_SUPPORT_MISMATCH,
+        "two-state support status=%d", supportStatus);
+  CHECK(NearlyEqual(creal(diagnostic.m02), 4.0, 1.0e-15),
+        "two-state M02=%.17g", creal(diagnostic.m02));
+  CHECK(NearlyEqual(creal(diagnostic.m11), 0.0, 1.0e-15),
+        "two-state M11=%.17g", creal(diagnostic.m11));
+  CHECK(NearlyEqual(diagnostic.relativeDifference2, 1.0, 1.0e-15),
+        "two-state relative difference=%.17g",
+        diagnostic.relativeDifference2);
+
+  supportStatus = AnalyzePowerLanczosSupport(
+      matching, 32, 1, &diagnostic);
+  CHECK(supportStatus == POWER_LANCZOS_SUPPORT_PASS,
+        "matching support status=%d", supportStatus);
+  CHECK(cabs(diagnostic.delta2) <= 1.0e-15,
+        "matching delta2=(%.17g,%.17g)",
+        creal(diagnostic.delta2), cimag(diagnostic.delta2));
+  CHECK(cabs(diagnostic.delta3) <= 1.0e-15,
+        "matching delta3=(%.17g,%.17g)",
+        creal(diagnostic.delta3), cimag(diagnostic.delta3));
+
+  supportStatus = AnalyzePowerLanczosSupport(
+      complexNegative, 32, 0, &diagnostic);
+  CHECK(supportStatus == POWER_LANCZOS_SUPPORT_MISMATCH,
+        "complex support status=%d", supportStatus);
+  CHECK(cabs(diagnostic.m02 - 3.0 * I) <= 1.0e-15,
+        "complex M02=(%.17g,%.17g)",
+        creal(diagnostic.m02), cimag(diagnostic.m02));
+
+  supportStatus = AnalyzePowerLanczosSupport(
+      unresolved, 32, 0, &diagnostic);
+  CHECK(supportStatus == POWER_LANCZOS_SUPPORT_INCONCLUSIVE,
+        "large unresolved support status=%d", supportStatus);
+  CHECK(NearlyEqual(diagnostic.relativeDifference2, 1.0, 1.0e-15),
+        "large unresolved relative difference=%.17g",
+        diagnostic.relativeDifference2);
+  CHECK(diagnostic.score2 > 0.57 && diagnostic.score2 < 0.58,
+        "large unresolved score=%.17g", diagnostic.score2);
+
+  supportStatus = AnalyzePowerLanczosSupport(
+      matching, POWER_LANCZOS_SUPPORT_MIN_SAMPLES - 1, 1, &diagnostic);
+  CHECK(supportStatus == POWER_LANCZOS_SUPPORT_INCONCLUSIVE,
+        "short support status=%d", supportStatus);
+
+  {
+    FILE *output = tmpfile();
+    char line[2048];
+    CHECK(output != NULL, "support diagnostic tmpfile failed");
+    if (output != NULL) {
+      supportStatus = AnalyzePowerLanczosSupport(
+          negative, 32, 1, &diagnostic);
+      solveStatus = WritePowerLanczosSupportDiagnostic(
+          output, 2, 1, &diagnostic);
+      CHECK(solveStatus == LANCZOS2_SOLVE_OK,
+            "support diagnostic output status=%d", solveStatus);
+      rewind(output);
+      CHECK(fgets(line, sizeof(line), output) != NULL,
+            "support diagnostic header missing");
+      CHECK(strstr(line, "result=mismatch") != NULL &&
+                strstr(line, "quality=biased-diagnostic-only") != NULL &&
+                strstr(line, "scope=necessary-not-sufficient") != NULL,
+            "support diagnostic header mismatch: %s", line);
+      fclose(output);
+    }
+  }
+
+  {
+    double badPower[4] = {1.0, NAN, 0.0, 0.0};
+    solveStatus = RecordPowerLanczosSupportSampleReal(
+        negative, badPower, 4, 1.0);
+    CHECK(solveStatus == LANCZOS2_SOLVE_NONFINITE_MOMENT,
+          "nonfinite support record status=%d", solveStatus);
+  }
+
+  {
+    double zeroWeightSample[POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH];
+    const double zeroWeightPower[4] = {1.0, 2.0, 3.0, 4.0};
+    int field;
+    for (field = 0; field < POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH; field++) {
+      zeroWeightSample[field] = 7.0;
+    }
+    solveStatus = RecordPowerLanczosSupportSampleReal(
+        zeroWeightSample, zeroWeightPower, 4, 0.0);
+    CHECK(solveStatus == LANCZOS2_SOLVE_OK,
+          "zero-weight support record status=%d", solveStatus);
+    for (field = 0; field < POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH; field++) {
+      CHECK(zeroWeightSample[field] == 0.0,
+            "zero-weight support field %d changed to %.17g",
+            field, zeroWeightSample[field]);
+    }
+    solveStatus = RecordPowerLanczosSupportSampleReal(
+        zeroWeightSample, zeroWeightPower, 4, -1.0);
+    CHECK(solveStatus == LANCZOS2_SOLVE_INVALID_ARGUMENT,
+          "negative-weight support record status=%d", solveStatus);
+    solveStatus = RecordPowerLanczosSupportSampleReal(
+        zeroWeightSample, zeroWeightPower, 4, NAN);
+    CHECK(solveStatus == LANCZOS2_SOLVE_INVALID_ARGUMENT,
+          "nonfinite-weight support record status=%d", solveStatus);
+  }
+
+  {
+    double aggregateOverflow[32 * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH] = {0.0};
+    for (sample = 0; sample < 32; sample++) {
+      double *row = aggregateOverflow +
+                    sample * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH;
+      row[0] = 1.0;
+      row[1] = 1.0;
+      row[2] = DBL_MAX / 16.0;
+      row[4] = DBL_MAX / 16.0;
+    }
+    supportStatus = AnalyzePowerLanczosSupport(
+        aggregateOverflow, 32, 0, &diagnostic);
+    CHECK(supportStatus == POWER_LANCZOS_SUPPORT_INVALID,
+          "aggregate-overflow support status=%d", supportStatus);
+  }
+}
+
 static void TestOutputLayout(void) {
   const double eigenvalue[3] = {-2.0, 1.0, 4.0};
   const double weight[3] = {0.2, 0.3, 0.5};
@@ -584,6 +743,7 @@ int main(void) {
   TestLegacyDimensionTwoReduction();
   TestLegacyNegativeDiscriminantFails();
   TestMomentAccumulation();
+  TestPowerLanczosSupportDiagnostic();
   TestOutputLayout();
 
   if (failures != 0) {

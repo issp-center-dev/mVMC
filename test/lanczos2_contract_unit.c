@@ -115,6 +115,11 @@ static void TestEachUnsupportedCapability(void) {
   CheckStatus(&contract, LANCZOS2_CONTRACT_UNSUPPORTED_RBM, "RBM");
 
   contract = SupportedContract();
+  contract.reweight = 1;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_UNSUPPORTED_REWEIGHT,
+              "reweight");
+
+  contract = SupportedContract();
   contract.exUpdatePath = 1;
   CheckStatus(&contract, LANCZOS2_CONTRACT_UNSUPPORTED_UPDATE_PATH,
               "update path");

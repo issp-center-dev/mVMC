@@ -1374,6 +1374,8 @@ void VMCMainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
         }
         continue;
       }
+      RecordPowerLanczosSupportLSLQSample(
+          LSLQ_real,LSLQ,w,parentRank,sample,comm_parent);
       if(lanczosOracleDump != NULL) {
         fprintf(lanczosOracleDump, "sample %d occ", sample);
         for(i=0; i<Nsite2; i++) fprintf(lanczosOracleDump, " %d", eleNum[i]);
@@ -1769,6 +1771,8 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
         }
         continue;
       }
+      RecordPowerLanczosSupportLSLQSample(
+          LSLQ_real,LSLQ,w,parentRank,sample,comm_parent);
       if(lanczosOracleDump != NULL) {
         fprintf(lanczosOracleDump, "sample %d occ", sample);
         for(i=0; i<Nsite2; i++) fprintf(lanczosOracleDump, " %d", eleNum[i]);

@@ -317,10 +317,31 @@ mVMCで用いる1st stepと2nd stepの試行波動関数は、それぞれ
 一般の :math:`\hat A` に対しては
 :math:`F^\dagger(x,\hat A)` を :math:`F^\dagger(x,\hat A^\dagger)` で
 置き換える必要があります。
-両者はサンプル数無限大の極限では同じ期待値を与えますが、
-有限のサンプル数では一致せず、一般に後者の方が数値的に安定です。
-以下では表記を簡単にするため :math:`\rho_\psi(x)` を
-:math:`\rho(x)` と略記します。
+両者が同じ期待値を与えるのは、挿入した完全系をsampling support
+:math:`\operatorname{supp}(\psi)` に制限しても、落ちる項が全て0となる場合
+だけです。例えば :math:`\psi(x)=0` でも中間状態
+:math:`(\hat B\psi)(x)` がnonzeroなら、local estimatorを定義する比が使えず、
+:math:`|\psi|^2` からのproduct samplingはその配置を決して訪れません。
+この場合、split-product estimatorのbiasはsample数無限大でも残ります。
+このsupport条件を満たす場合に限り、両者は有限sampleでのみ一致せず、
+一般に後者の方が数値的に安定です。以下では表記を簡単にするため
+:math:`\rho_\psi(x)` を :math:`\rho(x)` と略記します。
+
+mVMCはmoment表とは独立に、このsupport条件の必要条件を監査します。
+両方のpower-Lanczos stepで
+:math:`M_{02}=\langle F_0^*F_2\rangle` と
+:math:`M_{11}=\langle F_1^*F_1\rangle` を比較し、2nd stepではさらに
+:math:`M_{03}` と :math:`M_{12}` を比較します。sampling standard errorは
+block推定で求めます。有効sampleが32未満なら判定不能です。それ以外では、
+relative differenceが :math:`10^{-8}` 以上、かつ差がblock standard errorの
+4.5倍以上（丸め誤差floor付き）のpairをmismatchとします。relative differenceが
+0.5以上でありながらscoreが4.5未満の場合は、大きな観測差を棄却できるだけの
+sampling精度がないため、passではなく判定不能とします。reweighting weightが
+厳密に0のsampleは監査から除外し、有効sample数を減らします。既定のstrict mode
+ではmismatchまたは判定不能ならLanczos solverの前で停止します。明示的な
+experimental modeでは従来のsupport制限estimatorを再現できますが、出力を
+``biased-diagnostic-only`` と記録します。これら低次anchorの通過は必要条件で
+あり、高次Krylov supportが全て完全であることの証明ではありません。
 
 例えば、エネルギーの分散
 :math:`\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle` を

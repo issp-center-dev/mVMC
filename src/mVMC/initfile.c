@@ -169,6 +169,16 @@ void InitFilePhysCal(int i, int rank) {
       MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
   }
+  if(NLanczosMode>0){
+    sprintf(fileName, "%s_ls_support_%03d.dat", CDataFileHead, idx);
+    FileLSSupport = fopen(fileName, "w");
+    if(FileLSSupport == NULL){
+      fprintf(stderr,
+              "Error: failed to open power-Lanczos support file '%s'.\n",
+              fileName);
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+  }
 
   return;
 }
@@ -226,6 +236,9 @@ void CloseFilePhysCal(int rank) {
   if(NLanczosMode>0 && NLanczosStep==2){
     fclose(FileLS2);
     fclose(FileLS2Moment);
+  }
+  if(NLanczosMode>0){
+    fclose(FileLSSupport);
   }
 
   return;

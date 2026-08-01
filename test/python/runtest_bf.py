@@ -186,6 +186,43 @@ def assert_lanczos_outputs(workdir, label):
     return 0
 
 
+def assert_power_lanczos_support(workdir, label, expected_mode,
+                                  expected_result):
+    path = os.path.join(workdir, "output", "zvo_ls_support_001.dat")
+    try:
+        with open(path) as fp:
+            lines = [line.strip() for line in fp if line.strip()]
+    except OSError as exc:
+        print("ERROR: {} support diagnostic is unavailable: {}".format(
+            label, exc))
+        return -1
+    if len(lines) != 3 or not lines[0].startswith(
+            "# mVMC power_lanczos_support v1 "):
+        print("ERROR: {} support diagnostic has an invalid format".format(
+            label))
+        return -1
+    metadata = {}
+    for token in lines[0].split()[4:]:
+        if "=" in token:
+            key, value = token.split("=", 1)
+            metadata[key] = value
+    expected_quality = (
+        "support-check-passed-not-proof" if expected_result == "pass" else
+        ("biased-diagnostic-only" if expected_mode == "experimental" else
+         "invalid-biased-estimator"))
+    for key, expected in (
+            ("step", "1"),
+            ("mode", expected_mode),
+            ("result", expected_result),
+            ("quality", expected_quality),
+            ("scope", "necessary-not-sufficient")):
+        if metadata.get(key) != expected:
+            print("ERROR: {} support diagnostic {}={} expected {}".format(
+                label, key, metadata.get(key), expected))
+            return -1
+    return 0
+
+
 def read_lanczos_oracle_rows(path):
     rows = []
     with open(path) as fp:
@@ -1223,7 +1260,7 @@ def write_nbodyg_failure_def(workdir):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -1237,6 +1274,7 @@ def main():
     compare_lanczos = False
     lanczos_mode = None
     lanczos_step = None
+    lanczos_support_mode = None
     vmc_cal_mode = None
     compare_twobodyg = False
     compare_twobodygex = False
@@ -1285,6 +1323,10 @@ def main():
             argi += 2
         elif sys.argv[argi] == "--lanczos-step" and argi + 1 < len(sys.argv):
             lanczos_step = str(int(sys.argv[argi + 1]))
+            argi += 2
+        elif (sys.argv[argi] == "--lanczos-support-mode"
+              and argi + 1 < len(sys.argv)):
+            lanczos_support_mode = str(int(sys.argv[argi + 1]))
             argi += 2
         elif sys.argv[argi] == "--vmc-cal-mode" and argi + 1 < len(sys.argv):
             vmc_cal_mode = str(int(sys.argv[argi + 1]))
@@ -1345,7 +1387,7 @@ def main():
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -1369,6 +1411,8 @@ def main():
         work_suffix += "_lanczos{}".format(lanczos_mode)
     if lanczos_step is not None:
         work_suffix += "_lanczos_step{}".format(lanczos_step)
+    if lanczos_support_mode is not None:
+        work_suffix += "_support{}".format(lanczos_support_mode)
     if compare_twobodyg:
         work_suffix += "_twobodyg"
     if compare_twobodygex:
@@ -1431,6 +1475,8 @@ def main():
         modpara_updates["NVMCWarmUp"] = "8"
     if lanczos_step is not None:
         modpara_updates["NLanczosStep"] = lanczos_step
+    if lanczos_support_mode is not None:
+        modpara_updates["NLanczosSupportMode"] = lanczos_support_mode
     if vmc_cal_mode is not None:
         modpara_updates["NVMCCalMode"] = vmc_cal_mode
     if modpara_updates:
@@ -1576,6 +1622,9 @@ def main():
         if proc.returncode == 0:
             print("ERROR: vmc.out unexpectedly succeeded for invalid BackFlow input.")
             return -1
+        if expected_error == "power-Lanczos support mismatch":
+            return assert_power_lanczos_support(
+                workdir, "BackFlow Lanczos", "strict", "mismatch")
         return 0
 
     if expect_lanczos_nonfinite:
@@ -1612,6 +1661,11 @@ def main():
         return -1
     tol = 1.0e-10
     if lanczos_mode == "1":
+        if lanczos_support_mode == "1":
+            status = assert_power_lanczos_support(
+                workdir, "BackFlow Lanczos", "experimental", "mismatch")
+            if status != 0:
+                return status
         status = assert_lanczos_outputs(workdir, "BackFlow Lanczos")
         if status != 0:
             return status

@@ -411,6 +411,7 @@ ModParaファイル (modpara.def)
     NVMCCalMode    0
     NLanczosMode   0
     NLanczosStep   1
+    NLanczosSupportMode 0
     --------------------
     NDataIdxStart  1
     NDataQtySmp    1
@@ -556,6 +557,8 @@ ModParaファイル (modpara.def)
    エラー終了します。``Exchange`` はelectronic classでは未対応、
    ``Transfer`` はpure-spin classでは未対応です。局在spinと遍歴電子の
    mixed系、および ``NQPFull>1`` のpure-spin量子射影も現scope外です。
+   2nd stepでは ``reweight=1`` もエラー終了します。reweightは基底
+   波動関数のsupport上のweightだけを変え、基底振幅が0の配置を回復できません。
    2nd stepのGreen関数は計算しません。
    Gutzwillerの ``ProjRatio`` 経路は独立ED oracleで値を検証しています。
    非自明な :math:`k=\pi` 運動量射影は、real/complexの独立projected ED
@@ -597,6 +600,21 @@ ModParaファイル (modpara.def)
    overlap行列が正定値でない場合は、相対対角regularization
    :math:`10^{-12}` を加えて1回だけ再試行し、結果を ``solve_flag`` に
    記録します。
+
+-  ``NLanczosSupportMode``
+
+   **形式 :** int型 (デフォルト値 = 0)
+
+   **説明 :** 独立なpower-Lanczos support監査の動作を指定します。[0] は
+   production用strict modeです。``M02`` と ``M11``、2nd stepではさらに
+   ``M03`` と ``M12`` が不一致の場合、または有効sampleが32未満で判定不能の
+   場合にLanczos solverの前で停止します。relative differenceが0.5以上で
+   scoreが4.5未満の未解決な大差も判定不能とします。reweighting weightが厳密に
+   0のsampleは有効sample数から除外します。[1] は明示的なexperimental互換
+   modeです。従来のsupport制限estimatorを続行し、監査失敗を
+   ``xxx_ls_support_yyy.dat`` に ``biased-diagnostic-only`` と記録します。
+   監査の通過は必要条件ですが、全ての高次Krylov supportが完全であることの
+   十分条件ではありません。
 
 -  ``NDataIdxStart``
 

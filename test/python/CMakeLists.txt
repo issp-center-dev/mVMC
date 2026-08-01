@@ -221,7 +221,7 @@ function(add_python_vmc_test_bf_lanczos_mpi test_name model)
 endfunction(add_python_vmc_test_bf_lanczos_mpi)
 
 function(add_python_vmc_test_bf_lanczos_nonidentity test_name model)
-    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --lanczos-mode 1 --use-nonidentity-init)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --lanczos-mode 1 --use-nonidentity-init --lanczos-samples 128)
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_LANCZOS_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_${test_name}")
 endfunction(add_python_vmc_test_bf_lanczos_nonidentity)
 
@@ -569,6 +569,26 @@ add_python_vmc_test_invalid_expert_with_updates(
     "does not support RBM"
     NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1)
 add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidReweight HubbardChain_SpinJastrow
+    "NLanczosStep=2 does not support reweight=1"
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1 reweight=1)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_InvalidReweight_mpi HubbardChain_SpinJastrow
+    "NLanczosStep=2 does not support reweight=1"
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1 reweight=1)
+set_tests_properties(Lanczos2_InvalidReweight_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos_InvalidSupportMode HubbardChain_SpinJastrow
+    "NLanczosSupportMode must be 0 or 1"
+    NLanczosSupportMode=2)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos_InvalidSupportMode_mpi HubbardChain_SpinJastrow
+    "NLanczosSupportMode must be 0 or 1"
+    NLanczosSupportMode=2)
+set_tests_properties(Lanczos_InvalidSupportMode_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+add_python_vmc_test_invalid_expert_with_updates(
     Lanczos2_InvalidPairHopping DoublonOnly_Lanczos
     "does not support PairHopping"
     NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1 NExUpdatePath=0)
@@ -792,6 +812,7 @@ add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_Identity_Complex)
 add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_Lanczos_Identity_Complex_mpi)
 add_python_vmc_test_bf_fsz_omp(BackFlow_FSZ_Lanczos_Identity_Complex_omp 4)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_Identity_Real)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_Identity_Real_Experimental)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_SpinChanging_Identity_Complex)
 add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_Lanczos_SpinChanging_Identity_Complex_mpi)
 add_python_vmc_test_bf_fsz_omp(BackFlow_FSZ_Lanczos_SpinChanging_Identity_Complex_omp 4)
@@ -915,14 +936,19 @@ add_python_vmc_test_bf_fsz_mpi_procs(BackFlow_FSZ_Optimization_NSplitSize_mpi 4)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_SpinChanging_C_Optimization_NonIdentity_Complex)
 add_python_vmc_test_bf(BackFlow_Identity_Complex BackFlow_Identity_Complex)
 add_python_vmc_test_bf_lanczos(BackFlow_Lanczos_Identity_Complex BackFlow_Identity_Complex)
-add_python_vmc_test_bf_lanczos(BackFlow_Lanczos_Identity_Real BackFlow_Identity_Real)
+add_test(NAME BackFlow_Lanczos_Identity_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real --lanczos-mode 1 --expect-error "power-Lanczos support mismatch")
+set_tests_properties(BackFlow_Lanczos_Identity_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_LANCZOS_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Lanczos_Identity_Real")
+add_test(NAME BackFlow_Lanczos_Identity_Real_Experimental
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real --lanczos-mode 1 --lanczos-support-mode 1 --compare-no-bf-lanczos)
+set_tests_properties(BackFlow_Lanczos_Identity_Real_Experimental PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_LANCZOS_STATE_CHECK=1;MVMC_LANCZOS_ORACLE_DUMP=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Lanczos_Identity_Real_Experimental")
 add_python_vmc_test_bf_lanczos_mpi(BackFlow_Lanczos_Identity_Complex_mpi BackFlow_Identity_Complex)
 add_test(NAME BackFlow_Lanczos_Identity_Complex_omp
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex --lanczos-mode 1 --compare-no-bf-lanczos)
 set_tests_properties(BackFlow_Lanczos_Identity_Complex_omp PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;MVMC_BF_LANCZOS_STATE_CHECK=1;MVMC_LANCZOS_ORACLE_DUMP=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Lanczos_Identity_Complex_omp")
 add_python_vmc_test_bf_lanczos_nonidentity(BackFlow_Lanczos_NonIdentity_Complex BackFlow_Identity_Complex)
 add_test(NAME BackFlow_Lanczos_NonIdentity_Complex_omp
-         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex --lanczos-mode 1 --use-nonidentity-init)
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex --lanczos-mode 1 --use-nonidentity-init --lanczos-samples 128)
 set_tests_properties(BackFlow_Lanczos_NonIdentity_Complex_omp PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;MVMC_BF_LANCZOS_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Lanczos_NonIdentity_Complex_omp")
 add_python_vmc_test_bf_lanczos_nonidentity(BackFlow_Lanczos_NonIdentity_Real BackFlow_Identity_Real)
 add_python_vmc_test_bf_lanczos_invalid(BackFlow_Lanczos_InvalidMode2 BackFlow_Identity_Complex 2 "supports only NLanczosMode==1")

@@ -327,10 +327,36 @@ bra part :math:`\hat A` and the ket part :math:`\hat B`.
 The latter expression assumes that :math:`\hat A` is Hermitian. For a
 general :math:`\hat A`, :math:`F^\dagger(x,\hat A)` must be replaced by
 :math:`F^\dagger(x,\hat A^\dagger)`.
-Both representations then give the same expectation value in the limit of an
-infinite number of samples. They differ for a finite number of samples,
-and the latter is numerically more stable in general. For compact
-notation, :math:`\rho_\psi(x)` is abbreviated as :math:`\rho(x)` below.
+Both representations give the same expectation value only when the
+resolution of the identity may be restricted to the sampled support
+:math:`\operatorname{supp}(\psi)`. In particular, all omitted terms must
+vanish. If :math:`\psi(x)=0` but an intermediate state such as
+:math:`(\hat B\psi)(x)` is nonzero, the ratio defining the local estimator
+is unavailable and product sampling from :math:`|\psi|^2` never visits that
+configuration. The split-product estimator then remains biased even with
+infinitely many samples. Subject to this support condition, the two
+representations differ for a finite number of samples, and the latter is
+numerically more stable in general. For compact notation,
+:math:`\rho_\psi(x)` is abbreviated as :math:`\rho(x)` below.
+
+mVMC audits this necessary support condition independently of the moment
+table. For both power-Lanczos steps it compares
+:math:`M_{02}=\langle F_0^*F_2\rangle` with
+:math:`M_{11}=\langle F_1^*F_1\rangle`; the second step also compares
+:math:`M_{03}` with :math:`M_{12}`. Block estimates provide the sampling
+standard error. A run with fewer than 32 valid samples is inconclusive.
+Otherwise a pair is reported as a mismatch when its relative difference is
+at least :math:`10^{-8}` and its difference is at least 4.5 block standard
+errors (with a roundoff floor). A relative difference of at least 0.5 that
+does not reach the 4.5-score threshold is reported as inconclusive rather
+than passed: the sampling precision is too poor to dismiss such a large
+observed disagreement. Exactly zero reweighting weights are omitted from
+the audit and reduce its valid-sample count. In strict mode, which is the
+default, a mismatch or inconclusive audit stops before the Lanczos solver.
+The explicit experimental mode can reproduce the legacy support-restricted
+estimator, but marks it as ``biased-diagnostic-only``. Passing these low-order
+anchors is a necessary check, not proof that all higher Krylov supports are
+complete.
 
 For example, the variance of the energy,
 :math:`\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle`, can
