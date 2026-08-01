@@ -11,7 +11,7 @@ include_directories("${STDFACE_DIR}/src")
 add_definitions(-DMEXP=19937)
 
 set(SOURCES_vmcmain
-        vmcmain.c physcal_lanczos.c physcal_lanczos2.c
+        vmcmain.c absolute_pfaffian.c physcal_lanczos.c physcal_lanczos2.c
         lanczos2_contract.c splitloop.c
  )
 
