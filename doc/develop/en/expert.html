@@ -427,6 +427,7 @@ file format is shown as follows.</p>
 <span class="n">NVMCCalMode</span>    <span class="mi">0</span>
 <span class="n">NLanczosMode</span>   <span class="mi">0</span>
 <span class="n">NLanczosStep</span>   <span class="mi">1</span>
+<span class="n">NLanczosSupportMode</span> <span class="mi">0</span>
 <span class="o">--------------------</span>
 <span class="n">NDataIdxStart</span>  <span class="mi">1</span>
 <span class="n">NDataQtySmp</span>    <span class="mi">1</span>
@@ -549,6 +550,9 @@ and Ising-limit inputs in the fixed <code class="docutils literal notranslate"><
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, BackFlow, RBM, <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">InterAll</span></code>,
 <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code>, and <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> are rejected before sampling.
+<code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> is also rejected for the second step: it changes weights
+only on the base-wave-function support and cannot recover configurations
+having zero base amplitude.
 <code class="docutils literal notranslate"><span class="pre">Exchange</span></code> remains unsupported in the electronic class, and
 <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> remains unsupported in the pure-spin class. Mixed
 localized/itinerant models and pure-spin quantum projection with
@@ -594,6 +598,21 @@ to test this failure path is test-only: it is compiled into
 builds. If the overlap matrix is not positive definite,
 the solver retries once with a relative diagonal regularization of
 <span class="math notranslate nohighlight">\(10^{-12}\)</span> and records this in <code class="docutils literal notranslate"><span class="pre">solve_flag</span></code>.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NLanczosSupportMode</span></code></p>
+<p><strong>Type :</strong> int-type (default value: 0)</p>
+<p><strong>Description :</strong> Controls the independent power-Lanczos support audit.
+[0] is strict production mode. It stops before the Lanczos solver when
+<code class="docutils literal notranslate"><span class="pre">M02</span></code> and <code class="docutils literal notranslate"><span class="pre">M11</span></code> disagree, when (for the second step) <code class="docutils literal notranslate"><span class="pre">M03</span></code> and
+<code class="docutils literal notranslate"><span class="pre">M12</span></code> disagree, or when fewer than 32 valid samples make the audit
+inconclusive, or when a relative difference of at least 0.5 remains below
+the 4.5-score mismatch threshold and is therefore unresolved. Samples
+with an exactly zero reweighting weight are omitted from the valid count.
+[1] is an explicit experimental compatibility mode. It
+continues through the legacy support-restricted estimator and marks a
+failed audit as <code class="docutils literal notranslate"><span class="pre">biased-diagnostic-only</span></code> in
+<code class="docutils literal notranslate"><span class="pre">xxx_ls_support_yyy.dat</span></code>. A passing audit is necessary but not
+sufficient to prove complete support at every higher Krylov order.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 0)</p>

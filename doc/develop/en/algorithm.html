@@ -287,10 +287,35 @@ bra part <span class="math notranslate nohighlight">\(\hat A\)</span> and the ke
 The latter expression assumes that <span class="math notranslate nohighlight">\(\hat A\)</span> is Hermitian. For a
 general <span class="math notranslate nohighlight">\(\hat A\)</span>, <span class="math notranslate nohighlight">\(F^\dagger(x,\hat A)\)</span> must be replaced by
 <span class="math notranslate nohighlight">\(F^\dagger(x,\hat A^\dagger)\)</span>.
-Both representations then give the same expectation value in the limit of an
-infinite number of samples. They differ for a finite number of samples,
-and the latter is numerically more stable in general. For compact
-notation, <span class="math notranslate nohighlight">\(\rho_\psi(x)\)</span> is abbreviated as <span class="math notranslate nohighlight">\(\rho(x)\)</span> below.</p>
+Both representations give the same expectation value only when the
+resolution of the identity may be restricted to the sampled support
+<span class="math notranslate nohighlight">\(\operatorname{supp}(\psi)\)</span>. In particular, all omitted terms must
+vanish. If <span class="math notranslate nohighlight">\(\psi(x)=0\)</span> but an intermediate state such as
+<span class="math notranslate nohighlight">\((\hat B\psi)(x)\)</span> is nonzero, the ratio defining the local estimator
+is unavailable and product sampling from <span class="math notranslate nohighlight">\(|\psi|^2\)</span> never visits that
+configuration. The split-product estimator then remains biased even with
+infinitely many samples. Subject to this support condition, the two
+representations differ for a finite number of samples, and the latter is
+numerically more stable in general. For compact notation,
+<span class="math notranslate nohighlight">\(\rho_\psi(x)\)</span> is abbreviated as <span class="math notranslate nohighlight">\(\rho(x)\)</span> below.</p>
+<p>mVMC audits this necessary support condition independently of the moment
+table. For both power-Lanczos steps it compares
+<span class="math notranslate nohighlight">\(M_{02}=\langle F_0^*F_2\rangle\)</span> with
+<span class="math notranslate nohighlight">\(M_{11}=\langle F_1^*F_1\rangle\)</span>; the second step also compares
+<span class="math notranslate nohighlight">\(M_{03}\)</span> with <span class="math notranslate nohighlight">\(M_{12}\)</span>. Block estimates provide the sampling
+standard error. A run with fewer than 32 valid samples is inconclusive.
+Otherwise a pair is reported as a mismatch when its relative difference is
+at least <span class="math notranslate nohighlight">\(10^{-8}\)</span> and its difference is at least 4.5 block standard
+errors (with a roundoff floor). A relative difference of at least 0.5 that
+does not reach the 4.5-score threshold is reported as inconclusive rather
+than passed: the sampling precision is too poor to dismiss such a large
+observed disagreement. Exactly zero reweighting weights are omitted from
+the audit and reduce its valid-sample count. In strict mode, which is the
+default, a mismatch or inconclusive audit stops before the Lanczos solver.
+The explicit experimental mode can reproduce the legacy support-restricted
+estimator, but marks it as <code class="docutils literal notranslate"><span class="pre">biased-diagnostic-only</span></code>. Passing these low-order
+anchors is a necessary check, not proof that all higher Krylov supports are
+complete.</p>
 <p>For example, the variance of the energy,
 <span class="math notranslate nohighlight">\(\sigma^2=\langle (\hat{H}-\langle \hat{H}\rangle)^2\rangle\)</span>, can
 be calculated in the two ways:</p>

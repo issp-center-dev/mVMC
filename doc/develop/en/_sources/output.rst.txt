@@ -546,6 +546,30 @@ input while avoiding the precision loss of raw high-order moments at
 large :math:`|E|`. They can be used for independent checks of
 Hermiticity and the Hankel identities.
 
+xxx\_ls\_support\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This three-line, versioned diagnostic is written for both
+``NLanczosStep=1`` and ``NLanczosStep=2`` whenever ``NLanczosMode>0``.
+The first line records ``step``, ``mode`` (``strict`` or
+``experimental``), ``result`` (``pass``, ``mismatch``, ``inconclusive``,
+or ``invalid``), ``quality``, and
+``scope=necessary-not-sufficient``. A failed audit in experimental mode
+has ``quality=biased-diagnostic-only``.
+
+The second line names the fields on the numeric third line: valid sample
+and block counts, total weight, effective sample count, the real and
+imaginary parts of ``M02``, ``M11``, and their difference, its relative
+difference, block standard error, and score, followed by the corresponding
+``M03``/``M12`` fields. Third-order fields are NaN for the first step.
+The ``M02``/``M11`` and ``M03``/``M12`` pairs are accumulated independently
+of the solver moment table. ``inconclusive`` includes fewer than 32 valid
+samples and an unresolved relative difference of at least 0.5 whose score is
+below 4.5. Exactly zero reweighting weights are not valid samples. In strict
+mode a result other than ``pass``
+terminates the run after this file is flushed and before a Lanczos result is
+reported.
+
 xxx\_ls\_cisajs\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

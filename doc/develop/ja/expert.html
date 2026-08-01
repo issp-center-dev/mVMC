@@ -422,6 +422,7 @@ TransSymです。それ以外のキーワードについては、指定がない
 <span class="n">NVMCCalMode</span>    <span class="mi">0</span>
 <span class="n">NLanczosMode</span>   <span class="mi">0</span>
 <span class="n">NLanczosStep</span>   <span class="mi">1</span>
+<span class="n">NLanczosSupportMode</span> <span class="mi">0</span>
 <span class="o">--------------------</span>
 <span class="n">NDataIdxStart</span>  <span class="mi">1</span>
 <span class="n">NDataQtySmp</span>    <span class="mi">1</span>
@@ -542,6 +543,8 @@ Heisenberg/XXZ、非一様結合、Ising極限を含みます。</p></li>
 エラー終了します。<code class="docutils literal notranslate"><span class="pre">Exchange</span></code> はelectronic classでは未対応、
 <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> はpure-spin classでは未対応です。局在spinと遍歴電子の
 mixed系、および <code class="docutils literal notranslate"><span class="pre">NQPFull&gt;1</span></code> のpure-spin量子射影も現scope外です。
+2nd stepでは <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> もエラー終了します。reweightは基底
+波動関数のsupport上のweightだけを変え、基底振幅が0の配置を回復できません。
 2nd stepのGreen関数は計算しません。
 Gutzwillerの <code class="docutils literal notranslate"><span class="pre">ProjRatio</span></code> 経路は独立ED oracleで値を検証しています。
 非自明な <span class="math notranslate nohighlight">\(k=\pi\)</span> 運動量射影は、real/complexの独立projected ED
@@ -579,6 +582,19 @@ solverの失敗、出力エラーを検出すると診断を表示して終了�
 overlap行列が正定値でない場合は、相対対角regularization
 <span class="math notranslate nohighlight">\(10^{-12}\)</span> を加えて1回だけ再試行し、結果を <code class="docutils literal notranslate"><span class="pre">solve_flag</span></code> に
 記録します。</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NLanczosSupportMode</span></code></p>
+<p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>
+<p><strong>説明 :</strong> 独立なpower-Lanczos support監査の動作を指定します。[0] は
+production用strict modeです。<code class="docutils literal notranslate"><span class="pre">M02</span></code> と <code class="docutils literal notranslate"><span class="pre">M11</span></code>、2nd stepではさらに
+<code class="docutils literal notranslate"><span class="pre">M03</span></code> と <code class="docutils literal notranslate"><span class="pre">M12</span></code> が不一致の場合、または有効sampleが32未満で判定不能の
+場合にLanczos solverの前で停止します。relative differenceが0.5以上で
+scoreが4.5未満の未解決な大差も判定不能とします。reweighting weightが厳密に
+0のsampleは有効sample数から除外します。[1] は明示的なexperimental互換
+modeです。従来のsupport制限estimatorを続行し、監査失敗を
+<code class="docutils literal notranslate"><span class="pre">xxx_ls_support_yyy.dat</span></code> に <code class="docutils literal notranslate"><span class="pre">biased-diagnostic-only</span></code> と記録します。
+監査の通過は必要条件ですが、全ての高次Krylov supportが完全であることの
+十分条件ではありません。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code></p>
 <p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>

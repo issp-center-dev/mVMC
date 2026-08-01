@@ -552,6 +552,28 @@ input while avoiding the precision loss of raw high-order moments at
 large <span class="math notranslate nohighlight">\(|E|\)</span>. They can be used for independent checks of
 Hermiticity and the Hankel identities.</p>
 </section>
+<section id="xxx-ls-support-yyy-dat">
+<h2>xxx_ls_support_yyy.dat<a class="headerlink" href="#xxx-ls-support-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<p>This three-line, versioned diagnostic is written for both
+<code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code> and <code class="docutils literal notranslate"><span class="pre">NLanczosStep=2</span></code> whenever <code class="docutils literal notranslate"><span class="pre">NLanczosMode&gt;0</span></code>.
+The first line records <code class="docutils literal notranslate"><span class="pre">step</span></code>, <code class="docutils literal notranslate"><span class="pre">mode</span></code> (<code class="docutils literal notranslate"><span class="pre">strict</span></code> or
+<code class="docutils literal notranslate"><span class="pre">experimental</span></code>), <code class="docutils literal notranslate"><span class="pre">result</span></code> (<code class="docutils literal notranslate"><span class="pre">pass</span></code>, <code class="docutils literal notranslate"><span class="pre">mismatch</span></code>, <code class="docutils literal notranslate"><span class="pre">inconclusive</span></code>,
+or <code class="docutils literal notranslate"><span class="pre">invalid</span></code>), <code class="docutils literal notranslate"><span class="pre">quality</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">scope=necessary-not-sufficient</span></code>. A failed audit in experimental mode
+has <code class="docutils literal notranslate"><span class="pre">quality=biased-diagnostic-only</span></code>.</p>
+<p>The second line names the fields on the numeric third line: valid sample
+and block counts, total weight, effective sample count, the real and
+imaginary parts of <code class="docutils literal notranslate"><span class="pre">M02</span></code>, <code class="docutils literal notranslate"><span class="pre">M11</span></code>, and their difference, its relative
+difference, block standard error, and score, followed by the corresponding
+<code class="docutils literal notranslate"><span class="pre">M03</span></code>/<code class="docutils literal notranslate"><span class="pre">M12</span></code> fields. Third-order fields are NaN for the first step.
+The <code class="docutils literal notranslate"><span class="pre">M02</span></code>/<code class="docutils literal notranslate"><span class="pre">M11</span></code> and <code class="docutils literal notranslate"><span class="pre">M03</span></code>/<code class="docutils literal notranslate"><span class="pre">M12</span></code> pairs are accumulated independently
+of the solver moment table. <code class="docutils literal notranslate"><span class="pre">inconclusive</span></code> includes fewer than 32 valid
+samples and an unresolved relative difference of at least 0.5 whose score is
+below 4.5. Exactly zero reweighting weights are not valid samples. In strict
+mode a result other than <code class="docutils literal notranslate"><span class="pre">pass</span></code>
+terminates the run after this file is flushed and before a Lanczos result is
+reported.</p>
+</section>
 <section id="xxx-ls-cisajs-yyy-dat">
 <h2>xxx_ls_cisajs_yyy.dat<a class="headerlink" href="#xxx-ls-cisajs-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file is the outputted files for one-body Green’s function
@@ -620,6 +642,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-out-yyy-dat">xxx_ls2_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-moment-yyy-dat">xxx_ls2_moment_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-ls-support-yyy-dat">xxx_ls_support_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajs-yyy-dat">xxx_ls_cisajs_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajscktalt-yyy-dat">xxx_ls_cisajscktalt_yyy.dat</a></li>
 </ul>

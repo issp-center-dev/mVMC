@@ -521,6 +521,25 @@ shiftとcentered momentによりsolver入力を再現でき、<span class="math 
 raw高次momentの桁落ちを避けられます。HermiticityおよびHankel恒等式の独立検証
 にも使用できます。</p>
 </section>
+<section id="xxx-ls-support-yyy-dat">
+<h2>xxx_ls_support_yyy.dat<a class="headerlink" href="#xxx-ls-support-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">NLanczosMode&gt;0</span></code> のとき、<code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code> と <code class="docutils literal notranslate"><span class="pre">2</span></code> の両方で出力する
+version付き3行の診断ファイルです。1行目には <code class="docutils literal notranslate"><span class="pre">step</span></code>、<code class="docutils literal notranslate"><span class="pre">mode</span></code>
+（<code class="docutils literal notranslate"><span class="pre">strict</span></code> または <code class="docutils literal notranslate"><span class="pre">experimental</span></code>）、<code class="docutils literal notranslate"><span class="pre">result``（``pass</span></code>、
+<code class="docutils literal notranslate"><span class="pre">mismatch</span></code>、<code class="docutils literal notranslate"><span class="pre">inconclusive</span></code>、<code class="docutils literal notranslate"><span class="pre">invalid</span></code>）、<code class="docutils literal notranslate"><span class="pre">quality</span></code>、および
+<code class="docutils literal notranslate"><span class="pre">scope=necessary-not-sufficient</span></code> を記録します。experimental modeで監査に
+失敗した場合、<code class="docutils literal notranslate"><span class="pre">quality=biased-diagnostic-only</span></code> となります。</p>
+<p>2行目は数値を記録する3行目のfield名です。有効sample数、block数、総weight、
+effective sample数、<code class="docutils literal notranslate"><span class="pre">M02</span></code>・<code class="docutils literal notranslate"><span class="pre">M11</span></code> とその差の実部・虚部、relative
+difference、block standard error、scoreに続き、<code class="docutils literal notranslate"><span class="pre">M03</span></code>・<code class="docutils literal notranslate"><span class="pre">M12</span></code> に対する
+同じfieldを出力します。1st stepの3次anchor fieldはNaNです。
+<code class="docutils literal notranslate"><span class="pre">M02</span></code>/<code class="docutils literal notranslate"><span class="pre">M11</span></code> と <code class="docutils literal notranslate"><span class="pre">M03</span></code>/<code class="docutils literal notranslate"><span class="pre">M12</span></code> はsolverのmoment表とは独立に蓄積します。
+<code class="docutils literal notranslate"><span class="pre">inconclusive``には、有効sampleが32未満の場合、およびrelative</span> <span class="pre">differenceが</span>
+<span class="pre">0.5以上でscoreが4.5未満の未解決な大差を含みます。reweighting</span> <span class="pre">weightが厳密に</span>
+<span class="pre">0のsampleは有効sampleに数えません。</span>
+<span class="pre">strict</span> <span class="pre">modeで</span> <span class="pre">``pass</span></code> 以外となった場合、このfileをflushした後、Lanczos結果を
+出力する前に計算を停止します。</p>
+</section>
 <section id="xxx-ls-cisajs-yyy-dat">
 <h2>xxx_ls_cisajs_yyy.dat<a class="headerlink" href="#xxx-ls-cisajs-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>Power Lanczos法により求めた,
@@ -586,6 +605,7 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-out-yyy-dat">xxx_ls2_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-moment-yyy-dat">xxx_ls2_moment_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-ls-support-yyy-dat">xxx_ls_support_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajs-yyy-dat">xxx_ls_cisajs_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajscktalt-yyy-dat">xxx_ls_cisajscktalt_yyy.dat</a></li>
 </ul>

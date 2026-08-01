@@ -497,6 +497,27 @@ shiftとcentered momentによりsolver入力を再現でき、:math:`|E|` が大
 raw高次momentの桁落ちを避けられます。HermiticityおよびHankel恒等式の独立検証
 にも使用できます。
 
+xxx\_ls\_support\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``NLanczosMode>0`` のとき、``NLanczosStep=1`` と ``2`` の両方で出力する
+version付き3行の診断ファイルです。1行目には ``step``、``mode``
+（``strict`` または ``experimental``）、``result``（``pass``、
+``mismatch``、``inconclusive``、``invalid``）、``quality``、および
+``scope=necessary-not-sufficient`` を記録します。experimental modeで監査に
+失敗した場合、``quality=biased-diagnostic-only`` となります。
+
+2行目は数値を記録する3行目のfield名です。有効sample数、block数、総weight、
+effective sample数、``M02``・``M11`` とその差の実部・虚部、relative
+difference、block standard error、scoreに続き、``M03``・``M12`` に対する
+同じfieldを出力します。1st stepの3次anchor fieldはNaNです。
+``M02``/``M11`` と ``M03``/``M12`` はsolverのmoment表とは独立に蓄積します。
+``inconclusive``には、有効sampleが32未満の場合、およびrelative differenceが
+0.5以上でscoreが4.5未満の未解決な大差を含みます。reweighting weightが厳密に
+0のsampleは有効sampleに数えません。
+strict modeで ``pass`` 以外となった場合、このfileをflushした後、Lanczos結果を
+出力する前に計算を停止します。
+
 xxx\_ls\_cisajs\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
