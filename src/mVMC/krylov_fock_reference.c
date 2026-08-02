@@ -745,7 +745,7 @@ static MVMCKrylovStatus evaluate_node(MVMCEvaluation *evaluation, int depth,
   } else {
     const size_t neighbor_base = workspace->transition_used;
     size_t raw_count;
-    size_t merged_count;
+    size_t merged_count = 0;
     size_t term_index;
     size_t neighbor_index;
     MVMCComplexAccumulator accumulator;

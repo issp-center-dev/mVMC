@@ -678,7 +678,6 @@ MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_equal_u64(
     const uint64_t *local_values, size_t value_count, int *all_equal) {
   int local_valid;
   int global_valid;
-  size_t index;
   int equal = 1;
 
   if (workspace == NULL || workspace->ranges == NULL) {
@@ -688,6 +687,7 @@ MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_equal_u64(
                 (value_count == 0 || local_values != NULL);
 #ifdef _mpi_use
   {
+    size_t index;
     uint64_t local_count = (uint64_t)value_count;
     uint64_t minimum_count = 0;
     uint64_t maximum_count = 0;
