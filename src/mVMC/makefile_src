@@ -16,6 +16,7 @@ endif
 
 OBJS = \
 	absolute_pfaffian.o \
+	classic_pfaffian_matrix.o \
 	classic_pfaffian_state.o \
 	classic_pfaffian_collective.o \
 	physcal_lanczos.o \
@@ -26,6 +27,7 @@ OBJS = \
 
 SOURCES = \
 absolute_pfaffian.c \
+classic_pfaffian_matrix.c \
 classic_pfaffian_state.c \
 classic_pfaffian_collective.c \
 backflow.c \
@@ -88,6 +90,7 @@ workspace.c
 
 HEADERS = \
 ./include/absolute_pfaffian.h \
+./include/classic_pfaffian_matrix.h \
 ./include/classic_pfaffian_state.h \
 ./include/classic_pfaffian_collective.h \
 ./include/backflow.h \

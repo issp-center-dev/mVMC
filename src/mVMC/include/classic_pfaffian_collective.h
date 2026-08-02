@@ -13,6 +13,9 @@ the Free Software Foundation, either version 3 of the License, or
 
 #include "classic_pfaffian_state.h"
 
+#include <stddef.h>
+#include <stdint.h>
+
 #ifdef _mpi_use
 #include <mpi.h>
 typedef MPI_Comm MVMCClassicPfaffianCommunicator;
@@ -52,6 +55,10 @@ MVMCPfaffianStatus mvmc_classic_pfaffian_collective_workspace_create(
     MVMCClassicPfaffianCollectiveWorkspace **workspace);
 void mvmc_classic_pfaffian_collective_workspace_destroy(
     MVMCClassicPfaffianCollectiveWorkspace *workspace);
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+size_t mvmc_classic_pfaffian_collective_workspace_bytes(
+    const MVMCClassicPfaffianCollectiveWorkspace *workspace);
+#endif
 
 /*
  * All ranks must call in the same order with a workspace from the same
@@ -123,5 +130,37 @@ MVMCPfaffianStatus mvmc_classic_pfaffian_collective_preflight(
 MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_true(
     MVMCClassicPfaffianCollectiveWorkspace *workspace,
     int local_true, int *all_true);
+
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+/* Creation-time exact replicated-data audit.  This routine may allocate. */
+MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_equal_bytes(
+    MVMCClassicPfaffianCollectiveWorkspace *workspace,
+    const void *local_data, size_t byte_count, int *all_equal);
+
+/* Allocation-free exact audit for evaluation-time configuration words. */
+MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_equal_u64(
+    MVMCClassicPfaffianCollectiveWorkspace *workspace,
+    const uint64_t *local_values, size_t value_count, int *all_equal);
+
+MVMCPfaffianStatus mvmc_classic_pfaffian_collective_sum_u64(
+    MVMCClassicPfaffianCollectiveWorkspace *workspace,
+    uint64_t local_value, uint64_t *global_sum);
+
+MVMCPfaffianStatus mvmc_classic_pfaffian_collective_max_int(
+    MVMCClassicPfaffianCollectiveWorkspace *workspace,
+    int local_value, int *global_max);
+
+/*
+ * Gather a validated contiguous QP partition into global QP index order.
+ * No allocation is performed; global_components has qp_total elements on
+ * every rank and local_components has qp_end-qp_start elements.
+ */
+MVMCPfaffianStatus
+mvmc_classic_pfaffian_collective_gather_value_components(
+    MVMCClassicPfaffianCollectiveWorkspace *workspace,
+    const MVMCAbsolutePfaffianValueResult *local_components,
+    size_t local_component_count, int qp_total, int qp_start, int qp_end,
+    MVMCAbsolutePfaffianValueResult *global_components);
+#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE */
 
 #endif /* MVMC_CLASSIC_PFAFFIAN_COLLECTIVE_H */

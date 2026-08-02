@@ -24,6 +24,14 @@ typedef enum {
 } MVMCPfaffianState;
 
 typedef enum {
+  MVMC_PFAFFIAN_VALUE_WELL_PIVOTED = 0,
+  MVMC_PFAFFIAN_VALUE_NEAR_PIVOT,
+  MVMC_PFAFFIAN_VALUE_SINGULAR,
+  MVMC_PFAFFIAN_VALUE_NONFINITE,
+  MVMC_PFAFFIAN_VALUE_INVALID
+} MVMCPfaffianValueState;
+
+typedef enum {
   /* Keep this list contiguous and synchronize collective status severity. */
   MVMC_PFAFFIAN_STATUS_OK = 0,
   MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
@@ -45,6 +53,14 @@ typedef struct {
 } MVMCAbsolutePfaffianResult;
 
 typedef struct {
+  MVMCPfaffianValueState state;
+  int factor_info;
+  double matrix_scale;
+  double scaled_min_pivot;
+  double complex pfaffian;
+} MVMCAbsolutePfaffianValueResult;
+
+typedef struct {
   int valid;
   double complex total;
   double sum_abs;
@@ -58,6 +74,10 @@ typedef struct MVMCAbsolutePfaffianRealWorkspace
     MVMCAbsolutePfaffianRealWorkspace;
 typedef struct MVMCAbsolutePfaffianComplexWorkspace
     MVMCAbsolutePfaffianComplexWorkspace;
+typedef struct MVMCAbsolutePfaffianRealValueWorkspace
+    MVMCAbsolutePfaffianRealValueWorkspace;
+typedef struct MVMCAbsolutePfaffianComplexValueWorkspace
+    MVMCAbsolutePfaffianComplexValueWorkspace;
 
 /*
  * Reusable factorization workspaces for sampler hot paths.  Creation may
@@ -75,6 +95,26 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_workspace_create(
 void mvmc_absolute_pfaffian_complex_workspace_destroy(
     MVMCAbsolutePfaffianComplexWorkspace *workspace);
 
+/*
+ * Value-only workspaces contain the PFAPACK factorization storage but no
+ * inverse factor, inverse workspace, or inverse-residual machinery.  They
+ * are independent from the full P1 workspaces and are intended for absolute
+ * terminal-amplitude evaluation.
+ */
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real_value_workspace_create(
+    int n, MVMCAbsolutePfaffianRealValueWorkspace **workspace);
+void mvmc_absolute_pfaffian_real_value_workspace_destroy(
+    MVMCAbsolutePfaffianRealValueWorkspace *workspace);
+size_t mvmc_absolute_pfaffian_real_value_workspace_bytes(
+    const MVMCAbsolutePfaffianRealValueWorkspace *workspace);
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_value_workspace_create(
+    int n, MVMCAbsolutePfaffianComplexValueWorkspace **workspace);
+void mvmc_absolute_pfaffian_complex_value_workspace_destroy(
+    MVMCAbsolutePfaffianComplexValueWorkspace *workspace);
+size_t mvmc_absolute_pfaffian_complex_value_workspace_bytes(
+    const MVMCAbsolutePfaffianComplexValueWorkspace *workspace);
+
 MVMCPfaffianStatus mvmc_absolute_pfaffian_real_with_workspace(
     MVMCAbsolutePfaffianRealWorkspace *workspace,
     const double *matrix, int n, int lda,
@@ -90,6 +130,18 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_with_workspace(
     uint64_t rebuild_generation,
     double scaled_pivot_tolerance, double residual_tolerance,
     MVMCAbsolutePfaffianResult *result);
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real_value_with_workspace(
+    MVMCAbsolutePfaffianRealValueWorkspace *workspace,
+    const double *matrix, int n, int lda,
+    double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianValueResult *result);
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_value_with_workspace(
+    MVMCAbsolutePfaffianComplexValueWorkspace *workspace,
+    const double complex *matrix, int n, int lda,
+    double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianValueResult *result);
 
 /*
  * Evaluate an even-dimensional skew-symmetric matrix without modifying it.
@@ -110,6 +162,16 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex(
     uint64_t rebuild_generation,
     double scaled_pivot_tolerance, double residual_tolerance,
     MVMCAbsolutePfaffianResult *result);
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real_value(
+    const double *matrix, int n, int lda,
+    double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianValueResult *result);
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_value(
+    const double complex *matrix, int n, int lda,
+    double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianValueResult *result);
 
 /*
  * Sum QPFullWeight[q] * PfM[q] without consulting inverse availability.
@@ -132,9 +194,21 @@ MVMCPfaffianStatus mvmc_projected_amplitude_slice(
     int qp_total, int qp_start, int qp_end,
     MVMCProjectedAmplitudeResult *result);
 
+MVMCPfaffianStatus mvmc_projected_amplitude_values(
+    const MVMCAbsolutePfaffianValueResult *components,
+    const double complex *weights, size_t component_count,
+    MVMCProjectedAmplitudeResult *result);
+
+MVMCPfaffianStatus mvmc_projected_amplitude_value_slice(
+    const MVMCAbsolutePfaffianValueResult *local_components,
+    size_t local_component_count, const double complex *global_weights,
+    int qp_total, int qp_start, int qp_end,
+    MVMCProjectedAmplitudeResult *result);
+
 /* False when this translation unit was compiled with fast-math semantics. */
 int mvmc_absolute_pfaffian_strict_fp_enabled(void);
 
 const char *mvmc_pfaffian_state_name(MVMCPfaffianState state);
+const char *mvmc_pfaffian_value_state_name(MVMCPfaffianValueState state);
 
 #endif /* MVMC_ABSOLUTE_PFAFFIAN_H */

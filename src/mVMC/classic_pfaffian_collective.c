@@ -192,6 +192,15 @@ void mvmc_classic_pfaffian_collective_workspace_destroy(
   free(workspace);
 }
 
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+size_t mvmc_classic_pfaffian_collective_workspace_bytes(
+    const MVMCClassicPfaffianCollectiveWorkspace *workspace) {
+  if (workspace == NULL || workspace->size <= 0) return 0;
+  return sizeof(*workspace) +
+         (size_t)workspace->size * 3 * sizeof(*workspace->ranges);
+}
+#endif
+
 MVMCPfaffianStatus mvmc_classic_pfaffian_collective_aggregate(
     MVMCClassicPfaffianCollectiveWorkspace *workspace,
     MVMCPfaffianStatus local_status,
@@ -567,7 +576,254 @@ MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_true(
   global_valid = local_valid;
   global_true = local_true;
 #endif
-  if (!global_valid) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  if (!global_valid || all_true == NULL) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
   *all_true = global_true;
   return MVMC_PFAFFIAN_STATUS_OK;
 }
+
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_equal_bytes(
+    MVMCClassicPfaffianCollectiveWorkspace *workspace,
+    const void *local_data, size_t byte_count, int *all_equal) {
+  const unsigned char *bytes = (const unsigned char *)local_data;
+  int local_valid;
+  int global_valid;
+
+  if (workspace == NULL || workspace->ranges == NULL) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  local_valid = all_equal != NULL && (byte_count == 0 || local_data != NULL);
+#ifdef _mpi_use
+  {
+    uint64_t local_count = (uint64_t)byte_count;
+    uint64_t minimum_count = 0;
+    uint64_t maximum_count = 0;
+    unsigned char *minimum = NULL;
+    unsigned char *maximum = NULL;
+    const size_t chunk_limit = 1024 * 1024;
+    size_t buffer_size;
+    size_t offset;
+    int allocation_ok;
+    int all_allocation_ok;
+    int equal = 1;
+
+#if SIZE_MAX > UINT64_MAX
+    if (byte_count > UINT64_MAX) local_valid = 0;
+#endif
+    if (MPI_Allreduce(&local_valid, &global_valid, 1, MPI_INT, MPI_MIN,
+                      workspace->communicator) != MPI_SUCCESS ||
+        MPI_Allreduce(&local_count, &minimum_count, 1, MPI_UINT64_T, MPI_MIN,
+                      workspace->communicator) != MPI_SUCCESS ||
+        MPI_Allreduce(&local_count, &maximum_count, 1, MPI_UINT64_T, MPI_MAX,
+                      workspace->communicator) != MPI_SUCCESS) {
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
+    if (!global_valid || minimum_count != maximum_count) {
+      if (all_equal != NULL) *all_equal = 0;
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
+    buffer_size = byte_count < chunk_limit ? byte_count : chunk_limit;
+    if (buffer_size != 0) {
+      minimum = (unsigned char *)malloc(buffer_size);
+      maximum = (unsigned char *)malloc(buffer_size);
+    }
+    allocation_ok = buffer_size == 0 ||
+                    (minimum != NULL && maximum != NULL);
+    if (MPI_Allreduce(&allocation_ok, &all_allocation_ok, 1, MPI_INT, MPI_MIN,
+                      workspace->communicator) != MPI_SUCCESS) {
+      free(maximum);
+      free(minimum);
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
+    if (!all_allocation_ok ||
+        (buffer_size != 0 && (minimum == NULL || maximum == NULL))) {
+      free(maximum);
+      free(minimum);
+      return MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
+    }
+    for (offset = 0; offset < byte_count; offset += buffer_size) {
+      const size_t remaining = byte_count - offset;
+      const int count = (int)(remaining < buffer_size ? remaining
+                                                       : buffer_size);
+      if (MPI_Allreduce(bytes + offset, minimum, count, MPI_UNSIGNED_CHAR,
+                        MPI_MIN, workspace->communicator) != MPI_SUCCESS ||
+          MPI_Allreduce(bytes + offset, maximum, count, MPI_UNSIGNED_CHAR,
+                        MPI_MAX, workspace->communicator) != MPI_SUCCESS) {
+        free(maximum);
+        free(minimum);
+        return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+      }
+      if (memcmp(minimum, maximum, (size_t)count) != 0) equal = 0;
+    }
+    free(maximum);
+    free(minimum);
+    if (all_equal == NULL) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    *all_equal = equal;
+  }
+#else
+  global_valid = local_valid;
+  if (!global_valid || all_equal == NULL) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  (void)bytes;
+  *all_equal = 1;
+#endif
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_equal_u64(
+    MVMCClassicPfaffianCollectiveWorkspace *workspace,
+    const uint64_t *local_values, size_t value_count, int *all_equal) {
+  int local_valid;
+  int global_valid;
+  size_t index;
+  int equal = 1;
+
+  if (workspace == NULL || workspace->ranges == NULL) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  local_valid = all_equal != NULL &&
+                (value_count == 0 || local_values != NULL);
+#ifdef _mpi_use
+  {
+    uint64_t local_count = (uint64_t)value_count;
+    uint64_t minimum_count = 0;
+    uint64_t maximum_count = 0;
+#if SIZE_MAX > UINT64_MAX
+    if (value_count > UINT64_MAX) local_valid = 0;
+#endif
+    if (MPI_Allreduce(&local_valid, &global_valid, 1, MPI_INT, MPI_MIN,
+                      workspace->communicator) != MPI_SUCCESS ||
+        MPI_Allreduce(&local_count, &minimum_count, 1, MPI_UINT64_T, MPI_MIN,
+                      workspace->communicator) != MPI_SUCCESS ||
+        MPI_Allreduce(&local_count, &maximum_count, 1, MPI_UINT64_T, MPI_MAX,
+                      workspace->communicator) != MPI_SUCCESS) {
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
+    if (!global_valid || minimum_count != maximum_count) {
+      if (all_equal != NULL) *all_equal = 0;
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
+    for (index = 0; index < value_count; ++index) {
+      uint64_t minimum = 0;
+      uint64_t maximum = 0;
+      if (MPI_Allreduce(local_values + index, &minimum, 1, MPI_UINT64_T,
+                        MPI_MIN, workspace->communicator) != MPI_SUCCESS ||
+          MPI_Allreduce(local_values + index, &maximum, 1, MPI_UINT64_T,
+                        MPI_MAX, workspace->communicator) != MPI_SUCCESS) {
+        return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+      }
+      if (minimum != maximum) equal = 0;
+    }
+  }
+#else
+  global_valid = local_valid;
+  (void)local_values;
+  (void)value_count;
+#endif
+  if (!global_valid || all_equal == NULL) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  *all_equal = equal;
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCPfaffianStatus mvmc_classic_pfaffian_collective_sum_u64(
+    MVMCClassicPfaffianCollectiveWorkspace *workspace,
+    uint64_t local_value, uint64_t *global_sum) {
+  if (workspace == NULL || workspace->ranges == NULL || global_sum == NULL) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+#ifdef _mpi_use
+  if (MPI_Allreduce(&local_value, global_sum, 1, MPI_UINT64_T, MPI_SUM,
+                    workspace->communicator) != MPI_SUCCESS) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+#else
+  *global_sum = local_value;
+#endif
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCPfaffianStatus mvmc_classic_pfaffian_collective_max_int(
+    MVMCClassicPfaffianCollectiveWorkspace *workspace,
+    int local_value, int *global_max) {
+  if (workspace == NULL || workspace->ranges == NULL || global_max == NULL) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+#ifdef _mpi_use
+  if (MPI_Allreduce(&local_value, global_max, 1, MPI_INT, MPI_MAX,
+                    workspace->communicator) != MPI_SUCCESS) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+#else
+  *global_max = local_value;
+#endif
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCPfaffianStatus
+mvmc_classic_pfaffian_collective_gather_value_components(
+    MVMCClassicPfaffianCollectiveWorkspace *workspace,
+    const MVMCAbsolutePfaffianValueResult *local_components,
+    size_t local_component_count, int qp_total, int qp_start, int qp_end,
+    MVMCAbsolutePfaffianValueResult *global_components) {
+  int local_valid;
+  int global_valid;
+  int global_qp;
+
+  if (workspace == NULL || workspace->ranges == NULL) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  local_valid = qp_total > 0 && qp_start >= 0 && qp_end >= qp_start &&
+                qp_end <= qp_total &&
+                (size_t)(qp_end - qp_start) == local_component_count &&
+                (local_component_count == 0 || local_components != NULL) &&
+                global_components != NULL &&
+                workspace->ranges[(size_t)workspace->rank * 3] == qp_total &&
+                workspace->ranges[(size_t)workspace->rank * 3 + 1] ==
+                    qp_start &&
+                workspace->ranges[(size_t)workspace->rank * 3 + 2] == qp_end;
+#ifdef _mpi_use
+  if (MPI_Allreduce(&local_valid, &global_valid, 1, MPI_INT, MPI_MIN,
+                    workspace->communicator) != MPI_SUCCESS) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+#else
+  global_valid = local_valid;
+#endif
+  if (!global_valid || global_components == NULL ||
+      (local_component_count != 0 && local_components == NULL)) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+
+  for (global_qp = 0; global_qp < qp_total; ++global_qp) {
+    int owner = -1;
+    int rank;
+    for (rank = 0; rank < workspace->size; ++rank) {
+      const int *range = workspace->ranges + (size_t)rank * 3;
+      if (global_qp >= range[1] && global_qp < range[2]) {
+        owner = rank;
+        break;
+      }
+    }
+    if (owner < 0) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    if (workspace->rank == owner) {
+      const size_t local_index = (size_t)(global_qp - qp_start);
+      if (local_components != NULL) {
+        global_components[global_qp] = local_components[local_index];
+      }
+    }
+#ifdef _mpi_use
+    if (MPI_Bcast(global_components + global_qp,
+                  (int)sizeof(*global_components), MPI_BYTE, owner,
+                  workspace->communicator) != MPI_SUCCESS) {
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
+#endif
+  }
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE */

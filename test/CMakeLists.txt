@@ -70,6 +70,7 @@ endif()
 
 add_executable(classic_pfaffian_state_unit
     classic_pfaffian_state_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_include_directories(classic_pfaffian_state_unit PRIVATE
@@ -91,6 +92,7 @@ add_test(NAME ClassicPfaffianState_Unit COMMAND classic_pfaffian_state_unit)
 add_executable(classic_pfaffian_collective_unit
     classic_pfaffian_collective_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_include_directories(classic_pfaffian_collective_unit PRIVATE
@@ -131,6 +133,7 @@ add_executable(classic_pfaffian_sampler_unit
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_sampler.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_audit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_compile_definitions(classic_pfaffian_sampler_unit PRIVATE
@@ -172,6 +175,7 @@ endif()
 add_executable(classic_pfaffian_legacy_ab_unit
     classic_pfaffian_legacy_ab_unit.c
     classic_pfaffian_legacy_matrix_tu.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_include_directories(classic_pfaffian_legacy_ab_unit PRIVATE
@@ -201,5 +205,48 @@ endif()
 target_link_libraries(absolute_krylov_reference_unit m)
 add_test(NAME AbsoluteKrylovReference_Unit
     COMMAND absolute_krylov_reference_unit)
+
+add_executable(classic_krylov_amplitude_unit
+    classic_krylov_amplitude_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(classic_krylov_amplitude_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+target_include_directories(classic_krylov_amplitude_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(classic_krylov_amplitude_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(classic_krylov_amplitude_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(classic_krylov_amplitude_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(classic_krylov_amplitude_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME ClassicKrylovAmplitude_Unit
+    COMMAND classic_krylov_amplitude_unit)
+if(MPI_FOUND)
+    add_test(NAME ClassicKrylovAmplitude_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:classic_krylov_amplitude_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME ClassicKrylovAmplitude_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:classic_krylov_amplitude_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(ClassicKrylovAmplitude_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+    set_tests_properties(ClassicKrylovAmplitude_Unit_Rank4_mpi PROPERTIES
+        PROCESSORS 4)
+endif()
 
 add_subdirectory(python)

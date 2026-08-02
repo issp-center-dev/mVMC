@@ -9,6 +9,7 @@ the Free Software Foundation, either version 3 of the License, or
 */
 
 #include "classic_pfaffian_state.h"
+#include "classic_pfaffian_matrix.h"
 
 #include <limits.h>
 #include <math.h>
@@ -319,43 +320,6 @@ void mvmc_classic_pfaffian_complex_workspace_destroy(
   free(workspace);
 }
 
-static void build_real_matrix(const MVMCClassicPfaffianLayout *layout,
-                              const double *slater, const int *ele_idx,
-                              double *matrix) {
-  const int ne = layout->nsize / 2;
-  int column, row;
-
-  for (column = 0; column < layout->nsize; ++column) {
-    const int slater_column =
-        ele_idx[column] + (column / ne) * layout->nsite;
-    for (row = 0; row < layout->nsize; ++row) {
-      const int slater_row = ele_idx[row] + (row / ne) * layout->nsite;
-      matrix[row + (size_t)column * (size_t)layout->nsize] =
-          -slater[(size_t)slater_column * (size_t)layout->nsite2 +
-                  (size_t)slater_row];
-    }
-  }
-}
-
-static void build_complex_matrix(const MVMCClassicPfaffianLayout *layout,
-                                 const double complex *slater,
-                                 const int *ele_idx,
-                                 double complex *matrix) {
-  const int ne = layout->nsize / 2;
-  int column, row;
-
-  for (column = 0; column < layout->nsize; ++column) {
-    const int slater_column =
-        ele_idx[column] + (column / ne) * layout->nsite;
-    for (row = 0; row < layout->nsize; ++row) {
-      const int slater_row = ele_idx[row] + (row / ne) * layout->nsite;
-      matrix[row + (size_t)column * (size_t)layout->nsize] =
-          -slater[(size_t)slater_column * (size_t)layout->nsite2 +
-                  (size_t)slater_row];
-    }
-  }
-}
-
 MVMCPfaffianStatus mvmc_classic_pfaffian_real_prepare(
     MVMCClassicPfaffianRealWorkspace *workspace,
     const double *slater_elm, const int *ele_idx,
@@ -398,10 +362,13 @@ MVMCPfaffianStatus mvmc_classic_pfaffian_real_prepare(
   for (local_qp = 0; local_qp < layout->local_qp_count; ++local_qp) {
     MVMCPfaffianStatus status;
     global_qp = layout->qp_start + (int)local_qp;
-    build_real_matrix(
-        layout,
+    status = mvmc_classic_pfaffian_build_real_matrix(
         slater_elm + (size_t)global_qp * layout->slater_matrix_count,
-        ele_idx, workspace->matrix_scratch);
+        layout->nsite, layout->nsize, ele_idx, workspace->matrix_scratch);
+    if (status != MVMC_PFAFFIAN_STATUS_OK) {
+      set_failure(layout, (int)local_qp, global_qp);
+      return status;
+    }
     status = mvmc_absolute_pfaffian_real_with_workspace(
         workspace->absolute_workspace, workspace->matrix_scratch,
         layout->nsize, layout->nsize,
@@ -489,10 +456,13 @@ MVMCPfaffianStatus mvmc_classic_pfaffian_complex_prepare(
   for (local_qp = 0; local_qp < layout->local_qp_count; ++local_qp) {
     MVMCPfaffianStatus status;
     global_qp = layout->qp_start + (int)local_qp;
-    build_complex_matrix(
-        layout,
+    status = mvmc_classic_pfaffian_build_complex_matrix(
         slater_elm + (size_t)global_qp * layout->slater_matrix_count,
-        ele_idx, workspace->matrix_scratch);
+        layout->nsite, layout->nsize, ele_idx, workspace->matrix_scratch);
+    if (status != MVMC_PFAFFIAN_STATUS_OK) {
+      set_failure(layout, (int)local_qp, global_qp);
+      return status;
+    }
     status = mvmc_absolute_pfaffian_complex_with_workspace(
         workspace->absolute_workspace, workspace->matrix_scratch,
         layout->nsize, layout->nsize,

@@ -11,7 +11,8 @@ include_directories("${STDFACE_DIR}/src")
 add_definitions(-DMEXP=19937)
 
 set(SOURCES_vmcmain
-        vmcmain.c absolute_pfaffian.c classic_pfaffian_state.c
+        vmcmain.c absolute_pfaffian.c classic_pfaffian_matrix.c
+        classic_pfaffian_state.c
         classic_pfaffian_collective.c
         physcal_lanczos.c physcal_lanczos2.c
         lanczos2_contract.c splitloop.c
@@ -29,7 +30,8 @@ add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
 if(Testing)
   # Keep fault injection, reference samplers, and audits out of production.
   target_sources(vmc.out PRIVATE classic_pfaffian_sampler.c
-      classic_pfaffian_audit.c krylov_fock_reference.c)
+      classic_pfaffian_audit.c krylov_fock_reference.c
+      classic_krylov_amplitude.c)
   target_compile_definitions(vmc.out PRIVATE MVMC_ENABLE_FAULT_INJECTION
       MVMC_ENABLE_PFAFFIAN_SAMPLER_REFERENCE
       MVMC_ENABLE_PFAFFIAN_STATE_AUDIT
