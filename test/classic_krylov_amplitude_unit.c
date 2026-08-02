@@ -264,6 +264,12 @@ static void test_complex_amplitude(int qp_total, int use_gutzwiller,
   CHECK(mvmc_classic_krylov_complex_amplitude_workspace_bytes(workspace) >
             sizeof(*pfaffians),
         "complex amplitude workspace reports preallocated bytes");
+  if (qp_total == 4 && use_gutzwiller) {
+    memset(slater, 0x5a, sizeof(slater));
+    for (qp = 0; qp < qp_total; ++qp) weights[qp] = 99.0 + 17.0 * I;
+    parameter = 99.0 + 13.0 * I;
+    gutz_indices[0] = gutz_indices[1] = 1;
+  }
   CHECK(mvmc_classic_krylov_complex_amplitude(
             &configuration, 1, workspace, &result) ==
             MVMC_KRYLOV_STATUS_OK,
@@ -307,6 +313,12 @@ static void test_all_zero_and_configuration_guards(void) {
             MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
             result.value == 0.0,
         "wrong particle sector is rejected atomically");
+  configuration = UINT64_C(21);
+  CHECK(mvmc_classic_krylov_real_amplitude(
+            &configuration, 1, workspace, &result) ==
+            MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            result.value == 0.0,
+        "nonzero configuration padding bit is rejected atomically");
   if (size > 1) {
     configuration = rank == size - 1 ? UINT64_C(6) : UINT64_C(5);
     CHECK(mvmc_classic_krylov_real_amplitude(
@@ -334,6 +346,15 @@ static void test_projection_allowlist(void) {
   int rank, size;
 
   rank_and_size(&rank, &size);
+  layout = base_layout(1, rank, size);
+  enable_gutzwiller(&layout, gutz_indices, parameter);
+  parameter[0] = -0.43 + I;
+  CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
+            &layout, slater, weights, &workspace) ==
+            MVMC_KRYLOV_STATUS_INVALID_ARGUMENT && workspace == NULL,
+        "real adapter rejects a finite imaginary projection parameter");
+  parameter[0] = -0.43;
+
   layout = base_layout(1, rank, size);
   layout.nproj = 1;
   layout.njastrow_idx = 1;

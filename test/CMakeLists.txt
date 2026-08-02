@@ -68,6 +68,39 @@ if(MPI_FOUND)
                 ${MPIEXEC_POSTFLAGS})
 endif()
 
+add_executable(scaled_pfaffian_unit
+    scaled_pfaffian_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(scaled_pfaffian_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(scaled_pfaffian_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(scaled_pfaffian_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(scaled_pfaffian_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(scaled_pfaffian_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(scaled_pfaffian_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME ScaledPfaffian_Unit COMMAND scaled_pfaffian_unit)
+if(MPI_FOUND)
+    add_test(NAME ScaledPfaffian_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:scaled_pfaffian_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME ScaledPfaffian_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:scaled_pfaffian_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(ScaledPfaffian_Unit_Rank2_mpi PROPERTIES PROCESSORS 2)
+    set_tests_properties(ScaledPfaffian_Unit_Rank4_mpi PROPERTIES PROCESSORS 4)
+endif()
+
 add_executable(classic_pfaffian_state_unit
     classic_pfaffian_state_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c

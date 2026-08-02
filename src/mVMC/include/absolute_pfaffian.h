@@ -79,6 +79,57 @@ typedef struct MVMCAbsolutePfaffianRealValueWorkspace
 typedef struct MVMCAbsolutePfaffianComplexValueWorkspace
     MVMCAbsolutePfaffianComplexValueWorkspace;
 
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+/*
+ * Testing-gated P4 numeric core.  Production producers must retain the
+ * phase/log representation until the P4-C promotion gate has passed.
+ */
+typedef enum {
+  MVMC_SCALED_COMPLEX_FINITE_NONZERO = 0,
+  MVMC_SCALED_COMPLEX_EXACT_ZERO,
+  MVMC_SCALED_COMPLEX_NUMERIC_ZERO,
+  MVMC_SCALED_COMPLEX_NONFINITE
+} MVMCScaledComplexState;
+
+typedef enum {
+  MVMC_SCALED_EXPORT_OK = 0,
+  MVMC_SCALED_EXPORT_EXACT_ZERO,
+  MVMC_SCALED_EXPORT_NUMERIC_ZERO,
+  MVMC_SCALED_EXPORT_UNDERFLOW,
+  MVMC_SCALED_EXPORT_OVERFLOW,
+  MVMC_SCALED_EXPORT_NONFINITE,
+  MVMC_SCALED_EXPORT_INVALID
+} MVMCScaledComplexExportStatus;
+
+typedef struct {
+  MVMCScaledComplexState state;
+  double complex phase;
+  double log_abs;
+  double log_abs_error_bound;
+  double max_input_log_abs;
+  double cancellation_log_abs;
+  double cancellation_ratio;
+} MVMCScaledComplex;
+
+typedef struct {
+  MVMCPfaffianValueState factor_state;
+  int factor_info;
+  double matrix_scale;
+  double scaled_min_pivot;
+  MVMCScaledComplex value;
+} MVMCAbsolutePfaffianScaledValueResult;
+
+typedef struct {
+  int valid;
+  MVMCScaledComplex total;
+  double log_sum_abs;
+  size_t well_pivoted_count;
+  size_t near_pivot_count;
+  size_t exact_zero_count;
+  size_t numeric_zero_count;
+} MVMCProjectedScaledAmplitudeResult;
+#endif
+
 /*
  * Reusable factorization workspaces for sampler hot paths.  Creation may
  * allocate and query LAPACK/PFAPACK workspace sizes; evaluation with an
@@ -172,6 +223,59 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_value(
     const double complex *matrix, int n, int lda,
     double scaled_pivot_tolerance,
     MVMCAbsolutePfaffianValueResult *result);
+
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+/* Pure scaled-complex operations.  Error returns preserve *result. */
+MVMCPfaffianStatus mvmc_scaled_complex_make_finite(
+    double complex phase, double log_abs, double log_abs_error_bound,
+    MVMCScaledComplex *result);
+MVMCPfaffianStatus mvmc_scaled_complex_make_exact_zero(
+    MVMCScaledComplex *result);
+MVMCPfaffianStatus mvmc_scaled_complex_make_numeric_zero(
+    double log_abs_error_bound, double max_input_log_abs,
+    double cancellation_log_abs, double cancellation_ratio,
+    MVMCScaledComplex *result);
+MVMCPfaffianStatus mvmc_scaled_complex_from_raw_testing(
+    double complex value, MVMCScaledComplex *result);
+MVMCPfaffianStatus mvmc_scaled_complex_multiply(
+    const MVMCScaledComplex *left, const MVMCScaledComplex *right,
+    MVMCScaledComplex *result);
+MVMCPfaffianStatus mvmc_scaled_complex_sum_ordered(
+    const MVMCScaledComplex *values, size_t value_count,
+    MVMCScaledComplex *result);
+MVMCScaledComplexExportStatus mvmc_scaled_complex_export_common_scale(
+    const MVMCScaledComplex *value, double common_log_scale,
+    double complex *result);
+
+/* Value-only Pfaffian path that never forms the raw pivot product. */
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real_scaled_value_with_workspace(
+    MVMCAbsolutePfaffianRealValueWorkspace *workspace,
+    const double *matrix, int n, int lda, double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result);
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_scaled_value_with_workspace(
+    MVMCAbsolutePfaffianComplexValueWorkspace *workspace,
+    const double complex *matrix, int n, int lda,
+    double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result);
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real_scaled_value(
+    const double *matrix, int n, int lda, double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result);
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_scaled_value(
+    const double complex *matrix, int n, int lda,
+    double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result);
+
+/* Canonical global-QP ordered aggregation and its rank-local slice form. */
+MVMCPfaffianStatus mvmc_projected_scaled_amplitude_values(
+    const MVMCAbsolutePfaffianScaledValueResult *components,
+    const double complex *weights, size_t component_count,
+    MVMCProjectedScaledAmplitudeResult *result);
+MVMCPfaffianStatus mvmc_projected_scaled_amplitude_value_slice(
+    const MVMCAbsolutePfaffianScaledValueResult *local_components,
+    size_t local_component_count, const double complex *global_weights,
+    int qp_total, int qp_start, int qp_end,
+    MVMCProjectedScaledAmplitudeResult *result);
+#endif
 
 /*
  * Sum QPFullWeight[q] * PfM[q] without consulting inverse availability.

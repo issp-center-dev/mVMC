@@ -35,7 +35,8 @@ if(Testing)
   target_compile_definitions(vmc.out PRIVATE MVMC_ENABLE_FAULT_INJECTION
       MVMC_ENABLE_PFAFFIAN_SAMPLER_REFERENCE
       MVMC_ENABLE_PFAFFIAN_STATE_AUDIT
-      MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+      MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+      MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 endif(Testing)
 target_link_libraries(vmc.out StdFace_mvmc m)
 target_link_libraries(vmc.out pfapack)
