@@ -1350,7 +1350,7 @@ static int decompose_finite_complex(
   return valid_unit_phase(*phase) && isfinite(*log_abs);
 }
 
-static int valid_scaled_complex(const MVMCScaledComplex *value) {
+int mvmc_scaled_complex_is_valid(const MVMCScaledComplex *value) {
   if (value == NULL) return 0;
   switch (value->state) {
     case MVMC_SCALED_COMPLEX_FINITE_NONZERO:
@@ -1486,8 +1486,8 @@ MVMCPfaffianStatus mvmc_scaled_complex_multiply(
   double error_bound = -INFINITY;
   double output_log_abs;
   double max_input;
-  if (result == NULL || !valid_scaled_complex(left) ||
-      !valid_scaled_complex(right)) {
+  if (result == NULL || !mvmc_scaled_complex_is_valid(left) ||
+      !mvmc_scaled_complex_is_valid(right)) {
     return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
   }
   if (left->state == MVMC_SCALED_COMPLEX_NONFINITE ||
@@ -1605,7 +1605,7 @@ MVMCPfaffianStatus mvmc_scaled_complex_sum_ordered(
     return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
   }
   for (index = 0; index < value_count; ++index) {
-    if (!valid_scaled_complex(values + index)) {
+    if (!mvmc_scaled_complex_is_valid(values + index)) {
       return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
     }
     if (values[index].state == MVMC_SCALED_COMPLEX_NONFINITE) {
@@ -1695,7 +1695,7 @@ MVMCScaledComplexExportStatus mvmc_scaled_complex_export_common_scale(
     double complex *result) {
   double delta;
   double magnitude;
-  if (result == NULL || !valid_scaled_complex(value) ||
+  if (result == NULL || !mvmc_scaled_complex_is_valid(value) ||
       !isfinite(common_log_scale)) {
     return MVMC_SCALED_EXPORT_INVALID;
   }
@@ -2045,7 +2045,7 @@ MVMCPfaffianStatus mvmc_projected_scaled_amplitude_values(
   for (index = 0; index < component_count; ++index) {
     MVMCScaledComplex scaled_weight;
     if (!finite_complex(weights[index]) ||
-        !valid_scaled_complex(&components[index].value)) {
+        !mvmc_scaled_complex_is_valid(&components[index].value)) {
       free(terms);
       return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
     }
