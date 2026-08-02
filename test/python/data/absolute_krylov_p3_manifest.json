@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "fixture_id": "absolute-krylov-p3-l4-v1",
+  "site_count": 4,
+  "orders": [0, 1, 2, 3],
+  "comparison": {
+    "independent_ed": "absolute v_k on every fixed-sector configuration",
+    "production_anchor": "production F_k versus v_k/v_0 where v_0 is nonzero",
+    "complex_production_convention": "conjugate(v_k/v_0)"
+  },
+  "amplitude": {
+    "qp_total": 1,
+    "electronic_projection": "GUTZWILLER_ONLY",
+    "spin_projection": "NONE",
+    "gutzwiller_parameter": -0.27,
+    "zero_support_bridge_required": true
+  },
+  "model_parameters": {
+    "ring_bonds": [[0, 1], [1, 2], [2, 3], [3, 0]],
+    "electronic": {
+      "transfer_real": 0.75,
+      "transfer_imaginary_by_bond": [0.125, 0.1875, 0.25, 0.3125],
+      "diagonal_transfer": [1, 0, 0.4375],
+      "coulomb_intra": [0.25, -0.125, 0.375, -0.3125],
+      "coulomb_inter": [[0, 2, 0.1875], [1, 3, -0.15625]],
+      "hund": [[0, 1, 0.21875], [2, 3, -0.09375]]
+    },
+    "spin": {
+      "hund_by_bond": [0.375, -0.25, 0.1875, -0.125],
+      "exchange_by_bond": [0.625, -0.3125, 0.4375, -0.5625]
+    }
+  },
+  "pair_matrix": {
+    "real": [
+      [1.5, -0.5, 1.5, 1.0],
+      [-1.5, 0.5, -1.5, -1.0],
+      [-0.5, 1.5, 1.5, 2.0],
+      [-2.0, -2.0, -1.0, 0.5]
+    ],
+    "complex_real": [
+      [2.0, 1.0, 0.5, 0.5],
+      [-2.0, -1.0, -0.5, -0.5],
+      [0.5, 0.5, -0.5, -0.5],
+      [1.5, 0.5, 1.5, 1.5]
+    ],
+    "complex_imaginary": [
+      [1.0, 1.5, -0.5, -1.5],
+      [-1.0, -1.5, 0.5, 1.5],
+      [1.0, 2.0, -2.0, -1.5],
+      [1.5, 0.5, -1.5, 1.5]
+    ]
+  },
+  "cases": [
+    {
+      "name": "electronic_real",
+      "scalar": "real",
+      "term_families": [
+        "Transfer", "DiagonalTransfer", "CoulombIntra",
+        "CoulombInter", "Hund"
+      ]
+    },
+    {
+      "name": "electronic_complex",
+      "scalar": "complex",
+      "term_families": [
+        "Transfer", "DiagonalTransfer", "CoulombIntra",
+        "CoulombInter", "Hund"
+      ]
+    },
+    {
+      "name": "spin_real",
+      "scalar": "real",
+      "term_families": ["Hund", "Exchange"]
+    },
+    {
+      "name": "spin_complex",
+      "scalar": "complex",
+      "term_families": ["Hund", "Exchange"]
+    }
+  ],
+  "pilot_scan": {
+    "lambda": [1.0, 1.0, 1.0, 1.0],
+    "rho": [0.000001, 0.0001, 0.01]
+  }
+}

@@ -651,6 +651,204 @@ static void test_rank_local_projected_amplitude(void) {
         "rank-local state counters reduce to full counters");
 }
 
+static void test_value_only_api(void) {
+  const int n = 4;
+  double matrix[16] = {0.0};
+  double original[16];
+  double inverse[16];
+  double complex complex_matrix[16] = {0.0};
+  double complex complex_inverse[16];
+  MVMCAbsolutePfaffianRealValueWorkspace *real_workspace = NULL;
+  MVMCAbsolutePfaffianComplexValueWorkspace *complex_workspace = NULL;
+  MVMCAbsolutePfaffianResult full;
+  MVMCAbsolutePfaffianValueResult value;
+  MVMCAbsolutePfaffianValueResult components[4];
+  MVMCProjectedAmplitudeResult aggregate, empty;
+  double complex weights[4] = {1.0, 2.0, -I, 0.5 + 0.25 * I};
+
+  set_real_pair(matrix, n, 0, 1, 2.0);
+  set_real_pair(matrix, n, 0, 2, -1.0);
+  set_real_pair(matrix, n, 0, 3, 0.5);
+  set_real_pair(matrix, n, 1, 2, 3.0);
+  set_real_pair(matrix, n, 1, 3, 4.0);
+  set_real_pair(matrix, n, 2, 3, -2.0);
+  memcpy(original, matrix, sizeof(matrix));
+  CHECK(mvmc_absolute_pfaffian_real(matrix, n, n, inverse, n, 501, 0.0,
+                                     0.0, &full) ==
+            MVMC_PFAFFIAN_STATUS_OK,
+        "value-only real full reference status");
+  CHECK(mvmc_absolute_pfaffian_real_value(matrix, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK,
+        "value-only real convenience status");
+  CHECK(value.state == MVMC_PFAFFIAN_VALUE_WELL_PIVOTED,
+        "value-only real well-pivoted classification");
+  CHECK(value.factor_info == full.factor_info &&
+            value.matrix_scale == full.matrix_scale &&
+            value.scaled_min_pivot == full.scaled_min_pivot &&
+            value.pfaffian == full.pfaffian,
+        "value-only real diagnostics and Pfaffian match full P1");
+  CHECK(memcmp(matrix, original, sizeof(matrix)) == 0,
+        "value-only real leaves source unchanged");
+
+  CHECK(mvmc_absolute_pfaffian_real_value_workspace_create(
+            n, &real_workspace) == MVMC_PFAFFIAN_STATUS_OK,
+        "value-only real workspace create");
+  CHECK(mvmc_absolute_pfaffian_real_value_with_workspace(
+            real_workspace, matrix, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.pfaffian == full.pfaffian,
+        "value-only real workspace reuse first evaluation");
+  CHECK(mvmc_absolute_pfaffian_real_value_with_workspace(
+            real_workspace, matrix, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.pfaffian == full.pfaffian,
+        "value-only real workspace reuse second evaluation");
+
+  memset(matrix, 0, sizeof(matrix));
+  set_real_pair(matrix, n, 0, 1, 1.0);
+  set_real_pair(matrix, n, 2, 3, 1.0e-15);
+  CHECK(mvmc_absolute_pfaffian_real_value_with_workspace(
+            real_workspace, matrix, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.state == MVMC_PFAFFIAN_VALUE_NEAR_PIVOT &&
+            close_complex(value.pfaffian, 1.0e-15, 1.0e-13),
+        "value-only near pivot retains finite Pfaffian");
+  memset(matrix, 0, sizeof(matrix));
+  set_real_pair(matrix, n, 0, 1, 1.0);
+  CHECK(mvmc_absolute_pfaffian_real_value_with_workspace(
+            real_workspace, matrix, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.state == MVMC_PFAFFIAN_VALUE_SINGULAR &&
+            value.factor_info > 0 && value.pfaffian == 0.0,
+        "value-only singular contract");
+  matrix[0] = NAN;
+  CHECK(mvmc_absolute_pfaffian_real_value_with_workspace(
+            real_workspace, matrix, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.state == MVMC_PFAFFIAN_VALUE_NONFINITE,
+        "value-only nonfinite classification");
+  CHECK(mvmc_absolute_pfaffian_real_value_with_workspace(
+            real_workspace, matrix, n, n, NAN, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            value.state == MVMC_PFAFFIAN_VALUE_INVALID,
+        "value-only invalid input is atomic");
+
+  set_complex_pair(complex_matrix, n, 0, 1, 1.0 + 0.5 * I);
+  set_complex_pair(complex_matrix, n, 0, 2, -0.25 + 0.75 * I);
+  set_complex_pair(complex_matrix, n, 0, 3, 2.0 - 0.5 * I);
+  set_complex_pair(complex_matrix, n, 1, 2, 0.5 + 1.25 * I);
+  set_complex_pair(complex_matrix, n, 1, 3, -1.0 + 0.25 * I);
+  set_complex_pair(complex_matrix, n, 2, 3, 1.5 - 0.75 * I);
+  CHECK(mvmc_absolute_pfaffian_complex(
+            complex_matrix, n, n, complex_inverse, n, 502, 0.0, 0.0,
+            &full) == MVMC_PFAFFIAN_STATUS_OK,
+        "value-only complex full reference status");
+  CHECK(mvmc_absolute_pfaffian_complex_value_workspace_create(
+            n, &complex_workspace) == MVMC_PFAFFIAN_STATUS_OK,
+        "value-only complex workspace create");
+  CHECK(mvmc_absolute_pfaffian_complex_value_with_workspace(
+            complex_workspace, complex_matrix, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.state == MVMC_PFAFFIAN_VALUE_WELL_PIVOTED &&
+            close_complex(value.pfaffian, full.pfaffian, 1.0e-15),
+        "value-only complex phase matches full P1");
+  memset(complex_matrix, 0, sizeof(complex_matrix));
+  set_complex_pair(complex_matrix, n, 0, 1, 1.0 + I);
+  set_complex_pair(complex_matrix, n, 2, 3, 1.0e-15 - 0.5e-15 * I);
+  CHECK(mvmc_absolute_pfaffian_complex(
+            complex_matrix, n, n, complex_inverse, n, 503, 0.0, 0.0,
+            &full) == MVMC_PFAFFIAN_STATUS_OK &&
+            full.state == MVMC_PFAFFIAN_NEAR_SINGULAR,
+        "value-only complex near full reference");
+  CHECK(mvmc_absolute_pfaffian_complex_value_with_workspace(
+            complex_workspace, complex_matrix, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.state == MVMC_PFAFFIAN_VALUE_NEAR_PIVOT &&
+            value.pfaffian == full.pfaffian,
+        "value-only complex near state and phase match full P1");
+  memset(complex_matrix, 0, sizeof(complex_matrix));
+  set_complex_pair(complex_matrix, n, 0, 1, 1.0 + I);
+  CHECK(mvmc_absolute_pfaffian_complex(
+            complex_matrix, n, n, complex_inverse, n, 504, 0.0, 0.0,
+            &full) == MVMC_PFAFFIAN_STATUS_OK &&
+            full.state == MVMC_PFAFFIAN_SINGULAR,
+        "value-only complex singular full reference");
+  CHECK(mvmc_absolute_pfaffian_complex_value_with_workspace(
+            complex_workspace, complex_matrix, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.state == MVMC_PFAFFIAN_VALUE_SINGULAR &&
+            value.pfaffian == full.pfaffian && value.pfaffian == 0.0,
+        "value-only complex singular state matches full P1");
+  complex_matrix[0] = INFINITY + 0.0 * I;
+  CHECK(mvmc_absolute_pfaffian_complex_value_with_workspace(
+            complex_workspace, complex_matrix, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.state == MVMC_PFAFFIAN_VALUE_NONFINITE,
+        "value-only complex nonfinite classification");
+  CHECK(mvmc_absolute_pfaffian_complex_value_with_workspace(
+            complex_workspace, complex_matrix, n, n, INFINITY, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            value.state == MVMC_PFAFFIAN_VALUE_INVALID,
+        "value-only complex invalid input is atomic");
+
+  components[0].state = MVMC_PFAFFIAN_VALUE_WELL_PIVOTED;
+  components[0].pfaffian = 2.0;
+  components[1].state = MVMC_PFAFFIAN_VALUE_SINGULAR;
+  components[1].pfaffian = 0.0;
+  components[2].state = MVMC_PFAFFIAN_VALUE_NEAR_PIVOT;
+  components[2].pfaffian = -1.0 + I;
+  components[3].state = MVMC_PFAFFIAN_VALUE_WELL_PIVOTED;
+  components[3].pfaffian = 3.0 - 0.5 * I;
+  CHECK(mvmc_projected_amplitude_values(
+            components, weights, 4, &aggregate) == MVMC_PFAFFIAN_STATUS_OK &&
+            aggregate.valid && aggregate.regular_count == 2 &&
+            aggregate.near_singular_count == 1 &&
+            aggregate.singular_count == 1,
+        "value-only projected aggregation preserves classifications");
+  CHECK(close_complex(aggregate.total, 4.625 + 1.5 * I, 1.0e-15),
+        "value-only projected total matches direct oracle");
+  CHECK(fabs(aggregate.sum_abs -
+             (2.0 + sqrt(2.0) + cabs(1.625 + 0.5 * I))) < 1.0e-14,
+        "value-only projected absolute sum matches direct oracle");
+  CHECK(fabs(aggregate.cancellation_ratio -
+             cabs(aggregate.total) / aggregate.sum_abs) < 1.0e-15,
+        "value-only projected cancellation metric matches oracle");
+  CHECK(mvmc_projected_amplitude_value_slice(
+            NULL, 0, weights, 4, 2, 2, &empty) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            empty.valid && empty.total == 0.0 && empty.regular_count == 0,
+        "value-only empty QP slice is valid");
+  components[1].pfaffian = 1.0;
+  CHECK(mvmc_projected_amplitude_values(
+            components, weights, 4, &aggregate) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            aggregate.valid == 0,
+        "value-only invalid singular component fails atomically");
+
+  components[0].state = MVMC_PFAFFIAN_VALUE_SINGULAR;
+  components[0].pfaffian = 0.0;
+  components[1] = components[0];
+  CHECK(mvmc_projected_amplitude_values(
+            components, weights, 2, &aggregate) == MVMC_PFAFFIAN_STATUS_OK &&
+            aggregate.valid && aggregate.total == 0.0 &&
+            aggregate.sum_abs == 0.0 && aggregate.singular_count == 2,
+        "all-zero value components remain a valid projected total");
+  components[0].state = MVMC_PFAFFIAN_VALUE_WELL_PIVOTED;
+  components[0].pfaffian = 1.0e16;
+  components[1].state = MVMC_PFAFFIAN_VALUE_WELL_PIVOTED;
+  components[1].pfaffian = -1.0e16;
+  components[2].state = MVMC_PFAFFIAN_VALUE_WELL_PIVOTED;
+  components[2].pfaffian = 1.0;
+  weights[0] = weights[1] = weights[2] = 1.0;
+  CHECK(mvmc_projected_amplitude_values(
+            components, weights, 3, &aggregate) == MVMC_PFAFFIAN_STATUS_OK &&
+            aggregate.total == 1.0,
+        "value-only compensated sum retains a small cancellation remainder");
+
+  mvmc_absolute_pfaffian_complex_value_workspace_destroy(complex_workspace);
+  mvmc_absolute_pfaffian_real_value_workspace_destroy(real_workspace);
+}
+
 int main(int argc, char **argv) {
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
@@ -678,6 +876,7 @@ int main(int argc, char **argv) {
   test_invalid_arguments();
   test_projected_amplitude();
   test_rank_local_projected_amplitude();
+  test_value_only_api();
 
   if (failure_count != 0) {
     fprintf(stderr, "%d absolute Pfaffian checks failed\n", failure_count);

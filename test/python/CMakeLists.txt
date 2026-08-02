@@ -23,6 +23,14 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_complex_ed.py DESTINATION
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_heisenberg_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_projected_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_projection_smoke.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_classic_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_production_anchor.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_profile.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_absolute_krylov_p3_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_p3_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_p3_pipeline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/absolute_krylov_p3_manifest.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/absolute_krylov_p3_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyg.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -429,6 +437,49 @@ if(MPI_FOUND)
         RESOURCE_LOCK "update_weight_e2e_workdir")
 endif()
 
+add_test(NAME AbsoluteKrylovProfile_AuditParity
+    COMMAND ${PYTHON_EXECUTABLE} runtest_absolute_krylov_profile.py
+            $<TARGET_FILE:absolute_krylov_profile_driver>)
+set_tests_properties(AbsoluteKrylovProfile_AuditParity PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME AbsoluteKrylovP3Evidence_Math
+    COMMAND ${PYTHON_EXECUTABLE} runtest_absolute_krylov_p3_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/absolute_krylov_p3_measurement_policy.json)
+set_tests_properties(AbsoluteKrylovP3Evidence_Math PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME AbsoluteKrylovP3Evidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE} runtest_absolute_krylov_p3_pipeline.py
+            ${CMAKE_BINARY_DIR}/test/python/data/absolute_krylov_p3_measurement_policy.json
+            ${CMAKE_SOURCE_DIR})
+set_tests_properties(AbsoluteKrylovP3Evidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+if(MPI_FOUND)
+    add_test(NAME AbsoluteKrylovProfile_AuditParity_Rank2_mpi
+        COMMAND ${PYTHON_EXECUTABLE} runtest_absolute_krylov_profile.py
+                $<TARGET_FILE:absolute_krylov_profile_driver>)
+    set_tests_properties(AbsoluteKrylovProfile_AuditParity_Rank2_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+        PROCESSORS 2)
+endif()
+
+add_test(NAME AbsoluteKrylovProductionAnchor
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_absolute_krylov_production_anchor.py
+            $<TARGET_FILE:absolute_krylov_classic_ed_driver>)
+set_tests_properties(AbsoluteKrylovProductionAnchor PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    RESOURCE_LOCK "absolute_krylov_production_anchor")
+if(MPI_FOUND)
+    add_test(NAME AbsoluteKrylovProductionAnchor_Rank2_mpi
+        COMMAND ${PYTHON_EXECUTABLE}
+                runtest_absolute_krylov_production_anchor.py
+                $<TARGET_FILE:absolute_krylov_classic_ed_driver>)
+    set_tests_properties(AbsoluteKrylovProductionAnchor_Rank2_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+        PROCESSORS 2
+        RESOURCE_LOCK "absolute_krylov_production_anchor_mpi")
+endif()
+
 set(python_test_vmc_model
   HeisenbergChain
   HeisenbergChain_cmp
@@ -653,6 +704,31 @@ add_test(NAME Lanczos2_Real_ED
 set_tests_properties(Lanczos2_Real_ED PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_LANCZOS2_STATE_CHECK=1"
     RESOURCE_LOCK "lanczos2_real_ed_workdir")
+
+add_test(NAME AbsoluteKrylovClassic_ED
+    COMMAND ${PYTHON_EXECUTABLE} runtest_absolute_krylov_classic_ed.py
+            $<TARGET_FILE:absolute_krylov_classic_ed_driver>)
+set_tests_properties(AbsoluteKrylovClassic_ED PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME AbsoluteKrylovClassic_ED_omp
+    COMMAND ${PYTHON_EXECUTABLE} runtest_absolute_krylov_classic_ed.py
+            $<TARGET_FILE:absolute_krylov_classic_ed_driver>)
+set_tests_properties(AbsoluteKrylovClassic_ED_omp PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+if(MPI_FOUND)
+    add_test(NAME AbsoluteKrylovClassic_ED_Rank2_mpi
+        COMMAND ${PYTHON_EXECUTABLE} runtest_absolute_krylov_classic_ed.py
+                $<TARGET_FILE:absolute_krylov_classic_ed_driver>)
+    set_tests_properties(AbsoluteKrylovClassic_ED_Rank2_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+        PROCESSORS 2)
+    add_test(NAME AbsoluteKrylovClassic_ED_Rank4_mpi
+        COMMAND ${PYTHON_EXECUTABLE} runtest_absolute_krylov_classic_ed.py
+                $<TARGET_FILE:absolute_krylov_classic_ed_driver>)
+    set_tests_properties(AbsoluteKrylovClassic_ED_Rank4_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=4;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+        PROCESSORS 4)
+endif()
 add_test(NAME Lanczos2_Real_ED_mpi
     COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_real_ed.py)
 set_tests_properties(Lanczos2_Real_ED_mpi PROPERTIES
