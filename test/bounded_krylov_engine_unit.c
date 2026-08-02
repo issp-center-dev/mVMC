@@ -15,6 +15,9 @@ static int failures = 0;
 static int world_rank = 0;
 static int world_size = 1;
 
+_Static_assert(sizeof(double) == sizeof(uint64_t),
+               "bitwise scaled-value tests require 64-bit double storage");
+
 #define CHECK(condition, ...)                                                   \
   do {                                                                          \
     if (!(condition)) {                                                         \
@@ -42,6 +45,32 @@ static uint64_t hash_u64_value(uint64_t hash, uint64_t value) {
     value >>= 8;
   }
   return hash;
+}
+
+static void scaled_value_field_bits(const MVMCScaledComplex *value,
+                                    uint64_t bits[8]) {
+  double fields[7];
+  size_t field;
+  bits[0] = (uint64_t)(unsigned int)value->state;
+  fields[0] = creal(value->phase);
+  fields[1] = cimag(value->phase);
+  fields[2] = value->log_abs;
+  fields[3] = value->log_abs_error_bound;
+  fields[4] = value->max_input_log_abs;
+  fields[5] = value->cancellation_log_abs;
+  fields[6] = value->cancellation_ratio;
+  for (field = 0; field < 7; ++field) {
+    memcpy(&bits[field + 1], &fields[field], sizeof(bits[field + 1]));
+  }
+}
+
+static int scaled_values_bitwise_equal(const MVMCScaledComplex *left,
+                                       const MVMCScaledComplex *right) {
+  uint64_t left_bits[8];
+  uint64_t right_bits[8];
+  scaled_value_field_bits(left, left_bits);
+  scaled_value_field_bits(right, right_bits);
+  return memcmp(left_bits, right_bits, sizeof(left_bits)) == 0;
 }
 
 static size_t small_configuration_index(const uint64_t *words,
@@ -531,8 +560,13 @@ static void test_duplicate_permutation_and_cache_grid(void) {
       memcpy(baseline, result.value, sizeof(baseline));
       have_baseline = 1;
     } else {
-      CHECK(memcmp(baseline, result.value, sizeof(baseline)) == 0,
-            "cache capacity changed mathematical scaled values");
+      int order;
+      for (order = 0; order <= 3; ++order) {
+        CHECK(scaled_values_bitwise_equal(&baseline[order],
+                                          &result.value[order]),
+              "cache capacity changed scaled-value fields at order %d",
+              order);
+      }
     }
     CHECK(actual_cache_bytes <= capacities[capacity_index] &&
               (set_bytes == 0 || actual_cache_bytes % set_bytes == 0),
@@ -888,20 +922,16 @@ static void test_rank_invariance(void) {
   CHECK(memcmp(minimum, maximum, sizeof(minimum)) == 0,
         "plan/ROW/cache/callback trace differs by MPI rank");
   for (order = 0; order <= 3; ++order) {
-    unsigned char local[sizeof(MVMCScaledComplex)];
-    unsigned char gathered_min[sizeof(MVMCScaledComplex)];
-    unsigned char gathered_max[sizeof(MVMCScaledComplex)];
-    size_t byte;
-    memcpy(local, &result.value[order], sizeof(local));
-    MPI_Allreduce(local, gathered_min, (int)sizeof(local), MPI_UNSIGNED_CHAR,
-                  MPI_MIN, MPI_COMM_WORLD);
-    MPI_Allreduce(local, gathered_max, (int)sizeof(local), MPI_UNSIGNED_CHAR,
-                  MPI_MAX, MPI_COMM_WORLD);
-    for (byte = 0; byte < sizeof(local); ++byte) {
-      CHECK(gathered_min[byte] == gathered_max[byte],
-            "scaled value differs by rank at order %d byte %zu", order,
-            byte);
-    }
+    uint64_t local[8];
+    uint64_t gathered_min[8];
+    uint64_t gathered_max[8];
+    scaled_value_field_bits(&result.value[order], local);
+    MPI_Allreduce(local, gathered_min, 8, MPI_UINT64_T, MPI_MIN,
+                  MPI_COMM_WORLD);
+    MPI_Allreduce(local, gathered_max, 8, MPI_UINT64_T, MPI_MAX,
+                  MPI_COMM_WORLD);
+    CHECK(memcmp(gathered_min, gathered_max, sizeof(gathered_min)) == 0,
+          "scaled-value fields differ by rank at order %d", order);
   }
 #endif
 }
