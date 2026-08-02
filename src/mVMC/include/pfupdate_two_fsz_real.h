@@ -12,10 +12,10 @@ void calculateNewPfMTwo_child_fsz_real(const int ma, const int s, const int mb, 
                               const int qpStart, const int qpEnd, const int qpidx,
                               double *vec_a, double *vec_b);
 void UpdateMAllTwo_fsz_real(const int ma, const int s, const int mb, const int t,
-                   const int raOld, const int rbOld,
+                   const int raOld, const int sOld, const int rbOld, const int tOld,
                    const int *eleIdx,const int*eleSpn, const int qpStart, const int qpEnd);
 void updateMAllTwo_child_fsz_real(const int ma, const int s, const int mb, const int t,
-                         const int raOld, const int rbOld,
+                         const int raOld, const int sOld, const int rbOld, const int tOld,
                          const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd, const int qpidx,
                          double *vecP, double *vecQ, double *vecS, double *vecT);
 

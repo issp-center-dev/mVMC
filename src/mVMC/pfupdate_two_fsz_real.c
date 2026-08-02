@@ -178,10 +178,11 @@ void calculateNewPfMTwo_child_fsz_real(const int ma, const int s, const int mb, 
 }
 
 // s comp
-/* Update PfM and InvM. The ma-th electron with spin s hops from raOld to site ra=eleIdx[msa],
-   and then the mb-th electron with spin t hops from rbOld to site rb=eleIdx[msb] */
+/* Update PfM and InvM. The ma-th electron changes from (raOld,sOld) to
+   (eleIdx[ma],s), and the mb-th electron changes from (rbOld,tOld) to
+   (eleIdx[mb],t). */
 void UpdateMAllTwo_fsz_real(const int ma, const int s, const int mb, const int t,
-                   const int raOld, const int rbOld,
+                   const int raOld, const int sOld, const int rbOld, const int tOld,
                    const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;
   int qpidx;
@@ -199,7 +200,7 @@ void UpdateMAllTwo_fsz_real(const int ma, const int s, const int mb, const int t
     #pragma omp for
     #pragma loop nounroll
     for(qpidx=0;qpidx<qpNum;qpidx++) {
-      updateMAllTwo_child_fsz_real(ma, s, mb, t, raOld, rbOld, eleIdx,eleSpn, qpStart, qpEnd, qpidx,
+      updateMAllTwo_child_fsz_real(ma, s, mb, t, raOld, sOld, rbOld, tOld, eleIdx,eleSpn, qpStart, qpEnd, qpidx,
                           vec1, vec2, vec3, vec4);
     }
   }
@@ -209,7 +210,7 @@ void UpdateMAllTwo_fsz_real(const int ma, const int s, const int mb, const int t
 }
 
 void updateMAllTwo_child_fsz_real(const int ma, const int s, const int mb, const int t,
-                         const int raOld, const int rbOld,
+                         const int raOld, const int sOld, const int rbOld, const int tOld,
                          const int *eleIdx,const int *eleSpn, const int qpStart, const int qpEnd, const int qpidx,
                          double *vecP, double *vecQ, double *vecS, double *vecT) {
   #pragma procedure serial
@@ -217,8 +218,8 @@ void updateMAllTwo_child_fsz_real(const int ma, const int s, const int mb, const
   const int msb = mb;//+t*Ne; fsz
   const int rsa = eleIdx[msa] + s*Nsite;
   const int rsb = eleIdx[msb] + t*Nsite;
-  const int rsaOld = raOld + s*Nsite;
-  const int rsbOld = rbOld + t*Nsite;
+  const int rsaOld = raOld + sOld*Nsite;
+  const int rsbOld = rbOld + tOld*Nsite;
   const int nsize = Nsize;
 
   const double *sltE = SlaterElm_real + (qpidx+qpStart)*Nsite2*Nsite2;;

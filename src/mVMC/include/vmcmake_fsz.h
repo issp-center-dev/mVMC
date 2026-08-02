@@ -44,9 +44,10 @@ void CheckEleConfig_fsz(int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn,MPI_Co
 int CheckEleNum_fsz(int *eleIdx, int *eleCfg, int *eleNum,int *eleSpn,MPI_Comm comm);
 void makeCandidate_LocalSpinFlip_localspin(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn);
+void makeCandidate_PairSpinFlip_localspin(int *mi_, int *mj_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn);
 void makeCandidate_LocalSpinFlip_conduction(int *mi_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
                            const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn);
 
 
 #endif
-

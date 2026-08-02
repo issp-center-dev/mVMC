@@ -72,17 +72,27 @@ static int ParseBFNBodyInjectionTerm(const char *value) {
 
 void OutputTime(int step) {
   time_t tx;
-  double pHop,pEx,pLSF;
+  double pHop,pEx,pLSF,pPSF;
 
   tx = time(NULL);
   if(step==0) {
-    fprintf(FileTime, "%05d  acc_hop acc_ex  acc_lsf n_hop    n_ex      n_lsf   : %s", step, ctime(&tx));
+    if(FlagUpdateWeight) {
+      fprintf(FileTime, "%05d  acc_hop acc_ex  acc_lsf n_hop    n_ex      n_lsf   acc_psf n_psf   : %s", step, ctime(&tx));
+    } else {
+      fprintf(FileTime, "%05d  acc_hop acc_ex  acc_lsf n_hop    n_ex      n_lsf   : %s", step, ctime(&tx));
+    }
   } else {
     pHop = (Counter[0] == 0) ? 0.0 : (double)Counter[1] / (double)Counter[0];
     pEx  = (Counter[2] == 0) ? 0.0 : (double)Counter[3] / (double)Counter[2];
     pLSF = (Counter[4] == 0) ? 0.0 : (double)Counter[5] / (double)Counter[4];
-    fprintf(FileTime, "%05d  %.5lf %.5lf %.5lf %-8d %-8d  %-8d: %s", step, pHop,pEx,pLSF,
-            Counter[0], Counter[2],Counter[4], ctime(&tx));
+    if(FlagUpdateWeight) {
+      pPSF = (Counter[6] == 0) ? 0.0 : (double)Counter[7] / (double)Counter[6];
+      fprintf(FileTime, "%05d  %.5lf %.5lf %.5lf %-8d %-8d  %-8d %.5lf %-8d: %s", step, pHop,pEx,pLSF,
+              Counter[0], Counter[2],Counter[4],pPSF,Counter[6], ctime(&tx));
+    } else {
+      fprintf(FileTime, "%05d  %.5lf %.5lf %.5lf %-8d %-8d  %-8d: %s", step, pHop,pEx,pLSF,
+              Counter[0], Counter[2],Counter[4], ctime(&tx));
+    }
   }
 }
 

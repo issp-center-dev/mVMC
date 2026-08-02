@@ -23,6 +23,14 @@ target_include_directories(lanczos2_contract_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 add_test(NAME Lanczos2Contract_Unit COMMAND lanczos2_contract_unit)
 
+add_executable(update_weight_unit
+    update_weight_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/update_weight.c)
+target_include_directories(update_weight_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(update_weight_unit m)
+add_test(NAME UpdateWeight_Unit COMMAND update_weight_unit)
+
 add_executable(lanczos2_solver_unit
     lanczos2_solver_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/physcal_lanczos2.c

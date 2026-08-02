@@ -915,6 +915,13 @@ UpdateType getUpdateType(int path) {
   } else if (path==1) {
     return (genrand_real2()<0.5) ? EXCHANGE : HOPPING; /* exchange or hopping */
   } else if (path==2) {
+    if(FlagUpdateWeight) {
+      const int selected = SelectUpdateWeight(UpdateWeights, genrand_real2());
+      if(selected == UpdateWeightExchange) return EXCHANGE;
+      if(selected == UpdateWeightLocalSpinFlip) return LOCALSPINFLIP;
+      if(selected == UpdateWeightPairSpinFlip) return PAIRSPINFLIP;
+      return NONE;
+    }
     if(iFlgOrbitalGeneral==0){
       return EXCHANGE;
     }else{

@@ -83,6 +83,8 @@ int NVMCInterval; /* sampling interval [MCS] */
 int NVMCSample; /* the number of samples */
 int NExUpdatePath; /* update path  0: hopping, 1: hopping+exchange, 2: exchange(spin), 3: KondoGC, 6: pair hopping(doublon-only) */
 int NBlockUpdateSize; /* {DEFINED: _pf_block_update} size of block Pfaffian update */
+int FlagUpdateWeight = 0; /* optional InUpdateWeight file is active */
+double UpdateWeights[3] = {0.0, 0.0, 0.0};
 
 int RndSeed; /* seed for pseudorandom number generator */
 int NSplitSize; /* the number of inner MPI processes */
@@ -406,10 +408,11 @@ int NThread;
 int LapackLWork;
 
 /***** counter for vmcMake *****/
-int Counter[6] = {0,0,0,0,0,0};
+int Counter[8] = {0,0,0,0,0,0,0,0};
 int Counter_max = 6;
 /* 0: hopping, 1: hopping accept, 2: exchange try, 3: exchange accept */
-/* 4: local spin flip try, 5 local spin flip accept*/
+/* 4: local spin flip try, 5: local spin flip accept */
+/* 6: pair spin flip try, 7: pair spin flip accept */
 
 /***** optional BackFlow profiling counters *****/
 #define NBFProfileCounter 48
