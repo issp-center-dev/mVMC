@@ -68,4 +68,123 @@ if(MPI_FOUND)
                 ${MPIEXEC_POSTFLAGS})
 endif()
 
+add_executable(classic_pfaffian_state_unit
+    classic_pfaffian_state_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_include_directories(classic_pfaffian_state_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(classic_pfaffian_state_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(classic_pfaffian_state_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(classic_pfaffian_state_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(classic_pfaffian_state_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME ClassicPfaffianState_Unit COMMAND classic_pfaffian_state_unit)
+
+add_executable(classic_pfaffian_collective_unit
+    classic_pfaffian_collective_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_include_directories(classic_pfaffian_collective_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(classic_pfaffian_collective_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(classic_pfaffian_collective_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(classic_pfaffian_collective_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(classic_pfaffian_collective_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME ClassicPfaffianCollective_Unit
+    COMMAND classic_pfaffian_collective_unit)
+if(MPI_FOUND)
+    add_test(NAME ClassicPfaffianCollective_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:classic_pfaffian_collective_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME ClassicPfaffianCollective_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:classic_pfaffian_collective_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(ClassicPfaffianCollective_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+    set_tests_properties(ClassicPfaffianCollective_Unit_Rank4_mpi PROPERTIES
+        PROCESSORS 4)
+endif()
+
+add_executable(classic_pfaffian_sampler_unit
+    classic_pfaffian_sampler_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_audit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(classic_pfaffian_sampler_unit PRIVATE
+    MVMC_ENABLE_PFAFFIAN_SAMPLER_REFERENCE
+    MVMC_ENABLE_PFAFFIAN_STATE_AUDIT)
+target_include_directories(classic_pfaffian_sampler_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(classic_pfaffian_sampler_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(classic_pfaffian_sampler_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(classic_pfaffian_sampler_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(classic_pfaffian_sampler_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME ClassicPfaffianSampler_Unit
+    COMMAND classic_pfaffian_sampler_unit)
+if(MPI_FOUND)
+    add_test(NAME ClassicPfaffianSampler_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:classic_pfaffian_sampler_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME ClassicPfaffianSampler_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:classic_pfaffian_sampler_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(ClassicPfaffianSampler_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+    set_tests_properties(ClassicPfaffianSampler_Unit_Rank4_mpi PROPERTIES
+        PROCESSORS 4)
+endif()
+
+add_executable(classic_pfaffian_legacy_ab_unit
+    classic_pfaffian_legacy_ab_unit.c
+    classic_pfaffian_legacy_matrix_tu.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_include_directories(classic_pfaffian_legacy_ab_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(classic_pfaffian_legacy_ab_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(classic_pfaffian_legacy_ab_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(classic_pfaffian_legacy_ab_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME ClassicPfaffianLegacyExecutionAB_Unit
+    COMMAND classic_pfaffian_legacy_ab_unit)
+
 add_subdirectory(python)

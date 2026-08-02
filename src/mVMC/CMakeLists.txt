@@ -11,7 +11,9 @@ include_directories("${STDFACE_DIR}/src")
 add_definitions(-DMEXP=19937)
 
 set(SOURCES_vmcmain
-        vmcmain.c absolute_pfaffian.c physcal_lanczos.c physcal_lanczos2.c
+        vmcmain.c absolute_pfaffian.c classic_pfaffian_state.c
+        classic_pfaffian_collective.c
+        physcal_lanczos.c physcal_lanczos2.c
         lanczos2_contract.c splitloop.c
  )
 
@@ -25,8 +27,12 @@ add_executable(vmcdry.out vmcdry.c)
 target_link_libraries(vmcdry.out StdFace_mvmc m)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
 if(Testing)
-  # Compile deliberate fault injection only into test-enabled builds.
-  target_compile_definitions(vmc.out PRIVATE MVMC_ENABLE_FAULT_INJECTION)
+  # Keep fault injection, reference sampler, and audit out of production.
+  target_sources(vmc.out PRIVATE classic_pfaffian_sampler.c
+      classic_pfaffian_audit.c)
+  target_compile_definitions(vmc.out PRIVATE MVMC_ENABLE_FAULT_INJECTION
+      MVMC_ENABLE_PFAFFIAN_SAMPLER_REFERENCE
+      MVMC_ENABLE_PFAFFIAN_STATE_AUDIT)
 endif(Testing)
 target_link_libraries(vmc.out StdFace_mvmc m)
 target_link_libraries(vmc.out pfapack)

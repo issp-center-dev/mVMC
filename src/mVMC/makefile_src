@@ -16,6 +16,8 @@ endif
 
 OBJS = \
 	absolute_pfaffian.o \
+	classic_pfaffian_state.o \
+	classic_pfaffian_collective.o \
 	physcal_lanczos.o \
 	splitloop.o \
 	vmcmain.o \
@@ -24,6 +26,8 @@ OBJS = \
 
 SOURCES = \
 absolute_pfaffian.c \
+classic_pfaffian_state.c \
+classic_pfaffian_collective.c \
 backflow.c \
 backflow_measure.c \
 backflow_nbody.c \
@@ -84,6 +88,8 @@ workspace.c
 
 HEADERS = \
 ./include/absolute_pfaffian.h \
+./include/classic_pfaffian_state.h \
+./include/classic_pfaffian_collective.h \
 ./include/backflow.h \
 ./include/backflow_nbody.h \
 ./include/average.h \

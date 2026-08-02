@@ -1,6 +1,7 @@
 #include "absolute_pfaffian.h"
 
 #include <complex.h>
+#include <float.h>
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
@@ -583,6 +584,15 @@ static void test_projected_amplitude(void) {
   CHECK(result.valid == 0 && result.total == 0.0 &&
             result.regular_count == 0,
         "failed aggregation does not expose a partial result");
+
+  components[0] = component(MVMC_PFAFFIAN_REGULAR, DBL_MAX);
+  components[1] = component(MVMC_PFAFFIAN_REGULAR, DBL_MAX);
+  weights[0] = weights[1] = 1.0;
+  CHECK(mvmc_projected_amplitude(components, weights, 2, &result) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "finite terms whose aggregate overflows are rejected");
+  CHECK(result.valid == 0 && result.total == 0.0,
+        "overflowing aggregate does not expose a partial result");
 }
 
 static void test_rank_local_projected_amplitude(void) {
