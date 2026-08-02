@@ -24,6 +24,7 @@ typedef enum {
 } MVMCPfaffianState;
 
 typedef enum {
+  /* Keep this list contiguous and synchronize collective status severity. */
   MVMC_PFAFFIAN_STATUS_OK = 0,
   MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
   MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE,
@@ -52,6 +53,43 @@ typedef struct {
   size_t near_singular_count;
   size_t singular_count;
 } MVMCProjectedAmplitudeResult;
+
+typedef struct MVMCAbsolutePfaffianRealWorkspace
+    MVMCAbsolutePfaffianRealWorkspace;
+typedef struct MVMCAbsolutePfaffianComplexWorkspace
+    MVMCAbsolutePfaffianComplexWorkspace;
+
+/*
+ * Reusable factorization workspaces for sampler hot paths.  Creation may
+ * allocate and query LAPACK/PFAPACK workspace sizes; evaluation with an
+ * existing workspace performs no allocation.  A workspace is bound to n and
+ * requires exclusive use while an evaluation is in progress.
+ */
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real_workspace_create(
+    int n, MVMCAbsolutePfaffianRealWorkspace **workspace);
+void mvmc_absolute_pfaffian_real_workspace_destroy(
+    MVMCAbsolutePfaffianRealWorkspace *workspace);
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_workspace_create(
+    int n, MVMCAbsolutePfaffianComplexWorkspace **workspace);
+void mvmc_absolute_pfaffian_complex_workspace_destroy(
+    MVMCAbsolutePfaffianComplexWorkspace *workspace);
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real_with_workspace(
+    MVMCAbsolutePfaffianRealWorkspace *workspace,
+    const double *matrix, int n, int lda,
+    double *inverse_out, int inverse_lda,
+    uint64_t rebuild_generation,
+    double scaled_pivot_tolerance, double residual_tolerance,
+    MVMCAbsolutePfaffianResult *result);
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_with_workspace(
+    MVMCAbsolutePfaffianComplexWorkspace *workspace,
+    const double complex *matrix, int n, int lda,
+    double complex *inverse_out, int inverse_lda,
+    uint64_t rebuild_generation,
+    double scaled_pivot_tolerance, double residual_tolerance,
+    MVMCAbsolutePfaffianResult *result);
 
 /*
  * Evaluate an even-dimensional skew-symmetric matrix without modifying it.

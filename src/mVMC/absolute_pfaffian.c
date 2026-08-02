@@ -31,6 +31,30 @@ typedef int MPI_Comm;
 #pragma GCC optimize("no-tree-loop-vectorize")
 #endif
 
+struct MVMCAbsolutePfaffianRealWorkspace {
+  int n;
+  size_t matrix_count;
+  int factor_lwork;
+  int inverse_lwork;
+  int *pivots;
+  double *factor;
+  double *inverse_factor;
+  double *factor_work;
+  double *inverse_work;
+};
+
+struct MVMCAbsolutePfaffianComplexWorkspace {
+  int n;
+  size_t matrix_count;
+  int factor_lwork;
+  int inverse_lwork;
+  int *pivots;
+  double complex *factor;
+  double complex *inverse_factor;
+  double complex *factor_work;
+  double complex *inverse_work;
+};
+
 static void initialize_result(MVMCAbsolutePfaffianResult *result,
                               uint64_t generation) {
   result->state = MVMC_PFAFFIAN_INVALID;
@@ -53,6 +77,176 @@ static int checked_square_size(int n, size_t element_size, size_t *count) {
   *count = dimension * dimension;
   if (*count > SIZE_MAX / element_size) return 0;
   return 1;
+}
+
+static int valid_real_lwork_query(double query, int *lwork) {
+  if (!isfinite(query) || query < 1.0 || query > (double)INT_MAX) return 0;
+  *lwork = (int)ceil(query);
+  return 1;
+}
+
+static int valid_complex_lwork_query(double complex query, int *lwork) {
+  if (!isfinite(creal(query)) || cimag(query) != 0.0 ||
+      creal(query) < 1.0 || creal(query) > (double)INT_MAX) {
+    return 0;
+  }
+  *lwork = (int)ceil(creal(query));
+  return 1;
+}
+
+void mvmc_absolute_pfaffian_real_workspace_destroy(
+    MVMCAbsolutePfaffianRealWorkspace *workspace) {
+  if (workspace == NULL) return;
+  free(workspace->inverse_work);
+  free(workspace->factor_work);
+  free(workspace->inverse_factor);
+  free(workspace->factor);
+  free(workspace->pivots);
+  free(workspace);
+}
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real_workspace_create(
+    int n, MVMCAbsolutePfaffianRealWorkspace **workspace) {
+  MVMCAbsolutePfaffianRealWorkspace *created = NULL;
+  double factor_query = 0.0;
+  double inverse_query = 0.0;
+  int info = 0;
+  int query_lwork = -1;
+  int index;
+  size_t matrix_count;
+
+  if (workspace == NULL) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  *workspace = NULL;
+  if (!mvmc_absolute_pfaffian_strict_fp_enabled()) {
+    return MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE;
+  }
+  if (n <= 0 || (n % 2) != 0 ||
+      !checked_square_size(n, sizeof(double), &matrix_count) ||
+      (size_t)n > SIZE_MAX / sizeof(int)) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  created = (MVMCAbsolutePfaffianRealWorkspace *)calloc(1, sizeof(*created));
+  if (created == NULL) return MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
+  created->n = n;
+  created->matrix_count = matrix_count;
+  created->pivots = (int *)malloc((size_t)n * sizeof(*created->pivots));
+  created->factor =
+      (double *)calloc(created->matrix_count, sizeof(*created->factor));
+  created->inverse_factor = (double *)calloc(
+      created->matrix_count, sizeof(*created->inverse_factor));
+  if (created->pivots == NULL || created->factor == NULL ||
+      created->inverse_factor == NULL) {
+    mvmc_absolute_pfaffian_real_workspace_destroy(created);
+    return MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
+  }
+  for (index = 0; index < n; ++index) created->pivots[index] = index + 1;
+
+  M_DSKTRF("U", "P", &n, created->factor, &n, created->pivots,
+           &factor_query, &query_lwork, &info);
+  if (info != 0 ||
+      !valid_real_lwork_query(factor_query, &created->factor_lwork) ||
+      (size_t)created->factor_lwork >
+          SIZE_MAX / sizeof(*created->factor_work)) {
+    mvmc_absolute_pfaffian_real_workspace_destroy(created);
+    return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+  }
+  M_DGETRI(&n, created->inverse_factor, &n, created->pivots,
+           &inverse_query, &query_lwork, &info);
+  if (info != 0 ||
+      !valid_real_lwork_query(inverse_query, &created->inverse_lwork) ||
+      (size_t)created->inverse_lwork >
+          SIZE_MAX / sizeof(*created->inverse_work)) {
+    mvmc_absolute_pfaffian_real_workspace_destroy(created);
+    return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+  }
+  created->factor_work = (double *)malloc(
+      (size_t)created->factor_lwork * sizeof(*created->factor_work));
+  created->inverse_work = (double *)malloc(
+      (size_t)created->inverse_lwork * sizeof(*created->inverse_work));
+  if (created->factor_work == NULL || created->inverse_work == NULL) {
+    mvmc_absolute_pfaffian_real_workspace_destroy(created);
+    return MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
+  }
+  *workspace = created;
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+void mvmc_absolute_pfaffian_complex_workspace_destroy(
+    MVMCAbsolutePfaffianComplexWorkspace *workspace) {
+  if (workspace == NULL) return;
+  free(workspace->inverse_work);
+  free(workspace->factor_work);
+  free(workspace->inverse_factor);
+  free(workspace->factor);
+  free(workspace->pivots);
+  free(workspace);
+}
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_workspace_create(
+    int n, MVMCAbsolutePfaffianComplexWorkspace **workspace) {
+  MVMCAbsolutePfaffianComplexWorkspace *created = NULL;
+  double complex factor_query = 0.0;
+  double complex inverse_query = 0.0;
+  int info = 0;
+  int query_lwork = -1;
+  int index;
+  size_t matrix_count;
+
+  if (workspace == NULL) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  *workspace = NULL;
+  if (!mvmc_absolute_pfaffian_strict_fp_enabled()) {
+    return MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE;
+  }
+  if (n <= 0 || (n % 2) != 0 ||
+      !checked_square_size(n, sizeof(double complex), &matrix_count) ||
+      (size_t)n > SIZE_MAX / sizeof(int)) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  created =
+      (MVMCAbsolutePfaffianComplexWorkspace *)calloc(1, sizeof(*created));
+  if (created == NULL) return MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
+  created->n = n;
+  created->matrix_count = matrix_count;
+  created->pivots = (int *)malloc((size_t)n * sizeof(*created->pivots));
+  created->factor = (double complex *)calloc(
+      created->matrix_count, sizeof(*created->factor));
+  created->inverse_factor = (double complex *)calloc(
+      created->matrix_count, sizeof(*created->inverse_factor));
+  if (created->pivots == NULL || created->factor == NULL ||
+      created->inverse_factor == NULL) {
+    mvmc_absolute_pfaffian_complex_workspace_destroy(created);
+    return MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
+  }
+  for (index = 0; index < n; ++index) created->pivots[index] = index + 1;
+
+  M_ZSKTRF("U", "P", &n, created->factor, &n, created->pivots,
+           &factor_query, &query_lwork, &info);
+  if (info != 0 ||
+      !valid_complex_lwork_query(factor_query, &created->factor_lwork) ||
+      (size_t)created->factor_lwork >
+          SIZE_MAX / sizeof(*created->factor_work)) {
+    mvmc_absolute_pfaffian_complex_workspace_destroy(created);
+    return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+  }
+  M_ZGETRI(&n, created->inverse_factor, &n, created->pivots,
+           &inverse_query, &query_lwork, &info);
+  if (info != 0 ||
+      !valid_complex_lwork_query(inverse_query, &created->inverse_lwork) ||
+      (size_t)created->inverse_lwork >
+          SIZE_MAX / sizeof(*created->inverse_work)) {
+    mvmc_absolute_pfaffian_complex_workspace_destroy(created);
+    return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+  }
+  created->factor_work = (double complex *)malloc(
+      (size_t)created->factor_lwork * sizeof(*created->factor_work));
+  created->inverse_work = (double complex *)malloc(
+      (size_t)created->inverse_lwork * sizeof(*created->inverse_work));
+  if (created->factor_work == NULL || created->inverse_work == NULL) {
+    mvmc_absolute_pfaffian_complex_workspace_destroy(created);
+    return MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
+  }
+  *workspace = created;
+  return MVMC_PFAFFIAN_STATUS_OK;
 }
 
 static int real_matrix_properties(const double *matrix, int n, int lda,
@@ -191,20 +385,21 @@ int mvmc_absolute_pfaffian_strict_fp_enabled(void) {
 #endif
 }
 
-MVMCPfaffianStatus mvmc_absolute_pfaffian_real(
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real_with_workspace(
+    MVMCAbsolutePfaffianRealWorkspace *workspace,
     const double *matrix, int n, int lda,
     double *inverse_out, int inverse_lda,
     uint64_t rebuild_generation,
     double scaled_pivot_tolerance, double residual_tolerance,
     MVMCAbsolutePfaffianResult *result) {
-  double *factor = NULL;
-  double *inverse_factor = NULL;
-  double *inverse_work = NULL;
-  double *factor_work = NULL;
-  int *pivots = NULL;
+  double *factor = workspace == NULL ? NULL : workspace->factor;
+  double *inverse_factor =
+      workspace == NULL ? NULL : workspace->inverse_factor;
+  double *inverse_work = workspace == NULL ? NULL : workspace->inverse_work;
+  double *factor_work = workspace == NULL ? NULL : workspace->factor_work;
+  int *pivots = workspace == NULL ? NULL : workspace->pivots;
   size_t matrix_count;
   int column, row, info = 0, lwork;
-  double work_query = 0.0;
   double pfaffian = 0.0;
   double min_pivot = INFINITY;
   MVMCPfaffianStatus status = MVMC_PFAFFIAN_STATUS_OK;
@@ -214,11 +409,13 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_real(
   if (!mvmc_absolute_pfaffian_strict_fp_enabled()) {
     return MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE;
   }
-  if (matrix == NULL || inverse_out == NULL || n <= 0 || (n % 2) != 0 ||
+  if (workspace == NULL || workspace->n != n || matrix == NULL ||
+      inverse_out == NULL || n <= 0 || (n % 2) != 0 ||
       lda < n || inverse_lda < n ||
       !isfinite(scaled_pivot_tolerance) ||
       !isfinite(residual_tolerance) ||
-      !checked_square_size(n, sizeof(*factor), &matrix_count)) {
+      !checked_square_size(n, sizeof(*factor), &matrix_count) ||
+      workspace->matrix_count != matrix_count) {
     return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
   }
   info = real_matrix_properties(matrix, n, lda, &result->matrix_scale);
@@ -228,12 +425,6 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_real(
   }
   if (info == 0) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
 
-  factor = (double *)malloc(matrix_count * sizeof(*factor));
-  pivots = (int *)malloc((size_t)n * sizeof(*pivots));
-  if (factor == NULL || pivots == NULL) {
-    status = MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
-    goto cleanup;
-  }
   for (column = 0; column < n; ++column) {
     for (row = 0; row < n; ++row) {
       factor[row + (size_t)column * (size_t)n] =
@@ -241,20 +432,7 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_real(
     }
   }
 
-  lwork = -1;
-  M_DSKTRF("U", "P", &n, factor, &n, pivots, &work_query, &lwork, &info);
-  if (info != 0 || !isfinite(work_query) || work_query < 1.0 ||
-      work_query > (double)INT_MAX) {
-    status = MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
-    goto cleanup;
-  }
-  lwork = (int)ceil(work_query);
-  factor_work = (double *)malloc((size_t)lwork * sizeof(*factor_work));
-  if (factor_work == NULL) {
-    status = MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
-    goto cleanup;
-  }
-
+  lwork = workspace->factor_lwork;
   M_DSKTRF("U", "P", &n, factor, &n, pivots, factor_work, &lwork, &info);
   result->factor_info = info;
   if (info < 0) {
@@ -291,14 +469,6 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_real(
     goto cleanup;
   }
 
-  free(factor_work);
-  factor_work = NULL;
-  inverse_factor =
-      (double *)malloc(matrix_count * sizeof(*inverse_factor));
-  if (inverse_factor == NULL) {
-    status = MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
-    goto cleanup;
-  }
   for (column = 0; column < n; ++column) {
     for (row = 0; row < n; ++row) {
       inverse_factor[row + (size_t)column * (size_t)n] =
@@ -315,24 +485,7 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_real(
     result->state = MVMC_PFAFFIAN_NEAR_SINGULAR;
     goto cleanup;
   }
-  lwork = -1;
-  M_DGETRI(&n, inverse_factor, &n, pivots, &work_query, &lwork, &info);
-  result->inverse_info = info;
-  if (info < 0 || !isfinite(work_query) || work_query < 1.0 ||
-      work_query > (double)INT_MAX) {
-    status = MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
-    goto cleanup;
-  }
-  if (info > 0) {
-    result->state = MVMC_PFAFFIAN_NEAR_SINGULAR;
-    goto cleanup;
-  }
-  lwork = (int)ceil(work_query);
-  inverse_work = (double *)malloc((size_t)lwork * sizeof(*inverse_work));
-  if (inverse_work == NULL) {
-    status = MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
-    goto cleanup;
-  }
+  lwork = workspace->inverse_lwork;
   M_DGETRI(&n, inverse_factor, &n, pivots, inverse_work, &lwork, &info);
   result->inverse_info = info;
   if (info < 0) {
@@ -365,31 +518,18 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_real(
   result->inverse_valid = 1;
 
 cleanup:
-  free(factor_work);
-  free(pivots);
-  free(inverse_work);
-  free(inverse_factor);
-  free(factor);
   return status;
 }
 
-MVMCPfaffianStatus mvmc_absolute_pfaffian_complex(
-    const double complex *matrix, int n, int lda,
-    double complex *inverse_out, int inverse_lda,
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real(
+    const double *matrix, int n, int lda,
+    double *inverse_out, int inverse_lda,
     uint64_t rebuild_generation,
     double scaled_pivot_tolerance, double residual_tolerance,
     MVMCAbsolutePfaffianResult *result) {
-  double complex *factor = NULL;
-  double complex *inverse_factor = NULL;
-  double complex *inverse_work = NULL;
-  double complex *factor_work = NULL;
-  int *pivots = NULL;
+  MVMCAbsolutePfaffianRealWorkspace *workspace = NULL;
+  MVMCPfaffianStatus status;
   size_t matrix_count;
-  int column, row, info = 0, lwork;
-  double complex work_query = 0.0;
-  double complex pfaffian = 0.0;
-  double min_pivot = INFINITY;
-  MVMCPfaffianStatus status = MVMC_PFAFFIAN_STATUS_OK;
 
   if (result == NULL) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
   initialize_result(result, rebuild_generation);
@@ -400,7 +540,53 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex(
       lda < n || inverse_lda < n ||
       !isfinite(scaled_pivot_tolerance) ||
       !isfinite(residual_tolerance) ||
-      !checked_square_size(n, sizeof(*factor), &matrix_count)) {
+      !checked_square_size(n, sizeof(*matrix), &matrix_count)) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  status = mvmc_absolute_pfaffian_real_workspace_create(n, &workspace);
+  if (status == MVMC_PFAFFIAN_STATUS_OK) {
+    status = mvmc_absolute_pfaffian_real_with_workspace(
+        workspace, matrix, n, lda, inverse_out, inverse_lda,
+        rebuild_generation, scaled_pivot_tolerance, residual_tolerance,
+        result);
+  }
+  mvmc_absolute_pfaffian_real_workspace_destroy(workspace);
+  return status;
+}
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_with_workspace(
+    MVMCAbsolutePfaffianComplexWorkspace *workspace,
+    const double complex *matrix, int n, int lda,
+    double complex *inverse_out, int inverse_lda,
+    uint64_t rebuild_generation,
+    double scaled_pivot_tolerance, double residual_tolerance,
+    MVMCAbsolutePfaffianResult *result) {
+  double complex *factor = workspace == NULL ? NULL : workspace->factor;
+  double complex *inverse_factor =
+      workspace == NULL ? NULL : workspace->inverse_factor;
+  double complex *inverse_work =
+      workspace == NULL ? NULL : workspace->inverse_work;
+  double complex *factor_work =
+      workspace == NULL ? NULL : workspace->factor_work;
+  int *pivots = workspace == NULL ? NULL : workspace->pivots;
+  size_t matrix_count;
+  int column, row, info = 0, lwork;
+  double complex pfaffian = 0.0;
+  double min_pivot = INFINITY;
+  MVMCPfaffianStatus status = MVMC_PFAFFIAN_STATUS_OK;
+
+  if (result == NULL) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  initialize_result(result, rebuild_generation);
+  if (!mvmc_absolute_pfaffian_strict_fp_enabled()) {
+    return MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE;
+  }
+  if (workspace == NULL || workspace->n != n || matrix == NULL ||
+      inverse_out == NULL || n <= 0 || (n % 2) != 0 ||
+      lda < n || inverse_lda < n ||
+      !isfinite(scaled_pivot_tolerance) ||
+      !isfinite(residual_tolerance) ||
+      !checked_square_size(n, sizeof(*factor), &matrix_count) ||
+      workspace->matrix_count != matrix_count) {
     return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
   }
   info = complex_matrix_properties(matrix, n, lda, &result->matrix_scale);
@@ -410,12 +596,6 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex(
   }
   if (info == 0) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
 
-  factor = (double complex *)malloc(matrix_count * sizeof(*factor));
-  pivots = (int *)malloc((size_t)n * sizeof(*pivots));
-  if (factor == NULL || pivots == NULL) {
-    status = MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
-    goto cleanup;
-  }
   for (column = 0; column < n; ++column) {
     for (row = 0; row < n; ++row) {
       factor[row + (size_t)column * (size_t)n] =
@@ -423,21 +603,7 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex(
     }
   }
 
-  lwork = -1;
-  M_ZSKTRF("U", "P", &n, factor, &n, pivots, &work_query, &lwork, &info);
-  if (info != 0 || !isfinite(creal(work_query)) || cimag(work_query) != 0.0 ||
-      creal(work_query) < 1.0 || creal(work_query) > (double)INT_MAX) {
-    status = MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
-    goto cleanup;
-  }
-  lwork = (int)ceil(creal(work_query));
-  factor_work =
-      (double complex *)malloc((size_t)lwork * sizeof(*factor_work));
-  if (factor_work == NULL) {
-    status = MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
-    goto cleanup;
-  }
-
+  lwork = workspace->factor_lwork;
   M_ZSKTRF("U", "P", &n, factor, &n, pivots, factor_work, &lwork, &info);
   result->factor_info = info;
   if (info < 0) {
@@ -475,14 +641,6 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex(
     goto cleanup;
   }
 
-  free(factor_work);
-  factor_work = NULL;
-  inverse_factor =
-      (double complex *)malloc(matrix_count * sizeof(*inverse_factor));
-  if (inverse_factor == NULL) {
-    status = MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
-    goto cleanup;
-  }
   for (column = 0; column < n; ++column) {
     for (row = 0; row < n; ++row) {
       inverse_factor[row + (size_t)column * (size_t)n] =
@@ -499,26 +657,7 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex(
     result->state = MVMC_PFAFFIAN_NEAR_SINGULAR;
     goto cleanup;
   }
-  lwork = -1;
-  M_ZGETRI(&n, inverse_factor, &n, pivots, &work_query, &lwork, &info);
-  result->inverse_info = info;
-  if (info < 0 || !isfinite(creal(work_query)) ||
-      cimag(work_query) != 0.0 || creal(work_query) < 1.0 ||
-      creal(work_query) > (double)INT_MAX) {
-    status = MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
-    goto cleanup;
-  }
-  if (info > 0) {
-    result->state = MVMC_PFAFFIAN_NEAR_SINGULAR;
-    goto cleanup;
-  }
-  lwork = (int)ceil(creal(work_query));
-  inverse_work =
-      (double complex *)malloc((size_t)lwork * sizeof(*inverse_work));
-  if (inverse_work == NULL) {
-    status = MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
-    goto cleanup;
-  }
+  lwork = workspace->inverse_lwork;
   M_ZGETRI(&n, inverse_factor, &n, pivots, inverse_work, &lwork, &info);
   result->inverse_info = info;
   if (info < 0) {
@@ -551,11 +690,39 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex(
   result->inverse_valid = 1;
 
 cleanup:
-  free(factor_work);
-  free(pivots);
-  free(inverse_work);
-  free(inverse_factor);
-  free(factor);
+  return status;
+}
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex(
+    const double complex *matrix, int n, int lda,
+    double complex *inverse_out, int inverse_lda,
+    uint64_t rebuild_generation,
+    double scaled_pivot_tolerance, double residual_tolerance,
+    MVMCAbsolutePfaffianResult *result) {
+  MVMCAbsolutePfaffianComplexWorkspace *workspace = NULL;
+  MVMCPfaffianStatus status;
+  size_t matrix_count;
+
+  if (result == NULL) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  initialize_result(result, rebuild_generation);
+  if (!mvmc_absolute_pfaffian_strict_fp_enabled()) {
+    return MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE;
+  }
+  if (matrix == NULL || inverse_out == NULL || n <= 0 || (n % 2) != 0 ||
+      lda < n || inverse_lda < n ||
+      !isfinite(scaled_pivot_tolerance) ||
+      !isfinite(residual_tolerance) ||
+      !checked_square_size(n, sizeof(*matrix), &matrix_count)) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  status = mvmc_absolute_pfaffian_complex_workspace_create(n, &workspace);
+  if (status == MVMC_PFAFFIAN_STATUS_OK) {
+    status = mvmc_absolute_pfaffian_complex_with_workspace(
+        workspace, matrix, n, lda, inverse_out, inverse_lda,
+        rebuild_generation, scaled_pivot_tolerance, residual_tolerance,
+        result);
+  }
+  mvmc_absolute_pfaffian_complex_workspace_destroy(workspace);
   return status;
 }
 
@@ -616,18 +783,27 @@ MVMCPfaffianStatus mvmc_projected_amplitude(
     value = cabs(term);
     corrected = value - abs_compensation;
     updated = abs_sum + corrected;
+    if (!isfinite(updated)) {
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
     abs_compensation = (updated - abs_sum) - corrected;
     abs_sum = updated;
 
     value = creal(term);
     corrected = value - real_compensation;
     updated = real_sum + corrected;
+    if (!isfinite(updated)) {
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
     real_compensation = (updated - real_sum) - corrected;
     real_sum = updated;
 
     value = cimag(term);
     corrected = value - imag_compensation;
     updated = imag_sum + corrected;
+    if (!isfinite(updated)) {
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
     imag_compensation = (updated - imag_sum) - corrected;
     imag_sum = updated;
   }
