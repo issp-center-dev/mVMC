@@ -17,6 +17,7 @@ the Free Software Foundation, either version 3 of the License, or
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 typedef enum {
   MVMC_MEMO_EMPTY = 0,
@@ -83,6 +84,17 @@ static int checked_multiply_size(size_t lhs, size_t rhs, size_t *result) {
 
 static int finite_complex(double complex value) {
   return isfinite(creal(value)) && isfinite(cimag(value));
+}
+
+static double wall_seconds(void) {
+  struct timespec now;
+  if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) return -1.0;
+  return (double)now.tv_sec + 1.0e-9 * (double)now.tv_nsec;
+}
+
+static double elapsed_seconds(double start) {
+  const double end = wall_seconds();
+  return start >= 0.0 && end >= start ? end - start : 0.0;
 }
 
 static int exact_complex_zero(double complex value) {
@@ -694,6 +706,7 @@ static MVMCKrylovStatus evaluate_node(MVMCEvaluation *evaluation, int depth,
 
   if (depth == 0) {
     MVMCKrylovAmplitudeResult amplitude;
+    double amplitude_start;
     if (evaluation->statistics->terminal_amplitude_requests >=
         workspace->limits.max_amplitude_evaluations) {
       return record_failure(evaluation, MVMC_KRYLOV_STATUS_RESOURCE_LIMIT,
@@ -705,8 +718,11 @@ static MVMCKrylovStatus evaluate_node(MVMCEvaluation *evaluation, int depth,
                             depth, canonical);
     }
     memset(&amplitude, 0, sizeof(amplitude));
+    amplitude_start = wall_seconds();
     status = evaluation->amplitude(canonical, workspace->word_count,
                                    evaluation->amplitude_context, &amplitude);
+    evaluation->statistics->amplitude_wall_seconds +=
+        elapsed_seconds(amplitude_start);
     if (status != MVMC_KRYLOV_STATUS_OK) {
       if (status >= MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
           status <= MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE) {
@@ -733,8 +749,10 @@ static MVMCKrylovStatus evaluate_node(MVMCEvaluation *evaluation, int depth,
     size_t term_index;
     size_t neighbor_index;
     MVMCComplexAccumulator accumulator;
+    double connectivity_start;
     memset(&accumulator, 0, sizeof(accumulator));
 
+    connectivity_start = wall_seconds();
     for (term_index = 0; term_index < evaluation->model->term_count;
          ++term_index) {
       const MVMCKrylovHamiltonianTerm *term =
@@ -777,6 +795,8 @@ static MVMCKrylovStatus evaluate_node(MVMCEvaluation *evaluation, int depth,
     sort_neighbors(evaluation, neighbor_base, raw_count);
     status = merge_neighbors(evaluation, neighbor_base, raw_count,
                              &merged_count);
+    evaluation->statistics->connectivity_wall_seconds +=
+        elapsed_seconds(connectivity_start);
     if (status != MVMC_KRYLOV_STATUS_OK) {
       return record_failure(evaluation, status, depth, canonical);
     }
@@ -849,8 +869,11 @@ MVMCKrylovStatus mvmc_krylov_evaluate(
   evaluation.failure = &result->failure;
 
   for (order = 0; order <= workspace->limits.max_order; ++order) {
+    const double depth_start = wall_seconds();
     status = evaluate_node(&evaluation, order, 0, root_configuration_words,
                            &result->value[order]);
+    result->statistics.depth_wall_seconds[order] =
+        elapsed_seconds(depth_start);
     if (status != MVMC_KRYLOV_STATUS_OK) {
       memset(result->value, 0, sizeof(result->value));
       result->valid = 0;

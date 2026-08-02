@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "policy_id": "absolute-krylov-p3-feasibility-v1",
+  "frozen_date": "2026-08-02",
+  "fixture_manifest": "absolute_krylov_p3_manifest.json",
+  "fixture_manifest_sha256": "8022b29800e98dc6be931dcbb88fef056cda4fed236024d5504e827350ad6285",
+  "p3_o1": {
+    "status": "fixed_before_official_p3d_measurement",
+    "representative_workload": {
+      "proposal_count": 4096,
+      "saved_sample_count": 4096,
+      "description": "one production-style 4096-sample second-Lanczos measurement block"
+    },
+    "l16_budgets": {
+      "proposal_seconds_per_configuration": 0.15,
+      "saved_increment_seconds_per_configuration": 0.25,
+      "combined_workload_seconds_per_rank": 1800.0,
+      "rank_rss_bytes": 4294967296
+    },
+    "rationale": "a 4096-sample measurement block must finish within a 30-minute interactive research window and fit a conservative 4-GiB per-rank memory allocation; the separate proposal/saved bounds prevent a passing aggregate from hiding an unusable stage",
+    "decision_rule": "a promoted guide must satisfy every runtime and RSS bound without assuming an unmeasured optimization"
+  },
+  "p3_o2": {
+    "status": "fixed",
+    "lambda": [1.0, 1.0, 1.0, 1.0],
+    "rho": [0.000001, 0.0001, 0.01]
+  },
+  "p3_o5": {
+    "status": "fixed_before_official_p3d_measurement",
+    "required_entries": {
+      "families": ["S", "K", "B"],
+      "i": [0, 1, 2],
+      "j": [0, 1, 2]
+    },
+    "scaled_basis": "u_k=s_k*v_k with s_0=1 and s_k=sqrt(N_0/N_k)",
+    "target_normalization": "sum_x T(x), where T=sum_k |u_k|^2",
+    "unsigned_scale": "sum_x |f_a(x)| / sum_x T(x)",
+    "absolute_standard_error_budget": "max(1e-12, 0.02 * unsigned_scale)",
+    "complex_variance": "E[|Y-E[Y]|^2]",
+    "sample_count": 4096,
+    "decision_rule": "every required entry in every frozen L=4 fixture must meet its entry-specific absolute one-sigma SE budget"
+  },
+  "official_scaling_grid": {
+    "site_counts": [4, 6, 8],
+    "qp_total": [1, 4],
+    "sample_count_by_site": {"4": 0, "6": 128, "8": 128},
+    "repeat_count": 7,
+    "mpi_rank_counts": [1, 2, 4],
+    "omp_threads": 1,
+    "blas_threads": 1,
+    "l16_extrapolation": "least-squares log-linear fit versus L for positive per-root timing and workspace series",
+    "l32_use": "sensitivity_only"
+  }
+}

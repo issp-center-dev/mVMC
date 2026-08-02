@@ -109,6 +109,25 @@ static int DeterministicStatisticsEqual(const MVMCKrylovStatistics *lhs,
          lhs->workspace_bytes == rhs->workspace_bytes;
 }
 
+static int FiniteNonnegativeTimings(
+    const MVMCKrylovStatistics *statistics) {
+  int depth;
+  if (statistics == NULL ||
+      !isfinite(statistics->amplitude_wall_seconds) ||
+      statistics->amplitude_wall_seconds < 0.0 ||
+      !isfinite(statistics->connectivity_wall_seconds) ||
+      statistics->connectivity_wall_seconds < 0.0) {
+    return 0;
+  }
+  for (depth = 0; depth <= MVMC_KRYLOV_MAX_ORDER; ++depth) {
+    if (!isfinite(statistics->depth_wall_seconds[depth]) ||
+        statistics->depth_wall_seconds[depth] < 0.0) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 static MVMCKrylovFockModel ElectronicModel(
     size_t site_count, size_t up_count, size_t down_count,
     const MVMCKrylovHamiltonianTerm *terms, size_t term_count,
@@ -279,6 +298,8 @@ static void TestZeroBridgesAndMemoization(void) {
         (unsigned long long)result.statistics.terminal_amplitude_requests);
   CHECK(result.statistics.memo_hits[0] > 0,
         "depth-0 memo was not reused");
+  CHECK(FiniteNonnegativeTimings(&result.statistics),
+        "profile timings must be finite and nonnegative");
 
   {
     const MVMCKrylovFermionOperator chain_operators[] = {

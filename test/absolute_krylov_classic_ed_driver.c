@@ -193,7 +193,7 @@ static MVMCClassicKrylovAmplitudeLayout amplitude_layout(int pure_spin) {
   layout.qp_total = 1;
   layout.qp_start = rank / size;
   layout.qp_end = (rank + 1) / size;
-  layout.scaled_pivot_tolerance = 64.0;
+  layout.scaled_pivot_tolerance = 0.0;
   if (!pure_spin) {
     layout.nproj = 1;
     layout.ngutzwiller_idx = 1;

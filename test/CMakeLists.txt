@@ -309,4 +309,52 @@ if(MPI_FOUND)
     target_link_libraries(absolute_krylov_classic_ed_driver ${MPI_C_LIBRARIES})
 endif()
 
+add_executable(absolute_krylov_profile_driver
+    absolute_krylov_profile_driver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(absolute_krylov_profile_driver PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+target_include_directories(absolute_krylov_profile_driver PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(absolute_krylov_profile_driver PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(absolute_krylov_profile_driver pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(absolute_krylov_profile_driver blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(absolute_krylov_profile_driver ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME AbsoluteKrylovProfile_Smoke
+    COMMAND absolute_krylov_profile_driver 4 1 3 1)
+add_test(NAME AbsoluteKrylovProfile_InvalidOddSite
+    COMMAND absolute_krylov_profile_driver 5 1 1 1)
+add_test(NAME AbsoluteKrylovProfile_InvalidQP
+    COMMAND absolute_krylov_profile_driver 4 2 1 1)
+add_test(NAME AbsoluteKrylovProfile_InvalidSampleCount
+    COMMAND absolute_krylov_profile_driver 4 1 37 1)
+set_tests_properties(
+    AbsoluteKrylovProfile_InvalidOddSite
+    AbsoluteKrylovProfile_InvalidQP
+    AbsoluteKrylovProfile_InvalidSampleCount
+    PROPERTIES WILL_FAIL TRUE)
+if(MPI_FOUND)
+    add_test(NAME AbsoluteKrylovProfile_ResourceLimit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                $<TARGET_FILE:absolute_krylov_profile_driver> 16 4 1 1)
+    set_tests_properties(
+        AbsoluteKrylovProfile_ResourceLimit_Rank2_mpi PROPERTIES
+        WILL_FAIL TRUE TIMEOUT 30 PROCESSORS 2
+        ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+endif()
+
 add_subdirectory(python)
