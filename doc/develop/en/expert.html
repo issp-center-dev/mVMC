@@ -239,6 +239,7 @@ example of the file format is shown as follows.</p>
 <span class="nf">OneBodyG</span> <span class="n">zcisajs</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">TwoBodyG</span>    <span class="n">zcisajscktaltdc</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">NBodyG</span> <span class="n">nbodyg</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">InUpdateWeight</span> <span class="n">updateweight</span><span class="o">.</span><span class="k">def</span>
 </pre></div>
 </div>
 <section id="file-format">
@@ -357,55 +358,58 @@ and “TransSym”.</p></li>
 <tr class="row-even"><td><p>TransSym <span class="math notranslate nohighlight">\(^*\)</span></p></td>
 <td><p>Translational and lattice symmetry operation.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InGutzwiller</p></td>
+<tr class="row-odd"><td><p>InUpdateWeight</p></td>
+<td><p>Optional relative weights for local-update kernels.</p></td>
+</tr>
+<tr class="row-even"><td><p>InGutzwiller</p></td>
 <td><p>Initial values of Gutzwiller factors.</p></td>
 </tr>
-<tr class="row-even"><td><p>InJastrow</p></td>
+<tr class="row-odd"><td><p>InJastrow</p></td>
 <td><p>Initial values of charge Jastrow factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InSpinJastrow</p></td>
+<tr class="row-even"><td><p>InSpinJastrow</p></td>
 <td><p>Initial values of spin Jastrow factors.</p></td>
 </tr>
-<tr class="row-even"><td><p>InDH2</p></td>
+<tr class="row-odd"><td><p>InDH2</p></td>
 <td><p>Initial values of 2-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InDH4</p></td>
+<tr class="row-even"><td><p>InDH4</p></td>
 <td><p>Initial values of 4-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-even"><td><p>InGeneralRBM_PhysLayer</p></td>
+<tr class="row-odd"><td><p>InGeneralRBM_PhysLayer</p></td>
 <td><p>Initial values of variational parameters of the general RBM correlation factors in a physical layer <span class="math notranslate nohighlight">\(\alpha_{i\sigma}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InGeneralRBM_HiddenLayer</p></td>
+<tr class="row-even"><td><p>InGeneralRBM_HiddenLayer</p></td>
 <td><p>Initial values of variational parameters of the general RBM correlation factors in a hidden layer <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>InGeneralRBM_PhysHidden</p></td>
+<tr class="row-odd"><td><p>InGeneralRBM_PhysHidden</p></td>
 <td><p>Initial values of variational parameters of the general RBM correlation factors which connect physical and hidden layers <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InOrbital</p></td>
+<tr class="row-even"><td><p>InOrbital</p></td>
 <td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>InOrbitalAntiParallel</p></td>
+<tr class="row-odd"><td><p>InOrbitalAntiParallel</p></td>
 <td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InOrbitalParallel</p></td>
+<tr class="row-even"><td><p>InOrbitalParallel</p></td>
 <td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\sigma j\sigma}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>InOrbitalGeneral</p></td>
+<tr class="row-odd"><td><p>InOrbitalGeneral</p></td>
 <td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\sigma_1 j\sigma_2}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>OneBodyG</p></td>
+<tr class="row-even"><td><p>OneBodyG</p></td>
 <td><p>Output components for Green functions <span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p>TwoBodyG</p></td>
+<tr class="row-odd"><td><p>TwoBodyG</p></td>
 <td><p>Output components for Correlation functions <span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p>NBodyG</p></td>
+<tr class="row-even"><td><p>NBodyG</p></td>
 <td><p>Output components for <span class="math notranslate nohighlight">\(N\)</span>-body correlation functions <span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p>Twist</p></td>
+<tr class="row-odd"><td><p>Twist</p></td>
 <td><p>Output components for Twist operators <span class="math notranslate nohighlight">\(\langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p>Lattice</p></td>
+<tr class="row-even"><td><p>Lattice</p></td>
 <td><p>Position of each site.</p></td>
 </tr>
 </tbody>
@@ -742,6 +746,11 @@ sampled local states are restricted to empty and doublon states,
 This mode requires <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">Ne</span> <span class="pre">&lt;</span> <span class="pre">Nsite</span></code> and an anti-parallel-spin
 <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> input. It currently does not support <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code>,
 <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code>, RBM, or <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>/FSZ inputs.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">InUpdateWeight</span></code> is absent, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=2</span></code> uses its legacy
+selector unchanged: exchange only for fixed-<span class="math notranslate nohighlight">\(S_z\)</span> or non-FSZ
+calculations, and equal-probability exchange/local-spin-flip for
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> with <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>. See <code class="docutils literal notranslate"><span class="pre">updateweight.def</span></code> below for
+the optional weighted selector and pair-spin-flip kernel.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">RndSeed</span></code></p>
 <p><strong>Type :</strong> int-type</p>
@@ -840,6 +849,49 @@ Typical settings for SR-CG in <code class="docutils literal notranslate"><span c
 </li>
 </ul>
 </section>
+</section>
+<section id="updateweight-file-updateweight-def">
+<h2>UpdateWeight file (updateweight.def)<a class="headerlink" href="#updateweight-file-updateweight-def" title="Permalink to this heading">¶</a></h2>
+<p>This optional file sets relative, unnormalized probabilities for the
+local-update kernels of <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=2</span></code>. It is enabled by adding
+<code class="docutils literal notranslate"><span class="pre">InUpdateWeight</span> <span class="pre">updateweight.def</span></code> to <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code>. Omitting the file
+preserves the legacy selector, random-number consumption, and <code class="docutils literal notranslate"><span class="pre">zvo_time</span></code>
+column layout.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">================================</span>
+<span class="n">NUpdateWeight</span> <span class="mi">3</span>
+<span class="o">================================</span>
+<span class="o">========</span><span class="n">UpdateType</span> <span class="n">Weight</span><span class="o">=======</span>
+<span class="o">================================</span>
+<span class="n">Exchange</span>          <span class="mf">1.0</span>
+<span class="n">LocalSpinFlip</span>     <span class="mf">1.0</span>
+<span class="n">PairSpinFlip</span>      <span class="mf">1.0</span>
+</pre></div>
+</div>
+<p>The second header line gives the number of data rows. Each following data
+row contains a supported kernel name and a finite, non-negative weight.
+Rows may appear in any order; omitted supported kernels have weight zero.
+Duplicate and unknown names, extra tokens, a non-positive total, or use with
+an update path other than 2 terminate the calculation. The weights are
+normalized internally and printed at input time.</p>
+<p><code class="docutils literal notranslate"><span class="pre">LocalSpinFlip</span></code> requires <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> and <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>.
+Setting its weight to zero deliberately conserves the parity of the number
+of up spins. This is appropriate when sampling a declared fixed-parity
+sector. If the target distribution has nonzero weight in both parity
+sectors, a positive <code class="docutils literal notranslate"><span class="pre">LocalSpinFlip</span></code> weight is necessary, and accepted
+local-spin-flip moves must be observed; a positive proposal weight alone
+does not guarantee ergodicity.</p>
+<p>Enabling this file consumes one random number for every kernel selection,
+even when only one kernel has positive weight. Consequently, a weighted run
+does not preserve the legacy random-number stream merely because it selects
+the same kernel sequence. Random-number-stream compatibility is guaranteed
+only when <code class="docutils literal notranslate"><span class="pre">InUpdateWeight</span></code> is omitted.</p>
+<p><code class="docutils literal notranslate"><span class="pre">PairSpinFlip</span></code> flips two distinct local spins with the same initial spin.
+It additionally requires <code class="docutils literal notranslate"><span class="pre">Ncond=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NLocalSpin=Nsite</span></code>, and <code class="docutils literal notranslate"><span class="pre">LocSpin=1</span></code>
+at every site. A pair with opposite initial spins is counted as a rejected
+proposal; the weights are not renormalized according to the current state.
+This keeps the proposal probabilities state independent and symmetric under
+the reverse move. When this file is active, pair-spin-flip proposal and
+acceptance counters are appended to <code class="docutils literal notranslate"><span class="pre">zvo_time</span></code>.</p>
 </section>
 <section id="locspin-file-locspn-def">
 <h2>LocSpin file (locspn.def)<a class="headerlink" href="#locspin-file-locspn-def" title="Permalink to this heading">¶</a></h2>
@@ -3800,6 +3852,7 @@ indices are rejected as input errors.</p></li>
 <li><a class="reference internal" href="#keywords-and-parameters">Keywords and parameters</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#updateweight-file-updateweight-def">UpdateWeight file (updateweight.def)</a></li>
 <li><a class="reference internal" href="#locspin-file-locspn-def">LocSpin file (locspn.def)</a><ul>
 <li><a class="reference internal" href="#id4">File format</a></li>
 <li><a class="reference internal" href="#id5">Parameters</a></li>

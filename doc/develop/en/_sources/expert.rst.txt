@@ -266,6 +266,7 @@ example of the file format is shown as follows.
     OneBodyG zcisajs.def
     TwoBodyG	zcisajscktaltdc.def
     NBodyG nbodyg.def
+    InUpdateWeight updateweight.def
 
 File format
 ^^^^^^^^^^^
@@ -361,6 +362,8 @@ User rules
      - Pair orbital factors :math:`f_{i\sigma_1 j\sigma_2}`.
    * - TransSym :math:`^*`
      - Translational and lattice symmetry operation.
+   * - InUpdateWeight
+     - Optional relative weights for local-update kernels.
    * - InGutzwiller
      - Initial values of Gutzwiller factors.
    * - InJastrow
@@ -797,6 +800,12 @@ Keywords and parameters
    ``Orbital`` input. It currently does not support ``LocSpin``,
    ``BackFlow``, RBM, or ``OrbitalGeneral``/FSZ inputs.
 
+   If ``InUpdateWeight`` is absent, ``NExUpdatePath=2`` uses its legacy
+   selector unchanged: exchange only for fixed-:math:`S_z` or non-FSZ
+   calculations, and equal-probability exchange/local-spin-flip for
+   ``OrbitalGeneral`` with ``2Sz=-1``. See ``updateweight.def`` below for
+   the optional weighted selector and pair-spin-flip kernel.
+
 -  ``RndSeed``
 
    **Type :** int-type
@@ -915,6 +924,55 @@ Keywords and parameters
    **Type :** int-type (default value: 0)
 
    **Description :** The number of neurons :math:`N_{\rm General RBM}` in the hidden layer of RBM.
+
+UpdateWeight file (updateweight.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This optional file sets relative, unnormalized probabilities for the
+local-update kernels of ``NExUpdatePath=2``. It is enabled by adding
+``InUpdateWeight updateweight.def`` to ``namelist.def``. Omitting the file
+preserves the legacy selector, random-number consumption, and ``zvo_time``
+column layout.
+
+::
+
+    ================================
+    NUpdateWeight 3
+    ================================
+    ========UpdateType Weight=======
+    ================================
+    Exchange          1.0
+    LocalSpinFlip     1.0
+    PairSpinFlip      1.0
+
+The second header line gives the number of data rows. Each following data
+row contains a supported kernel name and a finite, non-negative weight.
+Rows may appear in any order; omitted supported kernels have weight zero.
+Duplicate and unknown names, extra tokens, a non-positive total, or use with
+an update path other than 2 terminate the calculation. The weights are
+normalized internally and printed at input time.
+
+``LocalSpinFlip`` requires ``OrbitalGeneral`` and ``2Sz=-1``.
+Setting its weight to zero deliberately conserves the parity of the number
+of up spins. This is appropriate when sampling a declared fixed-parity
+sector. If the target distribution has nonzero weight in both parity
+sectors, a positive ``LocalSpinFlip`` weight is necessary, and accepted
+local-spin-flip moves must be observed; a positive proposal weight alone
+does not guarantee ergodicity.
+
+Enabling this file consumes one random number for every kernel selection,
+even when only one kernel has positive weight. Consequently, a weighted run
+does not preserve the legacy random-number stream merely because it selects
+the same kernel sequence. Random-number-stream compatibility is guaranteed
+only when ``InUpdateWeight`` is omitted.
+
+``PairSpinFlip`` flips two distinct local spins with the same initial spin.
+It additionally requires ``Ncond=0``, ``NLocalSpin=Nsite``, and ``LocSpin=1``
+at every site. A pair with opposite initial spins is counted as a rejected
+proposal; the weights are not renormalized according to the current state.
+This keeps the proposal probabilities state independent and symmetric under
+the reverse move. When this file is active, pair-spin-flip proposal and
+acceptance counters are appended to ``zvo_time``.
 
 LocSpin file (locspn.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
