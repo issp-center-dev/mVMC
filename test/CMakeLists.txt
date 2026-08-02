@@ -249,4 +249,64 @@ if(MPI_FOUND)
         PROCESSORS 4)
 endif()
 
+add_executable(classic_krylov_model_unit
+    classic_krylov_model_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c)
+target_compile_definitions(classic_krylov_model_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+target_include_directories(classic_krylov_model_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(classic_krylov_model_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(classic_krylov_model_unit m)
+if(MPI_FOUND)
+    target_link_libraries(classic_krylov_model_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME ClassicKrylovModel_Unit
+    COMMAND classic_krylov_model_unit)
+if(MPI_FOUND)
+    add_test(NAME ClassicKrylovModel_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:classic_krylov_model_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME ClassicKrylovModel_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:classic_krylov_model_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(ClassicKrylovModel_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+    set_tests_properties(ClassicKrylovModel_Unit_Rank4_mpi PROPERTIES
+        PROCESSORS 4)
+endif()
+
+add_executable(absolute_krylov_classic_ed_driver
+    absolute_krylov_classic_ed_driver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(absolute_krylov_classic_ed_driver PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+target_include_directories(absolute_krylov_classic_ed_driver PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(absolute_krylov_classic_ed_driver PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(absolute_krylov_classic_ed_driver pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(absolute_krylov_classic_ed_driver blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(absolute_krylov_classic_ed_driver ${MPI_C_LIBRARIES})
+endif()
+
 add_subdirectory(python)

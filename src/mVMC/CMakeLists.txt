@@ -31,7 +31,7 @@ if(Testing)
   # Keep fault injection, reference samplers, and audits out of production.
   target_sources(vmc.out PRIVATE classic_pfaffian_sampler.c
       classic_pfaffian_audit.c krylov_fock_reference.c
-      classic_krylov_amplitude.c)
+      classic_krylov_amplitude.c classic_krylov_model.c)
   target_compile_definitions(vmc.out PRIVATE MVMC_ENABLE_FAULT_INJECTION
       MVMC_ENABLE_PFAFFIAN_SAMPLER_REFERENCE
       MVMC_ENABLE_PFAFFIAN_STATE_AUDIT
