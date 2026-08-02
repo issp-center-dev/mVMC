@@ -27,6 +27,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyg.py DESTINATION ${CMAKE_BINA
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyinterall_invalid.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_update_weight.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -414,6 +415,19 @@ endfunction(add_python_uhf_test)
 # TODO: replace it with find_package(Python3 REQUIRED
 #cmake_policy(SET CMP0148 OLD)
 find_package(PythonInterp 3.6 REQUIRED)
+
+add_test(NAME UpdateWeight_E2E
+    COMMAND ${PYTHON_EXECUTABLE} runtest_update_weight.py)
+set_tests_properties(UpdateWeight_E2E PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1"
+    RESOURCE_LOCK "update_weight_e2e_workdir")
+if(MPI_FOUND)
+    add_test(NAME UpdateWeight_E2E_MPI
+        COMMAND ${PYTHON_EXECUTABLE} runtest_update_weight.py)
+    set_tests_properties(UpdateWeight_E2E_MPI PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
+        RESOURCE_LOCK "update_weight_e2e_workdir")
+endif()
 
 set(python_test_vmc_model
   HeisenbergChain

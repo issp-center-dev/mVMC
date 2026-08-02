@@ -150,6 +150,7 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
   // Counter[0] ->  Hopping  all,      Counter[1] ->  Hopping accept
   // Counter[2] ->  exchange all,      Counter[3] ->  exchange accept
   // Counter[4] ->  localspinflip all, Counter[5] ->  localspin flip accept
+  // Counter[6] ->  pairspinflip all,  Counter[7] ->  pairspinflip accept
 
   for(outStep=0;outStep<nOutStep;outStep++) {
     for(inStep=0;inStep<nInStep;inStep++) {
@@ -325,7 +326,8 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
           // Inv already updated. Only need to get PfM again.
           updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
 #else
-          UpdateMAllTwo_fsz(mi, s, mj, t, ri, rj, TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+          UpdateMAllTwo_fsz(mi, s, mj, t, ri, s, rj, t,
+                            TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
 #endif
           StopTimer(68);
 
@@ -342,6 +344,57 @@ void VMCMakeSample_fsz(MPI_Comm comm) {
           revertEleConfig_fsz(mi,ri,rj,s,s,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         }
         StopTimer(33);
+      }else if (updateType==PAIRSPINFLIP){
+        Counter[6]++;
+
+        StartTimer(31);
+        makeCandidate_PairSpinFlip_localspin(&mi, &mj, &ri, &rj, &s, &t,
+                              &rejectFlag, TmpEleIdx, TmpEleCfg, TmpEleNum,
+                              TmpEleSpn);
+        StopTimer(31);
+        if(rejectFlag) continue;
+
+        StartTimer(36);
+        updateEleConfig_fsz(mi,ri,ri,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
+        UpdateProjCnt_fsz(ri,ri,s,t,projCntNew,TmpEleProjCnt,TmpEleNum);
+        updateEleConfig_fsz(mj,rj,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
+        UpdateProjCnt_fsz(rj,rj,s,t,projCntNew,projCntNew,TmpEleNum);
+
+#ifdef _pf_block_update
+        updated_tdi_v_push_pair_z(NQPFull,
+                                  ri+t*Nsite, mi,
+                                  rj+t*Nsite, mj,
+                                  1, pfUpdator);
+        updated_tdi_v_get_pfa_z(NQPFull, pfMNew, pfUpdator);
+#else
+        CalculateNewPfMTwo2_fsz(mi, t, mj, t, pfMNew, TmpEleIdx,TmpEleSpn,
+                                qpStart,qpEnd);
+#endif
+        logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
+        x = LogProjRatio(projCntNew,TmpEleProjCnt);
+        w = exp(2.0*(x+creal(logIpNew-logIpOld)));
+        if( !isfinite(w) ) w = -1.0;
+
+        if(w > genrand_real2()) {
+#ifdef _pf_block_update
+          updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+#else
+          UpdateMAllTwo_fsz(mi, t, mj, t, ri, s, rj, s,
+                            TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+#endif
+          for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
+          logIpOld = logIpNew;
+          nAccept++;
+          Counter[7]++;
+        } else {
+#ifdef _pf_block_update
+          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
+#endif
+          revertEleConfig_fsz(mj,rj,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
+          revertEleConfig_fsz(mi,ri,ri,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
+        }
+        StopTimer(36);
       }else if (updateType==LOCALSPINFLIP){
         Counter[4]++;
 
@@ -2212,6 +2265,38 @@ void makeCandidate_exchange_fsz(int *mi_, int *ri_, int *rj_, int *s_, int *reje
   *rj_ = rj;
   *s_ = s;
   *rejectFlag_ = flag;
+  return;
+}
+//
+// Flip two distinct local spins with the same initial spin.  Drawing two
+// particle labels uniformly and rejecting opposite-spin pairs keeps the
+// forward and reverse proposal probabilities identical.
+void makeCandidate_PairSpinFlip_localspin(int *mi_, int *mj_, int *ri_, int *rj_, int *s_,int *t_, int *rejectFlag_,
+                           const int *eleIdx, const int *eleCfg,const int *eleNum,const int *eleSpn) {
+  int mi, mj, ri, rj, s;
+
+  if(Nsize < 2) {
+    *rejectFlag_ = 1;
+    return;
+  }
+
+  mi = gen_rand32()%Nsize;
+  do {
+    mj = gen_rand32()%Nsize;
+  } while(mj == mi);
+  ri = eleIdx[mi];
+  rj = eleIdx[mj];
+  s = eleSpn[mi];
+
+  *mi_ = mi;
+  *mj_ = mj;
+  *ri_ = ri;
+  *rj_ = rj;
+  *s_ = s;
+  *t_ = 1-s;
+  *rejectFlag_ = (eleSpn[mj] != s || LocSpn[ri] == 0 || LocSpn[rj] == 0);
+  (void)eleCfg;
+  (void)eleNum;
   return;
 }
 //

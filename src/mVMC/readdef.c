@@ -444,6 +444,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   char *cerr;
   char ctmp[D_FileNameMax];
   char ctmp2[D_FileNameMax];
+  char updateWeightError[512];
 
   int rank, size, info = 0;
   const int nBufInt = ParamIdxInt_End;
@@ -472,6 +473,11 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       fprintf(stderr, "  error: Definition files(*.def) are incomplete.\n");
       MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
+    FlagUpdateWeight =
+        (strcmp(cFileNameListFile[KWInUpdateWeight], "") != 0);
+    UpdateWeights[UpdateWeightExchange] = 0.0;
+    UpdateWeights[UpdateWeightLocalSpinFlip] = 0.0;
+    UpdateWeights[UpdateWeightPairSpinFlip] = 0.0;
 
     for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
       strcpy(defname, cFileNameListFile[iKWidx]);
@@ -645,6 +651,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffInt(fp, &bufInt[IdxNQPTrans]);
             break;
 
+          case KWInUpdateWeight:
+            cerr = "";
+            updateWeightError[0] = '\0';
+            if (ReadUpdateWeight(fp, defname, UpdateWeights,
+                                 updateWeightError,
+                                 sizeof(updateWeightError)) != 0) {
+              fprintf(stderr, "Error: %s.\n", updateWeightError);
+              info = 1;
+            }
+            break;
+
           case KWOneBodyG:
             cerr = ReadBuffInt(fp, &bufInt[IdxNOneBodyG]);
             break;
@@ -781,6 +798,23 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
         info = 1;
       } else bufInt[IdxNe] = (bufInt[IdxNLocSpin] + bufInt[IdxNCond]) / 2;
+    }
+
+    updateWeightError[0] = '\0';
+    if (ValidateUpdateWeightContract(
+            FlagUpdateWeight, bufInt[IdxExUpdatePath], bufInt[Idx2Sz],
+            bufInt[IdxNsite], bufInt[IdxNLocSpin], bufInt[IdxNe],
+            iFlgOrbitalGeneral, UpdateWeights, updateWeightError,
+            sizeof(updateWeightError)) != 0) {
+      fprintf(stderr, "Error: %s.\n", updateWeightError);
+      info = 1;
+    } else if (FlagUpdateWeight) {
+      fprintf(stdout,
+              "  Normalized update weights: Exchange=%.17g "
+              "LocalSpinFlip=%.17g PairSpinFlip=%.17g.\n",
+              UpdateWeights[UpdateWeightExchange],
+              UpdateWeights[UpdateWeightLocalSpinFlip],
+              UpdateWeights[UpdateWeightPairSpinFlip]);
     }
 
     if (bufInt[IdxExUpdatePath] == 4 || bufInt[IdxExUpdatePath] == 5) {
@@ -955,10 +989,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(&hasLattice, 1, MPI_INT, 0, comm);
   MPI_Bcast(&hasBF, 1, MPI_INT, 0, comm);
   MPI_Bcast(&hasBFRange, 1, MPI_INT, 0, comm);
+  MPI_Bcast(&FlagUpdateWeight, 1, MPI_INT, 0, comm);
+  MPI_Bcast(UpdateWeights, UpdateWeightCount, MPI_DOUBLE, 0, comm);
   MPI_Bcast(bufDouble, nBufDouble, MPI_DOUBLE, 0, comm);
   MPI_Bcast(CDataFileHead, nBufChar, MPI_CHAR, 0, comm);
   MPI_Bcast(CParaFileHead, nBufChar, MPI_CHAR, 0, comm);
 #endif /* _mpi_use */
+
+  Counter_max = FlagUpdateWeight ? 8 : 6;
 
   if (ValidateNBodyCapabilities(
         bufInt[IdxNBF], bufInt[IdxNNBodyG], bufInt[IdxNNBodyInterAll],
@@ -1429,6 +1467,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   int count_idx = 0;
   int bfRangeLoaded = 0;
   int rank;
+  char updateWeightError[512];
 
   MPI_Comm_rank(comm, &rank);
 
@@ -1447,6 +1486,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
       /*=======================================================================*/
       for (i = 0; i < IgnoreLinesInDef; i++) fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
       switch (iKWidx) {
+        case KWInUpdateWeight:
+          /* Parsed and normalized during ReadDefFileNInt(). */
+          break;
+
         case KWLocSpin: /* Read locspn.def----------------------------------------*/
           if (GetLocSpinInfo(fp, LocSpn, Nsite, NLocSpn, defname) != 0) info = 1;
           break;//locspn
@@ -1772,6 +1815,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   SafeMpiBcast(ParaCoulombIntra, NTotalDefDouble, comm);
   SafeMpiBcast_fcmp(ParaQPTrans, NQPTrans, comm);
 #endif /* _mpi_use */
+
+  updateWeightError[0] = '\0';
+  if (ValidateUpdateWeightLocSpin(
+          FlagUpdateWeight, Nsite, NLocSpn, LocSpn, UpdateWeights,
+          updateWeightError, sizeof(updateWeightError)) != 0) {
+    if (rank == 0) fprintf(stderr, "Error: %s.\n", updateWeightError);
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
 
   {
     int nSpinFlipTransfer = 0;

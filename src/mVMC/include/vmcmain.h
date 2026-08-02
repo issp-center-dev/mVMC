@@ -60,6 +60,7 @@ extern void omp_set_num_threads(int);
 #include "version.h"
 #include "global.h"
 #include "absolute_pfaffian.h"
+#include "update_weight.h"
 #include "pfupdate_fsz.h"
 #include "blas_externs.h"
 
@@ -118,6 +119,7 @@ extern void omp_set_num_threads(int);
 #include "../calgrn_fsz.c"
 #include "../backflow.c"
 #include "../setmemory.c"
+#include "../update_weight.c"
 #include "../readdef.c"
 #include "../initfile.c"
 

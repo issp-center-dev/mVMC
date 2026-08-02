@@ -37,7 +37,7 @@ void saveEleConfigBF(const int sample, const double logIp,
                      const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt, const int *eleProjBFCnt);
 /*[e] BackFlow */
 
-typedef enum {HOPPING,HOPPING_FSZ,EXCHANGE,LOCALSPINFLIP,SPINHOPPING,PAIRHOPPING,NONE} UpdateType;
+typedef enum {HOPPING,HOPPING_FSZ,EXCHANGE,LOCALSPINFLIP,PAIRSPINFLIP,SPINHOPPING,PAIRHOPPING,NONE} UpdateType;
 UpdateType getUpdateType(int path);
 
 #endif

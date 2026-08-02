@@ -262,6 +262,7 @@
     OneBodyG zcisajs.def
     TwoBodyG	zcisajscktaltdc.def
     NBodyG nbodyg.def
+    InUpdateWeight updateweight.def
 
 ファイル形式
 ^^^^^^^^^^^^
@@ -358,6 +359,8 @@
      - ペア軌道因子を指定します。
    * - TransSym :math:`^*`
      - 並進・格子対称演算子を設定します。
+   * - InUpdateWeight
+     - ローカル更新kernelの相対重みを任意指定します。
    * - InGutzwiller
      - Gutzwiller因子の初期値を設定します。
    * - InJastrow
@@ -772,6 +775,12 @@ ModParaファイル (modpara.def)
    反平行スピンの ``Orbital`` 入力が必要です。現状では ``LocSpin``、
    ``BackFlow``、RBM、``OrbitalGeneral``/FSZ入力には対応していません。
 
+   ``InUpdateWeight``を指定しない場合、``NExUpdatePath=2``の従来selectorは
+   変更されません。固定 :math:`S_z` または非FSZ計算ではEXCHANGEのみ、
+   ``OrbitalGeneral``かつ``2Sz=-1``ではEXCHANGEとLOCALSPINFLIPを等確率で
+   選びます。重み付きselectorとPAIRSPINFLIPについては後述の
+   ``updateweight.def``を参照してください。
+
 -  ``RndSeed``
 
    **形式 :** int型
@@ -879,6 +888,48 @@ ModParaファイル (modpara.def)
    **形式 :** int型 (デフォルト値=0)
 
    **説明 :** RBMの隠れ層にあるニューロン数 :math:`N_{\rm General RBM}` を指定する整数。
+
+UpdateWeight指定ファイル(updateweight.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``NExUpdatePath=2``で用いるローカル更新kernelの相対重みを指定する任意入力です。
+``namelist.def``へ``InUpdateWeight updateweight.def``を追加すると有効になります。
+ファイルを指定しない場合、従来のselector、乱数消費順、``zvo_time``の列構成を
+そのまま維持します。
+
+::
+
+    ================================
+    NUpdateWeight 3
+    ================================
+    ========UpdateType Weight=======
+    ================================
+    Exchange          1.0
+    LocalSpinFlip     1.0
+    PairSpinFlip      1.0
+
+2行目にdata行数を書き、6行目以降にkernel名と有限・非負の重みを指定します。
+行順は任意で、省略した対応済みkernelの重みは0です。重複名、未知の名前、余分な列、
+正でない重み合計、またはpath 2以外での使用はエラー終了します。重みは内部で正規化し、
+入力読込時に表示します。
+
+``LocalSpinFlip``には``OrbitalGeneral``と``2Sz=-1``が必要です。
+この重みを0にすると、up-spin数のparityを意図的に保存します。宣言した固定parity
+sectorだけをsampleする場合には正しい設定です。target分布が両parity sectorに
+nonzero weightを持つ場合、``LocalSpinFlip``の正の重みは必要条件であり、実際に
+acceptされたlocal-spin-flipも確認する必要があります。proposal重みが正であること
+だけではergodicityを保証しません。
+
+このファイルを有効にすると、正の重みを持つkernelが1個だけでもkernel選択ごとに
+乱数を1個消費します。したがって、選ばれるkernel列が同じでもweighted runの乱数列は
+legacy runと一致しません。乱数消費順の互換性を保証するのは``InUpdateWeight``を
+省略した場合だけです。
+
+``PairSpinFlip``は、初期spinが同じ2個の異なる局在spinを同時に反転します。さらに
+``Ncond=0``、``NLocalSpin=Nsite``、全siteで``LocSpin=1``を要求します。初期spinが
+逆向きのpairは棄却proposalとして数え、現在stateに応じた重みの再正規化は行いません。
+これによりproposal確率をstate非依存かつ逆更新と対称に保ちます。このファイルが
+有効な場合、PAIRSPINFLIPのproposal数とacceptanceを``zvo_time``末尾へ追記します。
 
 LocSpin指定ファイル(locspn.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

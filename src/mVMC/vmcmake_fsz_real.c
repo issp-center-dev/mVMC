@@ -134,6 +134,7 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
   // Counter[0] ->  Hopping  all,      Counter[1] ->  Hopping accept
   // Counter[2] ->  exchange all,      Counter[3] ->  exchange accept
   // Counter[4] ->  localspinflip all, Counter[5] ->  localspin flip accept
+  // Counter[6] ->  pairspinflip all,  Counter[7] ->  pairspinflip accept
 
   for(outStep=0;outStep<nOutStep;outStep++) {
     for(inStep=0;inStep<nInStep;inStep++) {
@@ -309,7 +310,8 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
           // Inv already updated. Only need to get PfM again.
           updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
 #else
-          UpdateMAllTwo_fsz_real(mi, s, mj, t, ri, rj, TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+          UpdateMAllTwo_fsz_real(mi, s, mj, t, ri, s, rj, t,
+                                 TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
 #endif
           StopTimer(68);
 
@@ -326,6 +328,57 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
           revertEleConfig_fsz(mi,ri,rj,s,s,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         }
         StopTimer(33);
+      }else if (updateType==PAIRSPINFLIP){
+        Counter[6]++;
+
+        StartTimer(31);
+        makeCandidate_PairSpinFlip_localspin(&mi, &mj, &ri, &rj, &s, &t,
+                              &rejectFlag, TmpEleIdx, TmpEleCfg, TmpEleNum,
+                              TmpEleSpn);
+        StopTimer(31);
+        if(rejectFlag) continue;
+
+        StartTimer(36);
+        updateEleConfig_fsz(mi,ri,ri,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
+        UpdateProjCnt_fsz(ri,ri,s,t,projCntNew,TmpEleProjCnt,TmpEleNum);
+        updateEleConfig_fsz(mj,rj,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
+        UpdateProjCnt_fsz(rj,rj,s,t,projCntNew,projCntNew,TmpEleNum);
+
+#ifdef _pf_block_update
+        updated_tdi_v_push_pair_d(NQPFull,
+                                  ri+t*Nsite, mi,
+                                  rj+t*Nsite, mj,
+                                  1, pfUpdator);
+        updated_tdi_v_get_pfa_d(NQPFull, pfMNew, pfUpdator);
+#else
+        CalculateNewPfMTwo2_fsz_real(mi, t, mj, t, pfMNew,
+                                     TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+#endif
+        logIpNew = CalculateLogIP_real(pfMNew,qpStart,qpEnd,comm);
+        x = LogProjRatio(projCntNew,TmpEleProjCnt);
+        w = exp(2.0*(x+(logIpNew-logIpOld)));
+        if( !isfinite(w) ) w = -1.0;
+
+        if(w > genrand_real2()) {
+#ifdef _pf_block_update
+          updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
+#else
+          UpdateMAllTwo_fsz_real(mi, t, mj, t, ri, s, rj, s,
+                                 TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
+#endif
+          for(i=0;i<NProj;i++) TmpEleProjCnt[i] = projCntNew[i];
+          logIpOld = logIpNew;
+          nAccept++;
+          Counter[7]++;
+        } else {
+#ifdef _pf_block_update
+          updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
+#endif
+          revertEleConfig_fsz(mj,rj,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
+          revertEleConfig_fsz(mi,ri,ri,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
+        }
+        StopTimer(36);
       }else if (updateType==LOCALSPINFLIP){
         Counter[4]++;
 

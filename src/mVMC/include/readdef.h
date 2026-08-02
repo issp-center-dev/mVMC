@@ -43,7 +43,7 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
   //RBM
   "Orbital", "OrbitalAntiParallel",
   "OrbitalParallel", "OrbitalGeneral",
-  "TransSym", "InGutzwiller", "InJastrow", "InSpinJastrow",
+  "TransSym", "InUpdateWeight", "InGutzwiller", "InJastrow", "InSpinJastrow",
   "InDH2", "InDH4",
   //RBM
   "InChargeRBM_HiddenLayer","InChargeRBM_PhysLayer", "InChargeRBM_PhysHidden",
@@ -74,7 +74,7 @@ enum KWIdxInt{
   //RBM
   KWOrbital, KWOrbitalAntiParallel,
 	KWOrbitalParallel, KWOrbitalGeneral,
-  KWTransSym, KWInGutzwiller, KWInJastrow, KWInSpinJastrow,
+  KWTransSym, KWInUpdateWeight, KWInGutzwiller, KWInJastrow, KWInSpinJastrow,
   KWInDH2, KWInDH4,
   //RBM
   KWInChargeRBM_HiddenLayer,KWInChargeRBM_PhysLayer,KWInChargeRBM_PhysHidden,
