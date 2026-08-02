@@ -187,4 +187,19 @@ endif()
 add_test(NAME ClassicPfaffianLegacyExecutionAB_Unit
     COMMAND classic_pfaffian_legacy_ab_unit)
 
+add_executable(absolute_krylov_reference_unit
+    absolute_krylov_reference_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c)
+target_compile_definitions(absolute_krylov_reference_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+target_include_directories(absolute_krylov_reference_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(absolute_krylov_reference_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(absolute_krylov_reference_unit m)
+add_test(NAME AbsoluteKrylovReference_Unit
+    COMMAND absolute_krylov_reference_unit)
+
 add_subdirectory(python)

@@ -27,12 +27,13 @@ add_executable(vmcdry.out vmcdry.c)
 target_link_libraries(vmcdry.out StdFace_mvmc m)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
 if(Testing)
-  # Keep fault injection, reference sampler, and audit out of production.
+  # Keep fault injection, reference samplers, and audits out of production.
   target_sources(vmc.out PRIVATE classic_pfaffian_sampler.c
-      classic_pfaffian_audit.c)
+      classic_pfaffian_audit.c krylov_fock_reference.c)
   target_compile_definitions(vmc.out PRIVATE MVMC_ENABLE_FAULT_INJECTION
       MVMC_ENABLE_PFAFFIAN_SAMPLER_REFERENCE
-      MVMC_ENABLE_PFAFFIAN_STATE_AUDIT)
+      MVMC_ENABLE_PFAFFIAN_STATE_AUDIT
+      MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
 endif(Testing)
 target_link_libraries(vmc.out StdFace_mvmc m)
 target_link_libraries(vmc.out pfapack)
