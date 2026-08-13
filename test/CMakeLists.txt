@@ -68,6 +68,39 @@ if(MPI_FOUND)
                 ${MPIEXEC_POSTFLAGS})
 endif()
 
+add_executable(scaled_pfaffian_unit
+    scaled_pfaffian_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(scaled_pfaffian_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(scaled_pfaffian_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(scaled_pfaffian_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(scaled_pfaffian_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(scaled_pfaffian_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(scaled_pfaffian_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME ScaledPfaffian_Unit COMMAND scaled_pfaffian_unit)
+if(MPI_FOUND)
+    add_test(NAME ScaledPfaffian_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:scaled_pfaffian_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME ScaledPfaffian_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:scaled_pfaffian_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(ScaledPfaffian_Unit_Rank2_mpi PROPERTIES PROCESSORS 2)
+    set_tests_properties(ScaledPfaffian_Unit_Rank4_mpi PROPERTIES PROCESSORS 4)
+endif()
+
 add_executable(classic_pfaffian_state_unit
     classic_pfaffian_state_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
@@ -205,6 +238,136 @@ endif()
 target_link_libraries(absolute_krylov_reference_unit m)
 add_test(NAME AbsoluteKrylovReference_Unit
     COMMAND absolute_krylov_reference_unit)
+
+add_executable(bounded_krylov_engine_unit
+    bounded_krylov_engine_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(bounded_krylov_engine_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(bounded_krylov_engine_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(bounded_krylov_engine_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(bounded_krylov_engine_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(bounded_krylov_engine_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(bounded_krylov_engine_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(bounded_krylov_engine_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME BoundedKrylovEngine_Unit
+    COMMAND bounded_krylov_engine_unit)
+if(MPI_FOUND)
+    add_test(NAME BoundedKrylovEngine_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:bounded_krylov_engine_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME BoundedKrylovEngine_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:bounded_krylov_engine_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(BoundedKrylovEngine_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+    set_tests_properties(BoundedKrylovEngine_Unit_Rank4_mpi PROPERTIES
+        PROCESSORS 4)
+endif()
+
+add_executable(bounded_krylov_collective_unit
+    bounded_krylov_collective_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(bounded_krylov_collective_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(bounded_krylov_collective_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(bounded_krylov_collective_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(bounded_krylov_collective_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(bounded_krylov_collective_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(bounded_krylov_collective_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(bounded_krylov_collective_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME BoundedKrylovCollective_Unit
+    COMMAND bounded_krylov_collective_unit)
+if(MPI_FOUND)
+    add_test(NAME BoundedKrylovCollective_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:bounded_krylov_collective_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME BoundedKrylovCollective_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:bounded_krylov_collective_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(BoundedKrylovCollective_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+    set_tests_properties(BoundedKrylovCollective_Unit_Rank4_mpi PROPERTIES
+        PROCESSORS 4)
+endif()
+
+add_executable(bounded_krylov_integration_unit
+    bounded_krylov_integration_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(bounded_krylov_integration_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(bounded_krylov_integration_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(bounded_krylov_integration_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(bounded_krylov_integration_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(bounded_krylov_integration_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(bounded_krylov_integration_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(bounded_krylov_integration_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME BoundedKrylovIntegration_Unit
+    COMMAND bounded_krylov_integration_unit)
+if(MPI_FOUND)
+    add_test(NAME BoundedKrylovIntegration_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:bounded_krylov_integration_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME BoundedKrylovIntegration_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:bounded_krylov_integration_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(BoundedKrylovIntegration_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+    set_tests_properties(BoundedKrylovIntegration_Unit_Rank4_mpi PROPERTIES
+        PROCESSORS 4)
+endif()
 
 add_executable(classic_krylov_amplitude_unit
     classic_krylov_amplitude_unit.c

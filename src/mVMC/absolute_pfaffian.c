@@ -1263,6 +1263,897 @@ MVMCPfaffianStatus mvmc_projected_amplitude_value_slice(
       local_component_count, result);
 }
 
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+static int finite_complex(double complex value) {
+  return isfinite(creal(value)) && isfinite(cimag(value));
+}
+
+static int negative_infinity(double value) {
+  return isinf(value) && value < 0.0;
+}
+
+static double log_add_bounds(double left, double right) {
+  double maximum;
+  if (negative_infinity(left)) return right;
+  if (negative_infinity(right)) return left;
+  if (!isfinite(left) || !isfinite(right)) return INFINITY;
+  maximum = fmax(left, right);
+  return maximum + log1p(exp(fmin(left, right) - maximum));
+}
+
+static MVMCScaledComplex scaled_nonfinite(void) {
+  MVMCScaledComplex value;
+  value.state = MVMC_SCALED_COMPLEX_NONFINITE;
+  value.phase = NAN + I * NAN;
+  value.log_abs = NAN;
+  value.log_abs_error_bound = NAN;
+  value.max_input_log_abs = NAN;
+  value.cancellation_log_abs = NAN;
+  value.cancellation_ratio = NAN;
+  return value;
+}
+
+static MVMCScaledComplex scaled_exact_zero(void) {
+  MVMCScaledComplex value;
+  value.state = MVMC_SCALED_COMPLEX_EXACT_ZERO;
+  value.phase = 1.0;
+  value.log_abs = -INFINITY;
+  value.log_abs_error_bound = -INFINITY;
+  value.max_input_log_abs = -INFINITY;
+  value.cancellation_log_abs = -INFINITY;
+  value.cancellation_ratio = 0.0;
+  return value;
+}
+
+static MVMCScaledComplex scaled_numeric_zero(
+    double log_abs_error_bound, double max_input_log_abs,
+    double cancellation_log_abs, double cancellation_ratio) {
+  MVMCScaledComplex value;
+  value.state = MVMC_SCALED_COMPLEX_NUMERIC_ZERO;
+  value.phase = 1.0;
+  value.log_abs = -INFINITY;
+  value.log_abs_error_bound = log_abs_error_bound;
+  value.max_input_log_abs = max_input_log_abs;
+  value.cancellation_log_abs = cancellation_log_abs;
+  value.cancellation_ratio = cancellation_ratio;
+  return value;
+}
+
+static int valid_error_log(double value) {
+  return isfinite(value) || negative_infinity(value);
+}
+
+static int valid_unit_phase(double complex phase) {
+  double magnitude;
+  if (!finite_complex(phase)) return 0;
+  magnitude = cabs(phase);
+  return isfinite(magnitude) && magnitude > 0.0 &&
+         fabs(magnitude - 1.0) <= 32.0 * DBL_EPSILON;
+}
+
+static int decompose_finite_complex(
+    double complex value, double complex *phase, double *log_abs) {
+  const double real_abs = fabs(creal(value));
+  const double imag_abs = fabs(cimag(value));
+  const double scale = fmax(real_abs, imag_abs);
+  double complex scaled;
+  double scaled_abs;
+  if (phase == NULL || log_abs == NULL || !finite_complex(value) ||
+      scale == 0.0 || !isfinite(scale)) {
+    return 0;
+  }
+  scaled = (creal(value) / scale) + I * (cimag(value) / scale);
+  scaled_abs = hypot(creal(scaled), cimag(scaled));
+  if (!isfinite(scaled_abs) || scaled_abs == 0.0) return 0;
+  *phase = scaled / scaled_abs;
+  *log_abs = log(scale) + log(scaled_abs);
+  return valid_unit_phase(*phase) && isfinite(*log_abs);
+}
+
+int mvmc_scaled_complex_is_valid(const MVMCScaledComplex *value) {
+  if (value == NULL) return 0;
+  switch (value->state) {
+    case MVMC_SCALED_COMPLEX_FINITE_NONZERO:
+      return valid_unit_phase(value->phase) &&
+             isfinite(value->log_abs) &&
+             valid_error_log(value->log_abs_error_bound) &&
+             (negative_infinity(value->log_abs_error_bound) ||
+              value->log_abs_error_bound < value->log_abs) &&
+             isfinite(value->max_input_log_abs) &&
+             isfinite(value->cancellation_log_abs) &&
+             isfinite(value->cancellation_ratio) &&
+             value->cancellation_ratio >= 0.0 &&
+             value->cancellation_ratio <= 1.0;
+    case MVMC_SCALED_COMPLEX_EXACT_ZERO:
+      return valid_unit_phase(value->phase) &&
+             negative_infinity(value->log_abs) &&
+             negative_infinity(value->log_abs_error_bound) &&
+             negative_infinity(value->max_input_log_abs) &&
+             negative_infinity(value->cancellation_log_abs) &&
+             value->cancellation_ratio == 0.0;
+    case MVMC_SCALED_COMPLEX_NUMERIC_ZERO:
+      return valid_unit_phase(value->phase) &&
+             negative_infinity(value->log_abs) &&
+             isfinite(value->log_abs_error_bound) &&
+             valid_error_log(value->max_input_log_abs) &&
+             valid_error_log(value->cancellation_log_abs) &&
+             isfinite(value->cancellation_ratio) &&
+             value->cancellation_ratio >= 0.0 &&
+             value->cancellation_ratio <= 1.0;
+    case MVMC_SCALED_COMPLEX_NONFINITE:
+      return 1;
+  }
+  return 0;
+}
+
+static double phase_rounding_error_log(double log_abs) {
+  const double relative_bound = 32.0 * DBL_EPSILON;
+  return log_abs + log(relative_bound);
+}
+
+static int normalize_phase(double complex phase, double complex *normalized) {
+  double ignored_log_abs;
+  return decompose_finite_complex(phase, normalized, &ignored_log_abs);
+}
+
+MVMCPfaffianStatus mvmc_scaled_complex_make_finite(
+    double complex phase, double log_abs, double log_abs_error_bound,
+    MVMCScaledComplex *result) {
+  MVMCScaledComplex candidate;
+  double complex normalized;
+  if (result == NULL || !isfinite(log_abs) ||
+      !valid_error_log(log_abs_error_bound)) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  if (!normalize_phase(phase, &normalized)) {
+    candidate = scaled_nonfinite();
+    *result = candidate;
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (isfinite(log_abs_error_bound) &&
+      log_abs <= log_abs_error_bound) {
+    candidate = scaled_numeric_zero(log_abs_error_bound, log_abs, log_abs,
+                                    1.0);
+  } else {
+    candidate.state = MVMC_SCALED_COMPLEX_FINITE_NONZERO;
+    candidate.phase = normalized;
+    candidate.log_abs = log_abs;
+    candidate.log_abs_error_bound = log_abs_error_bound;
+    candidate.max_input_log_abs = log_abs;
+    candidate.cancellation_log_abs = log_abs;
+    candidate.cancellation_ratio = 1.0;
+  }
+  *result = candidate;
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCPfaffianStatus mvmc_scaled_complex_make_exact_zero(
+    MVMCScaledComplex *result) {
+  if (result == NULL) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  *result = scaled_exact_zero();
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCPfaffianStatus mvmc_scaled_complex_make_numeric_zero(
+    double log_abs_error_bound, double max_input_log_abs,
+    double cancellation_log_abs, double cancellation_ratio,
+    MVMCScaledComplex *result) {
+  if (result == NULL || !isfinite(log_abs_error_bound) ||
+      !valid_error_log(max_input_log_abs) ||
+      !valid_error_log(cancellation_log_abs) ||
+      !isfinite(cancellation_ratio) || cancellation_ratio < 0.0 ||
+      cancellation_ratio > 1.0) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  *result = scaled_numeric_zero(log_abs_error_bound, max_input_log_abs,
+                                cancellation_log_abs, cancellation_ratio);
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCPfaffianStatus mvmc_scaled_complex_from_raw_testing(
+    double complex value, MVMCScaledComplex *result) {
+  MVMCScaledComplex candidate;
+  double complex phase;
+  double log_abs;
+  if (result == NULL) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  if (!finite_complex(value)) {
+    *result = scaled_nonfinite();
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (creal(value) == 0.0 && cimag(value) == 0.0) {
+    /* A raw zero has lost its producer scale, so its error is unknown. */
+    *result = scaled_numeric_zero(log(DBL_MAX), -INFINITY, -INFINITY,
+                                  0.0);
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (!decompose_finite_complex(value, &phase, &log_abs)) {
+    *result = scaled_nonfinite();
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (mvmc_scaled_complex_make_finite(phase, log_abs, -INFINITY,
+                                      &candidate) !=
+      MVMC_PFAFFIAN_STATUS_OK) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  *result = candidate;
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCPfaffianStatus mvmc_scaled_complex_multiply(
+    const MVMCScaledComplex *left, const MVMCScaledComplex *right,
+    MVMCScaledComplex *result) {
+  MVMCScaledComplex candidate;
+  double error_bound = -INFINITY;
+  double output_log_abs;
+  double max_input;
+  if (result == NULL || !mvmc_scaled_complex_is_valid(left) ||
+      !mvmc_scaled_complex_is_valid(right)) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  if (left->state == MVMC_SCALED_COMPLEX_NONFINITE ||
+      right->state == MVMC_SCALED_COMPLEX_NONFINITE) {
+    *result = scaled_nonfinite();
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (left->state == MVMC_SCALED_COMPLEX_EXACT_ZERO ||
+      right->state == MVMC_SCALED_COMPLEX_EXACT_ZERO) {
+    *result = scaled_exact_zero();
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (left->state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO ||
+      right->state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO) {
+    if (left->state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO &&
+        right->state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO) {
+      error_bound = left->log_abs_error_bound +
+                    right->log_abs_error_bound;
+    } else if (left->state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO) {
+      error_bound = left->log_abs_error_bound + right->log_abs;
+      if (isfinite(right->log_abs_error_bound)) {
+        error_bound = log_add_bounds(
+            error_bound, left->log_abs_error_bound +
+                             right->log_abs_error_bound);
+      }
+    } else {
+      error_bound = right->log_abs_error_bound + left->log_abs;
+      if (isfinite(left->log_abs_error_bound)) {
+        error_bound = log_add_bounds(
+            error_bound, right->log_abs_error_bound +
+                             left->log_abs_error_bound);
+      }
+    }
+    if (!isfinite(error_bound)) {
+      *result = scaled_nonfinite();
+      return MVMC_PFAFFIAN_STATUS_OK;
+    }
+    max_input = fmax(left->max_input_log_abs, right->max_input_log_abs);
+    *result = scaled_numeric_zero(error_bound, max_input, -INFINITY, 0.0);
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+
+  output_log_abs = left->log_abs + right->log_abs;
+  if (!isfinite(output_log_abs)) {
+    *result = scaled_nonfinite();
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (isfinite(left->log_abs_error_bound)) {
+    error_bound = log_add_bounds(
+        error_bound, left->log_abs_error_bound + right->log_abs);
+  }
+  if (isfinite(right->log_abs_error_bound)) {
+    error_bound = log_add_bounds(
+        error_bound, right->log_abs_error_bound + left->log_abs);
+  }
+  if (isfinite(left->log_abs_error_bound) &&
+      isfinite(right->log_abs_error_bound)) {
+    error_bound = log_add_bounds(
+        error_bound, left->log_abs_error_bound +
+                         right->log_abs_error_bound);
+  }
+  error_bound = log_add_bounds(error_bound,
+                               phase_rounding_error_log(output_log_abs));
+  if (!isfinite(error_bound)) {
+    *result = scaled_nonfinite();
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (mvmc_scaled_complex_make_finite(
+          left->phase * right->phase, output_log_abs, error_bound,
+          &candidate) != MVMC_PFAFFIAN_STATUS_OK) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  candidate.max_input_log_abs =
+      fmax(left->max_input_log_abs, right->max_input_log_abs);
+  candidate.cancellation_log_abs = output_log_abs;
+  candidate.cancellation_ratio = 1.0;
+  *result = candidate;
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+static int neumaier_add(double value, double *sum, double *compensation) {
+  double updated;
+  if (sum == NULL || compensation == NULL || !isfinite(value)) return 0;
+  updated = *sum + value;
+  if (!isfinite(updated)) return 0;
+  if (fabs(*sum) >= fabs(value)) {
+    *compensation += (*sum - updated) + value;
+  } else {
+    *compensation += (value - updated) + *sum;
+  }
+  if (!isfinite(*compensation)) return 0;
+  *sum = updated;
+  return 1;
+}
+
+MVMCPfaffianStatus mvmc_scaled_complex_sum_ordered(
+    const MVMCScaledComplex *values, size_t value_count,
+    MVMCScaledComplex *result) {
+  MVMCScaledComplex candidate;
+  double scale = -INFINITY;
+  double error_bound = -INFINITY;
+  double max_input = -INFINITY;
+  double real_sum = 0.0, real_compensation = 0.0;
+  double imag_sum = 0.0, imag_compensation = 0.0;
+  double abs_sum = 0.0, abs_compensation = 0.0;
+  double complex central;
+  double central_abs;
+  double central_log;
+  double cancellation_ratio;
+  size_t index;
+  int finite_count = 0;
+  int numeric_count = 0;
+
+  if (result == NULL || values == NULL || value_count == 0) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  for (index = 0; index < value_count; ++index) {
+    if (!mvmc_scaled_complex_is_valid(values + index)) {
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
+    if (values[index].state == MVMC_SCALED_COMPLEX_NONFINITE) {
+      *result = scaled_nonfinite();
+      return MVMC_PFAFFIAN_STATUS_OK;
+    }
+    max_input = fmax(max_input, values[index].max_input_log_abs);
+    if (values[index].state == MVMC_SCALED_COMPLEX_FINITE_NONZERO) {
+      scale = fmax(scale, values[index].log_abs);
+      ++finite_count;
+    } else if (values[index].state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO) {
+      error_bound = log_add_bounds(error_bound,
+                                   values[index].log_abs_error_bound);
+      ++numeric_count;
+    }
+  }
+  if (finite_count == 0) {
+    if (numeric_count == 0) {
+      *result = scaled_exact_zero();
+    } else if (isfinite(error_bound)) {
+      *result = scaled_numeric_zero(error_bound, max_input, -INFINITY, 0.0);
+    } else {
+      *result = scaled_nonfinite();
+    }
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  for (index = 0; index < value_count; ++index) {
+    double magnitude;
+    double complex term;
+    if (values[index].state != MVMC_SCALED_COMPLEX_FINITE_NONZERO) continue;
+    magnitude = exp(values[index].log_abs - scale);
+    term = magnitude * values[index].phase;
+    if (!finite_complex(term) ||
+        !neumaier_add(creal(term), &real_sum, &real_compensation) ||
+        !neumaier_add(cimag(term), &imag_sum, &imag_compensation) ||
+        !neumaier_add(magnitude, &abs_sum, &abs_compensation)) {
+      *result = scaled_nonfinite();
+      return MVMC_PFAFFIAN_STATUS_OK;
+    }
+    error_bound = log_add_bounds(error_bound,
+                                 values[index].log_abs_error_bound);
+  }
+  central = (real_sum + real_compensation) +
+            I * (imag_sum + imag_compensation);
+  central_abs = cabs(central);
+  abs_sum += abs_compensation;
+  if (!finite_complex(central) || !isfinite(abs_sum) || abs_sum <= 0.0) {
+    *result = scaled_nonfinite();
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  cancellation_ratio = fmin(1.0, central_abs / abs_sum);
+  if (central_abs == 0.0) {
+    error_bound = log_add_bounds(
+        error_bound, scale + log(32.0 * DBL_EPSILON * abs_sum));
+    *result = isfinite(error_bound)
+                  ? scaled_numeric_zero(error_bound, max_input, -INFINITY,
+                                        cancellation_ratio)
+                  : scaled_nonfinite();
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  central_log = scale + log(central_abs);
+  error_bound = log_add_bounds(
+      error_bound, scale + log(32.0 * DBL_EPSILON * abs_sum));
+  if (!isfinite(central_log) || !isfinite(error_bound)) {
+    *result = scaled_nonfinite();
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (central_log <= error_bound) {
+    *result = scaled_numeric_zero(error_bound, max_input, central_log,
+                                  cancellation_ratio);
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (mvmc_scaled_complex_make_finite(central / central_abs, central_log,
+                                      error_bound, &candidate) !=
+      MVMC_PFAFFIAN_STATUS_OK) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  candidate.max_input_log_abs = max_input;
+  candidate.cancellation_log_abs = central_log;
+  candidate.cancellation_ratio = cancellation_ratio;
+  *result = candidate;
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCScaledComplexExportStatus mvmc_scaled_complex_export_common_scale(
+    const MVMCScaledComplex *value, double common_log_scale,
+    double complex *result) {
+  double delta;
+  double magnitude;
+  if (result == NULL || !mvmc_scaled_complex_is_valid(value) ||
+      !isfinite(common_log_scale)) {
+    return MVMC_SCALED_EXPORT_INVALID;
+  }
+  switch (value->state) {
+    case MVMC_SCALED_COMPLEX_EXACT_ZERO:
+      *result = 0.0;
+      return MVMC_SCALED_EXPORT_EXACT_ZERO;
+    case MVMC_SCALED_COMPLEX_NUMERIC_ZERO:
+      *result = 0.0;
+      return MVMC_SCALED_EXPORT_NUMERIC_ZERO;
+    case MVMC_SCALED_COMPLEX_NONFINITE:
+      *result = NAN + I * NAN;
+      return MVMC_SCALED_EXPORT_NONFINITE;
+    case MVMC_SCALED_COMPLEX_FINITE_NONZERO:
+      break;
+  }
+  delta = value->log_abs - common_log_scale;
+  if (!isfinite(delta)) return MVMC_SCALED_EXPORT_INVALID;
+  if (delta > log(DBL_MAX)) {
+    *result = NAN + I * NAN;
+    return MVMC_SCALED_EXPORT_OVERFLOW;
+  }
+  if (delta < log(nextafter(0.0, 1.0))) {
+    *result = 0.0;
+    return MVMC_SCALED_EXPORT_UNDERFLOW;
+  }
+  magnitude = exp(delta);
+  if (magnitude == 0.0) {
+    *result = 0.0;
+    return MVMC_SCALED_EXPORT_UNDERFLOW;
+  }
+  *result = magnitude * value->phase;
+  if (!finite_complex(*result)) {
+    *result = NAN + I * NAN;
+    return MVMC_SCALED_EXPORT_OVERFLOW;
+  }
+  return MVMC_SCALED_EXPORT_OK;
+}
+
+static MVMCScaledComplex scaled_exact_weight(double complex weight) {
+  MVMCScaledComplex value;
+  double complex phase;
+  double log_abs;
+  if (!finite_complex(weight)) return scaled_nonfinite();
+  if (creal(weight) == 0.0 && cimag(weight) == 0.0) {
+    return scaled_exact_zero();
+  }
+  if (!decompose_finite_complex(weight, &phase, &log_abs)) {
+    return scaled_nonfinite();
+  }
+  if (mvmc_scaled_complex_make_finite(phase, log_abs, -INFINITY, &value) !=
+      MVMC_PFAFFIAN_STATUS_OK) {
+    return scaled_nonfinite();
+  }
+  return value;
+}
+
+static double zero_pivot_error_log(double matrix_scale, int n) {
+  double bound = 64.0 * DBL_EPSILON * (double)n;
+  if (!isfinite(matrix_scale) || matrix_scale < 0.0) return NAN;
+  if (matrix_scale > DBL_MAX / bound) return log(DBL_MAX);
+  bound *= fmax(matrix_scale, DBL_MIN);
+  if (!isfinite(bound) || bound <= 0.0) return log(DBL_MAX);
+  return log(bound);
+}
+
+static void initialize_scaled_pfaffian_result(
+    MVMCAbsolutePfaffianScaledValueResult *result) {
+  result->factor_state = MVMC_PFAFFIAN_VALUE_INVALID;
+  result->factor_info = 0;
+  result->matrix_scale = NAN;
+  result->scaled_min_pivot = NAN;
+  result->value = scaled_nonfinite();
+}
+
+static MVMCPfaffianStatus factorize_real_scaled_value(
+    const double *matrix, int n, int lda, double *factor, int *pivots,
+    double *factor_work, int factor_lwork, double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result) {
+  MVMCAbsolutePfaffianScaledValueResult candidate;
+  MVMCScaledComplex product;
+  double min_pivot = INFINITY;
+  int column, row, info = 0;
+  initialize_scaled_pfaffian_result(&candidate);
+  info = real_matrix_properties(matrix, n, lda, &candidate.matrix_scale);
+  if (info < 0) {
+    candidate.factor_state = MVMC_PFAFFIAN_VALUE_NONFINITE;
+    candidate.value = scaled_nonfinite();
+    *result = candidate;
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (info == 0) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  for (column = 0; column < n; ++column) {
+    pivots[column] = column + 1;
+    for (row = 0; row < n; ++row) {
+      factor[row + (size_t)column * (size_t)n] =
+          matrix[row + (size_t)column * (size_t)lda];
+    }
+  }
+  M_DSKTRF("U", "P", &n, factor, &n, pivots, factor_work,
+           &factor_lwork, &info);
+  candidate.factor_info = info;
+  if (info < 0) return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+  if (info > 0) {
+    candidate.factor_state = MVMC_PFAFFIAN_VALUE_SINGULAR;
+    candidate.scaled_min_pivot = 0.0;
+    candidate.value = scaled_exact_zero();
+    *result = candidate;
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (mvmc_scaled_complex_make_finite(1.0, 0.0, -INFINITY, &product) !=
+      MVMC_PFAFFIAN_STATUS_OK) {
+    return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+  }
+  for (row = 0; row < n; row += 2) {
+    MVMCScaledComplex pivot_value;
+    MVMCScaledComplex updated;
+    double pivot = factor[row + (size_t)(row + 1) * (size_t)n];
+    const double pivot_abs = fabs(pivot);
+    if (!isfinite(pivot)) {
+      candidate.factor_state = MVMC_PFAFFIAN_VALUE_NONFINITE;
+      candidate.value = scaled_nonfinite();
+      *result = candidate;
+      return MVMC_PFAFFIAN_STATUS_OK;
+    }
+    min_pivot = fmin(min_pivot, pivot_abs);
+    if (pivot == 0.0) {
+      pivot_value = scaled_numeric_zero(
+          zero_pivot_error_log(candidate.matrix_scale, n), -INFINITY,
+          -INFINITY, 0.0);
+    } else if (mvmc_scaled_complex_from_raw_testing(pivot, &pivot_value) !=
+               MVMC_PFAFFIAN_STATUS_OK) {
+      return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+    }
+    if (pivots[row] - 1 != row) pivot_value.phase = -pivot_value.phase;
+    if (pivots[row + 1] - 1 != row + 1) {
+      pivot_value.phase = -pivot_value.phase;
+    }
+    if (mvmc_scaled_complex_multiply(&product, &pivot_value, &updated) !=
+        MVMC_PFAFFIAN_STATUS_OK) {
+      return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+    }
+    product = updated;
+  }
+  candidate.scaled_min_pivot =
+      min_pivot / fmax(candidate.matrix_scale, DBL_MIN);
+  if (!isfinite(candidate.scaled_min_pivot) ||
+      product.state == MVMC_SCALED_COMPLEX_NONFINITE) {
+    candidate.factor_state = MVMC_PFAFFIAN_VALUE_NONFINITE;
+    candidate.value = scaled_nonfinite();
+  } else if (candidate.scaled_min_pivot <
+                 effective_pivot_tolerance(scaled_pivot_tolerance, n) ||
+             product.state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO) {
+    candidate.factor_state = MVMC_PFAFFIAN_VALUE_NEAR_PIVOT;
+    candidate.value = product;
+  } else {
+    candidate.factor_state = MVMC_PFAFFIAN_VALUE_WELL_PIVOTED;
+    candidate.value = product;
+  }
+  *result = candidate;
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+static MVMCPfaffianStatus factorize_complex_scaled_value(
+    const double complex *matrix, int n, int lda, double complex *factor,
+    int *pivots, double complex *factor_work, int factor_lwork,
+    double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result) {
+  MVMCAbsolutePfaffianScaledValueResult candidate;
+  MVMCScaledComplex product;
+  double min_pivot = INFINITY;
+  int column, row, info = 0;
+  initialize_scaled_pfaffian_result(&candidate);
+  info = complex_matrix_properties(matrix, n, lda, &candidate.matrix_scale);
+  if (info < 0) {
+    candidate.factor_state = MVMC_PFAFFIAN_VALUE_NONFINITE;
+    candidate.value = scaled_nonfinite();
+    *result = candidate;
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (info == 0) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  for (column = 0; column < n; ++column) {
+    pivots[column] = column + 1;
+    for (row = 0; row < n; ++row) {
+      factor[row + (size_t)column * (size_t)n] =
+          matrix[row + (size_t)column * (size_t)lda];
+    }
+  }
+  M_ZSKTRF("U", "P", &n, factor, &n, pivots, factor_work,
+           &factor_lwork, &info);
+  candidate.factor_info = info;
+  if (info < 0) return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+  if (info > 0) {
+    candidate.factor_state = MVMC_PFAFFIAN_VALUE_SINGULAR;
+    candidate.scaled_min_pivot = 0.0;
+    candidate.value = scaled_exact_zero();
+    *result = candidate;
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  if (mvmc_scaled_complex_make_finite(1.0, 0.0, -INFINITY, &product) !=
+      MVMC_PFAFFIAN_STATUS_OK) {
+    return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+  }
+  for (row = 0; row < n; row += 2) {
+    MVMCScaledComplex pivot_value;
+    MVMCScaledComplex updated;
+    double complex pivot = factor[row + (size_t)(row + 1) * (size_t)n];
+    const double pivot_abs = cabs(pivot);
+    if (!finite_complex(pivot) || !isfinite(pivot_abs)) {
+      candidate.factor_state = MVMC_PFAFFIAN_VALUE_NONFINITE;
+      candidate.value = scaled_nonfinite();
+      *result = candidate;
+      return MVMC_PFAFFIAN_STATUS_OK;
+    }
+    min_pivot = fmin(min_pivot, pivot_abs);
+    if (pivot_abs == 0.0) {
+      pivot_value = scaled_numeric_zero(
+          zero_pivot_error_log(candidate.matrix_scale, n), -INFINITY,
+          -INFINITY, 0.0);
+    } else if (mvmc_scaled_complex_from_raw_testing(pivot, &pivot_value) !=
+               MVMC_PFAFFIAN_STATUS_OK) {
+      return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+    }
+    if (pivots[row] - 1 != row) pivot_value.phase = -pivot_value.phase;
+    if (pivots[row + 1] - 1 != row + 1) {
+      pivot_value.phase = -pivot_value.phase;
+    }
+    if (mvmc_scaled_complex_multiply(&product, &pivot_value, &updated) !=
+        MVMC_PFAFFIAN_STATUS_OK) {
+      return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+    }
+    product = updated;
+  }
+  candidate.scaled_min_pivot =
+      min_pivot / fmax(candidate.matrix_scale, DBL_MIN);
+  if (!isfinite(candidate.scaled_min_pivot) ||
+      product.state == MVMC_SCALED_COMPLEX_NONFINITE) {
+    candidate.factor_state = MVMC_PFAFFIAN_VALUE_NONFINITE;
+    candidate.value = scaled_nonfinite();
+  } else if (candidate.scaled_min_pivot <
+                 effective_pivot_tolerance(scaled_pivot_tolerance, n) ||
+             product.state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO) {
+    candidate.factor_state = MVMC_PFAFFIAN_VALUE_NEAR_PIVOT;
+    candidate.value = product;
+  } else {
+    candidate.factor_state = MVMC_PFAFFIAN_VALUE_WELL_PIVOTED;
+    candidate.value = product;
+  }
+  *result = candidate;
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real_scaled_value_with_workspace(
+    MVMCAbsolutePfaffianRealValueWorkspace *workspace,
+    const double *matrix, int n, int lda, double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result) {
+  size_t matrix_count;
+  if (result == NULL || !mvmc_absolute_pfaffian_strict_fp_enabled()) {
+    return result == NULL ? MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT
+                          : MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE;
+  }
+  if (workspace == NULL || workspace->n != n || matrix == NULL || n <= 0 ||
+      (n % 2) != 0 || lda < n || !isfinite(scaled_pivot_tolerance) ||
+      !checked_square_size(n, sizeof(*matrix), &matrix_count) ||
+      workspace->matrix_count != matrix_count) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  return factorize_real_scaled_value(
+      matrix, n, lda, workspace->factor, workspace->pivots,
+      workspace->factor_work, workspace->factor_lwork,
+      scaled_pivot_tolerance, result);
+}
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_scaled_value_with_workspace(
+    MVMCAbsolutePfaffianComplexValueWorkspace *workspace,
+    const double complex *matrix, int n, int lda,
+    double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result) {
+  size_t matrix_count;
+  if (result == NULL || !mvmc_absolute_pfaffian_strict_fp_enabled()) {
+    return result == NULL ? MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT
+                          : MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE;
+  }
+  if (workspace == NULL || workspace->n != n || matrix == NULL || n <= 0 ||
+      (n % 2) != 0 || lda < n || !isfinite(scaled_pivot_tolerance) ||
+      !checked_square_size(n, sizeof(*matrix), &matrix_count) ||
+      workspace->matrix_count != matrix_count) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  return factorize_complex_scaled_value(
+      matrix, n, lda, workspace->factor, workspace->pivots,
+      workspace->factor_work, workspace->factor_lwork,
+      scaled_pivot_tolerance, result);
+}
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_real_scaled_value(
+    const double *matrix, int n, int lda, double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result) {
+  MVMCAbsolutePfaffianRealValueWorkspace *workspace = NULL;
+  MVMCPfaffianStatus status;
+  if (result == NULL) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  status = mvmc_absolute_pfaffian_real_value_workspace_create(n, &workspace);
+  if (status == MVMC_PFAFFIAN_STATUS_OK) {
+    status = mvmc_absolute_pfaffian_real_scaled_value_with_workspace(
+        workspace, matrix, n, lda, scaled_pivot_tolerance, result);
+  }
+  mvmc_absolute_pfaffian_real_value_workspace_destroy(workspace);
+  return status;
+}
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_scaled_value(
+    const double complex *matrix, int n, int lda,
+    double scaled_pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result) {
+  MVMCAbsolutePfaffianComplexValueWorkspace *workspace = NULL;
+  MVMCPfaffianStatus status;
+  if (result == NULL) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  status =
+      mvmc_absolute_pfaffian_complex_value_workspace_create(n, &workspace);
+  if (status == MVMC_PFAFFIAN_STATUS_OK) {
+    status = mvmc_absolute_pfaffian_complex_scaled_value_with_workspace(
+        workspace, matrix, n, lda, scaled_pivot_tolerance, result);
+  }
+  mvmc_absolute_pfaffian_complex_value_workspace_destroy(workspace);
+  return status;
+}
+
+MVMCPfaffianStatus mvmc_projected_scaled_amplitude_values(
+    const MVMCAbsolutePfaffianScaledValueResult *components,
+    const double complex *weights, size_t component_count,
+    MVMCProjectedScaledAmplitudeResult *result) {
+  MVMCProjectedScaledAmplitudeResult candidate;
+  MVMCScaledComplex *terms;
+  double log_sum_abs = -INFINITY;
+  size_t index;
+  MVMCPfaffianStatus status;
+  if (result == NULL || components == NULL || weights == NULL ||
+      component_count == 0 ||
+      component_count > SIZE_MAX / sizeof(*terms)) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  terms = (MVMCScaledComplex *)malloc(component_count * sizeof(*terms));
+  if (terms == NULL) return MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
+  memset(&candidate, 0, sizeof(candidate));
+  candidate.total = scaled_nonfinite();
+  candidate.log_sum_abs = -INFINITY;
+  for (index = 0; index < component_count; ++index) {
+    MVMCScaledComplex scaled_weight;
+    if (!finite_complex(weights[index]) ||
+        !mvmc_scaled_complex_is_valid(&components[index].value)) {
+      free(terms);
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
+    switch (components[index].factor_state) {
+      case MVMC_PFAFFIAN_VALUE_WELL_PIVOTED:
+        if (components[index].value.state !=
+            MVMC_SCALED_COMPLEX_FINITE_NONZERO) {
+          free(terms);
+          return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+        }
+        ++candidate.well_pivoted_count;
+        break;
+      case MVMC_PFAFFIAN_VALUE_NEAR_PIVOT:
+        if (components[index].value.state !=
+                MVMC_SCALED_COMPLEX_FINITE_NONZERO &&
+            components[index].value.state !=
+                MVMC_SCALED_COMPLEX_NUMERIC_ZERO) {
+          free(terms);
+          return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+        }
+        ++candidate.near_pivot_count;
+        break;
+      case MVMC_PFAFFIAN_VALUE_SINGULAR:
+        if (components[index].value.state !=
+            MVMC_SCALED_COMPLEX_EXACT_ZERO) {
+          free(terms);
+          return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+        }
+        break;
+      case MVMC_PFAFFIAN_VALUE_NONFINITE:
+      case MVMC_PFAFFIAN_VALUE_INVALID:
+        free(terms);
+        return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
+    if (components[index].value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO) {
+      ++candidate.exact_zero_count;
+    } else if (components[index].value.state ==
+               MVMC_SCALED_COMPLEX_NUMERIC_ZERO) {
+      ++candidate.numeric_zero_count;
+    } else if (components[index].value.state ==
+               MVMC_SCALED_COMPLEX_NONFINITE) {
+      free(terms);
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
+    scaled_weight = scaled_exact_weight(weights[index]);
+    if (scaled_weight.state == MVMC_SCALED_COMPLEX_NONFINITE) {
+      free(terms);
+      return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+    }
+    status = mvmc_scaled_complex_multiply(
+        &scaled_weight, &components[index].value, terms + index);
+    if (status != MVMC_PFAFFIAN_STATUS_OK ||
+        terms[index].state == MVMC_SCALED_COMPLEX_NONFINITE) {
+      free(terms);
+      return status == MVMC_PFAFFIAN_STATUS_OK
+                 ? MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT
+                 : status;
+    }
+    if (terms[index].state == MVMC_SCALED_COMPLEX_FINITE_NONZERO) {
+      log_sum_abs = log_add_bounds(log_sum_abs, terms[index].log_abs);
+    } else if (terms[index].state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO) {
+      log_sum_abs = log_add_bounds(log_sum_abs,
+                                   terms[index].log_abs_error_bound);
+    }
+  }
+  status = mvmc_scaled_complex_sum_ordered(terms, component_count,
+                                           &candidate.total);
+  free(terms);
+  if (status != MVMC_PFAFFIAN_STATUS_OK ||
+      candidate.total.state == MVMC_SCALED_COMPLEX_NONFINITE ||
+      !valid_error_log(log_sum_abs)) {
+    return status == MVMC_PFAFFIAN_STATUS_OK
+               ? MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT
+               : status;
+  }
+  candidate.log_sum_abs = log_sum_abs;
+  candidate.valid = 1;
+  *result = candidate;
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCPfaffianStatus mvmc_projected_scaled_amplitude_value_slice(
+    const MVMCAbsolutePfaffianScaledValueResult *local_components,
+    size_t local_component_count, const double complex *global_weights,
+    int qp_total, int qp_start, int qp_end,
+    MVMCProjectedScaledAmplitudeResult *result) {
+  MVMCProjectedScaledAmplitudeResult candidate;
+  if (result == NULL || qp_total <= 0 || qp_start < 0 || qp_end < qp_start ||
+      qp_end > qp_total ||
+      (size_t)(qp_end - qp_start) != local_component_count ||
+      global_weights == NULL ||
+      (local_component_count != 0 && local_components == NULL)) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  if (local_component_count == 0) {
+    memset(&candidate, 0, sizeof(candidate));
+    candidate.valid = 1;
+    candidate.total = scaled_exact_zero();
+    candidate.log_sum_abs = -INFINITY;
+    *result = candidate;
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  return mvmc_projected_scaled_amplitude_values(
+      local_components, global_weights + qp_start, local_component_count,
+      result);
+}
+#endif /* MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE */
+
 const char *mvmc_pfaffian_state_name(MVMCPfaffianState state) {
   switch (state) {
     case MVMC_PFAFFIAN_REGULAR:

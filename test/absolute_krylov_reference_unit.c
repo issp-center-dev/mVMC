@@ -676,6 +676,19 @@ static void TestFailuresAndLimits(void) {
   {
     MVMCKrylovHamiltonianTerm invalid_terms[2];
     memcpy(invalid_terms, terms, sizeof(invalid_terms));
+    invalid_terms[0].operator_count = 3;
+    model.terms = invalid_terms;
+    status = Evaluate(&model, UINT64_C(1), &limits, &amplitude, &result);
+    CHECK(status == MVMC_KRYLOV_STATUS_INVALID_ARGUMENT,
+          "odd fermion operator count accepted");
+    CheckAtomicFailure(&result, MVMC_KRYLOV_STATUS_INVALID_ARGUMENT,
+                       "odd operator count");
+    model.terms = terms;
+  }
+
+  {
+    MVMCKrylovHamiltonianTerm invalid_terms[2];
+    memcpy(invalid_terms, terms, sizeof(invalid_terms));
     invalid_terms[0].coefficient = NAN + 0.0 * I;
     model.terms = invalid_terms;
     status = Evaluate(&model, UINT64_C(1), &limits, &amplitude, &result);
