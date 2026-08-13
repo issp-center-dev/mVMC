@@ -808,24 +808,26 @@ def check_child_opt_block(all_values, child_values, start, label, tol):
     return 0
 
 
-def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs):
-    if mpi_procs:
-        print("ERROR: BackFlow opt-output restart smoke is a single-rank test.")
-        return -1
-
+def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs,
+                             opt_samples, include_backflow):
     refdir = os.path.join(rootdir, "data", model)
-    workdir = os.path.join(rootdir, "work", model + "_opt_output_restart")
+    work_suffix = "_mpi" if mpi_procs else ""
+    if not include_backflow:
+        work_suffix += "_no_bf"
+    workdir = os.path.join(
+        rootdir, "work", model + "_opt_output_restart" + work_suffix)
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
-    copy_def_files(refdir, workdir, include_backflow=True)
-    assert_nonidentity_init_layout(workdir)
+    copy_def_files(refdir, workdir, include_backflow=include_backflow)
+    if include_backflow:
+        assert_nonidentity_init_layout(workdir)
 
     update_modpara(
         os.path.join(workdir, "modpara.def"),
         {
-            "NSROptItrStep": 2,
-            "NSROptItrSmp": 2,
+            "NSROptItrStep": opt_samples,
+            "NSROptItrSmp": opt_samples,
             "NVMCSample": 16,
             "NVMCWarmUp": 4,
             "NStore": 1,
@@ -833,8 +835,11 @@ def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs):
     )
 
     nsite = parse_nsite(os.path.join(workdir, "modpara.def"))
-    definition = build_chain_nn_backflow(length=nsite, optimize=True)
-    write_chain_nn_backflow(workdir, length=nsite, optimize=True)
+    n_proj_bf = 0
+    if include_backflow:
+        definition = build_chain_nn_backflow(length=nsite, optimize=True)
+        write_chain_nn_backflow(workdir, length=nsite, optimize=True)
+        n_proj_bf = definition.n_proj_bf
     nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidx.def"))
 
     proc = run_vmc(rootdir, workdir, mpi_procs, log_name="bf_test_opt_output.log")
@@ -850,15 +855,13 @@ def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs):
         return -1
 
     zqp_opt = os.path.join(workdir, "output", "zqp_opt.dat")
-    zqp_bf_opt = os.path.join(workdir, "output", "zqp_bf_opt.dat")
-    zqp_orbital_opt = os.path.join(workdir, "output", "zqp_orbital_opt.dat")
-    for path in (zqp_opt, zqp_bf_opt, zqp_orbital_opt):
+    for path in (zqp_opt,):
         if not os.path.exists(path):
             print("ERROR: expected opt output was not written: {}".format(path))
             return -1
 
     all_values = read_first_float_row(zqp_opt)
-    expected_len = 6 + 3 * (definition.n_proj_bf + nslater)
+    expected_len = 6 + 3 * (n_proj_bf + nslater)
     if len(all_values) != expected_len:
         print("ERROR: zqp_opt.dat length mismatch: got {} expected {}".format(
             len(all_values), expected_len))
@@ -867,29 +870,50 @@ def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs):
         print("ERROR: zqp_opt.dat contains non-finite values.")
         return -1
 
-    bf_values = read_child_opt_values(zqp_bf_opt)
-    if len(bf_values) != definition.n_proj_bf:
-        print("ERROR: zqp_bf_opt.dat row count mismatch: got {} expected {}".format(
-            len(bf_values), definition.n_proj_bf))
-        return -1
-    result = check_child_opt_block(all_values, bf_values, 6, "BackFlow", 1.0e-15)
-    if result != 0:
-        return result
+    if opt_samples == 1:
+        uncertainties = all_values[2::3]
+        if any(value != 0.0 for value in uncertainties):
+            print("ERROR: single-sample zqp_opt.dat uncertainty is not zero.")
+            return -1
+        parameter_imag = all_values[7::3]
+        if not any(abs(value) > 1.0e-15 for value in parameter_imag):
+            print("ERROR: single-sample zqp_opt.dat lost all imaginary parameters.")
+            return -1
+    else:
+        zqp_orbital_opt = os.path.join(workdir, "output", "zqp_orbital_opt.dat")
+        expected_child_paths = [zqp_orbital_opt]
+        if include_backflow:
+            zqp_bf_opt = os.path.join(workdir, "output", "zqp_bf_opt.dat")
+            expected_child_paths.insert(0, zqp_bf_opt)
+        for path in expected_child_paths:
+            if not os.path.exists(path):
+                print("ERROR: expected opt output was not written: {}".format(path))
+                return -1
 
-    orbital_values = read_child_opt_values(zqp_orbital_opt)
-    if len(orbital_values) != nslater:
-        print("ERROR: zqp_orbital_opt.dat row count mismatch: got {} expected {}".format(
-            len(orbital_values), nslater))
-        return -1
-    result = check_child_opt_block(
-        all_values,
-        orbital_values,
-        6 + 3 * definition.n_proj_bf,
-        "Slater",
-        1.0e-15,
-    )
-    if result != 0:
-        return result
+        if include_backflow:
+            bf_values = read_child_opt_values(zqp_bf_opt)
+            if len(bf_values) != n_proj_bf:
+                print("ERROR: zqp_bf_opt.dat row count mismatch: got {} expected {}".format(
+                    len(bf_values), n_proj_bf))
+                return -1
+            result = check_child_opt_block(all_values, bf_values, 6, "BackFlow", 1.0e-15)
+            if result != 0:
+                return result
+
+        orbital_values = read_child_opt_values(zqp_orbital_opt)
+        if len(orbital_values) != nslater:
+            print("ERROR: zqp_orbital_opt.dat row count mismatch: got {} expected {}".format(
+                len(orbital_values), nslater))
+            return -1
+        result = check_child_opt_block(
+            all_values,
+            orbital_values,
+            6 + 3 * n_proj_bf,
+            "Slater",
+            1.0e-15,
+        )
+        if result != 0:
+            return result
 
     restart_proc = run_vmc(
         rootdir,
@@ -1290,6 +1314,8 @@ def main():
     expected_all_complex_flag = None
     compare_real_complex_model = None
     check_opt_restart = False
+    opt_output_samples = 2
+    opt_output_include_backflow = True
     ncond_override = None
     nsplit_size_override = None
     rejected_outputs = []
@@ -1383,6 +1409,16 @@ def main():
         elif sys.argv[argi] == "--check-opt-output-restart":
             check_opt_restart = True
             argi += 1
+        elif (sys.argv[argi] == "--opt-output-samples"
+              and argi + 1 < len(sys.argv)):
+            opt_output_samples = int(sys.argv[argi + 1])
+            if opt_output_samples < 1:
+                print("ERROR: --opt-output-samples must be positive.")
+                return -1
+            argi += 2
+        elif sys.argv[argi] == "--opt-output-no-backflow":
+            opt_output_include_backflow = False
+            argi += 1
         elif sys.argv[argi] == "--reject-output" and argi + 1 < len(sys.argv):
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
@@ -1402,7 +1438,9 @@ def main():
             rejected_outputs,
         )
     if check_opt_restart:
-        return check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs)
+        return check_opt_output_restart(
+            rootdir, model, mpi_procs, rejected_outputs,
+            opt_output_samples, opt_output_include_backflow)
 
     work_suffix = ""
     if compare_energy:

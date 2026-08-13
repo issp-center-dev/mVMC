@@ -1119,6 +1119,40 @@ set_tests_properties(
                "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Complex_CopyIndex_OMP4")
 add_python_vmc_test_bf_real_complex_nonidentity(BackFlow_NonIdentity_RealVsComplex BackFlow_Identity_Real BackFlow_Identity_Complex 1)
 add_python_vmc_test_bf_opt_output_restart(BackFlow_Optimization_OptOutputRestart BackFlow_Optimization_Complex 1)
+add_test(
+    NAME BackFlow_Optimization_SingleSampleOptOutputRestart
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex
+            --check-opt-output-restart
+            --opt-output-samples 1
+            --reject-output "Error:"
+            --reject-output "error:")
+set_tests_properties(
+    BackFlow_Optimization_SingleSampleOptOutputRestart
+    PROPERTIES ENVIRONMENT
+               "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+add_test(
+    NAME BackFlow_Optimization_SingleSampleOptOutputRestart_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex
+            --check-opt-output-restart
+            --opt-output-samples 1
+            --reject-output "Error:"
+            --reject-output "error:")
+set_tests_properties(
+    BackFlow_Optimization_SingleSampleOptOutputRestart_mpi
+    PROPERTIES ENVIRONMENT
+               "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2;OMP_NUM_THREADS=1")
+add_test(
+    NAME Optimization_SingleSampleOptOutputRestart_NoBackFlow
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex
+            --check-opt-output-restart
+            --opt-output-samples 1
+            --opt-output-no-backflow
+            --reject-output "Error:"
+            --reject-output "error:")
+set_tests_properties(
+    Optimization_SingleSampleOptOutputRestart_NoBackFlow
+    PROPERTIES ENVIRONMENT
+               "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
 add_python_vmc_test_bf_nonidentity_ncond(BackFlow_NonIdentity_HighFilling_Complex BackFlow_Identity_Complex 6 1)
 add_python_vmc_test_bf_nonidentity_ncond(BackFlow_NonIdentity_HighFilling_Real BackFlow_Identity_Real 6 1)
 add_python_vmc_test_bf_nonidentity_ncond_mpi(BackFlow_NonIdentity_HighFilling_Complex_mpi BackFlow_Identity_Complex 6)
