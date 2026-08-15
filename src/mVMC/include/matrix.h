@@ -34,6 +34,10 @@ int CalculateMAll_real(const int *eleIdx, const int qpStart, const int qpEnd);
 
 int CalculateMAll_BF_real(const int *eleIdx, const int qpStart, const int qpEnd);
 int CalculateMAll_BF_fcmp(const int *eleIdx, const int qpStart, const int qpEnd);
+int CalculateMAll_BF_real_from_workspace(const double *sltElmBF,
+    const int *eleIdx, const int qpStart, const int qpEnd,
+    double *pfMOut, double *invMOut, const size_t invMQpStride,
+    double *bufM, int *iwork, double *work, int lwork);
 int CalculateMAll_BF_fsz(const int *eleIdx, const int *eleSpn, const int qpStart, const int qpEnd);
 int CalculatePfM_BF_fsz(const int *eleIdx, const int *eleSpn, const int qpStart, const int qpEnd,
     double complex *pfMOut, int *failureDetail);

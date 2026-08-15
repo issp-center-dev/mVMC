@@ -59,13 +59,37 @@ static void *CheckedLanczos2Calloc(size_t count, size_t elementSize) {
   return result;
 }
 
+static void *CheckedDefMalloc(size_t count, size_t elementSize,
+                              const char *name) {
+  void *result;
+  int rank = 0;
+  if (elementSize != 0 && count > SIZE_MAX / elementSize) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+      fprintf(stderr, "Error: allocation size overflow for %s.\n", name);
+    }
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  if (count == 0) return NULL;
+  result = malloc(count * elementSize);
+  if (result == NULL) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+      fprintf(stderr, "Error: failed to allocate %s.\n", name);
+    }
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  return result;
+}
+
 void SetMemoryDef() {
   int i, j;
   int *pInt;
   double *pDouble;
 
   /* Int */
-  LocSpn = (int*)malloc(sizeof(int)*NTotalDefInt);
+  LocSpn = (int*)CheckedDefMalloc((size_t)NTotalDefInt, sizeof(int),
+                                  "definition integer tables");
   pInt = LocSpn + Nsite;
 
   Transfer = (int**)malloc(sizeof(int*)*NTransfer);
@@ -183,19 +207,22 @@ void SetMemoryDef() {
     }
   }
 
-  QPTrans = (int**)malloc(sizeof(int*)*NQPTrans);
+  QPTrans = (int**)CheckedDefMalloc((size_t)NQPTrans, sizeof(int*),
+                                    "QPTrans row pointers");
   for(i=0;i<NQPTrans;i++) {
     QPTrans[i] = pInt;
     pInt += Nsite;
   }
 
-  QPTransInv = (int**)malloc(sizeof(int*)*NQPTrans);
+  QPTransInv = (int**)CheckedDefMalloc((size_t)NQPTrans, sizeof(int*),
+                                       "QPTransInv row pointers");
   for(i=0;i<NQPTrans;i++) {
     QPTransInv[i] = pInt;
     pInt += Nsite;
   }
 
-  QPTransSgn = (int**)malloc(sizeof(int*)*NQPTrans);
+  QPTransSgn = (int**)CheckedDefMalloc((size_t)NQPTrans, sizeof(int*),
+                                       "QPTransSgn row pointers");
   for(i=0;i<NQPTrans;i++) {
     QPTransSgn[i] = pInt;
     pInt += Nsite;
@@ -269,13 +296,15 @@ void SetMemoryDef() {
     NBodyInterAllIdx = NULL;
   }
 
-  QPOptTrans = (int**)malloc(sizeof(int*)*NQPOptTrans);
+  QPOptTrans = (int**)CheckedDefMalloc((size_t)NQPOptTrans, sizeof(int*),
+                                       "QPOptTrans row pointers");
   for(i=0;i<NQPOptTrans;i++) {
     QPOptTrans[i] = pInt;
     pInt += Nsite;
   }
 
-  QPOptTransSgn = (int**)malloc(sizeof(int*)*NQPOptTrans);
+  QPOptTransSgn = (int**)CheckedDefMalloc((size_t)NQPOptTrans, sizeof(int*),
+                                          "QPOptTransSgn row pointers");
   for(i=0;i<NQPOptTrans;i++) {
     QPOptTransSgn[i] = pInt;
     pInt += Nsite;
@@ -316,7 +345,8 @@ void SetMemoryDef() {
   }
 
   ParaQPOptTrans = pDouble;
-  ParaQPTrans = (double complex*)malloc(sizeof(double complex)*(NQPTrans));
+  ParaQPTrans = (double complex*)CheckedDefMalloc(
+      (size_t)NQPTrans, sizeof(double complex), "ParaQPTrans");
 
   return;
 }

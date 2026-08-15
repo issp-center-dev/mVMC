@@ -7,6 +7,7 @@ int BFComputeSizes(int nBackFlowIdx, int nrange, int nzBF,
                    int *nrangeIdx, int *nBFIdxTotal, int *nProjBF);
 int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported);
 int BFValidateFszDefinitionDetails(void);
+int BFUseCanonicalNonFszPath(void);
 int BFDefIntCount(void);
 int BFWorkIntCount(void);
 int BFReadRange(FILE *fp, const char *defname);

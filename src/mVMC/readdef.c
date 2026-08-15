@@ -30,7 +30,9 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <errno.h>
 #include <limits.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "./include/backflow.h"
 #include "./include/lanczos2_contract.h"
 #include "./include/readdef.h"
@@ -146,6 +148,110 @@ char *ReadBuffInt(FILE *fp, int *iNbuf) {
     sscanf(ctmp2, "%s %d\n", ctmp, iNbuf); //2
   }
   return cerr;
+}
+
+static int LineTailIsWhitespace(const char *line, int offset) {
+  const unsigned char *cursor;
+  if (line == NULL || offset < 0) return 0;
+  cursor = (const unsigned char *)line + offset;
+  while (*cursor != '\0') {
+    if (!isspace(*cursor)) return 0;
+    cursor++;
+  }
+  return 1;
+}
+
+static int ParseStrictLongLong(const char *text, long long *value) {
+  char *end = NULL;
+  long long parsed;
+  if (text == NULL || value == NULL || *text == '\0') return 1;
+  errno = 0;
+  parsed = strtoll(text, &end, 10);
+  if (errno == ERANGE || end == text || *end != '\0') return 1;
+  *value = parsed;
+  return 0;
+}
+
+static int ReadPositiveProjectionCount(FILE *fp, int *count,
+                                       const char *expectedKeyword,
+                                       const char *defname) {
+  char header[D_FileNameMax];
+  char line[D_FileNameMax];
+  char keyword[D_FileNameMax];
+  char valueText[D_FileNameMax];
+  char extra;
+  long long parsed;
+  int fields;
+
+  if (fp == NULL || count == NULL || expectedKeyword == NULL) return 1;
+  if (fgets(header, sizeof(header), fp) == NULL ||
+      fgets(line, sizeof(line), fp) == NULL) {
+    fprintf(stderr, "Error: incomplete %s header in %s.\n",
+            expectedKeyword, defname);
+    return 1;
+  }
+  fields = sscanf(line, "%255s %255s %c", keyword, valueText, &extra);
+  if (fields != 2 || strcmp(keyword, expectedKeyword) != 0 ||
+      ParseStrictLongLong(valueText, &parsed) != 0 ||
+      parsed <= 0 || parsed > INT_MAX) {
+    fprintf(stderr,
+            "Error: %s must be an integer in [1, %d] in %s.\n",
+            expectedKeyword, INT_MAX, defname);
+    return 1;
+  }
+  *count = (int)parsed;
+  return 0;
+}
+
+static int CheckedCountTerm(long long *total, long long a, long long b,
+                            long long c, const char *name) {
+  long long product;
+  if (total == NULL || a < 0 || b < 0 || c < 0) {
+    fprintf(stderr, "Error: negative size while computing %s.\n", name);
+    return 1;
+  }
+  if ((a != 0 && b > LLONG_MAX / a) ||
+      (a * b != 0 && c > LLONG_MAX / (a * b))) {
+    fprintf(stderr, "Error: integer overflow while computing %s.\n", name);
+    return 1;
+  }
+  product = a * b * c;
+  if (product > LLONG_MAX - *total) {
+    fprintf(stderr, "Error: integer overflow while accumulating %s.\n", name);
+    return 1;
+  }
+  *total += product;
+  return 0;
+}
+
+static int CheckedIntProduct3(int a, int b, int c, const char *name,
+                              int *result) {
+  long long value;
+  if (result == NULL || a < 0 || b < 0 || c < 0) {
+    fprintf(stderr, "Error: negative size while computing %s.\n", name);
+    return 1;
+  }
+  value = (long long)a * (long long)b * (long long)c;
+  if (value > INT_MAX) {
+    fprintf(stderr, "Error: %s exceeds the supported int range.\n", name);
+    return 1;
+  }
+  *result = (int)value;
+  return 0;
+}
+
+static int CheckProjectionAllocationSizes(int nsite, int nQPTrans) {
+  size_t count;
+  if (nsite <= 0 || nQPTrans <= 0) return 1;
+  count = (size_t)nQPTrans;
+  if (count > SIZE_MAX / sizeof(int *) ||
+      count > SIZE_MAX / sizeof(double complex) ||
+      (size_t)nsite > SIZE_MAX / count) {
+    fprintf(stderr,
+            "Error: allocation size overflow for translation projection tables.\n");
+    return 1;
+  }
+  return 0;
 }
 
 char *ReadBuffIntCmpFlg(FILE *fp, int *iNbuf, int *iComplexFlag) {
@@ -648,7 +754,11 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             break;
 
           case KWTransSym:
-            cerr = ReadBuffInt(fp, &bufInt[IdxNQPTrans]);
+            cerr = "";
+            if (ReadPositiveProjectionCount(fp, &bufInt[IdxNQPTrans],
+                                            "NQPTrans", defname) != 0) {
+              info = ReadDefFileError(defname);
+            }
             break;
 
           case KWInUpdateWeight:
@@ -741,9 +851,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           case KWOptTrans:
             bufInt[IdxNQPOptTrans] = 1;
             if (FlagOptTrans > 0) {
-              cerr = ReadBuffInt(fp, &bufInt[IdxNQPOptTrans]);
-              if (bufInt[IdxNQPOptTrans] < 1) {
-                fprintf(stderr, "Error: NQPOptTrans should be larger than 0.\n");
+              cerr = "";
+              if (ReadPositiveProjectionCount(fp,
+                                              &bufInt[IdxNQPOptTrans],
+                                              "NQPOptTrans", defname) != 0) {
                 info = ReadDefFileError(defname);
               }
             }
@@ -771,6 +882,39 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           info = ReadDefFileError(defname);
         }
         fclose(fp);
+      }
+    }
+
+    {
+      const long long rawNMPTrans = (long long)bufInt[IdxMPTrans];
+      const long long absNMPTrans =
+          rawNMPTrans < 0 ? -rawNMPTrans : rawNMPTrans;
+      if (bufInt[IdxNsite] <= 0) {
+        fprintf(stderr, "Error: Nsite must be positive (got %d).\n",
+                bufInt[IdxNsite]);
+        info = 1;
+      }
+      if (rawNMPTrans == 0 || rawNMPTrans == INT_MIN ||
+          absNMPTrans > INT_MAX) {
+        fprintf(stderr,
+                "Error: NMPTrans must be a nonzero integer with "
+                "abs(NMPTrans) <= %d (got %lld).\n",
+                INT_MAX, rawNMPTrans);
+        info = 1;
+      }
+      if (bufInt[IdxNQPTrans] <= 0 ||
+          (rawNMPTrans != INT_MIN && absNMPTrans > bufInt[IdxNQPTrans])) {
+        fprintf(stderr,
+                "Error: translation projection requires NQPTrans > 0 and "
+                "1 <= abs(NMPTrans) <= NQPTrans "
+                "(NMPTrans=%lld, NQPTrans=%d).\n",
+                rawNMPTrans, bufInt[IdxNQPTrans]);
+        info = 1;
+      }
+      if (bufInt[IdxNsite] > 0 && bufInt[IdxNQPTrans] > 0 &&
+          CheckProjectionAllocationSizes(bufInt[IdxNsite],
+                                         bufInt[IdxNQPTrans]) != 0) {
+        info = 1;
       }
     }
 
@@ -1202,7 +1346,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
   if (NMPTrans < 0) {
     APFlag = 1; /* anti-periodic boundary */
-    NMPTrans *= -1;
+    NMPTrans = (int)(-(long long)NMPTrans);
   } else {
     APFlag = 0;
   }
@@ -1216,10 +1360,11 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                 "Error: FSZ NLanczosMode==1 currently supports only diagonal and Transfer Hamiltonian terms.\n");
         fszLanczosInfo = 1;
       }
-      if (FlagRBM != 0 || NTwist > 0 || reweight == 1 || APFlag != 0 ||
+      if (FlagRBM != 0 || NTwist > 0 || reweight == 1 ||
           FlagOptTrans > 0 || NExUpdatePath != 0) {
         fprintf(stderr,
-                "Error: FSZ NLanczosMode==1 does not support RBM, Twist, reweight, APFlag, OptTrans, or special update paths.\n");
+                "Error: FSZ NLanczosMode==1 does not support RBM, Twist, "
+                "reweight, OptTrans, or special update paths.\n");
         fszLanczosInfo = 1;
       }
     }
@@ -1382,77 +1527,105 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
      reweight inputs before the derived sizes are finalized here. */
 
   NPara = NProj + NSlater + NOptTrans + NProjBF + NRBM * FlagRBM;
-  NQPFix = NSPGaussLeg * NMPTrans;
-  NQPFull = NQPFix * NQPOptTrans;
+  if (CheckedIntProduct3(NSPGaussLeg, NMPTrans, 1, "NQPFix",
+                         &NQPFix) != 0 ||
+      CheckedIntProduct3(NQPFix, NQPOptTrans, 1, "NQPFull",
+                         &NQPFull) != 0) {
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
   SROptSize = NPara + 1;
 
-  NTotalDefInt = Nsite /* LocSpn */
-                 + 4 * NTransfer /* Transfer */
-                 + NCoulombIntra /* CoulombIntra */
-                 + 2 * NCoulombInter /* CoulombInter */
-                 + 2 * NHundCoupling /* HundCoupling */
-                 + 2 * NPairHopping /* PairHopping */
-                 + 2 * NExchangeCoupling /* ExchangeCoupling */
-                 + Nsite /* GutzwillerIdx */
-                 + Nsite * Nsite /* JastrowIdx */
-                 + Nsite * Nsite /* SpinJastrowIdx */
-                 + 2 * Nsite * NDoublonHolon2siteIdx /* DoublonHolon2siteIdx */
-                 + 4 * Nsite * NDoublonHolon4siteIdx /* DoublonHolon4siteIdx */
-                 //+ (2*Nsite)*(2*Nsite) /* OrbitalIdx */ //fsz
-                 //+ (2*Nsite)*(2*Nsite) /* OrbitalSgn */ //fsz
-                 + Nsite * NQPTrans /* QPTrans */
-                 + Nsite * NQPTrans /* QPTransInv */
-                 + Nsite * NQPTrans /* QPTransSgn */
-                 + 4 * NCisAjs /* CisAjs */
-                 + 2 * NCisAjsCktAlt /* CisAjsCktAlt */
-                 + 8 * NCisAjsCktAltDC /* CisAjsCktAltDC */
-                 + 2 * NNBodyG /* NBodyGN + NBodyGOffset */
-                 + 4 * NBodyGTotalFactors /* NBodyGIdx */
-                 + 8 * NInterAll /* InterAll */
-                 + 2 * NNBodyInterAll /* NBodyInterAllN + NBodyInterAllOffset */
-                 + 4 * NBodyInterAllTotalFactors /* NBodyInterAllIdx */
-                 + Nsite * NQPOptTrans /* QPOptTrans */
-                 + Nsite * NQPOptTrans /* QPOptTransSgn */
-                 + 4*Nsite /* LatticeIdx */
-                 + NTwist*2*Nsite*2 /* TwistIdx */
-                 //RBM
-                 + FlagRBM * (
-                   NneuronCharge /* ChargeRMB_HiddenLayerIdx */
-                 + Nsite /* ChargeRMB_PhysLayerIdx */
-                 + Nsite*NneuronCharge /* ChargeRMB_PhysHiddenIdx */
-                 + NneuronSpin /* SpinRMB_HiddenLayerIdx */
-                 + Nsite /* SpinRMB_PhysLayerIdx */
-                 + Nsite*NneuronSpin /* SpinRMB_PhysHiddenIdx */
-                 + NneuronGeneral /* RMB_HiddenLayerIdx */
-                 + Nsite2 /* RMB_PhysLayerIdx */
-                 + Nsite2*NneuronGeneral /* RMB_PhysHiddenIdx */
-                 )
-                 //RBM
-                 + 2 * NPara; /* OptFlag */ // TBC
+  {
+    long long totalInt = 0;
+    long long totalDouble = 0;
+    const int orbitalDim = iFlgOrbitalGeneral == 0 ? Nsite : Nsite2;
+    int sizeInfo = 0;
 
+    sizeInfo |= CheckedCountTerm(&totalInt, Nsite, 1, 1, "LocSpn");
+    sizeInfo |= CheckedCountTerm(&totalInt, NTransfer, 4, 1, "Transfer");
+    sizeInfo |= CheckedCountTerm(&totalInt, NCoulombIntra, 1, 1, "CoulombIntra");
+    sizeInfo |= CheckedCountTerm(&totalInt, NCoulombInter, 2, 1, "CoulombInter");
+    sizeInfo |= CheckedCountTerm(&totalInt, NHundCoupling, 2, 1, "HundCoupling");
+    sizeInfo |= CheckedCountTerm(&totalInt, NPairHopping, 2, 1, "PairHopping");
+    sizeInfo |= CheckedCountTerm(&totalInt, NExchangeCoupling, 2, 1, "ExchangeCoupling");
+    sizeInfo |= CheckedCountTerm(&totalInt, Nsite, 1, 1, "GutzwillerIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, Nsite, Nsite, 1, "JastrowIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, Nsite, Nsite, 1, "SpinJastrowIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, Nsite, NDoublonHolon2siteIdx, 2,
+                                 "DoublonHolon2siteIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, Nsite, NDoublonHolon4siteIdx, 4,
+                                 "DoublonHolon4siteIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, Nsite, NQPTrans, 3,
+                                 "QPTrans/QPTransInv/QPTransSgn");
+    sizeInfo |= CheckedCountTerm(&totalInt, NCisAjs, 4, 1, "CisAjs");
+    sizeInfo |= CheckedCountTerm(&totalInt, NCisAjsCktAlt, 2, 1, "CisAjsCktAlt");
+    sizeInfo |= CheckedCountTerm(&totalInt, NCisAjsCktAltDC, 8, 1, "CisAjsCktAltDC");
+    sizeInfo |= CheckedCountTerm(&totalInt, NNBodyG, 2, 1, "NBodyG metadata");
+    sizeInfo |= CheckedCountTerm(&totalInt, NBodyGTotalFactors, 4, 1, "NBodyG factors");
+    sizeInfo |= CheckedCountTerm(&totalInt, NInterAll, 8, 1, "InterAll");
+    sizeInfo |= CheckedCountTerm(&totalInt, NNBodyInterAll, 2, 1,
+                                 "NBodyInterAll metadata");
+    sizeInfo |= CheckedCountTerm(&totalInt, NBodyInterAllTotalFactors, 4, 1,
+                                 "NBodyInterAll factors");
+    sizeInfo |= CheckedCountTerm(&totalInt, Nsite, NQPOptTrans, 2,
+                                 "QPOptTrans/QPOptTransSgn");
+    sizeInfo |= CheckedCountTerm(&totalInt, Nsite, 4, 1, "LatticeIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, NTwist, Nsite, 4, "TwistIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, FlagRBM, NneuronCharge, 1,
+                                 "ChargeRBM_HiddenLayerIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, FlagRBM, Nsite, 1,
+                                 "ChargeRBM_PhysLayerIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, FlagRBM, Nsite, NneuronCharge,
+                                 "ChargeRBM_PhysHiddenIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, FlagRBM, NneuronSpin, 1,
+                                 "SpinRBM_HiddenLayerIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, FlagRBM, Nsite, 1,
+                                 "SpinRBM_PhysLayerIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, FlagRBM, Nsite, NneuronSpin,
+                                 "SpinRBM_PhysHiddenIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, FlagRBM, NneuronGeneral, 1,
+                                 "GeneralRBM_HiddenLayerIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, FlagRBM, Nsite2, 1,
+                                 "GeneralRBM_PhysLayerIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, FlagRBM, Nsite2, NneuronGeneral,
+                                 "GeneralRBM_PhysHiddenIdx");
+    sizeInfo |= CheckedCountTerm(&totalInt, NPara, 2, 1, "OptFlag");
+    sizeInfo |= CheckedCountTerm(&totalInt, orbitalDim, orbitalDim, 2,
+                                 "OrbitalIdx/OrbitalSgn");
+    if (NBackFlowIdx > 0) {
+      sizeInfo |= CheckedCountTerm(&totalInt, Nsite, Nrange, 1,
+                                   "PosBF");
+      sizeInfo |= CheckedCountTerm(&totalInt, Nsite, Nsite, 1,
+                                   "RangeIdx");
+    }
 
+    sizeInfo |= CheckedCountTerm(&totalDouble, NCoulombIntra, 1, 1,
+                                 "ParaCoulombIntra");
+    sizeInfo |= CheckedCountTerm(&totalDouble, NCoulombInter, 1, 1,
+                                 "ParaCoulombInter");
+    sizeInfo |= CheckedCountTerm(&totalDouble, NHundCoupling, 1, 1,
+                                 "ParaHundCoupling");
+    sizeInfo |= CheckedCountTerm(&totalDouble, NPairHopping, 1, 1,
+                                 "ParaPairHopping");
+    sizeInfo |= CheckedCountTerm(&totalDouble, NExchangeCoupling, 1, 1,
+                                 "ParaExchangeCoupling");
+    sizeInfo |= CheckedCountTerm(&totalDouble, NTwist, Nsite, 6,
+                                 "ParaTwist");
+    sizeInfo |= CheckedCountTerm(&totalDouble, NQPOptTrans, 1, 1,
+                                 "ParaQPOptTrans");
 
-  //Orbitalidx
-  if (iFlgOrbitalGeneral == 0) {
-    NTotalDefInt += Nsite * Nsite; // OrbitalIdx
-    NTotalDefInt += Nsite * Nsite; // OrbitalSgn
-  } else if (iFlgOrbitalGeneral == 1) {
-    NTotalDefInt += (2 * Nsite) * (2 * Nsite); //OrbitalIdx
-    NTotalDefInt += (2 * Nsite) * (2 * Nsite); //OrbitalSgn
+    if (sizeInfo != 0 || totalInt > INT_MAX || totalDouble > INT_MAX ||
+        (size_t)totalInt > SIZE_MAX / sizeof(int) ||
+        (size_t)totalDouble > SIZE_MAX / sizeof(double)) {
+      if (sizeInfo == 0) {
+        fprintf(stderr,
+                "Error: definition table allocation size exceeds the supported range.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    NTotalDefInt = (int)totalInt;
+    NTotalDefDouble = (int)totalDouble;
   }
-
-  NTotalDefInt += BFDefIntCount();
-
-  NTotalDefDouble =
-      NCoulombIntra /* ParaCoulombIntra */
-      + NCoulombInter /* ParaCoulombInter */
-      + NHundCoupling /* ParaHondCoupling */
-      + NPairHopping  /* ParaPairHopping */
-      + NExchangeCoupling /* ParaExchangeCoupling */
-      //    + NQPTrans /* ParaQPTrans */
-      //+ NInterAll /* ParaInterAll */
-      + NTwist*3*Nsite*2 /* ParaTwist */
-      + NQPOptTrans; /* ParaQPTransOpt */
 
   return 0;
 }
@@ -2637,9 +2810,14 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
           iret = system("mkdir -p output");
 
           double dtmp;
+          char valueText[D_FileNameMax];
           while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
             if (*ctmp2 == '\n' || ctmp2[0] == '-') continue;
-            sscanf(ctmp2, "%s %lf\n", ctmp, &dtmp);
+            if (sscanf(ctmp2, "%255s %255s", ctmp, valueText) != 2) {
+              fprintf(stderr, "Error: malformed ModPara line: %s", ctmp2);
+              return ReadDefFileError(defname);
+            }
+            dtmp = strtod(valueText, NULL);
             if (CheckWords(ctmp, "NVMCCalMode") == 0) {
               bufInt[IdxVMCCalcMode] = (int) dtmp;
             } else if (CheckWords(ctmp, "NLanczosMode") == 0) {
@@ -2669,7 +2847,18 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
             } else if (CheckWords(ctmp, "NSPStot") == 0) {
               bufInt[IdxSPStot] = (int) dtmp;
             } else if (CheckWords(ctmp, "NMPTrans") == 0) {
-              bufInt[IdxMPTrans] = (int) dtmp;
+              long long rawNMPTrans;
+              int offset = 0;
+              if (sscanf(ctmp2, "%*s %*s %n", &offset) < 0 ||
+                  !LineTailIsWhitespace(ctmp2, offset) ||
+                  ParseStrictLongLong(valueText, &rawNMPTrans) != 0 ||
+                  rawNMPTrans < INT_MIN || rawNMPTrans > INT_MAX) {
+                fprintf(stderr,
+                        "Error: NMPTrans must be an exact integer in int range: %s",
+                        ctmp2);
+                return ReadDefFileError(defname);
+              }
+              bufInt[IdxMPTrans] = (int)rawNMPTrans;
             } else if (CheckWords(ctmp, "NSROptItrStep") == 0) {
               bufInt[IdxSROptItrStep] = (int) dtmp;
             } else if (CheckWords(ctmp, "NSROptItrSmp") == 0) {
@@ -3134,39 +3323,241 @@ GetInfoDH4(FILE *fp, int **ArrayIdx, int *ArrayOpt, int iComplxFlag, int *iOptCo
   return info;
 }
 
-int GetInfoTransSym(FILE *fp, int **Array, int **ArraySgn, int **ArrayInv, double complex *ArrayPara,
-                    int _APFlag, int Nsite, int NArray, char *defname) {
-  char ctmp2[256];
-  int idx = 0, info = 0;
-  int i = 0, j = 0;
-  int itmp = 0, itmpsgn = 0;
-  double dReValue = 0, dImValue = 0;
+static int ReadProjectionMappings(FILE *fp, int **array, int **arraySgn,
+                                  int **arrayInv, int apFlag, int nsite,
+                                  int nArray, const char *defname) {
+  char line[D_CharTmpReadDef];
+  unsigned char *sourceSeen = NULL;
+  unsigned char *destinationSeen = NULL;
+  size_t expectedRows;
+  size_t row = 0;
+  int info = 0;
 
-  if (NArray > 0) {
-    for (i = 0; i < NArray; i++) {
-      itmp = 0;
-      dReValue = 0;
-      dImValue = 0;
-      fgets(ctmp2, D_CharTmpReadDef, fp);
-      sscanf(ctmp2, "%d %lf %lf\n", &itmp, &dReValue, &dImValue);
-      ArrayPara[itmp] = dReValue + I * dImValue;
+  if (fp == NULL || array == NULL || arraySgn == NULL || nsite <= 0 ||
+      nArray <= 0 || (size_t)nsite > SIZE_MAX / (size_t)nArray) {
+    fprintf(stderr, "Error: invalid projection mapping dimensions in %s.\n",
+            defname);
+    return 1;
+  }
+  expectedRows = (size_t)nsite * (size_t)nArray;
+  sourceSeen = (unsigned char *)calloc(expectedRows, sizeof(*sourceSeen));
+  destinationSeen =
+      (unsigned char *)calloc(expectedRows, sizeof(*destinationSeen));
+  if (sourceSeen == NULL || destinationSeen == NULL) {
+    fprintf(stderr,
+            "Error: failed to allocate projection parser state for %s.\n",
+            defname);
+    free(sourceSeen);
+    free(destinationSeen);
+    return 1;
+  }
+
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    int transform = 0;
+    int source = 0;
+    int destination = 0;
+    int sign = 1;
+    int offset = -1;
+    int fields;
+    size_t sourceKey;
+    size_t destinationKey;
+
+    if (row >= expectedRows) {
+      fprintf(stderr,
+              "Error: extra projection mapping row in %s "
+              "(expected %zu rows).\n",
+              defname, expectedRows);
+      info = 1;
+      break;
     }
-    idx = 0;
-    while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-      sscanf(ctmp2, "%d %d %d %d\n", &i, &j, &itmp, &itmpsgn);
-      Array[i][j] = itmp;
-      ArraySgn[i][j] = itmpsgn;
-      ArrayInv[i][itmp] = j;
-      idx++;
+    fields = sscanf(line, "%d %d %d %d %n", &transform, &source,
+                    &destination, &sign, &offset);
+    if (fields == 3 && apFlag == 0) {
+      offset = -1;
+      sign = 1;
+      fields = sscanf(line, "%d %d %d %n", &transform, &source,
+                      &destination, &offset);
     }
-    if (_APFlag == 0) {
-      for (i = 0; i < NArray; i++) {
-        for (j = 0; j < Nsite; j++) ArraySgn[i][j] = 1;
+    if ((fields != 4 && !(fields == 3 && apFlag == 0)) ||
+        !LineTailIsWhitespace(line, offset)) {
+      fprintf(stderr, "Error: malformed projection mapping row in %s: %s",
+              defname, line);
+      info = 1;
+      break;
+    }
+    if (transform < 0 || transform >= nArray ||
+        source < 0 || source >= nsite ||
+        destination < 0 || destination >= nsite) {
+      fprintf(stderr,
+              "Error: projection mapping index out of range in %s "
+              "(transform=%d, source=%d, destination=%d).\n",
+              defname, transform, source, destination);
+      info = 1;
+      break;
+    }
+    if (sign != -1 && sign != 1) {
+      fprintf(stderr,
+              "Error: projection sign must be +1 or -1 in %s "
+              "(transform=%d, source=%d, sign=%d).\n",
+              defname, transform, source, sign);
+      info = 1;
+      break;
+    }
+    sourceKey = (size_t)transform * (size_t)nsite + (size_t)source;
+    destinationKey =
+        (size_t)transform * (size_t)nsite + (size_t)destination;
+    if (sourceSeen[sourceKey] != 0) {
+      fprintf(stderr,
+              "Error: duplicate projection source in %s "
+              "(transform=%d, source=%d).\n",
+              defname, transform, source);
+      info = 1;
+      break;
+    }
+    if (destinationSeen[destinationKey] != 0) {
+      fprintf(stderr,
+              "Error: projection mapping is not a permutation in %s "
+              "(transform=%d, duplicate destination=%d).\n",
+              defname, transform, destination);
+      info = 1;
+      break;
+    }
+
+    sourceSeen[sourceKey] = 1;
+    destinationSeen[destinationKey] = 1;
+    array[transform][source] = destination;
+    arraySgn[transform][source] = apFlag != 0 ? sign : 1;
+    if (arrayInv != NULL) arrayInv[transform][destination] = source;
+    row++;
+  }
+
+  if (info == 0 && row != expectedRows) {
+    fprintf(stderr,
+            "Error: projection mapping row count mismatch in %s "
+            "(got %zu, expected %zu).\n",
+            defname, row, expectedRows);
+    info = 1;
+  }
+  if (info == 0) {
+    int transform;
+    int site;
+    for (transform = 0; transform < nArray && info == 0; transform++) {
+      for (site = 0; site < nsite; site++) {
+        size_t key = (size_t)transform * (size_t)nsite + (size_t)site;
+        if (sourceSeen[key] == 0 || destinationSeen[key] == 0) {
+          fprintf(stderr,
+                  "Error: incomplete projection permutation in %s "
+                  "(transform=%d, site=%d).\n",
+                  defname, transform, site);
+          info = 1;
+          break;
+        }
+        if (arrayInv != NULL &&
+            arrayInv[transform][array[transform][site]] != site) {
+          fprintf(stderr,
+                  "Error: inconsistent forward/inverse projection mapping "
+                  "in %s (transform=%d, site=%d).\n",
+                  defname, transform, site);
+          info = 1;
+          break;
+        }
       }
     }
-    if (idx != Nsite * NArray) info = ReadDefFileError(defname);
   }
+
+  free(sourceSeen);
+  free(destinationSeen);
   return info;
+}
+
+static int ReadTransSymParameters(FILE *fp, double complex *arrayPara,
+                                  int nArray, const char *defname) {
+  char line[D_CharTmpReadDef];
+  unsigned char *seen;
+  int row;
+
+  if (fp == NULL || arrayPara == NULL || nArray <= 0) return 1;
+  seen = (unsigned char *)calloc((size_t)nArray, sizeof(*seen));
+  if (seen == NULL) {
+    fprintf(stderr,
+            "Error: failed to allocate projection parameter parser state "
+            "for %s.\n",
+            defname);
+    return 1;
+  }
+  for (row = 0; row < nArray; row++) {
+    int transform = 0;
+    int offset = -1;
+    int fields;
+    double realPart = 0.0;
+    double imagPart = 0.0;
+    if (fgets(line, sizeof(line), fp) == NULL) {
+      fprintf(stderr,
+              "Error: missing projection parameter row in %s "
+              "(got %d, expected %d).\n",
+              defname, row, nArray);
+      free(seen);
+      return 1;
+    }
+    fields = sscanf(line, "%d %lf %lf %n", &transform, &realPart,
+                    &imagPart, &offset);
+    if (fields == 2) {
+      offset = -1;
+      imagPart = 0.0;
+      fields = sscanf(line, "%d %lf %n", &transform, &realPart, &offset);
+    }
+    if ((fields != 2 && fields != 3) ||
+        !LineTailIsWhitespace(line, offset) || !isfinite(realPart) ||
+        !isfinite(imagPart)) {
+      fprintf(stderr,
+              "Error: malformed projection parameter row in %s: %s",
+              defname, line);
+      free(seen);
+      return 1;
+    }
+    if (transform < 0 || transform >= nArray) {
+      fprintf(stderr,
+              "Error: projection parameter index out of range in %s "
+              "(index=%d).\n",
+              defname, transform);
+      free(seen);
+      return 1;
+    }
+    if (seen[transform] != 0) {
+      fprintf(stderr,
+              "Error: duplicate projection parameter index in %s "
+              "(index=%d).\n",
+              defname, transform);
+      free(seen);
+      return 1;
+    }
+    seen[transform] = 1;
+    arrayPara[transform] = realPart + I * imagPart;
+  }
+  for (row = 0; row < nArray; row++) {
+    if (seen[row] == 0) {
+      fprintf(stderr,
+              "Error: missing projection parameter index in %s "
+              "(index=%d).\n",
+              defname, row);
+      free(seen);
+      return 1;
+    }
+  }
+  free(seen);
+  return 0;
+}
+
+int GetInfoTransSym(FILE *fp, int **Array, int **ArraySgn, int **ArrayInv,
+                    double complex *ArrayPara, int _APFlag, int Nsite,
+                    int NArray, char *defname) {
+  if (NArray <= 0 || Nsite <= 0) {
+    fprintf(stderr, "Error: invalid TransSym dimensions in %s.\n", defname);
+    return 1;
+  }
+  if (ReadTransSymParameters(fp, ArrayPara, NArray, defname) != 0) return 1;
+  return ReadProjectionMappings(fp, Array, ArraySgn, ArrayInv, _APFlag,
+                                Nsite, NArray, defname);
 }
 
 int
@@ -3944,39 +4335,91 @@ int GetInfoNBodyInterAll(FILE *fp, int *termN, int *termOffset,
   return info;
 }
 
-int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara, int *ArrayOpt, int **ArraySgn,
-                    int _iFlagOptTrans, int *iOptCount, int _fidx, int _APFlag, int Nsite, int NArray, char *defname) {
-  char ctmp2[256];
-  int idx = 0, info = 0;
-  int i = 0, j = 0;
-  int itmp = 0, itmpsgn = 0;
-  int fidx = _fidx;
-  double dReValue;
-  if (_iFlagOptTrans > 0) {
-    for (i = 0; i < NArray; i++) {
-      itmp = 0;
-      dReValue = 0;
-      fgets(ctmp2, D_CharTmpReadDef, fp);
-      sscanf(ctmp2, "%d %lf \n", &itmp, &dReValue);
-      ArrayPara[itmp] = dReValue;
-      ArrayOpt[fidx] = 1;
-      fidx++;
-      (*iOptCount)++;
+static int ReadOptTransParameters(FILE *fp, double *arrayPara, int nArray,
+                                  const char *defname) {
+  char line[D_CharTmpReadDef];
+  unsigned char *seen;
+  int row;
+
+  if (fp == NULL || arrayPara == NULL || nArray <= 0) return 1;
+  seen = (unsigned char *)calloc((size_t)nArray, sizeof(*seen));
+  if (seen == NULL) {
+    fprintf(stderr,
+            "Error: failed to allocate OptTrans parameter parser state "
+            "for %s.\n",
+            defname);
+    return 1;
+  }
+  for (row = 0; row < nArray; row++) {
+    int transform = 0;
+    int offset = -1;
+    double value = 0.0;
+    if (fgets(line, sizeof(line), fp) == NULL) {
+      fprintf(stderr,
+              "Error: missing OptTrans parameter row in %s "
+              "(got %d, expected %d).\n",
+              defname, row, nArray);
+      free(seen);
+      return 1;
     }
-    idx = 0;
-    while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-      sscanf(ctmp2, "%d %d %d %d\n", &i, &j, &itmp, &itmpsgn);
-      Array[i][j] = itmp;
-      ArraySgn[i][j] = itmpsgn;
-      idx++;
+    if (sscanf(line, "%d %lf %n", &transform, &value, &offset) != 2 ||
+        !LineTailIsWhitespace(line, offset) || !isfinite(value)) {
+      fprintf(stderr, "Error: malformed OptTrans parameter row in %s: %s",
+              defname, line);
+      free(seen);
+      return 1;
     }
-    if (_APFlag == 0) {
-      for (i = 0; i < NArray; i++) {
-        for (j = 0; j < Nsite; j++) ArraySgn[i][j] = 1;
-      }
+    if (transform < 0 || transform >= nArray) {
+      fprintf(stderr,
+              "Error: OptTrans parameter index out of range in %s "
+              "(index=%d).\n",
+              defname, transform);
+      free(seen);
+      return 1;
+    }
+    if (seen[transform] != 0) {
+      fprintf(stderr,
+              "Error: duplicate OptTrans parameter index in %s "
+              "(index=%d).\n",
+              defname, transform);
+      free(seen);
+      return 1;
+    }
+    seen[transform] = 1;
+    arrayPara[transform] = value;
+  }
+  for (row = 0; row < nArray; row++) {
+    if (seen[row] == 0) {
+      fprintf(stderr,
+              "Error: missing OptTrans parameter index in %s "
+              "(index=%d).\n",
+              defname, row);
+      free(seen);
+      return 1;
     }
   }
-  return info;
+  free(seen);
+  return 0;
+}
+
+int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara,
+                    int *ArrayOpt, int **ArraySgn, int _iFlagOptTrans,
+                    int *iOptCount, int _fidx, int _APFlag, int Nsite,
+                    int NArray, char *defname) {
+  int i;
+  if (_iFlagOptTrans <= 0) return 0;
+  if (NArray <= 0 || Nsite <= 0 || ArrayOpt == NULL || iOptCount == NULL) {
+    fprintf(stderr, "Error: invalid OptTrans dimensions in %s.\n", defname);
+    return 1;
+  }
+  if (ReadOptTransParameters(fp, ArrayPara, NArray, defname) != 0) return 1;
+  if (ReadProjectionMappings(fp, Array, ArraySgn, NULL, _APFlag, Nsite,
+                             NArray, defname) != 0) {
+    return 1;
+  }
+  for (i = 0; i < NArray; i++) ArrayOpt[_fidx + i] = 1;
+  *iOptCount += NArray;
+  return 0;
 }
 
 int GetInfoInterAll(FILE *fp, int **ArrayIdx, double complex *ArrayValue,

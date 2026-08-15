@@ -10,6 +10,7 @@
 
 #include "calham.h"
 #include "calham_real.h"
+#include "backflow.h"
 #include "global.h"
 #include "locgrn.h"
 #include "locgrn_real.h"
@@ -295,6 +296,7 @@ static int lsbfOuterComplex(int ri, int rj, int s,
   double complex ratio;
   double complex pfRatio;
   double complex result;
+  int greenStatus = BF_PF_OK;
   int useRebuild;
   int idx;
 
@@ -307,18 +309,24 @@ static int lsbfOuterComplex(int ri, int rj, int s,
     return 0;
   }
 
-  lsbfCopyState(scratch, eleIdx, eleCfg, eleNum, eleProjCnt);
-  StoreSlaterElmBF_fcmp(scratch->gfSlaterComplex);
-  ratio = GreenFunc1BF(ri, rj, s, ip, scratch->gfSlaterComplex,
-                       scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
-                       eleProjCnt, scratch->gfProjCnt, eleProjBFCnt,
-                       scratch->gfBFCnt, scratch->gfComplex);
-  pfRatio = CalculateIP_fcmp(scratch->gfComplex, 0, NQPFull,
-                             MPI_COMM_SELF)/ip;
-  useRebuild = cabs(pfRatio) > 1.0e-12;
-  if(LSLanczosTestProjectionBranchAuditEnabled() && useRebuild &&
-     cabs(pfRatio) <= 1.0e-12 && cabs(ratio) > 1.0e-12) {
-    return LSLANCZOS_STATE_FAILURE;
+  if(BFUseCanonicalNonFszPath()) {
+    /* Multi-QP BackFlow never consults the legacy incremental ratio. */
+    useRebuild = 1;
+  } else {
+    lsbfCopyState(scratch, eleIdx, eleCfg, eleNum, eleProjCnt);
+    StoreSlaterElmBF_fcmp(scratch->gfSlaterComplex);
+    ratio = GreenFunc1BF(ri, rj, s, ip, scratch->gfSlaterComplex,
+                         scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
+                         eleProjCnt, scratch->gfProjCnt, eleProjBFCnt,
+                         scratch->gfBFCnt, scratch->gfComplex, &greenStatus);
+    if(greenStatus != BF_PF_OK) return LSLANCZOS_NUMERIC_REJECT;
+    pfRatio = CalculateIP_fcmp(scratch->gfComplex, 0, NQPFull,
+                               MPI_COMM_SELF)/ip;
+    useRebuild = cabs(pfRatio) > 1.0e-12;
+    if(LSLanczosTestProjectionBranchAuditEnabled() && useRebuild &&
+       cabs(pfRatio) <= 1.0e-12 && cabs(ratio) > 1.0e-12) {
+      return LSLANCZOS_STATE_FAILURE;
+    }
   }
   if(useRebuild) {
     double complex ipNew;
@@ -358,7 +366,8 @@ static int lsbfOuterComplex(int ri, int rj, int s,
         Transfer[idx][3], s, ip, scratch->gfSlaterComplex,
         scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
         eleProjCnt, scratch->gfProjCnt, eleProjBFCnt,
-        scratch->gfBFCnt, scratch->gfComplex);
+        scratch->gfBFCnt, scratch->gfComplex, &greenStatus);
+    if(greenStatus != BF_PF_OK) return LSLANCZOS_NUMERIC_REJECT;
     result -= ParaTransfer[idx]*green;
   }
   *value = result;
@@ -376,6 +385,7 @@ static int lsbfOuterReal(int ri, int rj, int s,
   double ratio;
   double pfRatio;
   double result;
+  int greenStatus = BF_PF_OK;
   int useRebuild;
   int idx;
 
@@ -388,19 +398,25 @@ static int lsbfOuterReal(int ri, int rj, int s,
     return 0;
   }
 
-  lsbfCopyState(scratch, eleIdx, eleCfg, eleNum, eleProjCnt);
-  StoreSlaterElmBF_real(scratch->gfSlaterReal);
-  ratio = GreenFunc1BF_real(
-      ri, rj, s, ip, scratch->gfSlaterReal,
-      scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
-      eleProjCnt, scratch->gfProjCnt, eleProjBFCnt,
-      scratch->gfBFCnt, scratch->gfReal);
-  pfRatio = CalculateIP_real(scratch->gfReal, 0, NQPFull,
-                             MPI_COMM_SELF)/ip;
-  useRebuild = fabs(pfRatio) > 1.0e-12;
-  if(LSLanczosTestProjectionBranchAuditEnabled() && useRebuild &&
-     fabs(pfRatio) <= 1.0e-12 && fabs(ratio) > 1.0e-12) {
-    return LSLANCZOS_STATE_FAILURE;
+  if(BFUseCanonicalNonFszPath()) {
+    /* Multi-QP BackFlow never consults the legacy incremental ratio. */
+    useRebuild = 1;
+  } else {
+    lsbfCopyState(scratch, eleIdx, eleCfg, eleNum, eleProjCnt);
+    StoreSlaterElmBF_real(scratch->gfSlaterReal);
+    ratio = GreenFunc1BF_real(
+        ri, rj, s, ip, scratch->gfSlaterReal,
+        scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
+        eleProjCnt, scratch->gfProjCnt, eleProjBFCnt,
+        scratch->gfBFCnt, scratch->gfReal, &greenStatus);
+    if(greenStatus != BF_PF_OK) return LSLANCZOS_NUMERIC_REJECT;
+    pfRatio = CalculateIP_real(scratch->gfReal, 0, NQPFull,
+                               MPI_COMM_SELF)/ip;
+    useRebuild = fabs(pfRatio) > 1.0e-12;
+    if(LSLanczosTestProjectionBranchAuditEnabled() && useRebuild &&
+       fabs(pfRatio) <= 1.0e-12 && fabs(ratio) > 1.0e-12) {
+      return LSLANCZOS_STATE_FAILURE;
+    }
   }
   if(useRebuild) {
     double ipNew;
@@ -441,7 +457,8 @@ static int lsbfOuterReal(int ri, int rj, int s,
         Transfer[idx][3], s, ip, scratch->gfSlaterReal,
         scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
         eleProjCnt, scratch->gfProjCnt, eleProjBFCnt,
-        scratch->gfBFCnt, scratch->gfReal);
+        scratch->gfBFCnt, scratch->gfReal, &greenStatus);
+    if(greenStatus != BF_PF_OK) return LSLANCZOS_NUMERIC_REJECT;
     result -= creal(ParaTransfer[idx])*green;
   }
   *value = result;

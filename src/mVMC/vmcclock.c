@@ -605,6 +605,8 @@ static void OutputBFProfileCounters(FILE *fp) {
   fprintf(fp,"    BF exchange valid               [947] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_VALID]);
   fprintf(fp,"    BF exchange accept              [948] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_ACCEPT]);
   fprintf(fp,"    BF exchange metropolis reject   [949] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_METROPOLIS_REJECT]);
+  fprintf(fp,"    BF canonical full rebuild       [985] %12lld\n",BFProfileCounter[BFPROF_FULL_REBUILD]);
+  fprintf(fp,"    BF multi-QP legacy incremental  [986] %12lld\n",BFProfileCounter[BFPROF_MULTI_QP_LEGACY_INCREMENTAL]);
 
   for(i=0;i<NBFFSZProfileSource;i++) {
     const char *label = (i == BFFSZ_PROFILE_SAMPLE) ? "sample" : "green";
