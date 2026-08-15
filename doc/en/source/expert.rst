@@ -695,9 +695,11 @@ Keywords and parameters
    **Description :** The absolute value gives the number of the momentum
    and lattice translational quantum-number projection. When the value
    is negative, the mode of anti-periodic condition turns on. The
-   quantum-number projection is used from the top to ``NMPTrans`` with
-   the specified weight indicated in ``TransSym`` file. In the case of
-   not applying the projection, this value must be equal to 1.
+   quantum-number projection uses the first ``abs(NMPTrans)`` patterns
+   and their weights from the ``TransSym`` file. The value must be
+   nonzero and ``abs(NMPTrans)`` must not exceed ``NQPTrans`` declared
+   by that file. In the case of not applying the projection, this value
+   must be equal to 1 (or -1 for an anti-periodic identity pattern).
 
 -  ``NSROptItrStep``
 
@@ -2620,7 +2622,9 @@ Inputs outside this range are rejected.
 
 -  Spin projection is not supported. Use ``NSPGaussLeg==1``.
 
--  RBM, Twist, ``APFlag=1``, and ``NQPOptTrans>1`` are not supported.
+-  RBM, Twist, and ``NQPOptTrans>1`` are not supported. Periodic and
+   anti-periodic (negative ``NMPTrans``, ``APFlag=1``) translation
+   patterns are supported.
    ``reweight=1`` is rejected for every BackFlow calculation, including
    BF-FSZ and BackFlow N-body inputs. Single Lanczos Step is available only with
    ``NVMCCalMode=1`` and ``NLanczosMode=1``; its Hamiltonian is limited
@@ -2630,10 +2634,19 @@ Inputs outside this range are rejected.
    and BackFlow Lanczos corrections for ``NBodyG`` / ``NBodyInterAll``
    are not supported.
 
--  The usual momentum projection with ``NMPTrans>1`` is available with
-   ``OrbitalGeneral`` / FSZ, ``APFlag=0``, and ``NQPOptTrans==1``.
-   BackFlow with the normal ``Orbital`` / ``OrbitalAntiParallel`` format
-   requires ``NMPTrans==1``.
+-  Momentum projection with ``abs(NMPTrans)>1`` is available with both
+   ``OrbitalGeneral`` / FSZ and the normal ``Orbital`` /
+   ``OrbitalAntiParallel`` format, for periodic and anti-periodic
+   patterns. ``abs(NMPTrans)`` must not exceed ``NQPTrans`` in
+   ``TransSym``. The normal non-FSZ format rejects ``OptTrans``; FSZ
+   retains its existing ``OptTrans`` support subject to
+   ``NQPOptTrans==1``. For non-FSZ ``abs(NMPTrans)>1``, sampling,
+   Green functions, Hamiltonian, first Lanczos, and N-body evaluation
+   use a correctness-first full Slater/Pfaffian rebuild. The same
+   rebuild is used for anti-periodic inputs and for a single-pattern
+   input whose first transformation is nonidentity; only the periodic,
+   identity, single-pattern case retains the legacy incremental path.
+   The rebuild path can be more expensive than that legacy path.
 
 -  With the normal ``Orbital`` / ``OrbitalAntiParallel`` format, the
    Hamiltonian may contain ``Trans`` and number-operator interactions
@@ -3854,7 +3867,8 @@ Parameters
    **Type :** int-type (blank parameter not allowed)
 
    **Description :** An integer giving total number of projection
-   patterns.
+   patterns. It must be positive and at least ``abs(NMPTrans)`` from
+   ``ModPara``. Only the first ``abs(NMPTrans)`` patterns are used.
 
 -  [ int02 ]
 
