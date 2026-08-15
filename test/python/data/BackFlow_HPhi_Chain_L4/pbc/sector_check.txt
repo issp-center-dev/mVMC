@@ -1,0 +1,6 @@
+translation_eigenvalue_real -9.999999999998677e-01
+translation_eigenvalue_imag 1.684287499215211e-17
+translation_eigenvalue_abs 9.999999999998677e-01
+translation_residual_l2 5.153065811302165e-07
+expected_momentum_over_pi 1.0
+eigenvector_sha256 fb33d11a9182d06052e001aebe2d6ef5e0881355afe2b83e381195ab7aaa6d06
