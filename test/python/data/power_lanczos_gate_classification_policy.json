@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "policy_id": "power_lanczos_zero_support_gate_classification_v1",
+  "created_at": "2026-08-16 20:03 JST",
+  "status": "active_for_stage_authorization",
+  "applies_to_evidence_policy_ids": [
+    "power_lanczos_zero_support_p4f_confirmatory_v4"
+  ],
+  "frozen_policy_preservation": {
+    "required": true,
+    "rule": "Preserve the recorded v3/v4 GO or STOP decision verbatim; this policy classifies failure meaning and stage authorization, and never rewrites a frozen decision."
+  },
+  "classes": {
+    "ARTIFACT_INVALID": "The artifact, provenance, census, schema, or recorded-decision binding is invalid.",
+    "CORRECTNESS_FAIL": "Deterministic reconstruction or exact numerical correctness failed.",
+    "STATISTICALLY_INCONCLUSIVE": "A stochastic diagnostic is uncalibrated, underpowered, or failed; this alone is not evidence of a code bug.",
+    "RESOURCE_LIMIT": "A runtime, memory, or inode constraint failed; this alone is not evidence of a code bug."
+  },
+  "artifact_contract": {
+    "validation_schema": 1,
+    "trace_count": 24,
+    "seed_count": 4,
+    "site_counts": [
+      4,
+      6,
+      8
+    ],
+    "qp_totals": [
+      1,
+      4
+    ],
+    "sample_count_per_trace": 32768,
+    "dimensions": [
+      2,
+      3
+    ],
+    "prefix_sample_counts": [
+      8192,
+      16384,
+      32768
+    ],
+    "pooled_gate_count": 12,
+    "identity_checks": [
+      "driver_schema",
+      "session_schema",
+      "fixture",
+      "seed",
+      "case",
+      "sample_count",
+      "rank_count",
+      "cache",
+      "rho",
+      "rng_stream",
+      "persistent_session",
+      "proposal",
+      "partition",
+      "p4s"
+    ],
+    "artifact_identity_checks": [
+      "driver_schema",
+      "session_schema",
+      "fixture",
+      "seed",
+      "case",
+      "sample_count",
+      "rank_count",
+      "cache",
+      "rho",
+      "rng_stream",
+      "persistent_session",
+      "proposal",
+      "partition"
+    ],
+    "combined_checks_requiring_disaggregation_on_failure": [
+      "p4s",
+      "solver_pass"
+    ]
+  },
+  "deterministic_exact_correctness": {
+    "maximum_reconstruction_error": 5e-11,
+    "maximum_relative_residual": 1e-10,
+    "maximum_relative_antihermitian_residual": 1e-12,
+    "negative_variance_relative_tolerance": 1e-10,
+    "minimum_retained_rank": 1,
+    "require_exact_cutoff_scan_pass": true
+  },
+  "statistical_adequacy": {
+    "release_status": "STATISTICALLY_INCONCLUSIVE",
+    "reason": "No stochastic threshold in P4-F v4 is mapped to an allowed downstream P5 or production observable error, and the 8192 prefix uses only four delete-one blocks.",
+    "diagnostic_only_until_calibrated": [
+      "per_prefix_exact_energy",
+      "leave_one_block_rank_stability",
+      "per_trace_energy_se_convergence",
+      "pooled_energy_se_convergence",
+      "stochastic_coefficient_distance",
+      "stochastic_cutoff_sensitivity",
+      "stochastic_matrix_antihermiticity"
+    ],
+    "calibration_requirement": "Use P5 exact/synthetic downstream sensitivity to set an allowed energy, variance, and observable error; then preregister simultaneous or hierarchical coverage and an adequate effective block count."
+  },
+  "authorization": {
+    "p5_testing_only": {
+      "requires": [
+        "artifact_contract_pass",
+        "deterministic_exact_correctness_pass",
+        "no_failed_undisaggregated_combined_gate"
+      ],
+      "does_not_require": [
+        "statistical_adequacy_pass",
+        "resource_gate_pass"
+      ],
+      "constraints": [
+        "Testing-only symbols and targets",
+        "exact or synthetic coefficients when isolating P5 correctness",
+        "no production enablement",
+        "no claim that P4-F stochastic release adequacy passed"
+      ]
+    },
+    "p6_production": {
+      "status": "BLOCKED_PENDING_CALIBRATED_STATISTICAL_RELEASE_GATE",
+      "requires_new_preregistered_policy": true
+    }
+  }
+}

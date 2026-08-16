@@ -1,0 +1,71 @@
+{
+  "schema_version": 5,
+  "policy_id": "power-lanczos-zero-support-p4-r0-v7-stage-a",
+  "status": "p4s7_r0_partial_guide_exact_q_prefilter_frozen",
+  "frozen_date": "2026-08-15",
+  "source_policy": "power_lanczos_p4s6_measurement_policy.json",
+  "plan": "docs/2026-08-15-power-lanczos-zero-support-p4s7-partial-guide-plan.md",
+  "review": "docs/2026-08-15-power-lanczos-zero-support-p4s7-plan-review.md",
+  "scope": {
+    "site_counts": [4, 6, 8],
+    "qp_total": [1, 4],
+    "physical_case_order": [[4, 1], [4, 4], [6, 1], [6, 4], [8, 1], [8, 4]],
+    "omp_threads": 1,
+    "blas_threads": 1,
+    "statistical_cache_bytes": 268435456
+  },
+  "measurement_guide": {
+    "order": 3,
+    "rho": 0.01,
+    "lambda": [1.0, 1.0, 1.0, 1.0],
+    "basis_scale": "exact_sector_norm_ratio_v1",
+    "eta": "rho_times_exact_sector_mean_target"
+  },
+  "partial_guide": {
+    "formula": "sum_abs_uk_squared_k0_to_m_plus_alpha_eta_v1",
+    "proposal": "exact_q_independence_nonproduction_prefilter",
+    "candidate_order": [
+      {"m": 1, "alpha": 1},
+      {"m": 1, "alpha": 10},
+      {"m": 1, "alpha": 100},
+      {"m": 2, "alpha": 1},
+      {"m": 2, "alpha": 10},
+      {"m": 2, "alpha": 100}
+    ],
+    "stage_b_mapping": {"K_order": [16, 32], "mapping": "every_stage_a_survivor"},
+    "selection": "all_candidates_passing_all_six_cases_survive",
+    "grid_extension": "forbidden_under_v7_stage_a"
+  },
+  "exact_q_prefilter": {
+    "sample_count_per_seed": 131072,
+    "seed_hex_order": [
+      "0x5034533750494c31",
+      "0x5034533750494c32",
+      "0x5034533750494c33",
+      "0x5034533750494c34"
+    ],
+    "initialization": "exact_inverse_cdf_from_G_over_sum_G",
+    "warmup_proposals": 0,
+    "predicted_official_sample_count": 4096,
+    "maximum_predicted_se_budget_ratio": 0.90,
+    "maximum_tau_int": 12.0,
+    "exact_l4_balance_tolerance_multiplier_dbl_epsilon": 256.0,
+    "anchor_tolerance_multiplier_dbl_epsilon": 1024.0,
+    "independent_transition_oracle": "enumerate_exact_Q_independence_then_outer_G_correction",
+    "eligibility": "candidate_must_pass_all_six_cases_and_all_four_seeds"
+  },
+  "stage_b": {
+    "status": "forbidden_until_nonempty_stage_a_list",
+    "K_order": [16, 32],
+    "maximum_predicted_se_budget_ratio": 0.90,
+    "maximum_tau_int": 12.0
+  },
+  "timing_census": {
+    "status": "forbidden_until_nonempty_stage_b_list",
+    "sample_count": 128,
+    "repeat_count": 7,
+    "baseline": "rho_0p01_global_only_same_real_callback_producer",
+    "maximum_total_seconds_per_step_regression_fraction": 0.10
+  },
+  "failure": "STOP_without_grid_sample_threshold_or_K_extension"
+}

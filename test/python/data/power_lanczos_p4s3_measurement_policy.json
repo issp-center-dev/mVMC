@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "policy_id": "power-lanczos-zero-support-p4-r0-v3",
+  "status": "p4s3_r0_proposal_mixture_frozen",
+  "frozen_date": "2026-08-15",
+  "source_policy": "power_lanczos_p4_measurement_policy.json",
+  "plan": "docs/2026-08-15-power-lanczos-zero-support-p4s3-proposal-mixture-plan.md",
+  "scope": {
+    "site_counts": [4, 6, 8],
+    "qp_total": [1, 4],
+    "physical_case_order": [
+      [4, 1], [4, 4], [6, 1], [6, 4], [8, 1], [8, 4]
+    ],
+    "omp_threads": 1,
+    "blas_threads": 1,
+    "statistical_cache_bytes": 268435456
+  },
+  "proposal": {
+    "kernel": "neighbor_global_fixed_sector_mixture",
+    "policy_version": 1,
+    "subset_order": "canonical_site_order_v1",
+    "self_proposal_rule": "report_separately_from_configuration_change",
+    "rng_algorithm": "splitmix64",
+    "candidate_order": [
+      {"global_numerator": 1, "global_denominator": 8, "rho": 0.01},
+      {"global_numerator": 1, "global_denominator": 8, "rho": 0.0001},
+      {"global_numerator": 1, "global_denominator": 8, "rho": 0.000001},
+      {"global_numerator": 1, "global_denominator": 4, "rho": 0.01},
+      {"global_numerator": 1, "global_denominator": 4, "rho": 0.0001},
+      {"global_numerator": 1, "global_denominator": 4, "rho": 0.000001},
+      {"global_numerator": 1, "global_denominator": 2, "rho": 0.01},
+      {"global_numerator": 1, "global_denominator": 2, "rho": 0.0001},
+      {"global_numerator": 1, "global_denominator": 2, "rho": 0.000001},
+      {"global_numerator": 1, "global_denominator": 1, "rho": 0.01},
+      {"global_numerator": 1, "global_denominator": 1, "rho": 0.0001},
+      {"global_numerator": 1, "global_denominator": 1, "rho": 0.000001}
+    ]
+  },
+  "exact_table_pilot": {
+    "sample_count_per_seed": 131072,
+    "seed_hex_order": [
+      "0x5034533350494c31",
+      "0x5034533350494c32",
+      "0x5034533350494c33",
+      "0x5034533350494c34"
+    ],
+    "initialization": "exact_inverse_cdf_from_q_G_over_sum_G",
+    "warmup_proposals": 0,
+    "predicted_official_sample_count": 4096,
+    "maximum_predicted_se_budget_ratio": 0.90,
+    "maximum_tau_int": 12.0,
+    "exact_l4_balance_tolerance_multiplier_dbl_epsilon": 256.0,
+    "anchor_scope": "all_states_L4_L6_and_all_states_L8_stronger_than_canonical_census",
+    "eligibility": "candidate_must_pass_all_six_physical_cases_and_all_four_seeds"
+  },
+  "official_markov": {
+    "sample_count": 4096,
+    "official_seed_hex": "0x5034533352305631",
+    "warmup_proposals": 0,
+    "official_partition": {"block_count": 16, "block_length": 256},
+    "diagnostic_partition": {"block_count": 32, "block_length": 128},
+    "maximum_conservative_se_budget_ratio": 1.0,
+    "maximum_tau_int": 16.0,
+    "minimum_official_block_length_to_tau_ratio": 16.0,
+    "promotion": "first_passing_candidate_in_frozen_eligible_order"
+  },
+  "cache_invariance_smoke": {
+    "site_count": 4,
+    "qp_total": 1,
+    "rho": 0.0001,
+    "global_numerator": 1,
+    "global_denominator": 2,
+    "cache_bytes": [0, 268435456],
+    "seed_hex": "0x5034533352305631",
+    "comparison": "byte_identical_samples_trace_and_estimates_excluding_cache_manifest_metadata"
+  },
+  "timing_census": {
+    "sample_count": 128,
+    "repeat_count": 7,
+    "stream_order": [0, 1, 2, 3, 4, 5, 6],
+    "baseline_global_fraction": [0, 1],
+    "rank_reducer": "maximum",
+    "repeat_reducer": "median",
+    "maximum_total_seconds_per_step_regression_fraction": 0.10,
+    "failure": "remove_candidate_from_official_eligibility"
+  },
+  "failure": "STOP_without_sample_extension_threshold_relaxation_or_guide_retuning"
+}

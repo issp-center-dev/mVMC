@@ -1,0 +1,95 @@
+{
+  "schema_version": 2,
+  "policy_id": "power-lanczos-zero-support-p4-r0-v4",
+  "status": "p4s4_r0_fixed_distance_shell_frozen",
+  "frozen_date": "2026-08-15",
+  "source_policy": "power_lanczos_p4s3_measurement_policy.json",
+  "plan": "docs/2026-08-15-power-lanczos-zero-support-p4s4-fixed-distance-plan.md",
+  "review": "docs/2026-08-15-power-lanczos-zero-support-p4s4-plan-review.md",
+  "scope": {
+    "site_counts": [4, 6, 8],
+    "qp_total": [1, 4],
+    "physical_case_order": [
+      [4, 1], [4, 4], [6, 1], [6, 4], [8, 1], [8, 4]
+    ],
+    "omp_threads": 1,
+    "blas_threads": 1,
+    "statistical_cache_bytes": 268435456,
+    "rho": 0.01
+  },
+  "proposal": {
+    "kernel": "neighbor_fixed_distance_shell_mixture",
+    "policy_version": 2,
+    "neighbor_numerator": 1,
+    "neighbor_denominator": 8,
+    "shell_numerator": 7,
+    "shell_denominator": 8,
+    "distance_rounding": "round_half_up_v1_minimum_one_no_upper_clamp",
+    "electronic_maximum_distance": "min(Nup,Nsite-Nup)+min(Ndown,Nsite-Ndown)",
+    "pure_spin_maximum_distance": "min(Nup,Ndown)",
+    "subset_order": "canonical_site_order_v1",
+    "rng_algorithm": "splitmix64",
+    "candidate_order": [
+      {"distance_numerator": 1, "distance_denominator": 3, "rho": 0.01},
+      {"distance_numerator": 1, "distance_denominator": 2, "rho": 0.01},
+      {"distance_numerator": 2, "distance_denominator": 3, "rho": 0.01}
+    ]
+  },
+  "exact_table_pilot": {
+    "sample_count_per_seed": 131072,
+    "seed_hex_order": [
+      "0x5034533450494c31",
+      "0x5034533450494c32",
+      "0x5034533450494c33",
+      "0x5034533450494c34"
+    ],
+    "initialization": "exact_inverse_cdf_from_q_G_over_sum_G",
+    "warmup_proposals": 0,
+    "predicted_official_sample_count": 4096,
+    "maximum_predicted_se_budget_ratio": 0.90,
+    "maximum_tau_int": 12.0,
+    "exact_l4_balance_tolerance_multiplier_dbl_epsilon": 256.0,
+    "independent_transition_oracle": "enumerate_full_neighbor_plus_shell_probabilities_including_d1_overlap",
+    "anchor_scope": "all_electronic_states_L4_L6_L8_plus_pure_spin_L4_L6_L8_sector_symmetry_connectivity",
+    "eligibility": "candidate_must_pass_all_six_electronic_physical_cases_and_all_four_seeds",
+    "selection": "first_passing_candidate_in_frozen_order_preferred_all_passing_retained_for_timing"
+  },
+  "pure_spin_correctness": {
+    "site_counts": [4, 6, 8],
+    "models": ["Exchange", "XXZ"],
+    "role": "correctness_anchor_not_electronic_candidate_ranking",
+    "duplicate_resolved_kernels": "report_and_do_not_count_as_independent_evidence"
+  },
+  "official_markov": {
+    "sample_count": 4096,
+    "official_seed_hex": "0x5034533452305631",
+    "warmup_proposals": 0,
+    "official_partition": {"block_count": 16, "block_length": 256},
+    "diagnostic_partition": {"block_count": 32, "block_length": 128},
+    "maximum_conservative_se_budget_ratio": 1.0,
+    "maximum_tau_int": 16.0,
+    "minimum_official_block_length_to_tau_ratio": 16.0,
+    "promotion": "first_passing_candidate_in_frozen_eligible_order"
+  },
+  "cache_invariance_smoke": {
+    "site_count": 4,
+    "qp_total": 1,
+    "rho": 0.01,
+    "distance_numerator": 1,
+    "distance_denominator": 2,
+    "cache_bytes": [0, 268435456],
+    "seed_hex": "0x5034533452305631",
+    "comparison": "byte_identical_samples_trace_and_estimates_excluding_cache_manifest_metadata"
+  },
+  "timing_census": {
+    "sample_count": 128,
+    "repeat_count": 7,
+    "stream_order": [0, 1, 2, 3, 4, 5, 6],
+    "baseline": "neighbor_only",
+    "rank_reducer": "maximum",
+    "repeat_reducer": "median",
+    "maximum_total_seconds_per_step_regression_fraction": 0.10,
+    "failure": "remove_candidate_from_official_eligibility"
+  },
+  "failure": "STOP_without_sample_extension_threshold_relaxation_guide_retuning_or_remote_submission"
+}

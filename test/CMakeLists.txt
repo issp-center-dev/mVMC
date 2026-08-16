@@ -1,3 +1,7 @@
+if(NOT PYTHON_EXECUTABLE)
+    find_package(PythonInterp 3.6 REQUIRED)
+endif()
+
 foreach(datafile ${DATA_FILES})
     configure_file(${datafile} ${CMAKE_BINARY_DIR}/test/ COPYONLY)
 endforeach()
@@ -42,6 +46,18 @@ if(MPI_FOUND)
     target_link_libraries(lanczos2_solver_unit ${MPI_C_LIBRARIES})
 endif()
 add_test(NAME Lanczos2Solver_Unit COMMAND lanczos2_solver_unit)
+
+add_executable(krylov_gevp_solver_unit
+    krylov_gevp_solver_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c)
+target_include_directories(krylov_gevp_solver_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(krylov_gevp_solver_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(krylov_gevp_solver_unit ${LAPACK_LIBRARIES} m)
+add_test(NAME KrylovGEVPSolver_Unit COMMAND krylov_gevp_solver_unit)
 
 add_executable(absolute_pfaffian_unit
     absolute_pfaffian_unit.c
@@ -239,6 +255,22 @@ target_link_libraries(absolute_krylov_reference_unit m)
 add_test(NAME AbsoluteKrylovReference_Unit
     COMMAND absolute_krylov_reference_unit)
 
+add_executable(krylov_fock_proposal_unit
+    krylov_fock_proposal_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c)
+target_compile_definitions(krylov_fock_proposal_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+target_include_directories(krylov_fock_proposal_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(krylov_fock_proposal_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(krylov_fock_proposal_unit m)
+add_test(NAME KrylovFockProposal_Unit
+    COMMAND krylov_fock_proposal_unit)
+
 add_executable(bounded_krylov_engine_unit
     bounded_krylov_engine_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
@@ -368,6 +400,119 @@ if(MPI_FOUND)
     set_tests_properties(BoundedKrylovIntegration_Unit_Rank4_mpi PROPERTIES
         PROCESSORS 4)
 endif()
+
+add_executable(krylov_positive_guide_unit
+    krylov_positive_guide_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(krylov_positive_guide_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(krylov_positive_guide_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(krylov_positive_guide_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(krylov_positive_guide_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(krylov_positive_guide_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(krylov_positive_guide_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(krylov_positive_guide_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME KrylovPositiveGuide_Unit
+    COMMAND krylov_positive_guide_unit)
+
+add_executable(krylov_positive_sampler_unit
+    krylov_positive_sampler_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(krylov_positive_sampler_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(krylov_positive_sampler_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(krylov_positive_sampler_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(krylov_positive_sampler_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(krylov_positive_sampler_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(krylov_positive_sampler_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(krylov_positive_sampler_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME KrylovPositiveSampler_Unit
+    COMMAND krylov_positive_sampler_unit)
+if(MPI_FOUND)
+    add_test(NAME KrylovPositiveSampler_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                $<TARGET_FILE:krylov_positive_sampler_unit>)
+    set_tests_properties(KrylovPositiveSampler_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+    add_test(NAME KrylovPositiveSampler_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                $<TARGET_FILE:krylov_positive_sampler_unit>)
+    set_tests_properties(KrylovPositiveSampler_Unit_Rank4_mpi PROPERTIES
+        PROCESSORS 4)
+endif()
+
+add_executable(krylov_streaming_statistics_unit
+    krylov_streaming_statistics_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c)
+target_compile_definitions(krylov_streaming_statistics_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+target_include_directories(krylov_streaming_statistics_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(krylov_streaming_statistics_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(krylov_streaming_statistics_unit m)
+add_test(NAME KrylovStreamingStatistics_Unit
+    COMMAND krylov_streaming_statistics_unit)
+
+add_executable(krylov_matrix_measurement_unit
+    krylov_matrix_measurement_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(krylov_matrix_measurement_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(krylov_matrix_measurement_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(krylov_matrix_measurement_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(krylov_matrix_measurement_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(krylov_matrix_measurement_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(krylov_matrix_measurement_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(krylov_matrix_measurement_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME KrylovMatrixMeasurement_Unit
+    COMMAND krylov_matrix_measurement_unit)
 
 add_executable(classic_krylov_amplitude_unit
     classic_krylov_amplitude_unit.c
@@ -519,5 +664,308 @@ if(MPI_FOUND)
         WILL_FAIL TRUE TIMEOUT 30 PROCESSORS 2
         ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
 endif()
+
+add_executable(bounded_krylov_profile_driver
+    bounded_krylov_profile_driver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(bounded_krylov_profile_driver PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(bounded_krylov_profile_driver PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(bounded_krylov_profile_driver PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(bounded_krylov_profile_driver pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(bounded_krylov_profile_driver stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(bounded_krylov_profile_driver blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(bounded_krylov_profile_driver ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME BoundedKrylovProfile_Smoke
+    COMMAND bounded_krylov_profile_driver 4 1 3 0 1)
+add_test(NAME BoundedKrylovProfile_CacheSmoke
+    COMMAND bounded_krylov_profile_driver 4 4 3 4096 1)
+add_test(NAME BoundedKrylovProfile_SessionSmoke
+    COMMAND bounded_krylov_profile_driver 4 1 3 4096 1 session-profile)
+add_test(NAME BoundedKrylovProfile_InvalidOddSite
+    COMMAND bounded_krylov_profile_driver 5 1 1 0 1)
+add_test(NAME BoundedKrylovProfile_InvalidQP
+    COMMAND bounded_krylov_profile_driver 4 2 1 0 1)
+add_test(NAME BoundedKrylovProfile_InvalidCache
+    COMMAND bounded_krylov_profile_driver 4 1 1 4294967297 1)
+set_tests_properties(
+    BoundedKrylovProfile_InvalidOddSite
+    BoundedKrylovProfile_InvalidQP
+    BoundedKrylovProfile_InvalidCache
+    PROPERTIES WILL_FAIL TRUE)
+if(MPI_FOUND)
+    add_test(NAME BoundedKrylovProfile_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                $<TARGET_FILE:bounded_krylov_profile_driver> 4 4 3 4096 1)
+    set_tests_properties(BoundedKrylovProfile_Rank2_mpi PROPERTIES
+        PROCESSORS 2
+        ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+endif()
+
+add_executable(bounded_krylov_markov_driver
+    bounded_krylov_markov_driver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(bounded_krylov_markov_driver PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(bounded_krylov_markov_driver PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(bounded_krylov_markov_driver PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(bounded_krylov_markov_driver pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(bounded_krylov_markov_driver stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(bounded_krylov_markov_driver blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(bounded_krylov_markov_driver ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME BoundedKrylovMarkov_Smoke
+    COMMAND bounded_krylov_markov_driver
+            4 1 128 0 1e-4 0x5034535F52305631)
+set_tests_properties(BoundedKrylovMarkov_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME BoundedKrylovMarkovShell_Smoke
+    COMMAND bounded_krylov_markov_driver
+            4 1 128 0 1e-2 0x50345334534D4B31 shell 1 8 1 2 7)
+set_tests_properties(BoundedKrylovMarkovShell_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME BoundedKrylovMarkovP4S9Session_Smoke
+    COMMAND bounded_krylov_markov_driver
+            4 1 128 4194304 1e-2 0x5034533952305631 0 1 7 session)
+set_tests_properties(BoundedKrylovMarkovP4S9Session_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+if(MPI_FOUND)
+    add_test(NAME BoundedKrylovMarkovShell_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                $<TARGET_FILE:bounded_krylov_markov_driver>
+                4 1 128 0 1e-2 0x50345334534D4B31 shell 1 8 1 2 7)
+    add_test(NAME BoundedKrylovMarkovShell_Rank4_EmptyQP_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                $<TARGET_FILE:bounded_krylov_markov_driver>
+                4 1 128 0 1e-2 0x50345334534D4B31 shell 1 8 1 2 7)
+    add_test(NAME BoundedKrylovMarkovP4S9Session_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                $<TARGET_FILE:bounded_krylov_markov_driver>
+                4 1 128 4194304 1e-2 0x5034533952305631 0 1 7 session)
+    add_test(NAME BoundedKrylovMarkovP4S9Session_Rank4_EmptyQP_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                $<TARGET_FILE:bounded_krylov_markov_driver>
+                4 1 128 4194304 1e-2 0x5034533952305631 0 1 7 session)
+    set_tests_properties(
+        BoundedKrylovMarkovShell_Rank2_mpi
+        BoundedKrylovMarkovShell_Rank4_EmptyQP_mpi
+        BoundedKrylovMarkovP4S9Session_Rank2_mpi
+        BoundedKrylovMarkovP4S9Session_Rank4_EmptyQP_mpi
+        PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+    set_tests_properties(
+        BoundedKrylovMarkovShell_Rank2_mpi
+        BoundedKrylovMarkovP4S9Session_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+    set_tests_properties(
+        BoundedKrylovMarkovShell_Rank4_EmptyQP_mpi
+        BoundedKrylovMarkovP4S9Session_Rank4_EmptyQP_mpi
+        PROPERTIES PROCESSORS 4)
+endif()
+
+add_executable(p4f_matrix_reparse_driver
+    p4f_matrix_reparse_driver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+add_dependencies(p4f_matrix_reparse_driver bounded_krylov_markov_driver)
+target_compile_definitions(p4f_matrix_reparse_driver PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(p4f_matrix_reparse_driver PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(p4f_matrix_reparse_driver PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(p4f_matrix_reparse_driver pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(p4f_matrix_reparse_driver stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(p4f_matrix_reparse_driver blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(p4f_matrix_reparse_driver ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME P4FMatrixReparse_Smoke
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_p4f_matrix_reparse.py
+            $<TARGET_FILE:bounded_krylov_markov_driver>
+            $<TARGET_FILE:p4f_matrix_reparse_driver>)
+set_tests_properties(P4FMatrixReparse_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+
+add_executable(bounded_krylov_markov_pilot_driver
+    bounded_krylov_markov_pilot_driver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(bounded_krylov_markov_pilot_driver PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(bounded_krylov_markov_pilot_driver PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(bounded_krylov_markov_pilot_driver PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(bounded_krylov_markov_pilot_driver pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(bounded_krylov_markov_pilot_driver stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(bounded_krylov_markov_pilot_driver blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(bounded_krylov_markov_pilot_driver
+        ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME BoundedKrylovMarkovPilot_Smoke
+    COMMAND bounded_krylov_markov_pilot_driver 4 1 256 0)
+set_tests_properties(BoundedKrylovMarkovPilot_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME BoundedKrylovMarkovShellPilot_Smoke
+    COMMAND bounded_krylov_markov_pilot_driver 4 1 256 0 shell)
+set_tests_properties(BoundedKrylovMarkovShellPilot_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME BoundedKrylovMarkovFlatGuidePilot_Smoke
+    COMMAND bounded_krylov_markov_pilot_driver 4 1 256 0 flat)
+set_tests_properties(BoundedKrylovMarkovFlatGuidePilot_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME BoundedKrylovMarkovSurrogatePilot_Smoke
+    COMMAND bounded_krylov_markov_pilot_driver 4 1 256 0 surrogate)
+set_tests_properties(BoundedKrylovMarkovSurrogatePilot_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME BoundedKrylovMarkovPartialGuidePilot_Smoke
+    COMMAND bounded_krylov_markov_pilot_driver 4 1 256 0 partial)
+set_tests_properties(BoundedKrylovMarkovPartialGuidePilot_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME BoundedKrylovMarkovPartialNeighborPilot_Smoke
+    COMMAND bounded_krylov_markov_pilot_driver
+            4 1 256 0 partial-neighbor)
+set_tests_properties(BoundedKrylovMarkovPartialNeighborPilot_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME BoundedKrylovMarkovPartialCallbackPilot_Smoke
+    COMMAND bounded_krylov_markov_pilot_driver
+            4 1 256 0 partial-callback)
+set_tests_properties(BoundedKrylovMarkovPartialCallbackPilot_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME BoundedKrylovMarkovLongDirectPilot_Smoke
+    COMMAND bounded_krylov_markov_pilot_driver 4 1 256 0 long-direct)
+set_tests_properties(BoundedKrylovMarkovLongDirectPilot_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+
+add_executable(bounded_krylov_markov_timing_driver
+    bounded_krylov_markov_timing_driver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(bounded_krylov_markov_timing_driver PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(bounded_krylov_markov_timing_driver PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(bounded_krylov_markov_timing_driver PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(bounded_krylov_markov_timing_driver pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(bounded_krylov_markov_timing_driver stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(bounded_krylov_markov_timing_driver blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(bounded_krylov_markov_timing_driver
+        ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME BoundedKrylovMarkovPartialCallbackTiming_Smoke
+    COMMAND bounded_krylov_markov_timing_driver
+            4 1 0 128 partial-callback)
+set_tests_properties(BoundedKrylovMarkovPartialCallbackTiming_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+add_test(NAME BoundedKrylovMarkovLongDirectSessionTiming_Smoke
+    COMMAND bounded_krylov_markov_timing_driver
+            4 1 4194304 16 long-direct-session)
+set_tests_properties(BoundedKrylovMarkovLongDirectSessionTiming_Smoke PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
 
 add_subdirectory(python)
