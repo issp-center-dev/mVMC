@@ -3268,6 +3268,9 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
   unsigned int *masks = NULL;
   MVMCScaledComplex (*exact_values)[PROFILE_DEPTH_COUNT] = NULL;
   double complex (*raw_values)[PROFILE_DEPTH_COUNT] = NULL;
+  const MVMCScaledComplex (*exact_values_readonly)[PROFILE_DEPTH_COUNT] =
+      NULL;
+  const double complex (*raw_values_readonly)[PROFILE_DEPTH_COUNT] = NULL;
   uint64_t *configurations = NULL;
   size_t *lookup = NULL;
   double *slater = NULL;
@@ -3296,6 +3299,10 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
         sector_size, sizeof(*exact_values));
     raw_values = (double complex (*)[PROFILE_DEPTH_COUNT])calloc(
         sector_size, sizeof(*raw_values));
+    exact_values_readonly =
+        (const MVMCScaledComplex (*)[PROFILE_DEPTH_COUNT])exact_values;
+    raw_values_readonly =
+        (const double complex (*)[PROFILE_DEPTH_COUNT])raw_values;
     configurations =
         (uint64_t *)calloc(sector_size, sizeof(*configurations));
     local_ready = exact_values != NULL && raw_values != NULL &&
@@ -3411,8 +3418,8 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
             0, site_count, qp_total, sample_count, cache_bytes, 1.0e-2,
             &proposal_policy, long_direct_seeds,
             PILOT_LONG_DIRECT_SCHEMA_VERSION, 32768, 0.80, 12.0,
-            model, &limits, exact_values, raw_values, norms, configurations,
-            sector_size, lookup, lookup_count)) {
+            model, &limits, exact_values_readonly, raw_values_readonly,
+            norms, configurations, sector_size, lookup, lookup_count)) {
       goto cleanup;
     }
   } else if (mode == PILOT_MODE_PARTIAL_CALLBACK) {
@@ -3424,8 +3431,8 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
               site_count, qp_total, sample_count, cache_bytes,
               partial_neighbor_seeds, model, &partial_limits,
               partial_workspace, partial_plan_hash, amplitude_workspace,
-              exact_values, raw_values, norms, configurations, sector_size,
-              lookup, lookup_count)) {
+              exact_values_readonly, raw_values_readonly, norms,
+              configurations, sector_size, lookup, lookup_count)) {
         goto cleanup;
       }
     }
@@ -3441,8 +3448,8 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
                 candidate_index, 2, stage_b_alphas[alpha_index],
                 stage_b_steps[step_index], site_count, qp_total,
                 sample_count, cache_bytes, partial_neighbor_seeds, model,
-                &limits, exact_values, raw_values, norms, configurations,
-                sector_size, lookup, lookup_count)) {
+                &limits, exact_values_readonly, raw_values_readonly, norms,
+                configurations, sector_size, lookup, lookup_count)) {
           goto cleanup;
         }
       }
@@ -3457,7 +3464,8 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
                 candidate_index, partial_order,
                 surrogate_floor_multipliers[alpha_index], site_count,
                 qp_total, sample_count, cache_bytes, partial_seeds, &limits,
-                exact_values, raw_values, norms, configurations,
+                exact_values_readonly, raw_values_readonly, norms,
+                configurations,
                 sector_size)) {
           goto cleanup;
         }
@@ -3468,8 +3476,8 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
     for (fraction_index = 0; fraction_index < 3; ++fraction_index) {
       if (!pilot_emit_surrogate_control(
               fraction_index, surrogate_floor_multipliers[fraction_index],
-              site_count, qp_total, cache_bytes, exact_values, raw_values,
-              norms, sector_size)) {
+              site_count, qp_total, cache_bytes, exact_values_readonly,
+              raw_values_readonly, norms, sector_size)) {
         goto cleanup;
       }
     }
@@ -3481,8 +3489,8 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
                 candidate_index, surrogate_step_counts[step_index],
                 surrogate_floor_multipliers[alpha_index], site_count,
                 qp_total, sample_count, cache_bytes, surrogate_seeds, model,
-                &limits, exact_values, raw_values, norms, configurations,
-                sector_size, lookup, lookup_count)) {
+                &limits, exact_values_readonly, raw_values_readonly, norms,
+                configurations, sector_size, lookup, lookup_count)) {
           goto cleanup;
         }
       }
@@ -3491,10 +3499,11 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
     MVMCKrylovPositiveSamplerProposalPolicy proposal_policy;
     if (!pilot_emit_flat_control(
             0, "rho_0p01", 0, site_count, qp_total, cache_bytes, 1.0e-2,
-            exact_values, raw_values, norms, sector_size) ||
+            exact_values_readonly, raw_values_readonly, norms, sector_size) ||
         !pilot_emit_flat_control(
             1, "uniform_guide_limit", 1, site_count, qp_total, cache_bytes,
-            0.0, exact_values, raw_values, norms, sector_size) ||
+            0.0, exact_values_readonly, raw_values_readonly, norms,
+            sector_size) ||
         mvmc_krylov_positive_sampler_proposal_policy_create(
             1, 1, &proposal_policy) != MVMC_KRYLOV_STATUS_OK) {
       goto cleanup;
@@ -3505,8 +3514,8 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
               cache_bytes, flat_rho_values[fraction_index], &proposal_policy,
               flat_seeds, PILOT_FLAT_SCHEMA_VERSION, 4096, 0.90, 12.0,
               model, &limits,
-              exact_values, raw_values, norms, configurations, sector_size,
-              lookup, lookup_count)) {
+              exact_values_readonly, raw_values_readonly, norms,
+              configurations, sector_size, lookup, lookup_count)) {
         goto cleanup;
       }
     }
@@ -3521,8 +3530,8 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
               fraction_index, site_count, qp_total, sample_count,
               cache_bytes, 1.0e-2, &proposal_policy, shell_seeds,
               PILOT_SHELL_SCHEMA_VERSION, 4096, 0.90, 12.0,
-              model, &limits, exact_values, raw_values, norms,
-              configurations, sector_size, lookup, lookup_count)) {
+              model, &limits, exact_values_readonly, raw_values_readonly,
+              norms, configurations, sector_size, lookup, lookup_count)) {
         goto cleanup;
       }
     }
@@ -3540,8 +3549,8 @@ static int run_pilot(int site_count, int qp_total, int sample_count,
                 cache_bytes, rho_values[rho_index], &proposal_policy,
                 global_seeds, PILOT_SCHEMA_VERSION, 4096, 0.90, 12.0,
                 model, &limits,
-                exact_values, raw_values, norms, configurations,
-                sector_size, lookup, lookup_count)) {
+                exact_values_readonly, raw_values_readonly, norms,
+                configurations, sector_size, lookup, lookup_count)) {
           goto cleanup;
         }
       }

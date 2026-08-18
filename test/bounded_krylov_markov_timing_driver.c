@@ -682,6 +682,9 @@ static int run_timing(int site_count, int qp_total, int sample_count,
   unsigned int *masks = NULL;
   MVMCScaledComplex (*exact_values)[PROFILE_DEPTH_COUNT] = NULL;
   double complex (*raw_values)[PROFILE_DEPTH_COUNT] = NULL;
+  const MVMCScaledComplex (*exact_values_readonly)[PROFILE_DEPTH_COUNT] =
+      NULL;
+  const double complex (*raw_values_readonly)[PROFILE_DEPTH_COUNT] = NULL;
   uint64_t *configurations = NULL;
   size_t *lookup = NULL;
   double *slater = NULL;
@@ -710,6 +713,10 @@ static int run_timing(int site_count, int qp_total, int sample_count,
         sector_size, sizeof(*exact_values));
     raw_values = (double complex (*)[PROFILE_DEPTH_COUNT])calloc(
         sector_size, sizeof(*raw_values));
+    exact_values_readonly =
+        (const MVMCScaledComplex (*)[PROFILE_DEPTH_COUNT])exact_values;
+    raw_values_readonly =
+        (const double complex (*)[PROFILE_DEPTH_COUNT])raw_values;
     configurations =
         (uint64_t *)calloc(sector_size, sizeof(*configurations));
     local_ready = exact_values != NULL && raw_values != NULL &&
@@ -795,12 +802,12 @@ static int run_timing(int site_count, int qp_total, int sample_count,
     int fraction_index;
     memset(&table, 0, sizeof(table));
     if (!markov_compute_scales_and_eta(
-            sector_size, raw_values, norms, rho_values[rho_index],
+            sector_size, raw_values_readonly, norms, rho_values[rho_index],
             log_basis_scale, &eta) ||
         !markov_init_measurement_policy(eta, log_basis_scale,
                                         &measurement_policy) ||
-        !pilot_table_create(&measurement_policy, exact_values, sector_size,
-                            &table)) {
+        !pilot_table_create(&measurement_policy, exact_values_readonly,
+                            sector_size, &table)) {
       pilot_table_destroy(&table);
       goto cleanup;
     }
@@ -877,6 +884,9 @@ static int run_partial_callback_timing(
   unsigned int *masks = NULL;
   MVMCScaledComplex (*exact_values)[PROFILE_DEPTH_COUNT] = NULL;
   double complex (*raw_values)[PROFILE_DEPTH_COUNT] = NULL;
+  const MVMCScaledComplex (*exact_values_readonly)[PROFILE_DEPTH_COUNT] =
+      NULL;
+  const double complex (*raw_values_readonly)[PROFILE_DEPTH_COUNT] = NULL;
   uint64_t *configurations = NULL;
   double *slater = NULL;
   double complex *weights = NULL;
@@ -906,6 +916,10 @@ static int run_partial_callback_timing(
         sector_size, sizeof(*exact_values));
     raw_values = (double complex (*)[PROFILE_DEPTH_COUNT])calloc(
         sector_size, sizeof(*raw_values));
+    exact_values_readonly =
+        (const MVMCScaledComplex (*)[PROFILE_DEPTH_COUNT])exact_values;
+    raw_values_readonly =
+        (const double complex (*)[PROFILE_DEPTH_COUNT])raw_values;
     configurations =
         (uint64_t *)calloc(sector_size, sizeof(*configurations));
     local_ready = exact_values != NULL && raw_values != NULL &&
@@ -968,14 +982,14 @@ static int run_partial_callback_timing(
           sector_size, site_count, exact_values, raw_values,
           configurations, norms) ||
       !markov_compute_scales_and_eta(
-          sector_size, raw_values, norms, 1.0e-2,
+          sector_size, raw_values_readonly, norms, 1.0e-2,
           log_basis_scale, &eta) ||
       !markov_init_guide_policy(site_count, qp_total, cache_bytes, 1.0e-2,
                                 eta, log_basis_scale, &guide_policy) ||
       !markov_init_measurement_policy(eta, log_basis_scale,
                                       &measurement_policy) ||
-      !pilot_table_create(&measurement_policy, exact_values, sector_size,
-                          &table)) {
+      !pilot_table_create(&measurement_policy, exact_values_readonly,
+                          sector_size, &table)) {
     goto cleanup_partial;
   }
   mvmc_bounded_krylov_workspace_destroy(calibration_workspace);
