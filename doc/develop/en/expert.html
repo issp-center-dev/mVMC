@@ -664,9 +664,11 @@ quantum-number projection in actual numerical calculation.</p>
 <p><strong>Description :</strong> The absolute value gives the number of the momentum
 and lattice translational quantum-number projection. When the value
 is negative, the mode of anti-periodic condition turns on. The
-quantum-number projection is used from the top to <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> with
-the specified weight indicated in <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> file. In the case of
-not applying the projection, this value must be equal to 1.</p>
+quantum-number projection uses the first <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span></code> patterns
+and their weights from the <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> file. The value must be
+nonzero and <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span></code> must not exceed <code class="docutils literal notranslate"><span class="pre">NQPTrans</span></code> declared
+by that file. In the case of not applying the projection, this value
+must be equal to 1 (or -1 for an anti-periodic identity pattern).</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NSROptItrStep</span></code></p>
 <p><strong>Type :</strong> int-type (Positive integer, default value: 1000)</p>
@@ -2250,7 +2252,9 @@ spin-flip sampler and spin-changing <code class="docutils literal notranslate"><
 <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> operators. BackFlow with localized spins is not
 supported.</p></li>
 <li><p>Spin projection is not supported. Use <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg==1</span></code>.</p></li>
-<li><p>RBM, Twist, <code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code> are not supported.
+<li><p>RBM, Twist, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code> are not supported. Periodic and
+anti-periodic (negative <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code>, <code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>) translation
+patterns are supported.
 <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> is rejected for every BackFlow calculation, including
 BF-FSZ and BackFlow N-body inputs. Single Lanczos Step is available only with
 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code> and <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>; its Hamiltonian is limited
@@ -2259,10 +2263,19 @@ Spin-changing <code class="docutils literal notranslate"><span class="pre">Trans
 requires <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>. <code class="docutils literal notranslate"><span class="pre">NLanczosMode&gt;=2</span></code>, the second Lanczos step,
 and BackFlow Lanczos corrections for <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> / <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code>
 are not supported.</p></li>
-<li><p>The usual momentum projection with <code class="docutils literal notranslate"><span class="pre">NMPTrans&gt;1</span></code> is available with
-<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, <code class="docutils literal notranslate"><span class="pre">APFlag=0</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans==1</span></code>.
-BackFlow with the normal <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format
-requires <code class="docutils literal notranslate"><span class="pre">NMPTrans==1</span></code>.</p></li>
+<li><p>Momentum projection with <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)&gt;1</span></code> is available with both
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ and the normal <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> /
+<code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format, for periodic and anti-periodic
+patterns. <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span></code> must not exceed <code class="docutils literal notranslate"><span class="pre">NQPTrans</span></code> in
+<code class="docutils literal notranslate"><span class="pre">TransSym</span></code>. The normal non-FSZ format rejects <code class="docutils literal notranslate"><span class="pre">OptTrans</span></code>; FSZ
+retains its existing <code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> support subject to
+<code class="docutils literal notranslate"><span class="pre">NQPOptTrans==1</span></code>. For non-FSZ <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)&gt;1</span></code>, sampling,
+Green functions, Hamiltonian, first Lanczos, and N-body evaluation
+use a correctness-first full Slater/Pfaffian rebuild. The same
+rebuild is used for anti-periodic inputs and for a single-pattern
+input whose first transformation is nonidentity; only the periodic,
+identity, single-pattern case retains the legacy incremental path.
+The rebuild path can be more expensive than that legacy path.</p></li>
 <li><p>With the normal <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format, the
 Hamiltonian may contain <code class="docutils literal notranslate"><span class="pre">Trans</span></code> and number-operator interactions
 (<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>). Two-body Hamiltonian
@@ -3256,7 +3269,8 @@ You can freely give a name of the keyword.</p>
 <li><p>[ int01 ]</p>
 <p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
 <p><strong>Description :</strong> An integer giving total number of projection
-patterns.</p>
+patterns. It must be positive and at least <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span></code> from
+<code class="docutils literal notranslate"><span class="pre">ModPara</span></code>. Only the first <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span></code> patterns are used.</p>
 </li>
 <li><p>[ int02 ]</p>
 <p><strong>Type :</strong> int-type (blank parameter not allowed)</p>

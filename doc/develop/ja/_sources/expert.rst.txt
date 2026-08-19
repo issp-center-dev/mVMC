@@ -678,7 +678,9 @@ ModParaファイル (modpara.def)
 
    **説明 :**
    ``NMPTrans`` の絶対値で並進・格子対称性の量子数射影の個数を指定する。負の場合は反周期境界条件を与える。
-   TransSymファイルで指定した重みで上から ``NMPTrans`` 個まで使用する。射影を行わない場合は1に設定する必要があります。
+   TransSymファイルで指定した重みで上から ``abs(NMPTrans)`` 個まで使用する。
+   0 は指定できず、``abs(NMPTrans)`` は TransSym の ``NQPTrans`` 以下でなければならない。
+   射影を行わない場合は1（反周期の恒等patternでは -1）に設定する必要があります。
 
 -  ``NSROptItrStep``
 
@@ -2493,7 +2495,8 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
 
 -  スピン射影は未対応です。``NSPGaussLeg==1`` を指定してください。
 
--  RBM、Twist、``APFlag=1``、``NQPOptTrans>1`` は未対応です。
+-  RBM、Twist、``NQPOptTrans>1`` は未対応です。周期境界に加えて、負の
+   ``NMPTrans`` で指定する反周期境界（``APFlag=1``）を使用できます。
    BF-FSZとBackFlow :math:`N` 体入力を含む全てのBackFlow計算で
    ``reweight=1`` はエラー終了します。
    Single Lanczos Step は ``NVMCCalMode=1`` かつ ``NLanczosMode=1``
@@ -2503,10 +2506,16 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
    ``NLanczosMode>=2``、2nd Lanczos、および ``NBodyG`` /
    ``NBodyInterAll`` に対する BackFlow の Lanczos 補正は未対応です。
 
--  ``NMPTrans>1`` による通常の運動量射影は ``OrbitalGeneral`` / FSZ、
-   ``APFlag=0``、``NQPOptTrans==1`` の組み合わせで使用できます。
-   通常の ``Orbital`` / ``OrbitalAntiParallel`` 形式の BackFlow では
-   ``NMPTrans==1`` を指定してください。
+-  ``abs(NMPTrans)>1`` による運動量射影は ``OrbitalGeneral`` / FSZ と
+   通常の ``Orbital`` / ``OrbitalAntiParallel`` の両形式で、周期・反周期の
+   どちらでも使用できます。``abs(NMPTrans)`` は TransSym の ``NQPTrans``
+   以下でなければなりません。通常の non-FSZ 形式では ``OptTrans`` を
+   rejectし、FSZでは ``NQPOptTrans==1`` の範囲で従来の ``OptTrans`` supportを
+   維持します。non-FSZ の ``abs(NMPTrans)>1`` では sampling、Green関数、
+   Hamiltonian、1st Lanczos、N体評価を correctness-first の完全
+   Slater/Pfaffian再構築で処理します。反周期入力、および先頭変換が非恒等な
+   単一pattern入力も同じ再構築を使用し、周期・恒等・単一patternの場合だけ
+   従来の増分経路を維持します。再構築経路は従来経路より高コストになる場合があります。
 
 -  ``Orbital`` / ``OrbitalAntiParallel`` の通常形式では、Hamiltonian は
    ``Trans`` と number-operator 型の相互作用（``CoulombIntra``,
@@ -3630,6 +3639,8 @@ TransSym指定ファイル(qptransidx.def)
    **形式 :** int型 (空白不可)
 
    **説明 :** 射影パターンの総数を指定します。
+   正の値を指定し、``ModPara`` の ``abs(NMPTrans)`` 以上でなければなりません。
+   実際に使うのは先頭 ``abs(NMPTrans)`` 個です。
 
 -  [ int02 ]
 
