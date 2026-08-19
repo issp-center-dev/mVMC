@@ -46,3 +46,6 @@ doc/fourier/en/_build/
 cmake-build-debug
 latex/
 dist/
+/Debug/
+__pycache__/
+*.py[cod]

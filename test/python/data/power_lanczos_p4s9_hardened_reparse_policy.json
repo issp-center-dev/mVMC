@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "policy_id": "power-lanczos-zero-support-p4-r0-v13-hardened-reparse",
+  "candidate_id": "direct_neighbor_rho0p01_N32768_session256m",
+  "registered_at_jst": "2026-08-16T00:03:46+09:00",
+  "registered_before_result_inspection": true,
+  "parent_official_execution_policy": {
+    "path": "test/python/data/power_lanczos_p4s9_official_execution_policy.json",
+    "sha256": "1ac5290575287d28c754adee4ee0b07e3996860f2648808776733c1661429669"
+  },
+  "execution_contract": {
+    "execution_parameter_changes": false,
+    "seed_changes": false,
+    "sample_count_changes": false,
+    "partition_changes": false,
+    "rank_changes": false,
+    "cache_changes": false,
+    "threshold_changes": false,
+    "source_commit": "39d48c272998521d78166d38acf60c6b2e8624e5",
+    "baseline_develop_commit": "39d48c272998521d78166d38acf60c6b2e8624e5",
+    "source_archive_sha256": "a006c0f3c3b33dc9d794a263818ff5d217116ea17ed41ab1be48458636388495",
+    "transfer_package_sha256": "ceec699498c885b42ea1f78d9f6ba5c5338002963fe938a326aa33eaa1bf5da8",
+    "statistics_log_count": 24,
+    "timing_log_count": 18,
+    "target_log_count": 18,
+    "mpi_parity_log_count": 3
+  },
+  "hardened_invariants": {
+    "statistics": [
+      "decimal_seed_matches_seed_hex",
+      "tau_37_record_exact_census_and_gate_reapplication",
+      "entry_18_record_exact_census",
+      "denominator_summary_recomputed_from_samples",
+      "support_tau_denominator_decision_consistency"
+    ],
+    "resource": [
+      "canonical_input_paths_are_unique",
+      "timing_plan_generation_and_stream_trace_match_rank_1_2_4",
+      "target_generation_and_row_trace_match_rank_1_2_4"
+    ],
+    "closure": [
+      "component_ledger_matches_complete_regular_file_census",
+      "component_evidence_and_decision_are_ledger_bound",
+      "symlinks_and_duplicate_ledger_entries_are_rejected",
+      "component_schema_artifact_candidate_and_commit_provenance_match",
+      "focused_ctest_required_results_each_pass_exactly_once",
+      "focused_ctest_has_no_failed_result_and_summary_count_matches"
+    ]
+  },
+  "parser_manifest_sha256": {
+    "test/python/generate_bounded_krylov_p4c_evidence.py": "c5e185a4c8644a7fa7dbba79d92dc4e673fb6ff427dddaf795dc133132837bb5",
+    "test/python/generate_bounded_krylov_p4s_evidence.py": "4dd32066989b28eb2d4704fbc682b95f06c17669757584c4e3f2810da8d1a140",
+    "test/python/generate_bounded_krylov_p4s9_official_statistics_evidence.py": "8153d23386ee532fb65a183ded6ea3da12bd68573af6a6a3296e6375e941309f",
+    "test/python/generate_bounded_krylov_p4s9_session_resource_evidence.py": "bb9aa73400239287abb77ee6ffb05dd4f3c438708fce67612a31c31d17aa43b8",
+    "test/python/generate_bounded_krylov_p4s9_target_session_evidence.py": "53d3980ae8081f3e18e5a0602b4ef15a2fbac8c1d17fb61bc6b90039fdca5660",
+    "test/python/generate_bounded_krylov_p4s9_official_resource_evidence.py": "a562dcabd1df2eb3b16844a81eb14a60774c81c1250e65e2fa1919200bc23108",
+    "test/python/generate_bounded_krylov_p4s9_official_closure.py": "2ac1a533e9a1cc542212efc6f728b6f73b51d8494c7cb5b45e414b91fb296ec8",
+    "test/python/validate_bounded_krylov_p4s9_hardened_reparse_policy.py": "28ad7685d67d329e4ece6564b4bb05ecf80e066c47e769385107527fb7068b92",
+    "test/python/generate_bounded_krylov_p4s9_hardened_comparison.py": "d99efdc7bc5956f24a2fa7ade35d170aa58f09b9fb50349396c722ad00b44c2a"
+  },
+  "promotion": {
+    "primary_v12_closure_required": "GO",
+    "hardened_v13_reparse_closure_required": "GO",
+    "raw_log_sha256_census_must_match": true,
+    "case_numeric_results_must_match": true,
+    "any_mismatch_action": "STOP_PRESERVE_EVIDENCE_NO_P4F"
+  },
+  "authorization": {
+    "p4f_authorized": false,
+    "remote_mutation_authorized": false,
+    "push_or_github_mutation_authorized": false
+  }
+}

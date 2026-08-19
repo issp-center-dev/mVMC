@@ -465,6 +465,9 @@ static void test_scaled_multipath_cancellation(void) {
 }
 
 static void test_duplicate_permutation_and_cache_grid(void) {
+  const double large = 1.0e32;
+  const volatile double runtime_large = 1.0e32;
+  const volatile double runtime_small = 1.0;
   const MVMCKrylovFermionOperator operators[] = {
       {MVMC_KRYLOV_FERMION_CREATE, 0},
       {MVMC_KRYLOV_FERMION_ANNIHILATE, 1},
@@ -472,14 +475,14 @@ static void test_duplicate_permutation_and_cache_grid(void) {
       {MVMC_KRYLOV_FERMION_ANNIHILATE, 0},
   };
   MVMCKrylovHamiltonianTerm terms_a[] = {
-      {1.0e16, 0, 2, 1, 10}, {1.0, 0, 2, 1, 12},
-      {-1.0e16, 0, 2, 1, 11}, {1.0e16, 2, 2, 1, 10},
-      {1.0, 2, 2, 1, 12}, {-1.0e16, 2, 2, 1, 11},
+      {large, 0, 2, 1, 10}, {1.0, 0, 2, 1, 12},
+      {-large, 0, 2, 1, 11}, {large, 2, 2, 1, 10},
+      {1.0, 2, 2, 1, 12}, {-large, 2, 2, 1, 11},
   };
   const MVMCKrylovHamiltonianTerm terms_b[] = {
-      {-1.0e16, 2, 2, 1, 11}, {1.0, 0, 2, 1, 12},
-      {1.0e16, 2, 2, 1, 10},  {-1.0e16, 0, 2, 1, 11},
-      {1.0, 2, 2, 1, 12},     {1.0e16, 0, 2, 1, 10},
+      {-large, 2, 2, 1, 11}, {1.0, 0, 2, 1, 12},
+      {large, 2, 2, 1, 10},  {-large, 0, 2, 1, 11},
+      {1.0, 2, 2, 1, 12},    {large, 0, 2, 1, 10},
   };
   MVMCKrylovFockModel model_a =
       electronic_model(2, 1, 0, terms_a, 6, operators, 4);
@@ -502,7 +505,7 @@ static void test_duplicate_permutation_and_cache_grid(void) {
   fixture.trace_hash = UINT64_C(1469598103934665603);
   fixture.values[1] = 3.0;
   fixture.values[2] = -2.0;
-  CHECK(((1.0 + 1.0e16) + -1.0e16) == 0.0,
+  CHECK(((runtime_small + runtime_large) + -runtime_large) == 0.0,
         "dynamic-range fixture no longer defeats naive summation");
   CHECK(mvmc_bounded_krylov_plan_create(&model_a, &hash_limits, &plan_a) ==
             MVMC_KRYLOV_STATUS_OK &&
@@ -539,7 +542,7 @@ static void test_duplicate_permutation_and_cache_grid(void) {
   mvmc_bounded_krylov_plan_destroy(plan_b);
   mvmc_bounded_krylov_plan_destroy(plan_a);
 
-  terms_a[0].coefficient = 1.0e16;
+  terms_a[0].coefficient = large;
   model_a.hermitian = 1;
   capacities[0] = 0;
   capacities[1] = set_bytes + set_bytes / 2;
@@ -641,10 +644,14 @@ static void test_fermion_sign_pure_spin_and_multiword(void) {
         {-0.25, 8, 4, 3, 0}};
     MVMCKrylovFockModel model =
         electronic_model(2, 1, 1, terms, 3, operators, 12);
-    const MVMCKrylovBoundedLimits limits = bounded_limits(1, 0);
+    const MVMCKrylovBoundedLimits limits = bounded_limits(1, 4096);
     const uint64_t root = UINT64_C(6);
+    const uint64_t partner = UINT64_C(9);
     TableAmplitude amplitude;
     MVMCKrylovBoundedResult result;
+    MVMCKrylovBoundedResult session_result;
+    MVMCKrylovBoundedPlan *plan = NULL;
+    MVMCKrylovBoundedWorkspace *workspace = NULL;
     double complex raw;
     model.pure_spin = 1;
     memset(&amplitude, 0, sizeof(amplitude));
@@ -656,6 +663,33 @@ static void test_fermion_sign_pure_spin_and_multiword(void) {
               scaled_to_raw(&result.value[1], &raw) &&
               close_complex(raw, 1.0, 1.0e-14),
           "pure-spin Exchange/XXZ sign or diagonal mismatch");
+    CHECK(mvmc_bounded_krylov_plan_create(&model, &limits, &plan) ==
+              MVMC_KRYLOV_STATUS_OK &&
+              mvmc_bounded_krylov_workspace_create(plan, &workspace) ==
+                  MVMC_KRYLOV_STATUS_OK &&
+              mvmc_bounded_krylov_session_begin(
+                  workspace, scaled_table_callback, &amplitude,
+                  UINT64_C(0x503453395350494e)) ==
+                  MVMC_KRYLOV_STATUS_OK &&
+              mvmc_bounded_krylov_session_evaluate(
+                  workspace, &root, 1, &session_result) ==
+                  MVMC_KRYLOV_STATUS_OK,
+          "pure-spin persistent session failed");
+    CHECK(scaled_values_bitwise_equal(&result.value[0],
+                                      &session_result.value[0]) &&
+              scaled_values_bitwise_equal(&result.value[1],
+                                           &session_result.value[1]) &&
+              session_result.statistics.persistent_session_active == 1,
+          "pure-spin persistent session changed Exchange/XXZ values");
+    CHECK(mvmc_bounded_krylov_session_evaluate(
+              workspace, &partner, 1, &session_result) ==
+              MVMC_KRYLOV_STATUS_OK &&
+              session_result.statistics.cache_entries_resident_start > 0 &&
+              mvmc_bounded_krylov_session_end(workspace) ==
+                  MVMC_KRYLOV_STATUS_OK,
+          "pure-spin partner root did not reuse the session");
+    mvmc_bounded_krylov_workspace_destroy(workspace);
+    mvmc_bounded_krylov_plan_destroy(plan);
   }
   {
     const MVMCKrylovFockModel model =
@@ -875,6 +909,194 @@ static void test_limits_wrap_and_atomic_failures(void) {
   mvmc_bounded_krylov_plan_destroy(plan);
 }
 
+static void test_persistent_session_lifecycle(void) {
+  const MVMCKrylovFermionOperator operators[] = {
+      {MVMC_KRYLOV_FERMION_CREATE, 0},
+      {MVMC_KRYLOV_FERMION_ANNIHILATE, 1},
+      {MVMC_KRYLOV_FERMION_CREATE, 1},
+      {MVMC_KRYLOV_FERMION_ANNIHILATE, 0},
+  };
+  const MVMCKrylovHamiltonianTerm terms[] = {
+      {0.75 + 0.25 * I, 0, 2, 1, 0},
+      {0.75 - 0.25 * I, 2, 2, 1, 1},
+  };
+  const MVMCKrylovFockModel model =
+      electronic_model(2, 1, 0, terms, 2, operators, 4);
+  const MVMCKrylovBoundedLimits limits = bounded_limits(3, 4096);
+  const uint64_t root_a = UINT64_C(1);
+  const uint64_t root_b = UINT64_C(2);
+  const uint64_t generation_a = UINT64_C(0x5034533953455353);
+  const uint64_t generation_b = UINT64_C(0x5034533953455354);
+  MVMCKrylovBoundedPlan *plan = NULL;
+  MVMCKrylovBoundedWorkspace *workspace = NULL;
+  MVMCKrylovBoundedResult cold_b;
+  MVMCKrylovBoundedResult session_a;
+  MVMCKrylovBoundedResult hot_b;
+  MVMCKrylovBoundedResult changed_result;
+  MVMCKrylovBoundedResult failure_result;
+  TableAmplitude amplitude;
+  TableAmplitude changed;
+  TableAmplitude substitute;
+  int order;
+
+  memset(&amplitude, 0, sizeof(amplitude));
+  amplitude.values[1] = 0.5 + 0.125 * I;
+  amplitude.values[2] = -0.75 + 0.25 * I;
+  changed = amplitude;
+  changed.values[1] = -1.25 + 0.5 * I;
+  changed.values[2] = 0.875 - 0.75 * I;
+  substitute = amplitude;
+
+  CHECK(mvmc_bounded_krylov_plan_create(&model, &limits, &plan) ==
+            MVMC_KRYLOV_STATUS_OK &&
+            mvmc_bounded_krylov_workspace_create(plan, &workspace) ==
+                MVMC_KRYLOV_STATUS_OK,
+        "persistent-session workspace creation failed");
+  if (workspace == NULL) {
+    mvmc_bounded_krylov_plan_destroy(plan);
+    return;
+  }
+
+  CHECK(mvmc_bounded_krylov_evaluate(
+            workspace, &root_b, 1, scaled_table_callback, &amplitude,
+            &cold_b) == MVMC_KRYLOV_STATUS_OK,
+        "persistent-session cold reference failed");
+  amplitude.calls = 0;
+  CHECK(mvmc_bounded_krylov_session_begin(
+            workspace, scaled_table_callback, &amplitude, generation_a) ==
+            MVMC_KRYLOV_STATUS_OK &&
+            mvmc_bounded_krylov_session_is_active(workspace),
+        "persistent-session begin failed");
+  CHECK(mvmc_bounded_krylov_session_evaluate(
+            workspace, &root_a, 1, &session_a) == MVMC_KRYLOV_STATUS_OK,
+        "persistent-session first root failed");
+  CHECK(session_a.statistics.persistent_session_active == 1 &&
+            session_a.statistics.amplitude_generation_hash == generation_a &&
+            session_a.statistics.session_root_evaluation == 1 &&
+            session_a.statistics.cache_reset_performed == 1 &&
+            session_a.statistics.cache_entries_resident_start == 0 &&
+            session_a.statistics.cache_entries_resident_end > 0,
+        "persistent-session first-root metadata mismatch");
+  amplitude.calls = 0;
+  CHECK(mvmc_bounded_krylov_session_evaluate_bound(
+            workspace, &root_b, 1, scaled_table_callback, &amplitude,
+            &hot_b) == MVMC_KRYLOV_STATUS_OK,
+        "persistent-session hot root failed");
+  for (order = 0; order <= 3; ++order) {
+    CHECK(scaled_values_bitwise_equal(&cold_b.value[order],
+                                      &hot_b.value[order]),
+          "persistent cache changed root-b value[%d]", order);
+  }
+  CHECK(hot_b.statistics.persistent_session_active == 1 &&
+            hot_b.statistics.amplitude_generation_hash == generation_a &&
+            hot_b.statistics.session_root_evaluation == 2 &&
+            hot_b.statistics.cache_reset_performed == 0 &&
+            hot_b.statistics.cache_entries_resident_start > 0 &&
+            hot_b.statistics.cache_hits[0] > 0 && amplitude.calls == 0,
+        "persistent-session hot reuse was not observed");
+  CHECK(mvmc_bounded_krylov_session_end(workspace) ==
+            MVMC_KRYLOV_STATUS_OK &&
+            !mvmc_bounded_krylov_session_is_active(workspace) &&
+            mvmc_bounded_krylov_session_end(workspace) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT,
+        "persistent-session end/double-end contract failed");
+
+  CHECK(mvmc_bounded_krylov_session_begin(
+            workspace, scaled_table_callback, &substitute, generation_a) ==
+            MVMC_KRYLOV_STATUS_INVALID_ARGUMENT,
+        "same generation accepted a different callback context");
+  CHECK(mvmc_bounded_krylov_session_begin(
+            workspace, scaled_table_callback, &changed, generation_b) ==
+            MVMC_KRYLOV_STATUS_OK &&
+            mvmc_bounded_krylov_session_evaluate(
+                workspace, &root_a, 1, &changed_result) ==
+                MVMC_KRYLOV_STATUS_OK,
+        "new amplitude generation failed");
+  CHECK(!scaled_values_bitwise_equal(&session_a.value[0],
+                                     &changed_result.value[0]) &&
+            changed_result.statistics.cache_reset_performed == 1 &&
+            changed_result.statistics.amplitude_generation_hash ==
+                generation_b,
+        "new generation reused stale cached amplitude values");
+  CHECK(mvmc_bounded_krylov_session_end(workspace) ==
+            MVMC_KRYLOV_STATUS_OK,
+        "new-generation session end failed");
+
+  CHECK(mvmc_bounded_krylov_session_begin(
+            workspace, scaled_table_callback, &amplitude,
+            generation_b + UINT64_C(1)) == MVMC_KRYLOV_STATUS_OK &&
+            mvmc_bounded_krylov_session_begin(
+                workspace, scaled_table_callback, &amplitude,
+                generation_b + UINT64_C(2)) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            mvmc_bounded_krylov_session_is_active(workspace),
+        "double begin corrupted the active session");
+  CHECK(mvmc_bounded_krylov_session_evaluate_bound(
+            workspace, &root_a, 1, scaled_table_callback, &substitute,
+            &failure_result) == MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            !mvmc_bounded_krylov_session_is_active(workspace),
+        "callback-context substitution did not close the session");
+  check_atomic_failure(&failure_result, MVMC_KRYLOV_STATUS_INVALID_ARGUMENT,
+                       "session context substitution");
+
+  CHECK(mvmc_bounded_krylov_session_begin(
+            workspace, scaled_table_callback, &amplitude,
+            generation_b + UINT64_C(3)) == MVMC_KRYLOV_STATUS_OK &&
+            mvmc_bounded_krylov_evaluate(
+                workspace, &root_a, 1, scaled_table_callback, &amplitude,
+                &changed_result) == MVMC_KRYLOV_STATUS_OK &&
+            !mvmc_bounded_krylov_session_is_active(workspace) &&
+            changed_result.statistics.persistent_session_active == 0 &&
+            changed_result.statistics.cache_reset_performed == 1 &&
+            changed_result.statistics.cache_entries_resident_start == 0,
+        "legacy evaluate did not close and cold-reset the session");
+
+  substitute = amplitude;
+  substitute.forced_status = MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
+  CHECK(mvmc_bounded_krylov_session_begin(
+            workspace, scaled_table_callback, &substitute,
+            generation_b + UINT64_C(4)) == MVMC_KRYLOV_STATUS_OK &&
+            mvmc_bounded_krylov_session_evaluate(
+                workspace, &root_a, 1, &failure_result) ==
+                MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE &&
+            !mvmc_bounded_krylov_session_is_active(workspace),
+        "amplitude failure did not invalidate the session");
+  check_atomic_failure(&failure_result,
+                       MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE,
+                       "session amplitude failure");
+
+  CHECK(mvmc_bounded_krylov_testing_force_cache_counters(
+            workspace, UINT64_MAX, 0) == MVMC_KRYLOV_STATUS_OK &&
+            mvmc_bounded_krylov_session_begin(
+                workspace, scaled_table_callback, &amplitude,
+                generation_b + UINT64_C(5)) == MVMC_KRYLOV_STATUS_OK &&
+            mvmc_bounded_krylov_session_evaluate(
+                workspace, &root_a, 1, &changed_result) ==
+                MVMC_KRYLOV_STATUS_OK &&
+            changed_result.statistics.cache_epoch_full_clears == 1 &&
+            changed_result.statistics.cache_reset_performed == 1,
+        "session begin did not report an epoch-wrap full clear");
+  CHECK(mvmc_bounded_krylov_session_end(workspace) ==
+            MVMC_KRYLOV_STATUS_OK,
+        "epoch-wrap session end failed");
+
+  CHECK(mvmc_bounded_krylov_session_begin(
+            workspace, scaled_table_callback, &amplitude,
+            generation_b + UINT64_C(6)) == MVMC_KRYLOV_STATUS_OK &&
+            mvmc_bounded_krylov_testing_force_cache_counters(
+                workspace, 7, UINT64_MAX) == MVMC_KRYLOV_STATUS_OK &&
+            mvmc_bounded_krylov_session_evaluate(
+                workspace, &root_a, 1, &failure_result) ==
+                MVMC_KRYLOV_STATUS_RESOURCE_LIMIT &&
+            !mvmc_bounded_krylov_session_is_active(workspace),
+        "session cache-counter overflow did not fail closed");
+  check_atomic_failure(&failure_result, MVMC_KRYLOV_STATUS_RESOURCE_LIMIT,
+                       "session cache access overflow");
+
+  mvmc_bounded_krylov_workspace_destroy(workspace);
+  mvmc_bounded_krylov_plan_destroy(plan);
+}
+
 static void test_rank_invariance(void) {
 #ifdef _mpi_use
   const MVMCKrylovFermionOperator operators[] = {
@@ -951,6 +1173,7 @@ int main(int argc, char **argv) {
   test_duplicate_permutation_and_cache_grid();
   test_fermion_sign_pure_spin_and_multiword();
   test_limits_wrap_and_atomic_failures();
+  test_persistent_session_lifecycle();
   test_rank_invariance();
 
 #ifdef _mpi_use

@@ -36,6 +36,61 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_p3_evidence.py DES
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_p3_pipeline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/absolute_krylov_p3_manifest.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/absolute_krylov_p3_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4c_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4c_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4c_pipeline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s3_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s3_timing_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s3_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s4_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s4_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s5_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s5_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s6_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s6_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s7_prefilter_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s7_prefilter_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s7_stage_b1_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s7_stage_b1_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s7_stage_b2_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s7_stage_b2_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s7_timing_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s7_timing_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_long_direct_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_long_direct_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_session_resource_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_session_resource_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_target_session_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_target_session_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_official_statistics_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_official_statistics_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_official_resource_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_official_resource_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_official_closure.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_official_closure.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/validate_bounded_krylov_p4s9_hardened_reparse_policy.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_hardened_reparse_policy.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_hardened_comparison.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_hardened_comparison.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classify_power_lanczos_p4f_v4_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_gate_classification.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s3_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s4_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s5_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s6_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s7_prefilter_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s7_stage_b1_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s7_stage_b2_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s7_timing_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_long_direct_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_session_resource_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_target_session_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_official_execution_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_hardened_reparse_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_gate_classification_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyg.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -473,6 +528,123 @@ add_test(NAME AbsoluteKrylovP3Evidence_Pipeline
             ${CMAKE_BINARY_DIR}/test/python/data/absolute_krylov_p3_measurement_policy.json
             ${CMAKE_SOURCE_DIR})
 set_tests_properties(AbsoluteKrylovP3Evidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4CEvidence_Math
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bounded_krylov_p4c_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4_measurement_policy.json)
+set_tests_properties(BoundedKrylovP4CEvidence_Math PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4CEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bounded_krylov_p4c_pipeline.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4_measurement_policy.json
+            ${CMAKE_SOURCE_DIR})
+set_tests_properties(BoundedKrylovP4CEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4SMarkovEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bounded_krylov_p4s_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4_measurement_policy.json
+            ${CMAKE_SOURCE_DIR})
+set_tests_properties(BoundedKrylovP4SMarkovEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S3PilotEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s3_pilot_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s3_measurement_policy.json)
+set_tests_properties(BoundedKrylovP4S3PilotEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S4PilotEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s4_pilot_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s4_measurement_policy.json)
+set_tests_properties(BoundedKrylovP4S4PilotEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S5PilotEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s5_pilot_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s5_measurement_policy.json)
+set_tests_properties(BoundedKrylovP4S5PilotEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S6PilotEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s6_pilot_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s6_measurement_policy.json)
+set_tests_properties(BoundedKrylovP4S6PilotEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S7PrefilterEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s7_prefilter_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s7_prefilter_policy.json)
+set_tests_properties(BoundedKrylovP4S7PrefilterEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S7StageB1Evidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s7_stage_b1_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s7_stage_b1_policy.json)
+set_tests_properties(BoundedKrylovP4S7StageB1Evidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S7StageB2Evidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s7_stage_b2_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s7_stage_b2_policy.json)
+set_tests_properties(BoundedKrylovP4S7StageB2Evidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S7TimingEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s7_timing_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s7_timing_policy.json)
+set_tests_properties(BoundedKrylovP4S7TimingEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9LongDirectEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_long_direct_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_long_direct_policy.json)
+set_tests_properties(BoundedKrylovP4S9LongDirectEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9SessionResourceEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_session_resource_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_session_resource_policy.json)
+set_tests_properties(BoundedKrylovP4S9SessionResourceEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9TargetSessionEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_target_session_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_target_session_policy.json)
+set_tests_properties(BoundedKrylovP4S9TargetSessionEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9OfficialStatisticsEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_official_statistics_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_official_execution_policy.json)
+set_tests_properties(BoundedKrylovP4S9OfficialStatisticsEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9OfficialResourceEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_official_resource_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_official_execution_policy.json
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_session_resource_policy.json
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_target_session_policy.json)
+set_tests_properties(BoundedKrylovP4S9OfficialResourceEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9OfficialClosure_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_official_closure.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_official_execution_policy.json)
+set_tests_properties(BoundedKrylovP4S9OfficialClosure_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9HardenedReparsePolicy
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_hardened_reparse_policy.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_hardened_reparse_policy.json
+            ${CMAKE_SOURCE_DIR})
+set_tests_properties(BoundedKrylovP4S9HardenedReparsePolicy PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9HardenedComparison
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_hardened_comparison.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_hardened_reparse_policy.json
+            ${CMAKE_SOURCE_DIR})
+set_tests_properties(BoundedKrylovP4S9HardenedComparison PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 if(MPI_FOUND)
     add_test(NAME AbsoluteKrylovProfile_AuditParity_Rank2_mpi
@@ -1406,3 +1578,47 @@ add_test(NAME UHF_InterAll COMMAND ${PYTHON_EXECUTABLE} test_UHF_InterAll.py)
 set_tests_properties(UHF_InterAll PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 
 add_subdirectory(data)
+
+add_test(NAME PowerLanczosP4FV3ConfirmatoryEvidence_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v3_confirmatory_evidence.py)
+
+add_test(NAME PowerLanczosP4FV3ResultValidator_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v3_result_validator.py)
+
+add_test(NAME PowerLanczosP4FEvidenceComparator_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_evidence_comparator.py)
+
+add_test(NAME PowerLanczosP4FV3SecondaryPreparer_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v3_secondary_preparer.py)
+
+add_test(NAME PowerLanczosP4FV3SecondaryClosure_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v3_secondary_closure.py)
+
+add_test(NAME PowerLanczosP4FBlockStabilityAnalysis_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_block_stability_analysis.py)
+
+add_test(NAME PowerLanczosP4FV4ConfirmatoryEvidence_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v4_confirmatory_evidence.py)
+
+add_test(NAME PowerLanczosP4FV4ResultValidator_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v4_result_validator.py)
+
+add_test(NAME PowerLanczosP4FV4SecondaryPreparer_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v4_secondary_preparer.py)
+
+add_test(NAME PowerLanczosP4FV4SecondaryClosure_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v4_secondary_closure.py)
+
+add_test(NAME PowerLanczosGateClassification_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_gate_classification.py)
