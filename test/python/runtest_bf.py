@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -97,6 +98,48 @@ def update_modpara(path, values):
 
     with open(path, "w") as fp:
         fp.writelines(lines)
+
+
+def assert_modpara_value(path, key, expected):
+    """Fail-fast check that a (possibly secondary) workdir really carries the
+    requested modpara override, e.g. NExUpdatePath for exchange tests."""
+    values = read_key_value_file(path)
+    got = values.get(key)
+    if got is None or str(got).split()[0] != str(expected):
+        raise RuntimeError("{}: expected {} {} but found {}".format(path, key, expected, got))
+
+
+PF_UPDATE_CHECK_PATTERN = re.compile(
+    r"info: BF pf-update check \((?P<label>[^,]+), rank=(?P<rank>\d+)\): "
+    r"hopping proposal=(?P<hp>\d+) accept=(?P<ha>\d+) reject=(?P<hr>\d+); "
+    r"exchange proposal=(?P<ep>\d+) accept=(?P<ea>\d+) reject=(?P<er>\d+)")
+
+
+def summarize_pf_update_check(output):
+    """Sum the per-rank MVMC_BF_PF_UPDATE_CHECK counters printed by the last
+    VMC_BF_MakeSample call of each rank (counters are cumulative per rank)."""
+    last_by_rank = {}
+    for match in PF_UPDATE_CHECK_PATTERN.finditer(output):
+        last_by_rank[match.group("rank")] = match
+    totals = {"hp": 0, "ha": 0, "hr": 0, "ep": 0, "ea": 0, "er": 0, "ranks": len(last_by_rank)}
+    for match in last_by_rank.values():
+        for key in ("hp", "ha", "hr", "ep", "ea", "er"):
+            totals[key] += int(match.group(key))
+    return totals
+
+
+def assert_exchange_events(output, label):
+    """Non-vacuous check for exchange tests run with MVMC_BF_PF_UPDATE_CHECK=1:
+    the oracle must have seen accepted and rejected exchange (and hopping) moves."""
+    totals = summarize_pf_update_check(output)
+    if totals["ranks"] == 0:
+        print("ERROR: {}: no 'BF pf-update check' report found; is MVMC_BF_PF_UPDATE_CHECK=1 set?".format(label))
+        return -1
+    if totals["ea"] <= 0 or totals["er"] <= 0 or totals["ha"] <= 0 or totals["hr"] <= 0:
+        print("ERROR: {}: exchange oracle coverage is vacuous: {}".format(label, totals))
+        return -1
+    print("{}: BF pf-update check totals: {}".format(label, totals))
+    return 0
 
 
 def first_row_is_finite(path):
@@ -574,6 +617,8 @@ def compare_no_bf_energy(rootdir, refdir, bf_workdir, mpi_procs, tol, rejected_o
     copy_def_files(refdir, no_bf_workdir, include_backflow=False)
     if modpara_updates:
         update_modpara(os.path.join(no_bf_workdir, "modpara.def"), modpara_updates)
+        for key, value in modpara_updates.items():
+            assert_modpara_value(os.path.join(no_bf_workdir, "modpara.def"), key, value)
 
     proc = run_vmc(rootdir, no_bf_workdir, mpi_procs, log_name="bf_test_nobf.log")
     if proc.returncode != 0:
@@ -696,15 +741,16 @@ def compare_no_bf_twobodygex(rootdir, refdir, bf_workdir, mpi_procs, tol, reject
     return 0
 
 
-def compare_real_complex_nonidentity(rootdir, real_model, complex_model, mpi_procs, tol, rejected_outputs):
+def compare_real_complex_nonidentity(rootdir, real_model, complex_model, mpi_procs, tol, rejected_outputs,
+                                     modpara_updates=None, work_suffix="", require_exchange_events=False):
     if mpi_procs:
         print("ERROR: non-identity real/complex comparison is a single-rank smoke test.")
         return -1
 
     real_refdir = os.path.join(rootdir, "data", real_model)
     complex_refdir = os.path.join(rootdir, "data", complex_model)
-    real_workdir = os.path.join(rootdir, "work", real_model + "_nonidentity_real")
-    complex_workdir = os.path.join(rootdir, "work", complex_model + "_nonidentity_complex")
+    real_workdir = os.path.join(rootdir, "work", real_model + "_nonidentity_real" + work_suffix)
+    complex_workdir = os.path.join(rootdir, "work", complex_model + "_nonidentity_complex" + work_suffix)
 
     for refdir, workdir in ((real_refdir, real_workdir), (complex_refdir, complex_workdir)):
         if os.path.exists(workdir):
@@ -712,6 +758,10 @@ def compare_real_complex_nonidentity(rootdir, real_model, complex_model, mpi_pro
         os.makedirs(workdir)
         copy_def_files(refdir, workdir, include_backflow=True)
         assert_nonidentity_init_layout(workdir)
+        if modpara_updates:
+            update_modpara(os.path.join(workdir, "modpara.def"), modpara_updates)
+            for key, value in modpara_updates.items():
+                assert_modpara_value(os.path.join(workdir, "modpara.def"), key, value)
 
     real_nsite = parse_nsite(os.path.join(real_workdir, "modpara.def"))
     complex_nsite = parse_nsite(os.path.join(complex_workdir, "modpara.def"))
@@ -767,6 +817,9 @@ def compare_real_complex_nonidentity(rootdir, real_model, complex_model, mpi_pro
             print(proc.stdout)
             print("---- output end ----")
             return -1
+        if require_exchange_events and assert_exchange_events(proc.stdout, label + " nonidentity") != 0:
+            print(proc.stdout)
+            return -1
 
     real_row = read_first_float_row(os.path.join(real_workdir, "output", "zvo_out_001.dat"))
     complex_row = read_first_float_row(os.path.join(complex_workdir, "output", "zvo_out_001.dat"))
@@ -809,11 +862,13 @@ def check_child_opt_block(all_values, child_values, start, label, tol):
 
 
 def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs,
-                             opt_samples, include_backflow):
+                             opt_samples, include_backflow, modpara_updates=None,
+                             extra_work_suffix=""):
     refdir = os.path.join(rootdir, "data", model)
     work_suffix = "_mpi" if mpi_procs else ""
     if not include_backflow:
         work_suffix += "_no_bf"
+    work_suffix += extra_work_suffix
     workdir = os.path.join(
         rootdir, "work", model + "_opt_output_restart" + work_suffix)
     if os.path.exists(workdir):
@@ -833,6 +888,10 @@ def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs,
             "NStore": 1,
         },
     )
+    if modpara_updates:
+        update_modpara(os.path.join(workdir, "modpara.def"), modpara_updates)
+        for key, value in modpara_updates.items():
+            assert_modpara_value(os.path.join(workdir, "modpara.def"), key, value)
 
     nsite = parse_nsite(os.path.join(workdir, "modpara.def"))
     n_proj_bf = 0
@@ -1284,7 +1343,7 @@ def write_nbodyg_failure_def(workdir):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>] [--ex-update-path <n>] [--expect-exchange-events] [--set-vmc-sample <n>]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -1296,6 +1355,9 @@ def main():
     expected_nqp_full = None
     compare_energy = False
     compare_lanczos = False
+    ex_update_path = None
+    expect_exchange_events = False
+    vmc_sample_override = None
     lanczos_mode = None
     lanczos_step = None
     lanczos_support_mode = None
@@ -1422,12 +1484,34 @@ def main():
         elif sys.argv[argi] == "--reject-output" and argi + 1 < len(sys.argv):
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
+        elif sys.argv[argi] == "--ex-update-path" and argi + 1 < len(sys.argv):
+            ex_update_path = str(int(sys.argv[argi + 1]))
+            argi += 2
+        elif sys.argv[argi] == "--expect-exchange-events":
+            expect_exchange_events = True
+            argi += 1
+        elif sys.argv[argi] == "--set-vmc-sample" and argi + 1 < len(sys.argv):
+            vmc_sample_override = str(int(sys.argv[argi + 1]))
+            if int(vmc_sample_override) < 1:
+                print("ERROR: --set-vmc-sample must be positive.")
+                return -1
+            argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>] [--ex-update-path <n>] [--expect-exchange-events] [--set-vmc-sample <n>]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
     mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+    ex_updates = {}
+    ex_suffix = ""
+    if ex_update_path is not None:
+        ex_updates["NExUpdatePath"] = ex_update_path
+        ex_suffix += "_expath{}".format(ex_update_path)
+    if vmc_sample_override is not None:
+        ex_updates["NVMCSample"] = vmc_sample_override
+        ex_suffix += "_smp{}".format(vmc_sample_override)
+    if not ex_updates:
+        ex_updates = None
     if compare_real_complex_model is not None:
         return compare_real_complex_nonidentity(
             rootdir,
@@ -1436,13 +1520,19 @@ def main():
             mpi_procs,
             1.0e-10,
             rejected_outputs,
+            modpara_updates=ex_updates,
+            work_suffix=ex_suffix,
+            require_exchange_events=expect_exchange_events,
         )
     if check_opt_restart:
         return check_opt_output_restart(
             rootdir, model, mpi_procs, rejected_outputs,
-            opt_output_samples, opt_output_include_backflow)
+            opt_output_samples, opt_output_include_backflow,
+            modpara_updates=ex_updates, extra_work_suffix=ex_suffix)
 
     work_suffix = ""
+    if ex_suffix:
+        work_suffix += ex_suffix
     if compare_energy:
         work_suffix += "_energy"
     if lanczos_mode is not None:
@@ -1517,8 +1607,14 @@ def main():
         modpara_updates["NLanczosSupportMode"] = lanczos_support_mode
     if vmc_cal_mode is not None:
         modpara_updates["NVMCCalMode"] = vmc_cal_mode
+    if ex_update_path is not None:
+        modpara_updates["NExUpdatePath"] = ex_update_path
+    if vmc_sample_override is not None and "NVMCSample" not in modpara_updates:
+        modpara_updates["NVMCSample"] = vmc_sample_override
     if modpara_updates:
         update_modpara(os.path.join(workdir, "modpara.def"), modpara_updates)
+        for key, value in modpara_updates.items():
+            assert_modpara_value(os.path.join(workdir, "modpara.def"), key, value)
 
     nsite = parse_nsite(os.path.join(workdir, "modpara.def"))
     definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd)
@@ -1696,6 +1792,9 @@ def main():
         print("---- output begin ----")
         print(proc.stdout)
         print("---- output end ----")
+        return -1
+    if expect_exchange_events and assert_exchange_events(proc.stdout, model) != 0:
+        print(proc.stdout)
         return -1
     tol = 1.0e-10
     if lanczos_mode == "1":

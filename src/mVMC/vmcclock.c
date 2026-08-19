@@ -413,6 +413,8 @@ void InitTimer() {
   BFFSZAffectedCheckEnabled = (affectedCheckEnv != NULL && atoi(affectedCheckEnv) != 0);
   pfUpdateCheckEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_CHECK");
   BFFSZPfUpdateCheckEnabled = (pfUpdateCheckEnv != NULL && atoi(pfUpdateCheckEnv) != 0);
+  pfUpdateCheckEnv = getenv("MVMC_BF_PF_UPDATE_CHECK");
+  BFPfUpdateCheckEnabled = (pfUpdateCheckEnv != NULL && atoi(pfUpdateCheckEnv) != 0);
   pfUpdateFallbackEnv = getenv("MVMC_BF_FSZ_PF_UPDATE_FORCE_FALLBACK");
   BFFSZPfUpdateForceFallback = (pfUpdateFallbackEnv != NULL
       && atoi(pfUpdateFallbackEnv) != 0);

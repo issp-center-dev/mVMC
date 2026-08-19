@@ -1685,6 +1685,16 @@ def run_lanczos_invalid_case(rootdir, case_name, mpi_procs=None):
             "currently supports only diagonal and Transfer Hamiltonian terms",
             write_lanczos_interall,
         ),
+        "BackFlow_FSZ_InvalidExUpdatePath1": (
+            {"NExUpdatePath": "1"},
+            "FSZ BackFlow supports only NExUpdatePath==0",
+            None,
+        ),
+        "BackFlow_FSZ_InvalidExUpdatePath1_mpi": (
+            {"NExUpdatePath": "1"},
+            "FSZ BackFlow supports only NExUpdatePath==0",
+            None,
+        ),
         "FSZ_Lanczos_InvalidReweight": (
             {"NLanczosMode": "1", "NVMCCalMode": "1", "reweight": "1"},
             "does not support RBM, Twist, reweight",
