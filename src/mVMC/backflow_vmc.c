@@ -100,6 +100,12 @@ static void AppendBFUpdateRow(int *msa, int *hopNum, const int mub) {
 #define BF_PF_CHECK_KIND_HOP 0
 #define BF_PF_CHECK_KIND_EXCH 1
 static long long BFPfCheckCount[2][3]; /* [kind][proposal, accept, reject] */
+static double BFPfCheckMaxDev[2];      /* [kind] max |pfMNew - full| / max(|full|, |PfM_old|) */
+/* Proposal/accept tolerance.  The rank-n update and the full rebuild differ by
+   round-off that scales with the *old* Pfaffian (the update is PfM_old times a
+   small Pfaffian), so the deviation is measured against max(|full|, |PfM_old|):
+   this is the absolute error of the Metropolis ratio.  A genuine update bug
+   gives O(1) deviations. */
 static const double BF_PF_CHECK_TOL = 1.0e-8;
 /* Restore checks compare against a pre-proposal snapshot.  The reverse update
    recomputes elements with a different summation order than the initial
@@ -183,14 +189,15 @@ static void BFPfCheckReport(const char *label) {
   int worldRank = 0;
   if (!BFPfUpdateCheckEnabled) return;
   MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+  if (worldRank != 0) return; /* every rank checks and aborts; only rank 0 reports */
   fprintf(stderr,
-          "info: BF pf-update check (%s, rank=%d): hopping proposal=%lld accept=%lld reject=%lld; "
-          "exchange proposal=%lld accept=%lld reject=%lld\n",
+          "info: BF pf-update check (%s, rank=%d): hopping proposal=%lld accept=%lld reject=%lld maxdev=%.3e; "
+          "exchange proposal=%lld accept=%lld reject=%lld maxdev=%.3e\n",
           label, worldRank,
           BFPfCheckCount[BF_PF_CHECK_KIND_HOP][0], BFPfCheckCount[BF_PF_CHECK_KIND_HOP][1],
-          BFPfCheckCount[BF_PF_CHECK_KIND_HOP][2],
+          BFPfCheckCount[BF_PF_CHECK_KIND_HOP][2], BFPfCheckMaxDev[BF_PF_CHECK_KIND_HOP],
           BFPfCheckCount[BF_PF_CHECK_KIND_EXCH][0], BFPfCheckCount[BF_PF_CHECK_KIND_EXCH][1],
-          BFPfCheckCount[BF_PF_CHECK_KIND_EXCH][2]);
+          BFPfCheckCount[BF_PF_CHECK_KIND_EXCH][2], BFPfCheckMaxDev[BF_PF_CHECK_KIND_EXCH]);
 }
 
 /* --- complex sampler --- */
@@ -220,7 +227,12 @@ static void BFPfCheckProposal(BFPfCheckState *st, const int kind, const double c
   memcpy(st->invMFull, InvM, sizeof(double complex) * st->nInv);
   st->fullValid = 1;
   for (qpidx = 0; qpidx < st->qpNum; qpidx++) {
-    const double scale = (cabs(st->pfMFull[qpidx]) > 0.0) ? cabs(st->pfMFull[qpidx]) : 1.0;
+    double scale = cabs(st->pfMFull[qpidx]);
+    double dev;
+    if (cabs(st->pfM[qpidx]) > scale) scale = cabs(st->pfM[qpidx]);
+    if (!(scale > 0.0)) scale = 1.0;
+    dev = cabs(pfMNew[qpidx] - st->pfMFull[qpidx]) / scale;
+    if (dev > BFPfCheckMaxDev[kind]) BFPfCheckMaxDev[kind] = dev;
     if (!BFPfCheckCloseC(pfMNew[qpidx], st->pfMFull[qpidx], scale)) {
       fprintf(stderr, "error: pfMNew mismatch qp=%d update=(%.17e,%.17e) full=(%.17e,%.17e)\n",
               qpidx + qpStart, creal(pfMNew[qpidx]), cimag(pfMNew[qpidx]),
@@ -244,7 +256,9 @@ static void BFPfCheckAccept(BFPfCheckState *st, const int kind, const int qpStar
     BFPfCheckAbort("accepted singular candidate", BFPfCheckKindName(kind), rank);
   }
   for (qpidx = 0; qpidx < st->qpNum; qpidx++) {
-    const double scale = (cabs(st->pfMFull[qpidx]) > 0.0) ? cabs(st->pfMFull[qpidx]) : 1.0;
+    double scale = cabs(st->pfMFull[qpidx]);
+    if (cabs(st->pfM[qpidx]) > scale) scale = cabs(st->pfM[qpidx]);
+    if (!(scale > 0.0)) scale = 1.0;
     if (!BFPfCheckCloseC(PfM[qpidx], st->pfMFull[qpidx], scale)) {
       fprintf(stderr, "error: accepted PfM mismatch qp=%d update=(%.17e,%.17e) full=(%.17e,%.17e)\n",
               qpidx + qpStart, creal(PfM[qpidx]), cimag(PfM[qpidx]),
@@ -317,7 +331,12 @@ static void BFPfCheckProposal_real(BFPfCheckState *st, const int kind, const dou
   memcpy(st->invMFull_r, InvM_real, sizeof(double) * st->nInv);
   st->fullValid = 1;
   for (qpidx = 0; qpidx < st->qpNum; qpidx++) {
-    const double scale = (fabs(st->pfMFull_r[qpidx]) > 0.0) ? fabs(st->pfMFull_r[qpidx]) : 1.0;
+    double scale = fabs(st->pfMFull_r[qpidx]);
+    double dev;
+    if (fabs(st->pfM_r[qpidx]) > scale) scale = fabs(st->pfM_r[qpidx]);
+    if (!(scale > 0.0)) scale = 1.0;
+    dev = fabs(pfMNew[qpidx] - st->pfMFull_r[qpidx]) / scale;
+    if (dev > BFPfCheckMaxDev[kind]) BFPfCheckMaxDev[kind] = dev;
     if (!BFPfCheckCloseR(pfMNew[qpidx], st->pfMFull_r[qpidx], scale)) {
       fprintf(stderr, "error: pfMNew mismatch qp=%d update=%.17e full=%.17e\n",
               qpidx + qpStart, pfMNew[qpidx], st->pfMFull_r[qpidx]);
@@ -339,7 +358,9 @@ static void BFPfCheckAccept_real(BFPfCheckState *st, const int kind, const int q
     BFPfCheckAbort("accepted singular candidate", BFPfCheckKindName(kind), rank);
   }
   for (qpidx = 0; qpidx < st->qpNum; qpidx++) {
-    const double scale = (fabs(st->pfMFull_r[qpidx]) > 0.0) ? fabs(st->pfMFull_r[qpidx]) : 1.0;
+    double scale = fabs(st->pfMFull_r[qpidx]);
+    if (fabs(st->pfM_r[qpidx]) > scale) scale = fabs(st->pfM_r[qpidx]);
+    if (!(scale > 0.0)) scale = 1.0;
     if (!BFPfCheckCloseR(PfM_real[qpidx], st->pfMFull_r[qpidx], scale)) {
       fprintf(stderr, "error: accepted PfM mismatch qp=%d update=%.17e full=%.17e\n",
               qpidx + qpStart, PfM_real[qpidx], st->pfMFull_r[qpidx]);

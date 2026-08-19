@@ -111,8 +111,10 @@ def assert_modpara_value(path, key, expected):
 
 PF_UPDATE_CHECK_PATTERN = re.compile(
     r"info: BF pf-update check \((?P<label>[^,]+), rank=(?P<rank>\d+)\): "
-    r"hopping proposal=(?P<hp>\d+) accept=(?P<ha>\d+) reject=(?P<hr>\d+); "
-    r"exchange proposal=(?P<ep>\d+) accept=(?P<ea>\d+) reject=(?P<er>\d+)")
+    r"hopping proposal=(?P<hp>\d+) accept=(?P<ha>\d+) reject=(?P<hr>\d+)"
+    r"(?: maxdev=(?P<hdev>\S+))?; "
+    r"exchange proposal=(?P<ep>\d+) accept=(?P<ea>\d+) reject=(?P<er>\d+)"
+    r"(?: maxdev=(?P<edev>\S+))?")
 
 
 def summarize_pf_update_check(output):
@@ -121,10 +123,14 @@ def summarize_pf_update_check(output):
     last_by_rank = {}
     for match in PF_UPDATE_CHECK_PATTERN.finditer(output):
         last_by_rank[match.group("rank")] = match
-    totals = {"hp": 0, "ha": 0, "hr": 0, "ep": 0, "ea": 0, "er": 0, "ranks": len(last_by_rank)}
+    totals = {"hp": 0, "ha": 0, "hr": 0, "ep": 0, "ea": 0, "er": 0, "ranks": len(last_by_rank),
+              "hdev": 0.0, "edev": 0.0}
     for match in last_by_rank.values():
         for key in ("hp", "ha", "hr", "ep", "ea", "er"):
             totals[key] += int(match.group(key))
+        for key in ("hdev", "edev"):
+            if match.group(key) is not None:
+                totals[key] = max(totals[key], float(match.group(key)))
     return totals
 
 
