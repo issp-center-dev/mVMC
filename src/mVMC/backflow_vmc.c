@@ -807,17 +807,6 @@ void VMC_BF_MakeSample(MPI_Comm comm)
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
 
-  /* The exchange update (NExUpdatePath==1) is implemented only on the
-     incremental non-FSZ path; the canonical full-rebuild path (momentum
-     projection / APBC / nontrivial QPTrans) has no exchange support yet. */
-  if (NExUpdatePath == 1 && BFUseCanonicalNonFszPath()) {
-    if (rank == 0) {
-      fprintf(stderr,
-              "Error: BackFlow exchange update (NExUpdatePath==1) is not supported "
-              "with momentum projection/APBC (canonical non-FSZ path).\n");
-    }
-    MPI_Abort(comm, EXIT_FAILURE);
-  }
   SplitLoop(&qpStart, &qpEnd, NQPFull, rank, size);
   BFPfCheckInit(&pfCheck, qpStart, qpEnd, 0);
 
@@ -988,22 +977,34 @@ void VMC_BF_MakeSample(MPI_Comm comm)
 
       } else if (updateType == EXCHANGE) { /* exchange */
         Counter[2]++;
+        /* Unlike the real sampler, the complex sampler carries no hopping
+           profile counters; the exchange counters are wired here so tests can
+           assert non-vacuous exchange coverage on both samplers. */
+        AddBFProfileCounter(BFPROF_EXCHANGE_TRY, 1);
 
         StartTimer(31);
         makeCandidate_exchange(&mi, &ri, &rj, &s, &rejectFlag,
                                TmpEleIdx, TmpEleCfg, TmpEleNum);
         StopTimer(31);
 
-        if (rejectFlag) continue;
+        if (rejectFlag) {
+          AddBFProfileCounter(BFPROF_EXCHANGE_CANDIDATE_REJECT, 1);
+          continue;
+        }
+        AddBFProfileCounter(BFPROF_EXCHANGE_VALID, 1);
         BFPfCheckSnapshot(&pfCheck, TmpEleProjCnt, TmpEleProjBFCnt);
 
         StartTimer(33);
+        bfMultiQPSampleAuditCaptureBase(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+            TmpEleProjCnt, TmpEleProjBFCnt);
         StartTimer(65);
 
         /* The mi-th electron with spin s exchanges with the electron on site rj with spin 1-s.
-           Only sites ri and rj change occupation, so the BackFlow Slater-element update for the
-           hop (ri -> rj) covers every affected element; the second moved electron is added to
-           the Pfaffian update rows explicitly. */
+           On the incremental path, only sites ri and rj change occupation, so the BackFlow
+           Slater-element update for the hop (ri -> rj) covers every affected element; the
+           second moved electron is added to the Pfaffian update rows explicitly.  On the
+           canonical path the candidate is rebuilt in full, exactly as for hopping. */
         t = 1 - s;
         mj = TmpEleCfg[rj + t * Nsite];
 
@@ -1014,22 +1015,36 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         updateEleConfig(mj, rj, ri, t, TmpEleIdx, TmpEleCfg, TmpEleNum);
         UpdateProjCnt(rj, ri, t, projCntNew, projCntNew, TmpEleNum);
         MakeProjBFCnt(projBFCntNew, TmpEleNum);
+        bfMultiQPSampleAuditCaptureCandidate(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum);
 
         StopTimer(65);
         StartTimer(64);
-        UpdateSlaterElmBF_fcmp(mi, ri, rj, s, TmpEleCfg, TmpEleNum, projBFCntNew, msaTmp, icount,
-                               SlaterElmBF);
-        AppendBFUpdateRow(msaTmp, icount, mj + Ne * t);
+        if(BFUseCanonicalNonFszPath()) {
+          fullCandidateStatus = RebuildSlaterMAllBF_fcmp(
+              TmpEleIdx, TmpEleNum, projBFCntNew, qpStart, qpEnd,
+              fullCandidateSlater, pfMNew, fullCandidateInv);
+          bfMultiQPSampleAuditAfterCandidate(&sampleAudit);
+        } else {
+          UpdateSlaterElmBF_fcmp(mi, ri, rj, s, TmpEleCfg, TmpEleNum, projBFCntNew, msaTmp, icount,
+                                 SlaterElmBF);
+          AppendBFUpdateRow(msaTmp, icount, mj + Ne * t);
+          fullCandidateStatus = 0;
+        }
         StopTimer(64);
         StartTimer(66);
 
-        CalculateNewPfMBF(icount, msaTmp, pfMNew, TmpEleIdx, qpStart, qpEnd, SlaterElmBF);
+        if(!BFUseCanonicalNonFszPath()) {
+          CalculateNewPfMBF(icount, msaTmp, pfMNew, TmpEleIdx, qpStart, qpEnd, SlaterElmBF);
+        }
         BFPfCheckProposal(&pfCheck, BF_PF_CHECK_KIND_EXCH, pfMNew, TmpEleIdx, qpStart, qpEnd, rank);
         StopTimer(66);
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm);
+        logIpNew = fullCandidateStatus == 0
+            ? CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm)
+            : -INFINITY;
 
         StopTimer(67);
 
@@ -1038,24 +1053,44 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         w = exp(2.0 * (x + (logIpNew - logIpOld))); //TBC
         if (!isfinite(w)) w = -1.0; /* should be rejected */
 
-        if (w > genrand_real2()) { /* accept */
+        if (fullCandidateStatus == 0 && w > genrand_real2()) { /* accept */
           StartTimer(68);
-          UpdateMAll_BF_fcmp(icount, msaTmp, PfM, TmpEleIdx, qpStart, qpEnd);
+          if(BFUseCanonicalNonFszPath()) {
+            MakeSlaterElmBF_fcmp(TmpEleNum, projBFCntNew);
+            memcpy(PfM, pfMNew,
+                   (size_t)(qpEnd-qpStart)*sizeof(double complex));
+            memcpy(InvM, fullCandidateInv,
+                   fullInvCount*sizeof(double complex));
+          } else {
+            UpdateMAll_BF_fcmp(icount, msaTmp, PfM, TmpEleIdx, qpStart, qpEnd);
+          }
           StopTimer(68);
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
           for (i = 0; i < 16 * Nsite * Nrange; i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
+          bfMultiQPSampleAuditAfterAccept(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, projCntNew, TmpEleProjBFCnt, projBFCntNew,
+              fullCandidateSlater, pfMNew, fullCandidateInv,
+              NULL, NULL, NULL);
           logIpOld = logIpNew;
           nAccept++;
           Counter[3]++;
+          AddBFProfileCounter(BFPROF_EXCHANGE_ACCEPT, 1);
           BFPfCheckAccept(&pfCheck, BF_PF_CHECK_KIND_EXCH, qpStart, rank);
         } else { /* reject */
+          AddBFProfileCounter(BFPROF_EXCHANGE_METROPOLIS_REJECT, 1);
           revertEleConfig(mj, rj, ri, t, TmpEleIdx, TmpEleCfg, TmpEleNum);
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
-          StartTimer(64);
-          UpdateSlaterElmBF_fcmp(mi, rj, ri, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, msaTmp, icount,
-                                 SlaterElmBF);
-          StopTimer(64);
+          if(!BFUseCanonicalNonFszPath()) {
+            StartTimer(64);
+            UpdateSlaterElmBF_fcmp(mi, rj, ri, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, msaTmp, icount,
+                                   SlaterElmBF);
+            StopTimer(64);
+          }
+          bfMultiQPSampleAuditAfterReject(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, TmpEleProjBFCnt);
           BFPfCheckReject(&pfCheck, BF_PF_CHECK_KIND_EXCH, TmpEleProjCnt, TmpEleProjBFCnt, rank);
         }
         StopTimer(33);
@@ -1318,17 +1353,6 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
 
-  /* The exchange update (NExUpdatePath==1) is implemented only on the
-     incremental non-FSZ path; the canonical full-rebuild path (momentum
-     projection / APBC / nontrivial QPTrans) has no exchange support yet. */
-  if (NExUpdatePath == 1 && BFUseCanonicalNonFszPath()) {
-    if (rank == 0) {
-      fprintf(stderr,
-              "Error: BackFlow exchange update (NExUpdatePath==1) is not supported "
-              "with momentum projection/APBC (canonical non-FSZ path).\n");
-    }
-    MPI_Abort(comm, EXIT_FAILURE);
-  }
   SplitLoop(&qpStart, &qpEnd, NQPFull, rank, size);
   BFPfCheckInit(&pfCheck, qpStart, qpEnd, 1);
 
@@ -1562,12 +1586,16 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         BFPfCheckSnapshot_real(&pfCheck, TmpEleProjCnt, TmpEleProjBFCnt);
 
         StartTimer(33);
+        bfMultiQPSampleAuditCaptureBase(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+            TmpEleProjCnt, TmpEleProjBFCnt);
         StartTimer(65);
 
         /* The mi-th electron with spin s exchanges with the electron on site rj with spin 1-s.
-           Only sites ri and rj change occupation, so the BackFlow Slater-element update for the
-           hop (ri -> rj) covers every affected element; the second moved electron is added to
-           the Pfaffian update rows explicitly. */
+           On the incremental path, only sites ri and rj change occupation, so the BackFlow
+           Slater-element update for the hop (ri -> rj) covers every affected element; the
+           second moved electron is added to the Pfaffian update rows explicitly.  On the
+           canonical path the candidate is rebuilt in full, exactly as for hopping. */
         t = 1 - s;
         mj = TmpEleCfg[rj + t * Nsite];
 
@@ -1578,27 +1606,43 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         updateEleConfig(mj, rj, ri, t, TmpEleIdx, TmpEleCfg, TmpEleNum);
         UpdateProjCnt(rj, ri, t, projCntNew, projCntNew, TmpEleNum);
         MakeProjBFCnt(projBFCntNew, TmpEleNum);
+        bfMultiQPSampleAuditCaptureCandidate(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum);
 
         StopTimer(65);
         StartTimer(64);
+        if(BFUseCanonicalNonFszPath()) {
+          fullCandidateStatus = RebuildSlaterMAllBF_real(
+              TmpEleIdx, TmpEleNum, projBFCntNew, qpStart, qpEnd,
+              fullCandidateSlater, pfMNewComplex, fullCandidateInv,
+              fullCandidateSlaterReal, pfMNew_real,
+              fullCandidateInvReal);
+          bfMultiQPSampleAuditAfterCandidate(&sampleAudit);
+        } else {
 #ifdef MVMC_DEBUG_BF_REAL_UPDATE
-        UpdateSlaterElmBF_real_checked("exchange proposal", mi, ri, rj, s, TmpEleCfg, TmpEleNum,
-                                       TmpEleProjBFCnt, projBFCntNew, msaTmp, icount, msaRef, icountRef, rank);
+          UpdateSlaterElmBF_real_checked("exchange proposal", mi, ri, rj, s, TmpEleCfg, TmpEleNum,
+                                         TmpEleProjBFCnt, projBFCntNew, msaTmp, icount, msaRef, icountRef, rank);
 #else
-        UpdateSlaterElmBF_real(mi, ri, rj, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, projBFCntNew, msaTmp, icount,
-                               SlaterElmBF_real);
+          UpdateSlaterElmBF_real(mi, ri, rj, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, projBFCntNew, msaTmp, icount,
+                                 SlaterElmBF_real);
 #endif
-        AppendBFUpdateRow(msaTmp, icount, mj + Ne * t);
+          AppendBFUpdateRow(msaTmp, icount, mj + Ne * t);
+          fullCandidateStatus = 0;
+        }
         StopTimer(64);
         StartTimer(66);
 
-        CalculateNewPfMBF_real(icount, msaTmp, pfMNew_real, TmpEleIdx, qpStart, qpEnd, SlaterElmBF_real);
+        if(!BFUseCanonicalNonFszPath()) {
+          CalculateNewPfMBF_real(icount, msaTmp, pfMNew_real, TmpEleIdx, qpStart, qpEnd, SlaterElmBF_real);
+        }
         BFPfCheckProposal_real(&pfCheck, BF_PF_CHECK_KIND_EXCH, pfMNew_real, TmpEleIdx, qpStart, qpEnd, rank);
         StopTimer(66);
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm);
+        logIpNew = fullCandidateStatus == 0
+            ? CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm)
+            : -INFINITY;
 
         StopTimer(67);
 
@@ -1607,13 +1651,33 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         w = exp(2.0 * (x + (logIpNew - logIpOld))); //TBC
         if (!isfinite(w)) w = -1.0; /* should be rejected */
 
-        if (w > genrand_real2()) { /* accept */
+        if (fullCandidateStatus == 0 && w > genrand_real2()) { /* accept */
           StartTimer(68);
-          UpdateMAll_BF_real(icount, msaTmp, PfM_real, TmpEleIdx, qpStart, qpEnd);
+          if(BFUseCanonicalNonFszPath()) {
+            MakeSlaterElmBF_fcmp(TmpEleNum, projBFCntNew);
+            memcpy(SlaterElmBF_real, fullCandidateSlaterReal,
+                   fullSlaterCount*sizeof(double));
+            memcpy(PfM, pfMNewComplex,
+                   (size_t)(qpEnd-qpStart)*sizeof(double complex));
+            memcpy(InvM, fullCandidateInv,
+                   fullInvCount*sizeof(double complex));
+            memcpy(PfM_real, pfMNew_real,
+                   (size_t)(qpEnd-qpStart)*sizeof(double));
+            memcpy(InvM_real, fullCandidateInvReal,
+                   fullInvCount*sizeof(double));
+          } else {
+            UpdateMAll_BF_real(icount, msaTmp, PfM_real, TmpEleIdx, qpStart, qpEnd);
+          }
           StopTimer(68);
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
           for (i = 0; i < 16 * Nsite * Nrange; i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
+          bfMultiQPSampleAuditAfterAccept(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, projCntNew, TmpEleProjBFCnt, projBFCntNew,
+              fullCandidateSlater, pfMNewComplex, fullCandidateInv,
+              fullCandidateSlaterReal, pfMNew_real,
+              fullCandidateInvReal);
           logIpOld = logIpNew;
           nAccept++;
           Counter[3]++;
@@ -1623,15 +1687,20 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
           AddBFProfileCounter(BFPROF_EXCHANGE_METROPOLIS_REJECT, 1);
           revertEleConfig(mj, rj, ri, t, TmpEleIdx, TmpEleCfg, TmpEleNum);
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
-          StartTimer(64);
+          if(!BFUseCanonicalNonFszPath()) {
+            StartTimer(64);
 #ifdef MVMC_DEBUG_BF_REAL_UPDATE
-          UpdateSlaterElmBF_real_checked("exchange reject", mi, rj, ri, s, TmpEleCfg, TmpEleNum,
-                                         projBFCntNew, TmpEleProjBFCnt, msaTmp, icount, msaRef, icountRef, rank);
+            UpdateSlaterElmBF_real_checked("exchange reject", mi, rj, ri, s, TmpEleCfg, TmpEleNum,
+                                           projBFCntNew, TmpEleProjBFCnt, msaTmp, icount, msaRef, icountRef, rank);
 #else
-          UpdateSlaterElmBF_real(mi, rj, ri, s, TmpEleCfg, TmpEleNum, projBFCntNew, TmpEleProjBFCnt, msaTmp, icount,
-                                 SlaterElmBF_real);
+            UpdateSlaterElmBF_real(mi, rj, ri, s, TmpEleCfg, TmpEleNum, projBFCntNew, TmpEleProjBFCnt, msaTmp, icount,
+                                   SlaterElmBF_real);
 #endif
-          StopTimer(64);
+            StopTimer(64);
+          }
+          bfMultiQPSampleAuditAfterReject(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, TmpEleProjBFCnt);
           BFPfCheckReject_real(&pfCheck, BF_PF_CHECK_KIND_EXCH, TmpEleProjCnt, TmpEleProjBFCnt, rank);
         }
         StopTimer(33);

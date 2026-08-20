@@ -1355,9 +1355,30 @@ set_tests_properties(BackFlow_Optimization_Complex_MultiQP PROPERTIES ENVIRONMEN
 add_test(NAME BackFlow_Optimization_Complex_MultiQP_mpi
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --expect-nqp-full 2 --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_Optimization_Complex_MultiQP_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Optimization_Complex_MultiQP_mpi")
-add_test(NAME BackFlow_MultiQP_InvalidExchangePath
-         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --set-ex-update-path 1 --expect-error "not supported with momentum projection/APBC")
-set_tests_properties(BackFlow_MultiQP_InvalidExchangePath PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_InvalidExchangePath")
+# exchange update on the canonical multi-QP path: sampling must stay on the
+# full-rebuild route (no legacy incremental updates) with the state audit on,
+# and every run must see accepted and rejected exchange moves
+add_test(NAME BackFlow_MultiQP_Exchange_PBC_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --set-ex-update-path 1 --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_PBC_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_PBC_Complex")
+add_test(NAME BackFlow_MultiQP_Exchange_PBC_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --set-ex-update-path 1 --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_PBC_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_PBC_Real")
+add_test(NAME BackFlow_MultiQP_Exchange_PBC_Real_mpi
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --set-ex-update-path 1 --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_PBC_Real_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_PBC_Real_mpi")
+add_test(NAME BackFlow_MultiQP_Exchange_AP_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --set-ex-update-path 1 --use-ap-projection --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_AP_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_AP_Real")
+add_test(NAME BackFlow_MultiQP_Exchange_AP_Real_mpi
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --set-ex-update-path 1 --use-ap-projection --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_AP_Real_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_AP_Real_mpi")
+# the non-identity initial state drives the chain toward doubly occupied
+# configurations where exchange candidates are rare, so sample longer to keep
+# the accept/reject coverage assertion non-vacuous
+add_test(NAME BackFlow_MultiQP_Exchange_NonIdentity_PBC_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --set-ex-update-path 1 --use-nonidentity-init --set-vmc-sample 640 --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_NonIdentity_PBC_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_NonIdentity_PBC_Real")
 add_test(NAME BackFlow_MultiQP_SampleState_PBC_Complex
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_MultiQP_SampleState_PBC_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_SampleState_PBC_Complex")

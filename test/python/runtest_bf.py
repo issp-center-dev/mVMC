@@ -255,6 +255,37 @@ def check_multiqp_full_rebuild_profile(workdir):
     return 0
 
 
+def check_exchange_profile(workdir):
+    """Non-vacuous coverage check for exchange sampling via the real-sampler
+    profile counters (MVMC_BF_PROFILE=1): the run must have seen valid,
+    accepted, and Metropolis-rejected exchange moves."""
+    time_files = sorted(glob.glob(os.path.join(
+        workdir, "output", "*CalcTimer.dat")))
+    if len(time_files) != 1:
+        print("ERROR: expected one BackFlow timing file, got {}".format(
+            time_files))
+        return -1
+    keys = ("BF exchange valid", "BF exchange accept",
+            "BF exchange metropolis reject")
+    counters = {}
+    with open(time_files[0]) as source:
+        for line in source:
+            for key in keys:
+                if key in line:
+                    counters[key] = int(line.split()[-1])
+    missing = [key for key in keys if key not in counters]
+    if missing:
+        print("ERROR: exchange profile counters are missing: {}".format(
+            missing))
+        return -1
+    if any(counters[key] <= 0 for key in keys):
+        print("ERROR: exchange sampling coverage is vacuous: {}".format(
+            counters))
+        return -1
+    print("exchange profile counters: {}".format(counters))
+    return 0
+
+
 def first_row_is_finite(path):
     with open(path) as fp:
         for line in fp:
@@ -1656,7 +1687,7 @@ def write_nbodyg_failure_def(workdir):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green1-bruteforce] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--set-ex-update-path <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reverse-projection-order] [--use-ap-projection] [--use-asymmetric-complex-projection-weights] [--mutate-ap-signs-positive] [--check-multiqp-full-rebuild] [--reject-output <substring>] [--ex-update-path <n>] [--expect-exchange-events] [--set-vmc-sample <n>]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green1-bruteforce] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--set-ex-update-path <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reverse-projection-order] [--use-ap-projection] [--use-asymmetric-complex-projection-weights] [--mutate-ap-signs-positive] [--check-multiqp-full-rebuild] [--reject-output <substring>] [--ex-update-path <n>] [--expect-exchange-events] [--set-vmc-sample <n>] [--expect-exchange-profile]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -1700,6 +1731,7 @@ def main():
     use_single_projection_row = False
     mutate_ap_signs_positive = False
     check_multiqp_full_rebuild = False
+    expect_exchange_profile = False
     ncond_override = None
     nsplit_size_override = None
     ex_update_path_override = None
@@ -1837,6 +1869,9 @@ def main():
         elif sys.argv[argi] == "--check-multiqp-full-rebuild":
             check_multiqp_full_rebuild = True
             argi += 1
+        elif sys.argv[argi] == "--expect-exchange-profile":
+            expect_exchange_profile = True
+            argi += 1
         elif sys.argv[argi] == "--reject-output" and argi + 1 < len(sys.argv):
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
@@ -1853,7 +1888,7 @@ def main():
                 return -1
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green1-bruteforce] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--set-ex-update-path <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reverse-projection-order] [--use-ap-projection] [--use-asymmetric-complex-projection-weights] [--mutate-ap-signs-positive] [--check-multiqp-full-rebuild] [--reject-output <substring>] [--ex-update-path <n>] [--expect-exchange-events] [--set-vmc-sample <n>]".format(sys.argv[0]))
+            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green1-bruteforce] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--set-ex-update-path <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reverse-projection-order] [--use-ap-projection] [--use-asymmetric-complex-projection-weights] [--mutate-ap-signs-positive] [--check-multiqp-full-rebuild] [--reject-output <substring>] [--ex-update-path <n>] [--expect-exchange-events] [--set-vmc-sample <n>] [--expect-exchange-profile]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -2060,7 +2095,7 @@ def main():
     nbody_env = {}
     if check_bf_nbody_state:
         nbody_env["MVMC_BF_NBODY_STATE_CHECK"] = "1"
-    if check_multiqp_full_rebuild:
+    if check_multiqp_full_rebuild or expect_exchange_profile:
         nbody_env["MVMC_BF_PROFILE"] = "1"
     if check_bf_green1_bruteforce:
         nbody_env["MVMC_BF_GREEN1_DUMP"] = green1_dump_path
@@ -2278,6 +2313,10 @@ def main():
             return result
     if check_multiqp_full_rebuild:
         result = check_multiqp_full_rebuild_profile(workdir)
+        if result != 0:
+            return result
+    if expect_exchange_profile:
+        result = check_exchange_profile(workdir)
         if result != 0:
             return result
     if check_bf_green1_bruteforce:
