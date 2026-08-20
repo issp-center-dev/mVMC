@@ -199,8 +199,16 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
     fprintf(stderr, "Error: BackFlow MVP does not support NLocalSpin > 0 (got %d).\n", NLocSpn);
     return 1;
   }
-  if (NExUpdatePath != 0) {
-    fprintf(stderr, "Error: BackFlow MVP supports only NExUpdatePath==0 (got %d).\n", NExUpdatePath);
+  /* Local update path: the non-FSZ BackFlow samplers implement hopping (0) and
+     hopping+exchange (1). The FSZ BackFlow sampler ignores NExUpdatePath, so any
+     non-zero value would be silently dropped there; reject it explicitly. */
+  if (iFlgOrbitalGeneral != 0) {
+    if (NExUpdatePath != 0) {
+      fprintf(stderr, "Error: FSZ BackFlow supports only NExUpdatePath==0 (got %d).\n", NExUpdatePath);
+      return 1;
+    }
+  } else if (NExUpdatePath != 0 && NExUpdatePath != 1) {
+    fprintf(stderr, "Error: BackFlow supports only NExUpdatePath==0 or 1 (got %d).\n", NExUpdatePath);
     return 1;
   }
   if (NSPGaussLeg != 1) {

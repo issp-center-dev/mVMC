@@ -2608,9 +2608,13 @@ Inputs outside this range are rejected.
 -  Only ``NBackFlowIdx==1`` is supported. Multiple BackFlow groups are
    not supported.
 
--  The local update path must be the hopping update
-   ``NExUpdatePath==0``. t-J update paths, exchange updates, Kondo
-   updates, and doublon-only updates are not supported.
+-  The local update path must be ``NExUpdatePath==0`` (hopping) or
+   ``NExUpdatePath==1`` (hopping and exchange) for the normal
+   ``Orbital`` / ``OrbitalAntiParallel`` (non-FSZ) sampler. With
+   ``OrbitalGeneral`` (FSZ) only ``NExUpdatePath==0`` is supported.
+   t-J update paths, Kondo updates, doublon-only updates, and the
+   ``NExUpdatePath>=2`` pure-spin / weighted local update paths are not
+   supported.
 
 -  Pair orbitals may use the normal ``Orbital`` /
    ``OrbitalAntiParallel`` format or ``OrbitalGeneral`` / FSZ. With
