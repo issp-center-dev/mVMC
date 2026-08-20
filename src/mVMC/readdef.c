@@ -1178,6 +1178,15 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NCoulombIntra = bufInt[IdxNCoulombIntra];
   NCoulombInter = bufInt[IdxNCoulombInter];
   NHundCoupling = bufInt[IdxNHund];
+  if (bufInt[IdxNPairHop] < 0 || bufInt[IdxNPairHop] > INT_MAX / 2) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NPairHopping count is outside the supported range "
+              "(raw NPairHop=%d).\n",
+              bufInt[IdxNPairHop]);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
   NPairHopping = 2 * bufInt[IdxNPairHop];
   NExchangeCoupling = bufInt[IdxNExchange];
   NGutzwillerIdx = bufInt[IdxNGutz];
@@ -1460,8 +1469,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     MPI_Abort(comm, EXIT_FAILURE);
   }
 
-  Nsize = 2 * Ne;
-  Nsite2 = 2 * Nsite;
   NSlater = NOrbitalIdx;
   NProj = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx
           + 2 * 3 * NDoublonHolon2siteIdx
@@ -1489,6 +1496,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         .lanczosMode = NLanczosMode,
         .vmcCalMode = NVMCCalMode,
         .orbitalGeneral = iFlgOrbitalGeneral,
+        .twoSz = TwoSz,
         .nProjBF = NProjBF,
         .flagRBM = FlagRBM,
         .reweight = reweight,
@@ -1522,6 +1530,9 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       MPI_Abort(comm, EXIT_FAILURE);
     }
   }
+
+  Nsize = 2 * Ne;
+  Nsite2 = 2 * Nsite;
 
   /* BFValidateSettings has already rejected unsupported BackFlow Twist and
      reweight inputs before the derived sizes are finalized here. */
@@ -2008,6 +2019,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
     lanczos2Contract.lanczosMode = NLanczosMode;
     lanczos2Contract.vmcCalMode = NVMCCalMode;
     lanczos2Contract.orbitalGeneral = iFlgOrbitalGeneral;
+    lanczos2Contract.twoSz = TwoSz;
     lanczos2Contract.nProjBF = NProjBF;
     lanczos2Contract.flagRBM = FlagRBM;
     lanczos2Contract.reweight = reweight;

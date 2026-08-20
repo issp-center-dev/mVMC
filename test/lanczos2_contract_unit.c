@@ -24,6 +24,7 @@ static Lanczos2Contract SupportedContract(void) {
   contract.vmcCalMode = 1;
   contract.nsite = 4;
   contract.ne = 2;
+  contract.nTransfer = 8;
   contract.nQPFull = 1;
   return contract;
 }
@@ -33,6 +34,7 @@ static Lanczos2Contract SupportedHeisenbergContract(void) {
   contract.exUpdatePath = 2;
   contract.nExchangeCoupling = 4;
   contract.nLocSpn = 4;
+  contract.nTransfer = 0;
   return contract;
 }
 
@@ -67,13 +69,17 @@ static void TestAllowedInputs(void) {
   CHECK(ClassifyLanczos2Model(&contract) == LANCZOS2_MODEL_ELECTRONIC_VK,
         "electronic model classification");
 
-  /*
-   * Step 1 is the compatibility path: the new step-2 capability gate must not
-   * reject combinations that remain owned by the existing Lanczos code.
-   */
-  memset(&contract, 0x5a, sizeof(contract));
+  /* Step 1 remains the legacy compatibility path, but not an unconditional OK. */
+  contract = SupportedContract();
   contract.step = 1;
   CheckStatus(&contract, LANCZOS2_CONTRACT_OK, "step 1 compatibility");
+
+  contract = SupportedContract();
+  contract.step = 1;
+  contract.lanczosMode = 2;
+  contract.nProjBF = 1;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_OK,
+              "step 1 legacy capability compatibility");
 }
 
 static void TestStepDomain(void) {
@@ -107,6 +113,10 @@ static void TestEachUnsupportedCapability(void) {
               "orbital-general");
 
   contract = SupportedContract();
+  contract.twoSz = 2;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_UNSUPPORTED_TWO_SZ, "2Sz");
+
+  contract = SupportedContract();
   contract.nProjBF = 1;
   CheckStatus(&contract, LANCZOS2_CONTRACT_UNSUPPORTED_BACKFLOW, "BackFlow");
 
@@ -123,6 +133,12 @@ static void TestEachUnsupportedCapability(void) {
   contract.exUpdatePath = 1;
   CheckStatus(&contract, LANCZOS2_CONTRACT_UNSUPPORTED_UPDATE_PATH,
               "update path");
+
+  contract = SupportedContract();
+  contract.nTransfer = 0;
+  CheckStatus(&contract,
+              LANCZOS2_CONTRACT_REQUIRES_SPIN_CONSERVING_TRANSFER,
+              "electronic Transfer");
 
   contract = SupportedHeisenbergContract();
   contract.nLocSpn = 3;
@@ -149,7 +165,7 @@ static void TestEachUnsupportedCapability(void) {
   contract.ne = INT_MAX;
   contract.nsite = INT_MAX;
   contract.nLocSpn = INT_MAX;
-  CheckStatus(&contract, LANCZOS2_CONTRACT_REQUIRES_PURE_LOCALIZED_SPIN,
+  CheckStatus(&contract, LANCZOS2_CONTRACT_SIZE_OVERFLOW,
               "pure-spin electron-count overflow");
 
   contract = SupportedContract();
@@ -193,6 +209,36 @@ static void TestEachUnsupportedCapability(void) {
   }
 }
 
+static void TestCommonDomainAndOverflow(void) {
+  Lanczos2Contract contract = SupportedContract();
+  contract.step = 1;
+  contract.ne = 0;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_INVALID_COUNT,
+              "step 1 zero Ne rejected");
+
+  contract = SupportedContract();
+  contract.step = 1;
+  contract.nPairHopping = -1;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_INVALID_COUNT,
+              "step 1 negative count rejected");
+
+  contract = SupportedContract();
+  contract.step = 1;
+  contract.nsite = INT_MAX;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_SIZE_OVERFLOW,
+              "step 1 Nsite2 overflow rejected");
+
+  contract = SupportedContract();
+  contract.nQPFull = 0;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_INVALID_COUNT,
+              "step 2 zero NQPFull rejected");
+
+  contract = SupportedContract();
+  contract.ne = INT_MAX;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_SIZE_OVERFLOW,
+              "step 2 Nsize overflow rejected");
+}
+
 static void TestFirstFailureIsStable(void) {
   Lanczos2Contract contract = SupportedContract();
   contract.lanczosMode = 0;
@@ -211,6 +257,7 @@ int main(void) {
   TestAllowedInputs();
   TestStepDomain();
   TestEachUnsupportedCapability();
+  TestCommonDomainAndOverflow();
   TestFirstFailureIsStable();
 
   if (failures != 0) {

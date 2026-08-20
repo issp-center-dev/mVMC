@@ -22,10 +22,37 @@ add_test(NAME NBodyOperator_Unit COMMAND nbody_operator_unit)
 
 add_executable(lanczos2_contract_unit
     lanczos2_contract_unit.c
-    ${CMAKE_SOURCE_DIR}/src/mVMC/lanczos2_contract.c)
+    ${CMAKE_SOURCE_DIR}/src/mVMC/lanczos2_contract.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_contract.c)
 target_include_directories(lanczos2_contract_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 add_test(NAME Lanczos2Contract_Unit COMMAND lanczos2_contract_unit)
+
+add_executable(power_lanczos_contract_unit
+    power_lanczos_contract_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_contract.c)
+target_include_directories(power_lanczos_contract_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_contract_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME PowerLanczosContract_Unit
+    COMMAND power_lanczos_contract_unit)
+
+add_executable(power_lanczos_build_metadata_unit
+    power_lanczos_fp_metadata_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_fp_metadata.c)
+target_include_directories(power_lanczos_build_metadata_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_build_metadata_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+    target_compile_definitions(power_lanczos_build_metadata_unit PRIVATE
+        MVMC_POWER_LANCZOS_FP_CONTRACT_OFF_REQUESTED=1)
+endif()
+add_test(NAME PowerLanczosBuildMetadata_Unit
+    COMMAND power_lanczos_build_metadata_unit)
 
 add_executable(update_weight_unit
     update_weight_unit.c

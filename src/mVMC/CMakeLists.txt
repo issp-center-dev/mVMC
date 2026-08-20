@@ -15,6 +15,7 @@ set(SOURCES_vmcmain
         classic_pfaffian_state.c
         classic_pfaffian_collective.c
         physcal_lanczos.c physcal_lanczos2.c
+        power_lanczos_contract.c power_lanczos_fp_metadata.c
         lanczos2_contract.c splitloop.c
         krylov_fock_reference.c krylov_fock_proposal.c bounded_krylov_engine.c
         bounded_krylov_collective.c krylov_positive_guide.c
@@ -35,6 +36,11 @@ add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
 target_compile_definitions(vmc.out PRIVATE
     MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
     MVMC_ENABLE_POWER_LANCZOS_P5_CORE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vmc.out PRIVATE -fno-fast-math -ffp-contract=off)
+  target_compile_definitions(vmc.out PRIVATE
+      MVMC_POWER_LANCZOS_FP_CONTRACT_OFF_REQUESTED=1)
+endif()
 if(Testing)
   # Keep fault injection, reference samplers, and audits out of production.
   target_sources(vmc.out PRIVATE classic_pfaffian_sampler.c

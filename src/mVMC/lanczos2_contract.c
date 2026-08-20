@@ -2,82 +2,123 @@
 #include <stddef.h>
 
 #include "lanczos2_contract.h"
+#include "power_lanczos_contract.h"
+
+static MVMCPowerLanczosContract ToPowerContract(
+    const Lanczos2Contract *contract) {
+  MVMCPowerLanczosContract powerContract;
+  powerContract.order = contract->step;
+  powerContract.lanczosMode = contract->lanczosMode;
+  powerContract.vmcCalMode = contract->vmcCalMode;
+  powerContract.orbitalGeneral = contract->orbitalGeneral;
+  powerContract.twoSz = contract->twoSz;
+  powerContract.nProjBF = contract->nProjBF;
+  powerContract.flagRBM = contract->flagRBM;
+  powerContract.reweight = contract->reweight;
+  powerContract.exUpdatePath = contract->exUpdatePath;
+  powerContract.nPairHopping = contract->nPairHopping;
+  powerContract.nExchangeCoupling = contract->nExchangeCoupling;
+  powerContract.nInterAll = contract->nInterAll;
+  powerContract.nNBodyInterAll = contract->nNBodyInterAll;
+  powerContract.nNBodyG = contract->nNBodyG;
+  powerContract.nSpinFlipTransfer = contract->nSpinFlipTransfer;
+  powerContract.nLocSpn = contract->nLocSpn;
+  powerContract.nsite = contract->nsite;
+  powerContract.ne = contract->ne;
+  powerContract.nTransfer = contract->nTransfer;
+  powerContract.nQPFull = contract->nQPFull;
+  return powerContract;
+}
+
+static Lanczos2ContractStatus FromPowerStatus(
+    MVMCPowerLanczosContractStatus status) {
+  switch (status) {
+    case MVMC_POWER_LANCZOS_CONTRACT_OK:
+      return LANCZOS2_CONTRACT_OK;
+    case MVMC_POWER_LANCZOS_CONTRACT_INVALID_ARGUMENT:
+    case MVMC_POWER_LANCZOS_CONTRACT_INVALID_ORDER:
+      return LANCZOS2_CONTRACT_INVALID_STEP;
+    case MVMC_POWER_LANCZOS_CONTRACT_REQUIRES_LANCZOS_MODE_1:
+      return LANCZOS2_CONTRACT_REQUIRES_LANCZOS_MODE_1;
+    case MVMC_POWER_LANCZOS_CONTRACT_REQUIRES_VMC_CAL_MODE_1:
+      return LANCZOS2_CONTRACT_REQUIRES_VMC_CAL_MODE_1;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_ORBITAL_GENERAL:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_ORBITAL_GENERAL;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_TWO_SZ:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_TWO_SZ;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_BACKFLOW:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_BACKFLOW;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_RBM:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_RBM;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_REWEIGHT:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_REWEIGHT;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_UPDATE_PATH:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_UPDATE_PATH;
+    case MVMC_POWER_LANCZOS_CONTRACT_REQUIRES_SPIN_CONSERVING_TRANSFER:
+      return LANCZOS2_CONTRACT_REQUIRES_SPIN_CONSERVING_TRANSFER;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_TRANSFER:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_TRANSFER;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_PAIR_HOPPING:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_PAIR_HOPPING;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_EXCHANGE:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_EXCHANGE;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_INTER_ALL:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_INTER_ALL;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_NBODY_INTER_ALL:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_NBODY_INTER_ALL;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_NBODY_G:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_NBODY_G;
+    case MVMC_POWER_LANCZOS_CONTRACT_UNSUPPORTED_SPIN_FLIP_TRANSFER:
+      return LANCZOS2_CONTRACT_UNSUPPORTED_SPIN_FLIP_TRANSFER;
+    case MVMC_POWER_LANCZOS_CONTRACT_REQUIRES_PURE_LOCALIZED_SPIN:
+      return LANCZOS2_CONTRACT_REQUIRES_PURE_LOCALIZED_SPIN;
+    case MVMC_POWER_LANCZOS_CONTRACT_INVALID_COUNT:
+      return LANCZOS2_CONTRACT_INVALID_COUNT;
+    case MVMC_POWER_LANCZOS_CONTRACT_SIZE_OVERFLOW:
+      return LANCZOS2_CONTRACT_SIZE_OVERFLOW;
+  }
+  return LANCZOS2_CONTRACT_INVALID_STEP;
+}
 
 Lanczos2ModelClass ClassifyLanczos2Model(
     const Lanczos2Contract *contract) {
+  MVMCPowerLanczosContract powerContract;
   if (contract == NULL) return LANCZOS2_MODEL_INVALID;
-  if (contract->exUpdatePath == 0) {
-    return LANCZOS2_MODEL_ELECTRONIC_VK;
-  }
-  if (contract->exUpdatePath == 2 &&
-      contract->nsite > 0 &&
-      contract->ne > 0 &&
-      contract->ne <= INT_MAX / 2 &&
-      contract->nLocSpn == contract->nsite &&
-      contract->nLocSpn == 2 * contract->ne) {
-    return LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE;
+  powerContract = ToPowerContract(contract);
+  switch (mvmc_power_lanczos_classify_model(&powerContract)) {
+    case MVMC_POWER_LANCZOS_MODEL_ELECTRONIC_VK:
+      return LANCZOS2_MODEL_ELECTRONIC_VK;
+    case MVMC_POWER_LANCZOS_MODEL_LOCAL_SPIN_EXCHANGE:
+      return LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE;
+    case MVMC_POWER_LANCZOS_MODEL_INVALID:
+      return LANCZOS2_MODEL_INVALID;
   }
   return LANCZOS2_MODEL_INVALID;
 }
 
 Lanczos2ContractStatus ValidateLanczos2Contract(
     const Lanczos2Contract *contract) {
+  MVMCPowerLanczosContract powerContract;
+  MVMCPowerLanczosContractStatus powerStatus;
   Lanczos2ModelClass model;
 
   if (contract == NULL || (contract->step != 1 && contract->step != 2)) {
     return LANCZOS2_CONTRACT_INVALID_STEP;
   }
+  powerContract = ToPowerContract(contract);
+  powerStatus = mvmc_power_lanczos_validate_common_contract(&powerContract);
+  if (powerStatus != MVMC_POWER_LANCZOS_CONTRACT_OK) {
+    return FromPowerStatus(powerStatus);
+  }
   if (contract->step == 1) return LANCZOS2_CONTRACT_OK;
 
-  if (contract->lanczosMode != 1) {
-    return LANCZOS2_CONTRACT_REQUIRES_LANCZOS_MODE_1;
+  powerStatus =
+      mvmc_power_lanczos_validate_production_contract(&powerContract);
+  if (powerStatus != MVMC_POWER_LANCZOS_CONTRACT_OK) {
+    return FromPowerStatus(powerStatus);
   }
-  if (contract->vmcCalMode != 1) {
-    return LANCZOS2_CONTRACT_REQUIRES_VMC_CAL_MODE_1;
-  }
-  if (contract->orbitalGeneral != 0) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_ORBITAL_GENERAL;
-  }
-  if (contract->nProjBF != 0) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_BACKFLOW;
-  }
-  if (contract->flagRBM != 0) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_RBM;
-  }
-  if (contract->reweight != 0) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_REWEIGHT;
-  }
-  if (contract->exUpdatePath != 0 && contract->exUpdatePath != 2) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_UPDATE_PATH;
-  }
+
   model = ClassifyLanczos2Model(contract);
-  if (contract->exUpdatePath == 2 &&
-      model != LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE) {
-    return LANCZOS2_CONTRACT_REQUIRES_PURE_LOCALIZED_SPIN;
-  }
-  if (model == LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE &&
-      contract->nTransfer != 0) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_TRANSFER;
-  }
-  if (contract->nPairHopping != 0) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_PAIR_HOPPING;
-  }
-  if (model == LANCZOS2_MODEL_ELECTRONIC_VK &&
-      contract->nExchangeCoupling != 0) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_EXCHANGE;
-  }
-  if (contract->nInterAll != 0) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_INTER_ALL;
-  }
-  if (contract->nNBodyInterAll != 0) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_NBODY_INTER_ALL;
-  }
-  if (contract->nNBodyG != 0) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_NBODY_G;
-  }
-  if (contract->nSpinFlipTransfer != 0) {
-    return LANCZOS2_CONTRACT_UNSUPPORTED_SPIN_FLIP_TRANSFER;
-  }
   if (model == LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE &&
       contract->nQPFull != 1) {
     return LANCZOS2_CONTRACT_UNSUPPORTED_QUANTUM_PROJECTION;
@@ -97,6 +138,8 @@ const char *Lanczos2ContractError(Lanczos2ContractStatus status) {
       return "NLanczosStep=2 requires NVMCCalMode=1";
     case LANCZOS2_CONTRACT_UNSUPPORTED_ORBITAL_GENERAL:
       return "NLanczosStep=2 does not support orbital-general (FSZ) mode";
+    case LANCZOS2_CONTRACT_UNSUPPORTED_TWO_SZ:
+      return "NLanczosStep=2 requires 2Sz=0";
     case LANCZOS2_CONTRACT_UNSUPPORTED_BACKFLOW:
       return "NLanczosStep=2 does not support BackFlow";
     case LANCZOS2_CONTRACT_UNSUPPORTED_RBM:
@@ -106,6 +149,9 @@ const char *Lanczos2ContractError(Lanczos2ContractStatus status) {
     case LANCZOS2_CONTRACT_UNSUPPORTED_UPDATE_PATH:
       return "NLanczosStep=2 supports NExUpdatePath=0, or "
              "NExUpdatePath=2 for pure-spin mode";
+    case LANCZOS2_CONTRACT_REQUIRES_SPIN_CONSERVING_TRANSFER:
+      return "NLanczosStep=2 electronic mode requires at least one "
+             "spin-conserving Transfer term";
     case LANCZOS2_CONTRACT_UNSUPPORTED_PAIR_HOPPING:
       return "NLanczosStep=2 does not support PairHopping";
     case LANCZOS2_CONTRACT_UNSUPPORTED_EXCHANGE:
@@ -125,6 +171,11 @@ const char *Lanczos2ContractError(Lanczos2ContractStatus status) {
       return "NLanczosStep=2 pure-spin mode requires NTransfer=0";
     case LANCZOS2_CONTRACT_UNSUPPORTED_QUANTUM_PROJECTION:
       return "NLanczosStep=2 pure-spin mode currently requires NQPFull=1";
+    case LANCZOS2_CONTRACT_INVALID_COUNT:
+      return "NLanczosStep requires non-negative counts and positive Nsite, "
+             "Ne, and NQPFull";
+    case LANCZOS2_CONTRACT_SIZE_OVERFLOW:
+      return "NLanczosStep size arithmetic overflows the supported range";
   }
   return "unknown NLanczosStep contract error";
 }
