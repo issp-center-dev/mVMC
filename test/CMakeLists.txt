@@ -54,6 +54,20 @@ endif()
 add_test(NAME PowerLanczosBuildMetadata_Unit
     COMMAND power_lanczos_build_metadata_unit)
 
+add_executable(classic_krylov_configuration_unit
+    classic_krylov_configuration_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c)
+target_include_directories(classic_krylov_configuration_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(classic_krylov_configuration_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(classic_krylov_configuration_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME ClassicKrylovConfiguration_Unit
+    COMMAND classic_krylov_configuration_unit)
+
 add_executable(update_weight_unit
     update_weight_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/update_weight.c)
