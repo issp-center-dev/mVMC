@@ -24,7 +24,7 @@ static int close_double(double actual, double expected, double tolerance) {
 static MVMCScaledComplex finite_raw(double complex raw) {
   MVMCScaledComplex value;
   memset(&value, 0, sizeof(value));
-  CHECK(mvmc_scaled_complex_from_raw_testing(raw, &value) ==
+  CHECK(mvmc_scaled_complex_from_raw(raw, &value) ==
             MVMC_PFAFFIAN_STATUS_OK &&
             value.state == MVMC_SCALED_COMPLEX_FINITE_NONZERO,
         "finite raw scaled fixture");

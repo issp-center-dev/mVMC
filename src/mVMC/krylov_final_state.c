@@ -294,7 +294,7 @@ static MVMCKrylovStatus scaled_coefficient(
   if (creal(coefficient) == 0.0 && cimag(coefficient) == 0.0) {
     status = mvmc_scaled_complex_make_exact_zero(result);
   } else {
-    status = mvmc_scaled_complex_from_raw_testing(coefficient, result);
+    status = mvmc_scaled_complex_from_raw(coefficient, result);
   }
   return status == MVMC_PFAFFIAN_STATUS_OK
              ? MVMC_KRYLOV_STATUS_OK

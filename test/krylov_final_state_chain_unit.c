@@ -75,7 +75,7 @@ static MVMCKrylovStatus table_callback(
     }
     result->exact_zero_component_count = 1;
   } else {
-    if (mvmc_scaled_complex_from_raw_testing(
+    if (mvmc_scaled_complex_from_raw(
             table->values[index], &result->value) !=
         MVMC_PFAFFIAN_STATUS_OK) {
       return MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
@@ -236,7 +236,7 @@ static void test_observable_inventory(void) {
   krylov.status = MVMC_KRYLOV_STATUS_OK;
   krylov.evaluated_order = 2;
   for (order = 0; order <= 2; ++order) {
-    CHECK(mvmc_scaled_complex_from_raw_testing(
+    CHECK(mvmc_scaled_complex_from_raw(
               values[order], &krylov.value[order]) ==
               MVMC_PFAFFIAN_STATUS_OK,
           "observable raw value %d", order);

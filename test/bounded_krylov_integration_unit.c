@@ -47,7 +47,7 @@ static MVMCAbsolutePfaffianScaledValueResult component_value(
     (void)mvmc_scaled_complex_make_exact_zero(&component.value);
   } else {
     component.factor_state = MVMC_PFAFFIAN_VALUE_WELL_PIVOTED;
-    (void)mvmc_scaled_complex_from_raw_testing(raw, &component.value);
+    (void)mvmc_scaled_complex_from_raw(raw, &component.value);
   }
   return component;
 }

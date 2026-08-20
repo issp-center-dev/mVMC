@@ -31,7 +31,7 @@ static MVMCScaledComplex finite_value(double complex raw) {
   memset(&value, 0, sizeof(value));
   CHECK(creal(raw) != 0.0 || cimag(raw) != 0.0,
         "finite fixture cannot import raw zero");
-  CHECK(mvmc_scaled_complex_from_raw_testing(raw, &value) ==
+  CHECK(mvmc_scaled_complex_from_raw(raw, &value) ==
             MVMC_PFAFFIAN_STATUS_OK &&
             value.state == MVMC_SCALED_COMPLEX_FINITE_NONZERO,
         "finite scaled fixture construction failed");

@@ -67,7 +67,7 @@ static MVMCKrylovStatus table_callback(
     }
     result->exact_zero_component_count = 1;
   } else {
-    if (mvmc_scaled_complex_from_raw_testing(
+    if (mvmc_scaled_complex_from_raw(
             table->values[index], &result->value) !=
         MVMC_PFAFFIAN_STATUS_OK) {
       return MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
@@ -165,7 +165,7 @@ static MVMCKrylovBoundedResult raw_krylov_result(
     if (creal(values[order]) == 0.0 && cimag(values[order]) == 0.0) {
       status = mvmc_scaled_complex_make_exact_zero(&result.value[order]);
     } else {
-      status = mvmc_scaled_complex_from_raw_testing(
+      status = mvmc_scaled_complex_from_raw(
           values[order], &result.value[order]);
     }
     CHECK(status == MVMC_PFAFFIAN_STATUS_OK,

@@ -90,7 +90,7 @@ static MVMCKrylovStatus table_callback(
       return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
     }
     result->exact_zero_component_count = 1;
-  } else if (mvmc_scaled_complex_from_raw_testing(
+  } else if (mvmc_scaled_complex_from_raw(
                  table->values[index], &result->value) !=
              MVMC_PFAFFIAN_STATUS_OK) {
     return MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
@@ -1630,7 +1630,7 @@ static void test_surrogate_policy_weight_and_draw(void) {
             SIZE_MAX, 1, &guide, &invalid_surrogate) ==
             MVMC_KRYLOV_STATUS_INVALID_ARGUMENT,
         "surrogate step counter overflow rejected");
-  CHECK(mvmc_scaled_complex_from_raw_testing(2.0, &zeroth) ==
+  CHECK(mvmc_scaled_complex_from_raw(2.0, &zeroth) ==
             MVMC_PFAFFIAN_STATUS_OK &&
             mvmc_krylov_positive_sampler_surrogate_weight_zeroth(
                 &k4_alpha10, &guide, &zeroth, &weight) ==
@@ -1655,7 +1655,7 @@ static void test_surrogate_policy_weight_and_draw(void) {
             weight.valid && weight.floor_only &&
             close_double(exp(weight.log_weight), 2.5, 1.0e-14),
         "surrogate numeric-zero floor weight");
-  CHECK(mvmc_scaled_complex_from_raw_testing(NAN + I, &zeroth) ==
+  CHECK(mvmc_scaled_complex_from_raw(NAN + I, &zeroth) ==
             MVMC_PFAFFIAN_STATUS_OK &&
             mvmc_krylov_positive_sampler_surrogate_weight_zeroth(
                 &k4_alpha10, &guide, &zeroth, &weight) ==
@@ -1666,9 +1666,9 @@ static void test_surrogate_policy_weight_and_draw(void) {
             MVMC_KRYLOV_STATUS_INVALID_ARGUMENT && !weight.valid,
         "surrogate guide mismatch rejected");
 
-  CHECK(mvmc_scaled_complex_from_raw_testing(2.0, &partial_values[0]) ==
+  CHECK(mvmc_scaled_complex_from_raw(2.0, &partial_values[0]) ==
             MVMC_PFAFFIAN_STATUS_OK &&
-            mvmc_scaled_complex_from_raw_testing(3.0, &partial_values[1]) ==
+            mvmc_scaled_complex_from_raw(3.0, &partial_values[1]) ==
                 MVMC_PFAFFIAN_STATUS_OK &&
             mvmc_scaled_complex_make_exact_zero(&partial_values[2]) ==
                 MVMC_PFAFFIAN_STATUS_OK &&
@@ -1689,7 +1689,7 @@ static void test_surrogate_policy_weight_and_draw(void) {
             weight.valid && weight.floor_only &&
             close_double(exp(weight.log_weight), 0.25, 1.0e-14),
         "partial surrogate all-zero floor weight");
-  CHECK(mvmc_scaled_complex_from_raw_testing(NAN + I, &partial_values[1]) ==
+  CHECK(mvmc_scaled_complex_from_raw(NAN + I, &partial_values[1]) ==
             MVMC_PFAFFIAN_STATUS_OK &&
             mvmc_krylov_positive_sampler_surrogate_weight_partial(
                 &partial_m1, &partial_guide, partial_values, 2, &weight) ==

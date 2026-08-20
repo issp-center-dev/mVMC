@@ -1450,7 +1450,7 @@ MVMCPfaffianStatus mvmc_scaled_complex_make_numeric_zero(
   return MVMC_PFAFFIAN_STATUS_OK;
 }
 
-MVMCPfaffianStatus mvmc_scaled_complex_from_raw_testing(
+MVMCPfaffianStatus mvmc_scaled_complex_from_raw(
     double complex value, MVMCScaledComplex *result) {
   MVMCScaledComplex candidate;
   double complex phase;
@@ -1826,7 +1826,7 @@ static MVMCPfaffianStatus factorize_real_scaled_value(
       pivot_value = scaled_numeric_zero(
           zero_pivot_error_log(candidate.matrix_scale, n), -INFINITY,
           -INFINITY, 0.0);
-    } else if (mvmc_scaled_complex_from_raw_testing(pivot, &pivot_value) !=
+    } else if (mvmc_scaled_complex_from_raw(pivot, &pivot_value) !=
                MVMC_PFAFFIAN_STATUS_OK) {
       return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
     }
@@ -1915,7 +1915,7 @@ static MVMCPfaffianStatus factorize_complex_scaled_value(
       pivot_value = scaled_numeric_zero(
           zero_pivot_error_log(candidate.matrix_scale, n), -INFINITY,
           -INFINITY, 0.0);
-    } else if (mvmc_scaled_complex_from_raw_testing(pivot, &pivot_value) !=
+    } else if (mvmc_scaled_complex_from_raw(pivot, &pivot_value) !=
                MVMC_PFAFFIAN_STATUS_OK) {
       return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
     }

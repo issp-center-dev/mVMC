@@ -102,7 +102,7 @@ static MVMCKrylovStatus scaled_table_callback(
     }
     result->exact_zero_component_count = 1;
   } else {
-    if (mvmc_scaled_complex_from_raw_testing(table->values[index],
+    if (mvmc_scaled_complex_from_raw(table->values[index],
                                               &result->value) !=
         MVMC_PFAFFIAN_STATUS_OK) {
       return MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;

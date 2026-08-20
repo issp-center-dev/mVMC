@@ -124,16 +124,16 @@ static void test_scaled_pure_math(void) {
             isfinite(product.log_abs_error_bound),
         "scaled multiplication handles exponent span 2000");
 
-  CHECK(mvmc_scaled_complex_from_raw_testing(0.0, &values[2]) ==
+  CHECK(mvmc_scaled_complex_from_raw(0.0, &values[2]) ==
             MVMC_PFAFFIAN_STATUS_OK &&
             values[2].state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO &&
             isfinite(values[2].log_abs_error_bound),
         "raw zero imports as numeric zero");
-  CHECK(mvmc_scaled_complex_from_raw_testing(NAN + I, &values[3]) ==
+  CHECK(mvmc_scaled_complex_from_raw(NAN + I, &values[3]) ==
             MVMC_PFAFFIAN_STATUS_OK &&
             values[3].state == MVMC_SCALED_COMPLEX_NONFINITE,
         "raw NaN imports as nonfinite");
-  CHECK(mvmc_scaled_complex_from_raw_testing(
+  CHECK(mvmc_scaled_complex_from_raw(
             DBL_MAX + I * DBL_MAX, &values[3]) ==
             MVMC_PFAFFIAN_STATUS_OK &&
             values[3].state == MVMC_SCALED_COMPLEX_FINITE_NONZERO &&
@@ -345,7 +345,7 @@ static void test_scaled_projection(void) {
   double complex exported = 0.0;
   const double complex expected = 4.625 + 1.5 * I;
 
-  CHECK(mvmc_scaled_complex_from_raw_testing(-2.5 + 0.75 * I, &value) ==
+  CHECK(mvmc_scaled_complex_from_raw(-2.5 + 0.75 * I, &value) ==
             MVMC_PFAFFIAN_STATUS_OK,
         "NQP=1 component construction");
   components[0] =
@@ -375,7 +375,7 @@ static void test_scaled_projection(void) {
         "finite complex weight survives raw-magnitude overflow");
   weights[0] = 1.0;
 
-  CHECK(mvmc_scaled_complex_from_raw_testing(2.0, &value) ==
+  CHECK(mvmc_scaled_complex_from_raw(2.0, &value) ==
             MVMC_PFAFFIAN_STATUS_OK,
         "projection regular component construction");
   components[0] =
@@ -384,11 +384,11 @@ static void test_scaled_projection(void) {
             MVMC_PFAFFIAN_STATUS_OK,
         "projection singular component construction");
   components[1] = scaled_component(MVMC_PFAFFIAN_VALUE_SINGULAR, value);
-  CHECK(mvmc_scaled_complex_from_raw_testing(-1.0 + I, &value) ==
+  CHECK(mvmc_scaled_complex_from_raw(-1.0 + I, &value) ==
             MVMC_PFAFFIAN_STATUS_OK,
         "projection near component construction");
   components[2] = scaled_component(MVMC_PFAFFIAN_VALUE_NEAR_PIVOT, value);
-  CHECK(mvmc_scaled_complex_from_raw_testing(3.0 - 0.5 * I, &value) ==
+  CHECK(mvmc_scaled_complex_from_raw(3.0 - 0.5 * I, &value) ==
             MVMC_PFAFFIAN_STATUS_OK,
         "projection final component construction");
   components[3] =
