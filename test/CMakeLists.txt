@@ -471,6 +471,166 @@ if(MPI_FOUND)
         PROCESSORS 4)
 endif()
 
+add_executable(krylov_final_state_unit
+    krylov_final_state_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(krylov_final_state_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+    MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)
+target_include_directories(krylov_final_state_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(krylov_final_state_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(krylov_final_state_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(krylov_final_state_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(krylov_final_state_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(krylov_final_state_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME KrylovFinalState_Unit
+    COMMAND krylov_final_state_unit)
+if(MPI_FOUND)
+    add_test(NAME KrylovFinalState_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                $<TARGET_FILE:krylov_final_state_unit>)
+    set_tests_properties(KrylovFinalState_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+endif()
+
+add_executable(krylov_final_state_sensitivity_unit
+    krylov_final_state_sensitivity_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_sensitivity.c)
+target_compile_definitions(krylov_final_state_sensitivity_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+    MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)
+target_include_directories(krylov_final_state_sensitivity_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(krylov_final_state_sensitivity_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(krylov_final_state_sensitivity_unit m)
+if(MPI_FOUND)
+    target_link_libraries(krylov_final_state_sensitivity_unit
+        ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME KrylovFinalStateSensitivity_Unit
+    COMMAND krylov_final_state_sensitivity_unit)
+if(MPI_FOUND)
+    add_test(NAME KrylovFinalStateSensitivity_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                $<TARGET_FILE:krylov_final_state_sensitivity_unit>)
+    set_tests_properties(
+        KrylovFinalStateSensitivity_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+endif()
+
+add_executable(krylov_final_state_chain_unit
+    krylov_final_state_chain_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(krylov_final_state_chain_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+    MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)
+target_include_directories(krylov_final_state_chain_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(krylov_final_state_chain_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(krylov_final_state_chain_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(krylov_final_state_chain_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(krylov_final_state_chain_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(krylov_final_state_chain_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME KrylovFinalStateChain_Unit
+    COMMAND krylov_final_state_chain_unit)
+if(MPI_FOUND)
+    add_test(NAME KrylovFinalStateChain_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                $<TARGET_FILE:krylov_final_state_chain_unit>)
+    set_tests_properties(KrylovFinalStateChain_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+    add_test(NAME KrylovFinalStateChain_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                $<TARGET_FILE:krylov_final_state_chain_unit>)
+    set_tests_properties(KrylovFinalStateChain_Unit_Rank4_mpi PROPERTIES
+        PROCESSORS 4)
+endif()
+
+add_executable(krylov_final_state_chain_driver
+    krylov_final_state_chain_driver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(krylov_final_state_chain_driver PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+    MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)
+target_include_directories(krylov_final_state_chain_driver PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(krylov_final_state_chain_driver PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(krylov_final_state_chain_driver pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(krylov_final_state_chain_driver stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(krylov_final_state_chain_driver blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(krylov_final_state_chain_driver ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME KrylovFinalStateChainDriver_Smoke
+    COMMAND krylov_final_state_chain_driver
+            two_state_support_bridge 256 16 64
+            0x5035434453454541 0x5035435354524541 123)
+if(MPI_FOUND)
+    add_test(NAME KrylovFinalStateChainDriver_Smoke_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                $<TARGET_FILE:krylov_final_state_chain_driver>
+                complex_ring4_near_zero 256 16 64
+                0x5035434453454541 0x5035435354524541 123)
+    set_tests_properties(
+        KrylovFinalStateChainDriver_Smoke_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+endif()
+
 add_executable(krylov_streaming_statistics_unit
     krylov_streaming_statistics_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c)

@@ -76,6 +76,10 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_hardened_comp
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_hardened_comparison.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classify_power_lanczos_p4f_v4_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_gate_classification.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_power_lanczos_p5b_sensitivity.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p5b_sensitivity.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_power_lanczos_p5c_direct.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p5c_direct.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s3_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s4_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
@@ -91,6 +95,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_target_session_pol
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_official_execution_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_hardened_reparse_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_gate_classification_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p5b_sensitivity_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p5c_direct_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyg.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -1622,3 +1628,16 @@ add_test(NAME PowerLanczosP4FV4SecondaryClosure_Unit
 add_test(NAME PowerLanczosGateClassification_Unit
          COMMAND ${PYTHON_EXECUTABLE}
                  ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_gate_classification.py)
+
+add_test(NAME PowerLanczosP5BSensitivity_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p5b_sensitivity.py)
+
+add_test(NAME PowerLanczosP5CDirect_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p5c_direct.py
+                 $<TARGET_FILE:krylov_final_state_chain_driver>
+                 ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p5c_direct_policy.json
+                 ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p5b_sensitivity_policy.json)
+set_tests_properties(PowerLanczosP5CDirect_Unit PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
