@@ -10,8 +10,9 @@ the Free Software Foundation, either version 3 of the License, or
 
 #include "krylov_streaming_statistics.h"
 
-#if !defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
-#error "krylov_streaming_statistics.c is Testing-only"
+#if !defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) &&                        \
+    !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+#error "krylov_streaming_statistics.c requires the power-Lanczos core"
 #endif
 
 #include <float.h>

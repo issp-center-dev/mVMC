@@ -10,8 +10,9 @@ the Free Software Foundation, either version 3 of the License, or
 
 #include "krylov_fock_proposal.h"
 
-#if !defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
-#error "krylov_fock_proposal.c is Testing-only"
+#if !defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) &&                        \
+    !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+#error "krylov_fock_proposal.c requires the power-Lanczos core"
 #endif
 
 #include <complex.h>

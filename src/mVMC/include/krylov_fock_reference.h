@@ -11,7 +11,8 @@ the Free Software Foundation, either version 3 of the License, or
 #ifndef MVMC_KRYLOV_FOCK_REFERENCE_H
 #define MVMC_KRYLOV_FOCK_REFERENCE_H
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                         \
+    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
 #include <complex.h>
 #include <stddef.h>
@@ -150,6 +151,7 @@ MVMCKrylovStatus mvmc_krylov_evaluate(
 
 const char *mvmc_krylov_status_string(MVMCKrylovStatus status);
 
-#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE */
+#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE ||
+          MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE */
 
 #endif /* MVMC_KRYLOV_FOCK_REFERENCE_H */

@@ -11,11 +11,11 @@ the Free Software Foundation, either version 3 of the License, or
 #ifndef MVMC_KRYLOV_FINAL_STATE_H
 #define MVMC_KRYLOV_FINAL_STATE_H
 
-#if defined(MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)
+#if defined(MVMC_ENABLE_POWER_LANCZOS_P5_CORE) ||                             \
+    defined(MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)
 
-#if !defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                         \
-    !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
-#error "P5 final-state testing requires the absolute bounded Krylov engine"
+#if !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+#error "P5 final-state core requires the bounded Krylov engine"
 #endif
 
 #include "bounded_krylov_engine.h"
@@ -156,6 +156,7 @@ MVMCKrylovStatus mvmc_krylov_final_state_sampler_step_selected_neighbor(
     uint64_t *proposal_words, size_t proposal_word_count,
     MVMCKrylovFinalStateProposalStepResult *result);
 
-#endif /* MVMC_ENABLE_POWER_LANCZOS_P5_TESTING */
+#endif /* MVMC_ENABLE_POWER_LANCZOS_P5_CORE ||
+          MVMC_ENABLE_POWER_LANCZOS_P5_TESTING */
 
 #endif /* MVMC_KRYLOV_FINAL_STATE_H */

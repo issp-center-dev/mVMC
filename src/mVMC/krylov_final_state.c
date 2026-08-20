@@ -10,10 +10,10 @@ the Free Software Foundation, either version 3 of the License, or
 
 #include "krylov_final_state.h"
 
-#if !defined(MVMC_ENABLE_POWER_LANCZOS_P5_TESTING) ||                          \
-    !defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                         \
+#if (!defined(MVMC_ENABLE_POWER_LANCZOS_P5_CORE) &&                            \
+     !defined(MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)) ||                        \
     !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
-#error "krylov_final_state.c is Testing-only"
+#error "krylov_final_state.c requires the P5 final-state core"
 #endif
 
 #include <complex.h>

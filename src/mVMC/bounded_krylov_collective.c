@@ -11,7 +11,7 @@ the Free Software Foundation, either version 3 of the License, or
 #include "bounded_krylov_collective.h"
 
 #if !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
-#error "bounded_krylov_collective.c is Testing-only"
+#error "bounded_krylov_collective.c requires the power-Lanczos core"
 #endif
 
 #include <limits.h>

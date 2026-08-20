@@ -11,7 +11,7 @@ the Free Software Foundation, either version 3 of the License, or
 #include "bounded_krylov_engine.h"
 
 #if !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
-#error "bounded_krylov_engine.c is Testing-only"
+#error "bounded_krylov_engine.c requires the power-Lanczos core"
 #endif
 
 #include <float.h>
@@ -575,6 +575,7 @@ size_t mvmc_bounded_krylov_workspace_bytes(
   return workspace == NULL ? 0 : workspace->allocated_bytes;
 }
 
+#if defined(MVMC_ENABLE_POWER_LANCZOS_TESTING_HOOKS)
 MVMCKrylovStatus mvmc_bounded_krylov_testing_force_cache_counters(
     MVMCKrylovBoundedWorkspace *workspace,
     uint64_t epoch, uint64_t access_counter) {
@@ -583,6 +584,7 @@ MVMCKrylovStatus mvmc_bounded_krylov_testing_force_cache_counters(
   workspace->cache_access = access_counter;
   return MVMC_KRYLOV_STATUS_OK;
 }
+#endif
 
 static uint64_t count_occupied_before(const uint64_t *words,
                                       size_t orbital) {

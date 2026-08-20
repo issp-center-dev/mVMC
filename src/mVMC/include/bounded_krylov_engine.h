@@ -172,10 +172,12 @@ MVMCKrylovStatus mvmc_bounded_krylov_session_end(
 int mvmc_bounded_krylov_session_is_active(
     const MVMCKrylovBoundedWorkspace *workspace);
 
+#if defined(MVMC_ENABLE_POWER_LANCZOS_TESTING_HOOKS)
 /* Testing hooks for deterministic wrap and failure fixtures. */
 MVMCKrylovStatus mvmc_bounded_krylov_testing_force_cache_counters(
     MVMCKrylovBoundedWorkspace *workspace,
     uint64_t epoch, uint64_t access_counter);
+#endif
 
 #endif /* MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE */
 

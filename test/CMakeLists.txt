@@ -278,7 +278,8 @@ add_executable(bounded_krylov_engine_unit
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_compile_definitions(bounded_krylov_engine_unit PRIVATE
     MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
-    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+    MVMC_ENABLE_POWER_LANCZOS_TESTING_HOOKS)
 target_include_directories(bounded_krylov_engine_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
