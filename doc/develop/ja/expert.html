@@ -2096,8 +2096,11 @@ BackFlow group 番号は 0 として扱われます。</p></li>
 エラー終了します。</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code> のみ。複数 BackFlow group は未対応です。</p></li>
-<li><p>ローカル更新は <code class="docutils literal notranslate"><span class="pre">NExUpdatePath==0</span></code> の hopping update のみ。
-t-J 用更新経路、exchange update、Kondo update、doublon-only update との併用は未対応です。</p></li>
+<li><p>ローカル更新は、通常の <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel``（非</span> <span class="pre">FSZ）では</span>
+<span class="pre">``NExUpdatePath==0``（hopping）または</span> <span class="pre">``NExUpdatePath==1``（hopping</span> <span class="pre">+</span> <span class="pre">exchange）、</span>
+<span class="pre">``OrbitalGeneral``（FSZ）では</span> <span class="pre">``NExUpdatePath==0</span></code> のみ。
+t-J 用更新経路、Kondo update、doublon-only update、<code class="docutils literal notranslate"><span class="pre">NExUpdatePath&gt;=2</span></code> の
+pure-spin / weighted local update との併用は未対応です。</p></li>
 <li><p>ペア軌道は <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> の通常形式、または
 <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ を使用できます。<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> では固定
 <span class="math notranslate nohighlight">\(S_z\)</span> sector と <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code> の両方を使用できます。<code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code> では

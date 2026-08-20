@@ -2483,8 +2483,11 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
 
 -  ``NBackFlowIdx==1`` のみ。複数 BackFlow group は未対応です。
 
--  ローカル更新は ``NExUpdatePath==0`` の hopping update のみ。
-   t-J 用更新経路、exchange update、Kondo update、doublon-only update との併用は未対応です。
+-  ローカル更新は、通常の ``Orbital`` / ``OrbitalAntiParallel``（非 FSZ）では
+   ``NExUpdatePath==0``（hopping）または ``NExUpdatePath==1``（hopping + exchange）、
+   ``OrbitalGeneral``（FSZ）では ``NExUpdatePath==0`` のみ。
+   t-J 用更新経路、Kondo update、doublon-only update、``NExUpdatePath>=2`` の
+   pure-spin / weighted local update との併用は未対応です。
 
 -  ペア軌道は ``Orbital`` / ``OrbitalAntiParallel`` の通常形式、または
    ``OrbitalGeneral`` / FSZ を使用できます。``OrbitalGeneral`` では固定

@@ -2241,9 +2241,13 @@ Inputs outside this range are rejected.</p>
 <ul class="simple">
 <li><p>Only <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code> is supported. Multiple BackFlow groups are
 not supported.</p></li>
-<li><p>The local update path must be the hopping update
-<code class="docutils literal notranslate"><span class="pre">NExUpdatePath==0</span></code>. t-J update paths, exchange updates, Kondo
-updates, and doublon-only updates are not supported.</p></li>
+<li><p>The local update path must be <code class="docutils literal notranslate"><span class="pre">NExUpdatePath==0</span></code> (hopping) or
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath==1</span></code> (hopping and exchange) for the normal
+<code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> (non-FSZ) sampler. With
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> (FSZ) only <code class="docutils literal notranslate"><span class="pre">NExUpdatePath==0</span></code> is supported.
+t-J update paths, Kondo updates, doublon-only updates, and the
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath&gt;=2</span></code> pure-spin / weighted local update paths are not
+supported.</p></li>
 <li><p>Pair orbitals may use the normal <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> /
 <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format or <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ. With
 <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>, both a fixed <span class="math notranslate nohighlight">\(S_z\)</span> sector and <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>
