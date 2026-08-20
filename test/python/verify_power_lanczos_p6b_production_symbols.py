@@ -8,7 +8,8 @@ import subprocess
 import sys
 
 
-EXPECTED_POLICY_ID = "power-lanczos-zero-support-p6b-production-symbols-v1"
+DEFAULT_POLICY_ID = "power-lanczos-zero-support-p6b-production-symbols-v1"
+DEFAULT_PHASE = "P6-B"
 
 
 def require(condition, message):
@@ -49,15 +50,15 @@ def read_binary(binary):
         return handle.read()
 
 
-def validate_policy(policy):
+def validate_policy(policy, expected_policy_id, expected_phase):
     require(policy.get("schema_version") == 1, "schema mismatch")
-    require(policy.get("policy_id") == EXPECTED_POLICY_ID,
+    require(policy.get("policy_id") == expected_policy_id,
             "policy identity mismatch")
-    require(policy.get("phase") == "P6-B", "phase mismatch")
+    require(policy.get("phase") == expected_phase, "phase mismatch")
     require(policy.get("testing_only") is False,
-            "P6-B production policy must not be testing-only")
+            "production policy must not be testing-only")
     require(policy.get("production_authorized") is True,
-            "P6-B production policy authorization mismatch")
+            "production policy authorization mismatch")
 
     required = policy.get("required_symbols")
     required_strings = policy.get("required_binary_strings", [])
@@ -95,10 +96,10 @@ def validate_policy(policy):
     return required, required_strings, forbidden, forbidden_strings
 
 
-def verify(binary, policy_path):
+def verify(binary, policy_path, expected_policy_id, expected_phase):
     policy = read_json(policy_path)
     required, required_strings, forbidden_patterns, forbidden_strings = \
-        validate_policy(policy)
+        validate_policy(policy, expected_policy_id, expected_phase)
     symbols = read_global_symbols(binary)
     binary_payload = read_binary(binary)
 
@@ -119,24 +120,25 @@ def verify(binary, policy_path):
 
     if missing or missing_binary_strings or forbidden or forbidden_binary_strings:
         if missing:
-            print("missing required P6-B production symbols:")
+            print("missing required production symbols:")
             for symbol in missing:
                 print("  {}".format(symbol))
         if missing_binary_strings:
-            print("missing required P6-B production binary strings:")
+            print("missing required production binary strings:")
             for text in missing_binary_strings:
                 print("  {}".format(text))
         if forbidden:
-            print("forbidden P6-B production symbols:")
+            print("forbidden production symbols:")
             for symbol in forbidden:
                 print("  {}".format(symbol))
         if forbidden_binary_strings:
-            print("forbidden P6-B production binary strings:")
+            print("forbidden production binary strings:")
             for text in forbidden_binary_strings:
                 print("  {}".format(text))
         return 1
 
-    print("power-Lanczos P6-B production binary policy: PASS")
+    print("power-Lanczos {} production binary policy: PASS".format(
+        expected_phase))
     return 0
 
 
@@ -144,14 +146,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--binary", required=True)
     parser.add_argument("--policy", required=True)
+    parser.add_argument("--expected-policy-id", default=DEFAULT_POLICY_ID)
+    parser.add_argument("--expected-phase", default=DEFAULT_PHASE)
     args = parser.parse_args()
-    return verify(os.path.abspath(args.binary), os.path.abspath(args.policy))
+    return verify(os.path.abspath(args.binary), os.path.abspath(args.policy),
+                  args.expected_policy_id, args.expected_phase)
 
 
 if __name__ == "__main__":
     try:
         sys.exit(main())
     except AssertionError as error:
-        print("power-Lanczos P6-B production binary policy: FAIL")
+        print("power-Lanczos production binary policy: FAIL")
         print(error)
         sys.exit(1)

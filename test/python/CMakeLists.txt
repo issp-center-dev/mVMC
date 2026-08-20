@@ -99,6 +99,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_gate_classification_pol
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p5b_sensitivity_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p5c_direct_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6b_production_symbol_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6c1_production_symbol_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyg.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)

@@ -734,12 +734,16 @@ add_executable(classic_krylov_amplitude_unit
     classic_krylov_amplitude_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_compile_definitions(classic_krylov_amplitude_unit PRIVATE
-    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 target_include_directories(classic_krylov_amplitude_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
@@ -771,6 +775,61 @@ if(MPI_FOUND)
         PROCESSORS 2)
     set_tests_properties(ClassicKrylovAmplitude_Unit_Rank4_mpi PROPERTIES
         PROCESSORS 4)
+endif()
+
+# Production-only anchor: intentionally omit the reference and testing-hook
+# macros so this target proves the classic adapters and scaled callback are
+# reachable through the bounded engine exactly as they are in vmc.out.
+add_executable(classic_krylov_production_anchor_unit
+    classic_krylov_production_anchor_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(classic_krylov_production_anchor_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(classic_krylov_production_anchor_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(classic_krylov_production_anchor_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(classic_krylov_production_anchor_unit
+    pfapack ltl2inv ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(classic_krylov_production_anchor_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(classic_krylov_production_anchor_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(classic_krylov_production_anchor_unit
+        ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME ClassicKrylovProductionAnchor_Unit
+    COMMAND classic_krylov_production_anchor_unit)
+if(MPI_FOUND)
+    add_test(NAME ClassicKrylovProductionAnchor_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:classic_krylov_production_anchor_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME ClassicKrylovProductionAnchor_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:classic_krylov_production_anchor_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(
+        ClassicKrylovProductionAnchor_Unit_Rank2_mpi PROPERTIES PROCESSORS 2)
+    set_tests_properties(
+        ClassicKrylovProductionAnchor_Unit_Rank4_mpi PROPERTIES PROCESSORS 4)
 endif()
 
 add_executable(classic_krylov_model_unit
@@ -811,6 +870,8 @@ add_executable(absolute_krylov_classic_ed_driver
     absolute_krylov_classic_ed_driver.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
@@ -837,6 +898,8 @@ add_executable(absolute_krylov_profile_driver
     absolute_krylov_profile_driver.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c

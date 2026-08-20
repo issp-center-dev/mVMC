@@ -10,7 +10,8 @@ the Free Software Foundation, either version 3 of the License, or
 
 #include "classic_krylov_model.h"
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                     \
+    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
 #include <limits.h>
 #include <math.h>
@@ -835,4 +836,4 @@ size_t mvmc_classic_krylov_model_workspace_bytes(
   return workspace == NULL ? 0 : workspace->allocated_bytes;
 }
 
-#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE */
+#endif /* reference or bounded engine */

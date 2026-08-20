@@ -13,7 +13,8 @@ add_definitions(-DMEXP=19937)
 set(SOURCES_vmcmain
         vmcmain.c absolute_pfaffian.c classic_pfaffian_matrix.c
         classic_pfaffian_state.c classic_krylov_configuration.c
-        classic_krylov_projection.c
+        classic_krylov_projection.c classic_krylov_amplitude.c
+        classic_krylov_model.c
         classic_pfaffian_collective.c
         physcal_lanczos.c physcal_lanczos2.c
         power_lanczos_contract.c power_lanczos_fp_metadata.c
@@ -45,8 +46,7 @@ endif()
 if(Testing)
   # Keep fault injection, reference samplers, and audits out of production.
   target_sources(vmc.out PRIVATE classic_pfaffian_sampler.c
-      classic_pfaffian_audit.c
-      classic_krylov_amplitude.c classic_krylov_model.c)
+      classic_pfaffian_audit.c)
   target_compile_definitions(vmc.out PRIVATE MVMC_ENABLE_FAULT_INJECTION
       MVMC_ENABLE_PFAFFIAN_SAMPLER_REFERENCE
       MVMC_ENABLE_PFAFFIAN_STATE_AUDIT

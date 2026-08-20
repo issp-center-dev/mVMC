@@ -27,6 +27,18 @@ static int close_complex(double complex actual, double complex expected,
   return cabs(actual - expected) <= tolerance * fmax(1.0, cabs(expected));
 }
 
+static int scaled_matches(const MVMCScaledComplex *actual,
+                          double complex expected, double tolerance) {
+  double complex exported = 0.0;
+  if (expected == 0.0) {
+    return actual->state == MVMC_SCALED_COMPLEX_EXACT_ZERO ||
+           actual->state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO;
+  }
+  return mvmc_scaled_complex_export_common_scale(
+             actual, 0.0, &exported) == MVMC_SCALED_EXPORT_OK &&
+         close_complex(exported, expected, tolerance);
+}
+
 static void rank_and_size(int *rank, int *size) {
 #ifdef _mpi_use
   MPI_Comm_rank(MPI_COMM_WORLD, rank);
@@ -179,9 +191,9 @@ static void test_matrix_helper(void) {
 
 static void test_real_amplitude(int qp_total, int use_gutzwiller,
                                 int singular_qp, int mutate_source) {
-  double slater[64];
-  double pfaffians[4] = {0.0};
-  double complex weights[4] = {1.0, -1.0, 1.0, -1.0};
+  double slater[128];
+  double pfaffians[8] = {0.0};
+  double complex weights[8] = {0.0};
   double complex parameter = -0.43;
   int gutz_indices[2] = {0, 0};
   MVMCClassicKrylovRealAmplitudeWorkspace *workspace = NULL;
@@ -197,7 +209,10 @@ static void test_real_amplitude(int qp_total, int use_gutzwiller,
     enable_gutzwiller(&layout, gutz_indices, &parameter);
   }
   fill_real_slater(slater, qp_total, singular_qp, pfaffians);
-  for (qp = 0; qp < qp_total; ++qp) expected += weights[qp] * pfaffians[qp];
+  for (qp = 0; qp < qp_total; ++qp) {
+    weights[qp] = qp % 2 == 0 ? 1.0 : -1.0;
+    expected += weights[qp] * pfaffians[qp];
+  }
   if (use_gutzwiller) expected *= exp(creal(parameter));
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) == MVMC_KRYLOV_STATUS_OK,
@@ -231,15 +246,27 @@ static void test_real_amplitude(int qp_total, int use_gutzwiller,
                     result.singular_component_count ==
                 (uint64_t)qp_total,
         "real amplitude component classifications");
+  {
+    MVMCKrylovScaledAmplitudeResult scaled;
+    CHECK(mvmc_classic_krylov_real_scaled_amplitude(
+              &configuration, 1, workspace, &scaled) ==
+              MVMC_KRYLOV_STATUS_OK &&
+              scaled_matches(&scaled.value, expected, 3.0e-14) &&
+              scaled.global_factorization_count == (uint64_t)qp_total &&
+              scaled.exact_zero_component_count ==
+                  (uint64_t)(singular_qp >= 0 ? 1 : 0),
+          "real scaled amplitude matches raw oracle");
+    CHECK(mvmc_classic_krylov_real_amplitude_generation_hash(workspace) != 0,
+          "real amplitude generation hash is nonzero");
+  }
   mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
 }
 
 static void test_complex_amplitude(int qp_total, int use_gutzwiller,
                                    int singular_qp) {
-  double complex slater[64];
-  double complex pfaffians[4] = {0.0};
-  double complex weights[4] = {1.0, -1.0 + 0.25 * I,
-                               0.5 - 0.75 * I, -I};
+  double complex slater[128];
+  double complex pfaffians[8] = {0.0};
+  double complex weights[8] = {0.0};
   double complex parameter = -0.43;
   int gutz_indices[2] = {0, 0};
   MVMCClassicKrylovComplexAmplitudeWorkspace *workspace = NULL;
@@ -255,7 +282,11 @@ static void test_complex_amplitude(int qp_total, int use_gutzwiller,
     enable_gutzwiller(&layout, gutz_indices, &parameter);
   }
   fill_complex_slater(slater, qp_total, singular_qp, pfaffians);
-  for (qp = 0; qp < qp_total; ++qp) expected += weights[qp] * pfaffians[qp];
+  for (qp = 0; qp < qp_total; ++qp) {
+    weights[qp] = (1.0 + 0.125 * (double)qp) +
+                  (qp % 2 == 0 ? -0.25 : 0.375) * I;
+    expected += weights[qp] * pfaffians[qp];
+  }
   if (use_gutzwiller) expected *= exp(creal(parameter));
   CHECK(mvmc_classic_krylov_complex_amplitude_workspace_create(
             &layout, slater, weights, &workspace) == MVMC_KRYLOV_STATUS_OK,
@@ -283,6 +314,20 @@ static void test_complex_amplitude(int qp_total, int use_gutzwiller,
   CHECK(result.singular_component_count ==
             (uint64_t)(singular_qp >= 0 ? 1 : 0),
         "complex amplitude singular component remains valid");
+  {
+    MVMCKrylovScaledAmplitudeResult scaled;
+    CHECK(mvmc_classic_krylov_complex_scaled_amplitude(
+              &configuration, 1, workspace, &scaled) ==
+              MVMC_KRYLOV_STATUS_OK &&
+              scaled_matches(&scaled.value, expected, 4.0e-14) &&
+              scaled.global_factorization_count == (uint64_t)qp_total &&
+              scaled.exact_zero_component_count ==
+                  (uint64_t)(singular_qp >= 0 ? 1 : 0),
+          "complex scaled amplitude matches raw oracle");
+    CHECK(mvmc_classic_krylov_complex_amplitude_generation_hash(workspace) !=
+              0,
+          "complex amplitude generation hash is nonzero");
+  }
   mvmc_classic_krylov_complex_amplitude_workspace_destroy(workspace);
 }
 
@@ -329,7 +374,7 @@ static void test_all_zero_and_configuration_guards(void) {
   mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
 }
 
-static void test_projection_allowlist(void) {
+static void test_projection_families(void) {
   double slater[16] = {0.0};
   double complex weights[1] = {1.0};
   double complex parameter[10] = {-0.43, 0.25};
@@ -362,8 +407,10 @@ static void test_projection_allowlist(void) {
   layout.projection_parameters = parameter;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
-            MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL && workspace == NULL,
-        "well-formed Jastrow is outside the initial allowlist");
+            MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+        "well-formed Jastrow is supported");
+  mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
+  workspace = NULL;
 
   jastrow_row_0[1] = jastrow_row_1[0] = 1;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
@@ -393,8 +440,10 @@ static void test_projection_allowlist(void) {
   layout.projection_parameters = parameter;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
-            MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL && workspace == NULL,
-        "well-formed Spin Jastrow is outside the initial allowlist");
+            MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+        "well-formed Spin Jastrow is supported");
+  mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
+  workspace = NULL;
 
   layout = base_layout(1, rank, size);
   layout.nproj = 6;
@@ -403,8 +452,10 @@ static void test_projection_allowlist(void) {
   layout.projection_parameters = parameter;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
-            MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL && workspace == NULL,
-        "well-formed two-site doublon-holon is outside the allowlist");
+            MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+        "well-formed two-site doublon-holon is supported");
+  mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
+  workspace = NULL;
   dh2_row[0] = -1;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
@@ -419,8 +470,10 @@ static void test_projection_allowlist(void) {
   layout.projection_parameters = parameter;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
-            MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL && workspace == NULL,
-        "well-formed four-site doublon-holon is outside the allowlist");
+            MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+        "well-formed four-site doublon-holon is supported");
+  mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
+  workspace = NULL;
   dh4_row[7] = 2;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
@@ -453,8 +506,10 @@ static void test_projection_allowlist(void) {
   layout.projection_parameters = parameter;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
-            MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL,
-        "multiple Gutzwiller parameters are outside the initial allowlist");
+            MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+        "multiple site-dependent Gutzwiller parameters are supported");
+  mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
+  workspace = NULL;
 
   {
     const uint32_t unsupported_flags[] = {
@@ -473,6 +528,95 @@ static void test_projection_allowlist(void) {
             "unsupported feature is rejected without Pfaffian fallback");
     }
   }
+}
+
+static void test_combined_projection_amplitude(void) {
+  double slater[16] = {0.0};
+  double slater_snapshot[16];
+  double complex weights[1] = {1.5};
+  double complex weight_snapshot[1];
+  double complex parameters[20];
+  double complex parameter_snapshot[20];
+  int gutzwiller[2] = {0, 1};
+  int gutzwiller_snapshot[2];
+  int jastrow_row_0[2] = {-1, 0};
+  int jastrow_row_1[2] = {0, -1};
+  const int *jastrow[2] = {jastrow_row_0, jastrow_row_1};
+  int spin_row_0[2] = {-1, 0};
+  int spin_row_1[2] = {0, -1};
+  const int *spin_jastrow[2] = {spin_row_0, spin_row_1};
+  int dh2_row[4] = {1, 1, 0, 0};
+  const int *dh2[1] = {dh2_row};
+  int dh4_row[8] = {1, 1, 1, 1, 0, 0, 0, 0};
+  const int *dh4[1] = {dh4_row};
+  MVMCClassicKrylovRealAmplitudeWorkspace *workspace = NULL;
+  MVMCClassicKrylovAmplitudeLayout layout;
+  MVMCKrylovAmplitudeResult raw;
+  MVMCKrylovScaledAmplitudeResult scaled;
+  const uint64_t configuration = UINT64_C(5);
+  const double expected_log_factor = 0.56;
+  const double complex expected = 3.0 * exp(expected_log_factor);
+  uint64_t generation;
+  int rank, size, index;
+
+  rank_and_size(&rank, &size);
+  for (index = 0; index < 20; ++index) {
+    parameters[index] = (double)(index + 1) / 100.0;
+  }
+  set_real_pair(slater, 2, 0, 0, 2.0);
+  layout = base_layout(1, rank, size);
+  layout.nproj = 20;
+  layout.ngutzwiller_idx = 2;
+  layout.njastrow_idx = 1;
+  layout.nspin_jastrow_idx = 1;
+  layout.ndoublon_holon_2site_idx = 1;
+  layout.ndoublon_holon_4site_idx = 1;
+  layout.gutzwiller_idx = gutzwiller;
+  layout.jastrow_idx = jastrow;
+  layout.spin_jastrow_idx = spin_jastrow;
+  layout.doublon_holon_2site_idx = dh2;
+  layout.doublon_holon_4site_idx = dh4;
+  layout.projection_parameters = parameters;
+  memcpy(slater_snapshot, slater, sizeof(slater));
+  memcpy(weight_snapshot, weights, sizeof(weights));
+  memcpy(parameter_snapshot, parameters, sizeof(parameters));
+  memcpy(gutzwiller_snapshot, gutzwiller, sizeof(gutzwiller));
+  CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
+            &layout, slater, weights, &workspace) == MVMC_KRYLOV_STATUS_OK,
+        "combined projection amplitude workspace create");
+  if (workspace == NULL) return;
+  generation = mvmc_classic_krylov_real_amplitude_generation_hash(workspace);
+  CHECK(mvmc_classic_krylov_real_amplitude(
+            &configuration, 1, workspace, &raw) == MVMC_KRYLOV_STATUS_OK &&
+            close_complex(raw.value, expected, 3.0e-14),
+        "combined classic correlator raw amplitude");
+  CHECK(mvmc_classic_krylov_real_scaled_amplitude(
+            &configuration, 1, workspace, &scaled) ==
+            MVMC_KRYLOV_STATUS_OK &&
+            scaled_matches(&scaled.value, expected, 3.0e-14),
+        "combined classic correlator scaled amplitude");
+  CHECK(memcmp(slater, slater_snapshot, sizeof(slater)) == 0 &&
+            memcmp(weights, weight_snapshot, sizeof(weights)) == 0 &&
+            memcmp(parameters, parameter_snapshot, sizeof(parameters)) == 0 &&
+            memcmp(gutzwiller, gutzwiller_snapshot,
+                   sizeof(gutzwiller)) == 0 &&
+            configuration == UINT64_C(5),
+        "combined amplitude evaluation preserves caller bytes");
+
+  memset(slater, 0, sizeof(slater));
+  weights[0] = 99.0;
+  parameters[0] = 99.0;
+  gutzwiller[0] = 1;
+  jastrow_row_0[1] = 7;
+  dh2_row[0] = 0;
+  CHECK(mvmc_classic_krylov_real_scaled_amplitude(
+            &configuration, 1, workspace, &scaled) ==
+            MVMC_KRYLOV_STATUS_OK &&
+            scaled_matches(&scaled.value, expected, 3.0e-14) &&
+            mvmc_classic_krylov_real_amplitude_generation_hash(workspace) ==
+                generation,
+        "combined amplitude owns immutable production binding");
+  mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
 }
 
 static void test_weight_binding_guards(void) {
@@ -789,10 +933,13 @@ int main(int argc, char **argv) {
   test_matrix_helper();
   test_real_amplitude(1, 0, -1, 1);
   test_real_amplitude(4, 1, 1, 1);
+  test_real_amplitude(8, 1, 6, 1);
   test_complex_amplitude(1, 0, -1);
   test_complex_amplitude(4, 1, 2);
+  test_complex_amplitude(8, 1, 5);
   test_all_zero_and_configuration_guards();
-  test_projection_allowlist();
+  test_projection_families();
+  test_combined_projection_amplitude();
   test_weight_binding_guards();
   test_rank_invariant_cancellation();
   test_nonfinite_and_near_pivot_classification();
