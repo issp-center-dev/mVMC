@@ -1058,6 +1058,9 @@ def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs,
     if not include_backflow:
         work_suffix += "_no_bf"
     work_suffix += extra_work_suffix
+    # opt_samples must be part of the name: the 1-sample and 2-sample variants
+    # otherwise share a workdir and delete it under each other in parallel ctest
+    work_suffix += "_smp{}".format(opt_samples)
     workdir = os.path.join(
         rootdir, "work", model + "_opt_output_restart" + work_suffix)
     if os.path.exists(workdir):
