@@ -703,6 +703,26 @@ static void test_value_only_api(void) {
             MVMC_PFAFFIAN_STATUS_OK &&
             value.pfaffian == full.pfaffian,
         "value-only real workspace reuse second evaluation");
+  CHECK(mvmc_absolute_pfaffian_real_value_with_workspace(
+            real_workspace, NULL, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            value.state == MVMC_PFAFFIAN_VALUE_INVALID,
+        "value-only real null matrix fails atomically");
+  CHECK(mvmc_absolute_pfaffian_real_value_with_workspace(
+            real_workspace, matrix, 2, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            value.state == MVMC_PFAFFIAN_VALUE_INVALID,
+        "value-only real workspace dimension mismatch fails atomically");
+  CHECK(mvmc_absolute_pfaffian_real_value_with_workspace(
+            real_workspace, matrix, n, n - 1, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            value.state == MVMC_PFAFFIAN_VALUE_INVALID,
+        "value-only real bad leading dimension fails atomically");
+  CHECK(mvmc_absolute_pfaffian_real_value(
+            matrix, INT_MAX - 1, INT_MAX - 1, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            value.state == MVMC_PFAFFIAN_VALUE_INVALID,
+        "value-only real overflowing matrix extent fails atomically");
 
   memset(matrix, 0, sizeof(matrix));
   set_real_pair(matrix, n, 0, 1, 1.0);
@@ -752,6 +772,26 @@ static void test_value_only_api(void) {
             value.state == MVMC_PFAFFIAN_VALUE_WELL_PIVOTED &&
             close_complex(value.pfaffian, full.pfaffian, 1.0e-15),
         "value-only complex phase matches full P1");
+  CHECK(mvmc_absolute_pfaffian_complex_value_with_workspace(
+            complex_workspace, NULL, n, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            value.state == MVMC_PFAFFIAN_VALUE_INVALID,
+        "value-only complex null matrix fails atomically");
+  CHECK(mvmc_absolute_pfaffian_complex_value_with_workspace(
+            complex_workspace, complex_matrix, 2, n, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            value.state == MVMC_PFAFFIAN_VALUE_INVALID,
+        "value-only complex workspace dimension mismatch fails atomically");
+  CHECK(mvmc_absolute_pfaffian_complex_value_with_workspace(
+            complex_workspace, complex_matrix, n, n - 1, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            value.state == MVMC_PFAFFIAN_VALUE_INVALID,
+        "value-only complex bad leading dimension fails atomically");
+  CHECK(mvmc_absolute_pfaffian_complex_value(
+            complex_matrix, INT_MAX - 1, INT_MAX - 1, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            value.state == MVMC_PFAFFIAN_VALUE_INVALID,
+        "value-only complex overflowing matrix extent fails atomically");
   memset(complex_matrix, 0, sizeof(complex_matrix));
   set_complex_pair(complex_matrix, n, 0, 1, 1.0 + I);
   set_complex_pair(complex_matrix, n, 2, 3, 1.0e-15 - 0.5e-15 * I);

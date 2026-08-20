@@ -42,10 +42,12 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #define M_DGETRF dgetrf_
 #define M_DGETRI dgetri_
 #define M_DPOSV  dposv_
+#define M_DSYEV  dsyev_
 #define M_DSYGV  dsygv_
 #define M_ZGETRF zgetrf_
 #define M_ZGETRI zgetri_
 #define M_ZPOSV  zposv_
+#define M_ZHEEV  zheev_
 #define M_ZHEGV  zhegv_
 
 // Pfapack
@@ -94,6 +96,9 @@ extern void M_ZAXPY(const int *n, const double complex *alpha, const double comp
 // LAPACK
 extern void M_DPOSV(const char* uplo, const int* n, const int* nrhs, double* a,
                     const int* lda, double* b, const int* ldb, int* info );
+extern void M_DSYEV(const char* jobz, const char* uplo, const int* n,
+                    double* a, const int* lda, double* w, double* work,
+                    const int* lwork, int* info);
 extern void M_DSYGV(const int* itype, const char* jobz, const char* uplo,
                     const int* n, double* a, const int* lda, double* b,
                     const int* ldb, double* w, double* work,
@@ -106,6 +111,10 @@ extern void M_DGETRI(const int* n, double* a, const int* lda,
 extern void M_ZPOSV(const char* uplo, const int* n, const int* nrhs,
                     double complex* a, const int* lda, double complex* b,
                     const int* ldb, int* info );
+extern void M_ZHEEV(const char* jobz, const char* uplo, const int* n,
+                    double complex* a, const int* lda, double* w,
+                    double complex* work, const int* lwork, double* rwork,
+                    int* info);
 extern void M_ZHEGV(const int* itype, const char* jobz, const char* uplo,
                     const int* n, double complex* a, const int* lda,
                     double complex* b, const int* ldb, double* w,

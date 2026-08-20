@@ -3,6 +3,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mode1.py DESTINATION ${CMAKE_BINAR
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_invalid_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sr.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nstore_nsplit.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_UHF.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -13,8 +14,12 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_doublon_only.py DESTINATION ${CMAK
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_reweight.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_rescale.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/backflow_def_helper.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/bf_canonical_model.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_fsz.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_projection_variants.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_hphi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/hphi_sector_check.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_sector_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_step1_compat.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -31,6 +36,61 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_p3_evidence.py DES
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_p3_pipeline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/absolute_krylov_p3_manifest.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/absolute_krylov_p3_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4c_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4c_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4c_pipeline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s3_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s3_timing_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s3_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s4_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s4_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s5_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s5_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s6_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s6_pilot_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s7_prefilter_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s7_prefilter_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s7_stage_b1_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s7_stage_b1_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s7_stage_b2_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s7_stage_b2_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s7_timing_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s7_timing_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_long_direct_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_long_direct_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_session_resource_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_session_resource_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_target_session_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_target_session_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_official_statistics_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_official_statistics_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_official_resource_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_official_resource_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_official_closure.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_official_closure.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/validate_bounded_krylov_p4s9_hardened_reparse_policy.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_hardened_reparse_policy.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/generate_bounded_krylov_p4s9_hardened_comparison.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bounded_krylov_p4s9_hardened_comparison.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classify_power_lanczos_p4f_v4_evidence.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_gate_classification.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s3_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s4_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s5_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s6_measurement_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s7_prefilter_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s7_stage_b1_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s7_stage_b2_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s7_timing_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_long_direct_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_session_resource_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_target_session_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_official_execution_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p4s9_hardened_reparse_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_gate_classification_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyg.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -69,6 +129,14 @@ function(add_python_vmc_test_invalid_expert_with_updates test_name model expecte
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
 endfunction(add_python_vmc_test_invalid_expert_with_updates)
+
+function(add_python_projection_parser_test test_name mode)
+    add_test(NAME ${test_name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_projection_parser.py ${mode})
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+        RESOURCE_LOCK "projection_parser_contract")
+endfunction(add_python_projection_parser_test)
 
 function(add_python_vmc_test_expert_phys model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_expert_phys.py ${model})
@@ -408,6 +476,14 @@ function(add_python_vmc_test_bf_mpi test_name model)
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2")
 endfunction(add_python_vmc_test_bf_mpi)
 
+function(add_python_vmc_test_bf_projection_variants test_name mode)
+    add_test(NAME ${test_name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_projection_variants.py ${mode})
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_${test_name}"
+        RESOURCE_LOCK "bf_projection_variants_${test_name}")
+endfunction(add_python_vmc_test_bf_projection_variants)
+
 function(add_python_vmc_test_invalid_bf model expected_error)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --expect-error "${expected_error}")
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
@@ -452,6 +528,123 @@ add_test(NAME AbsoluteKrylovP3Evidence_Pipeline
             ${CMAKE_BINARY_DIR}/test/python/data/absolute_krylov_p3_measurement_policy.json
             ${CMAKE_SOURCE_DIR})
 set_tests_properties(AbsoluteKrylovP3Evidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4CEvidence_Math
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bounded_krylov_p4c_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4_measurement_policy.json)
+set_tests_properties(BoundedKrylovP4CEvidence_Math PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4CEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bounded_krylov_p4c_pipeline.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4_measurement_policy.json
+            ${CMAKE_SOURCE_DIR})
+set_tests_properties(BoundedKrylovP4CEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4SMarkovEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bounded_krylov_p4s_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4_measurement_policy.json
+            ${CMAKE_SOURCE_DIR})
+set_tests_properties(BoundedKrylovP4SMarkovEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S3PilotEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s3_pilot_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s3_measurement_policy.json)
+set_tests_properties(BoundedKrylovP4S3PilotEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S4PilotEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s4_pilot_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s4_measurement_policy.json)
+set_tests_properties(BoundedKrylovP4S4PilotEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S5PilotEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s5_pilot_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s5_measurement_policy.json)
+set_tests_properties(BoundedKrylovP4S5PilotEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S6PilotEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s6_pilot_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s6_measurement_policy.json)
+set_tests_properties(BoundedKrylovP4S6PilotEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S7PrefilterEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s7_prefilter_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s7_prefilter_policy.json)
+set_tests_properties(BoundedKrylovP4S7PrefilterEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S7StageB1Evidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s7_stage_b1_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s7_stage_b1_policy.json)
+set_tests_properties(BoundedKrylovP4S7StageB1Evidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S7StageB2Evidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s7_stage_b2_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s7_stage_b2_policy.json)
+set_tests_properties(BoundedKrylovP4S7StageB2Evidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S7TimingEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s7_timing_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s7_timing_policy.json)
+set_tests_properties(BoundedKrylovP4S7TimingEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9LongDirectEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_long_direct_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_long_direct_policy.json)
+set_tests_properties(BoundedKrylovP4S9LongDirectEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9SessionResourceEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_session_resource_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_session_resource_policy.json)
+set_tests_properties(BoundedKrylovP4S9SessionResourceEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9TargetSessionEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_target_session_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_target_session_policy.json)
+set_tests_properties(BoundedKrylovP4S9TargetSessionEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9OfficialStatisticsEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_official_statistics_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_official_execution_policy.json)
+set_tests_properties(BoundedKrylovP4S9OfficialStatisticsEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9OfficialResourceEvidence_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_official_resource_evidence.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_official_execution_policy.json
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_session_resource_policy.json
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_target_session_policy.json)
+set_tests_properties(BoundedKrylovP4S9OfficialResourceEvidence_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9OfficialClosure_Pipeline
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_official_closure.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_official_execution_policy.json)
+set_tests_properties(BoundedKrylovP4S9OfficialClosure_Pipeline PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9HardenedReparsePolicy
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_hardened_reparse_policy.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_hardened_reparse_policy.json
+            ${CMAKE_SOURCE_DIR})
+set_tests_properties(BoundedKrylovP4S9HardenedReparsePolicy PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_test(NAME BoundedKrylovP4S9HardenedComparison
+    COMMAND ${PYTHON_EXECUTABLE}
+            runtest_bounded_krylov_p4s9_hardened_comparison.py
+            ${CMAKE_BINARY_DIR}/test/python/data/power_lanczos_p4s9_hardened_reparse_policy.json
+            ${CMAKE_SOURCE_DIR})
+set_tests_properties(BoundedKrylovP4S9HardenedComparison PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 if(MPI_FOUND)
     add_test(NAME AbsoluteKrylovProfile_AuditParity_Rank2_mpi
@@ -910,6 +1103,11 @@ add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_SpinChanging_NonIdentity_Complex
 add_python_vmc_test_bf_fsz_omp(BackFlow_FSZ_Lanczos_SpinChanging_NonIdentity_Complex_omp 4)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_MomentumProjection_Identity_Complex)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_MomentumProjection_NonIdentity_Complex)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_AP_Identity_Complex)
+add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_Lanczos_AP_Identity_Complex_mpi)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_AP_Identity_Real_Experimental)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_AP_NonIdentity_Complex)
+add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_Lanczos_AP_NonIdentity_Complex_mpi)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_NonfiniteThreshold)
 add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_Lanczos_NonfiniteThreshold_mpi)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_NonfiniteWarning)
@@ -917,6 +1115,7 @@ add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_Lanczos_NonfiniteAggregateWarning_mp
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_RebuildFailureWarning)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_ProfileIsolation)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_InvalidMode2)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_AP_InvalidMode2)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_InvalidOptimization)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_InvalidSPGaussLeg)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_InvalidPairHop)
@@ -1014,6 +1213,15 @@ add_python_vmc_test_bf_fsz(BackFlow_FSZ_SRDiff_MomentumProjection_Complex)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_SRDiff_NonIdentity_Complex)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_SRDiff_MomentumProjection_NonIdentity_Complex)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_SRDiff_SpinChanging_NonIdentity_Complex)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_SRDiff_AP_NonIdentity_Complex)
+add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_SRDiff_AP_NonIdentity_Complex_mpi)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_SRDiff_AP_NonIdentity_Real)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_SRDiff_AP_OptTrans_NonIdentity_Complex)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_SRDiff_AP_OrbitalSign_NonIdentity_Complex)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_AP_Identity_Complex)
+add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_AP_Identity_Complex_mpi)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_AP_Identity_Real)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_AP_NonIdentity_RealVsComplex)
 add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_InvalidSpinChangingOneBodyG_mpi)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Optimization_Identity_Complex)
 add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_Optimization_Identity_Complex_mpi)
@@ -1060,12 +1268,20 @@ add_test(NAME BackFlow_Lanczos_RebuildFailureWarning
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex --lanczos-mode 1 --expect-lanczos-warning)
 set_tests_properties(BackFlow_Lanczos_RebuildFailureWarning PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_LANCZOS_TEST_REBUILD_FAILURES=1;MVMC_BF_LANCZOS_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Lanczos_RebuildFailureWarning")
 add_python_vmc_test_bf_compact(BackFlow_Compact_Identity_Complex BackFlow_Identity_Complex)
-add_python_vmc_test_bf_invalid(BackFlow_Identity_Complex_MultiQP BackFlow_Identity_Complex_MultiQP "momentum projection in non-FSZ mode yet")
-add_python_vmc_test_bf_invalid(BackFlow_Identity_Real_MultiQP BackFlow_Identity_Real_MultiQP "momentum projection in non-FSZ mode yet")
+add_test(NAME BackFlow_Identity_Complex_MultiQP
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --expect-nqp-full 2 --compare-no-bf-energy --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_Identity_Complex_MultiQP PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Identity_Complex_MultiQP")
+add_test(NAME BackFlow_Identity_Real_MultiQP
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --expect-nqp-full 2 --compare-no-bf-energy --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_Identity_Real_MultiQP PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Identity_Real_MultiQP")
 add_python_vmc_test_bf_mpi(BackFlow_Identity_Complex_mpi BackFlow_Identity_Complex)
 add_python_vmc_test_bf_energy_omp_nqp(BackFlow_IdentityEnergy_Real BackFlow_Identity_Real 1 1)
-add_python_vmc_test_bf_invalid(BackFlow_Identity_Real_MultiQP_L8s1 BackFlow_Identity_Real_MultiQP_L8s1 "momentum projection in non-FSZ mode yet")
-add_python_vmc_test_bf_invalid(BackFlow_Identity_Real_MultiQP_L8s4 BackFlow_Identity_Real_MultiQP_L8s4 "momentum projection in non-FSZ mode yet")
+add_test(NAME BackFlow_Identity_Real_MultiQP_L8s1
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP_L8s1 --expect-nqp-full 2 --compare-no-bf-energy --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_Identity_Real_MultiQP_L8s1 PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Identity_Real_MultiQP_L8s1")
+add_test(NAME BackFlow_Identity_Real_MultiQP_L8s4
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP_L8s4 --expect-nqp-full 2 --compare-no-bf-energy --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_Identity_Real_MultiQP_L8s4 PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Identity_Real_MultiQP_L8s4")
 add_python_vmc_test_bf(BackFlow_Optimization_Complex BackFlow_Optimization_Complex)
 
 # --- BackFlow exchange update (NExUpdatePath=1, non-FSZ samplers) ---
@@ -1130,8 +1346,124 @@ set_tests_properties(BackFlow_Invalid_ExUpdatePath2 PROPERTIES ENVIRONMENT "PYTH
 add_python_vmc_test_bf_compact(BackFlow_Compact_Optimization_Complex BackFlow_Optimization_Complex)
 add_python_vmc_test_bf_compact(BackFlow_Compact_Optimization_Real BackFlow_Optimization_Real)
 add_python_vmc_test_bf_energy_clean_omp_nqp(BackFlow_Optimization_Real BackFlow_Optimization_Real 1 1)
-add_python_vmc_test_bf_invalid(BackFlow_Optimization_Real_MultiQP BackFlow_Optimization_Real_MultiQP "momentum projection in non-FSZ mode yet")
-add_python_vmc_test_bf_invalid(BackFlow_Optimization_Complex_MultiQP BackFlow_Optimization_Complex_MultiQP "momentum projection in non-FSZ mode yet")
+add_test(NAME BackFlow_Optimization_Real_MultiQP
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Real_MultiQP --expect-nqp-full 2 --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_Optimization_Real_MultiQP PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Optimization_Real_MultiQP")
+add_test(NAME BackFlow_Optimization_Complex_MultiQP
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --expect-nqp-full 2 --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_Optimization_Complex_MultiQP PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Optimization_Complex_MultiQP")
+add_test(NAME BackFlow_Optimization_Complex_MultiQP_mpi
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --expect-nqp-full 2 --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_Optimization_Complex_MultiQP_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Optimization_Complex_MultiQP_mpi")
+add_test(NAME BackFlow_MultiQP_InvalidExchangePath
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --set-ex-update-path 1 --expect-error "not supported with momentum projection/APBC")
+set_tests_properties(BackFlow_MultiQP_InvalidExchangePath PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_InvalidExchangePath")
+add_test(NAME BackFlow_MultiQP_SampleState_PBC_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_SampleState_PBC_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_SampleState_PBC_Complex")
+add_test(NAME BackFlow_MultiQP_SampleState_AP_Real_RebuildFailure
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --use-ap-projection --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_SampleState_AP_Real_RebuildFailure PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_MULTI_QP_INJECT_REBUILD_FAILURE=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_SampleState_AP_Real_RebuildFailure")
+add_test(NAME BackFlow_MultiQP_ProjBF_OrbitalFD_PBC
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_ProjBF_OrbitalFD_PBC PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_ProjBF_OrbitalFD_PBC")
+add_test(NAME BackFlow_MultiQP_ProjBF_OrbitalFD_AP
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --use-ap-projection --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_ProjBF_OrbitalFD_AP PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_ProjBF_OrbitalFD_AP")
+add_test(NAME BackFlow_MultiQP_PhysicalCovariance_AP
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --use-ap-projection --use-full-projection-group --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_PhysicalCovariance_AP PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_PhysicalCovariance_AP")
+add_test(NAME BackFlow_SingleQP_NonIdentity_CanonicalFallback
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --reverse-projection-order --use-single-projection-row --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_SingleQP_NonIdentity_CanonicalFallback PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_NonIdentity_CanonicalFallback")
+add_test(NAME BackFlow_SingleQP_AP_CanonicalFallback
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --use-ap-projection --use-single-projection-row --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_SingleQP_AP_CanonicalFallback PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_AP_CanonicalFallback")
+add_python_vmc_test_bf_projection_variants(BackFlow_MultiQP_OrderInvariant_PBC pbc)
+add_python_vmc_test_bf_projection_variants(BackFlow_MultiQP_OrderInvariant_AP_Mutation ap)
+add_test(NAME BackFlow_MultiQP_Green1_PBC_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-green1-bruteforce --use-nonidentity-init --expect-all-complex-flag 1 --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Green1_PBC_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green1_PBC_Complex")
+add_test(NAME BackFlow_MultiQP_Green1_PBC_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --check-bf-green1-bruteforce --use-nonidentity-init --expect-all-complex-flag 0 --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Green1_PBC_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green1_PBC_Real")
+add_test(NAME BackFlow_MultiQP_Green1_AP_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-green1-bruteforce --use-nonidentity-init --expect-all-complex-flag 1 --use-ap-projection --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Green1_AP_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green1_AP_Complex")
+add_test(NAME BackFlow_MultiQP_Green1_AP_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --check-bf-green1-bruteforce --use-nonidentity-init --expect-all-complex-flag 0 --use-ap-projection --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Green1_AP_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green1_AP_Real")
+add_test(NAME BackFlow_MultiQP_Green2_PBC_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-green2-bruteforce --use-nonidentity-init --expect-all-complex-flag 1 --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Green2_PBC_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green2_PBC_Complex")
+add_test(NAME BackFlow_MultiQP_Green2_PBC_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --check-bf-green2-bruteforce --use-nonidentity-init --expect-all-complex-flag 0 --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Green2_PBC_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green2_PBC_Real")
+add_test(NAME BackFlow_MultiQP_Green2_AP_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-green2-bruteforce --use-nonidentity-init --expect-all-complex-flag 1 --use-ap-projection --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Green2_AP_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green2_AP_Complex")
+add_test(NAME BackFlow_MultiQP_Green2_AP_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --check-bf-green2-bruteforce --use-nonidentity-init --expect-all-complex-flag 0 --use-ap-projection --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Green2_AP_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green2_AP_Real")
+add_test(NAME BackFlow_MultiQP_Green1_Failure_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --use-ap-projection --expect-error "BackFlow canonical Green evaluation failed")
+set_tests_properties(BackFlow_MultiQP_Green1_Failure_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_CANONICAL_GREEN_INJECT_FAILURE=complex1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green1_Failure_Complex")
+add_test(NAME BackFlow_MultiQP_Green1_Failure_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --use-ap-projection --expect-error "BackFlow canonical Green evaluation failed")
+set_tests_properties(BackFlow_MultiQP_Green1_Failure_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_CANONICAL_GREEN_INJECT_FAILURE=real1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green1_Failure_Real")
+add_test(NAME BackFlow_MultiQP_Green2_Failure_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --use-ap-projection --compare-no-bf-twobodyg --expect-error "BackFlow canonical Green evaluation failed")
+set_tests_properties(BackFlow_MultiQP_Green2_Failure_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_CANONICAL_GREEN_INJECT_FAILURE=complex2;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green2_Failure_Complex")
+add_test(NAME BackFlow_MultiQP_Green2_Failure_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --use-ap-projection --check-bf-green2-bruteforce --expect-error "BackFlow canonical Green evaluation failed")
+set_tests_properties(BackFlow_MultiQP_Green2_Failure_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_CANONICAL_GREEN_INJECT_FAILURE=real2;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green2_Failure_Real")
+add_test(NAME BackFlow_MultiQP_Green1_Failure_Complex_mpi
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --use-ap-projection --expect-error "BackFlow canonical Green evaluation failed")
+set_tests_properties(BackFlow_MultiQP_Green1_Failure_Complex_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_CANONICAL_GREEN_INJECT_FAILURE=complex1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green1_Failure_Complex_mpi")
+add_test(NAME BackFlow_MultiQP_Green_PfZero_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --use-ap-projection --use-nonidentity-init)
+set_tests_properties(BackFlow_MultiQP_Green_PfZero_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_CANONICAL_PF_INJECT_ZERO=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Green_PfZero_Complex")
+add_test(NAME BackFlow_MultiQP_Lanczos_PBC_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --lanczos-mode 1 --lanczos-samples 32 --compare-no-bf-lanczos --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Lanczos_PBC_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_LANCZOS_STATE_CHECK=1;MVMC_LANCZOS_ORACLE_DUMP=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Lanczos_PBC_Complex")
+add_test(NAME BackFlow_MultiQP_Lanczos_AP_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --lanczos-mode 1 --lanczos-samples 32 --compare-no-bf-lanczos --use-ap-projection --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Lanczos_AP_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_LANCZOS_STATE_CHECK=1;MVMC_LANCZOS_ORACLE_DUMP=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Lanczos_AP_Complex")
+add_test(NAME BackFlow_MultiQP_Lanczos_AP_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --lanczos-mode 1 --lanczos-samples 32 --compare-no-bf-lanczos --use-ap-projection --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Lanczos_AP_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_LANCZOS_STATE_CHECK=1;MVMC_LANCZOS_ORACLE_DUMP=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Lanczos_AP_Real")
+add_test(NAME BackFlow_MultiQP_Lanczos_AP_Complex_mpi
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --lanczos-mode 1 --lanczos-samples 32 --compare-no-bf-lanczos --use-ap-projection --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_Lanczos_AP_Complex_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_LANCZOS_STATE_CHECK=1;MVMC_LANCZOS_ORACLE_DUMP=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Lanczos_AP_Complex_mpi")
+add_test(NAME BackFlow_MultiQP_NBody_Components_PBC
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-components --use-nonidentity-init --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_NBody_Components_PBC PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_Components_PBC")
+add_test(NAME BackFlow_MultiQP_NBody_State_PBC
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-asymmetric-complex-projection-weights --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_NBody_State_PBC PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_PBC")
+add_test(NAME BackFlow_MultiQP_NBody_State_AP
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-complex-projection-weights --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_NBody_State_AP PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_AP")
+add_test(NAME BackFlow_MultiQP_NBody_State_AP_mpi
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-complex-projection-weights --check-multiqp-full-rebuild)
+set_tests_properties(BackFlow_MultiQP_NBody_State_AP_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_AP_mpi")
+add_test(NAME BackFlow_MultiQP_AP_NonIdentity_RealVsComplex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --compare-real-complex-nonidentity BackFlow_Identity_Complex_MultiQP --use-ap-projection --reject-output "Error:" --reject-output "error:")
+set_tests_properties(BackFlow_MultiQP_AP_NonIdentity_RealVsComplex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_AP_NonIdentity_RealVsComplex")
+add_test(NAME BackFlow_HPhi_FixtureContract
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf_hphi.py fixture)
+set_tests_properties(BackFlow_HPhi_FixtureContract PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+add_test(NAME BackFlow_HPhi_PBC_Optimization
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf_hphi.py pbc)
+set_tests_properties(BackFlow_HPhi_PBC_Optimization PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1"
+    TIMEOUT 600)
+add_test(NAME BackFlow_HPhi_APBC_Optimization
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf_hphi.py apbc)
+set_tests_properties(BackFlow_HPhi_APBC_Optimization PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1"
+    TIMEOUT 600)
 add_python_vmc_test_bf_twobodyg_omp_nqp(BackFlow_Identity_TwoBodyG_Complex BackFlow_Identity_Complex 1 1)
 add_python_vmc_test_bf_twobodyg_mpi(BackFlow_Identity_TwoBodyG_Complex_mpi BackFlow_Identity_Complex 1)
 add_python_vmc_test_bf_twobodygex_omp_nqp(BackFlow_Identity_TwoBodyGEx_Complex BackFlow_Identity_Complex 1 1)
@@ -1224,6 +1556,13 @@ add_python_vmc_test_invalid_expert(BackFlow_InvalidSpinProjection "NSPGaussLeg==
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path4_InvalidRBM "does not support RBM")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path5_InvalidRBM "does not support RBM")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond4_J_path4_InvalidFullFilling "requires 2*Ne < Nsite")
+add_python_projection_parser_test(ProjectionParserContract serial)
+if(MPI_FOUND)
+    add_python_projection_parser_test(ProjectionParserContract_mpi mpi)
+    set_tests_properties(ProjectionParserContract_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+        PROCESSORS 2)
+endif()
 add_test(NAME NSplitSize_Zero_Invalid
          COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py HubbardChain_SpinJastrow
                  "NSplitSize (= 0) must be a positive integer" NSplitSize=0 NStore=0)
@@ -1335,3 +1674,47 @@ add_test(NAME UHF_InterAll COMMAND ${PYTHON_EXECUTABLE} test_UHF_InterAll.py)
 set_tests_properties(UHF_InterAll PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 
 add_subdirectory(data)
+
+add_test(NAME PowerLanczosP4FV3ConfirmatoryEvidence_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v3_confirmatory_evidence.py)
+
+add_test(NAME PowerLanczosP4FV3ResultValidator_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v3_result_validator.py)
+
+add_test(NAME PowerLanczosP4FEvidenceComparator_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_evidence_comparator.py)
+
+add_test(NAME PowerLanczosP4FV3SecondaryPreparer_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v3_secondary_preparer.py)
+
+add_test(NAME PowerLanczosP4FV3SecondaryClosure_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v3_secondary_closure.py)
+
+add_test(NAME PowerLanczosP4FBlockStabilityAnalysis_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_block_stability_analysis.py)
+
+add_test(NAME PowerLanczosP4FV4ConfirmatoryEvidence_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v4_confirmatory_evidence.py)
+
+add_test(NAME PowerLanczosP4FV4ResultValidator_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v4_result_validator.py)
+
+add_test(NAME PowerLanczosP4FV4SecondaryPreparer_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v4_secondary_preparer.py)
+
+add_test(NAME PowerLanczosP4FV4SecondaryClosure_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_p4f_v4_secondary_closure.py)
+
+add_test(NAME PowerLanczosGateClassification_Unit
+         COMMAND ${PYTHON_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_gate_classification.py)

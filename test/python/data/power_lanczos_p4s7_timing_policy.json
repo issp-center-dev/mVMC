@@ -1,0 +1,40 @@
+{
+  "schema_version": 8,
+  "policy_id": "power-lanczos-zero-support-p4-r0-v7-stage-c",
+  "status": "p4s7_partial_guide_real_callback_timing_frozen",
+  "frozen_date": "2026-08-15",
+  "source_stage_b2_artifact": "20260815-p4s7-stage-b2-local-v1",
+  "source_stage_b2_policy_sha256": "b878a6853b85336fe52ab7c88ff4ed81834b5e5f707fbb086b78e121978feb25",
+  "source_stage_b2_ledger_sha256": "e84cb935826962fcc4f548b298cd09045084f0ada9779ca93634552e45687433",
+  "plan": "docs/2026-08-15-power-lanczos-zero-support-p4s7-partial-guide-plan.md",
+  "review": "docs/2026-08-15-power-lanczos-zero-support-p4s7-plan-review.md",
+  "scope": {
+    "site_counts": [4, 6, 8],
+    "qp_total": [1, 4],
+    "physical_case_order": [[4, 1], [4, 4], [6, 1], [6, 4], [8, 1], [8, 4]],
+    "omp_threads": 1,
+    "blas_threads": 1,
+    "cache_bytes": 268435456
+  },
+  "candidate_order": [
+    {"m": 2, "alpha": 1, "K": 32},
+    {"m": 2, "alpha": 10, "K": 32}
+  ],
+  "timing_census": {
+    "sample_count": 128,
+    "repeat_count": 7,
+    "seed_hex": "0x5034533352305631",
+    "stream_order": [0, 1, 2, 3, 4, 5, 6],
+    "within_stream_order": ["global_only_baseline", "m2_alpha1_K32", "m2_alpha10_K32"],
+    "baseline": {"rho": 0.01, "global_numerator": 1, "global_denominator": 1, "bounded_max_order": 3},
+    "candidate_partial_bounded_max_order": 2,
+    "candidate_callback_evaluations_per_step": 32,
+    "candidate_maximum_final_bounded_evaluations_per_step": 1,
+    "workspace": "fresh_full_and_partial_workspaces_per_repeat",
+    "initialization_timing": "excluded",
+    "rank_reducer": "maximum_per_component",
+    "repeat_reducer": "median",
+    "maximum_total_seconds_per_step_regression_fraction": 0.10
+  },
+  "failure": "STOP_without_retiming_reordering_threshold_or_candidate_change"
+}

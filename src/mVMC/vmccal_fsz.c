@@ -845,6 +845,8 @@ static void dumpBFFSZSRDiffCheck(const char *path, int *eleIdx, int *eleSpn,
                                  int *eleNum, const int *eleProjBFCnt,
                                  const int qpStart, const int qpEnd,
                                  const int sample) {
+  int *const callerEleNum = eleNum;
+  const int *const callerEleProjBFCnt = eleProjBFCnt;
   FILE *fp;
   double complex *diffNoBF;
   double complex *analyticPacked;
@@ -852,6 +854,7 @@ static void dumpBFFSZSRDiffCheck(const char *path, int *eleIdx, int *eleSpn,
   double complex *analyticSlater;
   double complex *projBFStore;
   double complex *slaterStore;
+  double complex *callerSlaterElmStore;
   double complex ipNoBF = 0.0 + 0.0*I;
   double complex ipBF = 0.0 + 0.0*I;
   double complex ipPlus = 0.0 + 0.0*I;
@@ -869,6 +872,7 @@ static void dumpBFFSZSRDiffCheck(const char *path, int *eleIdx, int *eleSpn,
   double maxOrbitalRealDiff = 0.0;
   double maxOrbitalImagDiff = 0.0;
   double maxOrbitalDiff = 0.0;
+  double maxCallerSlaterRestoreDiff = 0.0;
   int maxIdentityOrbitalIdx = -1;
   int maxProjBFRealIdx = -1;
   int maxProjBFImagIdx = -1;
@@ -882,6 +886,11 @@ static void dumpBFFSZSRDiffCheck(const char *path, int *eleIdx, int *eleSpn,
   int nonzeroOrbitalFDCount = 0;
   int nanCount = 0;
   int fdFailCount = 0;
+  int negativeQPTransSignCount = 0;
+  int negativeQPOptTransSignCount = 0;
+  int negativeOrbitalSignCount = 0;
+  int negativeOrbitalInputSignCount = 0;
+  int nonzeroThetaCount = 0;
   int infoNoBF;
   int infoBF;
   int infoPlus;
@@ -889,24 +898,64 @@ static void dumpBFFSZSRDiffCheck(const char *path, int *eleIdx, int *eleSpn,
   int noBFReady;
   int bfReady;
   int idx;
+  int tableIndex;
+  int siteIndex;
+  size_t restoreIndex;
+  int fixedConfiguration = 0;
+  int fixedEleIdx[4] = {0, 1, 1, 3};
+  int fixedEleSpn[4] = {0, 0, 1, 1};
+  int fixedEleNum[8] = {0};
+  int fixedEleProjBFCnt[16*4*3] = {0};
+  size_t callerSlaterCount = 0;
 
   if(path == NULL || path[0] == '\0') return;
   if(NProjBF <= 0 || ProjBF == NULL || NSlater <= 0) return;
+  if(NQPFull <= 0 || Nsite2 <= 0
+     || BFFSZNBodyDiagSizeMul(
+            (size_t)NQPFull, (size_t)Nsite2, &callerSlaterCount) != 0
+     || BFFSZNBodyDiagSizeMul(
+            callerSlaterCount, (size_t)Nsite2, &callerSlaterCount) != 0) {
+    fprintf(stderr, "Error: invalid BF-FSZ SR caller Slater size.\n");
+    return;
+  }
+  if(getenv("MVMC_BF_FSZ_SR_DIFF_FIXED_CONFIG") != NULL) {
+    if(Nsite != 4 || Nsite2 != 8 || Nsize != 4 || Nrange != 3) {
+      fprintf(stderr,
+              "Error: BF-FSZ SR fixed configuration requires "
+              "Nsite=4, Nsize=4, and Nrange=3.\n");
+      return;
+    }
+    for(idx=0;idx<4;idx++) {
+      fixedEleNum[fixedEleIdx[idx] + fixedEleSpn[idx]*Nsite]++;
+    }
+    MakeProjBFCnt(fixedEleProjBFCnt, fixedEleNum);
+    eleIdx = fixedEleIdx;
+    eleSpn = fixedEleSpn;
+    eleNum = fixedEleNum;
+    eleProjBFCnt = fixedEleProjBFCnt;
+    fixedConfiguration = 1;
+  }
 
   diffNoBF = (double complex *)calloc((size_t)2 * (size_t)NSlater, sizeof(double complex));
   analyticPacked = (double complex *)calloc((size_t)2 * (size_t)(NProjBF + NSlater),
                                             sizeof(double complex));
   projBFStore = (double complex *)calloc((size_t)NProjBF, sizeof(double complex));
   slaterStore = (double complex *)calloc((size_t)NSlater, sizeof(double complex));
+  callerSlaterElmStore = (double complex *)calloc(
+      callerSlaterCount, sizeof(double complex));
   if(diffNoBF == NULL || analyticPacked == NULL ||
-      projBFStore == NULL || slaterStore == NULL) {
+      projBFStore == NULL || slaterStore == NULL ||
+      callerSlaterElmStore == NULL) {
     fprintf(stderr, "Error: memory allocation failed for BF-FSZ SR diff dump.\n");
     free(diffNoBF);
     free(analyticPacked);
     free(projBFStore);
     free(slaterStore);
+    free(callerSlaterElmStore);
     return;
   }
+  memcpy(callerSlaterElmStore, SlaterElmBF,
+         callerSlaterCount * sizeof(double complex));
   analyticProjBF = analyticPacked;
   analyticSlater = analyticPacked + 2*NProjBF;
 
@@ -1090,17 +1139,65 @@ static void dumpBFFSZSRDiffCheck(const char *path, int *eleIdx, int *eleSpn,
 
   for(idx=0;idx<NProjBF;idx++) ProjBF[idx] = projBFStore[idx];
   for(idx=0;idx<NSlater;idx++) Slater[idx] = slaterStore[idx];
-  MakeSlaterElmBF_fsz(eleNum, eleProjBFCnt);
+  MakeSlaterElmBF_fsz(callerEleNum, callerEleProjBFCnt);
+  for(restoreIndex=0;restoreIndex<callerSlaterCount;restoreIndex++) {
+    const double diff = cabs(
+        SlaterElmBF[restoreIndex] - callerSlaterElmStore[restoreIndex]);
+    if(diff > maxCallerSlaterRestoreDiff) {
+      maxCallerSlaterRestoreDiff = diff;
+    }
+  }
+
+  for(tableIndex=0;tableIndex<NMPTrans;tableIndex++) {
+    for(siteIndex=0;siteIndex<Nsite;siteIndex++) {
+      if(QPTransSgn[tableIndex][siteIndex] < 0) {
+        negativeQPTransSignCount++;
+      }
+    }
+  }
+  for(tableIndex=0;tableIndex<NQPOptTrans;tableIndex++) {
+    for(siteIndex=0;siteIndex<Nsite;siteIndex++) {
+      if(QPOptTransSgn[tableIndex][siteIndex] < 0) {
+        negativeQPOptTransSignCount++;
+      }
+    }
+  }
+  for(tableIndex=0;tableIndex<Nsite2;tableIndex++) {
+    for(siteIndex=0;siteIndex<Nsite2;siteIndex++) {
+      if(OrbitalSgn[tableIndex][siteIndex] < 0) {
+        negativeOrbitalSignCount++;
+        if(tableIndex < siteIndex) negativeOrbitalInputSignCount++;
+      }
+    }
+  }
+  for(idx=0;idx<8*Nsite*Nrange;idx++) {
+    if(eleProjBFCnt[idx] != 0) nonzeroThetaCount++;
+  }
 
   fp = fopen(path, "w");
   if(fp == NULL) {
     fprintf(stderr, "Error: failed to open BF-FSZ SR diff dump file: %s\n", path);
   } else {
     fprintf(fp, "sample %d\n", sample);
+    fprintf(fp, "fixed_configuration %d\n", fixedConfiguration);
+    fprintf(fp, "configuration 0 0 1 0 1 1 3 1\n");
     fprintf(fp, "info_no_bf %d\n", infoNoBF);
     fprintf(fp, "info_bf %d\n", infoBF);
     fprintf(fp, "nprojbf %d\n", NProjBF);
     fprintf(fp, "nslater %d\n", NSlater);
+    fprintf(fp, "ap_flag %d\n", APFlag);
+    fprintf(fp, "negative_qptrans_sign_count %d\n",
+            negativeQPTransSignCount);
+    fprintf(fp, "negative_qpopttrans_sign_count %d\n",
+            negativeQPOptTransSignCount);
+    fprintf(fp, "negative_orbital_sign_count %d\n",
+            negativeOrbitalSignCount);
+    fprintf(fp, "negative_orbital_input_sign_count %d\n",
+            negativeOrbitalInputSignCount);
+    fprintf(fp, "nonzero_theta_count %d\n", nonzeroThetaCount);
+    fprintf(fp, "max_abs_caller_slater_restore_diff %.17e\n",
+            maxCallerSlaterRestoreDiff);
+    fprintf(fp, "ip_bf %.17e %.17e\n", creal(ipBF), cimag(ipBF));
     fprintf(fp, "step %.17e\n", h);
     fprintf(fp, "fd_fail_count %d\n", fdFailCount);
     fprintf(fp, "nan_count %d\n", nanCount);
@@ -1137,6 +1234,7 @@ static void dumpBFFSZSRDiffCheck(const char *path, int *eleIdx, int *eleSpn,
   free(analyticPacked);
   free(projBFStore);
   free(slaterStore);
+  free(callerSlaterElmStore);
 }
 
 void VMCMainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {

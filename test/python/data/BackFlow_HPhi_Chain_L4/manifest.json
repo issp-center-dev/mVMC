@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "fixture": "BackFlow_HPhi_Chain_L4",
+  "oracle": {
+    "name": "HPhi",
+    "version": "3.5.2",
+    "release_tag": "v3.5.2",
+    "release_commit": "df0277d9a2c8f8a16dcc266db2e31ccd75214aa1",
+    "binary_platform": "macOS arm64",
+    "binary_sha256": "1eca1f513d4b96d4d70d56a58a9cff2af9a2d5871841f3efc94c14af0cae0e02",
+    "solver": "CG/LOBPCG",
+    "initial_iv": 314159,
+    "lanczos_eps": 14
+  },
+  "hamiltonian": {
+    "lattice": "one-dimensional four-site ring",
+    "model": "canonical Hubbard",
+    "t": 1.0,
+    "U": 4.0,
+    "ncond": 4,
+    "two_sz": 0
+  },
+  "mvmc_acceptance": {
+    "seeds": [314159, 271828, 161803],
+    "optimization": {
+      "NSROptItrStep": 60,
+      "NSROptItrSmp": 10,
+      "NVMCSample": 512,
+      "NVMCWarmUp": 64,
+      "NVMCInterval": 1,
+      "DSROptRedCut": 1e-08,
+      "DSROptStaDel": 0.02,
+      "DSROptStepDt": 0.02
+    },
+    "measurement": {
+      "NDataQtySmp": 4,
+      "NVMCSample": 4096,
+      "NVMCWarmUp": 128,
+      "NVMCInterval": 1
+    },
+    "lower_bound_sigma": 3.0,
+    "lower_bound_numerical_slack": 0.01,
+    "accuracy_tolerance": 0.15,
+    "uncertainty_ceiling": 0.03
+  },
+  "cases": {
+    "pbc": {
+      "phase_degrees": 0.0,
+      "ap_flag": 0,
+      "nmptrans": 4,
+      "nqptrans": 4,
+      "momentum_over_pi": 1.0,
+      "translation_eigenvalue": [-1.0, 0.0],
+      "projection_weights": [[1.0, 0.0], [-1.0, 0.0], [1.0, 0.0], [-1.0, 0.0]],
+      "exact_ground_energy": -2.1027484834620509,
+      "sector_residual_ceiling": 2e-06,
+      "files": {
+        "calcmod.def": "a9da559bef2a8a8e1642898afa00b0648a1d74d6cb8f940d35f2d3293811da8e",
+        "coulombintra.def": "971dfb3c9e020a4b0d391c5dbf831816ca7c9c04fad0b774f158f30eee84d112",
+        "locspn.def": "3511951a34edd890afc52157c28aecc0428f07b173d5de62adb3c74c472e01a2",
+        "modpara.def": "fb50f70063267636a30e3a5a7cc74d883f0dc5046e5ec01be97643ef63e6c0c5",
+        "namelist.def": "cec07fd74f09a7991c8a11a1dce53ec02629f1f004e9d19eed4de00825e43a7c",
+        "sector_check.txt": "ca1d19ffcd54cb0e3b3977e5d0c2c992372b199d7f528b39a5256e3f7507bfbf",
+        "stan.in": "0bd5f34891bb7aca6e58dae8471d40ae21793860034a88944c4611332d7216fd",
+        "trans.def": "8ddcbeee152f2f626f8f2c132b98a21210bb16d00c72297eaf7b601ae61d9e70",
+        "zvo_energy.dat": "476c31bdf5f98a2f3b24a271d3a9742bf799bce34805fd4857f49ee9e89c7e58"
+      },
+      "eigenvector_sha256": "fb33d11a9182d06052e001aebe2d6ef5e0881355afe2b83e381195ab7aaa6d06"
+    },
+    "apbc": {
+      "phase_degrees": 180.0,
+      "ap_flag": 1,
+      "nmptrans": -4,
+      "nqptrans": 4,
+      "momentum_over_pi": 0.0,
+      "translation_eigenvalue": [1.0, 0.0],
+      "projection_weights": [[1.0, 0.0], [1.0, 0.0], [1.0, 0.0], [1.0, 0.0]],
+      "exact_ground_energy": -2.7205662327304423,
+      "sector_residual_ceiling": 2e-06,
+      "files": {
+        "calcmod.def": "a9da559bef2a8a8e1642898afa00b0648a1d74d6cb8f940d35f2d3293811da8e",
+        "coulombintra.def": "971dfb3c9e020a4b0d391c5dbf831816ca7c9c04fad0b774f158f30eee84d112",
+        "locspn.def": "3511951a34edd890afc52157c28aecc0428f07b173d5de62adb3c74c472e01a2",
+        "modpara.def": "fb50f70063267636a30e3a5a7cc74d883f0dc5046e5ec01be97643ef63e6c0c5",
+        "namelist.def": "cec07fd74f09a7991c8a11a1dce53ec02629f1f004e9d19eed4de00825e43a7c",
+        "sector_check.txt": "8b46d35e36e380d37183521b8362ef86c11073960c02be703746393ee750f947",
+        "stan.in": "d3979b076f42cec6412c89417597bdb42e77e1004ab234ae97f0f26d20d76823",
+        "trans.def": "dcce5a939d48fab1ebc679821ed477b5b49429aa96c0bb4c61091713fe470792",
+        "zvo_energy.dat": "93df9959645a9b31f6821b0cdb66a8432c19ce03b36fb12b1dba01e1f75b8d69"
+      },
+      "eigenvector_sha256": "4b48ef18d124e5a7954ea459b9ea5621d9ef85a4defb71719948961a2a46990e"
+    }
+  }
+}

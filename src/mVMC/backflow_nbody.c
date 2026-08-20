@@ -468,6 +468,7 @@ static BFNBodyResult BFDispatchReducedNBody(
   const int source = scratch->rsj[0];
   const int spin = source/Nsite;
   double complex value;
+  int greenStatus = BF_PF_OK;
 
   if(reduction->order != 1) {
     return BFNBodyResultValue(
@@ -489,7 +490,13 @@ static BFNBodyResult BFDispatchReducedNBody(
       target%Nsite, source%Nsite, spin, ip, scratch->slater,
       scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
       eleProjCnt, scratch->projCnt, eleProjBFCnt,
-      scratch->projBFCnt, scratch->greenBuffer);
+      scratch->projBFCnt, scratch->greenBuffer, &greenStatus);
+
+  if(greenStatus != BF_PF_OK) {
+    return BFNBodyResultValue(
+        BF_NBODY_PFAFFIAN_ERROR, BF_NBODY_STAGE_PFAFFIAN,
+        greenStatus, reduction->order, 0.0+0.0*I);
+  }
 
   if(memcmp(scratch->eleIdx, eleIdx, (size_t)Nsize*sizeof(int)) != 0
      || memcmp(scratch->eleCfg, eleCfg,
