@@ -13,6 +13,7 @@ add_definitions(-DMEXP=19937)
 set(SOURCES_vmcmain
         vmcmain.c absolute_pfaffian.c classic_pfaffian_matrix.c
         classic_pfaffian_state.c classic_krylov_configuration.c
+        classic_krylov_projection.c
         classic_pfaffian_collective.c
         physcal_lanczos.c physcal_lanczos2.c
         power_lanczos_contract.c power_lanczos_fp_metadata.c
