@@ -30,8 +30,12 @@ static void *lsbffszCheckedCalloc(size_t count, size_t size) {
 }
 
 static int lsbffszStateCheckEnabled(void) {
+#ifndef MVMC_ENABLE_FAULT_INJECTION
+  return 0;
+#else
   const char *value = getenv("MVMC_BF_LANCZOS_STATE_CHECK");
   return value != NULL && value[0] != '\0' && strcmp(value, "0") != 0;
+#endif
 }
 
 void LSLanczosBFFSZScratchFree(LSLanczosBFFSZScratch *scratch) {

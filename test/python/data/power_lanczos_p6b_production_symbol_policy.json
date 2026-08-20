@@ -18,8 +18,21 @@
     "^mvmc_classic_pfaffian_.*_audit_",
     "^mvmc_classic_krylov_"
   ],
+  "forbidden_binary_strings": [
+    "MVMC_LANCZOS_ORACLE_DUMP",
+    "MVMC_LANCZOS_TEST_NONFINITE_SAMPLE",
+    "MVMC_LANCZOS_TEST_NONFINITE_PARENT_RANK",
+    "MVMC_LANCZOS_TEST_REBUILD_FAILURES",
+    "MVMC_LANCZOS_TEST_PROJECTION_BRANCH_AUDIT",
+    "MVMC_LANCZOS2_STATE_CHECK",
+    "MVMC_LANCZOS2_TEST_NONFINITE_SAMPLE",
+    "MVMC_LANCZOS2_TEST_CALHCA_GUARD_AUDIT",
+    "MVMC_LANCZOS2_HEISENBERG_AUDIT",
+    "MVMC_BF_LANCZOS_STATE_CHECK"
+  ],
   "notes": [
     "Run this policy against a Testing=OFF vmc.out built from the P6-B production-core slice.",
-    "The allow boundary intentionally permits existing production Pfaffian matrix and collective symbols."
+    "The allow boundary intentionally permits existing production Pfaffian matrix and collective symbols.",
+    "Forbidden binary strings cover Testing-only Lanczos oracle, audit, state-check, and fault-injection env hooks."
   ]
 }

@@ -143,6 +143,10 @@ typedef struct {
 } Lanczos2StateSnapshot;
 
 static int Lanczos2StateSnapshotInit(Lanczos2StateSnapshot *snapshot) {
+#ifndef MVMC_ENABLE_FAULT_INJECTION
+  memset(snapshot, 0, sizeof(*snapshot));
+  return 0;
+#else
   const char *value = getenv("MVMC_LANCZOS2_STATE_CHECK");
   size_t matrixStride;
   size_t matrixSize;
@@ -189,6 +193,7 @@ static int Lanczos2StateSnapshotInit(Lanczos2StateSnapshot *snapshot) {
     return -1;
   }
   return 0;
+#endif
 }
 
 static void Lanczos2StateSnapshotCapture(
@@ -363,6 +368,7 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
 #endif
 
   if(NVMCCalMode == 1 && NLanczosMode > 0) {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
     const char *dumpValue = getenv("MVMC_LANCZOS_ORACLE_DUMP");
     if(dumpValue != NULL && dumpValue[0] != '\0' && strcmp(dumpValue, "0") != 0) {
       char dumpPath[1024];
@@ -389,6 +395,7 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
         MPI_Abort(comm_parent, EXIT_FAILURE);
       }
     }
+#endif
   }
 
   if(NVMCCalMode==0 && NStoreO!=0 && NSRCG==0) {

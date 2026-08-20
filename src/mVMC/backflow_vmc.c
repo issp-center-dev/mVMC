@@ -342,6 +342,9 @@ static int lsbfLocalVectorFinite(void) {
 }
 
 static long lsbfNonfiniteInjectionSample(void) {
+#ifndef MVMC_ENABLE_FAULT_INJECTION
+  return -1;
+#else
   const char *value = getenv("MVMC_LANCZOS_TEST_NONFINITE_SAMPLE");
   char *end = NULL;
   long sample;
@@ -350,6 +353,7 @@ static long lsbfNonfiniteInjectionSample(void) {
   sample = strtol(value, &end, 10);
   if(errno != 0 || end == value || *end != '\0' || sample < 0) return -2;
   return sample;
+#endif
 }
 
 static void lsbfFinalizeAccounting(MPI_Comm comm, int rank,
@@ -3633,6 +3637,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
 
   memset(&lanczosScratch, 0, sizeof(lanczosScratch));
   if(NVMCCalMode == 1 && NLanczosMode == 1) {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
     const char *dumpValue = getenv("MVMC_LANCZOS_ORACLE_DUMP");
     lanczosInjectSample = lsbfNonfiniteInjectionSample();
     lanczosInjectParentRank = LSLanczosTestNonfiniteParentRank();
@@ -3655,6 +3660,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
        lanczosInjectParentRank != parentRank) {
       lanczosInjectSample = -1;
     }
+#endif
     if(LSLanczosBFScratchInit(&lanczosScratch, AllComplexFlag == 0) != 0) {
       if(rank == 0) {
         fprintf(stderr, "Error: failed to allocate BackFlow Lanczos scratch.\n");
@@ -3662,6 +3668,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       MPI_Abort(comm, EXIT_FAILURE);
     }
     lanczosScratchReady = 1;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
     if(dumpValue != NULL && dumpValue[0] != '\0' && strcmp(dumpValue, "0") != 0) {
       char dumpPath[1024];
       int pathLength;
@@ -3687,6 +3694,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
         MPI_Abort(comm_parent, EXIT_FAILURE);
       }
     }
+#endif
   }
 
   if(NVMCCalMode==0 && NStoreO!=0 && NSRCG==0) {

@@ -43,6 +43,12 @@ def read_global_symbols(binary):
     return symbols
 
 
+def read_binary(binary):
+    require(os.path.exists(binary), "binary does not exist: {}".format(binary))
+    with open(binary, "rb") as handle:
+        return handle.read()
+
+
 def validate_policy(policy):
     require(policy.get("schema_version") == 1, "schema mismatch")
     require(policy.get("policy_id") == EXPECTED_POLICY_ID,
@@ -55,22 +61,34 @@ def validate_policy(policy):
 
     required = policy.get("required_symbols")
     forbidden = policy.get("forbidden_symbol_regex")
+    forbidden_strings = policy.get("forbidden_binary_strings", [])
     require(isinstance(required, list) and required,
             "missing required symbol list")
     require(isinstance(forbidden, list), "missing forbidden symbol list")
+    require(isinstance(forbidden_strings, list),
+            "invalid forbidden binary string list")
     for symbol in required:
         require(isinstance(symbol, str) and symbol.startswith("mvmc_"),
                 "invalid required symbol {}".format(symbol))
     for pattern in forbidden:
         require(isinstance(pattern, str), "invalid forbidden regex")
         re.compile(pattern)
-    return required, forbidden
+    for text in forbidden_strings:
+        require(isinstance(text, str) and text.startswith("MVMC_"),
+                "invalid forbidden binary string {}".format(text))
+        try:
+            text.encode("ascii")
+        except UnicodeEncodeError:
+            raise AssertionError(
+                "forbidden binary string is not ASCII: {}".format(text))
+    return required, forbidden, forbidden_strings
 
 
 def verify(binary, policy_path):
     policy = read_json(policy_path)
-    required, forbidden_patterns = validate_policy(policy)
+    required, forbidden_patterns, forbidden_strings = validate_policy(policy)
     symbols = read_global_symbols(binary)
+    binary_payload = read_binary(binary)
 
     missing = [symbol for symbol in required if symbol not in symbols]
     forbidden = []
@@ -78,8 +96,12 @@ def verify(binary, policy_path):
         regex = re.compile(pattern)
         forbidden.extend(symbol for symbol in symbols if regex.search(symbol))
     forbidden = sorted(set(forbidden))
+    forbidden_binary_strings = [
+        text for text in forbidden_strings
+        if text.encode("ascii") in binary_payload
+    ]
 
-    if missing or forbidden:
+    if missing or forbidden or forbidden_binary_strings:
         if missing:
             print("missing required P6-B production symbols:")
             for symbol in missing:
@@ -88,9 +110,13 @@ def verify(binary, policy_path):
             print("forbidden P6-B production symbols:")
             for symbol in forbidden:
                 print("  {}".format(symbol))
+        if forbidden_binary_strings:
+            print("forbidden P6-B production binary strings:")
+            for text in forbidden_binary_strings:
+                print("  {}".format(text))
         return 1
 
-    print("power-Lanczos P6-B production symbol policy: PASS")
+    print("power-Lanczos P6-B production binary policy: PASS")
     return 0
 
 
@@ -106,6 +132,6 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except AssertionError as error:
-        print("power-Lanczos P6-B production symbol policy: FAIL")
+        print("power-Lanczos P6-B production binary policy: FAIL")
         print(error)
         sys.exit(1)

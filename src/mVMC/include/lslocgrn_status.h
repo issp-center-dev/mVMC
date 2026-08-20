@@ -14,6 +14,9 @@ typedef enum {
 /* Test-only fault injection.  A positive value rejects this many candidate
  * rebuilds per process without changing production behavior when unset. */
 static inline int LSLanczosTestConsumeRebuildFailure(void) {
+#ifndef MVMC_ENABLE_FAULT_INJECTION
+  return 0;
+#else
   static int initialized = 0;
   static long remaining = 0;
   if(!initialized) {
@@ -32,16 +35,24 @@ static inline int LSLanczosTestConsumeRebuildFailure(void) {
   if(remaining <= 0) return 0;
   remaining--;
   return 1;
+#endif
 }
 
 static inline int LSLanczosTestProjectionBranchAuditEnabled(void) {
+#ifndef MVMC_ENABLE_FAULT_INJECTION
+  return 0;
+#else
   const char *value = getenv("MVMC_LANCZOS_TEST_PROJECTION_BRANCH_AUDIT");
   return value != NULL && value[0] != '\0' && value[0] != '0';
+#endif
 }
 
 /* Optional parent-communicator rank selector for non-finite injection.
  * Returns -1 when unset and -2 for malformed input. */
 static inline long LSLanczosTestNonfiniteParentRank(void) {
+#ifndef MVMC_ENABLE_FAULT_INJECTION
+  return -1;
+#else
   const char *value = getenv("MVMC_LANCZOS_TEST_NONFINITE_PARENT_RANK");
   char *end = NULL;
   long rank;
@@ -50,6 +61,7 @@ static inline long LSLanczosTestNonfiniteParentRank(void) {
   rank = strtol(value, &end, 10);
   if(errno != 0 || end == value || *end != '\0' || rank < 0) return -2;
   return rank;
+#endif
 }
 
 #endif
