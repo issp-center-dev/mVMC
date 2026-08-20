@@ -1127,6 +1127,8 @@ add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_InvalidSPGaussLeg)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_InvalidPairHop)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_InvalidExchange)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_InvalidInterAll)
+add_python_vmc_test_bf_fsz(BackFlow_FSZ_InvalidExUpdatePath1)
+add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_InvalidExUpdatePath1_mpi)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_IdentityEnergy_Complex)
 add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_IdentityEnergy_Complex_mpi)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_NBody_Dispatch_NonIdentity_Complex)
@@ -1287,6 +1289,66 @@ add_test(NAME BackFlow_Identity_Real_MultiQP_L8s4
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP_L8s4 --expect-nqp-full 2 --compare-no-bf-energy --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_Identity_Real_MultiQP_L8s4 PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Identity_Real_MultiQP_L8s4")
 add_python_vmc_test_bf(BackFlow_Optimization_Complex BackFlow_Optimization_Complex)
+
+# --- BackFlow exchange update (NExUpdatePath=1, non-FSZ samplers) ---
+# Identity BF with exchange must reproduce the no-BF sampler (same RNG stream).
+# Non-identity runs are validated by the full-rebuild oracle
+# (MVMC_BF_PF_UPDATE_CHECK=1: proposal / accept / reject stages) and must see
+# accepted and rejected exchange moves (--expect-exchange-events).
+function(add_python_vmc_test_bf_exchange_identity test_name model)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model}
+             --ex-update-path 1 --set-vmc-sample 400 --compare-no-bf-energy)
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_${test_name}")
+endfunction(add_python_vmc_test_bf_exchange_identity)
+
+function(add_python_vmc_test_bf_exchange_nonidentity test_name model)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model}
+             --ex-update-path 1 --set-vmc-sample 400 --use-nonidentity-init --expect-exchange-events)
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_PF_UPDATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_${test_name}")
+endfunction(add_python_vmc_test_bf_exchange_nonidentity)
+
+function(add_python_vmc_test_bf_exchange_nonidentity_mpi test_name model)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model}
+             --ex-update-path 1 --set-vmc-sample 400 --use-nonidentity-init --expect-exchange-events)
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_PF_UPDATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_${test_name}")
+endfunction(add_python_vmc_test_bf_exchange_nonidentity_mpi)
+
+function(add_python_vmc_test_bf_exchange_nonidentity_omp test_name model threads)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model}
+             --ex-update-path 1 --set-vmc-sample 400 --use-nonidentity-init --expect-exchange-events)
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${threads};OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;MVMC_BF_PF_UPDATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_${test_name}")
+endfunction(add_python_vmc_test_bf_exchange_nonidentity_omp)
+
+add_python_vmc_test_bf_exchange_identity(BackFlow_Exchange_Identity_Real BackFlow_Identity_Real)
+add_python_vmc_test_bf_exchange_identity(BackFlow_Exchange_Identity_Complex BackFlow_Identity_Complex)
+add_python_vmc_test_bf_exchange_nonidentity(BackFlow_Exchange_NonIdentity_Real BackFlow_Identity_Real)
+add_python_vmc_test_bf_exchange_nonidentity(BackFlow_Exchange_NonIdentity_Complex BackFlow_Identity_Complex)
+add_python_vmc_test_bf_exchange_nonidentity_mpi(BackFlow_Exchange_NonIdentity_Real_mpi BackFlow_Identity_Real)
+add_python_vmc_test_bf_exchange_nonidentity_mpi(BackFlow_Exchange_NonIdentity_Complex_mpi BackFlow_Identity_Complex)
+add_python_vmc_test_bf_exchange_nonidentity_omp(BackFlow_Exchange_NonIdentity_Real_omp BackFlow_Identity_Real 4)
+add_python_vmc_test_bf_exchange_nonidentity_omp(BackFlow_Exchange_NonIdentity_Complex_omp BackFlow_Identity_Complex 4)
+# single-rank real/complex agreement of the non-identity exchange sampler
+add_test(NAME BackFlow_Exchange_RealComplex_NonIdentity
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real
+                 --ex-update-path 1 --set-vmc-sample 400
+                 --compare-real-complex-nonidentity BackFlow_Identity_Complex --expect-exchange-events)
+set_tests_properties(BackFlow_Exchange_RealComplex_NonIdentity PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_PF_UPDATE_CHECK=1")
+# SR optimization with exchange sampling and opt-output restart consistency
+add_test(NAME BackFlow_Exchange_Optimization_OptOutputRestart
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex
+                 --ex-update-path 1 --check-opt-output-restart
+                 --reject-output "Error:" --reject-output "error:")
+set_tests_properties(BackFlow_Exchange_Optimization_OptOutputRestart PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_PF_UPDATE_CHECK=1")
+add_test(NAME BackFlow_Exchange_Optimization_OptOutputRestart_mpi
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex
+                 --ex-update-path 1 --check-opt-output-restart
+                 --reject-output "Error:" --reject-output "error:")
+set_tests_properties(BackFlow_Exchange_Optimization_OptOutputRestart_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_PF_UPDATE_CHECK=1")
+# unsupported local update path (pure-spin / weighted update family) is still rejected
+add_test(NAME BackFlow_Invalid_ExUpdatePath2
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real
+                 --ex-update-path 2 --expect-error "supports only NExUpdatePath==0 or 1")
+set_tests_properties(BackFlow_Invalid_ExUpdatePath2 PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
 add_python_vmc_test_bf_compact(BackFlow_Compact_Optimization_Complex BackFlow_Optimization_Complex)
 add_python_vmc_test_bf_compact(BackFlow_Compact_Optimization_Real BackFlow_Optimization_Real)
 add_python_vmc_test_bf_energy_clean_omp_nqp(BackFlow_Optimization_Real BackFlow_Optimization_Real 1 1)
@@ -1299,9 +1361,30 @@ set_tests_properties(BackFlow_Optimization_Complex_MultiQP PROPERTIES ENVIRONMEN
 add_test(NAME BackFlow_Optimization_Complex_MultiQP_mpi
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --expect-nqp-full 2 --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_Optimization_Complex_MultiQP_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Optimization_Complex_MultiQP_mpi")
-add_test(NAME BackFlow_MultiQP_InvalidExchangePath
-         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --set-ex-update-path 1 --expect-error "BackFlow MVP supports only NExUpdatePath==0")
-set_tests_properties(BackFlow_MultiQP_InvalidExchangePath PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_InvalidExchangePath")
+# exchange update on the canonical multi-QP path: sampling must stay on the
+# full-rebuild route (no legacy incremental updates) with the state audit on,
+# and every run must see accepted and rejected exchange moves
+add_test(NAME BackFlow_MultiQP_Exchange_PBC_Complex
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --set-ex-update-path 1 --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_PBC_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_PBC_Complex")
+add_test(NAME BackFlow_MultiQP_Exchange_PBC_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --set-ex-update-path 1 --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_PBC_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_PBC_Real")
+add_test(NAME BackFlow_MultiQP_Exchange_PBC_Real_mpi
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --set-ex-update-path 1 --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_PBC_Real_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_PBC_Real_mpi")
+add_test(NAME BackFlow_MultiQP_Exchange_AP_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --set-ex-update-path 1 --use-ap-projection --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_AP_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_AP_Real")
+add_test(NAME BackFlow_MultiQP_Exchange_AP_Real_mpi
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --set-ex-update-path 1 --use-ap-projection --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_AP_Real_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_AP_Real_mpi")
+# the non-identity initial state drives the chain toward doubly occupied
+# configurations where exchange candidates are rare, so sample longer to keep
+# the accept/reject coverage assertion non-vacuous
+add_test(NAME BackFlow_MultiQP_Exchange_NonIdentity_PBC_Real
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --set-ex-update-path 1 --use-nonidentity-init --set-vmc-sample 640 --check-multiqp-full-rebuild --expect-exchange-profile)
+set_tests_properties(BackFlow_MultiQP_Exchange_NonIdentity_PBC_Real PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_Exchange_NonIdentity_PBC_Real")
 add_test(NAME BackFlow_MultiQP_SampleState_PBC_Complex
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_MultiQP_SampleState_PBC_Complex PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_MULTI_QP_STATE_CHECK=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_SampleState_PBC_Complex")
@@ -1457,6 +1540,40 @@ set_tests_properties(
                "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Complex_CopyIndex_OMP4")
 add_python_vmc_test_bf_real_complex_nonidentity(BackFlow_NonIdentity_RealVsComplex BackFlow_Identity_Real BackFlow_Identity_Complex 1)
 add_python_vmc_test_bf_opt_output_restart(BackFlow_Optimization_OptOutputRestart BackFlow_Optimization_Complex 1)
+add_test(
+    NAME BackFlow_Optimization_SingleSampleOptOutputRestart
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex
+            --check-opt-output-restart
+            --opt-output-samples 1
+            --reject-output "Error:"
+            --reject-output "error:")
+set_tests_properties(
+    BackFlow_Optimization_SingleSampleOptOutputRestart
+    PROPERTIES ENVIRONMENT
+               "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+add_test(
+    NAME BackFlow_Optimization_SingleSampleOptOutputRestart_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex
+            --check-opt-output-restart
+            --opt-output-samples 1
+            --reject-output "Error:"
+            --reject-output "error:")
+set_tests_properties(
+    BackFlow_Optimization_SingleSampleOptOutputRestart_mpi
+    PROPERTIES ENVIRONMENT
+               "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2;OMP_NUM_THREADS=1")
+add_test(
+    NAME Optimization_SingleSampleOptOutputRestart_NoBackFlow
+    COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex
+            --check-opt-output-restart
+            --opt-output-samples 1
+            --opt-output-no-backflow
+            --reject-output "Error:"
+            --reject-output "error:")
+set_tests_properties(
+    Optimization_SingleSampleOptOutputRestart_NoBackFlow
+    PROPERTIES ENVIRONMENT
+               "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
 add_python_vmc_test_bf_nonidentity_ncond(BackFlow_NonIdentity_HighFilling_Complex BackFlow_Identity_Complex 6 1)
 add_python_vmc_test_bf_nonidentity_ncond(BackFlow_NonIdentity_HighFilling_Real BackFlow_Identity_Real 6 1)
 add_python_vmc_test_bf_nonidentity_ncond_mpi(BackFlow_NonIdentity_HighFilling_Complex_mpi BackFlow_Identity_Complex 6)

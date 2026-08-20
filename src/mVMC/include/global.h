@@ -494,6 +494,7 @@ long long BFProfileCounter[NBFProfileCounter];
 int BFFSZGreenRebuildCheckEnabled = 0;
 int BFFSZAffectedCheckEnabled = 0;
 int BFFSZPfUpdateCheckEnabled = 0;
+int BFPfUpdateCheckEnabled = 0; /* non-FSZ BackFlow sampler: full-rebuild oracle for hopping/exchange updates */
 int BFFSZPfUpdateForceFallback = 0;
 int BFFSZPfUpdateInjectedStatus = 0;
 int BFFSZPfUpdateInjectedRank = -1;

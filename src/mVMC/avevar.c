@@ -105,7 +105,11 @@ void OutputOptData() {
 
   if(NSROptItrSmp==1) {
     for(i=0;i<n;i++) {
-      fprintf(fp,"% .18e % .18e ", creal(SROptData[i]), 0.0);//TBC
+      /* Keep the single-sample output restart-compatible with the regular
+       * Re/Im/uncertainty triplet format.  ReadInitParameter() skips the
+       * first two triplets and then consumes one triplet per parameter. */
+      fprintf(fp,"% .18e % .18e % .18e ",
+              creal(SROptData[i]), cimag(SROptData[i]), 0.0);
     }
   } else {    
     //output <H> and <H^2>
