@@ -534,6 +534,47 @@ Keywords and parameters
    ``NLanczosMode=2`` and Lanczos corrections for ``NBodyG`` /
    ``NBodyInterAll`` are not supported.
 
+-  ``NLanczosEstimatorMode``
+
+   **Type :** int-type (default value: 0)
+
+   **Description :** Selects the power-Lanczos estimator used when
+   ``NLanczosMode`` is 1 or 2.
+
+   * [0] Selects the corrected estimator. This is also selected when the
+     keyword is omitted. The corrected production pipeline is not enabled in
+     this staged release, so the program exits with status 20 before the P6
+     observable census, memory setup, or sampling. ``NLanczosMode=1`` reports
+     ``CORRECTED_PIPELINE_UNAVAILABLE``; ``NLanczosMode=2`` reports
+     ``OBSERVABLE_CERTIFICATE_UNAVAILABLE``.
+   * [1] Explicitly opts in to the previous biased base-support estimator.
+     This compatibility route is diagnostic-only and is not a corrected
+     release result. All ``NLanczosCoeff*``, ``NLanczosFinal*``,
+     ``NLanczosGuideMode``, and ``NLanczosStatMode`` controls must remain 0.
+
+   Existing inputs require an explicit compatibility decision:
+
+   .. list-table:: Power-Lanczos selector compatibility
+      :header-rows: 1
+      :widths: 30 30 40
+
+      * - Input
+        - Earlier behavior
+        - Current behavior
+      * - ``NLanczosMode=1`` or 2, selector omitted
+        - Used the legacy base-support estimator
+        - Selects the corrected route and exits with status 20 until that
+          route is enabled
+      * - Add ``NLanczosEstimatorMode 1``
+        - Not required
+        - Reproduces the previous estimator with a diagnostic-only warning
+      * - ``NLanczosEstimatorMode 0``
+        - Not available as a selector
+        - Explicitly selects the corrected route; currently fails fast
+
+   When ``NLanczosMode=0``, this keyword and every other P6 estimator control
+   must be 0.
+
 -  ``NLanczosStep``
 
    **Type :** int-type (default value: 1)

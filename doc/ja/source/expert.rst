@@ -531,6 +531,46 @@ ModParaファイル (modpara.def)
    ``CoulombInter``, ``Hund``）に限定されます。``NLanczosMode=2``、
    ``NBodyG`` / ``NBodyInterAll`` の Lanczos 補正は未対応です。
 
+-  ``NLanczosEstimatorMode``
+
+   **形式 :** int型 (デフォルト値 = 0)
+
+   **説明 :** ``NLanczosMode`` が1または2のときに使用する
+   Power-Lanczos estimatorを選択します。
+
+   * [0] corrected estimatorを選択します。キーワードを省略した場合も
+     0が選ばれます。段階導入中の現releaseではcorrected production経路を
+     まだ有効化していないため、P6 observable census、メモリ確保、samplingの
+     前にstatus 20で終了します。``NLanczosMode=1`` では
+     ``CORRECTED_PIPELINE_UNAVAILABLE``、``NLanczosMode=2`` では
+     ``OBSERVABLE_CERTIFICATE_UNAVAILABLE`` を報告します。
+   * [1] 従来のbiased base-support estimatorを明示的に選択します。この
+     compatibility経路はdiagnostic専用で、corrected release resultでは
+     ありません。``NLanczosCoeff*``、``NLanczosFinal*``、
+     ``NLanczosGuideMode``、``NLanczosStatMode`` はすべて0にする必要があります。
+
+   既存inputではcompatibility方針を明示的に選択してください。
+
+   .. list-table:: Power-Lanczos selectorの互換性
+      :header-rows: 1
+      :widths: 30 30 40
+
+      * - input
+        - 従来の動作
+        - 現在の動作
+      * - ``NLanczosMode=1`` または2、selector省略
+        - legacy base-support estimatorを使用
+        - corrected経路を選択し、その経路が有効になるまでstatus 20で終了
+      * - ``NLanczosEstimatorMode 1`` を追加
+        - 指定不要
+        - diagnostic専用warning付きで従来のestimatorを再現
+      * - ``NLanczosEstimatorMode 0``
+        - selectorとしては未提供
+        - corrected経路を明示的に選択し、現時点ではfail-fast
+
+   ``NLanczosMode=0`` のときは、このキーワードを含むすべてのP6 estimator
+   controlを0にする必要があります。
+
 -  ``NLanczosStep``
 
    **形式 :** int型 (デフォルト値 = 1)
@@ -777,11 +817,11 @@ ModParaファイル (modpara.def)
    反平行スピンの ``Orbital`` 入力が必要です。現状では ``LocSpin``、
    ``BackFlow``、RBM、``OrbitalGeneral``/FSZ入力には対応していません。
 
-   ``InUpdateWeight``を指定しない場合、``NExUpdatePath=2``の従来selectorは
+   ``InUpdateWeight`` を指定しない場合、 ``NExUpdatePath=2`` の従来selectorは
    変更されません。固定 :math:`S_z` または非FSZ計算ではEXCHANGEのみ、
-   ``OrbitalGeneral``かつ``2Sz=-1``ではEXCHANGEとLOCALSPINFLIPを等確率で
+   ``OrbitalGeneral`` かつ ``2Sz=-1`` ではEXCHANGEとLOCALSPINFLIPを等確率で
    選びます。重み付きselectorとPAIRSPINFLIPについては後述の
-   ``updateweight.def``を参照してください。
+   ``updateweight.def`` を参照してください。
 
 -  ``RndSeed``
 
@@ -894,9 +934,9 @@ ModParaファイル (modpara.def)
 UpdateWeight指定ファイル(updateweight.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``NExUpdatePath=2``で用いるローカル更新kernelの相対重みを指定する任意入力です。
-``namelist.def``へ``InUpdateWeight updateweight.def``を追加すると有効になります。
-ファイルを指定しない場合、従来のselector、乱数消費順、``zvo_time``の列構成を
+``NExUpdatePath=2`` で用いるローカル更新kernelの相対重みを指定する任意入力です。
+``namelist.def`` へ ``InUpdateWeight updateweight.def`` を追加すると有効になります。
+ファイルを指定しない場合、従来のselector、乱数消費順、 ``zvo_time`` の列構成を
 そのまま維持します。
 
 ::
@@ -915,10 +955,10 @@ UpdateWeight指定ファイル(updateweight.def)
 正でない重み合計、またはpath 2以外での使用はエラー終了します。重みは内部で正規化し、
 入力読込時に表示します。
 
-``LocalSpinFlip``には``OrbitalGeneral``と``2Sz=-1``が必要です。
+``LocalSpinFlip`` には ``OrbitalGeneral`` と ``2Sz=-1`` が必要です。
 この重みを0にすると、up-spin数のparityを意図的に保存します。宣言した固定parity
 sectorだけをsampleする場合には正しい設定です。target分布が両parity sectorに
-nonzero weightを持つ場合、``LocalSpinFlip``の正の重みは必要条件であり、実際に
+nonzero weightを持つ場合、 ``LocalSpinFlip`` の正の重みは必要条件であり、実際に
 acceptされたlocal-spin-flipも確認する必要があります。proposal重みが正であること
 だけではergodicityを保証しません。
 

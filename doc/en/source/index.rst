@@ -10,6 +10,7 @@ Manual for mVMC
    :maxdepth: 2
 
    intro.rst
+   release_note.rst
    start.rst
    tutorial.rst
    standard.rst
@@ -27,4 +28,3 @@ Manual for mVMC
 .. * :ref:`genindex`
 .. * :ref:`modindex`
 .. * :ref:`search`
-
