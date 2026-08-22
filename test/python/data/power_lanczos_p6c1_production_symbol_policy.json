@@ -12,6 +12,10 @@
     "mvmc_power_lanczos_validate_production_contract",
     "mvmc_krylov_matrix_measurement_sample",
     "mvmc_krylov_gevp_solve_complex_packed",
+    "mvmc_power_lanczos_gevp_default_policy",
+    "mvmc_power_lanczos_gevp_solve_complex_packed",
+    "mvmc_power_lanczos_gevp_solve_real_packed",
+    "mvmc_power_lanczos_gevp_policy_id",
     "mvmc_krylov_final_state_policy_create",
     "mvmc_krylov_final_state_chain_step_mixture_rng",
     "mvmc_classic_krylov_configuration_decode",
@@ -29,6 +33,7 @@
   ],
   "required_binary_strings": [
     "power-lanczos-p6a-production-contract-v2",
+    "power_lanczos_p6c1_exact_cartesian_normwise_gevp_v2",
     "strict-fp-options:fno-fast-math,ffp-contract-off",
     "complex-fma-contract:c99-complex,record-__FP_FAST_FMA,ffp-contract-off-requested"
   ],

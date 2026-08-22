@@ -114,6 +114,21 @@ endif()
 target_link_libraries(krylov_gevp_solver_unit ${LAPACK_LIBRARIES} m)
 add_test(NAME KrylovGEVPSolver_Unit COMMAND krylov_gevp_solver_unit)
 
+add_executable(power_lanczos_gevp_unit
+    power_lanczos_gevp_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_gevp.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c)
+target_include_directories(power_lanczos_gevp_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_gevp_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+    target_compile_definitions(power_lanczos_gevp_unit PRIVATE
+        MVMC_POWER_LANCZOS_FP_CONTRACT_OFF_REQUESTED=1)
+endif()
+target_link_libraries(power_lanczos_gevp_unit ${LAPACK_LIBRARIES} m)
+add_test(NAME PowerLanczosGEVP_Unit COMMAND power_lanczos_gevp_unit)
+
 add_executable(absolute_pfaffian_unit
     absolute_pfaffian_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
@@ -892,6 +907,112 @@ if(Require_BLIS)
 endif()
 if(MPI_FOUND)
     target_link_libraries(absolute_krylov_classic_ed_driver ${MPI_C_LIBRARIES})
+endif()
+
+# One-time P6-C1 Cartesian evidence driver.  Deliberately not registered as
+# a permanent CTest; the versioned evidence generator invokes it exactly once
+# after independent pre-result review.
+add_executable(power_lanczos_p6c1_cartesian_driver
+    power_lanczos_p6c1_cartesian_driver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_gevp.c)
+target_compile_definitions(power_lanczos_p6c1_cartesian_driver PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(power_lanczos_p6c1_cartesian_driver PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_p6c1_cartesian_driver PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+target_link_libraries(power_lanczos_p6c1_cartesian_driver pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(power_lanczos_p6c1_cartesian_driver stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(power_lanczos_p6c1_cartesian_driver blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(power_lanczos_p6c1_cartesian_driver
+        ${MPI_C_LIBRARIES})
+endif()
+
+# Focused pilot composition test.  This is a distinct executable with an
+# exact nine-case grammar; the official driver above keeps its 2016-case gate.
+add_executable(power_lanczos_p6c1_preflight
+    power_lanczos_p6c1_cartesian_driver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_gevp.c)
+target_compile_definitions(power_lanczos_p6c1_preflight PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE MVMC_P6C1_PREFLIGHT)
+target_include_directories(power_lanczos_p6c1_preflight PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_p6c1_preflight PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+target_link_libraries(power_lanczos_p6c1_preflight pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(power_lanczos_p6c1_preflight stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(power_lanczos_p6c1_preflight blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(power_lanczos_p6c1_preflight ${MPI_C_LIBRARIES})
+endif()
+set(POWER_LANCZOS_P6C1_PREFLIGHT_INPUT
+    ${CMAKE_BINARY_DIR}/test/power_lanczos_p6c1_preflight_input.txt)
+add_test(NAME PowerLanczosP6C1_PreflightPrepare
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/test/python/power_lanczos_p6c1_cartesian_evidence.py
+            prepare-preflight ${POWER_LANCZOS_P6C1_PREFLIGHT_INPUT})
+set_tests_properties(PowerLanczosP6C1_PreflightPrepare PROPERTIES
+    FIXTURES_SETUP PowerLanczosP6C1_PreflightInput)
+add_test(NAME PowerLanczosP6C1_Preflight
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/test/python/power_lanczos_p6c1_cartesian_evidence.py
+            run-preflight --expected-world-size 1 --
+            $<TARGET_FILE:power_lanczos_p6c1_preflight>
+            ${POWER_LANCZOS_P6C1_PREFLIGHT_INPUT})
+set_tests_properties(PowerLanczosP6C1_Preflight PROPERTIES
+    FIXTURES_REQUIRED PowerLanczosP6C1_PreflightInput
+    ENVIRONMENT "OMP_NUM_THREADS=1")
+if(MPI_FOUND)
+    add_test(NAME PowerLanczosP6C1_Preflight_mpi
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/test/python/power_lanczos_p6c1_cartesian_evidence.py
+                run-preflight --expected-world-size 2 --
+                ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:power_lanczos_p6c1_preflight>
+                ${POWER_LANCZOS_P6C1_PREFLIGHT_INPUT}
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(PowerLanczosP6C1_Preflight_mpi PROPERTIES
+        FIXTURES_REQUIRED PowerLanczosP6C1_PreflightInput
+        ENVIRONMENT "OMP_NUM_THREADS=1")
 endif()
 
 add_executable(absolute_krylov_profile_driver

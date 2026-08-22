@@ -23,6 +23,7 @@ set(SOURCES_vmcmain
         bounded_krylov_collective.c krylov_positive_guide.c
         krylov_positive_sampler.c krylov_streaming_statistics.c
         krylov_matrix_measurement.c krylov_gevp_solver.c
+        power_lanczos_gevp.c
         krylov_final_state.c krylov_final_state_chain.c
  )
 
