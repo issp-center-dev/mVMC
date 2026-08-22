@@ -56,13 +56,13 @@ typedef struct {
   size_t matrix_count;
   double scaled_pivot_tolerance;
   double projection_parameter;
-  double complex global_weights[4];
+  double complex global_weights[8];
   double *slater;
   double *matrix;
   int *ele_idx;
   int *ele_num;
   MVMCAbsolutePfaffianRealValueWorkspace *value_workspace;
-  MVMCAbsolutePfaffianScaledValueResult local_components[4];
+  MVMCAbsolutePfaffianScaledValueResult local_components[8];
   MVMCKrylovBoundedCollectiveWorkspace *collective;
   uint64_t callback_calls;
 } ProfileScaledAmplitude;
@@ -342,7 +342,8 @@ static int initialize_slater(int site_count, int qp_total, double **slater,
     return 0;
   }
   for (qp = 0; qp < qp_total; ++qp) {
-    static const double weight_values[4] = {1.0, 0.5, -0.25, 0.125};
+    static const double weight_values[8] = {
+        1.0, 0.5, -0.25, 0.125, -0.0625, 0.03125, -0.015625, 0.0078125};
     created_weights[qp] = weight_values[qp];
     for (up = 0; up < site_count; ++up) {
       for (down = 0; down < site_count; ++down) {
@@ -1059,8 +1060,8 @@ int main(int argc, char **argv) {
 #endif
   if ((argc != 6 && argc != 7) ||
       !parse_int(argv[1], 4, PROFILE_MAX_SITE_COUNT, &site_count) ||
-      (site_count & 1) != 0 || !parse_int(argv[2], 1, 4, &qp_total) ||
-      (qp_total != 1 && qp_total != 4) ||
+      (site_count & 1) != 0 || !parse_int(argv[2], 1, 8, &qp_total) ||
+      (qp_total != 1 && qp_total != 4 && qp_total != 8) ||
       !parse_int(argv[3], 0, 100000000, &sample_count) ||
       !parse_size_arg(argv[4], (size_t)4 * 1024 * 1024 * 1024,
                       &cache_bytes) ||
@@ -1068,7 +1069,7 @@ int main(int argc, char **argv) {
       (argc == 7 && strcmp(argv[6], "session-profile") != 0)) {
     if (world_rank() == 0) {
       fprintf(stderr,
-              "usage: %s EVEN_SITE_COUNT(4..16) QP_TOTAL(1|4) "
+              "usage: %s EVEN_SITE_COUNT(4..16) QP_TOTAL(1|4|8) "
               "SAMPLES(0=all) CACHE_BYTES AUDIT(0|1) [session-profile]\n",
               argv[0]);
     }

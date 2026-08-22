@@ -189,6 +189,69 @@ if(MPI_FOUND)
 endif()
 add_test(NAME PowerLanczosObservableCorrectness_Unit
     COMMAND power_lanczos_observable_correctness)
+
+add_executable(power_lanczos_observable_scaling_driver
+    power_lanczos_observable_scaling_driver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_census.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_action.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_evaluator.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_blocks.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(power_lanczos_observable_scaling_driver PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(power_lanczos_observable_scaling_driver PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include ${CMAKE_CURRENT_SOURCE_DIR})
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_observable_scaling_driver PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+target_link_libraries(power_lanczos_observable_scaling_driver
+    pfapack ltl2inv ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(power_lanczos_observable_scaling_driver stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(power_lanczos_observable_scaling_driver
+        blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(power_lanczos_observable_scaling_driver
+        ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME PowerLanczosObservableScalingCampaign_Unit
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/power_lanczos_observable_scaling_campaign.py
+            self-test)
+set(_p6c2_scaling_driver_test_args
+    --python ${PYTHON_EXECUTABLE}
+    --campaign
+        ${CMAKE_CURRENT_SOURCE_DIR}/python/power_lanczos_observable_scaling_campaign.py
+    --driver $<TARGET_FILE:power_lanczos_observable_scaling_driver>
+    --repo ${CMAKE_SOURCE_DIR}
+    --build-dir ${CMAKE_BINARY_DIR})
+if(MPI_FOUND)
+    list(APPEND _p6c2_scaling_driver_test_args
+        --mpiexec ${MPIEXEC_EXECUTABLE})
+endif()
+add_test(NAME PowerLanczosObservableScalingDriver_Focused
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_power_lanczos_observable_scaling_driver.py
+            ${_p6c2_scaling_driver_test_args})
+set_tests_properties(
+    PowerLanczosObservableScalingCampaign_Unit
+    PowerLanczosObservableScalingDriver_Focused
+    PROPERTIES TIMEOUT 180
+    ENVIRONMENT
+        "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+
 if(MPI_FOUND)
     add_test(NAME PowerLanczosObservableCorrectness_Unit_mpi2
         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2

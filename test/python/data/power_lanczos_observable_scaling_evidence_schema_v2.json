@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "power_lanczos_observable_scaling_evidence_schema_v2.json",
+  "title": "P6-C2 observable operator-count scaling evidence v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "evidence_id", "erratum_id", "result_observed", "production_authorized", "status", "protocol_id", "timer_id", "provenance", "warmup_record_ids", "warmup_records", "records", "summaries", "parity_records", "campaign_artifact_bytes", "campaign_artifact_files", "passed"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "evidence_id": {"const": "power-lanczos-p6c2-observable-scaling-evidence-v2"},
+    "erratum_id": {"const": "power-lanczos-p6c2-observable-scaling-erratum-v2"},
+    "result_observed": {"const": true},
+    "production_authorized": {"const": false},
+    "status": {"enum": ["PASS", "FAIL"]},
+    "protocol_id": {"const": "p6c2-operator-count-scaling-v2"},
+    "timer_id": {"const": "p6c2_observable_source_batch_v2"},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "warmup_record_ids": {"type": "array", "minItems": 16, "maxItems": 16, "uniqueItems": true, "items": {"type": "string"}},
+    "warmup_records": {"type": "array", "minItems": 16, "maxItems": 16, "items": {"$ref": "#/$defs/warmupRecord"}},
+    "records": {"type": "array", "minItems": 112, "maxItems": 112, "items": {"$ref": "#/$defs/scalingRecord"}},
+    "summaries": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"$ref": "#/$defs/summary"}},
+    "parity_records": {"type": "array", "minItems": 12, "maxItems": 12, "items": {"$ref": "#/$defs/parityRecord"}},
+    "campaign_artifact_bytes": {"$ref": "#/$defs/nonnegativeInteger"},
+    "campaign_artifact_files": {"$ref": "#/$defs/nonnegativeInteger"},
+    "passed": {"type": "boolean"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nonnegativeInteger": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "metadataBytes": {"type": "integer", "minimum": 0, "maximum": 16777216},
+    "nullableNonnegative": {"oneOf": [{"type": "null"}, {"type": "number", "minimum": 0}]},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_commit", "source_diff_sha256", "binary_sha256", "build_sha256", "environment_sha256"],
+      "properties": {
+        "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "source_diff_sha256": {"$ref": "#/$defs/sha256"},
+        "binary_sha256": {"$ref": "#/$defs/sha256"},
+        "build_sha256": {"$ref": "#/$defs/sha256"},
+        "environment_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "warmupRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_id", "stratum_id", "operator_count", "block_count", "artifact_payload_bytes", "artifact_metadata_bytes", "artifact_bytes", "artifact_files", "censored", "censor_reason"],
+      "properties": {
+        "record_id": {"type": "string", "pattern": "^warmup-SC-[A-Z-]+-R(001|032|128|512)-rep0-mpi1$"},
+        "stratum_id": {"enum": ["SC-ONEBODY", "SC-QUARTIC", "SC-MIXED", "SC-LOW-REUSE"]},
+        "operator_count": {"enum": [1, 32, 128, 512]},
+        "block_count": {"type": "integer", "minimum": 0},
+        "artifact_payload_bytes": {"$ref": "#/$defs/nonnegativeInteger"},
+        "artifact_metadata_bytes": {"$ref": "#/$defs/metadataBytes"},
+        "artifact_bytes": {"$ref": "#/$defs/nonnegativeInteger"},
+        "artifact_files": {"$ref": "#/$defs/nonnegativeInteger"},
+        "censored": {"type": "boolean"},
+        "censor_reason": {"enum": [null, "timeout", "nonzero_exit", "scheduler_eviction", "missing_metric", "identity_mismatch"]}
+      }
+    },
+    "familyCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cisajs", "cisajscktaltex", "cisajscktalt"],
+      "properties": {
+        "cisajs": {"type": "integer", "minimum": 0},
+        "cisajscktaltex": {"type": "integer", "minimum": 0},
+        "cisajscktalt": {"type": "integer", "minimum": 0}
+      }
+    },
+    "scalingRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stratum_id", "operator_count", "replicate_ordinal", "model", "arithmetic", "Nsite", "NQPFull", "family_counts", "unique_target_count", "saved_source_count", "input_sha256", "operator_census_sha256", "timing_seed_sha256", "source_commit", "source_diff_sha256", "binary_sha256", "build_sha256", "environment_sha256", "mpi_world_size", "timer_id", "setup_seconds", "active_seconds", "wall_seconds", "peak_RSS_bytes", "exact_allocated_bytes", "block_count", "artifact_payload_bytes", "artifact_metadata_bytes", "artifact_bytes", "artifact_files", "normalized_semantic_payload_sha256", "censored", "censor_reason"],
+      "properties": {
+        "stratum_id": {"enum": ["SC-ONEBODY", "SC-QUARTIC", "SC-MIXED", "SC-LOW-REUSE"]},
+        "operator_count": {"enum": [1, 32, 128, 512]},
+        "replicate_ordinal": {"type": "integer", "minimum": 0, "maximum": 6},
+        "model": {"enum": ["electronic", "pure_spin"]},
+        "arithmetic": {"enum": ["real", "complex"]},
+        "Nsite": {"const": 16},
+        "NQPFull": {"const": 8},
+        "family_counts": {"$ref": "#/$defs/familyCounts"},
+        "unique_target_count": {"type": ["integer", "null"], "minimum": 0},
+        "saved_source_count": {"const": 64},
+        "input_sha256": {"$ref": "#/$defs/sha256"},
+        "operator_census_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "timing_seed_sha256": {"$ref": "#/$defs/sha256"},
+        "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "source_diff_sha256": {"$ref": "#/$defs/sha256"},
+        "binary_sha256": {"$ref": "#/$defs/sha256"},
+        "build_sha256": {"$ref": "#/$defs/sha256"},
+        "environment_sha256": {"$ref": "#/$defs/sha256"},
+        "mpi_world_size": {"const": 1},
+        "timer_id": {"const": "p6c2_observable_source_batch_v2"},
+        "setup_seconds": {"type": "number", "minimum": 0},
+        "active_seconds": {"type": "number", "minimum": 0},
+        "wall_seconds": {"type": "number", "minimum": 0},
+        "peak_RSS_bytes": {"$ref": "#/$defs/nonnegativeInteger"},
+        "exact_allocated_bytes": {"$ref": "#/$defs/nonnegativeInteger"},
+        "block_count": {"type": "integer", "minimum": 0},
+        "artifact_payload_bytes": {"$ref": "#/$defs/nonnegativeInteger"},
+        "artifact_metadata_bytes": {"$ref": "#/$defs/metadataBytes"},
+        "artifact_bytes": {"$ref": "#/$defs/nonnegativeInteger"},
+        "artifact_files": {"$ref": "#/$defs/nonnegativeInteger"},
+        "normalized_semantic_payload_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "censored": {"type": "boolean"},
+        "censor_reason": {"enum": [null, "timeout", "nonzero_exit", "scheduler_eviction", "missing_metric", "identity_mismatch"]}
+      }
+    },
+    "pointUpper": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operator_count", "active_seconds_per_saved_source_upper"],
+      "properties": {"operator_count": {"enum": [1, 32, 128, 512]}, "active_seconds_per_saved_source_upper": {"$ref": "#/$defs/nullableNonnegative"}}
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stratum_id", "point_uppers", "slope_upper_seconds_per_source_operator", "intercept_upper_seconds_per_source", "setup_upper_seconds", "rss_minus_allocation_headroom_upper_bytes", "passed"],
+      "properties": {
+        "stratum_id": {"enum": ["SC-ONEBODY", "SC-QUARTIC", "SC-MIXED", "SC-LOW-REUSE"]},
+        "point_uppers": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"$ref": "#/$defs/pointUpper"}},
+        "slope_upper_seconds_per_source_operator": {"$ref": "#/$defs/nullableNonnegative"},
+        "intercept_upper_seconds_per_source": {"$ref": "#/$defs/nullableNonnegative"},
+        "setup_upper_seconds": {"$ref": "#/$defs/nullableNonnegative"},
+        "rss_minus_allocation_headroom_upper_bytes": {"type": ["integer", "null"], "minimum": 0},
+        "passed": {"type": "boolean"}
+      }
+    },
+    "parityRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_id", "stratum_id", "operator_count", "mpi_world_size", "normalized_semantic_payload_sha256", "block_count", "artifact_payload_bytes", "artifact_metadata_bytes", "artifact_bytes", "artifact_files", "censored", "censor_reason"],
+      "properties": {
+        "record_id": {"type": "string", "pattern": "^parity-SC-[A-Z-]+-R512-rep0-mpi(1|2|4)$"},
+        "stratum_id": {"enum": ["SC-ONEBODY", "SC-QUARTIC", "SC-MIXED", "SC-LOW-REUSE"]},
+        "operator_count": {"const": 512},
+        "mpi_world_size": {"enum": [1, 2, 4]},
+        "normalized_semantic_payload_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "block_count": {"type": "integer", "minimum": 0},
+        "artifact_payload_bytes": {"$ref": "#/$defs/nonnegativeInteger"},
+        "artifact_metadata_bytes": {"$ref": "#/$defs/metadataBytes"},
+        "artifact_bytes": {"$ref": "#/$defs/nonnegativeInteger"},
+        "artifact_files": {"$ref": "#/$defs/nonnegativeInteger"},
+        "censored": {"type": "boolean"},
+        "censor_reason": {"enum": [null, "timeout", "nonzero_exit", "scheduler_eviction", "missing_metric", "identity_mismatch"]}
+      }
+    }
+  }
+}
