@@ -177,6 +177,8 @@ OUTPUT_ARCHIVE=$RUN_DIR/p6c2-observable-scaling-evidence-{short}.tar.gz
 OUTPUT_CHECKSUM=$RUN_DIR/p6c2-observable-scaling-evidence-{short}.sha256
 SOURCE_COMMIT={source_commit}
 SOURCE_DIFF_SHA256={source_diff_sha256}
+export MVMC_P6C2_SOURCE_COMMIT=$SOURCE_COMMIT
+export MVMC_P6C2_SOURCE_DIFF_SHA256=$SOURCE_DIFF_SHA256
 
 cleanup() {{
   if [[ -n ${{SCRATCH:-}} && -d $SCRATCH && ! -L $SCRATCH ]]; then

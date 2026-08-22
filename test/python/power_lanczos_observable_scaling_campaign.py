@@ -74,6 +74,14 @@ def sha_file(path: Path) -> str:
     return sha_bytes(path.read_bytes())
 
 
+def is_lower_hex(value: str | None, length: int) -> bool:
+    return (
+        value is not None
+        and len(value) == length
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
 def load_json(path: Path):
     def reject_duplicates(pairs):
         result = {}
@@ -373,9 +381,9 @@ def create_snapshot(
     else:
         source_commit = source_commit_override
         source_diff_sha256 = source_diff_override
-    require(len(source_commit) == 40, "source commit")
+    require(is_lower_hex(source_commit, 40), "source commit")
     require(
-        source_diff_sha256 is not None and len(source_diff_sha256) == 64,
+        is_lower_hex(source_diff_sha256, 64),
         "source diff sha256",
     )
     build_identity = {

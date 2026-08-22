@@ -58,12 +58,25 @@ def main() -> int:
         identity = work / "identity.json"
         raw = work / "raw"
         campaign(args.python, args.campaign, "generate-inputs", "--output-dir", inputs)
+        snapshot_source = ["--repo", args.repo]
+        if not (args.repo / ".git").exists():
+            source_commit = os.environ.get("MVMC_P6C2_SOURCE_COMMIT")
+            source_diff = os.environ.get("MVMC_P6C2_SOURCE_DIFF_SHA256")
+            if source_commit is None or source_diff is None:
+                raise RuntimeError(
+                    "archive test requires MVMC_P6C2 source identity"
+                )
+            snapshot_source = [
+                "--source-commit",
+                source_commit,
+                "--source-diff-sha256",
+                source_diff,
+            ]
         campaign(
             args.python,
             args.campaign,
             "snapshot",
-            "--repo",
-            args.repo,
+            *snapshot_source,
             "--driver",
             args.driver,
             "--build-dir",
