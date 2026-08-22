@@ -10,9 +10,11 @@ import io
 import json
 import os
 import posixpath
+import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 from pathlib import Path, PurePosixPath
 
 
@@ -173,8 +175,14 @@ EVIDENCE_DIR=
 INPUT_DIR=
 IDENTITY=
 CAMPAIGN=
+CURRENT_PHASE=bootstrap
+FINALIZATION_ACTIVE=0
+FINALIZATION_COUNT=0
+FINALIZED=0
 OUTPUT_ARCHIVE=$RUN_DIR/p6c2-observable-scaling-evidence-{short}.tar.gz
 OUTPUT_CHECKSUM=$RUN_DIR/p6c2-observable-scaling-evidence-{short}.sha256
+FAILURE_METADATA=$RUN_DIR/p6c2-observable-scaling-failure-{short}.json
+FAILURE_CHECKSUM=$RUN_DIR/p6c2-observable-scaling-failure-{short}.sha256
 SOURCE_COMMIT={source_commit}
 SOURCE_DIFF_SHA256={source_diff_sha256}
 export MVMC_P6C2_SOURCE_COMMIT=$SOURCE_COMMIT
@@ -182,17 +190,20 @@ export MVMC_P6C2_SOURCE_DIFF_SHA256=$SOURCE_DIFF_SHA256
 
 cleanup() {{
   if [[ -n ${{SCRATCH:-}} && -d $SCRATCH && ! -L $SCRATCH ]]; then
-    resolved=$(readlink -f "$SCRATCH")
+    resolved=$(cd "$SCRATCH" && pwd -P)
     case "$resolved" in
       "$RUN_DIR"/tmp/*) rm -rf -- "$resolved" ;;
       *) echo "refusing unexpected scratch cleanup: $resolved" >&2 ;;
     esac
   fi
+  rm -f -- "$OUTPUT_ARCHIVE.partial.$$" "$OUTPUT_CHECKSUM.partial.$$"
+  rm -f -- "$FAILURE_METADATA.partial.$$" "$FAILURE_CHECKSUM.partial.$$"
   rmdir "$RUN_DIR/tmp" 2>/dev/null || true
 }}
 
 archive_evidence() {{
-  [[ -n ${{EVIDENCE_DIR:-}} && -d $EVIDENCE_DIR ]] || return 0
+  local archive_tmp checksum_tmp digest
+  [[ -n ${{EVIDENCE_DIR:-}} && -d $EVIDENCE_DIR ]] || return 1
   find "$EVIDENCE_DIR" -type l -print -quit | grep -q . && return 1
   (
     cd "$EVIDENCE_DIR"
@@ -200,12 +211,83 @@ archive_evidence() {{
       xargs -0 sha256sum > artifact-ledger.sha256
     sha256sum -c artifact-ledger.sha256
   )
-  tar -czf "$OUTPUT_ARCHIVE" -C "$EVIDENCE_DIR" .
-  tar -tzf "$OUTPUT_ARCHIVE" >/dev/null
-  sha256sum "$OUTPUT_ARCHIVE" > "$OUTPUT_CHECKSUM"
+  archive_tmp=$OUTPUT_ARCHIVE.partial.$$
+  checksum_tmp=$OUTPUT_CHECKSUM.partial.$$
+  rm -f -- "$archive_tmp" "$checksum_tmp"
+  COPYFILE_DISABLE=1 tar -czf "$archive_tmp" -C "$EVIDENCE_DIR" .
+  tar -tzf "$archive_tmp" >/dev/null
+  digest=$(sha256sum "$archive_tmp" | awk '{{print $1}}')
+  printf '%s  %s\n' "$digest" "$(basename "$OUTPUT_ARCHIVE")" > "$checksum_tmp"
+  mv -f -- "$archive_tmp" "$OUTPUT_ARCHIVE"
+  mv -f -- "$checksum_tmp" "$OUTPUT_CHECKSUM"
+}}
+
+write_failure_metadata() {{
+  local failure_exit=$1 failure_reason=$2 metadata_tmp checksum_tmp digest
+  metadata_tmp=$FAILURE_METADATA.partial.$$
+  checksum_tmp=$FAILURE_CHECKSUM.partial.$$
+  cat > "$metadata_tmp" <<EOF
+{{
+  "schema_version": 1,
+  "status": "failed",
+  "exit_code": $failure_exit,
+  "phase": "$CURRENT_PHASE",
+  "reason": "$failure_reason",
+  "finalization_count": $FINALIZATION_COUNT,
+  "source_commit": "$SOURCE_COMMIT",
+  "source_diff_sha256": "$SOURCE_DIFF_SHA256"
+}}
+EOF
+  digest=$(sha256sum "$metadata_tmp" | awk '{{print $1}}')
+  printf '%s  %s\n' "$digest" "$(basename "$FAILURE_METADATA")" > "$checksum_tmp"
+  mv -f -- "$metadata_tmp" "$FAILURE_METADATA"
+  mv -f -- "$checksum_tmp" "$FAILURE_CHECKSUM"
+  if [[ -n ${{EVIDENCE_DIR:-}} && -d $EVIDENCE_DIR ]]; then
+    mkdir -p "$EVIDENCE_DIR/workflow"
+    cp "$FAILURE_METADATA" "$FAILURE_CHECKSUM" "$EVIDENCE_DIR/workflow/"
+  fi
+}}
+
+finalize_failure() {{
+  local failure_exit=$1 failure_reason=$2 metadata_status archive_status
+  if [[ $FINALIZED -eq 1 || $FINALIZATION_ACTIVE -eq 1 ]]; then
+    return 0
+  fi
+  FINALIZATION_ACTIVE=1
+  FINALIZATION_COUNT=$((FINALIZATION_COUNT + 1))
+  set +e
+  write_failure_metadata "$failure_exit" "$failure_reason"
+  metadata_status=$?
+  archive_evidence
+  archive_status=$?
+  {{
+    echo "status=failed"
+    echo "exit_code=$failure_exit"
+    echo "phase=$CURRENT_PHASE"
+    echo "reason=$failure_reason"
+    echo "finalization_count=$FINALIZATION_COUNT"
+    echo "failure_metadata_status=$metadata_status"
+    echo "evidence_archive_status=$archive_status"
+  }} > "$RUN_DIR/FAILED"
+  FINALIZED=1
+  FINALIZATION_ACTIVE=0
+  return 0
+}}
+
+on_exit() {{
+  local exit_status=$?
+  trap - EXIT HUP INT TERM
+  set +e
+  if [[ $exit_status -ne 0 && $FINALIZED -eq 0 ]]; then
+    finalize_failure "$exit_status" nonzero_exit
+  fi
+  cleanup
+  exit "$exit_status"
 }}
 
 seal_on_signal() {{
+  local signal_name=$1
+  trap - HUP INT TERM
   set +e
   echo "scheduler signal received; sealing every absent registered record" >&2
   if [[ -n ${{CAMPAIGN:-}} && -f $CAMPAIGN && -n ${{INPUT_DIR:-}} && \
@@ -219,28 +301,73 @@ seal_on_signal() {{
         --raw-dir "$EVIDENCE_DIR/raw" --output "$evidence"
     fi
   fi
-  archive_evidence
+  finalize_failure 130 "scheduler_signal_$signal_name"
   exit 130
 }}
 
-trap cleanup EXIT
-trap seal_on_signal HUP INT TERM
+prepare_scratch() {{
+  mkdir -p "$RUN_DIR/tmp"
+  SCRATCH=$(mktemp -d "$RUN_DIR/tmp/p6c2-scaling.XXXXXX")
+  SOURCE_DIR=$SCRATCH/source
+  BUILD_DIR=$SCRATCH/build
+  EVIDENCE_DIR=$SCRATCH/evidence
+  INPUT_DIR=$EVIDENCE_DIR/inputs
+  IDENTITY=$EVIDENCE_DIR/identity.json
+  mkdir "$SOURCE_DIR" "$BUILD_DIR" "$EVIDENCE_DIR"
+}}
 
+run_lifecycle_selftest() {{
+  case "$1" in
+    success)
+      CURRENT_PHASE=selftest_success
+      mkdir -p "$EVIDENCE_DIR/workflow"
+      echo selftest-success > "$EVIDENCE_DIR/workflow/selftest.log"
+      archive_evidence
+      CURRENT_PHASE=selftest_success_marker
+      touch "$RUN_DIR/COMPLETED"
+      FINALIZED=1
+      exit 0
+      ;;
+    nonzero)
+      CURRENT_PHASE=selftest_nonzero
+      echo injected-configure-failure > "$EVIDENCE_DIR/configure.log"
+      exit 23
+      ;;
+    signal)
+      CURRENT_PHASE=selftest_signal
+      echo injected-scheduler-signal > "$EVIDENCE_DIR/configure.log"
+      kill -TERM "$$"
+      exit 99
+      ;;
+    *)
+      CURRENT_PHASE=selftest_unknown
+      exit 64
+      ;;
+  esac
+}}
+
+trap on_exit EXIT
+trap 'seal_on_signal HUP' HUP
+trap 'seal_on_signal INT' INT
+trap 'seal_on_signal TERM' TERM
+
+CURRENT_PHASE=prepare_scratch
+prepare_scratch
+if [[ -n ${{MVMC_P6C2_JOB_SELFTEST_MODE:-}} ]]; then
+  run_lifecycle_selftest "$MVMC_P6C2_JOB_SELFTEST_MODE"
+fi
+
+CURRENT_PHASE=package_manifest_checksum
 test -f "$SOURCE_ARCHIVE" && test ! -L "$SOURCE_ARCHIVE"
 (cd "$RUN_DIR" && sha256sum -c package_manifest.sha256)
+CURRENT_PHASE=source_archive_checksum
 (cd "$RUN_DIR" && sha256sum -c "$(basename "$SOURCE_CHECKSUM")")
 
-mkdir -p "$RUN_DIR/tmp"
-SCRATCH=$(mktemp -d "$RUN_DIR/tmp/p6c2-scaling.XXXXXX")
-SOURCE_DIR=$SCRATCH/source
-BUILD_DIR=$SCRATCH/build
-EVIDENCE_DIR=$SCRATCH/evidence
-INPUT_DIR=$EVIDENCE_DIR/inputs
-IDENTITY=$EVIDENCE_DIR/identity.json
-mkdir "$SOURCE_DIR" "$BUILD_DIR" "$EVIDENCE_DIR"
+CURRENT_PHASE=source_extraction
 tar -xzf "$SOURCE_ARCHIVE" -C "$SOURCE_DIR"
 SOURCE_ROOT=$SOURCE_DIR/mVMC
 
+CURRENT_PHASE=environment_setup
 module load intel/2023.2 mvapich/3.0-intel2023.2
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
@@ -253,9 +380,11 @@ PYTHON=$(command -v python3.11 2>/dev/null || command -v python3)
 MPIEXEC=$(command -v mpiexec)
 CAMPAIGN=$SOURCE_ROOT/test/python/power_lanczos_observable_scaling_campaign.py
 PACKAGER=$SOURCE_ROOT/test/python/package_power_lanczos_observable_scaling.py
+CURRENT_PHASE=package_validation
 "$PYTHON" "$PACKAGER" validate --package-dir "$RUN_DIR" \
   --skip-package-archive
 
+CURRENT_PHASE=configure
 cmake -S "$SOURCE_ROOT" -B "$BUILD_DIR" \
   -DCONFIG=intel \
   -DTesting=ON \
@@ -265,22 +394,27 @@ cmake -S "$SOURCE_ROOT" -B "$BUILD_DIR" \
   -DCMAKE_Fortran_FLAGS='-fp-model precise' \
   -DPYTHON_EXECUTABLE="$PYTHON" \
   > "$EVIDENCE_DIR/configure.log" 2>&1
+CURRENT_PHASE=build
 cmake --build "$BUILD_DIR" --parallel 1 \
   --target power_lanczos_observable_scaling_driver \
   > "$EVIDENCE_DIR/build.log" 2>&1
 
+CURRENT_PHASE=focused_test
 env OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
   BLIS_NUM_THREADS=1 ctest --test-dir "$BUILD_DIR" --output-on-failure \
-  -R '^PowerLanczosObservableScaling(Campaign_Unit|Driver_Focused)$' \
+  -R '^PowerLanczosObservableScaling(Campaign_Unit|Driver_Focused|Package_Lifecycle)$' \
   > "$EVIDENCE_DIR/focused-ctest.log" 2>&1
 
 DRIVER=$BUILD_DIR/test/power_lanczos_observable_scaling_driver
+CURRENT_PHASE=input_generation
 "$PYTHON" "$CAMPAIGN" generate-inputs --output-dir "$INPUT_DIR"
+CURRENT_PHASE=identity_snapshot
 "$PYTHON" "$CAMPAIGN" snapshot \
   --driver "$DRIVER" --build-dir "$BUILD_DIR" --output "$IDENTITY" \
   --source-commit "$SOURCE_COMMIT" \
   --source-diff-sha256 "$SOURCE_DIFF_SHA256"
 
+CURRENT_PHASE=workflow_metadata
 mkdir "$EVIDENCE_DIR/raw" "$EVIDENCE_DIR/workflow"
 cp "$PACKAGE_MANIFEST" "$EVIDENCE_DIR/workflow/"
 cp "$RUN_DIR/package_manifest.sha256" "$EVIDENCE_DIR/workflow/"
@@ -328,6 +462,7 @@ run_point() {{
     --replicate "$replicate" --kind "$kind" --timeout 3600
 }}
 
+CURRENT_PHASE=measurement_loop
 for stratum in SC-ONEBODY SC-QUARTIC SC-MIXED SC-LOW-REUSE; do
   for count in 1 32 128 512; do
     run_point "$stratum" "$count" 0 warmup 1
@@ -342,10 +477,13 @@ for stratum in SC-ONEBODY SC-QUARTIC SC-MIXED SC-LOW-REUSE; do
 done
 
 EVIDENCE_JSON=$EVIDENCE_DIR/power-lanczos-p6c2-observable-scaling-evidence-v2.json
+CURRENT_PHASE=evidence_assembly
 "$PYTHON" "$CAMPAIGN" assemble \
   --raw-dir "$EVIDENCE_DIR/raw" --output "$EVIDENCE_JSON"
+CURRENT_PHASE=evidence_validation
 "$PYTHON" "$CAMPAIGN" validate-evidence --evidence "$EVIDENCE_JSON"
 
+CURRENT_PHASE=inventory
 {{
   echo "source_entries=$(find "$SOURCE_ROOT" -xdev | wc -l)"
   echo "source_bytes=$(du -sk "$SOURCE_ROOT" | awk '{{print $1 * 1024}}')"
@@ -358,12 +496,16 @@ EVIDENCE_JSON=$EVIDENCE_DIR/power-lanczos-p6c2-observable-scaling-evidence-v2.js
 CAMPAIGN_PASS=$("$PYTHON" -c \
   'import json,sys; print("1" if json.load(open(sys.argv[1]))["passed"] else "0")' \
   "$EVIDENCE_JSON")
-archive_evidence
-touch "$RUN_DIR/COMPLETED"
 if [[ $CAMPAIGN_PASS != 1 ]]; then
-  echo "P6-C2 scaling campaign completed with FAIL evidence" >&2
+  CURRENT_PHASE=campaign_result
+  finalize_failure 2 campaign_evidence_failed
   exit 2
 fi
+CURRENT_PHASE=evidence_archival
+archive_evidence
+CURRENT_PHASE=completion_marker
+touch "$RUN_DIR/COMPLETED"
+FINALIZED=1
 echo "P6-C2 scaling campaign completed with PASS evidence"
 """
 
@@ -465,7 +607,15 @@ def create_package(args) -> None:
                 "SC-LOW-REUSE",
             ],
             "remote_scratch": "submission-directory-relative ./tmp only",
-            "cleanup_condition": "after evidence archive and checksum are written; EXIT/signal trap otherwise",
+            "cleanup_condition": "after success or failure evidence archive and checksum are written by one-shot EXIT/signal finalization",
+            "job_failure_artifacts": {
+                "phase_tracking": True,
+                "generic_nonzero_exit": True,
+                "signal_exit": True,
+                "atomic_archive_publication": True,
+                "standalone_failure_metadata": True,
+                "checksummed_partial_logs": True,
+            },
             "failure_records": [
                 "timeout",
                 "nonzero_exit",
@@ -547,6 +697,18 @@ def validate_package(package_dir: Path, skip_package_archive: bool) -> None:
         "result-unobserved package boundary",
     )
     require(manifest["execution"]["exact_grid"] == EXPECTED_GRID, "exact grid")
+    require(
+        manifest["execution"]["job_failure_artifacts"]
+        == {
+            "phase_tracking": True,
+            "generic_nonzero_exit": True,
+            "signal_exit": True,
+            "atomic_archive_publication": True,
+            "standalone_failure_metadata": True,
+            "checksummed_partial_logs": True,
+        },
+        "job failure artifacts",
+    )
     members = [manifest["source"]["archive"], *manifest["members"]]
     for item in members:
         path = root / item["path"]
@@ -574,8 +736,13 @@ def validate_package(package_dir: Path, skip_package_archive: bool) -> None:
         encoding="utf-8"
     )
     for token in [
-        "trap cleanup EXIT",
-        "trap seal_on_signal HUP INT TERM",
+        "trap on_exit EXIT",
+        "trap 'seal_on_signal HUP' HUP",
+        "finalize_failure",
+        "write_failure_metadata",
+        "FINALIZATION_COUNT",
+        "CURRENT_PHASE=configure",
+        "MVMC_P6C2_JOB_SELFTEST_MODE",
         'mktemp -d "$RUN_DIR/tmp/',
         "seal-missing",
         "scheduler_eviction",
@@ -607,6 +774,170 @@ def validate_package(package_dir: Path, skip_package_archive: bool) -> None:
         require(sidecar.read_text(encoding="ascii") == expected, "package checksum")
 
 
+def validate_checksum_sidecar(path: Path, sidecar: Path) -> None:
+    fields = sidecar.read_text(encoding="ascii").strip().split()
+    require(
+        len(fields) == 2
+        and fields[0] == sha_file(path)
+        and fields[1] == path.name,
+        f"checksum sidecar: {sidecar.name}",
+    )
+
+
+def validate_evidence_archive(path: Path, required_suffixes: set[str]) -> None:
+    with tarfile.open(path, "r:gz") as archive:
+        members = archive.getmembers()
+        require(
+            all(item.isfile() or item.isdir() for item in members),
+            "self-test archive special member",
+        )
+        payloads = {
+            item.name: archive.extractfile(item).read()
+            for item in members
+            if item.isfile()
+        }
+    ledger_names = [name for name in payloads if name.endswith("artifact-ledger.sha256")]
+    require(
+        len(ledger_names) == 1,
+        f"self-test artifact ledger: ledgers={ledger_names} members={sorted(payloads)}",
+    )
+    ledger_name = ledger_names[0]
+    observed = {}
+    for raw_line in payloads[ledger_name].decode("ascii").splitlines():
+        digest, relative = raw_line.split(maxsplit=1)
+        observed[relative] = digest
+    expected = {
+        name: sha_bytes(payload)
+        for name, payload in payloads.items()
+        if name != ledger_name
+    }
+    require(observed == expected, "self-test artifact ledger contents")
+    for suffix in required_suffixes:
+        require(
+            any(name.endswith(suffix) for name in payloads),
+            f"self-test archive member: {suffix}",
+        )
+
+
+def self_test_lifecycle() -> None:
+    source_commit = "1" * 40
+    short = source_commit[:12]
+    script_text = job_script(
+        f"mVMC-p6c2-scaling-source-{short}.tar.gz",
+        source_commit,
+        SOURCE_DIFF_SHA256,
+        "selftest-project",
+        "selftest-resource",
+    )
+    local_tmp = Path.cwd() / "tmp"
+    local_tmp.mkdir(exist_ok=True)
+    work = Path(tempfile.mkdtemp(prefix="p6c2-package-lifecycle.", dir=local_tmp))
+    try:
+        cases = {
+            "success": 0,
+            "nonzero": 23,
+            "signal": 130,
+        }
+        for mode, expected_exit in cases.items():
+            case_root = work / mode
+            case_root.mkdir()
+            script = case_root / "p6c2_scaling_genkai_job.sh"
+            script.write_text(script_text, encoding="utf-8")
+            script.chmod(0o755)
+            completed = subprocess.run(
+                ["bash", str(script)],
+                cwd=case_root,
+                env={**os.environ, "MVMC_P6C2_JOB_SELFTEST_MODE": mode},
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            require(
+                completed.returncode == expected_exit,
+                f"self-test {mode} exit: {completed.returncode}",
+            )
+            require(not (case_root / "tmp").exists(), f"self-test {mode} cleanup")
+            require(
+                not list(case_root.glob("*.partial.*")),
+                f"self-test {mode} partial artifact",
+            )
+            archive = (
+                case_root
+                / f"p6c2-observable-scaling-evidence-{short}.tar.gz"
+            )
+            checksum = (
+                case_root / f"p6c2-observable-scaling-evidence-{short}.sha256"
+            )
+            require(archive.is_file() and checksum.is_file(), f"self-test {mode} archive")
+            validate_checksum_sidecar(archive, checksum)
+            if mode == "success":
+                require((case_root / "COMPLETED").is_file(), "self-test success marker")
+                require(not (case_root / "FAILED").exists(), "self-test success failure marker")
+                validate_evidence_archive(
+                    archive, {"workflow/selftest.log", "artifact-ledger.sha256"}
+                )
+                continue
+
+            require(not (case_root / "COMPLETED").exists(), f"self-test {mode} completed")
+            require((case_root / "FAILED").is_file(), f"self-test {mode} marker")
+            metadata = (
+                case_root / f"p6c2-observable-scaling-failure-{short}.json"
+            )
+            metadata_checksum = (
+                case_root / f"p6c2-observable-scaling-failure-{short}.sha256"
+            )
+            require(
+                metadata.is_file() and metadata_checksum.is_file(),
+                f"self-test {mode} metadata",
+            )
+            validate_checksum_sidecar(metadata, metadata_checksum)
+            record = json.loads(metadata.read_text(encoding="utf-8"))
+            expected_phase = f"selftest_{mode}"
+            expected_reason = (
+                "nonzero_exit" if mode == "nonzero" else "scheduler_signal_TERM"
+            )
+            require(
+                record["status"] == "failed"
+                and record["exit_code"] == expected_exit
+                and record["phase"] == expected_phase
+                and record["reason"] == expected_reason
+                and record["finalization_count"] == 1,
+                f"self-test {mode} failure metadata",
+            )
+            marker = dict(
+                line.split("=", 1)
+                for line in (case_root / "FAILED").read_text(encoding="ascii").splitlines()
+            )
+            require(
+                marker["exit_code"] == str(expected_exit)
+                and marker["phase"] == expected_phase
+                and marker["reason"] == expected_reason
+                and marker["finalization_count"] == "1"
+                and marker["failure_metadata_status"] == "0"
+                and marker["evidence_archive_status"] == "0",
+                f"self-test {mode} failure marker",
+            )
+            validate_evidence_archive(
+                archive,
+                {
+                    "configure.log",
+                    f"workflow/{metadata.name}",
+                    f"workflow/{metadata_checksum.name}",
+                    "artifact-ledger.sha256",
+                },
+            )
+        print(
+            "PASS P6-C2 package lifecycle normal=1 nonzero=1 signal=1 "
+            "finalize_once=2 cleanup=3 archives=3"
+        )
+    finally:
+        resolved = work.resolve()
+        if resolved.parent == local_tmp.resolve() and not resolved.is_symlink():
+            shutil.rmtree(resolved)
+        if local_tmp.exists() and not any(local_tmp.iterdir()):
+            local_tmp.rmdir()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -619,6 +950,7 @@ def build_parser() -> argparse.ArgumentParser:
     validate = subparsers.add_parser("validate")
     validate.add_argument("--package-dir", type=Path, required=True)
     validate.add_argument("--skip-package-archive", action="store_true")
+    subparsers.add_parser("self-test-lifecycle")
     return parser
 
 
@@ -627,9 +959,11 @@ def main() -> int:
     try:
         if args.command == "create":
             create_package(args)
-        else:
+        elif args.command == "validate":
             validate_package(args.package_dir, args.skip_package_archive)
             print(f"PASS P6-C2 scaling package validation: {args.package_dir}")
+        else:
+            self_test_lifecycle()
         return 0
     except (
         PackageError,

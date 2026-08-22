@@ -230,6 +230,10 @@ add_test(NAME PowerLanczosObservableScalingCampaign_Unit
     COMMAND ${PYTHON_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/python/power_lanczos_observable_scaling_campaign.py
             self-test)
+add_test(NAME PowerLanczosObservableScalingPackage_Lifecycle
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/package_power_lanczos_observable_scaling.py
+            self-test-lifecycle)
 set(_p6c2_scaling_driver_test_args
     --python ${PYTHON_EXECUTABLE}
     --campaign
@@ -247,6 +251,7 @@ add_test(NAME PowerLanczosObservableScalingDriver_Focused
             ${_p6c2_scaling_driver_test_args})
 set_tests_properties(
     PowerLanczosObservableScalingCampaign_Unit
+    PowerLanczosObservableScalingPackage_Lifecycle
     PowerLanczosObservableScalingDriver_Focused
     PROPERTIES TIMEOUT 180
     ENVIRONMENT
