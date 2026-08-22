@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "policy_id": "power-lanczos-zero-support-p6c2-observable-core-production-symbols-v1",
+  "phase": "P6-C2-CORE",
+  "testing_only": false,
+  "production_authorized": true,
+  "required_symbols": [
+    "mvmc_power_lanczos_observable_word_count",
+    "mvmc_power_lanczos_observable_validate_configuration",
+    "mvmc_power_lanczos_observable_apply",
+    "mvmc_power_lanczos_observable_group_targets",
+    "mvmc_power_lanczos_observable_action_status_string",
+    "mvmc_power_lanczos_observable_evaluator_workspace_create",
+    "mvmc_power_lanczos_observable_evaluator_workspace_destroy",
+    "mvmc_power_lanczos_observable_evaluator_workspace_bytes",
+    "mvmc_power_lanczos_observable_coefficient_sample",
+    "mvmc_power_lanczos_observable_final_sample",
+    "mvmc_power_lanczos_observable_block_create",
+    "mvmc_power_lanczos_observable_block_destroy",
+    "mvmc_power_lanczos_observable_block_add_sample",
+    "mvmc_power_lanczos_observable_block_discard_partial",
+    "mvmc_power_lanczos_observable_block_summary",
+    "mvmc_power_lanczos_observable_block_export",
+    "mvmc_power_lanczos_observable_block_reduce_rank_ordered",
+    "mvmc_power_lanczos_observable_block_payload_bytes",
+    "mvmc_power_lanczos_observable_preflight",
+    "mvmc_power_lanczos_observable_preflight_error"
+  ],
+  "required_binary_strings": [
+    "invalid_target",
+    "internal_invariant_failure",
+    "P6 INPUT REJECTED: OBSERVABLE_CERTIFICATE_UNAVAILABLE"
+  ],
+  "forbidden_symbol_regex": [
+    "^oracle_",
+    "^mvmc_bounded_krylov_testing_",
+    "^mvmc_scaled_complex_from_raw_testing$",
+    "^mvmc_classic_sampler_",
+    "^mvmc_classic_pfaffian_.*_audit_",
+    "^mvmc_classic_krylov_(real|complex)_amplitude$"
+  ],
+  "forbidden_binary_strings": [
+    "MVMC_LANCZOS_ORACLE_DUMP",
+    "MVMC_LANCZOS_TEST_NONFINITE_SAMPLE",
+    "MVMC_LANCZOS_TEST_NONFINITE_PARENT_RANK",
+    "MVMC_LANCZOS_TEST_REBUILD_FAILURES",
+    "MVMC_LANCZOS_TEST_PROJECTION_BRANCH_AUDIT",
+    "MVMC_LANCZOS2_STATE_CHECK",
+    "MVMC_LANCZOS2_TEST_NONFINITE_SAMPLE",
+    "MVMC_LANCZOS2_TEST_CALHCA_GUARD_AUDIT",
+    "MVMC_LANCZOS2_HEISENBERG_AUDIT",
+    "MVMC_BF_LANCZOS_STATE_CHECK"
+  ],
+  "notes": [
+    "Run against a Testing=OFF vmc.out after the P6-C2 action, evaluator, and block-core slice.",
+    "The dense Fock-matrix oracle and correctness registry remain test-only and must not appear in vmc.out.",
+    "This policy authorizes the production core symbols only; corrected observable selector dispatch remains fail-fast until the versioned certificate and HPC scaling gate pass."
+  ]
+}

@@ -176,7 +176,7 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
     #pragma omp master
     {StartTimer(50);}
 
-    #pragma omp for private(idx,ri,rj,s,tmp) schedule(dynamic) nowait
+    #pragma omp for private(idx,ri,rj,s,t,tmp) schedule(dynamic) nowait
     for(idx=0;idx<NCisAjs;idx++) {
       ri = CisAjsIdx[idx][0];
       s  = CisAjsIdx[idx][1];
@@ -195,7 +195,7 @@ void CalculateGreenFunc_fsz(const double w, const double complex ip, int *eleIdx
     #pragma omp master
     {StopTimer(50);StartTimer(51);}
 
-    #pragma omp for private(idx,ri,rj,s,rk,rl,t,tmp) schedule(dynamic)
+    #pragma omp for private(idx,ri,rj,s,t,rk,rl,u,v,tmp) schedule(dynamic)
     for(idx=0;idx<NCisAjsCktAltDC;idx++) {
       /*
       ri = CisAjsCktAltDCIdx[idx][0];

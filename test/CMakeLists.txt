@@ -40,6 +40,165 @@ endif()
 add_test(NAME PowerLanczosContract_Unit
     COMMAND power_lanczos_contract_unit)
 
+add_executable(power_lanczos_observable_census_unit
+    power_lanczos_observable_census_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_census.c)
+target_include_directories(power_lanczos_observable_census_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_observable_census_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME PowerLanczosObservableCensus_Unit
+    COMMAND power_lanczos_observable_census_unit)
+
+add_executable(power_lanczos_observable_registry_unit
+    power_lanczos_observable_registry_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_census.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_registry.c)
+target_include_directories(power_lanczos_observable_registry_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_observable_registry_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+add_test(NAME PowerLanczosObservableRegistry_Unit
+    COMMAND power_lanczos_observable_registry_unit)
+
+add_executable(power_lanczos_observable_action_unit
+    power_lanczos_observable_action_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_action.c)
+target_include_directories(power_lanczos_observable_action_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_observable_action_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME PowerLanczosObservableAction_Unit
+    COMMAND power_lanczos_observable_action_unit)
+
+add_executable(power_lanczos_observable_evaluator_unit
+    power_lanczos_observable_evaluator_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_evaluator.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_action.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_include_directories(power_lanczos_observable_evaluator_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(power_lanczos_observable_evaluator_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_observable_evaluator_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+target_link_libraries(power_lanczos_observable_evaluator_unit
+    pfapack ltl2inv ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(power_lanczos_observable_evaluator_unit
+        blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(power_lanczos_observable_evaluator_unit
+        ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME PowerLanczosObservableEvaluator_Unit
+    COMMAND power_lanczos_observable_evaluator_unit)
+
+add_executable(power_lanczos_observable_blocks_unit
+    power_lanczos_observable_blocks_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_blocks.c)
+target_include_directories(power_lanczos_observable_blocks_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(power_lanczos_observable_blocks_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_observable_blocks_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+target_link_libraries(power_lanczos_observable_blocks_unit m)
+add_test(NAME PowerLanczosObservableBlocks_Unit
+    COMMAND power_lanczos_observable_blocks_unit)
+
+add_executable(power_lanczos_observable_preflight_unit
+    power_lanczos_observable_preflight_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_preflight.c)
+target_include_directories(power_lanczos_observable_preflight_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_observable_preflight_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+target_link_libraries(power_lanczos_observable_preflight_unit m)
+add_test(NAME PowerLanczosObservablePreflight_Unit
+    COMMAND power_lanczos_observable_preflight_unit)
+
+add_executable(power_lanczos_observable_correctness
+    power_lanczos_observable_correctness.c
+    power_lanczos_observable_dense_oracle.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_evaluator.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_action.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_blocks.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_include_directories(power_lanczos_observable_correctness PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(power_lanczos_observable_correctness PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_observable_correctness PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+target_link_libraries(power_lanczos_observable_correctness
+    pfapack ltl2inv ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(power_lanczos_observable_correctness blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(power_lanczos_observable_correctness
+        ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME PowerLanczosObservableCorrectness_Unit
+    COMMAND power_lanczos_observable_correctness)
+if(MPI_FOUND)
+    add_test(NAME PowerLanczosObservableCorrectness_Unit_mpi2
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:power_lanczos_observable_correctness>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME PowerLanczosObservableCorrectness_Unit_mpi4
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:power_lanczos_observable_correctness>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(
+        PowerLanczosObservableCorrectness_Unit_mpi2 PROPERTIES PROCESSORS 2)
+    set_tests_properties(
+        PowerLanczosObservableCorrectness_Unit_mpi4 PROPERTIES PROCESSORS 4)
+    add_executable(power_lanczos_observable_census_mpi
+        power_lanczos_observable_census_mpi.c
+        ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_census.c)
+    target_include_directories(power_lanczos_observable_census_mpi PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(power_lanczos_observable_census_mpi PRIVATE
+            -Wall -Wextra -Wpedantic -Werror)
+    endif()
+    target_link_libraries(power_lanczos_observable_census_mpi
+        ${MPI_C_LIBRARIES})
+    add_test(NAME PowerLanczosObservableCensus_Unit_mpi2
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:power_lanczos_observable_census_mpi>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME PowerLanczosObservableCensus_Unit_mpi4
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:power_lanczos_observable_census_mpi>
+                ${MPIEXEC_POSTFLAGS})
+endif()
+
 add_executable(power_lanczos_build_metadata_unit
     power_lanczos_fp_metadata_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_fp_metadata.c)

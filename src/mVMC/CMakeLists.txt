@@ -20,6 +20,10 @@ set(SOURCES_vmcmain
         power_lanczos_contract.c power_lanczos_fp_metadata.c
         power_lanczos_observable_census.c
         power_lanczos_observable_registry.c
+        power_lanczos_observable_action.c
+        power_lanczos_observable_evaluator.c
+        power_lanczos_observable_blocks.c
+        power_lanczos_observable_preflight.c
         lanczos2_contract.c splitloop.c
         krylov_fock_reference.c krylov_fock_proposal.c bounded_krylov_engine.c
         bounded_krylov_collective.c krylov_positive_guide.c

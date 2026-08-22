@@ -1531,6 +1531,11 @@ add_test(
             ${CMAKE_CURRENT_SOURCE_DIR}/check_backflow_omp_private.py
             ${CMAKE_SOURCE_DIR}/src/mVMC/backflow_measure.c)
 add_test(
+    NAME FSZ_Green_LoopPrivate_Source
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/check_fsz_green_omp_private.py
+            ${CMAKE_SOURCE_DIR}/src/mVMC/calgrn_fsz.c)
+add_test(
     NAME BackFlow_Complex_CopyIndex_OMP4
     COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex
             --expect-nqp-full 1
