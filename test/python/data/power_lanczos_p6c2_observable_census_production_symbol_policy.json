@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "policy_id": "power-lanczos-zero-support-p6c2-observable-census-production-symbols-v1",
+  "phase": "P6-C2-CENSUS",
+  "testing_only": false,
+  "production_authorized": true,
+  "required_symbols": [
+    "mvmc_power_lanczos_observable_plan_init",
+    "mvmc_power_lanczos_observable_plan_destroy",
+    "mvmc_power_lanczos_observable_plan_build_from_files",
+    "mvmc_power_lanczos_observable_plan_rehash",
+    "mvmc_power_lanczos_observable_plan_semantic_rehash",
+    "mvmc_power_lanczos_observable_plan_write_canonical_json",
+    "mvmc_power_lanczos_observable_plan_wire_size",
+    "mvmc_power_lanczos_observable_plan_pack",
+    "mvmc_power_lanczos_observable_plan_unpack",
+    "mvmc_power_lanczos_observable_family_name",
+    "mvmc_power_lanczos_observable_adjoint_class_name",
+    "mvmc_power_lanczos_observable_census_status_string"
+  ],
+  "required_binary_strings": [
+    "self_adjoint",
+    "has_requested_adjoint",
+    "nonhermitian_unpaired"
+  ],
+  "forbidden_symbol_regex": [
+    "^mvmc_bounded_krylov_testing_",
+    "^mvmc_scaled_complex_from_raw_testing$",
+    "^mvmc_classic_sampler_",
+    "^mvmc_classic_pfaffian_.*_audit_",
+    "^mvmc_classic_krylov_(real|complex)_amplitude$"
+  ],
+  "forbidden_binary_strings": [
+    "MVMC_LANCZOS_ORACLE_DUMP",
+    "MVMC_LANCZOS_TEST_NONFINITE_SAMPLE",
+    "MVMC_LANCZOS_TEST_NONFINITE_PARENT_RANK",
+    "MVMC_LANCZOS_TEST_REBUILD_FAILURES",
+    "MVMC_LANCZOS_TEST_PROJECTION_BRANCH_AUDIT",
+    "MVMC_LANCZOS2_STATE_CHECK",
+    "MVMC_LANCZOS2_TEST_NONFINITE_SAMPLE",
+    "MVMC_LANCZOS2_TEST_CALHCA_GUARD_AUDIT",
+    "MVMC_LANCZOS2_HEISENBERG_AUDIT",
+    "MVMC_BF_LANCZOS_STATE_CHECK"
+  ],
+  "notes": [
+    "Run against a Testing=OFF vmc.out from the P6-C2 raw observable census slice.",
+    "The approved surface is the strict raw census plan, file-bound canonical SHA, basename-independent semantic certificate SHA, and rank-broadcast wire API.",
+    "This policy does not authorize corrected observable runtime dispatch or legacy fallback.",
+    "Staged rollout: the corrected-unavailable gate fires before the raw observable census, so in this slice these symbols are linked into vmc.out but have no reachable production caller. This policy therefore attests to linkage, not to invocation."
+  ]
+}

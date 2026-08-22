@@ -26,6 +26,12 @@ option(GIT_SUBMODULE_UPDATE "execute `git submodule update` automatically" ON)
 # External packages only use their C API.
 enable_language(C)
 
+# mVMC production sources use C11 language features such as _Static_assert.
+# Require the dialect explicitly so vendor/HPC builds do not depend on the
+# compiler's default C language version.
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 

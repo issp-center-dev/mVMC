@@ -18,6 +18,8 @@ set(SOURCES_vmcmain
         classic_pfaffian_collective.c
         physcal_lanczos.c physcal_lanczos2.c
         power_lanczos_contract.c power_lanczos_fp_metadata.c
+        power_lanczos_observable_census.c
+        power_lanczos_observable_registry.c
         lanczos2_contract.c splitloop.c
         krylov_fock_reference.c krylov_fock_proposal.c bounded_krylov_engine.c
         bounded_krylov_collective.c krylov_positive_guide.c
