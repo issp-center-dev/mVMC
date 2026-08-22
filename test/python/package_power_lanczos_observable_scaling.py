@@ -434,6 +434,17 @@ test -f "$SOURCE_ARCHIVE" && test ! -L "$SOURCE_ARCHIVE"
 (cd "$RUN_DIR" && sha256sum -c package_manifest.sha256)
 CURRENT_PHASE=source_archive_checksum
 (cd "$RUN_DIR" && sha256sum -c "$(basename "$SOURCE_CHECKSUM")")
+CURRENT_PHASE=python_wheelhouse_checksum
+: > "$EVIDENCE_DIR/python-dependency.log"
+(cd "$RUN_DIR" && sha256sum -c python-wheelhouse.sha256) \
+  >> "$EVIDENCE_DIR/python-dependency.log" 2>&1
+CURRENT_PHASE=workflow_provenance
+mkdir "$EVIDENCE_DIR/workflow"
+cp "$PACKAGE_MANIFEST" "$RUN_DIR/package_manifest.sha256" \
+  "$SOURCE_CHECKSUM" "$PYTHON_REQUIREMENTS" \
+  "$PYTHON_WHEELHOUSE_CHECKSUM" \
+  "$RUN_DIR/workflow/p6c2_scaling_genkai_job.sh" \
+  "$EVIDENCE_DIR/workflow/"
 
 CURRENT_PHASE=source_extraction
 tar -xzf "$SOURCE_ARCHIVE" -C "$SOURCE_DIR"
@@ -459,10 +470,7 @@ CURRENT_PHASE=python_bootstrap_preflight
   "$BOOTSTRAP_PYTHON" --version
   "$BOOTSTRAP_PYTHON" -I -c \
     'import ensurepip,sys,venv; expected=(3,12,11); assert sys.version_info[:3] == expected, (sys.version_info, expected)'
-}} > "$EVIDENCE_DIR/python-dependency.log" 2>&1
-CURRENT_PHASE=python_wheelhouse_checksum
-(cd "$RUN_DIR" && sha256sum -c python-wheelhouse.sha256) \
-  >> "$EVIDENCE_DIR/python-dependency.log" 2>&1
+}} >> "$EVIDENCE_DIR/python-dependency.log" 2>&1
 CURRENT_PHASE=package_validation
 "$BOOTSTRAP_PYTHON" "$PACKAGER" validate --package-dir "$RUN_DIR" \
   --skip-package-archive
@@ -513,14 +521,7 @@ CURRENT_PHASE=identity_snapshot
   --source-diff-sha256 "$SOURCE_DIFF_SHA256"
 
 CURRENT_PHASE=workflow_metadata
-mkdir "$EVIDENCE_DIR/raw" "$EVIDENCE_DIR/workflow"
-cp "$PACKAGE_MANIFEST" "$EVIDENCE_DIR/workflow/"
-cp "$RUN_DIR/package_manifest.sha256" "$EVIDENCE_DIR/workflow/"
-cp "$SOURCE_CHECKSUM" "$EVIDENCE_DIR/workflow/"
-cp "$PYTHON_REQUIREMENTS" "$PYTHON_WHEELHOUSE_CHECKSUM" \
-  "$EVIDENCE_DIR/workflow/"
-cp "$RUN_DIR/workflow/p6c2_scaling_genkai_job.sh" \
-  "$EVIDENCE_DIR/workflow/"
+mkdir "$EVIDENCE_DIR/raw"
 
 {{
   echo "measurement=p6c2_observable_operator_count_scaling_v2"
@@ -589,6 +590,8 @@ CURRENT_PHASE=inventory
   echo "source_bytes=$(du -sk "$SOURCE_ROOT" | awk '{{print $1 * 1024}}')"
   echo "build_entries=$(find "$BUILD_DIR" -xdev | wc -l)"
   echo "build_bytes=$(du -sk "$BUILD_DIR" | awk '{{print $1 * 1024}}')"
+  echo "python_env_entries=$(find "$PYTHON_ENV" -xdev | wc -l)"
+  echo "python_env_bytes=$(du -sk "$PYTHON_ENV" | awk '{{print $1 * 1024}}')"
   echo "raw_entries=$(find "$EVIDENCE_DIR/raw" -xdev | wc -l)"
   echo "raw_bytes=$(du -sk "$EVIDENCE_DIR/raw" | awk '{{print $1 * 1024}}')"
 }} > "$EVIDENCE_DIR/workflow/remote-scratch-inventory.txt"
@@ -939,7 +942,9 @@ def validate_package(package_dir: Path, skip_package_archive: bool) -> None:
         "FINALIZATION_COUNT",
         "CURRENT_PHASE=configure",
         "CURRENT_PHASE=python_dependency_install",
+        "CURRENT_PHASE=workflow_provenance",
         "python-dependency.log",
+        "python_env_entries=",
         "module load intel/2023.2 mvapich/3.0-intel2023.2 python/3.12.11",
         "--no-cache-dir --no-index --no-deps --no-compile",
         "--only-binary=:all: --require-hashes",
@@ -952,6 +957,17 @@ def validate_package(package_dir: Path, skip_package_archive: bool) -> None:
         "archive_evidence",
     ]:
         require(token in job, f"scheduler lifecycle token: {token}")
+    provenance_order = [
+        "CURRENT_PHASE=python_wheelhouse_checksum",
+        "CURRENT_PHASE=workflow_provenance",
+        "CURRENT_PHASE=source_extraction",
+        "CURRENT_PHASE=python_dependency_install",
+    ]
+    require(
+        [job.index(token) for token in provenance_order]
+        == sorted(job.index(token) for token in provenance_order),
+        "scheduler dependency provenance order",
+    )
     require("$TMPDIR" not in job and "/var/tmp" not in job, "system temporary path")
     subprocess.run(["bash", "-n", str(root / "workflow/p6c2_scaling_genkai_job.sh")], check=True)
     if not skip_package_archive:
