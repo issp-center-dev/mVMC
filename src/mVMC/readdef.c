@@ -35,9 +35,22 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <string.h>
 #include "./include/backflow.h"
 #include "./include/lanczos2_contract.h"
+#include "./include/power_lanczos_observable_census.h"
+#include "./include/power_lanczos_observable_preflight.h"
+#include "./include/power_lanczos_observable_registry.h"
+#include "./include/power_lanczos_selector.h"
 #include "./include/readdef.h"
 #include "./include/global.h"
 #include "safempi_fcmp.c"
+
+_Static_assert(IdxLanczosEstimatorMode == IdxNCond + 1,
+               "P6 integers must be appended after the frozen legacy enum");
+_Static_assert(IdxLanczosCoeffWarmUp == IdxLanczosEstimatorMode + 1,
+               "P6 integer keyword order changed");
+_Static_assert(IdxLanczosStatMode == IdxLanczosEstimatorMode + 8,
+               "P6 requires exactly nine contiguous integer fields");
+_Static_assert(ParamIdxInt_End == IdxLanczosStatMode + 1,
+               "P6 integers must remain at the end of bufInt");
 
 char (*cFileNameListFile)[D_CharTmpReadDef] = NULL;
 
@@ -170,6 +183,132 @@ static int ParseStrictLongLong(const char *text, long long *value) {
   if (errno == ERANGE || end == text || *end != '\0') return 1;
   *value = parsed;
   return 0;
+}
+
+static const char *const P6LanczosKeywordNames[] = {
+    "NLanczosEstimatorMode", "NLanczosCoeffWarmUp",
+    "NLanczosCoeffSample", "NLanczosCoeffInterval",
+    "NLanczosFinalWarmUp", "NLanczosFinalSample",
+    "NLanczosFinalInterval", "NLanczosGuideMode",
+    "NLanczosStatMode"};
+
+static const int P6LanczosKeywordIndices[] = {
+    IdxLanczosEstimatorMode, IdxLanczosCoeffWarmUp,
+    IdxLanczosCoeffSample, IdxLanczosCoeffInterval,
+    IdxLanczosFinalWarmUp, IdxLanczosFinalSample,
+    IdxLanczosFinalInterval, IdxLanczosGuideMode,
+    IdxLanczosStatMode};
+
+_Static_assert(sizeof(P6LanczosKeywordNames) /
+                       sizeof(P6LanczosKeywordNames[0]) ==
+                   sizeof(P6LanczosKeywordIndices) /
+                       sizeof(P6LanczosKeywordIndices[0]),
+               "P6 keyword names and bufInt indices must remain paired");
+
+#define P6_LANCZOS_KEYWORD_COUNT \
+  ((int)(sizeof(P6LanczosKeywordNames) / sizeof(P6LanczosKeywordNames[0])))
+
+static int FindP6LanczosKeyword(const char *keyword) {
+  int index;
+  if (keyword == NULL) return -1;
+  for (index = 0; index < P6_LANCZOS_KEYWORD_COUNT; ++index) {
+    if (CheckWords(keyword, P6LanczosKeywordNames[index]) == 0) return index;
+  }
+  return -1;
+}
+
+static int ParseP6LanczosKeywordLine(const char *line, const char *valueText,
+                                     int *value) {
+  int offset = 0;
+  if (line == NULL || valueText == NULL || value == NULL ||
+      sscanf(line, "%*s %*s %n", &offset) < 0 || offset <= 0 ||
+      !LineTailIsWhitespace(line, offset) ||
+      mvmc_power_lanczos_parse_ascii_nonnegative_int(valueText, value) != 0) {
+    return 1;
+  }
+  return 0;
+}
+
+static void GetPowerLanczosRuntimeOptions(
+    const int *bufInt, MVMCPowerLanczosRuntimeOptions *options) {
+  memset(options, 0, sizeof(*options));
+  options->lanczos_mode = bufInt[IdxLanczosMode];
+  options->estimator_mode = bufInt[IdxLanczosEstimatorMode];
+  options->chain_controls[MVMC_POWER_LANCZOS_CONTROL_COEFF_WARMUP] =
+      bufInt[IdxLanczosCoeffWarmUp];
+  options->chain_controls[MVMC_POWER_LANCZOS_CONTROL_COEFF_SAMPLE] =
+      bufInt[IdxLanczosCoeffSample];
+  options->chain_controls[MVMC_POWER_LANCZOS_CONTROL_COEFF_INTERVAL] =
+      bufInt[IdxLanczosCoeffInterval];
+  options->chain_controls[MVMC_POWER_LANCZOS_CONTROL_FINAL_WARMUP] =
+      bufInt[IdxLanczosFinalWarmUp];
+  options->chain_controls[MVMC_POWER_LANCZOS_CONTROL_FINAL_SAMPLE] =
+      bufInt[IdxLanczosFinalSample];
+  options->chain_controls[MVMC_POWER_LANCZOS_CONTROL_FINAL_INTERVAL] =
+      bufInt[IdxLanczosFinalInterval];
+  options->guide_mode = bufInt[IdxLanczosGuideMode];
+  options->stat_mode = bufInt[IdxLanczosStatMode];
+}
+
+static void ReportPowerLanczosRuntimeValidationError(
+    const MVMCPowerLanczosRuntimeResult *result) {
+  fprintf(stderr, "%s\n", mvmc_power_lanczos_runtime_error(result));
+  if (result->status ==
+      MVMC_POWER_LANCZOS_RUNTIME_INVALID_CHAIN_CONTROL) {
+    fprintf(stderr, "P6 INPUT REJECTED: INVALID_CHAIN_CONTROL %s\n",
+            mvmc_power_lanczos_chain_control_name(
+                result->invalid_chain_control));
+  }
+}
+
+static void ReportPowerLanczosLegacyOptIn(void) {
+  fprintf(stderr,
+          "P6 LEGACY OPT-IN: add \"NLanczosEstimatorMode 1\" to ModPara "
+          "to reproduce the previous biased base-support estimator; legacy "
+          "output is diagnostic-only and is not a corrected release "
+          "result.\n");
+}
+
+static void ReportPowerLanczosCorrectedUnavailable(int lanczosMode) {
+  fprintf(stderr, "%s\n",
+          lanczosMode == 2
+              ? "P6 INPUT REJECTED: OBSERVABLE_CERTIFICATE_UNAVAILABLE"
+              : "P6 INPUT REJECTED: CORRECTED_PIPELINE_UNAVAILABLE");
+  ReportPowerLanczosLegacyOptIn();
+}
+
+static MVMCPowerLanczosObservablePreflightStatus
+PreflightUnregisteredObservablePlan(
+    const MVMCPowerLanczosObservablePlan *plan,
+    MVMCPowerLanczosObservablePreflightResult *result) {
+  MVMCPowerLanczosObservablePreflightInput input;
+  int family;
+  if (plan == NULL || result == NULL) {
+    if (result != NULL) {
+      memset(result, 0, sizeof(*result));
+      result->status =
+          MVMC_POWER_LANCZOS_OBSERVABLE_PREFLIGHT_INVALID_ARGUMENT;
+    }
+    return MVMC_POWER_LANCZOS_OBSERVABLE_PREFLIGHT_INVALID_ARGUMENT;
+  }
+  memset(&input, 0, sizeof(input));
+  input.nsite = plan->nsite;
+  input.nsite_uc = plan->nsite_uc;
+  input.unique_target_upper = (size_t)plan->record_count;
+  input.block_count = MVMC_POWER_LANCZOS_OBSERVABLE_MIN_BLOCK_COUNT;
+  input.saved_source_count = 1;
+  input.target_cache_bytes_per_target = 1;
+  input.stage_file_count = 1;
+  input.artifact_file_count = 1;
+  input.block_contract_passed = 1;
+  for (family = 0; family < MVMC_POWER_LANCZOS_OBSERVABLE_FAMILY_COUNT;
+       ++family) {
+    input.family_count[family] = plan->family_count[family];
+  }
+  /* No local/HPC result certificate has been registered yet. */
+  input.correctness_family_mask = 0;
+  input.scaling_family_mask = 0;
+  return mvmc_power_lanczos_observable_preflight(&input, result);
 }
 
 static int ReadPositiveProjectionCount(FILE *fp, int *count,
@@ -563,12 +702,21 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   int hasLattice = 0;
   int hasBF = 0;
   int hasBFRange = 0;
+  int p6InputRejected = 0;
+  int rawObservablePlanPrepared = 0;
+  void *rawObservableWire = NULL;
+  size_t rawObservableWireSize = 0;
+  MVMCPowerLanczosObservablePlan rawObservablePlan;
+  MVMCPowerLanczosLegacyAugmentedPlan legacyAugmentedPlan;
   int iFlgOrbitalAntiParallel = 0;
   int iFlgOrbitalParallel = 0;
   int itmp = 0;
 
   int iOrbitalComplex = 0;
   iFlgOrbitalGeneral = 0;
+  mvmc_power_lanczos_observable_plan_init(&rawObservablePlan);
+  mvmc_power_lanczos_legacy_augmented_plan_init(&legacyAugmentedPlan);
+  mvmc_power_lanczos_observable_registry_reset();
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
@@ -609,7 +757,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       if (rank == 0) {
         fprintf(stderr, "  Error: ModPara file is incomplete.\n");
       }
-      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+      MPI_Abort(MPI_COMM_WORLD,
+                iret == MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE
+                    ? MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE
+                    : EXIT_FAILURE);
     }
 
  /*
@@ -924,7 +1075,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     //TODO: LanczosMode is not supported for Sz not conserved mode.
 
     //For indirect calculation of Green's function
-    if (bufInt[IdxNTwoBodyGEx] > 0 || bufInt[IdxLanczosMode] > 1) {
+    if (info == 0 &&
+        (bufInt[IdxLanczosMode] == 0 ||
+         bufInt[IdxLanczosEstimatorMode] == 1) &&
+        (bufInt[IdxNTwoBodyGEx] > 0 || bufInt[IdxLanczosMode] > 1)) {
       //Get info of CisAjs and CisAjsCktAlt(GreenTwoEx as if it's DC)
       int i;
       iOneBodyGIdx = malloc(sizeof(int *) * (2 * bufInt[IdxNsite])); //For spin
@@ -934,6 +1088,29 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       bufInt[IdxNOneBodyG] = CountOneBodyGForLanczos(xNameListFile,
                                                      bufInt[IdxNOneBodyG], bufInt[IdxNTwoBodyGEx],
                                                      bufInt[IdxNsite], iOneBodyGIdx);
+      if (bufInt[IdxLanczosMode] > 0 &&
+          bufInt[IdxLanczosEstimatorMode] == 1) {
+        char diagnostic[512];
+        MVMCPowerLanczosObservableCensusStatus censusStatus;
+        diagnostic[0] = '\0';
+        censusStatus = mvmc_power_lanczos_legacy_augmented_plan_build(
+            bufInt[IdxNsite], bufInt[IdxNOneBodyG], iOneBodyGIdx,
+            &legacyAugmentedPlan, diagnostic, sizeof(diagnostic));
+        if (censusStatus == MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK) {
+          censusStatus =
+              mvmc_power_lanczos_observable_registry_publish_legacy(
+                  &legacyAugmentedPlan);
+        }
+        if (censusStatus != MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK) {
+          fprintf(stderr,
+                  "P6 INPUT REJECTED: LEGACY_AUGMENTED_PLAN_%s%s%s\n",
+                  mvmc_power_lanczos_observable_census_status_string(
+                      censusStatus),
+                  diagnostic[0] == '\0' ? "" : ": ", diagnostic);
+          p6InputRejected = 1;
+          info = 1;
+        }
+      }
     }
 
     //CalcNCond
@@ -1108,17 +1285,151 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
              bufInt[IdxLanczosMode], 1) != 0) {
       info = 1;
     }
+    if (info == 0 && bufInt[IdxLanczosMode] > 0) {
+      MVMCPowerLanczosRuntimeOptions runtimeOptions;
+      MVMCPowerLanczosRuntimeResult runtimeResult;
+      GetPowerLanczosRuntimeOptions(bufInt, &runtimeOptions);
+      if (mvmc_power_lanczos_runtime_validate(
+              &runtimeOptions, &runtimeResult) !=
+          MVMC_POWER_LANCZOS_RUNTIME_OK) {
+        ReportPowerLanczosRuntimeValidationError(&runtimeResult);
+        p6InputRejected = 1;
+        info = 1;
+      } else if (runtimeResult.route ==
+                 MVMC_POWER_LANCZOS_ROUTE_CORRECTED) {
+        ReportPowerLanczosCorrectedUnavailable(
+            runtimeOptions.lanczos_mode);
+        p6InputRejected = 1;
+        info = 1;
+      }
+    }
+    /*
+     * Staged-rollout dormancy (P6-C2).  The corrected-unavailable gate above
+     * already sets info for every route == CORRECTED input, and that set
+     * strictly contains this condition, so the raw observable census, its
+     * wire, and the preflight below currently have no reachable production
+     * caller.  This is deliberate: `expert.rst` and the release note promise
+     * that NLanczosMode=2 fails before the census so a census or resource
+     * error cannot mask the unavailable corrected route, and
+     * `runtest_power_lanczos_selector_input.py` pins that ordering.
+     *
+     * The block is kept rather than deleted because the census/wire/ownership
+     * contract is already frozen and covered by PowerLanczosObservableCensus_*
+     * (including the MPI 2/4 pack-broadcast-unpack round trip).  Enabling
+     * corrected observable dispatch means relaxing the gate above so this
+     * path runs again; do not re-derive the wiring from scratch then.
+     */
+    if (info == 0 && bufInt[IdxLanczosMode] == 2 &&
+        bufInt[IdxLanczosEstimatorMode] == 0) {
+      const char *paths[MVMC_POWER_LANCZOS_OBSERVABLE_FAMILY_COUNT] = {
+          cFileNameListFile[KWOneBodyG],
+          cFileNameListFile[KWTwoBodyGEx],
+          cFileNameListFile[KWTwoBodyG]};
+      char diagnostic[512];
+      MVMCPowerLanczosObservableCensusStatus censusStatus;
+      diagnostic[0] = '\0';
+      censusStatus = mvmc_power_lanczos_observable_plan_build_from_files(
+          bufInt[IdxNsite], bufInt[IdxNorb], paths, &rawObservablePlan,
+          diagnostic, sizeof(diagnostic));
+      if (censusStatus == MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK) {
+        censusStatus = mvmc_power_lanczos_observable_plan_wire_size(
+            &rawObservablePlan, &rawObservableWireSize);
+        if (censusStatus == MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK &&
+            rawObservableWireSize > (size_t)INT_MAX) {
+          censusStatus = MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_SIZE_OVERFLOW;
+        }
+      }
+      if (censusStatus == MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK) {
+        rawObservableWire = malloc(rawObservableWireSize);
+        if (rawObservableWire == NULL) {
+          censusStatus =
+              MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_ALLOCATION_FAILURE;
+        }
+      }
+      if (censusStatus == MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK) {
+        censusStatus = mvmc_power_lanczos_observable_plan_pack(
+            &rawObservablePlan, rawObservableWire, rawObservableWireSize,
+            &rawObservableWireSize);
+      }
+      if (censusStatus != MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK) {
+        fprintf(stderr, "P6 INPUT REJECTED: OBSERVABLE_CENSUS_%s%s%s\n",
+                mvmc_power_lanczos_observable_census_status_string(
+                    censusStatus),
+                diagnostic[0] == '\0' ? "" : ": ", diagnostic);
+        ReportPowerLanczosLegacyOptIn();
+        p6InputRejected = 1;
+        info = 1;
+      } else {
+        rawObservablePlanPrepared = 1;
+      }
+    }
   }
 
   if (info != 0) {
     if (rank == 0) {
       fprintf(stderr, "Error: Definition files(*.def) are incomplete.\n");
     }
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    MPI_Abort(MPI_COMM_WORLD,
+              p6InputRejected
+                  ? MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE
+                  : EXIT_FAILURE);
   }
 
 #ifdef _mpi_use
   MPI_Bcast(bufInt, nBufInt, MPI_INT, 0, comm);
+  /*
+   * Dormant with the rank-0 census build above: rank 0 aborts before this
+   * point for every corrected-route input.  See the staged-rollout note at
+   * the census block.
+   */
+  if (bufInt[IdxLanczosMode] == 2 &&
+      bufInt[IdxLanczosEstimatorMode] == 0) {
+    unsigned long long wireSize64 =
+        rank == 0 ? (unsigned long long)rawObservableWireSize : 0ULL;
+    int localFailure = 0;
+    int collectiveFailure = 0;
+    MPI_Bcast(&wireSize64, 1, MPI_UNSIGNED_LONG_LONG, 0, comm);
+    if (wireSize64 == 0ULL || wireSize64 > (unsigned long long)INT_MAX ||
+        wireSize64 > (unsigned long long)SIZE_MAX) {
+      localFailure = 1;
+    } else if (rank != 0) {
+      rawObservableWireSize = (size_t)wireSize64;
+      rawObservableWire = malloc(rawObservableWireSize);
+      if (rawObservableWire == NULL) localFailure = 1;
+    }
+    MPI_Allreduce(&localFailure, &collectiveFailure, 1, MPI_INT, MPI_MAX,
+                  comm);
+    if (collectiveFailure) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "P6 INPUT REJECTED: OBSERVABLE_CENSUS_ALLOCATION_FAILURE\n");
+        ReportPowerLanczosLegacyOptIn();
+      }
+      MPI_Abort(comm, MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE);
+    }
+    MPI_Bcast(rawObservableWire, (int)rawObservableWireSize, MPI_BYTE, 0,
+              comm);
+    if (rank != 0) {
+      char diagnostic[512];
+      const MVMCPowerLanczosObservableCensusStatus censusStatus =
+          mvmc_power_lanczos_observable_plan_unpack(
+              rawObservableWire, rawObservableWireSize, &rawObservablePlan,
+              diagnostic, sizeof(diagnostic));
+      localFailure =
+          censusStatus != MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK;
+    }
+    MPI_Allreduce(&localFailure, &collectiveFailure, 1, MPI_INT, MPI_MAX,
+                  comm);
+    if (collectiveFailure) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "P6 INPUT REJECTED: OBSERVABLE_CENSUS_DIGEST_MISMATCH\n");
+        ReportPowerLanczosLegacyOptIn();
+      }
+      MPI_Abort(comm, MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE);
+    }
+    rawObservablePlanPrepared = 1;
+  }
   MPI_Bcast(&FlagRBM, 1, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
   MPI_Bcast(&NSRCG, 1, MPI_INT, 0, comm); // for NCG
@@ -1140,6 +1451,104 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   MPI_Bcast(CParaFileHead, nBufChar, MPI_CHAR, 0, comm);
 #endif /* _mpi_use */
 
+  {
+    MVMCPowerLanczosRuntimeOptions runtimeOptions;
+    MVMCPowerLanczosRuntimeResult runtimeResult;
+    GetPowerLanczosRuntimeOptions(bufInt, &runtimeOptions);
+    if (mvmc_power_lanczos_runtime_validate(
+            &runtimeOptions, &runtimeResult) !=
+        MVMC_POWER_LANCZOS_RUNTIME_OK) {
+      if (rank == 0) {
+        ReportPowerLanczosRuntimeValidationError(&runtimeResult);
+      }
+      free(rawObservableWire);
+      mvmc_power_lanczos_observable_plan_destroy(&rawObservablePlan);
+      mvmc_power_lanczos_legacy_augmented_plan_destroy(
+          &legacyAugmentedPlan);
+      mvmc_power_lanczos_observable_registry_reset();
+      MPI_Abort(comm, MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE);
+    }
+    /*
+     * Dormant with the rank-0 census build: the corrected-unavailable gate in
+     * the rank-0 section rejects every route == CORRECTED input before this
+     * all-rank block is reached.  Kept for the same staged-rollout reason as
+     * the census block; the surviving reachable arms here are the runtime
+     * validation above and the explicit-legacy warning below.
+     */
+    if (runtimeResult.route == MVMC_POWER_LANCZOS_ROUTE_CORRECTED &&
+        runtimeOptions.lanczos_mode > 0) {
+      if (runtimeOptions.lanczos_mode == 2) {
+        const MVMCPowerLanczosObservablePlan *ownedRawPlan = NULL;
+        MVMCPowerLanczosObservablePreflightResult preflightResult;
+        MVMCPowerLanczosObservablePreflightStatus preflightStatus;
+        MVMCPowerLanczosObservableCensusStatus censusStatus;
+        int registryFailure;
+        int collectiveRegistryFailure;
+        if (rawObservablePlanPrepared) {
+          censusStatus = mvmc_power_lanczos_observable_registry_publish_raw(
+              &rawObservablePlan);
+          if (censusStatus == MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK) {
+            ownedRawPlan = mvmc_power_lanczos_observable_registry_raw();
+          }
+        } else {
+          censusStatus =
+              MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_INVALID_ARGUMENT;
+        }
+        registryFailure =
+            censusStatus != MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK;
+        collectiveRegistryFailure = registryFailure;
+#ifdef _mpi_use
+        MPI_Allreduce(&registryFailure, &collectiveRegistryFailure, 1,
+                      MPI_INT, MPI_MAX, comm);
+#endif
+        if (collectiveRegistryFailure) {
+          if (rank == 0) {
+            const MVMCPowerLanczosObservableCensusStatus reportedStatus =
+                registryFailure
+                    ? censusStatus
+                    : MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_DIGEST_MISMATCH;
+            fprintf(stderr, "P6 INPUT REJECTED: OBSERVABLE_CENSUS_%s\n",
+                    mvmc_power_lanczos_observable_census_status_string(
+                        reportedStatus));
+            ReportPowerLanczosLegacyOptIn();
+          }
+          free(rawObservableWire);
+          mvmc_power_lanczos_observable_plan_destroy(&rawObservablePlan);
+          mvmc_power_lanczos_observable_registry_reset();
+          MPI_Abort(comm, MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE);
+        }
+        preflightStatus = PreflightUnregisteredObservablePlan(
+            ownedRawPlan, &preflightResult);
+        if (rank == 0) {
+          fprintf(stderr, "%s\n",
+                  mvmc_power_lanczos_observable_preflight_error(
+                      preflightStatus));
+          ReportPowerLanczosLegacyOptIn();
+        }
+      } else if (rank == 0) {
+        ReportPowerLanczosCorrectedUnavailable(
+            runtimeOptions.lanczos_mode);
+      }
+      free(rawObservableWire);
+      mvmc_power_lanczos_observable_plan_destroy(&rawObservablePlan);
+      mvmc_power_lanczos_legacy_augmented_plan_destroy(
+          &legacyAugmentedPlan);
+      mvmc_power_lanczos_observable_registry_reset();
+      MPI_Abort(comm, MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE);
+    }
+    if (runtimeResult.route == MVMC_POWER_LANCZOS_ROUTE_LEGACY &&
+        rank == 0) {
+      fprintf(stderr,
+              "WARNING: explicit legacy base-support power-Lanczos "
+              "estimator; biased diagnostic only; not a corrected release "
+              "result.\n");
+    }
+  }
+
+  free(rawObservableWire);
+  mvmc_power_lanczos_observable_plan_destroy(&rawObservablePlan);
+  mvmc_power_lanczos_legacy_augmented_plan_destroy(&legacyAugmentedPlan);
+
   Counter_max = FlagUpdateWeight ? 8 : 6;
 
   if (ValidateNBodyCapabilities(
@@ -1151,6 +1560,15 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NVMCCalMode = bufInt[IdxVMCCalcMode];
   NLanczosMode = bufInt[IdxLanczosMode];
   NLanczosStep = bufInt[IdxLanczosStep];
+  NLanczosEstimatorMode = bufInt[IdxLanczosEstimatorMode];
+  NLanczosCoeffWarmUp = bufInt[IdxLanczosCoeffWarmUp];
+  NLanczosCoeffSample = bufInt[IdxLanczosCoeffSample];
+  NLanczosCoeffInterval = bufInt[IdxLanczosCoeffInterval];
+  NLanczosFinalWarmUp = bufInt[IdxLanczosFinalWarmUp];
+  NLanczosFinalSample = bufInt[IdxLanczosFinalSample];
+  NLanczosFinalInterval = bufInt[IdxLanczosFinalInterval];
+  NLanczosGuideMode = bufInt[IdxLanczosGuideMode];
+  NLanczosStatMode = bufInt[IdxLanczosStatMode];
   if (NLanczosSupportMode != 0 && NLanczosSupportMode != 1) {
     if (rank == 0) {
       fprintf(stderr, "Error: NLanczosSupportMode must be 0 or 1.\n");
@@ -1515,8 +1933,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     int lanczos2StatusCode = LANCZOS2_CONTRACT_OK;
     Lanczos2ContractStatus lanczos2Status;
     if (rank == 0) {
-      lanczos2StatusCode =
-          (int)ValidateLanczos2Contract(&lanczos2Contract);
+      lanczos2StatusCode = (int)(
+          NLanczosEstimatorMode == 1
+              ? ValidateLegacyLanczos2ExecutionContract(&lanczos2Contract)
+              : ValidateLanczos2Contract(&lanczos2Contract));
     }
 #ifdef _mpi_use
     MPI_Bcast(&lanczos2StatusCode, 1, MPI_INT, 0, comm);
@@ -2732,6 +3152,15 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[IdxNNz] = 0;
   bufInt[Idx2Sz] = -1;// -1: sz is not fixed :fsz
   bufInt[IdxNCond] = -1;
+  bufInt[IdxLanczosEstimatorMode] = 0;
+  bufInt[IdxLanczosCoeffWarmUp] = 0;
+  bufInt[IdxLanczosCoeffSample] = 0;
+  bufInt[IdxLanczosCoeffInterval] = 0;
+  bufInt[IdxLanczosFinalWarmUp] = 0;
+  bufInt[IdxLanczosFinalSample] = 0;
+  bufInt[IdxLanczosFinalInterval] = 0;
+  bufInt[IdxLanczosGuideMode] = 0;
+  bufInt[IdxLanczosStatMode] = 0;
 
 //RBM
   bufInt[IdxNneuron] = 0;
@@ -2782,6 +3211,7 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
 
   int iKWidx = 0;
   int iret = 0;
+  int p6LanczosKeywordSeen[P6_LANCZOS_KEYWORD_COUNT] = {0};
   fprintf(stdout, "Start: Read ModPara File .\n");
   for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
     strcpy(defname, cFileNameListFile[iKWidx]);
@@ -2824,8 +3254,34 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
           double dtmp;
           char valueText[D_FileNameMax];
           while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            int fieldCount;
+            int p6Keyword;
             if (*ctmp2 == '\n' || ctmp2[0] == '-') continue;
-            if (sscanf(ctmp2, "%255s %255s", ctmp, valueText) != 2) {
+            ctmp[0] = '\0';
+            valueText[0] = '\0';
+            fieldCount = sscanf(ctmp2, "%255s %255s", ctmp, valueText);
+            p6Keyword = fieldCount >= 1 ? FindP6LanczosKeyword(ctmp) : -1;
+            if (p6Keyword >= 0) {
+              int parsedValue;
+              if (fieldCount != 2 ||
+                  ParseP6LanczosKeywordLine(
+                      ctmp2, valueText, &parsedValue) != 0) {
+                fprintf(stderr,
+                        "P6 INPUT REJECTED: INVALID_INTEGER_TOKEN %s\n",
+                        P6LanczosKeywordNames[p6Keyword]);
+                return MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE;
+              }
+              if (p6LanczosKeywordSeen[p6Keyword]) {
+                fprintf(stderr,
+                        "P6 INPUT REJECTED: DUPLICATE_KEYWORD %s\n",
+                        P6LanczosKeywordNames[p6Keyword]);
+                return MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE;
+              }
+              p6LanczosKeywordSeen[p6Keyword] = 1;
+              bufInt[P6LanczosKeywordIndices[p6Keyword]] = parsedValue;
+              continue;
+            }
+            if (fieldCount != 2) {
               fprintf(stderr, "Error: malformed ModPara line: %s", ctmp2);
               return ReadDefFileError(defname);
             }

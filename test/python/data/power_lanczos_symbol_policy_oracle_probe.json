@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "policy_id": "power-lanczos-symbol-policy-oracle-probe-v1",
+  "phase": "TEST-PROBE",
+  "testing_only": false,
+  "production_authorized": true,
+  "required_symbols": [
+    "mvmc_power_lanczos_symbol_policy_probe"
+  ],
+  "required_binary_strings": [],
+  "forbidden_symbol_regex": [
+    "^oracle_"
+  ],
+  "forbidden_binary_strings": [],
+  "notes": [
+    "Negative policy fixture: the exported oracle_* symbol must be rejected on ELF and Mach-O."
+  ]
+}

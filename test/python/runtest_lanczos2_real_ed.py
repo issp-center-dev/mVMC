@@ -564,6 +564,7 @@ def main():
         workdir,
         {
             "NLanczosMode": "1",
+            "NLanczosEstimatorMode": "1",
             "NLanczosStep": "2",
             "NVMCCalMode": "1",
             "NVMCSample": "256",

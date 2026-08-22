@@ -32,6 +32,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <stdint.h>
 #include "backflow.h"
 #include "global.h"
+#include "power_lanczos_observable_registry.h"
 #include "physcal_lanczos2.h"
 #include "setmemory.h"
 
@@ -353,11 +354,13 @@ void SetMemoryDef() {
 
 void FreeMemoryDef() {
   int i, rank;
+  mvmc_power_lanczos_observable_registry_reset();
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank==0 && NCisAjsCktAlt>0) {
+  if (rank == 0 && iOneBodyGIdx != NULL) {
     for(i=0;i<2*Nsite;i++)
       free(iOneBodyGIdx[i]);
     free(iOneBodyGIdx);
+    iOneBodyGIdx = NULL;
   }
 
   free(QPOptTransSgn);

@@ -50,6 +50,19 @@ static void CheckStatus(const Lanczos2Contract *contract,
   }
 }
 
+static void CheckLegacyExecutionStatus(const Lanczos2Contract *contract,
+                                       Lanczos2ContractStatus expected,
+                                       const char *label) {
+  const Lanczos2ContractStatus actual =
+      ValidateLegacyLanczos2ExecutionContract(contract);
+  CHECK(actual == expected, "%s: legacy status=%d expected=%d", label,
+        (int)actual, (int)expected);
+  if (actual != LANCZOS2_CONTRACT_OK) {
+    CHECK(Lanczos2ContractError(actual)[0] != '\0',
+          "%s: empty legacy error message", label);
+  }
+}
+
 static void TestAllowedInputs(void) {
   Lanczos2Contract contract = SupportedContract();
   CheckStatus(&contract, LANCZOS2_CONTRACT_OK, "supported step 2");
@@ -157,9 +170,8 @@ static void TestEachUnsupportedCapability(void) {
 
   contract = SupportedHeisenbergContract();
   contract.nQPFull = 2;
-  CheckStatus(&contract,
-              LANCZOS2_CONTRACT_UNSUPPORTED_QUANTUM_PROJECTION,
-              "pure-spin multi-QP");
+  CheckStatus(&contract, LANCZOS2_CONTRACT_OK,
+              "pure-spin multi-QP production contract");
 
   contract = SupportedHeisenbergContract();
   contract.ne = INT_MAX;
@@ -253,12 +265,46 @@ static void TestFirstFailureIsStable(void) {
               "pure-spin first-failure order");
 }
 
+static void TestLegacyPureSpinExecutionLimit(void) {
+  Lanczos2Contract contract = SupportedHeisenbergContract();
+
+  contract.nQPFull = 2;
+  CheckStatus(&contract, LANCZOS2_CONTRACT_OK,
+              "pure-spin multi-QP remains a production capability");
+  CheckLegacyExecutionStatus(
+      &contract, LANCZOS2_CONTRACT_UNSUPPORTED_QUANTUM_PROJECTION,
+      "legacy pure-spin multi-QP execution");
+
+  contract.nQPFull = 1;
+  CheckLegacyExecutionStatus(&contract, LANCZOS2_CONTRACT_OK,
+                             "legacy pure-spin single-QP execution");
+
+  contract = SupportedContract();
+  contract.nQPFull = 4;
+  CheckLegacyExecutionStatus(&contract, LANCZOS2_CONTRACT_OK,
+                             "legacy electronic multi-QP execution");
+
+  contract = SupportedHeisenbergContract();
+  contract.step = 1;
+  contract.nQPFull = 4;
+  CheckLegacyExecutionStatus(&contract, LANCZOS2_CONTRACT_OK,
+                             "legacy pure-spin step-one multi-QP execution");
+
+  contract = SupportedHeisenbergContract();
+  contract.vmcCalMode = 0;
+  contract.nQPFull = 4;
+  CheckLegacyExecutionStatus(
+      &contract, LANCZOS2_CONTRACT_REQUIRES_VMC_CAL_MODE_1,
+      "legacy validation preserves general failure precedence");
+}
+
 int main(void) {
   TestAllowedInputs();
   TestStepDomain();
   TestEachUnsupportedCapability();
   TestCommonDomainAndOverflow();
   TestFirstFailureIsStable();
+  TestLegacyPureSpinExecutionLimit();
 
   if (failures != 0) {
     fprintf(stderr, "Lanczos2Contract_Unit: %d failure(s)\n", failures);

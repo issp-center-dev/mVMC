@@ -14,3 +14,4 @@ RndSeed = 1
 NSPGaussLeg = 4 
 NVMCCalMode  =  1
 NLanczosMode =  1
+NLanczosEstimatorMode = 1

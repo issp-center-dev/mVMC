@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 
-DEFAULT_POLICY_ID = "power-lanczos-zero-support-p6b-production-symbols-v1"
+DEFAULT_POLICY_ID = "power-lanczos-zero-support-p6b-production-symbols-v2"
 DEFAULT_PHASE = "P6-B"
 
 
@@ -23,7 +23,10 @@ def read_json(path):
 
 
 def normalize_symbol(symbol):
-    if symbol.startswith("_mvmc_"):
+    # Mach-O prepends one underscore to externally visible C symbols.  Policy
+    # regexes describe source-level C identifiers and must behave identically
+    # on Mach-O and ELF for required and forbidden symbols alike.
+    if symbol.startswith("_"):
         return symbol[1:]
     return symbol
 
@@ -39,8 +42,7 @@ def read_global_symbols(binary):
         if len(fields) < 2:
             continue
         symbol = normalize_symbol(fields[-1])
-        if symbol.startswith("mvmc_"):
-            symbols.add(symbol)
+        symbols.add(symbol)
     return symbols
 
 
@@ -100,10 +102,10 @@ def verify(binary, policy_path, expected_policy_id, expected_phase):
     policy = read_json(policy_path)
     required, required_strings, forbidden_patterns, forbidden_strings = \
         validate_policy(policy, expected_policy_id, expected_phase)
-    symbols = read_global_symbols(binary)
+    all_symbols = read_global_symbols(binary)
     binary_payload = read_binary(binary)
 
-    missing = [symbol for symbol in required if symbol not in symbols]
+    missing = [symbol for symbol in required if symbol not in all_symbols]
     missing_binary_strings = [
         text for text in required_strings
         if text.encode("ascii") not in binary_payload
@@ -111,7 +113,8 @@ def verify(binary, policy_path, expected_policy_id, expected_phase):
     forbidden = []
     for pattern in forbidden_patterns:
         regex = re.compile(pattern)
-        forbidden.extend(symbol for symbol in symbols if regex.search(symbol))
+        forbidden.extend(
+            symbol for symbol in all_symbols if regex.search(symbol))
     forbidden = sorted(set(forbidden))
     forbidden_binary_strings = [
         text for text in forbidden_strings

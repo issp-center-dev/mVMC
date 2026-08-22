@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "policy_id": "power-lanczos-zero-support-p6b-production-symbols-v1",
+  "policy_id": "power-lanczos-zero-support-p6b-production-symbols-v2",
   "phase": "P6-B",
   "testing_only": false,
   "production_authorized": true,
@@ -25,7 +25,7 @@
     "^mvmc_scaled_complex_from_raw_testing$",
     "^mvmc_classic_sampler_",
     "^mvmc_classic_pfaffian_.*_audit_",
-    "^mvmc_classic_krylov_"
+    "^mvmc_classic_krylov_(real|complex)_amplitude$"
   ],
   "forbidden_binary_strings": [
     "MVMC_LANCZOS_ORACLE_DUMP",
@@ -40,8 +40,9 @@
     "MVMC_BF_LANCZOS_STATE_CHECK"
   ],
   "notes": [
-    "Run this policy against a Testing=OFF vmc.out built from the P6-B production-core slice.",
+    "Run this cumulative policy against a Testing=OFF-equivalent vmc.out; v2 incorporates the later P6-C1 production-adapter promotion.",
     "The allow boundary intentionally permits existing production Pfaffian matrix and collective symbols.",
+    "P6-C1 subsequently authorized classic configuration, projection, workspace, generation-hash, and scaled-amplitude adapters; the raw real/complex amplitude callbacks remain forbidden.",
     "Forbidden binary strings cover Testing-only Lanczos oracle, audit, state-check, and fault-injection env hooks."
   ]
 }

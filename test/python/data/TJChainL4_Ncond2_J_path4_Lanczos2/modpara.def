@@ -8,6 +8,7 @@ CParaFileHead  zqp
 --------------------
 NVMCCalMode    1
 NLanczosMode   2
+NLanczosEstimatorMode 1
 --------------------
 NDataIdxStart  1
 NDataQtySmp    1

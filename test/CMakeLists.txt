@@ -40,6 +40,22 @@ endif()
 add_test(NAME PowerLanczosContract_Unit
     COMMAND power_lanczos_contract_unit)
 
+add_executable(power_lanczos_production_symbol_probe
+    power_lanczos_production_symbol_probe.c)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_production_symbol_probe PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME PowerLanczosProductionSymbols_OracleForbidden
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_power_lanczos_production_symbols.py
+            --python ${PYTHON_EXECUTABLE}
+            --verifier
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/verify_power_lanczos_p6b_production_symbols.py
+            --binary $<TARGET_FILE:power_lanczos_production_symbol_probe>
+            --policy
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/data/power_lanczos_symbol_policy_oracle_probe.json)
+
 add_executable(power_lanczos_observable_census_unit
     power_lanczos_observable_census_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_census.c)
@@ -132,6 +148,18 @@ endif()
 target_link_libraries(power_lanczos_observable_preflight_unit m)
 add_test(NAME PowerLanczosObservablePreflight_Unit
     COMMAND power_lanczos_observable_preflight_unit)
+
+add_executable(power_lanczos_runtime_unit
+    power_lanczos_selector_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_selector.c)
+target_include_directories(power_lanczos_runtime_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_runtime_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME PowerLanczosRuntime_Unit
+    COMMAND power_lanczos_runtime_unit)
 
 add_executable(power_lanczos_observable_correctness
     power_lanczos_observable_correctness.c

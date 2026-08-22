@@ -51,6 +51,7 @@ NVMCSample = {samples}
 NVMCWarmUp = {warmup}
 NVMCCalMode = 1
 NLanczosMode = 1
+NLanczosEstimatorMode = 1
 RndSeed = 2468
 """.format(size=size, samples=samples, warmup=warmup)
         )
@@ -219,6 +220,7 @@ def prepare_case(
         os.path.join(case, "modpara.def"),
         {
             "NLanczosMode": "1",
+            "NLanczosEstimatorMode": "1",
             "NLanczosStep": "2",
             "NVMCCalMode": "1",
             "NVMCSample": str(samples),

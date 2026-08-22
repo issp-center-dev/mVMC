@@ -24,6 +24,7 @@ set(SOURCES_vmcmain
         power_lanczos_observable_evaluator.c
         power_lanczos_observable_blocks.c
         power_lanczos_observable_preflight.c
+        power_lanczos_selector.c
         lanczos2_contract.c splitloop.c
         krylov_fock_reference.c krylov_fock_proposal.c bounded_krylov_engine.c
         bounded_krylov_collective.c krylov_positive_guide.c
@@ -41,47 +42,62 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../pfapack)
 
 add_executable(vmcdry.out vmcdry.c)
 target_link_libraries(vmcdry.out StdFace_mvmc m)
-add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
-target_compile_definitions(vmc.out PRIVATE
-    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
-    MVMC_ENABLE_POWER_LANCZOS_P5_CORE)
-if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-  target_compile_options(vmc.out PRIVATE -fno-fast-math -ffp-contract=off)
-  target_compile_definitions(vmc.out PRIVATE
-      MVMC_POWER_LANCZOS_FP_CONTRACT_OFF_REQUESTED=1)
-endif()
+
+function(configure_vmc_executable target include_testing_support)
+  add_executable(${target} ${SOURCES_vmcmain} ${SOURCES_sfmt})
+  target_compile_definitions(${target} PRIVATE
+      MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+      MVMC_ENABLE_POWER_LANCZOS_P5_CORE)
+  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(${target} PRIVATE
+        -fno-fast-math -ffp-contract=off)
+    target_compile_definitions(${target} PRIVATE
+        MVMC_POWER_LANCZOS_FP_CONTRACT_OFF_REQUESTED=1)
+  endif()
+  if(include_testing_support)
+    # Keep fault injection, reference samplers, and audits out of production.
+    target_sources(${target} PRIVATE classic_pfaffian_sampler.c
+        classic_pfaffian_audit.c)
+    target_compile_definitions(${target} PRIVATE MVMC_ENABLE_FAULT_INJECTION
+        MVMC_ENABLE_PFAFFIAN_SAMPLER_REFERENCE
+        MVMC_ENABLE_PFAFFIAN_STATE_AUDIT
+        MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+  endif()
+  target_link_libraries(${target} StdFace_mvmc m pfapack ltl2inv)
+  if(PFAFFIAN_BLOCKED)
+    target_link_libraries(${target} pfupdates)
+  endif()
+  if(Require_BLIS)
+    target_link_libraries(${target} blis pthread)
+  endif()
+  target_link_libraries(${target} ${LAPACK_LIBRARIES} m)
+
+  if(USE_SCALAPACK)
+    string(REGEX REPLACE "-L[ ]+" "-L" sc_libs
+        "${SCALAPACK_LIBRARIES}")
+    string(REGEX REPLACE "[ ]+" ";" sc_libs "${sc_libs}")
+    foreach(sc_lib IN LISTS sc_libs)
+      target_link_libraries(${target} ${sc_lib})
+    endforeach(sc_lib)
+  endif()
+
+  if(MPI_FOUND)
+    target_link_libraries(${target} ${MPI_C_LIBRARIES})
+  endif()
+endfunction()
+
+configure_vmc_executable(vmc.out ${Testing})
 if(Testing)
-  # Keep fault injection, reference samplers, and audits out of production.
-  target_sources(vmc.out PRIVATE classic_pfaffian_sampler.c
-      classic_pfaffian_audit.c)
-  target_compile_definitions(vmc.out PRIVATE MVMC_ENABLE_FAULT_INJECTION
-      MVMC_ENABLE_PFAFFIAN_SAMPLER_REFERENCE
-      MVMC_ENABLE_PFAFFIAN_STATE_AUDIT
-      MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
-endif(Testing)
-target_link_libraries(vmc.out StdFace_mvmc m)
-target_link_libraries(vmc.out pfapack)
-target_link_libraries(vmc.out ltl2inv)
-if(PFAFFIAN_BLOCKED)
-  target_link_libraries(vmc.out pfupdates)
-endif(PFAFFIAN_BLOCKED)
-if(Require_BLIS)
-  target_link_libraries(vmc.out blis pthread)
-endif(Require_BLIS)
-target_link_libraries(vmc.out ${LAPACK_LIBRARIES} m)
+  # CTest builds this target on demand and applies every cumulative production
+  # symbol policy to a binary compiled without Testing-only hooks.
+  configure_vmc_executable(vmc.production-policy.out FALSE)
+  set_target_properties(vmc.production-policy.out PROPERTIES
+      EXCLUDE_FROM_ALL TRUE)
+endif()
 
 if(USE_SCALAPACK)
-  string(REGEX REPLACE "-L[ ]+" "-L" sc_libs "${SCALAPACK_LIBRARIES}")
-  string(REGEX REPLACE "[ ]+" ";" sc_libs "${sc_libs}")
-  foreach(sc_lib IN LISTS sc_libs)
-    target_link_libraries(vmc.out ${sc_lib})
-  endforeach(sc_lib)
   message(STATUS "SCALAPACK_LIBRARIES: ${SCALAPACK_LIBRARIES}")
-endif(USE_SCALAPACK)
-
-if(MPI_FOUND)
-  target_link_libraries(vmc.out ${MPI_C_LIBRARIES})
-endif(MPI_FOUND)
+endif()
 install(TARGETS vmcdry.out RUNTIME DESTINATION bin)
 install(TARGETS vmc.out RUNTIME DESTINATION bin)
 add_definitions(-D_mVMC)

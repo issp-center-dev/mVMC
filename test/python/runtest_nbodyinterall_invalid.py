@@ -61,6 +61,11 @@ def write_base_case(workdir, orbital_complex=True, orbital_general=False,
     modpara = os.path.join(workdir, "modpara.def")
     text = open(modpara).read()
     text = text.replace("NLanczosMode   0", "NLanczosMode   {}".format(lanczos_mode))
+    if lanczos_mode == 1:
+        text = text.replace(
+            "NLanczosMode   1\n",
+            "NLanczosMode   1\nNLanczosEstimatorMode 1\n",
+        )
     write(modpara, text)
 
     if backflow:

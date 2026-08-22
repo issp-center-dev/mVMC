@@ -1346,6 +1346,8 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
                 backflow_optimize=False)
             update_modpara(workdir, {
                 "NLanczosMode": lanczos_mode,
+                "NLanczosEstimatorMode": (
+                    "1" if lanczos_mode == "1" else "0"),
                 "NVMCCalMode": "1",
                 "NVMCSample": "32",
                 "NVMCWarmUp": "8",
@@ -1412,6 +1414,7 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
         orbital_optimize=True, backflow_optimize=False)
     updates = {
         "NLanczosMode": "1",
+        "NLanczosEstimatorMode": "1",
         "NVMCCalMode": "1",
         "NVMCSample": ("75" if case_name.endswith(
                        "NonfiniteAggregateWarning_mpi") else
@@ -1570,6 +1573,7 @@ def run_lanczos_cross_family_case(rootdir, case_name, mpi_procs=None):
 
     updates = {
         "NLanczosMode": "1",
+        "NLanczosEstimatorMode": "1",
         "NVMCCalMode": "1",
         "NVMCSample": "128",
         "NVMCWarmUp": "16",
@@ -1649,6 +1653,7 @@ def run_lanczos_case(rootdir, case_name, mpi_procs=None):
     )
     update_modpara(workdir, {
         "NLanczosMode": "1",
+        "NLanczosEstimatorMode": "1",
         "NVMCCalMode": "1",
         "NVMCSample": ("75" if case_name.endswith(
                        "NonfiniteAggregateWarning_mpi") else
@@ -1822,6 +1827,12 @@ def run_lanczos_invalid_case(rootdir, case_name, mpi_procs=None):
     if case_name not in cases:
         return None
     updates, expected, mutate_defs = cases[case_name]
+    try:
+        uses_legacy_lanczos = int(updates.get("NLanczosMode", "0")) > 0
+    except ValueError:
+        uses_legacy_lanczos = False
+    if uses_legacy_lanczos:
+        updates = dict(updates, NLanczosEstimatorMode="1")
     workdir = prepare_case(
         rootdir, case_name, include_backflow=case_name.startswith("BackFlow_"))
     update_modpara(workdir, updates)

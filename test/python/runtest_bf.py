@@ -2013,6 +2013,12 @@ def main():
         modpara_updates["NExUpdatePath"] = ex_update_path_override
     if lanczos_mode is not None:
         modpara_updates["NLanczosMode"] = lanczos_mode
+        try:
+            uses_legacy_lanczos = int(lanczos_mode) > 0
+        except (TypeError, ValueError):
+            uses_legacy_lanczos = False
+        modpara_updates["NLanczosEstimatorMode"] = (
+            "1" if uses_legacy_lanczos else "0")
         modpara_updates["NVMCCalMode"] = "1"
         modpara_updates["NVMCSample"] = (
             lanczos_samples_override if lanczos_samples_override is not None

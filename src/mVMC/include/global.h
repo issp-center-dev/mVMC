@@ -43,6 +43,15 @@ int NLanczosMode; /* mode of the single Lanczos step
                      0: none, 1: only energy, 2: Green functions */
 int NLanczosStep; /* polynomial order of the Lanczos wave function: 1 or 2 */
 int NLanczosSupportMode; /* 0: strict support gate, 1: experimental legacy */
+int NLanczosEstimatorMode; /* 0: corrected default, 1: explicit legacy */
+int NLanczosCoeffWarmUp;
+int NLanczosCoeffSample;
+int NLanczosCoeffInterval;
+int NLanczosFinalWarmUp;
+int NLanczosFinalSample;
+int NLanczosFinalInterval;
+int NLanczosGuideMode;
+int NLanczosStatMode;
 
 int NStoreO; /* choice of store O: 0-> normal other-> store  */
 int NSRCG; /* choice of solver for Sx=g: 0-> (Sca)LAPACK other-> CG  */

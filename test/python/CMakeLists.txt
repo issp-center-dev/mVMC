@@ -21,6 +21,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_projection_variants.py DESTINAT
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_hphi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/hphi_sector_check.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_power_lanczos_selector_input.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_sector_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_step1_compat.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_real_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -100,11 +101,67 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p5b_sensitivity_policy.
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p5c_direct_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6b_production_symbol_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6c1_production_symbol_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6c2_observable_census_production_symbol_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6c2_observable_core_production_symbol_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6c2_selector_production_symbol_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyg.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyinterall_invalid.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_update_weight.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+
+set(power_lanczos_production_build_command
+    ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}
+    --target vmc.production-policy.out)
+if(CMAKE_CONFIGURATION_TYPES)
+    list(APPEND power_lanczos_production_build_command
+        --config $<CONFIG>)
+endif()
+add_test(NAME PowerLanczosProductionSymbols_Build
+    COMMAND ${power_lanczos_production_build_command})
+set_tests_properties(PowerLanczosProductionSymbols_Build PROPERTIES
+    FIXTURES_SETUP PowerLanczosProductionBinary
+    RUN_SERIAL TRUE
+    TIMEOUT 900)
+
+function(add_power_lanczos_production_symbol_policy_test
+         test_name policy_file policy_id phase)
+    add_test(NAME ${test_name}
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/verify_power_lanczos_p6b_production_symbols.py
+                --binary $<TARGET_FILE:vmc.production-policy.out>
+                --policy ${CMAKE_CURRENT_SOURCE_DIR}/data/${policy_file}
+                --expected-policy-id ${policy_id}
+                --expected-phase ${phase})
+    set_tests_properties(${test_name} PROPERTIES
+        FIXTURES_REQUIRED PowerLanczosProductionBinary)
+endfunction()
+
+add_power_lanczos_production_symbol_policy_test(
+    PowerLanczosProductionSymbols_P6B
+    power_lanczos_p6b_production_symbol_policy.json
+    power-lanczos-zero-support-p6b-production-symbols-v2
+    P6-B)
+add_power_lanczos_production_symbol_policy_test(
+    PowerLanczosProductionSymbols_P6C1
+    power_lanczos_p6c1_production_symbol_policy.json
+    power-lanczos-zero-support-p6c1-production-symbols-v1
+    P6-C1)
+add_power_lanczos_production_symbol_policy_test(
+    PowerLanczosProductionSymbols_P6C2Census
+    power_lanczos_p6c2_observable_census_production_symbol_policy.json
+    power-lanczos-zero-support-p6c2-observable-census-production-symbols-v1
+    P6-C2-CENSUS)
+add_power_lanczos_production_symbol_policy_test(
+    PowerLanczosProductionSymbols_P6C2Core
+    power_lanczos_p6c2_observable_core_production_symbol_policy.json
+    power-lanczos-zero-support-p6c2-observable-core-production-symbols-v1
+    P6-C2-CORE)
+add_power_lanczos_production_symbol_policy_test(
+    PowerLanczosProductionSymbols_P6C2Runtime
+    power_lanczos_p6c2_selector_production_symbol_policy.json
+    power-lanczos-zero-support-p6c2-runtime-production-symbols-v1
+    P6-C2-RUNTIME)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -794,6 +851,18 @@ add_python_vmc_test_lanczos_expert(TJChainL4_Ncond2_J_path4_Lanczos)
 add_python_vmc_test_lanczos_expert(TJChainL4_Ncond2_J_path5_Lanczos)
 add_python_vmc_test_lanczos_expert(TJChainL4_Ncond2_J_path4_Lanczos2)
 add_python_vmc_test_lanczos_expert(DoublonOnly_Lanczos)
+add_test(NAME PowerLanczosRuntime_Input
+    COMMAND ${PYTHON_EXECUTABLE} runtest_power_lanczos_selector_input.py)
+set_tests_properties(PowerLanczosRuntime_Input PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1"
+    RESOURCE_LOCK "power_lanczos_runtime_input_workdir")
+if(MPI_FOUND)
+    add_test(NAME PowerLanczosRuntime_Input_mpi2
+        COMMAND ${PYTHON_EXECUTABLE} runtest_power_lanczos_selector_input.py)
+    set_tests_properties(PowerLanczosRuntime_Input_mpi2 PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
+        RESOURCE_LOCK "power_lanczos_runtime_input_workdir")
+endif()
 add_python_vmc_test_lanczos_sector_ed(LanczosSectorED)
 add_test(NAME Lanczos2_Step1_OmittedExplicit_ByteEquivalent
     COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos2_step1_compat.py
@@ -821,6 +890,7 @@ add_python_vmc_test_invalid_expert_with_updates(
 add_python_vmc_test_invalid_expert_with_updates(
     Lanczos2_InvalidVmcCalMode HubbardChain_SpinJastrow
     "NLanczosStep=2 requires NVMCCalMode=1"
+    reject_before_memory
     NLanczosStep=2 NLanczosMode=1 NVMCCalMode=0)
 add_python_vmc_test_invalid_expert_with_updates(
     Lanczos2_InvalidUpdatePath HubbardChain_SpinJastrow
@@ -893,8 +963,16 @@ add_python_vmc_test_invalid_expert_with_updates(
     NLanczosStep=2 NLanczosMode=2 NVMCCalMode=1 NMPTrans=1)
 add_python_vmc_test_invalid_expert_with_updates(
     Lanczos2_Heisenberg_InvalidMultiQP HeisenbergChain_SpinJastrow
-    "pure-spin mode currently requires NQPFull=1"
+    "legacy pure-spin Lanczos2 execution currently requires NQPFull=1"
+    reject_before_memory
     NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1 NMPTrans=2)
+add_python_vmc_test_invalid_expert_with_updates(
+    Lanczos2_Heisenberg_InvalidMultiQP_mpi HeisenbergChain_SpinJastrow
+    "legacy pure-spin Lanczos2 execution currently requires NQPFull=1"
+    expected_error_count=1 reject_before_memory
+    NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1 NMPTrans=2)
+set_tests_properties(Lanczos2_Heisenberg_InvalidMultiQP_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
 add_test(NAME Lanczos2_ContractPositive_TwoSz0_NonFSZ
     COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py
     HubbardChain_SpinJastrow "Finish calculation." allow_success

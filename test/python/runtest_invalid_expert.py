@@ -77,18 +77,38 @@ def main():
     expected = sys.argv[2]
     allow_success = False
     spin_flip_transfer = False
+    reject_before_memory = False
+    expected_error_count = None
     modpara_updates = {}
     for arg in sys.argv[3:]:
         if arg == "allow_success":
             allow_success = True
         elif arg == "spin_flip_transfer":
             spin_flip_transfer = True
+        elif arg == "reject_before_memory":
+            reject_before_memory = True
+        elif arg.startswith("expected_error_count="):
+            expected_error_count = int(arg.split("=", 1)[1])
         elif "=" in arg:
             key, value = arg.split("=", 1)
             modpara_updates[key] = value
         else:
             print("ERROR: unknown extra argument: {}".format(arg))
             return -1
+
+    # Existing contract/error tests exercise the legacy estimator formulas.
+    # Keep that classification explicit in the generated ModPara input; new
+    # corrected-selector tests pass NLanczosEstimatorMode=0 themselves.
+    try:
+        uses_legacy_lanczos = int(
+            modpara_updates.get("NLanczosMode", "0")) > 0
+    except ValueError:
+        uses_legacy_lanczos = False
+    if (
+        uses_legacy_lanczos
+        and "NLanczosEstimatorMode" not in modpara_updates
+    ):
+        modpara_updates["NLanczosEstimatorMode"] = "1"
 
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -137,6 +157,40 @@ def main():
         print(proc.stdout)
         print("---- output end ----")
         return -1
+    if expected_error_count is not None and proc.stdout.count(expected) != expected_error_count:
+        print(
+            "ERROR: expected error substring count {}, observed {}.".format(
+                expected_error_count, proc.stdout.count(expected)
+            )
+        )
+        print("---- output begin ----")
+        print(proc.stdout)
+        print("---- output end ----")
+        return -1
+    if reject_before_memory:
+        forbidden_markers = (
+            "End  : Read *def files.",
+            "Start: Set memories.",
+            "Start: Initialize parameters.",
+            "Start: Sampling.",
+        )
+        observed_markers = [
+            marker for marker in forbidden_markers if marker in proc.stdout
+        ]
+        output_artifacts = sorted(
+            name for name in os.listdir(workdir) if name.startswith("zvo")
+        )
+        if observed_markers or output_artifacts:
+            print(
+                "ERROR: invalid input was not rejected before memory/output: "
+                "markers={} artifacts={}".format(
+                    observed_markers, output_artifacts
+                )
+            )
+            print("---- output begin ----")
+            print(proc.stdout)
+            print("---- output end ----")
+            return -1
     # Default: invalid input must terminate with non-zero.
     # Some legacy readers only emit error messages and continue;
     # those cases can opt in to allow_success mode.

@@ -100,7 +100,6 @@ Lanczos2ContractStatus ValidateLanczos2Contract(
     const Lanczos2Contract *contract) {
   MVMCPowerLanczosContract powerContract;
   MVMCPowerLanczosContractStatus powerStatus;
-  Lanczos2ModelClass model;
 
   if (contract == NULL || (contract->step != 1 && contract->step != 2)) {
     return LANCZOS2_CONTRACT_INVALID_STEP;
@@ -118,8 +117,16 @@ Lanczos2ContractStatus ValidateLanczos2Contract(
     return FromPowerStatus(powerStatus);
   }
 
-  model = ClassifyLanczos2Model(contract);
-  if (model == LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE &&
+  return LANCZOS2_CONTRACT_OK;
+}
+
+Lanczos2ContractStatus ValidateLegacyLanczos2ExecutionContract(
+    const Lanczos2Contract *contract) {
+  const Lanczos2ContractStatus status = ValidateLanczos2Contract(contract);
+  if (status != LANCZOS2_CONTRACT_OK) return status;
+  if (contract->step == 2 &&
+      ClassifyLanczos2Model(contract) ==
+          LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE &&
       contract->nQPFull != 1) {
     return LANCZOS2_CONTRACT_UNSUPPORTED_QUANTUM_PROJECTION;
   }
@@ -170,7 +177,9 @@ const char *Lanczos2ContractError(Lanczos2ContractStatus status) {
     case LANCZOS2_CONTRACT_UNSUPPORTED_TRANSFER:
       return "NLanczosStep=2 pure-spin mode requires NTransfer=0";
     case LANCZOS2_CONTRACT_UNSUPPORTED_QUANTUM_PROJECTION:
-      return "NLanczosStep=2 pure-spin mode currently requires NQPFull=1";
+      return "legacy pure-spin Lanczos2 execution currently requires "
+             "NQPFull=1; the corrected production adapter handles multi-QP "
+             "through its dedicated dispatch";
     case LANCZOS2_CONTRACT_INVALID_COUNT:
       return "NLanczosStep requires non-negative counts and positive Nsite, "
              "Ne, and NQPFull";

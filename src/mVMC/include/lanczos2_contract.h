@@ -61,6 +61,14 @@ Lanczos2ModelClass ClassifyLanczos2Model(
 Lanczos2ContractStatus ValidateLanczos2Contract(
     const Lanczos2Contract *contract);
 
+/*
+ * Apply the additional execution limit of the legacy pure-spin main path.
+ * The general production capability contract intentionally accepts multi-QP;
+ * corrected adapters use their dedicated dispatch instead of this gate.
+ */
+Lanczos2ContractStatus ValidateLegacyLanczos2ExecutionContract(
+    const Lanczos2Contract *contract);
+
 const char *Lanczos2ContractError(Lanczos2ContractStatus status);
 
 #endif

@@ -522,6 +522,7 @@ def check_spin_changing_fsz_local_oracle(rootdir):
     )
     update_modpara(workdir, {
         "NLanczosMode": "1",
+        "NLanczosEstimatorMode": "1",
         "NVMCCalMode": "1",
         "NVMCSample": "128",
         "NVMCWarmUp": "16",
@@ -640,6 +641,7 @@ def check_projection_branch_fsz_local_oracle(rootdir):
     )
     update_modpara(workdir, {
         "NLanczosMode": "1",
+        "NLanczosEstimatorMode": "1",
         "NVMCCalMode": "1",
         "NVMCSample": "4096",
         "NVMCWarmUp": "32",

@@ -124,6 +124,10 @@ enum ParamIdxInt{
   IdxSROptCGMaxIter,
   IdxNx,IdxNy,IdxNz,IdxNorb,IdxNTwist,
   IdxNBF,IdxNrange, IdxNNz, Idx2Sz, IdxNCond,
+  IdxLanczosEstimatorMode,
+  IdxLanczosCoeffWarmUp, IdxLanczosCoeffSample, IdxLanczosCoeffInterval,
+  IdxLanczosFinalWarmUp, IdxLanczosFinalSample, IdxLanczosFinalInterval,
+  IdxLanczosGuideMode, IdxLanczosStatMode,
   ParamIdxInt_End
 };
 

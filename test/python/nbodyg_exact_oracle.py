@@ -894,7 +894,7 @@ def invalid_backflow_state(nsite):
     return f_matrix, slater_elm
 
 
-def update_modpara(workdir, keyword, value):
+def update_modpara(workdir, keyword, value, append_if_missing=False):
     path = os.path.join(workdir, "modpara.def")
     lines = []
     found = False
@@ -906,9 +906,29 @@ def update_modpara(workdir, keyword, value):
                 found = True
             else:
                 lines.append(line)
+    if not found and append_if_missing:
+        lines.append("{:<15} {}\n".format(keyword, value))
+        found = True
     if not found:
         raise AssertionError("{} is missing from modpara.def".format(keyword))
     write(path, "".join(lines))
+
+
+def assert_modpara_value(workdir, keyword, expected):
+    path = os.path.join(workdir, "modpara.def")
+    observed = []
+    with open(path) as f:
+        for line in f:
+            cols = line.split()
+            if cols and cols[0] == keyword:
+                observed.append(cols[1:])
+    expected_text = str(expected)
+    if observed != [[expected_text]]:
+        raise AssertionError(
+            "{} must occur exactly once with value {}, got {}".format(
+                keyword, expected_text, observed
+            )
+        )
 
 
 def invalid_backflow_real_case(workdir):
@@ -930,6 +950,10 @@ def invalid_backflow_lanczos_case(workdir):
     slater_values = write_antiparallel_orbital(workdir, f_matrix)
     enable_nonidentity_backflow(workdir, nsite, slater_values)
     update_modpara(workdir, "NLanczosMode", 1)
+    update_modpara(
+        workdir, "NLanczosEstimatorMode", 1, append_if_missing=True
+    )
+    assert_modpara_value(workdir, "NLanczosEstimatorMode", 1)
 
 
 def invalid_backflow_spin_change_nonfsz_case(workdir):

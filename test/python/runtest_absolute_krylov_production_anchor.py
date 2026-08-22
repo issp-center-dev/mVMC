@@ -213,6 +213,7 @@ def prepare_case(rootdir, name):
         workdir,
         {
             "NLanczosMode": "1",
+            "NLanczosEstimatorMode": "1",
             "NLanczosStep": "2",
             "NLanczosSupportMode": "1",
             "NVMCCalMode": "1",

@@ -327,6 +327,7 @@ def run_standard_smoke(rootdir):
         workdir,
         {
             "NLanczosMode": "1",
+            "NLanczosEstimatorMode": "1",
             "NLanczosStep": "2",
             "NVMCCalMode": "1",
             "NVMCSample": "128",
@@ -676,6 +677,7 @@ def prepare_case(rootdir, complex_mode, ising, workdir_stem=None):
         workdir,
         {
             "NLanczosMode": "1",
+            "NLanczosEstimatorMode": "1",
             "NLanczosStep": "2",
             "NVMCCalMode": "1",
             "NVMCSample": "512",
