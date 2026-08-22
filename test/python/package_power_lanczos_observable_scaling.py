@@ -22,6 +22,42 @@ SCHEMA_VERSION = 1
 PACKAGE_PREFIX = "p6c2-observable-scaling"
 SOURCE_DIFF_SHA256 = hashlib.sha256(b"tracked-diff\0").hexdigest()
 EXPECTED_GRID = {"warmup": 16, "measured": 112, "parity": 12}
+PYTHON_MODULE = "python/3.12.11"
+PYTHON_EXECUTABLE = "python3.12"
+PYTHON_VERSION = "3.12.11"
+PYTHON_WHEEL_TARGET = "CPython 3.12 / manylinux2014 x86_64"
+PYTHON_WHEELS = (
+    {
+        "requirement": "attrs==26.1.0",
+        "filename": "attrs-26.1.0-py3-none-any.whl",
+        "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+    },
+    {
+        "requirement": "jsonschema==4.26.0",
+        "filename": "jsonschema-4.26.0-py3-none-any.whl",
+        "sha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce",
+    },
+    {
+        "requirement": "jsonschema-specifications==2025.9.1",
+        "filename": "jsonschema_specifications-2025.9.1-py3-none-any.whl",
+        "sha256": "98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe",
+    },
+    {
+        "requirement": "referencing==0.37.0",
+        "filename": "referencing-0.37.0-py3-none-any.whl",
+        "sha256": "381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231",
+    },
+    {
+        "requirement": "rpds-py==2026.6.3",
+        "filename": "rpds_py-2026.6.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        "sha256": "ecabd69db66de867690f9797f2f8fa27ba501bbc24540cbdbdc649cd15888ba6",
+    },
+    {
+        "requirement": "typing-extensions==4.16.0",
+        "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+        "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+    },
+)
 
 
 class PackageError(RuntimeError):
@@ -43,6 +79,31 @@ def sha_file(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def python_requirements_lock() -> str:
+    return "".join(
+        f"{wheel['requirement']} --hash=sha256:{wheel['sha256']}\n"
+        for wheel in PYTHON_WHEELS
+    )
+
+
+def validate_python_wheelhouse(path: Path) -> list[Path]:
+    require(path.is_dir() and not path.is_symlink(), "Python wheelhouse directory")
+    expected = {wheel["filename"]: wheel for wheel in PYTHON_WHEELS}
+    observed = {item.name: item for item in path.iterdir()}
+    require(set(observed) == set(expected), "Python wheelhouse exact member set")
+    result = []
+    for filename, wheel in sorted(expected.items()):
+        source = observed[filename]
+        require(
+            source.is_file()
+            and not source.is_symlink()
+            and sha_file(source) == wheel["sha256"],
+            f"Python wheel: {filename}",
+        )
+        result.append(source)
+    return result
 
 
 def git(repo: Path, *arguments: str) -> bytes:
@@ -170,11 +231,17 @@ RUN_DIR=$(pwd -P)
 SOURCE_ARCHIVE=$RUN_DIR/{source_name}
 SOURCE_CHECKSUM=$RUN_DIR/source_archive.sha256
 PACKAGE_MANIFEST=$RUN_DIR/package_manifest.json
+PYTHON_REQUIREMENTS=$RUN_DIR/python-requirements.lock
+PYTHON_WHEELHOUSE=$RUN_DIR/python-wheelhouse
+PYTHON_WHEELHOUSE_CHECKSUM=$RUN_DIR/python-wheelhouse.sha256
 SCRATCH=
 EVIDENCE_DIR=
 INPUT_DIR=
 IDENTITY=
 CAMPAIGN=
+BOOTSTRAP_PYTHON=
+PYTHON=
+PYTHON_ENV=
 CURRENT_PHASE=bootstrap
 FINALIZATION_ACTIVE=0
 FINALIZATION_COUNT=0
@@ -333,6 +400,11 @@ run_lifecycle_selftest() {{
       echo injected-configure-failure > "$EVIDENCE_DIR/configure.log"
       exit 23
       ;;
+    dependency)
+      CURRENT_PHASE=selftest_python_dependency
+      echo injected-python-dependency-failure > "$EVIDENCE_DIR/python-dependency.log"
+      exit 24
+      ;;
     signal)
       CURRENT_PHASE=selftest_signal
       echo injected-scheduler-signal > "$EVIDENCE_DIR/configure.log"
@@ -368,21 +440,47 @@ tar -xzf "$SOURCE_ARCHIVE" -C "$SOURCE_DIR"
 SOURCE_ROOT=$SOURCE_DIR/mVMC
 
 CURRENT_PHASE=environment_setup
-module load intel/2023.2 mvapich/3.0-intel2023.2
+module load intel/2023.2 mvapich/3.0-intel2023.2 {PYTHON_MODULE}
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 export BLIS_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 export PYTHONDONTWRITEBYTECODE=1
+export PYTHONNOUSERSITE=1
+export PIP_CONFIG_FILE=/dev/null
 
-PYTHON=$(command -v python3.11 2>/dev/null || command -v python3)
+BOOTSTRAP_PYTHON=$(command -v {PYTHON_EXECUTABLE})
 MPIEXEC=$(command -v mpiexec)
 CAMPAIGN=$SOURCE_ROOT/test/python/power_lanczos_observable_scaling_campaign.py
 PACKAGER=$SOURCE_ROOT/test/python/package_power_lanczos_observable_scaling.py
+CURRENT_PHASE=python_bootstrap_preflight
+{{
+  "$BOOTSTRAP_PYTHON" --version
+  "$BOOTSTRAP_PYTHON" -I -c \
+    'import ensurepip,sys,venv; expected=(3,12,11); assert sys.version_info[:3] == expected, (sys.version_info, expected)'
+}} > "$EVIDENCE_DIR/python-dependency.log" 2>&1
+CURRENT_PHASE=python_wheelhouse_checksum
+(cd "$RUN_DIR" && sha256sum -c python-wheelhouse.sha256) \
+  >> "$EVIDENCE_DIR/python-dependency.log" 2>&1
 CURRENT_PHASE=package_validation
-"$PYTHON" "$PACKAGER" validate --package-dir "$RUN_DIR" \
+"$BOOTSTRAP_PYTHON" "$PACKAGER" validate --package-dir "$RUN_DIR" \
   --skip-package-archive
+CURRENT_PHASE=python_environment_creation
+PYTHON_ENV=$SCRATCH/python-env
+"$BOOTSTRAP_PYTHON" -m venv "$PYTHON_ENV" \
+  >> "$EVIDENCE_DIR/python-dependency.log" 2>&1
+PYTHON=$PYTHON_ENV/bin/python
+CURRENT_PHASE=python_dependency_install
+"$PYTHON" -m pip --isolated install \
+  --disable-pip-version-check --no-cache-dir --no-index --no-deps --no-compile \
+  --only-binary=:all: --require-hashes \
+  --find-links "$PYTHON_WHEELHOUSE" -r "$PYTHON_REQUIREMENTS" \
+  >> "$EVIDENCE_DIR/python-dependency.log" 2>&1
+CURRENT_PHASE=python_dependency_preflight
+"$PYTHON" -I -c \
+  'import importlib.metadata as metadata,sys; from jsonschema import Draft202012Validator; expected=(3,12,11); version=metadata.version("jsonschema"); assert sys.version_info[:3] == expected; assert version == "4.26.0"; Draft202012Validator.check_schema({{"type":"object"}}); print(f"python={{sys.version.split()[0]}} jsonschema={{version}} Draft202012Validator=OK")' \
+  >> "$EVIDENCE_DIR/python-dependency.log" 2>&1
 
 CURRENT_PHASE=configure
 cmake -S "$SOURCE_ROOT" -B "$BUILD_DIR" \
@@ -419,6 +517,8 @@ mkdir "$EVIDENCE_DIR/raw" "$EVIDENCE_DIR/workflow"
 cp "$PACKAGE_MANIFEST" "$EVIDENCE_DIR/workflow/"
 cp "$RUN_DIR/package_manifest.sha256" "$EVIDENCE_DIR/workflow/"
 cp "$SOURCE_CHECKSUM" "$EVIDENCE_DIR/workflow/"
+cp "$PYTHON_REQUIREMENTS" "$PYTHON_WHEELHOUSE_CHECKSUM" \
+  "$EVIDENCE_DIR/workflow/"
 cp "$RUN_DIR/workflow/p6c2_scaling_genkai_job.sh" \
   "$EVIDENCE_DIR/workflow/"
 
@@ -522,8 +622,10 @@ def member(path: Path, root: Path, role: str):
 def create_package(args) -> None:
     repo = args.repo.resolve()
     output = args.output_dir.resolve()
+    python_wheelhouse_source = args.python_wheelhouse.resolve()
     require((repo / ".git").exists(), "repository metadata is required")
     require(not output.exists(), f"package output already exists: {output}")
+    python_wheel_sources = validate_python_wheelhouse(python_wheelhouse_source)
     require(
         git(repo, "status", "--porcelain=v1", "--untracked-files=all") == b"",
         "source worktree must be clean",
@@ -560,13 +662,34 @@ def create_package(args) -> None:
         f"{sha_file(source_path)}  {source_name}\n", encoding="ascii"
     )
 
+    python_wheelhouse = output / "python-wheelhouse"
+    python_wheelhouse.mkdir()
+    python_wheel_paths = []
+    for source in python_wheel_sources:
+        destination = python_wheelhouse / source.name
+        shutil.copyfile(source, destination)
+        os.chmod(destination, 0o644)
+        python_wheel_paths.append(destination)
+    python_requirements = output / "python-requirements.lock"
+    python_requirements.write_text(python_requirements_lock(), encoding="ascii")
+    python_wheelhouse_checksum = output / "python-wheelhouse.sha256"
+    python_wheelhouse_checksum.write_text(
+        "".join(
+            f"{sha_file(path)}  python-wheelhouse/{path.name}\n"
+            for path in python_wheel_paths
+        ),
+        encoding="ascii",
+    )
+
     readme = workflow / "README.md"
     readme.write_text(
         "# P6-C2 observable scaling package\n\n"
         "This package is result-unobserved. Transfer and `pjsub` require "
         "explicit user confirmation. The job uses only `./tmp` below the "
         "submission directory and removes its extracted source/build tree "
-        "after checksummed evidence archival.\n",
+        "and its Python virtual environment after checksummed evidence "
+        "archival. Python dependencies are installed offline from the "
+        "checksummed wheelhouse in this package.\n",
         encoding="utf-8",
     )
     job = workflow / "p6c2_scaling_genkai_job.sh"
@@ -600,6 +723,24 @@ def create_package(args) -> None:
             "omp_num_threads": 1,
             "mpi_process_capacity": 4,
             "exact_grid": EXPECTED_GRID,
+            "python_runtime": {
+                "module": PYTHON_MODULE,
+                "executable": PYTHON_EXECUTABLE,
+                "version": PYTHON_VERSION,
+                "wheel_target": PYTHON_WHEEL_TARGET,
+                "environment": "submission-directory-relative ./tmp virtual environment",
+                "installation": "pip --isolated --no-cache-dir --no-index --no-deps --require-hashes --only-binary",
+                "requirements_lock": "python-requirements.lock",
+                "wheelhouse_checksum": "python-wheelhouse.sha256",
+                "wheels": [
+                    {
+                        "requirement": wheel["requirement"],
+                        "path": f"python-wheelhouse/{wheel['filename']}",
+                        "sha256": wheel["sha256"],
+                    }
+                    for wheel in PYTHON_WHEELS
+                ],
+            },
             "logical_batches": [
                 "SC-ONEBODY",
                 "SC-QUARTIC",
@@ -615,6 +756,7 @@ def create_package(args) -> None:
                 "atomic_archive_publication": True,
                 "standalone_failure_metadata": True,
                 "checksummed_partial_logs": True,
+                "python_dependency_log": True,
             },
             "failure_records": [
                 "timeout",
@@ -628,6 +770,16 @@ def create_package(args) -> None:
             member(source_checksum, output, "source_checksum"),
             member(readme, output, "workflow_readme"),
             member(job, output, "scheduler_script"),
+            member(python_requirements, output, "python_requirements_lock"),
+            member(
+                python_wheelhouse_checksum,
+                output,
+                "python_wheelhouse_checksum",
+            ),
+            *[
+                member(path, output, "python_dependency_wheel")
+                for path in python_wheel_paths
+            ],
         ],
     }
     manifest_path.write_text(
@@ -648,6 +800,12 @@ def create_package(args) -> None:
         ("package_manifest.sha256", 0o644),
         ("workflow/README.md", 0o644),
         ("workflow/p6c2_scaling_genkai_job.sh", 0o755),
+        ("python-requirements.lock", 0o644),
+        ("python-wheelhouse.sha256", 0o644),
+        *[
+            (f"python-wheelhouse/{path.name}", 0o644)
+            for path in python_wheel_paths
+        ],
     ]
     write_tar_gz(package_path, archive_file_entries(output, package_members))
     (output / f"{package_name}.sha256").write_text(
@@ -698,6 +856,28 @@ def validate_package(package_dir: Path, skip_package_archive: bool) -> None:
     )
     require(manifest["execution"]["exact_grid"] == EXPECTED_GRID, "exact grid")
     require(
+        manifest["execution"]["python_runtime"]
+        == {
+            "module": PYTHON_MODULE,
+            "executable": PYTHON_EXECUTABLE,
+            "version": PYTHON_VERSION,
+            "wheel_target": PYTHON_WHEEL_TARGET,
+            "environment": "submission-directory-relative ./tmp virtual environment",
+            "installation": "pip --isolated --no-cache-dir --no-index --no-deps --require-hashes --only-binary",
+            "requirements_lock": "python-requirements.lock",
+            "wheelhouse_checksum": "python-wheelhouse.sha256",
+            "wheels": [
+                {
+                    "requirement": wheel["requirement"],
+                    "path": f"python-wheelhouse/{wheel['filename']}",
+                    "sha256": wheel["sha256"],
+                }
+                for wheel in PYTHON_WHEELS
+            ],
+        },
+        "Python runtime",
+    )
+    require(
         manifest["execution"]["job_failure_artifacts"]
         == {
             "phase_tracking": True,
@@ -706,6 +886,7 @@ def validate_package(package_dir: Path, skip_package_archive: bool) -> None:
             "atomic_archive_publication": True,
             "standalone_failure_metadata": True,
             "checksummed_partial_logs": True,
+            "python_dependency_log": True,
         },
         "job failure artifacts",
     )
@@ -718,6 +899,21 @@ def validate_package(package_dir: Path, skip_package_archive: bool) -> None:
             and sha_file(path) == item["sha256"],
             f"package member: {item['path']}",
         )
+    validate_python_wheelhouse(root / "python-wheelhouse")
+    require(
+        (root / "python-requirements.lock").read_text(encoding="ascii")
+        == python_requirements_lock(),
+        "Python requirements lock",
+    )
+    expected_wheelhouse_checksum = "".join(
+        f"{wheel['sha256']}  python-wheelhouse/{wheel['filename']}\n"
+        for wheel in sorted(PYTHON_WHEELS, key=lambda item: item["filename"])
+    )
+    require(
+        (root / "python-wheelhouse.sha256").read_text(encoding="ascii")
+        == expected_wheelhouse_checksum,
+        "Python wheelhouse checksum",
+    )
     source_names = validate_tar(
         root / manifest["source"]["archive"]["path"], "mVMC/"
     )
@@ -742,6 +938,11 @@ def validate_package(package_dir: Path, skip_package_archive: bool) -> None:
         "write_failure_metadata",
         "FINALIZATION_COUNT",
         "CURRENT_PHASE=configure",
+        "CURRENT_PHASE=python_dependency_install",
+        "python-dependency.log",
+        "module load intel/2023.2 mvapich/3.0-intel2023.2 python/3.12.11",
+        "--no-cache-dir --no-index --no-deps --no-compile",
+        "--only-binary=:all: --require-hashes",
         "MVMC_P6C2_JOB_SELFTEST_MODE",
         'mktemp -d "$RUN_DIR/tmp/',
         "seal-missing",
@@ -757,16 +958,24 @@ def validate_package(package_dir: Path, skip_package_archive: bool) -> None:
         packages = list(root.glob(f"{PACKAGE_PREFIX}-package-*.tar.gz"))
         require(len(packages) == 1, "single transfer package")
         names = validate_tar(packages[0])
-        require(
-            names
-            == [
+        expected_names = sorted(
+            [
                 manifest["source"]["archive"]["path"],
                 "package_manifest.json",
                 "package_manifest.sha256",
                 "source_archive.sha256",
                 "workflow/README.md",
                 "workflow/p6c2_scaling_genkai_job.sh",
-            ],
+                "python-requirements.lock",
+                "python-wheelhouse.sha256",
+                *[
+                    f"python-wheelhouse/{wheel['filename']}"
+                    for wheel in PYTHON_WHEELS
+                ],
+            ]
+        )
+        require(
+            names == expected_names,
             "transfer package members",
         )
         sidecar = root / f"{packages[0].name}.sha256"
@@ -836,6 +1045,7 @@ def self_test_lifecycle() -> None:
         cases = {
             "success": 0,
             "nonzero": 23,
+            "dependency": 24,
             "signal": 130,
         }
         for mode, expected_exit in cases.items():
@@ -892,9 +1102,13 @@ def self_test_lifecycle() -> None:
             )
             validate_checksum_sidecar(metadata, metadata_checksum)
             record = json.loads(metadata.read_text(encoding="utf-8"))
-            expected_phase = f"selftest_{mode}"
+            expected_phase = (
+                "selftest_python_dependency"
+                if mode == "dependency"
+                else f"selftest_{mode}"
+            )
             expected_reason = (
-                "nonzero_exit" if mode == "nonzero" else "scheduler_signal_TERM"
+                "scheduler_signal_TERM" if mode == "signal" else "nonzero_exit"
             )
             require(
                 record["status"] == "failed"
@@ -920,15 +1134,19 @@ def self_test_lifecycle() -> None:
             validate_evidence_archive(
                 archive,
                 {
-                    "configure.log",
+                    (
+                        "python-dependency.log"
+                        if mode == "dependency"
+                        else "configure.log"
+                    ),
                     f"workflow/{metadata.name}",
                     f"workflow/{metadata_checksum.name}",
                     "artifact-ledger.sha256",
                 },
             )
         print(
-            "PASS P6-C2 package lifecycle normal=1 nonzero=1 signal=1 "
-            "finalize_once=2 cleanup=3 archives=3"
+            "PASS P6-C2 package lifecycle normal=1 nonzero=1 dependency=1 "
+            "signal=1 finalize_once=3 cleanup=4 archives=4"
         )
     finally:
         resolved = work.resolve()
@@ -944,6 +1162,7 @@ def build_parser() -> argparse.ArgumentParser:
     create = subparsers.add_parser("create")
     create.add_argument("--repo", type=Path, required=True)
     create.add_argument("--output-dir", type=Path, required=True)
+    create.add_argument("--python-wheelhouse", type=Path, required=True)
     create.add_argument("--package-id", required=True)
     create.add_argument("--project-code", default="pj25000164")
     create.add_argument("--resource-group", default="a-pj25000164")
