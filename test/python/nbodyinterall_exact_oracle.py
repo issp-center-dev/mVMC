@@ -452,6 +452,56 @@ EXACT_CASES = {
     "NBodyInterAll_ZeroTerms": zero_terms_case,
 }
 
+def write_interall_def(workdir, terms):
+    """Write the same two-body terms as an InterAll file (spin-conserving pairs only)."""
+    body = []
+    for nbody, factors, coef in terms:
+        if nbody != 2:
+            raise AssertionError("InterAll cross-check terms must be two-body")
+        if factors[1] != factors[3] or factors[5] != factors[7]:
+            raise AssertionError("InterAll requires spin-conserving factor pairs")
+        cols = [str(x) for x in factors] + [fmt(coef.real), fmt(coef.imag)]
+        body.append("{}\n".format(" ".join(cols)))
+    write(
+        os.path.join(workdir, "interall.def"),
+        (
+            "=============================================\n"
+            "NInterAll   {0}\n"
+            "=============================================\n"
+            "======== InterAll interactions ==============\n"
+            "=============================================\n"
+            "{1}"
+        ).format(len(terms), "".join(body)),
+    )
+
+
+def backflow_interall_cross_case(workdir):
+    """Non-identity BackFlow: the same two-body Hamiltonian written as NBodyInterAll
+    (full candidate rebuild path) and as InterAll (GreenFunc2BF path) must give the
+    same energy on the identical sampling chain."""
+    nsite = 6
+    terms = [
+        (2, (0, 0, 2, 0, 5, 1, 1, 1), -0.28 + 0.16j),
+        (2, (3, 0, 1, 0, 4, 1, 0, 1), 0.41 - 0.09j),
+        (2, (1, 1, 4, 1, 2, 0, 5, 0), 0.23 + 0.05j),
+        (2, (0, 0, 2, 0, 3, 0, 1, 0), 0.17 - 0.12j),
+        (2, (5, 1, 2, 1, 4, 1, 0, 1), -0.14 + 0.08j),
+        (2, (2, 0, 2, 0, 3, 1, 3, 1), 0.70 + 0.00j),
+        (2, (0, 0, 1, 0, 1, 1, 0, 1), -0.35 + 0.00j),
+        (2, (4, 0, 5, 0, 4, 1, 5, 1), 0.20 - 0.10j),
+        (2, (1, 0, 3, 0, 3, 0, 1, 0), 0.11 + 0.00j),
+    ]
+    f_matrix, unused_slater = complex_antiparallel_state(nsite)
+    write_common_nbodyinterall_defs(
+        workdir, nsite, 400, 71504, "Orbital", "orbitalidx.def"
+    )
+    write_nbodyinterall_def(workdir, terms)
+    write_interall_def(workdir, terms)
+    slater_values = write_antiparallel_orbital(workdir, f_matrix)
+    enable_nonidentity_backflow(workdir, nsite, slater_values)
+    return None
+
+
 SMOKE_CASES = {
     "NBodyInterAll_Projector_N3_MultiTerm": projector_multiterm_smoke_case,
     "BackFlow_NBodyInterAll_NonIdentity_N1_Energy": backflow_n1_energy_case,
@@ -468,6 +518,11 @@ CONFIG_ORACLE_CASES = {
         backflow_mixed_config_oracle_case,
     "BackFlow_FSZ_NBodyInterAll_Mixed_ConfigOracle":
         backflow_fsz_mixed_config_oracle_case,
+}
+
+CROSS_CASES = {
+    "BackFlow_InterAll_vs_NBodyInterAll_NonIdentity_Energy":
+        backflow_interall_cross_case,
 }
 
 NONVACUOUS_ENERGY_CASES = {
@@ -505,6 +560,7 @@ def assert_close(
 def main():
     all_cases = sorted(
         list(EXACT_CASES) + list(SMOKE_CASES) + list(CONFIG_ORACLE_CASES)
+        + list(CROSS_CASES)
     )
     if len(sys.argv) != 2 or sys.argv[1] not in all_cases:
         print("usage: {} {}".format(sys.argv[0], "|".join(all_cases)))
@@ -523,6 +579,9 @@ def main():
         expected = exact_nbodyinterall_energy(nsite, nup, ndown, slater_elm, terms)
     elif model in SMOKE_CASES:
         SMOKE_CASES[model](workdir)
+        expected = None
+    elif model in CROSS_CASES:
+        CROSS_CASES[model](workdir)
         expected = None
     else:
         nsite, terms, categories, required_categories = (
@@ -543,6 +602,41 @@ def main():
         return result
 
     actual = parse_energy(workdir)
+    if model in CROSS_CASES:
+        cross_workdir = workdir + "_interall"
+        if os.path.exists(cross_workdir):
+            shutil.rmtree(cross_workdir)
+        shutil.copytree(workdir, cross_workdir,
+                        ignore=shutil.ignore_patterns("output"))
+        namelist_path = os.path.join(cross_workdir, "namelist.def")
+        with open(namelist_path) as f:
+            lines = f.readlines()
+        replaced = 0
+        rewritten = []
+        for line in lines:
+            cols = line.split()
+            if cols and cols[0] == "NBodyInterAll":
+                rewritten.append("        InterAll  interall.def\n")
+                replaced += 1
+            else:
+                rewritten.append(line)
+        if replaced != 1:
+            raise AssertionError("cross-check namelist rewrite failed")
+        with open(namelist_path, "w") as f:
+            f.writelines(rewritten)
+        result = subprocess.call(cmd, cwd=cross_workdir)
+        if result != 0:
+            return result
+        cross_actual = parse_energy(cross_workdir)
+        if abs(actual) < 1.0e-6:
+            raise AssertionError("cross-check energy is vacuous: {}".format(actual))
+        assert_close(
+            "BackFlow InterAll vs NBodyInterAll energy",
+            cross_actual, actual, tol=1.0e-8,
+        )
+        print("BackFlow InterAll {} vs NBodyInterAll {} agree".format(
+            cross_actual, actual))
+        return 0
     if model in CONFIG_ORACLE_CASES:
         rows = []
         for rank, dump_path in enumerate(config_oracle_dump_paths(workdir)):

@@ -31,6 +31,15 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #include "./include/projection.h"
 
+/* Diagnostics for the Pfaffian row-update selection in the sampler
+ * (UpdateSlaterElmBF_{fcmp,real}): total electrons appended to msa, and
+ * how many of them had fewer than Ne changed row entries.  A former
+ * heuristic (jcount >= Ne) dropped the latter; they are now always included
+ * because the rank update is only exact for a superset of the changed rows. */
+long long BFRowSelectAdds = 0;
+long long BFRowSelectLowCountAdds = 0;
+int BFRowSelectCountersEnabled = 0;
+
 void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex*slt_ij, int *ijcount, double complex*slt_ji, int *jicount, const int *eleProjBFCnt);
 
 void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijcount, double *slt_ji, int *jicount, const int *eleProjBFCnt);
@@ -1318,7 +1327,11 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
         itmp0++;
       }
       //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
-      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+      if((jcount[zidx] >= 1) && (mi0 != -1) && (mua != mi0)){
+        if(BFRowSelectCountersEnabled) {
+          BFRowSelectAdds++;
+          if(jcount[zidx] < Ne) BFRowSelectLowCountAdds++;
+        }
         msa[qpidx*Nsize+hop]=mi0;
         hop++;
       }
@@ -1328,7 +1341,11 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
         itmp1++;
       }
       //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
-      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+      if((jcount1[zidx] >= 1) && (mi1 != -1) && (mua != mi1+Ne)){
+        if(BFRowSelectCountersEnabled) {
+          BFRowSelectAdds++;
+          if(jcount1[zidx] < Ne) BFRowSelectLowCountAdds++;
+        }
         msa[qpidx*Nsize+hop]=mi1+Ne;
         hop++;
       }
@@ -1586,7 +1603,11 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
         itmp0++;
       }
       //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
-      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+      if((jcount[zidx] >= 1) && (mi0 != -1) && (mua != mi0)){
+        if(BFRowSelectCountersEnabled) {
+          BFRowSelectAdds++;
+          if(jcount[zidx] < Ne) BFRowSelectLowCountAdds++;
+        }
         msa[qpidx*Nsize+hop]=mi0;
         hop++;
       }
@@ -1596,7 +1617,11 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
         itmp1++;
       }
       //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
-      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+      if((jcount1[zidx] >= 1) && (mi1 != -1) && (mua != mi1+Ne)){
+        if(BFRowSelectCountersEnabled) {
+          BFRowSelectAdds++;
+          if(jcount1[zidx] < Ne) BFRowSelectLowCountAdds++;
+        }
         msa[qpidx*Nsize+hop]=mi1+Ne;
         hop++;
       }
@@ -1643,6 +1668,12 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
   return ;
 }
 
+/* NOTE (two-body Green functions): an electron must be included in the Pfaffian
+ * row-update list as soon as ANY entry of its Slater row changed.  The former
+ * "jcount >= Ne" heuristic assumed that a changed row is changed in (almost) all
+ * columns, which fails when a preceding hop of the same Green function already
+ * updated part of the row (GreenFunc2BF) or when f_ij is sparse.  The rank
+ * update in CalculateNewPfMBF is exact for any superset of the changed rows. */
 void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
                           const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex* sltElmTmp){
   int **posBF = PosBF;
@@ -1772,7 +1803,7 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
         itmp0++;
       }
       //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
-      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+      if((jcount[zidx] >= 1) && (mi0 != -1) && (mua != mi0)){
         msa[qpidx*Nsize+hop]=mi0;
         hop++;
       }
@@ -1782,7 +1813,7 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
         itmp1++;
       }
       //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
-      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+      if((jcount1[zidx] >= 1) && (mi1 != -1) && (mua != mi1+Ne)){
         msa[qpidx*Nsize+hop]=mi1+Ne;
         hop++;
       }
@@ -2045,11 +2076,11 @@ void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, cons
       mi0 = eleCfg[rsi0];
       mi1 = eleCfg[rsi1];
 
-      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+      if((jcount[zidx] >= 1) && (mi0 != -1) && (mua != mi0)){
         msa[qpidx*Nsize+hop]=mi0;
         hop++;
       }
-      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+      if((jcount1[zidx] >= 1) && (mi1 != -1) && (mua != mi1+Ne)){
         msa[qpidx*Nsize+hop]=mi1+Ne;
         hop++;
       }
@@ -2271,7 +2302,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
         itmp0++;
       }
       //if((jcount == Nsite) && (mi0 != -1) && (mua != mi0)){
-      if((jcount[zidx] >= Ne) && (mi0 != -1) && (mua != mi0)){
+      if((jcount[zidx] >= 1) && (mi0 != -1) && (mua != mi0)){
         msa[qpidx*Nsize+hop]=mi0;
         hop++;
       }
@@ -2281,7 +2312,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
         itmp1++;
       }
       //if((jcount1 == Nsite) && (mi1 != -1) && (mua != mi1+Ne)){
-      if((jcount1[zidx] >= Ne) && (mi1 != -1) && (mua != mi1+Ne)){
+      if((jcount1[zidx] >= 1) && (mi1 != -1) && (mua != mi1+Ne)){
         msa[qpidx*Nsize+hop]=mi1+Ne;
         hop++;
       }

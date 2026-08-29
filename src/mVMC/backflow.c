@@ -250,11 +250,9 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
             "Error: BackFlow NLanczosMode==1 currently supports only diagonal and Transfer Hamiltonian terms.\n");
     return 1;
   }
-  if (iFlgOrbitalGeneral == 0 &&
-      (NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0)) {
-    fprintf(stderr, "Error: BackFlow MVP does not support two-body Hamiltonian terms.\n");
-    return 1;
-  }
+  /* Two-body Hamiltonian terms (PairHop / Exchange / InterAll) are evaluated with
+   * GreenFunc2BF(_real) in CalculateHamiltonianBF_{fcmp,real} for the normal
+   * Orbital / OrbitalAntiParallel format as well as in BF-FSZ mode. */
   return 0;
 }
 
@@ -398,6 +396,23 @@ int BFReadRange(FILE *fp, const char *defname) {
       fprintf(stderr, "Error in %s: BFRange site %d is missing the self row.\n", defname, i);
       info = 1;
       goto cleanup;
+    }
+  }
+  /* The incremental BackFlow updates (UpdateSlaterElmBF*, GreenFunc*BF) rebuild the
+   * Slater rows of {a} + range(a) after a hop at site a.  This is only the complete
+   * set of sites whose Theta counts can change when the range relation is mutual
+   * (j in range(i) <=> i in range(j)), so non-mutual ranges are rejected here. */
+  for (i = 0; i < Nsite; i++) {
+    for (j = 0; j < Nrange; j++) {
+      const int site = PosBF[i][j];
+      if (site == i) continue;
+      if (seenPair[site * Nsite + i] == 0) {
+        fprintf(stderr,
+                "Error in %s: BFRange must be mutual: site %d lists site %d, but site %d does not list site %d.\n",
+                defname, i, site, site, i);
+        info = 1;
+        goto cleanup;
+      }
     }
   }
 

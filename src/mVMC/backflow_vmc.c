@@ -26,6 +26,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #pragma once
 
 #include <errno.h>
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -109,6 +110,246 @@ static void lsbfFinalizeAccounting(MPI_Comm comm, int rank,
   }
 }
 
+
+/* ------------------------------------------------------------------------
+ * Opt-in sampler oracle: MVMC_BF_SAMPLER_REBUILD_CHECK=<dump path>
+ * After every hopping proposal the incremental BackFlow state (SlaterElmBF,
+ * candidate Pfaffian, and after acceptance InvM / PfM) is compared with a
+ * full rebuild (MakeSlaterElmBF + CalculateMAll_BF) of the same
+ * configuration.  The Markov chain itself keeps using the incremental values,
+ * so the check does not alter sampling; it only records maximum deviations
+ * and appends one summary line per call to a per-rank dump file
+ * "<path>.rank<world rank>" (separate files avoid concurrent appends).
+ *
+ * Layout note: SlaterElmBF(_real) is built for all NQPFull projections, but
+ * PfM(_real), InvM(_real) and pfMNew use the dense rank-local layout
+ * qpidx = 0..qpEnd-qpStart-1 of CalculateMAll_BF_* / CalculateNewPfMBF*, so
+ * the Pfaffian / inverse comparisons cover only the qpEnd-qpStart local
+ * projections (possibly zero on some ranks when NQPFull < communicator size).
+ * ---------------------------------------------------------------------- */
+typedef struct {
+  int enabled;
+  const char *path;
+  int worldRank, commRank, commSize, qpStart, qpEnd, qpCount;
+  size_t slaterCount, invCount, pfCount;
+  double complex *slaterSave, *invSave, *pfSave, *slaterInc, *invFull, *pfFull;
+  double *slaterSaveR, *invSaveR, *pfSaveR, *slaterIncR, *invFullR, *pfFullR;
+  long long proposals, accepts, rejects;
+  double maxCandidateSlaterDiff, maxCandidatePfDiff;
+  double maxAcceptInvDiff, maxAcceptPfDiff, maxRejectSlaterDiff, maxRejectInvDiff;
+  long long rowSelectAddsBefore, rowSelectLowBefore;
+} BFSamplerRebuildCheck;
+
+/* malloc that stays non-NULL for zero-length buffers (qpCount may be 0). */
+static void *BFSamplerCheckAlloc(size_t bytes) {
+  return malloc(bytes > 0 ? bytes : 1);
+}
+
+static void BFSamplerRebuildCheckInit(BFSamplerRebuildCheck *chk, int useReal,
+                                      int qpStart, int qpEnd, int commRank, int commSize) {
+  const char *path = getenv("MVMC_BF_SAMPLER_REBUILD_CHECK");
+  memset(chk, 0, sizeof(*chk));
+  if (path == NULL || path[0] == '\0') return;
+  if (qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull) {
+    fprintf(stderr, "error: BackFlow sampler rebuild check: invalid QP range [%d,%d) for NQPFull=%d.\n",
+            qpStart, qpEnd, NQPFull);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  chk->enabled = 1;
+  chk->path = path;
+  MPI_Comm_rank(MPI_COMM_WORLD, &chk->worldRank);
+  chk->commRank = commRank;
+  chk->commSize = commSize;
+  chk->qpStart = qpStart;
+  chk->qpEnd = qpEnd;
+  chk->qpCount = qpEnd - qpStart;
+  /* SlaterElmBF is global over NQPFull; PfM / InvM / pfMNew are rank-local. */
+  chk->slaterCount = (size_t)NQPFull * (size_t)Nsite2 * (size_t)Nsite2;
+  chk->invCount = (size_t)chk->qpCount * (size_t)Nsize * (size_t)Nsize;
+  chk->pfCount = (size_t)chk->qpCount;
+  if (useReal) {
+    chk->slaterSaveR = (double *)BFSamplerCheckAlloc(sizeof(double) * chk->slaterCount);
+    chk->slaterIncR = (double *)BFSamplerCheckAlloc(sizeof(double) * chk->slaterCount);
+    chk->invSaveR = (double *)BFSamplerCheckAlloc(sizeof(double) * chk->invCount);
+    chk->invFullR = (double *)BFSamplerCheckAlloc(sizeof(double) * chk->invCount);
+    chk->pfSaveR = (double *)BFSamplerCheckAlloc(sizeof(double) * chk->pfCount);
+    chk->pfFullR = (double *)BFSamplerCheckAlloc(sizeof(double) * chk->pfCount);
+    if (!chk->slaterSaveR || !chk->slaterIncR || !chk->invSaveR || !chk->invFullR || !chk->pfSaveR || !chk->pfFullR) {
+      fprintf(stderr, "error: BackFlow sampler rebuild check allocation failed.\n");
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+  } else {
+    chk->slaterSave = (double complex *)BFSamplerCheckAlloc(sizeof(double complex) * chk->slaterCount);
+    chk->slaterInc = (double complex *)BFSamplerCheckAlloc(sizeof(double complex) * chk->slaterCount);
+    chk->invSave = (double complex *)BFSamplerCheckAlloc(sizeof(double complex) * chk->invCount);
+    chk->invFull = (double complex *)BFSamplerCheckAlloc(sizeof(double complex) * chk->invCount);
+    chk->pfSave = (double complex *)BFSamplerCheckAlloc(sizeof(double complex) * chk->pfCount);
+    chk->pfFull = (double complex *)BFSamplerCheckAlloc(sizeof(double complex) * chk->pfCount);
+    if (!chk->slaterSave || !chk->slaterInc || !chk->invSave || !chk->invFull || !chk->pfSave || !chk->pfFull) {
+      fprintf(stderr, "error: BackFlow sampler rebuild check allocation failed.\n");
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+  }
+  chk->rowSelectAddsBefore = BFRowSelectAdds;
+  chk->rowSelectLowBefore = BFRowSelectLowCountAdds;
+  BFRowSelectCountersEnabled = 1;
+}
+
+static double BFMaxAbsDiff_fcmp(const double complex *a, const double complex *b, size_t n) {
+  size_t i; double d, m = 0.0;
+  for (i = 0; i < n; i++) { d = cabs(a[i] - b[i]); if (!(d <= m)) m = d; }
+  return m;
+}
+static double BFMaxAbsDiff_real(const double *a, const double *b, size_t n) {
+  size_t i; double d, m = 0.0;
+  for (i = 0; i < n; i++) { d = fabs(a[i] - b[i]); if (!(d <= m)) m = d; }
+  return m;
+}
+static double BFMaxRelDiff_fcmp(const double complex *a, const double complex *b, size_t n) {
+  size_t i; double d, m = 0.0, scale;
+  for (i = 0; i < n; i++) { scale = cabs(b[i]) > 1.0 ? cabs(b[i]) : 1.0; d = cabs(a[i] - b[i]) / scale; if (!(d <= m)) m = d; }
+  return m;
+}
+static double BFMaxRelDiff_real(const double *a, const double *b, size_t n) {
+  size_t i; double d, m = 0.0, scale;
+  for (i = 0; i < n; i++) { scale = fabs(b[i]) > 1.0 ? fabs(b[i]) : 1.0; d = fabs(a[i] - b[i]) / scale; if (!(d <= m)) m = d; }
+  return m;
+}
+
+/* complex path */
+static void BFSamplerCheckSave_fcmp(BFSamplerRebuildCheck *chk) {
+  memcpy(chk->slaterSave, SlaterElmBF, sizeof(double complex) * chk->slaterCount);
+  memcpy(chk->invSave, InvM, sizeof(double complex) * chk->invCount);
+  memcpy(chk->pfSave, PfM, sizeof(double complex) * chk->pfCount);
+}
+static void BFSamplerCheckCandidate_fcmp(BFSamplerRebuildCheck *chk, const int *eleIdx, const int *eleNum,
+                                         const int *projBFCntNew, const double complex *pfMNew,
+                                         int qpStart, int qpEnd) {
+  double d;
+  chk->proposals++;
+  memcpy(chk->slaterInc, SlaterElmBF, sizeof(double complex) * chk->slaterCount);
+  MakeSlaterElmBF_fcmp(eleNum, projBFCntNew);
+  if (CalculateMAll_BF_fcmp(eleIdx, qpStart, qpEnd) != 0) {
+    fprintf(stderr, "error: BackFlow sampler rebuild check: full rebuild failed.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  d = BFMaxAbsDiff_fcmp(chk->slaterInc, SlaterElmBF, chk->slaterCount);
+  if (d > chk->maxCandidateSlaterDiff) chk->maxCandidateSlaterDiff = d;
+  d = BFMaxRelDiff_fcmp(pfMNew, PfM, chk->pfCount);
+  if (d > chk->maxCandidatePfDiff) chk->maxCandidatePfDiff = d;
+  memcpy(chk->invFull, InvM, sizeof(double complex) * chk->invCount);
+  memcpy(chk->pfFull, PfM, sizeof(double complex) * chk->pfCount);
+  /* keep sampling on the incremental state */
+  memcpy(SlaterElmBF, chk->slaterInc, sizeof(double complex) * chk->slaterCount);
+  memcpy(InvM, chk->invSave, sizeof(double complex) * chk->invCount);
+  memcpy(PfM, chk->pfSave, sizeof(double complex) * chk->pfCount);
+}
+static void BFSamplerCheckAccept_fcmp(BFSamplerRebuildCheck *chk) {
+  double d;
+  chk->accepts++;
+  d = BFMaxRelDiff_fcmp(InvM, chk->invFull, chk->invCount);
+  if (d > chk->maxAcceptInvDiff) chk->maxAcceptInvDiff = d;
+  d = BFMaxRelDiff_fcmp(PfM, chk->pfFull, chk->pfCount);
+  if (d > chk->maxAcceptPfDiff) chk->maxAcceptPfDiff = d;
+}
+static void BFSamplerCheckReject_fcmp(BFSamplerRebuildCheck *chk) {
+  double d;
+  chk->rejects++;
+  d = BFMaxAbsDiff_fcmp(SlaterElmBF, chk->slaterSave, chk->slaterCount);
+  if (d > chk->maxRejectSlaterDiff) chk->maxRejectSlaterDiff = d;
+  d = BFMaxRelDiff_fcmp(InvM, chk->invSave, chk->invCount);
+  if (d > chk->maxRejectInvDiff) chk->maxRejectInvDiff = d;
+}
+
+/* real path */
+static void BFSamplerCheckSave_real(BFSamplerRebuildCheck *chk) {
+  memcpy(chk->slaterSaveR, SlaterElmBF_real, sizeof(double) * chk->slaterCount);
+  memcpy(chk->invSaveR, InvM_real, sizeof(double) * chk->invCount);
+  memcpy(chk->pfSaveR, PfM_real, sizeof(double) * chk->pfCount);
+}
+static void BFSamplerCheckCandidate_real(BFSamplerRebuildCheck *chk, const int *eleIdx, const int *eleNum,
+                                         const int *projBFCntNew, const double *pfMNew,
+                                         int qpStart, int qpEnd) {
+  double d;
+  size_t i;
+  chk->proposals++;
+  memcpy(chk->slaterIncR, SlaterElmBF_real, sizeof(double) * chk->slaterCount);
+  MakeSlaterElmBF_fcmp(eleNum, projBFCntNew);
+  for (i = 0; i < chk->slaterCount; i++) SlaterElmBF_real[i] = creal(SlaterElmBF[i]);
+  if (CalculateMAll_BF_real(eleIdx, qpStart, qpEnd) != 0) {
+    fprintf(stderr, "error: BackFlow sampler rebuild check: full rebuild failed.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  d = BFMaxAbsDiff_real(chk->slaterIncR, SlaterElmBF_real, chk->slaterCount);
+  if (d > chk->maxCandidateSlaterDiff) chk->maxCandidateSlaterDiff = d;
+  d = BFMaxRelDiff_real(pfMNew, PfM_real, chk->pfCount);
+  if (d > chk->maxCandidatePfDiff) chk->maxCandidatePfDiff = d;
+  memcpy(chk->invFullR, InvM_real, sizeof(double) * chk->invCount);
+  memcpy(chk->pfFullR, PfM_real, sizeof(double) * chk->pfCount);
+  memcpy(SlaterElmBF_real, chk->slaterIncR, sizeof(double) * chk->slaterCount);
+  memcpy(InvM_real, chk->invSaveR, sizeof(double) * chk->invCount);
+  memcpy(PfM_real, chk->pfSaveR, sizeof(double) * chk->pfCount);
+}
+static void BFSamplerCheckAccept_real(BFSamplerRebuildCheck *chk) {
+  double d;
+  chk->accepts++;
+  d = BFMaxRelDiff_real(InvM_real, chk->invFullR, chk->invCount);
+  if (d > chk->maxAcceptInvDiff) chk->maxAcceptInvDiff = d;
+  d = BFMaxRelDiff_real(PfM_real, chk->pfFullR, chk->pfCount);
+  if (d > chk->maxAcceptPfDiff) chk->maxAcceptPfDiff = d;
+}
+static void BFSamplerCheckReject_real(BFSamplerRebuildCheck *chk) {
+  double d;
+  chk->rejects++;
+  d = BFMaxAbsDiff_real(SlaterElmBF_real, chk->slaterSaveR, chk->slaterCount);
+  if (d > chk->maxRejectSlaterDiff) chk->maxRejectSlaterDiff = d;
+  d = BFMaxRelDiff_real(InvM_real, chk->invSaveR, chk->invCount);
+  if (d > chk->maxRejectInvDiff) chk->maxRejectInvDiff = d;
+}
+
+static void BFSamplerRebuildCheckFinish(BFSamplerRebuildCheck *chk, const char *label) {
+  FILE *fp;
+  char *rankPath;
+  size_t rankPathLen;
+  if (!chk->enabled) return;
+  /* one file per world rank: no concurrent appends, world rank is traceable */
+  rankPathLen = strlen(chk->path) + 32;
+  rankPath = (char *)malloc(rankPathLen);
+  if (rankPath == NULL) {
+    fprintf(stderr, "error: BackFlow sampler rebuild check allocation failed.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  snprintf(rankPath, rankPathLen, "%s.rank%d", chk->path, chk->worldRank);
+  fp = fopen(rankPath, "a");
+  if (fp == NULL) {
+    fprintf(stderr, "error: failed to open BackFlow sampler rebuild dump file: %s\n", rankPath);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  fprintf(fp, "path %s world_rank %d comm_rank %d comm_size %d "
+              "qp_start %d qp_end %d qp_count %d nqp_full %d "
+              "proposals %lld accepts %lld rejects %lld "
+              "max_candidate_slater_diff %.17e max_candidate_pf_reldiff %.17e "
+              "max_accept_inv_reldiff %.17e max_accept_pf_reldiff %.17e "
+              "max_reject_slater_diff %.17e max_reject_inv_reldiff %.17e "
+              "row_select_adds %lld row_select_low_count_adds %lld\n",
+          label, chk->worldRank, chk->commRank, chk->commSize,
+          chk->qpStart, chk->qpEnd, chk->qpCount, NQPFull,
+          chk->proposals, chk->accepts, chk->rejects,
+          chk->maxCandidateSlaterDiff, chk->maxCandidatePfDiff,
+          chk->maxAcceptInvDiff, chk->maxAcceptPfDiff,
+          chk->maxRejectSlaterDiff, chk->maxRejectInvDiff,
+          BFRowSelectAdds - chk->rowSelectAddsBefore,
+          BFRowSelectLowCountAdds - chk->rowSelectLowBefore);
+  BFRowSelectCountersEnabled = 0;
+  fclose(fp);
+  free(rankPath);
+  free(chk->slaterSave); free(chk->invSave); free(chk->pfSave);
+  free(chk->slaterInc); free(chk->invFull); free(chk->pfFull);
+  free(chk->slaterSaveR); free(chk->invSaveR); free(chk->pfSaveR);
+  free(chk->slaterIncR); free(chk->invFullR); free(chk->pfFullR);
+  memset(chk, 0, sizeof(*chk));
+}
+
 void VMC_BF_MakeSample(MPI_Comm comm)
 {
   int outStep, nOutStep;
@@ -131,7 +372,9 @@ void VMC_BF_MakeSample(MPI_Comm comm)
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
 
+  BFSamplerRebuildCheck rebuildChk;
   SplitLoop(&qpStart, &qpEnd, NQPFull, rank, size);
+  BFSamplerRebuildCheckInit(&rebuildChk, 0, qpStart, qpEnd, rank, size);
 
   StartTimer(30);
   if (BurnFlag == 0) {
@@ -175,6 +418,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         if (rejectFlag) continue;
 
         StartTimer(32);
+        if (rebuildChk.enabled) BFSamplerCheckSave_fcmp(&rebuildChk);
         StartTimer(60);
         /* The mi-th electron with spin s hops to site rj */
         updateEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
@@ -189,6 +433,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         //CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
         CalculateNewPfMBF(icount, msaTmp, pfMNew, TmpEleIdx, qpStart, qpEnd, SlaterElmBF);
+        if (rebuildChk.enabled) BFSamplerCheckCandidate_fcmp(&rebuildChk, TmpEleIdx, TmpEleNum, projBFCntNew, pfMNew, qpStart, qpEnd);
 
         //printf("DEBUG: out %d in %d pfMNew=%lf \n",outStep,inStep,creal(pfMNew[0]));
         StopTimer(61);
@@ -211,6 +456,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
           //          UpdateMAll_real(mi,s,TmpEleIdx,qpStart,qpEnd);
           //            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
           StopTimer(63);
+          if (rebuildChk.enabled) BFSamplerCheckAccept_fcmp(&rebuildChk);
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
           for (i = 0; i < 16 * Nsite * Nrange; i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
@@ -223,6 +469,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
           UpdateSlaterElmBF_fcmp(mi, rj, ri, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, msaTmp, icount,
                                  SlaterElmBF);
           StopTimer(64);
+          if (rebuildChk.enabled) BFSamplerCheckReject_fcmp(&rebuildChk);
         }
         StopTimer(32);
 
@@ -304,6 +551,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
     StopTimer(35);
   } /* end of outstep */
 
+  BFSamplerRebuildCheckFinish(&rebuildChk, "complex");
   copyToBurnSampleBF(TmpEleIdx);
   BurnFlag = 1;
   return;
@@ -524,7 +772,9 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
 
+  BFSamplerRebuildCheck rebuildChk;
   SplitLoop(&qpStart, &qpEnd, NQPFull, rank, size);
+  BFSamplerRebuildCheckInit(&rebuildChk, 1, qpStart, qpEnd, rank, size);
 
   StartTimer(30);
   if (BurnFlag == 0) {
@@ -583,6 +833,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         AddBFProfileCounter(BFPROF_HOP_VALID, 1);
 
         StartTimer(32);
+        if (rebuildChk.enabled) BFSamplerCheckSave_real(&rebuildChk);
         StartTimer(60);
         /* The mi-th electron with spin s hops to site rj */
         updateEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
@@ -604,6 +855,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         //CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
         CalculateNewPfMBF_real(icount, msaTmp, pfMNew_real, TmpEleIdx, qpStart, qpEnd, SlaterElmBF_real);
+        if (rebuildChk.enabled) BFSamplerCheckCandidate_real(&rebuildChk, TmpEleIdx, TmpEleNum, projBFCntNew, pfMNew_real, qpStart, qpEnd);
 
         //printf("DEBUG: out %d in %d pfMNew=%lf \n",outStep,inStep,creal(pfMNew[0]));
         StopTimer(61);
@@ -626,6 +878,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
           //          UpdateMAll_real(mi,s,TmpEleIdx,qpStart,qpEnd);
           //            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
           StopTimer(63);
+          if (rebuildChk.enabled) BFSamplerCheckAccept_real(&rebuildChk);
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
           for (i = 0; i < 16 * Nsite * Nrange; i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
@@ -645,6 +898,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
                                  SlaterElmBF_real);
 #endif
           StopTimer(64);
+          if (rebuildChk.enabled) BFSamplerCheckReject_real(&rebuildChk);
         }
         StopTimer(32);
 
@@ -736,6 +990,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   } /* end of outstep */
 
   //copyToBurnSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt);
+  BFSamplerRebuildCheckFinish(&rebuildChk, "real");
   copyToBurnSampleBF(TmpEleIdx);
   BurnFlag = 1;
   return;

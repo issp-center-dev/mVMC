@@ -1,0 +1,10 @@
+         ModPara  modpara.def
+         LocSpin  locspn.def
+           Trans  trans.def
+        InterAll  interall.def
+        Exchange  exchange.def
+         PairHop  pairhopp.def
+         Orbital  orbitalidx.def
+        TransSym  qptransidx.def
+              BF  bf.def
+         BFRange  rangebf.def

@@ -40,6 +40,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "calham_real.h"
 #include "calgrn.h"
 #include "workspace.h"
+#include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 static int AppendBFHopIndex(int *dst, int *count, const int stride, const int value) {
@@ -464,20 +466,26 @@ double GreenFunc1BF_real(const int ri, const int rj, const int s, const double i
 }
 
 /* Calculate 2-body Green function with BackFlow. */
-double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
-                    const int s, const int t, const double ip, double *bufM,
+/* Two-body Green function with BackFlow, real variational parameters.
+ * vecTmp0 / vecTmp1: caller-owned packed row-vector workspaces of
+ * NQPFull*Nsize*Nsize doubles each (no allocation inside).
+ * Returns 0 and stores the Green function in *value, or a nonzero status when
+ * an internal invariant fails (hop-list merge overflow).  A physical zero is
+ * reported as status 0 with *value == 0. */
+int GreenFunc2BF_real_ws(const int ri, const int rj, const int rk, const int rl,
+                    const int s, const int t, const double ip,
+                    double *vecTmp0, double *vecTmp1,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
-                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer) {
+                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer,
+                    double *value) {
   double z;
   int mj,msj,ml,mtl;
   int rsi,rsj,rtk,rtl;
   double *pfMNew_real = buffer; /* [NQPFull] */
   int msaTmp0[NQPFull*Nsize], msaTmp1[NQPFull*Nsize], msaTmp[NQPFull*Nsize];
   int icount0[NQPFull], icount1[NQPFull], icount[NQPFull];
-  double *vecTmp0 = NULL;
-  size_t vecTmpSize;
 
-#define RETURN_GREENFUNC2BF_REAL(value) do { z = (value); StopTimer(85); return z; } while (0)
+#define RETURN_GREENFUNC2BF_REAL(v) do { *value = (v); StopTimer(85); return 0; } while (0)
 
   StartTimer(85);
 
@@ -489,36 +497,36 @@ double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
   if(s==t) {
     if(rk==rl) {
       if(eleNum[rtk]==0) RETURN_GREENFUNC2BF_REAL(0.0);
-      else RETURN_GREENFUNC2BF_REAL(GreenFunc1BF_real(ri,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC2BF_REAL(GreenFunc1BF_real(ri,rj,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                     eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer));
     }else if(rj==rl) {
       RETURN_GREENFUNC2BF_REAL(0.0);
     }else if(ri==rl) {
       if(eleNum[rsi]==0) RETURN_GREENFUNC2BF_REAL(0.0);
       else if(rj==rk) RETURN_GREENFUNC2BF_REAL(1.0-eleNum[rsj]);
-      else RETURN_GREENFUNC2BF_REAL(-GreenFunc1BF_real(rk,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC2BF_REAL(-GreenFunc1BF_real(rk,rj,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                      eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer));
     }else if(rj==rk) {
       if(eleNum[rsj]==1) RETURN_GREENFUNC2BF_REAL(0.0);
       else if(ri==rl) RETURN_GREENFUNC2BF_REAL(eleNum[rsi]);
-      else RETURN_GREENFUNC2BF_REAL(GreenFunc1BF_real(ri,rl,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC2BF_REAL(GreenFunc1BF_real(ri,rl,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                     eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer));
     }else if(ri==rk) {
       RETURN_GREENFUNC2BF_REAL(0.0);
     }else if(ri==rj) {
       if(eleNum[rsi]==0) RETURN_GREENFUNC2BF_REAL(0.0);
-      else RETURN_GREENFUNC2BF_REAL(GreenFunc1BF_real(rk,rl,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC2BF_REAL(GreenFunc1BF_real(rk,rl,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                     eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer));
     }
   }else{
     if(rk==rl) {
       if(eleNum[rtk]==0) RETURN_GREENFUNC2BF_REAL(0.0);
       else if(ri==rj) RETURN_GREENFUNC2BF_REAL(eleNum[rsi]);
-      else RETURN_GREENFUNC2BF_REAL(GreenFunc1BF_real(ri,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC2BF_REAL(GreenFunc1BF_real(ri,rj,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                     eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer));
     }else if(ri==rj) {
       if(eleNum[rsi]==0) RETURN_GREENFUNC2BF_REAL(0.0);
-      else RETURN_GREENFUNC2BF_REAL(GreenFunc1BF_real(rk,rl,t,ip,bufM,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC2BF_REAL(GreenFunc1BF_real(rk,rl,t,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                     eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer));
     }
   }
@@ -529,11 +537,6 @@ double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
   ml = eleCfg[rtl];
   msj = mj + s*Ne;
   mtl = ml + t*Ne;
-
-  if(NQPFull <= 0 || Nsize <= 0) RETURN_GREENFUNC2BF_REAL(0.0);
-  vecTmpSize = (size_t)NQPFull * (size_t)Nsize * (size_t)Nsize;
-  vecTmp0 = (double *)malloc(sizeof(double)*vecTmpSize);
-  if(vecTmp0 == NULL) RETURN_GREENFUNC2BF_REAL(0.0);
 
   StartTimer(86);
   eleCfg[rtl] = -1;
@@ -562,7 +565,6 @@ double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
     eleNum[rsj] = 1;
     eleNum[rsi] = 0;
     StopTimer(86);
-    free(vecTmp0);
     RETURN_GREENFUNC2BF_REAL(0.0);
   }
 
@@ -576,11 +578,11 @@ double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
   UpdateSlaterElmBFGrnVec_real(ml, rl, rk, t, eleIdx, eleCfg, eleNum,
                                eleProjBFCnt, projBFCntNew, msaTmp0, icount0, vecTmp0);
   UpdateSlaterElmBFGrnVec_real(mj, rj, ri, s, eleIdx, eleCfg, eleNum,
-                               eleProjBFCnt, projBFCntNew, msaTmp1, icount1, bufM);
+                               eleProjBFCnt, projBFCntNew, msaTmp1, icount1, vecTmp1);
   StopTimer(82);
 
   StartTimer(90);
-  if (MergeBFHopListsVec_real(msaTmp0, icount0, vecTmp0, msaTmp1, icount1, bufM, msaTmp, icount, vecTmp0) != 0) {
+  if (MergeBFHopListsVec_real(msaTmp0, icount0, vecTmp0, msaTmp1, icount1, vecTmp1, msaTmp, icount, vecTmp0) != 0) {
     StopTimer(90);
     StartTimer(88);
     eleCfg[rtl] = ml;
@@ -594,8 +596,9 @@ double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
     eleNum[rsj] = 1;
     eleNum[rsi] = 0;
     StopTimer(88);
-    free(vecTmp0);
-    RETURN_GREENFUNC2BF_REAL(0.0);
+    *value = 0.0;
+    StopTimer(85);
+    return 1; /* hop-list merge overflow: invariant violation, not a physical zero */
   }
   StopTimer(90);
 
@@ -619,10 +622,46 @@ double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
   eleNum[rsi] = 0;
   StopTimer(88);
 
-  free(vecTmp0);
-
   RETURN_GREENFUNC2BF_REAL(z/ip);
 #undef RETURN_GREENFUNC2BF_REAL
+}
+
+/* Convenience wrapper with the historical signature: bufM is one packed
+ * row-vector workspace (NQPFull*Nsize*Nsize doubles); the second one is
+ * allocated here.  Not for hot loops -- CalculateHamiltonianBF_real uses
+ * GreenFunc2BF_real_ws with thread-owned workspaces.  Internal failures abort
+ * instead of being folded into a Green-function value of zero. */
+double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
+                    const int s, const int t, const double ip, double *bufM,
+                    int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
+                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer) {
+  double value = 0.0;
+  double *vecTmp0;
+  size_t vecTmpSize;
+  int status;
+
+  if(NQPFull <= 0 || Nsize <= 0
+     || (size_t)NQPFull > SIZE_MAX / (size_t)Nsize
+     || (size_t)NQPFull * (size_t)Nsize > SIZE_MAX / (size_t)Nsize) {
+    fprintf(stderr, "error: GreenFunc2BF_real workspace size overflow (NQPFull=%d, Nsize=%d)\n", NQPFull, Nsize);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  vecTmpSize = (size_t)NQPFull * (size_t)Nsize * (size_t)Nsize;
+  vecTmp0 = (double *)malloc(sizeof(double)*vecTmpSize);
+  if(vecTmp0 == NULL) {
+    fprintf(stderr, "error: GreenFunc2BF_real workspace allocation failed (%zu doubles)\n", vecTmpSize);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  status = GreenFunc2BF_real_ws(ri, rj, rk, rl, s, t, ip, vecTmp0, bufM,
+                                eleIdx, eleCfg, eleNum, eleProjCnt, projCntNew,
+                                eleProjBFCnt, projBFCntNew, buffer, &value);
+  free(vecTmp0);
+  if(status != 0) {
+    fprintf(stderr, "error: GreenFunc2BF_real internal failure (status %d) for (%d,%d,%d,%d,%d,%d)\n",
+            status, ri, rj, rk, rl, s, t);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  return value;
 }
 
 #ifndef BF_TRANSFER_BATCH_SIZE
@@ -800,42 +839,37 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
 #pragma omp master
       {StopTimer(71);StartTimer(72);}
 
-      /* Pair Hopping */
+      /* Pair Hopping (BackFlow two-body Green function) */
 #pragma omp for private(idx,ri,rj) schedule(dynamic) nowait
       for(idx=0;idx<NPairHopping;idx++) {
         ri = PairHopping[idx][0];
         rj = PairHopping[idx][1];
 
-        if (!FlagRBM) {
-          const double complex *rbmCnt;
-          double complex *rbmCntNew;
-          myEnergy += ParaPairHopping[idx]
-                      * GreenFunc2(ri,rj,ri,rj,0,1,ip,myEleIdx,eleCfg,
-                                   myEleNum,eleProjCnt,myProjCntNew,
-                                   rbmCnt,rbmCntNew,myBuffer);
-        }
+        myEnergy += ParaPairHopping[idx]
+                    * GreenFunc2BF(ri,rj,ri,rj,0,1,ip,mySltBFTmp,
+                                   myEleIdx,myEleCfg,myEleNum,eleProjCnt,
+                                   myProjCntNew,eleProjBFCnt,myProjBFCntNew,
+                                   myBuffer);
       }
 
-      /* Exchange Coupling */
+      /* Exchange Coupling (BackFlow two-body Green function) */
 #pragma omp for private(idx,ri,rj,tmp) schedule(dynamic) nowait
       for(idx=0;idx<NExchangeCoupling;idx++) {
         ri = ExchangeCoupling[idx][0];
         rj = ExchangeCoupling[idx][1];
 
-        if (!FlagRBM) {
-          const double complex *rbmCnt;
-          double complex *rbmCntNew;
-          tmp = GreenFunc2(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,
-                           myEleNum,eleProjCnt,myProjCntNew,
-                           rbmCnt,rbmCntNew,myBuffer);
-          tmp += GreenFunc2(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,
-                            myEleNum,eleProjCnt,myProjCntNew,
-                            rbmCnt,rbmCntNew,myBuffer);
-          myEnergy += ParaExchangeCoupling[idx] * tmp;
-        }
+        tmp = GreenFunc2BF(ri,rj,rj,ri,0,1,ip,mySltBFTmp,
+                           myEleIdx,myEleCfg,myEleNum,eleProjCnt,
+                           myProjCntNew,eleProjBFCnt,myProjBFCntNew,
+                           myBuffer);
+        tmp += GreenFunc2BF(ri,rj,rj,ri,1,0,ip,mySltBFTmp,
+                            myEleIdx,myEleCfg,myEleNum,eleProjCnt,
+                            myProjCntNew,eleProjBFCnt,myProjBFCntNew,
+                            myBuffer);
+        myEnergy += ParaExchangeCoupling[idx] * tmp;
       }
 
-      /* Inter All */
+      /* Inter All (BackFlow two-body Green function) */
 #pragma omp for private(idx,ri,rj,s,rk,rl,t) schedule(dynamic) nowait
       for(idx=0;idx<NInterAll;idx++) {
         ri = InterAll[idx][0];
@@ -844,14 +878,11 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
         rk = InterAll[idx][4];
         rl = InterAll[idx][6];
         t  = InterAll[idx][7];
-        if (!FlagRBM) {
-          const double complex *rbmCnt;
-          double complex *rbmCntNew;
-          myEnergy += ParaInterAll[idx]
-                      * GreenFunc2(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,
-                                   myEleNum,eleProjCnt,myProjCntNew,
-                                   rbmCnt,rbmCntNew,myBuffer);
-        }
+        myEnergy += ParaInterAll[idx]
+                    * GreenFunc2BF(ri,rj,rk,rl,s,t,ip,mySltBFTmp,
+                                   myEleIdx,myEleCfg,myEleNum,eleProjCnt,
+                                   myProjCntNew,eleProjBFCnt,myProjBFCntNew,
+                                   myBuffer);
       }
 
       /*
@@ -913,13 +944,25 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
   //double sltTmp[NThread*NQPFull*Nsite2*Nsite2];
   double *myBatchVec, *myBatchPfM, *myBatchProj, *myBatchGreen, *myBatchVecStack, *myBatchWStack;
   double *myBuffer;
+  double *myVecTmp0, *myVecTmp1; /* per-thread packed row-vector workspaces for GreenFunc2BF_real_ws */
+  const int needTwoBody = (NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0);
+  long long vecTmpSizeLL = needTwoBody ? (long long)NQPFull*(long long)Nsize*(long long)Nsize : 0;
+  int vecTmpSize;
+  int twoBodyFailure = 0;
+  int greenStatus;
+  double green;
   double myEnergy;
+  if(vecTmpSizeLL < 0 || vecTmpSizeLL > INT_MAX/2) {
+    fprintf(stderr, "error: CalculateHamiltonianBF_real workspace size overflow (NQPFull=%d, Nsize=%d)\n", NQPFull, Nsize);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  vecTmpSize = (int)vecTmpSizeLL;
 
   RequestWorkSpaceThreadInt(Nsize+2*Nsite2+NProj+16*Nsite*Nrange
                             + BF_TRANSFER_BATCH_SIZE
                             + BF_TRANSFER_BATCH_SIZE*NQPFull
                             + BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize);
-  RequestWorkSpaceThreadDouble(NQPFull+2*Nsize
+  RequestWorkSpaceThreadDouble(NQPFull+2*Nsize + 2*vecTmpSize
                                + BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize*Nsize
                                + BF_TRANSFER_BATCH_SIZE*NQPFull
                                + 2*BF_TRANSFER_BATCH_SIZE
@@ -928,7 +971,7 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize, BF transfer batch scratch */
 
 #pragma omp parallel default(shared)\
-  private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myBuffer,\
+  private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myBuffer,myVecTmp0,myVecTmp1,greenStatus,green,\
           myBatchIdx,myBatchMsa,myBatchIcount,myBatchVec,myBatchPfM,myBatchProj,myBatchGreen,\
           myBatchVecStack,myBatchWStack,myEnergy,idx,ri,rj,s,rk,rl,t,tmp,\
           batchNo,batchStart,batchEnd,batchIdx,batchCount)\
@@ -943,6 +986,8 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
     myBatchIcount  = GetWorkSpaceThreadInt(BF_TRANSFER_BATCH_SIZE*NQPFull);
     myBatchMsa     = GetWorkSpaceThreadInt(BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize);
     myBuffer   = GetWorkSpaceThreadDouble(NQPFull+2*Nsize);
+    myVecTmp0 = needTwoBody ? GetWorkSpaceThreadDouble(vecTmpSize) : NULL;
+    myVecTmp1 = needTwoBody ? GetWorkSpaceThreadDouble(vecTmpSize) : NULL;
     myBatchVec = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize*Nsize);
     myBatchPfM = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE*NQPFull);
     myBatchProj = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE);
@@ -1034,28 +1079,43 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
 #pragma omp master
     {StopTimer(71);StartTimer(72);}
 
-    /* Pair Hopping */
+    /* Pair Hopping (BackFlow two-body Green function) */
 #pragma omp for private(idx,ri,rj) schedule(dynamic) nowait
     for(idx=0;idx<NPairHopping;idx++) {
       ri = PairHopping[idx][0];
       rj = PairHopping[idx][1];
 
-      myEnergy += ParaPairHopping[idx]
-        * GreenFunc2_real(ri,rj,ri,rj,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
+      greenStatus = GreenFunc2BF_real_ws(ri,rj,ri,rj,0,1,ip,myVecTmp0,myVecTmp1,myEleIdx,myEleCfg,myEleNum,
+                                         eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green);
+      if(greenStatus != 0) {
+#pragma omp atomic write
+        twoBodyFailure = 1;
+        continue;
+      }
+      myEnergy += ParaPairHopping[idx] * green;
     }
 
-    /* Exchange Coupling */
+    /* Exchange Coupling (BackFlow two-body Green function) */
 #pragma omp for private(idx,ri,rj,tmp) schedule(dynamic) nowait
     for(idx=0;idx<NExchangeCoupling;idx++) {
       ri = ExchangeCoupling[idx][0];
       rj = ExchangeCoupling[idx][1];
 
-      tmp =  GreenFunc2_real(ri,rj,rj,ri,0,1,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
-      tmp += GreenFunc2_real(ri,rj,rj,ri,1,0,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
+      greenStatus = GreenFunc2BF_real_ws(ri,rj,rj,ri,0,1,ip,myVecTmp0,myVecTmp1,myEleIdx,myEleCfg,myEleNum,
+                                         eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green);
+      tmp = green;
+      greenStatus |= GreenFunc2BF_real_ws(ri,rj,rj,ri,1,0,ip,myVecTmp0,myVecTmp1,myEleIdx,myEleCfg,myEleNum,
+                                          eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green);
+      if(greenStatus != 0) {
+#pragma omp atomic write
+        twoBodyFailure = 1;
+        continue;
+      }
+      tmp += green;
       myEnergy += ParaExchangeCoupling[idx] * tmp;
     }
 
-    /* Inter All */
+    /* Inter All (BackFlow two-body Green function) */
 #pragma omp for private(idx,ri,rj,s,rk,rl,t) schedule(dynamic) nowait
     for(idx=0;idx<NInterAll;idx++) {
       ri = InterAll[idx][0];
@@ -1064,8 +1124,14 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
       rk = InterAll[idx][4];
       rl = InterAll[idx][6];
       t  = InterAll[idx][7];
-      myEnergy += creal(ParaInterAll[idx])
-        * GreenFunc2_real(ri,rj,rk,rl,s,t,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myProjCntNew,myBuffer);
+      greenStatus = GreenFunc2BF_real_ws(ri,rj,rk,rl,s,t,ip,myVecTmp0,myVecTmp1,myEleIdx,myEleCfg,myEleNum,
+                                         eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green);
+      if(greenStatus != 0) {
+#pragma omp atomic write
+        twoBodyFailure = 1;
+        continue;
+      }
+      myEnergy += creal(ParaInterAll[idx]) * green;
     }
 
 #pragma omp master
@@ -1073,9 +1139,12 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
 
     e += myEnergy;
   }
-
   ReleaseWorkSpaceThreadInt();
   ReleaseWorkSpaceThreadDouble();
+  if(twoBodyFailure != 0) {
+    fprintf(stderr, "error: BackFlow two-body Green function failed in CalculateHamiltonianBF_real (hop-list merge overflow).\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
   return e;
 }
 

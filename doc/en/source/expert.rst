@@ -1420,10 +1420,11 @@ Use rules
    orders. A genuine effective order of 3 or greater therefore costs one
    full BackFlow Slater/Pfaffian construction per surviving term.
 
--  Native non-FSZ BackFlow ``PairHop``, ``Exchange``, and ``InterAll``
-   inputs remain unsupported. Equivalent ordered factors may be supplied
-   through ``NBodyInterAll`` while satisfying the restrictions above.
-   BackFlow with ``reweight=1`` is rejected.
+-  Native ``PairHop``, ``Exchange``, and ``InterAll`` inputs are
+   evaluated with the BackFlow two-body Green function in both the normal
+   ``Orbital`` / ``OrbitalAntiParallel`` format and ``OrbitalGeneral`` /
+   FSZ. ``NBodyInterAll`` is only needed for terms of order three or
+   higher. BackFlow with ``reweight=1`` is rejected.
 
 CoulombIntra file (coulombintra.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2445,6 +2446,14 @@ User rules
 -  The same center/range pair ``(i,j)`` cannot be specified more than
    once.
 
+-  The range relation must be mutual: if a non-self row ``i j ...`` lists
+   site ``j`` in the range of center site ``i``, the reverse row ``j i ...``
+   must also be present (the shell indices of the two rows need not
+   coincide). The incremental BackFlow update assumes this mutuality when it
+   collects the anchor sites whose Theta counts can change, so an
+   asymmetric ``BFRange`` is rejected at input time with
+   ``BFRange must be mutual``.
+
 BF file (bf.def)
 ^^^^^^^^^^^^^^^^
 
@@ -2636,13 +2645,14 @@ Inputs outside this range are rejected.
    requires ``NMPTrans==1``.
 
 -  With the normal ``Orbital`` / ``OrbitalAntiParallel`` format, the
-   Hamiltonian may contain ``Trans`` and number-operator interactions
-   (``CoulombIntra``, ``CoulombInter``, ``Hund``). Two-body Hamiltonian
-   terms such as ``PairHop``, ``Exchange``, and ``InterAll`` remain
-   unsupported in this mode.
+   Hamiltonian may contain ``Trans``, number-operator interactions
+   (``CoulombIntra``, ``CoulombInter``, ``Hund``), and the two-body terms
+   ``PairHop``, ``Exchange``, and ``InterAll`` (spin-conserving factor
+   pairs). The two-body terms are evaluated with the BackFlow two-body
+   Green function; the local-energy loop is OpenMP-parallel over terms.
 
 -  With ``OrbitalGeneral`` / FSZ, ``PairHop``, ``Exchange``, and
-   ``InterAll`` are additionally supported. Measurement outputs
+   ``InterAll`` are also supported. Measurement outputs
    ``OneBodyG``, ``TwoBodyG``, and ``TwoBodyGEx`` support general spin
    labels. ``NBodyG`` and ``NBodyInterAll`` support general spin labels
    only when ``2Sz=-1``; in a fixed :math:`S_z` sector every N-body
