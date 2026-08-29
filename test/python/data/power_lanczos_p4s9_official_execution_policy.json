@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "policy_id": "power-lanczos-zero-support-p4-r0-v12",
+  "frozen_date": "2026-08-15",
+  "status": "p4s9_official_execution_frozen_before_package",
+  "candidate_id": "direct_neighbor_rho0p01_N32768_session256m",
+  "failure": "formal_stop_without_sample_seed_partition_rank_schedule_cache_threshold_candidate_or_resource_relaxation",
+  "parent_sha256": {
+    "long_direct_policy": "27161fe3791c6ab75874ba422285204a3d0aedc27c8d4bb74d5bc19eab10ca42",
+    "session_resource_policy": "617f521cf1d36484fbfc94181cf889478af7f7ed7f8b83fb9e9c20719d19192a",
+    "target_session_policy": "851127720629b5693868cb4eaa063cacd501bc8d2aac6e644515c1bd4ad0fac1",
+    "stage_a_evidence": "e0a65415f78bb2664cb3ae389f4d3b6a369545f7d3fdd3d67d7b8da7f822ea68",
+    "stage_a_decision": "74280523877664d7cd07e39b71fb8950cb89e48d2cd94895799df6d50ea99cdc",
+    "stage_c_local_decision": "f5b866bd000095d2a5313e1b8a956e8e903096876c15bb01d62af2031a83881c",
+    "target_local_evidence": "b13d46ba1286552281ca3b7fb7654c31e1d84f772fd6176ca1547de89febbc0a",
+    "target_local_decision": "2c3c8f68080b0cccdc6e6b5df5e9b80fd40b4267942792e516bbcfdf62b0954b"
+  },
+  "environment": {
+    "system": "genkai_linux_hpc",
+    "omp_threads": 1,
+    "blas_threads": 1,
+    "strict_fp": "intel_fp_model_precise",
+    "allocation_mpi_processes": 4,
+    "remote_transfer_or_submission_requires_explicit_user_approval": true,
+    "remote_scratch": "run_directory_relative_./tmp_only"
+  },
+  "official_statistics": {
+    "driver": "bounded_krylov_markov_driver",
+    "driver_schema_version": 3,
+    "fixture": "p4s9_long_direct_session_official",
+    "mode_argument": "session",
+    "rank_counts": [1],
+    "site_counts": [4, 6, 8],
+    "qp_total": [1, 4],
+    "physical_case_order": [[4, 1], [4, 4], [6, 1], [6, 4], [8, 1], [8, 4]],
+    "cache_bytes": 268435456,
+    "rho": 0.01,
+    "global_numerator": 0,
+    "global_denominator": 1,
+    "rng_stream": 0,
+    "sample_count": 32768,
+    "warmup_proposals": 0,
+    "seed_hex_order": [
+      "0x5034533952305631",
+      "0x5034533952305632",
+      "0x5034533952305633",
+      "0x5034533952305634"
+    ],
+    "official_partition": {"block_count": 16, "block_length": 2048},
+    "diagnostic_partition": {"block_count": 32, "block_length": 1024},
+    "maximum_conservative_se_budget_ratio": 1.0,
+    "maximum_tau_int": 16.0,
+    "minimum_block_length_to_tau_ratio": 16.0,
+    "maximum_block_stability_ratio": 1.25,
+    "minimum_leave_one_denominator": 1e-12,
+    "minimum_abs_denominator_mean": 1e-12,
+    "maximum_denominator_relative_se": 1.0,
+    "session_audit": {
+      "persistent_session": 1,
+      "amplitude_generation_hash": "nonzero_and_constant_within_each_run",
+      "session_root_evaluations": 32769,
+      "cache_reset_count": 1,
+      "engine_heap_allocations": 0,
+      "session_end_pass": 1
+    },
+    "promotion": "all_four_seeds_all_six_cases_must_GO"
+  },
+  "official_resource": {
+    "session_timing": {
+      "driver": "bounded_krylov_markov_timing_driver",
+      "mode": "long-direct-session",
+      "schema_version": 3,
+      "rank_counts": [1, 2, 4],
+      "site_counts": [4, 6, 8],
+      "qp_total": [1, 4],
+      "sample_count": 32768,
+      "repeat_count": 7,
+      "rng_stream_order": [0, 1, 2, 3, 4, 5, 6],
+      "cache_bytes": 268435456
+    },
+    "direct_target_stress": {
+      "driver": "bounded_krylov_profile_driver",
+      "mode": "session-profile",
+      "schema_version": 2,
+      "rank_counts": [1, 2, 4],
+      "site_count": 16,
+      "qp_total": [1, 4],
+      "sample_count": 4096,
+      "repeat_count": 3,
+      "root_schedule": "evenly_spaced_fixed_sector_indices_including_endpoints",
+      "cache_bytes": 268435456
+    },
+    "gate": {
+      "seconds_per_configuration_l16_maximum": 0.054931640625,
+      "projected_32768_root_seconds_maximum": 1800.0,
+      "allocated_capacity_bytes_per_rank_maximum": 4294967296,
+      "peak_rss_bytes_per_rank_maximum": 4294967296,
+      "required_speedup_over_p4c_cache256_maximum": 2.9127591854032655,
+      "rank_reducer": "maximum",
+      "repeat_reducer": "median"
+    },
+    "promotion": "all_rank1_rank2_rank4_session_timing_and_direct_target_cases_must_PASS"
+  },
+  "mpi_parity": {
+    "driver": "bounded_krylov_markov_driver",
+    "rank_counts": [1, 2, 4],
+    "site_count": 4,
+    "qp_total": 4,
+    "sample_count": 128,
+    "cache_bytes": 4194304,
+    "rho": 0.01,
+    "seed_hex": "0x5034533952305631",
+    "rng_stream": 7,
+    "comparison": "SCALE_SAMPLE_SUMMARY_TAU_ENTRY_MANIFEST_DECISION_bytes_identical",
+    "small_sample_decision_may_be_STOP": true
+  },
+  "focused_tests": {
+    "required_names": [
+      "BoundedKrylovEngine_Unit",
+      "KrylovPositiveSampler_Unit",
+      "BoundedKrylovProfile_SessionSmoke",
+      "BoundedKrylovMarkovLongDirectSessionTiming_Smoke",
+      "BoundedKrylovMarkovP4S9Session_Smoke",
+      "BoundedKrylovMarkovP4S9Session_Rank2_mpi",
+      "BoundedKrylovMarkovP4S9Session_Rank4_EmptyQP_mpi",
+      "BoundedKrylovP4S9LongDirectEvidence_Pipeline",
+      "BoundedKrylovP4S9SessionResourceEvidence_Pipeline",
+      "BoundedKrylovP4S9TargetSessionEvidence_Pipeline",
+      "BoundedKrylovP4S9OfficialStatisticsEvidence_Pipeline",
+      "BoundedKrylovP4S9OfficialResourceEvidence_Pipeline",
+      "BoundedKrylovP4S9OfficialClosure_Pipeline"
+    ],
+    "pass_summary": "100% tests passed, 0 tests failed"
+  },
+  "promotion": {
+    "p4s9_decision": "GO_only_if_official_statistics_resource_mpi_parity_and_focused_tests_all_pass",
+    "go_action": "authorize_local_P4F_work_only",
+    "stop_action": "preserve_all_evidence_and_stop_before_P4F",
+    "push_or_github_mutation_authorized": false
+  }
+}

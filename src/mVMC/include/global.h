@@ -415,7 +415,7 @@ int Counter_max = 6;
 /* 6: pair spin flip try, 7: pair spin flip accept */
 
 /***** optional BackFlow profiling counters *****/
-#define NBFProfileCounter 48
+#define NBFProfileCounter 50
 #define BFPROF_SAMPLE_ROW_REQUEST        0
 #define BFPROF_SAMPLE_ROW_RECOMPUTE      1
 #define BFPROF_SAMPLE_ROW_REUSE          2
@@ -464,6 +464,8 @@ int Counter_max = 6;
 #define BFPROF_GREEN_DELTA_PAIR_NEW        45
 #define BFPROF_GREEN_DELTA_PAIR_OLD        46
 #define BFPROF_GREEN_DELTA_PAIR_TOTAL      47
+#define BFPROF_FULL_REBUILD                48
+#define BFPROF_MULTI_QP_LEGACY_INCREMENTAL 49
 int BFProfileEnabled = 0;
 long long BFProfileCounter[NBFProfileCounter];
 
@@ -492,6 +494,7 @@ long long BFProfileCounter[NBFProfileCounter];
 int BFFSZGreenRebuildCheckEnabled = 0;
 int BFFSZAffectedCheckEnabled = 0;
 int BFFSZPfUpdateCheckEnabled = 0;
+int BFPfUpdateCheckEnabled = 0; /* non-FSZ BackFlow sampler: full-rebuild oracle for hopping/exchange updates */
 int BFFSZPfUpdateForceFallback = 0;
 int BFFSZPfUpdateInjectedStatus = 0;
 int BFFSZPfUpdateInjectedRank = -1;

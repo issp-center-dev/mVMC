@@ -34,7 +34,8 @@ def write_namelist(workdir, include_backflow):
         fp.write("\n".join(lines) + "\n")
 
 
-def write_orbital_general(workdir, nsite, complex_type=1, optimize=True):
+def write_orbital_general(workdir, nsite, complex_type=1, optimize=True,
+                          signed=False):
     nsite2 = 2 * nsite
     norbital = nsite2 * (nsite2 - 1) // 2
     opt_flag = 1 if optimize else 0
@@ -46,13 +47,16 @@ def write_orbital_general(workdir, nsite, complex_type=1, optimize=True):
         "=============================================",
     ]
     idx = 0
+    signed_pairs = {(0, nsite + 1), (1, 2 * nsite - 1)}
     for orb_i in range(nsite2):
         for orb_j in range(orb_i + 1, nsite2):
+            sign = -1 if signed and (orb_i, orb_j) in signed_pairs else 1
             lines.append(
-                "{:5d} {:2d} {:6d} {:2d} {:6d}      1".format(
+                "{:5d} {:2d} {:6d} {:2d} {:6d} {:6d}".format(
                     orb_i % nsite, orb_i // nsite,
                     orb_j % nsite, orb_j // nsite,
                     idx,
+                    sign,
                 )
             )
             idx += 1
@@ -337,6 +341,40 @@ def make_momentum_projection(workdir, nsite=4):
             ))
 
 
+def make_ap_momentum_projection(workdir, nsite=4, all_positive=False):
+    with open(os.path.join(workdir, "qptransidx.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NQPTrans          2\n")
+        fp.write("=============================================\n")
+        fp.write("======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n")
+        fp.write("=============================================\n")
+        fp.write("0    1.00000    0.00000\n")
+        fp.write("1    1.00000    0.00000\n")
+        for site in range(nsite):
+            fp.write("    0 {:6d} {:6d}      1\n".format(site, site))
+        for site in range(nsite):
+            sign = 1 if all_positive or site != nsite - 1 else -1
+            fp.write("    1 {:6d} {:6d} {:6d}\n".format(
+                site, (site + 1) % nsite, sign,
+            ))
+
+
+def make_ap_opt_projection(workdir, nsite=4, all_positive=False):
+    with open(os.path.join(workdir, "qpopttrans.def"), "w") as fp:
+        fp.write("=============================================\n")
+        fp.write("NQPOptTrans       1\n")
+        fp.write("=============================================\n")
+        fp.write("======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n")
+        fp.write("=============================================\n")
+        fp.write("0    1.00000\n")
+        for site in range(nsite):
+            sign = 1 if all_positive or site != nsite - 1 else -1
+            fp.write("    0 {:6d} {:6d} {:6d}\n".format(
+                site, (site + 1) % nsite, sign,
+            ))
+    append_namelist_entry(workdir, "OptTrans", "qpopttrans.def")
+
+
 def write_locspn(workdir, local_sites, nsite=4):
     local_sites = set(local_sites)
     with open(os.path.join(workdir, "locspn.def"), "w") as fp:
@@ -419,7 +457,8 @@ def write_nonidentity_init_parameter(path, nprojbf, nslater,
         fp.write("\n")
 
 
-def write_nonidentity_init(workdir, nsite=4, complex_orbitals=False):
+def write_nonidentity_init(workdir, nsite=4, complex_orbitals=False,
+                           include_opttrans=False):
     definition = build_chain_nn_backflow(length=nsite, optimize=False)
     nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidxgen.def"))
     init_name = "nonidentity_init.dat"
@@ -429,12 +468,20 @@ def write_nonidentity_init(workdir, nsite=4, complex_orbitals=False):
         nslater,
         complex_orbitals=complex_orbitals,
     )
+    if include_opttrans:
+        with open(os.path.join(workdir, init_name), "a") as fp:
+            fp.write("1.000000000000000000e+00 0.000000000000000000e+00 "
+                     "0.000000000000000000e+00\n")
     return init_name
 
 
-def run_vmc(rootdir, workdir, mpi_procs=None, init_path=None, extra_env=None):
+def run_vmc(rootdir, workdir, mpi_procs=None, init_path=None, extra_env=None,
+            opttrans=False):
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
-    cmd = [bin_to_test, "-e", "namelist.def"]
+    cmd = [bin_to_test]
+    if opttrans:
+        cmd.append("-o")
+    cmd.extend(["-e", "namelist.def"])
     if init_path is not None:
         cmd.append(init_path)
     if mpi_procs:
@@ -832,7 +879,8 @@ def max_abs_diff(left_rows, right_rows):
 
 
 def prepare_case(rootdir, name, include_backflow, orbital_complex_type=1,
-                 orbital_optimize=True, backflow_optimize=False):
+                 orbital_optimize=True, backflow_optimize=False,
+                 orbital_signs=False):
     refdir = os.path.join(rootdir, "data", "BackFlow_Identity_Complex")
     workdir = os.path.join(rootdir, "work", name)
     if os.path.exists(workdir):
@@ -846,6 +894,7 @@ def prepare_case(rootdir, name, include_backflow, orbital_complex_type=1,
         nsite=4,
         complex_type=orbital_complex_type,
         optimize=orbital_optimize,
+        signed=orbital_signs,
     )
     write_green_defs(workdir)
     if include_backflow:
@@ -1260,6 +1309,31 @@ def compare_lanczos_output_files(left_workdir, right_workdir,
     return 0
 
 
+def assert_lanczos_sign_mutation_changes_oracle(
+        base_workdir, base_name, mutation_workdir, mutation_name,
+        rank_count=1):
+    try:
+        base = read_lanczos_oracle_set(base_workdir, base_name, rank_count)
+        mutation = read_lanczos_oracle_set(
+            mutation_workdir, mutation_name, rank_count)
+    except (OSError, RuntimeError, ValueError) as exc:
+        print("ERROR: {}".format(exc))
+        return -1
+    common = set(base).intersection(mutation)
+    if not common:
+        print("ERROR: Lanczos sign mutation has no common sampled occupancy")
+        return -1
+    max_difference = max(
+        abs(left - right)
+        for occupancy in common
+        for left, right in zip(base[occupancy], mutation[occupancy])
+    )
+    if max_difference <= 1.0e-10:
+        print("ERROR: all-positive AP sign mutation did not change Lanczos h1/h2")
+        return -1
+    return 0
+
+
 def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
     if case_name == "BackFlow_FSZ_Lanczos_ProfileIsolation":
         if mpi_procs:
@@ -1317,6 +1391,11 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
         "BackFlow_FSZ_Lanczos_SpinChanging_NonIdentity_Complex_omp": (1, True, False, True, False),
         "BackFlow_FSZ_Lanczos_MomentumProjection_Identity_Complex": (1, False, True, False, True),
         "BackFlow_FSZ_Lanczos_MomentumProjection_NonIdentity_Complex": (1, False, True, True, False),
+        "BackFlow_FSZ_Lanczos_AP_Identity_Complex": (1, False, False, False, True),
+        "BackFlow_FSZ_Lanczos_AP_Identity_Complex_mpi": (1, False, False, False, True),
+        "BackFlow_FSZ_Lanczos_AP_Identity_Real_Experimental": (0, False, False, False, True),
+        "BackFlow_FSZ_Lanczos_AP_NonIdentity_Complex": (1, False, True, True, False),
+        "BackFlow_FSZ_Lanczos_AP_NonIdentity_Complex_mpi": (1, False, True, True, False),
         "BackFlow_FSZ_Lanczos_NonfiniteThreshold": (1, False, False, False, False),
         "BackFlow_FSZ_Lanczos_NonfiniteThreshold_mpi": (1, False, False, False, False),
         "BackFlow_FSZ_Lanczos_NonfiniteWarning": (1, False, False, False, False),
@@ -1326,6 +1405,7 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
     if case_name not in cases:
         return None
     orbital_complex_type, spin_changing, momentum, nonidentity, compare_no_bf = cases[case_name]
+    use_ap = "_AP_" in case_name
     bf_workdir = prepare_case(
         rootdir, case_name, include_backflow=True,
         orbital_complex_type=orbital_complex_type,
@@ -1339,17 +1419,24 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
                         ("NonfiniteWarning", "RebuildFailureWarning")) else "32")),
         "NVMCWarmUp": "8",
     }
+    if use_ap and nonidentity:
+        updates["NVMCSample"] = "64"
     if case_name.endswith("Identity_Real_Experimental"):
         updates["NLanczosSupportMode"] = "1"
     if spin_changing:
         updates["2Sz"] = "-1"
     if momentum:
-        updates["NMPTrans"] = "2"
+        updates["NMPTrans"] = "-2" if use_ap else "2"
+    elif use_ap:
+        updates["NMPTrans"] = "-1"
     update_modpara(bf_workdir, updates)
     if spin_changing:
         write_spin_changing_c1_defs(bf_workdir)
     if momentum:
-        make_momentum_projection(bf_workdir)
+        if use_ap:
+            make_ap_momentum_projection(bf_workdir)
+        else:
+            make_momentum_projection(bf_workdir)
     init_path = write_nonidentity_init(bf_workdir) if nonidentity else None
     bf_dump = "lanczos_oracle_bf_fsz.dat"
     bf_env = {
@@ -1406,7 +1493,30 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
         status = assert_power_lanczos_support(
             bf_workdir, case_name, "experimental", "mismatch")
     if status != 0 or not compare_no_bf:
-        return status
+        if status != 0 or not (use_ap and nonidentity):
+            return status
+        mutation_workdir = prepare_case(
+            rootdir, case_name + "_all_positive_sign_mutation",
+            include_backflow=True,
+            orbital_complex_type=orbital_complex_type,
+            orbital_optimize=True, backflow_optimize=False)
+        update_modpara(mutation_workdir, updates)
+        make_ap_momentum_projection(mutation_workdir, all_positive=True)
+        mutation_init = write_nonidentity_init(mutation_workdir)
+        mutation_dump = "lanczos_oracle_bf_fsz_mutation.dat"
+        mutation_proc = run_vmc(
+            rootdir, mutation_workdir, mpi_procs=mpi_procs,
+            init_path=mutation_init,
+            extra_env={
+                "MVMC_LANCZOS_ORACLE_DUMP": mutation_dump,
+                "MVMC_BF_LANCZOS_STATE_CHECK": "1",
+            })
+        if mutation_proc.returncode != 0:
+            print(mutation_proc.stdout)
+            return mutation_proc.returncode
+        return assert_lanczos_sign_mutation_changes_oracle(
+            bf_workdir, bf_dump, mutation_workdir, mutation_dump,
+            rank_count=int(mpi_procs) if mpi_procs else 1)
 
     no_bf_workdir = prepare_case(
         rootdir, case_name + "_nobf", include_backflow=False,
@@ -1416,7 +1526,10 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
     if spin_changing:
         write_spin_changing_c1_defs(no_bf_workdir)
     if momentum:
-        make_momentum_projection(no_bf_workdir)
+        if use_ap:
+            make_ap_momentum_projection(no_bf_workdir)
+        else:
+            make_momentum_projection(no_bf_workdir)
     no_bf_dump = "lanczos_oracle_fsz.dat"
     no_bf_proc = run_vmc(
         rootdir, no_bf_workdir, mpi_procs=mpi_procs,
@@ -1660,6 +1773,11 @@ def run_lanczos_invalid_case(rootdir, case_name, mpi_procs=None):
             "FSZ supports only NLanczosMode==1",
             None,
         ),
+        "BackFlow_FSZ_Lanczos_AP_InvalidMode2": (
+            {"NLanczosMode": "2", "NVMCCalMode": "1", "NMPTrans": "-1"},
+            "FSZ supports only NLanczosMode==1",
+            None,
+        ),
         "BackFlow_FSZ_Lanczos_InvalidOptimization": (
             {"NLanczosMode": "1", "NVMCCalMode": "0"},
             "requires NVMCCalMode==1",
@@ -1684,6 +1802,16 @@ def run_lanczos_invalid_case(rootdir, case_name, mpi_procs=None):
             {"NLanczosMode": "1", "NVMCCalMode": "1"},
             "currently supports only diagonal and Transfer Hamiltonian terms",
             write_lanczos_interall,
+        ),
+        "BackFlow_FSZ_InvalidExUpdatePath1": (
+            {"NExUpdatePath": "1"},
+            "FSZ BackFlow supports only NExUpdatePath==0",
+            None,
+        ),
+        "BackFlow_FSZ_InvalidExUpdatePath1_mpi": (
+            {"NExUpdatePath": "1"},
+            "FSZ BackFlow supports only NExUpdatePath==0",
+            None,
         ),
         "FSZ_Lanczos_InvalidReweight": (
             {"NLanczosMode": "1", "NVMCCalMode": "1", "reweight": "1"},
@@ -2147,27 +2275,59 @@ def run_sr_diff_case(rootdir, case_name, mpi_procs=None):
         "BackFlow_FSZ_SRDiff_SpinChanging_NonIdentity_Complex": (
             False, True, False, True,
         ),
+        "BackFlow_FSZ_SRDiff_AP_NonIdentity_Complex": (
+            True, True, False, False,
+        ),
+        "BackFlow_FSZ_SRDiff_AP_NonIdentity_Complex_mpi": (
+            True, True, False, False,
+        ),
+        "BackFlow_FSZ_SRDiff_AP_NonIdentity_Real": (
+            True, True, False, False,
+        ),
+        "BackFlow_FSZ_SRDiff_AP_OptTrans_NonIdentity_Complex": (
+            True, True, False, False,
+        ),
+        "BackFlow_FSZ_SRDiff_AP_OrbitalSign_NonIdentity_Complex": (
+            True, True, False, False,
+        ),
     }
     if case_name not in sr_diff_cases:
         return None
 
     use_momentum, use_nonidentity, check_identity, use_spin_changing = sr_diff_cases[case_name]
-    workdir = prepare_case(rootdir, case_name, True)
+    use_ap = "_AP_" in case_name
+    use_real = case_name.endswith("_Real")
+    use_opttrans = "_OptTrans_" in case_name
+    use_orbital_sign = "_OrbitalSign_" in case_name
+    workdir = prepare_case(
+        rootdir, case_name, True,
+        orbital_complex_type=0 if use_real else 1,
+        orbital_signs=use_orbital_sign)
     update_modpara(workdir, {"NVMCSample": "1"})
     if use_spin_changing:
         update_modpara(workdir, {"2Sz": "-1"})
         write_spin_changing_c2_defs(workdir)
     if use_momentum:
-        update_modpara(workdir, {"NMPTrans": "2"})
-        make_momentum_projection(workdir)
-    init_path = write_nonidentity_init(workdir) if use_nonidentity else None
+        update_modpara(workdir, {"NMPTrans": "-2" if use_ap else "2"})
+        if use_ap:
+            make_ap_momentum_projection(workdir)
+        else:
+            make_momentum_projection(workdir)
+    if use_opttrans:
+        make_ap_opt_projection(workdir)
+    init_path = write_nonidentity_init(
+        workdir, include_opttrans=use_opttrans) if use_nonidentity else None
     dump_path = os.path.join(workdir, "bf_fsz_sr_diff.dat")
     proc = run_vmc(
         rootdir,
         workdir,
         mpi_procs=mpi_procs,
         init_path=init_path,
-        extra_env={"MVMC_BF_FSZ_SR_DIFF_DUMP": dump_path},
+        extra_env={
+            "MVMC_BF_FSZ_SR_DIFF_DUMP": dump_path,
+            **({"MVMC_BF_FSZ_SR_DIFF_FIXED_CONFIG": "1"} if use_ap else {}),
+        },
+        opttrans=use_opttrans,
     )
     if proc.returncode != 0:
         print(proc.stdout)
@@ -2188,6 +2348,10 @@ def run_sr_diff_case(rootdir, case_name, mpi_procs=None):
         print("ERROR: BF-FSZ SR diff dump contains non-finite values")
         print(open(dump_path).read())
         return -1
+    if get_float(values, "max_abs_caller_slater_restore_diff") > 1.0e-13:
+        print("ERROR: BF-FSZ SR diff dump did not restore caller Slater state")
+        print(open(dump_path).read())
+        return -1
     if get_int(values, "nonzero_projbf_fd_count") <= 0:
         print("ERROR: BF-FSZ ProjBF finite difference was vacuous")
         print(open(dump_path).read())
@@ -2196,6 +2360,28 @@ def run_sr_diff_case(rootdir, case_name, mpi_procs=None):
         print("ERROR: BF-FSZ orbital finite difference was vacuous")
         print(open(dump_path).read())
         return -1
+    if use_ap:
+        for key in ("negative_qptrans_sign_count", "nonzero_theta_count"):
+            if get_int(values, key) <= 0:
+                print("ERROR: BF-FSZ AP fixture is vacuous: {}\n{}".format(
+                    key, open(dump_path).read()))
+                return -1
+        if use_orbital_sign and get_int(
+                values, "negative_orbital_input_sign_count") <= 0:
+            print("ERROR: BF-FSZ AP orbital-sign fixture is vacuous\n{}".format(
+                open(dump_path).read()))
+            return -1
+        if get_int(values, "ap_flag") != 1:
+            print("ERROR: BF-FSZ AP fixture did not enable APFlag")
+            return -1
+        if get_int(values, "fixed_configuration") != 1:
+            print("ERROR: BF-FSZ AP FD did not use the fixed configuration")
+            return -1
+        if use_opttrans and get_int(
+                values, "negative_qpopttrans_sign_count") <= 0:
+            print("ERROR: BF-FSZ AP OptTrans sign fixture is vacuous\n{}".format(
+                open(dump_path).read()))
+            return -1
 
     projbf_diff = get_float(values, "max_abs_projbf_fd_diff")
     orbital_diff = get_float(values, "max_abs_orbital_fd_diff")
@@ -2217,6 +2403,162 @@ def run_sr_diff_case(rootdir, case_name, mpi_procs=None):
             print("ERROR: BF-FSZ identity orbital O mismatch: {:.3e}".format(identity_diff))
             print(open(dump_path).read())
             return -1
+    if use_ap and not mpi_procs and not use_real and not use_opttrans:
+        mutation_name = case_name + "_all_positive_sign_mutation"
+        mutation_workdir = prepare_case(
+            rootdir, mutation_name, True,
+            orbital_signs=use_orbital_sign)
+        update_modpara(mutation_workdir, {
+            "NVMCSample": "1",
+            "NMPTrans": "-2",
+        })
+        make_ap_momentum_projection(mutation_workdir, all_positive=True)
+        mutation_init = write_nonidentity_init(mutation_workdir)
+        mutation_dump = os.path.join(
+            mutation_workdir, "bf_fsz_sr_diff_mutation.dat")
+        mutation_proc = run_vmc(
+            rootdir, mutation_workdir, init_path=mutation_init,
+            extra_env={
+                "MVMC_BF_FSZ_SR_DIFF_DUMP": mutation_dump,
+                "MVMC_BF_FSZ_SR_DIFF_FIXED_CONFIG": "1",
+            },
+        )
+        if mutation_proc.returncode != 0 or not os.path.exists(mutation_dump):
+            print(mutation_proc.stdout)
+            return mutation_proc.returncode or -1
+        mutation_values = read_key_values(mutation_dump)
+        if get_int(mutation_values, "negative_qptrans_sign_count") != 0:
+            print("ERROR: all-positive QPTrans sign mutation was not applied")
+            return -1
+        base_ip = complex(*[float(value) for value in values["ip_bf"]])
+        mutation_ip = complex(
+            *[float(value) for value in mutation_values["ip_bf"]])
+        if abs(base_ip - mutation_ip) <= 1.0e-10:
+            print("ERROR: QPTrans sign mutation did not change the BF-FSZ amplitude")
+            return -1
+    if use_orbital_sign:
+        mutation_name = case_name + "_all_positive_orbital_sign_mutation"
+        mutation_workdir = prepare_case(rootdir, mutation_name, True)
+        update_modpara(mutation_workdir, {
+            "NVMCSample": "1",
+            "NMPTrans": "-2",
+        })
+        make_ap_momentum_projection(mutation_workdir)
+        mutation_init = write_nonidentity_init(mutation_workdir)
+        mutation_dump = os.path.join(
+            mutation_workdir, "bf_fsz_sr_diff_orbital_sign_mutation.dat")
+        mutation_proc = run_vmc(
+            rootdir, mutation_workdir, init_path=mutation_init,
+            extra_env={
+                "MVMC_BF_FSZ_SR_DIFF_DUMP": mutation_dump,
+                "MVMC_BF_FSZ_SR_DIFF_FIXED_CONFIG": "1",
+            },
+        )
+        if mutation_proc.returncode != 0 or not os.path.exists(mutation_dump):
+            print(mutation_proc.stdout)
+            return mutation_proc.returncode or -1
+        mutation_values = read_key_values(mutation_dump)
+        if get_int(mutation_values, "negative_orbital_input_sign_count") != 0:
+            print("ERROR: all-positive orbital sign mutation was not applied")
+            return -1
+        base_ip = complex(*[float(value) for value in values["ip_bf"]])
+        mutation_ip = complex(
+            *[float(value) for value in mutation_values["ip_bf"]])
+        if abs(base_ip - mutation_ip) <= 1.0e-10:
+            print("ERROR: OrbitalSgn mutation did not change the BF-FSZ amplitude")
+            return -1
+    if use_opttrans:
+        mutation_name = case_name + "_all_positive_opt_sign_mutation"
+        mutation_workdir = prepare_case(rootdir, mutation_name, True)
+        update_modpara(mutation_workdir, {
+            "NVMCSample": "1",
+            "NMPTrans": "-2",
+        })
+        make_ap_momentum_projection(mutation_workdir)
+        make_ap_opt_projection(mutation_workdir, all_positive=True)
+        mutation_init = write_nonidentity_init(
+            mutation_workdir, include_opttrans=True)
+        mutation_dump = os.path.join(
+            mutation_workdir, "bf_fsz_sr_diff_opt_mutation.dat")
+        mutation_proc = run_vmc(
+            rootdir, mutation_workdir, init_path=mutation_init,
+            extra_env={
+                "MVMC_BF_FSZ_SR_DIFF_DUMP": mutation_dump,
+                "MVMC_BF_FSZ_SR_DIFF_FIXED_CONFIG": "1",
+            },
+            opttrans=True,
+        )
+        if mutation_proc.returncode != 0 or not os.path.exists(mutation_dump):
+            print(mutation_proc.stdout)
+            return mutation_proc.returncode or -1
+        mutation_values = read_key_values(mutation_dump)
+        if get_int(mutation_values, "negative_qpopttrans_sign_count") != 0:
+            print("ERROR: all-positive QPOptTrans sign mutation was not applied")
+            return -1
+        base_ip = complex(*[float(value) for value in values["ip_bf"]])
+        mutation_ip = complex(
+            *[float(value) for value in mutation_values["ip_bf"]])
+        if abs(base_ip - mutation_ip) <= 1.0e-10:
+            print("ERROR: QPOptTrans sign mutation did not change the BF-FSZ amplitude")
+            return -1
+    return 0
+
+
+def run_ap_real_complex_case(rootdir, case_name, mpi_procs=None):
+    if case_name != "BackFlow_FSZ_AP_NonIdentity_RealVsComplex":
+        return None
+    if mpi_procs:
+        raise RuntimeError("BF-FSZ AP real/complex comparison is single-rank")
+
+    complex_workdir = prepare_case(
+        rootdir, case_name + "_complex", True, orbital_complex_type=1)
+    real_workdir = prepare_case(
+        rootdir, case_name + "_real", True, orbital_complex_type=0)
+    for workdir in (complex_workdir, real_workdir):
+        update_modpara(workdir, {
+            "NMPTrans": "-2",
+            "NVMCWarmUp": "0",
+            "NVMCInterval": "0",
+            "NVMCSample": "1",
+        })
+        make_ap_momentum_projection(workdir)
+    complex_init = write_nonidentity_init(complex_workdir)
+    real_init = write_nonidentity_init(real_workdir)
+    complex_dump = os.path.join(complex_workdir, "fixed_config_diff.dat")
+    real_dump = os.path.join(real_workdir, "fixed_config_diff.dat")
+    complex_proc = run_vmc(
+        rootdir, complex_workdir, init_path=complex_init,
+        extra_env={
+            "MVMC_BF_FSZ_SR_DIFF_DUMP": complex_dump,
+            "MVMC_BF_FSZ_SR_DIFF_FIXED_CONFIG": "1",
+        })
+    real_proc = run_vmc(
+        rootdir, real_workdir, init_path=real_init,
+        extra_env={
+            "MVMC_BF_FSZ_SR_DIFF_DUMP": real_dump,
+            "MVMC_BF_FSZ_SR_DIFF_FIXED_CONFIG": "1",
+        })
+    if complex_proc.returncode != 0:
+        print(complex_proc.stdout)
+        return complex_proc.returncode
+    if real_proc.returncode != 0:
+        print(real_proc.stdout)
+        return real_proc.returncode
+    complex_values = read_key_values(complex_dump)
+    real_values = read_key_values(real_dump)
+    for values, label in ((complex_values, "complex"), (real_values, "real")):
+        if get_int(values, "fixed_configuration") != 1:
+            print("ERROR: {} route did not use the fixed configuration".format(label))
+            return -1
+        if get_int(values, "fd_fail_count") != 0:
+            print("ERROR: {} fixed-configuration FD failed".format(label))
+            return -1
+    complex_ip = complex(*[float(value) for value in complex_values["ip_bf"]])
+    real_ip = complex(*[float(value) for value in real_values["ip_bf"]])
+    if abs(complex_ip - real_ip) > 1.0e-12 or abs(real_ip.imag) > 1.0e-12:
+        print("ERROR: BF-FSZ AP fixed-configuration real/complex amplitude "
+              "mismatch: complex={} real={}".format(complex_ip, real_ip))
+        return -1
     return 0
 
 
@@ -3487,6 +3829,11 @@ def main():
         "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex",
     )
     nonidentity_momentum_case = case_name == "BackFlow_FSZ_MomentumProjection_NonIdentity_Complex"
+    ap_identity_cases = (
+        "BackFlow_FSZ_AP_Identity_Complex",
+        "BackFlow_FSZ_AP_Identity_Complex_mpi",
+        "BackFlow_FSZ_AP_Identity_Real",
+    )
     nbody_dispatch_status = run_nbody_dispatch_case(
         rootdir, case_name, mpi_procs)
     if nbody_dispatch_status is not None:
@@ -3535,6 +3882,10 @@ def main():
     sr_diff_status = run_sr_diff_case(rootdir, case_name, mpi_procs)
     if sr_diff_status is not None:
         return sr_diff_status
+    ap_real_complex_status = run_ap_real_complex_case(
+        rootdir, case_name, mpi_procs)
+    if ap_real_complex_status is not None:
+        return ap_real_complex_status
     optimization_status = run_optimization_case(rootdir, case_name, mpi_procs)
     if optimization_status is not None:
         return optimization_status
@@ -3547,12 +3898,19 @@ def main():
         updates, expected, local_sites, mutate_defs = named_invalid
         return expect_invalid(rootdir, case_name, updates, expected, mpi_procs, local_sites, mutate_defs)
 
-    bf_workdir = prepare_case(rootdir, case_name, True)
-    no_bf_workdir = prepare_case(rootdir, case_name + "_nobf", False)
+    orbital_complex_type = 0 if case_name.endswith("_Real") else 1
+    bf_workdir = prepare_case(
+        rootdir, case_name, True, orbital_complex_type=orbital_complex_type)
+    no_bf_workdir = prepare_case(
+        rootdir, case_name + "_nobf", False,
+        orbital_complex_type=orbital_complex_type)
     if case_name in momentum_projection_cases:
         for workdir in (bf_workdir, no_bf_workdir):
             update_modpara(workdir, {"NMPTrans": "2"})
             make_momentum_projection(workdir)
+    if case_name in ap_identity_cases:
+        for workdir in (bf_workdir, no_bf_workdir):
+            update_modpara(workdir, {"NMPTrans": "-1"})
     init_path = write_nonidentity_init(bf_workdir) if nonidentity_momentum_case else None
 
     bf_proc = run_vmc(rootdir, bf_workdir, mpi_procs, init_path)

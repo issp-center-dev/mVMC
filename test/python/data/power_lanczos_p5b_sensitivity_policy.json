@@ -1,0 +1,41 @@
+{
+  "schema": "power_lanczos_p5b_sensitivity_policy_v1",
+  "phase": "P5-B",
+  "testing_only": true,
+  "production_authorized": false,
+  "fixtures": [
+    "real_dimension_2_support_bridge",
+    "complex_dimension_3_krylov"
+  ],
+  "perturbation_scales": [
+    1e-08,
+    1e-07,
+    1e-06,
+    1e-05,
+    0.0001,
+    0.001,
+    0.01
+  ],
+  "directions": [
+    "coefficient_real",
+    "coefficient_imaginary",
+    "overlap_hermitian",
+    "hamiltonian_hermitian",
+    "squared_hamiltonian_hermitian",
+    "observable_hermitian",
+    "combined_all"
+  ],
+  "downstream_absolute_targets": {
+    "energy": 0.0001,
+    "full_support_variance": 0.001,
+    "quadratic_observable": 0.001
+  },
+  "candidate_envelope_safety_factor": 0.5,
+  "required": {
+    "finite_all_cases": true,
+    "positive_overlap": true,
+    "solver_residual_maximum": 1e-10,
+    "baseline_identity_delta_maximum": 1e-12,
+    "global_phase_invariance_maximum": 1e-12
+  }
+}

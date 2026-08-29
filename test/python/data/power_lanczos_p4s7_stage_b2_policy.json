@@ -1,0 +1,42 @@
+{
+  "schema_version": 7,
+  "policy_id": "power-lanczos-zero-support-p4-r0-v7-stage-b2",
+  "status": "p4s7_partial_guide_real_callback_stage_b2_frozen",
+  "frozen_date": "2026-08-15",
+  "source_stage_b1_artifact": "20260815-p4s7-stage-b1-local-v1",
+  "source_stage_b1_policy_sha256": "3368aa2aca1e3321fba50e3129ad0e3563bc9a28e4b9a3de8debfc2b0f41234e",
+  "source_stage_b1_ledger_sha256": "9c30f3bb0f43fc05c8a07a8c7531595ef186c86453c257dd86fea9b2a7d4487d",
+  "plan": "docs/2026-08-15-power-lanczos-zero-support-p4s7-partial-guide-plan.md",
+  "review": "docs/2026-08-15-power-lanczos-zero-support-p4s7-plan-review.md",
+  "scope": {
+    "site_counts": [4, 6, 8],
+    "qp_total": [1, 4],
+    "physical_case_order": [[4, 1], [4, 4], [6, 1], [6, 4], [8, 1], [8, 4]],
+    "omp_threads": 1,
+    "blas_threads": 1,
+    "statistical_cache_bytes": 268435456
+  },
+  "candidate_order": [
+    {"m": 2, "alpha": 1, "K": 32, "source_b1_index": 1},
+    {"m": 2, "alpha": 10, "K": 32, "source_b1_index": 3}
+  ],
+  "callback": {
+    "bounded_max_order": 2,
+    "formula": "sum_k_0_to_m_abs_u_k_squared_plus_alpha_eta",
+    "inner_kernel": "symmetric_fixed_sector_neighbor_mh",
+    "outer_correction": "G_y_Q_x_over_G_x_Q_y",
+    "sample_count_per_seed": 256,
+    "seed_hex_order": [
+      "0x5034533850494c31", "0x5034533850494c32",
+      "0x5034533850494c33", "0x5034533850494c34"
+    ],
+    "all_state_anchor_tolerance_multiplier_dbl_epsilon": 1024.0,
+    "exact_l4_balance_tolerance_multiplier_dbl_epsilon": 256.0,
+    "exact_l4_powered_ratio_tolerance_multiplier_dbl_epsilon": 1024.0,
+    "replay": "exact_table_and_real_callback_rng_state_trace_counters_and_series_identical",
+    "restart": "257_equals_101_plus_156"
+  },
+  "statistics": "frozen_stage_b1_only_not_reselected_in_stage_b2",
+  "timing": "forbidden_until_all_six_stage_b2_cases_pass",
+  "failure": "STOP_without_tolerance_seed_sample_candidate_or_grid_change"
+}

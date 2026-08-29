@@ -18,6 +18,8 @@ the Free Software Foundation, either version 3 of the License, or
 #include "./include/backflow.h"
 #include "./include/global.h"
 
+static int BFCanonicalNonFszPath = 1;
+
 static int BFCheckedMulLL(long long a, long long b, const char *name, long long *out) {
   if (a < 0 || b < 0) {
     fprintf(stderr, "Error: negative size while computing %s.\n", name);
@@ -197,18 +199,26 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
     fprintf(stderr, "Error: BackFlow MVP does not support NLocalSpin > 0 (got %d).\n", NLocSpn);
     return 1;
   }
-  if (NExUpdatePath != 0) {
-    fprintf(stderr, "Error: BackFlow MVP supports only NExUpdatePath==0 (got %d).\n", NExUpdatePath);
+  /* Local update path: the non-FSZ BackFlow samplers implement hopping (0) and
+     hopping+exchange (1). The FSZ BackFlow sampler ignores NExUpdatePath, so any
+     non-zero value would be silently dropped there; reject it explicitly. */
+  if (iFlgOrbitalGeneral != 0) {
+    if (NExUpdatePath != 0) {
+      fprintf(stderr, "Error: FSZ BackFlow supports only NExUpdatePath==0 (got %d).\n", NExUpdatePath);
+      return 1;
+    }
+  } else if (NExUpdatePath != 0 && NExUpdatePath != 1) {
+    fprintf(stderr, "Error: BackFlow supports only NExUpdatePath==0 or 1 (got %d).\n", NExUpdatePath);
     return 1;
   }
   if (NSPGaussLeg != 1) {
     fprintf(stderr, "Error: BackFlow MVP supports only NSPGaussLeg==1 (got %d).\n", NSPGaussLeg);
     return 1;
   }
-  if (iFlgOrbitalGeneral == 0 && NMPTrans > 1) {
+  if (iFlgOrbitalGeneral == 0 && FlagOptTrans > 0) {
     fprintf(stderr,
-            "Error: BackFlow MVP does not support momentum projection in non-FSZ mode yet (NMPTrans=%d).\n",
-            NMPTrans);
+            "Error: non-FSZ BackFlow does not support OptTrans; "
+            "remove -o/OptTrans or use FSZ orbital-general mode.\n");
     return 1;
   }
   if (FlagRBM != 0) {
@@ -221,10 +231,6 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
   }
   if (reweight == 1) {
     fprintf(stderr, "Error: BackFlow MVP does not support reweight.\n");
-    return 1;
-  }
-  if (APFlag != 0) {
-    fprintf(stderr, "Error: BackFlow MVP does not support APFlag=1.\n");
     return 1;
   }
   if (NQPOptTrans > 1) {
@@ -254,6 +260,23 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
    * GreenFunc2BF(_real) in CalculateHamiltonianBF_{fcmp,real} for the normal
    * Orbital / OrbitalAntiParallel format as well as in BF-FSZ mode. */
   return 0;
+}
+
+static int BFComputeCanonicalNonFszPath(void) {
+  int site;
+  if (NMPTrans > 1 || APFlag != 0) return 1;
+  if (NMPTrans != 1 || Nsite <= 0 || QPTrans == NULL ||
+      QPTransSgn == NULL || QPTrans[0] == NULL || QPTransSgn[0] == NULL) {
+    return 1;
+  }
+  for (site = 0; site < Nsite; site++) {
+    if (QPTrans[0][site] != site || QPTransSgn[0][site] != 1) return 1;
+  }
+  return 0;
+}
+
+int BFUseCanonicalNonFszPath(void) {
+  return BFCanonicalNonFszPath;
 }
 
 int BFValidateFszDefinitionDetails(void) {
@@ -720,6 +743,7 @@ void BFAllocRuntime(void) {
   int i;
   size_t slaterCount;
   if (NBackFlowIdx <= 0) {
+    BFCanonicalNonFszPath = 1;
     EleProjBFCnt = NULL;
     SmpSltElmBF_real = NULL;
     SmpEta = NULL;
@@ -735,6 +759,7 @@ void BFAllocRuntime(void) {
     BFRealEta = 1.0;
     return;
   }
+  BFCanonicalNonFszPath = BFComputeCanonicalNonFszPath();
 
   EleProjBFCnt = (int *)BFMallocArray((size_t)NVMCSample * (size_t)BFWorkIntCount(),
                                       sizeof(int), "EleProjBFCnt");
@@ -775,6 +800,7 @@ void BFAllocRuntime(void) {
 
 void BFFreeRuntime(void) {
   int i;
+  BFCanonicalNonFszPath = 1;
   free(EleProjBFCnt);
   free(SmpSltElmBF_real);
   free(SmpEta);

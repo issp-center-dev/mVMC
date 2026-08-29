@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "policy_id": "power-lanczos-zero-support-p4-r0-v11",
+  "status": "p4s9_target_session_stress_frozen_before_formal_run",
+  "frozen_date": "2026-08-15",
+  "parent_resource_policy_sha256": "617f521cf1d36484fbfc94181cf889478af7f7ed7f8b83fb9e9c20719d19192a",
+  "stage_c_evidence_sha256": "aaede11be8ff64974836ac8c79aa9e7ea9fc78c2faa15d9ef9006533e6ee30f2",
+  "stage_c_decision_sha256": "f5b866bd000095d2a5313e1b8a956e8e903096876c15bb01d62af2031a83881c",
+  "candidate_id": "direct_neighbor_rho0p01_N32768_session256m",
+  "reason": "L4_L6_L8_session_runs_saturated_the_full_finite_sector_so_their_L16_log_linear_slope_requires_a_direct_target_stress_screen",
+  "driver": {
+    "binary": "bounded_krylov_profile_driver",
+    "mode": "session-profile",
+    "schema_version": 2,
+    "fixture": "p4s9_target_session_spread_roots",
+    "site_count": 16,
+    "sector_size": 165636900,
+    "qp_total_order": [1, 4],
+    "sample_count": 4096,
+    "repeat_count": 3,
+    "root_schedule": "evenly_spaced_fixed_sector_indices_including_endpoints",
+    "root_schedule_role": "low_reuse_spread_root_stress_not_official_statistics",
+    "cache_bytes": 268435456,
+    "audit": 1,
+    "omp_threads": 1,
+    "blas_threads": 1,
+    "rank_count": 1
+  },
+  "resource_gate": {
+    "rank_reducer": "maximum",
+    "repeat_reducer": "median",
+    "total_seconds_per_root_maximum": 0.054931640625,
+    "projected_32768_root_seconds_maximum": 1800.0,
+    "allocated_capacity_bytes_per_rank_maximum": 4294967296,
+    "peak_rss_bytes_per_rank_maximum": 4294967296,
+    "p4c_cache256_maximum_seconds_per_configuration": 0.16000264079973991,
+    "required_speedup_minimum": 2.9127591854032655,
+    "engine_heap_allocations": 0,
+    "cache_reset_count": 1,
+    "mathematical_trace": "all_three_repeats_must_have_identical_ROW_bytes_excluding_timing_and_cache_metadata"
+  },
+  "decision": {
+    "local_promotable": false,
+    "pass": "both_qp_cases_pass_all_resource_and_trace_gates",
+    "pass_action": "prepare_remote_package_then_request_explicit_user_approval",
+    "failure_action": "formal_local_stop_no_remote_package"
+  },
+  "failure": "no_sample_repeat_schedule_cache_or_threshold_relaxation"
+}

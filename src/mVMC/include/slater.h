@@ -22,6 +22,21 @@ void MakeSlaterElmBF_fcmp(const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fcmp_to_serial(double complex *sltElmBF,
                                     const int *eleNum,
                                     const int *eleProjBFCnt);
+int RebuildSlaterMAllBF_fcmp(
+    const int *eleIdx, const int *eleNum, const int *eleProjBFCnt,
+    int qpStart, int qpEnd, double complex *sltElmBF,
+    double complex *pfMOut, double complex *invMOut);
+int RebuildSlaterMAllBF_real(
+    const int *eleIdx, const int *eleNum, const int *eleProjBFCnt,
+    int qpStart, int qpEnd, double complex *sltElmBF,
+    double complex *pfMComplexOut, double complex *invMComplexOut,
+    double *sltElmBFReal, double *pfMRealOut, double *invMRealOut);
+int CalculateBFCanonicalPf_fcmp(
+    const int *eleIdx, const int *eleNum, const int *eleProjBFCnt,
+    int qpStart, int qpEnd, double complex *pfMOut);
+int CalculateBFCanonicalPf_real(
+    const int *eleIdx, const int *eleNum, const int *eleProjBFCnt,
+    int qpStart, int qpEnd, double *pfMOut);
 void MakeSlaterElmBF_fsz(const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz_to(double complex *sltElmBF, const int *eleNum, const int *eleProjBFCnt);
 void MakeSlaterElmBF_fsz_to_serial(double complex *sltElmBF, const int *eleNum,

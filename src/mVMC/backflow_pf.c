@@ -199,68 +199,96 @@ int CalculateMAll_BF_real(const int *eleIdx, const int qpStart, const int qpEnd)
 
 int calculateMAll_BF_real_child(const int *eleIdx, const int qpStart, const int qpEnd, const int qpidx,
     double *bufM, int *iwork, double *work, int lwork, double* PfM_real, double* InvM_real) {
+  const size_t invMQpStride = (size_t)Nsize*(size_t)Nsize;
+
 #pragma procedure serial
-  /* const int qpNum = qpEnd-qpStart; */
-  int msi,msj;
-  int rsi,rsj;
+  return CalculateMAll_BF_real_from_workspace(
+      SlaterElmBF_real, eleIdx, qpStart+qpidx, qpStart+qpidx+1,
+      PfM_real+qpidx, InvM_real+(size_t)qpidx*invMQpStride,
+      invMQpStride, bufM, iwork, work, lwork);
+}
 
-  char uplo='U', mthd='P';
-  int m,n,nsq,one,lda,info=0;
-  double pfaff,minus_one;
+int CalculateMAll_BF_real_from_workspace(const double *sltElmBF,
+    const int *eleIdx, const int qpStart, const int qpEnd,
+    double *pfMOut, double *invMOut, const size_t invMQpStride,
+    double *bufM, int *iwork, double *work, int lwork) {
+#pragma procedure serial
+  const size_t nsizeSquared = (size_t)Nsize*(size_t)Nsize;
+  int qpidx;
 
-  /* optimization for Kei */
-  const int nsize = Nsize;
+  if(qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull) return -1;
+  if(qpStart == qpEnd) return 0;
+  if(sltElmBF == NULL || eleIdx == NULL || pfMOut == NULL
+     || invMOut == NULL || bufM == NULL || iwork == NULL || work == NULL
+     || Nsize <= 0 || Nsite <= 0 || Nsite2 <= 0 || Ne <= 0
+     || lwork < LapackLWork || invMQpStride < nsizeSquared
+     || invMQpStride > (size_t)PTRDIFF_MAX
+     || (qpEnd-qpStart > 1
+         && invMQpStride > SIZE_MAX/(size_t)(qpEnd-qpStart-1))) {
+    return -1;
+  }
+  for(qpidx=0;qpidx<Nsize;qpidx++) {
+    if(eleIdx[qpidx] < 0 || eleIdx[qpidx] >= Nsite) return -1;
+  }
 
-  const double *sltE = SlaterElmBF_real + (qpidx+qpStart)*Nsite2*Nsite2;
-  const double *sltE_i;
+  for(qpidx=0;qpidx<qpEnd-qpStart;qpidx++) {
+    int msi,msj;
+    int rsi,rsj;
 
-  double *invM = InvM_real + qpidx*Nsize*Nsize;
-  double *invM_i;
+    char uplo='U', mthd='P';
+    int m,n,nsq,one,lda,info=0;
+    double pfaff,minus_one;
 
-  double *bufM_i, *bufM_i2;
+    const int nsize = Nsize;
+    const int globalQpidx = qpStart+qpidx;
 
-  m=n=lda=Nsize;
-  nsq=n*n;
-  one=1;
-  minus_one=-1.0;
+    const double *sltE = sltElmBF
+        + (size_t)globalQpidx*(size_t)Nsite2*(size_t)Nsite2;
+    const double *sltE_i;
 
-  /* store bufM */
-  /* Note that bufM is column-major and skew-symmetric. */
-  /* bufM[msj][msi] = -sltE[rsi][rsj] */
+    double *invM = invMOut+(size_t)qpidx*invMQpStride;
+
+    double *bufM_i;
+
+    m=n=lda=Nsize;
+    nsq=n*n;
+    one=1;
+    minus_one=-1.0;
+
+    /* bufM is column-major and skew-symmetric. */
 #pragma loop noalias
-  for(msi=0;msi<nsize;msi++) {
-    rsi = eleIdx[msi] + (msi/Ne)*Nsite;
-    bufM_i = bufM + msi*Nsize;
-    sltE_i = sltE + rsi*Nsite2;
+    for(msi=0;msi<nsize;msi++) {
+      rsi = eleIdx[msi] + (msi/Ne)*Nsite;
+      bufM_i = bufM + msi*Nsize;
+      sltE_i = sltE + rsi*Nsite2;
 #pragma loop norecurrence
-    for(msj=0;msj<nsize;msj++) {
-      rsj = eleIdx[msj] + (msj/Ne)*Nsite;
-      bufM_i[msj] = -sltE_i[rsj];
+      for(msj=0;msj<nsize;msj++) {
+        rsj = eleIdx[msj] + (msj/Ne)*Nsite;
+        bufM_i[msj] = -sltE_i[rsj];
+      }
+    }
+
+    for(msi=0;msi<nsize*nsize;msi++) invM[msi] = bufM[msi];
+
+    M_DSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff,
+             iwork, work, &lwork, &info);
+
+    if(info!=0) return info;
+    if(!isfinite(pfaff)) return globalQpidx+1;
+    pfMOut[qpidx] = pfaff;
+
+    M_DGETRF(&m, &n, invM, &lda, iwork, &info);
+    if(info!=0) return info;
+    M_DGETRI(&n, invM, &lda, iwork, work, &lwork, &info);
+    if(info!=0) return info;
+
+    M_DSCAL(&nsq, &minus_one, invM, &one);
+    for(msi=0;msi<nsize*nsize;msi++) {
+      if(!isfinite(invM[msi])) return globalQpidx+1;
     }
   }
 
-  /* Pfaffian/inverse computed separately. */
-  /* Copy bufM to invM before using bufM to compute Pfaffian. */
-  for(msi=0;msi<nsize*nsize;msi++)
-    invM[msi] = bufM[msi];
-
-  /* Calculate Pf M */
-  M_DSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, &info);
-
-  if(info!=0) return info;
-  if(!isfinite(pfaff)) return qpidx+1;
-  PfM_real[qpidx] = pfaff;
-
-  /* Compute inverse. */
-  M_DGETRF(&m, &n, invM, &lda, iwork, &info); /* ipiv = iwork */
-  if(info!=0) return info;
-  M_DGETRI(&n, invM, &lda, iwork, work, &lwork, &info);
-  if(info!=0) return info;
-
-  // InvM -> InvM' = -InvM
-  M_DSCAL(&nsq, &minus_one, invM, &one);
-
-  return info;
+  return 0;
 }
 
 //==============e real =============//

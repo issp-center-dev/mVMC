@@ -34,6 +34,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <string.h>
 
 #include "global.h"
+#include "backflow.h"
 #include "backflow_nbody.h"
 #include "nbody_operator.h"
 #include "vmcmake.h"
@@ -55,6 +56,674 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #ifdef _pf_block_update
 #include "../pfupdates/pf_interface.h"
 #endif
+
+/* ------------------------------------------------------------------ */
+/* non-FSZ BackFlow sampler helpers: exchange-update row bookkeeping   */
+/* and the optional full-rebuild oracle (MVMC_BF_PF_UPDATE_CHECK=1).   */
+/* ------------------------------------------------------------------ */
+
+/* Append electron row `mub` to the per-QP update row list produced by
+   UpdateSlaterElmBF_*, unless it is already listed.  Used by the exchange
+   update, where the second moved electron changes its Pfaffian row but is
+   not forced into `msa` by UpdateSlaterElmBF_*.  Duplicate rows would make
+   the rank-n Pfaffian update singular, so the search runs before any write,
+   and a full row list aborts before writing out of bounds. */
+static void AppendBFUpdateRow(int *msa, int *hopNum, const int mub) {
+  int qpidx, hop;
+
+  if (mub < 0 || mub >= Nsize) {
+    fprintf(stderr, "error: AppendBFUpdateRow: electron index %d out of range [0,%d)\n", mub, Nsize);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  for (qpidx = 0; qpidx < NQPFull; qpidx++) {
+    int *row = msa + qpidx * Nsize;
+    const int n = hopNum[qpidx];
+    int found = 0;
+    for (hop = 0; hop < n; hop++) {
+      if (row[hop] == mub) { found = 1; break; }
+    }
+    if (found) continue;
+    if (n < 0 || n >= Nsize) {
+      fprintf(stderr, "error: AppendBFUpdateRow: update row list full (qp=%d, hopNum=%d, Nsize=%d)\n",
+              qpidx, n, Nsize);
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+    row[n] = mub;
+    hopNum[qpidx] = n + 1;
+  }
+}
+
+/* Full-rebuild oracle.  Enabled by MVMC_BF_PF_UPDATE_CHECK=1 (BFPfUpdateCheckEnabled).
+   Three stages per proposal:
+     (a) proposal: pfMNew from the rank-n update == PfM from CalculateMAll_BF_* on the candidate;
+     (b) accept:   PfM/InvM after UpdateMAll_BF_* == the candidate full rebuild;
+     (c) reject:   SlaterElmBF(_real), PfM, InvM, projection counts == pre-proposal snapshot.
+   Tolerance excursions in (a)/(b) only warn: accumulated round-off scales with
+   the proposal count, so production-length runs can cross any fixed threshold
+   without an update bug.  Structural failures -- a singular candidate that was
+   accepted, or a reject that fails to restore the snapshot -- still abort.
+   The check never changes the sampling path or RNG sequence. */
+#define BF_PF_CHECK_KIND_HOP 0
+#define BF_PF_CHECK_KIND_EXCH 1
+static long long BFPfCheckCount[2][3]; /* [kind][proposal, accept, reject] */
+static double BFPfCheckMaxDev[2];      /* [kind] max |pfMNew - full| / max(|full|, |PfM_old|) */
+/* Proposal/accept tolerance.  The rank-n update and the full rebuild differ by
+   round-off that scales with the *old* Pfaffian (the update is PfM_old times a
+   small Pfaffian), so the deviation is measured against max(|full|, |PfM_old|):
+   this is the absolute error of the Metropolis ratio.  A genuine update bug
+   gives O(1) deviations.  1e-8 aborted production-scale runs (~1e6 proposals)
+   on the unmodified hopping path with deviations of a few 1e-8, so the round-off
+   tail alone reaches that level; exceeding the tolerance therefore warns instead
+   of aborting, and the threshold is kept loose. */
+static const double BF_PF_CHECK_TOL = 1.0e-6;
+/* Restore checks compare against a pre-proposal snapshot.  The reverse update
+   recomputes elements with a different summation order than the initial
+   MakeSlaterElmBF_* pass, so a 1-ulp difference is expected on first touch;
+   a genuine restore bug produces O(1) differences. */
+static const double BF_PF_RESTORE_TOL = 1.0e-12;
+
+typedef struct {
+  int qpNum;
+  int fullValid;  /* candidate full rebuild available for the accept-stage check */
+  size_t nSlt;    /* NQPFull*Nsite2*Nsite2 */
+  size_t nInv;    /* qpNum*Nsize*Nsize */
+  double complex *pfM, *invM, *sltE;       /* pre-proposal snapshot (complex sampler) */
+  double complex *pfMFull, *invMFull;      /* candidate full rebuild (complex sampler) */
+  double *pfM_r, *invM_r, *sltE_r;         /* pre-proposal snapshot (real sampler) */
+  double *pfMFull_r, *invMFull_r;          /* candidate full rebuild (real sampler) */
+  int *projCnt, *projBFCnt;
+} BFPfCheckState;
+
+static void BFPfCheckAbort(const char *what, const char *kind, const int rank) {
+  fprintf(stderr, "error: BF pf-update check failed (%s, %s update, rank=%d)\n", what, kind, rank);
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+}
+
+static const char *BFPfCheckKindName(const int kind) {
+  return (kind == BF_PF_CHECK_KIND_EXCH) ? "exchange" : "hopping";
+}
+
+/* The oracle validates the incremental (rank-n) update machinery, which only
+   runs on the non-canonical path.  The canonical path rebuilds every candidate
+   in full and leaves the globals untouched until accept, so the proposal-stage
+   assumptions (SlaterElmBF holds the candidate) do not hold there: the check
+   is inert when the canonical path is selected. */
+static int BFPfCheckActive(void) {
+  return BFPfUpdateCheckEnabled && !BFUseCanonicalNonFszPath();
+}
+
+/* Tolerance excursions in the proposal/accept checks warn instead of aborting
+   (see BF_PF_CHECK_TOL above).  Detailed per-mismatch lines are capped per rank
+   so a systematic excursion cannot flood stderr on long runs; the counters keep
+   the full totals for the end-of-sample report. */
+static long long BFPfCheckWarnCount[2]; /* [kind] proposal/accept tolerance warnings */
+#define BF_PF_CHECK_WARN_PRINT_MAX 20LL
+
+static int BFPfCheckWarn(const char *what, const int kind, const int rank) {
+  BFPfCheckWarnCount[kind]++;
+  if (BFPfCheckWarnCount[kind] > BF_PF_CHECK_WARN_PRINT_MAX) return 0;
+  fprintf(stderr, "warning: BF pf-update check exceeded tolerance (%s, %s update, rank=%d)\n",
+          what, BFPfCheckKindName(kind), rank);
+  if (BFPfCheckWarnCount[kind] == BF_PF_CHECK_WARN_PRINT_MAX) {
+    fprintf(stderr, "warning: BF pf-update check: further %s-update tolerance warnings suppressed on rank %d\n",
+            BFPfCheckKindName(kind), rank);
+  }
+  return 1;
+}
+
+static int BFPfCheckCloseC(const double complex a, const double complex b, const double scale) {
+  return cabs(a - b) <= BF_PF_CHECK_TOL * scale;
+}
+static int BFPfCheckCloseR(const double a, const double b, const double scale) {
+  return fabs(a - b) <= BF_PF_CHECK_TOL * scale;
+}
+
+static void BFPfCheckInit(BFPfCheckState *st, const int qpStart, const int qpEnd, const int isReal) {
+  memset(st, 0, sizeof(*st));
+  st->qpNum = qpEnd - qpStart;
+  st->nSlt = (size_t)NQPFull * (size_t)Nsite2 * (size_t)Nsite2;
+  st->nInv = (size_t)st->qpNum * (size_t)Nsize * (size_t)Nsize;
+  if (!BFPfCheckActive()) return;
+  {
+    /* malloc(0) may legally return NULL (e.g. a rank that owns no QP index); keep sizes >= 1 */
+    const size_t nPf = (st->qpNum > 0) ? (size_t)st->qpNum : 1;
+    const size_t nInv = (st->nInv > 0) ? st->nInv : 1;
+    const size_t nSlt = (st->nSlt > 0) ? st->nSlt : 1;
+    if (isReal) {
+      st->pfM_r = (double *)malloc(sizeof(double) * nPf);
+      st->pfMFull_r = (double *)malloc(sizeof(double) * nPf);
+      st->invM_r = (double *)malloc(sizeof(double) * nInv);
+      st->invMFull_r = (double *)malloc(sizeof(double) * nInv);
+      st->sltE_r = (double *)malloc(sizeof(double) * nSlt);
+    } else {
+      st->pfM = (double complex *)malloc(sizeof(double complex) * nPf);
+      st->pfMFull = (double complex *)malloc(sizeof(double complex) * nPf);
+      st->invM = (double complex *)malloc(sizeof(double complex) * nInv);
+      st->invMFull = (double complex *)malloc(sizeof(double complex) * nInv);
+      st->sltE = (double complex *)malloc(sizeof(double complex) * nSlt);
+    }
+  }
+  st->projCnt = (int *)malloc(sizeof(int) * (NProj > 0 ? NProj : 1));
+  st->projBFCnt = (int *)malloc(sizeof(int) * (16 * Nsite * Nrange > 0 ? 16 * Nsite * Nrange : 1));
+  if ((isReal ? (st->pfM_r == NULL || st->pfMFull_r == NULL || st->invM_r == NULL ||
+                 st->invMFull_r == NULL || st->sltE_r == NULL)
+              : (st->pfM == NULL || st->pfMFull == NULL || st->invM == NULL ||
+                 st->invMFull == NULL || st->sltE == NULL)) ||
+      st->projCnt == NULL || st->projBFCnt == NULL) {
+    fprintf(stderr, "error: BF pf-update check: allocation failed\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+}
+
+static void BFPfCheckFree(BFPfCheckState *st) {
+  free(st->pfM); free(st->pfMFull); free(st->invM); free(st->invMFull); free(st->sltE);
+  free(st->pfM_r); free(st->pfMFull_r); free(st->invM_r); free(st->invMFull_r); free(st->sltE_r);
+  free(st->projCnt); free(st->projBFCnt);
+  memset(st, 0, sizeof(*st));
+}
+
+static void BFPfCheckReport(const char *label) {
+  int worldRank = 0;
+  if (!BFPfCheckActive()) return;
+  MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+  if (worldRank != 0) return; /* every rank checks and aborts; only rank 0 reports */
+  /* trailing warn counts must stay after both maxdev fields and be separated by
+     whitespace (not ';'): runtest_bf.py's PF_UPDATE_CHECK_PATTERN parses this
+     line, captures maxdev as \S+, and ignores extra trailing text */
+  fprintf(stderr,
+          "info: BF pf-update check (%s, rank=%d): hopping proposal=%lld accept=%lld reject=%lld maxdev=%.3e; "
+          "exchange proposal=%lld accept=%lld reject=%lld maxdev=%.3e (tolerance warnings hopping=%lld exchange=%lld)\n",
+          label, worldRank,
+          BFPfCheckCount[BF_PF_CHECK_KIND_HOP][0], BFPfCheckCount[BF_PF_CHECK_KIND_HOP][1],
+          BFPfCheckCount[BF_PF_CHECK_KIND_HOP][2], BFPfCheckMaxDev[BF_PF_CHECK_KIND_HOP],
+          BFPfCheckCount[BF_PF_CHECK_KIND_EXCH][0], BFPfCheckCount[BF_PF_CHECK_KIND_EXCH][1],
+          BFPfCheckCount[BF_PF_CHECK_KIND_EXCH][2], BFPfCheckMaxDev[BF_PF_CHECK_KIND_EXCH],
+          BFPfCheckWarnCount[BF_PF_CHECK_KIND_HOP], BFPfCheckWarnCount[BF_PF_CHECK_KIND_EXCH]);
+}
+
+/* --- complex sampler --- */
+static void BFPfCheckSnapshot(BFPfCheckState *st, const int *projCnt, const int *projBFCnt) {
+  if (!BFPfCheckActive()) return;
+  memcpy(st->pfM, PfM, sizeof(double complex) * st->qpNum);
+  memcpy(st->invM, InvM, sizeof(double complex) * st->nInv);
+  memcpy(st->sltE, SlaterElmBF, sizeof(double complex) * st->nSlt);
+  memcpy(st->projCnt, projCnt, sizeof(int) * NProj);
+  memcpy(st->projBFCnt, projBFCnt, sizeof(int) * 16 * Nsite * Nrange);
+}
+
+static void BFPfCheckProposal(BFPfCheckState *st, const int kind, const double complex *pfMNew,
+                              const int *eleIdx, const int qpStart, const int qpEnd, const int rank) {
+  int qpidx;
+  if (!BFPfCheckActive()) return;
+  BFPfCheckCount[kind][0]++;
+  st->fullValid = 0;
+  /* full rebuild of the candidate state; SlaterElmBF already holds the candidate elements */
+  if (CalculateMAll_BF_fcmp(eleIdx, qpStart, qpEnd) != 0) {
+    /* singular candidate: the rank-n update must then be non-finite or rejected; skip value check */
+    memcpy(PfM, st->pfM, sizeof(double complex) * st->qpNum);
+    memcpy(InvM, st->invM, sizeof(double complex) * st->nInv);
+    return;
+  }
+  memcpy(st->pfMFull, PfM, sizeof(double complex) * st->qpNum);
+  memcpy(st->invMFull, InvM, sizeof(double complex) * st->nInv);
+  st->fullValid = 1;
+  for (qpidx = 0; qpidx < st->qpNum; qpidx++) {
+    double scale = cabs(st->pfMFull[qpidx]);
+    double dev;
+    if (cabs(st->pfM[qpidx]) > scale) scale = cabs(st->pfM[qpidx]);
+    if (!(scale > 0.0)) scale = 1.0;
+    dev = cabs(pfMNew[qpidx] - st->pfMFull[qpidx]) / scale;
+    if (dev > BFPfCheckMaxDev[kind]) BFPfCheckMaxDev[kind] = dev;
+    if (!BFPfCheckCloseC(pfMNew[qpidx], st->pfMFull[qpidx], scale)) {
+      if (BFPfCheckWarn("proposal Pfaffian ratio", kind, rank)) {
+        fprintf(stderr, "warning: pfMNew mismatch qp=%d update=(%.17e,%.17e) full=(%.17e,%.17e)\n",
+                qpidx + qpStart, creal(pfMNew[qpidx]), cimag(pfMNew[qpidx]),
+                creal(st->pfMFull[qpidx]), cimag(st->pfMFull[qpidx]));
+      }
+    }
+  }
+  /* restore the pre-proposal state so the hot path is unchanged */
+  memcpy(PfM, st->pfM, sizeof(double complex) * st->qpNum);
+  memcpy(InvM, st->invM, sizeof(double complex) * st->nInv);
+}
+
+static void BFPfCheckAccept(BFPfCheckState *st, const int kind, const int qpStart, const int rank) {
+  int qpidx;
+  size_t idx;
+  double invScale = 1.0;
+  if (!BFPfCheckActive()) return;
+  BFPfCheckCount[kind][1]++;
+  if (!st->fullValid) {
+    fprintf(stderr, "error: accepted a move whose candidate full rebuild was singular\n");
+    BFPfCheckAbort("accepted singular candidate", BFPfCheckKindName(kind), rank);
+  }
+  for (qpidx = 0; qpidx < st->qpNum; qpidx++) {
+    double scale = cabs(st->pfMFull[qpidx]);
+    if (cabs(st->pfM[qpidx]) > scale) scale = cabs(st->pfM[qpidx]);
+    if (!(scale > 0.0)) scale = 1.0;
+    if (!BFPfCheckCloseC(PfM[qpidx], st->pfMFull[qpidx], scale)) {
+      if (BFPfCheckWarn("accepted PfM", kind, rank)) {
+        fprintf(stderr, "warning: accepted PfM mismatch qp=%d update=(%.17e,%.17e) full=(%.17e,%.17e)\n",
+                qpidx + qpStart, creal(PfM[qpidx]), cimag(PfM[qpidx]),
+                creal(st->pfMFull[qpidx]), cimag(st->pfMFull[qpidx]));
+      }
+    }
+  }
+  for (idx = 0; idx < st->nInv; idx++) {
+    const double v = cabs(st->invMFull[idx]);
+    if (v > invScale) invScale = v;
+  }
+  for (idx = 0; idx < st->nInv; idx++) {
+    if (!BFPfCheckCloseC(InvM[idx], st->invMFull[idx], invScale)) {
+      if (BFPfCheckWarn("accepted InvM", kind, rank)) {
+        fprintf(stderr, "warning: accepted InvM mismatch idx=%zu update=(%.17e,%.17e) full=(%.17e,%.17e)\n",
+                idx, creal(InvM[idx]), cimag(InvM[idx]), creal(st->invMFull[idx]), cimag(st->invMFull[idx]));
+      }
+    }
+  }
+}
+
+static void BFPfCheckReject(BFPfCheckState *st, const int kind, const int *projCnt, const int *projBFCnt,
+                            const int rank) {
+  size_t idx;
+  int i;
+  if (!BFPfCheckActive()) return;
+  BFPfCheckCount[kind][2]++;
+  for (idx = 0; idx < st->nSlt; idx++) {
+    if (cabs(SlaterElmBF[idx] - st->sltE[idx]) > BF_PF_RESTORE_TOL * (1.0 + cabs(st->sltE[idx]))) {
+      fprintf(stderr, "error: rejected SlaterElmBF not restored idx=%zu now=(%.17e,%.17e) snap=(%.17e,%.17e)\n",
+              idx, creal(SlaterElmBF[idx]), cimag(SlaterElmBF[idx]), creal(st->sltE[idx]), cimag(st->sltE[idx]));
+      BFPfCheckAbort("reject Slater restore", BFPfCheckKindName(kind), rank);
+    }
+  }
+  for (i = 0; i < st->qpNum; i++) {
+    if (PfM[i] != st->pfM[i]) BFPfCheckAbort("reject PfM restore", BFPfCheckKindName(kind), rank);
+  }
+  for (idx = 0; idx < st->nInv; idx++) {
+    if (InvM[idx] != st->invM[idx]) BFPfCheckAbort("reject InvM restore", BFPfCheckKindName(kind), rank);
+  }
+  for (i = 0; i < NProj; i++) {
+    if (projCnt[i] != st->projCnt[i]) BFPfCheckAbort("reject projection count restore", BFPfCheckKindName(kind), rank);
+  }
+  for (i = 0; i < 16 * Nsite * Nrange; i++) {
+    if (projBFCnt[i] != st->projBFCnt[i]) BFPfCheckAbort("reject BF count restore", BFPfCheckKindName(kind), rank);
+  }
+}
+
+/* --- real sampler --- */
+static void BFPfCheckSnapshot_real(BFPfCheckState *st, const int *projCnt, const int *projBFCnt) {
+  if (!BFPfCheckActive()) return;
+  memcpy(st->pfM_r, PfM_real, sizeof(double) * st->qpNum);
+  memcpy(st->invM_r, InvM_real, sizeof(double) * st->nInv);
+  memcpy(st->sltE_r, SlaterElmBF_real, sizeof(double) * st->nSlt);
+  memcpy(st->projCnt, projCnt, sizeof(int) * NProj);
+  memcpy(st->projBFCnt, projBFCnt, sizeof(int) * 16 * Nsite * Nrange);
+}
+
+static void BFPfCheckProposal_real(BFPfCheckState *st, const int kind, const double *pfMNew,
+                                   const int *eleIdx, const int qpStart, const int qpEnd, const int rank) {
+  int qpidx;
+  if (!BFPfCheckActive()) return;
+  BFPfCheckCount[kind][0]++;
+  st->fullValid = 0;
+  if (CalculateMAll_BF_real(eleIdx, qpStart, qpEnd) != 0) {
+    memcpy(PfM_real, st->pfM_r, sizeof(double) * st->qpNum);
+    memcpy(InvM_real, st->invM_r, sizeof(double) * st->nInv);
+    return;
+  }
+  memcpy(st->pfMFull_r, PfM_real, sizeof(double) * st->qpNum);
+  memcpy(st->invMFull_r, InvM_real, sizeof(double) * st->nInv);
+  st->fullValid = 1;
+  for (qpidx = 0; qpidx < st->qpNum; qpidx++) {
+    double scale = fabs(st->pfMFull_r[qpidx]);
+    double dev;
+    if (fabs(st->pfM_r[qpidx]) > scale) scale = fabs(st->pfM_r[qpidx]);
+    if (!(scale > 0.0)) scale = 1.0;
+    dev = fabs(pfMNew[qpidx] - st->pfMFull_r[qpidx]) / scale;
+    if (dev > BFPfCheckMaxDev[kind]) BFPfCheckMaxDev[kind] = dev;
+    if (!BFPfCheckCloseR(pfMNew[qpidx], st->pfMFull_r[qpidx], scale)) {
+      if (BFPfCheckWarn("proposal Pfaffian ratio", kind, rank)) {
+        fprintf(stderr, "warning: pfMNew mismatch qp=%d update=%.17e full=%.17e\n",
+                qpidx + qpStart, pfMNew[qpidx], st->pfMFull_r[qpidx]);
+      }
+    }
+  }
+  memcpy(PfM_real, st->pfM_r, sizeof(double) * st->qpNum);
+  memcpy(InvM_real, st->invM_r, sizeof(double) * st->nInv);
+}
+
+static void BFPfCheckAccept_real(BFPfCheckState *st, const int kind, const int qpStart, const int rank) {
+  int qpidx;
+  size_t idx;
+  double invScale = 1.0;
+  if (!BFPfCheckActive()) return;
+  BFPfCheckCount[kind][1]++;
+  if (!st->fullValid) {
+    fprintf(stderr, "error: accepted a move whose candidate full rebuild was singular\n");
+    BFPfCheckAbort("accepted singular candidate", BFPfCheckKindName(kind), rank);
+  }
+  for (qpidx = 0; qpidx < st->qpNum; qpidx++) {
+    double scale = fabs(st->pfMFull_r[qpidx]);
+    if (fabs(st->pfM_r[qpidx]) > scale) scale = fabs(st->pfM_r[qpidx]);
+    if (!(scale > 0.0)) scale = 1.0;
+    if (!BFPfCheckCloseR(PfM_real[qpidx], st->pfMFull_r[qpidx], scale)) {
+      if (BFPfCheckWarn("accepted PfM", kind, rank)) {
+        fprintf(stderr, "warning: accepted PfM mismatch qp=%d update=%.17e full=%.17e\n",
+                qpidx + qpStart, PfM_real[qpidx], st->pfMFull_r[qpidx]);
+      }
+    }
+  }
+  for (idx = 0; idx < st->nInv; idx++) {
+    const double v = fabs(st->invMFull_r[idx]);
+    if (v > invScale) invScale = v;
+  }
+  for (idx = 0; idx < st->nInv; idx++) {
+    if (!BFPfCheckCloseR(InvM_real[idx], st->invMFull_r[idx], invScale)) {
+      if (BFPfCheckWarn("accepted InvM", kind, rank)) {
+        fprintf(stderr, "warning: accepted InvM mismatch idx=%zu update=%.17e full=%.17e\n",
+                idx, InvM_real[idx], st->invMFull_r[idx]);
+      }
+    }
+  }
+}
+
+static void BFPfCheckReject_real(BFPfCheckState *st, const int kind, const int *projCnt, const int *projBFCnt,
+                                 const int rank) {
+  size_t idx;
+  int i;
+  if (!BFPfCheckActive()) return;
+  BFPfCheckCount[kind][2]++;
+  for (idx = 0; idx < st->nSlt; idx++) {
+    if (fabs(SlaterElmBF_real[idx] - st->sltE_r[idx]) > BF_PF_RESTORE_TOL * (1.0 + fabs(st->sltE_r[idx]))) {
+      fprintf(stderr, "error: rejected SlaterElmBF_real not restored idx=%zu now=%.17e snap=%.17e\n",
+              idx, SlaterElmBF_real[idx], st->sltE_r[idx]);
+      BFPfCheckAbort("reject Slater restore", BFPfCheckKindName(kind), rank);
+    }
+  }
+  for (i = 0; i < st->qpNum; i++) {
+    if (PfM_real[i] != st->pfM_r[i]) BFPfCheckAbort("reject PfM restore", BFPfCheckKindName(kind), rank);
+  }
+  for (idx = 0; idx < st->nInv; idx++) {
+    if (InvM_real[idx] != st->invM_r[idx]) BFPfCheckAbort("reject InvM restore", BFPfCheckKindName(kind), rank);
+  }
+  for (i = 0; i < NProj; i++) {
+    if (projCnt[i] != st->projCnt[i]) BFPfCheckAbort("reject projection count restore", BFPfCheckKindName(kind), rank);
+  }
+  for (i = 0; i < 16 * Nsite * Nrange; i++) {
+    if (projBFCnt[i] != st->projBFCnt[i]) BFPfCheckAbort("reject BF count restore", BFPfCheckKindName(kind), rank);
+  }
+}
+
+typedef struct {
+  int enabled;
+  int realMode;
+  int injectFailure;
+  int injected;
+  size_t slaterCount;
+  size_t invCount;
+  size_t pfCount;
+  size_t etaCount;
+  size_t projCount;
+  size_t projBFCount;
+  int *baseEleIdx;
+  int *baseEleCfg;
+  int *baseEleNum;
+  int *baseProj;
+  int *baseProjBF;
+  int *candidateEleIdx;
+  int *candidateEleCfg;
+  int *candidateEleNum;
+  double complex *baseSlater;
+  double complex *baseInv;
+  double complex *basePf;
+  double complex *baseEta;
+  int *baseEtaFlag;
+  double *baseSlaterReal;
+  double *baseInvReal;
+  double *basePfReal;
+  long long checked;
+  long long accepted;
+  long long rejected;
+  long long failures;
+} BFMultiQPSampleAudit;
+
+static int bfExactEnvOne(const char *name) {
+  const char *value = getenv(name);
+  return value != NULL && strcmp(value, "1") == 0;
+}
+
+static void bfMultiQPSampleAuditFree(BFMultiQPSampleAudit *audit) {
+  if(audit == NULL) return;
+  free(audit->baseEleIdx);
+  free(audit->baseEleCfg);
+  free(audit->baseEleNum);
+  free(audit->baseProj);
+  free(audit->baseProjBF);
+  free(audit->candidateEleIdx);
+  free(audit->candidateEleCfg);
+  free(audit->candidateEleNum);
+  free(audit->baseSlater);
+  free(audit->baseInv);
+  free(audit->basePf);
+  free(audit->baseEta);
+  free(audit->baseEtaFlag);
+  free(audit->baseSlaterReal);
+  free(audit->baseInvReal);
+  free(audit->basePfReal);
+  memset(audit, 0, sizeof(*audit));
+}
+
+static int bfMultiQPSampleAuditInit(BFMultiQPSampleAudit *audit,
+                                    int realMode, int qpCount) {
+  if(audit == NULL || qpCount < 0) return -1;
+  memset(audit, 0, sizeof(*audit));
+  audit->enabled = bfExactEnvOne("MVMC_BF_MULTI_QP_STATE_CHECK") ||
+                   bfExactEnvOne("MVMC_BF_MULTI_QP_INJECT_REBUILD_FAILURE");
+  if(!audit->enabled) return 0;
+  audit->realMode = realMode;
+  audit->injectFailure =
+      bfExactEnvOne("MVMC_BF_MULTI_QP_INJECT_REBUILD_FAILURE");
+  audit->slaterCount =
+      (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+  audit->invCount = (size_t)qpCount*(size_t)Nsize*(size_t)Nsize;
+  audit->pfCount = (size_t)qpCount;
+  audit->etaCount = (size_t)Nsite*(size_t)Nsite;
+  audit->projCount = NProj > 0 ? (size_t)NProj : 1u;
+  audit->projBFCount = (size_t)16*(size_t)Nsite*(size_t)Nrange;
+
+#define BF_AUDIT_ALLOC(member, count, type) \
+  audit->member = (type *)malloc(((count) > 0 ? (count) : 1u)*sizeof(type))
+  BF_AUDIT_ALLOC(baseEleIdx, (size_t)Nsize, int);
+  BF_AUDIT_ALLOC(baseEleCfg, (size_t)Nsite2, int);
+  BF_AUDIT_ALLOC(baseEleNum, (size_t)Nsite2, int);
+  BF_AUDIT_ALLOC(baseProj, audit->projCount, int);
+  BF_AUDIT_ALLOC(baseProjBF, audit->projBFCount, int);
+  BF_AUDIT_ALLOC(candidateEleIdx, (size_t)Nsize, int);
+  BF_AUDIT_ALLOC(candidateEleCfg, (size_t)Nsite2, int);
+  BF_AUDIT_ALLOC(candidateEleNum, (size_t)Nsite2, int);
+  BF_AUDIT_ALLOC(baseSlater, audit->slaterCount, double complex);
+  BF_AUDIT_ALLOC(baseInv, audit->invCount, double complex);
+  BF_AUDIT_ALLOC(basePf, audit->pfCount, double complex);
+  BF_AUDIT_ALLOC(baseEta, audit->etaCount, double complex);
+  BF_AUDIT_ALLOC(baseEtaFlag, audit->etaCount, int);
+  if(realMode) {
+    BF_AUDIT_ALLOC(baseSlaterReal, audit->slaterCount, double);
+    BF_AUDIT_ALLOC(baseInvReal, audit->invCount, double);
+    BF_AUDIT_ALLOC(basePfReal, audit->pfCount, double);
+  }
+#undef BF_AUDIT_ALLOC
+  if(audit->baseEleIdx == NULL || audit->baseEleCfg == NULL ||
+     audit->baseEleNum == NULL || audit->baseProj == NULL ||
+     audit->baseProjBF == NULL || audit->candidateEleIdx == NULL ||
+     audit->candidateEleCfg == NULL || audit->candidateEleNum == NULL ||
+     audit->baseSlater == NULL || audit->baseInv == NULL ||
+     audit->basePf == NULL || audit->baseEta == NULL ||
+     audit->baseEtaFlag == NULL ||
+     (realMode && (audit->baseSlaterReal == NULL ||
+                   audit->baseInvReal == NULL ||
+                   audit->basePfReal == NULL))) {
+    bfMultiQPSampleAuditFree(audit);
+    return -1;
+  }
+  return 0;
+}
+
+static void bfMultiQPSampleAuditCaptureBase(
+    BFMultiQPSampleAudit *audit, const int *eleIdx, const int *eleCfg,
+    const int *eleNum, const int *eleProjCnt, const int *eleProjBFCnt) {
+  int site;
+  if(audit == NULL || !audit->enabled) return;
+  memcpy(audit->baseEleIdx, eleIdx, (size_t)Nsize*sizeof(int));
+  memcpy(audit->baseEleCfg, eleCfg, (size_t)Nsite2*sizeof(int));
+  memcpy(audit->baseEleNum, eleNum, (size_t)Nsite2*sizeof(int));
+  if(NProj > 0) {
+    memcpy(audit->baseProj, eleProjCnt, (size_t)NProj*sizeof(int));
+  }
+  memcpy(audit->baseProjBF, eleProjBFCnt,
+         audit->projBFCount*sizeof(int));
+  memcpy(audit->baseSlater, SlaterElmBF,
+         audit->slaterCount*sizeof(double complex));
+  memcpy(audit->baseInv, InvM,
+         audit->invCount*sizeof(double complex));
+  memcpy(audit->basePf, PfM,
+         audit->pfCount*sizeof(double complex));
+  for(site=0;site<Nsite;site++) {
+    memcpy(audit->baseEta+(size_t)site*(size_t)Nsite, eta[site],
+           (size_t)Nsite*sizeof(double complex));
+    memcpy(audit->baseEtaFlag+(size_t)site*(size_t)Nsite, etaFlag[site],
+           (size_t)Nsite*sizeof(int));
+  }
+  if(audit->realMode) {
+    memcpy(audit->baseSlaterReal, SlaterElmBF_real,
+           audit->slaterCount*sizeof(double));
+    memcpy(audit->baseInvReal, InvM_real,
+           audit->invCount*sizeof(double));
+    memcpy(audit->basePfReal, PfM_real,
+           audit->pfCount*sizeof(double));
+  }
+}
+
+static void bfMultiQPSampleAuditCaptureCandidate(
+    BFMultiQPSampleAudit *audit, const int *eleIdx, const int *eleCfg,
+    const int *eleNum) {
+  if(audit == NULL || !audit->enabled) return;
+  memcpy(audit->candidateEleIdx, eleIdx, (size_t)Nsize*sizeof(int));
+  memcpy(audit->candidateEleCfg, eleCfg, (size_t)Nsite2*sizeof(int));
+  memcpy(audit->candidateEleNum, eleNum, (size_t)Nsite2*sizeof(int));
+}
+
+static int bfMultiQPSampleAuditGlobalsEqualBase(
+    const BFMultiQPSampleAudit *audit) {
+  int site;
+  if(audit == NULL || !audit->enabled) return 1;
+  if(memcmp(audit->baseSlater, SlaterElmBF,
+            audit->slaterCount*sizeof(double complex)) != 0 ||
+     memcmp(audit->baseInv, InvM,
+            audit->invCount*sizeof(double complex)) != 0 ||
+     memcmp(audit->basePf, PfM,
+            audit->pfCount*sizeof(double complex)) != 0) return 0;
+  for(site=0;site<Nsite;site++) {
+    if(memcmp(audit->baseEta+(size_t)site*(size_t)Nsite, eta[site],
+              (size_t)Nsite*sizeof(double complex)) != 0 ||
+       memcmp(audit->baseEtaFlag+(size_t)site*(size_t)Nsite,
+              etaFlag[site], (size_t)Nsite*sizeof(int)) != 0) return 0;
+  }
+  if(audit->realMode &&
+     (memcmp(audit->baseSlaterReal, SlaterElmBF_real,
+             audit->slaterCount*sizeof(double)) != 0 ||
+      memcmp(audit->baseInvReal, InvM_real,
+             audit->invCount*sizeof(double)) != 0 ||
+      memcmp(audit->basePfReal, PfM_real,
+             audit->pfCount*sizeof(double)) != 0)) return 0;
+  return 1;
+}
+
+static void bfMultiQPSampleAuditAfterCandidate(
+    BFMultiQPSampleAudit *audit) {
+  if(audit == NULL || !audit->enabled) return;
+  audit->checked++;
+  if(!bfMultiQPSampleAuditGlobalsEqualBase(audit)) audit->failures++;
+}
+
+static void bfMultiQPSampleAuditAfterReject(
+    BFMultiQPSampleAudit *audit, const int *eleIdx, const int *eleCfg,
+    const int *eleNum, const int *eleProjCnt, const int *eleProjBFCnt) {
+  if(audit == NULL || !audit->enabled) return;
+  audit->rejected++;
+  if(!bfMultiQPSampleAuditGlobalsEqualBase(audit) ||
+     memcmp(audit->baseEleIdx, eleIdx, (size_t)Nsize*sizeof(int)) != 0 ||
+     memcmp(audit->baseEleCfg, eleCfg, (size_t)Nsite2*sizeof(int)) != 0 ||
+     memcmp(audit->baseEleNum, eleNum, (size_t)Nsite2*sizeof(int)) != 0 ||
+     (NProj > 0 && memcmp(audit->baseProj, eleProjCnt,
+                          (size_t)NProj*sizeof(int)) != 0) ||
+     memcmp(audit->baseProjBF, eleProjBFCnt,
+            audit->projBFCount*sizeof(int)) != 0) {
+    audit->failures++;
+  }
+}
+
+static void bfMultiQPSampleAuditAfterAccept(
+    BFMultiQPSampleAudit *audit, const int *eleIdx, const int *eleCfg,
+    const int *eleNum, const int *eleProjCnt, const int *expectedProj,
+    const int *eleProjBFCnt, const int *expectedProjBF,
+    const double complex *candidateSlater,
+    const double complex *candidatePf, const double complex *candidateInv,
+    const double *candidateSlaterReal, const double *candidatePfReal,
+    const double *candidateInvReal) {
+  if(audit == NULL || !audit->enabled) return;
+  audit->accepted++;
+  if(memcmp(audit->candidateEleIdx, eleIdx,
+            (size_t)Nsize*sizeof(int)) != 0 ||
+     memcmp(audit->candidateEleCfg, eleCfg,
+            (size_t)Nsite2*sizeof(int)) != 0 ||
+     memcmp(audit->candidateEleNum, eleNum,
+            (size_t)Nsite2*sizeof(int)) != 0 ||
+     (NProj > 0 && (memcmp(eleProjCnt, expectedProj,
+                           (size_t)NProj*sizeof(int)) != 0)) ||
+     memcmp(eleProjBFCnt, expectedProjBF,
+            audit->projBFCount*sizeof(int)) != 0 ||
+     memcmp(SlaterElmBF, candidateSlater,
+            audit->slaterCount*sizeof(double complex)) != 0 ||
+     memcmp(PfM, candidatePf,
+            audit->pfCount*sizeof(double complex)) != 0 ||
+     memcmp(InvM, candidateInv,
+            audit->invCount*sizeof(double complex)) != 0 ||
+     (audit->realMode &&
+      (memcmp(SlaterElmBF_real, candidateSlaterReal,
+              audit->slaterCount*sizeof(double)) != 0 ||
+       memcmp(PfM_real, candidatePfReal,
+              audit->pfCount*sizeof(double)) != 0 ||
+       memcmp(InvM_real, candidateInvReal,
+              audit->invCount*sizeof(double)) != 0))) {
+    audit->failures++;
+  }
+}
+
+static void bfMultiQPSampleAuditFinalize(BFMultiQPSampleAudit *audit,
+                                         MPI_Comm comm, int rank) {
+  long long local[5];
+  long long total[5];
+  if(audit == NULL || !audit->enabled) return;
+  local[0] = audit->checked;
+  local[1] = audit->accepted;
+  local[2] = audit->rejected;
+  local[3] = audit->injected;
+  local[4] = audit->failures;
+  memcpy(total, local, sizeof(total));
+#ifdef _mpi_use
+  MPI_Allreduce(local, total, 5, MPI_LONG_LONG, MPI_SUM, comm);
+#endif
+  if(rank == 0) {
+    fprintf(stderr,
+            "BF multi-QP sample state audit checked:%lld accepted:%lld "
+            "rejected:%lld injected:%lld failures:%lld\n",
+            total[0], total[1], total[2], total[3], total[4]);
+  }
+  if(total[0] <= 0 || total[1] <= 0 || total[2] <= 0 || total[4] != 0 ||
+     (audit->injectFailure && total[3] <= 0)) {
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+}
 
 static int lsbfLocalVectorFinite(void) {
   int idx;
@@ -364,7 +1033,14 @@ void VMC_BF_MakeSample(MPI_Comm comm)
   int projBFCntNew[16 * Nsite * Nrange]; // For BackFlow
   int msaTmp[NQPFull * Nsize], icount[NQPFull]; // For BackFlow
   double complex pfMNew[NQPFull];
+  double complex *fullCandidateSlater = NULL;
+  double complex *fullCandidateInv = NULL;
+  size_t fullSlaterCount = 0;
+  size_t fullInvCount = 0;
+  int fullCandidateStatus = 0;
+  BFMultiQPSampleAudit sampleAudit = {0};
   double x, w; // TBC x will be complex number
+  BFPfCheckState pfCheck;
 
   int qpStart, qpEnd;
   int rejectFlag;
@@ -374,7 +1050,37 @@ void VMC_BF_MakeSample(MPI_Comm comm)
 
   BFSamplerRebuildCheck rebuildChk;
   SplitLoop(&qpStart, &qpEnd, NQPFull, rank, size);
-  BFSamplerRebuildCheckInit(&rebuildChk, 0, qpStart, qpEnd, rank, size);
+  memset(&rebuildChk, 0, sizeof(rebuildChk));
+  if(!BFUseCanonicalNonFszPath()) {
+    BFSamplerRebuildCheckInit(&rebuildChk, 0, qpStart, qpEnd, rank, size);
+  }
+  BFPfCheckInit(&pfCheck, qpStart, qpEnd, 0);
+
+  if(BFUseCanonicalNonFszPath()) {
+    if(bfMultiQPSampleAuditInit(
+           &sampleAudit, 0, qpEnd-qpStart) != 0) {
+      if(rank == 0) {
+        fprintf(stderr,
+                "Error: failed to allocate non-FSZ multi-QP BackFlow sample audit.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    fullSlaterCount = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+    fullInvCount = (size_t)(qpEnd-qpStart)*(size_t)Nsize*(size_t)Nsize;
+    fullCandidateSlater = (double complex *)malloc(
+        fullSlaterCount*sizeof(double complex));
+    fullCandidateInv = (double complex *)malloc(
+        (fullInvCount > 0 ? fullInvCount : 1)*sizeof(double complex));
+    if(fullCandidateSlater == NULL || fullCandidateInv == NULL) {
+      if(rank == 0) {
+        fprintf(stderr,
+                "Error: failed to allocate non-FSZ multi-QP BackFlow candidate workspace.\n");
+      }
+      free(fullCandidateSlater);
+      free(fullCandidateInv);
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+  }
 
   StartTimer(30);
   if (BurnFlag == 0) {
@@ -416,24 +1122,46 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         StopTimer(31);
 
         if (rejectFlag) continue;
+        BFPfCheckSnapshot(&pfCheck, TmpEleProjCnt, TmpEleProjBFCnt);
 
         StartTimer(32);
         if (rebuildChk.enabled) BFSamplerCheckSave_fcmp(&rebuildChk);
+        bfMultiQPSampleAuditCaptureBase(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+            TmpEleProjCnt, TmpEleProjBFCnt);
         StartTimer(60);
         /* The mi-th electron with spin s hops to site rj */
         updateEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
         UpdateProjCnt(ri, rj, s, projCntNew, TmpEleProjCnt, TmpEleNum);
         MakeProjBFCnt(projBFCntNew, TmpEleNum);
+        bfMultiQPSampleAuditCaptureCandidate(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum);
         StopTimer(60);
         StartTimer(64);
-        UpdateSlaterElmBF_fcmp(mi, ri, rj, s, TmpEleCfg, TmpEleNum, projBFCntNew, msaTmp, icount,
-                               SlaterElmBF);
+        if(BFUseCanonicalNonFszPath()) {
+          fullCandidateStatus = RebuildSlaterMAllBF_fcmp(
+              TmpEleIdx, TmpEleNum, projBFCntNew, qpStart, qpEnd,
+              fullCandidateSlater, pfMNew, fullCandidateInv);
+          bfMultiQPSampleAuditAfterCandidate(&sampleAudit);
+          if(sampleAudit.injectFailure && !sampleAudit.injected) {
+            fullCandidateStatus = BF_FSZ_MALL_LAPACK_FAILURE;
+            sampleAudit.injected++;
+          }
+        } else {
+          UpdateSlaterElmBF_fcmp(mi, ri, rj, s, TmpEleCfg, TmpEleNum,
+                                 projBFCntNew, msaTmp, icount, SlaterElmBF);
+          fullCandidateStatus = 0;
+        }
         StopTimer(64);
         StartTimer(61);
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         //CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
-        CalculateNewPfMBF(icount, msaTmp, pfMNew, TmpEleIdx, qpStart, qpEnd, SlaterElmBF);
+        if(!BFUseCanonicalNonFszPath()) {
+          CalculateNewPfMBF(icount, msaTmp, pfMNew, TmpEleIdx,
+                            qpStart, qpEnd, SlaterElmBF);
+        }
         if (rebuildChk.enabled) BFSamplerCheckCandidate_fcmp(&rebuildChk, TmpEleIdx, TmpEleNum, projBFCntNew, pfMNew, qpStart, qpEnd);
+        BFPfCheckProposal(&pfCheck, BF_PF_CHECK_KIND_HOP, pfMNew, TmpEleIdx, qpStart, qpEnd, rank);
 
         //printf("DEBUG: out %d in %d pfMNew=%lf \n",outStep,inStep,creal(pfMNew[0]));
         StopTimer(61);
@@ -441,7 +1169,9 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         StartTimer(62);
         /* calculate inner product <phi|L|x> */
         //logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
-        logIpNew = CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm);
+        logIpNew = fullCandidateStatus == 0
+            ? CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm)
+            : -INFINITY;
         StopTimer(62);
 
         /* Metroplis */
@@ -449,10 +1179,19 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         w = exp(2.0 * (x + (logIpNew - logIpOld)));
         if (!isfinite(w)) w = -1.0; /* should be rejected */
 
-        if (w > genrand_real2()) { /* accept */
+        if (fullCandidateStatus == 0 && w > genrand_real2()) { /* accept */
           // UpdateMAll will change SlaterElm, InvM (including PfM)
           StartTimer(63);
-          UpdateMAll_BF_fcmp(icount, msaTmp, PfM, TmpEleIdx, qpStart, qpEnd);
+          if(BFUseCanonicalNonFszPath()) {
+            MakeSlaterElmBF_fcmp(TmpEleNum, projBFCntNew);
+            memcpy(PfM, pfMNew,
+                   (size_t)(qpEnd-qpStart)*sizeof(double complex));
+            memcpy(InvM, fullCandidateInv,
+                   fullInvCount*sizeof(double complex));
+          } else {
+            UpdateMAll_BF_fcmp(icount, msaTmp, PfM, TmpEleIdx,
+                               qpStart, qpEnd);
+          }
           //          UpdateMAll_real(mi,s,TmpEleIdx,qpStart,qpEnd);
           //            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
           StopTimer(63);
@@ -460,33 +1199,62 @@ void VMC_BF_MakeSample(MPI_Comm comm)
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
           for (i = 0; i < 16 * Nsite * Nrange; i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
+          bfMultiQPSampleAuditAfterAccept(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, projCntNew, TmpEleProjBFCnt, projBFCntNew,
+              fullCandidateSlater, pfMNew, fullCandidateInv,
+              NULL, NULL, NULL);
           logIpOld = logIpNew;
           nAccept++;
           Counter[1]++;
+          BFPfCheckAccept(&pfCheck, BF_PF_CHECK_KIND_HOP, qpStart, rank);
         } else { /* reject */
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
-          StartTimer(64);
-          UpdateSlaterElmBF_fcmp(mi, rj, ri, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, msaTmp, icount,
-                                 SlaterElmBF);
-          StopTimer(64);
+          if(!BFUseCanonicalNonFszPath()) {
+            StartTimer(64);
+            UpdateSlaterElmBF_fcmp(mi, rj, ri, s, TmpEleCfg, TmpEleNum,
+                                   TmpEleProjBFCnt, msaTmp, icount,
+                                   SlaterElmBF);
+            StopTimer(64);
+          }
           if (rebuildChk.enabled) BFSamplerCheckReject_fcmp(&rebuildChk);
+          bfMultiQPSampleAuditAfterReject(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, TmpEleProjBFCnt);
+          BFPfCheckReject(&pfCheck, BF_PF_CHECK_KIND_HOP, TmpEleProjCnt, TmpEleProjBFCnt, rank);
         }
         StopTimer(32);
 
       } else if (updateType == EXCHANGE) { /* exchange */
         Counter[2]++;
+        /* Unlike the real sampler, the complex sampler carries no hopping
+           profile counters; the exchange counters are wired here so tests can
+           assert non-vacuous exchange coverage on both samplers. */
+        AddBFProfileCounter(BFPROF_EXCHANGE_TRY, 1);
 
         StartTimer(31);
         makeCandidate_exchange(&mi, &ri, &rj, &s, &rejectFlag,
                                TmpEleIdx, TmpEleCfg, TmpEleNum);
         StopTimer(31);
 
-        if (rejectFlag) continue;
+        if (rejectFlag) {
+          AddBFProfileCounter(BFPROF_EXCHANGE_CANDIDATE_REJECT, 1);
+          continue;
+        }
+        AddBFProfileCounter(BFPROF_EXCHANGE_VALID, 1);
+        BFPfCheckSnapshot(&pfCheck, TmpEleProjCnt, TmpEleProjBFCnt);
 
         StartTimer(33);
+        bfMultiQPSampleAuditCaptureBase(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+            TmpEleProjCnt, TmpEleProjBFCnt);
         StartTimer(65);
 
-        /* The mi-th electron with spin s exchanges with the electron on site rj with spin 1-s */
+        /* The mi-th electron with spin s exchanges with the electron on site rj with spin 1-s.
+           On the incremental path, only sites ri and rj change occupation, so the BackFlow
+           Slater-element update for the hop (ri -> rj) covers every affected element; the
+           second moved electron is added to the Pfaffian update rows explicitly.  On the
+           canonical path the candidate is rebuilt in full, exactly as for hopping. */
         t = 1 - s;
         mj = TmpEleCfg[rj + t * Nsite];
 
@@ -496,16 +1264,37 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         /* The mj-th electron with spin t hops to ri */
         updateEleConfig(mj, rj, ri, t, TmpEleIdx, TmpEleCfg, TmpEleNum);
         UpdateProjCnt(rj, ri, t, projCntNew, projCntNew, TmpEleNum);
+        MakeProjBFCnt(projBFCntNew, TmpEleNum);
+        bfMultiQPSampleAuditCaptureCandidate(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum);
 
         StopTimer(65);
+        StartTimer(64);
+        if(BFUseCanonicalNonFszPath()) {
+          fullCandidateStatus = RebuildSlaterMAllBF_fcmp(
+              TmpEleIdx, TmpEleNum, projBFCntNew, qpStart, qpEnd,
+              fullCandidateSlater, pfMNew, fullCandidateInv);
+          bfMultiQPSampleAuditAfterCandidate(&sampleAudit);
+        } else {
+          UpdateSlaterElmBF_fcmp(mi, ri, rj, s, TmpEleCfg, TmpEleNum, projBFCntNew, msaTmp, icount,
+                                 SlaterElmBF);
+          AppendBFUpdateRow(msaTmp, icount, mj + Ne * t);
+          fullCandidateStatus = 0;
+        }
+        StopTimer(64);
         StartTimer(66);
 
-        CalculateNewPfMTwo2_fcmp(mi, s, mj, t, pfMNew, TmpEleIdx, qpStart, qpEnd);
+        if(!BFUseCanonicalNonFszPath()) {
+          CalculateNewPfMBF(icount, msaTmp, pfMNew, TmpEleIdx, qpStart, qpEnd, SlaterElmBF);
+        }
+        BFPfCheckProposal(&pfCheck, BF_PF_CHECK_KIND_EXCH, pfMNew, TmpEleIdx, qpStart, qpEnd, rank);
         StopTimer(66);
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm);
+        logIpNew = fullCandidateStatus == 0
+            ? CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm)
+            : -INFINITY;
 
         StopTimer(67);
 
@@ -514,18 +1303,45 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         w = exp(2.0 * (x + (logIpNew - logIpOld))); //TBC
         if (!isfinite(w)) w = -1.0; /* should be rejected */
 
-        if (w > genrand_real2()) { /* accept */
+        if (fullCandidateStatus == 0 && w > genrand_real2()) { /* accept */
           StartTimer(68);
-          UpdateMAllTwo_fcmp(mi, s, mj, t, ri, rj, TmpEleIdx, qpStart, qpEnd);
+          if(BFUseCanonicalNonFszPath()) {
+            MakeSlaterElmBF_fcmp(TmpEleNum, projBFCntNew);
+            memcpy(PfM, pfMNew,
+                   (size_t)(qpEnd-qpStart)*sizeof(double complex));
+            memcpy(InvM, fullCandidateInv,
+                   fullInvCount*sizeof(double complex));
+          } else {
+            UpdateMAll_BF_fcmp(icount, msaTmp, PfM, TmpEleIdx, qpStart, qpEnd);
+          }
           StopTimer(68);
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
+          for (i = 0; i < 16 * Nsite * Nrange; i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
+          bfMultiQPSampleAuditAfterAccept(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, projCntNew, TmpEleProjBFCnt, projBFCntNew,
+              fullCandidateSlater, pfMNew, fullCandidateInv,
+              NULL, NULL, NULL);
           logIpOld = logIpNew;
           nAccept++;
           Counter[3]++;
+          AddBFProfileCounter(BFPROF_EXCHANGE_ACCEPT, 1);
+          BFPfCheckAccept(&pfCheck, BF_PF_CHECK_KIND_EXCH, qpStart, rank);
         } else { /* reject */
+          AddBFProfileCounter(BFPROF_EXCHANGE_METROPOLIS_REJECT, 1);
           revertEleConfig(mj, rj, ri, t, TmpEleIdx, TmpEleCfg, TmpEleNum);
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
+          if(!BFUseCanonicalNonFszPath()) {
+            StartTimer(64);
+            UpdateSlaterElmBF_fcmp(mi, rj, ri, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, msaTmp, icount,
+                                   SlaterElmBF);
+            StopTimer(64);
+          }
+          bfMultiQPSampleAuditAfterReject(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, TmpEleProjBFCnt);
+          BFPfCheckReject(&pfCheck, BF_PF_CHECK_KIND_EXCH, TmpEleProjCnt, TmpEleProjBFCnt, rank);
         }
         StopTimer(33);
       }
@@ -554,6 +1370,12 @@ void VMC_BF_MakeSample(MPI_Comm comm)
   BFSamplerRebuildCheckFinish(&rebuildChk, "complex");
   copyToBurnSampleBF(TmpEleIdx);
   BurnFlag = 1;
+  BFPfCheckReport("complex");
+  BFPfCheckFree(&pfCheck);
+  bfMultiQPSampleAuditFinalize(&sampleAudit, comm, rank);
+  bfMultiQPSampleAuditFree(&sampleAudit);
+  free(fullCandidateSlater);
+  free(fullCandidateInv);
   return;
 }
 int makeInitialSampleBF(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, int *eleProjBFCnt,
@@ -764,7 +1586,17 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   int msaRef[NQPFull * Nsize], icountRef[NQPFull];
 #endif
   double pfMNew_real[NQPFull];
+  double complex pfMNewComplex[NQPFull];
+  double complex *fullCandidateSlater = NULL;
+  double complex *fullCandidateInv = NULL;
+  double *fullCandidateSlaterReal = NULL;
+  double *fullCandidateInvReal = NULL;
+  size_t fullSlaterCount = 0;
+  size_t fullInvCount = 0;
+  int fullCandidateStatus = 0;
+  BFMultiQPSampleAudit sampleAudit = {0};
   double x, w; // TBC x will be complex number
+  BFPfCheckState pfCheck;
 
   int qpStart, qpEnd;
   int rejectFlag;
@@ -774,7 +1606,44 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
 
   BFSamplerRebuildCheck rebuildChk;
   SplitLoop(&qpStart, &qpEnd, NQPFull, rank, size);
-  BFSamplerRebuildCheckInit(&rebuildChk, 1, qpStart, qpEnd, rank, size);
+  memset(&rebuildChk, 0, sizeof(rebuildChk));
+  if(!BFUseCanonicalNonFszPath()) {
+    BFSamplerRebuildCheckInit(&rebuildChk, 1, qpStart, qpEnd, rank, size);
+  }
+  BFPfCheckInit(&pfCheck, qpStart, qpEnd, 1);
+
+  if(BFUseCanonicalNonFszPath()) {
+    if(bfMultiQPSampleAuditInit(
+           &sampleAudit, 1, qpEnd-qpStart) != 0) {
+      if(rank == 0) {
+        fprintf(stderr,
+                "Error: failed to allocate real non-FSZ multi-QP BackFlow sample audit.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    fullSlaterCount = (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
+    fullInvCount = (size_t)(qpEnd-qpStart)*(size_t)Nsize*(size_t)Nsize;
+    fullCandidateSlater = (double complex *)malloc(
+        fullSlaterCount*sizeof(double complex));
+    fullCandidateInv = (double complex *)malloc(
+        (fullInvCount > 0 ? fullInvCount : 1)*sizeof(double complex));
+    fullCandidateSlaterReal = (double *)malloc(
+        fullSlaterCount*sizeof(double));
+    fullCandidateInvReal = (double *)malloc(
+        (fullInvCount > 0 ? fullInvCount : 1)*sizeof(double));
+    if(fullCandidateSlater == NULL || fullCandidateInv == NULL
+       || fullCandidateSlaterReal == NULL || fullCandidateInvReal == NULL) {
+      if(rank == 0) {
+        fprintf(stderr,
+                "Error: failed to allocate real non-FSZ multi-QP BackFlow candidate workspace.\n");
+      }
+      free(fullCandidateSlater);
+      free(fullCandidateInv);
+      free(fullCandidateSlaterReal);
+      free(fullCandidateInvReal);
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+  }
 
   StartTimer(30);
   if (BurnFlag == 0) {
@@ -791,6 +1660,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   }
 
   CalculateMAll_BF_real(TmpEleIdx, qpStart, qpEnd);
+  if(BFUseCanonicalNonFszPath()) CalculateMAll_BF_fcmp(TmpEleIdx, qpStart, qpEnd);
   // printf("DEBUG: maker1: PfM=%lf\n",creal(PfM[0]));
   logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
   if (!isfinite(logIpOld)) {
@@ -801,6 +1671,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
                              qpStart, qpEnd, comm);
 
     CalculateMAll_BF_real(TmpEleIdx, qpStart, qpEnd);
+    if(BFUseCanonicalNonFszPath()) CalculateMAll_BF_fcmp(TmpEleIdx, qpStart, qpEnd);
     //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
     logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
     BurnFlag = 0;
@@ -831,31 +1702,56 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
           continue;
         }
         AddBFProfileCounter(BFPROF_HOP_VALID, 1);
+        BFPfCheckSnapshot_real(&pfCheck, TmpEleProjCnt, TmpEleProjBFCnt);
 
         StartTimer(32);
         if (rebuildChk.enabled) BFSamplerCheckSave_real(&rebuildChk);
+        bfMultiQPSampleAuditCaptureBase(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+            TmpEleProjCnt, TmpEleProjBFCnt);
         StartTimer(60);
         /* The mi-th electron with spin s hops to site rj */
         updateEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
         UpdateProjCnt(ri, rj, s, projCntNew, TmpEleProjCnt, TmpEleNum);
         MakeProjBFCnt(projBFCntNew, TmpEleNum);
+        bfMultiQPSampleAuditCaptureCandidate(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum);
         StopTimer(60);
         StartTimer(64);
+        if(BFUseCanonicalNonFszPath()) {
+          fullCandidateStatus = RebuildSlaterMAllBF_real(
+              TmpEleIdx, TmpEleNum, projBFCntNew, qpStart, qpEnd,
+              fullCandidateSlater, pfMNewComplex, fullCandidateInv,
+              fullCandidateSlaterReal, pfMNew_real,
+              fullCandidateInvReal);
+          bfMultiQPSampleAuditAfterCandidate(&sampleAudit);
+          if(sampleAudit.injectFailure && !sampleAudit.injected) {
+            fullCandidateStatus = BF_FSZ_MALL_LAPACK_FAILURE;
+            sampleAudit.injected++;
+          }
+        } else {
 #ifdef MVMC_DEBUG_BF_REAL_UPDATE
-        UpdateSlaterElmBF_real_checked("hopping proposal", mi, ri, rj, s, TmpEleCfg, TmpEleNum,
-                                       TmpEleProjBFCnt, projBFCntNew, msaTmp, icount, msaRef, icountRef, rank);
+          UpdateSlaterElmBF_real_checked("hopping proposal", mi, ri, rj, s, TmpEleCfg, TmpEleNum,
+                                         TmpEleProjBFCnt, projBFCntNew, msaTmp, icount, msaRef, icountRef, rank);
 #else
-        /* Real BF sampling updates SlaterElmBF_real directly; SlaterElmBF is not kept current on this hot path. */
-        UpdateSlaterElmBF_real(mi, ri, rj, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, projBFCntNew, msaTmp, icount,
-                               SlaterElmBF_real);
+          /* The legacy single-QP real hot path updates only the real matrix. */
+          UpdateSlaterElmBF_real(mi, ri, rj, s, TmpEleCfg, TmpEleNum,
+                                 TmpEleProjBFCnt, projBFCntNew, msaTmp,
+                                 icount, SlaterElmBF_real);
 #endif
+          fullCandidateStatus = 0;
+        }
         StopTimer(64);
 
         StartTimer(61);
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         //CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
-        CalculateNewPfMBF_real(icount, msaTmp, pfMNew_real, TmpEleIdx, qpStart, qpEnd, SlaterElmBF_real);
+        if(!BFUseCanonicalNonFszPath()) {
+          CalculateNewPfMBF_real(icount, msaTmp, pfMNew_real, TmpEleIdx,
+                                 qpStart, qpEnd, SlaterElmBF_real);
+        }
         if (rebuildChk.enabled) BFSamplerCheckCandidate_real(&rebuildChk, TmpEleIdx, TmpEleNum, projBFCntNew, pfMNew_real, qpStart, qpEnd);
+        BFPfCheckProposal_real(&pfCheck, BF_PF_CHECK_KIND_HOP, pfMNew_real, TmpEleIdx, qpStart, qpEnd, rank);
 
         //printf("DEBUG: out %d in %d pfMNew=%lf \n",outStep,inStep,creal(pfMNew[0]));
         StopTimer(61);
@@ -863,7 +1759,9 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         StartTimer(62);
         /* calculate inner product <phi|L|x> */
         //logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
-        logIpNew = CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm);
+        logIpNew = fullCandidateStatus == 0
+            ? CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm)
+            : -INFINITY;
         StopTimer(62);
 
         /* Metroplis */
@@ -871,10 +1769,25 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         w = exp(2.0 * (x + (logIpNew - logIpOld)));
         if (!isfinite(w)) w = -1.0; /* should be rejected */
 
-        if (w > genrand_real2()) { /* accept */
+        if (fullCandidateStatus == 0 && w > genrand_real2()) { /* accept */
           // UpdateMAll will change SlaterElm, InvM (including PfM)
           StartTimer(63);
-          UpdateMAll_BF_real(icount, msaTmp, PfM_real, TmpEleIdx, qpStart, qpEnd);
+          if(BFUseCanonicalNonFszPath()) {
+            MakeSlaterElmBF_fcmp(TmpEleNum, projBFCntNew);
+            memcpy(SlaterElmBF_real, fullCandidateSlaterReal,
+                   fullSlaterCount*sizeof(double));
+            memcpy(PfM, pfMNewComplex,
+                   (size_t)(qpEnd-qpStart)*sizeof(double complex));
+            memcpy(InvM, fullCandidateInv,
+                   fullInvCount*sizeof(double complex));
+            memcpy(PfM_real, pfMNew_real,
+                   (size_t)(qpEnd-qpStart)*sizeof(double));
+            memcpy(InvM_real, fullCandidateInvReal,
+                   fullInvCount*sizeof(double));
+          } else {
+            UpdateMAll_BF_real(icount, msaTmp, PfM_real, TmpEleIdx,
+                               qpStart, qpEnd);
+          }
           //          UpdateMAll_real(mi,s,TmpEleIdx,qpStart,qpEnd);
           //            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
           StopTimer(63);
@@ -882,23 +1795,37 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
           for (i = 0; i < 16 * Nsite * Nrange; i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
+          bfMultiQPSampleAuditAfterAccept(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, projCntNew, TmpEleProjBFCnt, projBFCntNew,
+              fullCandidateSlater, pfMNewComplex, fullCandidateInv,
+              fullCandidateSlaterReal, pfMNew_real,
+              fullCandidateInvReal);
           logIpOld = logIpNew;
           nAccept++;
           Counter[1]++;
           AddBFProfileCounter(BFPROF_HOP_ACCEPT, 1);
+          BFPfCheckAccept_real(&pfCheck, BF_PF_CHECK_KIND_HOP, qpStart, rank);
         } else { /* reject */
           AddBFProfileCounter(BFPROF_HOP_METROPOLIS_REJECT, 1);
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
-          StartTimer(64);
+          if(!BFUseCanonicalNonFszPath()) {
+            StartTimer(64);
 #ifdef MVMC_DEBUG_BF_REAL_UPDATE
-          UpdateSlaterElmBF_real_checked("hopping reject", mi, rj, ri, s, TmpEleCfg, TmpEleNum,
-                                         projBFCntNew, TmpEleProjBFCnt, msaTmp, icount, msaRef, icountRef, rank);
+            UpdateSlaterElmBF_real_checked("hopping reject", mi, rj, ri, s, TmpEleCfg, TmpEleNum,
+                                           projBFCntNew, TmpEleProjBFCnt, msaTmp, icount, msaRef, icountRef, rank);
 #else
-          UpdateSlaterElmBF_real(mi, rj, ri, s, TmpEleCfg, TmpEleNum, projBFCntNew, TmpEleProjBFCnt, msaTmp, icount,
-                                 SlaterElmBF_real);
+            UpdateSlaterElmBF_real(mi, rj, ri, s, TmpEleCfg, TmpEleNum,
+                                   projBFCntNew, TmpEleProjBFCnt, msaTmp,
+                                   icount, SlaterElmBF_real);
 #endif
-          StopTimer(64);
+            StopTimer(64);
+          }
           if (rebuildChk.enabled) BFSamplerCheckReject_real(&rebuildChk);
+          bfMultiQPSampleAuditAfterReject(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, TmpEleProjBFCnt);
+          BFPfCheckReject_real(&pfCheck, BF_PF_CHECK_KIND_HOP, TmpEleProjCnt, TmpEleProjBFCnt, rank);
         }
         StopTimer(32);
 
@@ -916,11 +1843,19 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
           continue;
         }
         AddBFProfileCounter(BFPROF_EXCHANGE_VALID, 1);
+        BFPfCheckSnapshot_real(&pfCheck, TmpEleProjCnt, TmpEleProjBFCnt);
 
         StartTimer(33);
+        bfMultiQPSampleAuditCaptureBase(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+            TmpEleProjCnt, TmpEleProjBFCnt);
         StartTimer(65);
 
-        /* The mi-th electron with spin s exchanges with the electron on site rj with spin 1-s */
+        /* The mi-th electron with spin s exchanges with the electron on site rj with spin 1-s.
+           On the incremental path, only sites ri and rj change occupation, so the BackFlow
+           Slater-element update for the hop (ri -> rj) covers every affected element; the
+           second moved electron is added to the Pfaffian update rows explicitly.  On the
+           canonical path the candidate is rebuilt in full, exactly as for hopping. */
         t = 1 - s;
         mj = TmpEleCfg[rj + t * Nsite];
 
@@ -930,16 +1865,44 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         /* The mj-th electron with spin t hops to ri */
         updateEleConfig(mj, rj, ri, t, TmpEleIdx, TmpEleCfg, TmpEleNum);
         UpdateProjCnt(rj, ri, t, projCntNew, projCntNew, TmpEleNum);
+        MakeProjBFCnt(projBFCntNew, TmpEleNum);
+        bfMultiQPSampleAuditCaptureCandidate(
+            &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum);
 
         StopTimer(65);
+        StartTimer(64);
+        if(BFUseCanonicalNonFszPath()) {
+          fullCandidateStatus = RebuildSlaterMAllBF_real(
+              TmpEleIdx, TmpEleNum, projBFCntNew, qpStart, qpEnd,
+              fullCandidateSlater, pfMNewComplex, fullCandidateInv,
+              fullCandidateSlaterReal, pfMNew_real,
+              fullCandidateInvReal);
+          bfMultiQPSampleAuditAfterCandidate(&sampleAudit);
+        } else {
+#ifdef MVMC_DEBUG_BF_REAL_UPDATE
+          UpdateSlaterElmBF_real_checked("exchange proposal", mi, ri, rj, s, TmpEleCfg, TmpEleNum,
+                                         TmpEleProjBFCnt, projBFCntNew, msaTmp, icount, msaRef, icountRef, rank);
+#else
+          UpdateSlaterElmBF_real(mi, ri, rj, s, TmpEleCfg, TmpEleNum, TmpEleProjBFCnt, projBFCntNew, msaTmp, icount,
+                                 SlaterElmBF_real);
+#endif
+          AppendBFUpdateRow(msaTmp, icount, mj + Ne * t);
+          fullCandidateStatus = 0;
+        }
+        StopTimer(64);
         StartTimer(66);
 
-        CalculateNewPfMTwo2_real(mi, s, mj, t, pfMNew_real, TmpEleIdx, qpStart, qpEnd);
+        if(!BFUseCanonicalNonFszPath()) {
+          CalculateNewPfMBF_real(icount, msaTmp, pfMNew_real, TmpEleIdx, qpStart, qpEnd, SlaterElmBF_real);
+        }
+        BFPfCheckProposal_real(&pfCheck, BF_PF_CHECK_KIND_EXCH, pfMNew_real, TmpEleIdx, qpStart, qpEnd, rank);
         StopTimer(66);
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm);
+        logIpNew = fullCandidateStatus == 0
+            ? CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm)
+            : -INFINITY;
 
         StopTimer(67);
 
@@ -948,20 +1911,57 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         w = exp(2.0 * (x + (logIpNew - logIpOld))); //TBC
         if (!isfinite(w)) w = -1.0; /* should be rejected */
 
-        if (w > genrand_real2()) { /* accept */
+        if (fullCandidateStatus == 0 && w > genrand_real2()) { /* accept */
           StartTimer(68);
-          UpdateMAllTwo_real(mi, s, mj, t, ri, rj, TmpEleIdx, qpStart, qpEnd);
+          if(BFUseCanonicalNonFszPath()) {
+            MakeSlaterElmBF_fcmp(TmpEleNum, projBFCntNew);
+            memcpy(SlaterElmBF_real, fullCandidateSlaterReal,
+                   fullSlaterCount*sizeof(double));
+            memcpy(PfM, pfMNewComplex,
+                   (size_t)(qpEnd-qpStart)*sizeof(double complex));
+            memcpy(InvM, fullCandidateInv,
+                   fullInvCount*sizeof(double complex));
+            memcpy(PfM_real, pfMNew_real,
+                   (size_t)(qpEnd-qpStart)*sizeof(double));
+            memcpy(InvM_real, fullCandidateInvReal,
+                   fullInvCount*sizeof(double));
+          } else {
+            UpdateMAll_BF_real(icount, msaTmp, PfM_real, TmpEleIdx, qpStart, qpEnd);
+          }
           StopTimer(68);
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
+          for (i = 0; i < 16 * Nsite * Nrange; i++) TmpEleProjBFCnt[i] = projBFCntNew[i];
+          bfMultiQPSampleAuditAfterAccept(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, projCntNew, TmpEleProjBFCnt, projBFCntNew,
+              fullCandidateSlater, pfMNewComplex, fullCandidateInv,
+              fullCandidateSlaterReal, pfMNew_real,
+              fullCandidateInvReal);
           logIpOld = logIpNew;
           nAccept++;
           Counter[3]++;
           AddBFProfileCounter(BFPROF_EXCHANGE_ACCEPT, 1);
+          BFPfCheckAccept_real(&pfCheck, BF_PF_CHECK_KIND_EXCH, qpStart, rank);
         } else { /* reject */
           AddBFProfileCounter(BFPROF_EXCHANGE_METROPOLIS_REJECT, 1);
           revertEleConfig(mj, rj, ri, t, TmpEleIdx, TmpEleCfg, TmpEleNum);
           revertEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
+          if(!BFUseCanonicalNonFszPath()) {
+            StartTimer(64);
+#ifdef MVMC_DEBUG_BF_REAL_UPDATE
+            UpdateSlaterElmBF_real_checked("exchange reject", mi, rj, ri, s, TmpEleCfg, TmpEleNum,
+                                           projBFCntNew, TmpEleProjBFCnt, msaTmp, icount, msaRef, icountRef, rank);
+#else
+            UpdateSlaterElmBF_real(mi, rj, ri, s, TmpEleCfg, TmpEleNum, projBFCntNew, TmpEleProjBFCnt, msaTmp, icount,
+                                   SlaterElmBF_real);
+#endif
+            StopTimer(64);
+          }
+          bfMultiQPSampleAuditAfterReject(
+              &sampleAudit, TmpEleIdx, TmpEleCfg, TmpEleNum,
+              TmpEleProjCnt, TmpEleProjBFCnt);
+          BFPfCheckReject_real(&pfCheck, BF_PF_CHECK_KIND_EXCH, TmpEleProjCnt, TmpEleProjBFCnt, rank);
         }
         StopTimer(33);
       }
@@ -972,6 +1972,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         //CalculateMAll_real(TmpEleIdx,qpStart,qpEnd);
         //printf("DEBUG: maker3: PfM=%lf\n",creal(PfM[0]));
         CalculateMAll_BF_real(TmpEleIdx, qpStart, qpEnd);
+        if(BFUseCanonicalNonFszPath()) CalculateMAll_BF_fcmp(TmpEleIdx, qpStart, qpEnd);
         logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
         StopTimer(34);
         nAccept = 0;
@@ -993,6 +1994,14 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   BFSamplerRebuildCheckFinish(&rebuildChk, "real");
   copyToBurnSampleBF(TmpEleIdx);
   BurnFlag = 1;
+  BFPfCheckReport("real");
+  BFPfCheckFree(&pfCheck);
+  bfMultiQPSampleAuditFinalize(&sampleAudit, comm, rank);
+  bfMultiQPSampleAuditFree(&sampleAudit);
+  free(fullCandidateSlater);
+  free(fullCandidateInv);
+  free(fullCandidateSlaterReal);
+  free(fullCandidateInvReal);
   return;
 }
 
@@ -1249,13 +2258,17 @@ static int calculateBFIPForFD(int *eleIdx, int *eleNum, const int *eleProjBFCnt,
 }
 
 static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
-                                        int *eleNum, int *eleProjCnt,
+                                        int *eleCfg, int *eleNum,
+                                        int *eleProjCnt,
                                         const int *eleProjBFCnt,
                                         const int qpStart, const int qpEnd,
                                         const int sample, const int append) {
   FILE *fp;
-  double complex *analytic;
+  double complex *analyticPacked;
+  double complex *analyticProjBF;
+  double complex *analyticSlater;
   double complex *projBFStore;
+  double complex *slaterStore;
   double complex ip0 = 0.0 + 0.0*I;
   double complex ipPlus = 0.0 + 0.0*I;
   double complex ipMinus = 0.0 + 0.0*I;
@@ -1267,11 +2280,25 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
   double maxImagDiff = 0.0;
   double maxDiff = 0.0;
   double maxFDAbs = 0.0;
+  double maxOrbitalRealDiff = 0.0;
+  double maxOrbitalImagDiff = 0.0;
+  double maxOrbitalDiff = 0.0;
+  double maxOrbitalFDAbs = 0.0;
   int maxRealIdx = -1;
   int maxImagIdx = -1;
   int maxIdx = -1;
   int maxIsImag = 0;
   int nonzeroFDCount = 0;
+  int nonzeroOrbitalFDCount = 0;
+  int maxOrbitalRealIdx = -1;
+  int maxOrbitalImagIdx = -1;
+  int maxOrbitalIdx = -1;
+  int maxOrbitalIsImag = 0;
+  double complex orbitalAnalyticAtMax = 0.0 + 0.0*I;
+  double complex orbitalFDAtMax = 0.0 + 0.0*I;
+  double complex energyBase = 0.0 + 0.0*I;
+  int negativeQPTransSignCount = 0;
+  int nonzeroThetaCount = 0;
   int nanCount = 0;
   int fdFailCount = 0;
   int infoBase;
@@ -1282,20 +2309,28 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
   if (path == NULL || path[0] == '\0') return;
   if (NProjBF <= 0 || ProjBF == NULL) return;
 
-  analytic = (double complex *)calloc((size_t)2 * (size_t)NProjBF, sizeof(double complex));
+  analyticPacked = (double complex *)calloc(
+      (size_t)2 * (size_t)(NProjBF + NSlater), sizeof(double complex));
   projBFStore = (double complex *)calloc((size_t)NProjBF, sizeof(double complex));
-  if (analytic == NULL || projBFStore == NULL) {
+  slaterStore = (double complex *)calloc((size_t)NSlater, sizeof(double complex));
+  if (analyticPacked == NULL || projBFStore == NULL || slaterStore == NULL) {
     fprintf(stderr, "Error: memory allocation failed for BackFlow finite-difference dump.\n");
-    free(analytic);
+    free(analyticPacked);
     free(projBFStore);
+    free(slaterStore);
     return;
   }
+  analyticProjBF = analyticPacked;
+  analyticSlater = analyticPacked + 2 * NProjBF;
 
   for (idx = 0; idx < NProjBF; idx++) projBFStore[idx] = ProjBF[idx];
+  for (idx = 0; idx < NSlater; idx++) slaterStore[idx] = Slater[idx];
 
   infoBase = calculateBFIPForFD(eleIdx, eleNum, eleProjBFCnt, qpStart, qpEnd, &ip0);
   if (infoBase == 0 && isfinite(creal(ip0)) && isfinite(cimag(ip0)) && cabs(ip0) > 0.0) {
-    BackFlowDiff_fcmp(analytic, ip0, eleIdx, eleNum, eleProjCnt, eleProjBFCnt);
+    BackFlowDiff_fcmp(analyticProjBF, ip0, eleIdx, eleNum, eleProjCnt, eleProjBFCnt);
+    SlaterElmBFDiff_fcmp(analyticSlater, ip0, eleIdx, eleNum, eleCfg,
+                        eleProjCnt, eleProjBFCnt);
     for (idx = 0; idx < NProjBF; idx++) {
       double diff;
 
@@ -1310,7 +2345,7 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
         fdFailCount++;
       } else {
         fd = ((ipPlus - ipMinus) / (2.0 * h)) / ip0;
-        diff = cabs(fd - analytic[2 * idx]);
+        diff = cabs(fd - analyticProjBF[2 * idx]);
         if (!isfinite(diff) || !isfinite(cabs(fd))) {
           nanCount++;
         } else {
@@ -1324,7 +2359,7 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
             maxDiff = diff;
             maxIdx = idx;
             maxIsImag = 0;
-            analyticAtMax = analytic[2 * idx];
+            analyticAtMax = analyticProjBF[2 * idx];
             fdAtMax = fd;
           }
         }
@@ -1342,7 +2377,7 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
         fdFailCount++;
       } else {
         fd = ((ipPlus - ipMinus) / (2.0 * h)) / ip0;
-        diff = cabs(fd - analytic[2 * idx + 1]);
+        diff = cabs(fd - analyticProjBF[2 * idx + 1]);
         if (!isfinite(diff) || !isfinite(cabs(fd))) {
           nanCount++;
         } else {
@@ -1356,8 +2391,78 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
             maxDiff = diff;
             maxIdx = idx;
             maxIsImag = 1;
-            analyticAtMax = analytic[2 * idx + 1];
+            analyticAtMax = analyticProjBF[2 * idx + 1];
             fdAtMax = fd;
+          }
+        }
+      }
+    }
+
+    for (idx = 0; idx < NSlater; idx++) {
+      double diff;
+
+      Slater[idx] = slaterStore[idx] + h;
+      infoPlus = calculateBFIPForFD(eleIdx, eleNum, eleProjBFCnt,
+                                    qpStart, qpEnd, &ipPlus);
+      Slater[idx] = slaterStore[idx] - h;
+      infoMinus = calculateBFIPForFD(eleIdx, eleNum, eleProjBFCnt,
+                                     qpStart, qpEnd, &ipMinus);
+      Slater[idx] = slaterStore[idx];
+      if (infoPlus != 0 || infoMinus != 0 ||
+          !isfinite(creal(ipPlus)) || !isfinite(cimag(ipPlus)) ||
+          !isfinite(creal(ipMinus)) || !isfinite(cimag(ipMinus))) {
+        fdFailCount++;
+      } else {
+        fd = ((ipPlus - ipMinus) / (2.0 * h)) / ip0;
+        diff = cabs(fd - analyticSlater[2 * idx]);
+        if (!isfinite(diff) || !isfinite(cabs(fd))) {
+          nanCount++;
+        } else {
+          if (cabs(fd) > 1.0e-12) nonzeroOrbitalFDCount++;
+          if (cabs(fd) > maxOrbitalFDAbs) maxOrbitalFDAbs = cabs(fd);
+          if (diff > maxOrbitalRealDiff) {
+            maxOrbitalRealDiff = diff;
+            maxOrbitalRealIdx = idx;
+          }
+          if (diff > maxOrbitalDiff) {
+            maxOrbitalDiff = diff;
+            maxOrbitalIdx = idx;
+            maxOrbitalIsImag = 0;
+            orbitalAnalyticAtMax = analyticSlater[2 * idx];
+            orbitalFDAtMax = fd;
+          }
+        }
+      }
+
+      Slater[idx] = slaterStore[idx] + I * h;
+      infoPlus = calculateBFIPForFD(eleIdx, eleNum, eleProjBFCnt,
+                                    qpStart, qpEnd, &ipPlus);
+      Slater[idx] = slaterStore[idx] - I * h;
+      infoMinus = calculateBFIPForFD(eleIdx, eleNum, eleProjBFCnt,
+                                     qpStart, qpEnd, &ipMinus);
+      Slater[idx] = slaterStore[idx];
+      if (infoPlus != 0 || infoMinus != 0 ||
+          !isfinite(creal(ipPlus)) || !isfinite(cimag(ipPlus)) ||
+          !isfinite(creal(ipMinus)) || !isfinite(cimag(ipMinus))) {
+        fdFailCount++;
+      } else {
+        fd = ((ipPlus - ipMinus) / (2.0 * h)) / ip0;
+        diff = cabs(fd - analyticSlater[2 * idx + 1]);
+        if (!isfinite(diff) || !isfinite(cabs(fd))) {
+          nanCount++;
+        } else {
+          if (cabs(fd) > 1.0e-12) nonzeroOrbitalFDCount++;
+          if (cabs(fd) > maxOrbitalFDAbs) maxOrbitalFDAbs = cabs(fd);
+          if (diff > maxOrbitalImagDiff) {
+            maxOrbitalImagDiff = diff;
+            maxOrbitalImagIdx = idx;
+          }
+          if (diff > maxOrbitalDiff) {
+            maxOrbitalDiff = diff;
+            maxOrbitalIdx = idx;
+            maxOrbitalIsImag = 1;
+            orbitalAnalyticAtMax = analyticSlater[2 * idx + 1];
+            orbitalFDAtMax = fd;
           }
         }
       }
@@ -1367,7 +2472,23 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
   }
 
   for (idx = 0; idx < NProjBF; idx++) ProjBF[idx] = projBFStore[idx];
+  for (idx = 0; idx < NSlater; idx++) Slater[idx] = slaterStore[idx];
   MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
+  infoBase = CalculateMAll_BF_fcmp(eleIdx, qpStart, qpEnd);
+  ip0 = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+  if (infoBase == 0 && isfinite(creal(ip0)) && isfinite(cimag(ip0)) &&
+      cabs(ip0) > 0.0) {
+    energyBase = CalculateHamiltonianBF_fcmp(
+        ip0, eleIdx, eleCfg, eleNum, eleProjCnt, eleProjBFCnt);
+  }
+  for (int transform = 0; transform < NMPTrans; transform++) {
+    for (idx = 0; idx < Nsite; idx++) {
+      if (QPTransSgn[transform][idx] < 0) negativeQPTransSignCount++;
+    }
+  }
+  for (idx = 0; idx < 16 * Nsite * Nrange; idx++) {
+    if (eleProjBFCnt[idx] != 0) nonzeroThetaCount++;
+  }
 
   fp = fopen(path, append ? "a" : "w");
   if (fp == NULL) {
@@ -1376,11 +2497,104 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
     fprintf(fp, "sample %d\n", sample);
     fprintf(fp, "info_base %d\n", infoBase);
     fprintf(fp, "nprojbf %d\n", NProjBF);
+    fprintf(fp, "nslater %d\n", NSlater);
+    fprintf(fp, "nsite %d\n", Nsite);
+    fprintf(fp, "nsite2 %d\n", Nsite2);
+    fprintf(fp, "nsize %d\n", Nsize);
+    fprintf(fp, "ne %d\n", Ne);
+    fprintf(fp, "nrange %d\n", Nrange);
+    fprintf(fp, "nrangeidx %d\n", NrangeIdx);
+    fprintf(fp, "nqpfull %d\n", NQPFull);
+    fprintf(fp, "nspgaussleg %d\n", NSPGaussLeg);
+    fprintf(fp, "ap_flag %d\n", APFlag);
+    fprintf(fp, "nmptrans %d\n", NMPTrans);
+    fprintf(fp, "negative_qptrans_sign_count %d\n",
+            negativeQPTransSignCount);
+    fprintf(fp, "nonzero_theta_count %d\n", nonzeroThetaCount);
+    fprintf(fp, "ip_base %.17e %.17e\n", creal(ip0), cimag(ip0));
+    fprintf(fp, "energy_base %.17e %.17e\n",
+            creal(energyBase), cimag(energyBase));
+    fprintf(fp, "ele_idx");
+    for (idx = 0; idx < Nsize; idx++) fprintf(fp, " %d", eleIdx[idx]);
+    fprintf(fp, "\n");
+    fprintf(fp, "ele_projbf_cnt");
+    for (idx = 0; idx < 16 * Nsite * Nrange; idx++) {
+      fprintf(fp, " %d", eleProjBFCnt[idx]);
+    }
+    fprintf(fp, "\n");
+    for (idx = 0; idx < NProjBF; idx++) {
+      fprintf(fp, "projbf_param_%d %.17e %.17e\n", idx,
+              creal(ProjBF[idx]), cimag(ProjBF[idx]));
+    }
+    for (idx = 0; idx < NSlater; idx++) {
+      fprintf(fp, "slater_param_%d %.17e %.17e\n", idx,
+              creal(Slater[idx]), cimag(Slater[idx]));
+    }
+    for (int transform = 0; transform < NMPTrans; transform++) {
+      fprintf(fp, "qp_transform_%d", transform);
+      for (idx = 0; idx < Nsite; idx++) {
+        fprintf(fp, " %d", QPTrans[transform][idx]);
+      }
+      fprintf(fp, "\nqp_sign_%d", transform);
+      for (idx = 0; idx < Nsite; idx++) {
+        fprintf(fp, " %d", QPTransSgn[transform][idx]);
+      }
+      fprintf(fp, "\n");
+    }
+    for (int site = 0; site < Nsite; site++) {
+      fprintf(fp, "orbital_idx_%d", site);
+      for (idx = 0; idx < Nsite; idx++) {
+        fprintf(fp, " %d", OrbitalIdx[site][idx]);
+      }
+      fprintf(fp, "\norbital_sgn_%d", site);
+      for (idx = 0; idx < Nsite; idx++) {
+        fprintf(fp, " %d", OrbitalSgn[site][idx]);
+      }
+      fprintf(fp, "\nposbf_%d", site);
+      for (idx = 0; idx < Nrange; idx++) {
+        fprintf(fp, " %d", PosBF[site][idx]);
+      }
+      fprintf(fp, "\nrangeidx_%d", site);
+      for (idx = 0; idx < Nsite; idx++) {
+        fprintf(fp, " %d", RangeIdx[site][idx]);
+      }
+      fprintf(fp, "\n");
+    }
+    for (int rangeIndex = 0; rangeIndex < NrangeIdx; rangeIndex++) {
+      fprintf(fp, "bfsubidx_%d", rangeIndex);
+      for (idx = 0; idx < NrangeIdx; idx++) {
+        fprintf(fp, " %d", BFSubIdx[rangeIndex][idx]);
+      }
+      fprintf(fp, "\n");
+    }
+    for (int spinQp = 0; spinQp < NSPGaussLeg; spinQp++) {
+      fprintf(fp, "spgl_%d %.17e %.17e %.17e %.17e %.17e %.17e\n",
+              spinQp,
+              creal(SPGLCosSin[spinQp]), cimag(SPGLCosSin[spinQp]),
+              creal(SPGLCosCos[spinQp]), cimag(SPGLCosCos[spinQp]),
+              creal(SPGLSinSin[spinQp]), cimag(SPGLSinSin[spinQp]));
+    }
+    for (int qp = 0; qp < NQPFull; qp++) {
+      fprintf(fp, "qp_weight_%d %.17e %.17e\n", qp,
+              creal(QPFullWeight[qp]), cimag(QPFullWeight[qp]));
+      for (int row = 0; row < Nsite2; row++) {
+        const double complex *slaterRow = SlaterElmBF +
+            ((size_t)qp * (size_t)Nsite2 + (size_t)row) * (size_t)Nsite2;
+        fprintf(fp, "slater_elm_%d_%d", qp, row);
+        for (int column = 0; column < Nsite2; column++) {
+          fprintf(fp, " %.17e %.17e",
+                  creal(slaterRow[column]), cimag(slaterRow[column]));
+        }
+        fprintf(fp, "\n");
+      }
+    }
     fprintf(fp, "step %.17e\n", h);
     fprintf(fp, "fd_fail_count %d\n", fdFailCount);
     fprintf(fp, "nan_count %d\n", nanCount);
     fprintf(fp, "nonzero_fd_count %d\n", nonzeroFDCount);
+    fprintf(fp, "nonzero_orbital_fd_count %d\n", nonzeroOrbitalFDCount);
     fprintf(fp, "max_abs_fd_value %.17e\n", maxFDAbs);
+    fprintf(fp, "max_abs_orbital_fd_value %.17e\n", maxOrbitalFDAbs);
     fprintf(fp, "max_abs_projbf_fd_real %.17e\n", maxRealDiff);
     fprintf(fp, "max_real_idx %d\n", maxRealIdx);
     fprintf(fp, "max_abs_projbf_fd_imag %.17e\n", maxImagDiff);
@@ -1388,14 +2602,42 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
     fprintf(fp, "max_abs_projbf_fd_diff %.17e\n", maxDiff);
     fprintf(fp, "max_idx %d\n", maxIdx);
     fprintf(fp, "max_is_imag %d\n", maxIsImag);
+    fprintf(fp, "max_abs_orbital_fd_real %.17e\n", maxOrbitalRealDiff);
+    fprintf(fp, "max_orbital_real_idx %d\n", maxOrbitalRealIdx);
+    fprintf(fp, "max_abs_orbital_fd_imag %.17e\n", maxOrbitalImagDiff);
+    fprintf(fp, "max_orbital_imag_idx %d\n", maxOrbitalImagIdx);
+    fprintf(fp, "max_abs_orbital_fd_diff %.17e\n", maxOrbitalDiff);
+    fprintf(fp, "max_orbital_idx %d\n", maxOrbitalIdx);
+    fprintf(fp, "max_orbital_is_imag %d\n", maxOrbitalIsImag);
     fprintf(fp, "analytic_at_max %.17e %.17e\n", creal(analyticAtMax), cimag(analyticAtMax));
     fprintf(fp, "fd_at_max %.17e %.17e\n", creal(fdAtMax), cimag(fdAtMax));
+    fprintf(fp, "orbital_analytic_at_max %.17e %.17e\n",
+            creal(orbitalAnalyticAtMax), cimag(orbitalAnalyticAtMax));
+    fprintf(fp, "orbital_fd_at_max %.17e %.17e\n",
+            creal(orbitalFDAtMax), cimag(orbitalFDAtMax));
+    for (idx = 0; idx < NProjBF; idx++) {
+      fprintf(fp, "projbf_derivative_%d %.17e %.17e %.17e %.17e\n",
+              idx,
+              creal(analyticProjBF[2 * idx]),
+              cimag(analyticProjBF[2 * idx]),
+              creal(analyticProjBF[2 * idx + 1]),
+              cimag(analyticProjBF[2 * idx + 1]));
+    }
+    for (idx = 0; idx < NSlater; idx++) {
+      fprintf(fp, "orbital_derivative_%d %.17e %.17e %.17e %.17e\n",
+              idx,
+              creal(analyticSlater[2 * idx]),
+              cimag(analyticSlater[2 * idx]),
+              creal(analyticSlater[2 * idx + 1]),
+              cimag(analyticSlater[2 * idx + 1]));
+    }
     fprintf(fp, "\n");
     fclose(fp);
   }
 
-  free(analytic);
+  free(analyticPacked);
   free(projBFStore);
+  free(slaterStore);
 }
 
 static void copySlaterElmBFToReal(void) {
@@ -1407,6 +2649,306 @@ static void copySlaterElmBFToReal(void) {
 static void copyIntArray(int *dst, const int *src, const int n) {
   int idx;
   for (idx = 0; idx < n; idx++) dst[idx] = src[idx];
+}
+
+static void abortBFCanonicalGreenDiagnostic(const char *context,
+                                             int greenStatus) {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if(rank == 0) {
+    fprintf(stderr,
+            "Error: BackFlow canonical Green evaluation failed: "
+            "context=%s status=%d term=-1.\n",
+            context, greenStatus);
+  }
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+}
+
+static void dumpBFGreen1BruteForceCheck(const char *path, int *eleIdx,
+                                        int *eleCfg, int *eleNum,
+                                        const int *eleProjCnt,
+                                        const int *eleProjBFCnt,
+                                        const int qpStart, const int qpEnd,
+                                        const int sample,
+                                        const int append) {
+  FILE *fp;
+  int *idxCopy = NULL;
+  int *cfgCopy = NULL;
+  int *numCopy = NULL;
+  int *projCntNew = NULL;
+  int *projBFCntNew = NULL;
+  double complex *buffer = NULL;
+  double complex *sltBFTmp = NULL;
+  double *bufferReal = NULL;
+  double *sltBFTmpReal = NULL;
+  double complex *globalSlaterBefore = NULL;
+  double *globalSlaterRealBefore = NULL;
+  double complex *globalInvBefore = NULL;
+  double *globalInvRealBefore = NULL;
+  double complex *globalPfBefore = NULL;
+  double *globalPfRealBefore = NULL;
+  double maxDiff = 0.0;
+  double maxBrute = 0.0;
+  double complex fastAtMax = 0.0 + 0.0 * I;
+  double complex bruteAtMax = 0.0 + 0.0 * I;
+  int maxRi = -1;
+  int maxRj = -1;
+  int maxSpin = -1;
+  int compared = 0;
+  int nonzeroBrute = 0;
+  int skipped = 0;
+  int infoFail = 0;
+  int nanCount = 0;
+  int stateChecks = 0;
+  int stateChanges = 0;
+  int greenStatus = BF_PF_OK;
+  int ri, rj, spin;
+  const int projSize = (NProj > 0) ? NProj : 1;
+  const int bfCntSize = 16 * Nsite * Nrange;
+  const int slaterSize = NQPFull * Nsite2 * Nsite2;
+  const int invSize = NQPFull * Nsize * Nsize;
+
+  if (path == NULL || path[0] == '\0') return;
+
+  idxCopy = (int *)malloc(sizeof(int) * (size_t)Nsize);
+  cfgCopy = (int *)malloc(sizeof(int) * (size_t)Nsite2);
+  numCopy = (int *)malloc(sizeof(int) * (size_t)Nsite2);
+  projCntNew = (int *)malloc(sizeof(int) * (size_t)projSize);
+  projBFCntNew = (int *)malloc(sizeof(int) * (size_t)bfCntSize);
+  buffer = (double complex *)malloc(
+      sizeof(double complex) * (size_t)(NQPFull + 2 * Nsize));
+  sltBFTmp = (double complex *)malloc(
+      sizeof(double complex) * (size_t)slaterSize);
+  bufferReal = (double *)malloc(
+      sizeof(double) * (size_t)(NQPFull + 2 * Nsize));
+  sltBFTmpReal = (double *)malloc(sizeof(double) * (size_t)slaterSize);
+  globalSlaterBefore = (double complex *)malloc(
+      sizeof(double complex) * (size_t)slaterSize);
+  globalSlaterRealBefore = AllComplexFlag == 0 ? (double *)malloc(
+      sizeof(double) * (size_t)slaterSize) : NULL;
+  globalInvBefore = (double complex *)malloc(
+      sizeof(double complex) * (size_t)invSize);
+  globalInvRealBefore = AllComplexFlag == 0 ? (double *)malloc(
+      sizeof(double) * (size_t)invSize) : NULL;
+  globalPfBefore = (double complex *)malloc(
+      sizeof(double complex) * (size_t)NQPFull);
+  globalPfRealBefore = AllComplexFlag == 0 ? (double *)malloc(
+      sizeof(double) * (size_t)NQPFull) : NULL;
+  if (idxCopy == NULL || cfgCopy == NULL || numCopy == NULL ||
+      projCntNew == NULL || projBFCntNew == NULL || buffer == NULL ||
+      sltBFTmp == NULL || bufferReal == NULL || sltBFTmpReal == NULL ||
+      globalSlaterBefore == NULL || globalInvBefore == NULL ||
+      globalPfBefore == NULL ||
+      (AllComplexFlag == 0 &&
+       (globalSlaterRealBefore == NULL || globalInvRealBefore == NULL ||
+        globalPfRealBefore == NULL))) {
+    fprintf(stderr,
+            "Error: memory allocation failed for BackFlow GreenFunc1 dump.\n");
+    infoFail++;
+    goto write_dump;
+  }
+
+  for (spin = 0; spin < 2; spin++) {
+    for (rj = 0; rj < Nsite; rj++) {
+      for (ri = 0; ri < Nsite; ri++) {
+        const int rsi = ri + spin * Nsite;
+        const int rsj = rj + spin * Nsite;
+        int mj, msj;
+        int info;
+        double projRatio;
+        double diff;
+        double bruteAbs;
+        double complex ip;
+        double complex fast;
+        double complex brute;
+
+        if (ri == rj || eleNum[rsi] != 0 || eleNum[rsj] != 1) {
+          skipped++;
+          continue;
+        }
+
+        copyIntArray(idxCopy, eleIdx, Nsize);
+        copyIntArray(cfgCopy, eleCfg, Nsite2);
+        copyIntArray(numCopy, eleNum, Nsite2);
+        MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
+        if (AllComplexFlag == 0) {
+          double ipReal;
+          copySlaterElmBFToReal();
+          info = CalculateMAll_BF_real(idxCopy, qpStart, qpEnd);
+          ipReal = CalculateIP_real(PfM_real, qpStart, qpEnd, MPI_COMM_SELF);
+          ip = ipReal + 0.0 * I;
+        } else {
+          info = CalculateMAll_BF_fcmp(idxCopy, qpStart, qpEnd);
+          ip = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+        }
+        if (info != 0 || !isfinite(creal(ip)) || !isfinite(cimag(ip)) ||
+            cabs(ip) <= 0.0) {
+          infoFail++;
+          continue;
+        }
+
+        memcpy(globalSlaterBefore, SlaterElmBF,
+               sizeof(double complex) * (size_t)slaterSize);
+        if (AllComplexFlag == 0) {
+          memcpy(globalSlaterRealBefore, SlaterElmBF_real,
+                 sizeof(double) * (size_t)slaterSize);
+        }
+        memcpy(globalInvBefore, InvM,
+               sizeof(double complex) * (size_t)invSize);
+        if (AllComplexFlag == 0) {
+          memcpy(globalInvRealBefore, InvM_real,
+                 sizeof(double) * (size_t)invSize);
+        }
+        memcpy(globalPfBefore, PfM,
+               sizeof(double complex) * (size_t)NQPFull);
+        if (AllComplexFlag == 0) {
+          memcpy(globalPfRealBefore, PfM_real,
+                 sizeof(double) * (size_t)NQPFull);
+        }
+
+        if (AllComplexFlag == 0) {
+          StoreSlaterElmBF_real(sltBFTmpReal);
+          fast = GreenFunc1BF_real(
+              ri, rj, spin, creal(ip), sltBFTmpReal,
+              idxCopy, cfgCopy, numCopy, eleProjCnt,
+              projCntNew, eleProjBFCnt, projBFCntNew,
+              bufferReal, &greenStatus) + 0.0 * I;
+        } else {
+          StoreSlaterElmBF_fcmp(sltBFTmp);
+          fast = GreenFunc1BF(
+              ri, rj, spin, ip, sltBFTmp,
+              idxCopy, cfgCopy, numCopy, eleProjCnt,
+              projCntNew, eleProjBFCnt, projBFCntNew, buffer,
+              &greenStatus);
+        }
+        if(greenStatus != BF_PF_OK) {
+          abortBFCanonicalGreenDiagnostic("Green1 diagnostic", greenStatus);
+        }
+        stateChecks++;
+        if (memcmp(idxCopy, eleIdx, sizeof(int) * (size_t)Nsize) != 0 ||
+            memcmp(cfgCopy, eleCfg, sizeof(int) * (size_t)Nsite2) != 0 ||
+            memcmp(numCopy, eleNum, sizeof(int) * (size_t)Nsite2) != 0 ||
+            memcmp(globalSlaterBefore, SlaterElmBF,
+                   sizeof(double complex) * (size_t)slaterSize) != 0 ||
+            (AllComplexFlag == 0 &&
+             memcmp(globalSlaterRealBefore, SlaterElmBF_real,
+                    sizeof(double) * (size_t)slaterSize) != 0) ||
+            memcmp(globalInvBefore, InvM,
+                   sizeof(double complex) * (size_t)invSize) != 0 ||
+            (AllComplexFlag == 0 &&
+             memcmp(globalInvRealBefore, InvM_real,
+                    sizeof(double) * (size_t)invSize) != 0) ||
+            memcmp(globalPfBefore, PfM,
+                   sizeof(double complex) * (size_t)NQPFull) != 0 ||
+            (AllComplexFlag == 0 &&
+             memcmp(globalPfRealBefore, PfM_real,
+                    sizeof(double) * (size_t)NQPFull) != 0)) {
+          stateChanges++;
+        }
+
+        copyIntArray(idxCopy, eleIdx, Nsize);
+        copyIntArray(cfgCopy, eleCfg, Nsite2);
+        copyIntArray(numCopy, eleNum, Nsite2);
+        mj = cfgCopy[rsj];
+        if (mj < 0) {
+          infoFail++;
+          continue;
+        }
+        msj = mj + spin * Ne;
+        cfgCopy[rsj] = -1;
+        cfgCopy[rsi] = mj;
+        idxCopy[msj] = ri;
+        numCopy[rsj] = 0;
+        numCopy[rsi] = 1;
+        UpdateProjCnt(rj, ri, spin, projCntNew, eleProjCnt, numCopy);
+        projRatio = ProjRatio(projCntNew, eleProjCnt);
+        MakeProjBFCnt(projBFCntNew, numCopy);
+        MakeSlaterElmBF_fcmp(numCopy, projBFCntNew);
+        if (AllComplexFlag == 0) {
+          double ipNewReal;
+          copySlaterElmBFToReal();
+          info = CalculateMAll_BF_real(idxCopy, qpStart, qpEnd);
+          ipNewReal = CalculateIP_real(
+              PfM_real, qpStart, qpEnd, MPI_COMM_SELF);
+          brute = (projRatio * ipNewReal / creal(ip)) + 0.0 * I;
+        } else {
+          double complex ipNew;
+          info = CalculateMAll_BF_fcmp(idxCopy, qpStart, qpEnd);
+          ipNew = CalculateIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_SELF);
+          brute = conj((projRatio * ipNew) / ip);
+        }
+        if (info != 0) {
+          infoFail++;
+          continue;
+        }
+
+        diff = cabs(fast - brute);
+        bruteAbs = cabs(brute);
+        if (!isfinite(diff) || !isfinite(bruteAbs)) {
+          nanCount++;
+          continue;
+        }
+        compared++;
+        if (bruteAbs > 1.0e-12) nonzeroBrute++;
+        if (bruteAbs > maxBrute) maxBrute = bruteAbs;
+        if (diff > maxDiff) {
+          maxDiff = diff;
+          maxRi = ri;
+          maxRj = rj;
+          maxSpin = spin;
+          fastAtMax = fast;
+          bruteAtMax = brute;
+        }
+      }
+    }
+  }
+
+  MakeSlaterElmBF_fcmp(eleNum, eleProjBFCnt);
+  if (AllComplexFlag == 0) copySlaterElmBFToReal();
+
+write_dump:
+  fp = fopen(path, append ? "a" : "w");
+  if (fp == NULL) {
+    fprintf(stderr,
+            "Error: failed to open BackFlow GreenFunc1 dump file: %s\n", path);
+  } else {
+    fprintf(fp, "sample %d\n", sample);
+    fprintf(fp, "all_complex_flag %d\n", AllComplexFlag);
+    fprintf(fp, "compared_count %d\n", compared);
+    fprintf(fp, "nonzero_bruteforce_count %d\n", nonzeroBrute);
+    fprintf(fp, "skipped_count %d\n", skipped);
+    fprintf(fp, "info_fail_count %d\n", infoFail);
+    fprintf(fp, "nan_count %d\n", nanCount);
+    fprintf(fp, "state_check_count %d\n", stateChecks);
+    fprintf(fp, "state_change_count %d\n", stateChanges);
+    fprintf(fp, "max_abs_bruteforce %.17e\n", maxBrute);
+    fprintf(fp, "max_abs_green1_diff %.17e\n", maxDiff);
+    fprintf(fp, "max_ri %d\n", maxRi);
+    fprintf(fp, "max_rj %d\n", maxRj);
+    fprintf(fp, "max_spin %d\n", maxSpin);
+    fprintf(fp, "fast_at_max %.17e %.17e\n",
+            creal(fastAtMax), cimag(fastAtMax));
+    fprintf(fp, "bruteforce_at_max %.17e %.17e\n",
+            creal(bruteAtMax), cimag(bruteAtMax));
+    fprintf(fp, "\n");
+    fclose(fp);
+  }
+
+  free(idxCopy);
+  free(cfgCopy);
+  free(numCopy);
+  free(projCntNew);
+  free(projBFCntNew);
+  free(buffer);
+  free(sltBFTmp);
+  free(bufferReal);
+  free(sltBFTmpReal);
+  free(globalSlaterBefore);
+  free(globalSlaterRealBefore);
+  free(globalInvBefore);
+  free(globalInvRealBefore);
+  free(globalPfBefore);
+  free(globalPfRealBefore);
 }
 
 static int isGreen2BFGeneralCase(const int ri, const int rj, const int rk,
@@ -1482,6 +3024,12 @@ static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
   double complex *sltBFTmp;
   double *bufferReal;
   double *sltBFTmpReal;
+  double complex *globalSlaterBefore;
+  double *globalSlaterRealBefore;
+  double complex *globalInvBefore;
+  double *globalInvRealBefore;
+  double complex *globalPfBefore;
+  double *globalPfRealBefore;
   double maxDiff = 0.0;
   double maxBrute = 0.0;
   double complex fastAtMax = 0.0 + 0.0 * I;
@@ -1492,10 +3040,14 @@ static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
   int skipped = 0;
   int infoFail = 0;
   int nanCount = 0;
+  int stateChecks = 0;
+  int stateChanges = 0;
+  int greenStatus = BF_PF_OK;
   int idx;
   const int projSize = (NProj > 0) ? NProj : 1;
   const int bfCntSize = 16 * Nsite * Nrange;
   const int slaterSize = NQPFull * Nsite2 * Nsite2;
+  const int invSize = NQPFull * Nsize * Nsize;
 
   if (path == NULL || path[0] == '\0') return;
   if (NCisAjsCktAltDC <= 0) return;
@@ -1509,9 +3061,26 @@ static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
   sltBFTmp = (double complex *)malloc(sizeof(double complex) * (size_t)slaterSize);
   bufferReal = (double *)malloc(sizeof(double) * (size_t)(NQPFull + 2 * Nsize));
   sltBFTmpReal = (double *)malloc(sizeof(double) * (size_t)slaterSize);
+  globalSlaterBefore = (double complex *)malloc(
+      sizeof(double complex) * (size_t)slaterSize);
+  globalSlaterRealBefore = AllComplexFlag == 0 ? (double *)malloc(
+      sizeof(double) * (size_t)slaterSize) : NULL;
+  globalInvBefore = (double complex *)malloc(
+      sizeof(double complex) * (size_t)invSize);
+  globalInvRealBefore = AllComplexFlag == 0 ? (double *)malloc(
+      sizeof(double) * (size_t)invSize) : NULL;
+  globalPfBefore = (double complex *)malloc(
+      sizeof(double complex) * (size_t)NQPFull);
+  globalPfRealBefore = AllComplexFlag == 0 ? (double *)malloc(
+      sizeof(double) * (size_t)NQPFull) : NULL;
   if (idxCopy == NULL || cfgCopy == NULL || numCopy == NULL ||
       projCntNew == NULL || projBFCntNew == NULL || buffer == NULL ||
-      sltBFTmp == NULL || bufferReal == NULL || sltBFTmpReal == NULL) {
+      sltBFTmp == NULL || bufferReal == NULL || sltBFTmpReal == NULL ||
+      globalSlaterBefore == NULL || globalInvBefore == NULL ||
+      globalPfBefore == NULL ||
+      (AllComplexFlag == 0 &&
+       (globalSlaterRealBefore == NULL || globalInvRealBefore == NULL ||
+        globalPfRealBefore == NULL))) {
     fprintf(stderr, "Error: memory allocation failed for BackFlow GreenFunc2 dump.\n");
     free(idxCopy);
     free(cfgCopy);
@@ -1522,6 +3091,12 @@ static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
     free(sltBFTmp);
     free(bufferReal);
     free(sltBFTmpReal);
+    free(globalSlaterBefore);
+    free(globalSlaterRealBefore);
+    free(globalInvBefore);
+    free(globalInvRealBefore);
+    free(globalPfBefore);
+    free(globalPfRealBefore);
     return;
   }
 
@@ -1563,17 +3138,60 @@ static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
       infoFail++;
       continue;
     }
+    memcpy(globalSlaterBefore, SlaterElmBF,
+           sizeof(double complex) * (size_t)slaterSize);
+    if (AllComplexFlag == 0) {
+      memcpy(globalSlaterRealBefore, SlaterElmBF_real,
+             sizeof(double) * (size_t)slaterSize);
+    }
+    memcpy(globalInvBefore, InvM,
+           sizeof(double complex) * (size_t)invSize);
+    if (AllComplexFlag == 0) {
+      memcpy(globalInvRealBefore, InvM_real,
+             sizeof(double) * (size_t)invSize);
+    }
+    memcpy(globalPfBefore, PfM,
+           sizeof(double complex) * (size_t)NQPFull);
+    if (AllComplexFlag == 0) {
+      memcpy(globalPfRealBefore, PfM_real,
+             sizeof(double) * (size_t)NQPFull);
+    }
     if (AllComplexFlag == 0) {
       StoreSlaterElmBF_real(sltBFTmpReal);
       fast = GreenFunc2BF_real(ri, rj, rk, rl, s, t, creal(ip), sltBFTmpReal,
                                idxCopy, cfgCopy, numCopy, eleProjCnt,
                                projCntNew, eleProjBFCnt, projBFCntNew,
-                               bufferReal) + 0.0 * I;
+                               bufferReal, &greenStatus) + 0.0 * I;
     } else {
       StoreSlaterElmBF_fcmp(sltBFTmp);
       fast = GreenFunc2BF(ri, rj, rk, rl, s, t, ip, sltBFTmp,
                           idxCopy, cfgCopy, numCopy, eleProjCnt,
-                          projCntNew, eleProjBFCnt, projBFCntNew, buffer);
+                          projCntNew, eleProjBFCnt, projBFCntNew, buffer,
+                          &greenStatus);
+    }
+    if(greenStatus != BF_PF_OK) {
+      abortBFCanonicalGreenDiagnostic("Green2 diagnostic", greenStatus);
+    }
+    stateChecks++;
+    if (memcmp(idxCopy, eleIdx, sizeof(int) * (size_t)Nsize) != 0 ||
+        memcmp(cfgCopy, eleCfg, sizeof(int) * (size_t)Nsite2) != 0 ||
+        memcmp(numCopy, eleNum, sizeof(int) * (size_t)Nsite2) != 0 ||
+        memcmp(globalSlaterBefore, SlaterElmBF,
+               sizeof(double complex) * (size_t)slaterSize) != 0 ||
+        (AllComplexFlag == 0 &&
+         memcmp(globalSlaterRealBefore, SlaterElmBF_real,
+                sizeof(double) * (size_t)slaterSize) != 0) ||
+        memcmp(globalInvBefore, InvM,
+               sizeof(double complex) * (size_t)invSize) != 0 ||
+        (AllComplexFlag == 0 &&
+         memcmp(globalInvRealBefore, InvM_real,
+                sizeof(double) * (size_t)invSize) != 0) ||
+        memcmp(globalPfBefore, PfM,
+               sizeof(double complex) * (size_t)NQPFull) != 0 ||
+        (AllComplexFlag == 0 &&
+         memcmp(globalPfRealBefore, PfM_real,
+                sizeof(double) * (size_t)NQPFull) != 0)) {
+      stateChanges++;
     }
 
     copyIntArray(idxCopy, eleIdx, Nsize);
@@ -1636,6 +3254,8 @@ static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
     fprintf(fp, "skipped_count %d\n", skipped);
     fprintf(fp, "info_fail_count %d\n", infoFail);
     fprintf(fp, "nan_count %d\n", nanCount);
+    fprintf(fp, "state_check_count %d\n", stateChecks);
+    fprintf(fp, "state_change_count %d\n", stateChanges);
     fprintf(fp, "max_abs_bruteforce %.17e\n", maxBrute);
     fprintf(fp, "max_abs_green2_diff %.17e\n", maxDiff);
     fprintf(fp, "max_idx %d\n", maxIdx);
@@ -1654,6 +3274,12 @@ static void dumpBFGreen2BruteForceCheck(const char *path, int *eleIdx,
   free(sltBFTmp);
   free(bufferReal);
   free(sltBFTmpReal);
+  free(globalSlaterBefore);
+  free(globalSlaterRealBefore);
+  free(globalInvBefore);
+  free(globalInvRealBefore);
+  free(globalPfBefore);
+  free(globalPfRealBefore);
 }
 
 static int dumpBFNBodyComponentCheck(const char *path,
@@ -1966,6 +3592,7 @@ static int BFDiagDirectValue(
     double complex *valueOut) {
   NBodyReduction reduction;
   double complex value;
+  int greenStatus = BF_PF_OK;
   const size_t slaterCount =
       (size_t)NQPFull*(size_t)Nsite2*(size_t)Nsite2;
 
@@ -2004,7 +3631,8 @@ static int BFDiagDirectValue(
       scratch->rsj[0]/Nsite, ip, scratch->slater,
       scratch->eleIdx, scratch->eleCfg, scratch->eleNum,
       eleProjCnt, scratch->projCnt, eleProjBFCnt,
-      scratch->projBFCnt, scratch->greenBuffer);
+      scratch->projBFCnt, scratch->greenBuffer, &greenStatus);
+  if(greenStatus != BF_PF_OK) return -1;
   if(memcmp(scratch->eleIdx, eleIdx, (size_t)Nsize*sizeof(int)) != 0
      || memcmp(scratch->eleCfg, eleCfg,
                (size_t)Nsite2*sizeof(int)) != 0
@@ -2178,6 +3806,7 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
   double maxDirectDiff = 0.0;
   double maxFullRebuildDiff = 0.0;
   double maxN4Imag = 0.0;
+  double maxN4Abs = 0.0;
   const long long stateChecksBefore = BFNBodyStateCheckCount;
   const long long stateCheckFailuresBefore =
       BFNBodyStateCheckFailureCount;
@@ -2534,6 +4163,7 @@ static int dumpBFNBodyDispatchCheck(const char *path, const int *eleIdx,
       if(fabs(cimag(result.value)) > maxN4Imag) {
         maxN4Imag = fabs(cimag(result.value));
       }
+      if(cabs(result.value) > maxN4Abs) maxN4Abs = cabs(result.value);
     }
   }
   {
@@ -2717,6 +4347,7 @@ write_dump:
   fprintf(fp, "max_direct_diff %.17e\n", maxDirectDiff);
   fprintf(fp, "max_full_rebuild_diff %.17e\n", maxFullRebuildDiff);
   fprintf(fp, "max_n4_imag %.17e\n", maxN4Imag);
+  fprintf(fp, "max_n4_abs %.17e\n", maxN4Abs);
   status =
       contractFailures == 0 && setupFailures == 0
       && mixedOrderFailures == 0 && callerStateChanged == 0
@@ -2728,7 +4359,8 @@ write_dump:
       && isfinite(maxDirectDiff) && maxDirectDiff <= tolerance
       && isfinite(maxFullRebuildDiff)
       && maxFullRebuildDiff <= tolerance
-      && isfinite(maxN4Imag) && maxN4Imag > 1.0e-12 ? 0 : -1;
+      && isfinite(maxN4Imag) && isfinite(maxN4Abs)
+      && maxN4Abs > 1.0e-12 ? 0 : -1;
 
 cleanup:
   if(fp != NULL) fclose(fp);
@@ -2762,6 +4394,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   const char *bfIdentityDumpPath = getenv("MVMC_BF_IDENTITY_DUMP");
   const char *bfDiffDumpPath = getenv("MVMC_BF_DIFF_DUMP");
   const char *bfFDDumpPath = getenv("MVMC_BF_FD_DUMP");
+  const char *bfGreen1DumpPath = getenv("MVMC_BF_GREEN1_DUMP");
   const char *bfGreen2DumpPath = getenv("MVMC_BF_GREEN2_DUMP");
   const char *bfNBodyComponentDumpPath =
       getenv("MVMC_BF_NBODY_COMPONENT_DUMP");
@@ -2922,8 +4555,13 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
                             sample, sample != sampleStart);
     }
     if (rank == 0 && bfFDDumpPath != NULL && bfFDDumpPath[0] != '\0') {
-      dumpBFProjBFFiniteDiffCheck(bfFDDumpPath, eleIdx, eleNum, eleProjCnt,
+      dumpBFProjBFFiniteDiffCheck(bfFDDumpPath, eleIdx, eleCfg, eleNum, eleProjCnt,
                                   eleProjBFCnt, qpStart, qpEnd,
+                                  sample, sample != sampleStart);
+    }
+    if (rank == 0 && bfGreen1DumpPath != NULL && bfGreen1DumpPath[0] != '\0') {
+      dumpBFGreen1BruteForceCheck(bfGreen1DumpPath, eleIdx, eleCfg, eleNum,
+                                  eleProjCnt, eleProjBFCnt, qpStart, qpEnd,
                                   sample, sample != sampleStart);
     }
     if (rank == 0 && bfGreen2DumpPath != NULL && bfGreen2DumpPath[0] != '\0') {

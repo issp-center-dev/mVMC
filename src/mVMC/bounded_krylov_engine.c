@@ -59,6 +59,18 @@ struct MVMCKrylovBoundedWorkspace {
   size_t cache_live_count;
   uint64_t cache_epoch;
   uint64_t cache_access;
+  MVMCKrylovScaledAmplitudeCallback session_amplitude;
+  void *session_amplitude_context;
+  uint64_t session_amplitude_generation_hash;
+  uint64_t session_root_evaluations;
+  uint64_t session_epoch_full_clears_pending;
+  double session_reset_seconds_pending;
+  int session_active;
+  int session_reset_pending;
+  MVMCKrylovScaledAmplitudeCallback last_session_amplitude;
+  void *last_session_amplitude_context;
+  uint64_t last_session_amplitude_generation_hash;
+  int last_session_binding_valid;
   MVMCBoundedNeighbor *neighbors;
   uint64_t *neighbor_words;
   MVMCScaledComplex *contributions;
@@ -1163,6 +1175,18 @@ static void invalidate_partial_values(MVMCKrylovBoundedResult *result,
   result->statistics.completed_order = -1;
 }
 
+static void close_session(MVMCKrylovBoundedWorkspace *workspace) {
+  if (workspace == NULL) return;
+  workspace->session_active = 0;
+  workspace->session_amplitude = NULL;
+  workspace->session_amplitude_context = NULL;
+  workspace->session_amplitude_generation_hash = 0;
+  workspace->session_root_evaluations = 0;
+  workspace->session_epoch_full_clears_pending = 0;
+  workspace->session_reset_seconds_pending = 0.0;
+  workspace->session_reset_pending = 0;
+}
+
 static MVMCKrylovStatus reset_cache(MVMCBoundedEvaluation *evaluation) {
   MVMCKrylovBoundedWorkspace *workspace = evaluation->workspace;
   const double start = wall_seconds();
@@ -1189,11 +1213,27 @@ static MVMCKrylovStatus reset_cache(MVMCBoundedEvaluation *evaluation) {
   return MVMC_KRYLOV_STATUS_OK;
 }
 
-MVMCKrylovStatus mvmc_bounded_krylov_evaluate(
+static void initialize_evaluation_statistics(
+    MVMCKrylovBoundedWorkspace *workspace,
+    MVMCKrylovBoundedStatistics *statistics) {
+  statistics->root_evaluations = 1;
+  statistics->requested_order = workspace->plan->limits.max_order;
+  statistics->plan_bytes = workspace->plan->plan_bytes;
+  statistics->model_bytes = workspace->plan->model_bytes;
+  statistics->workspace_bytes = workspace->allocated_bytes;
+  statistics->frame_bytes = workspace->frame_bytes;
+  statistics->scratch_bytes = workspace->scratch_bytes;
+  statistics->cache_requested_bytes = workspace->plan->limits.cache_bytes;
+  statistics->cache_allocated_bytes = workspace->cache_allocated_bytes;
+  statistics->cache_set_count = workspace->cache_set_count;
+}
+
+static MVMCKrylovStatus evaluate_bound_amplitude(
     MVMCKrylovBoundedWorkspace *workspace,
     const uint64_t *root_configuration_words, size_t root_word_count,
     MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
-    MVMCKrylovBoundedResult *result) {
+    int reset_before_evaluation, uint64_t amplitude_generation_hash,
+    uint64_t session_root_evaluation, MVMCKrylovBoundedResult *result) {
   MVMCKrylovBoundedResult candidate;
   MVMCBoundedEvaluation evaluation;
   MVMCKrylovStatus status;
@@ -1217,18 +1257,12 @@ MVMCKrylovStatus mvmc_bounded_krylov_evaluate(
     *result = candidate;
     return status;
   }
-  candidate.statistics.root_evaluations = 1;
-  candidate.statistics.requested_order = workspace->plan->limits.max_order;
-  candidate.statistics.plan_bytes = workspace->plan->plan_bytes;
-  candidate.statistics.model_bytes = workspace->plan->model_bytes;
-  candidate.statistics.workspace_bytes = workspace->allocated_bytes;
-  candidate.statistics.frame_bytes = workspace->frame_bytes;
-  candidate.statistics.scratch_bytes = workspace->scratch_bytes;
-  candidate.statistics.cache_requested_bytes =
-      workspace->plan->limits.cache_bytes;
-  candidate.statistics.cache_allocated_bytes =
-      workspace->cache_allocated_bytes;
-  candidate.statistics.cache_set_count = workspace->cache_set_count;
+  initialize_evaluation_statistics(workspace, &candidate.statistics);
+  candidate.statistics.persistent_session_active =
+      reset_before_evaluation ? 0 : 1;
+  candidate.statistics.amplitude_generation_hash =
+      amplitude_generation_hash;
+  candidate.statistics.session_root_evaluation = session_root_evaluation;
   candidate.statistics.trace_hash = UINT64_C(1469598103934665603);
   hash_u64(&candidate.statistics.trace_hash, workspace->plan->plan_hash);
   for (word = 0; word < root_word_count; ++word) {
@@ -1241,15 +1275,30 @@ MVMCKrylovStatus mvmc_bounded_krylov_evaluate(
   evaluation.statistics = &candidate.statistics;
   evaluation.failure = &candidate.failure;
   total_start = wall_seconds();
-  status = reset_cache(&evaluation);
-  if (status != MVMC_KRYLOV_STATUS_OK) {
-    candidate.failure.status = status;
-    candidate.failure.depth = -1;
-    invalidate_partial_values(&candidate, status);
-    candidate.statistics.total_seconds = elapsed_seconds(total_start);
-    *result = candidate;
-    return status;
+  if (reset_before_evaluation) {
+    status = reset_cache(&evaluation);
+    candidate.statistics.cache_reset_performed = 1;
+    if (status != MVMC_KRYLOV_STATUS_OK) {
+      candidate.failure.status = status;
+      candidate.failure.depth = -1;
+      invalidate_partial_values(&candidate, status);
+      candidate.statistics.total_seconds = elapsed_seconds(total_start);
+      *result = candidate;
+      return status;
+    }
+  } else if (workspace->session_reset_pending) {
+    candidate.statistics.cache_reset_performed = 1;
+    candidate.statistics.cache_epoch_full_clears =
+        workspace->session_epoch_full_clears_pending;
+    candidate.statistics.reset_seconds =
+        workspace->session_reset_seconds_pending;
+    workspace->session_epoch_full_clears_pending = 0;
+    workspace->session_reset_seconds_pending = 0.0;
+    workspace->session_reset_pending = 0;
   }
+  candidate.statistics.cache_entries_resident_start =
+      workspace->cache_live_count;
+  candidate.statistics.cache_entries_peak = workspace->cache_live_count;
   evaluation_start = wall_seconds();
   for (order = 0; order <= workspace->plan->limits.max_order; ++order) {
     const double depth_start = wall_seconds();
@@ -1261,6 +1310,8 @@ MVMCKrylovStatus mvmc_bounded_krylov_evaluate(
       candidate.statistics.evaluation_wall_seconds =
           elapsed_seconds(evaluation_start);
       invalidate_partial_values(&candidate, status);
+      candidate.statistics.cache_entries_resident_end =
+          workspace->cache_live_count;
       candidate.statistics.total_seconds = elapsed_seconds(total_start);
       *result = candidate;
       return status;
@@ -1272,7 +1323,137 @@ MVMCKrylovStatus mvmc_bounded_krylov_evaluate(
   candidate.valid = 1;
   candidate.status = MVMC_KRYLOV_STATUS_OK;
   candidate.evaluated_order = workspace->plan->limits.max_order;
+  candidate.statistics.cache_entries_resident_end =
+      workspace->cache_live_count;
   candidate.statistics.total_seconds = elapsed_seconds(total_start);
   *result = candidate;
+  return MVMC_KRYLOV_STATUS_OK;
+}
+
+MVMCKrylovStatus mvmc_bounded_krylov_evaluate(
+    MVMCKrylovBoundedWorkspace *workspace,
+    const uint64_t *root_configuration_words, size_t root_word_count,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
+    MVMCKrylovBoundedResult *result) {
+  if (workspace != NULL && workspace->session_active) close_session(workspace);
+  return evaluate_bound_amplitude(
+      workspace, root_configuration_words, root_word_count, amplitude,
+      amplitude_context, 1, 0, 0, result);
+}
+
+MVMCKrylovStatus mvmc_bounded_krylov_session_begin(
+    MVMCKrylovBoundedWorkspace *workspace,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
+    uint64_t amplitude_generation_hash) {
+  MVMCKrylovBoundedStatistics statistics;
+  MVMCKrylovBoundedFailure failure;
+  MVMCBoundedEvaluation evaluation;
+  MVMCKrylovStatus status;
+  if (workspace == NULL || workspace->plan == NULL || amplitude == NULL ||
+      amplitude_generation_hash == 0 || workspace->session_active ||
+      (workspace->last_session_binding_valid &&
+       amplitude_generation_hash ==
+           workspace->last_session_amplitude_generation_hash &&
+       (amplitude != workspace->last_session_amplitude ||
+        amplitude_context != workspace->last_session_amplitude_context))) {
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+  memset(&statistics, 0, sizeof(statistics));
+  memset(&failure, 0, sizeof(failure));
+  evaluation.workspace = workspace;
+  evaluation.amplitude = amplitude;
+  evaluation.amplitude_context = amplitude_context;
+  evaluation.statistics = &statistics;
+  evaluation.failure = &failure;
+  status = reset_cache(&evaluation);
+  if (status != MVMC_KRYLOV_STATUS_OK) {
+    close_session(workspace);
+    return status;
+  }
+  workspace->session_amplitude = amplitude;
+  workspace->session_amplitude_context = amplitude_context;
+  workspace->session_amplitude_generation_hash = amplitude_generation_hash;
+  workspace->session_root_evaluations = 0;
+  workspace->session_epoch_full_clears_pending =
+      statistics.cache_epoch_full_clears;
+  workspace->session_reset_seconds_pending = statistics.reset_seconds;
+  workspace->session_active = 1;
+  workspace->session_reset_pending = 1;
+  workspace->last_session_amplitude = amplitude;
+  workspace->last_session_amplitude_context = amplitude_context;
+  workspace->last_session_amplitude_generation_hash =
+      amplitude_generation_hash;
+  workspace->last_session_binding_valid = 1;
+  return MVMC_KRYLOV_STATUS_OK;
+}
+
+int mvmc_bounded_krylov_session_is_active(
+    const MVMCKrylovBoundedWorkspace *workspace) {
+  return workspace != NULL && workspace->session_active;
+}
+
+static MVMCKrylovStatus session_evaluate_checked(
+    MVMCKrylovBoundedWorkspace *workspace,
+    const uint64_t *root_configuration_words, size_t root_word_count,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
+    MVMCKrylovBoundedResult *result) {
+  MVMCKrylovStatus status;
+  const int counter_overflow =
+      workspace != NULL && workspace->session_active &&
+      workspace->session_root_evaluations == UINT64_MAX;
+  if (workspace == NULL || !workspace->session_active ||
+      amplitude != workspace->session_amplitude ||
+      amplitude_context != workspace->session_amplitude_context ||
+      counter_overflow) {
+    if (workspace != NULL && workspace->session_active) close_session(workspace);
+    status = counter_overflow ? MVMC_KRYLOV_STATUS_RESOURCE_LIMIT
+                              : MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+    if (result != NULL) {
+      initialize_result(result);
+      result->status = status;
+      result->failure.status = status;
+    }
+    return status;
+  }
+  ++workspace->session_root_evaluations;
+  status = evaluate_bound_amplitude(
+      workspace, root_configuration_words, root_word_count,
+      workspace->session_amplitude, workspace->session_amplitude_context, 0,
+      workspace->session_amplitude_generation_hash,
+      workspace->session_root_evaluations, result);
+  if (status != MVMC_KRYLOV_STATUS_OK) close_session(workspace);
+  return status;
+}
+
+MVMCKrylovStatus mvmc_bounded_krylov_session_evaluate(
+    MVMCKrylovBoundedWorkspace *workspace,
+    const uint64_t *root_configuration_words, size_t root_word_count,
+    MVMCKrylovBoundedResult *result) {
+  if (workspace == NULL || !workspace->session_active) {
+    if (result != NULL) initialize_result(result);
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+  return session_evaluate_checked(
+      workspace, root_configuration_words, root_word_count,
+      workspace->session_amplitude, workspace->session_amplitude_context,
+      result);
+}
+
+MVMCKrylovStatus mvmc_bounded_krylov_session_evaluate_bound(
+    MVMCKrylovBoundedWorkspace *workspace,
+    const uint64_t *root_configuration_words, size_t root_word_count,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
+    MVMCKrylovBoundedResult *result) {
+  return session_evaluate_checked(
+      workspace, root_configuration_words, root_word_count, amplitude,
+      amplitude_context, result);
+}
+
+MVMCKrylovStatus mvmc_bounded_krylov_session_end(
+    MVMCKrylovBoundedWorkspace *workspace) {
+  if (workspace == NULL || !workspace->session_active) {
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+  close_session(workspace);
   return MVMC_KRYLOV_STATUS_OK;
 }

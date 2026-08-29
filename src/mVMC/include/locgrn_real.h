@@ -15,7 +15,8 @@ double GreenFuncN_real(const int n, int *rsi, int *rsj, const double ip,
 
 double GreenFunc1BF_real(const int ri, const int rj, const int s, const double ip, double *bufM,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
-                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer);
+                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew,
+                    double *buffer, int *greenStatus);
 int GreenFunc1BF_real_prepare(const int ri, const int rj, const int s, double *greenValue,
                     double *projRatio, double *vecM, int *msaTmp, int *icount,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
@@ -33,6 +34,7 @@ int GreenFunc2BF_real_ws(const int ri, const int rj, const int rk, const int rl,
 double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
                     const int s, const int t, const double ip, double *bufM,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
-                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer);
+                    int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew,
+                    double *buffer, int *greenStatus);
 
 #endif

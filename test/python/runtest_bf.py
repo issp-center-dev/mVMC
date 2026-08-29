@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -97,6 +98,192 @@ def update_modpara(path, values):
 
     with open(path, "w") as fp:
         fp.writelines(lines)
+
+
+def assert_modpara_value(path, key, expected):
+    """Fail-fast check that a (possibly secondary) workdir really carries the
+    requested modpara override, e.g. NExUpdatePath for exchange tests."""
+    values = read_key_value_file(path)
+    got = values.get(key)
+    if got is None or str(got).split()[0] != str(expected):
+        raise RuntimeError("{}: expected {} {} but found {}".format(path, key, expected, got))
+
+
+PF_UPDATE_CHECK_PATTERN = re.compile(
+    r"info: BF pf-update check \((?P<label>[^,]+), rank=(?P<rank>\d+)\): "
+    r"hopping proposal=(?P<hp>\d+) accept=(?P<ha>\d+) reject=(?P<hr>\d+)"
+    r"(?: maxdev=(?P<hdev>\S+))?; "
+    r"exchange proposal=(?P<ep>\d+) accept=(?P<ea>\d+) reject=(?P<er>\d+)"
+    r"(?: maxdev=(?P<edev>\S+))?")
+
+
+def summarize_pf_update_check(output):
+    """Sum the per-rank MVMC_BF_PF_UPDATE_CHECK counters printed by the last
+    VMC_BF_MakeSample call of each rank (counters are cumulative per rank)."""
+    last_by_rank = {}
+    for match in PF_UPDATE_CHECK_PATTERN.finditer(output):
+        last_by_rank[match.group("rank")] = match
+    totals = {"hp": 0, "ha": 0, "hr": 0, "ep": 0, "ea": 0, "er": 0, "ranks": len(last_by_rank),
+              "hdev": 0.0, "edev": 0.0}
+    for match in last_by_rank.values():
+        for key in ("hp", "ha", "hr", "ep", "ea", "er"):
+            totals[key] += int(match.group(key))
+        for key in ("hdev", "edev"):
+            if match.group(key) is not None:
+                totals[key] = max(totals[key], float(match.group(key)))
+    return totals
+
+
+def assert_exchange_events(output, label):
+    """Non-vacuous check for exchange tests run with MVMC_BF_PF_UPDATE_CHECK=1:
+    the oracle must have seen accepted and rejected exchange (and hopping) moves."""
+    totals = summarize_pf_update_check(output)
+    if totals["ranks"] == 0:
+        print("ERROR: {}: no 'BF pf-update check' report found; is MVMC_BF_PF_UPDATE_CHECK=1 set?".format(label))
+        return -1
+    if totals["ea"] <= 0 or totals["er"] <= 0 or totals["ha"] <= 0 or totals["hr"] <= 0:
+        print("ERROR: {}: exchange oracle coverage is vacuous: {}".format(label, totals))
+        return -1
+    print("{}: BF pf-update check totals: {}".format(label, totals))
+    return 0
+
+
+def rewrite_transsym_variant(path, nsite, reverse_order=False,
+                             antiperiodic=False, all_signs_positive=False,
+                             full_group=False, complex_character=False,
+                             asymmetric_complex=False):
+    with open(path) as source:
+        lines = source.readlines()
+    if len(lines) < 5:
+        raise RuntimeError("invalid TransSym fixture: {}".format(path))
+    count_words = lines[1].split()
+    if len(count_words) != 2 or count_words[0] != "NQPTrans":
+        raise RuntimeError("missing NQPTrans header in {}".format(path))
+    count = int(count_words[1])
+    if full_group:
+        order = list(range(nsite))
+        if reverse_order:
+            order.reverse()
+        rewritten = list(lines[:5])
+        rewritten[1] = "NQPTrans          {}\n".format(nsite)
+        for new_transform, shift in enumerate(order):
+            if asymmetric_complex:
+                angle = 0.37 * (shift + 1)
+                magnitude = 1.0 + 0.13 * shift
+            else:
+                angle = (2.0 * math.pi * shift / nsite
+                         if complex_character else 0.0)
+                magnitude = 1.0
+            rewritten.append("{} {:.17e} {:.17e}\n".format(
+                new_transform, magnitude * math.cos(angle),
+                magnitude * math.sin(angle)))
+        for new_transform, shift in enumerate(order):
+            for source in range(nsite):
+                destination = (source + shift) % nsite
+                sign = -1 if antiperiodic and source + shift >= nsite else 1
+                if all_signs_positive:
+                    sign = 1
+                rewritten.append("{:5d} {:6d} {:6d} {:6d}\n".format(
+                    new_transform, source, destination, sign))
+        with open(path, "w") as destination:
+            destination.writelines(rewritten)
+        return nsite
+    parameter_rows = [lines[5 + idx].split() for idx in range(count)]
+    mapping_start = 5 + count
+    mapping_rows = [line.split() for line in
+                    lines[mapping_start:mapping_start + count * nsite]]
+    if len(mapping_rows) != count * nsite:
+        raise RuntimeError("incomplete TransSym mapping in {}".format(path))
+
+    parameters = {}
+    mappings = {}
+    for row in parameter_rows:
+        parameters[int(row[0])] = row[1:]
+    for row in mapping_rows:
+        transform = int(row[0])
+        mappings.setdefault(transform, []).append(
+            (int(row[1]), int(row[2]), int(row[3])))
+    order = list(range(count))
+    if reverse_order:
+        order.reverse()
+
+    rewritten = lines[:5]
+    for new_transform, old_transform in enumerate(order):
+        rewritten.append("{} {}\n".format(
+            new_transform, " ".join(parameters[old_transform])))
+    for new_transform, old_transform in enumerate(order):
+        rows = sorted(mappings[old_transform], key=lambda row: row[0])
+        is_identity = all(source == destination
+                          for source, destination, _ in rows)
+        for source, destination, old_sign in rows:
+            sign = old_sign
+            if antiperiodic:
+                sign = 1 if is_identity or destination >= source else -1
+            if all_signs_positive:
+                sign = 1
+            rewritten.append("{:5d} {:6d} {:6d} {:6d}\n".format(
+                new_transform, source, destination, sign))
+    rewritten.extend(lines[mapping_start + count * nsite:])
+    with open(path, "w") as destination:
+        destination.writelines(rewritten)
+    return count
+
+
+def check_multiqp_full_rebuild_profile(workdir):
+    time_files = sorted(glob.glob(os.path.join(
+        workdir, "output", "*CalcTimer.dat")))
+    if len(time_files) != 1:
+        print("ERROR: expected one BackFlow timing file, got {}".format(
+            time_files))
+        return -1
+    full_rebuild = None
+    legacy_incremental = None
+    with open(time_files[0]) as source:
+        for line in source:
+            if "BF canonical full rebuild" in line:
+                full_rebuild = int(line.split()[-1])
+            elif "BF multi-QP legacy incremental" in line:
+                legacy_incremental = int(line.split()[-1])
+    if full_rebuild is None or legacy_incremental is None:
+        print("ERROR: multi-QP BackFlow route counters are missing")
+        return -1
+    if full_rebuild <= 0 or legacy_incremental != 0:
+        print("ERROR: invalid multi-QP BackFlow route counters: "
+              "full_rebuild={} legacy_incremental={}".format(
+                  full_rebuild, legacy_incremental))
+        return -1
+    return 0
+
+
+def check_exchange_profile(workdir):
+    """Non-vacuous coverage check for exchange sampling via the real-sampler
+    profile counters (MVMC_BF_PROFILE=1): the run must have seen valid,
+    accepted, and Metropolis-rejected exchange moves."""
+    time_files = sorted(glob.glob(os.path.join(
+        workdir, "output", "*CalcTimer.dat")))
+    if len(time_files) != 1:
+        print("ERROR: expected one BackFlow timing file, got {}".format(
+            time_files))
+        return -1
+    keys = ("BF exchange valid", "BF exchange accept",
+            "BF exchange metropolis reject")
+    counters = {}
+    with open(time_files[0]) as source:
+        for line in source:
+            for key in keys:
+                if key in line:
+                    counters[key] = int(line.split()[-1])
+    missing = [key for key in keys if key not in counters]
+    if missing:
+        print("ERROR: exchange profile counters are missing: {}".format(
+            missing))
+        return -1
+    if any(counters[key] <= 0 for key in keys):
+        print("ERROR: exchange sampling coverage is vacuous: {}".format(
+            counters))
+        return -1
+    print("exchange profile counters: {}".format(counters))
+    return 0
 
 
 def first_row_is_finite(path):
@@ -298,7 +485,10 @@ def compare_lanczos_oracle_rows(bf_workdir, no_bf_workdir, mpi_procs,
 
 
 def compare_no_bf_lanczos(rootdir, refdir, bf_workdir, mpi_procs,
-                           modpara_updates, abs_tol=1.0e-10,
+                           modpara_updates, reverse_projection_order=False,
+                           use_ap_projection=False,
+                           mutate_ap_signs_positive=False,
+                           abs_tol=1.0e-10,
                            rel_tol=1.0e-9):
     no_bf_workdir = bf_workdir + "_nobf_lanczos"
     if os.path.exists(no_bf_workdir):
@@ -306,6 +496,17 @@ def compare_no_bf_lanczos(rootdir, refdir, bf_workdir, mpi_procs,
     os.makedirs(no_bf_workdir)
     copy_def_files(refdir, no_bf_workdir, include_backflow=False)
     update_modpara(os.path.join(no_bf_workdir, "modpara.def"), modpara_updates)
+    if reverse_projection_order or use_ap_projection:
+        nsite = parse_nsite(os.path.join(no_bf_workdir, "modpara.def"))
+        trans_count = rewrite_transsym_variant(
+            os.path.join(no_bf_workdir, "qptransidx.def"), nsite,
+            reverse_order=reverse_projection_order,
+            antiperiodic=use_ap_projection,
+            all_signs_positive=mutate_ap_signs_positive)
+        if use_ap_projection:
+            update_modpara(os.path.join(no_bf_workdir, "modpara.def"), {
+                "NMPTrans": str(-trans_count),
+            })
     proc = run_vmc(rootdir, no_bf_workdir, mpi_procs,
                    log_name="bf_test_nobf_lanczos.log")
     if proc.returncode != 0:
@@ -580,6 +781,8 @@ def compare_no_bf_energy(rootdir, refdir, bf_workdir, mpi_procs, tol, rejected_o
     copy_def_files(refdir, no_bf_workdir, include_backflow=False)
     if modpara_updates:
         update_modpara(os.path.join(no_bf_workdir, "modpara.def"), modpara_updates)
+        for key, value in modpara_updates.items():
+            assert_modpara_value(os.path.join(no_bf_workdir, "modpara.def"), key, value)
 
     proc = run_vmc(rootdir, no_bf_workdir, mpi_procs, log_name="bf_test_nobf.log")
     if proc.returncode != 0:
@@ -702,15 +905,35 @@ def compare_no_bf_twobodygex(rootdir, refdir, bf_workdir, mpi_procs, tol, reject
     return 0
 
 
-def compare_real_complex_nonidentity(rootdir, real_model, complex_model, mpi_procs, tol, rejected_outputs):
+def compare_real_complex_nonidentity(rootdir, real_model, complex_model,
+                                     mpi_procs, tol, rejected_outputs,
+                                     modpara_updates=None, work_suffix="",
+                                     require_exchange_events=False,
+                                     reverse_projection_order=False,
+                                     use_ap_projection=False,
+                                     mutate_ap_signs_positive=False):
     if mpi_procs:
         print("ERROR: non-identity real/complex comparison is a single-rank smoke test.")
         return -1
 
     real_refdir = os.path.join(rootdir, "data", real_model)
     complex_refdir = os.path.join(rootdir, "data", complex_model)
-    real_workdir = os.path.join(rootdir, "work", real_model + "_nonidentity_real")
-    complex_workdir = os.path.join(rootdir, "work", complex_model + "_nonidentity_complex")
+    variant_suffix = "_ap" if use_ap_projection else ""
+    if reverse_projection_order:
+        variant_suffix += "_reverse_projection"
+    if mutate_ap_signs_positive:
+        variant_suffix += "_all_signs_positive"
+    env_work_suffix = os.environ.get("MVMC_BF_TEST_WORK_SUFFIX", "")
+    if env_work_suffix:
+        variant_suffix += "".join(
+            ch if ch.isalnum() or ch in "._-" else "_"
+            for ch in env_work_suffix
+        )
+    variant_suffix += work_suffix
+    real_workdir = os.path.join(
+        rootdir, "work", real_model + "_nonidentity_real" + variant_suffix)
+    complex_workdir = os.path.join(
+        rootdir, "work", complex_model + "_nonidentity_complex" + variant_suffix)
 
     for refdir, workdir in ((real_refdir, real_workdir), (complex_refdir, complex_workdir)):
         if os.path.exists(workdir):
@@ -718,12 +941,28 @@ def compare_real_complex_nonidentity(rootdir, real_model, complex_model, mpi_pro
         os.makedirs(workdir)
         copy_def_files(refdir, workdir, include_backflow=True)
         assert_nonidentity_init_layout(workdir)
+        if modpara_updates:
+            update_modpara(os.path.join(workdir, "modpara.def"), modpara_updates)
+            for key, value in modpara_updates.items():
+                assert_modpara_value(os.path.join(workdir, "modpara.def"), key, value)
 
     real_nsite = parse_nsite(os.path.join(real_workdir, "modpara.def"))
     complex_nsite = parse_nsite(os.path.join(complex_workdir, "modpara.def"))
     if real_nsite != complex_nsite:
         print("ERROR: Nsite mismatch: real={} complex={}".format(real_nsite, complex_nsite))
         return -1
+    if reverse_projection_order or use_ap_projection:
+        for workdir, nsite in ((real_workdir, real_nsite),
+                               (complex_workdir, complex_nsite)):
+            trans_count = rewrite_transsym_variant(
+                os.path.join(workdir, "qptransidx.def"), nsite,
+                reverse_order=reverse_projection_order,
+                antiperiodic=use_ap_projection,
+                all_signs_positive=mutate_ap_signs_positive)
+            if use_ap_projection:
+                update_modpara(os.path.join(workdir, "modpara.def"), {
+                    "NMPTrans": str(-trans_count),
+                })
 
     real_definition = build_chain_nn_backflow(length=real_nsite, optimize=False)
     complex_definition = build_chain_nn_backflow(length=complex_nsite, optimize=False)
@@ -773,6 +1012,9 @@ def compare_real_complex_nonidentity(rootdir, real_model, complex_model, mpi_pro
             print(proc.stdout)
             print("---- output end ----")
             return -1
+        if require_exchange_events and assert_exchange_events(proc.stdout, label + " nonidentity") != 0:
+            print(proc.stdout)
+            return -1
 
     real_row = read_first_float_row(os.path.join(real_workdir, "output", "zvo_out_001.dat"))
     complex_row = read_first_float_row(os.path.join(complex_workdir, "output", "zvo_out_001.dat"))
@@ -814,33 +1056,47 @@ def check_child_opt_block(all_values, child_values, start, label, tol):
     return 0
 
 
-def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs):
-    if mpi_procs:
-        print("ERROR: BackFlow opt-output restart smoke is a single-rank test.")
-        return -1
-
+def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs,
+                             opt_samples, include_backflow, modpara_updates=None,
+                             extra_work_suffix=""):
     refdir = os.path.join(rootdir, "data", model)
-    workdir = os.path.join(rootdir, "work", model + "_opt_output_restart")
+    work_suffix = "_mpi" if mpi_procs else ""
+    if not include_backflow:
+        work_suffix += "_no_bf"
+    work_suffix += extra_work_suffix
+    # opt_samples must be part of the name: the 1-sample and 2-sample variants
+    # otherwise share a workdir and delete it under each other in parallel ctest
+    work_suffix += "_smp{}".format(opt_samples)
+    workdir = os.path.join(
+        rootdir, "work", model + "_opt_output_restart" + work_suffix)
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
-    copy_def_files(refdir, workdir, include_backflow=True)
-    assert_nonidentity_init_layout(workdir)
+    copy_def_files(refdir, workdir, include_backflow=include_backflow)
+    if include_backflow:
+        assert_nonidentity_init_layout(workdir)
 
     update_modpara(
         os.path.join(workdir, "modpara.def"),
         {
-            "NSROptItrStep": 2,
-            "NSROptItrSmp": 2,
+            "NSROptItrStep": opt_samples,
+            "NSROptItrSmp": opt_samples,
             "NVMCSample": 16,
             "NVMCWarmUp": 4,
             "NStore": 1,
         },
     )
+    if modpara_updates:
+        update_modpara(os.path.join(workdir, "modpara.def"), modpara_updates)
+        for key, value in modpara_updates.items():
+            assert_modpara_value(os.path.join(workdir, "modpara.def"), key, value)
 
     nsite = parse_nsite(os.path.join(workdir, "modpara.def"))
-    definition = build_chain_nn_backflow(length=nsite, optimize=True)
-    write_chain_nn_backflow(workdir, length=nsite, optimize=True)
+    n_proj_bf = 0
+    if include_backflow:
+        definition = build_chain_nn_backflow(length=nsite, optimize=True)
+        write_chain_nn_backflow(workdir, length=nsite, optimize=True)
+        n_proj_bf = definition.n_proj_bf
     nslater = parse_norbitalidx(os.path.join(workdir, "orbitalidx.def"))
 
     proc = run_vmc(rootdir, workdir, mpi_procs, log_name="bf_test_opt_output.log")
@@ -856,15 +1112,13 @@ def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs):
         return -1
 
     zqp_opt = os.path.join(workdir, "output", "zqp_opt.dat")
-    zqp_bf_opt = os.path.join(workdir, "output", "zqp_bf_opt.dat")
-    zqp_orbital_opt = os.path.join(workdir, "output", "zqp_orbital_opt.dat")
-    for path in (zqp_opt, zqp_bf_opt, zqp_orbital_opt):
+    for path in (zqp_opt,):
         if not os.path.exists(path):
             print("ERROR: expected opt output was not written: {}".format(path))
             return -1
 
     all_values = read_first_float_row(zqp_opt)
-    expected_len = 6 + 3 * (definition.n_proj_bf + nslater)
+    expected_len = 6 + 3 * (n_proj_bf + nslater)
     if len(all_values) != expected_len:
         print("ERROR: zqp_opt.dat length mismatch: got {} expected {}".format(
             len(all_values), expected_len))
@@ -873,29 +1127,50 @@ def check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs):
         print("ERROR: zqp_opt.dat contains non-finite values.")
         return -1
 
-    bf_values = read_child_opt_values(zqp_bf_opt)
-    if len(bf_values) != definition.n_proj_bf:
-        print("ERROR: zqp_bf_opt.dat row count mismatch: got {} expected {}".format(
-            len(bf_values), definition.n_proj_bf))
-        return -1
-    result = check_child_opt_block(all_values, bf_values, 6, "BackFlow", 1.0e-15)
-    if result != 0:
-        return result
+    if opt_samples == 1:
+        uncertainties = all_values[2::3]
+        if any(value != 0.0 for value in uncertainties):
+            print("ERROR: single-sample zqp_opt.dat uncertainty is not zero.")
+            return -1
+        parameter_imag = all_values[7::3]
+        if not any(abs(value) > 1.0e-15 for value in parameter_imag):
+            print("ERROR: single-sample zqp_opt.dat lost all imaginary parameters.")
+            return -1
+    else:
+        zqp_orbital_opt = os.path.join(workdir, "output", "zqp_orbital_opt.dat")
+        expected_child_paths = [zqp_orbital_opt]
+        if include_backflow:
+            zqp_bf_opt = os.path.join(workdir, "output", "zqp_bf_opt.dat")
+            expected_child_paths.insert(0, zqp_bf_opt)
+        for path in expected_child_paths:
+            if not os.path.exists(path):
+                print("ERROR: expected opt output was not written: {}".format(path))
+                return -1
 
-    orbital_values = read_child_opt_values(zqp_orbital_opt)
-    if len(orbital_values) != nslater:
-        print("ERROR: zqp_orbital_opt.dat row count mismatch: got {} expected {}".format(
-            len(orbital_values), nslater))
-        return -1
-    result = check_child_opt_block(
-        all_values,
-        orbital_values,
-        6 + 3 * definition.n_proj_bf,
-        "Slater",
-        1.0e-15,
-    )
-    if result != 0:
-        return result
+        if include_backflow:
+            bf_values = read_child_opt_values(zqp_bf_opt)
+            if len(bf_values) != n_proj_bf:
+                print("ERROR: zqp_bf_opt.dat row count mismatch: got {} expected {}".format(
+                    len(bf_values), n_proj_bf))
+                return -1
+            result = check_child_opt_block(all_values, bf_values, 6, "BackFlow", 1.0e-15)
+            if result != 0:
+                return result
+
+        orbital_values = read_child_opt_values(zqp_orbital_opt)
+        if len(orbital_values) != nslater:
+            print("ERROR: zqp_orbital_opt.dat row count mismatch: got {} expected {}".format(
+                len(orbital_values), nslater))
+            return -1
+        result = check_child_opt_block(
+            all_values,
+            orbital_values,
+            6 + 3 * n_proj_bf,
+            "Slater",
+            1.0e-15,
+        )
+        if result != 0:
+            return result
 
     restart_proc = run_vmc(
         rootdir,
@@ -957,7 +1232,11 @@ def check_no_bf_gradient_dump(path, tol):
     return 0
 
 
-def check_proj_bf_finite_diff_dump(path, tol):
+def check_proj_bf_finite_diff_dump(path, tol, expect_ap=False,
+                                   expect_negative_signs=None,
+                                   require_physical_covariance=False,
+                                   expected_nmptrans=None,
+                                   require_nonidentity_first=False):
     if not os.path.exists(path):
         print("ERROR: BackFlow finite-difference dump was not written.")
         return -1
@@ -968,18 +1247,31 @@ def check_proj_bf_finite_diff_dump(path, tol):
         return -1
 
     total_nonzero = 0
+    total_orbital_nonzero = 0
     maxima = {
         "max_abs_projbf_fd_real": 0.0,
         "max_abs_projbf_fd_imag": 0.0,
         "max_abs_projbf_fd_diff": 0.0,
         "max_abs_fd_value": 0.0,
+        "max_abs_orbital_fd_real": 0.0,
+        "max_abs_orbital_fd_imag": 0.0,
+        "max_abs_orbital_fd_diff": 0.0,
+        "max_abs_orbital_fd_value": 0.0,
     }
     for block in blocks:
         info_base = int(block.get("info_base", ["-1"])[0])
         fd_fail_count = int(block.get("fd_fail_count", ["-1"])[0])
         nan_count = int(block.get("nan_count", ["-1"])[0])
         nprojbf = int(block.get("nprojbf", ["0"])[0])
+        nslater = int(block.get("nslater", ["0"])[0])
+        ap_flag = int(block.get("ap_flag", ["-1"])[0])
+        nmptrans = int(block.get("nmptrans", ["0"])[0])
+        negative_signs = int(
+            block.get("negative_qptrans_sign_count", ["-1"])[0])
+        nonzero_theta = int(block.get("nonzero_theta_count", ["0"])[0])
         total_nonzero += int(block.get("nonzero_fd_count", ["0"])[0])
+        total_orbital_nonzero += int(
+            block.get("nonzero_orbital_fd_count", ["0"])[0])
         if info_base != 0:
             print("ERROR: finite-difference base matrix calculation failed: info_base={}".format(info_base))
             return -1
@@ -992,6 +1284,36 @@ def check_proj_bf_finite_diff_dump(path, tol):
         if nprojbf <= 0:
             print("ERROR: finite-difference dump has invalid nprojbf={}".format(nprojbf))
             return -1
+        if nslater <= 0:
+            print("ERROR: finite-difference dump has invalid nslater={}".format(nslater))
+            return -1
+        if ap_flag != int(expect_ap):
+            print("ERROR: finite-difference APFlag mismatch: actual={} expected={}".format(
+                ap_flag, int(expect_ap)))
+            return -1
+        if nmptrans <= 0:
+            print("ERROR: finite-difference dump has invalid nmptrans={}".format(nmptrans))
+            return -1
+        if expected_nmptrans is not None and nmptrans != expected_nmptrans:
+            print("ERROR: finite-difference dump has nmptrans={}, expected {}".format(
+                nmptrans, expected_nmptrans))
+            return -1
+        if require_nonidentity_first:
+            nsite = int(block.get("nsite", ["0"])[0])
+            mapping = [int(value) for value in block.get("qp_transform_0", [])]
+            if len(mapping) != nsite or mapping == list(range(nsite)):
+                print("ERROR: single-QP fallback fixture did not place a "
+                      "nonidentity transformation first")
+                return -1
+        if nonzero_theta <= 0:
+            print("ERROR: finite-difference fixture has no nonzero Theta contribution")
+            return -1
+        if expect_negative_signs is True and negative_signs <= 0:
+            print("ERROR: AP finite-difference fixture has no negative projection sign")
+            return -1
+        if expect_negative_signs is False and negative_signs != 0:
+            print("ERROR: sign-mutation fixture still has negative projection signs")
+            return -1
         for key in maxima:
             value = float(block.get(key, ["nan"])[0])
             if not math.isfinite(value):
@@ -1003,9 +1325,100 @@ def check_proj_bf_finite_diff_dump(path, tol):
     if total_nonzero == 0 or maxima["max_abs_fd_value"] <= 1.0e-12:
         print("ERROR: finite-difference check was vacuous: nonzero_fd_count={}".format(total_nonzero))
         return -1
+    if (total_orbital_nonzero == 0 or
+            maxima["max_abs_orbital_fd_value"] <= 1.0e-12):
+        print("ERROR: orbital finite-difference check was vacuous: "
+              "nonzero_orbital_fd_count={}".format(total_orbital_nonzero))
+        return -1
     if maxima["max_abs_projbf_fd_diff"] > tol:
         print("ERROR: ProjBF finite-difference mismatch: max_abs_diff={:.3e}".format(
             maxima["max_abs_projbf_fd_diff"]))
+        return -1
+    if maxima["max_abs_orbital_fd_diff"] > tol:
+        print("ERROR: orbital finite-difference mismatch: max_abs_diff={:.3e}".format(
+            maxima["max_abs_orbital_fd_diff"]))
+        return -1
+    try:
+        from bf_canonical_model import check_dump
+        model_maxima = check_dump(path)
+    except (ImportError, OSError, RuntimeError, ValueError) as exc:
+        print("ERROR: independent BackFlow canonical Python model failed: {}".format(exc))
+        return -1
+    if (require_physical_covariance and
+            model_maxima["physical_checks"] <= 0):
+        print("ERROR: physical BackFlow covariance check was not exercised")
+        return -1
+    if model_maxima["physical_checks"] > 0:
+        print("BackFlow physical covariance: checks={} max_error={:.3e} "
+              "virtual_sign_mutation_error={:.3e}".format(
+                  model_maxima["physical_checks"],
+                  model_maxima["covariance"],
+                  model_maxima["virtual_mutation"]))
+    return 0
+
+
+def check_bf_green1_bruteforce_dump(path, tol, expected_all_complex_flag):
+    if not os.path.exists(path):
+        print("ERROR: BackFlow GreenFunc1 brute-force dump was not written.")
+        return -1
+
+    blocks = read_key_value_blocks(path)
+    if not blocks:
+        print("ERROR: BackFlow GreenFunc1 brute-force dump is empty.")
+        return -1
+
+    total_compared = 0
+    total_nonzero = 0
+    max_diff = 0.0
+    max_bruteforce = 0.0
+    for block in blocks:
+        if expected_all_complex_flag is not None:
+            all_complex_flag = int(block.get("all_complex_flag", ["-1"])[0])
+            if all_complex_flag != expected_all_complex_flag:
+                print("ERROR: unexpected all_complex_flag in GreenFunc1 dump: got {} expected {}".format(
+                    all_complex_flag, expected_all_complex_flag))
+                return -1
+        info_fail_count = int(block.get("info_fail_count", ["-1"])[0])
+        nan_count = int(block.get("nan_count", ["-1"])[0])
+        state_check_count = int(block.get("state_check_count", ["0"])[0])
+        state_change_count = int(block.get("state_change_count", ["-1"])[0])
+        if info_fail_count != 0:
+            print("ERROR: GreenFunc1 brute-force dump has info_fail_count={}".format(
+                info_fail_count))
+            return -1
+        if nan_count != 0:
+            print("ERROR: GreenFunc1 brute-force dump has nan_count={}".format(
+                nan_count))
+            return -1
+        if state_check_count <= 0:
+            print("ERROR: GreenFunc1 state-preservation check was not exercised")
+            return -1
+        if state_change_count != 0:
+            print("ERROR: GreenFunc1 changed caller/global base state: count={}".format(
+                state_change_count))
+            return -1
+        compared = int(block.get("compared_count", ["0"])[0])
+        nonzero = int(block.get("nonzero_bruteforce_count", ["0"])[0])
+        block_diff = float(block.get("max_abs_green1_diff", ["nan"])[0])
+        block_bruteforce = float(block.get("max_abs_bruteforce", ["nan"])[0])
+        if not math.isfinite(block_diff) or not math.isfinite(block_bruteforce):
+            print("ERROR: GreenFunc1 brute-force dump contains non-finite maxima.")
+            return -1
+        total_compared += compared
+        total_nonzero += nonzero
+        max_diff = max(max_diff, block_diff)
+        max_bruteforce = max(max_bruteforce, block_bruteforce)
+
+    if total_compared == 0:
+        print("ERROR: GreenFunc1 brute-force check was vacuous: compared_count=0.")
+        return -1
+    if total_nonzero == 0 or max_bruteforce <= 1.0e-12:
+        print("ERROR: GreenFunc1 brute-force check was vacuous: nonzero_bruteforce_count={}".format(
+            total_nonzero))
+        return -1
+    if max_diff > tol:
+        print("ERROR: BackFlow GreenFunc1 brute-force mismatch: max_abs_diff={:.3e}".format(
+            max_diff))
         return -1
     return 0
 
@@ -1033,11 +1446,20 @@ def check_bf_green2_bruteforce_dump(path, tol, expected_all_complex_flag):
                 return -1
         info_fail_count = int(block.get("info_fail_count", ["-1"])[0])
         nan_count = int(block.get("nan_count", ["-1"])[0])
+        state_check_count = int(block.get("state_check_count", ["0"])[0])
+        state_change_count = int(block.get("state_change_count", ["-1"])[0])
         if info_fail_count != 0:
             print("ERROR: GreenFunc2 brute-force dump has info_fail_count={}".format(info_fail_count))
             return -1
         if nan_count != 0:
             print("ERROR: GreenFunc2 brute-force dump has nan_count={}".format(nan_count))
+            return -1
+        if state_check_count <= 0:
+            print("ERROR: GreenFunc2 state-preservation check was not exercised")
+            return -1
+        if state_change_count != 0:
+            print("ERROR: GreenFunc2 changed caller/global base state: count={}".format(
+                state_change_count))
             return -1
         compared = int(block.get("compared_count", ["0"])[0])
         nonzero = int(block.get("nonzero_bruteforce_count", ["0"])[0])
@@ -1140,7 +1562,8 @@ def check_bf_nbody_component_dump(path, tol):
     return 0
 
 
-def check_bf_nbody_dispatch_dump(path, tol, require_state_checks=False):
+def check_bf_nbody_dispatch_dump(path, tol, require_state_checks=False,
+                                 require_complex_n4=False):
     if not os.path.exists(path):
         print("ERROR: BackFlow N-body dispatch dump was not written.")
         return -1
@@ -1165,6 +1588,7 @@ def check_bf_nbody_dispatch_dump(path, tol, require_state_checks=False):
         "max_direct_diff",
         "max_full_rebuild_diff",
         "max_n4_imag",
+        "max_n4_abs",
     )
     missing = [key for key in required if key not in values]
     if missing:
@@ -1199,7 +1623,13 @@ def check_bf_nbody_dispatch_dump(path, tol, require_state_checks=False):
                 key, value))
             return -1
     max_n4_imag = float(values["max_n4_imag"])
-    if not math.isfinite(max_n4_imag) or max_n4_imag <= 1.0e-12:
+    max_n4_abs = float(values["max_n4_abs"])
+    if not math.isfinite(max_n4_abs) or max_n4_abs <= 1.0e-12:
+        print("ERROR: genuine N=4 check was vacuous: max_n4_abs={:.3e}".format(
+            max_n4_abs))
+        return -1
+    if (require_complex_n4 and
+            (not math.isfinite(max_n4_imag) or max_n4_imag <= 1.0e-12)):
         print("ERROR: genuine N=4 complex check was vacuous: max_n4_imag={:.3e}".format(
             max_n4_imag))
         return -1
@@ -1422,7 +1852,7 @@ def check_bf_sampler_rebuild_dump(path, tol, expect_low_count_adds,
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>] [--keep-twobodyg] [--custom-backflow] [--sparse-orbital-range <n>] [--check-bf-sampler-rebuild] [--expect-low-count-adds] [--expect-sampler-ranks <n>] [--expect-zero-qp-rank]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green1-bruteforce] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--set-ex-update-path <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reverse-projection-order] [--use-ap-projection] [--use-asymmetric-complex-projection-weights] [--mutate-ap-signs-positive] [--check-multiqp-full-rebuild] [--reject-output <substring>] [--ex-update-path <n>] [--expect-exchange-events] [--set-vmc-sample <n>] [--expect-exchange-profile] [--keep-twobodyg] [--custom-backflow] [--sparse-orbital-range <n>] [--check-bf-sampler-rebuild] [--expect-low-count-adds] [--expect-sampler-ranks <n>] [--expect-zero-qp-rank]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -1434,6 +1864,9 @@ def main():
     expected_nqp_full = None
     compare_energy = False
     compare_lanczos = False
+    ex_update_path = None
+    expect_exchange_events = False
+    vmc_sample_override = None
     lanczos_mode = None
     lanczos_step = None
     lanczos_support_mode = None
@@ -1442,6 +1875,7 @@ def main():
     compare_twobodygex = False
     compare_gradient = False
     compare_proj_bf_fd = False
+    check_bf_green1_bruteforce = False
     check_bf_green2_bruteforce = False
     keep_twobodyg = False
     custom_backflow = False
@@ -1459,8 +1893,20 @@ def main():
     expected_all_complex_flag = None
     compare_real_complex_model = None
     check_opt_restart = False
+    opt_output_samples = 2
+    opt_output_include_backflow = True
+    reverse_projection_order = False
+    use_ap_projection = False
+    use_full_projection_group = False
+    use_complex_projection_weights = False
+    use_asymmetric_complex_projection_weights = False
+    use_single_projection_row = False
+    mutate_ap_signs_positive = False
+    check_multiqp_full_rebuild = False
+    expect_exchange_profile = False
     ncond_override = None
     nsplit_size_override = None
+    ex_update_path_override = None
     rejected_outputs = []
     argi = 2
     while argi < len(sys.argv):
@@ -1515,6 +1961,9 @@ def main():
         elif sys.argv[argi] == "--compare-proj-bf-finite-diff":
             compare_proj_bf_fd = True
             argi += 1
+        elif sys.argv[argi] == "--check-bf-green1-bruteforce":
+            check_bf_green1_bruteforce = True
+            argi += 1
         elif sys.argv[argi] == "--check-bf-green2-bruteforce":
             check_bf_green2_bruteforce = True
             argi += 1
@@ -1543,6 +1992,9 @@ def main():
         elif sys.argv[argi] == "--set-nsplit-size" and argi + 1 < len(sys.argv):
             nsplit_size_override = str(int(sys.argv[argi + 1]))
             argi += 2
+        elif sys.argv[argi] == "--set-ex-update-path" and argi + 1 < len(sys.argv):
+            ex_update_path_override = str(int(sys.argv[argi + 1]))
+            argi += 2
         elif sys.argv[argi] == "--expect-all-complex-flag" and argi + 1 < len(sys.argv):
             expected_all_complex_flag = int(sys.argv[argi + 1])
             argi += 2
@@ -1551,6 +2003,46 @@ def main():
             argi += 2
         elif sys.argv[argi] == "--check-opt-output-restart":
             check_opt_restart = True
+            argi += 1
+        elif (sys.argv[argi] == "--opt-output-samples"
+              and argi + 1 < len(sys.argv)):
+            opt_output_samples = int(sys.argv[argi + 1])
+            if opt_output_samples < 1:
+                print("ERROR: --opt-output-samples must be positive.")
+                return -1
+            argi += 2
+        elif sys.argv[argi] == "--opt-output-no-backflow":
+            opt_output_include_backflow = False
+            argi += 1
+        elif sys.argv[argi] == "--reverse-projection-order":
+            reverse_projection_order = True
+            argi += 1
+        elif sys.argv[argi] == "--use-ap-projection":
+            use_ap_projection = True
+            argi += 1
+        elif sys.argv[argi] == "--use-full-projection-group":
+            use_full_projection_group = True
+            argi += 1
+        elif sys.argv[argi] == "--use-complex-projection-weights":
+            use_full_projection_group = True
+            use_complex_projection_weights = True
+            argi += 1
+        elif sys.argv[argi] == "--use-asymmetric-complex-projection-weights":
+            use_full_projection_group = True
+            use_asymmetric_complex_projection_weights = True
+            argi += 1
+        elif sys.argv[argi] == "--use-single-projection-row":
+            use_single_projection_row = True
+            argi += 1
+        elif sys.argv[argi] == "--mutate-ap-signs-positive":
+            use_ap_projection = True
+            mutate_ap_signs_positive = True
+            argi += 1
+        elif sys.argv[argi] == "--check-multiqp-full-rebuild":
+            check_multiqp_full_rebuild = True
+            argi += 1
+        elif sys.argv[argi] == "--expect-exchange-profile":
+            expect_exchange_profile = True
             argi += 1
         elif sys.argv[argi] == "--reject-output" and argi + 1 < len(sys.argv):
             rejected_outputs.append(sys.argv[argi + 1])
@@ -1576,12 +2068,34 @@ def main():
         elif sys.argv[argi] == "--expect-zero-qp-rank":
             expect_zero_qp_rank = True
             argi += 1
+        elif sys.argv[argi] == "--ex-update-path" and argi + 1 < len(sys.argv):
+            ex_update_path = str(int(sys.argv[argi + 1]))
+            argi += 2
+        elif sys.argv[argi] == "--expect-exchange-events":
+            expect_exchange_events = True
+            argi += 1
+        elif sys.argv[argi] == "--set-vmc-sample" and argi + 1 < len(sys.argv):
+            vmc_sample_override = str(int(sys.argv[argi + 1]))
+            if int(vmc_sample_override) < 1:
+                print("ERROR: --set-vmc-sample must be positive.")
+                return -1
+            argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reject-output <substring>] [--keep-twobodyg] [--custom-backflow] [--sparse-orbital-range <n>] [--check-bf-sampler-rebuild] [--expect-low-count-adds] [--expect-sampler-ranks <n>] [--expect-zero-qp-rank]".format(sys.argv[0]))
+            print("usage: {} <model name> [options]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
     mpi_procs = os.environ.get("MVMC_MPI_PROCS")
+    ex_updates = {}
+    ex_suffix = ""
+    if ex_update_path is not None:
+        ex_updates["NExUpdatePath"] = ex_update_path
+        ex_suffix += "_expath{}".format(ex_update_path)
+    if vmc_sample_override is not None:
+        ex_updates["NVMCSample"] = vmc_sample_override
+        ex_suffix += "_smp{}".format(vmc_sample_override)
+    if not ex_updates:
+        ex_updates = None
     if compare_real_complex_model is not None:
         return compare_real_complex_nonidentity(
             rootdir,
@@ -1590,11 +2104,22 @@ def main():
             mpi_procs,
             1.0e-10,
             rejected_outputs,
+            modpara_updates=ex_updates,
+            work_suffix=ex_suffix,
+            require_exchange_events=expect_exchange_events,
+            reverse_projection_order=reverse_projection_order,
+            use_ap_projection=use_ap_projection,
+            mutate_ap_signs_positive=mutate_ap_signs_positive,
         )
     if check_opt_restart:
-        return check_opt_output_restart(rootdir, model, mpi_procs, rejected_outputs)
+        return check_opt_output_restart(
+            rootdir, model, mpi_procs, rejected_outputs,
+            opt_output_samples, opt_output_include_backflow,
+            modpara_updates=ex_updates, extra_work_suffix=ex_suffix)
 
     work_suffix = ""
+    if ex_suffix:
+        work_suffix += ex_suffix
     if compare_energy:
         work_suffix += "_energy"
     if lanczos_mode is not None:
@@ -1611,6 +2136,8 @@ def main():
         work_suffix += "_gradient"
     if compare_proj_bf_fd:
         work_suffix += "_projbf_fd"
+    if check_bf_green1_bruteforce:
+        work_suffix += "_green1_bruteforce"
     if check_bf_green2_bruteforce:
         work_suffix += "_green2_bruteforce"
     if check_bf_nbody_components:
@@ -1632,10 +2159,26 @@ def main():
         work_suffix += "_compact"
     if use_nonidentity_init:
         work_suffix += "_nonidentity"
+    if reverse_projection_order:
+        work_suffix += "_reverse_projection"
+    if use_ap_projection:
+        work_suffix += "_ap"
+    if use_full_projection_group:
+        work_suffix += "_full_projection_group"
+    if use_complex_projection_weights:
+        work_suffix += "_complex_projection_weights"
+    if use_asymmetric_complex_projection_weights:
+        work_suffix += "_asymmetric_complex_projection_weights"
+    if use_single_projection_row:
+        work_suffix += "_single_projection_row"
+    if mutate_ap_signs_positive:
+        work_suffix += "_all_signs_positive"
     if ncond_override is not None:
         work_suffix += "_ncond{}".format(ncond_override)
     if nsplit_size_override is not None:
         work_suffix += "_nsplit{}".format(nsplit_size_override)
+    if ex_update_path_override is not None:
+        work_suffix += "_exupdate{}".format(ex_update_path_override)
     env_work_suffix = os.environ.get("MVMC_BF_TEST_WORK_SUFFIX", "")
     if env_work_suffix:
         safe_work_suffix = "".join(
@@ -1656,6 +2199,8 @@ def main():
         modpara_updates["Ncond"] = ncond_override
     if nsplit_size_override is not None:
         modpara_updates["NSplitSize"] = nsplit_size_override
+    if ex_update_path_override is not None:
+        modpara_updates["NExUpdatePath"] = ex_update_path_override
     if lanczos_mode is not None:
         modpara_updates["NLanczosMode"] = lanczos_mode
         modpara_updates["NVMCCalMode"] = "1"
@@ -1669,10 +2214,30 @@ def main():
         modpara_updates["NLanczosSupportMode"] = lanczos_support_mode
     if vmc_cal_mode is not None:
         modpara_updates["NVMCCalMode"] = vmc_cal_mode
+    if ex_update_path is not None:
+        modpara_updates["NExUpdatePath"] = ex_update_path
+    if vmc_sample_override is not None and "NVMCSample" not in modpara_updates:
+        modpara_updates["NVMCSample"] = vmc_sample_override
     if modpara_updates:
         update_modpara(os.path.join(workdir, "modpara.def"), modpara_updates)
+        for key, value in modpara_updates.items():
+            assert_modpara_value(os.path.join(workdir, "modpara.def"), key, value)
 
     nsite = parse_nsite(os.path.join(workdir, "modpara.def"))
+    if reverse_projection_order or use_ap_projection or use_full_projection_group:
+        trans_count = rewrite_transsym_variant(
+            os.path.join(workdir, "qptransidx.def"), nsite,
+            reverse_order=reverse_projection_order,
+            antiperiodic=use_ap_projection,
+            all_signs_positive=mutate_ap_signs_positive,
+            full_group=use_full_projection_group,
+            complex_character=use_complex_projection_weights,
+            asymmetric_complex=use_asymmetric_complex_projection_weights)
+        active_trans_count = 1 if use_single_projection_row else trans_count
+        update_modpara(os.path.join(workdir, "modpara.def"), {
+            "NMPTrans": str(-active_trans_count if use_ap_projection
+                            else active_trans_count),
+        })
     definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd)
     if not custom_backflow:
         write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd, compact=compact_backflow)
@@ -1715,6 +2280,7 @@ def main():
     dump_path = None if use_nonidentity_init else os.path.join(workdir, "bf_identity_dump.dat")
     diff_dump_path = os.path.join(workdir, "bf_diff_dump.dat") if compare_gradient else None
     fd_dump_path = os.path.join(workdir, "bf_projbf_fd_dump.dat") if compare_proj_bf_fd else None
+    green1_dump_path = os.path.join(workdir, "bf_green1_bruteforce_dump.dat") if check_bf_green1_bruteforce else None
     green2_dump_path = os.path.join(workdir, "bf_green2_bruteforce_dump.dat") if check_bf_green2_bruteforce else None
     component_dump_path = os.path.join(workdir, "bf_nbody_components.dat") if check_bf_nbody_components else None
     dispatch_dump_path = (
@@ -1724,6 +2290,10 @@ def main():
     nbody_env = {}
     if check_bf_nbody_state:
         nbody_env["MVMC_BF_NBODY_STATE_CHECK"] = "1"
+    if check_multiqp_full_rebuild or expect_exchange_profile:
+        nbody_env["MVMC_BF_PROFILE"] = "1"
+    if check_bf_green1_bruteforce:
+        nbody_env["MVMC_BF_GREEN1_DUMP"] = green1_dump_path
     if nbody_failure_stage in ("workspace", "candidate", "pfaffian"):
         nbody_env.update({
             "MVMC_BF_NBODY_STATE_CHECK": "1",
@@ -1859,6 +2429,9 @@ def main():
         print(proc.stdout)
         print("---- output end ----")
         return -1
+    if expect_exchange_events and assert_exchange_events(proc.stdout, model) != 0:
+        print(proc.stdout)
+        return -1
     tol = 1.0e-10
     if lanczos_mode == "1":
         if lanczos_support_mode == "1":
@@ -1871,7 +2444,10 @@ def main():
             return status
         if compare_lanczos:
             return compare_no_bf_lanczos(
-                rootdir, refdir, workdir, mpi_procs, modpara_updates)
+                rootdir, refdir, workdir, mpi_procs, modpara_updates,
+                reverse_projection_order=reverse_projection_order,
+                use_ap_projection=use_ap_projection,
+                mutate_ap_signs_positive=mutate_ap_signs_positive)
         return 0
     if dump_path is not None:
         if not os.path.exists(dump_path):
@@ -1925,7 +2501,30 @@ def main():
         if result != 0:
             return result
     if compare_proj_bf_fd:
-        result = check_proj_bf_finite_diff_dump(fd_dump_path, 1.0e-6)
+        result = check_proj_bf_finite_diff_dump(
+            fd_dump_path, 1.0e-6,
+            expect_ap=use_ap_projection,
+            expect_negative_signs=(False if mutate_ap_signs_positive else
+                                   (True if (use_ap_projection and
+                                             not use_single_projection_row)
+                                    else None)),
+            require_physical_covariance=use_full_projection_group,
+            expected_nmptrans=(1 if use_single_projection_row else None),
+            require_nonidentity_first=(use_single_projection_row and
+                                       reverse_projection_order))
+        if result != 0:
+            return result
+    if check_multiqp_full_rebuild:
+        result = check_multiqp_full_rebuild_profile(workdir)
+        if result != 0:
+            return result
+    if expect_exchange_profile:
+        result = check_exchange_profile(workdir)
+        if result != 0:
+            return result
+    if check_bf_green1_bruteforce:
+        result = check_bf_green1_bruteforce_dump(
+            green1_dump_path, 1.0e-10, expected_all_complex_flag)
         if result != 0:
             return result
     if check_bf_green2_bruteforce:
@@ -1944,7 +2543,8 @@ def main():
     if check_bf_nbody_dispatch or check_bf_nbody_state:
         result = check_bf_nbody_dispatch_dump(
             dispatch_dump_path, 1.0e-11,
-            require_state_checks=check_bf_nbody_state)
+            require_state_checks=check_bf_nbody_state,
+            require_complex_n4=True)
         if result != 0:
             return result
 

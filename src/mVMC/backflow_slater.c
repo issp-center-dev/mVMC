@@ -26,7 +26,12 @@ along with this program. If not, see http://www.gnu.org/licenses/.
  * by Satoshi Morita
  *-------------------------------------------------------------*/
 #include <complex.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include "./include/global.h"
+#include "./include/backflow.h"
+#include "./include/matrix.h"
 #include "./include/slater.h"
 
 #include "./include/projection.h"
@@ -72,6 +77,10 @@ static void MakeBFRealSparseChangedCount(const BFRealSparseEntry *oldEntry, cons
                                          int *oldChangedCount, int *newChangedCount);
 static long long CountBFRealDeltaSparsePairsForRow(const int tri, const int *count,
                                                    const int *changedCount);
+static int SlaterElmBFDiffCanonical_fcmp(double complex *srOptO,
+    double complex ip, const int *eleIdx, const int *eleProjBFCnt);
+static int BackFlowDiffCanonical_fcmp(double complex *srOptO,
+    double complex ip, const int *eleIdx, const int *eleProjBFCnt);
 
 void MakeProjBFCnt(int *projCnt, const int *eleNum) {
   const int *n0 = eleNum;
@@ -171,6 +180,14 @@ void MakeProjBFCnt(int *projCnt, const int *eleNum) {
 //[e] MERGE BY TM
 
 void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *eleIdx, int *eleNum, int *eleCfg, int *eleProjConst,const int * eleProjBFCnt){
+  if(BFUseCanonicalNonFszPath()) {
+    if(SlaterElmBFDiffCanonical_fcmp(
+           srOptO, ip, eleIdx, eleProjBFCnt) != 0) {
+      int param;
+      for(param=0;param<2*NSlater;param++) srOptO[param] = NAN+NAN*I;
+    }
+    return;
+  }
   const int nBuf=NSlater*NQPFull;
   const int nsize = Nsize;
   const int ne = Ne;
@@ -449,6 +466,15 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
 void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *eleIdx, const int *eleNum, int *eleProjConst,
                    const int *eleProjBFCnt) {
 
+  if(BFUseCanonicalNonFszPath()) {
+    if(BackFlowDiffCanonical_fcmp(srOptO, ip, eleIdx,
+                                  eleProjBFCnt) != 0) {
+      int param;
+      for(param=0;param<2*NProjBF;param++) srOptO[param] = NAN+NAN*I;
+    }
+    return;
+  }
+
   const double complex invIP = 1.0/ip;
   int msi,msj,ri,rj,tri,trj;
   int mpidx,qpidx;
@@ -669,23 +695,380 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
 }
 
 
+static inline double complex BFNonFszOrbitalTransformed(
+    const int rawI, const int rawJ, const int *xqp) {
+  const int transformedI = xqp[rawI];
+  const int transformedJ = xqp[rawJ];
+  return Slater[OrbitalIdx[transformedI][transformedJ]] *
+      (double)OrbitalSgn[transformedI][transformedJ];
+}
+
+static void SubSlaterElmBFCanonical_fcmp(
+    const int ri, const int rj, const int *xqp, const int *xqpSgn,
+    double complex *slt_ij, int *ijcount,
+    double complex *slt_ji, int *jicount,
+    const int *eleProjBFCnt) {
+  const int nSiteRange = Nsite*Nrange;
+  const int *bfCnt0 = eleProjBFCnt;
+  const int *bfCnt1 = eleProjBFCnt + 4*Nsite*Nrange;
+  int xn, xm, xk, xl;
+
+  *slt_ij = 0.0 + 0.0*I;
+  *slt_ji = 0.0 + 0.0*I;
+  *ijcount = 0;
+  *jicount = 0;
+
+  for(xn=0;xn<4;xn++) {
+    const int *bfCnt0_n = bfCnt0 + xn*nSiteRange;
+    const int *bfCnt1_n = bfCnt1 + xn*nSiteRange;
+    for(xm=0;xm<4;xm++) {
+      const int *bfCnt0_m;
+      const int *bfCnt1_m;
+      if(xm == 0 && xn == 0) continue;
+      bfCnt0_m = bfCnt0 + xm*nSiteRange;
+      bfCnt1_m = bfCnt1 + xm*nSiteRange;
+
+      for(xk=0;xk<Nrange;xk++) {
+        const int rk = PosBF[ri][xk];
+        const int idx_ik = ri*Nrange + xk;
+        const int idx_jk = rj*Nrange + xk;
+        const int dki = RangeIdx[ri][rk];
+        const int packedI = 4*dki + xn;
+        int nidx = packedI - 3 - dki;
+        int cnt_ij_i;
+        int cnt_ji_i;
+        if(packedI%4 == 0) nidx = -1;
+        if(packedI == 0) nidx = 0;
+        if(nidx < 0) continue;
+
+        *ijcount += bfCnt0[nSiteRange + idx_ik] +
+                    bfCnt0[nSiteRange + idx_jk];
+        *jicount += bfCnt0[nSiteRange + idx_ik] +
+                    bfCnt0[nSiteRange + idx_jk];
+        cnt_ij_i = bfCnt0_n[idx_ik];
+        cnt_ji_i = bfCnt1_n[idx_ik];
+        if(cnt_ij_i == 0 && cnt_ji_i == 0) continue;
+
+        for(xl=0;xl<Nrange;xl++) {
+          const int rl = PosBF[rj][xl];
+          const int idx_jl = rj*Nrange + xl;
+          const int cnt_ij_j = bfCnt1_m[idx_jl];
+          const int cnt_ji_j = bfCnt0_m[idx_jl];
+          const int dlj = RangeIdx[rj][rl];
+          const int packedJ = 4*dlj + xm;
+          int midx = packedJ - 3 - dlj;
+          int bfidx;
+          if((cnt_ij_i == 0 || cnt_ij_j == 0) &&
+             (cnt_ji_i == 0 || cnt_ji_j == 0)) continue;
+          if(packedJ%4 == 0) midx = -1;
+          if(packedJ == 0) midx = 0;
+          if(midx < 0) continue;
+          bfidx = BFSubIdx[nidx][midx];
+          if(cnt_ij_i != 0 && cnt_ij_j != 0) {
+            *slt_ij += -ProjBF[bfidx] * (double)(cnt_ij_i*cnt_ij_j) *
+                BFNonFszOrbitalTransformed(rk, rl, xqp);
+          }
+          if(cnt_ji_i != 0 && cnt_ji_j != 0) {
+            *slt_ji += -ProjBF[bfidx] * (double)(cnt_ji_i*cnt_ji_j) *
+                BFNonFszOrbitalTransformed(rl, rk, xqp);
+          }
+        }
+      }
+    }
+  }
+
+  *slt_ij += (*ijcount == 0 ? 1.0 : creal(ProjBF[0])) *
+      BFNonFszOrbitalTransformed(ri, rj, xqp);
+  *slt_ji += (*jicount == 0 ? 1.0 : creal(ProjBF[0])) *
+      BFNonFszOrbitalTransformed(rj, ri, xqp);
+  if(xqpSgn[ri]*xqpSgn[rj] != 1) {
+    *slt_ij = -*slt_ij;
+    *slt_ji = -*slt_ji;
+  }
+}
+
+static void BFAddCanonicalOrbitalDerivative(
+    double complex *coefficient, int rawI, int rawJ,
+    const int *xqp, double complex scale) {
+  const int transformedI = xqp[rawI];
+  const int transformedJ = xqp[rawJ];
+  const int orbital = OrbitalIdx[transformedI][transformedJ];
+  int sign = OrbitalSgn[transformedI][transformedJ];
+  if(coefficient == NULL || orbital < 0 || orbital >= NSlater) return;
+  coefficient[orbital] += scale*(double)sign;
+}
+
+static void BFCanonicalDirectedDerivativeCoefficients(
+    int ri, int rj, const int *xqp, const int *xqpSgn,
+    const int *eleProjBFCnt,
+    double complex *orbitalA, double complex *orbitalB,
+    double complex *projRealA, double complex *projImagA,
+    double complex *projRealB, double complex *projImagB) {
+  const int nSiteRange = Nsite*Nrange;
+  const int *bfCnt0 = eleProjBFCnt;
+  const int *bfCnt1 = eleProjBFCnt + 4*Nsite*Nrange;
+  int ijcount = 0;
+  int jicount = 0;
+  const double endpointSign = (double)(xqpSgn[ri]*xqpSgn[rj]);
+  int xn,xm,xk,xl;
+
+  for(xn=0;xn<4;xn++) {
+    const int *bfCnt0_n = bfCnt0 + xn*nSiteRange;
+    const int *bfCnt1_n = bfCnt1 + xn*nSiteRange;
+    for(xm=0;xm<4;xm++) {
+      const int *bfCnt0_m;
+      const int *bfCnt1_m;
+      if(xm == 0 && xn == 0) continue;
+      bfCnt0_m = bfCnt0 + xm*nSiteRange;
+      bfCnt1_m = bfCnt1 + xm*nSiteRange;
+
+      for(xk=0;xk<Nrange;xk++) {
+        const int rk = PosBF[ri][xk];
+        const int idx_ik = ri*Nrange+xk;
+        const int idx_jk = rj*Nrange+xk;
+        const int dki = RangeIdx[ri][rk];
+        const int packedI = 4*dki+xn;
+        int nidx = packedI-3-dki;
+        int cnt_ij_i;
+        int cnt_ji_i;
+        if(packedI%4 == 0) nidx = -1;
+        if(packedI == 0) nidx = 0;
+        if(nidx < 0) continue;
+
+        ijcount += bfCnt0[nSiteRange+idx_ik]
+                 + bfCnt0[nSiteRange+idx_jk];
+        jicount += bfCnt0[nSiteRange+idx_ik]
+                 + bfCnt0[nSiteRange+idx_jk];
+        cnt_ij_i = bfCnt0_n[idx_ik];
+        cnt_ji_i = bfCnt1_n[idx_ik];
+        if(cnt_ij_i == 0 && cnt_ji_i == 0) continue;
+
+        for(xl=0;xl<Nrange;xl++) {
+          const int rl = PosBF[rj][xl];
+          const int idx_jl = rj*Nrange+xl;
+          const int cnt_ij_j = bfCnt1_m[idx_jl];
+          const int cnt_ji_j = bfCnt0_m[idx_jl];
+          const int dlj = RangeIdx[rj][rl];
+          const int packedJ = 4*dlj+xm;
+          int midx = packedJ-3-dlj;
+          int bfidx;
+          if((cnt_ij_i == 0 || cnt_ij_j == 0)
+             && (cnt_ji_i == 0 || cnt_ji_j == 0)) continue;
+          if(packedJ%4 == 0) midx = -1;
+          if(packedJ == 0) midx = 0;
+          if(midx < 0) continue;
+          bfidx = BFSubIdx[nidx][midx];
+
+          if(cnt_ij_i != 0 && cnt_ij_j != 0) {
+            const double count = (double)(cnt_ij_i*cnt_ij_j);
+            const double complex orbital =
+                BFNonFszOrbitalTransformed(rk, rl, xqp);
+            BFAddCanonicalOrbitalDerivative(
+                orbitalA, rk, rl, xqp,
+                -endpointSign*ProjBF[bfidx]*count);
+            if(projRealA != NULL) {
+              projRealA[bfidx] -= endpointSign*count*orbital;
+            }
+            if(projImagA != NULL) {
+              projImagA[bfidx] -= I*endpointSign*count*orbital;
+            }
+          }
+          if(cnt_ji_i != 0 && cnt_ji_j != 0) {
+            const double count = (double)(cnt_ji_i*cnt_ji_j);
+            const double complex orbital =
+                BFNonFszOrbitalTransformed(rl, rk, xqp);
+            BFAddCanonicalOrbitalDerivative(
+                orbitalB, rl, rk, xqp,
+                -endpointSign*ProjBF[bfidx]*count);
+            if(projRealB != NULL) {
+              projRealB[bfidx] -= endpointSign*count*orbital;
+            }
+            if(projImagB != NULL) {
+              projImagB[bfidx] -= I*endpointSign*count*orbital;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  BFAddCanonicalOrbitalDerivative(
+      orbitalA, ri, rj, xqp,
+      endpointSign*(ijcount == 0 ? 1.0 : creal(ProjBF[0])));
+  BFAddCanonicalOrbitalDerivative(
+      orbitalB, rj, ri, xqp,
+      endpointSign*(jicount == 0 ? 1.0 : creal(ProjBF[0])));
+  if(ijcount != 0 && projRealA != NULL) {
+    projRealA[0] += endpointSign*BFNonFszOrbitalTransformed(
+        ri, rj, xqp);
+  }
+  if(jicount != 0 && projRealB != NULL) {
+    projRealB[0] += endpointSign*BFNonFszOrbitalTransformed(
+        rj, ri, xqp);
+  }
+}
+
+static inline double complex BFCanonicalSpinDerivative(
+    double complex directedA, double complex directedB,
+    int spinI, int spinJ, int spidx) {
+  const double complex cs = SPGLCosSin[spidx];
+  const double complex cc = SPGLCosCos[spidx];
+  const double complex ss = SPGLSinSin[spidx];
+  if(spinI == 0 && spinJ == 0) return -(directedA-directedB)*cs;
+  if(spinI == 0 && spinJ == 1) return directedA*cc+directedB*ss;
+  if(spinI == 1 && spinJ == 0) return -directedA*ss-directedB*cc;
+  return (directedA-directedB)*cs;
+}
+
+static int SlaterElmBFDiffCanonical_fcmp(double complex *srOptO,
+    double complex ip, const int *eleIdx, const int *eleProjBFCnt) {
+  double complex *orbitalA = NULL;
+  double complex *orbitalB = NULL;
+  int qpidx,msi,msj,param;
+
+  if(srOptO == NULL || eleIdx == NULL || eleProjBFCnt == NULL
+     || NSlater <= 0 || Nsize <= 0 || Ne <= 0
+     || !isfinite(creal(ip)) || !isfinite(cimag(ip)) || cabs(ip) == 0.0) {
+    return -1;
+  }
+  orbitalA = (double complex *)calloc((size_t)NSlater,
+                                       sizeof(double complex));
+  orbitalB = (double complex *)calloc((size_t)NSlater,
+                                       sizeof(double complex));
+  if(orbitalA == NULL || orbitalB == NULL) {
+    free(orbitalA);
+    free(orbitalB);
+    return -1;
+  }
+  for(param=0;param<2*NSlater;param++) srOptO[param] = 0.0+0.0*I;
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    const int mpidx = qpidx/NSPGaussLeg;
+    const int spidx = qpidx%NSPGaussLeg;
+    const int *xqp = QPTrans[mpidx];
+    const int *xqpSgn = QPTransSgn[mpidx];
+    const double complex factor =
+        -0.5*QPFullWeight[qpidx]*PfM[qpidx]/ip;
+    const double complex *invM = InvM+(size_t)qpidx*Nsize*Nsize;
+    for(msi=0;msi<Nsize;msi++) {
+      const int ri = eleIdx[msi];
+      const int spinI = msi/Ne;
+      for(msj=0;msj<Nsize;msj++) {
+        const int rj = eleIdx[msj];
+        const int spinJ = msj/Ne;
+        const double complex contraction =
+            factor*invM[(size_t)msi*Nsize+msj];
+        memset(orbitalA, 0, (size_t)NSlater*sizeof(double complex));
+        memset(orbitalB, 0, (size_t)NSlater*sizeof(double complex));
+        BFCanonicalDirectedDerivativeCoefficients(
+            ri, rj, xqp, xqpSgn, eleProjBFCnt,
+            orbitalA, orbitalB, NULL, NULL, NULL, NULL);
+        for(param=0;param<NSlater;param++) {
+          const double complex derivative = BFCanonicalSpinDerivative(
+              orbitalA[param], orbitalB[param], spinI, spinJ, spidx);
+          srOptO[2*param] += contraction*derivative;
+        }
+      }
+    }
+  }
+  for(param=0;param<NSlater;param++) {
+    srOptO[2*param+1] = I*srOptO[2*param];
+  }
+  free(orbitalA);
+  free(orbitalB);
+  return 0;
+}
+
+static int BackFlowDiffCanonical_fcmp(double complex *srOptO,
+    double complex ip, const int *eleIdx, const int *eleProjBFCnt) {
+  double complex *projRealA = NULL;
+  double complex *projImagA = NULL;
+  double complex *projRealB = NULL;
+  double complex *projImagB = NULL;
+  int qpidx,msi,msj,param;
+
+  if(srOptO == NULL || eleIdx == NULL || eleProjBFCnt == NULL
+     || NProjBF <= 0 || Nsize <= 0 || Ne <= 0
+     || !isfinite(creal(ip)) || !isfinite(cimag(ip)) || cabs(ip) == 0.0) {
+    return -1;
+  }
+  projRealA = (double complex *)calloc((size_t)NProjBF,
+                                       sizeof(double complex));
+  projImagA = (double complex *)calloc((size_t)NProjBF,
+                                       sizeof(double complex));
+  projRealB = (double complex *)calloc((size_t)NProjBF,
+                                       sizeof(double complex));
+  projImagB = (double complex *)calloc((size_t)NProjBF,
+                                       sizeof(double complex));
+  if(projRealA == NULL || projImagA == NULL
+     || projRealB == NULL || projImagB == NULL) {
+    free(projRealA);
+    free(projImagA);
+    free(projRealB);
+    free(projImagB);
+    return -1;
+  }
+  for(param=0;param<2*NProjBF;param++) srOptO[param] = 0.0+0.0*I;
+
+  for(qpidx=0;qpidx<NQPFull;qpidx++) {
+    const int mpidx = qpidx/NSPGaussLeg;
+    const int spidx = qpidx%NSPGaussLeg;
+    const int *xqp = QPTrans[mpidx];
+    const int *xqpSgn = QPTransSgn[mpidx];
+    const double complex factor =
+        -0.5*QPFullWeight[qpidx]*PfM[qpidx]/ip;
+    const double complex *invM = InvM+(size_t)qpidx*Nsize*Nsize;
+    for(msi=0;msi<Nsize;msi++) {
+      const int ri = eleIdx[msi];
+      const int spinI = msi/Ne;
+      for(msj=0;msj<Nsize;msj++) {
+        const int rj = eleIdx[msj];
+        const int spinJ = msj/Ne;
+        const double complex contraction =
+            factor*invM[(size_t)msi*Nsize+msj];
+        memset(projRealA, 0, (size_t)NProjBF*sizeof(double complex));
+        memset(projImagA, 0, (size_t)NProjBF*sizeof(double complex));
+        memset(projRealB, 0, (size_t)NProjBF*sizeof(double complex));
+        memset(projImagB, 0, (size_t)NProjBF*sizeof(double complex));
+        BFCanonicalDirectedDerivativeCoefficients(
+            ri, rj, xqp, xqpSgn, eleProjBFCnt,
+            NULL, NULL, projRealA, projImagA, projRealB, projImagB);
+        for(param=0;param<NProjBF;param++) {
+          const double complex realDerivative = BFCanonicalSpinDerivative(
+              projRealA[param], projRealB[param], spinI, spinJ, spidx);
+          const double complex imagDerivative = BFCanonicalSpinDerivative(
+              projImagA[param], projImagB[param], spinI, spinJ, spidx);
+          srOptO[2*param] += contraction*realDerivative;
+          srOptO[2*param+1] += contraction*imagDerivative;
+        }
+      }
+    }
+  }
+  free(projRealA);
+  free(projImagA);
+  free(projRealB);
+  free(projImagB);
+  return 0;
+}
+
 static void MakeSlaterElmBF_fcmp_qp_to(double complex *sltElmBF,
                                        const int qpidx,
                                        const int updateEta,
                                        const int *eleProjBFCnt) {
   int icount, jcount;
-  int ri,tri,rsi0,rsi1;
-  int rj,trj,rsj0,rsj1;
+  int ri,rsi0,rsi1;
+  int rj,rsj0,rsj1;
   int mpidx,spidx;
   double complex cs,cc,ss;
   double complex slt_ij,slt_ji;
-  int *xqp;
+  int *xqp, *xqpSgn;
   double complex *sltE,*sltE_i0,*sltE_i1;
 
   mpidx = qpidx / NSPGaussLeg;
   spidx = qpidx % NSPGaussLeg;
 
   xqp = QPTrans[mpidx];
+  xqpSgn = QPTransSgn[mpidx];
   cs = SPGLCosSin[spidx];
   cc = SPGLCosCos[spidx];
   ss = SPGLSinSin[spidx];
@@ -693,26 +1076,26 @@ static void MakeSlaterElmBF_fcmp_qp_to(double complex *sltElmBF,
   sltE = sltElmBF + qpidx*Nsite2*Nsite2;
 
   for(ri=0;ri<Nsite;ri++) {
-    tri = xqp[ri];
     rsi0 = ri;
     rsi1 = ri+Nsite;
     sltE_i0 = sltE + rsi0*Nsite2;
     sltE_i1 = sltE + rsi1*Nsite2;
 
     for(rj=0;rj<Nsite;rj++) {
-      trj = xqp[rj];
       rsj0 = rj;
       rsj1 = rj+Nsite;
 
       /* backflow correlation factor */
-      SubSlaterElmBF_fcmp(tri,trj,&slt_ij,&icount,&slt_ji,&jcount,eleProjBFCnt);
+      SubSlaterElmBFCanonical_fcmp(
+          ri, rj, xqp, xqpSgn, &slt_ij, &icount, &slt_ji, &jcount,
+          eleProjBFCnt);
 
       if(updateEta) {
-        if(icount == 0){eta[tri][trj] = 1.0;  etaFlag[tri][trj]=0;}
-        else{eta[tri][trj] = creal(ProjBF[0]); etaFlag[tri][trj]=1;}
+        if(icount == 0){eta[ri][rj] = 1.0;  etaFlag[ri][rj]=0;}
+        else{eta[ri][rj] = creal(ProjBF[0]); etaFlag[ri][rj]=1;}
 
-        if(jcount == 0){eta[trj][tri] = 1.0; etaFlag[trj][tri]=0;}
-        else{eta[trj][tri] = creal(ProjBF[0]); etaFlag[trj][tri]=1;}
+        if(jcount == 0){eta[rj][ri] = 1.0; etaFlag[rj][ri]=0;}
+        else{eta[rj][ri] = creal(ProjBF[0]); etaFlag[rj][ri]=1;}
       }
 
       sltE_i0[rsj0] = -(slt_ij - slt_ji)*cs;
@@ -747,6 +1130,233 @@ void MakeSlaterElmBF_fcmp_to_serial(double complex *sltElmBF,
   for(qpidx=0;qpidx<NQPFull;qpidx++) {
     MakeSlaterElmBF_fcmp_qp_to(sltElmBF, qpidx, 0, eleProjBFCnt);
   }
+}
+
+static int BFCanonicalSizeProduct(size_t left, size_t right,
+                                  size_t *result) {
+  if(result == NULL || (right != 0 && left > SIZE_MAX/right)) return -1;
+  *result = left*right;
+  return 0;
+}
+
+int RebuildSlaterMAllBF_fcmp(
+    const int *eleIdx, const int *eleNum, const int *eleProjBFCnt,
+    int qpStart, int qpEnd, double complex *sltElmBF,
+    double complex *pfMOut, double complex *invMOut) {
+  BF_FSZ_MAllResult result;
+  size_t nsizeSquared;
+  int *eleSpn = NULL;
+  int *iwork = NULL;
+  double complex *bufM = NULL;
+  double complex *work = NULL;
+  double *rwork = NULL;
+  int particle;
+
+  if(eleIdx == NULL || eleNum == NULL || eleProjBFCnt == NULL
+     || sltElmBF == NULL || pfMOut == NULL || invMOut == NULL
+     || qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull
+     || Nsize <= 0 || Ne <= 0 || LapackLWork <= 0
+     || BFCanonicalSizeProduct((size_t)Nsize, (size_t)Nsize,
+                               &nsizeSquared) != 0) {
+    return BF_FSZ_MALL_INVALID_ARGUMENT;
+  }
+
+  MakeSlaterElmBF_fcmp_to_serial(sltElmBF, eleNum, eleProjBFCnt);
+  if(qpStart == qpEnd) {
+    if(BFProfileEnabled) AddBFProfileCounter(BFPROF_FULL_REBUILD, 1);
+    return BF_FSZ_MALL_OK;
+  }
+
+  eleSpn = (int *)malloc((size_t)Nsize*sizeof(int));
+  iwork = (int *)malloc((size_t)Nsize*sizeof(int));
+  bufM = (double complex *)malloc(nsizeSquared*sizeof(double complex));
+  work = (double complex *)malloc((size_t)LapackLWork*sizeof(double complex));
+  rwork = (double *)malloc((size_t)LapackLWork*sizeof(double));
+  if(eleSpn == NULL || iwork == NULL || bufM == NULL
+     || work == NULL || rwork == NULL) {
+    free(eleSpn);
+    free(iwork);
+    free(bufM);
+    free(work);
+    free(rwork);
+    return BF_FSZ_MALL_INVALID_ARGUMENT;
+  }
+
+  for(particle=0;particle<Nsize;particle++) {
+    eleSpn[particle] = particle < Ne ? 0 : 1;
+  }
+  result = CalculateMAll_BF_fsz_from_workspace(
+      sltElmBF, eleIdx, eleSpn, qpStart, qpEnd, pfMOut, invMOut,
+      nsizeSquared, bufM, iwork, work, LapackLWork, rwork);
+
+  free(eleSpn);
+  free(iwork);
+  free(bufM);
+  free(work);
+  free(rwork);
+  if(BFProfileEnabled) AddBFProfileCounter(BFPROF_FULL_REBUILD, 1);
+  return result.status;
+}
+
+int RebuildSlaterMAllBF_real(
+    const int *eleIdx, const int *eleNum, const int *eleProjBFCnt,
+    int qpStart, int qpEnd, double complex *sltElmBF,
+    double complex *pfMComplexOut, double complex *invMComplexOut,
+    double *sltElmBFReal, double *pfMRealOut, double *invMRealOut) {
+  size_t nsite2Squared;
+  size_t slaterCount;
+  size_t nsizeSquared;
+  double *bufM = NULL;
+  double *work = NULL;
+  int *iwork = NULL;
+  size_t idx;
+  int status;
+
+  if(sltElmBFReal == NULL || pfMRealOut == NULL || invMRealOut == NULL
+     || BFCanonicalSizeProduct((size_t)Nsite2, (size_t)Nsite2,
+                               &nsite2Squared) != 0
+     || BFCanonicalSizeProduct((size_t)NQPFull, nsite2Squared,
+                               &slaterCount) != 0
+     || BFCanonicalSizeProduct((size_t)Nsize, (size_t)Nsize,
+                               &nsizeSquared) != 0) {
+    return BF_FSZ_MALL_INVALID_ARGUMENT;
+  }
+  status = RebuildSlaterMAllBF_fcmp(
+      eleIdx, eleNum, eleProjBFCnt, qpStart, qpEnd, sltElmBF,
+      pfMComplexOut, invMComplexOut);
+  if(status != BF_FSZ_MALL_OK) return status;
+
+  for(idx=0;idx<slaterCount;idx++) {
+    const double realPart = creal(sltElmBF[idx]);
+    const double imagPart = cimag(sltElmBF[idx]);
+    if(!isfinite(realPart) || !isfinite(imagPart)
+       || fabs(imagPart) > 1.0e-12*(1.0+fabs(realPart))) {
+      return BF_FSZ_MALL_NONFINITE;
+    }
+    sltElmBFReal[idx] = realPart;
+  }
+
+  bufM = (double *)malloc(nsizeSquared*sizeof(double));
+  work = (double *)malloc((size_t)LapackLWork*sizeof(double));
+  iwork = (int *)malloc((size_t)Nsize*sizeof(int));
+  if(bufM == NULL || work == NULL || iwork == NULL) {
+    free(bufM);
+    free(work);
+    free(iwork);
+    return BF_FSZ_MALL_INVALID_ARGUMENT;
+  }
+  status = CalculateMAll_BF_real_from_workspace(
+      sltElmBFReal, eleIdx, qpStart, qpEnd, pfMRealOut, invMRealOut,
+      nsizeSquared, bufM, iwork, work, LapackLWork);
+  free(bufM);
+  free(work);
+  free(iwork);
+  return status == 0 ? BF_FSZ_MALL_OK : BF_FSZ_MALL_LAPACK_FAILURE;
+}
+
+int CalculateBFCanonicalPf_fcmp(
+    const int *eleIdx, const int *eleNum, const int *eleProjBFCnt,
+    int qpStart, int qpEnd, double complex *pfMOut) {
+  size_t nsite2Squared;
+  size_t slaterCount;
+  size_t nsizeSquared;
+  double complex *sltElmBF = NULL;
+  double complex *bufM = NULL;
+  double complex *work = NULL;
+  double *rwork = NULL;
+  int *eleSpn = NULL;
+  int *iwork = NULL;
+  int particle;
+  int failureDetail = 0;
+  int status;
+
+  if(eleIdx == NULL || eleNum == NULL || eleProjBFCnt == NULL
+     || pfMOut == NULL || qpStart < 0 || qpEnd <= qpStart
+     || qpEnd > NQPFull || Nsize <= 0 || Nsite <= 0 || Nsite2 <= 0
+     || Ne <= 0 || LapackLWork <= 0
+     || BFCanonicalSizeProduct((size_t)Nsite2, (size_t)Nsite2,
+                               &nsite2Squared) != 0
+     || BFCanonicalSizeProduct((size_t)NQPFull, nsite2Squared,
+                               &slaterCount) != 0
+     || BFCanonicalSizeProduct((size_t)Nsize, (size_t)Nsize,
+                               &nsizeSquared) != 0) {
+    return BF_PF_INVALID_ARGUMENT;
+  }
+  for(particle=0;particle<Nsize;particle++) {
+    if(eleIdx[particle] < 0 || eleIdx[particle] >= Nsite) {
+      return BF_PF_INVALID_ARGUMENT;
+    }
+  }
+  sltElmBF = (double complex *)malloc(slaterCount*sizeof(double complex));
+  bufM = (double complex *)malloc(nsizeSquared*sizeof(double complex));
+  work = (double complex *)malloc((size_t)LapackLWork*sizeof(double complex));
+  rwork = (double *)malloc((size_t)LapackLWork*sizeof(double));
+  eleSpn = (int *)malloc((size_t)Nsize*sizeof(int));
+  iwork = (int *)malloc((size_t)Nsize*sizeof(int));
+  if(sltElmBF == NULL || bufM == NULL || work == NULL || rwork == NULL
+     || eleSpn == NULL || iwork == NULL) {
+    free(sltElmBF);
+    free(bufM);
+    free(work);
+    free(rwork);
+    free(eleSpn);
+    free(iwork);
+    return BF_PF_INVALID_ARGUMENT;
+  }
+  for(particle=0;particle<Nsize;particle++) {
+    eleSpn[particle] = particle < Ne ? 0 : 1;
+  }
+  MakeSlaterElmBF_fcmp_to_serial(sltElmBF, eleNum, eleProjBFCnt);
+  if(getenv("MVMC_BF_CANONICAL_PF_INJECT_ZERO") != NULL) {
+    memset(sltElmBF+(size_t)qpStart*nsite2Squared, 0,
+           nsite2Squared*sizeof(double complex));
+  }
+  status = CalculatePfM_BF_from_workspace(
+      sltElmBF, eleIdx, eleSpn, qpStart, qpEnd, pfMOut, &failureDetail,
+      bufM, iwork, work, LapackLWork, rwork);
+  free(sltElmBF);
+  free(bufM);
+  free(work);
+  free(rwork);
+  free(eleSpn);
+  free(iwork);
+  if(BFProfileEnabled) AddBFProfileCounter(BFPROF_FULL_REBUILD, 1);
+  return status;
+}
+
+int CalculateBFCanonicalPf_real(
+    const int *eleIdx, const int *eleNum, const int *eleProjBFCnt,
+    int qpStart, int qpEnd, double *pfMOut) {
+  double complex *pfMComplex = NULL;
+  int qpidx;
+  int status;
+
+  if(pfMOut == NULL || qpStart < 0 || qpEnd <= qpStart
+     || qpEnd > NQPFull) {
+    return BF_PF_INVALID_ARGUMENT;
+  }
+  pfMComplex = (double complex *)malloc(
+      (size_t)(qpEnd-qpStart)*sizeof(double complex));
+  if(pfMComplex == NULL) {
+    free(pfMComplex);
+    return BF_PF_INVALID_ARGUMENT;
+  }
+  status = CalculateBFCanonicalPf_fcmp(
+      eleIdx, eleNum, eleProjBFCnt, qpStart, qpEnd, pfMComplex);
+  if(status == BF_PF_OK) {
+    for(qpidx=0;qpidx<qpEnd-qpStart;qpidx++) {
+      const double realPart = creal(pfMComplex[qpidx]);
+      const double imagPart = cimag(pfMComplex[qpidx]);
+      if(!isfinite(realPart) || !isfinite(imagPart)
+         || fabs(imagPart) > 1.0e-12*(1.0+fabs(realPart))) {
+        status = BF_PF_NONFINITE;
+        break;
+      }
+      pfMOut[qpidx] = realPart;
+    }
+  }
+  free(pfMComplex);
+  return status;
 }
 
 void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, int *ijcount, double complex* slt_ji, int *jicount, const int *eleProjBFCnt){
@@ -1173,6 +1783,9 @@ static long long CountBFRealDeltaSparsePairsForRow(const int tri, const int *cou
 
 void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int u,
                        const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex*sltElmTmp){
+  if(BFProfileEnabled && BFUseCanonicalNonFszPath()) {
+    AddBFProfileCounter(BFPROF_MULTI_QP_LEGACY_INCREMENTAL, 1);
+  }
   int **posBF = PosBF;
   const int mua = ma + Ne*u;
   int trua, trub;
@@ -1378,6 +1991,9 @@ void UpdateSlaterElmBF_fcmp(const int ma, const int ra, const int rb, const int 
 void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int u,
                        const int *eleCfg, const int *eleNum, const int *eleProjBFCntOld,
                        const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp){
+  if(BFProfileEnabled && BFUseCanonicalNonFszPath()) {
+    AddBFProfileCounter(BFPROF_MULTI_QP_LEGACY_INCREMENTAL, 1);
+  }
   int **posBF = PosBF;
   const int mua = ma + Ne*u;
   int trua, trub;
@@ -1676,6 +2292,9 @@ void UpdateSlaterElmBF_real(const int ma, const int ra, const int rb, const int 
  * update in CalculateNewPfMBF is exact for any superset of the changed rows. */
 void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
                           const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double complex* sltElmTmp){
+  if(BFProfileEnabled && BFUseCanonicalNonFszPath()) {
+    AddBFProfileCounter(BFPROF_MULTI_QP_LEGACY_INCREMENTAL, 1);
+  }
   int **posBF = PosBF;
   //int rua=ra+Nsite*u, rub=rb+Nsite*u;
   const int mua = ma + Ne*u;
@@ -1896,6 +2515,9 @@ void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, cons
                      const int *eleIdx, const int *eleCfg, const int *eleNum,
                      const int *eleProjBFCntOld, const int *eleProjBFCnt,
                      int *msa, int *hopNum, double *vecTmp){
+  if(BFProfileEnabled && BFUseCanonicalNonFszPath()) {
+    AddBFProfileCounter(BFPROF_MULTI_QP_LEGACY_INCREMENTAL, 1);
+  }
   int **posBF = PosBF;
   const int mua = ma + Ne*u;
   int trua, trub;
@@ -2118,6 +2740,9 @@ void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, cons
 void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const int u,
                      const int *eleCfg, const int *eleNum, const int *eleProjBFCnt, int *msa, int *hopNum, double *sltElmTmp,
                      int *restoreRows, int *restoreRowCount){
+  if(BFProfileEnabled && BFUseCanonicalNonFszPath()) {
+    AddBFProfileCounter(BFPROF_MULTI_QP_LEGACY_INCREMENTAL, 1);
+  }
   int **posBF = PosBF;
   //int rua=ra+Nsite*u, rub=rb+Nsite*u;
   const int mua = ma + Ne*u;

@@ -58,6 +58,9 @@ typedef struct {
   uint64_t cache_insertions;
   uint64_t cache_evictions;
   uint64_t cache_epoch_full_clears;
+  uint64_t cache_reset_performed;
+  uint64_t amplitude_generation_hash;
+  uint64_t session_root_evaluation;
   uint64_t raw_row_transitions;
   uint64_t merged_duplicate_transitions;
   uint64_t cancelled_zero_transitions;
@@ -81,7 +84,10 @@ typedef struct {
   size_t cache_requested_bytes;
   size_t cache_allocated_bytes;
   size_t cache_set_count;
+  size_t cache_entries_resident_start;
+  size_t cache_entries_resident_end;
   uint64_t engine_heap_allocations;
+  int persistent_session_active;
   double reset_seconds;
   double total_seconds;
   double evaluation_wall_seconds;
@@ -142,6 +148,29 @@ MVMCKrylovStatus mvmc_bounded_krylov_evaluate(
     const uint64_t *root_configuration_words, size_t root_word_count,
     MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
     MVMCKrylovBoundedResult *result);
+
+/*
+ * A persistent session binds one immutable amplitude generation and reuses
+ * exact (configuration, depth) values across roots.  Legacy evaluate remains
+ * cold per root and closes an active session before evaluating.
+ */
+MVMCKrylovStatus mvmc_bounded_krylov_session_begin(
+    MVMCKrylovBoundedWorkspace *workspace,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
+    uint64_t amplitude_generation_hash);
+MVMCKrylovStatus mvmc_bounded_krylov_session_evaluate(
+    MVMCKrylovBoundedWorkspace *workspace,
+    const uint64_t *root_configuration_words, size_t root_word_count,
+    MVMCKrylovBoundedResult *result);
+MVMCKrylovStatus mvmc_bounded_krylov_session_evaluate_bound(
+    MVMCKrylovBoundedWorkspace *workspace,
+    const uint64_t *root_configuration_words, size_t root_word_count,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
+    MVMCKrylovBoundedResult *result);
+MVMCKrylovStatus mvmc_bounded_krylov_session_end(
+    MVMCKrylovBoundedWorkspace *workspace);
+int mvmc_bounded_krylov_session_is_active(
+    const MVMCKrylovBoundedWorkspace *workspace);
 
 /* Testing hooks for deterministic wrap and failure fixtures. */
 MVMCKrylovStatus mvmc_bounded_krylov_testing_force_cache_counters(

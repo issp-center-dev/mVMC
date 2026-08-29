@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "policy_id": "power-lanczos-zero-support-p5c-testing-v2",
+  "phase": "P5-C",
+  "testing_only": true,
+  "production_authorized": false,
+  "revision_reason": "portable_numeric_p5b_binding_and_independent_exact_gate",
+  "p5b_binding": {
+    "policy_sha256": "997f2a0e59515095afc86ffbd447511f65b5da8251a1384433a4bd7ca48be819",
+    "reference_evidence_sha256": "4447eb94f9797b0e7db8af970d3f2333556c755b172374c33d294e9b7c99b5f5",
+    "binding_numeric_tolerance": 1e-12,
+    "largest_passing_perturbation_scale": 1e-5,
+    "candidate_envelope_safety_factor": 0.5,
+    "candidate_input_envelope": 5e-6,
+    "reference_envelope_maxima": {
+      "energy": 2.0251728940268166e-5,
+      "full_support_variance": 4.611034135071357e-5,
+      "quadratic_observable": 1.3416467863991124e-5
+    }
+  },
+  "fixtures": [
+    "two_state_support_bridge",
+    "two_state_variance_gap",
+    "complex_ring4_near_zero"
+  ],
+  "proposal": {
+    "kernel": "canonical_uniform_sector",
+    "global_numerator": 1,
+    "global_denominator": 1,
+    "required_target_support_connectivity": true
+  },
+  "rng": {
+    "algorithm": "SplitMix64",
+    "seed_hex_order": [
+      "0x5035434453454541",
+      "0x5035434453454542",
+      "0x5035434453454543",
+      "0x5035434453454544",
+      "0x5035434453454545",
+      "0x5035434453454546",
+      "0x5035434453454547",
+      "0x5035434453454548"
+    ],
+    "stream_hex": "0x5035435354524541"
+  },
+  "schedule": {
+    "burn_in": 1024,
+    "sample_count_per_seed": 65536,
+    "prefix_sample_counts": [4096, 16384, 65536],
+    "block_length": 1024,
+    "restart_split_after_completed_steps": 12345
+  },
+  "coverage": {
+    "metric_census": [
+      "two_state_support_bridge.energy_real",
+      "two_state_support_bridge.energy_imag",
+      "two_state_support_bridge.direct_second_moment",
+      "complex_ring4_near_zero.energy_real",
+      "complex_ring4_near_zero.energy_imag"
+    ],
+    "family_wise_alpha": 0.01,
+    "multiplicity": "Bonferroni_two_sided_normal",
+    "normal_multiplier": 3.090232306167813,
+    "maximum_tau_int": 16.0,
+    "maximum_full_to_first_conservative_se_ratio": 0.65,
+    "minimum_full_blocks_per_seed": 64,
+    "minimum_acceptance_rate_exclusive": 0.0,
+    "maximum_acceptance_rate_exclusive": 1.0
+  },
+  "near_zero_scan_relative_amplitude_cutoffs": [
+    0.0,
+    1e-8,
+    1e-6,
+    5e-6,
+    1e-5,
+    1e-4
+  ],
+  "mixture_reference": {
+    "eta": 1e-6,
+    "lambda": [1.0, 1.0, 1.0],
+    "scale_aware_tolerance": 1e-12
+  },
+  "observable_inventory": {
+    "supported": [
+      "direct_energy_complex",
+      "direct_local_energy_abs_squared_diagnostic",
+      "full_support_variance_quadratic_reference"
+    ],
+    "unsupported_fail_fast": [
+      "arbitrary_diagonal",
+      "arbitrary_off_diagonal",
+      "backflow",
+      "fsz",
+      "blocked_update"
+    ]
+  },
+  "required_decision_fields": [
+    "artifact",
+    "deterministic_correctness",
+    "statistical_adequacy",
+    "resource"
+  ]
+}

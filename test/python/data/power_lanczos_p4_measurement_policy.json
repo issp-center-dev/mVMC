@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "policy_id": "power-lanczos-zero-support-p4-r0-v2",
+  "status": "p4_r0_v2_p4s_conservative_precision_gate",
+  "frozen_date": "2026-08-02",
+  "design": "2026-08-02-power-lanczos-zero-support-phase4-bounded-engine-design.md",
+  "implementation_plan": "2026-08-02-power-lanczos-zero-support-phase4-implementation-plan.md",
+  "independent_review": "2026-08-02-power-lanczos-zero-support-phase4-design-review.md",
+  "source_policy": "mVMC/test/python/data/absolute_krylov_p3_measurement_policy.json",
+  "scope": {
+    "site_count_is_total_sites": true,
+    "lattice": "one_dimensional_periodic_chain",
+    "site_counts": [4, 6, 8],
+    "target_site_count": 16,
+    "sample_count_by_site": {"4": 0, "6": 128, "8": 128},
+    "qp_total": [1, 4],
+    "mpi_rank_counts": [1, 2, 4],
+    "repeat_count": 7,
+    "omp_threads": 1,
+    "blas_threads": 1,
+    "cache_capacity_bytes": [0, 67108864, 268435456]
+  },
+  "guide": {
+    "candidate_family": "r3",
+    "lambda": [1.0, 1.0, 1.0, 1.0],
+    "rho": [0.000001, 0.0001, 0.01],
+    "floor_basis": "b(x)=1",
+    "scale": "u_k=s_k*v_k with s_0=1 and s_k=sqrt(N_0/N_k)",
+    "eta": "rho*mean_x(sum_k |u_k(x)|^2)",
+    "r0_to_r2": "negative_control_only",
+    "candidate_improves": "diagnostic_only_not_a_hard_gate"
+  },
+  "p4_c_engine_feasibility": {
+    "semantics": "bounded_engine_resource_gate_plus_exact_enumeration_iid_o5_proxy",
+    "markov_chain_samples": false,
+    "representative_workload": {
+      "proposal_count": 4096,
+      "saved_sample_count": 4096,
+      "counts_are_cost_multipliers_not_a_sample_trace": true
+    },
+    "target_budgets": {
+      "proposal_seconds_per_configuration": 0.15,
+      "saved_increment_seconds_per_configuration": 0.25,
+      "combined_workload_seconds_per_rank": 1800.0,
+      "allocated_capacity_bytes_per_rank": 4294967296,
+      "peak_rss_bytes_per_rank": 4294967296
+    },
+    "memory_budget_note": "requiring both allocated capacity and peak RSS is an explicit conservative strengthening of P3-O1",
+    "repeat_aggregation": {
+      "rank_composition": "reduce ranks within each repeat before reducing repeats",
+      "runtime_rank_reducer": "max",
+      "runtime_repeat_gate_reducer": "median_of_7_rank_max_values",
+      "runtime_repeat_diagnostic": "max_of_7_rank_max_values",
+      "allocated_capacity_rank_reducer": "max",
+      "allocated_capacity_repeat_gate_reducer": "max_of_7_rank_max_values",
+      "peak_rss_rank_reducer": "max",
+      "peak_rss_repeat_gate_reducer": "max_of_7_rank_max_values",
+      "rank_sum": "diagnostic_only",
+      "counter_rank_reducer": "max",
+      "counter_repeat_summary": ["median", "max"]
+    },
+    "target_extrapolation": {
+      "runtime_input_by_site": "median_of_7_rank_max_values",
+      "peak_rss_input_by_site": "max_of_7_rank_max_values",
+      "method": "least_squares_log_linear_fit_versus_total_site_count_for_positive_values",
+      "allocated_capacity": "exact_checked_byte_formula_and_allocation_smoke_no_fit",
+      "zero_or_nonfinite_input": "fail_closed"
+    },
+    "exact_iid_o5": {
+      "sample_count_proxy": 4096,
+      "distribution": "q_r(x)=G_r(x)/sum_x G_r(x) from exact sector enumeration",
+      "ratio": "theta=E_q[f/G]/E_q[T/G]",
+      "influence": "delta=f/G-theta*T/G",
+      "complex_variance": "E_q[|delta|^2]/|E_q[T/G]|^2",
+      "standard_error": "sqrt(complex_variance/sample_count_proxy)",
+      "denominator_variance_and_covariance": "included_by_influence_variable",
+      "autocorrelation": "not_applicable_exact_iid_proxy",
+      "absolute_budget": "max(1e-12,0.02*sum_x|f_a(x)|/sum_x T(x))",
+      "decision_rule": "every required S/K/B entry in every frozen exact fixture must pass"
+    },
+    "candidate_order": [
+      "cache_capacity_bytes_ascending",
+      "maximum_required_entry_exact_iid_se_to_budget_ratio_ascending",
+      "conservative_combined_runtime_seconds_per_rank_ascending",
+      "rho_ascending"
+    ],
+    "cache_invariance": "exact values and exact-IID O5 statistics must be cache-capacity independent; a difference is an internal invariant failure",
+    "decision_rule": "all correctness, runtime, allocated-capacity, peak-RSS, support, finite-weight, and exact-IID O5 gates are AND conditions"
+  },
+  "p4_s_markov_gate": {
+    "position": "after P4-D guide sampler and P4-E streaming accumulator, before P4-F solver closure",
+    "sample_count": 4096,
+    "sample_order": "contiguous_saved_chain_without_thinning",
+    "initialization": {
+      "fixture_scope": "exact_enumerable_sector_only",
+      "distribution": "draw_exactly_from_q_r_by_inverse_cdf_in_canonical_configuration_order",
+      "seed_hex": "0x5034535F52305631",
+      "warmup_proposals": 0,
+      "rationale": "the exact-q draw starts the validation chain in stationarity",
+      "nonenumerable_production_run": "out_of_scope_until_P6_warmup_policy_is_frozen"
+    },
+    "official_estimator": "delete_one_block_jackknife",
+    "official_partition": {
+      "block_count": 16,
+      "block_length": 256,
+      "degrees_of_freedom": 15
+    },
+    "diagnostic_partition": {
+      "block_count": 32,
+      "block_length": 128,
+      "degrees_of_freedom": 31
+    },
+    "jackknife_formula": "Cov(theta)=(m-1)/m*sum_j((theta_leave_j-mean_leave)*(theta_leave_j-mean_leave)^T) for the [real,imag] vector",
+    "official_complex_standard_error": "sqrt(trace(Cov_16x256))",
+    "conservative_precision": {
+      "metric": "max(SE_16x256,SE_32x128)/O5_budget",
+      "maximum": 1.0,
+      "hard_gate": true
+    },
+    "block_stability": {
+      "metric": "max(SE_16x256,SE_32x128)/min(SE_16x256,SE_32x128)",
+      "diagnostic_maximum": 1.25,
+      "role": "diagnostic_pathology_guard",
+      "ratio_above_diagnostic_maximum": "report_only_when_conservative_precision_passes",
+      "both_exact_zero": "pass",
+      "one_zero_only": "hard_fail"
+    },
+    "denominator_stability": {
+      "minimum_abs_denominator_mean": 1.0e-12,
+      "minimum_leave_one_denominator": 1.0e-12,
+      "maximum_denominator_relative_se": 1.0
+    },
+    "autocorrelation": {
+      "estimator": "Geyer_initial_positive_sequence",
+      "series": "W and nonzero-variance real/imag components of every required-entry influence delta",
+      "maximum_tau_int": 16.0,
+      "minimum_official_block_length_to_tau_ratio": 16.0
+    },
+    "boundary_reporting": {
+      "se_to_budget_at_or_below_one": "pass_only_if_support_tau_denominator_and_pathology_gates_pass",
+      "se_to_budget_above_0_9": "report_borderline_diagnostic",
+      "post_hoc_sample_extension": "forbidden_without_a_new_policy_version"
+    },
+    "candidate_application": "evaluate P4-C passing candidates in the frozen P4-C candidate order; promote the first P4-S passing candidate",
+    "failure": "STOP; do not enter P4-F and do not choose an unregistered estimator or partition"
+  },
+  "numeric_contract": {
+    "producer_type": "scaled_phase_log_abs_state_only",
+    "raw_import": {
+      "production": "forbidden",
+      "testing_adapter_finite_nonzero": "FINITE_NONZERO",
+      "testing_adapter_zero": "NUMERIC_ZERO_never_EXACT_ZERO",
+      "testing_adapter_nonfinite": "NONFINITE"
+    },
+    "numeric_zero": {
+      "required_field": "log_absolute_error_bound",
+      "unknown_error_bound": "NONFINITE_or_fail_loud",
+      "propagation": "sum and product must include operand error bounds and operation rounding bounds",
+      "support_claim": "never_exact_zero"
+    },
+    "phase_normalization": {
+      "target": "unit_magnitude",
+      "tolerance": "32*DBL_EPSILON",
+      "outside_tolerance": "renormalize_once_then_fail_if_nonfinite_or_zero"
+    },
+    "accumulator": "Neumaier_real_and_imaginary_in_canonical_order",
+    "pivot_zero_with_success_info": "NUMERIC_ZERO_not_EXACT_ZERO",
+    "cancellation_diagnostic": "preserve maximum input log scale, output log scale, and cancellation ratio"
+  },
+  "solver_contract_deadline": {
+    "phase": "before P4-F implementation freeze",
+    "normalization": "homogeneous_only",
+    "rank_cutoff": "relative_to_largest_retained_S_eigenvalue",
+    "residual": "relative_scaled_residual_only",
+    "absolute_cutoff": "forbidden",
+    "basis_rescale": "use adjacent scale ratios without reconstructing raw matrix magnitudes"
+  },
+  "required_new_collectives": [
+    "gather_scaled_components_in_global_qp_order",
+    "max_u64_for_limits_and_counters",
+    "gather_or_ordered_merge_scaled_accumulator_arrays"
+  ],
+  "timer_contract": {
+    "timers_are_inclusive_unless_named_self_seconds": true,
+    "total_seconds": "reset_start_through_transactional_result_commit",
+    "calibration_seconds": "one_time_setup_reported_separately_and_added_to_production_facing_combined_cost",
+    "component_overlap": "report; component sums are diagnostic and are not required to equal total_seconds"
+  },
+  "review_deadlines": {
+    "PF-1_to_PF-5": "P4-R0 independent followup review",
+    "PF-6": "P4-A design freeze",
+    "PF-7_to_PF-8": "P4-E/F design freeze",
+    "PF-9": "P4-B implementation exit",
+    "PF-10": "P4-A implementation exit",
+    "PF-11_to_PF-13": "this policy and plan revision",
+    "PF-14_to_PF-20": "owning P4-A/E/F implementation review",
+    "PF-21_to_PF-25": "this documentation revision or owning task list"
+  }
+}
