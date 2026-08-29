@@ -1351,9 +1351,10 @@ NBodyInterAll指定ファイル(nbodyinterall.def)
    したがって真正な実効次数3以上では、残った各項ごとにBackFlow
    Slater/Pfaffianを完全構築する計算量が必要です。
 
--  non-FSZ BackFlowのnative ``PairHop``、``Exchange``、``InterAll`` 入力は
-   引き続き未対応です。同値な演算子因子は、上記の制約を満たす
-   ``NBodyInterAll`` として指定できます。BackFlowと ``reweight=1`` の併用は
+-  native の ``PairHop``、``Exchange``、``InterAll`` 入力は、通常の
+   ``Orbital`` / ``OrbitalAntiParallel`` 形式でも ``OrbitalGeneral`` / FSZ でも
+   BackFlow 用の二体 Green 関数で評価されます。``NBodyInterAll`` が必要なのは
+   3 次以上の項だけです。BackFlowと ``reweight=1`` の併用は
    エラー終了します。
 
 CoulombIntra指定ファイル(coulombintra.def)
@@ -2333,6 +2334,13 @@ BackFlow 用の追加ヘッダです。7 行目の ``Nrange`` 行は読み飛ば
 
 -  同じ中心サイトと範囲サイトの組 ``(i,j)`` を重複して指定することはできません。
 
+-  範囲の関係は相互でなければなりません。自サイト以外の行 ``i j ...`` で
+   中心サイト ``i`` の範囲にサイト ``j`` を含めた場合、逆向きの行 ``j i ...`` も
+   必要です (両行のシェル番号は一致していなくても構いません)。
+   BackFlow の増分更新は、Theta の個数が変化し得る anchor サイトを集めるときに
+   この相互性を仮定しているため、非対称な ``BFRange`` は入力時に
+   ``BFRange must be mutual`` というエラーで拒否されます。
+
 BF ファイル (bf.def)
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -2521,11 +2529,13 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
    従来の増分経路を維持します。再構築経路は従来経路より高コストになる場合があります。
 
 -  ``Orbital`` / ``OrbitalAntiParallel`` の通常形式では、Hamiltonian は
-   ``Trans`` と number-operator 型の相互作用（``CoulombIntra``,
-   ``CoulombInter``, ``Hund``）の範囲で使用できます。この形式では
-   ``PairHop``、``Exchange``、``InterAll`` は引き続き未対応です。
+   ``Trans``、number-operator 型の相互作用（``CoulombIntra``,
+   ``CoulombInter``, ``Hund``）、および二体項 ``PairHop``、``Exchange``、
+   ``InterAll``（スピンを保存する因子対）を使用できます。二体項は
+   BackFlow 用の二体 Green 関数で評価され、局所エネルギーのループは
+   項について OpenMP 並列化されています。
 
--  ``OrbitalGeneral`` / FSZ では、``PairHop``、``Exchange``、``InterAll`` も
+-  ``OrbitalGeneral`` / FSZ でも、``PairHop``、``Exchange``、``InterAll`` を
    使用できます。測定用の ``OneBodyG``、``TwoBodyG``、``TwoBodyGEx`` は
    general spin label に対応します。``NBodyG`` と ``NBodyInterAll`` で
    general spin labelを使えるのは ``2Sz=-1`` の場合だけで、固定
