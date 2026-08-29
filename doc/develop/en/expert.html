@@ -1261,10 +1261,11 @@ BackFlow Slater/Pfaffian state for effective order 2 or greater.
 BF-FSZ uses its validated order-1/order-2 dispatch and rebuilds higher
 orders. A genuine effective order of 3 or greater therefore costs one
 full BackFlow Slater/Pfaffian construction per surviving term.</p></li>
-<li><p>Native non-FSZ BackFlow <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>, and <code class="docutils literal notranslate"><span class="pre">InterAll</span></code>
-inputs remain unsupported. Equivalent ordered factors may be supplied
-through <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> while satisfying the restrictions above.
-BackFlow with <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> is rejected.</p></li>
+<li><p>Native <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>, and <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> inputs are
+evaluated with the BackFlow two-body Green function in both the normal
+<code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format and <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> /
+FSZ. <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> is only needed for terms of order three or
+higher. BackFlow with <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> is rejected.</p></li>
 </ul>
 </section>
 </section>
@@ -2101,6 +2102,13 @@ each center site. The center site itself must be included.</p>
 index 0, is an error.</p></li>
 <li><p>The same center/range pair <code class="docutils literal notranslate"><span class="pre">(i,j)</span></code> cannot be specified more than
 once.</p></li>
+<li><p>The range relation must be mutual: if a non-self row <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">j</span> <span class="pre">...</span></code> lists
+site <code class="docutils literal notranslate"><span class="pre">j</span></code> in the range of center site <code class="docutils literal notranslate"><span class="pre">i</span></code>, the reverse row <code class="docutils literal notranslate"><span class="pre">j</span> <span class="pre">i</span> <span class="pre">...</span></code>
+must also be present (the shell indices of the two rows need not
+coincide). The incremental BackFlow update assumes this mutuality when it
+collects the anchor sites whose Theta counts can change, so an
+asymmetric <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> is rejected at input time with
+<code class="docutils literal notranslate"><span class="pre">BFRange</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">mutual</span></code>.</p></li>
 </ul>
 </section>
 <section id="bf-file-bf-def">
@@ -2281,12 +2289,13 @@ input whose first transformation is nonidentity; only the periodic,
 identity, single-pattern case retains the legacy incremental path.
 The rebuild path can be more expensive than that legacy path.</p></li>
 <li><p>With the normal <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format, the
-Hamiltonian may contain <code class="docutils literal notranslate"><span class="pre">Trans</span></code> and number-operator interactions
-(<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>). Two-body Hamiltonian
-terms such as <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>, and <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> remain
-unsupported in this mode.</p></li>
+Hamiltonian may contain <code class="docutils literal notranslate"><span class="pre">Trans</span></code>, number-operator interactions
+(<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>), and the two-body terms
+<code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>, and <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> (spin-conserving factor
+pairs). The two-body terms are evaluated with the BackFlow two-body
+Green function; the local-energy loop is OpenMP-parallel over terms.</p></li>
 <li><p>With <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ, <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>, <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>, and
-<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> are additionally supported. Measurement outputs
+<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> are also supported. Measurement outputs
 <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code>, <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code>, and <code class="docutils literal notranslate"><span class="pre">TwoBodyGEx</span></code> support general spin
 labels. <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> and <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> support general spin labels
 only when <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>; in a fixed <span class="math notranslate nohighlight">\(S_z\)</span> sector every N-body
