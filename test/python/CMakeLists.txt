@@ -17,6 +17,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/backflow_def_helper.py DESTINATION ${CMAKE
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/bf_canonical_model.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_fsz.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_bf_sampler_dump_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_projection_variants.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_hphi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/hphi_sector_check.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -276,6 +277,11 @@ function(add_python_nbodyinterall_generated_check test_name omp_threads)
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads}")
 endfunction(add_python_nbodyinterall_generated_check)
 
+function(add_python_nbodyinterall_generated_check_omp test_name model omp_threads)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} nbodyinterall_exact_oracle.py ${model})
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads};OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;MVMC_BF_NBODY_TEST_WORK_SUFFIX=_${test_name}")
+endfunction(add_python_nbodyinterall_generated_check_omp)
+
 function(add_python_nbodyinterall_config_oracle test_name)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} nbodyinterall_exact_oracle.py ${test_name})
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_NBODY_ORACLE_DUMP=backflow_nbody_oracle.dat;MVMC_BF_FSZ_GREEN_REBUILD_CHECK=1;MVMC_BF_FSZ_PF_UPDATE_CHECK=1")
@@ -478,6 +484,46 @@ function(add_python_vmc_test_bf_twobodygex_mpi test_name model nqp_full)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --expect-nqp-full ${nqp_full} --compare-no-bf-twobodygex)
     set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2")
 endfunction(add_python_vmc_test_bf_twobodygex_mpi)
+
+function(add_python_vmc_test_bf_invalid_custom test_name model expected_error)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --custom-backflow --expect-error "${expected_error}")
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+endfunction(add_python_vmc_test_bf_invalid_custom)
+
+function(add_python_vmc_test_bf_green2_l6 test_name model omp_threads all_complex_flag)
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --check-bf-green2-bruteforce --keep-twobodyg --use-nonidentity-init --expect-all-complex-flag ${all_complex_flag})
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads}" RESOURCE_LOCK "bf_green2_${model}_workdir")
+endfunction(add_python_vmc_test_bf_green2_l6)
+
+function(add_python_vmc_test_bf_sampler_rebuild test_name model omp_threads sparse_range expect_low)
+    if(${sparse_range} GREATER 0)
+        set(_sparse_args --sparse-orbital-range ${sparse_range})
+    else()
+        set(_sparse_args)
+    endif()
+    if(expect_low)
+        set(_low_args --expect-low-count-adds)
+    else()
+        set(_low_args)
+    endif()
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --check-bf-sampler-rebuild --use-nonidentity-init ${_sparse_args} ${_low_args} --reject-output "Error:" --reject-output "error:")
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=${omp_threads}" RESOURCE_LOCK "bf_sampler_${model}_workdir")
+endfunction(add_python_vmc_test_bf_sampler_rebuild)
+
+# MPI regression for the sampler rebuild oracle: 2 ranks. nsplit=2 puts both
+# ranks in one sampling communicator so the QP range is split (with NQPFull=1
+# one rank owns zero projections); nsplit=1 gives two single-rank
+# communicators that both own the full range. Every rank must write its own
+# "<dump>.rank<world rank>" file with a consistent local QP layout.
+function(add_python_vmc_test_bf_sampler_rebuild_mpi test_name model nsplit_size expect_zero_qp)
+    if(expect_zero_qp)
+        set(_zero_args --expect-zero-qp-rank)
+    else()
+        set(_zero_args)
+    endif()
+    add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --check-bf-sampler-rebuild --use-nonidentity-init --sparse-orbital-range 2 --expect-low-count-adds --set-nsplit-size ${nsplit_size} --expect-sampler-ranks 2 ${_zero_args} --reject-output "Error:" --reject-output "error:")
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;MVMC_MPI_PROCS=2" RESOURCE_LOCK "bf_sampler_${model}_workdir")
+endfunction(add_python_vmc_test_bf_sampler_rebuild_mpi)
 
 function(add_python_vmc_test_bf_green2_bruteforce test_name model omp_threads all_complex_flag)
     add_test(NAME ${test_name} COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py ${model} --check-bf-green2-bruteforce --use-nonidentity-init --expect-all-complex-flag ${all_complex_flag})
@@ -1240,7 +1286,6 @@ add_python_vmc_test_bf_fsz_omp(BackFlow_FSZ_C2_Detail_Profile_Complex_omp 4)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_C2_MatrixFree_Paths_NonIdentity_Complex)
 add_python_vmc_test_bf_fsz_mpi(BackFlow_FSZ_C2_MatrixFree_Paths_NonIdentity_Complex_mpi)
 add_python_vmc_test_bf_fsz_omp(BackFlow_FSZ_C2_MatrixFree_Paths_NonIdentity_Complex_omp 4)
-add_python_vmc_test_bf_fsz(BackFlow_InvalidTwoBodyHamiltonian_NonFSZ)
 add_python_vmc_test_bf_fsz(BackFlow_InvalidReweight)
 add_python_vmc_test_bf_fsz_mpi(BackFlow_InvalidReweight_mpi)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_InvalidSpinChangingTransfer)
@@ -1375,6 +1420,36 @@ set_tests_properties(BackFlow_Identity_Real_MultiQP_L8s1 PROPERTIES ENVIRONMENT 
 add_test(NAME BackFlow_Identity_Real_MultiQP_L8s4
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP_L8s4 --expect-nqp-full 2 --compare-no-bf-energy --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_Identity_Real_MultiQP_L8s4 PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_Identity_Real_MultiQP_L8s4")
+add_python_vmc_test_bf_energy_omp_nqp(BackFlow_IdentityEnergy_InterAll_Real BackFlow_Identity_InterAll_Real 1 1)
+add_python_vmc_test_bf_energy_omp_nqp(BackFlow_IdentityEnergy_InterAll_Complex BackFlow_Identity_InterAll_Complex 1 1)
+add_python_vmc_test_bf_energy_omp_nqp(BackFlow_IdentityEnergy_InterAll_Complex_omp BackFlow_Identity_InterAll_Complex 4 1)
+add_python_vmc_test_bf_energy_mpi_nqp(BackFlow_IdentityEnergy_InterAll_Complex_mpi BackFlow_Identity_InterAll_Complex 1)
+add_python_vmc_test_bf_real_complex_nonidentity(BackFlow_NonIdentity_InterAll_RealComplex BackFlow_Identity_InterAll_Real BackFlow_Identity_InterAll_Complex 1)
+add_python_vmc_test_bf_real_complex_nonidentity(BackFlow_NonIdentity_InterAll_RealComplex_omp BackFlow_Identity_InterAll_Real BackFlow_Identity_InterAll_Complex 4)
+add_python_vmc_test_bf_green2_l6(BackFlow_Green2_L6_Real BackFlow_Green2_L6_Real 1 0)
+add_python_vmc_test_bf_green2_l6(BackFlow_Green2_L6_Complex BackFlow_Green2_L6_Complex 1 1)
+add_python_vmc_test_bf_green2_l6(BackFlow_Green2_L6_Complex_omp BackFlow_Green2_L6_Complex 4 1)
+add_python_vmc_test_bf_sampler_rebuild(BackFlow_SamplerRebuild_Sparse_Real BackFlow_Sampler_L8_Real 1 2 TRUE)
+add_python_vmc_test_bf_sampler_rebuild(BackFlow_SamplerRebuild_Sparse_Complex BackFlow_Sampler_L8_Complex 1 2 TRUE)
+add_python_vmc_test_bf_sampler_rebuild(BackFlow_SamplerRebuild_Dense_Real BackFlow_Sampler_L8_Real 1 0 FALSE)
+add_python_vmc_test_bf_sampler_rebuild(BackFlow_SamplerRebuild_Dense_Complex_omp BackFlow_Sampler_L8_Complex 4 0 FALSE)
+add_python_vmc_test_bf_sampler_rebuild_mpi(BackFlow_SamplerRebuild_Sparse_Real_mpi_split BackFlow_Sampler_L8_Real 2 TRUE)
+add_python_vmc_test_bf_sampler_rebuild_mpi(BackFlow_SamplerRebuild_Sparse_Complex_mpi_split BackFlow_Sampler_L8_Complex 2 TRUE)
+add_python_vmc_test_bf_sampler_rebuild_mpi(BackFlow_SamplerRebuild_Sparse_Real_mpi BackFlow_Sampler_L8_Real 1 FALSE)
+add_python_vmc_test_bf_sampler_rebuild_mpi(BackFlow_SamplerRebuild_Sparse_Complex_mpi BackFlow_Sampler_L8_Complex 1 FALSE)
+add_test(NAME BackFlow_SamplerDumpParser_SplitLoop_Unit
+         COMMAND ${PYTHON_EXECUTABLE} test_bf_sampler_dump_parser.py)
+set_tests_properties(BackFlow_SamplerDumpParser_SplitLoop_Unit PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_python_vmc_test_bf_invalid_custom(BackFlow_InvalidAsymmetricRange BackFlow_InvalidAsymmetricRange "BFRange must be mutual")
+set_tests_properties(
+    BackFlow_IdentityEnergy_InterAll_Real
+    BackFlow_IdentityEnergy_InterAll_Complex
+    BackFlow_IdentityEnergy_InterAll_Complex_omp
+    BackFlow_IdentityEnergy_InterAll_Complex_mpi
+    BackFlow_NonIdentity_InterAll_RealComplex
+    BackFlow_NonIdentity_InterAll_RealComplex_omp
+    PROPERTIES RESOURCE_LOCK "bf_interall_identity_workdir")
 add_python_vmc_test_bf(BackFlow_Optimization_Complex BackFlow_Optimization_Complex)
 
 # --- BackFlow exchange update (NExUpdatePath=1, non-FSZ samplers) ---
@@ -1757,6 +1832,12 @@ add_python_nbodyinterall_generated_check(NBodyInterAll_Projector_N3_MultiTerm 2)
 add_python_nbodyinterall_generated_check(BackFlow_NBodyInterAll_NonIdentity_N1_Energy 1)
 add_python_nbodyinterall_generated_check(BackFlow_NBodyInterAll_NonIdentity_N2_Energy 1)
 add_python_nbodyinterall_generated_check(BackFlow_NBodyInterAll_NonIdentity_Mixed_Energy 1)
+add_python_nbodyinterall_generated_check(BackFlow_InterAll_vs_NBodyInterAll_NonIdentity_Energy 1)
+add_python_nbodyinterall_generated_check_omp(BackFlow_InterAll_vs_NBodyInterAll_NonIdentity_Energy_omp BackFlow_InterAll_vs_NBodyInterAll_NonIdentity_Energy 4)
+set_tests_properties(
+    BackFlow_InterAll_vs_NBodyInterAll_NonIdentity_Energy
+    BackFlow_InterAll_vs_NBodyInterAll_NonIdentity_Energy_omp
+    PROPERTIES RESOURCE_LOCK "bf_interall_cross_workdir")
 add_python_nbodyinterall_generated_check(BackFlow_NBody_ZeroTerms_NonFSZ 1)
 add_python_nbodyinterall_generated_check(BackFlow_FSZ_NBodyInterAll_SpinChanging_Mixed_Energy 1)
 add_python_nbodyinterall_generated_check(BackFlow_FSZ_NBody_ZeroTerms 1)

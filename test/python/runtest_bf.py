@@ -637,7 +637,8 @@ def write_minimal_twobodygex(workdir, nsite):
 
 def write_nonidentity_init_parameter(path, nprojbf, nslater,
                                      complex_orbitals=False,
-                                     proj_values=()):
+                                     proj_values=(),
+                                     sparse_range=None):
     projbf_values = [
         0.93, 0.08, -0.05, 0.035, -0.025,
         0.015, -0.012, 0.010, -0.007, 0.005,
@@ -660,10 +661,15 @@ def write_nonidentity_init_parameter(path, nprojbf, nslater,
                 real = 1.0 + 0.1 * row
             else:
                 real = 0.03 * float(row - col)
+            if sparse_range is not None and abs(row - col) > sparse_range:
+                real = 0.0
         else:
             real = math.sin(0.37 * (idx + 1))
         imag = (0.017 * math.sin(0.73 * (idx + 1))
                 if complex_orbitals else 0.0)
+        if sparse_range is not None and matrix_width * matrix_width == nslater \
+                and abs(idx // matrix_width - idx % matrix_width) > sparse_range:
+            imag = 0.0
         values.extend([real, imag, 0.0])
 
     with open(path, "w") as fp:
@@ -1688,9 +1694,165 @@ def write_nbodyg_failure_def(workdir):
         fp.writelines(lines)
 
 
+def split_loop_bounds(loop_length, mpi_rank, mpi_size):
+    """Return the interval assigned by src/mVMC/splitloop.c::SplitLoop."""
+    if loop_length < 0 or mpi_size <= 0 or not (0 <= mpi_rank < mpi_size):
+        raise ValueError("invalid SplitLoop arguments")
+    if mpi_size < loop_length:
+        remainder = loop_length % mpi_size
+        if remainder == 0:
+            block = loop_length // mpi_size
+            start = block * mpi_rank
+            end = start + block
+        else:
+            block = (loop_length - remainder) // mpi_size
+            if mpi_rank < mpi_size - remainder:
+                start = block * mpi_rank
+                end = start + block
+            else:
+                start = block * mpi_rank + mpi_rank - (mpi_size - remainder)
+                end = start + block + 1
+    elif mpi_rank < loop_length:
+        start = mpi_rank
+        end = mpi_rank + 1
+    else:
+        start = loop_length
+        end = loop_length
+    return start, end
+
+
+def check_bf_sampler_rebuild_dump(path, tol, expect_low_count_adds,
+                                  expect_ranks=None, expect_zero_qp_rank=False):
+    """Validate the per-rank sampler rebuild dumps "<path>.rank<world rank>".
+
+    PfM / InvM comparisons in the oracle are rank-local (qp_count = qpEnd-qpStart
+    projections), so every rank must report its QP range and the ranges of one
+    sampling communicator must tile [0, nqp_full).
+    """
+    files = sorted(glob.glob(path + ".rank*"))
+    if not files:
+        print("ERROR: BackFlow sampler rebuild dump was not written: {}.rank*".format(path))
+        return -1
+    rows = []
+    for dump_file in files:
+        with open(dump_file) as fp:
+            for line in fp:
+                cols = line.split()
+                if not cols:
+                    continue
+                if len(cols) % 2 != 0:
+                    print("ERROR: malformed sampler rebuild dump line: {}".format(line.strip()))
+                    return -1
+                rows.append(dict(zip(cols[0::2], cols[1::2])))
+    if not rows:
+        print("ERROR: BackFlow sampler rebuild dump is empty.")
+        return -1
+    total = {"proposals": 0, "accepts": 0, "rejects": 0,
+             "row_select_adds": 0, "row_select_low_count_adds": 0}
+    max_keys = ("max_candidate_slater_diff", "max_candidate_pf_reldiff",
+                "max_accept_inv_reldiff", "max_accept_pf_reldiff",
+                "max_reject_slater_diff", "max_reject_inv_reldiff")
+    local_keys = ("max_candidate_pf_reldiff", "max_accept_inv_reldiff", "max_accept_pf_reldiff",
+                  "max_reject_inv_reldiff")
+    layout_keys = ("world_rank", "comm_rank", "comm_size", "qp_start", "qp_end", "qp_count", "nqp_full")
+    maxima = dict((key, 0.0) for key in max_keys)
+    world_ranks = set()
+    comm_sizes = set()
+    nqp_fulls = set()
+    qp_count_sum = 0
+    zero_qp_rows = 0
+    nonzero_qp_rows = 0
+    for row in rows:
+        for key in layout_keys:
+            if key not in row:
+                print("ERROR: sampler rebuild dump row lacks {}: {}".format(key, row))
+                return -1
+        layout = dict((key, int(row[key])) for key in layout_keys)
+        if not (0 <= layout["qp_start"] <= layout["qp_end"] <= layout["nqp_full"]):
+            print("ERROR: sampler rebuild dump has an invalid QP range: {}".format(layout))
+            return -1
+        if layout["qp_count"] != layout["qp_end"] - layout["qp_start"]:
+            print("ERROR: sampler rebuild dump qp_count mismatch: {}".format(layout))
+            return -1
+        if layout["comm_size"] <= 0 or not (0 <= layout["comm_rank"] < layout["comm_size"]):
+            print("ERROR: sampler rebuild dump has an invalid communicator layout: {}".format(layout))
+            return -1
+        expected_start, expected_end = split_loop_bounds(
+            layout["nqp_full"], layout["comm_rank"], layout["comm_size"])
+        if (layout["qp_start"], layout["qp_end"]) != (expected_start, expected_end):
+            print("ERROR: sampler rebuild dump QP range does not match SplitLoop: {} expected [{},{})".format(
+                layout, expected_start, expected_end))
+            return -1
+        world_ranks.add(layout["world_rank"])
+        comm_sizes.add(layout["comm_size"])
+        nqp_fulls.add(layout["nqp_full"])
+        qp_count_sum += layout["qp_count"]
+        if layout["qp_count"] == 0:
+            zero_qp_rows += 1
+        else:
+            nonzero_qp_rows += 1
+        if int(row.get("proposals", "0")) <= 0:
+            print("ERROR: sampler rebuild dump row has no proposals: {}".format(row))
+            return -1
+        for key in total:
+            total[key] += int(row.get(key, "0"))
+        for key in max_keys:
+            value = float(row.get(key, "nan"))
+            if not math.isfinite(value):
+                print("ERROR: sampler rebuild dump has non-finite {}".format(key))
+                return -1
+            if layout["qp_count"] == 0 and key in local_keys and value != 0.0:
+                print("ERROR: rank with qp_count=0 reported a nonzero local comparison {}={:.3e}".format(
+                    key, value))
+                return -1
+            maxima[key] = max(maxima[key], value)
+    if len(world_ranks) != len(rows):
+        print("ERROR: sampler rebuild dump has duplicated world ranks: {}".format(sorted(world_ranks)))
+        return -1
+    if len(comm_sizes) != 1 or len(nqp_fulls) != 1:
+        print("ERROR: sampler rebuild dump mixes communicator sizes {} or NQPFull {}".format(
+            sorted(comm_sizes), sorted(nqp_fulls)))
+        return -1
+    comm_size = comm_sizes.pop()
+    nqp_full = nqp_fulls.pop()
+    if len(rows) % comm_size != 0:
+        print("ERROR: sampler rebuild dump rows {} are not a multiple of comm_size {}".format(
+            len(rows), comm_size))
+        return -1
+    if qp_count_sum != nqp_full * (len(rows) // comm_size):
+        print("ERROR: sampler rebuild dump QP ranges do not tile NQPFull: sum {} expected {}".format(
+            qp_count_sum, nqp_full * (len(rows) // comm_size)))
+        return -1
+    if expect_ranks is not None and len(rows) != expect_ranks:
+        print("ERROR: sampler rebuild dump has {} rank rows, expected {}".format(len(rows), expect_ranks))
+        return -1
+    if nonzero_qp_rows == 0:
+        print("ERROR: sampler rebuild check compared no local projections on any rank")
+        return -1
+    if expect_zero_qp_rank and zero_qp_rows == 0:
+        print("ERROR: sampler rebuild check expected a rank with qp_count=0 but found none")
+        return -1
+    for key in max_keys:
+        if maxima[key] > tol:
+            print("ERROR: sampler incremental/full-rebuild mismatch: {}={:.3e} (tol {:.1e})".format(
+                key, maxima[key], tol))
+            print("totals: {}".format(total))
+            return -1
+    if total["proposals"] == 0 or total["accepts"] == 0 or total["rejects"] == 0:
+        print("ERROR: sampler rebuild check was vacuous: {}".format(total))
+        return -1
+    if expect_low_count_adds and total["row_select_low_count_adds"] == 0:
+        print("ERROR: sampler rebuild check never exercised a row with 1 <= jcount < Ne: {}".format(total))
+        return -1
+    print("sampler rebuild check: {} ranks (comm_size {}, nqp_full {}, zero-qp ranks {}) {} maxima {}".format(
+        len(rows), comm_size, nqp_full, zero_qp_rows, total,
+        " ".join("{}={:.2e}".format(k, maxima[k]) for k in max_keys)))
+    return 0
+
+
 def main():
     if len(sys.argv) < 2:
-        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green1-bruteforce] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--set-ex-update-path <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reverse-projection-order] [--use-ap-projection] [--use-asymmetric-complex-projection-weights] [--mutate-ap-signs-positive] [--check-multiqp-full-rebuild] [--reject-output <substring>] [--ex-update-path <n>] [--expect-exchange-events] [--set-vmc-sample <n>] [--expect-exchange-profile]".format(sys.argv[0]))
+        print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green1-bruteforce] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--set-ex-update-path <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reverse-projection-order] [--use-ap-projection] [--use-asymmetric-complex-projection-weights] [--mutate-ap-signs-positive] [--check-multiqp-full-rebuild] [--reject-output <substring>] [--ex-update-path <n>] [--expect-exchange-events] [--set-vmc-sample <n>] [--expect-exchange-profile] [--keep-twobodyg] [--custom-backflow] [--sparse-orbital-range <n>] [--check-bf-sampler-rebuild] [--expect-low-count-adds] [--expect-sampler-ranks <n>] [--expect-zero-qp-rank]".format(sys.argv[0]))
         return -1
 
     model = sys.argv[1]
@@ -1715,6 +1877,13 @@ def main():
     compare_proj_bf_fd = False
     check_bf_green1_bruteforce = False
     check_bf_green2_bruteforce = False
+    keep_twobodyg = False
+    custom_backflow = False
+    sparse_orbital_range = None
+    check_bf_sampler_rebuild = False
+    expect_low_count_adds = False
+    expect_sampler_ranks = None
+    expect_zero_qp_rank = False
     check_bf_nbody_components = False
     check_bf_nbody_dispatch = False
     check_bf_nbody_state = False
@@ -1878,6 +2047,27 @@ def main():
         elif sys.argv[argi] == "--reject-output" and argi + 1 < len(sys.argv):
             rejected_outputs.append(sys.argv[argi + 1])
             argi += 2
+        elif sys.argv[argi] == "--keep-twobodyg":
+            keep_twobodyg = True
+            argi += 1
+        elif sys.argv[argi] == "--custom-backflow":
+            custom_backflow = True
+            argi += 1
+        elif sys.argv[argi] == "--sparse-orbital-range" and argi + 1 < len(sys.argv):
+            sparse_orbital_range = int(sys.argv[argi + 1])
+            argi += 2
+        elif sys.argv[argi] == "--check-bf-sampler-rebuild":
+            check_bf_sampler_rebuild = True
+            argi += 1
+        elif sys.argv[argi] == "--expect-low-count-adds":
+            expect_low_count_adds = True
+            argi += 1
+        elif sys.argv[argi] == "--expect-sampler-ranks" and argi + 1 < len(sys.argv):
+            expect_sampler_ranks = int(sys.argv[argi + 1])
+            argi += 2
+        elif sys.argv[argi] == "--expect-zero-qp-rank":
+            expect_zero_qp_rank = True
+            argi += 1
         elif sys.argv[argi] == "--ex-update-path" and argi + 1 < len(sys.argv):
             ex_update_path = str(int(sys.argv[argi + 1]))
             argi += 2
@@ -1891,7 +2081,7 @@ def main():
                 return -1
             argi += 2
         else:
-            print("usage: {} <model name> [--expect-error <substring>] [--expect-lanczos-nonfinite] [--expect-lanczos-warning] [--expect-lanczos-warning-count <rejected/checked>] [--lanczos-samples <n>] [--expect-nqp-full <n>] [--lanczos-mode <n>] [--lanczos-support-mode <n>] [--vmc-cal-mode <n>] [--compare-no-bf-lanczos] [--compare-no-bf-energy] [--compare-no-bf-twobodyg] [--compare-no-bf-twobodygex] [--compare-no-bf-gradient] [--compare-proj-bf-finite-diff] [--check-bf-green1-bruteforce] [--check-bf-green2-bruteforce] [--check-bf-nbody-components] [--check-bf-nbody-dispatch] [--check-bf-nbody-state] [--inject-bf-nbody-failure <mode>] [--compact-backflow] [--use-nonidentity-init] [--set-ncond <n>] [--set-nsplit-size <n>] [--set-ex-update-path <n>] [--expect-all-complex-flag <0|1>] [--compare-real-complex-nonidentity <complex model>] [--check-opt-output-restart] [--reverse-projection-order] [--use-ap-projection] [--use-asymmetric-complex-projection-weights] [--mutate-ap-signs-positive] [--check-multiqp-full-rebuild] [--reject-output <substring>] [--ex-update-path <n>] [--expect-exchange-events] [--set-vmc-sample <n>] [--expect-exchange-profile]".format(sys.argv[0]))
+            print("usage: {} <model name> [options]".format(sys.argv[0]))
             return -1
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
@@ -2055,7 +2245,8 @@ def main():
                             else active_trans_count),
         })
     definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd)
-    write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd, compact=compact_backflow)
+    if not custom_backflow:
+        write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd, compact=compact_backflow)
     if check_bf_nbody_dispatch or check_bf_nbody_state:
         write_uniform_gutzwiller(workdir, nsite)
     if inject_bf_nbody_failure is not None:
@@ -2063,7 +2254,7 @@ def main():
             write_nbodyg_failure_def(workdir)
         else:
             write_nbody_failure_def(workdir)
-    if compare_twobodyg or check_bf_green2_bruteforce:
+    if (compare_twobodyg or check_bf_green2_bruteforce) and not keep_twobodyg:
         write_minimal_twobodyg(workdir, nsite)
     if compare_twobodygex:
         write_minimal_twobodygex(workdir, nsite)
@@ -2085,6 +2276,7 @@ def main():
                               or check_bf_nbody_state),
             proj_values=((0.21,) if (check_bf_nbody_dispatch
                                      or check_bf_nbody_state) else ()),
+            sparse_range=sparse_orbital_range,
         )
         if projbf[0] == 1.0 or all(value == 0.0 for value in projbf[1:]):
             print("ERROR: non-identity ProjBF initialization is invalid.")
@@ -2159,6 +2351,14 @@ def main():
         print("ERROR: unknown BackFlow N-body failure mode: {}".format(
             inject_bf_nbody_failure))
         return -1
+    sampler_rebuild_dump_path = None
+    if check_bf_sampler_rebuild:
+        sampler_rebuild_dump_path = os.path.join(workdir, "bf_sampler_rebuild_dump.dat")
+        for stale in [sampler_rebuild_dump_path] + glob.glob(sampler_rebuild_dump_path + ".rank*"):
+            if os.path.exists(stale):
+                os.remove(stale)
+        nbody_env = dict(nbody_env) if nbody_env else {}
+        nbody_env["MVMC_BF_SAMPLER_REBUILD_CHECK"] = sampler_rebuild_dump_path
     proc = run_vmc(rootdir, workdir, mpi_procs, dump_path=dump_path, diff_dump_path=diff_dump_path,
                    fd_dump_path=fd_dump_path, green2_dump_path=green2_dump_path,
                    component_dump_path=component_dump_path, dispatch_dump_path=dispatch_dump_path,
@@ -2335,6 +2535,11 @@ def main():
             return result
     if check_bf_green2_bruteforce:
         result = check_bf_green2_bruteforce_dump(green2_dump_path, 1.0e-10, expected_all_complex_flag)
+        if result != 0:
+            return result
+    if check_bf_sampler_rebuild:
+        result = check_bf_sampler_rebuild_dump(sampler_rebuild_dump_path, 1.0e-10, expect_low_count_adds,
+                                               expect_sampler_ranks, expect_zero_qp_rank)
         if result != 0:
             return result
     if check_bf_nbody_components:

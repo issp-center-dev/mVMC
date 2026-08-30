@@ -3777,11 +3777,6 @@ def run_spin_changing_c2_case(rootdir, case_name, mpi_procs=None):
 
 def run_nonfsz_invalid_case(rootdir, case_name, mpi_procs=None):
     cases = {
-        "BackFlow_InvalidTwoBodyHamiltonian_NonFSZ": (
-            {},
-            "BackFlow MVP does not support two-body Hamiltonian terms",
-            True,
-        ),
         "BackFlow_InvalidReweight": (
             {"reweight": "1"},
             "BackFlow MVP does not support reweight",
