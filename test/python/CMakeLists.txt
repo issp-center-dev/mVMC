@@ -103,6 +103,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyinterall_invalid.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_update_weight.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_real_rbm.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -1125,6 +1126,47 @@ add_python_vmc_test_invalid_expert(DoublonOnly_InvalidNeZero "requires Ne > 0")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidNeFull "requires Ne < Nsite")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidLocSpin "NLocalSpin > 0")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidOrbitalGeneral "OrbitalGeneral=1")
+
+foreach(real_rbm_case
+    family-charge
+    family-spin
+    family-general
+    mixed-dispatch
+    zero-point
+    equivalence
+    sr-direct
+    sr-stored
+    sr-cg
+    sr-reweight
+    sr-rescale
+    negative-fsz
+    negative-lanczos
+    negative-path2)
+  string(REPLACE "-" "_" real_rbm_test_suffix ${real_rbm_case})
+  add_test(NAME RealRBM_${real_rbm_test_suffix}
+      COMMAND ${PYTHON_EXECUTABLE} runtest_real_rbm.py ${real_rbm_case})
+  set_tests_properties(RealRBM_${real_rbm_test_suffix} PROPERTIES
+      ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+      RESOURCE_LOCK "real_rbm_${real_rbm_test_suffix}_workdir")
+endforeach()
+
+add_test(NAME RealRBM_family_general_omp
+    COMMAND ${PYTHON_EXECUTABLE} runtest_real_rbm.py family-general)
+set_tests_properties(RealRBM_family_general_omp PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_REAL_RBM_TEST_SUFFIX=_omp"
+    RESOURCE_LOCK "real_rbm_family_general_omp_workdir")
+
+if(MPI_FOUND)
+  foreach(real_rbm_mpi_case family-general negative-fsz negative-lanczos negative-path2)
+    string(REPLACE "-" "_" real_rbm_mpi_suffix ${real_rbm_mpi_case})
+    add_test(NAME RealRBM_${real_rbm_mpi_suffix}_mpi
+        COMMAND ${PYTHON_EXECUTABLE} runtest_real_rbm.py ${real_rbm_mpi_case})
+    set_tests_properties(RealRBM_${real_rbm_mpi_suffix}_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_REAL_RBM_TEST_SUFFIX=_mpi"
+        PROCESSORS 2
+        RESOURCE_LOCK "real_rbm_${real_rbm_mpi_suffix}_mpi_workdir")
+  endforeach()
+endif()
 
 add_python_backflow_helper_test(BackFlow_Helper_ChainNN)
 add_python_vmc_test_bf_fsz(FSZ_Lanczos_Identity_Complex)

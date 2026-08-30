@@ -35,6 +35,19 @@ target_include_directories(update_weight_unit PRIVATE
 target_link_libraries(update_weight_unit m)
 add_test(NAME UpdateWeight_Unit COMMAND update_weight_unit)
 
+add_executable(real_rbm_oracle_unit
+    real_rbm_oracle_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/rbm.c)
+target_include_directories(real_rbm_oracle_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(real_rbm_oracle_unit m)
+add_test(NAME RealRBM_PrimitiveOracle COMMAND real_rbm_oracle_unit)
+add_test(NAME RealRBM_PrimitiveOracle_omp COMMAND real_rbm_oracle_unit)
+set_tests_properties(RealRBM_PrimitiveOracle PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1")
+set_tests_properties(RealRBM_PrimitiveOracle_omp PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=4")
+
 add_executable(lanczos2_solver_unit
     lanczos2_solver_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/physcal_lanczos2.c

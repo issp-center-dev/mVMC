@@ -318,7 +318,7 @@ double calHCA1_real(const int ri, const int rj, const int s,
   UpdateMAll_real(mj,s,eleIdx,0,NQPFull);
   ipNew = CalculateIP_real(PfM_real,0,NQPFull,MPI_COMM_SELF);
 
-  e = CalculateHamiltonian_real(ipNew,eleIdx,eleCfg,eleNum,projCntNew);
+  e = CalculateHamiltonian_real(ipNew,eleIdx,eleCfg,eleNum,projCntNew,NULL);
 
   /* revert hopping */
   eleIdx[mj+s*Ne] = rj;
@@ -373,7 +373,8 @@ double calHCA2_real(const int ri, const int rj, const int s,
 
   /* H0 term */
   /* <psi|H0 CA|x>/<psi|x> = H0(x') <psi|CA|x>/<psi|x> */
-  g = GreenFunc1_real(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt,bufferInt,buffer);
+  g = GreenFunc1_real(ri,rj,s,ip,eleIdx,eleCfg,eleNum,eleProjCnt,
+                      bufferInt,NULL,NULL,buffer);
 
   /* hopping */
   eleNum[rsi] = 1;
@@ -413,7 +414,8 @@ double calHCA2_real(const int ri, const int rj, const int s,
       sk = Transfer[idx][3];
 
       myValue -= creal(ParaTransfer[idx])
-                       * GreenFunc2_real(rk,rl,ri,rj,sk,s,ip,myEleIdx,eleCfg,myEleNum,eleProjCnt,myBufferInt,myBuffer);
+                       * GreenFunc2_real(rk,rl,ri,rj,sk,s,ip,myEleIdx,eleCfg,
+                                         myEleNum,eleProjCnt,myBufferInt,NULL,NULL,myBuffer);
       /* Caution: negative sign */
     }
 
@@ -702,7 +704,7 @@ double calHCACA1_real(const int ri, const int rj, const int rk, const int rl,
   UpdateMAllTwo_real(ml, sk, mj, si, rl, rj, eleIdx, 0, NQPFull);
   ipNew = CalculateIP_real(PfM_real,0,NQPFull,MPI_COMM_SELF);
 
-  e = CalculateHamiltonian_real(ipNew,eleIdx,eleCfg,eleNum,projCntNew);
+  e = CalculateHamiltonian_real(ipNew,eleIdx,eleCfg,eleNum,projCntNew,NULL);
 
   /* revert hopping */
   eleIdx[mj+si*Ne] = rj;
@@ -762,7 +764,7 @@ double calHCACA2_real(const int ri, const int rj, const int rk, const int rl,
   /* H0 term */
   /* <psi|H0 CACA|x>/<psi|x> = H0(x') <psi|CACA|x>/<psi|x> */
   g = GreenFunc2_real(ri,rj,rk,rl,si,sk,ip,
-      eleIdx,eleCfg,eleNum,eleProjCnt,bufferInt,buffer);
+      eleIdx,eleCfg,eleNum,eleProjCnt,bufferInt,NULL,NULL,buffer);
 
   /* hopping */
   eleNum[rsi] = 1;
