@@ -120,7 +120,7 @@ void InitFilePhysCal(int i, int rank) {
     FileNBodyG = fopen(fileName, "w");
   }
 
-  if(NLanczosMode>0 && NLanczosStep==1){
+  if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==1){
     sprintf(fileName, "%s_ls_out_%03d.dat", CDataFileHead, idx);
     FileLS = fopen(fileName, "w");
 
@@ -152,7 +152,7 @@ void InitFilePhysCal(int i, int rank) {
       FileLSCisAjsCktAltDC = fopen(fileName, "w");
     }
   }
-  if(NLanczosMode>0 && NLanczosStep==2){
+  if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==2){
     sprintf(fileName, "%s_ls2_out_%03d.dat", CDataFileHead, idx);
     FileLS2 = fopen(fileName, "w");
     if(FileLS2 == NULL){
@@ -169,7 +169,7 @@ void InitFilePhysCal(int i, int rank) {
       MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
   }
-  if(NLanczosMode>0){
+  if(NLanczosMode>0 && NLanczosEstimatorMode==1){
     sprintf(fileName, "%s_ls_support_%03d.dat", CDataFileHead, idx);
     FileLSSupport = fopen(fileName, "w");
     if(FileLSSupport == NULL){
@@ -219,7 +219,7 @@ void CloseFilePhysCal(int rank) {
     fclose(FileNBodyG);
   }
 
-  if(NLanczosMode>0 && NLanczosStep==1){
+  if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==1){
     fclose(FileLS);
     fclose(FileLSQQQQ);
 
@@ -233,11 +233,11 @@ void CloseFilePhysCal(int rank) {
       fclose(FileLSCisAjsCktAltDC);
     }
   }
-  if(NLanczosMode>0 && NLanczosStep==2){
+  if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==2){
     fclose(FileLS2);
     fclose(FileLS2Moment);
   }
-  if(NLanczosMode>0){
+  if(NLanczosMode>0 && NLanczosEstimatorMode==1){
     fclose(FileLSSupport);
   }
 

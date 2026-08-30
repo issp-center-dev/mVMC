@@ -374,7 +374,9 @@ static MVMCKrylovGEVPStatus recompute_returned_coefficient_diagnostics(
   }
   normalization = creal(normalization_value);
   if (!(normalization > 0.0) ||
-      fabs(normalization - 1.0) > 4096.0 * DBL_EPSILON) {
+      fabs(normalization - 1.0) >
+          MVMC_POWER_LANCZOS_GEVP_NORMALIZATION_TOLERANCE_FACTOR *
+              DBL_EPSILON) {
     result->valid = 0;
     result->status = MVMC_KRYLOV_GEVP_NORMALIZATION_FAILURE;
     return result->status;
@@ -797,7 +799,9 @@ static MVMCKrylovGEVPStatus solve_complex_impl(
     return result->status;
   }
   normalization = creal(normalization_value);
-  if (fabs(normalization - 1.0) > 4096.0 * DBL_EPSILON) {
+  if (fabs(normalization - 1.0) >
+      MVMC_POWER_LANCZOS_GEVP_NORMALIZATION_TOLERANCE_FACTOR *
+          DBL_EPSILON) {
     result->status = MVMC_KRYLOV_GEVP_NORMALIZATION_FAILURE;
     return result->status;
   }

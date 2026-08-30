@@ -125,8 +125,7 @@ static MVMCKrylovStatus validate_root_raw(
       raw->inter_all_count != 0 || raw->nbody_inter_all_count != 0 ||
       (!raw->pure_spin && raw->exchange_count != 0) ||
       (raw->pure_spin &&
-       (raw->transfer_count != 0 || raw->coulomb_intra_count != 0 ||
-        raw->coulomb_inter_count != 0))) {
+       (raw->transfer_count != 0 || raw->coulomb_intra_count != 0))) {
     return MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL;
   }
   return MVMC_KRYLOV_STATUS_OK;

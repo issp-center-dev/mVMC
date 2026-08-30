@@ -8,11 +8,17 @@ Power-Lanczos estimatorの選択
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Power-Lanczos inputはcorrected estimatorをデフォルトで選択するようになりました。
-``NLanczosMode`` を1または2に設定し、新しい ``NLanczosEstimatorMode`` を省略した
-既存inputも対象です。段階導入中はcorrected production経路をまだ有効化していない
-ため、該当inputはavailability diagnosticを出し、exit status 20でfail-fastします。
-``NLanczosMode=2`` ではP6 observable censusより前に終了するため、census errorや
-resource-limit errorがcorrected経路の未提供を覆い隠すことはありません。
+``NLanczosMode`` を設定し、新しい ``NLanczosEstimatorMode`` を省略した既存inputも
+対象です。``NLanczosMode=1`` はfull-support、scale-normalized corrected
+energy/variance経路を独立なcoefficient/final chainで実行し、compactな安定化JSONを
+1ファイル出力します。これは数値安定化のevidenceであり、release統計認証では
+ありません。corrected ``NLanczosMode=2`` は引き続きscope外で、メモリ確保前に
+拒否します。追加observableのproduction enableは変更しません。
+
+corrected launcherは :ref:`HowToExpert` に記載したsource/input/binary/environment/
+seedの正確なidentity変数を指定する必要があります。固定default policyは
+4096+4096のscale pilot、各scored stageのwarmup 4096・saved 16384、32 blocksを
+使用し、sample-level traceを永続保存しません。
 
 従来のbiased base-support estimatorを一時的に再現するには、ModPara fileへ次の行を
 追加してください::

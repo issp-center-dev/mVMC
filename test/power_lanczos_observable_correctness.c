@@ -894,6 +894,10 @@ static void BuildElectronicCase(CorrectnessCase *test_case) {
                   MVMC_POWER_LANCZOS_OBSERVABLE_CISAJSCKTALTEX, 4,
                   distinct_adjoint),
         "distinct adjoint record");
+  CHECK(AddRecord(test_case,
+                  MVMC_POWER_LANCZOS_OBSERVABLE_CISAJSCKTALTEX, 4,
+                  distinct),
+        "same-family cancellation partner record");
   for (left_orbital = 0; left_orbital < 6; ++left_orbital) {
     for (right_orbital = 0; right_orbital < 6; ++right_orbital) {
       const size_t pair[4] = {left_orbital, left_orbital,
@@ -928,12 +932,8 @@ static void BuildPureSpinCase(CorrectnessCase *test_case) {
   const size_t exchange[4] = {0, 1, 3, 2};
   const size_t exchange_adjoint[4] = {2, 3, 1, 0};
   const size_t density[4] = {0, 0, 0, 0};
-  const size_t longitudinal_pairs[4][4] = {
-      {0, 0, 1, 1}, {0, 0, 3, 3},
-      {2, 2, 1, 1}, {2, 2, 3, 3}};
   size_t left;
   size_t right;
-  size_t pair;
   memset(test_case, 0, sizeof(*test_case));
   for (left = 0; left < ORACLE_MAX_ORBITALS; ++left) {
     for (right = 0; right < ORACLE_MAX_ORBITALS; ++right) {
@@ -958,15 +958,16 @@ static void BuildPureSpinCase(CorrectnessCase *test_case) {
   CHECK(AddRecord(test_case, MVMC_POWER_LANCZOS_OBSERVABLE_CISAJS, 2,
                   density),
         "pure density record");
-  for (pair = 0; pair < 4; ++pair) {
-    const size_t left_orbital = longitudinal_pairs[pair][0];
-    const size_t right_orbital = longitudinal_pairs[pair][2];
-    test_case->density_pair_record[left_orbital][right_orbital] =
-        (int)test_case->record_count;
-    CHECK(AddRecord(test_case,
-                    MVMC_POWER_LANCZOS_OBSERVABLE_CISAJSCKTALTEX,
-                    4, longitudinal_pairs[pair]),
-          "pure longitudinal pair record");
+  for (left = 0; left < 4; ++left) {
+    for (right = 0; right < 4; ++right) {
+      const size_t pair[4] = {left, left, right, right};
+      test_case->density_pair_record[left][right] =
+          (int)test_case->record_count;
+      CHECK(AddRecord(test_case,
+                      MVMC_POWER_LANCZOS_OBSERVABLE_CISAJSCKTALT,
+                      4, pair),
+            "pure-spin density pair record");
+    }
   }
   test_case->psi[6] = 1.0 + 0.2 * I;
   test_case->psi[9] = 0.0;
@@ -974,6 +975,55 @@ static void BuildPureSpinCase(CorrectnessCase *test_case) {
   test_case->basis_log_scale[1] = 0.15;
   test_case->alpha[0] = 0.4 - 0.3 * I;
   test_case->alpha[1] = 0.8 + 0.1 * I;
+}
+
+static void BuildParityPositiveCase(CorrectnessCase *test_case) {
+  const size_t hop[4] = {0, 2, 0, 0};
+  const size_t adjoint[4] = {2, 0, 0, 0};
+  memset(test_case, 0, sizeof(*test_case));
+  test_case->name = "one_body_parity_positive";
+  test_case->layout = (MVMCPowerLanczosObservableLayout){3, 1, 0, 0};
+  CHECK(AddTerm(test_case, 1.0, 2, hop), "positive parity hop");
+  CHECK(AddTerm(test_case, 1.0, 2, adjoint),
+        "positive parity hop adjoint");
+  CHECK(AddRecord(test_case, MVMC_POWER_LANCZOS_OBSERVABLE_CISAJS,
+                  2, hop),
+        "positive parity observable");
+  test_case->psi[UINT64_C(4)] = 1.0;
+  test_case->alpha[0] = 1.0 / sqrt(2.0);
+  test_case->alpha[1] = 1.0 / sqrt(2.0);
+}
+
+static void BuildParityNegativeCase(CorrectnessCase *test_case) {
+  const size_t hop[4] = {0, 2, 0, 0};
+  const size_t adjoint[4] = {2, 0, 0, 0};
+  memset(test_case, 0, sizeof(*test_case));
+  test_case->name = "one_body_parity_negative";
+  test_case->layout = (MVMCPowerLanczosObservableLayout){3, 2, 0, 0};
+  CHECK(AddTerm(test_case, -1.0, 2, hop), "negative parity hop");
+  CHECK(AddTerm(test_case, -1.0, 2, adjoint),
+        "negative parity hop adjoint");
+  CHECK(AddRecord(test_case, MVMC_POWER_LANCZOS_OBSERVABLE_CISAJS,
+                  2, hop),
+        "negative parity observable");
+  test_case->psi[UINT64_C(6)] = 1.0;
+  test_case->alpha[0] = 1.0 / sqrt(2.0);
+  test_case->alpha[1] = 1.0 / sqrt(2.0);
+}
+
+static void BuildOneBodyPauliZeroCase(CorrectnessCase *test_case) {
+  const size_t hop[4] = {0, 1, 0, 0};
+  const size_t density[4] = {0, 0, 0, 0};
+  memset(test_case, 0, sizeof(*test_case));
+  test_case->name = "one_body_pauli_zero";
+  test_case->layout = (MVMCPowerLanczosObservableLayout){2, 2, 0, 0};
+  CHECK(AddTerm(test_case, 1.0, 2, density), "Pauli-zero density term");
+  CHECK(AddRecord(test_case, MVMC_POWER_LANCZOS_OBSERVABLE_CISAJS,
+                  2, hop),
+        "Pauli-zero observable");
+  test_case->psi[UINT64_C(3)] = 1.0;
+  test_case->alpha[0] = 1.0 / sqrt(2.0);
+  test_case->alpha[1] = 1.0 / sqrt(2.0);
 }
 
 static void BuildDistributedCase(CorrectnessCase *test_case) {
@@ -1060,10 +1110,12 @@ static void CheckRepresentativeRegistry(
   int longitudinal_records[4];
   const double complex longitudinal_coefficients[4] = {
       0.25, -0.25, -0.25, 0.25};
-  int structure_records[36];
+  int charge_structure_records[36];
   double complex charge_coefficients[36];
-  double complex spin_coefficients[36];
-  const double momentum = 2.0 * acos(-1.0) / 3.0;
+  int spin_structure_records[16];
+  double complex spin_coefficients[16];
+  const double charge_momentum = 2.0 * acos(-1.0) / 3.0;
+  const double spin_momentum = acos(-1.0);
   size_t cursor = 0;
   size_t left;
   size_t right;
@@ -1086,29 +1138,46 @@ static void CheckRepresentativeRegistry(
     for (right = 0; right < 6; ++right) {
       const int left_site = (int)(left % 3);
       const int right_site = (int)(right % 3);
-      const int left_spin_sign = left < 3 ? 1 : -1;
-      const int right_spin_sign = right < 3 ? 1 : -1;
       const double complex phase =
-          cexp(I * momentum * (double)(left_site - right_site)) / 3.0;
-      structure_records[cursor] =
+          cexp(I * charge_momentum *
+               (double)(left_site - right_site)) / 3.0;
+      charge_structure_records[cursor] =
           electronic_case->density_pair_record[left][right];
       charge_coefficients[cursor] = phase;
+      ++cursor;
+    }
+  }
+  CheckCombination("fixed-momentum charge structure factor", electronic,
+                   charge_structure_records, charge_coefficients, cursor);
+  cursor = 0;
+  for (left = 0; left < 4; ++left) {
+    for (right = 0; right < 4; ++right) {
+      const int left_site = (int)(left % 2);
+      const int right_site = (int)(right % 2);
+      const int left_spin_sign = left < 2 ? 1 : -1;
+      const int right_spin_sign = right < 2 ? 1 : -1;
+      const double complex phase =
+          cexp(I * spin_momentum *
+               (double)(left_site - right_site)) / 2.0;
+      spin_structure_records[cursor] =
+          pure_case->density_pair_record[left][right];
       spin_coefficients[cursor] =
           0.25 * (double)(left_spin_sign * right_spin_sign) * phase;
       ++cursor;
     }
   }
-  CheckCombination("fixed-momentum charge structure factor", electronic,
-                   structure_records, charge_coefficients, cursor);
-  CheckCombination("fixed-momentum spin structure factor", electronic,
-                   structure_records, spin_coefficients, cursor);
+  CheckCombination("fixed-momentum spin structure factor", pure,
+                   spin_structure_records, spin_coefficients, cursor);
 }
 
 static void CheckControls(const CorrectnessCase *electronic_case,
                           const CorrectnessCase *pure_case,
                           const CaseResult *lower,
                           const CaseResult *electronic,
-                          const CaseResult *pure) {
+                          const CaseResult *pure,
+                          const CaseResult *parity_positive,
+                          const CaseResult *parity_negative,
+                          const CaseResult *pauli_zero) {
   size_t entry;
   CHECK(CloseComplex(lower->matrix[0], 0.0) &&
             CloseComplex(lower->matrix[1], 0.0) &&
@@ -1128,9 +1197,9 @@ static void CheckControls(const CorrectnessCase *electronic_case,
   }
   for (entry = 0; entry < 4; ++entry) {
     CHECK(CloseComplex(electronic->matrix[4 * 6 + entry] -
-                           electronic->matrix[4 * 8 + entry],
+                           electronic->matrix[4 * 10 + entry],
                        0.0),
-          "quartic exact cancellation entry %zu", entry);
+          "same-family quartic exact cancellation entry %zu", entry);
   }
   CHECK(CloseComplex(electronic->matrix[0],
                      conj(electronic->matrix[0])) &&
@@ -1151,31 +1220,164 @@ static void CheckControls(const CorrectnessCase *electronic_case,
             CloseComplex(pure->matrix[6], conj(pure->matrix[1])) &&
             CloseComplex(pure->matrix[7], conj(pure->matrix[3])),
         "pure-spin exchange adjoint relation");
+  CHECK(CloseComplex(parity_positive->matrix[0], 0.0) &&
+            CloseComplex(parity_positive->matrix[1], 0.0) &&
+            CloseComplex(parity_positive->matrix[2], 1.0) &&
+            CloseComplex(parity_positive->matrix[3], 0.0),
+        "one-body positive fermion parity");
+  CHECK(CloseComplex(parity_negative->matrix[0], 0.0) &&
+            CloseComplex(parity_negative->matrix[1], 0.0) &&
+            CloseComplex(parity_negative->matrix[2], -1.0) &&
+            CloseComplex(parity_negative->matrix[3], 0.0),
+        "one-body negative fermion parity");
+  CHECK(CloseComplex(pauli_zero->matrix[0], 0.0) &&
+            CloseComplex(pauli_zero->matrix[1], 0.0) &&
+            CloseComplex(pauli_zero->matrix[2], 0.0) &&
+            CloseComplex(pauli_zero->matrix[3], 0.0) &&
+            CloseComplex(pauli_zero->final[0], 0.0),
+        "one-body occupied-target Pauli zero");
   CheckRepresentativeRegistry(electronic_case, electronic,
                               pure_case, pure);
+}
+
+static const char *FamilyName(MVMCPowerLanczosObservableFamily family) {
+  switch (family) {
+    case MVMC_POWER_LANCZOS_OBSERVABLE_CISAJS:
+      return "cisajs";
+    case MVMC_POWER_LANCZOS_OBSERVABLE_CISAJSCKTALTEX:
+      return "cisajscktaltex";
+    case MVMC_POWER_LANCZOS_OBSERVABLE_CISAJSCKTALT:
+      return "cisajscktalt";
+  }
+  return "invalid";
+}
+
+static void PrintComplexJson(double complex value) {
+  printf("[%.17g,%.17g]", creal(value), cimag(value));
+}
+
+static void EmitGroupJson(const CorrectnessCase *test_case,
+                          const CaseResult *result, const char *model,
+                          const char *arithmetic, const char *support) {
+  size_t record;
+  printf("{\"name\":\"%s\",\"model\":\"%s\","
+         "\"arithmetic\":\"%s\",\"support\":\"%s\","
+         "\"layout\":{\"nsite\":%d,\"up_electron_count\":%d,"
+         "\"down_electron_count\":%d,\"pure_spin\":%s},"
+         "\"alpha\":[",
+         test_case->name, model, arithmetic, support,
+         test_case->layout.nsite, test_case->layout.up_electron_count,
+         test_case->layout.down_electron_count,
+         test_case->layout.pure_spin ? "true" : "false");
+  PrintComplexJson(test_case->alpha[0]);
+  printf(",");
+  PrintComplexJson(test_case->alpha[1]);
+  printf("],\"record_count\":%zu,\"records\":[",
+         test_case->record_count);
+  for (record = 0; record < test_case->record_count; ++record) {
+    const MVMCPowerLanczosObservableRecord *observable =
+        &test_case->records[record];
+    size_t entry;
+    int raw_index;
+    if (record != 0) printf(",");
+    printf("{\"ordinal\":%zu,\"family\":\"%s\","
+           "\"row_width\":%d,\"raw_indices\":[",
+           record, FamilyName(observable->family), observable->row_width);
+    for (raw_index = 0; raw_index < observable->row_width; ++raw_index) {
+      if (raw_index != 0) printf(",");
+      printf("%d", observable->raw_indices[raw_index]);
+    }
+    printf("],\"production_matrix\":[");
+    for (entry = 0; entry < 4; ++entry) {
+      if (entry != 0) printf(",");
+      PrintComplexJson(result->matrix[4 * record + entry]);
+    }
+    printf("],\"oracle_matrix\":[");
+    for (entry = 0; entry < 4; ++entry) {
+      if (entry != 0) printf(",");
+      PrintComplexJson(result->oracle_matrix[4 * record + entry]);
+    }
+    printf("],\"production_direct_final\":");
+    PrintComplexJson(result->final[record]);
+    printf(",\"oracle_direct_final\":");
+    PrintComplexJson(result->oracle_final[record]);
+    printf("}");
+  }
+  printf("]}");
+}
+
+static void EmitSnapshotJson(
+    int world_size, uint64_t semantic_hash,
+    const CorrectnessCase *lower_case, const CaseResult *lower_result,
+    const CorrectnessCase *electronic_case,
+    const CaseResult *electronic_result,
+    const CorrectnessCase *pure_case, const CaseResult *pure_result,
+    const CorrectnessCase *parity_positive_case,
+    const CaseResult *parity_positive_result,
+    const CorrectnessCase *parity_negative_case,
+    const CaseResult *parity_negative_result,
+    const CorrectnessCase *pauli_zero_case,
+    const CaseResult *pauli_zero_result) {
+  printf("{\"schema_version\":2,"
+         "\"protocol_id\":\"p6c2-representative-correctness-v1\","
+         "\"world_size\":%d,\"semantic_fnv64\":\"%016llx\","
+         "\"passed\":true,\"groups\":[",
+         world_size, (unsigned long long)semantic_hash);
+  EmitGroupJson(lower_case, lower_result, "electronic", "real", "regular");
+  printf(",");
+  EmitGroupJson(electronic_case, electronic_result, "electronic",
+                "complex", "zero_support");
+  printf(",");
+  EmitGroupJson(pure_case, pure_result, "pure_spin", "complex",
+                "zero_support");
+  printf(",");
+  EmitGroupJson(parity_positive_case, parity_positive_result, "electronic",
+                "real", "regular");
+  printf(",");
+  EmitGroupJson(parity_negative_case, parity_negative_result, "electronic",
+                "real", "regular");
+  printf(",");
+  EmitGroupJson(pauli_zero_case, pauli_zero_result, "electronic", "real",
+                "regular");
+  printf("]}\n");
 }
 
 int main(int argc, char **argv) {
   CorrectnessCase lower_case;
   CorrectnessCase electronic_case;
   CorrectnessCase pure_case;
+  CorrectnessCase parity_positive_case;
+  CorrectnessCase parity_negative_case;
+  CorrectnessCase pauli_zero_case;
   CorrectnessCase distributed_case;
   CaseResult lower_result;
   CaseResult electronic_result;
   CaseResult pure_result;
+  CaseResult parity_positive_result;
+  CaseResult parity_negative_result;
+  CaseResult pauli_zero_result;
   uint64_t semantic_hash;
+  int emit_json = 0;
   int world_size = 1;
+  int argument;
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-#else
-  (void)argc;
-  (void)argv;
 #endif
+  for (argument = 1; argument < argc; ++argument) {
+    if (strcmp(argv[argument], "--emit-json") == 0) {
+      emit_json = 1;
+    } else {
+      CHECK(0, "unknown argument: %s", argv[argument]);
+    }
+  }
   BuildLowerCase(&lower_case);
   BuildElectronicCase(&electronic_case);
   BuildPureSpinCase(&pure_case);
+  BuildParityPositiveCase(&parity_positive_case);
+  BuildParityNegativeCase(&parity_negative_case);
+  BuildOneBodyPauliZeroCase(&pauli_zero_case);
   BuildDistributedCase(&distributed_case);
   CHECK(RunCase(&lower_case, UINT64_C(0x2001), &lower_result),
         "lower case execution");
@@ -1183,16 +1385,36 @@ int main(int argc, char **argv) {
         "electronic case execution");
   CHECK(RunCase(&pure_case, UINT64_C(0x2003), &pure_result),
         "pure case execution");
+  CHECK(RunCase(&parity_positive_case, UINT64_C(0x2005),
+                &parity_positive_result),
+        "positive parity case execution");
+  CHECK(RunCase(&parity_negative_case, UINT64_C(0x2006),
+                &parity_negative_result),
+        "negative parity case execution");
+  CHECK(RunCase(&pauli_zero_case, UINT64_C(0x2007),
+                &pauli_zero_result),
+        "one-body Pauli-zero case execution");
   CHECK(RunDistributedBlockCase(&distributed_case, UINT64_C(0x2004),
                                 world_size),
         "distributed block case execution");
   CheckControls(&electronic_case, &pure_case, &lower_result,
-                &electronic_result, &pure_result);
+                &electronic_result, &pure_result,
+                &parity_positive_result, &parity_negative_result,
+                &pauli_zero_result);
   semantic_hash = lower_result.semantic_hash;
   semantic_hash = HashBytes(semantic_hash, &electronic_result.semantic_hash,
                             sizeof(electronic_result.semantic_hash));
   semantic_hash = HashBytes(semantic_hash, &pure_result.semantic_hash,
                             sizeof(pure_result.semantic_hash));
+  semantic_hash = HashBytes(semantic_hash,
+                            &parity_positive_result.semantic_hash,
+                            sizeof(parity_positive_result.semantic_hash));
+  semantic_hash = HashBytes(semantic_hash,
+                            &parity_negative_result.semantic_hash,
+                            sizeof(parity_negative_result.semantic_hash));
+  semantic_hash = HashBytes(semantic_hash,
+                            &pauli_zero_result.semantic_hash,
+                            sizeof(pauli_zero_result.semantic_hash));
 #ifdef _mpi_use
   {
     uint64_t minimum_hash = 0;
@@ -1210,10 +1432,19 @@ int main(int argc, char **argv) {
   }
 #endif
   if (world_rank == 0 && failures == 0) {
-    printf("power_lanczos_observable_correctness: PASS cases=4 "
-           "records=55 representatives=8 distributed_sector=4 "
-           "mpi=%d hash=%016llx\n",
-           world_size, (unsigned long long)semantic_hash);
+    if (emit_json) {
+      EmitSnapshotJson(
+          world_size, semantic_hash, &lower_case, &lower_result,
+          &electronic_case, &electronic_result, &pure_case, &pure_result,
+          &parity_positive_case, &parity_positive_result,
+          &parity_negative_case, &parity_negative_result,
+          &pauli_zero_case, &pauli_zero_result);
+    } else {
+      printf("power_lanczos_observable_correctness: PASS cases=7 "
+             "records=71 representatives=8 distributed_sector=4 "
+             "mpi=%d hash=%016llx\n",
+             world_size, (unsigned long long)semantic_hash);
+    }
   }
 #ifdef _mpi_use
   MPI_Finalize();

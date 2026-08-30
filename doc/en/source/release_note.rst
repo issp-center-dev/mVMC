@@ -8,12 +8,18 @@ Power-Lanczos estimator selection
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Power-Lanczos inputs now select the corrected estimator by default. This
-includes existing inputs that set ``NLanczosMode`` to 1 or 2 and omit the new
-``NLanczosEstimatorMode`` keyword. The corrected production route remains
-disabled during the staged rollout, so such inputs fail fast with exit status
-20 and an availability diagnostic. For ``NLanczosMode=2``, this happens before
-the P6 observable census and prevents a census or resource-limit error from
-masking the unavailable corrected route.
+includes existing inputs that set ``NLanczosMode`` and omit the new
+``NLanczosEstimatorMode`` keyword. ``NLanczosMode=1`` runs the full-support,
+scale-normalized corrected energy/variance path with independent coefficient
+and final chains and writes one compact stabilization JSON. This is numerical
+stabilization evidence, not a release-statistics certification. Corrected
+``NLanczosMode=2`` remains outside scope and is rejected before allocation;
+additional-observable production enable is unchanged.
+
+Corrected launchers must provide exact source, input, binary, environment, and
+seed identity variables documented in :ref:`HowToExpert`. The fixed default
+policy uses a 4096+4096 scale pilot, 4096 warmup and 16384 saved configurations
+for each scored stage, 32 blocks, and no sample-level trace persistence.
 
 To reproduce the previous biased base-support estimator temporarily, add the
 following line to the ModPara file::

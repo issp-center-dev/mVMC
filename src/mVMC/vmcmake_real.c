@@ -129,6 +129,8 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
   nOutStep = (BurnFlag == 0) ? NVMCWarmUp + NVMCSample : NVMCSample + 1;
   nInStep = NVMCInterval * Nsite;
+  PowerLanczosBaseTerminalProposalCounter =
+      (unsigned long long)nOutStep * (unsigned long long)nInStep;
 
   for (i = 0; i < Counter_max; i++) Counter[i] = 0;  /* reset counter */
 

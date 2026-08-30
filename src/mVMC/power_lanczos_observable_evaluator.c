@@ -20,6 +20,7 @@ struct MVMCPowerLanczosObservableEvaluatorWorkspace {
   int *request_sign;
   MVMCScaledComplex *target_basis;
   double complex *primitive_scratch;
+  MVMCPowerLanczosNumericEvidence *evidence_scratch;
 };
 
 typedef struct {
@@ -151,6 +152,12 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_evaluator_workspace_create(
                            (void **)&candidate->primitive_scratch,
                            &candidate->allocated_bytes);
   }
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = AllocateArray(primitive_count,
+                           sizeof(candidate->evidence_scratch[0]),
+                           (void **)&candidate->evidence_scratch,
+                           &candidate->allocated_bytes);
+  }
   if (status != MVMC_KRYLOV_STATUS_OK) {
     mvmc_power_lanczos_observable_evaluator_workspace_destroy(candidate);
     return status;
@@ -164,6 +171,7 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_evaluator_workspace_create(
 void mvmc_power_lanczos_observable_evaluator_workspace_destroy(
     MVMCPowerLanczosObservableEvaluatorWorkspace *workspace) {
   if (workspace == NULL) return;
+  free(workspace->evidence_scratch);
   free(workspace->primitive_scratch);
   free(workspace->target_basis);
   free(workspace->request_sign);
@@ -361,6 +369,18 @@ static MVMCKrylovStatus GuideNormalizedProduct(
   return MVMC_KRYLOV_STATUS_OK;
 }
 
+static MVMCKrylovStatus ExactZeroEvidence(
+    MVMCPowerLanczosNumericEvidence *evidence) {
+  MVMCScaledComplex zero;
+  MVMCPfaffianStatus pfaffian_status;
+  if (evidence == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  pfaffian_status = mvmc_scaled_complex_make_exact_zero(&zero);
+  if (pfaffian_status != MVMC_PFAFFIAN_STATUS_OK) {
+    return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+  }
+  return mvmc_power_lanczos_scaled_export_evidence(&zero, 0.0, evidence);
+}
+
 static void NoteLog(double value,
                     MVMCPowerLanczosObservableSampleDiagnostics *diagnostics) {
   if (value == -INFINITY) return;
@@ -436,6 +456,25 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_coefficient_sample(
     double log_guide, const double basis_log_scale[2],
     double complex *matrix_entries, size_t matrix_entry_capacity,
     MVMCPowerLanczosObservableSampleDiagnostics *diagnostics) {
+  return mvmc_power_lanczos_observable_coefficient_sample_with_evidence(
+      workspace, bounded_workspace, layout, plan, source_words, word_count,
+      log_guide, basis_log_scale, NULL, matrix_entries,
+      matrix_entry_capacity, NULL, 0, diagnostics);
+}
+
+MVMCKrylovStatus
+mvmc_power_lanczos_observable_coefficient_sample_with_evidence(
+    MVMCPowerLanczosObservableEvaluatorWorkspace *workspace,
+    MVMCKrylovBoundedWorkspace *bounded_workspace,
+    const MVMCPowerLanczosObservableLayout *layout,
+    const MVMCPowerLanczosObservablePlan *plan,
+    const uint64_t *source_words, size_t word_count,
+    double log_guide, const double basis_log_scale[2],
+    const MVMCScaledComplex *guide,
+    double complex *matrix_entries, size_t matrix_entry_capacity,
+    MVMCPowerLanczosNumericEvidence *evidence,
+    size_t evidence_capacity,
+    MVMCPowerLanczosObservableSampleDiagnostics *diagnostics) {
   MVMCScaledComplex source_basis[2];
   MVMCPowerLanczosObservableSampleDiagnostics local_diagnostics;
   MVMCKrylovStatus status;
@@ -452,6 +491,15 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_coefficient_sample(
   if (matrix_entries == NULL || diagnostics == NULL) {
     return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   }
+  if ((evidence == NULL) != (guide == NULL) ||
+      (evidence != NULL &&
+       (evidence_capacity <
+            (size_t)plan->record_count *
+                MVMC_POWER_LANCZOS_OBSERVABLE_MATRIX_ENTRIES ||
+        !mvmc_scaled_complex_is_valid(guide) ||
+        guide->state != MVMC_SCALED_COMPLEX_FINITE_NONZERO))) {
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
   status = EvaluateSourceAndTargets(
       workspace, bounded_workspace, layout, plan, source_words, word_count,
       source_basis, &local_diagnostics);
@@ -462,6 +510,11 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_coefficient_sample(
     if (target_index == MVMC_POWER_LANCZOS_OBSERVABLE_ZERO_TARGET) {
       for (row = 0; row < 4; ++row) {
         workspace->primitive_scratch[4 * request + row] = 0.0;
+        if (evidence != NULL) {
+          status = ExactZeroEvidence(
+              workspace->evidence_scratch + 4 * request + row);
+          if (status != MVMC_KRYLOV_STATUS_OK) return status;
+        }
       }
       continue;
     }
@@ -482,12 +535,30 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_coefficient_sample(
             &workspace->primitive_scratch[4 * request + 2 * row + column],
             &log_contribution);
         if (status != MVMC_KRYLOV_STATUS_OK) return status;
+        if (evidence != NULL) {
+          status =
+              mvmc_power_lanczos_guide_normalized_product_evidence(
+                  &workspace->target_basis[
+                      2 * (size_t)target_index + row],
+                  basis_log_scale[row], &source_basis[column],
+                  basis_log_scale[column],
+                  workspace->request_sign[request], guide,
+                  workspace->primitive_scratch[
+                      4 * request + 2 * row + column],
+                  workspace->evidence_scratch +
+                      4 * request + 2 * row + column);
+          if (status != MVMC_KRYLOV_STATUS_OK) return status;
+        }
         NoteLog(log_contribution, &local_diagnostics);
       }
     }
   }
   memcpy(matrix_entries, workspace->primitive_scratch,
          (size_t)plan->record_count * 4 * sizeof(matrix_entries[0]));
+  if (evidence != NULL) {
+    memcpy(evidence, workspace->evidence_scratch,
+           (size_t)plan->record_count * 4 * sizeof(evidence[0]));
+  }
   local_diagnostics.valid = 1;
   local_diagnostics.status = MVMC_KRYLOV_STATUS_OK;
   *diagnostics = local_diagnostics;
@@ -504,8 +575,27 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_final_sample(
     const double complex alpha[2],
     double complex *numerators, size_t numerator_capacity,
     MVMCPowerLanczosObservableSampleDiagnostics *diagnostics) {
+  return mvmc_power_lanczos_observable_final_sample_with_evidence(
+      workspace, bounded_workspace, layout, plan, source_words, word_count,
+      log_guide, basis_log_scale, alpha, numerators, numerator_capacity,
+      NULL, 0, diagnostics);
+}
+
+MVMCKrylovStatus mvmc_power_lanczos_observable_final_sample_with_evidence(
+    MVMCPowerLanczosObservableEvaluatorWorkspace *workspace,
+    MVMCKrylovBoundedWorkspace *bounded_workspace,
+    const MVMCPowerLanczosObservableLayout *layout,
+    const MVMCPowerLanczosObservablePlan *plan,
+    const uint64_t *source_words, size_t word_count,
+    double log_guide, const double basis_log_scale[2],
+    const double complex alpha[2],
+    double complex *numerators, size_t numerator_capacity,
+    MVMCPowerLanczosNumericEvidence *evidence,
+    size_t evidence_capacity,
+    MVMCPowerLanczosObservableSampleDiagnostics *diagnostics) {
   MVMCScaledComplex source_basis[2];
   MVMCScaledComplex source_final;
+  MVMCScaledComplex evidence_guide;
   MVMCPowerLanczosObservableSampleDiagnostics local_diagnostics;
   MVMCKrylovStatus status;
   size_t request;
@@ -522,6 +612,10 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_final_sample(
       diagnostics == NULL) {
     return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   }
+  if (evidence != NULL &&
+      evidence_capacity < (size_t)plan->record_count) {
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
   status = EvaluateSourceAndTargets(
       workspace, bounded_workspace, layout, plan, source_words, word_count,
       source_basis, &local_diagnostics);
@@ -529,10 +623,27 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_final_sample(
   status = MakeFinalAmplitude(source_basis, basis_log_scale, alpha,
                               &source_final);
   if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  if (evidence != NULL) {
+    const double evidence_log_scale[1] = {0.0};
+    const double evidence_weight[1] = {1.0};
+    status = mvmc_power_lanczos_scaled_weighted_norm(
+        &source_final, evidence_log_scale, evidence_weight, 1, 0.0,
+        &evidence_guide);
+    if (status != MVMC_KRYLOV_STATUS_OK ||
+        evidence_guide.state != MVMC_SCALED_COMPLEX_FINITE_NONZERO) {
+      return status == MVMC_KRYLOV_STATUS_OK
+                 ? MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE
+                 : status;
+    }
+  }
   for (request = 0; request < (size_t)plan->record_count; ++request) {
     const int target_index = workspace->request_target_index[request];
     if (target_index == MVMC_POWER_LANCZOS_OBSERVABLE_ZERO_TARGET) {
       workspace->primitive_scratch[request] = 0.0;
+      if (evidence != NULL) {
+        status = ExactZeroEvidence(workspace->evidence_scratch + request);
+        if (status != MVMC_KRYLOV_STATUS_OK) return status;
+      }
     } else {
       MVMCScaledComplex target_final;
       ScaledView left;
@@ -552,11 +663,23 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_final_sample(
             &workspace->primitive_scratch[request], &log_contribution);
       }
       if (status != MVMC_KRYLOV_STATUS_OK) return status;
+      if (evidence != NULL) {
+        status = mvmc_power_lanczos_guide_normalized_product_evidence(
+            &target_final, 0.0, &source_final, 0.0,
+            workspace->request_sign[request], &evidence_guide,
+            workspace->primitive_scratch[request],
+            workspace->evidence_scratch + request);
+        if (status != MVMC_KRYLOV_STATUS_OK) return status;
+      }
       NoteLog(log_contribution, &local_diagnostics);
     }
   }
   memcpy(numerators, workspace->primitive_scratch,
          (size_t)plan->record_count * sizeof(numerators[0]));
+  if (evidence != NULL) {
+    memcpy(evidence, workspace->evidence_scratch,
+           (size_t)plan->record_count * sizeof(evidence[0]));
+  }
   local_diagnostics.valid = 1;
   local_diagnostics.status = MVMC_KRYLOV_STATUS_OK;
   *diagnostics = local_diagnostics;

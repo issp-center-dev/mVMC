@@ -1,6 +1,7 @@
 #include "krylov_matrix_measurement.h"
 
 #include <complex.h>
+#include <float.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -256,6 +257,7 @@ static void test_single_sample_against_raw_oracle(void) {
   double complex raw[SAMPLE_COUNT][4];
   MVMCScaledComplex scaled[4];
   RawOracleSample oracle;
+  MVMCKrylovMatrixMeasurementSampleEvidence evidence;
   MVMCKrylovMatrixMeasurementSampleDiagnostics diagnostics;
   double complex overlap[UPPER_COUNT];
   double complex hamiltonian[UPPER_COUNT];
@@ -267,25 +269,45 @@ static void test_single_sample_against_raw_oracle(void) {
 
   fill_raw_dimensionless(raw);
   make_scaled_values(&policy, raw[0], scaled);
+  {
+    int index;
+    for (index = 0; index <= ORDER; ++index) {
+      if (scaled[index].state == MVMC_SCALED_COMPLEX_FINITE_NONZERO) {
+        scaled[index].log_abs_error_bound =
+            scaled[index].log_abs + log(512.0 * DBL_EPSILON);
+      }
+    }
+  }
   oracle = raw_oracle_sample(&policy, raw[0]);
 
   CHECK(mvmc_krylov_matrix_measurement_dimension(
             ORDER, &dimension, &upper_count) == MVMC_KRYLOV_STATUS_OK &&
             dimension == DIMENSION && upper_count == UPPER_COUNT,
         "matrix measurement dimension");
-  CHECK(mvmc_krylov_matrix_measurement_sample_with_adjoint(
+  CHECK(mvmc_krylov_matrix_measurement_sample_with_adjoint_evidence(
             &policy, scaled, 4, overlap, hamiltonian,
             hamiltonian_adjoint, hamiltonian_squared, UPPER_COUNT,
-            &diagnostics) ==
+            &evidence, &diagnostics) ==
             MVMC_KRYLOV_STATUS_OK &&
             diagnostics.valid && diagnostics.finite_component_count == 4 &&
-            diagnostics.zero_component_count == 0,
-        "single sample measurement");
+            diagnostics.zero_component_count == 0 && evidence.valid &&
+            evidence.status == MVMC_KRYLOV_STATUS_OK &&
+            evidence.order == ORDER && evidence.dimension == DIMENSION &&
+            evidence.upper_count == UPPER_COUNT &&
+            evidence.has_hamiltonian_adjoint &&
+            evidence.guide.state == MVMC_SCALED_COMPLEX_FINITE_NONZERO &&
+            isfinite(evidence.guide.log_abs_error_bound),
+        "single sample measurement with evidence");
   CHECK(close_double(exp(diagnostics.log_guide),
                      guide_value(&policy, raw[0]), 1.0e-13),
         "log guide raw oracle");
   CHECK(close_double(diagnostics.denominator, oracle.denominator, 1.0e-13),
         "sample denominator oracle");
+  CHECK(evidence.denominator.value == diagnostics.denominator &&
+            fabs(oracle.denominator -
+                 creal(evidence.denominator.value)) <=
+                evidence.denominator.absolute_numeric_bound,
+        "sample denominator evidence covers raw oracle");
   for (entry = 0; entry < UPPER_COUNT; ++entry) {
     CHECK(close_complex(overlap[entry], oracle.overlap[entry], 1.0e-13),
           "sample S entry %zu", entry);
@@ -298,6 +320,44 @@ static void test_single_sample_against_raw_oracle(void) {
     CHECK(close_complex(hamiltonian_squared[entry],
                         oracle.hamiltonian_squared[entry], 1.0e-13),
           "sample B entry %zu", entry);
+    CHECK(evidence.overlap[entry].valid &&
+              evidence.overlap[entry].value == overlap[entry] &&
+              cabs(oracle.overlap[entry] - evidence.overlap[entry].value) <=
+                  evidence.overlap[entry].absolute_numeric_bound,
+          "sample S evidence entry %zu delta=%.17g bound=%.17g", entry,
+          cabs(oracle.overlap[entry] - evidence.overlap[entry].value),
+          evidence.overlap[entry].absolute_numeric_bound);
+    CHECK(evidence.hamiltonian[entry].valid &&
+              evidence.hamiltonian[entry].value == hamiltonian[entry] &&
+              cabs(oracle.hamiltonian[entry] -
+                   evidence.hamiltonian[entry].value) <=
+                  evidence.hamiltonian[entry].absolute_numeric_bound,
+          "sample K evidence entry %zu delta=%.17g bound=%.17g", entry,
+          cabs(oracle.hamiltonian[entry] -
+               evidence.hamiltonian[entry].value),
+          evidence.hamiltonian[entry].absolute_numeric_bound);
+    CHECK(evidence.hamiltonian_adjoint[entry].valid &&
+              evidence.hamiltonian_adjoint[entry].value ==
+                  hamiltonian_adjoint[entry] &&
+              cabs(oracle.hamiltonian_adjoint[entry] -
+                   evidence.hamiltonian_adjoint[entry].value) <=
+                  evidence.hamiltonian_adjoint[entry]
+                      .absolute_numeric_bound,
+          "sample Kadj evidence entry %zu delta=%.17g bound=%.17g", entry,
+          cabs(oracle.hamiltonian_adjoint[entry] -
+               evidence.hamiltonian_adjoint[entry].value),
+          evidence.hamiltonian_adjoint[entry].absolute_numeric_bound);
+    CHECK(evidence.hamiltonian_squared[entry].valid &&
+              evidence.hamiltonian_squared[entry].value ==
+                  hamiltonian_squared[entry] &&
+              cabs(oracle.hamiltonian_squared[entry] -
+                   evidence.hamiltonian_squared[entry].value) <=
+                  evidence.hamiltonian_squared[entry]
+                      .absolute_numeric_bound,
+          "sample B evidence entry %zu delta=%.17g bound=%.17g", entry,
+          cabs(oracle.hamiltonian_squared[entry] -
+               evidence.hamiltonian_squared[entry].value),
+          evidence.hamiltonian_squared[entry].absolute_numeric_bound);
   }
 }
 

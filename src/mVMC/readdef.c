@@ -269,17 +269,10 @@ static void ReportPowerLanczosLegacyOptIn(void) {
           "result.\n");
 }
 
-static void ReportPowerLanczosCorrectedUnavailable(int lanczosMode) {
-  fprintf(stderr, "%s\n",
-          lanczosMode == 2
-              ? "P6 INPUT REJECTED: OBSERVABLE_CERTIFICATE_UNAVAILABLE"
-              : "P6 INPUT REJECTED: CORRECTED_PIPELINE_UNAVAILABLE");
-  ReportPowerLanczosLegacyOptIn();
-}
-
 static MVMCPowerLanczosObservablePreflightStatus
 PreflightUnregisteredObservablePlan(
     const MVMCPowerLanczosObservablePlan *plan,
+    int nqpFull,
     MVMCPowerLanczosObservablePreflightResult *result) {
   MVMCPowerLanczosObservablePreflightInput input;
   int family;
@@ -294,6 +287,7 @@ PreflightUnregisteredObservablePlan(
   memset(&input, 0, sizeof(input));
   input.nsite = plan->nsite;
   input.nsite_uc = plan->nsite_uc;
+  input.nqp_full = nqpFull;
   input.unique_target_upper = (size_t)plan->record_count;
   input.block_count = MVMC_POWER_LANCZOS_OBSERVABLE_MIN_BLOCK_COUNT;
   input.saved_source_count = 1;
@@ -1295,29 +1289,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         ReportPowerLanczosRuntimeValidationError(&runtimeResult);
         p6InputRejected = 1;
         info = 1;
-      } else if (runtimeResult.route ==
-                 MVMC_POWER_LANCZOS_ROUTE_CORRECTED) {
-        ReportPowerLanczosCorrectedUnavailable(
-            runtimeOptions.lanczos_mode);
-        p6InputRejected = 1;
-        info = 1;
       }
     }
     /*
-     * Staged-rollout dormancy (P6-C2).  The corrected-unavailable gate above
-     * already sets info for every route == CORRECTED input, and that set
-     * strictly contains this condition, so the raw observable census, its
-     * wire, and the preflight below currently have no reachable production
-     * caller.  This is deliberate: `expert.rst` and the release note promise
-     * that NLanczosMode=2 fails before the census so a census or resource
-     * error cannot mask the unavailable corrected route, and
-     * `runtest_power_lanczos_selector_input.py` pins that ordering.
+     * Corrected additional-observable production is outside the stabilization
+     * scope.  The selector rejects NLanczosMode=2 before this block, so the
+     * historical census wiring remains dormant and cannot allocate or parse
+     * observable inputs on the corrected route.
      *
      * The block is kept rather than deleted because the census/wire/ownership
      * contract is already frozen and covered by PowerLanczosObservableCensus_*
-     * (including the MPI 2/4 pack-broadcast-unpack round trip).  Enabling
-     * corrected observable dispatch means relaxing the gate above so this
-     * path runs again; do not re-derive the wiring from scratch then.
+     * (including the MPI 2/4 pack-broadcast-unpack round trip).
      */
     if (info == 0 && bufInt[IdxLanczosMode] == 2 &&
         bufInt[IdxLanczosEstimatorMode] == 0) {
@@ -1460,74 +1442,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         MVMC_POWER_LANCZOS_RUNTIME_OK) {
       if (rank == 0) {
         ReportPowerLanczosRuntimeValidationError(&runtimeResult);
-      }
-      free(rawObservableWire);
-      mvmc_power_lanczos_observable_plan_destroy(&rawObservablePlan);
-      mvmc_power_lanczos_legacy_augmented_plan_destroy(
-          &legacyAugmentedPlan);
-      mvmc_power_lanczos_observable_registry_reset();
-      MPI_Abort(comm, MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE);
-    }
-    /*
-     * Dormant with the rank-0 census build: the corrected-unavailable gate in
-     * the rank-0 section rejects every route == CORRECTED input before this
-     * all-rank block is reached.  Kept for the same staged-rollout reason as
-     * the census block; the surviving reachable arms here are the runtime
-     * validation above and the explicit-legacy warning below.
-     */
-    if (runtimeResult.route == MVMC_POWER_LANCZOS_ROUTE_CORRECTED &&
-        runtimeOptions.lanczos_mode > 0) {
-      if (runtimeOptions.lanczos_mode == 2) {
-        const MVMCPowerLanczosObservablePlan *ownedRawPlan = NULL;
-        MVMCPowerLanczosObservablePreflightResult preflightResult;
-        MVMCPowerLanczosObservablePreflightStatus preflightStatus;
-        MVMCPowerLanczosObservableCensusStatus censusStatus;
-        int registryFailure;
-        int collectiveRegistryFailure;
-        if (rawObservablePlanPrepared) {
-          censusStatus = mvmc_power_lanczos_observable_registry_publish_raw(
-              &rawObservablePlan);
-          if (censusStatus == MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK) {
-            ownedRawPlan = mvmc_power_lanczos_observable_registry_raw();
-          }
-        } else {
-          censusStatus =
-              MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_INVALID_ARGUMENT;
-        }
-        registryFailure =
-            censusStatus != MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_OK;
-        collectiveRegistryFailure = registryFailure;
-#ifdef _mpi_use
-        MPI_Allreduce(&registryFailure, &collectiveRegistryFailure, 1,
-                      MPI_INT, MPI_MAX, comm);
-#endif
-        if (collectiveRegistryFailure) {
-          if (rank == 0) {
-            const MVMCPowerLanczosObservableCensusStatus reportedStatus =
-                registryFailure
-                    ? censusStatus
-                    : MVMC_POWER_LANCZOS_OBSERVABLE_CENSUS_DIGEST_MISMATCH;
-            fprintf(stderr, "P6 INPUT REJECTED: OBSERVABLE_CENSUS_%s\n",
-                    mvmc_power_lanczos_observable_census_status_string(
-                        reportedStatus));
-            ReportPowerLanczosLegacyOptIn();
-          }
-          free(rawObservableWire);
-          mvmc_power_lanczos_observable_plan_destroy(&rawObservablePlan);
-          mvmc_power_lanczos_observable_registry_reset();
-          MPI_Abort(comm, MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE);
-        }
-        preflightStatus = PreflightUnregisteredObservablePlan(
-            ownedRawPlan, &preflightResult);
-        if (rank == 0) {
-          fprintf(stderr, "%s\n",
-                  mvmc_power_lanczos_observable_preflight_error(
-                      preflightStatus));
-          ReportPowerLanczosLegacyOptIn();
-        }
-      } else if (rank == 0) {
-        ReportPowerLanczosCorrectedUnavailable(
-            runtimeOptions.lanczos_mode);
       }
       free(rawObservableWire);
       mvmc_power_lanczos_observable_plan_destroy(&rawObservablePlan);
@@ -2455,7 +2369,11 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
     lanczos2Contract.ne = Ne;
     lanczos2Contract.nTransfer = NTransfer;
     lanczos2Contract.nQPFull = NQPFull;
-    lanczos2Status = ValidateLanczos2Contract(&lanczos2Contract);
+    lanczos2Status =
+        NLanczosEstimatorMode == 0 && NLanczosMode > 0
+            ? ValidateCorrectedPowerLanczosExecutionContract(
+                  &lanczos2Contract)
+            : ValidateLanczos2Contract(&lanczos2Contract);
     if (lanczos2Status != LANCZOS2_CONTRACT_OK) {
       if (rank == 0) {
         fprintf(stderr, "Error: %s.\n",

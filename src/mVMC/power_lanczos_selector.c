@@ -93,6 +93,20 @@ MVMCPowerLanczosRuntimeStatus mvmc_power_lanczos_runtime_validate(
     return Commit(MVMC_POWER_LANCZOS_RUNTIME_OK,
                   MVMC_POWER_LANCZOS_ROUTE_LEGACY, -1, result);
   }
+  if (options->lanczos_mode != 1) {
+    return Commit(
+        MVMC_POWER_LANCZOS_RUNTIME_CORRECTED_OBSERVABLE_UNSUPPORTED,
+        MVMC_POWER_LANCZOS_ROUTE_DISABLED, -1, result);
+  }
+  for (control = MVMC_POWER_LANCZOS_CONTROL_COEFF_SAMPLE;
+       control <= MVMC_POWER_LANCZOS_CONTROL_FINAL_SAMPLE; control += 3) {
+    const int sample_count = options->chain_controls[control];
+    if (sample_count != 0 &&
+        (sample_count < 32 || sample_count % 32 != 0)) {
+      return Commit(MVMC_POWER_LANCZOS_RUNTIME_INVALID_CHAIN_CONTROL,
+                    MVMC_POWER_LANCZOS_ROUTE_DISABLED, control, result);
+    }
+  }
   return Commit(MVMC_POWER_LANCZOS_RUNTIME_OK,
                 MVMC_POWER_LANCZOS_ROUTE_CORRECTED, -1, result);
 }
@@ -117,11 +131,13 @@ const char *mvmc_power_lanczos_runtime_error(
     case MVMC_POWER_LANCZOS_RUNTIME_INVALID_ESTIMATOR_MODE:
       return "P6 INPUT REJECTED: NLanczosEstimatorMode must be the integer 0 (corrected) or 1 (explicit legacy).";
     case MVMC_POWER_LANCZOS_RUNTIME_INVALID_CHAIN_CONTROL:
-      return "P6 INPUT REJECTED: chain controls must be non-negative integers.";
+      return "P6 INPUT REJECTED: chain controls must be non-negative integers; nonzero sample counts must be multiples of 32 and at least 32.";
     case MVMC_POWER_LANCZOS_RUNTIME_INVALID_GUIDE_MODE:
       return "P6 INPUT REJECTED: NLanczosGuideMode only supports integer 0 in P6.";
     case MVMC_POWER_LANCZOS_RUNTIME_INVALID_STAT_MODE:
       return "P6 INPUT REJECTED: NLanczosStatMode only supports integer 0 in P6.";
+    case MVMC_POWER_LANCZOS_RUNTIME_CORRECTED_OBSERVABLE_UNSUPPORTED:
+      return "P6 INPUT REJECTED: corrected energy/variance stabilization supports NLanczosMode=1 only; additional observable production enable is out of scope.";
     case MVMC_POWER_LANCZOS_RUNTIME_DISABLED_CONTROL_CONFLICT:
       return "P6 INPUT REJECTED: NLanczosMode=0 requires every P6 estimator and chain control at default zero.";
     case MVMC_POWER_LANCZOS_RUNTIME_LEGACY_CONTROL_CONFLICT:

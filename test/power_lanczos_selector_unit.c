@@ -73,11 +73,25 @@ static void TestRoutes(void) {
         "legacy chain control conflict");
   options = DefaultOptions();
   options.lanczos_mode = 1;
-  options.chain_controls[MVMC_POWER_LANCZOS_CONTROL_FINAL_SAMPLE] = 16;
+  options.chain_controls[MVMC_POWER_LANCZOS_CONTROL_FINAL_SAMPLE] = 64;
   CHECK(mvmc_power_lanczos_runtime_validate(&options, &result) ==
             MVMC_POWER_LANCZOS_RUNTIME_OK &&
             result.route == MVMC_POWER_LANCZOS_ROUTE_CORRECTED,
         "corrected positive control route");
+  options = DefaultOptions();
+  options.lanczos_mode = 2;
+  CHECK(mvmc_power_lanczos_runtime_validate(&options, &result) ==
+                MVMC_POWER_LANCZOS_RUNTIME_CORRECTED_OBSERVABLE_UNSUPPORTED &&
+            result.route == MVMC_POWER_LANCZOS_ROUTE_DISABLED &&
+            strstr(mvmc_power_lanczos_runtime_error(&result),
+                   "additional observable production enable is out of scope") !=
+                NULL,
+        "corrected additional observable is explicitly out of scope");
+  options.estimator_mode = 1;
+  CHECK(mvmc_power_lanczos_runtime_validate(&options, &result) ==
+                MVMC_POWER_LANCZOS_RUNTIME_OK &&
+            result.route == MVMC_POWER_LANCZOS_ROUTE_LEGACY,
+        "legacy augmented route remains available");
 }
 
 static void TestInvalidOptions(void) {
@@ -98,6 +112,22 @@ static void TestInvalidOptions(void) {
                    result.invalid_chain_control),
                "NLanczosFinalInterval") == 0,
         "negative control identity");
+  options = DefaultOptions();
+  options.lanczos_mode = 1;
+  options.chain_controls[MVMC_POWER_LANCZOS_CONTROL_COEFF_SAMPLE] = 33;
+  CHECK(mvmc_power_lanczos_runtime_validate(&options, &result) ==
+                MVMC_POWER_LANCZOS_RUNTIME_INVALID_CHAIN_CONTROL &&
+            result.invalid_chain_control ==
+                MVMC_POWER_LANCZOS_CONTROL_COEFF_SAMPLE,
+        "corrected coefficient sample block contract");
+  options = DefaultOptions();
+  options.lanczos_mode = 1;
+  options.chain_controls[MVMC_POWER_LANCZOS_CONTROL_FINAL_SAMPLE] = 16;
+  CHECK(mvmc_power_lanczos_runtime_validate(&options, &result) ==
+                MVMC_POWER_LANCZOS_RUNTIME_INVALID_CHAIN_CONTROL &&
+            result.invalid_chain_control ==
+                MVMC_POWER_LANCZOS_CONTROL_FINAL_SAMPLE,
+        "corrected final sample minimum");
   options = DefaultOptions();
   options.guide_mode = 1;
   CHECK(mvmc_power_lanczos_runtime_validate(&options, &result) ==

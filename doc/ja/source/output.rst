@@ -435,20 +435,40 @@ Twist指定ファイルで指定されたTwist演算子 :math:`P^{(\alpha)} = \l
      :math:`P^{(\alpha)}` の値を表します。
    | :math:`[` double01 :math:`]` が実部、 :math:`[` double02 :math:`]` が虚部、:math:`[` double03 :math:`]` が絶対値、 :math:`[` double04 :math:`]` が位相(:math:`\arg P^{(\alpha)}`)を表します。
 
+xxx\_pl\_stabilization\_yyy.json
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``NVMCCalMode=1``、``NLanczosMode=1``、``NLanczosEstimatorMode=0`` の
+corrected energy/variance経路が出力します。``yyy`` は0埋めしたdata indexです。
+ファイルはatomicにcommitし、既存fileを上書きしません。数値評価が完了した場合は
+``PASS``、``INCONCLUSIVE``、``FAIL`` のいずれかを含むcompact JSONを1ファイルだけ
+出力します。processが成功終了するのは ``PASS`` だけで、他の2判定もevidenceを
+commitしてから非0 statusを返します。
+
+run identity、固定policyとbasis scale、32個のcoefficient/final block十分統計、
+overlap spectrumとretained rank、canonical GEVP coefficientとresidual、energy/
+variance uncertainty、autocorrelation/effective-block診断、support/numeric-zero
+evidence、acceptance counter、in-memory allocation sizeを保存します。sample-level
+primitive trace、bootstrap配列、追加observable結果は保存しません。peak RSS、
+elapsed time、exit status、JSON checksumはprocess終了後にだけ確定するため、validation
+launcherが記録します。この安定化record単独ではrelease統計認証になりません。
+
 xxx\_ls\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Power Lanczos法により求めた :math:`\langle H \rangle`,
+explicit legacy Power Lanczos法により求めた :math:`\langle H \rangle`,
 :math:`(\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2` および最適化パラメータ :math:`\alpha` の順に出力されます。
 ``ModPara`` 指定ファイルで ``NVMCCalMode`` =1, ``NLanczosmode`` =1,
-2、``NLanczosStep`` = 1に設定することで計算されます。
+2、``NLanczosEstimatorMode`` = 1、``NLanczosStep`` = 1に設定することで
+計算されます。
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
 ``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。
 
 xxx\_ls2\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-``NVMCCalMode=1``、``NLanczosMode=1``、``NLanczosStep=2`` の場合に
+``NVMCCalMode=1``、``NLanczosMode=1``、``NLanczosEstimatorMode=1``、
+``NLanczosStep=2`` の場合に
 出力する2行のファイルです。1行目はversion付きheaderです。2行目には次の
 17項目を出力します: ``E``、``sigma2_over_E2``、``c0``・``c1``・
 ``c2`` の実部と虚部、``alpha1=c1/c0``・``alpha2=c2/c0`` の実部と
@@ -500,7 +520,8 @@ raw高次momentの桁落ちを避けられます。HermiticityおよびHankel恒
 xxx\_ls\_support\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``NLanczosMode>0`` のとき、``NLanczosStep=1`` と ``2`` の両方で出力する
+``NLanczosMode>0`` かつ ``NLanczosEstimatorMode=1`` のとき、
+``NLanczosStep=1`` と ``2`` の両方で出力する
 version付き3行の診断ファイルです。1行目には ``step``、``mode``
 （``strict`` または ``experimental``）、``result``（``pass``、
 ``mismatch``、``inconclusive``、``invalid``）、``quality``、および
@@ -524,11 +545,12 @@ xxx\_ls\_cisajs\_yyy.dat
 Power Lanczos法により求めた,
 OneBodyG指定ファイルで指定された一体グリーン関数 :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle` の計算結果を出力します。
 ファイル形式はxxx\_cisajs\_yyy.datファイルと同じです。 ``ModPara`` 指定ファイルで ``NVMCCalMode`` =1,
-``NLanczosmode`` =2に設定することで計算されます。
+``NLanczosmode`` =2、``NLanczosEstimatorMode`` =1に設定することで計算されます。
 
 xxx\_ls\_cisajscktalt\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Power Lanczos法により求めた,
 TwoBodyG指定ファイルで指定された二体グリーン関数 :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle` の計算結果を出力します。ファイル形式はxxx\_cisajscktalt\_yyy.datファイルと同じです。 ``ModPara`` 指定ファイルで ``NVMCCalMode``
-= 1, ``NLanczosmode`` = 2 に設定することで計算されます。
+= 1, ``NLanczosmode`` = 2、``NLanczosEstimatorMode`` = 1 に設定することで
+計算されます。

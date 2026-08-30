@@ -20,6 +20,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 #include "bounded_krylov_engine.h"
 #include "krylov_fock_proposal.h"
+#include "power_lanczos_numeric_evidence.h"
 
 #include <complex.h>
 #include <stddef.h>
@@ -30,7 +31,8 @@ the Free Software Foundation, either version 3 of the License, or
 typedef enum {
   MVMC_KRYLOV_FINAL_COEFFICIENT_EXACT = 1,
   MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC = 2,
-  MVMC_KRYLOV_FINAL_COEFFICIENT_PERTURBED_TESTING = 3
+  MVMC_KRYLOV_FINAL_COEFFICIENT_PERTURBED_TESTING = 3,
+  MVMC_KRYLOV_FINAL_COEFFICIENT_PRODUCTION_NOISY = 4
 } MVMCKrylovFinalCoefficientSource;
 
 typedef struct {
@@ -107,6 +109,18 @@ MVMCKrylovStatus mvmc_krylov_final_state_policy_create(
     uint64_t provenance_hash, const double complex *coefficient,
     size_t coefficient_count, MVMCKrylovFinalStatePolicy *policy);
 
+/*
+ * Create a raw-Krylov-basis final-state policy from coefficients expressed in
+ * the scaled basis w_i=exp(log_basis_scale[i])*H^i|Psi_0>.  The converted
+ * coefficients are normalized by a common positive factor so their largest
+ * magnitude is one; this leaves the represented projective state unchanged.
+ */
+MVMCKrylovStatus mvmc_krylov_final_state_policy_create_scaled_basis(
+    int order, MVMCKrylovFinalCoefficientSource source,
+    uint64_t provenance_hash, const double complex *scaled_coefficient,
+    const double *log_basis_scale, size_t coefficient_count,
+    MVMCKrylovFinalStatePolicy *policy);
+
 uint64_t mvmc_krylov_final_state_policy_hash(
     const MVMCKrylovFinalStatePolicy *policy);
 
@@ -121,6 +135,10 @@ MVMCKrylovStatus mvmc_krylov_final_state_evaluate(
 MVMCScaledComplexExportStatus mvmc_krylov_final_state_local_energy_export(
     const MVMCKrylovFinalStateEvaluation *evaluation,
     double complex *local_energy);
+
+MVMCKrylovStatus mvmc_krylov_final_state_local_energy_evidence(
+    const MVMCKrylovFinalStateEvaluation *evaluation,
+    MVMCPowerLanczosNumericEvidence *evidence);
 
 MVMCKrylovStatus mvmc_krylov_final_state_acceptance(
     const MVMCKrylovFinalStateEvaluation *current,

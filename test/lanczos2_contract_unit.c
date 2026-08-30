@@ -63,6 +63,19 @@ static void CheckLegacyExecutionStatus(const Lanczos2Contract *contract,
   }
 }
 
+static void CheckCorrectedExecutionStatus(const Lanczos2Contract *contract,
+                                          Lanczos2ContractStatus expected,
+                                          const char *label) {
+  const Lanczos2ContractStatus actual =
+      ValidateCorrectedPowerLanczosExecutionContract(contract);
+  CHECK(actual == expected, "%s: corrected status=%d expected=%d", label,
+        (int)actual, (int)expected);
+  if (actual != LANCZOS2_CONTRACT_OK) {
+    CHECK(Lanczos2ContractError(actual)[0] != '\0',
+          "%s: empty corrected error message", label);
+  }
+}
+
 static void TestAllowedInputs(void) {
   Lanczos2Contract contract = SupportedContract();
   CheckStatus(&contract, LANCZOS2_CONTRACT_OK, "supported step 2");
@@ -298,6 +311,31 @@ static void TestLegacyPureSpinExecutionLimit(void) {
       "legacy validation preserves general failure precedence");
 }
 
+static void TestCorrectedStepOneExecutionGate(void) {
+  Lanczos2Contract contract = SupportedContract();
+  contract.step = 1;
+  CheckCorrectedExecutionStatus(&contract, LANCZOS2_CONTRACT_OK,
+                                "corrected electronic step one");
+
+  contract.nProjBF = 1;
+  CheckCorrectedExecutionStatus(&contract,
+                                LANCZOS2_CONTRACT_UNSUPPORTED_BACKFLOW,
+                                "corrected step-one BackFlow");
+
+  contract = SupportedContract();
+  contract.step = 1;
+  contract.orbitalGeneral = 1;
+  CheckCorrectedExecutionStatus(
+      &contract, LANCZOS2_CONTRACT_UNSUPPORTED_ORBITAL_GENERAL,
+      "corrected step-one FSZ");
+
+  contract = SupportedHeisenbergContract();
+  contract.step = 1;
+  contract.nQPFull = 8;
+  CheckCorrectedExecutionStatus(&contract, LANCZOS2_CONTRACT_OK,
+                                "corrected pure-spin multi-QP step one");
+}
+
 int main(void) {
   TestAllowedInputs();
   TestStepDomain();
@@ -305,6 +343,7 @@ int main(void) {
   TestCommonDomainAndOverflow();
   TestFirstFailureIsStable();
   TestLegacyPureSpinExecutionLimit();
+  TestCorrectedStepOneExecutionGate();
 
   if (failures != 0) {
     fprintf(stderr, "Lanczos2Contract_Unit: %d failure(s)\n", failures);

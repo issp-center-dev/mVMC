@@ -525,8 +525,8 @@ ModParaファイル (modpara.def)
    体のグリーン関数まで計算(条件: 1, 2 は ``NVMCCalMode`` =
    1のみ使用可能。)
 
-   ``OrbitalGeneral`` / FSZ、および BackFlow では ``NLanczosMode=1``
-   のみ対応します。この場合、Hamiltonian は ``Transfer`` と
+   explicit legacy経路では、``OrbitalGeneral`` / FSZ、および BackFlow は
+   ``NLanczosMode=1`` のみ対応します。この場合、Hamiltonian は ``Transfer`` と
    number-operator 型の対角相互作用（``CoulombIntra``,
    ``CoulombInter``, ``Hund``）に限定されます。``NLanczosMode=2``、
    ``NBodyG`` / ``NBodyInterAll`` の Lanczos 補正は未対応です。
@@ -538,12 +538,11 @@ ModParaファイル (modpara.def)
    **説明 :** ``NLanczosMode`` が1または2のときに使用する
    Power-Lanczos estimatorを選択します。
 
-   * [0] corrected estimatorを選択します。キーワードを省略した場合も
-     0が選ばれます。段階導入中の現releaseではcorrected production経路を
-     まだ有効化していないため、P6 observable census、メモリ確保、samplingの
-     前にstatus 20で終了します。``NLanczosMode=1`` では
-     ``CORRECTED_PIPELINE_UNAVAILABLE``、``NLanczosMode=2`` では
-     ``OBSERVABLE_CERTIFICATE_UNAVAILABLE`` を報告します。
+   * [0] full-support corrected energy/variance estimatorを選択します。
+     キーワードを省略した場合も0が選ばれます。corrected経路は
+     ``NLanczosMode=1`` だけで使用できます。``NLanczosMode=2`` は追加observable
+     のproduction enableに当たり、数値安定化のscope外なのでメモリ確保前に
+     エラー終了します。
    * [1] 従来のbiased base-support estimatorを明示的に選択します。この
      compatibility経路はdiagnostic専用で、corrected release resultでは
      ありません。``NLanczosCoeff*``、``NLanczosFinal*``、
@@ -560,16 +559,51 @@ ModParaファイル (modpara.def)
         - 現在の動作
       * - ``NLanczosMode=1`` または2、selector省略
         - legacy base-support estimatorを使用
-        - corrected経路を選択し、その経路が有効になるまでstatus 20で終了
+        - mode 1はcorrected energy/varianceを選択し、mode 2はscope外の
+          追加observable要求として拒否
       * - ``NLanczosEstimatorMode 1`` を追加
         - 指定不要
         - diagnostic専用warning付きで従来のestimatorを再現
       * - ``NLanczosEstimatorMode 0``
         - selectorとしては未提供
-        - corrected経路を明示的に選択し、現時点ではfail-fast
+        - corrected energy/variance経路を明示的に選択
 
    ``NLanczosMode=0`` のときは、このキーワードを含むすべてのP6 estimator
    controlを0にする必要があります。
+
+   corrected実行には ``NVMCCalMode=1`` とfull-support classic bridgeが必要です。
+   FSZ/``OrbitalGeneral``、BackFlow、RBM、reweight、非対応のupdate path・
+   Hamiltonian項、不正なmodel sectorはsampling前に拒否します。legacy estimator
+   へのfallbackは行いません。
+
+   launcherは次の環境変数で正確なrun identityを指定する必要があります:
+   ``MVMC_POWER_LANCZOS_SOURCE_COMMIT``（40または64桁のlowercase hex）、
+   ``MVMC_POWER_LANCZOS_INPUT_SHA256`` と
+   ``MVMC_POWER_LANCZOS_BINARY_SHA256``（64桁のlowercase hex）、
+   ``MVMC_POWER_LANCZOS_ENVIRONMENT_ID``、``MVMC_POWER_LANCZOS_SEED_ID``、
+   ``MVMC_POWER_LANCZOS_BASE_SEED_HEX``（``0x`` と16桁のhex、0は禁止）。
+   欠落または不正なidentityはメモリ確保前に拒否します。
+
+-  ``NLanczosCoeffWarmUp``、``NLanczosCoeffSample``、
+   ``NLanczosCoeffInterval``、``NLanczosFinalWarmUp``、
+   ``NLanczosFinalSample``、``NLanczosFinalInterval``
+
+   **形式 :** int型 (デフォルト値 = 0)
+
+   **説明 :** 独立なcorrected coefficient chainとfinal-state chainを設定します。
+   0は安定化用default（各stageでwarmup 4096、saved configuration 16384、
+   interval 1）を選択します。0以外のsample数は32以上かつ32の倍数が必要です。
+   scale pilotはwarmup 4096 + unscored 4096に固定され、これらのkeywordでは
+   変更しません。
+
+-  ``NLanczosGuideMode``、``NLanczosStatMode``
+
+   **形式 :** int型 (デフォルト値 = 0)
+
+   **説明 :** corrected経路用の予約selectorで、0だけを受理します。
+   scale-normalized flat guide、relative floor :math:`2^{-40}`、global proposal
+   mixture 1/16、near-value omissionなし、relative overlap-rank cutoff
+   :math:`2^{-40}`、compactな32-block統計を固定します。
 
 -  ``NLanczosStep``
 
@@ -590,8 +624,8 @@ ModParaファイル (modpara.def)
      対角相互作用（``CoulombIntra``, ``CoulombInter``, ``Hund``）に
      対応します。既存のスピン射影・運動量射影を使用できます。
    * pure spin-1/2 classは ``NExUpdatePath=2`` を使用し、
-     ``NLocalSpin=Nsite=2*Ne``、``NTransfer=0``、``NQPFull=1`` を
-     必須とします。Hamiltonianにはnumber-operator型の対角相互作用と
+     ``NLocalSpin=Nsite=2*Ne``、``NTransfer=0`` を必須とします。
+     Hamiltonianにはnumber-operator型の対角相互作用と
      ``Exchange`` 項を指定できます。固定 ``2Sz=0`` sectorの
      Heisenberg/XXZ、非一様結合、Ising極限を含みます。
 
@@ -599,7 +633,9 @@ ModParaファイル (modpara.def)
    ``InterAll``、``NBodyInterAll``、``NBodyG`` はsampling開始前に
    エラー終了します。``Exchange`` はelectronic classでは未対応、
    ``Transfer`` はpure-spin classでは未対応です。局在spinと遍歴電子の
-   mixed系、および ``NQPFull>1`` のpure-spin量子射影も現scope外です。
+   mixed系も現scope外です。corrected full-support bridgeは ``NQPFull>1`` の
+   pure-spin量子射影に対応しますが、explicit legacyの2nd-step実行経路は
+   ``NQPFull=1`` に限定されます。
    2nd stepでは ``reweight=1`` もエラー終了します。reweightは基底
    波動関数のsupport上のweightだけを変え、基底振幅が0の配置を回復できません。
    2nd stepのGreen関数は計算しません。
@@ -624,7 +660,8 @@ ModParaファイル (modpara.def)
    それぞれ2、4、6次の ``GreenFuncN`` で評価します。sampleあたり
    :math:`A` 個の向き付きexchangeがactiveなら、各深さのcall数上限は
    :math:`A`、:math:`A^2`、:math:`A^3` で、深さ3が支配します。
-   このclassは現時点で ``NQPFull=1`` のみ対応します。
+   explicit legacy経路はこのclassで ``NQPFull=1`` に限定されますが、
+   corrected full-support bridgeにはこのlegacy制限はありません。
 
    したがって、射影により2nd stepの測定時間が大幅に増える場合があります。
    実サイズの計算前に、実計算と同じ ``NSPGaussLeg`` と ``NMPTrans`` を使った

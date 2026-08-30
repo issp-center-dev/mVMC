@@ -104,6 +104,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6c1_production_symbol_
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6c2_observable_census_production_symbol_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6c2_observable_core_production_symbol_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6c2_selector_production_symbol_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p6de_production_session_symbol_policy.json DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyg.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -162,6 +163,11 @@ add_power_lanczos_production_symbol_policy_test(
     power_lanczos_p6c2_selector_production_symbol_policy.json
     power-lanczos-zero-support-p6c2-runtime-production-symbols-v1
     P6-C2-RUNTIME)
+add_power_lanczos_production_symbol_policy_test(
+    PowerLanczosProductionSymbols_P6DESession
+    power_lanczos_p6de_production_session_symbol_policy.json
+    power-lanczos-zero-support-p6de-production-session-symbols-v4
+    P6-DE-2)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})

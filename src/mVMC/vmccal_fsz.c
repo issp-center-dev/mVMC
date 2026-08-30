@@ -1284,7 +1284,8 @@ void VMCMainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
   StopTimer(24);
 
   memset(&lanczosScratch, 0, sizeof(lanczosScratch));
-  if(NVMCCalMode == 1 && NLanczosMode == 1) {
+  if(NVMCCalMode == 1 && NLanczosMode == 1 &&
+     NLanczosEstimatorMode == 1) {
 #ifdef MVMC_ENABLE_FAULT_INJECTION
     const char *dumpValue = getenv("MVMC_LANCZOS_ORACLE_DUMP");
     lanczosInjectSample = getLanczosNonfiniteInjectionSample();
@@ -1432,7 +1433,8 @@ void VMCMainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
       continue;
     }
 
-    if(NVMCCalMode == 1 && NLanczosMode == 1) {
+    if(NVMCCalMode == 1 && NLanczosMode == 1 &&
+       NLanczosEstimatorMode == 1) {
       int lanczosInfo;
       int lanczosFinite;
       lanczosCheckedSamples++;
@@ -1576,7 +1578,7 @@ void VMCMainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
       CalculateGreenFunc_fsz(w,ip,eleIdx,eleCfg,eleNum,eleSpn,eleProjCnt);
       StopTimer(42);
 
-      if(NLanczosMode>0){
+      if(NLanczosMode>0 && NLanczosEstimatorMode==1){
         if(AllComplexFlag == 0) {
           calculateQQQQ_real(QQQQ_real, LSLQ_real, w, NLSHam);
         } else {
@@ -1586,7 +1588,8 @@ void VMCMainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
     }
   } /* end of for(sample) */
 
-  if(NVMCCalMode == 1 && NLanczosMode == 1) {
+  if(NVMCCalMode == 1 && NLanczosMode == 1 &&
+     NLanczosEstimatorMode == 1) {
     finalizeLanczosFSZAccounting(comm_parent, parentRank, lanczosCheckedSamples,
                                  lanczosRejectedSamples);
   }
@@ -1674,7 +1677,8 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
   StopTimer(24);
 
   memset(&lanczosScratch, 0, sizeof(lanczosScratch));
-  if(NVMCCalMode == 1 && NLanczosMode == 1) {
+  if(NVMCCalMode == 1 && NLanczosMode == 1 &&
+     NLanczosEstimatorMode == 1) {
 #ifdef MVMC_ENABLE_FAULT_INJECTION
     const char *dumpValue = getenv("MVMC_LANCZOS_ORACLE_DUMP");
     lanczosInjectSample = getLanczosNonfiniteInjectionSample();
@@ -1819,7 +1823,8 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
       continue;
     }
 
-    if(NVMCCalMode == 1 && NLanczosMode == 1) {
+    if(NVMCCalMode == 1 && NLanczosMode == 1 &&
+       NLanczosEstimatorMode == 1) {
       int lanczosInfo;
       int lanczosFinite;
       lanczosCheckedSamples++;
@@ -1963,7 +1968,7 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
       CalculateGreenFuncBF_fsz(w,ip,eleIdx,eleCfg,eleNum,eleSpn,eleProjCnt,eleProjBFCnt);
       StopTimer(42);
 
-      if(NLanczosMode>0) {
+      if(NLanczosMode>0 && NLanczosEstimatorMode==1) {
         if(AllComplexFlag == 0) {
           calculateQQQQ_real(QQQQ_real, LSLQ_real, w, NLSHam);
         } else {
@@ -1973,7 +1978,8 @@ void VMC_BF_MainCal_fsz(MPI_Comm comm_parent, MPI_Comm comm) {
     }
   }
 
-  if(NVMCCalMode == 1 && NLanczosMode == 1) {
+  if(NVMCCalMode == 1 && NLanczosMode == 1 &&
+     NLanczosEstimatorMode == 1) {
     finalizeLanczosFSZAccounting(comm_parent, parentRank, lanczosCheckedSamples,
                                  lanczosRejectedSamples);
   }

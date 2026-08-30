@@ -16,6 +16,7 @@
 #define MVMC_POWER_LANCZOS_OBSERVABLE_MAX_ARTIFACT_BYTES \
   ((size_t)100 * 1024 * 1024 * 1024)
 #define MVMC_POWER_LANCZOS_OBSERVABLE_MAX_ARTIFACT_FILES ((size_t)25000)
+#define MVMC_POWER_LANCZOS_OBSERVABLE_MAX_NQP_FULL 8
 
 typedef enum {
   MVMC_POWER_LANCZOS_OBSERVABLE_PREFLIGHT_READY = 0,
@@ -30,6 +31,7 @@ typedef enum {
 typedef struct {
   int nsite;
   int nsite_uc;
+  int nqp_full;
   int family_count[MVMC_POWER_LANCZOS_OBSERVABLE_FAMILY_COUNT];
   size_t unique_target_upper;
   size_t block_count;
@@ -53,9 +55,15 @@ typedef struct {
   int valid;
   MVMCPowerLanczosObservablePreflightStatus status;
   int corrected_dispatch_enabled;
+  int nsite;
+  int nsite_uc;
+  int nqp_full;
+  int family_count[MVMC_POWER_LANCZOS_OBSERVABLE_FAMILY_COUNT];
   unsigned int requested_family_mask;
   size_t request_count;
   size_t unique_target_upper;
+  size_t block_count;
+  uint64_t saved_source_count;
   size_t matrix_accumulator_bytes;
   size_t target_cache_bytes;
   size_t exact_allocated_upper_bytes;

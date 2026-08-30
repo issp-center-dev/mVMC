@@ -21,7 +21,7 @@
   ],
   "required_binary_strings": [
     "legacy_augmented_one_body_v1",
-    "P6 INPUT REJECTED: CORRECTED_PIPELINE_UNAVAILABLE",
+    "P6 INPUT REJECTED: corrected energy/variance stabilization supports NLanczosMode=1 only; additional observable production enable is out of scope.",
     "P6 LEGACY OPT-IN: add \"NLanczosEstimatorMode 1\" to ModPara to reproduce the previous biased base-support estimator",
     "WARNING: explicit legacy base-support power-Lanczos estimator; biased diagnostic only; not a corrected release result."
   ],
@@ -48,7 +48,7 @@
   "notes": [
     "Run against a Testing=OFF vmc.out after selector and plan-ownership wiring.",
     "The raw corrected plan and legacy augmented plan have separate ownership objects and digest schemas.",
-    "Corrected runtime remains fail-fast until a versioned correctness and HPC scaling certificate is registered.",
-    "Staged rollout: the corrected-unavailable gate fires before the raw observable census, so in this slice these symbols are linked into vmc.out but have no reachable production caller. This policy therefore attests to linkage, not to invocation."
+    "The corrected energy/variance runtime is production-reachable for NLanczosMode=1; production enable for additional observables remains out of scope.",
+    "This selector policy attests to the current runtime scope guard and the retained explicit legacy opt-in path."
   ]
 }

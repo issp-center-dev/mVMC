@@ -477,14 +477,37 @@ Parameters
    | :math:`[` double01 :math:`]` is the real part, :math:`[` double02 :math:`]` is the imaginary part, :math:`[` double03 :math:`]` is the absolute value, and :math:`[` double04 :math:`]` is the phase (:math:`\arg P^{(\alpha)}`).
 
 
+xxx\_pl\_stabilization\_yyy.json
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file is written by the corrected energy/variance route when
+``NVMCCalMode=1``, ``NLanczosMode=1``, and
+``NLanczosEstimatorMode=0``. ``yyy`` is the zero-padded data index. The file
+is committed atomically and is never overwritten. A completed numerical
+evaluation writes exactly one compact JSON, including a ``PASS``,
+``INCONCLUSIVE``, or ``FAIL`` decision. The process returns success only for
+``PASS``; the other two decisions still commit their evidence before returning
+a nonzero status.
+
+The record contains exact run identity, fixed policy and basis scales, 32
+coefficient/final block sufficient statistics, overlap spectrum and retained
+rank, canonical GEVP coefficient and residuals, energy/variance uncertainties,
+autocorrelation/effective-block diagnostics, support/numeric-zero evidence,
+acceptance counters, and in-memory allocation size. It does not contain
+sample-level primitive traces, bootstrap arrays, or additional-observable
+results. Peak RSS, elapsed time, exit status, and the JSON checksum are
+recorded by the validation launcher because they are known only after process
+termination. This stabilization record is not by itself a release-statistics
+certification.
+
 xxx\_ls\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~
 
 This file is the outputted files for :math:`\langle H \rangle`,
 :math:`(\langle H^2\rangle - \langle H \rangle^2)/\langle H \rangle^2`, and the optimized parameter :math:`\alpha`
-obtained by Power Lanczos method. This file is outputted when
+obtained by the explicit legacy Power Lanczos method. This file is outputted when
 ``NVMCCalMode`` = 1, ``NLanczosmode`` = 1 or 2 are set in ``ModPara``
-file and ``NLanczosStep`` = 1. Here, xxx is the header indicated by ``CDataFileHead`` in
+file, ``NLanczosEstimatorMode`` = 1, and ``NLanczosStep`` = 1. Here, xxx is the header indicated by ``CDataFileHead`` in
 ``ModPara`` file and yyy is a number given by
 ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp``,
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
@@ -493,8 +516,8 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 xxx\_ls2\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-This two-line file is written for ``NVMCCalMode=1``,
-``NLanczosMode=1``, and ``NLanczosStep=2``. The first line is a
+This two-line legacy file is written for ``NVMCCalMode=1``,
+``NLanczosMode=1``, ``NLanczosEstimatorMode=1``, and ``NLanczosStep=2``. The first line is a
 versioned header. The second line has the following 17 fields:
 ``E``, ``sigma2_over_E2``, the real and imaginary parts of
 ``c0``, ``c1``, and ``c2``, the real and imaginary parts of
@@ -549,8 +572,9 @@ Hermiticity and the Hankel identities.
 xxx\_ls\_support\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This three-line, versioned diagnostic is written for both
-``NLanczosStep=1`` and ``NLanczosStep=2`` whenever ``NLanczosMode>0``.
+This three-line, versioned legacy diagnostic is written for both
+``NLanczosStep=1`` and ``NLanczosStep=2`` whenever ``NLanczosMode>0`` and
+``NLanczosEstimatorMode=1``.
 The first line records ``step``, ``mode`` (``strict`` or
 ``experimental``), ``result`` (``pass``, ``mismatch``, ``inconclusive``,
 or ``invalid``), ``quality``, and
@@ -577,7 +601,8 @@ This file is the outputted files for one-body Green’s function
 :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle` obtained by
 Power Lanczos method. The file format is same as the
 xxx\_cisajs\_yyy.dat file. This file is outputted when ``NVMCCalMode`` =
-1, ``NLanczosmode`` = 2 are set in ``ModPara`` file.
+1, ``NLanczosmode`` = 2, and ``NLanczosEstimatorMode`` = 1 are set in
+``ModPara`` file.
 
 xxx\_ls\_cisajscktalt\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -586,4 +611,5 @@ This file is the outputted files for the two-body Green’s function
 :math:`\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle`
 obtained by Power Lanczos method. The file format is same as the
 xxx\_cisajscktalt\_yyy.dat file. This file is outputted when
-``NVMCCalMode`` = 1, ``NLanczosmode`` = 2 are set in ``ModPara`` file.
+``NVMCCalMode`` = 1, ``NLanczosmode`` = 2, and
+``NLanczosEstimatorMode`` = 1 are set in ``ModPara`` file.

@@ -17,7 +17,6 @@ the Free Software Foundation, either version 3 of the License, or
 #endif
 
 #include <complex.h>
-#include <float.h>
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
@@ -142,7 +141,8 @@ static int word_ranges_overlap(const uint64_t *left, size_t left_count,
 static int source_valid(MVMCKrylovFinalCoefficientSource source) {
   return source == MVMC_KRYLOV_FINAL_COEFFICIENT_EXACT ||
          source == MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC ||
-         source == MVMC_KRYLOV_FINAL_COEFFICIENT_PERTURBED_TESTING;
+         source == MVMC_KRYLOV_FINAL_COEFFICIENT_PERTURBED_TESTING ||
+         source == MVMC_KRYLOV_FINAL_COEFFICIENT_PRODUCTION_NOISY;
 }
 
 static int order_valid(int order) {
@@ -277,17 +277,6 @@ static int evaluation_valid(
              MVMC_SCALED_COMPLEX_NONFINITE;
 }
 
-static double log_add_bound(double left, double right) {
-  if (isinf(left) && left < 0.0) return right;
-  if (isinf(right) && right < 0.0) return left;
-  if (left < right) {
-    const double temporary = left;
-    left = right;
-    right = temporary;
-  }
-  return left + log1p(exp(right - left));
-}
-
 static MVMCKrylovStatus scaled_coefficient(
     double complex coefficient, MVMCScaledComplex *result) {
   MVMCPfaffianStatus status;
@@ -296,95 +285,6 @@ static MVMCKrylovStatus scaled_coefficient(
   } else {
     status = mvmc_scaled_complex_from_raw(coefficient, result);
   }
-  return status == MVMC_PFAFFIAN_STATUS_OK
-             ? MVMC_KRYLOV_STATUS_OK
-             : MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
-}
-
-static MVMCKrylovStatus scaled_divide(
-    const MVMCScaledComplex *numerator,
-    const MVMCScaledComplex *denominator,
-    MVMCScaledComplex *result) {
-  double denominator_lower_log;
-  double denominator_relative_error = 0.0;
-  double quotient_log;
-  double quotient_error_log = -INFINITY;
-  double numerator_error_term = -INFINITY;
-  double denominator_error_term = -INFINITY;
-  double complex phase;
-  MVMCPfaffianStatus status;
-
-  if (result == NULL || !mvmc_scaled_complex_is_valid(numerator) ||
-      !mvmc_scaled_complex_is_valid(denominator) ||
-      denominator->state != MVMC_SCALED_COMPLEX_FINITE_NONZERO) {
-    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
-  }
-  if (numerator->state == MVMC_SCALED_COMPLEX_NONFINITE) {
-    return MVMC_KRYLOV_STATUS_NONFINITE;
-  }
-  if (isfinite(denominator->log_abs_error_bound)) {
-    denominator_relative_error =
-        exp(denominator->log_abs_error_bound - denominator->log_abs);
-    if (!isfinite(denominator_relative_error) ||
-        denominator_relative_error < 0.0 ||
-        denominator_relative_error >= 1.0) {
-      return MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
-    }
-  }
-  denominator_lower_log =
-      denominator->log_abs + log1p(-denominator_relative_error);
-  if (!isfinite(denominator_lower_log)) {
-    return MVMC_KRYLOV_STATUS_NONFINITE;
-  }
-  if (numerator->state == MVMC_SCALED_COMPLEX_EXACT_ZERO) {
-    return mvmc_scaled_complex_make_exact_zero(result) ==
-                   MVMC_PFAFFIAN_STATUS_OK
-               ? MVMC_KRYLOV_STATUS_OK
-               : MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
-  }
-  if (numerator->state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO) {
-    const double error_log =
-        numerator->log_abs_error_bound - denominator_lower_log;
-    if (!isfinite(error_log)) return MVMC_KRYLOV_STATUS_NONFINITE;
-    status = mvmc_scaled_complex_make_numeric_zero(
-        error_log,
-        isfinite(numerator->max_input_log_abs)
-            ? numerator->max_input_log_abs - denominator_lower_log
-            : -INFINITY,
-        isfinite(numerator->cancellation_log_abs)
-            ? numerator->cancellation_log_abs - denominator_lower_log
-            : -INFINITY,
-        numerator->cancellation_ratio, result);
-    return status == MVMC_PFAFFIAN_STATUS_OK
-               ? MVMC_KRYLOV_STATUS_OK
-               : MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
-  }
-
-  quotient_log = numerator->log_abs - denominator->log_abs;
-  phase = numerator->phase * conj(denominator->phase);
-  if (!isfinite(quotient_log) || !finite_complex(phase)) {
-    return MVMC_KRYLOV_STATUS_NONFINITE;
-  }
-  if (isfinite(numerator->log_abs_error_bound)) {
-    numerator_error_term = numerator->log_abs_error_bound;
-  }
-  if (isfinite(denominator->log_abs_error_bound)) {
-    denominator_error_term =
-        quotient_log + denominator->log_abs_error_bound;
-  }
-  if (isfinite(numerator_error_term) ||
-      isfinite(denominator_error_term)) {
-    quotient_error_log =
-        log_add_bound(numerator_error_term, denominator_error_term) -
-        denominator_lower_log;
-  }
-  quotient_error_log = log_add_bound(
-      quotient_error_log, quotient_log + log(64.0 * DBL_EPSILON));
-  if (!isfinite(quotient_error_log)) {
-    return MVMC_KRYLOV_STATUS_NONFINITE;
-  }
-  status = mvmc_scaled_complex_make_finite(
-      phase, quotient_log, quotient_error_log, result);
   return status == MVMC_PFAFFIAN_STATUS_OK
              ? MVMC_KRYLOV_STATUS_OK
              : MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
@@ -425,6 +325,83 @@ MVMCKrylovStatus mvmc_krylov_final_state_policy_create(
   candidate.policy_hash = compute_policy_hash(&candidate);
   *policy = candidate;
   return MVMC_KRYLOV_STATUS_OK;
+}
+
+MVMCKrylovStatus mvmc_krylov_final_state_policy_create_scaled_basis(
+    int order, MVMCKrylovFinalCoefficientSource source,
+    uint64_t provenance_hash, const double complex *scaled_coefficient,
+    const double *log_basis_scale, size_t coefficient_count,
+    MVMCKrylovFinalStatePolicy *policy) {
+  double log_raw_magnitude[MVMC_KRYLOV_MAX_ORDER + 1];
+  double complex raw_coefficient[MVMC_KRYLOV_MAX_ORDER + 1];
+  double maximum_log_raw_magnitude = -INFINITY;
+  size_t index;
+  int nonzero = 0;
+  if (policy == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  memset(policy, 0, sizeof(*policy));
+  if (!order_valid(order) || !source_valid(source) ||
+      provenance_hash == 0 || scaled_coefficient == NULL ||
+      log_basis_scale == NULL ||
+      coefficient_count != (size_t)order + 1) {
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+  memset(log_raw_magnitude, 0, sizeof(log_raw_magnitude));
+  memset(raw_coefficient, 0, sizeof(raw_coefficient));
+  for (index = 0; index < coefficient_count; ++index) {
+    const double complex coefficient = scaled_coefficient[index];
+    double magnitude;
+    double log_magnitude;
+    if (!finite_complex(coefficient) || !isfinite(log_basis_scale[index])) {
+      return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+    }
+    magnitude = hypot(creal(coefficient), cimag(coefficient));
+    if (!isfinite(magnitude)) {
+      return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+    }
+    if (magnitude == 0.0) {
+      log_raw_magnitude[index] = -INFINITY;
+      continue;
+    }
+    log_magnitude = log(magnitude) + log_basis_scale[index];
+    if (!isfinite(log_magnitude)) {
+      return MVMC_KRYLOV_STATUS_RESOURCE_LIMIT;
+    }
+    log_raw_magnitude[index] = log_magnitude;
+    if (log_magnitude > maximum_log_raw_magnitude) {
+      maximum_log_raw_magnitude = log_magnitude;
+    }
+    nonzero = 1;
+  }
+  if (!nonzero) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  for (index = 0; index < coefficient_count; ++index) {
+    const double complex coefficient = scaled_coefficient[index];
+    const double magnitude = hypot(creal(coefficient), cimag(coefficient));
+    double relative_magnitude;
+    double phase_real;
+    double phase_imaginary;
+    if (magnitude == 0.0) continue;
+    relative_magnitude =
+        exp(log_raw_magnitude[index] - maximum_log_raw_magnitude);
+    if (!isfinite(relative_magnitude)) {
+      return MVMC_KRYLOV_STATUS_NONFINITE;
+    }
+    if (relative_magnitude == 0.0) {
+      return MVMC_KRYLOV_STATUS_RESOURCE_LIMIT;
+    }
+    phase_real = creal(coefficient) / magnitude;
+    phase_imaginary = cimag(coefficient) / magnitude;
+    raw_coefficient[index] =
+        phase_real * relative_magnitude +
+        I * (phase_imaginary * relative_magnitude);
+    if (!finite_complex(raw_coefficient[index]) ||
+        (creal(raw_coefficient[index]) == 0.0 &&
+         cimag(raw_coefficient[index]) == 0.0)) {
+      return MVMC_KRYLOV_STATUS_RESOURCE_LIMIT;
+    }
+  }
+  return mvmc_krylov_final_state_policy_create(
+      order, source, provenance_hash, raw_coefficient, coefficient_count,
+      policy);
 }
 
 uint64_t mvmc_krylov_final_state_policy_hash(
@@ -521,9 +498,9 @@ MVMCKrylovStatus mvmc_krylov_final_state_evaluate(
       invalidate_evaluation(MVMC_KRYLOV_STATUS_NONFINITE, result);
       return MVMC_KRYLOV_STATUS_NONFINITE;
     }
-    status = scaled_divide(&candidate.hamiltonian_amplitude,
-                           &candidate.amplitude,
-                           &candidate.local_energy);
+    status = mvmc_power_lanczos_scaled_divide(
+        &candidate.hamiltonian_amplitude, &candidate.amplitude,
+        &candidate.local_energy);
     if (status != MVMC_KRYLOV_STATUS_OK) {
       invalidate_evaluation(status, result);
       return status;
@@ -551,6 +528,17 @@ MVMCScaledComplexExportStatus mvmc_krylov_final_state_local_energy_export(
   }
   return mvmc_scaled_complex_export_common_scale(
       &evaluation->local_energy, 0.0, local_energy);
+}
+
+MVMCKrylovStatus mvmc_krylov_final_state_local_energy_evidence(
+    const MVMCKrylovFinalStateEvaluation *evaluation,
+    MVMCPowerLanczosNumericEvidence *evidence) {
+  if (!evaluation_valid(evaluation) ||
+      !evaluation->local_energy_available || evidence == NULL) {
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+  return mvmc_power_lanczos_scaled_export_evidence(
+      &evaluation->local_energy, 0.0, evidence);
 }
 
 MVMCKrylovStatus mvmc_krylov_final_state_acceptance(

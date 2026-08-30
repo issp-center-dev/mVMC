@@ -527,8 +527,8 @@ Keywords and parameters
    body Green’s functions by using Single Lanczos Step (Condition: The
    options 1 and 2 can be selected when ``NVMCCalMode`` = 1).
 
-   With ``OrbitalGeneral`` / FSZ or BackFlow, only
-   ``NLanczosMode=1`` is supported. In these cases the Hamiltonian is
+   On the explicit legacy route, ``OrbitalGeneral`` / FSZ or BackFlow supports
+   only ``NLanczosMode=1``. In these cases the Hamiltonian is
    limited to ``Transfer`` and diagonal number-operator interactions
    (``CoulombIntra``, ``CoulombInter``, and ``Hund``).
    ``NLanczosMode=2`` and Lanczos corrections for ``NBodyG`` /
@@ -541,12 +541,11 @@ Keywords and parameters
    **Description :** Selects the power-Lanczos estimator used when
    ``NLanczosMode`` is 1 or 2.
 
-   * [0] Selects the corrected estimator. This is also selected when the
-     keyword is omitted. The corrected production pipeline is not enabled in
-     this staged release, so the program exits with status 20 before the P6
-     observable census, memory setup, or sampling. ``NLanczosMode=1`` reports
-     ``CORRECTED_PIPELINE_UNAVAILABLE``; ``NLanczosMode=2`` reports
-     ``OBSERVABLE_CERTIFICATE_UNAVAILABLE``.
+   * [0] Selects the full-support corrected energy/variance estimator. This is
+     also selected when the keyword is omitted. The corrected route is
+     available only with ``NLanczosMode=1``; ``NLanczosMode=2`` is rejected
+     before allocation because additional-observable production enable is
+     outside the numerical-stabilization scope.
    * [1] Explicitly opts in to the previous biased base-support estimator.
      This compatibility route is diagnostic-only and is not a corrected
      release result. All ``NLanczosCoeff*``, ``NLanczosFinal*``,
@@ -563,17 +562,53 @@ Keywords and parameters
         - Current behavior
       * - ``NLanczosMode=1`` or 2, selector omitted
         - Used the legacy base-support estimator
-        - Selects the corrected route and exits with status 20 until that
-          route is enabled
+        - Mode 1 selects corrected energy/variance; mode 2 is rejected as an
+          out-of-scope additional-observable request
       * - Add ``NLanczosEstimatorMode 1``
         - Not required
         - Reproduces the previous estimator with a diagnostic-only warning
       * - ``NLanczosEstimatorMode 0``
         - Not available as a selector
-        - Explicitly selects the corrected route; currently fails fast
+        - Explicitly selects the corrected energy/variance route
 
    When ``NLanczosMode=0``, this keyword and every other P6 estimator control
    must be 0.
+
+   Corrected execution requires ``NVMCCalMode=1`` and the full-support classic
+   bridge. FSZ/``OrbitalGeneral``, BackFlow, RBM, reweighting, unsupported
+   update paths or Hamiltonian terms, and an invalid model sector are rejected
+   before sampling. There is no fallback to the legacy estimator.
+
+   The launcher must provide exact run identity through the following
+   environment variables: ``MVMC_POWER_LANCZOS_SOURCE_COMMIT`` (40 or 64
+   lowercase hexadecimal digits), ``MVMC_POWER_LANCZOS_INPUT_SHA256`` and
+   ``MVMC_POWER_LANCZOS_BINARY_SHA256`` (64 lowercase hexadecimal digits),
+   ``MVMC_POWER_LANCZOS_ENVIRONMENT_ID``, ``MVMC_POWER_LANCZOS_SEED_ID``, and
+   ``MVMC_POWER_LANCZOS_BASE_SEED_HEX`` (``0x`` followed by 16 hexadecimal
+   digits, nonzero). Missing or malformed identity is rejected before memory
+   setup.
+
+-  ``NLanczosCoeffWarmUp``, ``NLanczosCoeffSample``,
+   ``NLanczosCoeffInterval``, ``NLanczosFinalWarmUp``,
+   ``NLanczosFinalSample``, ``NLanczosFinalInterval``
+
+   **Type :** int-type (default value: 0)
+
+   **Description :** Configure the independent corrected coefficient and
+   final-state chains. Zero selects the stabilization defaults: warmup 4096,
+   16384 saved configurations, and interval 1 for each stage. A nonzero sample
+   count must be at least 32 and divisible by 32. The scale pilot is fixed at
+   warmup 4096 plus 4096 unscored samples and is not changed by these keywords.
+
+-  ``NLanczosGuideMode``, ``NLanczosStatMode``
+
+   **Type :** int-type (default value: 0)
+
+   **Description :** Reserved corrected-route selectors. Only 0 is accepted.
+   It fixes the scale-normalized flat guide with relative floor
+   :math:`2^{-40}`, global-proposal mixture 1/16, zero near-value omission,
+   relative overlap-rank cutoff :math:`2^{-40}`, and the compact 32-block
+   stabilization statistics.
 
 -  ``NLanczosStep``
 
@@ -595,7 +630,7 @@ Keywords and parameters
      interactions (``CoulombIntra``, ``CoulombInter``, and ``Hund``).
      Existing spin and momentum projections are supported.
    * The pure spin-1/2 class uses ``NExUpdatePath=2`` and requires
-     ``NLocalSpin=Nsite=2*Ne``, ``NTransfer=0``, and ``NQPFull=1``.
+     ``NLocalSpin=Nsite=2*Ne`` and ``NTransfer=0``.
      Its Hamiltonian may contain diagonal number-operator interactions
      and ``Exchange`` terms. This covers Heisenberg/XXZ, nonuniform,
      and Ising-limit inputs in the fixed ``2Sz=0`` sector.
@@ -607,9 +642,10 @@ Keywords and parameters
    having zero base amplitude.
    ``Exchange`` remains unsupported in the electronic class, and
    ``Transfer`` remains unsupported in the pure-spin class. Mixed
-   localized/itinerant models and pure-spin quantum projection with
-   ``NQPFull>1`` are also outside the current scope. Second-step Green's
-   functions are not calculated.
+   localized/itinerant models are also outside the current scope. The
+   corrected full-support bridge supports pure-spin quantum projection with
+   ``NQPFull>1``; the explicit legacy second-step execution path remains
+   limited to ``NQPFull=1``. Second-step Green's functions are not calculated.
    The Gutzwiller ``ProjRatio`` path is checked against an independent
    ED oracle. A nontrivial :math:`k=\pi` momentum projection is checked
    against independent real and complex projected-ED value oracles.
@@ -634,7 +670,8 @@ Keywords and parameters
    ``GreenFuncN`` orders 2, 4, and 6. If :math:`A` oriented exchanges
    are active for a sample, the corresponding call-count bounds are
    :math:`A`, :math:`A^2`, and :math:`A^3`; the depth-three term
-   dominates. Only ``NQPFull=1`` is currently supported for this class.
+   dominates. The explicit legacy path is limited to ``NQPFull=1`` for this
+   class; the corrected full-support bridge does not impose that legacy limit.
 
    Projection can consequently increase second-step measurement time
    substantially. Benchmark a small instance with the same

@@ -2,6 +2,7 @@
 
 #include <complex.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -11,12 +12,14 @@
 
 static int failure_count = 0;
 
-#define CHECK(condition, message)                                    \
-  do {                                                               \
-    if (!(condition)) {                                              \
-      fprintf(stderr, "FAIL: %s (line %d)\n", (message), __LINE__); \
-      ++failure_count;                                               \
-    }                                                                \
+#define CHECK(condition, ...)                                 \
+  do {                                                        \
+    if (!(condition)) {                                       \
+      fprintf(stderr, "FAIL: ");                             \
+      fprintf(stderr, __VA_ARGS__);                           \
+      fprintf(stderr, " (line %d)\n", __LINE__);             \
+      ++failure_count;                                        \
+    }                                                         \
   } while (0)
 
 static void rank_and_size(int *rank, int *size) {
@@ -66,6 +69,58 @@ static MVMCKrylovStatus create_root_model(
   (void)size;
   return mvmc_classic_krylov_model_workspace_create_from_root(
       rank == 0 ? raw : NULL, world_communicator(), workspace);
+}
+
+typedef struct {
+  double complex values[16];
+} PureSpinOracle;
+
+static MVMCKrylovStatus pure_spin_oracle_amplitude(
+    const uint64_t *configuration_words, size_t word_count,
+    void *context, MVMCKrylovAmplitudeResult *result) {
+  PureSpinOracle *oracle = (PureSpinOracle *)context;
+  uint64_t configuration;
+  if (configuration_words == NULL || word_count != 1 || oracle == NULL ||
+      result == NULL) {
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+  configuration = configuration_words[0];
+  if (configuration >= 16) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  memset(result, 0, sizeof(*result));
+  result->value = oracle->values[configuration];
+  result->total_zero = result->value == 0.0;
+  result->regular_component_count = result->total_zero ? 0 : 1;
+  result->local_factorization_count = 1;
+  result->global_factorization_count = 1;
+  return MVMC_KRYLOV_STATUS_OK;
+}
+
+static int evaluate_first_order(
+    const MVMCKrylovFockModel *model, uint64_t root,
+    PureSpinOracle *oracle, double complex *value) {
+  MVMCKrylovLimits limits;
+  MVMCKrylovWorkspace *workspace;
+  MVMCKrylovResult result;
+  MVMCKrylovStatus status;
+  memset(&limits, 0, sizeof(limits));
+  limits.max_states = 16;
+  limits.max_transitions = 256;
+  limits.max_amplitude_evaluations = 16;
+  limits.max_bytes = (size_t)1024 * 1024;
+  limits.max_order = 1;
+  workspace = mvmc_krylov_workspace_create(model->site_count, &limits,
+                                            &status);
+  if (workspace == NULL) return 0;
+  status = mvmc_krylov_evaluate(
+      workspace, model, &root, 1, pure_spin_oracle_amplitude, oracle,
+      &result);
+  mvmc_krylov_workspace_destroy(workspace);
+  if (status != MVMC_KRYLOV_STATUS_OK || !result.valid ||
+      result.evaluated_order != 1) {
+    return 0;
+  }
+  *value = result.value[1];
+  return 1;
 }
 
 static void test_electronic_mapping_and_permutation(void) {
@@ -141,16 +196,21 @@ cleanup:
 }
 
 static void test_pure_spin_mapping(void) {
-  const MVMCClassicKrylovPairCoupling hund[] = {{0, 1, -0.25}};
-  const MVMCClassicKrylovPairCoupling exchange[] = {{1, 0, 0.75}};
+  const MVMCClassicKrylovPairCoupling inter[] = {{0, 1, -0.25}};
+  const MVMCClassicKrylovPairCoupling hund[] = {{0, 1, -0.5}};
+  const MVMCClassicKrylovPairCoupling exchange[] = {{1, 0, -0.5}};
   MVMCClassicKrylovRawModel raw;
   MVMCClassicKrylovModelWorkspace *workspace = NULL;
   const MVMCKrylovFockModel *model;
+  PureSpinOracle oracle;
+  double complex value = NAN + I * NAN;
   memset(&raw, 0, sizeof(raw));
   raw.site_count = 2;
   raw.up_electron_count = 1;
   raw.down_electron_count = 1;
   raw.pure_spin = 1;
+  raw.coulomb_inter_count = 1;
+  raw.coulomb_inter = inter;
   raw.hund_count = 1;
   raw.hund = hund;
   raw.exchange_count = 1;
@@ -159,19 +219,40 @@ static void test_pure_spin_mapping(void) {
         "pure-spin model create");
   if (workspace == NULL) return;
   model = mvmc_classic_krylov_model(workspace);
-  CHECK(model != NULL && model->pure_spin == 1 && model->term_count == 4 &&
-            model->operator_count == 16,
+  CHECK(model != NULL && model->pure_spin == 1 && model->term_count == 8 &&
+            model->operator_count == 32,
         "pure-spin family expansion count");
   if (model != NULL) {
-    CHECK(model->terms[0].coefficient == 0.25 &&
-              model->terms[2].coefficient == 0.75 &&
-              model->terms[3].coefficient == 0.75,
-          "Hund/Exchange coefficient mapping");
-    CHECK(model->operators[8].orbital == 0 &&
-              model->operators[9].orbital == 1 &&
-              model->operators[10].orbital == 3 &&
-              model->operators[11].orbital == 2,
+    CHECK(model->terms[0].source_kind ==
+              MVMC_CLASSIC_KRYLOV_SOURCE_COULOMB_INTER &&
+              model->terms[0].coefficient == -0.25 &&
+              model->terms[4].source_kind ==
+                  MVMC_CLASSIC_KRYLOV_SOURCE_HUND &&
+              model->terms[4].coefficient == 0.5 &&
+              model->terms[6].source_kind ==
+                  MVMC_CLASSIC_KRYLOV_SOURCE_EXCHANGE &&
+              model->terms[6].coefficient == -0.5,
+          "StdFace CoulombInter/Hund/Exchange coefficient mapping");
+    CHECK(model->operators[24].orbital == 0 &&
+              model->operators[25].orbital == 1 &&
+              model->operators[26].orbital == 3 &&
+              model->operators[27].orbital == 2,
           "Exchange forward orientation");
+    /* The up-orbitals-before-down Fock convention reverses the coordinate
+       phase of the two physical spin basis states; the eigenvalue set is
+       nevertheless the Heisenberg {-3/4, +1/4} spectrum. */
+    memset(&oracle, 0, sizeof(oracle));
+    oracle.values[UINT64_C(6)] = 1.0;
+    oracle.values[UINT64_C(9)] = 1.0;
+    CHECK(evaluate_first_order(model, UINT64_C(6), &oracle, &value) &&
+              cabs(value + 0.75) < 2.0e-15,
+          "StdFace Heisenberg symmetric-Fock eigenvalue actual=(%.17g,%.17g)",
+          creal(value), cimag(value));
+    oracle.values[UINT64_C(9)] = -1.0;
+    CHECK(evaluate_first_order(model, UINT64_C(6), &oracle, &value) &&
+              cabs(value - 0.25) < 2.0e-15,
+          "StdFace Heisenberg antisymmetric-Fock eigenvalue actual=(%.17g,%.17g)",
+          creal(value), cimag(value));
   }
   mvmc_classic_krylov_model_workspace_destroy(workspace);
 }
@@ -180,7 +261,7 @@ static void expect_status(MVMCClassicKrylovRawModel *raw,
                           MVMCKrylovStatus expected, const char *message) {
   MVMCClassicKrylovModelWorkspace *workspace = NULL;
   CHECK(create_root_model(raw, &workspace) == expected && workspace == NULL,
-        message);
+        "%s", message);
   mvmc_classic_krylov_model_workspace_destroy(workspace);
 }
 

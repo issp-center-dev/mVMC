@@ -61,6 +61,12 @@ Lanczos2ModelClass ClassifyLanczos2Model(
 Lanczos2ContractStatus ValidateLanczos2Contract(
     const Lanczos2Contract *contract);
 
+/* Apply the full-support corrected execution capability gate for either
+ * power step.  Unlike the legacy step-1 compatibility route, corrected
+ * execution must be representable by the classic full-support bridge. */
+Lanczos2ContractStatus ValidateCorrectedPowerLanczosExecutionContract(
+    const Lanczos2Contract *contract);
+
 /*
  * Apply the additional execution limit of the legacy pure-spin main path.
  * The general production capability contract intentionally accepts multi-QP;

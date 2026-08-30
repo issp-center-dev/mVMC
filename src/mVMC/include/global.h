@@ -276,6 +276,7 @@ int *BurnEleProjCnt;
 int *BurnEleSpn;
 double complex *BurnRBMCnt;
 int BurnFlag=0; /* 0: off, 1: on */
+unsigned long long PowerLanczosBaseTerminalProposalCounter = 0ULL;
 
 /***** Slater Elements ******/
 double complex *SlaterElm; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */

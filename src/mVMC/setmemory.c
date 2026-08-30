@@ -521,7 +521,7 @@ void SetMemory() {
       PhysNBodyG = NULL;
     }
 
-    if(NLanczosMode>0 && NLanczosStep==1){
+    if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==1){
       QQQQ = (double complex*)malloc(sizeof(double complex)
         *(NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam) );
       LSLQ = QQQQ + NLSHam*NLSHam*NLSHam*NLSHam;
@@ -545,7 +545,7 @@ void SetMemory() {
 
       }
     }
-    if(NLanczosMode>0){
+    if(NLanczosMode>0 && NLanczosEstimatorMode==1){
       size_t sampleCount;
       if(NVMCSample <= 0 ||
          (size_t)NVMCSample >
@@ -567,7 +567,7 @@ void SetMemory() {
           sampleCount * POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH,
           sizeof(double));
     }
-    if(NLanczosMode>0 && NLanczosStep==2){
+    if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==2){
       const size_t sampleCount = (size_t)NVMCSample;
       if(NVMCSample <= 0) {
         int rank = 0;
@@ -611,7 +611,7 @@ void FreeMemory() {
   if(NVMCCalMode==1){
     free(PhysCisAjs);
     free(PhysNBodyG);
-    if(NLanczosMode>0 && NLanczosStep==1){
+    if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==1){
       free(QQQQ);
       free(QQQQ_real);
       if(NLanczosMode>1){
@@ -619,7 +619,7 @@ void FreeMemory() {
         free(QCisAjsQ_real);
       }
     }
-    if(NLanczosMode>0 && NLanczosStep==2){
+    if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==2){
       free(LS2Moment);
       free(LS2Moment_real);
       free(LS2SamplePower);
@@ -627,7 +627,7 @@ void FreeMemory() {
       free(LS2SampleWeight);
       free(LS2SampleValid);
     }
-    if(NLanczosMode>0){
+    if(NLanczosMode>0 && NLanczosEstimatorMode==1){
       free(PowerLanczosSupportSampleData);
     }
   }

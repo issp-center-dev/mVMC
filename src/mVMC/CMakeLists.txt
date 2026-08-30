@@ -14,7 +14,7 @@ set(SOURCES_vmcmain
         vmcmain.c absolute_pfaffian.c classic_pfaffian_matrix.c
         classic_pfaffian_state.c classic_krylov_configuration.c
         classic_krylov_projection.c classic_krylov_amplitude.c
-        classic_krylov_model.c
+        classic_krylov_model.c power_lanczos_classic_bridge.c
         classic_pfaffian_collective.c
         physcal_lanczos.c physcal_lanczos2.c
         power_lanczos_contract.c power_lanczos_fp_metadata.c
@@ -24,6 +24,22 @@ set(SOURCES_vmcmain
         power_lanczos_observable_evaluator.c
         power_lanczos_observable_blocks.c
         power_lanczos_observable_preflight.c
+        power_lanczos_observable_confirmation.c
+        power_lanczos_sha256.c
+        power_lanczos_rng.c
+        power_lanczos_chain_rng.c
+        power_lanczos_snapshot.c
+        power_lanczos_production_session.c
+        power_lanczos_production_session_prepare.c
+        power_lanczos_production_session_stages.c
+        power_lanczos_primitive_trace.c
+        power_lanczos_numeric_evidence.c
+        power_lanczos_stabilization_statistics.c
+        power_lanczos_stabilization_output.c
+        power_lanczos_corrected_dispatch.c
+        power_lanczos_json_writer.c
+        power_lanczos_output_transaction.c
+        power_lanczos_block_collective.c
         power_lanczos_selector.c
         lanczos2_contract.c splitloop.c
         krylov_fock_reference.c krylov_fock_proposal.c bounded_krylov_engine.c

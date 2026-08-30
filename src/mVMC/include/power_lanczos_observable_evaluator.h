@@ -4,6 +4,7 @@
 #if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
 #include "bounded_krylov_engine.h"
+#include "power_lanczos_numeric_evidence.h"
 #include "power_lanczos_observable_action.h"
 
 #include <complex.h>
@@ -55,6 +56,25 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_coefficient_sample(
     MVMCPowerLanczosObservableSampleDiagnostics *diagnostics);
 
 /*
+ * Evidence-bearing coefficient path.  guide must be the scaled positive
+ * guide used by log_guide.  Evidence is request-major in the same four-entry
+ * row-major order as matrix_entries and is committed only on success.
+ */
+MVMCKrylovStatus
+mvmc_power_lanczos_observable_coefficient_sample_with_evidence(
+    MVMCPowerLanczosObservableEvaluatorWorkspace *workspace,
+    MVMCKrylovBoundedWorkspace *bounded_workspace,
+    const MVMCPowerLanczosObservableLayout *layout,
+    const MVMCPowerLanczosObservablePlan *plan,
+    const uint64_t *source_words, size_t word_count,
+    double log_guide, const double basis_log_scale[2],
+    const MVMCScaledComplex *guide,
+    double complex *matrix_entries, size_t matrix_entry_capacity,
+    MVMCPowerLanczosNumericEvidence *evidence,
+    size_t evidence_capacity,
+    MVMCPowerLanczosObservableSampleDiagnostics *diagnostics);
+
+/*
  * Evaluate the independent final-chain primitive using
  * A=alpha[0]*w_0+alpha[1]*w_1 directly.  This path never contracts the
  * coefficient-stage matrix.
@@ -68,6 +88,19 @@ MVMCKrylovStatus mvmc_power_lanczos_observable_final_sample(
     double log_guide, const double basis_log_scale[2],
     const double complex alpha[2],
     double complex *numerators, size_t numerator_capacity,
+    MVMCPowerLanczosObservableSampleDiagnostics *diagnostics);
+
+MVMCKrylovStatus mvmc_power_lanczos_observable_final_sample_with_evidence(
+    MVMCPowerLanczosObservableEvaluatorWorkspace *workspace,
+    MVMCKrylovBoundedWorkspace *bounded_workspace,
+    const MVMCPowerLanczosObservableLayout *layout,
+    const MVMCPowerLanczosObservablePlan *plan,
+    const uint64_t *source_words, size_t word_count,
+    double log_guide, const double basis_log_scale[2],
+    const double complex alpha[2],
+    double complex *numerators, size_t numerator_capacity,
+    MVMCPowerLanczosNumericEvidence *evidence,
+    size_t evidence_capacity,
     MVMCPowerLanczosObservableSampleDiagnostics *diagnostics);
 
 #endif

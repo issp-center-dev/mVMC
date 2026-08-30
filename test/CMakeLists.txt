@@ -96,6 +96,7 @@ add_test(NAME PowerLanczosObservableAction_Unit
 add_executable(power_lanczos_observable_evaluator_unit
     power_lanczos_observable_evaluator_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_evaluator.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_action.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
@@ -149,6 +150,234 @@ target_link_libraries(power_lanczos_observable_preflight_unit m)
 add_test(NAME PowerLanczosObservablePreflight_Unit
     COMMAND power_lanczos_observable_preflight_unit)
 
+add_executable(power_lanczos_production_session_unit
+    power_lanczos_production_session_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_sha256.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_rng.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_snapshot.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_production_session.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_production_session_prepare.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_production_session_stages.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_block_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_chain_rng.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_census.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_action.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_evaluator.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_blocks.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_confirmation.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_primitive_trace.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilization_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilization_output.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_json_writer.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_gevp.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_include_directories(power_lanczos_production_session_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(power_lanczos_production_session_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+    MVMC_ENABLE_POWER_LANCZOS_P5_CORE
+    MVMC_ENABLE_POWER_LANCZOS_P6_TESTING)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_production_session_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+target_link_libraries(power_lanczos_production_session_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(power_lanczos_production_session_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(power_lanczos_production_session_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(power_lanczos_production_session_unit
+        ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME PowerLanczosProductionSession_Unit
+    COMMAND power_lanczos_production_session_unit)
+if(MPI_FOUND)
+    add_test(NAME PowerLanczosProductionSession_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:power_lanczos_production_session_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME PowerLanczosProductionSession_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:power_lanczos_production_session_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(
+        PowerLanczosProductionSession_Unit_Rank2_mpi PROPERTIES PROCESSORS 2)
+    set_tests_properties(
+        PowerLanczosProductionSession_Unit_Rank4_mpi PROPERTIES PROCESSORS 4)
+endif()
+
+add_executable(power_lanczos_chain_rng_unit
+    power_lanczos_chain_rng_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_rng.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_chain_rng.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_include_directories(power_lanczos_chain_rng_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(power_lanczos_chain_rng_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_chain_rng_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+target_link_libraries(power_lanczos_chain_rng_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(power_lanczos_chain_rng_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(power_lanczos_chain_rng_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(power_lanczos_chain_rng_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME PowerLanczosChainRng_Unit
+    COMMAND power_lanczos_chain_rng_unit)
+if(MPI_FOUND)
+    add_test(NAME PowerLanczosChainRng_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:power_lanczos_chain_rng_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME PowerLanczosChainRng_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:power_lanczos_chain_rng_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(
+        PowerLanczosChainRng_Unit_Rank2_mpi PROPERTIES PROCESSORS 2)
+    set_tests_properties(
+        PowerLanczosChainRng_Unit_Rank4_mpi PROPERTIES PROCESSORS 4)
+endif()
+
+add_executable(power_lanczos_block_collective_unit
+    power_lanczos_block_collective_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_block_collective.c)
+target_include_directories(power_lanczos_block_collective_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(power_lanczos_block_collective_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_block_collective_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+target_link_libraries(power_lanczos_block_collective_unit m)
+if(MPI_FOUND)
+    target_link_libraries(power_lanczos_block_collective_unit
+        ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME PowerLanczosBlockCollective_Unit
+    COMMAND power_lanczos_block_collective_unit)
+if(MPI_FOUND)
+    add_test(NAME PowerLanczosBlockCollective_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:power_lanczos_block_collective_unit>
+                ${MPIEXEC_POSTFLAGS})
+    add_test(NAME PowerLanczosBlockCollective_Unit_Rank4_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:power_lanczos_block_collective_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(
+        PowerLanczosBlockCollective_Unit_Rank2_mpi PROPERTIES PROCESSORS 2)
+    set_tests_properties(
+        PowerLanczosBlockCollective_Unit_Rank4_mpi PROPERTIES PROCESSORS 4)
+endif()
+
+add_executable(power_lanczos_primitive_trace_unit
+    power_lanczos_primitive_trace_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_primitive_trace.c)
+target_include_directories(power_lanczos_primitive_trace_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(power_lanczos_primitive_trace_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_primitive_trace_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(power_lanczos_primitive_trace_unit m)
+add_test(NAME PowerLanczosPrimitiveTrace_Unit
+    COMMAND power_lanczos_primitive_trace_unit)
+
+add_executable(power_lanczos_numeric_evidence_unit
+    power_lanczos_numeric_evidence_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_include_directories(power_lanczos_numeric_evidence_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(power_lanczos_numeric_evidence_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_numeric_evidence_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror -fno-fast-math -ffp-contract=off)
+endif()
+target_link_libraries(power_lanczos_numeric_evidence_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(power_lanczos_numeric_evidence_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(power_lanczos_numeric_evidence_unit
+        ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME PowerLanczosNumericEvidence_Unit
+    COMMAND power_lanczos_numeric_evidence_unit)
+
+add_executable(power_lanczos_json_writer_unit
+    power_lanczos_json_writer_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_json_writer.c)
+target_include_directories(power_lanczos_json_writer_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(power_lanczos_json_writer_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_json_writer_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(power_lanczos_json_writer_unit m)
+add_test(NAME PowerLanczosJsonWriter_Unit
+    COMMAND power_lanczos_json_writer_unit)
+
+add_executable(power_lanczos_output_transaction_unit
+    power_lanczos_output_transaction_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_output_transaction.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_sha256.c)
+target_include_directories(power_lanczos_output_transaction_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(power_lanczos_output_transaction_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+    MVMC_ENABLE_POWER_LANCZOS_P6_TESTING)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_output_transaction_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(power_lanczos_output_transaction_unit m)
+add_test(NAME PowerLanczosOutputTransaction_Unit
+    COMMAND power_lanczos_output_transaction_unit)
+
 add_executable(power_lanczos_runtime_unit
     power_lanczos_selector_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_selector.c)
@@ -165,6 +394,7 @@ add_executable(power_lanczos_observable_correctness
     power_lanczos_observable_correctness.c
     power_lanczos_observable_dense_oracle.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_evaluator.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_action.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_blocks.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
@@ -189,12 +419,12 @@ if(MPI_FOUND)
 endif()
 add_test(NAME PowerLanczosObservableCorrectness_Unit
     COMMAND power_lanczos_observable_correctness)
-
 add_executable(power_lanczos_observable_scaling_driver
     power_lanczos_observable_scaling_driver.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_census.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_action.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_evaluator.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_blocks.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
@@ -800,6 +1030,7 @@ endif()
 add_executable(krylov_final_state_unit
     krylov_final_state_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
@@ -868,6 +1099,7 @@ add_executable(krylov_final_state_chain_unit
     krylov_final_state_chain_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
@@ -914,6 +1146,7 @@ add_executable(krylov_final_state_chain_driver
     krylov_final_state_chain_driver.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
@@ -975,6 +1208,7 @@ add_test(NAME KrylovStreamingStatistics_Unit
 add_executable(krylov_matrix_measurement_unit
     krylov_matrix_measurement_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_compile_definitions(krylov_matrix_measurement_unit PRIVATE
@@ -1056,15 +1290,46 @@ add_executable(classic_krylov_production_anchor_unit
     ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_classic_bridge.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_sha256.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_rng.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_chain_rng.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_snapshot.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_block_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_census.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_action.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_evaluator.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_blocks.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_confirmation.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_primitive_trace.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_production_session.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_production_session_prepare.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_production_session_stages.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilization_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilization_output.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_corrected_dispatch.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_json_writer.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_output_transaction.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_gevp.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_compile_definitions(classic_krylov_production_anchor_unit PRIVATE
-    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+    MVMC_ENABLE_POWER_LANCZOS_P5_CORE)
 target_include_directories(classic_krylov_production_anchor_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
@@ -1104,7 +1369,8 @@ endif()
 
 add_executable(classic_krylov_model_unit
     classic_krylov_model_unit.c
-    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c)
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c)
 target_compile_definitions(classic_krylov_model_unit PRIVATE
     MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
 target_include_directories(classic_krylov_model_unit PRIVATE
@@ -1384,6 +1650,7 @@ add_executable(bounded_krylov_markov_driver
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
@@ -1468,6 +1735,7 @@ add_executable(p4f_matrix_reparse_driver
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
@@ -1513,6 +1781,7 @@ add_executable(bounded_krylov_markov_pilot_driver
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
@@ -1584,6 +1853,7 @@ add_executable(bounded_krylov_markov_timing_driver
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_numeric_evidence.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c

@@ -96,6 +96,9 @@ int main(void) {
   MVMCKrylovBoundedWorkspace *bounded_workspace = NULL;
   MVMCPowerLanczosObservableEvaluatorWorkspace *evaluator = NULL;
   MVMCPowerLanczosObservableSampleDiagnostics diagnostics;
+  MVMCPowerLanczosNumericEvidence matrix_evidence[4];
+  MVMCPowerLanczosNumericEvidence numerator_evidence;
+  MVMCScaledComplex coefficient_guide;
   AmplitudeTable table;
   double complex matrix[4] = {99.0, 99.0, 99.0, 99.0};
   double complex numerator = 99.0;
@@ -127,6 +130,10 @@ int main(void) {
   CHECK(mvmc_power_lanczos_observable_evaluator_workspace_bytes(evaluator) >
             0,
         "evaluator workspace byte ledger");
+  CHECK(mvmc_scaled_complex_make_finite(
+            1.0, 0.0, -INFINITY, &coefficient_guide) ==
+            MVMC_PFAFFIAN_STATUS_OK,
+        "coefficient guide fixture");
 
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = mvmc_bounded_krylov_session_begin(
@@ -134,15 +141,25 @@ int main(void) {
   }
   CHECK(status == MVMC_KRYLOV_STATUS_OK, "coefficient session begin");
   if (status == MVMC_KRYLOV_STATUS_OK) {
-    status = mvmc_power_lanczos_observable_coefficient_sample(
+    status = mvmc_power_lanczos_observable_coefficient_sample_with_evidence(
         evaluator, bounded_workspace, &layout, &observable_plan, &source, 1,
-        0.0, scales, matrix, 4, &diagnostics);
+        0.0, scales, &coefficient_guide, matrix, 4, matrix_evidence, 4,
+        &diagnostics);
   }
   CHECK(status == MVMC_KRYLOV_STATUS_OK && diagnostics.valid,
         "coefficient sample");
   CHECK(Close(matrix[0], 0.0) && Close(matrix[1], 0.0) &&
             Close(matrix[2], 1.0) && Close(matrix[3], 0.0),
         "full lower-triangle matrix counterexample");
+  CHECK(matrix_evidence[0].valid && matrix_evidence[1].valid &&
+            matrix_evidence[2].valid && matrix_evidence[3].valid &&
+            matrix_evidence[0].value == matrix[0] &&
+            matrix_evidence[1].value == matrix[1] &&
+            matrix_evidence[2].value == matrix[2] &&
+            matrix_evidence[3].value == matrix[3] &&
+            cabs(1.0 - matrix_evidence[2].value) <=
+                matrix_evidence[2].absolute_numeric_bound,
+        "coefficient evidence matches published primitive bytes");
   CHECK(diagnostics.request_count == 1 &&
             diagnostics.active_request_count == 1 &&
             diagnostics.unique_target_count == 1 &&
@@ -159,9 +176,10 @@ int main(void) {
       bounded_workspace, TableAmplitude, &table, UINT64_C(0x1002));
   CHECK(status == MVMC_KRYLOV_STATUS_OK, "final session begin");
   if (status == MVMC_KRYLOV_STATUS_OK) {
-    status = mvmc_power_lanczos_observable_final_sample(
+    status = mvmc_power_lanczos_observable_final_sample_with_evidence(
         evaluator, bounded_workspace, &layout, &observable_plan, &source, 1,
-        0.0, scales, alpha, &numerator, 1, &diagnostics);
+        0.0, scales, alpha, &numerator, 1, &numerator_evidence, 1,
+        &diagnostics);
   }
   CHECK(status == MVMC_KRYLOV_STATUS_OK && diagnostics.valid,
         "final sample");
@@ -170,6 +188,11 @@ int main(void) {
             creal(numerator), cimag(numerator));
   }
   CHECK(Close(numerator, 0.5), "direct-final lower-triangle numerator");
+  CHECK(numerator_evidence.valid &&
+            numerator_evidence.value == numerator &&
+            cabs(0.5 - numerator_evidence.value) <=
+                numerator_evidence.absolute_numeric_bound,
+        "final evidence matches published numerator bytes");
   if (mvmc_bounded_krylov_session_is_active(bounded_workspace)) {
     CHECK(mvmc_bounded_krylov_session_end(bounded_workspace) ==
               MVMC_KRYLOV_STATUS_OK,

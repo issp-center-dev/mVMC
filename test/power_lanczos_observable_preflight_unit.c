@@ -20,6 +20,7 @@ static MVMCPowerLanczosObservablePreflightInput ValidInput(void) {
   memset(&input, 0, sizeof(input));
   input.nsite = 16;
   input.nsite_uc = 16;
+  input.nqp_full = 8;
   input.family_count[0] = 32;
   input.family_count[1] = 64;
   input.family_count[2] = 64;
@@ -70,10 +71,30 @@ int main(void) {
             result.valid && result.corrected_dispatch_enabled,
         "valid preflight not enabled");
   Check(result.request_count == 160 &&
+            result.nsite == 16 && result.nsite_uc == 16 &&
+            result.nqp_full == 8 && result.family_count[0] == 32 &&
+            result.family_count[1] == 64 && result.family_count[2] == 64 &&
+            result.block_count == 32 && result.saved_source_count == 1024 &&
             result.matrix_accumulator_bytes == 64 * 160 &&
             result.target_cache_bytes == 120 * 256 &&
             result.artifact_payload_bytes == 80 * 32 * 160,
         "preflight exact formulas");
+
+  input = ValidInput();
+  input.nqp_full = 0;
+  ExpectStatus(&input,
+               MVMC_POWER_LANCZOS_OBSERVABLE_PREFLIGHT_INVALID_ARGUMENT,
+               "zero NQPFull");
+  input = ValidInput();
+  input.nqp_full = -1;
+  ExpectStatus(&input,
+               MVMC_POWER_LANCZOS_OBSERVABLE_PREFLIGHT_INVALID_ARGUMENT,
+               "negative NQPFull");
+  input = ValidInput();
+  input.nqp_full = 9;
+  ExpectStatus(&input,
+               MVMC_POWER_LANCZOS_OBSERVABLE_PREFLIGHT_INVALID_ARGUMENT,
+               "NQPFull over cap");
 
   input = ValidInput();
   input.correctness_family_mask = 3;

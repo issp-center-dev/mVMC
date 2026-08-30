@@ -120,6 +120,21 @@ Lanczos2ContractStatus ValidateLanczos2Contract(
   return LANCZOS2_CONTRACT_OK;
 }
 
+Lanczos2ContractStatus ValidateCorrectedPowerLanczosExecutionContract(
+    const Lanczos2Contract *contract) {
+  MVMCPowerLanczosContract powerContract;
+  MVMCPowerLanczosContractStatus powerStatus;
+  if (contract == NULL || (contract->step != 1 && contract->step != 2)) {
+    return LANCZOS2_CONTRACT_INVALID_STEP;
+  }
+  powerContract = ToPowerContract(contract);
+  powerStatus =
+      mvmc_power_lanczos_validate_production_contract(&powerContract);
+  return powerStatus == MVMC_POWER_LANCZOS_CONTRACT_OK
+             ? LANCZOS2_CONTRACT_OK
+             : FromPowerStatus(powerStatus);
+}
+
 Lanczos2ContractStatus ValidateLegacyLanczos2ExecutionContract(
     const Lanczos2Contract *contract) {
   const Lanczos2ContractStatus status = ValidateLanczos2Contract(contract);

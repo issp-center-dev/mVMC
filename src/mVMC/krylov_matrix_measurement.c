@@ -69,6 +69,14 @@ static void invalidate_sample_diagnostics(
   diagnostics->maximum_log_contribution = NAN;
 }
 
+static void invalidate_sample_evidence(
+    MVMCKrylovStatus status,
+    MVMCKrylovMatrixMeasurementSampleEvidence *evidence) {
+  if (evidence == NULL) return;
+  memset(evidence, 0, sizeof(*evidence));
+  evidence->status = status;
+}
+
 static void invalidate_accumulator(
     MVMCKrylovStatus status,
     MVMCKrylovMatrixMeasurementAccumulator *accumulator) {
@@ -313,6 +321,114 @@ static int all_upper_entries_zero(
   return 1;
 }
 
+static MVMCKrylovStatus weighted_norm_ratio_evidence(
+    const MVMCScaledComplex *values, const double *log_scale,
+    const double *weight, size_t value_count,
+    const MVMCScaledComplex *guide, double production_value,
+    MVMCPowerLanczosNumericEvidence *evidence) {
+  MVMCScaledComplex numerator;
+  MVMCScaledComplex quotient;
+  MVMCPowerLanczosNumericEvidence independent;
+  MVMCKrylovStatus status = mvmc_power_lanczos_scaled_weighted_norm(
+      values, log_scale, weight, value_count, 0.0, &numerator);
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = mvmc_power_lanczos_scaled_divide(
+        &numerator, guide, &quotient);
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = mvmc_power_lanczos_scaled_export_evidence(
+        &quotient, 0.0, &independent);
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = mvmc_power_lanczos_numeric_evidence_recenter(
+        &independent, production_value, evidence);
+  }
+  return status;
+}
+
+static MVMCKrylovStatus compute_sample_evidence(
+    const MVMCKrylovMatrixMeasurementPolicy *policy,
+    const MVMCScaledComplex *values, size_t value_count,
+    const double complex *overlap_upper,
+    const double complex *hamiltonian_upper,
+    const double complex *hamiltonian_adjoint_upper,
+    const double complex *hamiltonian_squared_upper, size_t upper_count,
+    double production_denominator,
+    MVMCKrylovMatrixMeasurementSampleEvidence *evidence) {
+  MVMCKrylovMatrixMeasurementSampleEvidence candidate;
+  MVMCScaledComplex guide;
+  size_t row;
+  size_t column;
+  MVMCKrylovStatus status;
+  if (evidence == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  invalidate_sample_evidence(MVMC_KRYLOV_STATUS_INVALID_ARGUMENT, evidence);
+  memset(&candidate, 0, sizeof(candidate));
+  candidate.status = MVMC_KRYLOV_STATUS_OK;
+  candidate.order = policy->order;
+  candidate.dimension = (size_t)policy->order;
+  candidate.upper_count = upper_count;
+  candidate.has_hamiltonian_adjoint =
+      hamiltonian_adjoint_upper != NULL ? 1 : 0;
+  status = mvmc_power_lanczos_scaled_weighted_norm(
+      values, policy->log_basis_scale, policy->guide_lambda,
+      value_count, policy->eta, &guide);
+  if (status == MVMC_KRYLOV_STATUS_OK &&
+      guide.state != MVMC_SCALED_COMPLEX_FINITE_NONZERO) {
+    status = MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK) candidate.guide = guide;
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = weighted_norm_ratio_evidence(
+        values, policy->log_basis_scale, policy->target_weight,
+        value_count, &guide, production_denominator,
+        &candidate.denominator);
+  }
+  for (row = 0; status == MVMC_KRYLOV_STATUS_OK &&
+                row < candidate.dimension; ++row) {
+    for (column = row; status == MVMC_KRYLOV_STATUS_OK &&
+                         column < candidate.dimension; ++column) {
+      size_t index = 0;
+      status = mvmc_krylov_streaming_upper_index(
+          candidate.dimension, row, column, &index);
+      if (status == MVMC_KRYLOV_STATUS_OK) {
+        status = mvmc_power_lanczos_guide_normalized_product_evidence(
+            values + row, policy->log_basis_scale[row],
+            values + column, policy->log_basis_scale[column], 1, &guide,
+            overlap_upper[index], candidate.overlap + index);
+      }
+      if (status == MVMC_KRYLOV_STATUS_OK) {
+        status = mvmc_power_lanczos_guide_normalized_product_evidence(
+            values + row, policy->log_basis_scale[row],
+            values + column + 1, policy->log_basis_scale[column], 1,
+            &guide, hamiltonian_upper[index],
+            candidate.hamiltonian + index);
+      }
+      if (status == MVMC_KRYLOV_STATUS_OK &&
+          hamiltonian_adjoint_upper != NULL) {
+        status = mvmc_power_lanczos_guide_normalized_product_evidence(
+            values + column, policy->log_basis_scale[column],
+            values + row + 1, policy->log_basis_scale[row], 1, &guide,
+            hamiltonian_adjoint_upper[index],
+            candidate.hamiltonian_adjoint + index);
+      }
+      if (status == MVMC_KRYLOV_STATUS_OK) {
+        status = mvmc_power_lanczos_guide_normalized_product_evidence(
+            values + row + 1, policy->log_basis_scale[row],
+            values + column + 1, policy->log_basis_scale[column], 1,
+            &guide, hamiltonian_squared_upper[index],
+            candidate.hamiltonian_squared + index);
+      }
+    }
+  }
+  if (status != MVMC_KRYLOV_STATUS_OK) {
+    invalidate_sample_evidence(status, evidence);
+    return status;
+  }
+  candidate.valid = 1;
+  *evidence = candidate;
+  return MVMC_KRYLOV_STATUS_OK;
+}
+
 MVMCKrylovStatus mvmc_krylov_matrix_measurement_dimension(
     int order, size_t *dimension, size_t *upper_count) {
   MVMCKrylovStatus status;
@@ -343,6 +459,20 @@ MVMCKrylovStatus mvmc_krylov_matrix_measurement_sample_with_adjoint(
     double complex *overlap_upper, double complex *hamiltonian_upper,
     double complex *hamiltonian_adjoint_upper,
     double complex *hamiltonian_squared_upper, size_t upper_count,
+    MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics) {
+  return mvmc_krylov_matrix_measurement_sample_with_adjoint_evidence(
+      policy, values, value_count, overlap_upper, hamiltonian_upper,
+      hamiltonian_adjoint_upper, hamiltonian_squared_upper, upper_count,
+      NULL, diagnostics);
+}
+
+MVMCKrylovStatus mvmc_krylov_matrix_measurement_sample_with_adjoint_evidence(
+    const MVMCKrylovMatrixMeasurementPolicy *policy,
+    const MVMCScaledComplex *values, size_t value_count,
+    double complex *overlap_upper, double complex *hamiltonian_upper,
+    double complex *hamiltonian_adjoint_upper,
+    double complex *hamiltonian_squared_upper, size_t upper_count,
+    MVMCKrylovMatrixMeasurementSampleEvidence *evidence,
     MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics) {
   DimensionlessValue dimensionless[MVMC_KRYLOV_MAX_ORDER + 1];
   MVMCKrylovMatrixMeasurementSampleDiagnostics candidate;
@@ -478,6 +608,18 @@ MVMCKrylovStatus mvmc_krylov_matrix_measurement_sample_with_adjoint(
     return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   }
 
+  if (evidence != NULL) {
+    status = compute_sample_evidence(
+        policy, values, (size_t)policy->order + 1,
+        overlap_upper, hamiltonian_upper, hamiltonian_adjoint_upper,
+        hamiltonian_squared_upper, upper_count, candidate.denominator,
+        evidence);
+    if (status != MVMC_KRYLOV_STATUS_OK) {
+      invalidate_sample_diagnostics(status, diagnostics);
+      return status;
+    }
+  }
+
   candidate.valid = 1;
   *diagnostics = candidate;
   return MVMC_KRYLOV_STATUS_OK;
@@ -568,6 +710,17 @@ MVMCKrylovStatus mvmc_krylov_matrix_measurement_accumulator_add_sample(
     const MVMCKrylovMatrixMeasurementPolicy *policy,
     const MVMCScaledComplex *values, size_t value_count,
     MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics) {
+  return mvmc_krylov_matrix_measurement_accumulator_add_sample_with_evidence(
+      accumulator, policy, values, value_count, NULL, diagnostics);
+}
+
+MVMCKrylovStatus
+mvmc_krylov_matrix_measurement_accumulator_add_sample_with_evidence(
+    MVMCKrylovMatrixMeasurementAccumulator *accumulator,
+    const MVMCKrylovMatrixMeasurementPolicy *policy,
+    const MVMCScaledComplex *values, size_t value_count,
+    MVMCKrylovMatrixMeasurementSampleEvidence *evidence,
+    MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics) {
   double complex overlap[MVMC_KRYLOV_MAX_ORDER *
                          (MVMC_KRYLOV_MAX_ORDER + 1) / 2];
   double complex hamiltonian[MVMC_KRYLOV_MAX_ORDER *
@@ -591,10 +744,11 @@ MVMCKrylovStatus mvmc_krylov_matrix_measurement_accumulator_add_sample(
            accumulator->sample_count)) {
     return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   }
-  status = mvmc_krylov_matrix_measurement_sample_with_adjoint(
+  status = mvmc_krylov_matrix_measurement_sample_with_adjoint_evidence(
       policy, values, value_count, overlap, hamiltonian,
       accumulator->has_hamiltonian_adjoint ? hamiltonian_adjoint : NULL,
-      hamiltonian_squared, accumulator->upper_count, &local_diagnostics);
+      hamiltonian_squared, accumulator->upper_count, evidence,
+      &local_diagnostics);
   if (status != MVMC_KRYLOV_STATUS_OK) {
     accumulator->status = status;
     if (diagnostics != NULL) *diagnostics = local_diagnostics;
@@ -843,6 +997,18 @@ MVMCKrylovStatus mvmc_krylov_matrix_measurement_block_accumulator_add_sample(
     const MVMCKrylovMatrixMeasurementPolicy *policy,
     const MVMCScaledComplex *values, size_t value_count,
     MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics) {
+  return
+      mvmc_krylov_matrix_measurement_block_accumulator_add_sample_with_evidence(
+          accumulator, policy, values, value_count, NULL, diagnostics);
+}
+
+MVMCKrylovStatus
+mvmc_krylov_matrix_measurement_block_accumulator_add_sample_with_evidence(
+    MVMCKrylovMatrixMeasurementBlockAccumulator *accumulator,
+    const MVMCKrylovMatrixMeasurementPolicy *policy,
+    const MVMCScaledComplex *values, size_t value_count,
+    MVMCKrylovMatrixMeasurementSampleEvidence *evidence,
+    MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics) {
   uint64_t capacity = 0;
   size_t block_index;
   MVMCKrylovStatus status;
@@ -867,9 +1033,9 @@ MVMCKrylovStatus mvmc_krylov_matrix_measurement_block_accumulator_add_sample(
     accumulator->status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
     return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
   }
-  status = mvmc_krylov_matrix_measurement_accumulator_add_sample(
+  status = mvmc_krylov_matrix_measurement_accumulator_add_sample_with_evidence(
       &accumulator->blocks[block_index], policy, values, value_count,
-      diagnostics);
+      evidence, diagnostics);
   if (status != MVMC_KRYLOV_STATUS_OK) {
     accumulator->status = status;
     return status;

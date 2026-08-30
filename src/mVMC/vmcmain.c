@@ -29,6 +29,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "vmcmain.h"
 #include "physcal_lanczos.h"
 #include "physcal_lanczos2.h"
+#include "power_lanczos_corrected_dispatch.h"
+#include "power_lanczos_json_writer.h"
 
 // #define _DEBUG
 // #define _DEBUG_DUMP_SROPTO_STORE
@@ -42,6 +44,279 @@ void printUsageError();
 void printOption();
 void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MPI_Comm *comm_child1);
 void StdFace_main(char *fname);
+
+static uint64_t PowerLanczosHashBytes(uint64_t hash, const char *value) {
+  size_t index;
+  if (value == NULL) return hash;
+  for (index = 0; value[index] != '\0'; ++index) {
+    hash ^= (unsigned char)value[index];
+    hash *= UINT64_C(1099511628211);
+  }
+  return hash;
+}
+
+static int PowerLanczosParseSeed(const char *value, uint64_t *seed) {
+  char *end = NULL;
+  unsigned long long parsed;
+  if (value == NULL || seed == NULL || strlen(value) != 18 ||
+      value[0] != '0' || value[1] != 'x') {
+    return 0;
+  }
+  errno = 0;
+  parsed = strtoull(value + 2, &end, 16);
+  if (errno != 0 || end == NULL || *end != '\0' || parsed == 0ULL) {
+    return 0;
+  }
+  *seed = (uint64_t)parsed;
+  return 1;
+}
+
+static int PowerLanczosHexIdentityValid(const char *value, size_t length) {
+  size_t index;
+  if (value == NULL || strlen(value) != length) return 0;
+  for (index = 0; index < length; ++index) {
+    const unsigned char c = (unsigned char)value[index];
+    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return 0;
+  }
+  return 1;
+}
+
+static int PowerLanczosSourceIdentityValid(const char *value) {
+  const size_t length = value == NULL ? 0 : strlen(value);
+  return (length == 40 || length == 64) &&
+         PowerLanczosHexIdentityValid(value, length);
+}
+
+static int PowerLanczosCorrectedIdentityEnvironmentValid(void) {
+  uint64_t seed = 0;
+  const char *environmentId =
+      getenv("MVMC_POWER_LANCZOS_ENVIRONMENT_ID");
+  const char *seedId = getenv("MVMC_POWER_LANCZOS_SEED_ID");
+  return PowerLanczosParseSeed(
+             getenv("MVMC_POWER_LANCZOS_BASE_SEED_HEX"), &seed) &&
+         PowerLanczosSourceIdentityValid(
+             getenv("MVMC_POWER_LANCZOS_SOURCE_COMMIT")) &&
+         PowerLanczosHexIdentityValid(
+             getenv("MVMC_POWER_LANCZOS_INPUT_SHA256"), 64) &&
+         PowerLanczosHexIdentityValid(
+             getenv("MVMC_POWER_LANCZOS_BINARY_SHA256"), 64) &&
+         environmentId != NULL && environmentId[0] != '\0' &&
+         seedId != NULL && seedId[0] != '\0' &&
+         mvmc_power_lanczos_json_public_string_valid(environmentId) &&
+         mvmc_power_lanczos_json_public_string_valid(seedId);
+}
+
+static int PowerLanczosOutputLocation(
+    int outputIndex, char directory[D_FileNameMax],
+    char basename[MVMC_POWER_LANCZOS_OUTPUT_BASENAME_CAPACITY]) {
+  const char *separator = strrchr(CDataFileHead, '/');
+  const char *head = separator == NULL ? CDataFileHead : separator + 1;
+  size_t directoryLength = separator == NULL
+                               ? 1
+                               : (size_t)(separator - CDataFileHead);
+  int written;
+  if (head[0] == '\0' || outputIndex < 0 ||
+      directoryLength >= D_FileNameMax) {
+    return 0;
+  }
+  if (separator == NULL) {
+    directory[0] = '.';
+    directory[1] = '\0';
+  } else if (directoryLength == 0) {
+    directory[0] = '/';
+    directory[1] = '\0';
+  } else {
+    memcpy(directory, CDataFileHead, directoryLength);
+    directory[directoryLength] = '\0';
+  }
+  written = snprintf(basename,
+                     MVMC_POWER_LANCZOS_OUTPUT_BASENAME_CAPACITY,
+                     "%s_pl_stabilization_%03d.json", head, outputIndex);
+  return written > 0 &&
+         written < MVMC_POWER_LANCZOS_OUTPUT_BASENAME_CAPACITY &&
+         mvmc_power_lanczos_output_basename_valid(basename);
+}
+
+static int RunPowerLanczosCorrected(
+    int outputIndex, MPI_Comm commParent, MPI_Comm commChild) {
+  MVMCPowerLanczosClassicView view;
+  MVMCPowerLanczosCorrectedDispatchInput input;
+  MVMCPowerLanczosCorrectedDispatchResult result;
+  MVMCPowerLanczosStabilizationOutputIdentity identity;
+  const char *sourceCommit = getenv("MVMC_POWER_LANCZOS_SOURCE_COMMIT");
+  const char *inputSha256 = getenv("MVMC_POWER_LANCZOS_INPUT_SHA256");
+  const char *binarySha256 = getenv("MVMC_POWER_LANCZOS_BINARY_SHA256");
+  const char *environmentId = getenv("MVMC_POWER_LANCZOS_ENVIRONMENT_ID");
+  const char *seedId = getenv("MVMC_POWER_LANCZOS_SEED_ID");
+  const char *seedHex = getenv("MVMC_POWER_LANCZOS_BASE_SEED_HEX");
+  char runId[64];
+  char outputDirectory[D_FileNameMax];
+  char outputBasename[MVMC_POWER_LANCZOS_OUTPUT_BASENAME_CAPACITY];
+  uint64_t baseSeed = 0;
+  uint64_t generation = UINT64_C(1469598103934665603);
+  int worldRank = 0;
+  int worldSize = 1;
+  int chainRank = 0;
+  int chainSize = 1;
+  int localValid = 1;
+  int globalValid = 1;
+  int runIdLength;
+  MVMCKrylovStatus status;
+  MPI_Comm_rank(commParent, &worldRank);
+  MPI_Comm_size(commParent, &worldSize);
+  MPI_Comm_rank(commChild, &chainRank);
+  MPI_Comm_size(commChild, &chainSize);
+  if (!PowerLanczosParseSeed(seedHex, &baseSeed) ||
+      !PowerLanczosSourceIdentityValid(sourceCommit) ||
+      !PowerLanczosHexIdentityValid(inputSha256, 64) ||
+      !PowerLanczosHexIdentityValid(binarySha256, 64) ||
+      environmentId == NULL || environmentId[0] == '\0' ||
+      seedId == NULL || seedId[0] == '\0' ||
+      !mvmc_power_lanczos_json_public_string_valid(environmentId) ||
+      !mvmc_power_lanczos_json_public_string_valid(seedId)) {
+    localValid = 0;
+  }
+  if (worldRank == 0) {
+    runIdLength = snprintf(runId, sizeof(runId), "pl-%03d", outputIndex);
+    if (runIdLength <= 0 || (size_t)runIdLength >= sizeof(runId) ||
+        !PowerLanczosOutputLocation(outputIndex, outputDirectory,
+                                    outputBasename)) {
+      localValid = 0;
+    }
+  }
+#ifdef _mpi_use
+  MPI_Allreduce(&localValid, &globalValid, 1, MPI_INT, MPI_MIN, commParent);
+#else
+  globalValid = localValid;
+#endif
+  if (!globalValid) {
+    if (worldRank == 0) {
+      fprintf(stderr,
+              "P6 CORRECTED FAILED: exact source/input/binary/environment/"
+              "seed identity, terminal state, or output basename is invalid.\n");
+    }
+    return 1;
+  }
+  memset(&view, 0, sizeof(view));
+  view.site_count = Nsite;
+  view.up_electron_count = Ne;
+  view.down_electron_count = Ne;
+  view.pure_spin = NExUpdatePath == 2;
+  view.arithmetic = AllComplexFlag == 0
+                        ? MVMC_POWER_LANCZOS_CLASSIC_REAL
+                        : MVMC_POWER_LANCZOS_CLASSIC_COMPLEX;
+  view.transfer_count = NTransfer;
+  view.transfer_indices = worldRank == 0 ? Transfer : NULL;
+  view.transfer_parameters = worldRank == 0 ? ParaTransfer : NULL;
+  view.coulomb_intra_count = NCoulombIntra;
+  view.coulomb_intra_indices = worldRank == 0 ? CoulombIntra : NULL;
+  view.coulomb_intra_parameters = worldRank == 0 ? ParaCoulombIntra : NULL;
+  view.coulomb_inter_count = NCoulombInter;
+  view.coulomb_inter_indices = worldRank == 0 ? CoulombInter : NULL;
+  view.coulomb_inter_parameters =
+      worldRank == 0 ? ParaCoulombInter : NULL;
+  view.hund_count = NHundCoupling;
+  view.hund_indices = worldRank == 0 ? HundCoupling : NULL;
+  view.hund_parameters = worldRank == 0 ? ParaHundCoupling : NULL;
+  view.exchange_count = NExchangeCoupling;
+  view.exchange_indices = worldRank == 0 ? ExchangeCoupling : NULL;
+  view.exchange_parameters =
+      worldRank == 0 ? ParaExchangeCoupling : NULL;
+  view.pair_hopping_count = NPairHopping;
+  view.inter_all_count = NInterAll;
+  view.nbody_inter_all_count = NNBodyInterAll;
+  view.nbody_g_count = NNBodyG;
+  view.qp_total = NQPFull;
+  view.qp_start = NQPFull * chainRank / chainSize;
+  view.qp_end = NQPFull * (chainRank + 1) / chainSize;
+  view.scaled_pivot_tolerance = 0.0;
+  view.nproj = NProj;
+  view.ngutzwiller_idx = NGutzwillerIdx;
+  view.njastrow_idx = NJastrowIdx;
+  view.nspin_jastrow_idx = NSpinJastrowIdx;
+  view.ndoublon_holon_2site_idx = NDoublonHolon2siteIdx;
+  view.ndoublon_holon_4site_idx = NDoublonHolon4siteIdx;
+  view.gutzwiller_idx = GutzwillerIdx;
+  view.jastrow_idx = JastrowIdx;
+  view.spin_jastrow_idx = SpinJastrowIdx;
+  view.doublon_holon_2site_idx = DoublonHolon2siteIdx;
+  view.doublon_holon_4site_idx = DoublonHolon4siteIdx;
+  view.projection_parameters = Proj;
+  view.qp_weights = QPFullWeight;
+  view.slater_real = AllComplexFlag == 0 ? SlaterElm_real : NULL;
+  view.slater_complex = AllComplexFlag == 0 ? NULL : SlaterElm;
+  if (FlagRBM != 0) {
+    view.unsupported_amplitude_features |=
+        MVMC_CLASSIC_KRYLOV_UNSUPPORTED_RBM;
+  }
+  if (NProjBF != 0) {
+    view.unsupported_amplitude_features |=
+        MVMC_CLASSIC_KRYLOV_UNSUPPORTED_BACKFLOW;
+  }
+  if (iFlgOrbitalGeneral != 0) {
+    view.unsupported_amplitude_features |=
+        MVMC_CLASSIC_KRYLOV_UNSUPPORTED_GENERAL_ORBITAL;
+  }
+#ifdef _pf_block_update
+  view.unsupported_amplitude_features |=
+      MVMC_CLASSIC_KRYLOV_UNSUPPORTED_BLOCK_UPDATE;
+#endif
+  generation = PowerLanczosHashBytes(generation, sourceCommit);
+  generation = PowerLanczosHashBytes(generation, inputSha256);
+  generation ^= baseSeed;
+  generation *= UINT64_C(1099511628211);
+  generation ^= (uint64_t)(unsigned)outputIndex;
+  if (generation == 0) generation = UINT64_C(1);
+  identity.run_id = runId;
+  identity.source_commit = sourceCommit;
+  identity.input_sha256 = inputSha256;
+  identity.binary_sha256 = binarySha256;
+  identity.environment_id = environmentId;
+  identity.seed_id = seedId;
+  memset(&input, 0, sizeof(input));
+  input.classic_view = &view;
+  input.world_communicator = commParent;
+  input.chain_communicator = commChild;
+  input.power_step = NLanczosStep;
+  input.resolved_base_seed = baseSeed;
+  input.run_index = (uint64_t)(unsigned)outputIndex;
+  input.mpi_world_rank = (size_t)worldRank;
+  input.mpi_world_size = (size_t)worldSize;
+  input.split_size = (size_t)NSplitSize;
+  input.base_generation = generation;
+  input.bootstrap_mode =
+      MVMC_POWER_LANCZOS_CORRECTED_BOOTSTRAP_UNIFORM_SECTOR;
+  input.controls.coefficient_warm_up = (size_t)NLanczosCoeffWarmUp;
+  input.controls.coefficient_sample_count = (size_t)NLanczosCoeffSample;
+  input.controls.coefficient_interval = (size_t)NLanczosCoeffInterval;
+  input.controls.final_warm_up = (size_t)NLanczosFinalWarmUp;
+  input.controls.final_sample_count = (size_t)NLanczosFinalSample;
+  input.controls.final_interval = (size_t)NLanczosFinalInterval;
+  input.root_identity = worldRank == 0 ? &identity : NULL;
+  input.root_output_directory =
+      worldRank == 0 ? outputDirectory : NULL;
+  input.root_output_basename = worldRank == 0 ? outputBasename : NULL;
+  status = mvmc_power_lanczos_corrected_dispatch_run(&input, &result);
+  if (worldRank == 0) {
+    if (status == MVMC_KRYLOV_STATUS_OK) {
+      fprintf(stdout,
+              "P6 corrected %s: E=%.17g +/- %.6g variance=%.17g +/- "
+              "%.6g artifact=%s sha256=%s\n",
+              mvmc_power_lanczos_stabilization_decision_string(
+                  result.decision),
+              result.energy, result.energy_standard_error, result.variance,
+              result.variance_standard_error, outputBasename,
+              result.output_sha256);
+    } else {
+      fprintf(stderr, "P6 CORRECTED FAILED: %s\n",
+              mvmc_krylov_status_string(status));
+    }
+  }
+  return status == MVMC_KRYLOV_STATUS_OK &&
+                 result.decision == MVMC_POWER_LANCZOS_STABILIZATION_PASS
+             ? 0
+             : 1;
+}
 
 /*main program*/
 int main(int argc, char* argv[])
@@ -218,6 +493,24 @@ int main(int argc, char* argv[])
   if(rank0==0) fprintf(stdout,"End  : Read *def files.\n");
   StopTimer(11);
 
+  if (NLanczosMode > 0 && NLanczosEstimatorMode == 0) {
+    const int localIdentityValid =
+        PowerLanczosCorrectedIdentityEnvironmentValid();
+    int globalIdentityValid = 0;
+    MPI_Allreduce(&localIdentityValid, &globalIdentityValid, 1, MPI_INT,
+                  MPI_MIN, comm0);
+    if (!globalIdentityValid) {
+      if (rank0 == 0) {
+        fprintf(stderr,
+                "P6 INPUT REJECTED: corrected execution requires exact "
+                "source/input/binary/environment/seed identity variables.\n");
+      }
+      MPI_Comm_free(&comm0);
+      MPI_Finalize();
+      return MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE;
+    }
+  }
+
   StartTimer(12);
   SetMemoryDef();
   StopTimer(12);
@@ -305,7 +598,7 @@ int main(int argc, char* argv[])
     StartTimer(2);
     /*-- VMC Physical Quantity Calculation --*/
     if(rank0==0) fprintf(stdout,"Start: Calculate VMC physical quantities.\n");
-    VMCPhysCal(comm0, comm1, comm2);
+    info = VMCPhysCal(comm0, comm1, comm2);
     if(rank0==0) fprintf(stdout,"End  : Calculate VMC physical quantities.\n");
     StopTimer(2);
   } else {
@@ -553,6 +846,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 /*-- VMC Physical Quantity Calculation --*/
 int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2) {
   int ismp, tmp_i;
+  int correctedInfo;
   int rank;
   MPI_Comm_rank(comm_parent, &rank);
 
@@ -566,11 +860,32 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   StopTimer(20);
   if(rank==0) fprintf(stdout, "End  : UpdateSlaterElm.\n");
 
+  /*
+   * The corrected real-arithmetic route consumes SlaterElm_real directly.
+   * The classic sampler normally fills it below, but corrected dispatch
+   * intentionally bypasses that sampler and therefore must synchronize the
+   * real view before entering the production bridge.
+   */
+  if (NLanczosMode == 1 && NLanczosEstimatorMode == 0 &&
+      AllComplexFlag == 0) {
+#pragma omp parallel for default(shared) private(tmp_i)
+    for (tmp_i = 0; tmp_i < NQPFull * (2 * Nsite) * (2 * Nsite); ++tmp_i) {
+      SlaterElm_real[tmp_i] = creal(SlaterElm[tmp_i]);
+    }
+  }
+
   if(rank==0) fprintf(stdout, "Start: Sampling.\n");
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
     if(rank==0) OutputTime(ismp);
     FlushFile(0,rank);
     InitFilePhysCal(ismp, rank);
+    if (NLanczosMode == 1 && NLanczosEstimatorMode == 0) {
+      correctedInfo = RunPowerLanczosCorrected(
+          ismp + NDataIdxStart, comm_parent, comm_child1);
+      CloseFilePhysCal(rank);
+      if (correctedInfo != 0) return correctedInfo;
+      continue;
+    }
     StartTimer(3);
     if(NProjBF ==0) {
       //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){//real & sz=0
@@ -735,7 +1050,7 @@ void outputData() {
       fprintf(FileNBodyG, "\n");
     }
 
-    if (NLanczosMode > 0) {
+    if (NLanczosMode > 0 && NLanczosEstimatorMode == 1) {
       if (NLanczosStep == 1) {
       if (AllComplexFlag == 0) { //real
         lanczosStatus = PhysCalLanczos_real(

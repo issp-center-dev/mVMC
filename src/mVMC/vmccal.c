@@ -317,6 +317,7 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
         strcmp(auditValue, "0") != 0;
     if(lanczos2CalHCAGuardAudit &&
        (parentSize != 1 || NVMCCalMode != 1 || NLanczosMode <= 0 ||
+        NLanczosEstimatorMode != 1 ||
         NLanczosStep != 2 || NQPFull <= 1)) {
       fprintf(stderr,
               "Error: Lanczos2 calHCA guard audit requires single-rank "
@@ -331,14 +332,16 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     Lanczos2CalHCAGuardAuditComplexEnabled = lanczos2CalHCAGuardAudit;
   }
 #endif
-  if(NVMCCalMode == 1 && NLanczosMode > 0 && NLanczosStep == 2 &&
+  if(NVMCCalMode == 1 && NLanczosMode > 0 &&
+     NLanczosEstimatorMode == 1 && NLanczosStep == 2 &&
      Lanczos2StateSnapshotInit(&lanczos2StateSnapshot) != 0) {
     fprintf(stderr,
             "Error: failed to allocate Lanczos2 state snapshot on rank %d.\n",
             parentRank);
     MPI_Abort(comm_parent, EXIT_FAILURE);
   }
-  if(NVMCCalMode == 1 && NLanczosMode > 0 && NLanczosStep == 2 &&
+  if(NVMCCalMode == 1 && NLanczosMode > 0 &&
+     NLanczosEstimatorMode == 1 && NLanczosStep == 2 &&
      NExUpdatePath == 2 &&
      Lanczos2HeisenbergScratchInit(
          &lanczos2HeisenbergScratch, AllComplexFlag != 0) != 0) {
@@ -351,6 +354,7 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
 #ifdef MVMC_ENABLE_FAULT_INJECTION
   if(lanczos2HeisenbergScratch.auditEnabled) {
     if(parentSize != 1 || NVMCCalMode != 1 || NLanczosMode != 1 ||
+       NLanczosEstimatorMode != 1 ||
        NLanczosStep != 2 || NExUpdatePath != 2 || NQPFull != 1 ||
        NExchangeCoupling <= 0) {
       fprintf(stderr,
@@ -367,7 +371,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   }
 #endif
 
-  if(NVMCCalMode == 1 && NLanczosMode > 0) {
+  if(NVMCCalMode == 1 && NLanczosMode > 0 &&
+     NLanczosEstimatorMode == 1) {
 #ifdef MVMC_ENABLE_FAULT_INJECTION
     const char *dumpValue = getenv("MVMC_LANCZOS_ORACLE_DUMP");
     if(dumpValue != NULL && dumpValue[0] != '\0' && strcmp(dumpValue, "0") != 0) {
@@ -561,7 +566,7 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       CalculateGreenFunc(w,ip,eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
       StopTimer(42);
 
-      if(NLanczosMode>0){
+      if(NLanczosMode>0 && NLanczosEstimatorMode==1){
 #ifdef _DEBUG_VMCCAL
   fprintf(stdout, "Debug: Start: Lanczos\n");
 #endif
@@ -886,7 +891,7 @@ void clearPhysQuantity(){
 #pragma omp parallel for default(shared) private(i)
     for(i=0;i<NNBodyG;i++) vec[i] = 0.0+0.0*I;
 
-    if(NLanczosMode>0 && NLanczosStep==1) {
+    if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==1) {
       /* QQQQ, LSLQ */
         //[TODO]: Check the value n
       n = NLSHam*NLSHam*NLSHam*NLSHam + NLSHam*NLSHam;
@@ -915,7 +920,7 @@ void clearPhysQuantity(){
         for(i=0;i<n;i++) vec_real[i] = 0.0;
       }
     }
-    if(NLanczosMode>0 && NLanczosStep==2) {
+    if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==2) {
       if(AllComplexFlag==0) {
         for(i=0;i<LANCZOS2_MOMENT_COUNT+LANCZOS2_POWER_COUNT;i++) {
           LS2Moment_real[i] = 0.0;
@@ -937,7 +942,7 @@ void clearPhysQuantity(){
       }
       LS2MomentBasisShift = 0.0;
     }
-    if(NLanczosMode>0) {
+    if(NLanczosMode>0 && NLanczosEstimatorMode==1) {
       for(i=0;
           i<PowerLanczosSupportSampleCapacity *
                 POWER_LANCZOS_SUPPORT_SAMPLE_WIDTH;

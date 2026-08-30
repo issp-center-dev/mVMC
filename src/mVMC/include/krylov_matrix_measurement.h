@@ -15,6 +15,10 @@ the Free Software Foundation, either version 3 of the License, or
 
 #include "absolute_pfaffian.h"
 #include "krylov_streaming_statistics.h"
+#include "power_lanczos_numeric_evidence.h"
+
+#define MVMC_KRYLOV_MATRIX_MAX_UPPER_COUNT                                  \
+  (MVMC_KRYLOV_MAX_ORDER * (MVMC_KRYLOV_MAX_ORDER + 1) / 2)
 
 typedef enum {
   MVMC_KRYLOV_MATRIX_OVERLAP = 0,
@@ -113,6 +117,25 @@ typedef struct {
   MVMCKrylovMatrixMeasurementAccumulator *blocks;
 } MVMCKrylovMatrixMeasurementBlockAccumulator;
 
+typedef struct {
+  int valid;
+  MVMCKrylovStatus status;
+  int order;
+  size_t dimension;
+  size_t upper_count;
+  int has_hamiltonian_adjoint;
+  MVMCScaledComplex guide;
+  MVMCPowerLanczosNumericEvidence denominator;
+  MVMCPowerLanczosNumericEvidence
+      overlap[MVMC_KRYLOV_MATRIX_MAX_UPPER_COUNT];
+  MVMCPowerLanczosNumericEvidence
+      hamiltonian[MVMC_KRYLOV_MATRIX_MAX_UPPER_COUNT];
+  MVMCPowerLanczosNumericEvidence
+      hamiltonian_adjoint[MVMC_KRYLOV_MATRIX_MAX_UPPER_COUNT];
+  MVMCPowerLanczosNumericEvidence
+      hamiltonian_squared[MVMC_KRYLOV_MATRIX_MAX_UPPER_COUNT];
+} MVMCKrylovMatrixMeasurementSampleEvidence;
+
 MVMCKrylovStatus mvmc_krylov_matrix_measurement_dimension(
     int order, size_t *dimension, size_t *upper_count);
 
@@ -129,6 +152,15 @@ MVMCKrylovStatus mvmc_krylov_matrix_measurement_sample_with_adjoint(
     double complex *overlap_upper, double complex *hamiltonian_upper,
     double complex *hamiltonian_adjoint_upper,
     double complex *hamiltonian_squared_upper, size_t upper_count,
+    MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics);
+
+MVMCKrylovStatus mvmc_krylov_matrix_measurement_sample_with_adjoint_evidence(
+    const MVMCKrylovMatrixMeasurementPolicy *policy,
+    const MVMCScaledComplex *values, size_t value_count,
+    double complex *overlap_upper, double complex *hamiltonian_upper,
+    double complex *hamiltonian_adjoint_upper,
+    double complex *hamiltonian_squared_upper, size_t upper_count,
+    MVMCKrylovMatrixMeasurementSampleEvidence *evidence,
     MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics);
 
 MVMCKrylovStatus mvmc_krylov_matrix_measurement_accumulator_init(
@@ -148,6 +180,14 @@ MVMCKrylovStatus mvmc_krylov_matrix_measurement_accumulator_add_sample(
     MVMCKrylovMatrixMeasurementAccumulator *accumulator,
     const MVMCKrylovMatrixMeasurementPolicy *policy,
     const MVMCScaledComplex *values, size_t value_count,
+    MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics);
+
+MVMCKrylovStatus
+mvmc_krylov_matrix_measurement_accumulator_add_sample_with_evidence(
+    MVMCKrylovMatrixMeasurementAccumulator *accumulator,
+    const MVMCKrylovMatrixMeasurementPolicy *policy,
+    const MVMCScaledComplex *values, size_t value_count,
+    MVMCKrylovMatrixMeasurementSampleEvidence *evidence,
     MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics);
 
 MVMCKrylovStatus mvmc_krylov_matrix_measurement_accumulator_mean(
@@ -175,6 +215,14 @@ MVMCKrylovStatus mvmc_krylov_matrix_measurement_block_accumulator_add_sample(
     MVMCKrylovMatrixMeasurementBlockAccumulator *accumulator,
     const MVMCKrylovMatrixMeasurementPolicy *policy,
     const MVMCScaledComplex *values, size_t value_count,
+    MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics);
+
+MVMCKrylovStatus
+mvmc_krylov_matrix_measurement_block_accumulator_add_sample_with_evidence(
+    MVMCKrylovMatrixMeasurementBlockAccumulator *accumulator,
+    const MVMCKrylovMatrixMeasurementPolicy *policy,
+    const MVMCScaledComplex *values, size_t value_count,
+    MVMCKrylovMatrixMeasurementSampleEvidence *evidence,
     MVMCKrylovMatrixMeasurementSampleDiagnostics *diagnostics);
 
 MVMCKrylovStatus mvmc_krylov_matrix_measurement_block_accumulator_extract_blocks(

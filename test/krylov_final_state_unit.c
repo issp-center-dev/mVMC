@@ -183,14 +183,16 @@ static void test_policy_contract(void) {
   MVMCKrylovFinalStatePolicy exact;
   MVMCKrylovFinalStatePolicy synthetic;
   MVMCKrylovFinalStatePolicy perturbed;
+  MVMCKrylovFinalStatePolicy production_noisy;
   MVMCKrylovFinalStatePolicy invalid;
 
   CHECK(mvmc_krylov_final_state_policy_create(
             1, MVMC_KRYLOV_FINAL_COEFFICIENT_EXACT,
             UINT64_C(0x4558414354503101), p1, 2, &exact) ==
             MVMC_KRYLOV_STATUS_OK &&
-            mvmc_krylov_final_state_policy_hash(&exact) != 0,
-        "exact policy creation");
+            mvmc_krylov_final_state_policy_hash(&exact) ==
+                UINT64_C(0x80f725bd1ff18268),
+        "exact policy creation and accepted v2 hash compatibility");
   CHECK(mvmc_krylov_final_state_policy_create(
             2, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC,
             UINT64_C(0x53594e5448503201), p2, 3, &synthetic) ==
@@ -204,6 +206,13 @@ static void test_policy_contract(void) {
             perturbed.policy_hash != exact.policy_hash &&
             perturbed.policy_hash != synthetic.policy_hash,
         "perturbed Testing-only policy creation");
+  CHECK(mvmc_krylov_final_state_policy_create(
+            1, MVMC_KRYLOV_FINAL_COEFFICIENT_PRODUCTION_NOISY,
+            UINT64_C(0x50524f444e4f4953), p1, 2,
+            &production_noisy) == MVMC_KRYLOV_STATUS_OK &&
+            production_noisy.policy_hash != exact.policy_hash &&
+            production_noisy.policy_hash != perturbed.policy_hash,
+        "production noisy policy creation");
   CHECK(mvmc_krylov_final_state_policy_create(
             -1, MVMC_KRYLOV_FINAL_COEFFICIENT_EXACT, 1, p1, 2,
             &invalid) == MVMC_KRYLOV_STATUS_INVALID_ARGUMENT,
@@ -243,6 +252,164 @@ static void test_policy_contract(void) {
   exact.policy_hash ^= UINT64_C(1);
   CHECK(mvmc_krylov_final_state_policy_hash(&exact) == 0,
         "corrupt policy hash rejected");
+}
+
+static void test_scaled_basis_policy_contract(void) {
+  const double complex c01_coefficient[] = {
+      2.37145166384, -2.13934836109};
+  const double c01_log_scale[] = {
+      -2.27460731431, -4.51375622420};
+  const double complex p2_coefficient[] = {
+      3.0 + 4.0 * I, 0.0, -1.0 + 2.0 * I};
+  const double p2_log_scale[] = {-3.0, 7.0, 2.0};
+  const double shifted_log_scale[] = {497.0, 507.0, 502.0};
+  const double complex all_zero[] = {0.0, 0.0};
+  const double underflow_log_scale[] = {0.0, -1000.0};
+  const double invalid_log_scale[] = {0.0, NAN};
+  const double complex unity[] = {1.0, 1.0};
+  const double complex raw_values[] = {
+      1.0 + 0.2 * I, -0.5 + 0.3 * I, 0.7 - 0.1 * I};
+  MVMCKrylovFinalStatePolicy c01_policy;
+  MVMCKrylovFinalStatePolicy p2_policy;
+  MVMCKrylovFinalStatePolicy shifted_policy;
+  MVMCKrylovFinalStatePolicy untransformed_policy;
+  MVMCKrylovFinalStatePolicy invalid;
+  MVMCKrylovFinalStateEvaluation evaluation;
+  const MVMCKrylovBoundedResult krylov = raw_krylov_result(raw_values, 2);
+  const double complex expected_c01_ratio =
+      c01_coefficient[1] / c01_coefficient[0] *
+      exp(c01_log_scale[1] - c01_log_scale[0]);
+  const double complex expected_p2_ratio =
+      p2_coefficient[0] / p2_coefficient[2] *
+      exp(p2_log_scale[0] - p2_log_scale[2]);
+  const double complex expected_local_energy =
+      (c01_coefficient[0] * exp(c01_log_scale[0]) * raw_values[1] +
+       c01_coefficient[1] * exp(c01_log_scale[1]) * raw_values[2]) /
+      (c01_coefficient[0] * exp(c01_log_scale[0]) * raw_values[0] +
+       c01_coefficient[1] * exp(c01_log_scale[1]) * raw_values[1]);
+  double complex local_energy = NAN + I * NAN;
+  double complex untransformed_local_energy = NAN + I * NAN;
+  double transformed_matrix_energy = NAN;
+  double untransformed_matrix_energy = NAN;
+
+  CHECK(mvmc_krylov_final_state_policy_create_scaled_basis(
+            1, MVMC_KRYLOV_FINAL_COEFFICIENT_PRODUCTION_NOISY,
+            UINT64_C(0x4330315343414c45), c01_coefficient,
+            c01_log_scale, 2, &c01_policy) == MVMC_KRYLOV_STATUS_OK &&
+            close_complex(c01_policy.coefficient[1] /
+                              c01_policy.coefficient[0],
+                          expected_c01_ratio, 2.0e-15) &&
+            close_complex(c01_policy.coefficient[1] /
+                              c01_policy.coefficient[0],
+                          -0.0961207644, 2.0e-10),
+        "C01 scaled-to-raw coefficient ratio actual=(%.17g,%.17g)",
+        creal(c01_policy.coefficient[1] / c01_policy.coefficient[0]),
+        cimag(c01_policy.coefficient[1] / c01_policy.coefficient[0]));
+  CHECK(mvmc_krylov_final_state_evaluate(
+            &c01_policy, &krylov, &evaluation) ==
+                MVMC_KRYLOV_STATUS_OK &&
+            mvmc_krylov_final_state_local_energy_export(
+                &evaluation, &local_energy) == MVMC_SCALED_EXPORT_OK &&
+            close_complex(local_energy, expected_local_energy, 5.0e-15),
+        "scaled p1 policy direct local energy actual=(%.17g,%.17g) "
+        "expected=(%.17g,%.17g)",
+        creal(local_energy), cimag(local_energy),
+        creal(expected_local_energy), cimag(expected_local_energy));
+  CHECK(mvmc_krylov_final_state_policy_create(
+            1, MVMC_KRYLOV_FINAL_COEFFICIENT_PRODUCTION_NOISY,
+            UINT64_C(0x433031554e534341), c01_coefficient, 2,
+            &untransformed_policy) == MVMC_KRYLOV_STATUS_OK &&
+            mvmc_krylov_final_state_evaluate(
+                &untransformed_policy, &krylov, &evaluation) ==
+                MVMC_KRYLOV_STATUS_OK &&
+            mvmc_krylov_final_state_local_energy_export(
+                &evaluation, &untransformed_local_energy) ==
+                MVMC_SCALED_EXPORT_OK &&
+            cabs(untransformed_local_energy - expected_local_energy) > 0.1,
+        "untransformed C01 negative control unexpectedly matched");
+  {
+    const double overlap[2][2] = {
+        {2.0312347412109375, 11.218908309936523},
+        {11.218908309936523, 80.46485376358032}};
+    const double hamiltonian[2][2] = {
+        {11.218908309936523, 80.46485376358032},
+        {80.46485376358032, 703.9974483922124}};
+    double complex transformed_norm = 0.0;
+    double complex transformed_numerator = 0.0;
+    double complex untransformed_norm = 0.0;
+    double complex untransformed_numerator = 0.0;
+    int row;
+    int column;
+    for (row = 0; row < 2; ++row) {
+      for (column = 0; column < 2; ++column) {
+        transformed_norm +=
+            conj(c01_policy.coefficient[row]) * overlap[row][column] *
+            c01_policy.coefficient[column];
+        transformed_numerator +=
+            conj(c01_policy.coefficient[row]) * hamiltonian[row][column] *
+            c01_policy.coefficient[column];
+        untransformed_norm +=
+            conj(c01_coefficient[row]) * overlap[row][column] *
+            c01_coefficient[column];
+        untransformed_numerator +=
+            conj(c01_coefficient[row]) * hamiltonian[row][column] *
+            c01_coefficient[column];
+      }
+    }
+    transformed_matrix_energy =
+        creal(transformed_numerator / transformed_norm);
+    untransformed_matrix_energy =
+        creal(untransformed_numerator / untransformed_norm);
+  }
+  CHECK(close_double(transformed_matrix_energy, 3.6486525732, 2.0e-10) &&
+            close_double(untransformed_matrix_energy, 9.2857020644,
+                         2.0e-10) &&
+            fabs(transformed_matrix_energy - 3.6486259257) < 3.0e-5,
+        "C01 exact raw-matrix energy transform=%.17g negative=%.17g",
+        transformed_matrix_energy, untransformed_matrix_energy);
+
+  CHECK(mvmc_krylov_final_state_policy_create_scaled_basis(
+            2, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC,
+            UINT64_C(0x5032434f4d504c58), p2_coefficient,
+            p2_log_scale, 3, &p2_policy) == MVMC_KRYLOV_STATUS_OK &&
+            p2_policy.coefficient[1] == 0.0 &&
+            close_complex(p2_policy.coefficient[0] /
+                              p2_policy.coefficient[2],
+                          expected_p2_ratio, 3.0e-15) &&
+            close_double(cabs(p2_policy.coefficient[2]), 1.0, 2.0e-15),
+        "complex p2 scaled-to-raw conversion");
+  CHECK(mvmc_krylov_final_state_policy_create_scaled_basis(
+            2, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC,
+            UINT64_C(0x5032534849465445), p2_coefficient,
+            shifted_log_scale, 3, &shifted_policy) ==
+                MVMC_KRYLOV_STATUS_OK &&
+            close_complex(shifted_policy.coefficient[0] /
+                              shifted_policy.coefficient[2],
+                          p2_policy.coefficient[0] /
+                              p2_policy.coefficient[2],
+                          5.0e-14) &&
+            shifted_policy.coefficient[1] == 0.0,
+        "common log-scale shift changed complex p2 projective state");
+
+  memset(&invalid, 0xff, sizeof(invalid));
+  CHECK(mvmc_krylov_final_state_policy_create_scaled_basis(
+            1, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC, 1,
+            all_zero, c01_log_scale, 2, &invalid) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            invalid.policy_hash == 0,
+        "scaled-basis all-zero coefficient rejected and invalidated");
+  CHECK(mvmc_krylov_final_state_policy_create_scaled_basis(
+            1, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC, 1,
+            unity, invalid_log_scale, 2, &invalid) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            invalid.policy_hash == 0,
+        "scaled-basis nonfinite scale rejected and invalidated");
+  CHECK(mvmc_krylov_final_state_policy_create_scaled_basis(
+            1, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC, 1,
+            unity, underflow_log_scale, 2, &invalid) ==
+                MVMC_KRYLOV_STATUS_RESOURCE_LIMIT &&
+            invalid.policy_hash == 0,
+        "scaled-basis representational underflow fails closed");
 }
 
 static void test_exact_support_bridge(void) {
@@ -505,6 +672,7 @@ static void test_complex_p2_and_failures(void) {
   MVMCKrylovFinalStatePolicy rotated_policy;
   MVMCKrylovFinalStateEvaluation evaluation;
   MVMCKrylovFinalStateEvaluation rotated_evaluation;
+  MVMCPowerLanczosNumericEvidence local_energy_evidence;
   double complex expected_amplitude = 0.0;
   double complex expected_hamiltonian = 0.0;
   double complex actual_amplitude = NAN + I * NAN;
@@ -525,12 +693,20 @@ static void test_complex_p2_and_failures(void) {
             evaluation.sampleable &&
             export_scaled(&evaluation.amplitude, &actual_amplitude) &&
             mvmc_krylov_final_state_local_energy_export(
-                &evaluation, &local_energy) == MVMC_SCALED_EXPORT_OK,
+                &evaluation, &local_energy) == MVMC_SCALED_EXPORT_OK &&
+            mvmc_krylov_final_state_local_energy_evidence(
+                &evaluation, &local_energy_evidence) ==
+                MVMC_KRYLOV_STATUS_OK &&
+            local_energy_evidence.valid &&
+            local_energy_evidence.value == local_energy,
         "complex p2 evaluation");
   CHECK(close_complex(actual_amplitude, expected_amplitude, 5.0e-13) &&
             close_complex(local_energy,
                           expected_hamiltonian / expected_amplitude,
-                          5.0e-13),
+                          5.0e-13) &&
+            cabs(expected_hamiltonian / expected_amplitude -
+                 local_energy_evidence.value) <=
+                local_energy_evidence.absolute_numeric_bound,
         "complex p2 raw oracle");
   CHECK(mvmc_krylov_final_state_policy_create(
             2, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC,
@@ -647,6 +823,7 @@ int main(int argc, char **argv) {
   (void)argv;
 #endif
   test_policy_contract();
+  test_scaled_basis_policy_contract();
   test_exact_support_bridge();
   test_synthetic_proposal_transaction();
   test_complex_p2_and_failures();

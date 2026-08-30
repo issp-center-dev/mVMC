@@ -58,6 +58,8 @@ mvmc_power_lanczos_observable_preflight(
       input->nsite > MVMC_POWER_LANCZOS_OBSERVABLE_MAX_NSITE ||
       input->nsite_uc <= 0 || input->nsite_uc > input->nsite ||
       input->nsite_uc > MVMC_POWER_LANCZOS_OBSERVABLE_MAX_NSITE_UC ||
+      input->nqp_full <= 0 ||
+      input->nqp_full > MVMC_POWER_LANCZOS_OBSERVABLE_MAX_NQP_FULL ||
       input->block_count == 0 || input->saved_source_count == 0 ||
       input->target_cache_bytes_per_target == 0 ||
       !isfinite(input->setup_wall_upper_seconds) ||
@@ -71,6 +73,11 @@ mvmc_power_lanczos_observable_preflight(
     if (result != NULL) *result = candidate;
     return MVMC_POWER_LANCZOS_OBSERVABLE_PREFLIGHT_INVALID_ARGUMENT;
   }
+  candidate.nsite = input->nsite;
+  candidate.nsite_uc = input->nsite_uc;
+  candidate.nqp_full = input->nqp_full;
+  candidate.block_count = input->block_count;
+  candidate.saved_source_count = input->saved_source_count;
   for (family = 0; family < MVMC_POWER_LANCZOS_OBSERVABLE_FAMILY_COUNT;
        ++family) {
     size_t family_limit;
@@ -80,6 +87,7 @@ mvmc_power_lanczos_observable_preflight(
       *result = candidate;
       return MVMC_POWER_LANCZOS_OBSERVABLE_PREFLIGHT_INVALID_ARGUMENT;
     }
+    candidate.family_count[family] = input->family_count[family];
     if (input->family_count[family] > 0) {
       requested_mask |= 1u << (unsigned int)family;
     }

@@ -314,7 +314,7 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
     weightAverageReduce_fcmp(NNBodyG,vec,comm);
   }
 
-  if(NLanczosMode>0 && NLanczosStep==1){
+  if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==1){
     /* QQQQ */
     n = NLSHam*NLSHam*NLSHam*NLSHam;
     //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){
@@ -339,7 +339,7 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
       }
     }
   }
-  if(NLanczosMode>0 && NLanczosStep==2){
+  if(NLanczosMode>0 && NLanczosEstimatorMode==1 && NLanczosStep==2){
     Lanczos2SolveStatus lanczos2Status;
     int rank = 0;
     MPI_Comm_rank(comm,&rank);
@@ -376,7 +376,7 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
       weightAverageReduce_fcmp(LANCZOS2_MOMENT_COUNT,LS2Moment,comm);
     }
   }
-  if(NLanczosMode>0){
+  if(NLanczosMode>0 && NLanczosEstimatorMode==1){
     CheckPowerLanczosSupport(comm);
   }
   return;
