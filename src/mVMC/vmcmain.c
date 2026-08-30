@@ -489,7 +489,7 @@ int main(int argc, char* argv[])
 
   StartTimer(11);
   if(rank0==0) fprintf(stdout,"Start: Read *def files.\n");
-  ReadDefFileNInt(fileDefList, comm0);
+  ReadDefFileNInt(fileDefList, comm0, flagStandard);
   if(rank0==0) fprintf(stdout,"End  : Read *def files.\n");
   StopTimer(11);
 

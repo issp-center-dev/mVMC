@@ -36,7 +36,16 @@ def prepare_definitions(source, destination, dry_binary):
 def set_lanczos_step(filename, explicit):
     with open(filename) as source:
         lines = source.readlines()
-    lines = [line for line in lines if not line.split()[:1] == ["NLanczosStep"]]
+    lines = [
+        line
+        for line in lines
+        if line.split()[:1]
+        not in (["NLanczosStep"], ["NLanczosEstimatorMode"])
+    ]
+    # This Expert-mode test isolates the NLanczosStep default.  Select the
+    # legacy estimator explicitly so an omitted estimator does not enter the
+    # corrected route, whose Expert-mode default is intentionally 0.
+    lines.append("NLanczosEstimatorMode   1\n")
     if explicit:
         lines.append("NLanczosStep   1\n")
     with open(filename, "w") as destination:

@@ -29,9 +29,29 @@ os.chdir(workdir)
 bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
 #bin_to_test = os.path.join(rootdir, "..", "..", "build/src", "mVMC", "vmc.out")
 
-result = subprocess.call([bin_to_test, "-s", "%s/StdFace.def" % refdir, "%s/zqp_opt.dat" % refdir])
-if result != 0:
-    sys.exit(result)
+process = subprocess.run(
+    [bin_to_test, "-s", "%s/StdFace.def" % refdir, "%s/zqp_opt.dat" % refdir],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,
+    text=True,
+)
+sys.stdout.write(process.stdout)
+if process.returncode != 0:
+    sys.exit(process.returncode)
+
+standard_warning = (
+    "WARNING: Standard-mode power-Lanczos retains the legacy base-support "
+    "estimator; biased diagnostic only. Use Expert mode (-e) for the "
+    "corrected estimator."
+)
+if process.stdout.count(standard_warning) != 1:
+    print("ERROR: Standard-mode legacy routing warning mismatch")
+    sys.exit(-1)
+
+with open("modpara.def") as generated_modpara:
+    if "NLanczosEstimatorMode" in generated_modpara.read():
+        print("ERROR: stable StdFace unexpectedly generated a P6 selector")
+        sys.exit(-1)
 
 array_calc = read_out("./output/zvo_ls_out_001.dat")[0:2]
 ref_ave = read_out("%s/ref/ref_mean_Els.dat" % refdir)[0:2]

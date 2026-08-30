@@ -56,7 +56,7 @@ char (*cFileNameListFile)[D_CharTmpReadDef] = NULL;
 
 int ReadDefFileError(const char *defname);
 
-int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm);
+int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm, int standardMode);
 
 int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm);
 
@@ -677,7 +677,7 @@ static int ValidateNBodyCapabilities(int nBackFlow, int nNBodyG,
   return info;
 }
 
-int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
+int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm, int standardMode) {
   FILE *fp;
   char defname[D_FileNameMax];
   char *cerr;
@@ -755,6 +755,16 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                 iret == MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE
                     ? MVMC_POWER_LANCZOS_INPUT_REJECTED_EXIT_CODE
                     : EXIT_FAILURE);
+    }
+
+    /*
+     * StdFace's stable standard-mode interface predates the P6 estimator
+     * selector.  Preserve that interface as the legacy diagnostic route,
+     * while expert-mode inputs keep the corrected default (0) and can set
+     * every P6 control directly in ModPara.
+     */
+    if (standardMode && bufInt[IdxLanczosMode] > 0) {
+      bufInt[IdxLanczosEstimatorMode] = 1;
     }
 
  /*
@@ -1452,10 +1462,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     }
     if (runtimeResult.route == MVMC_POWER_LANCZOS_ROUTE_LEGACY &&
         rank == 0) {
-      fprintf(stderr,
-              "WARNING: explicit legacy base-support power-Lanczos "
-              "estimator; biased diagnostic only; not a corrected release "
-              "result.\n");
+      if (standardMode) {
+        fprintf(stderr,
+                "WARNING: Standard-mode power-Lanczos retains the legacy "
+                "base-support estimator; biased diagnostic only. Use "
+                "Expert mode (-e) for the corrected estimator.\n");
+      } else {
+        fprintf(stderr,
+                "WARNING: explicit legacy base-support power-Lanczos "
+                "estimator; biased diagnostic only; not a corrected release "
+                "result.\n");
+      }
     }
   }
 

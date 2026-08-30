@@ -7,13 +7,18 @@
 Power-Lanczos estimatorの選択
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Power-Lanczos inputはcorrected estimatorをデフォルトで選択するようになりました。
-``NLanczosMode`` を設定し、新しい ``NLanczosEstimatorMode`` を省略した既存inputも
+Expert-mode Power-Lanczos inputはcorrected estimatorをデフォルトで選択します。
+``NLanczosMode`` を設定し、新しい ``NLanczosEstimatorMode`` を省略したExpert inputも
 対象です。``NLanczosMode=1`` はfull-support、scale-normalized corrected
 energy/variance経路を独立なcoefficient/final chainで実行し、compactな安定化JSONを
-1ファイル出力します。これは数値安定化のevidenceであり、release統計認証では
-ありません。corrected ``NLanczosMode=2`` は引き続きscope外で、メモリ確保前に
-拒否します。追加observableのproduction enableは変更しません。
+1ファイル出力します。corrected実行には ``vmc.out -e`` が必要であり、P6 controlの
+解釈・生成にはStdFaceを使用しません。これは数値安定化のevidenceであり、
+release統計認証ではありません。corrected ``NLanczosMode=2`` は引き続きscope外で、
+メモリ確保前に拒否します。追加observableのproduction enableは変更しません。
+
+Standard mode（``vmc.out -s``）は安定版StdFace interfaceと従来のlegacy
+Power-Lanczos estimatorを維持します。corrected energy/varianceにはExpert modeを
+使用してください。
 
 corrected launcherは :ref:`HowToExpert` に記載したsource/input/binary/environment/
 seedの正確なidentity変数を指定する必要があります。固定default policyは

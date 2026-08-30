@@ -539,16 +539,20 @@ ModParaファイル (modpara.def)
    Power-Lanczos estimatorを選択します。
 
    * [0] full-support corrected energy/variance estimatorを選択します。
-     キーワードを省略した場合も0が選ばれます。corrected経路は
-     ``NLanczosMode=1`` だけで使用できます。``NLanczosMode=2`` は追加observable
-     のproduction enableに当たり、数値安定化のscope外なのでメモリ確保前に
-     エラー終了します。
+     Expert mode（``vmc.out -e``）ではキーワードを省略した場合も0が
+     選ばれます。corrected経路は ``NLanczosMode=1`` だけで使用できます。
+     ``NLanczosMode=2`` は追加observableのproduction enableに当たり、数値安定化の
+     scope外なのでメモリ確保前にエラー終了します。
    * [1] 従来のbiased base-support estimatorを明示的に選択します。この
      compatibility経路はdiagnostic専用で、corrected release resultでは
      ありません。``NLanczosCoeff*``、``NLanczosFinal*``、
      ``NLanczosGuideMode``、``NLanczosStatMode`` はすべて0にする必要があります。
 
-   既存inputではcompatibility方針を明示的に選択してください。
+   corrected実行はExpert mode専用です。Standard mode（``vmc.out -s``）は安定版の
+   StdFace interfaceを継続使用し、Power-Lanczos inputを常にlegacy diagnostic
+   estimatorへ解決します。StdFaceはP6 estimator controlを解釈・生成しません。
+
+   Expert-mode inputではcompatibility方針を明示的に選択してください。
 
    .. list-table:: Power-Lanczos selectorの互換性
       :header-rows: 1
@@ -557,7 +561,7 @@ ModParaファイル (modpara.def)
       * - input
         - 従来の動作
         - 現在の動作
-      * - ``NLanczosMode=1`` または2、selector省略
+      * - Expert mode、``NLanczosMode=1`` または2、selector省略
         - legacy base-support estimatorを使用
         - mode 1はcorrected energy/varianceを選択し、mode 2はscope外の
           追加observable要求として拒否
@@ -567,6 +571,9 @@ ModParaファイル (modpara.def)
       * - ``NLanczosEstimatorMode 0``
         - selectorとしては未提供
         - corrected energy/variance経路を明示的に選択
+      * - Standard mode、``NLanczosMode=1`` または2
+        - legacy base-support estimatorを使用
+        - legacy estimatorを継続使用。corrected energy/varianceにはExpert modeを使用
 
    ``NLanczosMode=0`` のときは、このキーワードを含むすべてのP6 estimator
    controlを0にする必要があります。

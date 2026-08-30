@@ -14,4 +14,3 @@ DSROptStepDt  = 1e-2
 RndSeed = 1
 NVMCCalMode   =  1
 NLanczosMode   =  1
-NLanczosEstimatorMode = 1

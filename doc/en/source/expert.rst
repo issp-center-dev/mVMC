@@ -541,17 +541,23 @@ Keywords and parameters
    **Description :** Selects the power-Lanczos estimator used when
    ``NLanczosMode`` is 1 or 2.
 
-   * [0] Selects the full-support corrected energy/variance estimator. This is
-     also selected when the keyword is omitted. The corrected route is
-     available only with ``NLanczosMode=1``; ``NLanczosMode=2`` is rejected
-     before allocation because additional-observable production enable is
-     outside the numerical-stabilization scope.
+   * [0] Selects the full-support corrected energy/variance estimator. In
+     Expert mode (``vmc.out -e``), this is also selected when the keyword is
+     omitted. The corrected route is available only with
+     ``NLanczosMode=1``; ``NLanczosMode=2`` is rejected before allocation
+     because additional-observable production enable is outside the
+     numerical-stabilization scope.
    * [1] Explicitly opts in to the previous biased base-support estimator.
      This compatibility route is diagnostic-only and is not a corrected
      release result. All ``NLanczosCoeff*``, ``NLanczosFinal*``,
      ``NLanczosGuideMode``, and ``NLanczosStatMode`` controls must remain 0.
 
-   Existing inputs require an explicit compatibility decision:
+   Corrected execution is Expert-mode-only. Standard mode (``vmc.out -s``)
+   continues to use the stable StdFace interface and always resolves
+   Power-Lanczos input to the legacy diagnostic estimator. StdFace does not
+   parse or generate the P6 estimator controls.
+
+   Expert-mode inputs require an explicit compatibility decision:
 
    .. list-table:: Power-Lanczos selector compatibility
       :header-rows: 1
@@ -560,7 +566,7 @@ Keywords and parameters
       * - Input
         - Earlier behavior
         - Current behavior
-      * - ``NLanczosMode=1`` or 2, selector omitted
+      * - Expert mode, ``NLanczosMode=1`` or 2, selector omitted
         - Used the legacy base-support estimator
         - Mode 1 selects corrected energy/variance; mode 2 is rejected as an
           out-of-scope additional-observable request
@@ -570,6 +576,10 @@ Keywords and parameters
       * - ``NLanczosEstimatorMode 0``
         - Not available as a selector
         - Explicitly selects the corrected energy/variance route
+      * - Standard mode, ``NLanczosMode=1`` or 2
+        - Used the legacy base-support estimator
+        - Continues to use the legacy estimator; use Expert mode for corrected
+          energy/variance
 
    When ``NLanczosMode=0``, this keyword and every other P6 estimator control
    must be 0.
