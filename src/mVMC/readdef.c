@@ -1082,6 +1082,15 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   if (rank == 0) {
     AllComplexFlag = iComplexFlgGutzwiller + iComplexFlgJastrow + iComplexFlgSpinJastrow + iComplexFlgDH2; //TBC
     AllComplexFlag += iComplexFlgDH4 + iComplexFlgOrbital;//TBC
+    AllComplexFlag += iComplexFlgGeneralRBM_PhysLayer
+                    + iComplexFlgGeneralRBM_HiddenLayer
+                    + iComplexFlgGeneralRBM_PhysHidden
+                    + iComplexFlgChargeRBM_PhysLayer
+                    + iComplexFlgChargeRBM_HiddenLayer
+                    + iComplexFlgChargeRBM_PhysHidden
+                    + iComplexFlgSpinRBM_PhysLayer
+                    + iComplexFlgSpinRBM_HiddenLayer
+                    + iComplexFlgSpinRBM_PhysHidden;
     //AllComplexFlag  = 1;//DEBUG
     // AllComplexFlag= 0 -> All real, !=0 -> complex
     //if(AllComplexFlag == 0 && iFlgOrbitalGeneral == 1){
@@ -1092,9 +1101,22 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       iComplexFlgOrbital = 1;
       fprintf(stderr, "Warning: All the pairings are treated as complex variational parameters.\n");
     }
-    if(FlagRBM == 1 && AllComplexFlag == 0){
-      fprintf(stderr, "Error: RBM requires complex variational parameters (AllComplexFlag != 0).\n");
-      info = 1;
+    if(FlagRBM != 0 && AllComplexFlag == 0){
+      if (iFlgOrbitalGeneral != 0) {
+        fprintf(stderr,
+                "Error: real-valued RBM does not support orbital-general (FSZ) mode.\n");
+        info = 1;
+      }
+      if (bufInt[IdxLanczosMode] > 0) {
+        fprintf(stderr,
+                "Error: real-valued RBM does not support Lanczos mode.\n");
+        info = 1;
+      }
+      if (bufInt[IdxExUpdatePath] == 2) {
+        fprintf(stderr,
+                "Error: real-valued RBM does not support NExUpdatePath=2.\n");
+        info = 1;
+      }
     }
     /*
      * Single-rank runs exercise the rank-0 pre-broadcast capability gate.
