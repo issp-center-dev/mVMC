@@ -51,7 +51,7 @@ jobs:
 
       - name: pip
         run: |
-          python3 -m pip install numpy
+          python3 -m pip install numpy jsonschema
 
       - name: make workspace
         run: cmake -E make_directory ${{runner.workspace}}/build

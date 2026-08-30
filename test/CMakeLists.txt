@@ -488,20 +488,22 @@ set_tests_properties(
         "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
 
 if(MPI_FOUND)
-    add_test(NAME PowerLanczosObservableCorrectness_Unit_mpi2
+    add_test(NAME PowerLanczosObservableCorrectness_Unit_Rank2_mpi
         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
                 ${MPIEXEC_PREFLAGS}
                 $<TARGET_FILE:power_lanczos_observable_correctness>
                 ${MPIEXEC_POSTFLAGS})
-    add_test(NAME PowerLanczosObservableCorrectness_Unit_mpi4
+    add_test(NAME PowerLanczosObservableCorrectness_Unit_Rank4_mpi
         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
                 ${MPIEXEC_PREFLAGS}
                 $<TARGET_FILE:power_lanczos_observable_correctness>
                 ${MPIEXEC_POSTFLAGS})
     set_tests_properties(
-        PowerLanczosObservableCorrectness_Unit_mpi2 PROPERTIES PROCESSORS 2)
+        PowerLanczosObservableCorrectness_Unit_Rank2_mpi
+        PROPERTIES PROCESSORS 2)
     set_tests_properties(
-        PowerLanczosObservableCorrectness_Unit_mpi4 PROPERTIES PROCESSORS 4)
+        PowerLanczosObservableCorrectness_Unit_Rank4_mpi
+        PROPERTIES PROCESSORS 4)
     add_executable(power_lanczos_observable_census_mpi
         power_lanczos_observable_census_mpi.c
         ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_observable_census.c)
@@ -513,16 +515,22 @@ if(MPI_FOUND)
     endif()
     target_link_libraries(power_lanczos_observable_census_mpi
         ${MPI_C_LIBRARIES})
-    add_test(NAME PowerLanczosObservableCensus_Unit_mpi2
+    add_test(NAME PowerLanczosObservableCensus_Unit_Rank2_mpi
         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
                 ${MPIEXEC_PREFLAGS}
                 $<TARGET_FILE:power_lanczos_observable_census_mpi>
                 ${MPIEXEC_POSTFLAGS})
-    add_test(NAME PowerLanczosObservableCensus_Unit_mpi4
+    add_test(NAME PowerLanczosObservableCensus_Unit_Rank4_mpi
         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
                 ${MPIEXEC_PREFLAGS}
                 $<TARGET_FILE:power_lanczos_observable_census_mpi>
                 ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(
+        PowerLanczosObservableCensus_Unit_Rank2_mpi
+        PROPERTIES PROCESSORS 2)
+    set_tests_properties(
+        PowerLanczosObservableCensus_Unit_Rank4_mpi
+        PROPERTIES PROCESSORS 4)
 endif()
 
 add_executable(power_lanczos_build_metadata_unit
@@ -1518,36 +1526,9 @@ endif()
 if(MPI_FOUND)
     target_link_libraries(power_lanczos_p6c1_preflight ${MPI_C_LIBRARIES})
 endif()
-set(POWER_LANCZOS_P6C1_PREFLIGHT_INPUT
-    ${CMAKE_BINARY_DIR}/test/power_lanczos_p6c1_preflight_input.txt)
-add_test(NAME PowerLanczosP6C1_PreflightPrepare
-    COMMAND ${PYTHON_EXECUTABLE}
-            ${CMAKE_SOURCE_DIR}/test/python/power_lanczos_p6c1_cartesian_evidence.py
-            prepare-preflight ${POWER_LANCZOS_P6C1_PREFLIGHT_INPUT})
-set_tests_properties(PowerLanczosP6C1_PreflightPrepare PROPERTIES
-    FIXTURES_SETUP PowerLanczosP6C1_PreflightInput)
-add_test(NAME PowerLanczosP6C1_Preflight
-    COMMAND ${PYTHON_EXECUTABLE}
-            ${CMAKE_SOURCE_DIR}/test/python/power_lanczos_p6c1_cartesian_evidence.py
-            run-preflight --expected-world-size 1 --
-            $<TARGET_FILE:power_lanczos_p6c1_preflight>
-            ${POWER_LANCZOS_P6C1_PREFLIGHT_INPUT})
-set_tests_properties(PowerLanczosP6C1_Preflight PROPERTIES
-    FIXTURES_REQUIRED PowerLanczosP6C1_PreflightInput
-    ENVIRONMENT "OMP_NUM_THREADS=1")
-if(MPI_FOUND)
-    add_test(NAME PowerLanczosP6C1_Preflight_mpi
-        COMMAND ${PYTHON_EXECUTABLE}
-                ${CMAKE_SOURCE_DIR}/test/python/power_lanczos_p6c1_cartesian_evidence.py
-                run-preflight --expected-world-size 2 --
-                ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
-                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:power_lanczos_p6c1_preflight>
-                ${POWER_LANCZOS_P6C1_PREFLIGHT_INPUT}
-                ${MPIEXEC_POSTFLAGS})
-    set_tests_properties(PowerLanczosP6C1_Preflight_mpi PROPERTIES
-        FIXTURES_REQUIRED PowerLanczosP6C1_PreflightInput
-        ENVIRONMENT "OMP_NUM_THREADS=1")
-endif()
+# This executable consumes frozen external evidence when invoked manually.
+# Keep its source build-gated, but do not register a non-portable repository
+# CTest that depends on policy artifacts outside this source tree.
 
 add_executable(absolute_krylov_profile_driver
     absolute_krylov_profile_driver.c
