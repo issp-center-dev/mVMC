@@ -36,6 +36,7 @@ which follows "The BSD 3-Clause License".
 #include "qp_real.h"
 #include "splitloop.h"
 #include "vmcmake.h"
+#include "rbm.h"
 
 #ifdef _pf_block_update
 // Block-update extension.
@@ -52,6 +53,8 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
   double logIpOld, logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
   int projCntNew[NProj > 0 ? NProj : 1];
+  double complex rbmCntNew[
+      NRBM_PhysLayerIdx + Nneuron > 0 ? NRBM_PhysLayerIdx + Nneuron : 1];
   double pfMNew_real[NQPFull];
   double x, w; // TBC x will be complex number
 
@@ -68,8 +71,10 @@ void VMCMakeSample_real(MPI_Comm comm) {
   if (BurnFlag == 0) {
     makeInitialSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
                       qpStart, qpEnd, comm);
+    if (FlagRBM) MakeRBMCnt(TmpRBMCnt, TmpEleNum);
   } else {
     copyFromBurnSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt);
+    if (FlagRBM) MakeRBMCnt(TmpRBMCnt, TmpEleNum);
   }
 
 #ifdef _pf_block_update
@@ -108,6 +113,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
     if (rank == 0) fprintf(stderr, "waring: VMCMakeSample remakeSample logIpOld=%e\n", creal(logIpOld)); //TBC
     makeInitialSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
                       qpStart, qpEnd, comm);
+    if (FlagRBM) MakeRBMCnt(TmpRBMCnt, TmpEleNum);
 #ifdef _pf_block_update
     // Clear and reinitialize.
     updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital);
@@ -163,6 +169,9 @@ void VMCMakeSample_real(MPI_Comm comm) {
         /* The mi-th electron with spin s hops to site rj */
         updateEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
         UpdateProjCnt(ri, rj, s, projCntNew, TmpEleProjCnt, TmpEleNum);
+        if (FlagRBM) {
+          UpdateRBMCnt(ri, rj, s, rbmCntNew, TmpRBMCnt, TmpEleNum);
+        }
         StopTimer(60);
 
         StartTimer(61);
@@ -184,6 +193,9 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
         /* Metroplis */
         x = LogProjRatio(projCntNew, TmpEleProjCnt);
+        if (FlagRBM) {
+          x += creal(LogRBMRatio(rbmCntNew, TmpRBMCnt));
+        }
         w = exp(2.0 * (x + (logIpNew - logIpOld)));
         if (!isfinite(w)) w = -1.0; /* should be rejected */
 
@@ -200,6 +212,11 @@ void VMCMakeSample_real(MPI_Comm comm) {
           StopTimer(63);
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
+          if (FlagRBM) {
+            for (i = 0; i < NRBM_PhysLayerIdx + Nneuron; i++) {
+              TmpRBMCnt[i] = rbmCntNew[i];
+            }
+          }
           logIpOld = logIpNew;
           nAccept++;
           Counter[1]++;
@@ -233,9 +250,15 @@ void VMCMakeSample_real(MPI_Comm comm) {
         /* The mi-th electron with spin s hops to rj */
         updateEleConfig(mi, ri, rj, s, TmpEleIdx, TmpEleCfg, TmpEleNum);
         UpdateProjCnt(ri, rj, s, projCntNew, TmpEleProjCnt, TmpEleNum);
+        if (FlagRBM) {
+          UpdateRBMCnt(ri, rj, s, rbmCntNew, TmpRBMCnt, TmpEleNum);
+        }
         /* The mj-th electron with spin t hops to ri */
         updateEleConfig(mj, rj, ri, t, TmpEleIdx, TmpEleCfg, TmpEleNum);
         UpdateProjCnt(rj, ri, t, projCntNew, projCntNew, TmpEleNum);
+        if (FlagRBM) {
+          UpdateRBMCnt(rj, ri, t, rbmCntNew, rbmCntNew, TmpEleNum);
+        }
 
         StopTimer(65);
         StartTimer(66);
@@ -259,6 +282,9 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
         /* Metroplis */
         x = LogProjRatio(projCntNew, TmpEleProjCnt);
+        if (FlagRBM) {
+          x += creal(LogRBMRatio(rbmCntNew, TmpRBMCnt));
+        }
         w = exp(2.0 * (x + (logIpNew - logIpOld))); //TBC
         if (!isfinite(w)) w = -1.0; /* should be rejected */
 
@@ -273,6 +299,11 @@ void VMCMakeSample_real(MPI_Comm comm) {
           StopTimer(68);
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
+          if (FlagRBM) {
+            for (i = 0; i < NRBM_PhysLayerIdx + Nneuron; i++) {
+              TmpRBMCnt[i] = rbmCntNew[i];
+            }
+          }
           logIpOld = logIpNew;
           nAccept++;
           Counter[3]++;
@@ -386,12 +417,14 @@ void VMCMakeSample_real(MPI_Comm comm) {
     if (outStep >= nOutStep - NVMCSample) {
       sample = outStep - (nOutStep - NVMCSample);
       saveEleConfig(sample, logIpOld, TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt);
+      if (FlagRBM) saveRBMCnt(sample, TmpRBMCnt);
     }
     StopTimer(35);
 
   } /* end of outstep */
 
   copyToBurnSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt);
+  if (FlagRBM) copyToBurnSampleRBM(TmpRBMCnt);
   BurnFlag = 1;
 
 #ifdef _pf_block_update

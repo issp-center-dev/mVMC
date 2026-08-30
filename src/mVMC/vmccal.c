@@ -473,7 +473,7 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
 #ifdef _DEBUG_VMCCAL
       printf("  Debug: sample=%d: calculateHam_real \n",sample);
 #endif
-      e = CalculateHamiltonian_real(creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt);
+      e = CalculateHamiltonian_real(creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt,rbmCnt);
     }else{
 #ifdef _DEBUG_VMCCAL
       printf("  Debug: sample=%d: calculateHam_cmp \n",sample);

@@ -3207,7 +3207,14 @@ User rules
 
 -  This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.
 
--  This function is available only for the VMC calculation with ``ComplexType=1`` and ``Orbital``. This function is not available for the Power Lanczos calculations.
+-  Both ``ComplexType=0`` and ``ComplexType=1`` are accepted.  If every active
+   variational-parameter definition, including all RBM layer definitions, has
+   ``ComplexType=0``, mVMC uses the real-valued VMC path.  If any definition
+   has ``ComplexType=1``, mVMC uses the complex-valued path.  Real-valued RBM
+   calculations support ``Orbital`` (not ``OrbitalGeneral``/FSZ),
+   ``NExUpdatePath=0`` or ``1``, and ``NLanczosMode=0``.  They do not support
+   BackFlow or Power Lanczos.  The same dispatch and restrictions apply to
+   the ChargeRBM and SpinRBM layer definitions.
 
 -  Headers cannot be omitted.
 
@@ -3333,7 +3340,9 @@ User rules
 
 -  This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.
 
--  This function is available only for the VMC calculation with ``ComplexType=1`` and ``Orbital``. This function is not available for the Power Lanczos calculations.
+-  Both ``ComplexType=0`` and ``ComplexType=1`` are accepted.  For the
+   real-valued RBM capability and its restrictions, see the
+   GeneralRBM_PhysLayer file section above.
 
 -  Headers cannot be omitted.
 
@@ -3476,7 +3485,9 @@ User rules
 
 -  This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.
 
--  This function is available only for the VMC calculation with ``ComplexType=1`` and ``Orbital``. This function is not available for the Power Lanczos calculations.
+-  Both ``ComplexType=0`` and ``ComplexType=1`` are accepted.  For the
+   real-valued RBM capability and its restrictions, see the
+   GeneralRBM_PhysLayer file section above.
 
 -  Headers cannot be omitted.
 
