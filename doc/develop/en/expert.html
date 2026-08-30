@@ -2678,7 +2678,14 @@ optimize, 1: optimize).</p>
 <h3>User rules<a class="headerlink" href="#id53" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
-<li><p>This function is available only for the VMC calculation with <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> and <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>. This function is not available for the Power Lanczos calculations.</p></li>
+<li><p>Both <code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> and <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> are accepted.  If every active
+variational-parameter definition, including all RBM layer definitions, has
+<code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code>, mVMC uses the real-valued VMC path.  If any definition
+has <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code>, mVMC uses the complex-valued path.  Real-valued RBM
+calculations support <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> (not <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>/FSZ),
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>.  They do not support
+BackFlow or Power Lanczos.  The same dispatch and restrictions apply to
+the ChargeRBM and SpinRBM layer definitions.</p></li>
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
 different from the total number of variational parameters defined in
@@ -2776,7 +2783,9 @@ optimize, 1: optimize).</p>
 <h3>User rules<a class="headerlink" href="#id56" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
-<li><p>This function is available only for the VMC calculation with <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> and <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>. This function is not available for the Power Lanczos calculations.</p></li>
+<li><p>Both <code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> and <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> are accepted.  For the
+real-valued RBM capability and its restrictions, see the
+GeneralRBM_PhysLayer file section above.</p></li>
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
 different from the total number of variational parameters defined in
@@ -2887,7 +2896,9 @@ optimize, 1: optimize).</p>
 <h3>User rules<a class="headerlink" href="#id59" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
-<li><p>This function is available only for the VMC calculation with <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> and <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>. This function is not available for the Power Lanczos calculations.</p></li>
+<li><p>Both <code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> and <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> are accepted.  For the
+real-valued RBM capability and its restrictions, see the
+GeneralRBM_PhysLayer file section above.</p></li>
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
 different from the total number of variational parameters defined in

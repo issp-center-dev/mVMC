@@ -2519,7 +2519,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。</p></li>
-<li><p>本機能は <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> かつ ペア軌道のうち <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> のみを指定したVMC計算のみ使用可能です。Power Lanczosの計算には対応していません。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> と <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> の両方を指定できます。RBM層を含む有効な変分パラメータ定義がすべて <code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> の場合、mVMCは実数VMC経路を使用します。いずれか1つでも <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> の定義があれば複素数経路を使用します。実数RBMは <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> （<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZは不可）、<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code> または <code class="docutils literal notranslate"><span class="pre">1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code> の組合せに対応します。BackFlowおよびPower Lanczosとの併用には対応していません。同じ経路選択と制約がChargeRBMおよびSpinRBMの各層定義にも適用されます。</p></li>
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
 <li><p>[ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。</p></li>
 <li><p>[ int02 ]-[ int07 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。</p></li>
@@ -2608,7 +2608,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。</p></li>
-<li><p>本機能は <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> かつ ペア軌道のうち <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> のみを指定したVMC計算のみ使用可能です。Power Lanczosの計算には対応していません。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> と <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> の両方を指定できます。実数RBMの対応範囲と制約は上記のGeneralRBM_PhysLayer指定ファイルの節を参照してください。</p></li>
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
 <li><p>[ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。</p></li>
 <li><p>[ int02 ]-[ int06 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。</p></li>
@@ -2710,7 +2710,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。</p></li>
-<li><p>本機能は <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> かつ ペア軌道のうち <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> のみを指定したVMC計算のみ使用可能です。Power Lanczosの計算には対応していません。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> と <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> の両方を指定できます。実数RBMの対応範囲と制約は上記のGeneralRBM_PhysLayer指定ファイルの節を参照してください。</p></li>
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
 <li><p>[ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。</p></li>
 <li><p>[ int02 ]-[ int08 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。</p></li>
