@@ -11,11 +11,11 @@ the Free Software Foundation, either version 3 of the License, or
 #ifndef MVMC_KRYLOV_FINAL_STATE_H
 #define MVMC_KRYLOV_FINAL_STATE_H
 
-#if defined(MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)
+#if defined(MVMC_ENABLE_POWER_LANCZOS_P5_CORE) ||                             \
+    defined(MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)
 
-#if !defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                         \
-    !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
-#error "P5 final-state testing requires the absolute bounded Krylov engine"
+#if !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+#error "P5 final-state core requires the bounded Krylov engine"
 #endif
 
 #include "bounded_krylov_engine.h"
@@ -30,7 +30,8 @@ the Free Software Foundation, either version 3 of the License, or
 typedef enum {
   MVMC_KRYLOV_FINAL_COEFFICIENT_EXACT = 1,
   MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC = 2,
-  MVMC_KRYLOV_FINAL_COEFFICIENT_PERTURBED_TESTING = 3
+  MVMC_KRYLOV_FINAL_COEFFICIENT_PERTURBED_TESTING = 3,
+  MVMC_KRYLOV_FINAL_COEFFICIENT_PRODUCTION_NOISY = 4
 } MVMCKrylovFinalCoefficientSource;
 
 typedef struct {
@@ -107,6 +108,12 @@ MVMCKrylovStatus mvmc_krylov_final_state_policy_create(
     uint64_t provenance_hash, const double complex *coefficient,
     size_t coefficient_count, MVMCKrylovFinalStatePolicy *policy);
 
+MVMCKrylovStatus mvmc_krylov_final_state_policy_create_scaled_basis(
+    int order, MVMCKrylovFinalCoefficientSource source,
+    uint64_t provenance_hash, const double complex *scaled_coefficient,
+    const double *log_basis_scale, size_t coefficient_count,
+    MVMCKrylovFinalStatePolicy *policy);
+
 uint64_t mvmc_krylov_final_state_policy_hash(
     const MVMCKrylovFinalStatePolicy *policy);
 
@@ -156,6 +163,6 @@ MVMCKrylovStatus mvmc_krylov_final_state_sampler_step_selected_neighbor(
     uint64_t *proposal_words, size_t proposal_word_count,
     MVMCKrylovFinalStateProposalStepResult *result);
 
-#endif /* MVMC_ENABLE_POWER_LANCZOS_P5_TESTING */
+#endif /* P5 core or testing */
 
 #endif /* MVMC_KRYLOV_FINAL_STATE_H */

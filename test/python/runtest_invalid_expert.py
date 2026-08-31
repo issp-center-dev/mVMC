@@ -65,6 +65,20 @@ def inject_spin_flip_transfer(filename):
     raise RuntimeError("no Transfer data row was available for mutation")
 
 
+def inject_two_body_g_ex(namelist):
+    filename = "greentwoex.def"
+    with open(filename, "w") as destination:
+        destination.write("===============================\n")
+        destination.write("NCisAjsCktAlt  1\n")
+    with open(namelist) as source:
+        lines = source.readlines()
+    if not any(line.split() and line.split()[0] == "TwoBodyGEx"
+               for line in lines):
+        lines.append("      TwoBodyGEx  {}\n".format(filename))
+    with open(namelist, "w") as destination:
+        destination.writelines(lines)
+
+
 def main():
     if len(sys.argv) < 3:
         print(
@@ -77,12 +91,15 @@ def main():
     expected = sys.argv[2]
     allow_success = False
     spin_flip_transfer = False
+    two_body_g_ex = False
     modpara_updates = {}
     for arg in sys.argv[3:]:
         if arg == "allow_success":
             allow_success = True
         elif arg == "spin_flip_transfer":
             spin_flip_transfer = True
+        elif arg == "two_body_g_ex":
+            two_body_g_ex = True
         elif "=" in arg:
             key, value = arg.split("=", 1)
             modpara_updates[key] = value
@@ -115,6 +132,8 @@ def main():
         except RuntimeError as error:
             print("ERROR: {}".format(error))
             return -1
+    if two_body_g_ex:
+        inject_two_body_g_ex("namelist.def")
 
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
     command = [bin_to_test, "-e", "namelist.def"]

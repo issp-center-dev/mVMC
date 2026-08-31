@@ -11,8 +11,7 @@ the Free Software Foundation, either version 3 of the License, or
 #ifndef MVMC_KRYLOV_POSITIVE_GUIDE_H
 #define MVMC_KRYLOV_POSITIVE_GUIDE_H
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) &&                         \
-    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
 #include "bounded_krylov_engine.h"
 

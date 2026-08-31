@@ -29,6 +29,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "vmcmain.h"
 #include "physcal_lanczos.h"
 #include "physcal_lanczos2.h"
+#include "power_lanczos_stabilized.h"
 
 // #define _DEBUG
 // #define _DEBUG_DUMP_SROPTO_STORE
@@ -42,6 +43,157 @@ void printUsageError();
 void printOption();
 void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MPI_Comm *comm_child1);
 void StdFace_main(char *fname);
+
+static int RunPowerLanczosStabilized(
+    int outputIndex, MPI_Comm communicator) {
+  MVMCPowerLanczosClassicView view;
+  MVMCPowerLanczosStabilizedInput input;
+  MVMCPowerLanczosStabilizedResult result;
+  MVMCKrylovStatus status;
+  size_t sweep;
+  int rank = 0;
+  int size = 1;
+  MPI_Comm_rank(communicator, &rank);
+  MPI_Comm_size(communicator, &size);
+  if (NVMCInterval <= 0 || Nsite <= 0 || NVMCWarmUp < 0 ||
+      NVMCSample < 0 ||
+      (size_t)NVMCInterval > SIZE_MAX / (size_t)Nsite) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: invalid stabilized power-Lanczos chain controls.\n");
+    }
+    return 1;
+  }
+  if (mvmc_power_lanczos_stabilized_block_count(
+          (size_t)NVMCSample) == 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: stabilized power-Lanczos requires NVMCSample >= 8 "
+              "and a divisor between 4 and 16 with at least two samples "
+              "per block "
+              "(a multiple of 16 is recommended; got %d).\n",
+              NVMCSample);
+    }
+    return 1;
+  }
+  sweep = (size_t)NVMCInterval * (size_t)Nsite;
+  if ((size_t)NVMCWarmUp > SIZE_MAX / sweep) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: stabilized power-Lanczos warm-up overflows size_t.\n");
+    }
+    return 1;
+  }
+  memset(&view, 0, sizeof(view));
+  view.site_count = Nsite;
+  view.up_electron_count = Ne;
+  view.down_electron_count = Ne;
+  view.pure_spin = NExUpdatePath == 2;
+  view.arithmetic = AllComplexFlag == 0
+                        ? MVMC_POWER_LANCZOS_CLASSIC_REAL
+                        : MVMC_POWER_LANCZOS_CLASSIC_COMPLEX;
+  view.transfer_count = NTransfer;
+  view.transfer_indices = rank == 0 ? Transfer : NULL;
+  view.transfer_parameters = rank == 0 ? ParaTransfer : NULL;
+  view.coulomb_intra_count = NCoulombIntra;
+  view.coulomb_intra_indices = rank == 0 ? CoulombIntra : NULL;
+  view.coulomb_intra_parameters =
+      rank == 0 ? ParaCoulombIntra : NULL;
+  view.coulomb_inter_count = NCoulombInter;
+  view.coulomb_inter_indices = rank == 0 ? CoulombInter : NULL;
+  view.coulomb_inter_parameters =
+      rank == 0 ? ParaCoulombInter : NULL;
+  view.hund_count = NHundCoupling;
+  view.hund_indices = rank == 0 ? HundCoupling : NULL;
+  view.hund_parameters = rank == 0 ? ParaHundCoupling : NULL;
+  view.exchange_count = NExchangeCoupling;
+  view.exchange_indices = rank == 0 ? ExchangeCoupling : NULL;
+  view.exchange_parameters =
+      rank == 0 ? ParaExchangeCoupling : NULL;
+  view.pair_hopping_count = NPairHopping;
+  view.inter_all_count = NInterAll;
+  view.nbody_inter_all_count = NNBodyInterAll;
+  view.nbody_g_count = NNBodyG;
+  view.qp_total = NQPFull;
+  view.qp_start = NQPFull * rank / size;
+  view.qp_end = NQPFull * (rank + 1) / size;
+  view.scaled_pivot_tolerance = 0.0;
+  view.nproj = NProj;
+  view.ngutzwiller_idx = NGutzwillerIdx;
+  view.njastrow_idx = NJastrowIdx;
+  view.nspin_jastrow_idx = NSpinJastrowIdx;
+  view.ndoublon_holon_2site_idx = NDoublonHolon2siteIdx;
+  view.ndoublon_holon_4site_idx = NDoublonHolon4siteIdx;
+  view.gutzwiller_idx = GutzwillerIdx;
+  view.jastrow_idx = JastrowIdx;
+  view.spin_jastrow_idx = SpinJastrowIdx;
+  view.doublon_holon_2site_idx = DoublonHolon2siteIdx;
+  view.doublon_holon_4site_idx = DoublonHolon4siteIdx;
+  view.projection_parameters = Proj;
+  view.qp_weights = QPFullWeight;
+  view.slater_real = AllComplexFlag == 0 ? SlaterElm_real : NULL;
+  view.slater_complex = AllComplexFlag == 0 ? NULL : SlaterElm;
+  if (FlagRBM != 0) {
+    view.unsupported_amplitude_features |=
+        MVMC_CLASSIC_KRYLOV_UNSUPPORTED_RBM;
+  }
+  if (NProjBF != 0) {
+    view.unsupported_amplitude_features |=
+        MVMC_CLASSIC_KRYLOV_UNSUPPORTED_BACKFLOW;
+  }
+  if (iFlgOrbitalGeneral != 0) {
+    view.unsupported_amplitude_features |=
+        MVMC_CLASSIC_KRYLOV_UNSUPPORTED_GENERAL_ORBITAL;
+  }
+#ifdef _pf_block_update
+  view.unsupported_amplitude_features |=
+      MVMC_CLASSIC_KRYLOV_UNSUPPORTED_BLOCK_UPDATE;
+#endif
+  memset(&input, 0, sizeof(input));
+  input.classic_view = &view;
+  input.communicator = communicator;
+  input.power_step = NLanczosStep;
+  input.seed =
+      ((uint64_t)(uint32_t)RndSeed << 32) ^
+      (uint64_t)(unsigned)(outputIndex + 1) ^
+      UINT64_C(0x504c534c494d5631);
+  if (input.seed == 0) input.seed = UINT64_C(1);
+  input.warm_up = (size_t)NVMCWarmUp * sweep;
+  input.sample_count = (size_t)NVMCSample;
+  input.interval = sweep;
+  status = mvmc_power_lanczos_stabilized_run(&input, &result);
+  if (rank == 0 && status == MVMC_KRYLOV_STATUS_OK) {
+    fprintf(FileLS,
+            "# stabilized_power_lanczos version=%llu order=%d "
+            "coefficient_samples=%llu final_samples=%llu blocks=%zu\n",
+            (unsigned long long)result.version, result.power_step,
+            (unsigned long long)result.coefficient_samples,
+            (unsigned long long)result.final_samples,
+            result.block_count);
+    fprintf(FileLS,
+            "# energy energy_se variance variance_se energy_imag "
+            "variance_imag tau_int effective_samples retained_rank "
+            "condition gevp_residual\n");
+    fprintf(FileLS,
+            "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e "
+            "%d %.18e %.18e\n",
+            result.energy, result.energy_standard_error, result.variance,
+            result.variance_standard_error,
+            result.final_energy_imaginary, result.variance_imaginary,
+            result.energy_tau_int, result.effective_sample_count,
+            result.retained_rank, result.condition_estimate,
+            result.gevp_residual);
+    fprintf(stdout,
+            "Stabilized power-Lanczos: E=%.17g +/- %.6g, "
+            "variance=%.17g +/- %.6g\n",
+            result.energy, result.energy_standard_error, result.variance,
+            result.variance_standard_error);
+  } else if (rank == 0) {
+    fprintf(stderr, "Error: stabilized power-Lanczos failed: %s.\n",
+            mvmc_krylov_status_string(status));
+  }
+  return status == MVMC_KRYLOV_STATUS_OK ? 0 : 1;
+}
 
 /*main program*/
 int main(int argc, char* argv[])
@@ -305,7 +457,7 @@ int main(int argc, char* argv[])
     StartTimer(2);
     /*-- VMC Physical Quantity Calculation --*/
     if(rank0==0) fprintf(stdout,"Start: Calculate VMC physical quantities.\n");
-    VMCPhysCal(comm0, comm1, comm2);
+    info = VMCPhysCal(comm0, comm1, comm2);
     if(rank0==0) fprintf(stdout,"End  : Calculate VMC physical quantities.\n");
     StopTimer(2);
   } else {
@@ -553,6 +705,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 /*-- VMC Physical Quantity Calculation --*/
 int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2) {
   int ismp, tmp_i;
+  int correctedInfo;
   int rank;
   MPI_Comm_rank(comm_parent, &rank);
 
@@ -566,11 +719,27 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
   StopTimer(20);
   if(rank==0) fprintf(stdout, "End  : UpdateSlaterElm.\n");
 
+  if (NLanczosMode == 1 && NLanczosEstimatorMode == 1 &&
+      AllComplexFlag == 0) {
+#pragma omp parallel for default(shared) private(tmp_i)
+    for (tmp_i = 0;
+         tmp_i < NQPFull * (2 * Nsite) * (2 * Nsite); ++tmp_i) {
+      SlaterElm_real[tmp_i] = creal(SlaterElm[tmp_i]);
+    }
+  }
+
   if(rank==0) fprintf(stdout, "Start: Sampling.\n");
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
     if(rank==0) OutputTime(ismp);
     FlushFile(0,rank);
     InitFilePhysCal(ismp, rank);
+    if (NLanczosMode == 1 && NLanczosEstimatorMode == 1) {
+      correctedInfo = RunPowerLanczosStabilized(
+          ismp + NDataIdxStart, comm_parent);
+      CloseFilePhysCal(rank);
+      if (correctedInfo != 0) return correctedInfo;
+      continue;
+    }
     StartTimer(3);
     if(NProjBF ==0) {
       //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){//real & sz=0
@@ -735,7 +904,7 @@ void outputData() {
       fprintf(FileNBodyG, "\n");
     }
 
-    if (NLanczosMode > 0) {
+    if (NLanczosMode > 0 && NLanczosEstimatorMode == 0) {
       if (NLanczosStep == 1) {
       if (AllComplexFlag == 0) { //real
         lanczosStatus = PhysCalLanczos_real(

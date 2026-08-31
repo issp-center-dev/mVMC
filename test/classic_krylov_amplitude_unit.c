@@ -362,8 +362,10 @@ static void test_projection_allowlist(void) {
   layout.projection_parameters = parameter;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
-            MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL && workspace == NULL,
-        "well-formed Jastrow is outside the initial allowlist");
+            MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+        "well-formed Jastrow is supported");
+  mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
+  workspace = NULL;
 
   jastrow_row_0[1] = jastrow_row_1[0] = 1;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
@@ -393,8 +395,10 @@ static void test_projection_allowlist(void) {
   layout.projection_parameters = parameter;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
-            MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL && workspace == NULL,
-        "well-formed Spin Jastrow is outside the initial allowlist");
+            MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+        "well-formed Spin Jastrow is supported");
+  mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
+  workspace = NULL;
 
   layout = base_layout(1, rank, size);
   layout.nproj = 6;
@@ -403,8 +407,10 @@ static void test_projection_allowlist(void) {
   layout.projection_parameters = parameter;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
-            MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL && workspace == NULL,
-        "well-formed two-site doublon-holon is outside the allowlist");
+            MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+        "well-formed two-site doublon-holon is supported");
+  mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
+  workspace = NULL;
   dh2_row[0] = -1;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
@@ -419,8 +425,10 @@ static void test_projection_allowlist(void) {
   layout.projection_parameters = parameter;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
-            MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL && workspace == NULL,
-        "well-formed four-site doublon-holon is outside the allowlist");
+            MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+        "well-formed four-site doublon-holon is supported");
+  mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
+  workspace = NULL;
   dh4_row[7] = 2;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
@@ -453,8 +461,10 @@ static void test_projection_allowlist(void) {
   layout.projection_parameters = parameter;
   CHECK(mvmc_classic_krylov_real_amplitude_workspace_create(
             &layout, slater, weights, &workspace) ==
-            MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL,
-        "multiple Gutzwiller parameters are outside the initial allowlist");
+            MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+        "multiple site-dependent Gutzwiller parameters are supported");
+  mvmc_classic_krylov_real_amplitude_workspace_destroy(workspace);
+  workspace = NULL;
 
   {
     const uint32_t unsupported_flags[] = {

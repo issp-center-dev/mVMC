@@ -10,9 +10,15 @@ the Free Software Foundation, either version 3 of the License, or
 
 #include "classic_krylov_amplitude.h"
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                     \
+    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
+#include "classic_krylov_configuration.h"
 #include "classic_pfaffian_matrix.h"
+#include "classic_krylov_projection.h"
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+#include "bounded_krylov_collective.h"
+#endif
 
 #include <limits.h>
 #include <math.h>
@@ -35,14 +41,20 @@ typedef struct {
   size_t slater_matrix_count;
   size_t matrix_count;
   double scaled_pivot_tolerance;
-  MVMCClassicKrylovProjectionKind projection_kind;
-  double projection_parameter;
+  uint64_t generation_hash;
+  MVMCClassicKrylovConfigurationLayout configuration_layout;
+  MVMCClassicKrylovProjectionWorkspace *projection_workspace;
   double complex *global_weights;
   int *ele_idx;
+  int *ele_cfg;
   int *ele_num;
   MVMCAbsolutePfaffianValueResult *components;
   MVMCAbsolutePfaffianValueResult *global_components;
   MVMCClassicPfaffianCollectiveWorkspace *collective_workspace;
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+  MVMCAbsolutePfaffianScaledValueResult *scaled_components;
+  MVMCKrylovBoundedCollectiveWorkspace *bounded_collective_workspace;
+#endif
 } MVMCClassicKrylovAmplitudeCommon;
 
 struct MVMCClassicKrylovRealAmplitudeWorkspace {
@@ -71,6 +83,17 @@ static int checked_add(size_t left, size_t right, size_t *sum) {
   return 1;
 }
 
+static uint64_t hash_bytes(uint64_t hash, const void *data,
+                           size_t byte_count) {
+  const unsigned char *bytes = (const unsigned char *)data;
+  size_t index;
+  for (index = 0; index < byte_count; ++index) {
+    hash ^= (uint64_t)bytes[index];
+    hash *= UINT64_C(1099511628211);
+  }
+  return hash;
+}
+
 static MVMCKrylovStatus map_create_status(MVMCPfaffianStatus status) {
   switch (status) {
     case MVMC_PFAFFIAN_STATUS_OK:
@@ -86,57 +109,14 @@ static MVMCKrylovStatus map_create_status(MVMCPfaffianStatus status) {
   return MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
 }
 
-static int valid_jastrow_binding(const int *const *binding,
-                                  size_t site_count, int class_count) {
-  size_t row, column;
-
-  if (class_count == 0) return 1;
-  if (binding == NULL) return 0;
-  for (row = 0; row < site_count; ++row) {
-    if (binding[row] == NULL) return 0;
-    for (column = 0; column < site_count; ++column) {
-      const int value = binding[row][column];
-      if (row == column) {
-        if (value != -1) return 0;
-      } else if (value < 0 || value >= class_count ||
-                 binding[column] == NULL ||
-                 binding[column][row] != value) {
-        return 0;
-      }
-    }
-  }
-  return 1;
-}
-
-static int valid_doublon_holon_binding(const int *const *binding,
-                                       size_t site_count, int class_count,
-                                       size_t neighbors_per_site) {
-  int class_index;
-  size_t value_index, value_count;
-
-  if (class_count == 0) return 1;
-  if (binding == NULL ||
-      !checked_multiply(site_count, neighbors_per_site, &value_count)) {
-    return 0;
-  }
-  for (class_index = 0; class_index < class_count; ++class_index) {
-    if (binding[class_index] == NULL) return 0;
-    for (value_index = 0; value_index < value_count; ++value_index) {
-      const int value = binding[class_index][value_index];
-      if (value < 0 || (size_t)value >= site_count) return 0;
-    }
-  }
-  return 1;
-}
-
 static MVMCKrylovStatus initialize_common(
     const MVMCClassicKrylovAmplitudeLayout *layout,
     const double complex *global_weights,
     MVMCClassicKrylovAmplitudeCommon *common) {
+  MVMCClassicKrylovProjectionLayout projection_layout;
+  MVMCKrylovStatus status;
   size_t nsize, orbital_count, word_count, matrix_count;
   size_t slater_dimension, slater_matrix_count;
-  size_t expected_nproj;
-  int index;
   int qp;
 
   if (layout == NULL || common == NULL || global_weights == NULL ||
@@ -149,87 +129,15 @@ static MVMCKrylovStatus initialize_common(
       (layout->pure_spin &&
        layout->up_electron_count + layout->down_electron_count !=
            layout->site_count) ||
-      (layout->qp_total != 1 && layout->qp_total != 4) ||
+      layout->qp_total <= 0 ||
       layout->qp_start < 0 ||
       layout->qp_end < layout->qp_start ||
       layout->qp_end > layout->qp_total ||
-      !isfinite(layout->scaled_pivot_tolerance) ||
-      layout->nproj < 0 || layout->ngutzwiller_idx < 0 ||
-      layout->njastrow_idx < 0 || layout->nspin_jastrow_idx < 0 ||
-      layout->ndoublon_holon_2site_idx < 0 ||
-      layout->ndoublon_holon_4site_idx < 0) {
+      !isfinite(layout->scaled_pivot_tolerance)) {
     return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   }
   if (layout->unsupported_features != 0) {
     return MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL;
-  }
-  expected_nproj = (size_t)layout->ngutzwiller_idx;
-  if ((size_t)layout->njastrow_idx > SIZE_MAX - expected_nproj) {
-    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
-  }
-  expected_nproj += (size_t)layout->njastrow_idx;
-  if ((size_t)layout->nspin_jastrow_idx > SIZE_MAX - expected_nproj) {
-    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
-  }
-  expected_nproj += (size_t)layout->nspin_jastrow_idx;
-  if ((size_t)layout->ndoublon_holon_2site_idx >
-          (SIZE_MAX - expected_nproj) / 6) {
-    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
-  }
-  expected_nproj += 6 * (size_t)layout->ndoublon_holon_2site_idx;
-  if ((size_t)layout->ndoublon_holon_4site_idx >
-          (SIZE_MAX - expected_nproj) / 10) {
-    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
-  }
-  expected_nproj += 10 * (size_t)layout->ndoublon_holon_4site_idx;
-  if (expected_nproj > (size_t)INT_MAX ||
-      (int)expected_nproj != layout->nproj) {
-    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
-  }
-  if (layout->ngutzwiller_idx != 0) {
-    if (layout->gutzwiller_idx == NULL ||
-        layout->projection_parameters == NULL) {
-      return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
-    }
-    for (index = 0; index < (int)layout->site_count; ++index) {
-      if (layout->gutzwiller_idx[index] < 0 ||
-          layout->gutzwiller_idx[index] >= layout->ngutzwiller_idx) {
-        return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
-      }
-    }
-  }
-  for (index = 0; index < layout->nproj; ++index) {
-    if (layout->projection_parameters == NULL ||
-        !isfinite(creal(layout->projection_parameters[index])) ||
-        !isfinite(cimag(layout->projection_parameters[index])) ||
-        cimag(layout->projection_parameters[index]) != 0.0) {
-      return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
-    }
-  }
-  if (!valid_jastrow_binding(layout->jastrow_idx, layout->site_count,
-                              layout->njastrow_idx) ||
-      !valid_jastrow_binding(layout->spin_jastrow_idx, layout->site_count,
-                              layout->nspin_jastrow_idx) ||
-      !valid_doublon_holon_binding(layout->doublon_holon_2site_idx,
-                                    layout->site_count,
-                                    layout->ndoublon_holon_2site_idx, 2) ||
-      !valid_doublon_holon_binding(layout->doublon_holon_4site_idx,
-                                    layout->site_count,
-                                    layout->ndoublon_holon_4site_idx, 4)) {
-    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
-  }
-  if (layout->njastrow_idx != 0 || layout->nspin_jastrow_idx != 0 ||
-      layout->ndoublon_holon_2site_idx != 0 ||
-      layout->ndoublon_holon_4site_idx != 0 ||
-      layout->ngutzwiller_idx > 1) {
-    return MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL;
-  }
-  if (layout->ngutzwiller_idx == 1) {
-    for (index = 0; index < (int)layout->site_count; ++index) {
-      if (layout->gutzwiller_idx[index] != 0) {
-        return MVMC_KRYLOV_STATUS_UNSUPPORTED_MODEL;
-      }
-    }
   }
   nsize = layout->up_electron_count + layout->down_electron_count;
   if (nsize > (size_t)INT_MAX ||
@@ -241,6 +149,27 @@ static MVMCKrylovStatus initialize_common(
                         &slater_matrix_count)) {
     return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   }
+  memset(&projection_layout, 0, sizeof(projection_layout));
+  projection_layout.site_count = layout->site_count;
+  projection_layout.nproj = layout->nproj;
+  projection_layout.ngutzwiller_idx = layout->ngutzwiller_idx;
+  projection_layout.njastrow_idx = layout->njastrow_idx;
+  projection_layout.nspin_jastrow_idx = layout->nspin_jastrow_idx;
+  projection_layout.ndoublon_holon_2site_idx =
+      layout->ndoublon_holon_2site_idx;
+  projection_layout.ndoublon_holon_4site_idx =
+      layout->ndoublon_holon_4site_idx;
+  projection_layout.gutzwiller_idx = layout->gutzwiller_idx;
+  projection_layout.jastrow_idx = layout->jastrow_idx;
+  projection_layout.spin_jastrow_idx = layout->spin_jastrow_idx;
+  projection_layout.doublon_holon_2site_idx =
+      layout->doublon_holon_2site_idx;
+  projection_layout.doublon_holon_4site_idx =
+      layout->doublon_holon_4site_idx;
+  projection_layout.parameters = layout->projection_parameters;
+  status = mvmc_classic_krylov_projection_workspace_create(
+      &projection_layout, &common->projection_workspace);
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
   word_count = (orbital_count + 63) / 64;
   for (qp = 0; qp < layout->qp_total; ++qp) {
     if (!isfinite(creal(global_weights[qp])) ||
@@ -262,19 +191,41 @@ static MVMCKrylovStatus initialize_common(
   common->slater_matrix_count = slater_matrix_count;
   common->matrix_count = matrix_count;
   common->scaled_pivot_tolerance = layout->scaled_pivot_tolerance;
-  common->projection_kind = layout->ngutzwiller_idx == 0
-                                ? MVMC_CLASSIC_KRYLOV_PROJECTION_NONE
-                                : MVMC_CLASSIC_KRYLOV_PROJECTION_GUTZWILLER_ONLY;
-  common->projection_parameter =
-      layout->ngutzwiller_idx == 0
-          ? 0.0 : creal(layout->projection_parameters[0]);
+  common->configuration_layout.site_count = (int)layout->site_count;
+  common->configuration_layout.up_electron_count =
+      (int)layout->up_electron_count;
+  common->configuration_layout.down_electron_count =
+      (int)layout->down_electron_count;
+  common->configuration_layout.pure_spin = layout->pure_spin;
   return MVMC_KRYLOV_STATUS_OK;
 }
 
 static int allocate_common(MVMCClassicKrylovAmplitudeCommon *common) {
-  if (common == NULL || common->nsize <= 0) return 0;
+  size_t byte_count;
+  if (common == NULL || common->nsize <= 0 ||
+      !checked_multiply((size_t)common->nsize, sizeof(*common->ele_idx),
+                        &byte_count) ||
+      !checked_multiply(common->orbital_count, sizeof(*common->ele_cfg),
+                        &byte_count) ||
+      !checked_multiply(common->orbital_count, sizeof(*common->ele_num),
+                        &byte_count) ||
+      !checked_multiply((size_t)common->qp_total,
+                        sizeof(*common->global_weights), &byte_count) ||
+      !checked_multiply(common->local_qp_count,
+                        sizeof(*common->components), &byte_count) ||
+      !checked_multiply((size_t)common->qp_total,
+                        sizeof(*common->global_components), &byte_count)
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+      || !checked_multiply(common->local_qp_count,
+                           sizeof(*common->scaled_components), &byte_count)
+#endif
+      ) {
+    return 0;
+  }
   common->ele_idx = (int *)calloc((size_t)common->nsize,
                                   sizeof(*common->ele_idx));
+  common->ele_cfg = (int *)calloc(common->orbital_count,
+                                  sizeof(*common->ele_cfg));
   common->ele_num = (int *)calloc(common->orbital_count,
                                   sizeof(*common->ele_num));
   common->global_weights = (double complex *)calloc(
@@ -282,23 +233,42 @@ static int allocate_common(MVMCClassicKrylovAmplitudeCommon *common) {
   if (common->local_qp_count != 0) {
     common->components = (MVMCAbsolutePfaffianValueResult *)calloc(
         common->local_qp_count, sizeof(*common->components));
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+    common->scaled_components =
+        (MVMCAbsolutePfaffianScaledValueResult *)calloc(
+            common->local_qp_count, sizeof(*common->scaled_components));
+#endif
   }
   common->global_components = (MVMCAbsolutePfaffianValueResult *)calloc(
       (size_t)common->qp_total, sizeof(*common->global_components));
-  return common->ele_idx != NULL && common->ele_num != NULL &&
+  return common->ele_idx != NULL && common->ele_cfg != NULL &&
+         common->ele_num != NULL &&
          common->global_weights != NULL &&
          common->global_components != NULL &&
-         (common->local_qp_count == 0 || common->components != NULL);
+         (common->local_qp_count == 0 || common->components != NULL)
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+         && (common->local_qp_count == 0 ||
+             common->scaled_components != NULL)
+#endif
+      ;
 }
 
 static void destroy_common(MVMCClassicKrylovAmplitudeCommon *common) {
   if (common == NULL) return;
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+  mvmc_bounded_krylov_collective_workspace_destroy(
+      common->bounded_collective_workspace);
+  free(common->scaled_components);
+#endif
   mvmc_classic_pfaffian_collective_workspace_destroy(
       common->collective_workspace);
+  mvmc_classic_krylov_projection_workspace_destroy(
+      common->projection_workspace);
   free(common->global_components);
   free(common->components);
   free(common->global_weights);
   free(common->ele_num);
+  free(common->ele_cfg);
   free(common->ele_idx);
 }
 
@@ -306,28 +276,37 @@ static MVMCPfaffianStatus audit_static_binding(
     MVMCClassicKrylovAmplitudeCommon *common, int scalar_kind,
     const void *slater, size_t slater_bytes,
     const double complex *global_weights) {
-  uint64_t metadata[9];
+  uint64_t metadata[7];
   uint64_t tolerance_bits = 0;
-  uint64_t projection_bits = 0;
+  const unsigned char *projection_binding;
+  size_t projection_binding_bytes = 0;
   MVMCPfaffianStatus status;
   int all_equal = 0;
 
   memcpy(&tolerance_bits, &common->scaled_pivot_tolerance,
          sizeof(tolerance_bits));
-  memcpy(&projection_bits, &common->projection_parameter,
-         sizeof(projection_bits));
   metadata[0] = (uint64_t)common->site_count;
   metadata[1] = (uint64_t)common->up_electron_count;
   metadata[2] = (uint64_t)common->down_electron_count;
   metadata[3] = (uint64_t)common->pure_spin;
   metadata[4] = (uint64_t)common->qp_total;
-  metadata[5] = (uint64_t)common->projection_kind;
-  metadata[6] = (uint64_t)scalar_kind;
-  metadata[7] = tolerance_bits;
-  metadata[8] = projection_bits;
+  metadata[5] = (uint64_t)scalar_kind;
+  metadata[6] = tolerance_bits;
   status = mvmc_classic_pfaffian_collective_all_equal_u64(
       common->collective_workspace, metadata,
       sizeof(metadata) / sizeof(metadata[0]), &all_equal);
+  if (status != MVMC_PFAFFIAN_STATUS_OK || !all_equal) {
+    return status == MVMC_PFAFFIAN_STATUS_OK
+               ? MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT : status;
+  }
+  projection_binding = mvmc_classic_krylov_projection_binding_bytes(
+      common->projection_workspace, &projection_binding_bytes);
+  if (projection_binding == NULL || projection_binding_bytes == 0) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  status = mvmc_classic_pfaffian_collective_all_equal_bytes(
+      common->collective_workspace, projection_binding,
+      projection_binding_bytes, &all_equal);
   if (status != MVMC_PFAFFIAN_STATUS_OK || !all_equal) {
     return status == MVMC_PFAFFIAN_STATUS_OK
                ? MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT : status;
@@ -345,6 +324,16 @@ static MVMCPfaffianStatus audit_static_binding(
     return status == MVMC_PFAFFIAN_STATUS_OK
                ? MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT : status;
   }
+  common->generation_hash = hash_bytes(
+      UINT64_C(1469598103934665603), metadata, sizeof(metadata));
+  common->generation_hash = hash_bytes(
+      common->generation_hash, projection_binding, projection_binding_bytes);
+  common->generation_hash = hash_bytes(
+      common->generation_hash, global_weights,
+      (size_t)common->qp_total * sizeof(*global_weights));
+  common->generation_hash = hash_bytes(
+      common->generation_hash, slater, slater_bytes);
+  if (common->generation_hash == 0) common->generation_hash = 1;
   return MVMC_PFAFFIAN_STATUS_OK;
 }
 
@@ -362,70 +351,33 @@ static MVMCPfaffianStatus audit_qp_partition(
       &collective);
 }
 
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+static MVMCKrylovStatus create_bounded_collective(
+    MVMCClassicKrylovAmplitudeCommon *common,
+    MVMCClassicPfaffianCommunicator communicator) {
+  return mvmc_bounded_krylov_collective_workspace_create(
+      communicator, (size_t)common->qp_total, 1,
+      &common->bounded_collective_workspace);
+}
+#endif
+
 static int build_occupation(MVMCClassicKrylovAmplitudeCommon *common,
                             const uint64_t *words, size_t word_count) {
-  size_t orbital;
-  size_t up_count = 0;
-  size_t down_count = 0;
-
-  if (common == NULL || words == NULL || word_count != common->word_count) {
-    return 0;
-  }
-  if ((common->orbital_count % 64) != 0 &&
-      (words[word_count - 1] >> (common->orbital_count % 64)) != 0) {
-    return 0;
-  }
-  memset(common->ele_num, 0,
-         common->orbital_count * sizeof(*common->ele_num));
-  for (orbital = 0; orbital < common->orbital_count; ++orbital) {
-    const int occupied =
-        (int)((words[orbital / 64] >> (orbital % 64)) & UINT64_C(1));
-    common->ele_num[orbital] = occupied;
-    if (!occupied) continue;
-    if (orbital < common->site_count) {
-      if (up_count >= common->up_electron_count) return 0;
-      common->ele_idx[up_count++] = (int)orbital;
-    } else {
-      if (down_count >= common->down_electron_count) return 0;
-      common->ele_idx[common->up_electron_count + down_count++] =
-          (int)(orbital - common->site_count);
-    }
-  }
-  if (up_count != common->up_electron_count ||
-      down_count != common->down_electron_count) {
-    return 0;
-  }
-  if (common->pure_spin) {
-    size_t site;
-    for (site = 0; site < common->site_count; ++site) {
-      if (common->ele_num[site] +
-              common->ele_num[common->site_count + site] != 1) {
-        return 0;
-      }
-    }
-  }
-  return 1;
+  return common != NULL &&
+         mvmc_classic_krylov_configuration_decode(
+             &common->configuration_layout, words, word_count,
+             common->ele_idx, common->ele_cfg, common->ele_num) ==
+             MVMC_KRYLOV_STATUS_OK;
 }
 
 static MVMCKrylovStatus projection_log_value(
     MVMCClassicKrylovAmplitudeCommon *common, double *log_value) {
-  size_t site;
-  size_t double_occupancy = 0;
-
-  *log_value = 0.0;
-  if (common->projection_kind == MVMC_CLASSIC_KRYLOV_PROJECTION_NONE) {
-    return MVMC_KRYLOV_STATUS_OK;
-  }
-  for (site = 0; site < common->site_count; ++site) {
-    double_occupancy +=
-        (size_t)(common->ele_num[site] *
-                 common->ele_num[common->site_count + site]);
-  }
-  *log_value = common->projection_parameter * (double)double_occupancy;
-  return isfinite(*log_value) ? MVMC_KRYLOV_STATUS_OK
-                              : MVMC_KRYLOV_STATUS_NONFINITE;
+  return mvmc_classic_krylov_projection_evaluate(
+      common->projection_workspace, common->ele_num,
+      common->orbital_count, NULL, 0, log_value);
 }
 
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
 static int neumaier_add(double value, double *sum, double *compensation) {
   const double updated = *sum + value;
 
@@ -543,6 +495,7 @@ static MVMCKrylovStatus publish_amplitude(
   result->global_factorization_count = global_factorization_count;
   return MVMC_KRYLOV_STATUS_OK;
 }
+#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE */
 
 MVMCKrylovStatus mvmc_classic_krylov_real_amplitude_workspace_create(
     const MVMCClassicKrylovAmplitudeLayout *layout,
@@ -557,6 +510,7 @@ MVMCKrylovStatus mvmc_classic_krylov_real_amplitude_workspace_create(
   int all_ready = 0;
   size_t slater_count = 0;
   size_t slater_bytes = 0;
+  size_t matrix_bytes = 0;
   int qp;
 
   if (workspace == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
@@ -604,11 +558,12 @@ MVMCKrylovStatus mvmc_classic_krylov_real_amplitude_workspace_create(
                        created->common.slater_matrix_count, &slater_count) &&
       checked_multiply(slater_count, sizeof(*created->slater_elm),
                        &slater_bytes) &&
+      checked_multiply(created->common.matrix_count,
+                       sizeof(*created->matrix), &matrix_bytes) &&
       allocate_common(&created->common);
   if (local_ready) {
     created->slater_elm = (double *)malloc(slater_bytes);
-    created->matrix = (double *)malloc(
-        created->common.matrix_count * sizeof(*created->matrix));
+    created->matrix = (double *)malloc(matrix_bytes);
     local_ready = created->slater_elm != NULL && created->matrix != NULL;
   }
   if (local_ready) {
@@ -624,6 +579,20 @@ MVMCKrylovStatus mvmc_classic_krylov_real_amplitude_workspace_create(
                ? map_create_status(pf_status)
                : MVMC_KRYLOV_STATUS_ALLOCATION_FAILURE;
   }
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+  local_status = create_bounded_collective(
+      &created->common, layout->communicator);
+  if (mvmc_classic_pfaffian_collective_max_int(
+          created->common.collective_workspace, (int)local_status,
+          &global_status) != MVMC_PFAFFIAN_STATUS_OK) {
+    mvmc_classic_krylov_real_amplitude_workspace_destroy(created);
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  }
+  if (global_status != (int)MVMC_KRYLOV_STATUS_OK) {
+    mvmc_classic_krylov_real_amplitude_workspace_destroy(created);
+    return (MVMCKrylovStatus)global_status;
+  }
+#endif
   pf_status = audit_static_binding(
       &created->common, 0, slater_elm, slater_bytes, global_weights);
   if (pf_status == MVMC_PFAFFIAN_STATUS_OK) {
@@ -656,8 +625,14 @@ size_t mvmc_classic_krylov_real_amplitude_workspace_bytes(
     const MVMCClassicKrylovRealAmplitudeWorkspace *workspace) {
   size_t bytes;
   size_t item;
+  size_t slater_count;
 
-  if (workspace == NULL) return 0;
+  if (workspace == NULL ||
+      !checked_multiply((size_t)workspace->common.qp_total,
+                        workspace->common.slater_matrix_count,
+                        &slater_count)) {
+    return 0;
+  }
   bytes = sizeof(*workspace);
 #define ADD_REAL_BYTES(count, type)                                      \
   do {                                                                    \
@@ -666,14 +641,17 @@ size_t mvmc_classic_krylov_real_amplitude_workspace_bytes(
   } while (0)
   ADD_REAL_BYTES((size_t)workspace->common.nsize, int);
   ADD_REAL_BYTES(workspace->common.orbital_count, int);
+  ADD_REAL_BYTES(workspace->common.orbital_count, int);
   ADD_REAL_BYTES((size_t)workspace->common.qp_total, double complex);
   ADD_REAL_BYTES(workspace->common.local_qp_count,
                  MVMCAbsolutePfaffianValueResult);
   ADD_REAL_BYTES((size_t)workspace->common.qp_total,
                  MVMCAbsolutePfaffianValueResult);
-  ADD_REAL_BYTES((size_t)workspace->common.qp_total *
-                     workspace->common.slater_matrix_count,
-                 double);
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+  ADD_REAL_BYTES(workspace->common.local_qp_count,
+                 MVMCAbsolutePfaffianScaledValueResult);
+#endif
+  ADD_REAL_BYTES(slater_count, double);
   ADD_REAL_BYTES(workspace->common.matrix_count, double);
 #undef ADD_REAL_BYTES
   if (!checked_add(bytes,
@@ -683,9 +661,21 @@ size_t mvmc_classic_krylov_real_amplitude_workspace_bytes(
       !checked_add(bytes,
                    mvmc_classic_pfaffian_collective_workspace_bytes(
                        workspace->common.collective_workspace),
+                   &bytes) ||
+      !checked_add(bytes,
+                   mvmc_classic_krylov_projection_workspace_bytes(
+                       workspace->common.projection_workspace),
                    &bytes)) {
     return 0;
   }
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+  if (!checked_add(bytes,
+                   mvmc_bounded_krylov_collective_workspace_bytes(
+                       workspace->common.bounded_collective_workspace),
+                   &bytes)) {
+    return 0;
+  }
+#endif
   return bytes;
 }
 
@@ -703,6 +693,7 @@ MVMCKrylovStatus mvmc_classic_krylov_complex_amplitude_workspace_create(
   int all_ready = 0;
   size_t slater_count = 0;
   size_t slater_bytes = 0;
+  size_t matrix_bytes = 0;
 
   if (workspace == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   *workspace = NULL;
@@ -742,12 +733,13 @@ MVMCKrylovStatus mvmc_classic_krylov_complex_amplitude_workspace_create(
                        created->common.slater_matrix_count, &slater_count) &&
       checked_multiply(slater_count, sizeof(*created->slater_elm),
                        &slater_bytes) &&
+      checked_multiply(created->common.matrix_count,
+                       sizeof(*created->matrix), &matrix_bytes) &&
       allocate_common(&created->common);
   if (local_ready) {
     created->slater_elm =
         (double complex *)malloc(slater_bytes);
-    created->matrix = (double complex *)malloc(
-        created->common.matrix_count * sizeof(*created->matrix));
+    created->matrix = (double complex *)malloc(matrix_bytes);
     local_ready = created->slater_elm != NULL && created->matrix != NULL;
   }
   if (local_ready) {
@@ -763,6 +755,20 @@ MVMCKrylovStatus mvmc_classic_krylov_complex_amplitude_workspace_create(
                ? map_create_status(pf_status)
                : MVMC_KRYLOV_STATUS_ALLOCATION_FAILURE;
   }
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+  local_status = create_bounded_collective(
+      &created->common, layout->communicator);
+  if (mvmc_classic_pfaffian_collective_max_int(
+          created->common.collective_workspace, (int)local_status,
+          &global_status) != MVMC_PFAFFIAN_STATUS_OK) {
+    mvmc_classic_krylov_complex_amplitude_workspace_destroy(created);
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  }
+  if (global_status != (int)MVMC_KRYLOV_STATUS_OK) {
+    mvmc_classic_krylov_complex_amplitude_workspace_destroy(created);
+    return (MVMCKrylovStatus)global_status;
+  }
+#endif
   pf_status = audit_static_binding(
       &created->common, 1, slater_elm, slater_bytes, global_weights);
   if (pf_status == MVMC_PFAFFIAN_STATUS_OK) {
@@ -795,8 +801,14 @@ size_t mvmc_classic_krylov_complex_amplitude_workspace_bytes(
     const MVMCClassicKrylovComplexAmplitudeWorkspace *workspace) {
   size_t bytes;
   size_t item;
+  size_t slater_count;
 
-  if (workspace == NULL) return 0;
+  if (workspace == NULL ||
+      !checked_multiply((size_t)workspace->common.qp_total,
+                        workspace->common.slater_matrix_count,
+                        &slater_count)) {
+    return 0;
+  }
   bytes = sizeof(*workspace);
 #define ADD_COMPLEX_BYTES(count, type)                                   \
   do {                                                                    \
@@ -805,14 +817,17 @@ size_t mvmc_classic_krylov_complex_amplitude_workspace_bytes(
   } while (0)
   ADD_COMPLEX_BYTES((size_t)workspace->common.nsize, int);
   ADD_COMPLEX_BYTES(workspace->common.orbital_count, int);
+  ADD_COMPLEX_BYTES(workspace->common.orbital_count, int);
   ADD_COMPLEX_BYTES((size_t)workspace->common.qp_total, double complex);
   ADD_COMPLEX_BYTES(workspace->common.local_qp_count,
                     MVMCAbsolutePfaffianValueResult);
   ADD_COMPLEX_BYTES((size_t)workspace->common.qp_total,
                     MVMCAbsolutePfaffianValueResult);
-  ADD_COMPLEX_BYTES((size_t)workspace->common.qp_total *
-                        workspace->common.slater_matrix_count,
-                    double complex);
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+  ADD_COMPLEX_BYTES(workspace->common.local_qp_count,
+                    MVMCAbsolutePfaffianScaledValueResult);
+#endif
+  ADD_COMPLEX_BYTES(slater_count, double complex);
   ADD_COMPLEX_BYTES(workspace->common.matrix_count, double complex);
 #undef ADD_COMPLEX_BYTES
   if (!checked_add(bytes,
@@ -822,12 +837,25 @@ size_t mvmc_classic_krylov_complex_amplitude_workspace_bytes(
       !checked_add(bytes,
                    mvmc_classic_pfaffian_collective_workspace_bytes(
                        workspace->common.collective_workspace),
+                   &bytes) ||
+      !checked_add(bytes,
+                   mvmc_classic_krylov_projection_workspace_bytes(
+                       workspace->common.projection_workspace),
                    &bytes)) {
     return 0;
   }
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+  if (!checked_add(bytes,
+                   mvmc_bounded_krylov_collective_workspace_bytes(
+                       workspace->common.bounded_collective_workspace),
+                   &bytes)) {
+    return 0;
+  }
+#endif
   return bytes;
 }
 
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
 MVMCKrylovStatus mvmc_classic_krylov_real_amplitude(
     const uint64_t *configuration_words, size_t word_count,
     void *context, MVMCKrylovAmplitudeResult *result) {
@@ -1053,5 +1081,183 @@ MVMCKrylovStatus mvmc_classic_krylov_complex_amplitude(
   return publish_amplitude(common, &projected, log_projection,
                            global_factorizations, result);
 }
-
 #endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE */
+
+uint64_t mvmc_classic_krylov_real_amplitude_generation_hash(
+    const MVMCClassicKrylovRealAmplitudeWorkspace *workspace) {
+  return workspace == NULL ? 0 : workspace->common.generation_hash;
+}
+
+uint64_t mvmc_classic_krylov_complex_amplitude_generation_hash(
+    const MVMCClassicKrylovComplexAmplitudeWorkspace *workspace) {
+  return workspace == NULL ? 0 : workspace->common.generation_hash;
+}
+
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+static MVMCKrylovStatus scaled_amplitude_preflight(
+    MVMCClassicKrylovAmplitudeCommon *common,
+    const uint64_t *configuration_words, size_t word_count,
+    double *log_projection) {
+  MVMCPfaffianStatus pf_status;
+  MVMCKrylovStatus status;
+  int all_equal = 0;
+  int all_valid = 0;
+  int global_status = 0;
+
+  pf_status = mvmc_classic_pfaffian_collective_all_equal_u64(
+      common->collective_workspace, configuration_words, word_count,
+      &all_equal);
+  if (pf_status != MVMC_PFAFFIAN_STATUS_OK || !all_equal) {
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  }
+  pf_status = mvmc_classic_pfaffian_collective_all_true(
+      common->collective_workspace,
+      build_occupation(common, configuration_words, word_count), &all_valid);
+  if (pf_status != MVMC_PFAFFIAN_STATUS_OK) {
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  }
+  if (!all_valid) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  status = projection_log_value(common, log_projection);
+  pf_status = mvmc_classic_pfaffian_collective_max_int(
+      common->collective_workspace, (int)status, &global_status);
+  if (pf_status != MVMC_PFAFFIAN_STATUS_OK) {
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  }
+  return (MVMCKrylovStatus)global_status;
+}
+
+static MVMCKrylovStatus apply_scaled_projection(
+    double log_projection, MVMCKrylovScaledAmplitudeResult *amplitude) {
+  MVMCScaledComplex factor;
+  MVMCScaledComplex projected;
+
+  if (log_projection == 0.0) return MVMC_KRYLOV_STATUS_OK;
+  if (mvmc_scaled_complex_make_finite(
+          1.0 + 0.0 * I, log_projection, -INFINITY, &factor) !=
+          MVMC_PFAFFIAN_STATUS_OK ||
+      mvmc_scaled_complex_multiply(&factor, &amplitude->value,
+                                   &projected) !=
+          MVMC_PFAFFIAN_STATUS_OK ||
+      projected.state == MVMC_SCALED_COMPLEX_NONFINITE) {
+    return MVMC_KRYLOV_STATUS_NONFINITE;
+  }
+  amplitude->value = projected;
+  return MVMC_KRYLOV_STATUS_OK;
+}
+
+MVMCKrylovStatus mvmc_classic_krylov_real_scaled_amplitude(
+    const uint64_t *configuration_words, size_t word_count,
+    void *context, MVMCKrylovScaledAmplitudeResult *result) {
+  MVMCClassicKrylovRealAmplitudeWorkspace *workspace =
+      (MVMCClassicKrylovRealAmplitudeWorkspace *)context;
+  MVMCClassicKrylovAmplitudeCommon *common;
+  MVMCKrylovScaledAmplitudeResult projected;
+  MVMCKrylovBoundedCollectiveResult collective;
+  MVMCKrylovStatus status;
+  MVMCPfaffianStatus pf_status = MVMC_PFAFFIAN_STATUS_OK;
+  double log_projection = 0.0;
+  size_t local_qp;
+
+  if (result == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  memset(result, 0, sizeof(*result));
+  if (workspace == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  common = &workspace->common;
+  status = scaled_amplitude_preflight(
+      common, configuration_words, word_count, &log_projection);
+  for (local_qp = 0; status == MVMC_KRYLOV_STATUS_OK &&
+                     local_qp < common->local_qp_count; ++local_qp) {
+    const int global_qp = common->qp_start + (int)local_qp;
+    pf_status = mvmc_classic_pfaffian_build_real_matrix(
+        workspace->slater_elm +
+            (size_t)global_qp * common->slater_matrix_count,
+        (int)common->site_count, common->nsize, common->ele_idx,
+        workspace->matrix);
+    if (pf_status == MVMC_PFAFFIAN_STATUS_OK) {
+      pf_status = mvmc_absolute_pfaffian_real_scaled_value_with_workspace(
+          workspace->value_workspace, workspace->matrix, common->nsize,
+          common->nsize, common->scaled_pivot_tolerance,
+          &common->scaled_components[local_qp]);
+    }
+    if (pf_status != MVMC_PFAFFIAN_STATUS_OK) {
+      status = pf_status == MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE
+                   ? MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE
+                   : map_create_status(pf_status);
+    } else if (common->scaled_components[local_qp].factor_state ==
+               MVMC_PFAFFIAN_VALUE_NONFINITE) {
+      status = MVMC_KRYLOV_STATUS_NONFINITE;
+    } else if (common->scaled_components[local_qp].factor_state ==
+               MVMC_PFAFFIAN_VALUE_INVALID) {
+      status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+    }
+  }
+  status = mvmc_bounded_krylov_collective_gather_projected_amplitude(
+      common->bounded_collective_workspace, status,
+      common->scaled_components, common->local_qp_count,
+      common->global_weights, common->qp_total, common->qp_start,
+      common->qp_end, &projected, &collective);
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  status = apply_scaled_projection(log_projection, &projected);
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  *result = projected;
+  return MVMC_KRYLOV_STATUS_OK;
+}
+
+MVMCKrylovStatus mvmc_classic_krylov_complex_scaled_amplitude(
+    const uint64_t *configuration_words, size_t word_count,
+    void *context, MVMCKrylovScaledAmplitudeResult *result) {
+  MVMCClassicKrylovComplexAmplitudeWorkspace *workspace =
+      (MVMCClassicKrylovComplexAmplitudeWorkspace *)context;
+  MVMCClassicKrylovAmplitudeCommon *common;
+  MVMCKrylovScaledAmplitudeResult projected;
+  MVMCKrylovBoundedCollectiveResult collective;
+  MVMCKrylovStatus status;
+  MVMCPfaffianStatus pf_status = MVMC_PFAFFIAN_STATUS_OK;
+  double log_projection = 0.0;
+  size_t local_qp;
+
+  if (result == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  memset(result, 0, sizeof(*result));
+  if (workspace == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  common = &workspace->common;
+  status = scaled_amplitude_preflight(
+      common, configuration_words, word_count, &log_projection);
+  for (local_qp = 0; status == MVMC_KRYLOV_STATUS_OK &&
+                     local_qp < common->local_qp_count; ++local_qp) {
+    const int global_qp = common->qp_start + (int)local_qp;
+    pf_status = mvmc_classic_pfaffian_build_complex_matrix(
+        workspace->slater_elm +
+            (size_t)global_qp * common->slater_matrix_count,
+        (int)common->site_count, common->nsize, common->ele_idx,
+        workspace->matrix);
+    if (pf_status == MVMC_PFAFFIAN_STATUS_OK) {
+      pf_status = mvmc_absolute_pfaffian_complex_scaled_value_with_workspace(
+          workspace->value_workspace, workspace->matrix, common->nsize,
+          common->nsize, common->scaled_pivot_tolerance,
+          &common->scaled_components[local_qp]);
+    }
+    if (pf_status != MVMC_PFAFFIAN_STATUS_OK) {
+      status = pf_status == MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE
+                   ? MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE
+                   : map_create_status(pf_status);
+    } else if (common->scaled_components[local_qp].factor_state ==
+               MVMC_PFAFFIAN_VALUE_NONFINITE) {
+      status = MVMC_KRYLOV_STATUS_NONFINITE;
+    } else if (common->scaled_components[local_qp].factor_state ==
+               MVMC_PFAFFIAN_VALUE_INVALID) {
+      status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+    }
+  }
+  status = mvmc_bounded_krylov_collective_gather_projected_amplitude(
+      common->bounded_collective_workspace, status,
+      common->scaled_components, common->local_qp_count,
+      common->global_weights, common->qp_total, common->qp_start,
+      common->qp_end, &projected, &collective);
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  status = apply_scaled_projection(log_projection, &projected);
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  *result = projected;
+  return MVMC_KRYLOV_STATUS_OK;
+}
+#endif /* MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE */
+
+#endif /* reference or bounded engine */

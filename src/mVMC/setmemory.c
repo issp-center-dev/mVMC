@@ -354,10 +354,11 @@ void SetMemoryDef() {
 void FreeMemoryDef() {
   int i, rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank==0 && NCisAjsCktAlt>0) {
+  if (rank == 0 && iOneBodyGIdx != NULL) {
     for(i=0;i<2*Nsite;i++)
       free(iOneBodyGIdx[i]);
     free(iOneBodyGIdx);
+    iOneBodyGIdx = NULL;
   }
 
   free(QPOptTransSgn);

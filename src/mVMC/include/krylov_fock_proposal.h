@@ -11,7 +11,8 @@ the Free Software Foundation, either version 3 of the License, or
 #ifndef MVMC_KRYLOV_FOCK_PROPOSAL_H
 #define MVMC_KRYLOV_FOCK_PROPOSAL_H
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                         \
+    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
 #include "krylov_fock_reference.h"
 
@@ -92,6 +93,6 @@ MVMCKrylovStatus mvmc_krylov_fock_proposal_check_connectivity(
     const MVMCKrylovFockModel *model, size_t max_states,
     MVMCKrylovFockProposalConnectivity *result);
 
-#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE */
+#endif /* reference or bounded engine */
 
 #endif /* MVMC_KRYLOV_FOCK_PROPOSAL_H */

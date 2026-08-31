@@ -11,8 +11,7 @@ the Free Software Foundation, either version 3 of the License, or
 #ifndef MVMC_KRYLOV_POSITIVE_SAMPLER_H
 #define MVMC_KRYLOV_POSITIVE_SAMPLER_H
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) &&                         \
-    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
 #include "krylov_fock_proposal.h"
 #include "krylov_positive_guide.h"

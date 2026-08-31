@@ -525,6 +525,18 @@ order. For independent finite samples it is a statistical diagnostic
 that is expected to decrease approximately as
 :math:`O(1/\sqrt{N_{\mathrm{VMCSample}}})`; it is not a solver tolerance.
 
+xxx\_pl\_out\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~~
+
+This three-line file is written by the stabilized Power-Lanczos estimator
+when ``NLanczosEstimatorMode=1``. Its header records the version, order,
+coefficient-chain and final-chain sample counts, and block count. After the
+field-name line, the data line contains corrected energy and variance with
+standard errors, their imaginary diagnostics, the energy autocorrelation time
+and effective sample count, and the retained rank, condition estimate, and
+residual of the generalized eigenproblem. It contains no Green's functions or
+per-sample trace.
+
 xxx\_ls2\_moment\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

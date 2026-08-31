@@ -81,6 +81,18 @@ void InitFilePhysCal(int i, int rank) {
 
   if(rank!=0) return;
 
+  if(NLanczosMode>0 && NLanczosEstimatorMode==1){
+    sprintf(fileName, "%s_pl_out_%03d.dat", CDataFileHead, idx);
+    FileLS = fopen(fileName, "w");
+    if(FileLS == NULL){
+      fprintf(stderr,
+              "Error: failed to open stabilized power-Lanczos output "
+              "'%s'.\n", fileName);
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+    return;
+  }
+
   sprintf(fileName, "%s_out_%03d.dat", CDataFileHead, idx);
   FileOut = fopen(fileName, "w");
 
@@ -199,6 +211,11 @@ void CloseFile(int rank) {
 
 void CloseFilePhysCal(int rank) {
   if(rank!=0) return;
+
+  if(NLanczosMode>0 && NLanczosEstimatorMode==1){
+    fclose(FileLS);
+    return;
+  }
 
   fclose(FileOut);
   fclose(FileVar);

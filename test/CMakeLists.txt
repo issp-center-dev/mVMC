@@ -687,9 +687,39 @@ endif()
 add_test(NAME KrylovMatrixMeasurement_Unit
     COMMAND krylov_matrix_measurement_unit)
 
+add_executable(classic_krylov_configuration_unit
+    classic_krylov_configuration_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c)
+target_include_directories(classic_krylov_configuration_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(classic_krylov_configuration_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(classic_krylov_configuration_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME ClassicKrylovConfiguration_Unit
+    COMMAND classic_krylov_configuration_unit)
+
+add_executable(classic_krylov_projection_unit
+    classic_krylov_projection_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c)
+target_include_directories(classic_krylov_projection_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(classic_krylov_projection_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(classic_krylov_projection_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME ClassicKrylovProjection_Unit
+    COMMAND classic_krylov_projection_unit)
+
 add_executable(classic_krylov_amplitude_unit
     classic_krylov_amplitude_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
@@ -730,6 +760,61 @@ if(MPI_FOUND)
         PROCESSORS 4)
 endif()
 
+add_executable(power_lanczos_stabilized_unit
+    power_lanczos_stabilized_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_classic_bridge.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilized.c)
+target_include_directories(power_lanczos_stabilized_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_compile_definitions(power_lanczos_stabilized_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+    MVMC_ENABLE_POWER_LANCZOS_P5_CORE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_stabilized_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(power_lanczos_stabilized_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(power_lanczos_stabilized_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(power_lanczos_stabilized_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(power_lanczos_stabilized_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME PowerLanczosStabilized_Unit
+    COMMAND power_lanczos_stabilized_unit)
+if(MPI_FOUND)
+    add_test(NAME PowerLanczosStabilized_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:power_lanczos_stabilized_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(PowerLanczosStabilized_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+endif()
+
 add_executable(classic_krylov_model_unit
     classic_krylov_model_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c)
@@ -767,6 +852,8 @@ endif()
 add_executable(absolute_krylov_classic_ed_driver
     absolute_krylov_classic_ed_driver.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
@@ -793,6 +880,8 @@ endif()
 add_executable(absolute_krylov_profile_driver
     absolute_krylov_profile_driver.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c

@@ -11,7 +11,8 @@ the Free Software Foundation, either version 3 of the License, or
 #ifndef MVMC_CLASSIC_KRYLOV_MODEL_H
 #define MVMC_CLASSIC_KRYLOV_MODEL_H
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                         \
+    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
 #include "classic_pfaffian_collective.h"
 #include "krylov_fock_reference.h"
@@ -94,6 +95,6 @@ const MVMCKrylovFockModel *mvmc_classic_krylov_model(
 size_t mvmc_classic_krylov_model_workspace_bytes(
     const MVMCClassicKrylovModelWorkspace *workspace);
 
-#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE */
+#endif /* reference or bounded engine */
 
 #endif /* MVMC_CLASSIC_KRYLOV_MODEL_H */

@@ -502,6 +502,8 @@ def run_sr_variant(rootdir, variant):
             "NSRCG": 1,
             "RescaleSmat": 1,
             "NSROptCGMaxIter": 1000,
+            "DSROptStaDel": 0.1,
+            "DSROptCGTol": 1.0e-6,
         },
     }[variant]
     run_family(rootdir, "General", settings)
