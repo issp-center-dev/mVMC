@@ -72,6 +72,36 @@ endif()
 target_link_libraries(krylov_gevp_solver_unit ${LAPACK_LIBRARIES} m)
 add_test(NAME KrylovGEVPSolver_Unit COMMAND krylov_gevp_solver_unit)
 
+add_executable(power_lanczos_independent_unit
+    power_lanczos_independent_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_independent.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(power_lanczos_independent_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(power_lanczos_independent_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(power_lanczos_independent_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(power_lanczos_independent_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(power_lanczos_independent_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(power_lanczos_independent_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(power_lanczos_independent_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME PowerLanczosIndependent_Unit
+    COMMAND power_lanczos_independent_unit)
+
 add_executable(absolute_pfaffian_unit
     absolute_pfaffian_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)

@@ -261,6 +261,8 @@ example of the file format is shown as follows.
     LocSpin  zlocspn.def
     Trans    ztransfer.def
     InterAll zinterall.def
+    LsTrans  zlstrans.def
+    LsInterAll zlsinterall.def
     NBodyInterAll nbodyinterall.def
     Orbital orbitalidx.def
     OneBodyG zcisajs.def
@@ -320,6 +322,10 @@ User rules
      - Transfer and chemical potential for Hamiltonian.
    * - InterAll
      - Two-body interactions for Hamiltonian.
+   * - LsTrans
+     - One-body part of an independent Lanczos operator :math:`H'`.
+   * - LsInterAll
+     - Two-body part of an independent Lanczos operator :math:`H'`.
    * - NBodyInterAll
      - Variable-order :math:`N`-body interactions for Hamiltonian.
    * - CoulombIntra
@@ -628,6 +634,15 @@ Keywords and parameters
    ``xxx_pl_out_yyy.dat``. ``NVMCSample`` must be at least 8 and divisible by
    a block count between 4 and 16 with at least two samples per block; a
    multiple of 16 is recommended.
+
+   Supplying ``LsTrans`` or ``LsInterAll`` selects the independent-operator
+   route with basis :math:`\{\Psi,H'\Psi\}`. This route additionally requires
+   real variational parameters, ``NLanczosStep=1``, ``NExUpdatePath=0``, and
+   physical mode. The physical :math:`H` and independent :math:`H'` may
+   contain only ``Trans`` and ``InterAll`` rows. FSZ, BackFlow, RBM,
+   reweighting, native model couplings, special updates, and Green's-function
+   measurements are rejected. ``NQPFull`` remains a run-time value and is not
+   fixed by this feature.
 
 -  ``NLanczosSupportMode``
 
@@ -1313,6 +1328,18 @@ Use rules
 -  A program is terminated, when
    [ int02 ]-[ int09 ] are out of
    range from the defined values.
+
+Independent Lanczos operator files (lstrans.def, lsinterall.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``LsTrans`` and ``LsInterAll`` define an operator :math:`H'` that is
+independent of the physical Hamiltonian. Their file formats and sign
+conventions are exactly those of ``Trans`` and ``InterAll``: an ``LsTrans``
+row contributes :math:`-t c^\dagger c`, while an ``LsInterAll`` row is
+applied in the written CACA order. Either component may be omitted, but the
+combined operator must be nonempty, real, Hermitian, and preserve particle
+number and :math:`S_z`. mVMC checks row-level finite/index/sector conditions;
+the input generator is responsible for Hermitian closure.
 
 NBodyInterAll file (nbodyinterall.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

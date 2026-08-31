@@ -44,6 +44,7 @@ int NLanczosMode; /* mode of the single Lanczos step
 int NLanczosStep; /* polynomial order of the Lanczos wave function: 1 or 2 */
 int NLanczosSupportMode; /* 0: strict support gate, 1: experimental legacy */
 int NLanczosEstimatorMode; /* 0: legacy default, 1: stabilized estimator */
+int FlagLsExplicit; /* independent H' supplied by LsTrans/LsInterAll */
 
 int NStoreO; /* choice of store O: 0-> normal other-> store  */
 int NSRCG; /* choice of solver for Sx=g: 0-> (Sca)LAPACK other-> CG  */
@@ -126,6 +127,12 @@ double *ParaExchangeCoupling;
 int NInterAll;
 int **InterAll; /* [NInterAll][8] */
 double complex*ParaInterAll;
+int NLsTransfer;
+int **LsTransfer; /* [NLsTransfer][4] */
+double complex *ParaLsTransfer;
+int NLsInterAll;
+int **LsInterAll; /* [NLsInterAll][8] */
+double complex *ParaLsInterAll;
 int NNBodyInterAll;
 int NBodyInterAllTotalFactors;
 int NBodyInterAllMaxN;
