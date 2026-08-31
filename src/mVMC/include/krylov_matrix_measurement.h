@@ -11,8 +11,7 @@ the Free Software Foundation, either version 3 of the License, or
 #ifndef MVMC_KRYLOV_MATRIX_MEASUREMENT_H
 #define MVMC_KRYLOV_MATRIX_MEASUREMENT_H
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) &&                         \
-    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
 #include "absolute_pfaffian.h"
 #include "krylov_streaming_statistics.h"
@@ -189,7 +188,6 @@ MVMCKrylovStatus mvmc_krylov_matrix_measurement_diagnostics_summary(
     double maximum_denominator_relative_se,
     MVMCKrylovMatrixMeasurementDiagnosticsSummary *summary);
 
-#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE &&
-          MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE */
+#endif /* MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE */
 
 #endif /* MVMC_KRYLOV_MATRIX_MEASUREMENT_H */

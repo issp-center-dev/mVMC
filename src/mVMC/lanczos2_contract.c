@@ -20,15 +20,9 @@ Lanczos2ModelClass ClassifyLanczos2Model(
   return LANCZOS2_MODEL_INVALID;
 }
 
-Lanczos2ContractStatus ValidateLanczos2Contract(
+static Lanczos2ContractStatus ValidateLanczos2Capabilities(
     const Lanczos2Contract *contract) {
   Lanczos2ModelClass model;
-
-  if (contract == NULL || (contract->step != 1 && contract->step != 2)) {
-    return LANCZOS2_CONTRACT_INVALID_STEP;
-  }
-  if (contract->step == 1) return LANCZOS2_CONTRACT_OK;
-
   if (contract->lanczosMode != 1) {
     return LANCZOS2_CONTRACT_REQUIRES_LANCZOS_MODE_1;
   }
@@ -78,11 +72,32 @@ Lanczos2ContractStatus ValidateLanczos2Contract(
   if (contract->nSpinFlipTransfer != 0) {
     return LANCZOS2_CONTRACT_UNSUPPORTED_SPIN_FLIP_TRANSFER;
   }
-  if (model == LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE &&
+  return LANCZOS2_CONTRACT_OK;
+}
+
+Lanczos2ContractStatus ValidateLanczos2Contract(
+    const Lanczos2Contract *contract) {
+  Lanczos2ContractStatus status;
+  if (contract == NULL || (contract->step != 1 && contract->step != 2)) {
+    return LANCZOS2_CONTRACT_INVALID_STEP;
+  }
+  if (contract->step == 1) return LANCZOS2_CONTRACT_OK;
+  status = ValidateLanczos2Capabilities(contract);
+  if (status != LANCZOS2_CONTRACT_OK) return status;
+  if (ClassifyLanczos2Model(contract) ==
+          LANCZOS2_MODEL_LOCAL_SPIN_EXCHANGE &&
       contract->nQPFull != 1) {
     return LANCZOS2_CONTRACT_UNSUPPORTED_QUANTUM_PROJECTION;
   }
   return LANCZOS2_CONTRACT_OK;
+}
+
+Lanczos2ContractStatus ValidateCorrectedPowerLanczosExecutionContract(
+    const Lanczos2Contract *contract) {
+  if (contract == NULL || (contract->step != 1 && contract->step != 2)) {
+    return LANCZOS2_CONTRACT_INVALID_STEP;
+  }
+  return ValidateLanczos2Capabilities(contract);
 }
 
 const char *Lanczos2ContractError(Lanczos2ContractStatus status) {

@@ -477,6 +477,16 @@ sample-local outer productから構成するため、構造上ほぼ丸め誤差
 :math:`O(1/\sqrt{N_{\mathrm{VMCSample}}})` 程度で減少する統計的診断であり、
 solver toleranceではありません。
 
+xxx\_pl\_out\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~~
+
+``NLanczosEstimatorMode=1`` の数値安定化Power-Lanczos計算が出力する
+3行のファイルです。headerにはversion、次数、係数決定chainと最終chainの
+sample数、block数を記録します。field名に続くdata行にはcorrected energyと
+variance、そのstandard error、虚部、energyの自己相関時間と有効sample数、
+一般化固有値問題のretained rank・condition estimate・residualを出力します。
+Green関数やsampleごとのtraceは出力しません。
+
 xxx\_ls2\_moment\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -900,6 +900,23 @@ add_python_vmc_test_invalid_expert_with_updates(
 set_tests_properties(Lanczos_InvalidSupportMode_mpi PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
 add_python_vmc_test_invalid_expert_with_updates(
+    PowerLanczosStabilized_InvalidTwoBodyGEx HubbardChain_SpinJastrow
+    "stabilized power-Lanczos does not support TwoBodyGEx Green functions"
+    two_body_g_ex NLanczosEstimatorMode=1 NLanczosMode=1
+    NLanczosStep=1 NVMCCalMode=1)
+add_python_vmc_test_invalid_expert_with_updates(
+    PowerLanczosStabilized_InvalidTwoBodyGEx_mpi HubbardChain_SpinJastrow
+    "stabilized power-Lanczos does not support TwoBodyGEx Green functions"
+    two_body_g_ex NLanczosEstimatorMode=1 NLanczosMode=1
+    NLanczosStep=1 NVMCCalMode=1)
+set_tests_properties(PowerLanczosStabilized_InvalidTwoBodyGEx_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+add_python_vmc_test_invalid_expert_with_updates(
+    PowerLanczosStabilized_InvalidSampleCount HubbardChain_SpinJastrow
+    "stabilized power-Lanczos requires NVMCSample >= 8 and a divisor between 4 and 16"
+    NLanczosEstimatorMode=1 NLanczosMode=1 NLanczosStep=1
+    NVMCCalMode=1 NVMCSample=37)
+add_python_vmc_test_invalid_expert_with_updates(
     Lanczos2_InvalidPairHopping DoublonOnly_Lanczos
     "does not support PairHopping"
     NLanczosStep=2 NLanczosMode=1 NVMCCalMode=1 NExUpdatePath=0)

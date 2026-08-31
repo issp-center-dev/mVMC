@@ -10,9 +10,8 @@ the Free Software Foundation, either version 3 of the License, or
 
 #include "krylov_matrix_measurement.h"
 
-#if !defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                         \
-    !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
-#error "krylov_matrix_measurement.c is Testing-only"
+#if !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+#error "krylov_matrix_measurement.c requires the power-Lanczos core"
 #endif
 
 #include <float.h>

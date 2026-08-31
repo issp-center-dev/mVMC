@@ -1479,6 +1479,11 @@ MVMCPfaffianStatus mvmc_scaled_complex_from_raw_testing(
   return MVMC_PFAFFIAN_STATUS_OK;
 }
 
+MVMCPfaffianStatus mvmc_scaled_complex_from_raw(
+    double complex value, MVMCScaledComplex *result) {
+  return mvmc_scaled_complex_from_raw_testing(value, result);
+}
+
 MVMCPfaffianStatus mvmc_scaled_complex_multiply(
     const MVMCScaledComplex *left, const MVMCScaledComplex *right,
     MVMCScaledComplex *result) {

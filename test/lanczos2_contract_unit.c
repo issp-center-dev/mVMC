@@ -48,6 +48,15 @@ static void CheckStatus(const Lanczos2Contract *contract,
   }
 }
 
+static void CheckCorrectedStatus(const Lanczos2Contract *contract,
+                                 Lanczos2ContractStatus expected,
+                                 const char *label) {
+  const Lanczos2ContractStatus actual =
+      ValidateCorrectedPowerLanczosExecutionContract(contract);
+  CHECK(actual == expected, "%s: corrected status=%d expected=%d", label,
+        (int)actual, (int)expected);
+}
+
 static void TestAllowedInputs(void) {
   Lanczos2Contract contract = SupportedContract();
   CheckStatus(&contract, LANCZOS2_CONTRACT_OK, "supported step 2");
@@ -207,11 +216,34 @@ static void TestFirstFailureIsStable(void) {
               "pure-spin first-failure order");
 }
 
+static void TestCorrectedExecutionContract(void) {
+  Lanczos2Contract contract = SupportedContract();
+  CheckCorrectedStatus(&contract, LANCZOS2_CONTRACT_OK,
+                       "corrected electronic step 2");
+
+  contract.step = 1;
+  CheckCorrectedStatus(&contract, LANCZOS2_CONTRACT_OK,
+                       "corrected electronic step 1");
+
+  contract = SupportedHeisenbergContract();
+  contract.nQPFull = 2;
+  CheckCorrectedStatus(&contract, LANCZOS2_CONTRACT_OK,
+                       "corrected pure-spin multi-QP");
+
+  contract.nTransfer = 1;
+  CheckCorrectedStatus(&contract, LANCZOS2_CONTRACT_UNSUPPORTED_TRANSFER,
+                       "corrected pure-spin Transfer");
+
+  CheckCorrectedStatus(NULL, LANCZOS2_CONTRACT_INVALID_STEP,
+                       "corrected NULL contract");
+}
+
 int main(void) {
   TestAllowedInputs();
   TestStepDomain();
   TestEachUnsupportedCapability();
   TestFirstFailureIsStable();
+  TestCorrectedExecutionContract();
 
   if (failures != 0) {
     fprintf(stderr, "Lanczos2Contract_Unit: %d failure(s)\n", failures);

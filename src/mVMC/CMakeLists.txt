@@ -14,6 +14,15 @@ set(SOURCES_vmcmain
         vmcmain.c absolute_pfaffian.c classic_pfaffian_matrix.c
         classic_pfaffian_state.c
         classic_pfaffian_collective.c
+        classic_krylov_configuration.c classic_krylov_projection.c
+        classic_krylov_amplitude.c classic_krylov_model.c
+        bounded_krylov_engine.c bounded_krylov_collective.c
+        krylov_fock_reference.c krylov_fock_proposal.c
+        krylov_positive_guide.c krylov_positive_sampler.c
+        krylov_matrix_measurement.c krylov_streaming_statistics.c
+        krylov_gevp_solver.c krylov_final_state.c
+        krylov_final_state_chain.c power_lanczos_classic_bridge.c
+        power_lanczos_stabilized.c
         physcal_lanczos.c physcal_lanczos2.c
         lanczos2_contract.c splitloop.c
  )
@@ -27,17 +36,20 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../pfapack)
 add_executable(vmcdry.out vmcdry.c)
 target_link_libraries(vmcdry.out StdFace_mvmc m)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
+target_compile_definitions(vmc.out PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+    MVMC_ENABLE_POWER_LANCZOS_P5_CORE)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(vmc.out PRIVATE -fno-fast-math -ffp-contract=off)
+endif()
 if(Testing)
   # Keep fault injection, reference samplers, and audits out of production.
   target_sources(vmc.out PRIVATE classic_pfaffian_sampler.c
-      classic_pfaffian_audit.c krylov_fock_reference.c
-      classic_krylov_amplitude.c classic_krylov_model.c
-      bounded_krylov_engine.c bounded_krylov_collective.c)
+      classic_pfaffian_audit.c)
   target_compile_definitions(vmc.out PRIVATE MVMC_ENABLE_FAULT_INJECTION
       MVMC_ENABLE_PFAFFIAN_SAMPLER_REFERENCE
       MVMC_ENABLE_PFAFFIAN_STATE_AUDIT
-      MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
-      MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+      MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
 endif(Testing)
 target_link_libraries(vmc.out StdFace_mvmc m)
 target_link_libraries(vmc.out pfapack)

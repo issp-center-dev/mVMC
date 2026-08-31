@@ -11,7 +11,8 @@ the Free Software Foundation, either version 3 of the License, or
 #ifndef MVMC_KRYLOV_FINAL_STATE_CHAIN_H
 #define MVMC_KRYLOV_FINAL_STATE_CHAIN_H
 
-#if defined(MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)
+#if defined(MVMC_ENABLE_POWER_LANCZOS_P5_CORE) ||                             \
+    defined(MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)
 
 #include "krylov_final_state.h"
 #include "krylov_positive_sampler.h"
@@ -107,6 +108,6 @@ MVMCKrylovStatus mvmc_krylov_final_state_chain_restart_restore(
     MVMCKrylovFinalStateSnapshot *current,
     MVMCKrylovPositiveSamplerRng *rng);
 
-#endif /* MVMC_ENABLE_POWER_LANCZOS_P5_TESTING */
+#endif /* P5 core or testing */
 
 #endif /* MVMC_KRYLOV_FINAL_STATE_CHAIN_H */

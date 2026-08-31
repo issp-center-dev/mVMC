@@ -11,19 +11,18 @@ the Free Software Foundation, either version 3 of the License, or
 #ifndef MVMC_CLASSIC_KRYLOV_AMPLITUDE_H
 #define MVMC_CLASSIC_KRYLOV_AMPLITUDE_H
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                     \
+    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
 #include "classic_pfaffian_collective.h"
 #include "krylov_fock_reference.h"
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+#include "bounded_krylov_engine.h"
+#endif
 
 #include <complex.h>
 #include <stddef.h>
 #include <stdint.h>
-
-typedef enum {
-  MVMC_CLASSIC_KRYLOV_PROJECTION_NONE = 0,
-  MVMC_CLASSIC_KRYLOV_PROJECTION_GUTZWILLER_ONLY
-} MVMCClassicKrylovProjectionKind;
 
 #define MVMC_CLASSIC_KRYLOV_UNSUPPORTED_RBM UINT32_C(1)
 #define MVMC_CLASSIC_KRYLOV_UNSUPPORTED_BACKFLOW UINT32_C(2)
@@ -47,11 +46,8 @@ typedef struct {
   int ndoublon_holon_4site_idx;
   const int *gutzwiller_idx;
   /*
-   * Production-shaped index bindings.  Even correlators outside the P3
-   * allowlist must provide these when their count is nonzero so malformed
-   * indices are reported as invalid before a well-formed model is reported
-   * as unsupported.  Jastrow tables are site_count-square; DH rows contain
-   * 2*site_count and 4*site_count site indices respectively.
+   * Production-shaped index bindings.  Jastrow tables are site_count-square;
+   * DH rows contain 2*site_count and 4*site_count site indices respectively.
    */
   const int *const *jastrow_idx;
   const int *const *spin_jastrow_idx;
@@ -69,7 +65,7 @@ typedef struct MVMCClassicKrylovComplexAmplitudeWorkspace
 
 /*
  * Creation is collective on layout->communicator.  It verifies replicated
- * Slater data, QP weights, and the supported projection binding exactly,
+ * Slater data, QP weights, and every classic projection binding exactly,
  * then keeps an immutable private copy.  Evaluation performs no allocation
  * and never writes production PfM/InvM, accepted sampler state, projection
  * counts, caller buffers, or the input configuration.  Projected values are
@@ -97,6 +93,7 @@ void mvmc_classic_krylov_complex_amplitude_workspace_destroy(
 size_t mvmc_classic_krylov_complex_amplitude_workspace_bytes(
     const MVMCClassicKrylovComplexAmplitudeWorkspace *workspace);
 
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
 MVMCKrylovStatus mvmc_classic_krylov_real_amplitude(
     const uint64_t *configuration_words, size_t word_count,
     void *context, MVMCKrylovAmplitudeResult *result);
@@ -104,7 +101,23 @@ MVMCKrylovStatus mvmc_classic_krylov_real_amplitude(
 MVMCKrylovStatus mvmc_classic_krylov_complex_amplitude(
     const uint64_t *configuration_words, size_t word_count,
     void *context, MVMCKrylovAmplitudeResult *result);
+#endif
 
-#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE */
+uint64_t mvmc_classic_krylov_real_amplitude_generation_hash(
+    const MVMCClassicKrylovRealAmplitudeWorkspace *workspace);
+uint64_t mvmc_classic_krylov_complex_amplitude_generation_hash(
+    const MVMCClassicKrylovComplexAmplitudeWorkspace *workspace);
+
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+MVMCKrylovStatus mvmc_classic_krylov_real_scaled_amplitude(
+    const uint64_t *configuration_words, size_t word_count,
+    void *context, MVMCKrylovScaledAmplitudeResult *result);
+
+MVMCKrylovStatus mvmc_classic_krylov_complex_scaled_amplitude(
+    const uint64_t *configuration_words, size_t word_count,
+    void *context, MVMCKrylovScaledAmplitudeResult *result);
+#endif
+
+#endif /* reference or bounded engine */
 
 #endif /* MVMC_CLASSIC_KRYLOV_AMPLITUDE_H */

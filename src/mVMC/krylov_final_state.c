@@ -10,10 +10,10 @@ the Free Software Foundation, either version 3 of the License, or
 
 #include "krylov_final_state.h"
 
-#if !defined(MVMC_ENABLE_POWER_LANCZOS_P5_TESTING) ||                          \
-    !defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                         \
+#if (!defined(MVMC_ENABLE_POWER_LANCZOS_P5_CORE) &&                            \
+     !defined(MVMC_ENABLE_POWER_LANCZOS_P5_TESTING)) ||                        \
     !defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
-#error "krylov_final_state.c is Testing-only"
+#error "krylov_final_state.c requires the P5 final-state core"
 #endif
 
 #include <complex.h>
@@ -142,7 +142,8 @@ static int word_ranges_overlap(const uint64_t *left, size_t left_count,
 static int source_valid(MVMCKrylovFinalCoefficientSource source) {
   return source == MVMC_KRYLOV_FINAL_COEFFICIENT_EXACT ||
          source == MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC ||
-         source == MVMC_KRYLOV_FINAL_COEFFICIENT_PERTURBED_TESTING;
+         source == MVMC_KRYLOV_FINAL_COEFFICIENT_PERTURBED_TESTING ||
+         source == MVMC_KRYLOV_FINAL_COEFFICIENT_PRODUCTION_NOISY;
 }
 
 static int order_valid(int order) {
@@ -294,7 +295,7 @@ static MVMCKrylovStatus scaled_coefficient(
   if (creal(coefficient) == 0.0 && cimag(coefficient) == 0.0) {
     status = mvmc_scaled_complex_make_exact_zero(result);
   } else {
-    status = mvmc_scaled_complex_from_raw_testing(coefficient, result);
+    status = mvmc_scaled_complex_from_raw(coefficient, result);
   }
   return status == MVMC_PFAFFIAN_STATUS_OK
              ? MVMC_KRYLOV_STATUS_OK
@@ -425,6 +426,68 @@ MVMCKrylovStatus mvmc_krylov_final_state_policy_create(
   candidate.policy_hash = compute_policy_hash(&candidate);
   *policy = candidate;
   return MVMC_KRYLOV_STATUS_OK;
+}
+
+MVMCKrylovStatus mvmc_krylov_final_state_policy_create_scaled_basis(
+    int order, MVMCKrylovFinalCoefficientSource source,
+    uint64_t provenance_hash, const double complex *scaled_coefficient,
+    const double *log_basis_scale, size_t coefficient_count,
+    MVMCKrylovFinalStatePolicy *policy) {
+  double log_raw_magnitude[MVMC_KRYLOV_MAX_ORDER + 1];
+  double complex raw_coefficient[MVMC_KRYLOV_MAX_ORDER + 1];
+  double maximum_log_raw_magnitude = -INFINITY;
+  size_t index;
+  int nonzero = 0;
+  if (policy == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  memset(policy, 0, sizeof(*policy));
+  if (!order_valid(order) || !source_valid(source) ||
+      provenance_hash == 0 || scaled_coefficient == NULL ||
+      log_basis_scale == NULL ||
+      coefficient_count != (size_t)order + 1) {
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+  memset(log_raw_magnitude, 0, sizeof(log_raw_magnitude));
+  memset(raw_coefficient, 0, sizeof(raw_coefficient));
+  for (index = 0; index < coefficient_count; ++index) {
+    const double complex coefficient = scaled_coefficient[index];
+    const double magnitude = hypot(creal(coefficient), cimag(coefficient));
+    if (!finite_complex(coefficient) || !isfinite(log_basis_scale[index]) ||
+        !isfinite(magnitude)) {
+      return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+    }
+    if (magnitude == 0.0) {
+      log_raw_magnitude[index] = -INFINITY;
+      continue;
+    }
+    log_raw_magnitude[index] = log(magnitude) + log_basis_scale[index];
+    if (!isfinite(log_raw_magnitude[index])) {
+      return MVMC_KRYLOV_STATUS_RESOURCE_LIMIT;
+    }
+    if (log_raw_magnitude[index] > maximum_log_raw_magnitude) {
+      maximum_log_raw_magnitude = log_raw_magnitude[index];
+    }
+    nonzero = 1;
+  }
+  if (!nonzero) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  for (index = 0; index < coefficient_count; ++index) {
+    const double complex coefficient = scaled_coefficient[index];
+    const double magnitude = hypot(creal(coefficient), cimag(coefficient));
+    double relative_magnitude;
+    if (magnitude == 0.0) continue;
+    relative_magnitude =
+        exp(log_raw_magnitude[index] - maximum_log_raw_magnitude);
+    if (!isfinite(relative_magnitude) || relative_magnitude == 0.0) {
+      return MVMC_KRYLOV_STATUS_RESOURCE_LIMIT;
+    }
+    raw_coefficient[index] =
+        (coefficient / magnitude) * relative_magnitude;
+    if (!finite_complex(raw_coefficient[index])) {
+      return MVMC_KRYLOV_STATUS_RESOURCE_LIMIT;
+    }
+  }
+  return mvmc_krylov_final_state_policy_create(
+      order, source, provenance_hash, raw_coefficient, coefficient_count,
+      policy);
 }
 
 uint64_t mvmc_krylov_final_state_policy_hash(

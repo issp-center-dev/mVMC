@@ -418,6 +418,7 @@ file format is shown as follows.
     NVMCCalMode    0
     NLanczosMode   0
     NLanczosStep   1
+    NLanczosEstimatorMode 0
     NLanczosSupportMode 0
     --------------------
     NDataIdxStart  1
@@ -613,6 +614,20 @@ Keywords and parameters
    builds. If the overlap matrix is not positive definite,
    the solver retries once with a relative diagonal regularization of
    :math:`10^{-12}` and records this in ``solve_flag``.
+
+-  ``NLanczosEstimatorMode``
+
+   **Type :** int-type (default value: 0)
+
+   **Description :** [0] uses the legacy Power-Lanczos calculation. [1]
+   explicitly enables the numerically stabilized energy/variance estimator
+   in expert mode. It requires ``NVMCCalMode=1``, ``NLanczosMode=1``, and
+   ``NLanczosStep=1`` or ``2``. Independent chains determine the coefficients
+   and estimate the final energy. FSZ, BackFlow, RBM, reweighting, and Green's
+   functions are outside this mode. Its only result file is
+   ``xxx_pl_out_yyy.dat``. ``NVMCSample`` must be at least 8 and divisible by
+   a block count between 4 and 16 with at least two samples per block; a
+   multiple of 16 is recommended.
 
 -  ``NLanczosSupportMode``
 

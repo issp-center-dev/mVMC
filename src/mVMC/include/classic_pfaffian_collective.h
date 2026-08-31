@@ -55,7 +55,8 @@ MVMCPfaffianStatus mvmc_classic_pfaffian_collective_workspace_create(
     MVMCClassicPfaffianCollectiveWorkspace **workspace);
 void mvmc_classic_pfaffian_collective_workspace_destroy(
     MVMCClassicPfaffianCollectiveWorkspace *workspace);
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                     \
+    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 size_t mvmc_classic_pfaffian_collective_workspace_bytes(
     const MVMCClassicPfaffianCollectiveWorkspace *workspace);
 #endif
@@ -131,7 +132,8 @@ MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_true(
     MVMCClassicPfaffianCollectiveWorkspace *workspace,
     int local_true, int *all_true);
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                     \
+    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 /* Creation-time exact replicated-data audit.  This routine may allocate. */
 MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_equal_bytes(
     MVMCClassicPfaffianCollectiveWorkspace *workspace,
@@ -161,6 +163,6 @@ mvmc_classic_pfaffian_collective_gather_value_components(
     const MVMCAbsolutePfaffianValueResult *local_components,
     size_t local_component_count, int qp_total, int qp_start, int qp_end,
     MVMCAbsolutePfaffianValueResult *global_components);
-#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE */
+#endif /* reference or bounded engine */
 
 #endif /* MVMC_CLASSIC_PFAFFIAN_COLLECTIVE_H */

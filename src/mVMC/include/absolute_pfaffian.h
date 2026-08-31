@@ -238,6 +238,8 @@ MVMCPfaffianStatus mvmc_scaled_complex_make_numeric_zero(
 int mvmc_scaled_complex_is_valid(const MVMCScaledComplex *value);
 MVMCPfaffianStatus mvmc_scaled_complex_from_raw_testing(
     double complex value, MVMCScaledComplex *result);
+MVMCPfaffianStatus mvmc_scaled_complex_from_raw(
+    double complex value, MVMCScaledComplex *result);
 MVMCPfaffianStatus mvmc_scaled_complex_multiply(
     const MVMCScaledComplex *left, const MVMCScaledComplex *right,
     MVMCScaledComplex *result);

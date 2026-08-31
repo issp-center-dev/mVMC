@@ -611,7 +611,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
       MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
-
  /*
     Block_size is using for Tuning of RBMRatio function.
     It must be multiple of 8.
@@ -924,7 +923,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     //TODO: LanczosMode is not supported for Sz not conserved mode.
 
     //For indirect calculation of Green's function
-    if (bufInt[IdxNTwoBodyGEx] > 0 || bufInt[IdxLanczosMode] > 1) {
+    if (bufInt[IdxLanczosEstimatorMode] == 0 &&
+        (bufInt[IdxNTwoBodyGEx] > 0 || bufInt[IdxLanczosMode] > 1)) {
       //Get info of CisAjs and CisAjsCktAlt(GreenTwoEx as if it's DC)
       int i;
       iOneBodyGIdx = malloc(sizeof(int *) * (2 * bufInt[IdxNsite])); //For spin
@@ -1003,6 +1003,28 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     if (bufInt[IdxLanczosMode] < 0) {
       fprintf(stderr, "Error: NLanczosMode must be non-negative (got %d).\n",
               bufInt[IdxLanczosMode]);
+      info = 1;
+    }
+    if (bufInt[IdxLanczosEstimatorMode] != 0 &&
+        bufInt[IdxLanczosEstimatorMode] != 1) {
+      fprintf(stderr,
+              "Error: NLanczosEstimatorMode must be 0 or 1 (got %d).\n",
+              bufInt[IdxLanczosEstimatorMode]);
+      info = 1;
+    }
+    if (bufInt[IdxLanczosMode] > 0 &&
+        bufInt[IdxLanczosEstimatorMode] == 1 &&
+        bufInt[IdxLanczosMode] != 1) {
+      fprintf(stderr,
+              "Error: stabilized power-Lanczos currently supports "
+              "NLanczosMode=1 (energy/variance) only.\n");
+      info = 1;
+    }
+    if (bufInt[IdxLanczosEstimatorMode] == 1 &&
+        bufInt[IdxNTwoBodyGEx] > 0) {
+      fprintf(stderr,
+              "Error: stabilized power-Lanczos does not support "
+              "TwoBodyGEx Green functions.\n");
       info = 1;
     }
     if (iFlgOrbitalGeneral == 1) {
@@ -1173,6 +1195,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NVMCCalMode = bufInt[IdxVMCCalcMode];
   NLanczosMode = bufInt[IdxLanczosMode];
   NLanczosStep = bufInt[IdxLanczosStep];
+  NLanczosEstimatorMode = bufInt[IdxLanczosEstimatorMode];
   if (NLanczosSupportMode != 0 && NLanczosSupportMode != 1) {
     if (rank == 0) {
       fprintf(stderr, "Error: NLanczosSupportMode must be 0 or 1.\n");
@@ -2045,7 +2068,11 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
     lanczos2Contract.ne = Ne;
     lanczos2Contract.nTransfer = NTransfer;
     lanczos2Contract.nQPFull = NQPFull;
-    lanczos2Status = ValidateLanczos2Contract(&lanczos2Contract);
+    lanczos2Status =
+        NLanczosMode > 0 && NLanczosEstimatorMode == 1
+            ? ValidateCorrectedPowerLanczosExecutionContract(
+                  &lanczos2Contract)
+            : ValidateLanczos2Contract(&lanczos2Contract);
     if (lanczos2Status != LANCZOS2_CONTRACT_OK) {
       if (rank == 0) {
         fprintf(stderr, "Error: %s.\n",
@@ -2742,6 +2769,7 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[IdxNNz] = 0;
   bufInt[Idx2Sz] = -1;// -1: sz is not fixed :fsz
   bufInt[IdxNCond] = -1;
+  bufInt[IdxLanczosEstimatorMode] = 0;
 
 //RBM
   bufInt[IdxNneuron] = 0;
@@ -2852,6 +2880,9 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
                */
               bufInt[IdxLanczosStep] =
                   (dtmp == 1.0 || dtmp == 2.0) ? (int)dtmp : 0;
+            } else if (CheckWords(ctmp, "NLanczosEstimatorMode") == 0) {
+              bufInt[IdxLanczosEstimatorMode] =
+                  (dtmp == 0.0 || dtmp == 1.0) ? (int)dtmp : -1;
             } else if (CheckWords(ctmp, "NDataIdxStart") == 0) {
               bufInt[IdxDataIdxStart] = (int) dtmp;
             } else if (CheckWords(ctmp, "NDataQtySmp") == 0) {

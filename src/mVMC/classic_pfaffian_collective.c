@@ -192,7 +192,8 @@ void mvmc_classic_pfaffian_collective_workspace_destroy(
   free(workspace);
 }
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                     \
+    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 size_t mvmc_classic_pfaffian_collective_workspace_bytes(
     const MVMCClassicPfaffianCollectiveWorkspace *workspace) {
   if (workspace == NULL || workspace->size <= 0) return 0;
@@ -583,7 +584,8 @@ MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_true(
   return MVMC_PFAFFIAN_STATUS_OK;
 }
 
-#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+#if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                     \
+    defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 MVMCPfaffianStatus mvmc_classic_pfaffian_collective_all_equal_bytes(
     MVMCClassicPfaffianCollectiveWorkspace *workspace,
     const void *local_data, size_t byte_count, int *all_equal) {
@@ -826,4 +828,4 @@ mvmc_classic_pfaffian_collective_gather_value_components(
   }
   return MVMC_PFAFFIAN_STATUS_OK;
 }
-#endif /* MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE */
+#endif /* reference or bounded engine */

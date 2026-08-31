@@ -56,6 +56,9 @@ Lanczos2ModelClass ClassifyLanczos2Model(
 Lanczos2ContractStatus ValidateLanczos2Contract(
     const Lanczos2Contract *contract);
 
+Lanczos2ContractStatus ValidateCorrectedPowerLanczosExecutionContract(
+    const Lanczos2Contract *contract);
+
 const char *Lanczos2ContractError(Lanczos2ContractStatus status);
 
 #endif

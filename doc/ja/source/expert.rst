@@ -414,6 +414,7 @@ ModParaファイル (modpara.def)
     NVMCCalMode    0
     NLanczosMode   0
     NLanczosStep   1
+    NLanczosEstimatorMode 0
     NLanczosSupportMode 0
     --------------------
     NDataIdxStart  1
@@ -603,6 +604,19 @@ ModParaファイル (modpara.def)
    overlap行列が正定値でない場合は、相対対角regularization
    :math:`10^{-12}` を加えて1回だけ再試行し、結果を ``solve_flag`` に
    記録します。
+
+-  ``NLanczosEstimatorMode``
+
+   **形式 :** int型 (デフォルト値 = 0)
+
+   **説明 :** [0] 従来のPower-Lanczos計算、[1] 数値安定化した
+   energy/variance estimatorを使用します。[1] はexpert modeで明示的に指定し、
+   ``NVMCCalMode=1``、``NLanczosMode=1``、``NLanczosStep=1`` または ``2``
+   を必要とします。係数決定用chainと最終energy用chainは独立です。
+   FSZ、BackFlow、RBM、reweight、およびGreen関数は対象外です。
+   出力は ``xxx_pl_out_yyy.dat`` のみです。``NVMCSample`` は8以上かつ、
+   各blockに2 sample以上が入る4から16までのblock数で割り切れる値とし、
+   16の倍数を推奨します。
 
 -  ``NLanczosSupportMode``
 
