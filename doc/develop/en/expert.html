@@ -431,6 +431,7 @@ file format is shown as follows.</p>
 <span class="n">NVMCCalMode</span>    <span class="mi">0</span>
 <span class="n">NLanczosMode</span>   <span class="mi">0</span>
 <span class="n">NLanczosStep</span>   <span class="mi">1</span>
+<span class="n">NLanczosEstimatorMode</span> <span class="mi">0</span>
 <span class="n">NLanczosSupportMode</span> <span class="mi">0</span>
 <span class="o">--------------------</span>
 <span class="n">NDataIdxStart</span>  <span class="mi">1</span>
@@ -602,6 +603,18 @@ to test this failure path is test-only: it is compiled into
 builds. If the overlap matrix is not positive definite,
 the solver retries once with a relative diagonal regularization of
 <span class="math notranslate nohighlight">\(10^{-12}\)</span> and records this in <code class="docutils literal notranslate"><span class="pre">solve_flag</span></code>.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode</span></code></p>
+<p><strong>Type :</strong> int-type (default value: 0)</p>
+<p><strong>Description :</strong> [0] uses the legacy Power-Lanczos calculation. [1]
+explicitly enables the numerically stabilized energy/variance estimator
+in expert mode. It requires <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code> or <code class="docutils literal notranslate"><span class="pre">2</span></code>. Independent chains determine the coefficients
+and estimate the final energy. FSZ, BackFlow, RBM, reweighting, and Green’s
+functions are outside this mode. Its only result file is
+<code class="docutils literal notranslate"><span class="pre">xxx_pl_out_yyy.dat</span></code>. <code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> must be at least 8 and divisible by
+a block count between 4 and 16 with at least two samples per block; a
+multiple of 16 is recommended.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NLanczosSupportMode</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 0)</p>

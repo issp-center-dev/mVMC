@@ -505,6 +505,15 @@ sample-local outer productから構成するため、構造上ほぼ丸め誤差
 <span class="math notranslate nohighlight">\(O(1/\sqrt{N_{\mathrm{VMCSample}}})\)</span> 程度で減少する統計的診断であり、
 solver toleranceではありません。</p>
 </section>
+<section id="xxx-pl-out-yyy-dat">
+<h2>xxx_pl_out_yyy.dat<a class="headerlink" href="#xxx-pl-out-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode=1</span></code> の数値安定化Power-Lanczos計算が出力する
+3行のファイルです。headerにはversion、次数、係数決定chainと最終chainの
+sample数、block数を記録します。field名に続くdata行にはcorrected energyと
+variance、そのstandard error、虚部、energyの自己相関時間と有効sample数、
+一般化固有値問題のretained rank・condition estimate・residualを出力します。
+Green関数やsampleごとのtraceは出力しません。</p>
+</section>
 <section id="xxx-ls2-moment-yyy-dat">
 <h2>xxx_ls2_moment_yyy.dat<a class="headerlink" href="#xxx-ls2-moment-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">xxx_ls2_out_yyy.dat</span></code> と同時に出力する2行の診断用ファイルです。
@@ -604,6 +613,7 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-out-yyy-dat">xxx_ls2_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-pl-out-yyy-dat">xxx_pl_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-moment-yyy-dat">xxx_ls2_moment_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-support-yyy-dat">xxx_ls_support_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajs-yyy-dat">xxx_ls_cisajs_yyy.dat</a></li>

@@ -535,6 +535,17 @@ order. For independent finite samples it is a statistical diagnostic
 that is expected to decrease approximately as
 <span class="math notranslate nohighlight">\(O(1/\sqrt{N_{\mathrm{VMCSample}}})\)</span>; it is not a solver tolerance.</p>
 </section>
+<section id="xxx-pl-out-yyy-dat">
+<h2>xxx_pl_out_yyy.dat<a class="headerlink" href="#xxx-pl-out-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<p>This three-line file is written by the stabilized Power-Lanczos estimator
+when <code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode=1</span></code>. Its header records the version, order,
+coefficient-chain and final-chain sample counts, and block count. After the
+field-name line, the data line contains corrected energy and variance with
+standard errors, their imaginary diagnostics, the energy autocorrelation time
+and effective sample count, and the retained rank, condition estimate, and
+residual of the generalized eigenproblem. It contains no Green’s functions or
+per-sample trace.</p>
+</section>
 <section id="xxx-ls2-moment-yyy-dat">
 <h2>xxx_ls2_moment_yyy.dat<a class="headerlink" href="#xxx-ls2-moment-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This two-line diagnostic file accompanies <code class="docutils literal notranslate"><span class="pre">xxx_ls2_out_yyy.dat</span></code>.
@@ -641,6 +652,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-out-yyy-dat">xxx_ls2_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-pl-out-yyy-dat">xxx_pl_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-moment-yyy-dat">xxx_ls2_moment_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-support-yyy-dat">xxx_ls_support_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajs-yyy-dat">xxx_ls_cisajs_yyy.dat</a></li>

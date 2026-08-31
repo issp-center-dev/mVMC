@@ -426,6 +426,7 @@ TransSymです。それ以外のキーワードについては、指定がない
 <span class="n">NVMCCalMode</span>    <span class="mi">0</span>
 <span class="n">NLanczosMode</span>   <span class="mi">0</span>
 <span class="n">NLanczosStep</span>   <span class="mi">1</span>
+<span class="n">NLanczosEstimatorMode</span> <span class="mi">0</span>
 <span class="n">NLanczosSupportMode</span> <span class="mi">0</span>
 <span class="o">--------------------</span>
 <span class="n">NDataIdxStart</span>  <span class="mi">1</span>
@@ -586,6 +587,17 @@ solverの失敗、出力エラーを検出すると診断を表示して終了�
 overlap行列が正定値でない場合は、相対対角regularization
 <span class="math notranslate nohighlight">\(10^{-12}\)</span> を加えて1回だけ再試行し、結果を <code class="docutils literal notranslate"><span class="pre">solve_flag</span></code> に
 記録します。</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode</span></code></p>
+<p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>
+<p><strong>説明 :</strong> [0] 従来のPower-Lanczos計算、[1] 数値安定化した
+energy/variance estimatorを使用します。[1] はexpert modeで明示的に指定し、
+<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code> または <code class="docutils literal notranslate"><span class="pre">2</span></code>
+を必要とします。係数決定用chainと最終energy用chainは独立です。
+FSZ、BackFlow、RBM、reweight、およびGreen関数は対象外です。
+出力は <code class="docutils literal notranslate"><span class="pre">xxx_pl_out_yyy.dat</span></code> のみです。<code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> は8以上かつ、
+各blockに2 sample以上が入る4から16までのblock数で割り切れる値とし、
+16の倍数を推奨します。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NLanczosSupportMode</span></code></p>
 <p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>
