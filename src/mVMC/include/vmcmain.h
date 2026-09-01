@@ -142,6 +142,7 @@ extern void omp_set_num_threads(int);
 #include "../vmccal.c"
 #include "../backflow_vmc.c"
 #include "../vmccal_fsz.c"
+#include "../vmccal_gc.c"
 
 #include "../rbm.c"
 
