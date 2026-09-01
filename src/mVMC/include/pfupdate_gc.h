@@ -14,6 +14,9 @@ void UpdateMAllHopGC(int ma, const int *eleIdx, int ncur, int qpStart,
 void CalculateNewPfMTwoHopGC(int ma, int mb, double complex *pfMNew,
                              const int *eleIdx, int ncur, int qpStart,
                              int qpEnd);
+void CalculateNewPfMTwoHopGCWorkspace(
+    int ma, int mb, double complex *pfMNew, const int *eleIdx, int ncur,
+    int qpStart, int qpEnd, double complex *vecA, double complex *vecB);
 
 /* n-row candidate used by GC Green functions. msa[k] is the moved particle
  * position and rsa[k] its destination fused orbital. All scratch belongs to

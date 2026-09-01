@@ -184,6 +184,21 @@ void CalculateNewPfMTwoHopGC(const int ma, const int mb,
   ReleaseWorkSpaceComplex();
 }
 
+void CalculateNewPfMTwoHopGCWorkspace(
+    const int ma, const int mb, double complex *pfMNew,
+    const int *eleIdx, const int ncur, const int qpStart, const int qpEnd,
+    double complex *vecA, double complex *vecB) {
+  int qpidx;
+  if (ma == mb) {
+    CalculateNewPfMHopGC(ma, pfMNew, eleIdx, ncur, qpStart, qpEnd);
+    return;
+  }
+  for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+    pfMNew[qpidx] = CalculateNewPfMTwoHopGCChild(
+        ma, mb, eleIdx, ncur, qpStart, qpidx, vecA, vecB);
+  }
+}
+
 double complex CalculateNewPfMNGC(
     const int qpidx, const int n, const int *msa, const int *rsa,
     const int *eleIdx, const int ncur, double complex *vec,

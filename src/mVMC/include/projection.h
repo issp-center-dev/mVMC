@@ -8,6 +8,8 @@ void MakeProjCnt(int *projCnt, const int *eleNum);
 void UpdateProjCnt(const int ri, const int rj, const int s,
 				   int *projCntNew, const int *projCntOld,
 				   const int *eleNum);
+void UpdateProjCnt_fsz(int ri, int rj, int s, int t, int *projCntNew,
+                       const int *projCntOld, const int *eleNum);
 
 void MakeProjBFCnt(int *projCnt, const int *eleNum);
 
