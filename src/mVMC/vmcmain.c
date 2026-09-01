@@ -531,7 +531,9 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 #ifdef _DEBUG_DETAIL
     printf("Debug: step %d, MakeSample.\n", step);
 #endif
-    if(NProjBF ==0) {
+    if(FlagGrandCanonical != 0) {
+      VMCMakeSampleGC(comm_child1);
+    } else if(NProjBF ==0) {
       if(AllComplexFlag==0){ // real
         StartTimer(69);
 #pragma omp parallel for default(shared) private(tmp_i)
@@ -579,7 +581,9 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 #ifdef _DEBUG_DETAIL
     printf("Debug: step %d, MainCal.\n", step);
 #endif
-    if(NProjBF ==0) {
+    if(FlagGrandCanonical != 0) {
+      VMCMainCalGC(comm_parent, comm_child1);
+    } else if(NProjBF ==0) {
       if(iFlgOrbitalGeneral==0){//sz is conserved
         VMCMainCal(comm_parent, comm_child1);
       }else{//fsz
@@ -741,7 +745,9 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
       continue;
     }
     StartTimer(3);
-    if(NProjBF ==0) {
+    if(FlagGrandCanonical != 0) {
+      VMCMakeSampleGC(comm_child1);
+    } else if(NProjBF ==0) {
       //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){//real & sz=0
       if(AllComplexFlag==0){//real
         // only for real TBC
@@ -795,7 +801,9 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     if(rank==0) fprintf(stdout, "End  : Sampling.\n");
 
     if(rank==0) fprintf(stdout, "Start: Main calculation.\n");
-    if(NProjBF ==0) {
+    if(FlagGrandCanonical != 0) {
+      VMCMainCalGC(comm_parent, comm_child1);
+    } else if(NProjBF ==0) {
       if(iFlgOrbitalGeneral==0){
         VMCMainCal(comm_parent, comm_child1);
       }else{
@@ -839,6 +847,11 @@ void outputData() {
  // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
  //   fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)));
    fprintf(FileOut, "% .18e % .18e  % .18e % .18e %.18e %.18e\n", creal(Etot),cimag(Etot), creal(Etot2), creal((Etot2 - Etot*Etot)/(Etot*Etot)),creal(Sztot),creal(Sztot2));
+   if(FlagGrandCanonical != 0 && FileGC != NULL) {
+     fprintf(FileGC, "% .18e % .18e % .18e\n",
+             creal(Ntot), creal(Ntot2), creal(Ntot2 - Ntot*Ntot));
+     fflush(FileGC);
+   }
   // fprintf(FileOut, "% .18e % .18e % .18e \n", Etot, Etot2, (Etot2 - Etot*Etot)/(Etot*Etot));
  // fprintf(FileOut, "% .18e % .18e  % .18e % .18e \n", creal(Etot), cimag(Etot), creal(Etot2),
  //         creal((Etot2 - Etot * Etot) / (Etot * Etot)));

@@ -383,6 +383,7 @@ FILE *FileOut;
 FILE *FileVar;
 FILE *FileTime;
 FILE *FileSRinfo; /* zvo_SRinfo.dat */
+FILE *FileGC; /* zvo_gc.dat */
 FILE *FileCisAjs;
 FILE *FileCisAjsCktAlt;
 FILE *FileCisAjsCktAltDC;

@@ -412,6 +412,8 @@ ModParaファイル (modpara.def)
     CParaFileHead  zqp
     --------------------
     NVMCCalMode    0
+    NGrandCanonical 0
+    NGCInitNelec   -1
     NLanczosMode   0
     NLanczosStep   1
     NLanczosEstimatorMode 0
@@ -516,6 +518,23 @@ ModParaファイル (modpara.def)
 
    **説明 :** [0] 変分パラメータの最適化、[1] 1 体・2
    体のグリーン関数の計算。
+
+-  ``NGrandCanonical``
+
+   **形式 :** int型 (デフォルト値 = 0)
+
+   **説明 :** 1にすると全偶数粒子数sectorをsamplingします。このmodeでは
+   ``OrbitalGeneral``、複素変分パラメータ、``2Sz=-1``、
+   ``NExUpdatePath=0``、``NSPGaussLeg=1``、``NMPTrans=1``、
+   ``NQPOptTrans<=1`` が必要です。Phase 1ではRBM、BackFlow、Lanczos、
+   OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。
+
+-  ``NGCInitNelec``
+
+   **形式 :** int型 (デフォルト値 = -1)
+
+   **説明 :** grand-canonical samplingの初期粒子数hintです。``-1`` は
+   組込み初期化を選び、明示した奇数値は直下の偶数へ切り下げます。
 
 -  ``NLanczosMode``
 

@@ -416,6 +416,8 @@ file format is shown as follows.
     CParaFileHead  zqp
     --------------------
     NVMCCalMode    0
+    NGrandCanonical 0
+    NGCInitNelec   -1
     NLanczosMode   0
     NLanczosStep   1
     NLanczosEstimatorMode 0
@@ -518,6 +520,24 @@ Keywords and parameters
 
    **Description :** [0] Optimization of variational parameters, [1]
    Calculation of one body and two body Green’s functions.
+
+-  ``NGrandCanonical``
+
+   **Type :** int-type (default value: 0)
+
+   **Description :** Set to 1 to sample all even particle-number sectors.
+   This mode requires ``OrbitalGeneral``, complex variational parameters,
+   ``2Sz=-1``, ``NExUpdatePath=0``, ``NSPGaussLeg=1``, ``NMPTrans=1``, and
+   ``NQPOptTrans<=1``. RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
+   spins, and SR-CG are not supported in this first phase.
+
+-  ``NGCInitNelec``
+
+   **Type :** int-type (default value: -1)
+
+   **Description :** Initial particle-number hint for grand-canonical
+   sampling. ``-1`` selects the built-in initialization; an explicitly given
+   odd value is rounded down to the nearest even value.
 
 -  ``NLanczosMode``
 
