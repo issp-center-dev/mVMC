@@ -62,6 +62,7 @@ extern void omp_set_num_threads(int);
 #include "absolute_pfaffian.h"
 #include "update_weight.h"
 #include "pfupdate_fsz.h"
+#include "pfupdate_gc.h"
 #include "blas_externs.h"
 
 #include "../safempi.c"
@@ -99,6 +100,7 @@ extern void omp_set_num_threads(int);
 #include "../backflow_pf.c"
 #include "../pfupdate_fsz.c"
 #include "../pfupdate_fsz_real.c"
+#include "../pfupdate_gc.c"
 #include "../pfupdate_two_fcmp.c"
 #include "../pfupdate_two_real.c"
 #include "../pfupdate_two_fsz.c"

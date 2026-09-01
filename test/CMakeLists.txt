@@ -47,6 +47,19 @@ if(MPI_FOUND)
 endif()
 add_test(NAME GCMatrix_Unit COMMAND gc_matrix_unit)
 
+add_executable(gc_pfupdate_unit gc_pfupdate_unit.c)
+target_include_directories(gc_pfupdate_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_pfupdate_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(gc_pfupdate_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(gc_pfupdate_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCPfUpdate_Unit COMMAND gc_pfupdate_unit)
+
 add_executable(nbody_operator_unit
     nbody_operator_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/nbody_operator.c
