@@ -27,6 +27,13 @@ foreach(gc_size_death_mode mul_overflow add_overflow negative int_overflow)
         PROPERTIES WILL_FAIL TRUE)
 endforeach()
 
+add_executable(gc_config_unit gc_config_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_config.c)
+target_include_directories(gc_config_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_config_unit m)
+add_test(NAME GCConfig_Unit COMMAND gc_config_unit)
+
 add_executable(nbody_operator_unit
     nbody_operator_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/nbody_operator.c
