@@ -415,7 +415,7 @@ int main(int argc, char* argv[])
   /* initialize Mersenne Twister */
   init_gen_rand(RndSeed+group1);
   /* get the size of work space for LAPACK and PFAPACK */
-  LapackLWork = getLWork_fcmp(); //TBC
+  LapackLWork = getLWork_fcmp_dim(NsizeMax); //TBC
 
   StartTimer(13);
   /* initialize variational parameters */

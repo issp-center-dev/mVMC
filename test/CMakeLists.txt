@@ -12,6 +12,21 @@ if(LAPACK_FOUND)
     add_test(NAME BLAS_DGEMM_Canary COMMAND blas_dgemm_canary)
 endif()
 
+add_executable(gc_size_unit gc_size_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_size.c)
+target_include_directories(gc_size_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(MPI_FOUND)
+    target_link_libraries(gc_size_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCSize_Unit COMMAND gc_size_unit)
+foreach(gc_size_death_mode mul_overflow add_overflow negative int_overflow)
+    add_test(NAME GCSize_Unit_${gc_size_death_mode}
+        COMMAND gc_size_unit ${gc_size_death_mode})
+    set_tests_properties(GCSize_Unit_${gc_size_death_mode}
+        PROPERTIES WILL_FAIL TRUE)
+endforeach()
+
 add_executable(nbody_operator_unit
     nbody_operator_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/nbody_operator.c

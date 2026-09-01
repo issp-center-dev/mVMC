@@ -31,6 +31,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <limits.h>
 #include <stdint.h>
 #include "backflow.h"
+#include "gc_size.h"
 #include "global.h"
 #include "physcal_lanczos2.h"
 #include "setmemory.h"
@@ -399,10 +400,37 @@ void FreeMemoryDef() {
 void SetMemory() {
   int i;
   int bfWorkIntCount;
+  size_t nbfwork;
+  size_t npara;
+  size_t nproj;
+  size_t nqp;
+  size_t nsite2;
+  size_t nsizeMax;
+  size_t nsample;
+  size_t sampleActiveCount;
+  size_t sampleSiteCount;
+  size_t sampleProjCount;
+  size_t packCount;
+  size_t slaterBlock;
+  size_t slaterCount;
+  size_t invBlock;
+  size_t invMatrixCount;
+  size_t invCount;
+
+  npara = GCNonnegativeSize(NPara, "NPara");
+  nproj = GCNonnegativeSize(NProj, "NProj");
+  nqp = GCNonnegativeSize(NQPFull, "NQPFull");
+  nsite2 = GCNonnegativeSize(Nsite2, "Nsite2");
+  nsizeMax = GCNonnegativeSize(NsizeMax, "NsizeMax");
+  nsample = GCNonnegativeSize(NVMCSample, "NVMCSample");
+  sampleActiveCount = GCCheckedMulSize(nsample, nsizeMax);
+  sampleSiteCount = GCCheckedMulSize(nsample, nsite2);
+  sampleProjCount = GCCheckedMulSize(nsample, nproj);
 
   /***** Variational Parameters *****/
   //printf("DEBUG:opt=%d %d %d %d %d Ne=%d\n", AllComplexFlag,NPara,NProj,NSlater,NOrbitalIdx,Ne);
-  Para     = (double complex*)malloc(sizeof(double complex)*(NPara));
+  Para = (double complex *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(double complex), npara), "Para");
 
   Proj     = Para;
   RBM      = Para + NProj;
@@ -411,31 +439,51 @@ void SetMemory() {
   OptTrans = Para + NProj + FlagRBM*NRBM + NProjBF + NSlater;
 
   /***** Electron Configuration ******/
-  EleIdx            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));
-  EleCfg            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
-  EleNum            = (int*)malloc(sizeof(int)*( NVMCSample*2*Nsite ));
-  EleProjCnt        = (int*)malloc(sizeof(int)*( NVMCSample*NProj ));
+  EleIdx = (int *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(int), sampleActiveCount), "EleIdx");
+  EleCfg = (int *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(int), sampleSiteCount), "EleCfg");
+  EleNum = (int *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(int), sampleSiteCount), "EleNum");
+  EleProjCnt = (int *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(int), sampleProjCount), "EleProjCnt");
+  if (FlagGrandCanonical != 0) {
+    EleNumSample = (int *)GCCheckedMalloc(
+        GCCheckedMulSize(sizeof(int), nsample), "EleNumSample");
+  } else {
+    EleNumSample = NULL;
+  }
 //[s] MERGE BY TM
-  EleSpn            = (int*)malloc(sizeof(int)*( NVMCSample*2*Ne ));//fsz
+  EleSpn = (int *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(int), sampleActiveCount), "EleSpn");
 //[e] MERGE BY TM
-    logSqPfFullSlater = (double*)malloc(sizeof(double)*(NVMCSample));
+  logSqPfFullSlater = (double *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(double), nsample), "logSqPfFullSlater");
   BFAllocRuntime();
   bfWorkIntCount = BFWorkIntCount();
+  nbfwork = GCNonnegativeSize(bfWorkIntCount, "BF workspace count");
+  packCount = GCCheckedAddSize(nsizeMax, nsite2);
+  packCount = GCCheckedAddSize(packCount, nsite2);
+  packCount = GCCheckedAddSize(packCount, nproj);
+  packCount = GCCheckedAddSize(packCount, nbfwork);
+  packCount = GCCheckedAddSize(packCount, nsizeMax);
 
-  TmpEleIdx         = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+2*Ne+bfWorkIntCount));//fsz
-  TmpEleCfg         = TmpEleIdx + 2*Ne;
-  TmpEleNum         = TmpEleCfg + 2*Nsite;
-  TmpEleProjCnt     = TmpEleNum + 2*Nsite;
+  TmpEleIdx = (int *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(int), packCount), "temporary electron pack");
+  TmpEleCfg = TmpEleIdx + nsizeMax;
+  TmpEleNum = TmpEleCfg + nsite2;
+  TmpEleProjCnt = TmpEleNum + nsite2;
 //[s] MERGE BY TM
-  TmpEleProjBFCnt   = (bfWorkIntCount > 0) ? TmpEleProjCnt + NProj : NULL;
-  TmpEleSpn         = TmpEleProjCnt + NProj + bfWorkIntCount; //fsz
+  TmpEleProjBFCnt = (nbfwork > 0) ? TmpEleProjCnt + nproj : NULL;
+  TmpEleSpn = TmpEleProjCnt + nproj + nbfwork;
 //[e] MERGE BY TM
 
-  BurnEleIdx        = (int*)malloc(sizeof(int)*(2*Ne+2*Nsite+2*Nsite+NProj+bfWorkIntCount+2*Ne)); //fsz
-  BurnEleCfg        = BurnEleIdx + 2*Ne;
-  BurnEleNum        = BurnEleCfg + 2*Nsite;
-  BurnEleProjCnt    = BurnEleNum + 2*Nsite;
-  BurnEleSpn        = BurnEleProjCnt + NProj + bfWorkIntCount; //fsz
+  BurnEleIdx = (int *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(int), packCount), "burn-in electron pack");
+  BurnEleCfg = BurnEleIdx + nsizeMax;
+  BurnEleNum = BurnEleCfg + nsite2;
+  BurnEleProjCnt = BurnEleNum + nsite2;
+  BurnEleSpn = BurnEleProjCnt + nproj + nbfwork;
 
 //RBM
   if (FlagRBM) {
@@ -446,14 +494,23 @@ void SetMemory() {
 //RBM
 
   /***** Slater Elements ******/
-  SlaterElm = (double complex*)malloc( sizeof(double complex)*(NQPFull*(2*Nsite)*(2*Nsite)) );
-  InvM = (double complex*)malloc( sizeof(double complex)*(NQPFull*(Nsize*Nsize+1)) );
-  PfM = InvM + NQPFull*Nsize*Nsize;
+  slaterBlock = GCCheckedMulSize(nsite2, nsite2);
+  slaterCount = GCCheckedMulSize(nqp, slaterBlock);
+  invBlock = GCCheckedMulSize(nsizeMax, nsizeMax);
+  invMatrixCount = GCCheckedMulSize(nqp, invBlock);
+  invCount = GCCheckedAddSize(invMatrixCount, nqp);
+  SlaterElm = (double complex *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(double complex), slaterCount), "SlaterElm");
+  InvM = (double complex *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(double complex), invCount), "InvM/PfM");
+  PfM = InvM + invMatrixCount;
 // for real TBC
   if (AllComplexFlag == 0){
-    SlaterElm_real = (double*)malloc(sizeof(double)*(NQPFull*(2*Nsite)*(2*Nsite)) );
-    InvM_real      = (double*)malloc(sizeof(double)*(NQPFull*(Nsize*Nsize+1)) );
-    PfM_real       = InvM_real + NQPFull*Nsize*Nsize;
+    SlaterElm_real = (double *)GCCheckedMalloc(
+        GCCheckedMulSize(sizeof(double), slaterCount), "SlaterElm_real");
+    InvM_real = (double *)GCCheckedMalloc(
+        GCCheckedMulSize(sizeof(double), invCount), "InvM/PfM_real");
+    PfM_real = InvM_real + invMatrixCount;
   }
 
   /***** Quantum Projection *****/
@@ -663,6 +720,7 @@ void FreeMemory() {
   free(EleProjCnt);
   free(EleIdx);
   free(EleNum);
+  free(EleNumSample);
   free(EleSpn);
   free(EleCfg);
 

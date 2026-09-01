@@ -1184,6 +1184,17 @@ add_test(NAME GC_OddNCond_Positive_mpi
 set_tests_properties(GC_OddNCond_Positive_mpi PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
 
+add_test(NAME GC_VacuumStorage_Positive
+    COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+    "initial GC particle number is 0" allow_success NGCInitNelec=0)
+set_tests_properties(GC_VacuumStorage_Positive PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+add_test(NAME GC_VacuumStorage_Positive_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+    "initial GC particle number is 0" allow_success NGCInitNelec=0)
+set_tests_properties(GC_VacuumStorage_Positive_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+
 foreach(real_rbm_case
     family-charge
     family-spin

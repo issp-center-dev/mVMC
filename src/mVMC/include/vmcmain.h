@@ -85,6 +85,7 @@ extern void omp_set_num_threads(int);
 #include "../average.c"
 #include "../parameter.c"
 #include "../projection.c"
+#include "../gc_size.c"
 #include "../slater.c"
 #include "../backflow_slater.c"
 #include "../slater_fsz.c"

@@ -54,7 +54,7 @@ int getLWork() {
   return lwork;
 }
 
-int getLWork_fcmp() {
+int getLWork_fcmp_dim(const int nDim) {
   char uplo='U', mthd='P';
   int n,lda,lwork,info=0;
   double rwork;
@@ -64,7 +64,7 @@ int getLWork_fcmp() {
   double complex optSize1,optSize2;
 
   /* ask the optimal size of work */
-  n=lda=Nsize;
+  n=lda=nDim;
   lwork=-1;
   M_ZGETRI(&n, &a, &lda, &iwork, &optSize1, &lwork, &info);
   lwork=-1;
@@ -72,6 +72,10 @@ int getLWork_fcmp() {
 
   lwork = (creal(optSize1)>creal(optSize2)) ? (int)creal(optSize1) : (int)creal(optSize2);
   return lwork;
+}
+
+int getLWork_fcmp() {
+  return getLWork_fcmp_dim(Nsize);
 }
 
 //==============s fsz =============//
