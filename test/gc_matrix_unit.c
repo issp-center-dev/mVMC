@@ -9,6 +9,7 @@
 #endif
 
 extern int omp_get_thread_num(void);
+extern int omp_get_max_threads(void);
 
 #include "global.h"
 #include "blas_externs.h"
@@ -259,7 +260,7 @@ int main(int argc, char **argv) {
   (void)argc;
   (void)argv;
 #endif
-  NThread = 1;
+  NThread = omp_get_max_threads();
   initializeWorkSpaceAll();
   test_dimension_patterns(4, 0);
   test_dimension_patterns(4, 2);

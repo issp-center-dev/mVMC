@@ -10,6 +10,7 @@
 #endif
 
 extern int omp_get_thread_num(void);
+extern int omp_get_max_threads(void);
 
 #include "global.h"
 #include "blas_externs.h"
@@ -152,7 +153,7 @@ static void setup_globals(void) {
   NDoublonHolon2siteIdx = 0;
   NDoublonHolon4siteIdx = 0;
   LapackLWork = 128;
-  NThread = 1;
+  NThread = omp_get_max_threads();
   initializeWorkSpaceAll();
   SlaterElm = malloc(ORBITALS * ORBITALS * sizeof(*SlaterElm));
   InvM = malloc(ORBITALS * ORBITALS * sizeof(*InvM));

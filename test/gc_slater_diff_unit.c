@@ -9,6 +9,7 @@
 #endif
 
 extern int omp_get_thread_num(void);
+extern int omp_get_max_threads(void);
 
 #include "global.h"
 #include "blas_externs.h"
@@ -117,7 +118,7 @@ static void check_derivative(const int ncur, const int *eleIdx,
 static void initialize_fixture(void) {
   int row;
   int parameter = 0;
-  NThread = 1;
+  NThread = omp_get_max_threads();
   Nsite = 2;
   Nsite2 = ORBITALS;
   NsizeMax = ORBITALS;
