@@ -22,7 +22,8 @@ set(SOURCES_vmcmain
         krylov_matrix_measurement.c krylov_streaming_statistics.c
         krylov_gevp_solver.c krylov_final_state.c
         krylov_final_state_chain.c power_lanczos_classic_bridge.c
-        power_lanczos_stabilized.c power_lanczos_independent.c
+        power_lanczos_sampling.c power_lanczos_stabilized.c
+        power_lanczos_independent.c
         power_lanczos_independent_driver.c
         physcal_lanczos.c physcal_lanczos2.c
         lanczos2_contract.c splitloop.c

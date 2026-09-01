@@ -46,16 +46,19 @@ void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MP
 void StdFace_main(char *fname);
 
 static int RunPowerLanczosStabilized(
-    int outputIndex, MPI_Comm communicator) {
+    int outputIndex, MPI_Comm world_communicator,
+    MPI_Comm chain_communicator) {
   MVMCPowerLanczosClassicView view;
   MVMCPowerLanczosStabilizedInput input;
   MVMCPowerLanczosStabilizedResult result;
   MVMCKrylovStatus status;
   size_t sweep;
   int rank = 0;
-  int size = 1;
-  MPI_Comm_rank(communicator, &rank);
-  MPI_Comm_size(communicator, &size);
+  int chain_rank = 0;
+  int chain_size = 1;
+  MPI_Comm_rank(world_communicator, &rank);
+  MPI_Comm_rank(chain_communicator, &chain_rank);
+  MPI_Comm_size(chain_communicator, &chain_size);
   if (NVMCInterval <= 0 || Nsite <= 0 || NVMCWarmUp < 0 ||
       NVMCSample < 0 ||
       (size_t)NVMCInterval > SIZE_MAX / (size_t)Nsite) {
@@ -116,8 +119,8 @@ static int RunPowerLanczosStabilized(
   view.nbody_inter_all_count = NNBodyInterAll;
   view.nbody_g_count = NNBodyG;
   view.qp_total = NQPFull;
-  view.qp_start = NQPFull * rank / size;
-  view.qp_end = NQPFull * (rank + 1) / size;
+  view.qp_start = NQPFull * chain_rank / chain_size;
+  view.qp_end = NQPFull * (chain_rank + 1) / chain_size;
   view.scaled_pivot_tolerance = 0.0;
   view.nproj = NProj;
   view.ngutzwiller_idx = NGutzwillerIdx;
@@ -152,7 +155,8 @@ static int RunPowerLanczosStabilized(
 #endif
   memset(&input, 0, sizeof(input));
   input.classic_view = &view;
-  input.communicator = communicator;
+  input.world_communicator = world_communicator;
+  input.chain_communicator = chain_communicator;
   input.power_step = NLanczosStep;
   input.seed =
       ((uint64_t)(uint32_t)RndSeed << 32) ^
@@ -166,8 +170,10 @@ static int RunPowerLanczosStabilized(
   if (rank == 0 && status == MVMC_KRYLOV_STATUS_OK) {
     fprintf(FileLS,
             "# stabilized_power_lanczos version=%llu order=%d "
-            "coefficient_samples=%llu final_samples=%llu blocks=%zu\n",
+            "chains=%llu samples_per_chain=%d coefficient_samples=%llu "
+            "final_samples=%llu blocks=%zu\n",
             (unsigned long long)result.version, result.power_step,
+            (unsigned long long)result.sampling_chains, NVMCSample,
             (unsigned long long)result.coefficient_samples,
             (unsigned long long)result.final_samples,
             result.block_count);
@@ -197,16 +203,19 @@ static int RunPowerLanczosStabilized(
 }
 
 static int RunPowerLanczosIndependent(
-    int outputIndex, MPI_Comm communicator) {
+    int outputIndex, MPI_Comm world_communicator,
+    MPI_Comm chain_communicator) {
   MVMCPowerLanczosClassicView view;
   MVMCPowerLanczosIndependentInput input;
   MVMCPowerLanczosIndependentResult result;
   MVMCKrylovStatus status;
   size_t sweep;
   int rank = 0;
-  int size = 1;
-  MPI_Comm_rank(communicator, &rank);
-  MPI_Comm_size(communicator, &size);
+  int chain_rank = 0;
+  int chain_size = 1;
+  MPI_Comm_rank(world_communicator, &rank);
+  MPI_Comm_rank(chain_communicator, &chain_rank);
+  MPI_Comm_size(chain_communicator, &chain_size);
   if (NVMCInterval <= 0 || Nsite <= 0 || NVMCWarmUp < 0 ||
       NVMCSample < 8 || (size_t)NVMCInterval > SIZE_MAX / (size_t)Nsite) {
     if (rank == 0)
@@ -233,8 +242,8 @@ static int RunPowerLanczosIndependent(
   view.transfer_indices = rank == 0 ? Transfer : NULL;
   view.transfer_parameters = rank == 0 ? ParaTransfer : NULL;
   view.qp_total = NQPFull;
-  view.qp_start = NQPFull * rank / size;
-  view.qp_end = NQPFull * (rank + 1) / size;
+  view.qp_start = NQPFull * chain_rank / chain_size;
+  view.qp_end = NQPFull * (chain_rank + 1) / chain_size;
   view.scaled_pivot_tolerance = 0.0;
   view.nproj = NProj;
   view.ngutzwiller_idx = NGutzwillerIdx;
@@ -256,7 +265,8 @@ static int RunPowerLanczosIndependent(
 #endif
   memset(&input, 0, sizeof(input));
   input.classic_view = &view;
-  input.communicator = communicator;
+  input.world_communicator = world_communicator;
+  input.chain_communicator = chain_communicator;
   input.physical_transfer_count = (size_t)NTransfer;
   input.physical_transfer_indices = Transfer;
   input.physical_transfer_parameters = ParaTransfer;
@@ -280,8 +290,10 @@ static int RunPowerLanczosIndependent(
   if (rank == 0 && status == MVMC_KRYLOV_STATUS_OK) {
     fprintf(FileLS,
             "# independent_power_lanczos version=%llu basis={Psi,HprimePsi} "
-            "coefficient_samples=%llu final_samples=%llu blocks=%zu\n",
+            "chains=%llu samples_per_chain=%d coefficient_samples=%llu "
+            "final_samples=%llu blocks=%zu\n",
             (unsigned long long)result.version,
+            (unsigned long long)result.sampling_chains, NVMCSample,
             (unsigned long long)result.coefficient_samples,
             (unsigned long long)result.final_samples,
             result.block_count);
@@ -847,8 +859,10 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     InitFilePhysCal(ismp, rank);
     if (NLanczosMode == 1 && NLanczosEstimatorMode == 1) {
       correctedInfo = FlagLsExplicit
-          ? RunPowerLanczosIndependent(ismp + NDataIdxStart, comm_parent)
-          : RunPowerLanczosStabilized(ismp + NDataIdxStart, comm_parent);
+          ? RunPowerLanczosIndependent(
+                ismp + NDataIdxStart, comm_parent, comm_child1)
+          : RunPowerLanczosStabilized(
+                ismp + NDataIdxStart, comm_parent, comm_child1);
       CloseFilePhysCal(rank);
       if (correctedInfo != 0) return correctedInfo;
       continue;

@@ -812,6 +812,7 @@ add_executable(power_lanczos_stabilized_unit
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_classic_bridge.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_sampling.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilized.c)
 target_include_directories(power_lanczos_stabilized_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)

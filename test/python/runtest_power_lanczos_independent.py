@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -30,20 +31,44 @@ def read_result(output):
     return values
 
 
+def read_sampling_metadata(output):
+    header = output.read_text().splitlines()[0]
+    metadata = {}
+    for name in ("chains", "samples_per_chain", "coefficient_samples",
+                 "final_samples", "blocks"):
+        match = re.search(r"\b{}=(\d+)\b".format(name), header)
+        if match is None:
+            raise RuntimeError("missing {} metadata in {}".format(
+                name, output))
+        metadata[name] = int(match.group(1))
+    return metadata
+
+
 root = pathlib.Path.cwd()
 source = root / "data" / "BackFlow_Identity_InterAll_Real"
 extra = root / "data" / "PowerLanczosIndependent"
 arguments = set(sys.argv[1:])
-unknown_arguments = arguments.difference(("blocked", "interall", "invalid"))
+unknown_arguments = arguments.difference(
+    ("blocked", "interall", "invalid", "projection", "hybrid"))
 if unknown_arguments:
     raise RuntimeError("unknown arguments: {}".format(sorted(unknown_arguments)))
 processes = os.environ.get("MVMC_MPI_PROCS")
 blocked = "blocked" in arguments
 invalid = "invalid" in arguments
 interall = "interall" in arguments
+projection = "projection" in arguments
+hybrid = "hybrid" in arguments
+if projection and hybrid:
+    raise RuntimeError("projection and hybrid modes are mutually exclusive")
+if (projection or hybrid) and not processes:
+    raise RuntimeError("MPI split test requires MVMC_MPI_PROCS")
 suffix_parts = []
 if processes:
     suffix_parts.append("mpi")
+if projection:
+    suffix_parts.append("projection")
+if hybrid:
+    suffix_parts.append("hybrid")
 if invalid:
     suffix_parts.append("invalid")
 elif interall:
@@ -76,6 +101,13 @@ for old, new in replacements.items():
     if old not in modpara:
         raise RuntimeError("missing modpara anchor: {}".format(old))
     modpara = modpara.replace(old, new)
+split_size = int(processes) if projection else (2 if hybrid else 1)
+if projection or hybrid:
+    split_anchor = "NSplitSize     1"
+    if split_anchor not in modpara:
+        raise RuntimeError("missing NSplitSize anchor")
+    modpara = modpara.replace(
+        split_anchor, "NSplitSize     {}".format(split_size))
 (work / "modpara.def").write_text(modpara)
 namelist_lines = [
     " ModPara modpara.def\n",
@@ -120,7 +152,21 @@ if completed.returncode != 0:
 
 output = work / "output" / "zvo_pl_out_001.dat"
 values = read_result(output)
+metadata = read_sampling_metadata(output)
 if processes:
+    expected_chains = (
+        int(processes) + split_size - 1) // split_size
+    expected_total = 256 * expected_chains
+    expected_metadata = {
+        "chains": expected_chains,
+        "samples_per_chain": 256,
+        "coefficient_samples": expected_total,
+        "final_samples": expected_total,
+    }
+    for name, expected in expected_metadata.items():
+        if metadata[name] != expected:
+            raise RuntimeError("{} metadata mismatch: {} != {}".format(
+                name, metadata[name], expected))
     serial_work = work.with_name(work.name + "_serial_reference")
     if serial_work.exists():
         shutil.rmtree(str(serial_work))
@@ -135,7 +181,26 @@ if processes:
             serial_completed.returncode))
     serial_values = read_result(
         serial_work / "output" / "zvo_pl_out_001.dat")
-    if not np.allclose(values, serial_values, rtol=2e-12, atol=2e-12):
-        raise RuntimeError("rank-1/rank-2 mismatch:\n{}\n{}".format(
-            serial_values, values))
+    serial_metadata = read_sampling_metadata(
+        serial_work / "output" / "zvo_pl_out_001.dat")
+    if serial_metadata["chains"] != 1 or \
+            serial_metadata["coefficient_samples"] != 256:
+        raise RuntimeError("invalid serial sampling metadata: {}".format(
+            serial_metadata))
+    if expected_chains == 1:
+        if not np.allclose(values, serial_values, rtol=2e-12, atol=2e-12):
+            raise RuntimeError("projection-parallel mismatch:\n{}\n{}".format(
+                serial_values, values))
+    else:
+        for value_index, error_index, label in ((0, 1, "energy"),
+                                                 (2, 3, "variance")):
+            tolerance = max(
+                5e-8,
+                8.0 * np.hypot(values[error_index],
+                               serial_values[error_index]))
+            if abs(values[value_index] - serial_values[value_index]) > tolerance:
+                raise RuntimeError(
+                    "sample-parallel {} mismatch: {} vs {} (tol {})".format(
+                        label, values[value_index],
+                        serial_values[value_index], tolerance))
 print("PowerLanczosIndependent{}: PASS".format(suffix))

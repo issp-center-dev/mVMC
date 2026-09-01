@@ -20,7 +20,7 @@ the Free Software Foundation, either version 3 of the License, or
 #include "bounded_krylov_engine.h"
 #include "power_lanczos_classic_bridge.h"
 
-#define MVMC_POWER_LANCZOS_INDEPENDENT_VERSION UINT64_C(1)
+#define MVMC_POWER_LANCZOS_INDEPENDENT_VERSION UINT64_C(2)
 
 typedef struct MVMCPowerLanczosIndependentModel
     MVMCPowerLanczosIndependentModel;
@@ -36,7 +36,8 @@ typedef struct {
 
 typedef struct {
     const MVMCPowerLanczosClassicView *classic_view;
-    MVMCClassicPfaffianCommunicator communicator;
+    MVMCClassicPfaffianCommunicator world_communicator;
+    MVMCClassicPfaffianCommunicator chain_communicator;
     size_t physical_transfer_count;
     int *const *physical_transfer_indices;
     const double complex *physical_transfer_parameters;
@@ -62,6 +63,7 @@ typedef struct {
     uint64_t coefficient_samples;
     uint64_t final_samples;
     uint64_t physical_row_terms;
+    uint64_t sampling_chains;
     size_t block_count;
     int retained_rank;
     double condition_estimate;
