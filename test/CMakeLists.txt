@@ -78,6 +78,19 @@ add_test(NAME GCSampler_Unit_DebugRebuild COMMAND gc_sampler_unit)
 set_tests_properties(GCSampler_Unit_DebugRebuild PROPERTIES
     ENVIRONMENT "MVMC_GC_DEBUG_REBUILD_INTERVAL=1")
 
+add_executable(gc_slater_diff_unit gc_slater_diff_unit.c)
+target_include_directories(gc_slater_diff_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_slater_diff_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(gc_slater_diff_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(gc_slater_diff_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCSlaterDiff_Unit COMMAND gc_slater_diff_unit)
+
 add_executable(nbody_operator_unit
     nbody_operator_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/nbody_operator.c

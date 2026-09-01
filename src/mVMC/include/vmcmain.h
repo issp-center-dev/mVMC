@@ -92,6 +92,7 @@ extern void omp_set_num_threads(int);
 #include "../slater.c"
 #include "../backflow_slater.c"
 #include "../slater_fsz.c"
+#include "../slater_gc.c"
 #include "../qp.c"
 #include "../qp_real.c"
 #include "../matrix.c"

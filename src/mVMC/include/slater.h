@@ -6,6 +6,8 @@
 #define BF_FSZ_ROW_BUILD_INVALID_ARGUMENT 2
 void UpdateSlaterElm_fcmp();
 void SlaterElmDiff_fcmp(double complex *srOptO, const double complex ip, int *eleIdx);
+void SlaterElmDiffGC_fcmp(double complex *srOptO, double complex ip,
+                         const int *eleIdx, int ncur);
 
 void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *eleIdx, int *eleNum, int *eleCfg, int *eleProjConst,const int * eleProjBFCnt);
 
