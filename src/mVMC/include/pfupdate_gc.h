@@ -25,4 +25,15 @@ double complex CalculateNewPfMNGC(
     double complex *smallMat, int *pfIWork, double complex *pfWork,
     int pfLWork, double *pfRWork);
 
+void CalculateNewPfMAddGC(int rsa, int rsb, double complex *pfMNew,
+                          const int *eleIdx, int ncurOld, int qpStart,
+                          int qpEnd);
+void UpdateMAllAddGC(int rsa, int rsb, const int *eleIdx, int ncurOld,
+                     int qpStart, int qpEnd);
+void CalculateNewPfMRemoveGC(int pos0, int pos1,
+                             double complex *pfMNew, const int *eleIdx,
+                             int ncurOld, int qpStart, int qpEnd);
+void UpdateMAllRemoveGC(int pos0, int pos1, const int *eleIdx,
+                        int ncurOld, int qpStart, int qpEnd);
+
 #endif

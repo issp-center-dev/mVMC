@@ -1,8 +1,10 @@
 #include <complex.h>
 #include <math.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "include/blas_externs.h"
+#include "include/gc_config.h"
 #include "include/gc_size.h"
 #include "include/global.h"
 #include "include/pfupdate_gc.h"
@@ -290,6 +292,223 @@ double complex CalculateNewPfMNGC(
   }
   sign = (((n * (n - 1) / 2) % 2) == 0) ? 1.0 : -1.0;
   return sign * pfaffian * PfM[qpidx];
+}
+
+static double complex GCAddSchur(
+    const int rsa, const int rsb, const int *eleIdx, const int ncurOld,
+    const int qpStart, const int qpidx, double complex *y0,
+    double complex *y1) {
+  const size_t invStride = GCInvStride();
+  const size_t slaterStride = GCSlaterStride();
+  const double complex *slater =
+      SlaterElm + (size_t)(qpStart + qpidx) * slaterStride;
+  const double complex *slaterA =
+      slater + (size_t)rsa * (size_t)Nsite2;
+  const double complex *slaterB =
+      slater + (size_t)rsb * (size_t)Nsite2;
+  const double complex *invM = InvM + (size_t)qpidx * invStride;
+  double complex d01 = -slaterA[rsb];
+  int i;
+  for (i = 0; i < ncurOld; i++) {
+    const double complex *invRow =
+        invM + (size_t)i * (size_t)NsizeMax;
+    double complex value0 = 0.0;
+    double complex value1 = 0.0;
+    int j;
+    for (j = 0; j < ncurOld; j++) {
+      const int rsj = eleIdx[j];
+      value0 += invRow[j] * slaterA[rsj];
+      value1 += invRow[j] * slaterB[rsj];
+    }
+    y0[i] = value0;
+    y1[i] = value1;
+  }
+  for (i = 0; i < ncurOld; i++) d01 += slaterA[eleIdx[i]] * y1[i];
+  return d01;
+}
+
+void CalculateNewPfMAddGC(const int rsa, const int rsb,
+                          double complex *pfMNew, const int *eleIdx,
+                          const int ncurOld, const int qpStart,
+                          const int qpEnd) {
+  const int workspaceCount = GCCheckedSizeToInt(
+      GCCheckedMulSize(2, (size_t)ncurOld), "GC add candidate workspace");
+  int qpidx;
+  RequestWorkSpaceComplex(workspaceCount);
+  {
+    double complex *y0 = GetWorkSpaceComplex(ncurOld);
+    double complex *y1 = GetWorkSpaceComplex(ncurOld);
+    for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+      const double complex d01 =
+          GCAddSchur(rsa, rsb, eleIdx, ncurOld, qpStart, qpidx, y0, y1);
+      pfMNew[qpidx] = d01 * PfM[qpidx];
+    }
+  }
+  ReleaseWorkSpaceComplex();
+}
+
+static void UpdateMAllAddGCChild(
+    const int rsa, const int rsb, const int *eleIdx, const int ncurOld,
+    const int qpStart, const int qpidx, double complex *y0,
+    double complex *y1) {
+  const size_t invStride = GCInvStride();
+  double complex *invM = InvM + (size_t)qpidx * invStride;
+  const double complex d01 =
+      GCAddSchur(rsa, rsb, eleIdx, ncurOld, qpStart, qpidx, y0, y1);
+  int i;
+  PfM[qpidx] *= d01;
+  for (i = 0; i < ncurOld; i++) {
+    double complex *invRow =
+        invM + (size_t)i * (size_t)NsizeMax;
+    int j;
+    for (j = 0; j < ncurOld; j++) {
+      invRow[j] += (-y0[i] * y1[j] + y1[i] * y0[j]) / d01;
+    }
+    invRow[ncurOld] = -y1[i] / d01;
+    invRow[ncurOld + 1] = y0[i] / d01;
+  }
+  {
+    double complex *row0 =
+        invM + (size_t)ncurOld * (size_t)NsizeMax;
+    double complex *row1 =
+        invM + (size_t)(ncurOld + 1) * (size_t)NsizeMax;
+    for (i = 0; i < ncurOld; i++) {
+      row0[i] = y1[i] / d01;
+      row1[i] = -y0[i] / d01;
+    }
+    row0[ncurOld] = 0.0;
+    row0[ncurOld + 1] = -1.0 / d01;
+    row1[ncurOld] = 1.0 / d01;
+    row1[ncurOld + 1] = 0.0;
+  }
+}
+
+void UpdateMAllAddGC(const int rsa, const int rsb, const int *eleIdx,
+                     const int ncurOld, const int qpStart,
+                     const int qpEnd) {
+  const int workspaceCount = GCCheckedSizeToInt(
+      GCCheckedMulSize(2, (size_t)ncurOld), "GC add update workspace");
+  int qpidx;
+  RequestWorkSpaceThreadComplex(workspaceCount);
+#pragma omp parallel default(shared)
+  {
+    double complex *y0 = GetWorkSpaceThreadComplex(ncurOld);
+    double complex *y1 = GetWorkSpaceThreadComplex(ncurOld);
+#pragma omp for
+    for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+      UpdateMAllAddGCChild(rsa, rsb, eleIdx, ncurOld, qpStart, qpidx, y0,
+                           y1);
+    }
+  }
+  ReleaseWorkSpaceThreadComplex();
+}
+
+static int GCOldPositionAfterRemoveSwap(const int newPosition,
+                                        const int pos0, const int pos1,
+                                        const int ncurOld) {
+  int oldPosition = newPosition;
+  if (oldPosition == pos0) {
+    oldPosition = ncurOld - 2;
+  } else if (oldPosition == ncurOld - 2) {
+    oldPosition = pos0;
+  }
+  if (oldPosition == pos1) {
+    oldPosition = ncurOld - 1;
+  } else if (oldPosition == ncurOld - 1) {
+    oldPosition = pos1;
+  }
+  return oldPosition;
+}
+
+static double complex GCRemoveRatio(const int pos0, const int pos1,
+                                    const int ncurOld, const int qpidx) {
+  const size_t invStride = GCInvStride();
+  const double complex *invM = InvM + (size_t)qpidx * invStride;
+  const int tail0 = GCOldPositionAfterRemoveSwap(
+      ncurOld - 2, pos0, pos1, ncurOld);
+  const int tail1 = GCOldPositionAfterRemoveSwap(
+      ncurOld - 1, pos0, pos1, ncurOld);
+  const double complex r =
+      invM[(size_t)tail0 * (size_t)NsizeMax + (size_t)tail1];
+  return -(double)GCRemoveParitySign(pos0, pos1, ncurOld) * r;
+}
+
+void CalculateNewPfMRemoveGC(const int pos0, const int pos1,
+                             double complex *pfMNew, const int *eleIdx,
+                             const int ncurOld, const int qpStart,
+                             const int qpEnd) {
+  int qpidx;
+  (void)eleIdx;
+  (void)qpStart;
+  for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+    pfMNew[qpidx] =
+        GCRemoveRatio(pos0, pos1, ncurOld, qpidx) * PfM[qpidx];
+  }
+}
+
+static void UpdateMAllRemoveGCChild(
+    const int pos0, const int pos1, const int ncurOld, const int qpidx,
+    double complex *oldInv) {
+  const size_t invStride = GCInvStride();
+  const int survivor = ncurOld - 2;
+  double complex *invM = InvM + (size_t)qpidx * invStride;
+  const int tail0 = GCOldPositionAfterRemoveSwap(
+      survivor, pos0, pos1, ncurOld);
+  const int tail1 = GCOldPositionAfterRemoveSwap(
+      survivor + 1, pos0, pos1, ncurOld);
+  double complex r;
+  int i;
+  for (i = 0; i < ncurOld; i++) {
+    memcpy(oldInv + (size_t)i * (size_t)ncurOld,
+           invM + (size_t)i * (size_t)NsizeMax,
+           (size_t)ncurOld * sizeof(*oldInv));
+  }
+  r = oldInv[(size_t)tail0 * (size_t)ncurOld + (size_t)tail1];
+  PfM[qpidx] *= -(double)GCRemoveParitySign(pos0, pos1, ncurOld) * r;
+  for (i = 0; i < survivor; i++) {
+    const int oldI =
+        GCOldPositionAfterRemoveSwap(i, pos0, pos1, ncurOld);
+    double complex *newRow =
+        invM + (size_t)i * (size_t)NsizeMax;
+    int j;
+    for (j = 0; j < survivor; j++) {
+      const int oldJ =
+          GCOldPositionAfterRemoveSwap(j, pos0, pos1, ncurOld);
+      const double complex p =
+          oldInv[(size_t)oldI * (size_t)ncurOld + (size_t)oldJ];
+      const double complex qi0 =
+          oldInv[(size_t)oldI * (size_t)ncurOld + (size_t)tail0];
+      const double complex qi1 =
+          oldInv[(size_t)oldI * (size_t)ncurOld + (size_t)tail1];
+      const double complex u0j =
+          oldInv[(size_t)tail0 * (size_t)ncurOld + (size_t)oldJ];
+      const double complex u1j =
+          oldInv[(size_t)tail1 * (size_t)ncurOld + (size_t)oldJ];
+      newRow[j] = p + (qi0 * u1j - qi1 * u0j) / r;
+    }
+  }
+}
+
+void UpdateMAllRemoveGC(const int pos0, const int pos1,
+                        const int *eleIdx, const int ncurOld,
+                        const int qpStart, const int qpEnd) {
+  const size_t matrixCount =
+      GCCheckedMulSize((size_t)ncurOld, (size_t)ncurOld);
+  const int workspaceCount =
+      GCCheckedSizeToInt(matrixCount, "GC remove update workspace");
+  int qpidx;
+  (void)eleIdx;
+  (void)qpStart;
+  RequestWorkSpaceThreadComplex(workspaceCount);
+#pragma omp parallel default(shared)
+  {
+    double complex *oldInv = GetWorkSpaceThreadComplex(workspaceCount);
+#pragma omp for
+    for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+      UpdateMAllRemoveGCChild(pos0, pos1, ncurOld, qpidx, oldInv);
+    }
+  }
+  ReleaseWorkSpaceThreadComplex();
 }
 
 #endif

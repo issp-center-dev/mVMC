@@ -18,6 +18,7 @@ extern int omp_get_thread_num(void);
 #include "../src/mVMC/gc_size.c"
 #include "../src/mVMC/workspace.c"
 #include "../src/mVMC/matrix_gc.c"
+#include "../src/mVMC/gc_config.c"
 #include "../src/mVMC/pfupdate_gc.c"
 
 #define MAX_DIMENSION 8
@@ -307,6 +308,159 @@ static void test_m8_noncontracted_n3(void) {
                        &oldState, label);
 }
 
+static void test_add_case(const int ncurOld, const int *configuration,
+                          const unsigned int mask, const int rsa,
+                          const int rsb) {
+  int candidateConfiguration[MAX_DIMENSION];
+  PfState oldState;
+  PfState expected;
+  double complex candidate[MAX_QP];
+  char label[160];
+  memcpy(candidateConfiguration, configuration,
+         (size_t)ncurOld * sizeof(*candidateConfiguration));
+  snprintf(label, sizeof(label),
+           "add M=%d n=%d mask=%u rs=%d,%d", Nsite2, ncurOld, mask, rsa,
+           rsb);
+  initialize_old_state(ncurOld, candidateConfiguration, &oldState, label);
+  candidateConfiguration[ncurOld] = rsa;
+  candidateConfiguration[ncurOld + 1] = rsb;
+  CalculateNewPfMAddGC(rsa, rsb, candidate, candidateConfiguration, ncurOld,
+                       0, MAX_QP);
+  check_candidate_noncommit(&oldState, label);
+  rebuild_candidate(ncurOld + 2, candidateConfiguration, &expected, label);
+  check_pf_values(candidate, &expected, label);
+  restore_state(&oldState);
+  UpdateMAllAddGC(rsa, rsb, candidateConfiguration, ncurOld, 0, MAX_QP);
+  check_updated_state(ncurOld + 2, &expected, &oldState, label);
+  if (ncurOld == 0) {
+    int qp;
+    for (qp = 0; qp < MAX_QP; qp++) {
+      const double complex *slater =
+          SlaterElm + (size_t)qp * (size_t)Nsite2 * (size_t)Nsite2;
+      const double complex base =
+          -slater[(size_t)rsa * (size_t)Nsite2 + (size_t)rsb];
+      CHECK(close_complex(expected.pf[qp], base),
+            "%s qp=%d vacuum base Pf != X_ab", label, qp);
+    }
+  }
+}
+
+static void test_remove_case(const int ncurOld, const int *configuration,
+                             const unsigned int mask, const int pos0,
+                             const int pos1) {
+  int candidateConfiguration[MAX_DIMENSION];
+  int eleCfg[MAX_DIMENSION];
+  int eleNum[MAX_DIMENSION];
+  int ncur = ncurOld;
+  PfState oldState;
+  PfState expected;
+  double complex candidate[MAX_QP];
+  char label[176];
+  int i;
+  memcpy(candidateConfiguration, configuration,
+         (size_t)ncurOld * sizeof(*candidateConfiguration));
+  for (i = 0; i < Nsite2; i++) {
+    eleCfg[i] = -1;
+    eleNum[i] = 0;
+  }
+  for (i = 0; i < ncurOld; i++) {
+    eleCfg[candidateConfiguration[i]] = i;
+    eleNum[candidateConfiguration[i]] = 1;
+  }
+  snprintf(label, sizeof(label),
+           "remove M=%d n=%d mask=%u pos=%d,%d", Nsite2, ncurOld, mask,
+           pos0, pos1);
+  initialize_old_state(ncurOld, candidateConfiguration, &oldState, label);
+  (void)GCRemovePair(pos0, pos1, candidateConfiguration, eleCfg, eleNum,
+                     &ncur);
+  CHECK(ncur == ncurOld - 2, "%s mutation count", label);
+  CalculateNewPfMRemoveGC(pos0, pos1, candidate, candidateConfiguration,
+                          ncurOld, 0, MAX_QP);
+  check_candidate_noncommit(&oldState, label);
+  rebuild_candidate(ncur, candidateConfiguration, &expected, label);
+  check_pf_values(candidate, &expected, label);
+  restore_state(&oldState);
+  UpdateMAllRemoveGC(pos0, pos1, candidateConfiguration, ncurOld, 0,
+                     MAX_QP);
+  check_updated_state(ncur, &expected, &oldState, label);
+}
+
+static void test_add_remove_exhaustive(void) {
+  unsigned int mask;
+  setup_dimension(6);
+  for (mask = 0; mask < (1U << 6); mask++) {
+    const int ncur = popcount(mask);
+    int configuration[MAX_DIMENSION];
+    int count = 0;
+    int rs;
+    for (rs = 0; rs < 6; rs++) {
+      if ((mask & (1U << rs)) != 0U) configuration[count++] = rs;
+    }
+    if (ncur == 0 || ncur == 2 || ncur == 4) {
+      int rsa;
+      for (rsa = 0; rsa < 6; rsa++) {
+        int rsb;
+        if ((mask & (1U << rsa)) != 0U) continue;
+        for (rsb = rsa + 1; rsb < 6; rsb++) {
+          if ((mask & (1U << rsb)) == 0U) {
+            test_add_case(ncur, configuration, mask, rsa, rsb);
+          }
+        }
+      }
+    }
+    if (ncur == 2 || ncur == 4 || ncur == 6) {
+      int pos0;
+      for (pos0 = 0; pos0 < ncur; pos0++) {
+        int pos1;
+        for (pos1 = pos0 + 1; pos1 < ncur; pos1++) {
+          test_remove_case(ncur, configuration, mask, pos0, pos1);
+        }
+      }
+    }
+  }
+}
+
+static void test_add_conjugate_transpose_mutation(void) {
+  int configuration[MAX_DIMENSION] = {0, 1, 2, 3};
+  PfState oldState;
+  PfState expected;
+  double complex y0[2];
+  double complex y1[2];
+  double complex b0[2];
+  double complex b1[2];
+  double complex d01;
+  double complex wrong01;
+  const double complex *slater;
+  const char *label = "add ordinary-transpose mutation";
+  int i;
+  int j;
+  setup_dimension(6);
+  initialize_old_state(2, configuration, &oldState, label);
+  configuration[2] = 2;
+  configuration[3] = 3;
+  rebuild_candidate(4, configuration, &expected, label);
+  restore_state(&oldState);
+  slater = SlaterElm;
+  for (i = 0; i < 2; i++) {
+    b0[i] = slater[(size_t)2 * (size_t)Nsite2 +
+                    (size_t)configuration[i]];
+    b1[i] = slater[(size_t)3 * (size_t)Nsite2 +
+                    (size_t)configuration[i]];
+    y0[i] = 0.0;
+    y1[i] = 0.0;
+    for (j = 0; j < 2; j++) {
+      y0[i] += InvM[(size_t)i * (size_t)NsizeMax + (size_t)j] * b0[j];
+      y1[i] += InvM[(size_t)i * (size_t)NsizeMax + (size_t)j] * b1[j];
+    }
+  }
+  d01 = -slater[(size_t)2 * (size_t)Nsite2 + 3U];
+  for (i = 0; i < 2; i++) d01 += b0[i] * y1[i];
+  wrong01 = InvM[1] +
+            (-y0[0] * conj(y1[1]) + y1[0] * conj(y0[1])) / d01;
+  CHECK(cabs(wrong01 - expected.inv[1]) > 1.0e-5,
+        "complex fixture does not kill conjugate-transpose mutation");
+}
+
 int main(int argc, char **argv) {
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
@@ -318,6 +472,8 @@ int main(int argc, char **argv) {
   initializeWorkSpaceAll();
   test_m6_exhaustive();
   test_m8_noncontracted_n3();
+  test_add_remove_exhaustive();
+  test_add_conjugate_transpose_mutation();
   FreeWorkSpaceAll();
   free(SlaterElm);
   free(InvM);
