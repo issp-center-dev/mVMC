@@ -138,6 +138,15 @@ function(add_python_vmc_test_invalid_expert_with_updates test_name model expecte
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
 endfunction(add_python_vmc_test_invalid_expert_with_updates)
 
+function(add_gc_invalid_test test_name expected_error)
+    add_python_vmc_test_invalid_expert_with_updates(
+        ${test_name} gc_invalid/base "${expected_error}" ${ARGN})
+    add_python_vmc_test_invalid_expert_with_updates(
+        ${test_name}_mpi gc_invalid/base "${expected_error}" ${ARGN})
+    set_tests_properties(${test_name}_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+endfunction(add_gc_invalid_test)
+
 function(add_python_projection_parser_test test_name mode)
     add_test(NAME ${test_name}
         COMMAND ${PYTHON_EXECUTABLE} runtest_projection_parser.py ${mode})
@@ -1143,6 +1152,37 @@ add_python_vmc_test_invalid_expert(DoublonOnly_InvalidNeZero "requires Ne > 0")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidNeFull "requires Ne < Nsite")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidLocSpin "NLocalSpin > 0")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidOrbitalGeneral "OrbitalGeneral=1")
+
+add_gc_invalid_test(GC_Invalid_LocSpin "does not support LocSpin" gc_locspin)
+add_gc_invalid_test(GC_Invalid_TwoSz "requires 2Sz=-1" 2Sz=0)
+add_gc_invalid_test(GC_Invalid_ExUpdatePath "requires NExUpdatePath=0" NExUpdatePath=1)
+add_gc_invalid_test(GC_Invalid_UpdateWeight "does not support the UpdateWeight input" gc_updateweight)
+add_gc_invalid_test(GC_Invalid_SRCG "supports dense SR only" NSRCG=1)
+add_gc_invalid_test(GC_Invalid_Lanczos "does not support Lanczos" NLanczosMode=1)
+add_gc_invalid_test(GC_Invalid_RBM "does not support RBM" gc_rbm)
+add_gc_invalid_test(GC_Invalid_BackFlow "does not support BackFlow" gc_backflow)
+add_gc_invalid_test(GC_Invalid_FlagRange "must be 0 or 1" NGrandCanonical=2)
+add_gc_invalid_test(GC_Invalid_HintOver "NGCInitNelec must satisfy" NGCInitNelec=999)
+add_gc_invalid_test(GC_Invalid_HintNegative "NGCInitNelec must satisfy" NGCInitNelec=-2)
+add_gc_invalid_test(GC_Invalid_NoOrbitalGeneral "requires OrbitalGeneral" gc_noorbgen)
+add_gc_invalid_test(GC_Invalid_RealParameter "requires complex variational parameters" gc_realparam)
+add_gc_invalid_test(GC_Invalid_GaussLeg "initially requires" NSPGaussLeg=2)
+add_gc_invalid_test(GC_Invalid_MPTrans "initially requires" NMPTrans=2)
+add_gc_invalid_test(GC_Invalid_QPOptTrans "initially requires" gc_opttrans2 opttrans_mode)
+add_gc_invalid_test(GC_Invalid_OptTrans "does not support OptTrans" gc_opttrans1 opttrans_mode)
+
+add_test(NAME GC_OddNCond_Positive
+    COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+    "NCond is ignored" allow_success "expect:initial GC particle number is 2"
+    Ncond=3 NGCInitNelec=2)
+set_tests_properties(GC_OddNCond_Positive PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+add_test(NAME GC_OddNCond_Positive_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+    "NCond is ignored" allow_success "expect:initial GC particle number is 2"
+    Ncond=3 NGCInitNelec=2)
+set_tests_properties(GC_OddNCond_Positive_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
 
 foreach(real_rbm_case
     family-charge

@@ -79,6 +79,50 @@ def inject_two_body_g_ex(namelist):
         destination.writelines(lines)
 
 
+def append_namelist_entry(filename, keyword, definition):
+    with open(filename) as source:
+        lines = source.readlines()
+    lines.append("{:>18}  {}\n".format(keyword, definition))
+    with open(filename, "w") as destination:
+        destination.writelines(lines)
+
+
+def apply_gc_fixture_mutation(action):
+    if action == "gc_locspin":
+        with open("locspn.def") as source:
+            text = source.read()
+        text = text.replace("NlocalSpin     0", "NlocalSpin     1")
+        text = text.replace("    0      0", "    0      1", 1)
+        with open("locspn.def", "w") as destination:
+            destination.write(text)
+    elif action == "gc_noorbgen":
+        with open("namelist.def") as source:
+            lines = [line for line in source
+                     if not line.split() or line.split()[0] != "OrbitalGeneral"]
+        lines.append("           Orbital  orbitalidx.def\n")
+        with open("namelist.def", "w") as destination:
+            destination.writelines(lines)
+    elif action == "gc_realparam":
+        with open("orbitalidxgen.def") as source:
+            text = source.read()
+        text = text.replace("ComplexType          1", "ComplexType          0")
+        with open("orbitalidxgen.def", "w") as destination:
+            destination.write(text)
+    elif action == "gc_updateweight":
+        append_namelist_entry("namelist.def", "InUpdateWeight", "updateweight.def")
+    elif action == "gc_rbm":
+        append_namelist_entry("namelist.def", "GeneralRBM_HiddenLayer", "rbm.def")
+    elif action == "gc_backflow":
+        append_namelist_entry("namelist.def", "BF", "bf.def")
+        append_namelist_entry("namelist.def", "BFRange", "rangebf.def")
+    elif action == "gc_opttrans1":
+        append_namelist_entry("namelist.def", "OptTrans", "opttrans1.def")
+    elif action == "gc_opttrans2":
+        append_namelist_entry("namelist.def", "OptTrans", "opttrans2.def")
+    else:
+        raise RuntimeError("unknown GC fixture mutation: {}".format(action))
+
+
 def main():
     if len(sys.argv) < 3:
         print(
@@ -89,9 +133,12 @@ def main():
 
     model = sys.argv[1]
     expected = sys.argv[2]
+    expected_substrings = [expected]
     allow_success = False
     spin_flip_transfer = False
     two_body_g_ex = False
+    opttrans_mode = False
+    gc_fixture_mutations = []
     modpara_updates = {}
     for arg in sys.argv[3:]:
         if arg == "allow_success":
@@ -100,6 +147,12 @@ def main():
             spin_flip_transfer = True
         elif arg == "two_body_g_ex":
             two_body_g_ex = True
+        elif arg == "opttrans_mode":
+            opttrans_mode = True
+        elif arg.startswith("gc_"):
+            gc_fixture_mutations.append(arg)
+        elif arg.startswith("expect:"):
+            expected_substrings.append(arg[len("expect:"):])
         elif "=" in arg:
             key, value = arg.split("=", 1)
             modpara_updates[key] = value
@@ -134,9 +187,18 @@ def main():
             return -1
     if two_body_g_ex:
         inject_two_body_g_ex("namelist.def")
+    for mutation in gc_fixture_mutations:
+        try:
+            apply_gc_fixture_mutation(mutation)
+        except RuntimeError as error:
+            print("ERROR: {}".format(error))
+            return -1
 
     bin_to_test = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
-    command = [bin_to_test, "-e", "namelist.def"]
+    command = [bin_to_test]
+    if opttrans_mode:
+        command.append("-o")
+    command.extend(["-e", "namelist.def"])
     mpi_procs = os.environ.get("MVMC_MPI_PROCS")
     if mpi_procs:
         command = ["mpirun", "-np", mpi_procs] + command
@@ -150,12 +212,14 @@ def main():
     with open("invalid_test.log", "w") as f:
         f.write(proc.stdout)
 
-    if expected not in proc.stdout:
-        print("ERROR: expected error substring not found: {}".format(expected))
-        print("---- output begin ----")
-        print(proc.stdout)
-        print("---- output end ----")
-        return -1
+    for expected_substring in expected_substrings:
+        if expected_substring not in proc.stdout:
+            print("ERROR: expected error substring not found: {}".format(
+                expected_substring))
+            print("---- output begin ----")
+            print(proc.stdout)
+            print("---- output end ----")
+            return -1
     # Default: invalid input must terminate with non-zero.
     # Some legacy readers only emit error messages and continue;
     # those cases can opt in to allow_success mode.

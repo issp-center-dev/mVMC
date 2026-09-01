@@ -59,6 +59,8 @@ int Ne;    /* the number of electrons with up spin */
 int Nup;   /* the number of electrons with up spin */
 int Nsize; /* the number of electrons = 2*Ne */
 int Nsite2; /* 2*Nsite */
+int NsizeMax; /* maximum active Pfaffian dimension */
+int Ncur; /* current GC particle count */
 int NzBF; /* BF connectivity */
 int TwoSz;
 
