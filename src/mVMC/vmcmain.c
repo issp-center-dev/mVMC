@@ -250,6 +250,10 @@ static int RunPowerLanczosIndependent(
   view.projection_parameters = Proj;
   view.qp_weights = QPFullWeight;
   view.slater_real = SlaterElm_real;
+#ifdef _pf_block_update
+  view.unsupported_amplitude_features |=
+      MVMC_CLASSIC_KRYLOV_UNSUPPORTED_BLOCK_UPDATE;
+#endif
   memset(&input, 0, sizeof(input));
   input.classic_view = &view;
   input.communicator = communicator;

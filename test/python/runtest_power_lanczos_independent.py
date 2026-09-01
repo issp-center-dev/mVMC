@@ -12,13 +12,24 @@ import numpy as np
 root = pathlib.Path.cwd()
 source = root / "data" / "BackFlow_Identity_InterAll_Real"
 extra = root / "data" / "PowerLanczosIndependent"
-suffix = "_mpi" if os.environ.get("MVMC_MPI_PROCS") else ""
-invalid = len(sys.argv) > 1 and sys.argv[1] == "invalid"
-interall = len(sys.argv) > 1 and sys.argv[1] == "interall"
+arguments = set(sys.argv[1:])
+unknown_arguments = arguments.difference(("blocked", "interall", "invalid"))
+if unknown_arguments:
+    raise RuntimeError("unknown arguments: {}".format(sorted(unknown_arguments)))
+processes = os.environ.get("MVMC_MPI_PROCS")
+blocked = "blocked" in arguments
+invalid = "invalid" in arguments
+interall = "interall" in arguments
+suffix_parts = []
+if processes:
+    suffix_parts.append("mpi")
 if invalid:
-    suffix = "_invalid"
+    suffix_parts.append("invalid")
 elif interall:
-    suffix = "_interall"
+    suffix_parts.append("interall")
+if blocked:
+    suffix_parts.append("blocked")
+suffix = "_" + "_".join(suffix_parts) if suffix_parts else ""
 work = root / "work" / ("PowerLanczosIndependent" + suffix)
 if work.exists():
     shutil.rmtree(str(work))
@@ -58,7 +69,6 @@ namelist_lines = [
 
 binary = root.parent.parent / "src" / "mVMC" / "vmc.out"
 command = [str(binary), "-e", "namelist.def"]
-processes = os.environ.get("MVMC_MPI_PROCS")
 if processes:
     command = ["mpirun", "-np", processes] + command
 completed = subprocess.run(command, cwd=str(work), text=True,
@@ -69,6 +79,19 @@ if invalid:
         print(completed.stdout)
         raise RuntimeError("invalid LsTrans was not rejected as expected")
     print("PowerLanczosIndependent_invalid: PASS")
+    sys.exit(0)
+if blocked:
+    expected_error = "independent power-Lanczos failed: unsupported model"
+    if completed.returncode == 0 or expected_error not in completed.stdout:
+        print(completed.stdout)
+        raise RuntimeError("blocked-update build was not rejected as expected")
+    output = work / "output" / "zvo_pl_out_001.dat"
+    if output.exists():
+        rows = [line for line in output.read_text().splitlines()
+                if line.strip() and not line.lstrip().startswith("#")]
+        if rows:
+            raise RuntimeError("blocked-update rejection wrote a result row")
+    print("PowerLanczosIndependent{}: PASS".format(suffix))
     sys.exit(0)
 if completed.returncode != 0:
     print(completed.stdout)

@@ -127,8 +127,14 @@ function(add_python_vmc_test_expert model)
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 endfunction(add_python_vmc_test_expert)
 
+set(POWER_LANCZOS_INDEPENDENT_EXPECTATION)
+if(PFAFFIAN_BLOCKED)
+    set(POWER_LANCZOS_INDEPENDENT_EXPECTATION blocked)
+endif()
+
 add_test(NAME PowerLanczosIndependent_Expert
-    COMMAND ${PYTHON_EXECUTABLE} runtest_power_lanczos_independent.py)
+    COMMAND ${PYTHON_EXECUTABLE} runtest_power_lanczos_independent.py
+    ${POWER_LANCZOS_INDEPENDENT_EXPECTATION})
 set_tests_properties(PowerLanczosIndependent_Expert PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1"
     RESOURCE_LOCK "power_lanczos_independent_fixture")
@@ -137,12 +143,14 @@ add_test(NAME PowerLanczosIndependent_InvalidInput
 set_tests_properties(PowerLanczosIndependent_InvalidInput PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
 add_test(NAME PowerLanczosIndependent_InterAll
-    COMMAND ${PYTHON_EXECUTABLE} runtest_power_lanczos_independent.py interall)
+    COMMAND ${PYTHON_EXECUTABLE} runtest_power_lanczos_independent.py interall
+    ${POWER_LANCZOS_INDEPENDENT_EXPECTATION})
 set_tests_properties(PowerLanczosIndependent_InterAll PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
 if(MPI_FOUND)
     add_test(NAME PowerLanczosIndependent_Expert_mpi
-        COMMAND ${PYTHON_EXECUTABLE} runtest_power_lanczos_independent.py)
+        COMMAND ${PYTHON_EXECUTABLE} runtest_power_lanczos_independent.py
+        ${POWER_LANCZOS_INDEPENDENT_EXPECTATION})
     set_tests_properties(PowerLanczosIndependent_Expert_mpi PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
         PROCESSORS 2
