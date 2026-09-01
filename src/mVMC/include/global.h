@@ -62,6 +62,10 @@ int Nsite2; /* 2*Nsite */
 int NzBF; /* BF connectivity */
 int TwoSz;
 
+/* GC */
+int FlagGrandCanonical;
+int NGCInitNelec;
+
 int NSPGaussLeg; /* the number of points for the Gauss-Legendre quadrature */
 int NSPStot; /* S of Spin projection */
 int NMPTrans; /* the number of quantum projection for translation and point group symmetry */

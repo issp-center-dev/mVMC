@@ -1196,6 +1196,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NLanczosMode = bufInt[IdxLanczosMode];
   NLanczosStep = bufInt[IdxLanczosStep];
   NLanczosEstimatorMode = bufInt[IdxLanczosEstimatorMode];
+  FlagGrandCanonical = bufInt[IdxNGrandCanonical];
+  NGCInitNelec = bufInt[IdxNGCInitNelec];
   if (NLanczosSupportMode != 0 && NLanczosSupportMode != 1) {
     if (rank == 0) {
       fprintf(stderr, "Error: NLanczosSupportMode must be 0 or 1.\n");
@@ -2770,6 +2772,8 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[Idx2Sz] = -1;// -1: sz is not fixed :fsz
   bufInt[IdxNCond] = -1;
   bufInt[IdxLanczosEstimatorMode] = 0;
+  bufInt[IdxNGrandCanonical] = 0;
+  bufInt[IdxNGCInitNelec] = -1;
 
 //RBM
   bufInt[IdxNneuron] = 0;
@@ -2883,6 +2887,10 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
             } else if (CheckWords(ctmp, "NLanczosEstimatorMode") == 0) {
               bufInt[IdxLanczosEstimatorMode] =
                   (dtmp == 0.0 || dtmp == 1.0) ? (int)dtmp : -1;
+            } else if (CheckWords(ctmp, "NGrandCanonical") == 0) {
+              bufInt[IdxNGrandCanonical] = (int)dtmp;
+            } else if (CheckWords(ctmp, "NGCInitNelec") == 0) {
+              bufInt[IdxNGCInitNelec] = (int)dtmp;
             } else if (CheckWords(ctmp, "NDataIdxStart") == 0) {
               bufInt[IdxDataIdxStart] = (int) dtmp;
             } else if (CheckWords(ctmp, "NDataQtySmp") == 0) {
