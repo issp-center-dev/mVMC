@@ -635,6 +635,13 @@ Keywords and parameters
    a block count between 4 and 16 with at least two samples per block; a
    multiple of 16 is recommended.
 
+   In this estimator mode, each coefficient or final chain is one collective
+   Markov chain shared by all MPI ranks. ``NVMCSample`` is the total length of
+   each shared chain, not a per-rank sample count, and ``NSplitSize`` does not
+   create independent sampling chains for this route. MPI ranks cooperate in
+   the quantum-projection amplitude evaluation; ranks beyond ``NQPFull`` have
+   empty local projection ranges. MPI sample parallelism is not yet supported.
+
    Supplying ``LsTrans`` or ``LsInterAll`` selects the independent-operator
    route with basis :math:`\{\Psi,H'\Psi\}`. This route additionally requires
    real variational parameters, ``NLanczosStep=1``, ``NExUpdatePath=0``, and

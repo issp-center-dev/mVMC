@@ -624,6 +624,13 @@ ModParaファイル (modpara.def)
    各blockに2 sample以上が入る4から16までのblock数で割り切れる値とし、
    16の倍数を推奨します。
 
+   このestimator modeでは、係数決定用chainと最終energy用chainのそれぞれが、
+   全MPI rankで共有する1本のcollective Markov chainです。``NVMCSample`` は
+   rank当たりのsample数ではなく各共有chainの総長であり、``NSplitSize`` で
+   この経路の独立sampling chainを作ることはできません。MPI rankは量子数射影の
+   amplitude評価を分担し、``NQPFull`` を超えるrankの局所射影範囲は空になります。
+   MPI sample並列は現時点では未対応です。
+
    ``LsTrans`` または ``LsInterAll`` を指定すると、基底
    :math:`\{\Psi,H'\Psi\}` を使う独立演算子経路を選択します。この経路はさらに
    実変分パラメータ、``NLanczosStep=1``、``NExUpdatePath=0``、physical modeを
