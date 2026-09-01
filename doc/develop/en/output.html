@@ -539,15 +539,19 @@ that is expected to decrease approximately as
 <h2>xxx_pl_out_yyy.dat<a class="headerlink" href="#xxx-pl-out-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This three-line file is written by the stabilized Power-Lanczos estimator
 when <code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode=1</span></code>. Its header records the version, order,
-coefficient-chain and final-chain sample counts, and block count. After the
+number of independent chains, samples per chain, total coefficient-chain and
+final-chain sample counts, and block count. After the
 field-name line, the data line contains corrected energy and variance with
 standard errors, their imaginary diagnostics, the energy autocorrelation time
 and effective sample count, and the retained rank, condition estimate, and
 residual of the generalized eigenproblem. It contains no Green’s functions or
-per-sample trace.</p>
+per-sample trace. For multiple independent chains, <code class="docutils literal notranslate"><span class="pre">effective_samples</span></code> is
+the sum of the per-chain effective sample counts, and <code class="docutils literal notranslate"><span class="pre">tau_int</span></code> is the
+equivalent value <code class="docutils literal notranslate"><span class="pre">total_samples/(2*effective_samples)</span></code>.</p>
 <p>When <code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> or <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> selects an independent <span class="math notranslate nohighlight">\(H'\)</span>, the
 first header instead contains <code class="docutils literal notranslate"><span class="pre">independent_power_lanczos</span></code> and
-<code class="docutils literal notranslate"><span class="pre">basis={Psi,HprimePsi}</span></code>. The data row has 12 fields in this order:
+<code class="docutils literal notranslate"><span class="pre">basis={Psi,HprimePsi}</span></code>; it records the same chain and sample-count
+metadata. The data row has 12 fields in this order:
 <code class="docutils literal notranslate"><span class="pre">energy</span></code>, <code class="docutils literal notranslate"><span class="pre">energy_se</span></code>, <code class="docutils literal notranslate"><span class="pre">variance</span></code>, <code class="docutils literal notranslate"><span class="pre">variance_se</span></code>, <code class="docutils literal notranslate"><span class="pre">energy_imag</span></code>,
 <code class="docutils literal notranslate"><span class="pre">variance_imag</span></code>, <code class="docutils literal notranslate"><span class="pre">tau_int</span></code>, <code class="docutils literal notranslate"><span class="pre">effective_samples</span></code>, <code class="docutils literal notranslate"><span class="pre">retained_rank</span></code>,
 <code class="docutils literal notranslate"><span class="pre">condition</span></code>, <code class="docutils literal notranslate"><span class="pre">gevp_residual</span></code>, and <code class="docutils literal notranslate"><span class="pre">streamed_row_terms</span></code>. The final field

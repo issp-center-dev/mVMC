@@ -481,15 +481,19 @@ xxx\_pl\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 ``NLanczosEstimatorMode=1`` の数値安定化Power-Lanczos計算が出力する
-3行のファイルです。headerにはversion、次数、係数決定chainと最終chainの
-sample数、block数を記録します。field名に続くdata行にはcorrected energyと
+3行のファイルです。headerにはversion、次数、独立chain数、chain当たりの
+sample数、係数決定chainと最終chainの総sample数、block数を記録します。
+field名に続くdata行にはcorrected energyと
 variance、そのstandard error、虚部、energyの自己相関時間と有効sample数、
 一般化固有値問題のretained rank・condition estimate・residualを出力します。
-Green関数やsampleごとのtraceは出力しません。
+Green関数やsampleごとのtraceは出力しません。独立chainが複数ある場合、
+``effective_samples`` はchainごとの有効sample数の合計、``tau_int`` は
+``total_samples/(2*effective_samples)`` で定義する等価な値です。
 
 ``LsTrans`` または ``LsInterAll`` で独立 :math:`H'` を選択した場合、1行目の
 headerには ``independent_power_lanczos`` と ``basis={Psi,HprimePsi}`` を
-記録します。data行の12項目は順に ``energy``、``energy_se``、``variance``、
+記録し、同じchain数・sample数metadataも記録します。data行の12項目は順に
+``energy``、``energy_se``、``variance``、
 ``variance_se``、``energy_imag``、``variance_imag``、``tau_int``、
 ``effective_samples``、``retained_rank``、``condition``、``gevp_residual``、
 ``streamed_row_terms`` です。最後の項目はcoefficient chainで採用した測定snapshotに

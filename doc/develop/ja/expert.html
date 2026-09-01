@@ -606,12 +606,16 @@ FSZ、BackFlow、RBM、reweight、およびGreen関数は対象外です。
 出力は <code class="docutils literal notranslate"><span class="pre">xxx_pl_out_yyy.dat</span></code> のみです。<code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> は8以上かつ、
 各blockに2 sample以上が入る4から16までのblock数で割り切れる値とし、
 16の倍数を推奨します。</p>
-<p>このestimator modeでは、係数決定用chainと最終energy用chainのそれぞれが、
-全MPI rankで共有する1本のcollective Markov chainです。<code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> は
-rank当たりのsample数ではなく各共有chainの総長であり、<code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> で
-この経路の独立sampling chainを作ることはできません。MPI rankは量子数射影の
-amplitude評価を分担し、<code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> を超えるrankの局所射影範囲は空になります。
-MPI sample並列は現時点では未対応です。</p>
+<p>このestimator modeでは、<code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> で定義される各内部MPI groupが、
+係数決定用chainと最終energy用chainをそれぞれ1本ずつ独立に実行します。
+同じgroup内のMPI rankは量子数射影のamplitude評価を分担します。
+<code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> は各chainの長さで、chain数は内部group数（通常は
+<code class="docutils literal notranslate"><span class="pre">ceil(MPI_size/NSplitSize)</span></code>）です。したがって各stageの総sample数は
+<code class="docutils literal notranslate"><span class="pre">NVMCSample</span> <span class="pre">*</span> <span class="pre">chain数</span></code> です。係数行列は全chainから集約した後に共通の
+一般化固有値問題を1回解き、その共通係数を使う最終chainの統計量も全chainから
+集約します。<code class="docutils literal notranslate"><span class="pre">NSplitSize=1</span></code> では各MPI rankが独立chainを実行します。
+<code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> を増やすとsample並列を量子数射影並列へ振り替えます。
+group内で <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> を超えるrankの局所射影範囲は空になります。</p>
 <p><code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> または <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> を指定すると、基底
 <span class="math notranslate nohighlight">\(\{\Psi,H'\Psi\}\)</span> を使う独立演算子経路を選択します。この経路はさらに
 実変分パラメータ、<code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、physical modeを

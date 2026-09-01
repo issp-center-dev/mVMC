@@ -623,12 +623,19 @@ functions are outside this mode. Its only result file is
 <code class="docutils literal notranslate"><span class="pre">xxx_pl_out_yyy.dat</span></code>. <code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> must be at least 8 and divisible by
 a block count between 4 and 16 with at least two samples per block; a
 multiple of 16 is recommended.</p>
-<p>In this estimator mode, each coefficient or final chain is one collective
-Markov chain shared by all MPI ranks. <code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> is the total length of
-each shared chain, not a per-rank sample count, and <code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> does not
-create independent sampling chains for this route. MPI ranks cooperate in
-the quantum-projection amplitude evaluation; ranks beyond <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> have
-empty local projection ranges. MPI sample parallelism is not yet supported.</p>
+<p>In this estimator mode, each inner MPI group defined by <code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> runs
+one independent coefficient chain and one independent final chain. MPI
+ranks within a group cooperate in the quantum-projection amplitude
+evaluation. <code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> is the length of each chain, and the number of
+chains is the number of inner groups (normally
+<code class="docutils literal notranslate"><span class="pre">ceil(MPI_size/NSplitSize)</span></code>). Thus each stage contributes
+<code class="docutils literal notranslate"><span class="pre">NVMCSample</span> <span class="pre">*</span> <span class="pre">number_of_chains</span></code> samples. Coefficient matrices are summed
+over all chains before one common generalized eigenproblem is solved; the
+final-chain statistics are then summed over all chains using those common
+coefficients. With <code class="docutils literal notranslate"><span class="pre">NSplitSize=1</span></code>, every MPI rank runs an independent
+chain. Increasing <code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> trades sample parallelism for parallel
+quantum-projection evaluation; ranks beyond <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> in a group have
+empty local projection ranges.</p>
 <p>Supplying <code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> or <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> selects the independent-operator
 route with basis <span class="math notranslate nohighlight">\(\{\Psi,H'\Psi\}\)</span>. This route additionally requires
 real variational parameters, <code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>, and
