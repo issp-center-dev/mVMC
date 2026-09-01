@@ -154,7 +154,6 @@ if(MPI_FOUND)
     set_tests_properties(PowerLanczosIndependent_Expert_mpi PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
         PROCESSORS 2
-        DEPENDS PowerLanczosIndependent_Expert
         RESOURCE_LOCK "power_lanczos_independent_fixture")
 endif()
 

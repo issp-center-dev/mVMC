@@ -9,6 +9,27 @@ import sys
 import numpy as np
 
 
+def read_result(output):
+    text = output.read_text()
+    if "# independent_power_lanczos" not in text:
+        print(text)
+        raise RuntimeError("independent output header is missing: {}".format(
+            output))
+    rows = [line for line in text.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")]
+    if len(rows) != 1:
+        raise RuntimeError("expected one result row in {}, got {}".format(
+            output, len(rows)))
+    values = np.fromstring(rows[0], sep=" ")
+    if values.size != 12 or not np.all(np.isfinite(values)):
+        raise RuntimeError("invalid independent result in {}: {}".format(
+            output, values))
+    if int(round(values[8])) < 1:
+        raise RuntimeError("invalid retained rank in {}: {}".format(
+            output, values[8]))
+    return values
+
+
 root = pathlib.Path.cwd()
 source = root / "data" / "BackFlow_Identity_InterAll_Real"
 extra = root / "data" / "PowerLanczosIndependent"
@@ -98,24 +119,22 @@ if completed.returncode != 0:
     sys.exit(completed.returncode)
 
 output = work / "output" / "zvo_pl_out_001.dat"
-text = output.read_text()
-if "# independent_power_lanczos" not in text:
-    print(text)
-    raise RuntimeError("independent output header is missing")
-rows = [line for line in text.splitlines()
-        if line.strip() and not line.lstrip().startswith("#")]
-if len(rows) != 1:
-    raise RuntimeError("expected one result row, got {}".format(len(rows)))
-values = np.fromstring(rows[0], sep=" ")
-if values.size != 12 or not np.all(np.isfinite(values)):
-    raise RuntimeError("invalid independent result: {}".format(values))
-if int(round(values[8])) < 1:
-    raise RuntimeError("invalid retained rank: {}".format(values[8]))
+values = read_result(output)
 if processes:
-    serial_output = root / "work" / "PowerLanczosIndependent" / "output" / "zvo_pl_out_001.dat"
-    serial_rows = [line for line in serial_output.read_text().splitlines()
-                   if line.strip() and not line.lstrip().startswith("#")]
-    serial_values = np.fromstring(serial_rows[0], sep=" ")
+    serial_work = work.with_name(work.name + "_serial_reference")
+    if serial_work.exists():
+        shutil.rmtree(str(serial_work))
+    shutil.copytree(str(work), str(serial_work),
+                    ignore=shutil.ignore_patterns("output"))
+    serial_completed = subprocess.run(
+        [str(binary), "-e", "namelist.def"], cwd=str(serial_work), text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if serial_completed.returncode != 0:
+        print(serial_completed.stdout)
+        raise RuntimeError("serial reference run failed with status {}".format(
+            serial_completed.returncode))
+    serial_values = read_result(
+        serial_work / "output" / "zvo_pl_out_001.dat")
     if not np.allclose(values, serial_values, rtol=2e-12, atol=2e-12):
         raise RuntimeError("rank-1/rank-2 mismatch:\n{}\n{}".format(
             serial_values, values))
