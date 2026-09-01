@@ -60,6 +60,24 @@ if(MPI_FOUND)
 endif()
 add_test(NAME GCPfUpdate_Unit COMMAND gc_pfupdate_unit)
 
+add_executable(gc_sampler_unit gc_sampler_unit.c
+    ${CMAKE_SOURCE_DIR}/src/sfmt/SFMT.c)
+target_include_directories(gc_sampler_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include
+    ${CMAKE_SOURCE_DIR}/src/sfmt)
+target_link_libraries(gc_sampler_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(gc_sampler_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(gc_sampler_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCSampler_Unit COMMAND gc_sampler_unit)
+add_test(NAME GCSampler_Unit_DebugRebuild COMMAND gc_sampler_unit)
+set_tests_properties(GCSampler_Unit_DebugRebuild PROPERTIES
+    ENVIRONMENT "MVMC_GC_DEBUG_REBUILD_INTERVAL=1")
+
 add_executable(nbody_operator_unit
     nbody_operator_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/nbody_operator.c

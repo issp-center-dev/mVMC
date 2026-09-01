@@ -63,6 +63,7 @@ extern void omp_set_num_threads(int);
 #include "update_weight.h"
 #include "pfupdate_fsz.h"
 #include "pfupdate_gc.h"
+#include "vmcmake_gc.h"
 #include "blas_externs.h"
 
 #include "../safempi.c"
@@ -132,6 +133,7 @@ extern void omp_set_num_threads(int);
 #include "../vmcmake_real.c"
 #include "../vmcmake_fsz.c"
 #include "../vmcmake_fsz_real.c"
+#include "../vmcmake_gc.c"
 #include "../backflow_nbody_oracle.c"
 #include "../vmccal.c"
 #include "../backflow_vmc.c"
