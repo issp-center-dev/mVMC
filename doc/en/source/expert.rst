@@ -635,12 +635,19 @@ Keywords and parameters
    a block count between 4 and 16 with at least two samples per block; a
    multiple of 16 is recommended.
 
-   In this estimator mode, each coefficient or final chain is one collective
-   Markov chain shared by all MPI ranks. ``NVMCSample`` is the total length of
-   each shared chain, not a per-rank sample count, and ``NSplitSize`` does not
-   create independent sampling chains for this route. MPI ranks cooperate in
-   the quantum-projection amplitude evaluation; ranks beyond ``NQPFull`` have
-   empty local projection ranges. MPI sample parallelism is not yet supported.
+   In this estimator mode, each inner MPI group defined by ``NSplitSize`` runs
+   one independent coefficient chain and one independent final chain. MPI
+   ranks within a group cooperate in the quantum-projection amplitude
+   evaluation. ``NVMCSample`` is the length of each chain, and the number of
+   chains is the number of inner groups (normally
+   ``ceil(MPI_size/NSplitSize)``). Thus each stage contributes
+   ``NVMCSample * number_of_chains`` samples. Coefficient matrices are summed
+   over all chains before one common generalized eigenproblem is solved; the
+   final-chain statistics are then summed over all chains using those common
+   coefficients. With ``NSplitSize=1``, every MPI rank runs an independent
+   chain. Increasing ``NSplitSize`` trades sample parallelism for parallel
+   quantum-projection evaluation; ranks beyond ``NQPFull`` in a group have
+   empty local projection ranges.
 
    Supplying ``LsTrans`` or ``LsInterAll`` selects the independent-operator
    route with basis :math:`\{\Psi,H'\Psi\}`. This route additionally requires

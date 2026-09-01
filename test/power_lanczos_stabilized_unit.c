@@ -31,6 +31,15 @@ static MVMCClassicPfaffianCommunicator world(void) {
 #endif
 }
 
+static MVMCClassicPfaffianCommunicator chain(int sample_parallel) {
+#ifdef _mpi_use
+  return sample_parallel ? MPI_COMM_SELF : MPI_COMM_WORLD;
+#else
+  (void)sample_parallel;
+  return 0;
+#endif
+}
+
 static void set_real_pair(double *slater, int up, int down, double value) {
   const int orbitals = 4;
   const int down_orbital = 2 + down;
@@ -87,7 +96,8 @@ static void fill_complex_slater(double complex *slater, int qp_total) {
 static void initialize_view(MVMCPowerLanczosClassicView *view,
                             MVMCPowerLanczosClassicArithmetic arithmetic,
                             double *slater_real,
-                            double complex *slater_complex) {
+                            double complex *slater_complex,
+                            int chain_rank, int chain_size) {
   enum { qp_total = 8 };
   static int transfer_rows[4][4] = {
       {1, 0, 0, 0}, {0, 0, 1, 0},
@@ -116,8 +126,8 @@ static void initialize_view(MVMCPowerLanczosClassicView *view,
   view->coulomb_intra_indices = intra_indices;
   view->coulomb_intra_parameters = intra_parameters;
   view->qp_total = qp_total;
-  view->qp_start = qp_total * rank / size;
-  view->qp_end = qp_total * (rank + 1) / size;
+  view->qp_start = qp_total * chain_rank / chain_size;
+  view->qp_end = qp_total * (chain_rank + 1) / chain_size;
   view->qp_weights = weights;
   view->slater_real = slater_real;
   view->slater_complex = slater_complex;
@@ -125,7 +135,8 @@ static void initialize_view(MVMCPowerLanczosClassicView *view,
 
 static MVMCPowerLanczosStabilizedResult run_case(
     int power_step, double scale,
-    MVMCPowerLanczosClassicArithmetic arithmetic) {
+    MVMCPowerLanczosClassicArithmetic arithmetic,
+    int sample_parallel) {
   enum { qp_total = 8 };
   double slater_real[qp_total * 16];
   double complex slater_complex[qp_total * 16];
@@ -135,16 +146,23 @@ static MVMCPowerLanczosStabilizedResult run_case(
   MVMCKrylovStatus status;
   double energy_imaginary_tolerance;
   double variance_imaginary_tolerance;
+  const int chain_rank = sample_parallel ? 0 : rank;
+  const int chain_size = sample_parallel ? 1 : size;
+  const uint64_t expected_chains =
+      sample_parallel ? (uint64_t)size : UINT64_C(1);
   if (arithmetic == MVMC_POWER_LANCZOS_CLASSIC_REAL) {
     fill_real_slater(slater_real, qp_total, scale);
-    initialize_view(&view, arithmetic, slater_real, NULL);
+    initialize_view(&view, arithmetic, slater_real, NULL,
+                    chain_rank, chain_size);
   } else {
     fill_complex_slater(slater_complex, qp_total);
-    initialize_view(&view, arithmetic, NULL, slater_complex);
+    initialize_view(&view, arithmetic, NULL, slater_complex,
+                    chain_rank, chain_size);
   }
   memset(&input, 0, sizeof(input));
   input.classic_view = &view;
-  input.communicator = world();
+  input.world_communicator = world();
+  input.chain_communicator = chain(sample_parallel);
   input.power_step = power_step;
   input.seed = UINT64_C(0x53544142494c495a);
   input.warm_up = 16;
@@ -155,8 +173,9 @@ static MVMCPowerLanczosStabilizedResult run_case(
   CHECK(result.valid && result.status == MVMC_KRYLOV_STATUS_OK,
         "stabilized result validity");
   CHECK(result.power_step == power_step &&
-            result.coefficient_samples == 256 &&
-            result.final_samples == 256,
+            result.sampling_chains == expected_chains &&
+            result.coefficient_samples == UINT64_C(256) * expected_chains &&
+            result.final_samples == UINT64_C(256) * expected_chains,
         "stabilized result shape");
   CHECK(isfinite(result.energy) && isfinite(result.energy_standard_error) &&
             result.energy_standard_error >= 0.0 &&
@@ -244,22 +263,32 @@ int main(int argc, char **argv) {
         "valid sample count block selection");
   CHECK(mvmc_power_lanczos_stabilized_block_count(37) == 0,
         "invalid sample count block selection");
-  base = run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL);
+  base = run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL, 1);
   check_ed(&base, -1.167342721287232, 0.0012031753879899743,
            "real first step");
-  scaled = run_case(1, 1.0e150, MVMC_POWER_LANCZOS_CLASSIC_REAL);
+  scaled = run_case(1, 1.0e150, MVMC_POWER_LANCZOS_CLASSIC_REAL, 1);
   CHECK(fabs(base.energy - scaled.energy) <=
             1.0e-10 * fmax(1.0, fabs(base.energy)) &&
             fabs(base.variance - scaled.variance) <=
             1.0e-9 * fmax(1.0, fabs(base.variance)),
         "global amplitude scaling changes corrected observables");
-  second_step = run_case(2, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL);
+  second_step = run_case(2, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL, 1);
   check_ed(&second_step, -1.1679611410882096, 0.000163604277214624,
            "real second step");
   complex_first_step =
-      run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_COMPLEX);
+      run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_COMPLEX, 1);
   check_ed(&complex_first_step, -1.1659572960326554,
            0.003155912326888499, "complex first step");
+#ifdef _mpi_use
+  if (size > 1) {
+    MVMCPowerLanczosStabilizedResult projection_parallel =
+        run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL, 0);
+    CHECK(projection_parallel.sampling_chains == UINT64_C(1),
+          "projection-parallel run must contain one chain");
+    check_ed(&projection_parallel, -1.167342721287232,
+             0.0012031753879899743, "projection-parallel first step");
+  }
+#endif
 #ifdef _mpi_use
   {
     int total = 0;

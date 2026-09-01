@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define MVMC_POWER_LANCZOS_STABILIZED_VERSION UINT64_C(1)
+#define MVMC_POWER_LANCZOS_STABILIZED_VERSION UINT64_C(2)
 #define MVMC_POWER_LANCZOS_STABILIZED_BLOCKS ((size_t)16)
 
 static inline size_t mvmc_power_lanczos_stabilized_block_count(
@@ -24,7 +24,8 @@ static inline size_t mvmc_power_lanczos_stabilized_block_count(
 
 typedef struct {
   const MVMCPowerLanczosClassicView *classic_view;
-  MVMCClassicPfaffianCommunicator communicator;
+  MVMCClassicPfaffianCommunicator world_communicator;
+  MVMCClassicPfaffianCommunicator chain_communicator;
   int power_step;
   uint64_t seed;
   size_t warm_up;
@@ -38,6 +39,7 @@ typedef struct {
   uint64_t version;
   int power_step;
   size_t block_count;
+  uint64_t sampling_chains;
   uint64_t coefficient_samples;
   uint64_t final_samples;
   int retained_rank;

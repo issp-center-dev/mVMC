@@ -530,16 +530,20 @@ xxx\_pl\_out\_yyy.dat
 
 This three-line file is written by the stabilized Power-Lanczos estimator
 when ``NLanczosEstimatorMode=1``. Its header records the version, order,
-coefficient-chain and final-chain sample counts, and block count. After the
+number of independent chains, samples per chain, total coefficient-chain and
+final-chain sample counts, and block count. After the
 field-name line, the data line contains corrected energy and variance with
 standard errors, their imaginary diagnostics, the energy autocorrelation time
 and effective sample count, and the retained rank, condition estimate, and
 residual of the generalized eigenproblem. It contains no Green's functions or
-per-sample trace.
+per-sample trace. For multiple independent chains, ``effective_samples`` is
+the sum of the per-chain effective sample counts, and ``tau_int`` is the
+equivalent value ``total_samples/(2*effective_samples)``.
 
 When ``LsTrans`` or ``LsInterAll`` selects an independent :math:`H'`, the
 first header instead contains ``independent_power_lanczos`` and
-``basis={Psi,HprimePsi}``. The data row has 12 fields in this order:
+``basis={Psi,HprimePsi}``; it records the same chain and sample-count
+metadata. The data row has 12 fields in this order:
 ``energy``, ``energy_se``, ``variance``, ``variance_se``, ``energy_imag``,
 ``variance_imag``, ``tau_int``, ``effective_samples``, ``retained_rank``,
 ``condition``, ``gevp_residual``, and ``streamed_row_terms``. The final field

@@ -9,6 +9,7 @@
 #include "krylov_gevp_solver.h"
 #include "krylov_matrix_measurement.h"
 #include "krylov_streaming_statistics.h"
+#include "power_lanczos_sampling.h"
 
 #include <complex.h>
 #include <limits.h>
@@ -75,6 +76,11 @@ static uint64_t mix_u64(uint64_t value) {
 static uint64_t domain_seed(uint64_t seed, uint64_t domain) {
   const uint64_t derived = mix_u64(seed ^ domain);
   return derived == 0 ? UINT64_C(1) : derived;
+}
+
+static uint64_t chain_domain(uint64_t domain, uint64_t chain_index) {
+  return domain ^
+         (chain_index * UINT64_C(0x9e3779b97f4a7c15));
 }
 
 static uint64_t hash_u64(uint64_t hash, uint64_t value) {
@@ -250,16 +256,19 @@ static MVMCKrylovStatus scale_pilot(
     MVMCKrylovPositiveSamplerRng *rng,
     MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
     uint64_t *proposal_words, MVMCKrylovPositiveGuidePolicy *guide,
-    MVMCKrylovMatrixMeasurementPolicy *matrix) {
-  double maximum[MVMC_KRYLOV_MAX_ORDER + 1];
-  double scaled_sum[MVMC_KRYLOV_MAX_ORDER + 1];
+    MVMCKrylovMatrixMeasurementPolicy *matrix,
+    const MVMCPowerLanczosSamplingTopology *sampling) {
+  double local_maximum[MVMC_KRYLOV_MAX_ORDER + 1];
+  double global_maximum[MVMC_KRYLOV_MAX_ORDER + 1];
+  double local_scaled_sum[MVMC_KRYLOV_MAX_ORDER + 1];
+  double global_scaled_sum[MVMC_KRYLOV_MAX_ORDER + 1];
   size_t step;
   size_t sample;
   int index;
   MVMCKrylovStatus status = MVMC_KRYLOV_STATUS_OK;
   for (index = 0; index <= guide->order; ++index) {
-    maximum[index] = -INFINITY;
-    scaled_sum[index] = 0.0;
+    local_maximum[index] = -INFINITY;
+    local_scaled_sum[index] = 0.0;
   }
   for (step = 0; status == MVMC_KRYLOV_STATUS_OK &&
                  step < pilot_warm_up; ++step) {
@@ -283,20 +292,43 @@ static MVMCKrylovStatus scale_pilot(
         if (!isfinite(log_squared)) {
           status = MVMC_KRYLOV_STATUS_NONFINITE;
         } else {
-          log_sum_add(log_squared, maximum + index, scaled_sum + index);
+          log_sum_add(log_squared, local_maximum + index,
+                      local_scaled_sum + index);
         }
       }
     }
   }
+  status = mvmc_power_lanczos_sampling_synchronize(sampling, status);
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    memcpy(global_maximum, local_maximum,
+           sizeof(global_maximum));
+    status = mvmc_power_lanczos_sampling_max_double(
+        sampling, global_maximum, (size_t)guide->order + 1);
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    for (index = 0; index <= guide->order; ++index) {
+      global_scaled_sum[index] =
+          local_maximum[index] == -INFINITY
+              ? 0.0
+              : local_scaled_sum[index] *
+                    exp(local_maximum[index] - global_maximum[index]);
+    }
+    status = mvmc_power_lanczos_sampling_sum_double(
+        sampling, global_scaled_sum, (size_t)guide->order + 1);
+  }
   for (index = 0; status == MVMC_KRYLOV_STATUS_OK &&
                   index <= guide->order; ++index) {
     double scale = 0.0;
-    if (maximum[index] != -INFINITY) {
+    if (global_maximum[index] != -INFINITY) {
+      const double pilot_total =
+          (double)pilot_sample_count * (double)sampling->chain_count;
       const double log_mean =
-          maximum[index] + log(scaled_sum[index]) -
-          log((double)pilot_sample_count);
+          global_maximum[index] + log(global_scaled_sum[index]) -
+          log(pilot_total);
       scale = -0.5 * log_mean;
-      if (!isfinite(log_mean) || !isfinite(scale)) {
+      if (!(pilot_total > 0.0) || !isfinite(pilot_total) ||
+          !(global_scaled_sum[index] > 0.0) ||
+          !isfinite(log_mean) || !isfinite(scale)) {
         status = MVMC_KRYLOV_STATUS_NONFINITE;
       }
     }
@@ -399,6 +431,54 @@ static void matrix_block_add(
     total->hamiltonian_squared[entry] +=
         block->hamiltonian_squared[entry];
   }
+}
+
+static MVMCKrylovStatus reduce_matrix_blocks(
+    const MVMCPowerLanczosSamplingTopology *sampling,
+    MVMCPowerLanczosMatrixBlock *blocks, size_t block_count,
+    size_t upper_count) {
+  double complex values[
+      MVMC_POWER_LANCZOS_STABILIZED_BLOCKS * 4 *
+      MVMC_POWER_LANCZOS_PACKED_CAPACITY];
+  uint64_t counts[MVMC_POWER_LANCZOS_STABILIZED_BLOCKS];
+  size_t cursor = 0;
+  size_t block;
+  size_t entry;
+  MVMCKrylovStatus status;
+  if (sampling == NULL || blocks == NULL || block_count == 0 ||
+      block_count > MVMC_POWER_LANCZOS_STABILIZED_BLOCKS ||
+      upper_count > MVMC_POWER_LANCZOS_PACKED_CAPACITY) {
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+  memset(values, 0, sizeof(values));
+  memset(counts, 0, sizeof(counts));
+  for (block = 0; block < block_count; ++block) {
+    counts[block] = blocks[block].count;
+    for (entry = 0; entry < upper_count; ++entry) {
+      values[cursor++] = blocks[block].overlap[entry];
+      values[cursor++] = blocks[block].hamiltonian[entry];
+      values[cursor++] = blocks[block].hamiltonian_adjoint[entry];
+      values[cursor++] = blocks[block].hamiltonian_squared[entry];
+    }
+  }
+  status = mvmc_power_lanczos_sampling_sum_complex(
+      sampling, values, cursor);
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = mvmc_power_lanczos_sampling_sum_u64(
+        sampling, counts, block_count);
+  }
+  cursor = 0;
+  for (block = 0; status == MVMC_KRYLOV_STATUS_OK &&
+                  block < block_count; ++block) {
+    blocks[block].count = counts[block];
+    for (entry = 0; entry < upper_count; ++entry) {
+      blocks[block].overlap[entry] = values[cursor++];
+      blocks[block].hamiltonian[entry] = values[cursor++];
+      blocks[block].hamiltonian_adjoint[entry] = values[cursor++];
+      blocks[block].hamiltonian_squared[entry] = values[cursor++];
+    }
+  }
+  return status;
 }
 
 static MVMCPowerLanczosMatrixBlock matrix_block_without(
@@ -526,6 +606,7 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
   MVMCKrylovFinalStatePolicy final_policy;
   MVMCKrylovGEVPPolicy gevp_policy;
   MVMCKrylovGEVPResult gevp;
+  MVMCPowerLanczosSamplingTopology sampling;
   MVMCKrylovMatrixMeasurementAccumulator accumulators[
       MVMC_POWER_LANCZOS_STABILIZED_BLOCKS];
   MVMCKrylovStreamingComplexSum overlap_entries[
@@ -562,6 +643,7 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
   double complex variance = NAN + I * NAN;
   double energy_standard_error = NAN;
   double second_moment_standard_error = NAN;
+  double effective_sample_count = NAN;
   MVMCKrylovTauIntResult tau;
   MVMCKrylovStatus status = MVMC_KRYLOV_STATUS_OK;
   size_t step;
@@ -578,19 +660,28 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
     return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   }
   dimension = (size_t)input->power_step + 1;
-  status = mvmc_krylov_streaming_upper_count(dimension, &upper_count);
+  status = mvmc_power_lanczos_sampling_topology_create(
+      input->world_communicator, input->chain_communicator,
+      input->sample_count, &sampling);
+  if (status != MVMC_KRYLOV_STATUS_OK) {
+    invalidate_result(status, result);
+    return status;
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = mvmc_krylov_streaming_upper_count(dimension, &upper_count);
+  }
   if (status == MVMC_KRYLOV_STATUS_OK &&
       upper_count > MVMC_POWER_LANCZOS_PACKED_CAPACITY) {
     status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
   }
-  block_count =
-      mvmc_power_lanczos_stabilized_block_count(input->sample_count);
+  block_count = mvmc_power_lanczos_stabilized_block_count(
+      (size_t)sampling.total_samples);
   if (block_count == 0) status = MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
 
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = mvmc_power_lanczos_classic_bridge_create(
-        input->classic_view, input->communicator, input->communicator,
-        &bridge);
+        input->classic_view, input->world_communicator,
+        input->chain_communicator, &bridge);
   }
   if (status == MVMC_KRYLOV_STATUS_OK) {
     model = mvmc_power_lanczos_classic_bridge_model(bridge);
@@ -635,6 +726,7 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
     status = mvmc_krylov_positive_sampler_proposal_policy_create(
         1, 16, &proposal_policy);
   }
+  status = mvmc_power_lanczos_sampling_synchronize(&sampling, status);
   memset(&guide, 0, sizeof(guide));
   memset(&matrix_policy, 0, sizeof(matrix_policy));
   guide.order = (int)dimension;
@@ -651,12 +743,15 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
       guide_policy_hash(guide.order, guide.eta, guide.log_basis_scale);
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = mvmc_krylov_positive_sampler_rng_seed(
-        domain_seed(input->seed, UINT64_C(0x504c424f4f545354)),
+        domain_seed(input->seed,
+                    chain_domain(UINT64_C(0x504c424f4f545354),
+                                 sampling.chain_index)),
         UINT64_C(0x504c424f4f545354), &bootstrap_rng);
   }
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = draw_uniform_sector(
-        model, input->communicator, &bootstrap_rng, words, word_count);
+        model, input->chain_communicator, &bootstrap_rng, words,
+        word_count);
   }
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = mvmc_bounded_krylov_session_begin(
@@ -664,7 +759,9 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
   }
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = mvmc_krylov_positive_sampler_rng_seed(
-        domain_seed(input->seed, UINT64_C(0x504c434f45464631)),
+        domain_seed(input->seed,
+                    chain_domain(UINT64_C(0x504c434f45464631),
+                                 sampling.chain_index)),
         UINT64_C(0x504c434f45464631), &coefficient_rng);
   }
   if (status == MVMC_KRYLOV_STATUS_OK) {
@@ -680,7 +777,7 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
         workspace, model, &proposal_policy, pilot_warm_up,
         pilot_sample_count, words, word_count, &coefficient_snapshot,
         &coefficient_rng, amplitude, amplitude_context, proposal_words,
-        &guide, &matrix_policy);
+        &guide, &matrix_policy, &sampling);
   }
   for (step = 0; status == MVMC_KRYLOV_STATUS_OK &&
                  step < input->warm_up; ++step) {
@@ -695,10 +792,15 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
         overlap_entries, hamiltonian_entries,
         hamiltonian_adjoint_entries, hamiltonian_squared_entries);
   }
+  status = mvmc_power_lanczos_sampling_synchronize(&sampling, status);
   for (sample = 0; status == MVMC_KRYLOV_STATUS_OK &&
                    sample < input->sample_count; ++sample) {
     MVMCKrylovMatrixMeasurementSampleDiagnostics diagnostics;
-    block = sample * block_count / input->sample_count;
+    block = mvmc_power_lanczos_sampling_block_index(
+        &sampling, sample, block_count);
+    if (block >= block_count) {
+      status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+    }
     for (step = 0; status == MVMC_KRYLOV_STATUS_OK &&
                    step < input->interval; ++step) {
       status = coefficient_step(
@@ -720,24 +822,29 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
         mvmc_bounded_krylov_session_end(workspace);
     if (status == MVMC_KRYLOV_STATUS_OK) status = end_status;
   }
-  status = synchronize_status(status, input->communicator);
+  status = mvmc_power_lanczos_sampling_synchronize(&sampling, status);
 
   memset(&matrix_total, 0, sizeof(matrix_total));
   for (block = 0; status == MVMC_KRYLOV_STATUS_OK &&
                   block < block_count; ++block) {
     status = extract_matrix_block(
         accumulators + block, matrix_blocks + block);
-    if (status == MVMC_KRYLOV_STATUS_OK &&
-        matrix_blocks[block].count == 0) {
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = reduce_matrix_blocks(
+        &sampling, matrix_blocks, block_count, upper_count);
+  }
+  for (block = 0; status == MVMC_KRYLOV_STATUS_OK &&
+                  block < block_count; ++block) {
+    if (matrix_blocks[block].count == 0) {
       status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
-    }
-    if (status == MVMC_KRYLOV_STATUS_OK) {
+    } else {
       matrix_block_add(
           &matrix_total, matrix_blocks + block, upper_count);
     }
   }
   if (status == MVMC_KRYLOV_STATUS_OK &&
-      matrix_total.count != (uint64_t)input->sample_count) {
+      matrix_total.count != sampling.total_samples) {
     status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
   }
   if (status == MVMC_KRYLOV_STATUS_OK &&
@@ -760,7 +867,9 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
   }
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = mvmc_krylov_positive_sampler_rng_seed(
-        domain_seed(input->seed, UINT64_C(0x504c46494e414c31)),
+        domain_seed(input->seed,
+                    chain_domain(UINT64_C(0x504c46494e414c31),
+                                 sampling.chain_index)),
         UINT64_C(0x504c46494e414c31), &final_rng);
   }
   if (status == MVMC_KRYLOV_STATUS_OK) {
@@ -775,7 +884,8 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
          attempt < MVMC_POWER_LANCZOS_BOOTSTRAP_ATTEMPTS;
          ++attempt) {
       status = draw_uniform_sector(
-          model, input->communicator, &final_rng, words, word_count);
+          model, input->chain_communicator, &final_rng, words,
+          word_count);
       if (status == MVMC_KRYLOV_STATUS_OK) {
         status = mvmc_krylov_final_state_sampler_initialize(
             workspace, &final_policy, words, word_count, amplitude,
@@ -796,7 +906,11 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
                    sample < input->sample_count; ++sample) {
     double complex local_energy = NAN + I * NAN;
     MVMCScaledComplexExportStatus export_status;
-    block = sample * block_count / input->sample_count;
+    block = mvmc_power_lanczos_sampling_block_index(
+        &sampling, sample, block_count);
+    if (block >= block_count) {
+      status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+    }
     for (step = 0; status == MVMC_KRYLOV_STATUS_OK &&
                    step < input->interval; ++step) {
       status = final_step(
@@ -827,9 +941,21 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
         mvmc_bounded_krylov_session_end(workspace);
     if (status == MVMC_KRYLOV_STATUS_OK) status = end_status;
   }
-  status = synchronize_status(status, input->communicator);
+  status = mvmc_power_lanczos_sampling_synchronize(&sampling, status);
   if (status == MVMC_KRYLOV_STATUS_OK) {
-    energy = energy_sum / (double)input->sample_count;
+    status = mvmc_power_lanczos_sampling_sum_complex(
+        &sampling, &energy_sum, 1);
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = mvmc_power_lanczos_sampling_sum_complex(
+        &sampling, final_energy_block_sum, block_count);
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = mvmc_power_lanczos_sampling_sum_u64(
+        &sampling, final_energy_block_count, block_count);
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    energy = energy_sum / (double)sampling.total_samples;
     status = physical_second_moment(
         &matrix_total, &gevp, (int)dimension, &second_moment);
   }
@@ -874,13 +1000,26 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
     status = mvmc_krylov_tau_int_geyer_initial_positive(
         energy_series, input->sample_count, &tau);
   }
+  status = mvmc_power_lanczos_sampling_synchronize(&sampling, status);
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    effective_sample_count =
+        (double)input->sample_count / (2.0 * tau.tau_int);
+    status = mvmc_power_lanczos_sampling_sum_double(
+        &sampling, &effective_sample_count, 1);
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK &&
+      (!(effective_sample_count > 0.0) ||
+       !isfinite(effective_sample_count))) {
+    status = MVMC_KRYLOV_STATUS_NONFINITE;
+  }
   if (status == MVMC_KRYLOV_STATUS_OK) {
     result->valid = 1;
     result->status = MVMC_KRYLOV_STATUS_OK;
     result->power_step = input->power_step;
     result->block_count = block_count;
-    result->coefficient_samples = (uint64_t)input->sample_count;
-    result->final_samples = (uint64_t)input->sample_count;
+    result->sampling_chains = sampling.chain_count;
+    result->coefficient_samples = sampling.total_samples;
+    result->final_samples = sampling.total_samples;
     result->retained_rank = gevp.retained_rank;
     result->condition_estimate = gevp.condition_estimate;
     result->gevp_residual = gevp.gevp_relative_residual;
@@ -892,9 +1031,10 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
         2.0 * cabs(energy) * energy_standard_error);
     result->final_energy_imaginary = cimag(energy);
     result->variance_imaginary = cimag(variance);
-    result->energy_tau_int = tau.tau_int;
-    result->effective_sample_count =
-        (double)input->sample_count / (2.0 * tau.tau_int);
+    result->energy_tau_int =
+        (double)sampling.total_samples /
+        (2.0 * effective_sample_count);
+    result->effective_sample_count = effective_sample_count;
   } else {
     invalidate_result(status, result);
   }

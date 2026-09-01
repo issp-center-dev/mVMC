@@ -155,6 +155,20 @@ if(MPI_FOUND)
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
         PROCESSORS 2
         RESOURCE_LOCK "power_lanczos_independent_fixture")
+    add_test(NAME PowerLanczosIndependent_Projection_mpi
+        COMMAND ${PYTHON_EXECUTABLE} runtest_power_lanczos_independent.py
+        projection ${POWER_LANCZOS_INDEPENDENT_EXPECTATION})
+    set_tests_properties(PowerLanczosIndependent_Projection_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
+        PROCESSORS 2
+        RESOURCE_LOCK "power_lanczos_independent_fixture")
+    add_test(NAME PowerLanczosIndependent_Hybrid_mpi
+        COMMAND ${PYTHON_EXECUTABLE} runtest_power_lanczos_independent.py
+        hybrid ${POWER_LANCZOS_INDEPENDENT_EXPECTATION})
+    set_tests_properties(PowerLanczosIndependent_Hybrid_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=4"
+        PROCESSORS 4
+        RESOURCE_LOCK "power_lanczos_independent_fixture")
 endif()
 
 function(add_python_vmc_test_invalid_expert model expected_error)
