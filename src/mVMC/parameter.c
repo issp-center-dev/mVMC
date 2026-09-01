@@ -163,7 +163,11 @@ void SyncModifiedParameter(MPI_Comm comm) {
   for(i=1;i<NSlater;i++){
     if(xmax < cabs(Slater[i])) xmax = cabs(Slater[i]);
   }
-  ratio = D_AmpMax/xmax;
+  /* The overall pairing scale is a physical fugacity in the GC wave function:
+   * multiplying f changes the relative weights of the N=0,2,... sectors.
+   * Preserve that degree of freedom (and the exactly-zero vacuum) while
+   * retaining the canonical normalization byte-for-byte. */
+  ratio = FlagGrandCanonical != 0 ? 1.0 : D_AmpMax/xmax;
   #pragma omp parallel for default(shared) private(i)
   for(i=0;i<NSlater;i++) Slater[i] *= ratio;
 

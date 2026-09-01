@@ -42,6 +42,33 @@ void outputData();
 void printUsageError();
 void printOption();
 void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MPI_Comm *comm_child1);
+
+static void DumpGCSROpt(const int step, const int rank) {
+  const char *path = getenv("MVMC_GC_SR_DUMP");
+  FILE *fp;
+  int pi;
+  if (FlagGrandCanonical == 0 || rank != 0 || path == NULL || *path == '\0') {
+    return;
+  }
+  fp = fopen(path, "a");
+  if (fp == NULL) {
+    fprintf(stderr, "Error: failed to open MVMC_GC_SR_DUMP '%s'.\n", path);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  fprintf(fp, "STEP %d NPARA %d SROPTSIZE %d NPROJ %d STOREO %d\n",
+          step, NPara, SROptSize, NProj, NStoreO);
+  for (pi = 0; pi < 2 * NPara; pi++) {
+    const double complex meanO = SROptOO[pi + 2];
+    const double complex meanOH = SROptHO[pi + 2];
+    const double gradient =
+        2.0 * (creal(meanOH) - creal(SROptHO[0]) * creal(meanO));
+    fprintf(fp,
+            "P %d %.17e %.17e %.17e %.17e %.17e\n",
+            pi, creal(meanO), cimag(meanO), creal(meanOH),
+            cimag(meanOH), gradient);
+  }
+  fclose(fp);
+}
 void StdFace_main(char *fname);
 
 static int RunPowerLanczosStabilized(
@@ -610,6 +637,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }else{
       WeightAverageSROpt(comm_parent);
     }
+    DumpGCSROpt(step, rank);
     StopTimer(25);
     ReduceCounter(comm_child2);
     StopTimer(21);

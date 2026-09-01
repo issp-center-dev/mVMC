@@ -3,6 +3,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mode1.py DESTINATION ${CMAKE_BINAR
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_invalid_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sr.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nstore_nsplit.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -146,6 +148,14 @@ function(add_gc_invalid_test test_name expected_error)
     set_tests_properties(${test_name}_mpi PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
 endfunction(add_gc_invalid_test)
+
+function(add_gc_oracle_test test_name case_name)
+    add_test(NAME ${test_name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc.py ${case_name})
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+        RESOURCE_LOCK "gc_oracle_${case_name}")
+endfunction(add_gc_oracle_test)
 
 function(add_python_projection_parser_test test_name mode)
     add_test(NAME ${test_name}
@@ -1170,6 +1180,19 @@ add_gc_invalid_test(GC_Invalid_GaussLeg "initially requires" NSPGaussLeg=2)
 add_gc_invalid_test(GC_Invalid_MPTrans "initially requires" NMPTrans=2)
 add_gc_invalid_test(GC_Invalid_QPOptTrans "initially requires" gc_opttrans2 opttrans_mode)
 add_gc_invalid_test(GC_Invalid_OptTrans "does not support OptTrans" gc_opttrans1 opttrans_mode)
+
+add_test(NAME GC_Exact_Oracle_SelfTest
+    COMMAND ${PYTHON_EXECUTABLE} grandcanonical_exact_oracle.py)
+set_tests_properties(GC_Exact_Oracle_SelfTest PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_gc_oracle_test(GC_Exact_Physical physical)
+add_gc_oracle_test(GC_SR_Oracle sr)
+add_gc_oracle_test(GC_Mu_Response mu_response)
+add_gc_oracle_test(GC_Vacuum_Exact vacuum)
+add_gc_oracle_test(GC_MPI_NSplit2_CalMode0 mpi_nsplit2_mode0)
+add_gc_oracle_test(GC_MPI_NSplit2_CalMode1 mpi_nsplit2_mode1)
+add_gc_oracle_test(GC_MPI_NSplit1_CalMode0 mpi_nsplit1_mode0)
+add_gc_oracle_test(GC_MPI_NSplit1_CalMode1 mpi_nsplit1_mode1)
 
 add_test(NAME GC_OddNCond_Positive
     COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base

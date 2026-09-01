@@ -230,6 +230,37 @@ static int GCDebugRebuildInterval(void) {
   return interval;
 }
 
+static FILE *GCOpenStateDump(void) {
+  const char *base = getenv("MVMC_GC_STATE_DUMP");
+  char path[D_FileNameMax + 64];
+  int worldRank = 0;
+  int written;
+  if (base == NULL || *base == '\0') return NULL;
+  MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+  written = snprintf(path, sizeof(path), "%s.rank%d", base, worldRank);
+  if (written < 0 || (size_t)written >= sizeof(path)) {
+    fprintf(stderr, "Error: MVMC_GC_STATE_DUMP path is too long.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  return fopen(path, "a");
+}
+
+static void GCWriteStateDump(FILE *fp, const char *label, const int sample,
+                             const int *eleIdx, const int *eleCfg,
+                             const int *eleNum, const int *eleProjCnt) {
+  int i;
+  if (fp == NULL) return;
+  fprintf(fp, "%s %d %d", label, sample, Ncur);
+  for (i = 0; i < NsizeMax; i++) fprintf(fp, " %d", eleIdx[i]);
+  fprintf(fp, " |");
+  for (i = 0; i < Nsite2; i++) fprintf(fp, " %d", eleCfg[i]);
+  fprintf(fp, " |");
+  for (i = 0; i < Nsite2; i++) fprintf(fp, " %d", eleNum[i]);
+  fprintf(fp, " |");
+  for (i = 0; i < NProj; i++) fprintf(fp, " %d", eleProjCnt[i]);
+  fprintf(fp, "\n");
+}
+
 static void GCDebugCheckFastState(const int *eleIdx,
                                   double complex *logIpOld,
                                   const int qpStart, const int qpEnd,
@@ -420,6 +451,12 @@ void VMCMakeSampleGC(MPI_Comm comm) {
   int nOutStep;
   int nInStep;
   int outStep;
+  const char *stateDumpPath = getenv("MVMC_GC_STATE_DUMP");
+  FILE *stateDump = GCOpenStateDump();
+  if (stateDumpPath != NULL && *stateDumpPath != '\0' && stateDump == NULL) {
+    fprintf(stderr, "Error: failed to open MVMC_GC_STATE_DUMP.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
   SplitLoop(&qpStart, &qpEnd, NQPFull, rank, size);
@@ -431,6 +468,8 @@ void VMCMakeSampleGC(MPI_Comm comm) {
                               TmpEleProjCnt, qpStart, qpEnd, comm);
   } else {
     copyFromBurnSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt);
+    GCWriteStateDump(stateDump, "RESTORE", -1, TmpEleIdx, TmpEleCfg,
+                     TmpEleNum, TmpEleProjCnt);
     if (CalculateMAllGC_fcmp(Ncur, TmpEleIdx, qpStart, qpEnd) !=
         GC_MALL_OK) {
       (void)makeInitialSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum,
@@ -468,10 +507,15 @@ void VMCMakeSampleGC(MPI_Comm comm) {
       const int sample = outStep - (nOutStep - NVMCSample);
       saveEleConfigGC(sample, logIpOld, TmpEleIdx, TmpEleCfg, TmpEleNum,
                       TmpEleProjCnt, Ncur);
+      GCWriteStateDump(stateDump, "SAMPLE", sample, TmpEleIdx, TmpEleCfg,
+                       TmpEleNum, TmpEleProjCnt);
     }
   }
   copyToBurnSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt);
+  GCWriteStateDump(stateDump, "STORE", -1, TmpEleIdx, TmpEleCfg,
+                   TmpEleNum, TmpEleProjCnt);
   BurnFlag = 1;
+  if (stateDump != NULL) fclose(stateDump);
   ReleaseWorkSpaceInt();
   free(pfMNew);
 }
