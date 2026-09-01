@@ -355,14 +355,18 @@ int GCMakeOneStep(int *eleIdx, int *eleCfg, int *eleNum,
   return accepted;
 }
 
+static int GCCollectiveRebuildStatus(const int localStatus, MPI_Comm comm) {
+  int globalStatus = GC_MALL_OK;
+  MPI_Allreduce(&localStatus, &globalStatus, 1, MPI_INT, MPI_MAX, comm);
+  return globalStatus;
+}
+
 int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
                         int *eleProjCnt, const int qpStart,
                         const int qpEnd, MPI_Comm comm) {
   int attempt;
   int rank;
-  int size;
   MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
   for (attempt = 0; attempt < 100; attempt++) {
     int position;
     int status;
@@ -382,10 +386,7 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
     }
     MakeProjCnt(eleProjCnt, eleNum);
     status = CalculateMAllGC_fcmp(Ncur, eleIdx, qpStart, qpEnd);
-    globalStatus = status;
-    if (size > 1) {
-      MPI_Allreduce(&status, &globalStatus, 1, MPI_INT, MPI_MAX, comm);
-    }
+    globalStatus = GCCollectiveRebuildStatus(status, comm);
     if (globalStatus == GC_MALL_OK) return 0;
   }
   if (rank == 0) {
@@ -467,11 +468,13 @@ void VMCMakeSampleGC(MPI_Comm comm) {
     (void)makeInitialSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum,
                               TmpEleProjCnt, qpStart, qpEnd, comm);
   } else {
+    int rebuildStatus;
     copyFromBurnSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt);
     GCWriteStateDump(stateDump, "RESTORE", -1, TmpEleIdx, TmpEleCfg,
                      TmpEleNum, TmpEleProjCnt);
-    if (CalculateMAllGC_fcmp(Ncur, TmpEleIdx, qpStart, qpEnd) !=
-        GC_MALL_OK) {
+    rebuildStatus = CalculateMAllGC_fcmp(Ncur, TmpEleIdx, qpStart, qpEnd);
+    rebuildStatus = GCCollectiveRebuildStatus(rebuildStatus, comm);
+    if (rebuildStatus != GC_MALL_OK) {
       (void)makeInitialSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum,
                                 TmpEleProjCnt, qpStart, qpEnd, comm);
       BurnFlag = 0;

@@ -105,6 +105,24 @@ static int close_complex(const double complex actual,
   return cabs(actual - expected) <= 2.0e-9 * (1.0 + cabs(expected));
 }
 
+static void test_collective_rebuild_status(void) {
+  int rank = 0;
+  int size = 1;
+  int localStatus;
+  int globalStatus;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  localStatus = (size > 1 && rank == 0) ? GC_MALL_GETRF : GC_MALL_OK;
+  globalStatus = GCCollectiveRebuildStatus(localStatus, MPI_COMM_WORLD);
+  CHECK(globalStatus == (size > 1 ? GC_MALL_GETRF : GC_MALL_OK),
+        "collective rebuild status mismatch: rank=%d size=%d got=%d",
+        rank, size, globalStatus);
+  globalStatus = GCCollectiveRebuildStatus(GC_MALL_OK, MPI_COMM_WORLD);
+  CHECK(globalStatus == GC_MALL_OK,
+        "collective rebuild success changed: rank=%d got=%d", rank,
+        globalStatus);
+}
+
 static void fill_slater(void) {
   int row;
   memset(SlaterElm, 0, ORBITALS * ORBITALS * sizeof(*SlaterElm));
@@ -572,18 +590,22 @@ static void cleanup_globals(void) {
 }
 
 int main(int argc, char **argv) {
+  int collectiveOnly = 0;
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
 #else
-  (void)argc;
   (void)argv;
 #endif
+  collectiveOnly = argc == 2 && strcmp(argv[1], "--collective-only") == 0;
   setup_globals();
-  test_selector();
-  test_exact_detailed_balance();
-  test_transactions();
-  test_burn_and_save();
-  test_production_chains();
+  test_collective_rebuild_status();
+  if (!collectiveOnly) {
+    test_selector();
+    test_exact_detailed_balance();
+    test_transactions();
+    test_burn_and_save();
+    test_production_chains();
+  }
   cleanup_globals();
 #ifdef _mpi_use
   MPI_Finalize();

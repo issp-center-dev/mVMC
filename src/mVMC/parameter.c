@@ -150,13 +150,18 @@ void SyncModifiedParameter(MPI_Comm comm) {
 #endif /* _mpi_use */
 
   /***** shift correlation factors *****/
-  /* shift the DH correlation factors */
-  if(FlagShiftDH2==1) gShift += shiftDH2();
-  if(FlagShiftDH4==1) gShift += shiftDH4();
-  /* shift the Gutzwiller factors */
-  for(i=0;i<NGutzwillerIdx;i++) Proj[i] += gShift;
-  /* shift the Gutzwiller-Jastrow factors */
-  if(FlagShiftGJ==1) shiftGJ();
+  /* These shifts are gauge transformations only at fixed particle number.
+   * In GC mode they change the relative weights of particle-number sectors,
+   * just as an overall Slater rescale does, so preserve the raw parameters. */
+  if(FlagGrandCanonical == 0) {
+    /* shift the DH correlation factors */
+    if(FlagShiftDH2==1) gShift += shiftDH2();
+    if(FlagShiftDH4==1) gShift += shiftDH4();
+    /* shift the Gutzwiller factors */
+    for(i=0;i<NGutzwillerIdx;i++) Proj[i] += gShift;
+    /* shift the Gutzwiller-Jastrow factors */
+    if(FlagShiftGJ==1) shiftGJ();
+  }
 
   /***** rescale Slater *****/
   xmax = cabs(Slater[0]);

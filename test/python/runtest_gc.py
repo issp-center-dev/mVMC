@@ -213,10 +213,10 @@ def write_hamiltonian(workdir, mu):
           "================ Hund =======================\n"
           "=============================================\n0 1 0.17\n")
     write(os.path.join(workdir, "pairhopp.def"),
-          "=============================================\nNPairHopp 2\n"
+          "=============================================\nNPairHopp 1\n"
           "=============================================\n"
           "================ PairHop ====================\n"
-          "=============================================\n0 1 0.13\n1 0 0.13\n")
+          "=============================================\n0 1 0.13\n")
     write(os.path.join(workdir, "exchange.def"),
           "=============================================\nNExchange 1\n"
           "=============================================\n"
@@ -561,13 +561,13 @@ def sr_case(rootdir):
 
     first = runs[(0, 0)][0]["p"]
 
-    # Parameter 1 real and parameter 4 imaginary use the optimizer's packed
+    # Parameter 5 real and imaginary use the optimizer's packed
     # mapping pi=2*(NProj+orbital)+component, with NProj=1.
-    for orbital, imaginary in ((1, False), (4, True)):
+    for orbital, imaginary in ((5, False), (5, True)):
         packed = 2 * (1 + orbital) + (1 if imaginary else 0)
         exact = parameter_gradient(orbital, imaginary, 0.23, 0.4)
         sampled = first[packed][4]
-        assert_close("sampled SR covariance {}".format(packed), sampled, exact, 0.045)
+        assert_close("sampled SR covariance {}".format(packed), sampled, exact, 0.012)
         for epsilon in (1.0e-5, 5.0e-6):
             fd = finite_difference(orbital, imaginary, epsilon, 0.23, 0.4)
             assert_close("exact FD {} {}".format(packed, epsilon), fd, exact,

@@ -80,10 +80,10 @@ def adjoint(operators):
 
 
 def default_parameters():
-    # Raw OrbitalGeneral parameters.  The largest magnitude is exactly four,
-    # so SyncModifiedParameter's normalization leaves this fixture unchanged.
+    # Raw OrbitalGeneral parameters.  The largest magnitude is deliberately
+    # below D_AmpMax=4 so the GC no-rescale guard is observable end to end.
     return (
-        4.0 + 0.0j,
+        2.0 + 0.0j,
         0.42 - 0.31j,
         -0.27 + 0.36j,
         0.33 + 0.18j,
@@ -265,7 +265,7 @@ def self_test():
     # Hermiticity of the full term inventory is exposed by a real energy.
     if abs(observable["energy"].imag) > 1.0e-12:
         raise AssertionError("Hamiltonian inventory is not Hermitian")
-    for parameter_index, imaginary in ((1, False), (4, True)):
+    for parameter_index, imaginary in ((5, False), (5, True)):
         exact = parameter_gradient(parameter_index, imaginary, 0.23, 0.4)
         fd1 = finite_difference(parameter_index, imaginary, 1.0e-5, 0.23, 0.4)
         fd2 = finite_difference(parameter_index, imaginary, 5.0e-6, 0.23, 0.4)

@@ -34,6 +34,17 @@ target_include_directories(gc_config_unit PRIVATE
 target_link_libraries(gc_config_unit m)
 add_test(NAME GCConfig_Unit COMMAND gc_config_unit)
 
+add_executable(gc_parameter_unit gc_parameter_unit.c
+    ${CMAKE_SOURCE_DIR}/src/sfmt/SFMT.c)
+target_include_directories(gc_parameter_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include
+    ${CMAKE_SOURCE_DIR}/src/sfmt)
+target_link_libraries(gc_parameter_unit m)
+if(MPI_FOUND)
+    target_link_libraries(gc_parameter_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCParameter_Unit COMMAND gc_parameter_unit)
+
 add_executable(gc_matrix_unit gc_matrix_unit.c)
 target_include_directories(gc_matrix_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
@@ -77,6 +88,14 @@ add_test(NAME GCSampler_Unit COMMAND gc_sampler_unit)
 add_test(NAME GCSampler_Unit_DebugRebuild COMMAND gc_sampler_unit)
 set_tests_properties(GCSampler_Unit_DebugRebuild PROPERTIES
     ENVIRONMENT "MVMC_GC_DEBUG_REBUILD_INTERVAL=1")
+if(MPI_FOUND)
+    add_test(NAME GCSampler_RebuildStatus_MPI
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_sampler_unit>
+                --collective-only ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(GCSampler_RebuildStatus_MPI PROPERTIES
+        PROCESSORS 2 TIMEOUT 30)
+endif()
 
 add_executable(gc_slater_diff_unit gc_slater_diff_unit.c)
 target_include_directories(gc_slater_diff_unit PRIVATE

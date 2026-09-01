@@ -48,7 +48,7 @@ void StopTimer(int timer) { (void)timer; }
 #define SMALL_COUNT 36
 
 static int failures = 0;
-static const int baseEleIdx[ACTIVE] = {0, 2, 5, 7};
+static const int baseEleIdx[ACTIVE] = {0, 2, 4, 7};
 static const uint64_t intGuard = UINT64_C(0x6543cdef1234abcd);
 static const double complex complexGuard = 71.25 - 39.5 * I;
 static const double doubleGuard = -913.125;
@@ -389,8 +389,8 @@ static void test_green_kernels(void) {
     int annihilate1[1] = {0};
     int create2[2] = {1, 3};
     int annihilate2[2] = {0, 2};
-    int create3[3] = {1, 3, 4};
-    int annihilate3[3] = {0, 2, 5};
+    int create3[3] = {1, 3, 5};
+    int annihilate3[3] = {0, 2, 4};
     int *creates[3] = {create1, create2, create3};
     int *annihilates[3] = {annihilate1, annihilate2, annihilate3};
     int n;
@@ -426,32 +426,45 @@ static void test_hamiltonian_and_measurement(void) {
   double complex baseOverlap;
   double complex expectedEnergy;
   double complex actualEnergy;
-  int transferStorage[2][4] = {{1, 0, 0, 0}, {3, 1, 3, 0}};
+  double complex classContribution;
+  int transferStorage[2][4] = {{1, 0, 0, 0}, {2, 1, 3, 1}};
   int *transferRows[2] = {transferStorage[0], transferStorage[1]};
   double complex transferParameter[2] = {0.41 - 0.13 * I,
                                          -0.22 + 0.09 * I};
-  int interStorage[1][8] = {{1, 0, 0, 0, 3, 1, 1, 1}};
+  int interStorage[1][8] = {{1, 0, 0, 0, 2, 1, 3, 1}};
   int *interRows[1] = {interStorage[0]};
   double complex interParameter[1] = {0.17 + 0.08 * I};
   int nbodyN[1] = {3};
   int nbodyOffset[1] = {0};
   int nbodyStorage[3][4] = {
-      {1, 0, 0, 0}, {3, 0, 2, 0}, {0, 1, 1, 1}};
+      {1, 0, 0, 0}, {3, 0, 2, 0}, {1, 1, 0, 1}};
   int *nbodyRows[3] = {nbodyStorage[0], nbodyStorage[1], nbodyStorage[2]};
   double complex nbodyParameter[1] = {-0.12 + 0.06 * I};
-  int coulombInterStorage[1][2] = {{0, 1}};
+  int coulombIntraStorage[2] = {0, 1};
+  double coulombIntraParameter[2] = {0.43, -0.19};
+  int coulombInterStorage[1][2] = {{0, 2}};
   int *coulombInterRows[1] = {coulombInterStorage[0]};
   double coulombInterParameter[1] = {0.31};
-  int cisStorage[2][4] = {{1, 0, 0, 0}, {3, 1, 3, 0}};
+  int hundStorage[1][2] = {{0, 2}};
+  int *hundRows[1] = {hundStorage[0]};
+  double hundParameter[1] = {0.23};
+  int pairHoppingStorage[2][2] = {{0, 1}, {1, 0}};
+  int *pairHoppingRows[2] = {
+      pairHoppingStorage[0], pairHoppingStorage[1]};
+  double pairHoppingParameter[2] = {0.29, 0.29};
+  int exchangeStorage[1][2] = {{2, 3}};
+  int *exchangeRows[1] = {exchangeStorage[0]};
+  double exchangeParameter[1] = {-0.37};
+  int cisStorage[2][4] = {{1, 0, 0, 0}, {2, 1, 3, 1}};
   int *cisRows[2] = {cisStorage[0], cisStorage[1]};
-  int dcStorage[1][8] = {{1, 0, 0, 0, 3, 1, 1, 1}};
+  int dcStorage[1][8] = {{1, 0, 0, 0, 2, 1, 3, 1}};
   int *dcRows[1] = {dcStorage[0]};
   int productStorage[1][2] = {{0, 1}};
   int *productRows[1] = {productStorage[0]};
   int nbodyGStorage[1] = {3};
   int nbodyGOffsetStorage[1] = {0};
   int nbodyGFactors[3][4] = {
-      {1, 0, 0, 0}, {3, 0, 2, 0}, {0, 1, 1, 1}};
+      {1, 0, 0, 0}, {3, 0, 2, 0}, {1, 1, 0, 1}};
   int *nbodyGFactorRows[3] = {
       nbodyGFactors[0], nbodyGFactors[1], nbodyGFactors[2]};
   double complex local[2] = {0.0, 0.0};
@@ -478,16 +491,24 @@ static void test_hamiltonian_and_measurement(void) {
   memcpy(invSnapshot, InvM, sizeof(invSnapshot));
   memcpy(pfSnapshot, PfM, sizeof(pfSnapshot));
 
-  NCoulombIntra = 0;
+  NCoulombIntra = 2;
+  CoulombIntra = coulombIntraStorage;
+  ParaCoulombIntra = coulombIntraParameter;
   NCoulombInter = 1;
   CoulombInter = coulombInterRows;
   ParaCoulombInter = coulombInterParameter;
-  NHundCoupling = 0;
+  NHundCoupling = 1;
+  HundCoupling = hundRows;
+  ParaHundCoupling = hundParameter;
   NTransfer = 2;
   Transfer = transferRows;
   ParaTransfer = transferParameter;
-  NPairHopping = 0;
-  NExchangeCoupling = 0;
+  NPairHopping = 2;
+  PairHopping = pairHoppingRows;
+  ParaPairHopping = pairHoppingParameter;
+  NExchangeCoupling = 1;
+  ExchangeCoupling = exchangeRows;
+  ParaExchangeCoupling = exchangeParameter;
   NInterAll = 1;
   InterAll = interRows;
   ParaInterAll = interParameter;
@@ -500,27 +521,83 @@ static void test_hamiltonian_and_measurement(void) {
 
   create1[0] = 1;
   annihilate1[0] = 0;
-  expectedEnergy = coulombInterParameter[0];
-  expectedEnergy -= transferParameter[0] *
-                    brute_green(1, create1, annihilate1, baseOverlap, projCnt);
-  create1[0] = 7;
-  annihilate1[0] = 3;
-  expectedEnergy -= transferParameter[1] *
-                    brute_green(1, create1, annihilate1, baseOverlap, projCnt);
+  classContribution = coulombIntraParameter[0] * eleNum[0] * eleNum[4] +
+                      coulombIntraParameter[1] * eleNum[1] * eleNum[5];
+  CHECK(cabs(classContribution) > 1.0e-6,
+        "CoulombIntra fixture is vacuous");
+  expectedEnergy = classContribution;
+  classContribution = coulombInterParameter[0] *
+                      (eleNum[0] + eleNum[4]) *
+                      (eleNum[2] + eleNum[6]);
+  CHECK(cabs(classContribution) > 1.0e-6,
+        "CoulombInter fixture is vacuous");
+  expectedEnergy += classContribution;
+  classContribution = -hundParameter[0] *
+                      (eleNum[0] * eleNum[2] + eleNum[4] * eleNum[6]);
+  CHECK(cabs(classContribution) > 1.0e-6, "Hund fixture is vacuous");
+  expectedEnergy += classContribution;
+  classContribution = -transferParameter[0] *
+                      brute_green(1, create1, annihilate1, baseOverlap,
+                                  projCnt);
+  create1[0] = 6;
+  annihilate1[0] = 7;
+  classContribution -= transferParameter[1] *
+                       brute_green(1, create1, annihilate1, baseOverlap,
+                                   projCnt);
+  CHECK(cabs(classContribution) > 1.0e-6, "Transfer fixture is vacuous");
+  expectedEnergy += classContribution;
+  create2[0] = 0;
+  annihilate2[0] = 1;
+  create2[1] = 4;
+  annihilate2[1] = 5;
+  classContribution = pairHoppingParameter[0] *
+                      brute_green(2, create2, annihilate2, baseOverlap,
+                                  projCnt);
   create2[0] = 1;
   annihilate2[0] = 0;
+  create2[1] = 5;
+  annihilate2[1] = 4;
+  classContribution += pairHoppingParameter[1] *
+                       brute_green(2, create2, annihilate2, baseOverlap,
+                                   projCnt);
+  CHECK(cabs(classContribution) > 1.0e-6, "PairHop fixture is vacuous");
+  expectedEnergy += classContribution;
+  create2[0] = 2;
+  annihilate2[0] = 3;
   create2[1] = 7;
-  annihilate2[1] = 5;
-  expectedEnergy += interParameter[0] *
-                    brute_green(2, create2, annihilate2, baseOverlap, projCnt);
+  annihilate2[1] = 6;
+  classContribution = exchangeParameter[0] *
+                      brute_green(2, create2, annihilate2, baseOverlap,
+                                  projCnt);
+  create2[0] = 6;
+  annihilate2[0] = 7;
+  create2[1] = 3;
+  annihilate2[1] = 2;
+  classContribution += exchangeParameter[0] *
+                       brute_green(2, create2, annihilate2, baseOverlap,
+                                   projCnt);
+  CHECK(cabs(classContribution) > 1.0e-6, "Exchange fixture is vacuous");
+  expectedEnergy += classContribution;
+  create2[0] = 1;
+  annihilate2[0] = 0;
+  create2[1] = 6;
+  annihilate2[1] = 7;
+  classContribution = interParameter[0] *
+                      brute_green(2, create2, annihilate2, baseOverlap,
+                                  projCnt);
+  CHECK(cabs(classContribution) > 1.0e-6, "InterAll fixture is vacuous");
+  expectedEnergy += classContribution;
   create3[0] = 1;
   annihilate3[0] = 0;
   create3[1] = 3;
   annihilate3[1] = 2;
-  create3[2] = 4;
-  annihilate3[2] = 5;
-  expectedEnergy += nbodyParameter[0] *
-                    brute_green(3, create3, annihilate3, baseOverlap, projCnt);
+  create3[2] = 5;
+  annihilate3[2] = 4;
+  classContribution = nbodyParameter[0] *
+                      brute_green(3, create3, annihilate3, baseOverlap,
+                                  projCnt);
+  CHECK(cabs(classContribution) > 1.0e-6, "NBody fixture is vacuous");
+  expectedEnergy += classContribution;
   actualEnergy = CalculateHamiltonianGC(baseOverlap, ACTIVE, eleIdx, eleCfg,
                                         eleNum, projCnt);
   CHECK(cabs(actualEnergy - expectedEnergy) < 2.0e-8,
@@ -551,20 +628,20 @@ static void test_hamiltonian_and_measurement(void) {
   create1[0] = 1;
   annihilate1[0] = 0;
   expectedLocal0 = brute_green(1, create1, annihilate1, baseOverlap, projCnt);
-  create1[0] = 7;
-  annihilate1[0] = 3;
+  create1[0] = 6;
+  annihilate1[0] = 7;
   expectedLocal1 = brute_green(1, create1, annihilate1, baseOverlap, projCnt);
   create2[0] = 1;
   annihilate2[0] = 0;
-  create2[1] = 7;
-  annihilate2[1] = 5;
+  create2[1] = 6;
+  annihilate2[1] = 7;
   expectedDC = brute_green(2, create2, annihilate2, baseOverlap, projCnt);
   create3[0] = 1;
   annihilate3[0] = 0;
   create3[1] = 3;
   annihilate3[1] = 2;
-  create3[2] = 4;
-  annihilate3[2] = 5;
+  create3[2] = 5;
+  annihilate3[2] = 4;
   expectedN = brute_green(3, create3, annihilate3, baseOverlap, projCnt);
   CalculateGreenFuncGC(measurementWeight, baseOverlap, ACTIVE, eleIdx, eleCfg,
                        eleNum, projCnt);
