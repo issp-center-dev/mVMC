@@ -280,6 +280,20 @@ void SetMemoryDef() {
     pInt += 8;
   }
 
+  LsTransfer = (int**)CheckedDefMalloc((size_t)NLsTransfer, sizeof(int*),
+                                       "LsTransfer row pointers");
+  for(i=0;i<NLsTransfer;i++) {
+    LsTransfer[i] = pInt;
+    pInt += 4;
+  }
+
+  LsInterAll = (int**)CheckedDefMalloc((size_t)NLsInterAll, sizeof(int*),
+                                       "LsInterAll row pointers");
+  for(i=0;i<NLsInterAll;i++) {
+    LsInterAll[i] = pInt;
+    pInt += 8;
+  }
+
   NBodyInterAllN = pInt;
   pInt += NNBodyInterAll;
 
@@ -314,6 +328,10 @@ void SetMemoryDef() {
 
   ParaTransfer = (double complex*)malloc(sizeof(double complex)*(NTransfer+NInterAll));
   ParaInterAll = ParaTransfer+NTransfer;
+  ParaLsTransfer = (double complex*)CheckedDefMalloc(
+      (size_t)NLsTransfer + (size_t)NLsInterAll, sizeof(double complex),
+      "independent Lanczos parameters");
+  ParaLsInterAll = ParaLsTransfer == NULL ? NULL : ParaLsTransfer+NLsTransfer;
   if (NNBodyInterAll > 0) {
     ParaNBodyInterAll = (double complex*)malloc(sizeof(double complex)*NNBodyInterAll);
   } else {
@@ -366,6 +384,8 @@ void FreeMemoryDef() {
   free(ParaNBodyInterAll);
   free(NBodyInterAllIdx);
   free(InterAll);
+  free(LsInterAll);
+  free(LsTransfer);
   free(NBodyGIdx);
   free(CisAjsCktAltDCIdx);
   free(CisAjsCktAltIdx);
@@ -380,6 +400,7 @@ void FreeMemoryDef() {
   free(SpinJastrowIdx);
   free(JastrowIdx);
   free(ParaTransfer);
+  free(ParaLsTransfer);
   free(ParaCoulombIntra);
   free(ParaQPTrans);
   free(ExchangeCoupling);

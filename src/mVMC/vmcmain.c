@@ -30,6 +30,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "physcal_lanczos.h"
 #include "physcal_lanczos2.h"
 #include "power_lanczos_stabilized.h"
+#include "power_lanczos_independent.h"
 
 // #define _DEBUG
 // #define _DEBUG_DUMP_SROPTO_STORE
@@ -190,6 +191,117 @@ static int RunPowerLanczosStabilized(
             result.variance_standard_error);
   } else if (rank == 0) {
     fprintf(stderr, "Error: stabilized power-Lanczos failed: %s.\n",
+            mvmc_krylov_status_string(status));
+  }
+  return status == MVMC_KRYLOV_STATUS_OK ? 0 : 1;
+}
+
+static int RunPowerLanczosIndependent(
+    int outputIndex, MPI_Comm communicator) {
+  MVMCPowerLanczosClassicView view;
+  MVMCPowerLanczosIndependentInput input;
+  MVMCPowerLanczosIndependentResult result;
+  MVMCKrylovStatus status;
+  size_t sweep;
+  int rank = 0;
+  int size = 1;
+  MPI_Comm_rank(communicator, &rank);
+  MPI_Comm_size(communicator, &size);
+  if (NVMCInterval <= 0 || Nsite <= 0 || NVMCWarmUp < 0 ||
+      NVMCSample < 8 || (size_t)NVMCInterval > SIZE_MAX / (size_t)Nsite) {
+    if (rank == 0)
+      fprintf(stderr,
+              "Error: invalid independent power-Lanczos chain controls.\n");
+    return 1;
+  }
+  sweep = (size_t)NVMCInterval * (size_t)Nsite;
+  if ((size_t)NVMCWarmUp > SIZE_MAX / sweep) {
+    if (rank == 0)
+      fprintf(stderr,
+              "Error: independent power-Lanczos warm-up overflows size_t.\n");
+    return 1;
+  }
+  memset(&view, 0, sizeof(view));
+  view.site_count = Nsite;
+  view.up_electron_count = Ne;
+  view.down_electron_count = Ne;
+  view.pure_spin = 0;
+  view.arithmetic = MVMC_POWER_LANCZOS_CLASSIC_REAL;
+  /* The bridge model is proposal-only.  Full physical InterAll is lowered
+     separately and evaluated by the streaming-H path. */
+  view.transfer_count = NTransfer;
+  view.transfer_indices = rank == 0 ? Transfer : NULL;
+  view.transfer_parameters = rank == 0 ? ParaTransfer : NULL;
+  view.qp_total = NQPFull;
+  view.qp_start = NQPFull * rank / size;
+  view.qp_end = NQPFull * (rank + 1) / size;
+  view.scaled_pivot_tolerance = 0.0;
+  view.nproj = NProj;
+  view.ngutzwiller_idx = NGutzwillerIdx;
+  view.njastrow_idx = NJastrowIdx;
+  view.nspin_jastrow_idx = NSpinJastrowIdx;
+  view.ndoublon_holon_2site_idx = NDoublonHolon2siteIdx;
+  view.ndoublon_holon_4site_idx = NDoublonHolon4siteIdx;
+  view.gutzwiller_idx = GutzwillerIdx;
+  view.jastrow_idx = JastrowIdx;
+  view.spin_jastrow_idx = SpinJastrowIdx;
+  view.doublon_holon_2site_idx = DoublonHolon2siteIdx;
+  view.doublon_holon_4site_idx = DoublonHolon4siteIdx;
+  view.projection_parameters = Proj;
+  view.qp_weights = QPFullWeight;
+  view.slater_real = SlaterElm_real;
+#ifdef _pf_block_update
+  view.unsupported_amplitude_features |=
+      MVMC_CLASSIC_KRYLOV_UNSUPPORTED_BLOCK_UPDATE;
+#endif
+  memset(&input, 0, sizeof(input));
+  input.classic_view = &view;
+  input.communicator = communicator;
+  input.physical_transfer_count = (size_t)NTransfer;
+  input.physical_transfer_indices = Transfer;
+  input.physical_transfer_parameters = ParaTransfer;
+  input.physical_inter_all_count = (size_t)NInterAll;
+  input.physical_inter_all_indices = InterAll;
+  input.physical_inter_all_parameters = ParaInterAll;
+  input.hprime_transfer_count = (size_t)NLsTransfer;
+  input.hprime_transfer_indices = LsTransfer;
+  input.hprime_transfer_parameters = ParaLsTransfer;
+  input.hprime_inter_all_count = (size_t)NLsInterAll;
+  input.hprime_inter_all_indices = LsInterAll;
+  input.hprime_inter_all_parameters = ParaLsInterAll;
+  input.seed = ((uint64_t)(uint32_t)RndSeed << 32) ^
+               (uint64_t)(unsigned)(outputIndex + 1) ^
+               UINT64_C(0x494e444c414e4331);
+  if (input.seed == 0) input.seed = UINT64_C(1);
+  input.warm_up = (size_t)NVMCWarmUp * sweep;
+  input.sample_count = (size_t)NVMCSample;
+  input.interval = sweep;
+  status = mvmc_power_lanczos_independent_run(&input, &result);
+  if (rank == 0 && status == MVMC_KRYLOV_STATUS_OK) {
+    fprintf(FileLS,
+            "# independent_power_lanczos version=%llu basis={Psi,HprimePsi} "
+            "coefficient_samples=%llu final_samples=%llu blocks=%zu\n",
+            (unsigned long long)result.version,
+            (unsigned long long)result.coefficient_samples,
+            (unsigned long long)result.final_samples,
+            result.block_count);
+    fprintf(FileLS,
+            "# energy energy_se variance variance_se energy_imag "
+            "variance_imag tau_int effective_samples retained_rank "
+            "condition gevp_residual streamed_row_terms\n");
+    fprintf(FileLS,
+            "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e "
+            "%d %.18e %.18e %llu\n",
+            result.energy, result.energy_standard_error, result.variance,
+            result.variance_standard_error,
+            result.final_energy_imaginary, result.variance_imaginary,
+            result.energy_tau_int, result.effective_sample_count,
+            result.retained_rank, result.condition_estimate,
+            result.gevp_residual,
+            (unsigned long long)result.physical_row_terms);
+  }
+  if (status != MVMC_KRYLOV_STATUS_OK && rank == 0) {
+    fprintf(stderr, "Error: independent power-Lanczos failed: %s.\n",
             mvmc_krylov_status_string(status));
   }
   return status == MVMC_KRYLOV_STATUS_OK ? 0 : 1;
@@ -734,8 +846,9 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     FlushFile(0,rank);
     InitFilePhysCal(ismp, rank);
     if (NLanczosMode == 1 && NLanczosEstimatorMode == 1) {
-      correctedInfo = RunPowerLanczosStabilized(
-          ismp + NDataIdxStart, comm_parent);
+      correctedInfo = FlagLsExplicit
+          ? RunPowerLanczosIndependent(ismp + NDataIdxStart, comm_parent)
+          : RunPowerLanczosStabilized(ismp + NDataIdxStart, comm_parent);
       CloseFilePhysCal(rank);
       if (correctedInfo != 0) return correctedInfo;
       continue;

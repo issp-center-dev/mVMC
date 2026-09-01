@@ -487,6 +487,14 @@ variance、そのstandard error、虚部、energyの自己相関時間と有効s
 一般化固有値問題のretained rank・condition estimate・residualを出力します。
 Green関数やsampleごとのtraceは出力しません。
 
+``LsTrans`` または ``LsInterAll`` で独立 :math:`H'` を選択した場合、1行目の
+headerには ``independent_power_lanczos`` と ``basis={Psi,HprimePsi}`` を
+記録します。data行の12項目は順に ``energy``、``energy_se``、``variance``、
+``variance_se``、``energy_imag``、``variance_imag``、``tau_int``、
+``effective_samples``、``retained_rank``、``condition``、``gevp_residual``、
+``streamed_row_terms`` です。最後の項目はcoefficient chainで採用した測定snapshotに
+対して作用した物理Hの行数です。失敗時はresult行を出力しません。
+
 xxx\_ls2\_moment\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

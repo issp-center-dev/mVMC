@@ -835,6 +835,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffInt(fp, &bufInt[IdxNInterAll]);
             break;
 
+          case KWLsTrans:
+            cerr = ReadBuffInt(fp, &bufInt[IdxNLsTrans]);
+            break;
+
+          case KWLsInterAll:
+            cerr = ReadBuffInt(fp, &bufInt[IdxNLsInterAll]);
+            break;
+
           case KWNBodyInterAll:
             cerr = "";
             if (ReadBuffNBodyInterAll(fp,
@@ -1102,6 +1110,9 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   }//rank 0
 
   if (rank == 0) {
+    FlagLsExplicit =
+        strcmp(cFileNameListFile[KWLsTrans], "") != 0 ||
+        strcmp(cFileNameListFile[KWLsInterAll], "") != 0;
     AllComplexFlag = iComplexFlgGutzwiller + iComplexFlgJastrow + iComplexFlgSpinJastrow + iComplexFlgDH2; //TBC
     AllComplexFlag += iComplexFlgDH4 + iComplexFlgOrbital;//TBC
     AllComplexFlag += iComplexFlgGeneralRBM_PhysLayer
@@ -1164,6 +1175,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 #ifdef _mpi_use
   MPI_Bcast(bufInt, nBufInt, MPI_INT, 0, comm);
   MPI_Bcast(&FlagRBM, 1, MPI_INT, 0, comm);
+  MPI_Bcast(&FlagLsExplicit, 1, MPI_INT, 0, comm);
   MPI_Bcast(&NStoreO, 1, MPI_INT, 0, comm); // for NStoreO
   MPI_Bcast(&NSRCG, 1, MPI_INT, 0, comm); // for NCG
   MPI_Bcast(&NSRCGFallback, 1, MPI_INT, 0, comm); // for SR-CG fallback
@@ -1268,6 +1280,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NBodyGTotalFactors = bufInt[IdxNBodyGTotalFactors];
   NBodyGMaxN = bufInt[IdxNBodyGMaxN];
   NInterAll = bufInt[IdxNInterAll];
+  NLsTransfer = bufInt[IdxNLsTrans];
+  NLsInterAll = bufInt[IdxNLsInterAll];
   NNBodyInterAll = bufInt[IdxNNBodyInterAll];
   NBodyInterAllTotalFactors = bufInt[IdxNBodyInterAllTotalFactors];
   NBodyInterAllMaxN = bufInt[IdxNBodyInterAllMaxN];
@@ -1517,6 +1531,33 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     MPI_Abort(comm, EXIT_FAILURE);
   }
 
+  if (FlagLsExplicit) {
+    int independentInfo = 0;
+    if (rank == 0 &&
+        (NLanczosMode != 1 || NLanczosEstimatorMode != 1 ||
+         NLanczosStep != 1 || NVMCCalMode != 1 || AllComplexFlag != 0 ||
+         iFlgOrbitalGeneral != 0 || NProjBF != 0 || FlagRBM != 0 ||
+         reweight != 0 || NExUpdatePath != 0 || NPairHopping != 0 ||
+         NExchangeCoupling != 0 || NNBodyInterAll != 0 || NNBodyG != 0 ||
+         NCisAjs != 0 || NCisAjsCktAlt != 0 || NCisAjsCktAltDC != 0 ||
+         NCoulombIntra != 0 || NCoulombInter != 0 ||
+         NHundCoupling != 0 ||
+         (NLsTransfer <= 0 && NLsInterAll <= 0) ||
+         (NTransfer <= 0 && NInterAll <= 0))) {
+      fprintf(stderr,
+              "Error: LsTrans/LsInterAll requires real physical mode, "
+              "NLanczosMode=1, NLanczosEstimatorMode=1, "
+              "NLanczosStep=1, NVMCCalMode=1, NExUpdatePath=0, and "
+              "no Green functions, with nonempty H/H' containing only "
+              "Trans+InterAll.\n");
+      independentInfo = 1;
+    }
+#ifdef _mpi_use
+    MPI_Bcast(&independentInfo, 1, MPI_INT, 0, comm);
+#endif
+    if (independentInfo != 0) MPI_Abort(comm, EXIT_FAILURE);
+  }
+
   {
     int lanczos2NQPFull = 0;
     const long long lanczos2MPTrans =
@@ -1608,6 +1649,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     sizeInfo |= CheckedCountTerm(&totalInt, NNBodyG, 2, 1, "NBodyG metadata");
     sizeInfo |= CheckedCountTerm(&totalInt, NBodyGTotalFactors, 4, 1, "NBodyG factors");
     sizeInfo |= CheckedCountTerm(&totalInt, NInterAll, 8, 1, "InterAll");
+    sizeInfo |= CheckedCountTerm(&totalInt, NLsTransfer, 4, 1, "LsTransfer");
+    sizeInfo |= CheckedCountTerm(&totalInt, NLsInterAll, 8, 1, "LsInterAll");
     sizeInfo |= CheckedCountTerm(&totalInt, NNBodyInterAll, 2, 1,
                                  "NBodyInterAll metadata");
     sizeInfo |= CheckedCountTerm(&totalInt, NBodyInterAllTotalFactors, 4, 1,
@@ -1923,6 +1966,16 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           if (GetInfoInterAll(fp, InterAll, ParaInterAll, Nsite, NInterAll, defname) != 0) info = 1;
           break;
 
+        case KWLsTrans:
+          if (GetTransferInfo(fp, LsTransfer, ParaLsTransfer, Nsite,
+                              NLsTransfer, defname) != 0) info = 1;
+          break;
+
+        case KWLsInterAll:
+          if (GetInfoInterAll(fp, LsInterAll, ParaLsInterAll, Nsite,
+                              NLsInterAll, defname) != 0) info = 1;
+          break;
+
         case KWNBodyInterAll:
           /*nbodyinterall.def----------------------------------*/
           if (GetInfoNBodyInterAll(fp, NBodyInterAllN,
@@ -2017,6 +2070,68 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
 
+  if (FlagLsExplicit) {
+    int lsInfo = 0;
+    if (rank == 0) {
+      for (i = 0; i < NTransfer; ++i) {
+        if (Transfer[i][1] != Transfer[i][3] ||
+            !isfinite(creal(ParaTransfer[i])) ||
+            cimag(ParaTransfer[i]) != 0.0) {
+          fprintf(stderr,
+                  "Error: physical Trans row %d must be finite, real, and "
+                  "S_z-conserving with LsTrans/LsInterAll.\n", i);
+          lsInfo = 1;
+          break;
+        }
+      }
+      for (i = 0; !lsInfo && i < NInterAll; ++i) {
+        if (InterAll[i][1] != InterAll[i][3] ||
+            InterAll[i][5] != InterAll[i][7] ||
+            !isfinite(creal(ParaInterAll[i])) ||
+            cimag(ParaInterAll[i]) != 0.0) {
+          fprintf(stderr,
+                  "Error: physical InterAll row %d must be finite, real, "
+                  "and S_z-conserving with LsTrans/LsInterAll.\n", i);
+          lsInfo = 1;
+          break;
+        }
+      }
+      for (i = 0; !lsInfo && i < NLsTransfer; ++i) {
+        if (LsTransfer[i][1] < 0 || LsTransfer[i][1] > 1 ||
+            LsTransfer[i][3] < 0 || LsTransfer[i][3] > 1 ||
+            LsTransfer[i][1] != LsTransfer[i][3] ||
+            !isfinite(creal(ParaLsTransfer[i])) ||
+            cimag(ParaLsTransfer[i]) != 0.0) {
+          fprintf(stderr,
+                  "Error: LsTrans row %d must be finite, real, and "
+                  "S_z-conserving.\n", i);
+          lsInfo = 1;
+          break;
+        }
+      }
+      for (i = 0; !lsInfo && i < NLsInterAll; ++i) {
+        if (LsInterAll[i][1] < 0 || LsInterAll[i][1] > 1 ||
+            LsInterAll[i][3] < 0 || LsInterAll[i][3] > 1 ||
+            LsInterAll[i][5] < 0 || LsInterAll[i][5] > 1 ||
+            LsInterAll[i][7] < 0 || LsInterAll[i][7] > 1 ||
+            LsInterAll[i][1] != LsInterAll[i][3] ||
+            LsInterAll[i][5] != LsInterAll[i][7] ||
+            !isfinite(creal(ParaLsInterAll[i])) ||
+            cimag(ParaLsInterAll[i]) != 0.0) {
+          fprintf(stderr,
+                  "Error: LsInterAll row %d must be finite, real, and "
+                  "S_z-conserving.\n", i);
+          lsInfo = 1;
+          break;
+        }
+      }
+    }
+#ifdef _mpi_use
+    MPI_Bcast(&lsInfo, 1, MPI_INT, 0, comm);
+#endif
+    if (lsInfo != 0) MPI_Abort(comm, EXIT_FAILURE);
+  }
+
   //Debug
   /*
   for(i =0; i<2*Nsite; i++){
@@ -2029,6 +2144,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
 #ifdef _mpi_use
   SafeMpiBcastInt(LocSpn, NTotalDefInt, comm);
   SafeMpiBcast_fcmp(ParaTransfer, NTransfer + NInterAll, comm);
+  if (NLsTransfer > 0) {
+    SafeMpiBcastInt(LsTransfer[0], 4 * NLsTransfer, comm);
+  }
+  if (NLsInterAll > 0) {
+    SafeMpiBcastInt(LsInterAll[0], 8 * NLsInterAll, comm);
+  }
+  SafeMpiBcast_fcmp(ParaLsTransfer, NLsTransfer, comm);
+  SafeMpiBcast_fcmp(ParaLsInterAll, NLsInterAll, comm);
   SafeMpiBcast_fcmp(ParaNBodyInterAll, NNBodyInterAll, comm);
   SafeMpiBcast(ParaCoulombIntra, NTotalDefDouble, comm);
   SafeMpiBcast_fcmp(ParaQPTrans, NQPTrans, comm);
@@ -2069,7 +2192,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
     lanczos2Contract.nTransfer = NTransfer;
     lanczos2Contract.nQPFull = NQPFull;
     lanczos2Status =
-        NLanczosMode > 0 && NLanczosEstimatorMode == 1
+        NLanczosMode > 0 && NLanczosEstimatorMode == 1 && !FlagLsExplicit
             ? ValidateCorrectedPowerLanczosExecutionContract(
                   &lanczos2Contract)
             : ValidateLanczos2Contract(&lanczos2Contract);
@@ -2759,6 +2882,8 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[IdxNBodyGTotalFactors] = 0;
   bufInt[IdxNBodyGMaxN] = 0;
   bufInt[IdxNInterAll] = 0;
+  bufInt[IdxNLsTrans] = 0;
+  bufInt[IdxNLsInterAll] = 0;
   bufInt[IdxNNBodyInterAll] = 0;
   bufInt[IdxNBodyInterAllTotalFactors] = 0;
   bufInt[IdxNBodyInterAllMaxN] = 0;

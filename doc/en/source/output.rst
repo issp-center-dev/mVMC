@@ -537,6 +537,15 @@ and effective sample count, and the retained rank, condition estimate, and
 residual of the generalized eigenproblem. It contains no Green's functions or
 per-sample trace.
 
+When ``LsTrans`` or ``LsInterAll`` selects an independent :math:`H'`, the
+first header instead contains ``independent_power_lanczos`` and
+``basis={Psi,HprimePsi}``. The data row has 12 fields in this order:
+``energy``, ``energy_se``, ``variance``, ``variance_se``, ``energy_imag``,
+``variance_imag``, ``tau_int``, ``effective_samples``, ``retained_rank``,
+``condition``, ``gevp_residual``, and ``streamed_row_terms``. The final field
+counts physical-H rows applied at the retained coefficient-chain measurement
+snapshots. A failed run writes no result row.
+
 xxx\_ls2\_moment\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
