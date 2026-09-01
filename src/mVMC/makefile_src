@@ -42,25 +42,32 @@ average.c \
 avevar.c \
 calgrn.c \
 calgrn_fsz.c \
+calgrn_gc.c \
 calham.c \
 calham_real.c \
 calham_fsz.c \
+calham_gc.c \
+gc_config.c \
+gc_size.c \
 gauleg.c \
 initfile.c \
 legendrepoly.c \
 locgrn.c \
 locgrn_real.c \
 locgrn_fsz.c \
+locgrn_gc.c \
 lslocgrn.c \
 lslocgrn_bf.c \
 lslocgrn_bf_fsz.c \
 lslocgrn_fsz.c \
 lslocgrn_real.c \
 matrix.c \
+matrix_gc.c \
 nbody_operator.c \
 parameter.c \
 pfupdate.c \
 pfupdate_fsz.c \
+pfupdate_gc.c \
 pfupdate_real.c \
 pfupdate_two_fcmp.c \
 pfupdate_two_fsz.c \
@@ -74,18 +81,21 @@ safempi_fcmp.c \
 setmemory.c \
 slater.c \
 slater_fsz.c \
+slater_gc.c \
 splitloop.c \
 stcopt_dposv.c \
 stcopt_pdposv.c \
 stcopt_cg.c \
 vmccal.c \
 vmccal_fsz.c \
+vmccal_gc.c \
 vmcdry.c \
 vmcmain.c \
 vmcclock.c \
 vmcmake.c \
 vmcmake_fsz.c \
 vmcmake_real.c \
+vmcmake_gc.c \
 workspace.c
 
 HEADERS = \
@@ -100,12 +110,15 @@ HEADERS = \
 ./include/calgrn.h \
 ./include/calham.h \
 ./include/calham_real.h \
+./include/gc_config.h \
+./include/gc_size.h \
 ./include/gauleg.h \
 ./include/global.h \
 ./include/initfile.h \
 ./include/legendrepoly.h \
 ./include/locgrn.h \
 ./include/locgrn_fsz.h \
+./include/locgrn_gc.h \
 ./include/locgrn_real.h \
 ./include/lslocgrn.h \
 ./include/lslocgrn_bf.h \
@@ -114,9 +127,11 @@ HEADERS = \
 ./include/lslocgrn_status.h \
 ./include/lslocgrn_real.h \
 ./include/matrix.h \
+./include/matrix_gc.h \
 ./include/nbody_operator.h \
 ./include/parameter.h \
 ./include/pfupdate.h \
+./include/pfupdate_gc.h \
 ./include/pfupdate_real.h \
 ./include/pfupdate_two_fcmp.h \
 ./include/pfupdate_two_real.h \
@@ -135,6 +150,7 @@ HEADERS = \
 ./include/vmccal.h \
 ./include/vmcmain.h \
 ./include/vmcmake.h \
+./include/vmcmake_gc.h \
 ./include/vmcmake_real.h \
 ./include/workspace.h
 
