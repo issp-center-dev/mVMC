@@ -234,6 +234,8 @@ example of the file format is shown as follows.</p>
 <span class="nf">LocSpin</span>  <span class="n">zlocspn</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">Trans</span>    <span class="n">ztransfer</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">InterAll</span> <span class="n">zinterall</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">LsTrans</span>  <span class="n">zlstrans</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">LsInterAll</span> <span class="n">zlsinterall</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">NBodyInterAll</span> <span class="n">nbodyinterall</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">Orbital</span> <span class="n">orbitalidx</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">OneBodyG</span> <span class="n">zcisajs</span><span class="o">.</span><span class="k">def</span>
@@ -294,6 +296,12 @@ and “TransSym”.</p></li>
 </tr>
 <tr class="row-odd"><td><p>InterAll</p></td>
 <td><p>Two-body interactions for Hamiltonian.</p></td>
+</tr>
+<tr class="row-even"><td><p>LsTrans</p></td>
+<td><p>One-body part of an independent Lanczos operator <span class="math notranslate nohighlight">\(H'\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>LsInterAll</p></td>
+<td><p>Two-body part of an independent Lanczos operator <span class="math notranslate nohighlight">\(H'\)</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p>NBodyInterAll</p></td>
 <td><p>Variable-order <span class="math notranslate nohighlight">\(N\)</span>-body interactions for Hamiltonian.</p></td>
@@ -615,6 +623,20 @@ functions are outside this mode. Its only result file is
 <code class="docutils literal notranslate"><span class="pre">xxx_pl_out_yyy.dat</span></code>. <code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> must be at least 8 and divisible by
 a block count between 4 and 16 with at least two samples per block; a
 multiple of 16 is recommended.</p>
+<p>In this estimator mode, each coefficient or final chain is one collective
+Markov chain shared by all MPI ranks. <code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> is the total length of
+each shared chain, not a per-rank sample count, and <code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> does not
+create independent sampling chains for this route. MPI ranks cooperate in
+the quantum-projection amplitude evaluation; ranks beyond <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> have
+empty local projection ranges. MPI sample parallelism is not yet supported.</p>
+<p>Supplying <code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> or <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> selects the independent-operator
+route with basis <span class="math notranslate nohighlight">\(\{\Psi,H'\Psi\}\)</span>. This route additionally requires
+real variational parameters, <code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>, and
+physical mode. The physical <span class="math notranslate nohighlight">\(H\)</span> and independent <span class="math notranslate nohighlight">\(H'\)</span> may
+contain only <code class="docutils literal notranslate"><span class="pre">Trans</span></code> and <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> rows. FSZ, BackFlow, RBM,
+reweighting, native model couplings, special updates, and Green’s-function
+measurements are rejected. <code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> remains a run-time value and is not
+fixed by this feature.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NLanczosSupportMode</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 0)</p>
@@ -1175,6 +1197,17 @@ defined in this file.</p></li>
 range from the defined values.</p></li>
 </ul>
 </section>
+</section>
+<section id="independent-lanczos-operator-files-lstrans-def-lsinterall-def">
+<h2>Independent Lanczos operator files (lstrans.def, lsinterall.def)<a class="headerlink" href="#independent-lanczos-operator-files-lstrans-def-lsinterall-def" title="Permalink to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> and <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> define an operator <span class="math notranslate nohighlight">\(H'\)</span> that is
+independent of the physical Hamiltonian. Their file formats and sign
+conventions are exactly those of <code class="docutils literal notranslate"><span class="pre">Trans</span></code> and <code class="docutils literal notranslate"><span class="pre">InterAll</span></code>: an <code class="docutils literal notranslate"><span class="pre">LsTrans</span></code>
+row contributes <span class="math notranslate nohighlight">\(-t c^\dagger c\)</span>, while an <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> row is
+applied in the written CACA order. Either component may be omitted, but the
+combined operator must be nonempty, real, Hermitian, and preserve particle
+number and <span class="math notranslate nohighlight">\(S_z\)</span>. mVMC checks row-level finite/index/sector conditions;
+the input generator is responsible for Hermitian closure.</p>
 </section>
 <section id="nbodyinterall-file-nbodyinterall-def">
 <h2>NBodyInterAll file (nbodyinterall.def)<a class="headerlink" href="#nbodyinterall-file-nbodyinterall-def" title="Permalink to this heading">¶</a></h2>
@@ -3922,6 +3955,7 @@ indices are rejected as input errors.</p></li>
 <li><a class="reference internal" href="#id11">Use rules</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#independent-lanczos-operator-files-lstrans-def-lsinterall-def">Independent Lanczos operator files (lstrans.def, lsinterall.def)</a></li>
 <li><a class="reference internal" href="#nbodyinterall-file-nbodyinterall-def">NBodyInterAll file (nbodyinterall.def)</a><ul>
 <li><a class="reference internal" href="#id12">File format</a></li>
 <li><a class="reference internal" href="#id13">Parameters</a></li>

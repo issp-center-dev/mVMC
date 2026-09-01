@@ -545,6 +545,14 @@ standard errors, their imaginary diagnostics, the energy autocorrelation time
 and effective sample count, and the retained rank, condition estimate, and
 residual of the generalized eigenproblem. It contains no Green’s functions or
 per-sample trace.</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> or <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> selects an independent <span class="math notranslate nohighlight">\(H'\)</span>, the
+first header instead contains <code class="docutils literal notranslate"><span class="pre">independent_power_lanczos</span></code> and
+<code class="docutils literal notranslate"><span class="pre">basis={Psi,HprimePsi}</span></code>. The data row has 12 fields in this order:
+<code class="docutils literal notranslate"><span class="pre">energy</span></code>, <code class="docutils literal notranslate"><span class="pre">energy_se</span></code>, <code class="docutils literal notranslate"><span class="pre">variance</span></code>, <code class="docutils literal notranslate"><span class="pre">variance_se</span></code>, <code class="docutils literal notranslate"><span class="pre">energy_imag</span></code>,
+<code class="docutils literal notranslate"><span class="pre">variance_imag</span></code>, <code class="docutils literal notranslate"><span class="pre">tau_int</span></code>, <code class="docutils literal notranslate"><span class="pre">effective_samples</span></code>, <code class="docutils literal notranslate"><span class="pre">retained_rank</span></code>,
+<code class="docutils literal notranslate"><span class="pre">condition</span></code>, <code class="docutils literal notranslate"><span class="pre">gevp_residual</span></code>, and <code class="docutils literal notranslate"><span class="pre">streamed_row_terms</span></code>. The final field
+counts physical-H rows applied at the retained coefficient-chain measurement
+snapshots. A failed run writes no result row.</p>
 </section>
 <section id="xxx-ls2-moment-yyy-dat">
 <h2>xxx_ls2_moment_yyy.dat<a class="headerlink" href="#xxx-ls2-moment-yyy-dat" title="Permalink to this heading">¶</a></h2>

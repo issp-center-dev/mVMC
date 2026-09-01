@@ -513,6 +513,13 @@ sample数、block数を記録します。field名に続くdata行にはcorrected
 variance、そのstandard error、虚部、energyの自己相関時間と有効sample数、
 一般化固有値問題のretained rank・condition estimate・residualを出力します。
 Green関数やsampleごとのtraceは出力しません。</p>
+<p><code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> または <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> で独立 <span class="math notranslate nohighlight">\(H'\)</span> を選択した場合、1行目の
+headerには <code class="docutils literal notranslate"><span class="pre">independent_power_lanczos</span></code> と <code class="docutils literal notranslate"><span class="pre">basis={Psi,HprimePsi}</span></code> を
+記録します。data行の12項目は順に <code class="docutils literal notranslate"><span class="pre">energy</span></code>、<code class="docutils literal notranslate"><span class="pre">energy_se</span></code>、<code class="docutils literal notranslate"><span class="pre">variance</span></code>、
+<code class="docutils literal notranslate"><span class="pre">variance_se</span></code>、<code class="docutils literal notranslate"><span class="pre">energy_imag</span></code>、<code class="docutils literal notranslate"><span class="pre">variance_imag</span></code>、<code class="docutils literal notranslate"><span class="pre">tau_int</span></code>、
+<code class="docutils literal notranslate"><span class="pre">effective_samples</span></code>、<code class="docutils literal notranslate"><span class="pre">retained_rank</span></code>、<code class="docutils literal notranslate"><span class="pre">condition</span></code>、<code class="docutils literal notranslate"><span class="pre">gevp_residual</span></code>、
+<code class="docutils literal notranslate"><span class="pre">streamed_row_terms</span></code> です。最後の項目はcoefficient chainで採用した測定snapshotに
+対して作用した物理Hの行数です。失敗時はresult行を出力しません。</p>
 </section>
 <section id="xxx-ls2-moment-yyy-dat">
 <h2>xxx_ls2_moment_yyy.dat<a class="headerlink" href="#xxx-ls2-moment-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>

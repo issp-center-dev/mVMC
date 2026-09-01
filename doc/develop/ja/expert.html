@@ -229,6 +229,8 @@ BackFlow 相関のパラメータ group と最適化フラグを指定します�
 <span class="nf">LocSpin</span>  <span class="n">zlocspn</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">Trans</span>    <span class="n">ztransfer</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">InterAll</span> <span class="n">zinterall</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">LsTrans</span>  <span class="n">zlstrans</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">LsInterAll</span> <span class="n">zlsinterall</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">NBodyInterAll</span> <span class="n">nbodyinterall</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">Orbital</span> <span class="n">orbitalidx</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">OneBodyG</span> <span class="n">zcisajs</span><span class="o">.</span><span class="k">def</span>
@@ -288,6 +290,12 @@ TransSymです。それ以外のキーワードについては、指定がない
 </tr>
 <tr class="row-odd"><td><p>InterAll</p></td>
 <td><p>一般的な二体相互作用を指定します。</p></td>
+</tr>
+<tr class="row-even"><td><p>LsTrans</p></td>
+<td><p>独立Lanczos演算子 <span class="math notranslate nohighlight">\(H'\)</span> の一体部分を指定します。</p></td>
+</tr>
+<tr class="row-odd"><td><p>LsInterAll</p></td>
+<td><p>独立Lanczos演算子 <span class="math notranslate nohighlight">\(H'\)</span> の二体部分を指定します。</p></td>
 </tr>
 <tr class="row-even"><td><p>NBodyInterAll</p></td>
 <td><p>ハミルトニアンに含める可変次数の <span class="math notranslate nohighlight">\(N\)</span> 体相互作用を指定します。</p></td>
@@ -598,6 +606,19 @@ FSZ、BackFlow、RBM、reweight、およびGreen関数は対象外です。
 出力は <code class="docutils literal notranslate"><span class="pre">xxx_pl_out_yyy.dat</span></code> のみです。<code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> は8以上かつ、
 各blockに2 sample以上が入る4から16までのblock数で割り切れる値とし、
 16の倍数を推奨します。</p>
+<p>このestimator modeでは、係数決定用chainと最終energy用chainのそれぞれが、
+全MPI rankで共有する1本のcollective Markov chainです。<code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> は
+rank当たりのsample数ではなく各共有chainの総長であり、<code class="docutils literal notranslate"><span class="pre">NSplitSize</span></code> で
+この経路の独立sampling chainを作ることはできません。MPI rankは量子数射影の
+amplitude評価を分担し、<code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> を超えるrankの局所射影範囲は空になります。
+MPI sample並列は現時点では未対応です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> または <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> を指定すると、基底
+<span class="math notranslate nohighlight">\(\{\Psi,H'\Psi\}\)</span> を使う独立演算子経路を選択します。この経路はさらに
+実変分パラメータ、<code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、physical modeを
+必要とします。物理 <span class="math notranslate nohighlight">\(H\)</span> と独立 <span class="math notranslate nohighlight">\(H'\)</span> は <code class="docutils literal notranslate"><span class="pre">Trans</span></code> と
+<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> の行だけで構成してください。FSZ、BackFlow、RBM、reweight、
+native model coupling、special update、Green関数測定は対象外です。
+<code class="docutils literal notranslate"><span class="pre">NQPFull</span></code> はruntime入力値であり、本機能では固定しません。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NLanczosSupportMode</span></code></p>
 <p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>
@@ -1104,6 +1125,15 @@ NInterAll      36
 <li><p>[ int02 ]-[ int09 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。</p></li>
 </ul>
 </section>
+</section>
+<section id="lanczos-lstrans-def-lsinterall-def">
+<h2>独立Lanczos演算子指定ファイル(lstrans.def, lsinterall.def)<a class="headerlink" href="#lanczos-lstrans-def-lsinterall-def" title="この見出しへのパーマリンク">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> と <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> は、物理Hamiltonianとは独立な演算子 <span class="math notranslate nohighlight">\(H'\)</span> を
+定義します。ファイル形式と符号規約は <code class="docutils literal notranslate"><span class="pre">Trans</span></code> と <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> と同じです。
+<code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> の1行は <span class="math notranslate nohighlight">\(-t c^\dagger c\)</span>、<code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> の1行は記載した
+CACA順で作用します。どちらか一方は省略できますが、両者を合わせた演算子は非空、
+実係数、Hermitianで、粒子数と <span class="math notranslate nohighlight">\(S_z\)</span> を保存する必要があります。mVMCは
+行ごとの有限性・index・sector条件を検査し、Hermitian closureは入力生成側の責務です。</p>
 </section>
 <section id="nbodyinterall-nbodyinterall-def">
 <h2>NBodyInterAll指定ファイル(nbodyinterall.def)<a class="headerlink" href="#nbodyinterall-nbodyinterall-def" title="この見出しへのパーマリンク">¶</a></h2>
@@ -3656,6 +3686,7 @@ lattice.def の座標と twist.def の位相が意図した幾何を表すよう
 <li><a class="reference internal" href="#id36">使用ルール</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#lanczos-lstrans-def-lsinterall-def">独立Lanczos演算子指定ファイル(lstrans.def, lsinterall.def)</a></li>
 <li><a class="reference internal" href="#nbodyinterall-nbodyinterall-def">NBodyInterAll指定ファイル(nbodyinterall.def)</a><ul>
 <li><a class="reference internal" href="#id37">ファイル形式</a></li>
 <li><a class="reference internal" href="#id38">パラメータ</a></li>

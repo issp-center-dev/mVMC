@@ -257,6 +257,8 @@
     LocSpin  zlocspn.def
     Trans    ztransfer.def
     InterAll zinterall.def
+    LsTrans  zlstrans.def
+    LsInterAll zlsinterall.def
     NBodyInterAll nbodyinterall.def
     Orbital orbitalidx.def
     OneBodyG zcisajs.def
@@ -317,6 +319,10 @@
      - 一般的な一体相互作用を指定します。
    * - InterAll
      - 一般的な二体相互作用を指定します。
+   * - LsTrans
+     - 独立Lanczos演算子 :math:`H'` の一体部分を指定します。
+   * - LsInterAll
+     - 独立Lanczos演算子 :math:`H'` の二体部分を指定します。
    * - NBodyInterAll
      - ハミルトニアンに含める可変次数の :math:`N` 体相互作用を指定します。
    * - CoulombIntra
@@ -617,6 +623,21 @@ ModParaファイル (modpara.def)
    出力は ``xxx_pl_out_yyy.dat`` のみです。``NVMCSample`` は8以上かつ、
    各blockに2 sample以上が入る4から16までのblock数で割り切れる値とし、
    16の倍数を推奨します。
+
+   このestimator modeでは、係数決定用chainと最終energy用chainのそれぞれが、
+   全MPI rankで共有する1本のcollective Markov chainです。``NVMCSample`` は
+   rank当たりのsample数ではなく各共有chainの総長であり、``NSplitSize`` で
+   この経路の独立sampling chainを作ることはできません。MPI rankは量子数射影の
+   amplitude評価を分担し、``NQPFull`` を超えるrankの局所射影範囲は空になります。
+   MPI sample並列は現時点では未対応です。
+
+   ``LsTrans`` または ``LsInterAll`` を指定すると、基底
+   :math:`\{\Psi,H'\Psi\}` を使う独立演算子経路を選択します。この経路はさらに
+   実変分パラメータ、``NLanczosStep=1``、``NExUpdatePath=0``、physical modeを
+   必要とします。物理 :math:`H` と独立 :math:`H'` は ``Trans`` と
+   ``InterAll`` の行だけで構成してください。FSZ、BackFlow、RBM、reweight、
+   native model coupling、special update、Green関数測定は対象外です。
+   ``NQPFull`` はruntime入力値であり、本機能では固定しません。
 
 -  ``NLanczosSupportMode``
 
@@ -1249,6 +1270,16 @@ InterAll指定ファイル
 -  [ int01 ] と定義されているInterAllの総数が異なる場合はエラー終了します。
 
 -  [ int02 ]-[ int09 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
+
+独立Lanczos演算子指定ファイル(lstrans.def, lsinterall.def)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``LsTrans`` と ``LsInterAll`` は、物理Hamiltonianとは独立な演算子 :math:`H'` を
+定義します。ファイル形式と符号規約は ``Trans`` と ``InterAll`` と同じです。
+``LsTrans`` の1行は :math:`-t c^\dagger c`、``LsInterAll`` の1行は記載した
+CACA順で作用します。どちらか一方は省略できますが、両者を合わせた演算子は非空、
+実係数、Hermitianで、粒子数と :math:`S_z` を保存する必要があります。mVMCは
+行ごとの有限性・index・sector条件を検査し、Hermitian closureは入力生成側の責務です。
 
 NBodyInterAll指定ファイル(nbodyinterall.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
