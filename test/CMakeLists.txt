@@ -124,7 +124,8 @@ endif()
 add_test(NAME GCGreen_Unit COMMAND gc_green_unit)
 add_test(NAME GCGreen_Unit_OMP4 COMMAND gc_green_unit)
 set_tests_properties(GCGreen_Unit_OMP4 PROPERTIES
-    ENVIRONMENT "OMP_NUM_THREADS=4")
+    ENVIRONMENT
+      "OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;MVMC_GC_REQUIRE_OMP_THREADS=4")
 
 add_executable(nbody_operator_unit
     nbody_operator_unit.c

@@ -31,6 +31,10 @@ double complex CalculateNewPfMNGC(
 void CalculateNewPfMAddGC(int rsa, int rsb, double complex *pfMNew,
                           const int *eleIdx, int ncurOld, int qpStart,
                           int qpEnd);
+void CalculateNewPfMAddGCWorkspace(
+    int rsa, int rsb, double complex *pfMNew, const int *eleIdx,
+    int ncurOld, int qpStart, int qpEnd, double complex *y0,
+    double complex *y1);
 void UpdateMAllAddGC(int rsa, int rsb, const int *eleIdx, int ncurOld,
                      int qpStart, int qpEnd);
 void CalculateNewPfMRemoveGC(int pos0, int pos1,

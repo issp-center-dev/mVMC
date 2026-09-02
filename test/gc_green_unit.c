@@ -11,6 +11,7 @@
 
 extern int omp_get_thread_num(void);
 extern int omp_get_max_threads(void);
+extern int omp_get_num_threads(void);
 
 #include "global.h"
 #include "blas_externs.h"
@@ -237,6 +238,256 @@ static int apply_creation(unsigned int *occupancy, const int orbital,
   if (parity_below(*occupancy, orbital) != 0) *sign = -*sign;
   *occupancy |= 1U << orbital;
   return 1;
+}
+
+static void build_state(const int *baseIdx, const int ncur, int *eleCfg,
+                        int *eleNum, int *projCnt) {
+  int k;
+  for (k = 0; k < ORBITALS; k++) {
+    eleCfg[k] = -1;
+    eleNum[k] = 0;
+  }
+  for (k = 0; k < ncur; k++) {
+    eleCfg[baseIdx[k]] = k;
+    eleNum[baseIdx[k]] = 1;
+  }
+  MakeProjCnt(projCnt, eleNum);
+}
+
+static double complex brute_anomalous_param(
+    const int type, const int rs1, const int rs2, const int *baseIdx,
+    const int ncur, const double complex baseSortedOverlap,
+    const int *baseProjCnt) {
+  unsigned int occupancy = 0U;
+  int finalEleNum[ORBITALS] = {0};
+  int finalEleIdx[ORBITALS];
+  int finalProjCnt[1];
+  int sign = 1;
+  int k;
+  int count = 0;
+  for (k = 0; k < ncur; k++) occupancy |= 1U << baseIdx[k];
+  if (type == 1) {
+    if (!apply_creation(&occupancy, rs2, &sign) ||
+        !apply_creation(&occupancy, rs1, &sign)) return 0.0;
+  } else {
+    if (!apply_annihilation(&occupancy, rs2, &sign) ||
+        !apply_annihilation(&occupancy, rs1, &sign)) return 0.0;
+  }
+  for (k = 0; k < ORBITALS; k++) {
+    if (((occupancy >> k) & 1U) != 0U) {
+      finalEleIdx[count++] = k;
+      finalEleNum[k] = 1;
+    }
+  }
+  MakeProjCnt(finalProjCnt, finalEleNum);
+  return (double)sign * conj(ProjRatio(finalProjCnt, baseProjCnt) *
+                             overlap_for_sorted_state(finalEleIdx, count) /
+                             baseSortedOverlap);
+}
+
+static void permute_base(const int *sorted, int *out, const int ncur,
+                         const int kind) {
+  int k;
+  for (k = 0; k < ncur; k++) out[k] = sorted[k];
+  if (ncur < 2) return;
+  if (kind == 1) {
+    for (k = 0; k < ncur; k++) out[k] = sorted[ncur - 1 - k];
+  } else if (kind == 2) {
+    for (k = 0; k < ncur; k++) out[k] = sorted[(k + 1) % ncur];
+  } else if (kind == 3) {
+    out[0] = sorted[1];
+    out[1] = sorted[0];
+  }
+}
+
+static void test_anomalous_green_exhaustive(void) {
+  static const int bases[][ORBITALS] = {
+      {0},
+      {0, 5},
+      {0, 2, 4, 7},
+      {0, 1, 2, 3, 4, 5},
+      {0, 1, 2, 3, 4, 5, 6, 7},
+  };
+  static const int ncurs[] = {0, 2, 4, 6, 8};
+  int caseCount = 0;
+  int nonzeroAdd = 0;
+  int nonzeroRemove = 0;
+  int nonzeroRemovePositiveSign = 0;
+  int nonzeroRemoveNegativeSign = 0;
+  int vacuumNonzeroAdd = 0;
+  int vacuumNonzeroRemove = 0;
+  int fullNonzeroAdd = 0;
+  int fullNonzeroRemove = 0;
+  int b;
+  for (b = 0; b < 5; b++) {
+    const int ncur = ncurs[b];
+    int kind;
+    for (kind = 0; kind < 4; kind++) {
+      int baseIdx[ORBITALS] = {0};
+      int eleCfgL[ORBITALS];
+      int eleNumL[ORBITALS];
+      int projCnt[1];
+      int rs1;
+      int rs2;
+      double complex ipSorted;
+      double complex ipPermuted;
+      GuardedScratch guarded;
+      if (ncur < 2 && kind > 0) continue;
+      permute_base(bases[b], baseIdx, ncur, kind);
+      build_state(baseIdx, ncur, eleCfgL, eleNumL, projCnt);
+      CHECK(CalculateMAllGC_fcmp(ncur, baseIdx, 0, NQPFull) == GC_MALL_OK,
+            "rebuild failed ncur=%d kind=%d", ncur, kind);
+      ipPermuted = CalculateIP_fcmp(PfM, 0, NQPFull, MPI_COMM_SELF);
+      ipSorted = overlap_for_sorted_state(bases[b], ncur);
+      initialize_scratch(&guarded);
+      for (rs1 = 0; rs1 < ORBITALS; rs1++) {
+        for (rs2 = 0; rs2 < ORBITALS; rs2++) {
+          double complex expectedAdd;
+          double complex actualAdd;
+          double complex expectedRemove;
+          double complex actualRemove;
+          if (rs1 == rs2) continue;
+          expectedAdd = brute_anomalous_param(1, rs1, rs2, bases[b],
+                                              ncur, ipSorted, projCnt);
+          actualAdd = GreenFuncPairAddGC(rs1, rs2, ipPermuted, ncur,
+                                         baseIdx, eleCfgL, eleNumL,
+                                         projCnt, &guarded.scratch);
+          CHECK(cabs(actualAdd - expectedAdd) <
+                    1.0e-9 * (1.0 + cabs(expectedAdd)),
+                "PairAdd ncur=%d kind=%d rs=(%d,%d)",
+                ncur, kind, rs1, rs2);
+          if (cabs(expectedAdd) > 1.0e-12) {
+            nonzeroAdd++;
+            if (ncur == 0) vacuumNonzeroAdd++;
+            if (ncur == ORBITALS) fullNonzeroAdd++;
+          }
+          expectedRemove = brute_anomalous_param(0, rs1, rs2, bases[b],
+                                                 ncur, ipSorted, projCnt);
+          actualRemove = GreenFuncPairRemoveGC(rs1, rs2, ipPermuted, ncur,
+                                               baseIdx, eleCfgL, eleNumL,
+                                               projCnt, &guarded.scratch);
+          CHECK(cabs(actualRemove - expectedRemove) <
+                    1.0e-9 * (1.0 + cabs(expectedRemove)),
+                "PairRemove ncur=%d kind=%d rs=(%d,%d)",
+                ncur, kind, rs1, rs2);
+          if (cabs(expectedRemove) > 1.0e-12) {
+            nonzeroRemove++;
+            if (eleCfgL[rs1] < eleCfgL[rs2]) {
+              nonzeroRemovePositiveSign++;
+            } else {
+              nonzeroRemoveNegativeSign++;
+            }
+            if (ncur == 0) vacuumNonzeroRemove++;
+            if (ncur == ORBITALS) fullNonzeroRemove++;
+          }
+          caseCount += 2;
+          CHECK(eleNumL[rs1] == (eleCfgL[rs1] >= 0) &&
+                    eleNumL[rs2] == (eleCfgL[rs2] >= 0),
+                "eleNum not restored ncur=%d rs=(%d,%d)",
+                ncur, rs1, rs2);
+        }
+      }
+      check_scratch_guards(&guarded);
+      free_scratch(&guarded);
+    }
+  }
+  printf("anomalous oracle cases=%d nonzeroAdd=%d nonzeroRemove=%d "
+         "removeSignPlus=%d removeSignMinus=%d vacuumAdd=%d fullRemove=%d\n",
+         caseCount, nonzeroAdd, nonzeroRemove,
+         nonzeroRemovePositiveSign, nonzeroRemoveNegativeSign,
+         vacuumNonzeroAdd, fullNonzeroRemove);
+  CHECK(caseCount == 1904, "anomalous oracle case inventory changed: %d",
+        caseCount);
+  CHECK(nonzeroAdd > 100 && nonzeroRemove > 100 &&
+            nonzeroRemovePositiveSign > 0 &&
+            nonzeroRemoveNegativeSign > 0,
+        "anomalous oracle lacks add/remove/sign coverage");
+  CHECK(vacuumNonzeroAdd > 0 && vacuumNonzeroRemove == 0 &&
+            fullNonzeroAdd == 0 && fullNonzeroRemove > 0,
+        "anomalous vacuum/full boundary coverage changed");
+}
+
+static void test_anomalous_omp_stress(void) {
+  static const int stressBase[ORBITALS] = {0, 2, 4, 7};
+  int baseIdx[ORBITALS] = {0};
+  int eleCfgL[ORBITALS];
+  int eleNumL[ORBITALS];
+  int projCnt[1];
+  double complex ip;
+  double complex serialAdd;
+  double complex serialRemove;
+  const char *requiredText = getenv("MVMC_GC_REQUIRE_OMP_THREADS");
+  const int requiredThreads = requiredText == NULL ? 0 : atoi(requiredText);
+  unsigned int teamMask = 0U;
+  unsigned int evaluationMask = 0U;
+  int observedTeamSize = 0;
+  int failuresBefore = failures;
+  GuardedScratch serialGuarded;
+  memcpy(baseIdx, stressBase, sizeof(baseIdx));
+  build_state(baseIdx, 4, eleCfgL, eleNumL, projCnt);
+  CHECK(CalculateMAllGC_fcmp(4, baseIdx, 0, NQPFull) == GC_MALL_OK,
+        "OMP stress rebuild failed");
+  ip = CalculateIP_fcmp(PfM, 0, NQPFull, MPI_COMM_SELF);
+  initialize_scratch(&serialGuarded);
+  serialAdd = GreenFuncPairAddGC(1, 6, ip, 4, baseIdx, eleCfgL, eleNumL,
+                                 projCnt, &serialGuarded.scratch);
+  serialRemove = GreenFuncPairRemoveGC(0, 7, ip, 4, baseIdx, eleCfgL,
+                                       eleNumL, projCnt,
+                                       &serialGuarded.scratch);
+  CHECK(cabs(serialAdd) > 1.0e-12 && cabs(serialRemove) > 1.0e-12,
+        "OMP stress pair fixture is vacuous");
+  check_scratch_guards(&serialGuarded);
+  free_scratch(&serialGuarded);
+#pragma omp parallel shared(observedTeamSize, teamMask, evaluationMask)
+  {
+    GuardedScratch guarded;
+    const int tid = omp_get_thread_num();
+    int myEleNum[ORBITALS];
+    int evaluated = 0;
+    int iter;
+#pragma omp critical(gc_anomalous_participation)
+    {
+      observedTeamSize = omp_get_num_threads();
+      if (tid < (int)(8 * sizeof(teamMask))) teamMask |= 1U << tid;
+    }
+    initialize_scratch(&guarded);
+    memcpy(myEleNum, eleNumL, sizeof(myEleNum));
+#pragma omp for
+    for (iter = 0; iter < 4000; iter++) {
+      const double complex add = GreenFuncPairAddGC(
+          1, 6, ip, 4, baseIdx, eleCfgL, myEleNum, projCnt,
+          &guarded.scratch);
+      const double complex remove = GreenFuncPairRemoveGC(
+          0, 7, ip, 4, baseIdx, eleCfgL, myEleNum, projCnt,
+          &guarded.scratch);
+      evaluated = 1;
+      if (cabs(add - serialAdd) > 1.0e-12 ||
+          cabs(remove - serialRemove) > 1.0e-12) {
+#pragma omp critical(gc_anomalous_failure)
+        CHECK(0, "OMP stress mismatch iter=%d", iter);
+      }
+    }
+#pragma omp critical(gc_anomalous_participation)
+    {
+      if (evaluated && tid < (int)(8 * sizeof(evaluationMask))) {
+        evaluationMask |= 1U << tid;
+      }
+      check_scratch_guards(&guarded);
+    }
+    free_scratch(&guarded);
+  }
+  CHECK(failures == failuresBefore, "OMP stress failed");
+  if (requiredThreads > 0) {
+    const unsigned int requiredMask = (1U << requiredThreads) - 1U;
+    CHECK(observedTeamSize == requiredThreads,
+          "OMP team size got=%d expected=%d", observedTeamSize,
+          requiredThreads);
+    CHECK((teamMask & requiredMask) == requiredMask,
+          "OMP team mask got=0x%x expected=0x%x", teamMask, requiredMask);
+    CHECK((evaluationMask & requiredMask) == requiredMask,
+          "OMP kernel-evaluation mask got=0x%x expected=0x%x",
+          evaluationMask, requiredMask);
+  }
 }
 
 static double complex brute_green(const int n, const int *rsi,
@@ -728,6 +979,8 @@ int main(int argc, char **argv) {
 #endif
   initialize_fixture();
   test_green_kernels();
+  test_anomalous_green_exhaustive();
+  test_anomalous_omp_stress();
   test_hamiltonian_and_measurement();
   free_fixture();
 #ifdef _mpi_use

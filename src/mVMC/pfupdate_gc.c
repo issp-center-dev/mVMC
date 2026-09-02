@@ -348,18 +348,26 @@ void CalculateNewPfMAddGC(const int rsa, const int rsb,
                           const int qpEnd) {
   const int workspaceCount = GCCheckedSizeToInt(
       GCCheckedMulSize(2, (size_t)ncurOld), "GC add candidate workspace");
-  int qpidx;
   RequestWorkSpaceComplex(workspaceCount);
   {
     double complex *y0 = GetWorkSpaceComplex(ncurOld);
     double complex *y1 = GetWorkSpaceComplex(ncurOld);
-    for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
-      const double complex d01 =
-          GCAddSchur(rsa, rsb, eleIdx, ncurOld, qpStart, qpidx, y0, y1);
-      pfMNew[qpidx] = d01 * PfM[qpidx];
-    }
+    CalculateNewPfMAddGCWorkspace(rsa, rsb, pfMNew, eleIdx, ncurOld,
+                                  qpStart, qpEnd, y0, y1);
   }
   ReleaseWorkSpaceComplex();
+}
+
+void CalculateNewPfMAddGCWorkspace(
+    const int rsa, const int rsb, double complex *pfMNew,
+    const int *eleIdx, const int ncurOld, const int qpStart,
+    const int qpEnd, double complex *y0, double complex *y1) {
+  int qpidx;
+  for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+    const double complex d01 =
+        GCAddSchur(rsa, rsb, eleIdx, ncurOld, qpStart, qpidx, y0, y1);
+    pfMNew[qpidx] = d01 * PfM[qpidx];
+  }
 }
 
 static void UpdateMAllAddGCChild(
