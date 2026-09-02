@@ -432,6 +432,8 @@ TransSymです。それ以外のキーワードについては、指定がない
 <span class="n">CParaFileHead</span>  <span class="n">zqp</span>
 <span class="o">--------------------</span>
 <span class="n">NVMCCalMode</span>    <span class="mi">0</span>
+<span class="n">NGrandCanonical</span> <span class="mi">0</span>
+<span class="n">NGCInitNelec</span>   <span class="o">-</span><span class="mi">1</span>
 <span class="n">NLanczosMode</span>   <span class="mi">0</span>
 <span class="n">NLanczosStep</span>   <span class="mi">1</span>
 <span class="n">NLanczosEstimatorMode</span> <span class="mi">0</span>
@@ -517,6 +519,19 @@ TransSymです。それ以外のキーワードについては、指定がない
 <p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>
 <p><strong>説明 :</strong> [0] 変分パラメータの最適化、[1] 1 体・2
 体のグリーン関数の計算。</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code></p>
+<p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>
+<p><strong>説明 :</strong> 1にすると全偶数粒子数sectorをsamplingします。このmodeでは
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>、複素変分パラメータ、<code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>、
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NMPTrans=1</span></code>、
+<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code> が必要です。Phase 1ではRBM、BackFlow、Lanczos、
+OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code></p>
+<p><strong>形式 :</strong> int型 (デフォルト値 = -1)</p>
+<p><strong>説明 :</strong> grand-canonical samplingの初期粒子数hintです。<code class="docutils literal notranslate"><span class="pre">-1</span></code> は
+組込み初期化を選び、明示した奇数値は直下の偶数へ切り下げます。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NLanczosMode</span></code></p>
 <p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>

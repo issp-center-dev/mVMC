@@ -91,32 +91,44 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 <tr class="row-even"><td><p>xxx_out_yyy.dat</p></td>
 <td><p>Energy and deviation.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_SRinfo.dat</p></td>
+<tr class="row-odd"><td><p>zvo_gc.dat</p></td>
+<td><p>Particle-number moments in grand-canonical mode.</p></td>
+</tr>
+<tr class="row-even"><td><p>xxx_SRinfo.dat</p></td>
 <td><p>Information related to SR optimization method.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_var_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_var_yyy.dat</p></td>
 <td><p>Progress information for optimizing variational parameters.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_CalcTimer.dat</p></td>
+<tr class="row-even"><td><p>xxx_CalcTimer.dat</p></td>
 <td><p>Computation time for each processes.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_time_zzz.dat</p></td>
+<tr class="row-odd"><td><p>xxx_time_zzz.dat</p></td>
 <td><p>Progress information for Monte Carlo samplings.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_cisajs_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_cisajs_yyy.dat</p></td>
 <td><p>One body Green’s functions.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
 <td><p>Correlation functions.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_NBodyG_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_NBodyG_yyy.dat</p></td>
 <td><p><span class="math notranslate nohighlight">\(N\)</span>-body correlation functions.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_twist_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_twist_yyy.dat</p></td>
 <td><p>Twist operators.</p></td>
 </tr>
 </tbody>
 </table>
+<section id="grand-canonical-particle-number-output-zvo-gc-dat">
+<h2>Grand-canonical particle-number output (zvo_gc.dat)<a class="headerlink" href="#grand-canonical-particle-number-output-zvo-gc-dat" title="Permalink to this heading">¶</a></h2>
+<p>When <code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code>, this fixed-name file contains three columns:
+<span class="math notranslate nohighlight">\(\langle N\rangle\)</span>, <span class="math notranslate nohighlight">\(\langle N^2\rangle\)</span>, and
+<span class="math notranslate nohighlight">\(\langle N^2\rangle-\langle N\rangle^2\)</span>. Parameter optimization writes
+one line per SR step; physical calculation writes one line per bin. The name
+does not use <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> or <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>. Starting another run in
+the same directory replaces the previous <code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code>.</p>
+</section>
 <section id="output-file-for-variational-parameters-opt-dat">
 <h2>Output file for variational parameters (***_opt.dat)<a class="headerlink" href="#output-file-for-variational-parameters-opt-dat" title="Permalink to this heading">¶</a></h2>
 <p>The average and deviation values of variational parameters and the
@@ -629,6 +641,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
     <h3><a href="index.html">Table of Contents</a></h3>
     <ul>
 <li><a class="reference internal" href="#">Output files</a><ul>
+<li><a class="reference internal" href="#grand-canonical-particle-number-output-zvo-gc-dat">Grand-canonical particle-number output (zvo_gc.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-variational-parameters-opt-dat">Output file for variational parameters (***_opt.dat)</a></li>
 <li><a class="reference internal" href="#output-files-for-variational-parameters-at-each-steps-xxx-var-yyy-dat">Output files for variational parameters at each steps (xxx_var_yyy.dat)</a></li>
 <li><a class="reference internal" href="#output-file-for-gutzwiller-factors-gutzwiller-opt-dat">Output file for gutzwiller factors (***_gutzwiller_opt.dat)</a></li>

@@ -86,32 +86,44 @@
 <tr class="row-even"><td><p>xxx_out_yyy.dat</p></td>
 <td><p>エネルギーとその分散.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_SRinfo.dat</p></td>
+<tr class="row-odd"><td><p>zvo_gc.dat</p></td>
+<td><p>grand-canonical modeの粒子数moment.</p></td>
+</tr>
+<tr class="row-even"><td><p>xxx_SRinfo.dat</p></td>
 <td><p>SR法に関連した情報.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_var_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_var_yyy.dat</p></td>
 <td><p>パラメータ最適化過程の情報.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_CalcTimer.dat</p></td>
+<tr class="row-even"><td><p>xxx_CalcTimer.dat</p></td>
 <td><p>各プロセスに対する計算時間に関する情報.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_time_zzz.dat</p></td>
+<tr class="row-odd"><td><p>xxx_time_zzz.dat</p></td>
 <td><p>モンテカルロサンプリングの過程に関する情報.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_cisajs_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_cisajs_yyy.dat</p></td>
 <td><p>一体グリーン関数.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_cisajscktalt_yyy.dat</p></td>
 <td><p>二体グリーン関数.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_NBodyG_yyy.dat</p></td>
+<tr class="row-even"><td><p>xxx_NBodyG_yyy.dat</p></td>
 <td><p><span class="math notranslate nohighlight">\(N\)</span> 体相関関数.</p></td>
 </tr>
-<tr class="row-even"><td><p>xxx_twist_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_twist_yyy.dat</p></td>
 <td><p>Twist演算子の期待値.</p></td>
 </tr>
 </tbody>
 </table>
+<section id="grand-canonical-zvo-gc-dat">
+<h2>Grand-canonical粒子数出力 (zvo_gc.dat)<a class="headerlink" href="#grand-canonical-zvo-gc-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code> のとき、この固定名fileへ
+<span class="math notranslate nohighlight">\(\langle N\rangle\)</span>、<span class="math notranslate nohighlight">\(\langle N^2\rangle\)</span>、
+<span class="math notranslate nohighlight">\(\langle N^2\rangle-\langle N\rangle^2\)</span> の3列を出力します。
+変分最適化ではSR stepごとに1行、物理量計算ではbinごとに1行を書きます。
+ファイル名には <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> と <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> を適用しません。同じ
+directoryで別runを開始すると、以前の <code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> は置き換えられます。</p>
+</section>
 <section id="opt-dat">
 <h2>変分パラメータ出力ファイル(***_opt.dat)<a class="headerlink" href="#opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>SR法で最適化された変分パラメータとエネルギーが一斉出力されます。
@@ -589,6 +601,7 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
     <h3><a href="index.html">目次</a></h3>
     <ul>
 <li><a class="reference internal" href="#">出力ファイル</a><ul>
+<li><a class="reference internal" href="#grand-canonical-zvo-gc-dat">Grand-canonical粒子数出力 (zvo_gc.dat)</a></li>
 <li><a class="reference internal" href="#opt-dat">変分パラメータ出力ファイル(***_opt.dat)</a></li>
 <li><a class="reference internal" href="#xxx-var-yyy-dat">ステップ別変分パラメータ出力ファイル(xxx_var_yyy.dat)</a></li>
 <li><a class="reference internal" href="#gutzwiller-gutzwiller-opt-dat">Gutzwiller因子出力ファイル(***_gutzwiller_opt.dat)</a></li>

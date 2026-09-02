@@ -437,6 +437,8 @@ file format is shown as follows.</p>
 <span class="n">CParaFileHead</span>  <span class="n">zqp</span>
 <span class="o">--------------------</span>
 <span class="n">NVMCCalMode</span>    <span class="mi">0</span>
+<span class="n">NGrandCanonical</span> <span class="mi">0</span>
+<span class="n">NGCInitNelec</span>   <span class="o">-</span><span class="mi">1</span>
 <span class="n">NLanczosMode</span>   <span class="mi">0</span>
 <span class="n">NLanczosStep</span>   <span class="mi">1</span>
 <span class="n">NLanczosEstimatorMode</span> <span class="mi">0</span>
@@ -525,6 +527,20 @@ not read and skipped.</p></li>
 <p><strong>Type :</strong> int-type (default value: 0)</p>
 <p><strong>Description :</strong> [0] Optimization of variational parameters, [1]
 Calculation of one body and two body Green’s functions.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code></p>
+<p><strong>Type :</strong> int-type (default value: 0)</p>
+<p><strong>Description :</strong> Set to 1 to sample all even particle-number sectors.
+This mode requires <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>, complex variational parameters,
+<code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NMPTrans=1</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code>. RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
+spins, and SR-CG are not supported in this first phase.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code></p>
+<p><strong>Type :</strong> int-type (default value: -1)</p>
+<p><strong>Description :</strong> Initial particle-number hint for grand-canonical
+sampling. <code class="docutils literal notranslate"><span class="pre">-1</span></code> selects the built-in initialization; an explicitly given
+odd value is rounded down to the nearest even value.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NLanczosMode</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 0)</p>
