@@ -69,6 +69,9 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **NBodyInterAll (nbodyinterall.def)**: variable-order
     :math:`N`-body interaction terms for the Hamiltonian.
 
+    **AnomalousTerm (anomalousterm.def)**: pair-creation and
+    pair-annihilation terms for the grand-canonical Hamiltonian.
+
     .. rubric:: t-J model input convention
 
     For a t-J model with the physical convention
@@ -240,6 +243,9 @@ listed in parentheses correspond to the file made by vmcdry.out.
     **NBodyG (nbodyg.def)**: Set the components of :math:`N`-body
     correlation functions to output.
 
+    **AnomalousG (anomalousg.def)**: Set the pair-creation and
+    pair-annihilation expectation values to output in grand-canonical mode.
+
     **Twist (twist.def)**: Set the components of twist operators to
     output.
 
@@ -264,10 +270,12 @@ example of the file format is shown as follows.
     LsTrans  zlstrans.def
     LsInterAll zlsinterall.def
     NBodyInterAll nbodyinterall.def
+    AnomalousTerm anomalousterm.def
     Orbital orbitalidx.def
     OneBodyG zcisajs.def
     TwoBodyG	zcisajscktaltdc.def
     NBodyG nbodyg.def
+    AnomalousG anomalousg.def
     InUpdateWeight updateweight.def
 
 File format
@@ -328,6 +336,8 @@ User rules
      - Two-body part of an independent Lanczos operator :math:`H'`.
    * - NBodyInterAll
      - Variable-order :math:`N`-body interactions for Hamiltonian.
+   * - AnomalousTerm
+     - Pair-creation and pair-annihilation terms for the grand-canonical Hamiltonian.
    * - CoulombIntra
      - CoulombIntra interactions.
    * - CoulombInter
@@ -400,6 +410,8 @@ User rules
      - Output components for Correlation functions :math:`\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle`
    * - NBodyG
      - Output components for :math:`N`-body correlation functions :math:`\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle`
+   * - AnomalousG
+     - Output components for grand-canonical pair-creation and pair-annihilation expectation values.
    * - Twist
      - Output components for Twist operators :math:`\langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle`
    * - Lattice
@@ -4433,6 +4445,79 @@ Use rules
    component.
 
 -  Output filenames remain ``xxx_NBodyG_%03d.dat``.
+
+
+AnomalousTerm and AnomalousG files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``AnomalousTerm`` adds pair-creation and pair-annihilation terms to the
+grand-canonical Hamiltonian. ``AnomalousG`` selects the corresponding
+expectation values in a physical-quantity calculation. The following
+Hermitian complex pair and four measurement rows form a complete example.
+
+``anomalousterm.def``:
+
+::
+
+    =============================================
+    NAnomalousTerm 2
+    =============================================
+    ======== type s1 spin1 s2 spin2 Re Im =======
+    =============================================
+    1 0 0 1 1  3.500000000000000000e-01 -2.000000000000000000e-01
+    0 1 1 0 0  3.500000000000000000e-01  2.000000000000000000e-01
+
+``anomalousg.def``:
+
+::
+
+    =============================================
+    NAnomalousG 4
+    =============================================
+    ======== type s1 spin1 s2 spin2 =============
+    =============================================
+    1 0 0 1 1
+    0 1 1 0 0
+    1 1 1 0 0
+    0 0 0 1 1
+
+File format
+^^^^^^^^^^^
+
+-  The count is ``NAnomalousTerm N`` or ``NAnomalousG N`` on line 2.
+   ``N`` must be an integer from 0 through ``INT_MAX`` and must equal the
+   number of data rows.
+
+-  An ``AnomalousTerm`` row is
+   ``type s1 spin1 s2 spin2 Re Im``. An ``AnomalousG`` row omits ``Re Im``.
+   Every row must have exactly the documented fields; extra tokens are an
+   input error. Hamiltonian coefficients must be finite.
+
+-  ``type=1`` denotes :math:`c_{s_1\,\mathrm{spin}_1}^{\dagger} c_{s_2\,\mathrm{spin}_2}^{\dagger}`,
+   and ``type=0`` denotes :math:`c_{s_1\,\mathrm{spin}_1} c_{s_2\,\mathrm{spin}_2}`.
+   In both cases the second (rightmost)
+   operator acts first. Site indices are in ``[0,Nsite)`` and spin indices
+   are 0 (up) or 1 (down). Repeating the same fermion operator in one pair
+   is forbidden.
+
+Hermiticity and mode restrictions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+-  ``NAnomalousTerm`` must be even. Each adjacent pair must reverse the
+   indices, flip ``type``, and complex-conjugate the coefficient. The
+   coefficient tolerance is ``1e-12``. Thus, the second row in the example
+   is the adjoint of the first; Hermitian partners cannot be separated or
+   reordered.
+
+-  The presence of either keyword requires ``NGrandCanonical=1``, including
+   an explicit zero count. ``AnomalousTerm`` is accepted in
+   ``NVMCCalMode=0`` and 1. ``AnomalousG`` is accepted only in
+   ``NVMCCalMode=1``; supplying its keyword in mode 0 is an input error.
+
+-  Grand-canonical sampling covers even particle-number sectors and inherits
+   the constraints documented for ``NGrandCanonical``: ``OrbitalGeneral``
+   and complex variational parameters are required, while real-only GC,
+   RBM, BackFlow, and Lanczos paths remain unsupported.
 
 
 Twist file (twist.def)

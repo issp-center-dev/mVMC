@@ -70,6 +70,9 @@
     **NBodyInterAll (nbodyinterall.def)**:
     ハミルトニアンに含める可変次数の :math:`N` 体相互作用を指定します。
 
+    **AnomalousTerm (anomalousterm.def)**:
+    grand-canonical Hamiltonianのpair生成・消滅項を指定します。
+
     .. rubric:: t-J模型の指定
 
     物理的なt-J模型を
@@ -237,6 +240,9 @@
 
     **NBodyG (nbodyg.def)**:出力する :math:`N` 体相関関数を指定します。
 
+    **AnomalousG (anomalousg.def)**:grand-canonical modeで出力するpair生成・
+    消滅期待値を指定します。
+
     **Twist (twist.def)**:出力するTwist演算子を指定します。
 
 (7) その他:
@@ -260,10 +266,12 @@
     LsTrans  zlstrans.def
     LsInterAll zlsinterall.def
     NBodyInterAll nbodyinterall.def
+    AnomalousTerm anomalousterm.def
     Orbital orbitalidx.def
     OneBodyG zcisajs.def
     TwoBodyG	zcisajscktaltdc.def
     NBodyG nbodyg.def
+    AnomalousG anomalousg.def
     InUpdateWeight updateweight.def
 
 ファイル形式
@@ -325,6 +333,8 @@
      - 独立Lanczos演算子 :math:`H'` の二体部分を指定します。
    * - NBodyInterAll
      - ハミルトニアンに含める可変次数の :math:`N` 体相互作用を指定します。
+   * - AnomalousTerm
+     - grand-canonical Hamiltonianのpair生成・消滅項を指定します。
    * - CoulombIntra
      - 内部クーロン相互作用を指定します。
    * - CoulombInter
@@ -397,6 +407,8 @@
      - 出力する二体グリーン関数を指定します。
    * - NBodyG
      - 出力する :math:`N` 体相関関数 :math:`\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle` を指定します。
+   * - AnomalousG
+     - grand-canonical modeで出力するpair生成・消滅期待値を指定します。
    * - Twist
      - 出力するTwist演算子を指定します。
    * - Lattice
@@ -4157,6 +4169,77 @@ NBodyG指定ファイル(nbodyg.def)
    BackFlow Slater/Pfaffianを完全構築する計算量が必要です。
 
 -  出力ファイル名は従来どおり ``xxx_NBodyG_%03d.dat`` です。
+
+
+AnomalousTerm・AnomalousG指定ファイル
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``AnomalousTerm`` はgrand-canonical Hamiltonianへpair生成・消滅項を追加し、
+``AnomalousG`` は物理量計算で対応する期待値を選択します。複素係数を持つ
+Hermitian pairと4つの測定行を指定する完全な例を次に示します。
+
+``anomalousterm.def``:
+
+::
+
+    =============================================
+    NAnomalousTerm 2
+    =============================================
+    ======== type s1 spin1 s2 spin2 Re Im =======
+    =============================================
+    1 0 0 1 1  3.500000000000000000e-01 -2.000000000000000000e-01
+    0 1 1 0 0  3.500000000000000000e-01  2.000000000000000000e-01
+
+``anomalousg.def``:
+
+::
+
+    =============================================
+    NAnomalousG 4
+    =============================================
+    ======== type s1 spin1 s2 spin2 =============
+    =============================================
+    1 0 0 1 1
+    0 1 1 0 0
+    1 1 1 0 0
+    0 0 0 1 1
+
+ファイル形式
+^^^^^^^^^^^^
+
+-  2行目に ``NAnomalousTerm N`` または ``NAnomalousG N`` を指定します。
+   ``N`` は0以上 ``INT_MAX`` 以下の整数で、実際のdata行数と一致する必要があります。
+
+-  ``AnomalousTerm`` のdata行は
+   ``type s1 spin1 s2 spin2 Re Im``、``AnomalousG`` のdata行は
+   ``type s1 spin1 s2 spin2`` です。各行は規定数ちょうどのfieldを持つ必要があり、
+   余剰tokenは入力errorです。Hamiltonian係数には有限値だけを指定できます。
+
+-  ``type=1`` は
+   :math:`c_{s_1\,\mathrm{spin}_1}^{\dagger}c_{s_2\,\mathrm{spin}_2}^{\dagger}`、
+   ``type=0`` は
+   :math:`c_{s_1\,\mathrm{spin}_1}c_{s_2\,\mathrm{spin}_2}` を表します。
+   どちらも右側の第2演算子を先に作用させます。site番号は0以上 ``Nsite`` 未満、
+   spin番号は0（up）または1（down）です。同じfermion演算子を1つのpair内で
+   重複指定することはできません。
+
+Hermiticityとmode制約
+^^^^^^^^^^^^^^^^^^^^^^
+
+-  ``NAnomalousTerm`` は偶数である必要があります。隣接する2行ごとに、indexを転置し、
+   ``type`` を反転し、係数を複素共役にしてください。係数の許容差は ``1e-12`` です。
+   したがって上記例の2行目は1行目のHermitian共役であり、対応する2行を離したり
+   並べ替えたりすることはできません。
+
+-  いずれかのkeywordを指定した場合、明示的なcount 0を含めて
+   ``NGrandCanonical=1`` が必要です。``AnomalousTerm`` は
+   ``NVMCCalMode=0`` と1の両方で指定できます。``AnomalousG`` は
+   ``NVMCCalMode=1`` 専用で、mode 0でkeywordを指定すると入力errorになります。
+
+-  grand-canonical samplingは偶数粒子数sectorを対象とし、``NGrandCanonical`` の
+   制約を継承します。``OrbitalGeneral`` と複素変分パラメータが必要で、real-only GC、
+   RBM、BackFlow、Lanczos経路は引き続き非対応です。
+
 
 Twist指定ファイル(twist.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

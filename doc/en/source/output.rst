@@ -55,6 +55,8 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_NBodyG\_yyy.dat                     | :math:`N`-body correlation functions.                                                                                  |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| xxx\_anomalousg\_yyy.dat                 | Grand-canonical pair-creation and pair-annihilation expectation values.                                                |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_twist\_yyy.dat                      | Twist operators.                                                                                                       |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 
@@ -459,6 +461,34 @@ Parameters
    :math:`\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle`.
    [double01] and [double02] show the real and imaginary part,
    respectively.
+
+xxx\_anomalousg\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When ``NGrandCanonical=1`` and ``NVMCCalMode=1``, this file contains the
+pair expectation values selected by ``AnomalousG``. The exact filename is
+``<CDataFileHead>_anomalousg_<index:03d>.dat``. ``index`` starts at
+``NDataIdxStart`` and one independent file is created for every physical
+calculation bin. For example:
+
+::
+
+    1 0 0 1 1 -5.299557869812032000e-02  6.578111353403385000e-02
+    0 1 1 0 0 -5.299557869812032000e-02 -6.578111353403385000e-02
+    1 1 1 0 0  5.299557869812032000e-02 -6.578111353403385000e-02
+    0 0 0 1 1  5.299557869812032000e-02  6.578111353403385000e-02
+
+Each row is ``type s1 spin1 s2 spin2 Re Im``. The first five columns retain
+the input order and operator convention from ``AnomalousG``; the last two
+columns are the real and imaginary parts after sample-weight averaging and
+MPI reduction. ``type=1`` denotes pair creation and ``type=0`` pair
+annihilation, with the second operator acting first.
+
+No file is created when ``NAnomalousG=0`` or in optimization mode. Supplying
+the ``AnomalousG`` keyword in ``NVMCCalMode=0`` is rejected before execution,
+even when its count is zero. The mVMC filename differs from HPhi's filename,
+but the input operator convention and the seven output columns can be
+cross-checked directly.
 
 xxx\_twist\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~
