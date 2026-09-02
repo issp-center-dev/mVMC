@@ -5,6 +5,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert.py DESTINATION ${CMAKE_BINA
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_invalid_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_hphi_anomalous.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_gc_canonical_baseline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sr.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -1297,6 +1298,12 @@ add_gc_oracle_test(GC_Anomalous_Energy_Response anomalous_energy)
 add_gc_oracle_test(GC_Anomalous_SR anomalous_sr)
 add_gc_oracle_test(GC_Anomalous_MPI_NSplit2 anomalous_mpi)
 add_gc_oracle_test(GC_Anomalous_Vacuum_Smoke anomalous_vacuum)
+add_test(NAME GC_HPhi_CrossCheck
+    COMMAND ${PYTHON_EXECUTABLE} compare_hphi_anomalous.py)
+set_tests_properties(GC_HPhi_CrossCheck PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    RESOURCE_LOCK "gc_hphi_crosscheck"
+    SKIP_RETURN_CODE 77)
 
 add_test(NAME GC_OddNCond_Positive
     COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
