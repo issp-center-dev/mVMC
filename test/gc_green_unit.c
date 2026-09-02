@@ -217,10 +217,11 @@ static double complex overlap_for_sorted_state(const int *occupied,
     for (row = 0; row < count; row++) {
       int column;
       for (column = 0; column < count; column++) {
+        /* <x|phi_GC> = Pf(SlaterElm_x): |phi_GC> = exp[sum f c+ c+]|0>. */
         matrix[(size_t)row * (size_t)count + (size_t)column] =
-            -SlaterElm[(size_t)qpidx * ORBITALS * ORBITALS +
-                       (size_t)occupied[row] * ORBITALS +
-                       (size_t)occupied[column]];
+            SlaterElm[(size_t)qpidx * ORBITALS * ORBITALS +
+                      (size_t)occupied[row] * ORBITALS +
+                      (size_t)occupied[column]];
       }
     }
     overlap += QPFullWeight[qpidx] * pfaffian_recursive(matrix, count);

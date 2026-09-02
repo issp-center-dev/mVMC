@@ -90,7 +90,11 @@ static int CalculateMAllGCChild(
            rawInv + (size_t)row * (size_t)ncur,
            (size_t)ncur * sizeof(*rawInv));
   }
-  PfM[qpidx] = pfaffian;
+  /* GC amplitude convention: <x|phi_GC> = Pf(SlaterElm_x) so that
+   * |phi_GC> = exp[sum_{IJ} f_IJ c^+_I c^+_J]|0>.  The Pfaffian above is
+   * Pf(X) with X = -SlaterElm_x, and Pf(-A) = (-1)^{n/2} Pf(A), so the
+   * sector-dependent sign is restored here.  InvM keeps the X convention. */
+  PfM[qpidx] = ((ncur / 2) % 2 == 0) ? pfaffian : -pfaffian;
   return GC_MALL_OK;
 }
 

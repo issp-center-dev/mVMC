@@ -76,6 +76,21 @@ static void build_active_x(const int ncur, const int *eleIdx,
   }
 }
 
+/* Pf(SlaterElm_x) is the stored PfM convention (|phi_GC> = exp[sum f c+c+]|0>),
+ * while InvM keeps the X = -SlaterElm convention of build_active_x. */
+static void build_active_slater(const int ncur, const int *eleIdx,
+                                double complex *matrix) {
+  int row;
+  for (row = 0; row < ncur; row++) {
+    int column;
+    for (column = 0; column < ncur; column++) {
+      matrix[(size_t)row * (size_t)ncur + (size_t)column] =
+          SlaterElm[(size_t)eleIdx[row] * (size_t)Nsite2 +
+                    (size_t)eleIdx[column]];
+    }
+  }
+}
+
 static double complex pfaffian_recursive(const double complex *matrix,
                                           const int n) {
   double complex result = 0.0;
@@ -177,8 +192,9 @@ static void test_dimension_patterns(const int dimension, const int ncur) {
     for (rs = 0; rs < 2 * dimension * dimension; rs++) InvM[rs] = sentinel;
     PfM[0] = -301.0 + 17.0 * I;
     PfM[1] = -302.0 + 18.0 * I;
-    build_active_x(ncur, eleIdx, matrix);
+    build_active_slater(ncur, eleIdx, matrix);
     expectedPf = pfaffian_recursive(matrix, ncur);
+    build_active_x(ncur, eleIdx, matrix);
     snprintf(label, sizeof(label), "M=%d n=%d mask=%u", dimension, ncur,
              mask);
 
@@ -202,8 +218,8 @@ static void test_qp_range_layout(void) {
   for (i = 0; i < 2 * block; i++) InvM[i] = 91.0 + 3.0 * I;
   PfM[0] = 41.0 + I;
   PfM[1] = 42.0 + I;
-  build_active_x(2, eleIdx, matrix);
-  /* build_active_x used QP 0; the second Slater block is scaled by 1.7. */
+  build_active_slater(2, eleIdx, matrix);
+  /* build_active_slater used QP 0; the second Slater block is scaled by 1.7. */
   expectedPf = 1.7 * pfaffian_recursive(matrix, 2);
   CHECK(CalculateMAllGC_fcmp(2, eleIdx, 1, 2) == GC_MALL_OK,
         "qpStart=1 rebuild status");

@@ -250,6 +250,8 @@ double complex GreenFuncPairAddGC(
   (void)eleCfg;
   if (rsa == rsb) return 0.0;
   if (eleNum[rsa] != 0 || eleNum[rsb] != 0) return 0.0;
+  /* Defensive only: GC sets NsizeMax = Nsite2, so two empty orbitals
+   * already imply ncur + 2 <= NsizeMax. */
   if (ncur + 2 > NsizeMax) return 0.0;
 
   eleNum[rsa] = 1;
@@ -286,7 +288,11 @@ double complex GreenFuncPairRemoveGC(
   if (ncur < 2) return 0.0;
   pi = eleCfg[rsi];
   pj = eleCfg[rsj];
-  sign = (pi < pj) ? 1.0 : -1.0;
+  /* Operator signs (-1)^{p_i+p_j-[p_i>p_j]} times the minor identity
+   * Pf(X_del)/Pf(X) = (-1)^{p0+p1} (X^{-1})_{p0 p1} give (-1)^{[p_i>p_j]}
+   * for X = -SlaterElm.  PfM stores Pf(SlaterElm_x), and removing two
+   * particles flips (-1)^{n/2}, hence the extra overall minus. */
+  sign = (pi < pj) ? -1.0 : 1.0;
   p0 = (pi < pj) ? pi : pj;
   p1 = (pi < pj) ? pj : pi;
 

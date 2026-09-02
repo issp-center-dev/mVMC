@@ -363,10 +363,12 @@ void CalculateNewPfMAddGCWorkspace(
     const int *eleIdx, const int ncurOld, const int qpStart,
     const int qpEnd, double complex *y0, double complex *y1) {
   int qpidx;
+  /* d01 = Pf(X_new)/Pf(X) with X = -SlaterElm.  PfM stores Pf(SlaterElm_x)
+   * (see CalculateMAllGC), and adding two particles flips (-1)^{n/2}. */
   for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
     const double complex d01 =
         GCAddSchur(rsa, rsb, eleIdx, ncurOld, qpStart, qpidx, y0, y1);
-    pfMNew[qpidx] = d01 * PfM[qpidx];
+    pfMNew[qpidx] = -d01 * PfM[qpidx];
   }
 }
 
@@ -379,7 +381,7 @@ static void UpdateMAllAddGCChild(
   const double complex d01 =
       GCAddSchur(rsa, rsb, eleIdx, ncurOld, qpStart, qpidx, y0, y1);
   int i;
-  PfM[qpidx] *= d01;
+  PfM[qpidx] *= -d01; /* Pf(SlaterElm) convention; see CalculateNewPfMAddGCWorkspace */
   for (i = 0; i < ncurOld; i++) {
     double complex *invRow =
         invM + (size_t)i * (size_t)NsizeMax;
@@ -453,7 +455,10 @@ static double complex GCRemoveRatio(const int pos0, const int pos1,
       ncurOld - 1, pos0, pos1, ncurOld);
   const double complex r =
       invM[(size_t)tail0 * (size_t)NsizeMax + (size_t)tail1];
-  return -(double)GCRemoveParitySign(pos0, pos1, ncurOld) * r;
+  /* Pf(X_del)/Pf(X) = -parity * r with X = -SlaterElm; removing two
+   * particles flips (-1)^{n/2} of the Pf(SlaterElm_x) convention, so the
+   * stored-PfM ratio is +parity * r. */
+  return (double)GCRemoveParitySign(pos0, pos1, ncurOld) * r;
 }
 
 void CalculateNewPfMRemoveGC(const int pos0, const int pos1,
@@ -487,7 +492,8 @@ static void UpdateMAllRemoveGCChild(
            (size_t)ncurOld * sizeof(*oldInv));
   }
   r = oldInv[(size_t)tail0 * (size_t)ncurOld + (size_t)tail1];
-  PfM[qpidx] *= -(double)GCRemoveParitySign(pos0, pos1, ncurOld) * r;
+  PfM[qpidx] *= (double)GCRemoveParitySign(pos0, pos1, ncurOld) * r;
+  /* same Pf(SlaterElm) sign convention as GCRemoveRatio */
   for (i = 0; i < survivor; i++) {
     const int oldI =
         GCOldPositionAfterRemoveSwap(i, pos0, pos1, ncurOld);

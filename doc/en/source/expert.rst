@@ -544,6 +544,19 @@ Keywords and parameters
    **Type :** int-type (default value: 0)
 
    **Description :** Set to 1 to sample all even particle-number sectors.
+   The grand-canonical pair wave function is
+
+   .. math::
+
+      |\phi_{\rm GC}\rangle = \exp\Big[\sum_{I,J} f_{IJ}\, c_{I}^{\dagger} c_{J}^{\dagger}\Big]|0\rangle,
+
+   where :math:`f_{IJ}` are the ``OrbitalGeneral`` parameters
+   (:math:`I=(i,\sigma)`). Its :math:`N`-particle component is the Pfaffian
+   of :math:`F_{IJ}=f_{IJ}-f_{JI}` restricted to the occupied orbitals, so the
+   canonical component coincides with :math:`|\phi_{\rm pair}\rangle` up to
+   normalization. The relative sign between particle-number sectors follows
+   this definition; it fixes the sign of the ``AnomalousG`` expectation
+   values and of the ``AnomalousTerm`` energy response.
    This mode requires ``OrbitalGeneral``, complex variational parameters,
    ``2Sz=-1``, ``NExUpdatePath=0``, ``NSPGaussLeg=1``, ``NMPTrans=1``, and
    ``NQPOptTrans<=1``. RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
@@ -4491,7 +4504,9 @@ File format
 -  An ``AnomalousTerm`` row is
    ``type s1 spin1 s2 spin2 Re Im``. An ``AnomalousG`` row omits ``Re Im``.
    Every row must have exactly the documented fields; extra tokens are an
-   input error. Hamiltonian coefficients must be finite.
+   input error. Hamiltonian coefficients must be finite. Blank lines and
+   lines starting with ``#`` after the five header lines are skipped, as in
+   HPhi and ``NBodyInterAll``.
 
 -  ``type=1`` denotes :math:`c_{s_1\,\mathrm{spin}_1}^{\dagger} c_{s_2\,\mathrm{spin}_2}^{\dagger}`,
    and ``type=0`` denotes :math:`c_{s_1\,\mathrm{spin}_1} c_{s_2\,\mathrm{spin}_2}`.

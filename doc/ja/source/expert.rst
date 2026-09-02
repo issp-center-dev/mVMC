@@ -541,7 +541,19 @@ ModParaファイル (modpara.def)
 
    **形式 :** int型 (デフォルト値 = 0)
 
-   **説明 :** 1にすると全偶数粒子数sectorをsamplingします。このmodeでは
+   **説明 :** 1にすると全偶数粒子数sectorをsamplingします。
+   grand-canonical pair波動関数は
+
+   .. math::
+
+      |\phi_{\rm GC}\rangle = \exp\Big[\sum_{I,J} f_{IJ}\, c_{I}^{\dagger} c_{J}^{\dagger}\Big]|0\rangle
+
+   で、:math:`f_{IJ}` は ``OrbitalGeneral`` の変分パラメータ
+   （:math:`I=(i,\sigma)`）です。:math:`N` 粒子成分は占有orbitalに制限した
+   :math:`F_{IJ}=f_{IJ}-f_{JI}` のPfaffianであり、規格化を除いてcanonicalの
+   :math:`|\phi_{\rm pair}\rangle` と一致します。粒子数sector間の相対符号は
+   この定義に従い、``AnomalousG`` の期待値と ``AnomalousTerm`` のenergy応答の
+   符号を決めます。このmodeでは
    ``OrbitalGeneral``、複素変分パラメータ、``2Sz=-1``、
    ``NExUpdatePath=0``、``NSPGaussLeg=1``、``NMPTrans=1``、
    ``NQPOptTrans<=1`` が必要です。Phase 1ではRBM、BackFlow、Lanczos、
@@ -4214,6 +4226,8 @@ Hermitian pairと4つの測定行を指定する完全な例を次に示しま�
    ``type s1 spin1 s2 spin2 Re Im``、``AnomalousG`` のdata行は
    ``type s1 spin1 s2 spin2`` です。各行は規定数ちょうどのfieldを持つ必要があり、
    余剰tokenは入力errorです。Hamiltonian係数には有限値だけを指定できます。
+   header 5行より後の空行と ``#`` で始まる行は、HPhiや ``NBodyInterAll`` と同様に
+   読み飛ばします。
 
 -  ``type=1`` は
    :math:`c_{s_1\,\mathrm{spin}_1}^{\dagger}c_{s_2\,\mathrm{spin}_2}^{\dagger}`、

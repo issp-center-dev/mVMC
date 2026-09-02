@@ -116,11 +116,13 @@ def slater_matrix(parameters):
     for row in range(NORBITAL):
         for column in range(row + 1, NORBITAL):
             # OrbitalGeneral expands one upper-triangle parameter as
-            # f_ij-f_ji = 2*f_ij.  CalculateMAllGC forms its Pfaffian matrix
-            # from -SlaterElm, so the minus sign is part of the mVMC BCS
-            # input convention.  It is invisible to number-conserving
-            # observables but fixes the relative phase between N sectors.
-            matrix[row][column] = -2.0 * parameters[index]
+            # F_ij = f_ij-f_ji = 2*f_ij, and the grand-canonical state is
+            # |phi_GC> = exp[sum_{IJ} f_IJ c+_I c+_J]|0>, whose N-particle
+            # amplitude is Pf(F_x) (design spec; mVMC stores PfM as
+            # Pf(SlaterElm_x)).  The relative sign between N sectors is
+            # invisible to number-conserving observables but fixes the sign
+            # of AnomalousG and of the AnomalousTerm energy response.
+            matrix[row][column] = 2.0 * parameters[index]
             matrix[column][row] = -matrix[row][column]
             index += 1
     return matrix
