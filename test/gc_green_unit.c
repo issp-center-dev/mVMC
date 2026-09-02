@@ -742,6 +742,7 @@ static void test_hamiltonian_and_measurement(void) {
   double complex phys2[1] = {0.0};
   double complex physDC[1] = {0.0};
   double complex physN[1] = {0.0};
+  double complex physAnomalous[4] = {0.0, 0.0, 0.0, 0.0};
   const double measurementWeight = 0.37;
   int create1[1];
   int annihilate1[1];
@@ -753,6 +754,7 @@ static void test_hamiltonian_and_measurement(void) {
   double complex expectedLocal1;
   double complex expectedDC;
   double complex expectedN;
+  int anomalousIdx;
 
   initialize_state(eleIdx, eleCfg, eleNum, projCnt);
   CHECK(CalculateMAllGC_fcmp(ACTIVE, eleIdx, 0, QPS) == GC_MALL_OK,
@@ -931,6 +933,9 @@ static void test_hamiltonian_and_measurement(void) {
   PhysCisAjsCktAlt = phys2;
   PhysCisAjsCktAltDC = physDC;
   PhysNBodyG = physN;
+  NAnomalousG = 4;
+  AnomalousG = anomalousRows;
+  PhysAnomalousG = physAnomalous;
   create1[0] = 1;
   annihilate1[0] = 0;
   expectedLocal0 = brute_green(1, create1, annihilate1, baseOverlap, projCnt);
@@ -964,6 +969,21 @@ static void test_hamiltonian_and_measurement(void) {
         "measurement direct two-body mismatch");
   CHECK(cabs(physN[0] - measurementWeight * expectedN) < 8.0e-9,
         "measurement n-body mismatch");
+  for (anomalousIdx = 0; anomalousIdx < NAnomalousG; anomalousIdx++) {
+    const int rs1 = AnomalousG[anomalousIdx][1] +
+                    AnomalousG[anomalousIdx][2] * Nsite;
+    const int rs2 = AnomalousG[anomalousIdx][3] +
+                    AnomalousG[anomalousIdx][4] * Nsite;
+    const double complex expected = brute_anomalous_param(
+        AnomalousG[anomalousIdx][0], rs1, rs2, baseEleIdx, ACTIVE,
+        baseSortedOverlap, projCnt);
+    CHECK(cabs(PhysAnomalousG[anomalousIdx] -
+               measurementWeight * expected) < 8.0e-9,
+          "AnomalousG measurement row=%d", anomalousIdx);
+  }
+  CHECK(cabs(physAnomalous[0]) > 1.0e-6 &&
+            cabs(physAnomalous[2]) > 1.0e-6,
+        "AnomalousG create/remove fixture is vacuous");
   assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
                          pfSnapshot, "measurement");
 }

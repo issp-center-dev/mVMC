@@ -349,6 +349,10 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
     weightAverageReduce_fcmp(NNBodyG,vec,comm);
   }
 
+  if (NAnomalousG > 0) {
+    weightAverageReduce_fcmp(NAnomalousG, PhysAnomalousG, comm);
+  }
+
   if(NLanczosMode>0 && NLanczosStep==1){
     /* QQQQ */
     n = NLSHam*NLSHam*NLSHam*NLSHam;
