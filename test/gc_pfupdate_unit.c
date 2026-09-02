@@ -338,10 +338,12 @@ static void test_add_case(const int ncurOld, const int *configuration,
     for (qp = 0; qp < MAX_QP; qp++) {
       const double complex *slater =
           SlaterElm + (size_t)qp * (size_t)Nsite2 * (size_t)Nsite2;
+      /* PfM stores Pf(SlaterElm_x): the two-particle amplitude built on
+       * the vacuum is +SlaterElm[rsa][rsb] (|phi_GC> = exp[sum f c+c+]|0>). */
       const double complex base =
-          -slater[(size_t)rsa * (size_t)Nsite2 + (size_t)rsb];
+          slater[(size_t)rsa * (size_t)Nsite2 + (size_t)rsb];
       CHECK(close_complex(expected.pf[qp], base),
-            "%s qp=%d vacuum base Pf != X_ab", label, qp);
+            "%s qp=%d vacuum base Pf != SlaterElm_ab", label, qp);
     }
   }
 }

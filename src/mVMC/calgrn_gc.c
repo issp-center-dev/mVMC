@@ -183,6 +183,20 @@ void CalculateGreenFuncGC(const double w, const double complex ip,
           nbody, scratch.rsi, scratch.rsj, ip, ncur, myEleIdx, myEleCfg,
           myEleNum, eleProjCnt, &scratch);
     }
+#pragma omp for schedule(dynamic)
+    for (idx = 0; idx < NAnomalousG; idx++) {
+      const int type = AnomalousG[idx][0];
+      const int rs1 = AnomalousG[idx][1] + AnomalousG[idx][2] * Nsite;
+      const int rs2 = AnomalousG[idx][3] + AnomalousG[idx][4] * Nsite;
+      const double complex green =
+          type == 1
+              ? GreenFuncPairAddGC(rs1, rs2, ip, ncur, myEleIdx,
+                                   myEleCfg, myEleNum, eleProjCnt, &scratch)
+              : GreenFuncPairRemoveGC(rs1, rs2, ip, ncur, myEleIdx,
+                                      myEleCfg, myEleNum, eleProjCnt,
+                                      &scratch);
+      PhysAnomalousG[idx] += w * green;
+    }
 #pragma omp master
     { StopTimer(54); }
   }

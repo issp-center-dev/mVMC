@@ -87,6 +87,37 @@ def append_namelist_entry(filename, keyword, definition):
         destination.writelines(lines)
 
 
+def write_anomalous_g(filename, count=2, rows=None):
+    if rows is None:
+        rows = ["1 0 0 1 1\n", "0 1 1 0 0\n"]
+    with open(filename, "w") as destination:
+        destination.write("=============================================\n")
+        destination.write("NAnomalousG {}\n".format(count))
+        destination.write("=============================================\n")
+        destination.write("============ type s1 spin1 s2 spin2 =========\n")
+        destination.write("=============================================\n")
+        destination.writelines(rows)
+
+
+def replace_anomalous_term(old, new):
+    with open("anomalousterm.def") as source:
+        text = source.read()
+    if old not in text:
+        raise RuntimeError("anomalous term mutation target not found: {}".format(old))
+    with open("anomalousterm.def", "w") as destination:
+        destination.write(text.replace(old, new, 1))
+
+
+def set_anomalous_count(filename, keyword, value):
+    with open(filename) as source:
+        lines = source.readlines()
+    if len(lines) < 2:
+        raise RuntimeError("incomplete anomalous definition: {}".format(filename))
+    lines[1] = "{} {}\n".format(keyword, value)
+    with open(filename, "w") as destination:
+        destination.writelines(lines)
+
+
 def apply_gc_fixture_mutation(action):
     if action == "gc_locspin":
         with open("locspn.def") as source:
@@ -119,6 +150,81 @@ def apply_gc_fixture_mutation(action):
         append_namelist_entry("namelist.def", "OptTrans", "opttrans1.def")
     elif action == "gc_opttrans2":
         append_namelist_entry("namelist.def", "OptTrans", "opttrans2.def")
+    elif action == "anomalous_on":
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_g_on":
+        write_anomalous_g("anomalousg.def")
+        append_namelist_entry("namelist.def", "AnomalousG", "anomalousg.def")
+    elif action == "anomalous_broken_pair":
+        replace_anomalous_term("0.30 -0.10", "0.30 0.10")
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_odd":
+        set_anomalous_count("anomalousterm.def", "NAnomalousTerm", 1)
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_bad_site":
+        replace_anomalous_term("1 0 0 1 1", "1 9 0 1 1")
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_bad_spin":
+        replace_anomalous_term("1 0 0 1 1", "1 0 2 1 1")
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_bad_type":
+        replace_anomalous_term("1 0 0 1 1", "2 0 0 1 1")
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_same_op":
+        replace_anomalous_term("1 0 0 1 1", "1 0 0 0 0")
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_nonfinite":
+        replace_anomalous_term("0.30 0.10", "nan 0.10")
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_extra_token":
+        replace_anomalous_term("0.30 0.10\n", "0.30 0.10 9\n")
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_extra_row":
+        with open("anomalousterm.def", "a") as destination:
+            destination.write("1 0 1 1 0 0.20 0.00\n")
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_g_malformed":
+        write_anomalous_g("anomalousg.def", count=1, rows=["1 0 0 1\n"])
+        append_namelist_entry("namelist.def", "AnomalousG", "anomalousg.def")
+    elif action == "anomalous_negative_term_count":
+        set_anomalous_count("anomalousterm.def", "NAnomalousTerm", -1)
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_negative_g_count":
+        write_anomalous_g("anomalousg.def", count=-1, rows=[])
+        append_namelist_entry("namelist.def", "AnomalousG", "anomalousg.def")
+    elif action == "anomalous_oversized_term_count":
+        set_anomalous_count("anomalousterm.def", "NAnomalousTerm", 2147483648)
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+    elif action == "anomalous_oversized_g_count":
+        write_anomalous_g("anomalousg.def", count=2147483648, rows=[])
+        append_namelist_entry("namelist.def", "AnomalousG", "anomalousg.def")
+    elif action == "anomalous_blank_comment":
+        # HPhi-compatible layout: comment lines and blank lines between and
+        # after the data rows must be skipped by both parsers.
+        with open("anomalousterm.def") as source:
+            lines = source.readlines()
+        header, rows = lines[:5], lines[5:]
+        with open("anomalousterm.def", "w") as destination:
+            destination.writelines(header)
+            destination.write("# Hermitian pair\n")
+            destination.write(rows[0])
+            destination.write("\n")
+            destination.writelines(rows[1:])
+            destination.write("   \n\n")
+        write_anomalous_g("anomalousg.def",
+                          rows=["# create\n", "1 0 0 1 1\n", "\n",
+                                "0 1 1 0 0\n", "\n"])
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+        append_namelist_entry("namelist.def", "AnomalousG", "anomalousg.def")
+    elif action == "anomalous_counts_zero":
+        set_anomalous_count("anomalousterm.def", "NAnomalousTerm", 0)
+        with open("anomalousterm.def") as source:
+            lines = source.readlines()[:5]
+        with open("anomalousterm.def", "w") as destination:
+            destination.writelines(lines)
+        write_anomalous_g("anomalousg.def", count=0, rows=[])
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+        append_namelist_entry("namelist.def", "AnomalousG", "anomalousg.def")
     else:
         raise RuntimeError("unknown GC fixture mutation: {}".format(action))
 
@@ -149,7 +255,7 @@ def main():
             two_body_g_ex = True
         elif arg == "opttrans_mode":
             opttrans_mode = True
-        elif arg.startswith("gc_"):
+        elif arg.startswith("gc_") or arg.startswith("anomalous_"):
             gc_fixture_mutations.append(arg)
         elif arg.startswith("expect:"):
             expected_substrings.append(arg[len("expect:"):])

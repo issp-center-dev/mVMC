@@ -146,6 +146,11 @@ int *NBodyInterAllN;        /* [NNBodyInterAll] */
 int *NBodyInterAllOffset;   /* [NNBodyInterAll] */
 int **NBodyInterAllIdx;     /* [NBodyInterAllTotalFactors][4] */
 double complex *ParaNBodyInterAll;
+int NAnomalousTerm;
+int **AnomalousTerm; /* [NAnomalousTerm][5] = type,site1,spin1,site2,spin2 */
+double complex *ParaAnomalousTerm;
+int NAnomalousG;
+int **AnomalousG; /* [NAnomalousG][5] = type,site1,spin1,site2,spin2 */
 
 /* for variational parameters */
 int NGutzwillerIdx, *GutzwillerIdx; /* [Nsite] */
@@ -352,6 +357,7 @@ int NTwist, **TwistIdx;         /* TwistIdx -> SiteIdx, SpinIdx */
 double **ParaTwist;         /* [NTwist][3*Nsite*2] */
 double complex *PhysTwist; /* [NTwist] */
 double complex *PhysNBodyG; /* [NNBodyG] */
+double complex *PhysAnomalousG; /* [NAnomalousG] */
 
 
 
@@ -396,6 +402,7 @@ FILE *FileCisAjsCktAlt;
 FILE *FileCisAjsCktAltDC;
 FILE *FileTwist;
 FILE *FileNBodyG;
+FILE *FileAnomalousG;
 FILE *FileLS;
 FILE *FileLSQQQQ;
 FILE *FileLSQCisAjsQ;

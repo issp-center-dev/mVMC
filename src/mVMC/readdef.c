@@ -41,6 +41,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 char (*cFileNameListFile)[D_CharTmpReadDef] = NULL;
 
+#define GC_ANOMALOUS_HERMITE_EPS 1.0e-12
+
 int ReadDefFileError(const char *defname);
 
 int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm);
@@ -92,6 +94,13 @@ int GetInfoOrbitalAntiParallel(FILE *fp, int **Array, int *ArrayOpt, int **Array
 
 int GetInfoInterAll(FILE *fp, int **ArrayIdx, double complex *ArrayValue,
                     int Nsite, int NArray, char *defname);
+
+int GetInfoAnomalousTerm(FILE *fp, int **ArrayIdx,
+                         double complex *ArrayValue, int Nsite, int NArray,
+                         char *defname);
+
+int GetInfoAnomalousG(FILE *fp, int **ArrayIdx, int Nsite, int NArray,
+                      char *defname);
 
 int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara, int *ArrayOpt, int **ArraySgn,
                     int _iFlagOptTrans, int *iOptCount, int _fidx, int _APFlag, int Nsite, int NArray, char *defname);
@@ -169,6 +178,32 @@ static int ParseStrictLongLong(const char *text, long long *value) {
   parsed = strtoll(text, &end, 10);
   if (errno == ERANGE || end == text || *end != '\0') return 1;
   *value = parsed;
+  return 0;
+}
+
+static int ReadAnomalousCount(FILE *fp, int *result,
+                              const char *expectedName,
+                              const char *defname) {
+  char header[D_FileNameMax];
+  char line[D_FileNameMax];
+  char parsedName[D_FileNameMax];
+  char parsedValue[D_FileNameMax];
+  long long value;
+  int offset = 0;
+  if (fp == NULL || result == NULL || expectedName == NULL ||
+      fgets(header, sizeof(header), fp) == NULL ||
+      fgets(line, sizeof(line), fp) == NULL ||
+      sscanf(line, "%255s %255s%n", parsedName, parsedValue, &offset) != 2 ||
+      !LineTailIsWhitespace(line, offset) ||
+      strcmp(parsedName, expectedName) != 0 ||
+      ParseStrictLongLong(parsedValue, &value) != 0 ||
+      value < 0 || value > INT_MAX) {
+    fprintf(stderr,
+            "Error in %s: %s must be an integer in [0, INT_MAX].\n",
+            defname, expectedName);
+    return 1;
+  }
+  *result = (int)value;
   return 0;
 }
 
@@ -563,6 +598,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   int hasLattice = 0;
   int hasBF = 0;
   int hasBFRange = 0;
+  int hasAnomalousTerm = 0;
+  int hasAnomalousG = 0;
   int iFlgOrbitalAntiParallel = 0;
   int iFlgOrbitalParallel = 0;
   int itmp = 0;
@@ -602,6 +639,9 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     hasLattice = (strcmp(cFileNameListFile[KWLattice], "") != 0);
     hasBF = (strcmp(cFileNameListFile[KWBF], "") != 0);
     hasBFRange = (strcmp(cFileNameListFile[KWBFRange], "") != 0);
+    hasAnomalousTerm =
+        (strcmp(cFileNameListFile[KWAnomalousTerm], "") != 0);
+    hasAnomalousG = (strcmp(cFileNameListFile[KWAnomalousG], "") != 0);
 
     SetDefaultValuesModPara(bufInt, bufDouble);
     iret = GetInfoFromModPara(bufInt, bufDouble);
@@ -881,6 +921,22 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             cerr = ReadBuffInt(fp, &bufInt[IdxNBF]);
             break;
 
+          case KWAnomalousTerm:
+            cerr = "";
+            if (ReadAnomalousCount(fp, &bufInt[IdxNAnomalousTerm],
+                                   "NAnomalousTerm", defname) != 0) {
+              info = ReadDefFileError(defname);
+            }
+            break;
+
+          case KWAnomalousG:
+            cerr = "";
+            if (ReadAnomalousCount(fp, &bufInt[IdxNAnomalousG],
+                                   "NAnomalousG", defname) != 0) {
+              info = ReadDefFileError(defname);
+            }
+            break;
+
           default:
             cerr = "";
             break;
@@ -986,6 +1042,23 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     if (bufInt[IdxNe] > INT_MAX / 2) {
       fprintf(stderr,
               "Error: Ne is too large: 2*Ne would overflow int.\n");
+      info = 1;
+    }
+
+    if (bufInt[IdxNGrandCanonical] == 0 &&
+        (hasAnomalousTerm || hasAnomalousG)) {
+      fprintf(stderr,
+              "Error: AnomalousTerm/AnomalousG requires NGrandCanonical=1.\n");
+      info = 1;
+    }
+    if (hasAnomalousG && bufInt[IdxVMCCalcMode] != 1) {
+      fprintf(stderr, "Error: AnomalousG requires NVMCCalMode=1.\n");
+      info = 1;
+    }
+    if (bufInt[IdxNAnomalousTerm] % 2 != 0) {
+      fprintf(stderr,
+              "Error: AnomalousTerm terms must appear as adjacent Hermite "
+              "pairs.\n");
       info = 1;
     }
 
@@ -1318,6 +1391,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NLanczosEstimatorMode = bufInt[IdxLanczosEstimatorMode];
   FlagGrandCanonical = bufInt[IdxNGrandCanonical];
   NGCInitNelec = bufInt[IdxNGCInitNelec];
+  NAnomalousTerm = bufInt[IdxNAnomalousTerm];
+  NAnomalousG = bufInt[IdxNAnomalousG];
   if (NLanczosSupportMode != 0 && NLanczosSupportMode != 1) {
     if (rank == 0) {
       fprintf(stderr, "Error: NLanczosSupportMode must be 0 or 1.\n");
@@ -1776,6 +1851,10 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                                  "NBodyInterAll metadata");
     sizeInfo |= CheckedCountTerm(&totalInt, NBodyInterAllTotalFactors, 4, 1,
                                  "NBodyInterAll factors");
+    sizeInfo |= CheckedCountTerm(&totalInt, NAnomalousTerm, 5, 1,
+                                 "AnomalousTerm");
+    sizeInfo |= CheckedCountTerm(&totalInt, NAnomalousG, 5, 1,
+                                 "AnomalousG");
     sizeInfo |= CheckedCountTerm(&totalInt, Nsite, NQPOptTrans, 2,
                                  "QPOptTrans/QPOptTransSgn");
     sizeInfo |= CheckedCountTerm(&totalInt, Nsite, 4, 1, "LatticeIdx");
@@ -2111,6 +2190,18 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
             info = 1;
           break;
 
+        case KWAnomalousTerm:
+          if (GetInfoAnomalousTerm(fp, AnomalousTerm, ParaAnomalousTerm,
+                                   Nsite, NAnomalousTerm, defname) != 0)
+            info = 1;
+          break;
+
+        case KWAnomalousG:
+          if (GetInfoAnomalousG(fp, AnomalousG, Nsite, NAnomalousG,
+                                defname) != 0)
+            info = 1;
+          break;
+
         case KWOptTrans:
           /*qpopttrans.def------------------------------------*/
           fidx = NProj + FlagRBM * NRBM + NProjBF + NSlater;
@@ -2274,6 +2365,7 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   SafeMpiBcast_fcmp(ParaLsTransfer, NLsTransfer, comm);
   SafeMpiBcast_fcmp(ParaLsInterAll, NLsInterAll, comm);
   SafeMpiBcast_fcmp(ParaNBodyInterAll, NNBodyInterAll, comm);
+  SafeMpiBcast_fcmp(ParaAnomalousTerm, NAnomalousTerm, comm);
   SafeMpiBcast(ParaCoulombIntra, NTotalDefDouble, comm);
   SafeMpiBcast_fcmp(ParaQPTrans, NQPTrans, comm);
 #endif /* _mpi_use */
@@ -3018,6 +3110,8 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[IdxLanczosEstimatorMode] = 0;
   bufInt[IdxNGrandCanonical] = 0;
   bufInt[IdxNGCInitNelec] = -1;
+  bufInt[IdxNAnomalousTerm] = 0;
+  bufInt[IdxNAnomalousG] = 0;
 
 //RBM
   bufInt[IdxNneuron] = 0;
@@ -4767,6 +4861,161 @@ int GetInfoInterAll(FILE *fp, int **ArrayIdx, double complex *ArrayValue,
   }
   if (idx != NArray) info = ReadDefFileError(defname);
   return info;
+}
+
+int GetInfoAnomalousTerm(FILE *fp, int **ArrayIdx,
+                         double complex *ArrayValue, int Nsite, int NArray,
+                         char *defname) {
+  char line[D_FileNameMax];
+  int idx = 0;
+  int type, s1, sp1, s2, sp2;
+  double re, im;
+  int nread;
+
+  if (NArray == 0) return 0;
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    /* Blank and '#' comment lines are skipped like HPhi and NBodyInterAll. */
+    if (IsIgnorableNBodyGLine(line)) continue;
+    if (idx >= NArray) {
+      fprintf(stderr, "Error in %s: too many AnomalousTerm rows.\n",
+              defname);
+      return 1;
+    }
+    nread = 0;
+    if (sscanf(line, "%d %d %d %d %d %lf %lf%n",
+               &type, &s1, &sp1, &s2, &sp2, &re, &im, &nread) != 7) {
+      fprintf(stderr, "Error in %s: malformed AnomalousTerm row.\n",
+              defname);
+      return 1;
+    }
+    if (!LineTailIsWhitespace(line, nread)) {
+      fprintf(stderr,
+              "Error in %s: AnomalousTerm line has extra fields.\n",
+              defname);
+      return 1;
+    }
+    if (!isfinite(re) || !isfinite(im)) {
+      fprintf(stderr,
+              "Error in %s: AnomalousTerm coefficient is not finite.\n",
+              defname);
+      return 1;
+    }
+    if (type != 0 && type != 1) {
+      fprintf(stderr, "Error in %s: AnomalousTerm type must be 0 or 1.\n",
+              defname);
+      return 1;
+    }
+    if (CheckSite(s1, Nsite) != 0 || CheckSite(s2, Nsite) != 0) {
+      fprintf(stderr,
+              "Error in %s: Site index of AnomalousTerm is incorrect.\n",
+              defname);
+      return 1;
+    }
+    if (sp1 < 0 || sp1 > 1 || sp2 < 0 || sp2 > 1) {
+      fprintf(stderr,
+              "Error in %s: Spin index of AnomalousTerm is incorrect.\n",
+              defname);
+      return 1;
+    }
+    if (s1 == s2 && sp1 == sp2) {
+      fprintf(stderr,
+              "Error in %s: AnomalousTerm cannot use the same fermion "
+              "operator twice in one pair.\n",
+              defname);
+      return 1;
+    }
+    ArrayIdx[idx][0] = type;
+    ArrayIdx[idx][1] = s1;
+    ArrayIdx[idx][2] = sp1;
+    ArrayIdx[idx][3] = s2;
+    ArrayIdx[idx][4] = sp2;
+    ArrayValue[idx] = re + im * I;
+    idx++;
+  }
+  if (idx != NArray) {
+    fprintf(stderr,
+            "Error in %s: AnomalousTerm row count does not match header.\n",
+            defname);
+    return 1;
+  }
+  for (idx = 0; idx + 1 < NArray; idx += 2) {
+    const int *a = ArrayIdx[idx];
+    const int *b = ArrayIdx[idx + 1];
+    if (b[0] != 1 - a[0] || b[1] != a[3] || b[2] != a[4] ||
+        b[3] != a[1] || b[4] != a[2] ||
+        cabs(ArrayValue[idx + 1] - conj(ArrayValue[idx])) >
+            GC_ANOMALOUS_HERMITE_EPS) {
+      fprintf(stderr,
+              "Error in %s: AnomalousTerm Hermite pair is inconsistent "
+              "at rows %d-%d.\n",
+              defname, idx + 1, idx + 2);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+int GetInfoAnomalousG(FILE *fp, int **ArrayIdx, int Nsite, int NArray,
+                      char *defname) {
+  char line[D_FileNameMax];
+  int idx = 0;
+  int type, s1, sp1, s2, sp2;
+  int nread;
+
+  if (NArray == 0) return 0;
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    if (IsIgnorableNBodyGLine(line)) continue;
+    if (idx >= NArray) {
+      fprintf(stderr, "Error in %s: too many AnomalousG rows.\n", defname);
+      return 1;
+    }
+    nread = 0;
+    if (sscanf(line, "%d %d %d %d %d%n",
+               &type, &s1, &sp1, &s2, &sp2, &nread) != 5) {
+      fprintf(stderr, "Error in %s: malformed AnomalousG row.\n", defname);
+      return 1;
+    }
+    if (!LineTailIsWhitespace(line, nread)) {
+      fprintf(stderr, "Error in %s: AnomalousG line has extra fields.\n",
+              defname);
+      return 1;
+    }
+    if (type != 0 && type != 1) {
+      fprintf(stderr, "Error in %s: AnomalousG type must be 0 or 1.\n",
+              defname);
+      return 1;
+    }
+    if (CheckSite(s1, Nsite) != 0 || CheckSite(s2, Nsite) != 0) {
+      fprintf(stderr, "Error in %s: Site index of AnomalousG is incorrect.\n",
+              defname);
+      return 1;
+    }
+    if (sp1 < 0 || sp1 > 1 || sp2 < 0 || sp2 > 1) {
+      fprintf(stderr, "Error in %s: Spin index of AnomalousG is incorrect.\n",
+              defname);
+      return 1;
+    }
+    if (s1 == s2 && sp1 == sp2) {
+      fprintf(stderr,
+              "Error in %s: AnomalousG cannot use the same fermion "
+              "operator twice in one pair.\n",
+              defname);
+      return 1;
+    }
+    ArrayIdx[idx][0] = type;
+    ArrayIdx[idx][1] = s1;
+    ArrayIdx[idx][2] = sp1;
+    ArrayIdx[idx][3] = s2;
+    ArrayIdx[idx][4] = sp2;
+    idx++;
+  }
+  if (idx != NArray) {
+    fprintf(stderr,
+            "Error in %s: AnomalousG row count does not match header.\n",
+            defname);
+    return 1;
+  }
+  return 0;
 }
 
 int GetInfoOrbitalAntiParallel(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, int *iOptCount,

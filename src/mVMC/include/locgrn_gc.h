@@ -32,6 +32,14 @@ double complex GreenFuncNGC(int n, int *rsi, int *rsj, double complex ip,
                             int ncur, int *eleIdx, int *eleCfg, int *eleNum,
                             const int *eleProjCnt,
                             GCGreenScratch *scratch);
+double complex GreenFuncPairAddGC(
+    int rsa, int rsb, double complex ip, int ncur, const int *eleIdx,
+    const int *eleCfg, int *eleNum, const int *eleProjCnt,
+    GCGreenScratch *scratch);
+double complex GreenFuncPairRemoveGC(
+    int rsi, int rsj, double complex ip, int ncur, const int *eleIdx,
+    const int *eleCfg, int *eleNum, const int *eleProjCnt,
+    GCGreenScratch *scratch);
 double complex CalculateHamiltonianGC(double complex ip, int ncur,
                                       int *eleIdx, int *eleCfg, int *eleNum,
                                       const int *eleProjCnt);

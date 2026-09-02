@@ -11,6 +11,7 @@ version.
 #include <complex.h>
 #include <math.h>
 
+#include "include/gc_size.h"
 #include "include/global.h"
 #include "include/locgrn_gc.h"
 #include "include/pfupdate_gc.h"
@@ -237,6 +238,78 @@ double complex GreenFuncNGC(const int n, int *rsi, int *rsj,
     eleNum[destination] = 0;
     eleNum[source] = 1;
   }
+  return conj(projectionRatio * candidateOverlap / ip);
+}
+
+double complex GreenFuncPairAddGC(
+    const int rsa, const int rsb, const double complex ip,
+    const int ncur, const int *eleIdx, const int *eleCfg, int *eleNum,
+    const int *eleProjCnt, GCGreenScratch *scratch) {
+  double projectionRatio;
+  double complex candidateOverlap;
+  (void)eleCfg;
+  if (rsa == rsb) return 0.0;
+  if (eleNum[rsa] != 0 || eleNum[rsb] != 0) return 0.0;
+  /* Defensive only: GC sets NsizeMax = Nsite2, so two empty orbitals
+   * already imply ncur + 2 <= NsizeMax. */
+  if (ncur + 2 > NsizeMax) return 0.0;
+
+  eleNum[rsa] = 1;
+  eleNum[rsb] = 1;
+  MakeProjCnt(scratch->projCntNew, eleNum);
+  projectionRatio = ProjRatio(scratch->projCntNew, eleProjCnt);
+  eleNum[rsa] = 0;
+  eleNum[rsb] = 0;
+
+  CalculateNewPfMAddGCWorkspace(rsa, rsb, scratch->pfMNew, eleIdx, ncur,
+                                0, NQPFull, scratch->vec,
+                                scratch->vec + NsizeMax);
+  candidateOverlap = GCProjectedCandidate(scratch->pfMNew);
+  return conj(projectionRatio * candidateOverlap / ip);
+}
+
+double complex GreenFuncPairRemoveGC(
+    const int rsi, const int rsj, const double complex ip,
+    const int ncur, const int *eleIdx, const int *eleCfg, int *eleNum,
+    const int *eleProjCnt, GCGreenScratch *scratch) {
+  const size_t invStride =
+      GCCheckedMulSize((size_t)NsizeMax, (size_t)NsizeMax);
+  double projectionRatio;
+  double complex candidateOverlap;
+  double sign;
+  int pi;
+  int pj;
+  int p0;
+  int p1;
+  int qpidx;
+  (void)eleIdx;
+  if (rsi == rsj) return 0.0;
+  if (eleNum[rsi] == 0 || eleNum[rsj] == 0) return 0.0;
+  if (ncur < 2) return 0.0;
+  pi = eleCfg[rsi];
+  pj = eleCfg[rsj];
+  /* Operator signs (-1)^{p_i+p_j-[p_i>p_j]} times the minor identity
+   * Pf(X_del)/Pf(X) = (-1)^{p0+p1} (X^{-1})_{p0 p1} give (-1)^{[p_i>p_j]}
+   * for X = -SlaterElm.  PfM stores Pf(SlaterElm_x), and removing two
+   * particles flips (-1)^{n/2}, hence the extra overall minus. */
+  sign = (pi < pj) ? -1.0 : 1.0;
+  p0 = (pi < pj) ? pi : pj;
+  p1 = (pi < pj) ? pj : pi;
+
+  eleNum[rsi] = 0;
+  eleNum[rsj] = 0;
+  MakeProjCnt(scratch->projCntNew, eleNum);
+  projectionRatio = ProjRatio(scratch->projCntNew, eleProjCnt);
+  eleNum[rsi] = 1;
+  eleNum[rsj] = 1;
+
+  for (qpidx = 0; qpidx < NQPFull; qpidx++) {
+    const double complex *invM = InvM + (size_t)qpidx * invStride;
+    scratch->pfMNew[qpidx] =
+        sign * invM[(size_t)p0 * (size_t)NsizeMax + (size_t)p1] *
+        PfM[qpidx];
+  }
+  candidateOverlap = GCProjectedCandidate(scratch->pfMNew);
   return conj(projectionRatio * candidateOverlap / ip);
 }
 

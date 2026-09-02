@@ -141,6 +141,11 @@ void InitFilePhysCal(int i, int rank) {
     FileNBodyG = fopen(fileName, "w");
   }
 
+  if(NAnomalousG>0){
+    sprintf(fileName, "%s_anomalousg_%03d.dat", CDataFileHead, idx);
+    FileAnomalousG = fopen(fileName, "w");
+  }
+
   if(NLanczosMode>0 && NLanczosStep==1){
     sprintf(fileName, "%s_ls_out_%03d.dat", CDataFileHead, idx);
     FileLS = fopen(fileName, "w");
@@ -248,6 +253,9 @@ void CloseFilePhysCal(int rank) {
   }
   if(NNBodyG>0){
     fclose(FileNBodyG);
+  }
+  if(NAnomalousG>0){
+    fclose(FileAnomalousG);
   }
 
   if(NLanczosMode>0 && NLanczosStep==1){

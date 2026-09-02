@@ -5,6 +5,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert.py DESTINATION ${CMAKE_BINA
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_invalid_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_hphi_anomalous.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_gc_canonical_baseline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sr.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -1228,6 +1229,70 @@ add_gc_invalid_test(GC_Invalid_MPTrans "initially requires" NMPTrans=2)
 add_gc_invalid_test(GC_Invalid_QPOptTrans "initially requires" gc_opttrans2 opttrans_mode)
 add_gc_invalid_test(GC_Invalid_OptTrans "does not support OptTrans" gc_opttrans1 opttrans_mode)
 
+# Phase 2: anomalous input negatives.
+add_gc_invalid_test(GC_Invalid_AnomalousCanonical
+    "requires NGrandCanonical=1" anomalous_on NGrandCanonical=0)
+add_gc_invalid_test(GC_Invalid_AnomalousCanonicalZero
+    "requires NGrandCanonical=1" anomalous_counts_zero NGrandCanonical=0)
+add_gc_invalid_test(GC_Invalid_AnomalousMode0G
+    "AnomalousG requires NVMCCalMode=1" anomalous_g_on NVMCCalMode=0)
+add_gc_invalid_test(GC_Invalid_AnomalousMode0GZero
+    "AnomalousG requires NVMCCalMode=1" anomalous_counts_zero NVMCCalMode=0)
+add_gc_invalid_test(GC_Invalid_AnomalousHermitePair
+    "Hermite pair" anomalous_broken_pair)
+add_gc_invalid_test(GC_Invalid_AnomalousOddCount
+    "must appear as adjacent Hermite pairs" anomalous_odd)
+add_gc_invalid_test(GC_Invalid_AnomalousRange
+    "Site index" anomalous_bad_site)
+add_gc_invalid_test(GC_Invalid_AnomalousBadSpin
+    "Spin index" anomalous_bad_spin)
+add_gc_invalid_test(GC_Invalid_AnomalousBadType
+    "type must be 0 or 1" anomalous_bad_type)
+add_gc_invalid_test(GC_Invalid_AnomalousSameOp
+    "same fermion operator" anomalous_same_op)
+add_gc_invalid_test(GC_Invalid_AnomalousNonFinite
+    "coefficient" anomalous_nonfinite)
+add_gc_invalid_test(GC_Invalid_AnomalousExtraToken
+    "extra fields" anomalous_extra_token)
+add_gc_invalid_test(GC_Invalid_AnomalousTooManyRows
+    "AnomalousTerm" anomalous_extra_row)
+add_gc_invalid_test(GC_Invalid_AnomalousGMalformed
+    "AnomalousG" anomalous_g_malformed)
+add_gc_invalid_test(GC_Invalid_AnomalousNegativeTermCount
+    "NAnomalousTerm must be an integer in [0, INT_MAX]"
+    anomalous_negative_term_count)
+add_gc_invalid_test(GC_Invalid_AnomalousNegativeGCount
+    "NAnomalousG must be an integer in [0, INT_MAX]"
+    anomalous_negative_g_count)
+add_gc_invalid_test(GC_Invalid_AnomalousOversizedTermCount
+    "NAnomalousTerm must be an integer in [0, INT_MAX]"
+    anomalous_oversized_term_count)
+add_gc_invalid_test(GC_Invalid_AnomalousOversizedGCount
+    "NAnomalousG must be an integer in [0, INT_MAX]"
+    anomalous_oversized_g_count)
+
+add_python_vmc_test_invalid_expert_with_updates(
+    GC_Anomalous_CountZero gc_invalid/base "Finish calculation."
+    allow_success anomalous_counts_zero)
+add_python_vmc_test_invalid_expert_with_updates(
+    GC_Anomalous_CountZero_mpi gc_invalid/base "Finish calculation."
+    allow_success anomalous_counts_zero)
+set_tests_properties(GC_Anomalous_CountZero_mpi PROPERTIES
+    ENVIRONMENT
+      "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+
+# Positive HPhi-compatible layout: '#' comment lines and blank lines inside
+# and after the data rows are skipped (independent review M-1).
+add_python_vmc_test_invalid_expert_with_updates(
+    GC_Anomalous_BlankComment gc_invalid/base "Finish calculation."
+    allow_success anomalous_blank_comment)
+add_python_vmc_test_invalid_expert_with_updates(
+    GC_Anomalous_BlankComment_mpi gc_invalid/base "Finish calculation."
+    allow_success anomalous_blank_comment)
+set_tests_properties(GC_Anomalous_BlankComment_mpi PROPERTIES
+    ENVIRONMENT
+      "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+
 add_test(NAME GC_Exact_Oracle_SelfTest
     COMMAND ${PYTHON_EXECUTABLE} grandcanonical_exact_oracle.py)
 set_tests_properties(GC_Exact_Oracle_SelfTest PROPERTIES
@@ -1240,6 +1305,17 @@ add_gc_oracle_test(GC_MPI_NSplit2_CalMode0 mpi_nsplit2_mode0)
 add_gc_oracle_test(GC_MPI_NSplit2_CalMode1 mpi_nsplit2_mode1)
 add_gc_oracle_test(GC_MPI_NSplit1_CalMode0 mpi_nsplit1_mode0)
 add_gc_oracle_test(GC_MPI_NSplit1_CalMode1 mpi_nsplit1_mode1)
+add_gc_oracle_test(GC_Anomalous_Exact anomalous)
+add_gc_oracle_test(GC_Anomalous_Energy_Response anomalous_energy)
+add_gc_oracle_test(GC_Anomalous_SR anomalous_sr)
+add_gc_oracle_test(GC_Anomalous_MPI_NSplit2 anomalous_mpi)
+add_gc_oracle_test(GC_Anomalous_Vacuum_Smoke anomalous_vacuum)
+add_test(NAME GC_HPhi_CrossCheck
+    COMMAND ${PYTHON_EXECUTABLE} compare_hphi_anomalous.py)
+set_tests_properties(GC_HPhi_CrossCheck PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    RESOURCE_LOCK "gc_hphi_crosscheck"
+    SKIP_RETURN_CODE 77)
 
 add_test(NAME GC_OddNCond_Positive
     COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base

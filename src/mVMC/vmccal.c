@@ -880,6 +880,11 @@ void clearPhysQuantity(){
 #pragma omp parallel for default(shared) private(i)
     for(i=0;i<NNBodyG;i++) vec[i] = 0.0+0.0*I;
 
+    if (NAnomalousG > 0) {
+#pragma omp parallel for default(shared) private(i)
+      for(i=0;i<NAnomalousG;i++) PhysAnomalousG[i] = 0.0+0.0*I;
+    }
+
     if(NLanczosMode>0 && NLanczosStep==1) {
       /* QQQQ, LSLQ */
         //[TODO]: Check the value n

@@ -4,6 +4,8 @@ import cmath
 import math
 import sys
 
+import numpy as np
+
 
 NSITE = 2
 NORBITAL = 2 * NSITE
@@ -74,9 +76,25 @@ def nbody(fused_pairs):
     return tuple(operators)
 
 
+def pair_create(first, second):
+    return (("c", first), ("c", second))
+
+
+def pair_remove(first, second):
+    return (("a", first), ("a", second))
+
+
 def adjoint(operators):
     return tuple(("a" if kind == "c" else "c", orbital)
                  for kind, orbital in reversed(operators))
+
+
+ANOMALOUS_G_OPERATORS = (
+    (1, 0, 3, pair_create(0, 3)),
+    (0, 3, 0, pair_remove(3, 0)),
+    (1, 3, 0, pair_create(3, 0)),
+    (0, 0, 3, pair_remove(0, 3)),
+)
 
 
 def default_parameters():
@@ -97,8 +115,13 @@ def slater_matrix(parameters):
     index = 0
     for row in range(NORBITAL):
         for column in range(row + 1, NORBITAL):
-            # OrbitalGeneral stores one upper-triangle parameter and expands
-            # it as f_ij-f_ji = 2*f_ij.
+            # OrbitalGeneral expands one upper-triangle parameter as
+            # F_ij = f_ij-f_ji = 2*f_ij, and the grand-canonical state is
+            # |phi_GC> = exp[sum_{IJ} f_IJ c+_I c+_J]|0>, whose N-particle
+            # amplitude is Pf(F_x) (design spec; mVMC stores PfM as
+            # Pf(SlaterElm_x)).  The relative sign between N sectors is
+            # invisible to number-conserving observables but fixes the sign
+            # of AnomalousG and of the AnomalousTerm energy response.
             matrix[row][column] = 2.0 * parameters[index]
             matrix[column][row] = -matrix[row][column]
             index += 1
@@ -139,7 +162,7 @@ def expectation(wave, operators):
     return numerator / denominator
 
 
-def model_terms(mu=0.0):
+def model_terms(mu=0.0, delta=None):
     up0, up1, down0, down1 = 0, 1, 2, 3
     terms = []
 
@@ -175,6 +198,11 @@ def model_terms(mu=0.0):
     nbody_ops = nbody(((up0, up1), (down0, down0), (up1, up1)))
     terms.append(("nbody_inter_all", 0.07, nbody_ops))
     terms.append(("nbody_inter_all", 0.07, adjoint(nbody_ops)))
+    if delta is not None:
+        create_ops = pair_create(0, 3)
+        terms.append(("anomalous", delta, create_ops))
+        terms.append(("anomalous", delta.conjugate(),
+                      adjoint(create_ops)))
     return tuple(terms)
 
 
@@ -191,10 +219,10 @@ def hamiltonian_action(wave, terms):
     return result
 
 
-def exact_observables(parameters=None, jastrow=0.0, mu=0.0):
+def exact_observables(parameters=None, jastrow=0.0, mu=0.0, delta=None):
     wave = wavefunction(parameters, jastrow)
     denominator = norm(wave)
-    action = hamiltonian_action(wave, model_terms(mu))
+    action = hamiltonian_action(wave, model_terms(mu, delta))
     energy = sum(wave[state].conjugate() * action[state] for state in wave) / denominator
     energy2 = sum(abs(action[state]) ** 2 for state in wave) / denominator
     number = sum(abs(amplitude) ** 2 * bin(state).count("1")
@@ -205,6 +233,10 @@ def exact_observables(parameters=None, jastrow=0.0, mu=0.0):
         ((out_orbital, in_orbital), expectation(wave, one_body(out_orbital, in_orbital)))
         for out_orbital in range(NORBITAL) for in_orbital in range(NORBITAL)
     )
+    anomalous_g = dict(
+        ((operator_type, first, second), expectation(wave, operators))
+        for operator_type, first, second, operators in ANOMALOUS_G_OPERATORS
+    )
     return {
         "wave": wave,
         "energy": energy,
@@ -213,25 +245,73 @@ def exact_observables(parameters=None, jastrow=0.0, mu=0.0):
         "number2": number2,
         "variance_number": number2 - number * number,
         "greens1": greens1,
+        "anomalous_g": anomalous_g,
     }
 
 
-def energy(parameters, component_jastrow=0.0, mu=0.0):
-    return exact_observables(parameters, component_jastrow, mu)["energy"].real
+def sector_hamiltonian(basis, mu=0.0, delta=None):
+    basis_index = dict((state, index) for index, state in enumerate(basis))
+    matrix = np.zeros((len(basis), len(basis)), dtype=np.complex128)
+    for column, state in enumerate(basis):
+        for unused_label, coefficient, operators in model_terms(mu, delta):
+            transformed = apply_ops(state, operators)
+            if transformed is None:
+                continue
+            target, sign = transformed
+            if target in basis_index:
+                matrix[basis_index[target], column] += coefficient * sign
+    return matrix
 
 
-def parameter_gradient(parameter_index, imaginary=False, jastrow=0.0, mu=0.0):
+def even_sector_eigenvalues(mu=0.0, delta=None):
+    return np.linalg.eigvalsh(sector_hamiltonian(EVEN_BASIS, mu, delta))
+
+
+def ed_ground_state(mu=0.0, delta=None):
+    eigenvalues, eigenvectors = np.linalg.eigh(
+        sector_hamiltonian(EVEN_BASIS, mu, delta))
+    vector = eigenvectors[:, 0]
+    wave = dict((state, vector[index])
+                for index, state in enumerate(EVEN_BASIS))
+    number = sum(abs(vector[index]) ** 2 * bin(state).count("1")
+                 for index, state in enumerate(EVEN_BASIS))
+    anomalous_g = dict(
+        ((operator_type, first, second), expectation(wave, operators))
+        for operator_type, first, second, operators in ANOMALOUS_G_OPERATORS
+    )
+    return {
+        "energy": eigenvalues[0],
+        "number": number,
+        "anomalous_g": anomalous_g,
+        "vector": vector,
+    }
+
+
+def spectra_match(first, second, tolerance):
+    return len(first) == len(second) and all(
+        abs(left - right) <= tolerance
+        for left, right in zip(first, second)
+    )
+
+
+def energy(parameters, component_jastrow=0.0, mu=0.0, delta=None):
+    return exact_observables(parameters, component_jastrow, mu,
+                             delta)["energy"].real
+
+
+def parameter_gradient(parameter_index, imaginary=False, jastrow=0.0,
+                       mu=0.0, delta=None):
     parameters = list(default_parameters())
     wave = wavefunction(parameters, jastrow)
-    action = hamiltonian_action(wave, model_terms(mu))
+    action = hamiltonian_action(wave, model_terms(mu, delta))
     denominator = norm(wave)
     mean_h = sum(wave[state].conjugate() * action[state] for state in wave) / denominator
     epsilon = 1.0e-7
     plus = list(parameters)
     minus = list(parameters)
-    delta = 1j * epsilon if imaginary else epsilon
-    plus[parameter_index] += delta
-    minus[parameter_index] -= delta
+    parameter_step = 1j * epsilon if imaginary else epsilon
+    plus[parameter_index] += parameter_step
+    minus[parameter_index] -= parameter_step
     wave_plus = wavefunction(plus, jastrow)
     wave_minus = wavefunction(minus, jastrow)
     mean_o = 0.0j
@@ -247,13 +327,15 @@ def parameter_gradient(parameter_index, imaginary=False, jastrow=0.0, mu=0.0):
     return covariance
 
 
-def finite_difference(parameter_index, imaginary, epsilon, jastrow=0.0, mu=0.0):
+def finite_difference(parameter_index, imaginary, epsilon, jastrow=0.0,
+                      mu=0.0, delta=None):
     plus = list(default_parameters())
     minus = list(default_parameters())
-    delta = 1j * epsilon if imaginary else epsilon
-    plus[parameter_index] += delta
-    minus[parameter_index] -= delta
-    return (energy(plus, jastrow, mu) - energy(minus, jastrow, mu)) / (2.0 * epsilon)
+    parameter_step = 1j * epsilon if imaginary else epsilon
+    plus[parameter_index] += parameter_step
+    minus[parameter_index] -= parameter_step
+    return (energy(plus, jastrow, mu, delta) -
+            energy(minus, jastrow, mu, delta)) / (2.0 * epsilon)
 
 
 def self_test():
@@ -265,6 +347,20 @@ def self_test():
     # Hermiticity of the full term inventory is exposed by a real energy.
     if abs(observable["energy"].imag) > 1.0e-12:
         raise AssertionError("Hamiltonian inventory is not Hermitian")
+    observable_delta = exact_observables(jastrow=0.23, mu=0.4,
+                                         delta=0.4)
+    if abs(observable_delta["energy"].imag) > 1.0e-12:
+        raise AssertionError("anomalous Hamiltonian inventory is not Hermitian")
+    if not spectra_match(even_sector_eigenvalues(0.4, None),
+                         even_sector_eigenvalues(0.4, 0.0), 1.0e-12):
+        raise AssertionError("delta=0 spectrum changed")
+    if abs(ed_ground_state(0.4, 0.4)["number"] -
+           ed_ground_state(0.4, None)["number"]) <= 1.0e-3:
+        raise AssertionError("ED ground state does not respond to pairing")
+    if abs(observable_delta["number"] - observable["number"]) > 1.0e-12:
+        raise AssertionError("fixed-f particle number depends on delta")
+    if abs(observable_delta["energy"] - observable["energy"]) <= 1.0e-3:
+        raise AssertionError("fixed-f energy does not respond to delta")
     for parameter_index, imaginary in ((5, False), (5, True)):
         exact = parameter_gradient(parameter_index, imaginary, 0.23, 0.4)
         fd1 = finite_difference(parameter_index, imaginary, 1.0e-5, 0.23, 0.4)

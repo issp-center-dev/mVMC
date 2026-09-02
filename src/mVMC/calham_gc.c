@@ -190,6 +190,22 @@ double complex CalculateHamiltonianGC(const double complex ip,
           nbody, scratch.rsi, scratch.rsj, ip, ncur, myEleIdx, myEleCfg,
           myEleNum, eleProjCnt, &scratch);
     }
+#pragma omp for schedule(dynamic)
+    for (idx = 0; idx < NAnomalousTerm; idx++) {
+      const int type = AnomalousTerm[idx][0];
+      const int rs1 =
+          AnomalousTerm[idx][1] + AnomalousTerm[idx][2] * Nsite;
+      const int rs2 =
+          AnomalousTerm[idx][3] + AnomalousTerm[idx][4] * Nsite;
+      const double complex green =
+          type == 1
+              ? GreenFuncPairAddGC(rs1, rs2, ip, ncur, myEleIdx,
+                                   myEleCfg, myEleNum, eleProjCnt, &scratch)
+              : GreenFuncPairRemoveGC(rs1, rs2, ip, ncur, myEleIdx,
+                                      myEleCfg, myEleNum, eleProjCnt,
+                                      &scratch);
+      myEnergy += ParaAnomalousTerm[idx] * green;
+    }
 #pragma omp master
     { StopTimer(72); }
     energy += myEnergy;

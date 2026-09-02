@@ -1072,6 +1072,17 @@ void outputData() {
       fprintf(FileNBodyG, "\n");
     }
 
+    if (NAnomalousG > 0) {
+      for (i = 0; i < NAnomalousG; i++) {
+        fprintf(FileAnomalousG,
+                "%d %d %d %d %d % .18e % .18e\n",
+                AnomalousG[i][0], AnomalousG[i][1], AnomalousG[i][2],
+                AnomalousG[i][3], AnomalousG[i][4],
+                creal(PhysAnomalousG[i]), cimag(PhysAnomalousG[i]));
+      }
+      fprintf(FileAnomalousG, "\n");
+    }
+
     if (NLanczosMode > 0 && NLanczosEstimatorMode == 0) {
       if (NLanczosStep == 1) {
       if (AllComplexFlag == 0) { //real
