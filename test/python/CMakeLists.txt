@@ -1292,6 +1292,11 @@ add_gc_oracle_test(GC_MPI_NSplit2_CalMode0 mpi_nsplit2_mode0)
 add_gc_oracle_test(GC_MPI_NSplit2_CalMode1 mpi_nsplit2_mode1)
 add_gc_oracle_test(GC_MPI_NSplit1_CalMode0 mpi_nsplit1_mode0)
 add_gc_oracle_test(GC_MPI_NSplit1_CalMode1 mpi_nsplit1_mode1)
+add_gc_oracle_test(GC_Anomalous_Exact anomalous)
+add_gc_oracle_test(GC_Anomalous_Energy_Response anomalous_energy)
+add_gc_oracle_test(GC_Anomalous_SR anomalous_sr)
+add_gc_oracle_test(GC_Anomalous_MPI_NSplit2 anomalous_mpi)
+add_gc_oracle_test(GC_Anomalous_Vacuum_Smoke anomalous_vacuum)
 
 add_test(NAME GC_OddNCond_Positive
     COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base

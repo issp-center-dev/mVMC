@@ -115,9 +115,12 @@ def slater_matrix(parameters):
     index = 0
     for row in range(NORBITAL):
         for column in range(row + 1, NORBITAL):
-            # OrbitalGeneral stores one upper-triangle parameter and expands
-            # it as f_ij-f_ji = 2*f_ij.
-            matrix[row][column] = 2.0 * parameters[index]
+            # OrbitalGeneral expands one upper-triangle parameter as
+            # f_ij-f_ji = 2*f_ij.  CalculateMAllGC forms its Pfaffian matrix
+            # from -SlaterElm, so the minus sign is part of the mVMC BCS
+            # input convention.  It is invisible to number-conserving
+            # observables but fixes the relative phase between N sectors.
+            matrix[row][column] = -2.0 * parameters[index]
             matrix[column][row] = -matrix[row][column]
             index += 1
     return matrix
