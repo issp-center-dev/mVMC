@@ -54,6 +54,20 @@ static const uint64_t intGuard = UINT64_C(0x6543cdef1234abcd);
 static const double complex complexGuard = 71.25 - 39.5 * I;
 static const double doubleGuard = -913.125;
 static int gutzStorage[4] = {0, 0, 0, 0};
+static int anomalousRowsStorage[4][5] = {
+    {1, 1, 0, 2, 1},
+    {0, 2, 1, 1, 0},
+    {0, 0, 0, 3, 1},
+    {1, 3, 1, 0, 0},
+};
+static int *anomalousRows[4] = {
+    anomalousRowsStorage[0], anomalousRowsStorage[1],
+    anomalousRowsStorage[2], anomalousRowsStorage[3],
+};
+static double complex anomalousParameter[4] = {
+    0.31 + 0.17 * I, 0.31 - 0.17 * I,
+   -0.23 + 0.11 * I, -0.23 - 0.11 * I,
+};
 
 #define CHECK(condition, ...)                                                   \
   do {                                                                          \
@@ -675,9 +689,14 @@ static void test_hamiltonian_and_measurement(void) {
   double complex invSnapshot[QPS * ORBITALS * ORBITALS];
   double complex pfSnapshot[QPS];
   double complex baseOverlap;
+  double complex baseSortedOverlap;
   double complex expectedEnergy;
   double complex actualEnergy;
   double complex classContribution;
+  double complex createContribution;
+  double complex removeContribution;
+  double complex anomalousPairContribution;
+  double complex mutatedEnergy;
   int transferStorage[2][4] = {{1, 0, 0, 0}, {2, 1, 3, 1}};
   int *transferRows[2] = {transferStorage[0], transferStorage[1]};
   double complex transferParameter[2] = {0.41 - 0.13 * I,
@@ -739,6 +758,7 @@ static void test_hamiltonian_and_measurement(void) {
   CHECK(CalculateMAllGC_fcmp(ACTIVE, eleIdx, 0, QPS) == GC_MALL_OK,
         "Hamiltonian baseline rebuild failed");
   baseOverlap = CalculateIP_fcmp(PfM, 0, QPS, MPI_COMM_SELF);
+  baseSortedOverlap = overlap_for_sorted_state(baseEleIdx, ACTIVE);
   memcpy(invSnapshot, InvM, sizeof(invSnapshot));
   memcpy(pfSnapshot, PfM, sizeof(pfSnapshot));
 
@@ -769,6 +789,9 @@ static void test_hamiltonian_and_measurement(void) {
   NBodyInterAllOffset = nbodyOffset;
   NBodyInterAllIdx = nbodyRows;
   ParaNBodyInterAll = nbodyParameter;
+  NAnomalousTerm = 4;
+  AnomalousTerm = anomalousRows;
+  ParaAnomalousTerm = anomalousParameter;
 
   create1[0] = 1;
   annihilate1[0] = 0;
@@ -849,12 +872,44 @@ static void test_hamiltonian_and_measurement(void) {
                                   projCnt);
   CHECK(cabs(classContribution) > 1.0e-6, "NBody fixture is vacuous");
   expectedEnergy += classContribution;
+  createContribution =
+      anomalousParameter[0] * brute_anomalous_param(
+          1, 1, 6, baseEleIdx, ACTIVE, baseSortedOverlap, projCnt) +
+      anomalousParameter[3] * brute_anomalous_param(
+          1, 7, 0, baseEleIdx, ACTIVE, baseSortedOverlap, projCnt);
+  removeContribution =
+      anomalousParameter[1] * brute_anomalous_param(
+          0, 6, 1, baseEleIdx, ACTIVE, baseSortedOverlap, projCnt) +
+      anomalousParameter[2] * brute_anomalous_param(
+          0, 0, 7, baseEleIdx, ACTIVE, baseSortedOverlap, projCnt);
+  CHECK(cabs(createContribution) > 1.0e-6,
+        "AnomalousTerm create fixture is vacuous");
+  CHECK(cabs(removeContribution) > 1.0e-6,
+        "AnomalousTerm remove fixture is vacuous");
+  classContribution = createContribution + removeContribution;
+  CHECK(cabs(classContribution) > 1.0e-6,
+        "AnomalousTerm total fixture is vacuous");
+  expectedEnergy += classContribution;
   actualEnergy = CalculateHamiltonianGC(baseOverlap, ACTIVE, eleIdx, eleCfg,
                                         eleNum, projCnt);
   CHECK(cabs(actualEnergy - expectedEnergy) < 2.0e-8,
         "Hamiltonian got=(%.17g,%.17g) expected=(%.17g,%.17g)",
         creal(actualEnergy), cimag(actualEnergy), creal(expectedEnergy),
         cimag(expectedEnergy));
+  anomalousPairContribution =
+      anomalousParameter[0] * brute_anomalous_param(
+          1, 1, 6, baseEleIdx, ACTIVE, baseSortedOverlap, projCnt) +
+      anomalousParameter[1] * brute_anomalous_param(
+          0, 6, 1, baseEleIdx, ACTIVE, baseSortedOverlap, projCnt);
+  anomalousParameter[0] = -anomalousParameter[0];
+  anomalousParameter[1] = -anomalousParameter[1];
+  mutatedEnergy = CalculateHamiltonianGC(baseOverlap, ACTIVE, eleIdx, eleCfg,
+                                         eleNum, projCnt);
+  CHECK(cabs((mutatedEnergy - actualEnergy) +
+             2.0 * anomalousPairContribution) < 2.0e-8,
+        "AnomalousTerm coefficient mutation mismatch");
+  anomalousParameter[0] = -anomalousParameter[0];
+  anomalousParameter[1] = -anomalousParameter[1];
   CHECK(CalculateSzGC(eleNum) == 0.0, "CalculateSzGC normalization");
   assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
                          pfSnapshot, "Hamiltonian");
