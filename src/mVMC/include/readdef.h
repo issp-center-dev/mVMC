@@ -56,7 +56,8 @@ static char cKWListOfFileNameList[][D_CharTmpReadDef]={
   "Lattice", "Twist",
   "InterAll", "NBodyInterAll", "OptTrans", "InOptTrans",
   "LsTrans", "LsInterAll",
-  "BF", "BFRange"
+  "BF", "BFRange",
+  "AnomalousTerm", "AnomalousG"
 };
 
 /**
@@ -89,6 +90,7 @@ enum KWIdxInt{
   KWInterAll, KWNBodyInterAll, KWOptTrans, KWInOptTrans,
   KWLsTrans, KWLsInterAll,
   KWBF, KWBFRange,
+  KWAnomalousTerm, KWAnomalousG,
   KWIdxInt_end
 };
 
@@ -129,6 +131,7 @@ enum ParamIdxInt{
   IdxNBF,IdxNrange, IdxNNz, Idx2Sz, IdxNCond,
   IdxLanczosEstimatorMode,
   IdxNGrandCanonical, IdxNGCInitNelec,
+  IdxNAnomalousTerm, IdxNAnomalousG,
   ParamIdxInt_End
 };
 

@@ -311,6 +311,20 @@ void SetMemoryDef() {
     NBodyInterAllIdx = NULL;
   }
 
+  AnomalousTerm = (int**)CheckedDefMalloc(
+      (size_t)NAnomalousTerm, sizeof(int*), "AnomalousTerm row pointers");
+  for(i=0;i<NAnomalousTerm;i++) {
+    AnomalousTerm[i] = pInt;
+    pInt += 5;
+  }
+
+  AnomalousG = (int**)CheckedDefMalloc(
+      (size_t)NAnomalousG, sizeof(int*), "AnomalousG row pointers");
+  for(i=0;i<NAnomalousG;i++) {
+    AnomalousG[i] = pInt;
+    pInt += 5;
+  }
+
   QPOptTrans = (int**)CheckedDefMalloc((size_t)NQPOptTrans, sizeof(int*),
                                        "QPOptTrans row pointers");
   for(i=0;i<NQPOptTrans;i++) {
@@ -337,6 +351,15 @@ void SetMemoryDef() {
     ParaNBodyInterAll = (double complex*)malloc(sizeof(double complex)*NNBodyInterAll);
   } else {
     ParaNBodyInterAll = NULL;
+  }
+  if (NAnomalousTerm > 0) {
+    ParaAnomalousTerm = (double complex*)GCCheckedMalloc(
+        GCCheckedMulSize(sizeof(double complex),
+                         GCNonnegativeSize(NAnomalousTerm,
+                                           "NAnomalousTerm")),
+        "ParaAnomalousTerm");
+  } else {
+    ParaAnomalousTerm = NULL;
   }
 
   ParaCoulombIntra = (double*)malloc(sizeof(double)*(NTotalDefDouble));
@@ -384,6 +407,9 @@ void FreeMemoryDef() {
   free(QPOptTrans);
   free(ParaNBodyInterAll);
   free(NBodyInterAllIdx);
+  free(ParaAnomalousTerm);
+  free(AnomalousG);
+  free(AnomalousTerm);
   free(InterAll);
   free(LsInterAll);
   free(LsTransfer);
@@ -596,6 +622,13 @@ void SetMemory() {
     } else {
       PhysNBodyG = NULL;
     }
+    if (NAnomalousG > 0) {
+      PhysAnomalousG = (double complex*)GCCheckedMalloc(
+          GCCheckedMulSize(sizeof(double complex), (size_t)NAnomalousG),
+          "PhysAnomalousG");
+    } else {
+      PhysAnomalousG = NULL;
+    }
 
     if(NLanczosMode>0 && NLanczosStep==1){
       QQQQ = (double complex*)malloc(sizeof(double complex)
@@ -687,6 +720,7 @@ void FreeMemory() {
   if(NVMCCalMode==1){
     free(PhysCisAjs);
     free(PhysNBodyG);
+    free(PhysAnomalousG);
     if(NLanczosMode>0 && NLanczosStep==1){
       free(QQQQ);
       free(QQQQ_real);
