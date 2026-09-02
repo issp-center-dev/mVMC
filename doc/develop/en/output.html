@@ -115,7 +115,10 @@ where both <code class="docutils literal notranslate"><span class="pre">NDataIdx
 <tr class="row-even"><td><p>xxx_NBodyG_yyy.dat</p></td>
 <td><p><span class="math notranslate nohighlight">\(N\)</span>-body correlation functions.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_twist_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_anomalousg_yyy.dat</p></td>
+<td><p>Grand-canonical pair-creation and pair-annihilation expectation values.</p></td>
+</tr>
+<tr class="row-even"><td><p>xxx_twist_yyy.dat</p></td>
 <td><p>Twist operators.</p></td>
 </tr>
 </tbody>
@@ -474,6 +477,30 @@ respectively.</p>
 </ul>
 </section>
 </section>
+<section id="xxx-anomalousg-yyy-dat">
+<h2>xxx_anomalousg_yyy.dat<a class="headerlink" href="#xxx-anomalousg-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<p>When <code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code> and <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>, this file contains the
+pair expectation values selected by <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code>. The exact filename is
+<code class="docutils literal notranslate"><span class="pre">&lt;CDataFileHead&gt;_anomalousg_&lt;index:03d&gt;.dat</span></code>. <code class="docutils literal notranslate"><span class="pre">index</span></code> starts at
+<code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> and one independent file is created for every physical
+calculation bin. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span>  <span class="mf">5.299557869812032000e-02</span> <span class="o">-</span><span class="mf">6.578111353403385000e-02</span>
+<span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span>  <span class="mf">5.299557869812032000e-02</span>  <span class="mf">6.578111353403385000e-02</span>
+<span class="mi">1</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span> <span class="o">-</span><span class="mf">5.299557869812032000e-02</span>  <span class="mf">6.578111353403385000e-02</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span> <span class="o">-</span><span class="mf">5.299557869812032000e-02</span> <span class="o">-</span><span class="mf">6.578111353403385000e-02</span>
+</pre></div>
+</div>
+<p>Each row is <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">s1</span> <span class="pre">spin1</span> <span class="pre">s2</span> <span class="pre">spin2</span> <span class="pre">Re</span> <span class="pre">Im</span></code>. The first five columns retain
+the input order and operator convention from <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code>; the last two
+columns are the real and imaginary parts after sample-weight averaging and
+MPI reduction. <code class="docutils literal notranslate"><span class="pre">type=1</span></code> denotes pair creation and <code class="docutils literal notranslate"><span class="pre">type=0</span></code> pair
+annihilation, with the second operator acting first.</p>
+<p>No file is created when <code class="docutils literal notranslate"><span class="pre">NAnomalousG=0</span></code> or in optimization mode. Supplying
+the <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> keyword in <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=0</span></code> is rejected before execution,
+even when its count is zero. The mVMC filename differs from HPhi’s filename,
+but the input operator convention and the seven output columns can be
+cross-checked directly.</p>
+</section>
 <section id="xxx-twist-yyy-dat">
 <h2>xxx_twist_yyy.dat<a class="headerlink" href="#xxx-twist-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This file is the outputted files for the Twist operator  <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span>. The target components are set in the input file with the keyword “Twist”. Here, xxx is the header indicated by <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file and yyy is a number given by <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code>, where both <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> and <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> are defined in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file. An example of the file format is as follows.</p>
@@ -670,6 +697,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 <li><a class="reference internal" href="#id4">Parameters</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#xxx-anomalousg-yyy-dat">xxx_anomalousg_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id5">File format</a></li>
 <li><a class="reference internal" href="#id6">Parameters</a></li>

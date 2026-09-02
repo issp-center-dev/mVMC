@@ -92,6 +92,8 @@ I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k
 <span class="math notranslate nohighlight">\({\cal H}_I\)</span> 内の <span class="math notranslate nohighlight">\(I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}\)</span> を指定します。</p>
 <p><strong>NBodyInterAll (nbodyinterall.def)</strong>:
 ハミルトニアンに含める可変次数の <span class="math notranslate nohighlight">\(N\)</span> 体相互作用を指定します。</p>
+<p><strong>AnomalousTerm (anomalousterm.def)</strong>:
+grand-canonical Hamiltonianのpair生成・消滅項を指定します。</p>
 <p class="rubric">t-J模型の指定</p>
 <p>物理的なt-J模型を</p>
 <div class="math notranslate nohighlight">
@@ -215,6 +217,8 @@ BackFlow 相関のパラメータ group と最適化フラグを指定します�
 <p><strong>OneBodyG (greenone.def)</strong>:出力する一体Green関数を指定します。</p>
 <p><strong>TwoBodyG (greentwo.def)</strong>:出力する二体Green関数を指定します。</p>
 <p><strong>NBodyG (nbodyg.def)</strong>:出力する <span class="math notranslate nohighlight">\(N\)</span> 体相関関数を指定します。</p>
+<p><strong>AnomalousG (anomalousg.def)</strong>:grand-canonical modeで出力するpair生成・
+消滅期待値を指定します。</p>
 <p><strong>Twist (twist.def)</strong>:出力するTwist演算子を指定します。</p>
 </li>
 <li><p>その他:</p>
@@ -232,10 +236,12 @@ BackFlow 相関のパラメータ group と最適化フラグを指定します�
 <span class="nf">LsTrans</span>  <span class="n">zlstrans</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">LsInterAll</span> <span class="n">zlsinterall</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">NBodyInterAll</span> <span class="n">nbodyinterall</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">AnomalousTerm</span> <span class="n">anomalousterm</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">Orbital</span> <span class="n">orbitalidx</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">OneBodyG</span> <span class="n">zcisajs</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">TwoBodyG</span>    <span class="n">zcisajscktaltdc</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">NBodyG</span> <span class="n">nbodyg</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">AnomalousG</span> <span class="n">anomalousg</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">InUpdateWeight</span> <span class="n">updateweight</span><span class="o">.</span><span class="k">def</span>
 </pre></div>
 </div>
@@ -300,113 +306,119 @@ TransSymです。それ以外のキーワードについては、指定がない
 <tr class="row-even"><td><p>NBodyInterAll</p></td>
 <td><p>ハミルトニアンに含める可変次数の <span class="math notranslate nohighlight">\(N\)</span> 体相互作用を指定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>CoulombIntra</p></td>
+<tr class="row-odd"><td><p>AnomalousTerm</p></td>
+<td><p>grand-canonical Hamiltonianのpair生成・消滅項を指定します。</p></td>
+</tr>
+<tr class="row-even"><td><p>CoulombIntra</p></td>
 <td><p>内部クーロン相互作用を指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>CoulombInter</p></td>
+<tr class="row-odd"><td><p>CoulombInter</p></td>
 <td><p>サイト間クーロン相互作用を指定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>Hund</p></td>
+<tr class="row-even"><td><p>Hund</p></td>
 <td><p>フント結合を指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>PairHop</p></td>
+<tr class="row-odd"><td><p>PairHop</p></td>
 <td><p>ペアホッピング相互作用を指定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>Exchange</p></td>
+<tr class="row-even"><td><p>Exchange</p></td>
 <td><p>交換相互作用を指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>Gutzwiller</p></td>
+<tr class="row-odd"><td><p>Gutzwiller</p></td>
 <td><p>最適化するGutzwiller因子を設定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>Jastrow</p></td>
+<tr class="row-even"><td><p>Jastrow</p></td>
 <td><p>最適化する電荷Jastrow因子を指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>SpinJastrow</p></td>
+<tr class="row-odd"><td><p>SpinJastrow</p></td>
 <td><p>最適化するスピンJastrow因子を指定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>BFRange</p></td>
+<tr class="row-even"><td><p>BFRange</p></td>
 <td><p>BackFlow相関で参照する近傍リストと距離シェルを指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>BF</p></td>
+<tr class="row-odd"><td><p>BF</p></td>
 <td><p>BackFlow相関のパラメータgroupと最適化フラグを指定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>DH2</p></td>
+<tr class="row-even"><td><p>DH2</p></td>
 <td><p>最適化する2サイトダブロン・ホロン相関因子を指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>DH4</p></td>
+<tr class="row-odd"><td><p>DH4</p></td>
 <td><p>最適化する4サイトダブロン・ホロン相関因子を指定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>GeneralRBM_PhysLayer</p></td>
+<tr class="row-even"><td><p>GeneralRBM_PhysLayer</p></td>
 <td><p>一般的なRBM相関因子のうち、最適化する物理層での変分パラメータを指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>GeneralRBM_HiddenLayer</p></td>
+<tr class="row-odd"><td><p>GeneralRBM_HiddenLayer</p></td>
 <td><p>一般的なRBM相関因子のうち、最適化する隠れ層での変分パラメータを指定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>GeneralRBM_PhysHidden</p></td>
+<tr class="row-even"><td><p>GeneralRBM_PhysHidden</p></td>
 <td><p>一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータを指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>Orbital <span class="math notranslate nohighlight">\(^*\)</span></p></td>
+<tr class="row-odd"><td><p>Orbital <span class="math notranslate nohighlight">\(^*\)</span></p></td>
 <td><p>反平行のスピンを持つペア軌道因子を指定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>OrbitalAntiParallel</p></td>
+<tr class="row-even"><td><p>OrbitalAntiParallel</p></td>
 <td><p>反平行のスピンを持つペア軌道因子を指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>OrbitalParallel</p></td>
+<tr class="row-odd"><td><p>OrbitalParallel</p></td>
 <td><p>平行のスピンを持つペア軌道因子を指定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>OrbitalGeneral</p></td>
+<tr class="row-even"><td><p>OrbitalGeneral</p></td>
 <td><p>ペア軌道因子を指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>TransSym <span class="math notranslate nohighlight">\(^*\)</span></p></td>
+<tr class="row-odd"><td><p>TransSym <span class="math notranslate nohighlight">\(^*\)</span></p></td>
 <td><p>並進・格子対称演算子を設定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>InUpdateWeight</p></td>
+<tr class="row-even"><td><p>InUpdateWeight</p></td>
 <td><p>ローカル更新kernelの相対重みを任意指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>InGutzwiller</p></td>
+<tr class="row-odd"><td><p>InGutzwiller</p></td>
 <td><p>Gutzwiller因子の初期値を設定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>InJastrow</p></td>
+<tr class="row-even"><td><p>InJastrow</p></td>
 <td><p>電荷Jastrow因子の初期値を設定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>InSpinJastrow</p></td>
+<tr class="row-odd"><td><p>InSpinJastrow</p></td>
 <td><p>スピンJastrow因子の初期値を設定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>InDH2</p></td>
+<tr class="row-even"><td><p>InDH2</p></td>
 <td><p>2サイトダブロン・ホロン相関因子の初期値を設定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>InDH4</p></td>
+<tr class="row-odd"><td><p>InDH4</p></td>
 <td><p>4サイトダブロン・ホロン相関因子の初期値を設定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>InGeneralRBM_PhysLayer</p></td>
+<tr class="row-even"><td><p>InGeneralRBM_PhysLayer</p></td>
 <td><p>一般的なRBM相関因子のうち、最適化する物理層での変分パラメータの初期値を設定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>InGeneralRBM_HiddenLayer</p></td>
+<tr class="row-odd"><td><p>InGeneralRBM_HiddenLayer</p></td>
 <td><p>一般的なRBM相関因子のうち、最適化する隠れ層での変分パラメータの初期値を設定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>InGeneralRBM_PhysHidden</p></td>
+<tr class="row-even"><td><p>InGeneralRBM_PhysHidden</p></td>
 <td><p>一般的なRBM相関因子のうち、最適化する物理層と隠れ層を繋ぐ変分パラメータの初期値を設定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>InOrbital</p></td>
+<tr class="row-odd"><td><p>InOrbital</p></td>
 <td><p>ペア軌道因子 <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span> の初期値を設定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>InOrbitalAntiParallel</p></td>
+<tr class="row-even"><td><p>InOrbitalAntiParallel</p></td>
 <td><p>ペア軌道因子 <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span> の初期値を設定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>InOrbitalParallel</p></td>
+<tr class="row-odd"><td><p>InOrbitalParallel</p></td>
 <td><p>ペア軌道因子 <span class="math notranslate nohighlight">\(f_{i\sigma j\sigma}\)</span> の初期値を設定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>InOrbitalGeneral</p></td>
+<tr class="row-even"><td><p>InOrbitalGeneral</p></td>
 <td><p>ペア軌道因子 <span class="math notranslate nohighlight">\(f_{i\sigma j\sigma'}\)</span> の初期値を設定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>OneBodyG</p></td>
+<tr class="row-odd"><td><p>OneBodyG</p></td>
 <td><p>出力する一体グリーン関数を指定します。</p></td>
 </tr>
-<tr class="row-odd"><td><p>TwoBodyG</p></td>
+<tr class="row-even"><td><p>TwoBodyG</p></td>
 <td><p>出力する二体グリーン関数を指定します。</p></td>
 </tr>
-<tr class="row-even"><td><p>NBodyG</p></td>
+<tr class="row-odd"><td><p>NBodyG</p></td>
 <td><p>出力する <span class="math notranslate nohighlight">\(N\)</span> 体相関関数 <span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span> を指定します。</p></td>
+</tr>
+<tr class="row-even"><td><p>AnomalousG</p></td>
+<td><p>grand-canonical modeで出力するpair生成・消滅期待値を指定します。</p></td>
 </tr>
 <tr class="row-odd"><td><p>Twist</p></td>
 <td><p>出力するTwist演算子を指定します。</p></td>
@@ -522,7 +534,16 @@ TransSymです。それ以外のキーワードについては、指定がない
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code></p>
 <p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>
-<p><strong>説明 :</strong> 1にすると全偶数粒子数sectorをsamplingします。このmodeでは
+<p><strong>説明 :</strong> 1にすると全偶数粒子数sectorをsamplingします。
+grand-canonical pair波動関数は</p>
+<div class="math notranslate nohighlight">
+\[|\phi_{\rm GC}\rangle = \exp\Big[\sum_{I,J} f_{IJ}\, c_{I}^{\dagger} c_{J}^{\dagger}\Big]|0\rangle\]</div>
+<p>で、<span class="math notranslate nohighlight">\(f_{IJ}\)</span> は <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> の変分パラメータ
+（<span class="math notranslate nohighlight">\(I=(i,\sigma)\)</span>）です。<span class="math notranslate nohighlight">\(N\)</span> 粒子成分は占有orbitalに制限した
+<span class="math notranslate nohighlight">\(F_{IJ}=f_{IJ}-f_{JI}\)</span> のPfaffianであり、規格化を除いてcanonicalの
+<span class="math notranslate nohighlight">\(|\phi_{\rm pair}\rangle\)</span> と一致します。粒子数sector間の相対符号は
+この定義に従い、<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> の期待値と <code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> のenergy応答の
+符号を決めます。このmodeでは
 <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>、複素変分パラメータ、<code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>、
 <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NMPTrans=1</span></code>、
 <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code> が必要です。Phase 1ではRBM、BackFlow、Lanczos、
@@ -3485,6 +3506,70 @@ BackFlow Slater/Pfaffianを完全構築する計算量が必要です。</p></li
 </ul>
 </section>
 </section>
+<section id="anomaloustermanomalousg">
+<h2>AnomalousTerm・AnomalousG指定ファイル<a class="headerlink" href="#anomaloustermanomalousg" title="この見出しへのパーマリンク">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> はgrand-canonical Hamiltonianへpair生成・消滅項を追加し、
+<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> は物理量計算で対応する期待値を選択します。複素係数を持つ
+Hermitian pairと4つの測定行を指定する完全な例を次に示します。</p>
+<p><code class="docutils literal notranslate"><span class="pre">anomalousterm.def</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">=============================================</span>
+<span class="n">NAnomalousTerm</span> <span class="mi">2</span>
+<span class="o">=============================================</span>
+<span class="o">========</span> <span class="nb">type</span> <span class="n">s1</span> <span class="n">spin1</span> <span class="n">s2</span> <span class="n">spin2</span> <span class="n">Re</span> <span class="n">Im</span> <span class="o">=======</span>
+<span class="o">=============================================</span>
+<span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span>  <span class="mf">3.500000000000000000e-01</span> <span class="o">-</span><span class="mf">2.000000000000000000e-01</span>
+<span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span>  <span class="mf">3.500000000000000000e-01</span>  <span class="mf">2.000000000000000000e-01</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">anomalousg.def</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">=============================================</span>
+<span class="n">NAnomalousG</span> <span class="mi">4</span>
+<span class="o">=============================================</span>
+<span class="o">========</span> <span class="nb">type</span> <span class="n">s1</span> <span class="n">spin1</span> <span class="n">s2</span> <span class="n">spin2</span> <span class="o">=============</span>
+<span class="o">=============================================</span>
+<span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span>
+<span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">1</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<section id="id117">
+<h3>ファイル形式<a class="headerlink" href="#id117" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p>2行目に <code class="docutils literal notranslate"><span class="pre">NAnomalousTerm</span> <span class="pre">N</span></code> または <code class="docutils literal notranslate"><span class="pre">NAnomalousG</span> <span class="pre">N</span></code> を指定します。
+<code class="docutils literal notranslate"><span class="pre">N</span></code> は0以上 <code class="docutils literal notranslate"><span class="pre">INT_MAX</span></code> 以下の整数で、実際のdata行数と一致する必要があります。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> のdata行は
+<code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">s1</span> <span class="pre">spin1</span> <span class="pre">s2</span> <span class="pre">spin2</span> <span class="pre">Re</span> <span class="pre">Im</span></code>、<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> のdata行は
+<code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">s1</span> <span class="pre">spin1</span> <span class="pre">s2</span> <span class="pre">spin2</span></code> です。各行は規定数ちょうどのfieldを持つ必要があり、
+余剰tokenは入力errorです。Hamiltonian係数には有限値だけを指定できます。
+header 5行より後の空行と <code class="docutils literal notranslate"><span class="pre">#</span></code> で始まる行は、HPhiや <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> と同様に
+読み飛ばします。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">type=1</span></code> は
+<span class="math notranslate nohighlight">\(c_{s_1\,\mathrm{spin}_1}^{\dagger}c_{s_2\,\mathrm{spin}_2}^{\dagger}\)</span>、
+<code class="docutils literal notranslate"><span class="pre">type=0</span></code> は
+<span class="math notranslate nohighlight">\(c_{s_1\,\mathrm{spin}_1}c_{s_2\,\mathrm{spin}_2}\)</span> を表します。
+どちらも右側の第2演算子を先に作用させます。site番号は0以上 <code class="docutils literal notranslate"><span class="pre">Nsite</span></code> 未満、
+spin番号は0（up）または1（down）です。同じfermion演算子を1つのpair内で
+重複指定することはできません。</p></li>
+</ul>
+</section>
+<section id="hermiticitymode">
+<h3>Hermiticityとmode制約<a class="headerlink" href="#hermiticitymode" title="この見出しへのパーマリンク">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">NAnomalousTerm</span></code> は偶数である必要があります。隣接する2行ごとに、indexを転置し、
+<code class="docutils literal notranslate"><span class="pre">type</span></code> を反転し、係数を複素共役にしてください。係数の許容差は <code class="docutils literal notranslate"><span class="pre">1e-12</span></code> です。
+したがって上記例の2行目は1行目のHermitian共役であり、対応する2行を離したり
+並べ替えたりすることはできません。</p></li>
+<li><p>いずれかのkeywordを指定した場合、明示的なcount 0を含めて
+<code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code> が必要です。<code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> は
+<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=0</span></code> と1の両方で指定できます。<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> は
+<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code> 専用で、mode 0でkeywordを指定すると入力errorになります。</p></li>
+<li><p>grand-canonical samplingは偶数粒子数sectorを対象とし、<code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> の
+制約を継承します。<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> と複素変分パラメータが必要で、real-only GC、
+RBM、BackFlow、Lanczos経路は引き続き非対応です。</p></li>
+</ul>
+</section>
+</section>
 <section id="twist-twist-def">
 <h2>Twist指定ファイル(twist.def)<a class="headerlink" href="#twist-twist-def" title="この見出しへのパーマリンク">¶</a></h2>
 <p>計算・出力するTwist演算子 <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span> を指定します。位置演算子 <span class="math notranslate nohighlight">\(\mu_i\)</span> はLattice指定ファイル(lattice.def)で定義します。
@@ -3511,8 +3596,8 @@ idx_site_s_x_y_z
     …
 </pre></div>
 </div>
-<section id="id117">
-<h3>ファイル形式<a class="headerlink" href="#id117" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id118">
+<h3>ファイル形式<a class="headerlink" href="#id118" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -3522,8 +3607,8 @@ idx_site_s_x_y_z
 [int02]  [int03]  [int04]  [double01]  [double02]  [double03]</p></li>
 </ul>
 </section>
-<section id="id118">
-<h3>パラメータ<a class="headerlink" href="#id118" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id119">
+<h3>パラメータ<a class="headerlink" href="#id119" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3560,8 +3645,8 @@ Twist演算子の番号 <span class="math notranslate nohighlight">\(\alpha\)</s
 </li>
 </ul>
 </section>
-<section id="id119">
-<h3>使用ルール<a class="headerlink" href="#id119" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id120">
+<h3>使用ルール<a class="headerlink" href="#id120" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -3587,8 +3672,8 @@ i_x_y_z_orb
     …
 </pre></div>
 </div>
-<section id="id120">
-<h3>ファイル形式<a class="headerlink" href="#id120" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id121">
+<h3>ファイル形式<a class="headerlink" href="#id121" title="この見出しへのパーマリンク">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -3598,8 +3683,8 @@ i_x_y_z_orb
 [int05]  [int06]  [int07]  [int08]  [int09]</p></li>
 </ul>
 </section>
-<section id="id121">
-<h3>パラメータ<a class="headerlink" href="#id121" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id122">
+<h3>パラメータ<a class="headerlink" href="#id122" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3639,8 +3724,8 @@ i_x_y_z_orb
 </li>
 </ul>
 </section>
-<section id="id122">
-<h3>使用ルール<a class="headerlink" href="#id122" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id123">
+<h3>使用ルール<a class="headerlink" href="#id123" title="この見出しへのパーマリンク">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -3853,16 +3938,21 @@ lattice.def の座標と twist.def の位相が意図した幾何を表すよう
 <li><a class="reference internal" href="#id116">使用ルール</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#twist-twist-def">Twist指定ファイル(twist.def)</a><ul>
+<li><a class="reference internal" href="#anomaloustermanomalousg">AnomalousTerm・AnomalousG指定ファイル</a><ul>
 <li><a class="reference internal" href="#id117">ファイル形式</a></li>
-<li><a class="reference internal" href="#id118">パラメータ</a></li>
-<li><a class="reference internal" href="#id119">使用ルール</a></li>
+<li><a class="reference internal" href="#hermiticitymode">Hermiticityとmode制約</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#twist-twist-def">Twist指定ファイル(twist.def)</a><ul>
+<li><a class="reference internal" href="#id118">ファイル形式</a></li>
+<li><a class="reference internal" href="#id119">パラメータ</a></li>
+<li><a class="reference internal" href="#id120">使用ルール</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#lattice-lattice-def">Lattice指定ファイル(lattice.def)</a><ul>
-<li><a class="reference internal" href="#id120">ファイル形式</a></li>
-<li><a class="reference internal" href="#id121">パラメータ</a></li>
-<li><a class="reference internal" href="#id122">使用ルール</a></li>
+<li><a class="reference internal" href="#id121">ファイル形式</a></li>
+<li><a class="reference internal" href="#id122">パラメータ</a></li>
+<li><a class="reference internal" href="#id123">使用ルール</a></li>
 </ul>
 </li>
 </ul>

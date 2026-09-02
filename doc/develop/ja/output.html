@@ -110,7 +110,10 @@
 <tr class="row-even"><td><p>xxx_NBodyG_yyy.dat</p></td>
 <td><p><span class="math notranslate nohighlight">\(N\)</span> 体相関関数.</p></td>
 </tr>
-<tr class="row-odd"><td><p>xxx_twist_yyy.dat</p></td>
+<tr class="row-odd"><td><p>xxx_anomalousg_yyy.dat</p></td>
+<td><p>grand-canonical pair生成・消滅期待値.</p></td>
+</tr>
+<tr class="row-even"><td><p>xxx_twist_yyy.dat</p></td>
 <td><p>Twist演算子の期待値.</p></td>
 </tr>
 </tbody>
@@ -450,6 +453,28 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 </ul>
 </section>
 </section>
+<section id="xxx-anomalousg-yyy-dat">
+<h2>xxx_anomalousg_yyy.dat<a class="headerlink" href="#xxx-anomalousg-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code> かつ <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code> のとき、<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> で
+指定したpair期待値を出力します。実際のfilenameは
+<code class="docutils literal notranslate"><span class="pre">&lt;CDataFileHead&gt;_anomalousg_&lt;index:03d&gt;.dat</span></code> です。<code class="docutils literal notranslate"><span class="pre">index</span></code> は
+<code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> から始まり、物理量計算のbinごとに独立したfileを作成します。
+出力例を次に示します。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span>  <span class="mf">5.299557869812032000e-02</span> <span class="o">-</span><span class="mf">6.578111353403385000e-02</span>
+<span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span>  <span class="mf">5.299557869812032000e-02</span>  <span class="mf">6.578111353403385000e-02</span>
+<span class="mi">1</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span> <span class="o">-</span><span class="mf">5.299557869812032000e-02</span>  <span class="mf">6.578111353403385000e-02</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span> <span class="o">-</span><span class="mf">5.299557869812032000e-02</span> <span class="o">-</span><span class="mf">6.578111353403385000e-02</span>
+</pre></div>
+</div>
+<p>各行は <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">s1</span> <span class="pre">spin1</span> <span class="pre">s2</span> <span class="pre">spin2</span> <span class="pre">Re</span> <span class="pre">Im</span></code> の7列です。先頭5列は
+<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> の入力順と演算子規約を保持し、末尾2列はsample weight平均と
+MPI reduction後の実部・虚部です。<code class="docutils literal notranslate"><span class="pre">type=1</span></code> はpair生成、<code class="docutils literal notranslate"><span class="pre">type=0</span></code> はpair消滅を
+表し、いずれも第2演算子を先に作用させます。</p>
+<p><code class="docutils literal notranslate"><span class="pre">NAnomalousG=0</span></code> または最適化modeではfileを作成しません。
+<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=0</span></code> で <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> keywordを指定すると、count 0の場合を含めて
+実行前に入力errorとなります。mVMCとHPhiではfilenameが異なりますが、入力演算子規約と
+出力7列は直接cross-checkできます。</p>
+</section>
 <section id="xxx-twist-yyy-dat">
 <h2>xxx_twist_yyy.dat<a class="headerlink" href="#xxx-twist-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p>Twist指定ファイルで指定されたTwist演算子 <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span> の計算結果を出力します。xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
@@ -630,6 +655,7 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#id7">パラメータ</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#xxx-anomalousg-yyy-dat">xxx_anomalousg_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id8">ファイル形式</a></li>
 <li><a class="reference internal" href="#id9">パラメータ</a></li>

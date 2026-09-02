@@ -92,6 +92,8 @@ specified by the following files, respectively;</p>
 <span class="math notranslate nohighlight">\({\cal H}_I\)</span>,</p>
 <p><strong>NBodyInterAll (nbodyinterall.def)</strong>: variable-order
 <span class="math notranslate nohighlight">\(N\)</span>-body interaction terms for the Hamiltonian.</p>
+<p><strong>AnomalousTerm (anomalousterm.def)</strong>: pair-creation and
+pair-annihilation terms for the grand-canonical Hamiltonian.</p>
 <p class="rubric">t-J model input convention</p>
 <p>For a t-J model with the physical convention</p>
 <div class="math notranslate nohighlight">
@@ -219,6 +221,8 @@ functions to output.</p>
 functions to output.</p>
 <p><strong>NBodyG (nbodyg.def)</strong>: Set the components of <span class="math notranslate nohighlight">\(N\)</span>-body
 correlation functions to output.</p>
+<p><strong>AnomalousG (anomalousg.def)</strong>: Set the pair-creation and
+pair-annihilation expectation values to output in grand-canonical mode.</p>
 <p><strong>Twist (twist.def)</strong>: Set the components of twist operators to
 output.</p>
 </li>
@@ -237,10 +241,12 @@ example of the file format is shown as follows.</p>
 <span class="nf">LsTrans</span>  <span class="n">zlstrans</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">LsInterAll</span> <span class="n">zlsinterall</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">NBodyInterAll</span> <span class="n">nbodyinterall</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">AnomalousTerm</span> <span class="n">anomalousterm</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">Orbital</span> <span class="n">orbitalidx</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">OneBodyG</span> <span class="n">zcisajs</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">TwoBodyG</span>    <span class="n">zcisajscktaltdc</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">NBodyG</span> <span class="n">nbodyg</span><span class="o">.</span><span class="k">def</span>
+<span class="nf">AnomalousG</span> <span class="n">anomalousg</span><span class="o">.</span><span class="k">def</span>
 <span class="nf">InUpdateWeight</span> <span class="n">updateweight</span><span class="o">.</span><span class="k">def</span>
 </pre></div>
 </div>
@@ -306,113 +312,119 @@ and “TransSym”.</p></li>
 <tr class="row-even"><td><p>NBodyInterAll</p></td>
 <td><p>Variable-order <span class="math notranslate nohighlight">\(N\)</span>-body interactions for Hamiltonian.</p></td>
 </tr>
-<tr class="row-odd"><td><p>CoulombIntra</p></td>
+<tr class="row-odd"><td><p>AnomalousTerm</p></td>
+<td><p>Pair-creation and pair-annihilation terms for the grand-canonical Hamiltonian.</p></td>
+</tr>
+<tr class="row-even"><td><p>CoulombIntra</p></td>
 <td><p>CoulombIntra interactions.</p></td>
 </tr>
-<tr class="row-even"><td><p>CoulombInter</p></td>
+<tr class="row-odd"><td><p>CoulombInter</p></td>
 <td><p>CoulombInter interactions.</p></td>
 </tr>
-<tr class="row-odd"><td><p>Hund</p></td>
+<tr class="row-even"><td><p>Hund</p></td>
 <td><p>Hund couplings.</p></td>
 </tr>
-<tr class="row-even"><td><p>PairHop</p></td>
+<tr class="row-odd"><td><p>PairHop</p></td>
 <td><p>Pair hopping couplings.</p></td>
 </tr>
-<tr class="row-odd"><td><p>Exchange</p></td>
+<tr class="row-even"><td><p>Exchange</p></td>
 <td><p>Exchange couplings.</p></td>
 </tr>
-<tr class="row-even"><td><p>Gutzwiller</p></td>
+<tr class="row-odd"><td><p>Gutzwiller</p></td>
 <td><p>Gutzwiller factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>Jastrow</p></td>
+<tr class="row-even"><td><p>Jastrow</p></td>
 <td><p>Charge Jastrow factors.</p></td>
 </tr>
-<tr class="row-even"><td><p>SpinJastrow</p></td>
+<tr class="row-odd"><td><p>SpinJastrow</p></td>
 <td><p>Spin Jastrow factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>BFRange</p></td>
+<tr class="row-even"><td><p>BFRange</p></td>
 <td><p>Neighbor list and distance shells for BackFlow.</p></td>
 </tr>
-<tr class="row-even"><td><p>BF</p></td>
+<tr class="row-odd"><td><p>BF</p></td>
 <td><p>BackFlow parameter groups and optimization flags.</p></td>
 </tr>
-<tr class="row-odd"><td><p>DH2</p></td>
+<tr class="row-even"><td><p>DH2</p></td>
 <td><p>2-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-even"><td><p>DH4</p></td>
+<tr class="row-odd"><td><p>DH4</p></td>
 <td><p>4-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>GeneralRBM_PhysLayer</p></td>
+<tr class="row-even"><td><p>GeneralRBM_PhysLayer</p></td>
 <td><p>A part of the general RBM correlation factor including variational parameters in a physical layer <span class="math notranslate nohighlight">\(\alpha_{i\sigma}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>GeneralRBM_HiddenLayer</p></td>
+<tr class="row-odd"><td><p>GeneralRBM_HiddenLayer</p></td>
 <td><p>A part of the general RBM correlation factor including variational parameters in a hidden layer <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>GeneralRBM_PhysHidden</p></td>
+<tr class="row-even"><td><p>GeneralRBM_PhysHidden</p></td>
 <td><p>A part of the general RBM correlation factor including variational parameters which connect physical and hidden layers <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>Orbital <span class="math notranslate nohighlight">\(^*\)</span></p></td>
+<tr class="row-odd"><td><p>Orbital <span class="math notranslate nohighlight">\(^*\)</span></p></td>
 <td><p>Pair orbital factors with anti-parallel spins <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>OrbitalAntiParallel</p></td>
+<tr class="row-even"><td><p>OrbitalAntiParallel</p></td>
 <td><p>Pair orbital factors with anti-parallel spins <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>OrbitalParallel</p></td>
+<tr class="row-odd"><td><p>OrbitalParallel</p></td>
 <td><p>Pair orbital factors with parallel spins <span class="math notranslate nohighlight">\(f_{i\sigma j\sigma}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>OrbitalGeneral</p></td>
+<tr class="row-even"><td><p>OrbitalGeneral</p></td>
 <td><p>Pair orbital factors <span class="math notranslate nohighlight">\(f_{i\sigma_1 j\sigma_2}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>TransSym <span class="math notranslate nohighlight">\(^*\)</span></p></td>
+<tr class="row-odd"><td><p>TransSym <span class="math notranslate nohighlight">\(^*\)</span></p></td>
 <td><p>Translational and lattice symmetry operation.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InUpdateWeight</p></td>
+<tr class="row-even"><td><p>InUpdateWeight</p></td>
 <td><p>Optional relative weights for local-update kernels.</p></td>
 </tr>
-<tr class="row-even"><td><p>InGutzwiller</p></td>
+<tr class="row-odd"><td><p>InGutzwiller</p></td>
 <td><p>Initial values of Gutzwiller factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InJastrow</p></td>
+<tr class="row-even"><td><p>InJastrow</p></td>
 <td><p>Initial values of charge Jastrow factors.</p></td>
 </tr>
-<tr class="row-even"><td><p>InSpinJastrow</p></td>
+<tr class="row-odd"><td><p>InSpinJastrow</p></td>
 <td><p>Initial values of spin Jastrow factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InDH2</p></td>
+<tr class="row-even"><td><p>InDH2</p></td>
 <td><p>Initial values of 2-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-even"><td><p>InDH4</p></td>
+<tr class="row-odd"><td><p>InDH4</p></td>
 <td><p>Initial values of 4-site doublon-holon correlation factors.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InGeneralRBM_PhysLayer</p></td>
+<tr class="row-even"><td><p>InGeneralRBM_PhysLayer</p></td>
 <td><p>Initial values of variational parameters of the general RBM correlation factors in a physical layer <span class="math notranslate nohighlight">\(\alpha_{i\sigma}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>InGeneralRBM_HiddenLayer</p></td>
+<tr class="row-odd"><td><p>InGeneralRBM_HiddenLayer</p></td>
 <td><p>Initial values of variational parameters of the general RBM correlation factors in a hidden layer <span class="math notranslate nohighlight">\(h_{k}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InGeneralRBM_PhysHidden</p></td>
+<tr class="row-even"><td><p>InGeneralRBM_PhysHidden</p></td>
 <td><p>Initial values of variational parameters of the general RBM correlation factors which connect physical and hidden layers <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>InOrbital</p></td>
+<tr class="row-odd"><td><p>InOrbital</p></td>
 <td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InOrbitalAntiParallel</p></td>
+<tr class="row-even"><td><p>InOrbitalAntiParallel</p></td>
 <td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\uparrow j\downarrow}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>InOrbitalParallel</p></td>
+<tr class="row-odd"><td><p>InOrbitalParallel</p></td>
 <td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\sigma j\sigma}\)</span>.</p></td>
 </tr>
-<tr class="row-odd"><td><p>InOrbitalGeneral</p></td>
+<tr class="row-even"><td><p>InOrbitalGeneral</p></td>
 <td><p>Initial values of pair orbital factors <span class="math notranslate nohighlight">\(f_{i\sigma_1 j\sigma_2}\)</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p>OneBodyG</p></td>
+<tr class="row-odd"><td><p>OneBodyG</p></td>
 <td><p>Output components for Green functions <span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}\rangle\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p>TwoBodyG</p></td>
+<tr class="row-even"><td><p>TwoBodyG</p></td>
 <td><p>Output components for Correlation functions <span class="math notranslate nohighlight">\(\langle c_{i\sigma}^{\dagger}c_{j\sigma}c_{k\tau}^{\dagger}c_{l\tau}\rangle\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p>NBodyG</p></td>
+<tr class="row-odd"><td><p>NBodyG</p></td>
 <td><p>Output components for <span class="math notranslate nohighlight">\(N\)</span>-body correlation functions <span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>AnomalousG</p></td>
+<td><p>Output components for grand-canonical pair-creation and pair-annihilation expectation values.</p></td>
 </tr>
 <tr class="row-odd"><td><p>Twist</p></td>
 <td><p>Output components for Twist operators <span class="math notranslate nohighlight">\(\langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span></p></td>
@@ -531,6 +543,16 @@ Calculation of one body and two body Green’s functions.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 0)</p>
 <p><strong>Description :</strong> Set to 1 to sample all even particle-number sectors.
+The grand-canonical pair wave function is</p>
+<div class="math notranslate nohighlight">
+\[|\phi_{\rm GC}\rangle = \exp\Big[\sum_{I,J} f_{IJ}\, c_{I}^{\dagger} c_{J}^{\dagger}\Big]|0\rangle,\]</div>
+<p>where <span class="math notranslate nohighlight">\(f_{IJ}\)</span> are the <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> parameters
+(<span class="math notranslate nohighlight">\(I=(i,\sigma)\)</span>). Its <span class="math notranslate nohighlight">\(N\)</span>-particle component is the Pfaffian
+of <span class="math notranslate nohighlight">\(F_{IJ}=f_{IJ}-f_{JI}\)</span> restricted to the occupied orbitals, so the
+canonical component coincides with <span class="math notranslate nohighlight">\(|\phi_{\rm pair}\rangle\)</span> up to
+normalization. The relative sign between particle-number sectors follows
+this definition; it fixes the sign of the <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> expectation
+values and of the <code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> energy response.
 This mode requires <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>, complex variational parameters,
 <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NMPTrans=1</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code>. RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
@@ -3762,6 +3784,73 @@ component.</p></li>
 </ul>
 </section>
 </section>
+<section id="anomalousterm-and-anomalousg-files">
+<h2>AnomalousTerm and AnomalousG files<a class="headerlink" href="#anomalousterm-and-anomalousg-files" title="Permalink to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> adds pair-creation and pair-annihilation terms to the
+grand-canonical Hamiltonian. <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> selects the corresponding
+expectation values in a physical-quantity calculation. The following
+Hermitian complex pair and four measurement rows form a complete example.</p>
+<p><code class="docutils literal notranslate"><span class="pre">anomalousterm.def</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">=============================================</span>
+<span class="n">NAnomalousTerm</span> <span class="mi">2</span>
+<span class="o">=============================================</span>
+<span class="o">========</span> <span class="nb">type</span> <span class="n">s1</span> <span class="n">spin1</span> <span class="n">s2</span> <span class="n">spin2</span> <span class="n">Re</span> <span class="n">Im</span> <span class="o">=======</span>
+<span class="o">=============================================</span>
+<span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span>  <span class="mf">3.500000000000000000e-01</span> <span class="o">-</span><span class="mf">2.000000000000000000e-01</span>
+<span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span>  <span class="mf">3.500000000000000000e-01</span>  <span class="mf">2.000000000000000000e-01</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">anomalousg.def</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">=============================================</span>
+<span class="n">NAnomalousG</span> <span class="mi">4</span>
+<span class="o">=============================================</span>
+<span class="o">========</span> <span class="nb">type</span> <span class="n">s1</span> <span class="n">spin1</span> <span class="n">s2</span> <span class="n">spin2</span> <span class="o">=============</span>
+<span class="o">=============================================</span>
+<span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span>
+<span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">1</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span>
+<span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<section id="id84">
+<h3>File format<a class="headerlink" href="#id84" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>The count is <code class="docutils literal notranslate"><span class="pre">NAnomalousTerm</span> <span class="pre">N</span></code> or <code class="docutils literal notranslate"><span class="pre">NAnomalousG</span> <span class="pre">N</span></code> on line 2.
+<code class="docutils literal notranslate"><span class="pre">N</span></code> must be an integer from 0 through <code class="docutils literal notranslate"><span class="pre">INT_MAX</span></code> and must equal the
+number of data rows.</p></li>
+<li><p>An <code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> row is
+<code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">s1</span> <span class="pre">spin1</span> <span class="pre">s2</span> <span class="pre">spin2</span> <span class="pre">Re</span> <span class="pre">Im</span></code>. An <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> row omits <code class="docutils literal notranslate"><span class="pre">Re</span> <span class="pre">Im</span></code>.
+Every row must have exactly the documented fields; extra tokens are an
+input error. Hamiltonian coefficients must be finite. Blank lines and
+lines starting with <code class="docutils literal notranslate"><span class="pre">#</span></code> after the five header lines are skipped, as in
+HPhi and <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">type=1</span></code> denotes <span class="math notranslate nohighlight">\(c_{s_1\,\mathrm{spin}_1}^{\dagger} c_{s_2\,\mathrm{spin}_2}^{\dagger}\)</span>,
+and <code class="docutils literal notranslate"><span class="pre">type=0</span></code> denotes <span class="math notranslate nohighlight">\(c_{s_1\,\mathrm{spin}_1} c_{s_2\,\mathrm{spin}_2}\)</span>.
+In both cases the second (rightmost)
+operator acts first. Site indices are in <code class="docutils literal notranslate"><span class="pre">[0,Nsite)</span></code> and spin indices
+are 0 (up) or 1 (down). Repeating the same fermion operator in one pair
+is forbidden.</p></li>
+</ul>
+</section>
+<section id="hermiticity-and-mode-restrictions">
+<h3>Hermiticity and mode restrictions<a class="headerlink" href="#hermiticity-and-mode-restrictions" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">NAnomalousTerm</span></code> must be even. Each adjacent pair must reverse the
+indices, flip <code class="docutils literal notranslate"><span class="pre">type</span></code>, and complex-conjugate the coefficient. The
+coefficient tolerance is <code class="docutils literal notranslate"><span class="pre">1e-12</span></code>. Thus, the second row in the example
+is the adjoint of the first; Hermitian partners cannot be separated or
+reordered.</p></li>
+<li><p>The presence of either keyword requires <code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code>, including
+an explicit zero count. <code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> is accepted in
+<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=0</span></code> and 1. <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> is accepted only in
+<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>; supplying its keyword in mode 0 is an input error.</p></li>
+<li><p>Grand-canonical sampling covers even particle-number sectors and inherits
+the constraints documented for <code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code>: <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>
+and complex variational parameters are required, while real-only GC,
+RBM, BackFlow, and Lanczos paths remain unsupported.</p></li>
+</ul>
+</section>
+</section>
 <section id="twist-file-twist-def">
 <h2>Twist file (twist.def)<a class="headerlink" href="#twist-file-twist-def" title="Permalink to this heading">¶</a></h2>
 <p>This file sets the target components to calculate and output the
@@ -3791,8 +3880,8 @@ idx_site_s_x_y_z
     …
 </pre></div>
 </div>
-<section id="id84">
-<h3>File format<a class="headerlink" href="#id84" title="Permalink to this heading">¶</a></h3>
+<section id="id85">
+<h3>File format<a class="headerlink" href="#id85" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -3801,8 +3890,8 @@ idx_site_s_x_y_z
 [int02]  [int03]  [int04]  [double01]  [double02]  [double03]</p></li>
 </ul>
 </section>
-<section id="id85">
-<h3>Parameters<a class="headerlink" href="#id85" title="Permalink to this heading">¶</a></h3>
+<section id="id86">
+<h3>Parameters<a class="headerlink" href="#id86" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3836,8 +3925,8 @@ An integer giving a spin index,
 </li>
 </ul>
 </section>
-<section id="id86">
-<h3>Use rules<a class="headerlink" href="#id86" title="Permalink to this heading">¶</a></h3>
+<section id="id87">
+<h3>Use rules<a class="headerlink" href="#id87" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>All the combinations of sites and spins must be specified to designate each Twist operator.</p></li>
@@ -3862,8 +3951,8 @@ i_x_y_z_orb
     …
 </pre></div>
 </div>
-<section id="id87">
-<h3>File format<a class="headerlink" href="#id87" title="Permalink to this heading">¶</a></h3>
+<section id="id88">
+<h3>File format<a class="headerlink" href="#id88" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01] [int02]  [int03]  [int04]</p></li>
@@ -3871,8 +3960,8 @@ i_x_y_z_orb
 <li><p>Lines 6 -: [int05]  [int06]  [int07]  [int08]  [int09]</p></li>
 </ul>
 </section>
-<section id="id88">
-<h3>Parameters<a class="headerlink" href="#id88" title="Permalink to this heading">¶</a></h3>
+<section id="id89">
+<h3>Parameters<a class="headerlink" href="#id89" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -4126,15 +4215,20 @@ indices are rejected as input errors.</p></li>
 <li><a class="reference internal" href="#id83">Use rules</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#twist-file-twist-def">Twist file (twist.def)</a><ul>
+<li><a class="reference internal" href="#anomalousterm-and-anomalousg-files">AnomalousTerm and AnomalousG files</a><ul>
 <li><a class="reference internal" href="#id84">File format</a></li>
-<li><a class="reference internal" href="#id85">Parameters</a></li>
-<li><a class="reference internal" href="#id86">Use rules</a></li>
+<li><a class="reference internal" href="#hermiticity-and-mode-restrictions">Hermiticity and mode restrictions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#twist-file-twist-def">Twist file (twist.def)</a><ul>
+<li><a class="reference internal" href="#id85">File format</a></li>
+<li><a class="reference internal" href="#id86">Parameters</a></li>
+<li><a class="reference internal" href="#id87">Use rules</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#lattice-file-lattice-def">Lattice file (lattice.def)</a><ul>
-<li><a class="reference internal" href="#id87">File format</a></li>
-<li><a class="reference internal" href="#id88">Parameters</a></li>
+<li><a class="reference internal" href="#id88">File format</a></li>
+<li><a class="reference internal" href="#id89">Parameters</a></li>
 <li><a class="reference internal" href="#usage-rules">Usage rules</a></li>
 </ul>
 </li>
