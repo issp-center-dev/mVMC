@@ -29,6 +29,10 @@ typedef struct {
   int lapackInfo;
 } BF_FSZ_MAllResult;
 
+int getLWork(void);
+int getLWork_fcmp(void);
+int getLWork_fcmp_dim(int nDim);
+
 int CalculateMAll_fcmp(const int *eleIdx, const int qpStart, const int qpEnd);
 int CalculateMAll_real(const int *eleIdx, const int qpStart, const int qpEnd);
 

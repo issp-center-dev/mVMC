@@ -60,8 +60,14 @@ int Ne;    /* the number of electrons with up spin */
 int Nup;   /* the number of electrons with up spin */
 int Nsize; /* the number of electrons = 2*Ne */
 int Nsite2; /* 2*Nsite */
+int NsizeMax; /* maximum active Pfaffian dimension */
+int Ncur; /* current GC particle count */
 int NzBF; /* BF connectivity */
 int TwoSz;
+
+/* GC */
+int FlagGrandCanonical;
+int NGCInitNelec;
 
 int NSPGaussLeg; /* the number of points for the Gauss-Legendre quadrature */
 int NSPStot; /* S of Spin projection */
@@ -245,6 +251,7 @@ double BFRealEta;
 int *EleIdx;     /* EleIdx[sample][mi+si*Ne] */
 int *EleCfg;     /* EleCfg[sample][ri+si*Nsite] */
 int *EleNum;     /* EleIdx[sample][ri+si*Nsite] */
+int *EleNumSample; /* active particle count for each GC sample */
 int *EleProjCnt; /* EleProjCnt[sample][proj] */
 //[s] MERGE BY TM
 int *EleSpn;     /* EleIdx[sample][mi+si*Ne] */ //fsz
@@ -275,6 +282,7 @@ int *BurnEleProjCnt;
 int *BurnEleSpn;
 double complex *BurnRBMCnt;
 int BurnFlag=0; /* 0: off, 1: on */
+int BurnNcur;
 
 /***** Slater Elements ******/
 double complex *SlaterElm; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
@@ -316,6 +324,8 @@ double complex *SROptData; /* [2+NPara] storage for energy and variational param
 double complex Wc; /* Weight for correlation sampling = <psi|x> */
 double complex Etot; /* <H> */
 double complex Etot2; /* <H^2> */
+double complex Ntot; /* <N> */
+double complex Ntot2; /* <N^2> */
 double complex Dbtot;
 double complex Dbtot2;
 
@@ -380,6 +390,7 @@ FILE *FileOut;
 FILE *FileVar;
 FILE *FileTime;
 FILE *FileSRinfo; /* zvo_SRinfo.dat */
+FILE *FileGC; /* zvo_gc.dat */
 FILE *FileCisAjs;
 FILE *FileCisAjsCktAlt;
 FILE *FileCisAjsCktAltDC;

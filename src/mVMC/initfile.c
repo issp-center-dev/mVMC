@@ -35,6 +35,15 @@ void InitFile(char *xNameListFile, int rank) {
 
   if(rank!=0) return;
 
+  FileGC = NULL;
+  if(FlagGrandCanonical != 0) {
+    FileGC = fopen("zvo_gc.dat", "w");
+    if(FileGC == NULL) {
+      fprintf(stderr, "Error: failed to open grand-canonical output 'zvo_gc.dat'.\n");
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+  }
+
   //sprintf(fileName, "%s_cfg_%03d.dat", CDataFileHead, NDataIdxStart);
   //writeConfig(xNameListFile, fileName);
 
@@ -204,6 +213,11 @@ void CloseFile(int rank) {
     fclose(FileSRinfo);
     fclose(FileOut);
     fclose(FileVar);
+  }
+
+  if(FileGC != NULL) {
+    fclose(FileGC);
+    FileGC = NULL;
   }
 
   return;

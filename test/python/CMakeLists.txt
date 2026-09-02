@@ -3,6 +3,9 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mode1.py DESTINATION ${CMAKE_BINAR
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_invalid_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_gc_canonical_baseline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sr.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nstore_nsplit.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -183,6 +186,23 @@ function(add_python_vmc_test_invalid_expert_with_updates test_name model expecte
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
 endfunction(add_python_vmc_test_invalid_expert_with_updates)
+
+function(add_gc_invalid_test test_name expected_error)
+    add_python_vmc_test_invalid_expert_with_updates(
+        ${test_name} gc_invalid/base "${expected_error}" ${ARGN})
+    add_python_vmc_test_invalid_expert_with_updates(
+        ${test_name}_mpi gc_invalid/base "${expected_error}" ${ARGN})
+    set_tests_properties(${test_name}_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+endfunction(add_gc_invalid_test)
+
+function(add_gc_oracle_test test_name case_name)
+    add_test(NAME ${test_name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc.py ${case_name})
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+        RESOURCE_LOCK "gc_oracle_${case_name}")
+endfunction(add_gc_oracle_test)
 
 function(add_python_projection_parser_test test_name mode)
     add_test(NAME ${test_name}
@@ -1189,6 +1209,61 @@ add_python_vmc_test_invalid_expert(DoublonOnly_InvalidNeZero "requires Ne > 0")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidNeFull "requires Ne < Nsite")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidLocSpin "NLocalSpin > 0")
 add_python_vmc_test_invalid_expert(DoublonOnly_InvalidOrbitalGeneral "OrbitalGeneral=1")
+
+add_gc_invalid_test(GC_Invalid_LocSpin "does not support LocSpin" gc_locspin)
+add_gc_invalid_test(GC_Invalid_TwoSz "requires 2Sz=-1" 2Sz=0)
+add_gc_invalid_test(GC_Invalid_ExUpdatePath "requires NExUpdatePath=0" NExUpdatePath=1)
+add_gc_invalid_test(GC_Invalid_UpdateWeight "does not support the UpdateWeight input" gc_updateweight)
+add_gc_invalid_test(GC_Invalid_SRCG "supports dense SR only" NSRCG=1)
+add_gc_invalid_test(GC_Invalid_Lanczos "does not support Lanczos" NLanczosMode=1)
+add_gc_invalid_test(GC_Invalid_RBM "does not support RBM" gc_rbm)
+add_gc_invalid_test(GC_Invalid_BackFlow "does not support BackFlow" gc_backflow)
+add_gc_invalid_test(GC_Invalid_FlagRange "must be 0 or 1" NGrandCanonical=2)
+add_gc_invalid_test(GC_Invalid_HintOver "NGCInitNelec must satisfy" NGCInitNelec=999)
+add_gc_invalid_test(GC_Invalid_HintNegative "NGCInitNelec must satisfy" NGCInitNelec=-2)
+add_gc_invalid_test(GC_Invalid_NoOrbitalGeneral "requires OrbitalGeneral" gc_noorbgen)
+add_gc_invalid_test(GC_Invalid_RealParameter "requires complex variational parameters" gc_realparam)
+add_gc_invalid_test(GC_Invalid_GaussLeg "initially requires" NSPGaussLeg=2)
+add_gc_invalid_test(GC_Invalid_MPTrans "initially requires" NMPTrans=2)
+add_gc_invalid_test(GC_Invalid_QPOptTrans "initially requires" gc_opttrans2 opttrans_mode)
+add_gc_invalid_test(GC_Invalid_OptTrans "does not support OptTrans" gc_opttrans1 opttrans_mode)
+
+add_test(NAME GC_Exact_Oracle_SelfTest
+    COMMAND ${PYTHON_EXECUTABLE} grandcanonical_exact_oracle.py)
+set_tests_properties(GC_Exact_Oracle_SelfTest PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+add_gc_oracle_test(GC_Exact_Physical physical)
+add_gc_oracle_test(GC_SR_Oracle sr)
+add_gc_oracle_test(GC_Mu_Response mu_response)
+add_gc_oracle_test(GC_Vacuum_Exact vacuum)
+add_gc_oracle_test(GC_MPI_NSplit2_CalMode0 mpi_nsplit2_mode0)
+add_gc_oracle_test(GC_MPI_NSplit2_CalMode1 mpi_nsplit2_mode1)
+add_gc_oracle_test(GC_MPI_NSplit1_CalMode0 mpi_nsplit1_mode0)
+add_gc_oracle_test(GC_MPI_NSplit1_CalMode1 mpi_nsplit1_mode1)
+
+add_test(NAME GC_OddNCond_Positive
+    COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+    "NCond is ignored" allow_success "expect:initial GC particle number is 2"
+    Ncond=3 NGCInitNelec=2)
+set_tests_properties(GC_OddNCond_Positive PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+add_test(NAME GC_OddNCond_Positive_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+    "NCond is ignored" allow_success "expect:initial GC particle number is 2"
+    Ncond=3 NGCInitNelec=2)
+set_tests_properties(GC_OddNCond_Positive_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+
+add_test(NAME GC_VacuumStorage_Positive
+    COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+    "initial GC particle number is 0" allow_success NGCInitNelec=0)
+set_tests_properties(GC_VacuumStorage_Positive PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+add_test(NAME GC_VacuumStorage_Positive_mpi
+    COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+    "initial GC particle number is 0" allow_success NGCInitNelec=0)
+set_tests_properties(GC_VacuumStorage_Positive_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
 
 foreach(real_rbm_case
     family-charge

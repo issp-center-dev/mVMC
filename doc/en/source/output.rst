@@ -39,6 +39,8 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_out\_yyy.dat                        | Energy and deviation.                                                                                                  |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| zvo\_gc.dat                              | Particle-number moments in grand-canonical mode.                                                                       |
++------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_SRinfo.dat                          | Information related to SR optimization method.                                                                         |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_var\_yyy.dat                        | Progress information for optimizing variational parameters.                                                            |
@@ -55,6 +57,16 @@ where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
 | xxx\_twist\_yyy.dat                      | Twist operators.                                                                                                       |
 +------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+
+Grand-canonical particle-number output (zvo\_gc.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When ``NGrandCanonical=1``, this fixed-name file contains three columns:
+:math:`\langle N\rangle`, :math:`\langle N^2\rangle`, and
+:math:`\langle N^2\rangle-\langle N\rangle^2`. Parameter optimization writes
+one line per SR step; physical calculation writes one line per bin. The name
+does not use ``CDataFileHead`` or ``NDataIdxStart``. Starting another run in
+the same directory replaces the previous ``zvo_gc.dat``.
 
 Output file for variational parameters (\*\*\*\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

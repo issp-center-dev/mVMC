@@ -842,6 +842,7 @@ void clearPhysQuantity(){
   double  *vec_real;
 //[s] MERGE BY TM
   Wc = Etot = Etot2 = Sztot=Sztot2 =0.0;//fsz
+  Ntot = Ntot2 = 0.0;
   //Wc = Etot = Etot2 = 0.0;
   Dbtot = Dbtot2 = 0.0;
 //[e] MERGE BY TM

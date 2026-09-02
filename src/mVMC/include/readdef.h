@@ -128,6 +128,7 @@ enum ParamIdxInt{
   IdxNx,IdxNy,IdxNz,IdxNorb,IdxNTwist,
   IdxNBF,IdxNrange, IdxNNz, Idx2Sz, IdxNCond,
   IdxLanczosEstimatorMode,
+  IdxNGrandCanonical, IdxNGCInitNelec,
   ParamIdxInt_End
 };
 

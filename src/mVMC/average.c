@@ -131,6 +131,41 @@ static void CheckPowerLanczosSupport(MPI_Comm comm) {
 /* calculate average of Wc, Etot and Etot2 ;Sztot,Sztot2 for fsz*/
 /* All processes will have the result */
 void WeightAverageWE(MPI_Comm comm) {
+  if(FlagGrandCanonical != 0) {
+    const int nGC=7;
+    double complex invWGC;
+    int rankGC,sizeGC;
+    double complex sendGC[nGC],recvGC[nGC];
+    MPI_Comm_rank(comm,&rankGC);
+    MPI_Comm_size(comm,&sizeGC);
+    if(sizeGC>1) {
+      sendGC[0] = Wc;
+      sendGC[1] = Etot;
+      sendGC[2] = Etot2;
+      sendGC[3] = Sztot;
+      sendGC[4] = Sztot2;
+      sendGC[5] = Ntot;
+      sendGC[6] = Ntot2;
+      SafeMpiAllReduce_fcmp(sendGC,recvGC,nGC,comm);
+      Wc     = recvGC[0];
+      invWGC = 1.0/Wc;
+      Etot   = recvGC[1]*invWGC;
+      Etot2  = recvGC[2]*invWGC;
+      Sztot  = recvGC[3]*invWGC;
+      Sztot2 = recvGC[4]*invWGC;
+      Ntot   = recvGC[5]*invWGC;
+      Ntot2  = recvGC[6]*invWGC;
+    } else {
+      invWGC = 1.0/Wc;
+      Etot   *= invWGC;
+      Etot2  *= invWGC;
+      Sztot  *= invWGC;
+      Sztot2 *= invWGC;
+      Ntot   *= invWGC;
+      Ntot2  *= invWGC;
+    }
+    return;
+  }
   const int n=5;//fsz
   double complex invW;
   int rank,size;

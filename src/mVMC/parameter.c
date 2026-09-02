@@ -150,20 +150,29 @@ void SyncModifiedParameter(MPI_Comm comm) {
 #endif /* _mpi_use */
 
   /***** shift correlation factors *****/
-  /* shift the DH correlation factors */
-  if(FlagShiftDH2==1) gShift += shiftDH2();
-  if(FlagShiftDH4==1) gShift += shiftDH4();
-  /* shift the Gutzwiller factors */
-  for(i=0;i<NGutzwillerIdx;i++) Proj[i] += gShift;
-  /* shift the Gutzwiller-Jastrow factors */
-  if(FlagShiftGJ==1) shiftGJ();
+  /* These shifts are gauge transformations only at fixed particle number.
+   * In GC mode they change the relative weights of particle-number sectors,
+   * just as an overall Slater rescale does, so preserve the raw parameters. */
+  if(FlagGrandCanonical == 0) {
+    /* shift the DH correlation factors */
+    if(FlagShiftDH2==1) gShift += shiftDH2();
+    if(FlagShiftDH4==1) gShift += shiftDH4();
+    /* shift the Gutzwiller factors */
+    for(i=0;i<NGutzwillerIdx;i++) Proj[i] += gShift;
+    /* shift the Gutzwiller-Jastrow factors */
+    if(FlagShiftGJ==1) shiftGJ();
+  }
 
   /***** rescale Slater *****/
   xmax = cabs(Slater[0]);
   for(i=1;i<NSlater;i++){
     if(xmax < cabs(Slater[i])) xmax = cabs(Slater[i]);
   }
-  ratio = D_AmpMax/xmax;
+  /* The overall pairing scale is a physical fugacity in the GC wave function:
+   * multiplying f changes the relative weights of the N=0,2,... sectors.
+   * Preserve that degree of freedom (and the exactly-zero vacuum) while
+   * retaining the canonical normalization byte-for-byte. */
+  ratio = FlagGrandCanonical != 0 ? 1.0 : D_AmpMax/xmax;
   #pragma omp parallel for default(shared) private(i)
   for(i=0;i<NSlater;i++) Slater[i] *= ratio;
 

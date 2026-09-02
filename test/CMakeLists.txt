@@ -12,6 +12,120 @@ if(LAPACK_FOUND)
     add_test(NAME BLAS_DGEMM_Canary COMMAND blas_dgemm_canary)
 endif()
 
+add_executable(gc_size_unit gc_size_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_size.c)
+target_include_directories(gc_size_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(MPI_FOUND)
+    target_link_libraries(gc_size_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCSize_Unit COMMAND gc_size_unit)
+foreach(gc_size_death_mode mul_overflow add_overflow negative int_overflow)
+    add_test(NAME GCSize_Unit_${gc_size_death_mode}
+        COMMAND gc_size_unit ${gc_size_death_mode})
+    set_tests_properties(GCSize_Unit_${gc_size_death_mode}
+        PROPERTIES WILL_FAIL TRUE)
+endforeach()
+
+add_executable(gc_config_unit gc_config_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_config.c)
+target_include_directories(gc_config_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_config_unit m)
+add_test(NAME GCConfig_Unit COMMAND gc_config_unit)
+
+add_executable(gc_parameter_unit gc_parameter_unit.c
+    ${CMAKE_SOURCE_DIR}/src/sfmt/SFMT.c)
+target_include_directories(gc_parameter_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include
+    ${CMAKE_SOURCE_DIR}/src/sfmt)
+target_link_libraries(gc_parameter_unit m)
+if(MPI_FOUND)
+    target_link_libraries(gc_parameter_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCParameter_Unit COMMAND gc_parameter_unit)
+
+add_executable(gc_matrix_unit gc_matrix_unit.c)
+target_include_directories(gc_matrix_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_matrix_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(gc_matrix_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(gc_matrix_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCMatrix_Unit COMMAND gc_matrix_unit)
+
+add_executable(gc_pfupdate_unit gc_pfupdate_unit.c)
+target_include_directories(gc_pfupdate_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_pfupdate_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(gc_pfupdate_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(gc_pfupdate_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCPfUpdate_Unit COMMAND gc_pfupdate_unit)
+
+add_executable(gc_sampler_unit gc_sampler_unit.c
+    ${CMAKE_SOURCE_DIR}/src/sfmt/SFMT.c)
+target_include_directories(gc_sampler_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include
+    ${CMAKE_SOURCE_DIR}/src/sfmt)
+target_link_libraries(gc_sampler_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(gc_sampler_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(gc_sampler_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCSampler_Unit COMMAND gc_sampler_unit)
+add_test(NAME GCSampler_Unit_DebugRebuild COMMAND gc_sampler_unit)
+set_tests_properties(GCSampler_Unit_DebugRebuild PROPERTIES
+    ENVIRONMENT "MVMC_GC_DEBUG_REBUILD_INTERVAL=1")
+if(MPI_FOUND)
+    add_test(NAME GCSampler_RebuildStatus_MPI
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_sampler_unit>
+                --collective-only ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(GCSampler_RebuildStatus_MPI PROPERTIES
+        PROCESSORS 2 TIMEOUT 30)
+endif()
+
+add_executable(gc_slater_diff_unit gc_slater_diff_unit.c)
+target_include_directories(gc_slater_diff_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_slater_diff_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(gc_slater_diff_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(gc_slater_diff_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCSlaterDiff_Unit COMMAND gc_slater_diff_unit)
+
+add_executable(gc_green_unit gc_green_unit.c)
+target_include_directories(gc_green_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_green_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(gc_green_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(gc_green_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCGreen_Unit COMMAND gc_green_unit)
+add_test(NAME GCGreen_Unit_OMP4 COMMAND gc_green_unit)
+set_tests_properties(GCGreen_Unit_OMP4 PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=4")
+
 add_executable(nbody_operator_unit
     nbody_operator_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/nbody_operator.c

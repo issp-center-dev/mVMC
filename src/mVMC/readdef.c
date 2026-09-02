@@ -945,11 +945,20 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     }
 
     //CalcNCond
-    if (bufInt[IdxNCond] != -1) {
-      if (bufInt[IdxNCond] % 2 != 0) {
-        fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
-        info = 1;
-      } else bufInt[IdxNe] = (bufInt[IdxNLocSpin] + bufInt[IdxNCond]) / 2;
+    if (bufInt[IdxNGrandCanonical] == 0) {
+      if (bufInt[IdxNCond] != -1) {
+        if (bufInt[IdxNCond] % 2 != 0) {
+          fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
+          info = 1;
+        } else {
+          bufInt[IdxNe] =
+              (bufInt[IdxNLocSpin] + bufInt[IdxNCond]) / 2;
+        }
+      }
+    } else if (bufInt[IdxNCond] != -1) {
+      fprintf(stdout,
+              "  Note: NCond is ignored when NGrandCanonical=1 "
+              "(use NGCInitNelec).\n");
     }
 
     updateWeightError[0] = '\0';
@@ -967,6 +976,99 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
               UpdateWeights[UpdateWeightExchange],
               UpdateWeights[UpdateWeightLocalSpinFlip],
               UpdateWeights[UpdateWeightPairSpinFlip]);
+    }
+
+    if (bufInt[IdxNsite] > INT_MAX / 2) {
+      fprintf(stderr,
+              "Error: Nsite is too large: 2*Nsite would overflow int.\n");
+      info = 1;
+    }
+    if (bufInt[IdxNe] > INT_MAX / 2) {
+      fprintf(stderr,
+              "Error: Ne is too large: 2*Ne would overflow int.\n");
+      info = 1;
+    }
+
+    if (bufInt[IdxNGrandCanonical] != 0) {
+      fprintf(stdout,
+              "  Note: Ne/Nelectron and NCond do not constrain particle "
+              "number when NGrandCanonical=1.\n");
+      if (bufInt[IdxNGrandCanonical] != 1) {
+        fprintf(stderr,
+                "Error: NGrandCanonical (in modpara.def) must be 0 or 1.\n");
+        info = 1;
+      }
+      if (iFlgOrbitalGeneral != 1) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 requires OrbitalGeneral.\n");
+        info = 1;
+      }
+      if (bufInt[IdxNLocSpin] > 0) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 does not support LocSpin "
+                "(pair add/remove breaks local-spin occupancy).\n");
+        info = 1;
+      }
+      if (bufInt[Idx2Sz] != -1) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 requires 2Sz=-1 "
+                "(Sz is not conserved by pair add/remove).\n");
+        info = 1;
+      }
+      if (bufInt[IdxExUpdatePath] != 0) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 requires NExUpdatePath=0 "
+                "(GC sampler has its own move classes).\n");
+        info = 1;
+      }
+      if (FlagUpdateWeight) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 does not support the "
+                "UpdateWeight input.\n");
+        info = 1;
+      }
+      if (NSRCG != 0) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 supports dense SR only "
+                "(NSRCG must be 0).\n");
+        info = 1;
+      }
+      if (bufInt[IdxLanczosMode] > 0) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 does not support Lanczos.\n");
+        info = 1;
+      }
+      if (FlagRBM > 0) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 does not support RBM.\n");
+        info = 1;
+      }
+      if (bufInt[IdxNBF] > 0) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 does not support BackFlow.\n");
+        info = 1;
+      }
+      if (bufInt[IdxSPGaussLeg] != 1 || bufInt[IdxMPTrans] != 1 ||
+          bufInt[IdxNQPOptTrans] > 1) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 initially requires "
+                "NSPGaussLeg=1, NMPTrans=1, NQPOptTrans<=1.\n");
+        info = 1;
+      }
+      if (FlagOptTrans > 0) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 does not support OptTrans.\n");
+        info = 1;
+      }
+      if (bufInt[IdxNGCInitNelec] != -1 &&
+          (bufInt[IdxNGCInitNelec] < 0 ||
+           (long long)bufInt[IdxNGCInitNelec] >
+               2LL * (long long)bufInt[IdxNsite])) {
+        fprintf(stderr,
+                "Error: NGCInitNelec must satisfy "
+                "0 <= NGCInitNelec <= 2*Nsite.\n");
+        info = 1;
+      }
     }
 
     if (bufInt[IdxExUpdatePath] == 4 || bufInt[IdxExUpdatePath] == 5) {
@@ -1134,6 +1236,12 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       iComplexFlgOrbital = 1;
       fprintf(stderr, "Warning: All the pairings are treated as complex variational parameters.\n");
     }
+    if (bufInt[IdxNGrandCanonical] != 0 && AllComplexFlag == 0) {
+      fprintf(stderr,
+              "Error: NGrandCanonical=1 requires complex variational "
+              "parameters.\n");
+      info = 1;
+    }
     if(FlagRBM != 0 && AllComplexFlag == 0){
       if (iFlgOrbitalGeneral != 0) {
         fprintf(stderr,
@@ -1208,6 +1316,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   NLanczosMode = bufInt[IdxLanczosMode];
   NLanczosStep = bufInt[IdxLanczosStep];
   NLanczosEstimatorMode = bufInt[IdxLanczosEstimatorMode];
+  FlagGrandCanonical = bufInt[IdxNGrandCanonical];
+  NGCInitNelec = bufInt[IdxNGCInitNelec];
   if (NLanczosSupportMode != 0 && NLanczosSupportMode != 1) {
     if (rank == 0) {
       fprintf(stderr, "Error: NLanczosSupportMode must be 0 or 1.\n");
@@ -1521,6 +1631,17 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
   Nsize = 2 * Ne;
   Nsite2 = 2 * Nsite;
+  NsizeMax = (FlagGrandCanonical != 0) ? Nsite2 : Nsize;
+  if (FlagGrandCanonical != 0) {
+    int ncur0 = (NGCInitNelec >= 0) ? NGCInitNelec : Nsite;
+    if (ncur0 % 2 != 0) ncur0 -= 1;
+    if (ncur0 < 0) ncur0 = 0;
+    if (ncur0 > Nsite2) ncur0 = Nsite2 - (Nsite2 % 2);
+    Ncur = ncur0;
+    if (rank == 0) {
+      fprintf(stdout, "  Note: initial GC particle number is %d.\n", Ncur);
+    }
+  }
   NSlater = NOrbitalIdx;
   NProj = NGutzwillerIdx + NJastrowIdx + NSpinJastrowIdx
           + 2 * 3 * NDoublonHolon2siteIdx
@@ -2895,6 +3016,8 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufInt[Idx2Sz] = -1;// -1: sz is not fixed :fsz
   bufInt[IdxNCond] = -1;
   bufInt[IdxLanczosEstimatorMode] = 0;
+  bufInt[IdxNGrandCanonical] = 0;
+  bufInt[IdxNGCInitNelec] = -1;
 
 //RBM
   bufInt[IdxNneuron] = 0;
@@ -3008,6 +3131,10 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
             } else if (CheckWords(ctmp, "NLanczosEstimatorMode") == 0) {
               bufInt[IdxLanczosEstimatorMode] =
                   (dtmp == 0.0 || dtmp == 1.0) ? (int)dtmp : -1;
+            } else if (CheckWords(ctmp, "NGrandCanonical") == 0) {
+              bufInt[IdxNGrandCanonical] = (int)dtmp;
+            } else if (CheckWords(ctmp, "NGCInitNelec") == 0) {
+              bufInt[IdxNGCInitNelec] = (int)dtmp;
             } else if (CheckWords(ctmp, "NDataIdxStart") == 0) {
               bufInt[IdxDataIdxStart] = (int) dtmp;
             } else if (CheckWords(ctmp, "NDataQtySmp") == 0) {
