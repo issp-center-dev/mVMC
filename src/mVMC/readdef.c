@@ -4874,6 +4874,8 @@ int GetInfoAnomalousTerm(FILE *fp, int **ArrayIdx,
 
   if (NArray == 0) return 0;
   while (fgets(line, sizeof(line), fp) != NULL) {
+    /* Blank and '#' comment lines are skipped like HPhi and NBodyInterAll. */
+    if (IsIgnorableNBodyGLine(line)) continue;
     if (idx >= NArray) {
       fprintf(stderr, "Error in %s: too many AnomalousTerm rows.\n",
               defname);
@@ -4962,6 +4964,7 @@ int GetInfoAnomalousG(FILE *fp, int **ArrayIdx, int Nsite, int NArray,
 
   if (NArray == 0) return 0;
   while (fgets(line, sizeof(line), fp) != NULL) {
+    if (IsIgnorableNBodyGLine(line)) continue;
     if (idx >= NArray) {
       fprintf(stderr, "Error in %s: too many AnomalousG rows.\n", defname);
       return 1;

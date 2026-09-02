@@ -198,6 +198,24 @@ def apply_gc_fixture_mutation(action):
     elif action == "anomalous_oversized_g_count":
         write_anomalous_g("anomalousg.def", count=2147483648, rows=[])
         append_namelist_entry("namelist.def", "AnomalousG", "anomalousg.def")
+    elif action == "anomalous_blank_comment":
+        # HPhi-compatible layout: comment lines and blank lines between and
+        # after the data rows must be skipped by both parsers.
+        with open("anomalousterm.def") as source:
+            lines = source.readlines()
+        header, rows = lines[:5], lines[5:]
+        with open("anomalousterm.def", "w") as destination:
+            destination.writelines(header)
+            destination.write("# Hermitian pair\n")
+            destination.write(rows[0])
+            destination.write("\n")
+            destination.writelines(rows[1:])
+            destination.write("   \n\n")
+        write_anomalous_g("anomalousg.def",
+                          rows=["# create\n", "1 0 0 1 1\n", "\n",
+                                "0 1 1 0 0\n", "\n"])
+        append_namelist_entry("namelist.def", "AnomalousTerm", "anomalousterm.def")
+        append_namelist_entry("namelist.def", "AnomalousG", "anomalousg.def")
     elif action == "anomalous_counts_zero":
         set_anomalous_count("anomalousterm.def", "NAnomalousTerm", 0)
         with open("anomalousterm.def") as source:

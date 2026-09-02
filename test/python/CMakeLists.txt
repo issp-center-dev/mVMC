@@ -1281,6 +1281,18 @@ set_tests_properties(GC_Anomalous_CountZero_mpi PROPERTIES
     ENVIRONMENT
       "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
 
+# Positive HPhi-compatible layout: '#' comment lines and blank lines inside
+# and after the data rows are skipped (independent review M-1).
+add_python_vmc_test_invalid_expert_with_updates(
+    GC_Anomalous_BlankComment gc_invalid/base "Finish calculation."
+    allow_success anomalous_blank_comment)
+add_python_vmc_test_invalid_expert_with_updates(
+    GC_Anomalous_BlankComment_mpi gc_invalid/base "Finish calculation."
+    allow_success anomalous_blank_comment)
+set_tests_properties(GC_Anomalous_BlankComment_mpi PROPERTIES
+    ENVIRONMENT
+      "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+
 add_test(NAME GC_Exact_Oracle_SelfTest
     COMMAND ${PYTHON_EXECUTABLE} grandcanonical_exact_oracle.py)
 set_tests_properties(GC_Exact_Oracle_SelfTest PROPERTIES

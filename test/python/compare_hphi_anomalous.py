@@ -239,6 +239,11 @@ def run_cross_check(binary, workdir):
     if even_spectrum[0] + 1.0e-6 >= odd_spectrum[0]:
         raise AssertionError(
             "HPhi fixture ground state is not robustly even parity")
+    # AnomalousG expectation values are basis dependent inside a degenerate
+    # ground-state manifold, so require a clear gap in the even sector.
+    if even_spectrum[1] - even_spectrum[0] <= 1.0e-6:
+        raise AssertionError(
+            "HPhi fixture even-sector ground state is degenerate")
 
     prepare_fixture(workdir, mu, delta)
     environment = os.environ.copy()
