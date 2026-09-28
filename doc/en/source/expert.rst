@@ -760,9 +760,12 @@ Keywords and parameters
 
 -  ``Ncond``
 
-   **Type :** int-type (greater than 0)
+   **Type :** int-type (greater than or equal to 0)
 
-   **Description :** The number of conduction electrons.
+   **Description :** The number of conduction electrons. Electrons of
+   localized spins are not counted, so that ``Ncond`` is 0 for a pure
+   spin system. ``Ncond`` must not exceed
+   2 (``Nsite`` - ``NlocalSpin``).
 
 -  ``2Sz``
 

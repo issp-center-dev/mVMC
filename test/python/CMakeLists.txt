@@ -1914,6 +1914,17 @@ add_python_vmc_test_invalid_expert(BackFlow_InvalidSpinProjection "NSPGaussLeg==
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path4_InvalidRBM "does not support RBM")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path5_InvalidRBM "does not support RBM")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond4_J_path4_InvalidFullFilling "requires 2*Ne < Nsite")
+# These inputs made makeInitialSample loop forever; TIMEOUT keeps a regression from stalling ctest.
+add_python_vmc_test_invalid_expert_with_updates(
+    Ncond_InvalidPureSpin HeisenbergChain_SpinJastrow
+    "Ncond (in modpara.def) must be 0 when every site is a localized spin"
+    Ncond=4)
+add_python_vmc_test_invalid_expert_with_updates(
+    Ncond_InvalidOverFilling HubbardChain_SpinJastrow
+    "must not exceed 2*(Nsite-NLocalSpin) (= 12)"
+    Ncond=14)
+set_tests_properties(Ncond_InvalidPureSpin Ncond_InvalidOverFilling
+    PROPERTIES TIMEOUT 60)
 add_python_projection_parser_test(ProjectionParserContract serial)
 if(MPI_FOUND)
     add_python_projection_parser_test(ProjectionParserContract_mpi mpi)

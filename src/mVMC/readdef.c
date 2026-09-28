@@ -1237,6 +1237,25 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
     }
 
+    //Check the number of conduction electrons
+    if (bufInt[IdxNGrandCanonical] == 0) {
+      const long long nCond =
+          2LL * bufInt[IdxNe] - (long long)bufInt[IdxNLocSpin];
+      const long long nCondMax =
+          2LL * ((long long)bufInt[IdxNsite] - bufInt[IdxNLocSpin]);
+      if (nCond > nCondMax) {
+        fprintf(stderr,
+                "Error: The number of conduction electrons (= %lld) must not exceed 2*(Nsite-NLocalSpin) (= %lld).\n",
+                nCond, nCondMax);
+        if (bufInt[IdxNLocSpin] > 0 &&
+            bufInt[IdxNLocSpin] == bufInt[IdxNsite]) {
+          fprintf(stderr,
+                  "  Ncond (in modpara.def) must be 0 when every site is a localized spin.\n");
+        }
+        info = 1;
+      }
+    }
+
     //Check LocSpn
     if (bufInt[IdxNLocSpin] > 0) {
       if (bufInt[IdxNLocSpin] == 2 * bufInt[IdxNe] && bufInt[IdxExUpdatePath] != 2) {
