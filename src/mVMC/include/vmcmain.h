@@ -133,6 +133,7 @@ extern void omp_set_num_threads(int);
 #include "../readdef.c"
 #include "../initfile.c"
 
+#include "../initial_sample.c"
 #include "../vmcmake.c"
 #include "../vmcmake_real.c"
 #include "../vmcmake_fsz.c"

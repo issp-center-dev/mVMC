@@ -1925,6 +1925,17 @@ add_python_vmc_test_invalid_expert_with_updates(
     Ncond=14)
 set_tests_properties(Ncond_InvalidPureSpin Ncond_InvalidOverFilling
     PROPERTIES TIMEOUT 60)
+# Kondo chain above half filling: vmc.out did not end with some of the seeds.
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_initial_sample.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+foreach(initial_sample_variant real cmp fsz)
+    add_test(NAME InitialSample_AboveHalfFilling_${initial_sample_variant}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_initial_sample.py
+                ${initial_sample_variant})
+    set_tests_properties(InitialSample_AboveHalfFilling_${initial_sample_variant}
+        PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1"
+        TIMEOUT 300)
+endforeach()
 add_python_projection_parser_test(ProjectionParserContract serial)
 if(MPI_FOUND)
     add_python_projection_parser_test(ProjectionParserContract_mpi mpi)
