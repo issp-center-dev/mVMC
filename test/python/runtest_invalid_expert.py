@@ -269,8 +269,8 @@ def main():
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
     workroot = os.path.join(rootdir, "work")
-    if not os.path.exists(workroot):
-        os.makedirs(workroot)
+    # Tests which run in parallel may create it at the same time.
+    os.makedirs(workroot, exist_ok=True)
     case_name = make_workdir_name(model, modpara_updates)
     workdir = os.path.join(workroot, "{}_{}".format(case_name, os.getpid()))
     if os.path.exists(workdir):
