@@ -21,6 +21,7 @@ OBJS = \
 	classic_pfaffian_collective.o \
 	physcal_lanczos.o \
 	splitloop.o \
+	version.o \
 	vmcmain.o \
 	$(PFAPACK) $(SFMT) $(STDFACE) \
 	$(PFUPDATES) $(LTL2INV)
@@ -167,7 +168,7 @@ all :
 vmc.out : $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(OPTION) $(CFLAGS) $(LIBS)
 
-vmcdry.out : vmcdry.o $(STDFACE)
+vmcdry.out : vmcdry.o version.o $(STDFACE)
 	$(CXX) -o $@ $^ $(OPTION) $(CFLAGS) $(LIBS)
 
 SUFFIXES: .o .c
@@ -186,5 +187,6 @@ clean :
 
 physcal_lanczos.o:$(SOURCES) $(HEADERS)
 splitloop.o:$(SOURCES) $(HEADERS)
+version.o:./include/version.h
 vmcdry.o:$(SOURCES) $(HEADERS)
 vmcmain.o:$(SOURCES) $(HEADERS)

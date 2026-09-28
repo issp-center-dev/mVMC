@@ -109,6 +109,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyinterall_invalid.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_update_weight.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_version.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_git_hash.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_real_rbm.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
@@ -2095,3 +2097,21 @@ add_test(NAME PowerLanczosP5CDirect_Unit
                  ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p5b_sensitivity_policy.json)
 set_tests_properties(PowerLanczosP5CDirect_Unit PROPERTIES
     ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+
+# "vmc.out -v" and "vmcdry.out -v"
+add_test(NAME Version_Option
+    COMMAND ${PYTHON_EXECUTABLE} runtest_version.py
+            ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+set_tests_properties(Version_Option PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+if(MPI_FOUND)
+    add_test(NAME Version_Option_mpi
+        COMMAND ${PYTHON_EXECUTABLE} runtest_version.py
+                ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+    set_tests_properties(Version_Option_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+        PROCESSORS 2)
+endif()
+add_test(NAME Version_GitHash
+    COMMAND ${PYTHON_EXECUTABLE} runtest_git_hash.py
+            ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR}/cmake/git_hash.cmake)
