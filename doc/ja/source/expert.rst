@@ -2270,6 +2270,7 @@ Tocchio ら [Tocchio2008_], [Tocchio2011_] も参照してください。
      \eta^{\mu\nu}_{\tau\tau'}
      \Theta^{\mu\uparrow}_{i_n,i_n+\tau}(x)
      \Theta^{\nu\downarrow}_{i_m,i_m+\tau'}(x)
+     \phi(i_n,i_n+\tau)\phi(i_m,i_m+\tau')
      f_{i_n+\tau,i_m+\tau'} .
 
 :math:`\tau,\tau'` は ``BFRange`` で列挙した近傍サイトを表し、
@@ -2307,6 +2308,25 @@ mVMC の ``ProjBF`` はこの :math:`\eta` を平坦化して格納したもの�
 BackFlow 無しの極限は
 :math:`\eta^{00}_{0,0}=1` かつその他の :math:`\eta=0` です。
 mVMC の入力ではこれが ``ProjBF[0]=1``、``ProjBF[k>0]=0`` に対応します。
+
+結合の位相 :math:`\phi(i,k)=\pm1` は hopping と同じゲージで
+``BFRange`` に指定します。有向の中心→近傍チャネルのそれぞれに掛け、
+ペアの正逆両方向に適用します。base 項は :math:`\phi(i,i)=1` で、
+占有数の count と base 項の活性化条件には位相を混ぜません。
+
+符号付き変換 :math:`U` の評価では、変換後の結合
+:math:`\phi(Ui,Uk)\phi(Uj,Ul)` と、従来の **中心サイト** の符号
+:math:`s_U(i)s_U(j)` を使用します。reader は使用する各変換に対して
+:math:`\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)` を検査します。
+この関係に含まれる近傍サイトの符号を軌道符号としてもう一度掛けてはいけません。
+FSZ では ``TransSym`` と ``OptTrans`` の合成写像・合成符号を用います。
+
+物理的な契約は三つに分かれます。局所 Z2 ゲージ変換
+:math:`f_{ij}\mapsto g_i g_j f_{ij}`、
+:math:`\phi(i,k)\mapsto g_i g_k\phi(i,k)` に対して BackFlow 軌道も共変です。
+射影前の ansatz の並進共変性には、元軌道が指定した並進部分群に対して共変である
+という追加の前提が必要です。射影演算では、一般の元軌道に対しても変換後の配置と
+結合を評価し、そのような元軌道の対称性は仮定しません。
 
 パラメータ数
 ^^^^^^^^^^^^

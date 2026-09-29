@@ -2382,6 +2382,7 @@ following configuration-dependent pair orbital :math:`f^b_{ij}(x)`:
      \eta^{\mu\nu}_{\tau\tau'}
      \Theta^{\mu\uparrow}_{i_n,i_n+\tau}(x)
      \Theta^{\nu\downarrow}_{i_m,i_m+\tau'}(x)
+     \phi(i_n,i_n+\tau)\phi(i_m,i_m+\tau')
      f_{i_n+\tau,i_m+\tau'} .
 
 :math:`\tau` and :math:`\tau'` run over the neighbor sites listed in
@@ -2421,6 +2422,29 @@ patterns in the configuration :math:`x`. With
 The no-BackFlow limit is :math:`\eta^{00}_{0,0}=1` and zero for the
 other :math:`\eta` values. In mVMC input, this corresponds to
 ``ProjBF[0]=1`` and ``ProjBF[k>0]=0``.
+
+The connection :math:`\phi(i,k)=\pm1` is specified by ``BFRange`` in
+the same gauge as the hopping amplitudes. It multiplies each directed
+center-to-neighbor channel, including both orientations of a pair.
+The base term has :math:`\phi(i,i)=1`; occupation counts and the base-term
+activation rule do not depend on the phase.
+
+For a signed transformation :math:`U`, the evaluated channels use
+:math:`\phi(Ui,Uk)\phi(Uj,Ul)`, together with the existing **center**
+signs :math:`s_U(i)s_U(j)`. The reader checks
+:math:`\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)` for every used transformation.
+The neighbor signs that enter this identity must not be inserted a second
+time as orbital signs. FSZ uses the composition of ``TransSym`` and
+``OptTrans`` and its composed signs.
+
+These statements express three distinct contracts. Local Z2 gauge changes
+:math:`f_{ij}\mapsto g_i g_j f_{ij}` and
+:math:`\phi(i,k)\mapsto g_i g_k\phi(i,k)` give the same transformation
+of the BackFlow pair orbital. Translation covariance of an unprojected
+ansatz additionally requires the original orbitals to be covariant under
+the declared translation subgroup. Evaluation of a projected state uses
+the transformed configuration and transformed bonds even for arbitrary
+original orbitals; it does not assume that additional orbital symmetry.
 
 Number of parameters
 ^^^^^^^^^^^^^^^^^^^^
