@@ -1144,14 +1144,12 @@ int RebuildSlaterMAllBF_fcmp(
     const int *eleIdx, const int *eleNum, const int *eleProjBFCnt,
     int qpStart, int qpEnd, double complex *sltElmBF,
     double complex *pfMOut, double complex *invMOut) {
-  BF_FSZ_MAllResult result;
+  int result;
   size_t nsizeSquared;
-  int *eleSpn = NULL;
   int *iwork = NULL;
   double complex *bufM = NULL;
   double complex *work = NULL;
   double *rwork = NULL;
-  int particle;
 
   if(eleIdx == NULL || eleNum == NULL || eleProjBFCnt == NULL
      || sltElmBF == NULL || pfMOut == NULL || invMOut == NULL
@@ -1168,14 +1166,12 @@ int RebuildSlaterMAllBF_fcmp(
     return BF_FSZ_MALL_OK;
   }
 
-  eleSpn = (int *)malloc((size_t)Nsize*sizeof(int));
   iwork = (int *)malloc((size_t)Nsize*sizeof(int));
   bufM = (double complex *)malloc(nsizeSquared*sizeof(double complex));
   work = (double complex *)malloc((size_t)LapackLWork*sizeof(double complex));
   rwork = (double *)malloc((size_t)LapackLWork*sizeof(double));
-  if(eleSpn == NULL || iwork == NULL || bufM == NULL
+  if(iwork == NULL || bufM == NULL
      || work == NULL || rwork == NULL) {
-    free(eleSpn);
     free(iwork);
     free(bufM);
     free(work);
@@ -1183,20 +1179,16 @@ int RebuildSlaterMAllBF_fcmp(
     return BF_FSZ_MALL_INVALID_ARGUMENT;
   }
 
-  for(particle=0;particle<Nsize;particle++) {
-    eleSpn[particle] = particle < Ne ? 0 : 1;
-  }
-  result = CalculateMAll_BF_fsz_from_workspace(
-      sltElmBF, eleIdx, eleSpn, qpStart, qpEnd, pfMOut, invMOut,
+  result = CalculateMAll_BF_fcmp_from_workspace(
+      sltElmBF, eleIdx, qpStart, qpEnd, pfMOut, invMOut,
       nsizeSquared, bufM, iwork, work, LapackLWork, rwork);
 
-  free(eleSpn);
   free(iwork);
   free(bufM);
   free(work);
   free(rwork);
   if(BFProfileEnabled) AddBFProfileCounter(BFPROF_FULL_REBUILD, 1);
-  return result.lapackInfo < 0 ? BF_PF_INVALID_ARGUMENT : result.status;
+  return result;
 }
 
 int RebuildSlaterMAllBF_real(

@@ -28,7 +28,7 @@ int GreenFunc1BF_real_prepare(const int ri, const int rj, const int s, double *g
 void GreenFunc1BF_real_finish_batch(const int batchSize, const double ip,
                     const double *projRatio, const int *icount, const int *msaTmp,
                     const double *vecM, double *greenValue, double *pfMNew,
-                    double *vecStack, double *wStack);
+                    const int *eleIdx);
 int GreenFunc2BF_real_ws(const int ri, const int rj, const int rk, const int rl,
                     const int s, const int t, const double ip,
                     double *vecTmp0, double *vecTmp1,

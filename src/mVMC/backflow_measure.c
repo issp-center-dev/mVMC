@@ -433,13 +433,13 @@ int GreenFunc1BF_real_prepare(const int ri, const int rj, const int s, double *g
 void GreenFunc1BF_real_finish_batch(const int batchSize, const double ip,
                     const double *projRatio, const int *icount, const int *msaTmp,
                     const double *vecM, double *greenValue, double *pfMNew,
-                    double *vecStack, double *wStack) {
+                    const int *eleIdx) {
   int batchIdx;
 
   StartTimer(84);
   StartTimer(83);
   CalculateNewPfMBFVecBatched_real(batchSize, icount, msaTmp, pfMNew, 0, NQPFull,
-                                   vecM, vecStack, wStack);
+                                   vecM, eleIdx);
   StopTimer(83);
   StartTimer(87);
   for(batchIdx=0;batchIdx<batchSize;batchIdx++) {
@@ -515,7 +515,7 @@ double GreenFunc1BF_real(const int ri, const int rj, const int s, const double i
                                eleProjBFCnt, projBFCntNew, msaTmp, icount, bufM);
   StopTimer(82);
   StartTimer(83);
-  CalculateNewPfMBFVec_real(icount, msaTmp, pfMNew_real, 0, NQPFull, bufM);
+  CalculateNewPfMBFVec_real(icount, msaTmp, pfMNew_real, 0, NQPFull, bufM, eleIdx);
   StopTimer(83);
   StartTimer(87);
   z *= CalculateIP_real(pfMNew_real, 0, NQPFull, MPI_COMM_SELF);
@@ -738,7 +738,7 @@ int GreenFunc2BF_real_ws(const int ri, const int rj, const int rk, const int rl,
   StopTimer(90);
 
   StartTimer(83);
-  CalculateNewPfMBFVecWithStride_real(icount, msaTmp, Nsize, pfMNew_real, 0, NQPFull, vecTmp0, Nsize);
+  CalculateNewPfMBFVecWithStride_real(icount, msaTmp, Nsize, pfMNew_real, 0, NQPFull, vecTmp0, Nsize, eleIdx);
   StopTimer(83);
   StartTimer(87);
   z *= CalculateIP_real(pfMNew_real, 0, NQPFull, MPI_COMM_SELF);
@@ -1143,7 +1143,7 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
   int *myEleIdx, *myEleNum, *myEleCfg, *myProjCntNew, *myProjBFCntNew;
   int *myBatchIdx, *myBatchMsa, *myBatchIcount;
   //double sltTmp[NThread*NQPFull*Nsite2*Nsite2];
-  double *myBatchVec, *myBatchPfM, *myBatchProj, *myBatchGreen, *myBatchVecStack, *myBatchWStack;
+  double *myBatchVec, *myBatchPfM, *myBatchProj, *myBatchGreen;
   double *myBuffer;
   double *myVecTmp0, *myVecTmp1; /* per-thread packed row-vector workspaces for GreenFunc2BF_real_ws */
   const int needTwoBody = (NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0);
@@ -1166,15 +1166,14 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
   RequestWorkSpaceThreadDouble(NQPFull+2*Nsize + 2*vecTmpSize
                                + BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize*Nsize
                                + BF_TRANSFER_BATCH_SIZE*NQPFull
-                               + 2*BF_TRANSFER_BATCH_SIZE
-                               + 2*BF_TRANSFER_BATCH_SIZE*Nsize*Nsize);
+                               + 2*BF_TRANSFER_BATCH_SIZE);
   nTransferBatch = (NTransfer + BF_TRANSFER_BATCH_SIZE - 1) / BF_TRANSFER_BATCH_SIZE;
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize, BF transfer batch scratch */
 
 #pragma omp parallel default(shared)\
   private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myBuffer,myVecTmp0,myVecTmp1,greenStatus,green,\
           myBatchIdx,myBatchMsa,myBatchIcount,myBatchVec,myBatchPfM,myBatchProj,myBatchGreen,\
-          myBatchVecStack,myBatchWStack,myEnergy,idx,ri,rj,s,rk,rl,t,tmp,\
+          myEnergy,idx,ri,rj,s,rk,rl,t,tmp,\
           greenValue,batchNo,batchStart,batchEnd,batchIdx,batchCount)\
   reduction(+:e)
   {
@@ -1193,8 +1192,6 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
     myBatchPfM = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE*NQPFull);
     myBatchProj = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE);
     myBatchGreen = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE);
-    myBatchVecStack = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE*Nsize*Nsize);
-    myBatchWStack = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE*Nsize*Nsize);
 
 #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -1282,7 +1279,7 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
       if(batchCount > 0) {
         GreenFunc1BF_real_finish_batch(batchCount, ip, myBatchProj, myBatchIcount, myBatchMsa,
                                        myBatchVec, myBatchGreen, myBatchPfM,
-                                       myBatchVecStack, myBatchWStack);
+                                       myEleIdx);
         for(batchIdx=0;batchIdx<batchCount;batchIdx++) {
           idx = myBatchIdx[batchIdx];
           myEnergy -= creal(ParaTransfer[idx]) * myBatchGreen[batchIdx];

@@ -16,13 +16,13 @@ void CalculateNewPfMBFWithStride_real(const int *icount, const int *msaTmp, cons
                             const int qpStart, const int qpEnd, const double *bufM);
 void CalculateNewPfMBFVecWithStride_real(const int *icount, const int *msaTmp, const int msaStride,
                             double *pfMNew, const int qpStart, const int qpEnd,
-                            const double *vecM, const int vecStride);
+                            const double *vecM, const int vecStride, const int *eleIdx);
 void CalculateNewPfMBFVec_real(const int *icount, const int *msaTmp,
                             double *pfMNew, const int qpStart, const int qpEnd,
-                            const double *vecM);
+                            const double *vecM, const int *eleIdx);
 void CalculateNewPfMBFVecBatched_real(const int batchSize, const int *icount, const int *msaTmp,
                             double *pfMNew, const int qpStart, const int qpEnd,
-                            const double *vecM, double *vecStack, double *wStack);
+                            const double *vecM, const int *eleIdx);
 
 int UpdateMAll_BF_real(const int *icount, const int *msaTmp, double *pfMNew, const int *eleIdx, int qpStart, int qpEnd, double *candidateInv);
 
