@@ -28,10 +28,47 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "./include/matrix.h"
 #include <complex.h>
 #include <stdint.h>
+#include <limits.h>
 #include <string.h>
 #include "./include/global.h"
 #include "./include/pfupdate.h"
 #include "./include/pfupdate_real.h"
+
+
+enum { BF_FAIL_PROPOSAL=1, BF_FAIL_ACCEPT_LU, BF_FAIL_ACCEPT_INVERSE,
+       BF_FAIL_ACCEPT_PF, BF_FAIL_FULL_PF, BF_FAIL_FULL_INVERSE, BF_FAIL_PERIODIC };
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+static unsigned BFFailureMask, BFFailureNegativeMask, BFFailureNanMask, BFFailureConsumed;
+static int BFFailureForceAccept;
+static int BFInjectNumericalInfo(int stage, int globalQp, int info) {
+  const unsigned bit=1u<<stage;
+  if(globalQp != 0 || !(BFFailureMask & bit) || (BFFailureConsumed & bit)
+      || (BFFailureNanMask & bit)) return info;
+  BFFailureConsumed |= bit;
+  return BFFailureNegativeMask & bit ? -4 : 1;
+}
+static int BFInjectNumericalNan(int stage, int globalQp) {
+  const unsigned bit=1u<<stage;
+  if(globalQp != 0 || !(BFFailureNanMask & bit) || (BFFailureConsumed & bit)) return 0;
+  BFFailureConsumed |= bit;
+  return 1;
+}
+#else
+#define BFInjectNumericalInfo(stage,globalQp,info) (info)
+#define BFInjectNumericalNan(stage,globalQp) 0
+#endif
+
+/* A normalized status is safe to aggregate with MPI_MAX; raw LAPACK info is
+ * signed and must never be used as a collective severity. */
+static int BFStatusFromLapack(int info) {
+  return info < 0 ? BF_PF_INVALID_ARGUMENT : (info > 0 ? BF_PF_LAPACK_FAILURE : BF_PF_OK);
+}
+static void BFRequirePfSuccess(int status, const char *stage) {
+  if(status != BF_PF_OK) {
+    fprintf(stderr,"Error: BackFlow %s failed (status=%d).\n",stage,status);
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
+}
 
 int CalculateMAll_BF_fcmp(const int *eleIdx, const int qpStart, const int qpEnd) {
   const int qpNum = qpEnd-qpStart;
@@ -51,7 +88,7 @@ int CalculateMAll_BF_fcmp(const int *eleIdx, const int qpStart, const int qpEnd)
   RequestWorkSpaceThreadDouble(LapackLWork); // TBC for rwork
 
 #pragma omp parallel default(shared)              \
-  private(myIWork,myWork,myRWork, myInfo,myBufM) //TODO: Check to add myRWork is correct or not.
+  reduction(max:info) private(myIWork,myWork,myRWork, myInfo,myBufM) //TODO: Check to add myRWork is correct or not.
   {
     myIWork = GetWorkSpaceThreadInt(Nsize);
     myBufM = GetWorkSpaceThreadComplex(Nsize*Nsize);
@@ -61,13 +98,11 @@ int CalculateMAll_BF_fcmp(const int *eleIdx, const int qpStart, const int qpEnd)
 
 #pragma omp for private(qpidx)
     for(qpidx=0;qpidx<qpNum;qpidx++) {
-      if(info!=0) continue;
 
       myInfo = calculateMAll_BF_fcmp_child(eleIdx, qpStart, qpEnd, qpidx,
           myBufM, myIWork, myWork, LapackLWork, myRWork, PfM, InvM);
       if(myInfo!=0) {
-#pragma omp critical
-        info=myInfo;
+        if(myInfo > info) info=myInfo;
       }
     }
   }
@@ -140,20 +175,22 @@ int calculateMAll_BF_fcmp_child(
   /* Calculate Pf M */
   M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
 
-  if(info!=0) return info;
-  if(!(isfinite(creal(pfaff)) && isfinite(cimag(pfaff)))) return qpidx+1;
+  if(info!=0) return BFStatusFromLapack(info);
+  if(!(isfinite(creal(pfaff)) && isfinite(cimag(pfaff)))) return BF_PF_NONFINITE;
   PfM[qpidx] = pfaff;
 
   /* Calculate inverse. */
   M_ZGETRF(&m, &n, invM, &lda, iwork, &info); /* ipiv = iwork */
-  if(info!=0) return info;
+  if(info!=0) return BFStatusFromLapack(info);
   M_ZGETRI(&n, invM, &lda, iwork, work, &lwork, &info);
-  if(info!=0) return info;
+  if(info!=0) return BFStatusFromLapack(info);
 
   /* InvM -> InvM(T) -> -InvM */
   M_ZSCAL(&nsq, &minus_one, invM, &one);
 
-  return info;
+  for(msi=0;msi<nsize*nsize;msi++)
+    if(!(isfinite(creal(invM[msi])) && isfinite(cimag(invM[msi])))) return BF_PF_NONFINITE;
+  return BF_PF_OK;
 }
 
 int CalculateMAll_BF_real(const int *eleIdx, const int qpStart, const int qpEnd){
@@ -173,7 +210,7 @@ int CalculateMAll_BF_real(const int *eleIdx, const int qpStart, const int qpEnd)
   /* Keep real BackFlow MultiQP rebuilds serialized; Linux CI shows the
      concurrent QP rebuild path can corrupt the identity-energy run. */
 #pragma omp parallel if(qpNum == 1) default(shared)              \
-  private(myIWork,myWork,myInfo,myBufM)
+  reduction(max:info) private(myIWork,myWork,myInfo,myBufM)
   {
     myIWork = GetWorkSpaceThreadInt(Nsize);
     myBufM = GetWorkSpaceThreadDouble(Nsize*Nsize);
@@ -181,13 +218,11 @@ int CalculateMAll_BF_real(const int *eleIdx, const int qpStart, const int qpEnd)
 
 #pragma omp for private(qpidx)
     for(qpidx=0;qpidx<qpNum;qpidx++) {
-      if(info!=0) continue;
 
       myInfo = calculateMAll_BF_real_child(eleIdx, qpStart, qpEnd, qpidx,
           myBufM, myIWork, myWork, LapackLWork, PfM_real, InvM_real);
       if(myInfo!=0) {
-#pragma omp critical
-        info=myInfo;
+        if(myInfo > info) info=myInfo;
       }
     }
   }
@@ -216,7 +251,7 @@ int CalculateMAll_BF_real_from_workspace(const double *sltElmBF,
   const size_t nsizeSquared = (size_t)Nsize*(size_t)Nsize;
   int qpidx;
 
-  if(qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull) return -1;
+  if(qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull) return BF_PF_INVALID_ARGUMENT;
   if(qpStart == qpEnd) return 0;
   if(sltElmBF == NULL || eleIdx == NULL || pfMOut == NULL
      || invMOut == NULL || bufM == NULL || iwork == NULL || work == NULL
@@ -225,10 +260,10 @@ int CalculateMAll_BF_real_from_workspace(const double *sltElmBF,
      || invMQpStride > (size_t)PTRDIFF_MAX
      || (qpEnd-qpStart > 1
          && invMQpStride > SIZE_MAX/(size_t)(qpEnd-qpStart-1))) {
-    return -1;
+    return BF_PF_INVALID_ARGUMENT;
   }
   for(qpidx=0;qpidx<Nsize;qpidx++) {
-    if(eleIdx[qpidx] < 0 || eleIdx[qpidx] >= Nsite) return -1;
+    if(eleIdx[qpidx] < 0 || eleIdx[qpidx] >= Nsite) return BF_PF_INVALID_ARGUMENT;
   }
 
   for(qpidx=0;qpidx<qpEnd-qpStart;qpidx++) {
@@ -273,18 +308,18 @@ int CalculateMAll_BF_real_from_workspace(const double *sltElmBF,
     M_DSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff,
              iwork, work, &lwork, &info);
 
-    if(info!=0) return info;
-    if(!isfinite(pfaff)) return globalQpidx+1;
+    if(info!=0) return BFStatusFromLapack(info);
+    if(!isfinite(pfaff)) return BF_PF_NONFINITE;
     pfMOut[qpidx] = pfaff;
 
     M_DGETRF(&m, &n, invM, &lda, iwork, &info);
-    if(info!=0) return info;
+    if(info!=0) return BFStatusFromLapack(info);
     M_DGETRI(&n, invM, &lda, iwork, work, &lwork, &info);
-    if(info!=0) return info;
+    if(info!=0) return BFStatusFromLapack(info);
 
     M_DSCAL(&nsq, &minus_one, invM, &one);
     for(msi=0;msi<nsize*nsize;msi++) {
-      if(!isfinite(invM[msi])) return globalQpidx+1;
+      if(!isfinite(invM[msi])) return BF_PF_NONFINITE;
     }
   }
 
@@ -296,14 +331,18 @@ double complex updateMAll_BF_fcmp_child(
         const int qpidx,
         const int globalQpidx,
         const int n, const int *msa,
-        const int *eleIdx);
+        const int *eleIdx, double complex *candidateInv, int *status);
 
 
-void CalculateNewPfMBFWithStride(const int *icount, const int *msaTmp, const int msaStride,
+static int CalculateNewPfMBFWithStrideChecked(const int *icount, const int *msaTmp, const int msaStride,
                        double complex* pfMNew, const int *eleIdx,
                        const int qpStart, const int qpEnd, const double complex* bufM) {
+  if(qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull || !icount || !msaTmp || !pfMNew || !eleIdx)
+    return BF_PF_INVALID_ARGUMENT;
+  if(msaStride < Nsize || !bufM) return BF_PF_INVALID_ARGUMENT;
+
   //#pragma procedure serial
-  int i;
+  int i, childStatus;
   const int qpNum = qpEnd-qpStart;
   int qpidx;
   int globalQpidx;
@@ -311,21 +350,37 @@ void CalculateNewPfMBFWithStride(const int *icount, const int *msaTmp, const int
 
   for(qpidx=0;qpidx<qpNum;qpidx++) {
     globalQpidx = qpidx + qpStart;
+    if(icount[globalQpidx] < 0 || icount[globalQpidx] > Nsize) return BF_PF_INVALID_ARGUMENT;
     //Store msa//
     msa=(int *)malloc(sizeof(int)*icount[globalQpidx]);
     //printf("Total=%d\n",icount[qpidx]);
+    if(!msa && icount[globalQpidx] != 0) return BF_PF_INVALID_ARGUMENT;
     for(i=0;i<icount[globalQpidx];i++){
       msa[i] = msaTmp[i+globalQpidx*msaStride];
       //printf("hop[%d]=%d\n",i,msa[i]);
     }
 
     /* calculateNewPfM */
-    pfMNew[qpidx] = calculateNewPfMBFN4_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx,bufM);
+    pfMNew[qpidx] = calculateNewPfMBFN4_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx,bufM, &childStatus);
 
     free(msa);
+    if(childStatus != BF_PF_OK) {
+      fprintf(stderr,"BackFlow kernel failure: qp=%d status=%d\n",globalQpidx,childStatus);
+      return childStatus;
+    }
   }
 
-  return;
+  return BF_PF_OK;
+}
+
+
+void CalculateNewPfMBFWithStride(const int *icount, const int *msaTmp, const int msaStride,
+    double complex *pfMNew, const int *eleIdx, int qpStart, int qpEnd, const double complex *bufM) {
+  BFRequirePfSuccess(CalculateNewPfMBFWithStrideChecked(icount,msaTmp,msaStride,pfMNew,eleIdx,qpStart,qpEnd,bufM),"Green proposal");
+}
+int CalculateNewPfMBFChecked(const int *icount, const int *msaTmp,
+    double complex *pfMNew, const int *eleIdx, int qpStart, int qpEnd, const double complex *bufM) {
+  return CalculateNewPfMBFWithStrideChecked(icount,msaTmp,Nsize,pfMNew,eleIdx,qpStart,qpEnd,bufM);
 }
 
 void CalculateNewPfMBF(const int *icount, const int *msaTmp,
@@ -335,8 +390,15 @@ void CalculateNewPfMBF(const int *icount, const int *msaTmp,
 }
 
 double complex calculateNewPfMBFN4_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
-                                         const int *eleIdx, const double complex* bufM)
+                                         const int *eleIdx, const double complex* bufM, int *status)
 {
+  if(n < 0 || n > Nsize || 4LL*n*n > INT_MAX) { *status=BF_PF_INVALID_ARGUMENT; return 0.0; }
+  for(int row=0;row<n;row++) if(msa[row] < 0 || msa[row] >= Nsize) {
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
+
+  *status = BF_PF_OK;
+  if(n == 0) return PfM[qpidx];
   const int nsize = Nsize;
   const int n2 = 2*n;
   const double complex *sltE;
@@ -375,6 +437,10 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int globalQpidx,
   mat = (double complex*)malloc(sizeof(double complex)*n2*n2);
   //matUV = (double *)malloc(sizeof(double)*n2*nsize);
   work = (double complex*)malloc(sizeof(double complex)*n2*n2);
+  if(!vec || !mat || !work) {
+    free(vec);free(mat);free(work);
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
 
   //#pragma loop noalias
   for(k=0;k<n;k++) {
@@ -442,6 +508,10 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int globalQpidx,
   /* Calculate Pf M */
   //TODO: CHECK rwork is real <-- [R-Xu] Not needed anymore?
   M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+  info = BFInjectNumericalInfo(BF_FAIL_PROPOSAL,globalQpidx,info);
+  if(BFInjectNumericalNan(BF_FAIL_PROPOSAL,globalQpidx)) pfaff=NAN;
+  *status = BFStatusFromLapack(info);
+
   //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
 
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
@@ -451,13 +521,23 @@ double complex calculateNewPfMBFN4_child(const int qpidx, const int globalQpidx,
   free(vec);
   //free(invMat);
   free(work);
-  return sgn * pfaff * PfM[qpidx];
+  if(*status != BF_PF_OK) return 0.0;
+  const double complex value = sgn * pfaff * PfM[qpidx];
+  if(!(isfinite(creal(value)) && isfinite(cimag(value)))) {
+    *status = BF_PF_NONFINITE;
+    return 0.0;
+  }
+  return value;
 }
 
-void UpdateMAll_BF_fcmp(const int *icount, const int *msaTmp,
+int UpdateMAll_BF_fcmp(const int *icount, const int *msaTmp,
                         double complex* pfMNew, const int *eleIdx,
-                        const int qpStart, const int qpEnd)
+                        const int qpStart, const int qpEnd, double complex *candidateInv)
 {
+  if(qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull || !icount || !msaTmp || !pfMNew || !eleIdx)
+    return BF_PF_INVALID_ARGUMENT;
+  if(!candidateInv) return BF_PF_INVALID_ARGUMENT;
+
 #pragma procedure serial
   const int qpNum = qpEnd-qpStart;
   int qpidx;
@@ -465,26 +545,36 @@ void UpdateMAll_BF_fcmp(const int *icount, const int *msaTmp,
   //double complex *sltE;
   //double complex *sltE_i;
   int *msa;
-  int i;
+  int i, childStatus;
   //int *hop;
   //double complex diff;
 
+  memcpy(candidateInv, InvM, (size_t)qpNum*Nsize*Nsize*sizeof(double complex));
   for(qpidx=0;qpidx<qpNum;qpidx++) {
     globalQpidx = qpidx + qpStart;
+    if(icount[globalQpidx] < 0 || icount[globalQpidx] > Nsize) return BF_PF_INVALID_ARGUMENT;
     //Store msa//
     msa=(int *)malloc(sizeof(int)*icount[globalQpidx]);
+    if(!msa && icount[globalQpidx] != 0) return BF_PF_INVALID_ARGUMENT;
     for(i=0;i<icount[globalQpidx];i++){
       msa[i] = msaTmp[i+globalQpidx*Nsize];
     }
 
     /* calculateNewPfM */
-    pfMNew[qpidx] = updateMAll_BF_fcmp_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx);
+    pfMNew[qpidx] = updateMAll_BF_fcmp_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx, candidateInv, &childStatus);
 
     free(msa);
+    if(childStatus != BF_PF_OK) {
+      fprintf(stderr,"BackFlow kernel failure: qp=%d status=%d\n",globalQpidx,childStatus);
+      return childStatus;
+    }
   }
 
-  return;
+  return BF_PF_OK;
 }
+
+
+
 
 /* msa[k]-th electron hops from rsa[k] to eleIdx[msa[k]] */
 /* buffer size = n*Nsize */
@@ -493,8 +583,15 @@ double complex updateMAll_BF_fcmp_child(
         const int qpidx,
         const int globalQpidx,
         const int n, const int *msa,
-        const int *eleIdx)
+        const int *eleIdx, double complex *candidateInv, int *status)
 {
+  if(n < 0 || n > Nsize || 4LL*n*n > INT_MAX) { *status=BF_PF_INVALID_ARGUMENT; return 0.0; }
+  for(int row=0;row<n;row++) if(msa[row] < 0 || msa[row] >= Nsize) {
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
+
+  *status = BF_PF_OK;
+  if(n == 0) return PfM[qpidx];
   const int nsize = Nsize;
   const int n2 = 2*n;
   const double complex*sltE;
@@ -532,7 +629,7 @@ double complex updateMAll_BF_fcmp_child(
   m=nn=lda=n2;
 
   sltE = SlaterElmBF + globalQpidx*Nsite2*Nsite2;
-  invM = InvM + qpidx*Nsize*Nsize;
+  invM = candidateInv + qpidx*Nsize*Nsize;
 
   //vec = bufferc; /* n*nsize */
   vec = (double complex*)malloc(sizeof(double complex)*n*nsize);
@@ -541,6 +638,10 @@ double complex updateMAll_BF_fcmp_child(
   matUV = (double complex*)malloc(sizeof(double complex)*n2*nsize);
   work = (double complex*)malloc(sizeof(double complex)*n2*n2);
   work2 = (double complex*)malloc(sizeof(double complex)*n2);
+  if(!vec || !invMat || !mat || !matUV || !work || !work2) {
+    free(vec);free(invMat);free(mat);free(matUV);free(work);free(work2);
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
 
 #pragma loop noalias
   for(k=0;k<n;k++) {
@@ -630,19 +731,15 @@ double complex updateMAll_BF_fcmp_child(
   }
   /* DInv */
   m=nn=lda=n2;
-  M_ZGETRF(&m, &nn, invMat, &lda, iwork2, &info); /* ipiv = iwork */
+  M_ZGETRF(&m, &nn, invMat, &lda, iwork2, &info);
+  info = BFInjectNumericalInfo(BF_FAIL_ACCEPT_LU,globalQpidx,info); /* ipiv = iwork */
   //M_DGETRF(&m, &nn, invMat, &lda, iwork2, &info); /* ipiv = iwork */
-  if(info!=0){
-    printf("Error M_ZGETRF %d\n",info);
-    //return;
-  }
+  if(info!=0) { *status = BFStatusFromLapack(info); goto cleanup; }
 
   M_ZGETRI(&nn, invMat, &lda, iwork2, work2, &lwork2, &info);
+  info = BFInjectNumericalInfo(BF_FAIL_ACCEPT_INVERSE,globalQpidx,info);
   //M_DGETRI(&nn, invMat, &lda, iwork2, work2, &lwork2, &info);
-  if(info!=0){
-    printf("Error M_ZGETRI %d\n",info);
-    //return;
-  }
+  if(info!=0) { *status = BFStatusFromLapack(info); goto cleanup; }
 
   for(msi=0;msi<nsize;msi++) {
     matUV_i = matUV + n2*msi;
@@ -681,11 +778,15 @@ double complex updateMAll_BF_fcmp_child(
 
   /* Calculate Pf M */
   M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
+  info = BFInjectNumericalInfo(BF_FAIL_ACCEPT_PF,globalQpidx,info);
+  *status = BFStatusFromLapack(info);
+  if(*status != BF_PF_OK) goto cleanup;
   //M_DSKPFA(&uplo, &mthd, &nn, invM, &lda, &pfaff, iwork, work, &lwork, &info);
   //M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
 
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
 
+cleanup:
   free(matUV);
   free(mat);
   free(vec);
@@ -693,17 +794,22 @@ double complex updateMAll_BF_fcmp_child(
   free(work);
   free(work2);
 
-  return sgn * pfaff * PfM[qpidx];
+  if(*status != BF_PF_OK) return 0.0;
+  const double complex value = sgn * pfaff * PfM[qpidx];
+  if(!(isfinite(creal(value)) && isfinite(cimag(value)))) *status = BF_PF_NONFINITE;
+  for(msi=0;msi<nsize*nsize;msi++)
+    if(!(isfinite(creal(invM[msi])) && isfinite(cimag(invM[msi])))) *status = BF_PF_NONFINITE;
+  return *status == BF_PF_OK ? value : 0.0;
 }
 
 double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
-                                      const int *eleIdx, const double *bufM);
-double calculateNewPfMBFN4_real_child_vec(const int qpidx, const int n, const int *msa, const double *vec);
-static double calculateNewPfMBFN4_real_child_vec_w(const int qpidx, const int n, const int *msa,
-                                                   const double *vec, const double *w);
+                                      const int *eleIdx, const double *bufM, int *status);
+double calculateNewPfMBFN4_real_child_vec(const int qpidx, const int globalQpidx, const int n, const int *msa, const double *vec, int *status);
+static double calculateNewPfMBFN4_real_child_vec_w(const int qpidx, const int globalQpidx, const int n, const int *msa,
+                                                   const double *vec, const double *w, int *status);
 
 double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
-                                const int *eleIdx);
+                                const int *eleIdx, double *candidateInv, int *status);
 
 static void DgemmRowMajorNN(const int m, const int n, const int k,
                             const double *a, const double *b,
@@ -723,11 +829,15 @@ static void DgemmRowMajorNT(const int m, const int n, const int k,
   M_DGEMM(&transa, &transb, &fm, &fn, &fk, &alpha, b, &lda, a, &ldb, &beta, c, &ldc);
 }
 
-void CalculateNewPfMBFWithStride_real(const int *icount, const int *msaTmp, const int msaStride,
+static int CalculateNewPfMBFWithStride_realChecked(const int *icount, const int *msaTmp, const int msaStride,
                        double *pfMNew, const int *eleIdx,
                        const int qpStart, const int qpEnd, const double *bufM) {
+  if(qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull || !icount || !msaTmp || !pfMNew || !eleIdx)
+    return BF_PF_INVALID_ARGUMENT;
+  if(msaStride < Nsize || !bufM) return BF_PF_INVALID_ARGUMENT;
+
   //#pragma procedure serial
-  int i;
+  int i, childStatus;
   const int qpNum = qpEnd-qpStart;
   int qpidx;
   int globalQpidx;
@@ -740,22 +850,38 @@ void CalculateNewPfMBFWithStride_real(const int *icount, const int *msaTmp, cons
 
   for(qpidx=0;qpidx<qpNum;qpidx++) {
     globalQpidx = qpidx + qpStart;
+    if(icount[globalQpidx] < 0 || icount[globalQpidx] > Nsize) return BF_PF_INVALID_ARGUMENT;
     //Store msa//
     msa=(int *)malloc(sizeof(int)*icount[globalQpidx]);
     //printf("Total=%d\n",icount[qpidx]);
+    if(!msa && icount[globalQpidx] != 0) return BF_PF_INVALID_ARGUMENT;
     for(i=0;i<icount[globalQpidx];i++){
       msa[i] = msaTmp[i+globalQpidx*msaStride];
       //printf("hop[%d]=%d\n",i,msa[i]);
     }
 
     /* calculateNewPfM */
-    pfMNew[qpidx] = calculateNewPfMBFN4_real_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx,bufM);
+    pfMNew[qpidx] = calculateNewPfMBFN4_real_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx,bufM, &childStatus);
 
     free(msa);
+    if(childStatus != BF_PF_OK) {
+      fprintf(stderr,"BackFlow kernel failure: qp=%d status=%d\n",globalQpidx,childStatus);
+      return childStatus;
+    }
   }
   //icount = UpdateSlaterElmBFTmp3(ma, rb, ra, s, eleCfg, eleNum, msaTmp);
 
-  return;
+  return BF_PF_OK;
+}
+
+
+void CalculateNewPfMBFWithStride_real(const int *icount, const int *msaTmp, const int msaStride,
+    double *pfMNew, const int *eleIdx, int qpStart, int qpEnd, const double *bufM) {
+  BFRequirePfSuccess(CalculateNewPfMBFWithStride_realChecked(icount,msaTmp,msaStride,pfMNew,eleIdx,qpStart,qpEnd,bufM),"Green proposal");
+}
+int CalculateNewPfMBF_realChecked(const int *icount, const int *msaTmp,
+    double *pfMNew, const int *eleIdx, int qpStart, int qpEnd, const double *bufM) {
+  return CalculateNewPfMBFWithStride_realChecked(icount,msaTmp,Nsize,pfMNew,eleIdx,qpStart,qpEnd,bufM);
 }
 
 void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
@@ -767,6 +893,7 @@ void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
 void CalculateNewPfMBFVecWithStride_real(const int *icount, const int *msaTmp, const int msaStride,
                        double *pfMNew, const int qpStart, const int qpEnd,
                        const double *vecM, const int vecStride) {
+  int childStatus = BF_PF_OK;
   int i;
   const int qpNum = qpEnd-qpStart;
   int qpidx;
@@ -782,7 +909,8 @@ void CalculateNewPfMBFVecWithStride_real(const int *icount, const int *msaTmp, c
     }
 
     vec = vecM + globalQpidx*vecStride*Nsize;
-    pfMNew[qpidx] = calculateNewPfMBFN4_real_child_vec(qpidx,icount[globalQpidx],msa,vec);
+    pfMNew[qpidx] = calculateNewPfMBFN4_real_child_vec(qpidx,globalQpidx,icount[globalQpidx],msa,vec, &childStatus);
+    BFRequirePfSuccess(childStatus,"Green vector proposal");
 
     free(msa);
   }
@@ -799,6 +927,7 @@ void CalculateNewPfMBFVec_real(const int *icount, const int *msaTmp,
 void CalculateNewPfMBFVecBatched_real(const int batchSize, const int *icount, const int *msaTmp,
                        double *pfMNew, const int qpStart, const int qpEnd,
                        const double *vecM, double *vecStack, double *wStack) {
+  int childStatus = BF_PF_OK;
   const int nsize = Nsize;
   const int qpNum = qpEnd-qpStart;
   int qpidx, globalQpidx, batchIdx, row, totalRows, offset;
@@ -831,9 +960,10 @@ void CalculateNewPfMBFVecBatched_real(const int batchSize, const int *icount, co
       offset = rowOffset[batchIdx];
       msa = msaTmp + ((size_t)batchIdx*NQPFull + globalQpidx)*nsize;
       pfMNew[batchIdx*NQPFull + globalQpidx] =
-        calculateNewPfMBFN4_real_child_vec_w(qpidx, n, msa,
+        calculateNewPfMBFN4_real_child_vec_w(qpidx,globalQpidx, n, msa,
                                              vecStack + offset*nsize,
-                                             wStack + offset*nsize);
+                                             wStack + offset*nsize, &childStatus);
+    BFRequirePfSuccess(childStatus,"Green vector proposal");
     }
   }
 
@@ -845,7 +975,12 @@ void CalculateNewPfMBFVecBatched_real(const int batchSize, const int *icount, co
 //double complex calculateNewPfMBFN_child(const int qpidx, const int n, const int *msa,
 //                              const int *eleIdx, double *rwork, double complex *bufferc) {
 double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
-                                      const int *eleIdx, const double *bufM) {
+                                      const int *eleIdx, const double *bufM, int *status) {
+  if(n < 0 || n > Nsize || 4LL*n*n > INT_MAX) { *status=BF_PF_INVALID_ARGUMENT; return 0.0; }
+  for(int row=0;row<n;row++) if(msa[row] < 0 || msa[row] >= Nsize) {
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
+
   const int nsize = Nsize;
   const double *sltE;
   const double *sltE_k;
@@ -859,6 +994,10 @@ double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, co
   sltE = bufM + globalQpidx*Nsite2*Nsite2;
 
   vec = (double *)malloc(sizeof(double)*n*nsize);
+  if(!vec) {
+    free(vec);
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
 
   //#pragma loop noalias
   for(k=0;k<n;k++) {
@@ -872,13 +1011,18 @@ double calculateNewPfMBFN4_real_child(const int qpidx, const int globalQpidx, co
     }
   }
 
-  pfnew = calculateNewPfMBFN4_real_child_vec(qpidx,n,msa,vec);
+  pfnew = calculateNewPfMBFN4_real_child_vec(qpidx,globalQpidx,n,msa,vec, status);
 
   free(vec);
   return pfnew;
 }
 
-double calculateNewPfMBFN4_real_child_vec(const int qpidx, const int n, const int *msa, const double *vec) {
+double calculateNewPfMBFN4_real_child_vec(const int qpidx, const int globalQpidx, const int n, const int *msa, const double *vec, int *status) {
+  if(n < 0 || n > Nsize || 4LL*n*n > INT_MAX) { *status=BF_PF_INVALID_ARGUMENT; return 0.0; }
+  for(int row=0;row<n;row++) if(msa[row] < 0 || msa[row] >= Nsize) {
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
+
   const int nsize = Nsize;
   double *invM;
   double *w; /* w[n][nsize] = vec * invM^T */
@@ -887,17 +1031,28 @@ double calculateNewPfMBFN4_real_child_vec(const int qpidx, const int n, const in
   invM = InvM_real + qpidx*Nsize*Nsize;
 
   w = (double *)malloc(sizeof(double)*n*nsize);
+  if(!w) {
+    free(w);
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
 
   DgemmRowMajorNT(n, nsize, nsize, vec, invM, 1.0, 0.0, w);
 
-  pfnew = calculateNewPfMBFN4_real_child_vec_w(qpidx,n,msa,vec,w);
+  pfnew = calculateNewPfMBFN4_real_child_vec_w(qpidx,globalQpidx,n,msa,vec,w, status);
 
   free(w);
   return pfnew;
 }
 
-static double calculateNewPfMBFN4_real_child_vec_w(const int qpidx, const int n, const int *msa,
-                                                   const double *vec, const double *w) {
+static double calculateNewPfMBFN4_real_child_vec_w(const int qpidx, const int globalQpidx, const int n, const int *msa,
+                                                   const double *vec, const double *w, int *status) {
+  if(n < 0 || n > Nsize || 4LL*n*n > INT_MAX) { *status=BF_PF_INVALID_ARGUMENT; return 0.0; }
+  for(int row=0;row<n;row++) if(msa[row] < 0 || msa[row] >= Nsize) {
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
+
+  *status = BF_PF_OK;
+  if(n == 0) return PfM_real[qpidx];
   const int nsize = Nsize;
   const int n2 = 2*n;
   double *invM;
@@ -924,6 +1079,10 @@ static double calculateNewPfMBFN4_real_child_vec_w(const int qpidx, const int n,
 
   mat = (double *)malloc(sizeof(double)*n2*n2);
   work = (double *)malloc(sizeof(double)*n2*n2);
+  if(!mat || !work) {
+    free(mat);free(work);
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
 
   /* X_kl */
   for(k=0;k<n;k++) {
@@ -966,6 +1125,10 @@ static double calculateNewPfMBFN4_real_child_vec_w(const int qpidx, const int n,
 
   /* calculate Pf M */
   M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
+  info = BFInjectNumericalInfo(BF_FAIL_PROPOSAL,globalQpidx,info);
+  if(BFInjectNumericalNan(BF_FAIL_PROPOSAL,globalQpidx)) pfaff=NAN;
+  *status = BFStatusFromLapack(info);
+
 
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
 
@@ -973,14 +1136,24 @@ static double calculateNewPfMBFN4_real_child_vec_w(const int qpidx, const int n,
   free(mat);
   //free(invMat);
   free(work);
-  return sgn * pfaff * PfM_real[qpidx];
+  if(*status != BF_PF_OK) return 0.0;
+  const double value = sgn * pfaff * PfM_real[qpidx];
+  if(!(isfinite(creal(value)) && isfinite(cimag(value)))) {
+    *status = BF_PF_NONFINITE;
+    return 0.0;
+  }
+  return value;
 }
 
 /* Calculate new pfaffian with Backflow effects.
    The ma-th electron with spin s hops from ra to rb */
-void UpdateMAll_BF_real(const int *icount, const int *msaTmp,
+int UpdateMAll_BF_real(const int *icount, const int *msaTmp,
                   double *pfMNew, const int *eleIdx,
-                  const int qpStart, const int qpEnd) {
+                  const int qpStart, const int qpEnd, double *candidateInv) {
+  if(qpStart < 0 || qpEnd < qpStart || qpEnd > NQPFull || !icount || !msaTmp || !pfMNew || !eleIdx)
+    return BF_PF_INVALID_ARGUMENT;
+  if(!candidateInv) return BF_PF_INVALID_ARGUMENT;
+
 #pragma procedure serial
   const int qpNum = qpEnd-qpStart;
   int qpidx;
@@ -988,32 +1161,49 @@ void UpdateMAll_BF_real(const int *icount, const int *msaTmp,
   //double complex *sltE;
   //double complex *sltE_i;
   int *msa;
-  int i;
+  int i, childStatus;
   //int *hop;
   //double complex diff;
 
+  memcpy(candidateInv, InvM_real, (size_t)qpNum*Nsize*Nsize*sizeof(double));
   for(qpidx=0;qpidx<qpNum;qpidx++) {
     globalQpidx = qpidx + qpStart;
+    if(icount[globalQpidx] < 0 || icount[globalQpidx] > Nsize) return BF_PF_INVALID_ARGUMENT;
     //Store msa//
     msa=(int *)malloc(sizeof(int)*icount[globalQpidx]);
+    if(!msa && icount[globalQpidx] != 0) return BF_PF_INVALID_ARGUMENT;
     for(i=0;i<icount[globalQpidx];i++){
       msa[i] = msaTmp[i+globalQpidx*Nsize];
     }
 
     /* calculateNewPfM */
-    pfMNew[qpidx] = updateMAll_BF_real_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx);
+    pfMNew[qpidx] = updateMAll_BF_real_child(qpidx,globalQpidx,icount[globalQpidx],msa,eleIdx, candidateInv, &childStatus);
 
     free(msa);
+    if(childStatus != BF_PF_OK) {
+      fprintf(stderr,"BackFlow kernel failure: qp=%d status=%d\n",globalQpidx,childStatus);
+      return childStatus;
+    }
   }
 
-  return;
+  return BF_PF_OK;
 }
+
+
+
 
 /* msa[k]-th electron hops from rsa[k] to eleIdx[msa[k]] */
 /* buffer size = n*Nsize */
 //void updateMAllBF3_child(const int qpidx, const int n, const int *msa,
 double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const int n, const int *msa,
-                          const int *eleIdx) {
+                          const int *eleIdx, double *candidateInv, int *status) {
+  if(n < 0 || n > Nsize || 4LL*n*n > INT_MAX) { *status=BF_PF_INVALID_ARGUMENT; return 0.0; }
+  for(int row=0;row<n;row++) if(msa[row] < 0 || msa[row] >= Nsize) {
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
+
+  *status = BF_PF_OK;
+  if(n == 0) return PfM_real[qpidx];
   const int nsize = Nsize;
   const int n2 = 2*n;
   const double *sltE;
@@ -1052,7 +1242,7 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
   m=nn=lda=n2;
 
   sltE = SlaterElmBF_real + globalQpidx*Nsite2*Nsite2;
-  invM = InvM_real + qpidx*Nsize*Nsize;
+  invM = candidateInv + qpidx*Nsize*Nsize;
 
   //vec = bufferc; /* n*nsize */
   vec = (double *)malloc(sizeof(double)*n*nsize);
@@ -1063,6 +1253,10 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
   woodburyTmp = (double *)malloc(sizeof(double)*nsize*n2);
   work = (double *)malloc(sizeof(double)*n2*n2);
   work2 = (double *)malloc(sizeof(double)*n2);
+  if(!vec || !w || !invMat || !mat || !matUV || !woodburyTmp || !work || !work2) {
+    free(vec);free(w);free(invMat);free(mat);free(matUV);free(woodburyTmp);free(work);free(work2);
+    *status=BF_PF_INVALID_ARGUMENT;return 0.0;
+  }
 
 #pragma loop noalias
   for(k=0;k<n;k++) {
@@ -1143,18 +1337,14 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
   //       utilize DSKTRF+LTL2INV
   m=nn=lda=n2;
   //M_ZGETRF(&m, &nn, invMat, &lda, iwork2, &info); /* ipiv = iwork */
-  M_DGETRF(&m, &nn, invMat, &lda, iwork2, &info); /* ipiv = iwork */
-  if(info!=0){
-    printf("Error M_ZGETRF %d\n",info);
-    //return;
-  }
+  M_DGETRF(&m, &nn, invMat, &lda, iwork2, &info);
+  info = BFInjectNumericalInfo(BF_FAIL_ACCEPT_LU,globalQpidx,info); /* ipiv = iwork */
+  if(info!=0) { *status = BFStatusFromLapack(info); goto cleanup; }
 
   //M_ZGETRI(&nn, invMat, &lda, iwork2, work2, &lwork2, &info);
   M_DGETRI(&nn, invMat, &lda, iwork2, work2, &lwork2, &info);
-  if(info!=0){
-    printf("Error M_ZGETRI %d\n",info);
-    //return;
-  }
+  info = BFInjectNumericalInfo(BF_FAIL_ACCEPT_INVERSE,globalQpidx,info);
+  if(info!=0) { *status = BFStatusFromLapack(info); goto cleanup; }
 
   DgemmRowMajorNN(nsize, n2, n2, matUV, invMat, 1.0, 0.0, woodburyTmp);
   DgemmRowMajorNT(nsize, nsize, n2, woodburyTmp, matUV, -1.0, 1.0, invM);
@@ -1180,9 +1370,13 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
   //M_ZSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
   //M_DSKPFA(&uplo, &mthd, &nn, invM, &lda, &pfaff, iwork, work, &lwork, &info);
   M_DSKPFA(&uplo, &mthd, &nn, mat, &lda, &pfaff, iwork, work, &lwork, &info);
+  info = BFInjectNumericalInfo(BF_FAIL_ACCEPT_PF,globalQpidx,info);
+  *status = BFStatusFromLapack(info);
+  if(*status != BF_PF_OK) goto cleanup;
 
   sgn = ( (n*(n-1)/2)%2==0 ) ? 1.0 : -1.0;
 
+cleanup:
   free(matUV);
   free(mat);
   free(w);
@@ -1192,5 +1386,10 @@ double updateMAll_BF_real_child(const int qpidx, const int globalQpidx, const in
   free(work);
   free(work2);
 
-  return sgn * pfaff * PfM_real[qpidx];
+  if(*status != BF_PF_OK) return 0.0;
+  const double value = sgn * pfaff * PfM_real[qpidx];
+  if(!(isfinite(creal(value)) && isfinite(cimag(value)))) *status = BF_PF_NONFINITE;
+  for(msi=0;msi<nsize*nsize;msi++)
+    if(!(isfinite(creal(invM[msi])) && isfinite(cimag(invM[msi])))) *status = BF_PF_NONFINITE;
+  return *status == BF_PF_OK ? value : 0.0;
 }

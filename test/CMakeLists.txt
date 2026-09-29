@@ -9,6 +9,10 @@ if(MPI_FOUND)
 endif()
 add_test(NAME BackFlow_Seam_Input_Unit COMMAND backflow_seam_unit)
 
+add_executable(backflow_acceptance_unit backflow_acceptance_unit.c)
+target_link_libraries(backflow_acceptance_unit m)
+add_test(NAME BackFlow_Log_Acceptance_Unit COMMAND backflow_acceptance_unit)
+
 foreach(datafile ${DATA_FILES})
     configure_file(${datafile} ${CMAKE_BINARY_DIR}/test/ COPYONLY)
 endforeach()

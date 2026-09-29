@@ -7,6 +7,7 @@ void CalculateNewPfM2_real(const int mi, const int s, double *pfMNew_real, const
 void UpdateMAll_real(const int mi, const int s, const int *eleIdx,
                 const int qpStart, const int qpEnd);
 
+int CalculateNewPfMBF_realChecked(const int *icount, const int *msaTmp, double *pfMNew, const int *eleIdx, int qpStart, int qpEnd, const double *bufM);
 void CalculateNewPfMBF_real(const int *icount, const int *msaTmp,
                             double *pfMNew, const int *eleIdx,
                             const int qpStart, const int qpEnd, const double *bufM);
@@ -23,8 +24,7 @@ void CalculateNewPfMBFVecBatched_real(const int batchSize, const int *icount, co
                             double *pfMNew, const int qpStart, const int qpEnd,
                             const double *vecM, double *vecStack, double *wStack);
 
-void UpdateMAll_BF_real(const int *icount, const int *msaTmp,
-                  double *pfMNew, const int *eleIdx,
-                  const int qpStart, const int qpEnd) ;
+int UpdateMAll_BF_real(const int *icount, const int *msaTmp, double *pfMNew, const int *eleIdx, int qpStart, int qpEnd, double *candidateInv);
+
 
 #endif

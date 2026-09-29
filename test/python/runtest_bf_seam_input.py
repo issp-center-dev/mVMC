@@ -93,6 +93,17 @@ def main():
         else:
             make_ap_momentum_projection(str(path), all_positive=True)
         run(path, "BackFlow seam transform mismatch", opt=fsz)
+        if not fsz:
+            # An unused, structurally valid row is outside V-7's contract.
+            update_modpara(str(path / "modpara.def"), {"NMPTrans": "-1"})
+            run(path)
+            # A used row is checked even when its projection weight is zero.
+            update_modpara(str(path / "modpara.def"), {"NMPTrans": "-2"})
+            qp = path / "qptransidx.def"
+            lines = qp.read_text().splitlines(keepends=True)
+            lines[6] = "1 0.0 0.0\n"
+            qp.write_text("".join(lines))
+            run(path, "BackFlow seam transform mismatch")
         # Existing reader failures must abort before the seam validator runs.
         qp = path / "qptransidx.def"
         lines = qp.read_text().splitlines(keepends=True)

@@ -377,7 +377,8 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
                   if(xtmp==0){midx=0;}
                   if(midx<0){continue;}
                   bfidx=BFSubIdx[nidx][midx];
-                  orbsgn =  OrbitalSgn[rki][rlj];
+                  /* Reverse traversal: the differentiated bare orbital is
+                   * (tri,trj), not the occupied centers (rki,rlj). */
 
                   buf[orbidx] -= -orbsgn*invM_k[msl]*ProjBF[bfidx]*bfCnt2_n[idx_ik]*bfCnt3_m[idx_jl]*PfM[qpidx];
                 }
@@ -1195,7 +1196,7 @@ int RebuildSlaterMAllBF_fcmp(
   free(work);
   free(rwork);
   if(BFProfileEnabled) AddBFProfileCounter(BFPROF_FULL_REBUILD, 1);
-  return result.status;
+  return result.lapackInfo < 0 ? BF_PF_INVALID_ARGUMENT : result.status;
 }
 
 int RebuildSlaterMAllBF_real(
@@ -1251,7 +1252,7 @@ int RebuildSlaterMAllBF_real(
   free(bufM);
   free(work);
   free(iwork);
-  return status == 0 ? BF_FSZ_MALL_OK : BF_FSZ_MALL_LAPACK_FAILURE;
+  return status;
 }
 
 int CalculateBFCanonicalPf_fcmp(
@@ -1321,7 +1322,7 @@ int CalculateBFCanonicalPf_fcmp(
   free(eleSpn);
   free(iwork);
   if(BFProfileEnabled) AddBFProfileCounter(BFPROF_FULL_REBUILD, 1);
-  return status;
+  return failureDetail < 0 ? BF_PF_INVALID_ARGUMENT : status;
 }
 
 int CalculateBFCanonicalPf_real(
