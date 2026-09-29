@@ -51,6 +51,7 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex*slt_ij, in
 typedef struct {
   int r;
   int coord;
+  int phase;
   int cnt0;
   int cnt1;
 } BFRealSparseEntry;
@@ -379,7 +380,7 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
                   /* Reverse traversal: the differentiated bare orbital is
                    * (tri,trj), not the occupied centers (rki,rlj). */
 
-                  buf[orbidx] -= -orbsgn*invM_k[msl]*ProjBF[bfidx]*bfCnt2_n[idx_ik]*bfCnt3_m[idx_jl]*PfM[qpidx];
+                  buf[orbidx] -= -(double)(orbsgn*BFSeamPhase[tri][rki]*BFSeamPhase[trj][rlj])*invM_k[msl]*ProjBF[bfidx]*bfCnt2_n[idx_ik]*bfCnt3_m[idx_jl]*PfM[qpidx];
                 }
               }
             }
@@ -664,8 +665,8 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
                 if(midx<0){continue;}
                 bfidx=BFSubIdx[nidx][midx];
 
-                tmp = -bfCnt0_n[idx_ik]*bfCnt1_m[idx_jl]*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj]
-                      -bfCnt1_n[idx_jk]*bfCnt0_m[idx_il]*Slater[ OrbitalIdx[rli][rkj]]*OrbitalSgn[rli][rkj];
+                tmp = -(double)(BFSeamPhase[tri][rki]*BFSeamPhase[trj][rlj]*bfCnt0_n[idx_ik])*bfCnt1_m[idx_jl]*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj]
+                      -(double)(BFSeamPhase[tri][rli]*BFSeamPhase[trj][rkj]*bfCnt1_n[idx_jk])*bfCnt0_m[idx_il]*Slater[ OrbitalIdx[rli][rkj]]*OrbitalSgn[rli][rkj];
                 trM[bfidx] -= invM_i[msj]*tmp;
               }
             }
@@ -765,11 +766,11 @@ static void SubSlaterElmBFCanonical_fcmp(
           if(midx < 0) continue;
           bfidx = BFSubIdx[nidx][midx];
           if(cnt_ij_i != 0 && cnt_ij_j != 0) {
-            *slt_ij += -ProjBF[bfidx] * (double)(cnt_ij_i*cnt_ij_j) *
+            *slt_ij += -ProjBF[bfidx] * (double)(cnt_ij_i*cnt_ij_j*BFSeamPhase[xqp[ri]][xqp[rk]]*BFSeamPhase[xqp[rj]][xqp[rl]]) *
                 BFNonFszOrbitalTransformed(rk, rl, xqp);
           }
           if(cnt_ji_i != 0 && cnt_ji_j != 0) {
-            *slt_ji += -ProjBF[bfidx] * (double)(cnt_ji_i*cnt_ji_j) *
+            *slt_ji += -ProjBF[bfidx] * (double)(cnt_ji_i*cnt_ji_j*BFSeamPhase[xqp[ri]][xqp[rk]]*BFSeamPhase[xqp[rj]][xqp[rl]]) *
                 BFNonFszOrbitalTransformed(rl, rk, xqp);
           }
         }
@@ -860,7 +861,7 @@ static void BFCanonicalDirectedDerivativeCoefficients(
           bfidx = BFSubIdx[nidx][midx];
 
           if(cnt_ij_i != 0 && cnt_ij_j != 0) {
-            const double count = (double)(cnt_ij_i*cnt_ij_j);
+            const double count = (double)(cnt_ij_i*cnt_ij_j*BFSeamPhase[xqp[ri]][xqp[rk]]*BFSeamPhase[xqp[rj]][xqp[rl]]);
             const double complex orbital =
                 BFNonFszOrbitalTransformed(rk, rl, xqp);
             BFAddCanonicalOrbitalDerivative(
@@ -874,7 +875,7 @@ static void BFCanonicalDirectedDerivativeCoefficients(
             }
           }
           if(cnt_ji_i != 0 && cnt_ji_j != 0) {
-            const double count = (double)(cnt_ji_i*cnt_ji_j);
+            const double count = (double)(cnt_ji_i*cnt_ji_j*BFSeamPhase[xqp[ri]][xqp[rk]]*BFSeamPhase[xqp[rj]][xqp[rl]]);
             const double complex orbital =
                 BFNonFszOrbitalTransformed(rl, rk, xqp);
             BFAddCanonicalOrbitalDerivative(
@@ -1431,10 +1432,10 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, i
           //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
           //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
           if(cnt_ij_i != 0 && cnt_ij_j != 0) {
-            *slt_ij += -ProjBF[bfidx]*cnt_ij_i*cnt_ij_j*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj];
+            *slt_ij += -ProjBF[bfidx]*(double)(cnt_ij_i*BFSeamPhase[tri][rki]*BFSeamPhase[trj][rlj])*cnt_ij_j*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj];
           }
           if(cnt_ji_i != 0 && cnt_ji_j != 0) {
-            *slt_ji += -ProjBF[bfidx]*cnt_ji_i*cnt_ji_j*Slater[ OrbitalIdx[rlj][rki]]*OrbitalSgn[rlj][rki];
+            *slt_ji += -ProjBF[bfidx]*(double)(cnt_ji_i*BFSeamPhase[tri][rki]*BFSeamPhase[trj][rlj])*cnt_ji_j*Slater[ OrbitalIdx[rlj][rki]]*OrbitalSgn[rlj][rki];
           }
         }
       }
@@ -1513,6 +1514,7 @@ static void MakeBFRealSparseCountList(BFRealSparseEntry *entry, int *offset, int
         geomCount[key]++;
         if(bfCnt0_state[idx] == 0 && bfCnt1_state[idx] == 0) continue;
         entry[cursor].r = r;
+        entry[cursor].phase = BFSeamPhase[ri][r];
         entry[cursor].coord = coord;
         entry[cursor].cnt0 = bfCnt0_state[idx];
         entry[cursor].cnt1 = bfCnt1_state[idx];
@@ -1579,11 +1581,11 @@ static void SubSlaterElmBF_real_eta_sparse(const int tri, const int trj, double 
           if(stats != NULL) stats->sparsePair++;
 
           if(left->cnt0 != 0 && right->cnt1 != 0) {
-            *slt_ij += bfRealProj[left->coord*nRangeIdx+right->coord]*left->cnt0*right->cnt1*bfRealSlater[rki*nSite+rlj]*bfRealSlaterSign[rki*nSite+rlj];
+            *slt_ij += bfRealProj[left->coord*nRangeIdx+right->coord]*(double)(left->phase*right->phase*left->cnt0)*right->cnt1*bfRealSlater[rki*nSite+rlj]*bfRealSlaterSign[rki*nSite+rlj];
             if(stats != NULL) stats->actualAdd++;
           }
           if(left->cnt1 != 0 && right->cnt0 != 0) {
-            *slt_ji += bfRealProj[left->coord*nRangeIdx+right->coord]*left->cnt1*right->cnt0*bfRealSlater[rlj*nSite+rki]*bfRealSlaterSign[rlj*nSite+rki];
+            *slt_ji += bfRealProj[left->coord*nRangeIdx+right->coord]*(double)(left->phase*right->phase*left->cnt1)*right->cnt0*bfRealSlater[rlj*nSite+rki]*bfRealSlaterSign[rlj*nSite+rki];
             if(stats != NULL) stats->actualAdd++;
           }
         }

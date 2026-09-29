@@ -2251,7 +2251,19 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
   double complex fd;
   double complex analyticAtMax = 0.0 + 0.0*I;
   double complex fdAtMax = 0.0 + 0.0*I;
-  const double h = 1.0e-6;
+  double h = 1.0e-6;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  const char *fdStep=getenv("MVMC_BF_TEST_FD_STEP");
+  if(fdStep && *fdStep) {
+    char *end;
+    errno=0;
+    h=strtod(fdStep,&end);
+    if(errno || *end || !isfinite(h) || h <= 0.0 || h > 0.01) {
+      fprintf(stderr,"Error: invalid MVMC_BF_TEST_FD_STEP.\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+  }
+#endif
   double maxRealDiff = 0.0;
   double maxImagDiff = 0.0;
   double maxDiff = 0.0;
@@ -2534,6 +2546,10 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
       for (idx = 0; idx < Nsite; idx++) {
         fprintf(fp, " %d", RangeIdx[site][idx]);
       }
+      fprintf(fp, "\nseam_phase_%d", site);
+      for (idx = 0; idx < Nsite; idx++) {
+        fprintf(fp, " %d", BFSeamPhase[site][idx]);
+      }
       fprintf(fp, "\n");
     }
     for (int rangeIndex = 0; rangeIndex < NrangeIdx; rangeIndex++) {
@@ -2543,6 +2559,30 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
       }
       fprintf(fp, "\n");
     }
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    if(getenv("MVMC_BF_TEST_COEFFICIENT_DUMP")) {
+      const size_t total=2*(size_t)NSlater+4*(size_t)NProjBF;
+      double complex *data=calloc(total,sizeof(*data));
+      if(!data) MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+      double complex *parts[6]={data,data+NSlater,data+2*(size_t)NSlater,
+        data+2*(size_t)NSlater+NProjBF,data+2*(size_t)NSlater+2*(size_t)NProjBF,
+        data+2*(size_t)NSlater+3*(size_t)NProjBF};
+      const char *names[6]={"orbital_a","orbital_b","proj_real_a","proj_imag_a",
+                             "proj_real_b","proj_imag_b"};
+      for(int mp=0;mp<NMPTrans;mp++) for(int ri=0;ri<Nsite;ri++) for(int rj=0;rj<Nsite;rj++) {
+        memset(data,0,total*sizeof(*data));
+        BFCanonicalDirectedDerivativeCoefficients(ri,rj,QPTrans[mp],QPTransSgn[mp],
+            eleProjBFCnt,parts[0],parts[1],parts[2],parts[3],parts[4],parts[5]);
+        for(int part=0;part<6;part++) {
+          fprintf(fp,"coef_%s_%d_%d_%d",names[part],mp,ri,rj);
+          for(int k=0;k<(part<2 ? NSlater : NProjBF);k++)
+            fprintf(fp," %.17e %.17e",creal(parts[part][k]),cimag(parts[part][k]));
+          fprintf(fp,"\n");
+        }
+      }
+      free(data);
+    }
+#endif
     for (int spinQp = 0; spinQp < NSPGaussLeg; spinQp++) {
       fprintf(fp, "spgl_%d %.17e %.17e %.17e %.17e %.17e %.17e\n",
               spinQp,

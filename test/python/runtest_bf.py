@@ -577,7 +577,7 @@ def copy_def_files(refdir, workdir, include_backflow):
             shutil.copy(src_path, dst_path)
 
 
-def write_minimal_twobodyg(workdir, nsite):
+def write_minimal_twobodyg(workdir, nsite, all_general=False):
     if nsite < 4:
         raise RuntimeError("minimal TwoBodyG BackFlow smoke requires Nsite >= 4")
     rows = [
@@ -588,6 +588,14 @@ def write_minimal_twobodyg(workdir, nsite):
         (1, 1, 0, 1, 3, 0, 2, 0),
         (2, 0, 3, 0, 1, 1, 0, 1),
     ]
+    if all_general:
+        # A short chain may stay in a sector where all four original hop
+        # probes are Pauli-blocked. Cover every opposite-spin double hop,
+        # including the seam, without changing the sampled state.
+        rows = sorted(set(rows + [(i,0,j,0,k,1,l,1)
+                      for i in range(nsite) for j in range(nsite)
+                      for k in range(nsite) for l in range(nsite)
+                      if i != j and k != l]))
     with open(os.path.join(workdir, "greentwo.def"), "w") as fp:
         fp.write("=============================================\n")
         fp.write("NCisAjsCktAltDC         {}\n".format(len(rows)))
@@ -2251,7 +2259,7 @@ def main():
         else:
             write_nbody_failure_def(workdir)
     if (compare_twobodyg or check_bf_green2_bruteforce) and not keep_twobodyg:
-        write_minimal_twobodyg(workdir, nsite)
+        write_minimal_twobodyg(workdir, nsite, all_general=check_bf_green2_bruteforce)
     if compare_twobodygex:
         write_minimal_twobodygex(workdir, nsite)
 

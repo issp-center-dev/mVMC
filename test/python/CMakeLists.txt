@@ -1819,10 +1819,10 @@ add_test(NAME BackFlow_MultiQP_NBody_State_PBC
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-asymmetric-complex-projection-weights --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_MultiQP_NBody_State_PBC PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_PBC")
 add_test(NAME BackFlow_MultiQP_NBody_State_AP
-         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-complex-projection-weights --check-multiqp-full-rebuild)
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-asymmetric-complex-projection-weights --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_MultiQP_NBody_State_AP PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_AP")
 add_test(NAME BackFlow_MultiQP_NBody_State_AP_mpi
-         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-complex-projection-weights --check-multiqp-full-rebuild)
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-asymmetric-complex-projection-weights --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_MultiQP_NBody_State_AP_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_AP_mpi")
 add_test(NAME BackFlow_MultiQP_AP_NonIdentity_RealVsComplex
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --compare-real-complex-nonidentity BackFlow_Identity_Complex_MultiQP --use-ap-projection --reject-output "Error:" --reject-output "error:")

@@ -1431,7 +1431,9 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
         "NVMCWarmUp": "8",
     }
     if use_ap and nonidentity:
-        updates["NVMCSample"] = "64"
+        # The seam-covariant state has a broader H^2 estimator distribution.
+        # Keep the strict support gate and seed; collect enough samples for it.
+        updates["NVMCSample"] = "1024"
     if case_name.endswith("Identity_Real_Experimental"):
         updates["NLanczosSupportMode"] = "1"
     if spin_changing:
@@ -1450,7 +1452,8 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
             make_ap_momentum_projection(bf_workdir)
         else:
             make_momentum_projection(bf_workdir)
-    init_path = write_nonidentity_init(bf_workdir) if nonidentity else None
+    init_path = write_nonidentity_init(
+        bf_workdir, complex_orbitals=use_ap) if nonidentity else None
     bf_dump = "lanczos_oracle_bf_fsz.dat"
     bf_env = {
         "MVMC_LANCZOS_ORACLE_DUMP": bf_dump,

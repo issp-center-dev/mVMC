@@ -274,6 +274,9 @@ static double complex SubSlaterElmBF_fsz_sparse(
   double complex slt = 0.0 + 0.0*I;
   double eta;
 
+  tri = xqp[xqpOpt[ri]];
+  trj = xqp[xqpOpt[rj]];
+
   for(mu=0;mu<4;mu++) {
     kCount = sparseCount[BFThetaKey_fsz(si, mu, ri)];
     if(kCount == 0) continue;
@@ -297,7 +300,7 @@ static double complex SubSlaterElmBF_fsz_sparse(
           midx = sparseSubIdx[lStart + l];
           cntJ = sparseThetaCnt[lStart + l];
           bfidx = BFSubIdx[nidx][midx];
-          slt += -ProjBF[bfidx] * (double)(cntI*cntJ)
+          slt += -ProjBF[bfidx] * (double)(cntI*cntJ*BFSeamPhase[tri][rki]*BFSeamPhase[trj][rlj])
                  * SlaterOrbital_fsz(rki, si, rlj, sj);
         }
       }
@@ -306,8 +309,7 @@ static double complex SubSlaterElmBF_fsz_sparse(
 
   eta = (etaFlag[si*Nsite + ri] || etaFlag[sj*Nsite + rj])
       ? creal(ProjBF[0]) : 1.0;
-  tri = xqp[xqpOpt[ri]];
-  trj = xqp[xqpOpt[rj]];
+
   slt += eta * SlaterOrbital_fsz(tri, si, trj, sj);
 
   return slt;
@@ -1410,6 +1412,9 @@ static void AccumulateSlaterBFDiffOriented_fsz(
   int tri, trj;
   double eta;
 
+  tri = xqp[xqpOpt[ri]];
+  trj = xqp[xqpOpt[rj]];
+
   for(mu=0;mu<4;mu++) {
     kCount = sparseWork->sparseCount[BFThetaKey_fsz(si, mu, ri)];
     if(kCount == 0) continue;
@@ -1434,7 +1439,7 @@ static void AccumulateSlaterBFDiffOriented_fsz(
           cntJ = sparseWork->sparseThetaCnt[lStart + l];
           bfidx = BFSubIdx[nidx][midx];
           AddSlaterDiff_fsz(buf, pref, rki, si, rlj, sj,
-                            -ProjBF[bfidx] * (double)(cntI*cntJ));
+                            -ProjBF[bfidx] * (double)(cntI*cntJ*BFSeamPhase[tri][rki]*BFSeamPhase[trj][rlj]));
         }
       }
     }
@@ -1442,8 +1447,7 @@ static void AccumulateSlaterBFDiffOriented_fsz(
 
   eta = (sparseWork->etaFlag[si*Nsite + ri]
       || sparseWork->etaFlag[sj*Nsite + rj]) ? creal(ProjBF[0]) : 1.0;
-  tri = xqp[xqpOpt[ri]];
-  trj = xqp[xqpOpt[rj]];
+
   AddSlaterDiff_fsz(buf, pref, tri, si, trj, sj, eta);
 }
 
@@ -1458,6 +1462,9 @@ static void AccumulateBackFlowDiffOriented_fsz(
   int cntI, cntJ;
   int tri, trj;
   double complex term;
+
+  tri = xqp[xqpOpt[ri]];
+  trj = xqp[xqpOpt[rj]];
 
   for(mu=0;mu<4;mu++) {
     kCount = sparseWork->sparseCount[BFThetaKey_fsz(si, mu, ri)];
@@ -1482,7 +1489,7 @@ static void AccumulateBackFlowDiffOriented_fsz(
           midx = sparseWork->sparseSubIdx[lStart + l];
           cntJ = sparseWork->sparseThetaCnt[lStart + l];
           bfidx = BFSubIdx[nidx][midx];
-          term = -(double)(cntI*cntJ) * SlaterOrbital_fsz(rki, si, rlj, sj);
+          term = -(double)(cntI*cntJ*BFSeamPhase[tri][rki]*BFSeamPhase[trj][rlj]) * SlaterOrbital_fsz(rki, si, rlj, sj);
           bfReal[bfidx] += pref * term;
           bfImag[bfidx] += pref * term * I;
         }
@@ -1492,8 +1499,7 @@ static void AccumulateBackFlowDiffOriented_fsz(
 
   if(sparseWork->etaFlag[si*Nsite + ri]
       || sparseWork->etaFlag[sj*Nsite + rj]) {
-    tri = xqp[xqpOpt[ri]];
-    trj = xqp[xqpOpt[rj]];
+
     /* The BF-FSZ builder uses creal(ProjBF[0]) for eta, so eta has no
        derivative with respect to Im(ProjBF[0]); theta terms above still do. */
     bfReal[0] += pref * SlaterOrbital_fsz(tri, si, trj, sj);
