@@ -47,7 +47,6 @@ int BFRowSelectCountersEnabled = 0;
 
 void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex*slt_ij, int *ijcount, double complex*slt_ji, int *jicount, const int *eleProjBFCnt);
 
-void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijcount, double *slt_ji, int *jicount, const int *eleProjBFCnt);
 
 typedef struct {
   int r;
@@ -1454,100 +1453,6 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, i
 
 }
 
-
-void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijcount, double* slt_ji, int *jicount, const int *eleProjBFCnt){
-  int xn,xm,xk,xl;
-  int rki,rlj;
-  int idx_ik,idx_jk,idx_jl;
-  int bfidx;
-  int dki,dlj,nidx,midx,xtmp;
-  int cnt_ij_i,cnt_ji_i,cnt_ij_j,cnt_ji_j;
-  const int nSite=Nsite;
-  const int nRange=Nrange;
-  const int nSiteRange = nRange*nSite;
-  const int *bfCnt0=eleProjBFCnt;
-  const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
-  const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
-  double eta;
-  int **posBF = PosBF;
-
-  *slt_ij = 0.0;
-  *slt_ji = 0.0;
-  *ijcount = 0;
-  *jicount = 0;
-  //#pragma omp parallel for reduction(+:slt_ij,slt_ji)
-  for(xn=0;xn<4;xn++){
-    bfCnt0_n=bfCnt0+xn*nSiteRange;
-    bfCnt1_n=bfCnt1+xn*nSiteRange;
-    for(xm=0;xm<4;xm++){
-      if(xm==0 && xn == 0) continue;
-      bfCnt0_m=bfCnt0+xm*nSiteRange;
-      bfCnt1_m=bfCnt1+xm*nSiteRange;
-
-      for(xk=0;xk<nRange;xk++) {
-        rki=posBF[tri][xk];
-        //rkj=posBF[trj][xk];
-        idx_ik=tri*nRange+xk;
-        idx_jk=trj*nRange+xk;
-
-        dki = RangeIdx[tri][rki];
-        xtmp = 4*dki+xn;
-        nidx = xtmp-3-dki;
-        if(xtmp%4==0){nidx=-1;}
-        if(xtmp==0){nidx=0;}
-        if(nidx<0){continue;}
-
-        *ijcount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
-        *jicount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
-
-        cnt_ij_i = bfCnt0_n[idx_ik];
-        cnt_ji_i = bfCnt1_n[idx_ik];
-        if(cnt_ij_i == 0 && cnt_ji_i == 0) continue;
-
-        for(xl=0;xl<nRange;xl++){
-          //rli=posBF[tri][xl];
-          rlj=posBF[trj][xl];
-          //idx_il=tri*nRange+xl;
-          idx_jl=trj*nRange+xl;
-
-          cnt_ij_j = bfCnt1_m[idx_jl];
-          cnt_ji_j = bfCnt0_m[idx_jl];
-          if((cnt_ij_i == 0 || cnt_ij_j == 0) && (cnt_ji_i == 0 || cnt_ji_j == 0)) continue;
-
-          dlj = RangeIdx[trj][rlj];
-          xtmp = 4*dlj+xm;
-          midx = xtmp-3-dlj;
-          if(xtmp%4==0){midx=-1;}
-          if(xtmp==0){midx=0;}
-          if(midx<0){continue;}
-          bfidx=BFSubIdx[nidx][midx];
-
-          //printf("ProjBF[%d]=%.2e\n",bfidx,ProjBF[bfidx]);
-          //printf("OrbitalSgn[%d][%d]=%d\n",rki,rlj,OrbitalSgn[rki][rlj]);
-          //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
-          //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
-          if(cnt_ij_i != 0 && cnt_ij_j != 0) {
-            *slt_ij += -creal(ProjBF[bfidx])*cnt_ij_i*cnt_ij_j*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
-          }
-          if(cnt_ji_i != 0 && cnt_ji_j != 0) {
-            *slt_ji += -creal(ProjBF[bfidx])*cnt_ji_i*cnt_ji_j*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
-          }
-        }
-      }
-    }
-  }
-
-  if(*ijcount == 0){eta = 1.0;}
-  else{eta = creal(ProjBF[0]);} //TODO: Check
-  *slt_ij += eta*Slater[ OrbitalIdx[tri][trj] ]*OrbitalSgn[tri][trj];
-
-  if(*jicount == 0){eta = 1.0;}
-  else{eta = creal(ProjBF[0]);}
-  *slt_ji += eta*Slater[ OrbitalIdx[trj][tri] ]*OrbitalSgn[trj][tri];
-
-  return;
-
-}
 
 static void MakeBFEtaFlag_real(unsigned char *bfEtaFlag, const int *eleProjBFCnt){
   int ri,xk;
