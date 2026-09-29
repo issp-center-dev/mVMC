@@ -2,6 +2,13 @@ if(NOT PYTHON_EXECUTABLE)
     find_package(PythonInterp 3.6 REQUIRED)
 endif()
 
+add_executable(backflow_seam_unit backflow_seam_unit.c)
+target_link_libraries(backflow_seam_unit m)
+if(MPI_FOUND)
+    target_link_libraries(backflow_seam_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME BackFlow_Seam_Input_Unit COMMAND backflow_seam_unit)
+
 foreach(datafile ${DATA_FILES})
     configure_file(${datafile} ${CMAKE_BINARY_DIR}/test/ COPYONLY)
 endforeach()

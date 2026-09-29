@@ -2495,7 +2495,7 @@ File format
    line 7 also contains ``Nrange`` [int01] [int02].
 
 -  Lines 11 - (10 + :math:`N_s \times` [int01]):
-   [int03] [int04] [int05]
+   [int03] [int04] [int05] [int06]
 
 Parameters
 ^^^^^^^^^^
@@ -2556,6 +2556,36 @@ User rules
    collects the anchor sites whose Theta counts can change, so an
    asymmetric ``BFRange`` is rejected at input time with
    ``BFRange must be mutual``.
+
+The optional fourth field [int06] is the boundary seam phase
+:math:`\phi(i,j)`, an integer +1 or -1. For AP input (negative
+``NMPTrans``), all rows must contain this field. For PBC, either all rows
+have three fields (implicit +1) or all have four fields with +1. The
+example above is the compatible PBC format. For an AP four-site chain,
+append -1 to rows ``0 3 1`` and ``3 0 1``, and +1 to every other row.
+
+Each physical body line must contain exactly three or four whitespace-separated
+integers, with a uniform field count throughout the file. Blank lines,
+comments, trailing fields or rows, numeric suffixes, and integer overflow
+are rejected. A final newline is optional. Self phases must be +1 and
+reverse bonds must have the same phase.
+
+The phase specifies the boundary connection in the same gauge as the pair
+orbitals, not the sign of the hopping amplitude. Use bonds with an unambiguous
+boundary crossing; antipodal bonds along an AP direction (displacement L/2)
+are outside this format's supported scope. Every translation row actually
+used by ``abs(NMPTrans)`` must preserve the range, shell and phase according to
+:math:`\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)`. In orbital-general mode this
+includes the composition with every used OptTrans and its signs. Unused
+translation rows impose no additional BackFlow symmetry. Identity-only
+projection cannot verify the nontrivial boundary holonomy: the input generator
+is responsible for the physical seam. Inconsistent used transforms are
+rejected before sampling.
+
+AP inputs and optimized parameters from the old phase-free definition describe
+a different wavefunction. There is no compatibility switch; retain the old
+binary, source/submodule revisions, inputs and parameter hashes to reproduce
+those results, and reoptimize for the seam-phase definition.
 
 BF file (bf.def)
 ^^^^^^^^^^^^^^^^

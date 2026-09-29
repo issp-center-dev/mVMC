@@ -964,14 +964,14 @@ def compare_real_complex_nonidentity(rootdir, real_model, complex_model,
                     "NMPTrans": str(-trans_count),
                 })
 
-    real_definition = build_chain_nn_backflow(length=real_nsite, optimize=False)
-    complex_definition = build_chain_nn_backflow(length=complex_nsite, optimize=False)
+    real_definition = build_chain_nn_backflow(length=real_nsite, optimize=False, antiperiodic=use_ap_projection)
+    complex_definition = build_chain_nn_backflow(length=complex_nsite, optimize=False, antiperiodic=use_ap_projection)
     if real_definition.n_proj_bf != complex_definition.n_proj_bf:
         print("ERROR: NProjBF mismatch: real={} complex={}".format(
             real_definition.n_proj_bf, complex_definition.n_proj_bf))
         return -1
-    write_chain_nn_backflow(real_workdir, length=real_nsite, optimize=False)
-    write_chain_nn_backflow(complex_workdir, length=complex_nsite, optimize=False)
+    write_chain_nn_backflow(real_workdir, length=real_nsite, optimize=False, antiperiodic=use_ap_projection)
+    write_chain_nn_backflow(complex_workdir, length=complex_nsite, optimize=False, antiperiodic=use_ap_projection)
 
     real_nslater = parse_norbitalidx(os.path.join(real_workdir, "orbitalidx.def"))
     complex_nslater = parse_norbitalidx(os.path.join(complex_workdir, "orbitalidx.def"))
@@ -2238,9 +2238,11 @@ def main():
             "NMPTrans": str(-active_trans_count if use_ap_projection
                             else active_trans_count),
         })
-    definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd)
+    definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd,
+                                         antiperiodic=use_ap_projection)
     if not custom_backflow:
-        write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd, compact=compact_backflow)
+        write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd,
+                               compact=compact_backflow, antiperiodic=use_ap_projection)
     if check_bf_nbody_dispatch or check_bf_nbody_state:
         write_uniform_gutzwiller(workdir, nsite)
     if inject_bf_nbody_failure is not None:

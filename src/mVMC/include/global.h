@@ -245,6 +245,7 @@ double complex **eta;   /* Back Flow correlation factor (eta = 1.0 or ProjBF[0])
 /***** Back Flow ******/
 int NBackFlowIdx, **BackFlowIdx; /* [Nsite] */
 int Nrange, **PosBF, **RangeIdx; /* [Nsite] */
+int **BFSeamPhase; /* [Nsite][Nsite]: +/-1 on BFRange bonds, zero outside */
 int NBFIdxTotal,NrangeIdx;
 int **BFSubIdx; /* [Nsite] */
 double *BFRealProj;   /* BFRealProj[NrangeIdx][NrangeIdx] = -creal(ProjBF[BFSubIdx]) */
