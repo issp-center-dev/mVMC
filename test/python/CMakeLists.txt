@@ -66,6 +66,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/backflow_def_helper.py DESTINATION ${CMAKE
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/bf_canonical_model.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_fsz.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_fsz_green_omp.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+add_test(NAME FSZ_Green_SpinIndices_omp COMMAND ${PYTHON_EXECUTABLE} runtest_fsz_green_omp.py)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_bf_sampler_dump_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_projection_variants.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_hphi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
