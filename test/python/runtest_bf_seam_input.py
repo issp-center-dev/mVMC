@@ -59,6 +59,8 @@ def main():
         "pbc_negative": (False, 1, "0 3 1 -1\n", "invalid BFRange seam phase"),
         "self_negative": (True, 0, "0 0 0 -1\n", "invalid BFRange seam phase"),
         "zero": (True, 1, "0 3 1 0\n", "invalid BFRange seam phase"),
+        "two": (True, 1, "0 3 1 2\n", "invalid BFRange seam phase"),
+        "inline_comment": (True, 0, "0 0 0 1 #comment\n", "failed to read BFRange"),
         "asymmetric": (True, 1, "0 3 1 1\n", "must be symmetric"),
         "decimal": (True, 0, "0 0 0 1.0\n", "failed to read BFRange"),
         "overflow": (True, 0, "0 0 0 2147483648\n", "failed to read BFRange"),
@@ -104,13 +106,63 @@ def main():
             lines[6] = "1 0.0 0.0\n"
             qp.write_text("".join(lines))
             run(path, "BackFlow seam transform mismatch")
-        # Existing reader failures must abort before the seam validator runs.
-        qp = path / "qptransidx.def"
-        lines = qp.read_text().splitlines(keepends=True)
-        lines[-1] = "1 3 999 1\n"
-        qp.write_text("".join(lines))
-        proc = run(path, "Error", opt=fsz)
-        assert "BackFlow seam transform mismatch" not in proc.stdout
+        # Existing structural failures must abort before V-7 sees the table.
+        make_ap_momentum_projection(str(path))
+        if fsz:
+            make_ap_opt_projection(str(path))
+        for filename in (("qptransidx.def", "qpopttrans.def") if fsz else ("qptransidx.def",)):
+            table = path / filename
+            original = table.read_text().splitlines(keepends=True)
+            for mutation, error in (("range", "index out of range"),
+                                    ("duplicate", "duplicate projection source"),
+                                    ("missing", "mapping row count mismatch")):
+                lines = list(original)
+                if mutation == "range":
+                    fields = lines[-1].split()
+                    fields[2] = "999"
+                    lines[-1] = " ".join(fields)+"\n"
+                elif mutation == "duplicate":
+                    lines[-1] = lines[-2]
+                else:
+                    lines.pop()
+                table.write_text("".join(lines))
+                proc = run(path, error, opt=fsz)
+                assert "BackFlow seam transform mismatch" not in proc.stdout
+                (path / (filename+"_"+mutation+".log")).write_text(proc.stdout)
+            table.write_text("".join(original))
+        run(path, opt=fsz)
+    for ending in ("no_final_newline", "premature_eof"):
+        path = case(ending, ap=True)
+        table = path / "rangebf.def"
+        if ending == "no_final_newline":
+            table.write_text(table.read_text().rstrip("\n"))
+            run(path)
+        else:
+            table.write_text("\n".join(table.read_text().splitlines()[:-1])+"\n")
+            run(path,"failed to read BFRange")
+    if ranks > 1:
+        # Only world rank 0 owns dispatch flag parsing. Deliberately invalid
+        # non-root values must neither change the route nor cause a deadlock.
+        wrapper = workspace / "rank_flags.py"
+        wrapper.write_text('''import os, sys
+rank = int(os.environ.get("OMPI_COMM_WORLD_RANK", os.environ.get("PMI_RANK", "-1")))
+assert rank >= 0
+mode = sys.argv[1]
+os.environ["MVMC_BF_FORCE_CANONICAL_NONFSZ"] = ("1" if mode == "canonical" else "0") if rank == 0 else "invalid_nonroot"
+os.environ["MVMC_BF_TEST_FORCE_LEGACY_AP"] = ("1" if mode == "legacy" else "0") if rank == 0 else "invalid_nonroot"
+if mode == "invalid" and rank == 0:
+    os.environ["MVMC_BF_FORCE_CANONICAL_NONFSZ"] = "invalid_root"
+os.execv(sys.argv[2], sys.argv[2:])
+''')
+        for mode in ("canonical", "legacy", "invalid"):
+            path = case("rank_flags_"+mode, ap=True)
+            proc = subprocess.run(prefix+[sys.executable,str(wrapper),mode,str(binary),"-e","namelist.def"],
+                cwd=path,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=30)
+            (path / "reader.log").write_text(proc.stdout)
+            if mode == "invalid":
+                assert proc.returncode != 0 and "path flags require 0 or 1" in proc.stdout, proc.stdout
+            else:
+                assert proc.returncode == 0 and "BackFlow non-FSZ path: "+mode in proc.stdout, proc.stdout
     print("BF seam reader passed; ranks={}".format(ranks))
     return 0
 

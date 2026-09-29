@@ -31,10 +31,11 @@ def compare_trace(reference, actual):
 
 
 def main():
-    mode, boundary = sys.argv[1:]
+    mode, boundary = sys.argv[1:3]
+    force_legacy = "--force-ap-legacy" in sys.argv[3:]
     root = Path.cwd()
     ranks = int(os.environ.get("MVMC_MPI_PROCS", "1"))
-    parent = root / "work" / ("bf_failure_{}_{}_np{}".format(mode, boundary, ranks))
+    parent = root / "work" / ("bf_failure_{}_{}_np{}{}".format(mode, boundary, ranks, "_legacy" if force_legacy else ""))
     if parent.exists():
         shutil.rmtree(parent)
     parent.mkdir(parents=True)
@@ -42,8 +43,8 @@ def main():
     prefix = [] if ranks == 1 else [os.environ.get("MPIRUN", "mpiexec"), "-np", str(ranks)] + os.environ.get("MVMC_MPI_ARGS", "").split()
     model = "BackFlow_Identity_" + mode.capitalize()
 
-    def run(failure, node=False):
-        work = parent / ("physical_zero" if node else (failure.replace(",", "_") if failure else "baseline"))
+    def run(failure, node=False, partial_node=False):
+        work = parent / ("partial_zero" if partial_node else ("physical_zero" if node else (failure.replace(",", "_") if failure else "baseline")))
         shutil.copytree(root / "data" / model, work)
         write_chain_nn_backflow(str(work), antiperiodic=boundary == "ap")
         update_modpara(str(work / "modpara.def"), {
@@ -56,7 +57,7 @@ def main():
         values = initial.read_text().split()
         for i in range(parse_norbitalidx(str(work / "orbitalidx.def"))):
             values[6 + 30 + 3*i] = "{:.18e}".format(0.4*math.sin((i+1)**2*0.731) + 0.3*math.cos((i+2)*0.331))
-        if node:
+        if node or partial_node:
             # Identity BF and diagonal pair orbitals: any one-electron hop
             # from a paired configuration has an exactly zero determinant.
             for i in range(10):
@@ -65,8 +66,27 @@ def main():
             for i in range(16):
                 values[36+3*i] = "1" if i//4 == i%4 else "0"
                 values[37+3*i] = "0"
+        if partial_node:
+            # QP 0 has equal pair-orbital rows 1 and 2. QP 1 translates by
+            # one site, so a zero Pfaffian component can have nonzero sum.
+            pair = [1,1,1,1, 1,2,3,4, 1,2,3,4, 2,5,7,11]
+            for i, value in enumerate(pair):
+                values[36+3*i] = str(value)
+            update_modpara(str(work / "modpara.def"), {
+                "NMPTrans": "-2" if boundary == "ap" else "2", "NExUpdatePath": "0"})
+            path = work / "qptransidx.def"
+            header = path.read_text().splitlines()[:5]
+            header[1] = "NQPTrans 2"
+            rows = ["0 1.0 0.0", "1 1.0 0.0"]
+            rows += ["{} {} {} {}".format(q, i, (i+q)%4,
+                        -1 if boundary == "ap" and i+q >= 4 else 1)
+                     for q in range(2) for i in range(4)]
+            path.write_text("\n".join(header+rows)+"\n")
         initial.write_text(" ".join(values) + "\n")
         env = dict(os.environ, MVMC_BF_TEST_TRACE="1", MVMC_BF_TEST_FAILURE=failure)
+        if force_legacy:
+            env["MVMC_BF_TEST_FORCE_LEGACY_AP"] = "1"
+            env["MVMC_BF_FORCE_CANONICAL_NONFSZ"] = "0"
         command = prefix + [str(binary), "-e", "namelist.def", "initial.def"]
         proc = subprocess.run(command, cwd=work, env=env, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT, text=True, timeout=30)
@@ -118,6 +138,12 @@ def main():
             for key in ("ele_idx", "count", "bf_count", "pf", "inverse", "slater", "log_committed"):
                 assert row[key] == trace[0][key], key
     print("physical zero rejected with unchanged state", mode, boundary, ranks, flush=True)
+    work, proc = run("", partial_node=True)
+    assert proc.returncode != 0 and "checked recovery failed at accept full inverse" in proc.stdout, proc.stdout
+    zero_components = re.findall(r"zero QP proposal: qp=\d+ projected_log=([^ ]+) accept=1", proc.stdout)
+    assert zero_components and all(math.isfinite(float(x)) for x in zero_components), proc.stdout
+    print("zero component accepted by nonzero projected sum; singular inverse stopped", mode, boundary, ranks, flush=True)
+
     return 0
 
 

@@ -442,7 +442,7 @@ int Counter_max = 6;
 /* 6: pair spin flip try, 7: pair spin flip accept */
 
 /***** optional BackFlow profiling counters *****/
-#define NBFProfileCounter 50
+#define NBFProfileCounter 53
 #define BFPROF_SAMPLE_ROW_REQUEST        0
 #define BFPROF_SAMPLE_ROW_RECOMPUTE      1
 #define BFPROF_SAMPLE_ROW_REUSE          2
@@ -493,6 +493,9 @@ int Counter_max = 6;
 #define BFPROF_GREEN_DELTA_PAIR_TOTAL      47
 #define BFPROF_FULL_REBUILD                48
 #define BFPROF_MULTI_QP_LEGACY_INCREMENTAL 49
+#define BFPROF_LEGACY_NONFSZ_PROPOSAL       50
+#define BFPROF_LEGACY_NONFSZ_ACCEPT         51
+#define BFPROF_LEGACY_NONFSZ_GREEN_ROWS     52
 int BFProfileEnabled = 0;
 long long BFProfileCounter[NBFProfileCounter];
 

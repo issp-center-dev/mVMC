@@ -1,6 +1,32 @@
+foreach(seam_script bf_seam_phase_tool.py bf_seam_oracle.py test_bf_seam_oracle.py runtest_bf_seam_kernel.py)
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/${seam_script} DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+endforeach()
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/BackFlow_Seam_L4 DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+add_test(NAME BackFlow_Seam_Physics_Oracle COMMAND ${PYTHON_EXECUTABLE} test_bf_seam_oracle.py)
+foreach(seam_mode canonical legacy projected canonical_real legacy_real)
+    add_test(NAME BackFlow_Seam_Kernel_${seam_mode}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_seam_kernel.py ${seam_mode})
+endforeach()
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_seam_input.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_failure.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_replay.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 foreach(bf_mode real complex)
+    add_test(NAME BackFlow_Replay_${bf_mode}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_replay.py ${bf_mode})
+    if(MPI_FOUND)
+        add_test(NAME BackFlow_Replay_${bf_mode}_mpi
+            COMMAND ${PYTHON_EXECUTABLE} runtest_bf_replay.py ${bf_mode})
+        set_tests_properties(BackFlow_Replay_${bf_mode}_mpi
+            PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
+    endif()
+    add_test(NAME BackFlow_Failure_${bf_mode}_ap_legacy
+        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ap --force-ap-legacy)
+    if(MPI_FOUND)
+        add_test(NAME BackFlow_Failure_${bf_mode}_ap_legacy_mpi
+            COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ap --force-ap-legacy)
+        set_tests_properties(BackFlow_Failure_${bf_mode}_ap_legacy_mpi
+            PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
+    endif()
     foreach(bf_boundary pbc ap)
         add_test(NAME BackFlow_Failure_${bf_mode}_${bf_boundary}
             COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ${bf_boundary})

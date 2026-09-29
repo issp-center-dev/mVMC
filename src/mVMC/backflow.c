@@ -17,6 +17,9 @@ the Free Software Foundation, either version 3 of the License, or
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _mpi_use
+#include <mpi.h>
+#endif
 #include "./include/backflow.h"
 #include "./include/global.h"
 
@@ -264,9 +267,9 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
   return 0;
 }
 
-static int BFComputeCanonicalNonFszPath(void) {
+static int BFComputeCanonicalNonFszPath(const int allowAPLegacy) {
   int site;
-  if (NMPTrans > 1 || APFlag != 0) return 1;
+  if (NMPTrans > 1 || (APFlag != 0 && !allowAPLegacy)) return 1;
   if (NMPTrans != 1 || Nsite <= 0 || QPTrans == NULL ||
       QPTransSgn == NULL || QPTrans[0] == NULL || QPTransSgn[0] == NULL) {
     return 1;
@@ -891,7 +894,44 @@ void BFAllocRuntime(void) {
     BFRealEta = 1.0;
     return;
   }
-  BFCanonicalNonFszPath = BFComputeCanonicalNonFszPath();
+  {
+    int rank=0, flags[2]={0,0}, invalid=0;
+#ifdef _mpi_use
+    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+#endif
+    if(rank == 0) {
+      const char *names[2]={"MVMC_BF_FORCE_CANONICAL_NONFSZ",
+                           "MVMC_BF_TEST_FORCE_LEGACY_AP"};
+      int count=1;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+      count=2;
+#endif
+      for(int k=0;k<count;k++) {
+        const char *raw=getenv(names[k]);
+        if(raw && *raw) {
+          if(strcmp(raw,"1")==0) flags[k]=1;
+          else if(strcmp(raw,"0")!=0) invalid=1;
+        }
+      }
+    }
+#ifdef _mpi_use
+    MPI_Bcast(flags,2,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(&invalid,1,MPI_INT,0,MPI_COMM_WORLD);
+#endif
+    if(invalid) {
+      if(rank == 0) fprintf(stderr,"Error: BackFlow path flags require 0 or 1.\n");
+#ifdef _mpi_use
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+#else
+      exit(EXIT_FAILURE);
+#endif
+    }
+    /* AP legacy is still test-only until the numerical gate is closed. */
+    BFCanonicalNonFszPath = flags[0] || BFComputeCanonicalNonFszPath(flags[1]);
+    if(rank == 0 && iFlgOrbitalGeneral == 0)
+      fprintf(stdout,"BackFlow non-FSZ path: %s (force_canonical=%d)\n",
+          BFCanonicalNonFszPath ? "canonical" : "legacy",flags[0]);
+  }
 
   EleProjBFCnt = (int *)BFMallocArray((size_t)NVMCSample * (size_t)BFWorkIntCount(),
                                       sizeof(int), "EleProjBFCnt");

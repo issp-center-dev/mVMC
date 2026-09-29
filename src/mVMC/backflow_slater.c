@@ -2203,6 +2203,7 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
   if(BFProfileEnabled && BFUseCanonicalNonFszPath()) {
     AddBFProfileCounter(BFPROF_MULTI_QP_LEGACY_INCREMENTAL, 1);
   }
+  AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_GREEN_ROWS,1);
   int **posBF = PosBF;
   //int rua=ra+Nsite*u, rub=rb+Nsite*u;
   const int mua = ma + Ne*u;
@@ -2426,6 +2427,7 @@ void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, cons
   if(BFProfileEnabled && BFUseCanonicalNonFszPath()) {
     AddBFProfileCounter(BFPROF_MULTI_QP_LEGACY_INCREMENTAL, 1);
   }
+  AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_GREEN_ROWS,1);
   int **posBF = PosBF;
   const int mua = ma + Ne*u;
   int trua, trub;
@@ -2651,6 +2653,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
   if(BFProfileEnabled && BFUseCanonicalNonFszPath()) {
     AddBFProfileCounter(BFPROF_MULTI_QP_LEGACY_INCREMENTAL, 1);
   }
+  AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_GREEN_ROWS,1);
   int **posBF = PosBF;
   //int rua=ra+Nsite*u, rub=rb+Nsite*u;
   const int mua = ma + Ne*u;

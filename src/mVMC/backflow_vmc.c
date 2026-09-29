@@ -1168,6 +1168,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         //CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
         if(!BFUseCanonicalNonFszPath()) {
+          if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
           fullCandidateStatus = CalculateNewPfMBFChecked(icount, msaTmp, pfMNew, TmpEleIdx,
                             qpStart, qpEnd, SlaterElmBF);
         }
@@ -1286,6 +1287,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         StartTimer(66);
 
         if(!BFUseCanonicalNonFszPath()) {
+          if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
           fullCandidateStatus = CalculateNewPfMBFChecked(icount, msaTmp, pfMNew, TmpEleIdx, qpStart, qpEnd, SlaterElmBF);
         }
         logIpNew = BFTransactionProposal(&transaction,projBFCntNew,fullCandidateStatus);
@@ -1750,6 +1752,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         //CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
         if(!BFUseCanonicalNonFszPath()) {
+          if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
           fullCandidateStatus = CalculateNewPfMBF_realChecked(icount, msaTmp, pfMNew_real, TmpEleIdx,
                                  qpStart, qpEnd, SlaterElmBF_real);
         }
@@ -1878,6 +1881,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         StartTimer(66);
 
         if(!BFUseCanonicalNonFszPath()) {
+          if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
           fullCandidateStatus = CalculateNewPfMBF_realChecked(icount, msaTmp, pfMNew_real, TmpEleIdx, qpStart, qpEnd, SlaterElmBF_real);
         }
         logIpNew = BFTransactionProposal(&transaction,projBFCntNew,fullCandidateStatus);
@@ -4399,6 +4403,8 @@ cleanup:
   return status;
 }
 
+#include "backflow_replay.c"
+
 void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   int *eleIdx, *eleCfg, *eleNum, *eleProjCnt, *eleProjBFCnt;
   double complex e, ip; //db is double?
@@ -4446,6 +4452,8 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm_parent, &parentSize);
   MPI_Comm_rank(comm_parent, &parentRank);
+
+  const int replay=BFReplayMeasurementConfigurations(comm_parent);
 
   if(BFNBodyOracleOpen(&nbodyOracle, parentRank, parentSize, 0) != 0) {
     fprintf(stderr,
@@ -4620,6 +4628,14 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
               "Error: BackFlow N-body configuration oracle failed on "
               "parent rank %d sample %d.\n", parentRank, sample);
       MPI_Abort(comm_parent, EXIT_FAILURE);
+    }
+
+    if(replay) {
+      if(!isfinite(creal(ip)) || !isfinite(cimag(ip)) || cabs(ip) == 0.0) {
+        fprintf(stderr,"Error: nonfinite or zero BackFlow replay amplitude at sample %d.\n",sample);
+        MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+      }
+      logSqPfFullSlater[sample]=2.0*(LogProjVal(eleProjCnt)+log(cabs(ip)));
     }
 
     LogProjVal(eleProjCnt);

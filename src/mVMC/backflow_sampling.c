@@ -230,16 +230,29 @@ static int BFTransactionAccept(BFSampleTransaction *tx, const int *counts,
   }
 #endif
   if(!provisional) return 0;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if(getenv("MVMC_BF_TEST_TRACE")) {
+    for(int q=0;q<tx->qpEnd-tx->qpStart;q++) {
+      double complex value=tx->real ? tx->pfR[q] : tx->pf[q];
+      if(value == 0.0)
+        fprintf(stderr,"BackFlow zero QP proposal: qp=%d projected_log=%.17e accept=1\n",
+                tx->qpStart+q,creal(*newLog));
+    }
+  }
+#endif
   if(BFUseCanonicalNonFszPath() || tx->proposalRecovered) {
     status = BFTransactionFullState(tx,counts);
     status = BFTransactionInject(tx,BF_FAIL_ACCEPT_LU,status);
     status = BFTransactionInject(tx,BF_FAIL_ACCEPT_INVERSE,status);
     status = BFTransactionInject(tx,BF_FAIL_ACCEPT_PF,status);
   }
-  else if(tx->real)
-    status = UpdateMAll_BF_real(icount,msa,tx->pfR,TmpEleIdx,tx->qpStart,tx->qpEnd,tx->invR);
-  else
-    status = UpdateMAll_BF_fcmp(icount,msa,tx->pf,TmpEleIdx,tx->qpStart,tx->qpEnd,tx->inv);
+  else {
+    if(tx->qpEnd > tx->qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_ACCEPT,1);
+    if(tx->real)
+      status = UpdateMAll_BF_real(icount,msa,tx->pfR,TmpEleIdx,tx->qpStart,tx->qpEnd,tx->invR);
+    else
+      status = UpdateMAll_BF_fcmp(icount,msa,tx->pf,TmpEleIdx,tx->qpStart,tx->qpEnd,tx->inv);
+  }
   status = BFTransactionAgree(tx,status,"accept prepare");
   if(status != BF_PF_OK) {
     tx->acceptRecovery++;
