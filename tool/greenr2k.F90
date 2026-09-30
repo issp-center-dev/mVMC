@@ -98,8 +98,8 @@ SUBROUTINE read_filename()
   &                       filetail, calctype, numave, interval
   IMPLICIT NONE
   !
-  INTEGER :: fi = 10, lanczos_max, irun, istep, iwfc, idx_start
-  CHARACTER(256) :: modpara, calcmod, keyname, namelist
+  INTEGER :: fi = 10, lanczos_max, irun, istep, iwfc, idx_start, ii
+  CHARACTER(256) :: modpara, calcmod, keyname, namelist, outputdir, line
   !
   WRITE(*,*) 
   WRITE(*,*) "#####  Read HPhi/mVMC Input Files  #####" 
@@ -144,6 +144,7 @@ SUBROUTINE read_filename()
   !
   OPEN(fi,file = TRIM(modpara))
   !
+  outputdir = "output"
   DO
      READ(fi,*,END=20) keyname
      BACKSPACE(fi)
@@ -153,6 +154,17 @@ SUBROUTINE read_filename()
         READ(fi,*) keyname, nsite
      ELSE IF(TRIM(ADJUSTL(keyname)) == "cdatafilehead") THEN
         READ(fi,*) keyname, filehead
+     ELSE IF(TRIM(ADJUSTL(keyname)) == "outputdir") THEN
+        !
+        ! List-directed input stops at '/', so split the line by hand.
+        !
+        READ(fi,'(a)') line
+        DO ii = 1, LEN(line)
+           IF(line(ii:ii) == CHAR(9)) line(ii:ii) = " "
+        END DO
+        line = ADJUSTL(line)
+        line = ADJUSTL(line(INDEX(line, " "):))
+        outputdir = line(1:INDEX(line, " ") - 1)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "numave") THEN
         READ(fi,*) keyname, numave
      ELSE IF(TRIM(ADJUSTL(keyname)) == "lanczos_max") THEN
@@ -173,10 +185,11 @@ SUBROUTINE read_filename()
 20 CONTINUE
   WRITE(*,*) "  Read from ", TRIM(modpara)
   WRITE(*,*) "    FileHead : ", TRIM(ADJUSTL(filehead))
+  WRITE(*,*) "    OutputDir : ", TRIM(outputdir)
   WRITE(*,*) "    Number of site : ", nsite
   CLOSE(FI)
   !
-  filehead = "output/" // TRIM(ADJUSTL(filehead))
+  filehead = TRIM(outputdir) // "/" // TRIM(ADJUSTL(filehead))
   !
   ! Read from CalcMod file
   !

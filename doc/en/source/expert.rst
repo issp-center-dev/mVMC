@@ -934,6 +934,19 @@ Keywords and parameters
    ``NSplitSize > 1`` because the SR-CG stored :math:`O` matvec path does
    not support the inner MPI split.
 
+-  ``OutputDir``
+
+   **Type :** string-type (blank parameter not allowed, default value: output)
+
+   **Description :** Directory where output files are written. A relative
+   path is resolved against the current directory at run time. The
+   directory and its missing parents are created if they do not exist.
+   Output file names become ``OutputDir``/``CDataFileHead`` and
+   ``OutputDir``/``CParaFileHead``, each of which must be at most 191
+   bytes long. ``greenr2k`` also reads correlation functions from and
+   writes its results to ``OutputDir``. ``zvo_gc.dat`` is always written
+   to the current directory regardless of ``OutputDir``.
+
 -  ``NStore``
 
    **Type :** int-type (0 or 1, default value: 1)
