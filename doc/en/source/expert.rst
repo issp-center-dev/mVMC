@@ -2811,10 +2811,20 @@ Inputs outside this range are rejected.
    ``NQPOptTrans==1``. For non-FSZ ``abs(NMPTrans)>1``, sampling,
    Green functions, Hamiltonian, first Lanczos, and N-body evaluation
    use a correctness-first full Slater/Pfaffian rebuild. The same
-   rebuild is used for anti-periodic inputs and for a single-pattern
-   input whose first transformation is nonidentity; only the periodic,
-   identity, single-pattern case retains the legacy incremental path.
-   The rebuild path can be more expensive than that legacy path.
+   rebuild is used for a single-pattern input whose transformation is
+   nonidentity or has a negative transformation sign. A single identity
+   transformation with all-positive signs uses local Slater row updates
+   for both periodic and anti-periodic boundaries. The occupied Pfaffian
+   is evaluated directly; accepted inverses are rebuilt from the same
+   skew-symmetric occupied matrix to avoid unstable rank-update cancellation.
+   Thus the legacy route counters describe Slater row updates, not an
+   incremental Pfaffian/inverse formula or a guaranteed speedup.
+   ``MVMC_BF_FORCE_CANONICAL_NONFSZ=1`` selects the full Slater rebuild as
+   a manual fallback. This flag accepts only 0 or 1, is read on MPI rank 0
+   and broadcast, and the chosen route and reason are printed at startup.
+   Numerical failures are recovered with a checked evaluation of the same
+   proposal and the same random number, or terminate the calculation if
+   recovery fails; they are not treated as ordinary Metropolis rejections.
 
 -  With the normal ``Orbital`` / ``OrbitalAntiParallel`` format, the
    Hamiltonian may contain ``Trans``, number-operator interactions

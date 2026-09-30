@@ -267,16 +267,26 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
   return 0;
 }
 
-static int BFComputeCanonicalNonFszPath(const int allowAPLegacy) {
+static int BFComputeCanonicalNonFszPath(const char **reason) {
   int site;
-  if (NMPTrans > 1 || (APFlag != 0 && !allowAPLegacy)) return 1;
+  *reason = "multiple_transformations";
+  if (NMPTrans > 1) return 1;
+  *reason = "missing_transformation";
   if (NMPTrans != 1 || Nsite <= 0 || QPTrans == NULL ||
       QPTransSgn == NULL || QPTrans[0] == NULL || QPTransSgn[0] == NULL) {
     return 1;
   }
   for (site = 0; site < Nsite; site++) {
-    if (QPTrans[0][site] != site || QPTransSgn[0][site] != 1) return 1;
+    if (QPTrans[0][site] != site) {
+      *reason = "nonidentity_transformation";
+      return 1;
+    }
+    if (QPTransSgn[0][site] != 1) {
+      *reason = "nonpositive_transformation_sign";
+      return 1;
+    }
   }
+  *reason = "identity_all_positive";
   return 0;
 }
 
@@ -895,27 +905,20 @@ void BFAllocRuntime(void) {
     return;
   }
   {
-    int rank=0, flags[2]={0,0}, invalid=0;
+    int rank=0, forceCanonical=0, invalid=0;
+    const char *reason;
 #ifdef _mpi_use
     MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 #endif
     if(rank == 0) {
-      const char *names[2]={"MVMC_BF_FORCE_CANONICAL_NONFSZ",
-                           "MVMC_BF_TEST_FORCE_LEGACY_AP"};
-      int count=1;
-#ifdef MVMC_ENABLE_FAULT_INJECTION
-      count=2;
-#endif
-      for(int k=0;k<count;k++) {
-        const char *raw=getenv(names[k]);
-        if(raw && *raw) {
-          if(strcmp(raw,"1")==0) flags[k]=1;
-          else if(strcmp(raw,"0")!=0) invalid=1;
-        }
+      const char *raw=getenv("MVMC_BF_FORCE_CANONICAL_NONFSZ");
+      if(raw && *raw) {
+        if(strcmp(raw,"1")==0) forceCanonical=1;
+        else if(strcmp(raw,"0")!=0) invalid=1;
       }
     }
 #ifdef _mpi_use
-    MPI_Bcast(flags,2,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(&forceCanonical,1,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Bcast(&invalid,1,MPI_INT,0,MPI_COMM_WORLD);
 #endif
     if(invalid) {
@@ -926,11 +929,18 @@ void BFAllocRuntime(void) {
       exit(EXIT_FAILURE);
 #endif
     }
-    /* AP legacy is still test-only until the numerical gate is closed. */
-    BFCanonicalNonFszPath = flags[0] || BFComputeCanonicalNonFszPath(flags[1]);
-    if(rank == 0 && iFlgOrbitalGeneral == 0)
-      fprintf(stdout,"BackFlow non-FSZ path: %s (force_canonical=%d)\n",
-          BFCanonicalNonFszPath ? "canonical" : "legacy",flags[0]);
+    /* Boundary phases are carried by the kernels; only the effective
+     * transformation determines whether local Slater row updates are valid. */
+    BFCanonicalNonFszPath = BFComputeCanonicalNonFszPath(&reason);
+    if(forceCanonical) {
+      BFCanonicalNonFszPath = 1;
+      reason = "forced_canonical";
+    }
+    if(rank == 0 && iFlgOrbitalGeneral == 0) {
+      fprintf(stdout,"BackFlow non-FSZ path: %s (reason=%s, force_canonical=%d, APFlag=%d)\n",
+          BFCanonicalNonFszPath ? "canonical" : "legacy",reason,forceCanonical,APFlag);
+      fflush(stdout);
+    }
   }
 
   EleProjBFCnt = (int *)BFMallocArray((size_t)NVMCSample * (size_t)BFWorkIntCount(),

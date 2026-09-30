@@ -32,10 +32,10 @@ def compare_trace(reference, actual):
 
 def main():
     mode, boundary = sys.argv[1:3]
-    force_legacy = "--force-ap-legacy" in sys.argv[3:]
+    force_canonical = "--force-canonical" in sys.argv[3:]
     root = Path.cwd()
     ranks = int(os.environ.get("MVMC_MPI_PROCS", "1"))
-    parent = root / "work" / ("bf_failure_{}_{}_np{}{}".format(mode, boundary, ranks, "_legacy" if force_legacy else ""))
+    parent = root / "work" / ("bf_failure_{}_{}_np{}{}".format(mode, boundary, ranks, "_canonical" if force_canonical else ""))
     if parent.exists():
         shutil.rmtree(parent)
     parent.mkdir(parents=True)
@@ -43,8 +43,8 @@ def main():
     prefix = [] if ranks == 1 else [os.environ.get("MPIRUN", "mpiexec"), "-np", str(ranks)] + os.environ.get("MVMC_MPI_ARGS", "").split()
     model = "BackFlow_Identity_" + mode.capitalize()
 
-    def run(failure, node=False, partial_node=False):
-        work = parent / ("partial_zero" if partial_node else ("physical_zero" if node else (failure.replace(",", "_") if failure else "baseline")))
+    def run(failure, node=False, partial_node=False, twin=False):
+        work = parent / ("canonical_twin" if twin else "partial_zero" if partial_node else ("physical_zero" if node else (failure.replace(",", "_") if failure else "baseline")))
         shutil.copytree(root / "data" / model, work)
         write_chain_nn_backflow(str(work), antiperiodic=boundary == "ap")
         update_modpara(str(work / "modpara.def"), {
@@ -84,13 +84,13 @@ def main():
             path.write_text("\n".join(header+rows)+"\n")
         initial.write_text(" ".join(values) + "\n")
         env = dict(os.environ, MVMC_BF_TEST_TRACE="1", MVMC_BF_TEST_FAILURE=failure)
-        if force_legacy:
-            env["MVMC_BF_TEST_FORCE_LEGACY_AP"] = "1"
-            env["MVMC_BF_FORCE_CANONICAL_NONFSZ"] = "0"
+        env["MVMC_BF_FORCE_CANONICAL_NONFSZ"] = "1" if force_canonical or twin else "0"
         command = prefix + [str(binary), "-e", "namelist.def", "initial.def"]
         proc = subprocess.run(command, cwd=work, env=env, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT, text=True, timeout=30)
         (work / "run.log").write_text(proc.stdout)
+        expected = "canonical" if force_canonical or twin or partial_node else "legacy"
+        assert "BackFlow non-FSZ path: "+expected in proc.stdout, proc.stdout
         return work, proc
 
     baseline, proc = run("")
@@ -98,6 +98,11 @@ def main():
     read = lambda p: [json.loads(line) for line in p.read_text().splitlines()]
     references = {p.name: read(p) for p in baseline.glob("bf_transaction_trace.rank*.jsonl")}
     assert len(references) == ranks, references.keys()
+    if not force_canonical:
+        twin, proc = run("", twin=True)
+        assert proc.returncode == 0, proc.stdout
+        for name, reference in references.items():
+            compare_trace(reference, read(twin / name))
     first = next(iter(references.values()))
     assert any(r["kind"] >= 0 and r["accept"] for r in first)
     assert any(r["kind"] >= 0 and not r["accept"] for r in first)

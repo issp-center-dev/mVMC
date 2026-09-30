@@ -19,12 +19,12 @@ foreach(bf_mode real complex)
         set_tests_properties(BackFlow_Replay_${bf_mode}_mpi
             PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
     endif()
-    add_test(NAME BackFlow_Failure_${bf_mode}_ap_legacy
-        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ap --force-ap-legacy)
+    add_test(NAME BackFlow_Failure_${bf_mode}_ap_canonical
+        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ap --force-canonical)
     if(MPI_FOUND)
-        add_test(NAME BackFlow_Failure_${bf_mode}_ap_legacy_mpi
-            COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ap --force-ap-legacy)
-        set_tests_properties(BackFlow_Failure_${bf_mode}_ap_legacy_mpi
+        add_test(NAME BackFlow_Failure_${bf_mode}_ap_canonical_mpi
+            COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ap --force-canonical)
+        set_tests_properties(BackFlow_Failure_${bf_mode}_ap_canonical_mpi
             PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
     endif()
     foreach(bf_boundary pbc ap)
@@ -1781,9 +1781,12 @@ set_tests_properties(BackFlow_MultiQP_PhysicalCovariance_AP PROPERTIES ENVIRONME
 add_test(NAME BackFlow_SingleQP_NonIdentity_CanonicalFallback
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --reverse-projection-order --use-single-projection-row --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_SingleQP_NonIdentity_CanonicalFallback PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_NonIdentity_CanonicalFallback")
+add_test(NAME BackFlow_SingleQP_AP_LegacyPath
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --use-ap-projection --use-single-projection-row --check-bf-legacy-route)
+set_tests_properties(BackFlow_SingleQP_AP_LegacyPath PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_AP_LegacyPath")
 add_test(NAME BackFlow_SingleQP_AP_CanonicalFallback
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --use-ap-projection --use-single-projection-row --check-multiqp-full-rebuild)
-set_tests_properties(BackFlow_SingleQP_AP_CanonicalFallback PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_AP_CanonicalFallback")
+set_tests_properties(BackFlow_SingleQP_AP_CanonicalFallback PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_FORCE_CANONICAL_NONFSZ=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_AP_CanonicalFallback")
 add_python_vmc_test_bf_projection_variants(BackFlow_MultiQP_OrderInvariant_PBC pbc)
 add_python_vmc_test_bf_projection_variants(BackFlow_MultiQP_OrderInvariant_AP_Mutation ap)
 add_test(NAME BackFlow_MultiQP_Green1_PBC_Complex

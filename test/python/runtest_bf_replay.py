@@ -2,6 +2,7 @@
 import json
 import math
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -52,7 +53,7 @@ def main():
         shutil.copytree(source, work)
         legacy = name == "legacy"
         env = dict(os.environ, MVMC_BF_FORCE_CANONICAL_NONFSZ="0" if legacy else "1",
-                   MVMC_BF_TEST_FORCE_LEGACY_AP="1" if legacy else "0")
+                   MVMC_BF_PROFILE="1")
         if record:
             env["MVMC_BF_TEST_RECORD_CONFIG"] = str(parent / "configurations.txt")
         else:
@@ -67,6 +68,16 @@ def main():
             assert proc.returncode != 0 and "Error: invalid BackFlow" in proc.stdout, proc.stdout
         else:
             assert proc.returncode == 0, proc.stdout
+            expected = "legacy" if legacy else "canonical"
+            assert "BackFlow non-FSZ path: "+expected in proc.stdout, proc.stdout
+            timer, = (work / "output").glob("*CalcTimer.dat")
+            counters = {label.strip(): int(count) for label, count in
+                        re.findall(r"(BF[^\n]+?)\s+\[\d+\]\s+(\d+)\s*$", timer.read_text(), re.M)}
+            assert counters["BF multi-QP legacy incremental"] == 0, counters
+            for label in ("BF legacy non-FSZ proposal", "BF legacy non-FSZ accept prep", "BF legacy non-FSZ Green rows"):
+                assert (counters[label] > 0) if legacy else (counters[label] == 0), counters
+            if not legacy:
+                assert counters["BF canonical full rebuild"] > 0, counters
             if not record:
                 assert "measurement replay: samples=16 particles=4" in proc.stdout
         return work

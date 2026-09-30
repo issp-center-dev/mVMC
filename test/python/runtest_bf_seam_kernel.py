@@ -51,8 +51,7 @@ def main():
         env = dict(os.environ, MVMC_BF_FD_DUMP="fd.dat",
                    MVMC_BF_TEST_FD_STEP=str(h), MVMC_BF_TEST_COEFFICIENT_DUMP="1",
                    MVMC_BF_PROFILE="1",
-                   MVMC_BF_FORCE_CANONICAL_NONFSZ="0" if legacy else "1",
-                   MVMC_BF_TEST_FORCE_LEGACY_AP="1" if legacy else "0")
+                   MVMC_BF_FORCE_CANONICAL_NONFSZ="0" if legacy or mode == "projected" else "1")
         proc = subprocess.run([str(binary),"-e","namelist.def","initial.def"],cwd=work,
                               env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
                               text=True,timeout=60)

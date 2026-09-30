@@ -2658,9 +2658,17 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
    rejectし、FSZでは ``NQPOptTrans==1`` の範囲で従来の ``OptTrans`` supportを
    維持します。non-FSZ の ``abs(NMPTrans)>1`` では sampling、Green関数、
    Hamiltonian、1st Lanczos、N体評価を correctness-first の完全
-   Slater/Pfaffian再構築で処理します。反周期入力、および先頭変換が非恒等な
-   単一pattern入力も同じ再構築を使用し、周期・恒等・単一patternの場合だけ
-   従来の増分経路を維持します。再構築経路は従来経路より高コストになる場合があります。
+   Slater/Pfaffian再構築で処理します。単一patternでも変換が非恒等、または
+   変換符号に負値がある場合は同じ再構築を使用します。恒等変換・符号全 +1 の
+   単一patternでは、周期・反周期の両方で Slater の行更新を使用します。
+   占有行列の Pfaffian は直接評価し、accept 時の逆行列は同じ反対称占有行列から
+   再構築して、増分式の桁落ちを避けます。legacy counter は Slater 行更新の
+   実行回数であり、Pfaffian/逆行列の増分計算や速度向上を保証するものではありません。
+   手動退避用の ``MVMC_BF_FORCE_CANONICAL_NONFSZ=1`` は Slater 全再構築を
+   選択します。この変数は 0/1 のみを受理し、MPI rank 0 で解析して配布します。
+   起動時に経路と理由を表示します。数値失敗時は同じ候補・同じ乱数で検査付きの
+   再評価を行い、回復不能なら計算全体を停止します。数値失敗を通常の Metropolis
+   reject として処理しません。
 
 -  ``Orbital`` / ``OrbitalAntiParallel`` の通常形式では、Hamiltonian は
    ``Trans``、number-operator 型の相互作用（``CoulombIntra``,

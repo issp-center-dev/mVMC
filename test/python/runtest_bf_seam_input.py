@@ -1,6 +1,7 @@
 """Exercise the real reader and its MPI failure agreement, including FSZ."""
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -36,9 +37,11 @@ def main():
                 fp.write("{} {}\n".format(keyword, filename))
         return path
 
-    def run(path, error=None, opt=False):
+    def run(path, error=None, opt=False, force=False):
         cmd = prefix + [str(binary), "-e"] + (["-o"] if opt else []) + ["namelist.def"]
-        proc = subprocess.run(cmd, cwd=path, stdout=subprocess.PIPE,
+        env = dict(os.environ, MVMC_BF_FORCE_CANONICAL_NONFSZ="1" if force else "0",
+                   MVMC_BF_PROFILE="1")
+        proc = subprocess.run(cmd, cwd=path, env=env, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT, text=True, timeout=30)
         (path / "reader.log").write_text(proc.stdout)
         if error is None:
@@ -53,6 +56,46 @@ def main():
     for filename in ("zvo_out_001.dat", "zvo_cisajs_001.dat", "zvo_cisajscktalt_001.dat"):
         assert (p3 / "output" / filename).read_bytes() == (p4 / "output" / filename).read_bytes(), filename
     run(case("ap4", ap=True))
+    # Classify the actual effective transformation, independently of APFlag.
+    # A global minus sign is covariant but deliberately ineligible for rows.
+    reasons = {"identity": "identity_all_positive", "minus": "nonpositive_transformation_sign",
+               "shift": "nonidentity_transformation", "multi": "multiple_transformations",
+               "forced": "forced_canonical"}
+    for ap in (False, True):
+        for complex_mode in (False, True):
+            for kind, reason in reasons.items():
+                path = case("dispatch_{}_{}_{}".format(ap, complex_mode, kind), ap=ap)
+                if complex_mode:
+                    orbital = path / "orbitalidx.def"
+                    orbital.write_text(re.sub(r"(ComplexType\s+)0", r"\g<1>1", orbital.read_text()))
+                count = 2 if kind == "multi" else 1
+                update_modpara(str(path / "modpara.def"), {
+                    "NMPTrans": str(-count if ap else count), "NSplitSize": str(ranks),
+                    "NVMCSample": "16", "RndSeed": "8271"})
+                qp = path / "qptransidx.def"
+                header = qp.read_text().splitlines()[:5]
+                header[1] = "NQPTrans " + str(count)
+                rows = ["{} 1.0 0.0".format(q) for q in range(count)]
+                for q in range(count):
+                    shift = 1 if kind == "shift" else q
+                    rows += ["{} {} {} {}".format(q, i, (i+shift)%4,
+                        -1 if kind == "minus" or (ap and i+shift >= 4) else 1) for i in range(4)]
+                qp.write_text("\n".join(header+rows)+"\n")
+                proc = run(path, force=kind == "forced")
+                # PBC's projection reader normalizes transformation signs to +1.
+                effective_identity = kind == "identity" or (kind == "minus" and not ap)
+                expected = "legacy" if effective_identity else "canonical"
+                if effective_identity:
+                    reason = "identity_all_positive"
+                assert "BackFlow non-FSZ path: {} (reason={},".format(expected, reason) in proc.stdout, proc.stdout
+                timer, = (path / "output").glob("*CalcTimer.dat")
+                counters = {label.strip(): int(value) for label, value in
+                            re.findall(r"(BF[^\n]+?)\s+\[\d+\]\s+(\d+)\s*$", timer.read_text(), re.M)}
+                assert counters["BF multi-QP legacy incremental"] == 0, counters
+                for label in ("BF legacy non-FSZ proposal", "BF legacy non-FSZ accept prep", "BF legacy non-FSZ Green rows"):
+                    assert (counters[label] > 0) if expected == "legacy" else (counters[label] == 0), counters
+                if expected == "canonical":
+                    assert counters["BF canonical full rebuild"] > 0, counters
     mutations = {
         "ap_missing_phase": (True, 0, "0 0 0\n", "requires a fourth"),
         "mixed_columns": (False, 1, "0 1 1\n", "mixed BFRange"),
@@ -149,7 +192,6 @@ rank = int(os.environ.get("OMPI_COMM_WORLD_RANK", os.environ.get("PMI_RANK", "-1
 assert rank >= 0
 mode = sys.argv[1]
 os.environ["MVMC_BF_FORCE_CANONICAL_NONFSZ"] = ("1" if mode == "canonical" else "0") if rank == 0 else "invalid_nonroot"
-os.environ["MVMC_BF_TEST_FORCE_LEGACY_AP"] = ("1" if mode == "legacy" else "0") if rank == 0 else "invalid_nonroot"
 if mode == "invalid" and rank == 0:
     os.environ["MVMC_BF_FORCE_CANONICAL_NONFSZ"] = "invalid_root"
 os.execv(sys.argv[2], sys.argv[2:])
