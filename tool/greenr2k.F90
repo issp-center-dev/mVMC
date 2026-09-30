@@ -319,13 +319,13 @@ SUBROUTINE read_geometry()
      READ(fi,*) direct(1:3,ii)
   END DO
   WRITE(*,*) "    Direct LATTICE VECTOR :"
-  WRITE(*,'(4x3f15.10)') direct(1:3, 1:3)
+  WRITE(*,'(4x,3f15.10)') direct(1:3, 1:3)
   !
   ! Bondary phase
   !
   READ(fi,*) phase0(1:3)  
   WRITE(*,*) "    Boundary phase[degree] : "
-  WRITE(*,'(4x3f15.10)') phase0(1:3)
+  WRITE(*,'(4x,3f15.10)') phase0(1:3)
   phase0(1:3) = phase0(1:3) * ACOS(-1.0d0) / 180.0d0
   !
   ! Supercell index (a0w, a0l, a1w, a1l)
@@ -381,7 +381,7 @@ SUBROUTINE read_geometry()
   CALL dgetrf(3, 3, recipr, 3, Ipiv, ii)
   CALL dgetri(3, recipr, 3, ipiv, work, 10, ii)
   WRITE(*,*) "    Reciplocal lattice vector :"
-  WRITE(*,'(4x3f15.10)') recipr(1:3, 1:3)
+  WRITE(*,'(4x,3f15.10)') recipr(1:3, 1:3)
   !
   ! Move original R-vector to the nearest one with periodic boundary cond.
   !
