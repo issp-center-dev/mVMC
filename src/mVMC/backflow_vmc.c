@@ -1169,8 +1169,9 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         //CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
         if(!BFUseCanonicalNonFszPath()) {
           if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
-          fullCandidateStatus = CalculateNewPfMBFChecked(icount, msaTmp, pfMNew, TmpEleIdx,
-                            qpStart, qpEnd, SlaterElmBF);
+          fullCandidateStatus = CalculateNewPfMBFCheckedWorkspace(icount,
+              msaTmp,pfMNew,TmpEleIdx,qpStart,qpEnd,SlaterElmBF,
+              &transaction.stableC);
         }
         logIpNew = BFTransactionProposal(&transaction,projBFCntNew,fullCandidateStatus);
         if (rebuildChk.enabled) BFSamplerCheckCandidate_fcmp(&rebuildChk, TmpEleIdx, TmpEleNum, projBFCntNew, pfMNew, qpStart, qpEnd);
@@ -1288,7 +1289,9 @@ void VMC_BF_MakeSample(MPI_Comm comm)
 
         if(!BFUseCanonicalNonFszPath()) {
           if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
-          fullCandidateStatus = CalculateNewPfMBFChecked(icount, msaTmp, pfMNew, TmpEleIdx, qpStart, qpEnd, SlaterElmBF);
+          fullCandidateStatus = CalculateNewPfMBFCheckedWorkspace(icount,
+              msaTmp,pfMNew,TmpEleIdx,qpStart,qpEnd,SlaterElmBF,
+              &transaction.stableC);
         }
         logIpNew = BFTransactionProposal(&transaction,projBFCntNew,fullCandidateStatus);
         BFPfCheckProposal(&pfCheck, BF_PF_CHECK_KIND_EXCH, pfMNew, TmpEleIdx, qpStart, qpEnd, rank);
@@ -1372,7 +1375,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
       transaction.periodicRecovery,transaction.zeroProposal);
   BFPfCheckReport("complex");
   BFPfCheckFree(&pfCheck);
-  BFTransactionFinish();
+  BFTransactionFinish(&transaction);
   bfMultiQPSampleAuditFinalize(&sampleAudit, comm, rank);
   bfMultiQPSampleAuditFree(&sampleAudit);
   free(fullCandidateSlater);
@@ -1753,8 +1756,9 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         //CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
         if(!BFUseCanonicalNonFszPath()) {
           if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
-          fullCandidateStatus = CalculateNewPfMBF_realChecked(icount, msaTmp, pfMNew_real, TmpEleIdx,
-                                 qpStart, qpEnd, SlaterElmBF_real);
+          fullCandidateStatus = CalculateNewPfMBF_realCheckedWorkspace(icount,
+              msaTmp,pfMNew_real,TmpEleIdx,qpStart,qpEnd,SlaterElmBF_real,
+              &transaction.stableR);
         }
         logIpNew = BFTransactionProposal(&transaction,projBFCntNew,fullCandidateStatus);
         if (rebuildChk.enabled) BFSamplerCheckCandidate_real(&rebuildChk, TmpEleIdx, TmpEleNum, projBFCntNew, pfMNew_real, qpStart, qpEnd);
@@ -1882,7 +1886,9 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
 
         if(!BFUseCanonicalNonFszPath()) {
           if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
-          fullCandidateStatus = CalculateNewPfMBF_realChecked(icount, msaTmp, pfMNew_real, TmpEleIdx, qpStart, qpEnd, SlaterElmBF_real);
+          fullCandidateStatus = CalculateNewPfMBF_realCheckedWorkspace(icount,
+              msaTmp,pfMNew_real,TmpEleIdx,qpStart,qpEnd,SlaterElmBF_real,
+              &transaction.stableR);
         }
         logIpNew = BFTransactionProposal(&transaction,projBFCntNew,fullCandidateStatus);
         BFPfCheckProposal_real(&pfCheck, BF_PF_CHECK_KIND_EXCH, pfMNew_real, TmpEleIdx, qpStart, qpEnd, rank);
@@ -1975,7 +1981,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
       transaction.periodicRecovery,transaction.zeroProposal);
   BFPfCheckReport("real");
   BFPfCheckFree(&pfCheck);
-  BFTransactionFinish();
+  BFTransactionFinish(&transaction);
   bfMultiQPSampleAuditFinalize(&sampleAudit, comm, rank);
   bfMultiQPSampleAuditFree(&sampleAudit);
   free(fullCandidateSlater);

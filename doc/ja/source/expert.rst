@@ -2661,14 +2661,19 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
    Slater/Pfaffian再構築で処理します。単一patternでも変換が非恒等、または
    変換符号に負値がある場合は同じ再構築を使用します。恒等変換・符号全 +1 の
    単一patternでは、周期・反周期の両方で Slater の行更新を使用します。
-   占有行列の Pfaffian は直接評価し、accept 時の逆行列は同じ反対称占有行列から
-   再構築して、増分式の桁落ちを避けます。legacy counter は Slater 行更新の
+   non-FSZ の占有行列 :math:`A` は、同スピン block が厳密に 0 であることを検査し、
+   反対スピンの :math:`N_e\times N_e` block :math:`F` から
+   :math:`\operatorname{Pf}(A)=(-1)^{N_e(N_e-1)/2}\det(F)` として評価します。
+   accept 時の逆行列は同じ :math:`F` の LU 分解から再構築して、増分式の桁落ちを
+   避けます。legacy counter は Slater 行更新の
    実行回数であり、Pfaffian/逆行列の増分計算や速度向上を保証するものではありません。
    手動退避用の ``MVMC_BF_FORCE_CANONICAL_NONFSZ=1`` は Slater 全再構築を
    選択します。この変数は 0/1 のみを受理し、MPI rank 0 で解析して配布します。
    起動時に経路と理由を表示します。数値失敗時は同じ候補・同じ乱数で検査付きの
    再評価を行い、回復不能なら計算全体を停止します。数値失敗を通常の Metropolis
-   reject として処理しません。
+   reject として処理しません。この回復処理は sampler の proposal / commit に
+   限定されます。Hamiltonian と Green 関数の評価中に数値失敗した場合は、sampler
+   状態を変更せず、その場で計算全体を停止します。
 
 -  ``Orbital`` / ``OrbitalAntiParallel`` の通常形式では、Hamiltonian は
    ``Trans``、number-operator 型の相互作用（``CoulombIntra``,

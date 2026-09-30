@@ -12,6 +12,8 @@ typedef struct {
   double complex *slater, *pf, *inv;
   double *slaterR, *pfR, *invR;
   int *proposalIdx;
+  BFStableWorkspaceFcmp stableC;
+  BFStableWorkspaceReal stableR;
   long long proposalRecovery, acceptRecovery, periodicRecovery, zeroProposal;
 } BFSampleTransaction;
 
@@ -92,8 +94,34 @@ static void BFTransactionInit(BFSampleTransaction *tx) {
   BFFailureConsumed=0;
   BFFailureForceAccept=(int)masks[3];
 #else
-  (void)tx;
 #endif
+  int allocStatus=BF_PF_OK, globalStatus;
+  if(Ne<=0 || Nsize<=0 || Nsize!=2LL*Ne || LapackLWork<Ne
+     || (size_t)Ne>SIZE_MAX/(size_t)Ne/sizeof(*tx->stableC.factor)
+     || (size_t)LapackLWork>SIZE_MAX/sizeof(*tx->stableC.work)
+     || (size_t)Nsize>SIZE_MAX/sizeof(*tx->stableC.iwork)) {
+    allocStatus=BF_PF_INVALID_ARGUMENT;
+  } else {
+    tx->stableC.factor=malloc((size_t)Ne*Ne*sizeof(*tx->stableC.factor));
+    tx->stableC.work=malloc((size_t)LapackLWork*sizeof(*tx->stableC.work));
+    tx->stableC.iwork=malloc((size_t)Nsize*sizeof(*tx->stableC.iwork));
+    tx->stableC.lwork=LapackLWork;
+    if(!tx->stableC.factor || !tx->stableC.work || !tx->stableC.iwork)
+      allocStatus=BF_PF_INVALID_ARGUMENT;
+  }
+  if(tx->real && allocStatus==BF_PF_OK) {
+    tx->stableR.factor=malloc((size_t)Ne*Ne*sizeof(*tx->stableR.factor));
+    tx->stableR.work=malloc((size_t)LapackLWork*sizeof(*tx->stableR.work));
+    tx->stableR.iwork=malloc((size_t)Nsize*sizeof(*tx->stableR.iwork));
+    tx->stableR.lwork=LapackLWork;
+    if(!tx->stableR.factor || !tx->stableR.work || !tx->stableR.iwork)
+      allocStatus=BF_PF_INVALID_ARGUMENT;
+  }
+  MPI_Allreduce(&allocStatus,&globalStatus,1,MPI_INT,MPI_MAX,tx->comm);
+  if(globalStatus!=BF_PF_OK) {
+    if(tx->rank==0) fprintf(stderr,"Error: failed to allocate BackFlow stable sampler workspace.\n");
+    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+  }
 }
 
 static int BFTransactionInject(BFSampleTransaction *tx, int stage, int status) {
@@ -249,9 +277,11 @@ static int BFTransactionAccept(BFSampleTransaction *tx, const int *counts,
   else {
     if(tx->qpEnd > tx->qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_ACCEPT,1);
     if(tx->real)
-      status = UpdateMAll_BF_real(icount,msa,tx->pfR,TmpEleIdx,tx->qpStart,tx->qpEnd,tx->invR);
+      status = UpdateMAll_BF_realWorkspace(icount,msa,tx->pfR,TmpEleIdx,
+          tx->qpStart,tx->qpEnd,tx->invR,&tx->stableR);
     else
-      status = UpdateMAll_BF_fcmp(icount,msa,tx->pf,TmpEleIdx,tx->qpStart,tx->qpEnd,tx->inv);
+      status = UpdateMAll_BF_fcmpWorkspace(icount,msa,tx->pf,TmpEleIdx,
+          tx->qpStart,tx->qpEnd,tx->inv,&tx->stableC);
   }
   status = BFTransactionAgree(tx,status,"accept prepare");
   if(status != BF_PF_OK) {
@@ -296,26 +326,23 @@ static void BFTransactionCommit(BFSampleTransaction *tx, const int *counts) {
  * Slater table into temporary outputs; independently rebuild only on failure. */
 static int BFTransactionCurrentState(BFSampleTransaction *tx) {
   int status=BF_PF_OK;
-  int *iw=malloc((size_t)Nsize*sizeof(int));
-  double *rw=malloc((size_t)LapackLWork*sizeof(double));
-  double complex *cm=malloc((size_t)Nsize*Nsize*sizeof(double complex));
-  double complex *cw=malloc((size_t)LapackLWork*sizeof(double complex));
-  if(!iw || !rw || !cm || !cw) status=BF_PF_INVALID_ARGUMENT;
   tx->preparedFull=0;
   if(status == BF_PF_OK) for(int q=0;q<tx->qpEnd-tx->qpStart;q++) {
     int local = tx->real
       ? calculateMAll_BF_real_child(TmpEleIdx,tx->qpStart,tx->qpEnd,q,
-          (double *)cm,iw,(double *)cw,LapackLWork,tx->pfR,tx->invR)
+          tx->stableR.factor,tx->stableR.iwork,tx->stableR.work,
+          tx->stableR.lwork,tx->pfR,tx->invR)
       : calculateMAll_BF_fcmp_child(TmpEleIdx,tx->qpStart,tx->qpEnd,q,
-          cm,iw,cw,LapackLWork,rw,tx->pf,tx->inv);
+          tx->stableC.factor,tx->stableC.iwork,tx->stableC.work,
+          tx->stableC.lwork,NULL,tx->pf,tx->inv);
     if(local > status) status=local;
     if(tx->real && BFUseCanonicalNonFszPath()) {
       local=calculateMAll_BF_fcmp_child(TmpEleIdx,tx->qpStart,tx->qpEnd,q,
-          cm,iw,cw,LapackLWork,rw,tx->pf,tx->inv);
+          tx->stableC.factor,tx->stableC.iwork,tx->stableC.work,
+          tx->stableC.lwork,NULL,tx->pf,tx->inv);
       if(local > status) status=local;
     }
   }
-  free(iw);free(rw);free(cm);free(cw);
   return status;
 }
 
@@ -336,11 +363,15 @@ static double complex BFTransactionRefresh(BFSampleTransaction *tx, const int *c
   return value;
 }
 
-static void BFTransactionFinish(void) {
+static void BFTransactionFinish(BFSampleTransaction *tx) {
 #ifdef MVMC_ENABLE_FAULT_INJECTION
   /* A zero-QP rank may not have consumed a kernel hook. Do not carry sampler
    * injections into its subsequent Green-function measurement work. */
   BFFailureMask=BFFailureNegativeMask=BFFailureNanMask=0;
   BFFailureForceAccept=0;
 #endif
+  free(tx->stableC.factor);free(tx->stableC.work);free(tx->stableC.iwork);
+  free(tx->stableR.factor);free(tx->stableR.work);free(tx->stableR.iwork);
+  memset(&tx->stableC,0,sizeof(tx->stableC));
+  memset(&tx->stableR,0,sizeof(tx->stableR));
 }

@@ -2814,9 +2814,12 @@ Inputs outside this range are rejected.
    rebuild is used for a single-pattern input whose transformation is
    nonidentity or has a negative transformation sign. A single identity
    transformation with all-positive signs uses local Slater row updates
-   for both periodic and anti-periodic boundaries. The occupied Pfaffian
-   is evaluated directly; accepted inverses are rebuilt from the same
-   skew-symmetric occupied matrix to avoid unstable rank-update cancellation.
+   for both periodic and anti-periodic boundaries. For the non-FSZ occupied
+   matrix :math:`A`, the same-spin blocks are checked to be exactly zero and
+   the opposite-spin :math:`N_e\times N_e` block :math:`F` is used through
+   :math:`\operatorname{Pf}(A)=(-1)^{N_e(N_e-1)/2}\det(F)`. Accepted inverses
+   are rebuilt from the same LU factorization of :math:`F` to avoid unstable
+   rank-update cancellation.
    Thus the legacy route counters describe Slater row updates, not an
    incremental Pfaffian/inverse formula or a guaranteed speedup.
    ``MVMC_BF_FORCE_CANONICAL_NONFSZ=1`` selects the full Slater rebuild as
@@ -2825,6 +2828,9 @@ Inputs outside this range are rejected.
    Numerical failures are recovered with a checked evaluation of the same
    proposal and the same random number, or terminate the calculation if
    recovery fails; they are not treated as ordinary Metropolis rejections.
+   This recovery applies only to sampler proposal/commit transactions. A
+   numerical failure while evaluating a Hamiltonian or Green function stops
+   the calculation immediately without changing the sampler state.
 
 -  With the normal ``Orbital`` / ``OrbitalAntiParallel`` format, the
    Hamiltonian may contain ``Trans``, number-operator interactions

@@ -82,10 +82,12 @@ static int MergeBFHopLists(const int *left, const int *leftCount,
 
 /* Calculate 1-body Green function <CisAjs> */
 /* buffer size = NQPFull */
-double complex GreenFunc1BF(const int ri, const int rj, const int s, const double complex ip, double complex *bufM,
+static double complex GreenFunc1BFWorkspace(const int ri, const int rj,
+                    const int s, const double complex ip, double complex *bufM,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
                     int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew,
-                    double complex *buffer, int *greenStatus) {
+                    double complex *buffer, int *greenStatus,
+                    BFStableWorkspaceFcmp *stable) {
   double complex z;
   int mj,msj,rsi,rsj;
   //double complex bufM[NQPFull*Nsize*Nsize];
@@ -139,7 +141,9 @@ double complex GreenFunc1BF(const int ri, const int rj, const int s, const doubl
   UpdateSlaterElmBFGrn(mj, rj, ri, s, eleCfg, eleNum, projBFCntNew, msaTmp, icount, bufM);
   StopTimer(82);
   StartTimer(83);
-  CalculateNewPfMBF(icount, msaTmp, pfMNew, eleIdx, 0, NQPFull, bufM);
+  if(stable) CalculateNewPfMBFWithStrideWorkspace(icount,msaTmp,Nsize,
+      pfMNew,eleIdx,0,NQPFull,bufM,stable);
+  else CalculateNewPfMBF(icount,msaTmp,pfMNew,eleIdx,0,NQPFull,bufM);
   StopTimer(83);
   z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
@@ -155,12 +159,24 @@ double complex GreenFunc1BF(const int ri, const int rj, const int s, const doubl
   return conj(z/ip);
 }
 
+double complex GreenFunc1BF(const int ri, const int rj, const int s,
+                    const double complex ip, double complex *bufM,
+                    int *eleIdx, int *eleCfg, int *eleNum,
+                    const int *eleProjCnt, int *projCntNew,
+                    const int *eleProjBFCnt, int *projBFCntNew,
+                    double complex *buffer, int *greenStatus) {
+  return GreenFunc1BFWorkspace(ri,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer,greenStatus,NULL);
+}
+
 /* Calculate 2-body Green function with BackFlow. */
-double complex GreenFunc2BF(const int ri, const int rj, const int rk, const int rl,
+static double complex GreenFunc2BFWorkspace(const int ri, const int rj,
+                    const int rk, const int rl,
                     const int s, const int t, const double complex ip, double complex *bufM,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
                     int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew,
-                    double complex *buffer, int *greenStatus) {
+                    double complex *buffer, int *greenStatus,
+                    BFStableWorkspaceFcmp *stable) {
   double complex z;
   int mj,msj,ml,mtl;
   int rsi,rsj,rtk,rtl;
@@ -178,43 +194,43 @@ double complex GreenFunc2BF(const int ri, const int rj, const int rk, const int 
   if(s==t) {
     if(rk==rl) {
       if(eleNum[rtk]==0) return 0.0;
-      else return GreenFunc1BF(ri,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      else return GreenFunc1BFWorkspace(ri,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
                                eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                               buffer,greenStatus);
+                               buffer,greenStatus,stable);
     }else if(rj==rl) {
       return 0.0;
     }else if(ri==rl) {
       if(eleNum[rsi]==0) return 0.0;
       else if(rj==rk) return 1.0-eleNum[rsj];
-      else return -GreenFunc1BF(rk,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      else return -GreenFunc1BFWorkspace(rk,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
                                 eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                                buffer,greenStatus);
+                                buffer,greenStatus,stable);
     }else if(rj==rk) {
       if(eleNum[rsj]==1) return 0.0;
       else if(ri==rl) return eleNum[rsi];
-      else return GreenFunc1BF(ri,rl,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      else return GreenFunc1BFWorkspace(ri,rl,s,ip,bufM,eleIdx,eleCfg,eleNum,
                                eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                               buffer,greenStatus);
+                               buffer,greenStatus,stable);
     }else if(ri==rk) {
       return 0.0;
     }else if(ri==rj) {
       if(eleNum[rsi]==0) return 0.0;
-      else return GreenFunc1BF(rk,rl,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      else return GreenFunc1BFWorkspace(rk,rl,s,ip,bufM,eleIdx,eleCfg,eleNum,
                                eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                               buffer,greenStatus);
+                               buffer,greenStatus,stable);
     }
   }else{
     if(rk==rl) {
       if(eleNum[rtk]==0) return 0.0;
       else if(ri==rj) return eleNum[rsi];
-      else return GreenFunc1BF(ri,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      else return GreenFunc1BFWorkspace(ri,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
                                eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                               buffer,greenStatus);
+                               buffer,greenStatus,stable);
     }else if(ri==rj) {
       if(eleNum[rsi]==0) return 0.0;
-      else return GreenFunc1BF(rk,rl,t,ip,bufM,eleIdx,eleCfg,eleNum,
+      else return GreenFunc1BFWorkspace(rk,rl,t,ip,bufM,eleIdx,eleCfg,eleNum,
                                eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                               buffer,greenStatus);
+                               buffer,greenStatus,stable);
     }
   }
 
@@ -303,7 +319,10 @@ double complex GreenFunc2BF(const int ri, const int rj, const int rk, const int 
   }
 
   StartTimer(83);
-  CalculateNewPfMBFWithStride(icount, msaTmp, Nsize, pfMNew, eleIdx, 0, NQPFull, bufM);
+  if(stable) CalculateNewPfMBFWithStrideWorkspace(icount,msaTmp,Nsize,
+      pfMNew,eleIdx,0,NQPFull,bufM,stable);
+  else CalculateNewPfMBFWithStride(icount,msaTmp,Nsize,pfMNew,eleIdx,
+      0,NQPFull,bufM);
   StopTimer(83);
   z *= CalculateIP_fcmp(pfMNew, 0, NQPFull, MPI_COMM_SELF);
 
@@ -321,6 +340,18 @@ double complex GreenFunc2BF(const int ri, const int rj, const int rk, const int 
   StoreSlaterElmBF_fcmp(bufM);
 
   return conj(z/ip);
+}
+
+double complex GreenFunc2BF(const int ri, const int rj, const int rk,
+                    const int rl, const int s, const int t,
+                    const double complex ip, double complex *bufM,
+                    int *eleIdx, int *eleCfg, int *eleNum,
+                    const int *eleProjCnt, int *projCntNew,
+                    const int *eleProjBFCnt, int *projBFCntNew,
+                    double complex *buffer, int *greenStatus) {
+  return GreenFunc2BFWorkspace(ri,rj,rk,rl,s,t,ip,bufM,eleIdx,eleCfg,
+      eleNum,eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer,
+      greenStatus,NULL);
 }
 static int FindBFHopIndex_real(const int *list, const int count, const int value) {
   int i;
@@ -433,13 +464,15 @@ int GreenFunc1BF_real_prepare(const int ri, const int rj, const int s, double *g
 void GreenFunc1BF_real_finish_batch(const int batchSize, const double ip,
                     const double *projRatio, const int *icount, const int *msaTmp,
                     const double *vecM, double *greenValue, double *pfMNew,
-                    const int *eleIdx) {
+                    const int *eleIdx, BFStableWorkspaceReal *stable) {
   int batchIdx;
 
   StartTimer(84);
   StartTimer(83);
-  CalculateNewPfMBFVecBatched_real(batchSize, icount, msaTmp, pfMNew, 0, NQPFull,
-                                   vecM, eleIdx);
+  if(stable) CalculateNewPfMBFVecBatched_realWorkspace(batchSize,icount,
+      msaTmp,pfMNew,0,NQPFull,vecM,eleIdx,stable);
+  else CalculateNewPfMBFVecBatched_real(batchSize,icount,msaTmp,pfMNew,
+      0,NQPFull,vecM,eleIdx);
   StopTimer(83);
   StartTimer(87);
   for(batchIdx=0;batchIdx<batchSize;batchIdx++) {
@@ -452,10 +485,12 @@ void GreenFunc1BF_real_finish_batch(const int batchSize, const double ip,
   return;
 }
 
-double GreenFunc1BF_real(const int ri, const int rj, const int s, const double ip, double *bufM,
+static double GreenFunc1BF_realWorkspace(const int ri, const int rj,
+                    const int s, const double ip, double *bufM,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
                     int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew,
-                    double *buffer, int *greenStatus) {
+                    double *buffer, int *greenStatus,
+                    BFStableWorkspaceReal *stable) {
   double z;
   int mj,msj,rsi,rsj;
   //double complex bufM[NQPFull*Nsize*Nsize];
@@ -515,7 +550,10 @@ double GreenFunc1BF_real(const int ri, const int rj, const int s, const double i
                                eleProjBFCnt, projBFCntNew, msaTmp, icount, bufM);
   StopTimer(82);
   StartTimer(83);
-  CalculateNewPfMBFVec_real(icount, msaTmp, pfMNew_real, 0, NQPFull, bufM, eleIdx);
+  if(stable) CalculateNewPfMBFVecWithStride_realWorkspace(icount,msaTmp,
+      Nsize,pfMNew_real,0,NQPFull,bufM,Nsize,eleIdx,stable);
+  else CalculateNewPfMBFVec_real(icount,msaTmp,pfMNew_real,0,NQPFull,
+      bufM,eleIdx);
   StopTimer(83);
   StartTimer(87);
   z *= CalculateIP_real(pfMNew_real, 0, NQPFull, MPI_COMM_SELF);
@@ -548,6 +586,15 @@ double GreenFunc1BF_real(const int ri, const int rj, const int s, const double i
 #undef RETURN_GREENFUNC1BF_REAL
 }
 
+double GreenFunc1BF_real(const int ri, const int rj, const int s,
+                    const double ip, double *bufM, int *eleIdx, int *eleCfg,
+                    int *eleNum, const int *eleProjCnt, int *projCntNew,
+                    const int *eleProjBFCnt, int *projBFCntNew,
+                    double *buffer, int *greenStatus) {
+  return GreenFunc1BF_realWorkspace(ri,rj,s,ip,bufM,eleIdx,eleCfg,eleNum,
+      eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,buffer,greenStatus,NULL);
+}
+
 /* Calculate 2-body Green function with BackFlow. */
 /* Two-body Green function with BackFlow, real variational parameters.
  * vecTmp0 / vecTmp1: caller-owned packed row-vector workspaces of
@@ -560,7 +607,7 @@ int GreenFunc2BF_real_ws(const int ri, const int rj, const int rk, const int rl,
                     double *vecTmp0, double *vecTmp1,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
                     int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer,
-                    double *value) {
+                    double *value, BFStableWorkspaceReal *stable) {
   double z;
   double nestedValue;
   int mj,msj,ml,mtl;
@@ -595,43 +642,43 @@ int GreenFunc2BF_real_ws(const int ri, const int rj, const int rk, const int rl,
   if(s==t) {
     if(rk==rl) {
       if(eleNum[rtk]==0) RETURN_GREENFUNC2BF_REAL(0.0);
-      else RETURN_GREENFUNC1BF_REAL_STATUS(GreenFunc1BF_real(ri,rj,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC1BF_REAL_STATUS(GreenFunc1BF_realWorkspace(ri,rj,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                     eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                                    buffer,&nestedStatus));
+                                    buffer,&nestedStatus,stable));
     }else if(rj==rl) {
       RETURN_GREENFUNC2BF_REAL(0.0);
     }else if(ri==rl) {
       if(eleNum[rsi]==0) RETURN_GREENFUNC2BF_REAL(0.0);
       else if(rj==rk) RETURN_GREENFUNC2BF_REAL(1.0-eleNum[rsj]);
-      else RETURN_GREENFUNC1BF_REAL_STATUS(-GreenFunc1BF_real(rk,rj,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC1BF_REAL_STATUS(-GreenFunc1BF_realWorkspace(rk,rj,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                      eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                                     buffer,&nestedStatus));
+                                     buffer,&nestedStatus,stable));
     }else if(rj==rk) {
       if(eleNum[rsj]==1) RETURN_GREENFUNC2BF_REAL(0.0);
       else if(ri==rl) RETURN_GREENFUNC2BF_REAL(eleNum[rsi]);
-      else RETURN_GREENFUNC1BF_REAL_STATUS(GreenFunc1BF_real(ri,rl,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC1BF_REAL_STATUS(GreenFunc1BF_realWorkspace(ri,rl,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                     eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                                    buffer,&nestedStatus));
+                                    buffer,&nestedStatus,stable));
     }else if(ri==rk) {
       RETURN_GREENFUNC2BF_REAL(0.0);
     }else if(ri==rj) {
       if(eleNum[rsi]==0) RETURN_GREENFUNC2BF_REAL(0.0);
-      else RETURN_GREENFUNC1BF_REAL_STATUS(GreenFunc1BF_real(rk,rl,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC1BF_REAL_STATUS(GreenFunc1BF_realWorkspace(rk,rl,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                     eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                                    buffer,&nestedStatus));
+                                    buffer,&nestedStatus,stable));
     }
   }else{
     if(rk==rl) {
       if(eleNum[rtk]==0) RETURN_GREENFUNC2BF_REAL(0.0);
       else if(ri==rj) RETURN_GREENFUNC2BF_REAL(eleNum[rsi]);
-      else RETURN_GREENFUNC1BF_REAL_STATUS(GreenFunc1BF_real(ri,rj,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC1BF_REAL_STATUS(GreenFunc1BF_realWorkspace(ri,rj,s,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                     eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                                    buffer,&nestedStatus));
+                                    buffer,&nestedStatus,stable));
     }else if(ri==rj) {
       if(eleNum[rsi]==0) RETURN_GREENFUNC2BF_REAL(0.0);
-      else RETURN_GREENFUNC1BF_REAL_STATUS(GreenFunc1BF_real(rk,rl,t,ip,vecTmp1,eleIdx,eleCfg,eleNum,
+      else RETURN_GREENFUNC1BF_REAL_STATUS(GreenFunc1BF_realWorkspace(rk,rl,t,ip,vecTmp1,eleIdx,eleCfg,eleNum,
                                     eleProjCnt,projCntNew,eleProjBFCnt,projBFCntNew,
-                                    buffer,&nestedStatus));
+                                    buffer,&nestedStatus,stable));
     }
   }
 
@@ -738,7 +785,10 @@ int GreenFunc2BF_real_ws(const int ri, const int rj, const int rk, const int rl,
   StopTimer(90);
 
   StartTimer(83);
-  CalculateNewPfMBFVecWithStride_real(icount, msaTmp, Nsize, pfMNew_real, 0, NQPFull, vecTmp0, Nsize, eleIdx);
+  if(stable) CalculateNewPfMBFVecWithStride_realWorkspace(icount,msaTmp,
+      Nsize,pfMNew_real,0,NQPFull,vecTmp0,Nsize,eleIdx,stable);
+  else CalculateNewPfMBFVecWithStride_real(icount,msaTmp,Nsize,pfMNew_real,
+      0,NQPFull,vecTmp0,Nsize,eleIdx);
   StopTimer(83);
   StartTimer(87);
   z *= CalculateIP_real(pfMNew_real, 0, NQPFull, MPI_COMM_SELF);
@@ -796,7 +846,7 @@ double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
   }
   status = GreenFunc2BF_real_ws(ri, rj, rk, rl, s, t, ip, vecTmp0, bufM,
                                 eleIdx, eleCfg, eleNum, eleProjCnt, projCntNew,
-                                eleProjBFCnt, projBFCntNew, buffer, &value);
+                                eleProjBFCnt, projBFCntNew, buffer, &value,NULL);
   free(vecTmp0);
   *greenStatus = status;
   return status == BF_PF_OK ? value : 0.0;
@@ -899,7 +949,10 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
   double complex *mySltBFTmp;
   double complex *myBuffer;
   double complex *myComplexBase;
+  double complex *myStableFactor;
   double *myDoubleBase;
+  int *myStableIWork;
+  BFStableWorkspaceFcmp stable;
   double complex myEnergy;
   BFNBodyScratch scratch;
   BFNBodyResult result;
@@ -912,14 +965,15 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
                             &nbodyFailure);
     return 0.0+0.0*I;
   }
-  RequestWorkSpaceThreadInt((int)scratchSizes.intCount);
-  RequestWorkSpaceThreadComplex((int)scratchSizes.complexCount);
+  RequestWorkSpaceThreadInt((int)scratchSizes.intCount+Nsize);
+  RequestWorkSpaceThreadComplex((int)scratchSizes.complexCount+Ne*Ne);
   RequestWorkSpaceThreadDouble((int)scratchSizes.doubleCount);
 
 #pragma omp parallel default(shared)\
   private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myIntBase,\
           myBuffer,mySltBFTmp,myComplexBase,myDoubleBase,myEnergy,scratch,\
-          result,bindStatus,greenStatus,greenValue,idx)\
+          result,bindStatus,greenStatus,greenValue,idx,myStableIWork,\
+          myStableFactor,stable)\
   reduction(+:e)
   {
     myEnergy = 0.0;
@@ -927,6 +981,9 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
     myComplexBase =
         GetWorkSpaceThreadComplex((int)scratchSizes.complexCount);
     myDoubleBase = GetWorkSpaceThreadDouble((int)scratchSizes.doubleCount);
+    myStableIWork = GetWorkSpaceThreadInt(Nsize);
+    myStableFactor = GetWorkSpaceThreadComplex(Ne*Ne);
+    stable=(BFStableWorkspaceFcmp){myStableFactor,NULL,myStableIWork,0};
     bindStatus = BindBFNBodyScratch(
         &scratchSizes, myIntBase, scratchSizes.intCount,
         myComplexBase, scratchSizes.complexCount,
@@ -1000,10 +1057,10 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
         rj = Transfer[idx][2];
         s  = Transfer[idx][3];
 
-        greenValue = GreenFunc1BF(
+        greenValue = GreenFunc1BFWorkspace(
             ri,rj,s,ip,mySltBFTmp,myEleIdx,myEleCfg,myEleNum,eleProjCnt,
             myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,
-            &greenStatus);
+            &greenStatus,&stable);
         if(greenStatus == BF_PF_OK) {
           myEnergy -= ParaTransfer[idx]*greenValue;
         } else {
@@ -1021,10 +1078,10 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
         ri = PairHopping[idx][0];
         rj = PairHopping[idx][1];
 
-        greenValue = GreenFunc2BF(ri,rj,ri,rj,0,1,ip,mySltBFTmp,
+        greenValue = GreenFunc2BFWorkspace(ri,rj,ri,rj,0,1,ip,mySltBFTmp,
                                  myEleIdx,myEleCfg,myEleNum,eleProjCnt,
                                  myProjCntNew,eleProjBFCnt,myProjBFCntNew,
-                                 myBuffer,&greenStatus);
+                                 myBuffer,&greenStatus,&stable);
         if(greenStatus == BF_PF_OK) {
           myEnergy += ParaPairHopping[idx] * greenValue;
         } else {
@@ -1038,15 +1095,15 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
         ri = ExchangeCoupling[idx][0];
         rj = ExchangeCoupling[idx][1];
 
-        tmp = GreenFunc2BF(ri,rj,rj,ri,0,1,ip,mySltBFTmp,
+        tmp = GreenFunc2BFWorkspace(ri,rj,rj,ri,0,1,ip,mySltBFTmp,
                            myEleIdx,myEleCfg,myEleNum,eleProjCnt,
                            myProjCntNew,eleProjBFCnt,myProjBFCntNew,
-                           myBuffer,&greenStatus);
+                           myBuffer,&greenStatus,&stable);
         if(greenStatus == BF_PF_OK) {
-          tmp += GreenFunc2BF(ri,rj,rj,ri,1,0,ip,mySltBFTmp,
+          tmp += GreenFunc2BFWorkspace(ri,rj,rj,ri,1,0,ip,mySltBFTmp,
                               myEleIdx,myEleCfg,myEleNum,eleProjCnt,
                               myProjCntNew,eleProjBFCnt,myProjBFCntNew,
-                              myBuffer,&greenStatus);
+                              myBuffer,&greenStatus,&stable);
         }
         if(greenStatus == BF_PF_OK) {
           myEnergy += ParaExchangeCoupling[idx] * tmp;
@@ -1065,10 +1122,10 @@ double complex CalculateHamiltonianBF_fcmp(const double complex ip, int *eleIdx,
         rk = InterAll[idx][4];
         rl = InterAll[idx][6];
         t  = InterAll[idx][7];
-        greenValue = GreenFunc2BF(ri,rj,rk,rl,s,t,ip,mySltBFTmp,
+        greenValue = GreenFunc2BFWorkspace(ri,rj,rk,rl,s,t,ip,mySltBFTmp,
                                  myEleIdx,myEleCfg,myEleNum,eleProjCnt,
                                  myProjCntNew,eleProjBFCnt,myProjBFCntNew,
-                                 myBuffer,&greenStatus);
+                                 myBuffer,&greenStatus,&stable);
         if(greenStatus == BF_PF_OK) {
           myEnergy += ParaInterAll[idx] * greenValue;
         } else {
@@ -1146,6 +1203,9 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
   double *myBatchVec, *myBatchPfM, *myBatchProj, *myBatchGreen;
   double *myBuffer;
   double *myVecTmp0, *myVecTmp1; /* per-thread packed row-vector workspaces for GreenFunc2BF_real_ws */
+  double *myStableFactor;
+  int *myStableIWork;
+  BFStableWorkspaceReal stable;
   const int needTwoBody = (NPairHopping > 0 || NExchangeCoupling > 0 || NInterAll > 0);
   long long vecTmpSizeLL = needTwoBody ? (long long)NQPFull*(long long)Nsize*(long long)Nsize : 0;
   int vecTmpSize;
@@ -1162,11 +1222,12 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
   RequestWorkSpaceThreadInt(Nsize+2*Nsite2+NProj+16*Nsite*Nrange
                             + BF_TRANSFER_BATCH_SIZE
                             + BF_TRANSFER_BATCH_SIZE*NQPFull
-                            + BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize);
+                            + BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize
+                            + Nsize);
   RequestWorkSpaceThreadDouble(NQPFull+2*Nsize + 2*vecTmpSize
                                + BF_TRANSFER_BATCH_SIZE*NQPFull*Nsize*Nsize
                                + BF_TRANSFER_BATCH_SIZE*NQPFull
-                               + 2*BF_TRANSFER_BATCH_SIZE);
+                               + 2*BF_TRANSFER_BATCH_SIZE + Ne*Ne);
   nTransferBatch = (NTransfer + BF_TRANSFER_BATCH_SIZE - 1) / BF_TRANSFER_BATCH_SIZE;
   /* GreenFunc1: NQPFull, GreenFunc2: NQPFull+2*Nsize, BF transfer batch scratch */
 
@@ -1174,7 +1235,8 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
   private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myBuffer,myVecTmp0,myVecTmp1,greenStatus,green,\
           myBatchIdx,myBatchMsa,myBatchIcount,myBatchVec,myBatchPfM,myBatchProj,myBatchGreen,\
           myEnergy,idx,ri,rj,s,rk,rl,t,tmp,\
-          greenValue,batchNo,batchStart,batchEnd,batchIdx,batchCount)\
+          greenValue,batchNo,batchStart,batchEnd,batchIdx,batchCount,\
+          myStableFactor,myStableIWork,stable)\
   reduction(+:e)
   {
     myEleIdx = GetWorkSpaceThreadInt(Nsize);
@@ -1192,6 +1254,9 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
     myBatchPfM = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE*NQPFull);
     myBatchProj = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE);
     myBatchGreen = GetWorkSpaceThreadDouble(BF_TRANSFER_BATCH_SIZE);
+    myStableIWork = GetWorkSpaceThreadInt(Nsize);
+    myStableFactor = GetWorkSpaceThreadDouble(Ne*Ne);
+    stable=(BFStableWorkspaceReal){myStableFactor,NULL,myStableIWork,0};
 
 #pragma loop noalias
     for(idx=0;idx<Nsize;idx++) myEleIdx[idx] = eleIdx[idx];
@@ -1249,11 +1314,11 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
         s  = Transfer[idx][3];
 
         if(BFUseCanonicalNonFszPath()) {
-          greenValue = GreenFunc1BF_real(
+          greenValue = GreenFunc1BF_realWorkspace(
               ri, rj, s, ip, SlaterElmBF_real,
               myEleIdx, myEleCfg, myEleNum, eleProjCnt,
               myProjCntNew, eleProjBFCnt, myProjBFCntNew, myBuffer,
-              &greenStatus);
+              &greenStatus,&stable);
           if(greenStatus == BF_PF_OK) {
             myEnergy -= creal(ParaTransfer[idx])*greenValue;
           } else {
@@ -1279,7 +1344,7 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
       if(batchCount > 0) {
         GreenFunc1BF_real_finish_batch(batchCount, ip, myBatchProj, myBatchIcount, myBatchMsa,
                                        myBatchVec, myBatchGreen, myBatchPfM,
-                                       myEleIdx);
+                                       myEleIdx,&stable);
         for(batchIdx=0;batchIdx<batchCount;batchIdx++) {
           idx = myBatchIdx[batchIdx];
           myEnergy -= creal(ParaTransfer[idx]) * myBatchGreen[batchIdx];
@@ -1298,7 +1363,7 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
       rj = PairHopping[idx][1];
 
       greenStatus = GreenFunc2BF_real_ws(ri,rj,ri,rj,0,1,ip,myVecTmp0,myVecTmp1,myEleIdx,myEleCfg,myEleNum,
-                                         eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green);
+                                         eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green,&stable);
       if(greenStatus != BF_PF_OK) {
         RecordBFGreenLoopFailure(&twoBodyFailure, idx, greenStatus);
         continue;
@@ -1313,11 +1378,11 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
       rj = ExchangeCoupling[idx][1];
 
       greenStatus = GreenFunc2BF_real_ws(ri,rj,rj,ri,0,1,ip,myVecTmp0,myVecTmp1,myEleIdx,myEleCfg,myEleNum,
-                                         eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green);
+                                         eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green,&stable);
       tmp = green;
       if(greenStatus == BF_PF_OK) {
         greenStatus = GreenFunc2BF_real_ws(ri,rj,rj,ri,1,0,ip,myVecTmp0,myVecTmp1,myEleIdx,myEleCfg,myEleNum,
-                                            eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green);
+                                            eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green,&stable);
       }
       if(greenStatus != BF_PF_OK) {
         RecordBFGreenLoopFailure(&twoBodyFailure, NPairHopping+idx, greenStatus);
@@ -1337,7 +1402,7 @@ double CalculateHamiltonianBF_real(const double ip, int *eleIdx, const int *eleC
       rl = InterAll[idx][6];
       t  = InterAll[idx][7];
       greenStatus = GreenFunc2BF_real_ws(ri,rj,rk,rl,s,t,ip,myVecTmp0,myVecTmp1,myEleIdx,myEleCfg,myEleNum,
-                                         eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green);
+                                         eleProjCnt,myProjCntNew,eleProjBFCnt,myProjBFCntNew,myBuffer,&green,&stable);
       if(greenStatus != BF_PF_OK) {
         RecordBFGreenLoopFailure(&twoBodyFailure,
                                  NPairHopping+NExchangeCoupling+idx,
@@ -1387,7 +1452,10 @@ void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, 
   double complex* mySltBFTmp;
   double complex* myBuffer;
   double complex *myComplexBase;
+  double complex *myStableFactor;
   double *myDoubleBase;
+  int *myStableIWork;
+  BFStableWorkspaceFcmp stable;
   BFNBodyScratch scratch;
   BFNBodyResult result;
   int bindStatus;
@@ -1399,19 +1467,22 @@ void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, 
                             &nbodyFailure);
     return;
   }
-  RequestWorkSpaceThreadInt((int)scratchSizes.intCount);
-  RequestWorkSpaceThreadComplex((int)scratchSizes.complexCount);
+  RequestWorkSpaceThreadInt((int)scratchSizes.intCount+Nsize);
+  RequestWorkSpaceThreadComplex((int)scratchSizes.complexCount+Ne*Ne);
   RequestWorkSpaceThreadDouble((int)scratchSizes.doubleCount);
 
 #pragma omp parallel default(shared)\
   private(myEleIdx,myEleNum,myEleCfg,myProjCntNew,myProjBFCntNew,myIntBase,\
           myBuffer,mySltBFTmp,myComplexBase,myDoubleBase,scratch,result,\
-          bindStatus,greenStatus,idx)
+          bindStatus,greenStatus,idx,myStableFactor,myStableIWork,stable)
   {
     myIntBase = GetWorkSpaceThreadInt((int)scratchSizes.intCount);
     myComplexBase =
         GetWorkSpaceThreadComplex((int)scratchSizes.complexCount);
     myDoubleBase = GetWorkSpaceThreadDouble((int)scratchSizes.doubleCount);
+    myStableIWork = GetWorkSpaceThreadInt(Nsize);
+    myStableFactor = GetWorkSpaceThreadComplex(Ne*Ne);
+    stable=(BFStableWorkspaceFcmp){myStableFactor,NULL,myStableIWork,0};
     bindStatus = BindBFNBodyScratch(
         &scratchSizes, myIntBase, scratchSizes.intCount,
         myComplexBase, scratchSizes.complexCount,
@@ -1452,10 +1523,10 @@ void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, 
         ri = CisAjsIdx[idx][0];
         rj = CisAjsIdx[idx][2];
         s  = CisAjsIdx[idx][3];
-        tmp = GreenFunc1BF(ri,rj,s,ip,mySltBFTmp,myEleIdx,myEleCfg,
+        tmp = GreenFunc1BFWorkspace(ri,rj,s,ip,mySltBFTmp,myEleIdx,myEleCfg,
                            myEleNum,eleProjCnt,myProjCntNew,
                            eleProjBFCnt,myProjBFCntNew,myBuffer,
-                           &greenStatus);
+                           &greenStatus,&stable);
         if(greenStatus == BF_PF_OK) {
           LocalCisAjs[idx] = tmp;
         } else {
@@ -1475,10 +1546,10 @@ void CalculateGreenFuncBF(const double w, const double complex ip, int *eleIdx, 
         rk = CisAjsCktAltDCIdx[idx][4];
         rl = CisAjsCktAltDCIdx[idx][6];
         t  = CisAjsCktAltDCIdx[idx][5];
-        tmp = GreenFunc2BF(ri,rj,rk,rl,s,t,ip,mySltBFTmp,
+        tmp = GreenFunc2BFWorkspace(ri,rj,rk,rl,s,t,ip,mySltBFTmp,
                            myEleIdx,myEleCfg,myEleNum,eleProjCnt,
                            myProjCntNew,eleProjBFCnt,myProjBFCntNew,
-                           myBuffer,&greenStatus);
+                           myBuffer,&greenStatus,&stable);
         if(greenStatus == BF_PF_OK) {
           LocalCisAjsCktAltDC[idx] = tmp;
         } else {
