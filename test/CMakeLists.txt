@@ -59,7 +59,8 @@ add_test(NAME GCParameter_Unit COMMAND gc_parameter_unit)
 add_executable(backflow_stable_unit backflow_stable_unit.c)
 target_include_directories(backflow_stable_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
-target_link_libraries(backflow_stable_unit pfapack ${LAPACK_LIBRARIES} m)
+target_link_libraries(backflow_stable_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
 if(Require_BLIS)
     target_link_libraries(backflow_stable_unit blis pthread)
 endif()
