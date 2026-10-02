@@ -2382,6 +2382,7 @@ following configuration-dependent pair orbital :math:`f^b_{ij}(x)`:
      \eta^{\mu\nu}_{\tau\tau'}
      \Theta^{\mu\uparrow}_{i_n,i_n+\tau}(x)
      \Theta^{\nu\downarrow}_{i_m,i_m+\tau'}(x)
+     \phi(i_n,i_n+\tau)\phi(i_m,i_m+\tau')
      f_{i_n+\tau,i_m+\tau'} .
 
 :math:`\tau` and :math:`\tau'` run over the neighbor sites listed in
@@ -2421,6 +2422,29 @@ patterns in the configuration :math:`x`. With
 The no-BackFlow limit is :math:`\eta^{00}_{0,0}=1` and zero for the
 other :math:`\eta` values. In mVMC input, this corresponds to
 ``ProjBF[0]=1`` and ``ProjBF[k>0]=0``.
+
+The connection :math:`\phi(i,k)=\pm1` is specified by ``BFRange`` in
+the same gauge as the hopping amplitudes. It multiplies each directed
+center-to-neighbor channel, including both orientations of a pair.
+The base term has :math:`\phi(i,i)=1`; occupation counts and the base-term
+activation rule do not depend on the phase.
+
+For a signed transformation :math:`U`, the evaluated channels use
+:math:`\phi(Ui,Uk)\phi(Uj,Ul)`, together with the existing **center**
+signs :math:`s_U(i)s_U(j)`. The reader checks
+:math:`\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)` for every used transformation.
+The neighbor signs that enter this identity must not be inserted a second
+time as orbital signs. FSZ uses the composition of ``TransSym`` and
+``OptTrans`` and its composed signs.
+
+These statements express three distinct contracts. Local Z2 gauge changes
+:math:`f_{ij}\mapsto g_i g_j f_{ij}` and
+:math:`\phi(i,k)\mapsto g_i g_k\phi(i,k)` give the same transformation
+of the BackFlow pair orbital. Translation covariance of an unprojected
+ansatz additionally requires the original orbitals to be covariant under
+the declared translation subgroup. Evaluation of a projected state uses
+the transformed configuration and transformed bonds even for arbitrary
+original orbitals; it does not assume that additional orbital symmetry.
 
 Number of parameters
 ^^^^^^^^^^^^^^^^^^^^
@@ -2495,7 +2519,7 @@ File format
    line 7 also contains ``Nrange`` [int01] [int02].
 
 -  Lines 11 - (10 + :math:`N_s \times` [int01]):
-   [int03] [int04] [int05]
+   [int03] [int04] [int05] [int06]
 
 Parameters
 ^^^^^^^^^^
@@ -2556,6 +2580,36 @@ User rules
    collects the anchor sites whose Theta counts can change, so an
    asymmetric ``BFRange`` is rejected at input time with
    ``BFRange must be mutual``.
+
+The optional fourth field [int06] is the boundary seam phase
+:math:`\phi(i,j)`, an integer +1 or -1. For AP input (negative
+``NMPTrans``), all rows must contain this field. For PBC, either all rows
+have three fields (implicit +1) or all have four fields with +1. The
+example above is the compatible PBC format. For an AP four-site chain,
+append -1 to rows ``0 3 1`` and ``3 0 1``, and +1 to every other row.
+
+Each physical body line must contain exactly three or four whitespace-separated
+integers, with a uniform field count throughout the file. Blank lines,
+comments, trailing fields or rows, numeric suffixes, and integer overflow
+are rejected. A final newline is optional. Self phases must be +1 and
+reverse bonds must have the same phase.
+
+The phase specifies the boundary connection in the same gauge as the pair
+orbitals, not the sign of the hopping amplitude. Use bonds with an unambiguous
+boundary crossing; antipodal bonds along an AP direction (displacement L/2)
+are outside this format's supported scope. Every translation row actually
+used by ``abs(NMPTrans)`` must preserve the range, shell and phase according to
+:math:`\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)`. In orbital-general mode this
+includes the composition with every used OptTrans and its signs. Unused
+translation rows impose no additional BackFlow symmetry. Identity-only
+projection cannot verify the nontrivial boundary holonomy: the input generator
+is responsible for the physical seam. Inconsistent used transforms are
+rejected before sampling.
+
+AP inputs and optimized parameters from the old phase-free definition describe
+a different wavefunction. There is no compatibility switch; retain the old
+binary, source/submodule revisions, inputs and parameter hashes to reproduce
+those results, and reoptimize for the seam-phase definition.
 
 BF file (bf.def)
 ^^^^^^^^^^^^^^^^
@@ -2757,10 +2811,30 @@ Inputs outside this range are rejected.
    ``NQPOptTrans==1``. For non-FSZ ``abs(NMPTrans)>1``, sampling,
    Green functions, Hamiltonian, first Lanczos, and N-body evaluation
    use a correctness-first full Slater/Pfaffian rebuild. The same
-   rebuild is used for anti-periodic inputs and for a single-pattern
-   input whose first transformation is nonidentity; only the periodic,
-   identity, single-pattern case retains the legacy incremental path.
-   The rebuild path can be more expensive than that legacy path.
+   rebuild is used for a single-pattern input whose transformation is
+   nonidentity or has a negative transformation sign. A single identity
+   transformation with all-positive signs uses local Slater row updates
+   for both periodic and anti-periodic boundaries. Pfaffian evaluation on
+   the row-update route, and accepted Pfaffian/inverse evaluation on both
+   non-FSZ routes, use the following block factorization. For the occupied
+   matrix :math:`A`, the same-spin blocks are checked to be exactly zero and
+   the opposite-spin :math:`N_e\times N_e` block :math:`F` is used through
+   :math:`\operatorname{Pf}(A)=(-1)^{N_e(N_e-1)/2}\det(F)`. Accepted inverses
+   are rebuilt from the same LU factorization of :math:`F` to avoid unstable
+   rank-update cancellation. Proposal and Green-function evaluations on
+   the full-rebuild route, and sampler recovery evaluations on either route,
+   retain the direct :math:`2N_e\times 2N_e` Pfaffian factorization.
+   Thus the legacy route counters describe Slater row updates, not an
+   incremental Pfaffian/inverse formula or a guaranteed speedup.
+   ``MVMC_BF_FORCE_CANONICAL_NONFSZ=1`` selects the full Slater rebuild as
+   a manual fallback. This flag accepts only 0 or 1, is read on MPI rank 0
+   and broadcast, and the chosen route and reason are printed at startup.
+   Numerical failures are recovered with a checked evaluation of the same
+   proposal and the same random number, or terminate the calculation if
+   recovery fails; they are not treated as ordinary Metropolis rejections.
+   This recovery applies only to sampler proposal/commit transactions. A
+   numerical failure while evaluating a Hamiltonian or Green function stops
+   the calculation immediately without changing the sampler state.
 
 -  With the normal ``Orbital`` / ``OrbitalAntiParallel`` format, the
    Hamiltonian may contain ``Trans``, number-operator interactions

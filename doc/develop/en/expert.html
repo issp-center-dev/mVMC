@@ -2049,6 +2049,7 @@ following configuration-dependent pair orbital <span class="math notranslate noh
   \eta^{\mu\nu}_{\tau\tau'}
   \Theta^{\mu\uparrow}_{i_n,i_n+\tau}(x)
   \Theta^{\nu\downarrow}_{i_m,i_m+\tau'}(x)
+  \phi(i_n,i_n+\tau)\phi(i_m,i_m+\tau')
   f_{i_n+\tau,i_m+\tau'} .\]</div>
 <p><span class="math notranslate nohighlight">\(\tau\)</span> and <span class="math notranslate nohighlight">\(\tau'\)</span> run over the neighbor sites listed in
 <code class="docutils literal notranslate"><span class="pre">BFRange</span></code>. <span class="math notranslate nohighlight">\(\eta^{\mu\nu}_{\tau\tau'}\)</span> are the BackFlow
@@ -2083,6 +2084,26 @@ patterns in the configuration <span class="math notranslate nohighlight">\(x\)</
 <p>The no-BackFlow limit is <span class="math notranslate nohighlight">\(\eta^{00}_{0,0}=1\)</span> and zero for the
 other <span class="math notranslate nohighlight">\(\eta\)</span> values. In mVMC input, this corresponds to
 <code class="docutils literal notranslate"><span class="pre">ProjBF[0]=1</span></code> and <code class="docutils literal notranslate"><span class="pre">ProjBF[k&gt;0]=0</span></code>.</p>
+<p>The connection <span class="math notranslate nohighlight">\(\phi(i,k)=\pm1\)</span> is specified by <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> in
+the same gauge as the hopping amplitudes. It multiplies each directed
+center-to-neighbor channel, including both orientations of a pair.
+The base term has <span class="math notranslate nohighlight">\(\phi(i,i)=1\)</span>; occupation counts and the base-term
+activation rule do not depend on the phase.</p>
+<p>For a signed transformation <span class="math notranslate nohighlight">\(U\)</span>, the evaluated channels use
+<span class="math notranslate nohighlight">\(\phi(Ui,Uk)\phi(Uj,Ul)\)</span>, together with the existing <strong>center</strong>
+signs <span class="math notranslate nohighlight">\(s_U(i)s_U(j)\)</span>. The reader checks
+<span class="math notranslate nohighlight">\(\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)\)</span> for every used transformation.
+The neighbor signs that enter this identity must not be inserted a second
+time as orbital signs. FSZ uses the composition of <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> and
+<code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> and its composed signs.</p>
+<p>These statements express three distinct contracts. Local Z2 gauge changes
+<span class="math notranslate nohighlight">\(f_{ij}\mapsto g_i g_j f_{ij}\)</span> and
+<span class="math notranslate nohighlight">\(\phi(i,k)\mapsto g_i g_k\phi(i,k)\)</span> give the same transformation
+of the BackFlow pair orbital. Translation covariance of an unprojected
+ansatz additionally requires the original orbitals to be covariant under
+the declared translation subgroup. Evaluation of a projected state uses
+the transformed configuration and transformed bonds even for arbitrary
+original orbitals; it does not assume that additional orbital symmetry.</p>
 </section>
 <section id="number-of-parameters">
 <h3>Number of parameters<a class="headerlink" href="#number-of-parameters" title="Permalink to this heading">¶</a></h3>
@@ -2149,7 +2170,7 @@ with existing inputs.</p>
 the body is read, but they cannot be omitted. It is recommended that
 line 7 also contains <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> [int01] [int02].</p></li>
 <li><p>Lines 11 - (10 + <span class="math notranslate nohighlight">\(N_s \times\)</span> [int01]):
-[int03] [int04] [int05]</p></li>
+[int03] [int04] [int05] [int06]</p></li>
 </ul>
 </section>
 <section id="id40">
@@ -2201,6 +2222,32 @@ collects the anchor sites whose Theta counts can change, so an
 asymmetric <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> is rejected at input time with
 <code class="docutils literal notranslate"><span class="pre">BFRange</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">mutual</span></code>.</p></li>
 </ul>
+<p>The optional fourth field [int06] is the boundary seam phase
+<span class="math notranslate nohighlight">\(\phi(i,j)\)</span>, an integer +1 or -1. For AP input (negative
+<code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code>), all rows must contain this field. For PBC, either all rows
+have three fields (implicit +1) or all have four fields with +1. The
+example above is the compatible PBC format. For an AP four-site chain,
+append -1 to rows <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">3</span> <span class="pre">1</span></code> and <code class="docutils literal notranslate"><span class="pre">3</span> <span class="pre">0</span> <span class="pre">1</span></code>, and +1 to every other row.</p>
+<p>Each physical body line must contain exactly three or four whitespace-separated
+integers, with a uniform field count throughout the file. Blank lines,
+comments, trailing fields or rows, numeric suffixes, and integer overflow
+are rejected. A final newline is optional. Self phases must be +1 and
+reverse bonds must have the same phase.</p>
+<p>The phase specifies the boundary connection in the same gauge as the pair
+orbitals, not the sign of the hopping amplitude. Use bonds with an unambiguous
+boundary crossing; antipodal bonds along an AP direction (displacement L/2)
+are outside this format’s supported scope. Every translation row actually
+used by <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span></code> must preserve the range, shell and phase according to
+<span class="math notranslate nohighlight">\(\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)\)</span>. In orbital-general mode this
+includes the composition with every used OptTrans and its signs. Unused
+translation rows impose no additional BackFlow symmetry. Identity-only
+projection cannot verify the nontrivial boundary holonomy: the input generator
+is responsible for the physical seam. Inconsistent used transforms are
+rejected before sampling.</p>
+<p>AP inputs and optimized parameters from the old phase-free definition describe
+a different wavefunction. There is no compatibility switch; retain the old
+binary, source/submodule revisions, inputs and parameter hashes to reproduce
+those results, and reoptimize for the seam-phase definition.</p>
 </section>
 <section id="bf-file-bf-def">
 <h3>BF file (bf.def)<a class="headerlink" href="#bf-file-bf-def" title="Permalink to this heading">¶</a></h3>
@@ -2375,10 +2422,30 @@ retains its existing <code class="docutils literal notranslate"><span class="pre
 <code class="docutils literal notranslate"><span class="pre">NQPOptTrans==1</span></code>. For non-FSZ <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)&gt;1</span></code>, sampling,
 Green functions, Hamiltonian, first Lanczos, and N-body evaluation
 use a correctness-first full Slater/Pfaffian rebuild. The same
-rebuild is used for anti-periodic inputs and for a single-pattern
-input whose first transformation is nonidentity; only the periodic,
-identity, single-pattern case retains the legacy incremental path.
-The rebuild path can be more expensive than that legacy path.</p></li>
+rebuild is used for a single-pattern input whose transformation is
+nonidentity or has a negative transformation sign. A single identity
+transformation with all-positive signs uses local Slater row updates
+for both periodic and anti-periodic boundaries. Pfaffian evaluation on
+the row-update route, and accepted Pfaffian/inverse evaluation on both
+non-FSZ routes, use the following block factorization. For the occupied
+matrix <span class="math notranslate nohighlight">\(A\)</span>, the same-spin blocks are checked to be exactly zero and
+the opposite-spin <span class="math notranslate nohighlight">\(N_e\times N_e\)</span> block <span class="math notranslate nohighlight">\(F\)</span> is used through
+<span class="math notranslate nohighlight">\(\operatorname{Pf}(A)=(-1)^{N_e(N_e-1)/2}\det(F)\)</span>. Accepted inverses
+are rebuilt from the same LU factorization of <span class="math notranslate nohighlight">\(F\)</span> to avoid unstable
+rank-update cancellation. Proposal and Green-function evaluations on
+the full-rebuild route, and sampler recovery evaluations on either route,
+retain the direct <span class="math notranslate nohighlight">\(2N_e\times 2N_e\)</span> Pfaffian factorization.
+Thus the legacy route counters describe Slater row updates, not an
+incremental Pfaffian/inverse formula or a guaranteed speedup.
+<code class="docutils literal notranslate"><span class="pre">MVMC_BF_FORCE_CANONICAL_NONFSZ=1</span></code> selects the full Slater rebuild as
+a manual fallback. This flag accepts only 0 or 1, is read on MPI rank 0
+and broadcast, and the chosen route and reason are printed at startup.
+Numerical failures are recovered with a checked evaluation of the same
+proposal and the same random number, or terminate the calculation if
+recovery fails; they are not treated as ordinary Metropolis rejections.
+This recovery applies only to sampler proposal/commit transactions. A
+numerical failure while evaluating a Hamiltonian or Green function stops
+the calculation immediately without changing the sampler state.</p></li>
 <li><p>With the normal <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format, the
 Hamiltonian may contain <code class="docutils literal notranslate"><span class="pre">Trans</span></code>, number-operator interactions
 (<code class="docutils literal notranslate"><span class="pre">CoulombIntra</span></code>, <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>, <code class="docutils literal notranslate"><span class="pre">Hund</span></code>), and the two-body terms

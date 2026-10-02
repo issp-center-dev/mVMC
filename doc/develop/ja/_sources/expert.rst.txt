@@ -2270,6 +2270,7 @@ Tocchio ら [Tocchio2008_], [Tocchio2011_] も参照してください。
      \eta^{\mu\nu}_{\tau\tau'}
      \Theta^{\mu\uparrow}_{i_n,i_n+\tau}(x)
      \Theta^{\nu\downarrow}_{i_m,i_m+\tau'}(x)
+     \phi(i_n,i_n+\tau)\phi(i_m,i_m+\tau')
      f_{i_n+\tau,i_m+\tau'} .
 
 :math:`\tau,\tau'` は ``BFRange`` で列挙した近傍サイトを表し、
@@ -2307,6 +2308,25 @@ mVMC の ``ProjBF`` はこの :math:`\eta` を平坦化して格納したもの�
 BackFlow 無しの極限は
 :math:`\eta^{00}_{0,0}=1` かつその他の :math:`\eta=0` です。
 mVMC の入力ではこれが ``ProjBF[0]=1``、``ProjBF[k>0]=0`` に対応します。
+
+結合の位相 :math:`\phi(i,k)=\pm1` は hopping と同じゲージで
+``BFRange`` に指定します。有向の中心→近傍チャネルのそれぞれに掛け、
+ペアの正逆両方向に適用します。base 項は :math:`\phi(i,i)=1` で、
+占有数の count と base 項の活性化条件には位相を混ぜません。
+
+符号付き変換 :math:`U` の評価では、変換後の結合
+:math:`\phi(Ui,Uk)\phi(Uj,Ul)` と、従来の **中心サイト** の符号
+:math:`s_U(i)s_U(j)` を使用します。reader は使用する各変換に対して
+:math:`\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)` を検査します。
+この関係に含まれる近傍サイトの符号を軌道符号としてもう一度掛けてはいけません。
+FSZ では ``TransSym`` と ``OptTrans`` の合成写像・合成符号を用います。
+
+物理的な契約は三つに分かれます。局所 Z2 ゲージ変換
+:math:`f_{ij}\mapsto g_i g_j f_{ij}`、
+:math:`\phi(i,k)\mapsto g_i g_k\phi(i,k)` に対して BackFlow 軌道も共変です。
+射影前の ansatz の並進共変性には、元軌道が指定した並進部分群に対して共変である
+という追加の前提が必要です。射影演算では、一般の元軌道に対しても変換後の配置と
+結合を評価し、そのような元軌道の対称性は仮定しません。
 
 パラメータ数
 ^^^^^^^^^^^^
@@ -2376,7 +2396,7 @@ BackFlow 用の追加ヘッダです。7 行目の ``Nrange`` 行は読み飛ば
    7 行目にも ``Nrange`` [int01] [int02] を書くことを推奨します。
 
 -  11 - (10 + :math:`N_s \times` [int01]) 行:
-   [int03] [int04] [int05]
+   [int03] [int04] [int05] [int06]
 
 パラメータ
 ^^^^^^^^^^
@@ -2432,6 +2452,28 @@ BackFlow 用の追加ヘッダです。7 行目の ``Nrange`` 行は読み飛ば
    BackFlow の増分更新は、Theta の個数が変化し得る anchor サイトを集めるときに
    この相互性を仮定しているため、非対称な ``BFRange`` は入力時に
    ``BFRange must be mutual`` というエラーで拒否されます。
+
+第 4 列 [int06] は結合の境界位相 :math:`\phi(i,j)`（整数 +1 または -1）です。
+AP 入力（``NMPTrans`` が負）では全行に必須です。PBC は全行 3 列（位相を +1 と解釈）、
+または全行 4 列・位相全 +1 を受理します。上の例は互換 PBC 形式です。
+4 サイト AP 鎖では ``0 3 1`` と ``3 0 1`` の行に -1、その他の行に +1 を追加します。
+
+本文は 1 物理行に空白区切りの整数を 3 個または 4 個記載し、全行の列数を統一します。
+空行・コメント・余分な列や行・数値への接尾辞・整数 overflow は拒否します。
+最終行の改行は省略可能です。自サイトの位相は +1、逆向き結合の位相は同じ値とします。
+
+位相は pair 軌道と同じゲージの境界接続を表し、hopping 振幅の符号ではありません。
+境目の横断が一意に定まる結合を使います。AP 方向の変位が L/2 の antipodal 結合は
+対象外です。``abs(NMPTrans)`` で実際に使用する全並進は range・shell と
+:math:`\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)` を保存する必要があります。
+orbital-general では使用する OptTrans との合成および両者の符号を含めて検査します。
+未使用の並進行は BackFlow に追加の対称性を課しません。恒等変換のみでは非自明な
+境界の周回位相を検査できないため、物理的に正しい境目は入力生成側で保証してください。
+使用変換と不整合な入力は sampling 前に拒否します。
+
+旧来の位相なし AP 入力とその最適化 parameter は別の波動関数を表します。
+互換スイッチはありません。旧結果の再現には旧 binary、source/submodule revision、
+入力・parameter の hash を保持し、新定義では再最適化してください。
 
 BF ファイル (bf.def)
 ^^^^^^^^^^^^^^^^^^^^
@@ -2616,9 +2658,26 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
    rejectし、FSZでは ``NQPOptTrans==1`` の範囲で従来の ``OptTrans`` supportを
    維持します。non-FSZ の ``abs(NMPTrans)>1`` では sampling、Green関数、
    Hamiltonian、1st Lanczos、N体評価を correctness-first の完全
-   Slater/Pfaffian再構築で処理します。反周期入力、および先頭変換が非恒等な
-   単一pattern入力も同じ再構築を使用し、周期・恒等・単一patternの場合だけ
-   従来の増分経路を維持します。再構築経路は従来経路より高コストになる場合があります。
+   Slater/Pfaffian再構築で処理します。単一patternでも変換が非恒等、または
+   変換符号に負値がある場合は同じ再構築を使用します。恒等変換・符号全 +1 の
+   単一patternでは、周期・反周期の両方で Slater の行更新を使用します。
+   non-FSZ の行更新経路の Pfaffian 評価と、両経路の accept 時の Pfaffian・逆行列
+   評価には、以下の block 分解を使います。占有行列 :math:`A` の同スピン block が
+   厳密に 0 であることを検査し、
+   反対スピンの :math:`N_e\times N_e` block :math:`F` から
+   :math:`\operatorname{Pf}(A)=(-1)^{N_e(N_e-1)/2}\det(F)` として評価します。
+   accept 時の逆行列は同じ :math:`F` の LU 分解から再構築して、増分式の桁落ちを
+   避けます。全面再構築経路の proposal・Green 関数の評価、および両経路の sampler
+   回復評価には、従来の :math:`2N_e\times 2N_e` Pfaffian の直接分解を使います。
+   legacy counter は Slater 行更新の
+   実行回数であり、Pfaffian/逆行列の増分計算や速度向上を保証するものではありません。
+   手動退避用の ``MVMC_BF_FORCE_CANONICAL_NONFSZ=1`` は Slater 全再構築を
+   選択します。この変数は 0/1 のみを受理し、MPI rank 0 で解析して配布します。
+   起動時に経路と理由を表示します。数値失敗時は同じ候補・同じ乱数で検査付きの
+   再評価を行い、回復不能なら計算全体を停止します。数値失敗を通常の Metropolis
+   reject として処理しません。この回復処理は sampler の proposal / commit に
+   限定されます。Hamiltonian と Green 関数の評価中に数値失敗した場合は、sampler
+   状態を変更せず、その場で計算全体を停止します。
 
 -  ``Orbital`` / ``OrbitalAntiParallel`` の通常形式では、Hamiltonian は
    ``Trans``、number-operator 型の相互作用（``CoulombIntra``,
