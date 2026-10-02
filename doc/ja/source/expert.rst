@@ -2661,11 +2661,15 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
    Slater/Pfaffian再構築で処理します。単一patternでも変換が非恒等、または
    変換符号に負値がある場合は同じ再構築を使用します。恒等変換・符号全 +1 の
    単一patternでは、周期・反周期の両方で Slater の行更新を使用します。
-   non-FSZ の占有行列 :math:`A` は、同スピン block が厳密に 0 であることを検査し、
+   non-FSZ の行更新経路の Pfaffian 評価と、両経路の accept 時の Pfaffian・逆行列
+   評価には、以下の block 分解を使います。占有行列 :math:`A` の同スピン block が
+   厳密に 0 であることを検査し、
    反対スピンの :math:`N_e\times N_e` block :math:`F` から
    :math:`\operatorname{Pf}(A)=(-1)^{N_e(N_e-1)/2}\det(F)` として評価します。
    accept 時の逆行列は同じ :math:`F` の LU 分解から再構築して、増分式の桁落ちを
-   避けます。legacy counter は Slater 行更新の
+   避けます。全面再構築経路の proposal・Green 関数の評価、および両経路の sampler
+   回復評価には、従来の :math:`2N_e\times 2N_e` Pfaffian の直接分解を使います。
+   legacy counter は Slater 行更新の
    実行回数であり、Pfaffian/逆行列の増分計算や速度向上を保証するものではありません。
    手動退避用の ``MVMC_BF_FORCE_CANONICAL_NONFSZ=1`` は Slater 全再構築を
    選択します。この変数は 0/1 のみを受理し、MPI rank 0 で解析して配布します。

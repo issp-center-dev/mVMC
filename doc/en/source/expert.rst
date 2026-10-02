@@ -2814,12 +2814,16 @@ Inputs outside this range are rejected.
    rebuild is used for a single-pattern input whose transformation is
    nonidentity or has a negative transformation sign. A single identity
    transformation with all-positive signs uses local Slater row updates
-   for both periodic and anti-periodic boundaries. For the non-FSZ occupied
+   for both periodic and anti-periodic boundaries. Pfaffian evaluation on
+   the row-update route, and accepted Pfaffian/inverse evaluation on both
+   non-FSZ routes, use the following block factorization. For the occupied
    matrix :math:`A`, the same-spin blocks are checked to be exactly zero and
    the opposite-spin :math:`N_e\times N_e` block :math:`F` is used through
    :math:`\operatorname{Pf}(A)=(-1)^{N_e(N_e-1)/2}\det(F)`. Accepted inverses
    are rebuilt from the same LU factorization of :math:`F` to avoid unstable
-   rank-update cancellation.
+   rank-update cancellation. Proposal and Green-function evaluations on
+   the full-rebuild route, and sampler recovery evaluations on either route,
+   retain the direct :math:`2N_e\times 2N_e` Pfaffian factorization.
    Thus the legacy route counters describe Slater row updates, not an
    incremental Pfaffian/inverse formula or a guaranteed speedup.
    ``MVMC_BF_FORCE_CANONICAL_NONFSZ=1`` selects the full Slater rebuild as
