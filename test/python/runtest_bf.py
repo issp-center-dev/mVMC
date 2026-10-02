@@ -229,7 +229,7 @@ def rewrite_transsym_variant(path, nsite, reverse_order=False,
     return count
 
 
-def check_multiqp_full_rebuild_profile(workdir):
+def check_multiqp_full_rebuild_profile(workdir, legacy=False):
     time_files = sorted(glob.glob(os.path.join(
         workdir, "output", "*CalcTimer.dat")))
     if len(time_files) != 1:
@@ -238,8 +238,12 @@ def check_multiqp_full_rebuild_profile(workdir):
         return -1
     full_rebuild = None
     legacy_incremental = None
+    row_counts = {}
     with open(time_files[0]) as source:
         for line in source:
+            for label in ("BF legacy non-FSZ proposal", "BF legacy non-FSZ accept prep", "BF legacy non-FSZ Green rows"):
+                if label in line:
+                    row_counts[label] = int(line.split()[-1])
             if "BF canonical full rebuild" in line:
                 full_rebuild = int(line.split()[-1])
             elif "BF multi-QP legacy incremental" in line:
@@ -247,6 +251,11 @@ def check_multiqp_full_rebuild_profile(workdir):
     if full_rebuild is None or legacy_incremental is None:
         print("ERROR: multi-QP BackFlow route counters are missing")
         return -1
+    if legacy:
+        if legacy_incremental != 0 or len(row_counts) != 3 or min(row_counts.values()) <= 0:
+            print("ERROR: invalid BackFlow row counters", row_counts, legacy_incremental)
+            return -1
+        return 0
     if full_rebuild <= 0 or legacy_incremental != 0:
         print("ERROR: invalid multi-QP BackFlow route counters: "
               "full_rebuild={} legacy_incremental={}".format(
@@ -577,7 +586,7 @@ def copy_def_files(refdir, workdir, include_backflow):
             shutil.copy(src_path, dst_path)
 
 
-def write_minimal_twobodyg(workdir, nsite):
+def write_minimal_twobodyg(workdir, nsite, all_general=False):
     if nsite < 4:
         raise RuntimeError("minimal TwoBodyG BackFlow smoke requires Nsite >= 4")
     rows = [
@@ -588,6 +597,14 @@ def write_minimal_twobodyg(workdir, nsite):
         (1, 1, 0, 1, 3, 0, 2, 0),
         (2, 0, 3, 0, 1, 1, 0, 1),
     ]
+    if all_general:
+        # A short chain may stay in a sector where all four original hop
+        # probes are Pauli-blocked. Cover every opposite-spin double hop,
+        # including the seam, without changing the sampled state.
+        rows = sorted(set(rows + [(i,0,j,0,k,1,l,1)
+                      for i in range(nsite) for j in range(nsite)
+                      for k in range(nsite) for l in range(nsite)
+                      if i != j and k != l]))
     with open(os.path.join(workdir, "greentwo.def"), "w") as fp:
         fp.write("=============================================\n")
         fp.write("NCisAjsCktAltDC         {}\n".format(len(rows)))
@@ -964,14 +981,14 @@ def compare_real_complex_nonidentity(rootdir, real_model, complex_model,
                     "NMPTrans": str(-trans_count),
                 })
 
-    real_definition = build_chain_nn_backflow(length=real_nsite, optimize=False)
-    complex_definition = build_chain_nn_backflow(length=complex_nsite, optimize=False)
+    real_definition = build_chain_nn_backflow(length=real_nsite, optimize=False, antiperiodic=use_ap_projection)
+    complex_definition = build_chain_nn_backflow(length=complex_nsite, optimize=False, antiperiodic=use_ap_projection)
     if real_definition.n_proj_bf != complex_definition.n_proj_bf:
         print("ERROR: NProjBF mismatch: real={} complex={}".format(
             real_definition.n_proj_bf, complex_definition.n_proj_bf))
         return -1
-    write_chain_nn_backflow(real_workdir, length=real_nsite, optimize=False)
-    write_chain_nn_backflow(complex_workdir, length=complex_nsite, optimize=False)
+    write_chain_nn_backflow(real_workdir, length=real_nsite, optimize=False, antiperiodic=use_ap_projection)
+    write_chain_nn_backflow(complex_workdir, length=complex_nsite, optimize=False, antiperiodic=use_ap_projection)
 
     real_nslater = parse_norbitalidx(os.path.join(real_workdir, "orbitalidx.def"))
     complex_nslater = parse_norbitalidx(os.path.join(complex_workdir, "orbitalidx.def"))
@@ -1903,6 +1920,7 @@ def main():
     use_single_projection_row = False
     mutate_ap_signs_positive = False
     check_multiqp_full_rebuild = False
+    check_bf_legacy_route = False
     expect_exchange_profile = False
     ncond_override = None
     nsplit_size_override = None
@@ -2037,6 +2055,9 @@ def main():
         elif sys.argv[argi] == "--mutate-ap-signs-positive":
             use_ap_projection = True
             mutate_ap_signs_positive = True
+            argi += 1
+        elif sys.argv[argi] == "--check-bf-legacy-route":
+            check_bf_legacy_route = True
             argi += 1
         elif sys.argv[argi] == "--check-multiqp-full-rebuild":
             check_multiqp_full_rebuild = True
@@ -2238,9 +2259,11 @@ def main():
             "NMPTrans": str(-active_trans_count if use_ap_projection
                             else active_trans_count),
         })
-    definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd)
+    definition = build_chain_nn_backflow(length=nsite, optimize=compare_proj_bf_fd,
+                                         antiperiodic=use_ap_projection)
     if not custom_backflow:
-        write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd, compact=compact_backflow)
+        write_chain_nn_backflow(workdir, length=nsite, optimize=compare_proj_bf_fd,
+                               compact=compact_backflow, antiperiodic=use_ap_projection)
     if check_bf_nbody_dispatch or check_bf_nbody_state:
         write_uniform_gutzwiller(workdir, nsite)
     if inject_bf_nbody_failure is not None:
@@ -2249,7 +2272,7 @@ def main():
         else:
             write_nbody_failure_def(workdir)
     if (compare_twobodyg or check_bf_green2_bruteforce) and not keep_twobodyg:
-        write_minimal_twobodyg(workdir, nsite)
+        write_minimal_twobodyg(workdir, nsite, all_general=check_bf_green2_bruteforce)
     if compare_twobodygex:
         write_minimal_twobodygex(workdir, nsite)
 
@@ -2290,7 +2313,7 @@ def main():
     nbody_env = {}
     if check_bf_nbody_state:
         nbody_env["MVMC_BF_NBODY_STATE_CHECK"] = "1"
-    if check_multiqp_full_rebuild or expect_exchange_profile:
+    if check_multiqp_full_rebuild or check_bf_legacy_route or expect_exchange_profile:
         nbody_env["MVMC_BF_PROFILE"] = "1"
     if check_bf_green1_bruteforce:
         nbody_env["MVMC_BF_GREEN1_DUMP"] = green1_dump_path
@@ -2514,8 +2537,8 @@ def main():
                                        reverse_projection_order))
         if result != 0:
             return result
-    if check_multiqp_full_rebuild:
-        result = check_multiqp_full_rebuild_profile(workdir)
+    if check_multiqp_full_rebuild or check_bf_legacy_route:
+        result = check_multiqp_full_rebuild_profile(workdir, legacy=check_bf_legacy_route)
         if result != 0:
             return result
     if expect_exchange_profile:

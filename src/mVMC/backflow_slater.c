@@ -47,11 +47,11 @@ int BFRowSelectCountersEnabled = 0;
 
 void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex*slt_ij, int *ijcount, double complex*slt_ji, int *jicount, const int *eleProjBFCnt);
 
-void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijcount, double *slt_ji, int *jicount, const int *eleProjBFCnt);
 
 typedef struct {
   int r;
   int coord;
+  int phase;
   int cnt0;
   int cnt1;
 } BFRealSparseEntry;
@@ -377,9 +377,10 @@ void SlaterElmBFDiff_fcmp(double complex*srOptO, const double complex ip, int *e
                   if(xtmp==0){midx=0;}
                   if(midx<0){continue;}
                   bfidx=BFSubIdx[nidx][midx];
-                  orbsgn =  OrbitalSgn[rki][rlj];
+                  /* Reverse traversal: the differentiated bare orbital is
+                   * (tri,trj), not the occupied centers (rki,rlj). */
 
-                  buf[orbidx] -= -orbsgn*invM_k[msl]*ProjBF[bfidx]*bfCnt2_n[idx_ik]*bfCnt3_m[idx_jl]*PfM[qpidx];
+                  buf[orbidx] -= -(double)(orbsgn*BFSeamPhase[tri][rki]*BFSeamPhase[trj][rlj])*invM_k[msl]*ProjBF[bfidx]*bfCnt2_n[idx_ik]*bfCnt3_m[idx_jl]*PfM[qpidx];
                 }
               }
             }
@@ -664,8 +665,8 @@ void BackFlowDiff_fcmp(complex double *srOptO, const double complex ip, int *ele
                 if(midx<0){continue;}
                 bfidx=BFSubIdx[nidx][midx];
 
-                tmp = -bfCnt0_n[idx_ik]*bfCnt1_m[idx_jl]*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj]
-                      -bfCnt1_n[idx_jk]*bfCnt0_m[idx_il]*Slater[ OrbitalIdx[rli][rkj]]*OrbitalSgn[rli][rkj];
+                tmp = -(double)(BFSeamPhase[tri][rki]*BFSeamPhase[trj][rlj]*bfCnt0_n[idx_ik])*bfCnt1_m[idx_jl]*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj]
+                      -(double)(BFSeamPhase[tri][rli]*BFSeamPhase[trj][rkj]*bfCnt1_n[idx_jk])*bfCnt0_m[idx_il]*Slater[ OrbitalIdx[rli][rkj]]*OrbitalSgn[rli][rkj];
                 trM[bfidx] -= invM_i[msj]*tmp;
               }
             }
@@ -765,11 +766,11 @@ static void SubSlaterElmBFCanonical_fcmp(
           if(midx < 0) continue;
           bfidx = BFSubIdx[nidx][midx];
           if(cnt_ij_i != 0 && cnt_ij_j != 0) {
-            *slt_ij += -ProjBF[bfidx] * (double)(cnt_ij_i*cnt_ij_j) *
+            *slt_ij += -ProjBF[bfidx] * (double)(cnt_ij_i*cnt_ij_j*BFSeamPhase[xqp[ri]][xqp[rk]]*BFSeamPhase[xqp[rj]][xqp[rl]]) *
                 BFNonFszOrbitalTransformed(rk, rl, xqp);
           }
           if(cnt_ji_i != 0 && cnt_ji_j != 0) {
-            *slt_ji += -ProjBF[bfidx] * (double)(cnt_ji_i*cnt_ji_j) *
+            *slt_ji += -ProjBF[bfidx] * (double)(cnt_ji_i*cnt_ji_j*BFSeamPhase[xqp[ri]][xqp[rk]]*BFSeamPhase[xqp[rj]][xqp[rl]]) *
                 BFNonFszOrbitalTransformed(rl, rk, xqp);
           }
         }
@@ -860,7 +861,7 @@ static void BFCanonicalDirectedDerivativeCoefficients(
           bfidx = BFSubIdx[nidx][midx];
 
           if(cnt_ij_i != 0 && cnt_ij_j != 0) {
-            const double count = (double)(cnt_ij_i*cnt_ij_j);
+            const double count = (double)(cnt_ij_i*cnt_ij_j*BFSeamPhase[xqp[ri]][xqp[rk]]*BFSeamPhase[xqp[rj]][xqp[rl]]);
             const double complex orbital =
                 BFNonFszOrbitalTransformed(rk, rl, xqp);
             BFAddCanonicalOrbitalDerivative(
@@ -874,7 +875,7 @@ static void BFCanonicalDirectedDerivativeCoefficients(
             }
           }
           if(cnt_ji_i != 0 && cnt_ji_j != 0) {
-            const double count = (double)(cnt_ji_i*cnt_ji_j);
+            const double count = (double)(cnt_ji_i*cnt_ji_j*BFSeamPhase[xqp[ri]][xqp[rk]]*BFSeamPhase[xqp[rj]][xqp[rl]]);
             const double complex orbital =
                 BFNonFszOrbitalTransformed(rl, rk, xqp);
             BFAddCanonicalOrbitalDerivative(
@@ -1143,14 +1144,12 @@ int RebuildSlaterMAllBF_fcmp(
     const int *eleIdx, const int *eleNum, const int *eleProjBFCnt,
     int qpStart, int qpEnd, double complex *sltElmBF,
     double complex *pfMOut, double complex *invMOut) {
-  BF_FSZ_MAllResult result;
+  int result;
   size_t nsizeSquared;
-  int *eleSpn = NULL;
   int *iwork = NULL;
   double complex *bufM = NULL;
   double complex *work = NULL;
   double *rwork = NULL;
-  int particle;
 
   if(eleIdx == NULL || eleNum == NULL || eleProjBFCnt == NULL
      || sltElmBF == NULL || pfMOut == NULL || invMOut == NULL
@@ -1167,14 +1166,12 @@ int RebuildSlaterMAllBF_fcmp(
     return BF_FSZ_MALL_OK;
   }
 
-  eleSpn = (int *)malloc((size_t)Nsize*sizeof(int));
   iwork = (int *)malloc((size_t)Nsize*sizeof(int));
   bufM = (double complex *)malloc(nsizeSquared*sizeof(double complex));
   work = (double complex *)malloc((size_t)LapackLWork*sizeof(double complex));
   rwork = (double *)malloc((size_t)LapackLWork*sizeof(double));
-  if(eleSpn == NULL || iwork == NULL || bufM == NULL
+  if(iwork == NULL || bufM == NULL
      || work == NULL || rwork == NULL) {
-    free(eleSpn);
     free(iwork);
     free(bufM);
     free(work);
@@ -1182,20 +1179,16 @@ int RebuildSlaterMAllBF_fcmp(
     return BF_FSZ_MALL_INVALID_ARGUMENT;
   }
 
-  for(particle=0;particle<Nsize;particle++) {
-    eleSpn[particle] = particle < Ne ? 0 : 1;
-  }
-  result = CalculateMAll_BF_fsz_from_workspace(
-      sltElmBF, eleIdx, eleSpn, qpStart, qpEnd, pfMOut, invMOut,
+  result = CalculateMAll_BF_fcmp_from_workspace(
+      sltElmBF, eleIdx, qpStart, qpEnd, pfMOut, invMOut,
       nsizeSquared, bufM, iwork, work, LapackLWork, rwork);
 
-  free(eleSpn);
   free(iwork);
   free(bufM);
   free(work);
   free(rwork);
   if(BFProfileEnabled) AddBFProfileCounter(BFPROF_FULL_REBUILD, 1);
-  return result.status;
+  return result;
 }
 
 int RebuildSlaterMAllBF_real(
@@ -1251,7 +1244,7 @@ int RebuildSlaterMAllBF_real(
   free(bufM);
   free(work);
   free(iwork);
-  return status == 0 ? BF_FSZ_MALL_OK : BF_FSZ_MALL_LAPACK_FAILURE;
+  return status;
 }
 
 int CalculateBFCanonicalPf_fcmp(
@@ -1321,7 +1314,7 @@ int CalculateBFCanonicalPf_fcmp(
   free(eleSpn);
   free(iwork);
   if(BFProfileEnabled) AddBFProfileCounter(BFPROF_FULL_REBUILD, 1);
-  return status;
+  return failureDetail < 0 ? BF_PF_INVALID_ARGUMENT : status;
 }
 
 int CalculateBFCanonicalPf_real(
@@ -1431,10 +1424,10 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, i
           //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
           //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
           if(cnt_ij_i != 0 && cnt_ij_j != 0) {
-            *slt_ij += -ProjBF[bfidx]*cnt_ij_i*cnt_ij_j*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj];
+            *slt_ij += -ProjBF[bfidx]*(double)(cnt_ij_i*BFSeamPhase[tri][rki]*BFSeamPhase[trj][rlj])*cnt_ij_j*Slater[ OrbitalIdx[rki][rlj]]*OrbitalSgn[rki][rlj];
           }
           if(cnt_ji_i != 0 && cnt_ji_j != 0) {
-            *slt_ji += -ProjBF[bfidx]*cnt_ji_i*cnt_ji_j*Slater[ OrbitalIdx[rlj][rki]]*OrbitalSgn[rlj][rki];
+            *slt_ji += -ProjBF[bfidx]*(double)(cnt_ji_i*BFSeamPhase[tri][rki]*BFSeamPhase[trj][rlj])*cnt_ji_j*Slater[ OrbitalIdx[rlj][rki]]*OrbitalSgn[rlj][rki];
           }
         }
       }
@@ -1453,100 +1446,6 @@ void SubSlaterElmBF_fcmp(const int tri, const int trj, double complex *slt_ij, i
 
 }
 
-
-void SubSlaterElmBF_real(const int tri, const int trj, double *slt_ij, int *ijcount, double* slt_ji, int *jicount, const int *eleProjBFCnt){
-  int xn,xm,xk,xl;
-  int rki,rlj;
-  int idx_ik,idx_jk,idx_jl;
-  int bfidx;
-  int dki,dlj,nidx,midx,xtmp;
-  int cnt_ij_i,cnt_ji_i,cnt_ij_j,cnt_ji_j;
-  const int nSite=Nsite;
-  const int nRange=Nrange;
-  const int nSiteRange = nRange*nSite;
-  const int *bfCnt0=eleProjBFCnt;
-  const int *bfCnt1=eleProjBFCnt+4*Nsite*Nrange;
-  const int *bfCnt0_n,*bfCnt0_m,*bfCnt1_n,*bfCnt1_m;
-  double eta;
-  int **posBF = PosBF;
-
-  *slt_ij = 0.0;
-  *slt_ji = 0.0;
-  *ijcount = 0;
-  *jicount = 0;
-  //#pragma omp parallel for reduction(+:slt_ij,slt_ji)
-  for(xn=0;xn<4;xn++){
-    bfCnt0_n=bfCnt0+xn*nSiteRange;
-    bfCnt1_n=bfCnt1+xn*nSiteRange;
-    for(xm=0;xm<4;xm++){
-      if(xm==0 && xn == 0) continue;
-      bfCnt0_m=bfCnt0+xm*nSiteRange;
-      bfCnt1_m=bfCnt1+xm*nSiteRange;
-
-      for(xk=0;xk<nRange;xk++) {
-        rki=posBF[tri][xk];
-        //rkj=posBF[trj][xk];
-        idx_ik=tri*nRange+xk;
-        idx_jk=trj*nRange+xk;
-
-        dki = RangeIdx[tri][rki];
-        xtmp = 4*dki+xn;
-        nidx = xtmp-3-dki;
-        if(xtmp%4==0){nidx=-1;}
-        if(xtmp==0){nidx=0;}
-        if(nidx<0){continue;}
-
-        *ijcount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
-        *jicount += bfCnt0[nSiteRange+idx_ik]+bfCnt0[nSiteRange+idx_jk];
-
-        cnt_ij_i = bfCnt0_n[idx_ik];
-        cnt_ji_i = bfCnt1_n[idx_ik];
-        if(cnt_ij_i == 0 && cnt_ji_i == 0) continue;
-
-        for(xl=0;xl<nRange;xl++){
-          //rli=posBF[tri][xl];
-          rlj=posBF[trj][xl];
-          //idx_il=tri*nRange+xl;
-          idx_jl=trj*nRange+xl;
-
-          cnt_ij_j = bfCnt1_m[idx_jl];
-          cnt_ji_j = bfCnt0_m[idx_jl];
-          if((cnt_ij_i == 0 || cnt_ij_j == 0) && (cnt_ji_i == 0 || cnt_ji_j == 0)) continue;
-
-          dlj = RangeIdx[trj][rlj];
-          xtmp = 4*dlj+xm;
-          midx = xtmp-3-dlj;
-          if(xtmp%4==0){midx=-1;}
-          if(xtmp==0){midx=0;}
-          if(midx<0){continue;}
-          bfidx=BFSubIdx[nidx][midx];
-
-          //printf("ProjBF[%d]=%.2e\n",bfidx,ProjBF[bfidx]);
-          //printf("OrbitalSgn[%d][%d]=%d\n",rki,rlj,OrbitalSgn[rki][rlj]);
-          //printf("Slater[%d]=%.2e\n",OrbitalIdx[rki][rlj], Slater[ OrbitalIdx[rki][rlj]]);
-          //printf("bfCnt0_n[%d]=%d\n",idx_ik,bfCnt0_n[idx_ik]);
-          if(cnt_ij_i != 0 && cnt_ij_j != 0) {
-            *slt_ij += -creal(ProjBF[bfidx])*cnt_ij_i*cnt_ij_j*creal(Slater[ OrbitalIdx[rki][rlj]])*OrbitalSgn[rki][rlj];
-          }
-          if(cnt_ji_i != 0 && cnt_ji_j != 0) {
-            *slt_ji += -creal(ProjBF[bfidx])*cnt_ji_i*cnt_ji_j*creal(Slater[ OrbitalIdx[rlj][rki]])*OrbitalSgn[rlj][rki];
-          }
-        }
-      }
-    }
-  }
-
-  if(*ijcount == 0){eta = 1.0;}
-  else{eta = creal(ProjBF[0]);} //TODO: Check
-  *slt_ij += eta*Slater[ OrbitalIdx[tri][trj] ]*OrbitalSgn[tri][trj];
-
-  if(*jicount == 0){eta = 1.0;}
-  else{eta = creal(ProjBF[0]);}
-  *slt_ji += eta*Slater[ OrbitalIdx[trj][tri] ]*OrbitalSgn[trj][tri];
-
-  return;
-
-}
 
 static void MakeBFEtaFlag_real(unsigned char *bfEtaFlag, const int *eleProjBFCnt){
   int ri,xk;
@@ -1607,6 +1506,7 @@ static void MakeBFRealSparseCountList(BFRealSparseEntry *entry, int *offset, int
         geomCount[key]++;
         if(bfCnt0_state[idx] == 0 && bfCnt1_state[idx] == 0) continue;
         entry[cursor].r = r;
+        entry[cursor].phase = BFSeamPhase[ri][r];
         entry[cursor].coord = coord;
         entry[cursor].cnt0 = bfCnt0_state[idx];
         entry[cursor].cnt1 = bfCnt1_state[idx];
@@ -1673,11 +1573,11 @@ static void SubSlaterElmBF_real_eta_sparse(const int tri, const int trj, double 
           if(stats != NULL) stats->sparsePair++;
 
           if(left->cnt0 != 0 && right->cnt1 != 0) {
-            *slt_ij += bfRealProj[left->coord*nRangeIdx+right->coord]*left->cnt0*right->cnt1*bfRealSlater[rki*nSite+rlj]*bfRealSlaterSign[rki*nSite+rlj];
+            *slt_ij += bfRealProj[left->coord*nRangeIdx+right->coord]*(double)(left->phase*right->phase*left->cnt0)*right->cnt1*bfRealSlater[rki*nSite+rlj]*bfRealSlaterSign[rki*nSite+rlj];
             if(stats != NULL) stats->actualAdd++;
           }
           if(left->cnt1 != 0 && right->cnt0 != 0) {
-            *slt_ji += bfRealProj[left->coord*nRangeIdx+right->coord]*left->cnt1*right->cnt0*bfRealSlater[rlj*nSite+rki]*bfRealSlaterSign[rlj*nSite+rki];
+            *slt_ji += bfRealProj[left->coord*nRangeIdx+right->coord]*(double)(left->phase*right->phase*left->cnt1)*right->cnt0*bfRealSlater[rlj*nSite+rki]*bfRealSlaterSign[rlj*nSite+rki];
             if(stats != NULL) stats->actualAdd++;
           }
         }
@@ -2295,6 +2195,7 @@ void UpdateSlaterElmBFGrn(const int ma, const int ra, const int rb, const int u,
   if(BFProfileEnabled && BFUseCanonicalNonFszPath()) {
     AddBFProfileCounter(BFPROF_MULTI_QP_LEGACY_INCREMENTAL, 1);
   }
+  AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_GREEN_ROWS,1);
   int **posBF = PosBF;
   //int rua=ra+Nsite*u, rub=rb+Nsite*u;
   const int mua = ma + Ne*u;
@@ -2518,6 +2419,7 @@ void UpdateSlaterElmBFGrnVec_real(const int ma, const int ra, const int rb, cons
   if(BFProfileEnabled && BFUseCanonicalNonFszPath()) {
     AddBFProfileCounter(BFPROF_MULTI_QP_LEGACY_INCREMENTAL, 1);
   }
+  AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_GREEN_ROWS,1);
   int **posBF = PosBF;
   const int mua = ma + Ne*u;
   int trua, trub;
@@ -2743,6 +2645,7 @@ void UpdateSlaterElmBFGrn_real(const int ma, const int ra, const int rb, const i
   if(BFProfileEnabled && BFUseCanonicalNonFszPath()) {
     AddBFProfileCounter(BFPROF_MULTI_QP_LEGACY_INCREMENTAL, 1);
   }
+  AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_GREEN_ROWS,1);
   int **posBF = PosBF;
   //int rua=ra+Nsite*u, rub=rb+Nsite*u;
   const int mua = ma + Ne*u;

@@ -2,6 +2,17 @@ if(NOT PYTHON_EXECUTABLE)
     find_package(PythonInterp 3.6 REQUIRED)
 endif()
 
+add_executable(backflow_seam_unit backflow_seam_unit.c)
+target_link_libraries(backflow_seam_unit m)
+if(MPI_FOUND)
+    target_link_libraries(backflow_seam_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME BackFlow_Seam_Input_Unit COMMAND backflow_seam_unit)
+
+add_executable(backflow_acceptance_unit backflow_acceptance_unit.c)
+target_link_libraries(backflow_acceptance_unit m)
+add_test(NAME BackFlow_Log_Acceptance_Unit COMMAND backflow_acceptance_unit)
+
 foreach(datafile ${DATA_FILES})
     configure_file(${datafile} ${CMAKE_BINARY_DIR}/test/ COPYONLY)
 endforeach()
@@ -44,6 +55,16 @@ if(MPI_FOUND)
     target_link_libraries(gc_parameter_unit ${MPI_C_LIBRARIES})
 endif()
 add_test(NAME GCParameter_Unit COMMAND gc_parameter_unit)
+
+add_executable(backflow_stable_unit backflow_stable_unit.c)
+target_include_directories(backflow_stable_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(backflow_stable_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(backflow_stable_unit blis pthread)
+endif()
+add_test(NAME BackFlow_Stable_Occupied_Unit COMMAND backflow_stable_unit)
 
 add_executable(gc_matrix_unit gc_matrix_unit.c)
 target_include_directories(gc_matrix_unit PRIVATE

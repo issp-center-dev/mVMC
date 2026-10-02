@@ -1,3 +1,48 @@
+foreach(seam_script bf_seam_phase_tool.py bf_seam_oracle.py test_bf_seam_oracle.py runtest_bf_seam_kernel.py)
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/${seam_script} DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+endforeach()
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/BackFlow_Seam_L4 DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+add_test(NAME BackFlow_Seam_Physics_Oracle COMMAND ${PYTHON_EXECUTABLE} test_bf_seam_oracle.py)
+foreach(seam_mode canonical legacy projected canonical_real legacy_real)
+    add_test(NAME BackFlow_Seam_Kernel_${seam_mode}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_seam_kernel.py ${seam_mode})
+endforeach()
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_seam_input.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_failure.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_replay.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+foreach(bf_mode real complex)
+    add_test(NAME BackFlow_Replay_${bf_mode}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_replay.py ${bf_mode})
+    if(MPI_FOUND)
+        add_test(NAME BackFlow_Replay_${bf_mode}_mpi
+            COMMAND ${PYTHON_EXECUTABLE} runtest_bf_replay.py ${bf_mode})
+        set_tests_properties(BackFlow_Replay_${bf_mode}_mpi
+            PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
+    endif()
+    add_test(NAME BackFlow_Failure_${bf_mode}_ap_canonical
+        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ap --force-canonical)
+    if(MPI_FOUND)
+        add_test(NAME BackFlow_Failure_${bf_mode}_ap_canonical_mpi
+            COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ap --force-canonical)
+        set_tests_properties(BackFlow_Failure_${bf_mode}_ap_canonical_mpi
+            PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
+    endif()
+    foreach(bf_boundary pbc ap)
+        add_test(NAME BackFlow_Failure_${bf_mode}_${bf_boundary}
+            COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ${bf_boundary})
+        if(MPI_FOUND)
+            add_test(NAME BackFlow_Failure_${bf_mode}_${bf_boundary}_mpi
+                COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ${bf_boundary})
+            set_tests_properties(BackFlow_Failure_${bf_mode}_${bf_boundary}_mpi
+                PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
+        endif()
+    endforeach()
+endforeach()
+add_test(NAME BackFlow_Seam_Input_Reader COMMAND ${PYTHON_EXECUTABLE} runtest_bf_seam_input.py)
+if(MPI_FOUND)
+    add_test(NAME BackFlow_Seam_Input_Reader_mpi COMMAND ${PYTHON_EXECUTABLE} runtest_bf_seam_input.py)
+    set_tests_properties(BackFlow_Seam_Input_Reader_mpi PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
+endif()
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mode1.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -21,6 +66,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/backflow_def_helper.py DESTINATION ${CMAKE
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/bf_canonical_model.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_fsz.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_fsz_green_omp.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+add_test(NAME FSZ_Green_SpinIndices_omp COMMAND ${PYTHON_EXECUTABLE} runtest_fsz_green_omp.py)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_bf_sampler_dump_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_projection_variants.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_hphi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -1734,9 +1781,12 @@ set_tests_properties(BackFlow_MultiQP_PhysicalCovariance_AP PROPERTIES ENVIRONME
 add_test(NAME BackFlow_SingleQP_NonIdentity_CanonicalFallback
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --reverse-projection-order --use-single-projection-row --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_SingleQP_NonIdentity_CanonicalFallback PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_NonIdentity_CanonicalFallback")
+add_test(NAME BackFlow_SingleQP_AP_LegacyPath
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --use-ap-projection --use-single-projection-row --check-bf-legacy-route)
+set_tests_properties(BackFlow_SingleQP_AP_LegacyPath PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_AP_LegacyPath")
 add_test(NAME BackFlow_SingleQP_AP_CanonicalFallback
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --use-ap-projection --use-single-projection-row --check-multiqp-full-rebuild)
-set_tests_properties(BackFlow_SingleQP_AP_CanonicalFallback PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_AP_CanonicalFallback")
+set_tests_properties(BackFlow_SingleQP_AP_CanonicalFallback PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_FORCE_CANONICAL_NONFSZ=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_AP_CanonicalFallback")
 add_python_vmc_test_bf_projection_variants(BackFlow_MultiQP_OrderInvariant_PBC pbc)
 add_python_vmc_test_bf_projection_variants(BackFlow_MultiQP_OrderInvariant_AP_Mutation ap)
 add_test(NAME BackFlow_MultiQP_Green1_PBC_Complex
@@ -1800,10 +1850,10 @@ add_test(NAME BackFlow_MultiQP_NBody_State_PBC
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-asymmetric-complex-projection-weights --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_MultiQP_NBody_State_PBC PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_PBC")
 add_test(NAME BackFlow_MultiQP_NBody_State_AP
-         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-complex-projection-weights --check-multiqp-full-rebuild)
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-asymmetric-complex-projection-weights --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_MultiQP_NBody_State_AP PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_AP")
 add_test(NAME BackFlow_MultiQP_NBody_State_AP_mpi
-         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-complex-projection-weights --check-multiqp-full-rebuild)
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-asymmetric-complex-projection-weights --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_MultiQP_NBody_State_AP_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_AP_mpi")
 add_test(NAME BackFlow_MultiQP_AP_NonIdentity_RealVsComplex
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --compare-real-complex-nonidentity BackFlow_Identity_Complex_MultiQP --use-ap-projection --reject-output "Error:" --reject-output "error:")

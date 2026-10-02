@@ -36,6 +36,7 @@ backflow_nbody.c \
 backflow_nbody_scratch.c \
 backflow_nbody_oracle.c \
 backflow_pf.c \
+backflow_stable.c \
 backflow_slater.c \
 backflow_vmc.c \
 average.c \

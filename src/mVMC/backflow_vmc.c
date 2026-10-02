@@ -1019,6 +1019,8 @@ static void BFSamplerRebuildCheckFinish(BFSamplerRebuildCheck *chk, const char *
   memset(chk, 0, sizeof(*chk));
 }
 
+#include "backflow_sampling.c"
+
 void VMC_BF_MakeSample(MPI_Comm comm)
 {
   int outStep, nOutStep;
@@ -1039,6 +1041,8 @@ void VMC_BF_MakeSample(MPI_Comm comm)
   size_t fullInvCount = 0;
   int fullCandidateStatus = 0;
   BFMultiQPSampleAudit sampleAudit = {0};
+  BFSampleTransaction transaction = {0};
+  int proposalIdx[Nsize];
   double x, w; // TBC x will be complex number
   BFPfCheckState pfCheck;
 
@@ -1056,8 +1060,8 @@ void VMC_BF_MakeSample(MPI_Comm comm)
   }
   BFPfCheckInit(&pfCheck, qpStart, qpEnd, 0);
 
-  if(BFUseCanonicalNonFszPath()) {
-    if(bfMultiQPSampleAuditInit(
+  {
+    if(BFUseCanonicalNonFszPath() && bfMultiQPSampleAuditInit(
            &sampleAudit, 0, qpEnd-qpStart) != 0) {
       if(rank == 0) {
         fprintf(stderr,
@@ -1082,6 +1086,14 @@ void VMC_BF_MakeSample(MPI_Comm comm)
     }
   }
 
+  transaction.proposalIdx=proposalIdx;
+  transaction.comm=comm; transaction.rank=rank;
+  transaction.real=0; transaction.qpStart=qpStart; transaction.qpEnd=qpEnd;
+  transaction.slater=fullCandidateSlater; transaction.inv=fullCandidateInv;
+  transaction.pf=pfMNew;
+  transaction.slaterCount=fullSlaterCount; transaction.invCount=fullInvCount;
+
+  BFTransactionInit(&transaction);
   StartTimer(30);
   if (BurnFlag == 0) {
     makeInitialSampleBF(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt, TmpEleProjBFCnt,
@@ -1091,17 +1103,18 @@ void VMC_BF_MakeSample(MPI_Comm comm)
     MakeSlaterElmBF_fcmp(TmpEleNum, TmpEleProjBFCnt);
   }
 
-  CalculateMAll_BF_fcmp(TmpEleIdx, qpStart, qpEnd);
-  logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+  logIpOld = BFTransactionRefresh(&transaction,TmpEleProjBFCnt);
   if (! (isfinite(creal(logIpOld)) && isfinite(cimag(logIpOld)))) {
     if (rank == 0) fprintf(stderr, "waring: VMCMakeSample remakeSample logIpOld=%e\n", creal(logIpOld)); //TBC
     makeInitialSampleBF(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt, TmpEleProjBFCnt,
                         qpStart, qpEnd, comm);
-    CalculateMAll_BF_fcmp(TmpEleIdx, qpStart, qpEnd);
-    logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+    logIpOld = BFTransactionRefresh(&transaction,TmpEleProjBFCnt);
     BurnFlag = 0;
   }
   StopTimer(30);
+  transaction.started=1;
+  memcpy(proposalIdx,TmpEleIdx,(size_t)Nsize*sizeof(int));
+  BFTransactionTrace(&transaction,-1,0.0,logIpOld,logIpOld);
 
   nOutStep = (BurnFlag == 0) ? NVMCWarmUp + NVMCSample : NVMCSample + 1;
   nInStep = NVMCInterval * Nsite;
@@ -1139,9 +1152,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         StopTimer(60);
         StartTimer(64);
         if(BFUseCanonicalNonFszPath()) {
-          fullCandidateStatus = RebuildSlaterMAllBF_fcmp(
-              TmpEleIdx, TmpEleNum, projBFCntNew, qpStart, qpEnd,
-              fullCandidateSlater, pfMNew, fullCandidateInv);
+          fullCandidateStatus = BFTransactionFullPf(&transaction,projBFCntNew);
           bfMultiQPSampleAuditAfterCandidate(&sampleAudit);
           if(sampleAudit.injectFailure && !sampleAudit.injected) {
             fullCandidateStatus = BF_FSZ_MALL_LAPACK_FAILURE;
@@ -1157,9 +1168,12 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         //CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
         if(!BFUseCanonicalNonFszPath()) {
-          CalculateNewPfMBF(icount, msaTmp, pfMNew, TmpEleIdx,
-                            qpStart, qpEnd, SlaterElmBF);
+          if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
+          fullCandidateStatus = CalculateNewPfMBFCheckedWorkspace(icount,
+              msaTmp,pfMNew,TmpEleIdx,qpStart,qpEnd,SlaterElmBF,
+              &transaction.stableC);
         }
+        logIpNew = BFTransactionProposal(&transaction,projBFCntNew,fullCandidateStatus);
         if (rebuildChk.enabled) BFSamplerCheckCandidate_fcmp(&rebuildChk, TmpEleIdx, TmpEleNum, projBFCntNew, pfMNew, qpStart, qpEnd);
         BFPfCheckProposal(&pfCheck, BF_PF_CHECK_KIND_HOP, pfMNew, TmpEleIdx, qpStart, qpEnd, rank);
 
@@ -1169,29 +1183,20 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         StartTimer(62);
         /* calculate inner product <phi|L|x> */
         //logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
-        logIpNew = fullCandidateStatus == 0
-            ? CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm)
-            : -INFINITY;
+        /* logIpNew was computed collectively after status agreement. */
         StopTimer(62);
 
         /* Metroplis */
         x = LogProjRatio(projCntNew, TmpEleProjCnt);
-        w = exp(2.0 * (x + (logIpNew - logIpOld)));
-        if (!isfinite(w)) w = -1.0; /* should be rejected */
-
-        if (fullCandidateStatus == 0 && w > genrand_real2()) { /* accept */
+        w = genrand_real2();
+        double complex preparedLog = logIpNew;
+        const int accept = BFTransactionAccept(&transaction,projBFCntNew,icount,msaTmp,
+            x,logIpOld,&preparedLog,w);
+        logIpNew = preparedLog;
+        if (accept) { /* commit the prepared state */
           // UpdateMAll will change SlaterElm, InvM (including PfM)
           StartTimer(63);
-          if(BFUseCanonicalNonFszPath()) {
-            MakeSlaterElmBF_fcmp(TmpEleNum, projBFCntNew);
-            memcpy(PfM, pfMNew,
-                   (size_t)(qpEnd-qpStart)*sizeof(double complex));
-            memcpy(InvM, fullCandidateInv,
-                   fullInvCount*sizeof(double complex));
-          } else {
-            UpdateMAll_BF_fcmp(icount, msaTmp, PfM, TmpEleIdx,
-                               qpStart, qpEnd);
-          }
+          BFTransactionCommit(&transaction,projBFCntNew);
           //          UpdateMAll_real(mi,s,TmpEleIdx,qpStart,qpEnd);
           //            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
           StopTimer(63);
@@ -1271,9 +1276,7 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         StopTimer(65);
         StartTimer(64);
         if(BFUseCanonicalNonFszPath()) {
-          fullCandidateStatus = RebuildSlaterMAllBF_fcmp(
-              TmpEleIdx, TmpEleNum, projBFCntNew, qpStart, qpEnd,
-              fullCandidateSlater, pfMNew, fullCandidateInv);
+          fullCandidateStatus = BFTransactionFullPf(&transaction,projBFCntNew);
           bfMultiQPSampleAuditAfterCandidate(&sampleAudit);
         } else {
           UpdateSlaterElmBF_fcmp(mi, ri, rj, s, TmpEleCfg, TmpEleNum, projBFCntNew, msaTmp, icount,
@@ -1285,35 +1288,31 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         StartTimer(66);
 
         if(!BFUseCanonicalNonFszPath()) {
-          CalculateNewPfMBF(icount, msaTmp, pfMNew, TmpEleIdx, qpStart, qpEnd, SlaterElmBF);
+          if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
+          fullCandidateStatus = CalculateNewPfMBFCheckedWorkspace(icount,
+              msaTmp,pfMNew,TmpEleIdx,qpStart,qpEnd,SlaterElmBF,
+              &transaction.stableC);
         }
+        logIpNew = BFTransactionProposal(&transaction,projBFCntNew,fullCandidateStatus);
         BFPfCheckProposal(&pfCheck, BF_PF_CHECK_KIND_EXCH, pfMNew, TmpEleIdx, qpStart, qpEnd, rank);
         StopTimer(66);
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = fullCandidateStatus == 0
-            ? CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm)
-            : -INFINITY;
+        /* logIpNew was computed collectively after status agreement. */
 
         StopTimer(67);
 
         /* Metroplis */
         x = LogProjRatio(projCntNew, TmpEleProjCnt);
-        w = exp(2.0 * (x + (logIpNew - logIpOld))); //TBC
-        if (!isfinite(w)) w = -1.0; /* should be rejected */
-
-        if (fullCandidateStatus == 0 && w > genrand_real2()) { /* accept */
+        w = genrand_real2();
+        double complex preparedLog = logIpNew;
+        const int accept = BFTransactionAccept(&transaction,projBFCntNew,icount,msaTmp,
+            x,logIpOld,&preparedLog,w);
+        logIpNew = preparedLog;
+        if (accept) { /* commit the prepared state */
           StartTimer(68);
-          if(BFUseCanonicalNonFszPath()) {
-            MakeSlaterElmBF_fcmp(TmpEleNum, projBFCntNew);
-            memcpy(PfM, pfMNew,
-                   (size_t)(qpEnd-qpStart)*sizeof(double complex));
-            memcpy(InvM, fullCandidateInv,
-                   fullInvCount*sizeof(double complex));
-          } else {
-            UpdateMAll_BF_fcmp(icount, msaTmp, PfM, TmpEleIdx, qpStart, qpEnd);
-          }
+          BFTransactionCommit(&transaction,projBFCntNew);
           StopTimer(68);
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
@@ -1346,13 +1345,13 @@ void VMC_BF_MakeSample(MPI_Comm comm)
         StopTimer(33);
       }
 
+      BFTransactionTrace(&transaction,updateType,w,logIpOld,logIpNew);
       if (nAccept > Nsite) {
         StartTimer(34);
         /* recal PfM and InvM */
         //CalculateMAll_real(TmpEleIdx,qpStart,qpEnd);
         //printf("DEBUG: maker3: PfM=%lf\n",creal(PfM[0]));
-        CalculateMAll_BF_fcmp(TmpEleIdx, qpStart, qpEnd);
-        logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+        logIpOld = BFTransactionRefresh(&transaction,TmpEleProjBFCnt);
         StopTimer(34);
         nAccept = 0;
       }
@@ -1370,8 +1369,13 @@ void VMC_BF_MakeSample(MPI_Comm comm)
   BFSamplerRebuildCheckFinish(&rebuildChk, "complex");
   copyToBurnSampleBF(TmpEleIdx);
   BurnFlag = 1;
+  if(rank == 0) fprintf(stderr,
+      "BackFlow recovery: proposal=%lld accept=%lld periodic=%lld zero=%lld\n",
+      transaction.proposalRecovery,transaction.acceptRecovery,
+      transaction.periodicRecovery,transaction.zeroProposal);
   BFPfCheckReport("complex");
   BFPfCheckFree(&pfCheck);
+  BFTransactionFinish(&transaction);
   bfMultiQPSampleAuditFinalize(&sampleAudit, comm, rank);
   bfMultiQPSampleAuditFree(&sampleAudit);
   free(fullCandidateSlater);
@@ -1595,6 +1599,8 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   size_t fullInvCount = 0;
   int fullCandidateStatus = 0;
   BFMultiQPSampleAudit sampleAudit = {0};
+  BFSampleTransaction transaction = {0};
+  int proposalIdx[Nsize];
   double x, w; // TBC x will be complex number
   BFPfCheckState pfCheck;
 
@@ -1612,8 +1618,8 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   }
   BFPfCheckInit(&pfCheck, qpStart, qpEnd, 1);
 
-  if(BFUseCanonicalNonFszPath()) {
-    if(bfMultiQPSampleAuditInit(
+  {
+    if(BFUseCanonicalNonFszPath() && bfMultiQPSampleAuditInit(
            &sampleAudit, 1, qpEnd-qpStart) != 0) {
       if(rank == 0) {
         fprintf(stderr,
@@ -1645,6 +1651,15 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
     }
   }
 
+  transaction.proposalIdx=proposalIdx;
+  transaction.comm=comm; transaction.rank=rank;
+  transaction.real=1; transaction.qpStart=qpStart; transaction.qpEnd=qpEnd;
+  transaction.slater=fullCandidateSlater; transaction.inv=fullCandidateInv;
+  transaction.pf=pfMNewComplex;
+  transaction.slaterCount=fullSlaterCount; transaction.invCount=fullInvCount;
+  transaction.slaterR=fullCandidateSlaterReal; transaction.invR=fullCandidateInvReal; transaction.pfR=pfMNew_real;
+
+  BFTransactionInit(&transaction);
   StartTimer(30);
   if (BurnFlag == 0) {
     makeInitialSampleBF_real(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt, TmpEleProjBFCnt,
@@ -1659,10 +1674,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
     for(tmp_i=0;tmp_i<NQPFull*(2*Nsite)*(2*Nsite);tmp_i++) SlaterElmBF_real[tmp_i]= creal(SlaterElmBF[tmp_i]);
   }
 
-  CalculateMAll_BF_real(TmpEleIdx, qpStart, qpEnd);
-  if(BFUseCanonicalNonFszPath()) CalculateMAll_BF_fcmp(TmpEleIdx, qpStart, qpEnd);
-  // printf("DEBUG: maker1: PfM=%lf\n",creal(PfM[0]));
-  logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+  logIpOld = BFTransactionRefresh(&transaction,TmpEleProjBFCnt);
   if (!isfinite(logIpOld)) {
     if (rank == 0) fprintf(stderr, "waring: VMCMakeSample remakeSample logIpOld=%e\n", creal(logIpOld)); //TBC
     //    makeInitialSample(TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleProjCnt,
@@ -1670,13 +1682,13 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
     makeInitialSampleBF_real(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt, TmpEleProjBFCnt,
                              qpStart, qpEnd, comm);
 
-    CalculateMAll_BF_real(TmpEleIdx, qpStart, qpEnd);
-    if(BFUseCanonicalNonFszPath()) CalculateMAll_BF_fcmp(TmpEleIdx, qpStart, qpEnd);
-    //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
-    logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+    logIpOld = BFTransactionRefresh(&transaction,TmpEleProjBFCnt);
     BurnFlag = 0;
   }
   StopTimer(30);
+  transaction.started=1;
+  memcpy(proposalIdx,TmpEleIdx,(size_t)Nsize*sizeof(int));
+  BFTransactionTrace(&transaction,-1,0.0,logIpOld,logIpOld);
 
   nOutStep = (BurnFlag == 0) ? NVMCWarmUp + NVMCSample : NVMCSample + 1;
   nInStep = NVMCInterval * Nsite;
@@ -1719,11 +1731,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         StopTimer(60);
         StartTimer(64);
         if(BFUseCanonicalNonFszPath()) {
-          fullCandidateStatus = RebuildSlaterMAllBF_real(
-              TmpEleIdx, TmpEleNum, projBFCntNew, qpStart, qpEnd,
-              fullCandidateSlater, pfMNewComplex, fullCandidateInv,
-              fullCandidateSlaterReal, pfMNew_real,
-              fullCandidateInvReal);
+          fullCandidateStatus = BFTransactionFullPf(&transaction,projBFCntNew);
           bfMultiQPSampleAuditAfterCandidate(&sampleAudit);
           if(sampleAudit.injectFailure && !sampleAudit.injected) {
             fullCandidateStatus = BF_FSZ_MALL_LAPACK_FAILURE;
@@ -1747,9 +1755,12 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         //CalculateNewPfM2_real(mi,s,pfMNew_real,TmpEleIdx,qpStart,qpEnd);
         if(!BFUseCanonicalNonFszPath()) {
-          CalculateNewPfMBF_real(icount, msaTmp, pfMNew_real, TmpEleIdx,
-                                 qpStart, qpEnd, SlaterElmBF_real);
+          if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
+          fullCandidateStatus = CalculateNewPfMBF_realCheckedWorkspace(icount,
+              msaTmp,pfMNew_real,TmpEleIdx,qpStart,qpEnd,SlaterElmBF_real,
+              &transaction.stableR);
         }
+        logIpNew = BFTransactionProposal(&transaction,projBFCntNew,fullCandidateStatus);
         if (rebuildChk.enabled) BFSamplerCheckCandidate_real(&rebuildChk, TmpEleIdx, TmpEleNum, projBFCntNew, pfMNew_real, qpStart, qpEnd);
         BFPfCheckProposal_real(&pfCheck, BF_PF_CHECK_KIND_HOP, pfMNew_real, TmpEleIdx, qpStart, qpEnd, rank);
 
@@ -1759,35 +1770,20 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         StartTimer(62);
         /* calculate inner product <phi|L|x> */
         //logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
-        logIpNew = fullCandidateStatus == 0
-            ? CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm)
-            : -INFINITY;
+        /* logIpNew was computed collectively after status agreement. */
         StopTimer(62);
 
         /* Metroplis */
         x = LogProjRatio(projCntNew, TmpEleProjCnt);
-        w = exp(2.0 * (x + (logIpNew - logIpOld)));
-        if (!isfinite(w)) w = -1.0; /* should be rejected */
-
-        if (fullCandidateStatus == 0 && w > genrand_real2()) { /* accept */
+        w = genrand_real2();
+        double complex preparedLog = logIpNew;
+        const int accept = BFTransactionAccept(&transaction,projBFCntNew,icount,msaTmp,
+            x,logIpOld,&preparedLog,w);
+        logIpNew = preparedLog;
+        if (accept) { /* commit the prepared state */
           // UpdateMAll will change SlaterElm, InvM (including PfM)
           StartTimer(63);
-          if(BFUseCanonicalNonFszPath()) {
-            MakeSlaterElmBF_fcmp(TmpEleNum, projBFCntNew);
-            memcpy(SlaterElmBF_real, fullCandidateSlaterReal,
-                   fullSlaterCount*sizeof(double));
-            memcpy(PfM, pfMNewComplex,
-                   (size_t)(qpEnd-qpStart)*sizeof(double complex));
-            memcpy(InvM, fullCandidateInv,
-                   fullInvCount*sizeof(double complex));
-            memcpy(PfM_real, pfMNew_real,
-                   (size_t)(qpEnd-qpStart)*sizeof(double));
-            memcpy(InvM_real, fullCandidateInvReal,
-                   fullInvCount*sizeof(double));
-          } else {
-            UpdateMAll_BF_real(icount, msaTmp, PfM_real, TmpEleIdx,
-                               qpStart, qpEnd);
-          }
+          BFTransactionCommit(&transaction,projBFCntNew);
           //          UpdateMAll_real(mi,s,TmpEleIdx,qpStart,qpEnd);
           //            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
           StopTimer(63);
@@ -1872,11 +1868,7 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         StopTimer(65);
         StartTimer(64);
         if(BFUseCanonicalNonFszPath()) {
-          fullCandidateStatus = RebuildSlaterMAllBF_real(
-              TmpEleIdx, TmpEleNum, projBFCntNew, qpStart, qpEnd,
-              fullCandidateSlater, pfMNewComplex, fullCandidateInv,
-              fullCandidateSlaterReal, pfMNew_real,
-              fullCandidateInvReal);
+          fullCandidateStatus = BFTransactionFullPf(&transaction,projBFCntNew);
           bfMultiQPSampleAuditAfterCandidate(&sampleAudit);
         } else {
 #ifdef MVMC_DEBUG_BF_REAL_UPDATE
@@ -1893,41 +1885,31 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         StartTimer(66);
 
         if(!BFUseCanonicalNonFszPath()) {
-          CalculateNewPfMBF_real(icount, msaTmp, pfMNew_real, TmpEleIdx, qpStart, qpEnd, SlaterElmBF_real);
+          if(qpEnd > qpStart) AddBFProfileCounter(BFPROF_LEGACY_NONFSZ_PROPOSAL,1);
+          fullCandidateStatus = CalculateNewPfMBF_realCheckedWorkspace(icount,
+              msaTmp,pfMNew_real,TmpEleIdx,qpStart,qpEnd,SlaterElmBF_real,
+              &transaction.stableR);
         }
+        logIpNew = BFTransactionProposal(&transaction,projBFCntNew,fullCandidateStatus);
         BFPfCheckProposal_real(&pfCheck, BF_PF_CHECK_KIND_EXCH, pfMNew_real, TmpEleIdx, qpStart, qpEnd, rank);
         StopTimer(66);
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = fullCandidateStatus == 0
-            ? CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm)
-            : -INFINITY;
+        /* logIpNew was computed collectively after status agreement. */
 
         StopTimer(67);
 
         /* Metroplis */
         x = LogProjRatio(projCntNew, TmpEleProjCnt);
-        w = exp(2.0 * (x + (logIpNew - logIpOld))); //TBC
-        if (!isfinite(w)) w = -1.0; /* should be rejected */
-
-        if (fullCandidateStatus == 0 && w > genrand_real2()) { /* accept */
+        w = genrand_real2();
+        double complex preparedLog = logIpNew;
+        const int accept = BFTransactionAccept(&transaction,projBFCntNew,icount,msaTmp,
+            x,logIpOld,&preparedLog,w);
+        logIpNew = preparedLog;
+        if (accept) { /* commit the prepared state */
           StartTimer(68);
-          if(BFUseCanonicalNonFszPath()) {
-            MakeSlaterElmBF_fcmp(TmpEleNum, projBFCntNew);
-            memcpy(SlaterElmBF_real, fullCandidateSlaterReal,
-                   fullSlaterCount*sizeof(double));
-            memcpy(PfM, pfMNewComplex,
-                   (size_t)(qpEnd-qpStart)*sizeof(double complex));
-            memcpy(InvM, fullCandidateInv,
-                   fullInvCount*sizeof(double complex));
-            memcpy(PfM_real, pfMNew_real,
-                   (size_t)(qpEnd-qpStart)*sizeof(double));
-            memcpy(InvM_real, fullCandidateInvReal,
-                   fullInvCount*sizeof(double));
-          } else {
-            UpdateMAll_BF_real(icount, msaTmp, PfM_real, TmpEleIdx, qpStart, qpEnd);
-          }
+          BFTransactionCommit(&transaction,projBFCntNew);
           StopTimer(68);
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
@@ -1966,14 +1948,13 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
         StopTimer(33);
       }
 
+      BFTransactionTrace(&transaction,updateType,w,logIpOld,logIpNew);
       if (nAccept > Nsite) {
         StartTimer(34);
         /* recal PfM and InvM */
         //CalculateMAll_real(TmpEleIdx,qpStart,qpEnd);
         //printf("DEBUG: maker3: PfM=%lf\n",creal(PfM[0]));
-        CalculateMAll_BF_real(TmpEleIdx, qpStart, qpEnd);
-        if(BFUseCanonicalNonFszPath()) CalculateMAll_BF_fcmp(TmpEleIdx, qpStart, qpEnd);
-        logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+        logIpOld = BFTransactionRefresh(&transaction,TmpEleProjBFCnt);
         StopTimer(34);
         nAccept = 0;
       }
@@ -1994,8 +1975,13 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
   BFSamplerRebuildCheckFinish(&rebuildChk, "real");
   copyToBurnSampleBF(TmpEleIdx);
   BurnFlag = 1;
+  if(rank == 0) fprintf(stderr,
+      "BackFlow recovery: proposal=%lld accept=%lld periodic=%lld zero=%lld\n",
+      transaction.proposalRecovery,transaction.acceptRecovery,
+      transaction.periodicRecovery,transaction.zeroProposal);
   BFPfCheckReport("real");
   BFPfCheckFree(&pfCheck);
+  BFTransactionFinish(&transaction);
   bfMultiQPSampleAuditFinalize(&sampleAudit, comm, rank);
   bfMultiQPSampleAuditFree(&sampleAudit);
   free(fullCandidateSlater);
@@ -2275,7 +2261,19 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
   double complex fd;
   double complex analyticAtMax = 0.0 + 0.0*I;
   double complex fdAtMax = 0.0 + 0.0*I;
-  const double h = 1.0e-6;
+  double h = 1.0e-6;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  const char *fdStep=getenv("MVMC_BF_TEST_FD_STEP");
+  if(fdStep && *fdStep) {
+    char *end;
+    errno=0;
+    h=strtod(fdStep,&end);
+    if(errno || *end || !isfinite(h) || h <= 0.0 || h > 0.01) {
+      fprintf(stderr,"Error: invalid MVMC_BF_TEST_FD_STEP.\n");
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    }
+  }
+#endif
   double maxRealDiff = 0.0;
   double maxImagDiff = 0.0;
   double maxDiff = 0.0;
@@ -2558,6 +2556,10 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
       for (idx = 0; idx < Nsite; idx++) {
         fprintf(fp, " %d", RangeIdx[site][idx]);
       }
+      fprintf(fp, "\nseam_phase_%d", site);
+      for (idx = 0; idx < Nsite; idx++) {
+        fprintf(fp, " %d", BFSeamPhase[site][idx]);
+      }
       fprintf(fp, "\n");
     }
     for (int rangeIndex = 0; rangeIndex < NrangeIdx; rangeIndex++) {
@@ -2567,6 +2569,30 @@ static void dumpBFProjBFFiniteDiffCheck(const char *path, int *eleIdx,
       }
       fprintf(fp, "\n");
     }
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    if(getenv("MVMC_BF_TEST_COEFFICIENT_DUMP")) {
+      const size_t total=2*(size_t)NSlater+4*(size_t)NProjBF;
+      double complex *data=calloc(total,sizeof(*data));
+      if(!data) MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+      double complex *parts[6]={data,data+NSlater,data+2*(size_t)NSlater,
+        data+2*(size_t)NSlater+NProjBF,data+2*(size_t)NSlater+2*(size_t)NProjBF,
+        data+2*(size_t)NSlater+3*(size_t)NProjBF};
+      const char *names[6]={"orbital_a","orbital_b","proj_real_a","proj_imag_a",
+                             "proj_real_b","proj_imag_b"};
+      for(int mp=0;mp<NMPTrans;mp++) for(int ri=0;ri<Nsite;ri++) for(int rj=0;rj<Nsite;rj++) {
+        memset(data,0,total*sizeof(*data));
+        BFCanonicalDirectedDerivativeCoefficients(ri,rj,QPTrans[mp],QPTransSgn[mp],
+            eleProjBFCnt,parts[0],parts[1],parts[2],parts[3],parts[4],parts[5]);
+        for(int part=0;part<6;part++) {
+          fprintf(fp,"coef_%s_%d_%d_%d",names[part],mp,ri,rj);
+          for(int k=0;k<(part<2 ? NSlater : NProjBF);k++)
+            fprintf(fp," %.17e %.17e",creal(parts[part][k]),cimag(parts[part][k]));
+          fprintf(fp,"\n");
+        }
+      }
+      free(data);
+    }
+#endif
     for (int spinQp = 0; spinQp < NSPGaussLeg; spinQp++) {
       fprintf(fp, "spgl_%d %.17e %.17e %.17e %.17e %.17e %.17e\n",
               spinQp,
@@ -4383,6 +4409,8 @@ cleanup:
   return status;
 }
 
+#include "backflow_replay.c"
+
 void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   int *eleIdx, *eleCfg, *eleNum, *eleProjCnt, *eleProjBFCnt;
   double complex e, ip; //db is double?
@@ -4430,6 +4458,8 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm_parent, &parentSize);
   MPI_Comm_rank(comm_parent, &parentRank);
+
+  const int replay=BFReplayMeasurementConfigurations(comm_parent);
 
   if(BFNBodyOracleOpen(&nbodyOracle, parentRank, parentSize, 0) != 0) {
     fprintf(stderr,
@@ -4604,6 +4634,14 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
               "Error: BackFlow N-body configuration oracle failed on "
               "parent rank %d sample %d.\n", parentRank, sample);
       MPI_Abort(comm_parent, EXIT_FAILURE);
+    }
+
+    if(replay) {
+      if(!isfinite(creal(ip)) || !isfinite(cimag(ip)) || cabs(ip) == 0.0) {
+        fprintf(stderr,"Error: nonfinite or zero BackFlow replay amplitude at sample %d.\n",sample);
+        MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+      }
+      logSqPfFullSlater[sample]=2.0*(LogProjVal(eleProjCnt)+log(cabs(ip)));
     }
 
     LogProjVal(eleProjCnt);

@@ -2,6 +2,7 @@
 #define _LOCGRN_REAL
 
 #include <complex.h>
+#include "backflow_stable.h"
 
 double GreenFunc1_real(const int ri, const int rj, const int s, const double ip,
                   int *eleIdx, const int *eleCfg, int *eleNum, const int *eleProjCnt,
@@ -28,13 +29,13 @@ int GreenFunc1BF_real_prepare(const int ri, const int rj, const int s, double *g
 void GreenFunc1BF_real_finish_batch(const int batchSize, const double ip,
                     const double *projRatio, const int *icount, const int *msaTmp,
                     const double *vecM, double *greenValue, double *pfMNew,
-                    double *vecStack, double *wStack);
+                    const int *eleIdx, BFStableWorkspaceReal *stable);
 int GreenFunc2BF_real_ws(const int ri, const int rj, const int rk, const int rl,
                     const int s, const int t, const double ip,
                     double *vecTmp0, double *vecTmp1,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,
                     int *projCntNew, const int *eleProjBFCnt,int *projBFCntNew, double *buffer,
-                    double *value);
+                    double *value, BFStableWorkspaceReal *stable);
 double GreenFunc2BF_real(const int ri, const int rj, const int rk, const int rl,
                     const int s, const int t, const double ip, double *bufM,
                     int *eleIdx, int *eleCfg, int *eleNum, const int *eleProjCnt,

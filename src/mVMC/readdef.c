@@ -1885,6 +1885,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                                    "PosBF");
       sizeInfo |= CheckedCountTerm(&totalInt, Nsite, Nsite, 1,
                                    "RangeIdx");
+      sizeInfo |= CheckedCountTerm(&totalInt, Nsite, Nsite, 1,
+                                   "BFSeamPhase");
     }
 
     sizeInfo |= CheckedCountTerm(&totalDouble, NCoulombIntra, 1, 1,
@@ -2281,6 +2283,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
     }
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
+
+  /* Only rank 0 owns the definition payload until SafeMpiBcastInt below.
+   * The existing info abort above must precede this table traversal. */
+  if (rank == 0 && info == 0) info = BFValidateSeamTransforms();
+#ifdef _mpi_use
+  MPI_Bcast(&info, 1, MPI_INT, 0, comm);
+#endif
+  if (info != 0) MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
   if (FlagLsExplicit) {
     int lsInfo = 0;

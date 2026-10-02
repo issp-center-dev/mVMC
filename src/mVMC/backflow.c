@@ -11,10 +11,15 @@ the Free Software Foundation, either version 3 of the License, or
  * Backflow plumbing and validation
  *-------------------------------------------------------------*/
 
+#include <ctype.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _mpi_use
+#include <mpi.h>
+#endif
 #include "./include/backflow.h"
 #include "./include/global.h"
 
@@ -262,16 +267,26 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
   return 0;
 }
 
-static int BFComputeCanonicalNonFszPath(void) {
+static int BFComputeCanonicalNonFszPath(const char **reason) {
   int site;
-  if (NMPTrans > 1 || APFlag != 0) return 1;
+  *reason = "multiple_transformations";
+  if (NMPTrans > 1) return 1;
+  *reason = "missing_transformation";
   if (NMPTrans != 1 || Nsite <= 0 || QPTrans == NULL ||
       QPTransSgn == NULL || QPTrans[0] == NULL || QPTransSgn[0] == NULL) {
     return 1;
   }
   for (site = 0; site < Nsite; site++) {
-    if (QPTrans[0][site] != site || QPTransSgn[0][site] != 1) return 1;
+    if (QPTrans[0][site] != site) {
+      *reason = "nonidentity_transformation";
+      return 1;
+    }
+    if (QPTransSgn[0][site] != 1) {
+      *reason = "nonpositive_transformation_sign";
+      return 1;
+    }
   }
+  *reason = "identity_all_positive";
   return 0;
 }
 
@@ -325,12 +340,46 @@ int BFValidateFszDefinitionDetails(void) {
   return 0;
 }
 
+/* Read one complete physical line.  Integer conversion must not consume the
+ * next row or accept a numeric prefix such as "1.0" or "1junk". */
+static int BFReadRangeRow(FILE *fp, int values[4], int *columns) {
+  char line[256], *p, *end;
+  size_t used = sizeof(line);
+  int count = 0;
+  /* The sentinel also lets us reject embedded NUL bytes, including at EOF. */
+  memset(line, 0xff, sizeof(line));
+  if (fgets(line, sizeof(line), fp) == NULL) return 1;
+  while (used > 0 && (unsigned char)line[used - 1] == 0xff) used--;
+  if (used == 0 || line[used - 1] != '\0' ||
+      memchr(line, '\0', used - 1) != NULL) return 1;
+  if (strchr(line, '\n') == NULL && !feof(fp)) {
+    if (fgetc(fp) != EOF || ferror(fp)) return 1; /* overlong line */
+  }
+  p = line;
+  while (*p != '\0') {
+    long value;
+    while (isspace((unsigned char)*p)) p++;
+    if (*p == '\0') break;
+    if (count == 4) return 1;
+    errno = 0;
+    value = strtol(p, &end, 10);
+    if (p == end || errno == ERANGE || value < INT_MIN || value > INT_MAX ||
+        (*end != '\0' && !isspace((unsigned char)*end))) return 1;
+    values[count++] = (int)value;
+    p = end;
+  }
+  if (count != 3 && count != 4) return 1;
+  *columns = count;
+  return 0;
+}
+
 int BFReadRange(FILE *fp, const char *defname) {
   int i;
   int j;
   int n;
   int info = 0;
   int shellMax;
+  int columns = 0;
   int *seenCount = NULL;
   int *seenPair = NULL;
   long long row;
@@ -338,7 +387,7 @@ int BFReadRange(FILE *fp, const char *defname) {
 
   if (Nrange <= 0) return 0;
   if (BFSkipBodyHeader(fp, defname) != 0) return 1;
-  if (PosBF == NULL || RangeIdx == NULL) {
+  if (Nsite <= 0 || PosBF == NULL || RangeIdx == NULL || BFSeamPhase == NULL) {
     fprintf(stderr, "Error in %s: BackFlow range tables are not allocated.\n", defname);
     return 1;
   }
@@ -362,13 +411,37 @@ int BFReadRange(FILE *fp, const char *defname) {
     for (j = 0; j < Nrange; j++) PosBF[i][j] = -1;
   }
   for (i = 0; i < Nsite; i++) {
-    for (j = 0; j < Nsite; j++) RangeIdx[i][j] = -1;
+    for (j = 0; j < Nsite; j++) {
+      RangeIdx[i][j] = -1;
+      BFSeamPhase[i][j] = 0;
+    }
   }
 
   for (row = 0; row < expectedRows; row++) {
-    if (fscanf(fp, "%d %d %d", &i, &j, &n) != 3) {
-      fprintf(stderr, "Error in %s: failed to read BFRange row %lld of %lld.\n",
+    int values[4], rowColumns, phase;
+    if (BFReadRangeRow(fp, values, &rowColumns) != 0) {
+      fprintf(stderr, "Error in %s: failed to read BFRange row %lld of %lld (expected 3 or 4 integer columns on one line).\n",
               defname, row + 1, expectedRows);
+      info = 1;
+      goto cleanup;
+    }
+    if (columns != 0 && rowColumns != columns) {
+      fprintf(stderr, "Error in %s: mixed BFRange column counts at row %lld.\n", defname, row + 1);
+      info = 1;
+      goto cleanup;
+    }
+    columns = rowColumns;
+    if (APFlag && columns != 4) {
+      fprintf(stderr, "Error in %s: AP BackFlow requires a fourth BFRange seam-phase column (+1 or -1).\n", defname);
+      info = 1;
+      goto cleanup;
+    }
+    i = values[0]; j = values[1]; n = values[2];
+    phase = columns == 4 ? values[3] : 1;
+    if ((phase != 1 && phase != -1) || (!APFlag && phase != 1) ||
+        (i == j && phase != 1)) {
+      fprintf(stderr, "Error in %s: invalid BFRange seam phase at row %lld (expected +/-1; self and PBC require +1).\n",
+              defname, row + 1);
       info = 1;
       goto cleanup;
     }
@@ -404,8 +477,15 @@ int BFReadRange(FILE *fp, const char *defname) {
 
     PosBF[i][seenCount[i]] = j;
     RangeIdx[i][j] = n;
+    BFSeamPhase[i][j] = phase;
     seenCount[i]++;
     seenPair[i * Nsite + j] = 1;
+  }
+
+  if (fgetc(fp) != EOF || ferror(fp)) {
+    fprintf(stderr, "Error in %s: extra data after the last BFRange row.\n", defname);
+    info = 1;
+    goto cleanup;
   }
 
   for (i = 0; i < Nsite; i++) {
@@ -436,6 +516,11 @@ int BFReadRange(FILE *fp, const char *defname) {
         info = 1;
         goto cleanup;
       }
+      if (BFSeamPhase[i][site] != BFSeamPhase[site][i]) {
+        fprintf(stderr, "Error in %s: BFRange seam phases must be symmetric (sites %d, %d).\n", defname, i, site);
+        info = 1;
+        goto cleanup;
+      }
     }
   }
 
@@ -443,6 +528,51 @@ cleanup:
   free(seenCount);
   free(seenPair);
   return info;
+}
+
+/* Rank 0 only, after all definition readers have succeeded and implicit
+ * OptTrans has been initialized.  Unused QPTrans rows do not constrain BF. */
+int BFValidateSeamTransforms(void) {
+  int mp, opt, i, r;
+  int optCount;
+  if (NBackFlowIdx <= 0) return 0;
+  optCount = iFlgOrbitalGeneral ? NQPOptTrans : 1;
+  if (Nsite <= 0 || NMPTrans <= 0 || NMPTrans > NQPTrans || optCount <= 0 ||
+      PosBF == NULL || RangeIdx == NULL || BFSeamPhase == NULL ||
+      QPTrans == NULL || QPTransSgn == NULL ||
+      (iFlgOrbitalGeneral && (QPOptTrans == NULL || QPOptTransSgn == NULL))) {
+    fprintf(stderr, "Error: incomplete BackFlow seam transformation tables.\n");
+    return 1;
+  }
+  for (opt = 0; opt < optCount; opt++) {
+    for (mp = 0; mp < NMPTrans; mp++) {
+      for (i = 0; i < Nsite; i++) {
+        const int oi = iFlgOrbitalGeneral ? QPOptTrans[opt][i] : i;
+        int ui, si;
+        if (BFCheckSiteIndex(oi)) return 1; /* also checked by the input reader */
+        ui = QPTrans[mp][oi];
+        si = QPTransSgn[mp][oi] * (iFlgOrbitalGeneral ? QPOptTransSgn[opt][i] : 1);
+        if (BFCheckSiteIndex(ui)) return 1;
+        for (r = 0; r < Nrange; r++) {
+          const int k = PosBF[i][r];
+          int ok, uk, sk;
+          if (BFCheckSiteIndex(k)) return 1;
+          ok = iFlgOrbitalGeneral ? QPOptTrans[opt][k] : k;
+          if (BFCheckSiteIndex(ok)) return 1;
+          uk = QPTrans[mp][ok];
+          sk = QPTransSgn[mp][ok] * (iFlgOrbitalGeneral ? QPOptTransSgn[opt][k] : 1);
+          if (BFCheckSiteIndex(uk)) return 1;
+          if (RangeIdx[ui][uk] != RangeIdx[i][k] || BFSeamPhase[ui][uk] == 0 ||
+              BFSeamPhase[ui][uk] != si * sk * BFSeamPhase[i][k]) {
+            fprintf(stderr, "Error: BackFlow seam transform mismatch (mp=%d opt=%d bond=%d,%d mapped=%d,%d): range, shell and phase must be preserved.\n",
+                    mp, opt, i, k, ui, uk);
+            return 1;
+          }
+        }
+      }
+    }
+  }
+  return 0;
 }
 
 static int BFReadOptFlags(FILE *fp, int *optFlag, int *countIdx, const char *defname) {
@@ -645,6 +775,7 @@ int BFDefIntCount(void) {
   if (BFCheckedMulLL(Nsite, Nrange, "PosBF", &posCount) != 0) exit(EXIT_FAILURE);
   if (BFCheckedMulLL(Nsite, Nsite, "RangeIdx", &rangeCount) != 0) exit(EXIT_FAILURE);
   if (BFCheckedAddLL(posCount, rangeCount, "BackFlow definition table size", &total) != 0) exit(EXIT_FAILURE);
+  if (BFCheckedAddLL(total, rangeCount, "BFSeamPhase definition table size", &total) != 0) exit(EXIT_FAILURE);
   if (BFIntFromLL(total, "BackFlow definition table size", &count) != 0) exit(EXIT_FAILURE);
   return count;
 }
@@ -663,7 +794,13 @@ int BFWorkIntCount(void) {
 void BFBindDefTables(int **pInt) {
   int i;
   int *cursor = *pInt;
-  if (NBackFlowIdx <= 0) return;
+  if (NBackFlowIdx <= 0) {
+    PosBF = NULL;
+    RangeIdx = NULL;
+    BFSeamPhase = NULL;
+    BackFlowIdx = NULL;
+    return;
+  }
   BackFlowIdx = NULL;
 
   PosBF = (int **)BFMallocArray((size_t)Nsite, sizeof(int *), "PosBF");
@@ -676,15 +813,23 @@ void BFBindDefTables(int **pInt) {
     RangeIdx[i] = cursor;
     cursor += Nsite;
   }
+  BFSeamPhase = (int **)BFMallocArray((size_t)Nsite, sizeof(int *), "BFSeamPhase");
+  for (i = 0; i < Nsite; i++) {
+    BFSeamPhase[i] = cursor;
+    memset(cursor, 0, (size_t)Nsite * sizeof(int));
+    cursor += Nsite;
+  }
   *pInt = cursor;
 }
 
 void BFFreeDefTables(void) {
   free(PosBF);
   free(RangeIdx);
+  free(BFSeamPhase);
   free(BackFlowIdx);
   PosBF = NULL;
   RangeIdx = NULL;
+  BFSeamPhase = NULL;
   BackFlowIdx = NULL;
 }
 
@@ -759,7 +904,44 @@ void BFAllocRuntime(void) {
     BFRealEta = 1.0;
     return;
   }
-  BFCanonicalNonFszPath = BFComputeCanonicalNonFszPath();
+  {
+    int rank=0, forceCanonical=0, invalid=0;
+    const char *reason;
+#ifdef _mpi_use
+    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+#endif
+    if(rank == 0) {
+      const char *raw=getenv("MVMC_BF_FORCE_CANONICAL_NONFSZ");
+      if(raw && *raw) {
+        if(strcmp(raw,"1")==0) forceCanonical=1;
+        else if(strcmp(raw,"0")!=0) invalid=1;
+      }
+    }
+#ifdef _mpi_use
+    MPI_Bcast(&forceCanonical,1,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(&invalid,1,MPI_INT,0,MPI_COMM_WORLD);
+#endif
+    if(invalid) {
+      if(rank == 0) fprintf(stderr,"Error: BackFlow path flags require 0 or 1.\n");
+#ifdef _mpi_use
+      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+#else
+      exit(EXIT_FAILURE);
+#endif
+    }
+    /* Boundary phases are carried by the kernels; only the effective
+     * transformation determines whether local Slater row updates are valid. */
+    BFCanonicalNonFszPath = BFComputeCanonicalNonFszPath(&reason);
+    if(forceCanonical) {
+      BFCanonicalNonFszPath = 1;
+      reason = "forced_canonical";
+    }
+    if(rank == 0 && iFlgOrbitalGeneral == 0) {
+      fprintf(stdout,"BackFlow non-FSZ path: %s (reason=%s, force_canonical=%d, APFlag=%d)\n",
+          BFCanonicalNonFszPath ? "canonical" : "legacy",reason,forceCanonical,APFlag);
+      fflush(stdout);
+    }
+  }
 
   EleProjBFCnt = (int *)BFMallocArray((size_t)NVMCSample * (size_t)BFWorkIntCount(),
                                       sizeof(int), "EleProjBFCnt");
