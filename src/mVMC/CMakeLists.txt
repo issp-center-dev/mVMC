@@ -26,7 +26,7 @@ set(SOURCES_vmcmain
         power_lanczos_independent.c
         power_lanczos_independent_driver.c
         physcal_lanczos.c physcal_lanczos2.c
-        lanczos2_contract.c splitloop.c
+        lanczos2_contract.c splitloop.c near_zero_guide.c
  )
 
 set(SOURCES_sfmt
