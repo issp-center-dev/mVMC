@@ -44,6 +44,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "lslocgrn_heisenberg.c"
 #include "calgrn.c"
 #include "physcal_lanczos2.h"
+#include "near_zero_guide.h"
 
 //#define _DEBUG_VMCCAL
 //#define _DEBUG_VMCCAL_DETAIL
@@ -254,6 +255,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   double x,w;
   double sqrtw;
   double complex we;
+  double guideRatio = 0.0;
+  int guideFloored = 0;
 
   const int qpStart=0;
   const int qpEnd=NQPFull;
@@ -403,6 +406,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     eleProjCnt = NProj > 0 ? EleProjCnt + sample*NProj : NULL;
     rbmCnt = FlagRBM ? RBMCnt + sample*nSizeRBM : NULL;
 
+    if(FlagLanczosGuide) NearZeroGuideStat[NZG_SAMPLES] += 1.0;
+
     StartTimer(40);
 #ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: CalculateMAll \n",sample);
@@ -434,7 +439,26 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
 #endif
     x = LogProjVal(eleProjCnt);
     /* calculate reweight */
-    if (reweight==1){
+    if(FlagLanczosGuide) {
+      NearZeroGuide guide;
+      if(NearZeroGuideEvaluate(QPFullWeight, PfM_real, qpStart, qpEnd,
+                               LanczosGuideSqrtEps, MPI_COMM_SELF,
+                               &guide) != 0) {
+        fprintf(stderr,
+                "Error: near-zero guide evaluation failed in VMCMainCal.\n");
+        MPI_Abort(comm_parent, EXIT_FAILURE);
+      }
+      NearZeroGuideStat[NZG_FLOORED] += (double)guide.floored;
+      if(guide.abs_ip == 0.0) {
+        NearZeroGuideStat[NZG_EXACT_ZERO] += 1.0;
+        NearZeroGuideStat[NZG_MIN_W] = 0.0;
+        continue;
+      }
+      w = NearZeroGuideWeight(guide.log_abs_ip, x,
+                              logSqPfFullSlater[sample]);
+      guideRatio = guide.abs_sum / guide.abs_ip;
+      guideFloored = guide.floored;
+    } else if (reweight==1){
        w = 2.0*(log(cabs(ip))+x);
        if (FlagRBM) {
          w += 2.0*creal(LogWeightRBM(rbmCnt));
@@ -842,6 +866,7 @@ void clearPhysQuantity(){
   double  *vec_real;
 //[s] MERGE BY TM
   Wc = Etot = Etot2 = Sztot=Sztot2 =0.0;//fsz
+  if(FlagLanczosGuide) NearZeroGuideStatReset(NearZeroGuideStat);
   Ntot = Ntot2 = 0.0;
   //Wc = Etot = Etot2 = 0.0;
   Dbtot = Dbtot2 = 0.0;

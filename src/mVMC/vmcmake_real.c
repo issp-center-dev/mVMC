@@ -37,11 +37,31 @@ which follows "The BSD 3-Clause License".
 #include "splitloop.h"
 #include "vmcmake.h"
 #include "rbm.h"
+#include "near_zero_guide.h"
 
 #ifdef _pf_block_update
 // Block-update extension.
 #include "../pfupdates/pf_interface.h"
 #endif
+
+/* Log of the square-root sampling weight without the correlation factor:
+ * log|<phi|L|x>| in the legacy path, or
+ * log max(|P|, sqrt(eps) A) with the near-zero guide. */
+static double logSamplingWeightPf_real(double *const pfM, const int qpStart,
+                                       const int qpEnd, MPI_Comm comm) {
+  if (FlagLanczosGuide) {
+    NearZeroGuide guide;
+    if (NearZeroGuideEvaluate(QPFullWeight, pfM, qpStart, qpEnd,
+                              LanczosGuideSqrtEps, comm, &guide) != 0) {
+      fprintf(stderr,
+              "Error: near-zero guide evaluation failed in "
+              "VMCMakeSample_real.\n");
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    return guide.log_guide;
+  }
+  return CalculateLogIP_real(pfM, qpStart, qpEnd, comm);
+}
 
 void VMCMakeSample_real(MPI_Comm comm) {
   int outStep, nOutStep;
@@ -107,7 +127,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
   CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
 #endif
   // printf("DEBUG: maker1: PfM=%lf\n",creal(PfM[0]));
-  logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+  logIpOld = logSamplingWeightPf_real(PfM_real, qpStart, qpEnd, comm);
 
   if (!isfinite(logIpOld)) {
     if (rank == 0) fprintf(stderr, "waring: VMCMakeSample remakeSample logIpOld=%e\n", creal(logIpOld)); //TBC
@@ -128,7 +148,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
     CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
 #endif
     //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
-    logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+    logIpOld = logSamplingWeightPf_real(PfM_real, qpStart, qpEnd, comm);
     BurnFlag = 0;
   }
   StopTimer(30);
@@ -186,7 +206,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
         StartTimer(62);
         /* calculate inner product <phi|L|x> */
         //logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
-        logIpNew = CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm);
+        logIpNew = logSamplingWeightPf_real(pfMNew_real, qpStart, qpEnd, comm);
         StopTimer(62);
 
         /* Metroplis */
@@ -274,7 +294,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm);
+        logIpNew = logSamplingWeightPf_real(pfMNew_real, qpStart, qpEnd, comm);
 
         StopTimer(67);
 
@@ -353,7 +373,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm);
+        logIpNew = logSamplingWeightPf_real(pfMNew_real, qpStart, qpEnd, comm);
         StopTimer(67);
 
         /* Metropolis */
@@ -404,7 +424,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
         CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
 #endif
         //printf("DEBUG: maker3: PfM=%lf\n",creal(PfM[0]));
-        logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+        logIpOld = logSamplingWeightPf_real(PfM_real, qpStart, qpEnd, comm);
         StopTimer(34);
         nAccept = 0;
       }

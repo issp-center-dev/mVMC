@@ -90,6 +90,18 @@ foreach(mode invalid_negative invalid_estimator)
     set_tests_properties(Lanczos_NearZeroGuide_${mode} PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
 endforeach()
+foreach(mode eps1e-6 eps1)
+    add_test(NAME Lanczos_NearZeroGuide_${mode}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos_guide.py ${mode})
+    set_tests_properties(Lanczos_NearZeroGuide_${mode} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+endforeach()
+if(MPI_FOUND)
+    add_test(NAME Lanczos_NearZeroGuide_eps1e-6_mpi
+        COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos_guide.py eps1e-6)
+    set_tests_properties(Lanczos_NearZeroGuide_eps1e-6_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+endif()
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_classic_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_production_anchor.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_profile.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)

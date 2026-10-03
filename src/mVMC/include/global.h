@@ -48,6 +48,7 @@ int FlagLsExplicit; /* independent H' supplied by LsTrans/LsInterAll */
 double DLanczosGuideEps; /* 0: off; >0: q=|J|^2 max(P^2, eps A^2) */
 int FlagLanczosGuide; /* 1 when the near-zero guide input contract passed */
 double LanczosGuideSqrtEps; /* sqrt(DLanczosGuideEps) */
+double NearZeroGuideStat[8]; /* near_zero_guide.h NZG_* per-bin statistics */
 
 int NStoreO; /* choice of store O: 0-> normal other-> store  */
 int NSRCG; /* choice of solver for Sx=g: 0-> (Sca)LAPACK other-> CG  */
