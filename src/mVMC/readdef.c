@@ -1195,6 +1195,24 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
               bufInt[IdxLanczosEstimatorMode]);
       info = 1;
     }
+    if (!(bufDouble[IdxLanczosGuideEps] >= 0.0) ||
+        !isfinite(bufDouble[IdxLanczosGuideEps])) {
+      fprintf(stderr,
+              "Error: DLanczosGuideEps must be a finite non-negative "
+              "number (got %g).\n",
+              bufDouble[IdxLanczosGuideEps]);
+      info = 1;
+    }
+    if (bufDouble[IdxLanczosGuideEps] > 0.0 &&
+        (bufInt[IdxVMCCalcMode] != 1 || bufInt[IdxLanczosMode] != 1 ||
+         bufInt[IdxLanczosStep] != 1 ||
+         bufInt[IdxLanczosEstimatorMode] != 0)) {
+      fprintf(stderr,
+              "Error: DLanczosGuideEps > 0 requires NVMCCalMode=1, "
+              "NLanczosMode=1, NLanczosStep=1 and "
+              "NLanczosEstimatorMode=0.\n");
+      info = 1;
+    }
     if (bufInt[IdxLanczosMode] > 0 &&
         bufInt[IdxLanczosEstimatorMode] == 1 &&
         bufInt[IdxLanczosMode] != 1) {
@@ -1479,6 +1497,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   DSROptStaDel = bufDouble[IdxSROptStaDel];
   DSROptStepDt = bufDouble[IdxSROptStepDt];
   DSROptCGTol = bufDouble[IdxSROptCGTol];
+  DLanczosGuideEps = bufDouble[IdxLanczosGuideEps];
   TwoSz = bufInt[Idx2Sz];
 
   Nx = bufInt[IdxNx];
@@ -1752,6 +1771,30 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     MPI_Bcast(&independentInfo, 1, MPI_INT, 0, comm);
 #endif
     if (independentInfo != 0) MPI_Abort(comm, EXIT_FAILURE);
+  }
+
+  FlagLanczosGuide = 0;
+  LanczosGuideSqrtEps = 0.0;
+  if (DLanczosGuideEps > 0.0) {
+    int guideInfo = 0;
+    if (rank == 0 &&
+        (NVMCCalMode != 1 || NLanczosMode != 1 || NLanczosStep != 1 ||
+         NLanczosEstimatorMode != 0 || AllComplexFlag != 0 ||
+         iFlgOrbitalGeneral != 0 || NProjBF != 0 || FlagRBM != 0 ||
+         reweight != 0 || FlagGrandCanonical != 0)) {
+      fprintf(stderr,
+              "Error: DLanczosGuideEps > 0 requires NVMCCalMode=1, "
+              "NLanczosMode=1, NLanczosStep=1, NLanczosEstimatorMode=0, "
+              "real variational parameters, and no BackFlow, RBM, "
+              "reweight or grand-canonical sampling.\n");
+      guideInfo = 1;
+    }
+#ifdef _mpi_use
+    MPI_Bcast(&guideInfo, 1, MPI_INT, 0, comm);
+#endif
+    if (guideInfo != 0) MPI_Abort(comm, EXIT_FAILURE);
+    FlagLanczosGuide = 1;
+    LanczosGuideSqrtEps = sqrt(DLanczosGuideEps);
   }
 
   {
@@ -3144,6 +3187,7 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufDouble[IdxSROptStaDel] = 0.02;
   bufDouble[IdxSROptStepDt] = 0.02;
   bufDouble[IdxSROptCGTol] = 1.0e-10;
+  bufDouble[IdxLanczosGuideEps] = 0.0;
   NStoreO = 1;
   NSRCG = 0;
   NSRCGFallback = 0;
@@ -3272,6 +3316,8 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               bufInt[IdxSROptItrStep] = (int) dtmp;
             } else if (CheckWords(ctmp, "NSROptItrSmp") == 0) {
               bufInt[IdxSROptItrSmp] = (int) dtmp;
+            } else if (CheckWords(ctmp, "DLanczosGuideEps") == 0) {
+              bufDouble[IdxLanczosGuideEps] = (double) dtmp;
             } else if (CheckWords(ctmp, "DSROptRedCut") == 0) {
               bufDouble[IdxSROptRedCut] = (double) dtmp;
             } else if (CheckWords(ctmp, "DSROptStaDel") == 0) {
