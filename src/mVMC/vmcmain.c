@@ -31,6 +31,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "physcal_lanczos2.h"
 #include "power_lanczos_stabilized.h"
 #include "power_lanczos_independent.h"
+#include "near_zero_guide.h"
 
 // #define _DEBUG
 // #define _DEBUG_DUMP_SROPTO_STORE
@@ -974,6 +975,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     StartTimer(21);
 
     WeightAverageWE(comm_parent);
+    if(FlagLanczosGuide) WeightAverageNearZeroGuide(comm_parent);
     WeightAverageGreenFunc(comm_parent);
     ReduceCounter(comm_child2);
 
@@ -1085,6 +1087,28 @@ void outputData() {
 
     if (NLanczosMode > 0 && NLanczosEstimatorMode == 0) {
       if (NLanczosStep == 1) {
+      if (FlagLanczosGuide) {
+        fprintf(FileNZGuide,
+                "% .18e % .0f % .0f % .0f % .0f % .18e % .18e % .18e % .18e\n",
+                DLanczosGuideEps,
+                NearZeroGuideStat[NZG_SAMPLES],
+                NearZeroGuideStat[NZG_FLOORED],
+                NearZeroGuideStat[NZG_EXACT_ZERO],
+                NearZeroGuideStat[NZG_NUMERIC_SKIPPED],
+                NearZeroGuideStat[NZG_SUM_W],
+                NearZeroGuideStat[NZG_SUM_W2],
+                NearZeroGuideStat[NZG_MIN_W],
+                NearZeroGuideStat[NZG_MAX_RATIO]);
+        if(NearZeroGuideStat[NZG_EXACT_ZERO] != 0.0 ||
+           NearZeroGuideStat[NZG_NUMERIC_SKIPPED] != 0.0) {
+          fprintf(stderr,
+                  "warning: near-zero guide bin has %.0f exact-zero and "
+                  "%.0f numerical-skip samples; do not use its Lanczos "
+                  "moments\n",
+                  NearZeroGuideStat[NZG_EXACT_ZERO],
+                  NearZeroGuideStat[NZG_NUMERIC_SKIPPED]);
+        }
+      }
       if (AllComplexFlag == 0) { //real
         lanczosStatus = PhysCalLanczos_real(
           QQQQ_real, QCisAjsQ_real, QCisAjsCktAltQ_real, QCisAjsCktAltQDC_real,

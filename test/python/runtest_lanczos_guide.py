@@ -69,7 +69,35 @@ def lanczos_energies(workdir):
 
 
 def check_stats(workdir, mode):
-    del workdir, mode
+    eps = float(MODES[mode]["DLanczosGuideEps"])
+    for idx in range(1, NBIN + 1):
+        path = os.path.join(
+            workdir, "output", "zvo_nzguide_%03d.dat" % idx)
+        if not os.path.exists(path):
+            print("missing %s" % path)
+            return 1
+        row = np.loadtxt(path, dtype="float").flatten()
+        if row.shape != (9,):
+            print("unexpected column count in %s: %s" % (path, row))
+            return 1
+        (eps_file, n, floored, exact_zero, numeric_skip, sum_w, sum_w2,
+         min_w, max_ratio) = row
+        ok = (
+            abs(eps_file - eps) <= 1e-12 * eps
+            and n > 0
+            and 0 <= floored <= n
+            and exact_zero == 0
+            and numeric_skip == 0
+            and 0 < sum_w <= n * (1 + 1e-12)
+            and sum_w2 <= sum_w * (1 + 1e-12)
+            and 0 < min_w <= 1 + 1e-12
+            and max_ratio >= 1 - 1e-12
+        )
+        if mode == "eps1":
+            ok = ok and floored > 0
+        if not ok:
+            print("bad guide statistics in %s: %s" % (path, row))
+            return 1
     return 0
 
 

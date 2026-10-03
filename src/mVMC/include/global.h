@@ -409,6 +409,7 @@ FILE *FileTwist;
 FILE *FileNBodyG;
 FILE *FileAnomalousG;
 FILE *FileLS;
+FILE *FileNZGuide; /* xxx_nzguide_yyy.dat: one line of guide statistics */
 FILE *FileLSQQQQ;
 FILE *FileLSQCisAjsQ;
 FILE *FileLSQCisAjsCktAltQ;
