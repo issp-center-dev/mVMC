@@ -1498,30 +1498,6 @@ void saveEleConfigBF(const int sample, const double logIp,
 
   x = LogProjVal(eleProjCnt);
   logSqPfFullSlater[sample] = 2.0 * (x + logIp);
-
-  /*
-  if (NStoreM != 0) {
-    offset = sample * nQPFull * nsize * nsize;
-#pragma loop noalias
-    for (i = 0; i < nQPFull * nsize * nsize; i++) InvM_Store[offset + i] = InvM[i];
-    offset = sample * nQPFull;
-#pragma loop noalias
-    for (i = 0; i < nQPFull; i++) PfM_Store[offset + i] = PfM[i];
-    offset = sample * nsite2 * nsite2 * NQPFull;
-#pragma loop noalias
-    for (i = 0; i < nsite2 * nsite2 * nQPFull; i++) {
-      SmpSltElmBF_real[offset + i] = SlaterElmBF_real[i];
-    }
-    offset = sample * NQPFull * nsite * nsite;
-#pragma loop noalias
-    for (i = 0; i < nsite; i++) {
-      for (j = 0; j < nsite; j++) {
-        SmpEta[offset + i * nsite + j] = eta[i][j];
-        SmpEtaFlag[offset + i * nsite + j] = etaFlag[i][j];
-      }
-    }
-  }
-  */
   return;
 }
 
