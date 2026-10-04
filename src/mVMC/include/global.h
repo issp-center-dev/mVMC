@@ -265,11 +265,6 @@ double complex *RBMCnt;
 int *EleProjBFCnt; /* EleProjCnt[sample][proj] */
 //[e] MERGE BY TM
 double *logSqPfFullSlater; /* logSqPfFullSlater[sample] */
-//double complex *SmpSltElmBF; /* logSqPfFullSlater[sample] */
-double *SmpSltElmBF_real; /* logSqPfFullSlater[sample] */
-
-int    *SmpEtaFlag; /* logSqPfFullSlater[sample] */
-double *SmpEta; /* logSqPfFullSlater[sample] */
 
 int *TmpEleIdx;
 int *TmpEleCfg;

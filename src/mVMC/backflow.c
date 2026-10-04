@@ -890,9 +890,6 @@ void BFAllocRuntime(void) {
   if (NBackFlowIdx <= 0) {
     BFCanonicalNonFszPath = 1;
     EleProjBFCnt = NULL;
-    SmpSltElmBF_real = NULL;
-    SmpEta = NULL;
-    SmpEtaFlag = NULL;
     SlaterElmBF = NULL;
     SlaterElmBF_real = NULL;
     eta = NULL;
@@ -949,14 +946,6 @@ void BFAllocRuntime(void) {
   SlaterElmBF = (double complex *)BFMallocArray(slaterCount, sizeof(double complex), "SlaterElmBF");
   SlaterElmBF_real = (double *)BFMallocArray(slaterCount, sizeof(double), "SlaterElmBF_real");
   memset(SlaterElmBF_real, 0, slaterCount * sizeof(double));
-  SmpSltElmBF_real = (double *)BFMallocArray((size_t)NVMCSample * slaterCount,
-                                             sizeof(double), "SmpSltElmBF_real");
-  SmpEta = (double *)BFMallocArray((size_t)NVMCSample * (size_t)NQPFull *
-                                   (size_t)Nsite * (size_t)Nsite,
-                                   sizeof(double), "SmpEta");
-  SmpEtaFlag = (int *)BFMallocArray((size_t)NVMCSample * (size_t)NQPFull *
-                                    (size_t)Nsite * (size_t)Nsite,
-                                    sizeof(int), "SmpEtaFlag");
   BFRealProj = (double *)BFMallocArray((size_t)NrangeIdx * (size_t)NrangeIdx,
                                        sizeof(double), "BFRealProj");
   BFRealSlater = (double *)BFMallocArray((size_t)Nsite * (size_t)Nsite,
@@ -984,9 +973,6 @@ void BFFreeRuntime(void) {
   int i;
   BFCanonicalNonFszPath = 1;
   free(EleProjBFCnt);
-  free(SmpSltElmBF_real);
-  free(SmpEta);
-  free(SmpEtaFlag);
   free(SlaterElmBF);
   free(SlaterElmBF_real);
   free(BFRealProj);
@@ -1006,9 +992,6 @@ void BFFreeRuntime(void) {
   free(BFSubIdx);
 
   EleProjBFCnt = NULL;
-  SmpSltElmBF_real = NULL;
-  SmpEta = NULL;
-  SmpEtaFlag = NULL;
   SlaterElmBF = NULL;
   SlaterElmBF_real = NULL;
   eta = NULL;
