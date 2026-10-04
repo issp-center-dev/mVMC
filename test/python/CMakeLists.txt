@@ -157,6 +157,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyinterall_invalid.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_update_weight.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_real_rbm.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_output_dir.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -941,6 +942,24 @@ add_python_vmc_test_expert_phys_mpi(Twist_SSH_fsz_mpi Twist_SSH_fsz)
 foreach(model ${python_test_vmc_model_expert_mpi})
     add_python_vmc_test_expert_mpi(${model})
 endforeach(model)
+
+foreach(output_dir_case nested absolute mixedcase data_limit para_limit
+        file spaces data_toolong para_toolong greenr2k)
+    add_test(NAME OutputDir_${output_dir_case}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_output_dir.py ${output_dir_case})
+    set_tests_properties(OutputDir_${output_dir_case} PROPERTIES
+        SKIP_RETURN_CODE 77)
+endforeach()
+if(MPI_FOUND)
+    # Test names end in _mpi so that CI runs them in the MPI job.
+    foreach(output_dir_case nested toolong)
+        add_test(NAME OutputDir_${output_dir_case}_mpi
+            COMMAND ${PYTHON_EXECUTABLE} runtest_output_dir.py mpi_${output_dir_case})
+        set_tests_properties(OutputDir_${output_dir_case}_mpi PROPERTIES
+            ENVIRONMENT "MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+            PROCESSORS 2)
+    endforeach()
+endif()
 
 add_python_vmc_test_doublon_only(DoublonOnly_GreenFunc2)
 add_test(NAME DoublonOnly_GreenFunc2_Complex

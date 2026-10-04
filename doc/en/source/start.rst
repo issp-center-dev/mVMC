@@ -284,7 +284,8 @@ We can calculate by using these modes as follows:
 
    Log files are outputted in the ``output/`` directory which is
    automatically made in the directory for a calculation scenario. The
-   details of output files are shown in :ref:`OutputFile`.
+   directory can be changed with ``OutputDir`` in ``modpara.def`` of
+   Expert mode. The details of output files are shown in :ref:`OutputFile`.
 
 #. Results
 
