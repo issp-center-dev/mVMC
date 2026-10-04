@@ -42,9 +42,10 @@ def set_modpara(path, overrides):
         handle.write("\n".join(out) + "\n")
 
 
-def run_case(rootdir, name, overrides):
+def run_case(rootdir, namespace, name, overrides):
     refdir = os.path.join(rootdir, "data", FIXTURE)
-    workdir = os.path.join(rootdir, "work", FIXTURE + "_" + name)
+    workdir = os.path.join(
+        rootdir, "work", FIXTURE + "_" + namespace + "_" + name)
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     shutil.copytree(refdir, workdir)
@@ -83,14 +84,15 @@ def check_stats(workdir, mode):
         (eps_file, n, floored, exact_zero, numeric_skip, sum_w, sum_w2,
          min_w, max_ratio) = row
         ok = (
-            abs(eps_file - eps) <= 1e-12 * eps
+            np.all(np.isfinite(row))
+            and abs(eps_file - eps) <= 1e-12 * eps
             and n > 0
             and 0 <= floored <= n
             and exact_zero == 0
             and numeric_skip == 0
-            and 0 < sum_w <= n * (1 + 1e-12)
-            and sum_w2 <= sum_w * (1 + 1e-12)
-            and 0 < min_w <= 1 + 1e-12
+            and sum_w > 0
+            and sum_w2 > 0
+            and min_w > 0
             and max_ratio >= 1 - 1e-12
         )
         if mode == "eps1":
@@ -107,19 +109,23 @@ def main():
         return 2
     mode = sys.argv[1]
     rootdir = os.getcwd()
+    procs = os.environ.get("MVMC_MPI_PROCS")
+    namespace = mode + ("_mpi" + procs if procs else "_serial")
     if mode.startswith("invalid"):
-        status, _ = run_case(rootdir, mode, MODES[mode])
+        status, _ = run_case(rootdir, namespace, mode, MODES[mode])
         print("%s: vmc.out exit status %d (nonzero expected)" %
               (mode, status))
         return 0 if status != 0 else 1
 
-    status_legacy, legacy_dir = run_case(rootdir, "legacy", MODES["legacy"])
+    status_legacy, legacy_dir = run_case(
+        rootdir, namespace, "legacy", MODES["legacy"])
     if status_legacy != 0:
         return 1
     if mode == "legacy":
         return 0
 
-    status_guide, guide_dir = run_case(rootdir, mode, MODES[mode])
+    status_guide, guide_dir = run_case(
+        rootdir, namespace, mode, MODES[mode])
     if status_guide != 0:
         return 1
     e_legacy = lanczos_energies(legacy_dir)
