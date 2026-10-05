@@ -44,6 +44,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "lslocgrn_heisenberg.c"
 #include "calgrn.c"
 #include "physcal_lanczos2.h"
+#include "near_zero_guide.h"
 
 //#define _DEBUG_VMCCAL
 //#define _DEBUG_VMCCAL_DETAIL
@@ -254,6 +255,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   double x,w;
   double sqrtw;
   double complex we;
+  double guideRatio = 0.0;
+  int guideFloored = 0;
 
   const int qpStart=0;
   const int qpEnd=NQPFull;
@@ -403,6 +406,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     eleProjCnt = NProj > 0 ? EleProjCnt + sample*NProj : NULL;
     rbmCnt = FlagRBM ? RBMCnt + sample*nSizeRBM : NULL;
 
+    if(FlagLanczosGuide) NearZeroGuideStat[NZG_SAMPLES] += 1.0;
+
     StartTimer(40);
 #ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: CalculateMAll \n",sample);
@@ -417,8 +422,12 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     StopTimer(40);
 
     if(info!=0) {
-      SamplerRepairMeasureFactorFailure(sample, info);
-      if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
+      if(FlagLanczosGuide) {
+        NearZeroGuideStat[NZG_NUMERIC_SKIPPED] += 1.0;
+      } else {
+        SamplerRepairMeasureFactorFailure(sample, info);
+        if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
+      }
       continue;
     }
 #ifdef _DEBUG_VMCCAL
@@ -437,7 +446,26 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     if (Sr.logging)
       SamplerRepairMeasure(log(cabs(ip)), x, logSqPfFullSlater[sample]);
     /* calculate reweight */
-    if (reweight==1){
+    if(FlagLanczosGuide) {
+      NearZeroGuide guide;
+      if(NearZeroGuideEvaluate(QPFullWeight, PfM_real, qpStart, qpEnd,
+                               LanczosGuideSqrtEps, MPI_COMM_SELF,
+                               &guide) != 0) {
+        fprintf(stderr,
+                "Error: near-zero guide evaluation failed in VMCMainCal.\n");
+        MPI_Abort(comm_parent, EXIT_FAILURE);
+      }
+      NearZeroGuideStat[NZG_FLOORED] += (double)guide.floored;
+      if(guide.abs_ip == 0.0) {
+        NearZeroGuideStat[NZG_EXACT_ZERO] += 1.0;
+        NearZeroGuideStat[NZG_MIN_W] = 0.0;
+        continue;
+      }
+      w = NearZeroGuideWeight(guide.log_abs_ip, x,
+                              logSqPfFullSlater[sample]);
+      guideRatio = guide.abs_sum / guide.abs_ip;
+      guideFloored = guide.floored;
+    } else if (reweight==1){
        w = 2.0*(log(cabs(ip))+x);
        if (FlagRBM) {
          w += 2.0*creal(LogWeightRBM(rbmCnt));
@@ -450,10 +478,22 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
 #ifdef _DEBUG_VMCCAL
     printf("  Debug: sample=%d: isfinite \n",sample);
 #endif
-    if( !isfinite(w) ) {
-      SamplerRepairMeasureFinish(sample, w, NAN, 1);
-      if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d w=%e\n",rank,sample,w);
+    if(!isfinite(w) || (FlagLanczosGuide && w == 0.0)) {
+      if(FlagLanczosGuide) {
+        NearZeroGuideStat[NZG_NUMERIC_SKIPPED] += 1.0;
+      } else {
+        SamplerRepairMeasureFinish(sample, w, NAN, 1);
+        if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d w=%e\n",rank,sample,w);
+      }
       continue;
+    }
+    if(FlagLanczosGuide) {
+      NearZeroGuideStat[NZG_SUM_W] += w;
+      NearZeroGuideStat[NZG_SUM_W2] += w * w;
+      if(w < NearZeroGuideStat[NZG_MIN_W])
+        NearZeroGuideStat[NZG_MIN_W] = w;
+      if(guideRatio > NearZeroGuideStat[NZG_MAX_RATIO])
+        NearZeroGuideStat[NZG_MAX_RATIO] = guideRatio;
     }
 
     StartTimer(41);
@@ -479,8 +519,12 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     printf("  Debug: sample=%d: e = %lf %lf \n",sample, creal(e), cimag(e));
 #endif
     if( !isfinite(creal(e) + cimag(e)) ) {
-      SamplerRepairMeasureFinish(sample, w, creal(e), 2);
-      if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
+      if(FlagLanczosGuide) {
+        NearZeroGuideStat[NZG_NUMERIC_SKIPPED] += 1.0;
+      } else {
+        SamplerRepairMeasureFinish(sample, w, creal(e), 2);
+        if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
+      }
       continue;
     }
 
@@ -570,6 +614,20 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
         StartTimer(43);
         if(AllComplexFlag==0) {
           LSLocalQ_real(creal(e),creal(ip),eleIdx,eleCfg,eleNum,eleProjCnt, LSLQ_real);
+          if(FlagLanczosGuide) {
+            int guideLslqFinite = 1;
+            for(i=0; i<NLSHam*NLSHam; i++) {
+              if(!isfinite(LSLQ_real[i])) {
+                guideLslqFinite = 0;
+                break;
+              }
+            }
+            if(!guideLslqFinite) {
+              NearZeroGuideStat[NZG_NUMERIC_SKIPPED] += 1.0;
+              StopTimer(43);
+              continue;
+            }
+          }
           RecordPowerLanczosSupportLSLQSample(
               LSLQ_real,NULL,w,parentRank,sample,comm_parent);
           calculateQQQQ_real(QQQQ_real,LSLQ_real,w,NLSHam);
@@ -592,6 +650,10 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
               fprintf(lanczosOracleDump, " %.17e %.17e",
                       creal(LSLQ[i]), cimag(LSLQ[i]));
             }
+          }
+          if(FlagLanczosGuide) {
+            fprintf(lanczosOracleDump, " guide %.17e %.17e %d",
+                    w, guideRatio, guideFloored);
           }
           fprintf(lanczosOracleDump, "\n");
         }
@@ -848,6 +910,7 @@ void clearPhysQuantity(){
   double  *vec_real;
 //[s] MERGE BY TM
   Wc = Etot = Etot2 = Sztot=Sztot2 =0.0;//fsz
+  if(FlagLanczosGuide) NearZeroGuideStatReset(NearZeroGuideStat);
   Ntot = Ntot2 = 0.0;
   //Wc = Etot = Etot2 = 0.0;
   Dbtot = Dbtot2 = 0.0;

@@ -1413,4 +1413,27 @@ add_test(NAME BoundedKrylovMarkovLongDirectSessionTiming_Smoke
 set_tests_properties(BoundedKrylovMarkovLongDirectSessionTiming_Smoke PROPERTIES
     ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
 
+add_executable(near_zero_guide_unit near_zero_guide_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/near_zero_guide.c)
+target_include_directories(near_zero_guide_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(near_zero_guide_unit m)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(near_zero_guide_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(near_zero_guide_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME NearZeroGuide_Unit COMMAND near_zero_guide_unit)
+if(MPI_FOUND)
+    add_test(NAME NearZeroGuide_Unit_Rank2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:near_zero_guide_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(NearZeroGuide_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2 ENVIRONMENT "OMP_NUM_THREADS=1")
+endif()
+
 add_subdirectory(python)

@@ -774,7 +774,9 @@ pure-spin classでは各exchange bondを2つの向き付き演算子
 非block版のlegacy第1Lanczosエネルギー測定では、成分単位修復を既定で有効にします。
 対象は ``NVMCCalMode=1``, ``NLanczosMode=1``, ``NLanczosStep=1``,
 ``NLanczosEstimatorMode=0``, ``NSplitSize=1``, ``NExUpdatePath=1`` です。
-それ以外の経路は従来の動作を維持します。
+``DLanczosGuideEps > 0`` では修復とdriftログを自動無効化します。
+異なるsampling weightを使うため、guide有効時に修復またはdriftログを
+明示的に要求すると入力エラーにします。それ以外の経路は従来の動作を維持します。
 
 hopまたはexchangeのaccept後、規格化したPfaffianの絶対値が、基準値・直前配置・
 最後の修復以降の最小値から1000倍を超えて成長した射影成分だけを再計算し、

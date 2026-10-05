@@ -811,7 +811,9 @@ or a sampling guide, the non-block sampler enables selective component
 repair in legacy first-Lanczos energy measurements (``NVMCCalMode=1``,
 ``NLanczosMode=1``, ``NLanczosStep=1``, ``NLanczosEstimatorMode=0``,
 ``NSplitSize=1``, ``NExUpdatePath=1``).
-Other calculation paths retain their existing behavior.
+A positive ``DLanczosGuideEps`` disables automatic repair and its drift log.
+Explicitly requesting either with a guide is an input error, because the
+guide samples a different weight. Other paths retain their existing behavior.
 
 After an accepted hop or exchange, the sampler rebuilds only projection
 components whose normalized Pfaffian magnitude has grown by more than

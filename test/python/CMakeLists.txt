@@ -82,6 +82,26 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_complex_ed.py DESTINATION
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_heisenberg_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_projected_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_projection_smoke.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_guide.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/HubbardChainLanczos_Guide DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+foreach(mode invalid_negative invalid_estimator)
+    add_test(NAME Lanczos_NearZeroGuide_${mode}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos_guide.py ${mode})
+    set_tests_properties(Lanczos_NearZeroGuide_${mode} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+endforeach()
+foreach(mode eps1e-6 eps1)
+    add_test(NAME Lanczos_NearZeroGuide_${mode}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos_guide.py ${mode})
+    set_tests_properties(Lanczos_NearZeroGuide_${mode} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+endforeach()
+if(MPI_FOUND)
+    add_test(NAME Lanczos_NearZeroGuide_eps1e-6_mpi
+        COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos_guide.py eps1e-6)
+    set_tests_properties(Lanczos_NearZeroGuide_eps1e-6_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+endif()
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_classic_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_production_anchor.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_profile.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)

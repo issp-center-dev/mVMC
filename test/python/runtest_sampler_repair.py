@@ -16,12 +16,14 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = {k: v for k, v in os.environ.items() if not k.startswith('MVMC_SAMPLER_')}
 env['OMP_NUM_THREADS'] = '1'
 
-def run(cmd, cwd, settings):
+def run(cmd, cwd, settings, expected_error=None):
     proc = subprocess.run(cmd, cwd=str(cwd), env=dict(env, **settings),
                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                           universal_newlines=True, timeout=90)
     (cwd/'run.log').write_text(proc.stdout)
-    if proc.returncode:
+    if expected_error:
+        assert proc.returncode != 0 and expected_error in proc.stdout, proc.stdout
+    elif proc.returncode:
         raise RuntimeError(proc.stdout)
     return proc.stdout
 
@@ -72,4 +74,34 @@ with tempfile.TemporaryDirectory(prefix='sampler-repair-', dir=str(scratch)) as 
         assert len(events) <= 16
         assert all(n <= 4 for n in collections.Counter(r[5] for r in events).values())
         assert p.stat().st_size < 16384
+    # A positive guide epsilon overlaps the supported real/split1/hop-exchange
+    # conditions above, but uses a different sampling weight and must stay off.
+    guide_input = work/'guide-input'
+    shutil.copytree(str(generated), str(guide_input))
+    p = guide_input/'modpara.def'
+    text, count = re.subn(r'^DLanczosGuideEps\s+\S+', 'DLanczosGuideEps 1.0',
+                          p.read_text(), flags=re.M)
+    if not count:
+        text += '\nDLanczosGuideEps 1.0\n'
+    p.write_text(text)
+    for name, settings in [('guide-auto', {}), ('guide-off', {'MVMC_SAMPLER_REPAIR': '0'}),
+                           ('guide-force', {'MVMC_SAMPLER_REPAIR': '1'}),
+                           ('guide-log', {'MVMC_SAMPLER_DRIFT_LOG': '1'})]:
+        d = work/name
+        shutil.copytree(str(guide_input), str(d))
+        error = 'enabled outside' if name == 'guide-force' else (
+            'drift logging requested outside' if name == 'guide-log' else None)
+        out = run(launcher+[str(binary), '-e', 'namelist.def', 'zqp_opt.dat'],
+                  d, settings, error)
+        assert not list(d.glob('sampler_drift_r*.dat'))
+        if error:
+            assert not physical(d)
+        else:
+            assert 'Sampler component repair: off;' in out
+    assert physical(work/'guide-auto') == physical(work/'guide-off')
+    assert len(physical(work/'guide-auto')) >= 10
+    guide_stats = list((work/'guide-auto'/'output').glob('zvo_nzguide_*.dat'))
+    assert len(guide_stats) == 2
+    for p in guide_stats:
+        assert p.read_bytes() == (work/'guide-off'/'output'/p.name).read_bytes()
 print('sampler repair solver/logging smoke PASS')

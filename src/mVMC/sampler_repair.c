@@ -82,7 +82,7 @@ static int SamplerRepairSupported(void) {
   return NVMCCalMode == 1 && NLanczosMode == 1 && NLanczosStep == 1 &&
       NLanczosEstimatorMode == 0 && AllComplexFlag == 0 &&
       iFlgOrbitalGeneral == 0 && NBackFlowIdx == 0 && !FlagGrandCanonical &&
-      !FlagRBM && NSplitSize == 1 && NExUpdatePath == 1;
+      !FlagRBM && !FlagLanczosGuide && NSplitSize == 1 && NExUpdatePath == 1;
 #endif
 }
 

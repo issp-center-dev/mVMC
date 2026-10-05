@@ -153,6 +153,11 @@ void InitFilePhysCal(int i, int rank) {
     sprintf(fileName, "%s_ls_qqqq_%03d.dat", CDataFileHead, idx);
     FileLSQQQQ = fopen(fileName, "w");
 
+    if(FlagLanczosGuide){
+      sprintf(fileName, "%s_nzguide_%03d.dat", CDataFileHead, idx);
+      FileNZGuide = fopen(fileName, "w");
+    }
+
     if(NLanczosMode>1){
 #ifdef _DEBUG
       sprintf(fileName, "%s_ls_qcisajsq_%03d.dat",
@@ -260,6 +265,7 @@ void CloseFilePhysCal(int rank) {
 
   if(NLanczosMode>0 && NLanczosStep==1){
     fclose(FileLS);
+    if(FlagLanczosGuide) fclose(FileNZGuide);
     fclose(FileLSQQQQ);
 
     if(NLanczosMode>1){

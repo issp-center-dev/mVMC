@@ -16,6 +16,7 @@ static int MPI_Bcast(void *p,int n,int type,int root,int comm) {
 }
 static int NVMCCalMode=1, NLanczosMode=1, NLanczosStep=1, NLanczosEstimatorMode=0;
 static int AllComplexFlag=0, iFlgOrbitalGeneral=0, NBackFlowIdx=0;
+static int FlagLanczosGuide=0;
 static int FlagGrandCanonical=0, FlagRBM=0, NSplitSize=1, NExUpdatePath=1;
 static int NQPFull=3,Nsize=2,LapackLWork=8;
 static double pf[3],inverse[12], *PfM_real=pf,*InvM_real=inverse;
@@ -123,6 +124,8 @@ int main(int argc,char **argv) {
   assert(SamplerRepairLogAccept(0,0,0,0.9));
   assert(!SamplerRepairLogAccept(0,0,-1,0.5));
   assert(SamplerRepairLogAccept(0,0,-1,0.1));
+  FlagLanczosGuide=1;SamplerRepairInit();assert(!Sr.enabled && !Sr.logging);
+  SamplerRepairFinalize();FlagLanczosGuide=0;
   SamplerRepairInit();assert(Sr.enabled && !Sr.logging);
   pf[0]=1;pf[1]=1e-5;pf[2]=1e-9;SamplerRepairRecompute();
   accept(0.1);assert(factor_calls==1 && inverse[4]==123);
