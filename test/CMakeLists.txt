@@ -2,6 +2,19 @@ if(NOT PYTHON_EXECUTABLE)
     find_package(PythonInterp 3.6 REQUIRED)
 endif()
 
+add_executable(sampler_repair_unit sampler_repair_unit.c)
+target_link_libraries(sampler_repair_unit m)
+add_test(NAME Sampler_Component_Repair_Unit COMMAND sampler_repair_unit)
+foreach(mode invalid unsupported factor-failure rollback-fails rebuild-fails rollback-factor-fails rebuild-nan current-zero current-factor-fails)
+    add_test(NAME Sampler_Component_Repair_${mode}
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_sampler_repair_failure.py
+        $<TARGET_FILE:sampler_repair_unit> ${mode})
+endforeach()
+
+foreach(mode recover recover-nan rollback-hop rollback-exchange finite-fast)
+    add_test(NAME Sampler_Component_Repair_${mode} COMMAND sampler_repair_unit ${mode})
+endforeach()
+
 add_executable(backflow_seam_unit backflow_seam_unit.c)
 target_link_libraries(backflow_seam_unit m)
 if(MPI_FOUND)

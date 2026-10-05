@@ -425,7 +425,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       if(FlagLanczosGuide) {
         NearZeroGuideStat[NZG_NUMERIC_SKIPPED] += 1.0;
       } else {
-        fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
+        SamplerRepairMeasureFactorFailure(sample, info);
+        if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
       }
       continue;
     }
@@ -442,6 +443,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     printf("  Debug: sample=%d: LogProjVal \n",sample);
 #endif
     x = LogProjVal(eleProjCnt);
+    if (Sr.logging)
+      SamplerRepairMeasure(log(cabs(ip)), x, logSqPfFullSlater[sample]);
     /* calculate reweight */
     if(FlagLanczosGuide) {
       NearZeroGuide guide;
@@ -479,7 +482,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       if(FlagLanczosGuide) {
         NearZeroGuideStat[NZG_NUMERIC_SKIPPED] += 1.0;
       } else {
-        fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d w=%e\n",rank,sample,w);
+        SamplerRepairMeasureFinish(sample, w, NAN, 1);
+        if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d w=%e\n",rank,sample,w);
       }
       continue;
     }
@@ -518,11 +522,13 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       if(FlagLanczosGuide) {
         NearZeroGuideStat[NZG_NUMERIC_SKIPPED] += 1.0;
       } else {
-        fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
+        SamplerRepairMeasureFinish(sample, w, creal(e), 2);
+        if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
       }
       continue;
     }
 
+    SamplerRepairMeasureFinish(sample, w, creal(e), 0);
     Wc += w;
     Etot  += w * e;
     Etot2 += w * conj(e) * e;
