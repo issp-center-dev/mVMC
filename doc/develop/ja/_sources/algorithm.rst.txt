@@ -765,3 +765,110 @@ pure-spin classでは各exchange bondを2つの向き付き演算子
 :math:`\langle \phi_1 | \phi_1 \rangle` です。プログラムでは、
 この表式に基づき一体グリーン関数および二体グリーン関数の計算を
 行っています。
+
+
+第1Lanczos samplerの成分単位修復
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+実数・スピン保存・粒子数固定で、BackFlow、RBM、sampling guideを使わない
+非block版のlegacy第1Lanczosエネルギー測定では、成分単位修復を既定で有効にします。
+対象は ``NVMCCalMode=1``, ``NLanczosMode=1``, ``NLanczosStep=1``,
+``NLanczosEstimatorMode=0``, ``NSplitSize=1``, ``NExUpdatePath=1`` です。
+``DLanczosGuideEps > 0`` では修復とdriftログを自動無効化します。
+異なるsampling weightを使うため、guide有効時に修復またはdriftログを
+明示的に要求すると入力エラーにします。それ以外の経路は従来の動作を維持します。
+
+hopまたはexchangeのaccept後、規格化したPfaffianの絶対値が、基準値・直前配置・
+最後の修復以降の最小値から1000倍を超えて成長した射影成分だけを再計算し、
+保存したsampling weightを更新します。仮の採否には既存の提案評価を使い、
+修復onではlog領域で比較します。
+基準値がzeroの成分も再計算します。
+高次Hamiltonian評価を追加せず、sampleの切り詰め・除外も行いません。
+小さい残存driftや物理的な裾は残り得ます。
+
+次の環境変数は初期化時にMPI world rank 0で読み、全rankへ配布します。
+
+* ``MVMC_SAMPLER_REPAIR=0``: 修復を無効にして従来経路を使います。
+* ``MVMC_SAMPLER_REPAIR=1``: 修復を要求します。対象外の条件ではsampling前に
+  入力エラーにします。未指定時は上記の対象経路でのみ自動的に有効です。
+* ``MVMC_SAMPLER_DRIFT_LOG=0``: 修復を維持したまま集計出力を省きます。
+  ``1`` では対象経路で集計し、修復offとの比較にも使えます。
+  未指定時は修復のon/offに従います。
+
+各rankは作業directoryの ``sampler_drift_rNNNN.dat`` に、binごとの ``Q`` 行を出します。
+列は0始まりのbin、評価したsample数、非有限値の数、最大絶対drift、
+1e-6・1e-3・1を超えた数、確定accept数、修復発動数、修復成分数です。
+修復発動数と成分数には、その後取り消した仮acceptに対する作業も含みます。
+最後の ``F refreshTotal`` 行は全binの修復成分数です。
+driftは通常測定にある直接再計算を使った
+``2 * (log(abs(ip_direct)) + LogProjVal) - stored_log_weight`` であり、
+energy誤差の上限ではありません。全proposalのtraceや、診断のための追加の
+全成分再計算は行いません。
+
+
+zero・異常時のログ
+^^^^^^^^^^^^^^^^^^
+
+従来のdrift・修復集計 ``Q`` に加え、各binで次の ``Z`` 行を出します。
+
+``Z bin proposalZero ratioUnderflow ratioNonfinite currentNonfinite componentZeroPre componentZeroPost measurementZero repairFailed measureWeightZero skipWeight skipEnergy measureFactorFailed detailsTotal suppressedTotal``
+
+``proposalZero`` は計算された提案の射影振幅のlogが負の無限大だった回数です。
+``ratioUnderflow`` は入力のlogとprojection比が有限でも採択比が0になった回数です。
+成分Pfaffianのzero、射影和のzero、測定時のreweighting factorのzeroは区別します。
+倍精度のzeroだけで数学的なzeroとは断定できません。
+``currentNonfinite`` は修復・再計算時の観測回数で、異なる配置の数ではありません。
+測定skipの集計は既存の失敗分岐を記録するもので、新しいsample除外を導入しません。
+行列分解失敗でskipしたsampleは ``measureFactorFailed`` に数え、``Q`` には含めません。
+
+異常詳細 ``E`` は、各rank・run全体で4種類に各4件、**最大16件**です。
+``detailsTotal`` と ``suppressedTotal`` は累計、他の ``Z`` 列はbinごとにリセットします。
+詳細を抑制した後も件数は集計し続けます。
+
+``E bin out in move kind qp mask a b c d e f info action``
+
+* ``proposal``: a/b=旧/提案log振幅、c=projectionのlog比、d=変換前の採択比。
+  e/fは未使用。zero・不正入力のrejectに加え、診断用比がoverflow/underflowしても
+  log比較で仮acceptした場合は ``accept-log`` を記録します。
+* ``component``: a/b=旧/提案Pfaffian、c/d=再計算前後の保存値、e/f=基準/最小κ。
+  maskの1/2/4 bitは基準値/直前配置/最小履歴からの成長です。
+  ``info`` が非zeroの場合、再計算後の値は有効な修復結果とはみなしません。
+* ``current``: a/b=操作前後のlog振幅。c〜fは未使用。
+  初期配置の作り直し、作り直し後、成分修復後、全再計算後をactionで区別します。
+* ``measure``: a/b/c=直接log振幅/projection log/保存log重み、d/e=reweighting factor/energy、
+  f=sample番号。蓄積・zero寄与・重み/energy/行列分解の既存skipをactionに記録します。
+  未取得の値はNaNです。
+
+``out``/``in`` はbin内の提案位置、move=1/2はhop/exchangeです。
+該当しない位置・成分番号は-1です。容量はbin数・rank数に比例し、全proposal数や修復回数には
+比例しません。配置・逆行列・追加の高次評価は出力しません。
+このログがonの場合、既存の測定失敗のstderr反復は、上限付き詳細と全件カウンタへ集約します。
+修復失敗時は、rank・bin・step・成分・info・再計算前後値をstderrにも出し、停止します。
+
+現在状態の異常時復旧
+^^^^^^^^^^^^^^^^^^^^
+
+修復onで、仮accept後のlog振幅がzero・非有限になったときだけ、提案先の全成分を
+1回再計算します。有限に戻れば保存重みと修復の基準・最小履歴を更新して続行します。
+直接再計算でもzeroならhop/exchangeを取り消し、移動前の配置のPfaffianと逆行列を
+再構築します。射影カウントとaccept数は復旧確認後に確定するため、取り消し時には
+変更しません。移動前のlog振幅が有限であることを確認して続行します。
+乱数の追加、振幅の下限設定、near-zero cutoff、sampleの削除はありません。
+
+再計算失敗、再計算後のNaN・正の無限大、復元先の非有限振幅は診断付きで停止します。
+初期化には既存の作り直しを残し、その後の振幅が有限かつ行列分解が成功していることを
+要求します。既存の定期的な全再計算後にもzero・非有限が残る場合は停止します。
+この場合に同じ全再計算を繰り返したり、無言で継続したりはしません。
+
+各binに ``R bin fullRebuild recovered rollback failed`` を追加します。
+異常時の全再計算数（移動前の再構築も含む）、提案先で復旧した数、取り消し完了数、
+復旧・現在状態検証の失敗数です。既存の初期化・定期再計算はfullRebuildに含めません。
+詳細は既存の ``E current`` の4件上限を共有し、``recovered-accepted``、
+``rollback-zero``、``restored-old-reject``、``abort-*`` で結果を区別します。
+詳細上限後も致命的失敗は位置・値をstderrに出し、途中の件数をflushして停止します。
+
+採否のlog比較では、有限logから指数を取る際の正のoverflowをacceptできるようにし、
+NaN・無限大の提案logとは区別します。負の有限log比は同じ乱数のlogの半分と比較します。
+修復を明示offにした場合は従来の採否・復旧動作を維持します。
+通常の有限な経路に追加の全再計算はありません。復旧は現在状態を使える形に戻す処理であり、
+それ以前の近似的な採否がすべて正しかったという保証ではありません。復旧件数も診断に残します。

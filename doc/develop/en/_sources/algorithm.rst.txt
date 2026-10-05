@@ -801,3 +801,139 @@ where the denominator is the same normalization factor
 :math:`\langle \phi_1 | \phi_1 \rangle` as that for the energy. In the
 program, the one-body and two-body Green functions are calculated based
 on this expression.
+
+
+Selective repair in the first-Lanczos sampler
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For real, spin-conserving canonical wave functions without BackFlow, RBM,
+or a sampling guide, the non-block sampler enables selective component
+repair in legacy first-Lanczos energy measurements (``NVMCCalMode=1``,
+``NLanczosMode=1``, ``NLanczosStep=1``, ``NLanczosEstimatorMode=0``,
+``NSplitSize=1``, ``NExUpdatePath=1``).
+A positive ``DLanczosGuideEps`` disables automatic repair and its drift log.
+Explicitly requesting either with a guide is an input error, because the
+guide samples a different weight. Other paths retain their existing behavior.
+
+After an accepted hop or exchange, the sampler rebuilds only projection
+components whose normalized Pfaffian magnitude has grown by more than
+1000 relative to its reference, the previous configuration, or the minimum
+since its last repair. It then updates the stored sampling weight.
+A component with a zero reference is also rebuilt.
+The provisional accept decision uses the existing proposal evaluation, with
+log-space comparison when repair is enabled. This repair
+adds no high-order Hamiltonian evaluation and does not clip or discard
+samples. Small residual drift and physical heavy tails may remain.
+
+The following environment settings are read once on MPI world rank zero
+and broadcast to all ranks:
+
+* ``MVMC_SAMPLER_REPAIR=0`` disables repair to reproduce the previous path.
+* ``MVMC_SAMPLER_REPAIR=1`` requires repair; an unsupported calculation is
+  rejected before sampling. When unset, repair is automatic only for the
+  supported path above.
+* ``MVMC_SAMPLER_DRIFT_LOG=0`` disables the summary without changing repair.
+  ``1`` enables the summary on the supported path, including when repair
+  is off. By default, logging follows repair.
+
+Each rank writes ``sampler_drift_rNNNN.dat`` in the working directory.
+A ``Q`` row contains the zero-based bin, evaluated-sample count, nonfinite
+count, maximum absolute log-weight drift, counts above 1e-6, 1e-3 and 1,
+committed accepts, repair attempts, and repaired components. Repair attempts
+and component work include an accepted move subsequently rolled back. The final
+``F refreshTotal`` row gives the total component count. Drift is
+``2 * (log(abs(ip_direct)) + LogProjVal) - stored_log_weight``, using the
+direct recomputation already performed by measurement. It is a diagnostic
+of stored sampling weights, not a bound on energy errors. No per-proposal
+traces or additional full recomputations are performed for this summary.
+
+
+Zero and exceptional-event logging
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Q`` remains the compact drift/repair summary. Each bin also writes ``Z``:
+
+``Z bin proposalZero ratioUnderflow ratioNonfinite currentNonfinite componentZeroPre componentZeroPost measurementZero repairFailed measureWeightZero skipWeight skipEnergy measureFactorFailed detailsTotal suppressedTotal``
+
+``proposalZero`` counts a computed projected-amplitude log of negative
+infinity, while ``ratioUnderflow`` counts a zero acceptance ratio with finite
+input logs and projection ratio. Component zeros refer to a single Pfaffian,
+not to the projected sum. ``measurementZero`` refers to the directly computed
+projected amplitude; ``measureWeightZero`` refers to the reweighting factor.
+Floating-point zeros do not by themselves establish mathematical zeros.
+``currentNonfinite`` counts observations at repair/recompute checkpoints,
+not distinct configurations. Skip counters record the existing measurement
+failure branches; they do not introduce new sample exclusions. Samples skipped
+after failed factorization are counted in ``measureFactorFailed``, not in ``Q``.
+
+``E`` rows record exceptional events, with a maximum of four per kind
+(``proposal``, ``component``, ``current``, ``measure``), per rank, for the whole
+run: at most 16 detail rows/rank. ``detailsTotal`` and ``suppressedTotal`` are
+cumulative; the other ``Z`` counters reset each bin. Repeated events continue
+to increment counters after the detail budget is exhausted.
+
+``E bin out in move kind qp mask a b c d e f info action``
+
+* ``proposal``: a/b are old/proposed log amplitudes, c is the projection log
+  ratio, d is the raw acceptance ratio; e/f are unused. ``reject`` records
+  zero/invalid-input rejection; ``accept-log`` records a provisional accept
+  made in log space despite overflow/underflow of the diagnostic raw ratio.
+* ``component``: a/b are old/proposed Pfaffians, c/d are the stored values
+  before/after factorization, e/f are reference/minimum kappa. Mask bits
+  1/2/4 mean reference/one-step/minimum growth. A nonzero ``info`` means
+  failure; the post-factorization value is then not a valid repaired result.
+* ``current``: a/b are the log amplitudes before/after the indicated existing
+  operation; c through f are unused. Actions distinguish initial remake,
+  completion of remake, component repair, and full recomputation.
+* ``measure``: a/b/c are direct log amplitude/projection log/stored log
+  weight, d/e are reweighting factor/energy, f is the sample index. Actions
+  distinguish accumulation, zero contribution, and the existing weight,
+  energy, or factorization skip. Unavailable fields are NaN.
+
+``out``/``in`` locate the proposal within the bin, and ``move`` is 1 for
+hop and 2 for exchange. Inapplicable locations and component indices are
+-1. New files grow with bins and ranks, not with proposal or repair counts.
+No configurations, inverse matrices, or higher-order evaluations are dumped.
+When this log is enabled, the existing per-sample measurement warnings are
+represented by bounded details and complete counters instead of repeated
+stderr lines. A failed repair additionally prints rank, bin, step, component,
+factorization status and before/after values to stderr before aborting.
+
+Exceptional current-state recovery
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+With repair enabled, a zero/nonfinite log amplitude after an accepted update
+triggers one full reconstruction of that proposed configuration. A finite
+result replaces the stored weight and resets the repair reference/minimum.
+If the full evaluation still gives zero, the provisional hop or exchange is
+undone, and the previous configuration's Pfaffians and inverse matrices are
+rebuilt. Projection counts and accept counters have not yet been committed.
+Sampling continues only if the restored log amplitude is finite. No extra
+random variate, amplitude floor, near-zero cutoff, or sample deletion is used.
+
+A failed reconstruction, NaN/positive-infinite rebuilt log amplitude, or an
+invalid restored state aborts with a diagnostic. Initialization retains the
+existing remake attempt but now requires a finite current amplitude and a
+successful factorization afterwards. A zero/nonfinite result of an existing
+periodic full reconstruction also aborts; repeating the same reconstruction
+or silently continuing would not establish a valid current state.
+
+Each bin adds ``R bin fullRebuild recovered rollback failed``. These counters
+record exceptional full reconstructions (including the old-state rebuild),
+recovered proposed states, completed rollbacks, and fatal recovery/validation
+failures. Existing initialization/periodic rebuilds are not counted as
+exceptional full reconstructions. ``E current`` uses the existing four-detail
+budget: ``recovered-accepted``, ``rollback-zero``, ``restored-old-reject``, and
+``abort-*`` distinguish outcomes. Even if that budget is exhausted, fatal
+failures print their location and values to stderr and flush partial counters.
+
+Log-space acceptance distinguishes overflow of an exponential of finite logs
+from an invalid amplitude. Positive ratio overflow is accepted; NaN and
+infinite proposed log amplitudes are rejected. Finite negative log ratios are
+compared with half the log of the same uniform variate. Explicitly disabling
+repair preserves the previous acceptance and recovery behavior.
+
+There is no additional full evaluation on the finite normal path. Recovery
+restores a usable current state, not a guarantee that earlier approximate
+acceptance decisions were exact; recovery counters remain part of the run's
+numerical diagnostics.

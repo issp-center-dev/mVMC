@@ -663,6 +663,127 @@ A_{LS}(\alpha) =\frac{\langle \phi_1| \hat{A} |\phi_1\rangle}{\langle \phi_1|\ph
 program, the one-body and two-body Green functions are calculated based
 on this expression.</p>
 </section>
+<section id="selective-repair-in-the-first-lanczos-sampler">
+<h3>Selective repair in the first-Lanczos sampler<a class="headerlink" href="#selective-repair-in-the-first-lanczos-sampler" title="Permalink to this heading">¶</a></h3>
+<p>For real, spin-conserving canonical wave functions without BackFlow, RBM,
+or a sampling guide, the non-block sampler enables selective component
+repair in legacy first-Lanczos energy measurements (<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode=0</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NSplitSize=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=1</span></code>).
+A positive <code class="docutils literal notranslate"><span class="pre">DLanczosGuideEps</span></code> disables automatic repair and its drift log.
+Explicitly requesting either with a guide is an input error, because the
+guide samples a different weight. Other paths retain their existing behavior.</p>
+<p>After an accepted hop or exchange, the sampler rebuilds only projection
+components whose normalized Pfaffian magnitude has grown by more than
+1000 relative to its reference, the previous configuration, or the minimum
+since its last repair. It then updates the stored sampling weight.
+A component with a zero reference is also rebuilt.
+The provisional accept decision uses the existing proposal evaluation, with
+log-space comparison when repair is enabled. This repair
+adds no high-order Hamiltonian evaluation and does not clip or discard
+samples. Small residual drift and physical heavy tails may remain.</p>
+<p>The following environment settings are read once on MPI world rank zero
+and broadcast to all ranks:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">MVMC_SAMPLER_REPAIR=0</span></code> disables repair to reproduce the previous path.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MVMC_SAMPLER_REPAIR=1</span></code> requires repair; an unsupported calculation is
+rejected before sampling. When unset, repair is automatic only for the
+supported path above.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MVMC_SAMPLER_DRIFT_LOG=0</span></code> disables the summary without changing repair.
+<code class="docutils literal notranslate"><span class="pre">1</span></code> enables the summary on the supported path, including when repair
+is off. By default, logging follows repair.</p></li>
+</ul>
+<p>Each rank writes <code class="docutils literal notranslate"><span class="pre">sampler_drift_rNNNN.dat</span></code> in the working directory.
+A <code class="docutils literal notranslate"><span class="pre">Q</span></code> row contains the zero-based bin, evaluated-sample count, nonfinite
+count, maximum absolute log-weight drift, counts above 1e-6, 1e-3 and 1,
+committed accepts, repair attempts, and repaired components. Repair attempts
+and component work include an accepted move subsequently rolled back. The final
+<code class="docutils literal notranslate"><span class="pre">F</span> <span class="pre">refreshTotal</span></code> row gives the total component count. Drift is
+<code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">(log(abs(ip_direct))</span> <span class="pre">+</span> <span class="pre">LogProjVal)</span> <span class="pre">-</span> <span class="pre">stored_log_weight</span></code>, using the
+direct recomputation already performed by measurement. It is a diagnostic
+of stored sampling weights, not a bound on energy errors. No per-proposal
+traces or additional full recomputations are performed for this summary.</p>
+<section id="zero-and-exceptional-event-logging">
+<h4>Zero and exceptional-event logging<a class="headerlink" href="#zero-and-exceptional-event-logging" title="Permalink to this heading">¶</a></h4>
+<p><code class="docutils literal notranslate"><span class="pre">Q</span></code> remains the compact drift/repair summary. Each bin also writes <code class="docutils literal notranslate"><span class="pre">Z</span></code>:</p>
+<p><code class="docutils literal notranslate"><span class="pre">Z</span> <span class="pre">bin</span> <span class="pre">proposalZero</span> <span class="pre">ratioUnderflow</span> <span class="pre">ratioNonfinite</span> <span class="pre">currentNonfinite</span> <span class="pre">componentZeroPre</span> <span class="pre">componentZeroPost</span> <span class="pre">measurementZero</span> <span class="pre">repairFailed</span> <span class="pre">measureWeightZero</span> <span class="pre">skipWeight</span> <span class="pre">skipEnergy</span> <span class="pre">measureFactorFailed</span> <span class="pre">detailsTotal</span> <span class="pre">suppressedTotal</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">proposalZero</span></code> counts a computed projected-amplitude log of negative
+infinity, while <code class="docutils literal notranslate"><span class="pre">ratioUnderflow</span></code> counts a zero acceptance ratio with finite
+input logs and projection ratio. Component zeros refer to a single Pfaffian,
+not to the projected sum. <code class="docutils literal notranslate"><span class="pre">measurementZero</span></code> refers to the directly computed
+projected amplitude; <code class="docutils literal notranslate"><span class="pre">measureWeightZero</span></code> refers to the reweighting factor.
+Floating-point zeros do not by themselves establish mathematical zeros.
+<code class="docutils literal notranslate"><span class="pre">currentNonfinite</span></code> counts observations at repair/recompute checkpoints,
+not distinct configurations. Skip counters record the existing measurement
+failure branches; they do not introduce new sample exclusions. Samples skipped
+after failed factorization are counted in <code class="docutils literal notranslate"><span class="pre">measureFactorFailed</span></code>, not in <code class="docutils literal notranslate"><span class="pre">Q</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">E</span></code> rows record exceptional events, with a maximum of four per kind
+(<code class="docutils literal notranslate"><span class="pre">proposal</span></code>, <code class="docutils literal notranslate"><span class="pre">component</span></code>, <code class="docutils literal notranslate"><span class="pre">current</span></code>, <code class="docutils literal notranslate"><span class="pre">measure</span></code>), per rank, for the whole
+run: at most 16 detail rows/rank. <code class="docutils literal notranslate"><span class="pre">detailsTotal</span></code> and <code class="docutils literal notranslate"><span class="pre">suppressedTotal</span></code> are
+cumulative; the other <code class="docutils literal notranslate"><span class="pre">Z</span></code> counters reset each bin. Repeated events continue
+to increment counters after the detail budget is exhausted.</p>
+<p><code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">bin</span> <span class="pre">out</span> <span class="pre">in</span> <span class="pre">move</span> <span class="pre">kind</span> <span class="pre">qp</span> <span class="pre">mask</span> <span class="pre">a</span> <span class="pre">b</span> <span class="pre">c</span> <span class="pre">d</span> <span class="pre">e</span> <span class="pre">f</span> <span class="pre">info</span> <span class="pre">action</span></code></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">proposal</span></code>: a/b are old/proposed log amplitudes, c is the projection log
+ratio, d is the raw acceptance ratio; e/f are unused. <code class="docutils literal notranslate"><span class="pre">reject</span></code> records
+zero/invalid-input rejection; <code class="docutils literal notranslate"><span class="pre">accept-log</span></code> records a provisional accept
+made in log space despite overflow/underflow of the diagnostic raw ratio.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">component</span></code>: a/b are old/proposed Pfaffians, c/d are the stored values
+before/after factorization, e/f are reference/minimum kappa. Mask bits
+1/2/4 mean reference/one-step/minimum growth. A nonzero <code class="docutils literal notranslate"><span class="pre">info</span></code> means
+failure; the post-factorization value is then not a valid repaired result.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">current</span></code>: a/b are the log amplitudes before/after the indicated existing
+operation; c through f are unused. Actions distinguish initial remake,
+completion of remake, component repair, and full recomputation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">measure</span></code>: a/b/c are direct log amplitude/projection log/stored log
+weight, d/e are reweighting factor/energy, f is the sample index. Actions
+distinguish accumulation, zero contribution, and the existing weight,
+energy, or factorization skip. Unavailable fields are NaN.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">out</span></code>/<code class="docutils literal notranslate"><span class="pre">in</span></code> locate the proposal within the bin, and <code class="docutils literal notranslate"><span class="pre">move</span></code> is 1 for
+hop and 2 for exchange. Inapplicable locations and component indices are
+-1. New files grow with bins and ranks, not with proposal or repair counts.
+No configurations, inverse matrices, or higher-order evaluations are dumped.
+When this log is enabled, the existing per-sample measurement warnings are
+represented by bounded details and complete counters instead of repeated
+stderr lines. A failed repair additionally prints rank, bin, step, component,
+factorization status and before/after values to stderr before aborting.</p>
+</section>
+<section id="exceptional-current-state-recovery">
+<h4>Exceptional current-state recovery<a class="headerlink" href="#exceptional-current-state-recovery" title="Permalink to this heading">¶</a></h4>
+<p>With repair enabled, a zero/nonfinite log amplitude after an accepted update
+triggers one full reconstruction of that proposed configuration. A finite
+result replaces the stored weight and resets the repair reference/minimum.
+If the full evaluation still gives zero, the provisional hop or exchange is
+undone, and the previous configuration’s Pfaffians and inverse matrices are
+rebuilt. Projection counts and accept counters have not yet been committed.
+Sampling continues only if the restored log amplitude is finite. No extra
+random variate, amplitude floor, near-zero cutoff, or sample deletion is used.</p>
+<p>A failed reconstruction, NaN/positive-infinite rebuilt log amplitude, or an
+invalid restored state aborts with a diagnostic. Initialization retains the
+existing remake attempt but now requires a finite current amplitude and a
+successful factorization afterwards. A zero/nonfinite result of an existing
+periodic full reconstruction also aborts; repeating the same reconstruction
+or silently continuing would not establish a valid current state.</p>
+<p>Each bin adds <code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">bin</span> <span class="pre">fullRebuild</span> <span class="pre">recovered</span> <span class="pre">rollback</span> <span class="pre">failed</span></code>. These counters
+record exceptional full reconstructions (including the old-state rebuild),
+recovered proposed states, completed rollbacks, and fatal recovery/validation
+failures. Existing initialization/periodic rebuilds are not counted as
+exceptional full reconstructions. <code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">current</span></code> uses the existing four-detail
+budget: <code class="docutils literal notranslate"><span class="pre">recovered-accepted</span></code>, <code class="docutils literal notranslate"><span class="pre">rollback-zero</span></code>, <code class="docutils literal notranslate"><span class="pre">restored-old-reject</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">abort-*</span></code> distinguish outcomes. Even if that budget is exhausted, fatal
+failures print their location and values to stderr and flush partial counters.</p>
+<p>Log-space acceptance distinguishes overflow of an exponential of finite logs
+from an invalid amplitude. Positive ratio overflow is accepted; NaN and
+infinite proposed log amplitudes are rejected. Finite negative log ratios are
+compared with half the log of the same uniform variate. Explicitly disabling
+repair preserves the previous acceptance and recovery behavior.</p>
+<p>There is no additional full evaluation on the finite normal path. Recovery
+restores a usable current state, not a guarantee that earlier approximate
+acceptance decisions were exact; recovery counters remain part of the run’s
+numerical diagnostics.</p>
+</section>
+</section>
 </section>
 </section>
 
@@ -697,6 +818,11 @@ on this expression.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#calculation-of-physical-quantities-after-the-first-power-lanczos-step">Calculation of physical quantities after the first power-Lanczos step</a></li>
+<li><a class="reference internal" href="#selective-repair-in-the-first-lanczos-sampler">Selective repair in the first-Lanczos sampler</a><ul>
+<li><a class="reference internal" href="#zero-and-exceptional-event-logging">Zero and exceptional-event logging</a></li>
+<li><a class="reference internal" href="#exceptional-current-state-recovery">Exceptional current-state recovery</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
