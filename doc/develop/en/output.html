@@ -542,6 +542,24 @@ file and <code class="docutils literal notranslate"><span class="pre">NLanczosSt
 where both <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> and <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> are defined in
 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file.</p>
 </section>
+<section id="xxx-nzguide-yyy-dat">
+<h2>xxx_nzguide_yyy.dat<a class="headerlink" href="#xxx-nzguide-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<p>Written only when <code class="docutils literal notranslate"><span class="pre">DLanczosGuideEps</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>. One line has nine columns:
+<span class="math notranslate nohighlight">\(\varepsilon\)</span>, the total number of saved samples drawn from the guide
+distribution, the number of samples with
+<span class="math notranslate nohighlight">\(|P| &lt; \sqrt{\varepsilon} A\)</span>, the number of samples whose local
+quantities were not evaluated because <span class="math notranslate nohighlight">\(P=0\)</span>, the number stopped by a
+numerical guard, the sum of the weights
+<span class="math notranslate nohighlight">\(|\psi|^2/q_\varepsilon\)</span>, the sum of their squares, the minimum
+weight, and the maximum of <span class="math notranslate nohighlight">\(A/|P|\)</span> over finite nonzero <span class="math notranslate nohighlight">\(P\)</span>.
+Samples with <span class="math notranslate nohighlight">\(P=0, A&gt;0\)</span> are included in the first two counts and
+contribute zero to the weight sum. If the numerical-skip count is zero, the
+total saved-sample count divided by the weight sum estimates
+<span class="math notranslate nohighlight">\(Z_q/Z_\psi\)</span>. Do not use Lanczos moments from a bin with a nonzero
+exact-zero or numerical-skip count. Zero counts do not prove full support
+for states where <span class="math notranslate nohighlight">\(A=0\)</span> or <span class="math notranslate nohighlight">\(J=0\)</span> makes the guide weight itself
+zero.</p>
+</section>
 <section id="xxx-ls2-out-yyy-dat">
 <h2>xxx_ls2_out_yyy.dat<a class="headerlink" href="#xxx-ls2-out-yyy-dat" title="Permalink to this heading">¶</a></h2>
 <p>This two-line file is written for <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>,
@@ -704,6 +722,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-nzguide-yyy-dat">xxx_nzguide_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-out-yyy-dat">xxx_ls2_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-pl-out-yyy-dat">xxx_pl_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-moment-yyy-dat">xxx_ls2_moment_yyy.dat</a></li>

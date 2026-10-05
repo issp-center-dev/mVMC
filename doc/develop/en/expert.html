@@ -698,6 +698,25 @@ failed audit as <code class="docutils literal notranslate"><span class="pre">bia
 <code class="docutils literal notranslate"><span class="pre">xxx_ls_support_yyy.dat</span></code>. A passing audit is necessary but not
 sufficient to prove complete support at every higher Krylov order.</p>
 </li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DLanczosGuideEps</span></code></p>
+<p><strong>Type :</strong> double (default value: 0.0)</p>
+<p><strong>Description :</strong> Experimental. In the legacy Power-Lanczos calculation
+(<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode=0</span></code>), this replaces the sampling weight by
+<span class="math notranslate nohighlight">\(q_\varepsilon(x)=|J(x)|^2\max(P(x)^2,\varepsilon A(x)^2)\)</span>, where
+<span class="math notranslate nohighlight">\(P=\sum_q a_q\)</span> is the quantum-number-projected sum and
+<span class="math notranslate nohighlight">\(A=\sum_q |a_q|\)</span>. With 0, the sampler uses <span class="math notranslate nohighlight">\(|\psi|^2\)</span> as
+before. With a positive value, the acceptance ratio uses
+<span class="math notranslate nohighlight">\(q_\varepsilon\)</span> and each measured sample carries the weight
+<span class="math notranslate nohighlight">\(|\psi|^2/q_\varepsilon=P^2/\max(P^2,\varepsilon A^2)\)</span>.
+This is allowed only with real variational parameters and without
+BackFlow, RBM, reweighting, or grand-canonical sampling. Samples with
+<span class="math notranslate nohighlight">\(P=0\)</span> remain in the guide-distribution visit count, carry zero
+weight, and are excluded before evaluating local quantities. They are
+counted in <code class="docutils literal notranslate"><span class="pre">xxx_nzguide_yyy.dat</span></code>. A bin with a nonzero exact-zero or
+numerical-skip count cannot be used for Lanczos moments. No recommended
+value of <span class="math notranslate nohighlight">\(\varepsilon\)</span> is given.</p>
+</li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 0)</p>
 <p><strong>Description :</strong> An integer for numbering of output files. For

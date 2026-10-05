@@ -701,6 +701,26 @@ ModParaファイル (modpara.def)
    監査の通過は必要条件ですが、全ての高次Krylov supportが完全であることの
    十分条件ではありません。
 
+-  ``DLanczosGuideEps``
+
+   **形式 :** double型 (デフォルト値 = 0.0)
+
+   **説明 :** 従来のPower-Lanczos計算（``NVMCCalMode=1``、
+   ``NLanczosMode=1``、``NLanczosStep=1``、``NLanczosEstimatorMode=0``）で、
+   sampling重みを
+   :math:`q_\varepsilon(x)=|J(x)|^2\max(P(x)^2,\varepsilon A(x)^2)`
+   に置き換える実験的機能です。:math:`P=\sum_q a_q` は量子数射影の成分和、
+   :math:`A=\sum_q |a_q|` です。0では従来どおり
+   :math:`|\psi|^2`でsamplingします。正の値では採否比を
+   :math:`q_\varepsilon`で評価し、測定時に各sampleへ
+   :math:`|\psi|^2/q_\varepsilon=P^2/\max(P^2,\varepsilon A^2)`を掛けます。
+   実変分パラメータで、BackFlow、RBM、reweight、グランドカノニカルを
+   使わない場合だけ指定できます。:math:`P=0`のsampleはguide分布の訪問数に
+   含め、重み0として局所量の評価から除外し、件数を
+   ``xxx_nzguide_yyy.dat`` に記録します。この件数または数値guardによる
+   中止件数が非零のbinはLanczos momentの解析に使用できません。
+   :math:`\varepsilon`の推奨値は定めていません。
+
 -  ``NDataIdxStart``
 
    **形式 :** int型 (デフォルト値 = 0)

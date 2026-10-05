@@ -513,6 +513,22 @@ MPI reduction後の実部・虚部です。<code class="docutils literal notrans
 xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
 <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。</p>
 </section>
+<section id="xxx-nzguide-yyy-dat">
+<h2>xxx_nzguide_yyy.dat<a class="headerlink" href="#xxx-nzguide-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">DLanczosGuideEps</span> <span class="pre">&gt;</span> <span class="pre">0</span></code> のときだけ出力されます。1行9列で、順に
+<span class="math notranslate nohighlight">\(\varepsilon\)</span>、guide分布から得た全保存sample数、
+<span class="math notranslate nohighlight">\(|P| &lt; \sqrt{\varepsilon} A\)</span> となったsample数、<span class="math notranslate nohighlight">\(P=0\)</span> のため
+局所量を評価しなかったsample数、数値guardで評価を中止したsample数、重み
+<span class="math notranslate nohighlight">\(|\psi|^2/q_\varepsilon\)</span> の和、その二乗和、重みの最小値、有限かつ
+非零の <span class="math notranslate nohighlight">\(P\)</span> に対する <span class="math notranslate nohighlight">\(A/|P|\)</span> の最大値です。
+<span class="math notranslate nohighlight">\(P=0, A&gt;0\)</span> のsampleは最初の2つのsample数に含まれ、重み0として
+重み和へ寄与しません。数値guardによる中止が0なら、全保存sample数を
+重みの和で割った値が <span class="math notranslate nohighlight">\(Z_q/Z_\psi\)</span> の推定になります。
+<span class="math notranslate nohighlight">\(P=0\)</span> または数値guardによる中止が1件でもあるbinは、Lanczos momentに
+欠落があるため採用しないでください。両方が0でも、<span class="math notranslate nohighlight">\(A=0\)</span> または
+<span class="math notranslate nohighlight">\(J=0\)</span> でguide重み自体が0となる状態のfull supportを証明するものでは
+ありません。</p>
+</section>
 <section id="xxx-ls2-out-yyy-dat">
 <h2>xxx_ls2_out_yyy.dat<a class="headerlink" href="#xxx-ls2-out-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NLanczosStep=2</span></code> の場合に
@@ -662,6 +678,7 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-nzguide-yyy-dat">xxx_nzguide_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-out-yyy-dat">xxx_ls2_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-pl-out-yyy-dat">xxx_pl_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-moment-yyy-dat">xxx_ls2_moment_yyy.dat</a></li>

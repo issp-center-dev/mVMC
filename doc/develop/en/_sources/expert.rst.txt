@@ -720,6 +720,27 @@ Keywords and parameters
    ``xxx_ls_support_yyy.dat``. A passing audit is necessary but not
    sufficient to prove complete support at every higher Krylov order.
 
+-  ``DLanczosGuideEps``
+
+   **Type :** double (default value: 0.0)
+
+   **Description :** Experimental. In the legacy Power-Lanczos calculation
+   (``NVMCCalMode=1``, ``NLanczosMode=1``, ``NLanczosStep=1``, and
+   ``NLanczosEstimatorMode=0``), this replaces the sampling weight by
+   :math:`q_\varepsilon(x)=|J(x)|^2\max(P(x)^2,\varepsilon A(x)^2)`, where
+   :math:`P=\sum_q a_q` is the quantum-number-projected sum and
+   :math:`A=\sum_q |a_q|`. With 0, the sampler uses :math:`|\psi|^2` as
+   before. With a positive value, the acceptance ratio uses
+   :math:`q_\varepsilon` and each measured sample carries the weight
+   :math:`|\psi|^2/q_\varepsilon=P^2/\max(P^2,\varepsilon A^2)`.
+   This is allowed only with real variational parameters and without
+   BackFlow, RBM, reweighting, or grand-canonical sampling. Samples with
+   :math:`P=0` remain in the guide-distribution visit count, carry zero
+   weight, and are excluded before evaluating local quantities. They are
+   counted in ``xxx_nzguide_yyy.dat``. A bin with a nonzero exact-zero or
+   numerical-skip count cannot be used for Lanczos moments. No recommended
+   value of :math:`\varepsilon` is given.
+
 -  ``NDataIdxStart``
 
    **Type :** int-type (default value: 0)
