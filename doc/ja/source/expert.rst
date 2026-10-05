@@ -91,11 +91,19 @@
 
     .. math::
 
-       V_{ij}=-\frac{J_{ij}}{4}, \qquad
+       V_{ij}=-\frac{J_{ij}}{2}, \qquad
        J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
        J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}
 
-    を指定します。また、t-J用の更新経路は ``modpara.def`` の
+    を指定します。
+    :math:`S_i^z S_j^z = \frac{1}{2}(n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow})-\frac{1}{4}n_i n_j` なので、
+    ``Hund`` と ``Exchange`` に :math:`V_{ij}=-J_{ij}/4` を合わせたものが
+    :math:`J_{ij}{\boldsymbol S}_i\cdot{\boldsymbol S}_j` を与え、
+    :math:`V_{ij}` の残りの :math:`-J_{ij}/4` が
+    :math:`-\frac{1}{4}J_{ij}n_i n_j` を与えます。
+    :math:`-\frac{1}{4}n_i n_j` の項を含めないt-J模型では
+    :math:`V_{ij}=-J_{ij}/4` を指定します。
+    また、t-J用の更新経路は ``modpara.def`` の
     ``NExUpdatePath`` で指定します。現状のt-J更新経路では
     ``BackFlow`` と ``LocSpin`` は非対応です。また、二重占有を許さないため、
     電子数がサイト数を超える入力は使用できません。 ``NExUpdatePath=4`` では
@@ -752,7 +760,9 @@ ModParaファイル (modpara.def)
 
    **形式 :** int型 (0以上)
 
-   **説明 :** 伝導電子の数。
+   **説明 :** 伝導電子の数。局在スピンの電子は数えないため、
+   純粋なスピン系では0を指定します。2 (``Nsite`` - ``NlocalSpin``)
+   を超える値は指定できません。
 
 -  ``2Sz``
 

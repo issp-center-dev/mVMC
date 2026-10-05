@@ -184,6 +184,17 @@ target_include_directories(update_weight_unit PRIVATE
 target_link_libraries(update_weight_unit m)
 add_test(NAME UpdateWeight_Unit COMMAND update_weight_unit)
 
+add_executable(initial_sample_unit initial_sample_unit.c
+    ${CMAKE_SOURCE_DIR}/src/sfmt/SFMT.c)
+target_include_directories(initial_sample_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include
+    ${CMAKE_SOURCE_DIR}/src/sfmt)
+if(MPI_FOUND)
+    target_link_libraries(initial_sample_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME InitialSample_Unit COMMAND initial_sample_unit)
+set_tests_properties(InitialSample_Unit PROPERTIES TIMEOUT 60)
+
 add_executable(real_rbm_oracle_unit
     real_rbm_oracle_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/rbm.c)

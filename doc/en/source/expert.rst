@@ -91,9 +91,17 @@ listed in parentheses correspond to the file made by vmcdry.out.
 
     .. math::
 
-       V_{ij}=-\frac{J_{ij}}{4}, \qquad
+       V_{ij}=-\frac{J_{ij}}{2}, \qquad
        J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
        J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}.
+
+    Here ``Hund`` and ``Exchange`` together with
+    :math:`V_{ij}=-J_{ij}/4` give
+    :math:`J_{ij}{\boldsymbol S}_i\cdot{\boldsymbol S}_j`, because
+    :math:`S_i^z S_j^z = \frac{1}{2}(n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow})-\frac{1}{4}n_i n_j`, and the
+    remaining :math:`-J_{ij}/4` of :math:`V_{ij}` gives
+    :math:`-\frac{1}{4}J_{ij}n_i n_j`. For a t-J model without the
+    :math:`-\frac{1}{4}n_i n_j` term, use :math:`V_{ij}=-J_{ij}/4`.
 
     The t-J update path must also be selected by ``NExUpdatePath`` in
     ``modpara.def``. The current t-J update paths do not support
@@ -773,9 +781,12 @@ Keywords and parameters
 
 -  ``Ncond``
 
-   **Type :** int-type (greater than 0)
+   **Type :** int-type (greater than or equal to 0)
 
-   **Description :** The number of conduction electrons.
+   **Description :** The number of conduction electrons. Electrons of
+   localized spins are not counted, so that ``Ncond`` is 0 for a pure
+   spin system. ``Ncond`` must not exceed
+   2 (``Nsite`` - ``NlocalSpin``).
 
 -  ``2Sz``
 

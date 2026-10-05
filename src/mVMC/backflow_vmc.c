@@ -1385,33 +1385,17 @@ void VMC_BF_MakeSample(MPI_Comm comm)
 int makeInitialSampleBF(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, int *eleProjBFCnt,
                         const int qpStart, const int qpEnd, MPI_Comm comm)
 {
-  const int nsize = Nsize;
   const int nsite2 = Nsite2;
   int flag = 1, flagRdc, loop = 0;
-  int ri, mi, si, msi, rsi;
+  int ri, mi, si, rsi;
   int rank, size;
 
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
 
   do {
-    /* initialize */
-#pragma omp parallel for default(shared) private(msi)
-    for (msi = 0; msi < nsize; msi++) eleIdx[msi] = -1;
-#pragma omp parallel for default(shared) private(rsi)
-    for (rsi = 0; rsi < nsite2; rsi++) eleCfg[rsi] = -1;
-
-    /* local spin */
-    for (ri = 0; ri < Nsite; ri++) {
-      if (LocSpn[ri] == 1) {
-        do {
-          mi = gen_rand32() % Ne;
-          si = (genrand_real2() < 0.5) ? 0 : 1;
-        } while (eleIdx[mi + si * Ne] != -1);
-        eleCfg[ri + si * Nsite] = mi;
-        eleIdx[mi + si * Ne] = ri;
-      }
-    }
+    /* initialize and local spin */
+    initSampleWithLocalSpin(eleIdx,eleCfg,NULL);
 
     /* itinerant electron */
     for (si = 0; si < 2; si++) {
@@ -1969,10 +1953,9 @@ void VMC_BF_MakeSample_real(MPI_Comm comm) {
 
 int makeInitialSampleBF_real(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt, int *eleProjBFCnt,
                              const int qpStart, const int qpEnd, MPI_Comm comm) {
-  const int nsize = Nsize;
   const int nsite2 = Nsite2;
   int flag = 1, flagRdc, loop = 0;
-  int ri, mi, si, msi, rsi;
+  int ri, mi, si, rsi;
   int rank, size;
   int tmp_i;
 
@@ -1980,23 +1963,8 @@ int makeInitialSampleBF_real(int *eleIdx, int *eleCfg, int *eleNum, int *eleProj
   MPI_Comm_rank(comm, &rank);
 
   do {
-    /* initialize */
-#pragma omp parallel for default(shared) private(msi)
-    for (msi = 0; msi < nsize; msi++) eleIdx[msi] = -1;
-#pragma omp parallel for default(shared) private(rsi)
-    for (rsi = 0; rsi < nsite2; rsi++) eleCfg[rsi] = -1;
-
-    /* local spin */
-    for (ri = 0; ri < Nsite; ri++) {
-      if (LocSpn[ri] == 1) {
-        do {
-          mi = gen_rand32() % Ne;
-          si = (genrand_real2() < 0.5) ? 0 : 1;
-        } while (eleIdx[mi + si * Ne] != -1);
-        eleCfg[ri + si * Nsite] = mi;
-        eleIdx[mi + si * Ne] = ri;
-      }
-    }
+    /* initialize and local spin */
+    initSampleWithLocalSpin(eleIdx,eleCfg,NULL);
 
     /* itinerant electron */
     for (si = 0; si < 2; si++) {
