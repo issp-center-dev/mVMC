@@ -61,6 +61,9 @@ with tempfile.TemporaryDirectory(prefix='sampler-repair-', dir=str(scratch)) as 
         rows = [l.split() for l in p.read_text().splitlines() if l and l[0] != '#']
         q = [r for r in rows if r[0] == 'Q']
         z = [r for r in rows if r[0] == 'Z']
+        recovery = [r for r in rows if r[0] == 'R']
+        assert len(recovery) == 2 and all(len(r) == 6 for r in recovery)
+        assert all(all(int(v) == 0 for v in r[2:]) for r in recovery)
         events = [r for r in rows if r[0] == 'E']
         assert len(q) == len(z) == 2
         assert [int(r[1]) for r in q] == [0, 1]

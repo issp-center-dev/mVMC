@@ -818,7 +818,8 @@ components whose normalized Pfaffian magnitude has grown by more than
 1000 relative to its reference, the previous configuration, or the minimum
 since its last repair. It then updates the stored sampling weight.
 A component with a zero reference is also rebuilt.
-The accept decision uses the existing proposal evaluation. This repair
+The provisional accept decision uses the existing proposal evaluation, with
+log-space comparison when repair is enabled. This repair
 adds no high-order Hamiltonian evaluation and does not clip or discard
 samples. Small residual drift and physical heavy tails may remain.
 
@@ -836,7 +837,8 @@ and broadcast to all ranks:
 Each rank writes ``sampler_drift_rNNNN.dat`` in the working directory.
 A ``Q`` row contains the zero-based bin, evaluated-sample count, nonfinite
 count, maximum absolute log-weight drift, counts above 1e-6, 1e-3 and 1,
-accepted moves, accepts with repair, and repaired components. The final
+committed accepts, repair attempts, and repaired components. Repair attempts
+and component work include an accepted move subsequently rolled back. The final
 ``F refreshTotal`` row gives the total component count. Drift is
 ``2 * (log(abs(ip_direct)) + LogProjVal) - stored_log_weight``, using the
 direct recomputation already performed by measurement. It is a diagnostic
@@ -872,7 +874,8 @@ to increment counters after the detail budget is exhausted.
 
 * ``proposal``: a/b are old/proposed log amplitudes, c is the projection log
   ratio, d is the raw acceptance ratio; e/f are unused. ``reject`` records
-  the existing zero/nonfinite-ratio rejection.
+  zero/invalid-input rejection; ``accept-log`` records a provisional accept
+  made in log space despite overflow/underflow of the diagnostic raw ratio.
 * ``component``: a/b are old/proposed Pfaffians, c/d are the stored values
   before/after factorization, e/f are reference/minimum kappa. Mask bits
   1/2/4 mean reference/one-step/minimum growth. A nonzero ``info`` means
@@ -894,9 +897,41 @@ represented by bounded details and complete counters instead of repeated
 stderr lines. A failed repair additionally prints rank, bin, step, component,
 factorization status and before/after values to stderr before aborting.
 
-This logging does not add an exact-zero recovery algorithm. A zero proposed
-amplitude is rejected; initialization retains its existing remake attempt.
-A nonfinite current amplitude after accepted repair or full recomputation is
-recorded with the existing continuation action. The legacy rejection rule
-can then prevent escape from that state. Such a run must not be interpreted
-as a recovered chain merely because a repair counter is nonzero.
+Exceptional current-state recovery
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+With repair enabled, a zero/nonfinite log amplitude after an accepted update
+triggers one full reconstruction of that proposed configuration. A finite
+result replaces the stored weight and resets the repair reference/minimum.
+If the full evaluation still gives zero, the provisional hop or exchange is
+undone, and the previous configuration's Pfaffians and inverse matrices are
+rebuilt. Projection counts and accept counters have not yet been committed.
+Sampling continues only if the restored log amplitude is finite. No extra
+random variate, amplitude floor, near-zero cutoff, or sample deletion is used.
+
+A failed reconstruction, NaN/positive-infinite rebuilt log amplitude, or an
+invalid restored state aborts with a diagnostic. Initialization retains the
+existing remake attempt but now requires a finite current amplitude and a
+successful factorization afterwards. A zero/nonfinite result of an existing
+periodic full reconstruction also aborts; repeating the same reconstruction
+or silently continuing would not establish a valid current state.
+
+Each bin adds ``R bin fullRebuild recovered rollback failed``. These counters
+record exceptional full reconstructions (including the old-state rebuild),
+recovered proposed states, completed rollbacks, and fatal recovery/validation
+failures. Existing initialization/periodic rebuilds are not counted as
+exceptional full reconstructions. ``E current`` uses the existing four-detail
+budget: ``recovered-accepted``, ``rollback-zero``, ``restored-old-reject``, and
+``abort-*`` distinguish outcomes. Even if that budget is exhausted, fatal
+failures print their location and values to stderr and flush partial counters.
+
+Log-space acceptance distinguishes overflow of an exponential of finite logs
+from an invalid amplitude. Positive ratio overflow is accepted; NaN and
+infinite proposed log amplitudes are rejected. Finite negative log ratios are
+compared with half the log of the same uniform variate. Explicitly disabling
+repair preserves the previous acceptance and recovery behavior.
+
+There is no additional full evaluation on the finite normal path. Recovery
+restores a usable current state, not a guarantee that earlier approximate
+acceptance decisions were exact; recovery counters remain part of the run's
+numerical diagnostics.

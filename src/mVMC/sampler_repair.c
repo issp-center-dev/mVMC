@@ -25,6 +25,7 @@ static struct {
   long measure_weight_zero, skip_weight, skip_energy, measure_factor_failed;
   double measure_log, measure_projection, measure_stored;
   int measure_issue;
+  long recovery_full, recovery_restored, recovery_rollback, recovery_failed;
   long events_written, events_suppressed;
   int events_by_kind[4];
 } Sr;
@@ -143,6 +144,7 @@ static void SamplerRepairInit(void) {
     if (Sr.file == NULL) SamplerRepairFail("cannot open drift summary");
     fprintf(Sr.file, "# Z bin proposalZero ratioUnderflow ratioNonfinite currentNonfinite componentZeroPre componentZeroPost measurementZero repairFailed measureWeightZero skipWeight skipEnergy measureFactorFailed detailsTotal suppressedTotal\n");
     fprintf(Sr.file, "# E bin out in move kind qp mask a b c d e f info action; max 4 per kind/rank/run\n");
+    fprintf(Sr.file, "# R bin fullRebuild recovered rollback failed\n");
     fprintf(Sr.file, "# Q bin samples nonfinite maxAbsDrift gt1e6 gt1e3 gt1 accepts refreshAccepts components\n");
   }
 }
@@ -164,6 +166,13 @@ static void SamplerRepairFlush(void) {
     if (fflush(Sr.file) != 0 || ferror(Sr.file))
       SamplerRepairFail("cannot write zero-event summary");
   }
+  if (Sr.file && Sr.bin >= 0) {
+    fprintf(Sr.file, "R %d %ld %ld %ld %ld\n", Sr.bin, Sr.recovery_full,
+            Sr.recovery_restored, Sr.recovery_rollback, Sr.recovery_failed);
+    if (fflush(Sr.file) != 0 || ferror(Sr.file))
+      SamplerRepairFail("cannot write recovery summary");
+  }
+  Sr.recovery_full = Sr.recovery_restored = Sr.recovery_rollback = Sr.recovery_failed = 0;
   Sr.proposal_zero = Sr.ratio_underflow = Sr.ratio_nonfinite = Sr.current_nonfinite = 0;
   Sr.component_zero_pre = Sr.component_zero_post = Sr.measurement_zero = Sr.repair_failed = 0;
   Sr.measure_weight_zero = Sr.skip_weight = Sr.skip_energy = Sr.measure_factor_failed = 0;
@@ -176,6 +185,7 @@ static void SamplerRepairFlush(void) {
 static void SamplerRepairSetBin(int bin) {
   SamplerRepairFlush();
   Sr.bin = bin;
+  Sr.out_step = Sr.in_step = -1; Sr.move = 0;
 }
 
 static void SamplerRepairRecompute(void) {
@@ -185,25 +195,102 @@ static void SamplerRepairRecompute(void) {
 }
 
 static void SamplerRepairProposal(int out_step, int in_step, int move,
-    double old_log, double proposed_log, double projection_ratio, double ratio) {
-  if (!Sr.logging) return;
+    double old_log, double proposed_log, double projection_ratio, double ratio, int accepted) {
   Sr.out_step = out_step; Sr.in_step = in_step; Sr.move = move;
+  if (!Sr.logging) return;
   Sr.proposal_zero += proposed_log == -INFINITY;
   Sr.ratio_underflow += ratio == 0.0 && isfinite(old_log) &&
       isfinite(proposed_log) && isfinite(projection_ratio);
   Sr.ratio_nonfinite += !isfinite(ratio);
   if (proposed_log == -INFINITY || ratio == 0.0 || !isfinite(ratio))
     SamplerRepairEvent("proposal", -1, 0, old_log, proposed_log, projection_ratio,
-                      ratio, 0.0, 0.0, 0, "reject");
+                      ratio, 0.0, 0.0, 0, accepted ? "accept-log" : "reject");
 }
 
 static void SamplerRepairCurrent(int out_step, int in_step, int move,
     double before, double after, const char *action) {
-  if (!Sr.logging || (isfinite(before) && isfinite(after))) return;
   Sr.out_step = out_step; Sr.in_step = in_step; Sr.move = move;
+  if (!Sr.logging || (isfinite(before) && isfinite(after))) return;
   Sr.current_nonfinite += !isfinite(after);
   SamplerRepairEvent("current", -1, 0, before, after, 0.0, 0.0, 0.0, 0.0, 0, action);
-  /* No new recovery or change to the existing Markov chain is introduced. */
+}
+
+/* Compare in log space: positive overflow is acceptance, not NaN rejection.
+ * The caller draws one uniform variate even for deterministic decisions. */
+static int SamplerRepairLogAccept(double old_log, double proposed_log,
+                                  double projection_ratio, double uniform) {
+  double half_log_ratio;
+  if (!isfinite(old_log) || !isfinite(projection_ratio) ||
+      !isfinite(proposed_log)) return 0;
+  half_log_ratio = projection_ratio + (proposed_log - old_log);
+  if (isnan(half_log_ratio)) return 0;
+  if (half_log_ratio >= 0.0) return 1;
+  /* Finite input logs represent positive weights even if their subtraction
+   * overflows. genrand_real2 can return zero; the true zero was rejected above. */
+  if (uniform == 0.0) return 1;
+  return 0.5 * log(uniform) < half_log_ratio;
+}
+
+static void SamplerRepairRecoveryFailure(double before, double after, int info,
+                                         const char *action) {
+  int rank;
+  Sr.recovery_failed++;
+  SamplerRepairEvent("current", -1, 0, before, after, NAN, NAN, NAN, NAN, info, action);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  fprintf(stderr, "sampler recovery failure rank=%d bin=%d out=%d in=%d move=%d info=%d log_before=%.17e log_after=%.17e action=%s\n",
+          rank, Sr.bin, Sr.out_step, Sr.in_step, Sr.move, info, before, after, action);
+  SamplerRepairFlush();
+  SamplerRepairFail("cannot establish a finite current amplitude");
+}
+
+/* Used after an already-completed full factorization: never retry it blindly. */
+static void SamplerRepairRequireCurrent(double log_value, int info,
+                                        const char *action) {
+  if (Sr.enabled && (info != 0 || !isfinite(log_value)))
+    SamplerRepairRecoveryFailure(log_value, log_value, info, action);
+}
+
+/* Only the exceptional accepted state is rebuilt. No snapshot of all inverse
+ * matrices is needed: projection counts have not been committed yet, and the
+ * old configuration is reconstructed by undoing the hop(s). Returns commit. */
+static int SamplerRepairResolveAccepted(int *eleIdx, int *eleCfg, int *eleNum,
+    int mi, int mj, int ri, int rj, int spin, int move,
+    int qpStart, int qpEnd, MPI_Comm comm, double *new_log, double *old_log) {
+  int info;
+  double before;
+  if (!Sr.enabled || isfinite(*new_log)) return 1;
+  before = *new_log;
+  Sr.current_nonfinite++;
+  Sr.recovery_full++;
+  info = CalculateMAll_real(eleIdx, qpStart, qpEnd);
+  *new_log = info == 0 ? CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm) : NAN;
+  if (info != 0 || isnan(*new_log) || *new_log == INFINITY)
+    SamplerRepairRecoveryFailure(before, *new_log, info, "abort-proposal-rebuild");
+  if (isfinite(*new_log)) {
+    SamplerRepairRecompute();
+    Sr.recovery_restored++;
+    SamplerRepairEvent("current", -1, 0, before, *new_log, NAN, NAN, NAN, NAN,
+                      0, "recovered-accepted");
+    return 1;
+  }
+  /* Directly evaluated zero has no target weight. Undo the provisional accept;
+   * a failed factorization is NOT used as evidence that this weight is zero. */
+  SamplerRepairEvent("current", -1, 0, before, *new_log, NAN, NAN, NAN, NAN,
+                    0, "rollback-zero");
+  if (move == 2)
+    revertEleConfig(mj, rj, ri, 1-spin, eleIdx, eleCfg, eleNum);
+  revertEleConfig(mi, ri, rj, spin, eleIdx, eleCfg, eleNum);
+  before = *old_log;
+  Sr.recovery_full++;
+  info = CalculateMAll_real(eleIdx, qpStart, qpEnd);
+  *old_log = info == 0 ? CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm) : NAN;
+  if (info != 0 || !isfinite(*old_log))
+    SamplerRepairRecoveryFailure(before, *old_log, info, "abort-rollback");
+  SamplerRepairRecompute();
+  Sr.recovery_rollback++;
+  SamplerRepairEvent("current", -1, 0, before, *old_log, NAN, NAN, NAN, NAN,
+                    0, "restored-old-reject");
+  return 0;
 }
 
 /* Called only on an accepted proposal, before the fast inverse update. */
@@ -217,7 +304,6 @@ static void SamplerRepairAcceptPre(const double *proposed) {
  * after any repair; the accept decision and RNG stream have already been set. */
 static int SamplerRepairAcceptPost(const int *eleIdx, int qpStart, int qpEnd) {
   int q, any = 0;
-  if (Sr.logging) Sr.accepts++;
   if (!Sr.enabled) return 0;
   SamplerRepairKappa(PfM_real, Sr.k);
   Sr.proposal_finite = 1;

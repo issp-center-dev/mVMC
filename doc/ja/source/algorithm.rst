@@ -778,7 +778,8 @@ pure-spin classでは各exchange bondを2つの向き付き演算子
 
 hopまたはexchangeのaccept後、規格化したPfaffianの絶対値が、基準値・直前配置・
 最後の修復以降の最小値から1000倍を超えて成長した射影成分だけを再計算し、
-保存したsampling weightを更新します。採否は既存の提案評価で決めます。
+保存したsampling weightを更新します。仮の採否には既存の提案評価を使い、
+修復onではlog領域で比較します。
 基準値がzeroの成分も再計算します。
 高次Hamiltonian評価を追加せず、sampleの切り詰め・除外も行いません。
 小さい残存driftや物理的な裾は残り得ます。
@@ -794,7 +795,8 @@ hopまたはexchangeのaccept後、規格化したPfaffianの絶対値が、基�
 
 各rankは作業directoryの ``sampler_drift_rNNNN.dat`` に、binごとの ``Q`` 行を出します。
 列は0始まりのbin、評価したsample数、非有限値の数、最大絶対drift、
-1e-6・1e-3・1を超えた数、accept数、修復したaccept数、修復成分数です。
+1e-6・1e-3・1を超えた数、確定accept数、修復発動数、修復成分数です。
+修復発動数と成分数には、その後取り消した仮acceptに対する作業も含みます。
 最後の ``F refreshTotal`` 行は全binの修復成分数です。
 driftは通常測定にある直接再計算を使った
 ``2 * (log(abs(ip_direct)) + LogProjVal) - stored_log_weight`` であり、
@@ -824,7 +826,8 @@ zero・異常時のログ
 ``E bin out in move kind qp mask a b c d e f info action``
 
 * ``proposal``: a/b=旧/提案log振幅、c=projectionのlog比、d=変換前の採択比。
-  e/fは未使用。既存処理によるzero・非有限比のrejectを記録します。
+  e/fは未使用。zero・不正入力のrejectに加え、診断用比がoverflow/underflowしても
+  log比較で仮acceptした場合は ``accept-log`` を記録します。
 * ``component``: a/b=旧/提案Pfaffian、c/d=再計算前後の保存値、e/f=基準/最小κ。
   maskの1/2/4 bitは基準値/直前配置/最小履歴からの成長です。
   ``info`` が非zeroの場合、再計算後の値は有効な修復結果とはみなしません。
@@ -840,8 +843,30 @@ zero・異常時のログ
 このログがonの場合、既存の測定失敗のstderr反復は、上限付き詳細と全件カウンタへ集約します。
 修復失敗時は、rank・bin・step・成分・info・再計算前後値をstderrにも出し、停止します。
 
-ログ追加は厳密なzeroからの新しい復旧アルゴリズムではありません。
-提案のzeroはrejectし、初期配置には既存の作り直しを使います。
-accept後の修復や全再計算後に現在のlog振幅が非有限のままなら、既存のcontinue動作を
-明記して記録します。この状態では従来のreject規則により遷移できなくなる可能性があり、
-修復回数が増えたことだけで復旧したとは判断しません。
+現在状態の異常時復旧
+^^^^^^^^^^^^^^^^^^^^
+
+修復onで、仮accept後のlog振幅がzero・非有限になったときだけ、提案先の全成分を
+1回再計算します。有限に戻れば保存重みと修復の基準・最小履歴を更新して続行します。
+直接再計算でもzeroならhop/exchangeを取り消し、移動前の配置のPfaffianと逆行列を
+再構築します。射影カウントとaccept数は復旧確認後に確定するため、取り消し時には
+変更しません。移動前のlog振幅が有限であることを確認して続行します。
+乱数の追加、振幅の下限設定、near-zero cutoff、sampleの削除はありません。
+
+再計算失敗、再計算後のNaN・正の無限大、復元先の非有限振幅は診断付きで停止します。
+初期化には既存の作り直しを残し、その後の振幅が有限かつ行列分解が成功していることを
+要求します。既存の定期的な全再計算後にもzero・非有限が残る場合は停止します。
+この場合に同じ全再計算を繰り返したり、無言で継続したりはしません。
+
+各binに ``R bin fullRebuild recovered rollback failed`` を追加します。
+異常時の全再計算数（移動前の再構築も含む）、提案先で復旧した数、取り消し完了数、
+復旧・現在状態検証の失敗数です。既存の初期化・定期再計算はfullRebuildに含めません。
+詳細は既存の ``E current`` の4件上限を共有し、``recovered-accepted``、
+``rollback-zero``、``restored-old-reject``、``abort-*`` で結果を区別します。
+詳細上限後も致命的失敗は位置・値をstderrに出し、途中の件数をflushして停止します。
+
+採否のlog比較では、有限logから指数を取る際の正のoverflowをacceptできるようにし、
+NaN・無限大の提案logとは区別します。負の有限log比は同じ乱数のlogの半分と比較します。
+修復を明示offにした場合は従来の採否・復旧動作を維持します。
+通常の有限な経路に追加の全再計算はありません。復旧は現在状態を使える形に戻す処理であり、
+それ以前の近似的な採否がすべて正しかったという保証ではありません。復旧件数も診断に残します。
