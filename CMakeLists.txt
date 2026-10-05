@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.5...3.10)
-project(mVMC NONE)
+# The version number is defined in src/mVMC/include/version.h
+foreach(_part MAJOR MINOR PATCH)
+  file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/src/mVMC/include/version.h _line
+    REGEX "^#define[ \t]+MVMC_VERSION_${_part}[ \t]+[0-9]+")
+  string(REGEX REPLACE "^#define[ \t]+MVMC_VERSION_${_part}[ \t]+([0-9]+).*" "\\1"
+    MVMC_VERSION_${_part} "${_line}")
+endforeach()
+project(mVMC
+  VERSION ${MVMC_VERSION_MAJOR}.${MVMC_VERSION_MINOR}.${MVMC_VERSION_PATCH}
+  LANGUAGES NONE)
 
 # Make submodule packages with old cmake available from CMake4.0 or later.
 set(CMAKE_POLICY_VERSION_MINIMUM 3.10)

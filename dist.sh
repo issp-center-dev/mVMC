@@ -15,10 +15,14 @@
 set -e
 
 # Retrieve Version ID
-major=`awk '$2=="VERSION_MAJOR"{print $3}' src/mVMC/include/version.h`
-minor=`awk '$2=="VERSION_MINOR"{print $3}' src/mVMC/include/version.h`
-patch=`awk '$2=="VERSION_PATCH"{print $3}' src/mVMC/include/version.h`
+major=`awk '$2=="MVMC_VERSION_MAJOR"{print $3}' src/mVMC/include/version.h`
+minor=`awk '$2=="MVMC_VERSION_MINOR"{print $3}' src/mVMC/include/version.h`
+patch=`awk '$2=="MVMC_VERSION_PATCH"{print $3}' src/mVMC/include/version.h`
+pre=`awk '$2=="MVMC_VERSION_PRERELEASE"{gsub(/"/,"",$3); print $3}' src/mVMC/include/version.h`
 vid=`echo ${major}.${minor}.${patch}`
+if [ -n "${pre}" ]; then
+  vid=${vid}-${pre}
+fi
 
 # Build PDF docs
 rm -rf build-docs
@@ -38,3 +42,18 @@ git-archive-all \
   --extra=doc/mVMC-${vid}_en.pdf \
   --prefix=mVMC-${vid} \
   mVMC-${vid}.tar.gz
+
+# Write the hash of the commit into cmake/git_archive.txt of the tarball,
+# unless it is filled in already. "vmc.out -v" built from the tarball prints it.
+hash=`git rev-parse HEAD`
+tmpdir=`mktemp -d`
+tar xzf mVMC-${vid}.tar.gz -C ${tmpdir}
+if grep -q Format ${tmpdir}/mVMC-${vid}/cmake/git_archive.txt; then
+  echo ${hash} > ${tmpdir}/mVMC-${vid}/cmake/git_archive.txt
+  COPYFILE_DISABLE=1 tar czf mVMC-${vid}.tar.gz -C ${tmpdir} mVMC-${vid}
+fi
+rm -rf ${tmpdir}
+if [ -n "`git status --porcelain --untracked-files=no`" ]; then
+  echo 'WARNING: the source has changes which are not committed.'
+  echo '         The hash written into the tarball is that of HEAD.'
+fi

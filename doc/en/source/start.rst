@@ -325,10 +325,17 @@ We can calculate by using these modes as follows:
 Printing version ID
 -------------------
 
-By using ``-v`` option as follows, you can check which version of mVMC
-you are using.
+By using ``-v`` (or ``--version``) option as follows, you can check
+which version of mVMC you are using.
 
 .. code-block:: bash
 
    $ PATH/vmcdry.out -v
    $ PATH/vmc.out -v
+   mVMC version 1.4.0 (7d453176)
+
+The version number is followed by the first 8 digits of the hash of the
+commit which mVMC was built from. ``-dirty`` follows the hash, as
+``7d453176-dirty``, if the source had changes which were not committed.
+The hash is not printed if it is not known (for example, when mVMC is
+built without CMake).

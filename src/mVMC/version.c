@@ -21,23 +21,31 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 #include "version.h"
 
-void StdFace_main(char *fname);
+/* version_git.h is written into the build directory by cmake/git_hash.cmake. */
+#ifdef MVMC_HAVE_VERSION_GIT_H
+#include "version_git.h"
+#endif
+#ifndef MVMC_GIT_HASH
+#define MVMC_GIT_HASH ""
+#endif
 
-int main(int argc, char *argv[])
-{
-  if (argc == 1){
-    printf("Usage: %s StdFace.def\n", argv[0]);
-    return 1;
-  }
+/* Abbreviated hash (8 digits) of the commit which mVMC was built from,
+   followed by "-dirty" if the source had changes which were not committed.
+   An empty string if the commit is not known. */
+const char *MVMC_GetGitHash(void) {
+  return MVMC_GIT_HASH;
+}
 
-  if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0) {
-    MVMC_PrintVersion();
-    exit(0);
+void MVMC_PrintVersion(void) {
+  printf("mVMC version %d.%d.%d",MVMC_VERSION_MAJOR,MVMC_VERSION_MINOR,MVMC_VERSION_PATCH);
+  if(strlen(MVMC_VERSION_PRERELEASE)>0) {
+    printf("-%s",MVMC_VERSION_PRERELEASE);
   }
-  else {
-    StdFace_main(argv[1]);
+  if(strlen(MVMC_GetGitHash())>0) {
+    printf(" (%s)",MVMC_GetGitHash());
   }
+  printf("\n");
+  return;
 }
