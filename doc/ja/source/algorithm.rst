@@ -768,7 +768,7 @@ pure-spin classでは各exchange bondを2つの向き付き演算子
 
 
 第1Lanczos samplerの成分単位修復
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 実数・スピン保存・粒子数固定で、BackFlow、RBM、sampling guideを使わない
 非block版のlegacy第1Lanczosエネルギー測定では、成分単位修復を既定で有効にします。

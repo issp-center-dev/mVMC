@@ -804,7 +804,7 @@ on this expression.
 
 
 Selective repair in the first-Lanczos sampler
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For real, spin-conserving canonical wave functions without BackFlow, RBM,
 or a sampling guide, the non-block sampler enables selective component
