@@ -2145,3 +2145,21 @@ add_test(NAME PowerLanczosP5CDirect_Unit
                  ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p5b_sensitivity_policy.json)
 set_tests_properties(PowerLanczosP5CDirect_Unit PROPERTIES
     ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+
+# A short real-solver check keeps logging observational and bounded.
+add_test(NAME Sampler_Component_Repair_Smoke
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sampler_repair.py
+    $<TARGET_FILE:vmc.out> $<TARGET_FILE:vmcdry.out>
+    ${CMAKE_CURRENT_SOURCE_DIR}/data/HubbardChainLanczos
+    ${CMAKE_BINARY_DIR}/test/sampler_repair_smoke)
+set_tests_properties(Sampler_Component_Repair_Smoke PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1")
+if(MPI_FOUND)
+    add_test(NAME Sampler_Component_Repair_Smoke_mpi
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sampler_repair.py
+        $<TARGET_FILE:vmc.out> $<TARGET_FILE:vmcdry.out>
+        ${CMAKE_CURRENT_SOURCE_DIR}/data/HubbardChainLanczos
+        ${CMAKE_BINARY_DIR}/test/sampler_repair_smoke_mpi
+        ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2)
+    set_tests_properties(Sampler_Component_Repair_Smoke_mpi PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1" PROCESSORS 2)
+endif()

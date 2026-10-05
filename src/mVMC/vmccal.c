@@ -417,7 +417,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     StopTimer(40);
 
     if(info!=0) {
-      fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
+      SamplerRepairMeasureFactorFailure(sample, info);
+      if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n",rank,sample,info);
       continue;
     }
 #ifdef _DEBUG_VMCCAL
@@ -433,6 +434,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     printf("  Debug: sample=%d: LogProjVal \n",sample);
 #endif
     x = LogProjVal(eleProjCnt);
+    if (Sr.logging)
+      SamplerRepairMeasure(log(cabs(ip)), x, logSqPfFullSlater[sample]);
     /* calculate reweight */
     if (reweight==1){
        w = 2.0*(log(cabs(ip))+x);
@@ -448,7 +451,8 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     printf("  Debug: sample=%d: isfinite \n",sample);
 #endif
     if( !isfinite(w) ) {
-      fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d w=%e\n",rank,sample,w);
+      SamplerRepairMeasureFinish(sample, w, NAN, 1);
+      if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d w=%e\n",rank,sample,w);
       continue;
     }
 
@@ -475,10 +479,12 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     printf("  Debug: sample=%d: e = %lf %lf \n",sample, creal(e), cimag(e));
 #endif
     if( !isfinite(creal(e) + cimag(e)) ) {
-      fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
+      SamplerRepairMeasureFinish(sample, w, creal(e), 2);
+      if (!Sr.logging) fprintf(stderr,"warning: VMCMainCal rank:%d sample:%d e=%e\n",rank,sample,creal(e)); //TBC
       continue;
     }
 
+    SamplerRepairMeasureFinish(sample, w, creal(e), 0);
     Wc += w;
     Etot  += w * e;
     Etot2 += w * conj(e) * e;

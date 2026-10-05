@@ -110,6 +110,8 @@ void VMCMakeSample_real(MPI_Comm comm) {
   logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
 
   if (!isfinite(logIpOld)) {
+    const double beforeRemake = logIpOld;
+    SamplerRepairCurrent(-1, -1, 0, logIpOld, logIpOld, "remake-initial");
     if (rank == 0) fprintf(stderr, "waring: VMCMakeSample remakeSample logIpOld=%e\n", creal(logIpOld)); //TBC
     makeInitialSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
                       qpStart, qpEnd, comm);
@@ -129,9 +131,11 @@ void VMCMakeSample_real(MPI_Comm comm) {
 #endif
     //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
     logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+    SamplerRepairCurrent(-1, -1, 0, beforeRemake, logIpOld, "continue-after-remake");
     BurnFlag = 0;
   }
   StopTimer(30);
+  SamplerRepairRecompute();
 
   nOutStep = (BurnFlag == 0) ? NVMCWarmUp + NVMCSample : NVMCSample + 1;
   nInStep = NVMCInterval * Nsite;
@@ -195,9 +199,11 @@ void VMCMakeSample_real(MPI_Comm comm) {
           x += creal(LogRBMRatio(rbmCntNew, TmpRBMCnt));
         }
         w = exp(2.0 * (x + (logIpNew - logIpOld)));
+        SamplerRepairProposal(outStep, inStep, 1, logIpOld, logIpNew, x, w);
         if (!isfinite(w)) w = -1.0; /* should be rejected */
 
         if (w > genrand_real2()) { /* accept */
+          SamplerRepairAcceptPre(pfMNew_real);
           StartTimer(63);
 #ifdef _pf_block_update
           // Inv already updated. Only need to get PfM again.
@@ -208,6 +214,11 @@ void VMCMakeSample_real(MPI_Comm comm) {
           //            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
 #endif
           StopTimer(63);
+          if (SamplerRepairAcceptPost(TmpEleIdx, qpStart, qpEnd)) {
+            const double beforeRepair = logIpNew;
+            logIpNew = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+            SamplerRepairCurrent(outStep, inStep, 1, beforeRepair, logIpNew, "continue-after-repair");
+          }
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
           if (FlagRBM) {
@@ -284,9 +295,11 @@ void VMCMakeSample_real(MPI_Comm comm) {
           x += creal(LogRBMRatio(rbmCntNew, TmpRBMCnt));
         }
         w = exp(2.0 * (x + (logIpNew - logIpOld))); //TBC
+        SamplerRepairProposal(outStep, inStep, 2, logIpOld, logIpNew, x, w);
         if (!isfinite(w)) w = -1.0; /* should be rejected */
 
         if (w > genrand_real2()) { /* accept */
+          SamplerRepairAcceptPre(pfMNew_real);
           StartTimer(68);
 #ifdef _pf_block_update
           // Inv already updated. Only need to get PfM again.
@@ -295,6 +308,11 @@ void VMCMakeSample_real(MPI_Comm comm) {
           UpdateMAllTwo_real(mi, s, mj, t, ri, rj, TmpEleIdx, qpStart, qpEnd);
 #endif
           StopTimer(68);
+          if (SamplerRepairAcceptPost(TmpEleIdx, qpStart, qpEnd)) {
+            const double beforeRepair = logIpNew;
+            logIpNew = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+            SamplerRepairCurrent(outStep, inStep, 2, beforeRepair, logIpNew, "continue-after-repair");
+          }
 
           for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
           if (FlagRBM) {
@@ -388,6 +406,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
       }
 
       if (nAccept > Nsite) {
+        const double beforeFullRecompute = logIpOld;
         // Recalculate PfM and InvM.
         StartTimer(34);
 #ifdef _pf_block_update
@@ -405,7 +424,9 @@ void VMCMakeSample_real(MPI_Comm comm) {
 #endif
         //printf("DEBUG: maker3: PfM=%lf\n",creal(PfM[0]));
         logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+        SamplerRepairCurrent(outStep, inStep, 0, beforeFullRecompute, logIpOld, "continue-after-full-recompute");
         StopTimer(34);
+        SamplerRepairRecompute();
         nAccept = 0;
       }
     } /* end of instep */

@@ -801,3 +801,102 @@ where the denominator is the same normalization factor
 :math:`\langle \phi_1 | \phi_1 \rangle` as that for the energy. In the
 program, the one-body and two-body Green functions are calculated based
 on this expression.
+
+
+Selective repair in the first-Lanczos sampler
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For real, spin-conserving canonical wave functions without BackFlow, RBM,
+or a sampling guide, the non-block sampler enables selective component
+repair in legacy first-Lanczos energy measurements (``NVMCCalMode=1``,
+``NLanczosMode=1``, ``NLanczosStep=1``, ``NLanczosEstimatorMode=0``,
+``NSplitSize=1``, ``NExUpdatePath=1``).
+Other calculation paths retain their existing behavior.
+
+After an accepted hop or exchange, the sampler rebuilds only projection
+components whose normalized Pfaffian magnitude has grown by more than
+1000 relative to its reference, the previous configuration, or the minimum
+since its last repair. It then updates the stored sampling weight.
+A component with a zero reference is also rebuilt.
+The accept decision uses the existing proposal evaluation. This repair
+adds no high-order Hamiltonian evaluation and does not clip or discard
+samples. Small residual drift and physical heavy tails may remain.
+
+The following environment settings are read once on MPI world rank zero
+and broadcast to all ranks:
+
+* ``MVMC_SAMPLER_REPAIR=0`` disables repair to reproduce the previous path.
+* ``MVMC_SAMPLER_REPAIR=1`` requires repair; an unsupported calculation is
+  rejected before sampling. When unset, repair is automatic only for the
+  supported path above.
+* ``MVMC_SAMPLER_DRIFT_LOG=0`` disables the summary without changing repair.
+  ``1`` enables the summary on the supported path, including when repair
+  is off. By default, logging follows repair.
+
+Each rank writes ``sampler_drift_rNNNN.dat`` in the working directory.
+A ``Q`` row contains the zero-based bin, evaluated-sample count, nonfinite
+count, maximum absolute log-weight drift, counts above 1e-6, 1e-3 and 1,
+accepted moves, accepts with repair, and repaired components. The final
+``F refreshTotal`` row gives the total component count. Drift is
+``2 * (log(abs(ip_direct)) + LogProjVal) - stored_log_weight``, using the
+direct recomputation already performed by measurement. It is a diagnostic
+of stored sampling weights, not a bound on energy errors. No per-proposal
+traces or additional full recomputations are performed for this summary.
+
+
+Zero and exceptional-event logging
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Q`` remains the compact drift/repair summary. Each bin also writes ``Z``:
+
+``Z bin proposalZero ratioUnderflow ratioNonfinite currentNonfinite componentZeroPre componentZeroPost measurementZero repairFailed measureWeightZero skipWeight skipEnergy measureFactorFailed detailsTotal suppressedTotal``
+
+``proposalZero`` counts a computed projected-amplitude log of negative
+infinity, while ``ratioUnderflow`` counts a zero acceptance ratio with finite
+input logs and projection ratio. Component zeros refer to a single Pfaffian,
+not to the projected sum. ``measurementZero`` refers to the directly computed
+projected amplitude; ``measureWeightZero`` refers to the reweighting factor.
+Floating-point zeros do not by themselves establish mathematical zeros.
+``currentNonfinite`` counts observations at repair/recompute checkpoints,
+not distinct configurations. Skip counters record the existing measurement
+failure branches; they do not introduce new sample exclusions. Samples skipped
+after failed factorization are counted in ``measureFactorFailed``, not in ``Q``.
+
+``E`` rows record exceptional events, with a maximum of four per kind
+(``proposal``, ``component``, ``current``, ``measure``), per rank, for the whole
+run: at most 16 detail rows/rank. ``detailsTotal`` and ``suppressedTotal`` are
+cumulative; the other ``Z`` counters reset each bin. Repeated events continue
+to increment counters after the detail budget is exhausted.
+
+``E bin out in move kind qp mask a b c d e f info action``
+
+* ``proposal``: a/b are old/proposed log amplitudes, c is the projection log
+  ratio, d is the raw acceptance ratio; e/f are unused. ``reject`` records
+  the existing zero/nonfinite-ratio rejection.
+* ``component``: a/b are old/proposed Pfaffians, c/d are the stored values
+  before/after factorization, e/f are reference/minimum kappa. Mask bits
+  1/2/4 mean reference/one-step/minimum growth. A nonzero ``info`` means
+  failure; the post-factorization value is then not a valid repaired result.
+* ``current``: a/b are the log amplitudes before/after the indicated existing
+  operation; c through f are unused. Actions distinguish initial remake,
+  completion of remake, component repair, and full recomputation.
+* ``measure``: a/b/c are direct log amplitude/projection log/stored log
+  weight, d/e are reweighting factor/energy, f is the sample index. Actions
+  distinguish accumulation, zero contribution, and the existing weight,
+  energy, or factorization skip. Unavailable fields are NaN.
+
+``out``/``in`` locate the proposal within the bin, and ``move`` is 1 for
+hop and 2 for exchange. Inapplicable locations and component indices are
+-1. New files grow with bins and ranks, not with proposal or repair counts.
+No configurations, inverse matrices, or higher-order evaluations are dumped.
+When this log is enabled, the existing per-sample measurement warnings are
+represented by bounded details and complete counters instead of repeated
+stderr lines. A failed repair additionally prints rank, bin, step, component,
+factorization status and before/after values to stderr before aborting.
+
+This logging does not add an exact-zero recovery algorithm. A zero proposed
+amplitude is rejected; initialization retains its existing remake attempt.
+A nonfinite current amplitude after accepted repair or full recomputation is
+recorded with the existing continuation action. The legacy rejection rule
+can then prevent escape from that state. Such a run must not be interpreted
+as a recovered chain merely because a repair counter is nonzero.

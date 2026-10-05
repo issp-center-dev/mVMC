@@ -884,9 +884,11 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }
   }
 
+  SamplerRepairInit();
   if(rank==0) fprintf(stdout, "Start: Sampling.\n");
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
     if(rank==0) OutputTime(ismp);
+    SamplerRepairSetBin(ismp);
     FlushFile(0,rank);
     InitFilePhysCal(ismp, rank);
     if (NLanczosMode == 1 && NLanczosEstimatorMode == 1) {
@@ -987,6 +989,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     StopTimer(5);
   }
 
+  SamplerRepairFinalize();
   if(rank==0) OutputTime(NDataQtySmp);
 
   return 0;

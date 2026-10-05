@@ -2,6 +2,18 @@ if(NOT PYTHON_EXECUTABLE)
     find_package(PythonInterp 3.6 REQUIRED)
 endif()
 
+add_executable(sampler_repair_unit sampler_repair_unit.c)
+target_link_libraries(sampler_repair_unit m)
+# Keep assertions enabled in the deterministic state-machine test.
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(sampler_repair_unit PRIVATE -UNDEBUG)
+endif()
+add_test(NAME Sampler_Component_Repair_Unit COMMAND sampler_repair_unit)
+foreach(mode invalid unsupported factor-failure)
+    add_test(NAME Sampler_Component_Repair_${mode} COMMAND sampler_repair_unit ${mode})
+    set_tests_properties(Sampler_Component_Repair_${mode} PROPERTIES WILL_FAIL TRUE)
+endforeach()
+
 add_executable(backflow_seam_unit backflow_seam_unit.c)
 target_link_libraries(backflow_seam_unit m)
 if(MPI_FOUND)
