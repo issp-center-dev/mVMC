@@ -45,6 +45,10 @@ int NLanczosStep; /* polynomial order of the Lanczos wave function: 1 or 2 */
 int NLanczosSupportMode; /* 0: strict support gate, 1: experimental legacy */
 int NLanczosEstimatorMode; /* 0: legacy default, 1: stabilized estimator */
 int FlagLsExplicit; /* independent H' supplied by LsTrans/LsInterAll */
+double DLanczosGuideEps; /* 0: off; >0: q=|J|^2 max(P^2, eps A^2) */
+int FlagLanczosGuide; /* 1 when the near-zero guide input contract passed */
+double LanczosGuideSqrtEps; /* sqrt(DLanczosGuideEps) */
+double NearZeroGuideStat[8]; /* near_zero_guide.h NZG_* per-bin statistics */
 
 int NStoreO; /* choice of store O: 0-> normal other-> store  */
 int NSRCG; /* choice of solver for Sx=g: 0-> (Sca)LAPACK other-> CG  */
@@ -400,6 +404,7 @@ FILE *FileTwist;
 FILE *FileNBodyG;
 FILE *FileAnomalousG;
 FILE *FileLS;
+FILE *FileNZGuide; /* xxx_nzguide_yyy.dat: one line of guide statistics */
 FILE *FileLSQQQQ;
 FILE *FileLSQCisAjsQ;
 FILE *FileLSQCisAjsCktAltQ;

@@ -532,6 +532,25 @@ file and ``NLanczosStep`` = 1. Here, xxx is the header indicated by ``CDataFileH
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 ``ModPara`` file.
 
+xxx\_nzguide\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~
+
+Written only when ``DLanczosGuideEps > 0``. One line has nine columns:
+:math:`\varepsilon`, the total number of saved samples drawn from the guide
+distribution, the number of samples with
+:math:`|P| < \sqrt{\varepsilon} A`, the number of samples whose local
+quantities were not evaluated because :math:`P=0`, the number stopped by a
+numerical guard, the sum of the weights
+:math:`|\psi|^2/q_\varepsilon`, the sum of their squares, the minimum
+weight, and the maximum of :math:`A/|P|` over finite nonzero :math:`P`.
+Samples with :math:`P=0, A>0` are included in the first two counts and
+contribute zero to the weight sum. If the numerical-skip count is zero, the
+total saved-sample count divided by the weight sum estimates
+:math:`Z_q/Z_\psi`. Do not use Lanczos moments from a bin with a nonzero
+exact-zero or numerical-skip count. Zero counts do not prove full support
+for states where :math:`A=0` or :math:`J=0` makes the guide weight itself
+zero.
+
 xxx\_ls2\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~
 
