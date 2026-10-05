@@ -885,7 +885,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }
   }
 
-  SamplerRepairInit();
+  SamplerRepairInit(comm_parent);
   if(rank==0) fprintf(stdout, "Start: Sampling.\n");
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
     if(rank==0) OutputTime(ismp);

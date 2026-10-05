@@ -1,5 +1,8 @@
 /* Exercise the production repair state machine with a deterministic factorizer.
  * The solver MPI smoke separately covers real factorization and wiring. */
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <assert.h>
 #include <float.h>
 #include <math.h>
@@ -8,11 +11,12 @@
 #include <string.h>
 typedef int MPI_Comm;
 #define MPI_COMM_WORLD 0
+#define TEST_PARENT_COMM 7
 #define MPI_INT 0
 static int MPI_Abort(int comm, int code) { (void)comm; exit(code); }
 static int MPI_Comm_rank(int comm, int *rank) { (void)comm; *rank=0; return 0; }
 static int MPI_Bcast(void *p,int n,int type,int root,int comm) {
-  (void)p;(void)n;(void)type;(void)root;(void)comm;return 0;
+  (void)p;(void)n;(void)type;assert(root==0 && comm==TEST_PARENT_COMM);return 0;
 }
 static int NVMCCalMode=1, NLanczosMode=1, NLanczosStep=1, NLanczosEstimatorMode=0;
 static int AllComplexFlag=0, iFlgOrbitalGeneral=0, NBackFlowIdx=0;
@@ -63,7 +67,7 @@ static void recovery_test(const char *mode) {
   int move=2;
   full_calls=revert_calls=0;full_info[0]=full_info[1]=0;
   full_logs[0]=-INFINITY;full_logs[1]=3;
-  SamplerRepairInit();Sr.logging=1;Sr.file=tmpfile();assert(Sr.file);
+  SamplerRepairInit(TEST_PARENT_COMM);Sr.logging=1;Sr.file=tmpfile();assert(Sr.file);
   SamplerRepairSetBin(0);
   if(!strcmp(mode,"recover"))full_logs[0]=4;
   if(!strcmp(mode,"recover-nan")) {new_log=NAN;full_logs[0]=4;}
@@ -103,10 +107,10 @@ int main(int argc,char **argv) {
   setenv("MVMC_SAMPLER_DRIFT_LOG","0",1);
   unsetenv("MVMC_SAMPLER_REPAIR");
   if(argc>1 && !strcmp(argv[1],"invalid")) {
-    setenv("MVMC_SAMPLER_REPAIR","junk",1);SamplerRepairInit();return 0;
+    setenv("MVMC_SAMPLER_REPAIR","junk",1);SamplerRepairInit(TEST_PARENT_COMM);return 0;
   }
   if(argc>1 && !strcmp(argv[1],"unsupported")) {
-    NBackFlowIdx=1;setenv("MVMC_SAMPLER_REPAIR","1",1);SamplerRepairInit();return 0;
+    NBackFlowIdx=1;setenv("MVMC_SAMPLER_REPAIR","1",1);SamplerRepairInit(TEST_PARENT_COMM);return 0;
   }
   if(argc>1 && strcmp(argv[1],"factor-failure")) {
     recovery_test(argv[1]);return 0;
@@ -124,16 +128,16 @@ int main(int argc,char **argv) {
   assert(SamplerRepairLogAccept(0,0,0,0.9));
   assert(!SamplerRepairLogAccept(0,0,-1,0.5));
   assert(SamplerRepairLogAccept(0,0,-1,0.1));
-  FlagLanczosGuide=1;SamplerRepairInit();assert(!Sr.enabled && !Sr.logging);
+  FlagLanczosGuide=1;SamplerRepairInit(TEST_PARENT_COMM);assert(!Sr.enabled && !Sr.logging);
   SamplerRepairFinalize();FlagLanczosGuide=0;
-  SamplerRepairInit();assert(Sr.enabled && !Sr.logging);
+  SamplerRepairInit(TEST_PARENT_COMM);assert(Sr.enabled && !Sr.logging);
   pf[0]=1;pf[1]=1e-5;pf[2]=1e-9;SamplerRepairRecompute();
   accept(0.1);assert(factor_calls==1 && inverse[4]==123);
   assert(Sr.reference[1]==0.1 && Sr.floor[1]==refreshed_value && Sr.total==1);
   SamplerRepairFinalize();assert(!Sr.enabled && Sr.reference==NULL);
   // An initially small component that fell, then grew gradually, selects min
   // history even when neither last-refresh nor single-step growth reaches G.
-  factor_calls=0;SamplerRepairInit();pf[0]=1;pf[1]=0.01;pf[2]=1e-9;
+  factor_calls=0;SamplerRepairInit(TEST_PARENT_COMM);pf[0]=1;pf[1]=0.01;pf[2]=1e-9;
   SamplerRepairRecompute();accept(1e-9);accept(1e-7);
   assert(factor_calls==0 && Sr.floor[1]==1e-9);
   accept(2e-6);assert(factor_calls==1 && Sr.floor[1]==refreshed_value);
@@ -150,12 +154,12 @@ int main(int argc,char **argv) {
   SamplerRepairSetBin(1);assert(Sr.samples==0 && Sr.max_d==0);
   SamplerRepairFinalize();
   // Explicit off retains the sampler; unsupported paths are auto-disabled.
-  setenv("MVMC_SAMPLER_REPAIR","0",1);SamplerRepairInit();assert(!Sr.enabled && !Sr.reference);
+  setenv("MVMC_SAMPLER_REPAIR","0",1);SamplerRepairInit(TEST_PARENT_COMM);assert(!Sr.enabled && !Sr.reference);
   SamplerRepairAcceptPre(NULL);assert(!SamplerRepairAcceptPost(NULL,0,3));SamplerRepairFinalize();
-  unsetenv("MVMC_SAMPLER_REPAIR");NBackFlowIdx=1;SamplerRepairInit();assert(!Sr.enabled);SamplerRepairFinalize();
-  NBackFlowIdx=0;NLanczosMode=0;SamplerRepairInit();assert(!Sr.enabled);SamplerRepairFinalize();
+  unsetenv("MVMC_SAMPLER_REPAIR");NBackFlowIdx=1;SamplerRepairInit(TEST_PARENT_COMM);assert(!Sr.enabled);SamplerRepairFinalize();
+  NBackFlowIdx=0;NLanczosMode=0;SamplerRepairInit(TEST_PARENT_COMM);assert(!Sr.enabled);SamplerRepairFinalize();
   // Counter-only volume grows with bins; detail has a per-kind run budget.
-  NLanczosMode=1;SamplerRepairInit();Sr.logging=1;Sr.file=tmpfile();assert(Sr.file);
+  NLanczosMode=1;SamplerRepairInit(TEST_PARENT_COMM);Sr.logging=1;Sr.file=tmpfile();assert(Sr.file);
   SamplerRepairSetBin(0);
   for(int i=0;i<40;i++)SamplerRepairProposal(1,i,1,0,-INFINITY,0,0,0);
   SamplerRepairProposal(2,0,1,0,-1000,0,0,0);

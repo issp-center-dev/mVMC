@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -17,15 +18,22 @@ env = {k: v for k, v in os.environ.items() if not k.startswith('MVMC_SAMPLER_')}
 env['OMP_NUM_THREADS'] = '1'
 
 def run(cmd, cwd, settings, expected_error=None):
-    proc = subprocess.run(cmd, cwd=str(cwd), env=dict(env, **settings),
+    with subprocess.Popen(cmd, cwd=str(cwd), env=dict(env, **settings),
                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                          universal_newlines=True, timeout=90)
-    (cwd/'run.log').write_text(proc.stdout)
+                          universal_newlines=True, start_new_session=True) as proc:
+        try:
+            output, _ = proc.communicate(timeout=90)
+        except subprocess.TimeoutExpired:
+            os.killpg(proc.pid, signal.SIGKILL)
+            output, _ = proc.communicate()
+            (cwd/'run.log').write_text(output)
+            raise
+    (cwd/'run.log').write_text(output)
     if expected_error:
-        assert proc.returncode != 0 and expected_error in proc.stdout, proc.stdout
+        assert proc.returncode != 0 and expected_error in output, output
     elif proc.returncode:
-        raise RuntimeError(proc.stdout)
-    return proc.stdout
+        raise RuntimeError(output)
+    return output
 
 def physical(d):
     return {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
@@ -104,4 +112,28 @@ with tempfile.TemporaryDirectory(prefix='sampler-repair-', dir=str(scratch)) as 
     assert len(guide_stats) == 2
     for p in guide_stats:
         assert p.read_bytes() == (work/'guide-off'/'output'/p.name).read_bytes()
+    if launcher:
+        # World rank zero optimizes; only rank one calls SamplerRepairInit.
+        # A WORLD collective here deadlocks. Use one rank per definition group.
+        assert rank_count == 2
+        mixed = work/'mixed'
+        mixed.mkdir()
+        for name in ('optimization', 'measurement'):
+            shutil.copytree(str(generated), str(mixed/name))
+        p = mixed/'optimization'/'modpara.def'
+        text = p.read_text()
+        for key, value in [('NVMCCalMode', 0), ('NLanczosMode', 0),
+                           ('NSROptItrStep', 1), ('NSROptItrSmp', 1)]:
+            text, count = re.subn(r'^'+key+r'\s+\S+', key+' '+str(value), text, flags=re.M)
+            assert count == 1
+        p.write_text(text)
+        (mixed/'dirlist.txt').write_text('optimization\nmeasurement\n')
+        out = run(launcher+[str(binary), '-m', '2', 'dirlist.txt',
+                            'namelist.def', 'zqp_opt.dat'], mixed, {})
+        assert out.count('Sampler component repair: on;') == 1
+        assert not list((mixed/'optimization').glob('sampler_drift_r*.dat'))
+        assert (mixed/'measurement'/'sampler_drift_r0001.dat').is_file()
+        assert not (mixed/'measurement'/'sampler_drift_r0000.dat').exists()
+        assert len(physical(mixed/'measurement')) >= 10
+        print('mixed optimization/measurement multi-def MPI PASS')
 print('sampler repair solver/logging smoke PASS')

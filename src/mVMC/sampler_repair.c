@@ -101,17 +101,18 @@ static void *SamplerRepairAlloc(size_t count, size_t size) {
   return result;
 }
 
-static void SamplerRepairInit(void) {
-  int rank, settings[2];
+static void SamplerRepairInit(MPI_Comm comm_parent) {
+  int rank, world_rank, settings[2];
   const int supported = SamplerRepairSupported();
   char path[64];
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  /* Read configuration once, from world rank zero, before any sampler work. */
+  MPI_Comm_rank(comm_parent, &rank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  /* Other multi-def groups may optimize and never enter VMCPhysCal. */
   if (rank == 0) {
     settings[0] = SamplerRepairSwitch("MVMC_SAMPLER_REPAIR", -1);
     settings[1] = SamplerRepairSwitch("MVMC_SAMPLER_DRIFT_LOG", -1);
   }
-  MPI_Bcast(settings, 2, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(settings, 2, MPI_INT, 0, comm_parent);
   if (settings[0] == 1 && !supported)
     SamplerRepairFail("enabled outside real non-FSZ/no-BF/no-RBM canonical, non-block, split1, hop/exchange, unguided legacy first-Lanczos measurement");
   Sr.enabled = supported && settings[0] != 0;
@@ -120,9 +121,11 @@ static void SamplerRepairInit(void) {
     SamplerRepairFail("drift logging requested outside the supported measurement path");
   Sr.bin = Sr.out_step = Sr.in_step = -1;
   Sr.n = NQPFull;
-  if (rank == 0)
+  if (rank == 0) {
     fprintf(stdout, "Sampler component repair: %s; growth=1000; drift_log=%d\n",
             Sr.enabled ? "on" : "off", Sr.logging);
+    fflush(stdout);
+  }
   if (Sr.enabled) {
     if (NQPFull <= 0 || Nsize <= 0 || LapackLWork <= 0)
       SamplerRepairFail("invalid workspace dimensions");
@@ -139,7 +142,7 @@ static void SamplerRepairInit(void) {
     Sr.iwork = SamplerRepairAlloc((size_t)Nsize, sizeof(int));
   }
   if (Sr.logging) {
-    snprintf(path, sizeof(path), "sampler_drift_r%04d.dat", rank);
+    snprintf(path, sizeof(path), "sampler_drift_r%04d.dat", world_rank);
     Sr.file = fopen(path, "w");
     if (Sr.file == NULL) SamplerRepairFail("cannot open drift summary");
     fprintf(Sr.file, "# Z bin proposalZero ratioUnderflow ratioNonfinite currentNonfinite componentZeroPre componentZeroPost measurementZero repairFailed measureWeightZero skipWeight skipEnergy measureFactorFailed detailsTotal suppressedTotal\n");
@@ -252,7 +255,9 @@ static void SamplerRepairRequireCurrent(double log_value, int info,
 
 /* Only the exceptional accepted state is rebuilt. No snapshot of all inverse
  * matrices is needed: projection counts have not been committed yet, and the
- * old configuration is reconstructed by undoing the hop(s). Returns commit. */
+ * old configuration is reconstructed by undoing the hop(s). Returns commit.
+ * CalculateLogIP_real is the target weight only for the unguided path enforced
+ * by SamplerRepairSupported; supporting a guide requires changing this too. */
 static int SamplerRepairResolveAccepted(int *eleIdx, int *eleCfg, int *eleNum,
     int mi, int mj, int ri, int rj, int spin, int move,
     int qpStart, int qpEnd, MPI_Comm comm, double *new_log, double *old_log) {

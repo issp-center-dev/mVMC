@@ -4,14 +4,11 @@ endif()
 
 add_executable(sampler_repair_unit sampler_repair_unit.c)
 target_link_libraries(sampler_repair_unit m)
-# Keep assertions enabled in the deterministic state-machine test.
-if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(sampler_repair_unit PRIVATE -UNDEBUG)
-endif()
 add_test(NAME Sampler_Component_Repair_Unit COMMAND sampler_repair_unit)
 foreach(mode invalid unsupported factor-failure rollback-fails rebuild-fails rollback-factor-fails rebuild-nan current-zero current-factor-fails)
-    add_test(NAME Sampler_Component_Repair_${mode} COMMAND sampler_repair_unit ${mode})
-    set_tests_properties(Sampler_Component_Repair_${mode} PROPERTIES WILL_FAIL TRUE)
+    add_test(NAME Sampler_Component_Repair_${mode}
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_sampler_repair_failure.py
+        $<TARGET_FILE:sampler_repair_unit> ${mode})
 endforeach()
 
 foreach(mode recover recover-nan rollback-hop rollback-exchange finite-fast)
