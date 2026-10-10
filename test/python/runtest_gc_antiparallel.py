@@ -1739,6 +1739,37 @@ def comparator_guard_case(rootdir, args):
     print("GC anti-parallel comparator guard passed")
 
 
+SAMPLE_SAMPLES = 10000
+
+
+def sample_case(rootdir, args):
+    """The published sample equals the PBC fixture and replays exactly."""
+    source = args.sample_dir
+    if not source or not os.path.isdir(source):
+        raise SystemExit("--sample-dir is required")
+    reference = prepare_work(rootdir, "sample_reference")
+    write_fixture(reference, ap=False, mode=1, samples=SAMPLE_SAMPLES)
+    published = sorted(name for name in os.listdir(source)
+                       if name != "README.md")
+    if published != sorted(os.listdir(reference)):
+        raise AssertionError("sample files {} differ from {}".format(
+            published, sorted(os.listdir(reference))))
+    for name in published:
+        with open(os.path.join(source, name), "rb") as stream:
+            actual = stream.read()
+        with open(os.path.join(reference, name), "rb") as stream:
+            expected = stream.read()
+        if actual != expected:
+            raise AssertionError("sample file {} differs from the fixture"
+                                 .format(name))
+    workdir = prepare_work(rootdir, "sample_run")
+    for name in published:
+        shutil.copy(os.path.join(source, name), os.path.join(workdir, name))
+    run_binary(rootdir, workdir, 1, extra_env={"MVMC_GC_STATE_DUMP": "state.dat"})
+    replay_against_oracle(workdir, False, 1, SAMPLE_SAMPLES)
+    print("GC anti-parallel sample reproduces the fixture and replays")
+
+
 def inventory_case(rootdir, args):
     """The CMake registration must list exactly the runner's mutations."""
     registered = sorted(name for name in (args.mutation or "").split(",")
@@ -1753,6 +1784,7 @@ def inventory_case(rootdir, args):
 
 
 CASES = {
+    "sample": sample_case,
     "mutation": mutation_case,
     "comparator_guard": comparator_guard_case,
     "replay": replay_case,
@@ -1776,6 +1808,7 @@ def main():
     parser.add_argument("--mode", type=int, default=1)
     parser.add_argument("--store", type=int, default=1)
     parser.add_argument("--mutation", default=None)
+    parser.add_argument("--sample-dir", default=None)
     args = parser.parse_args()
     rootdir = os.getcwd()
     cases = globals().get("CASES", {})

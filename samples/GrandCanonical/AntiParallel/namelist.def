@@ -1,0 +1,19 @@
+         ModPara  modpara.def
+         LocSpin  locspn.def
+      Gutzwiller  gutzwilleridx.def
+         Jastrow  jastrowidx.def
+        TransSym  qptransidx.def
+           Trans  trans.def
+    CoulombIntra  coulombintra.def
+    CoulombInter  coulombinter.def
+            Hund  hund.def
+         PairHop  pairhop.def
+        Exchange  exchange.def
+        InterAll  interall.def
+   NBodyInterAll  nbodyinterall.def
+   AnomalousTerm  anomalousterm.def
+OrbitalAntiParallel  orbitalidx.def
+        OneBodyG  greenone.def
+        TwoBodyG  greentwo.def
+          NBodyG  nbodyg.def
+      AnomalousG  anomalousg.def

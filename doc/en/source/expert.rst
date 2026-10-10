@@ -557,10 +557,53 @@ Keywords and parameters
    normalization. The relative sign between particle-number sectors follows
    this definition; it fixes the sign of the ``AnomalousG`` expectation
    values and of the ``AnomalousTerm`` energy response.
-   This mode requires ``OrbitalGeneral``, complex variational parameters,
-   ``2Sz=-1``, ``NExUpdatePath=0``, ``NSPGaussLeg=1``, ``NMPTrans=1`` or
-   ``-1``, and ``NQPOptTrans<=1``. RBM, BackFlow, Lanczos, OptTrans,
-   UpdateWeight, local spins, and SR-CG are not supported in this first phase.
+
+   The orbital input selects one of two pairing forms.
+
+   * General pairing: ``OrbitalGeneral``, or ``OrbitalAntiParallel``
+     together with ``OrbitalParallel``. Pair additions and removals change
+     :math:`S^z`, so ``2Sz=-1`` is required.
+   * Anti-parallel pairing: ``OrbitalAntiParallel`` (or its alias
+     ``Orbital``) alone. The wave function
+
+     .. math::
+
+        |\phi_{\rm GC}\rangle = \exp\Big[\sum_{i,j} F_{ij}\,
+        c_{i\uparrow}^{\dagger} c_{j\downarrow}^{\dagger}\Big]|0\rangle
+
+     has weight only on configurations with :math:`N_\uparrow=N_\downarrow`,
+     and ``2Sz=0`` must be given explicitly (the default ``-1`` and other
+     values are rejected). :math:`F_{ij}` is the anti-parallel parameter
+     itself, including the sign column. The same state written as
+     ``OrbitalGeneral`` uses :math:`F_{ij}/2` for the up-down pairs and 0 for
+     the same-spin pairs, because :math:`F_{IJ}=f_{IJ}-f_{JI}` counts each
+     pair twice; equal numbers in the two formats are different states.
+     The sampler keeps :math:`N_\uparrow=N_\downarrow` by adding or removing
+     one up-down pair and by hopping electrons without changing their spin.
+     Anti-parallel pairing alone is not a spin (:math:`S=0`) projection.
+     Every Hamiltonian term must conserve :math:`S^z` as a whole: ``Trans``
+     must not flip a spin, an ``InterAll`` or ``NBodyInterAll`` term may
+     contain spin-flip factors only when
+     :math:`\sum(\sigma_{\rm out}-\sigma_{\rm in})=0` over the term, and
+     ``AnomalousTerm`` pairs must be up-down. Terms that would cancel only
+     after summing several rows are not simplified, and rows with a zero
+     coefficient are exempt from the rule but still checked for indices.
+     Measurement inputs (``OneBodyG``, ``TwoBodyG``, ``NBodyG``,
+     ``AnomalousG``) are not restricted; operators that change :math:`S^z`
+     have zero expectation value. :math:`\langle H^2\rangle` is the sample
+     average of :math:`|E_{\rm loc}|^2`; it equals
+     :math:`\langle\phi|H^2|\phi\rangle/\langle\phi|\phi\rangle` when the
+     wave function has no zero amplitude inside the
+     :math:`N_\uparrow=N_\downarrow` sector, while for a state with such nodes
+     the part of :math:`H|\phi\rangle` on the nodes is missed.
+
+   In both forms the uniform rescaling of the pair parameters used in
+   canonical runs is not applied, because it would change the relative
+   weights of particle-number sectors. Both forms require complex
+   variational parameters, ``NExUpdatePath=0``, ``NSPGaussLeg=1``,
+   ``NMPTrans=1`` or ``-1``, and ``NQPOptTrans<=1``. RBM, BackFlow, Lanczos,
+   OptTrans, UpdateWeight, local spins, and SR-CG are not supported in this
+   first phase.
 
    ``NMPTrans=-1`` selects anti-periodic boundary conditions (APBC). Only
    the first ``TransSym`` pattern is used; momentum projection over several
@@ -573,6 +616,9 @@ Keywords and parameters
    * ``OrbitalGeneral``: the sixth column gives the sign that multiplies
      :math:`F_{IJ}` (:math:`F_{IJ}=s_{IJ}f_{k}-s_{JI}f_{k}` with
      :math:`s_{JI}=-s_{IJ}`).
+   * ``OrbitalAntiParallel`` / ``Orbital`` (anti-parallel pairing): the
+     fourth column of every pair row is the sign :math:`\pm1` that
+     multiplies :math:`F_{ij}`.
    * ``TransSym``: the first pattern is the identity map with weight 1 and
      sign +1 on every site. APBC does not require a negative sign on the
      identity map.
@@ -593,6 +639,21 @@ Keywords and parameters
    twist angles, projection over several translations, and BackFlow are not
    supported. A four-site chain example and the conversion script are in
    ``samples/GrandCanonical/APBC_chain``.
+
+   For anti-parallel pairing, run StdFace with ``2Sz=0``, ``phase0=180`` (or
+   similar), and ``ComplexType=1``. It writes the boundary phases into
+   ``Trans`` and a four-column ``orbitalidx.def`` (pair table with one sign
+   per row) referenced by the ``Orbital`` entry. Keep ``Orbital`` (or rename
+   it to ``OrbitalAntiParallel``) as the only orbital entry of
+   ``namelist.def`` with no ``OrbitalGeneral`` or ``OrbitalParallel`` line,
+   and set ``NGrandCanonical=1``, ``2Sz=0``, ``NExUpdatePath=0``,
+   ``NSPGaussLeg=1`` (StdFace writes 8 for ``2Sz=0``), and ``NMPTrans=-1``
+   in ``modpara.def`` without an ``OptTrans`` file. Keep the boundary
+   phases in ``Trans`` and the identity first ``TransSym`` pattern, check
+   that the orbital header has ``ComplexType 1``, and give ``NGCInitNelec``
+   and complex initial parameters. Do not apply the ``OrbitalGeneral``
+   :math:`F/2` conversion to the anti-parallel table. A four-site
+   anti-parallel input is in ``samples/GrandCanonical/AntiParallel``.
 
 -  ``NGCInitNelec``
 
@@ -1441,6 +1502,10 @@ Use rules
    [ int02 ]-[ int09 ] are out of
    range from the defined values.
 
+-  In the anti-parallel grand-canonical mode a term may contain spin-flip
+   factors when :math:`\sigma_1-\sigma_2+\sigma_3-\sigma_4=0`; a term with a
+   nonzero coefficient that changes :math:`S^z` is rejected.
+
 Independent Lanczos operator files (lstrans.def, lsinterall.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1555,7 +1620,9 @@ Use rules
 
 -  In orbital modes that do not allow spin-changing contractions, each
    factor must satisfy :math:`\sigma_a = \tau_a`. Spin-changing factors
-   require orbital-general mode.
+   require orbital-general mode, or the anti-parallel grand-canonical mode
+   in which the whole term must conserve :math:`S^z`
+   (:math:`\sum_a(\sigma_a-\tau_a)=0`, see ``NGrandCanonical``).
 
 -  ``NBodyInterAll`` contributes to the normal energy output; it does
    not create a separate interaction-output file.
@@ -3773,6 +3840,29 @@ User rules
 -  A program is terminated, when [ int02 ] -
    [ int09 ] are out of range from the defined values.
 
+-  The canonical reader reads the index column of the OptFlag rows but
+   assigns the flags in row order. Write the OptFlag rows in index order
+   (``0``, ``1``, ...).
+
+-  In the anti-parallel grand-canonical mode (``NGrandCanonical=1`` with
+   this file as the only orbital input) the file is read strictly, and every
+   check is made before the row is stored:
+
+   * Line 2 gives a positive number of parameters, line 3 gives
+     ``ComplexType`` 0 or 1, and :math:`(2N_s)^2` must fit in a signed int.
+   * The pair block has exactly :math:`N_s^2` rows, every :math:`(i,j)`
+     appears once, and the parameter index is in range. With ``NMPTrans>0``
+     a row has three or four integer columns and a fourth column is
+     ignored; with ``NMPTrans<0`` four columns are required and the fourth
+     must be :math:`\pm1`. Non-integer, out-of-int-range, or extra columns
+     are rejected in both cases.
+   * The OptFlag block has exactly [ int01 ] rows ``index flag``; every
+     index appears once and the flag is 0 or 1. In this mode the rows may be
+     given in any order, which is an extension of the grand-canonical
+     reader; index order is still recommended.
+   * Only blank lines may follow. Blank lines, comments, or surplus rows
+     inside the blocks are errors.
+
 OrbitalParallel file
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -4579,7 +4669,9 @@ Use rules
 
 -  In orbital modes that do not allow spin-changing contractions, each
    factor must satisfy :math:`\sigma_a = \tau_a`. Spin-changing factors
-   require orbital-general mode.
+   require orbital-general mode or the anti-parallel grand-canonical mode;
+   in the latter, terms that change :math:`S^z` are accepted and average to
+   zero.
 
 -  This output is supported for physical-quantity calculations with or
    without BackFlow. BackFlow N-body measurement requires complex
@@ -4672,9 +4764,14 @@ Hermiticity and mode restrictions
    ``NVMCCalMode=1``; supplying its keyword in mode 0 is an input error.
 
 -  Grand-canonical sampling covers even particle-number sectors and inherits
-   the constraints documented for ``NGrandCanonical``: ``OrbitalGeneral``
-   and complex variational parameters are required, while real-only GC,
-   RBM, BackFlow, and Lanczos paths remain unsupported.
+   the constraints documented for ``NGrandCanonical``: complex variational
+   parameters are required, while real-only GC, RBM, BackFlow, and Lanczos
+   paths remain unsupported. With general pairing (``OrbitalGeneral``) any
+   spin combination is allowed. With anti-parallel pairing
+   (``OrbitalAntiParallel`` / ``Orbital`` alone, ``2Sz=0``) every
+   ``AnomalousTerm`` pair with a nonzero coefficient must combine an up and a
+   down operator; ``AnomalousG`` rows may use any spins, and same-spin rows
+   average to zero.
 
 
 Twist file (twist.def)

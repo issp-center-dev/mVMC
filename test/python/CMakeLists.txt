@@ -1495,6 +1495,8 @@ string(REPLACE ";" "," GC_ANTIPAIR_INPUT_MUTATION_CSV
 add_gc_antiparallel_test(GC_AntiPair_Input_Inventory inventory
     --mutation ${GC_ANTIPAIR_INPUT_MUTATION_CSV})
 add_gc_antiparallel_test(GC_AntiPair_ComparatorGuard comparator_guard)
+add_gc_antiparallel_test(GC_AntiPair_Sample sample
+    --sample-dir ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/AntiParallel)
 add_gc_antiparallel_test(GC_AntiPair_Mutation_ap_sign_flip_apbc
     mutation --boundary apbc --mutation ap_sign_flip)
 foreach(boundary pbc apbc)
