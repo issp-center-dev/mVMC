@@ -80,6 +80,7 @@ static void DumpGCInputAudit(void) {
   int worldRank = 0;
   int negativeOrbitalInputSignCount = 0;
   int negativeQPTransSignCount = 0;
+  int writeFailed;
   int i, j, mpidx;
   if (FlagGrandCanonical == 0) return;
   MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
@@ -122,7 +123,13 @@ static void DumpGCInputAudit(void) {
               QPTransSgn[mpidx][i]);
     }
   }
-  fclose(fp);
+  /* Buffered write errors (e.g. a full device) surface at ferror/fclose. */
+  writeFailed = ferror(fp) != 0;
+  if (fclose(fp) != 0) writeFailed = 1;
+  if (writeFailed) {
+    fprintf(stderr, "Error: failed to write MVMC_GC_INPUT_AUDIT '%s'.\n", path);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
 }
 void StdFace_main(char *fname);
 

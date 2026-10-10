@@ -1335,6 +1335,18 @@ add_ap_orbital_test(Orbital_DuplicatePair "duplicate OrbitalGeneral pair" gc_orb
 add_ap_orbital_test(Orbital_MissingRow "has 2 columns" gc_orb_missing_row)
 add_ap_orbital_test(Orbital_Truncated "ended after 5 of 6 pair rows" gc_orb_truncated)
 add_ap_orbital_test(Orbital_BlankRow "has 0 columns" gc_orb_blank_row)
+add_ap_orbital_test(Orbital_ExtraPairRow "OptFlag row 1 in orbitalidxgen.def has 6 columns"
+    gc_orb_extra_pair)
+add_ap_orbital_test(Orbital_ExtraPairMissingFlags
+    "OptFlag row 1 in orbitalidxgen.def has 6 columns" gc_orb_extra_pair_missing_flags)
+add_ap_orbital_test(OptFlag_ExtraRow "rows after the 6 OptFlag rows" gc_orb_flag_extra)
+add_ap_orbital_test(OptFlag_MissingRow "ended after 5 of 6 OptFlag rows" gc_orb_flag_missing)
+add_ap_orbital_test(OptFlag_BadToken "column 2 is malformed" gc_orb_flag_bad_token)
+add_ap_orbital_test(OptFlag_IndexRange "OptFlag row 6 in orbitalidxgen.def has a parameter index out of range"
+    gc_orb_flag_index_range)
+add_ap_orbital_test(OptFlag_DuplicateIndex "duplicate OrbitalGeneral OptFlag index 0"
+    gc_orb_flag_duplicate)
+add_ap_orbital_test(OptFlag_Value "the flag must be 0 or 1" gc_orb_flag_value)
 
 # Positive controls: NMPTrans=-1 with valid +1/-1 signs runs to completion,
 # and the periodic reader keeps accepting five-column rows.
@@ -1353,6 +1365,11 @@ add_gc_positive_test(GC_AP_Accept NMPTrans=-1)
 add_gc_positive_test(GC_AP_NegativeSign_Positive NMPTrans=-1 gc_orb_negative_sign)
 add_gc_positive_test(FSZ_AP_NegativeSign_Positive NGrandCanonical=0 NMPTrans=-1
     gc_orb_negative_sign)
+add_gc_positive_test(GC_AP_OptFlagTrailingBlank_Positive NMPTrans=-1
+    gc_orb_flag_trailing_blank)
+add_gc_positive_test(GC_AP_OptFlagPermuted_Positive NMPTrans=-1 gc_orb_flag_permuted)
+add_gc_positive_test(FSZ_AP_OptFlagPermuted_Positive NGrandCanonical=0 NMPTrans=-1
+    gc_orb_flag_permuted)
 add_gc_positive_test(GC_PBC_FiveColumnOrbital_Positive NMPTrans=1 gc_orb_sign_missing)
 add_gc_positive_test(FSZ_PBC_FiveColumnOrbital_Positive NGrandCanonical=0 NMPTrans=1
     gc_orb_sign_missing)
@@ -1462,6 +1479,8 @@ add_gc_ap_test(GC_AP_MutationDetect mutation)
 add_gc_ap_test(GC_AP_Lattice_4x2_AP_P lattice_4x2)
 add_gc_ap_test(GC_AP_Lattice_4x4_AP_AP lattice_4x4)
 add_gc_ap_test(GC_AP_StdFaceExample stdface_example)
+add_gc_ap_test(GC_AP_ComparatorGuard comparator_guard)
+add_gc_ap_test(GC_AP_AuditWriteFailure audit_write_failure)
 set_property(TEST GC_AP_StdFaceExample APPEND PROPERTY ENVIRONMENT
     "MVMC_GC_APBC_SAMPLE=${CMAKE_SOURCE_DIR}/samples/GrandCanonical/APBC_chain")
 add_gc_ap_test(GC_AP_MPI_NSplit2_CalMode1 mpi_nsplit2_mode1)

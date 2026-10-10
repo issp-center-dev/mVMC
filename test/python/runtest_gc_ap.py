@@ -18,8 +18,8 @@ import sys
 import grandcanonical_ap_oracle as oracle
 from grandcanonical_exact_oracle import default_parameters, slater_matrix
 from runtest_gc import (
-    assert_close,
     fmt,
+    mpi_command,
     parse_complex_rows,
     parse_sr_dump,
     prepare_work,
@@ -299,24 +299,51 @@ def read_anomalous(workdir, nsite, data_index=1):
 
 
 # Gates fixed from a pilot of 8 independent seeds (1001, 2003, 3011, 4019,
-# 5021, 6037, 7043, 8053) at the production sample count of 60000.  Each gate
-# is max(6 x seed-to-seed SD, 2.5 x largest |deviation|), rounded up; Green
-# and AnomalousG gates bound the largest entry of each run.  The pilot SDs
-# were N 0.011, N2 0.10, var(N) 0.028, E2 0.10; max |dE| 0.026, max |dG|
-# 0.0057, max |dAG| 0.0048, max chi2/bin 1.22.
+# 5021, 6037, 7043, 8053) at the production sample count of 60000, for both
+# the plain and the anomalous fixture.  Each deviation gate is
+# max(6 x seed-to-seed SD, 2.5 x largest |deviation|) over both fixtures,
+# rounded up to two significant digits; "energy" is |E_sampled - E_exact| of
+# the complex energy, and the Green and AnomalousG gates bound the largest
+# entry of each run.  Required values: N 0.0643, N2 0.616, var(N) 0.202,
+# E 0.0661, E2 0.631, G 0.0142, AG 0.0120.  The chi-square gate is the pilot
+# maximum 1.22 plus 6 SD (0.14), rounded up.
 TOLERANCE = {
     "number": 0.065,
     "number2": 0.62,
     "variance": 0.21,
-    "energy": 0.066,
-    "energy2": 0.62,
+    "energy": 0.067,
+    "energy2": 0.64,
     "green": 0.015,
     "anomalous": 0.012,
     "chi_square_per_bin": 2.1,
 }
-# First SR step, packed index 2*(NProj+orbital)+imag with NProj=3.  Pilot
-# seed-to-seed SDs: P8 0.076, P12 0.034, P13 0.027, P15 0.037, P16 0.032.
-GRADIENT_TOLERANCE = {8: 0.46, 12: 0.21, 13: 0.16, 15: 0.22, 16: 0.19}
+# First SR step, packed index 2*(NProj+orbital)+imag with NProj=3, by the same
+# rule.  Required values: P8 0.457, P12 0.206, P13 0.159, P15 0.221, P16 0.189.
+GRADIENT_TOLERANCE = {8: 0.46, 12: 0.21, 13: 0.16, 15: 0.23, 16: 0.19}
+
+
+def is_finite_number(value):
+    value = complex(value)
+    return math.isfinite(value.real) and math.isfinite(value.imag)
+
+
+def comparison_failed(actual, expected, tolerance):
+    """True unless every input is finite and |actual - expected| <= tolerance.
+
+    A plain "abs(actual - expected) > tolerance" is False for NaN, which would
+    let a NaN observable pass.
+    """
+    if not (is_finite_number(actual) and is_finite_number(expected) and
+            math.isfinite(tolerance) and tolerance >= 0.0):
+        return True
+    return abs(actual - expected) > tolerance
+
+
+def assert_close(label, actual, expected, tolerance):
+    if comparison_failed(actual, expected, tolerance):
+        raise AssertionError(
+            "{} mismatch or non-finite: actual={} expected={} tolerance={}"
+            .format(label, actual, expected, tolerance))
 
 
 def compare_physical(model, workdir, label, data_index=1, strict=True):
@@ -347,10 +374,12 @@ def compare_physical(model, workdir, label, data_index=1, strict=True):
                            exact["anomalous_g"][key], TOLERANCE["anomalous"]))
     failures = [(name, actual, expected, tolerance)
                 for name, actual, expected, tolerance in checks
-                if abs(actual - expected) > tolerance]
+                if comparison_failed(actual, expected, tolerance)]
     if strict and failures:
         raise AssertionError("{} mismatches: {}".format(label, failures[:6]))
-    worst = max(abs(actual - expected) / tolerance
+    worst = max((abs(actual - expected) / tolerance
+                 if is_finite_number(actual) and is_finite_number(expected)
+                 else float("inf"))
                 for unused, actual, expected, tolerance in checks)
     return failures, worst
 
@@ -855,8 +884,140 @@ def stdface_example_case(rootdir):
           .format(len(table), oracle.negative_sign_count(table)))
 
 
+def write_exact_outputs(workdir, model):
+    """Write zvo_gc/zvo_out/Green/AnomalousG files holding the exact values."""
+    exact = oracle.exact_observables(model)
+    nsite = model.lattice.nsite
+    os.makedirs(os.path.join(workdir, "output"))
+    write(os.path.join(workdir, "zvo_gc.dat"), "{} {} {}\n".format(
+        fmt(exact["number"]), fmt(exact["number2"]),
+        fmt(exact["variance_number"])))
+    write(os.path.join(workdir, "output", "zvo_out_001.dat"),
+          "{} {} {} {}\n".format(fmt(exact["energy"].real),
+                                 fmt(exact["energy"].imag),
+                                 fmt(exact["energy2"].real), fmt(0.0)))
+    write(os.path.join(workdir, "output", "zvo_cisajs_001.dat"), "".join(
+        "{} {} {} {} {} {}\n".format(first % nsite, first // nsite,
+                                     second % nsite, second // nsite,
+                                     fmt(value.real), fmt(value.imag))
+        for (first, second), value in sorted(exact["greens1"].items())))
+    write(os.path.join(workdir, "output", "zvo_anomalousg_001.dat"), "".join(
+        "{} {} {} {} {} {} {}\n".format(kind, first % nsite, first // nsite,
+                                        second % nsite, second // nsite,
+                                        fmt(value.real), fmt(value.imag))
+        for (kind, first, second), value in
+        sorted(exact["anomalous_g"].items())))
+
+
+def replace_output_token(path, row, column, text):
+    with open(path) as stream:
+        lines = [line.split() for line in stream if line.split()]
+    lines[row][column] = text
+    write(path, "".join(" ".join(words) + "\n" for words in lines))
+
+
+def comparator_guard_case(rootdir):
+    """NaN and +-Inf in any compared observable must fail the comparison."""
+    model = oracle.ring_model(delta=0.33 - 0.21j)
+    base = prepare_work(rootdir, "GC_AP_ComparatorGuard")
+    write_exact_outputs(base, model)
+    failures, worst = compare_physical(model, base, "exact outputs")
+    if failures or worst > 1.0e-12:
+        raise AssertionError("exact outputs do not pass: {} {}".format(
+            failures, worst))
+    injections = (
+        ("<N>", "zvo_gc.dat", 0, 0),
+        ("var(N)", "zvo_gc.dat", 0, 2),
+        ("energy real", os.path.join("output", "zvo_out_001.dat"), 0, 0),
+        ("energy imag", os.path.join("output", "zvo_out_001.dat"), 0, 1),
+        ("energy2", os.path.join("output", "zvo_out_001.dat"), 0, 2),
+        ("one-body Green", os.path.join("output", "zvo_cisajs_001.dat"), 5, 4),
+        ("AnomalousG", os.path.join("output", "zvo_anomalousg_001.dat"), 2, 6),
+    )
+    count = 0
+    for label, name, row, column in injections:
+        for bad in ("nan", "inf", "-inf"):
+            work = os.path.join(rootdir, "work", "GC_AP_ComparatorGuard_{}".format(
+                count))
+            if os.path.exists(work):
+                shutil.rmtree(work)
+            shutil.copytree(base, work)
+            replace_output_token(os.path.join(work, name), row, column, bad)
+            try:
+                compare_physical(model, work, label)
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError("{}={} was accepted".format(label, bad))
+            failures, worst = compare_physical(model, work, label, strict=False)
+            if not failures or not math.isinf(worst):
+                raise AssertionError("{}={} not reported: {} {}".format(
+                    label, bad, failures, worst))
+            count += 1
+    nan = float("nan")
+    inf = float("inf")
+    for actual, expected, tolerance in ((nan, 1.0, 1.0), (1.0, nan, 1.0),
+                                        (1.0, 1.0, nan), (1.0, 1.0, inf),
+                                        (inf, inf, 1.0),
+                                        (complex(1.0, nan), 1.0, 1.0),
+                                        (1.0, 2.0, 0.5)):
+        try:
+            assert_close("guard", actual, expected, tolerance)
+        except AssertionError:
+            continue
+        raise AssertionError("assert_close accepted {} {} {}".format(
+            actual, expected, tolerance))
+    assert_close("finite", 1.0, 1.0 + 1.0e-12, 1.0e-9)
+    print("GC AP comparator rejects non-finite values: {} injections".format(
+        count))
+
+
+def run_expect_failure(rootdir, workdir, procs, extra_env):
+    binary = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
+    command = [binary, "-e", "namelist.def", "initial.def"]
+    if procs > 1:
+        command = mpi_command(procs, command)
+    environment = os.environ.copy()
+    environment["OMP_NUM_THREADS"] = "1"
+    environment.update(extra_env)
+    process = subprocess.run(command, cwd=workdir, env=environment,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+    write(os.path.join(workdir, "run.log"), process.stdout)
+    return process.returncode, process.stdout
+
+
+def audit_write_failure_case(rootdir):
+    """An audit that cannot be opened or written stops every rank."""
+    model = oracle.ring_model()
+    targets = [("missing_parent", os.path.join("no_such_dir", "gc_audit.dat"),
+                "failed to open MVMC_GC_INPUT_AUDIT")]
+    if os.path.exists("/dev/full"):
+        targets.append(("dev_full", "/dev/full",
+                        "failed to write MVMC_GC_INPUT_AUDIT"))
+    else:
+        print("note: /dev/full is unavailable; the write-error branch is not "
+              "exercised on this platform")
+    for name, path, message in targets:
+        for procs in (1, 2):
+            workdir = prepare_work(rootdir, "GC_AP_AuditFailure_{}_np{}".format(
+                name, procs))
+            write_ap_fixture(workdir, model, samples=50, iterations=1,
+                             measure=False)
+            returncode, output = run_expect_failure(
+                rootdir, workdir, procs, {"MVMC_GC_INPUT_AUDIT": path})
+            if returncode == 0 or message not in output:
+                raise AssertionError("audit {} np={} did not stop: rc={}\n{}"
+                                     .format(name, procs, returncode,
+                                             output[-2000:]))
+            print("audit {} np={} stopped: rc={}".format(name, procs,
+                                                         returncode))
+
+
 CASES = {
     "stdface_example": stdface_example_case,
+    "comparator_guard": comparator_guard_case,
+    "audit_write_failure": audit_write_failure_case,
     "legacy_parser": legacy_parser_case,
     "identity_wiring": identity_wiring_case,
     "audit": audit_case,

@@ -188,6 +188,29 @@ def apply_orbital_general_mutation(action):
         flags = []
     elif action == "gc_orb_blank_row":
         rows.insert(2, "\n")
+    elif action == "gc_orb_extra_pair":
+        # A surplus pair row must not be read as OptFlag rows.
+        rows.append(rows[0])
+    elif action == "gc_orb_extra_pair_missing_flags":
+        # Six integers of the surplus row would stand in for three flags.
+        rows.append(rows[0])
+        flags = flags[3:]
+    elif action == "gc_orb_flag_extra":
+        flags.append("5 1\n")
+    elif action == "gc_orb_flag_missing":
+        flags = flags[:-1]
+    elif action == "gc_orb_flag_bad_token":
+        flags[0] = "0 x\n"
+    elif action == "gc_orb_flag_index_range":
+        flags[-1] = "6 1\n"
+    elif action == "gc_orb_flag_duplicate":
+        flags[-1] = "0 1\n"
+    elif action == "gc_orb_flag_value":
+        flags[0] = "0 2\n"
+    elif action == "gc_orb_flag_trailing_blank":
+        flags.extend(["\n", "   \n"])
+    elif action == "gc_orb_flag_permuted":
+        flags = list(reversed(flags))
     else:
         raise RuntimeError("unknown OrbitalGeneral mutation: {}".format(action))
     write_orbital_general_rows(header, rows, flags)

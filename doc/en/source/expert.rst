@@ -4067,8 +4067,11 @@ User rules
    are 0 or 1; the parameter index is in [0, [ int01 ]); the sign
    [ int08 ] is :math:`\pm1`;
    :math:`i+\sigma_1 N_s < j+\sigma_2 N_s`; and every pair appears exactly
-   once (no duplicated, missing, or blank row). The periodic reader (five
-   or six columns) is unchanged.
+   once (no duplicated, missing, or blank row). The optimization rows that
+   follow must each be exactly two integers [ int09 ] [ int10 ], with every
+   [ int09 ] in [0, [ int01 ]) appearing exactly once (in any order) and
+   [ int10 ] equal to 0 or 1; only blank lines may follow them. The periodic
+   reader (five or six columns) is unchanged.
 
 TransSym file (qptransidx.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
