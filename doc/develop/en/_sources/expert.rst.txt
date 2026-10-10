@@ -558,9 +558,41 @@ Keywords and parameters
    this definition; it fixes the sign of the ``AnomalousG`` expectation
    values and of the ``AnomalousTerm`` energy response.
    This mode requires ``OrbitalGeneral``, complex variational parameters,
-   ``2Sz=-1``, ``NExUpdatePath=0``, ``NSPGaussLeg=1``, ``NMPTrans=1``, and
-   ``NQPOptTrans<=1``. RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
-   spins, and SR-CG are not supported in this first phase.
+   ``2Sz=-1``, ``NExUpdatePath=0``, ``NSPGaussLeg=1``, ``NMPTrans=1`` or
+   ``-1``, and ``NQPOptTrans<=1``. RBM, BackFlow, Lanczos, OptTrans,
+   UpdateWeight, local spins, and SR-CG are not supported in this first phase.
+
+   ``NMPTrans=-1`` selects anti-periodic boundary conditions (APBC). Only
+   the first ``TransSym`` pattern is used; momentum projection over several
+   translations is not performed. ``NMPTrans=-1`` does not modify the
+   Hamiltonian, so keep the following three inputs consistent.
+
+   * The Hamiltonian (``Trans`` etc.): coefficients that cross an
+     anti-periodic boundary carry the boundary phase :math:`-1` (for a
+     chain, :math:`c_{L}=-c_{0}` flips the sign of the boundary bond).
+   * ``OrbitalGeneral``: the sixth column gives the sign that multiplies
+     :math:`F_{IJ}` (:math:`F_{IJ}=s_{IJ}f_{k}-s_{JI}f_{k}` with
+     :math:`s_{JI}=-s_{IJ}`).
+   * ``TransSym``: the first pattern is the identity map with weight 1 and
+     sign +1 on every site. APBC does not require a negative sign on the
+     identity map.
+
+   With ``2Sz=-1`` and ``phase0=180`` or similar settings, StdFace writes a
+   ``Trans`` file that includes the boundary phases and an
+   ``orbitalidxgen.def`` with one variational parameter and one boundary
+   sign per pair. To use them, keep only ``OrbitalGeneral`` as the orbital
+   entry of ``namelist.def`` (remove the ``Orbital`` and ``OrbitalParallel``
+   lines and enable the commented ``OrbitalGeneral`` line) and set
+   ``NGrandCanonical=1``, ``2Sz=-1``, ``NExUpdatePath=0``,
+   ``NSPGaussLeg=1``, and ``NMPTrans=-1`` in ``modpara.def`` without an
+   ``OptTrans`` file (do not keep the ``NSPGaussLeg=8`` that StdFace writes
+   when ``2Sz`` is omitted). ``Ncond`` does not constrain the particle number
+   in GC mode, so give ``NGCInitNelec`` and explicit complex initial
+   parameters. StdFace uses ``NMPTrans=-1`` by default also for periodic
+   inputs, so that value alone does not indicate a physical APBC. General
+   twist angles, projection over several translations, and BackFlow are not
+   supported. A four-site chain example and the conversion script are in
+   ``samples/GrandCanonical/APBC_chain``.
 
 -  ``NGCInitNelec``
 
@@ -3997,7 +4029,8 @@ Parameters
    on (the mode turns on when the value of ``NMPTrans`` in ``ModPara``
    file is negative), the sign of :math:`f_{i\sigma_1j\sigma_2}` is
    specified by setting [ int08 :math:`]=\pm1`. This term can
-   be omitted when the mode of the anti-periodic condition is off.
+   be omitted when the mode of the anti-periodic condition is off, and
+   it is required on every row when the mode is on.
 
 -  [ int09 ]
 
@@ -4025,6 +4058,20 @@ User rules
 
 -  A program is terminated, when [ int02 ] -
    [ int10 ] are out of range from the defined values.
+
+-  In the anti-periodic mode (negative ``NMPTrans``), each pair row is
+   validated as it is read, independently of ``NGrandCanonical`` and
+   BackFlow, and the program is terminated unless: the row has exactly six
+   integer columns (no missing or extra column, no fractional or
+   out-of-range value); the site indices are in [0, ``Nsite``); the spins
+   are 0 or 1; the parameter index is in [0, [ int01 ]); the sign
+   [ int08 ] is :math:`\pm1`;
+   :math:`i+\sigma_1 N_s < j+\sigma_2 N_s`; and every pair appears exactly
+   once (no duplicated, missing, or blank row). The optimization rows that
+   follow must each be exactly two integers [ int09 ] [ int10 ], with every
+   [ int09 ] in [0, [ int01 ]) appearing exactly once (in any order) and
+   [ int10 ] equal to 0 or 1; only blank lines may follow them. The periodic
+   reader (five or six columns) is unchanged.
 
 TransSym file (qptransidx.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

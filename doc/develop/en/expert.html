@@ -554,9 +554,40 @@ normalization. The relative sign between particle-number sectors follows
 this definition; it fixes the sign of the <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> expectation
 values and of the <code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> energy response.
 This mode requires <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>, complex variational parameters,
-<code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NMPTrans=1</span></code>, and
-<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code>. RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
-spins, and SR-CG are not supported in this first phase.</p>
+<code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NMPTrans=1</span></code> or
+<code class="docutils literal notranslate"><span class="pre">-1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code>. RBM, BackFlow, Lanczos, OptTrans,
+UpdateWeight, local spins, and SR-CG are not supported in this first phase.</p>
+<p><code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> selects anti-periodic boundary conditions (APBC). Only
+the first <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> pattern is used; momentum projection over several
+translations is not performed. <code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> does not modify the
+Hamiltonian, so keep the following three inputs consistent.</p>
+<ul class="simple">
+<li><p>The Hamiltonian (<code class="docutils literal notranslate"><span class="pre">Trans</span></code> etc.): coefficients that cross an
+anti-periodic boundary carry the boundary phase <span class="math notranslate nohighlight">\(-1\)</span> (for a
+chain, <span class="math notranslate nohighlight">\(c_{L}=-c_{0}\)</span> flips the sign of the boundary bond).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>: the sixth column gives the sign that multiplies
+<span class="math notranslate nohighlight">\(F_{IJ}\)</span> (<span class="math notranslate nohighlight">\(F_{IJ}=s_{IJ}f_{k}-s_{JI}f_{k}\)</span> with
+<span class="math notranslate nohighlight">\(s_{JI}=-s_{IJ}\)</span>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TransSym</span></code>: the first pattern is the identity map with weight 1 and
+sign +1 on every site. APBC does not require a negative sign on the
+identity map.</p></li>
+</ul>
+<p>With <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code> and <code class="docutils literal notranslate"><span class="pre">phase0=180</span></code> or similar settings, StdFace writes a
+<code class="docutils literal notranslate"><span class="pre">Trans</span></code> file that includes the boundary phases and an
+<code class="docutils literal notranslate"><span class="pre">orbitalidxgen.def</span></code> with one variational parameter and one boundary
+sign per pair. To use them, keep only <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> as the orbital
+entry of <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> (remove the <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> and <code class="docutils literal notranslate"><span class="pre">OrbitalParallel</span></code>
+lines and enable the commented <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> line) and set
+<code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code>, <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> without an
+<code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> file (do not keep the <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=8</span></code> that StdFace writes
+when <code class="docutils literal notranslate"><span class="pre">2Sz</span></code> is omitted). <code class="docutils literal notranslate"><span class="pre">Ncond</span></code> does not constrain the particle number
+in GC mode, so give <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> and explicit complex initial
+parameters. StdFace uses <code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> by default also for periodic
+inputs, so that value alone does not indicate a physical APBC. General
+twist angles, projection over several translations, and BackFlow are not
+supported. A four-site chain example and the conversion script are in
+<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/APBC_chain</span></code>.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code></p>
 <p><strong>Type :</strong> int-type (default value: -1)</p>
@@ -3393,7 +3424,8 @@ spin, <span class="math notranslate nohighlight">\(1:\downarrow\)</span> spin).<
 on (the mode turns on when the value of <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code>
 file is negative), the sign of <span class="math notranslate nohighlight">\(f_{i\sigma_1j\sigma_2}\)</span> is
 specified by setting [ int08 <span class="math notranslate nohighlight">\(]=\pm1\)</span>. This term can
-be omitted when the mode of the anti-periodic condition is off.</p>
+be omitted when the mode of the anti-periodic condition is off, and
+it is required on every row when the mode is on.</p>
 </li>
 <li><p>[ int09 ]</p>
 <p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
@@ -3417,6 +3449,19 @@ different from the total number of variational parameters defined in
 this file.</p></li>
 <li><p>A program is terminated, when [ int02 ] -
 [ int10 ] are out of range from the defined values.</p></li>
+<li><p>In the anti-periodic mode (negative <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code>), each pair row is
+validated as it is read, independently of <code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> and
+BackFlow, and the program is terminated unless: the row has exactly six
+integer columns (no missing or extra column, no fractional or
+out-of-range value); the site indices are in [0, <code class="docutils literal notranslate"><span class="pre">Nsite</span></code>); the spins
+are 0 or 1; the parameter index is in [0, [ int01 ]); the sign
+[ int08 ] is <span class="math notranslate nohighlight">\(\pm1\)</span>;
+<span class="math notranslate nohighlight">\(i+\sigma_1 N_s &lt; j+\sigma_2 N_s\)</span>; and every pair appears exactly
+once (no duplicated, missing, or blank row). The optimization rows that
+follow must each be exactly two integers [ int09 ] [ int10 ], with every
+[ int09 ] in [0, [ int01 ]) appearing exactly once (in any order) and
+[ int10 ] equal to 0 or 1; only blank lines may follow them. The periodic
+reader (five or six columns) is unchanged.</p></li>
 </ul>
 </section>
 </section>
