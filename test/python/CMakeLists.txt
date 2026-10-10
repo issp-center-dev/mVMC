@@ -54,6 +54,10 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_ap_oracle.py DESTINATION ${
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_ap.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_antiparallel_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel_death.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel_failure_guard.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/gc_antiparallel_failure.py
+    DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_hphi_anomalous.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_gc_canonical_baseline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -1490,11 +1494,28 @@ set(GC_ANTIPAIR_INPUT_MUTATIONS header_missing header_norb_zero
     start_vacuum start_full start_default start_odd ncond_ignored
     twosz_missing twosz_minus1 twosz_two alias_duplicate all_real gaussleg2
     mptrans2 opttrans backflow rbm locspin lanczos srcg exupdate updateweight)
+list(APPEND GC_ANTIPAIR_INPUT_MUTATIONS
+    twosz_fractional twosz_negative_fractional twosz_garbage twosz_suffix
+    twosz_decimal twosz_nan twosz_inf twosz_minus_inf
+    twosz_int_overflow twosz_int_underflow twosz_llong_overflow twosz_extra_column
+    twosz_before_gc twosz_alias_fractional twosz_invalid_then_zero
+    twosz_plus_zero_before_gc twosz_long_token twosz_long_token_before_gc
+    twosz_long_tail twosz_long_tail_before_gc twosz_long_mode_override
+    twosz_final_no_newline
+    header_width_254 header_width_255 header_width_256 header_width_300
+    header_width_4094 header_too_long)
 string(REPLACE ";" "," GC_ANTIPAIR_INPUT_MUTATION_CSV
     "${GC_ANTIPAIR_INPUT_MUTATIONS}")
 add_gc_antiparallel_test(GC_AntiPair_Input_Inventory inventory
     --mutation ${GC_ANTIPAIR_INPUT_MUTATION_CSV})
 add_gc_antiparallel_test(GC_AntiPair_ComparatorGuard comparator_guard)
+foreach(guard death audit)
+    add_test(NAME GC_AntiPair_FailureGuard_${guard}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_antiparallel_failure_guard.py ${guard})
+    set_tests_properties(GC_AntiPair_FailureGuard_${guard} PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1"
+        TIMEOUT 180)
+endforeach()
 add_gc_antiparallel_test(GC_AntiPair_Sample sample
     --sample-dir ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/AntiParallel)
 add_gc_antiparallel_test(GC_AntiPair_Mutation_ap_sign_flip_apbc

@@ -2167,7 +2167,28 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
       }
 
       /*=======================================================================*/
-      for (i = 0; i < IgnoreLinesInDef; i++) fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+      if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral) &&
+          (iKWidx == KWOrbital || iKWidx == KWOrbitalAntiParallel)) {
+        int norbHeader, complexHeader;
+        /* Consume the same five physical lines as the allocation pass. */
+        if (GCAntiReadHeader(fp, Nsite, &norbHeader, &complexHeader,
+                             defname) != 0) {
+          info = 1;
+          fclose(fp);
+          continue;
+        }
+        if (norbHeader != iNOrbitalAntiParallel ||
+            complexHeader != iComplexFlgOrbital) {
+          fprintf(stderr, "Error: GC anti-parallel orbital file %s: "
+                          "header changed between reads.\n", defname);
+          info = 1;
+          fclose(fp);
+          continue;
+        }
+      } else {
+        for (i = 0; i < IgnoreLinesInDef; i++)
+          fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+      }
       switch (iKWidx) {
         case KWInUpdateWeight:
           /* Parsed and normalized during ReadDefFileNInt(). */
@@ -3408,6 +3429,15 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
 
   int iKWidx = 0;
   int iret = 0;
+  /* This function runs on rank 0, which owns cFileNameListFile. GC may be
+   * declared after 2Sz, so defer conversion for anti-only orbital input. */
+  const int antiOnly =
+      (cFileNameListFile[KWOrbital][0] != '\0' ||
+       cFileNameListFile[KWOrbitalAntiParallel][0] != '\0') &&
+      cFileNameListFile[KWOrbitalGeneral][0] == '\0' &&
+      cFileNameListFile[KWOrbitalParallel][0] == '\0';
+  int sawTwoSz = 0, invalidTwoSz = 0, exactTwoSz = 0;
+  double legacyTwoSz = 0.0;
   fprintf(stdout, "Start: Read ModPara File .\n");
   for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
     strcpy(defname, cFileNameListFile[iKWidx]);
@@ -3485,7 +3515,29 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
             } else if (CheckWords(ctmp, "Ncond") == 0) {
               bufInt[IdxNCond] = (int) dtmp;
             } else if (CheckWords(ctmp, "2Sz") == 0) {
-              bufInt[Idx2Sz] = (int) dtmp;
+              if (antiOnly) {
+                long long rawTwoSz;
+                int offset = 0;
+                sawTwoSz = 1;
+                legacyTwoSz = dtmp;
+                if (strchr(ctmp2, '\n') == NULL && !feof(fp)) {
+                  int ch;
+                  invalidTwoSz = 1;
+                  /* A continuation is part of this value, never another
+                   * keyword or separator (including NGrandCanonical). */
+                  while ((ch = fgetc(fp)) != '\n' && ch != EOF) {}
+                }
+                if (sscanf(ctmp2, "%*s %*s %n", &offset) < 0 ||
+                    !LineTailIsWhitespace(ctmp2, offset) ||
+                    ParseStrictLongLong(valueText, &rawTwoSz) != 0 ||
+                    rawTwoSz < INT_MIN || rawTwoSz > INT_MAX) {
+                  invalidTwoSz = 1;
+                } else {
+                  exactTwoSz = (int)rawTwoSz;
+                }
+              } else {
+                bufInt[Idx2Sz] = (int)dtmp;
+              }
             } else if (CheckWords(ctmp, "NSPGaussLeg") == 0) {
               bufInt[IdxSPGaussLeg] = (int) dtmp;
             } else if (CheckWords(ctmp, "NSPStot") == 0) {
@@ -3564,6 +3616,20 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               fprintf(stderr, "  Error: keyword \" %s \" is incorrect. \n", ctmp);
               iret = ReadDefFileError(defname);
               return iret;
+            }
+          }
+          if (sawTwoSz) {
+            if (bufInt[IdxNGrandCanonical] == 1) {
+              if (invalidTwoSz) {
+                fprintf(stderr, "Error: GC anti-parallel 2Sz must be an "
+                                "exact integer in int range.\n");
+                fclose(fp);
+                return ReadDefFileError(defname);
+              }
+              bufInt[Idx2Sz] = exactTwoSz;
+            } else {
+              /* Preserve the canonical reader's existing conversion. */
+              bufInt[Idx2Sz] = (int)legacyTwoSz;
             }
           }
           if (bufInt[IdxRndSeed] < 0) {

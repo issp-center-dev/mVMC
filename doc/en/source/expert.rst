@@ -573,7 +573,10 @@ Keywords and parameters
 
      has weight only on configurations with :math:`N_\uparrow=N_\downarrow`,
      and ``2Sz=0`` must be given explicitly (the default ``-1`` and other
-     values are rejected). :math:`F_{ij}` is the anti-parallel parameter
+     values are rejected). In this mode, the ``2Sz`` line must contain one
+     complete base-10 integer in the C ``int`` range; decimal notation such
+     as ``0.0``, nonfinite values, trailing tokens, and truncated lines are
+     rejected before conversion. :math:`F_{ij}` is the anti-parallel parameter
      itself, including the sign column. The same state written as
      ``OrbitalGeneral`` uses :math:`F_{ij}/2` for the up-down pairs and 0 for
      the same-spin pairs, because :math:`F_{IJ}=f_{IJ}-f_{JI}` counts each

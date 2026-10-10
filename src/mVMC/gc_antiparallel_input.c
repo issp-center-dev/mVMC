@@ -178,7 +178,7 @@ int GCAntiReadOrbitals(FILE *fp, int **idx, int **sgn, int *opt,
   char line[ANTI_LINE_CAPACITY];
   unsigned char *seenPair = NULL;
   unsigned char *seenOpt = NULL;
-  const int pairRows = nsite * nsite;
+  int pairRows;
   int lineNumber = ANTI_HEADER_LINES;
   int row;
   int status;
@@ -197,6 +197,7 @@ int GCAntiReadOrbitals(FILE *fp, int **idx, int **sgn, int *opt,
             filename, nsite);
     return 1;
   }
+  pairRows = nsite * nsite;
   if (norb <= 0 || norb > INT_MAX / 2) {
     fprintf(stderr,
             "Error: GC anti-parallel orbital file %s: the orbital count must "

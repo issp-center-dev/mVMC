@@ -313,6 +313,11 @@ static void argument_cases(void) {
       {FIDX, -1, 1, NSITE, NORB, "OptFlag count"},
       {FIDX, 0, 2, NSITE, NORB, "ComplexType"},
       {FIDX, 0, 1, 0, NORB, "Nsite"},
+      {FIDX, 0, 1, -1, NORB, "Nsite"},
+      {FIDX, 0, 1, INT_MIN, NORB, "Nsite"},
+      {FIDX, 0, 1, 23171, NORB, "Nsite"},
+      {FIDX, 0, 1, 46341, NORB, "Nsite"},
+      {FIDX, 0, 1, INT_MAX, NORB, "Nsite"},
       {FIDX, 0, 1, NSITE, 0, "orbital count"},
   };
   size_t k;

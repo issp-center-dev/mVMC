@@ -18,7 +18,8 @@ import sys
 import numpy as np
 
 import grandcanonical_antiparallel_oracle as oracle
-from runtest_gc import mpi_command, parse_sr_dump, state_dump_records
+from runtest_gc import mpi_command, state_dump_records
+from gc_antiparallel_failure import reject_signal_reports, require_expected_failure
 
 
 NSITE = oracle.NSITE
@@ -565,11 +566,11 @@ def update_modpara(workdir, key, value):
             if fields and fields[0] == key:
                 found = True
                 if value is not None:
-                    out.append("{:<15}{}\n".format(key, value))
+                    out.append("{:<15} {}\n".format(key, value))
             else:
                 out.append(line)
         if not found and value is not None:
-            out.append("{:<15}{}\n".format(key, value))
+            out.append("{:<15} {}\n".format(key, value))
         return out
     edit_file(workdir, "modpara.def", change)
 
@@ -763,9 +764,70 @@ INPUT_MUTATIONS = {
         "Exchange 1.0\nLocalSpinFlip 1.0\nPairSpinFlip 1.0\n"),
         ["does not support the UpdateWeight input"]),
 }
+# Exact integer syntax is required only on the anti-parallel GC path.
+TWOSZ_BAD = {
+    "fractional": "0.5", "negative_fractional": "-0.5",
+    "garbage": "garbage", "suffix": "0junk", "decimal": "0.0",
+    "nan": "NaN", "inf": "Inf", "minus_inf": "-Inf",
+    "int_overflow": "2147483648", "int_underflow": "-2147483649",
+    "llong_overflow": "9223372036854775808", "extra_column": "0 1",
+}
+for _name, _value in TWOSZ_BAD.items():
+    INPUT_MUTATIONS["twosz_" + _name] = _m(
+        lambda workdir, ap, value=_value: update_modpara(workdir, "2Sz", value),
+        ["GC anti-parallel", "2Sz must be an exact integer"])
+# Check both input orders, the alias, and an invalid value overwritten later.
+INPUT_MUTATIONS["twosz_before_gc"] = _m(lambda workdir, ap: (
+    update_modpara(workdir, "NGrandCanonical", None),
+    update_modpara(workdir, "2Sz", "garbage"),
+    update_modpara(workdir, "NGrandCanonical", 1)),
+    ["GC anti-parallel", "2Sz must be an exact integer"])
+INPUT_MUTATIONS["twosz_alias_fractional"] = _m(lambda workdir, ap: (
+    INPUT_MUTATIONS["alias_orbital"][0](workdir, ap),
+    update_modpara(workdir, "2Sz", "0.5")),
+    ["GC anti-parallel", "2Sz must be an exact integer"])
+INPUT_MUTATIONS["twosz_invalid_then_zero"] = _m(lambda workdir, ap: (
+    update_modpara(workdir, "2Sz", "garbage"),
+    append_rows(workdir, "modpara.def", ["2Sz 0\n"])),
+    ["GC anti-parallel", "2Sz must be an exact integer"])
+INPUT_MUTATIONS["twosz_plus_zero_before_gc"] = _m(lambda workdir, ap: (
+    update_modpara(workdir, "NGrandCanonical", None),
+    update_modpara(workdir, "2Sz", "+0"),
+    update_modpara(workdir, "NGrandCanonical", 1)), None)
+def long_twosz_row(workdir, text, gc_last):
+    update_modpara(workdir, "2Sz", None)
+    append_rows(workdir, "modpara.def", [text])
+    if gc_last:
+        update_modpara(workdir, "NGrandCanonical", None)
+        update_modpara(workdir, "NGrandCanonical", 1)
+
+
+for _name, _text in (
+        ("long_token", "2Sz " + "0" * 251 + "-5\n"),
+        ("long_tail", "2Sz 0" + " " * 250 + "-5\n")):
+    for _gc_last in (False, True):
+        _key = "twosz_" + _name + ("_before_gc" if _gc_last else "")
+        INPUT_MUTATIONS[_key] = _m(
+            lambda workdir, ap, text=_text, gc_last=_gc_last:
+            long_twosz_row(workdir, text, gc_last),
+            ["GC anti-parallel", "2Sz must be an exact integer"])
+INPUT_MUTATIONS["twosz_long_mode_override"] = _m(lambda workdir, ap:
+    long_twosz_row(workdir, "2Sz " + "0" * 251 + "NGrandCanonical 0\n", False),
+    ["GC anti-parallel", "2Sz must be an exact integer"])
+INPUT_MUTATIONS["twosz_final_no_newline"] = _m(lambda workdir, ap: (
+    update_modpara(workdir, "2Sz", None),
+    append_rows(workdir, "modpara.def", ["2Sz 0"])), None)
+
+
+for _length in (254, 255, 256, 300, 4094):
+    INPUT_MUTATIONS["header_width_" + str(_length)] = _m(
+        _orbital_edit(lambda lines, length=_length:
+                      [line.rstrip("\n").ljust(length) + "\n"
+                       for line in lines[:5]] + lines[5:]), None)
+INPUT_MUTATIONS["header_too_long"] = _m(
+    _orbital_line(0, "=" * 4095 + "\n"), ["line 1", "too long"])
+
 OPTIONS = {"opttrans": ("-o",)}
-SIGNAL_MARKERS = ("Segmentation fault", "signal 11", "Signal: ",
-                  "AddressSanitizer", "runtime error:", "Abort trap")
 
 
 def input_expectation(mutation, boundary):
@@ -787,23 +849,14 @@ def run_invalid(rootdir, mutation, ap, procs):
         extra_env={"MVMC_GC_STATE_DUMP": "state.dat"},
         timeout=INVALID_TIMEOUT if expected is not None else RUN_TIMEOUT,
         options=OPTIONS.get(mutation, ()))
-    signals = [marker for marker in SIGNAL_MARKERS if marker in output]
-    if signals:
-        raise AssertionError("{}: signal/sanitizer report {}:\n{}".format(
-            mutation, signals, output[-4000:]))
+    reject_signal_reports(output)
     if expected is None:
         if returncode != 0 or "Finish calculation." not in output:
             raise AssertionError("{} must be accepted (rc={}):\n{}".format(
                 mutation, returncode, output[-4000:]))
         check_balanced(sample_records(workdir, procs))
         return "accepted"
-    if returncode == 0 or returncode < 0:
-        raise AssertionError("{} must fail with a nonzero exit (rc={}):\n{}"
-                             .format(mutation, returncode, output[-4000:]))
-    missing = [text for text in expected if text not in output]
-    if missing:
-        raise AssertionError("{} diagnostic {} missing:\n{}".format(
-            mutation, missing, output[-4000:]))
+    require_expected_failure(returncode, output, expected)
     return "rejected"
 
 
@@ -883,9 +936,7 @@ def audit_case(rootdir, args):
         returncode, output = execute(rootdir, workdir, args.np,
                                      extra_env={"MVMC_GC_INPUT_AUDIT": path},
                                      timeout=INVALID_TIMEOUT)
-        if returncode <= 0 or message not in output:
-            raise AssertionError("audit {} rc={}:\n{}".format(
-                name, returncode, output[-3000:]))
+        require_expected_failure(returncode, output, [message])
     print("GC anti-parallel audit {} passed".format(tag))
 
 
@@ -1252,6 +1303,35 @@ def compare_greens(label, workdir, mode, expected, data_index=1, scale=2e-9):
     for group in groups:
         compare_keyed("{} {}".format(label, group), actual[group],
                       expected[group], scale)
+
+
+def parse_sr_dump(path):
+    """Validate every P record before storing it; indices are local to a STEP."""
+    steps = []
+    current = None
+    with open(path) as stream:
+        for line_number, line in enumerate(stream, 1):
+            columns = line.split()
+            if not columns:
+                continue
+            try:
+                if columns[0] == "STEP":
+                    current = {"step": int(columns[1]),
+                               "store": int(columns[-1]), "p": {}}
+                    steps.append(current)
+                elif columns[0] == "P":
+                    if current is None or len(columns) != 7:
+                        raise ValueError("P requires a STEP and five values")
+                    index = int(columns[1])
+                    values = tuple(float(value) for value in columns[2:])
+                    if index in current["p"]:
+                        raise ValueError("duplicate P index {}".format(index))
+                    if not all(math.isfinite(value) for value in values):
+                        raise ValueError("nonfinite P value")
+                    current["p"][index] = values
+            except (ValueError, IndexError) as error:
+                raise ComparisonFailure("SR line {}: {}".format(line_number, error))
+    return steps
 
 
 def compare_sr(label, sr_path, expected, step_index=0, scale=2e-9):
@@ -1717,6 +1797,24 @@ def comparator_guard_case(rootdir, args):
     sr_path = os.path.join(workdir, "sr.dat")
     write_sr_file(sr_path, expected["sr"])
     compare_sr("guard control", sr_path, expected["sr"])
+    with open(sr_path) as stream:
+        control = stream.readlines()
+    # A later valid P row must not hide an earlier corrupt or duplicate row.
+    for value in (0.0,) + bad_values:
+        for column in range(5):
+            fields = ["0"] * 5
+            fields[column] = str(value)
+            duplicate = "P 12 {}\n".format(" ".join(fields))
+            for position in (1, len(control)):
+                write(sr_path, "".join(control[:position] + [duplicate] +
+                                       control[position:]))
+                must_fail("SR duplicate {} column {} position {}".format(
+                    value, column, position), lambda: compare_sr(
+                        "guard", sr_path, expected["sr"]))
+    # Reusing an index in the next optimization step is legitimate.
+    write(sr_path, "".join(control) +
+          "".join(control).replace("STEP 0 ", "STEP 1 "))
+    compare_sr("guard two steps", sr_path, expected["sr"], step_index=1)
     write_sr_file(sr_path, expected["sr"], header=False)
     must_fail("SR header missing", lambda: compare_sr("guard", sr_path,
                                                       expected["sr"]))

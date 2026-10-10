@@ -1,6 +1,7 @@
 """Require the intended anti-parallel GC sampler abort; signals do not pass."""
 import subprocess
 import sys
+from gc_antiparallel_failure import reject_signal_reports, require_expected_failure
 
 EXPECTED = {
     '--antiparallel-death-init': ['makeInitialSampleGC exceeded 100 attempts',
@@ -21,8 +22,6 @@ except subprocess.TimeoutExpired:
     raise SystemExit('{} timed out'.format(mode))
 print(proc.stdout, end='')
 print(proc.stderr, end='', file=sys.stderr)
-missing = [message for message in EXPECTED[mode] if message not in proc.stderr]
-if proc.returncode <= 0 or missing:
-    raise SystemExit('unexpected result for {}: exit={} missing={}'.format(
-        mode, proc.returncode, missing))
+reject_signal_reports(proc.stdout)
+require_expected_failure(proc.returncode, proc.stderr, EXPECTED[mode])
 print('expected anti-parallel GC abort {} PASS'.format(mode))
