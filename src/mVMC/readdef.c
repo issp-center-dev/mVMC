@@ -33,6 +33,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "./include/backflow.h"
 #include "./include/lanczos2_contract.h"
 #include "./include/readdef.h"
@@ -178,6 +180,41 @@ static int ParseStrictLongLong(const char *text, long long *value) {
   parsed = strtoll(text, &end, 10);
   if (errno == ERANGE || end == text || *end != '\0') return 1;
   *value = parsed;
+  return 0;
+}
+
+/* Output file names are built by appending suffixes such as
+   "_generalRBM_hiddenlayer_opt.dat" to "<OutputDir>/<FileHead>" in
+   D_FileNameMax buffers, so the prefix must leave this much room. */
+#define D_OutputFileSuffixMax 64
+
+/* Create dir and any missing parents, like "mkdir -p". */
+static int MakeOutputDir(const char *dir) {
+  char path[D_FileNameMax];
+  char *cursor;
+  struct stat status;
+
+  snprintf(path, sizeof(path), "%s", dir);
+  for (cursor = path + 1; *cursor != '\0'; cursor++) {
+    if (*cursor != '/') continue;
+    *cursor = '\0';
+    if (mkdir(path, 0777) != 0 && errno != EEXIST) {
+      fprintf(stderr, "Error: failed to create OutputDir '%s': %s\n",
+              dir, strerror(errno));
+      return 1;
+    }
+    *cursor = '/';
+  }
+  if (mkdir(path, 0777) != 0 && errno != EEXIST) {
+    fprintf(stderr, "Error: failed to create OutputDir '%s': %s\n",
+            dir, strerror(errno));
+    return 1;
+  }
+  if (stat(path, &status) != 0 || !S_ISDIR(status.st_mode)) {
+    fprintf(stderr, "Error: OutputDir '%s' exists but is not a directory.\n",
+            dir);
+    return 1;
+  }
   return 0;
 }
 
@@ -3218,6 +3255,7 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
   char defname[D_FileNameMax];
   char ctmp[D_FileNameMax];
   char ctmp2[D_FileNameMax];
+  char outputDir[D_FileNameMax] = "output";
 
   int itmp;
   char *cerr;
@@ -3253,15 +3291,9 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
           sscanf(ctmp2, "%s %s\n", ctmp, CDataFileHead); //6
           cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
           if(cerr == NULL) return -1;
-          sprintf(ctmp, "output/%s", CDataFileHead);
-          strcpy(CDataFileHead, ctmp);
           sscanf(ctmp2, "%s %s\n", ctmp, CParaFileHead); //7
-          sprintf(ctmp, "output/%s", CParaFileHead);
-          strcpy(CParaFileHead, ctmp);
           cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);   //8
           if(cerr == NULL) return -1;
-
-          iret = system("mkdir -p output");
 
           double dtmp;
           char valueText[D_FileNameMax];
@@ -3348,6 +3380,17 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               bufInt[IdxRndSeed] = (int) dtmp;
             } else if (CheckWords(ctmp, "NSplitSize") == 0) {
               bufInt[IdxSplitSize] = (int) dtmp;
+            } else if (CheckWords(ctmp, "OutputDir") == 0) {
+              int offset = 0;
+              if (sscanf(ctmp2, "%*s %*s %n", &offset) < 0 ||
+                  !LineTailIsWhitespace(ctmp2, offset)) {
+                fprintf(stderr,
+                        "Error: OutputDir must be a single path without whitespace: %s",
+                        ctmp2);
+                fclose(fp);
+                return 1;
+              }
+              strcpy(outputDir, valueText);
             } else if (CheckWords(ctmp, "NStore") == 0) {
               NStoreO = (int) dtmp;
             } else if (CheckWords(ctmp, "NSRCG") == 0) {
@@ -3386,6 +3429,28 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
           if (bufInt[IdxRndSeed] < 0) {
             bufInt[IdxRndSeed] = (int) time(NULL);
             fprintf(stdout, "  remark: Seed = %d\n", bufInt[IdxRndSeed]);
+          }
+
+          /* Prefix the output directory to the file heads. */
+          if (strlen(outputDir) + 1 + strlen(CDataFileHead) >
+                  D_FileNameMax - D_OutputFileSuffixMax - 1 ||
+              strlen(outputDir) + 1 + strlen(CParaFileHead) >
+                  D_FileNameMax - D_OutputFileSuffixMax - 1) {
+            fprintf(stderr,
+                    "Error: OutputDir is too long: \"%s/%s\" and \"%s/%s\" "
+                    "must be at most %d characters.\n",
+                    outputDir, CDataFileHead, outputDir, CParaFileHead,
+                    D_FileNameMax - D_OutputFileSuffixMax - 1);
+            fclose(fp);
+            return 1;
+          }
+          snprintf(ctmp, sizeof(ctmp), "%s/%s", outputDir, CDataFileHead);
+          strcpy(CDataFileHead, ctmp);
+          snprintf(ctmp, sizeof(ctmp), "%s/%s", outputDir, CParaFileHead);
+          strcpy(CParaFileHead, ctmp);
+          if (MakeOutputDir(outputDir) != 0) {
+            fclose(fp);
+            return 1;
           }
           break;//modpara file
         default:

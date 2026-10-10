@@ -948,6 +948,18 @@ ModParaファイル (modpara.def)
    SR-CG の stored :math:`O` 行列ベクトル積は内部MPI分割に対応していないため、
    ``NSplitSize > 1`` の場合は ``NSRCG=0`` を指定してください。
 
+-  ``OutputDir``
+
+   **形式 :** string型 (空白不可、デフォルト値=output)
+
+   **説明 :** 出力ファイルを書き出すディレクトリ。相対パスは実行時の
+   カレントディレクトリを基準とします。存在しない場合は親ディレクトリも
+   含めて作成します。出力ファイル名は ``OutputDir``/``CDataFileHead``
+   および ``OutputDir``/``CParaFileHead`` の形になります。これらの長さは
+   それぞれ191バイト以下である必要があります。
+   ``greenr2k`` も ``OutputDir`` のディレクトリから相関関数を読み込み、結果を書き出します。
+   ``zvo_gc.dat`` は ``OutputDir`` によらずカレントディレクトリに出力されます。
+
 -  ``NStore``
 
    **形式 :** int型 (0もしくは1、デフォルト値=1)
