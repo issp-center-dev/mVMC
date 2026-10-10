@@ -1334,7 +1334,8 @@ def replay_case(rootdir, args):
     masks = iteration_masks(records, nsample, 0)
     expected = replay_values(masks, state_parameters(), ap, mode)
     compare_physical(name, workdir, expected)
-    compare_greens(name, workdir, mode, expected)
+    if mode == 1:
+        compare_greens(name, workdir, mode, expected)
     if mode == 0:
         compare_sr(name, os.path.join(workdir, "sr.dat"), expected["sr"])
         # F00, F03, F22 real/imaginary parts are P6/7, P12/13, P26/27.
@@ -1482,8 +1483,9 @@ def replay_against_oracle(workdir, ap, mode, nsample, params=None):
     check_balanced(records)
     masks = iteration_masks(records, nsample, 0)
     expected = replay_values(masks, params or state_parameters(), ap, mode)
-    compare_physical(workdir, workdir, expected)
-    compare_greens(workdir, workdir, mode, expected)
+    label = os.path.basename(workdir)
+    compare_physical(label, workdir, expected)
+    compare_greens(label, workdir, mode, expected)
     return expected
 
 

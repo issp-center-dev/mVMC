@@ -192,6 +192,9 @@ if(MPI_FOUND)
     target_link_libraries(gc_green_unit ${MPI_C_LIBRARIES})
 endif()
 add_test(NAME GCGreen_Unit COMMAND gc_green_unit)
+add_test(NAME GC_AntiPair_Green_Unit COMMAND gc_green_unit --antiparallel)
+set_tests_properties(GC_AntiPair_Green_Unit PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 120)
 add_test(NAME GCGreen_Unit_OMP4 COMMAND gc_green_unit)
 set_tests_properties(GCGreen_Unit_OMP4 PROPERTIES
     ENVIRONMENT

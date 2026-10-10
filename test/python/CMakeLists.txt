@@ -1494,6 +1494,9 @@ string(REPLACE ";" "," GC_ANTIPAIR_INPUT_MUTATION_CSV
     "${GC_ANTIPAIR_INPUT_MUTATIONS}")
 add_gc_antiparallel_test(GC_AntiPair_Input_Inventory inventory
     --mutation ${GC_ANTIPAIR_INPUT_MUTATION_CSV})
+add_gc_antiparallel_test(GC_AntiPair_ComparatorGuard comparator_guard)
+add_gc_antiparallel_test(GC_AntiPair_Mutation_ap_sign_flip_apbc
+    mutation --boundary apbc --mutation ap_sign_flip)
 foreach(boundary pbc apbc)
     add_gc_antiparallel_test(GC_AntiPair_Hamiltonian_${boundary}
         hamiltonian --boundary ${boundary})
@@ -1506,6 +1509,42 @@ foreach(boundary pbc apbc)
         set_tests_properties(GC_AntiPair_Audit_${boundary}_mpi PROPERTIES
             TIMEOUT 60 PROCESSORS 2)
     endif()
+    add_gc_antiparallel_test(GC_AntiPair_Physical_${boundary}
+        physical --boundary ${boundary})
+    add_gc_antiparallel_test(GC_AntiPair_SR_${boundary}
+        sr --boundary ${boundary})
+    add_gc_antiparallel_test(GC_AntiPair_Optimization_${boundary}
+        optimization --boundary ${boundary})
+    foreach(mode 0 1)
+        add_gc_antiparallel_test(GC_AntiPair_Replay_${boundary}_m${mode}
+            replay --boundary ${boundary} --mode ${mode})
+        set_tests_properties(GC_AntiPair_Replay_${boundary}_m${mode}
+            PROPERTIES TIMEOUT 180)
+        foreach(store 0 1)
+            add_gc_antiparallel_test(
+                GC_AntiPair_Smoke_${boundary}_m${mode}_o${store}
+                smoke --boundary ${boundary} --np 1 --nsplit 1
+                --mode ${mode} --store ${store})
+            set_tests_properties(GC_AntiPair_Smoke_${boundary}_m${mode}_o${store}
+                PROPERTIES TIMEOUT 180)
+            if(MPI_FOUND)
+                foreach(split 1 2)
+                    set(name
+                        GC_AntiPair_Smoke_${boundary}_m${mode}_o${store}_s${split}_mpi)
+                    add_gc_antiparallel_test(${name} smoke
+                        --boundary ${boundary} --np 2 --nsplit ${split}
+                        --mode ${mode} --store ${store})
+                    set_tests_properties(${name} PROPERTIES
+                        TIMEOUT 180 PROCESSORS 2)
+                endforeach()
+            endif()
+        endforeach()
+    endforeach()
+    foreach(mutation general general_full_f anomalous_sign
+            pairhop_duplicate_reverse transfer_missing_hc exchange_double_hc)
+        add_gc_antiparallel_test(GC_AntiPair_Mutation_${mutation}_${boundary}
+            mutation --boundary ${boundary} --mutation ${mutation})
+    endforeach()
     foreach(mutation ${GC_ANTIPAIR_INPUT_MUTATIONS})
         add_gc_antiparallel_test(GC_AntiPair_Input_${mutation}_${boundary}
             input --boundary ${boundary} --np 1 --mutation ${mutation})
