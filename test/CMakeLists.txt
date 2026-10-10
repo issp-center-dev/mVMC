@@ -150,6 +150,8 @@ if(MPI_FOUND)
     target_link_libraries(gc_slater_diff_unit ${MPI_C_LIBRARIES})
 endif()
 add_test(NAME GCSlaterDiff_Unit COMMAND gc_slater_diff_unit)
+add_test(NAME GC_AntiPair_SlaterDiff_Unit
+    COMMAND gc_slater_diff_unit --antiparallel)
 
 add_executable(gc_green_unit gc_green_unit.c)
 target_include_directories(gc_green_unit PRIVATE
