@@ -88,6 +88,7 @@ extern void omp_set_num_threads(int);
 #include "../parameter.c"
 #include "../projection.c"
 #include "../gc_antiparallel.c"
+#include "../gc_antiparallel_input.c"
 #include "../gc_config.c"
 #include "../gc_size.c"
 #include "../slater.c"

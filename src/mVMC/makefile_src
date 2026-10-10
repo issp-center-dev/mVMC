@@ -48,6 +48,8 @@ calham.c \
 calham_real.c \
 calham_fsz.c \
 calham_gc.c \
+gc_antiparallel.c \
+gc_antiparallel_input.c \
 gc_config.c \
 gc_size.c \
 gauleg.c \
@@ -111,6 +113,8 @@ HEADERS = \
 ./include/calgrn.h \
 ./include/calham.h \
 ./include/calham_real.h \
+./include/gc_antiparallel.h \
+./include/gc_antiparallel_input.h \
 ./include/gc_config.h \
 ./include/gc_size.h \
 ./include/gauleg.h \
