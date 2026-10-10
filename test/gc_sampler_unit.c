@@ -290,6 +290,108 @@ static void test_transactions(void) {
                        "remove transaction");
 }
 
+static double pfaffian_mask(const unsigned int mask);
+static void test_exact_detailed_balance(void);
+
+/*
+ * Anti-periodic-style pair matrix: parameter 1 is shared by a +1 and a -1
+ * upper-triangle row and parameter 2 enters with -1 (rows are I, J,
+ * parameter, sign), so F = 2 s f.
+ */
+static void fill_slater_signed(void) {
+  static const int rows[6][4] = {
+      {0, 1, 0, 1}, {2, 3, 0, 1}, {0, 2, 1, 1},
+      {1, 3, 1, -1}, {0, 3, 2, -1}, {1, 2, 3, 1}};
+  const double complex parameters[4] = {
+      0.61 - 0.22 * I, -0.37 + 0.45 * I, 0.52 + 0.31 * I, -0.29 - 0.48 * I};
+  int row;
+  memset(SlaterElm, 0, ORBITALS * ORBITALS * sizeof(*SlaterElm));
+  for (row = 0; row < 6; row++) {
+    const double complex value =
+        2.0 * (double)rows[row][3] * parameters[rows[row][2]];
+    SlaterElm[(size_t)rows[row][0] * ORBITALS + (size_t)rows[row][1]] = value;
+    SlaterElm[(size_t)rows[row][1] * ORBITALS + (size_t)rows[row][0]] = -value;
+  }
+}
+
+static void exercise_signed_transaction(const enum GCMoveClass moveClass,
+                                        const unsigned int mask,
+                                        const int arg0, const int arg1,
+                                        const unsigned int expectedMask,
+                                        const char *label) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  int projCntNew[1];
+  double complex pfMNew[1];
+  double complex logIp;
+  double complex fastInv[ORBITALS * ORBITALS];
+  double complex fastPf;
+  double complex fastLogIp;
+  SamplerState oldState;
+
+  logIp = set_state(mask, eleIdx, eleCfg, eleNum, eleProjCnt);
+  snapshot(&oldState, eleIdx, eleCfg, eleNum, eleProjCnt, logIp);
+  CHECK(GCAttemptMove(moveClass, arg0, arg1, 1.0e300, eleIdx, eleCfg, eleNum,
+                      eleProjCnt, &logIp, pfMNew, projCntNew, 0, 1,
+                      MPI_COMM_SELF) == 0,
+        "%s forced reject accepted", label);
+  check_snapshot(&oldState, eleIdx, eleCfg, eleNum, eleProjCnt, logIp, label);
+
+  logIp = set_state(mask, eleIdx, eleCfg, eleNum, eleProjCnt);
+  CHECK(GCAttemptMove(moveClass, arg0, arg1, 0.0, eleIdx, eleCfg, eleNum,
+                      eleProjCnt, &logIp, pfMNew, projCntNew, 0, 1,
+                      MPI_COMM_SELF) == 1,
+        "%s forced accept rejected", label);
+  CHECK(current_mask(eleNum) == expectedMask,
+        "%s produced mask %u, expected %u", label, current_mask(eleNum),
+        expectedMask);
+  fastPf = PfM[0];
+  fastLogIp = logIp;
+  memcpy(fastInv, InvM, sizeof(fastInv));
+  CHECK(fabs(cabs(fastPf) - pfaffian_mask(expectedMask)) <=
+            2.0e-9 * (1.0 + pfaffian_mask(expectedMask)),
+        "%s |Pf| %.17g differs from independent %.17g", label, cabs(fastPf),
+        pfaffian_mask(expectedMask));
+  check_fast_against_rebuild(eleIdx, fastPf, fastInv, label);
+  CHECK(close_complex(cexp(fastLogIp),
+                      cexp(CalculateLogIP_fcmp(PfM, 0, 1, MPI_COMM_SELF))),
+        "%s accepted logIp differs from rebuild", label);
+}
+
+/* Explicit hop, pair-add and pair-remove transactions on the signed matrix;
+ * the original fixture is restored afterwards for the chain tests. */
+static void test_signed_transactions(void) {
+  exercise_signed_transaction(GC_MOVE_HOP, 9U, 1, 2, 5U,
+                              "signed hop (0,3)->(0,2)");
+  exercise_signed_transaction(GC_MOVE_HOP, 12U, 0, 1, 10U,
+                              "signed hop (2,3)->(1,3)");
+  exercise_signed_transaction(GC_MOVE_HOP, 3U, 0, 3, 10U,
+                              "signed hop (0,1)->(1,3)");
+  exercise_signed_transaction(GC_MOVE_ADD, 0U, 0, 3, 9U,
+                              "signed add (0,3)");
+  exercise_signed_transaction(GC_MOVE_ADD, 3U, 2, 3, 15U,
+                              "signed add (2,3) to (0,1)");
+  exercise_signed_transaction(GC_MOVE_ADD, 6U, 3, 0, 15U,
+                              "signed add (3,0) to (1,2)");
+  exercise_signed_transaction(GC_MOVE_REMOVE, 15U, 0, 3, 6U,
+                              "signed remove slots (0,3)");
+  exercise_signed_transaction(GC_MOVE_REMOVE, 15U, 1, 3, 5U,
+                              "signed remove slots (1,3)");
+  exercise_signed_transaction(GC_MOVE_REMOVE, 9U, 0, 1, 0U,
+                              "signed remove to vacuum");
+}
+
+static void test_signed_matrix(void) {
+  double complex original[ORBITALS * ORBITALS];
+  memcpy(original, SlaterElm, sizeof(original));
+  fill_slater_signed();
+  test_signed_transactions();
+  test_exact_detailed_balance();
+  memcpy(SlaterElm, original, sizeof(original));
+}
+
 static double pfaffian_mask(const unsigned int mask) {
   int occupied[ORBITALS];
   int ncur = 0;
@@ -604,6 +706,7 @@ int main(int argc, char **argv) {
     test_selector();
     test_exact_detailed_balance();
     test_transactions();
+    test_signed_matrix();
     test_burn_and_save();
     test_production_chains();
   }

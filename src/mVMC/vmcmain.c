@@ -71,6 +71,59 @@ static void DumpGCSROpt(const int step, const int rank) {
   }
   fclose(fp);
 }
+
+/* Optional read-back of the sign-bearing GC inputs.  Only world rank 0 writes,
+ * after ReadDefFileIdxPara() has validated and broadcast the tables. */
+static void DumpGCInputAudit(void) {
+  const char *path;
+  FILE *fp;
+  int worldRank = 0;
+  int negativeOrbitalInputSignCount = 0;
+  int negativeQPTransSignCount = 0;
+  int i, j, mpidx;
+  if (FlagGrandCanonical == 0) return;
+  MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+  if (worldRank != 0) return;
+  path = getenv("MVMC_GC_INPUT_AUDIT");
+  if (path == NULL || *path == '\0') return;
+  fp = fopen(path, "w");
+  if (fp == NULL) {
+    fprintf(stderr, "Error: failed to open MVMC_GC_INPUT_AUDIT '%s'.\n", path);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  for (i = 0; i < Nsite2; i++) {
+    for (j = i + 1; j < Nsite2; j++) {
+      if (OrbitalSgn[i][j] < 0) negativeOrbitalInputSignCount++;
+    }
+  }
+  for (mpidx = 0; mpidx < NMPTrans; mpidx++) {
+    for (i = 0; i < Nsite; i++) {
+      if (QPTransSgn[mpidx][i] < 0) negativeQPTransSignCount++;
+    }
+  }
+  fprintf(fp, "ap_flag %d\n", APFlag);
+  fprintf(fp, "nsite %d\n", Nsite);
+  fprintf(fp, "nmptrans %d\n", NMPTrans);
+  fprintf(fp, "nslater %d\n", NSlater);
+  fprintf(fp, "negative_orbital_input_sign_count %d\n",
+          negativeOrbitalInputSignCount);
+  fprintf(fp, "negative_qptrans_sign_count %d\n", negativeQPTransSignCount);
+  for (i = 0; i < Nsite2; i++) {
+    for (j = i + 1; j < Nsite2; j++) {
+      fprintf(fp, "ORBITAL %d %d %d %d\n", i, j, OrbitalIdx[i][j],
+              OrbitalSgn[i][j]);
+    }
+  }
+  for (mpidx = 0; mpidx < NMPTrans; mpidx++) {
+    fprintf(fp, "TRANSWEIGHT %d %.17e %.17e\n", mpidx,
+            creal(ParaQPTrans[mpidx]), cimag(ParaQPTrans[mpidx]));
+    for (i = 0; i < Nsite; i++) {
+      fprintf(fp, "TRANS %d %d %d %d\n", mpidx, i, QPTrans[mpidx][i],
+              QPTransSgn[mpidx][i]);
+    }
+  }
+  fclose(fp);
+}
 void StdFace_main(char *fname);
 
 static int RunPowerLanczosStabilized(
@@ -531,6 +584,7 @@ int main(int argc, char* argv[])
   ReadDefFileIdxPara(fileDefList, comm0);
   if(rank0==0) fprintf(stdout,"End  : Read parameters from *def files.\n");
   StopTimer(11);
+  DumpGCInputAudit();
 
   if(NProjBF > 0 && AllComplexFlag == 0 && NQPFull > 1) {
     /* The real BackFlow MultiQP path is kept serial for OpenMP stability. */
