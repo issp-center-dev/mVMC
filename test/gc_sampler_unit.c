@@ -42,6 +42,7 @@ double complex CalculateLogIP_fcmp(double complex *const pfM,
   return clog(ip);
 }
 
+#include "../src/mVMC/gc_antiparallel.c"
 #include "../src/mVMC/vmcmake_gc.c"
 
 #define ORBITALS 4
@@ -141,6 +142,10 @@ static void fill_slater(void) {
 }
 
 static void setup_globals(void) {
+  /* The general-pair fixtures must not depend on zero-initialized globals. */
+  FlagGrandCanonical = 1;
+  iFlgOrbitalGeneral = 1;
+  TwoSz = -1;
   Nsite = 2;
   Nsite2 = ORBITALS;
   Nsize = 2;
@@ -672,6 +677,741 @@ static void test_production_chains(void) {
   }
 }
 
+
+/* ------------------------------------------------------------------------
+ * Anti-parallel (Sz=0) mode: FlagGrandCanonical=1, iFlgOrbitalGeneral=0.
+ * Orbitals 0,1 are up and 2,3 down; the same-spin blocks of the pair matrix
+ * vanish, so only the six balanced masks carry amplitude.
+ * ---------------------------------------------------------------------- */
+#define ANTI_STATE_COUNT 6
+static const unsigned int antiStates[ANTI_STATE_COUNT] = {0U,  5U,  6U,
+                                                          9U, 10U, 15U};
+
+static int finite_close_complex(const double complex actual,
+                                const double complex expected,
+                                const double tolerance) {
+  return isfinite(creal(actual)) && isfinite(cimag(actual)) &&
+         isfinite(creal(expected)) && isfinite(cimag(expected)) &&
+         isfinite(tolerance) && tolerance >= 0.0 &&
+         cabs(actual - expected) <= tolerance;
+}
+
+static void fill_slater_antiparallel(void) {
+  const double complex F[2][2] = {{0.71 + 0.12 * I, 0.34 - 0.23 * I},
+                                  {-0.41 + 0.26 * I, 0.62 - 0.11 * I}};
+  int i;
+  memset(SlaterElm, 0, ORBITALS * ORBITALS * sizeof(*SlaterElm));
+  for (i = 0; i < 2; i++) {
+    int j;
+    for (j = 0; j < 2; j++) {
+      SlaterElm[(size_t)i * ORBITALS + (size_t)(2 + j)] = F[i][j];
+      SlaterElm[(size_t)(2 + j) * ORBITALS + (size_t)i] = -F[i][j];
+    }
+  }
+}
+
+static void enter_antiparallel_mode(void) {
+  FlagGrandCanonical = 1;
+  iFlgOrbitalGeneral = 0;
+  TwoSz = 0;
+  fill_slater_antiparallel();
+}
+
+static int anti_state_index(const unsigned int mask) {
+  int i;
+  for (i = 0; i < ANTI_STATE_COUNT; i++) {
+    if (antiStates[i] == mask) return i;
+  }
+  return -1;
+}
+
+static int spin_balanced(const unsigned int mask) {
+  return popcount(mask & 3U) == popcount((mask >> 2) & 3U);
+}
+
+/* Like set_state, optionally storing the electrons in reverse order. */
+static double complex set_state_order(const unsigned int mask,
+                                      const int reversed, int *eleIdx,
+                                      int *eleCfg, int *eleNum,
+                                      int *eleProjCnt) {
+  double complex logIp = set_state(mask, eleIdx, eleCfg, eleNum, eleProjCnt);
+  if (reversed && Ncur > 1) {
+    int k;
+    for (k = 0; k < Ncur / 2; k++) {
+      const int other = Ncur - 1 - k;
+      const int temporary = eleIdx[k];
+      eleIdx[k] = eleIdx[other];
+      eleIdx[other] = temporary;
+    }
+    for (k = 0; k < Ncur; k++) eleCfg[eleIdx[k]] = k;
+    CHECK(CalculateMAllGC_fcmp(Ncur, eleIdx, 0, 1) == GC_MALL_OK,
+          "reversed state mask=%u rebuild", mask);
+    logIp = CalculateLogIP_fcmp(PfM, 0, 1, MPI_COMM_SELF);
+  }
+  return logIp;
+}
+
+static void anti_exact_probabilities(double *probability) {
+  double normalization = 0.0;
+  int i;
+  for (i = 0; i < ANTI_STATE_COUNT; i++) {
+    const double pf = pfaffian_mask(antiStates[i]);
+    probability[i] =
+        exp(2.0 * creal(Proj[0]) * double_occupancy(antiStates[i])) * pf * pf;
+    normalization += probability[i];
+  }
+  for (i = 0; i < ANTI_STATE_COUNT; i++) probability[i] /= normalization;
+}
+
+/* Guards run before any Pfaffian work: the candidate scratch keeps its
+ * sentinel and the state is untouched even with an always-accept draw. */
+static void expect_guard_reject(const enum GCMoveClass moveClass,
+                                const unsigned int mask, const int arg0Orbital,
+                                const int arg1, const int argIsPosition,
+                                const char *label) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  int projCntNew[1];
+  double complex pfMNew[1];
+  double complex logIp;
+  SamplerState before;
+  int arg0;
+  int second;
+  logIp = set_state(mask, eleIdx, eleCfg, eleNum, eleProjCnt);
+  snapshot(&before, eleIdx, eleCfg, eleNum, eleProjCnt, logIp);
+  arg0 = argIsPosition ? eleCfg[arg0Orbital] : arg0Orbital;
+  second = (argIsPosition && moveClass == GC_MOVE_REMOVE) ? eleCfg[arg1] : arg1;
+  if (moveClass == GC_MOVE_REMOVE && arg0 > second) {
+    const int temporary = arg0;
+    arg0 = second;
+    second = temporary;
+  }
+  pfMNew[0] = 123.0 + 7.0 * I;
+  CHECK(GCAttemptMove(moveClass, arg0, second, 0.0, eleIdx, eleCfg, eleNum,
+                      eleProjCnt, &logIp, pfMNew, projCntNew, 0, 1,
+                      MPI_COMM_SELF) == 0,
+        "%s was accepted", label);
+  check_snapshot(&before, eleIdx, eleCfg, eleNum, eleProjCnt, logIp, label);
+  CHECK(pfMNew[0] == 123.0 + 7.0 * I, "%s reached Pf calculation", label);
+}
+
+static void test_anti_guards(void) {
+  /* same-spin adds from the vacuum */
+  expect_guard_reject(GC_MOVE_ADD, 0U, 0, 1, 0, "same-spin up add");
+  expect_guard_reject(GC_MOVE_ADD, 0U, 2, 3, 0, "same-spin down add");
+  /* Non-vacuum mask 5: occupied up0/down0; spin-changing hops. */
+  expect_guard_reject(GC_MOVE_HOP, 5U, 2, 1, 1, "spin-changing hop down->up");
+  expect_guard_reject(GC_MOVE_HOP, 5U, 0, 3, 1, "spin-changing hop up->down");
+  /* Full filling: same-spin pair removals. */
+  expect_guard_reject(GC_MOVE_REMOVE, 15U, 0, 1, 1, "same-spin up remove");
+  expect_guard_reject(GC_MOVE_REMOVE, 15U, 2, 3, 1, "same-spin down remove");
+}
+
+static void test_anti_initialization(void) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  int seen[16] = {0};
+  int ncur;
+  for (ncur = 0; ncur <= ORBITALS; ncur += 2) {
+    int seed;
+    for (seed = 0; seed < 64; seed++) {
+      unsigned int mask;
+      init_gen_rand((uint32_t)(4099 + 31 * seed + ncur));
+      Ncur = ncur;
+      CHECK(makeInitialSampleGC(eleIdx, eleCfg, eleNum, eleProjCnt, 0, 1,
+                                MPI_COMM_SELF) == 0,
+            "initialization ncur=%d failed", ncur);
+      mask = current_mask(eleNum);
+      CHECK(Ncur == ncur, "initialization changed Ncur");
+      CHECK(spin_balanced(mask) && popcount(mask) == ncur,
+            "initialization ncur=%d produced mask %u", ncur, mask);
+      CHECK(GCAntiValidateConfig(eleIdx, eleCfg, eleNum, Nsite, Ncur) == 1,
+            "initialization ncur=%d produced an inconsistent state", ncur);
+      {
+        /* The spin-resolved draw stores the m up electrons first. */
+        int position;
+        for (position = 0; position < ncur; position++) {
+          CHECK((position < ncur / 2) == (eleIdx[position] < Nsite),
+                "initialization ncur=%d position %d holds orbital %d", ncur,
+                position, eleIdx[position]);
+        }
+      }
+      if (mask < 16U) seen[mask] = 1;
+    }
+  }
+  CHECK(seen[0] && seen[5] && seen[6] && seen[9] && seen[10] && seen[15],
+        "initialization did not reach every balanced state");
+}
+
+/* Every hop/add/remove candidate of the spin-balanced proposal from every
+ * balanced state, in both electron orders. */
+typedef struct {
+  enum GCMoveClass moveClass;
+  int first;  /* orbital (hop: moved electron, remove: up electron) */
+  int second; /* orbital (hop: target, add: down, remove: down electron) */
+} AntiMove;
+
+static int anti_moves(const unsigned int mask, AntiMove *moves) {
+  int count = 0;
+  int a;
+  int b;
+  for (a = 0; a < ORBITALS; a++) {
+    for (b = 0; b < ORBITALS; b++) {
+      const int sameSpin = (a / 2) == (b / 2);
+      const int aOcc = (int)((mask >> a) & 1U);
+      const int bOcc = (int)((mask >> b) & 1U);
+      if (sameSpin && aOcc && !bOcc) {
+        moves[count].moveClass = GC_MOVE_HOP;
+        moves[count].first = a;
+        moves[count].second = b;
+        count++;
+      }
+      if (a < 2 && b >= 2 && !aOcc && !bOcc) {
+        moves[count].moveClass = GC_MOVE_ADD;
+        moves[count].first = a;
+        moves[count].second = b;
+        count++;
+      }
+      if (a < 2 && b >= 2 && aOcc && bOcc) {
+        moves[count].moveClass = GC_MOVE_REMOVE;
+        moves[count].first = a;
+        moves[count].second = b;
+        count++;
+      }
+    }
+  }
+  return count;
+}
+
+static unsigned int apply_anti_move(const unsigned int mask,
+                                    const AntiMove *move) {
+  if (move->moveClass == GC_MOVE_HOP) {
+    return mask ^ (1U << move->first) ^ (1U << move->second);
+  }
+  if (move->moveClass == GC_MOVE_ADD) {
+    return mask | (1U << move->first) | (1U << move->second);
+  }
+  return mask ^ (1U << move->first) ^ (1U << move->second);
+}
+
+static void move_arguments(const AntiMove *move, const int *eleCfg,
+                           int *arg0, int *arg1) {
+  if (move->moveClass == GC_MOVE_HOP) {
+    *arg0 = eleCfg[move->first];
+    *arg1 = move->second;
+  } else if (move->moveClass == GC_MOVE_ADD) {
+    *arg0 = move->first;
+    *arg1 = move->second;
+  } else {
+    *arg0 = eleCfg[move->first];
+    *arg1 = eleCfg[move->second];
+    if (*arg0 > *arg1) {
+      const int temporary = *arg0;
+      *arg0 = *arg1;
+      *arg1 = temporary;
+    }
+  }
+}
+
+static double anti_proposal_ratio(const AntiMove *move, const int ncur) {
+  const int m = ncur / 2;
+  if (move->moveClass == GC_MOVE_ADD) {
+    return GCAntiRatioAdd(m, Nsite, class_probability(GC_MOVE_ADD, ncur),
+                          class_probability(GC_MOVE_REMOVE, ncur + 2));
+  }
+  if (move->moveClass == GC_MOVE_REMOVE) {
+    return GCAntiRatioRemove(m, Nsite,
+                             class_probability(GC_MOVE_REMOVE, ncur),
+                             class_probability(GC_MOVE_ADD, ncur - 2));
+  }
+  return 1.0;
+}
+
+static void test_anti_transactions(void) {
+  int stateIndex;
+  int boundaryProbes = 0;
+  for (stateIndex = 0; stateIndex < ANTI_STATE_COUNT; stateIndex++) {
+    const unsigned int mask = antiStates[stateIndex];
+    AntiMove moves[32];
+    const int count = anti_moves(mask, moves);
+    int k;
+    for (k = 0; k < count; k++) {
+      int reversed;
+      for (reversed = 0; reversed < 2; reversed++) {
+        int eleIdx[ORBITALS];
+        int eleCfg[ORBITALS];
+        int eleNum[ORBITALS];
+        int eleProjCnt[1];
+        int projCntNew[1];
+        double complex pfMNew[1];
+        double complex logIp;
+        double complex rebuiltLog;
+        double complex fastInv[ORBITALS * ORBITALS];
+        double complex fastPf;
+        SamplerState before;
+        const unsigned int target = apply_anti_move(mask, &moves[k]);
+        char label[128];
+        int arg0;
+        int arg1;
+        snprintf(label, sizeof(label), "anti move class=%d %u->%u order=%d",
+                 (int)moves[k].moveClass, mask, target, reversed);
+        CHECK(spin_balanced(target), "%s leaves Sz=0", label);
+
+        /* Finite forced rejection keeps every piece of state. */
+        logIp = set_state_order(mask, reversed, eleIdx, eleCfg, eleNum,
+                                eleProjCnt);
+        logIp += 1000.0;
+        snapshot(&before, eleIdx, eleCfg, eleNum, eleProjCnt, logIp);
+        move_arguments(&moves[k], eleCfg, &arg0, &arg1);
+        CHECK(GCAttemptMove(moves[k].moveClass, arg0, arg1, 0.5, eleIdx,
+                            eleCfg, eleNum, eleProjCnt, &logIp, pfMNew,
+                            projCntNew, 0, 1, MPI_COMM_SELF) == 0,
+              "%s forced reject accepted", label);
+        check_snapshot(&before, eleIdx, eleCfg, eleNum, eleProjCnt, logIp,
+                       label);
+
+        /* draw=0 accepts; the fast update equals a full rebuild. */
+        logIp = set_state_order(mask, reversed, eleIdx, eleCfg, eleNum,
+                                eleProjCnt);
+        move_arguments(&moves[k], eleCfg, &arg0, &arg1);
+        CHECK(GCAttemptMove(moves[k].moveClass, arg0, arg1, 0.0, eleIdx,
+                            eleCfg, eleNum, eleProjCnt, &logIp, pfMNew,
+                            projCntNew, 0, 1, MPI_COMM_SELF) == 1,
+              "%s forced accept rejected", label);
+        CHECK(current_mask(eleNum) == target, "%s produced mask %u", label,
+              current_mask(eleNum));
+        CHECK(GCAntiValidateConfig(eleIdx, eleCfg, eleNum, Nsite, Ncur) == 1,
+              "%s left an inconsistent state", label);
+        fastPf = PfM[0];
+        memcpy(fastInv, InvM, sizeof(fastInv));
+        check_fast_against_rebuild(eleIdx, fastPf, fastInv, label);
+        rebuiltLog = CalculateLogIP_fcmp(PfM, 0, 1, MPI_COMM_SELF);
+        CHECK(finite_close_complex(cexp(logIp), cexp(rebuiltLog),
+                                   2.0e-9 * (1.0 + cabs(cexp(rebuiltLog)))),
+              "%s accepted log differs from rebuild", label);
+
+        /* The Metropolis boundary uses the spin-resolved proposal ratio. */
+        {
+          const double pfX = pfaffian_mask(mask);
+          const double pfY = pfaffian_mask(target);
+          const double weight =
+              (pfY * pfY) / (pfX * pfX) *
+              exp(2.0 * creal(Proj[0]) *
+                  (double_occupancy(target) - double_occupancy(mask))) *
+              anti_proposal_ratio(&moves[k], popcount(mask));
+          if (weight < 1.0 && weight > 1.0e-6) {
+            int accepted;
+            boundaryProbes++;
+            logIp = set_state_order(mask, reversed, eleIdx, eleCfg, eleNum,
+                                    eleProjCnt);
+            move_arguments(&moves[k], eleCfg, &arg0, &arg1);
+            accepted = GCAttemptMove(moves[k].moveClass, arg0, arg1,
+                                     weight * (1.0 - 1.0e-9), eleIdx, eleCfg,
+                                     eleNum, eleProjCnt, &logIp, pfMNew,
+                                     projCntNew, 0, 1, MPI_COMM_SELF);
+            CHECK(accepted == 1, "%s rejected just below weight %.17g", label,
+                  weight);
+            logIp = set_state_order(mask, reversed, eleIdx, eleCfg, eleNum,
+                                    eleProjCnt);
+            move_arguments(&moves[k], eleCfg, &arg0, &arg1);
+            accepted = GCAttemptMove(moves[k].moveClass, arg0, arg1,
+                                     weight * (1.0 + 1.0e-9), eleIdx, eleCfg,
+                                     eleNum, eleProjCnt, &logIp, pfMNew,
+                                     projCntNew, 0, 1, MPI_COMM_SELF);
+            CHECK(accepted == 0, "%s accepted just above weight %.17g", label,
+                  weight);
+          }
+        }
+      }
+    }
+  }
+  CHECK(boundaryProbes > 10, "too few Metropolis boundary probes (%d)",
+        boundaryProbes);
+}
+
+static void test_anti_chains(void) {
+  double exact[ANTI_STATE_COUNT];
+  double frequency[CHAIN_COUNT][ANTI_STATE_COUNT];
+  long long totalCounts[ANTI_STATE_COUNT] = {0};
+  int saw02 = 0;
+  int saw24 = 0;
+  int imbalanced = 0;
+  int chain;
+  anti_exact_probabilities(exact);
+  for (chain = 0; chain < CHAIN_COUNT; chain++) {
+    int eleIdx[ORBITALS];
+    int eleCfg[ORBITALS];
+    int eleNum[ORBITALS];
+    int eleProjCnt[1];
+    int projCntNew[1];
+    double complex pfMNew[1];
+    double complex logIp;
+    long long counts[ANTI_STATE_COUNT] = {0};
+    int previousNcur;
+    int step;
+    init_gen_rand((uint32_t)(2027 + 7919 * chain));
+    /* Half of the chains start with down electrons stored first. */
+    logIp = set_state_order(antiStates[chain % ANTI_STATE_COUNT],
+                            (chain / ANTI_STATE_COUNT) % 2, eleIdx, eleCfg,
+                            eleNum, eleProjCnt);
+    previousNcur = Ncur;
+    for (step = 0; step < CHAIN_WARMUP + CHAIN_SAMPLES; step++) {
+      int separation;
+      for (separation = 0; separation < ORBITALS; separation++) {
+        (void)GCMakeOneStep(eleIdx, eleCfg, eleNum, eleProjCnt, &logIp,
+                            pfMNew, projCntNew, 0, 1, MPI_COMM_SELF);
+        if ((previousNcur == 0 && Ncur == 2) ||
+            (previousNcur == 2 && Ncur == 0)) saw02 = 1;
+        if ((previousNcur == 2 && Ncur == 4) ||
+            (previousNcur == 4 && Ncur == 2)) saw24 = 1;
+        if (!spin_balanced(current_mask(eleNum))) imbalanced++;
+        previousNcur = Ncur;
+      }
+      if (step >= CHAIN_WARMUP) {
+        const int index = anti_state_index(current_mask(eleNum));
+        if (index >= 0) counts[index]++;
+      }
+    }
+    for (step = 0; step < ANTI_STATE_COUNT; step++) {
+      frequency[chain][step] = (double)counts[step] / (double)CHAIN_SAMPLES;
+      totalCounts[step] += counts[step];
+    }
+  }
+  CHECK(imbalanced == 0, "anti chains visited %d imbalanced states",
+        imbalanced);
+  CHECK(saw02, "anti chains did not observe 0<->2 transition");
+  CHECK(saw24, "anti chains did not observe 2<->4 transition");
+  for (chain = 0; chain < ANTI_STATE_COUNT; chain++) {
+    double mean = 0.0;
+    double variance = 0.0;
+    double standardError;
+    double tolerance;
+    int sample;
+    for (sample = 0; sample < CHAIN_COUNT; sample++) {
+      mean += frequency[sample][chain];
+    }
+    mean /= CHAIN_COUNT;
+    for (sample = 0; sample < CHAIN_COUNT; sample++) {
+      const double delta = frequency[sample][chain] - mean;
+      variance += delta * delta;
+    }
+    variance /= CHAIN_COUNT - 1;
+    standardError = sqrt(variance / CHAIN_COUNT);
+    tolerance = fmax(6.0 * standardError, 5.0e-4);
+    CHECK(isfinite(mean) && isfinite(tolerance) &&
+              fabs(mean - exact[chain]) <= tolerance,
+          "anti chain state=%u mean=%.17g exact=%.17g SE=%.17g tol=%.17g",
+          antiStates[chain], mean, exact[chain], standardError, tolerance);
+    CHECK(totalCounts[chain] > 0, "anti chain state=%u never observed",
+          antiStates[chain]);
+  }
+}
+
+
+/* Three sites: m and L-m both reach 1 and 2, so a biased choice among
+ * several empty or occupied sites changes the stationary distribution. */
+#define THREE_SITES 3
+#define THREE_ORBITALS 6
+
+static double complex det3(const double complex F[THREE_SITES][THREE_SITES],
+                           const int *rows, const int *cols, const int n) {
+  if (n == 0) return 1.0;
+  if (n == 1) return F[rows[0]][cols[0]];
+  if (n == 2) {
+    return F[rows[0]][cols[0]] * F[rows[1]][cols[1]] -
+           F[rows[0]][cols[1]] * F[rows[1]][cols[0]];
+  }
+  return F[rows[0]][cols[0]] * (F[rows[1]][cols[1]] * F[rows[2]][cols[2]] -
+                                F[rows[1]][cols[2]] * F[rows[2]][cols[1]]) -
+         F[rows[0]][cols[1]] * (F[rows[1]][cols[0]] * F[rows[2]][cols[2]] -
+                                F[rows[1]][cols[2]] * F[rows[2]][cols[0]]) +
+         F[rows[0]][cols[2]] * (F[rows[1]][cols[0]] * F[rows[2]][cols[1]] -
+                                F[rows[1]][cols[1]] * F[rows[2]][cols[0]]);
+}
+
+static void test_anti_chains_three_sites(void) {
+  const double complex F[THREE_SITES][THREE_SITES] = {
+      {0.71 + 0.12 * I, 0.34 - 0.23 * I, -0.29 + 0.17 * I},
+      {-0.41 + 0.26 * I, 0.62 - 0.11 * I, 0.27 + 0.22 * I},
+      {0.23 + 0.37 * I, -0.36 + 0.14 * I, 0.58 + 0.09 * I}};
+  unsigned int states[64];
+  double exact[64];
+  double frequency[CHAIN_COUNT][64];
+  double normalization = 0.0;
+  int nstates = 0;
+  int imbalanced = 0;
+  int chain;
+  int i;
+  unsigned int mask;
+  Nsite = THREE_SITES;
+  Nsite2 = THREE_ORBITALS;
+  NsizeMax = THREE_ORBITALS;
+  free(SlaterElm);
+  free(InvM);
+  free(GutzwillerIdx);
+  SlaterElm = calloc(THREE_ORBITALS * THREE_ORBITALS, sizeof(*SlaterElm));
+  InvM = calloc(THREE_ORBITALS * THREE_ORBITALS, sizeof(*InvM));
+  GutzwillerIdx = calloc(THREE_SITES, sizeof(*GutzwillerIdx));
+  if (SlaterElm == NULL || InvM == NULL || GutzwillerIdx == NULL) {
+    fprintf(stderr, "three-site allocation failed\n");
+    exit(EXIT_FAILURE);
+  }
+  for (i = 0; i < THREE_SITES; i++) {
+    int j;
+    for (j = 0; j < THREE_SITES; j++) {
+      SlaterElm[(size_t)i * THREE_ORBITALS + (size_t)(THREE_SITES + j)] =
+          F[i][j];
+      SlaterElm[(size_t)(THREE_SITES + j) * THREE_ORBITALS + (size_t)i] =
+          -F[i][j];
+    }
+  }
+  for (mask = 0; mask < (1U << THREE_ORBITALS); mask++) {
+    int up[THREE_SITES];
+    int down[THREE_SITES];
+    int nu = 0;
+    int nd = 0;
+    int doublon = 0;
+    int site;
+    double complex amplitude;
+    for (site = 0; site < THREE_SITES; site++) {
+      const int u = (int)((mask >> site) & 1U);
+      const int d = (int)((mask >> (site + THREE_SITES)) & 1U);
+      if (u) up[nu++] = site;
+      if (d) down[nd++] = site;
+      doublon += u & d;
+    }
+    if (nu != nd) continue;
+    amplitude = det3(F, up, down, nu);
+    states[nstates] = mask;
+    exact[nstates] = exp(2.0 * creal(Proj[0]) * doublon) *
+                     creal(amplitude * conj(amplitude));
+    normalization += exact[nstates];
+    nstates++;
+  }
+  CHECK(nstates == 20, "three-site balanced basis has %d states", nstates);
+  for (i = 0; i < nstates; i++) exact[i] /= normalization;
+
+  for (chain = 0; chain < CHAIN_COUNT; chain++) {
+    int eleIdx[THREE_ORBITALS];
+    int eleCfg[THREE_ORBITALS];
+    int eleNum[THREE_ORBITALS];
+    int eleProjCnt[1];
+    int projCntNew[1];
+    double complex pfMNew[1];
+    double complex logIp;
+    long long counts[64] = {0};
+    int step;
+    init_gen_rand((uint32_t)(5153 + 6007 * chain));
+    Ncur = 2 * (chain % (THREE_SITES + 1));
+    CHECK(makeInitialSampleGC(eleIdx, eleCfg, eleNum, eleProjCnt, 0, 1,
+                              MPI_COMM_SELF) == 0,
+          "three-site initialization failed");
+    logIp = CalculateLogIP_fcmp(PfM, 0, 1, MPI_COMM_SELF);
+    for (step = 0; step < CHAIN_WARMUP + CHAIN_SAMPLES; step++) {
+      int separation;
+      for (separation = 0; separation < THREE_ORBITALS; separation++) {
+        (void)GCMakeOneStep(eleIdx, eleCfg, eleNum, eleProjCnt, &logIp,
+                            pfMNew, projCntNew, 0, 1, MPI_COMM_SELF);
+      }
+      if (step >= CHAIN_WARMUP) {
+        unsigned int current = 0U;
+        int rs;
+        int index = -1;
+        for (rs = 0; rs < THREE_ORBITALS; rs++) {
+          if (eleNum[rs] != 0) current |= 1U << rs;
+        }
+        for (i = 0; i < nstates; i++) {
+          if (states[i] == current) index = i;
+        }
+        if (index < 0) {
+          imbalanced++;
+        } else {
+          counts[index]++;
+        }
+      }
+    }
+    for (i = 0; i < nstates; i++) {
+      frequency[chain][i] = (double)counts[i] / (double)CHAIN_SAMPLES;
+    }
+  }
+  CHECK(imbalanced == 0, "three-site chains left Sz=0 %d times", imbalanced);
+  for (i = 0; i < nstates; i++) {
+    double mean = 0.0;
+    double variance = 0.0;
+    double tolerance;
+    int sample;
+    for (sample = 0; sample < CHAIN_COUNT; sample++) {
+      mean += frequency[sample][i];
+    }
+    mean /= CHAIN_COUNT;
+    for (sample = 0; sample < CHAIN_COUNT; sample++) {
+      const double delta = frequency[sample][i] - mean;
+      variance += delta * delta;
+    }
+    variance /= CHAIN_COUNT - 1;
+    tolerance = fmax(6.0 * sqrt(variance / CHAIN_COUNT), 5.0e-4);
+    CHECK(isfinite(mean) && isfinite(tolerance) &&
+              fabs(mean - exact[i]) <= tolerance,
+          "three-site state=%u mean=%.17g exact=%.17g tol=%.17g", states[i],
+          mean, exact[i], tolerance);
+  }
+}
+
+/* Two ranks split NQPFull=1, so rank 1 owns no projection; it must still take
+ * part in every collective and follow the same state. */
+static void test_anti_collective(void) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  int projCntNew[1];
+  double complex pfMNew[1];
+  double complex logIp;
+  int qpStart;
+  int qpEnd;
+  int rank;
+  int size;
+  int step;
+  int accepted[3] = {0, 0, 0};
+  int imbalanced = 0;
+  int mismatched = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  SplitLoop(&qpStart, &qpEnd, NQPFull, rank, size);
+  init_gen_rand(80713U);
+  Ncur = 2;
+  CHECK(makeInitialSampleGC(eleIdx, eleCfg, eleNum, eleProjCnt, qpStart, qpEnd,
+                            MPI_COMM_WORLD) == 0,
+        "collective initialization failed");
+  logIp = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_WORLD);
+  for (step = 0; step < 4000; step++) {
+    const int ncurBefore = Ncur;
+    const unsigned int maskBefore = current_mask(eleNum);
+    unsigned int masks[2];
+    unsigned int localMask;
+    if (GCMakeOneStep(eleIdx, eleCfg, eleNum, eleProjCnt, &logIp, pfMNew,
+                      projCntNew, qpStart, qpEnd, MPI_COMM_WORLD)) {
+      if (Ncur > ncurBefore) {
+        accepted[1]++;
+      } else if (Ncur < ncurBefore) {
+        accepted[2]++;
+      } else if (current_mask(eleNum) != maskBefore) {
+        accepted[0]++;
+      }
+    }
+    localMask = current_mask(eleNum);
+    if (!spin_balanced(localMask)) imbalanced++;
+    MPI_Allreduce(&localMask, &masks[0], 1, MPI_UNSIGNED, MPI_MIN,
+                  MPI_COMM_WORLD);
+    MPI_Allreduce(&localMask, &masks[1], 1, MPI_UNSIGNED, MPI_MAX,
+                  MPI_COMM_WORLD);
+    if (masks[0] != masks[1]) mismatched++;
+  }
+  CHECK(size == 2, "collective mode expects two ranks (got %d)", size);
+  CHECK(rank == 0 ? qpEnd - qpStart == 1 : qpEnd == qpStart,
+        "rank %d projection range [%d,%d)", rank, qpStart, qpEnd);
+  CHECK(imbalanced == 0, "rank %d visited %d imbalanced states", rank,
+        imbalanced);
+  CHECK(mismatched == 0, "ranks disagreed on %d states", mismatched);
+  CHECK(accepted[0] > 0 && accepted[1] > 0 && accepted[2] > 0,
+        "rank %d accepted hop/add/remove = %d/%d/%d", rank, accepted[0],
+        accepted[1], accepted[2]);
+}
+
+/* Fatal paths for the death-test wrapper; each must abort with a message. */
+static void anti_death_initialization(void) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  memset(SlaterElm, 0, ORBITALS * ORBITALS * sizeof(*SlaterElm));
+  Ncur = 2;
+  (void)makeInitialSampleGC(eleIdx, eleCfg, eleNum, eleProjCnt, 0, 1,
+                            MPI_COMM_SELF);
+}
+
+static void anti_death_nonfinite_candidate(void) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  int projCntNew[1];
+  double complex pfMNew[1];
+  double complex logIp = set_state(5U, eleIdx, eleCfg, eleNum, eleProjCnt);
+  /* Poison the pair (up1, down1) only after the current state is built. */
+  SlaterElm[(size_t)1 * ORBITALS + 3] = NAN;
+  SlaterElm[(size_t)3 * ORBITALS + 1] = NAN;
+  (void)GCAttemptMove(GC_MOVE_ADD, 1, 3, 0.5, eleIdx, eleCfg, eleNum,
+                      eleProjCnt, &logIp, pfMNew, projCntNew, 0, 1,
+                      MPI_COMM_SELF);
+}
+
+static void anti_death_nonfinite_old_log(void) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  int projCntNew[1];
+  double complex pfMNew[1];
+  double complex logIp = set_state(5U, eleIdx, eleCfg, eleNum, eleProjCnt);
+  logIp = INFINITY + 0.0 * I;
+  (void)GCAttemptMove(GC_MOVE_ADD, 1, 3, 0.5, eleIdx, eleCfg, eleNum,
+                      eleProjCnt, &logIp, pfMNew, projCntNew, 0, 1,
+                      MPI_COMM_SELF);
+}
+
+static void anti_death_burn_state(void) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  (void)set_state(3U, eleIdx, eleCfg, eleNum, eleProjCnt);
+  BurnEleIdx = malloc(ORBITALS * sizeof(*BurnEleIdx));
+  BurnEleCfg = malloc(ORBITALS * sizeof(*BurnEleCfg));
+  BurnEleNum = malloc(ORBITALS * sizeof(*BurnEleNum));
+  BurnEleProjCnt = malloc(sizeof(*BurnEleProjCnt));
+  TmpEleIdx = malloc(ORBITALS * sizeof(*TmpEleIdx));
+  TmpEleCfg = malloc(ORBITALS * sizeof(*TmpEleCfg));
+  TmpEleNum = malloc(ORBITALS * sizeof(*TmpEleNum));
+  TmpEleProjCnt = malloc(sizeof(*TmpEleProjCnt));
+  if (BurnEleIdx == NULL || BurnEleCfg == NULL || BurnEleNum == NULL ||
+      BurnEleProjCnt == NULL || TmpEleIdx == NULL || TmpEleCfg == NULL ||
+      TmpEleNum == NULL || TmpEleProjCnt == NULL) {
+    fprintf(stderr, "burn death allocation failed\n");
+    exit(EXIT_FAILURE);
+  }
+  /* mask 3 = up0, up1: a spin-imbalanced stored chain. */
+  copyToBurnSampleGC(eleIdx, eleCfg, eleNum, eleProjCnt);
+  BurnFlag = 1;
+  NVMCWarmUp = 0;
+  NVMCSample = 1;
+  NVMCInterval = 1;
+  VMCMakeSampleGC(MPI_COMM_SELF);
+}
+
+static int run_antiparallel_death(const char *mode) {
+  enter_antiparallel_mode();
+  init_gen_rand(60013U);
+  if (strcmp(mode, "--antiparallel-death-init") == 0) {
+    anti_death_initialization();
+  } else if (strcmp(mode, "--antiparallel-death-nonfinite") == 0) {
+    anti_death_nonfinite_candidate();
+  } else if (strcmp(mode, "--antiparallel-death-oldlog") == 0) {
+    anti_death_nonfinite_old_log();
+  } else if (strcmp(mode, "--antiparallel-death-burn") == 0) {
+    anti_death_burn_state();
+  } else {
+    fprintf(stderr, "unknown death mode %s\n", mode);
+    return 2;
+  }
+  fprintf(stderr, "death mode %s returned without aborting\n", mode);
+  return 3;
+}
+
 static void cleanup_globals(void) {
   FreeWorkSpaceAll();
   free(SlaterElm);
@@ -694,21 +1434,37 @@ static void cleanup_globals(void) {
 
 int main(int argc, char **argv) {
   int collectiveOnly = 0;
+  const char *mode = argc == 2 ? argv[1] : "";
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
-#else
-  (void)argv;
 #endif
-  collectiveOnly = argc == 2 && strcmp(argv[1], "--collective-only") == 0;
+  collectiveOnly = strcmp(mode, "--collective-only") == 0;
   setup_globals();
-  test_collective_rebuild_status();
-  if (!collectiveOnly) {
-    test_selector();
-    test_exact_detailed_balance();
-    test_transactions();
-    test_signed_matrix();
-    test_burn_and_save();
-    test_production_chains();
+  if (strncmp(mode, "--antiparallel-death", 20) == 0) {
+    return run_antiparallel_death(mode);
+  }
+  if (strcmp(mode, "--antiparallel") == 0) {
+    enter_antiparallel_mode();
+    test_anti_guards();
+    test_anti_initialization();
+    test_anti_transactions();
+    test_anti_chains();
+    test_anti_chains_three_sites();
+  } else if (strcmp(mode, "--antiparallel-collective") == 0) {
+    enter_antiparallel_mode();
+    test_anti_collective();
+  } else {
+    CHECK(!GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral),
+          "general fixture entered the anti-parallel mode");
+    test_collective_rebuild_status();
+    if (!collectiveOnly) {
+      test_selector();
+      test_exact_detailed_balance();
+      test_transactions();
+      test_signed_matrix();
+      test_burn_and_save();
+      test_production_chains();
+    }
   }
   cleanup_globals();
 #ifdef _mpi_use
