@@ -50,6 +50,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert.py DESTINATION ${CMAKE_BINA
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_invalid_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_ap_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_ap.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_hphi_anomalous.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_gc_canonical_baseline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -1291,10 +1293,86 @@ add_gc_invalid_test(GC_Invalid_HintOver "NGCInitNelec must satisfy" NGCInitNelec
 add_gc_invalid_test(GC_Invalid_HintNegative "NGCInitNelec must satisfy" NGCInitNelec=-2)
 add_gc_invalid_test(GC_Invalid_NoOrbitalGeneral "requires OrbitalGeneral" gc_noorbgen)
 add_gc_invalid_test(GC_Invalid_RealParameter "requires complex variational parameters" gc_realparam)
-add_gc_invalid_test(GC_Invalid_GaussLeg "initially requires" NSPGaussLeg=2)
-add_gc_invalid_test(GC_Invalid_MPTrans "initially requires" NMPTrans=2)
-add_gc_invalid_test(GC_Invalid_QPOptTrans "initially requires" gc_opttrans2 opttrans_mode)
+add_gc_invalid_test(GC_Invalid_GaussLeg "initially requires NSPGaussLeg=1, NQPOptTrans<=1" NSPGaussLeg=2)
+add_gc_invalid_test(GC_Invalid_MPTrans "requires NMPTrans=+1 or -1 (got 2)" NMPTrans=2)
+add_gc_invalid_test(GC_Invalid_MPTransMinus2 "requires NMPTrans=+1 or -1 (got -2)" NMPTrans=-2)
+add_gc_invalid_test(GC_Invalid_MPTransZero "requires NMPTrans=+1 or -1 (got 0)" NMPTrans=0)
+add_gc_invalid_test(GC_Invalid_MPTransIntMin "requires NMPTrans=+1 or -1 (got -2147483648)"
+    NMPTrans=-2147483648)
+add_gc_invalid_test(GC_Invalid_MPTransTooLarge "requires NMPTrans=+1 or -1 (got 3)" NMPTrans=3)
+add_gc_invalid_test(GC_Invalid_MPTransOverflow "must be an exact integer in int range"
+    NMPTrans=2147483648)
+add_gc_invalid_test(GC_Invalid_QPOptTrans "initially requires NSPGaussLeg=1, NQPOptTrans<=1"
+    gc_opttrans2 opttrans_mode)
 add_gc_invalid_test(GC_Invalid_OptTrans "does not support OptTrans" gc_opttrans1 opttrans_mode)
+
+# Anti-periodic OrbitalGeneral rows (APFlag=1).  The reader is shared by GC,
+# canonical FSZ, and BF-FSZ, so every rejection is pinned in GC and in the
+# canonical FSZ form of the same fixture, serial and MPI.
+function(add_ap_orbital_test test_name expected_error)
+    add_gc_invalid_test(GC_AP_${test_name} "${expected_error}" NMPTrans=-1 ${ARGN})
+    add_gc_invalid_test(FSZ_AP_${test_name} "${expected_error}"
+        NGrandCanonical=0 NMPTrans=-1 ${ARGN})
+endfunction(add_ap_orbital_test)
+add_ap_orbital_test(Orbital_SignZero "anti-periodic mode requires +1 or -1" gc_orb_sign_zero)
+add_ap_orbital_test(Orbital_SignTwo "has sign 2; anti-periodic mode requires +1 or -1"
+    gc_orb_sign_two)
+add_ap_orbital_test(Orbital_SignMissing "has 5 columns" gc_orb_sign_missing)
+add_ap_orbital_test(Orbital_ExtraColumn "has 7 columns" gc_orb_extra_column)
+add_ap_orbital_test(Orbital_NonInteger "column 6 is malformed" gc_orb_nonint)
+add_ap_orbital_test(Orbital_IntOverflow "column 5 is malformed or out of range"
+    gc_orb_int_overflow)
+add_ap_orbital_test(Orbital_IndexIntWrap "parameter index out of range"
+    gc_orb_index_int_wrap)
+add_ap_orbital_test(Orbital_SiteRange "site index out of range" gc_orb_site_range)
+add_ap_orbital_test(Orbital_SpinRange "spin index other than 0 or 1" gc_orb_spin_range)
+add_ap_orbital_test(Orbital_IndexRange "parameter index out of range" gc_orb_index_range)
+add_ap_orbital_test(Orbital_NegativeIndex "parameter index out of range"
+    gc_orb_negative_index)
+add_ap_orbital_test(Orbital_LowerTriangle "must satisfy I<J" gc_orb_lower)
+add_ap_orbital_test(Orbital_Diagonal "must satisfy I<J" gc_orb_diagonal)
+add_ap_orbital_test(Orbital_DuplicatePair "duplicate OrbitalGeneral pair" gc_orb_duplicate)
+add_ap_orbital_test(Orbital_MissingRow "has 2 columns" gc_orb_missing_row)
+add_ap_orbital_test(Orbital_Truncated "ended after 5 of 6 pair rows" gc_orb_truncated)
+add_ap_orbital_test(Orbital_BlankRow "has 0 columns" gc_orb_blank_row)
+add_ap_orbital_test(Orbital_ExtraPairRow "OptFlag row 1 in orbitalidxgen.def has 6 columns"
+    gc_orb_extra_pair)
+add_ap_orbital_test(Orbital_ExtraPairMissingFlags
+    "OptFlag row 1 in orbitalidxgen.def has 6 columns" gc_orb_extra_pair_missing_flags)
+add_ap_orbital_test(OptFlag_ExtraRow "rows after the 6 OptFlag rows" gc_orb_flag_extra)
+add_ap_orbital_test(OptFlag_MissingRow "ended after 5 of 6 OptFlag rows" gc_orb_flag_missing)
+add_ap_orbital_test(OptFlag_BadToken "column 2 is malformed" gc_orb_flag_bad_token)
+add_ap_orbital_test(OptFlag_IndexRange "OptFlag row 6 in orbitalidxgen.def has a parameter index out of range"
+    gc_orb_flag_index_range)
+add_ap_orbital_test(OptFlag_DuplicateIndex "duplicate OrbitalGeneral OptFlag index 0"
+    gc_orb_flag_duplicate)
+add_ap_orbital_test(OptFlag_Value "the flag must be 0 or 1" gc_orb_flag_value)
+
+# Positive controls: NMPTrans=-1 with valid +1/-1 signs runs to completion,
+# and the periodic reader keeps accepting five-column rows.
+function(add_gc_positive_test test_name)
+    foreach(gc_positive_suffix "" "_mpi")
+        add_test(NAME ${test_name}${gc_positive_suffix}
+            COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+            "Finish calculation." allow_success ${ARGN})
+    endforeach()
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+    set_tests_properties(${test_name}_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+endfunction(add_gc_positive_test)
+add_gc_positive_test(GC_AP_Accept NMPTrans=-1)
+add_gc_positive_test(GC_AP_NegativeSign_Positive NMPTrans=-1 gc_orb_negative_sign)
+add_gc_positive_test(FSZ_AP_NegativeSign_Positive NGrandCanonical=0 NMPTrans=-1
+    gc_orb_negative_sign)
+add_gc_positive_test(GC_AP_OptFlagTrailingBlank_Positive NMPTrans=-1
+    gc_orb_flag_trailing_blank)
+add_gc_positive_test(GC_AP_OptFlagPermuted_Positive NMPTrans=-1 gc_orb_flag_permuted)
+add_gc_positive_test(FSZ_AP_OptFlagPermuted_Positive NGrandCanonical=0 NMPTrans=-1
+    gc_orb_flag_permuted)
+add_gc_positive_test(GC_PBC_FiveColumnOrbital_Positive NMPTrans=1 gc_orb_sign_missing)
+add_gc_positive_test(FSZ_PBC_FiveColumnOrbital_Positive NGrandCanonical=0 NMPTrans=1
+    gc_orb_sign_missing)
 
 # Phase 2: anomalous input negatives.
 add_gc_invalid_test(GC_Invalid_AnomalousCanonical
@@ -1377,6 +1455,38 @@ add_gc_oracle_test(GC_Anomalous_Energy_Response anomalous_energy)
 add_gc_oracle_test(GC_Anomalous_SR anomalous_sr)
 add_gc_oracle_test(GC_Anomalous_MPI_NSplit2 anomalous_mpi)
 add_gc_oracle_test(GC_Anomalous_Vacuum_Smoke anomalous_vacuum)
+
+# Grand-canonical anti-periodic boundary (NMPTrans=-1).
+add_test(NAME GC_AP_Oracle_SelfTest
+    COMMAND ${PYTHON_EXECUTABLE} grandcanonical_ap_oracle.py)
+set_tests_properties(GC_AP_Oracle_SelfTest PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+function(add_gc_ap_test test_name case_name)
+    add_test(NAME ${test_name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_ap.py ${case_name})
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+        RESOURCE_LOCK "gc_ap_${case_name}")
+endfunction(add_gc_ap_test)
+add_gc_ap_test(GC_AP_LegacyParser legacy_parser)
+add_gc_ap_test(GC_AP_IdentityWiring identity_wiring)
+add_gc_ap_test(GC_AP_InputAudit audit)
+add_gc_ap_test(GC_AP_ExpandedReference expanded_reference)
+add_gc_ap_test(GC_AP_Exact_Physical physical)
+add_gc_ap_test(GC_AP_Anomalous_Exact anomalous)
+add_gc_ap_test(GC_AP_SR_Oracle sr)
+add_gc_ap_test(GC_AP_MutationDetect mutation)
+add_gc_ap_test(GC_AP_Lattice_4x2_AP_P lattice_4x2)
+add_gc_ap_test(GC_AP_Lattice_4x4_AP_AP lattice_4x4)
+add_gc_ap_test(GC_AP_StdFaceExample stdface_example)
+add_gc_ap_test(GC_AP_ComparatorGuard comparator_guard)
+add_gc_ap_test(GC_AP_AuditWriteFailure audit_write_failure)
+set_property(TEST GC_AP_StdFaceExample APPEND PROPERTY ENVIRONMENT
+    "MVMC_GC_APBC_SAMPLE=${CMAKE_SOURCE_DIR}/samples/GrandCanonical/APBC_chain")
+add_gc_ap_test(GC_AP_MPI_NSplit2_CalMode1 mpi_nsplit2_mode1)
+add_gc_ap_test(GC_AP_MPI_NSplit1_CalMode1 mpi_nsplit1_mode1)
+add_gc_ap_test(GC_AP_MPI_NSplit2_CalMode0 mpi_nsplit2_mode0)
+add_gc_ap_test(GC_AP_MPI_NSplit1_CalMode0 mpi_nsplit1_mode0)
 add_test(NAME GC_HPhi_CrossCheck
     COMMAND ${PYTHON_EXECUTABLE} compare_hphi_anomalous.py)
 set_tests_properties(GC_HPhi_CrossCheck PROPERTIES

@@ -555,9 +555,39 @@ ModParaファイル (modpara.def)
    この定義に従い、``AnomalousG`` の期待値と ``AnomalousTerm`` のenergy応答の
    符号を決めます。このmodeでは
    ``OrbitalGeneral``、複素変分パラメータ、``2Sz=-1``、
-   ``NExUpdatePath=0``、``NSPGaussLeg=1``、``NMPTrans=1``、
+   ``NExUpdatePath=0``、``NSPGaussLeg=1``、``NMPTrans=1`` または ``-1``、
    ``NQPOptTrans<=1`` が必要です。Phase 1ではRBM、BackFlow、Lanczos、
    OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。
+
+   ``NMPTrans=-1`` は反周期境界条件（APBC）を指定します。並進射影は
+   TransSym の先頭1個だけを使い、複数並進による運動量射影は行いません。
+   ``NMPTrans=-1`` 自体は Hamiltonian を変更しないため、次の3つを
+   整合させてください。
+
+   * ``Trans`` 等の Hamiltonian：反周期方向の境界をまたぐ係数に
+     境界位相 :math:`-1` を含める（例: 1次元鎖では
+     :math:`c_{L}=-c_{0}` に対応して境界bondの係数の符号を反転）。
+   * ``OrbitalGeneral``：6列目の符号で :math:`F_{IJ}` に掛かる符号を
+     指定する（:math:`F_{IJ}=s_{IJ}f_{k}-s_{JI}f_{k}`、
+     :math:`s_{JI}=-s_{IJ}`）。
+   * ``TransSym``：先頭のpatternは恒等写像・重み1・全siteの符号+1とする。
+     APBCのために恒等写像へ負符号を付ける必要はありません。
+
+   StdFaceで ``2Sz=-1`` と ``phase0=180`` 等を指定すると、境界位相を含む
+   ``Trans`` と、pairごとに独立な変分パラメータと境界の符号を持つ
+   ``orbitalidxgen.def`` が生成されます。これを使う場合は ``namelist.def``
+   の軌道指定を ``OrbitalGeneral`` だけにし（``Orbital`` /
+   ``OrbitalParallel`` の行を除き、コメントアウトされた ``OrbitalGeneral``
+   の行を有効にする）、``modpara.def`` を ``NGrandCanonical=1``、
+   ``2Sz=-1``、``NExUpdatePath=0``、``NSPGaussLeg=1``、``NMPTrans=-1`` に
+   置き換え、``OptTrans`` は使いません（``2Sz`` を省略して生成した場合に
+   出力される ``NSPGaussLeg=8`` は残さない）。
+   ``Ncond`` はGCでは粒子数を拘束しないため、``NGCInitNelec`` と複素の
+   初期パラメータを明示してください。StdFaceの既定値 ``NMPTrans=-1`` は
+   周期境界の入力にも使われるため、それだけでは物理的なAPBCを意味しません。
+   一般のtwist角、複数並進射影、BackFlowとの併用には対応していません。
+   4サイト鎖の入力例と変換スクリプトは
+   ``samples/GrandCanonical/APBC_chain`` にあります。
 
 -  ``NGCInitNelec``
 
@@ -3745,6 +3775,7 @@ OrbitalGeneral指定ファイル
 
    **説明 :**
    反周期境界条件モードがON( ``ModPara`` ファイルで ``NMPTrans`` が負の場合に有効)の場合、変分パラメータ :math:`f_{ij}` の番号の他に符号を反転するか否かを直接指定する。 [ int08 ] = :math:`\pm1` により符号を指定する。反周期境界条件モードがOFFの場合は省略可能。
+   反周期境界条件モードがONの場合は全行で必須です。
 
 -  [ int09 ]
 
@@ -3770,6 +3801,19 @@ OrbitalGeneral指定ファイル
 -  [ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
 
 -  [ int02 ]-[ int10 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
+
+-  反周期境界条件モード（``NMPTrans`` が負）では、各pair行を読む時点で
+   次を検査し、満たさない場合はエラー終了します（``NGrandCanonical`` の
+   値やBackFlowの有無によらず共通）。各行がちょうど6個の整数であること
+   （欠落・余剰列や小数・整数範囲外の値は不可）、サイト番号が0以上
+   ``Nsite`` 未満、スピンが0または1、変分パラメータ番号が0以上[int01]未満、
+   符号[int08]が :math:`\pm1`、:math:`i+\sigma_1 N_s < j+\sigma_2 N_s`
+   であること、および各pairがちょうど1回ずつ現れること（重複・欠落行や
+   空行は不可）。続く最適化指定の行も、各行がちょうど2個の整数
+   [int09] [int10] であり、[int09]が0以上[int01]未満で各値がちょうど1回
+   現れ（順序は任意）、[int10]が0または1であることを検査し、その後には
+   空行以外を置けません。周期境界条件モードの読み込み（5列または6列）は
+   変わりません。
 
 TransSym指定ファイル(qptransidx.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

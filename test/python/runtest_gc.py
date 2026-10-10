@@ -51,7 +51,7 @@ def operators_to_factors(operators):
 
 def write_modpara(workdir, mode, sample_count, seed, nstore=1,
                   nsplit=1, reweight=0, iterations=2, init_nelec=2,
-                  data_qty=1):
+                  data_qty=1, nmptrans=1):
     write(
         os.path.join(workdir, "modpara.def"),
         """--------------------
@@ -74,7 +74,7 @@ Ncond          3
 2Sz            -1
 NSPGaussLeg    1
 NSPStot        0
-NMPTrans       1
+NMPTrans       {nmptrans}
 NSROptItrStep  {iterations}
 NSROptItrSmp   1
 DSROptRedCut   0.000000000001
@@ -101,6 +101,7 @@ NGCInitNelec   {init_nelec}
             reweight=reweight,
             init_nelec=init_nelec,
             data_qty=data_qty,
+            nmptrans=nmptrans,
         ),
     )
 
@@ -343,12 +344,12 @@ def write_anomalous(workdir, delta):
 def write_fixture(workdir, mode=1, samples=60000, seed=93617, nstore=1,
                   nsplit=1, reweight=0, iterations=2, jastrow=0.23,
                   mu=0.4, vacuum=False, delta=None, init_nelec=None,
-                  data_qty=1):
+                  data_qty=1, nmptrans=1):
     parameters = tuple(0.0j for unused in range(6)) if vacuum else default_parameters()
     if init_nelec is None:
         init_nelec = 0 if vacuum else 2
     write_modpara(workdir, mode, samples, seed, nstore, nsplit, reweight,
-                  iterations, init_nelec, data_qty)
+                  iterations, init_nelec, data_qty, nmptrans)
     write_identity_projection(workdir)
     write_orbital(workdir, parameters, optimize=not vacuum)
     namelist = [

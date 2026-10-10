@@ -118,8 +118,108 @@ def set_anomalous_count(filename, keyword, value):
         destination.writelines(lines)
 
 
+def read_orbital_general_rows(filename="orbitalidxgen.def"):
+    with open(filename) as source:
+        lines = source.readlines()
+    header, body = lines[:5], lines[5:]
+    pair_count = 0
+    for line in body:
+        if len(line.split()) != 6:
+            break
+        pair_count += 1
+    if pair_count == 0:
+        raise RuntimeError("OrbitalGeneral fixture has no pair rows")
+    return header, body[:pair_count], body[pair_count:]
+
+
+def write_orbital_general_rows(header, rows, flags,
+                               filename="orbitalidxgen.def"):
+    with open(filename, "w") as destination:
+        destination.writelines(header)
+        destination.writelines(rows)
+        destination.writelines(flags)
+
+
+def replace_orbital_general_field(row, column, value):
+    header, rows, flags = read_orbital_general_rows()
+    words = rows[row].split()
+    words[column] = value
+    rows[row] = " ".join(words) + "\n"
+    write_orbital_general_rows(header, rows, flags)
+
+
+# OrbitalGeneral rows are "I spin_I J spin_J index sign".  The anti-periodic
+# reader validates every column, so each mutation isolates one rejection.
+ORBITAL_GENERAL_FIELD_MUTATIONS = {
+    "gc_orb_sign_zero": (0, 5, "0"),
+    "gc_orb_sign_two": (0, 5, "2"),
+    "gc_orb_negative_sign": (0, 5, "-1"),
+    "gc_orb_nonint": (0, 5, "1.0"),
+    "gc_orb_index_int_wrap": (0, 4, "2147483648"),
+    "gc_orb_int_overflow": (0, 4, "99999999999999999999"),
+    "gc_orb_site_range": (0, 0, "2"),
+    "gc_orb_spin_range": (0, 1, "2"),
+    "gc_orb_index_range": (0, 4, "6"),
+    "gc_orb_negative_index": (0, 4, "-1"),
+}
+
+
+def apply_orbital_general_mutation(action):
+    if action in ORBITAL_GENERAL_FIELD_MUTATIONS:
+        replace_orbital_general_field(*ORBITAL_GENERAL_FIELD_MUTATIONS[action])
+        return
+    header, rows, flags = read_orbital_general_rows()
+    if action == "gc_orb_sign_missing":
+        rows[0] = " ".join(rows[0].split()[:5]) + "\n"
+    elif action == "gc_orb_extra_column":
+        rows[0] = rows[0].rstrip("\n") + " 9\n"
+    elif action == "gc_orb_lower":
+        # (site 0, up)-(site 1, up) written as I=1 > J=0.
+        rows[4] = "1 0 0 0 4 1\n"
+    elif action == "gc_orb_diagonal":
+        rows[4] = "0 0 0 0 4 1\n"
+    elif action == "gc_orb_duplicate":
+        # The row count is unchanged: pair (2,3) is missing, (0,2) repeats.
+        rows[5] = rows[0]
+    elif action == "gc_orb_missing_row":
+        del rows[5]
+    elif action == "gc_orb_truncated":
+        del rows[5]
+        flags = []
+    elif action == "gc_orb_blank_row":
+        rows.insert(2, "\n")
+    elif action == "gc_orb_extra_pair":
+        # A surplus pair row must not be read as OptFlag rows.
+        rows.append(rows[0])
+    elif action == "gc_orb_extra_pair_missing_flags":
+        # Six integers of the surplus row would stand in for three flags.
+        rows.append(rows[0])
+        flags = flags[3:]
+    elif action == "gc_orb_flag_extra":
+        flags.append("5 1\n")
+    elif action == "gc_orb_flag_missing":
+        flags = flags[:-1]
+    elif action == "gc_orb_flag_bad_token":
+        flags[0] = "0 x\n"
+    elif action == "gc_orb_flag_index_range":
+        flags[-1] = "6 1\n"
+    elif action == "gc_orb_flag_duplicate":
+        flags[-1] = "0 1\n"
+    elif action == "gc_orb_flag_value":
+        flags[0] = "0 2\n"
+    elif action == "gc_orb_flag_trailing_blank":
+        flags.extend(["\n", "   \n"])
+    elif action == "gc_orb_flag_permuted":
+        flags = list(reversed(flags))
+    else:
+        raise RuntimeError("unknown OrbitalGeneral mutation: {}".format(action))
+    write_orbital_general_rows(header, rows, flags)
+
+
 def apply_gc_fixture_mutation(action):
-    if action == "gc_locspin":
+    if action.startswith("gc_orb_"):
+        apply_orbital_general_mutation(action)
+    elif action == "gc_locspin":
         with open("locspn.def") as source:
             text = source.read()
         text = text.replace("NlocalSpin     0", "NlocalSpin     1")

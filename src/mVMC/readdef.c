@@ -1121,11 +1121,19 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                 "Error: NGrandCanonical=1 does not support BackFlow.\n");
         info = 1;
       }
-      if (bufInt[IdxSPGaussLeg] != 1 || bufInt[IdxMPTrans] != 1 ||
-          bufInt[IdxNQPOptTrans] > 1) {
+      if (bufInt[IdxSPGaussLeg] != 1 || bufInt[IdxNQPOptTrans] > 1) {
         fprintf(stderr,
                 "Error: NGrandCanonical=1 initially requires "
-                "NSPGaussLeg=1, NMPTrans=1, NQPOptTrans<=1.\n");
+                "NSPGaussLeg=1, NQPOptTrans<=1.\n");
+        info = 1;
+      }
+      /* A single translation projection only; -1 selects the anti-periodic
+       * sign columns.  Compare the raw value directly (no abs on INT_MIN). */
+      if (bufInt[IdxMPTrans] != 1 && bufInt[IdxMPTrans] != -1) {
+        fprintf(stderr,
+                "Error: NGrandCanonical=1 requires NMPTrans=+1 or -1 "
+                "(got %d).\n",
+                bufInt[IdxMPTrans]);
         info = 1;
       }
       if (FlagOptTrans > 0) {
@@ -5147,6 +5155,297 @@ int GetInfoOrbitalAntiParallel(FILE *fp, int **Array, int *ArrayOpt, int **Array
   return info;
 }
 
+/* Count whitespace-separated tokens of one input row. */
+static int CountLineTokens(const char *line) {
+  const unsigned char *cursor = (const unsigned char *)line;
+  int count = 0;
+  while (*cursor != '\0') {
+    while (*cursor != '\0' && isspace(*cursor)) cursor++;
+    if (*cursor == '\0') break;
+    count++;
+    while (*cursor != '\0' && !isspace(*cursor)) cursor++;
+  }
+  return count;
+}
+
+/* Read the next token, which must be a whole base-10 integer in long long. */
+static int ReadStrictIntegerToken(const char **cursor, long long *value) {
+  const char *start;
+  char *end = NULL;
+  long long parsed;
+  if (cursor == NULL || *cursor == NULL || value == NULL) return 1;
+  start = *cursor;
+  while (*start != '\0' && isspace((unsigned char)*start)) start++;
+  if (*start == '\0') return 1;
+  errno = 0;
+  parsed = strtoll(start, &end, 10);
+  if (errno == ERANGE || end == start ||
+      (*end != '\0' && !isspace((unsigned char)*end))) {
+    return 1;
+  }
+  *value = parsed;
+  *cursor = end;
+  return 0;
+}
+
+/*
+ * OptFlag block of the anti-periodic OrbitalGeneral reader.  Each line is
+ * "index flag"; every index in [0, NArray) appears exactly once and the flag
+ * is 0 or 1, all checked before ArrayOpt is written.  Only blank lines may
+ * follow the last row, so a surplus pair row cannot be taken for OptFlags.
+ */
+static int GetInfoOrbitalGeneralAPOpt(FILE *fp, int *ArrayOpt,
+                                      int *iOptCount, int _fidx,
+                                      int _iComplexFlag, int NArray,
+                                      const char *defname) {
+  char line[D_CharTmpReadDef];
+  unsigned char *seen;
+  int row = 0;
+  int info = 0;
+
+  seen = (unsigned char *)calloc((size_t)NArray, sizeof(*seen));
+  if (seen == NULL) {
+    fprintf(stderr,
+            "Error: failed to allocate OrbitalGeneral OptFlag state for %s.\n",
+            defname);
+    return 1;
+  }
+  while (row < NArray) {
+    long long value[2];
+    const char *cursor = line;
+    int columns;
+    int column;
+    int index;
+
+    if (fgets(line, sizeof(line), fp) == NULL) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral in %s ended after %d of %d OptFlag rows "
+              "(anti-periodic mode).\n",
+              defname, row, NArray);
+      info = 1;
+      break;
+    }
+    if (strchr(line, '\n') == NULL && !feof(fp)) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral OptFlag row %d in %s is too long.\n",
+              row + 1, defname);
+      info = 1;
+      break;
+    }
+    columns = CountLineTokens(line);
+    if (columns != 2) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral OptFlag row %d in %s has %d columns; "
+              "anti-periodic mode requires exactly 2 integer columns "
+              "(index flag): %s",
+              row + 1, defname, columns, line);
+      info = 1;
+      break;
+    }
+    for (column = 0; column < 2; column++) {
+      if (ReadStrictIntegerToken(&cursor, &value[column]) != 0) break;
+    }
+    if (column != 2 || !LineTailIsWhitespace(cursor, 0)) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral OptFlag row %d in %s must contain integer "
+              "columns only (column %d is malformed or out of range): %s",
+              row + 1, defname, column + 1, line);
+      info = 1;
+      break;
+    }
+    if (value[0] < 0 || value[0] >= NArray) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral OptFlag row %d in %s has a parameter "
+              "index out of range [0, %d): %s",
+              row + 1, defname, NArray, line);
+      info = 1;
+      break;
+    }
+    if (value[1] != 0 && value[1] != 1) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral OptFlag row %d in %s has flag %lld; "
+              "the flag must be 0 or 1.\n",
+              row + 1, defname, value[1]);
+      info = 1;
+      break;
+    }
+    index = (int)value[0];
+    if (seen[index] != 0) {
+      fprintf(stderr,
+              "Error: duplicate OrbitalGeneral OptFlag index %d in %s "
+              "(row %d).\n",
+              index, defname, row + 1);
+      info = 1;
+      break;
+    }
+    seen[index] = 1;
+    ArrayOpt[2 * (_fidx + index)] = (int)value[1];
+    ArrayOpt[2 * (_fidx + index) + 1] =
+        _iComplexFlag > 0 ? (int)value[1] : 0;
+    (*iOptCount)++;
+    row++;
+  }
+  free(seen);
+  if (info != 0) return info;
+
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    if (CountLineTokens(line) != 0) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral in %s has rows after the %d OptFlag "
+              "rows (anti-periodic mode): %s",
+              defname, NArray, line);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/*
+ * Anti-periodic OrbitalGeneral rows carry the sign that enters F_IJ, so a
+ * malformed row cannot silently fall back to +1 or to the previous row.  Every
+ * row must be "I spin_I J spin_J index sign" with I<J in the fused (site +
+ * spin*Nsite) order, and each upper-triangle pair must appear exactly once.
+ */
+static int GetInfoOrbitalGeneralAP(FILE *fp, int **Array, int *ArrayOpt,
+                                   int **ArraySgn, int *iOptCount, int _fidx,
+                                   int _iComplexFlag, int Nsite, int NArray,
+                                   const char *defname) {
+  char line[D_CharTmpReadDef];
+  unsigned char *seen = NULL;
+  const int nsite2 = 2 * Nsite;
+  size_t expectedRows;
+  size_t row = 0;
+  int info = 0;
+
+  if (Nsite <= 0 || NArray <= 0 ||
+      (size_t)nsite2 > SIZE_MAX / (size_t)nsite2) {
+    fprintf(stderr, "Error: invalid OrbitalGeneral dimensions in %s.\n",
+            defname);
+    return 1;
+  }
+  expectedRows = (size_t)nsite2 * (size_t)(nsite2 - 1) / 2;
+  seen = (unsigned char *)calloc((size_t)nsite2 * (size_t)nsite2,
+                                 sizeof(*seen));
+  if (seen == NULL) {
+    fprintf(stderr,
+            "Error: failed to allocate OrbitalGeneral parser state for %s.\n",
+            defname);
+    return 1;
+  }
+
+  while (row < expectedRows) {
+    long long value[6];
+    const char *cursor = line;
+    long long allI, allJ;
+    size_t key;
+    int columns;
+    int column;
+
+    if (fgets(line, sizeof(line), fp) == NULL) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral in %s ended after %zu of %zu pair rows "
+              "(anti-periodic mode).\n",
+              defname, row, expectedRows);
+      info = 1;
+      break;
+    }
+    if (strchr(line, '\n') == NULL && !feof(fp)) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s is too long.\n",
+              row + 1, defname);
+      info = 1;
+      break;
+    }
+    columns = CountLineTokens(line);
+    if (columns != 6) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s has %d columns; "
+              "anti-periodic mode requires exactly 6 integer columns "
+              "(I spin_I J spin_J index sign): %s",
+              row + 1, defname, columns, line);
+      info = 1;
+      break;
+    }
+    for (column = 0; column < 6; column++) {
+      if (ReadStrictIntegerToken(&cursor, &value[column]) != 0) break;
+    }
+    if (column != 6 || !LineTailIsWhitespace(cursor, 0)) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s must contain integer "
+              "columns only (column %d is malformed or out of range): %s",
+              row + 1, defname, column + 1, line);
+      info = 1;
+      break;
+    }
+    if (value[0] < 0 || value[0] >= Nsite || value[2] < 0 ||
+        value[2] >= Nsite) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s has a site index out of "
+              "range [0, %d): %s",
+              row + 1, defname, Nsite, line);
+      info = 1;
+      break;
+    }
+    if ((value[1] != 0 && value[1] != 1) ||
+        (value[3] != 0 && value[3] != 1)) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s has a spin index other "
+              "than 0 or 1: %s",
+              row + 1, defname, line);
+      info = 1;
+      break;
+    }
+    if (value[4] < 0 || value[4] >= NArray) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s has a parameter index out "
+              "of range [0, %d): %s",
+              row + 1, defname, NArray, line);
+      info = 1;
+      break;
+    }
+    if (value[5] != 1 && value[5] != -1) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s has sign %lld; "
+              "anti-periodic mode requires +1 or -1.\n",
+              row + 1, defname, value[5]);
+      info = 1;
+      break;
+    }
+    allI = value[0] + value[1] * (long long)Nsite;
+    allJ = value[2] + value[3] * (long long)Nsite;
+    if (allI >= allJ) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s must satisfy I<J with "
+              "I=site+spin*Nsite (got I=%lld, J=%lld).\n",
+              row + 1, defname, allI, allJ);
+      info = 1;
+      break;
+    }
+    key = (size_t)allI * (size_t)nsite2 + (size_t)allJ;
+    if (seen[key] != 0) {
+      fprintf(stderr,
+              "Error: duplicate OrbitalGeneral pair in %s "
+              "(I=%lld, J=%lld, row %zu).\n",
+              defname, allI, allJ, row + 1);
+      info = 1;
+      break;
+    }
+    seen[key] = 1;
+    Array[allI][allJ] = (int)value[4];
+    ArraySgn[allI][allJ] = (int)value[5];
+    /* Note F_{IJ}=-F_{JI} */
+    Array[allJ][allI] = (int)value[4];
+    ArraySgn[allJ][allI] = -(int)value[5];
+    row++;
+  }
+  free(seen);
+  if (info != 0) return info;
+
+  /* expectedRows distinct I<J pairs cover the whole upper triangle. */
+  return GetInfoOrbitalGeneralAPOpt(fp, ArrayOpt, iOptCount, _fidx,
+                                    _iComplexFlag, NArray, defname);
+}
+
 int GetInfoOrbitalGeneral(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, int *iOptCount,
                           int _fidx, int _iComplexFlag, int _iFlagOrbitalGeneral, int _APFlag, int Nsite, int NArray,
                           char *defname) {
@@ -5160,6 +5459,11 @@ int GetInfoOrbitalGeneral(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, 
   int fidx = _fidx;
 
   if (NArray == 0) return 0;
+  if (_APFlag != 0) {
+    return GetInfoOrbitalGeneralAP(fp, Array, ArrayOpt, ArraySgn, iOptCount,
+                                   fidx, _iComplexFlag, Nsite, NArray,
+                                   defname);
+  }
   while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
     sscanf(ctmp2, "%d %d %d %d %d %d\n", &i, &spn_i, &j, &spn_j, &fij, &fijSign);
     all_i = i + spn_i * Nsite; //fsz

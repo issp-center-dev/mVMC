@@ -18,6 +18,7 @@ extern int omp_get_max_threads(void);
 #include "../src/mVMC/workspace.c"
 #include "../src/mVMC/matrix_gc.c"
 #include "../src/mVMC/slater_gc.c"
+#include "../src/mVMC/slater_fsz.c"
 
 #define ORBITALS 4
 #define PARAMETERS 6
@@ -46,6 +47,11 @@ static int *qpOptTransSgnRows[1] = {qpOptTransSgnStorage};
     }                                                                           \
   } while (0)
 
+static void refresh_slater_elements(void);
+/* Matrix builder used by rebuild_overlap(): the test's own expansion or the
+ * production UpdateSlaterElm_fsz(). */
+static void (*rebuild_matrix)(void) = refresh_slater_elements;
+
 static void refresh_slater_elements(void) {
   int rsi;
   for (rsi = 0; rsi < ORBITALS; rsi++) {
@@ -61,7 +67,7 @@ static void refresh_slater_elements(void) {
 }
 
 static double complex rebuild_overlap(const int ncur, const int *eleIdx) {
-  refresh_slater_elements();
+  rebuild_matrix();
   CHECK(CalculateMAllGC_fcmp(ncur, eleIdx, 0, 1) == GC_MALL_OK,
         "rebuild failed for ncur=%d", ncur);
   return QPFullWeight[0] * PfM[0];
@@ -109,7 +115,7 @@ static void check_derivative(const int ncur, const int *eleIdx,
         cimag(expectedImag));
   if (ncur == 0) {
     int i;
-    for (i = 0; i < 2 * PARAMETERS; i++) {
+    for (i = 0; i < 2 * NSlater; i++) {
       CHECK(derivative[i] == 0.0, "vacuum derivative[%d] is nonzero", i);
     }
   }
@@ -165,6 +171,160 @@ static void initialize_fixture(void) {
   initializeWorkSpaceAll();
 }
 
+/*
+ * Anti-periodic-style table: parameter 1 is shared by a +1 and a -1
+ * upper-triangle row, as a wrapped pair shares a translation class with an
+ * unwrapped one, and parameter 2 enters with -1 only.  Two negative rows that
+ * merely flip the overall sign of Pf(F) would be invisible to d ln Pf, so
+ * they are placed on terms of the full Pfaffian with different weight.
+ * Rows are (I, J, parameter, sign) with I<J.
+ */
+#define SIGNED_PARAMETERS 4
+static const int signedRows[6][4] = {
+    {0, 1, 0, 1}, {2, 3, 0, 1}, {0, 2, 1, 1},
+    {1, 3, 1, -1}, {0, 3, 2, -1}, {1, 2, 3, 1}};
+
+static void load_pair_table(const int rows[6][4], const int expanded) {
+  int row;
+  for (row = 0; row < ORBITALS; row++) {
+    orbitalIdxStorage[row][row] = 0;
+    orbitalSgnStorage[row][row] = 0;
+  }
+  for (row = 0; row < 6; row++) {
+    const int first = rows[row][0];
+    const int second = rows[row][1];
+    const int parameter = expanded ? row : rows[row][2];
+    const int sign = expanded ? 1 : rows[row][3];
+    orbitalIdxStorage[first][second] = parameter;
+    orbitalIdxStorage[second][first] = parameter;
+    orbitalSgnStorage[first][second] = sign;
+    orbitalSgnStorage[second][first] = -sign;
+  }
+}
+
+static void set_signed_parameters(void) {
+  int parameter;
+  NSlater = SIGNED_PARAMETERS;
+  load_pair_table(signedRows, 0);
+  for (parameter = 0; parameter < SIGNED_PARAMETERS; parameter++) {
+    Slater[parameter] =
+        (0.41 - 0.13 * parameter) + (-0.23 + 0.17 * parameter) * I;
+  }
+}
+
+/* Independent expansion F_IJ = q_I q_J (s_IJ f[k] - s_JI f[k]) for I != J,
+ * with the reader's completion s_JI = -s_IJ and the site sign q. */
+static double complex expected_element(const int first, const int second) {
+  int row;
+  for (row = 0; row < 6; row++) {
+    const int a = signedRows[row][0];
+    const int b = signedRows[row][1];
+    if ((a == first && b == second) || (a == second && b == first)) {
+      const double complex f = Slater[signedRows[row][2]];
+      const double sign =
+          (double)(a == first ? signedRows[row][3] : -signedRows[row][3]);
+      const double q = (double)(qpTransSgnStorage[first % 2] *
+                                qpTransSgnStorage[second % 2]);
+      return q * (sign * f - (-sign) * f);
+    }
+  }
+  return 0.0;
+}
+
+static void check_production_matrix(const char *label) {
+  int first;
+  UpdateSlaterElm_fsz();
+  for (first = 0; first < ORBITALS; first++) {
+    int second;
+    for (second = 0; second < ORBITALS; second++) {
+      const double complex actual =
+          SlaterElm[(size_t)first * ORBITALS + (size_t)second];
+      const double complex expected = expected_element(first, second);
+      CHECK(actual == expected,
+            "%s production F[%d][%d]=(%.17g,%.17g) expected=(%.17g,%.17g)",
+            label, first, second, creal(actual), cimag(actual),
+            creal(expected), cimag(expected));
+    }
+  }
+}
+
+/* Shared signed parameters versus one parameter per pair with the sign
+ * absorbed into its value: the production matrices must be bitwise equal. */
+static void check_expanded_reference(void) {
+  double complex shared[ORBITALS * ORBITALS];
+  double complex sharedParameters[SIGNED_PARAMETERS];
+  int row;
+  set_signed_parameters();
+  UpdateSlaterElm_fsz();
+  memcpy(shared, SlaterElm, sizeof(shared));
+  memcpy(sharedParameters, Slater, sizeof(sharedParameters));
+  NSlater = 6;
+  load_pair_table(signedRows, 1);
+  for (row = 0; row < 6; row++) {
+    Slater[row] =
+        (double)signedRows[row][3] * sharedParameters[signedRows[row][2]];
+  }
+  UpdateSlaterElm_fsz();
+  CHECK(memcmp(shared, SlaterElm, sizeof(shared)) == 0,
+        "expanded reference SlaterElm differs from shared signed table");
+}
+
+static void check_signed_derivatives(const char *label) {
+  const int eleIdx03[2] = {0, 3};
+  const int eleIdx23[2] = {2, 3};
+  const int eleIdx13[2] = {1, 3};
+  const int eleIdx4[4] = {0, 1, 2, 3};
+  check_derivative(0, NULL, 0, 1);
+  check_derivative(2, eleIdx03, 2, 2);
+  check_derivative(2, eleIdx23, 0, 0);
+  check_derivative(2, eleIdx13, 1, 1);
+  check_derivative(4, eleIdx4, 0, 1);
+  check_derivative(4, eleIdx4, 1, 0);
+  check_derivative(4, eleIdx4, 2, 3);
+  (void)label;
+}
+
+/* The sign must change the full-occupation derivative, otherwise the signed
+ * checks above could not detect an ignored OrbitalSgn. */
+static void check_sign_is_observable(void) {
+  const int eleIdx4[4] = {0, 1, 2, 3};
+  double complex withSign[2 * SIGNED_PARAMETERS];
+  double complex withoutSign[2 * SIGNED_PARAMETERS];
+  int row;
+  set_signed_parameters();
+  SlaterElmDiffGC_fcmp(withSign, rebuild_overlap(4, eleIdx4), eleIdx4, 4);
+  for (row = 0; row < 6; row++) {
+    if (signedRows[row][3] < 0) {
+      orbitalSgnStorage[signedRows[row][0]][signedRows[row][1]] = 1;
+      orbitalSgnStorage[signedRows[row][1]][signedRows[row][0]] = -1;
+    }
+  }
+  SlaterElmDiffGC_fcmp(withoutSign, rebuild_overlap(4, eleIdx4), eleIdx4, 4);
+  CHECK(cabs(withSign[2] - withoutSign[2]) > 1.0e-3,
+        "dropping the negative OrbitalSgn does not change d/df1");
+  CHECK(cabs(withSign[4] - withoutSign[4]) > 1.0e-3,
+        "dropping the negative OrbitalSgn does not change d/df2");
+  set_signed_parameters();
+}
+
+static void run_signed_checks(void) {
+  rebuild_matrix = UpdateSlaterElm_fsz;
+  set_signed_parameters();
+  check_production_matrix("identity translation");
+  check_signed_derivatives("identity translation");
+  check_sign_is_observable();
+  check_expanded_reference();
+
+  /* One translation projection whose map is the identity but whose sign
+   * depends on the site: rows and columns of site 1 flip. */
+  set_signed_parameters();
+  qpTransSgnStorage[1] = -1;
+  check_production_matrix("site-dependent translation sign");
+  check_signed_derivatives("site-dependent translation sign");
+  qpTransSgnStorage[1] = 1;
+  rebuild_matrix = refresh_slater_elements;
+}
+
 static void free_fixture(void) {
   FreeWorkSpaceAll();
   free(QPFullWeight);
@@ -187,6 +347,7 @@ int main(int argc, char **argv) {
   check_derivative(0, NULL, 0, 1);
   check_derivative(2, eleIdx2, 0, 0);
   check_derivative(4, eleIdx4, 1, 4);
+  run_signed_checks();
   free_fixture();
 #ifdef _mpi_use
   MPI_Finalize();
