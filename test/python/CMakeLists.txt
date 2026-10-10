@@ -52,6 +52,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc.py DESTINATION ${CMAKE_BINARY_D
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_ap_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_ap.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_antiparallel_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_hphi_anomalous.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_gc_canonical_baseline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -1461,6 +1462,13 @@ add_test(NAME GC_AP_Oracle_SelfTest
     COMMAND ${PYTHON_EXECUTABLE} grandcanonical_ap_oracle.py)
 set_tests_properties(GC_AP_Oracle_SelfTest PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+
+# Grand-canonical anti-parallel pairing (OrbitalAntiParallel only, 2Sz=0).
+add_test(NAME GC_AntiPair_Oracle
+    COMMAND ${PYTHON_EXECUTABLE} grandcanonical_antiparallel_oracle.py)
+set_tests_properties(GC_AntiPair_Oracle PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1")
+
 function(add_gc_ap_test test_name case_name)
     add_test(NAME ${test_name}
         COMMAND ${PYTHON_EXECUTABLE} runtest_gc_ap.py ${case_name})
