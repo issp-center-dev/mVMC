@@ -65,6 +65,12 @@ target_include_directories(gc_antiparallel_unit PRIVATE
 target_link_libraries(gc_antiparallel_unit m)
 add_test(NAME GC_AntiPair_Proposal_Unit COMMAND gc_antiparallel_unit)
 
+add_executable(gc_antiparallel_input_unit gc_antiparallel_input_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_antiparallel_input.c)
+target_include_directories(gc_antiparallel_input_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+add_test(NAME GC_AntiPair_Input_Unit COMMAND gc_antiparallel_input_unit)
+
 add_executable(gc_parameter_unit gc_parameter_unit.c
     ${CMAKE_SOURCE_DIR}/src/sfmt/SFMT.c)
 target_include_directories(gc_parameter_unit PRIVATE
