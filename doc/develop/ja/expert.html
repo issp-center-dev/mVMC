@@ -543,8 +543,45 @@ grand-canonical pair波動関数は</p>
 <span class="math notranslate nohighlight">\(F_{IJ}=f_{IJ}-f_{JI}\)</span> のPfaffianであり、規格化を除いてcanonicalの
 <span class="math notranslate nohighlight">\(|\phi_{\rm pair}\rangle\)</span> と一致します。粒子数sector間の相対符号は
 この定義に従い、<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> の期待値と <code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> のenergy応答の
-符号を決めます。このmodeでは
-<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>、複素変分パラメータ、<code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>、
+符号を決めます。</p>
+<p>軌道入力によって次の2つのpair形式のどちらかになります。</p>
+<ul>
+<li><p>一般pair：<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>、または <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> と
+<code class="docutils literal notranslate"><span class="pre">OrbitalParallel</span></code> の併用。pairの生成・消滅で <span class="math notranslate nohighlight">\(S^z\)</span> が変わるため
+<code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code> が必要です。</p></li>
+<li><p>反平行pair：<code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> （またはaliasの <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>）のみ。
+波動関数</p>
+<div class="math notranslate nohighlight">
+\[|\phi_{\rm GC}\rangle = \exp\Big[\sum_{i,j} F_{ij}\,
+c_{i\uparrow}^{\dagger} c_{j\downarrow}^{\dagger}\Big]|0\rangle\]</div>
+<p>は <span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span> の配置にだけ重みを持ち、<code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code> を
+明示する必要があります（既定値 <code class="docutils literal notranslate"><span class="pre">-1</span></code> やその他の値はエラーです）。
+このmodeでは <code class="docutils literal notranslate"><span class="pre">2Sz</span></code> 行の値はCの <code class="docutils literal notranslate"><span class="pre">int</span></code> の範囲内の10進整数1個に限ります。
+<code class="docutils literal notranslate"><span class="pre">0.0</span></code> のような小数表記、非有限値、余剰token、途中で切れた行は、
+整数への変換前にエラーになります。
+<span class="math notranslate nohighlight">\(F_{ij}\)</span> は符号列を含めた反平行入力のパラメータそのものです。
+同じ状態を <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> で書くと、<span class="math notranslate nohighlight">\(F_{IJ}=f_{IJ}-f_{JI}\)</span> が
+各pairを2回数えるため、上下pairは <span class="math notranslate nohighlight">\(F_{ij}/2\)</span>、同スピンpairは0に
+なります。両形式に同じ数値を入れたものは別の状態です。
+samplerは上下pair 1組の追加・削除と、スピンを変えない電子のhopで
+<span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span> を保ちます。反平行pairのみであることは
+スピン（<span class="math notranslate nohighlight">\(S=0\)</span>）射影を意味しません。
+Hamiltonianは各項全体で <span class="math notranslate nohighlight">\(S^z\)</span> を保存する必要があります。
+<code class="docutils literal notranslate"><span class="pre">Trans</span></code> はスピンを反転できず、<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> と <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> の項は
+項全体で <span class="math notranslate nohighlight">\(\sum(\sigma_{\rm out}-\sigma_{\rm in})=0\)</span> の場合に限り
+スピン反転因子を含められ、<code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> のpairは上下である必要が
+あります。複数行の和で初めて打ち消す項の簡約は行いません。係数0の行は
+この規則の対象外ですが、indexは検査します。測定入力（<code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code>、
+<code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code>、<code class="docutils literal notranslate"><span class="pre">NBodyG</span></code>、<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code>）は制限せず、<span class="math notranslate nohighlight">\(S^z\)</span> を
+変える演算子の期待値は0になります。<span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> は
+<span class="math notranslate nohighlight">\(|E_{\rm loc}|^2\)</span> のsample平均です。波動関数が
+<span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span> sector内に振幅0の配置を持たなければ
+<span class="math notranslate nohighlight">\(\langle\phi|H^2|\phi\rangle/\langle\phi|\phi\rangle\)</span> に一致しますが、
+そのような節を持つ状態では節上の <span class="math notranslate nohighlight">\(H|\phi\rangle\)</span> の寄与を落とします。</p>
+</li>
+</ul>
+<p>どちらの形式でも、canonical計算で行うpairパラメータの一様な再スケールは
+粒子数sector間の重みを変えるため行いません。両形式とも複素変分パラメータ、
 <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NMPTrans=1</span></code> または <code class="docutils literal notranslate"><span class="pre">-1</span></code>、
 <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code> が必要です。Phase 1ではRBM、BackFlow、Lanczos、
 OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。</p>
@@ -559,6 +596,8 @@ TransSym の先頭1個だけを使い、複数並進による運動量射影は�
 <li><p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>：6列目の符号で <span class="math notranslate nohighlight">\(F_{IJ}\)</span> に掛かる符号を
 指定する（<span class="math notranslate nohighlight">\(F_{IJ}=s_{IJ}f_{k}-s_{JI}f_{k}\)</span>、
 <span class="math notranslate nohighlight">\(s_{JI}=-s_{IJ}\)</span>）。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> / <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> （反平行pair）：全pair行の4列目に
+<span class="math notranslate nohighlight">\(F_{ij}\)</span> に掛かる符号 <span class="math notranslate nohighlight">\(\pm1\)</span> を指定する。</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">TransSym</span></code>：先頭のpatternは恒等写像・重み1・全siteの符号+1とする。
 APBCのために恒等写像へ負符号を付ける必要はありません。</p></li>
 </ul>
@@ -577,6 +616,19 @@ APBCのために恒等写像へ負符号を付ける必要はありません。<
 一般のtwist角、複数並進射影、BackFlowとの併用には対応していません。
 4サイト鎖の入力例と変換スクリプトは
 <code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/APBC_chain</span></code> にあります。</p>
+<p>反平行pairでは、StdFaceを <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>、<code class="docutils literal notranslate"><span class="pre">phase0=180</span></code> 等、
+<code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> で実行します。境界位相を含む <code class="docutils literal notranslate"><span class="pre">Trans</span></code> と、<code class="docutils literal notranslate"><span class="pre">Orbital</span></code>
+から参照される4列の <code class="docutils literal notranslate"><span class="pre">orbitalidx.def</span></code> （行ごとに符号を持つpair表）が
+生成されます。<code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> の軌道指定は <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> （または
+<code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> へ改名したもの）だけにして <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> /
+<code class="docutils literal notranslate"><span class="pre">OrbitalParallel</span></code> の行を置かず、<code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> を <code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code>、
+<code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> （StdFaceは <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code> で
+8を出力）、<code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> とし、<code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> は使いません。<code class="docutils literal notranslate"><span class="pre">Trans</span></code> の
+境界位相と恒等写像の先頭 <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> patternはそのまま使い、軌道header
+が <code class="docutils literal notranslate"><span class="pre">ComplexType</span> <span class="pre">1</span></code> であることを確認し、<code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> と複素の初期
+パラメータを明示してください。一般pair用の <span class="math notranslate nohighlight">\(F/2\)</span> 変換を反平行の表へ
+適用しないでください。4サイトの反平行入力例は
+<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/AntiParallel</span></code> にあります。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code></p>
 <p><strong>形式 :</strong> int型 (デフォルト値 = -1)</p>
@@ -1210,6 +1262,9 @@ NInterAll      36
 <li><p>ハミルトニアンがエルミートという制限から <span class="math notranslate nohighlight">\(I_{ijkl\sigma_1\sigma_2\sigma_3\sigma_4}=I_{lkji\sigma_4\sigma_3\sigma_2\sigma_1}^{\dagger}\)</span> の関係を満たす必要があります。</p></li>
 <li><p>[ int01 ] と定義されているInterAllの総数が異なる場合はエラー終了します。</p></li>
 <li><p>[ int02 ]-[ int09 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。</p></li>
+<li><p>反平行grand-canonical modeでは、<span class="math notranslate nohighlight">\(\sigma_1-\sigma_2+\sigma_3-\sigma_4=0\)</span>
+の場合に限り項がスピン反転因子を含められます。係数が0でない項で
+<span class="math notranslate nohighlight">\(S^z\)</span> を変えるものはエラー終了します。</p></li>
 </ul>
 </section>
 </section>
@@ -1295,7 +1350,9 @@ c_{j_{\alpha a}\tau_{\alpha a}}\]</div>
 <li><p>各成分行は <span class="math notranslate nohighlight">\(1 + 4N + 2\)</span> 個のフィールドを持つ必要があります。</p></li>
 <li><p>[ int01 ] と定義されている <span class="math notranslate nohighlight">\(N\)</span> 体ハミルトニアン項の総数が異なる場合はエラー終了します。</p></li>
 <li><p>サイト番号またはスピン番号に範囲外の整数を指定した場合、または係数が非有限値の場合はエラー終了します。</p></li>
-<li><p>スピンを変える因子 <span class="math notranslate nohighlight">\(\sigma_a \neq \tau_a\)</span> は orbital-general モードでのみ指定できます。
+<li><p>スピンを変える因子 <span class="math notranslate nohighlight">\(\sigma_a \neq \tau_a\)</span> は orbital-general モード、
+または項全体で <span class="math notranslate nohighlight">\(S^z\)</span> を保存する（<span class="math notranslate nohighlight">\(\sum_a(\sigma_a-\tau_a)=0\)</span>）
+反平行grand-canonical mode（<code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> を参照）でのみ指定できます。
 それ以外のモードでは各因子が <span class="math notranslate nohighlight">\(\sigma_a = \tau_a\)</span> を満たす必要があります。</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> は通常のエネルギー出力へ寄与し、相互作用専用の出力ファイルは生成しません。</p></li>
 <li><p>real local-energy kernel と <span class="math notranslate nohighlight">\(N\)</span> 体 Lanczos 補正は未実装です。
@@ -2990,6 +3047,25 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
 <li><p>[ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。</p></li>
 <li><p>[ int02 ]-[ int08 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。</p></li>
+<li><p>canonical計算の読込みではOptFlag行のindex列を読みますが、flagは行順に
+代入します。OptFlag行はindex順（<code class="docutils literal notranslate"><span class="pre">0</span></code>, <code class="docutils literal notranslate"><span class="pre">1</span></code>, ...）に記載してください。</p></li>
+<li><p>反平行のgrand-canonical mode（<code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code> で本ファイルだけを
+軌道入力とする場合）では厳格に読み込み、各行は検査を終えてから格納します。</p>
+<ul>
+<li><p>2行目はパラメータ数が正、3行目の <code class="docutils literal notranslate"><span class="pre">ComplexType</span></code> は0か1で、
+<span class="math notranslate nohighlight">\((2N_s)^2\)</span> がsigned intに収まる必要があります。</p></li>
+<li><p>pair blockはちょうど <span class="math notranslate nohighlight">\(N_s^2\)</span> 行で、全 <span class="math notranslate nohighlight">\((i,j)\)</span> が1回ずつ現れ、
+パラメータindexが範囲内である必要があります。<code class="docutils literal notranslate"><span class="pre">NMPTrans&gt;0</span></code> では3列か
+4列の整数で4列目は無視し、<code class="docutils literal notranslate"><span class="pre">NMPTrans&lt;0</span></code> では4列が必須で4列目は
+<span class="math notranslate nohighlight">\(\pm1\)</span> です。整数でない値、int範囲外の値、余剰列はどちらでも
+エラーです。</p></li>
+<li><p>OptFlag blockはちょうど [ int01 ] 行の <code class="docutils literal notranslate"><span class="pre">index</span> <span class="pre">flag</span></code> で、全indexが1回ずつ
+現れ、flagは0か1です。このmodeでは行の順序は任意で、これは
+grand-canonical用readerの拡張です。index順の記載を推奨します。</p></li>
+<li><p>その後に置けるのは空行だけです。block内の空行、コメント、余剰行は
+エラーです。</p></li>
+</ul>
+</li>
 </ul>
 </section>
 </section>
@@ -3600,7 +3676,9 @@ NCisAjsCktAltDC        576
 <li><p>[ int01 ] と定義されている <span class="math notranslate nohighlight">\(N\)</span> 体相関関数成分の総数が異なる場合はエラー終了します。</p></li>
 <li><p>各成分行は <span class="math notranslate nohighlight">\(1 + 4N\)</span> 個の整数を持つ必要があります。</p></li>
 <li><p>サイト番号またはスピン番号に範囲外の整数を指定した場合はエラー終了します。</p></li>
-<li><p>スピンを変える因子 <span class="math notranslate nohighlight">\(\sigma_a \neq \tau_a\)</span> は orbital-general モードでのみ指定できます。
+<li><p>スピンを変える因子 <span class="math notranslate nohighlight">\(\sigma_a \neq \tau_a\)</span> は orbital-general モードと
+反平行grand-canonical modeで指定できます。後者では <span class="math notranslate nohighlight">\(S^z\)</span> を変える項も
+受け付け、その期待値は0になります。
 それ以外のモードでは各因子が <span class="math notranslate nohighlight">\(\sigma_a = \tau_a\)</span> を満たす必要があります。</p></li>
 <li><p>本出力はBackFlowの有無によらず物理量計算で使用できます。BackFlow
 <span class="math notranslate nohighlight">\(N\)</span> 体測定では複素変分パラメータ、<code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>、
@@ -3677,8 +3755,12 @@ spin番号は0（up）または1（down）です。同じfermion演算子を1つ
 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=0</span></code> と1の両方で指定できます。<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> は
 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code> 専用で、mode 0でkeywordを指定すると入力errorになります。</p></li>
 <li><p>grand-canonical samplingは偶数粒子数sectorを対象とし、<code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> の
-制約を継承します。<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> と複素変分パラメータが必要で、real-only GC、
-RBM、BackFlow、Lanczos経路は引き続き非対応です。</p></li>
+制約を継承します。複素変分パラメータが必要で、real-only GC、RBM、BackFlow、
+Lanczos経路は引き続き非対応です。一般pair（<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>）では任意の
+spinの組合せを指定できます。反平行pair（<code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> / <code class="docutils literal notranslate"><span class="pre">Orbital</span></code>
+のみ、<code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>）では、係数が0でない <code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> のpairは上下spinの
+演算子の組である必要があります。<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> の行は任意のspinを指定でき、
+同スピンの行の期待値は0になります。</p></li>
 </ul>
 </section>
 </section>

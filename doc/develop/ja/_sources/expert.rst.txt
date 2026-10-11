@@ -553,8 +553,48 @@ ModParaファイル (modpara.def)
    :math:`F_{IJ}=f_{IJ}-f_{JI}` のPfaffianであり、規格化を除いてcanonicalの
    :math:`|\phi_{\rm pair}\rangle` と一致します。粒子数sector間の相対符号は
    この定義に従い、``AnomalousG`` の期待値と ``AnomalousTerm`` のenergy応答の
-   符号を決めます。このmodeでは
-   ``OrbitalGeneral``、複素変分パラメータ、``2Sz=-1``、
+   符号を決めます。
+
+   軌道入力によって次の2つのpair形式のどちらかになります。
+
+   * 一般pair：``OrbitalGeneral``、または ``OrbitalAntiParallel`` と
+     ``OrbitalParallel`` の併用。pairの生成・消滅で :math:`S^z` が変わるため
+     ``2Sz=-1`` が必要です。
+   * 反平行pair：``OrbitalAntiParallel`` （またはaliasの ``Orbital``）のみ。
+     波動関数
+
+     .. math::
+
+        |\phi_{\rm GC}\rangle = \exp\Big[\sum_{i,j} F_{ij}\,
+        c_{i\uparrow}^{\dagger} c_{j\downarrow}^{\dagger}\Big]|0\rangle
+
+     は :math:`N_\uparrow=N_\downarrow` の配置にだけ重みを持ち、``2Sz=0`` を
+     明示する必要があります（既定値 ``-1`` やその他の値はエラーです）。
+     このmodeでは ``2Sz`` 行の値はCの ``int`` の範囲内の10進整数1個に限ります。
+     ``0.0`` のような小数表記、非有限値、余剰token、途中で切れた行は、
+     整数への変換前にエラーになります。
+     :math:`F_{ij}` は符号列を含めた反平行入力のパラメータそのものです。
+     同じ状態を ``OrbitalGeneral`` で書くと、:math:`F_{IJ}=f_{IJ}-f_{JI}` が
+     各pairを2回数えるため、上下pairは :math:`F_{ij}/2`、同スピンpairは0に
+     なります。両形式に同じ数値を入れたものは別の状態です。
+     samplerは上下pair 1組の追加・削除と、スピンを変えない電子のhopで
+     :math:`N_\uparrow=N_\downarrow` を保ちます。反平行pairのみであることは
+     スピン（:math:`S=0`）射影を意味しません。
+     Hamiltonianは各項全体で :math:`S^z` を保存する必要があります。
+     ``Trans`` はスピンを反転できず、``InterAll`` と ``NBodyInterAll`` の項は
+     項全体で :math:`\sum(\sigma_{\rm out}-\sigma_{\rm in})=0` の場合に限り
+     スピン反転因子を含められ、``AnomalousTerm`` のpairは上下である必要が
+     あります。複数行の和で初めて打ち消す項の簡約は行いません。係数0の行は
+     この規則の対象外ですが、indexは検査します。測定入力（``OneBodyG``、
+     ``TwoBodyG``、``NBodyG``、``AnomalousG``）は制限せず、:math:`S^z` を
+     変える演算子の期待値は0になります。:math:`\langle H^2\rangle` は
+     :math:`|E_{\rm loc}|^2` のsample平均です。波動関数が
+     :math:`N_\uparrow=N_\downarrow` sector内に振幅0の配置を持たなければ
+     :math:`\langle\phi|H^2|\phi\rangle/\langle\phi|\phi\rangle` に一致しますが、
+     そのような節を持つ状態では節上の :math:`H|\phi\rangle` の寄与を落とします。
+
+   どちらの形式でも、canonical計算で行うpairパラメータの一様な再スケールは
+   粒子数sector間の重みを変えるため行いません。両形式とも複素変分パラメータ、
    ``NExUpdatePath=0``、``NSPGaussLeg=1``、``NMPTrans=1`` または ``-1``、
    ``NQPOptTrans<=1`` が必要です。Phase 1ではRBM、BackFlow、Lanczos、
    OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。
@@ -570,6 +610,8 @@ ModParaファイル (modpara.def)
    * ``OrbitalGeneral``：6列目の符号で :math:`F_{IJ}` に掛かる符号を
      指定する（:math:`F_{IJ}=s_{IJ}f_{k}-s_{JI}f_{k}`、
      :math:`s_{JI}=-s_{IJ}`）。
+   * ``OrbitalAntiParallel`` / ``Orbital`` （反平行pair）：全pair行の4列目に
+     :math:`F_{ij}` に掛かる符号 :math:`\pm1` を指定する。
    * ``TransSym``：先頭のpatternは恒等写像・重み1・全siteの符号+1とする。
      APBCのために恒等写像へ負符号を付ける必要はありません。
 
@@ -588,6 +630,20 @@ ModParaファイル (modpara.def)
    一般のtwist角、複数並進射影、BackFlowとの併用には対応していません。
    4サイト鎖の入力例と変換スクリプトは
    ``samples/GrandCanonical/APBC_chain`` にあります。
+
+   反平行pairでは、StdFaceを ``2Sz=0``、``phase0=180`` 等、
+   ``ComplexType=1`` で実行します。境界位相を含む ``Trans`` と、``Orbital``
+   から参照される4列の ``orbitalidx.def`` （行ごとに符号を持つpair表）が
+   生成されます。``namelist.def`` の軌道指定は ``Orbital`` （または
+   ``OrbitalAntiParallel`` へ改名したもの）だけにして ``OrbitalGeneral`` /
+   ``OrbitalParallel`` の行を置かず、``modpara.def`` を ``NGrandCanonical=1``、
+   ``2Sz=0``、``NExUpdatePath=0``、``NSPGaussLeg=1`` （StdFaceは ``2Sz=0`` で
+   8を出力）、``NMPTrans=-1`` とし、``OptTrans`` は使いません。``Trans`` の
+   境界位相と恒等写像の先頭 ``TransSym`` patternはそのまま使い、軌道header
+   が ``ComplexType 1`` であることを確認し、``NGCInitNelec`` と複素の初期
+   パラメータを明示してください。一般pair用の :math:`F/2` 変換を反平行の表へ
+   適用しないでください。4サイトの反平行入力例は
+   ``samples/GrandCanonical/AntiParallel`` にあります。
 
 -  ``NGCInitNelec``
 
@@ -1368,6 +1424,10 @@ InterAll指定ファイル
 
 -  [ int02 ]-[ int09 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
 
+-  反平行grand-canonical modeでは、:math:`\sigma_1-\sigma_2+\sigma_3-\sigma_4=0`
+   の場合に限り項がスピン反転因子を含められます。係数が0でない項で
+   :math:`S^z` を変えるものはエラー終了します。
+
 独立Lanczos演算子指定ファイル(lstrans.def, lsinterall.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1473,7 +1533,9 @@ NBodyInterAll指定ファイル(nbodyinterall.def)
 
 -  サイト番号またはスピン番号に範囲外の整数を指定した場合、または係数が非有限値の場合はエラー終了します。
 
--  スピンを変える因子 :math:`\sigma_a \neq \tau_a` は orbital-general モードでのみ指定できます。
+-  スピンを変える因子 :math:`\sigma_a \neq \tau_a` は orbital-general モード、
+   または項全体で :math:`S^z` を保存する（:math:`\sum_a(\sigma_a-\tau_a)=0`）
+   反平行grand-canonical mode（``NGrandCanonical`` を参照）でのみ指定できます。
    それ以外のモードでは各因子が :math:`\sigma_a = \tau_a` を満たす必要があります。
 
 -  ``NBodyInterAll`` は通常のエネルギー出力へ寄与し、相互作用専用の出力ファイルは生成しません。
@@ -3552,6 +3614,25 @@ Orbital/OrbitalAntiParallel指定ファイル(orbitalidx.def)
 
 -  [ int02 ]-[ int08 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
 
+-  canonical計算の読込みではOptFlag行のindex列を読みますが、flagは行順に
+   代入します。OptFlag行はindex順（``0``, ``1``, ...）に記載してください。
+
+-  反平行のgrand-canonical mode（``NGrandCanonical=1`` で本ファイルだけを
+   軌道入力とする場合）では厳格に読み込み、各行は検査を終えてから格納します。
+
+   * 2行目はパラメータ数が正、3行目の ``ComplexType`` は0か1で、
+     :math:`(2N_s)^2` がsigned intに収まる必要があります。
+   * pair blockはちょうど :math:`N_s^2` 行で、全 :math:`(i,j)` が1回ずつ現れ、
+     パラメータindexが範囲内である必要があります。``NMPTrans>0`` では3列か
+     4列の整数で4列目は無視し、``NMPTrans<0`` では4列が必須で4列目は
+     :math:`\pm1` です。整数でない値、int範囲外の値、余剰列はどちらでも
+     エラーです。
+   * OptFlag blockはちょうど [ int01 ] 行の ``index flag`` で、全indexが1回ずつ
+     現れ、flagは0か1です。このmodeでは行の順序は任意で、これは
+     grand-canonical用readerの拡張です。index順の記載を推奨します。
+   * その後に置けるのは空行だけです。block内の空行、コメント、余剰行は
+     エラーです。
+
 OrbitalParallel指定ファイル
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -4285,7 +4366,9 @@ NBodyG指定ファイル(nbodyg.def)
 
 -  サイト番号またはスピン番号に範囲外の整数を指定した場合はエラー終了します。
 
--  スピンを変える因子 :math:`\sigma_a \neq \tau_a` は orbital-general モードでのみ指定できます。
+-  スピンを変える因子 :math:`\sigma_a \neq \tau_a` は orbital-general モードと
+   反平行grand-canonical modeで指定できます。後者では :math:`S^z` を変える項も
+   受け付け、その期待値は0になります。
    それ以外のモードでは各因子が :math:`\sigma_a = \tau_a` を満たす必要があります。
 
 -  本出力はBackFlowの有無によらず物理量計算で使用できます。BackFlow
@@ -4374,8 +4457,12 @@ Hermiticityとmode制約
    ``NVMCCalMode=1`` 専用で、mode 0でkeywordを指定すると入力errorになります。
 
 -  grand-canonical samplingは偶数粒子数sectorを対象とし、``NGrandCanonical`` の
-   制約を継承します。``OrbitalGeneral`` と複素変分パラメータが必要で、real-only GC、
-   RBM、BackFlow、Lanczos経路は引き続き非対応です。
+   制約を継承します。複素変分パラメータが必要で、real-only GC、RBM、BackFlow、
+   Lanczos経路は引き続き非対応です。一般pair（``OrbitalGeneral``）では任意の
+   spinの組合せを指定できます。反平行pair（``OrbitalAntiParallel`` / ``Orbital``
+   のみ、``2Sz=0``）では、係数が0でない ``AnomalousTerm`` のpairは上下spinの
+   演算子の組である必要があります。``AnomalousG`` の行は任意のspinを指定でき、
+   同スピンの行の期待値は0になります。
 
 
 Twist指定ファイル(twist.def)

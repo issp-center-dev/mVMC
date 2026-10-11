@@ -142,7 +142,10 @@ xxx\_out\_yyy.dat
 
 が順に出力されます。 :math:`\langle H \rangle` については実部と虚部がそれぞれ出力され、それ以外は実部のみ出力されます。
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
-``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。以下に出力例を記載します。
+``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。
+反平行のgrand-canonical mode（``NGrandCanonical=1`` で ``OrbitalAntiParallel`` または ``Orbital`` のみ、``2Sz=0``）では
+全sampleが :math:`S^z=0` なので最後の2列は0になり、:math:`\langle H^2\rangle` にはExpert入力の
+``NGrandCanonical`` に記載した制限があります。以下に出力例を記載します。
 
 ::
 

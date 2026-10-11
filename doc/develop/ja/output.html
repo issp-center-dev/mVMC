@@ -189,7 +189,10 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 \nonumber.\]</div>
 <p>が順に出力されます。 <span class="math notranslate nohighlight">\(\langle H \rangle\)</span> については実部と虚部がそれぞれ出力され、それ以外は実部のみ出力されます。
 xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
-<code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。以下に出力例を記載します。</p>
+<code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。
+反平行のgrand-canonical mode（<code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code> で <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> または <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> のみ、<code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>）では
+全sampleが <span class="math notranslate nohighlight">\(S^z=0\)</span> なので最後の2列は0になり、<span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> にはExpert入力の
+<code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> に記載した制限があります。以下に出力例を記載します。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>1.151983765704212992e+01  8.124622418360909482e-01  \
 1.619082955438887268e+02  2.019905203939084959e-01
 1.288482613817423150e+01  5.006903733262847433e-01

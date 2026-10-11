@@ -552,11 +552,54 @@ of <span class="math notranslate nohighlight">\(F_{IJ}=f_{IJ}-f_{JI}\)</span> re
 canonical component coincides with <span class="math notranslate nohighlight">\(|\phi_{\rm pair}\rangle\)</span> up to
 normalization. The relative sign between particle-number sectors follows
 this definition; it fixes the sign of the <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> expectation
-values and of the <code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> energy response.
-This mode requires <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>, complex variational parameters,
-<code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NMPTrans=1</span></code> or
-<code class="docutils literal notranslate"><span class="pre">-1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code>. RBM, BackFlow, Lanczos, OptTrans,
-UpdateWeight, local spins, and SR-CG are not supported in this first phase.</p>
+values and of the <code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> energy response.</p>
+<p>The orbital input selects one of two pairing forms.</p>
+<ul>
+<li><p>General pairing: <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>, or <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code>
+together with <code class="docutils literal notranslate"><span class="pre">OrbitalParallel</span></code>. Pair additions and removals change
+<span class="math notranslate nohighlight">\(S^z\)</span>, so <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code> is required.</p></li>
+<li><p>Anti-parallel pairing: <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> (or its alias
+<code class="docutils literal notranslate"><span class="pre">Orbital</span></code>) alone. The wave function</p>
+<div class="math notranslate nohighlight">
+\[|\phi_{\rm GC}\rangle = \exp\Big[\sum_{i,j} F_{ij}\,
+c_{i\uparrow}^{\dagger} c_{j\downarrow}^{\dagger}\Big]|0\rangle\]</div>
+<p>has weight only on configurations with <span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span>,
+and <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code> must be given explicitly (the default <code class="docutils literal notranslate"><span class="pre">-1</span></code> and other
+values are rejected). In this mode, the <code class="docutils literal notranslate"><span class="pre">2Sz</span></code> line must contain one
+complete base-10 integer in the C <code class="docutils literal notranslate"><span class="pre">int</span></code> range; decimal notation such
+as <code class="docutils literal notranslate"><span class="pre">0.0</span></code>, nonfinite values, trailing tokens, and truncated lines are
+rejected before conversion. <span class="math notranslate nohighlight">\(F_{ij}\)</span> is the anti-parallel parameter
+itself, including the sign column. The same state written as
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> uses <span class="math notranslate nohighlight">\(F_{ij}/2\)</span> for the up-down pairs and 0 for
+the same-spin pairs, because <span class="math notranslate nohighlight">\(F_{IJ}=f_{IJ}-f_{JI}\)</span> counts each
+pair twice; equal numbers in the two formats are different states.
+The sampler keeps <span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span> by adding or removing
+one up-down pair and by hopping electrons without changing their spin.
+Anti-parallel pairing alone is not a spin (<span class="math notranslate nohighlight">\(S=0\)</span>) projection.
+Every Hamiltonian term must conserve <span class="math notranslate nohighlight">\(S^z\)</span> as a whole: <code class="docutils literal notranslate"><span class="pre">Trans</span></code>
+must not flip a spin, an <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> or <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> term may
+contain spin-flip factors only when
+<span class="math notranslate nohighlight">\(\sum(\sigma_{\rm out}-\sigma_{\rm in})=0\)</span> over the term, and
+<code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> pairs must be up-down. Terms that would cancel only
+after summing several rows are not simplified, and rows with a zero
+coefficient are exempt from the rule but still checked for indices.
+Measurement inputs (<code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code>, <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code>, <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code>,
+<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code>) are not restricted; operators that change <span class="math notranslate nohighlight">\(S^z\)</span>
+have zero expectation value. <span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> is the sample
+average of <span class="math notranslate nohighlight">\(|E_{\rm loc}|^2\)</span>; it equals
+<span class="math notranslate nohighlight">\(\langle\phi|H^2|\phi\rangle/\langle\phi|\phi\rangle\)</span> when the
+wave function has no zero amplitude inside the
+<span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span> sector, while for a state with such nodes
+the part of <span class="math notranslate nohighlight">\(H|\phi\rangle\)</span> on the nodes is missed.</p>
+</li>
+</ul>
+<p>In both forms the uniform rescaling of the pair parameters used in
+canonical runs is not applied, because it would change the relative
+weights of particle-number sectors. Both forms require complex
+variational parameters, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NMPTrans=1</span></code> or <code class="docutils literal notranslate"><span class="pre">-1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code>. RBM, BackFlow, Lanczos,
+OptTrans, UpdateWeight, local spins, and SR-CG are not supported in this
+first phase.</p>
 <p><code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> selects anti-periodic boundary conditions (APBC). Only
 the first <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> pattern is used; momentum projection over several
 translations is not performed. <code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> does not modify the
@@ -568,6 +611,9 @@ chain, <span class="math notranslate nohighlight">\(c_{L}=-c_{0}\)</span> flips 
 <li><p><code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>: the sixth column gives the sign that multiplies
 <span class="math notranslate nohighlight">\(F_{IJ}\)</span> (<span class="math notranslate nohighlight">\(F_{IJ}=s_{IJ}f_{k}-s_{JI}f_{k}\)</span> with
 <span class="math notranslate nohighlight">\(s_{JI}=-s_{IJ}\)</span>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> / <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> (anti-parallel pairing): the
+fourth column of every pair row is the sign <span class="math notranslate nohighlight">\(\pm1\)</span> that
+multiplies <span class="math notranslate nohighlight">\(F_{ij}\)</span>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">TransSym</span></code>: the first pattern is the identity map with weight 1 and
 sign +1 on every site. APBC does not require a negative sign on the
 identity map.</p></li>
@@ -588,6 +634,20 @@ inputs, so that value alone does not indicate a physical APBC. General
 twist angles, projection over several translations, and BackFlow are not
 supported. A four-site chain example and the conversion script are in
 <code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/APBC_chain</span></code>.</p>
+<p>For anti-parallel pairing, run StdFace with <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>, <code class="docutils literal notranslate"><span class="pre">phase0=180</span></code> (or
+similar), and <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code>. It writes the boundary phases into
+<code class="docutils literal notranslate"><span class="pre">Trans</span></code> and a four-column <code class="docutils literal notranslate"><span class="pre">orbitalidx.def</span></code> (pair table with one sign
+per row) referenced by the <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> entry. Keep <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> (or rename
+it to <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code>) as the only orbital entry of
+<code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> with no <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> or <code class="docutils literal notranslate"><span class="pre">OrbitalParallel</span></code> line,
+and set <code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code>, <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> (StdFace writes 8 for <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>), and <code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code>
+in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> without an <code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> file. Keep the boundary
+phases in <code class="docutils literal notranslate"><span class="pre">Trans</span></code> and the identity first <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> pattern, check
+that the orbital header has <code class="docutils literal notranslate"><span class="pre">ComplexType</span> <span class="pre">1</span></code>, and give <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code>
+and complex initial parameters. Do not apply the <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>
+<span class="math notranslate nohighlight">\(F/2\)</span> conversion to the anti-parallel table. A four-site
+anti-parallel input is in <code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/AntiParallel</span></code>.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code></p>
 <p><strong>Type :</strong> int-type (default value: -1)</p>
@@ -1290,6 +1350,9 @@ defined in this file.</p></li>
 <li><p>A program is terminated, when
 [ int02 ]-[ int09 ] are out of
 range from the defined values.</p></li>
+<li><p>In the anti-parallel grand-canonical mode a term may contain spin-flip
+factors when <span class="math notranslate nohighlight">\(\sigma_1-\sigma_2+\sigma_3-\sigma_4=0\)</span>; a term with a
+nonzero coefficient that changes <span class="math notranslate nohighlight">\(S^z\)</span> is rejected.</p></li>
 </ul>
 </section>
 </section>
@@ -1386,7 +1449,9 @@ number of <span class="math notranslate nohighlight">\(N\)</span>-body Hamiltoni
 or when coefficients are non-finite.</p></li>
 <li><p>In orbital modes that do not allow spin-changing contractions, each
 factor must satisfy <span class="math notranslate nohighlight">\(\sigma_a = \tau_a\)</span>. Spin-changing factors
-require orbital-general mode.</p></li>
+require orbital-general mode, or the anti-parallel grand-canonical mode
+in which the whole term must conserve <span class="math notranslate nohighlight">\(S^z\)</span>
+(<span class="math notranslate nohighlight">\(\sum_a(\sigma_a-\tau_a)=0\)</span>, see <code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> contributes to the normal energy output; it does
 not create a separate interaction-output file.</p></li>
 <li><p>Real local-energy kernels and N-body Lanczos corrections are not
@@ -3220,6 +3285,29 @@ different from the total number of variational parameters defined in
 this file.</p></li>
 <li><p>A program is terminated, when [ int02 ] -
 [ int09 ] are out of range from the defined values.</p></li>
+<li><p>The canonical reader reads the index column of the OptFlag rows but
+assigns the flags in row order. Write the OptFlag rows in index order
+(<code class="docutils literal notranslate"><span class="pre">0</span></code>, <code class="docutils literal notranslate"><span class="pre">1</span></code>, …).</p></li>
+<li><p>In the anti-parallel grand-canonical mode (<code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code> with
+this file as the only orbital input) the file is read strictly, and every
+check is made before the row is stored:</p>
+<ul>
+<li><p>Line 2 gives a positive number of parameters, line 3 gives
+<code class="docutils literal notranslate"><span class="pre">ComplexType</span></code> 0 or 1, and <span class="math notranslate nohighlight">\((2N_s)^2\)</span> must fit in a signed int.</p></li>
+<li><p>The pair block has exactly <span class="math notranslate nohighlight">\(N_s^2\)</span> rows, every <span class="math notranslate nohighlight">\((i,j)\)</span>
+appears once, and the parameter index is in range. With <code class="docutils literal notranslate"><span class="pre">NMPTrans&gt;0</span></code>
+a row has three or four integer columns and a fourth column is
+ignored; with <code class="docutils literal notranslate"><span class="pre">NMPTrans&lt;0</span></code> four columns are required and the fourth
+must be <span class="math notranslate nohighlight">\(\pm1\)</span>. Non-integer, out-of-int-range, or extra columns
+are rejected in both cases.</p></li>
+<li><p>The OptFlag block has exactly [ int01 ] rows <code class="docutils literal notranslate"><span class="pre">index</span> <span class="pre">flag</span></code>; every
+index appears once and the flag is 0 or 1. In this mode the rows may be
+given in any order, which is an extension of the grand-canonical
+reader; index order is still recommended.</p></li>
+<li><p>Only blank lines may follow. Blank lines, comments, or surplus rows
+inside the blocks are errors.</p></li>
+</ul>
+</li>
 </ul>
 </section>
 </section>
@@ -3895,7 +3983,9 @@ number of <span class="math notranslate nohighlight">\(N\)</span>-body correlati
 <li><p>A program is terminated, when site or spin indices are out of range.</p></li>
 <li><p>In orbital modes that do not allow spin-changing contractions, each
 factor must satisfy <span class="math notranslate nohighlight">\(\sigma_a = \tau_a\)</span>. Spin-changing factors
-require orbital-general mode.</p></li>
+require orbital-general mode or the anti-parallel grand-canonical mode;
+in the latter, terms that change <span class="math notranslate nohighlight">\(S^z\)</span> are accepted and average to
+zero.</p></li>
 <li><p>This output is supported for physical-quantity calculations with or
 without BackFlow. BackFlow N-body measurement requires complex
 variational parameters, <code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>, and <code class="docutils literal notranslate"><span class="pre">reweight=0</span></code>.
@@ -3976,9 +4066,14 @@ an explicit zero count. <code class="docutils literal notranslate"><span class="
 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=0</span></code> and 1. <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> is accepted only in
 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>; supplying its keyword in mode 0 is an input error.</p></li>
 <li><p>Grand-canonical sampling covers even particle-number sectors and inherits
-the constraints documented for <code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code>: <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>
-and complex variational parameters are required, while real-only GC,
-RBM, BackFlow, and Lanczos paths remain unsupported.</p></li>
+the constraints documented for <code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code>: complex variational
+parameters are required, while real-only GC, RBM, BackFlow, and Lanczos
+paths remain unsupported. With general pairing (<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>) any
+spin combination is allowed. With anti-parallel pairing
+(<code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> / <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> alone, <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>) every
+<code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> pair with a nonzero coefficient must combine an up and a
+down operator; <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> rows may use any spins, and same-spin rows
+average to zero.</p></li>
 </ul>
 </section>
 </section>

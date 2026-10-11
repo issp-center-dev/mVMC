@@ -212,7 +212,12 @@ the others is a real number. Here, xxx is the header indicated by
 <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file and yyy is a number given by
 <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code>,
 where both <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> and <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> are defined in
-<code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file. An example of outputted file is shown as follows.</p>
+<code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file. In the anti-parallel grand-canonical mode
+(<code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code> with <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> or <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> alone,
+<code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>), every sample has <span class="math notranslate nohighlight">\(S^z=0\)</span>, so the last two columns are
+zero, and <span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> has the limitation described for
+<code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> in the expert-mode input. An example of outputted file is
+shown as follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mf">1.151983765704212992e+01</span>  <span class="mf">8.124622418360909482e-01</span>  \
 <span class="mf">1.619082955438887268e+02</span>  <span class="mf">2.019905203939084959e-01</span>
 <span class="mf">1.288482613817423150e+01</span>  <span class="mf">5.006903733262847433e-01</span>

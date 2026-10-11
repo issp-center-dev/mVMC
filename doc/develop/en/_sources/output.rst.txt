@@ -166,7 +166,12 @@ the others is a real number. Here, xxx is the header indicated by
 ``CDataFileHead`` in ``ModPara`` file and yyy is a number given by
 ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp``,
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
-``ModPara`` file. An example of outputted file is shown as follows.
+``ModPara`` file. In the anti-parallel grand-canonical mode
+(``NGrandCanonical=1`` with ``OrbitalAntiParallel`` or ``Orbital`` alone,
+``2Sz=0``), every sample has :math:`S^z=0`, so the last two columns are
+zero, and :math:`\langle H^2\rangle` has the limitation described for
+``NGrandCanonical`` in the expert-mode input. An example of outputted file is
+shown as follows.
 
 ::
 
