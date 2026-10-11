@@ -475,4 +475,108 @@ int GCComponentProbe(const int qpGlobal, const int qpLocal,
   return isfinite(residual) && residual <= tolerance;
 }
 
+int GCComponentGradient(const int qpGlobal, const int qpLocal,
+                        const int ncur, const int *eleIdx,
+                        double complex *gradient,
+                        GCComponentCache *cache) {
+  const size_t slaterStride =
+      GCCheckedMulSize((size_t)Nsite2, (size_t)Nsite2);
+  const size_t invStride =
+      GCCheckedMulSize((size_t)NsizeMax, (size_t)NsizeMax);
+  const double complex *slater;
+  const int minorSize = ncur - 2;
+  const int pairCount = ncur * (ncur - 1) / 2;
+  int failure = GC_MALL_OK;
+  int i;
+  if (cache == NULL || gradient == NULL ||
+      !GCComponentArgumentsValid(qpGlobal, ncur, eleIdx) || qpLocal < 0 ||
+      qpLocal >= NQPFull || GCQpState == NULL || InvM == NULL || PfM == NULL)
+    return GC_MALL_INVALID_ARGUMENT;
+  for (i = 0; i < ncur; i++)
+    gradient[(size_t)i * (size_t)NsizeMax + (size_t)i] = 0.0;
+  if (GCQpState[qpLocal] == GC_QP_INVERSE) {
+    const double complex *invM = InvM + (size_t)qpLocal * invStride;
+    const double complex pfaffian = PfM[qpLocal];
+    int j;
+    for (i = 0; i < ncur; i++)
+      for (j = 0; j < ncur; j++)
+        if (i != j)
+          gradient[(size_t)i * (size_t)NsizeMax + (size_t)j] =
+              invM[(size_t)i * (size_t)NsizeMax + (size_t)j] * pfaffian;
+    return GC_MALL_OK;
+  }
+  cache->counters.cofactorGradient++;
+  slater = SlaterElm + (size_t)qpGlobal * slaterStride;
+#pragma omp parallel default(shared)
+  {
+    GCComponentCache *myCache = GCComponentThreadCache();
+    int pair;
+#pragma omp for schedule(dynamic)
+    for (pair = 0; pair < pairCount; pair++) {
+      int a = 0;
+      int rest = pair;
+      int b;
+      int row;
+      int column;
+      int minorRow;
+      int minorColumn;
+      int status = GC_MALL_OK;
+      double complex value = 1.0;
+      while (rest >= ncur - 1 - a) {
+        rest -= ncur - 1 - a;
+        a++;
+      }
+      b = a + 1 + rest;
+      if (minorSize > 0) {
+        GCComponentSlot *slot = NULL;
+        MVMCAbsolutePfaffianValueResult result;
+        status = GCComponentSlotFor(myCache, minorSize, 0, &slot);
+        if (status == GC_MALL_OK) {
+          minorColumn = 0;
+          for (column = 0; column < ncur; column++) {
+            if (column == a || column == b) continue;
+            minorRow = 0;
+            for (row = 0; row < ncur; row++) {
+              if (row == a || row == b) continue;
+              myCache->minor[minorRow +
+                             (size_t)minorColumn * (size_t)minorSize] =
+                  slater[(size_t)eleIdx[row] * (size_t)Nsite2 +
+                         (size_t)eleIdx[column]];
+              minorRow++;
+            }
+            minorColumn++;
+          }
+          status = GCComponentStatusFromBackend(
+              mvmc_absolute_pfaffian_complex_value_with_workspace(
+                  slot->value, myCache->minor, minorSize, minorSize, 0.0,
+                  &result));
+          if (status == GC_MALL_OK) {
+            if (result.state == MVMC_PFAFFIAN_VALUE_NONFINITE) {
+              status = GC_MALL_NONFINITE;
+            } else if (result.state == MVMC_PFAFFIAN_VALUE_SINGULAR) {
+              value = 0.0;
+            } else if ((result.state == MVMC_PFAFFIAN_VALUE_WELL_PIVOTED ||
+                        result.state == MVMC_PFAFFIAN_VALUE_NEAR_PIVOT) &&
+                       isfinite(creal(result.pfaffian)) &&
+                       isfinite(cimag(result.pfaffian))) {
+              value = result.pfaffian;
+            } else {
+              status = GC_MALL_INVALID_ARGUMENT;
+            }
+          }
+        }
+      }
+      if (status != GC_MALL_OK) {
+#pragma omp critical
+        failure = status;
+      } else {
+        value *= (((a + b + 1) % 2) == 0) ? 1.0 : -1.0;
+        gradient[(size_t)a * (size_t)NsizeMax + (size_t)b] = value;
+        gradient[(size_t)b * (size_t)NsizeMax + (size_t)a] = -value;
+      }
+    }
+  }
+  return failure;
+}
+
 #endif

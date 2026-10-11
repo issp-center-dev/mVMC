@@ -32,10 +32,15 @@ static int *orbitalIdxRows[ORBITALS];
 static int *orbitalSgnRows[ORBITALS];
 static int qpTransStorage[2] = {0, 1};
 static int qpTransSgnStorage[2] = {1, 1};
+static int qpTransStorage1[2] = {1, 0};
+static int qpTransSgnStorage1[2] = {1, 1};
 static int qpOptTransStorage[2] = {0, 1};
 static int qpOptTransSgnStorage[2] = {1, 1};
 static int *qpTransRows[1] = {qpTransStorage};
 static int *qpTransSgnRows[1] = {qpTransSgnStorage};
+static int *qpTransRows2[2] = {qpTransStorage, qpTransStorage1};
+static int *qpTransSgnRows2[2] = {qpTransSgnStorage,
+                                  qpTransSgnStorage1};
 static int *qpOptTransRows[1] = {qpOptTransStorage};
 static int *qpOptTransSgnRows[1] = {qpOptTransSgnStorage};
 
@@ -59,6 +64,7 @@ static int finite_close(const double complex actual,
 }
 
 static void refresh_slater_elements(void);
+static void free_fixture(void);
 /* Matrix builder used by rebuild_overlap(): the test's own expansion or the
  * production UpdateSlaterElm_fsz(). */
 static void (*rebuild_matrix)(void) = refresh_slater_elements;
@@ -78,10 +84,14 @@ static void refresh_slater_elements(void) {
 }
 
 static double complex rebuild_overlap(const int ncur, const int *eleIdx) {
+  double complex overlap = 0.0;
+  int qp;
   rebuild_matrix();
-  CHECK(CalculateMAllGC_fcmp(ncur, eleIdx, 0, 1) == GC_MALL_OK,
+  CHECK(CalculateMAllGC_fcmp(ncur, eleIdx, 0, NQPFull) == GC_MALL_OK,
         "rebuild failed for ncur=%d", ncur);
-  return QPFullWeight[0] * PfM[0];
+  for (qp = 0; qp < NQPFull; qp++)
+    overlap += QPFullWeight[qp] * PfM[qp];
+  return overlap;
 }
 
 static double complex finite_difference(const int ncur, const int *eleIdx,
@@ -191,6 +201,119 @@ static void initialize_fixture(void) {
   QPFullWeight[0] = 0.73 - 0.21 * I;
   initializeWorkSpaceAll();
   CHECK(GCComponentInit() == GC_MALL_OK, "component init");
+}
+
+static void initialize_multiqp_fixture(void) {
+  initialize_fixture();
+  NQPFull = 2;
+  NQPFix = 2;
+  NMPTrans = 2;
+  QPTrans = qpTransRows2;
+  QPTransSgn = qpTransSgnRows2;
+  SlaterElm = realloc(
+      SlaterElm, 2U * ORBITALS * ORBITALS * sizeof(*SlaterElm));
+  InvM = realloc(InvM, 2U * ORBITALS * ORBITALS * sizeof(*InvM));
+  PfM = realloc(PfM, 2U * sizeof(*PfM));
+  QPFullWeight = realloc(QPFullWeight, 2U * sizeof(*QPFullWeight));
+  CHECK(SlaterElm != NULL && InvM != NULL && PfM != NULL &&
+            QPFullWeight != NULL,
+        "multiqp fixture allocation");
+  if (failures != 0) exit(EXIT_FAILURE);
+  QPFullWeight[0] = 0.73 - 0.21 * I;
+  QPFullWeight[1] = 0.37 + 0.52 * I;
+  Slater[orbitalIdxStorage[0][1]] = 0.0;
+  Slater[orbitalIdxStorage[0][2]] = 0.0;
+  Slater[orbitalIdxStorage[0][3]] = 0.0;
+  rebuild_matrix = UpdateSlaterElm_fsz;
+  CHECK(GCComponentInit() == GC_MALL_OK, "multiqp component init");
+}
+
+static void check_component_states(const int ncur, const int *eleIdx,
+                                   const int state0, const int state1,
+                                   const char *label) {
+  rebuild_matrix();
+  CHECK(CalculateMAllGC_fcmp(ncur, eleIdx, 0, NQPFull) == GC_MALL_OK,
+        "%s rebuild", label);
+  CHECK(GCQpState[0] == state0 && GCQpState[1] == state1,
+        "%s states %s/%s", label, GCComponentStateName(GCQpState[0]),
+        GCComponentStateName(GCQpState[1]));
+}
+
+static void check_lowrank_component_gradient(void) {
+  const double complex u[4] = {0.7 + 0.1 * I, -0.3 + 0.4 * I,
+                               0.5 - 0.2 * I, 0.9 + 0.3 * I};
+  const double complex v[4] = {0.2 - 0.6 * I, 0.8 + 0.1 * I,
+                               -0.4 + 0.5 * I, 0.1 + 0.7 * I};
+  const int eleIdx[4] = {0, 1, 2, 3};
+  double complex gradient[ORBITALS * ORBITALS];
+  double complex plus;
+  double complex minus;
+  double complex finiteDifference;
+  const double epsilon = 1.0e-5;
+  int i;
+  NQPFull = 1;
+  NQPFix = 1;
+  NMPTrans = 1;
+  QPTrans = qpTransRows;
+  QPTransSgn = qpTransSgnRows;
+  rebuild_matrix = refresh_slater_elements;
+  for (i = 0; i < ORBITALS; i++) {
+    int j;
+    for (j = i + 1; j < ORBITALS; j++) {
+      Slater[orbitalIdxStorage[i][j]] =
+          0.5 * (u[i] * v[j] - v[i] * u[j]);
+    }
+  }
+  CHECK(GCComponentInit() == GC_MALL_OK, "low-rank component init");
+  rebuild_matrix();
+  CHECK(CalculateMAllGC_fcmp(4, eleIdx, 0, 1) == GC_MALL_OK,
+        "low-rank rebuild");
+  CHECK(GCQpState[0] == GC_QP_PFONLY, "low-rank state %s",
+        GCComponentStateName(GCQpState[0]));
+  CHECK(GCComponentGradient(0, 0, 4, eleIdx, gradient,
+                            GCComponentThreadCache()) == GC_MALL_OK,
+        "gradient status");
+  Slater[orbitalIdxStorage[0][1]] += epsilon;
+  rebuild_matrix();
+  CHECK(CalculateMAllGC_fcmp(4, eleIdx, 0, 1) == GC_MALL_OK, "plus");
+  plus = PfM[0];
+  Slater[orbitalIdxStorage[0][1]] -= 2.0 * epsilon;
+  rebuild_matrix();
+  CHECK(CalculateMAllGC_fcmp(4, eleIdx, 0, 1) == GC_MALL_OK, "minus");
+  minus = PfM[0];
+  Slater[orbitalIdxStorage[0][1]] += epsilon;
+  finiteDifference = (plus - minus) / (2.0 * epsilon);
+  CHECK(cabs(gradient[1]) > 1.0e-3,
+        "low-rank cofactor is vacuous");
+  CHECK(finite_close(2.0 * gradient[1], finiteDifference,
+                     2.0e-9 * (1.0 + cabs(finiteDifference))),
+        "low-rank dPf/df got=(%.17g,%.17g) fd=(%.17g,%.17g)",
+        creal(2.0 * gradient[1]), cimag(2.0 * gradient[1]),
+        creal(finiteDifference), cimag(finiteDifference));
+  CHECK(gradient[NsizeMax] == -gradient[1],
+        "cofactor antisymmetry");
+  CHECK(gradient[0] == 0.0, "cofactor diagonal");
+}
+
+static void run_multiqp_checks(void) {
+  const int occupied02[2] = {0, 2};
+  const int occupied13[2] = {1, 3};
+  const int occupied23[2] = {2, 3};
+  initialize_multiqp_fixture();
+  check_component_states(2, occupied02, GC_QP_PFONLY, GC_QP_INVERSE,
+                         "{0,2}");
+  check_component_states(2, occupied13, GC_QP_INVERSE, GC_QP_PFONLY,
+                         "{1,3}");
+  check_component_states(2, occupied23, GC_QP_INVERSE, GC_QP_INVERSE,
+                         "{2,3}");
+  check_derivative(2, occupied02, orbitalIdxStorage[0][2],
+                   orbitalIdxStorage[1][3]);
+  check_derivative(2, occupied13, orbitalIdxStorage[1][3],
+                   orbitalIdxStorage[0][2]);
+  check_derivative(2, occupied23, orbitalIdxStorage[2][3],
+                   orbitalIdxStorage[1][2]);
+  check_lowrank_component_gradient();
+  free_fixture();
 }
 
 /*
@@ -749,6 +872,8 @@ int main(int argc, char **argv) {
 #endif
   if (argc > 1 && strcmp(argv[1], "--antiparallel") == 0) {
     run_antiparallel_checks();
+  } else if (argc > 1 && strcmp(argv[1], "--multiqp") == 0) {
+    run_multiqp_checks();
   } else {
     initialize_fixture();
     check_derivative(0, NULL, 0, 1);
