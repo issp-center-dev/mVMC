@@ -145,7 +145,7 @@ add_test(NAME GCSampler_Unit_MultiQP_DebugRebuild
     COMMAND gc_sampler_unit --multiqp)
 set_tests_properties(GCSampler_Unit_MultiQP_DebugRebuild PROPERTIES
     ENVIRONMENT "MVMC_GC_DEBUG_REBUILD_INTERVAL=1")
-foreach(gc_death vacuum_k general_nonfinite)
+foreach(gc_death vacuum_k general_nonfinite cache_uninitialized rebuild_zero)
     add_test(NAME GCSampler_Death_${gc_death}
         COMMAND ${PYTHON_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
@@ -160,19 +160,27 @@ if(MPI_FOUND)
     set_tests_properties(GCSampler_RebuildStatus_MPI PROPERTIES
         PROCESSORS 2 TIMEOUT 30)
     foreach(np 2 3)
-        add_test(NAME GCSampler_MultiQP_MPI${np}
+        add_test(NAME GCSampler_MultiQP_np${np}_mpi
             COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
                     ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_sampler_unit>
                     --multiqp-collective ${MPIEXEC_POSTFLAGS})
-        set_tests_properties(GCSampler_MultiQP_MPI${np} PROPERTIES
+        set_tests_properties(GCSampler_MultiQP_np${np}_mpi PROPERTIES
             PROCESSORS ${np} TIMEOUT 120)
-        add_test(NAME GC_AntiPair_Sampler_MultiQP_MPI${np}
+        add_test(NAME GC_AntiPair_Sampler_MultiQP_np${np}_mpi
             COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
                     ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_sampler_unit>
                     --multiqp-anti-collective ${MPIEXEC_POSTFLAGS})
-        set_tests_properties(GC_AntiPair_Sampler_MultiQP_MPI${np} PROPERTIES
+        set_tests_properties(GC_AntiPair_Sampler_MultiQP_np${np}_mpi PROPERTIES
             PROCESSORS ${np} TIMEOUT 120)
     endforeach()
+    add_test(NAME GCSampler_ComponentStats_np2_mpi
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_component_stats.py
+                $<TARGET_FILE:gc_sampler_unit>)
+    set_tests_properties(GCSampler_ComponentStats_np2_mpi PROPERTIES
+        ENVIRONMENT
+          "MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+        PROCESSORS 2 TIMEOUT 60)
 endif()
 add_test(NAME GC_AntiPair_Sampler_Unit COMMAND gc_sampler_unit --antiparallel)
 add_test(NAME GC_AntiPair_Sampler_Debug COMMAND gc_sampler_unit --antiparallel)

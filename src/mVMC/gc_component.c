@@ -59,6 +59,13 @@ static int gcQpCapacity = 0;
 static int gcOmpAuditEnabled = 0;
 #endif
 
+static void GCComponentAbort(void) {
+#ifdef _mpi_use
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+#endif
+  exit(EXIT_FAILURE);
+}
+
 const char *GCComponentStateName(const int state) {
   return state == GC_QP_INVERSE ? "INVERSE"
          : state == GC_QP_PFONLY ? "PFONLY" : "unknown";
@@ -213,7 +220,7 @@ GCComponentCache *GCComponentThreadCache(void) {
     fprintf(stderr,
             "Error: GC component cache is not initialized for thread %d.\n",
             thread);
-    exit(EXIT_FAILURE);
+    GCComponentAbort();
   }
   if (gcCapacity < NsizeMax || gcQpCapacity < NQPFull) {
     fprintf(stderr,
@@ -221,7 +228,7 @@ GCComponentCache *GCComponentThreadCache(void) {
             "is smaller than the current dimensions (%d, %d); call "
             "GCComponentInit after changing them.\n",
             gcCapacity, gcQpCapacity, NsizeMax, NQPFull);
-    exit(EXIT_FAILURE);
+    GCComponentAbort();
   }
   return gcCaches[thread];
 }
@@ -279,7 +286,7 @@ void GCComponentOmpAuditTotal(const enum GCComponentOmpPath path,
 
 void GCComponentFinalize(const GCComponentComm comm) {
   GCComponentCounters total;
-  long long local[7], global[7];
+  long long local[8], global[8];
   int rank = 0;
   if (gcCaches == NULL) return;
   GCComponentCountersTotal(&total);
@@ -290,8 +297,9 @@ void GCComponentFinalize(const GCComponentComm comm) {
   local[4] = total.debugNearSingular;
   local[5] = total.directValue;
   local[6] = total.cofactorGradient;
+  local[7] = total.compositeZero;
 #ifdef _mpi_use
-  MPI_Reduce(local, global, 7, MPI_LONG_LONG, MPI_SUM, 0, comm);
+  MPI_Reduce(local, global, 8, MPI_LONG_LONG, MPI_SUM, 0, comm);
   MPI_Comm_rank(comm, &rank);
 #else
   (void)comm;
@@ -303,7 +311,7 @@ void GCComponentFinalize(const GCComponentComm comm) {
            "debug_near_singular=%lld direct_value=%lld "
            "cofactor_gradient=%lld composite_zero=%lld\n",
            gcCacheCount, global[0], global[1], global[2], global[3],
-           global[4], global[5], global[6], total.compositeZero);
+           global[4], global[5], global[6], global[7]);
   }
 #ifdef MVMC_ENABLE_FAULT_INJECTION
   if (gcOmpAuditEnabled) {

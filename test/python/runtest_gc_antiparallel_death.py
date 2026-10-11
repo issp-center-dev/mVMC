@@ -16,6 +16,9 @@ EXPECTED = {
                          'general mode', 'Ncur=0'],
     '--death-general_nonfinite': ['GC sampler met a nonfinite',
                                   'general mode'],
+    '--death-cache_uninitialized': ['component cache is not initialized'],
+    '--death-rebuild_zero': ['zero projected amplitude',
+                             'after periodic rebuild'],
 }
 
 binary, mode = sys.argv[1:]

@@ -603,8 +603,10 @@ ModParaファイル (modpara.def)
    Pfaffian backend の scale-aware な判定で特異・準特異と分類された
    「Pfaffian のみ」の成分かのどちらかとして保持されます。後者では候補振幅と
    パラメータ微分を直接（完全な Pfaffian と余因子展開で）評価します。これは
-   エラーではなく、非有限値・引数異常・分解や workspace の失敗・strict でない
-   浮動小数点 build だけが計算を停止します。計算終了時に
+   エラーではなく、非有限値・引数異常・分解や workspace の失敗・fast-math
+   （例: ``-fno-fast-math`` を伴わない ``-ffast-math`` や ``-Ofast``）を使った
+   build だけが計算を停止します。CMake による ``vmc.out`` の build では
+   fast-math は無効化済みです。計算終了時に
    ``GC component stats: ...`` の1行で各経路の使用回数を出力します。評価できない
    測定 sample は skip せず全 rank を停止し、射影振幅が 0 になる初期配置は
    ``NGCInitNelec`` の増加または ``TransSym`` の重みの確認を求める診断で停止します。

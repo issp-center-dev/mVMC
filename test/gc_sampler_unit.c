@@ -2007,12 +2007,26 @@ static void death_general_nonfinite(void) {
                       MPI_COMM_SELF);
 }
 
+static void death_cache_uninitialized(void) {
+  GCComponentRelease();
+  (void)GCComponentThreadCache();
+}
+
+static void death_rebuild_zero(void) {
+  GCRequireRebuiltAmplitude(-INFINITY + 0.0 * I, "periodic",
+                            MPI_COMM_SELF);
+}
+
 static int run_death(const char *mode) {
   init_gen_rand(60013U);
   if (strcmp(mode, "--death-vacuum_k") == 0) {
     death_vacuum_k();
   } else if (strcmp(mode, "--death-general_nonfinite") == 0) {
     death_general_nonfinite();
+  } else if (strcmp(mode, "--death-cache_uninitialized") == 0) {
+    death_cache_uninitialized();
+  } else if (strcmp(mode, "--death-rebuild_zero") == 0) {
+    death_rebuild_zero();
   } else {
     fprintf(stderr, "unknown death mode %s\n", mode);
     return 2;
@@ -2050,6 +2064,14 @@ int main(int argc, char **argv) {
 #endif
   collectiveOnly = strcmp(mode, "--collective-only") == 0;
   setup_globals();
+  if (strcmp(mode, "--component-stats-collective") == 0) {
+    GCRecordCompositeZero(MPI_COMM_SELF);
+    GCComponentFinalize(MPI_COMM_WORLD);
+#ifdef _mpi_use
+    MPI_Finalize();
+#endif
+    return EXIT_SUCCESS;
+  }
   if (strncmp(mode, "--antiparallel-death", 20) == 0) {
     return run_antiparallel_death(mode);
   }

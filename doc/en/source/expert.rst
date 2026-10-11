@@ -614,14 +614,16 @@ Keywords and parameters
    Pfaffian-only component whose candidate amplitudes and parameter derivatives
    are evaluated directly (full Pfaffian and cofactor expansion). Such components
    are not errors; the run stops only on nonfinite values, invalid arguments,
-   factorization or workspace failures, and non-strict floating-point builds. At the end of a run one
-   line ``GC component stats: ...`` reports how often each path was used. A
-   measurement sample that cannot be evaluated now stops every rank instead of
-   being skipped, and an initial configuration whose projected amplitude is
-   zero is reported with a request to raise ``NGCInitNelec`` or to check the
-   ``TransSym`` weights. Acceptance is decided in the log domain for both
-   pairing forms, so a finite but large amplitude ratio is accepted rather
-   than rejected by an overflowing weight.
+   factorization or workspace failures, and builds compiled with fast-math
+   (for example, ``-ffast-math`` or ``-Ofast`` without ``-fno-fast-math``).
+   The CMake build of ``vmc.out`` already disables fast-math. At the end of a
+   run one line ``GC component stats: ...`` reports how often each path was
+   used. A measurement sample that cannot be evaluated now stops every rank
+   instead of being skipped, and an initial configuration whose projected
+   amplitude is zero is reported with a request to raise ``NGCInitNelec`` or
+   to check the ``TransSym`` weights. Acceptance is decided in the log domain
+   for both pairing forms, so a finite but large amplitude ratio is accepted
+   rather than rejected by an overflowing weight.
 
    ``NMPTrans=-1`` selects anti-periodic boundary conditions (APBC). Only
    the first ``TransSym`` pattern is used; momentum projection over several

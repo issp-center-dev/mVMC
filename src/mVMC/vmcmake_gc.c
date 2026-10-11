@@ -31,6 +31,34 @@ static int GCAntiMode(void) {
 
 static uint32_t GCAntiNext32(void) { return gen_rand32(); }
 
+static void GCRecordCompositeZero(MPI_Comm comm) {
+  int rank = 0;
+  MPI_Comm_rank(comm, &rank);
+  if (rank == 0)
+    GCComponentCountersOf(GCComponentThreadCache())->compositeZero++;
+}
+
+static void GCRequireRebuiltAmplitude(const double complex logIp,
+                                      const char *label, MPI_Comm comm) {
+  int rank = 0;
+  if (isfinite(creal(logIp)) && isfinite(cimag(logIp))) return;
+  MPI_Comm_rank(comm, &rank);
+  if (rank == 0) {
+    if (creal(logIp) == -INFINITY && isfinite(cimag(logIp))) {
+      fprintf(stderr,
+              "Error: GC sampler state has zero projected amplitude "
+              "after %s rebuild.\n",
+              label);
+    } else {
+      fprintf(stderr,
+              "Error: GC sampler state has a nonfinite projected "
+              "amplitude after %s rebuild.\n",
+              label);
+    }
+  }
+  MPI_Abort(comm, EXIT_FAILURE);
+}
+
 /* Uniform index in [0, bound); -1 is checked before any int conversion of
  * the UINT32_MAX failure value. */
 static int GCAntiDrawIndex(const int bound) {
@@ -221,8 +249,7 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
     }
     MPI_Abort(comm, EXIT_FAILURE);
   }
-  if (creal(logIpNew) == -INFINITY)
-    GCComponentCountersOf(GCComponentThreadCache())->compositeZero++;
+  if (creal(logIpNew) == -INFINITY) GCRecordCompositeZero(comm);
   if (accepted) {
     const int kind = moveClass == GC_MOVE_HOP
                          ? GC_COMMIT_HOP
@@ -406,6 +433,7 @@ static void GCDebugCheckFastState(const int *eleIdx,
   free(fastPf);
   free(fastInv);
   *logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+  GCRequireRebuiltAmplitude(*logIpOld, "debug", comm);
 }
 
 int GCMakeOneStep(int *eleIdx, int *eleCfg, int *eleNum,
@@ -575,7 +603,8 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
       }
       MPI_Abort(comm, EXIT_FAILURE);
     }
-    GCComponentCountersOf(GCComponentThreadCache())->compositeZero++;
+    if (rank == 0)
+      GCComponentCountersOf(GCComponentThreadCache())->compositeZero++;
     if (Ncur == 0) {
       attempt = 1;
       break;
@@ -712,6 +741,7 @@ void VMCMakeSampleGC(MPI_Comm comm) {
           MPI_Abort(comm, EXIT_FAILURE);
         }
         logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+        GCRequireRebuiltAmplitude(logIpOld, "periodic", comm);
         nAccept = 0;
       }
     }
